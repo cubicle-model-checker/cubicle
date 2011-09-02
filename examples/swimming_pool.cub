@@ -1,0 +1,58 @@
+globals = A[int] B[int] C[int] D[int] E[int] F[int] G[int]
+
+init () { A = 0 && B = 0 && C = 0 && D = 0 && E = 0 &&
+          1 <= F && 1 <= G } 
+
+unsafe (z) { A = 0 && B = 0 && D = 0 && E = 0 && F = 0 }
+
+(* unsafe (z) { B = 0 && D = 0 && E = 0 && F = 0  && G = 0 } *)
+
+transition t1 (x)
+require { 1 <= F}
+assign { A := A + 1; F := F - 1} 
+
+transition t2 (x)
+require { A = 1 && 1 <= G }
+assign { A := A-1; B := B + 1; G := G - 1}
+
+transition t3 (x)
+require { 1 <= B}
+assign { B := B - 1; C := C + 1; F := F + 1}
+
+transition t4 (x)
+require { 1 <= C && 1 <= F } 
+assign { C := C - 1; D := D + 1; F := F - 1 }
+
+transition t5 (x)
+require { 1 <= D }
+assign { D := D - 1; E := E + 1; G := G + 1 }
+
+transition t6 (x)
+require { 1 <= E }
+assign { E := E - 1; F := F + 1}
+
+transition t7 (x)
+require { 1 <= A && 1 <= G }
+assign { A := A - 1; C := C + 1; F := F + 1; G := G - 1}
+
+transition t8 (x)
+require { 1 <= G && 1 <= F }
+assign { C := C + 1; G := G - 1}
+
+transition t9 (x)
+require { 1 <= C && 1 <= E }
+assign { C := C - 1; D := D + 1; E := E -1}
+
+transition t10 (x)
+require { 1 <= C && 1 <= F }
+assign { C := C - 1; E := E + 1; F := F - 1; G := G + 1 }
+
+transition t11 (x)
+require { 1 <= C && 1 <= E }
+assign { C := C - 1; G := G + 1 }
+
+transition t12 (x)
+require { 1 <= F && 1 <= G }
+assign { E := E +1; F := F - 1 }
+
+

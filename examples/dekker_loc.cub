@@ -1,0 +1,23 @@
+type loc = L1 | L2 | L3
+globals = Turn[proc]
+arrays = PC[proc,loc]
+
+init (z) { PC[z] = L1 }
+
+unsafe (z1 z2) { PC[z1] = L3 && PC[z2] = L3 }
+
+transition req (i)
+require { PC[i] = L1 }
+PC[j] := {| i=j : L2 | _ : PC[j] }
+
+transition enter (i)
+require { PC[i]=L2  && Turn = i}
+PC[j] := {| i=j : L3 | _ : PC[j]}
+ 
+transition exit (i)
+require { PC[i] = L3}
+assign { Turn := . }
+PC[j] := {| i=j : L1 | _ : PC[j] }
+
+
+

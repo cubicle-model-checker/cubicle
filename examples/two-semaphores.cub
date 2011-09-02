@@ -1,0 +1,43 @@
+type location = L1 | L2 | L3 | L4
+
+globals = C[int] D[int] B[location]
+arrays = A[proc,location] 
+
+init (x) { A[x] = L1 && B = L1 && C = 1 && D = 0 }
+
+unsafe (z) { A[z] = L3 && B = L3 } 
+
+transition t1 (x)
+require { A[x] = L1 }
+A[j] := {| j = x : L2 | _ : A[j] }
+
+transition t2 (x)
+require { A[x] = L2 && 0 < C }
+assign { C := C - 1 }
+A[j] := {| _ : L3 }
+
+transition t3 (x)
+require { A[x] = L3 }
+A[j] := {| _ : L4 }
+
+transition t4 (x)
+require { A[x] = L4 }
+assign { D := 1}
+A[j] := {| j = x : L1 | _ : A[j] }
+
+transition t5 (x)
+require { B = L1 }
+assign { B := L2 }
+
+transition t6 (x)
+require { B = L2 && 0 < D }
+assign { D := D - 1 }
+A[j] := {| _ : L3 }
+
+transition t7 (x)
+require { B = L3 }
+assign { B := L4 }
+
+transition t8 (x)
+require { B = L4 }
+assign { B := L1; C := C + 1 }

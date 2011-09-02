@@ -1,0 +1,27 @@
+**************************************************************************
+*                                  Cubicle                               *
+*             Combining model checking algorithms and SMT solvers        *
+*                                                                        *
+*                  Sylvain Conchon, Université Paris-Sud 11             *
+*                                                                        *
+*  Copyright 2011. This file is distributed under the terms of the Apache   *
+*  Software License version 2.0                                          *
+**************************************************************************
+
+
+Cubicle is a tool that combines model checking algorithms and
+automatic SMT theorem provers
+
+Various examples can be found in the subdirectory examples/.
+
+COPYRIGHT
+=========
+
+This program is distributed under the Apache Software License version
+2.0. See the enclosed file COPYING.
+
+
+INSTALLATION
+============
+
+See the enclosed file INSTALL.

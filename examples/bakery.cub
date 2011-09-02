@@ -1,0 +1,31 @@
+type t = Idle | Wait | Crit | Crash
+arrays = A[proc,t]
+
+init (z) { A[z] = Idle }
+unsafe (z1 z2) { A[z1] = Crit && A[z2] = Crit }
+
+transition tr1 (z)
+require { A[z] = Idle }
+A[j] := { 
+| j=z : Wait
+| j<z : A[j]
+| z<j && A[j]=Idle : A[j]
+| _ : Crash
+}
+
+transition tr2 (z)
+require { A[z] = Wait }
+A[j] := { 
+| j=z : Crit
+| z<j : A[j]
+| j<z && A[j]=Idle : Idle
+| _ : Crash
+}
+
+
+transition tr3 (z)
+require { A[z] = Crit }
+A[j] :=  { 
+| j = z : Idle 
+| _ : A[j]
+}

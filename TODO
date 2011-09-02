@@ -1,0 +1,11 @@
+
+- Disjunctions of unsafe formulas
+- Extend the syntax for expressions (universal guards, arithmetic formulas etc.)
+- Compute the tau function only once
+- Split expansion and implication checks
+- Call SMT solvers with the all disjunction
+- Exploit the incrementality and persistency of Alt-Ergo
+- Perform arithmetic simplification (see swimming_pool example)
+- Improve the generation invariant mechanism
+- Mix backward and forward reasoning
+

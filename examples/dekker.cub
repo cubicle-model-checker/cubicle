@@ -1,0 +1,22 @@
+globals = Turn[proc]
+arrays = Want[proc,bool] Crit[proc,bool]
+
+init (z) { Want[z] = False && Crit[z] = False }
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+transition req (i)
+require { Want[i] = False }
+Want[j] := {| i=j : True | _ : Want[j] }
+
+transition enter (i)
+require { Want[i]=True && Crit[i] = False && Turn = i}
+Crit[j] := {| i=j : True | _ : Crit[j]}
+
+transition exit (i)
+require { Crit[i] = True}
+assign { Turn := . }
+Crit[j] := {| i=j : False | _ : Crit[j] }
+Want[j] := {| i=j : False | _ : Want[j] }
+
+

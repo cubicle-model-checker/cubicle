@@ -1,0 +1,163 @@
+
+\documentclass[a4paper,12pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage{amssymb}
+\usepackage{graphicx}
+
+\newcommand{\version}{0.1}
+
+\title{\textbf{\Huge Cubicle}\\\Large Version \version}
+\author{{\Large Sylvain Conchon} \\[1em] Universit\'e Paris-Sud 11}
+\date\today
+
+
+\begin{document}
+
+\maketitle
+
+\newpage
+
+\section{Introduction}
+
+Cubicle is a model checker for array-based system. It combines model
+checking algorithms and SMT solvers.
+
+\section{Getting started}
+
+Cubicle is free software distributed under the terms of the Apache
+Software License version 2.0. You can download it at:
+
+\begin{center}
+  \texttt{http://cubicle.lri.fr/}
+\end{center}
+
+To compile Cubicle from its source code, you need a version of the
+Ocaml compiler\footnote{\texttt{http://caml.inria.fr}} greater that
+3.11 and a version of the Alt-Ergo theorem
+prover\footnote{\texttt{http://alt-ergo.lri.fr}} greater that
+0.94. Then, you just need to:
+
+\begin{enumerate}
+  \item run \texttt{autoconf}
+  \item configure with \texttt{./configure}
+  \item compile with \texttt{make}
+  \item install with \texttt{make install} (you may need superuser
+    permissions for this last step)
+\end{enumerate}
+
+The use of Cubicle is simple : just write a file with the
+\texttt{.cub} extension containing the description of a protocol and
+run cubicle on that file. The result is a message indicating whether
+the protocol is \emph{safe} or \emph{unsafe}.
+
+As an introduction to the syntax of Cubicle's input language, we show
+how to write a simple version of Lamport's Bakery algorithm as
+described in~\cite{Abdulla}.
+
+First, we define a type \texttt{state}:
+\begin{verbatim}
+type state = Idle | Wait | Crit | Crash
+\end{verbatim}
+%
+This enumeration type \texttt{state} contains four elements
+\texttt{Idle}, \texttt{Wait}, \texttt{Crit} and \texttt{Crash} which
+represents the different states of a process.
+
+\begin{verbatim}
+
+\end{verbatim}
+
+\section{Input Language}
+
+The input language of Cubicle is 
+
+\paragraph{Enumeration Types}
+
+\begin{verbatim}
+type location = L1 | L2 | L3
+\end{verbatim}
+
+\paragraph{Global variables and arrays}
+
+\paragraph{Transitions}
+
+\paragraph{Universal guards}
+
+\section{Examples}
+
+\subsection{The Dekker algorithm}
+
+\begin{verbatim}
+globals = Turn[proc]
+arrays = Want[proc,bool] Crit[proc,bool]
+
+init (z) { Want[z] = False && Crit[z] = False }
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+transition req (i)
+require { Want[i] = False }
+Want[j] := {| i=j : True | _ : Want[j] }
+
+transition enter (i)
+require { Want[i]=True && Crit[i] = False && Turn = i}
+Crit[j] := {| i=j : True | _ : Crit[j]}
+
+transition exit (i)
+require { Crit[i] = True}
+assign { Turn := . }
+Crit[j] := {| i=j : False | _ : Crit[j] }
+Want[j] := {| i=j : False | _ : Want[j] }
+\end{verbatim}
+
+
+\subsection{A simplify version of German protocol}
+
+\begin{verbatim}
+type req = Empty | Reqs | Reqe
+type cstate = Invalid | Shared | Exclusive
+
+globals = Exgntd[bool] Curcmd[req] Curptr[proc]
+arrays = Cache[proc,cstate] Shrset[proc,bool]
+
+init (z) { Cache[z] = Invalid && Shrset[z] = False &&
+           Exgntd = False && Curcmd = Empty }
+
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+
+transition req_shared (n)
+require { Curcmd = Empty && Cache[n] = Invalid }
+assign { Curcmd := Reqs; Curptr := n }
+    
+transition req_exclusive (n)
+require { Curcmd = Empty && Cache[n] <> Exclusive }
+assign { Curcmd := Reqe; Curptr := n }
+    
+transition inv_1 (n)
+require { Shrset[n]=True  &&  Curcmd = Reqe }
+assign { Exgntd := False }
+Cache[j] := {| j = n : Invalid | _ : Cache[j] }
+Shrset[j] := {| j= n : False | _ : Shrset[j] }
+
+transition inv_2 (n)
+require { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
+assign { Exgntd := False }
+Cache[j] := {| j = n : Invalid | _ : Cache[j] }
+Shrset[j] := {| j= n : False | _ : Shrset[j] }
+    
+transition gnt_shared (n)
+require { Curptr = n && Curcmd = Reqs && Exgntd = False }
+assign { Curcmd := Empty }
+Shrset[j] := {| j = n : True | _ : Shrset[j] }
+Cache[j] := {| j = n : Shared | _ : Cache[j] }
+
+transition gnt_exclusive (n)
+require { Curcmd = Reqe && Exgntd = False && Curptr = n}
+uguard (l) { Shrset[l] = False }
+assign { Curcmd := Empty; Exgntd := True }
+Shrset[j] := {| j = n : True | _ : Shrset[j] }
+Cache[j] := {| j = n : Exclusive | _ : Cache[j] }
+\end{verbatim}
+
+\end{document}

@@ -1,0 +1,179 @@
+##########################################################################
+#                                                                        #
+#                                  Cubicle                               #
+#             Combining model checking algorithms and SMT solvers        #
+#                                                                        #
+#                  Sylvain Conchon, Universite Paris-Sud 11              #
+#                                                                        #
+#  Copyright 2011. This file is distributed under the terms of the       #
+#  Apache Software License version 2.0                                   #
+#                                                                        #
+##########################################################################
+
+
+# where to install the binaries
+DESTDIR=
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+BINDIR=$(DESTDIR)@bindir@
+LIBDIR=$(DESTDIR)@libdir@/cubicle
+
+# where to install the man page
+MANDIR=$(DESTDIR)@mandir@
+
+# other variables set by ./configure
+OCAMLC   = @OCAMLC@
+OCAMLOPT = @OCAMLOPT@
+OCAMLDEP = @OCAMLDEP@
+OCAMLLEX = @OCAMLLEX@
+OCAMLYACC= @OCAMLYACC@
+OCAMLLIB = @OCAMLLIB@
+ALTERGOLIB = @ALTERGOLIB@
+OCAMLBEST= @OCAMLBEST@
+OCAMLVERSION = @OCAMLVERSION@
+OCAMLWIN32 = @OCAMLWIN32@
+EXE = @EXE@
+
+INCLUDES = $(ALTERGOLIB)
+
+BFLAGS = -dtypes -g $(INCLUDES) -annot
+OFLAGS = -dtypes $(INCLUDES) -annot
+
+BIBBYTE=nums.cma unix.cma
+
+BIBOPT=$(BIBBYTE:.cma=.cmxa)
+
+# main target
+#############
+
+NAME = cubicle
+BYTE=$(NAME).byte
+OPT=$(NAME).opt
+
+all: $(OCAMLBEST) 
+
+# bytecode and native-code compilation
+######################################
+
+CMO = version.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo options.cmo \
+      prover.cmo heap.cmo search.cmo \
+      bwreach.cmo typing.cmo main.cmo
+
+CMX = $(CMO:.cmo=.cmx)
+
+MAINCMO = $(CMO) main.cmo
+MAINCMX = $(MAINCMO:.cmo=.cmx)
+
+RUNCMO = $(CMO) run.cmo
+RUNCMX = $(RUNCMO:.cmo=.cmx)
+
+GENERATED = version.ml parser.ml parser.mli lexer.ml
+
+byte: $(NAME).byte
+opt: $(NAME).opt
+
+$(NAME).byte: $(MAINCMO)
+	$(if $(QUIET),@echo 'Linking $@' &&) 
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) altErgo.cmo $^
+
+$(NAME).opt: $(MAINCMX)
+	$(if $(QUIET),@echo 'Linking $@' &&) 
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) altErgo.cmx $^
+
+VERSION=0.1
+
+version.ml: config.status
+	@echo "let version = \""$(VERSION)"\"" > version.ml
+	@echo "let date = \""`date`"\"" >> version.ml
+	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
+
+
+
+# generic rules
+###############
+
+.SUFFIXES: .mli .ml .cmi .cmo .cmx .mll .mly
+
+.mli.cmi:
+	@true compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+
+.ml.cmo:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+	@true compile -w a $(BFLAGS) $< 
+
+.ml.o:
+	@true compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+
+.ml.cmx:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+	@true compile -w a $(BFLAGS) $< 
+
+.mll.ml:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLLEX) $< > /dev/null
+
+.mly.ml:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+
+.mly.mli:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+
+
+# file headers
+##############
+headers:
+	headache -c doc/headache_config.txt -h doc/cubicle_header.txt \
+		Makefile.in configure.in *.ml *.ml[ily]
+
+# Emacs tags
+############
+
+tags:
+	find . -name "*.ml*" | sort -r | xargs \
+	etags "--regex=/let[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/let[ \t]+rec[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/and[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/type[ \t]+\([^ \t]+\)/\1/" \
+              "--regex=/exception[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/val[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/module[ \t]+\([^ \t]+\)/\1/"
+
+# installation
+##############
+
+install: install-man
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
+
+install-byte: install-man
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).byte $(BINDIR)/$(NAME)$(EXE)
+
+install-opt: install-man
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).opt $(BINDIR)/$(NAME)$(EXE)
+
+install-man:
+	mkdir -p $(MANDIR)/man1
+	cp -f doc/*.1 $(MANDIR)/man1
+
+
+
+
+# clean
+#######
+
+clean:: 
+	@rm -f *.cm[iox] *.o *~ *.annot
+	@rm -f $(GENERATED) *.output
+	@rm -f $(NAME).byte $(NAME).opt
+
+# depend
+########
+
+.depend depend:: $(GENERATED)
+	@rm -f .depend
+	@$(OCAMLDEP) -slash *.ml *.mli > .depend
+
+include .depend

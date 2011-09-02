@@ -1,0 +1,57 @@
+type location = L1 | L2 | L3 | L4 | L5
+type lock = C0 | C1 | C2 | C3
+
+globals = B[bool] H[lock] C[int]
+arrays = A[proc, location] 
+
+init (z) { A[z] = L1 && B = False && H = C0 && 0<C }
+ 
+unsafe (z1 z2) { A[z1]=L2 && A[z2]=L2 }
+ 
+transition t1 (x)
+require { A[x]=L1 && B=False && 0 < C }
+assign { B := True }
+A[j] := {| j = x : L2 | _ : A[j] }
+
+transition t2 (x)
+require { A[x] = L1 && B = True && 0 < C }
+assign { C := C + 1 }
+A[j] := {| j = x : L3 | _ : A[j] }
+ 
+transition t3 (x)
+require { A[x] = L2 && B = True && C = 0 }
+assign { B := False }
+A[j] := {| j = x : L1 | _ : A[j] }
+
+transition t4 (x)
+require { A[x] = L2 && B = True && 0 < C }
+assign { C := C - 1 }
+A[j] := {| j = x : L4 | _ : A[j] }
+
+transition t5 (x)
+require { A[x] = L3 && H = C0 && 0 < C }
+assign { H := C1 }
+A[j] := {| j = x : L5 | _ : A[j] }
+
+transition t6 (x)
+require { A[x] = L4 && H = C0 && 0 < C }
+assign { H := C2 }
+A[j] := {| j = x : L1 | _ : A[j] }
+
+transition t7 (x)
+require { A[x] = L4 && H = C1 && 0 < C }
+assign { H := C3 }
+A[j] := {| j = x : L1 | _ : A[j] }
+
+transition t8 (x)
+require { A[x] = L3 && H = C2 && 0 < C }
+assign { H := C3 }
+A[j] := {| j = x : L5 | _ : A[j] }
+
+transition t9 (x)
+require { A[x] = L5 && H = C3 && 0 < C }
+assign { H := C0 }
+A[j] := {| j = x : L2 | _ : A[j] }
+
+
+
