@@ -17,7 +17,8 @@ open Atom
 
 
 module AE = AltErgo
-module S = Set.Make(String)
+module S = Set.Make(String) 
+  (* changer la fonction compare pour avoir dans l'ordre #1<#2<..<#9<#10 etc. *)
 
 exception Unsafe
 
@@ -188,7 +189,7 @@ let find_assign tr = function
       end
   | Access (a, i ) -> 
       let ni = 
-	if List.mem a tr.tr_nondets then fresh_nondet ()
+	if List.mem i tr.tr_nondets then fresh_nondet ()
 	else 
 	  try (match List.assoc i tr.tr_assigns with
 		 | Elem ni -> ni
@@ -325,9 +326,9 @@ let check_fixpoint s visited np =
 		    List.fold_left 
 		      (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
 		  SAtom.subset pp np 
-		(*    || 
+		    || 
 		      let f = Prover.extended_fixpoint s nargs ss np p in 
-		      smt_fixpoint_check f *) ) d)
+		      smt_fixpoint_check f  ) d)
     ) visited
 
 let is_fixpoint s nodes np = 

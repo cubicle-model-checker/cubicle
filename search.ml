@@ -69,7 +69,8 @@ module DFS ( X : I ) = struct
       Profiling.print (sprintf "[DFS]Number of processes : %d" (X.size s));
       X.safety s;
       let ls, post = X.pre ~invariants:[] ~visited:visited s in
-      List.iter (search_rec (cpt+1) (s::visited)) (ls@post)
+      let visited = if ls<>[] || post<>[] then s::visited else visited in
+      List.iter (search_rec (cpt+1) visited) (ls@post)
     in 
     search_rec 0 [] s
 
@@ -87,6 +88,7 @@ module DFSL ( X : I ) = struct
       Profiling.print (sprintf "Number of processes : %d" (X.size s));
       X.safety s;
       let ls, post = X.pre ~invariants:[] ~visited:!visited s in
+(*      if ls <> [] || post <> [] then visited := s :: (ls @ post @ !visited);*)
       visited := s :: !visited;
       List.iter (search_rec (cpt+1)) (ls@post)
     in
@@ -110,10 +112,10 @@ module DFSH ( X : I ) = struct
       let v1 = X.size s1 in
       let v2 = X.size s2 in
       if v1 <= 2 && v2 <= 2 then 
-	let c = Pervasives.compare l1 l2 in
-	if c<>0 then c else Pervasives.compare v2 v1
+	let c = Pervasives.compare l2 l1 in
+	if c<>0 then c else Pervasives.compare v1 v2
       else 
-	let c = Pervasives.compare v2 v1 in
+	let c = Pervasives.compare v1 v2 in
 	if c <> 0 then c else Pervasives.compare l2 l1
   end
 
@@ -129,7 +131,8 @@ module DFSH ( X : I ) = struct
 	if cpt = maxrounds then raise ReachBound;
 	X.safety s;
 	let ls, post = X.pre ~invariants:[] ~visited:visited s in
-	let l = List.map (fun s' -> cpt+1, s', s::visited) (ls@post) in
+	let visited = if ls<>[] || post<>[] then s::visited else visited in
+	let l = List.map (fun s' -> cpt+1, s', visited) (ls@post) in
 	search_rec (H.add h l)
       with Heap.EmptyHeap -> ()
     in
@@ -151,10 +154,10 @@ module DFSHL ( X : I ) = struct
       let v1 = X.size s1 in
       let v2 = X.size s2 in
       if v1 <= 2 && v2 <= 2 then 
-	let c = Pervasives.compare l1 l2 in
-	if c<>0 then c else Pervasives.compare v2 v1
+	let c = Pervasives.compare l2 l1 in
+	if c<>0 then c else Pervasives.compare v1 v2
       else 
-	let c = Pervasives.compare v2 v1 in
+	let c = Pervasives.compare v1 v2 in
 	if c <> 0 then c else Pervasives.compare l2 l1
   end
 
@@ -164,7 +167,7 @@ module DFSHL ( X : I ) = struct
 
   let search s =
     let visited = ref [] in
-    let postpones = ref [] in
+    let postponed = ref [] in
     let invariants = ref [] in
     let rec search_rec h =
       try 
@@ -177,18 +180,18 @@ module DFSHL ( X : I ) = struct
 	let ls, post = X.pre ~invariants:!invariants ~visited:!visited s in
 	if gen_inv && X.size s < 3 && ls <> [] then 
 	  invariants := (X.gen_inv Search.search s) @ !invariants;
-	if ls <> [] then visited := s::!visited;
-	postpones := post @ !postpones;
+	if ls <> [] || post <> [] then visited := s:: !visited(*(ls @ post @ !visited)*);
+	postponed := post @ !postponed;
 	let ls = List.map (fun s' -> cpt+1, s') ls in
 	search_rec (H.add h ls)
       with Heap.EmptyHeap -> 
-	if !postpones = [] then ()
+	if !postponed = [] then ()
 	else 
 	  begin
 	    Profiling.print 
-	      (sprintf "Postpones : %d@." (List.length !postpones));
-	    let l = List.map (fun s -> 0,s) !postpones in
-	    postpones := [];
+	      (sprintf "Postpones : %d@." (List.length !postponed));
+	    let l = List.map (fun s -> 0,s) !postponed in
+	    postponed := [];
 	    search_rec (H.add H.empty l)
 	  end
     in
@@ -213,7 +216,7 @@ module BFS ( X : I ) = struct
 	Profiling.print (sprintf "Number of processes : %d" (X.size s));
 	X.safety s;
 	let ls, post = X.pre ~invariants:[] ~visited:!visited s in
-	visited := s :: !visited;
+	if ls <> [] || post <> [] then visited := s :: (ls @ post @ !visited);
 	postpones := post @ !postpones;
 	List.iter (fun s -> Queue.add s q) ls;
 	search_rec ()

@@ -12,7 +12,7 @@
 
 type mode = Dfs | DfsL | DfsH | DfsHL | Bfs 
 
-let usage = "usage: backward file.cub"
+let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
 
 let type_only = ref false
@@ -43,7 +43,7 @@ let specs =
     "-type-only", Arg.Set type_only, " stop after typing";
     "-rounds", Arg.Set_int maxrounds, " max number of rounds";
     "-search", Arg.String set_mode, 
-               " <dfs(default) | dfsg | dfsh | dfshg | bfs> search strategies";
+               " <dfs(default) | dfsl | dfsh | dfshl | bfs> search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-v", Arg.Unit incr_verbose, " mode debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
