@@ -332,8 +332,12 @@ let obvious_subst env p np l1 l2 =
 	try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
       (try 
 	 (match si, sj with
-	   | Glob, Var -> (j, List.assoc i globv) :: acc
-	   | Var, Glob -> (i, List.assoc j globv) :: acc
+	   | Glob, Var -> 
+	     if List.mem_assoc j acc then acc
+	     else (j, List.assoc i globv) :: acc
+	   | Var, Glob -> 
+	     if List.mem_assoc i acc then acc
+	     else (i, List.assoc j globv) :: acc
 	   | _ -> acc)
        with Not_found -> acc)
     | _ -> acc) p [] in
@@ -343,9 +347,18 @@ let obvious_subst env p np l1 l2 =
   obvs, l1, l2
 
 
-let impossible_access env np a i j acc =
-  SAtom.fold (fun at acc -> match at with
-    | Comp (Access (a', i'), Eq, Elem j') when j <> j' && a = a' ->
+let impossible_access env np a i op j acc =
+  SAtom.fold (fun at acc -> match at, op with
+    | Comp (Access (a', i'), Eq, Elem j'), Eq when j <> j' && a = a' ->
+      let si' = 
+	try let s, _, _ = Hashtbl.find env i' in s with Not_found -> Var in
+      let sj' = 
+	try let s, _, _ = Hashtbl.find env j' in s with Not_found -> Var in
+      (match si', sj' with
+	| Var ,(Glob | Constr) -> (i, i')::acc
+	| _ -> acc)
+    | Comp (Access (a', i'), Eq, Elem j'), Neq 
+    | Comp (Access (a', i'), Neq, Elem j'), Eq  when j = j' && a = a' ->
       let si' = 
 	try let s, _, _ = Hashtbl.find env i' in s with Not_found -> Var in
       let sj' = 
@@ -356,13 +369,13 @@ let impossible_access env np a i j acc =
     | _ -> acc) np acc
     
 let impossible_permutations_atom env np at acc = match at with
-  | Comp (Access (a, i), Eq, Elem j) ->
+  | Comp (Access (a, i), ((Eq | Neq) as op), Elem j) ->
     let si = 
       try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
     let sj = 
       try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
     (match si, sj with
-      | Var, (Glob | Constr) -> impossible_access env np a i j acc
+      | Var, (Glob | Constr) -> impossible_access env np a i op j acc
       | _ -> acc)
   | _ -> acc
 
@@ -378,12 +391,31 @@ let relevant_permutations env p np l1 l2 =
   List.filter (List.for_all (fun s -> not (List.mem s impos))) perm
 
 
+let inconsistent sa = 
+  let l = SAtom.elements sa in
+  let rec check eqs neqs = function
+    | [] -> ()
+    | True :: l -> check eqs neqs l
+    | False :: _ -> raise Exit
+    | Comp (t1, Eq, t2) :: l -> 
+	(try if List.assoc t1 eqs <> t2 || List.assoc t2 eqs <> t1
+	    || List.assoc t1 neqs = t2 || List.assoc t2 neqs = t1
+	  then raise Exit; check eqs neqs l
+	with Not_found -> check ((t1, t2)::(t2, t1)::eqs) neqs l)
+    | Comp (t1, Neq, t2) :: l -> 
+	(try if List.assoc t1 eqs = t2 || List.assoc t2 eqs = t1
+	  then raise Exit; check eqs neqs l
+	with Not_found -> check eqs ((t1, t2)::(t2, t1)::neqs) l)
+    | _ :: l -> check eqs neqs l
+  in
+  try check [] []l; false with Exit -> true
 
 let possible_imply s np p =
   SS.subset (magic_number s p) (magic_number s np)  
     
 let check_fixpoint s visited np = 
   SAtom.mem False np
+  || inconsistent np
   ||
     List.exists
     (fun { t_unsafe = (args, p); t_env = env } ->
@@ -394,7 +426,7 @@ let check_fixpoint s visited np =
 	let nargs = args_of_atoms np in
 	( List.length args <= List.length nargs &&
 	    (* let d = all_permutations args nargs in *)
-	    (* eprintf "d1:%d@." (List.length d); *)
+	    (* eprintf "len:%d@." (List.length d); *)
 	    let d = relevant_permutations env p np args nargs in
 	    (* eprintf "d2:%d\n@." (List.length d); *)
 	    List.exists 
@@ -404,7 +436,7 @@ let check_fixpoint s visited np =
 		    (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
 		SAtom.subset pp np 
 		||
-		  ((possible_imply s np pp) &&
+		  ((possible_imply s np pp) && (not (inconsistent pp)) &&
 		      let f = Prover.extended_fixpoint s nargs ss np pp in
 		      let res = smt_fixpoint_check f in
 		      (* if not res then *)
@@ -427,19 +459,6 @@ let is_fixpoint s nodes np =
     in
     check_fixpoint s nodes np
 
-let inconsistent sa = 
-  let l = SAtom.elements sa in
-  let rec check acc = function
-    | [] -> ()
-    | True :: l -> check acc l
-    | False :: _ -> raise Exit
-    | Comp (t1, Eq, t2) :: l -> 
-	(try if List.assoc t1 acc <> t2 || List.assoc t2 acc <> t1
-	  then raise Exit; check acc l
-	with Not_found -> check ((t1, t2)::(t2, t1)::acc) l)
-    | _ :: l -> check acc l
-  in
-  try check [] l; false with Exit -> true
 
 let neg x op y = 
   match op with
