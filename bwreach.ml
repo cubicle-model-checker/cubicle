@@ -111,6 +111,8 @@ let rec simplification np env a =
   match a with
     | True | False -> a 
     | Comp (Elem i, op , Elem j) -> simplify_comp env i op j
+    | Comp (Arith (i, opai, xi), op, (Arith (j, opaj, xj)))
+      when opai = opaj && xi = xj -> simplify_comp env i op j
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
 	let sa = 
@@ -230,6 +232,7 @@ let check_safety s =
   with 
     | AE.Sat.Sat _ -> raise Unsafe
     | AE.Sat.I_dont_know -> exit 2
+    | AE.Sat.Unsat _ -> ()
 
 let number_of s = 
   if s.[0] = '#' then 
@@ -279,6 +282,7 @@ let smt_fixpoint_check f =
     true
   with 
     | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
+    | AE.Sat.Unsat _ -> true
 	
 let rec alpha_atoms np = 
   SAtom.fold (fun a -> add (alpha_atom a)) np SAtom.empty
@@ -307,28 +311,107 @@ and cross l pr x st =
 	let acc = all_permutations l (pr@p) in
 	let acc = List.map (fun ds -> (x, y)::ds) acc in
 	acc@(cross l (y::pr) x p)
-  
+
+let obvious_subst env p np l1 l2 =
+  let globv = SAtom.fold (fun a acc -> match a with
+    | Comp (Elem i, Eq, Elem j) ->
+      let si = 
+	try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
+      let sj = 
+	try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
+      (match si, sj with
+	| Glob, Var -> (i, j) :: acc
+	| Var, Glob -> (j, i) :: acc
+	| _ -> acc)
+    | _ -> acc) np [] in
+  let obvs = SAtom.fold (fun a acc -> match a with
+    | Comp (Elem i, Eq, Elem j) ->
+      let si = 
+	try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
+      let sj = 
+	try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
+      (try 
+	 (match si, sj with
+	   | Glob, Var -> (j, List.assoc i globv) :: acc
+	   | Var, Glob -> (i, List.assoc j globv) :: acc
+	   | _ -> acc)
+       with Not_found -> acc)
+    | _ -> acc) p [] in
+  let obvl1, obvl2 = List.split obvs in
+  let l1 = List.filter (fun b -> not (List.mem b obvl1)) l1 in
+  let l2 = List.filter (fun b -> not (List.mem b obvl2)) l2 in
+  obvs, l1, l2
+
+
+let impossible_access env np a i j acc =
+  SAtom.fold (fun at acc -> match at with
+    | Comp (Access (a', i'), Eq, Elem j') when j <> j' && a = a' ->
+      let si' = 
+	try let s, _, _ = Hashtbl.find env i' in s with Not_found -> Var in
+      let sj' = 
+	try let s, _, _ = Hashtbl.find env j' in s with Not_found -> Var in
+      (match si', sj' with
+	| Var ,(Glob | Constr) -> (i, i')::acc
+	| _ -> acc)
+    | _ -> acc) np acc
+    
+let impossible_permutations_atom env np at acc = match at with
+  | Comp (Access (a, i), Eq, Elem j) ->
+    let si = 
+      try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
+    let sj = 
+      try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
+    (match si, sj with
+      | Var, (Glob | Constr) -> impossible_access env np a i j acc
+      | _ -> acc)
+  | _ -> acc
+
+let impossible_permutations env p np =
+  SAtom.fold (impossible_permutations_atom env np) p []
+
+
+let relevant_permutations env p np l1 l2 =
+  let obvs, l1, l2 = obvious_subst env p np l1 l2 in
+  let perm = all_permutations l1 l2 in
+  let perm = List.map (List.append obvs) perm in
+  let impos = impossible_permutations env p np in
+  List.filter (List.for_all (fun s -> not (List.mem s impos))) perm
+
+
+
+let possible_imply s np p =
+  SS.subset (magic_number s p) (magic_number s np)  
+    
 let check_fixpoint s visited np = 
   SAtom.mem False np
   ||
     List.exists
-    (fun { t_unsafe = (args, p) } ->
-       (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
-       ||
-	 let p = alpha_atoms p in
-	 let args = args_of_atoms p in
-	 let nargs = args_of_atoms np in
-	 ( List.length args <= List.length nargs &&
-	     let d = all_permutations args nargs in
-	     List.exists 
-	       (fun ss ->
-		  let pp = 
-		    List.fold_left 
-		      (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
-		  SAtom.subset pp np 
-		    || 
-		      let f = Prover.extended_fixpoint s nargs ss np p in 
-		      smt_fixpoint_check f  ) d)
+    (fun { t_unsafe = (args, p); t_env = env } ->
+      (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
+      ||
+	let p = alpha_atoms p in
+	let args = args_of_atoms p in
+	let nargs = args_of_atoms np in
+	( List.length args <= List.length nargs &&
+	    (* let d = all_permutations args nargs in *)
+	    (* eprintf "d1:%d@." (List.length d); *)
+	    let d = relevant_permutations env p np args nargs in
+	    (* eprintf "d2:%d\n@." (List.length d); *)
+	    List.exists 
+	      (fun ss ->
+		let pp = 
+		  List.fold_left 
+		    (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
+		SAtom.subset pp np 
+		||
+		  ((possible_imply s np pp) &&
+		      let f = Prover.extended_fixpoint s nargs ss np pp in
+		      let res = smt_fixpoint_check f in
+		      (* if not res then *)
+		      (*   eprintf "not a fixpoint : %a -> %a\n@." *)
+		      (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
+		      res
+		  )  ) d)
     ) visited
 
 let is_fixpoint s nodes np = 
@@ -351,8 +434,9 @@ let inconsistent sa =
     | True :: l -> check acc l
     | False :: _ -> raise Exit
     | Comp (t1, Eq, t2) :: l -> 
-	(try if List.assoc t1 acc <> t2 then raise Exit; check acc l
-	with Not_found -> check ((t1, t2)::acc) l)
+	(try if List.assoc t1 acc <> t2 || List.assoc t2 acc <> t1
+	  then raise Exit; check acc l
+	with Not_found -> check ((t1, t2)::(t2, t1)::acc) l)
     | _ :: l -> check acc l
   in
   try check [] l; false with Exit -> true
