@@ -223,17 +223,42 @@ let make_tau tr x op y =
 	Branch {up_arr=a2; up_arg=j2; up_swts=(ls2, t2)} ->
 	assert false
 
+
+let inconsistent sa = 
+  let l = SAtom.elements sa in
+  let rec check eqs neqs = function
+    | [] -> ()
+    | True :: l -> check eqs neqs l
+    | False :: _ -> raise Exit
+    | Comp (t1, Eq, t2) :: l -> 
+	(try if List.assoc t1 eqs <> t2 || List.assoc t2 eqs <> t1
+	    || List.assoc t1 neqs = t2 || List.assoc t2 neqs = t1
+	  then raise Exit; check eqs neqs l
+	with Not_found -> check ((t1, t2)::(t2, t1)::eqs) neqs l)
+    | Comp (t1, Neq, t2) :: l -> 
+	(try if List.assoc t1 eqs = t2 || List.assoc t2 eqs = t1
+	  then raise Exit; check eqs neqs l
+	with Not_found -> check eqs ((t1, t2)::(t2, t1)::neqs) l)
+    | _ :: l -> check eqs neqs l
+  in
+  try check [] []l; false with Exit -> true
+
+
+let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa } =
+  inconsistent (SAtom.union inisa unsa)
+
 let check_safety s = 
   Debug.unsafe s;
-  try 
-    let f = Prover.unsafe s in
-    let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
-    ignore (AE.Sat.unsat AE.Sat.empty gf)
+  try
+    if not (obviously_safe s) then
+      let f = Prover.unsafe s in
+      let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
+      ignore (AE.Sat.unsat AE.Sat.empty gf)
   with 
     | AE.Sat.Sat _ -> raise Unsafe
     | AE.Sat.I_dont_know -> exit 2
     | AE.Sat.Unsat _ -> ()
-
+ 
 let number_of s = 
   if s.[0] = '#' then 
     int_of_string (String.sub s 1 (String.length s - 1))
@@ -390,35 +415,18 @@ let relevant_permutations env p np l1 l2 =
   let impos = impossible_permutations env p np in
   List.filter (List.for_all (fun s -> not (List.mem s impos))) perm
 
-
-let inconsistent sa = 
-  let l = SAtom.elements sa in
-  let rec check eqs neqs = function
-    | [] -> ()
-    | True :: l -> check eqs neqs l
-    | False :: _ -> raise Exit
-    | Comp (t1, Eq, t2) :: l -> 
-	(try if List.assoc t1 eqs <> t2 || List.assoc t2 eqs <> t1
-	    || List.assoc t1 neqs = t2 || List.assoc t2 neqs = t1
-	  then raise Exit; check eqs neqs l
-	with Not_found -> check ((t1, t2)::(t2, t1)::eqs) neqs l)
-    | Comp (t1, Neq, t2) :: l -> 
-	(try if List.assoc t1 eqs = t2 || List.assoc t2 eqs = t1
-	  then raise Exit; check eqs neqs l
-	with Not_found -> check eqs ((t1, t2)::(t2, t1)::neqs) l)
-    | _ :: l -> check eqs neqs l
-  in
-  try check [] []l; false with Exit -> true
-
 let possible_imply s np p =
   SS.subset (magic_number s p) (magic_number s np)  
     
 let check_fixpoint s visited np = 
+  (* let cpt = ref 0 in *)
+  (* let fix =  *)
   SAtom.mem False np
   || inconsistent np
   ||
     List.exists
     (fun { t_unsafe = (args, p); t_env = env } ->
+      incr cpt;
       (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
       ||
 	let p = alpha_atoms p in
@@ -445,6 +453,10 @@ let check_fixpoint s visited np =
 		      res
 		  )  ) d)
     ) visited
+  (* in *)
+  (* if fix then eprintf "\t\t\t\tFixpoint after %d checks / %d@." *)
+  (*   !cpt (List.length visited); *)
+  (* fix *)
 
 let is_fixpoint s nodes np = 
   List.exists (fun { t_unsafe = (_, p) } -> SAtom.subset p np) nodes
@@ -536,7 +548,7 @@ let make_cubes (ls, post) invariants visited (args, rargs)
 	 let np = SAtom.union ureq np in 
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
 	 if inconsistent np then acc 
-	 else if is_fixpoint s invariants np then acc
+	 else if gen_inv && is_fixpoint s invariants np then acc
 	 else if is_fixpoint s (s::(ls@visited)) np then acc
 	 else if postpone args p np then 
 	   ls, { s with t_unsafe = nargs, np }::post

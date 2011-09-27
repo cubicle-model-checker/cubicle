@@ -72,8 +72,8 @@ Chan2[j] := {| j = n : Gnts | _ : Chan2[j] }
 Shrset[j] := {| j = n : True | _ : Shrset[j] }
 
 transition send_gnt_exclusive(n)
-require { Curptr = n && Curcmd = Reqe &&
-	  Chan2[n] = Empty }
+require { Curptr = n && Curcmd = Reqe && Exgntd = False && 
+	  Chan2[n] = Empty && Shrset[n] = False }
 uguard (j) { Shrset[j] = False }
 assign { Curcmd := Empty; Exgntd := True }
 Chan2[j] := {| j = n : Gnte | _ : Chan2[j] }
