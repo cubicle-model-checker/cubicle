@@ -18,13 +18,14 @@ module type I = sig
   type t
 
   val size : t -> int
-
   val maxrounds : int
+  val invariants : t -> t list
+  val gen_inv : ( t -> unit) -> t -> t list
 
   val safety : t -> unit
-  val pre : 
-    invariants : (t list) -> visited : t list -> t -> t list * t list
-  val gen_inv : ( t -> unit) -> t -> t list
+  val fixpoint : invariants : t list -> visited : t list -> t -> bool
+  val pre : t -> t list * t list
+
 end
 
 module type S = sig 

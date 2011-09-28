@@ -16,6 +16,22 @@ init (z) {
      Curcmd=Empty &&
      Exgntd = False }
 
+invariant (z) { Cache[z]=Exclusive && Exgntd = False }
+
+invariant (z) { Shrset[z]=False && Cache[z]<>Invalid }
+
+invariant (z) { Chan2[z] = Gnte && Exgntd = False }
+
+invariant (z) { Invset[z] = True && Shrset[z] = False }
+
+invariant (z) { Chan3[z] = Invack && Cache[z] <> Invalid }
+
+invariant (z) { Chan3[z] = Invack && Chan2[z] <> empty }
+
+invariant (z) { Chan2[z] <> Inv && Chan3[z] = Invack && Invset[n] = True }
+
+invariant (z) { Chan2[z] <> Inv &&  Chan3[z] = Invack && Shrset[z] = False }
+
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }
 
 transition send_req_shared(n)

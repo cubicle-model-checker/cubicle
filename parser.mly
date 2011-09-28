@@ -50,7 +50,7 @@ type_defs
 global_defs
 array_defs
 init
-invariant
+invariants
 unsafe
 transitions 
 { { elems = $1; 
@@ -118,9 +118,13 @@ INIT LEFTPAR lident_option RIGHTPAR LEFTBR cubes RIGHTBR
 { $3, $6 }
 ;
 
-invariant:
+invariants:
 | { [] }
-| INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cubes RIGHTBR { [$3, $6] }
+| invariant invariants { $1 :: $2 }
+;
+
+invariant:
+| INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cubes RIGHTBR { $3, $6 }
 ;
 
 

@@ -43,13 +43,13 @@ module type I = sig
   type t
 
   val size : t -> int
-
   val maxrounds : int
+  val invariants : t -> t list
+  val gen_inv : ( t -> unit) -> t -> t list
 
   val safety : t -> unit
-  val pre : 
-    invariants:(t list) -> visited: t list -> t -> t list * t list
-  val gen_inv : ( t -> unit) -> t -> t list
+  val fixpoint : invariants : t list -> visited : t list -> t -> bool
+  val pre : t -> t list * t list
 end
 
 module type S = sig 
@@ -68,9 +68,9 @@ module DFS ( X : I ) = struct
       Profiling.incr_visited ();
       Profiling.print (sprintf "[DFS]Number of processes : %d" (X.size s));
       X.safety s;
-      let ls, post = X.pre ~invariants:[] ~visited:visited s in
-      let visited = if ls<>[] || post<>[] then s::visited else visited in
-      List.iter (search_rec (cpt+1) visited) (ls@post)
+      if not (X.fixpoint ~invariants:[] ~visited:visited s) then
+	let ls, post = X.pre s in
+	List.iter (search_rec (cpt+1) (s::visited)) (ls@post)
     in 
     search_rec 0 [] s
 
@@ -87,10 +87,12 @@ module DFSL ( X : I ) = struct
       Profiling.incr_visited ();
       Profiling.print (sprintf "Number of processes : %d" (X.size s));
       X.safety s;
-      let ls, post = X.pre ~invariants:[] ~visited:!visited s in
-(*      if ls <> [] || post <> [] then visited := s :: (ls @ post @ !visited);*)
-      visited := s :: !visited;
-      List.iter (search_rec (cpt+1)) (ls@post)
+      if not (X.fixpoint ~invariants:[] ~visited:!visited s) then
+	begin
+	  let ls, post = X.pre s in
+	  visited := s :: !visited;
+	  List.iter (search_rec (cpt+1)) (ls@post)
+	end
     in
     search_rec 0 s;
     eprintf "[DFSL]"; 
@@ -130,10 +132,13 @@ module DFSH ( X : I ) = struct
 	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
 	if cpt = maxrounds then raise ReachBound;
 	X.safety s;
-	let ls, post = X.pre ~invariants:[] ~visited:visited s in
-	let visited = if ls<>[] || post<>[] then s::visited else visited in
-	let l = List.map (fun s' -> cpt+1, s', visited) (ls@post) in
-	search_rec (H.add h l)
+	let  h = 
+	  if X.fixpoint ~invariants:[] ~visited:visited s then h else
+	    let ls, post = X.pre s in
+	    let l = List.map (fun s' -> cpt+1, s', s::visited) (ls@post) in
+	    (H.add h l)
+	in 
+	search_rec h 
       with Heap.EmptyHeap -> ()
     in
     search_rec (H.add H.empty [0, s, []]);
@@ -168,7 +173,7 @@ module DFSHL ( X : I ) = struct
   let search s =
     let visited = ref [] in
     let postponed = ref [] in
-    let invariants = ref [] in
+    let invariants = ref (X.invariants s) in
     let rec search_rec h =
       try 
 	let (cpt, s), h = H.pop h in
@@ -177,13 +182,21 @@ module DFSHL ( X : I ) = struct
 	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
 	if cpt = maxrounds then raise ReachBound;
 	X.safety s;
-	let ls, post = X.pre ~invariants:!invariants ~visited:!visited s in
-	if gen_inv && X.size s < 3 && ls <> [] then 
-	  invariants := (X.gen_inv Search.search s) @ !invariants;
-	if ls <> [] || post <> [] then visited := s:: !visited(*(ls @ post @ !visited)*);
-	postponed := post @ !postponed;
-	let ls = List.map (fun s' -> cpt+1, s') ls in
-	search_rec (H.add h ls)
+	let h  =
+	  if X.fixpoint 
+	    ~invariants:!invariants ~visited: (!postponed @ !visited) s then h
+	  else
+	    begin
+	      let ls, post = X.pre s in
+	      if gen_inv && X.size s < 3 && ls <> [] then 
+		invariants := (X.gen_inv Search.search s) @ !invariants;
+	      visited := s:: !visited (*(ls @ post @ !visited)*);
+	      postponed := post @ !postponed;
+	      let ls = List.map (fun s' -> cpt+1, s') ls in
+	      (H.add h ls)
+	    end
+	    in
+	    search_rec h
       with Heap.EmptyHeap -> 
 	if !postponed = [] then ()
 	else 
@@ -194,10 +207,10 @@ module DFSHL ( X : I ) = struct
 	    postponed := [];
 	    search_rec (H.add H.empty l)
 	  end
-    in
-    let h = H.add H.empty [0, s] in 
-    search_rec h;
-    Profiling.print_visited ()
+	in
+	let h = H.add H.empty [0, s] in 
+	search_rec h;
+	Profiling.print_visited ()
 
 end
 
@@ -208,6 +221,7 @@ module BFS ( X : I ) = struct
   let search s = 
     let visited = ref [] in
     let postpones = ref [] in
+    let invariants = X.invariants s in
     let q = Queue.create () in
     let rec search_rec () =
       try 
@@ -215,10 +229,13 @@ module BFS ( X : I ) = struct
 	Profiling.incr_visited ();
 	Profiling.print (sprintf "Number of processes : %d" (X.size s));
 	X.safety s;
-	let ls, post = X.pre ~invariants:[] ~visited:!visited s in
-	if ls <> [] || post <> [] then visited := s :: (ls @ post @ !visited);
-	postpones := post @ !postpones;
-	List.iter (fun s -> Queue.add s q) ls;
+	if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
+	  begin
+	    let ls, post = X.pre s in
+	    visited := s :: !visited;
+	    postpones := post @ !postpones;
+	    List.iter (fun s -> Queue.add s q) ls
+	  end;
 	search_rec ()
       with Queue.Empty -> 
 	if !postpones = [] then ()

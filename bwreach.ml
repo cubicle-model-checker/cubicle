@@ -421,37 +421,33 @@ let possible_imply s np p =
 let check_fixpoint s visited np = 
   (* let cpt = ref 0 in *)
   (* let fix =  *)
-  SAtom.mem False np
-  || inconsistent np
-  ||
-    List.exists
+  List.exists
     (fun { t_unsafe = (args, p); t_env = env } ->
-      incr cpt;
-      (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
-      ||
-	let p = alpha_atoms p in
-	let args = args_of_atoms p in
-	let nargs = args_of_atoms np in
-	( List.length args <= List.length nargs &&
-	    (* let d = all_permutations args nargs in *)
-	    (* eprintf "len:%d@." (List.length d); *)
-	    let d = relevant_permutations env p np args nargs in
-	    (* eprintf "d2:%d\n@." (List.length d); *)
-	    List.exists 
-	      (fun ss ->
-		let pp = 
-		  List.fold_left 
-		    (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
-		SAtom.subset pp np 
-		||
-		  ((possible_imply s np pp) && (not (inconsistent pp)) &&
-		      let f = Prover.extended_fixpoint s nargs ss np pp in
-		      let res = smt_fixpoint_check f in
-		      (* if not res then *)
-		      (*   eprintf "not a fixpoint : %a -> %a\n@." *)
-		      (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
-		      res
-		  )  ) d)
+       (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
+       ||
+	 let p = alpha_atoms p in
+	 let args = args_of_atoms p in
+	 let nargs = args_of_atoms np in
+	 ( List.length args <= List.length nargs &&
+	     (* let d = all_permutations args nargs in *)
+	     (* eprintf "len:%d@." (List.length d); *)
+	     let d = relevant_permutations env p np args nargs in
+	     (* eprintf "d2:%d\n@." (List.length d); *)
+	     List.exists 
+	       (fun ss ->
+		  let pp = 
+		    List.fold_left 
+		      (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
+		  SAtom.subset pp np 
+		  ||
+		    ((possible_imply s np pp) && (not (inconsistent pp)) &&
+		       let f = Prover.extended_fixpoint s nargs ss np pp in
+		       let res = smt_fixpoint_check f in
+		       (* if not res then *)
+		       (*   eprintf "not a fixpoint : %a -> %a\n@." *)
+		       (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
+		       res
+		    )  ) d)
     ) visited
   (* in *)
   (* if fix then eprintf "\t\t\t\tFixpoint after %d checks / %d@." *)
@@ -536,21 +532,26 @@ let uguard args = function
       List.fold_left 
 	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty args
 
-let make_cubes (ls, post) invariants visited (args, rargs) 
+let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) = 
+  SAtom.mem False np
+  || inconsistent np
+  || is_fixpoint s invariants np 
+  || is_fixpoint s visited np
+
+let make_cubes (ls, post) (args, rargs) 
     ({ t_unsafe = (_, p); t_env=env } as s) tr np = 
   let ureq = uguard rargs tr.tr_ureq in
   let cube acc sigma = 
     let ureq = subst_atoms sigma ureq in
     let lnp = simplify_atoms env (subst_atoms sigma np) in
     List.fold_left
-      (fun ((ls, post) as acc) np ->
+      (fun (ls, post) np ->
 	 let np, (nargs, _) = proper_cube np in
 	 let np = SAtom.union ureq np in 
+	 let nargs = args_of_atoms np in
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
-	 if inconsistent np then acc 
-	 else if gen_inv && is_fixpoint s invariants np then acc
-	 else if is_fixpoint s (s::(ls@visited)) np then acc
-	 else if postpone args p np then 
+	 if inconsistent np then (ls, post) 
+	 else if not (SAtom.is_empty ureq) || postpone args p np then 
 	   ls, { s with t_unsafe = nargs, np }::post
 	 else { s with t_unsafe = nargs, np } :: ls, post ) acc lnp
   in
@@ -602,13 +603,13 @@ let pre tr unsafe =
 (* Pre-image of a system s : computing the cubes gives a list of new
    systems *)
 
-let pre_system invariants visited ({ t_unsafe = _, u; t_trans = trs} as s) = 
+let pre_system ({ t_unsafe = _, u; t_trans = trs} as s) = 
   let ls, post = 
     List.fold_left
     (fun acc tr -> 
        let s = { s with t_from = tr.tr_name } in
        let tr, pre_u, info_args = pre tr u in
-       make_cubes acc invariants visited info_args s tr pre_u) 
+       make_cubes acc info_args s tr pre_u) 
     ([], []) 
     trs 
   in
@@ -669,11 +670,15 @@ let gen_inv search s =
 module T = struct
   type t = t_system
 
+  let invariants s = List.map (fun i -> { s with t_unsafe = i }) s.t_invs
   let size s = List.length (fst s.t_unsafe)
   let maxrounds = 100
-  let safety = check_safety
-  let pre ~invariants ~visited = pre_system invariants visited
   let gen_inv = gen_inv
+
+  let fixpoint = fixpoint
+  let safety = check_safety
+  let pre = pre_system
+
 end
 
 module StratDFS = Search.DFS(T)
