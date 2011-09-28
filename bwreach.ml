@@ -224,28 +224,46 @@ let make_tau tr x op y =
 	assert false
 
 
-let inconsistent sa = 
+let assoc_neq t1 l t2 =
+  try List.assoc t1 l <> t2 with Not_found -> false
+
+let assoc_eq t1 l t2 =
+  try List.assoc t1 l = t2 with Not_found -> false
+
+let inconsistent env sa = 
   let l = SAtom.elements sa in
-  let rec check eqs neqs = function
+  let rec check values eqs neqs = function
     | [] -> ()
-    | True :: l -> check eqs neqs l
+    | True :: l -> check values eqs neqs l
     | False :: _ -> raise Exit
-    | Comp (t1, Eq, t2) :: l -> 
-	(try if List.assoc t1 eqs <> t2 || List.assoc t2 eqs <> t1
-	    || List.assoc t1 neqs = t2 || List.assoc t2 neqs = t1
-	  then raise Exit; check eqs neqs l
-	with Not_found -> check ((t1, t2)::(t2, t1)::eqs) neqs l)
-    | Comp (t1, Neq, t2) :: l -> 
-	(try if List.assoc t1 eqs = t2 || List.assoc t2 eqs = t1
-	  then raise Exit; check eqs neqs l
-	with Not_found -> check eqs ((t1, t2)::(t2, t1)::neqs) l)
-    | _ :: l -> check eqs neqs l
+    | Comp (t1, Eq, (Elem x as t2)) :: l 
+    | Comp ((Elem x as t2), Eq, t1) :: l ->
+      let s = try let s, _, _ = Hashtbl.find env x in s with Not_found -> Var in
+      (match s with
+	| Var | Constr ->
+	  if assoc_neq t1 values t2 
+	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  then raise Exit
+	  else check ((t1, t2)::values) eqs neqs l
+	| _ ->
+	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  then raise Exit
+	  else check values ((t1, t2)::eqs) neqs l)
+    | Comp (t1, Eq, t2) :: l ->
+      if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+      then raise Exit
+      else check values ((t1, t2)::eqs) neqs l
+    | Comp (t1, Neq, t2) :: l ->
+      if assoc_eq t1 values t2 || assoc_eq t1 values t2 
+	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+      then raise Exit
+      else check values eqs ((t1, t2)::(t2, t1)::neqs) l
+    | _ :: l -> check values eqs neqs l
   in
-  try check [] []l; false with Exit -> true
+  try check [] [] []l; false with Exit -> true
 
-
-let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa } =
-  inconsistent (SAtom.union inisa unsa)
+let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa; t_env = env } =
+  inconsistent env (SAtom.union inisa unsa)
 
 let check_safety s = 
   Debug.unsafe s;
@@ -440,7 +458,8 @@ let check_fixpoint s visited np =
 		      (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
 		  SAtom.subset pp np 
 		  ||
-		    ((possible_imply s np pp) && (not (inconsistent pp)) &&
+		    ((possible_imply s np pp) && 
+		      (not (inconsistent s.t_env pp)) &&
 		       let f = Prover.extended_fixpoint s nargs ss np pp in
 		       let res = smt_fixpoint_check f in
 		       (* if not res then *)
@@ -532,26 +551,27 @@ let uguard args = function
       List.fold_left 
 	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty args
 
-let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) = 
+let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) = 
   SAtom.mem False np
-  || inconsistent np
+  || inconsistent env np
   || is_fixpoint s invariants np 
   || is_fixpoint s visited np
 
 let make_cubes (ls, post) (args, rargs) 
     ({ t_unsafe = (_, p); t_env=env } as s) tr np = 
-  let ureq = uguard rargs tr.tr_ureq in
+  (* let ureq = uguard rargs tr.tr_ureq in *)
   let cube acc sigma = 
-    let ureq = subst_atoms sigma ureq in
+    (* let ureq = subst_atoms sigma ureq in *)
     let lnp = simplify_atoms env (subst_atoms sigma np) in
     List.fold_left
       (fun (ls, post) np ->
 	 let np, (nargs, _) = proper_cube np in
+	 let ureq = uguard nargs tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
-	 let nargs = args_of_atoms np in
+	 (* let nargs = args_of_atoms np in *)
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
-	 if inconsistent np then (ls, post) 
-	 else if not (SAtom.is_empty ureq) || postpone args p np then 
+	 if inconsistent s.t_env np then (ls, post) 
+	 else if (* not (SAtom.is_empty ureq) || *) postpone args p np then 
 	   ls, { s with t_unsafe = nargs, np }::post
 	 else { s with t_unsafe = nargs, np } :: ls, post ) acc lnp
   in

@@ -85,7 +85,7 @@ module DFSL ( X : I ) = struct
     let rec search_rec cpt s = 
       if cpt = X.maxrounds then raise ReachBound;
       Profiling.incr_visited ();
-      Profiling.print (sprintf "Number of processes : %d" (X.size s));
+      Profiling.print (sprintf "(%d) Number of processes : %d" cpt (X.size s));
       X.safety s;
       if not (X.fixpoint ~invariants:[] ~visited:!visited s) then
 	begin
@@ -190,7 +190,7 @@ module DFSHL ( X : I ) = struct
 	      let ls, post = X.pre s in
 	      if gen_inv && X.size s < 3 && ls <> [] then 
 		invariants := (X.gen_inv Search.search s) @ !invariants;
-	      visited := s:: !visited (*(ls @ post @ !visited)*);
+	      visited := s :: !visited (*(ls @ post @ !visited)*);
 	      postponed := post @ !postponed;
 	      let ls = List.map (fun s' -> cpt+1, s') ls in
 	      (H.add h ls)
