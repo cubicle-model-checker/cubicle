@@ -13,6 +13,7 @@
 (* Backward reachability search strategies *)
 
 exception ReachBound
+exception FixpointSMT
 
 module type I = sig
   type t

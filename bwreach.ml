@@ -97,7 +97,25 @@ let print_magic fmt ss =
 (* simplify comparison atoms, according to the assumption that
    variables are all disctincts *)
 
-let simplify_comp env i op j = 
+
+let redondant env others = function
+  | True -> true
+  | Comp (t1, Neq, (Elem x as t2))
+  | Comp ((Elem x as t2), Neq, t1) ->
+    let s = try let s, _, _ = Hashtbl.find env x in s with Not_found -> Var in
+    (match s with
+      | Var | Constr ->
+	(try 
+	   (SAtom.iter (function 
+	     | Comp (t1', Eq, t2') 
+		 when (t1' = t1 && t2' <> t2) || (t1' <> t1 && t2' = t2) ->
+	       raise Exit
+	     | _ -> ()) others); false
+	 with Exit -> true)
+      | _ -> false)
+  | _ -> false
+
+let simplify_comp env i op j =  
   let si = try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
   let sj = try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
   match op, (si, sj) with
@@ -107,8 +125,9 @@ let simplify_comp env i op j =
     | Lt, _ when i=j -> False
     | _ -> Comp (Elem i, op, Elem j)
 
-let rec simplification np env a = 
-  match a with
+let rec simplification np env a =
+  if redondant env (SAtom.remove a np) a then True
+  else match a with
     | True | False -> a 
     | Comp (Elem i, op , Elem j) -> simplify_comp env i op j
     | Comp (Arith (i, opai, xi), op, (Arith (j, opaj, xj)))
@@ -254,7 +273,7 @@ let inconsistent env sa =
       then raise Exit
       else check values ((t1, t2)::eqs) neqs l
     | Comp (t1, Neq, t2) :: l ->
-      if assoc_eq t1 values t2 || assoc_eq t1 values t2 
+      if assoc_eq t1 values t2 || assoc_eq t2 values t1
 	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
       then raise Exit
       else check values eqs ((t1, t2)::(t2, t1)::neqs) l
@@ -435,12 +454,13 @@ let relevant_permutations env p np l1 l2 =
 
 let possible_imply s np p =
   SS.subset (magic_number s p) (magic_number s np)  
-    
+
 let check_fixpoint s visited np = 
   (* let cpt = ref 0 in *)
-  (* let fix =  *)
+  (* let fix = *)
   List.exists
     (fun { t_unsafe = (args, p); t_env = env } ->
+       (* incr cpt; *)
        (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
        ||
 	 let p = alpha_atoms p in
@@ -465,7 +485,7 @@ let check_fixpoint s visited np =
 		       (* if not res then *)
 		       (*   eprintf "not a fixpoint : %a -> %a\n@." *)
 		       (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
-		       res
+		       if res then raise Search.FixpointSMT else false
 		    )  ) d)
     ) visited
   (* in *)
@@ -495,9 +515,16 @@ let neg x op y =
     | Neq -> Comp (x, Eq, y)
 
 let simplification_atoms base env sa = 
-  SAtom.fold (fun a base -> add (simplification base env a) base)
-    sa SAtom.empty
-
+  try 
+    SAtom.fold (fun a base ->
+      let na = simplification base env a in
+      match na with
+	| True -> base
+	| False -> raise Exit
+	| _ -> add na base)
+      sa SAtom.empty
+  with Exit -> SAtom.singleton False
+      
 let rec break a =
   match a with
     | True | False | Comp _ -> [SAtom.singleton a]

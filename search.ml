@@ -14,6 +14,7 @@ open Options
 open Format
 
 exception ReachBound
+exception FixpointSMT
 
 module Profiling = struct
   
@@ -87,7 +88,11 @@ module DFSL ( X : I ) = struct
       Profiling.incr_visited ();
       Profiling.print (sprintf "(%d) Number of processes : %d" cpt (X.size s));
       X.safety s;
-      if not (X.fixpoint ~invariants:[] ~visited:!visited s) then
+      if not 
+	(try 
+	   X.fixpoint ~invariants:[] ~visited:!visited s
+	 with FixpointSMT -> visited := s :: !visited; true)
+      then
 	begin
 	  let ls, post = X.pre s in
 	  visited := s :: !visited;
@@ -175,7 +180,7 @@ module DFSHL ( X : I ) = struct
     let postponed = ref [] in
     let invariants = ref (X.invariants s) in
     let rec search_rec h =
-      try 
+      try
 	let (cpt, s), h = H.pop h in
 	Profiling.incr_visited ();
 	Profiling.print 
@@ -183,8 +188,11 @@ module DFSHL ( X : I ) = struct
 	if cpt = maxrounds then raise ReachBound;
 	X.safety s;
 	let h  =
-	  if X.fixpoint 
-	    ~invariants:!invariants ~visited: (!postponed @ !visited) s then h
+	  if (try 
+		X.fixpoint 
+		  ~invariants:!invariants ~visited: (!postponed @ !visited) s
+	    with FixpointSMT -> visited := s :: !visited; true)
+	  then h
 	  else
 	    begin
 	      let ls, post = X.pre s in
@@ -195,8 +203,8 @@ module DFSHL ( X : I ) = struct
 	      let ls = List.map (fun s' -> cpt+1, s') ls in
 	      (H.add h ls)
 	    end
-	    in
-	    search_rec h
+	in
+	search_rec h
       with Heap.EmptyHeap -> 
 	if !postponed = [] then ()
 	else 
@@ -229,7 +237,10 @@ module BFS ( X : I ) = struct
 	Profiling.incr_visited ();
 	Profiling.print (sprintf "Number of processes : %d" (X.size s));
 	X.safety s;
-	if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
+	if not 
+	  (try
+	     X.fixpoint ~invariants:invariants ~visited:!visited s
+	   with FixpointSMT -> visited := s :: !visited; true) then
 	  begin
 	    let ls, post = X.pre s in
 	    visited := s :: !visited;
