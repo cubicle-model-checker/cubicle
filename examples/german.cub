@@ -32,9 +32,12 @@ invariant (z) { Chan2[z] <> Inv && Chan3[z] = Invack && Invset[n] = True }
 
 invariant (z) { Chan2[z] <> Inv &&  Chan3[z] = Invack && Shrset[z] = False }
 
+(*
 invariant (z) { Chan1[z] <> Empty && Chan1[z] <> Reqs && Chan1[z] <> Reqe }
 
-invariant (z) { Chan2[z] <> Empty && Chan2[z] <> Inv && Chan2[z] <> Gnts && Chan2[z] <> Gnte  }
+invariant (z) { Chan2[z] <> Empty && Chan2[z] <> Inv && 
+	        Chan2[z] <> Gnts && Chan2[z] <> Gnte  }
+*)
 
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }*)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }
