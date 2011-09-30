@@ -73,7 +73,7 @@ open AltErgo
 type sort = Glob | Arr | Constr | Var
 
 type t_system = {
-  t_from : string list;
+  t_from : (string * SAtom.t) list;
   t_env : (string, (sort * Ty.t * Term.t)) Hashtbl.t;
   t_init : string option * SAtom.t;
   t_invs : (string list * SAtom.t) list;

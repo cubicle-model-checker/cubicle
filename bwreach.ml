@@ -285,7 +285,7 @@ let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa; t_env = env } =
   inconsistent env (SAtom.union inisa unsa)
 
 let check_safety s = 
-  Debug.unsafe s;
+  (*Debug.unsafe s;*)
   try
     if not (obviously_safe s) then
       let f = Prover.unsafe s in
@@ -651,10 +651,11 @@ let pre tr unsafe =
    systems *)
 
 let pre_system ({ t_unsafe = _, u; t_trans = trs} as s) = 
+  Debug.unsafe s;
   let ls, post = 
     List.fold_left
     (fun acc tr -> 
-       let s = { s with t_from = tr.tr_name::s.t_from } in
+       let s = { s with t_from = (tr.tr_name, snd s.t_unsafe)::s.t_from } in
        let tr, pre_u, info_args = pre tr u in
        make_cubes acc info_args s tr pre_u) 
     ([], []) 

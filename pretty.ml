@@ -58,6 +58,9 @@ let print_system fmt s =
 	       AE.Term.print g AE.Term.print e ) 
     s.t_init;*)
   fprintf fmt "  Unsafe property (from %a):@.%a@."
-    (fun fmt -> List.iter (fprintf fmt "%s, ")) s.t_from
+    (fun fmt -> 
+       fprintf fmt "*** %d : \n" (List.length s.t_from);
+       List.iter (fun (l, f) -> 
+		    fprintf fmt " [%s : %a], " l print_unsafe f)) s.t_from
     print_unsafe (snd s.t_unsafe)
 

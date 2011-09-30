@@ -93,7 +93,8 @@ module DFSL ( X : I ) = struct
     let rec search_rec cpt s = 
       if cpt = X.maxrounds then raise ReachBound;
       Profiling.incr_visited ();
-      Profiling.print (sprintf "(%d) Number of processes : %d" cpt (X.size s));
+      Profiling.print 
+	(sprintf "DFSL : (%d) Number of processes : %d" cpt (X.size s));
       X.safety s;
       if not 
 	(try 
@@ -159,78 +160,6 @@ module DFSH ( X : I ) = struct
 end
 
 
-module DFSHL ( X : I ) = struct
-
-  type t = X.t
-
-  module S = struct 
-    type g = t
-    type t = int * g
-
-    let compare (l1, s1) (l2, s2) = 
-      let v1 = X.size s1 in
-      let v2 = X.size s2 in
-      if v1 <= 2 && v2 <= 2 then 
-	let c = Pervasives.compare l2 l1 in
-	if c<>0 then c else Pervasives.compare v1 v2
-      else 
-	let c = Pervasives.compare v1 v2 in
-	if c <> 0 then c else Pervasives.compare l2 l1
-  end
-
-  module Search = DFSL (X)
-
-  module H = Heap.Make(S)
-
-  let search s =
-    let visited = ref [] in
-    let postponed = ref [] in
-    let invariants = ref (X.invariants s) in
-    let rec search_rec h =
-      try
-	let (cpt, s), h = H.pop h in
-	Profiling.incr_visited ();
-	Profiling.print 
-	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
-	if cpt = maxrounds then raise ReachBound;
-	X.safety s;
-	let h  =
-	  if (try 
-		X.fixpoint 
-		  ~invariants:!invariants ~visited: (!visited @ !postponed) s
-	    with FixpointSMT -> (* visited := s :: !visited; *) true)
-	  then h
-	  else
-	    begin
-	      let ls, post = X.pre s in
-	      if gen_inv && X.size s < 3 && ls <> [] then 
-		invariants := (X.gen_inv Search.search s) @ !invariants;
-	      visited := s :: !visited (*(ls @ post @ !visited)*);
-	      postponed := post @ !postponed;
-	      let ls = List.map (fun s' -> cpt+1, s') ls in
-	      (H.add h ls)
-	    end
-	in
-	search_rec h
-      with Heap.EmptyHeap -> 
-	if !postponed = [] then ()
-	else 
-	  begin
-	    Profiling.print 
-	      (sprintf "Postpones : %d@." (List.length !postponed));
-	    let l = List.map (fun s -> 0,s) !postponed in
-	    postponed := [];
-	    search_rec (H.add H.empty l)
-	  end
-	in
-	let h = H.add H.empty [0, s] in 
-	search_rec h;
-	Profiling.print_visited ()(* ; *)
-	(* Profiling.print_states !visited X.print *)
-	
-
-end
-
 module BFS ( X : I ) = struct
 
   type t = X.t
@@ -243,7 +172,7 @@ module BFS ( X : I ) = struct
     let rec search_rec () =
       try 
 	let s = Queue.take q in
-	Profiling.incr_visited ();
+	(*Profiling.incr_visited ();*)
 	Profiling.print (sprintf "Number of processes : %d" (X.size s));
 	X.safety s;
 	if not 
@@ -273,3 +202,87 @@ module BFS ( X : I ) = struct
     Profiling.print_visited ()
 
 end
+
+
+module DFSHL ( X : I ) = struct
+
+  type t = X.t
+
+  module S = struct 
+    type g = t
+    type t = int * g
+
+    let compare (l1, s1) (l2, s2) = 
+      let v1 = X.size s1 in
+      let v2 = X.size s2 in
+      if v1 <= 2 && v2 <= 2 then 
+	let c = Pervasives.compare l2 l1 in
+	if c<>0 then c else Pervasives.compare v1 v2
+      else 
+	let c = Pervasives.compare v1 v2 in
+	if c <> 0 then c else Pervasives.compare l2 l1
+  end
+
+  module Search = BFS (X)
+
+  module H = Heap.Make(S)
+
+  let search s =
+    let visited = ref [] in
+    let postponed = ref [] in
+    let invariants = ref (X.invariants s) in
+    let rec search_rec h =
+      try
+	let (cpt, s), h = H.pop h in
+	Profiling.incr_visited ();
+	Profiling.print 
+	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
+	if cpt = maxrounds then raise ReachBound;
+	X.safety s;
+	let h  =
+	  if (try 
+		X.fixpoint 
+		  ~invariants:!invariants ~visited: (!visited @ !postponed) s
+	    with FixpointSMT -> (* visited := s :: !visited; *) true)
+	  then h
+	  else
+	    begin
+	      let ls, post = X.pre s in
+	      let inv = 
+		if gen_inv && post <> [] then 
+		  begin
+		    eprintf "On cherche un invariant@.";
+		    X.gen_inv Search.search s
+		  end
+		else []
+	      in
+	      invariants :=  inv @ !invariants;
+	      visited := s :: !visited (*(ls @ post @ !visited)*);
+	      postponed := post @ !postponed;
+	      if inv = [] then
+		let ls = List.map (fun s' -> cpt+1, s') ls in
+		(H.add h ls)
+	      else 
+		h
+	    end
+	in
+	search_rec h
+      with Heap.EmptyHeap -> 
+	if !postponed = [] then ()
+	else 
+	  begin
+	    Profiling.print 
+	      (sprintf "Postpones : %d@." (List.length !postponed));
+	    let l = List.map (fun s -> 0, s) !postponed in
+	    postponed := [];
+	    search_rec (H.add H.empty l)
+	  end
+	in
+	let h = H.add H.empty [0, s] in 
+	search_rec h;
+	Profiling.print_visited ()(* ; *)
+	(* Profiling.print_states !visited X.print *)
+	
+
+end
+
