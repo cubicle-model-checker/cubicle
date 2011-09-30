@@ -598,7 +598,7 @@ let make_cubes (ls, post) (args, rargs)
 	 (* let nargs = args_of_atoms np in *)
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
 	 if inconsistent s.t_env np then (ls, post) 
-	 else if (* not (SAtom.is_empty ureq) || *) postpone args p np then 
+	 else if not (SAtom.is_empty ureq) || postpone args p np then 
 	   ls, { s with t_unsafe = nargs, np }::post
 	 else { s with t_unsafe = nargs, np } :: ls, post ) acc lnp
   in
@@ -654,7 +654,7 @@ let pre_system ({ t_unsafe = _, u; t_trans = trs} as s) =
   let ls, post = 
     List.fold_left
     (fun acc tr -> 
-       let s = { s with t_from = tr.tr_name } in
+       let s = { s with t_from = tr.tr_name::s.t_from } in
        let tr, pre_u, info_args = pre tr u in
        make_cubes acc info_args s tr pre_u) 
     ([], []) 
@@ -725,7 +725,7 @@ module T = struct
   let fixpoint = fixpoint
   let safety = check_safety
   let pre = pre_system
-
+  let print = Pretty.print_system
 end
 
 module StratDFS = Search.DFS(T)

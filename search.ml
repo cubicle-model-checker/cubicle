@@ -34,6 +34,11 @@ module Profiling = struct
     if not profiling then fun () -> ()
     else fun () -> eprintf "Number of visited nodes : %d@." !cpt_visited
 
+  let print_states st pr = 
+    if not profiling then ()
+    else List.iter
+      (eprintf "%a@." pr) st
+
   let print = 
     if not profiling then fun _ -> ()
     else fun s -> eprintf "%s@." s
@@ -50,7 +55,9 @@ module type I = sig
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
-  val pre : t -> t list * t list
+  val pre : t -> t list * t list  
+  val print : formatter -> t -> unit
+
 end
 
 module type S = sig 
@@ -190,8 +197,8 @@ module DFSHL ( X : I ) = struct
 	let h  =
 	  if (try 
 		X.fixpoint 
-		  ~invariants:!invariants ~visited: (!postponed @ !visited) s
-	    with FixpointSMT -> visited := s :: !visited; true)
+		  ~invariants:!invariants ~visited: (!visited @ !postponed) s
+	    with FixpointSMT -> (* visited := s :: !visited; *) true)
 	  then h
 	  else
 	    begin
@@ -218,7 +225,9 @@ module DFSHL ( X : I ) = struct
 	in
 	let h = H.add H.empty [0, s] in 
 	search_rec h;
-	Profiling.print_visited ()
+	Profiling.print_visited ()(* ; *)
+	(* Profiling.print_states !visited X.print *)
+	
 
 end
 
@@ -240,7 +249,7 @@ module BFS ( X : I ) = struct
 	if not 
 	  (try
 	     X.fixpoint ~invariants:invariants ~visited:!visited s
-	   with FixpointSMT -> visited := s :: !visited; true) then
+	   with FixpointSMT -> (* visited := s :: !visited; *) true) then
 	  begin
 	    let ls, post = X.pre s in
 	    visited := s :: !visited;

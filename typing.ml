@@ -239,7 +239,7 @@ let system s =
   init s.init;
   unsafe s.unsafe;
   transitions s.trans;
-  { t_from = "";
+  { t_from = [];
     t_env = Env.env;
     t_init = s.init;
     t_invs = s.invs;

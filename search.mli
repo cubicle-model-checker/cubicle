@@ -26,6 +26,7 @@ module type I = sig
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
   val pre : t -> t list * t list
+  val print : Format.formatter -> t -> unit
 
 end
 
