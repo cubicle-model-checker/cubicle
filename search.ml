@@ -143,7 +143,7 @@ module DFSH ( X : I ) = struct
 	Profiling.incr_visited ();
 	Profiling.print 
 	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
-	if cpt = maxrounds then raise ReachBound;
+	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	let  h = 
 	  if X.fixpoint ~invariants:[] ~visited:visited s then h else
@@ -171,9 +171,11 @@ module BFS ( X : I ) = struct
     let q = Queue.create () in
     let rec search_rec () =
       try 
-	let s = Queue.take q in
-	(*Profiling.incr_visited ();*)
-	Profiling.print (sprintf "Number of processes : %d" (X.size s));
+	let cpt, s = Queue.take q in
+	(* Profiling.incr_visited (); *)
+	Profiling.print 
+	  (sprintf "[BFS %d] Number of processes : %d" cpt (X.size s));
+	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	if not 
 	  (try
@@ -183,7 +185,7 @@ module BFS ( X : I ) = struct
 	    let ls, post = X.pre s in
 	    visited := s :: !visited;
 	    postpones := post @ !postpones;
-	    List.iter (fun s -> Queue.add s q) ls
+	    List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	  end;
 	search_rec ()
       with Queue.Empty -> 
@@ -192,13 +194,13 @@ module BFS ( X : I ) = struct
 	  begin
 	    Profiling.print 
 	      (sprintf "Postpones : %d@." (List.length !postpones));
-	    List.iter (fun s -> Queue.add s q) !postpones;
+	    List.iter (fun s -> Queue.add (0, s) q) !postpones;
 	    postpones := [];
 	    search_rec ()
 	  end
 
     in
-    Queue.add s q; search_rec ();
+    Queue.add (0, s) q; search_rec ();
     Profiling.print_visited ()
 
 end
@@ -223,7 +225,7 @@ module DFSHL ( X : I ) = struct
 	if c <> 0 then c else Pervasives.compare l2 l1
   end
 
-  module Search = BFS (X)
+  module Search = BFS (struct include X let maxrounds = 5 end)
 
   module H = Heap.Make(S)
 
@@ -237,7 +239,7 @@ module DFSHL ( X : I ) = struct
 	Profiling.incr_visited ();
 	Profiling.print 
 	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
-	if cpt = maxrounds then raise ReachBound;
+	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	let h  =
 	  if (try 

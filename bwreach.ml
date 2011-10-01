@@ -685,7 +685,7 @@ let same_number env z = function
   | Elem s | Access (_, s) | Arith (s, _, _) -> 
       s = z || 
   let v = try let v, _, _ = Hashtbl.find env s in v with Not_found -> Var in
-  v = Glob || v = Constr
+  (* v = Glob || *) v = Constr
 
 let rec contains_only env z = function
   | True | False -> true
@@ -698,7 +698,8 @@ let partition ({ t_unsafe = (args, sa) } as s) =
   List.fold_left 
     (fun l z -> 
        let sa', _ = SAtom.partition (contains_only s.t_env z) sa in
-       { s with t_unsafe = [z],sa'} :: l) 
+       if SAtom.cardinal sa' < 2 then l 
+       else { s with t_unsafe = [z],sa'} :: l)
     [] args
 
 let gen_inv search s = 
