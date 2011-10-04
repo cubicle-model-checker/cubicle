@@ -170,13 +170,14 @@ module BFS ( X : I ) = struct
     let rec search_rec () =
       try 
 	let cpt, s = Queue.take q in
-	Profiling.incr_visited ();
-	Profiling.print 
-	  (sprintf "[BFS %d] Number of processes : %d" cpt (X.size s));
 	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
 	  begin
+	    Profiling.incr_visited ();
+	    Profiling.print
+	      (sprintf "[BFS %d] Number of processes : %d" cpt (X.size s));
+	    (* eprintf " node %d= %a@." !Profiling.cpt_visited X.print s; *)
 	    let ls, post = X.pre s in
 	    visited := s :: !visited;
 	    postpones := post @ !postpones;
@@ -232,9 +233,6 @@ module DFSHL ( X : I ) = struct
     let rec search_rec h =
       try
 	let (cpt, s), h = H.pop h in
-	Profiling.incr_visited ();
-	Profiling.print 
-	  (sprintf "(%d) Number of processes : %d" cpt (X.size s));
 	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	let h  =
@@ -243,6 +241,9 @@ module DFSHL ( X : I ) = struct
 	  then h
 	  else
 	    begin
+	      Profiling.incr_visited ();
+	      Profiling.print 
+		(sprintf "(%d) Number of processes : %d" cpt (X.size s));
 	      let ls, post = X.pre s in
 	      let inv, not_invs = 
 		if gen_inv && post <> [] then 

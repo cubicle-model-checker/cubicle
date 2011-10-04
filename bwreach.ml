@@ -337,14 +337,17 @@ let proper_cube sa =
   for n = !cpt - 1 downto 1 do l := ("#"^(string_of_int n)) :: !l  done;
   sa, (!l, "#"^(string_of_int !cpt))
 
-let smt_fixpoint_check f = 
+let smt_fixpoint_check f =
   try
     let gf = { AE.Sat.f = f; age = 0; name = None; mf=false; gf=true} in
-    ignore (AE.Sat.unsat AE.Sat.empty gf);
+    let proof = AE.Sat.unsat AE.Sat.empty gf in
+    eprintf "%a@." AE.Explanation.print_proof proof;
     true
   with 
     | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
-    | AE.Sat.Unsat _ -> true
+    | AE.Sat.Unsat proof -> 
+      eprintf "%a@." AE.Explanation.print_proof proof;
+      true
 	
 let rec alpha_atoms np = 
   SAtom.fold (fun a -> add (alpha_atom a)) np SAtom.empty
@@ -460,33 +463,31 @@ let check_fixpoint s visited np =
   (* let fix = *)
   List.exists
     (fun { t_unsafe = (args, p); t_env = env } ->
-       (* incr cpt; *)
-       (let f = Prover.fixpoint s args np p in smt_fixpoint_check f )
-       ||
-	 let p = alpha_atoms p in
-	 let args = args_of_atoms p in
-	 let nargs = args_of_atoms np in
-	 ( List.length args <= List.length nargs &&
-	     (* let d = all_permutations args nargs in *)
-	     (* eprintf "len:%d@." (List.length d); *)
-	     let d = relevant_permutations env p np args nargs in
-	     (* eprintf "d2:%d\n@." (List.length d); *)
-	     List.exists 
-	       (fun ss ->
-		  let pp = 
-		    List.fold_left 
-		      (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
-		  SAtom.subset pp np 
-		  ||
-		    ((possible_imply s np pp) && 
-		      (not (inconsistent s.t_env pp)) &&
-		       let f = Prover.extended_fixpoint s nargs ss np pp in
-		       let res = smt_fixpoint_check f in
-		       (* if not res then *)
-		       (*   eprintf "not a fixpoint : %a -> %a\n@." *)
-		       (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
-		       res
-		    )  ) d)
+      (* incr cpt; *)
+      let p = alpha_atoms p in
+      let args = args_of_atoms p in
+      let nargs = args_of_atoms np in
+      ( List.length args <= List.length nargs &&
+	  (* let d = all_permutations args nargs in *)
+	  (* eprintf "len:%d@." (List.length d); *)
+	  let d = relevant_permutations env p np args nargs in
+	  (* eprintf "d2:%d\n@." (List.length d); *)
+	  List.exists 
+	    (fun ss ->
+	      let pp = 
+		List.fold_left 
+		  (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
+	      SAtom.subset pp np
+	      ||
+		((possible_imply s np pp) &&
+		    (not (inconsistent s.t_env pp)) &&
+		    let f = Prover.extended_fixpoint s nargs ss np pp in
+		    let res = smt_fixpoint_check f in
+		    (* if not res then *)
+		    (*   eprintf "not a fixpoint : %a -> %a\n@." *)
+		    (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
+		    res
+		)) d)
     ) visited
   (* in *)
   (* if fix then eprintf "\t\t\t\tFixpoint after %d checks / %d@." *)
@@ -661,7 +662,7 @@ let pre_system ({ t_unsafe = _, u; t_trans = trs} as s) =
     ([], []) 
     trs 
   in
-  Debug.fixpoint ls; ls, post
+  (* Debug.fixpoint ls;  *)ls, post
 
 (* Renames the parameters of the initial unsafe formula *)
 
@@ -737,7 +738,7 @@ module T = struct
   let fixpoint = fixpoint
   let safety = check_safety
   let pre = pre_system
-  let print = Pretty.print_system
+  let print = Pretty.print_node
 end
 
 module StratDFS = Search.DFS(T)

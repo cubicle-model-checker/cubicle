@@ -64,3 +64,6 @@ let print_system fmt s =
 		    fprintf fmt " [%s : %a], " l print_unsafe f)) s.t_from
     print_unsafe (snd s.t_unsafe)
 
+
+let print_node fmt s =
+  List.iter (fun (l, f) -> fprintf fmt "[%s]" l) s.t_from
