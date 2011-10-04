@@ -21,8 +21,9 @@ module type I = sig
   val size : t -> int
   val maxrounds : int
   val invariants : t -> t list
-  val gen_inv : ( t -> unit) -> t -> t list
-
+  val gen_inv :
+    (invariants : t list -> visited : t list -> t -> unit) -> 
+    invariants : t list -> t list -> t -> t list * t list
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
   val pre : t -> t list * t list
@@ -33,7 +34,7 @@ end
 module type S = sig 
   type t
 
-  val search : t -> unit
+  val search : invariants : t list -> visited : t list -> t -> unit
 
 end
 

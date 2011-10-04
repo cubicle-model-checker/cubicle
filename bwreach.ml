@@ -485,7 +485,7 @@ let check_fixpoint s visited np =
 		       (* if not res then *)
 		       (*   eprintf "not a fixpoint : %a -> %a\n@." *)
 		       (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
-		       if res then raise Search.FixpointSMT else false
+		       res
 		    )  ) d)
     ) visited
   (* in *)
@@ -702,16 +702,26 @@ let partition ({ t_unsafe = (args, sa) } as s) =
        else { s with t_unsafe = [z],sa'} :: l)
     [] args
 
-let gen_inv search s = 
+let impossible_inv { t_unsafe = (_, p) } not_invs =
+  List.exists (fun { t_unsafe = (_, ni) } -> SAtom.subset p ni) not_invs
+  
+
+let gen_inv search ~invariants not_invs s = 
   List.fold_left 
-    (fun invs p -> 
-       try 
-	 search p; 
-	 eprintf "Good! We found an invariant :-) \n %a @." 
-	   Pretty.print_system p;
-	 p::invs  
-       with | Unsafe | Search.ReachBound -> invs) 
-    [] (partition s)
+    (fun (invs, not_invs) p -> 
+       try
+	 let invariants = invs@invariants in
+	 (* if fixpoint ~invariants:invariants ~visited:[] p then invs  *)
+	 (* else *)
+	 if impossible_inv p not_invs then invs, not_invs
+	 else begin  
+	   search ~invariants:invariants ~visited:[] p; 
+	   eprintf "Good! We found an invariant :-) \n %a @." 
+	     Pretty.print_system p;
+	   p::invs, not_invs
+	 end
+       with | Unsafe | Search.ReachBound -> invs, p::not_invs) 
+    ([], not_invs) (partition s)
 
 
 (* ----------------- Search strategy selection -------------------*)
@@ -746,4 +756,4 @@ let search =
 
 let system s =  
   let s = init_parameters s in
-  search s
+  search ~invariants:(T.invariants s) ~visited:[] s

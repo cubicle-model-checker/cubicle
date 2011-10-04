@@ -51,7 +51,9 @@ module type I = sig
   val size : t -> int
   val maxrounds : int
   val invariants : t -> t list
-  val gen_inv : ( t -> unit) -> t -> t list
+  val gen_inv : 
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    invariants : t list -> t list -> t -> t list * t list
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
@@ -62,7 +64,7 @@ end
 
 module type S = sig 
   type t
-  val search : t -> unit
+  val search : invariants : t list -> visited : t list -> t -> unit
 end
 
 
@@ -70,13 +72,13 @@ module DFS ( X : I ) = struct
 
   type t = X.t
 
-  let search s =
+  let search ~invariants ~visited s =
     let rec search_rec cpt visited s =
       if cpt = X.maxrounds then raise ReachBound;
       Profiling.incr_visited ();
       Profiling.print (sprintf "[DFS]Number of processes : %d" (X.size s));
       X.safety s;
-      if not (X.fixpoint ~invariants:[] ~visited:visited s) then
+      if not (X.fixpoint ~invariants:invariants ~visited:visited s) then
 	let ls, post = X.pre s in
 	List.iter (search_rec (cpt+1) (s::visited)) (ls@post)
     in 
@@ -88,19 +90,15 @@ module DFSL ( X : I ) = struct
 
   type t = X.t
   
-  let search s =
-    let visited = ref [] in
+  let search ~invariants ~visited s =
+    let visited = ref visited in
     let rec search_rec cpt s = 
       if cpt = X.maxrounds then raise ReachBound;
       Profiling.incr_visited ();
       Profiling.print 
 	(sprintf "DFSL : (%d) Number of processes : %d" cpt (X.size s));
       X.safety s;
-      if not 
-	(try 
-	   X.fixpoint ~invariants:[] ~visited:!visited s
-	 with FixpointSMT -> visited := s :: !visited; true)
-      then
+      if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
 	begin
 	  let ls, post = X.pre s in
 	  visited := s :: !visited;
@@ -136,7 +134,7 @@ module DFSH ( X : I ) = struct
 
   module H = Heap.Make(S)
 
-  let search s =
+  let search ~invariants ~visited s =
     let rec search_rec h =
       try 
 	let (cpt, s, visited), h = H.pop h in
@@ -146,7 +144,7 @@ module DFSH ( X : I ) = struct
 	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	let  h = 
-	  if X.fixpoint ~invariants:[] ~visited:visited s then h else
+	  if X.fixpoint ~invariants:invariants ~visited:visited s then h else
 	    let ls, post = X.pre s in
 	    let l = List.map (fun s' -> cpt+1, s', s::visited) (ls@post) in
 	    (H.add h l)
@@ -154,7 +152,7 @@ module DFSH ( X : I ) = struct
 	search_rec h 
       with Heap.EmptyHeap -> ()
     in
-    search_rec (H.add H.empty [0, s, []]);
+    search_rec (H.add H.empty [0, s, visited]);
     Profiling.print_visited ()
 
 end
@@ -164,23 +162,20 @@ module BFS ( X : I ) = struct
 
   type t = X.t
 
-  let search s = 
-    let visited = ref [] in
+  let search ~invariants ~visited s = 
+    let visited = ref visited in
     let postpones = ref [] in
-    let invariants = X.invariants s in
+    (* let invariants = X.invariants s in *)
     let q = Queue.create () in
     let rec search_rec () =
       try 
 	let cpt, s = Queue.take q in
-	(* Profiling.incr_visited (); *)
+	Profiling.incr_visited ();
 	Profiling.print 
 	  (sprintf "[BFS %d] Number of processes : %d" cpt (X.size s));
 	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
-	if not 
-	  (try
-	     X.fixpoint ~invariants:invariants ~visited:!visited s
-	   with FixpointSMT -> (* visited := s :: !visited; *) true) then
+	if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
 	  begin
 	    let ls, post = X.pre s in
 	    visited := s :: !visited;
@@ -229,10 +224,11 @@ module DFSHL ( X : I ) = struct
 
   module H = Heap.Make(S)
 
-  let search s =
-    let visited = ref [] in
+  let search ~invariants ~visited s =
+    let visited = ref visited in
     let postponed = ref [] in
-    let invariants = ref (X.invariants s) in
+    let invariants = ref invariants (*(X.invariants s)*) in
+    let not_invariants = ref [] in
     let rec search_rec h =
       try
 	let (cpt, s), h = H.pop h in
@@ -242,23 +238,23 @@ module DFSHL ( X : I ) = struct
 	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
 	let h  =
-	  if (try 
-		X.fixpoint 
-		  ~invariants:!invariants ~visited: (!visited @ !postponed) s
-	    with FixpointSMT -> (* visited := s :: !visited; *) true)
+	  if X.fixpoint 
+		  ~invariants:!invariants ~visited:(!visited @ !postponed) s
 	  then h
 	  else
 	    begin
 	      let ls, post = X.pre s in
-	      let inv = 
+	      let inv, not_invs = 
 		if gen_inv && post <> [] then 
 		  begin
 		    eprintf "On cherche un invariant@.";
-		    X.gen_inv Search.search s
+		    X.gen_inv Search.search ~invariants:!invariants 
+		      !not_invariants s
 		  end
-		else []
+		else [], !not_invariants
 	      in
 	      invariants :=  inv @ !invariants;
+	      not_invariants :=  not_invs;
 	      visited := s :: !visited (*(ls @ post @ !visited)*);
 	      postponed := post @ !postponed;
 	      if inv = [] then
