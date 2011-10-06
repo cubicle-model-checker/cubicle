@@ -24,6 +24,7 @@ module type I = sig
   val gen_inv :
     (invariants : t list -> visited : t list -> t -> unit) -> 
     invariants : t list -> t list -> t -> t list * t list
+  val add_to_disjunction : t -> t list -> t list
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
   val pre : t -> t list * t list

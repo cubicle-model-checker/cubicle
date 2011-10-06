@@ -154,6 +154,21 @@ let extended_fixpoint {t_env=env} vars d np p =
   let p =  make_formula env vrai (SAtom.elements p) in
   AE.Formula.mk_not (AE.Formula.mk_imp np p 0)
   
+let simpl_check env vars sa1 sa2  = 
+  try
+    let tvars = List.map (make_variable ty_proc) vars in
+    let distincts = make_distincts tvars in
+    let f1 = make_formula env vrai (SAtom.elements sa1) in
+    let f2 = make_formula env vrai (SAtom.elements sa2) in
+    let f = AE.Formula.mk_and distincts (AE.Formula.mk_and 
+      (AE.Formula.mk_not f1) (AE.Formula.mk_not f2) 0) 0 in
+    let gf = { AE.Sat.f = f; age = 0; name = None; mf=false; gf=true} in
+    ignore(AE.Sat.unsat AE.Sat.empty gf);
+    true
+  with 
+    | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
+    | AE.Sat.Unsat _ -> true
+
 
 (* ---------- extra stuff ----------- *)
 

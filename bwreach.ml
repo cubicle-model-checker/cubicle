@@ -515,6 +515,13 @@ let neg x op y =
     | Le -> Comp (y, Lt, x)
     | Neq -> Comp (x, Eq, y)
 
+let rec neg_atom = function
+  | True -> False
+  | False -> True
+  | Comp (x, op, y) -> neg x op y 
+  | Ite (c,x,y) -> Ite (c, neg_atom x, neg_atom y)
+
+
 let simplification_atoms base env sa = 
   try 
     SAtom.fold (fun a base ->
@@ -555,6 +562,29 @@ let simplify_atoms env np =
     ) 
     ites
     [base]
+
+
+let simplify2atoms vars env sa1 sa2 =
+  let common = SAtom.inter sa1 sa2 in
+  let dif1 = SAtom.diff sa1 common in
+  let dif2 = SAtom.diff sa2 common in
+  if not (SAtom.is_empty dif1) && not (SAtom.is_empty dif2) &&
+    not (SAtom.is_empty common) &&
+    Prover.simpl_check env vars dif1 dif2
+  then begin
+    if debug then (eprintf "-----------------------@.";
+    eprintf "simplify %a@.@.WITH     %a @.======================@."
+      Pretty.print_unsafe sa1 Pretty.print_unsafe sa2;
+    eprintf "     %a@." Pretty.print_unsafe common;
+    eprintf "-----------------------@.");
+    common
+  end
+  else sa1
+    
+let add_to_disjunction ({ t_unsafe = (args, sa); t_env = env } as s) nodes =
+  let nsa = List.fold_left
+    (fun sa {t_unsafe = (_, n)} -> simplify2atoms args env sa n) sa nodes in
+  { s with t_unsafe = (args, nsa)} :: nodes
 
 (* Postponed Formulas*)
 
@@ -734,6 +764,7 @@ module T = struct
   let size s = List.length (fst s.t_unsafe)
   let maxrounds = 100
   let gen_inv = gen_inv
+  let add_to_disjunction = add_to_disjunction
 
   let fixpoint = fixpoint
   let safety = check_safety

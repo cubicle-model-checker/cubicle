@@ -27,3 +27,7 @@ val extended_fixpoint :
   t_system ->
   string list -> (string * string) list -> 
   SAtom.t -> SAtom.t -> AltErgo.Formula.t
+
+val simpl_check :
+  (string, (sort * AltErgo.Ty.t * AltErgo.Term.t)) Hashtbl.t ->
+  string list -> Ast.SAtom.t -> Ast.SAtom.t -> bool

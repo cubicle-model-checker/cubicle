@@ -28,7 +28,7 @@ module Profiling = struct
     cpt_visited := 0
 
   let incr_visited = 
-    if not profiling then fun () -> () else fun () -> incr cpt_visited
+    (* if not profiling then fun () -> () else *) fun () -> incr cpt_visited
       
   let print_visited = 
     if not profiling then fun () -> ()
@@ -55,6 +55,7 @@ module type I = sig
     (invariants : t list -> visited : t list -> t -> unit) ->
     invariants : t list -> t list -> t -> t list * t list
 
+  val add_to_disjunction : t -> t list -> t list
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
   val pre : t -> t list * t list  
@@ -158,28 +159,44 @@ module DFSH ( X : I ) = struct
 end
 
 
-module BFS ( X : I ) = struct
+module BFS_base ( X : I ) = struct
 
   type t = X.t
 
-  let search ~invariants ~visited s = 
+  let search inv_search invgen ~invariants ~visited s = 
     let visited = ref visited in
     let postpones = ref [] in
+    let not_invariants = ref [] in
     (* let invariants = X.invariants s in *)
+    let invariants = ref invariants (*(X.invariants s)*) in
     let q = Queue.create () in
     let rec search_rec () =
       try 
 	let cpt, s = Queue.take q in
 	if cpt = X.maxrounds then raise ReachBound;
 	X.safety s;
-	if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
+	if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) then
 	  begin
 	    Profiling.incr_visited ();
 	    Profiling.print
 	      (sprintf "[BFS %d] Number of processes : %d" cpt (X.size s));
-	    (* eprintf " node %d= %a@." !Profiling.cpt_visited X.print s; *)
+	    eprintf " node %d= %a@." !Profiling.cpt_visited X.print s;
 	    let ls, post = X.pre s in
-	    visited := s :: !visited;
+	    (* let ls,post= List.rev_append ls post, [] in *)
+	    (* let ls,post = List.partition (fun p -> X.size p <= X.size s) ls in *)
+	    let inv, not_invs =
+	      if invgen && gen_inv && post <> [] then 
+		begin
+		  eprintf "On cherche un invariant@.";
+		  X.gen_inv inv_search ~invariants:!invariants 
+		    !not_invariants s
+		end
+	      else [], !not_invariants
+	    in
+	    invariants :=  inv @ !invariants;
+	    not_invariants :=  not_invs;
+	    visited := s:: !visited;
+	    (* visited := X.add_to_disjunction s !visited; *)
 	    postpones := post @ !postpones;
 	    List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	  end;
@@ -198,6 +215,25 @@ module BFS ( X : I ) = struct
     in
     Queue.add (0, s) q; search_rec ();
     Profiling.print_visited ()
+
+end
+
+module BFSnoINV ( X : I ) = struct
+
+  include BFS_base(X)
+
+  let search = search (fun ~invariants:_ ~visited:_ _ -> ()) false
+
+end
+
+
+module BFS ( X : I ) = struct
+
+  include BFS_base(X)
+
+  module Search = BFSnoINV (struct include X let maxrounds = 5 end)
+    
+  let search = search Search.search true
 
 end
 
@@ -221,7 +257,7 @@ module DFSHL ( X : I ) = struct
 	if c <> 0 then c else Pervasives.compare l2 l1
   end
 
-  module Search = BFS (struct include X let maxrounds = 5 end)
+  module Search = BFSnoINV (struct include X let maxrounds = 5 end)
 
   module H = Heap.Make(S)
 
@@ -243,7 +279,7 @@ module DFSHL ( X : I ) = struct
 	    begin
 	      Profiling.incr_visited ();
 	      Profiling.print 
-		(sprintf "(%d) Number of processes : %d" cpt (X.size s));
+		(sprintf "[DFSHL](%d) Number of processes : %d" cpt (X.size s));
 	      let ls, post = X.pre s in
 	      let inv, not_invs = 
 		if gen_inv && post <> [] then 
@@ -256,7 +292,8 @@ module DFSHL ( X : I ) = struct
 	      in
 	      invariants :=  inv @ !invariants;
 	      not_invariants :=  not_invs;
-	      visited := s :: !visited (*(ls @ post @ !visited)*);
+	      (* visited := X.add_to_disjunction s !visited; *)
+	      visited := s :: !visited;
 	      postponed := post @ !postponed;
 	      if inv = [] then
 		let ls = List.map (fun s' -> cpt+1, s') ls in
@@ -284,4 +321,3 @@ module DFSHL ( X : I ) = struct
 	
 
 end
-
