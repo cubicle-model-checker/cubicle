@@ -12,22 +12,17 @@
 
 open Ast
 
+
+module TimeAE : Timer.S
+
+val nb_calls : unit -> int
+
+val empty : Hstring.t list -> unit
+
 (* Checks if the system is unsafe *)
-val unsafe : t_system -> AltErgo.Formula.t
+val unsafe : t_system -> unit
 
-(* 
-   fixpoint env [#1;...;#n] np p check for the formula
-   distinct(#1,...,#n) and np => p 
-*)
-val fixpoint : 
-  t_system -> string list -> SAtom.t -> SAtom.t -> AltErgo.Formula.t
+val add_goal : t_system -> unit
+val add_node : ('a * 'b * AltErgo.Term.t) Hstring.H.t -> Ast.ArrayAtom.t -> unit
 
-
-val extended_fixpoint : 
-  t_system ->
-  string list -> (string * string) list -> 
-  SAtom.t -> SAtom.t -> AltErgo.Formula.t
-
-val simpl_check :
-  (string, (sort * AltErgo.Ty.t * AltErgo.Term.t)) Hashtbl.t ->
-  string list -> Ast.SAtom.t -> Ast.SAtom.t -> bool
+val check_fixpoint : t_system -> Ast.ArrayAtom.t list -> bool

@@ -25,6 +25,7 @@ module type S = sig
   val empty : t
   val pop : t -> elem * t
   val add : t -> elem list -> t
+  val elements : t -> elem list
 end
 
 
@@ -50,4 +51,11 @@ module Make ( X : OrderType ) = struct
   let add h l = 
     List.fold_left (fun h x -> fusion (Node(x, Empty, Empty)) h ) h l
     
+  let elements h = 
+    let rec elements_aux acc = function
+      | Empty -> acc
+      | Node (m1 ,g1 ,d1) -> elements_aux (m1 :: acc) (fusion g1 d1)
+    in
+    elements_aux [] h
+
 end

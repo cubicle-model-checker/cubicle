@@ -17,8 +17,12 @@ open Atom
 
 
 module AE = AltErgo
-module S = Set.Make(String) 
+module S = Set.Make(Hstring) 
+let hempty = Hstring.make ""
+
   (* changer la fonction compare pour avoir dans l'ordre #1<#2<..<#9<#10 etc. *)
+
+module TimeFix = Search.TimeFix
 
 exception Unsafe
 
@@ -36,30 +40,32 @@ module Debug = struct
   let unsafe = 
     if not debug then fun _ -> () else 
       fun s ->
-	eprintf "Unsafe check :@.%a@." Pretty.print_system s
+	eprintf "    %a@." Pretty.print_unsafe s
 
   let invariant = 
       fun s ->
-	eprintf "Invariant ?@. %a@." Pretty.print_system s
+	eprintf "Invariant ?@. %a@." Pretty.print_cube s
 
   let pre = 
     if not debug then fun _ _ -> () else 
       fun tr p ->
 	eprintf "\nResult of the pre for transition %s:@.%a@." 
-	  tr.tr_name Pretty.print_unsafe p
+	  (Hstring.view tr.tr_name) Pretty.print_cube p
 
   let pre_cubes = 
     if not debug then fun _ -> () else 
       fun p ->
-	eprintf "Cubes:%a@." Pretty.print_unsafe p
+	eprintf "Cubes:%a@." Pretty.print_cube p
 
 end
 
 module SS = Set.Make
   (struct 
-     type t = string * string
+     type t = Hstring.t * Hstring.t
     let compare (s1, s2) (t1, t2) = 
-      Pervasives.compare (s1, s2) (t1, t2) 
+      let c = Hstring.compare s1 t1 in
+      if c <> 0 then c
+      else Hstring.compare s2 t2
    end)
   
 let rec m_number env a s = 
@@ -67,19 +73,18 @@ let rec m_number env a s =
     | True | False -> s
     | Comp (Elem x, Eq, Elem y) ->
 	begin
-	  let s1 = 
-	    try let s, _, _ = Hashtbl.find env x in s with Not_found -> Var in
-	  let s2 = 
-	    try let s, _, _ = Hashtbl.find env y in s with Not_found -> Var in
+	  let s1 = sort_of env x in
+	  let s2 = sort_of env y in
 	  match s1, s2 with
 	    | Glob, Constr | Constr, Glob -> SS.add (x,y) s
 	    | _ -> s
 	end
     | Comp (Access (a, _), _, Elem x) -> 
-	let xs = 
-	  try let s, _, _ = Hashtbl.find env x in s with Not_found -> Var in
-	if xs = Glob || xs = Constr then SS.add (a, x) s else SS.add (a, "") s
-    | Comp (_, _, Access (a, _)) -> SS.add (a, "") s
+	let xs = sort_of env x in
+	if xs = Glob || xs = Constr then
+	  SS.add (a, x) s 
+	else SS.add (a, hempty) s
+    | Comp (_, _, Access (a, _)) -> SS.add (a, hempty) s
     | Comp _ ->  s
     | Ite (sa, a1, a2) -> 
 	SAtom.fold (m_number env) sa (m_number env a1 (m_number env a2 s))
@@ -87,8 +92,24 @@ let rec m_number env a s =
 let magic_number s sa = SAtom.fold (m_number s.t_env) sa SS.empty
 
 let print_magic fmt ss = 
-  SS.iter (fun (a,b) -> fprintf fmt "(%s,%s) " a b) ss;
+  SS.iter (fun (a,b) -> 
+    fprintf fmt "(%s,%s) " (Hstring.view a) (Hstring.view b)) ss;
   fprintf fmt "@."
+
+
+let apply_subst p ss = subst_atoms ss p
+
+let memo_apply_subst =
+  let cache = Hashtbl.create 17 in
+  fun p ss ->
+    let k = p,ss in
+    try Hashtbl.find cache k
+    with Not_found ->
+      let v = apply_subst p ss in
+      Hashtbl.add cache k v;
+      v
+
+
 
 (* Simplifcation of atoms in a cube based on the hypothesis that
    indices #i are distinct and the type of elements is an
@@ -102,13 +123,13 @@ let redondant env others = function
   | True -> true
   | Comp (t1, Neq, (Elem x as t2))
   | Comp ((Elem x as t2), Neq, t1) ->
-    let s = try let s, _, _ = Hashtbl.find env x in s with Not_found -> Var in
+    let s = sort_of env x in
     (match s with
       | Var | Constr ->
 	(try 
 	   (SAtom.iter (function 
 	     | Comp (t1', Eq, t2') 
-		 when (t1' = t1 && t2' <> t2) || (t1' <> t1 && t2' = t2) ->
+		 when (t1' = t1 && t2' <> t2)  ->
 	       raise Exit
 	     | _ -> ()) others); false
 	 with Exit -> true)
@@ -116,8 +137,8 @@ let redondant env others = function
   | _ -> false
 
 let simplify_comp env i op j =  
-  let si = try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
-  let sj = try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
+  let si = sort_of env i in
+  let sj = sort_of env j in
   match op, (si, sj) with
     | Eq, (Var, Var | Constr, Constr) -> if i=j then True else False
     | Neq, (Var, Var | Constr, Constr) -> if i<>j then True else False
@@ -132,6 +153,7 @@ let rec simplification np env a =
     | Comp (Elem i, op , Elem j) -> simplify_comp env i op j
     | Comp (Arith (i, opai, xi), op, (Arith (j, opaj, xj)))
       when opai = opaj && xi = xj -> simplify_comp env i op j
+    | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
 	let sa = 
@@ -164,7 +186,7 @@ let rec pre_atom tau a =
 type assign = Single of term | Branch of update
 
 let fresh_nondet = 
-  let cpt = ref 0 in fun () -> incr cpt; "*"^(string_of_int !cpt)
+  let cpt = ref 0 in fun () -> incr cpt; Hstring.make ("*"^(string_of_int !cpt))
 
 let rec find_update a i = function
   | [] -> raise Not_found
@@ -186,8 +208,8 @@ let make_arith x op1 i1 op2 i2 =
 let find_assign tr = function
   | Elem x -> 
       let t = 
-	if List.mem x tr.tr_nondets then Elem (fresh_nondet ())
-	else try List.assoc x tr.tr_assigns with Not_found -> Elem x
+	if Hstring.list_mem x tr.tr_nondets then Elem (fresh_nondet ())
+	else try Hstring.list_assoc x tr.tr_assigns with Not_found -> Elem x
       in 
       Single t
 
@@ -196,7 +218,7 @@ let find_assign tr = function
   | Arith (x, op1, i1) ->
       begin
 	let t = 
-	  try List.assoc x tr.tr_assigns with Not_found -> Elem x
+	  try Hstring.list_assoc x tr.tr_assigns with Not_found -> Elem x
 	in 
 	match t with
 	  | Const i2 -> 
@@ -210,9 +232,9 @@ let find_assign tr = function
       end
   | Access (a, i ) -> 
       let ni = 
-	if List.mem i tr.tr_nondets then fresh_nondet ()
+	if Hstring.list_mem i tr.tr_nondets then fresh_nondet ()
 	else 
-	  try (match List.assoc i tr.tr_assigns with
+	  try (match Hstring.list_assoc i tr.tr_assigns with
 		 | Elem ni -> ni
 		 | Const _ | Arith _ | Access _ -> assert false)
 	  with Not_found -> i
@@ -220,14 +242,14 @@ let find_assign tr = function
       try find_update a ni tr.tr_upds
       with Not_found -> 
 	let na = 
-	  try (match List.assoc a tr.tr_assigns with
+	  try (match Hstring.list_assoc a tr.tr_assigns with
 		 | Elem na -> na
 		 | Const _ | Arith _ | Access _ -> assert false)
 	  with Not_found -> a
 	in
 	Single (Access (na, ni))
 
-let make_tau tr x op y = 
+let make_tau tr x op y =
   match find_assign tr x, find_assign tr y with
     | Single tx, Single ty -> Comp (tx, op, ty)
     | Single tx, Branch {up_arr=a; up_arg=j; up_swts=(ls, t)} ->
@@ -243,21 +265,26 @@ let make_tau tr x op y =
 	assert false
 
 
+(* cheap check of inconsitant cube *)
+
+let rec list_assoc_term t = function
+  | [] -> raise Not_found
+  | (u, v)::l -> if compare_term t u = 0 then v else list_assoc_term t l
+
 let assoc_neq t1 l t2 =
-  try List.assoc t1 l <> t2 with Not_found -> false
+  try list_assoc_term t1 l <> t2 with Not_found -> false
 
 let assoc_eq t1 l t2 =
-  try List.assoc t1 l = t2 with Not_found -> false
+  try list_assoc_term t1 l = t2 with Not_found -> false
 
-let inconsistent env sa = 
-  let l = SAtom.elements sa in
+let inconsistent_list env l = 
   let rec check values eqs neqs = function
     | [] -> ()
     | True :: l -> check values eqs neqs l
     | False :: _ -> raise Exit
     | Comp (t1, Eq, (Elem x as t2)) :: l 
     | Comp ((Elem x as t2), Eq, t1) :: l ->
-      let s = try let s, _, _ = Hashtbl.find env x in s with Not_found -> Var in
+      let s = sort_of env x in
       (match s with
 	| Var | Constr ->
 	  if assoc_neq t1 values t2 
@@ -281,20 +308,21 @@ let inconsistent env sa =
   in
   try check [] [] []l; false with Exit -> true
 
-let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa; t_env = env } =
-  inconsistent env (SAtom.union inisa unsa)
 
-let check_safety s = 
-  (*Debug.unsafe s;*)
-  try
-    if not (obviously_safe s) then
-      let f = Prover.unsafe s in
-      let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
-      ignore (AE.Sat.unsat AE.Sat.empty gf)
-  with 
-    | AE.Sat.Sat _ -> raise Unsafe
-    | AE.Sat.I_dont_know -> exit 2
-    | AE.Sat.Unsat _ -> ()
+let inconsistent env sa = 
+  let l = SAtom.elements sa in
+  inconsistent_list env l
+
+let inconsistent_array env a =
+  let l = Array.to_list a in
+  inconsistent_list env l
+
+
+let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa; t_env = env } =
+  inconsistent_list env 
+    (List.rev_append (SAtom.elements inisa) (SAtom.elements unsa))
+
+
  
 let number_of s = 
   if s.[0] = '#' then 
@@ -303,7 +331,8 @@ let number_of s =
 
 let add_arg args = function
   | Elem s | Access (_, s) | Arith (s, _, _) ->
-      if s.[0] = '#' || s.[0] = '$' then S.add s args else args
+      let s' = Hstring.view s in
+      if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
   | Const _ -> args
 
 let args_of_atoms sa = 
@@ -327,42 +356,23 @@ let proper_cube sa =
   let sa = 
     List.fold_left 
       (fun sa arg -> 
-	 let n = number_of arg in
+	 let n = number_of (Hstring.view arg) in
 	 if n = !cpt then (incr cpt; sa)
 	 else 
-	   let sa =  subst_atoms [arg, "#"^(string_of_int !cpt)] sa in 
-	   incr cpt; sa) sa args
+	   let sa = 
+	     subst_atoms [arg, Hstring.make ("#"^(string_of_int !cpt))] sa in 
+	   incr cpt; sa)
+      sa args
   in
   let l = ref [] in
-  for n = !cpt - 1 downto 1 do l := ("#"^(string_of_int n)) :: !l  done;
-  sa, (!l, "#"^(string_of_int !cpt))
+  for n = !cpt - 1 downto 1 do 
+    l := (Hstring.make ("#"^(string_of_int n))) :: !l
+  done;
+  sa, (!l, Hstring.make ("#"^(string_of_int !cpt)))
 
-let smt_fixpoint_check f =
-  try
-    let gf = { AE.Sat.f = f; age = 0; name = None; mf=false; gf=true} in
-    let proof = AE.Sat.unsat AE.Sat.empty gf in
-    eprintf "%a@." AE.Explanation.print_proof proof;
-    true
-  with 
-    | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
-    | AE.Sat.Unsat proof -> 
-      eprintf "%a@." AE.Explanation.print_proof proof;
-      true
-	
-let rec alpha_atoms np = 
-  SAtom.fold (fun a -> add (alpha_atom a)) np SAtom.empty
-and alpha_atom a = 
-  match a with
-    | False | True -> a
-    | Ite (la, a1, a2) -> 
-	Ite(alpha_atoms la, alpha_atom a1, alpha_atom a2)
-    | Comp (x, op, y) -> Comp(alpha_var x, op, alpha_var y)
-and alpha_var = function
-  | Elem s when s.[0] = '#' -> Elem ("$"^(string_of_int (number_of s)))
-  | Access (a, s) when s.[0] = '#' ->
-      Access (a, "$"^(string_of_int (number_of s)))
-  | t -> t
 
+(* Find relevant quantifier instantiation for 
+   \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
 
 let rec all_permutations l1 l2 = 
   assert (List.length l1 <= List.length l2);
@@ -377,135 +387,161 @@ and cross l pr x st =
 	let acc = List.map (fun ds -> (x, y)::ds) acc in
 	acc@(cross l (y::pr) x p)
 
-let obvious_subst env p np l1 l2 =
-  let globv = SAtom.fold (fun a acc -> match a with
+
+(* Extract global variables/values and accesses from a cube *)
+
+let globals_accesses env np =
+  Array.fold_left (fun ((globv, accsv) as acc) a -> match a with
     | Comp (Elem i, Eq, Elem j) ->
-      let si = 
-	try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
-      let sj = 
-	try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
+      let si = sort_of env i in
+      let sj = sort_of env j in
       (match si, sj with
-	| Glob, Var -> (i, j) :: acc
-	| Var, Glob -> (j, i) :: acc
+	| Glob, Var -> (i, j) :: globv, accsv
+	| Var, Glob -> (j, i) :: globv, accsv
 	| _ -> acc)
-    | _ -> acc) np [] in
-  let obvs = SAtom.fold (fun a acc -> match a with
+    | Comp (Access (a, i), ((Eq | Neq) as op), Elem j) ->
+      let si = sort_of env i in
+      let sj = sort_of env j in
+      (match si, sj with
+	| Var, (Glob | Constr) -> globv, (a, i, op, j) :: accsv
+	| _ -> acc)
+    | _ -> acc) ([], []) np
+
+let obvious_permutations env globv p l1 l2 =
+  let obvs = Array.fold_left (fun acc a -> match a with
     | Comp (Elem i, Eq, Elem j) ->
-      let si = 
-	try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
-      let sj = 
-	try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
+      let si = sort_of env i in
+      let sj = sort_of env j in
       (try 
 	 (match si, sj with
 	   | Glob, Var -> 
-	     if List.mem_assoc j acc then acc
-	     else (j, List.assoc i globv) :: acc
+	     if Hstring.list_mem_assoc j acc then acc
+	     else (j, Hstring.list_assoc i globv) :: acc
 	   | Var, Glob -> 
-	     if List.mem_assoc i acc then acc
-	     else (i, List.assoc j globv) :: acc
+	     if Hstring.list_mem_assoc i acc then acc
+	     else (i, Hstring.list_assoc j globv) :: acc
 	   | _ -> acc)
        with Not_found -> acc)
-    | _ -> acc) p [] in
+    | _ -> acc) [] p in
   let obvl1, obvl2 = List.split obvs in
-  let l1 = List.filter (fun b -> not (List.mem b obvl1)) l1 in
-  let l2 = List.filter (fun b -> not (List.mem b obvl2)) l2 in
+  let l1 = List.filter (fun b -> not (Hstring.list_mem b obvl1)) l1 in
+  let l2 = List.filter (fun b -> not (Hstring.list_mem b obvl2)) l2 in
   obvs, l1, l2
 
-
-let impossible_access env np a i op j acc =
-  SAtom.fold (fun at acc -> match at, op with
-    | Comp (Access (a', i'), Eq, Elem j'), Eq when j <> j' && a = a' ->
-      let si' = 
-	try let s, _, _ = Hashtbl.find env i' in s with Not_found -> Var in
-      let sj' = 
-	try let s, _, _ = Hashtbl.find env j' in s with Not_found -> Var in
-      (match si', sj' with
-	| Var ,(Glob | Constr) -> (i, i')::acc
+let impossible_access env p a i op j acc =
+  Array.fold_left (fun acc at -> match at, op with
+    | Comp (Access (a', i'), Eq, Elem j'), Eq 
+      when not (Hstring.equal j j') && Hstring.equal a a' ->
+      (* let si' =  sort_of env i' in *)
+      let sj' = sort_of env j' in
+      (match (* si', *) sj' with
+	| (* Var , *)(Glob | Constr) -> (i', i)::acc
 	| _ -> acc)
     | Comp (Access (a', i'), Eq, Elem j'), Neq 
-    | Comp (Access (a', i'), Neq, Elem j'), Eq  when j = j' && a = a' ->
-      let si' = 
-	try let s, _, _ = Hashtbl.find env i' in s with Not_found -> Var in
-      let sj' = 
-	try let s, _, _ = Hashtbl.find env j' in s with Not_found -> Var in
-      (match si', sj' with
-	| Var ,(Glob | Constr) -> (i, i')::acc
+    | Comp (Access (a', i'), Neq, Elem j'), Eq  
+      when Hstring.equal j j' && Hstring.equal a a' ->
+      (* let si' =  sort_of env i' in *)
+      let sj' = sort_of env j' in
+      (match (* si', *) sj' with
+	| (* Var, *) (Glob | Constr) -> (i', i)::acc
 	| _ -> acc)
-    | _ -> acc) np acc
-    
-let impossible_permutations_atom env np at acc = match at with
-  | Comp (Access (a, i), ((Eq | Neq) as op), Elem j) ->
-    let si = 
-      try let s, _, _ = Hashtbl.find env i in s with Not_found -> Var in
-    let sj = 
-      try let s, _, _ = Hashtbl.find env j in s with Not_found -> Var in
-    (match si, sj with
-      | Var, (Glob | Constr) -> impossible_access env np a i op j acc
-      | _ -> acc)
-  | _ -> acc
+    | _ -> acc) acc p
 
-let impossible_permutations env p np =
-  SAtom.fold (impossible_permutations_atom env np) p []
+let impossible_accesses env accesses p =
+  List.fold_left 
+    (fun acc (a, i, op, j) -> impossible_access env p a i op j acc) 
+    [] accesses
 
 
-let relevant_permutations env p np l1 l2 =
-  let obvs, l1, l2 = obvious_subst env p np l1 l2 in
+(* Relevant permuations for fixpoint check *)
+
+let relevant_permutations env globals accesses p l1 l2 =
+  TimeFix.start ();
+  let obvs, l1, l2 = obvious_permutations env globals p l1 l2 in
   let perm = all_permutations l1 l2 in
-  let perm = List.map (List.append obvs) perm in
-  let impos = impossible_permutations env p np in
-  List.filter (List.for_all (fun s -> not (List.mem s impos))) perm
+  let impos = impossible_accesses env accesses p in
+  let perm = List.filter 
+    (List.for_all (fun s -> not (Hstring.list_mem_couple s impos))) perm 
+  in
+  TimeFix.pause ();
+  List.map (List.rev_append obvs) perm
+
+
 
 let possible_imply s np p =
   SS.subset (magic_number s p) (magic_number s np)  
 
-let check_fixpoint s visited np = 
-  (* let cpt = ref 0 in *)
-  (* let fix = *)
-  List.exists
-    (fun { t_unsafe = (args, p); t_env = env } ->
-      (* incr cpt; *)
-      let p = alpha_atoms p in
-      let args = args_of_atoms p in
-      let nargs = args_of_atoms np in
-      ( List.length args <= List.length nargs &&
-	  (* let d = all_permutations args nargs in *)
-	  (* eprintf "len:%d@." (List.length d); *)
-	  let d = relevant_permutations env p np args nargs in
-	  (* eprintf "d2:%d\n@." (List.length d); *)
-	  List.exists 
-	    (fun ss ->
-	      let pp = 
-		List.fold_left 
-		  (fun pp (x, y) -> subst_atoms [x, y] pp) p ss in
-	      SAtom.subset pp np
-	      ||
-		((possible_imply s np pp) &&
-		    (not (inconsistent s.t_env pp)) &&
-		    let f = Prover.extended_fixpoint s nargs ss np pp in
-		    let res = smt_fixpoint_check f in
-		    (* if not res then *)
-		    (*   eprintf "not a fixpoint : %a -> %a\n@." *)
-		    (*     Pretty.print_unsafe np Pretty.print_unsafe pp; *)
-		    res
-		)) d)
-    ) visited
-  (* in *)
-  (* if fix then eprintf "\t\t\t\tFixpoint after %d checks / %d@." *)
-  (*   !cpt (List.length visited); *)
-  (* fix *)
 
-let is_fixpoint s nodes np = 
-  List.exists (fun { t_unsafe = (_, p) } -> SAtom.subset p np) nodes
+
+(* Safety check : s /\ init must be inconsistent *)
+
+let check_safety s =
+  (*Debug.unsafe s;*)
+  try
+    if not (obviously_safe s) then
+      begin
+	Prover.unsafe s;
+	raise Unsafe
+      end
+  with
+    | AE.Sat.Sat _ -> raise Unsafe
+    | AE.Sat.I_dont_know -> exit 2
+    | AE.Sat.Unsat _ -> ()
+
+
+(* Incremental fixpoint check : s => \/_{p \in nodes} p *)
+
+exception Fixpoint
+
+let check_fixpoint
+    ({t_unsafe = (nargs, _(*np*)); t_arru = anp; t_env = env } as s) visited =
+ 
+  Prover.add_goal s;
+  let nb_nargs = List.length nargs in
+  let globv, accsv = globals_accesses env anp in
+  let nodes = List.fold_left
+    (fun nodes { t_alpha = args, ap; t_env = env } ->
+      if List.length args > nb_nargs then nodes
+      else
+	let d = relevant_permutations env globv accsv ap args nargs in
+	List.fold_left
+	  (fun nodes ss ->
+	    let pp = ArrayAtom.apply_subst ss ap in
+	    if ArrayAtom.subset pp anp then raise Fixpoint
+	    (* Heruristic : throw away nodes too much different *)
+	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+	    else if (inconsistent_array env (ArrayAtom.union pp anp)) then
+	      nodes
+	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
+	    else (Prover.add_node env pp; nodes)
+	) nodes d
+    ) [] visited
+  in
+  let nodes = 
+    List.fast_sort
+      (fun p1 p2 ->
+	Pervasives.compare
+      	  (ArrayAtom.nb_diff p1 anp)
+      	  (ArrayAtom.nb_diff p2 anp))
+      nodes in
+  List.iter (fun p -> Prover.add_node env p) nodes
+
+let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes = 
+  List.exists (fun { t_arru = pa } -> ArrayAtom.subset pa npa) nodes
   ||
-    let mn = magic_number s np in
-    let nodes = 
-      List.filter 
-	(fun { t_unsafe = (_, p) } -> 
-	   let mp = (magic_number s p) in
-	   SS.subset mp mn 
-	) nodes
-    in
-    check_fixpoint s nodes np
+    try
+      check_fixpoint s nodes;
+      false
+    with 
+      | Fixpoint -> true
+      | Exit -> false
+      | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
+      | AE.Sat.Unsat _ -> true
+
+
+let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
+  is_fixpoint s (List.rev_append invariants visited)
+
 
 
 let neg x op y = 
@@ -564,32 +600,10 @@ let simplify_atoms env np =
     [base]
 
 
-let simplify2atoms vars env sa1 sa2 =
-  let common = SAtom.inter sa1 sa2 in
-  let dif1 = SAtom.diff sa1 common in
-  let dif2 = SAtom.diff sa2 common in
-  if not (SAtom.is_empty dif1) && not (SAtom.is_empty dif2) &&
-    not (SAtom.is_empty common) &&
-    Prover.simpl_check env vars dif1 dif2
-  then begin
-    if debug then (eprintf "-----------------------@.";
-    eprintf "simplify %a@.@.WITH     %a @.======================@."
-      Pretty.print_unsafe sa1 Pretty.print_unsafe sa2;
-    eprintf "     %a@." Pretty.print_unsafe common;
-    eprintf "-----------------------@.");
-    common
-  end
-  else sa1
-    
-let add_to_disjunction ({ t_unsafe = (args, sa); t_env = env } as s) nodes =
-  let nsa = List.fold_left
-    (fun sa {t_unsafe = (_, n)} -> simplify2atoms args env sa n) sa nodes in
-  { s with t_unsafe = (args, nsa)} :: nodes
-
-(* Postponed Formulas*)
+(* Postponed Formulas *)
 
 let has_args_term args = function
-  | Elem x | Access (_, x) | Arith (x, _, _) -> List.mem x args
+  | Elem x | Access (_, x) | Arith (x, _, _) -> Hstring.list_mem x args
   | Const _ -> false
 
 let rec has_args args = function
@@ -609,42 +623,52 @@ let uguard args = function
       List.fold_left 
 	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty args
 
-let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) = 
-  SAtom.mem False np
-  || inconsistent env np
-  || is_fixpoint s invariants np 
-  || is_fixpoint s visited np
-
 let make_cubes (ls, post) (args, rargs) 
-    ({ t_unsafe = (_, p); t_env=env } as s) tr np = 
-  (* let ureq = uguard rargs tr.tr_ureq in *)
+    ({ t_unsafe = (uargs, p); t_env=env } as s) tr np =
+  let nb_uargs = List.length uargs in
   let cube acc sigma = 
-    (* let ureq = subst_atoms sigma ureq in *)
     let lnp = simplify_atoms env (subst_atoms sigma np) in
     List.fold_left
       (fun (ls, post) np ->
 	 let np, (nargs, _) = proper_cube np in
 	 let ureq = uguard nargs tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
-	 (* let nargs = args_of_atoms np in *)
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
 	 if inconsistent s.t_env np then (ls, post) 
-	 else if not (SAtom.is_empty ureq) || postpone args p np then 
-	   ls, { s with t_unsafe = nargs, np }::post
-	 else { s with t_unsafe = nargs, np } :: ls, post ) acc lnp
+	 else
+	   let arr_np = ArrayAtom.of_satom np in
+	   let new_s = { s with 
+	     t_unsafe = nargs, np;
+	     t_arru = arr_np;
+	     t_alpha = ArrayAtom.alpha arr_np nargs } in 
+	   if (alwayspost && List.length nargs > nb_uargs) ||
+	     (not alwayspost && 
+		(not (SAtom.is_empty ureq) || postpone args p np)) then
+	     ls, new_s::post
+	   else new_s :: ls, post ) acc lnp
   in
   if List.length tr.tr_args > List.length rargs then (ls, post)
   else
     let d = all_permutations tr.tr_args rargs in
     List.fold_left cube (ls, post) d
 
+
+let fresh_var_list =
+  [ Hstring.make "?1";
+    Hstring.make "?2";
+    Hstring.make "?3";
+    Hstring.make "?4";
+    Hstring.make "?5";
+    Hstring.make "?6";
+    Hstring.make "?7";
+    Hstring.make "?8";
+    Hstring.make "?9" ]
+
+
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
   if args = [] then tr
   else
-    let cpt = ref 0 in
-    let sigma = 
-      List.map (fun x -> incr cpt; x, "?"^(string_of_int !cpt)) args 
-    in
+    let sigma = build_subst args fresh_var_list in
     { tr with 
 	tr_args = List.map snd sigma; 
 	tr_reqs = subst_atoms sigma tr.tr_reqs;
@@ -664,9 +688,10 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	     { up with up_swts = swts, subst_term sigma t }) 
 	  upds}
 
+
 (* Pre-image of an unsafe formula w.r.t a transition *)
 
-let pre tr unsafe = 
+let pre tr unsafe =
   let tr = fresh_args tr in
   let tau = make_tau tr in
   let pre_unsafe = 
@@ -675,38 +700,43 @@ let pre tr unsafe =
   in
   if debug && !verbose>0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
-  if tr.tr_args = [] then tr, pre_unsafe, (args, args) 
+  if tr.tr_args = [] then tr, pre_unsafe, (args, args)
   else tr, pre_unsafe, (args, m::args)
+
 
 (* Pre-image of a system s : computing the cubes gives a list of new
    systems *)
 
-let pre_system ({ t_unsafe = _, u; t_trans = trs} as s) = 
+let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
   Debug.unsafe s;
   let ls, post = 
     List.fold_left
-    (fun acc tr -> 
-       let s = { s with t_from = (tr.tr_name, snd s.t_unsafe)::s.t_from } in
+    (fun acc tr ->
        let tr, pre_u, info_args = pre tr u in
+       let s = { s with 
+	 t_from = (tr.tr_name, snd s.t_unsafe)::s.t_from } in
        make_cubes acc info_args s tr pre_u) 
     ([], []) 
     trs 
-  in
-  (* Debug.fixpoint ls;  *)ls, post
+  in 
+  ls, post
+
 
 (* Renames the parameters of the initial unsafe formula *)
 
 let init_atoms args sa = 
   let cpt = ref 0 in
-  let sigma = List.map (fun z -> incr cpt; z, "#"^(string_of_int !cpt)) args in
-  let sa = List.fold_left (fun sa (i, z) -> subst_atoms [i, z] sa) sa sigma in
+  let sigma = List.map (fun z -> incr cpt; z, Hstring.make ("#"^(string_of_int !cpt))) args in
+  let sa = apply_subst sa sigma in
   let args = List.map snd sigma in
   args, sa
 
-let init_parameters ({t_unsafe = (args, sa); t_invs = invs } as s) = 
+let init_parameters ({t_unsafe = (args, sa); t_arru = a; t_invs = invs } as s) =
   let args, sa = init_atoms args sa in
+  let a = ArrayAtom.of_satom sa in
   let invs = List.map (fun (argsi, sai) -> init_atoms argsi sai) invs in
-  { s with t_unsafe = (args, sa); t_invs = invs }
+  { s with t_unsafe = (args, sa); t_arru = a; 
+    t_alpha = ArrayAtom.alpha a args; t_invs = invs }
 
 
 (* Invariant generation stuff... *)
@@ -715,7 +745,7 @@ let same_number env z = function
   | Const _ -> true
   | Elem s | Access (_, s) | Arith (s, _, _) -> 
       s = z || 
-  let v = try let v, _, _ = Hashtbl.find env s in v with Not_found -> Var in
+  let v = sort_of env s in
   (* v = Glob || *) v = Constr
 
 let rec contains_only env z = function
@@ -730,11 +760,17 @@ let partition ({ t_unsafe = (args, sa) } as s) =
     (fun l z -> 
        let sa', _ = SAtom.partition (contains_only s.t_env z) sa in
        if SAtom.cardinal sa' < 2 then l 
-       else { s with t_unsafe = [z],sa'} :: l)
+       else 
+	 let ar' = ArrayAtom.of_satom sa' in
+	 { s with
+	   t_unsafe = [z], sa';
+	   t_arru = ar';
+	   t_alpha = ArrayAtom.alpha ar' [z];
+	 } :: l)
     [] args
 
-let impossible_inv { t_unsafe = (_, p) } not_invs =
-  List.exists (fun { t_unsafe = (_, ni) } -> SAtom.subset p ni) not_invs
+let impossible_inv { t_arru = p } not_invs =
+  List.exists (fun { t_arru = ni } -> ArrayAtom.subset p ni) not_invs
   
 
 let gen_inv search ~invariants not_invs s = 
@@ -755,21 +791,39 @@ let gen_inv search ~invariants not_invs s =
     ([], not_invs) (partition s)
 
 
+(* node deletion : experimental *)
+
+let delete_nodes s = List.filter 
+  (fun n -> not (ArrayAtom.subset s.t_arru n.t_arru))
+
+
 (* ----------------- Search strategy selection -------------------*)
 
 module T = struct
   type t = t_system
 
-  let invariants s = List.map (fun i -> { s with t_unsafe = i }) s.t_invs
+  let invariants s = 
+    List.map (fun ((a,u) as i) -> 
+      let ar = ArrayAtom.of_satom u in
+      { s with 
+	t_unsafe = i; 
+	t_arru = ar;
+	t_alpha = ArrayAtom.alpha ar a
+      }) s.t_invs
   let size s = List.length (fst s.t_unsafe)
-  let maxrounds = 100
+  let maxrounds = maxrounds
+  let maxnodes = maxnodes
   let gen_inv = gen_inv
   let add_to_disjunction = add_to_disjunction
+
+  let delete_nodes = delete_nodes
 
   let fixpoint = fixpoint
   let safety = check_safety
   let pre = pre_system
   let print = Pretty.print_node
+  let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
+    Pervasives.compare (List.length args1) (List.length args2))
 end
 
 module StratDFS = Search.DFS(T)
@@ -786,6 +840,9 @@ let search =
     | Bfs -> StratBFS.search
     | DfsHL -> StratDFSHL.search
 
-let system s =  
+let system s =
+  Hstring.TimeHS.start ();
   let s = init_parameters s in
+  Hstring.TimeHS.pause ();
+
   search ~invariants:(T.invariants s) ~visited:[] s

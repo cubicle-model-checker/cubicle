@@ -17,8 +17,10 @@ val cin : in_channel
 
 val type_only : bool ref
 val maxrounds : int
+val maxnodes : int
 
 val gen_inv : bool
+val alwayspost : bool
 
 val mode : mode ref
 

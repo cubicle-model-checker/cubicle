@@ -26,9 +26,9 @@ let rec print_strings fmt = function
 
 let rec print_term fmt = function
   | Const i -> fprintf fmt "%d" i
-  | Elem s -> fprintf fmt "%s" s
-  | Access (a, i) -> fprintf fmt "%s[%s]" a i
-  | Arith (x, op, i) -> fprintf fmt "@[%s %s %d@]" x (op_arith op) i 
+  | Elem s -> fprintf fmt "%s" (Hstring.view s)
+  | Access (a, i) -> fprintf fmt "%s[%s]" (Hstring.view a) (Hstring.view i)
+  | Arith (x, op, i) -> fprintf fmt "@[%s %s %d@]" (Hstring.view x) (op_arith op) i
 
 let rec print_atom fmt = function
   | True -> fprintf fmt "true"
@@ -42,28 +42,20 @@ let rec print_atom fmt = function
 and print_atoms sep fmt = function
   | [] -> ()
   | [a] -> print_atom fmt a
-  | a::l -> fprintf fmt "@[%a %s@ %a@]" print_atom a sep (print_atoms sep) l
+  | a::l -> fprintf fmt "%a %s@\n%a" print_atom a sep (print_atoms sep) l
 
-let print_unsafe fmt sa = print_atoms "&&" fmt (SAtom.elements sa)
+let print_cube fmt sa = 
+  fprintf fmt "@[%a@]" (print_atoms "&&") (SAtom.elements sa)
 
-let print_system fmt s = 
-  (*List.iter 
-    (fun ini -> 
-       match ini with
-	 | Array (a, e) ->
-	     fprintf fmt "@.  Init : forall i. %a[i]=%a &&@." 
-	       AE.Term.print a AE.Term.print e
-	 | Global (g, e) ->
-	     fprintf fmt "@.  Init :  %a=%a &&@." 
-	       AE.Term.print g AE.Term.print e ) 
-    s.t_init;*)
-  fprintf fmt "  Unsafe property (from %a):@.%a@."
-    (fun fmt -> 
-       fprintf fmt "*** %d : \n" (List.length s.t_from);
-       List.iter (fun (l, f) -> 
-		    fprintf fmt " [%s : %a], " l print_unsafe f)) s.t_from
-    print_unsafe (snd s.t_unsafe)
+let print_system fmt s = print_cube fmt (snd s.t_unsafe)
+
+let print_unsafe fmt s = 
+  fprintf fmt "  Unsafe property (from %a):@.        %a@."
+    (fun fmt ->
+       List.iter (fun (l, _) -> 
+		    fprintf fmt "[%s]" (Hstring.view l))) s.t_from
+    print_system s
 
 
 let print_node fmt s =
-  List.iter (fun (l, f) -> fprintf fmt "[%s]" l) s.t_from
+  List.iter (fun (l, _) -> fprintf fmt "[%s]" (Hstring.view l)) s.t_from 

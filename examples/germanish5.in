@@ -114,7 +114,7 @@
 :comment   
 :comment   
 
-:smt (define-type message ( subrange 1 3))
+:smt (define-type message ( subrange 1 7))
 :comment      Empty->1, Reqs->2, Reqe->3,
 :comment      Inv->4, Invack->5, 
 :comment      Gnts->6, Gnte->7 
@@ -124,6 +124,8 @@
 
 
 
+:comment Chan
+:local a message
 :comment Shrset
 :local d bool
 :comment Exgntd
@@ -139,7 +141,7 @@
 
 :initial
 :var x
-:cnj (=  d[x]  false) (=  f[x]  false) (=  g[x]  1) (=  h[x]  1) (=  i[x]  1) 
+:cnj (=  a[x]  1) (=  d[x]  false) (=  f[x]  false) (=  g[x]  1) (=  h[x]  1) (=  i[x]  1) 
 
 
 :unsafe 
@@ -147,41 +149,89 @@
 :var y
 :cnj (= i[x] 3)  (= i[y] 2) 
 
-:comment :no_backward_simplification
 
-:comment req_shared
+:no_backward_simplification
+
+:comment send_shared
 :transition
 :var x
 :var j
-:guard (=  g[x]  1) (=  i[x]  1)
+:guard (=  a[x]  1) (=  i[x]  1)
 :numcases 2
 :case (= x j)
+ :val 2
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_shared
+:transition
+:var x
+:var j
+:guard (=  g[x]  1) (=  a[x]  2)
+:numcases 2
+:case (= x j)
+ :val 1
  :val d[j]
  :val f[j]
  :val 2
  :val x
  :val i[j]
 :case
+ :val a[j]
  :val d[j]
  :val f[j]
  :val 2
  :val x
  :val i[j]
 
-
-:comment req_exclusive
+:comment send_exclusive
 :transition
 :var x
 :var j
-:guard (=  g[x]  1) (<  i[x]  3)
+:guard (=  a[x]  1) (<  i[x]  3)
 :numcases 2
 :case (= x j)
+ :val 3
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_exclusive
+:transition
+:var x
+:var j
+:guard (=  g[x]  1) (=  a[x]  3)
+:numcases 2
+:case (= x j)
+ :val 1
  :val d[j]
  :val f[j]
  :val 3
  :val x
  :val i[j]
 :case
+ :val a[j]
  :val d[j]
  :val f[j]
  :val 3
@@ -189,58 +239,107 @@
  :val i[j]
 
 
-:comment inv1
+:comment send_inv1
 :transition
 :var x
 :var j
-:guard (=  d[x] true) (=  g[x]  3)
+:guard (=  a[x]  1) (=  d[x] true) (=  g[x]  3)
 :numcases 2
 :case (= x j)
- :val false
- :val false
+ :val 4
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+:comment send_inv2
+:transition
+:var x
+:var j
+:guard (=  a[x]  1) (=  d[x]  true) (=  g[x]  2) (=  f[x]  true)
+:numcases 2
+:case (= x j)
+ :val 4
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_inv
+:transition
+:var x
+:var j
+:guard (=  a[x]  4)
+:numcases 2
+:case (= x j)
+ :val 5
+ :val d[j]
+ :val f[j]
  :val g[j]
  :val h[j]
  :val 1
 :case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+:comment recv_invack
+:transition
+:var x
+:var j
+:guard (=  a[x]  5) (>  g[x]  1)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val false
+ :val false
+ :val g[j]
+ :val h[j]
+ :val i[x]
+:case
+ :val a[j]
  :val d[j]
  :val false
  :val g[j]
  :val h[j]
  :val i[j]
 
-:comment inv2
+
+:comment send_gnt_shared
 :transition
 :var x
 :var j
-:guard (=  d[x]  true) (=  g[x]  2) (=  f[x]  true)
+:guard (=  h[x]  x) (=  g[x]  2) (=  f[x]  false) (=  a[x]  1)
 :numcases 2
 :case (= x j)
- :val false
- :val false
- :val g[j]
- :val h[j]
- :val 1
-:case
- :val d[j]
- :val false
- :val g[j]
- :val h[j]
- :val i[j]
-
-
-:comment gnt_shared
-:transition
-:var x
-:var j
-:guard (=  h[x]  x) (=  g[x]  2) (=  f[x]  false)
-:numcases 2
-:case (= x j)
+ :val 6
  :val true
  :val f[j]
  :val 1
  :val h[j]
- :val 2
+ :val i[j]
 :case
+ :val a[j]
  :val d[j]
  :val f[j]
  :val 1
@@ -248,22 +347,66 @@
  :val i[j]
 
 
-:comment gnt_exclusive
+:comment send_gnt_exclusive
 :transition
 :var x
 :var j
-:guard (=  d[x]  false) (=  g[x]  3) (=  f[x]  false) (=  h[x]  x)
+:guard (=  d[x]  false) (=  g[x]  3) (=  f[x]  false) (=  h[x]  x) (=  a[x]  1)
 :uguard (=  d[j]  false) 
 :numcases 2
 :case (= x j)
+ :val 7
  :val true
  :val true
  :val 1
  :val h[j]
- :val 3
+ :val i[j]
 :case
+ :val a[j]
  :val d[j]
  :val true
  :val 1
+ :val h[j]
+ :val i[j]
+
+:comment recv_gnt_shared
+:transition
+:var x
+:var j
+:guard (=  a[x]  6)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val 2
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+:comment recv_gnt_exclusive
+:transition
+:var x
+:var j
+:guard (=  a[x]  7)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val 3
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
  :val h[j]
  :val i[j]

@@ -150,6 +150,7 @@
 :cnj (= i[x] 3)  (= i[y] 2) 
 
 
+:comment :no_backward_simplification
 
 :comment send_shared
 :transition

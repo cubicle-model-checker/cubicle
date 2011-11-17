@@ -16,34 +16,17 @@ init (z) {
      Curcmd=Empty &&
      Exgntd = False }
 
+(* unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  } *)
 
-(*
-invariant (z) { Cache[z]=Exclusive && Exgntd = False }
+(* unsafe (z) { Chan1[z] <> Empty && Chan1[z] <> Reqs && Chan1[z] <> Reqe } *)
 
-invariant (z) { Shrset[z]=False && Cache[z]<>Invalid }
+(* unsafe (z) { Chan2[z] <> Empty && Chan2[z] <> Inv && Chan2[z] <> Gnts && Chan2[z] <> Gnte  } *)
 
-invariant (z) { Chan2[z] = Gnte && Exgntd = False }
+(* unsafe (z) { Chan3[z] <> Empty && Chan3[z] <> Invack } *)
 
-invariant (z) { Invset[z] = True && Shrset[z] = False }
+(* unsafe (z) { Curcmd <> Empty && Curcmd <> Reqs && Curcmd <> Reqe } *)
 
-invariant (z) { Chan3[z] = Invack && Cache[z] <> Invalid }
-
-invariant (z) { Chan3[z] = Invack && Chan2[z] <> Empty }
-
-invariant (z) { Chan2[z] <> Inv && Chan3[z] = Invack && Invset[n] = True }
-
-invariant (z) { Chan2[z] <> Inv &&  Chan3[z] = Invack && Shrset[z] = False }
-*)
-(*
-invariant (z) { Chan1[z] <> Empty && Chan1[z] <> Reqs && Chan1[z] <> Reqe }
-
-invariant (z) { Chan2[z] <> Empty && Chan2[z] <> Inv && 
-	        Chan2[z] <> Gnts && Chan2[z] <> Gnte  }
-*)
-
-unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }
-(*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
-
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }
 
 transition send_req_shared(n)
 require { Cache[n] = Invalid && Chan1[n] = Empty }

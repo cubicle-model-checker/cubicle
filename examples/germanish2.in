@@ -124,6 +124,8 @@
 
 
 
+:comment Chan
+:local a message
 :comment Shrset
 :local d bool
 :comment Exgntd
@@ -139,7 +141,7 @@
 
 :initial
 :var x
-:cnj (=  d[x]  false) (=  f[x]  false) (=  g[x]  1) (=  h[x]  1) (=  i[x]  1) 
+:cnj (=  a[x]  1) (=  d[x]  false) (=  f[x]  false) (=  g[x]  1) (=  h[x]  1) (=  i[x]  1) 
 
 
 :unsafe 
@@ -147,41 +149,89 @@
 :var y
 :cnj (= i[x] 3)  (= i[y] 2) 
 
-:comment :no_backward_simplification
 
-:comment req_shared
+:no_backward_simplification
+
+:comment send_shared
 :transition
 :var x
 :var j
-:guard (=  g[x]  1) (=  i[x]  1)
+:guard (=  a[x]  1) (=  i[x]  1)
 :numcases 2
 :case (= x j)
+ :val 2
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_shared
+:transition
+:var x
+:var j
+:guard (=  g[x]  1) (=  a[x]  2)
+:numcases 2
+:case (= x j)
+ :val 1
  :val d[j]
  :val f[j]
  :val 2
  :val x
  :val i[j]
 :case
+ :val a[j]
  :val d[j]
  :val f[j]
  :val 2
  :val x
  :val i[j]
 
-
-:comment req_exclusive
+:comment send_exclusive
 :transition
 :var x
 :var j
-:guard (=  g[x]  1) (<  i[x]  3)
+:guard (=  a[x]  1) (<  i[x]  3)
 :numcases 2
 :case (= x j)
+ :val 3
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_exclusive
+:transition
+:var x
+:var j
+:guard (=  g[x]  1) (=  a[x]  3)
+:numcases 2
+:case (= x j)
+ :val 1
  :val d[j]
  :val f[j]
  :val 3
  :val x
  :val i[j]
 :case
+ :val a[j]
  :val d[j]
  :val f[j]
  :val 3
@@ -196,12 +246,14 @@
 :guard (=  d[x] true) (=  g[x]  3)
 :numcases 2
 :case (= x j)
+ :val a[j]
  :val false
  :val false
  :val g[j]
  :val h[j]
  :val 1
 :case
+ :val a[j]
  :val d[j]
  :val false
  :val g[j]
@@ -215,18 +267,19 @@
 :guard (=  d[x]  true) (=  g[x]  2) (=  f[x]  true)
 :numcases 2
 :case (= x j)
+ :val a[j]
  :val false
  :val false
  :val g[j]
  :val h[j]
  :val 1
 :case
+ :val a[j]
  :val d[j]
  :val false
  :val g[j]
  :val h[j]
  :val i[j]
-
 
 :comment gnt_shared
 :transition
@@ -235,12 +288,14 @@
 :guard (=  h[x]  x) (=  g[x]  2) (=  f[x]  false)
 :numcases 2
 :case (= x j)
+ :val a[j]
  :val true
  :val f[j]
  :val 1
  :val h[j]
  :val 2
 :case
+ :val a[j]
  :val d[j]
  :val f[j]
  :val 1
@@ -256,12 +311,14 @@
 :uguard (=  d[j]  false) 
 :numcases 2
 :case (= x j)
+ :val a[j]
  :val true
  :val true
  :val 1
  :val h[j]
  :val 3
 :case
+ :val a[j]
  :val d[j]
  :val true
  :val 1

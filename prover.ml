@@ -16,22 +16,34 @@ open Options
 
 module AE = AltErgo
 
+let htrue = Hstring.make "true"
+let hfalse = Hstring.make "false"
+
+let cpt_check = ref 0
+
+module TimeAE = Timer.Make(struct end)
+
 let vrai = AE.Formula.mk_lit AE.Literal.LT.vrai 0
 let faux = AE.Formula.mk_lit AE.Literal.LT.faux 0
 let ty_proc = AE.Ty.Tint
 let ty_int = AE.Ty.Tint
 
+let nb_calls () = !cpt_check
+
 let op_arith x = 
   let sx = match x with Plus -> AE.Symbols.Plus | Minus -> AE.Symbols.Minus in
   AE.Symbols.Op sx
 
-let make_variable ty z = AE.Term.make (AE.Symbols.name z) []  ty
+let make_variable ty z = AE.Term.make (AE.Symbols.name (Hstring.view z)) []  ty
 
-let get a z = 
-  let {AE.Term.ty=ty} = AE.Term.view a in
+let get ta a z = 
+  let {AE.Term.ty=ty} = AE.Term.view ta in
   match ty with
     | AE.Ty.Tfarray(_, ty') ->
-	AE.Term.make (AE.Symbols.Op AE.Symbols.Get) [a; z] ty'
+        (* Theory of arrays if needed *)
+	(* AE.Term.make (AE.Symbols.Op AE.Symbols.Get) [a; z] ty' *)
+        (* Use UF instead when no affectations done in arrays *)
+	AE.Term.make (AE.Symbols.name (Hstring.view a)) [z] ty'
     | _ -> assert false
 
 let global_eq g c = 
@@ -45,37 +57,56 @@ let make_distincts = function
 let make_term env = function
   | Elem e ->
       begin try
-	let _, _, te = Hashtbl.find env e in te
+	let _, _, te = Hstring.H.find env e in te
       with Not_found -> make_variable ty_proc e end
   | Const i ->
       AE.Term.int (string_of_int i)
   | Access (a, i) -> 
-      let _, _, ta = Hashtbl.find env a in
+      let _, _, ta = Hstring.H.find env a in
       let ti = 
-	try let _, _, ti = Hashtbl.find env i in ti 
+	try let _, _, ti = Hstring.H.find env i in ti 
 	with Not_found -> make_variable ty_proc i 
       in
-      get ta ti
+      get ta a ti
   | Arith (x, op, i) ->
-      let _, _, tx = Hashtbl.find env x in
+      let _, _, tx = Hstring.H.find env x in
       let si = AE.Term.int (string_of_int i) in
       AE.Term.make (op_arith op) [tx;si] ty_int
 
 let rec make_formula env f = 
   List.fold_left (fun f a -> AE.Formula.mk_and f (make_literal env a) 0) f
 
+
+and make_formula_atoms env atoms =
+  try
+    let f = SAtom.choose atoms in
+    let ratoms = SAtom.remove f atoms in
+    SAtom.fold (fun a acc ->
+      AE.Formula.mk_and acc (make_literal env a) 0)
+      ratoms (make_literal env f)
+  with Not_found -> vrai
+
+and make_formula_array env atoms =
+  Array.fold_left (fun acc a -> 
+    AE.Formula.mk_and acc (make_literal env a) 0)
+    vrai atoms
+
 and make_literal env = function
   | True -> vrai 
   | False -> faux
-  | Comp (Elem ("True" | "False" as b), op, x) 
-  | Comp (x, op, Elem ("True" | "False" as b))-> 
+  | Comp (Elem b, op, x) 
+  | Comp (x, op, Elem b) when 
+      Hstring.compare htrue b = 0 || Hstring.compare hfalse b = 0 -> 
       let tx = make_term env x in
       let p = AE.Literal.LT.mk_pred tx in
       let lit = 
-	match op, b with
-	  | Eq, "True" | Neq, "False" ->  p 
-	  | Eq, "False" | Neq, "True" -> AE.Literal.LT.neg p
-	  | _ -> assert false
+	if (op = Eq && Hstring.compare htrue b = 0) 
+	  || (op = Neq && Hstring.compare hfalse b = 0)
+	then p
+	else if (op = Eq && Hstring.compare hfalse b = 0) 
+	    || (op = Neq && Hstring.compare htrue b = 0)
+	then AE.Literal.LT.neg p
+	else assert false
       in
       AE.Formula.mk_lit lit 0
 
@@ -124,64 +155,56 @@ let make_init env {t_init = arg, sa } f lvars =
 	     let la = SAtom.elements (subst_atoms [z, hash] sa) in
 	     make_formula env f la) f lvars
 
-let make_alpha = 
-  List.fold_left 
-    (fun f (x, y) -> 
-       let x = make_variable ty_proc x in
-       let y = make_variable ty_proc y in
-       let lit = AE.Literal.LT.make (AE.Literal.Eq(x,y)) in
-       let eq = AE.Formula.mk_lit lit 0 in
-       AE.Formula.mk_and f eq 0) vrai
+let empty vars =
+  let vars = List.map (make_variable ty_proc) vars in
+  let distincts = make_distincts vars in
+  let df = { AE.Sat.f = distincts; age = 0; name = None; mf=false; gf=false} in
+  AE.Sat.assume df
 
-let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) = 
+let check () =
+  incr cpt_check;
+  AE.Sat.check ()
+
+let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
+  AE.Sat.clear ();
   let tvars = List.map (make_variable ty_proc) vars in
   let distincts = make_distincts tvars in
   let init = make_init env ts distincts vars in
-  make_formula env init (SAtom.elements sa)
+  let f = make_formula env init (SAtom.elements sa) in
+  let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
+  AE.Sat.assume gf;
+  check ()
 
-let fixpoint {t_env=env} vars np p =  
-  let vars = List.map (make_variable ty_proc) vars in
-  let distincts = make_distincts vars in
-  let np = make_formula env distincts (SAtom.elements np) in
-  let p =  make_formula env vrai (SAtom.elements p) in
-  AE.Formula.mk_not (AE.Formula.mk_imp np p 0) 
-  
-let extended_fixpoint {t_env=env} vars d np p = 
-  let vars = List.map (make_variable ty_proc) vars in
-  let preambule = 
-    AE.Formula.mk_and (make_distincts vars) (make_alpha d) 0 in
-  let np = make_formula env preambule (SAtom.elements np) in
-  let p =  make_formula env vrai (SAtom.elements p) in
-  AE.Formula.mk_not (AE.Formula.mk_imp np p 0)
-  
-let simpl_check env vars sa1 sa2  = 
+
+let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env} =
+  TimeAE.start ();
+  AE.Sat.clear ();
+  empty args; 
+  let f = make_formula_array env ap in
+  if debug_altergo then Format.eprintf "goal g: %a@." AE.Formula.print f;
+  let gf = { AE.Sat.f = f; age = 0; name = None; mf=true; gf=true} in
+  AE.Sat.assume gf;
+  check ();
+  TimeAE.pause ()
+
+let add_node env ap =
+  TimeAE.start ();
+  let f = 
+    AE.Formula.mk_not (make_formula_array env ap)
+  in
+  if debug_altergo then Format.eprintf "axiom node: %a@." AE.Formula.print f;
+  let gf = 
+    { AE.Sat.f = f; age = 0; name = None; mf=false; gf=false} in
+  AE.Sat.assume gf;
+  check ();
+  TimeAE.pause ()
+
+let check_fixpoint ({t_env=env} as s) nodes =
   try
-    let tvars = List.map (make_variable ty_proc) vars in
-    let distincts = make_distincts tvars in
-    let f1 = make_formula env vrai (SAtom.elements sa1) in
-    let f2 = make_formula env vrai (SAtom.elements sa2) in
-    let f = AE.Formula.mk_and distincts (AE.Formula.mk_and 
-      (AE.Formula.mk_not f1) (AE.Formula.mk_not f2) 0) 0 in
-    let gf = { AE.Sat.f = f; age = 0; name = None; mf=false; gf=true} in
-    ignore(AE.Sat.unsat AE.Sat.empty gf);
-    true
-  with 
+    add_goal s;
+    List.iter (add_node env) nodes;
+    false
+  with
+    | Exit -> false
     | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
     | AE.Sat.Unsat _ -> true
-
-
-(* ---------- extra stuff ----------- *)
-
-(*
-  let alt_ergo_unsafe = 
-    if not debug_altergo then fun _ -> 	() else 
-      fun f ->
-	eprintf "[Unsafe check] Alt-Ergo is called on:@.%a\n@." 
-	  AE.Formula.print f
-
-  let alt_ergo_fixpoint = 
-    if not debug_altergo then fun _ -> () else 
-      fun f ->
-	eprintf "[Fixpoint check] Alt-Ergo is called on:@.%a\n@." 
-	  AE.Formula.print f
-*)

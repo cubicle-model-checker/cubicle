@@ -16,6 +16,8 @@
   open Parsing
   open Atom
 
+  let hproc = Hstring.make "proc"
+
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
 
   let rec extract_underscore = function
@@ -109,7 +111,7 @@ arrays:
 
 array:
 mident LEFTSQ lident COMMA lident RIGHTSQ 
-  { if $3<>"proc" then raise Parsing.Parse_error;
+  { if Hstring.compare $3 hproc <> 0 then raise Parsing.Parse_error;
     $1, ($3, $5) } 
 ;
 
@@ -233,7 +235,7 @@ term:
 ;
 
 mident:
-| MIDENT { $1 }
+| MIDENT { Hstring.make $1 }
 ;
 
 lident_plus:
@@ -248,11 +250,11 @@ lidents:
 
 lident_option:
 | { None }
-| LIDENT { Some $1 }
+| LIDENT { Some (Hstring.make $1) }
 ;
 
 lident:
-| LIDENT { $1 }
+| LIDENT { Hstring.make $1 }
 ;
 
 operator:

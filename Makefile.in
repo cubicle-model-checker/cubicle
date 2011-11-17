@@ -55,7 +55,8 @@ all: $(OCAMLBEST)
 # bytecode and native-code compilation
 ######################################
 
-CMO = version.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo options.cmo \
+CMO = timer.cmo hashcons.cmo hstring.cmo \
+      version.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo options.cmo \
       prover.cmo heap.cmo search.cmo \
       bwreach.cmo typing.cmo main.cmo
 

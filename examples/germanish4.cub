@@ -1,0 +1,65 @@
+type req = Empty | Reqs | Reqe | Inv | Invack
+type cstate = Invalid | Shared | Exclusive
+
+globals = Exgntd[bool] Curcmd[req] Curptr[proc]
+arrays = Cache[proc,cstate] Shrset[proc,bool] Chan1[proc,req]
+       Chan3[proc,req]
+
+init (z) { Cache[z] = Invalid && Shrset[z] = False &&
+           Exgntd = False && Curcmd = Empty && 
+	   Chan1[z]=Empty && Chan3[z]=Empty }
+
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+
+transition send_shared (n)
+require { Chan1[n] = Empty && Cache[n] = Invalid }
+Chan1[j] := {| j = n : Reqs | _ : Chan1[j] }
+
+transition recv_shared (n)
+require { Curcmd = Empty && Chan1[n] = Reqs }
+assign { Curcmd := Reqs; Curptr := n }
+Chan1[j] := {| j = n : Empty | _ : Chan1[j] }
+    
+transition send_exclusive (n)
+require { Chan1[n] = Empty && Cache[n] <> Exclusive }
+Chan1[j] := {| j = n : Reqe | _ : Chan1[j] }
+
+transition recv_exclusive (n)
+require { Curcmd = Empty && Chan1[n] = Reqe }
+assign { Curcmd := Reqe; Curptr := n }
+Chan1[j] := {| j = n : Empty | _ : Chan1[j] }
+    
+transition sendinv_1 (n)
+require { Chan3[n] = Empty && Shrset[n]=True  &&  Curcmd = Reqe }
+Chan3[j] := {| j = n : Inv | _ : Chan3[j] }
+
+
+transition sendinv_2 (n)
+require { Chan3[n] = Empty && Shrset[n]=True  &&
+	   Curcmd = Reqs && Exgntd=True }
+Chan3[j] := {| j = n : Inv | _ : Chan3[j] }
+
+
+transition recv_inv(n)
+require { Chan3[n] = Inv }
+Chan3[j] := {| j = n : Invack | _ : Chan3[j] }
+Cache[j] := {| j = n : Invalid | _ : Cache[j] }
+    
+transition recv_invack(n)
+require { Chan3[n] = Invack && Curcmd <> Empty }
+assign { Exgntd := False }
+Chan3[j] := {| j = n : Empty | _ : Chan3[j] }
+Shrset[j] := {| j = n : False | _ : Shrset[j] }
+
+transition gnt_shared (n)
+require { Curptr = n && Curcmd = Reqs && Exgntd = False }
+assign { Curcmd := Empty }
+Shrset[j] := {| j = n : True | _ : Shrset[j] }
+Cache[j] := {| j = n : Shared | _ : Cache[j] }
+
+transition gnt_exclusive (n)
+require { Curcmd = Reqe && Exgntd = False && Curptr = n}
+uguard (l) { Shrset[l] = False }
+assign { Curcmd := Empty; Exgntd := True }
+Shrset[j] := {| j = n : True | _ : Shrset[j] }
+Cache[j] := {| j = n : Exclusive | _ : Cache[j] }

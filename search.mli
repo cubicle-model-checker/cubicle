@@ -13,24 +13,29 @@
 (* Backward reachability search strategies *)
 
 exception ReachBound
-exception FixpointSMT
 
 module type I = sig
   type t
 
   val size : t -> int
   val maxrounds : int
+  val maxnodes : int
   val invariants : t -> t list
   val gen_inv :
     (invariants : t list -> visited : t list -> t -> unit) -> 
     invariants : t list -> t list -> t -> t list * t list
-  val add_to_disjunction : t -> t list -> t list
+
+  val delete_nodes : t -> t list -> t list
+
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
   val pre : t -> t list * t list
   val print : Format.formatter -> t -> unit
+  val sort : t list -> t list
 
 end
+
+module TimeFix : Timer.S
 
 module type S = sig 
   type t
@@ -42,12 +47,12 @@ end
 (* Dfs search where fixpoint nodes are only looked on the current
    branch *)
 
-module DFS ( X : I ) : S with type t = X.t 
+module DFS ( X : I ) : S with type t = X.t
 
 (* Dfs search which extends the previous one with fixpoint nodes
    looked in the all tree on the left. *)
 
-module DFSL ( X : I ) : S  with type t = X.t 
+module DFSL ( X : I ) : S  with type t = X.t
 
 
 (* Dfs search where nodes with less than 2 process variables are
@@ -60,7 +65,7 @@ module DFSH ( X : I ) : S  with type t = X.t
 (* Dfs search which extends the previous one with fixpoint nodes
    looked in the all tree on the left. *)
 
-module DFSHL ( X : I ) : S  with type t = X.t 
+module DFSHL ( X : I ) : S  with type t = X.t
 
 
 (* Bfs search where fixpoint nodes are the visited nodes. *)

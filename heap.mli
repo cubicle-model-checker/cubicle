@@ -25,6 +25,7 @@ module type S = sig
   val empty : t
   val pop : t -> elem * t
   val add : t -> elem list -> t
+  val elements : t -> elem list
 end
 
 module Make ( X : OrderType ) : S with type elem = X.t
