@@ -551,13 +551,6 @@ let neg x op y =
     | Le -> Comp (y, Lt, x)
     | Neq -> Comp (x, Eq, y)
 
-let rec neg_atom = function
-  | True -> False
-  | False -> True
-  | Comp (x, op, y) -> neg x op y 
-  | Ite (c,x,y) -> Ite (c, neg_atom x, neg_atom y)
-
-
 let simplification_atoms base env sa = 
   try 
     SAtom.fold (fun a base ->
@@ -814,7 +807,6 @@ module T = struct
   let maxrounds = maxrounds
   let maxnodes = maxnodes
   let gen_inv = gen_inv
-  let add_to_disjunction = add_to_disjunction
 
   let delete_nodes = delete_nodes
 
