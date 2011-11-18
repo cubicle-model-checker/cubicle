@@ -228,8 +228,6 @@ module BFS_base ( X : I ) = struct
 	  let post = List.rev post in
 	  (* Uncomment for pure bfs search *)
 	  (* let ls,post= List.rev_append ls post, [] in *)
-	  (* let ls,post = 
-	     List.partition (fun p -> X.size p <= X.size s) ls in *)
 	  Profiling.update_nb_proc (X.size s);
 
 	  (* invariant search *)

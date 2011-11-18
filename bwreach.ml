@@ -89,7 +89,12 @@ let rec m_number env a s =
     | Ite (sa, a1, a2) -> 
 	SAtom.fold (m_number env) sa (m_number env a1 (m_number env a2 s))
 
-let magic_number s sa = SAtom.fold (m_number s.t_env) sa SS.empty
+let magic_number env sa = SAtom.fold (m_number env) sa SS.empty
+
+let magic_number_arr env aa = 
+  Array.fold_left 
+    (fun s a -> m_number env a s) 
+    SS.empty aa
 
 let print_magic fmt ss = 
   SS.iter (fun (a,b) -> 
@@ -432,18 +437,16 @@ let impossible_access env p a i op j acc =
   Array.fold_left (fun acc at -> match at, op with
     | Comp (Access (a', i'), Eq, Elem j'), Eq 
       when not (Hstring.equal j j') && Hstring.equal a a' ->
-      (* let si' =  sort_of env i' in *)
       let sj' = sort_of env j' in
-      (match (* si', *) sj' with
-	| (* Var , *)(Glob | Constr) -> (i', i)::acc
+      (match  sj' with
+	| Glob | Constr -> (i', i)::acc
 	| _ -> acc)
     | Comp (Access (a', i'), Eq, Elem j'), Neq 
     | Comp (Access (a', i'), Neq, Elem j'), Eq  
       when Hstring.equal j j' && Hstring.equal a a' ->
-      (* let si' =  sort_of env i' in *)
       let sj' = sort_of env j' in
-      (match (* si', *) sj' with
-	| (* Var, *) (Glob | Constr) -> (i', i)::acc
+      (match sj' with
+	| Glob | Constr -> (i', i)::acc
 	| _ -> acc)
     | _ -> acc) acc p
 
@@ -468,10 +471,12 @@ let relevant_permutations env globals accesses p l1 l2 =
 
 
 
-let possible_imply s np p =
-  SS.subset (magic_number s p) (magic_number s np)  
+let possible_imply env anp ap =
+  SS.subset (magic_number_arr env ap) (magic_number_arr env anp)  
 
 
+let closeness env anp ap =
+  SS.cardinal (SS.diff (magic_number_arr env anp) (magic_number_arr env ap))
 
 (* Safety check : s /\ init must be inconsistent *)
 
@@ -520,9 +525,14 @@ let check_fixpoint
   let nodes = 
     List.fast_sort
       (fun p1 p2 ->
-	Pervasives.compare
+	let c = Pervasives.compare 
       	  (ArrayAtom.nb_diff p1 anp)
-      	  (ArrayAtom.nb_diff p2 anp))
+      	  (ArrayAtom.nb_diff p2 anp)
+	in 
+	if c <> 0 then c
+	else 
+	  Pervasives.compare (closeness env anp p1) (closeness env anp p2)
+      )
       nodes in
   List.iter (fun p -> Prover.add_node env p) nodes
 
