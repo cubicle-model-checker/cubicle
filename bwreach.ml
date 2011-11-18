@@ -24,6 +24,10 @@ let hempty = Hstring.make ""
 
 module TimeFix = Search.TimeFix
 
+module TimeRP = Search.TimeRP
+
+module TimePre = Search.TimePre
+
 exception Unsafe
 
 module Debug = struct
@@ -459,16 +463,16 @@ let impossible_accesses env accesses p =
 (* Relevant permuations for fixpoint check *)
 
 let relevant_permutations env globals accesses p l1 l2 =
-  TimeFix.start ();
+  TimeRP.start ();
   let obvs, l1, l2 = obvious_permutations env globals p l1 l2 in
   let perm = all_permutations l1 l2 in
   let impos = impossible_accesses env accesses p in
   let perm = List.filter 
     (List.for_all (fun s -> not (Hstring.list_mem_couple s impos))) perm 
   in
-  TimeFix.pause ();
-  List.map (List.rev_append obvs) perm
-
+  let r = List.map (List.rev_append obvs) perm in
+  TimeRP.pause ();
+  r
 
 
 let possible_imply env anp ap =
@@ -549,7 +553,10 @@ let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
 
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
-  is_fixpoint s (List.rev_append invariants visited)
+  TimeFix.start ();
+  let f = is_fixpoint s (List.rev_append invariants visited) in
+  TimeFix.pause ();
+  f
 
 
 
@@ -710,6 +717,7 @@ let pre tr unsafe =
    systems *)
 
 let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
+  TimePre.start ();
   Debug.unsafe s;
   let ls, post = 
     List.fold_left
@@ -720,7 +728,8 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
        make_cubes acc info_args s tr pre_u) 
     ([], []) 
     trs 
-  in 
+  in
+  TimePre.pause ();
   ls, post
 
 

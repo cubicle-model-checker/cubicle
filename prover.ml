@@ -166,6 +166,7 @@ let check () =
   AE.Sat.check ()
 
 let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
+  TimeAE.start ();
   AE.Sat.clear ();
   let tvars = List.map (make_variable ty_proc) vars in
   let distincts = make_distincts tvars in
@@ -173,8 +174,10 @@ let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
   let f = make_formula env init (SAtom.elements sa) in
   let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
   AE.Sat.assume gf;
-  check ()
-
+  try 
+    check ();
+    TimeAE.pause ()
+  with e -> TimeAE.pause (); raise e
 
 let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env} =
   TimeAE.start ();
@@ -184,8 +187,10 @@ let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env} =
   if debug_altergo then Format.eprintf "goal g: %a@." AE.Formula.print f;
   let gf = { AE.Sat.f = f; age = 0; name = None; mf=true; gf=true} in
   AE.Sat.assume gf;
-  check ();
-  TimeAE.pause ()
+  try 
+    check ();
+    TimeAE.pause ()
+  with e -> TimeAE.pause (); raise e
 
 let add_node env ap =
   TimeAE.start ();
@@ -196,8 +201,10 @@ let add_node env ap =
   let gf = 
     { AE.Sat.f = f; age = 0; name = None; mf=false; gf=false} in
   AE.Sat.assume gf;
-  check ();
-  TimeAE.pause ()
+  try 
+    check ();
+    TimeAE.pause ()
+  with e -> TimeAE.pause (); raise e
 
 let check_fixpoint ({t_env=env} as s) nodes =
   try

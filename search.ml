@@ -19,6 +19,10 @@ module AE = AltErgo
 
 module TimeFix = Timer.Make (struct end)
 
+module TimeRP = Timer.Make (struct end)
+
+module TimePre = Timer.Make (struct end)
+
 module Profiling = struct
   
   let round = 
@@ -46,33 +50,52 @@ module Profiling = struct
     else fun str d size -> 
       eprintf "[%s %d] Number of processes : %d@." str d size
 
-  let print_time_prover () =
-    let sec = Prover.TimeAE.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    eprintf "Time in solver          : %dm%2.3fs@." (int_of_float minu) extrasec
-
   let print_time_fix () =
     let sec = TimeFix.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "Time for fixpoint       : %dm%2.3fs@." (int_of_float minu) extrasec
+    eprintf "Time for fixpoint                : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
+  let print_time_rp () =
+    let sec = TimeRP.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    eprintf "├─Time for relevant permutations : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
+  let print_time_prover () =
+    let sec = Prover.TimeAE.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    eprintf "└─Time in solver                 : %dm%2.3fs@."
+      (int_of_float minu) extrasec
       
+  let print_time_pre () =
+    let sec = TimePre.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    eprintf "Time for pre-image computation   : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
   let print_time_hs () =
     let sec = Hstring.TimeHS.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "Hstring.make            : %dm%2.3fs@." (int_of_float minu) extrasec
+    eprintf "Hstring.make                     : %dm%2.3fs@."
+      (int_of_float minu) extrasec
 
   let print_report nb =
-    eprintf "\n--------------------------------------@.";
-    eprintf "Number of visited nodes : %d@." nb;
-    eprintf "Fixpoints               : %d@." !cpt_fix;
-    print_time_prover ();
-    eprintf "Number of solver calls  : %d@." (Prover.nb_calls ());
+    eprintf "\n----------------------------------------------@.";
+    eprintf "Number of visited nodes          : %d@." nb;
+    eprintf "Fixpoints                        : %d@." !cpt_fix;
+    eprintf "Number of solver calls           : %d@." (Prover.nb_calls ());
+    eprintf "Max Number of processes          : %d@." !cpt_process;
+    eprintf "----------------------------------------------@.";
     print_time_fix ();
-    eprintf "Max Number of processes : %d@." !cpt_process;
-    eprintf "--------------------------------------@."
+    print_time_rp ();
+    print_time_prover ();
+    eprintf "----------------------------------------------@."
 
 end
 
@@ -240,7 +263,7 @@ module BFS_base ( X : I ) = struct
 	      end
 	    else [], !not_invariants
 	  in
-	  invariants :=  List.rev_append inv !invariants;
+	  invariants := List.rev_append inv !invariants;
 	  not_invariants := not_invs;
 
 	  visited := s :: !visited;
