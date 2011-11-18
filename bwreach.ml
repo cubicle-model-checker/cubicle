@@ -525,13 +525,12 @@ let check_fixpoint
   let nodes = 
     List.fast_sort
       (fun p1 p2 ->
-	let c = Pervasives.compare 
+	 Pervasives.compare 
       	  (ArrayAtom.nb_diff p1 anp)
       	  (ArrayAtom.nb_diff p2 anp)
-	in 
-	if c <> 0 then c
-	else 
-	  Pervasives.compare (closeness env anp p1) (closeness env anp p2)
+	(* if c <> 0 then c *)
+	(* else  *)
+	(*   Pervasives.compare (closeness env anp p1) (closeness env anp p2) *)
       )
       nodes in
   List.iter (fun p -> Prover.add_node env p) nodes
