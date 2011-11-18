@@ -90,15 +90,15 @@ val sort_of : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t ->
   Hstring.t -> sort
 
 type t_system = {
-  t_from : (Hstring.t * SAtom.t) list;
+  t_from : (Hstring.t * t_system) list;
   t_env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;
-  t_trans : transition list
+  t_trans : transition list;
+  mutable t_deleted : bool
 }
-
 
 

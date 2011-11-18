@@ -239,12 +239,14 @@ let system s =
   transitions s.trans;
   let args, p = s.unsafe in
   let arru = ArrayAtom.of_satom p in
-  { t_from = [];
+  { 
+    t_from = [];
     t_env = Env.env;
     t_init = s.init;
     t_invs = s.invs;
     t_unsafe = s.unsafe;
     t_arru = arru;
     t_alpha = ArrayAtom.alpha arru args;
-    t_trans = s.trans }
-
+    t_trans = s.trans;
+    t_deleted = false;
+  }

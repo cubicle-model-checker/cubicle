@@ -551,12 +551,16 @@ let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
       | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
       | AE.Sat.Unsat _ -> true
 
+let has_deleted_ancestor s =
+  List.exists (fun (_, a) -> a.t_deleted) s.t_from
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
-  TimeFix.start ();
-  let f = is_fixpoint s (List.rev_append invariants visited) in
-  TimeFix.pause ();
-  f
+  let f = if delete then s.t_deleted || (has_deleted_ancestor s) else false in
+  f || 
+    (TimeFix.start ();
+     let f = is_fixpoint s (List.rev_append invariants visited) in
+     TimeFix.pause ();
+     f)
 
 
 
@@ -723,8 +727,11 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
     List.fold_left
     (fun acc tr ->
        let tr, pre_u, info_args = pre tr u in
-       let s = { s with 
-	 t_from = (tr.tr_name, snd s.t_unsafe)::s.t_from } in
+       let s = 
+	 { s with 
+	     t_from = (tr.tr_name, s (* snd s.t_unsafe *))::s.t_from;
+	     (* t_deleted = false; *)
+	 } in
        make_cubes acc info_args s tr pre_u) 
     ([], []) 
     trs 
@@ -804,8 +811,13 @@ let gen_inv search ~invariants not_invs s =
 
 (* node deletion : experimental *)
 
-let delete_nodes s = List.filter 
-  (fun n -> not (ArrayAtom.subset s.t_arru n.t_arru))
+let delete_nodes s = List.iter 
+  (fun n -> 
+     if (not n.t_deleted) && ArrayAtom.subset s.t_arru n.t_arru then 
+       begin
+	 (* eprintf "deleted node@."; *)
+	 n.t_deleted <- true;
+       end)
 
 
 (* ----------------- Search strategy selection -------------------*)

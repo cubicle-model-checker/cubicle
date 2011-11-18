@@ -21,6 +21,7 @@ val maxnodes : int
 
 val gen_inv : bool
 val alwayspost : bool
+val delete : bool
 
 val mode : mode ref
 
