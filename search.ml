@@ -92,6 +92,7 @@ module Profiling = struct
     eprintf "Number of solver calls           : %d@." (Prover.nb_calls ());
     eprintf "Max Number of processes          : %d@." !cpt_process;
     eprintf "----------------------------------------------@.";
+    print_time_pre ();
     print_time_fix ();
     print_time_rp ();
     print_time_prover ();
