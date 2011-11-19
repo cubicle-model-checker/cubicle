@@ -22,20 +22,47 @@ module S =
 		       let hash = Hashtbl.hash 
 		       let equal = (=)     end)
 
-type t = string Hashcons.hash_consed
+module TimeHS = Timer.Make (struct end)
 
-let make s = S.hashcons s
+module HS = struct
 
-let view s = s.node
+  type t = string Hashcons.hash_consed
 
-let equal s1 s2 = s1 == s2
+  let make s = S.hashcons s
 
-let compare s1 s2 = compare s1.tag s2.tag
+  let view s = s.node
 
-let hash s = s.tag
+  let equal s1 s2 = s1 == s2
 
-let empty = make ""
+  let compare s1 s2 = compare s1.tag s2.tag
 
-let rec list_assoc x = function
-  | [] -> raise Not_found
-  | (y, v) :: l -> if equal x y then v else list_assoc x l
+  let hash s = s.tag
+
+  let empty = make ""
+
+  let rec list_assoc x = function
+    | [] -> raise Not_found
+    | (y, v) :: l -> if equal x y then v else list_assoc x l
+
+  let rec list_mem_assoc x = function 
+    | [] -> false
+    | (y, _) :: l -> compare x y = 0 || list_mem_assoc x l
+
+  let rec list_mem x = function
+    | [] -> false
+    | y :: l -> compare x y  = 0 || list_mem x l
+
+  let compare_couple (x1,y1) (x2,y2) =
+    let c = compare x1 x2 in
+    if c <> 0 then c
+    else compare y1 y2
+
+  let rec list_mem_couple c = function
+    | [] -> false
+    | d :: l -> compare_couple c d  = 0 || list_mem_couple c l
+
+end
+
+include HS
+
+module H = Hashtbl.Make(HS)

@@ -17,6 +17,8 @@
 
 open Hashcons 
 
+module TimeHS : Timer.S
+
 type t = string hash_consed
 
 val make : string -> t
@@ -32,3 +34,11 @@ val hash : t -> int
 val empty : t 
 
 val list_assoc : t -> (t * 'a) list -> 'a
+
+val list_mem_assoc : t -> (t * 'a) list -> bool
+
+val list_mem : t -> t list -> bool
+
+val list_mem_couple : t * t -> (t * t) list -> bool
+
+module H : Hashtbl.S with type key = t

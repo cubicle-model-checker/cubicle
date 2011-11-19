@@ -12,6 +12,8 @@ exception Conflict of clause
 
 module D1 = Debug1
 
+module TimerSat = Timer.Make (struct end)
+
 (*==============================================================================
   Traduction de Solver.h
   *===========================================================================*)
@@ -841,13 +843,13 @@ let add_clauses cnf =
 
 
 let init_solver cnf =
-  Timer.init();
+  TimerSat.start ();
   if Debug1.d_decisions then begin
     eprintf "============================[ Problem Statistics ]=============================@.";
     eprintf "|                                                                             |@.";
   end;
   if D1.d_decisions  then begin
-    eprintf "|  Parsing time:         %-12.2f s                                       |@." (Timer.get());
+    eprintf "|  Parsing time:         %-12.2f s                                       |@." (TimerSat.pause (); TimerSat.start (); TimerSat.get());
   end;
   
   let nbv, _ = made_vars_info () in

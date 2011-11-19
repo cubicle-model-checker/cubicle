@@ -44,7 +44,7 @@ let pred_def _ = assert false
 
 let print_stats () = 
   if Debug1.d_decisions  then begin
-    let cpu_time = Timer.get() in
+    let cpu_time = TimerSat.get() in
     eprintf "===============================================================================@.";
     
     eprintf "restarts              : %-12l@." env.starts;
