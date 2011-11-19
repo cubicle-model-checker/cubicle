@@ -130,6 +130,10 @@ let build_subst args a_args =
   a_subst [] args a_args
 
 
+module TimerSubset = Timer.Make (struct end)
+
+module TimerApply = Timer.Make (struct end)
+
 module ArrayAtom = struct
 
   type t = Atom.t array
@@ -148,19 +152,24 @@ module ArrayAtom = struct
       !res
 
   let subset a1 a2 =
+    TimerSubset.start ();
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
-    if n1 > n2 then false
-    else
-      let i1 = ref 0 in 
-      let i2 = ref 0 in
-      while !i1 < n1 && !i2 < n2 do
-	let c = Atom.compare a1.(!i1) a2.(!i2) in
-	if c = 0 then (incr i1; incr i2)
-	else if c < 0 then i2 := n2
-	else incr i2
-      done;
-      !i1 = n1
+    let s = 
+      if n1 > n2 then false
+      else
+	let i1 = ref 0 in 
+	let i2 = ref 0 in
+	while !i1 < n1 && !i2 < n2 do
+	  let c = Atom.compare a1.(!i1) a2.(!i2) in
+	  if c = 0 then (incr i1; incr i2)
+	  else if c < 0 then i2 := n2
+	  else incr i2
+	done;
+	!i1 = n1
+    in
+    TimerSubset.pause ();
+    s
 
   let of_satom s =
     Array.of_list (SAtom.elements s)
@@ -168,8 +177,10 @@ module ArrayAtom = struct
   let union = Array.append
 
   let apply_subst sigma a =
+    TimerApply.start ();
     let a' = Array.init (Array.length a) (fun i -> subst_atom sigma a.(i)) in
     Array.fast_sort Atom.compare a';
+    TimerApply.pause ();
     a'
 
   let nb_diff a1 a2 =

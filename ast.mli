@@ -43,6 +43,9 @@ val subst_atoms : (Hstring.t * Hstring.t) list -> SAtom.t -> SAtom.t
 val build_subst : Hstring.t list -> Hstring.t list -> 
   (Hstring.t * Hstring.t) list
 
+module TimerSubset : Timer.S
+module TimerApply  : Timer.S
+
 module ArrayAtom : sig
   type t = Atom.t array
   val equal : t -> t -> bool

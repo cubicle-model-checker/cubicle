@@ -85,6 +85,20 @@ module Profiling = struct
     eprintf "Hstring.make                     : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
+  let print_time_subset () =
+    let sec = Ast.TimerSubset.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    eprintf "├─Subset tests                   : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
+  let print_time_apply () =
+    let sec = Ast.TimerApply.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    eprintf "├─Apply substitutions            : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
   let print_report nb =
     eprintf "\n----------------------------------------------@.";
     eprintf "Number of visited nodes          : %d@." nb;
@@ -95,6 +109,8 @@ module Profiling = struct
     print_time_pre ();
     print_time_fix ();
     print_time_rp ();
+    print_time_subset ();
+    print_time_apply ();
     print_time_prover ();
     eprintf "----------------------------------------------@."
 
