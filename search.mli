@@ -41,6 +41,8 @@ module TimeRP  : Timer.S
 
 module TimePre : Timer.S
 
+module TimeSort : Timer.S
+
 
 module type S = sig 
   type t

@@ -23,6 +23,8 @@ module TimeRP = Timer.Make (struct end)
 
 module TimePre = Timer.Make (struct end)
 
+module TimeSort = Timer.Make (struct end)
+
 module Profiling = struct
   
   let round = 
@@ -99,6 +101,13 @@ module Profiling = struct
     eprintf "├─Apply substitutions            : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
+  let print_time_sort () =
+    let sec = TimeSort.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    eprintf "├─Nodes sorting                  : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
   let print_report nb =
     eprintf "\n----------------------------------------------@.";
     eprintf "Number of visited nodes          : %d@." nb;
@@ -111,6 +120,7 @@ module Profiling = struct
     print_time_rp ();
     print_time_subset ();
     print_time_apply ();
+    print_time_sort ();
     print_time_prover ();
     eprintf "----------------------------------------------@."
 

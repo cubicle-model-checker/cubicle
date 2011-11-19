@@ -28,6 +28,8 @@ module TimeRP = Search.TimeRP
 
 module TimePre = Search.TimePre
 
+module TimeSort = Search.TimeSort
+
 exception Unsafe
 
 module Debug = struct
@@ -526,6 +528,7 @@ let check_fixpoint
 	) nodes d
     ) [] visited
   in
+  TimeSort.start ();
   let nodes = 
     List.fast_sort
       (fun p1 p2 ->
@@ -537,6 +540,7 @@ let check_fixpoint
 	(*   Pervasives.compare (closeness env anp p1) (closeness env anp p2) *)
       )
       nodes in
+  TimeSort.pause ();
   List.iter (fun p -> Prover.add_node env p) nodes
 
 let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes = 
