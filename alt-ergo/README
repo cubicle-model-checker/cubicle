@@ -1,0 +1,34 @@
+**************************************************************************
+*                                                                        *
+*     The Alt-ergo theorem prover                                        *
+*     Copyright (C) 2006-2010                                            *
+*                                                                        *
+*     Sylvain Conchon                                                    *
+*     Evelyne Contejean                                                  *
+*     Stephane Lescuyer                                                  *
+*     Mohamed Iguernelala                                                *
+*     Alain Mebsout                                                      *
+*                                                                        *
+*     CNRS - INRIA - Universite Paris Sud                                *
+*                                                                        *
+*   This file is distributed under the terms of the CeCILL-C licence     *
+*                                                                        *
+**************************************************************************
+
+Alt-Ergo is an automatic theorem prover.  Alt-Ergo's input is an arbitray
+first-order formula.
+
+
+Various examples can be found in the subdirectory tests/.
+
+COPYRIGHT
+=========
+
+This program is distributed under the CeCILL-C licence.
+See the enclosed file COPYING.
+
+
+INSTALLATION
+============
+
+See the enclosed file INSTALL.

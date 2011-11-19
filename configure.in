@@ -17,19 +17,19 @@ if test "$OCAMLC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlc.)
 fi
 
-AC_CHECK_PROG(ALTERGO,alt-ergo,alt-ergo,no)
-if test "$ALTERGO" = no ; then
-	AC_MSG_ERROR(Cannot find alt-ergo.)
-fi
+dnl AC_CHECK_PROG(ALTERGO,alt-ergo,alt-ergo,no)
+dnl if test "$ALTERGO" = no ; then
+dnl 	AC_MSG_ERROR(Cannot find alt-ergo.)
+dnl fi
 
 OCAMLVERSION=`$OCAMLC -version`
 echo "ocaml version is $OCAMLVERSION"
 OCAMLLIB=`$OCAMLC -where`
 echo "ocaml library path is $OCAMLLIB"
 
-ALTERGOVERSION=`$ALTERGO -version`
+ALTERGOVERSION=`0.93-satml`
 echo "alt-ergo version is $ALTERGOVERSION"
-ALTERGOLIBDIR=`$ALTERGO -where`
+ALTERGOLIBDIR=`alt-ergo`
 echo "alt-ergo library path is $ALTERGOLIBDIR"
 
 AC_CHECK_PROG(OCAMLOPT,ocamlopt.opt,ocamlopt.opt,no)
@@ -59,7 +59,7 @@ fi
 
 AC_CHECK_FILE($ALTERGOLIBDIR/altErgo.cmi,ALTERGOLD=yes,ALTERGOLD=no)
 if test "$ALTERGOLD" = no ; then
-      AC_MSG_ERROR(Cannot find alt-ergo library.)
+      AC_MSG_ERROR(Cannot find alt-ergo library. Please cd alt-ergo && make)
       ALTERGOLIB=""
 else
    ALTERGOLIB="-I $ALTERGOLIBDIR"

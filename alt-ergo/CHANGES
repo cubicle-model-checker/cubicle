@@ -1,0 +1,94 @@
+
+version 0.93.1, May 9th, 2011
+=================================
+
+  o bug fixes (distinct, let-in, explanations)
+
+version 0.93, April 12th, 2011
+=================================
+
+  o -steps <i> stops Alt-Ergo after a given number of steps
+  o -max-split option to limit the number of case-splits
+  o new polymorphic theory of arrays: ('a, 'b) farray
+  o explanations (-proof option)
+  o Built-in support for enumeration types
+  o graphical frontend (altgr-ergo), needs to be compiled with make
+    gui && make install-gui
+  o new predicate distinct (a,b,c, ...) to express that constants
+    a,b,c,... are pairwise distinct
+  o new constructs: let x = <term> in <term>
+                    let x = <term> in <formula>
+  o partial support for / (division) operator
+  o bug fixes
+
+version 0.92.2, October 22nd, 2010
+=====================================
+
+  o New built-in syntax for the theory of arrays
+  o Fixes a bug in the arithmetic module
+  o Allows folding and unfolding of predicate definitions
+  o Fixes other bugs
+
+version 0.91, May 19th, 2010
+===============================
+
+  o experimental support for the theory of functional polymorphic 
+    arrays with the -arrays option
+  o the -pairs option should now be used for the built-in support of
+    polymorphic pairs
+  o support the equality part of the omega test with the -omega option
+  o partial support for non-linear arithmetics
+  o support case split on integer variables
+  o new support for Euclidean division and modulo operators
+  o new environment variable ERGOLIB to specify the library directory
+    
+version 0.9, July 17th, 2009
+===============================
+
+  o support AC symbols
+  o support for C-like hexadecimal floating-point constants
+  o handle the division operator 
+
+version 0.8, July 21st, 2008
+===============================
+
+  o pretty output with the -color option
+  o the SAT solver part is now equipped with a backjumping mechanism
+  o now handles the flet and let SMT-lib constructs 
+  o goal directed strategy
+  o pruning strategy (-select option)
+  o incremental strategy for instantiation of lemmas
+  o fail if a parameter is bound twice in a definition
+  o treatment of existential formulas have been slightly improved
+  o decision procedure for polymorphic pairs
+  o decision procedure for bit-vectors
+  o combination scheme for several decision procedures  
+
+version 0.7.3, March 5th, 2008
+===============================
+
+  o renamings in the interfaces
+  o provides an API for alt-ergo (make api or make api.byte)
+  o handles the modulo operator (%) as an uninterpreted symbol
+  o allow labels on any term, not only on predicates
+
+version 0.7, October 11th, 2007
+===============================
+  o trigger construction has been improved
+  o preliminary implementation of combination scheme (Arithmetic+pairs)
+  o the SAT loop has been improved
+
+
+version 0.6, February 1st, 2007
+===============================
+
+  o new CC(X) architecture (it can know directly handle relation symbols)  
+  o fully handles the polymorphism of the logic
+
+version 0.5, October 12th, 2006
+===============================
+  o first (beta) release
+
+Local Variables: 
+mode: text
+End: 
