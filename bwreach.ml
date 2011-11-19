@@ -811,7 +811,8 @@ let gen_inv search ~invariants not_invs s =
 
 (* node deletion : experimental *)
 
-let delete_nodes s = List.iter 
+let delete_nodes s nodes = 
+  nodes := List.filter
   (fun n -> 
      if (not n.t_deleted) && 
        not (List.mem n (List.map snd s.t_from)) &&
@@ -819,7 +820,10 @@ let delete_nodes s = List.iter
        begin
 	 (* eprintf "deleted node@."; *)
 	 n.t_deleted <- true;
-       end)
+	 false
+       end
+     else true)
+  !nodes
 
 
 (* ----------------- Search strategy selection -------------------*)

@@ -112,7 +112,7 @@ module type I = sig
     (invariants : t list -> visited : t list -> t -> unit) ->
     invariants : t list -> t list -> t -> t list * t list
 
-  val delete_nodes : t -> t list -> unit
+  val delete_nodes : t -> t list ref -> unit
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
@@ -267,10 +267,10 @@ module BFS_base ( X : I ) = struct
 	  invariants := List.rev_append inv !invariants;
 	  not_invariants := not_invs;
 
-	  if delete then X.delete_nodes s !visited;
+	  if delete then X.delete_nodes s visited;
 	  visited := s :: !visited;
 	  postponed := List.rev_append post !postponed;
-	  if delete then X.delete_nodes s !postponed;
+	  if delete then X.delete_nodes s postponed;
 
 	  List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;
@@ -378,10 +378,10 @@ module DFSHL ( X : I ) = struct
 	      invariants :=  List.rev_append inv !invariants;
 	      not_invariants :=  not_invs;
 	      Profiling.update_nb_proc (X.size s);
-	      if delete then X.delete_nodes s !visited;
+	      if delete then X.delete_nodes s visited;
 	      visited := s :: !visited;
 	      postponed := List.rev_append post !postponed;
-	      if delete then X.delete_nodes s !postponed;
+	      if delete then X.delete_nodes s postponed;
 	      if inv = [] then
 		let ls = List.rev (List.rev_map (fun s' -> cpt+1, s') ls) in
 		(H.add h ls)
