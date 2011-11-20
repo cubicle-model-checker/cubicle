@@ -748,7 +748,9 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
 
 let init_atoms args sa = 
   let cpt = ref 0 in
-  let sigma = List.map (fun z -> incr cpt; z, Hstring.make ("#"^(string_of_int !cpt))) args in
+  let sigma = 
+    List.map 
+      (fun z -> incr cpt; z, Hstring.make ("#"^(string_of_int !cpt))) args in
   let sa = apply_subst sa sigma in
   let args = List.map snd sigma in
   args, sa
