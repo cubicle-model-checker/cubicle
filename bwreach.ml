@@ -821,8 +821,9 @@ let gen_inv search ~invariants not_invs s =
 let delete_nodes s nodes = 
   nodes := List.filter
   (fun n -> 
-     if (not n.t_deleted) && 
-       not (List.mem n (List.map snd s.t_from)) &&
+     if (not n.t_deleted) &&
+       not (List.exists (fun (_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru)
+	      s.t_from) &&
        ArrayAtom.subset s.t_arru n.t_arru then 
        begin
 	 (* eprintf "deleted node@."; *)
