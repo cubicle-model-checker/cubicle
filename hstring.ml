@@ -66,3 +66,15 @@ end
 include HS
 
 module H = Hashtbl.Make(HS)
+
+(* struct *)
+(*   include Hashtbl.Make(HS) *)
+
+(*   let find x h = *)
+(*     TimeHS.start (); *)
+(*     try      *)
+(*       let r = find x h in *)
+(*       TimeHS.pause (); *)
+(*       r *)
+(*     with Not_found -> TimeHS.pause (); raise Not_found *)
+(* end *)

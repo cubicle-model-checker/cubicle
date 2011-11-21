@@ -84,7 +84,7 @@ module Profiling = struct
     let sec = Hstring.TimeHS.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "Hstring.make                     : %dm%2.3fs@."
+    eprintf "Hstring.find                     : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_subset () =

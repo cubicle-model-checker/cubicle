@@ -242,7 +242,7 @@ type t_elem = {
 
 type sort = Glob | Arr | Constr | Var
 
-let sort_of env x = 
+let sort_of env x =
   try 
     let s, _, _ = Hstring.H.find env x in 
     s 

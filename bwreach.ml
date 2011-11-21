@@ -273,6 +273,7 @@ let make_tau tr x op y =
 	  ls (Comp(t, op, tx))
     | Branch {up_arr=a1; up_arg=j1; up_swts=(ls1, t1)},
 	Branch {up_arr=a2; up_arg=j2; up_swts=(ls2, t2)} ->
+        eprintf "%a@." Pretty.print_atom (Comp (x, op, y));
 	assert false
 
 
