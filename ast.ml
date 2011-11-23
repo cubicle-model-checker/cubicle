@@ -61,10 +61,13 @@ end = struct
       | False, False -> 0
       | False, _ -> -1 | _, False -> 1
       | Comp (x1, op1, y1), Comp (x2, op2, y2) ->
-	  let c = Pervasives.compare op1 op2 in
 	  let c1 = compare_term x1 x2 in
-	  let c2 = compare_term y1 y2 in
-	  if c <> 0  then c else if c1 <> 0 then c1  else c2
+	  if c1 <> 0  then c1 
+	  else 
+	    let c0 = Pervasives.compare op1 op2 in
+	    if c0 <> 0 then c0 
+	    else 
+	      let c2 = compare_term y1 y2 in c2
       | Comp _, _ -> -1 | _, Comp _ -> 1
       | Ite (sa1, a1, b1), Ite (sa2, a2, b2) ->
 	  let c = SAtom.compare sa1 sa2 in

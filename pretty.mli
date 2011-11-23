@@ -19,6 +19,8 @@ val print_atom : formatter -> Atom.t -> unit
 
 val print_cube : formatter -> SAtom.t -> unit
 
+val print_array : formatter -> ArrayAtom.t -> unit
+
 val print_system : formatter -> t_system -> unit
 
 val print_unsafe : formatter -> t_system -> unit

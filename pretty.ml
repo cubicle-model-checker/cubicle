@@ -47,6 +47,9 @@ and print_atoms sep fmt = function
 let print_cube fmt sa = 
   fprintf fmt "@[%a@]" (print_atoms "&&") (SAtom.elements sa)
 
+let print_array fmt a =
+  fprintf fmt "@[%a@]" (print_atoms "&&") (Array.to_list a)
+
 let print_system fmt s = print_cube fmt (snd s.t_unsafe)
 
 let print_unsafe fmt s = 

@@ -400,82 +400,107 @@ and cross l pr x st =
 	acc@(cross l (y::pr) x p)
 
 
-(* Extract global variables/values and accesses from a cube *)
+(* all permutations excepted impossible ones *)
 
-let globals_accesses env np =
-  Array.fold_left (fun ((globv, accsv) as acc) a -> match a with
-    | Comp (Elem i, Eq, Elem j) ->
-      let si = sort_of env i in
-      let sj = sort_of env j in
-      (match si, sj with
-	| Glob, Var -> (i, j) :: globv, accsv
-	| Var, Glob -> (j, i) :: globv, accsv
-	| _ -> acc)
-    | Comp (Access (a, i), ((Eq | Neq) as op), Elem j) ->
-      let si = sort_of env i in
-      let sj = sort_of env j in
-      (match si, sj with
-	| Var, (Glob | Constr) -> globv, (a, i, op, j) :: accsv
-	| _ -> acc)
-    | _ -> acc) ([], []) np
+let rec all_permutations_impos l1 l2 impos = 
+  assert (List.length l1 <= List.length l2);
+  match l1 with
+    | [] -> [[]]
+    | x::l -> cross_impos impos l [] x l2
+and cross_impos impos l pr x st =
+  match st with
+    | [] -> []
+    | y::p -> 
+	if Hstring.list_mem_couple (x,y) impos then 
+	  cross_impos impos l (y::pr) x p
+	else
+	  let acc = all_permutations_impos l (pr@p) impos in
+	  let acc = List.map (fun ds -> (x, y)::ds) acc in
+	  acc@(cross_impos impos l (y::pr) x p)
 
-let obvious_permutations env globv p l1 l2 =
-  let obvs = Array.fold_left (fun acc a -> match a with
-    | Comp (Elem i, Eq, Elem j) ->
-      let si = sort_of env i in
-      let sj = sort_of env j in
-      (try 
-	 (match si, sj with
-	   | Glob, Var -> 
-	     if Hstring.list_mem_assoc j acc then acc
-	     else (j, Hstring.list_assoc i globv) :: acc
-	   | Var, Glob -> 
-	     if Hstring.list_mem_assoc i acc then acc
-	     else (i, Hstring.list_assoc j globv) :: acc
-	   | _ -> acc)
-       with Not_found -> acc)
-    | _ -> acc) [] p in
-  let obvl1, obvl2 = List.split obvs in
-  let l1 = List.filter (fun b -> not (Hstring.list_mem b obvl1)) l1 in
-  let l2 = List.filter (fun b -> not (Hstring.list_mem b obvl2)) l2 in
-  obvs, l1, l2
 
-let impossible_access env p a i op j acc =
-  Array.fold_left (fun acc at -> match at, op with
-    | Comp (Access (a', i'), Eq, Elem j'), Eq 
-      when not (Hstring.equal j j') && Hstring.equal a a' ->
-      let sj' = sort_of env j' in
-      (match  sj' with
-	| Glob | Constr -> (i', i)::acc
-	| _ -> acc)
-    | Comp (Access (a', i'), Eq, Elem j'), Neq 
-    | Comp (Access (a', i'), Neq, Elem j'), Eq  
-      when Hstring.equal j j' && Hstring.equal a a' ->
-      let sj' = sort_of env j' in
-      (match sj' with
-	| Glob | Constr -> (i', i)::acc
-	| _ -> acc)
-    | _ -> acc) acc p
+(* Improved relevant permutations *)
 
-let impossible_accesses env accesses p =
-  List.fold_left 
-    (fun acc (a, i, op, j) -> impossible_access env p a i op j acc) 
-    [] accesses
+exception NoPermutations
+
+let find_impossible a1 x1 op c1 i2 a2 n2 impos obvs =
+  let i2 = ref i2 in
+  while !i2 < n2 do
+    let a2i = a2.(!i2) in
+    (match a2i, op with
+      | Comp (Access (a2, _), _, _), _ when not (Hstring.equal a1 a2) ->
+	i2 := n2
+      | Comp (Access (a2, x2), Eq, Elem c2), Neq when Hstring.equal c1 c2 ->
+	if Hstring.list_mem_couple (x1,x2) obvs then raise NoPermutations;
+	impos := (x1,x2) :: !impos
+      | Comp (Access (a2, x2), Neq, Elem c2), Eq when Hstring.equal c1 c2 ->
+	if Hstring.list_mem_couple (x1,x2) obvs then raise NoPermutations;
+	impos := (x1,x2) :: !impos
+      | Comp (Access (a2, x2), Eq, Elem c2), Eq when not (Hstring.equal c1 c2) ->
+	if Hstring.list_mem_couple (x1,x2) obvs then raise NoPermutations;
+	impos := (x1,x2) :: !impos
+      | _ -> ());
+    incr i2
+  done
+
+let obvious_impossible env a1 a2 =
+  let n1 = Array.length a1 in
+  let n2 = Array.length a2 in
+  let obvs = ref [] in
+  let impos = ref [] in
+  let i1 = ref 0 in
+  let i2 = ref 0 in
+  while !i1 < n1 && !i2 < n2 do
+    let a1i = a1.(!i1) in
+    let a2i = a2.(!i2) in
+    (match a1i, a2i with
+      | Comp (Elem x1, Eq, Elem y1), Comp (Elem x2, Eq, Elem y2) ->
+    	(match sort_of env x1, sort_of env y1,
+    	  sort_of env x2, sort_of env y2 with
+    	    | Glob, Constr, Glob, Constr 
+	      when Hstring.equal x1 x2 && not (Hstring.equal y1 y2) ->
+    	      raise NoPermutations
+    	    | Glob, Var, Glob, Var when Hstring.equal x1 x2 ->
+    	      obvs := (y1,y2) :: !obvs
+    	    | Glob, Var, Var, Glob when Hstring.equal x1 y2 ->
+    	      obvs := (y1,x2) :: !obvs
+    	    | Var, Glob, Glob, Var when Hstring.equal y1 x2 ->
+    	      obvs := (x1,y2) :: !obvs
+    	    | Var, Glob, Var, Glob when Hstring.equal y1 y2 ->
+    	      obvs := (x1,x2) :: !obvs
+    	    | _ -> ()
+    	)
+      | Comp (Elem x1, Eq, Elem y1), Comp (Elem x2, Neq, Elem y2) ->
+    	(match sort_of env x1, sort_of env y1,
+    	  sort_of env x2, sort_of env y2 with
+    	    | Glob, Constr, Glob, Constr 
+	      when Hstring.equal x1 x2 && Hstring.equal y1 y2 ->
+    	      raise NoPermutations
+    	    | _ -> ()
+    	)
+      | Comp (Access (a1, x1), op, Elem c1), Comp (Access (a, _), _, Elem _)
+    	when Hstring.equal a1 a ->
+	find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
+      | _ -> ());
+    if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
+  done;
+  !obvs, !impos
 
 
 (* Relevant permuations for fixpoint check *)
 
-let relevant_permutations env globals accesses p l1 l2 =
+let relevant_permutations env np p l1 l2 =
   TimeRP.start ();
-  let obvs, l1, l2 = obvious_permutations env globals p l1 l2 in
-  let perm = all_permutations l1 l2 in
-  let impos = impossible_accesses env accesses p in
-  let perm = List.filter 
-    (List.for_all (fun s -> not (Hstring.list_mem_couple s impos))) perm 
-  in
-  let r = List.map (List.rev_append obvs) perm in
-  TimeRP.pause ();
-  r
+  try
+    let obvs, impos = obvious_impossible env p np in
+    let obvl1, obvl2 = List.split obvs in
+    let l1 = List.filter (fun b -> not (Hstring.list_mem b obvl1)) l1 in
+    let l2 = List.filter (fun b -> not (Hstring.list_mem b obvl2)) l2 in
+    let perm = all_permutations_impos l1 l2 impos in
+    let r = List.map (List.rev_append obvs) perm in
+    TimeRP.pause ();
+    r
+  with NoPermutations -> TimeRP.pause (); []
 
 
 let possible_imply env anp ap =
@@ -510,20 +535,17 @@ let check_fixpoint
  
   Prover.add_goal s;
   let nb_nargs = List.length nargs in
-  let globv, accsv = globals_accesses env anp in
   let nodes = List.fold_left
-    (fun nodes { t_alpha = args, ap; t_env = env } ->
+    (fun nodes { t_alpha = args, ap; t_env = env }->
       if List.length args > nb_nargs then nodes
       else
-	let d = relevant_permutations env globv accsv ap args nargs in
+	let d = relevant_permutations env anp ap args nargs in
 	List.fold_left
 	  (fun nodes ss ->
 	    let pp = ArrayAtom.apply_subst ss ap in
 	    if ArrayAtom.subset pp anp then raise Fixpoint
 	    (* Heruristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-	    else if (inconsistent_array env (ArrayAtom.union pp anp)) then
-	      nodes
 	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
 	    else (Prover.add_node env pp; nodes)
 	) nodes d
@@ -822,8 +844,9 @@ let delete_nodes s nodes =
   nodes := List.filter
   (fun n -> 
      if (not n.t_deleted) &&
+       (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) && *)
        not (List.exists (fun (_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru)
-	      s.t_from) &&
+       	      s.t_from) &&
        ArrayAtom.subset s.t_arru n.t_arru then 
        begin
 	 (* eprintf "deleted node@."; *)
