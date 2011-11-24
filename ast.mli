@@ -54,6 +54,7 @@ module ArrayAtom : sig
   val union : t -> t -> t
   val apply_subst : (Hstring.t * Hstring.t) list -> t -> t
   val nb_diff : t -> t -> int
+  val diff : t -> t -> t
   val alpha : t -> Hstring.t list -> Hstring.t list * t
 end
 
@@ -93,7 +94,7 @@ val sort_of : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t ->
   Hstring.t -> sort
 
 type t_system = {
-  t_from : (Hstring.t * t_system) list;
+  t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;

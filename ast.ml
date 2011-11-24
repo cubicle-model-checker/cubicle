@@ -200,6 +200,31 @@ module ArrayAtom = struct
     done;
     !cpt + (n1 - !i1)
 
+  let diff a1 a2 =
+    let n1 = Array.length a1 in
+    let n2 = Array.length a2 in
+    let i1 = ref 0 in 
+    let i2 = ref 0 in
+    let cpt = ref 0 in
+    let d = Array.copy a1 in
+    while !i1 < n1 && !i2 < n2 do
+      let ai1 = a1.(!i1) in
+      let c = Atom.compare ai1 a2.(!i2) in
+      if c = 0 then (incr i1; incr i2)
+      else if c < 0 then begin
+	d.(!cpt) <- ai1;
+	incr cpt;
+	incr i1
+      end
+      else incr i2
+    done;
+    while !i1 < n1 do
+      d.(!cpt) <- a1.(!i1);
+      incr cpt;
+      incr i1
+    done;
+    Array.sub d 0 !cpt
+
   let alpha atoms args =
     let subst = build_subst args alpha_args in
     List.map snd subst, apply_subst subst atoms
@@ -252,7 +277,7 @@ let sort_of env x =
   with Not_found -> Var
 
 type t_system = {
-  t_from : (Hstring.t * t_system) list;
+  t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;

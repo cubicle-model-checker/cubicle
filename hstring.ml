@@ -57,6 +57,16 @@ module HS = struct
     if c <> 0 then c
     else compare y1 y2
 
+  let rec compare_list l1 l2 =
+    match l1, l2 with
+      | [], [] -> 0
+      | [], _ -> -1
+      | _, [] -> 1
+      | x::r1, y::r2 ->
+	let c = compare x y in
+	if c <> 0 then c
+	else compare_list r1 r2
+
   let rec list_mem_couple c = function
     | [] -> false
     | d :: l -> compare_couple c d  = 0 || list_mem_couple c l

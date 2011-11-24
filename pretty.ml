@@ -16,6 +16,13 @@ open Atom
 
 module AE = AltErgo
 
+(* Set width of pretty printing boxes to number of columns *)
+(*let _ =
+  try
+    set_margin (158);
+  with Not_found | Failure _ -> ()
+*)
+
 let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 let op_arith = function Plus -> "+" | Minus -> "-"
 
@@ -52,13 +59,22 @@ let print_array fmt a =
 
 let print_system fmt s = print_cube fmt (snd s.t_unsafe)
 
+let rec print_args fmt = function
+  | [] -> ()
+  | [a] -> fprintf fmt "%s" (Hstring.view a)
+  | a::r -> fprintf fmt "%s, %a" (Hstring.view a) print_args r
+
 let print_unsafe fmt s = 
-  fprintf fmt "  Unsafe property (from %a):@.        %a@."
+  fprintf fmt "  Unsafe property (from %aunsafe):@.        %a@."
     (fun fmt ->
-       List.iter (fun (l, _) -> 
-		    fprintf fmt "[%s]" (Hstring.view l))) s.t_from
+       List.iter 
+	 (fun (l, args, _) -> 
+	   fprintf fmt "%s(%a) -> " 
+	     (Hstring.view l) print_args args)) s.t_from
     print_system s
 
 
 let print_node fmt s =
-  List.iter (fun (l, _) -> fprintf fmt "[%s]" (Hstring.view l)) s.t_from 
+  List.iter (fun (l, args, _) -> fprintf fmt "%s(%a) ->@ " 
+    (Hstring.view l) print_args args) s.t_from;
+  fprintf fmt "unsafe"

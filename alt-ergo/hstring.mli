@@ -41,4 +41,6 @@ val list_mem : t -> t list -> bool
 
 val list_mem_couple : t * t -> (t * t) list -> bool
 
+val compare_list : t list -> t list -> int
+
 module H : Hashtbl.S with type key = t

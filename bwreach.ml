@@ -120,8 +120,7 @@ let memo_apply_subst =
       Hashtbl.add cache k v;
       v
 
-
-
+  
 (* Simplifcation of atoms in a cube based on the hypothesis that
    indices #i are distinct and the type of elements is an
    enumeration *)
@@ -579,11 +578,11 @@ let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
       | AE.Sat.Unsat _ -> true
 
 let has_deleted_ancestor s =
-  List.exists (fun (_, a) -> a.t_deleted) s.t_from
+  List.exists (fun (_, _, a) -> a.t_deleted) s.t_from
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
-  let f = if delete then s.t_deleted || (has_deleted_ancestor s) else false in
-  f || 
+  (delete && (s.t_deleted || has_deleted_ancestor s))
+  ||
     (TimeFix.start ();
      let f = is_fixpoint s (List.rev_append invariants visited) in
      TimeFix.pause ();
@@ -677,7 +676,8 @@ let make_cubes (ls, post) (args, rargs)
 	 if inconsistent s.t_env np then (ls, post) 
 	 else
 	   let arr_np = ArrayAtom.of_satom np in
-	   let new_s = { s with 
+	   let new_s = { s with
+	     t_from = (tr.tr_name, List.map snd sigma, s)::s.t_from;
 	     t_unsafe = nargs, np;
 	     t_arru = arr_np;
 	     t_alpha = ArrayAtom.alpha arr_np nargs } in 
@@ -754,11 +754,6 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
     List.fold_left
     (fun acc tr ->
        let tr, pre_u, info_args = pre tr u in
-       let s = 
-	 { s with 
-	     t_from = (tr.tr_name, s (* snd s.t_unsafe *))::s.t_from;
-	     (* t_deleted = false; *)
-	 } in
        make_cubes acc info_args s tr pre_u) 
     ([], []) 
     trs 
@@ -840,17 +835,20 @@ let gen_inv search ~invariants not_invs s =
 
 (* node deletion : experimental *)
 
-let delete_nodes s nodes = 
+let delete_nodes s nodes nb_del inc = 
   nodes := List.filter
   (fun n -> 
      if (not n.t_deleted) &&
        (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) && *)
-       not (List.exists (fun (_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru)
+       not (List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru)
        	      s.t_from) &&
        ArrayAtom.subset s.t_arru n.t_arru then 
        begin
 	 (* eprintf "deleted node@."; *)
 	 n.t_deleted <- true;
+	 if inc 
+	   (* && not (List.exists (fun (_,_,anc) -> anc.t_deleted) n.t_from) *)
+	 then incr nb_del;
 	 false
        end
      else true)

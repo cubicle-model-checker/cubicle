@@ -108,12 +108,16 @@ module Profiling = struct
     eprintf "├─Nodes sorting                  : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
-  let print_report nb =
+  let print_report nb inv del =
     eprintf "\n----------------------------------------------@.";
     eprintf "Number of visited nodes          : %d@." nb;
     eprintf "Fixpoints                        : %d@." !cpt_fix;
     eprintf "Number of solver calls           : %d@." (Prover.nb_calls ());
     eprintf "Max Number of processes          : %d@." !cpt_process;
+    if delete then 
+      eprintf "Number of deleted nodes          : %d@." del;
+    if gen_inv then 
+      eprintf "Number of invariants             : %d@." (List.length inv);  
     eprintf "----------------------------------------------@.";
     print_time_pre ();
     print_time_fix ();
@@ -138,7 +142,7 @@ module type I = sig
     (invariants : t list -> visited : t list -> t -> unit) ->
     invariants : t list -> t list -> t -> t list * t list
 
-  val delete_nodes : t -> t list ref -> unit
+  val delete_nodes : t -> t list ref -> int ref -> bool -> unit
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
@@ -195,7 +199,7 @@ module DFSL ( X : I ) = struct
     in
     search_rec 0 s;
     eprintf "[DFSL]";
-    Profiling.print_report !nb_nodes
+    Profiling.print_report !nb_nodes [] 0
 
 end
 
@@ -245,7 +249,7 @@ module DFSH ( X : I ) = struct
       try search_rec (H.add H.empty [0, s, visited])
       with Heap.EmptyHeap -> ()
     end;
-    Profiling.print_report !nb_nodes
+    Profiling.print_report !nb_nodes [] 0
 
 end
 
@@ -256,6 +260,7 @@ module BFS_base ( X : I ) = struct
 
   let search inv_search invgen ~invariants ~visited s = 
     let nb_nodes = ref 0 in
+    let nb_deleted = ref 0 in
     let visited = ref visited in
     let postponed = ref [] in
     let invariants = ref invariants in
@@ -271,7 +276,8 @@ module BFS_base ( X : I ) = struct
 	begin
 	  incr nb_nodes;
 	  Profiling.print "BFS" !nb_nodes (X.size s);
-	  eprintf " node %d= %a@." !nb_nodes 
+	  let prefpr = if (not invgen) && gen_inv then "     inv gen " else " " in
+	  eprintf "%snode %d= @[%a@]@." prefpr !nb_nodes 
 	    (if debug then fun _ _ -> () else X.print) s;
 	  let ls, post = X.pre s in
 	  let ls = List.rev ls in
@@ -284,7 +290,6 @@ module BFS_base ( X : I ) = struct
 	  let inv, not_invs =
 	    if invgen && gen_inv && post <> [] then 
 	      begin
-		eprintf "On cherche un invariant@.";
 		X.gen_inv inv_search ~invariants:!invariants 
 		  !not_invariants s
 	      end
@@ -292,11 +297,10 @@ module BFS_base ( X : I ) = struct
 	  in
 	  invariants := List.rev_append inv !invariants;
 	  not_invariants := not_invs;
-
-	  if delete then X.delete_nodes s visited;
+	  if delete then X.delete_nodes s visited nb_deleted false;
 	  visited := s :: !visited;
 	  postponed := List.rev_append post !postponed;
-	  if delete then X.delete_nodes s postponed;
+	  if delete then X.delete_nodes s postponed nb_deleted true;
 
 	  List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;
@@ -316,7 +320,8 @@ module BFS_base ( X : I ) = struct
 	  end
     in
     Queue.add (0, s) q; search_rec ();
-    Profiling.print_report !nb_nodes
+    if invgen || not gen_inv then 
+      Profiling.print_report !nb_nodes !invariants !nb_deleted
 
 end
 
@@ -371,6 +376,7 @@ module DFSHL ( X : I ) = struct
 
   let search ~invariants ~visited s =
     let nb_nodes = ref 0 in
+    let nb_deleted = ref 0 in
     let visited = ref visited in
     let postponed = ref [] in
     let invariants = ref invariants in
@@ -395,7 +401,6 @@ module DFSHL ( X : I ) = struct
 	      let inv, not_invs =
 		if gen_inv && post <> [] then
 		  begin
-		    eprintf "On cherche un invariant@.";
 		    X.gen_inv Search.search ~invariants:!invariants
 		      !not_invariants s
 		  end
@@ -404,10 +409,10 @@ module DFSHL ( X : I ) = struct
 	      invariants :=  List.rev_append inv !invariants;
 	      not_invariants :=  not_invs;
 	      Profiling.update_nb_proc (X.size s);
-	      if delete then X.delete_nodes s visited;
+	      if delete then X.delete_nodes s visited nb_deleted false;
 	      visited := s :: !visited;
 	      postponed := List.rev_append post !postponed;
-	      if delete then X.delete_nodes s postponed;
+	      if delete then X.delete_nodes s postponed nb_deleted true;
 	      if inv = [] then
 		let ls = List.rev (List.rev_map (fun s' -> cpt+1, s') ls) in
 		(H.add h ls)
@@ -431,7 +436,7 @@ module DFSHL ( X : I ) = struct
     in
     let h = H.add H.empty [0, s] in
     search_rec h;
-    Profiling.print_report !nb_nodes      
+    Profiling.print_report !nb_nodes !invariants !nb_deleted
 
 end
 
