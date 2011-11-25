@@ -120,13 +120,16 @@ let memo_apply_subst =
       Hashtbl.add cache k v;
       v
 
-  
-(* Simplifcation of atoms in a cube based on the hypothesis that
-   indices #i are distinct and the type of elements is an
-   enumeration *)
 
-(* simplify comparison atoms, according to the assumption that
-   variables are all disctincts *)
+  
+(*****************************************************************)
+(* Simplifcation of atoms in a cube based on the hypothesis that *)
+(* indices #i are distinct and the type of elements is an	 *)
+(* enumeration							 *)
+(* 								 *)
+(* simplify comparison atoms, according to the assumption that	 *)
+(* variables are all disctincts					 *)
+(*****************************************************************)
 
 
 let redondant env others = function
@@ -176,8 +179,10 @@ let rec simplification np env a =
 	else if SAtom.mem False sa then a2
 	else Ite(sa, a1, a2)
 	  
-(* Pre-image of an atom w.r.t a transition, simply represented here by
-   a function tau *)
+(***********************************************************************)
+(* Pre-image of an atom w.r.t a transition, simply represented here by *)
+(* a function tau						       *)
+(***********************************************************************)
 
 let rec pre_atom tau a = 
   match a with
@@ -191,7 +196,9 @@ let rec pre_atom tau a =
 	let pre_a2 = pre_atom tau a2 in 
 	Ite(pre_sa, pre_a1, pre_a2)
 
+(****************************************)
 (* Convert a transition into a function *)
+(****************************************)
 
 type assign = Single of term | Branch of update
 
@@ -276,17 +283,19 @@ let make_tau tr x op y =
 	assert false
 
 
-(* cheap check of inconsitant cube *)
+(***********************************)
+(* Cheap check of inconsitant cube *)
+(***********************************)
 
 let rec list_assoc_term t = function
   | [] -> raise Not_found
   | (u, v)::l -> if compare_term t u = 0 then v else list_assoc_term t l
 
 let assoc_neq t1 l t2 =
-  try list_assoc_term t1 l <> t2 with Not_found -> false
+  try compare_term (list_assoc_term t1 l) t2 <> 0 with Not_found -> false
 
 let assoc_eq t1 l t2 =
-  try list_assoc_term t1 l = t2 with Not_found -> false
+  try compare_term (list_assoc_term t1 l) t2 = 0 with Not_found -> false
 
 let inconsistent_list env l = 
   let rec check values eqs neqs = function
@@ -317,7 +326,7 @@ let inconsistent_list env l =
       else check values eqs ((t1, t2)::(t2, t1)::neqs) l
     | _ :: l -> check values eqs neqs l
   in
-  try check [] [] []l; false with Exit -> true
+  try check [] [] [] l; false with Exit -> true
 
 
 let inconsistent env sa = 
@@ -329,12 +338,108 @@ let inconsistent_array env a =
   inconsistent_list env l
 
 
-let obviously_safe { t_unsafe = _, unsa; t_init = _, inisa; t_env = env } =
+let obviously_safe 
+    { t_unsafe = args, _; t_arru = ua; t_init = iargs, inisa; t_env = env } =
+  let init_conj = match iargs with
+    | None -> inisa
+    | Some a ->
+      List.fold_left (fun acc ss ->
+	SAtom.union (apply_subst inisa ss) acc)
+	SAtom.empty
+	(List.map (fun b -> [a, b]) args)
+  in 
   inconsistent_list env 
-    (List.rev_append (SAtom.elements inisa) (SAtom.elements unsa))
+    (List.rev_append (Array.to_list ua) (SAtom.elements init_conj))
 
 
+(*************************************************)
+(* Safety check : s /\ init must be inconsistent *)
+(*************************************************)
  
+let check_safety s =
+  (*Debug.unsafe s;*)
+  try
+    if not (obviously_safe s) then
+      begin
+	Prover.unsafe s;
+	raise Unsafe
+      end
+  with
+    | AE.Sat.Sat _ -> raise Unsafe
+    | AE.Sat.I_dont_know -> exit 2
+    | AE.Sat.Unsat _ -> ()
+
+
+
+(**********************************************************************)
+(* Use unsat cores from fixpoints check to close nodes : experimental *)
+(**********************************************************************)
+
+module MArgs = Map.Make (struct 
+  type t = Hstring.t list 
+  let compare = Hstring.compare_list 
+end)
+
+let closed = Hstring.H.create (if simpl_by_uc then 8191 else 0)
+
+let already_closed s tr args =
+  let sa = s.t_arru in
+  try
+    let tr_margs = Hstring.H.find closed tr in
+    let ls = MArgs.find args tr_margs in
+    let rec find = function
+      | [] -> None
+      | (na, fix) :: r -> 
+	if ArrayAtom.subset na sa then Some fix
+	else find r
+    in find ls
+  with Not_found -> None
+
+let suitable_for_closing simpl s (*fix_from tr args*) =
+  try
+    if Array.length simpl <> 0 then begin
+      check_safety {s with t_arru = simpl};
+      true
+    end
+    else false
+  with Unsafe -> false
+  (* && not ( List.exists (fun (tr', args', f) -> *)
+  (*   Hstring.equal tr tr' && Hstring.compare_list args args' = 0 && *)
+  (*     ArrayAtom.subset simpl f.t_arru) fix_from) *)
+
+let has_alredy_closed_ancestor s =
+  let rec has acc = function
+    | [] -> false
+    | (tr, args, f) :: r ->
+      match already_closed f tr args with
+	| None -> has (f :: acc) r
+	| Some fix -> 
+	  not (List.exists (fun f -> ArrayAtom.equal f.t_arru fix.t_arru) acc)
+  in
+  has [] s.t_from
+
+(* let has_alredy_closed_father s = *)
+(*   match s.t_from with  *)
+(*     | [] -> false *)
+(*     | (tr, args, f)::_ -> already_closed f tr args *)
+
+let add_to_closed s fixa fix =
+  match s.t_from with
+    | [] -> ()
+    | (tr, args, f)::_ ->
+      let fa = f.t_arru in
+      let sa = s.t_arru in
+      let simpl = ArrayAtom.diff fa (ArrayAtom.diff sa fixa) in
+      if suitable_for_closing simpl s (* fix.t_from tr args *) then
+	let tr_margs = 
+	  try Hstring.H.find closed tr with Not_found -> MArgs.empty in
+	let ls = try MArgs.find args tr_margs with Not_found -> [] in
+	Hstring.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
+
+(**********************************************************************)
+
+
+
 let number_of s = 
   if s.[0] = '#' then 
     int_of_string (String.sub s 1 (String.length s - 1))
@@ -359,7 +464,9 @@ let args_of_atoms sa =
   in 
   S.elements (args_rec sa S.empty)
 
+(***************************************)
 (* Good renaming of a cube's variables *)
+(***************************************)
 
 let proper_cube sa = 
   let args = args_of_atoms sa in
@@ -382,8 +489,10 @@ let proper_cube sa =
   sa, (!l, Hstring.make ("#"^(string_of_int !cpt)))
 
 
-(* Find relevant quantifier instantiation for 
-   \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
+(****************************************************)
+(* Find relevant quantifier instantiation for 	    *)
+(* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
+(****************************************************)
 
 let rec all_permutations l1 l2 = 
   assert (List.length l1 <= List.length l2);
@@ -399,7 +508,9 @@ and cross l pr x st =
 	acc@(cross l (y::pr) x p)
 
 
+(*********************************************)
 (* all permutations excepted impossible ones *)
+(*********************************************)
 
 let rec all_permutations_impos l1 l2 impos = 
   assert (List.length l1 <= List.length l2);
@@ -418,7 +529,9 @@ and cross_impos impos l pr x st =
 	  acc@(cross_impos impos l (y::pr) x p)
 
 
-(* Improved relevant permutations *)
+(****************************************************)
+(* Improved relevant permutations (still quadratic) *)
+(****************************************************)
 
 exception NoPermutations
 
@@ -486,7 +599,9 @@ let obvious_impossible env a1 a2 =
   !obvs, !impos
 
 
+(*******************************************)
 (* Relevant permuations for fixpoint check *)
+(*******************************************)
 
 let relevant_permutations env np p l1 l2 =
   TimeRP.start ();
@@ -509,23 +624,9 @@ let possible_imply env anp ap =
 let closeness env anp ap =
   SS.cardinal (SS.diff (magic_number_arr env anp) (magic_number_arr env ap))
 
-(* Safety check : s /\ init must be inconsistent *)
-
-let check_safety s =
-  (*Debug.unsafe s;*)
-  try
-    if not (obviously_safe s) then
-      begin
-	Prover.unsafe s;
-	raise Unsafe
-      end
-  with
-    | AE.Sat.Sat _ -> raise Unsafe
-    | AE.Sat.I_dont_know -> exit 2
-    | AE.Sat.Unsat _ -> ()
-
-
+(********************************************************)
 (* Incremental fixpoint check : s => \/_{p \in nodes} p *)
+(********************************************************)
 
 exception Fixpoint
 
@@ -535,14 +636,17 @@ let check_fixpoint
   Prover.add_goal s;
   let nb_nargs = List.length nargs in
   let nodes = List.fold_left
-    (fun nodes { t_alpha = args, ap; t_env = env }->
+    (fun nodes ({ t_alpha = args, ap; t_env = env } as sp)->
       if List.length args > nb_nargs then nodes
       else
 	let d = relevant_permutations env anp ap args nargs in
 	List.fold_left
 	  (fun nodes ss ->
 	    let pp = ArrayAtom.apply_subst ss ap in
-	    if ArrayAtom.subset pp anp then raise Fixpoint
+	    if ArrayAtom.subset pp anp then begin
+	      if simpl_by_uc then add_to_closed s pp sp ;
+	      raise Fixpoint
+	    end
 	    (* Heruristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
@@ -566,7 +670,13 @@ let check_fixpoint
   List.iter (fun p -> Prover.add_node env p) nodes
 
 let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes = 
-  List.exists (fun { t_arru = pa } -> ArrayAtom.subset pa npa) nodes
+  List.exists (fun ({ t_arru = pa } as sp) -> 
+    if ArrayAtom.subset pa npa then begin
+      if simpl_by_uc then add_to_closed s pa sp;
+      true
+    end
+    else false
+  ) nodes
   ||
     try
       check_fixpoint s nodes;
@@ -578,10 +688,23 @@ let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
       | AE.Sat.Unsat _ -> true
 
 let has_deleted_ancestor s =
+  let rec has acc = function
+    | [] -> false, acc
+    | (_, _, a) :: r ->
+      if a.t_deleted then true, acc
+      else has (a :: acc) r
+  in
+  let del, children = has [] s.t_from in
+  if del then List.iter (fun a -> a.t_deleted <- true) children;
+  del
+  
+let has_deleted_ancestor s =
   List.exists (fun (_, _, a) -> a.t_deleted) s.t_from
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
   (delete && (s.t_deleted || has_deleted_ancestor s))
+  ||
+    (simpl_by_uc && has_alredy_closed_ancestor s)
   ||
     (TimeFix.start ();
      let f = is_fixpoint s (List.rev_append invariants visited) in
@@ -639,7 +762,9 @@ let simplify_atoms env np =
     [base]
 
 
+(**********************)
 (* Postponed Formulas *)
+(**********************)
 
 let has_args_term args = function
   | Elem x | Access (_, x) | Arith (x, _, _) -> Hstring.list_mem x args
@@ -675,17 +800,21 @@ let make_cubes (ls, post) (args, rargs)
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
 	 if inconsistent s.t_env np then (ls, post) 
 	 else
-	   let arr_np = ArrayAtom.of_satom np in
-	   let new_s = { s with
-	     t_from = (tr.tr_name, List.map snd sigma, s)::s.t_from;
-	     t_unsafe = nargs, np;
-	     t_arru = arr_np;
-	     t_alpha = ArrayAtom.alpha arr_np nargs } in 
-	   if (alwayspost && List.length nargs > nb_uargs) ||
-	     (not alwayspost && 
-		(not (SAtom.is_empty ureq) || postpone args p np)) then
-	     ls, new_s::post
-	   else new_s :: ls, post ) acc lnp
+	   let tr_args = List.map snd sigma in
+	   if simpl_by_uc && already_closed s tr.tr_name tr_args <> None 
+	   then ls, post
+	   else
+	     let arr_np = ArrayAtom.of_satom np in
+	     let new_s = { s with
+	       t_from = (tr.tr_name, tr_args, s)::s.t_from;
+	       t_unsafe = nargs, np;
+	       t_arru = arr_np;
+	       t_alpha = ArrayAtom.alpha arr_np nargs } in 
+	     if (alwayspost && List.length nargs > nb_uargs) ||
+	       (not alwayspost && 
+		  (not (SAtom.is_empty ureq) || postpone args p np)) then
+	       ls, new_s::post
+	     else new_s :: ls, post ) acc lnp
   in
   if List.length tr.tr_args > List.length rargs then (ls, post)
   else
@@ -729,7 +858,9 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	  upds}
 
 
+(*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)
+(*****************************************************)
 
 let pre tr unsafe =
   let tr = fresh_args tr in
@@ -744,8 +875,10 @@ let pre tr unsafe =
   else tr, pre_unsafe, (args, m::args)
 
 
-(* Pre-image of a system s : computing the cubes gives a list of new
-   systems *)
+(*********************************************************************)
+(* Pre-image of a system s : computing the cubes gives a list of new *)
+(* systems							     *)
+(*********************************************************************)
 
 let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
   TimePre.start ();
@@ -762,7 +895,9 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
   ls, post
 
 
+(********************************************************)
 (* Renames the parameters of the initial unsafe formula *)
+(********************************************************)
 
 let init_atoms args sa = 
   let cpt = ref 0 in
@@ -781,7 +916,9 @@ let init_parameters ({t_unsafe = (args, sa); t_arru = a; t_invs = invs } as s) =
     t_alpha = ArrayAtom.alpha a args; t_invs = invs }
 
 
-(* Invariant generation stuff... *)
+(**********************************)
+(* Invariant generation stuff...  *)
+(**********************************)
 
 let same_number env z = function 
   | Const _ -> true
@@ -833,7 +970,9 @@ let gen_inv search ~invariants not_invs s =
     ([], not_invs) (partition s)
 
 
-(* node deletion : experimental *)
+(******************************************************)
+(* Backward deletion of subsumed nodes : experimental *)
+(******************************************************)
 
 let delete_nodes s nodes nb_del inc = 
   nodes := List.filter
@@ -842,7 +981,8 @@ let delete_nodes s nodes nb_del inc =
        (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) && *)
        not (List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru)
        	      s.t_from) &&
-       ArrayAtom.subset s.t_arru n.t_arru then 
+       (ArrayAtom.subset s.t_arru n.t_arru
+	(* || has_alredy_closed_father n *)) then 
        begin
 	 (* eprintf "deleted node@."; *)
 	 n.t_deleted <- true;

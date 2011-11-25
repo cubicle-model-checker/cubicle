@@ -172,6 +172,7 @@ let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
   let distincts = make_distincts tvars in
   let init = make_init env ts distincts vars in
   let f = make_formula env init (SAtom.elements sa) in
+  if debug_altergo then Format.eprintf "unsafe g: %a@." AE.Formula.print f;
   let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
   AE.Sat.assume gf;
   try 

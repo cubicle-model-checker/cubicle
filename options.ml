@@ -29,6 +29,7 @@ let profiling = ref false
 let gen_inv = ref false
 let alwayspost = ref false
 let delete = ref false
+let simpl_by_uc = ref false
 
 let mode = ref DfsHL
 let set_mode = function
@@ -54,6 +55,7 @@ let specs =
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-alwayspost", Arg.Set alwayspost, " postpone states with n+1 processes";
     "-delete", Arg.Set delete, " delete subsumed nodes";
+    "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
     "-dergo", Arg.Set debug_altergo, " debug mode for alt-ergo"
   ]
 
@@ -78,3 +80,4 @@ let file = !file
 let gen_inv = !gen_inv
 let alwayspost = !alwayspost
 let delete = !delete
+let simpl_by_uc = !simpl_by_uc

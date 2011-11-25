@@ -102,7 +102,7 @@ type t_system = {
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;
   t_trans : transition list;
-  mutable t_deleted : bool
+  mutable t_deleted : bool;
 }
 
 

@@ -217,7 +217,8 @@ let updates args =
     (fun {up_arr=a; up_arg=arg; up_swts=swts} -> 
        if List.mem arg args then error (ClashParam (Hstring.view arg));
        let _, ty_a, _ = 
-	 try Env.find a with Not_found -> error (UnknownArray (Hstring.view a)) in       
+	 try Env.find a with Not_found -> error (UnknownArray (Hstring.view a)) 
+       in       
        match ty_a with
 	 | AltErgo.Ty.Tfarray (_, ty_e) -> switchs (arg::args) ty_e swts
 	 | _ -> assert false ) 
