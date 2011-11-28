@@ -215,20 +215,17 @@ let make_form name f =
   in
   make_form [] f.c f.annot
 
-let push_assume f name loc match_flag = 
+let push_assume f name loc = 
   let ff , _ = make_form name f in
-  Queue.push {st_decl=Assume(ff, match_flag) ; st_loc=loc} queue
+  Queue.push {st_decl=Assume ff ; st_loc=loc} queue
 
-let push_preddef f name loc match_flag = 
+let push_preddef f name loc = 
   let ff , _ = make_form name f in
   Queue.push {st_decl=PredDef ff ; st_loc=loc} queue
       
 let push_query n f loc = 
   let ff, lits = make_form "" f in
   Queue.push {st_decl=Query(n,ff,lits) ; st_loc=loc} queue
-
-let make_rule ({rwt_left = t1; rwt_right = t2} as r) = 
-  { r with rwt_left = make_term t1; rwt_right = make_term t2 }
 
 let make l = 
   (*  Decl.clear ();
@@ -237,14 +234,16 @@ let make l =
   clear();
   (* Formula.clear_htbl (); (* Why that was needed? *) *)
   List.iter
-    (fun (d,b) -> match d.c with
-       | TAxiom(loc, name, f) -> push_assume f name loc b
-       | TRewriting(loc, name, lr) -> 
-	   Queue.push 
-	     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} queue
-       | TGoal(loc, n, f) -> push_query n f loc
-       | TPredicate_def(loc, n, [], f) -> push_assume f n loc b
-       | TPredicate_def(loc, n, _, f) -> push_preddef f n loc b
-       | TFunction_def(loc, n, _, _, f) -> push_assume f n loc b
+    (fun d -> match d.c with
+       | TAxiom(loc, name, f) -> 
+	   push_assume f name loc
+       | TGoal(loc, n, f) -> 
+	   push_query n f loc
+       | TPredicate_def(loc, n, [], f) -> 
+	   push_assume f n loc
+       | TPredicate_def(loc, n, _, f) -> 
+	   push_preddef f n loc
+       | TFunction_def(loc, n, _, _, f) -> 
+	   push_assume f n loc
        | TTypeDecl _ | TLogic _  -> ()) l;
   queue

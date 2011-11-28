@@ -80,7 +80,6 @@ type body_type_decl =
 
 type decl = 
   | Axiom of loc * string * lexpr
-  | Rewriting of loc * string * lexpr list
   | Goal of loc * string * lexpr
   | Logic of loc * name_kind * string list * plogic_type
   | Predicate_def of loc * string * (loc * string * ppure_type) list * lexpr
@@ -154,16 +153,8 @@ and 'a tform =
       ('a tterm, 'a) annoted * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
-
-type 'a rwt_rule = {
-  rwt_vars : (Symbols.t * Ty.t) list;
-  rwt_left : 'a;
-  rwt_right : 'a
-}
-
 type 'a tdecl = 
   | TAxiom of loc * string * ('a tform, 'a) annoted
-  | TRewriting of loc * string * (('a tterm, 'a) annoted rwt_rule) list
   | TGoal of loc * string * ('a tform, 'a) annoted
   | TLogic of loc * string list * plogic_type
   | TPredicate_def of 
@@ -177,9 +168,8 @@ type 'a tdecl =
 (* Sat entry *)
 
 type sat_decl_aux = 
-  | Assume of Formula.t * bool 
+  | Assume of Formula.t
   | PredDef of Formula.t
-  | RwtDef of (Term.t rwt_rule) list
   | Query of string * Formula.t * Literal.LT.t list
 
 type sat_tdecl = {

@@ -27,16 +27,14 @@ end
 
 type output = Unsat of Explanation.t | Inconsistent | Sat | Unknown
 
-
 val process_decl:
   (Why_ptree.sat_tdecl -> output -> int64 -> 'a) ->
-  Sat.t * bool * Explanation.t -> sat_tdecl ->
-  Sat.t * bool * Explanation.t
+  Explanation.t -> sat_tdecl -> Explanation.t
 
 val open_file:
   string -> Lexing.lexbuf -> 
-  ((int tdecl, int) annoted * Why_typing.env) list list * Smt_ast.status
+  ((int tdecl, int) annoted * Why_typing.env) list list
 
 val processing:
   (Why_ptree.sat_tdecl -> output -> int64 -> 'a) -> 
-  ((int tdecl, int) annoted * Why_typing.env) list list -> unit
+  ((int tdecl, int) annoted * Why_typing.env ) list list -> unit

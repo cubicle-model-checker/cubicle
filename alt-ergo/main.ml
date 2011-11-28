@@ -60,7 +60,7 @@ let print_status d s steps =
 let main _ = 
   let lb = from_channel cin in 
   try 
-    let d, status = open_file !file lb in 
+    let d = open_file !file lb in 
     processing print_status d
   with
     | Why_lexer.Lexical_error s -> 

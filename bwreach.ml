@@ -365,7 +365,7 @@ let check_safety s =
 	raise Unsafe
       end
   with
-    | AE.Sat.Sat _ -> raise Unsafe
+    | AE.Sat.Sat -> raise Unsafe
     | AE.Sat.I_dont_know -> exit 2
     | AE.Sat.Unsat _ -> ()
 
@@ -683,7 +683,7 @@ let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
     with 
       | Fixpoint -> true
       | Exit -> false
-      | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
+      | AE.Sat.Sat | AE.Sat.I_dont_know -> false
       | AE.Sat.Unsat _ -> true
 
 let has_deleted_ancestor s =

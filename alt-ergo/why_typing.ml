@@ -809,14 +809,6 @@ let rec type_form env f =
   {c = form; annot = new_id ()}, vars
 
 
-let make_rules loc f = match f.c with
-  | TFforall {qf_bvars = vars; qf_form = {c = TFatom {c = TAeq [t1; t2]}}} ->
-      {rwt_vars = vars; rwt_left = t1; rwt_right = t2}
-  | TFatom {c = TAeq [t1; t2]} -> 
-      {rwt_vars = []; rwt_left = t1; rwt_right = t2}
-  | _ -> error SyntaxError loc
-
-
 let fresh_var = 
   let cpt = ref 0 in
   fun x -> incr cpt; ("_"^x^(string_of_int !cpt))
@@ -1099,16 +1091,6 @@ let type_decl (acc, env) d =
 	  let f = Triggers.make false f in
 	  let td = {c = TAxiom(loc,name,f); annot = new_id () } in
 	  (td, env)::acc, env
-
-      | Rewriting(loc, name, lr) -> 
-	  let lf = List.map (type_form env) lr in
-          if Options.rewriting then
-            let rules = List.map (fun (f,_) -> make_rules loc f) lf in
-	    let td = {c = TRewriting(loc, name, rules); annot = new_id () } in
-	    (td, env)::acc, env
-          else
-            axioms_of_rules loc name lf acc env
-
 
       | Goal(loc,n,f) ->
 	if qualif = 1 then fprintf fmt "[rule] TR-Typing-GoalDecl$_F$@.";

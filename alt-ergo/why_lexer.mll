@@ -65,7 +65,6 @@
 	"predicate", PREDICATE;
 	"prop", PROP;
 	"real", REAL;
-	"rewriting", REWRITING;
 	"then", THEN;
 	"true", TRUE;
 	"type", TYPE;

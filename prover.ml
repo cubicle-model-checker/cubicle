@@ -158,7 +158,7 @@ let make_init env {t_init = arg, sa } f lvars =
 let empty vars =
   let vars = List.map (make_variable ty_proc) vars in
   let distincts = make_distincts vars in
-  let df = { AE.Sat.f = distincts; age = 0; name = None; mf=false; gf=false} in
+  let df = { AE.Sat.f = distincts; age = 0; name = None; gf=false} in
   AE.Sat.assume df
 
 let check () =
@@ -173,7 +173,7 @@ let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
   let init = make_init env ts distincts vars in
   let f = make_formula env init (SAtom.elements sa) in
   if debug_altergo then Format.eprintf "unsafe g: %a@." AE.Formula.print f;
-  let gf = { AE.Sat.f = f; age = 0; name = None; mf = false; gf = true} in
+  let gf = { AE.Sat.f = f; age = 0; name = None; gf = true} in
   AE.Sat.assume gf;
   try 
     check ();
@@ -185,7 +185,7 @@ let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env} =
   empty args; 
   let f = make_formula_array env ap in
   if debug_altergo then Format.eprintf "goal g: %a@." AE.Formula.print f;
-  let gf = { AE.Sat.f = f; age = 0; name = None; mf=true; gf=true} in
+  let gf = { AE.Sat.f = f; age = 0; name = None; gf=true} in
   TimeAE.start ();
   AE.Sat.assume gf;
   try 
@@ -199,7 +199,7 @@ let add_node env ap =
   in
   if debug_altergo then Format.eprintf "axiom node: %a@." AE.Formula.print f;
   let gf = 
-    { AE.Sat.f = f; age = 0; name = None; mf=false; gf=false} in
+    { AE.Sat.f = f; age = 0; name = None; gf=false} in
   TimeAE.start ();
   AE.Sat.assume gf;
   try 
@@ -214,5 +214,5 @@ let check_fixpoint ({t_env=env} as s) nodes =
     false
   with
     | Exit -> false
-    | AE.Sat.Sat _ | AE.Sat.I_dont_know -> false
+    | AE.Sat.Sat | AE.Sat.I_dont_know -> false
     | AE.Sat.Unsat _ -> true

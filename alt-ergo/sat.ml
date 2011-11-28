@@ -24,23 +24,16 @@ type gformula = {
   f:Formula.t; 
   age: int; 
   name: Formula.t option; 
-  mf: bool;
   gf: bool;
 }
 
-type t = unit
-
-exception Sat of t 
+exception Sat
 exception Unsat of Explanation.t
 exception I_dont_know
-
-let empty = ()
 
 let steps = ref 0L
 let start () = steps := 0L
 let stop () = !steps
-let pred_def _ = assert false
-
 
 let print_stats () = 
   if Debug1.d_decisions  then begin
@@ -65,16 +58,7 @@ let print_stats () =
     
     eprintf "CPU time              : %g s@." cpu_time
   end
-      
-(*let _ = at_exit print_stats*)
-
-(***
-
-
-let main = 
-
-***)
-
+ 
 
 let check () =
   try solve ()
@@ -90,9 +74,9 @@ let assume gf =
   try assume_cnf cnf
   with Solver.Unsat -> raise (Unsat Explanation.empty)
 
-let unsat env gf = 
+let unsat gf = 
     assume gf;
     check ();
-    raise (Sat ())
+    raise Sat
 
 let clear () = Solver.clear ()

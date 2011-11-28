@@ -28,12 +28,6 @@ module rec CX : sig
   val extract2 : r -> X2.t option
   val embed2 : X2.t -> r
 
-  val extract3 : r -> X3.t option
-  val embed3 : X3.t -> r
-
-  (* val extract4 : r -> X4.t option *)
-  (* val embed4 : X4.t -> r *)
-
   val extract5 : r -> X5.t option
   val embed5 : X5.t -> r
 
@@ -46,20 +40,14 @@ struct
     | Ac    of AC.t
     | X1    of X1.t 
     | X2    of X2.t 
-    | X3    of X3.t 
-    (* | X4    of X4.t  *)
     | X5    of X5.t 
     
   let extract1 = function X1 r   -> Some r | _ -> None
   let extract2 = function X2 r   -> Some r | _ -> None
-  let extract3 = function X3 r   -> Some r | _ -> None
-  (* let extract4 = function X4 r   -> Some r | _ -> None *)
   let extract5 = function X5 r   -> Some r | _ -> None
   
   let embed1 x = X1 x
   let embed2 x = X2 x
-  let embed3 x = X3 x
-  (* let embed4 x = X4 x   *)
   let embed5 x = X5 x
 	
   let is_an_eq a = 
@@ -69,8 +57,6 @@ struct
     let ty  = match v with
       | X1 x -> X1.type_info x
       | X2 x -> X2.type_info x
-      | X3 x -> X3.type_info x
-      (* | X4 x -> X4.type_info x *)
       | X5 x -> X5.type_info x
       | Term t -> (Term.view t).Term.ty
       | Ac x -> AC.type_info x
@@ -88,8 +74,6 @@ struct
     match a, b with
       | X1 x, X1 y -> X1.compare x y
       | X2 x, X2 y -> X2.compare x y
-      | X3 x, X3 y -> X3.compare x y
-      (* | X4 x, X4 y -> X4.compare x y *)
       | X5 x, X5 y -> X5.compare x y
       | Term x  , Term y  -> Term.compare x y
       | Ac x    , Ac    y -> AC.compare x y
@@ -104,8 +88,6 @@ struct
     | Ac x -> AC.hash x
     | X1 x -> X1.hash x
     | X2 x -> X2.hash x
-    | X3 x -> X3.hash x
-    (* | X4 x -> X4.hash x *)
     | X5 x -> X5.hash x
 
   module MR = Map.Make(struct type t = r let compare = compare end)
@@ -115,8 +97,6 @@ struct
       match r with
         | X1 t    -> fprintf fmt "%a" X1.print t
         | X2 t    -> fprintf fmt "%a" X2.print t
-        | X3 t    -> fprintf fmt "%a" X3.print t
-        (* | X4 t    -> fprintf fmt "%a" X4.print t *)
         | X5 t    -> fprintf fmt "%a" X5.print t
         | Term t  -> fprintf fmt "%a" Term.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
@@ -124,8 +104,6 @@ struct
       match r with
         | X1 t    -> fprintf fmt "X1(%s):[%a]" X1.name X1.print t
         | X2 t    -> fprintf fmt "X2(%s):[%a]" X2.name X2.print t
-        | X3 t    -> fprintf fmt "X3(%s):[%a]" X3.name X3.print t
-        (* | X4 t    -> fprintf fmt "X3(%s):[%a]" X4.name X4.print t *)
         | X5 t    -> fprintf fmt "X3(%s):[%a]" X5.name X5.print t
         | Term t  -> fprintf fmt "FT:[%a]" Term.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
@@ -135,8 +113,6 @@ struct
     match r with 
       | X1 t -> X1.leaves t 
       | X2 t -> X2.leaves t 
-      | X3 t -> X3.leaves t 
-      (* | X4 t -> X4.leaves t  *)
       | X5 t -> X5.leaves t 
       | Ac t -> r :: (AC.leaves t)
       | Term _ -> [r]
@@ -160,8 +136,6 @@ struct
     match r with 
       | X1 _ -> X1.term_extract r 
       | X2 _ -> X2.term_extract r 
-      | X3 _ -> X3.term_extract r 
-      (* | X4 _ -> X4.term_extract r  *)
       | X5 _ -> X5.term_extract r 
       | Ac _ -> None (* SYLVAIN : TODO *)
       | Term t -> Some t
@@ -171,8 +145,6 @@ struct
     else match r with
       | X1 t   -> X1.subst p v t
       | X2 t   -> X2.subst p v t
-      | X3 t   -> X3.subst p v t
-      (* | X4 t   -> X4.subst p v t *)
       | X5 t   -> X5.subst p v t
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
@@ -182,37 +154,28 @@ struct
     match 
       X1.is_mine_symb sb,
       X2.is_mine_symb sb,
-      X3.is_mine_symb sb,
-      (* X4.is_mine_symb sb, *) false,
       X5.is_mine_symb sb,
       AC.is_mine_symb sb 
     with
-      | true  , false , false, false, false, false -> X1.make t
-      | false , true  , false, false, false, false -> X2.make t
-      | false , false , true , false, false, false -> X3.make t
-      | false , false , false, true , false, false -> assert false 
-      (* X4.make t *)
-      | false , false , false, false, true , false -> X5.make t
-      | false , false , false, false, false, true  -> AC.make t
-      | false , false , false, false, false, false -> Term t, []
+      | true  , false , false, false -> X1.make t
+      | false , true  , false, false -> X2.make t
+      | false , false , true , false -> X5.make t
+      | false , false , false, true  -> AC.make t
+      | false , false , false, false -> Term t, []
       | _ -> assert false
 	  
   let fully_interpreted sb =
     match 
       X1.is_mine_symb sb,
       X2.is_mine_symb sb,
-      X3.is_mine_symb sb,
-      false, (* X4.is_mine_symb sb, *)
       X5.is_mine_symb sb,
       AC.is_mine_symb sb 
     with
-      | true  , false , false, false, false, false -> X1.fully_interpreted sb
-      | false , true  , false, false, false, false -> X2.fully_interpreted sb
-      | false , false , true , false, false, false -> X3.fully_interpreted sb
-      | false , false , false, true , false, false -> assert false  (* X4.fully_interpreted sb *)
-      | false , false , false, false, true , false -> X5.fully_interpreted sb
-      | false , false , false, false, false, true  -> AC.fully_interpreted sb
-      | false , false , false, false, false, false -> false
+      | true  , false , false, false -> X1.fully_interpreted sb
+      | false , true  , false, false -> X2.fully_interpreted sb
+      | false , false , true , false -> X5.fully_interpreted sb
+      | false , false , false, true  -> AC.fully_interpreted sb
+      | false , false , false, false -> false
       | _ -> assert false
 
 
@@ -224,16 +187,12 @@ struct
         match 
           X1.is_mine_symb ac.Sig.h, 
           X2.is_mine_symb ac.Sig.h, 
-          X3.is_mine_symb ac.Sig.h, 
-          false, (* X4.is_mine_symb ac.Sig.h,  *)
           X5.is_mine_symb ac.Sig.h, 
           AC.is_mine_symb ac.Sig.h with 
-	    | true  , false , false, false, false, false -> X1.color ac
-	    | false , true  , false, false, false, false -> X2.color ac
-	    | false , false , true , false, false, false -> X3.color ac
-	    | false , false , false, true , false, false -> assert false (* X4.color ac *)
-	    | false , false , false, false, true, false -> X5.color ac
-	    | false , false , false, false, false, true  -> ac_embed ac
+	    | true  , false , false, false -> X1.color ac
+	    | false , true  , false, false -> X2.color ac
+	    | false , false , true , false -> X5.color ac
+	    | false , false , false, true  -> ac_embed ac
 	    | _ -> assert false
               
 
@@ -245,8 +204,6 @@ struct
   let unsolvable = function
     | X1 x -> X1.unsolvable x
     | X2 x -> X2.unsolvable x 
-    | X3 x -> X3.unsolvable x 
-    (* | X4 x -> X4.unsolvable x  *)
     | X5 x -> X5.unsolvable x 
     | Ac _ | Term _  -> true
 	
@@ -282,19 +239,14 @@ struct
   and unsolvable_values cmp a b =
     match a, b with
       (* Clash entre theories: On peut avoir ces pbs ? *)
-      | X1 _, (X2 _ | X3 _ | (* X4 _ | *) X5 _) 
-      | (X2 _ | X3 _ | (* X4 _ | *) X5 _), X1 _ 
-      | X2 _, (X3 _ | (* X4 _ | *) X5 _) 
-      | (X3 _ | (* X4 _ | *) X5 _), X2 _ 
-      | X3 _, ((* X4 _ | *) X5 _)
-      | ((* X4 _ | *) X5 _) , X3 _
-      (* | X5 _, X4 _ *) -> assert false
+      | X1 _, (X2 _ |  X5 _) 
+      | (X2 _ |  X5 _), X1 _ 
+      | X2 _,  X5 _
+       -> assert false
 
       (* theorie d'un cote, vide de l'autre *)
       | X1 _, _ | _, X1 _ -> X1.solve a b
       | X2 _, _ | _, X2 _ -> X2.solve a b
-      | X3 _, _ | _, X3 _ -> X3.solve a b
-      (* | X4 _, _ | _, X4 _ -> X4.solve a b *)
       | X5 _, _ | _, X5 _ -> X5.solve a b
       | (Ac _|Term _), (Ac _|Term _) -> [if cmp > 0 then a,b else b,a]
 
@@ -310,16 +262,8 @@ struct
     match b with
       | X1 _ -> X1.solve  a b
       | X2 _ -> X2.solve  a b
-      | X3 _ -> X3.solve  a b
-      (* | X4 _ -> X4.solve  a b *)
       | X5 _ -> X5.solve  a b
-      | Term _ | Ac _ -> 
-          (* XXX pour Arrays *)
-          match a with
-            (* | X4 _  -> X4.solve  a b *)
-            | _ -> 
-	        fprintf fmt "solvei %a = %a @." print a print b;
-	        assert false
+      | Term _ | Ac _ -> assert false
 
   let rec solve_rec  mt ab = 
     let mr = solve_list  mt ab in
@@ -358,8 +302,6 @@ struct
   let rec type_info = function
     | X1 t   -> X1.type_info t
     | X2 t   -> X2.type_info t
-    | X3 t   -> X3.type_info t
-    (* | X4 t   -> X4.type_info t *)
     | X5 t   -> X5.type_info t
     | Ac x   -> AC.type_info x
     | Term t -> let {Term.ty = ty} = Term.view t in ty
@@ -372,16 +314,12 @@ struct
     type t = { 
       r1: X1.Rel.t; 
       r2: X2.Rel.t; 
-      r3: X3.Rel.t;  
-      (* r4: X4.Rel.t;  *)
       r5: X5.Rel.t; 
     }
 	
     let empty _ = {
       r1=X1.Rel.empty (); 
       r2=X2.Rel.empty (); 
-      r3=X3.Rel.empty ();
-      (* r4=X4.Rel.empty (); *)
       r5=X5.Rel.empty ();
     }
 	
@@ -390,15 +328,10 @@ struct
 	X1.Rel.assume env.r1 sa ~are_eq ~are_neq ~class_of ~find in
       let env2, { assume = a2; remove = rm2} = 
 	X2.Rel.assume env.r2 sa ~are_eq ~are_neq ~class_of ~find in
-      let env3, { assume = a3; remove = rm3} = 
-	X3.Rel.assume env.r3 sa ~are_eq ~are_neq ~class_of ~find in
-      (* let env4, { assume = a4; remove = rm4} =  *)
-      (* 	X4.Rel.assume env.r4 sa ~are_eq ~are_neq ~class_of ~find in *)
       let env5, { assume = a5; remove = rm5} = 
 	X5.Rel.assume env.r5 sa ~are_eq ~are_neq ~class_of ~find in
-      {r1=env1; r2=env2; r3=env3; (* r4=env4; *) r5=env5}, 
-      { assume = a1@a2@a3@(* a4@ *)a5;
-	remove = rm1@rm2@rm3@(* rm4@ *)rm5;}
+      {r1=env1; r2=env2; r5=env5}, 
+      { assume = a1@a2@a5; remove = rm1@rm2@rm5;}
 	
     let query env a ~are_eq ~are_neq ~class_of ~find = 
       match X1.Rel.query env.r1 a ~are_eq ~are_neq ~class_of ~find with
@@ -406,29 +339,17 @@ struct
 	| No -> 
 	  match X2.Rel.query env.r2 a ~are_eq ~are_neq ~class_of ~find with
 	    | Yes _ as ans -> ans
-	    | No ->
-	      match X3.Rel.query env.r3 a ~are_eq ~are_neq ~class_of ~find with
-		| Yes _ as ans -> ans
-		| No -> 
-		    (* match X4.Rel.query env.r4 a ~are_eq ~are_neq ~class_of *)
-		    (*   ~find with *)
-		    (*   | Yes _ as ans -> ans *)
-		    (*   | No -> *) X5.Rel.query env.r5 a ~are_eq ~are_neq ~class_of
-			~find
+	    | No -> X5.Rel.query env.r5 a ~are_eq ~are_neq ~class_of ~find
 		      
     let case_split env = 
       let seq1 = X1.Rel.case_split env.r1 in
       let seq2 = X2.Rel.case_split env.r2 in
-      let seq3 = X3.Rel.case_split env.r3 in
-      (* let seq4 = X4.Rel.case_split env.r4 in *)
       let seq5 = X5.Rel.case_split env.r5 in
-      seq1 @ seq2 @ seq3 @ (* seq4 @ *) seq5
+      seq1 @ seq2 @ seq5
 
     let add env r =
       {r1=X1.Rel.add env.r1 r;
        r2=X2.Rel.add env.r2 r;
-       r3=X3.Rel.add env.r3 r;
-       (* r4=X4.Rel.add env.r4 r; *)
        r5=X5.Rel.add env.r5 r;
       }
   end
@@ -447,15 +368,6 @@ and X1 : Sig.THEORY  with type t = TX1.t and type r = CX.r =
        let assume env _ _ _ _ = env, {Sig.assume = []; remove = []} 
      end)
 
-(*and X2 : Sig.THEORY with type r = CX.r and type t = CX.r Pairs.abstract =
-  Pairs.Make
-    (struct
-       include CX
-       let extract = extract2
-       let embed = embed2
-     end)
-*)
-
 and X2 : Sig.THEORY with type r = CX.r and type t = CX.r Records.abstract =
   Records.Make
     (struct
@@ -464,23 +376,6 @@ and X2 : Sig.THEORY with type r = CX.r and type t = CX.r Records.abstract =
        let embed = embed2
      end)
 
-and X3 : Sig.THEORY with type r = CX.r and type t = CX.r Bitv.abstract =
-  Bitv.Make
-    (struct
-       include CX
-       let extract = extract3
-       let embed = embed3
-     end)
-
-(* and X4 : Sig.THEORY with type r = CX.r and type t = CX.r Arrays.abstract = *)
-(*   Arrays.Make *)
-(*     (struct *)
-(*        include CX *)
-(*        let extract = extract4 *)
-(*        let embed = embed4 *)
-(*      end) *)
-
- (* Its signature is not Sig.THEORY because it doen't provide a solver *)
 and AC : Ac.S with type r = CX.r = Ac.Make(CX)
 
 and X5 : Sig.THEORY with type r = CX.r and type t = CX.r Sum.abstract =

@@ -68,7 +68,7 @@
 %token <Num.num> NUM
 %token <string> STRING
 %token WITH
-%token AND LEFTARROW ARROW AC AT AXIOM REWRITING
+%token AND LEFTARROW ARROW AC AT AXIOM
 %token BAR HAT
 %token BOOL COLON COMMA PV DISTINCT DOT ELSE EOF EQUAL
 %token EXISTS FALSE VOID FORALL FUNCTION GE GOAL GT
@@ -151,9 +151,6 @@ decl:
 | AXIOM ident COLON lexpr
    { if qualif = 0 then fprintf fmt "[rule] TR-Lexical-decl@.";
      Axiom (loc (), $2, $4) }
-| REWRITING ident COLON list1_lexpr_sep_pv
-   { if qualif = 0 then fprintf fmt "[rule] TR-Lexical-decl@.";
-     Rewriting(loc (), $2, $4) }
 | GOAL ident COLON lexpr
    { if qualif = 0 then fprintf fmt "[rule] TR-Lexical-decl@.";
      Goal (loc (), $2, $4) }
@@ -418,12 +415,6 @@ trigger:
        $1 }
 ;
 
-
-list1_lexpr_sep_pv:
-| lexpr                       { [$1] }
-| lexpr PV                    { [$1] }
-| lexpr PV list1_lexpr_sep_pv { $1 :: $3 }
-;
 
 list0_lexpr_sep_comma:
 | /*empty */                        { [] }

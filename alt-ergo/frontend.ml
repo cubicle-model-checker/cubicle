@@ -43,117 +43,53 @@ end
 
 type output = Unsat of Explanation.t | Inconsistent | Sat | Unknown
 
-let check_produced_proof dep = ()
-  (* if verbose then  *)
-  (*   fprintf fmt "checking the proof:\n-------------------\n%a@."  *)
-  (*     Explanation.print_proof dep; *)
-
-  (* try *)
-  (*   let env = *)
-  (*     (Formula.Set.fold *)
-  (*        (fun f env ->  *)
-  (*           Sat.assume env {Sat.f=f;age=0;name=None;mf=false;gf=false} *)
-  (*        ) (Explanation.formulas_of dep) Sat.empty) *)
-  (*   in *)
-  (*   raise (Sat.Sat env) *)
-  (* with  *)
-  (*   | Sat.Unsat _  -> () *)
-  (*   | (Sat.Sat _ | Sat.I_dont_know) as e -> raise e *)
-
-
-let process_decl print_status (env, consistent, dep) d =
+let process_decl print_status dep d =
   try
     match d.st_decl with
-      | Assume(f,mf) -> 
-	  Sat.assume {Sat.f=f;age=0;name=None;mf=mf;gf=false},
-	  consistent, dep
+      | Assume f -> 
+	  Sat.assume {Sat.f=f; age=0; name=None; gf=false};
+	  dep
 
       |	PredDef f -> 
-	Sat.pred_def env f , consistent, dep
-
-      | RwtDef r -> assert false
+	  assert false
 
       | Query(n, f, lits)-> 
 	  let dep = 
-	    if consistent then
-	      let dep' = Sat.unsat env 
-		{Sat.f=f;age=0;name=None;mf=true;gf=true} in
-	      Explanation.union dep' dep
-	    else dep
+	    let dep' = Sat.unsat {Sat.f=f; age=0; name=None; gf=true} in
+	    Explanation.union dep' dep
           in
-          if debug_proof then check_produced_proof dep;
 	  print_status d (Unsat dep) (Sat.stop ());
-	  env, consistent, dep
+	  dep
   with 
     | Sat.Sat _ -> 
 	print_status d Sat (Sat.stop ());
-	env , consistent, dep
+	dep
     | Sat.Unsat dep' -> 
         let dep = Explanation.union dep dep' in
-        if debug_proof then check_produced_proof dep;
 	print_status d Inconsistent (Sat.stop ());
-	env , false, dep
+	raise (Sat.Unsat dep)
     | Sat.I_dont_know -> 
 	print_status d Unknown (Sat.stop ());
-	env , consistent, dep
-
-let get_smt_prelude () =
-  let libdir =
-    try Sys.getenv "ERGOLIB"
-    with Not_found -> Version.libdir
-  in
-  let f = Filename.concat libdir "smt_prelude.mlw"
-  in
-  from_channel (open_in f)
+	dep
 
 let open_file file lb =
-  let d ,status =
-    if !smtfile then begin
-      let _ = get_smt_prelude () in 
-      (*let lp = Why_parser.file Why_lexer.token lb_prelude in*)
-      let bname,l,status = Smt_parser.benchmark Smt_lex.token lb in
-      if verbose then printf "converting smt file : ";
-      let l = List.flatten (List.map Smt_to_why.bench_to_why l) in
-      if verbose then printf "done.@.";
-      if parse_only then exit 0;
-      let ltd = Why_typing.file (l) in
-      let lltd = Why_typing.split_goals ltd in
-      lltd, status
-    end
-    else if !smt2file then begin
-      let commands = Smtlib2_parse.main Smtlib2_lex.token lb in
-      if verbose then printf "converting smt2 file : ";
-      let l = Smtlib2_to_why.smt2_to_why commands in
-      if verbose then printf "done.@.";
-      if parse_only then exit 0;
-      let ltd = Why_typing.file l in
-      let lltd = Why_typing.split_goals ltd in
-      lltd, Smt_ast.Unknown
-    end
-    else
-      let a = Why_parser.file Why_lexer.token lb in
-      if parse_only then exit 0;
-      let ltd = Why_typing.file a in
-      let lltd = Why_typing.split_goals ltd in
-      lltd, Smt_ast.Unknown
+  let d =
+    let a = Why_parser.file Why_lexer.token lb in
+    if parse_only then exit 0;
+    let ltd = Why_typing.file a in
+    let lltd = Why_typing.split_goals ltd in
+    lltd
   in
   if file <> " stdin" then close_in cin;
   if type_only then exit 0;
-  d, status
+  d
 
-let pruning = 
-  List.map
-    (fun d -> 
-       if select > 0 then Pruning.split_and_prune select d 
-       else [List.map (fun f -> f,true) d])
-    
 let processing report declss = 
   Sat.start ();
-  let declss = List.map (List.map fst) declss in
-  List.iter
-    (List.iter 
-       (fun dcl ->
-	  let cnf = Cnf.make dcl in 
-	  ignore (Queue.fold (process_decl report)
-		    (Sat.empty, true, Explanation.empty) cnf)
-       )) (pruning declss)
+  (List.iter 
+     (fun dcl ->
+	let dcl = List.map fst dcl in
+	let cnf = Cnf.make dcl in 
+	ignore (Queue.fold (process_decl report) Explanation.empty cnf)
+     ))
+    declss
