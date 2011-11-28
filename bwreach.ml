@@ -430,11 +430,10 @@ let add_to_closed s fixa fix =
       let fa = f.t_arru in
       let sa = s.t_arru in
       let simpl = ArrayAtom.diff fa (ArrayAtom.diff sa fixa) in
-      if suitable_for_closing simpl s (* fix.t_from tr args *) then
-	let tr_margs = 
-	  try Hstring.H.find closed tr with Not_found -> MArgs.empty in
-	let ls = try MArgs.find args tr_margs with Not_found -> [] in
-	Hstring.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
+      let tr_margs = 
+	try Hstring.H.find closed tr with Not_found -> MArgs.empty in
+      let ls = try MArgs.find args tr_margs with Not_found -> [] in
+      Hstring.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
 
 (**********************************************************************)
 
@@ -925,7 +924,7 @@ let same_number env z = function
   | Elem s | Access (_, s) | Arith (s, _, _) -> 
       s = z || 
   let v = sort_of env s in
-  (* v = Glob || *) v = Constr
+  v = Glob || v = Constr
 
 let rec contains_only env z = function
   | True | False -> true
@@ -942,6 +941,7 @@ let partition ({ t_unsafe = (args, sa) } as s) =
        else 
 	 let ar' = ArrayAtom.of_satom sa' in
 	 { s with
+	   t_from = [];
 	   t_unsafe = [z], sa';
 	   t_arru = ar';
 	   t_alpha = ArrayAtom.alpha ar' [z];
