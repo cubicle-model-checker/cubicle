@@ -16,12 +16,34 @@ open Atom
 
 module AE = AltErgo
 
+
+(* Captures the output and exit status of a unix command : aux func*)
+let syscall cmd =
+  let ic, oc = Unix.open_process cmd in
+  let buf = Buffer.create 16 in
+  (try
+     while true do
+       Buffer.add_channel buf ic 1
+     done
+   with End_of_file -> ());
+  let _ = Unix.close_process (ic, oc) in
+  (Buffer.contents buf)
+
+let rec remove_trailing_whitespaces_end str =
+  if String.length str > 0 && 
+    (str.[String.length str - 1] = '\n' 
+    || str.[String.length str - 1] = ' '
+      || str.[String.length str - 1] = '\t')  then
+    remove_trailing_whitespaces_end (String.sub str 0 (String.length str - 1))
+  else str
+
 (* Set width of pretty printing boxes to number of columns *)
-(*let _ =
+let _ =
   try
-    set_margin (158);
+    let scol = syscall "tput cols" in
+    set_margin (int_of_string (remove_trailing_whitespaces_end scol));
   with Not_found | Failure _ -> ()
-*)
+
 
 let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 let op_arith = function Plus -> "+" | Minus -> "-"

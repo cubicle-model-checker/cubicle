@@ -56,69 +56,69 @@ module Profiling = struct
     let sec = TimeFix.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "Time for fixpoint                : %dm%2.3fs@."
+    printf "Time for fixpoint                : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_rp () =
     let sec = TimeRP.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "├─Time for relevant permutations : %dm%2.3fs@."
+    printf "├─Time for relevant permutations : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_prover () =
     let sec = Prover.TimeAE.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "└─Time in solver                 : %dm%2.3fs@."
+    printf "└─Time in solver                 : %dm%2.3fs@."
       (int_of_float minu) extrasec
       
   let print_time_pre () =
     let sec = TimePre.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "Time for pre-image computation   : %dm%2.3fs@."
+    printf "Time for pre-image computation   : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_hs () =
     let sec = Hstring.TimeHS.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "Hstring.find                     : %dm%2.3fs@."
+    printf "Hstring.find                     : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_subset () =
     let sec = Ast.TimerSubset.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "├─Subset tests                   : %dm%2.3fs@."
+    printf "├─Subset tests                   : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_apply () =
     let sec = Ast.TimerApply.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "├─Apply substitutions            : %dm%2.3fs@."
+    printf "├─Apply substitutions            : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_time_sort () =
     let sec = TimeSort.get () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    eprintf "├─Nodes sorting                  : %dm%2.3fs@."
+    printf "├─Nodes sorting                  : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
   let print_report nb inv del =
-    eprintf "\n----------------------------------------------@.";
-    eprintf "Number of visited nodes          : %d@." nb;
-    eprintf "Fixpoints                        : %d@." !cpt_fix;
-    eprintf "Number of solver calls           : %d@." (Prover.nb_calls ());
-    eprintf "Max Number of processes          : %d@." !cpt_process;
+    printf "\n----------------------------------------------@.";
+    printf "Number of visited nodes          : %d@." nb;
+    printf "Fixpoints                        : %d@." !cpt_fix;
+    printf "Number of solver calls           : %d@." (Prover.nb_calls ());
+    printf "Max Number of processes          : %d@." !cpt_process;
     if delete then 
-      eprintf "Number of deleted nodes          : %d@." del;
+      printf "Number of deleted nodes          : %d@." del;
     if gen_inv then 
-      eprintf "Number of invariants             : %d@." (List.length inv);  
-    eprintf "----------------------------------------------@.";
+      printf "Number of invariants             : %d@." (List.length inv);  
+    printf "----------------------------------------------@.";
     print_time_pre ();
     print_time_fix ();
     print_time_rp ();
@@ -126,7 +126,7 @@ module Profiling = struct
     print_time_apply ();
     print_time_sort ();
     print_time_prover ();
-    eprintf "----------------------------------------------@."
+    printf "----------------------------------------------@."
 
 end
 
@@ -276,8 +276,9 @@ module BFS_base ( X : I ) = struct
 	begin
 	  incr nb_nodes;
 	  Profiling.print "BFS" !nb_nodes (X.size s);
-	  let prefpr = if (not invgen) && gen_inv then "     inv gen " else " " in
-	  eprintf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+	  let prefpr = 
+	    if (not invgen) && gen_inv then "     inv gen " else " " in
+	  printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
 	    (if debug then fun _ _ -> () else X.print) s;
 	  let ls, post = X.pre s in
 	  let ls = List.rev ls in
@@ -394,7 +395,7 @@ module DFSHL ( X : I ) = struct
 	    begin
 	      incr nb_nodes;
 	      Profiling.print "DFSHL" !nb_nodes (X.size s);
-	      eprintf " node %d= %a@." !nb_nodes 
+	      printf " node %d= @[%a@]@." !nb_nodes 
 		(if debug then fun _ _ -> () else X.print) s;
 	      let ls, post = X.pre s in
 	      let post = List.rev post in
