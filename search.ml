@@ -144,6 +144,7 @@ module type I = sig
     invariants : t list -> t list -> t -> t list * t list
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
+  val delete_nodes_inv : t list -> t list ref -> unit
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
@@ -156,11 +157,6 @@ end
 module type S = sig 
   type t
   val search : invariants : t list -> visited : t list -> t -> unit
-end
-
-
-module Dist ( X : I ) = struct
-
 end
 
 
@@ -305,9 +301,11 @@ module BFS_base ( X : I ) = struct
 	  invariants := List.rev_append inv !invariants;
 	  not_invariants := not_invs;
 	  if delete then X.delete_nodes s visited nb_deleted false;
+	  if delete && invgen && gen_inv then X.delete_nodes_inv inv visited;
 	  visited := s :: !visited;
 	  postponed := List.rev_append post !postponed;
 	  if delete then X.delete_nodes s postponed nb_deleted true;
+	  if delete && invgen && gen_inv then X.delete_nodes_inv inv postponed;
 
 	  List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;

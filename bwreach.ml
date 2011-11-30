@@ -993,6 +993,19 @@ let delete_nodes s nodes nb_del inc =
   !nodes
 
 
+let delete_nodes_inv inv nodes = 
+  nodes := List.filter
+  (fun n -> 
+     if (not n.t_deleted) &&
+       List.exists (fun i -> ArrayAtom.subset i.t_arru n.t_arru) inv then 
+       begin
+	 n.t_deleted <- true;
+	 false
+       end
+     else true)
+  !nodes
+
+
 (* ----------------- Search strategy selection -------------------*)
 
 module T = struct
@@ -1012,6 +1025,7 @@ module T = struct
   let gen_inv = gen_inv
 
   let delete_nodes = delete_nodes
+  let delete_nodes_inv = delete_nodes_inv
 
   let fixpoint = fixpoint
   let safety = check_safety

@@ -27,6 +27,7 @@ module type I = sig
     invariants : t list -> t list -> t -> t list * t list
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
+  val delete_nodes_inv : t list -> t list ref -> unit
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
