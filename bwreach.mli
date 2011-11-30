@@ -12,6 +12,4 @@
 
 open Ast
 
-exception Unsafe
-
 val system : t_system -> unit

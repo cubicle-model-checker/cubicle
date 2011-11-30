@@ -13,6 +13,7 @@
 (* Backward reachability search strategies *)
 
 exception ReachBound
+exception Unsafe
 
 module type I = sig
   type t
@@ -30,6 +31,7 @@ module type I = sig
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
   val pre : t -> t list * t list
+  val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
   val sort : t list -> t list
 
@@ -78,3 +80,8 @@ module DFSHL ( X : I ) : S  with type t = X.t
 (* Bfs search where fixpoint nodes are the visited nodes. *)
 
 module BFS  ( X : I ) : S  with type t = X.t 
+
+
+(* Concurrent Bfs search *)
+
+module BFS_dist  ( X : I ) : S  with type t = X.t 

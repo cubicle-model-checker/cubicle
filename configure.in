@@ -65,6 +65,14 @@ else
    ALTERGOLIB="-I $ALTERGOLIBDIR"
 fi
 
+AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
+if test "$FUNCTORYLD" = no ; then
+      AC_MSG_ERROR(Cannot find functory library.)
+      FUNCTORYLIB=""
+else
+   FUNCTORYLIB="-I +functory"
+fi
+
 AC_MSG_CHECKING(platform)
 if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then
     echo "Windows platform"
@@ -86,6 +94,7 @@ AC_SUBST(OCAMLBEST)
 AC_SUBST(OCAMLVERSION)
 AC_SUBST(OCAMLLIB)
 AC_SUBST(ALTERGOLIB)
+AC_SUBST(FUNCTORYLIB)
 AC_SUBST(OCAMLWIN32)
 AC_SUBST(EXE)
 

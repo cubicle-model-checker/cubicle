@@ -10,7 +10,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = Dfs | DfsL | DfsH | DfsHL | Bfs 
+type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist
 
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
@@ -30,6 +30,7 @@ let gen_inv = ref false
 let alwayspost = ref false
 let delete = ref false
 let simpl_by_uc = ref false
+let cores = ref 0
 
 let mode = ref DfsHL
 let set_mode = function
@@ -56,6 +57,7 @@ let specs =
     "-alwayspost", Arg.Set alwayspost, " postpone states with n+1 processes";
     "-delete", Arg.Set delete, " delete subsumed nodes";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
+    "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-dergo", Arg.Set debug_altergo, " debug mode for alt-ergo"
   ]
 
@@ -81,3 +83,5 @@ let gen_inv = !gen_inv
 let alwayspost = !alwayspost
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
+let cores = !cores
+let mode = if cores > 0 then BfsDist else !mode

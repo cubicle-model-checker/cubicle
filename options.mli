@@ -10,7 +10,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = Dfs | DfsL | DfsH | DfsHL | Bfs 
+type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist
 
 val file : string
 val cin : in_channel
@@ -24,7 +24,9 @@ val alwayspost : bool
 val delete : bool
 val simpl_by_uc : bool
 
-val mode : mode ref
+val cores : int
+
+val mode : mode
 
 val debug : bool
 val verbose : int ref

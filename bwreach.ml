@@ -30,8 +30,6 @@ module TimePre = Search.TimePre
 
 module TimeSort = Search.TimeSort
 
-exception Unsafe
-
 module Debug = struct
 
   let fixpoint = 
@@ -362,10 +360,10 @@ let check_safety s =
     if not (obviously_safe s) then
       begin
 	Prover.unsafe s;
-	raise Unsafe
+	raise Search.Unsafe
       end
   with
-    | AE.Sat.Sat -> raise Unsafe
+    | AE.Sat.Sat -> raise Search.Unsafe
     | AE.Sat.I_dont_know -> exit 2
     | AE.Sat.Unsat _ -> ()
 
@@ -402,7 +400,7 @@ let suitable_for_closing simpl s (*fix_from tr args*) =
       true
     end
     else false
-  with Unsafe -> false
+  with Search.Unsafe -> false
   (* && not ( List.exists (fun (tr', args', f) -> *)
   (*   Hstring.equal tr tr' && Hstring.compare_list args args' = 0 && *)
   (*     ArrayAtom.subset simpl f.t_arru) fix_from) *)
@@ -966,7 +964,7 @@ let gen_inv search ~invariants not_invs s =
 	     Pretty.print_system p;
 	   p::invs, not_invs
 	 end
-       with | Unsafe | Search.ReachBound -> invs, p::not_invs) 
+       with | Search.Unsafe | Search.ReachBound -> invs, p::not_invs) 
     ([], not_invs) (partition s)
 
 
@@ -1018,6 +1016,7 @@ module T = struct
   let fixpoint = fixpoint
   let safety = check_safety
   let pre = pre_system
+  let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
   let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
     Pervasives.compare (List.length args1) (List.length args2))
@@ -1027,14 +1026,16 @@ module StratDFS = Search.DFS(T)
 module StratDFSL = Search.DFSL(T)
 module StratDFSH = Search.DFSH(T)
 module StratBFS = Search.BFS(T)
+module StratBFS_dist = Search.BFS_dist(T)
 module StratDFSHL = Search.DFSHL(T)
 
 let search = 
-  match !mode with
+  match mode with
     | Dfs -> StratDFS.search
     | DfsL -> StratDFSL.search
     | DfsH -> StratDFSH.search
     | Bfs -> StratBFS.search
+    | BfsDist -> StratBFS_dist.search
     | DfsHL -> StratDFSHL.search
 
 let system s =
