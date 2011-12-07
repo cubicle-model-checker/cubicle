@@ -1,19 +1,3 @@
-(**************************************************************************)
-(*                                                                        *)
-(*     The Alt-ergo theorem prover                                        *)
-(*     Copyright (C) 2006-2010                                            *)
-(*                                                                        *)
-(*     Sylvain Conchon                                                    *)
-(*     Evelyne Contejean                                                  *)
-(*     Stephane Lescuyer                                                  *)
-(*     Mohamed Iguernelala                                                *)
-(*     Alain Mebsout                                                      *)
-(*                                                                        *)
-(*     CNRS - INRIA - Universite Paris Sud                                *)
-(*                                                                        *)
-(*   This file is distributed under the terms of the CeCILL-C licence     *)
-(*                                                                        *)
-(**************************************************************************)
 
 open Hashcons
 
@@ -70,6 +54,9 @@ module HS = struct
   let rec list_mem_couple c = function
     | [] -> false
     | d :: l -> compare_couple c d  = 0 || list_mem_couple c l
+
+  let print fmt s = 
+    Format.fprintf fmt "%s" (view s)
 
 end
 

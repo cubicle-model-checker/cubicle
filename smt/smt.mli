@@ -5,29 +5,38 @@ exception Undefined of Hstring.t
 
 (* API for the construction of types, terms and formulas *)
 
-type ty
+module Typing : sig
+  type t
 
-val type_int : ty
-val type_bool : ty
+  val type_int : Hstring.t
+  val type_bool : Hstring.t
+  val type_proc : Hstring.t
+    
+  val declare_type : Hstring.t * Hstring.t list -> unit
+  val declare_name : Hstring.t -> Hstring.t list -> Hstring.t -> unit
 
-val declare_type : Hstring.t -> Hstring.t list -> unit
-val declare_name : Hstring.t -> ty list -> ty -> unit
+  val find : Hstring.t -> Hstring.t list * Hstring.t
+end
 
-type term
-type operator = Plus | Minus | Mult | Div | Modulo
+module Term : sig
+  type t
+  type operator = Plus | Minus | Mult | Div | Modulo
 
-val vrai : term
-val faux : term
-val make_int : string -> term
-val make_app : Hstring.t -> term list -> term
-val make_arith : operator -> term -> term -> term
+  val vrai : t
+  val faux : t
+  val make_int : string -> t
+  val make_app : Hstring.t -> t list -> t
+  val make_arith : operator -> t -> t -> t
+end
 
-type formula
-type comparator = Eq | Neq | Le | Lt
-type combinator = And | Or | Imp | Not
+module Formula : sig
+  type t
+  type comparator = Eq | Neq | Le | Lt
+  type combinator = And | Or | Imp | Not
 
-val make_lit : comparator -> term list -> formula
-val make_formula : combinator -> formula list -> formula
+  val make_lit : comparator -> Term.t list -> t
+  val make_formula : combinator -> t list -> t
+end
 
 (* SMT solver interface *)
 
@@ -36,7 +45,7 @@ exception Unsat of Explanation.t
 exception IDontknow
 
 val clear : unit -> unit
-val assume : formula -> unit
+val assume : Formula.t -> unit
 val check : unit -> unit
 
 

@@ -15,23 +15,25 @@ open Options
 type op_comp = Eq | Lt | Le| Neq
 type op_arith = Plus | Minus
 
+type sort = Glob | Arr | Constr | Var
+
 type term = 
   | Const of int
-  | Elem of Hstring.t
+  | Elem of Hstring.t * sort
   | Access of Hstring.t * Hstring.t
-  | Arith of Hstring.t * op_arith * int
+  | Arith of Hstring.t * sort * op_arith * int
 
 let rec compare_term t1 t2 = 
   match t1, t2 with
     | Const i1, Const i2 -> Pervasives.compare i1 i2
     | Const _, _ -> -1 | _, Const _ -> 1
-    | Elem s1, Elem s2 -> Hstring.compare s1 s2
+    | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
     | Elem _, _ -> -1 | _, Elem _ -> 1
     | Access (a1, i1), Access (a2, i2) ->
       let c = Hstring.compare a1 a2 in
       if c<>0 then c else Hstring.compare i1 i2
     | Access _, _ -> -1 | _, Access _ -> 1 
-    | Arith (t1, op1, u1), Arith (t2, op2, u2) ->
+    | Arith (t1, _, op1, u1), Arith (t2, _, op2, u2) ->
       let c = Pervasives.compare op1 op2 in
       if c <> 0 then c else
 	let c = Hstring.compare t1 t2 in
@@ -104,9 +106,10 @@ let svar j i k = if k = j then i else k
     
 let subst_term sigma t = 
   match t with
-    | Elem x -> (try Elem (List.assoc x sigma) with Not_found -> t)
+    | Elem (x, s) -> 
+	(try Elem (Hstring.list_assoc x sigma, s) with Not_found -> t)
     | Access (a, z) -> 
-	(try Access (a, List.assoc z sigma) with Not_found -> t)
+	(try Access (a, Hstring.list_assoc z sigma) with Not_found -> t)
     | _ -> t
 	
 open Atom
@@ -255,7 +258,7 @@ type elem = Hstring.t * (Hstring.t list)
 type system = {
   globals : (Hstring.t * Hstring.t) list;
   arrays : (Hstring.t * (Hstring.t * Hstring.t)) list;
-  elems : elem list;
+  type_defs : elem list;
   init : Hstring.t option * SAtom.t;
   invs : (Hstring.t list * SAtom.t) list;
   unsafe : Hstring.t list * SAtom.t;
@@ -270,18 +273,8 @@ type t_elem = {
   telem_consts : (Hstring.t * AltErgo.Term.t) list;
 }
 
-type sort = Glob | Arr | Constr | Var
-
-let sort_of env x =
-  try 
-    let s, _, _ = Hstring.H.find env x in 
-    s 
-  with Not_found -> Var
-
-
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;
-  t_env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;

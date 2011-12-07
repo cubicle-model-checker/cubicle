@@ -1,19 +1,3 @@
-(**************************************************************************)
-(*                                                                        *)
-(*     The Alt-ergo theorem prover                                        *)
-(*     Copyright (C) 2006-2010                                            *)
-(*                                                                        *)
-(*     Sylvain Conchon                                                    *)
-(*     Evelyne Contejean                                                  *)
-(*     Stephane Lescuyer                                                  *)
-(*     Mohamed Iguernelala                                                *)
-(*     Alain Mebsout                                                      *)
-(*                                                                        *)
-(*     CNRS - INRIA - Universite Paris Sud                                *)
-(*                                                                        *)
-(*   This file is distributed under the terms of the CeCILL-C licence     *)
-(*                                                                        *)
-(**************************************************************************)
 
 open Hashcons 
 
@@ -42,5 +26,7 @@ val list_mem : t -> t list -> bool
 val list_mem_couple : t * t -> (t * t) list -> bool
 
 val compare_list : t list -> t list -> int
+
+val print : Format.formatter -> t -> unit
 
 module H : Hashtbl.S with type key = t

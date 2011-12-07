@@ -28,14 +28,13 @@ OCAMLDEP = @OCAMLDEP@
 OCAMLLEX = @OCAMLLEX@
 OCAMLYACC= @OCAMLYACC@
 OCAMLLIB = @OCAMLLIB@
-ALTERGOLIB = @ALTERGOLIB@
 FUNCTORYLIB = @FUNCTORYLIB@
 OCAMLBEST= @OCAMLBEST@
 OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLUDES = $(ALTERGOLIB) $(FUNCTORYLIB) -thread
+INCLUDES = $(FUNCTORYLIB) -thread -I common/ -I smt/
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes $(INCLUDES) -annot
@@ -56,9 +55,9 @@ all: $(OCAMLBEST)
 # bytecode and native-code compilation
 ######################################
 
-CMO = timer.cmo hashcons.cmo hstring.cmo \
+CMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo common/heap.cmo \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      prover.cmo heap.cmo search.cmo \
+      prover.cmo search.cmo \
       bwreach.cmo typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
@@ -76,11 +75,11 @@ opt: $(NAME).opt
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) 
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) altErgo.cmo functory.cma threads.cma $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma $^
 
 $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) 
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) altErgo.cmx functory.cmxa threads.cmxa $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
 VERSION=0.1
 

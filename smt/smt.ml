@@ -1,26 +1,40 @@
 
 open Format
 
-type ty = Ty.t
 exception AlreadyDeclared of Hstring.t
 exception Undefined of Hstring.t
 
-let type_int = Ty.Tint
-let type_bool = Ty.Tbool
 
 module H = Hstring.H
 
 module Typing = struct
 
+  type t = Ty.t
+
   let decl_types = H.create 17
   let decl_symbs = H.create 17
+
+  let type_int = 
+    let tint = Hstring.make "int" in
+    H.add decl_types tint Ty.Tint;
+    tint
+
+  let type_bool = 
+    let tbool = Hstring.make "bool" in
+    H.add decl_types tint Ty.Tbool;
+    tbool
+
+  let type_proc = 
+    let tproc = Hstring.make "proc" in
+    H.add decl_types tint Ty.Tint;
+    tproc
 
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (AlreadyDeclared c);
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
       
-  let declare_type n l = 
+  let declare_type (n, l) = 
     if H.mem decl_types n then raise (AlreadyDeclared n);
     match l with
       | [] -> 
@@ -32,13 +46,17 @@ module Typing = struct
 
   let declare_name f args ret  = 
     if H.mem decl_symbs f then raise (AlreadyDeclared f);
+    List.iter 
+      (fun t -> if not H.mem decl_types t then raise (Undefined t)) (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
+
+  let find s = H.find decl_symbs s
 
 end
 
 module Term = struct
 
-  type term = Term.t
+  type t = Term.t
   type operator = Plus | Minus | Mult | Div | Modulo
 
   let vrai = Term.vrai
@@ -69,9 +87,9 @@ module Formula = struct
 
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
-  type formula = 
+  type t = 
     | Lit of Literal.LT.t  
-    | Comb of combinator * formula list
+    | Comb of combinator * t list
 
   let make_lit cmp l = 
     let lit = 
@@ -146,10 +164,6 @@ module Formula = struct
 
 end
 
-include Typing
-include Term
-include Formula
-
 exception Sat 
 exception Unsat of Explanation.t 
 exception IDontknow
@@ -157,7 +171,7 @@ exception IDontknow
 let clear () = Solver.clear ()
 
 let assume f = 
-  try Solver.assume (make_cnf f)
+  try Solver.assume (Formula.make_cnf f)
   with Solver.Unsat -> raise (Unsat Explanation.empty)
 
 let check () =

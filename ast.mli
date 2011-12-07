@@ -13,11 +13,13 @@
 type op_comp = Eq | Lt | Le | Neq
 type op_arith = Plus | Minus
 
+type sort = Glob | Arr | Constr | Var
+
 type term = 
   | Const of int
-  | Elem of Hstring.t
+  | Elem of Hstring.t * sort
   | Access of Hstring.t * Hstring.t
-  | Arith of Hstring.t * op_arith * int
+  | Arith of Hstring.t * sort * op_arith * int
 
 val compare_term : term -> term -> int
 
@@ -79,7 +81,7 @@ type elem = Hstring.t * (Hstring.t list)
 type system = {
   globals : (Hstring.t * Hstring.t) list;
   arrays : (Hstring.t * (Hstring.t * Hstring.t)) list;
-  elems : elem list;
+  type_defs : elem list;
   init : Hstring.t option * SAtom.t;
   invs : (Hstring.t list * SAtom.t) list;
   unsafe : Hstring.t list * SAtom.t;
@@ -88,14 +90,11 @@ type system = {
 
 (* Types AST *)
 
-type sort = Glob | Arr | Constr | Var
-
 val sort_of : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t ->
   Hstring.t -> sort
 
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;
-  t_env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;

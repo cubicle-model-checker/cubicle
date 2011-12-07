@@ -74,16 +74,9 @@ module SS = Set.Make
 let rec m_number env a s = 
   match a with
     | True | False -> s
-    | Comp (Elem x, Eq, Elem y) ->
-	begin
-	  let s1 = sort_of env x in
-	  let s2 = sort_of env y in
-	  match s1, s2 with
-	    | Glob, Constr | Constr, Glob -> SS.add (x,y) s
-	    | _ -> s
-	end
-    | Comp (Access (a, _), _, Elem x) -> 
-	let xs = sort_of env x in
+    | Comp (Elem (x, Glob), Eq, Elem (y, Constr)) 
+    | Comp (Elem (x, Constr), Eq, Elem (y, Glob)) -> S.add (x,y) s
+    | Comp (Access (a, _), _, Elem (x, xs)) -> 
 	if xs = Glob || xs = Constr then
 	  SS.add (a, x) s 
 	else SS.add (a, hempty) s
@@ -132,8 +125,7 @@ let memo_apply_subst =
 let redondant env others = function
   | True -> true
   | Comp (t1, Neq, (Elem x as t2))
-  | Comp ((Elem x as t2), Neq, t1) ->
-    let s = sort_of env x in
+  | Comp ((Elem (x, s) as t2), Neq, t1) ->
     (match s with
       | Var | Constr ->
 	(try 
@@ -146,23 +138,23 @@ let redondant env others = function
       | _ -> false)
   | _ -> false
 
-let simplify_comp env i op j =  
-  let si = sort_of env i in
-  let sj = sort_of env j in
+let simplify_comp env i si op j sj =  
   match op, (si, sj) with
-    | Eq, (Var, Var | Constr, Constr) -> if i=j then True else False
-    | Neq, (Var, Var | Constr, Constr) -> if i<>j then True else False
-    | Le, _ when i = j -> True
-    | Lt, _ when i=j -> False
-    | _ -> Comp (Elem i, op, Elem j)
+    | Eq, (Var, Var | Constr, Constr) -> 
+	if Hstring.equal i j then True else False
+    | Neq, (Var, Var | Constr, Constr) -> 
+	if not (Hstring.equal i j) then True else False
+    | Le, _ when Hstring.equal i j -> True
+    | Lt, _ when Hstring.equal i j -> False
+    | _ -> Comp (Elem (i, si), op, Elem (j, sj))
 
 let rec simplification np env a =
   if redondant env (SAtom.remove a np) a then True
   else match a with
     | True | False -> a 
-    | Comp (Elem i, op , Elem j) -> simplify_comp env i op j
-    | Comp (Arith (i, opai, xi), op, (Arith (j, opaj, xj)))
-      when opai = opaj && xi = xj -> simplify_comp env i op j
+    | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp env i si op j sj
+    | Comp (Arith (i, si, opai, xi), op, (Arith (j, sj, opaj, xj)))
+      when opai = opaj && xi = xj -> simplify_comp env i si op j sj
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
@@ -300,8 +292,7 @@ let inconsistent_list env l =
     | True :: l -> check values eqs neqs l
     | False :: _ -> raise Exit
     | Comp (t1, Eq, (Elem x as t2)) :: l 
-    | Comp ((Elem x as t2), Eq, t1) :: l ->
-      let s = sort_of env x in
+    | Comp ((Elem (x, s) as t2), Eq, t1) :: l ->
       (match s with
 	| Var | Constr ->
 	  if assoc_neq t1 values t2 
@@ -562,38 +553,41 @@ let obvious_impossible env a1 a2 =
     let a1i = a1.(!i1) in
     let a2i = a2.(!i2) in
     (match a1i, a2i with
-      | Comp (Elem x1, Eq, Elem y1), Comp (Elem x2, Eq, Elem y2) ->
-    	(match sort_of env x1, sort_of env y1,
-    	  sort_of env x2, sort_of env y2 with
-    	    | Glob, Constr, Glob, Constr 
-	      when Hstring.equal x1 x2 && not (Hstring.equal y1 y2) ->
-    	      raise NoPermutations
-    	    | Glob, Var, Glob, Var when Hstring.equal x1 x2 ->
-    	      obvs := (y1,y2) :: !obvs
-    	    | Glob, Var, Var, Glob when Hstring.equal x1 y2 ->
-    	      obvs := (y1,x2) :: !obvs
-    	    | Var, Glob, Glob, Var when Hstring.equal y1 x2 ->
-    	      obvs := (x1,y2) :: !obvs
-    	    | Var, Glob, Var, Glob when Hstring.equal y1 y2 ->
-    	      obvs := (x1,x2) :: !obvs
-    	    | _ -> ()
-    	)
-      | Comp (Elem x1, Eq, Elem y1), Comp (Elem x2, Neq, Elem y2) ->
-    	(match sort_of env x1, sort_of env y1,
-    	  sort_of env x2, sort_of env y2 with
-    	    | Glob, Constr, Glob, Constr 
-	      when Hstring.equal x1 x2 && Hstring.equal y1 y2 ->
-    	      raise NoPermutations
-    	    | _ -> ()
-    	)
-      | Comp (Access (a1, x1), op, Elem c1), Comp (Access (a, _), _, Elem _)
-    	when Hstring.equal a1 a ->
-	find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
-      | _ -> ());
+       | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
+	 Comp (Elem (x2, sx2), Eq, Elem (y2, sy2)) ->
+	   begin
+    	     match sx1, sy1, sx2, sy2 with
+    	       | Glob, Constr, Glob, Constr 
+		   when Hstring.equal x1 x2 && not (Hstring.equal y1 y2) ->
+    		   raise NoPermutations
+    	       | Glob, Var, Glob, Var when Hstring.equal x1 x2 ->
+    		   obvs := (y1,y2) :: !obvs
+    	       | Glob, Var, Var, Glob when Hstring.equal x1 y2 ->
+    		   obvs := (y1,x2) :: !obvs
+    	       | Var, Glob, Glob, Var when Hstring.equal y1 x2 ->
+    		   obvs := (x1,y2) :: !obvs
+    	       | Var, Glob, Var, Glob when Hstring.equal y1 y2 ->
+    		   obvs := (x1,x2) :: !obvs
+    	       | _ -> ()
+    	   end
+       | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
+	   Comp (Elem (x2, sx2), Neq, Elem (y2, sy2)) ->
+    	   begin
+	     match sx1, sy1, sx2, sy2 with
+    	       | Glob, Constr, Glob, Constr 
+		   when Hstring.equal x1 x2 && Hstring.equal y1 y2 ->
+    		   raise NoPermutations
+    	       | _ -> ()
+	   end
+       | Comp (Access (a1, x1), op, Elem (c1, _)), 
+	     Comp (Access (a, _), _, Elem _)
+    	       when Hstring.equal a1 a ->
+	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
+       | _ -> ());
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
   done;
   !obvs, !impos
-
+    
 
 (*******************************************)
 (* Relevant permuations for fixpoint check *)
@@ -978,10 +972,9 @@ let delete_node s = s.t_deleted <- true
 
 let same_number env z = function 
   | Const _ -> true
-  | Elem s | Access (_, s) | Arith (s, _, _) -> 
-      s = z || 
-  let v = sort_of env s in
-  v = Glob || v = Constr
+  | Elem (s, v) | Arith (s, v, _, _) -> 
+      Hstring.equal s z || v = Glob || v = Constr
+  | Access (_, s) -> Hstring.equal s z
 
 let rec contains_only env z = function
   | True | False -> true

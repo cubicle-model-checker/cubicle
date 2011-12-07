@@ -16,6 +16,25 @@
   open Parsing
   open Atom
 
+  module S = Set.Make(Hstring)
+
+  module Constructors = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
+  module Globals = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
+  let sort s = 
+    if Constructors.mem s then Constr 
+    else if Globals.mem s then Glob
+    else Var
+
   let hproc = Hstring.make "proc"
 
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
@@ -55,7 +74,7 @@ init
 invariants
 unsafe
 transitions 
-{ { elems = $1; 
+{ { type_defs = $1; 
     globals = $2;
     arrays = $3; 
     init = $4; 
@@ -66,15 +85,13 @@ transitions
 
 global_defs:
 | { [] }
-| GLOBALS EQ globals { $3 }
+| GLOBALS EQ globals { List.iter Globals.add $3; $3 }
 ;
 
 array_defs:
 | { [] }
 | ARRAYS EQ arrays { $3 }
 ;
-
-
 
 type_defs:
 | { [] }
@@ -87,7 +104,7 @@ type_def_plus:
 ;
 
 type_def:
-| TYPE lident EQ constructors { $2, $4 }
+| TYPE lident EQ constructors { List.iter Constructors.add $4; ($2, $4) }
 ;
 
 constructors:
@@ -226,11 +243,11 @@ cube:
 ;
 
 term:
-| mident { Elem $1 }
-| lident { Elem $1 }
+| mident { Elem ($1, sort $1) }
+| lident { Elem ($1, Var) }
 | mident LEFTSQ lident RIGHTSQ { Access($1,$3) }
-| mident PLUS INT { Arith($1, Plus, $3) }
-| mident MINUS INT { Arith($1, Minus, $3) }
+| mident PLUS INT { Arith($1, sort $1, Plus, $3) }
+| mident MINUS INT { Arith($1, sort $1, Minus, $3) }
 | INT { Const $1 }
 ;
 

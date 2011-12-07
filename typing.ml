@@ -15,161 +15,107 @@ open Ast
 open Atom
 
 type error = 
-  | UnknownConstr of string
-  | UnknownVar of string
-  | UnknownGlobal of string
-  | DuplicateName of string
-  | DuplicateTypeName of string
-  | DuplicateAssign of string
-  | UnknownArray of string
-  | UnknownType of string
-  | UnknownName of string
-  | DuplicateInit of string
+  | UnknownConstr of Hstring.t
+  | UnknownVar of Hstring.t
+  | UnknownGlobal of Hstring.t
+  | DuplicateName of Hstring.t
+  | DuplicateTypeName of Hstring.t
+  | DuplicateAssign of Hstring.t
+  | UnknownArray of Hstring.t
+  | UnknownType of Hstring.t
+  | UnknownName of Hstring.t
+  | DuplicateInit of Hstring.t
   | NoMoreThanOneArray
-  | ClashParam of string
-  | MustBeAnArray of string
-  | MustBeOfType of string * AltErgo.Ty.t
-  | MustBeOfTypeProc of string 
-  | UncompatibleType of AltErgo.Ty.t * AltErgo.Ty.t
+  | ClashParam of Hstring.t
+  | MustBeAnArray of Hstring.t
+  | MustBeOfType of Hstring.t * Hstring.t
+  | MustBeOfTypeProc of Hstring.t 
+  | UncompatibleType of Hstring.t * Hstring.t
+  | NotATerm of Hstring.t
 
 exception Error of error
 
 let report fmt = function
   | UnknownConstr e ->
-      fprintf fmt "unknown constructor %s" e
+      fprintf fmt "unknown constructor %a" Hstring.print e
   | DuplicateName e ->
-      fprintf fmt "duplicate name for %s" e
+      fprintf fmt "duplicate name for %a" Hstring.print e
   | DuplicateTypeName s ->
-      fprintf fmt "duplicate type name for %s" s
+      fprintf fmt "duplicate type name for %a" Hstring.print s
   | DuplicateAssign s ->
-      fprintf fmt "duplicate assignment for %s" s
+      fprintf fmt "duplicate assignment for %a" Hstring.print s
   | UnknownVar x ->
-      fprintf fmt "unknown variable %s" x
+      fprintf fmt "unknown variable %a" Hstring.print x
   | UnknownArray a ->
-      fprintf fmt "unknown array %s" a
+      fprintf fmt "unknown array %a" Hstring.print a
   | UnknownName s ->
-      fprintf fmt "unknown name %s" s
+      fprintf fmt "unknown name %a" Hstring.print s
   | UnknownGlobal s ->
-      fprintf fmt "unknown global %s" s
+      fprintf fmt "unknown global %a" Hstring.print s
   | UnknownType s ->
-      fprintf fmt "unknown type %s" s
+      fprintf fmt "unknown type %a" Hstring.print s
   | DuplicateInit a ->
-      fprintf fmt "duplicate initialization for %s" a
+      fprintf fmt "duplicate initialization for %a" Hstring.print a
   | NoMoreThanOneArray ->
       fprintf fmt "sorry, no more than one array"
   | ClashParam x ->
-      fprintf fmt "%s already used as a transition's parameter" x
+      fprintf fmt "%a already used as a transition's parameter" Hstring.print x
   | MustBeAnArray s ->
-      fprintf fmt "%s must have an array type" s
+      fprintf fmt "%a must have an array type" Hstring.print s
   | MustBeOfType (s, ty) ->
-      fprintf fmt "%s must be of type %a" s AltErgo.Ty.print ty
+      fprintf fmt "%a must be of type %a" Hstring.print s Hstring.print ty
   | MustBeOfTypeProc s ->
-      fprintf fmt "%s must be of proc" s
+      fprintf fmt "%a must be of proc" Hstring.print s
   | UncompatibleType (ty1, ty2) ->
       fprintf fmt "types %a and %a are not compatible" 
-	AltErgo.Ty.print ty1 AltErgo.Ty.print ty2
+	Hstring.print ty1 Hstring.print ty2
+  | NotATerm s -> fprintf fmt "%a is not a term" Hstring.print s
 
 let error e = raise (Error e)
 
 let rec unique error = function
   | [] -> ()
-  | x :: l -> if List.mem x l then error x; unique error l
-
-(* Type of indices *)
-let ty_proc = AltErgo.Ty.Tint
-let ty_int = AltErgo.Ty.Tint
-
-(* Typing environment *)
-
-module Env = struct
-
-  let types : AltErgo.Ty.t Hstring.H.t = Hstring.H.create 17
-  let env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t = Hstring.H.create 17
-
-  let unicity x = if Hstring.H.mem env x then error (DuplicateName (Hstring.view x))
-
-  let elems =
-    let mk_elems ty x = 
-      unicity x;
-      let sy = AltErgo.Symbols.name ~kind:AltErgo.Symbols.Constructor  (Hstring.view x) in
-      let ty_term = AltErgo.Term.make sy [] ty in
-      Hstring.H.add env x (Constr, ty, ty_term)
-    in
-    List.iter 
-      (fun (name, constrs) -> 
-	 let ty = AltErgo.Ty.tsum (Hstring.view name) (List.map Hstring.view constrs) in
-	 Hstring.H.add types name ty;
-	 List.iter (mk_elems ty) constrs)
-
-  let arrays = 
-    List.iter
-      (fun (ar, (ind, img)) ->
-	 unicity ar;
-	 let sy = AltErgo.Symbols.name (Hstring.view ar) in
-	 let ty_ind = 
-	   try Hstring.H.find types ind with Not_found -> error (UnknownType (Hstring.view ind))
-	 in
-	 if not (AltErgo.Ty.equal ty_ind ty_proc) then error (MustBeOfTypeProc (Hstring.view ind));
-	 let ty_img = 
-	   try Hstring.H.find types img with Not_found -> error (UnknownType (Hstring.view img))
-	 in
-	 let ty = AltErgo.Ty.Tfarray(ty_ind, ty_img) in
-	 Hstring.H.add env ar (Arr, ty, AltErgo.Term.make sy [] ty) )
-
-  let globals = 
-    List.iter
-      (fun (g, ty) -> 
-	 unicity g;
-	 try
-	   let sy_g = AltErgo.Symbols.name (Hstring.view g) in
-	   let ty_g = Hstring.H.find types ty in
-	   Hstring.H.add env g (Glob, ty_g, AltErgo.Term.make sy_g [] ty_g)
-	 with Not_found -> error (UnknownType (Hstring.view ty)) )
-
-  let make s = elems s.elems; arrays s.arrays; globals s.globals
-
-  let find a = Hstring.H.find env a
-
-  let extract_infos () = Hstring.H.fold (fun g info l -> (g, info)::l) env []
-
-
-  let _ = 
-    Hstring.H.add types (Hstring.make "proc") ty_proc;
-    Hstring.H.add types (Hstring.make "int") ty_int;
-    elems [Hstring.make "bool", [Hstring.make "True"; Hstring.make "False"]]
-
-
-end
-
-let find_var args x = 
-  if List.mem x args then ty_proc 
-  else 
-    try let _, tx, _ = Env.find x in tx with Not_found -> error (UnknownName (Hstring.view x))
+  | x :: l -> if Hstring.list_mem x l then error x; unique error l
 
 let term args = function
-  | Const _ -> ty_int
-  | Elem e -> find_var args e
-  | Arith (x, _, _) ->
-      let _, ty_x, _ = 
-	try Env.find x with Not_found -> error (UnknownGlobal (Hstring.view x)) in
-      if ty_x <> AltErgo.Ty.Tint then error (MustBeOfType(Hstring.view x, AltErgo.Ty.Tint));
-      ty_x
+  | Const _ -> Smt.Typing.type_int
+  | Elem (e, Var) ->
+      if not (Hstring.list_mem e args) then error (UnknownName x);
+      Smt.Typing.type_proc
+  | Elem (e, _) -> 
+      let l, t = Smt.Typing.find e in
+      if l <> [] then error (NotATerm e);
+      t
+  | Arith (x, Var|Const|Arr, _, _) ->
+      error (MustBeOfType (x, Smt.Typing.type_int))
+  | Arith (x, _, _, _) ->
+      begin
+	try 
+	  let args, ret = Smt.Typing.find x in
+	  if args <> [] then error (NotATerm x);
+	  if not (Hstring.equal ret Smt.Typing.type_int) then 
+	    error (MustBeOfType(x, Smt.Typing.type_int));
+	  ret
+	with Not_found -> error (UnknownGlobal x)
+      end
   | Access(a, i) -> 
-      let _, ty_a, _ = 
-	try Env.find a with Not_found -> error (UnknownArray (Hstring.view a)) in
-      match ty_a with
-	| AltErgo.Ty.Tfarray (_, ty) -> 
-	    let ty_i = find_var args i in
-	    if ty_i <> ty_proc then error (UncompatibleType (ty_proc, ty_i));
-	    ty
-	| _ -> error  (MustBeAnArray (Hstring.view a))
+      let args_a, ty_a = 
+	try Smt.Typing.find a with Not_found -> error (UnknownArray a) in
+      let args_i, ty_i = 
+	try Smt.Typing.find i with Not_found -> error (UnknownName i)
+      in
+      if args_a = [] then error (MustBeAnArray a);
+      if args_i <> [] then error (NotATerm i);
+      if not (Hstring.equal ty_i Smt.Typing.type_proc) then
+	error (MustBeOfTypeProc i);	    
+      ty_a
 
 let atom args = function
   | True | False -> ()
   | Comp (x, op, y) -> 
       let tx = term args x in
       let ty = term args y in
-      if not (AltErgo.Ty.equal tx ty) then error (UncompatibleType (tx, ty))
+      if not (Hstring.equal tx ty) then error (UncompatibleType (tx, ty))
   | Ite _ -> assert false
 
 let atoms args = SAtom.iter (atom args)
@@ -180,61 +126,71 @@ let init (arg, sa) =
     | Some z -> atoms [z] sa
 
 let unsafe (args, sa) = 
-  unique (fun x-> error (DuplicateName (Hstring.view x))) args; 
+  unique (fun x-> error (DuplicateName x)) args; 
   atoms args sa
 
 let nondets l = 
-  unique (fun c -> error (DuplicateAssign (Hstring.view c))) l;
+  unique (fun c -> error (DuplicateAssign c)) l;
   List.iter 
     (fun g -> 
        try
-	 let _, ty, _ = Env.find g in
-	 if ty <> ty_proc then error (MustBeOfTypeProc (Hstring.view g))
-       with Not_found -> error (UnknownGlobal (Hstring.view g))) l
+	 let args_g, ty_g = Smt.Typing.find g in
+	 if args_g <> [] then error (NotATerm g);
+	 if not (Hstring.equal ty_g Smt.Typing.type_proc) then 
+	   error (MustBeOfTypeProc g)
+       with Not_found -> error (UnknownGlobal g)) l
 
 let assigns args = 
   let dv = ref [] in
   List.iter 
     (fun (g, x) ->
-       if List.mem g !dv then error (DuplicateAssign (Hstring.view g));
-       let _, ty_g, _ = 
-	 try Env.find g with Not_found -> error (UnknownGlobal (Hstring.view g)) in
+       if Hstring.list_mem g !dv then error (DuplicateAssign g);
+       let args_g, ty_g = 
+	 try Smt.Typing.find g with Not_found -> error (UnknownGlobal g) in
+       if args_g <> [] then error (NotATerm g);
        let ty_x = term args x in
-       if not (AltErgo.Ty.equal ty_g ty_x) then error (UncompatibleType (ty_x, ty_g));
-       dv := g ::!dv )
+       if not (Hstring.equal ty_g ty_x) then 
+	 error (UncompatibleType (ty_x, ty_g));
+       dv := g ::!dv)
 
 let switchs args ty_e (l, ut) = 
   List.iter 
     (fun (sa, t) -> 
        atoms args sa; 
        let ty = term args t in
-       if ty <> ty_e then error (UncompatibleType (ty_e, ty))) l;
+       if not (Hstring.equal ty ty_e) then 
+	 error (UncompatibleType (ty_e, ty))) l;
   let ty = term args ut in
-  if ty <> ty_e then error (UncompatibleType (ty_e, ty))
+  if not (Hstring.equal ty ty_e) then error (UncompatibleType (ty_e, ty))
 
 let updates args = 
   List.iter 
-    (fun {up_arr=a; up_arg=arg; up_swts=swts} -> 
-       if List.mem arg args then error (ClashParam (Hstring.view arg));
-       let _, ty_a, _ = 
-	 try Env.find a with Not_found -> error (UnknownArray (Hstring.view a)) 
+    (fun {up_arr=a; up_arg=j; up_swts=swts} -> 
+       if Hstring.list_mem j args then error (ClashParam j);
+       let args_a, ty_a = 
+	 try Smt.Typing.find a with Not_found -> error (UnknownArray a)
        in       
-       match ty_a with
-	 | AltErgo.Ty.Tfarray (_, ty_e) -> switchs (arg::args) ty_e swts
-	 | _ -> assert false ) 
+       if args_a = [] then error (MustBeAnArray a);
+       switchs (j::args) ty_a swts) 
 
 let transitions = 
   List.iter 
     (fun ({tr_args = args} as t) -> 
-       unique (fun x-> error (DuplicateName (Hstring.view x))) args; 
+       unique (fun x-> error (DuplicateName x)) args; 
        atoms args t.tr_reqs;
        (match t.tr_ureq with None -> () | Some (x, sa) -> atoms (x::args) sa);
        updates args t.tr_upds;
        assigns args t.tr_assigns;
        nondets t.tr_nondets)
 
+let init_global_env s = 
+  List.iter Smt.declare_type s.type_defs;
+  List.iter 
+    (fun (n, t) -> Smt.declare_name n [] t) s.globals;
+  List.iter (fun (n, (arg, ret)) -> Smt.declare_name n [arg] ret) s.arrays
+
 let system s = 
-  Env.make s;
+  init_global_env s;
   init s.init;
   unsafe s.unsafe;
   transitions s.trans;
@@ -242,7 +198,6 @@ let system s =
   let arru = ArrayAtom.of_satom p in
   { 
     t_from = [];
-    t_env = Env.env;
     t_init = s.init;
     t_invs = s.invs;
     t_unsafe = s.unsafe;
