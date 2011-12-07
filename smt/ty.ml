@@ -1,7 +1,7 @@
 
 open Format
 
-type ty= 
+type t = 
   | Tint
   | Tbool
   | Tabstract of Hstring.t
