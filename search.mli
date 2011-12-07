@@ -25,16 +25,33 @@ module type I = sig
   val gen_inv :
     (invariants : t list -> visited : t list -> t -> unit) -> 
     invariants : t list -> t list -> t -> t list * t list
+  val gen_inv_proc : 
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    t list -> t list -> t -> t list * t list
+  val init_thread : 
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    t list ref -> t list ref -> t list ref -> t list ref -> 
+    t Queue.t -> Thread.t
+
+  val extract_candidates : t -> t list -> t list
+  val is_inv :
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
   val delete_nodes_inv : t list -> t list ref -> unit
+  val delete_node : t -> unit
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
+  val easy_fixpoint : t -> t list -> bool
+  val hard_fixpoint : t -> t list -> bool
+
   val pre : t -> t list * t list
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
   val sort : t list -> t list
+  val nb_father : t -> int
 
 end
 
@@ -86,3 +103,7 @@ module BFS  ( X : I ) : S  with type t = X.t
 (* Concurrent Bfs search *)
 
 module BFS_dist  ( X : I ) : S  with type t = X.t 
+
+(* Bfs search with concurent invariant generation *)
+
+module BFSinvp  ( X : I ) : S  with type t = X.t 

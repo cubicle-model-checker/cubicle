@@ -250,4 +250,6 @@ let system s =
     t_alpha = ArrayAtom.alpha arru args;
     t_trans = s.trans;
     t_deleted = false;
+    t_nb = 0;
+    t_nb_father = -1;
   }

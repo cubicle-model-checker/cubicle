@@ -166,7 +166,7 @@ let check () =
   AE.Sat.check ()
 
 let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
-  TimeAE.start ();
+  if profiling then TimeAE.start ();
   AE.Sat.clear ();
   let tvars = List.map (make_variable ty_proc) vars in
   let distincts = make_distincts tvars in
@@ -177,21 +177,21 @@ let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
   AE.Sat.assume gf;
   try 
     check ();
-    TimeAE.pause ()
-  with e -> TimeAE.pause (); raise e
+    if profiling then TimeAE.pause ()
+  with e -> if profiling then TimeAE.pause (); raise e
 
-let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env} =
+let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env; t_nb = nb} =
   AE.Sat.clear ();
   empty args; 
   let f = make_formula_array env ap in
   if debug_altergo then Format.eprintf "goal g: %a@." AE.Formula.print f;
   let gf = { AE.Sat.f = f; age = 0; name = None; gf=true} in
-  TimeAE.start ();
+  if profiling then TimeAE.start ();
   AE.Sat.assume gf;
   try 
     check ();
-    TimeAE.pause ()
-  with e -> TimeAE.pause (); raise e
+    if profiling then TimeAE.pause ()
+  with e -> if profiling then TimeAE.pause (); raise e
 
 let add_node env ap =
   let f = 
@@ -200,12 +200,12 @@ let add_node env ap =
   if debug_altergo then Format.eprintf "axiom node: %a@." AE.Formula.print f;
   let gf = 
     { AE.Sat.f = f; age = 0; name = None; gf=false} in
-  TimeAE.start ();
+  if profiling then TimeAE.start ();
   AE.Sat.assume gf;
   try 
     check ();
-    TimeAE.pause ()
-  with e -> TimeAE.pause (); raise e
+    if profiling then TimeAE.pause ()
+  with e -> if profiling then TimeAE.pause (); raise e
 
 let check_fixpoint ({t_env=env} as s) nodes =
   try

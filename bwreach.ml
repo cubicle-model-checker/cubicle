@@ -15,7 +15,6 @@ open Options
 open Ast
 open Atom
 
-
 module AE = AltErgo
 module S = Set.Make(Hstring) 
 let hempty = Hstring.make ""
@@ -601,7 +600,7 @@ let obvious_impossible env a1 a2 =
 (*******************************************)
 
 let relevant_permutations env np p l1 l2 =
-  TimeRP.start ();
+  if profiling then TimeRP.start ();
   try
     let obvs, impos = obvious_impossible env p np in
     let obvl1, obvl2 = List.split obvs in
@@ -609,9 +608,9 @@ let relevant_permutations env np p l1 l2 =
     let l2 = List.filter (fun b -> not (Hstring.list_mem b obvl2)) l2 in
     let perm = all_permutations_impos l1 l2 impos in
     let r = List.map (List.rev_append obvs) perm in
-    TimeRP.pause ();
+    if profiling then TimeRP.pause ();
     r
-  with NoPermutations -> TimeRP.pause (); []
+  with NoPermutations -> if profiling then TimeRP.pause (); []
 
 
 let possible_imply env anp ap =
@@ -646,43 +645,27 @@ let check_fixpoint
 	    end
 	    (* Heruristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
+	    else if ArrayAtom.nb_diff pp anp > 1 then (pp, env)::nodes
 	    else (Prover.add_node env pp; nodes)
 	) nodes d
     ) [] visited
   in
-  TimeSort.start ();
+  if profiling then TimeSort.start ();
   let nodes = 
     List.fast_sort
-      (fun p1 p2 ->
+      (fun (p1,_) (p2,_) ->
 	 Pervasives.compare 
       	  (ArrayAtom.nb_diff p1 anp)
       	  (ArrayAtom.nb_diff p2 anp)
-	(* if c <> 0 then c *)
-	(* else  *)
-	(*   Pervasives.compare (closeness env anp p1) (closeness env anp p2) *)
+      (* Better sorting but more expensive *)
+      (* if c <> 0 then c *)
+      (* else  *)
+      (*   Pervasives.compare (closeness env anp p1) (closeness env anp p2) *)
       )
       nodes in
-  TimeSort.pause ();
-  List.iter (fun p -> Prover.add_node env p) nodes
-
-let is_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes = 
-  List.exists (fun ({ t_arru = pa } as sp) -> 
-    if ArrayAtom.subset pa npa then begin
-      if simpl_by_uc then add_to_closed s pa sp;
-      true
-    end
-    else false
-  ) nodes
-  ||
-    try
-      check_fixpoint s nodes;
-      false
-    with 
-      | Fixpoint -> true
-      | Exit -> false
-      | AE.Sat.Sat | AE.Sat.I_dont_know -> false
-      | AE.Sat.Unsat _ -> true
+  if profiling then TimeSort.pause ();
+  List.iter (fun (p, env) -> Prover.add_node env p) nodes
+  
 
 let has_deleted_ancestor s =
   let rec has acc = function
@@ -698,16 +681,38 @@ let has_deleted_ancestor s =
 let has_deleted_ancestor s =
   List.exists (fun (_, _, a) -> a.t_deleted) s.t_from
 
-let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
+
+let easy_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   (delete && (s.t_deleted || has_deleted_ancestor s))
   ||
     (simpl_by_uc && has_alredy_closed_ancestor s)
   ||
-    (TimeFix.start ();
-     let f = is_fixpoint s (List.rev_append invariants visited) in
-     TimeFix.pause ();
-     f)
+    List.exists (fun ({ t_arru = pa } as sp) -> 
+      if ArrayAtom.subset pa npa then begin
+	if simpl_by_uc then add_to_closed s pa sp;
+	true
+      end
+      else false
+    ) nodes
 
+
+let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
+  try
+    check_fixpoint s nodes;
+    false
+  with 
+    | Fixpoint -> true
+    | Exit -> false
+    | AE.Sat.Sat | AE.Sat.I_dont_know -> false
+    | AE.Sat.Unsat _ -> true
+  
+
+let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
+  if profiling then TimeFix.start ();
+  let nodes = (List.rev_append invariants visited) in
+  let f = easy_fixpoint s nodes || hard_fixpoint s nodes in
+  if profiling then TimeFix.pause ();
+  f
 
 
 let neg x op y = 
@@ -784,8 +789,10 @@ let uguard args = function
       List.fold_left 
 	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty args
 
-let make_cubes (ls, post) (args, rargs) 
-    ({ t_unsafe = (uargs, p); t_env=env } as s) tr np =
+let make_cubes =
+  let cpt = ref 0 in
+  fun (ls, post) (args, rargs) 
+    ({ t_unsafe = (uargs, p); t_env=env; t_nb = nb} as s) tr np ->
   let nb_uargs = List.length uargs in
   let cube acc sigma = 
     let lnp = simplify_atoms env (subst_atoms sigma np) in
@@ -802,11 +809,15 @@ let make_cubes (ls, post) (args, rargs)
 	   then ls, post
 	   else
 	     let arr_np = ArrayAtom.of_satom np in
+	     incr cpt;
 	     let new_s = { s with
 	       t_from = (tr.tr_name, tr_args, s)::s.t_from;
 	       t_unsafe = nargs, np;
 	       t_arru = arr_np;
-	       t_alpha = ArrayAtom.alpha arr_np nargs } in 
+	       t_alpha = ArrayAtom.alpha arr_np nargs;
+	       t_nb = !cpt;
+	       t_nb_father = nb;
+	     } in 
 	     if (alwayspost && List.length nargs > nb_uargs) ||
 	       (not alwayspost && 
 		  (not (SAtom.is_empty ureq) || postpone args p np)) then
@@ -878,7 +889,7 @@ let pre tr unsafe =
 (*********************************************************************)
 
 let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
-  TimePre.start ();
+  if profiling then TimePre.start ();
   Debug.unsafe s;
   let ls, post = 
     List.fold_left
@@ -888,7 +899,7 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
     ([], []) 
     trs 
   in
-  TimePre.pause ();
+  if profiling then TimePre.pause ();
   ls, post
 
 
@@ -912,6 +923,54 @@ let init_parameters ({t_unsafe = (args, sa); t_arru = a; t_invs = invs } as s) =
   { s with t_unsafe = (args, sa); t_arru = a; 
     t_alpha = ArrayAtom.alpha a args; t_invs = invs }
 
+
+
+(******************************************************)
+(* Backward deletion of subsumed nodes : experimental *)
+(******************************************************)
+
+let filter_rev p =
+  let rec find accu = function
+  | [] -> accu
+  | x :: l -> if p x then find (x :: accu) l else find accu l in
+  find []
+
+let delete_nodes s nodes nb_del inc =
+  if (not s.t_deleted) && not (has_deleted_ancestor s) then
+    nodes := filter_rev
+      (fun n -> 
+	if (not n.t_deleted) &&
+	  (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) && *)
+	  not (List.exists (fun (_,_,anc) -> 
+	      ArrayAtom.equal n.t_arru anc.t_arru)
+       		 s.t_from) &&
+	  (ArrayAtom.subset s.t_arru n.t_arru
+	   || has_deleted_ancestor n ) then 
+	  begin
+	    (* eprintf "deleted node@."; *)
+	    n.t_deleted <- true;
+	    if inc 
+	    (* && not (List.exists (fun (_,_,anc) -> anc.t_deleted) n.t_from) *)
+	    then incr nb_del;
+	    false
+	  end
+	else true)
+      (List.rev !nodes)
+
+
+let delete_nodes_inv inv nodes = 
+  nodes := List.filter
+  (fun n -> 
+     if (not n.t_deleted) &&
+       List.exists (fun i -> ArrayAtom.subset i.t_arru n.t_arru) inv then 
+       begin
+	 n.t_deleted <- true;
+	 false
+       end
+     else true)
+  !nodes
+
+let delete_node s = s.t_deleted <- true
 
 (**********************************)
 (* Invariant generation stuff...  *)
@@ -943,13 +1002,57 @@ let partition ({ t_unsafe = (args, sa) } as s) =
 	   t_unsafe = [z], sa';
 	   t_arru = ar';
 	   t_alpha = ArrayAtom.alpha ar' [z];
+	   t_deleted = false;
+	   t_nb = 0;
+	   t_nb_father = -1;
 	 } :: l)
     [] args
 
 let impossible_inv { t_arru = p } not_invs =
   List.exists (fun { t_arru = ni } -> ArrayAtom.subset p ni) not_invs
-  
 
+type inv_result =  Inv | NotInv | Nothing
+
+let worker_inv search invariants not_invs p =
+  try 
+    if impossible_inv p !not_invs then Nothing
+    else begin  
+      search ~invariants:!invariants ~visited:[] p; 
+      eprintf "Good! We found an invariant :-) \n %a @." 
+	Pretty.print_system p;
+      Inv
+    end
+  with | Search.Unsafe | Search.ReachBound -> NotInv
+
+let init_thread search invariants not_invs visited postponed candidates =
+  
+  let master_inv (p, s) res =
+    (match res with
+      | Inv ->
+	invariants := p :: !invariants;
+	s.t_deleted <- true;
+	if delete then delete_nodes_inv [p] visited;
+	if delete then delete_nodes_inv [p] postponed;
+      | NotInv -> not_invs := p :: !not_invs
+      | Nothing -> ());
+    []
+  in
+
+  Thread.create (fun () ->
+    while true do
+      try 
+	let candidate = Queue.pop candidates in
+	if debug then eprintf "(Thread inv) Got something to do !@.";
+	Functory.Cores.compute ~worker:(worker_inv search invariants not_invs)
+	  ~master:master_inv (List.map (fun x -> x,candidate) 
+				(partition candidate))
+      with Queue.Empty -> eprintf "(Thread inv) Nothing to do ...@."
+    done;
+  ) ()
+
+
+
+      
 let gen_inv search ~invariants not_invs s = 
   List.fold_left 
     (fun (invs, not_invs) p -> 
@@ -968,43 +1071,36 @@ let gen_inv search ~invariants not_invs s =
     ([], not_invs) (partition s)
 
 
-(******************************************************)
-(* Backward deletion of subsumed nodes : experimental *)
-(******************************************************)
 
-let delete_nodes s nodes nb_del inc = 
-  nodes := List.filter
-  (fun n -> 
-     if (not n.t_deleted) &&
-       (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) && *)
-       not (List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru)
-       	      s.t_from) &&
-       (ArrayAtom.subset s.t_arru n.t_arru
-	(* || has_alredy_closed_father n *)) then 
-       begin
-	 (* eprintf "deleted node@."; *)
-	 n.t_deleted <- true;
-	 if inc 
-	   (* && not (List.exists (fun (_,_,anc) -> anc.t_deleted) n.t_from) *)
-	 then incr nb_del;
-	 false
-       end
-     else true)
-  !nodes
+let gen_inv_proc search invs not_invs s = 
+  let new_invs, _, new_not_invs, _ =
+    List.fold_left 
+      (fun ((new_invs, invs, new_not_invs, not_invs) as acc) p -> 
+	try
+	  if impossible_inv p not_invs then acc
+	  else begin
+	    search ~invariants:invs ~visited:[] p; 
+	    eprintf "Good! We found an invariant :-) \n %a @." 
+	      Pretty.print_system p;
+	    p::new_invs, p::invs, new_not_invs, not_invs
+	  end
+	with Search.Unsafe | Search.ReachBound ->
+	  new_invs, invs, p::new_not_invs, p::not_invs) 
+      ([], invs, [], not_invs) (partition s)
+  in
+  new_invs, new_not_invs
 
 
-let delete_nodes_inv inv nodes = 
-  nodes := List.filter
-  (fun n -> 
-     if (not n.t_deleted) &&
-       List.exists (fun i -> ArrayAtom.subset i.t_arru n.t_arru) inv then 
-       begin
-	 n.t_deleted <- true;
-	 false
-       end
-     else true)
-  !nodes
+let extract_candidates s not_invs =
+  List.filter (fun p -> not (impossible_inv p not_invs)) (partition s)
 
+let is_inv search p invs =
+  try
+    search ~invariants:invs ~visited:[] p; 
+    eprintf "Good! We found an invariant :-) \n %a @." 
+      Pretty.print_system p;
+    true
+  with Search.Unsafe | Search.ReachBound -> false
 
 (* ----------------- Search strategy selection -------------------*)
 
@@ -1023,17 +1119,26 @@ module T = struct
   let maxrounds = maxrounds
   let maxnodes = maxnodes
   let gen_inv = gen_inv
+  let gen_inv_proc = gen_inv_proc
+  let extract_candidates = extract_candidates
+  let is_inv = is_inv
+
+  let init_thread = init_thread
 
   let delete_nodes = delete_nodes
   let delete_nodes_inv = delete_nodes_inv
+  let delete_node = delete_node
 
   let fixpoint = fixpoint
+  let easy_fixpoint = easy_fixpoint
+  let hard_fixpoint = hard_fixpoint
   let safety = check_safety
   let pre = pre_system
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
   let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
     Pervasives.compare (List.length args1) (List.length args2))
+  let nb_father s = s.t_nb_father
 end
 
 module StratDFS = Search.DFS(T)
@@ -1041,6 +1146,7 @@ module StratDFSL = Search.DFSL(T)
 module StratDFSH = Search.DFSH(T)
 module StratBFS = Search.BFS(T)
 module StratBFS_dist = Search.BFS_dist(T)
+module StratBFSinvp = Search.BFSinvp(T)
 module StratDFSHL = Search.DFSHL(T)
 
 let search = 
@@ -1050,11 +1156,9 @@ let search =
     | DfsH -> StratDFSH.search
     | Bfs -> StratBFS.search
     | BfsDist -> StratBFS_dist.search
+    | Bfsinvp -> StratBFSinvp.search
     | DfsHL -> StratDFSHL.search
 
 let system s =
-  Hstring.TimeHS.start ();
   let s = init_parameters s in
-  Hstring.TimeHS.pause ();
-
   search ~invariants:(T.invariants s) ~visited:[] s

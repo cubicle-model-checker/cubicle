@@ -29,7 +29,7 @@ module TimeSort = Timer.Make (struct end)
 module Profiling = struct
   
   let round = 
-    if not profiling then fun _ -> () 
+    if not (profiling  && !verbose > 0) then fun _ -> () 
     else fun cpt -> eprintf "@.-- Round %d@." cpt
 
   let cpt_fix = ref 0
@@ -40,7 +40,7 @@ module Profiling = struct
     cpt_process := max !cpt_process s
     
   let print_visited = 
-    if not profiling then fun _ -> ()
+    if not (profiling && !verbose > 0) then fun _ -> ()
     else fun nb -> eprintf "Number of visited nodes : %d@." nb
 
   let print_states st pr = 
@@ -49,8 +49,11 @@ module Profiling = struct
       (eprintf "%a@." pr) st
 
   let print = 
-    if not profiling then fun _ _ _ -> ()
+    if not (profiling  && !verbose > 0) then fun _ _ _ -> ()
     else fun str d size -> 
+      eprintf "[%s %d] Number of processes : %d@." str d size
+
+  let print2 str d size =
       eprintf "[%s %d] Number of processes : %d@." str d size
 
   let print_time_fix () =
@@ -120,14 +123,16 @@ module Profiling = struct
     if gen_inv then 
       printf "Number of invariants             : %d@." (List.length inv);  
     printf "----------------------------------------------@.";
-    print_time_pre ();
-    print_time_fix ();
-    print_time_rp ();
-    print_time_subset ();
-    print_time_apply ();
-    print_time_sort ();
-    print_time_prover ();
-    printf "----------------------------------------------@."
+    if profiling then begin
+      print_time_pre ();
+      print_time_fix ();
+      print_time_rp ();
+      print_time_subset ();
+      print_time_apply ();
+      print_time_sort ();
+      print_time_prover ();
+      printf "----------------------------------------------@."
+    end
 
 end
 
@@ -142,16 +147,33 @@ module type I = sig
   val gen_inv : 
     (invariants : t list -> visited : t list -> t -> unit) ->
     invariants : t list -> t list -> t -> t list * t list
+  val gen_inv_proc : 
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    t list -> t list -> t -> t list * t list
+  val init_thread : 
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    t list ref -> t list ref -> t list ref -> t list ref -> 
+    t Queue.t -> Thread.t
+
+  val extract_candidates : t -> t list -> t list
+  val is_inv :
+    (invariants : t list -> visited : t list -> t -> unit) ->
+    t -> t list -> bool    
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
   val delete_nodes_inv : t list -> t list ref -> unit
+  val delete_node : t -> unit
 
   val safety : t -> unit
   val fixpoint : invariants : t list -> visited : t list -> t -> bool
+  val easy_fixpoint : t -> t list -> bool
+  val hard_fixpoint : t -> t list -> bool
+
   val pre : t -> t list * t list
   val has_deleted_ancestor : t -> bool
   val print : formatter -> t -> unit
   val sort : t list -> t list
+  val nb_father : t -> int
 end
 
 module type S = sig 
@@ -307,7 +329,7 @@ module BFS_base ( X : I ) = struct
 	  if delete then X.delete_nodes s postponed nb_deleted true;
 	  if delete && invgen && gen_inv then X.delete_nodes_inv inv postponed;
 
-	  List.iter (fun s -> Queue.add (cpt+1, s) q) ls
+	  if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;
       search_rec_aux ()
     in
@@ -330,41 +352,127 @@ module BFS_base ( X : I ) = struct
 
 end
 
+module BFSinvp_base ( X : I ) = struct
+
+  type t = X.t
+
+  let () = Functory.Cores.set_number_of_cores cores
+
+  let search inv_search ~invariants ~visited s = 
+    let nb_nodes = ref 0 in
+    let nb_deleted = ref 0 in
+    let visited = ref visited in
+    let postponed = ref [] in
+    let invariants = ref invariants in
+    let not_invariants = ref [] in
+    let q = Queue.create () in
+    let candidates = Queue.create () in
+    
+    ignore( 
+      X.init_thread inv_search invariants not_invariants 
+	visited postponed candidates
+    );
+    
+    let rec search_rec_aux () =
+      let cpt, s = Queue.take q in
+      if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
+	raise ReachBound;
+      X.safety s;
+      if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) 
+      then
+	begin
+	  incr nb_nodes;
+	  Profiling.print "BFSinvp" !nb_nodes (X.size s);
+	  printf " node %d= @[%a@]@." !nb_nodes 
+	    (if debug then fun _ _ -> () else X.print) s;
+	  let ls, post = X.pre s in
+	  let ls = List.rev ls in
+	  let post = List.rev post in
+	  (* Uncomment for pure bfs search *)
+	  (* let ls,post= List.rev_append ls post, [] in *)
+	  Profiling.update_nb_proc (X.size s);
+
+	  (* invariant search *)
+	  if post <> [] then
+	    (if debug then eprintf "Send candidate ...@.";
+	     Queue.push s candidates
+	    (* ignore (Event.poll (Event.send candidates_channel s)) *));
+
+	  if delete then X.delete_nodes s visited nb_deleted false;
+	  visited := s :: !visited;
+	  postponed := List.rev_append post !postponed;
+	  if delete then X.delete_nodes s postponed nb_deleted true;
+
+	  List.iter (fun s -> Queue.add (cpt+1, s) q) ls
+	end else incr Profiling.cpt_fix;
+      search_rec_aux ()
+    in
+    let rec search_rec () =
+      try search_rec_aux ()	    
+      with Queue.Empty -> 
+	if !postponed = [] then ()
+	else 
+	  begin
+	    Profiling.print "Postpones" (List.length !postponed) 0;
+	    (* postponed := X.sort !postponed; *)
+	    List.iter (fun s -> Queue.add (0, s) q) !postponed;
+	    postponed := [];
+	    search_rec ()
+	  end
+    in
+    Queue.add (0, s) q; search_rec ();
+    Profiling.print_report !nb_nodes !invariants !nb_deleted;
+
+end
+
 
 module BFS_dist_base ( X : I ) = struct
 
   type t = X.t 
 
-  type worker_return = Res of bool | Unsafe_res | ReachBound_res
+  type task = 
+    | Fixcheck of t * int * t list
+    | Geninv of t * t list * t list
+    | Tryinv of t * t list
+
+  type worker_return = 
+    | Fix | NotFix | Unsafe_res | ReachBound_res
+    | InvRes of t list * t list
+    | Inv | NotInv
   
   let () = Functory.Cores.set_number_of_cores cores
       
-  exception Finish
+  exception Killgeninv
 
-  let gentasks q invariants visited =
-    let nodes = 
-      List.rev (Queue.fold (fun acc s -> s::acc) [] q) in
-    let snodes = 
-      List.stable_sort (fun (_,n1,_) (_,n2,_) -> Pervasives.compare n1 n2)
-	nodes in
+  let gentasks snodes invariants visited =
     let _, tasks = 
-      List.fold_left (fun (elders, acc) (cpt, _, s) ->
-	s::elders,
-	((s, cpt, elders, invariants, visited) ,())::acc) ([], []) snodes
+      List.fold_left (fun (nodes, acc) (cpt, s) ->
+	if cpt = X.maxrounds then raise ReachBound;
+	if X.easy_fixpoint s nodes then nodes, acc
+	else 
+	  s::nodes,
+	  (Fixcheck (s, cpt, nodes), ())::acc) 
+	(List.rev_append invariants visited, []) snodes
     in 
-    tasks
+    List.rev tasks
 
-  let worker (s, cpt, elders, invariants, visited) =
-    try
-      X.safety s;
-      (* let elders = *)
-      (* 	List.filter (fun s -> not (X.has_deleted_ancestor s)) elders in *)
-      let f = X.fixpoint 
-	~invariants:invariants ~visited:(List.rev_append elders visited) s in
-      Res f
-    with
-      | Unsafe -> Unsafe_res
-      | ReachBound -> ReachBound_res
+  let worker inv_search = function
+    | Fixcheck (s, cpt, nodes) ->
+      begin
+	try
+	  X.safety s;
+	  if X.hard_fixpoint s nodes then Fix
+	  else NotFix
+	with
+	  | Unsafe -> Unsafe_res
+	  | ReachBound -> ReachBound_res
+      end
+    | Geninv (s, invariants, not_invariants) ->
+      let invs, not_invs = 
+	X.gen_inv_proc inv_search invariants not_invariants s in
+      InvRes (invs, not_invs)
+    | Tryinv (s, invariants) ->
+      if X.is_inv inv_search s invariants then Inv else NotInv
 	
 
   let search inv_search invgen ~invariants ~visited s = 
@@ -374,78 +482,126 @@ module BFS_dist_base ( X : I ) = struct
     let postponed = ref [] in
     let invariants = ref invariants in
     let not_invariants = ref [] in
-    let q = Queue.create () in
+    let new_nodes = ref [0, s] in
+    
+    let nb_inv_search = ref 0 in
+    let remaining_tasks = ref 1 in
 
-    let master ((s, cpt, _, _, _), ()) res =
+    let master (task, ()) res =
       begin
-	match res with
-	  | Unsafe_res -> raise Unsafe
-	  | ReachBound_res -> raise ReachBound
-	  | Res true ->
-	    incr Profiling.cpt_fix
-	  | Res false ->
-	    begin
-	      incr nb_nodes;
-	      Profiling.print "BFS" !nb_nodes (X.size s);
-	      let prefpr = 
-		if (not invgen) && gen_inv then "     inv gen " else " " in
-	      printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
-		(if debug then fun _ _ -> () else X.print) s;
-	      let ls, post = X.pre s in
-	      let ls = List.rev ls in
-	      let post = List.rev post in
-	      (* Uncomment for pure bfs search *)
-	      (* let ls,post= List.rev_append ls post, [] in *)
-	      Profiling.update_nb_proc (X.size s);
-
-	      (* invariant search *)
-	      let inv, not_invs =
-		if invgen && gen_inv && post <> [] then 
-		  begin
-		    X.gen_inv inv_search ~invariants:!invariants 
-		      !not_invariants s
-		  end
-		else [], !not_invariants
-	      in
-	      invariants := List.rev_append inv !invariants;
-	      not_invariants := not_invs;
-	      if delete then X.delete_nodes s visited nb_deleted false;
-	      visited := s :: !visited;
-	      postponed := List.rev_append post !postponed;
-	      if delete then X.delete_nodes s postponed nb_deleted true;
-	      
-	      List.iter (fun s -> Queue.add (cpt+1, !nb_nodes, s) q) ls
-	    end
-      end;
-      if cpt = X.maxrounds || !nb_nodes > X.maxnodes then raise ReachBound; []
-    (* let tasks = gentasks q !invariants !visited in *)
-    (* (\* let ls = List.rev (Queue.fold (fun acc s -> s::acc) [] q) in *\) *)
-    (* Queue.clear q; *)
-    (* tasks *)
-    in
-
-    let rec search_rec () =
-      let tasks =
-	try
-	  if Queue.is_empty q then
-	    if !postponed = [] then raise Finish
-	    else 
+	match res, task with
+	  | Unsafe_res, _ -> raise Unsafe
+	  | ReachBound_res, _ -> raise ReachBound
+	  | Fix, _ ->
+	    decr remaining_tasks;
+	    if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
+	    if invgen && gen_inv && !remaining_tasks = 0 then raise Killgeninv;
+	    incr Profiling.cpt_fix; []
+	  | NotFix, Fixcheck (s, cpt, _) ->
+	    new_nodes := (cpt, s) :: !new_nodes;
+	    decr remaining_tasks;
+	    if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
+	    if invgen && gen_inv (* && !nb_inv_search < 2 *) then
 	      begin
-		Profiling.print "Postpones" (List.length !postponed) 0;
-	      (* postponed := X.sort !postponed; *)
-		List.iter (fun s -> Queue.add (0, 0, s) q) !postponed;
-	      (* Queue.add (0, !postponed) q; *)
-		postponed := []
-	      end;
-	  gentasks q !invariants !visited
-	with Finish -> []
-      in
-      Queue.clear q;
-      Functory.Cores.compute ~worker ~master tasks;
-      if not (Queue.is_empty q) || !postponed <> [] then search_rec ()
+		if !remaining_tasks = 0 then raise Killgeninv;
+	    	incr nb_inv_search;
+	    	[Geninv (s, !invariants, !not_invariants), ()]
+	      end
+	    (* if invgen && gen_inv then *)
+	    (*   begin *)
+	    (* 	let candidates = X.extract_candidates s !not_invariants in *)
+	    (* 	List.map (fun p -> Tryinv (s, !invariants), ()) candidates *)
+	    (*   end *)
+	    else []
+	  | InvRes (invs, not_invs), Geninv (s, _, _) ->
+	    decr nb_inv_search;
+	    if delete && invs <> [] then X.delete_node s;
+	    if delete then X.delete_nodes_inv invs visited;
+	    if delete then X.delete_nodes_inv invs postponed;
+	    invariants := List.rev_append invs !invariants;
+	    not_invariants := List.rev_append not_invs !not_invariants;
+	    []
+	  | Inv, Tryinv (p, _) ->
+	    invariants := p :: !invariants;
+	    []
+	  | NotInv, Tryinv (p, _) ->
+	    not_invariants := p :: !not_invariants;
+	    []
+	  | _ -> assert false
+      end
     in
 
-    Queue.add (0, 0, s) q; search_rec ();
+    let rec search_rec ~post =
+
+      if !new_nodes <> [] || !postponed <> [] then
+	
+	let snodes = List.stable_sort (fun (_, n1) (_, n2) ->
+	  if post then
+	    Pervasives.compare (X.nb_father n2) (X.nb_father n1)
+	  else 
+	    Pervasives.compare (X.nb_father n1) (X.nb_father n2)
+	) (List.rev !new_nodes) in
+	
+	new_nodes := [];
+	
+	(* compute pre and etc... *)
+	let pres =
+	 List.fold_left (fun acc (cpt, s) ->
+	  incr nb_nodes;
+	  if !nb_nodes > X.maxnodes then raise ReachBound;
+	  Profiling.print "BFS" !nb_nodes (X.size s);
+	  let prefpr = 
+	    if (not invgen) && gen_inv then "     inv gen " else " " in
+	  printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+	    (if debug then fun _ _ -> () else X.print) s;
+	  let ls, post = X.pre s in
+	  let ls = List.rev ls in
+	  let post = List.rev post in
+	  (* Uncomment for pure bfs search *)
+	  (* let ls,post= List.rev_append ls post, [] in *)
+	  Profiling.update_nb_proc (X.size s);
+	  
+	  (* sequential invariant search *)
+	  (* let inv, not_invs = *)
+	  (*   if invgen && gen_inv && post <> [] then *)
+	  (*     begin *)
+	  (* 	X.gen_inv inv_search ~invariants:!invariants *)
+	  (* 	  !not_invariants s *)
+	  (*     end *)
+	  (*   else [], !not_invariants *)
+	  (* in *)
+	  (* invariants := List.rev_append inv !invariants; *)
+	  (* not_invariants := not_invs; *)
+	  if delete then X.delete_nodes s visited nb_deleted false;
+	  visited := s :: !visited;
+	  postponed := List.rev_append post !postponed;
+	  if delete then X.delete_nodes s postponed nb_deleted true;
+	  
+	  List.fold_left (fun acc s -> (cpt+1, s) :: acc) acc ls)
+	  [] snodes
+	in
+	
+	let pres = List.rev pres in
+	
+	let tasks, post =
+	  if pres = [] then
+	    let l = List.rev (List.rev_map (fun s -> (0, s)) !postponed) in
+	    Profiling.print "Postpones" (List.length !postponed) 0;
+	    postponed := [];
+	    gentasks l !invariants !visited, true
+	  else
+	    gentasks pres !invariants !visited, false
+	in
+
+	remaining_tasks := List.length tasks;
+	if debug then eprintf "tasks = %d@." !remaining_tasks;
+	(try
+	   Functory.Cores.compute ~worker:(worker inv_search) ~master tasks
+	 with Killgeninv -> eprintf "Killed remaining gen inv searches @.");
+	search_rec ~post
+    in
+
+    search_rec ~post:false ;
     if invgen || not gen_inv then 
       Profiling.print_report !nb_nodes !invariants !nb_deleted
     
@@ -487,6 +643,17 @@ module BFS_dist ( X : I ) = struct
 
 end
 
+module BFSinvp ( X : I ) = struct
+
+  include BFSinvp_base(X)
+
+  module Search = BFSnoINV (struct
+    include X let maxnodes = 100
+  end)
+    
+  let search = search Search.search
+
+end
 
 module DFSHL ( X : I ) = struct
 

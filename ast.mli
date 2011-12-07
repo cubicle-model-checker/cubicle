@@ -103,6 +103,8 @@ type t_system = {
   t_alpha : Hstring.t list * ArrayAtom.t;
   t_trans : transition list;
   mutable t_deleted : bool;
+  t_nb : int;
+  t_nb_father : int;
 }
 
-
+val assert_mem_accesses : ('a * 'b * 'c) Hstring.H.t -> ArrayAtom.t -> unit

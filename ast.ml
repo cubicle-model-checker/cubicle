@@ -10,6 +10,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Options
+
 type op_comp = Eq | Lt | Le| Neq
 type op_arith = Plus | Minus
 
@@ -155,7 +157,7 @@ module ArrayAtom = struct
       !res
 
   let subset a1 a2 =
-    TimerSubset.start ();
+    if profiling then TimerSubset.start ();
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
     let s = 
@@ -171,7 +173,7 @@ module ArrayAtom = struct
 	done;
 	!i1 = n1
     in
-    TimerSubset.pause ();
+    if profiling then TimerSubset.pause ();
     s
 
   let of_satom s =
@@ -180,10 +182,10 @@ module ArrayAtom = struct
   let union = Array.append
 
   let apply_subst sigma a =
-    TimerApply.start ();
+    if profiling then TimerApply.start ();
     let a' = Array.init (Array.length a) (fun i -> subst_atom sigma a.(i)) in
     Array.fast_sort Atom.compare a';
-    TimerApply.pause ();
+    if profiling then TimerApply.pause ();
     a'
 
   let nb_diff a1 a2 =
@@ -276,6 +278,7 @@ let sort_of env x =
     s 
   with Not_found -> Var
 
+
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_env : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t;
@@ -286,7 +289,20 @@ type t_system = {
   t_alpha : Hstring.t list * ArrayAtom.t;
   t_trans : transition list;
   mutable t_deleted : bool;
+  t_nb : int;
+  t_nb_father : int;
 }
 
+let assert_mem_term env x =
+  assert (match x with
+    | Access (a, _) -> 
+      (try let _ = Hstring.H.find env a in true with Not_found -> false)
+    | _ -> true)
 
-
+let assert_mem_accesses env ar =
+  Array.iter 
+  (function
+    | Comp (t1, _ , t2) ->
+      assert_mem_term env t1;
+      assert_mem_term env t2
+    | _ -> ()) ar 

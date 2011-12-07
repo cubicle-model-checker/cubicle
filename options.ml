@@ -10,7 +10,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist
+type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist | Bfsinvp
 
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
@@ -39,6 +39,7 @@ let set_mode = function
   | "dfsh" -> mode := DfsH
   | "dfshl" -> mode := DfsHL
   | "bfs" -> mode := Bfs
+  | "bfsinvp" -> mode := Bfsinvp
   | _ -> raise (Arg.Bad "search strategy not supported")
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
@@ -84,4 +85,4 @@ let alwayspost = !alwayspost
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
 let cores = !cores
-let mode = if cores > 0 then BfsDist else !mode
+let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode

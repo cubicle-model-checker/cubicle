@@ -10,7 +10,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist
+type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist | Bfsinvp
 
 val file : string
 val cin : in_channel

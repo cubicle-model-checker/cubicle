@@ -16,7 +16,6 @@ open Atom
 
 module AE = AltErgo
 
-
 (* Captures the output and exit status of a unix command : aux func*)
 let syscall cmd =
   let ic, oc = Unix.open_process cmd in
@@ -97,6 +96,7 @@ let print_unsafe fmt s =
 
 
 let print_node fmt s =
+  (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
   List.iter (fun (l, args, _) -> fprintf fmt "%s(%a) ->@ " 
     (Hstring.view l) print_args args) s.t_from;
   fprintf fmt "unsafe"
