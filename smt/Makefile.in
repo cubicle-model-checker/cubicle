@@ -1,0 +1,95 @@
+
+# where to install the binaries
+DESTDIR=
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+LIBDIR=$(DESTDIR)@libdir@/alt-ergo
+
+# where to install the man page
+MANDIR=$(DESTDIR)@mandir@
+
+# other variables set by ./configure
+OCAMLC   = @OCAMLC@
+OCAMLOPT = @OCAMLOPT@
+OCAMLDEP = @OCAMLDEP@
+OCAMLLIB = @OCAMLLIB@
+OCAMLBEST= @OCAMLBEST@
+OCAMLVERSION = @OCAMLVERSION@
+OCAMLWIN32 = @OCAMLWIN32@
+EXE = @EXE@
+
+BFLAGS = -I ../common/ -dtypes -g -annot
+OFLAGS = -I ../common/ -dtypes -annot
+
+BIBBYTE = nums.cma unix.cma
+
+BIBOPT = $(BIBBYTE:.cma=.cmxa)
+
+# bytecode and native-code compilation
+######################################
+
+CMO = exception.cmo \
+      symbols.cmo \
+      ty.cmo term.cmo literal.cmo \
+      debug1.cmo solver_types.cmo explanation.cmo \
+      polynome.cmo ac.cmo \
+      uf.cmo use.cmo intervals.cmo fm.cmo arith.cmo \
+      sum.cmo \
+      combine.cmo cc.cmo solver.cmo smt.cmo
+
+CMX = $(CMO:.cmo=.cmx)
+
+all : $(CMX)
+
+# generic rules
+###############
+
+.SUFFIXES: .mli .ml .cmi .cmo .cmx 
+
+.mli.cmi:
+	@@OCAMLWIZARD@ compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+
+.ml.cmo:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+	@@OCAMLWIZARD@ compile -w a $(BFLAGS) $< 
+
+.ml.o:
+	@@OCAMLWIZARD@ compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+
+.ml.cmx:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+	@@OCAMLWIZARD@ compile -w a $(BFLAGS) $< 
+
+# Makefile is rebuilt whenever Makefile.in or configure.in is modified
+######################################################################
+
+Makefile: Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./config.status --recheck
+
+configure: configure.in
+	autoconf 
+
+# clean
+#######
+
+clean:: 
+	@rm -f *.cm[iox] *.o *~ *.annot *.owz *mlocamlwizard_tmp_file*
+	@rm -f $(NAME).byte $(NAME).opt
+	@rm -f *.aux *.log $(NAME).tex $(NAME).dvi $(NAME).ps
+
+dist-clean distclean:: clean
+	@rm -f Makefile config.cache config.log config.status
+
+# depend
+########
+
+.depend depend:: $(GENERATED)
+	@rm -f .depend
+	@$(OCAMLDEP) -slash *.ml *.mli > .depend
+
+include .depend
