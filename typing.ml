@@ -196,7 +196,6 @@ let init_proc () =
     (fun n -> Smt.Typing.declare_name n [] Smt.Typing.type_proc) proc_vars
 
 let system s = 
-  init_proc ();
   init_global_env s;
   init s.init;
   unsafe s.unsafe;

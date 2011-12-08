@@ -19,7 +19,11 @@ open Options
 module T = Smt.Term
 module F = Smt.Formula
 
-let proc_terms = List.map (fun x -> T.make_app x []) proc_vars
+let proc_terms =
+  List.iter 
+    (fun x -> Smt.Typing.declare_name x [] Smt.Typing.type_proc) proc_vars;
+  List.map (fun x -> T.make_app x []) proc_vars
+
 let distinct_vars = 
   let t = Array.create max_proc F.vrai in
   let _ = 

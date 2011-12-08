@@ -118,8 +118,8 @@ module Formula = struct
       match cmp, l with
 	| Eq, [t1; t2] -> 
 	    Literal.Eq (t1, t2)
-	| Neq, [t1; t2] -> 
-	    Literal.Distinct (false, [t1; t2])
+	| Neq, ts -> 
+	    Literal.Distinct (false, ts)
 	| Le, [t1; t2] ->
 	    Literal.Builtin (true, Hstring.make "<=", [t1; t2])
 	| Lt, [t1; t2] ->
