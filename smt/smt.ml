@@ -4,6 +4,8 @@ open Format
 exception AlreadyDeclared of Hstring.t
 exception Undefined of Hstring.t
 
+let calls = ref 0
+module Time = Timer.Make(struct end)
 
 module H = Hstring.H
 
@@ -21,12 +23,12 @@ module Typing = struct
 
   let type_bool = 
     let tbool = Hstring.make "bool" in
-    H.add decl_types tint Ty.Tbool;
+    H.add decl_types tbool Ty.Tbool;
     tbool
 
   let type_proc = 
     let tproc = Hstring.make "proc" in
-    H.add decl_types tint Ty.Tint;
+    H.add decl_types tproc Ty.Tint;
     tproc
 
   let declare_constructor ty c = 
@@ -42,16 +44,23 @@ module Typing = struct
       | _ -> 
 	  let ty = Ty.Tsum (n, l) in
 	  H.add decl_types n ty;
-	  List.iter (fun c -> declare_constructor ty c) l
+	  List.iter (fun c -> declare_constructor n c) l
 
   let declare_name f args ret  = 
     if H.mem decl_symbs f then raise (AlreadyDeclared f);
     List.iter 
-      (fun t -> if not H.mem decl_types t then raise (Undefined t)) (ret::args);
+      (fun t -> if not (H.mem decl_types t) then raise (Undefined t)) 
+      (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
-  let find s = H.find decl_symbs s
-
+  let find s = let _, args, ret = H.find decl_symbs s in args, ret
+    
+  let _ = 
+    H.add decl_symbs (Hstring.make "True") 
+      (Symbols.True, [], Hstring.make "bool");
+    H.add decl_symbs (Hstring.make "False") 
+      (Symbols.False, [], Hstring.make "bool");
+    
 end
 
 module Term = struct
@@ -59,14 +68,12 @@ module Term = struct
   type t = Term.t
   type operator = Plus | Minus | Mult | Div | Modulo
 
-  let vrai = Term.vrai
-  let faux = Term.faux
-
-  let make_int = Term.int 
+  let make_int i = Term.int (string_of_int i)
 
   let make_app s l = 
     try
-      let (sb, _, ty) = H.find Typing.decl_symbs s in
+      let (sb, _, nty) = H.find Typing.decl_symbs s in
+      let ty = H.find Typing.decl_types nty in
       Term.make sb l ty
     with Not_found -> raise (Undefined s)
 
@@ -90,6 +97,9 @@ module Formula = struct
   type t = 
     | Lit of Literal.LT.t  
     | Comb of combinator * t list
+
+  let vrai = Lit(Literal.LT.vrai)
+  let faux = Lit(Literal.LT.faux)
 
   let make_lit cmp l = 
     let lit = 
@@ -122,7 +132,7 @@ module Formula = struct
 	Comb (Or, [sform (Comb (Not, [f1])); sform f2])
     | f -> f
 
-  let make_formula comb l = Comb (comb, l)
+  let make comb l = Comb (comb, l)
 
   let rec cnf f = 
     match f with
@@ -162,7 +172,25 @@ module Formula = struct
     let sfnc = cnf (sform f) in
     init [] sfnc
 
+  let rec print fmt f =
+    match f with
+      | Lit a -> Literal.LT.print fmt a
+      | Comb (Not, [f]) -> 
+	  fprintf fmt "not (%a)" print f
+      | Comb (And, l) -> print_list "and" fmt l
+      | Comb (Or, l) ->  print_list "or" fmt l
+      | Comb (Imp, [f1; f2]) -> 
+	  fprintf fmt "%a => %a" print f1 print f2
+      | _ -> assert false
+  and print_list sep fmt = function
+    | [] -> ()
+    | [f] -> print fmt f
+    | f::l -> fprintf fmt "%a %s %a" print f sep (print_list sep) l
+
 end
+
+let get_time = Time.get
+let get_calls () = !calls
 
 exception Sat 
 exception Unsat of Explanation.t 
@@ -174,9 +202,14 @@ let assume f =
   try Solver.assume (Formula.make_cnf f)
   with Solver.Unsat -> raise (Unsat Explanation.empty)
 
-let check () =
-  try Solver.solve ()
+let check ~profiling  =
+  incr calls;
+  if profiling then Time.start ();
+  try 
+    Solver.solve ();
+    if profiling then Time.pause ()
   with
-    | Solver.Sat -> ()
-    | Solver.Unsat -> raise (Unsat Explanation.empty)
-
+    | Solver.Sat -> if profiling then Time.pause ()
+    | Solver.Unsat -> 
+	if profiling then Time.pause ();
+	raise (Unsat Explanation.empty)

@@ -12,17 +12,9 @@
 
 open Ast
 
-
-module TimeAE : Timer.S
-
-val nb_calls : unit -> int
-
-val empty : Hstring.t list -> unit
-
 (* Checks if the system is unsafe *)
 val unsafe : t_system -> unit
+val assume_goal : t_system -> unit
+val assume_node : ArrayAtom.t -> unit
 
-val add_goal : t_system -> unit
-val add_node : ('a * 'b * AltErgo.Term.t) Hstring.H.t -> Ast.ArrayAtom.t -> unit
 
-val check_fixpoint : t_system -> Ast.ArrayAtom.t list -> bool

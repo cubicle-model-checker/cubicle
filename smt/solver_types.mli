@@ -1,3 +1,5 @@
+
+
 type var = 
     { vid : int;
       pa : atom;

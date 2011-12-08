@@ -16,8 +16,6 @@ open Format
 exception ReachBound
 exception Unsafe
 
-module AE = AltErgo
-
 module TimeFix = Timer.Make (struct end)
 
 module TimeRP = Timer.Make (struct end)
@@ -71,7 +69,7 @@ module Profiling = struct
       (int_of_float minu) extrasec
 
   let print_time_prover () =
-    let sec = Prover.TimeAE.get () in
+    let sec = Smt.get_time () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
     printf "└─Time in solver                 : %dm%2.3fs@."
@@ -116,7 +114,7 @@ module Profiling = struct
     printf "\n----------------------------------------------@.";
     printf "Number of visited nodes          : %d@." nb;
     printf "Fixpoints                        : %d@." !cpt_fix;
-    printf "Number of solver calls           : %d@." (Prover.nb_calls ());
+    printf "Number of solver calls           : %d@." (Smt.get_calls ());
     printf "Max Number of processes          : %d@." !cpt_process;
     if delete then 
       printf "Number of deleted nodes          : %d@." del;

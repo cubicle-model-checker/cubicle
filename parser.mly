@@ -85,7 +85,7 @@ transitions
 
 global_defs:
 | { [] }
-| GLOBALS EQ globals { List.iter Globals.add $3; $3 }
+| GLOBALS EQ globals { List.iter (fun (x,_) -> Globals.add x) $3; $3 }
 ;
 
 array_defs:

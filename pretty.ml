@@ -14,8 +14,6 @@ open Format
 open Ast
 open Atom
 
-module AE = AltErgo
-
 (* Captures the output and exit status of a unix command : aux func*)
 let syscall cmd =
   let ic, oc = Unix.open_process cmd in
@@ -54,9 +52,10 @@ let rec print_strings fmt = function
 
 let rec print_term fmt = function
   | Const i -> fprintf fmt "%d" i
-  | Elem s -> fprintf fmt "%s" (Hstring.view s)
-  | Access (a, i) -> fprintf fmt "%s[%s]" (Hstring.view a) (Hstring.view i)
-  | Arith (x, op, i) -> fprintf fmt "@[%s %s %d@]" (Hstring.view x) (op_arith op) i
+  | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
+  | Access (a, i) -> fprintf fmt "%a[%a]" Hstring.print a Hstring.print i
+  | Arith (x, _, op, i) -> 
+      fprintf fmt "@[%a %s %d@]" Hstring.print x (op_arith op) i
 
 let rec print_atom fmt = function
   | True -> fprintf fmt "true"

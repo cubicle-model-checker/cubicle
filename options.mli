@@ -15,6 +15,7 @@ type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist | Bfsinvp
 val file : string
 val cin : in_channel
 
+val max_proc : int
 val type_only : bool ref
 val maxrounds : int
 val maxnodes : int
@@ -31,5 +32,5 @@ val mode : mode
 val debug : bool
 val verbose : int ref
 
-val debug_altergo : bool
+val debug_smt : bool
 val profiling : bool

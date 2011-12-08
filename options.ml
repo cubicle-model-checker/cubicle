@@ -15,6 +15,7 @@ type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist | Bfsinvp
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
 
+let max_proc = 10
 let type_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
@@ -23,7 +24,7 @@ let verbose = ref 0
 
 let incr_verbose () = incr verbose
 
-let debug_altergo = ref false
+let debug_smt = ref false
 let profiling = ref false
 
 let gen_inv = ref false
@@ -59,7 +60,7 @@ let specs =
     "-delete", Arg.Set delete, " delete subsumed nodes";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
-    "-dergo", Arg.Set debug_altergo, " debug mode for alt-ergo"
+    "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver"
   ]
 
 let alspecs = Arg.align specs
@@ -77,7 +78,7 @@ let cin =
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let debug = !debug
-let debug_altergo = !debug_altergo
+let debug_smt = !debug_smt
 let profiling = !profiling
 let file = !file
 let gen_inv = !gen_inv

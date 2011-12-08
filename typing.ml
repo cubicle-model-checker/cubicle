@@ -80,13 +80,13 @@ let rec unique error = function
 let term args = function
   | Const _ -> Smt.Typing.type_int
   | Elem (e, Var) ->
-      if not (Hstring.list_mem e args) then error (UnknownName x);
+      if not (Hstring.list_mem e args) then error (UnknownName e);
       Smt.Typing.type_proc
   | Elem (e, _) -> 
       let l, t = Smt.Typing.find e in
       if l <> [] then error (NotATerm e);
       t
-  | Arith (x, Var|Const|Arr, _, _) ->
+  | Arith (x, (Var | Constr | Arr), _, _) ->
       error (MustBeOfType (x, Smt.Typing.type_int))
   | Arith (x, _, _, _) ->
       begin
@@ -184,12 +184,18 @@ let transitions =
        nondets t.tr_nondets)
 
 let init_global_env s = 
-  List.iter Smt.declare_type s.type_defs;
+  List.iter Smt.Typing.declare_type s.type_defs;
   List.iter 
-    (fun (n, t) -> Smt.declare_name n [] t) s.globals;
-  List.iter (fun (n, (arg, ret)) -> Smt.declare_name n [arg] ret) s.arrays
+    (fun (n, t) -> Smt.Typing.declare_name n [] t) s.globals;
+  List.iter 
+    (fun (n, (arg, ret)) -> Smt.Typing.declare_name n [arg] ret) s.arrays
+
+let init_proc () = 
+  List.iter 
+    (fun n -> Smt.Typing.declare_name n [] Smt.Typing.type_proc) proc_vars
 
 let system s = 
+  init_proc ();
   init_global_env s;
   init s.init;
   unsafe s.unsafe;

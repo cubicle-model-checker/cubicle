@@ -10,6 +10,7 @@
 #                                                                        #
 ##########################################################################
 
+QUIET=""
 
 # where to install the binaries
 DESTDIR=
@@ -55,10 +56,19 @@ all: $(OCAMLBEST)
 # bytecode and native-code compilation
 ######################################
 
-CMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo common/heap.cmo \
+SMTCMO = smt/exception.cmo smt/symbols.cmo \
+	 smt/ty.cmo smt/term.cmo smt/literal.cmo \
+         smt/solver_types.cmo smt/explanation.cmo \
+         smt/polynome.cmo smt/uf.cmo smt/use.cmo \
+	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
+         smt/combine.cmo smt/cc.cmo smt/solver.cmo smt/smt.cmo
+
+COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
+	    common/vec.cmo common/heap.cmo common/iheap.cmo
+
+CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      prover.cmo search.cmo \
-      bwreach.cmo typing.cmo main.cmo
+      prover.cmo search.cmo bwreach.cmo typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -74,11 +84,11 @@ byte: $(NAME).byte
 opt: $(NAME).opt
 
 $(NAME).byte: $(MAINCMO)
-	$(if $(QUIET),@echo 'Linking $@' &&) 
+	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma $^
 
 $(NAME).opt: $(MAINCMX)
-	$(if $(QUIET),@echo 'Linking $@' &&) 
+	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
 VERSION=0.1
@@ -167,6 +177,8 @@ install-man:
 
 clean:: 
 	@rm -f *.cm[iox] *.o *~ *.annot
+	@rm -f common/*.cm[iox] common/*.o common/*~ common/*.annot
+	@rm -f smt/*.cm[iox] smt/*.o smt/*~ smt/*.annot
 	@rm -f $(GENERATED) *.output
 	@rm -f $(NAME).byte $(NAME).opt
 
@@ -175,6 +187,9 @@ clean::
 
 .depend depend:: $(GENERATED)
 	@rm -f .depend
-	@$(OCAMLDEP) -slash *.ml *.mli > .depend
+	@$(OCAMLDEP) -slash -I common/ common/*.ml common/*.mli > .depend
+	@$(OCAMLDEP) -I common/ -I smt/ smt/*.ml smt/*.mli >> .depend
+	@$(OCAMLDEP) -I common/ -I smt/ -slash *.ml *.mli >> .depend
+
 
 include .depend

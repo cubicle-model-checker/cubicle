@@ -82,17 +82,16 @@ end = struct
 end
 and SAtom : Set.S with type elt = Atom.t = Set.Make(Atom)
 
+let gen_vars s n = 
+  let l = ref [] in
+  for i = max_proc downto 1 do
+    l := Hstring.make (s^(string_of_int i)) :: !l
+  done;
+  !l
 
-let alpha_args = 
-  [ Hstring.make "$1";
-    Hstring.make "$2";
-    Hstring.make "$3";
-    Hstring.make "$4";
-    Hstring.make "$5";
-    Hstring.make "$6";
-    Hstring.make "$7";
-    Hstring.make "$8";
-    Hstring.make "$9" ]
+let proc_vars = gen_vars "#" max_proc
+let alpha_vars = gen_vars "$" max_proc
+let fresh_vars = gen_vars "?" max_proc
 
 let add a s = 
   match a with
@@ -231,7 +230,7 @@ module ArrayAtom = struct
     Array.sub d 0 !cpt
 
   let alpha atoms args =
-    let subst = build_subst args alpha_args in
+    let subst = build_subst args alpha_vars in
     List.map snd subst, apply_subst subst atoms
 
 end
@@ -266,12 +265,6 @@ type system = {
 }
 
 (* Types AST *)
-
-type t_elem = { 
-  telem_name:  Hstring.t;
-  telem_ty : AltErgo.Ty.t; 
-  telem_consts : (Hstring.t * AltErgo.Term.t) list;
-}
 
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;

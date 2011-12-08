@@ -22,9 +22,7 @@ module Term : sig
   type t
   type operator = Plus | Minus | Mult | Div | Modulo
 
-  val vrai : t
-  val faux : t
-  val make_int : string -> t
+  val make_int : int -> t
   val make_app : Hstring.t -> t list -> t
   val make_arith : operator -> t -> t -> t
 end
@@ -34,8 +32,12 @@ module Formula : sig
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
 
+  val vrai : t
+  val faux : t
+
   val make_lit : comparator -> Term.t list -> t
-  val make_formula : combinator -> t list -> t
+  val make : combinator -> t list -> t
+  val print : Format.formatter -> t -> unit
 end
 
 (* SMT solver interface *)
@@ -44,9 +46,11 @@ exception Sat
 exception Unsat of Explanation.t 
 exception IDontknow
 
+val get_time : unit -> float
+val get_calls : unit -> int
+
 val clear : unit -> unit
 val assume : Formula.t -> unit
-val check : unit -> unit
-
+val check : profiling:bool -> unit
 
 

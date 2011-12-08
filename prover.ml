@@ -10,132 +10,65 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Format
 open Ast
 open Atom
 open Options
 
-module AE = AltErgo
+module T = Smt.Term
+module F = Smt.Formula
 
-let htrue = Hstring.make "true"
-let hfalse = Hstring.make "false"
+let proc_terms = List.map (fun x -> T.make_app x []) proc_vars
+let distinct_vars = 
+  let t = Array.create max_proc F.vrai in
+  let _ = 
+    List.fold_left 
+      (fun (acc,i) v -> 
+	 if i<>0 then t.(i) <- F.make_lit F.Neq (v::acc);
+	 v::acc, i+1) 
+      ([],0) proc_terms 
+  in
+  function n -> t.(n-1)
 
-let cpt_check = ref 0
+let make_op_arith = function Plus -> T.Plus | Minus -> T.Minus
+let make_op_comp = function
+  | Eq -> F.Eq
+  | Lt -> F.Lt
+  | Le -> F.Le
+  | Neq -> F.Neq
 
-module TimeAE = Timer.Make(struct end)
+let make_term = function
+  | Elem (e, _) -> T.make_app e []
+  | Const i -> T.make_int i
+  | Access (a, i) ->  T.make_app a [T.make_app i []]
+  | Arith (x, _, op, i) -> 
+      let tx = T.make_app x [] in
+      T.make_arith (make_op_arith op) tx (T.make_int i)
 
-let vrai = AE.Formula.mk_lit AE.Literal.LT.vrai 0
-let faux = AE.Formula.mk_lit AE.Literal.LT.faux 0
-let ty_proc = AE.Ty.Tint
-let ty_int = AE.Ty.Tint
+let rec make_formula_set sa = 
+  F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
 
-let nb_calls () = !cpt_check
-
-let op_arith x = 
-  let sx = match x with Plus -> AE.Symbols.Plus | Minus -> AE.Symbols.Minus in
-  AE.Symbols.Op sx
-
-let make_variable ty z = AE.Term.make (AE.Symbols.name (Hstring.view z)) []  ty
-
-let get ta a z = 
-  let {AE.Term.ty=ty} = AE.Term.view ta in
-  match ty with
-    | AE.Ty.Tfarray(_, ty') ->
-        (* Theory of arrays if needed *)
-	(* AE.Term.make (AE.Symbols.Op AE.Symbols.Get) [a; z] ty' *)
-        (* Use UF instead when no affectations done in arrays *)
-	AE.Term.make (AE.Symbols.name (Hstring.view a)) [z] ty'
-    | _ -> assert false
-
-let global_eq g c = 
-  AE.Formula.mk_lit (AE.Literal.LT.make (AE.Literal.Eq (g, c))) 0
-
-let make_distincts = function
-  | [] | [_] -> vrai
-  | l ->
-      AE.Formula.mk_lit (AE.Literal.LT.make (AE.Literal.Distinct(false, l))) 0
-
-let make_term env = function
-  | Elem e ->
-      begin try
-	let _, _, te = Hstring.H.find env e in te
-      with Not_found -> make_variable ty_proc e end
-  | Const i ->
-      AE.Term.int (string_of_int i)
-  | Access (a, i) -> 
-      let _, _, ta = Hstring.H.find env a in
-      let ti = 
-	try let _, _, ti = Hstring.H.find env i in ti 
-	with Not_found -> make_variable ty_proc i 
-      in
-      get ta a ti
-  | Arith (x, op, i) ->
-      let _, _, tx = Hstring.H.find env x in
-      let si = AE.Term.int (string_of_int i) in
-      AE.Term.make (op_arith op) [tx;si] ty_int
-
-let rec make_formula env f = 
-  List.fold_left (fun f a -> AE.Formula.mk_and f (make_literal env a) 0) f
-
-
-and make_formula_atoms env atoms =
-  try
-    let f = SAtom.choose atoms in
-    let ratoms = SAtom.remove f atoms in
-    SAtom.fold (fun a acc ->
-      AE.Formula.mk_and acc (make_literal env a) 0)
-      ratoms (make_literal env f)
-  with Not_found -> vrai
-
-and make_formula_array env atoms =
-  Array.fold_left (fun acc a -> 
-    AE.Formula.mk_and acc (make_literal env a) 0)
-    vrai atoms
-
-and make_literal env = function
-  | True -> vrai 
-  | False -> faux
-  | Comp (Elem b, op, x) 
-  | Comp (x, op, Elem b) when 
-      Hstring.compare htrue b = 0 || Hstring.compare hfalse b = 0 -> 
-      let tx = make_term env x in
-      let p = AE.Literal.LT.mk_pred tx in
-      let lit = 
-	if (op = Eq && Hstring.compare htrue b = 0) 
-	  || (op = Neq && Hstring.compare hfalse b = 0)
-	then p
-	else if (op = Eq && Hstring.compare hfalse b = 0) 
-	    || (op = Neq && Hstring.compare htrue b = 0)
-	then AE.Literal.LT.neg p
-	else assert false
-      in
-      AE.Formula.mk_lit lit 0
-
+and make_literal = function
+  | True -> F.vrai 
+  | False -> F.faux
   | Comp (x, op, y) -> 
-      let tx = make_term env x in
-      let ty = make_term env y in
-      let lit = 
-	match op with
-	  | Eq -> AE.Literal.LT.make (AE.Literal.Eq(tx, ty)) 
-	  | Neq -> AE.Literal.LT.make (AE.Literal.Distinct(false, [tx; ty]))
-	  | Lt ->
-	      AE.Literal.LT.make 
-		(AE.Literal.Builtin(true, AE.Hstring.make "<", [tx;ty])) 
-	  | Le ->
-	      AE.Literal.LT.make 
-		(AE.Literal.Builtin(true, AE.Hstring.make "<=", [tx;ty])) 
-      in
-      AE.Formula.mk_lit lit 0
+      let tx = make_term x in
+      let ty = make_term y in
+      F.make_lit (make_op_comp op) [tx; ty]
   | Ite (la, a1, a2) -> 
-      let f = make_formula env vrai (SAtom.elements la) in
-      let a1 = make_literal env a1 in
-      let a2 = make_literal env a2 in
-      let ff1 = AE.Formula.mk_imp f a1 0 in
-      let ff2 = AE.Formula.mk_imp (AE.Formula.mk_not f) a2 0 in
-      AE.Formula.mk_and ff1 ff2 0
+      let f = make_formula_set la in
+      let a1 = make_literal a1 in
+      let a2 = make_literal a2 in
+      let ff1 = F.make F.Imp [f; a1] in
+      let ff2 = F.make F.Imp [F.make F.Not [f]; a2] in
+      F.make F.And [ff1; ff2]
+
+let make_formula atoms =
+  F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
 let contain_arg z = function
-  | Elem x | Arith (x, _, _) -> x = z
-  | Access (x, y) -> x = z || y = z
+  | Elem (x, _) | Arith (x, _, _, _) -> Hstring.equal x z
+  | Access (x, y) -> Hstring.equal y z
   | Const _ -> false
 
 let has_var z = function
@@ -143,76 +76,39 @@ let has_var z = function
   | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
   | Ite _ -> assert false
 
-let make_init env {t_init = arg, sa } f lvars =
+let make_init {t_init = arg, sa } lvars =
   match arg with
     | None ->   
-	make_formula env f (SAtom.elements sa)
+	make_formula_set sa
     | Some z ->
 	let sa, cst = SAtom.partition (has_var z) sa in
-	let f = make_formula env f (SAtom.elements cst) in
-	List.fold_left 
-	  (fun f hash -> 
-	     let la = SAtom.elements (subst_atoms [z, hash] sa) in
-	     make_formula env f la) f lvars
+	let f = make_formula_set cst in
+	let fsa = 
+	  List.rev_map
+	    (fun h -> make_formula_set (subst_atoms [z, h] sa)) lvars
+	in
+	F.make F.And (f::fsa)
 
-let empty vars =
-  let vars = List.map (make_variable ty_proc) vars in
-  let distincts = make_distincts vars in
-  let df = { AE.Sat.f = distincts; age = 0; name = None; gf=false} in
-  AE.Sat.assume df
+let unsafe ({ t_unsafe = (args, sa) } as ts) =
+  Smt.clear ();
+  Smt.assume (distinct_vars (List.length args));
+  let init = make_init ts args in
+  let f = make_formula_set sa in
+  if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
+  Smt.assume init;
+  Smt.assume f;
+  Smt.check profiling
 
-let check () =
-  incr cpt_check;
-  AE.Sat.check ()
+let assume_goal {t_unsafe = (args, _); t_arru = ap } =
+  Smt.clear ();
+  Smt.assume (distinct_vars (List.length args));
+  let f = make_formula ap in
+  if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
+  Smt.assume f;
+  Smt.check profiling
 
-let unsafe ({ t_unsafe = (vars, sa); t_env = env } as ts) =
-  if profiling then TimeAE.start ();
-  AE.Sat.clear ();
-  let tvars = List.map (make_variable ty_proc) vars in
-  let distincts = make_distincts tvars in
-  let init = make_init env ts distincts vars in
-  let f = make_formula env init (SAtom.elements sa) in
-  if debug_altergo then Format.eprintf "unsafe g: %a@." AE.Formula.print f;
-  let gf = { AE.Sat.f = f; age = 0; name = None; gf = true} in
-  AE.Sat.assume gf;
-  try 
-    check ();
-    if profiling then TimeAE.pause ()
-  with e -> if profiling then TimeAE.pause (); raise e
-
-let add_goal {t_unsafe = (args, np); t_arru = ap; t_env=env; t_nb = nb} =
-  AE.Sat.clear ();
-  empty args; 
-  let f = make_formula_array env ap in
-  if debug_altergo then Format.eprintf "goal g: %a@." AE.Formula.print f;
-  let gf = { AE.Sat.f = f; age = 0; name = None; gf=true} in
-  if profiling then TimeAE.start ();
-  AE.Sat.assume gf;
-  try 
-    check ();
-    if profiling then TimeAE.pause ()
-  with e -> if profiling then TimeAE.pause (); raise e
-
-let add_node env ap =
-  let f = 
-    AE.Formula.mk_not (make_formula_array env ap)
-  in
-  if debug_altergo then Format.eprintf "axiom node: %a@." AE.Formula.print f;
-  let gf = 
-    { AE.Sat.f = f; age = 0; name = None; gf=false} in
-  if profiling then TimeAE.start ();
-  AE.Sat.assume gf;
-  try 
-    check ();
-    if profiling then TimeAE.pause ()
-  with e -> if profiling then TimeAE.pause (); raise e
-
-let check_fixpoint ({t_env=env} as s) nodes =
-  try
-    add_goal s;
-    List.iter (add_node env) nodes;
-    false
-  with
-    | Exit -> false
-    | AE.Sat.Sat | AE.Sat.I_dont_know -> false
-    | AE.Sat.Unsat _ -> true
+let assume_node ap =
+  let f = F.make F.Not [make_formula ap] in
+  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  Smt.assume f;
+  Smt.check profiling

@@ -15,9 +15,9 @@ open Options
 open Ast
 open Atom
 
-module AE = AltErgo
-module S = Set.Make(Hstring) 
-let hempty = Hstring.make ""
+module H = Hstring
+module S = Set.Make(H) 
+let hempty = H.make ""
 
   (* changer la fonction compare pour avoir dans l'ordre #1<#2<..<#9<#10 etc. *)
 
@@ -53,7 +53,7 @@ module Debug = struct
     if not debug then fun _ _ -> () else 
       fun tr p ->
 	eprintf "\nResult of the pre for transition %s:@.%a@." 
-	  (Hstring.view tr.tr_name) Pretty.print_cube p
+	  (H.view tr.tr_name) Pretty.print_cube p
 
   let pre_cubes = 
     if not debug then fun _ -> () else 
@@ -64,18 +64,18 @@ end
 
 module SS = Set.Make
   (struct 
-     type t = Hstring.t * Hstring.t
+     type t = H.t * H.t
     let compare (s1, s2) (t1, t2) = 
-      let c = Hstring.compare s1 t1 in
+      let c = H.compare s1 t1 in
       if c <> 0 then c
-      else Hstring.compare s2 t2
+      else H.compare s2 t2
    end)
   
-let rec m_number env a s = 
+let rec m_number a s = 
   match a with
     | True | False -> s
     | Comp (Elem (x, Glob), Eq, Elem (y, Constr)) 
-    | Comp (Elem (x, Constr), Eq, Elem (y, Glob)) -> S.add (x,y) s
+    | Comp (Elem (x, Constr), Eq, Elem (y, Glob)) -> SS.add (x,y) s
     | Comp (Access (a, _), _, Elem (x, xs)) -> 
 	if xs = Glob || xs = Constr then
 	  SS.add (a, x) s 
@@ -83,18 +83,18 @@ let rec m_number env a s =
     | Comp (_, _, Access (a, _)) -> SS.add (a, hempty) s
     | Comp _ ->  s
     | Ite (sa, a1, a2) -> 
-	SAtom.fold (m_number env) sa (m_number env a1 (m_number env a2 s))
+	SAtom.fold m_number sa (m_number a1 (m_number a2 s))
 
-let magic_number env sa = SAtom.fold (m_number env) sa SS.empty
+let magic_number sa = SAtom.fold m_number sa SS.empty
 
-let magic_number_arr env aa = 
+let magic_number_arr aa = 
   Array.fold_left 
-    (fun s a -> m_number env a s) 
+    (fun s a -> m_number a s) 
     SS.empty aa
 
 let print_magic fmt ss = 
   SS.iter (fun (a,b) -> 
-    fprintf fmt "(%s,%s) " (Hstring.view a) (Hstring.view b)) ss;
+    fprintf fmt "(%s,%s) " (H.view a) (H.view b)) ss;
   fprintf fmt "@."
 
 
@@ -122,9 +122,9 @@ let memo_apply_subst =
 (*****************************************************************)
 
 
-let redondant env others = function
+let redondant others = function
   | True -> true
-  | Comp (t1, Neq, (Elem x as t2))
+  | Comp (t1, Neq, (Elem (x, s) as t2))
   | Comp ((Elem (x, s) as t2), Neq, t1) ->
     (match s with
       | Var | Constr ->
@@ -138,32 +138,32 @@ let redondant env others = function
       | _ -> false)
   | _ -> false
 
-let simplify_comp env i si op j sj =  
+let simplify_comp i si op j sj =  
   match op, (si, sj) with
     | Eq, (Var, Var | Constr, Constr) -> 
-	if Hstring.equal i j then True else False
+	if H.equal i j then True else False
     | Neq, (Var, Var | Constr, Constr) -> 
-	if not (Hstring.equal i j) then True else False
-    | Le, _ when Hstring.equal i j -> True
-    | Lt, _ when Hstring.equal i j -> False
+	if not (H.equal i j) then True else False
+    | Le, _ when H.equal i j -> True
+    | Lt, _ when H.equal i j -> False
     | _ -> Comp (Elem (i, si), op, Elem (j, sj))
 
-let rec simplification np env a =
-  if redondant env (SAtom.remove a np) a then True
+let rec simplification np a =
+  if redondant (SAtom.remove a np) a then True
   else match a with
     | True | False -> a 
-    | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp env i si op j sj
+    | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
     | Comp (Arith (i, si, opai, xi), op, (Arith (j, sj, opaj, xj)))
-      when opai = opaj && xi = xj -> simplify_comp env i si op j sj
+      when opai = opaj && xi = xj -> simplify_comp i si op j sj
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
 	let sa = 
 	  SAtom.fold 
-	    (fun a -> add (simplification np env a)) sa SAtom.empty
+	    (fun a -> add (simplification np a)) sa SAtom.empty
 	in
-	let a1 = simplification np env a1 in
-	let a2 = simplification np env a2 in
+	let a1 = simplification np a1 in
+	let a2 = simplification np a2 in
 	if SAtom.is_empty sa || SAtom.subset sa np then a1
 	else if SAtom.mem False sa then a2
 	else Ite(sa, a1, a2)
@@ -192,7 +192,7 @@ let rec pre_atom tau a =
 type assign = Single of term | Branch of update
 
 let fresh_nondet = 
-  let cpt = ref 0 in fun () -> incr cpt; Hstring.make ("*"^(string_of_int !cpt))
+  let cpt = ref 0 in fun () -> incr cpt; H.make ("*"^(string_of_int !cpt))
 
 let rec find_update a i = function
   | [] -> raise Not_found
@@ -204,27 +204,28 @@ let rec find_update a i = function
       Branch { up_arr = a'; up_arg = i; up_swts = ls,t}
   | _ :: l -> find_update a i l
       
-let make_arith x op1 i1 op2 i2 = 
+let make_arith x sx op1 i1 op2 i2 = 
   match op1, op2 with
-    | Plus, Plus -> Arith (x, Plus, i1+i2)
-    | Plus, Minus -> Arith (x, Plus, i1 - i2)
-    | Minus, Plus -> Arith (x, Plus, i2 - i1)
-    | Minus, Minus -> Arith (x, Plus, - i1 -i2)
+    | Plus, Plus -> Arith (x, sx, Plus, i1+i2)
+    | Plus, Minus -> Arith (x, sx, Plus, i1 - i2)
+    | Minus, Plus -> Arith (x, sx, Plus, i2 - i1)
+    | Minus, Minus -> Arith (x, sx, Plus, - i1 -i2)
 
 let find_assign tr = function
-  | Elem x -> 
+  | Elem (x, sx) -> 
       let t = 
-	if Hstring.list_mem x tr.tr_nondets then Elem (fresh_nondet ())
-	else try Hstring.list_assoc x tr.tr_assigns with Not_found -> Elem x
+	if H.list_mem x tr.tr_nondets then Elem (fresh_nondet (), sx)
+	else 
+	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
       in 
       Single t
 
   | Const i as a -> Single a
 
-  | Arith (x, op1, i1) ->
+  | Arith (x, sx, op1, i1) ->
       begin
 	let t = 
-	  try Hstring.list_assoc x tr.tr_assigns with Not_found -> Elem x
+	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
 	in 
 	match t with
 	  | Const i2 -> 
@@ -232,24 +233,24 @@ let find_assign tr = function
 		Const (match op1 with Plus -> i2 + i1 | Minus -> i2 - i1)
 	      in
 	      Single c
-	  | Elem x -> Single (Arith (x, op1, i1))
-	  | Arith (y, op2, i2) -> Single (make_arith y op1 i1 op2 i2)
+	  | Elem (x, sx) -> Single (Arith (x, sx, op1, i1))
+	  | Arith (y, sy, op2, i2) -> Single (make_arith y sy op1 i1 op2 i2)
 	  | Access _ -> assert false
       end
   | Access (a, i ) -> 
       let ni = 
-	if Hstring.list_mem i tr.tr_nondets then fresh_nondet ()
+	if H.list_mem i tr.tr_nondets then fresh_nondet ()
 	else 
-	  try (match Hstring.list_assoc i tr.tr_assigns with
-		 | Elem ni -> ni
+	  try (match H.list_assoc i tr.tr_assigns with
+		 | Elem (ni, _) -> ni
 		 | Const _ | Arith _ | Access _ -> assert false)
 	  with Not_found -> i
       in
       try find_update a ni tr.tr_upds
       with Not_found -> 
 	let na = 
-	  try (match Hstring.list_assoc a tr.tr_assigns with
-		 | Elem na -> na
+	  try (match H.list_assoc a tr.tr_assigns with
+		 | Elem (na, _) -> na
 		 | Const _ | Arith _ | Access _ -> assert false)
 	  with Not_found -> a
 	in
@@ -286,12 +287,12 @@ let assoc_neq t1 l t2 =
 let assoc_eq t1 l t2 =
   try compare_term (list_assoc_term t1 l) t2 = 0 with Not_found -> false
 
-let inconsistent_list env l = 
+let inconsistent_list l = 
   let rec check values eqs neqs = function
     | [] -> ()
     | True :: l -> check values eqs neqs l
     | False :: _ -> raise Exit
-    | Comp (t1, Eq, (Elem x as t2)) :: l 
+    | Comp (t1, Eq, (Elem (x, s) as t2)) :: l 
     | Comp ((Elem (x, s) as t2), Eq, t1) :: l ->
       (match s with
 	| Var | Constr ->
@@ -317,17 +318,17 @@ let inconsistent_list env l =
   try check [] [] [] l; false with Exit -> true
 
 
-let inconsistent env sa = 
+let inconsistent sa = 
   let l = SAtom.elements sa in
-  inconsistent_list env l
+  inconsistent_list l
 
-let inconsistent_array env a =
+let inconsistent_array a =
   let l = Array.to_list a in
-  inconsistent_list env l
+  inconsistent_list l
 
 
 let obviously_safe 
-    { t_unsafe = args, _; t_arru = ua; t_init = iargs, inisa; t_env = env } =
+    { t_unsafe = args, _; t_arru = ua; t_init = iargs, inisa } =
   let init_conj = match iargs with
     | None -> inisa
     | Some a ->
@@ -336,7 +337,7 @@ let obviously_safe
 	SAtom.empty
 	(List.map (fun b -> [a, b]) args)
   in 
-  inconsistent_list env 
+  inconsistent_list
     (List.rev_append (Array.to_list ua) (SAtom.elements init_conj))
 
 
@@ -353,9 +354,9 @@ let check_safety s =
 	raise Search.Unsafe
       end
   with
-    | AE.Sat.Sat -> raise Search.Unsafe
-    | AE.Sat.I_dont_know -> exit 2
-    | AE.Sat.Unsat _ -> ()
+    | Smt.Sat -> raise Search.Unsafe
+    | Smt.IDontknow -> exit 2
+    | Smt.Unsat _ -> ()
 
 
 
@@ -364,16 +365,16 @@ let check_safety s =
 (**********************************************************************)
 
 module MArgs = Map.Make (struct 
-  type t = Hstring.t list 
-  let compare = Hstring.compare_list 
+  type t = H.t list 
+  let compare = H.compare_list 
 end)
 
-let closed = Hstring.H.create (if simpl_by_uc then 8191 else 0)
+let closed = H.H.create (if simpl_by_uc then 8191 else 0)
 
 let already_closed s tr args =
   let sa = s.t_arru in
   try
-    let tr_margs = Hstring.H.find closed tr in
+    let tr_margs = H.H.find closed tr in
     let ls = MArgs.find args tr_margs in
     let rec find = function
       | [] -> None
@@ -392,7 +393,7 @@ let suitable_for_closing simpl s (*fix_from tr args*) =
     else false
   with Search.Unsafe -> false
   (* && not ( List.exists (fun (tr', args', f) -> *)
-  (*   Hstring.equal tr tr' && Hstring.compare_list args args' = 0 && *)
+  (*   H.equal tr tr' && H.compare_list args args' = 0 && *)
   (*     ArrayAtom.subset simpl f.t_arru) fix_from) *)
 
 let has_alredy_closed_ancestor s =
@@ -419,9 +420,9 @@ let add_to_closed s fixa fix =
       let sa = s.t_arru in
       let simpl = ArrayAtom.diff fa (ArrayAtom.diff sa fixa) in
       let tr_margs = 
-	try Hstring.H.find closed tr with Not_found -> MArgs.empty in
+	try H.H.find closed tr with Not_found -> MArgs.empty in
       let ls = try MArgs.find args tr_margs with Not_found -> [] in
-      Hstring.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
+      H.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
 
 (**********************************************************************)
 
@@ -433,8 +434,8 @@ let number_of s =
   else 1
 
 let add_arg args = function
-  | Elem s | Access (_, s) | Arith (s, _, _) ->
-      let s' = Hstring.view s in
+  | Elem (s, _) | Access (_, s) | Arith (s, _, _, _) ->
+      let s' = H.view s in
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
   | Const _ -> args
 
@@ -461,19 +462,19 @@ let proper_cube sa =
   let sa = 
     List.fold_left 
       (fun sa arg -> 
-	 let n = number_of (Hstring.view arg) in
+	 let n = number_of (H.view arg) in
 	 if n = !cpt then (incr cpt; sa)
 	 else 
 	   let sa = 
-	     subst_atoms [arg, Hstring.make ("#"^(string_of_int !cpt))] sa in 
+	     subst_atoms [arg, H.make ("#"^(string_of_int !cpt))] sa in 
 	   incr cpt; sa)
       sa args
   in
   let l = ref [] in
   for n = !cpt - 1 downto 1 do 
-    l := (Hstring.make ("#"^(string_of_int n))) :: !l
+    l := (H.make ("#"^(string_of_int n))) :: !l
   done;
-  sa, (!l, Hstring.make ("#"^(string_of_int !cpt)))
+  sa, (!l, H.make ("#"^(string_of_int !cpt)))
 
 
 (****************************************************)
@@ -508,7 +509,7 @@ and cross_impos impos l pr x st =
   match st with
     | [] -> []
     | y::p -> 
-	if Hstring.list_mem_couple (x,y) impos then 
+	if H.list_mem_couple (x,y) impos then 
 	  cross_impos impos l (y::pr) x p
 	else
 	  let acc = all_permutations_impos l (pr@p) impos in
@@ -527,22 +528,28 @@ let find_impossible a1 x1 op c1 i2 a2 n2 impos obvs =
   while !i2 < n2 do
     let a2i = a2.(!i2) in
     (match a2i, op with
-      | Comp (Access (a2, _), _, _), _ when not (Hstring.equal a1 a2) ->
-	i2 := n2
-      | Comp (Access (a2, x2), Eq, Elem c2), Neq when Hstring.equal c1 c2 ->
-	if Hstring.list_mem_couple (x1,x2) obvs then raise NoPermutations;
-	impos := (x1,x2) :: !impos
-      | Comp (Access (a2, x2), Neq, Elem c2), Eq when Hstring.equal c1 c2 ->
-	if Hstring.list_mem_couple (x1,x2) obvs then raise NoPermutations;
-	impos := (x1,x2) :: !impos
-      | Comp (Access (a2, x2), Eq, Elem c2), Eq when not (Hstring.equal c1 c2) ->
-	if Hstring.list_mem_couple (x1,x2) obvs then raise NoPermutations;
-	impos := (x1,x2) :: !impos
+      | Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
+	  i2 := n2
+      | Comp (Access (a2, x2), Eq, Elem (c2, _)), Neq when H.equal c1 c2 ->
+	  
+	  if H.list_mem_couple (x1, x2) obvs then raise NoPermutations;
+	  impos := (x1, x2) :: !impos
+	    
+      | Comp (Access (a2, x2), Neq, Elem (c2, _)), Eq when H.equal c1 c2 ->
+	  
+	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
+	  impos := (x1, x2) :: !impos
+
+      | Comp (Access (a2, x2), Eq, Elem (c2, _)), Eq when not (H.equal c1 c2) ->
+	  
+	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
+	  impos := (x1, x2) :: !impos
+	    
       | _ -> ());
     incr i2
   done
 
-let obvious_impossible env a1 a2 =
+let obvious_impossible a1 a2 =
   let n1 = Array.length a1 in
   let n2 = Array.length a2 in
   let obvs = ref [] in
@@ -558,15 +565,15 @@ let obvious_impossible env a1 a2 =
 	   begin
     	     match sx1, sy1, sx2, sy2 with
     	       | Glob, Constr, Glob, Constr 
-		   when Hstring.equal x1 x2 && not (Hstring.equal y1 y2) ->
+		   when H.equal x1 x2 && not (H.equal y1 y2) ->
     		   raise NoPermutations
-    	       | Glob, Var, Glob, Var when Hstring.equal x1 x2 ->
+    	       | Glob, Var, Glob, Var when H.equal x1 x2 ->
     		   obvs := (y1,y2) :: !obvs
-    	       | Glob, Var, Var, Glob when Hstring.equal x1 y2 ->
+    	       | Glob, Var, Var, Glob when H.equal x1 y2 ->
     		   obvs := (y1,x2) :: !obvs
-    	       | Var, Glob, Glob, Var when Hstring.equal y1 x2 ->
+    	       | Var, Glob, Glob, Var when H.equal y1 x2 ->
     		   obvs := (x1,y2) :: !obvs
-    	       | Var, Glob, Var, Glob when Hstring.equal y1 y2 ->
+    	       | Var, Glob, Var, Glob when H.equal y1 y2 ->
     		   obvs := (x1,x2) :: !obvs
     	       | _ -> ()
     	   end
@@ -575,13 +582,13 @@ let obvious_impossible env a1 a2 =
     	   begin
 	     match sx1, sy1, sx2, sy2 with
     	       | Glob, Constr, Glob, Constr 
-		   when Hstring.equal x1 x2 && Hstring.equal y1 y2 ->
+		   when H.equal x1 x2 && H.equal y1 y2 ->
     		   raise NoPermutations
     	       | _ -> ()
 	   end
        | Comp (Access (a1, x1), op, Elem (c1, _)), 
 	     Comp (Access (a, _), _, Elem _)
-    	       when Hstring.equal a1 a ->
+    	       when H.equal a1 a ->
 	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
@@ -593,13 +600,13 @@ let obvious_impossible env a1 a2 =
 (* Relevant permuations for fixpoint check *)
 (*******************************************)
 
-let relevant_permutations env np p l1 l2 =
+let relevant_permutations np p l1 l2 =
   if profiling then TimeRP.start ();
   try
-    let obvs, impos = obvious_impossible env p np in
+    let obvs, impos = obvious_impossible p np in
     let obvl1, obvl2 = List.split obvs in
-    let l1 = List.filter (fun b -> not (Hstring.list_mem b obvl1)) l1 in
-    let l2 = List.filter (fun b -> not (Hstring.list_mem b obvl2)) l2 in
+    let l1 = List.filter (fun b -> not (H.list_mem b obvl1)) l1 in
+    let l2 = List.filter (fun b -> not (H.list_mem b obvl2)) l2 in
     let perm = all_permutations_impos l1 l2 impos in
     let r = List.map (List.rev_append obvs) perm in
     if profiling then TimeRP.pause ();
@@ -607,12 +614,12 @@ let relevant_permutations env np p l1 l2 =
   with NoPermutations -> if profiling then TimeRP.pause (); []
 
 
-let possible_imply env anp ap =
-  SS.subset (magic_number_arr env ap) (magic_number_arr env anp)  
+let possible_imply anp ap =
+  SS.subset (magic_number_arr ap) (magic_number_arr anp)  
 
 
-let closeness env anp ap =
-  SS.cardinal (SS.diff (magic_number_arr env anp) (magic_number_arr env ap))
+let closeness anp ap =
+  SS.cardinal (SS.diff (magic_number_arr anp) (magic_number_arr ap))
 
 (********************************************************)
 (* Incremental fixpoint check : s => \/_{p \in nodes} p *)
@@ -620,16 +627,15 @@ let closeness env anp ap =
 
 exception Fixpoint
 
-let check_fixpoint
-    ({t_unsafe = (nargs, _(*np*)); t_arru = anp; t_env = env } as s) visited =
- 
-  Prover.add_goal s;
+let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
+  
+  Prover.assume_goal s;
   let nb_nargs = List.length nargs in
   let nodes = List.fold_left
-    (fun nodes ({ t_alpha = args, ap; t_env = env } as sp)->
+    (fun nodes ({ t_alpha = args, ap } as sp)->
       if List.length args > nb_nargs then nodes
       else
-	let d = relevant_permutations env anp ap args nargs in
+	let d = relevant_permutations anp ap args nargs in
 	List.fold_left
 	  (fun nodes ss ->
 	    let pp = ArrayAtom.apply_subst ss ap in
@@ -639,26 +645,26 @@ let check_fixpoint
 	    end
 	    (* Heruristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-	    else if ArrayAtom.nb_diff pp anp > 1 then (pp, env)::nodes
-	    else (Prover.add_node env pp; nodes)
+	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
+	    else (Prover.assume_node pp; nodes)
 	) nodes d
     ) [] visited
   in
   if profiling then TimeSort.start ();
   let nodes = 
     List.fast_sort
-      (fun (p1,_) (p2,_) ->
+      (fun p1 p2 ->
 	 Pervasives.compare 
-      	  (ArrayAtom.nb_diff p1 anp)
-      	  (ArrayAtom.nb_diff p2 anp)
+      	   (ArrayAtom.nb_diff p1 anp)
+      	   (ArrayAtom.nb_diff p2 anp)
       (* Better sorting but more expensive *)
       (* if c <> 0 then c *)
       (* else  *)
-      (*   Pervasives.compare (closeness env anp p1) (closeness env anp p2) *)
+      (*   Pervasives.compare (closeness anp p1) (closeness anp p2) *)
       )
       nodes in
   if profiling then TimeSort.pause ();
-  List.iter (fun (p, env) -> Prover.add_node env p) nodes
+  List.iter (fun p -> Prover.assume_node p) nodes
   
 
 let has_deleted_ancestor s =
@@ -697,11 +703,11 @@ let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   with 
     | Fixpoint -> true
     | Exit -> false
-    | AE.Sat.Sat | AE.Sat.I_dont_know -> false
-    | AE.Sat.Unsat _ -> true
+    | Smt.Sat | Smt.IDontknow -> false
+    | Smt.Unsat _ -> true
   
 
-let fixpoint ~invariants ~visited ({ t_unsafe = (_,np); t_env = env } as s) =
+let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   if profiling then TimeFix.start ();
   let nodes = (List.rev_append invariants visited) in
   let f = easy_fixpoint s nodes || hard_fixpoint s nodes in
@@ -716,10 +722,10 @@ let neg x op y =
     | Le -> Comp (y, Lt, x)
     | Neq -> Comp (x, Eq, y)
 
-let simplification_atoms base env sa = 
+let simplification_atoms base sa = 
   try 
     SAtom.fold (fun a base ->
-      let na = simplification base env a in
+      let na = simplification base a in
       match na with
 	| True -> base
 	| False -> raise Exit
@@ -742,10 +748,10 @@ let rec break a =
 	    | _ -> [SAtom.singleton a]
 	end
 
-let simplify_atoms env np =
+let simplify_atoms np =
   let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
-  let base = simplification_atoms SAtom.empty env base in
-  let ites = simplification_atoms base env ites in
+  let base = simplification_atoms SAtom.empty base in
+  let ites = simplification_atoms base ites in
   SAtom.fold 
     (fun ite cubes ->
        List.fold_left
@@ -763,8 +769,8 @@ let simplify_atoms env np =
 (**********************)
 
 let has_args_term args = function
-  | Elem x | Access (_, x) | Arith (x, _, _) -> Hstring.list_mem x args
-  | Const _ -> false
+  | Elem (x, Var) | Access (_, x) | Arith (x, Var, _, _) -> H.list_mem x args
+  | _ -> false
 
 let rec has_args args = function
   | True | False -> false
@@ -786,17 +792,17 @@ let uguard args = function
 let make_cubes =
   let cpt = ref 0 in
   fun (ls, post) (args, rargs) 
-    ({ t_unsafe = (uargs, p); t_env=env; t_nb = nb} as s) tr np ->
+    ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
   let nb_uargs = List.length uargs in
   let cube acc sigma = 
-    let lnp = simplify_atoms env (subst_atoms sigma np) in
+    let lnp = simplify_atoms (subst_atoms sigma np) in
     List.fold_left
       (fun (ls, post) np ->
 	 let np, (nargs, _) = proper_cube np in
 	 let ureq = uguard nargs tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
-	 if inconsistent s.t_env np then (ls, post) 
+	 if inconsistent np then (ls, post) 
 	 else
 	   let tr_args = List.map snd sigma in
 	   if simpl_by_uc && already_closed s tr.tr_name tr_args <> None 
@@ -824,22 +830,10 @@ let make_cubes =
     List.fold_left cube (ls, post) d
 
 
-let fresh_var_list =
-  [ Hstring.make "?1";
-    Hstring.make "?2";
-    Hstring.make "?3";
-    Hstring.make "?4";
-    Hstring.make "?5";
-    Hstring.make "?6";
-    Hstring.make "?7";
-    Hstring.make "?8";
-    Hstring.make "?9" ]
-
-
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
   if args = [] then tr
   else
-    let sigma = build_subst args fresh_var_list in
+    let sigma = build_subst args fresh_vars in
     { tr with 
 	tr_args = List.map snd sigma; 
 	tr_reqs = subst_atoms sigma tr.tr_reqs;
@@ -905,7 +899,7 @@ let init_atoms args sa =
   let cpt = ref 0 in
   let sigma = 
     List.map 
-      (fun z -> incr cpt; z, Hstring.make ("#"^(string_of_int !cpt))) args in
+      (fun z -> incr cpt; z, H.make ("#"^(string_of_int !cpt))) args in
   let sa = apply_subst sa sigma in
   let args = List.map snd sigma in
   args, sa
@@ -970,23 +964,23 @@ let delete_node s = s.t_deleted <- true
 (* Invariant generation stuff...  *)
 (**********************************)
 
-let same_number env z = function 
+let same_number z = function 
   | Const _ -> true
   | Elem (s, v) | Arith (s, v, _, _) -> 
-      Hstring.equal s z || v = Glob || v = Constr
-  | Access (_, s) -> Hstring.equal s z
+      H.equal s z || v = Glob || v = Constr
+  | Access (_, s) -> H.equal s z
 
-let rec contains_only env z = function
+let rec contains_only z = function
   | True | False -> true
-  | Comp (i, _ , j) -> same_number env z i && same_number env z j
+  | Comp (i, _ , j) -> same_number z i && same_number z j
   | Ite (sa, a1, a2) -> 
-      contains_only env z a1 && contains_only env z a2 
-      && SAtom.for_all (contains_only env z) sa
+      contains_only z a1 && contains_only z a2 
+      && SAtom.for_all (contains_only z) sa
 
 let partition ({ t_unsafe = (args, sa) } as s) = 
   List.fold_left 
     (fun l z -> 
-       let sa', _ = SAtom.partition (contains_only s.t_env z) sa in
+       let sa', _ = SAtom.partition (contains_only z) sa in
        if SAtom.cardinal sa' < 2 then l 
        else 
 	 let ar' = ArrayAtom.of_satom sa' in

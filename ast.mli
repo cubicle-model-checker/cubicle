@@ -36,7 +36,10 @@ module rec Atom : sig
 end 
 and SAtom : Set.S with type elt = Atom.t
 
-val alpha_args : Hstring.t list
+val proc_vars : Hstring.t list
+val alpha_vars : Hstring.t list
+val fresh_vars : Hstring.t list
+
 val add : Atom.t -> SAtom.t -> SAtom.t
 val svar : Hstring.t -> Hstring.t -> Hstring.t -> Hstring.t
 val subst_term : (Hstring.t * Hstring.t) list -> term -> term
@@ -89,10 +92,7 @@ type system = {
 }
 
 (* Types AST *)
-
-val sort_of : (sort * AltErgo.Ty.t * AltErgo.Term.t) Hstring.H.t ->
-  Hstring.t -> sort
-
+ 
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_init : Hstring.t option * SAtom.t;
