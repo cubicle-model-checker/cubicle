@@ -31,11 +31,16 @@ type error =
   | MustBeAnArray of Hstring.t
   | MustBeOfType of Hstring.t * Hstring.t
   | MustBeOfTypeProc of Hstring.t 
-  | UncompatibleType of Hstring.t * Hstring.t
+  | IncompatibleType of Hstring.t list * Hstring.t * Hstring.t list * Hstring.t
   | NotATerm of Hstring.t
 
 exception Error of error
 
+let print_htype fmt (args, ty) =
+  fprintf fmt "%a%a" 
+    (fun fmt -> List.iter (fprintf fmt "%a -> " Hstring.print)) args
+    Hstring.print ty
+       
 let report fmt = function
   | UnknownConstr e ->
       fprintf fmt "unknown constructor %a" Hstring.print e
@@ -67,9 +72,9 @@ let report fmt = function
       fprintf fmt "%a must be of type %a" Hstring.print s Hstring.print ty
   | MustBeOfTypeProc s ->
       fprintf fmt "%a must be of proc" Hstring.print s
-  | UncompatibleType (ty1, ty2) ->
+  | IncompatibleType (args1, ty1, args2, ty2) ->
       fprintf fmt "types %a and %a are not compatible" 
-	Hstring.print ty1 Hstring.print ty2
+	print_htype (args1, ty1) print_htype (args2, ty2)
   | NotATerm s -> fprintf fmt "%a is not a term" Hstring.print s
 
 let error e = raise (Error e)
@@ -78,15 +83,16 @@ let rec unique error = function
   | [] -> ()
   | x :: l -> if Hstring.list_mem x l then error x; unique error l
 
+let unify (args_1, ty_1) (args_2, ty_2) =
+  if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
+  then error (IncompatibleType (args_1, ty_1, args_2, ty_2))
+
 let term args = function
-  | Const _ -> Smt.Typing.type_int
+  | Const _ -> [], Smt.Typing.type_int
   | Elem (e, Var) ->
       if not (Hstring.list_mem e args) then error (UnknownName e);
-      Smt.Typing.type_proc
-  | Elem (e, _) -> 
-      let l, t = Smt.Typing.find e in
-      if l <> [] then error (NotATerm e);
-      t
+      [], Smt.Typing.type_proc
+  | Elem (e, _) -> Smt.Typing.find e
   | Arith (x, (Var | Constr | Arr), _, _) ->
       error (MustBeOfType (x, Smt.Typing.type_int))
   | Arith (x, _, _, _) ->
@@ -96,27 +102,24 @@ let term args = function
 	  if args <> [] then error (NotATerm x);
 	  if not (Hstring.equal ret Smt.Typing.type_int) then 
 	    error (MustBeOfType(x, Smt.Typing.type_int));
-	  ret
+	  args, ret
 	with Not_found -> error (UnknownGlobal x)
       end
   | Access(a, i) -> 
       let args_a, ty_a = 
 	try Smt.Typing.find a with Not_found -> error (UnknownArray a) in
-      let args_i, ty_i = 
-	try Smt.Typing.find i with Not_found -> error (UnknownName i)
+      let ty_i =
+	if not (Hstring.list_mem i args) then  error (UnknownName i);
+	Smt.Typing.type_proc
       in
       if args_a = [] then error (MustBeAnArray a);
-      if args_i <> [] then error (NotATerm i);
       if not (Hstring.equal ty_i Smt.Typing.type_proc) then
 	error (MustBeOfTypeProc i);	    
-      ty_a
+      [], ty_a
 
 let atom args = function
   | True | False -> ()
-  | Comp (x, op, y) -> 
-      let tx = term args x in
-      let ty = term args y in
-      if not (Hstring.equal tx ty) then error (UncompatibleType (tx, ty))
+  | Comp (x, op, y) -> unify (term args x) (term args y)
   | Ite _ -> assert false
 
 let atoms args = SAtom.iter (atom args)
@@ -146,23 +149,20 @@ let assigns args =
   List.iter 
     (fun (g, x) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g);
-       let args_g, ty_g = 
+       let ty_g = 
 	 try Smt.Typing.find g with Not_found -> error (UnknownGlobal g) in
-       if args_g <> [] then error (NotATerm g);
        let ty_x = term args x in
-       if not (Hstring.equal ty_g ty_x) then 
-	 error (UncompatibleType (ty_x, ty_g));
+       unify ty_x ty_g;
        dv := g ::!dv)
-
+    
 let switchs args ty_e (l, ut) = 
   List.iter 
     (fun (sa, t) -> 
        atoms args sa; 
        let ty = term args t in
-       if not (Hstring.equal ty ty_e) then 
-	 error (UncompatibleType (ty_e, ty))) l;
+       unify ty ty_e) l;
   let ty = term args ut in
-  if not (Hstring.equal ty ty_e) then error (UncompatibleType (ty_e, ty))
+  unify ty ty_e
 
 let updates args = 
   List.iter 
@@ -172,7 +172,7 @@ let updates args =
 	 try Smt.Typing.find a with Not_found -> error (UnknownArray a)
        in       
        if args_a = [] then error (MustBeAnArray a);
-       switchs (j::args) ty_a swts) 
+       switchs (j::args) ([], ty_a) swts) 
 
 let transitions = 
   List.iter 

@@ -20,7 +20,8 @@
   module S = Set.Make(Hstring)
 
   module Constructors = struct
-    let s = ref S.empty
+    let s = ref (S.add (Hstring.make "True") 
+		   (S.singleton (Hstring.make "False")))
     let add x = s := S.add x !s
     let mem x = S.mem x !s
   end
@@ -31,9 +32,16 @@
     let mem x = S.mem x !s
   end
 
+  module Arrays = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
   let sort s = 
     if Constructors.mem s then Constr 
     else if Globals.mem s then Glob
+    else if Arrays.mem s then Arr
     else Var
 
   let hproc = Hstring.make "proc"
@@ -91,7 +99,7 @@ global_defs:
 
 array_defs:
 | { [] }
-| ARRAYS EQ arrays { $3 }
+| ARRAYS EQ arrays { List.iter (fun (x,_) -> Arrays.add x) $3; $3 }
 ;
 
 type_defs:

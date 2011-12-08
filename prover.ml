@@ -102,7 +102,7 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   Smt.assume init;
   Smt.assume f;
-  Smt.check profiling
+  Smt.check ~profiling
 
 let assume_goal {t_unsafe = (args, _); t_arru = ap } =
   Smt.clear ();
@@ -110,10 +110,10 @@ let assume_goal {t_unsafe = (args, _); t_arru = ap } =
   let f = make_formula ap in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   Smt.assume f;
-  Smt.check profiling
+  Smt.check ~profiling
 
 let assume_node ap =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   Smt.assume f;
-  Smt.check profiling
+  Smt.check ~profiling
