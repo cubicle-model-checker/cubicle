@@ -207,10 +207,10 @@ let rec find_update a i = function
       
 let make_arith x sx op1 i1 op2 i2 = 
   match op1, op2 with
-    | Plus, Plus -> Arith (x, sx, Plus, i1+i2)
-    | Plus, Minus -> Arith (x, sx, Plus, i1 - i2)
-    | Minus, Plus -> Arith (x, sx, Plus, i2 - i1)
-    | Minus, Minus -> Arith (x, sx, Plus, - i1 -i2)
+    | Plus , Plus  -> Arith (x, sx, Plus, i1 + i2)
+    | Plus , Minus -> Arith (x, sx, Plus, i1 - i2)
+    | Minus, Plus  -> Arith (x, sx, Plus, i2 - i1)
+    | Minus, Minus -> Arith (x, sx, Plus, -i1 - i2)
 
 let find_assign tr = function
   | Elem (x, sx) -> 
@@ -690,6 +690,7 @@ let easy_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   ||
     List.exists (fun ({ t_arru = pa } as sp) -> 
       if ArrayAtom.subset pa npa then begin
+	eprintf "%a => %a@." Pretty.print_array pa  Pretty.print_array npa;
 	if simpl_by_uc then add_to_closed s pa sp;
 	true
       end
