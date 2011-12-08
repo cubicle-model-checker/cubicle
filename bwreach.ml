@@ -690,7 +690,6 @@ let easy_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   ||
     List.exists (fun ({ t_arru = pa } as sp) -> 
       if ArrayAtom.subset pa npa then begin
-	eprintf "%a => %a@." Pretty.print_array pa  Pretty.print_array npa;
 	if simpl_by_uc then add_to_closed s pa sp;
 	true
       end
@@ -804,7 +803,10 @@ let make_cubes =
 	 let ureq = uguard nargs tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
-	 if inconsistent np then (ls, post) 
+	 if inconsistent np then begin
+	   if debug && !verbose > 0 then eprintf "(inconsistent)@.";
+	   (ls, post)
+	 end
 	 else
 	   let tr_args = List.map snd sigma in
 	   if simpl_by_uc && already_closed s tr.tr_name tr_args <> None 
@@ -867,7 +869,7 @@ let pre tr unsafe =
     SAtom.union tr.tr_reqs 
       (SAtom.fold (fun a -> add (pre_atom tau a)) unsafe SAtom.empty)
   in
-  if debug && !verbose>0 then Debug.pre tr pre_unsafe;
+  if debug && !verbose > 0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
   if tr.tr_args = [] then tr, pre_unsafe, (args, args)
   else tr, pre_unsafe, (args, m::args)

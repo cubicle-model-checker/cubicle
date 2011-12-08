@@ -85,10 +85,10 @@ and SAtom : Set.S with type elt = Atom.t = Set.Make(Atom)
 
 let gen_vars s n = 
   let l = ref [] in
-  for i = max_proc downto 1 do
+  for i = 1 to max_proc do
     l := Hstring.make (s^(string_of_int i)) :: !l
   done;
-  !l
+  List.rev !l
 
 let proc_vars = gen_vars "#" max_proc
 let alpha_vars = gen_vars "$" max_proc
