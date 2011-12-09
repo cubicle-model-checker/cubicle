@@ -90,8 +90,8 @@ let gen_vars s n =
   done;
   List.rev !l
 
-let proc_vars = gen_vars "#" max_proc
 let alpha_vars = gen_vars "$" max_proc
+let proc_vars = gen_vars "#" max_proc
 let fresh_vars = gen_vars "?" max_proc
 
 let add a s = 

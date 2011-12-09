@@ -248,7 +248,7 @@ exception IDontknow
 
 let clear () = Solver.clear ()
 
-let assume f = 
+let assume f =
   try Solver.assume (Formula.make_cnf f)
   with Solver.Unsat -> raise (Unsat Explanation.empty)
 

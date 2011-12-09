@@ -579,7 +579,7 @@ let obvious_impossible a1 a2 =
     	       | _ -> ()
     	   end
        | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
-	   Comp (Elem (x2, sx2), Neq, Elem (y2, sy2)) ->
+	 Comp (Elem (x2, sx2), Neq, Elem (y2, sy2)) ->
     	   begin
 	     match sx1, sy1, sx2, sy2 with
     	       | Glob, Constr, Glob, Constr 
@@ -588,8 +588,8 @@ let obvious_impossible a1 a2 =
     	       | _ -> ()
 	   end
        | Comp (Access (a1, x1), op, Elem (c1, _)), 
-	     Comp (Access (a, _), _, Elem _)
-    	       when H.equal a1 a ->
+	 Comp (Access (a, _), _, Elem _)
+    	   when H.equal a1 a ->
 	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
