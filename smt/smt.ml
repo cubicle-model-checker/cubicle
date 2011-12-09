@@ -131,10 +131,12 @@ module Formula = struct
   let rec sform = function
     | Comb (Not, [Lit a]) -> Lit (Literal.LT.neg a)
     | Comb (Not, [Comb (Not, [f])]) -> f
-    | Comb (Not, [Comb (Or, l)]) -> 
-	Comb (And, [sform (Comb (Not, l))])
+    | Comb (Not, [Comb (Or, l)]) ->
+	let nl = List.map (fun a -> sform (Comb (Not, [a]))) l in
+	Comb (And, nl)
     | Comb (Not, [Comb (And, l)]) ->  
-	Comb (Or, [sform (Comb (Not, l))])
+	let nl = List.map (fun a -> sform (Comb (Not, [a]))) l in
+	Comb (Or, nl)
     | Comb (Not, [Comb (Imp, [f1; f2])]) -> 
 	Comb (And, [sform f1; sform (Comb (Not, [f2]))])
     | Comb (And, l) -> 
@@ -148,31 +150,55 @@ module Formula = struct
 
   let make comb l = Comb (comb, l)
 
+  let make_or = function
+    | [] -> assert false
+    | [a] -> a
+    | l -> Comb (Or, l)
+
+  let distrib l_and l_or = 
+    let l = 
+      if l_or = [] then l_and
+      else
+	List.map 
+	  (fun x -> 
+	     match x with 
+	       | Lit _ -> Comb (Or, x::l_or)
+	       | Comb (Or, l) -> Comb (Or, l@l_or)
+	       | _ -> assert false
+	  ) l_and 
+    in
+    Comb (And, l)
+
+  let rec flatten_or = function
+    | [] -> []
+    | Comb (Or, l)::r -> l@(flatten_or r)
+    | Lit a :: r -> (Lit a)::(flatten_or r)
+    | _ -> assert false
+    
   let rec cnf f = 
     match f with
       | Comb (Or, l) -> 
-(*	  let l = List.map cnf l in
-	  let l1, l2 = 
-	    List.partition (function Comb(And,_) -> true | _ -> false) l in
-	  match make_or l2, l1 with
-	    | [], [] | [], [_] | [_], [] -> assert false
-	    | [], Comb(And, ll1)::r -> distrib ll1 r
-	    | [a], Comb(And, ll1)::r -> (distrib a ll1)
-	    | , _ -> distrib
-	  
 	  begin
-	    match cnf g, cnf d with
-	      | g' , Comb (And, [d1; d2]) -> 
-		  let f1 = cnf (Comb (Or, [g'; d1])) in
-		  let f2 = cnf (Comb (Or, [g'; d2])) in
-		  Comb (And, [f1; f2])
-	      | Comb (And, [g1; g2]), d' -> 
-		  let f1 = cnf (Comb (Or, [g1; d'])) in
-		  let f2 = cnf (Comb (Or, [g2; d'])) in
-		  Comb (And, [f1; f2])
-	      | _ , _ -> f
-	  end*)
-	  assert false
+	    let l = List.map cnf l in
+	    let l_and, l_or = 
+	      List.partition (function Comb(And,_) -> true | _ -> false) l in
+	    match l_and with
+	      | [ Comb(And, l_conj) ] -> 
+		  let u = flatten_or l_or in
+		  distrib l_conj u
+
+	      | Comb(And, l_conj) :: r ->
+		  let u = flatten_or l_or in
+		  cnf (Comb(Or, (distrib l_conj u)::r))
+
+	      | _ ->  
+		  begin
+		    match flatten_or l_or with
+		      | [] -> assert false
+		      | [r] -> r
+		      | v -> Comb (Or, v)
+		  end
+	  end
       | Comb (And, l) -> 
 	  Comb (And, List.map cnf l)
       | f -> f    
