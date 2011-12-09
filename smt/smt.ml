@@ -110,8 +110,8 @@ module Formula = struct
     | Lit of Literal.LT.t  
     | Comb of combinator * t list
 
-  let vrai = Lit(Literal.LT.vrai)
-  let faux = Lit(Literal.LT.faux)
+  let vrai = Lit Literal.LT.vrai
+  let faux = Lit Literal.LT.faux
 
   let make_lit cmp l = 
     let lit = 
@@ -129,26 +129,37 @@ module Formula = struct
     Lit (Literal.LT.make lit)
 
   let rec sform = function
+    | Comb (Not, [Lit a]) -> Lit (Literal.LT.neg a)
     | Comb (Not, [Comb (Not, [f])]) -> f
-    | Comb (Not, [Comb (Or, [f1; f2])]) -> 
-	Comb (And, [sform f1; sform f2])
-    | Comb (Not, [Comb (And, [f1; f2])]) ->  
-	Comb (Or, [sform f1; sform f2])
+    | Comb (Not, [Comb (Or, l)]) -> 
+	Comb (And, [sform (Comb (Not, l))])
+    | Comb (Not, [Comb (And, l)]) ->  
+	Comb (Or, [sform (Comb (Not, l))])
     | Comb (Not, [Comb (Imp, [f1; f2])]) -> 
 	Comb (And, [sform f1; sform (Comb (Not, [f2]))])
-    | Comb (And, [f1; f2]) -> 
-	Comb (And, [sform f1; sform f2])
-    | Comb (Or, [f1; f2]) -> 
-	Comb (Or, [sform f1; sform f2])
+    | Comb (And, l) -> 
+	Comb (And, List.map sform l)
+    | Comb (Or, l) -> 
+	Comb (Or, List.map sform l)
     | Comb (Imp, [f1; f2]) -> 
 	Comb (Or, [sform (Comb (Not, [f1])); sform f2])
+    | Comb (Imp, _) -> assert false
     | f -> f
 
   let make comb l = Comb (comb, l)
 
   let rec cnf f = 
     match f with
-      | Comb (Or, [g; d]) -> 
+      | Comb (Or, l) -> 
+(*	  let l = List.map cnf l in
+	  let l1, l2 = 
+	    List.partition (function Comb(And,_) -> true | _ -> false) l in
+	  match make_or l2, l1 with
+	    | [], [] | [], [_] | [_], [] -> assert false
+	    | [], Comb(And, ll1)::r -> distrib ll1 r
+	    | [a], Comb(And, ll1)::r -> (distrib a ll1)
+	    | , _ -> distrib
+	  
 	  begin
 	    match cnf g, cnf d with
 	      | g' , Comb (And, [d1; d2]) -> 
@@ -160,9 +171,10 @@ module Formula = struct
 		  let f2 = cnf (Comb (Or, [g2; d'])) in
 		  Comb (And, [f1; f2])
 	      | _ , _ -> f
-	  end
-      | Comb (And, [g; d]) -> 
-	  Comb (And, [cnf g; cnf d])
+	  end*)
+	  assert false
+      | Comb (And, l) -> 
+	  Comb (And, List.map cnf l)
       | f -> f    
 
   let rec unfold mono f = 
@@ -170,14 +182,14 @@ module Formula = struct
       | Lit a -> a::mono 
       | Comb (Not, [Lit a]) -> 
 	  (Literal.LT.neg a)::mono
-      | Comb (Or, [f1; f2]) -> 
-	  unfold (unfold mono f1) f2
+      | Comb (Or, l) -> 
+	  List.fold_left unfold mono l
       | _ -> assert false
 	  
   let rec init monos f = 
     match f with
-      | Comb (And, [f1; f2]) -> 
-	  init (init monos f1) f2
+      | Comb (And, l) -> 
+	  List.fold_left init monos l
       | f -> (unfold [] f)::monos
 	
   let make_cnf f = 
