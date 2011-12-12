@@ -29,23 +29,9 @@ module type RELATION = sig
 
   val empty : unit -> t
   
-  val assume : 
-    t -> 
-    (r input) list -> 
-    are_eq : (Term.t -> Term.t -> answer) -> 
-    are_neq : (Term.t -> Term.t -> answer) -> 
-    class_of : (Term.t -> Term.t list) -> 
-    find : (Term.t -> r * Explanation.t) ->
-    t * r result
+  val assume : t -> (r input) list -> t * r result
 
-  val query : 
-    t -> 
-    r input -> 
-    are_eq : (Term.t -> Term.t -> answer) -> 
-    are_neq : (Term.t -> Term.t -> answer) -> 
-    class_of : (Term.t -> Term.t list) -> 
-    find : (Term.t -> r * Explanation.t) ->
-    answer
+  val query : t -> r input -> answer
 
   val case_split : t -> (r Literal.view * Explanation.t * Num.num) list
     (** case_split env returns a list of equalities *)
@@ -59,16 +45,15 @@ module type THEORY = sig
 
   (**Type of terms of the theory*)
   type t
+
   (**Type of representants of terms of the theory*)
   type r
+
   (** Name of the theory*)
   val name : string
-  (** return true if the atom is owned by the theory*)
-  (*val is_mine_a : Literal.LT.t -> bool*)
+
   (** return true if the symbol is owned by the theory*)
   val is_mine_symb : Symbols.t -> bool
-  (** return true if the type is owned by the theory*)
-  (*val is_mine_type : t -> bool*)
 
   (** return true when the argument is an unsolvable function of the theory *)
   val unsolvable : t -> bool
@@ -84,6 +69,7 @@ module type THEORY = sig
 
   (** Give the leaves of a term of the theory *)
   val leaves : t -> r list
+
   val subst : r -> r -> t -> r
 
   val compare : t -> t -> int

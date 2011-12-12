@@ -3,7 +3,7 @@
 (*                                  Cubicle                               *)
 (*             Combining model checking algorithms and SMT solvers        *)
 (*                                                                        *)
-(*                  Sylvain Conchon and Alain Mebsout                     *)
+(*                  Mohamed Iguernelala                                   *)
 (*                  Universite Paris-Sud 11                               *)
 (*                                                                        *)
 (*  Copyright 2011. This file is distributed under the terms of the       *)

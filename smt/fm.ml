@@ -669,7 +669,7 @@ module Make
     let env, eqs = equalities_from_polynomes env eqs in
     equalities_from_monomes env eqs
 
-  let assume env la ~are_eq ~are_neq ~class_of ~find =
+  let assume env la =
     let env = {env with improved = SP.empty} in
     Debug.env env;
     let env, eqs, new_ineqs, expl =
@@ -739,9 +739,9 @@ module Make
     with Intervals.NotConsistent expl ->
       raise (Exception.Inconsistent expl)
       
-  let query env a_ex ~are_eq ~are_neq ~class_of ~find =
+  let query env a_ex =
     try 
-      ignore(assume env [a_ex] ~are_eq ~are_neq ~class_of ~find); 
+      ignore(assume env [a_ex]); 
       No
     with Exception.Inconsistent expl -> Yes expl
 

@@ -3,8 +3,9 @@
 (*                                  Cubicle                               *)
 (*             Combining model checking algorithms and SMT solvers        *)
 (*                                                                        *)
-(*                  Sylvain Conchon and Alain Mebsout                     *)
-(*                  Universite Paris-Sud 11                               *)
+(*                  Sylvain Conchon, Evelyne Contejean                    *)
+(*                  Francois Bobot, Mohamed Iguernelala, Alain Mebsout    *)
+(*                  CNRS, Universite Paris-Sud 11                         *)
 (*                                                                        *)
 (*  Copyright 2011. This file is distributed under the terms of the       *)
 (*  Apache Software License version 2.0                                   *)
@@ -288,12 +289,7 @@ module Make (X : Sig.X) = struct
       ) ({env with uf=uf}, [])  res
 
   let replay_atom env sa = 
-    let are_eq = Uf.are_equal env.uf in
-    let are_neq = Uf.are_distinct env.uf in
-    let class_of = Uf.class_of env.uf in
-    let find = Uf.find env.uf in
-    let relation, result = 
-      X.Rel.assume env.relation sa are_eq are_neq class_of find in
+    let relation, result = X.Rel.assume env.relation sa in
     let env = { env with relation = relation } in
     let env = clean_use env result.remove in
     env, result.assume
@@ -488,13 +484,8 @@ module Make (X : Sig.X) = struct
 	  let na = A.LT.neg a in
 	  let t = add_and_process na t in
 	  let env = t.gamma in
-	  let are_eq = Uf.are_equal env.uf in
-	  let are_neq = Uf.are_distinct env.uf in
-	  let class_of = Uf.class_of env.uf in
-	  let find = Uf.find env.uf in
 	  let rna, ex_rna = term_canonical_view env na Ex.empty in
-          X.Rel.query env.relation (rna, Some na, ex_rna) 
-	    are_eq are_neq class_of find
+          X.Rel.query env.relation (rna, Some na, ex_rna)
     with Exception.Inconsistent d -> Yes d
 
   let empty () = 

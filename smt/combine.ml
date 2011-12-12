@@ -37,9 +37,6 @@ struct
   let embed1 x = X1 x
   let embed5 x = X5 x
 	
-  let is_an_eq a = 
-    match Literal.LT.view a with Literal.Builtin _ -> false | _ -> true
-
   let is_int v = 
     let ty  = match v with
       | X1 x -> X1.type_info x
@@ -198,8 +195,7 @@ struct
     | X5 t   -> X5.type_info t
     | Term t -> let {Term.ty = ty} = Term.view t in ty
 	
-  module Rel =
-  struct
+  module Rel = struct
     type elt = r
     type r = elt
 
@@ -212,20 +208,18 @@ struct
       r1=X1.Rel.empty (); 
       r5=X5.Rel.empty ();
     }
-	
-    let assume env sa ~are_eq ~are_neq ~class_of ~find = 
-      let env1, { assume = a1; remove = rm1} = 
-	X1.Rel.assume env.r1 sa ~are_eq ~are_neq ~class_of ~find in
-      let env5, { assume = a5; remove = rm5} = 
-	X5.Rel.assume env.r5 sa ~are_eq ~are_neq ~class_of ~find in
+      
+    let assume env sa = 
+      let env1, { assume = a1; remove = rm1} = X1.Rel.assume env.r1 sa in
+      let env5, { assume = a5; remove = rm5} = X5.Rel.assume env.r5 sa in
       {r1=env1; r5=env5}, 
       { assume = a1@a5; remove = rm1@rm5;}
 	
-    let query env a ~are_eq ~are_neq ~class_of ~find = 
-      match X1.Rel.query env.r1 a ~are_eq ~are_neq ~class_of ~find with
+    let query env a = 
+      match X1.Rel.query env.r1 a with
 	| Yes _ as ans -> ans
-	| No -> X5.Rel.query env.r5 a ~are_eq ~are_neq ~class_of ~find
-		      
+	| No -> X5.Rel.query env.r5 a
+	    
     let case_split env = 
       let seq1 = X1.Rel.case_split env.r1 in
       let seq5 = X5.Rel.case_split env.r5 in
@@ -247,7 +241,7 @@ and X1 : Sig.THEORY  with type t = TX1.t and type r = CX.r =
        type r = CX.r
        let extract = CX.extract1
        let embed =  CX.embed1
-       let assume env _ _ _ _ = env, {Sig.assume = []; remove = []} 
+       let assume env _ _ = env, {Sig.assume = []; remove = []} 
      end)
 
 and X5 : Sig.THEORY with type r = CX.r and type t = CX.r Sum.abstract =
