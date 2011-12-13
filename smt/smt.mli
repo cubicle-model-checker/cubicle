@@ -28,6 +28,9 @@ module Typing : sig
   val declare_name : Hstring.t -> Hstring.t list -> Hstring.t -> unit
 
   val find : Hstring.t -> Hstring.t list * Hstring.t
+
+  val declared : Hstring.t -> bool
+
 end
 
 module Term : sig

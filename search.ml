@@ -157,7 +157,7 @@ module type I = sig
   val extract_candidates : t -> t list -> t list
   val is_inv :
     (invariants : t list -> visited : t list -> t -> unit) ->
-    t -> t list -> bool    
+    t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
   val delete_nodes_inv : t list -> t list ref -> unit
@@ -396,6 +396,7 @@ module BFSinvp_base ( X : I ) = struct
 	    (if debug then eprintf "Send candidate ...@.";
 	     Queue.push s candidates
 	    (* ignore (Event.poll (Event.send candidates_channel s)) *));
+	  Thread.yield ();
 
 	  if delete then X.delete_nodes s visited nb_deleted false;
 	  visited := s :: !visited;
@@ -494,7 +495,7 @@ module BFS_dist_base ( X : I ) = struct
 	  | Fix, _ ->
 	    decr remaining_tasks;
 	    if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
-	    if invgen && gen_inv && !remaining_tasks = 0 then raise Killgeninv;
+	    (* if invgen && gen_inv && !remaining_tasks = 0 then raise Killgeninv; *)
 	    incr Profiling.cpt_fix; []
 	  | NotFix, Fixcheck (s, cpt, _) ->
 	    new_nodes := (cpt, s) :: !new_nodes;
@@ -502,12 +503,14 @@ module BFS_dist_base ( X : I ) = struct
 	    if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
 	    if invgen && gen_inv (* && !nb_inv_search < 2 *) then
 	      begin
-		if !remaining_tasks = 0 then raise Killgeninv;
+	    	(* if !remaining_tasks = 0 then raise Killgeninv; *)
 	    	incr nb_inv_search;
 	    	[Geninv (s, !invariants, !not_invariants), ()]
 	      end
+	    (* Inefficient alternative : *)
 	    (* if invgen && gen_inv then *)
 	    (*   begin *)
+	    (* 	if !remaining_tasks = 0 then raise Killgeninv; *)
 	    (* 	let candidates = X.extract_candidates s !not_invariants in *)
 	    (* 	List.map (fun p -> Tryinv (s, !invariants), ()) candidates *)
 	    (*   end *)

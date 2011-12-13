@@ -66,12 +66,25 @@ module Typing = struct
     H.add decl_symbs f (Symbols.name f, args, ret)
 
   let find s = let _, args, ret = H.find decl_symbs s in args, ret
+
+  let declared s = 
+    let res = H.mem decl_symbs s in
+    if not res then begin 
+      eprintf "Not declared : %a in@." Hstring.print s;
+      H.iter (fun hs (sy, _, _) ->
+	eprintf "%a (=?%b) -> %a@." Hstring.print hs 
+	  (Hstring.compare hs s = 0)
+	  Symbols.print sy)
+	decl_symbs;
+    end;
+    res
     
   let _ = 
     H.add decl_symbs (Hstring.make "True") 
       (Symbols.True, [], Hstring.make "bool");
     H.add decl_symbs (Hstring.make "False") 
       (Symbols.False, [], Hstring.make "bool");
+
     
 end
 

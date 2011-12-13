@@ -34,7 +34,7 @@ let delete = ref false
 let simpl_by_uc = ref false
 let cores = ref 0
 
-let mode = ref DfsHL
+let mode = ref Bfs
 let set_mode = function
   | "dfs" -> mode := Dfs
   | "dfsl" -> mode := DfsL
@@ -52,7 +52,7 @@ let specs =
     "-depth", Arg.Set_int maxrounds, "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxrounds, "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-               "<dfs | dfsl | dfsh | dfshl(default) | bfs> search strategies";
+               "<bfs(default) | dfs | dfsl | dfsh | dfshl> search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";

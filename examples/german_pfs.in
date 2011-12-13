@@ -36,7 +36,7 @@
 :cnj (= a[x] 3)  (= a[y] 2)
  
 :comment :no_backward_simplification
-:comment :key_search m
+:key_search m
 
 :comment h0    t1
 :transition

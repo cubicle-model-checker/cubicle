@@ -107,4 +107,4 @@ type t_system = {
   t_nb_father : int;
 }
 
-val assert_mem_accesses : ('a * 'b * 'c) Hstring.H.t -> ArrayAtom.t -> unit
+val declared_terms : ArrayAtom.t -> bool

@@ -280,16 +280,14 @@ type t_system = {
   t_nb_father : int;
 }
 
-let assert_mem_term env x =
-  assert (match x with
-    | Access (a, _) -> 
-      (try let _ = Hstring.H.find env a in true with Not_found -> false)
-    | _ -> true)
+let declared_term x =
+  match x with
+    | Elem (_, Var) -> true
+    | Elem (s, _) | Access (s, _) -> Smt.Typing.declared s
+    | _ -> true
 
-let assert_mem_accesses env ar =
-  Array.iter 
-  (function
-    | Comp (t1, _ , t2) ->
-      assert_mem_term env t1;
-      assert_mem_term env t2
-    | _ -> ()) ar 
+let declared_terms ar =
+  Array.fold_left
+  (fun acc -> function
+    | Comp (t1, _ , t2) -> acc && declared_term t1 && declared_term t2
+    | _ -> acc) true ar

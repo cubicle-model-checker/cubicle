@@ -1032,12 +1032,19 @@ let init_thread search invariants not_invs visited postponed candidates =
   Thread.create (fun () ->
     while true do
       try 
-	let candidate = Queue.pop candidates in
+	(* let candidate = Queue.pop candidates in *)
+	let candidatel = Queue.fold (fun acc c -> c::acc) [] candidates in
+	let cand = List.fold_left
+	  (fun acc cs ->
+	    (List.map (fun x -> x, cs) (partition cs)) @ acc) [] candidatel in
+	Queue.clear candidates;
 	if debug then eprintf "(Thread inv) Got something to do !@.";
 	Functory.Cores.compute ~worker:(worker_inv search invariants not_invs)
-	  ~master:master_inv (List.map (fun x -> x,candidate) 
-				(partition candidate))
-      with Queue.Empty -> eprintf "(Thread inv) Nothing to do ...@."
+	  ~master:master_inv 
+	  (* (List.map (fun x -> x,candidate) (partition candidate));  *)
+	  cand;
+	Thread.yield ();
+      with Queue.Empty -> Thread.yield (); eprintf "(Thread inv) Nothing to do ...@."
     done;
   ) ()
 

@@ -28,7 +28,7 @@ module HS = struct
 
   let view s = s.node
 
-  let equal s1 s2 = s1 == s2
+  let equal s1 s2 = s1.tag = s2.tag
 
   let compare s1 s2 = compare s1.tag s2.tag
 
