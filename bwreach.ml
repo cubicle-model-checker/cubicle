@@ -193,7 +193,12 @@ let rec pre_atom tau a =
 type assign = Single of term | Branch of update
 
 let fresh_nondet = 
-  let cpt = ref 0 in fun () -> incr cpt; H.make ("*"^(string_of_int !cpt))
+  let cpt = ref 0 in 
+  fun (args, ret) -> 
+    incr cpt; 
+    let s = H.make ("*"^(string_of_int !cpt)) in
+    Smt.Typing.declare_name s args ret;
+    s
 
 let rec find_update a i = function
   | [] -> raise Not_found
@@ -215,7 +220,8 @@ let make_arith x sx op1 i1 op2 i2 =
 let find_assign tr = function
   | Elem (x, sx) -> 
       let t = 
-	if H.list_mem x tr.tr_nondets then Elem (fresh_nondet (), sx)
+	if H.list_mem x tr.tr_nondets then 
+	  Elem (fresh_nondet (Smt.Typing.find x), sx)
 	else 
 	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
       in 
@@ -240,7 +246,8 @@ let find_assign tr = function
       end
   | Access (a, i ) -> 
       let ni = 
-	if H.list_mem i tr.tr_nondets then fresh_nondet ()
+	if H.list_mem i tr.tr_nondets then 
+	  fresh_nondet (Smt.Typing.find i)
 	else 
 	  try (match H.list_assoc i tr.tr_assigns with
 		 | Elem (ni, _) -> ni

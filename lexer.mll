@@ -28,7 +28,6 @@
 	"assign", ASSIGN;
         "arrays", ARRAYS;
         "globals", GLOBALS;
-        "nondet", NONDET;
         "unsafe", UNSAFE;
       ]
 	       
