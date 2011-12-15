@@ -335,6 +335,10 @@ let inconsistent_array a =
   inconsistent_list l
 
 
+(*************************************************)
+(* Safety check : s /\ init must be inconsistent *)
+(*************************************************)
+
 let obviously_safe 
     { t_unsafe = args, _; t_arru = ua; t_init = iargs, inisa } =
   let init_conj = match iargs with
@@ -348,10 +352,6 @@ let obviously_safe
   inconsistent_list
     (List.rev_append (Array.to_list ua) (SAtom.elements init_conj))
 
-
-(*************************************************)
-(* Safety check : s /\ init must be inconsistent *)
-(*************************************************)
  
 let check_safety s =
   (*Debug.unsafe s;*)
@@ -359,10 +359,13 @@ let check_safety s =
     if not (obviously_safe s) then
       begin
 	Prover.unsafe s;
+	printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
 	raise Search.Unsafe
       end
   with
-    | Smt.Sat -> raise Search.Unsafe
+    | Smt.Sat ->
+      printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
+      raise Search.Unsafe
     | Smt.IDontknow -> exit 2
     | Smt.Unsat _ -> ()
 
