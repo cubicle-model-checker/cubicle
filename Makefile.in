@@ -52,7 +52,20 @@ NAME = cubicle
 BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
-all: $(OCAMLBEST) 
+all: make_functory $(OCAMLBEST) 
+
+# configuration of the fake functory library
+############################################
+
+
+make_functory:
+	@if [ -z $(FUNCTORYLIB) ]; then \
+	cp -f fake_functory.mli functory.mli;\
+	cp -f fake_functory.ml functory.ml;\
+	$(OCAMLC) -c functory.mli;\
+	$(OCAMLOPT) -c functory.ml;\
+	$(OCAMLOPT) -o functory.cmxa -a functory.cmx functory.o;\
+	fi
 
 # bytecode and native-code compilation
 ######################################
@@ -183,6 +196,7 @@ clean::
 	@rm -f smt/*.cm[iox] smt/*.o smt/*~ smt/*.annot
 	@rm -f $(GENERATED) *.output
 	@rm -f $(NAME).byte $(NAME).opt
+	@rm -f functory.*
 
 # depend
 ########

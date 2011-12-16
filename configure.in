@@ -48,7 +48,7 @@ fi
 
 AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
 if test "$FUNCTORYLD" = no ; then
-      AC_MSG_ERROR(Cannot find functory library.)
+      AC_MSG_RESULT(Cannot find functory library.)
       FUNCTORYLIB=""
 else
    FUNCTORYLIB="-I +functory"
