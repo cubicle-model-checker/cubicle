@@ -59,7 +59,7 @@ all: make_functory $(OCAMLBEST)
 
 
 make_functory:
-	@if [ -z $(FUNCTORYLIB) ]; then \
+	@if [ -z "$(FUNCTORYLIB)" ]; then \
 	cp -f fake_functory.mli functory.mli;\
 	cp -f fake_functory.ml functory.ml;\
 	$(OCAMLC) -c functory.mli;\
