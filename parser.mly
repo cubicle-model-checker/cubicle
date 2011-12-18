@@ -113,6 +113,7 @@ type_def_plus:
 ;
 
 type_def:
+| TYPE lident { ($2, []) }
 | TYPE lident EQ constructors { List.iter Constructors.add $4; ($2, $4) }
 ;
 
