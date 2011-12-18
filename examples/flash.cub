@@ -1,0 +1,219 @@
+type state = Invalid | Shared | Exclusive
+type data
+
+globals = Memory[data] 
+
+arrays = CacheState[proc,state] CacheData[proc,data]
+
+
+init (p) { 		   
+     CacheState[p] = Invalid &&
+}
+
+
+unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
+
+
+
+transition PI_Local_Get_Dirty (p)
+require { Home = p &&
+	  CacheState[p] = Invalid && CacheWait[p] = None && 
+	  Pending = False && Dirty = True }
+assign { Pending := True; Collecting := False; Requester := p; Fwd_get := Get}
+CacheWait[j] := {| j = p : Get | _ : CacheWait[j] }
+UnetProc[j] := {| j = p : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Get | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+transition PI_Local_Get_Other1 (p)
+require { Home = p &&
+	  CacheState[p] = Invalid && CacheWait[p] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[p] = True }
+assign { Local := True }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+transition PI_Local_Get_Other2 (p)
+require { Home = p &&
+	  CacheState[p] = Invalid && CacheWait[p] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[p] = False }
+assign { Local := True }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
+CacheState[j] := {| j = p : Shared | _ : CacheState[j] }
+
+
+
+transition PI_Remote_Get (p)
+require { Home <> p &&
+	  CacheState[p] = Invalid && CacheWait[p] = None }
+CacheWait[j] := {| j = p : Get | _ : CacheWait[j] }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Get | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+
+
+transition PI_Local_GetX_Dirty (p)
+require { Home = p &&
+	  CacheState[p] <> Exclusive && CacheWait[p] = None &&
+	  Pending = False && Dirty = True }
+assign { Pending := True; Collecting := False; Requester := p; Fwd_get := GetX }
+CacheWait[j] := {| j = p : GetX | _ : CacheWait[j] }
+UnetProc[j] := {| j = p : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : GetX | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+transition PI_Local_GetX_Other1 (p)
+require { Home = p && Head_valid = False &&
+	  CacheState[p] <> Exclusive && CacheWait[p] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[p] = True }
+assign { Local := True; Dirty := True; Real_owner := p }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+transition PI_Local_GetX_Other2 (p)
+require { Home = p && Head_valid = False &&
+	  CacheState[p] <> Exclusive && CacheWait[p] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[p] = False }
+assign { Local := True; Dirty := True; Real_owner := p }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
+CacheState[j] := {| j = p : Shared | _ : CacheState[j] }
+
+transition PI_Local_GetX_Other1_head (p)
+require { Home = p && Head_valid = True &&
+	  CacheState[p] <> Exclusive && CacheWait[p] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[p] = True }
+assign { Local := True; Dirty := True; Real_owner := p;
+         Collecting := True; M1 := M;
+	 Last_other_invack := Head_pointer;
+	 Pending := True;
+	 Head_valid := False;
+	 List := False; }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+Shlist[j] := {| _ : False }
+Real[j] := {| j = p : False 
+	    | j = Head_pointer : True 
+	    | List = True : Shlist[j] 
+	    | _ : False }
+Invnet[j] := {| j = p : Empty 
+	      | j = Head_pointer : Inv
+	      | List = True && Shlist[j] : Inv
+	      | _ : Empty }
+
+transition PI_Local_GetX_Other2_head (p)
+require { Home = p && Head_valid = True &&
+	  CacheState[p] <> Exclusive && CacheWait[p] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[p] = False }
+assign { Local := True; Dirty := True; Real_owner := p;
+         Collecting := True; M1 := M;
+	 Last_other_invack := Head_pointer;
+	 Pending := True;
+	 Head_valid := False;
+	 List := False; }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
+CacheState[j] := {| j = p : Shared | _ : CacheState[j] }
+
+Shlist[j] := {| _ : False }
+Real[j] := {| j = p : False 
+	    | j = Head_pointer : True 
+	    | List = True : Shlist[j] 
+	    | _ : False }
+Invnet[j] := {| j = p : Empty 
+	      | j = Head_pointer : Inv
+	      | List = True && Shlist[j] : Inv
+	      | _ : Empty }
+
+
+
+
+transition PI_Remote_GetX (p)
+require { Home <> p &&
+	  CacheState[p] = Invalid && CacheWait[p] = None }
+CacheWait[j] := {| j = p : GetX | _ : CacheWait[j] }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : GetX | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+
+
+transition PI_Local_PutX_Pending (p)
+require { Home = p &&
+	  CacheState[p] = Exclusive && CacheWait[p] = None &&
+	  Pending = True}
+assign { Dirty := False; Memory := CacheData[p]; Last_WB := p }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+transition PI_Local_PutX_Other (p)
+require { Home = p &&
+	  CacheState[p] = Exclusive && CacheWait[p] = None &&
+	  Pending = True}
+assign { Local := False; Dirty := False; Memory := CacheData[p]; Last_WB := p }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+
+transition PI_Remote_PutX (p)
+require { Home <> p && Dst_dirty := True }
+assign { WBnet_proc := p; WBnet_mtype := WB; WBnet_data := CacheData[p] }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+
+transition PI_Local_Replace (p)
+require { Home = p && CacheWait[p] = None }
+assign { Local := False }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+
+transition PI_Remote_Replace (p)
+require { Home <> p && CacheState[p] = Shared && CacheWait[p] = None }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+RP[j] := {| j = p : True | _ : RP[j] }
+
+
+transition NI_NAK (p)
+require { UnetMtype[p] = NAK }
+CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
+UnetMtype[j] := {| j = p : Empty | _ : UnetMtype[j] }
+
+
+transition NI_NAK_Clear (p)
+require { Nakc = True }
+assign { Pending := False; Nakc := False }
+
+
+transition NI_Local_Get1 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home && Rp_src = False &&
+	  Pending = True }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+transition NI_Local_Get2 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home && Rp_src = False &&
+	  Dirty = True && Local = True && CacheState[p] <> Exclusive }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+transition NI_Local_Get3 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home && Rp_src = False &&
+	  Dirty = True && Local = False && Head_pointer = p }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
+transition NI_Local_Get4 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home && Rp_src = False &&
+	  Dirty = True && Local = False && Head_pointer <> p }
+assign { Collecting := False; Requester := p; Fwd_get := Get }
+UnetProc[j] := {| j = p : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Get | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
+
