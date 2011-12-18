@@ -1,0 +1,64 @@
+type state = Invalid | Shared | Exclusive
+type data = Data1 | Data2 | Data3 | Data4
+
+globals = Memory[data] 
+
+arrays = CacheState[proc,state] CacheData[proc,data] Register[proc,data]
+
+
+init (p) { 		   
+     CacheState[p] = Invalid
+}
+
+
+unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
+
+
+
+
+transition atom_WB (p)
+require { CacheState[p] = Exclusive }
+assign { Memory := CacheData[p] }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+
+transition atom_Invalidate (p)
+require { CacheState[p] <> Exclusive }
+CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+
+
+transition atom_Get_1 (p)
+require { CacheState[p] <> Exclusive }
+uguard (i) { CacheState[i] <> Exclusive }
+CacheState[j] := {| j = p : Shared | _ : CacheState[j] }
+CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
+
+
+transition atom_Get_2 (p1 p2)
+require { CacheState[p1] = Exclusive }
+assign { Memory := CacheData[p1] }
+CacheState[j] := {| j = p1 : Shared | j = p2 : Shared | _ : CacheState[j] }
+CacheData[j] := {| j = p2 : CacheData[p1] | _ : CacheData[j] }
+
+
+transition atom_GetX_1 (p2)
+require { CacheState[p2] <> Exclusive }
+uguard (i) { CacheState[i] <> Exclusive }
+CacheState[j] := {| j = p2 : Exclusive | _ : CacheState[j] }
+CacheData[j] := {| j = p2 : Memory | _ : CacheData[j] }
+
+
+transition atom_GetX_2 (p1 p2)
+require { CacheState[p1] = Exclusive }
+CacheState[j] := {| j = p1 : Invalid | j = p2 : Exclusive | _ : CacheState[j] }
+CacheData[j] := {| j = p2 : CacheData[p1] | _ : CacheData[j] }
+
+
+transition load_Delayed (p)
+require { CacheState[p] <> Invalid }
+Register[j] := {| j = p : CacheData[p] | _ : Register[j] }
+
+
+transition store_Delayed (p)
+require { CacheState[p] = Exclusive }
+assign { Memory := Register[p] }
