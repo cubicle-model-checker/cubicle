@@ -1,62 +1,3 @@
-(*
- :comment      SOURCE: pfs distribution
- :comment      (difficult version)
-
- :smt (define-type locations (subrange 1 3))
- :smt (define-type messages1  (subrange 5 7))
- :smt (define-type messages2  (subrange 7 10))
- :comment   values 5, 11 for t[x] are mapped to false and  true, resp.
- :comment   value 5 for d[x] is mapped to  7
-*)
-
-(*
-type state = Invalid | Shared | Exclusive
- (*
-	 Invalid -> 1
-	 Shared -> 2
-	 Exclusive -> 3
- *)
-
-type msg1 = Empty1 | Reqs | Reqe 
- (*
-	Empty1 -> 5
-	Reqs -> 6
-	Reqe -> 7
-
- *)
-
-type msg2 = Empty2 | Inv | Gnts | Gnte
- (*
-	Empty2 -> 7
-	Inv -> 8
-	Gnts -> 9
-	Gnte -> 10
-
- *)
-
-type msg3 = Empty3 | Invack
- (*
-	Empty3 -> true
-	Invack -> false
- *)
-*)
-
-
-(*
-:local a locations
-:local u messages1
-:local d messages2
-:local t bool
-:local c bool
-:local s bool
-:local l bool
-:global g bool
-:global m messages1
-:global f bool
-
-*)
-
-
 globals = G[bool] M[int] F[bool]
 
 arrays = A[proc,int] U[proc,int] D[proc,int] T[proc,bool] 
@@ -70,14 +11,14 @@ init (z) {
 
 
 (* encoding of subranges *)
-invariant (z) { 0 < A[z] }
-invariant (z) { A[z] < 4 }
-invariant (z) { 4 < U[z] }
-invariant (z) { U[z] < 8 }
-invariant (z) { 6 < D[z] }
-invariant (z) { D[z] < 11 }
-invariant (z) { 4 < M }
-invariant (z) { M < 8 }
+invariant (z) { A[z] < 1}
+invariant (z) { 3 < A[z] }
+invariant (z) { U[z] < 5 }
+invariant (z) { 7 < U[z]  }
+invariant (z) { D[z] < 7  }
+invariant (z) { 10 < D[z] }
+invariant (z) { M < 5 }
+invariant (z) { 7 < M }
 
 
 unsafe (z1 z2) { A[z1] = 3 && A[z2] = 2 }
