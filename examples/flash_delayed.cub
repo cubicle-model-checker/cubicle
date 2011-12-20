@@ -11,9 +11,7 @@ init (p) {
 }
 
 
-unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
-
-
+unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Shared }
 
 
 transition atom_WB (p)
@@ -43,7 +41,7 @@ CacheData[j] := {| j = p2 : CacheData[p1] | _ : CacheData[j] }
 
 transition atom_GetX_1 (p2)
 require { CacheState[p2] <> Exclusive }
-uguard (i) { CacheState[i] <> Exclusive }
+uguard (i) { CacheState[i] <> Exclusive && CacheState[i] <> Shared }
 CacheState[j] := {| j = p2 : Exclusive | _ : CacheState[j] }
 CacheData[j] := {| j = p2 : Memory | _ : CacheData[j] }
 
