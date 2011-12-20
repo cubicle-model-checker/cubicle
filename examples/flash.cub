@@ -217,3 +217,124 @@ UnetProc[j] := {| j = p : Head_pointer | _ : UnetProc[j] }
 UnetMtype[j] := {| j = p : Get | _ : UnetMtype[j] }
 UnetData[j] := {| j = p : Undefined | _ : UnetData[j] }
 
+transition NI_Local_Get5 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home &&
+	  Pending = False && Dirty = False &&
+	  Rp[p] = False && Head = False }
+assign { Head := True; Head_pointer := p }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Put | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Memory | _ : UnetData[j] }
+
+transition NI_Local_Get6 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home &&
+	  Pending = False && Dirty = False &&
+	  Rp[p] = False && Head = True }
+assign { List := True }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Put | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : Memory | _ : UnetData[j] }
+Shlist[j] := {| j = p : True | _ : Shlist[j] }
+Real[j] := {| j = p : True | _ : Shlist[j] }
+
+transition NI_Local_Get7 (p)
+require { Mi_mtype = Get && Home <> p && Mi_proc = Home &&
+	  Pending = False && Dirty = True &&
+	  Local = True && CacheState[Home] = Exclusive &&
+	  Rp[p] = False && Head = False }
+assign { Dirty := False; Head := True; Head_pointer := p ; 
+         Memory := CacheData[Home]; Last_WB := Home }
+UnetProc[j] := {| j = p : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = p : Put | _ : UnetMtype[j] }
+UnetData[j] := {| j = p : CacheData[Home] | _ : UnetData[j] }
+CacheData[j] := {| j = Home : Shared | _ : CacheData[j] }
+
+
+
+(*------------ check before -------------*)
+
+
+transition NI_Remote_Get1 (src dst)
+require { UnetMtype[src] = Get &&
+	  UnetProc[src] = dst && Home <> dst && 
+	  CacheState[dst] = Exclusive }
+assign { Fwd_get := Empty; Fwd_src := src; Nakc := True }
+UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : Undefined | _ : UnetData[j] }
+
+transition NI_Remote_Get2 (src dst)
+require { UnetMtype[src] = Get &&
+	  UnetProc[src] = dst && Home <> dst &&
+	  CacheState[dst] <> Exclusive && CacheInvmarked[src] = False &&
+	  Home = src }
+assign { Fwd_get := Empty; Fwd_src := src }
+CacheState[j] := {| j = src : Shared | _ : CacheState[j] }
+UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : Put | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
+
+transition NI_Remote_Get3 (src dst)
+require { UnetMtype[src] = Get &&
+	  UnetProc[src] = dst && Home <> dst &&
+	  CacheState[dst] <> Exclusive && CacheInvmarked[src] = False &&
+	  Home <> src }
+assign { Fwd_get := Empty; Fwd_src := src; 
+         Real_owner := Home; Shwb_src := dst;
+	 ShwbnetProc := src;
+	 ShwbnetMtype := ShWB;
+	 ShwbnetData := CacheData[dst] }
+CacheState[j] := {| j = src : Shared | _ : CacheState[j] }
+UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : Put | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
+
+
+
+
+
+transition NI_Local_GetX1 (src)
+require { UnetMtype[src] = GetX && Home <> src && UnetProc[src] = Home &&
+	  Pending = True }
+UnetProc[j] := {| j = src : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : Undefined | _ : UnetData[j] }
+
+transition NI_Local_GetX2 (src)
+require { UnetMtype[src] = GetX && Home <> src && UnetProc[src] = Home &&
+	  Pending = False && Dirty = True && Local = True &&
+	  CacheState[Home] <> Exclusive }
+UnetProc[j] := {| j = src : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : Undefined | _ : UnetData[j] }
+
+transition NI_Local_GetX3 (src)
+require { UnetMtype[src] = GetX && Home <> src && UnetProc[src] = Home &&
+	  Pending = False && Dirty = True && Local = False &&
+	  Head_pointer = src }
+UnetProc[j] := {| j = src : Home | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : Nak | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : Undefined | _ : UnetData[j] }
+
+transition NI_Local_GetX4 (src)
+require { UnetMtype[src] = GetX && Home <> src && UnetProc[src] = Home &&
+	  Pending = False && Dirty = True && Local = False &&
+	  Head_pointer <> src && Head_pointer = Home }
+assign { Pending := True; Collecting := False; Requester := src }
+UnetProc[j] := {| j = src : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : GetX | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : Undefined | _ : UnetData[j] }
+
+transition NI_Local_GetX5 (src)
+require { UnetMtype[src] = GetX && Home <> src && UnetProc[src] = Home &&
+	  Pending = False && Dirty = True && Local = False &&
+	  Head_pointer <> src && Head_pointer <> Home }
+assign { Pending := True; Collecting := False; Requester := src; 
+         Fwd_get := GetX }
+UnetProc[j] := {| j = src : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = src : GetX | _ : UnetMtype[j] }
+UnetData[j] := {| j = src : Undefined | _ : UnetData[j] }
+
+transition NI_Local_GetX6 (src)
+require { UnetMtype[src] = GetX && Home <> src && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False }
