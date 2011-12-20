@@ -794,11 +794,12 @@ let postpone args p np =
   let sa2 = SAtom.filter (has_args args) np in
   SAtom.equal sa2 sa1
 
-let uguard args = function
+let uguard args tr_args = function
   | None -> SAtom.empty
-  | Some (j, sa) -> 
+  | Some (j, sa) ->
+      let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.fold_left 
-	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty args
+	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty uargs
 
 let make_cubes =
   let cpt = ref 0 in
@@ -810,7 +811,8 @@ let make_cubes =
     List.fold_left
       (fun (ls, post) np ->
 	 let np, (nargs, _) = proper_cube np in
-	 let ureq = uguard nargs tr.tr_ureq in
+	 let tr_args = List.map snd sigma in
+	 let ureq = uguard nargs tr_args tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
 	 if inconsistent np then begin
@@ -818,7 +820,6 @@ let make_cubes =
 	   (ls, post)
 	 end
 	 else
-	   let tr_args = List.map snd sigma in
 	   if simpl_by_uc && already_closed s tr.tr_name tr_args <> None 
 	   then ls, post
 	   else

@@ -36,7 +36,7 @@ Shrset[j] := {| j = n : True | _ : Shrset[j] }
 Cache[j] := {| j = n : Shared | _ : Cache[j] }
 
 transition t6 (n)
-require { Curcmd = Reqe && Exgntd = False && Curptr = n}
+require { Shrset[n] = False && Curcmd = Reqe && Exgntd = False && Curptr = n}
 uguard (l) { Shrset[l] = False }
 assign { Curcmd := Empty; Exgntd := True }
 Shrset[j] := {| j = n : True | _ : Shrset[j] }
