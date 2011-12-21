@@ -14,8 +14,6 @@ init (p) {
 unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
 
 
-
-
 transition atom_WB (p)
 require { CacheState[p] = Exclusive }
 assign { Memory := CacheData[p] }

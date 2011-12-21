@@ -1,5 +1,5 @@
 type state = Invalid | Shared | Exclusive
-type data = Data1 | Data2 | Data3 | Data4
+type data
 
 globals = Memory[data] 
 
