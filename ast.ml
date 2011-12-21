@@ -102,14 +102,14 @@ let add a s =
 
   (* Substitute an indice variable j by i in a set of atoms *)
 
-let svar j i k = if k = j then i else k
+let svar sigma v = Hstring.list_assoc v sigma
     
 let subst_term sigma t = 
   match t with
     | Elem (x, s) -> 
-	(try Elem (Hstring.list_assoc x sigma, s) with Not_found -> t)
+	(try Elem (svar sigma x, s) with Not_found -> t)
     | Access (a, z) -> 
-	(try Access (a, Hstring.list_assoc z sigma) with Not_found -> t)
+	(try Access (a, svar sigma z) with Not_found -> t)
     | _ -> t
 	
 open Atom

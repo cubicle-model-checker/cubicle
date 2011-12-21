@@ -42,7 +42,7 @@ val alpha_vars : Hstring.t list
 val fresh_vars : Hstring.t list
 
 val add : Atom.t -> SAtom.t -> SAtom.t
-val svar : Hstring.t -> Hstring.t -> Hstring.t -> Hstring.t
+val svar : (Hstring.t * Hstring.t) list -> Hstring.t -> Hstring.t
 val subst_term : (Hstring.t * Hstring.t) list -> term -> term
 val subst_atom : (Hstring.t * Hstring.t) list -> Atom.t -> Atom.t
 val subst_atoms : (Hstring.t * Hstring.t) list -> SAtom.t -> SAtom.t

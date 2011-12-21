@@ -53,8 +53,10 @@ module Debug = struct
   let pre = 
     if not debug then fun _ _ -> () else 
       fun tr p ->
-	eprintf "\nResult of the pre for transition %s:@.%a@." 
-	  (H.view tr.tr_name) Pretty.print_cube p
+	eprintf "\nResult of the pre for transition %s (%a):@.%a@."
+	  (H.view tr.tr_name)
+	  Pretty.print_args tr.tr_args
+	  Pretty.print_cube p
 
   let pre_cubes = 
     if not debug then fun _ -> () else 
@@ -811,7 +813,7 @@ let make_cubes =
     List.fold_left
       (fun (ls, post) np ->
 	 let np, (nargs, _) = proper_cube np in
-	 let tr_args = List.map snd sigma in
+	 let tr_args = List.map (svar sigma) tr.tr_args in
 	 let ureq = uguard nargs tr_args tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
 	 if debug && !verbose > 0 then Debug.pre_cubes np;
@@ -850,7 +852,7 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
   else
     let sigma = build_subst args fresh_vars in
     { tr with 
-	tr_args = List.map snd sigma; 
+	tr_args = List.map (svar sigma) tr.tr_args; 
 	tr_reqs = subst_atoms sigma tr.tr_reqs;
 	tr_ureq = (match tr.tr_ureq with
 	  | None -> None
