@@ -1,6 +1,8 @@
 type location = L1 | L2 | L3 | L4 | L5 | L6 | L7
 
-arrays = A[proc,location] F[proc,int] P[proc, bool] 
+array A[proc] : location
+array F[proc] : int
+array P[proc] : bool
 
 init (x) { A[x] = L1 && P[x] = False && F[x] = 0 }
 

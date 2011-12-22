@@ -1,5 +1,5 @@
 type t = Idle | Wait | Crit
-arrays = A[proc,t]
+array A[proc] : t
 
 init (z) { A[z] = Idle }
 unsafe (z1 z2) { A[z1] = Crit && A[z2] = Crit }

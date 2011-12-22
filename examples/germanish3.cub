@@ -1,8 +1,13 @@
 type req = Empty | Reqs | Reqe | Inv | Invack
 type cstate = Invalid | Shared | Exclusive
 
-globals = Exgntd[bool] Curcmd[req] Curptr[proc]
-arrays = Cache[proc,cstate] Shrset[proc,bool] Chan[proc,req]
+var Exgntd : bool
+var Curcmd : req
+var Curptr : proc
+
+array Cache[proc] : cstate
+array Shrset[proc] : bool
+array Chan[proc] : req
 
 init (z) { Cache[z] = Invalid && Shrset[z] = False &&
            Exgntd = False && Curcmd = Empty && Chan[z]=Empty }
@@ -56,7 +61,7 @@ Shrset[j] := {| j = n : True | _ : Shrset[j] }
 Cache[j] := {| j = n : Shared | _ : Cache[j] }
 
 transition gnt_exclusive (n)
-require { Curcmd = Reqe && Exgntd = False && Curptr = n}
+require { Shrset[n] = False && Curcmd = Reqe && Exgntd = False && Curptr = n}
 uguard (l) { Shrset[l] = False }
 assign { Curcmd := Empty; Exgntd := True }
 Shrset[j] := {| j = n : True | _ : Shrset[j] }

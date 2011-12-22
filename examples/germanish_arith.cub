@@ -3,11 +3,22 @@ type req = Empty | Reqs | Reqe
 type cstate = Invalid | Shared | Exclusive
 *)
 
-globals = Exgntd[bool] Curcmd[int] Curptr[proc]
-arrays = Cache[proc,int] Shrset[proc,bool]
+var Exgntd : bool
+var Curcmd : int
+var Curptr : proc
+
+array Cache[proc] : int
+array Shrset[proc] : bool
 
 init (z) { Cache[z] = 1 && Shrset[z] = False &&
            Exgntd = False && Curcmd = 1 }
+
+
+(* encoding of subranges *)
+invariant (z) { Cache[z] < 1 }
+invariant (z) { 3 < Cache[z] }
+invariant (z) { Curcmd < 1 }
+invariant (z) { 3 < Curcmd }
 
 
 unsafe (z1 z2) { Cache[z1] = 3 && Cache[z2] = 2 }
@@ -40,7 +51,7 @@ Shrset[j] := {| j = n : True | _ : Shrset[j] }
 Cache[j] := {| j = n : 2 | _ : Cache[j] }
 
 transition t6 (n)
-require { Curcmd = 3 && Exgntd = False && Curptr = n}
+require {  Shrset[n] = False && Curcmd = 3 && Exgntd = False && Curptr = n}
 uguard (l) { Shrset[l] = False }
 assign { Curcmd := 1; Exgntd := True }
 Shrset[j] := {| j = n : True | _ : Shrset[j] }

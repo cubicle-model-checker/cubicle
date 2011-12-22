@@ -1,7 +1,14 @@
-globals = G[bool] M[int] F[bool]
+var G: bool
+var M: int
+var F: bool
 
-arrays = A[proc,int] U[proc,int] D[proc,int] T[proc,bool] 
-         C[proc,bool] S[proc,bool] L[proc,bool]
+array A[proc] : int
+array U[proc] : int
+array D[proc] : int
+array T[proc] : bool
+array C[proc] : bool 
+array S[proc] : bool
+array L[proc] : bool
 
 
 init (z) {

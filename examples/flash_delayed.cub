@@ -1,10 +1,11 @@
 type state = Invalid | Shared | Exclusive
 type data
 
-globals = Memory[data] 
+var Memory : data
 
-arrays = CacheState[proc,state] CacheData[proc,data] Register[proc,data]
-
+array CacheState[proc] : state
+array CacheData[proc] : data
+array Register[proc] : data
 
 init (p) { 		   
      CacheState[p] = Invalid

@@ -1,6 +1,6 @@
 type location = L1 | L2 | L3 | L4
 
-arrays = A[proc, location]
+array A[proc] : location
 
 init (z) { A[z] = L1 }
 

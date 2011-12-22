@@ -55,10 +55,17 @@ type msg3 = Empty3 | Invack
 *)
 
 
-globals = G[bool] M[msg1] F[bool]
+var G : bool
+var M : msg1
+var F : bool
 
-arrays = A[proc,state] U[proc,msg1] D[proc,msg2] T[proc,msg3] 
-         C[proc,bool] S[proc,bool] L[proc,bool]
+array A[proc] : state
+array U[proc] : msg1
+array D[proc] : msg2
+array T[proc] : msg3
+array C[proc] : bool
+array S[proc] : bool
+array L[proc] : bool
 
 
 init (z) {

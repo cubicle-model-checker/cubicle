@@ -1,18 +1,18 @@
 type state = Invalid | Shared | Exclusive
 type msg = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
 
-globals = 
-	 Exgntd[bool] 
-	 Curcmd[msg] 
-	 Curptr[proc] 
+ 
+var Exgntd : bool
+var Curcmd : msg 
+var Curptr : proc
 
-arrays = 
-         Chan1[proc,msg] 
-	 Chan2[proc,msg] 
-	 Chan3[proc,msg] 
-         Cache[proc,state] 
-	 Invset[proc,bool] 
-	 Shrset[proc,bool]
+
+array Chan1[proc] : msg
+array Chan2[proc] : msg 
+array Chan3[proc] : msg
+array Cache[proc] : state
+array Invset[proc] : bool
+array Shrset[proc] : bool
 
 (* init : slight difference between German.in *)
 

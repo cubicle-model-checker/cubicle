@@ -1,9 +1,14 @@
 type req = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
 type cstate = Invalid | Shared | Exclusive
 
-globals = Exgntd[bool] Curcmd[req] Curptr[proc]
-arrays = Cache[proc,cstate] Shrset[proc,bool] Chan1[proc,req] 
-       Chan3[proc,req]
+var Exgntd : bool
+var Curcmd : req
+var Curptr : proc
+
+array Cache[proc] : cstate
+array Shrset[proc] : bool
+array Chan1[proc] : req
+array Chan3[proc] : req
 
 init (z) { Cache[z] = Invalid && Shrset[z] = False &&
            Exgntd = False && Curcmd = Empty && 

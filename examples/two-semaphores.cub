@@ -1,7 +1,9 @@
 type location = L1 | L2 | L3 | L4
 
-globals = C[int] D[int] B[location]
-arrays = A[proc,location] 
+var C : int
+var D : int
+var B : location
+array A[proc] : location
 
 init (x) { A[x] = L1 && B = L1 && C = 1 && D = 0 }
 

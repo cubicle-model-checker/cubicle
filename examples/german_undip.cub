@@ -1,11 +1,16 @@
 type state = Invalid | Shared | Exclusive
 type msg = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
 
-globals = Exgntd[bool] Curcmd[msg] 
+var Exgntd : bool
+var Curcmd : msg
 
-arrays = Chan1[proc,msg] Chan2[proc,msg] Chan3[proc,msg] 
-         PC[proc,state] Invset[proc,bool] Shrset[proc,bool]
-	 Curclient[proc,bool]
+array Chan1[proc] : msg
+array Chan2[proc] : msg
+array Chan3[proc] : msg
+array PC[proc] : state
+array Invset[proc] : bool
+array Shrset[proc] : bool
+array Curclient[proc] : bool
 
 init (z) { 		   
      Chan1[z] = Empty &&

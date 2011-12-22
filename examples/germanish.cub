@@ -1,8 +1,12 @@
 type req = Empty | Reqs | Reqe
 type cstate = Invalid | Shared | Exclusive
 
-globals = Exgntd[bool] Curcmd[req] Curptr[proc]
-arrays = Cache[proc,cstate] Shrset[proc,bool]
+var Exgntd : bool
+var Curcmd : req
+var Curptr : proc
+
+array Cache[proc] : cstate
+array Shrset[proc] : bool
 
 init (z) { Cache[z] = Invalid && Shrset[z] = False &&
            Exgntd = False && Curcmd = Empty }

@@ -1,5 +1,6 @@
-globals = Turn[proc]
-arrays = Want[proc,bool] Crit[proc,bool]
+var Turn : proc
+array Want[proc] : bool
+array Crit[proc] : bool
 
 init (z) { Want[z] = False && Crit[z] = False }
 

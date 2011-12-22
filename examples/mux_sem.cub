@@ -1,7 +1,7 @@
 type location = L1 | L2 | L3 | L4
 
-globals = F[bool]
-arrays = A[proc,location]
+vat F : bool
+array A[proc] : location
 
 init (z) { A[z] = L1 }
  

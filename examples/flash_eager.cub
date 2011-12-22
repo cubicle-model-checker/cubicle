@@ -1,9 +1,10 @@
 type state = Invalid | Shared | Exclusive
 type data
 
-globals = Memory[data] 
+var Memory : data
 
-arrays = CacheState[proc,state] CacheData[proc,data]
+array CacheState[proc] : state
+array CacheData[proc] : data
 
 
 init (p) { 		   
