@@ -18,6 +18,3 @@ transition exit (i)
 require { PC[i] = L3}
 assign { Turn := . }
 PC[j] := {| i=j : L1 | _ : PC[j] }
-
-
-
