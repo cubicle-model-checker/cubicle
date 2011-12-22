@@ -26,8 +26,8 @@
 	"require", REQUIRE;
 	"uguard", UGUARD;
 	"assign", ASSIGN;
-        "arrays", ARRAYS;
-        "globals", GLOBALS;
+        "array", ARRAY;
+        "var", VAR;
         "unsafe", UNSAFE;
       ]
 	       

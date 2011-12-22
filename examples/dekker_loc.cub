@@ -1,6 +1,8 @@
 type loc = L1 | L2 | L3
-globals = Turn[proc]
-arrays = PC[proc,loc]
+
+array PC[proc] : loc
+var Turn : proc
+
 
 init (z) { PC[z] = L1 }
 

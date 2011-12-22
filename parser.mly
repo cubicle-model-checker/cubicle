@@ -55,7 +55,7 @@
 
 %}
 
-%token GLOBALS ARRAYS TYPE INIT TRANSITION INVARIANT
+%token VAR ARRAY TYPE INIT TRANSITION INVARIANT
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE
 %token OR AND COMMA PV DOT
 %token <string> LIDENT
@@ -77,29 +77,36 @@
 
 system:
 type_defs
-global_defs
-array_defs
+declarations
 init
 invariants
 unsafe
 transitions 
-{ { type_defs = $1; 
-    globals = $2;
-    arrays = $3; 
-    init = $4; 
-    invs = $5;
-    unsafe = $6; 
-    trans = $7 } }
+{ let vars, arrays = $2 in
+  { type_defs = $1; 
+    globals = vars;
+    arrays = arrays; 
+    init = $3; 
+    invs = $4;
+    unsafe = $5; 
+    trans = $6 } }
 ;
 
-global_defs:
-| { [] }
-| GLOBALS EQ globals { List.iter (fun (x,_) -> Globals.add x) $3; $3 }
+declarations :
+  | { [], [] }
+  | var_decl declarations { let vars, arrays = $2 in ($1::vars), arrays }
+  | array_decl declarations { let vars, arrays = $2 in vars, ($1::arrays) }
 ;
 
-array_defs:
-| { [] }
-| ARRAYS EQ arrays { List.iter (fun (x,_) -> Arrays.add x) $3; $3 }
+var_decl:
+  | VAR mident COLON lident { Globals.add $2; $2, $4 }
+;
+
+array_decl:
+| ARRAY mident LEFTSQ lident RIGHTSQ COLON lident 
+   { if Hstring.compare $4 hproc <> 0 then raise Parsing.Parse_error;
+     Arrays.add $2; 
+     $2, ($4, $7)}
 ;
 
 type_defs:
@@ -122,25 +129,7 @@ constructors:
 | mident BAR constructors { $1::$3 }
 ;
 
-globals:
-| global { [$1] }
-| global globals { $1::$2 }
-;
 
-global:
-| mident LEFTSQ lident RIGHTSQ { $1, $3 }
-;
-
-arrays:
-| array { [$1] }
-| array arrays { $1::$2 }
-;
-
-array:
-mident LEFTSQ lident COMMA lident RIGHTSQ 
-  { if Hstring.compare $3 hproc <> 0 then raise Parsing.Parse_error;
-    $1, ($3, $5) } 
-;
 
 init:
 INIT LEFTPAR lident_option RIGHTPAR LEFTBR cubes RIGHTBR 
