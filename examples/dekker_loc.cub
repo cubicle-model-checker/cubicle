@@ -3,7 +3,6 @@ type loc = L1 | L2 | L3
 array PC[proc] : loc
 var Turn : proc
 
-
 init (z) { PC[z] = L1 }
 
 unsafe (z1 z2) { PC[z1] = L3 && PC[z2] = L3 }
