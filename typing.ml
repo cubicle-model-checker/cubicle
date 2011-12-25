@@ -87,6 +87,24 @@ let unify (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
   then error (IncompatibleType (args_1, ty_1, args_2, ty_2))
 
+let refinements = Hstring.H.create 17
+
+let infer_type x1 x2 =
+  try
+    let h1 = match x1 with
+      | Const _ | Arith _ -> raise Exit
+      | Elem (h1, _) | Access (h1, _) -> h1
+    in
+    let ref_ty, ref_cs =
+      try Hstring.H.find refinements h1 with Not_found -> [], [] in
+    match x2 with
+      | Elem (e2, Constr) -> Hstring.H.add refinements h1 (e2::ref_ty, ref_cs)
+      | Elem (e2, Glob) -> Hstring.H.add refinements h1 (ref_ty, e2::ref_cs)
+      | _ -> ()
+  with Exit -> ()
+
+let refinement_cycles () = (* TODO *) ()
+
 let term args = function
   | Const _ -> [], Smt.Typing.type_int
   | Elem (e, Var) ->
