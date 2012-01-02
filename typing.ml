@@ -108,8 +108,10 @@ let refinement_cycles () = (* TODO *) ()
 let term args = function
   | Const _ -> [], Smt.Typing.type_int
   | Elem (e, Var) ->
-      if not (Hstring.list_mem e args) then error (UnknownName e);
-      [], Smt.Typing.type_proc
+      if Hstring.list_mem e args then [], Smt.Typing.type_proc
+      else begin 
+	try Smt.Typing.find e with Not_found -> error (UnknownName e)
+      end
   | Elem (e, _) -> Smt.Typing.find e
   | Arith (x, (Var | Constr | Arr), _, _) ->
       error (MustBeOfType (x, Smt.Typing.type_int))
@@ -127,8 +129,13 @@ let term args = function
       let args_a, ty_a = 
 	try Smt.Typing.find a with Not_found -> error (UnknownArray a) in
       let ty_i =
-	if not (Hstring.list_mem i args) then  error (UnknownName i);
-	Smt.Typing.type_proc
+	if Hstring.list_mem i args then Smt.Typing.type_proc
+	else 
+	  try 
+	    let ia, tyi = Smt.Typing.find i in
+	    if ia <> [] then error (MustBeOfTypeProc i);
+	    tyi
+	  with Not_found -> error (UnknownName i) 
       in
       if args_a = [] then error (MustBeAnArray a);
       if not (Hstring.equal ty_i Smt.Typing.type_proc) then

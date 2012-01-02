@@ -59,9 +59,9 @@ module Debug = struct
 	  Pretty.print_cube p
 
   let pre_cubes = 
-    if not debug then fun _ -> () else 
-      fun p ->
-	eprintf "Cubes:%a@." Pretty.print_cube p
+    if not debug then fun _ _ -> () else 
+      fun p args ->
+	eprintf "Cubes (%a) :%a@." Pretty.print_args args Pretty.print_cube p
 
 end
 
@@ -562,6 +562,14 @@ let find_impossible a1 x1 op c1 i2 a2 n2 impos obvs =
     incr i2
   done
 
+let add_obv ((x,y) as p) obvs =
+  begin
+    try if not (H.equal (H.list_assoc x !obvs) y) then 
+	raise NoPermutations
+    with Not_found -> ()
+  end;
+  obvs := p :: !obvs
+
 let obvious_impossible a1 a2 =
   let n1 = Array.length a1 in
   let n2 = Array.length a2 in
@@ -581,13 +589,13 @@ let obvious_impossible a1 a2 =
 		   when H.equal x1 x2 && not (H.equal y1 y2) ->
     		   raise NoPermutations
     	       | Glob, Var, Glob, Var when H.equal x1 x2 ->
-    		   obvs := (y1,y2) :: !obvs
+		   add_obv (y1,y2) obvs
     	       | Glob, Var, Var, Glob when H.equal x1 y2 ->
-    		   obvs := (y1,x2) :: !obvs
+    		   add_obv (y1,x2) obvs
     	       | Var, Glob, Glob, Var when H.equal y1 x2 ->
-    		   obvs := (x1,y2) :: !obvs
+    		   add_obv (x1,y2) obvs
     	       | Var, Glob, Var, Glob when H.equal y1 y2 ->
-    		   obvs := (x1,x2) :: !obvs
+    		   add_obv (x1,x2) obvs
     	       | _ -> ()
     	   end
        | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
@@ -816,7 +824,7 @@ let make_cubes =
 	 let tr_args = List.map (svar sigma) tr.tr_args in
 	 let ureq = uguard nargs tr_args tr.tr_ureq in
 	 let np = SAtom.union ureq np in 
-	 if debug && !verbose > 0 then Debug.pre_cubes np;
+	 if debug && !verbose > 0 then Debug.pre_cubes np nargs;
 	 if inconsistent np then begin
 	   if debug && !verbose > 0 then eprintf "(inconsistent)@.";
 	   (ls, post)

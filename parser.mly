@@ -142,7 +142,7 @@ invariants:
 ;
 
 invariant:
-| INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cubes RIGHTBR { $3, $6 }
+| INVARIANT LEFTPAR lident_plus RIGHTPAR LEFTBR cubes RIGHTBR { $3, $6 }
 ;
 
 
@@ -245,6 +245,7 @@ term:
 | mident { Elem ($1, sort $1) }
 | lident { Elem ($1, Var) }
 | mident LEFTSQ lident RIGHTSQ { Access($1,$3) }
+| mident LEFTSQ mident RIGHTSQ { Access($1,$3) }
 | mident PLUS INT { Arith($1, sort $1, Plus, $3) }
 | mident MINUS INT { Arith($1, sort $1, Minus, $3) }
 | INT { Const $1 }
