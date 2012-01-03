@@ -71,33 +71,30 @@ unsafe (p1 p2) { Home = p1 && CacheState[p1] = Exclusive && CacheState[p2] = Exc
 
 
 
-transition pi_Local_Get_Dirty (p)
-require { Home = p &&
-	  CacheState[p] = Invalid && CacheWait[p] = None && 
+transition pi_Local_Get_Dirty ()
+require { CacheState[Home] = Invalid && CacheWait[Home] = None && 
 	  Pending = False && Dirty = True }
 assign { Pending := True }
-CacheWait[j] := {| j = p : WGet | _ : CacheWait[j] }
-UnetProc[j] := {| j = p : Head_pointer | _ : UnetProc[j] }
-UnetMtype[j] := {| j = p : Get | _ : UnetMtype[j] }
-(* UnetData[j] := {| j = p : Undefined | _ : UnetData[j] } *)
+CacheWait[j] := {| j = Home : WGet | _ : CacheWait[j] }
+UnetProc[j] := {| j = Home : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = Home : Get | _ : UnetMtype[j] }
+(* UnetData[j] := {| j = Home : Undefined | _ : UnetData[j] } *)
 
-transition pi_Local_Get_Other1 (p)
-require { Home = p &&
-	  CacheState[p] = Invalid && CacheWait[p] = None && 
-	  Pending = False && Dirty = False && CacheInvmarked[p] = True }
+transition pi_Local_Get_Other1 ()
+require { CacheState[Home] = Invalid && CacheWait[Home] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[Home] = True }
 assign { Local := True }
-CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
-CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
-CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+CacheWait[j] := {| j = Home : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = Home : False | _ : CacheInvmarked[j] }
+CacheState[j] := {| j = Home : Invalid | _ : CacheState[j] }
 
-transition pi_Local_Get_Other2 (p)
-require { Home = p &&
-	  CacheState[p] = Invalid && CacheWait[p] = None && 
-	  Pending = False && Dirty = False && CacheInvmarked[p] = False }
+transition pi_Local_Get_Other2 ()
+require { CacheState[Home] = Invalid && CacheWait[Home] = None && 
+	  Pending = False && Dirty = False && CacheInvmarked[Home] = False }
 assign { Local := True }
-CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
-CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
-CacheState[j] := {| j = p : Shared | _ : CacheState[j] }
+CacheWait[j] := {| j = Home : None | _ : CacheWait[j] }
+CacheData[j] := {| j = Home : Memory | _ : CacheData[j] }
+CacheState[j] := {| j = Home : Shared | _ : CacheState[j] }
 
 
 
@@ -111,43 +108,42 @@ UnetMtype[j] := {| j = src : Get | _ : UnetMtype[j] }
 
 
 
-transition pi_Local_GetX_Dirty (p)
-require { Home = p &&
-	  CacheState[p] <> Exclusive && CacheWait[p] = None &&
+transition pi_Local_GetX_Dirty ()
+require { CacheState[Home] <> Exclusive && CacheWait[Home] = None &&
 	  Pending = False && Dirty = True }
 assign { Pending := True }
-CacheWait[j] := {| j = p : WGetX | _ : CacheWait[j] }
-UnetProc[j] := {| j = p : Head_pointer | _ : UnetProc[j] }
-UnetMtype[j] := {| j = p : GetX | _ : UnetMtype[j] }
-(* UnetData[j] := {| j = p : Undefined | _ : UnetData[j] } *)
+CacheWait[j] := {| j = Home : WGetX | _ : CacheWait[j] }
+UnetProc[j] := {| j = Home : Head_pointer | _ : UnetProc[j] }
+UnetMtype[j] := {| j = Home : GetX | _ : UnetMtype[j] }
+(* UnetData[j] := {| j = Home : Undefined | _ : UnetData[j] } *)
 
-transition pi_Local_GetX_Other (p)
-require { Home = p && Head_valid = False &&
-	  CacheState[p] <> Exclusive && CacheWait[p] = None && 
+transition pi_Local_GetX_Other ()
+require { Head_valid = False &&
+	  CacheState[Home] <> Exclusive && CacheWait[Home] = None && 
 	  Pending = False && Dirty = False }
 assign { Local := True; Dirty := True }
-CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
-CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
-CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
-CacheState[j] := {| j = p : Exclusive | _ : CacheState[j] }
+CacheData[j] := {| j = Home : Memory | _ : CacheData[j] }
+CacheWait[j] := {| j = Home : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = Home : False | _ : CacheInvmarked[j] }
+CacheState[j] := {| j = Home : Exclusive | _ : CacheState[j] }
 
-transition pi_Local_GetX_Other_head (p)
-require { Home = p && Head_valid = True &&
-	  CacheState[p] <> Exclusive && CacheWait[p] = None && 
+transition pi_Local_GetX_Other_head ()
+require { Head_valid = True &&
+	  CacheState[Home] <> Exclusive && CacheWait[Home] = None && 
 	  Pending = False && Dirty = False }
 assign { Local := True; Dirty := True;
 	 Pending := True;
 	 Head_valid := False }
-CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
-CacheWait[j] := {| j = p : None | _ : CacheWait[j] }
-CacheInvmarked[j] := {| j = p : False | _ : CacheInvmarked[j] }
-CacheState[j] := {| j = p : Exclusive | _ : CacheState[j] }
+CacheData[j] := {| j = Home : Memory | _ : CacheData[j] }
+CacheWait[j] := {| j = Home : None | _ : CacheWait[j] }
+CacheInvmarked[j] := {| j = Home : False | _ : CacheInvmarked[j] }
+CacheState[j] := {| j = Home : Exclusive | _ : CacheState[j] }
 Shlist[j] := {| _ : False }
-Invnet[j] := {| j = p : Empty_inv
+Invnet[j] := {| j = Home : Empty_inv
 	      | j = Head_pointer : Inv
 	      | Shlist[j] = True : Inv
 	      | _ : Empty_inv }
-Real[j] := {| j = p : False 
+Real[j] := {| j = Home : False 
 	    | j = Head_pointer : True 
 	    | _ : Shlist[j] }
 
@@ -164,19 +160,17 @@ UnetMtype[j] := {| j = src : GetX | _ : UnetMtype[j] }
 
 
 
-transition pi_Local_PutX_Pending (p)
-require { Home = p &&
-	  CacheState[p] = Exclusive && CacheWait[p] = None &&
+transition pi_Local_PutX_Pending ()
+require { CacheState[Home] = Exclusive && CacheWait[Home] = None &&
 	  Pending = True}
-assign { Dirty := False; Memory := CacheData[p] }
-CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+assign { Dirty := False; Memory := CacheData[Home] }
+CacheState[j] := {| j = Home : Invalid | _ : CacheState[j] }
 
-transition pi_Local_PutX_Other (p)
-require { Home = p &&
-	  CacheState[p] = Exclusive && CacheWait[p] = None &&
+transition pi_Local_PutX_Other ()
+require { CacheState[Home] = Exclusive && CacheWait[Home] = None &&
 	  Pending = True}
-assign { Local := False; Dirty := False; Memory := CacheData[p] }
-CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+assign { Local := False; Dirty := False; Memory := CacheData[Home] }
+CacheState[j] := {| j = Home : Invalid | _ : CacheState[j] }
 
 
 transition pi_Remote_PutX (dst)
@@ -186,10 +180,10 @@ CacheState[j] := {| j = dst : Invalid | _ : CacheState[j] }
 
 
 
-transition pi_Local_Replace (p)
-require { Home = p && CacheState[p] = Shared && CacheWait[p] = None }
+transition pi_Local_Replace ()
+require { CacheState[Home] = Shared && CacheWait[Home] = None }
 assign { Local := False }
-CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+CacheState[j] := {| j = Home : Invalid | _ : CacheState[j] }
 
 
 
@@ -272,15 +266,14 @@ UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
 UnetMtype[j] := {| j = src : Nak | _ : UnetMtype[j] }
 (* UnetData[j] := {| j = src : Undefined | _ : UnetData[j] } *)
 
-transition ni_Remote_Get2 (src dst)
-require { UnetMtype[src] = Get &&
-	  UnetProc[src] = dst && Home <> dst &&
-	  CacheState[dst] = Exclusive && CacheInvmarked[src] = False &&
-	  Home = src }
-CacheState[j] := {| j = src : Shared | _ : CacheState[j] }
-UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
-UnetMtype[j] := {| j = src : Put | _ : UnetMtype[j] }
-UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
+transition ni_Remote_Get2 (dst)
+require { UnetMtype[Home] = Get &&
+	  UnetProc[Home] = dst && Home <> dst &&
+	  CacheState[dst] = Exclusive && CacheInvmarked[Home] = False }
+CacheState[j] := {| j = dst : Shared | _ : CacheState[j] }
+UnetProc[j] := {| j = Home : dst | _ : UnetProc[j] }
+UnetMtype[j] := {| j = Home : Put | _ : UnetMtype[j] }
+UnetData[j] := {| j = Home : CacheData[dst] | _ : UnetData[j] }
 
 transition ni_Remote_Get3 (src dst)
 require { UnetMtype[src] = Get &&
@@ -290,7 +283,7 @@ require { UnetMtype[src] = Get &&
 assign { ShWBnet_proc := src;
 	 ShWBnet_mtype := ShWB;
 	 ShWBnet_data := CacheData[dst] }
-CacheState[j] := {| j = src : Shared | _ : CacheState[j] }
+CacheState[j] := {| j = dst : Shared | _ : CacheState[j] }
 UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
 UnetMtype[j] := {| j = src : Put | _ : UnetMtype[j] }
 UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
@@ -442,14 +435,14 @@ UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
 UnetMtype[j] := {| j = src : Nak | _ : UnetMtype[j] }
 (* UnetData[j] := {| j = src : Undefined | _ : UnetData[j] } *)
 
-transition ni_Remote_GetX2 (src dst)
-require { UnetMtype[src] = GetX &&
-	  UnetProc[src] = dst && Home <> dst &&
-	  CacheState[dst] = Exclusive && Home = src }
-CacheState[j] := {| j = src : Invalid | _ : CacheState[j] }
-UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
-UnetMtype[j] := {| j = src : PutX | _ : UnetMtype[j] }
-UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
+transition ni_Remote_GetX2 (dst)
+require { UnetMtype[Home] = GetX &&
+	  UnetProc[Home] = dst && Home <> dst &&
+	  CacheState[dst] = Exclusive }
+CacheState[j] := {| j = dst : Invalid | _ : CacheState[j] }
+UnetProc[j] := {| j = Home : dst | _ : UnetProc[j] }
+UnetMtype[j] := {| j = Home : PutX | _ : UnetMtype[j] }
+UnetData[j] := {| j = Home : CacheData[dst] | _ : UnetData[j] }
 
 transition ni_Remote_GetX3 (src dst)
 require { UnetMtype[src] = GetX &&
@@ -458,7 +451,7 @@ require { UnetMtype[src] = GetX &&
 assign { ShWBnet_proc := src;
 	 ShWBnet_mtype := FAck
 	 (* ShWBnet_data := Undefined *) }
-CacheState[j] := {| j = src : Invalid | _ : CacheState[j] }
+CacheState[j] := {| j = dst : Invalid | _ : CacheState[j] }
 UnetProc[j] := {| j = src : dst | _ : UnetProc[j] }
 UnetMtype[j] := {| j = src : Put | _ : UnetMtype[j] }
 UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
@@ -467,8 +460,8 @@ UnetData[j] := {| j = src : CacheData[dst] | _ : UnetData[j] }
 
 
 
-transition ni_Local_Put1 (dst)
-require { Home = dst && UnetMtype[Home] = Put &&
+transition ni_Local_Put1 ()
+require { UnetMtype[Home] = Put &&
 	  CacheInvmarked[Home] = True }
 assign { Pending := False; Dirty := False; Local := True;
          Memory := UnetData[Home] }
@@ -477,8 +470,8 @@ CacheWait[j] := {| j = Home : None | _ : CacheWait[j] }
 CacheInvmarked[j] := {| j = Home : False | _ : CacheInvmarked[j] }
 CacheState[j] := {| j = Home : Invalid | _ : CacheState[j] }
 
-transition ni_Local_Put2 (dst)
-require { Home = dst && UnetMtype[Home] = Put &&
+transition ni_Local_Put2 ()
+require { UnetMtype[Home] = Put &&
 	  CacheInvmarked[Home] = False }
 assign { Pending := False; Dirty := False; Local := True;
          Memory := UnetData[Home] }
@@ -511,8 +504,8 @@ CacheState[j] := {| j = dst : Shared | _ : CacheState[j] }
 
 
 
-transition ni_Local_PutXAcksDone (dst)
-require { Home = dst && UnetMtype[Home] = PutX }
+transition ni_Local_PutXAcksDone ()
+require { UnetMtype[Home] = PutX }
 assign { Pending := False; Head_valid := False; Local := True }
 UnetMtype[j] := {| j = Home : Empty | _ : UnetMtype[j] }
 CacheData[j] := {| j = Home : UnetData[Home] | _ : CacheData[j] }
