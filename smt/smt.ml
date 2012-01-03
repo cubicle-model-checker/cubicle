@@ -20,6 +20,7 @@ let calls = ref 0
 module Time = Timer.Make(struct end)
 
 module H = Hstring.H
+module HSet = Hstring.HSet
 
 module Typing = struct
 
@@ -78,6 +79,94 @@ module Typing = struct
 	decl_symbs;
     end;
     res
+
+  module Variant = struct
+    
+    let constructors = H.create 17
+    let assignments = H.create 17
+
+    let find t x = try H.find t x with Not_found -> HSet.empty
+
+    let add t x v = 
+      let s = find t x in
+      H.replace t x (HSet.add v s)
+
+    let assign_constr = add constructors
+
+    let assign_var x y = 
+      if not (Hstring.equal x y) then
+	add assignments x y
+
+    let rec compute () = 
+      let flag = ref false in
+      let visited = ref HSet.empty in
+      let rec dfs x s = 
+	if not (HSet.mem x !visited) then
+	  begin
+	    visited := HSet.add x !visited;
+	    HSet.iter 
+	      (fun y -> 
+		 let c_x = find constructors x in
+		 let c_y = find constructors y in
+		 let c = HSet.union c_x c_y in
+		 if not (HSet.equal c c_x) then
+		   begin
+		     H.replace constructors x c;
+		     flag := true
+		   end;
+		 dfs y (find assignments y)
+	      ) s
+	  end
+      in
+      H.iter dfs assignments;
+      if !flag then compute ()
+      
+    let hset_print fmt s = 
+      HSet.iter (fun c -> Format.eprintf "%a, " Hstring.print c) s
+
+    let print () = 
+      H.iter 
+	(fun x c -> 
+	   Format.eprintf "%a = {%a}@." Hstring.print x hset_print c) 
+	constructors
+ 
+    let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
+
+    let init l = 
+      compute ();
+      List.iter 
+	(fun (x, nty) -> 
+	   if not (H.mem constructors x) then
+	     let ty = H.find decl_types nty in
+	     match ty with
+	       | Ty.Tsum (_, l) ->
+		   H.add constructors x (set_of_list l)
+	       | _ -> ()) l;
+      H.clear assignments
+
+    let update_decl_types s = 
+      let nty = ref "" in
+      let l = ref [] in
+      HSet.iter 
+	(fun x -> 
+	   l := x :: !l; 
+	   let vx = Hstring.view x in 
+	   nty := if !nty = "" then vx else !nty ^ "|" ^ vx) s;
+      let nty = Hstring.make !nty in
+      let ty = Ty.Tsum (nty, List.rev !l) in
+      H.replace decl_types nty ty;
+      nty
+
+    let close () = 
+      compute ();
+      H.iter 
+	(fun x s -> 
+	   let nty = update_decl_types s in
+	   let sy, args, _ = H.find decl_symbs x in
+	   H.replace decl_symbs x (sy, args, nty))
+	constructors
+      
+  end
     
   let _ = 
     H.add decl_symbs (Hstring.make "True") 

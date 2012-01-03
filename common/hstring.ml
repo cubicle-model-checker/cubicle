@@ -76,6 +76,8 @@ include HS
 
 module H = Hashtbl.Make(HS)
 
+module HSet = Set.Make(HS)
+
 (* struct *)
 (*   include Hashtbl.Make(HS) *)
 

@@ -27,6 +27,17 @@ module Typing : sig
   val declare_type : Hstring.t * Hstring.t list -> unit
   val declare_name : Hstring.t -> Hstring.t list -> Hstring.t -> unit
 
+  module Variant : sig
+
+    val init : (Hstring.t * Hstring.t) list -> unit
+    val close : unit -> unit
+
+    val assign_constr : Hstring.t -> Hstring.t -> unit
+    val assign_var : Hstring.t -> Hstring.t -> unit
+
+    val print : unit -> unit
+  end
+
   val find : Hstring.t -> Hstring.t list * Hstring.t
 
   val declared : Hstring.t -> bool

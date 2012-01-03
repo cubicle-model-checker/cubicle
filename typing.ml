@@ -142,17 +142,40 @@ let term args = function
 	error (MustBeOfTypeProc i);	    
       [], ty_a
 
-let atom args = function
+let assignment ?(init_variant=false) g x (_, ty) = 
+  if ty = Smt.Typing.type_proc 
+    || ty = Smt.Typing.type_bool
+    || ty = Smt.Typing.type_int
+  then ()
+  else
+    match x with
+      | Elem (n, Constr) -> 
+	  Smt.Typing.Variant.assign_constr g n
+      | Elem (n, _) | Access (n, _) -> 
+	  Smt.Typing.Variant.assign_var g n;
+	  if init_variant then 
+	    Smt.Typing.Variant.assign_var n g
+      | _ -> ()
+
+let atom init_variant args = function
   | True | False -> ()
-  | Comp (x, op, y) -> unify (term args x) (term args y)
+  | Comp (Elem(g, Glob) as x, Eq, y)
+  | Comp (y, Eq, (Elem(g, Glob) as x))
+  | Comp (y, Eq, (Access(g, _) as x))
+  | Comp (Access(g, _) as x, Eq, y) -> 
+      let ty = term args y in
+      unify (term args x) ty;
+      if init_variant then assignment ~init_variant g y ty
+  | Comp (x, op, y) -> 
+      unify (term args x) (term args y)
   | Ite _ -> assert false
 
-let atoms args = SAtom.iter (atom args)
+let atoms ?(init_variant=false) args = SAtom.iter (atom init_variant args)
 
 let init (arg, sa) =
   match arg with
-    | None -> atoms [] sa
-    | Some z -> atoms [z] sa
+    | None -> atoms ~init_variant:true [] sa
+    | Some z -> atoms ~init_variant:true  [z] sa
 
 let unsafe (args, sa) = 
   unique (fun x-> error (DuplicateName x)) args; 
@@ -178,16 +201,19 @@ let assigns args =
 	 try Smt.Typing.find g with Not_found -> error (UnknownGlobal g) in
        let ty_x = term args x in
        unify ty_x ty_g;
+       assignment g x ty_x;
        dv := g ::!dv)
     
-let switchs args ty_e (l, ut) = 
+let switchs a args ty_e (l, ut) = 
   List.iter 
     (fun (sa, t) -> 
        atoms args sa; 
        let ty = term args t in
-       unify ty ty_e) l;
+       unify ty ty_e;
+       assignment a t ty) l;
   let ty = term args ut in
-  unify ty ty_e
+  unify ty ty_e;
+  assignment a ut ty
 
 let updates args = 
   List.iter 
@@ -197,7 +223,7 @@ let updates args =
 	 try Smt.Typing.find a with Not_found -> error (UnknownArray a)
        in       
        if args_a = [] then error (MustBeAnArray a);
-       switchs (j::args) ([], ty_a) swts) 
+       switchs a (j::args) ([], ty_a) swts) 
 
 let transitions = 
   List.iter 
@@ -211,20 +237,29 @@ let transitions =
 
 let init_global_env s = 
   List.iter Smt.Typing.declare_type s.type_defs;
+  let l = ref [] in
   List.iter 
-    (fun (n, t) -> Smt.Typing.declare_name n [] t) s.globals;
+    (fun (n, t) -> 
+       Smt.Typing.declare_name n [] t;
+       l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (n, (arg, ret)) -> Smt.Typing.declare_name n [arg] ret) s.arrays
+    (fun (n, (arg, ret)) -> 
+       Smt.Typing.declare_name n [arg] ret;
+       l := (n, ret)::!l) s.arrays;
+  !l
 
 let init_proc () = 
   List.iter 
     (fun n -> Smt.Typing.declare_name n [] Smt.Typing.type_proc) proc_vars
 
 let system s = 
-  init_global_env s;
+  let l = init_global_env s in
   init s.init;
+  Smt.Typing.Variant.init l;
   unsafe s.unsafe;
   transitions s.trans;
+  Smt.Typing.Variant.close ();
+  if Options.debug then Smt.Typing.Variant.print ();
   let args, p = s.unsafe in
   let arru = ArrayAtom.of_satom p in
   { 

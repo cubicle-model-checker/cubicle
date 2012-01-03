@@ -42,3 +42,4 @@ val compare_list : t list -> t list -> int
 val print : Format.formatter -> t -> unit
 
 module H : Hashtbl.S with type key = t
+module HSet : Set.S with type elt = t
