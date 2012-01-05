@@ -1030,7 +1030,7 @@ let worker_inv search invariants not_invs p =
     if impossible_inv p !not_invs then Nothing
     else begin  
       search ~invariants:!invariants ~visited:[] p; 
-      eprintf "Good! We found an invariant :-) \n %a @." 
+      if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
 	Pretty.print_system p;
       Inv
     end
@@ -1082,7 +1082,7 @@ let gen_inv search ~invariants not_invs s =
 	 if impossible_inv p not_invs then invs, not_invs
 	 else begin  
 	   search ~invariants:invariants ~visited:[] p; 
-	   eprintf "Good! We found an invariant :-) \n %a @." 
+	   if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
 	     Pretty.print_system p;
 	   p::invs, not_invs
 	 end
@@ -1099,8 +1099,9 @@ let gen_inv_proc search invs not_invs s =
 	  if impossible_inv p not_invs then acc
 	  else begin
 	    search ~invariants:invs ~visited:[] p; 
-	    eprintf "Good! We found an invariant :-) \n %a @." 
-	      Pretty.print_system p;
+	    if not quiet then 
+	      eprintf "Good! We found an invariant :-) \n %a @." 
+		Pretty.print_system p;
 	    p::new_invs, p::invs, new_not_invs, not_invs
 	  end
 	with Search.Unsafe | Search.ReachBound ->
@@ -1116,8 +1117,8 @@ let extract_candidates s not_invs =
 let is_inv search p invs =
   try
     search ~invariants:invs ~visited:[] p; 
-    eprintf "Good! We found an invariant :-) \n %a @." 
-      Pretty.print_system p;
+    if not quiet then 
+      eprintf "Good! We found an invariant :-) \n %a @." Pretty.print_system p;
     true
   with Search.Unsafe | Search.ReachBound -> false
 

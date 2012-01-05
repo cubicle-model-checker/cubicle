@@ -31,6 +31,7 @@ val cores : int
 val mode : mode
 
 val debug : bool
+val quiet : bool
 val verbose : int ref
 
 val debug_smt : bool

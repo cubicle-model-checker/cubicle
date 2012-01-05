@@ -191,7 +191,7 @@ module DFS ( X : I ) = struct
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	raise ReachBound;
       incr nb_nodes;
-      Profiling.print "DFS" !nb_nodes (X.size s);
+      if not quiet then Profiling.print "DFS" !nb_nodes (X.size s);
       X.safety s;
       if not (X.fixpoint ~invariants:invariants ~visited:visited s) then
 	let ls, post = X.pre s in
@@ -212,7 +212,7 @@ module DFSL ( X : I ) = struct
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	raise ReachBound;
       incr nb_nodes;
-      Profiling.print "DFSL" !nb_nodes (X.size s);
+      if not quiet then Profiling.print "DFSL" !nb_nodes (X.size s);
       X.safety s;
       if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
 	begin
@@ -255,7 +255,7 @@ module DFSH ( X : I ) = struct
     let rec search_rec h =
       let (cpt, s, visited), h = H.pop h in
       incr nb_nodes;
-      Profiling.print "DFSH" !nb_nodes (X.size s);
+      if not quiet then Profiling.print "DFSH" !nb_nodes (X.size s);
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	raise ReachBound;
       X.safety s;
@@ -298,11 +298,13 @@ module BFS_base ( X : I ) = struct
       then
 	begin
 	  incr nb_nodes;
-	  Profiling.print "BFS" !nb_nodes (X.size s);
-	  let prefpr = 
-	    if (not invgen) && gen_inv then "     inv gen " else " " in
-	  printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
-	    (if debug then fun _ _ -> () else X.print) s;
+	  if not quiet then begin
+	    Profiling.print "BFS" !nb_nodes (X.size s);
+	    let prefpr = 
+	      if (not invgen) && gen_inv then "     inv gen " else " " in
+	    printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+	      (if debug then fun _ _ -> () else X.print) s
+	  end;
 	  let ls, post = X.pre s in
 	  let ls = List.rev ls in
 	  let post = List.rev post in
@@ -338,7 +340,8 @@ module BFS_base ( X : I ) = struct
 	if !postponed = [] then ()
 	else 
 	  begin
-	    Profiling.print "Postpones" (List.length !postponed) 0;
+	    if not quiet then
+	      Profiling.print "Postpones" (List.length !postponed) 0;
 	    (* postponed := X.sort !postponed; *)
 	    List.iter (fun s -> Queue.add (0, s) q) !postponed;
 	    postponed := [];
@@ -381,8 +384,8 @@ module BFSinvp_base ( X : I ) = struct
       then
 	begin
 	  incr nb_nodes;
-	  Profiling.print "BFSinvp" !nb_nodes (X.size s);
-	  printf " node %d= @[%a@]@." !nb_nodes 
+	  if not quiet then Profiling.print "BFSinvp" !nb_nodes (X.size s);
+	  if not quiet then printf " node %d= @[%a@]@." !nb_nodes 
 	    (if debug then fun _ _ -> () else X.print) s;
 	  let ls, post = X.pre s in
 	  let ls = List.rev ls in
@@ -413,7 +416,8 @@ module BFSinvp_base ( X : I ) = struct
 	if !postponed = [] then ()
 	else 
 	  begin
-	    Profiling.print "Postpones" (List.length !postponed) 0;
+	    if not quiet then
+	      Profiling.print "Postpones" (List.length !postponed) 0;
 	    (* postponed := X.sort !postponed; *)
 	    List.iter (fun s -> Queue.add (0, s) q) !postponed;
 	    postponed := [];
@@ -493,42 +497,42 @@ module BFS_dist_base ( X : I ) = struct
 	  | Unsafe_res, _ -> raise Unsafe
 	  | ReachBound_res, _ -> raise ReachBound
 	  | Fix, _ ->
-	    decr remaining_tasks;
-	    if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
-	    (* if invgen && gen_inv && !remaining_tasks = 0 then raise Killgeninv; *)
-	    incr Profiling.cpt_fix; []
+	      decr remaining_tasks;
+	      if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
+	      (* if invgen && gen_inv && !remaining_tasks = 0 then raise Killgeninv; *)
+	      incr Profiling.cpt_fix; []
 	  | NotFix, Fixcheck (s, cpt, _) ->
-	    new_nodes := (cpt, s) :: !new_nodes;
-	    decr remaining_tasks;
-	    if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
-	    if invgen && gen_inv (* && !nb_inv_search < 2 *) then
-	      begin
-	    	(* if !remaining_tasks = 0 then raise Killgeninv; *)
-	    	incr nb_inv_search;
-	    	[Geninv (s, !invariants, !not_invariants), ()]
-	      end
-	    (* Inefficient alternative : *)
-	    (* if invgen && gen_inv then *)
-	    (*   begin *)
-	    (* 	if !remaining_tasks = 0 then raise Killgeninv; *)
-	    (* 	let candidates = X.extract_candidates s !not_invariants in *)
-	    (* 	List.map (fun p -> Tryinv (s, !invariants), ()) candidates *)
-	    (*   end *)
-	    else []
+	      new_nodes := (cpt, s) :: !new_nodes;
+	      decr remaining_tasks;
+	      if debug then eprintf "remaining tasks = %d@." !remaining_tasks;
+	      if invgen && gen_inv (* && !nb_inv_search < 2 *) then
+		begin
+	    	  (* if !remaining_tasks = 0 then raise Killgeninv; *)
+	    	  incr nb_inv_search;
+	    	  [Geninv (s, !invariants, !not_invariants), ()]
+		end
+		  (* Inefficient alternative : *)
+		  (* if invgen && gen_inv then *)
+		  (*   begin *)
+		  (* 	if !remaining_tasks = 0 then raise Killgeninv; *)
+		  (* 	let candidates = X.extract_candidates s !not_invariants in *)
+		  (* 	List.map (fun p -> Tryinv (s, !invariants), ()) candidates *)
+		  (*   end *)
+	      else []
 	  | InvRes (invs, not_invs), Geninv (s, _, _) ->
-	    decr nb_inv_search;
-	    if delete && invs <> [] then X.delete_node s;
-	    if delete then X.delete_nodes_inv invs visited;
-	    if delete then X.delete_nodes_inv invs postponed;
-	    invariants := List.rev_append invs !invariants;
-	    not_invariants := List.rev_append not_invs !not_invariants;
-	    []
+	      decr nb_inv_search;
+	      if delete && invs <> [] then X.delete_node s;
+	      if delete then X.delete_nodes_inv invs visited;
+	      if delete then X.delete_nodes_inv invs postponed;
+	      invariants := List.rev_append invs !invariants;
+	      not_invariants := List.rev_append not_invs !not_invariants;
+	      []
 	  | Inv, Tryinv (p, _) ->
-	    invariants := p :: !invariants;
-	    []
+	      invariants := p :: !invariants;
+	      []
 	  | NotInv, Tryinv (p, _) ->
-	    not_invariants := p :: !not_invariants;
-	    []
+	      not_invariants := p :: !not_invariants;
+	      []
 	  | _ -> assert false
       end
     in
@@ -551,11 +555,13 @@ module BFS_dist_base ( X : I ) = struct
 	 List.fold_left (fun acc (cpt, s) ->
 	  incr nb_nodes;
 	  if !nb_nodes > X.maxnodes then raise ReachBound;
-	  Profiling.print "BFS" !nb_nodes (X.size s);
-	  let prefpr = 
-	    if (not invgen) && gen_inv then "     inv gen " else " " in
-	  printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
-	    (if debug then fun _ _ -> () else X.print) s;
+	  if not quiet then begin 
+	    Profiling.print "BFS" !nb_nodes (X.size s);
+	    let prefpr = 
+	      if (not invgen) && gen_inv then "     inv gen " else " " in
+	    printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+	      (if debug then fun _ _ -> () else X.print) s
+	  end;
 	  let ls, post = X.pre s in
 	  let ls = List.rev ls in
 	  let post = List.rev post in
@@ -588,7 +594,8 @@ module BFS_dist_base ( X : I ) = struct
 	let tasks, post =
 	  if pres = [] then
 	    let l = List.rev (List.rev_map (fun s -> (0, s)) !postponed) in
-	    Profiling.print "Postpones" (List.length !postponed) 0;
+	    if not quiet then 
+	      Profiling.print "Postpones" (List.length !postponed) 0;
 	    postponed := [];
 	    gentasks l !invariants !visited, true
 	  else
@@ -700,8 +707,8 @@ module DFSHL ( X : I ) = struct
 	  else
 	    begin
 	      incr nb_nodes;
-	      Profiling.print "DFSHL" !nb_nodes (X.size s);
-	      printf " node %d= @[%a@]@." !nb_nodes 
+	      if not quiet then Profiling.print "DFSHL" !nb_nodes (X.size s);
+	      if not quiet then printf " node %d= @[%a@]@." !nb_nodes 
 		(if debug then fun _ _ -> () else X.print) s;
 	      let ls, post = X.pre s in
 	      let post = List.rev post in
@@ -735,7 +742,8 @@ module DFSHL ( X : I ) = struct
 	if !postponed = [] then ()
 	else
 	  begin
-	    Profiling.print "Postpones" (List.length !postponed) 0;
+	    if not quiet then 
+	      Profiling.print "Postpones" (List.length !postponed) 0;
 	    let l = List.rev (List.rev_map (fun s -> 0, s) !postponed) in
 	    postponed := [];
 	    search_rec (H.add H.empty l)

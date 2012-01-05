@@ -22,6 +22,7 @@ let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
 let verbose = ref 0
+let quiet = ref false
 
 let incr_verbose () = incr verbose
 
@@ -48,6 +49,7 @@ let show_version () = Format.printf "%s@." Version.version; exit 0
 
 let specs = 
   [ "-version", Arg.Unit show_version, " prints the version number";
+    "-q", Arg.Set quiet, " do not output search trace";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-depth", Arg.Set_int maxrounds, "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxrounds, "<nb> max number nodes to explore (default 100000)";
@@ -88,3 +90,4 @@ let delete = !delete
 let simpl_by_uc = !simpl_by_uc
 let cores = !cores
 let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode
+let quiet = !quiet
