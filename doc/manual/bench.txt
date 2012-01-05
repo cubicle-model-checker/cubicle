@@ -1,0 +1,74 @@
+bfs alwayspost  subtype
+----------------------------------------------
+Number of visited nodes          : 19219
+Fixpoints                        : 118754
+Number of solver calls           : 4157866
+Max Number of processes          : 3
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    18m0.255s
+user    17m54.767s
+sys     0m2.116s
+
+
+
+bfs alwayspost delete  subtype
+
+----------------------------------------------
+Number of visited nodes          : 15737
+Fixpoints                        : 51674
+Number of solver calls           : 2969906
+Max Number of processes          : 3
+Number of deleted nodes          : 47874
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    11m31.283s
+user    11m27.819s
+sys     0m1.308s
+
+
+bfs alwayspost delete  subtype geninv
+----------------------------------------------
+Number of visited nodes          : 8004
+Fixpoints                        : 131938
+Number of solver calls           : 1647470
+Max Number of processes          : 3
+Number of deleted nodes          : 29958
+Number of invariants             : 110
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    6m5.046s
+user    6m3.123s
+sys     0m0.764s
+
+
+
+bfs // -j 8 alwayspost delete subtype
+----------------------------------------------
+Number of visited nodes          : 15517
+Fixpoints                        : 8076
+Number of solver calls           : 0
+Max Number of processes          : 3
+Number of deleted nodes          : 47394
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    4m17.853s
+user    13m44.940s
+sys     2m51.395s
+ PROBLEM
