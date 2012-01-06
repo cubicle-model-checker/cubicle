@@ -168,3 +168,41 @@ The system is SAFE
 real    0m20.331s
 user    1m2.544s
 sys     0m17.697s
+
+
+German bfs alwayspost delete
+----------------------------------------------
+Number of visited nodes          : 20405
+Fixpoints                        : 254469
+Number of solver calls           : 6193887
+Max Number of processes          : 5
+Number of deleted nodes          : 152350
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    33m51.324s
+user    33m41.870s
+sys     0m3.016s
+
+
+
+
+German bfs // -j 8 alwayspost delete
+----------------------------------------------
+Number of visited nodes          : 20179
+Fixpoints                        : 67008
+Number of solver calls           : 0
+Max Number of processes          : 5
+Number of deleted nodes          : 150710
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    14m35.816s
+user    39m11.999s
+sys     11m58.061s
