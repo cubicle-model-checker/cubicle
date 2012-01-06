@@ -91,7 +91,11 @@ init (p) {
 }
 
 
+invariant (z) { z = Home }
+
 unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
+
+(* unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive } *)
 
 
 
