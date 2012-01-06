@@ -91,3 +91,80 @@ The system is SAFE
 real    2m5.495s
 user    7m42.217s
 sys     2m22.117
+
+
+
+German bfs alwayspost delete subtype
+----------------------------------------------
+Number of visited nodes          : 3322
+Fixpoints                        : 21574
+Number of solver calls           : 132494
+Max Number of processes          : 3
+Number of deleted nodes          : 24461
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    0m25.017s
+user    0m24.858s
+sys     0m0.068s
+
+
+
+German bfs alwayspost delete subtype geninv
+----------------------------------------------
+Number of visited nodes          : 2892
+Fixpoints                        : 76557
+Number of solver calls           : 195713
+Max Number of processes          : 3
+Number of deleted nodes          : 21456
+Number of invariants             : 40
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    0m51.359s
+user    0m51.011s
+sys     0m0.176
+
+
+German bfs // -j 8 alwayspost delete subtype 
+----------------------------------------------
+Number of visited nodes          : 3281
+Fixpoints                        : 4400
+Number of solver calls           : 0
+Max Number of processes          : 3
+Number of deleted nodes          : 24160
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    0m12.391s
+user    0m20.297s
+sys     0m10.425s
+
+
+
+German bfs // -j 8 alwayspost delete subtype geninv
+----------------------------------------------
+Number of visited nodes          : 2899
+Fixpoints                        : 3845
+Number of solver calls           : 0
+Max Number of processes          : 3
+Number of deleted nodes          : 21191
+Number of invariants             : 46
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    0m20.331s
+user    1m2.544s
+sys     0m17.697s
