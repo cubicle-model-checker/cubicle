@@ -33,7 +33,7 @@ let distinct_vars =
 	 v::acc, i+1) 
       ([],0) proc_terms 
   in
-  function n -> t.(n-1)
+  function n -> if n = 0 then F.vrai else t.(n-1)
 
 let make_op_arith = function Plus -> T.Plus | Minus -> T.Minus
 let make_op_comp = function

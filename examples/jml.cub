@@ -12,49 +12,49 @@ init (z) { A[z] = L1 && B = False && H = C0 && 0<C }
 unsafe (z1 z2) { A[z1]=L2 && A[z2]=L2 }
  
 transition t1 (x)
-require { A[x]=L1 && B=False && 0 < C }
-assign { B := True }
-A[j] := {| j = x : L2 | _ : A[j] }
+requires { A[x]=L1 && B=False && 0 < C }
+{ B := True ;
+  A[j] := case | j = x : L2 | _ : A[j]; }
 
 transition t2 (x)
-require { A[x] = L1 && B = True && 0 < C }
-assign { C := C + 1 }
-A[j] := {| j = x : L3 | _ : A[j] }
+requires { A[x] = L1 && B = True && 0 < C }
+{ C := C + 1 ;	
+  A[j] := case | j = x : L3 | _ : A[j]; }
  
 transition t3 (x)
-require { A[x] = L2 && B = True && C = 0 }
-assign { B := False }
-A[j] := {| j = x : L1 | _ : A[j] }
+requires { A[x] = L2 && B = True && C = 0 }
+{ B := False;
+  A[j] := case | j = x : L1 | _ : A[j]; }
 
 transition t4 (x)
-require { A[x] = L2 && B = True && 0 < C }
-assign { C := C - 1 }
-A[j] := {| j = x : L4 | _ : A[j] }
+requires { A[x] = L2 && B = True && 0 < C }
+{ C := C - 1 ;
+  A[j] := case | j = x : L4 | _ : A[j]; }
 
 transition t5 (x)
-require { A[x] = L3 && H = C0 && 0 < C }
-assign { H := C1 }
-A[j] := {| j = x : L5 | _ : A[j] }
+requires { A[x] = L3 && H = C0 && 0 < C }
+{ H := C1;
+  A[j] := case | j = x : L5 | _ : A[j]; }
 
 transition t6 (x)
-require { A[x] = L4 && H = C0 && 0 < C }
-assign { H := C2 }
-A[j] := {| j = x : L1 | _ : A[j] }
+requires { A[x] = L4 && H = C0 && 0 < C }
+{ H := C2 ;
+  A[j] := case | j = x : L1 | _ : A[j]; }
 
 transition t7 (x)
-require { A[x] = L4 && H = C1 && 0 < C }
-assign { H := C3 }
-A[j] := {| j = x : L1 | _ : A[j] }
+requires { A[x] = L4 && H = C1 && 0 < C }
+{ H := C3;
+  A[j] := case | j = x : L1 | _ : A[j]; }
 
 transition t8 (x)
-require { A[x] = L3 && H = C2 && 0 < C }
-assign { H := C3 }
-A[j] := {| j = x : L5 | _ : A[j] }
+requires { A[x] = L3 && H = C2 && 0 < C }
+{ H := C3;
+  A[j] := case | j = x : L5 | _ : A[j]; }
 
 transition t9 (x)
-require { A[x] = L5 && H = C3 && 0 < C }
-assign { H := C0 }
-A[j] := {| j = x : L2 | _ : A[j] }
+requires { A[x] = L5 && H = C3 && 0 < C }
+{ H := C0;
+  A[j] := case | j = x : L2 | _ : A[j]; }
 
 
 

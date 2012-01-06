@@ -7,23 +7,23 @@ init (z) { A[z] = L5 }
 unsafe (z1 z2) { A[z1] = L1 &&  A[z2] = L1 }
 
 transition t1 (x)
-require { A[x] = L3 }
-A[j] := {| j = x : L1 | _ : A[j] }
+requires { A[x] = L3 }
+{ A[j] := case | j = x : L1 | _ : A[j] ;}
 
 transition t2 (x)
-require { A[x] = L5 }
-A[j] := {| j = x : L4 | A[j] = L3 : L4 | A[j] = L1 : L2 | _ : A[j] }
+requires { A[x] = L5 }
+{ A[j] := case | j = x : L4 | A[j] = L3 : L4 | A[j] = L1 : L2 | _ : A[j] ; }
   
 transition t3 (x)
-require { A[x] = L4 }
-A[j] := {| j = x : L3 | _ : L5 }
+requires { A[x] = L4 }
+{ A[j] := case | j = x : L3 | _ : L5 ;}
 
 transition t4 (x)
-require { A[x] = L2 }
-A[j] := {| j = x : L3 | _ : L5 }
+requires { A[x] = L2 }
+{ A[j] := case | j = x : L3 | _ : L5 ; }
 
 transition t5 (x)
-require { A[x] = L5 }
-A[j] := {| j = x : L3 | _ : L5 }
+requires { A[x] = L5 }
+{ A[j] := case | j = x : L3 | _ : L5; }
 
 

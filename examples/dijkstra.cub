@@ -9,45 +9,42 @@ init (x) { A[x] = L1 && P[x] = False && F[x] = 0 }
 unsafe (z1 z2) { A[z1] = L6 && A[z2] = L6 }
   
 transition t1 (x)
-require { A[x] = L1 }
-A[j] := {| j = x : L2 | _ : A[j] }
-F[j] := {| j = x : 1 | _ : F[j] }
+requires { A[x] = L1 }
+{ A[j] := case | j = x : L2 | _ : A[j];
+  F[j] := case | j = x : 1 | _ : F[j]; }
 
 
 transition t2a (x)
-require { A[x] = L2 }
-uguard (j) { P[j] = False }
-A[j] := {| j = x : L3 | _ : A[j] }
+requires { A[x] = L2 && forall_other j.  P[j] = False }
+{ A[j] := case | j = x : L3 | _ : A[j]; }
 
 transition t2b (x)
-require { A[x] = L2 }
-uguard (j) {  P[j] = True && F[j] = 0 }
-A[j] := {| j = x : L3 | _ : A[j] }
+requires { A[x] = L2 && forall_other j. (  P[j] = True && F[j] = 0 ) }
+{ A[j] := case | j = x : L3 | _ : A[j]; }
 
 transition t3 (x y)
-require { A[x] = L3 && P[y] = True }
-A[j] := {| j = x : L4 | _ : A[j] }
-P[j] := {| j = y : True | _ : P[j] }
+requires { A[x] = L3 && P[y] = True }
+{ A[j] := case | j = x : L4 | _ : A[j];
+  P[j] := case | j = y : True | _ : P[j]; }
 
 transition t4 (x)
-require { A[x] = L4 }
-A[j] := {| j = x : L5 | _ : A[j] }
-F[j] := {| j = x : 2 | _ : F[j] }
+requires { A[x] = L4 }
+{ A[j] := case | j = x : L5 | _ : A[j];
+  F[j] := case | j = x : 2 | _ : F[j]; }
 
 transition t5 (x)
-require { A[x] = L5 }
-uguard (j) { F[j] <> 2 }
-A[j] := {| j = x : L6 | _ : A[j] }
+requires { A[x] = L5 && forall_other j.  F[j] <> 2 }
+{ A[j] := case | j = x : L6 | _ : A[j]; }
 
 transition t6 (x y)
-require { A[x] = L5 && F[y] = 2 }
-A[j] := {| j = x : L1 | _ : A[j] }
+requires { A[x] = L5 && F[y] = 2 }
+{ A[j] := case | j = x : L1 | _ : A[j]; }
 
 transition t7 (x)
-require { A[x] = L6 }
-A[j] := {| j = x : L7 | _ : A[j] }
-F[j] := {| j = x : 0 | _ : F[j] }
+requires { A[x] = L6 }
+{ A[j] := case | j = x : L7 | _ : A[j]; 
+  F[j] := case | j = x : 0 | _ : F[j]; }
 
 transition t8 (x)
-require { A[x] = L7 }
-A[j] := {| j = x : L1 | _ : A[j] }
+requires { A[x] = L7 }
+{ A[j] := case | j = x : L1 | _ : A[j]; }
