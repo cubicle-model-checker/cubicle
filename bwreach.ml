@@ -729,6 +729,7 @@ let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
+  Debug.unsafe s;
   if profiling then TimeFix.start ();
   let nodes = (List.rev_append invariants visited) in
   let f = easy_fixpoint s nodes || hard_fixpoint s nodes in
@@ -824,6 +825,7 @@ let make_cubes =
 	 let np, (nargs, _) = proper_cube np in
 	 let tr_args = List.map (svar sigma) tr.tr_args in
 	 let ureq = uguard nargs tr_args tr.tr_ureq in
+	 let ureq = subst_atoms sigma ureq in
 	 let np = SAtom.union ureq np in 
 	 if debug && !verbose > 0 then Debug.pre_cubes np nargs;
 	 if inconsistent np then begin
