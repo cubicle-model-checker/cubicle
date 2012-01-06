@@ -71,4 +71,23 @@ The system is SAFE
 real    4m17.853s
 user    13m44.940s
 sys     2m51.395s
- PROBLEM
+
+
+
+bfs // -j 8 alwayspost delete subtype geninv
+----------------------------------------------
+Number of visited nodes          : 8031
+Fixpoints                        : 6140
+Number of solver calls           : 0
+Max Number of processes          : 3
+Number of deleted nodes          : 29610
+Number of invariants             : 169
+----------------------------------------------
+
+
+The system is SAFE
+
+
+real    2m5.495s
+user    7m42.217s
+sys     2m22.117
