@@ -805,11 +805,12 @@ let postpone args p np =
   SAtom.equal sa2 sa1
 
 let uguard args tr_args = function
-  | None -> SAtom.empty
-  | Some (j, sa) ->
+  | [] -> SAtom.empty
+  | [j, sa] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.fold_left 
 	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty uargs
+  | _ -> assert false
 
 let make_cubes =
   let cpt = ref 0 in
@@ -862,9 +863,7 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
     { tr with 
 	tr_args = List.map (svar sigma) tr.tr_args; 
 	tr_reqs = subst_atoms sigma tr.tr_reqs;
-	tr_ureq = (match tr.tr_ureq with
-	  | None -> None
-	  | Some (s, sa) -> Some (s, subst_atoms sigma sa));
+	tr_ureq = List.map (fun (s, sa) -> s, subst_atoms sigma sa) tr.tr_ureq;
 	tr_assigns = 
 	List.map (fun (x, t) -> x, subst_term sigma t) 
 	  tr.tr_assigns;
@@ -1065,7 +1064,8 @@ let init_thread search invariants not_invs visited postponed candidates =
 	  (* (List.map (fun x -> x,candidate) (partition candidate));  *)
 	  cand;
 	Thread.yield ();
-      with Queue.Empty -> Thread.yield (); eprintf "(Thread inv) Nothing to do ...@."
+      with Queue.Empty -> 
+	Thread.yield (); eprintf "(Thread inv) Nothing to do ...@."
     done;
   ) ()
 

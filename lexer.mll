@@ -23,12 +23,14 @@
 	"init", INIT;
 	"transition", TRANSITION;
 	"invariant", INVARIANT;
-	"require", REQUIRE;
+	"requires", REQUIRE;
 	"uguard", UGUARD;
 	"assign", ASSIGN;
         "array", ARRAY;
         "var", VAR;
         "unsafe", UNSAFE;
+	"case", CASE;
+	"forall_other", FORALL;
       ]
 	       
   let newline lexbuf =

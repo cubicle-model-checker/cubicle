@@ -17,6 +17,11 @@
   open Parsing
   open Atom
 
+  type t = 
+    | Assign of Hstring.t * term
+    | Nondet of Hstring.t
+    | Upd of update
+
   module S = Set.Make(Hstring)
 
   module Constructors = struct
@@ -55,7 +60,7 @@
 
 %}
 
-%token VAR ARRAY TYPE INIT TRANSITION INVARIANT
+%token VAR ARRAY TYPE INIT TRANSITION INVARIANT CASE FORALL
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE
 %token OR AND COMMA PV DOT
 %token <string> LIDENT
@@ -69,6 +74,7 @@
 %left PLUS MINUS
 %right OR
 %right AND
+%nonassoc for_all
 %left BAR
 
 %type <Ast.system> system
@@ -129,10 +135,8 @@ constructors:
 | mident BAR constructors { $1::$3 }
 ;
 
-
-
 init:
-INIT LEFTPAR lident_option RIGHTPAR LEFTBR cubes RIGHTBR 
+INIT LEFTPAR lident_option RIGHTPAR LEFTBR cube RIGHTBR 
 { $3, $6 }
 ;
 
@@ -142,12 +146,11 @@ invariants:
 ;
 
 invariant:
-| INVARIANT LEFTPAR lident_plus RIGHTPAR LEFTBR cubes RIGHTBR { $3, $6 }
+| INVARIANT LEFTPAR lident_plus RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
 ;
 
-
 unsafe:
-UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cubes RIGHTBR 
+UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR 
 { $3, $6 }
 ;
 
@@ -164,59 +167,51 @@ transitions_list:
 transition:
 TRANSITION lident LEFTPAR lident_plus RIGHTPAR 
 require
-urequire
-assigns
-updates
-{ let assigns, nondets = $8 in
+LEFTBR assigns_nondets_updates RIGHTBR
+{ let reqs, ureq = $6 in
+  let assigns, nondets, upds = $8 in
   { tr_name = $2; tr_args = $4; 
-    tr_reqs = $6; tr_ureq = $7; tr_assigns = assigns; 
-    tr_nondets = nondets; tr_upds = $9 } }
+    tr_reqs = reqs; tr_ureq = ureq; 
+    tr_assigns = assigns; 
+    tr_nondets = nondets; 
+    tr_upds = upds } 
+}
 ;
 
-assigns:
-| { [], [] }
-| ASSIGN LEFTBR assignments RIGHTBR { $3 }
+assigns_nondets_updates:
+|  { [], [], [] }
+| assign_nondet_update PV assigns_nondets_updates 
+       { 
+	 let assigns, nondets, upds = $3 in
+	 match $1 with
+	   | Assign (x, y) -> (x, y) :: assigns, nondets, upds
+	   | Nondet x -> assigns, x :: nondets, upds
+	   | Upd x -> assigns, nondets, x :: upds
+       }
 ;
 
-assignments:
-| assignment { [$1], [] }
-| nondet { [], [$1] }
-| assignment PV assignments { let l1, l2 = $3 in $1::l1, l2 }
-| nondet PV assignments { let l1, l2 = $3 in l1, $1::l2 }
+assign_nondet_update:
+| assignment { $1 }
+| nondet { $1 }
+| update { $1 }
 ;
 
 assignment:
-| mident AFFECT term    { $1, $3 }
+| mident AFFECT term    { Assign ($1, $3) }
 ;
 
 nondet:
-| mident AFFECT DOT    { $1 }
+| mident AFFECT DOT    { Nondet $1 }
 ;
 
 require:
-| { SAtom.empty }
-| REQUIRE LEFTBR cubes RIGHTBR { $3 }
-;
-
-urequire:
-| { None }
-| UGUARD LEFTPAR lident RIGHTPAR LEFTBR cubes RIGHTBR { Some ($3,$6) }
-;
-
-
-updates:
-| { [] }
-| update_plus { $1 }
-;
-
-update_plus:
-| update { [$1] }
-| update update_plus { $1::$2 }
+| { SAtom.empty, [] }
+| REQUIRE LEFTBR ucube RIGHTBR { $3 }
 ;
 
 update:
-mident LEFTSQ lident RIGHTSQ AFFECT LEFTBR switchs_underscore RIGHTBR
-{ { up_arr = $1; up_arg = $3; up_swts = $7} }
+mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs_underscore
+{ Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
 ;
 
 switchs_underscore:
@@ -229,15 +224,28 @@ switchs:
 ;
 
 switch:
-cubes COLON term { $1, $3 }
+cube COLON term { $1, $3 }
 ;
 
-cubes:
-| cube { SAtom.singleton $1 }
-| cube AND cubes { SAtom.add $1 $3 }
+ucube:
+| literal { SAtom.singleton $1, [] }
+| uliteral { SAtom.empty, [$1] }
+| literal AND ucube { let s, l = $3 in SAtom.add $1 s, l }
+| uliteral AND ucube { let s, l = $3 in s, $1::l }
 ;
 
 cube:
+| literal { SAtom.singleton $1 }
+| literal AND cube { SAtom.add $1 $3 }
+;
+
+uliteral:
+| FORALL lident DOT literal { $2, SAtom.singleton $4 }
+| FORALL lident DOT LEFTPAR cube RIGHTPAR { $2, $5 }
+;
+
+
+literal:
 | term operator term { Comp($1, $2, $3) }
 ;
 

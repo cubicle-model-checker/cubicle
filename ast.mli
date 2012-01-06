@@ -74,7 +74,7 @@ type transition = {
   tr_name : Hstring.t;
   tr_args : Hstring.t list;
   tr_reqs : SAtom.t;
-  tr_ureq : (Hstring.t * SAtom.t) option;
+  tr_ureq : (Hstring.t * SAtom.t) list;
   tr_assigns : (Hstring.t * term) list;
   tr_upds : update list;
   tr_nondets : Hstring.t list;

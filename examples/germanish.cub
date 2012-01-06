@@ -14,34 +14,66 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
 transition req_shared (n)
-require { Curcmd = Empty && Cache[n] = Invalid }
-assign { Curcmd := Reqs; Curptr := n }
+requires { Curcmd = Empty && Cache[n] = Invalid }
+{ 
+  Curcmd := Reqs; 
+  Curptr := n ;
+}
     
 transition req_exclusive (n)
-require { Curcmd = Empty && Cache[n] <> Exclusive }
-assign { Curcmd := Reqe; Curptr := n }
+requires { Curcmd = Empty && Cache[n] <> Exclusive }
+{ 
+  Curcmd := Reqe; 
+  Curptr := n;
+}
     
 transition inv_1 (n)
-require { Shrset[n]=True  &&  Curcmd = Reqe }
-assign { Exgntd := False }
-Cache[j] := {| j = n : Invalid | _ : Cache[j] }
-Shrset[j] := {| j= n : False | _ : Shrset[j] }
+requires { Shrset[n]=True  &&  Curcmd = Reqe }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+   	       | j = n : Invalid 
+	       | _ : Cache[j];
+  Shrset[j] := case 
+  	       | j= n : False 
+	       | _ : Shrset[j]; 
+}
 
 transition inv_2 (n)
-require { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
-assign { Exgntd := False }
-Cache[j] := {| j = n : Invalid | _ : Cache[j] }
-Shrset[j] := {| j= n : False | _ : Shrset[j] }
+requires { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	        | j = n : Invalid 
+		| _ : Cache[j];
+  Shrset[j] := case 
+  	        | j= n : False 
+		| _ : Shrset[j];
+}
     
 transition gnt_shared (n)
-require { Curptr = n && Curcmd = Reqs && Exgntd = False }
-assign { Curcmd := Empty }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-Cache[j] := {| j = n : Shared | _ : Cache[j] }
+requires { Curptr = n && Curcmd = Reqs && Exgntd = False }
+{ 
+  Curcmd := Empty;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j];
+  Cache[j] := case 
+  	        | j = n : Shared 
+		| _ : Cache[j];
+}
 
 transition gnt_exclusive (n)
-require { Shrset[n] = False && Curcmd = Reqe && Exgntd = False && Curptr = n}
-uguard (l) { Shrset[l] = False }
-assign { Curcmd := Empty; Exgntd := True }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-Cache[j] := {| j = n : Exclusive | _ : Cache[j] }
+requires { 
+	  Shrset[n] = False && Curcmd = Reqe && Exgntd = False && Curptr = n &&
+	  forall_other l. Shrset[l] = False }
+{ 
+  Curcmd := Empty; 
+  Exgntd := True;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j];
+  Cache[j] := case 
+  	        | j = n : Exclusive
+		| _ : Cache[j];
+}
