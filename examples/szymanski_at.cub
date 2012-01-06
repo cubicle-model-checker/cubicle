@@ -10,55 +10,62 @@ init (x) { A[x] = L8 && S[x] = False && W[x] = False && B[x] = False }
 unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
 
 transition t0 (x)
-require { A[x] = L8 }
-A[j] := {| j = x : L1 | _ : A[j] }
-B[j] := {| j = x : True | _ : B[j] }
+requires { A[x] = L8 }
+{ 
+  A[j] := case
+       	   | j = x : L1 
+	   | _ : A[j] ;
+  B[j] := case 
+       	   | j = x : True 
+	   | _ : B[j];
+}
 
 transition t1 (x)
-require { A[x] = L1 }
-uguard (y) { S[y] = False }
-A[j] := {| j = x : L2 | _ : A[j] }
+requires { A[x] = L1 && forall_other y. S[y] = False }
+{ 
+  A[j] := case
+       	   | j = x : L2 | _ : A[j];
+}
 
 transition t2 (x)
-require { A[x] = L2 }
-A[j] := {| j = x : L3 | _ : A[j] }
+requires { A[x] = L2 }
+{ A[j] := case | j = x : L3 | _ : A[j]; }
 
 transition t3 (x)
-require { A[x] = L3 }
-uguard (y) { B[y] =  False && W[y] = True }
-A[j] := {| j = x : L5 | _ : A[j] }
-W[j] := {| j = x : False | _ : B[j] }
+requires { A[x] = L3 && forall_other y. ( B[y] =  False && W[y] = True ) }
+{ A[j] := case | j = x : L5 | _ : A[j] ;
+  W[j] := case | j = x : False | _ : B[j] ;
+}
 
 transition t4 (x y)
-require { A[x] = L3 && B[y] = False && W[y] = False }
-A[j] := {| j = x : L4 | _ : A[j] }
-S[j] := {| j = x : False | _ : S[j] }
+requires { A[x] = L3 && B[y] = False && W[y] = False }
+{ A[j] := case | j = x : L4 | _ : A[j] ;
+  S[j] := case | j = x : False | _ : S[j] ;
+}
 
 transition t5 (x y)
-require { A[x] = L4 && S[y] = True && W[y] = False }
-A[j] := {| j = x : L5 | _ : A[j] }
-S[j] := {| j = x : True | _ : S[j] }
-W[j] := {| j = x : False | _ : W[j] }
+requires { A[x] = L4 && S[y] = True && W[y] = False }
+{ A[j] := case | j = x : L5 | _ : A[j] ;
+  S[j] := case | j = x : True | _ : S[j] ;
+  W[j] := case | j = x : False | _ : W[j] ; 
+}
 
 transition t6 (x)
-require { A[x] = L5 }
-uguard (y) { W[y] = False }
-A[j] := {| j = x: L6 | _ : A[j] }
+requires { A[x] = L5 && forall_other y. W[y] = False }
+{ A[j] := case | j = x: L6 | _ : A[j] ;}
 
 transition t7_1 (x)
-require { A[x] = L6 }
-uguard (j) { x < j }
-A[j] := {| j = x : L7 | _ : A[j] }
+requires { A[x] = L6 && forall_other j. x < j }
+{ A[j] := case | j = x : L7 | _ : A[j] ; }
 
 transition t7_2 (x)
-require { A[x] = L6 }
-uguard (y) { y < x && S[y] = False }
-A[j] := {| j = x : L7 | _ : A[j] }
+requires { A[x] = L6 && forall_other y. ( y < x && S[y] = False) }
+{ A[j] := case | j = x : L7 | _ : A[j] ; }
 
 transition t8 (x)
-require { A[x] = L7 }
-A[j] := {| j = x : L8 | _ : A[j] }
-S[j] := {| j = x : False | _ : S[j] }
-B[j] := {| j = x : False | _ : B[j] }
+requires { A[x] = L7 }
+{ A[j] := case | j = x : L8 | _ : A[j] ;
+  S[j] := case | j = x : False | _ : S[j] ;
+  B[j] := case | j = x : False | _ : B[j] ; }
 
 
