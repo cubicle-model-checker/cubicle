@@ -21,7 +21,7 @@ requires { A[z] = Idle && forall_other j. ( z < j && A[j] = Idle ) }
 }
 
 transition tr2_1 (z)
-requires { A[z] = Wait && forall_other j. j < z }
+requires { A[z] = Wait && forall_other j. z < j }
 {
   A[j] := case
            | j=z : Crit
@@ -29,7 +29,7 @@ requires { A[z] = Wait && forall_other j. j < z }
 }
 
 transition tr2_2 (z)
-requires { A[z] = Wait && forall_other j. ( z < j && A[j] = Idle ) }
+requires { A[z] = Wait && forall_other j. ( j < z && A[j] = Idle ) }
 { 
   A[j] := case
        	   | j=z : Crit
