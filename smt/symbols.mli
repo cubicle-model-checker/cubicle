@@ -21,12 +21,14 @@ type t =
   | False
   | Name of Hstring.t * name_kind
   | Int of Hstring.t
+  | Real of Hstring.t
   | Op of operator
   | Var of Hstring.t
 
 val name : ?kind:name_kind -> Hstring.t -> t
 val var : string -> t
 val int : string -> t
+val real : string -> t
 
 val is_ac : t -> bool
 

@@ -23,12 +23,15 @@ type t =
   | False
   | Name of Hstring.t * name_kind
   | Int of Hstring.t
+  | Real of Hstring.t
   | Op of operator
   | Var of Hstring.t
 
 let name ?(kind=Other) s = Name (s, kind)
 let var s = Var (Hstring.make s)
 let int i = Int (Hstring.make i)
+let real r = Real (Hstring.make r)
+
 
 let is_ac = function
   | Name(_, Ac) -> true
@@ -69,6 +72,7 @@ let to_string =  function
   | Name (n,_) -> Hstring.view n
   | Var x -> "*var* "^(Hstring.view x)
   | Int n -> Hstring.view n
+  | Real n -> Hstring.view n
   | Op Plus -> "+" 
   | Op Minus -> "-" 
   | Op Mult -> "*"

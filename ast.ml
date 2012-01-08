@@ -18,27 +18,38 @@ type op_arith = Plus | Minus
 
 type sort = Glob | Arr | Constr | Var
 
+type const = ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
+
+let compare_const c1 c2 = match c1, c2 with
+  | (ConstInt n1 | ConstReal n1), (ConstInt n2 | ConstReal n2) ->
+      Num.compare_num n1 n2
+  | (ConstInt _ | ConstReal _), _ -> -1
+  | _, (ConstInt _ | ConstReal _) -> 1
+  | ConstName h1, ConstName h2 -> Hstring.compare h1 h2
+
+module MConst = Map.Make (struct type t = const let compare = compare_const end)
+
+let compare_constants = MConst.compare Pervasives.compare 
+
 type term = 
-  | Const of int
+  | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Hstring.t
-  | Arith of Hstring.t * sort * op_arith * int
+  | Arith of Hstring.t * sort * int MConst.t
 
 let rec compare_term t1 t2 = 
   match t1, t2 with
-    | Const i1, Const i2 -> Pervasives.compare i1 i2
+    | Const c1, Const c2 -> compare_constants c1 c2
     | Const _, _ -> -1 | _, Const _ -> 1
     | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
     | Elem _, _ -> -1 | _, Elem _ -> 1
     | Access (a1, i1), Access (a2, i2) ->
-      let c = Hstring.compare a1 a2 in
-      if c<>0 then c else Hstring.compare i1 i2
+	let c = Hstring.compare a1 a2 in
+	if c<>0 then c else Hstring.compare i1 i2
     | Access _, _ -> -1 | _, Access _ -> 1 
-    | Arith (t1, _, op1, u1), Arith (t2, _, op2, u2) ->
-      let c = Pervasives.compare op1 op2 in
-      if c <> 0 then c else
+    | Arith (t1, _, cs1), Arith (t2, _, cs2) ->
 	let c = Hstring.compare t1 t2 in
-	if c<>0 then c else Pervasives.compare u1 u2
+	if c<>0 then c else compare_constants cs1 cs2
 
 type acc_eq = { a : Hstring.t; i: Hstring.t; e: term }
 
@@ -257,6 +268,7 @@ type elem = Hstring.t * (Hstring.t list)
 
 type system = {
   globals : (Hstring.t * Hstring.t) list;
+  consts : (Hstring.t * Hstring.t) list;
   arrays : (Hstring.t * (Hstring.t * Hstring.t)) list;
   type_defs : elem list;
   init : Hstring.t option * SAtom.t;

@@ -156,8 +156,8 @@ let rec simplification np a =
   else match a with
     | True | False -> a 
     | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
-    | Comp (Arith (i, si, opai, xi), op, (Arith (j, sj, opaj, xj)))
-      when opai = opaj && xi = xj -> simplify_comp i si op j sj
+    | Comp (Arith (i, si, csi), op, (Arith (j, sj, csj)))
+      when compare_constants csi csj = 0 -> simplify_comp i si op j sj
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
@@ -211,27 +211,42 @@ let rec find_update a i = function
       let t = subst_term [j, i] t in
       Branch { up_arr = a'; up_arg = i; up_swts = ls,t}
   | _ :: l -> find_update a i l
-      
 
-let make_arith tx op t = assert false
-(*let make_arith x sx op1 i1 op2 i2 = assert false*)
 
-(*
-	match t with
-	  | Const i2 -> 
-	      let c = 
-		Const (match op1 with Plus -> i2 + i1 | Minus -> i2 - i1)
-	      in
-	      Single c
-	  | Elem (x, sx) -> Single (Arith (x, sx, op1, i1))
-	  | Arith (y, sy, op2, i2) -> Single (make_arith y sy op1 i1 op2 i2)
-	  | Access _ -> assert false
-*)
-(*  match op1, op2 with
-    | Plus , Plus  -> Arith (x, sx, Plus, i1 + i2)
-    | Plus , Minus -> Arith (x, sx, Plus, i1 - i2)
-    | Minus, Plus  -> Arith (x, sx, Plus, i2 - i1)
-    | Minus, Minus -> Arith (x, sx, Plus, -i1 - i2)*)
+let num_of_const = function
+  | ConstInt n | ConstReal n -> n
+  | _ -> assert false
+
+let add_constnum c i num =
+  match c, num with
+    | ConstInt n, ConstInt m -> 
+	ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
+    | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
+	ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
+    | _ -> assert false
+
+let split_num_consts cs =
+  MConst.fold
+    (fun c i (cs, num) -> match c, num with
+       | ConstName _, _ -> MConst.add c i cs, num
+       | _ -> cs, add_constnum c i num)
+    cs (MConst.empty, ConstInt (Num.Int 0))
+
+let add_constant c i cs =
+  match c with
+    | ConstInt _ | ConstReal _ ->
+	let cs, num = split_num_consts cs in
+	let num = add_constnum c i num in
+	if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
+	else MConst.add num 1 cs
+    | _ ->
+	let i' = try MConst.find c cs with Not_found -> 0 in
+	let i = i + i' in
+	if i = 0 then MConst.remove c cs
+	else MConst.add c i cs
+
+let add_constants cs1 cs2 =
+  MConst.fold add_constant cs2 cs1
 
 let find_assign tr = function
   | Elem (x, sx) -> 
@@ -245,11 +260,21 @@ let find_assign tr = function
 
   | Const i as a -> Single a
 
-  | Arith (x, sx, op1, t1) ->
-      let tx = 
-	try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
-      in 
-	make_arith tx op1 t1
+  | Arith (x, sx, cs1) ->
+      begin
+	let t = 
+	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
+	in 
+	match t with
+	  | Const cs2 -> 
+	      let c = 
+		Const (add_constants cs1 cs2)
+	      in
+	      Single c
+	  | Elem (x, sx) -> Single (Arith (x, sx, cs1))
+	  | Arith (y, sy, cs2) -> Single (Arith (y, sy, add_constants cs1 cs2))
+	  | Access _ -> assert false
+      end
   | Access (a, i ) -> 
       let ni = 
 	if H.list_mem i tr.tr_nondets then 
@@ -451,7 +476,7 @@ let number_of s =
   else 1
 
 let add_arg args = function
-  | Elem (s, _) | Access (_, s) | Arith (s, _, _, _) ->
+  | Elem (s, _) | Access (_, s) | Arith (s, _, _) ->
       let s' = H.view s in
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
   | Const _ -> args
@@ -795,7 +820,7 @@ let simplify_atoms np =
 (**********************)
 
 let has_args_term args = function
-  | Elem (x, Var) | Access (_, x) | Arith (x, Var, _, _) -> H.list_mem x args
+  | Elem (x, Var) | Access (_, x) | Arith (x, Var, _) -> H.list_mem x args
   | _ -> false
 
 let rec has_args args = function
@@ -996,7 +1021,7 @@ let delete_node s = s.t_deleted <- true
 
 let same_number z = function 
   | Const _ -> true
-  | Elem (s, v) | Arith (s, v, _, _) -> 
+  | Elem (s, v) | Arith (s, v, _) -> 
       H.equal s z || v = Glob || v = Constr
   | Access (_, s) -> H.equal s z
 

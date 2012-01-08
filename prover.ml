@@ -42,13 +42,31 @@ let make_op_comp = function
   | Le -> F.Le
   | Neq -> F.Neq
 
+let make_const = function
+  | ConstInt i -> T.make_int i
+  | ConstReal i -> T.make_real i
+  | ConstName n -> T.make_app n []
+
+let make_arith_cs =
+  MConst.fold 
+    (fun c i acc ->
+       T.make_arith T.Plus acc
+	 (T.make_arith T.Mult (T.make_int (Num.Int i)) (make_const c)))
+
+let make_cs cs =
+  let c, i = MConst.choose cs in
+  let t_c = make_const c in
+  let r = MConst.remove c cs in
+  if i = 1 && MConst.is_empty r then t_c
+  else make_arith_cs r (T.make_arith T.Mult (T.make_int (Num.Int i)) t_c)
+	 
 let make_term = function
   | Elem (e, _) -> T.make_app e []
-  | Const i -> T.make_int i
-  | Access (a, i) ->  T.make_app a [T.make_app i []]
-  | Arith (x, _, op, i) -> 
+  | Const cs -> make_cs cs 
+  | Access (a, i) -> T.make_app a [T.make_app i []]
+  | Arith (x, _, cs) -> 
       let tx = T.make_app x [] in
-      T.make_arith (make_op_arith op) tx (T.make_int i)
+      make_arith_cs cs tx
 
 let rec make_formula_set sa = 
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
@@ -56,7 +74,7 @@ let rec make_formula_set sa =
 and make_literal = function
   | True -> F.vrai 
   | False -> F.faux
-  | Comp (x, op, y) -> 
+  | Comp (x, op, y) ->
       let tx = make_term x in
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
@@ -72,7 +90,7 @@ let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
 let contain_arg z = function
-  | Elem (x, _) | Arith (x, _, _, _) -> Hstring.equal x z
+  | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
   | Access (x, y) -> Hstring.equal y z
   | Const _ -> false
 

@@ -13,6 +13,7 @@
 
 type t = 
   | Tint
+  | Treal
   | Tbool
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list

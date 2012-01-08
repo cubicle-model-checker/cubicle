@@ -15,6 +15,7 @@ open Format
 
 type t = 
   | Tint
+  | Treal
   | Tbool
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
@@ -51,6 +52,7 @@ let compare t1 t2 =
 let print fmt ty = 
   match ty with
     | Tint -> fprintf fmt "int"
+    | Treal -> fprintf fmt "real"
     | Tbool -> fprintf fmt "bool"
     | Tabstract s -> fprintf fmt "%s" (Hstring.view s)
     | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)

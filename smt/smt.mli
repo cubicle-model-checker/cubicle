@@ -21,6 +21,7 @@ module Typing : sig
   type t
 
   val type_int : Hstring.t
+  val type_real : Hstring.t
   val type_bool : Hstring.t
   val type_proc : Hstring.t
     
@@ -48,7 +49,8 @@ module Term : sig
   type t
   type operator = Plus | Minus | Mult | Div | Modulo
 
-  val make_int : int -> t
+  val make_int : Num.num -> t
+  val make_real : Num.num -> t
   val make_app : Hstring.t -> t list -> t
   val make_arith : operator -> t -> t -> t
 end

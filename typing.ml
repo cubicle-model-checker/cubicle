@@ -30,6 +30,7 @@ type error =
   | ClashParam of Hstring.t
   | MustBeAnArray of Hstring.t
   | MustBeOfType of Hstring.t * Hstring.t
+  | MustBeNum of Hstring.t
   | MustBeOfTypeProc of Hstring.t 
   | IncompatibleType of Hstring.t list * Hstring.t * Hstring.t list * Hstring.t
   | NotATerm of Hstring.t
@@ -70,6 +71,8 @@ let report fmt = function
       fprintf fmt "%a must have an array type" Hstring.print s
   | MustBeOfType (s, ty) ->
       fprintf fmt "%a must be of type %a" Hstring.print s Hstring.print ty
+  | MustBeNum s ->
+      fprintf fmt "%a must be of type int or real" Hstring.print s
   | MustBeOfTypeProc s ->
       fprintf fmt "%a must be of proc" Hstring.print s
   | IncompatibleType (args1, ty1, args2, ty2) ->
@@ -106,22 +109,29 @@ let infer_type x1 x2 =
 let refinement_cycles () = (* TODO *) ()
 
 let term args = function
-  | Const _ -> [], Smt.Typing.type_int
+  | Const cs ->
+      let c, _ = MConst.choose cs in
+      (match c with
+	| ConstInt _ -> [], Smt.Typing.type_int
+	| ConstReal _ -> [], Smt.Typing.type_real
+	| ConstName x -> 
+	    try Smt.Typing.find x with Not_found -> error (UnknownName x))
   | Elem (e, Var) ->
       if Hstring.list_mem e args then [], Smt.Typing.type_proc
       else begin 
 	try Smt.Typing.find e with Not_found -> error (UnknownName e)
       end
   | Elem (e, _) -> Smt.Typing.find e
-  | Arith (x, (Var | Constr | Arr), _, _) ->
-      error (MustBeOfType (x, Smt.Typing.type_int))
-  | Arith (x, _, _, _) ->
+  | Arith (x, (Var | Constr | Arr), _) ->
+      error (MustBeNum x)
+  | Arith (x, _, _) ->
       begin
 	try 
 	  let args, ret = Smt.Typing.find x in
 	  if args <> [] then error (NotATerm x);
-	  if not (Hstring.equal ret Smt.Typing.type_int) then 
-	    error (MustBeOfType(x, Smt.Typing.type_int));
+	  if not (Hstring.equal ret Smt.Typing.type_int) 
+	    && not (Hstring.equal ret Smt.Typing.type_real) then 
+	    error (MustBeNum x);
 	  args, ret
 	with Not_found -> error (UnknownGlobal x)
       end
@@ -238,6 +248,10 @@ let transitions =
 let init_global_env s = 
   List.iter Smt.Typing.declare_type s.type_defs;
   let l = ref [] in
+  List.iter 
+    (fun (n, t) -> 
+       Smt.Typing.declare_name n [] t;
+       l := (n, t)::!l) s.consts;
   List.iter 
     (fun (n, t) -> 
        Smt.Typing.declare_name n [] t;

@@ -43,6 +43,12 @@
     let mem x = S.mem x !s
   end
 
+  module Consts = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
   let sort s = 
     if Constructors.mem s then Constr 
     else if Globals.mem s then Glob
@@ -60,13 +66,14 @@
 
 %}
 
-%token VAR ARRAY TYPE INIT TRANSITION INVARIANT CASE FORALL
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE
 %token OR AND COMMA PV DOT
 %token <string> LIDENT
 %token <string> MIDENT
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR 
-%token <int> INT
+%token <Num.num> REAL
+%token <Num.num> INT
 %token PLUS MINUS
 %token UNDERSCORE AFFECT
 %token EOF
@@ -88,8 +95,9 @@ init
 invariants
 unsafe
 transitions 
-{ let vars, arrays = $2 in
+{ let consts, vars, arrays = $2 in
   { type_defs = $1; 
+    consts = consts; 
     globals = vars;
     arrays = arrays; 
     init = $3; 
@@ -99,13 +107,21 @@ transitions
 ;
 
 declarations :
-  | { [], [] }
-  | var_decl declarations { let vars, arrays = $2 in ($1::vars), arrays }
-  | array_decl declarations { let vars, arrays = $2 in vars, ($1::arrays) }
+  | { [], [], [] }
+  | const_decl declarations 
+      { let consts, vars, arrays = $2 in ($1::consts), vars, arrays }
+  | var_decl declarations 
+      { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
+  | array_decl declarations 
+      { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
 ;
 
 var_decl:
   | VAR mident COLON lident { Globals.add $2; $2, $4 }
+;
+
+const_decl:
+  | CONST mident COLON lident { Consts.add $2; $2, $4 }
 ;
 
 array_decl:
@@ -249,14 +265,25 @@ literal:
 | term operator term { Comp($1, $2, $3) }
 ;
 
+constnum:
+| REAL { ConstReal $1 }
+| INT { ConstInt $1 }
+;
+
 term:
-| mident { Elem ($1, sort $1) }
+| mident { 
+    if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
+    else Elem ($1, sort $1) }
 | lident { Elem ($1, Var) }
 | mident LEFTSQ lident RIGHTSQ { Access($1,$3) }
 | mident LEFTSQ mident RIGHTSQ { Access($1,$3) }
-| mident PLUS INT { Arith($1, sort $1, Plus, $3) }
-| mident MINUS INT { Arith($1, sort $1, Minus, $3) }
-| INT { Const $1 }
+| mident PLUS constnum { Arith($1, sort $1, MConst.add $3 1 MConst.empty) }
+| mident MINUS constnum { Arith($1, sort $1, MConst.add $3 (-1) MConst.empty) }
+| mident PLUS mident 
+      { Arith($1, sort $1, MConst.add (ConstName $3) 1 MConst.empty) }
+| mident MINUS mident 
+      { Arith($1, sort $1, MConst.add (ConstName $3) (-1) MConst.empty) }
+| constnum { Const (MConst.add $1 1 MConst.empty) }
 ;
 
 mident:

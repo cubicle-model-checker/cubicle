@@ -66,6 +66,10 @@ let vrai = make (Sy.True) [] Ty.Tbool
 let faux = make (Sy.False) [] Ty.Tbool
 
 let int i = make (Sy.int i) [] Ty.Tint
+let real r = make (Sy.real r) [] Ty.Treal
+
+let is_int t = (view t).ty= Ty.Tint
+let is_real t = (view t).ty= Ty.Treal
 
 let equal t1 t2 =  t1 == t2
   

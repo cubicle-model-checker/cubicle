@@ -20,6 +20,10 @@ val make : Symbols.t -> t list -> Ty.t -> t
 val vrai : t
 val faux : t
 val int : string -> t
+val real : string -> t
+
+val is_int : t -> bool
+val is_real : t -> bool
 
 val compare : t -> t -> int
 val equal : t -> t -> bool

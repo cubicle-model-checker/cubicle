@@ -16,11 +16,17 @@ type op_arith = Plus | Minus
 
 type sort = Glob | Arr | Constr | Var
 
+type const = ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
+
+module MConst : Map.S with type key = const
+
+val compare_constants : int MConst.t -> int MConst.t -> int
+
 type term = 
-  | Const of int
+  | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Hstring.t
-  | Arith of Hstring.t * sort * op_arith * int
+  | Arith of Hstring.t * sort * int MConst.t
 
 val compare_term : term -> term -> int
 
@@ -84,6 +90,7 @@ type elem = Hstring.t * (Hstring.t list)
 
 type system = {
   globals : (Hstring.t * Hstring.t) list;
+  consts : (Hstring.t * Hstring.t) list;
   arrays : (Hstring.t * (Hstring.t * Hstring.t)) list;
   type_defs : elem list;
   init : Hstring.t option * SAtom.t;

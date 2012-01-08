@@ -28,6 +28,7 @@
 	"assign", ASSIGN;
         "array", ARRAY;
         "var", VAR;
+        "const", CONST;
         "unsafe", UNSAFE;
 	"case", CASE;
 	"forall_other", FORALL;
@@ -37,6 +38,22 @@
     let pos = lexbuf.lex_curr_p in
     lexbuf.lex_curr_p <- 
       { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
+
+  let num_of_stringfloat s =
+    let r = ref (Num.Int 0) in
+    let code_0 = Char.code '0' in
+    let num10 = Num.Int 10 in
+    let pos_dot = ref (-1) in
+    for i=0 to String.length s - 1 do
+      let c = s.[i] in
+      if c = '.' then pos_dot := i 
+      else
+	r := Num.add_num (Num.mult_num num10 !r) 
+	  (Num.num_of_int (Char.code s.[i] - code_0))
+    done;
+    assert (!pos_dot <> -1);
+    Num.div_num !r (Num.power_num num10 (Num.num_of_int !pos_dot))
+    
 
   let string_buf = Buffer.create 1024
 
@@ -48,6 +65,7 @@
 let newline = '\n'
 let space = [' ' '\t' '\r']
 let integer = ['0' - '9'] ['0' - '9']*
+let real = ['0' - '9'] ['0' - '9']* '.' ['0' - '9']* 
 let mident = ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let lident = ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
@@ -60,7 +78,8 @@ rule token = parse
       { try Hashtbl.find keywords id
 	with Not_found -> LIDENT id }
   | mident as id { MIDENT id }
-  | integer as i { INT (int_of_string i) }
+  | real as r { REAL (num_of_stringfloat r) }
+  | integer as i { INT (Num.num_of_string i) }
   | "("
       { LEFTPAR }
   | ")"

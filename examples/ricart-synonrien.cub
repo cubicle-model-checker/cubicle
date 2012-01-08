@@ -11,15 +11,13 @@ array Clock[proc] : real
 array Last[proc] : real
 array Is_proc[proc] : bool
 
-var Tick : real
-(* const tick : real *)
+const Tick : real
 (* axiom : 0  < tick  *)
-
 
 init (z) { State[z] = Empty && Clock[z] = 0.0 && Last[z] = 0.0 && Timer = 1.0 }
 
 
-invariant () { Tick >= 0 }
+invariant () { Tick <= 0.0 }
 
 unsafe (z1 z2) { State[z1] = Use && State[z2] = Use }
 
@@ -95,7 +93,7 @@ requires { State[z] = Use && Sender[z] = Receiver[z] }
 {
   State[j] := case
                 | j = z : Exiting
-		| Sender[j] <> Reciever[j] && State[j] = Ok && 
+		| Sender[j] <> Receiver[j] && State[j] = Ok && 
                   Sender[j] = z : Empty
 		| _ : State[j] ;
 }
@@ -115,7 +113,7 @@ requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
 
 transition t4b_2 (z)
 requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
-	   forall_other j. (Sender[j] <> Receiver[j] && Receiver[j] <> x)}
+	   forall_other j. (Sender[j] <> Receiver[j] && Receiver[j] <> z)}
 {
   Timer := Timer + Tick;
   State[j] := case
@@ -127,7 +125,7 @@ requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
 
 transition t4b_3 (z)
 requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
-	   forall_other j. (Sender[j] <> Receiver[j] && Receiver[j] = x &&
+	   forall_other j. (Sender[j] <> Receiver[j] && Receiver[j] = z &&
 			    State[j] = Req )}
 {
   Timer := Timer + Tick;

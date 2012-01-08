@@ -34,6 +34,11 @@ module Typing = struct
     H.add decl_types tint Ty.Tint;
     tint
 
+  let type_real = 
+    let treal = Hstring.make "real" in
+    H.add decl_types treal Ty.Treal;
+    treal
+
   let type_bool = 
     let tbool = Hstring.make "bool" in
     H.add decl_types tbool Ty.Tbool;
@@ -182,7 +187,9 @@ module Term = struct
   type t = Term.t
   type operator = Plus | Minus | Mult | Div | Modulo
 
-  let make_int i = Term.int (string_of_int i)
+  let make_int i = Term.int (Num.string_of_num i)
+
+  let make_real r = Term.real (Num.string_of_num r)
 
   let make_app s l = 
     try
@@ -320,7 +327,7 @@ module Formula = struct
 	  List.fold_left init monos l
       | f -> (unfold [] f)::monos
 	
-  let make_cnf f = 
+  let make_cnf f =
     let sfnc = cnf (sform f) in
     init [] sfnc
 
