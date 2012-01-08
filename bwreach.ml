@@ -212,12 +212,26 @@ let rec find_update a i = function
       Branch { up_arr = a'; up_arg = i; up_swts = ls,t}
   | _ :: l -> find_update a i l
       
-let make_arith x sx op1 i1 op2 i2 = 
-  match op1, op2 with
+
+let make_arith tx op t = assert false
+(*let make_arith x sx op1 i1 op2 i2 = assert false*)
+
+(*
+	match t with
+	  | Const i2 -> 
+	      let c = 
+		Const (match op1 with Plus -> i2 + i1 | Minus -> i2 - i1)
+	      in
+	      Single c
+	  | Elem (x, sx) -> Single (Arith (x, sx, op1, i1))
+	  | Arith (y, sy, op2, i2) -> Single (make_arith y sy op1 i1 op2 i2)
+	  | Access _ -> assert false
+*)
+(*  match op1, op2 with
     | Plus , Plus  -> Arith (x, sx, Plus, i1 + i2)
     | Plus , Minus -> Arith (x, sx, Plus, i1 - i2)
     | Minus, Plus  -> Arith (x, sx, Plus, i2 - i1)
-    | Minus, Minus -> Arith (x, sx, Plus, -i1 - i2)
+    | Minus, Minus -> Arith (x, sx, Plus, -i1 - i2)*)
 
 let find_assign tr = function
   | Elem (x, sx) -> 
@@ -231,21 +245,11 @@ let find_assign tr = function
 
   | Const i as a -> Single a
 
-  | Arith (x, sx, op1, i1) ->
-      begin
-	let t = 
-	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
-	in 
-	match t with
-	  | Const i2 -> 
-	      let c = 
-		Const (match op1 with Plus -> i2 + i1 | Minus -> i2 - i1)
-	      in
-	      Single c
-	  | Elem (x, sx) -> Single (Arith (x, sx, op1, i1))
-	  | Arith (y, sy, op2, i2) -> Single (make_arith y sy op1 i1 op2 i2)
-	  | Access _ -> assert false
-      end
+  | Arith (x, sx, op1, t1) ->
+      let tx = 
+	try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
+      in 
+	make_arith tx op1 t1
   | Access (a, i ) -> 
       let ni = 
 	if H.list_mem i tr.tr_nondets then 
