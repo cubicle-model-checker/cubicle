@@ -525,7 +525,7 @@ let proper_cube sa =
 (****************************************************)
 
 let rec all_permutations l1 l2 = 
-  assert (List.length l1 <= List.length l2);
+  (*assert (List.length l1 <= List.length l2);*)
   match l1 with
     | [] -> [[]]
     | x::l -> cross l [] x l2
@@ -839,56 +839,69 @@ let postpone args p np =
   SAtom.equal sa2 sa1
 
 let uguard args tr_args = function
-  | [] -> SAtom.empty
-  | [j, sa] ->
+  | [] -> [SAtom.empty]
+  | [j, cnf] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.fold_left 
-	(fun u z -> SAtom.union u (subst_atoms [j, z] sa)) SAtom.empty uargs
+	(fun lureq z ->
+	   let m = List.map (subst_atoms [j, z]) cnf in
+	   List.fold_left 
+	     (fun acc sa -> 
+		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
+	)
+	[SAtom.empty]
+	uargs
+
   | _ -> assert false
 
 let make_cubes =
   let cpt = ref 0 in
   fun (ls, post) (args, rargs) 
     ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
-  let nb_uargs = List.length uargs in
-  let cube acc sigma = 
-    let lnp = simplify_atoms (subst_atoms sigma np) in
-    List.fold_left
-      (fun (ls, post) np ->
-	 let np, (nargs, _) = proper_cube np in
-	 let tr_args = List.map (svar sigma) tr.tr_args in
-	 let ureq = uguard nargs tr_args tr.tr_ureq in
-	 let ureq = subst_atoms sigma ureq in
-	 let np = SAtom.union ureq np in 
-	 if debug && !verbose > 0 then Debug.pre_cubes np nargs;
-	 if inconsistent np then begin
-	   if debug && !verbose > 0 then eprintf "(inconsistent)@.";
-	   (ls, post)
-	 end
-	 else
-	   if simpl_by_uc && already_closed s tr.tr_name tr_args <> None 
-	   then ls, post
-	   else
-	     let arr_np = ArrayAtom.of_satom np in
-	     incr cpt;
-	     let new_s = { s with
-	       t_from = (tr.tr_name, tr_args, s)::s.t_from;
-	       t_unsafe = nargs, np;
-	       t_arru = arr_np;
-	       t_alpha = ArrayAtom.alpha arr_np nargs;
-	       t_nb = !cpt;
-	       t_nb_father = nb;
-	     } in 
-	     if (alwayspost && List.length nargs > nb_uargs) ||
-	       (not alwayspost && 
-		  (not (SAtom.is_empty ureq) || postpone args p np)) then
-	       ls, new_s::post
-	     else new_s :: ls, post ) acc lnp
-  in
-  if List.length tr.tr_args > List.length rargs then (ls, post)
-  else
-    let d = all_permutations tr.tr_args rargs in
-    List.fold_left cube (ls, post) d
+      let nb_uargs = List.length uargs in
+      let cube acc sigma = 
+	let lnp = simplify_atoms (subst_atoms sigma np) in
+	let tr_args = List.map (svar sigma) tr.tr_args in
+	List.fold_left
+	  (fun (ls, post) np ->
+	     let np, (nargs, _) = proper_cube np in
+	     let lureq = uguard nargs tr_args tr.tr_ureq in
+	     let lureq = List.map (subst_atoms sigma) lureq in
+	     List.fold_left 
+	       (fun (ls, post) ureq ->
+		  let np = SAtom.union ureq np in 
+		  if debug && !verbose > 0 then Debug.pre_cubes np nargs;
+		  if inconsistent np then begin
+		    if debug && !verbose > 0 then eprintf "(inconsistent)@.";
+		    (ls, post)
+		  end
+		  else
+		    if simpl_by_uc && 
+		      already_closed s tr.tr_name tr_args <> None 
+		    then ls, post
+		    else
+		      let arr_np = ArrayAtom.of_satom np in
+		      incr cpt;
+		      let new_s = 
+			{ s with
+			    t_from = (tr.tr_name, tr_args, s)::s.t_from;
+			    t_unsafe = nargs, np;
+			    t_arru = arr_np;
+			    t_alpha = ArrayAtom.alpha arr_np nargs;
+			    t_nb = !cpt;
+			    t_nb_father = nb;
+			} in 
+		      if (alwayspost && List.length nargs > nb_uargs) ||
+			(not alwayspost && 
+			   (not (SAtom.is_empty ureq) || postpone args p np)) 
+		      then
+			ls, new_s::post
+		      else new_s :: ls, post ) acc lureq ) acc lnp
+      in
+      if List.length tr.tr_args > List.length rargs then (ls, post)
+      else
+	let d = all_permutations tr.tr_args rargs in
+	List.fold_left cube (ls, post) d
 
 
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
@@ -898,7 +911,9 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
     { tr with 
 	tr_args = List.map (svar sigma) tr.tr_args; 
 	tr_reqs = subst_atoms sigma tr.tr_reqs;
-	tr_ureq = List.map (fun (s, sa) -> s, subst_atoms sigma sa) tr.tr_ureq;
+	tr_ureq = 
+	List.map 
+	  (fun (s, cnf) -> s, List.map (subst_atoms sigma) cnf) tr.tr_ureq;
 	tr_assigns = 
 	List.map (fun (x, t) -> x, subst_term sigma t) 
 	  tr.tr_assigns;

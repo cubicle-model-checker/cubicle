@@ -263,10 +263,15 @@ cube:
 ;
 
 uliteral:
-| FORALL lident DOT literal { $2, SAtom.singleton $4 }
-| FORALL lident DOT LEFTPAR cube RIGHTPAR { $2, $5 }
+| FORALL lident DOT literal { $2, [SAtom.singleton $4] }
+| FORALL lident DOT LEFTPAR dnf RIGHTPAR { $2, $5 }
 ;
 
+
+dnf:
+| cube { [$1] }
+| cube OR dnf {$1 :: $3}
+;
 
 literal:
 | term operator term { Comp($1, $2, $3) }

@@ -240,7 +240,9 @@ let transitions =
     (fun ({tr_args = args} as t) -> 
        unique (fun x-> error (DuplicateName x)) args; 
        atoms args t.tr_reqs;
-       List.iter (fun (x, sa) -> atoms (x::args) sa)  t.tr_ureq;
+       List.iter 
+	 (fun (x, cnf) -> 
+	    List.iter (atoms (x::args)) cnf)  t.tr_ureq;
        updates args t.tr_upds;
        assigns args t.tr_assigns;
        nondets t.tr_nondets)

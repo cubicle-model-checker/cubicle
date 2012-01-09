@@ -55,11 +55,7 @@ requires { A[x] = L5 && forall_other y. W[y] = False }
 { A[j] := case | j = x: L6 | _ : A[j] ;}
 
 transition t7_1 (x)
-requires { A[x] = L6 && forall_other j. x < j }
-{ A[j] := case | j = x : L7 | _ : A[j] ; }
-
-transition t7_2 (x)
-requires { A[x] = L6 && forall_other y. ( y < x && S[y] = False) }
+requires { A[x] = L6 && forall_other j. (x < j || S[j] = False) }
 { A[j] := case | j = x : L7 | _ : A[j] ; }
 
 transition t8 (x)

@@ -5,15 +5,7 @@ init (z) { A[z] = Idle }
 unsafe (z1 z2) { A[z1] = Crit && A[z2] = Crit }
 
 transition tr1_1 (z)
-requires { A[z] = Idle && forall_other j. j < z }
-{ 
-  A[j] := case
-           | j=z : Wait
-	   | _ : A[j];
-}
-
-transition tr1_2 (z)
-requires { A[z] = Idle && forall_other j. ( z < j && A[j] = Idle ) }
+requires { A[z] = Idle && forall_other j. (j < z || A[j] = Idle) }
 { 
   A[j] := case
            | j=z : Wait
@@ -21,18 +13,10 @@ requires { A[z] = Idle && forall_other j. ( z < j && A[j] = Idle ) }
 }
 
 transition tr2_1 (z)
-requires { A[z] = Wait && forall_other j. z < j }
+requires { A[z] = Wait && forall_other j. (z < j || A[j] = Idle) }
 {
   A[j] := case
            | j=z : Crit
-	   | _ : A[j];
-}
-
-transition tr2_2 (z)
-requires { A[z] = Wait && forall_other j. ( j < z && A[j] = Idle ) }
-{ 
-  A[j] := case
-       	   | j=z : Crit
 	   | _ : A[j];
 }
 
