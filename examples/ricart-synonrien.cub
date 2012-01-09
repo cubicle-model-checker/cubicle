@@ -58,34 +58,15 @@ requires { State[z] = Wait &&
 }
 
 
-transition t3_1 (z)
+transition t3 (z)
 requires { State[z] = Wait && Sender[z] = Receiver[z] && 
-           forall_other j. Sender[j] = Receiver[j] }
+           forall_other j. 
+	   (Sender[j] = Receiver[j] || Sender[j] <> z || State[j] = Ok )}
 {
   State[j] := case
                 | j = z : Use
 		| _ : State[j] ;
 }
-
-transition t3_2 (z)
-requires { State[z] = Wait && Sender[z] = Receiver[z] && 
-           forall_other j. (Sender[j] <> Receiver[j] && Sender[j] <> z) }
-{
-  State[j] := case
-                | j = z : Use
-		| _ : State[j] ;
-}
-
-transition t3_3 (z)
-requires { State[z] = Wait && Sender[z] = Receiver[z] && 
-           forall_other j. (Sender[j] <> Receiver[j] && Sender[j] = z && 
-	                    State[j] = Ok) }
-{
-  State[j] := case
-                | j = z : Use
-		| _ : State[j] ;
-}
-
 
 
 transition t4a (z)
@@ -99,9 +80,10 @@ requires { State[z] = Use && Sender[z] = Receiver[z] }
 }
 
 
-transition t4b_1 (z)
+transition t4b (z)
 requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
-	   forall_other j. Sender[j] = Receiver[j] }
+	   forall_other j. 
+	       (Sender[j] = Receiver[j] || Receiver[j] <> z || State[j] = Req) }
 {
   Timer := Timer + Tick;
   State[j] := case
@@ -110,32 +92,6 @@ requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
   Clock[j] := case
 		| _ : Timer ;
 }
-
-transition t4b_2 (z)
-requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
-	   forall_other j. (Sender[j] <> Receiver[j] && Receiver[j] <> z)}
-{
-  Timer := Timer + Tick;
-  State[j] := case
-                | j = z : Idle
-		| _ : State[j] ;
-  Clock[j] := case
-		| _ : Timer ;
-}
-
-transition t4b_3 (z)
-requires { State[z] = Exiting && Sender[z] = Receiver[z] &&
-	   forall_other j. (Sender[j] <> Receiver[j] && Receiver[j] = z &&
-			    State[j] = Req )}
-{
-  Timer := Timer + Tick;
-  State[j] := case
-                | j = z : Idle
-		| _ : State[j] ;
-  Clock[j] := case
-		| _ : Timer ;
-}
-
 
 transition t5 (z other)
 requires { State[z] = Idle && Sender[z] = Receiver[z] &&

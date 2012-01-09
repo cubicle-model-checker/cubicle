@@ -840,11 +840,11 @@ let postpone args p np =
 
 let uguard args tr_args = function
   | [] -> [SAtom.empty]
-  | [j, cnf] ->
+  | [j, dnf] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.fold_left 
 	(fun lureq z ->
-	   let m = List.map (subst_atoms [j, z]) cnf in
+	   let m = List.map (subst_atoms [j, z]) dnf in
 	   List.fold_left 
 	     (fun acc sa -> 
 		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
@@ -913,7 +913,7 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	tr_reqs = subst_atoms sigma tr.tr_reqs;
 	tr_ureq = 
 	List.map 
-	  (fun (s, cnf) -> s, List.map (subst_atoms sigma) cnf) tr.tr_ureq;
+	  (fun (s, dnf) -> s, List.map (subst_atoms sigma) dnf) tr.tr_ureq;
 	tr_assigns = 
 	List.map (fun (x, t) -> x, subst_term sigma t) 
 	  tr.tr_assigns;
