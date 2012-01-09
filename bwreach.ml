@@ -765,13 +765,14 @@ let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   if profiling then TimeFix.pause ();
   f
 
-
-let neg x op y = 
-  match op with
-    | Eq -> Comp (x, Neq, y)
-    | Lt -> Comp (y, Le, x)
-    | Le -> Comp (y, Lt, x)
-    | Neq -> Comp (x, Eq, y)
+let neg = function
+  | True -> False
+  | False -> True
+  | Comp (x, Eq, y) -> Comp (x, Neq, y)
+  | Comp (x, Lt, y) -> Comp (y, Le, x)
+  | Comp (x, Le, y) -> Comp (y, Lt, x)
+  | Comp (x, Neq, y) -> Comp (x, Eq, y)
+  | _ -> assert false
 
 let simplification_atoms base sa = 
   try 
@@ -791,12 +792,15 @@ let rec break a =
 	begin
 	  match SAtom.elements sa with
 	    | [] -> assert false
-	    | [Comp(x, op, y) as z] ->
-		let nz = neg x op y in
+	    | c ->
+	        let nc = List.map neg c in
 		let l = break a2 in
-		(SAtom.add z (SAtom.singleton a1))::
-		  (List.map (SAtom.add nz) l)@(List.map (SAtom.add a1) l)
-	    | _ -> [SAtom.singleton a]
+		let a1_and_c = SAtom.add a1 sa in
+		let a1_and_a2 = List.map (SAtom.add a1) l in
+		let a2_and_nc_r = List.fold_left (fun acc c' -> 
+		  List.fold_left (fun acc li -> SAtom.add c' li :: acc) acc l)
+		  a1_and_a2 nc in
+		a1_and_c :: a2_and_nc_r
 	end
 
 let simplify_atoms np =

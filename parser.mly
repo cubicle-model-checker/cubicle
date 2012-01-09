@@ -196,6 +196,13 @@ LEFTBR assigns_nondets_updates RIGHTBR
 
 assigns_nondets_updates:
 |  { [], [], [] }
+| assign_nondet_update 
+    {  
+      match $1 with
+	| Assign (x, y) -> [x, y], [], []
+	| Nondet x -> [], [x], []
+	| Upd x -> [], [], [x]
+    }
 | assign_nondet_update PV assigns_nondets_updates 
        { 
 	 let assigns, nondets, upds = $3 in

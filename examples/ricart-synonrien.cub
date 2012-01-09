@@ -36,7 +36,7 @@ requires { State[z] = Idle && Sender[z] = Receiver[z] (* && Is_proc[z] = True *)
 		| _ : Clock[j] ;
   Last[j]  := case
 		| j = z : Timer
-		| _ : Last[j] ;
+		| _ : Last[j] 
 
 }
 
