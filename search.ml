@@ -292,7 +292,8 @@ module BFS_base ( X : I ) = struct
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	raise ReachBound;
+	(Profiling.print_report !nb_nodes !invariants !nb_deleted;
+	 raise ReachBound);
       X.safety s;
       if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) 
       then

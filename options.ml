@@ -52,7 +52,7 @@ let specs =
     "-q", Arg.Set quiet, " do not output search trace";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-depth", Arg.Set_int maxrounds, "<nb> max depth of the search tree (default 100)";
-    "-nodes", Arg.Set_int maxrounds, "<nb> max number nodes to explore (default 100000)";
+    "-nodes", Arg.Set_int maxnodes, "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
                "<bfs(default) | dfs | dfsl | dfsh | dfshl> search strategies";
     "-debug", Arg.Set debug, " debug mode";

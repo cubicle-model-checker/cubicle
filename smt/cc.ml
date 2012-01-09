@@ -21,6 +21,8 @@ let max_split = Num.Int 1000000
 module type S = sig
   type t
 
+  module TimerCC : Timer.S
+
   val empty : unit -> t
   val assume : Literal.LT.t -> Explanation.t -> t -> t * Term.Set.t * int
   val query : Literal.LT.t -> t -> answer
@@ -28,6 +30,8 @@ module type S = sig
 end
 
 module Make (X : Sig.X) = struct    
+
+  module TimerCC = Timer.Make(struct end)
 
   module Ex = Explanation
   module SetA = Use.SA

@@ -214,16 +214,13 @@ let assigns args =
        assignment g x ty_x;
        dv := g ::!dv)
     
-let switchs a args ty_e (l, ut) = 
+let switchs a args ty_e l = 
   List.iter 
     (fun (sa, t) -> 
        atoms args sa; 
        let ty = term args t in
        unify ty ty_e;
-       assignment a t ty) l;
-  let ty = term args ut in
-  unify ty ty_e;
-  assignment a ut ty
+       assignment a t ty) l
 
 let updates args = 
   List.iter 

@@ -204,12 +204,11 @@ let fresh_nondet =
 
 let rec find_update a i = function
   | [] -> raise Not_found
-  | { up_arr = a'; up_arg = j; up_swts = ls,t} :: _ when a=a' -> 
+  | { up_arr = a'; up_arg = j; up_swts = ls} :: _ when a=a' -> 
       let ls = 
 	List.map 
 	  (fun (ci, ti) -> subst_atoms [j, i] ci, subst_term [j, i] ti) ls in
-      let t = subst_term [j, i] t in
-      Branch { up_arr = a'; up_arg = i; up_swts = ls,t}
+      Branch { up_arr = a'; up_arg = i; up_swts = ls}
   | _ :: l -> find_update a i l
 
 
@@ -298,18 +297,22 @@ let find_assign tr = function
 let make_tau tr x op y =
   match find_assign tr x, find_assign tr y with
     | Single tx, Single ty -> Comp (tx, op, ty)
-    | Single tx, Branch {up_arr=a; up_arg=j; up_swts=(ls, t)} ->
+    | Single tx, Branch {up_arr=a; up_arg=j; up_swts=ls} ->
 	List.fold_right
 	  (fun (ci, ti) f -> Ite(ci, Comp(tx, op, ti), f))
-	  ls (Comp(tx, op, t))
-    | Branch {up_arr=a; up_arg=j; up_swts=(ls, t)}, Single tx ->
+	  ls True
+    | Branch {up_arr=a; up_arg=j; up_swts=ls}, Single tx ->
 	List.fold_right
 	  (fun (ci, ti) f -> Ite(ci, Comp(ti, op, tx), f))
-	  ls (Comp(t, op, tx))
-    | Branch {up_arr=a1; up_arg=j1; up_swts=(ls1, t1)},
-	Branch {up_arr=a2; up_arg=j2; up_swts=(ls2, t2)} ->
-        eprintf "%a@." Pretty.print_atom (Comp (x, op, y));
-	assert false
+	  ls True
+    | Branch {up_arr=a1; up_arg=j1; up_swts = ls1 },
+	Branch {up_arr=a2; up_arg=j2; up_swts= ls2 } ->
+	List.fold_right
+	  (fun (ci, ti) f -> 
+	     List.fold_right 
+	       (fun (cj, tj) f ->
+		  Ite(SAtom.union ci cj, Comp(ti, op, tj), f)) ls2 f)
+	  ls1 True
 
 
 (***********************************)
@@ -919,12 +922,12 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	  tr.tr_assigns;
 	tr_upds = 
 	List.map 
-	  (fun ({up_swts = swts, t} as up) -> 
+	  (fun ({up_swts = swts} as up) -> 
 	     let swts = 
 	       List.map 
 		 (fun (sa, t) -> subst_atoms sigma sa, subst_term sigma t) swts
 	     in
-	     { up with up_swts = swts, subst_term sigma t }) 
+	     { up with up_swts = swts }) 
 	  upds}
 
 

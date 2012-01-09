@@ -262,7 +262,7 @@ end
 type update = {
   up_arr : Hstring.t;
   up_arg : Hstring.t;
-  up_swts : (SAtom.t * term) list * term;
+  up_swts : (SAtom.t * term) list;
 }
 
 type transition = {

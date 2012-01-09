@@ -15,6 +15,8 @@
 module type S = sig
   type t
 
+  module TimerCC : Timer.S
+
   val empty : unit -> t
   val assume : Literal.LT.t -> Explanation.t -> t -> t * Term.Set.t * int
   val query : Literal.LT.t -> t -> Sig.answer

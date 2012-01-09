@@ -18,7 +18,10 @@ const Tick : real
 init (z) { State[z] = L1 && Clock[z] = 0.0 && Last[z] = 0.0 && Timer = 1.0 }
 
 
-(* invariant () { Tick <= 0.0 } *)
+invariant () { Tick <= 0.0 }
+
+(*invariant (z) {Is_proc[z] = True  && Sender[z] <> Receiver[z] }
+invariant (z) {Is_proc[z] = False  && Sender[z] = Receiver[z] }*)
 
 unsafe (z1 z2 z3 z4) { 
   State[z1] = L3 && State[z2] = L3 &&

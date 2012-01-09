@@ -59,11 +59,6 @@
 
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
 
-  let rec extract_underscore = function
-    | [] -> assert false
-    | (s, t) :: l when SAtom.is_empty s -> List.rev l, t
-    | _ -> raise Parsing.Parse_error 
-
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
@@ -233,12 +228,9 @@ require:
 ;
 
 update:
-mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs_underscore
+mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs
 { Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
 ;
-
-switchs_underscore:
-| switchs { extract_underscore (List.rev $1) }
 
 switchs:
 | BAR UNDERSCORE COLON term { [(SAtom.empty, $4)] }
