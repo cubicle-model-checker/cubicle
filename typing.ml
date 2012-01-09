@@ -272,7 +272,7 @@ let system s =
   Smt.Typing.Variant.init l;
   unsafe s.unsafe;
   transitions s.trans;
-  Smt.Typing.Variant.close ();
+  (* Smt.Typing.Variant.close (); *)
   if Options.debug then Smt.Typing.Variant.print ();
   let args, p = s.unsafe in
   let arru = ArrayAtom.of_satom p in

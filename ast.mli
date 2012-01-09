@@ -18,7 +18,10 @@ type sort = Glob | Arr | Constr | Var
 
 type const = ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
 
-module MConst : Map.S with type key = const
+module MConst : sig 
+  include Map.S with type key = const
+  val choose : int t -> key * int
+end
 
 val compare_constants : int MConst.t -> int MConst.t -> int
 

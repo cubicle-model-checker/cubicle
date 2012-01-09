@@ -27,7 +27,18 @@ let compare_const c1 c2 = match c1, c2 with
   | _, (ConstInt _ | ConstReal _) -> 1
   | ConstName h1, ConstName h2 -> Hstring.compare h1 h2
 
-module MConst = Map.Make (struct type t = const let compare = compare_const end)
+module MConst = struct 
+  module M = Map.Make (struct type t = const let compare = compare_const end)
+  include M
+
+  exception Choose of const * int
+  let choose m =
+    try
+      M.iter (fun c i -> raise (Choose (c, i))) m;
+      raise Not_found
+    with Choose (c, i) -> c, i
+
+end
 
 let compare_constants = MConst.compare Pervasives.compare 
 
