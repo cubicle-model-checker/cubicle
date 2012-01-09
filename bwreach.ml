@@ -857,6 +857,13 @@ let uguard args tr_args = function
 
   | _ -> assert false
 
+let add_list n l = 
+  let l = 
+    List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l 
+  in
+  if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
+  else n :: l
+
 let make_cubes =
   let cpt = ref 0 in
   fun (ls, post) (args, rargs) 
@@ -898,8 +905,8 @@ let make_cubes =
 			(not alwayspost && 
 			   (not (SAtom.is_empty ureq) || postpone args p np)) 
 		      then
-			ls, new_s::post
-		      else new_s :: ls, post ) acc lureq ) acc lnp
+			ls, add_list new_s post
+		      else add_list new_s ls, post ) acc lureq ) acc lnp
       in
       if List.length tr.tr_args > List.length rargs then (ls, post)
       else
