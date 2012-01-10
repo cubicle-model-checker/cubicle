@@ -35,6 +35,22 @@ let distinct_vars =
   in
   function n -> if n = 0 then F.vrai else t.(n-1)
 
+let order_vars =
+  let t = Array.create max_proc F.vrai in
+  let _ =
+    List.fold_left
+      (fun (acc, lf, i) v ->
+        match acc with
+          | v2::r ->
+            let lf = (F.make_lit F.Lt [v;v2]) :: lf in
+            t.(i) <- F.make F.And lf;
+            v::acc, lf, i+1
+          | [] -> v::acc, lf, i+1)
+      ([], [], 0) proc_terms
+  in
+  function n -> if n = 0 then F.vrai else t.(n-1)
+
+
 let make_op_arith = function Plus -> T.Plus | Minus -> T.Minus
 let make_op_comp = function
   | Eq -> F.Eq
@@ -115,6 +131,7 @@ let make_init {t_init = arg, sa } lvars =
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
   Smt.clear ();
   Smt.assume (distinct_vars (List.length args));
+  (* Smt.assume (order_vars (List.length args)); *)
   let init = make_init ts args in
   let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
@@ -125,6 +142,7 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
 let assume_goal {t_unsafe = (args, _); t_arru = ap } =
   Smt.clear ();
   Smt.assume (distinct_vars (List.length args));
+  (* Smt.assume (order_vars (List.length args)); *)
   let f = make_formula ap in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   Smt.assume f;

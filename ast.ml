@@ -13,7 +13,7 @@
 
 open Options
 
-type op_comp = Eq | Lt | Le| Neq
+type op_comp = Eq | Lt | Le | Neq
 type op_arith = Plus | Minus
 
 type sort = Glob | Arr | Constr | Var
@@ -204,7 +204,9 @@ module ArrayAtom = struct
   let of_satom s =
     Array.of_list (SAtom.elements s)
 
-  let union = Array.append
+  let union = Array.append 
+    (* let a = Array.append a1 a2 in *)
+    (* Array.fast_sort Atom.compare a; a *)
 
   let apply_subst sigma a =
     if profiling then TimerApply.start ();

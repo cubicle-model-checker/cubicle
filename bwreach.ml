@@ -330,9 +330,9 @@ let assoc_eq t1 l t2 =
   try compare_term (list_assoc_term t1 l) t2 = 0 with Not_found -> false
 
 let inconsistent_list l = 
-  let rec check values eqs neqs = function
+  let rec check values eqs neqs les lts ges gts = function
     | [] -> ()
-    | True :: l -> check values eqs neqs l
+    | True :: l -> check values eqs neqs les lts ges gts l
     | False :: _ -> raise Exit
     | Comp (t1, Eq, (Elem (x, s) as t2)) :: l 
     | Comp ((Elem (x, s) as t2), Eq, t1) :: l ->
@@ -341,23 +341,34 @@ let inconsistent_list l =
 	  if assoc_neq t1 values t2 
 	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
 	  then raise Exit
-	  else check ((t1, t2)::values) eqs neqs l
+	  else check ((t1, t2)::values) eqs neqs les lts ges gts l
 	| _ ->
 	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
 	  then raise Exit
-	  else check values ((t1, t2)::eqs) neqs l)
+	  else check values ((t1, t2)::eqs) neqs les lts ges gts l)
     | Comp (t1, Eq, t2) :: l ->
       if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
       then raise Exit
-      else check values ((t1, t2)::eqs) neqs l
+      else check values ((t1, t2)::eqs) neqs les lts ges gts l
     | Comp (t1, Neq, t2) :: l ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
 	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
       then raise Exit
-      else check values eqs ((t1, t2)::(t2, t1)::neqs) l
-    | _ :: l -> check values eqs neqs l
+      else check values eqs ((t1, t2)::(t2, t1)::neqs) les lts ges gts l
+    | Comp (t1, Lt, t2) :: l ->
+      if assoc_eq t1 values t2 || assoc_eq t2 values t1
+	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+	|| assoc_eq t1 ges t2 || assoc_eq t2 les t1
+	|| assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      then raise Exit
+      else check values eqs neqs les ((t1, t2)::lts) ges ((t2, t1)::gts) l
+    | Comp (t1, Le, t2) :: l ->
+      if assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      then raise Exit
+      else check values eqs neqs ((t1, t2)::les) lts ((t2, t1)::ges) gts l
+    | _ :: l -> check values eqs neqs les lts ges gts l
   in
-  try check [] [] [] l; false with Exit -> true
+  try check [] [] [] [] [] [] [] l; false with Exit -> true
 
 
 let inconsistent sa = 
@@ -575,17 +586,23 @@ let find_impossible a1 x1 op c1 i2 a2 n2 impos obvs =
     (match a2i, op with
       | Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
 	  i2 := n2
-      | Comp (Access (a2, x2), Eq, Elem (c2, _)), Neq when H.equal c1 c2 ->
+
+      | Comp (Access (a2, x2), Eq,
+	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), (Neq | Lt)
+	  when compare_term c1 c2 = 0 ->
 	  
 	  if H.list_mem_couple (x1, x2) obvs then raise NoPermutations;
 	  impos := (x1, x2) :: !impos
 	    
-      | Comp (Access (a2, x2), Neq, Elem (c2, _)), Eq when H.equal c1 c2 ->
+      | Comp (Access (a2, x2), (Neq | Lt),
+	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), Eq
+	  when compare_term c1 c2 = 0 ->
 	  
 	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
 	  impos := (x1, x2) :: !impos
 
-      | Comp (Access (a2, x2), Eq, Elem (c2, _)), Eq when not (H.equal c1 c2) ->
+      | Comp (Access (a2, x2), Eq, (Elem (_, Constr) as c2)), Eq 
+	  when compare_term c1 c2 <> 0 ->
 	  
 	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
 	  impos := (x1, x2) :: !impos
@@ -639,15 +656,14 @@ let obvious_impossible a1 a2 =
     		   raise NoPermutations
     	       | _ -> ()
 	   end
-       | Comp (Access (a1, x1), op, Elem (c1, _)), 
-	 Comp (Access (a, _), _, Elem _)
+       | Comp (Access (a1, x1), op, (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
+	 Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
 	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
   done;
   !obvs, !impos
-    
 
 (*******************************************)
 (* Relevant permuations for fixpoint check *)
@@ -698,6 +714,8 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
 	    end
 	    (* Heruristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+	    (* line below useful for arith : ricart *)
+	    else if inconsistent_array (ArrayAtom.union pp anp) then nodes
 	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
 	    else (Prover.assume_node pp; nodes)
 	) nodes d
