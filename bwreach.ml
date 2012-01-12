@@ -795,6 +795,84 @@ let neg = function
   | Comp (x, Neq, y) -> Comp (x, Eq, y)
   | _ -> assert false
 
+
+let mult_const a =
+  MConst.map (fun i -> i * a)
+
+let add_terms a x b y = match x, y with
+  | Const cx, Const cy -> 
+      1, Const (add_constants (mult_const a cx) (mult_const b cy))
+  | Arith (x, sx, cx), Const cy -> 
+      let c = add_constants (mult_const a cx) (mult_const b cy) in
+      if MConst.is_empty c then a, Elem (x, sx)
+      else a, Arith (x, sx, c)
+  | Const cx, Arith (y, sy, cy) -> 
+      let c = add_constants (mult_const a cx) (mult_const b cy) in
+      if MConst.is_empty c then b, Elem (y, sy)
+      else b, Arith (y, sy, c)
+  | Arith (x, sx, cx), Arith (y, sy, cy) when a = -b -> 
+      1, Const (add_constants (mult_const a cx) (mult_const b cy))
+  | _ -> assert false
+
+let add_atoms a x b y = match x, y with
+  | _ -> assert false
+
+let cross x cpos cneg = assert false
+  (* let rec cross_rec acc = function  *)
+  (*   | [] -> acc *)
+
+  (*   | Comp (x, (Le | Lt as op), y) :: l -> *)
+	
+  (* 	let n1 = abs_num (P.find x p1) in *)
+  (* 	(\* let ty = P.type_info p1 in *\) *)
+  (* 	let acc =  *)
+  (* 	  List.fold_left  *)
+  (* 	    (fun acc {Inequation.ple0 = p2; is_le = k2; dep=d2; expl = ex2} -> *)
+  (* 	       let n2 = abs_num (P.find x p2) in *)
+  (* 	       (\* let n1, n2 =  div_by_pgcd (n1, n2) ty in *\) *)
+  (* 	       let p = P.add *)
+  (* 		 (P.mult (P.create [] n2 (P.type_info p2)) p1) *)
+  (* 		 (P.mult (P.create [] n1 (P.type_info p1)) p2) in *)
+  (* 	       let d1 = mult_list n2 d1 in *)
+  (* 	       let d2 = mult_list n1 d2 in *)
+  (* 	       let ni =  *)
+  (* 		 { Inequation.ple0 = p;  is_le = k1&&k2; dep = d1 -@ d2; *)
+  (* 		   expl = Explanation.union ex1 ex2 } *)
+  (* 	       in  *)
+  (* 	       ni::acc *)
+  (* 	    ) acc cpos *)
+  (* 	in  *)
+  (* 	cross_rec acc l *)
+  (* in *)
+  (* cross_rec [] cneg *)
+
+let split x l = assert false
+  (* let rec split_rec (cp, cn, co) ineq = *)
+  (*   try *)
+  (*     let a = Inequation.find x ineq in *)
+  (*     if a >/ (Int 0) then ineq::cp, cn, co  *)
+  (*     else cp, ineq::cn, co *)
+  (*   with Not_found ->	cp, cn, ineq::co *)
+  (* in  *)
+  (* List.fold_left split_rec ([], [], []) l *)
+
+
+let rec fourier eqs l = assert false
+  (* match l with *)
+  (*   | [] -> eqs *)
+  (*   | ineq :: l' -> *)
+  (* 	try *)
+  (* 	  let x = choose_var l in *)
+  (* 	  let cpos, cneg, others = split x l in *)
+  (* 	  let ninqs = cross x cpos cneg in *)
+  (* 	  Debug.cross x cpos cneg others ninqs; *)
+  (* 	  let acc = add_inequations acc cpos expl in *)
+  (* 	  let acc = add_inequations acc cneg expl in *)
+  (* 	  fourier acc (ninqs -@ others) expl *)
+  (* 	with Not_found -> add_inequations acc l expl *)
+
+let fourier_motzkin sa = assert false
+
 let simplification_atoms base sa = 
   try 
     SAtom.fold (fun a base ->
