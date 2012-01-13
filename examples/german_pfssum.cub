@@ -79,9 +79,10 @@ unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Shared }
 (*:comment h0    t1*)
 transition t1(x)
 requires { M = Reqs && G = False && D[x] = Empty2 && C[x] = True && F = False }
-{ M := Empty1 }
-D[j] := case | j = x : Gnts | _ : D[j] ;
-S[j] := case | j = x : True | _ : S[j] ;
+{ M := Empty1 ;
+  D[j] := case | j = x : Gnts | _ : D[j] ;
+  S[j] := case | j = x : True | _ : S[j] ;
+}
 
 
 (*:comment h1    t2*)
