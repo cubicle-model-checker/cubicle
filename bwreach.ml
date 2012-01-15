@@ -124,6 +124,45 @@ let memo_apply_subst =
 (* variables are all disctincts					 *)
 (*****************************************************************)
 
+let num_of_const = function
+  | ConstInt n | ConstReal n -> n
+  | _ -> assert false
+
+let add_constnum c i num =
+  match c, num with
+    | ConstInt n, ConstInt m -> 
+	ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
+    | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
+	ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
+    | _ -> assert false
+
+let split_num_consts cs =
+  MConst.fold
+    (fun c i (cs, num) -> match c, num with
+       | ConstName _, _ -> MConst.add c i cs, num
+       | _ -> cs, add_constnum c i num)
+    cs (MConst.empty, ConstInt (Num.Int 0))
+
+let add_constant c i cs =
+  match c with
+    | ConstInt _ | ConstReal _ ->
+	let cs, num = split_num_consts cs in
+	let num = add_constnum c i num in
+	if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
+	else MConst.add num 1 cs
+    | _ ->
+	let i' = try MConst.find c cs with Not_found -> 0 in
+	let i = i + i' in
+	if i = 0 then MConst.remove c cs
+	else MConst.add c i cs
+
+let add_constants cs1 cs2 =
+  MConst.fold add_constant cs2 cs1
+
+
+let mult_const a =
+  MConst.map (fun i -> i * a)
+
 
 let redondant others = function
   | True -> true
@@ -158,6 +197,12 @@ let rec simplification np a =
     | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
     | Comp (Arith (i, si, csi), op, (Arith (j, sj, csj)))
       when compare_constants csi csj = 0 -> simplify_comp i si op j sj
+    | Comp (Const cx, op, Arith (y, sy, cy)) ->
+	Comp (Const (add_constants (mult_const (-1) cx) cx), op,
+	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy)))
+    | Comp ( Arith (x, sx, cx), op, Const cy) ->
+	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op,
+	      Const (add_constants (mult_const (-1) cy) cy))
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
@@ -211,41 +256,6 @@ let rec find_update a i = function
       Branch { up_arr = a'; up_arg = i; up_swts = ls}
   | _ :: l -> find_update a i l
 
-
-let num_of_const = function
-  | ConstInt n | ConstReal n -> n
-  | _ -> assert false
-
-let add_constnum c i num =
-  match c, num with
-    | ConstInt n, ConstInt m -> 
-	ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
-    | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
-	ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
-    | _ -> assert false
-
-let split_num_consts cs =
-  MConst.fold
-    (fun c i (cs, num) -> match c, num with
-       | ConstName _, _ -> MConst.add c i cs, num
-       | _ -> cs, add_constnum c i num)
-    cs (MConst.empty, ConstInt (Num.Int 0))
-
-let add_constant c i cs =
-  match c with
-    | ConstInt _ | ConstReal _ ->
-	let cs, num = split_num_consts cs in
-	let num = add_constnum c i num in
-	if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
-	else MConst.add num 1 cs
-    | _ ->
-	let i' = try MConst.find c cs with Not_found -> 0 in
-	let i = i + i' in
-	if i = 0 then MConst.remove c cs
-	else MConst.add c i cs
-
-let add_constants cs1 cs2 =
-  MConst.fold add_constant cs2 cs1
 
 let find_assign tr = function
   | Elem (x, sx) -> 
@@ -796,12 +806,24 @@ let neg = function
   | _ -> assert false
 
 
-let mult_const a =
-  MConst.map (fun i -> i * a)
+let const_nul c =
+  try
+    let n = ref (Num.Int 0) in
+    MConst.iter (fun c i -> if i <> 0 then 
+		   match c with
+		     | ConstName _ -> raise Exit
+		     | ConstInt a | ConstReal a -> 
+			 n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
+    Num.compare_num !n (Num.Int 0) = 0
+  with Exit -> false
 
 let add_terms a x b y = match x, y with
   | Const cx, Const cy -> 
       1, Const (add_constants (mult_const a cx) (mult_const b cy))
+  | Elem (x,sx), Const cy -> 
+      a, Arith (x, sx, (mult_const b cy))
+  | Const cx, Elem (y,sy) -> 
+      b, Arith (y, sy, (mult_const a cx))
   | Arith (x, sx, cx), Const cy -> 
       let c = add_constants (mult_const a cx) (mult_const b cy) in
       if MConst.is_empty c then a, Elem (x, sx)
@@ -812,19 +834,39 @@ let add_terms a x b y = match x, y with
       else b, Arith (y, sy, c)
   | Arith (x, sx, cx), Arith (y, sy, cy) when a = -b && Hstring.equal x y -> 
       1, Const (add_constants (mult_const a cx) (mult_const b cy))
+  | Const cx, t ->
+      if const_nul cx then b, t
+      else 
+	(eprintf "%d (*) %a (+) %d (*) %a@." 
+	   a Pretty.print_term x b Pretty.print_term y;
+	 assert false)
+  | t, Const cy ->
+      if const_nul cy then a, t
+      else 
+	(eprintf "%d (*) %a (+) %d (*) %a@."
+	   a Pretty.print_term x b Pretty.print_term y;
+	 assert false)
   | _ ->
-      eprintf "%d (*) %a (+) %d (*) %a@." a Pretty.print_term x b Pretty.print_term y;
+      eprintf "%d (*) %a (+) %d (*) %a@."
+	a Pretty.print_term x b Pretty.print_term y;
       assert false
 
-let add_atoms a x b y = match x, y with
-  | Comp (x1, Le, x2), Comp (y1, Le, y2) ->
-      let cl, left = add_terms a x1 b y1 in
-      let cr, right = add_terms a x2 b y2 in
+let add_atoms a x b y = 
+  (*eprintf "aa: %d (*) %a (+) %d (*) %a@." a Pretty.print_atom x b Pretty.print_atom y;*)
+  match x, y with
+  | Comp (x1, (Eq), x2), Comp (y1, (Eq), y2) ->
+      let cl, left = add_terms (-a) x2 b y1 in
+      let cr, right = add_terms (-a) x1 b y2 in
+      if cl <> cr then raise Exit
+      else Comp (left, Eq, right)
+  | Comp (x1, (Le|Eq), x2), Comp (y1, (Le|Eq), y2) ->
+      let cl, left = add_terms (-a) x2 b y1 in
+      let cr, right = add_terms (-a) x1 b y2 in
       if cl <> cr then raise Exit
       else Comp (left, Le, right)
-  | Comp (x1, (Le|Lt), x2), Comp (y1, (Le|Lt), y2) ->
-      let cl, left = add_terms a x1 b y1 in
-      let cr, right = add_terms a x2 b y2 in
+  | Comp (x1, (Le|Lt|Eq), x2), Comp (y1, (Le|Lt|Eq), y2) ->
+      let cl, left = add_terms (-a) x2 b y1 in
+      let cr, right = add_terms (-a) x1 b y2 in
       if cl <> cr then raise Exit
       else Comp (left, Lt, right)
   | _ -> raise Exit
@@ -863,14 +905,14 @@ let split_sign x l =
     | Comp (l, _, r) ->
 	begin
 	  try 
-	    let a = find_coef_term x l in
-	    if a >= 0 then ineq::cp, cn, co
-	    else cp, ineq::cn, co
+	    let a = find_coef_term x r in
+	    if a >= 0 then cp, ineq::cn, co
+	    else ineq::cp, cn, co
 	  with Not_found ->
 	    try 
-	      let a = find_coef_term x r in
-	      if a >= 0 then cp, ineq::cn, co
-	      else ineq::cp, cn, co
+	      let a = find_coef_term x l in
+	      if a >= 0 then ineq::cp, cn, co
+	      else cp, ineq::cn, co
 	    with Not_found -> cp, cn, ineq::co
 	end
     | _ -> cp, cn, co
@@ -892,6 +934,7 @@ let choose_var_term t =
     end;
     raise Not_found
   with Found_var n -> n
+
 
 let rec choose_var = function
   | [] -> raise Not_found
@@ -939,20 +982,20 @@ let simplification_atoms base sa =
 let rec break a =
   match a with
     | True | False | Comp _ -> [SAtom.singleton a]
-    | Ite (sa, a1, a2) -> 
-	begin
-	  match SAtom.elements sa with
-	    | [] -> assert false
-	    | c ->
-	        let nc = List.map neg c in
-		let l = break a2 in
-		let a1_and_c = SAtom.add a1 sa in
-		let a1_and_a2 = List.map (SAtom.add a1) l in
-		let a2_and_nc_r = List.fold_left (fun acc c' -> 
-		  List.fold_left (fun acc li -> SAtom.add c' li :: acc) acc l)
-		  a1_and_a2 nc in
-		a1_and_c :: a2_and_nc_r
-	end
+    | Ite (sa, a1, a2) ->
+  	begin
+  	  match SAtom.elements sa with
+  	    | [] -> assert false
+  	    | c ->
+  	        let nc = List.map neg c in
+  		let l = break a2 in
+  		let a1_and_c = SAtom.add a1 sa in
+  		let a1_and_a2 = List.map (SAtom.add a1) l in
+  		let a2_and_nc_r = List.fold_left (fun acc c' ->
+  		  List.fold_left (fun acc li -> SAtom.add c' li :: acc) acc l)
+  		  a1_and_a2 nc in
+  		a1_and_c :: a2_and_nc_r
+  	end
 
 let simplify_atoms np =
   let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
