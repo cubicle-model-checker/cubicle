@@ -810,79 +810,131 @@ let add_terms a x b y = match x, y with
       let c = add_constants (mult_const a cx) (mult_const b cy) in
       if MConst.is_empty c then b, Elem (y, sy)
       else b, Arith (y, sy, c)
-  | Arith (x, sx, cx), Arith (y, sy, cy) when a = -b -> 
+  | Arith (x, sx, cx), Arith (y, sy, cy) when a = -b && Hstring.equal x y -> 
       1, Const (add_constants (mult_const a cx) (mult_const b cy))
-  | _ -> assert false
+  | _ ->
+      eprintf "%d (*) %a (+) %d (*) %a@." a Pretty.print_term x b Pretty.print_term y;
+      assert false
 
 let add_atoms a x b y = match x, y with
-  | _ -> assert false
+  | Comp (x1, Le, x2), Comp (y1, Le, y2) ->
+      let cl, left = add_terms a x1 b y1 in
+      let cr, right = add_terms a x2 b y2 in
+      if cl <> cr then raise Exit
+      else Comp (left, Le, right)
+  | Comp (x1, (Le|Lt), x2), Comp (y1, (Le|Lt), y2) ->
+      let cl, left = add_terms a x1 b y1 in
+      let cr, right = add_terms a x2 b y2 in
+      if cl <> cr then raise Exit
+      else Comp (left, Lt, right)
+  | _ -> raise Exit
 
-let cross x cpos cneg = assert false
-  (* let rec cross_rec acc = function  *)
-  (*   | [] -> acc *)
+let find_coef_term x = function
+  | Const c -> MConst.find (ConstName x) c
+  | Arith (y, _, _) when Hstring.equal x y -> 1
+  | Arith (_, _, c) -> MConst.find (ConstName x) c
+  | Elem (y, _) when Hstring.equal x y -> 1
+  | _ -> raise Not_found
 
-  (*   | Comp (x, (Le | Lt as op), y) :: l -> *)
-	
-  (* 	let n1 = abs_num (P.find x p1) in *)
-  (* 	(\* let ty = P.type_info p1 in *\) *)
-  (* 	let acc =  *)
-  (* 	  List.fold_left  *)
-  (* 	    (fun acc {Inequation.ple0 = p2; is_le = k2; dep=d2; expl = ex2} -> *)
-  (* 	       let n2 = abs_num (P.find x p2) in *)
-  (* 	       (\* let n1, n2 =  div_by_pgcd (n1, n2) ty in *\) *)
-  (* 	       let p = P.add *)
-  (* 		 (P.mult (P.create [] n2 (P.type_info p2)) p1) *)
-  (* 		 (P.mult (P.create [] n1 (P.type_info p1)) p2) in *)
-  (* 	       let d1 = mult_list n2 d1 in *)
-  (* 	       let d2 = mult_list n1 d2 in *)
-  (* 	       let ni =  *)
-  (* 		 { Inequation.ple0 = p;  is_le = k1&&k2; dep = d1 -@ d2; *)
-  (* 		   expl = Explanation.union ex1 ex2 } *)
-  (* 	       in  *)
-  (* 	       ni::acc *)
-  (* 	    ) acc cpos *)
-  (* 	in  *)
-  (* 	cross_rec acc l *)
-  (* in *)
-  (* cross_rec [] cneg *)
+let find_coef x = function
+  | Comp (l, _, r) -> 
+      (try find_coef_term x l with Not_found -> find_coef_term x r)
+  | _ -> raise Not_found
 
-let split x l = assert false
-  (* let rec split_rec (cp, cn, co) ineq = *)
-  (*   try *)
-  (*     let a = Inequation.find x ineq in *)
-  (*     if a >/ (Int 0) then ineq::cp, cn, co  *)
-  (*     else cp, ineq::cn, co *)
-  (*   with Not_found ->	cp, cn, ineq::co *)
-  (* in  *)
-  (* List.fold_left split_rec ([], [], []) l *)
+let cross x cpos cneg = 
+  let rec cross_rec acc = function
+    | [] -> acc
+    | i1 :: l ->
+  	let n1 = abs (find_coef x i1) in
+  	let acc =
+  	  List.fold_left
+  	    (fun acc i2 ->
+  	       let n2 = abs (find_coef x i2) in
+	       let ni = add_atoms n2 i1 n1 i2 in
+  	       ni::acc
+  	    ) acc cpos
+  	in
+  	cross_rec acc l
+  in
+  cross_rec [] cneg
+
+let split_sign x l =
+  let rec split_rec (cp, cn, co) ineq = match ineq with
+    | Comp (l, _, r) ->
+	begin
+	  try 
+	    let a = find_coef_term x l in
+	    if a >= 0 then ineq::cp, cn, co
+	    else cp, ineq::cn, co
+	  with Not_found ->
+	    try 
+	      let a = find_coef_term x r in
+	      if a >= 0 then cp, ineq::cn, co
+	      else ineq::cp, cn, co
+	    with Not_found -> cp, cn, ineq::co
+	end
+    | _ -> cp, cn, co
+  in
+  List.fold_left split_rec ([], [], []) l
 
 
-let rec fourier eqs l = assert false
-  (* match l with *)
-  (*   | [] -> eqs *)
-  (*   | ineq :: l' -> *)
-  (* 	try *)
-  (* 	  let x = choose_var l in *)
-  (* 	  let cpos, cneg, others = split x l in *)
-  (* 	  let ninqs = cross x cpos cneg in *)
-  (* 	  Debug.cross x cpos cneg others ninqs; *)
-  (* 	  let acc = add_inequations acc cpos expl in *)
-  (* 	  let acc = add_inequations acc cneg expl in *)
-  (* 	  fourier acc (ninqs -@ others) expl *)
-  (* 	with Not_found -> add_inequations acc l expl *)
+exception Found_var of Hstring.t
 
-let fourier_motzkin sa = assert false
+let choose_var_term t = 
+  try 
+    begin
+      match t with
+	| Const c | Arith (_ ,_ , c) -> 
+	    MConst.iter (fun c i -> if i <> 0 then match c with 
+			     | ConstName n -> raise (Found_var n)
+			     | _ -> ()) c
+	| _ -> ()
+    end;
+    raise Not_found
+  with Found_var n -> n
+
+let rec choose_var = function
+  | [] -> raise Not_found
+  | Comp (x, _, y)::l ->
+      (try choose_var_term x 
+       with Not_found -> 
+	 try choose_var_term y 
+	 with Not_found -> choose_var l)
+  | _::l -> choose_var l
+
+let rec fourier l =
+  match l with
+    | [] -> l
+    | ineq :: _ ->
+  	try
+  	  let x = choose_var l in
+  	  let cpos, cneg, others = split_sign x l in
+  	  let ninqs = cross x cpos cneg in
+  	  fourier (ninqs @ others)
+  	with Not_found -> l
+
+
+let fm_qe sa = 
+  let sineqs, sothers = 
+    SAtom.partition (function 
+		       | Comp ( _, (Le|Lt), _) -> true 
+		       | _ -> false) sa in
+  let nineqs = fourier (SAtom.elements sineqs) in
+  List.fold_left (fun acc a -> SAtom.add a acc) sothers nineqs
 
 let simplification_atoms base sa = 
-  try 
-    SAtom.fold (fun a base ->
-      let na = simplification base a in
-      match na with
-	| True -> base
-	| False -> raise Exit
-	| _ -> add na base)
-      sa SAtom.empty
-  with Exit -> SAtom.singleton False
+  let sa =
+    try 
+      SAtom.fold (fun a base ->
+		    let na = simplification base a in
+		    match na with
+		      | True -> base
+		      | False -> raise Exit
+		      | _ -> add na base)
+	sa SAtom.empty
+    with Exit -> SAtom.singleton False
+  in
+  fm_qe sa
       
 let rec break a =
   match a with
