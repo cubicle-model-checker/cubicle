@@ -1154,8 +1154,10 @@ let filter_rev p =
   | x :: l -> if p x then find (x :: accu) l else find accu l in
   find []
 
+let is_deleted s = s.t_deleted || has_deleted_ancestor s
+
 let delete_nodes s nodes nb_del inc =
-  if (not s.t_deleted) && not (has_deleted_ancestor s) then
+  (* if (not s.t_deleted) && not (has_deleted_ancestor s) then *)
     nodes := filter_rev
       (fun n -> 
 	if (not n.t_deleted) &&
@@ -1355,6 +1357,7 @@ module T = struct
   let delete_nodes = delete_nodes
   let delete_nodes_inv = delete_nodes_inv
   let delete_node = delete_node
+  let is_deleted = is_deleted
 
   let fixpoint = fixpoint
   let easy_fixpoint = easy_fixpoint

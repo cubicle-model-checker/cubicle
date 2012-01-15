@@ -16,39 +16,43 @@ unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
 
 
 transition atom_WB (p)
-require { CacheState[p] = Exclusive }
-assign { Memory := CacheData[p] }
-CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+requires { CacheState[p] = Exclusive }
+{ Memory := CacheData[p];
+CacheState[j] := case | j = p : Invalid | _ : CacheState[j] }
 
 
 transition atom_Invalidate (p)
-require { CacheState[p] <> Exclusive }
-CacheState[j] := {| j = p : Invalid | _ : CacheState[j] }
+requires { CacheState[p] <> Exclusive }
+{ CacheState[j] := case | j = p : Invalid | _ : CacheState[j] }
 
 
 transition atom_Get_1 (p)
-require { CacheState[p] <> Exclusive }
-uguard (i) { CacheState[i] <> Exclusive }
-CacheState[j] := {| j = p : Shared | _ : CacheState[j] }
-CacheData[j] := {| j = p : Memory | _ : CacheData[j] }
+requires { CacheState[p] <> Exclusive && 
+	  forall_other i. CacheState[i] <> Exclusive }
+{
+CacheState[j] := case | j = p : Shared | _ : CacheState[j];
+CacheData[j] := case | j = p : Memory | _ : CacheData[j] 
+}
 
 
 transition atom_Get_2 (p1 p2)
-require { CacheState[p1] = Exclusive }
-assign { Memory := CacheData[p1] }
-CacheState[j] := {| j = p1 : Shared | j = p2 : Shared | _ : CacheState[j] }
-CacheData[j] := {| j = p2 : CacheData[p1] | _ : CacheData[j] }
+requires { CacheState[p1] = Exclusive }
+{ Memory := CacheData[p1];
+CacheState[j] := case | j = p1 : Shared | j = p2 : Shared | _ : CacheState[j];
+CacheData[j] := case | j = p2 : CacheData[p1] | _ : CacheData[j] }
 
 
 transition atom_GetX_1 (p2)
-require { CacheState[p2] <> Exclusive }
-uguard (i) { CacheState[i] <> Exclusive }
-CacheState[j] := {| j = p2 : Exclusive | _ : CacheState[j] }
-CacheData[j] := {| j = p2 : Memory | _ : CacheData[j] }
+requires { CacheState[p2] <> Exclusive &&
+forall_other i. CacheState[i] <> Exclusive }
+{ CacheState[j] := case | j = p2 : Exclusive | _ : CacheState[j] ;
+  CacheData[j] := case | j = p2 : Memory | _ : CacheData[j] }
 
 
 transition atom_GetX_2 (p1 p2)
-require { CacheState[p1] = Exclusive }
-CacheState[j] := {| j = p1 : Invalid | j = p2 : Exclusive | _ : CacheState[j] }
-CacheData[j] := {| j = p2 : CacheData[p1] | _ : CacheData[j] }
+requires { CacheState[p1] = Exclusive }
+{
+CacheState[j] := case | j = p1 : Invalid | j = p2 : Exclusive | _ : CacheState[j];
+CacheData[j] := case | j = p2 : CacheData[p1] | _ : CacheData[j] 
+}
 

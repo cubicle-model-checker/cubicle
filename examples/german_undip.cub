@@ -36,11 +36,12 @@ LC	currentcommand=requestshared & exclusivegranted=false
 *)
 
 transition home0(n)
-require { Curcmd = Reqs && Exgntd = False && Chan2[n] = Empty &&
+requires { Curcmd = Reqs && Exgntd = False && Chan2[n] = Empty &&
     Curclient[n] = True }
-assign { Curcmd := Empty }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-Chan2[j] := {| j = n : Gnts | _ : Chan2[j] }
+{ Curcmd := Empty;
+Shrset[j] := case | j = n : True | _ : Shrset[j] ;
+Chan2[j] := case | j = n : Gnts | _ : Chan2[j] ;
+}
 
 (*
 #home1
@@ -54,12 +55,14 @@ BDP    currentcommand=requestexclusive & channeltwo=empty
 *)
 
 transition home1(n)
-require { Curcmd = Reqe && Chan2[n] = Empty &&
-    Curclient[n] = True && Shrset[n] = False }
-uguard (i) { Shrset[i] = False }
-assign { Curcmd := Empty; Exgntd := True }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-Chan2[j] := {| j = n : Gnte | _ : Chan2[j] }
+requires { Curcmd = Reqe && Chan2[n] = Empty &&
+    Curclient[n] = True && Shrset[n] = False &&
+    forall_other i. Shrset[i] = False }
+{
+Curcmd := Empty; Exgntd := True;
+Shrset[j] := case | j = n : True | _ : Shrset[j] ;
+Chan2[j] := case | j = n : Gnte | _ : Chan2[j] ;
+}
 
 
 (*
@@ -75,11 +78,13 @@ BDP    currentcommand=empty & channelone=requestshared
 *)
 
 transition home2r3(n)
-require { Curcmd = Empty && Chan1[n] = Reqs (* && Shrset[n] = False *)}
-assign { Curcmd := Reqs }
-Chan1[j] := {| j = n : Empty | _ : Chan1[j] }
-Invset[j] := {| j = n : False | _ : Shrset[j] }
-Curclient[j] := {| j = n : True | _ : False }
+requires { Curcmd = Empty && Chan1[n] = Reqs (* && Shrset[n] = False *)}
+{ 
+Curcmd := Reqs;
+Chan1[j] := case | j = n : Empty | _ : Chan1[j] ;
+Invset[j] := case | j = n : False | _ : Shrset[j] ;
+Curclient[j] := case | j = n : True | _ : False 
+}
 
 (*
 #home2: channelone=requestexclusive, sharedlist=false
@@ -94,11 +99,13 @@ BDP    currentcommand=empty & channelone=requestexclusive
 *)
 
 transition home2r4(n)
-require { Curcmd = Empty && Chan1[n] = Reqe (* && Shrset[n] = False *)}
-assign { Curcmd := Reqe }
-Chan1[j] := {| j = n : Empty | _ : Chan1[j] }
-Invset[j] := {| j = n : False | _ : Shrset[j] }
-Curclient[j] := {| j = n : True | _ : False }
+requires { Curcmd = Empty && Chan1[n] = Reqe (* && Shrset[n] = False *)}
+{
+Curcmd := Reqe;
+Chan1[j] := case | j = n : Empty | _ : Chan1[j] ;
+Invset[j] := case | j = n : False | _ : Shrset[j] ;
+Curclient[j] := case | j = n : True | _ : False 
+}
 
 
 (*
@@ -114,11 +121,13 @@ BDP    currentcommand=empty & channelone=requestshared
 *)
 
 transition home2r5(n)
-require { Curcmd = Empty && Chan1[n] = Reqs (* && Shrset[n] = True *)}
-assign { Curcmd := Reqs }
-Chan1[j] := {| j = n : Empty | _ : Chan1[j] }
-Invset[j] := {| j = n : True | _ : Shrset[j] }
-Curclient[j] := {| j = n : True | _ : False }
+requires { Curcmd = Empty && Chan1[n] = Reqs (* && Shrset[n] = True *)}
+{ 
+Curcmd := Reqs;
+Chan1[j] := case | j = n : Empty | _ : Chan1[j] ;
+Invset[j] := case | j = n : True | _ : Shrset[j] ;
+Curclient[j] := case | j = n : True | _ : False
+}
 
 (*
 #home2: channelone=requestexclusive, sharedlist=true
@@ -133,11 +142,13 @@ BDP    currentcommand=empty & channelone=requestexclusive
 *)
 
 transition home2r4(n)
-require { Curcmd = Empty && Chan1[n] = Reqe (* && Shrset[n] = True *)}
-assign { Curcmd := Reqe }
-Chan1[j] := {| j = n : Empty | _ : Chan1[j] }
-Invset[j] := {| j = n : True | _ : Shrset[j] }
-Curclient[j] := {| j = n : True | _ : False }
+requires { Curcmd = Empty && Chan1[n] = Reqe (* && Shrset[n] = True *)}
+{
+Curcmd := Reqe;
+Chan1[j] := case | j = n : Empty | _ : Chan1[j] ;
+Invset[j] := case | j = n : True | _ : Shrset[j] ;
+Curclient[j] := case | j = n : True | _ : False 
+}
 
 
 (*
@@ -149,10 +160,12 @@ LC     currentcommand=requestshared & exclusivegranted=true
 *)
 
 transition home3(n)
-require { Curcmd = Reqs && Exgntd = True && Chan2[n] = Empty &&
+requires { Curcmd = Reqs && Exgntd = True && Chan2[n] = Empty &&
     Invset[n] = True }
-Invset[j] := {| j = n : False | _ : Invset[j] }
-Chan2[j] := {| j = n : Inv | _ : Chan2[j] }
+{
+Invset[j] := case | j = n : False | _ : Invset[j] ;
+Chan2[j] := case | j = n : Inv | _ : Chan2[j] ;
+}
 
 (*
 #home4
@@ -163,9 +176,11 @@ LC     currentcommand=requestexclusive
 *)
 
 transition home4(n)
-require { Curcmd = Reqe  && Chan2[n] = Empty && Invset[n] = True }
-Invset[j] := {| j = n : False | _ : Invset[j] }
-Chan2[j] := {| j = n : Inv | _ : Chan2[j] }
+requires { Curcmd = Reqe  && Chan2[n] = Empty && Invset[n] = True }
+{
+Invset[j] := case | j = n : False | _ : Invset[j] ;
+Chan2[j] := case | j = n : Inv | _ : Chan2[j] ;
+}
 
 
 (*
@@ -177,10 +192,12 @@ Chan2[j] := {| j = n : Inv | _ : Chan2[j] }
 
 (*
 transition home5(n)
-require { Curcmd <> Empty && Chan3[n] = Invack }
-assign { Exgntd := False }
-Shrset[j] := {| j = n : False | _ : Shrset[j] }
-Chan3[j] := {| j = n : Empty | _ : Chan3[j] }
+requires { Curcmd <> Empty && Chan3[n] = Invack }
+{
+Exgntd := False;
+Shrset[j] := case | j = n : False | _ : Shrset[j] ;
+Chan3[j] := case | j = n : Empty | _ : Chan3[j] ;
+}
 *)
 
 (*
@@ -193,10 +210,12 @@ LC     currentcommand=grantshared
 *)
 
 transition home5r9(n)
-require { Curcmd = Gnts && Chan3[n] = Invack }
-assign { Exgntd := False }
-Shrset[j] := {| j = n : False | _ : Shrset[j] }
-Chan3[j] := {| j = n : Empty | _ : Chan3[j] }
+requires { Curcmd = Gnts && Chan3[n] = Invack }
+{
+Exgntd := False;
+Shrset[j] := case | j = n : False | _ : Shrset[j] ;
+Chan3[j] := case | j = n : Empty | _ : Chan3[j] ;
+}
 
 (*
 #home5 grantexclusive
@@ -208,10 +227,12 @@ LC     currentcommand=grantexclusive
 *)
 
 transition home5r10(n)
-require { Curcmd = Gnte && Chan3[n] = Invack }
-assign { Exgntd := False }
-Shrset[j] := {| j = n : False | _ : Shrset[j] }
-Chan3[j] := {| j = n : Empty | _ : Chan3[j] }
+requires { Curcmd = Gnte && Chan3[n] = Invack }
+{
+Exgntd := False;
+Shrset[j] := case | j = n : False | _ : Shrset[j] ;
+Chan3[j] := case | j = n : Empty | _ : Chan3[j] ;
+}
 
 
 (*
@@ -223,8 +244,10 @@ LC     pc=invalid
 *)
 
 transition client1(n)
-require { PC[n] = Invalid && Chan1[n] = Empty }
-Chan1[j] := {| j = n : Reqs | _ : Chan1[j] }
+requires { PC[n] = Invalid && Chan1[n] = Empty }
+{ 
+Chan1[j] := case | j = n : Reqs | _ : Chan1[j] ;
+}
 
 
 (*
@@ -236,8 +259,10 @@ LC     pc=invalid
 *)
 
 transition client2(n)
-require { PC[n] = Invalid && Chan1[n] = Empty }
-Chan1[j] := {| j = n : Reqe | _ : Chan1[j] }
+requires { PC[n] = Invalid && Chan1[n] = Empty }
+{
+Chan1[j] := case | j = n : Reqe | _ : Chan1[j] ;
+}
 
 (*
 #client3
@@ -248,8 +273,10 @@ LC    pc=shared
 *)
 
 transition client3(n)
-require { PC[n] = Shared && Chan1[n] = Empty }
-Chan1[j] := {| j = n : Reqe | _ : Chan1[j] }
+requires { PC[n] = Shared && Chan1[n] = Empty }
+{
+Chan1[j] := case | j = n : Reqe | _ : Chan1[j] ;
+}
 
 (*
 #client4
@@ -260,10 +287,12 @@ LC    pc'=invalid
 *)
 
 transition client4(n)
-require { Chan2[n] = Inv && Chan3[n] = Empty }
-PC[j] := {| j = n : Invalid | _ : PC[j] }
-Chan2[j] := {| j = n : Empty | _ : Chan2[j] }
-Chan3[j] := {| j = n : Invack | _ : Chan3[j] }
+requires { Chan2[n] = Inv && Chan3[n] = Empty }
+{
+PC[j] := case | j = n : Invalid | _ : PC[j] ;
+Chan2[j] := case | j = n : Empty | _ : Chan2[j] ;
+Chan3[j] := case | j = n : Invack | _ : Chan3[j] ;
+}
 
 (*
 #client5
@@ -274,10 +303,11 @@ LC    pc'=shared
 *)
 
 transition client5(n)
-require { Chan2[n] = Gnts }
-PC[j] := {| j = n : Shared | _ : PC[j] }
-Chan2[j] := {| j = n : Empty | _ : Chan2[j] }
-
+requires { Chan2[n] = Gnts }
+{
+PC[j] := case | j = n : Shared | _ : PC[j] ;
+Chan2[j] := case | j = n : Empty | _ : Chan2[j] ;
+}
 
 (*
 #client6
@@ -288,6 +318,8 @@ LC    pc'=exclusive
 *)
 
 transition client6(n)
-require { Chan2[n] = Gnte }
-PC[j] := {| j = n : Exclusive | _ : PC[j] }
-Chan2[j] := {| j = n : Empty | _ : Chan2[j] }
+requires { Chan2[n] = Gnte }
+{
+PC[j] := case | j = n : Exclusive | _ : PC[j] ;
+Chan2[j] := case | j = n : Empty | _ : Chan2[j] ;
+}
