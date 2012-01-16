@@ -965,20 +965,106 @@ let fm_qe sa =
   let nineqs = fourier (SAtom.elements sineqs) in
   List.fold_left (fun acc a -> SAtom.add a acc) sothers nineqs
 
-let simplification_atoms base sa = 
-  let sa =
-    try 
-      SAtom.fold (fun a base ->
-		    let na = simplification base a in
-		    match na with
-		      | True -> base
-		      | False -> raise Exit
-		      | _ -> add na base)
-	sa SAtom.empty
-    with Exit -> SAtom.singleton False
-  in
-  fm_qe sa
+
+let tick_pos sa = 
+  let ticks = ref [] in 
+  SAtom.iter
+    (fun a -> match a with
+       | Comp(Const c,Lt, Const m) when const_nul c -> 
+	  begin
+	    try
+	      let n = ref None in
+	      MConst.iter 
+		(fun c i -> 
+		   if i > 0 then 
+		     match c with
+		       | ConstName t -> 
+			   if !n = None then n := Some c else raise Not_found
+		       | _ -> raise Not_found )
+		m;
+	      match !n with Some c -> ticks := (c,a) :: !ticks | _ -> ()
+	    with Not_found -> ()
+	  end
+       | _-> ()
+    ) 
+    sa;
+  !ticks
+ 
+let remove_tick tick e op x = 
+  match e with
+    | Const m ->
+	begin
+	  try
+	    let c = MConst.find tick m in
+	    if c > 0 then 
+	      let m = MConst.remove tick m in
+	      let m = 
+		if MConst.is_empty m then 
+		  MConst.add (ConstReal (Num.Int 0)) 1 m
+		else m
+	      in
+	      Comp (Const m, Lt, x)
+	    else raise Not_found
+	  with Not_found -> Comp (e, op, x)
+	end
+    | Arith (v, sv, m ) ->
+	begin
+	  try
+	    let c = MConst.find tick m in
+	    if c > 0 then 
+	      let m = MConst.remove tick m in
+	      let e = 
+		if MConst.is_empty m then Elem (v, sv) else Arith(v, sv, m)
+	      in
+	      Comp (e, Lt, x)
+	    else raise Not_found
+	  with Not_found -> Comp (e, op, x)
+	end	
+    | _ -> assert false
       
+
+let contains_tick_term tick = function
+  | Const m | Arith (_, _, m) ->
+      (try MConst.find tick m <> 0 with Not_found -> false)
+  | _ -> false
+
+let contains_tick_atom tick = function
+  | Comp (t1, _, t2) -> 
+      contains_tick_term tick t1 || contains_tick_term tick t2
+  | _ -> false
+
+let remove_tick_atom sa (tick, at) = 
+  let sa = SAtom.remove at sa in
+  let flag = ref false in
+  let remove a sa = 
+    let a = match a with
+      | Comp ((Const _ | Arith (_, _, _) as e), (Le|Lt|Eq as op), x) ->
+	  remove_tick tick e op x
+      | _ -> a 
+    in
+    flag := !flag && contains_tick_atom tick a;
+    SAtom.add a sa
+  in
+  let sa = SAtom.fold remove sa SAtom.empty in
+  if !flag then SAtom.add at sa else sa
+
+let const_simplification sa = 
+  try
+    let ticks = tick_pos sa in
+    List.fold_left remove_tick_atom sa ticks
+  with Not_found -> sa
+
+let simplification_atoms base sa = 
+  try 
+    SAtom.fold (fun a base ->
+		  let na = simplification base a in
+		  match na with
+		    | True -> base
+		    | False -> raise Exit
+		    | _ -> add na base)
+      sa SAtom.empty
+  with Exit -> SAtom.singleton False
+
 let rec break a =
   match a with
     | True | False | Comp _ -> [SAtom.singleton a]
@@ -991,9 +1077,13 @@ let rec break a =
   		let l = break a2 in
   		let a1_and_c = SAtom.add a1 sa in
   		let a1_and_a2 = List.map (SAtom.add a1) l in
-  		let a2_and_nc_r = List.fold_left (fun acc c' ->
-  		  List.fold_left (fun acc li -> SAtom.add c' li :: acc) acc l)
-  		  a1_and_a2 nc in
+  		let a2_and_nc_r = 
+		  List.fold_left 
+		    (fun acc c' ->
+  		       List.fold_left 
+			 (fun acc li -> SAtom.add c' li :: acc) acc l)
+  		    a1_and_a2 nc 
+		in
   		a1_and_c :: a2_and_nc_r
   	end
 
@@ -1001,16 +1091,19 @@ let simplify_atoms np =
   let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
   let base = simplification_atoms SAtom.empty base in
   let ites = simplification_atoms base ites in
-  SAtom.fold 
-    (fun ite cubes ->
-       List.fold_left
-	 (fun cubes sa -> 
-	    List.map (fun cube -> SAtom.union sa cube) cubes)
-	 cubes
-	 (break ite)
-    ) 
-    ites
-    [base]
+  let lsa = 
+    SAtom.fold 
+      (fun ite cubes ->
+	 List.fold_left
+	   (fun acc sa -> 
+	      (List.map (fun cube -> SAtom.union sa cube) cubes)@acc)
+	   []
+	   (break ite)
+      ) 
+      ites
+      [base]
+  in
+  List.map const_simplification lsa
 
 
 (**********************)
@@ -1060,7 +1153,7 @@ let make_cubes =
   fun (ls, post) (args, rargs) 
     ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
       let nb_uargs = List.length uargs in
-      let cube acc sigma = 
+      let cube acc sigma =
 	let lnp = simplify_atoms (subst_atoms sigma np) in
 	let tr_args = List.map (svar sigma) tr.tr_args in
 	List.fold_left
@@ -1151,7 +1244,7 @@ let pre tr unsafe =
 (*********************************************************************)
 
 let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
-  if profiling then TimePre.start ();
+  if profiling then TimePre.start (); 
   Debug.unsafe s;
   let ls, post = 
     List.fold_left
