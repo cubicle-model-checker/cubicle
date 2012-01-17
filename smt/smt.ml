@@ -207,7 +207,16 @@ module Term = struct
 	| Div -> Symbols.Div
 	| Modulo -> Symbols.Modulo
     in
-    Term.make (Symbols.Op op) [t1; t2] Ty.Tint
+    let ty = 
+      if Term.is_int t1 && Term.is_int t2 then Ty.Tint
+      else if Term.is_real t1 && Term.is_real t2 then Ty.Treal
+      else assert false
+    in
+    Term.make (Symbols.Op op) [t1; t2] ty
+
+  let is_int = Term.is_int
+
+  let is_real = Term.is_real
 
 end
 
@@ -356,6 +365,7 @@ exception Unsat of Explanation.t
 exception IDontknow
 
 let clear () = Solver.clear ()
+
 
 let assume f =
   try Solver.assume (Formula.make_cnf f)

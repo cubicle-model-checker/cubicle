@@ -53,6 +53,9 @@ module Term : sig
   val make_real : Num.num -> t
   val make_app : Hstring.t -> t list -> t
   val make_arith : operator -> t -> t -> t
+
+  val is_int : t -> bool
+  val is_real : t -> bool
 end
 
 module Formula : sig

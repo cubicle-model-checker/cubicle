@@ -63,18 +63,35 @@ let make_const = function
   | ConstReal i -> T.make_real i
   | ConstName n -> T.make_app n []
 
+let ty_const = function
+  | ConstInt _ -> Smt.Typing.type_int
+  | ConstReal _ -> Smt.Typing.type_real
+  | ConstName n -> snd (Smt.Typing.find n)
+
+let rec mult_const tc c i =
+ match i with
+  | 0 -> 
+    if ty_const c = Smt.Typing.type_int then T.make_int (Num.Int 0)
+    else T.make_real (Num.Int 0)
+  | 1 -> tc
+  | -1 -> T.make_arith T.Minus (mult_const tc c 0) tc
+  | i when i > 0 -> T.make_arith T.Plus (mult_const tc c (i - 1)) tc
+  | i when i < 0 -> T.make_arith T.Minus (mult_const tc c (i + 1)) tc
+  | _ -> assert false
+
 let make_arith_cs =
   MConst.fold 
     (fun c i acc ->
-       T.make_arith T.Plus acc
-	 (T.make_arith T.Mult (T.make_int (Num.Int i)) (make_const c)))
+      let tc = make_const c in
+      let tci = mult_const tc c i in
+       T.make_arith T.Plus acc tci)
 
 let make_cs cs =
   let c, i = MConst.choose cs in
   let t_c = make_const c in
   let r = MConst.remove c cs in
-  if i = 1 && MConst.is_empty r then t_c
-  else make_arith_cs r (T.make_arith T.Mult (T.make_int (Num.Int i)) t_c)
+  if MConst.is_empty r then mult_const t_c c i
+  else make_arith_cs r (mult_const t_c c i)
 	 
 let make_term = function
   | Elem (e, _) -> T.make_app e []

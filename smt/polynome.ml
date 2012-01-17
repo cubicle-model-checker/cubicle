@@ -150,7 +150,9 @@ module Make (X : S) = struct
         let p = mult_const ((Int 1) // p2.c) p1 in
         match M.is_empty p.m, p.ty with
           | true, Ty.Tint  -> {p with c = floor_num p.c}, false 
+          | true, Ty.Treal  ->  p, false
           | false, Ty.Tint ->  p, true
+          | false, Ty.Treal ->  p, false
           | _ -> assert false
     else raise Maybe_zero
 

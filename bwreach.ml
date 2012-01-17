@@ -164,8 +164,8 @@ let mult_const a =
   MConst.map (fun i -> i * a)
 
 
-let redondant others = function
-  | True -> true
+let redondant_or_false others a = match a with
+  | True -> True
   | Comp (t1, Neq, (Elem (x, s) as t2))
   | Comp ((Elem (x, s) as t2), Neq, t1) ->
     (match s with
@@ -173,15 +173,53 @@ let redondant others = function
 	(try 
 	   (SAtom.iter (function 
 	     | Comp (t1', Eq, t2') 
-		 when (t1' = t1 && t2' <> t2)  ->
+		 when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
+	       raise Not_found
+	     | Comp (t1', Eq, t2') 
+		 when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
 	       raise Exit
-	     | _ -> ()) others); false
-	 with Exit -> true)
-      | _ -> false)
-  | _ -> false
+	     | _ -> ()) others); a
+	 with Not_found -> True | Exit -> False)
+      | _ -> a)
+  | Comp (t1, Eq, (Elem (x, s) as t2))
+  | Comp ((Elem (x, s) as t2), Eq, t1) ->
+    (match s with
+      | Var | Constr ->
+	(try 
+	   (SAtom.iter (function 
+	     | Comp (t1', Neq, t2') 
+		 when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
+	       raise Exit
+	     | Comp (t1', Eq, t2') 
+		 when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
+	       raise Exit
+	     | _ -> ()) others); a
+	 with Not_found -> True | Exit -> False)
+      | _ -> a)
+  | Comp (t1, Neq, t2) ->
+    (try 
+       (SAtom.iter (function 
+	 | Comp (t1', Eq, t2') 
+	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
+	       || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0) ->
+	   raise Exit
+	 | _ -> ()) others); a
+     with Exit -> False)
+  | Comp (t1, Eq, t2) ->
+    (try 
+       (SAtom.iter (function 
+	 | Comp (t1', Neq, t2') 
+	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
+	       || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0)  ->
+	   raise Exit
+	 | _ -> ()) others); a
+     with Exit -> False)
+  | _ -> a
 
 let simplify_comp i si op j sj =  
   match op, (si, sj) with
+    | Eq, _ when H.equal i j -> True
+    | Neq, _ when H.equal i j -> False
     | Eq, (Var, Var | Constr, Constr) -> 
 	if H.equal i j then True else False
     | Neq, (Var, Var | Constr, Constr) -> 
@@ -191,18 +229,18 @@ let simplify_comp i si op j sj =
     | _ -> Comp (Elem (i, si), op, Elem (j, sj))
 
 let rec simplification np a =
-  if redondant (SAtom.remove a np) a then True
-  else match a with
+  let a = redondant_or_false (SAtom.remove a np) a in
+  match a with
     | True | False -> a 
     | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
     | Comp (Arith (i, si, csi), op, (Arith (j, sj, csj)))
       when compare_constants csi csj = 0 -> simplify_comp i si op j sj
-    | Comp (Const cx, op, Arith (y, sy, cy)) ->
-	Comp (Const (add_constants (mult_const (-1) cx) cx), op,
-	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy)))
-    | Comp ( Arith (x, sx, cx), op, Const cy) ->
-	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op,
-	      Const (add_constants (mult_const (-1) cy) cy))
+    (* | Comp (Const cx, op, Arith (y, sy, cy)) -> *)
+    (* 	Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
+    (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
+    (* | Comp ( Arith (x, sx, cx), op, Const cy) -> *)
+    (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
+    (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
@@ -658,7 +696,7 @@ let obvious_impossible a1 a2 =
     	       | _ -> ()
     	   end
        | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
-	 Comp (Elem (x2, sx2), Neq, Elem (y2, sy2)) ->
+	 Comp (Elem (x2, sx2), (Neq | Lt), Elem (y2, sy2)) ->
     	   begin
 	     match sx1, sy1, sx2, sy2 with
     	       | Glob, Constr, Glob, Constr 
@@ -817,154 +855,6 @@ let const_nul c =
     Num.compare_num !n (Num.Int 0) = 0
   with Exit -> false
 
-let add_terms a x b y = match x, y with
-  | Const cx, Const cy -> 
-      1, Const (add_constants (mult_const a cx) (mult_const b cy))
-  | Elem (x,sx), Const cy -> 
-      a, Arith (x, sx, (mult_const b cy))
-  | Const cx, Elem (y,sy) -> 
-      b, Arith (y, sy, (mult_const a cx))
-  | Arith (x, sx, cx), Const cy -> 
-      let c = add_constants (mult_const a cx) (mult_const b cy) in
-      if MConst.is_empty c then a, Elem (x, sx)
-      else a, Arith (x, sx, c)
-  | Const cx, Arith (y, sy, cy) -> 
-      let c = add_constants (mult_const a cx) (mult_const b cy) in
-      if MConst.is_empty c then b, Elem (y, sy)
-      else b, Arith (y, sy, c)
-  | Arith (x, sx, cx), Arith (y, sy, cy) when a = -b && Hstring.equal x y -> 
-      1, Const (add_constants (mult_const a cx) (mult_const b cy))
-  | Const cx, t ->
-      if const_nul cx then b, t
-      else 
-	(eprintf "%d (*) %a (+) %d (*) %a@." 
-	   a Pretty.print_term x b Pretty.print_term y;
-	 assert false)
-  | t, Const cy ->
-      if const_nul cy then a, t
-      else 
-	(eprintf "%d (*) %a (+) %d (*) %a@."
-	   a Pretty.print_term x b Pretty.print_term y;
-	 assert false)
-  | _ ->
-      eprintf "%d (*) %a (+) %d (*) %a@."
-	a Pretty.print_term x b Pretty.print_term y;
-      assert false
-
-let add_atoms a x b y = 
-  (*eprintf "aa: %d (*) %a (+) %d (*) %a@." a Pretty.print_atom x b Pretty.print_atom y;*)
-  match x, y with
-  | Comp (x1, (Eq), x2), Comp (y1, (Eq), y2) ->
-      let cl, left = add_terms (-a) x2 b y1 in
-      let cr, right = add_terms (-a) x1 b y2 in
-      if cl <> cr then raise Exit
-      else Comp (left, Eq, right)
-  | Comp (x1, (Le|Eq), x2), Comp (y1, (Le|Eq), y2) ->
-      let cl, left = add_terms (-a) x2 b y1 in
-      let cr, right = add_terms (-a) x1 b y2 in
-      if cl <> cr then raise Exit
-      else Comp (left, Le, right)
-  | Comp (x1, (Le|Lt|Eq), x2), Comp (y1, (Le|Lt|Eq), y2) ->
-      let cl, left = add_terms (-a) x2 b y1 in
-      let cr, right = add_terms (-a) x1 b y2 in
-      if cl <> cr then raise Exit
-      else Comp (left, Lt, right)
-  | _ -> raise Exit
-
-let find_coef_term x = function
-  | Const c -> MConst.find (ConstName x) c
-  | Arith (y, _, _) when Hstring.equal x y -> 1
-  | Arith (_, _, c) -> MConst.find (ConstName x) c
-  | Elem (y, _) when Hstring.equal x y -> 1
-  | _ -> raise Not_found
-
-let find_coef x = function
-  | Comp (l, _, r) -> 
-      (try find_coef_term x l with Not_found -> find_coef_term x r)
-  | _ -> raise Not_found
-
-let cross x cpos cneg = 
-  let rec cross_rec acc = function
-    | [] -> acc
-    | i1 :: l ->
-  	let n1 = abs (find_coef x i1) in
-  	let acc =
-  	  List.fold_left
-  	    (fun acc i2 ->
-  	       let n2 = abs (find_coef x i2) in
-	       let ni = add_atoms n2 i1 n1 i2 in
-  	       ni::acc
-  	    ) acc cpos
-  	in
-  	cross_rec acc l
-  in
-  cross_rec [] cneg
-
-let split_sign x l =
-  let rec split_rec (cp, cn, co) ineq = match ineq with
-    | Comp (l, _, r) ->
-	begin
-	  try 
-	    let a = find_coef_term x r in
-	    if a >= 0 then cp, ineq::cn, co
-	    else ineq::cp, cn, co
-	  with Not_found ->
-	    try 
-	      let a = find_coef_term x l in
-	      if a >= 0 then ineq::cp, cn, co
-	      else cp, ineq::cn, co
-	    with Not_found -> cp, cn, ineq::co
-	end
-    | _ -> cp, cn, co
-  in
-  List.fold_left split_rec ([], [], []) l
-
-
-exception Found_var of Hstring.t
-
-let choose_var_term t = 
-  try 
-    begin
-      match t with
-	| Const c | Arith (_ ,_ , c) -> 
-	    MConst.iter (fun c i -> if i <> 0 then match c with 
-			     | ConstName n -> raise (Found_var n)
-			     | _ -> ()) c
-	| _ -> ()
-    end;
-    raise Not_found
-  with Found_var n -> n
-
-
-let rec choose_var = function
-  | [] -> raise Not_found
-  | Comp (x, _, y)::l ->
-      (try choose_var_term x 
-       with Not_found -> 
-	 try choose_var_term y 
-	 with Not_found -> choose_var l)
-  | _::l -> choose_var l
-
-let rec fourier l =
-  match l with
-    | [] -> l
-    | ineq :: _ ->
-  	try
-  	  let x = choose_var l in
-  	  let cpos, cneg, others = split_sign x l in
-  	  let ninqs = cross x cpos cneg in
-  	  fourier (ninqs @ others)
-  	with Not_found -> l
-
-
-let fm_qe sa = 
-  let sineqs, sothers = 
-    SAtom.partition (function 
-		       | Comp ( _, (Le|Lt), _) -> true 
-		       | _ -> false) sa in
-  let nineqs = fourier (SAtom.elements sineqs) in
-  List.fold_left (fun acc a -> SAtom.add a acc) sothers nineqs
-
 
 let tick_pos sa = 
   let ticks = ref [] in 
@@ -1003,7 +893,7 @@ let remove_tick tick e op x =
 		  MConst.add (ConstReal (Num.Int 0)) 1 m
 		else m
 	      in
-	      Comp (Const m, Lt, x)
+	      simplification SAtom.empty (Comp (Const m, Lt, x))
 	    else raise Not_found
 	  with Not_found -> Comp (e, op, x)
 	end
@@ -1016,7 +906,7 @@ let remove_tick tick e op x =
 	      let e = 
 		if MConst.is_empty m then Elem (v, sv) else Arith(v, sv, m)
 	      in
-	      Comp (e, Lt, x)
+	      simplification SAtom.empty (Comp (e, Lt, x))
 	    else raise Not_found
 	  with Not_found -> Comp (e, op, x)
 	end	
@@ -1055,7 +945,7 @@ let const_simplification sa =
   with Not_found -> sa
 
 let simplification_atoms base sa = 
-  try 
+  (* try  *)
     SAtom.fold (fun a base ->
 		  let na = simplification base a in
 		  match na with
@@ -1063,7 +953,7 @@ let simplification_atoms base sa =
 		    | False -> raise Exit
 		    | _ -> add na base)
       sa SAtom.empty
-  with Exit -> SAtom.singleton False
+  (* with Exit -> SAtom.singleton False *)
 
 let rec break a =
   match a with
@@ -1088,24 +978,28 @@ let rec break a =
   	end
 
 let simplify_atoms np =
-  let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
-  let base = simplification_atoms SAtom.empty base in
-  let ites = simplification_atoms base ites in
-  let lsa = 
-    SAtom.fold 
-      (fun ite cubes ->
-	 List.fold_left
-	   (fun acc sa -> 
-	      (List.map (fun cube -> SAtom.union sa cube) cubes)@acc)
-	   []
-	   (break ite)
-      ) 
-      ites
-      [base]
-  in
-  List.map const_simplification lsa
-
-
+  try
+    let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
+    let base = simplification_atoms SAtom.empty base in
+    let ites = simplification_atoms base ites in
+    let lsa = 
+      SAtom.fold 
+	(fun ite cubes ->
+	  List.fold_left
+	    (fun acc sa ->
+	      List.fold_left (fun sa_cubes cube ->
+		let sac = SAtom.union sa cube in
+		if inconsistent sac then sa_cubes else sac :: sa_cubes)
+		acc cubes
+	    )
+	    []
+	    (break ite)
+	) 
+	ites
+	[base]
+    in
+    List.rev (List.rev_map const_simplification lsa)
+  with Exit -> []
 (**********************)
 (* Postponed Formulas *)
 (**********************)
@@ -1142,11 +1036,12 @@ let uguard sigma args tr_args = function
   | _ -> assert false
 
 let add_list n l = 
-  let l = 
-    List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l 
-  in
   if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
-  else n :: l
+  else 
+    let l = 
+      List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l 
+    in
+    n :: l
 
 let make_cubes =
   let cpt = ref 0 in

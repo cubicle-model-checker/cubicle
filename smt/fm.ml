@@ -514,7 +514,7 @@ module Make
     fourier (env, eqs) (List.map snd env.inequations) expl
 
   let is_num r = 
-    let ty = X.type_info r in ty = Ty.Tint 
+    let ty = X.type_info r in ty = Ty.Tint || ty = Ty.Treal
 
   let add_disequality env eqs p expl =
     let ty = P.type_info p in

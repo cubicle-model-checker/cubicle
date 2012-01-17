@@ -36,7 +36,7 @@ let equal t1 t2 =
     | Tabstract s1, Tabstract s2 
     | Tsum (s1, _), Tsum (s2, _) ->
 	Hstring.equal s1 s2
-    | Tint, Tint | Tbool, Tbool -> true
+    | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
     | _ -> false
 	
 let compare t1 t2 = 

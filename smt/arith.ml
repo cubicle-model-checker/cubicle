@@ -51,13 +51,13 @@ module Make
       | _ -> false
 
   let is_mine_symb = function
-    | Sy.Int _ 
+    | Sy.Int _ | Sy.Real _ 
     | Sy.Op (Sy.Plus | Sy.Minus | Sy.Mult | Sy.Div | Sy.Modulo) -> true
     | _ -> false
 
   let is_mine_type p = 
     let ty = P.type_info p in 
-    ty = Ty.Tint
+    ty = Ty.Tint || ty = Ty.Treal
 
   let unsolvable _ = false
 	  
@@ -113,7 +113,7 @@ module Make
   let rec mke coef p t ctx =
     let {T.f = sb ; xs = xs; ty = ty} = T.view t in
     match sb, xs with
-      | Sy.Int n , _  -> 
+      | (Sy.Int n | Sy.Real n), _  -> 
 	  let c = coef */ (num_of_string (Hstring.view n)) in
 	  P.add (P.create [] c ty) p, ctx
 
