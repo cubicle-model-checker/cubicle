@@ -14,6 +14,7 @@
 open Format
 open Ast
 open Atom
+open Options
 
 (* Captures the output and exit status of a unix command : aux func*)
 let syscall cmd =
@@ -95,21 +96,36 @@ let print_system fmt s = print_cube fmt (snd s.t_unsafe)
 
 let rec print_args fmt = function
   | [] -> ()
-  | [a] -> fprintf fmt "%s" (Hstring.view a)
-  | a::r -> fprintf fmt "%s, %a" (Hstring.view a) print_args r
+  | [a] ->
+    let s = Hstring.view a in
+    let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
+    if dmcmt then fprintf fmt "_%s" s
+    else fprintf fmt "%s" s
+  | a::r -> 
+    let s = Hstring.view a in
+    let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
+    if dmcmt then  fprintf fmt "_%s%a" s print_args r
+    else  fprintf fmt "%s, %a" s print_args r
 
 let print_unsafe fmt s = 
   fprintf fmt "  Unsafe property (from %aunsafe):@.        %a@."
     (fun fmt ->
        List.iter 
-	 (fun (l, args, _) -> 
-	   fprintf fmt "%s(%a) -> " 
-	     (Hstring.view l) print_args args)) s.t_from
+	 (fun (l, args, _) ->
+	   if dmcmt then 
+	     fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+	   else
+	     fprintf fmt "%s(%a) -> " (Hstring.view l) print_args args
+	 )) s.t_from
     print_system s
 
 
 let print_node fmt s =
   (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
-  List.iter (fun (l, args, _) -> fprintf fmt "%s(%a) ->@ " 
-    (Hstring.view l) print_args args) s.t_from;
-  fprintf fmt "unsafe"
+  List.iter (fun (l, args, _) ->
+    if dmcmt then 
+      fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+    else 
+      fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
+  ) s.t_from;
+  if dmcmt then fprintf fmt "[0]" else fprintf fmt "unsafe"

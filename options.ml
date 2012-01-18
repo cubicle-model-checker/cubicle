@@ -27,6 +27,7 @@ let quiet = ref false
 let incr_verbose () = incr verbose
 
 let debug_smt = ref false
+let dmcmt = ref false
 let profiling = ref false
 
 let gen_inv = ref false
@@ -63,7 +64,8 @@ let specs =
     "-delete", Arg.Set delete, " delete subsumed nodes";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
-    "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver"
+    "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
+    "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format"
   ]
 
 let alspecs = Arg.align specs
@@ -82,6 +84,7 @@ let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let debug = !debug
 let debug_smt = !debug_smt
+let dmcmt = !dmcmt
 let profiling = !profiling
 let file = !file
 let gen_inv = !gen_inv

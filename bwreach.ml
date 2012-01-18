@@ -559,6 +559,7 @@ let args_of_atoms sa =
 (***************************************)
 
 let proper_cube sa = 
+  if profiling then TimerApply.start ();
   let args = args_of_atoms sa in
   let cpt = ref 1 in
   let sa = 
@@ -576,6 +577,7 @@ let proper_cube sa =
   for n = !cpt - 1 downto 1 do 
     l := (H.make ("#"^(string_of_int n))) :: !l
   done;
+  if profiling then TimerApply.pause ();
   sa, (!l, H.make ("#"^(string_of_int !cpt)))
 
 

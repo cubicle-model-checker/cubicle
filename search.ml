@@ -208,7 +208,7 @@ module DFSL ( X : I ) = struct
   
   let search ~invariants ~visited s =
     let visited = ref visited in
-    let nb_nodes = ref 0 in
+    let nb_nodes = ref (if dmcmt then -1 else 0) in
     let rec search_rec cpt s =
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	raise ReachBound;
@@ -252,7 +252,7 @@ module DFSH ( X : I ) = struct
   module H = Heap.Make(S)
 
   let search ~invariants ~visited s =
-    let nb_nodes = ref 0 in
+    let nb_nodes = ref (if dmcmt then -1 else 0) in
     let rec search_rec h =
       let (cpt, s, visited), h = H.pop h in
       incr nb_nodes;
@@ -283,7 +283,7 @@ module BFS_base ( X : I ) = struct
   type t = X.t 
 
   let search inv_search invgen ~invariants ~visited s = 
-    let nb_nodes = ref 0 in
+    let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
     let postponed = ref [] in
@@ -363,7 +363,7 @@ module BFSinvp_base ( X : I ) = struct
   let () = Functory.Cores.set_number_of_cores cores
 
   let search inv_search ~invariants ~visited s = 
-    let nb_nodes = ref 0 in
+    let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
     let postponed = ref [] in
@@ -482,7 +482,7 @@ module BFS_dist_base ( X : I ) = struct
 	
 
   let search inv_search invgen ~invariants ~visited s = 
-    let nb_nodes = ref 0 in
+    let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in 
     let postponed = ref [] in
@@ -701,7 +701,7 @@ module DFSHL ( X : I ) = struct
   module H = Heap.Make(S)
 
   let search ~invariants ~visited s =
-    let nb_nodes = ref 0 in
+    let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
     let postponed = ref [] in

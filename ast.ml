@@ -134,6 +134,11 @@ let subst_term sigma t =
 	(try Access (a, svar sigma z) with Not_found -> t)
     | _ -> t
 	
+
+module TimerSubset = Timer.Make (struct end)
+
+module TimerApply = Timer.Make (struct end)
+
 open Atom
 
 let rec subst_atoms sigma sa = 
@@ -159,10 +164,6 @@ let build_subst args a_args =
   in
   a_subst [] args a_args
 
-
-module TimerSubset = Timer.Make (struct end)
-
-module TimerApply = Timer.Make (struct end)
 
 module ArrayAtom = struct
 

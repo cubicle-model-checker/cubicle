@@ -34,7 +34,7 @@ unsafe (z1 z2 z3 z4) {
 
 
 transition t1 (z)
-requires { State[z] = L1 && Sender[z] = Receiver[z] (* && Is_proc[z] = True *) && 0.0 < Tick }
+requires { State[z] = L1 && Sender[z] = Receiver[z] && 0.0 < Tick }
 {
   Timer := Timer + Tick;
   State[j] := case
@@ -53,8 +53,8 @@ requires { State[z] = L1 && Sender[z] = Receiver[z] (* && Is_proc[z] = True *) &
 
 transition t2 (z other)
 requires { State[z] = L2 && 
-           Sender[z] = Receiver[z] (* && Is_proc[z] = True *) &&
-           Sender[other] <> Receiver[other] (* && Is_proc[other] = False *) &&
+           Sender[z] = Receiver[z] &&
+           Sender[other] <> Receiver[other] &&
 	   State[other] = L3 && Sender[other] = z  && 0.0 < Tick}
 {
   Timer := Timer + Tick;

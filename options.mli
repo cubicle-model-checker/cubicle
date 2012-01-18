@@ -35,4 +35,5 @@ val quiet : bool
 val verbose : int ref
 
 val debug_smt : bool
+val dmcmt : bool
 val profiling : bool
