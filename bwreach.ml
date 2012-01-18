@@ -159,10 +159,8 @@ let add_constant c i cs =
 let add_constants cs1 cs2 =
   MConst.fold add_constant cs2 cs1
 
-
 let mult_const a =
   MConst.map (fun i -> i * a)
-
 
 let redondant_or_false others a = match a with
   | True -> True
@@ -704,7 +702,8 @@ let obvious_impossible a1 a2 =
     		   raise NoPermutations
     	       | _ -> ()
 	   end
-       | Comp (Access (a1, x1), op, (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
+       | Comp (Access (a1, x1), op, 
+	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
 	 Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
 	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
@@ -945,15 +944,15 @@ let const_simplification sa =
   with Not_found -> sa
 
 let simplification_atoms base sa = 
-  (* try  *)
-    SAtom.fold (fun a base ->
-		  let na = simplification base a in
-		  match na with
-		    | True -> base
-		    | False -> raise Exit
-		    | _ -> add na base)
-      sa SAtom.empty
-  (* with Exit -> SAtom.singleton False *)
+  SAtom.fold 
+    (fun a sa ->
+       let a = simplification base a in
+       let a = simplification sa a in
+       match a with
+	 | True -> sa
+	 | False -> raise Exit
+	 | _ -> add a sa)
+    sa SAtom.empty
 
 let rec break a =
   match a with
@@ -977,6 +976,12 @@ let rec break a =
   		a1_and_c :: a2_and_nc_r
   	end
 
+let add_without_redondancy sa l = 
+  if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
+  else 
+    let l = List.filter (fun sa' -> not (SAtom.subset sa sa')) l in
+    sa :: l
+
 let simplify_atoms np =
   try
     let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
@@ -985,15 +990,21 @@ let simplify_atoms np =
     let lsa = 
       SAtom.fold 
 	(fun ite cubes ->
-	  List.fold_left
-	    (fun acc sa ->
-	      List.fold_left (fun sa_cubes cube ->
-		let sac = SAtom.union sa cube in
-		if inconsistent sac then sa_cubes else sac :: sa_cubes)
-		acc cubes
-	    )
-	    []
-	    (break ite)
+	   List.fold_left
+	     (fun acc sa ->
+		List.fold_left 
+		  (fun sa_cubes cube ->
+		     try
+		       let sa = simplification_atoms cube sa in
+		       let sa = SAtom.union sa cube in
+		       if inconsistent sa then sa_cubes else 
+			 add_without_redondancy sa sa_cubes
+		     with Exit -> sa_cubes
+		  )
+		  acc cubes
+	     )
+	     []
+	     (break ite)
 	) 
 	ites
 	[base]
@@ -1043,6 +1054,8 @@ let add_list n l =
     in
     n :: l
 
+let max_lnp = ref 0
+
 let make_cubes =
   let cpt = ref 0 in
   fun (ls, post) (args, rargs) 
@@ -1050,6 +1063,10 @@ let make_cubes =
       let nb_uargs = List.length uargs in
       let cube acc sigma =
 	let lnp = simplify_atoms (subst_atoms sigma np) in
+	(*let xx = List.length lnp in
+	if !max_lnp < xx then (max_lnp := xx; Format.eprintf ">>%d@." !max_lnp);
+	List.iter 
+	  (Format.eprintf "------------@. %a\n@." Pretty.print_cube) lnp;*)
 	let tr_args = List.map (svar sigma) tr.tr_args in
 	List.fold_left
 	  (fun (ls, post) np ->
