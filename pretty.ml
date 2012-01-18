@@ -128,4 +128,4 @@ let print_node fmt s =
     else 
       fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
   ) s.t_from;
-  if dmcmt then fprintf fmt "[0]" else fprintf fmt "unsafe"
+  if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"

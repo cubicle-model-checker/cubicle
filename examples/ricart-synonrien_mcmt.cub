@@ -80,7 +80,7 @@ requires { State[z] = L2 && Sender[z] = Receiver[z] &&
 }
 
 
-transition t4a (z)
+transition t4 (z)
 requires { State[z] = L3 && Sender[z] = Receiver[z] }
 {
   State[j] := case
@@ -91,7 +91,7 @@ requires { State[z] = L3 && Sender[z] = Receiver[z] }
 }
 
 
-transition t4b (z)
+transition t5 (z)
 requires { State[z] = L4 && Sender[z] = Receiver[z] && 0.0 < Tick &&
 	   forall_other j.
 	    (Sender[j] = Receiver[j] || Receiver[j] <> z || State[j] <> L2) }
@@ -105,7 +105,7 @@ requires { State[z] = L4 && Sender[z] = Receiver[z] && 0.0 < Tick &&
 }
 
 
-transition t5 (z other)
+transition t6 (z other)
 requires { State[z] = L1 && Sender[z] = Receiver[z] &&
            State[other] = L2 && Sender[other] <> Receiver[other] &&
 	   Receiver[other] = z && Clock[other] <= Clock[z] && 0.0 < Tick }
@@ -121,7 +121,7 @@ requires { State[z] = L1 && Sender[z] = Receiver[z] &&
 		| _ : Clock[j] ;
 }
 
-transition t6 (z other)
+transition t7 (z other)
 requires { State[z] = L2 && Sender[z] = Receiver[z] &&
            State[other] = L2 && Sender[other] <> Receiver[other] &&
 	   Receiver[other] = z && Clock[other] < Last[z] && 0.0 < Tick }
@@ -138,7 +138,7 @@ requires { State[z] = L2 && Sender[z] = Receiver[z] &&
 }
 
 
-transition t7 (z other)
+transition t8 (z other)
 requires { State[z] = L2 && Sender[z] = Receiver[z] &&
            State[other] = L2 && Sender[other] <> Receiver[other] &&
 	   Receiver[other] = z && Clock[other] = Last[z] && Sender[other] < z && 0.0 < Tick }

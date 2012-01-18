@@ -164,54 +164,49 @@ let mult_const a =
 
 let redondant_or_false others a = match a with
   | True -> True
-  | Comp (t1, Neq, (Elem (x, s) as t2))
-  | Comp ((Elem (x, s) as t2), Neq, t1) ->
-    (match s with
-      | Var | Constr ->
-	(try 
-	   (SAtom.iter (function 
-	     | Comp (t1', Eq, t2') 
-		 when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
+  | Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))
+  | Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->
+      (try 
+	 (SAtom.iter (function 
+	   | Comp (t1', Eq, t2') 
+	       when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
 	       raise Not_found
-	     | Comp (t1', Eq, t2') 
-		 when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
+	   | Comp (t1', Eq, t2') 
+	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
 	       raise Exit
-	     | _ -> ()) others); a
-	 with Not_found -> True | Exit -> False)
-      | _ -> a)
-  | Comp (t1, Eq, (Elem (x, s) as t2))
-  | Comp ((Elem (x, s) as t2), Eq, t1) ->
-    (match s with
-      | Var | Constr ->
-	(try 
-	   (SAtom.iter (function 
-	     | Comp (t1', Neq, t2') 
-		 when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
+	   | _ -> ()) others);
+	 a
+       with Not_found -> True | Exit -> False)
+  | Comp (t1, Eq, (Elem (x, (Var | Constr)) as t2))
+  | Comp ((Elem (x, (Var | Constr)) as t2), Eq, t1) ->
+      (try 
+	 (SAtom.iter (function 
+	   | Comp (t1', Neq, t2') 
+	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
 	       raise Exit
-	     | Comp (t1', Eq, t2') 
-		 when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
+	   | Comp (t1', Eq, t2') 
+	       when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
 	       raise Exit
-	     | _ -> ()) others); a
-	 with Not_found -> True | Exit -> False)
-      | _ -> a)
+	   | _ -> ()) others); a
+       with Not_found -> True | Exit -> False)
   | Comp (t1, Neq, t2) ->
-    (try 
-       (SAtom.iter (function 
-	 | Comp (t1', Eq, t2') 
-	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
-	       || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0) ->
-	   raise Exit
-	 | _ -> ()) others); a
-     with Exit -> False)
+      (try 
+	 (SAtom.iter (function 
+	   | Comp (t1', Eq, t2') 
+	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
+		 || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0) ->
+	     raise Exit
+	   | _ -> ()) others); a
+       with Exit -> False)
   | Comp (t1, Eq, t2) ->
-    (try 
-       (SAtom.iter (function 
-	 | Comp (t1', Neq, t2') 
-	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
-	       || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0)  ->
-	   raise Exit
-	 | _ -> ()) others); a
-     with Exit -> False)
+      (try 
+	 (SAtom.iter (function 
+	   | Comp (t1', Neq, t2') 
+	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
+		 || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0)  ->
+	     raise Exit
+	   | _ -> ()) others); a
+       with Exit -> False)
   | _ -> a
 
 let simplify_comp i si op j sj =  
@@ -417,6 +412,43 @@ let inconsistent_list l =
   try check [] [] [] [] [] [] [] l; false with Exit -> true
 
 
+let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
+    | True  -> acc
+    | False -> raise Exit
+    | Comp (t1, Eq, (Elem (x, s) as t2)) 
+    | Comp ((Elem (x, s) as t2), Eq, t1) ->
+      (match s with
+	| Var | Constr ->
+	  if assoc_neq t1 values t2 
+	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  then raise Exit
+	  else ((t1, t2)::values), eqs, neqs, les, lts, ges, gts
+	| _ ->
+	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  then raise Exit
+	  else values, ((t1, t2)::eqs), neqs, les, lts, ges, gts)
+    | Comp (t1, Eq, t2) ->
+      if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+      then raise Exit
+      else values, ((t1, t2)::eqs), neqs, les, lts, ges, gts
+    | Comp (t1, Neq, t2) ->
+      if assoc_eq t1 values t2 || assoc_eq t2 values t1
+	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+      then raise Exit
+      else values, eqs, ((t1, t2)::(t2, t1)::neqs), les, lts, ges, gts
+    | Comp (t1, Lt, t2) ->
+      if assoc_eq t1 values t2 || assoc_eq t2 values t1
+	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+	|| assoc_eq t1 ges t2 || assoc_eq t2 les t1
+	|| assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      then raise Exit
+      else values, eqs, neqs, les, ((t1, t2)::lts), ges, ((t2, t1)::gts)
+    | Comp (t1, Le, t2) ->
+      if assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      then raise Exit
+      else values, eqs, neqs, ((t1, t2)::les), lts, ((t2, t1)::ges), gts
+    | _  -> acc
+
 let inconsistent sa = 
   let l = SAtom.elements sa in
   inconsistent_list l
@@ -425,6 +457,29 @@ let inconsistent_array a =
   let l = Array.to_list a in
   inconsistent_list l
 
+
+let inconsistent sa =
+  try
+    let _ = 
+      SAtom.fold (fun a acc -> inconsistent_aux acc a) 
+	sa ([], [], [], [], [], [], []) in
+    false
+  with Exit -> true
+
+
+let inconsistent_array ar =
+  try
+    let _ = Array.fold_left inconsistent_aux ([], [], [], [], [], [], []) ar in
+    false
+  with Exit -> true
+
+let inconsistent_2arrays ar1 ar2 =
+  try
+    let acc = 
+      Array.fold_left inconsistent_aux ([], [], [], [], [], [], []) ar1 in
+    let _ = Array.fold_left inconsistent_aux acc ar2 in
+    false
+  with Exit -> true
 
 (*************************************************)
 (* Safety check : s /\ init must be inconsistent *)
@@ -743,30 +798,46 @@ let closeness anp ap =
 (* Incremental fixpoint check : s => \/_{p \in nodes} p *)
 (********************************************************)
 
+
+let split_args args nargs =
+  let rec aux (s_args, dif) args nargs = match args, nargs with
+    | [], [] -> s_args, dif
+    | _::_, [] -> s_args, args
+    | [], _::_ -> s_args, dif
+    | a::ra, b::rb -> aux (a::s_args, dif) ra rb
+  in 
+  let s_args, dif = aux ([], []) args nargs in
+  List.rev s_args, List.combine dif dif
+
+
 exception Fixpoint
 
 let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
   
   Prover.assume_goal s;
-  let nb_nargs = List.length nargs in
+  (* let nb_nargs = List.length nargs in *)
   let nodes = List.fold_left
     (fun nodes ({ t_alpha = args, ap } as sp)->
-      if List.length args > nb_nargs then nodes
-      else
-	let d = relevant_permutations anp ap args nargs in
-	List.fold_left
-	  (fun nodes ss ->
-	    let pp = ArrayAtom.apply_subst ss ap in
-	    if ArrayAtom.subset pp anp then begin
-	      if simpl_by_uc then add_to_closed s pp sp ;
-	      raise Fixpoint
-	    end
+      let args, extra_subst = split_args args nargs in
+      (* if List.length args > nb_nargs then nodes *)
+      (* else *)
+      let d = relevant_permutations anp ap args nargs in
+      let d = 
+	if extra_subst = [] then d 
+	else List.map (fun s -> s@extra_subst) d in 
+      List.fold_left
+	(fun nodes ss ->
+	  let pp = ArrayAtom.apply_subst ss ap in
+	  if ArrayAtom.subset pp anp then begin
+	    if simpl_by_uc then add_to_closed s pp sp ;
+	    raise Fixpoint
+	  end
 	    (* Heruristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	    (* line below useful for arith : ricart *)
-	    else if inconsistent_array (ArrayAtom.union pp anp) then nodes
-	    else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
-	    else (Prover.assume_node pp; nodes)
+	  else if inconsistent_array (ArrayAtom.union pp anp) then nodes
+	  else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
+	  else (Prover.assume_node pp; nodes)
 	) nodes d
     ) [] visited
   in
@@ -945,7 +1016,7 @@ let const_simplification sa =
     List.fold_left remove_tick_atom sa ticks
   with Not_found -> sa
 
-let simplification_atoms base sa = 
+let simplification_atoms base sa =
   SAtom.fold 
     (fun a sa ->
        let a = simplification base a in
@@ -981,7 +1052,10 @@ let rec break a =
 let add_without_redondancy sa l = 
   if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
   else 
-    let l = List.filter (fun sa' -> not (SAtom.subset sa sa')) l in
+    let l = 
+      if delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l
+      else l
+    in
     sa :: l
 
 let simplify_atoms np =
@@ -1048,11 +1122,13 @@ let uguard sigma args tr_args = function
 
   | _ -> assert false
 
-let add_list n l = 
+let add_list n l =
   if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
   else 
     let l = 
-      List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l 
+      if delete then
+	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l 
+      else l
     in
     n :: l
 
@@ -1076,6 +1152,8 @@ let make_cubes =
 	     let lureq = uguard sigma nargs tr_args tr.tr_ureq in
 	     List.fold_left 
 	       (fun (ls, post) ureq ->
+		 try
+		  let ureq = simplification_atoms np ureq in
 		  let np = SAtom.union ureq np in 
 		  if debug && !verbose > 0 then Debug.pre_cubes np nargs;
 		  if inconsistent np then begin
@@ -1100,10 +1178,12 @@ let make_cubes =
 			} in 
 		      if (alwayspost && List.length nargs > nb_uargs) ||
 			(not alwayspost && 
-			   (not (SAtom.is_empty ureq) || postpone args p np)) 
+			   (not (SAtom.is_empty ureq) || postpone args p np))
 		      then
 			ls, add_list new_s post
-		      else add_list new_s ls, post ) acc lureq ) acc lnp
+		      else add_list new_s ls, post 
+		 with Exit -> ls, post
+	       ) acc lureq ) acc lnp
       in
       if List.length tr.tr_args > List.length rargs then (ls, post)
       else
