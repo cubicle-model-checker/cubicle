@@ -146,6 +146,7 @@ let make_init {t_init = arg, sa } lvars =
 	F.make F.And (f::fsa)
 
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
+  Smt.Time.start();
   Smt.clear ();
   Smt.assume (distinct_vars (List.length args));
   (* Smt.assume (order_vars (List.length args)); *)
@@ -154,19 +155,24 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   Smt.assume init;
   Smt.assume f;
+  Smt.Time.pause();
   Smt.check ~profiling
 
 let assume_goal {t_unsafe = (args, _); t_arru = ap } =
+  Smt.Time.start();
   Smt.clear ();
   Smt.assume (distinct_vars (List.length args));
   (* Smt.assume (order_vars (List.length args)); *)
   let f = make_formula ap in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   Smt.assume f;
+  Smt.Time.pause();
   Smt.check ~profiling
 
 let assume_node ap =
+  Smt.Time.start();
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   Smt.assume f;
+  Smt.Time.pause();
   Smt.check ~profiling

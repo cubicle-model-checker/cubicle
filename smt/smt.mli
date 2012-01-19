@@ -17,6 +17,8 @@ exception Undefined of Hstring.t
 
 (* API for the construction of types, terms and formulas *)
 
+module Time : Timer.S
+
 module Typing : sig
   type t
 

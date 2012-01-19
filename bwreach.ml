@@ -1053,14 +1053,14 @@ let rec break a =
   		a1_and_c :: a2_and_nc_r
   	end
 
-let add_without_redondancy sa l = sa :: l
-  (* if List.exists (fun sa' -> SAtom.subset sa' sa) l then l *)
-  (* else  *)
-  (*   let l =  *)
-  (*     if delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l *)
-  (*     else l *)
-  (*   in *)
-  (*   sa :: l *)
+let add_without_redondancy sa l =
+  if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
+  else
+    let l =
+      if delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l
+      else l
+    in
+    sa :: l
 
 let simplify_atoms np =
   try
@@ -1126,15 +1126,15 @@ let uguard sigma args tr_args = function
 
   | _ -> assert false
 
-let add_list n l = n :: l
-  (* if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l *)
-  (* else  *)
-  (*   let l =  *)
-  (*     if delete then *)
-  (* 	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l  *)
-  (*     else l *)
-  (*   in *)
-  (*   n :: l *)
+let add_list n l = 
+  if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
+  else
+    let l =
+      if delete then
+  	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l
+      else l
+    in
+      n :: l
 
 let max_lnp = ref 0
 
@@ -1145,10 +1145,6 @@ let make_cubes =
       let nb_uargs = List.length uargs in
       let cube acc sigma =
 	let lnp = simplify_atoms (subst_atoms sigma np) in
-	(*let xx = List.length lnp in
-	if !max_lnp < xx then (max_lnp := xx; Format.eprintf ">>%d@." !max_lnp);
-	List.iter 
-	  (Format.eprintf "------------@. %a\n@." Pretty.print_cube) lnp;*)
 	let tr_args = List.map (svar sigma) tr.tr_args in
 	List.fold_left
 	  (fun (ls, post) np ->
@@ -1180,14 +1176,15 @@ let make_cubes =
 			    t_nb = !cpt;
 			    t_nb_father = nb;
 			} in 
-		      (* if (alwayspost && List.length nargs > nb_uargs) || *)
-		      (* 	(not alwayspost &&  *)
-		      (* 	   (not (SAtom.is_empty ureq) || postpone args p np)) *)
-		      (* then *)
-		      (* 	ls, add_list new_s post *)
-		      (* else *) add_list new_s ls, post 
+		      if (alwayspost && List.length nargs > nb_uargs) ||
+		      	(not alwayspost &&
+		      	   (not (SAtom.is_empty ureq) || postpone args p np))
+		      then
+		      	ls, add_list new_s post
+		      else
+			add_list new_s ls, post 
 		 with Exit -> ls, post
-	       ) acc lureq ) acc lnp
+	       ) (ls, post) lureq ) acc lnp
       in
       if List.length tr.tr_args > List.length rargs then (ls, post)
       else
