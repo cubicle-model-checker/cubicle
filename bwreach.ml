@@ -803,15 +803,14 @@ let closeness anp ap =
 (********************************************************)
 
 
-let split_args args nargs =
-  let rec aux (s_args, dif) args nargs = match args, nargs with
-    | [], [] -> s_args, dif
-    | _::_, [] -> s_args, args
-    | [], _::_ -> s_args, dif
-    | a::ra, b::rb -> aux (a::s_args, dif) ra rb
-  in 
-  let s_args, dif = aux ([], []) args nargs in
-  List.rev s_args, List.combine dif dif
+let extra_args args nargs =
+  let rec aux dif args nargs = match args, nargs with
+    | [], [] -> dif
+    | _::_, [] -> args
+    | [], _::_ -> dif
+    | a::ra, b::rb -> aux dif ra rb
+  in
+  aux [] args nargs
 
 
 exception Fixpoint
@@ -821,14 +820,12 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
   Prover.assume_goal s;
   (* let nb_nargs = List.length nargs in *)
   let nodes = List.fold_left
-    (fun nodes ({ t_alpha = args, ap } as sp)->
-      let args, extra_subst = split_args args nargs in
+    (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp)->
+      let dif = extra_args real_args nargs in
       (* if List.length args > nb_nargs then nodes *)
       (* else *)
+      let nargs = if dif = [] then nargs else nargs@dif in
       let d = relevant_permutations anp ap args nargs in
-      let d = 
-	if extra_subst = [] then d 
-	else (List.map (fun s -> s@extra_subst) d) in 
       List.fold_left
 	(fun nodes ss ->
 	  let pp = ArrayAtom.apply_subst ss ap in
@@ -836,9 +833,9 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
 	    if simpl_by_uc then add_to_closed s pp sp ;
 	    raise Fixpoint
 	  end
-	    (* Heruristic : throw away nodes too much different *)
-	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-	    (* line below useful for arith : ricart *)
+	  (* Heruristic : throw away nodes too much different *)
+	  (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+	  (* line below useful for arith : ricart *)
 	  else if inconsistent_array (ArrayAtom.union pp anp) then nodes
 	  else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
 	  else (Prover.assume_node pp; nodes)
@@ -1057,7 +1054,7 @@ let add_without_redondancy sa l =
   if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
   else
     let l =
-      if delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l
+      if true || delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l
       else l
     in
     sa :: l
@@ -1130,7 +1127,7 @@ let add_list n l =
   if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
   else
     let l =
-      if delete then
+      if true || delete then
   	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l
       else l
     in
