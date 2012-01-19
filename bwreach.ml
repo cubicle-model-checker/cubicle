@@ -168,25 +168,29 @@ let redondant_or_false others a = match a with
   | Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->
       (try 
 	 (SAtom.iter (function 
-	   | Comp (t1', Eq, t2') 
-	       when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
-	       raise Not_found
-	   | Comp (t1', Eq, t2') 
-	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
-	       raise Exit
+	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
+	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) ->
+	     raise Exit
+	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
+	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	     when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0) ->
+	     raise Not_found
 	   | _ -> ()) others);
 	 a
        with Not_found -> True | Exit -> False)
   | Comp (t1, Eq, (Elem (x, (Var | Constr)) as t2))
   | Comp ((Elem (x, (Var | Constr)) as t2), Eq, t1) ->
       (try 
-	 (SAtom.iter (function 
-	   | Comp (t1', Neq, t2') 
-	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0)  ->
-	       raise Exit
-	   | Comp (t1', Eq, t2') 
-	       when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0)  ->
-	       raise Exit
+	 (SAtom.iter (function
+	   | Comp (t1', Neq, (Elem (x', (Var | Constr)) as t2'))
+	   | Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1') 
+	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) ->
+	     raise Exit
+	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
+	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	     when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0) ->
+	     raise Exit
 	   | _ -> ()) others); a
        with Not_found -> True | Exit -> False)
   | Comp (t1, Neq, t2) ->
@@ -824,7 +828,7 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
       let d = relevant_permutations anp ap args nargs in
       let d = 
 	if extra_subst = [] then d 
-	else List.map (fun s -> s@extra_subst) d in 
+	else (List.map (fun s -> s@extra_subst) d) in 
       List.fold_left
 	(fun nodes ss ->
 	  let pp = ArrayAtom.apply_subst ss ap in
@@ -1049,14 +1053,14 @@ let rec break a =
   		a1_and_c :: a2_and_nc_r
   	end
 
-let add_without_redondancy sa l = 
-  if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
-  else 
-    let l = 
-      if delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l
-      else l
-    in
-    sa :: l
+let add_without_redondancy sa l = sa :: l
+  (* if List.exists (fun sa' -> SAtom.subset sa' sa) l then l *)
+  (* else  *)
+  (*   let l =  *)
+  (*     if delete then List.filter (fun sa' -> not (SAtom.subset sa sa')) l *)
+  (*     else l *)
+  (*   in *)
+  (*   sa :: l *)
 
 let simplify_atoms np =
   try
@@ -1122,15 +1126,15 @@ let uguard sigma args tr_args = function
 
   | _ -> assert false
 
-let add_list n l =
-  if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
-  else 
-    let l = 
-      if delete then
-	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l 
-      else l
-    in
-    n :: l
+let add_list n l = n :: l
+  (* if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l *)
+  (* else  *)
+  (*   let l =  *)
+  (*     if delete then *)
+  (* 	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l  *)
+  (*     else l *)
+  (*   in *)
+  (*   n :: l *)
 
 let max_lnp = ref 0
 
@@ -1176,12 +1180,12 @@ let make_cubes =
 			    t_nb = !cpt;
 			    t_nb_father = nb;
 			} in 
-		      if (alwayspost && List.length nargs > nb_uargs) ||
-			(not alwayspost && 
-			   (not (SAtom.is_empty ureq) || postpone args p np))
-		      then
-			ls, add_list new_s post
-		      else add_list new_s ls, post 
+		      (* if (alwayspost && List.length nargs > nb_uargs) || *)
+		      (* 	(not alwayspost &&  *)
+		      (* 	   (not (SAtom.is_empty ureq) || postpone args p np)) *)
+		      (* then *)
+		      (* 	ls, add_list new_s post *)
+		      (* else *) add_list new_s ls, post 
 		 with Exit -> ls, post
 	       ) acc lureq ) acc lnp
       in
