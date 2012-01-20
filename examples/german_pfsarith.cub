@@ -1,0 +1,135 @@
+var G: bool
+var M: int
+var F: bool
+
+array A[proc] : int
+array U[proc] : int
+array D[proc] : int
+array T[proc] : bool
+array C[proc] : bool 
+array S[proc] : bool
+array L[proc] : bool
+
+
+init (z) {
+     A[z] = 1 && U[z] = 5 && D[z] = 7 &&
+     T[z] = False && C[z] = False && S[z] = False && L[z] = False &&
+     G = False && M = 5 && F = False }
+
+
+(* encoding of subranges *)
+invariant (z) { A[z] < 1}
+invariant (z) { 3 < A[z] }
+invariant (z) { U[z] < 5 }
+invariant (z) { 7 < U[z]  }
+invariant (z) { D[z] < 7  }
+invariant (z) { 10 < D[z] }
+invariant (z) { M < 5 }
+invariant (z) { 7 < M }
+
+
+unsafe (z1 z2) { A[z1] = 3 && A[z2] = 2 }
+
+(*:comment h0    t1*)
+transition t1(x)
+require { M = 6 && G = False && D[x] = 7 && C[x] = True && F = False }
+assign { M := 5 }
+D[j] := {| j = x : 8 | _ : D[j] }
+S[j] := {| j = x : True | _ : S[j] }
+
+
+(*:comment h1    t2*)
+transition t2(x)
+require { S[x] = False && M = 7 && D[x] = 7 && C[x] = True && F = False }
+uguard (j) {S[j] = False}
+assign { M := 5 ; G := True }
+D[j] := {| j = x : 9 | _ : D[j] }
+S[j] := {| j = x : True | _ : S[j] }
+
+
+(*:comment h2  t3*)
+transition t3(x)
+require { M = 5 && U[x] <> 5 && F = False }
+assign { F := True ; L := S ; M := U[x] }
+U[j] := {| j = x : 5 | _ : U[j] }
+C[j] := {| j = x : True | _ : False }
+
+
+(*:comment n1   t4*)
+transition t4(x)
+require { F = True && S[x] = False }
+L[j] := {| j = x : False | _ : L[j] }
+
+
+(*:comment n2   t5*)
+transition t5(x)
+require { F = True && S[x] = True }
+L[j] := {| j = x : True | _ : L[j] }
+
+
+(*:comment n3   t6*)
+transition t6(x)
+require { F = True && L[x] = S[x] } 
+uguard (j) { L[j] = S[j] }
+assign { F := False }
+
+
+(*:comment h3    t7*)
+transition t7(x)
+require { M = 6 && G = True && L[x] = True && D[x] = 7 && F = False }
+D[j] := {| j = x : 10 | _ : D[j] }
+L[j] := {| j = x : False | _ : L[j] }
+
+
+(*:comment h4    t8*)
+transition t8(x)
+require { M = 7 && L[x] = True && D[x] = 7 && F = False }
+D[j] := {| j = x : 10 | _ : D[j] }
+L[j] := {| j = x : False | _ : L[j] }
+
+
+(*:comment h5   t9*)
+transition t9(x)
+require { M <> 5 && T[x] = True && F = False }
+assign { G := False }
+T[j] := {| j = x : False | _ : T[j] }
+S[j] := {| j = x : False | _ : S[j] }
+
+
+
+(*:comment c1    t10*)
+transition t10(x)
+require { A[x] = 1 && U[x] = 5 && F = False }
+A[j] := {| j = x : 1 | _ : A[j] }
+U[j] := {| j = x : 6 | _ : U[j] }
+
+
+(*:comment c2 - c3     t11*)
+transition t11(x)
+require { A[x] < 3 && U[x] = 5 && F = False }
+U[j] := {| j = x : 7 | _ : U[j] }
+
+
+
+(*:comment c4         t12*)
+transition t12(x)
+require { D[x] = 10 && T[x] = False && F = False }
+A[j] := {| j = x : 1 | _ : A[j] }
+D[j] := {| j = x : 7 | _ : D[j] }
+T[j] := {| j = x : True | _ : T[j] }
+
+
+(*:comment c5   t13*)
+transition t13(x)
+require { D[x] = 8 && F = False }
+A[j] := {| j = x : 2 | _ : A[j] }
+D[j] := {| j = x : 7 | _ : D[j] }
+
+
+(*:comment c6    t14*)
+transition t14(x)
+require { D[x] = 9 && F = False }
+A[j] := {| j = x : 3 | _ : A[j] }
+D[j] := {| j = x : 7 | _ : D[j] }
+
+

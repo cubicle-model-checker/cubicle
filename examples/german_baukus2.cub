@@ -3,7 +3,6 @@ type msg = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
 
 var Exgntd : bool
 var Curcmd : msg
-var Curptr : proc
 
 array Chan1[proc] : msg
 array Chan2[proc] : msg
@@ -11,6 +10,7 @@ array Chan3[proc] : msg
 array Cache[proc] : state
 array Invset[proc] : bool
 array Shrset[proc] : bool
+array Curptr[proc] : bool
 
 init (z) { 		   
      Chan1[z] = Empty &&
@@ -54,9 +54,11 @@ requires { Cache[n] = Shared && Chan1[n] = Empty }
 transition recv_req_shared(n)
 requires { Curcmd = Empty && Chan1[n] = Reqs }
 { 
-  Curcmd := Reqs; 
-  Curptr := n; 
+  Curcmd := Reqs;  
   Invset := Shrset;
+  Curptr[j] := case 
+  	       | j = n: True
+	       | _ : False;
   Chan1[j] := case 
   	       | j = n: Empty 
 	       | _ : Chan1[j];
@@ -66,8 +68,10 @@ transition recv_req_exclusive(n)
 requires { Curcmd = Empty && Chan1[n] = Reqe }
 { 
   Curcmd := Reqe; 
-  Curptr := n; 
   Invset := Shrset;
+  Curptr[j] := case 
+  	       | j = n: True
+	       | _ : False;
   Chan1[j] := case 
   	       | j = n : Empty 
 	       | _ : Chan1[j] ;
@@ -123,7 +127,7 @@ requires { Chan3[n] = Invack && Curcmd <> Empty }
 }
 
 transition send_gnt_shared(n)
-requires { Curptr = n && Curcmd = Reqs && 
+requires { Curptr[n] = True && Curcmd = Reqs && 
 	  Exgntd = False && Chan2[n] = Empty }
 { 	  
   Curcmd := Empty;
@@ -136,7 +140,7 @@ requires { Curptr = n && Curcmd = Reqs &&
 }
 
 transition send_gnt_exclusive(n)
-requires { Curptr = n && Curcmd = Reqe &&
+requires { Curptr[n] = True && Curcmd = Reqe &&
 	  Chan2[n] = Empty && Shrset[n] = False && 
           forall_other j. Shrset[j] = False }
 { 
