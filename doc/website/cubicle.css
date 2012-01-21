@@ -196,7 +196,7 @@ tr:nth-child(odd) {
     background-color: #DDDAEC;
 }
 
-#contents table {
+#content table {
     empty-cells: hide;
     text-align: center;
     margin: auto;
