@@ -1,15 +1,14 @@
 local
-cachestate [0..2] *
-#invalid, shared, exclusive
-cachedata [0..9999] *
+  cachestate [0..2] *
+  #invalid, shared, exclusive
+  cachedata [0..9999] *
 
+global
 
 transitions
 
-
-
 # atomwb
-local   cachestate=2 => cachestate:=0;
+local cachestate=2 => cachestate:=0;
 
 
 # atom_invalidate
