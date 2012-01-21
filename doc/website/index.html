@@ -1,0 +1,392 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;
+					     charset=UTF-8">
+    <link title="new" rel="stylesheet" href="cubicle.css"
+	  type="text/css">
+    <title>Cubicle</title>
+  </head>
+
+  <body>
+
+    <div id="menu-banner">
+      <img src="cubicle.svg"/>
+    </div>
+   
+    <div id="banner">
+      <h1>Cubicle</h1>
+    </div>
+
+
+   
+    <div id="menu">
+      <ul>
+	<li><a href="#overview">Overview</a></li>
+	<li><a href="#download">Download</a>
+	  <ul>
+	    <li><a href="#sources">Sources</a>
+	    <li><a href="#install">Installation instructions </a>
+	  </ul>
+	</li>
+	<li><a href="#experiments">Experiments</a></li>
+	<li><a href="#examples">Examples</a></li>
+	<li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+
+
+    <div id="menu-right">
+
+      <div>
+	<table>
+	  <tr>
+	    <td>
+	      <a href="cubicle.tar.gz"><img src="down.svg"></a>
+	    </td>
+	    <td>
+	      <a href="cubicle.tar.gz">Download latest sources</a>
+	    </td>
+	  </tr>
+	</table>
+      </div>
+
+      <br/>
+
+      <div>
+	<h>Authors</h>
+
+	<ul>
+	  <li><a href="http://www.lri.fr/~conchon/">Sylvain Conchon</a></li>
+	  <li><a href="http://www.lri.fr/~mesbout/">Alain Mebsout</a></li>
+	  <li><a href="http://www.lri.fr/~zaidi/">Fathia Zaïdi</a></li>
+	</ul>
+      </div>
+
+    </div>
+
+    <div id="content">
+      
+      <a name="overview"></a><h2>Overview</h2>
+
+      <p>
+	Cubicle is an open source model checker for verifying safety properties
+	of array-based systems.
+	This is a syntactically restricted class of
+	parametrized transition systems with states represented 
+	as arrays indexed by an arbitrary number of processes.
+	Cache coherence protocols and mutual exclusion algorithms are
+	typical examples of such systems.
+      </p>
+      
+      <p>
+	Cubicle model-checks by a symbolic backward reachability
+	analysis on infinite 
+	sets of states represented by specific simple formulas, called cubes.
+	Cubicle is based on ideas introduced by <a href="http://www.dsi.unimi.it/~ghilardi/mcmt/">MCMT</a> from which, in addition to revealing
+	the implementation details, it differs in a more friendly
+	input language and a concurrent architecture.
+	Cubicle is written
+	in <a href="http://caml.inria.fr/">OCaml</a>. Its SMT solver
+	is a tightly integrated, lightweight 
+	and enhanced version
+	of <a href="http://alt-ergo.lri.fr">Alt-Ergo</a>; and its
+	parallel implementation relies on 
+	the <a href="http://functory.lri.fr">Functory library</a>.
+	
+      </p>
+
+      <a name="download"></a>
+      <h2>Download</h2>
+      
+      <a name="sources"></a>
+      <h3>Sources</h3>
+      
+      <p>
+	Cubicle is distributed under
+	the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache
+	licence</a>. 
+	
+	<br/>
+	<br/>
+	
+	You can download the sources of the latest version of
+	Cubicle <a href="cubicle.tar.gz">here</a>.
+	
+      </p>
+
+      <a name="install"></a>
+      <h3>Installation instructions</h3>
+      
+      <p>
+	To compile Cubicle you will need OCaml version 3.11 (or
+	newer) and the Ocaml Functory library version 0.5 (or newer)
+	which can be downloaded <a href="http://functory.lri.fr">here</a>
+      </p>
+
+      <p class="note">
+	<b>Note:</b> You can still compile Cubile without Functory but
+	you will not be able to use its parallel features.
+      </p>
+
+      <p>
+	Uncompress the archive and do: <br/>
+
+	<span class="code">
+	  <span class="incode">$</span> cd cubicle <br/>
+	  <span class="incode">$</span> autoconf <br/>
+	  <span class="incode">$</span> ./configure <br/>
+	  <span class="incode">$</span> make <br/>
+	</span>
+	<br/>
+	
+	then with superuser rigths
+	<br/>
+
+	<span class="code">
+	  <span class="incode">#</span> make install <br/>
+	</span>
+	<br/>
+
+	to run cubicle on a file <span class="tt">file.cub</span>
+	simply do:
+	<br/>
+	<span class="code">
+	  <span class="incode">$</span> cubicle file.cub <br/>
+	</span>
+	<br/>
+	
+      </p>
+
+      
+      
+
+      <a name="experiments"></a>
+      <h2>Experiments</h2>
+
+      <p>
+	We have experimented Cubicle on classical and challenging
+	problems (mutual exclusion algorithms and cache coherence
+	protocols) from the literature.
+      </p>
+
+      <p>
+	All the following benchmarks have been executed on a 64 bits
+	machine with a quad-core 
+	Intel &reg; Xeon &reg; processor @ 3.2 GHz and 24 GB of memory. For
+	each tool, we
+	report the results obtained with the best settings we
+	found. Note that the parallel version of Cubicle was run on 4
+	cores and that we only give its results for significantly time
+	consuming problems.
+      </p>
+
+      <table>
+
+	<tr>
+	  <th></th>
+	  <th colspan="2"> Cubile </th>
+	  <th rowspan="2"> <a href="http://www.dsi.unimi.it/~ghilardi/mcmt/">MCMT</a></th>
+	  <th rowspan="2"> <a href="http://www.it.uu.se/research/docs/fm/apv/tools/undip/">Undip</a></th>
+
+	  <th rowspan="2"> <a href="http://www.it.uu.se/research/docs/fm/apv/tools/pfs/">PFS</a></th>
+	</tr>
+	<tr>
+	  <th></th><th>seq.</th> <th>4 cores</th>
+	</tr>
+
+	<tr>
+	  <td class="bench"> bakery </td>
+	
+	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td> 0.04s </td> <td> 0.01s </td> 
+
+	<tr/>
+
+	<tr>
+	  <td class="bench"> Dijkstra </td>
+	
+	  <td> 0.24s </td> <td> - </td> <td> 0.99s </td> <td> <b>0.04s</b> </td> <td> 0.26s </td> 
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> Java-Mlock </td>
+	
+	  <td> 0.04s </td> <td> - </td> <td> 0.06s </td> <td> 0.25s </td> <td> 0.02s </td> 
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> Szymanski_at </td>
+
+	  <td> <b>0.12s</b> </td> <td> - </td> <td> 0.71s </td> <td> 13.5s </td> <td> timeout </td> 	
+
+	<tr/>
+
+	<tr> </tr>
+
+	<tr>
+	  <td class="bench"> Berkeley </td>
+	
+	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td> 0.01s </td> <td> 0.01s </td> 
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> flash_aggregated </td>
+	
+	  <td> 0.01s </td> <td> - </td> <td> 0.02s </td> <td> 0.01s </td> <td> / </td> 
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> German_Baukus </td>
+	
+	  <td> <b>25.0s</b> </td> <td> 17.1s </td> <td> 3h39m </td> <td> 9m43s </td> <td> / </td> 
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> German_pfs </td>
+	
+
+	  <td> <b>6m23s</b> </td> <td> 3m8s </td> <td> 11m31s </td> <td> timeout </td> <td> 47m22s </td> 
+	<tr/>
+
+	<tr>
+	  <td class="bench"> German_undip </td>
+	
+	  <td> <b>0.17s</b> </td> <td> - </td> <td> 0.57s </td> <td>
+	  1m32s </td> <td> / </td> 
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> Illinois </td>
+	
+	  <td> 0.02s </td> <td> - </td> <td> 0.04s </td> <td>
+	  0.06s </td> <td> 0.06s </td>  
+
+	<tr/>
+
+	<tr>
+	  <td class="bench"> Mesi </td>
+	
+	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td>
+	  0.01s </td> <td> 0.01s </td>  
+	
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> Moesi </td>
+
+	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td>
+	  0.01s </td> <td> 0.01s </td>  
+		
+
+	<tr/>
+
+
+	<tr>
+	  <td class="bench"> synapse </td>
+	
+	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td>
+	  0.01s </td> <td> 0.01s </td>  
+	
+
+	<tr/>
+
+      </table>
+      
+            
+      
+
+      <a name="examples"></a>
+      <h2>Examples</h2>
+      
+      <p>
+	Below is an example of a simple mutal exclustion algorithm
+	<span class="tt">Mutex</span>:
+	<br/>
+	<br/>
+
+
+      <span class="code">
+<span class="incode">var</span> Turn : proc<br/>
+<span class="incode">array</span> Want[proc] : bool<br/>
+<span class="incode">array</span> Crit[proc] : bool<br/>
+<br/>
+<span class="incode">init</span> (z) {<br/>
+&nbsp;&nbsp; Want[z] = False && Crit[z] = False<br/>
+}<br/>
+<br/>
+<span class="incode">unsafe</span> (x y) {<br/>
+&nbsp;&nbsp;Crit[x] = True && Crit[y] = True<br/>
+}<br/>
+<br/>
+<span class="incode">transition</span> req (i)<br/>
+<span class="incode">requires</span> { Want[i] = False }<br/>
+{<br/>
+&nbsp;&nbsp;Want[j] := case <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;           | i = j : True<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Want[j]<br/>
+}<br/>
+<br/>
+<span class="incode">transition</span> enter (i)<br/>
+<span class="incode">requires</span> { <br/>
+&nbsp;&nbsp;  Want[i] = True <br/>
+&nbsp;&nbsp;  && Crit[i] = False<br/>
+&nbsp;&nbsp;  && Turn = i }<br/>
+{<br/>
+&nbsp;&nbsp;Crit[j] := case<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | i = j : True<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Crit[j]<br/>
+}<br/>
+<br/>
+<span class="incode">transition</span> exit (i)<br/>
+<span class="incode">requires</span> { Crit[i] = True }<br/>
+{<br/>
+&nbsp;&nbsp;Turn := . ;<br/>
+&nbsp;&nbsp;Crit[j] := case<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | i = j : False <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Crit[j]  ;<br/>
+&nbsp;&nbsp;Want[j] := case<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | i = j : False<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Want[j]<br/>
+}<br/>
+
+      </span>
+      </p>
+      
+
+
+      <a name="contact"></a>
+      <h2>Contact</h2>
+
+      <p>
+	You can contact us at our respective email addresses.
+      </p>
+
+
+
+
+
+
+    </div>
+
+
+
+
+
+  </body>
+
+
+</html>
