@@ -1,7 +1,7 @@
 local
 cachestate [0..2] *
 #invalid, shared, exclusive
-cachedata [0..9999]
+cachedata [0..9999] *
 
 
 transitions
