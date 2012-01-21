@@ -54,11 +54,18 @@
       <br/>
 
       <div>
-	<h>Authors</h>
+	<h>Developpers</h>
 
 	<ul>
 	  <li><a href="http://www.lri.fr/~conchon/">Sylvain Conchon</a></li>
 	  <li><a href="http://www.lri.fr/~mesbout/">Alain Mebsout</a></li>
+	</ul>
+
+	<h>Team members</h>
+
+	<ul>
+	  <li><a href="">Amit Goel</a></li>
+	  <li><a href="http://www.csee.ogi.edu/~krstics/">Sava Krsti&#263;</a></li>
 	  <li><a href="http://www.lri.fr/~zaidi/">Fathia Zaïdi</a></li>
 	</ul>
       </div>
@@ -182,127 +189,111 @@
       </p>
 
       <table>
-
 	<tr>
-	  <th></th>
-	  <th colspan="2"> Cubile </th>
-	  <th rowspan="2"> <a href="http://www.dsi.unimi.it/~ghilardi/mcmt/">MCMT</a></th>
-	  <th rowspan="2"> <a href="http://www.it.uu.se/research/docs/fm/apv/tools/undip/">Undip</a></th>
-
-	  <th rowspan="2"> <a href="http://www.it.uu.se/research/docs/fm/apv/tools/pfs/">PFS</a></th>
-	</tr>
-	<tr>
-	  <th></th><th>seq.</th> <th>4 cores</th>
+	  <th></th><th>sequential</th> <th>4 cores</th>
 	</tr>
 
-	<tr>
+	<tr class="mex">
 	  <td class="bench"> bakery </td>
 	
-	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td> 0.04s </td> <td> 0.01s </td> 
+	  <td> 0.01s </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
-	<tr>
+	<tr class="mex">
 	  <td class="bench"> Dijkstra </td>
 	
-	  <td> 0.24s </td> <td> - </td> <td> 0.99s </td> <td> <b>0.04s</b> </td> <td> 0.26s </td> 
+	  <td> 0.24s </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="mex">
 	  <td class="bench"> Java-Mlock </td>
 	
-	  <td> 0.04s </td> <td> - </td> <td> 0.06s </td> <td> 0.25s </td> <td> 0.02s </td> 
+	  <td> 0.04s </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="mex">
 	  <td class="bench"> Szymanski_at </td>
 
-	  <td> <b>0.12s</b> </td> <td> - </td> <td> 0.71s </td> <td> 13.5s </td> <td> timeout </td> 	
+	  <td> <b>0.12s</b> </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
-	<tr> </tr>
-
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> Berkeley </td>
 	
-	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td> 0.01s </td> <td> 0.01s </td> 
+	  <td> 0.01s </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> flash_aggregated </td>
 	
-	  <td> 0.01s </td> <td> - </td> <td> 0.02s </td> <td> 0.01s </td> <td> / </td> 
+	  <td> 0.01s </td> <td> - </td> 
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> German_Baukus </td>
 	
-	  <td> <b>25.0s</b> </td> <td> 17.1s </td> <td> 3h39m </td> <td> 9m43s </td> <td> / </td> 
+	  <td> <b>25.0s</b> </td> <td> 17.1s </td>
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> German_pfs </td>
 	
 
-	  <td> <b>6m23s</b> </td> <td> 3m8s </td> <td> 11m31s </td> <td> timeout </td> <td> 47m22s </td> 
-	<tr/>
+	  <td> <b>6m23s</b> </td> <td> 3m8s </td>
+	</tr>
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> German_undip </td>
 	
-	  <td> <b>0.17s</b> </td> <td> - </td> <td> 0.57s </td> <td>
-	  1m32s </td> <td> / </td> 
+	  <td> <b>0.17s</b> </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> Illinois </td>
 	
-	  <td> 0.02s </td> <td> - </td> <td> 0.04s </td> <td>
-	  0.06s </td> <td> 0.06s </td>  
+	  <td> 0.02s </td> <td> - </td>
 
-	<tr/>
+	</tr>
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> Mesi </td>
 	
-	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td>
-	  0.01s </td> <td> 0.01s </td>  
+	  <td> 0.01s </td> <td> - </td>
 	
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> Moesi </td>
 
-	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td>
-	  0.01s </td> <td> 0.01s </td>  
+	  <td> 0.01s </td> <td> - </td> 
 		
 
-	<tr/>
+	</tr>
 
 
-	<tr>
+	<tr class="ccp">
 	  <td class="bench"> synapse </td>
 	
-	  <td> 0.01s </td> <td> - </td> <td> 0.01s </td> <td>
-	  0.01s </td> <td> 0.01s </td>  
+	  <td> 0.01s </td> <td> - </td>
 	
 
-	<tr/>
+	</tr>
 
       </table>
       

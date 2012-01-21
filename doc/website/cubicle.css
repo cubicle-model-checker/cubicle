@@ -188,11 +188,13 @@ th {
 }
 
 
-tr:nth-child(even) {
+
+
+.mex {
     background-color: #EEEEFF;
 }
 
-tr:nth-child(odd) {
+.ccp {
     background-color: #DDDAEC;
 }
 
