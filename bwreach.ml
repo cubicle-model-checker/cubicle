@@ -1174,12 +1174,12 @@ let make_cubes =
 			    t_nb = !cpt;
 			    t_nb_father = nb;
 			} in 
-		      (*if (alwayspost && List.length nargs > nb_uargs) ||
+		      if (alwayspost && List.length nargs > nb_uargs) ||
 		      	(not alwayspost &&
 		      	   (not (SAtom.is_empty ureq) || postpone args p np))
 		      then
 		      	ls, add_list new_s post
-		      else*)
+		      else
 			add_list new_s ls, post 
 		 with Exit -> ls, post
 	       ) (ls, post) lureq ) acc lnp
