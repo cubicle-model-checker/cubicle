@@ -141,7 +141,7 @@ BDP    currentcommand=empty & channelone=requestexclusive
              & p.currentclient'=false]
 *)
 
-transition home2r4(n)
+transition home2r6(n)
 requires { Curcmd = Empty && Chan1[n] = Reqe (* && Shrset[n] = True *)}
 {
 Curcmd := Reqe;

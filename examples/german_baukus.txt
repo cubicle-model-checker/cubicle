@@ -41,8 +41,7 @@ local (cache=1 & chan1=0) => chan1:=2;
 local (chan1=1 & shrset=0) & global curcmd=0 =>
       curcmd:=1 & curptr:=1 & invset:=0
       & chan1:=0
-      & foralla curptr:=0 
-      & foralla invset:=shrset;
+      & foralla (curptr:=0 & invset:=shrset);
 
 
 
