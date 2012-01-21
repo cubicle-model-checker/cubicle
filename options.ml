@@ -50,7 +50,7 @@ let show_version () = Format.printf "%s@." Version.version; exit 0
 
 let specs = 
   [ "-version", Arg.Unit show_version, " prints the version number";
-    "-q", Arg.Set quiet, " do not output search trace";
+    "-quiet", Arg.Set quiet, " do not output search trace";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-depth", Arg.Set_int maxrounds, "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxnodes, "<nb> max number nodes to explore (default 100000)";
