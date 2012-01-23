@@ -215,6 +215,7 @@ include .depend
 ########
 
 DATE=$(shell date +%d/%m/%Y)
+LONGDATE=$(shell date +%Y%m%d%H%M)
 
 EXPORTDIR=$(NAME)-$(VERSION)
 TAR=$(EXPORTDIR).tar
@@ -263,4 +264,6 @@ release: export
 	cp export/$(EXPORTDIR)/examples/* export/release/examples/
 	cp doc/website/* export/release/
 	cd export/release/; sed "s@#version#@$(VERSION)@g" index.html > index.html.tmp; sed  "s@#date#@$(DATE)@g" index.html.tmp > index.html; rm -f index.html.tmp
+	mkdir -p $(WEB)/backup/$(LONGDATE)
+	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
 	cp -f -R export/release/* $(WEB)
