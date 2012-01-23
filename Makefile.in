@@ -258,7 +258,9 @@ export:
 
 release: export
 	mkdir -p export/release
+	mkdir -p export/release/examples/
 	cp export/$(TAR).gz export/release/
+	cp export/$(EXPORTDIR)/examples/* export/release/examples/
 	cp doc/website/* export/release/
 	cd export/release/; sed "s@#version#@$(VERSION)@g" index.html > index.html.tmp; sed  "s@#date#@$(DATE)@g" index.html.tmp > index.html; rm -f index.html.tmp
-	cp -f export/release/* $(WEB)
+	cp -f -R export/release/* $(WEB)

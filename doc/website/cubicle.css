@@ -18,9 +18,10 @@ th a:visited { color: #EEEEFF; text-decoration: none; }
 th a:hover { color: #EEEEFF; text-decoration: underline; }
 th a:active { color: #EEEEFF; text-decoration: underline; }
 
-
-
-
+td a:link { text-decoration: none; }
+td a:visited { text-decoration: none; }
+td a:hover { text-decoration: underline; }
+td a:active { text-decoration: underline; }
 
 
 a img {border:none; text-decoration:none; vertical-align:text-bottom;}
@@ -115,6 +116,8 @@ ul ul li {
     text-align: left;
     margin-left: -1.5em;
     line-height: 1.1em;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 #content {
@@ -202,5 +205,5 @@ th {
     empty-cells: hide;
     text-align: center;
     margin: auto;
-    min-width: 500px;
+    min-width: 400px;
 }
