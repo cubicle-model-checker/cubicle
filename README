@@ -14,4 +14,26 @@ This program is distributed under the Apache Software License version
 INSTALLATION
 ============
 
-See the enclosed file INSTALL.
+To compile Cubicle you will need OCaml version 3.11 (or
+newer) and the Ocaml Functory library version 0.5 (or newer)
+which can be downloaded at http://functory.lri.fr
+
+Note: You can still compile Cubile without Functory but
+you will not be able to use its parallel features.
+
+Install Functory and do:
+
+   ./configure
+    make
+
+then with superuser rigths:
+
+    make install
+
+to run Cubicle on a file file.cub simply do:
+ 
+    cubicle file.cub
+
+You can see al list of Cubcile's options by doing:
+
+    cubicle -h

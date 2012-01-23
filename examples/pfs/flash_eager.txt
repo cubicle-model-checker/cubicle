@@ -16,12 +16,11 @@ local (cachestate=0 | cachestate=1) => cachestate:=0;
 
 
 #atom_get1
-local (cachestate=0 | cachestate=1) & foralla (cachestate=0 |
-cachestate=1) => cachestate:=1;
+local (cachestate=0 | cachestate=1) & foralla (cachestate=0 | cachestate=1) => cachestate:=1;
 
 
 # atom_get2
-local cachestate=2 => cachestate:=1 & itexistsa (cachestate:=1);
+local cachestate=2 => cachestate:=1;
 
 
 #atom_getX_1
@@ -29,7 +28,7 @@ local (cachestate=0 | cachestate=1) & foralla (cachestate=0 |
 cachestate=1) => cachestate:=2;
 
 # atom_getX_2
-local cachestate=2 => cachestate:=0 & itexistsa (cachestate:=2);
+local cachestate=2 => cachestate:=0 ;
 
 initial
 : cachestate=0;

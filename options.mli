@@ -22,7 +22,7 @@ val maxrounds : int
 val maxnodes : int
 
 val gen_inv : bool
-val alwayspost : bool
+val post_strategy : int
 val delete : bool
 val simpl_by_uc : bool
 

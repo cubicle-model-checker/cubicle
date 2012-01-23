@@ -41,11 +41,14 @@
       <div>
 	<table>
 	  <tr>
+	    <td colspan="2">Last version: #version# (#date#)</td>
+	  </tr>
+	  <tr>
 	    <td>
-	      <a href="cubicle.tar.gz"><img src="down.svg"></a>
+	      <a href="cubicle-#version#.tar.gz"><img src="down.svg"></a>
 	    </td>
 	    <td>
-	      <a href="cubicle.tar.gz">Download latest sources</a>
+	      <a href="cubicle-#version#.tar.gz">Download v#version#</a>
 	    </td>
 	  </tr>
 	</table>
@@ -118,7 +121,7 @@
 	<br/>
 	
 	You can download the sources of the latest version of
-	Cubicle <a href="cubicle.tar.gz">here</a>.
+	Cubicle <a href="cubicle-#version#.tar.gz">here</a>.
 	
       </p>
 
@@ -140,8 +143,7 @@
 	Uncompress the archive and do: <br/>
 
 	<span class="code">
-	  <span class="incode">$</span> cd cubicle <br/>
-	  <span class="incode">$</span> autoconf <br/>
+	  <span class="incode">$</span> cd cubicle-#version# <br/>
 	  <span class="incode">$</span> ./configure <br/>
 	  <span class="incode">$</span> make <br/>
 	</span>

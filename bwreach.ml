@@ -1173,14 +1173,18 @@ let make_cubes =
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
 			    t_nb = !cpt;
 			    t_nb_father = nb;
-			} in 
-		      if (alwayspost && List.length nargs > nb_uargs) ||
-		      	(not alwayspost &&
-		      	   (not (SAtom.is_empty ureq) || postpone args p np))
-		      then
-		      	ls, add_list new_s post
-		      else
-			add_list new_s ls, post 
+			} in
+		      match post_strategy with
+			| 0 -> add_list new_s ls, post
+			| 1 -> 
+			    if List.length nargs > nb_uargs then
+			      ls, add_list new_s post
+			    else add_list new_s ls, post
+			| 2 -> 
+			    if not (SAtom.is_empty ureq) || postpone args p np 
+			    then ls, add_list new_s post
+			    else add_list new_s ls, post
+			| _ -> assert false
 		 with Exit -> ls, post
 	       ) (ls, post) lureq ) acc lnp
       in

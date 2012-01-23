@@ -214,8 +214,12 @@ include .depend
 # export
 ########
 
+DATE=$(shell date +%d/%m/%Y)
+
 EXPORTDIR=$(NAME)-$(VERSION)
 TAR=$(EXPORTDIR).tar
+
+WEB = $$HOME/WWW/cubicle/
 
 SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 	   smt/combine.mli smt/exception.ml smt/exception.mli\
@@ -237,7 +241,7 @@ FILES = ast.ml ast.mli bwreach.ml bwreach.mli fake_functory.ml\
 	parser.mly pretty.ml pretty.mli prover.ml prover.mli search.ml\
 	search.mli test.ml typing.ml typing.mli version.ml
 
-OTHERFILES = configure Makefile.in README
+OTHERFILES = configure Makefile.in README COPYING
 
 export:
 	mkdir -p export
@@ -251,3 +255,10 @@ export:
 	cp $(OTHERFILES) export/$(EXPORTDIR)/
 	cp examples/*.cub export/$(EXPORTDIR)/examples/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
+
+release: export
+	mkdir -p export/release
+	cp export/$(TAR).gz export/release/
+	cp doc/website/* export/release/
+	cd export/release/; sed "s@#version#@$(VERSION)@g" index.html > index.html.tmp; sed  "s@#date#@$(DATE)@g" index.html.tmp > index.html; rm -f index.html.tmp
+	cp -f export/release/* $(WEB)

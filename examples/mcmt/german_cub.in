@@ -157,6 +157,7 @@
 
 
 :comment :no_backward_simplification
+:key_search g
 
 :comment send_req_shared
 :transition
@@ -383,7 +384,7 @@
 :transition
 :var x
 :var j
-:guard (=  c[x]  5) (>  g[x]  1)
+:guard (=  c[x]  5) (not (=  g[x]  1))
 :numcases 2
 :case (= x j)
  :val a[j]
