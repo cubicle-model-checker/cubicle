@@ -30,6 +30,12 @@
 	  </ul>
 	</li>
 	<li><a href="#experiments">Experiments</a></li>
+	<li><a href="#manual">Manual</a>
+	  <ul>
+	    <li><a href="#language">Description<br/> language</a>
+	    <li><a href="#options">Options</a>
+	  </ul>
+	</li>
 	<li><a href="#examples">Examples</a></li>
 	<li><a href="#contact">Contact</a></li>
       </ul>
@@ -299,8 +305,329 @@
 
       </table>
       
-            
+
+      <a name="manual"></a>
+      <h2>Manual</h2>
+
+      <a name="language"></a>
+      <h3>Description language</h3>
       
+      
+      <p>
+	Cubicle's input
+	language contains some conventional programming constructs (arrays,
+	enumerated and abstract types etc.). However, since we have designed
+	our language with a particular set of protocols in mind, some of its
+	aspects would need to be improved for describing other classes of
+	algorithms.
+      </p>
+
+      <p>
+	In Cubicle, array-based systems are described by a set of type
+	declarations, a set of array declarations, an initial configuration,
+	and a transition relation given as a set of parameterized
+	transitions.
+      </p>
+
+      <p>
+
+	The language has four built-in data types: integers
+	(<span class="tt">int</span>), 
+	reals (<span class="tt">real</span>), boolean
+	(<span class="tt">bool</span>) and the type of process 
+	identifiers (<span class="tt">proc</span>). It also supports
+	user-defined abstract 
+	and enumerated data types. For instance,
+	<br/>
+	
+	<span class="code">
+	<span class="incode">type</span> data<br/>
+	<span class="incode">type</span> msg = Empty | Req | Ack<br/>
+	</span>
+
+	defines an abstract type <span class="tt">data</span>, and an enumeration type
+	<span class="tt">msg</span> with the three given values.
+      </p>
+
+      <p>
+	The state of a system is described by a set of global variables and
+	arrays indexed by process identifiers. Thus,
+	<br/>
+
+	<span class="code">
+	<span class="incode">var</span> Memory : data<br/>
+	<span class="incode">var</span> Counter : int<br/>
+	<span class="incode">array</span> Channel[proc] : msg<br/>
+	</span>
+
+	describe the state consisting of two global
+	variables <span class="tt">Memory</span> 
+	and <span class="tt">Counter</span>, respectively of
+	type <span class="tt">data</span> and 
+	<span class="tt">int</span>, and an
+	array <span class="tt">Channel</span> containing values of
+	type <span class="tt">msg</span>.
+      </p>
+
+      <p>
+	The initial state is defined by a universal conjunction of
+	literals characterizing the values for some variables and arrays. For
+	example, the configuration
+	where <span class="tt">Counter</span> initially equals to 
+	<span class="tt">1</span> and <span class="tt">Channel[z]</span>
+	contains the value <span class="tt">Empty</span> 
+	for any process <span class="tt">z</span> is expressed by:
+	<br/>
+
+	<span class="code">
+	<span class="incode">init</span> (z) { Counter = 1 && Channel[z] = Empty }<br/>
+	</span>
+      </p>
+
+      <p>
+
+	The execution of a parameterized system is defined by a set of
+	guarded transitions and consists of an infinite loop which
+	non-deterministically triggers at each iteration a transition whose
+	guard is true and whose action is to update state variables. Each
+	transition can take one or several process identifiers as arguments. A
+	guard is a conjunction of literals (equations, disequations or
+	inequations) and universal formulas. These formulas must be in
+	disjunctive normal form and are universally quantified by processes
+	different from the transition's arguments. Assignments of variables
+	can possibly be non-deterministic (denoted by <span class="tt">:= .</span>). Arrays
+	updates are realized through a case-defined construct where each
+	condition is expressed as a conjunction of literals and the default
+	case is denoted by <span class="tt">_</span>.
+	<br/>
+	<br/>
+	
+	<span class="code">
+	<span class="incode">transition</span> send_req(i)<br/>
+	<span class="incode">requires</span> 
+	{ Channel[i] = Empty && Counter &lt; 10 && <br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		forall_other j. (j &lt; i || Channel[j] &lt;&gt; Req) }<br/>
+        {<br/>
+        &nbsp;&nbsp;  Counter := Counter + 1 ; <br/>
+        &nbsp;&nbsp;  Memory := . ;<br/>
+	&nbsp;&nbsp;  Channel[j] := case <br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | j = i : Req <br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | _ : Channel[j]; <br/>
+	}
+	</span>
+      </p>
+
+      <p>
+	The safety property to be verified is expressed in its negated form as
+	a cube, existentially quantified by <em>distinct</em> processes, and
+	characterizes <em>unsafe</em> states.  The user also has an option to
+	specify invariants of the system. For instance, the following formula
+	expresses that a state is unsafe when there exists two distinct
+	processes <span class="tt">z1</span>
+	and <span class="tt">z2</span> such
+	that <span class="tt">Channel</span> 
+	contains <span class="tt">Req</span> for both.
+	<br/>
+
+	<span class="code">
+	<span class="incode">unsafe</span> (z1 z2)
+         { Channel[z1] = Req && Channel[z2] = Req }
+	</span>
+      </p>
+  
+      <a name="options"></a>
+      <h3>Options</h3>
+      
+      <p>
+	Cubicle can be run with different options that are shown
+	below:
+      </p>
+
+      <table class="opts">
+	
+	<tr>
+	  <td class="opt"> -version
+	  </td>
+	  
+	  <td class="opt-desc"> Print the version number on stdout
+	  and exit.
+	  </td>
+	</tr>
+
+	
+	<tr>
+	  <td class="opt"> -quiet
+	  </td>
+	  
+	  <td class="opt-desc"> Prevent Cubicle from printing the
+	  search trace while it performs backward reachability.
+	  </td>
+	</tr>
+
+		
+	<tr>
+	  <td class="opt"> -depth <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Limit the depth of the search tree
+	  to <em>n</em> at maximum. If this limit si excedeed Cubicle
+	  will print <span class="tt">reach bound</span> on
+	  stderr. This value is set to 100 by default.
+	  </td>
+	</tr>
+
+		
+	<tr>
+	  <td class="opt"> -nodes <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Limit the number of nodes to explore
+	  to <em>n</em> at maximum. If this limit si excedeed Cubicle
+	  will print <span class="tt">reach bound</span> on
+	  stderr. This value is set to 100000 by default.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -search <em>s</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Set the search strategy
+	  to <em>s</em>. <em>s</em> can be either
+	  breadth-first search (<span class="tt">bfs</span>) or depth-first search
+	  (<span class="tt">dfs</span>) or a variant of DFS
+	  (<span class="tt">dfsl</span>, <span class="tt">dfsh</span>, <span class="tt">dfshl</span>). By default,
+	  Cubicle explores the search space breadth-first
+	  (<span class="tt">bfs</span>).
+	  </td>
+	</tr>
+
+
+	<tr>
+	  <td class="opt"> -debug
+	  </td>
+	  
+	  <td class="opt-desc"> When this flag is present, Cubicle
+	  will output cubes that were computed during
+	  the <em>pre</em>, and that are being explored.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -v
+	  </td>
+	  
+	  <td class="opt-desc"> When this flag is present together
+	  with <b>-debug</b>, Cubicle
+	  will output the result of the <em>pre</em>.
+	  </td>
+	</tr>
+
+
+
+
+	<tr>
+	  <td class="opt"> -profiling
+	  </td>
+	  
+	  <td class="opt-desc"> Tells cubicle to output profiling
+	  informations at the end of the search. Such as the time that
+	  was spent in computing pre-images, in the fixpoint checks,
+	  in computing relevant permutations, in applying
+	  substitutions, in the solver, etc.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -geninv
+	  </td>
+	  
+	  <td class="opt-desc"> Activate invariant discovery during
+	    the search. If this flag is present, Cubicle will attempt to
+	    synthesize invariants with candidates being subsets of
+	    visited nodes that only contain predicates over a 
+	    unique process variable. Each of these subsets
+	    is checked for safety by starting a new resource limited
+	    backward reachability analysis.
+
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -postpone <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Select the strategy to postpone
+	  nodes. Values for <em>n</em> can be:
+	    <ul>
+	      <li>0: Nodes will not be postponed</li>
+	      <li>1: Postpone nodes that add another process
+	      variable</li>
+	      <li>2: Postpone nodes that do not contribute new
+	      information on arrays
+	    </ul>
+
+	  </td>
+	</tr>
+
+
+	<tr>
+	  <td class="opt"> -nodelete
+	  </td>
+	  
+	  <td class="opt-desc"> Deactivate <em>a posteriori</em>
+	  deletion of nodes that become subsumed.
+
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -j <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Run Cubicle in parallel on <em>n</em>
+	  cores. This option can only be used with the search strategy
+	  set to BFS.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -h, --help
+	  </td>
+	  
+	  <td class="opt-desc"> Display a message with usage and the
+	  list of options/
+	  </td>
+	</tr>	
+
+
+      </table>
+
+
+      <p>
+	When running, Cubicle will produce traces on stdout for each
+	node that is explored. For example, a node with the following
+	trace <br/>
+
+	<span class="code">
+	   inv_2(#2) -> gnt_shared(#1) -> unsafe
+	</span>
+	
+	will represent states that can reach the unsafe state by
+	first applying transistion <span class="tt">inv_2</span> in
+	process <span class="tt">#2</span> and then applying
+	transition <span class="tt">gnt_shared</span> in
+	process <span class="tt">#1</span>.	
+      </p>
+
+      <p>
+	If a system is proved unsafe, Cubicle will say so and output a
+	couterexample trace from the inital state to the unsafe state
+	in the same format.
+      </p>
+
+    
 
       <a name="examples"></a>
       <h2>Examples</h2>

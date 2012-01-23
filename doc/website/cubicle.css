@@ -139,6 +139,7 @@ ul ul li {
 }
 
 #content h3 {
+    padding-top: 15px;
     font-size: 1.1em;
     color: #5a3acb;
     font-weight: bold;
@@ -206,4 +207,25 @@ th {
     text-align: center;
     margin: auto;
     min-width: 400px;
+}
+
+
+#content td.opt-desc {
+    vertical-align: top;
+    padding: 10px;
+}
+
+#content td.opt {
+    vertical-align: top;
+    font-weight: bold;
+    padding: 10px;
+    padding-bottom: 20px;
+    width: 7em;
+}
+
+#content table.opts {
+    text-align: left;
+    margin-left: 2em;
+    margin-right: 2em;
+
 }
