@@ -241,7 +241,7 @@ FILES = ast.ml ast.mli bwreach.ml bwreach.mli fake_functory.ml\
 	parser.mly pretty.ml pretty.mli prover.ml prover.mli search.ml\
 	search.mli test.ml typing.ml typing.mli version.ml
 
-OTHERFILES = configure Makefile.in README COPYING
+OTHERFILES = .depend configure Makefile.in README COPYING
 
 export:
 	mkdir -p export
