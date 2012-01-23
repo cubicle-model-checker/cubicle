@@ -105,7 +105,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.1
+VERSION=0.2
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -209,3 +209,45 @@ clean::
 
 
 include .depend
+
+
+# export
+########
+
+EXPORTDIR=$(NAME)-$(VERSION)
+TAR=$(EXPORTDIR).tar
+
+SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
+	   smt/combine.mli smt/exception.ml smt/exception.mli\
+	   smt/explanation.ml smt/explanation.mli smt/fm.ml smt/fm.mli\
+	   smt/intervals.ml smt/intervals.mli smt/literal.ml\
+	   smt/literal.mli smt/polynome.ml smt/polynome.mli smt/sig.mli\
+	   smt/smt.ml smt/smt.mli smt/solver.ml smt/solver.mli\
+	   smt/solver_types.ml smt/solver_types.mli smt/sum.ml smt/sum.mli\
+	   smt/symbols.ml smt/symbols.mli smt/term.ml smt/term.mli\
+	   smt/ty.ml smt/ty.mli smt/uf.ml smt/uf.mli smt/use.ml smt/use.mli
+
+COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
+	      common/heap.mli common/hstring.ml common/hstring.mli\
+	      common/iheap.ml common/iheap.mli common/timer.ml\
+	      common/timer.mli common/vec.ml common/vec.mli
+
+FILES = ast.ml ast.mli bwreach.ml bwreach.mli fake_functory.ml\
+	fake_functory.mli lexer.mll main.ml options.ml options.mli\
+	parser.mly pretty.ml pretty.mli prover.ml prover.mli search.ml\
+	search.mli test.ml typing.ml typing.mli version.ml
+
+OTHERFILES = configure Makefile.in README
+
+export:
+	mkdir -p export
+	mkdir -p export/$(EXPORTDIR)
+	mkdir -p export/$(EXPORTDIR)/smt
+	mkdir -p export/$(EXPORTDIR)/common
+	mkdir -p export/$(EXPORTDIR)/examples
+	cp $(SMTFILES) export/$(EXPORTDIR)/smt
+	cp $(COMMONFILES) export/$(EXPORTDIR)/common
+	cp $(FILES) export/$(EXPORTDIR)/
+	cp $(OTHERFILES) export/$(EXPORTDIR)/
+	cp examples/*.cub export/$(EXPORTDIR)/examples/
+	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
