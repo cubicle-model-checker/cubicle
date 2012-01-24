@@ -156,8 +156,21 @@ let add_constant c i cs =
 	if i = 0 then MConst.remove c cs
 	else MConst.add c i cs
 
+let is_int_const = function
+  | ConstInt _ -> true
+  | ConstReal _ -> false
+  | ConstName n -> Hstring.equal (snd (Smt.Typing.find n)) Smt.Typing.type_int
+
 let add_constants cs1 cs2 =
-  MConst.fold add_constant cs2 cs1
+  let m = MConst.fold add_constant cs2 cs1 in
+  if MConst.is_empty m then 
+    let c0 = 
+      if is_int_const (fst (MConst.choose cs1)) then 
+	ConstInt (Num.Int 0) 
+      else ConstReal (Num.Int 0)
+    in
+    MConst.add c0 1 m
+  else m
 
 let mult_const a =
   MConst.map (fun i -> i * a)
@@ -238,6 +251,21 @@ let rec simplification np a =
     (* | Comp ( Arith (x, sx, cx), op, Const cy) -> *)
     (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
     (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
+    | Comp (Elem (x, sx), op, Arith (y, sy, cy)) when Hstring.equal x y ->
+        let cx = add_constants (mult_const (-1) cy) cy in
+	let c, i = MConst.choose cy in
+	let my = MConst.remove c cy in
+	let cy = 
+	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
+        Comp (Const cx, op, Const cy)
+    | Comp (Arith (y, sy, cy), op, Elem (x, sx)) when Hstring.equal x y ->
+        let cx = add_constants (mult_const (-1) cy) cy in
+	let c, i = MConst.choose cy in
+	let my = MConst.remove c cy in
+	let cy = 
+	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
+        Comp (Const cy, op, Const cx)
+    | Comp (Const _ as c, Eq, y) -> Comp (y, Eq, c)
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
@@ -998,18 +1026,20 @@ let contains_tick_atom tick = function
 
 let remove_tick_atom sa (tick, at) = 
   let sa = SAtom.remove at sa in
-  let flag = ref false in
+  (* let flag = ref false in *)
   let remove a sa = 
     let a = match a with
-      | Comp ((Const _ | Arith (_, _, _) as e), (Le|Lt|Eq as op), x) ->
+      | Comp ((Const _ | Arith (_, _, _) as e), (Le|Lt|Eq as op), x)
+      | Comp (x, (Eq as op), (Const _ | Arith (_, _, _) as e))  ->
 	  remove_tick tick e op x
       | _ -> a 
     in
-    flag := !flag && contains_tick_atom tick a;
+    (* flag := !flag || contains_tick_atom tick a; *)
+    if contains_tick_atom tick a then sa else
     SAtom.add a sa
   in
-  let sa = SAtom.fold remove sa SAtom.empty in
-  if !flag then SAtom.add at sa else sa
+  SAtom.fold remove sa SAtom.empty
+  (* if !flag then SAtom.add at sa else sa *)
 
 let const_simplification sa = 
   try
