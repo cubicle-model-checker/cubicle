@@ -64,7 +64,7 @@ make_functory:
 	cp -f fake_functory.ml functory.ml;\
 	$(OCAMLC) -c functory.mli;\
 	$(OCAMLOPT) -c functory.ml;\
-	$(OCAMLOPT) -o functory.cmxa -a functory.cmx functory.o;\
+	$(OCAMLOPT) -o functory.cmxa -a functory.cmx;\
 	fi
 
 # bytecode and native-code compilation
