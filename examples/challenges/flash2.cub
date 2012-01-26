@@ -659,9 +659,9 @@ requires { Invnet[dst] = Inv &&
 
 
 
-transition ni_InvAck1 (src)
+transition ni_InvAck1 (src other)
 requires { Pending = True && 
-	  Invnet[src] = InvAck && Real[src] = True }
+	  Invnet[src] = InvAck && Real[other] = True }
 {
   Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j];
   Real[j] := case | j = src : False | _ : Real[j] 
@@ -669,7 +669,7 @@ requires { Pending = True &&
 
 transition ni_InvAck2 (src)
 requires { Pending = True && 
-	   Invnet[src] = InvAck && Real[src] = True && Real_home = False &&
+	   Invnet[src] = InvAck &&
 	   Dirty = False && 
            forall_other j. Real[j] = False }
 { 
@@ -680,7 +680,7 @@ requires { Pending = True &&
 
 transition ni_InvAck3 (src)
 requires { Pending = True && 
-	  Invnet[src] = InvAck && Real[src] = True && Real_home = False &&
+	  Invnet[src] = InvAck &&
 	  Dirty = True && forall_other j. Real[j] = False }
 { Pending := False ;
   Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j] ;
