@@ -1,33 +1,33 @@
-type location = L1 | L2 | L3 | L4
+type location = M | E | S | I
 
 array A[proc] : location
 
-init (z) { A[z] = L2 }
+init (z) { A[z] = I }
  
-unsafe (z1 z2) { A[z1] = L4 && A[z2] = L4 }
+unsafe (z1 z2) { A[z1] = M && A[z2] = M }
  
 transition t1 (x)
-requires { A[x] = L1 }
-{ A[j] := case | j = x : L4 | _ : A[j]; }
+requires { A[x] = E }
+{ A[j] := case | j = x : M | _ : A[j]; }
 
 transition t2 (x)
-requires { A[x] = L2 }
+requires { A[x] = I }
 { A[j] := case
-  | j = x : L3
-  | A[j] = L1 : L3
-  | A[j] = L4 : L3 
-  | A[j] = L2 : L2
-  | _ : L3;
+  | j = x : S
+  | A[j] = E : S
+  | A[j] = M : S 
+  | A[j] = I : I
+  | _ : S;
 }
 
 transition t3 (x)
-requires { A[x] = L3 }
+requires { A[x] = S }
 { A[j] := case
-   | j = x : L1 
-   | _ : L2; }
+   | j = x : E 
+   | _ : I; }
 
 transition t4 (x)
-requires { A[x] = L2 }
-{ A[j] := case | j = x : L1 | _ : L2; }
+requires { A[x] = I }
+{ A[j] := case | j = x : E | _ : I; }
 
 
