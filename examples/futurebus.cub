@@ -1,0 +1,117 @@
+(* from "Regular Model Checking without Transducers 
+         (on efficient verification of parameterized systems)"
+   	Adulla et. al.
+	Tech report 2006-052 Uppsala Universitet
+*)
+
+type t = 
+      | Inv | ShU | ExclU | ExclM | PendR | PendE | PendSU | PendEW | PendW
+
+array A[proc] : t
+
+init (z) { A[z] = Inv }
+
+(*unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ExclU }*)
+(*unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ShU }*)
+(*unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ExclM }*)
+
+transition t1 (x)
+requires { A[x] = Inv && forall_other j. A[j] <> PendW }
+{
+  A[j] := case
+           | j = x : PendR
+	   | A[j] = ExclM : PendE
+	   | A[j] = ShU : PendSU
+	   | A[j] = ExclU : PendSU
+	   | _ : A[j]
+}
+
+transition t2 (x)
+requires { A[x] = PendE }
+{
+  A[j] := case
+       	   | j = x : ShU
+	   | A[j] = PendR : ShU
+	   | _ : A[j]
+}
+
+transition t3 (x)
+requires { A[x] = PendSU }
+{
+ A[j] := case
+      	  | j = x : ShU
+	  | A[j] = PendR : ShU
+	  | A[j] = PendSU : ShU
+	  | _ : A[j]
+}
+
+transition t4 (x y)
+requires { A[x] = PendR && 
+	   forall_other j. (A[j]<>PendSU && A[j]<>PendE) &&
+	   A[y] = PendR  }
+{
+ A[j] := case
+      	  | j = x : ShU
+	  | j = y : ShU  (* pas necessaire *)
+	  | A[j] = PendR : ShU
+	  | _ : A[j]
+}
+
+transition t5 (x)
+requires { A[x] = PendR && 
+	   forall_other j. (A[j] <> PendSU && A[j] <> PendE && A[j] <> PendR) } 
+{
+ A[j] := case
+          | j = x : ExclU
+	  | _ : A[j]
+}
+
+transition t6 (x)
+requires { A[x] = Inv && forall_other j. A[j] <> PendW } 
+{
+ A[j] := case 
+          | j = x : PendW
+	  | A[j] = PendE : Inv
+	  | A[j] = ShU : Inv
+	  | A[j] = ExclU : Inv
+	  | A[j] = PendSU : Inv
+	  | A[j] = PendR : Inv
+	  | A[j] = PendEW : Inv
+	  | A[j] = ExclM : PendEW
+	  | _ : A[j]
+}
+
+transition t7 (x)
+requires { A[x] = PendEW }
+{
+ A[j] := case 
+          | j = x : Inv
+	  | A[j] = PendW : ExclM
+	  | _ : A[j]
+}
+
+transition t8 (x)
+requires { A[x] = PendW && forall_other j. A[j] <> PendEW }
+{
+ A[j] := case
+          | j = x : ExclM
+	  | A[j] = PendW : ExclM
+	  | _ : A[j]
+}
+
+transition t9 (x)
+requires { A[x] = ExclU }
+{ A[j] := case | j = x : ExclM | _ : A[j] }
+
+transition t10 (x)
+requires { A[x] = ExclM }
+{ A[j] := case | j = x : ExclM | _ : A[j] }
+
+transition t11 (x)
+requires { A[x] = ShU }
+{
+ A[j] := case
+          | j = x : ExclM
+	  | A[j] = ShU : Inv
+	  | _ : A[j]
+}

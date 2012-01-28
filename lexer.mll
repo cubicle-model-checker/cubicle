@@ -136,5 +136,7 @@ and comment = parse
       { comment lexbuf; comment lexbuf }
   | eof
       { raise (Lexical_error "unterminated comment") }
+  | newline 
+      { newline lexbuf; comment lexbuf }
   | _ 
       { comment lexbuf }
