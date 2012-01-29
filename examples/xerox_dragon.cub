@@ -10,11 +10,10 @@ array A[proc] : t
 
 init (z) { A[z] = Invalid }
 
-unsafe (z1 z2) { A[z1] = SDirty && A[z2] = SClean }
-(*
-unsafe (z1 z2) { A[z1] = SDirty && A[z2] = SDirty }
-unsafe (z1 z2) { A[z1] = SDirty && A[z2] = Exclusive }
-*)
+(*unsafe (z1 z2) { A[z1] = Dirty && A[z2] = SClean }*)
+(*unsafe (z1 z2) { A[z1] = Dirty && A[z2] = SDirty }*)
+(*unsafe (z1 z2) { A[z1] = Dirty && A[z2] = Exclusive }*)
+unsafe (z1 z2) { A[z1] = Dirty && A[z2] = Dirty }
 
 transition t1 (x)
 requires { A[x] = SDirty && 
@@ -111,7 +110,6 @@ requires { A[x] = Invalid && A[y] <> Invalid }
 {
  A[j] := case
       	  | j = x : SDirty
-	  | A[j] = Exclusive : SClean
-	  | A[j] = SDirty : SClean
+	  | A[j] <> Invalid : SClean
 	  | _ : A[j]
 }
