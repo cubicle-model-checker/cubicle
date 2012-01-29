@@ -170,7 +170,7 @@ requires { Round = 3 && Done[x] = False && State[x] = False && Coord[x] = True }
 
 (* 10) Round 3 completed. System goes to round 4 *)
 transition t10(x)
-require { Round = 3 && Done[x] = True && Coord[x] = True && 
+requires { Round = 3 && Done[x] = True && Coord[x] = True && 
 	  forall_other j. Done[j] = True }
 { 
   Round := 4 ;
@@ -180,7 +180,7 @@ require { Round = 3 && Done[x] = True && Coord[x] = True &&
 (* 11) The coordinator in office is dismissed, a new process is elected as coordinator.
        The system restarts from round 1 *)
 transition t11 (x y)
-require { Round = 4 && Coord[x] = True && Coord[y] = False && 
+requires { Round = 4 && Coord[x] = True && Coord[y] = False && 
 	  ACoord[y] = False }
 { 
   Round := 1 ; 
@@ -198,7 +198,7 @@ require { Round = 4 && Coord[x] = True && Coord[y] = False &&
 (* 12) If there's no coordinator (maybe the coordinator in office crashed)
        a new one is elected and the system restarts from round 1 *)
 transition t12 (x)
-require { Coord[x] = False && ACoord[x] = False &&	
+requires { Coord[x] = False && ACoord[x] = False &&	
 	  forall_other j. Coord[j] = False }
 { 
   Round := 1 ; 
@@ -212,5 +212,9 @@ require { Coord[x] = False && ACoord[x] = False &&
 
 (* 13) Decided processes follow undecided ones doing nothing *)
 transition t13 (x)
-require { State[x] = True && Done[x] = False }
-Done[j] := {| j = x : True | _ : Done[j] }
+requires { State[x] = True && Done[x] = False }
+{ 
+  Done[j] := case 
+  	      | j = x : True 
+	      | _ : Done[j] 
+}
