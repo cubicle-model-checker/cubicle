@@ -40,11 +40,15 @@
 
 *)
 
-globals = Round[int] Request[bool]
+var Round : int
+var Request : bool
 
-arrays = Estimate[proc,bool] State[proc,bool] Coord[proc,bool] ACoord[proc,bool] Done[proc,bool] DecisionValue[proc,bool]
-
-
+array Estimate[proc] : bool
+array State[proc] : bool 
+array Coord[proc] : bool
+array ACoord[proc] : bool 
+array Done[proc] : bool
+array DecisionValue[proc] : bool
 
 (* initial configuration *)
 init (x) {
@@ -58,102 +62,152 @@ unsafe (x y) {
   DecisionValue[x] <> DecisionValue[y]
 }
 
-
-
-
 (* 1) An undecided process sends a request message to the coordinator *)
 transition t1 (x y)
-require { Round = 1 && Done[x] = False && State[x] = False && Coord[y] = True }
-assign { Request := True }
-Done[j] := {| j = x : True | _ : Done[j] }
-
+requires { Round = 1 && Done[x] = False && State[x] = False && Coord[y] = True }
+{ 
+  Request := True; 
+  Done[j] := case 
+              | j = x : True 
+	      | _ : Done[j] 
+}
 
 (* 2) If the coordinator is not decided sends a request to himself *)
 transition t2 (x)
-require { Round = 1 && Coord[x] = True && Done[x] = False && State[x] = False }
-assign { Request := True }
-Done[j] := {| j = x : True | _ : Done[j] }
-
+requires { Round = 1 && Coord[x] = True && Done[x] = False && State[x] = False }
+{ 
+  Request := True;
+  Done[j] := case 
+  	      | j = x : True 
+	      | _ : Done[j] 
+}
 
 (* 3) If the coordinator received at least one request the system goes in round 2 *)
 transition t3 (x)
-require { Round = 1 && Request = True && Coord[x] = True && Done[x] = True }
-uguard (j) {Done[j] = True}
-assign { Round := 2 }
-Done[j] := {| _ : False }
+requires { Round = 1 && Request = True && Coord[x] = True && Done[x] = True &&
+	   forall_other j. Done[j] = True }
+{ 
+  Round := 2;
+  Done[j] := case 
+  	      | _ : False 
+}
 
 
 (* 4) If the coordinator didn't received any request is dismissed *)
 transition t4(x)
-require { Round = 1 && Request = False && Coord[x] = True && Done[x] = True }
-uguard (j) { Done[j] = True }
-Coord[j] := {| j = x : False | _ : Coord[j] }
-ACoord[j] := {| j = x : True | _ : ACoord[j] }
-
+requires { Round = 1 && Request = False && Coord[x] = True && Done[x] = True &&
+	   forall_other j. Done[j] = True }
+{ 
+  Coord[j] := case 
+  	       | j = x : False 
+	       | _ : Coord[j] ;
+  ACoord[j] := case 
+  	        | j = x : True 
+		| _ : ACoord[j] 
+}
 
 (* 5) The coordinator sends his estimate to an undecided process *)
 transition t5(x y)
-require { Round = 2 && Done[x] = False && State[x] = False && Coord[y] = True }
-Estimate[j] := {| j = x : Estimate[y] | _ : Estimate[j] }
-Done[j] := {| j = x : True | _ : Done[j] }
-
+requires { Round = 2 && Done[x] = False && State[x] = False && Coord[y] = True }
+{ 
+  Estimate[j] := case 
+  	      	  | j = x : Estimate[y] 
+		  | _ : Estimate[j] ;
+  Done[j] := case 
+  	      | j = x : True 
+	      | _ : Done[j] 
+}
 
 (* 6) The undecided coordinator does nothing in this round *)
 transition t6(x)
-require { Round = 2 && State[x] = False && Done[x] = False && Coord[x] = True }
-Done[j] := {| j = x : True | _ : Done[j] }
-
+requires { Round = 2 && State[x] = False && Done[x] = False && Coord[x] = True }
+{ 
+  Done[j] := case 
+  	      | j = x : True 
+	      | _ : Done[j] 
+}
 
 (* 7) Round 2 completed. System goes to round 3 *)
 transition t7(x)
-require { Round = 2 && Done[x] = True && Coord[x] = True }
-uguard (j) { Done[j] = True }
-assign { Round := 3 }
-Done[j] := {| _ : False }
+requires { Round = 2 && Done[x] = True && Coord[x] = True && 
+	   forall_other j. Done[j] = True }
+{ 
+  Round := 3;
+  Done[j] := case | _ : False 
+}
 
 
 (* 8) Coordinator sends a 'decide' message to an undecided process *)
 transition t8 (x y)
-require { Round = 3 && Done[x] = False && State[x] = False && Coord[y] = True }
-State[j] := {| j = x : True | _ : State[j] }
-Done[j] := {| j = x : True | _ : Done[j] }
-DecisionValue[j] := {| j = x : Estimate[x] | _ : DecisionValue[j] }
-
+requires { Round = 3 && Done[x] = False && State[x] = False && Coord[y] = True }
+{ 
+  State[j] := case 
+  	       | j = x : True 
+	       | _ : State[j] ;
+  Done[j] := case 
+  	       | j = x : True 
+	       | _ : Done[j] ;
+  DecisionValue[j] := case 
+  		       | j = x : Estimate[x] 
+		       | _ : DecisionValue[j] 
+}
 
 (* 9) If the coordinator is undecided takes a decision. *)
 transition t9(x)
-require { Round = 3 && Done[x] = False && State[x] = False && Coord[x] = True }
-State[j] := {| j = x : True | _ : State[j] }
-Done[j] := {| j = x : True | _ : Done[j] }
-DecisionValue[j] := {| j = x : Estimate[x] | _ : DecisionValue[j] }
+requires { Round = 3 && Done[x] = False && State[x] = False && Coord[x] = True }
+{ 
+  State[j] := case 
+  	       | j = x : True 
+	       | _ : State[j] ;
+  Done[j] := case 
+  	       | j = x : True 
+	       | _ : Done[j] ;
+  DecisionValue[j] := case 
+  		       | j = x : Estimate[x] 
+		       | _ : DecisionValue[j] 
+}
 
 
 (* 10) Round 3 completed. System goes to round 4 *)
 transition t10(x)
-require { Round = 3 && Done[x] = True && Coord[x] = True }
-uguard (j) { Done[j] = True }
-assign { Round := 4 }
-Done[j] := {| _ : False }
-
+require { Round = 3 && Done[x] = True && Coord[x] = True && 
+	  forall_other j. Done[j] = True }
+{ 
+  Round := 4 ;
+  Done[j] := case | _ : False 
+}
 
 (* 11) The coordinator in office is dismissed, a new process is elected as coordinator.
        The system restarts from round 1 *)
 transition t11 (x y)
-require { Round = 4 && Coord[x] = True && Coord[y] = False && ACoord[y] = False }
-assign { Round := 1 ; Request := False }
-ACoord[j] := {| j = x : True | _ : ACoord[j] }
-Done[j] := {| _ : False }
-Coord[j] := {| j = x : False | j = y : True | _ : Coord[j] }
-
+require { Round = 4 && Coord[x] = True && Coord[y] = False && 
+	  ACoord[y] = False }
+{ 
+  Round := 1 ; 
+  Request := False ;
+  ACoord[j] := case 
+  	        | j = x : True 
+		| _ : ACoord[j] ;
+  Done[j] := case | _ : False ;
+  Coord[j] := case 
+  	       | j = x : False 
+	       | j = y : True 
+	       | _ : Coord[j] 
+}
 
 (* 12) If there's no coordinator (maybe the coordinator in office crashed)
        a new one is elected and the system restarts from round 1 *)
 transition t12 (x)
-require { Coord[x] = False && ACoord[x] = False }
-uguard (j) { Coord[j] = False }
-assign { Round := 1 ; Request := False }
-Coord[j] := {| j = x : True | _ : Coord[j] }
-Done[j] := {| _ : False }
+require { Coord[x] = False && ACoord[x] = False &&	
+	  forall_other j. Coord[j] = False }
+{ 
+  Round := 1 ; 
+  Request := False ;
+  Coord[j] := case 
+  	       | j = x : True 
+	       | _ : Coord[j] ;
+  Done[j] := case | _ : False 
+}
 
 
 (* 13) Decided processes follow undecided ones doing nothing *)
