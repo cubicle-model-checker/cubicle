@@ -1,47 +1,47 @@
-type location = L1 | L2 | L3 | L4 | L5 | L6 | L7
+type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
 
 array A[proc] : location
 array F[proc] : int
 array P[proc] : bool
 
-init (x) { A[x] = L1 && P[x] = False && F[x] = 0 }
+init (x) { A[x] = Q1 && P[x] = False && F[x] = 0 }
 
-unsafe (z1 z2) { A[z1] = L6 && A[z2] = L6 }
+unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
   
 transition t1 (x)
-requires { A[x] = L1 }
-{ A[j] := case | j = x : L2 | _ : A[j];
+requires { A[x] = Q1 }
+{ A[j] := case | j = x : Q2 | _ : A[j];
   F[j] := case | j = x : 1 | _ : F[j]; }
 
 
 transition t2 (x)
-requires { A[x] = L2 && 
+requires { A[x] = Q2 && 
 	 forall_other j. (P[j] = False || P[j] = True && F[j] = 0)}
-{ A[j] := case | j = x : L3 | _ : A[j]; }
+{ A[j] := case | j = x : Q3 | _ : A[j]; }
 
 transition t3 (x y)
-requires { A[x] = L3 && P[y] = True }
-{ A[j] := case | j = x : L4 | _ : A[j];
+requires { A[x] = Q3 && P[y] = True }
+{ A[j] := case | j = x : Q4 | _ : A[j];
   P[j] := case | j = y : True | _ : P[j]; }
 
 transition t4 (x)
-requires { A[x] = L4 }
-{ A[j] := case | j = x : L5 | _ : A[j];
+requires { A[x] = Q4 }
+{ A[j] := case | j = x : Q5 | _ : A[j];
   F[j] := case | j = x : 2 | _ : F[j]; }
 
 transition t5 (x)
-requires { A[x] = L5 && forall_other j.  F[j] <> 2 }
-{ A[j] := case | j = x : L6 | _ : A[j]; }
+requires { A[x] = Q5 && forall_other j.  F[j] <> 2 }
+{ A[j] := case | j = x : Q6 | _ : A[j]; }
 
 transition t6 (x y)
-requires { A[x] = L5 && F[y] = 2 }
-{ A[j] := case | j = x : L1 | _ : A[j]; }
+requires { A[x] = Q5 && F[y] = 2 }
+{ A[j] := case | j = x : Q1 | _ : A[j]; }
 
 transition t7 (x)
-requires { A[x] = L6 }
-{ A[j] := case | j = x : L7 | _ : A[j]; 
+requires { A[x] = Q6 }
+{ A[j] := case | j = x : Q7 | _ : A[j]; 
   F[j] := case | j = x : 0 | _ : F[j]; }
 
 transition t8 (x)
-requires { A[x] = L7 }
-{ A[j] := case | j = x : L1 | _ : A[j]; }
+requires { A[x] = Q7 }
+{ A[j] := case | j = x : Q1 | _ : A[j]; }
