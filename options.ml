@@ -96,7 +96,7 @@ let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode
 let post_strategy =
   if !post_strategy <> -1 then !post_strategy
   else match mode with
-    | Bfs -> 1
+    | Bfs | BfsDist | Bfsinvp -> 1
     | _ -> 2
 
 let quiet = !quiet

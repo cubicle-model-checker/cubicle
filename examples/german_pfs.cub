@@ -75,6 +75,7 @@ init (z) {
 
 
 unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Shared }
+(*unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Exclusive }*)
 
 (*:comment h0    t1*)
 transition t1(x)

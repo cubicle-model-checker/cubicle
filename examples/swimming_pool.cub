@@ -1,3 +1,5 @@
+(* unsafe : t8 -> t1 -> unsafe *)
+
 var A : int 
 var B : int
 var C : int
@@ -10,8 +12,7 @@ init () { A = 0 && B = 0 && C = 0 && D = 0 && E = 0 &&
           1 <= F && 1 <= G } 
 
 unsafe (z) { A = 0 && B = 0 && D = 0 && E = 0 && F = 0 }
-
-(* unsafe (z) { B = 0 && D = 0 && E = 0 && F = 0  && G = 0 } *)
+unsafe (z) { B = 0 && D = 0 && E = 0 && F = 0 && G = 0 }
 
 transition t1 ()
 requires { 1 <= F}

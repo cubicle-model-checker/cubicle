@@ -724,7 +724,7 @@ let solve () =
     done;
   with 
     | Sat -> 
-        check_model ();
+        (*check_model ();*)
         raise Sat
     | Unsat -> 
         env.unsat <- true; 
