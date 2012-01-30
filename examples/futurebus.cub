@@ -11,10 +11,12 @@ array A[proc] : t
 
 init (z) { A[z] = Inv }
 
-(*unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ExclU }*)
-(*unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ShU }*)
-(*unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ExclM }*)
-unsafe (z1 z2) { A[z1] = ExclM && A[z2] = ShU }
+unsafe (z1 z2) { A[z1] = ShU && A[z2] = ExclM }
+unsafe (z1 z2) { A[z1] = ShU && A[z2] = ExclU }
+unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ExclU }
+unsafe (z1 z2) { A[z1] = ExclU && A[z2] = ExclM }
+unsafe (z1 z2) { A[z1] = PendW && A[z2] = PendW }
+unsafe (z1 z2) { A[z1] = PendW && A[z2] = PendR }
 
 
 transition t1 (x)

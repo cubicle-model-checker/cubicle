@@ -13,4 +13,4 @@
 
 open Ast
 
-val system : t_system -> unit
+val system : t_system list -> unit

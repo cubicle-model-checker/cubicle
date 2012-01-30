@@ -24,19 +24,19 @@ module type I = sig
   val maxnodes : int
   val invariants : t -> t list
   val gen_inv :
-    (invariants : t list -> visited : t list -> t -> unit) -> 
+    (invariants : t list -> visited : t list -> t list -> unit) -> 
     invariants : t list -> t list -> t -> t list * t list
   val gen_inv_proc : 
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     t list -> t list -> t -> t list * t list
   val init_thread : 
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     t list ref -> t list ref -> t list ref -> t list ref -> 
     t Queue.t -> Thread.t
 
   val extract_candidates : t -> t list -> t list
   val is_inv :
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
@@ -69,7 +69,7 @@ module TimeSort : Timer.S
 module type S = sig 
   type t
 
-  val search : invariants : t list -> visited : t list -> t -> unit
+  val search : invariants : t list -> visited : t list -> t list -> unit
 
 end
 

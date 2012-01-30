@@ -1400,7 +1400,7 @@ let worker_inv search invariants not_invs p =
   try 
     if impossible_inv p !not_invs then Nothing
     else begin  
-      search ~invariants:!invariants ~visited:[] p; 
+      search ~invariants:!invariants ~visited:[] [p]; 
       if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
 	Pretty.print_system p;
       Inv
@@ -1453,7 +1453,7 @@ let gen_inv search ~invariants not_invs s =
 	 (* else *)
 	 if impossible_inv p not_invs then invs, not_invs
 	 else begin  
-	   search ~invariants:invariants ~visited:[] p; 
+	   search ~invariants:invariants ~visited:[] [p]; 
 	   if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
 	     Pretty.print_system p;
 	   p::invs, not_invs
@@ -1470,7 +1470,7 @@ let gen_inv_proc search invs not_invs s =
 	try
 	  if impossible_inv p not_invs then acc
 	  else begin
-	    search ~invariants:invs ~visited:[] p; 
+	    search ~invariants:invs ~visited:[] [p]; 
 	    if not quiet then 
 	      eprintf "Good! We found an invariant :-) \n %a @." 
 		Pretty.print_system p;
@@ -1488,7 +1488,7 @@ let extract_candidates s not_invs =
 
 let is_inv search p invs =
   try
-    search ~invariants:invs ~visited:[] p; 
+    search ~invariants:invs ~visited:[] [p]; 
     if not quiet then 
       eprintf "Good! We found an invariant :-) \n %a @." Pretty.print_system p;
     true
@@ -1552,6 +1552,10 @@ let search =
     | Bfsinvp -> StratBFSinvp.search
     | DfsHL -> StratDFSHL.search
 
-let system s =
-  let s = init_parameters s in
-  search ~invariants:(T.invariants s) ~visited:[] s
+let system uns =
+  let uns = List.map init_parameters uns in
+  let invariants = match uns with
+    | s::_ -> T.invariants s
+    | [] -> assert false
+  in
+  search ~invariants ~visited:[] uns

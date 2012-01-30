@@ -98,7 +98,7 @@ type system = {
   type_defs : elem list;
   init : Hstring.t option * SAtom.t;
   invs : (Hstring.t list * SAtom.t) list;
-  unsafe : Hstring.t list * SAtom.t;
+  unsafe : (Hstring.t list * SAtom.t) list;
   trans : transition list
 }
 

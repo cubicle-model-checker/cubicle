@@ -20,4 +20,4 @@ exception Error of error
 
 val report : Format.formatter -> error -> unit
 
-val system : system -> t_system
+val system : system -> t_system list

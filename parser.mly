@@ -88,7 +88,7 @@ type_defs
 declarations
 init
 invariants
-unsafe
+unsafe_list
 transitions 
 { let consts, vars, arrays = $2 in
   { type_defs = $1; 
@@ -168,6 +168,11 @@ UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR
 { $3, $6 }
 ;
 
+unsafe_list:
+| unsafe { [$1] }
+| unsafe unsafe_list { $1::$2 }
+;
+
 transitions:
 | { [] }
 | transitions_list { $1 }
@@ -175,7 +180,7 @@ transitions:
 
 transitions_list:
 | transition { [$1] }
-| transition transitions_list { $1::$2 } 
+| transition transitions_list { $1::$2 }
 ;
 
 transition:

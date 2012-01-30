@@ -144,19 +144,19 @@ module type I = sig
   val maxnodes : int
   val invariants : t -> t list
   val gen_inv : 
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     invariants : t list -> t list -> t -> t list * t list
   val gen_inv_proc : 
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     t list -> t list -> t -> t list * t list
   val init_thread : 
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     t list ref -> t list ref -> t list ref -> t list ref -> 
     t Queue.t -> Thread.t
 
   val extract_candidates : t -> t list -> t list
   val is_inv :
-    (invariants : t list -> visited : t list -> t -> unit) ->
+    (invariants : t list -> visited : t list -> t list -> unit) ->
     t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
@@ -178,7 +178,7 @@ end
 
 module type S = sig 
   type t
-  val search : invariants : t list -> visited : t list -> t -> unit
+  val search : invariants : t list -> visited : t list -> t list -> unit
 end
 
 
@@ -186,7 +186,7 @@ module DFS ( X : I ) = struct
 
   type t = X.t
 
-  let search ~invariants ~visited s =
+  let search ~invariants ~visited uns =
     let nb_nodes = ref 0 in
     let rec search_rec cpt visited s =
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
@@ -198,7 +198,7 @@ module DFS ( X : I ) = struct
 	let ls, post = X.pre s in
 	List.iter (search_rec (cpt+1) (s::visited)) (ls@post)
     in
-    search_rec 0 [] s
+    List.iter (search_rec 0 []) uns
 
 end
 
@@ -206,7 +206,7 @@ module DFSL ( X : I ) = struct
 
   type t = X.t
   
-  let search ~invariants ~visited s =
+  let search ~invariants ~visited uns =
     let visited = ref visited in
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let rec search_rec cpt s =
@@ -222,7 +222,7 @@ module DFSL ( X : I ) = struct
 	  List.iter (search_rec (cpt+1)) (ls@post)
 	end
     in
-    search_rec 0 s;
+    List.iter (search_rec 0) uns;
     eprintf "[DFSL]";
     Profiling.print_report !nb_nodes [] 0
 
@@ -251,7 +251,7 @@ module DFSH ( X : I ) = struct
 
   module H = Heap.Make(S)
 
-  let search ~invariants ~visited s =
+  let search ~invariants ~visited uns =
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let rec search_rec h =
       let (cpt, s, visited), h = H.pop h in
@@ -271,7 +271,8 @@ module DFSH ( X : I ) = struct
       search_rec h
     in
     begin
-      try search_rec (H.add H.empty [0, s, visited])
+      try
+	search_rec (H.add H.empty (List.map (fun s -> 0, s, visited) uns))
       with Heap.EmptyHeap -> ()
     end;
     Profiling.print_report !nb_nodes [] 0
@@ -282,7 +283,7 @@ module BFS_base ( X : I ) = struct
 
   type t = X.t 
 
-  let search inv_search invgen ~invariants ~visited s = 
+  let search inv_search invgen ~invariants ~visited uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -350,7 +351,8 @@ module BFS_base ( X : I ) = struct
 	    search_rec ()
 	  end
     in
-    Queue.add (0, s) q; search_rec ();
+    List.iter (fun s -> Queue.add (0, s) q) uns;
+    search_rec ();
     if invgen || not gen_inv then 
       Profiling.print_report !nb_nodes !invariants !nb_deleted
 
@@ -362,7 +364,7 @@ module BFSinvp_base ( X : I ) = struct
 
   let () = Functory.Cores.set_number_of_cores cores
 
-  let search inv_search ~invariants ~visited s = 
+  let search inv_search ~invariants ~visited uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -426,7 +428,8 @@ module BFSinvp_base ( X : I ) = struct
 	    search_rec ()
 	  end
     in
-    Queue.add (0, s) q; search_rec ();
+    List.iter (fun s -> Queue.add (0, s) q) uns;
+    search_rec ();
     Profiling.print_report !nb_nodes !invariants !nb_deleted;
 
 end
@@ -481,14 +484,14 @@ module BFS_dist_base ( X : I ) = struct
       if X.is_inv inv_search s invariants then Inv else NotInv
 	
 
-  let search inv_search invgen ~invariants ~visited s = 
+  let search inv_search invgen ~invariants ~visited uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in 
     let postponed = ref [] in
     let invariants = ref invariants in
     let not_invariants = ref [] in
-    let new_nodes = ref [0, s] in
+    let new_nodes = ref (List.map (fun s -> 0, s) uns) in
     
     let nb_inv_search = ref 0 in
     let remaining_tasks = ref 1 in
@@ -700,7 +703,7 @@ module DFSHL ( X : I ) = struct
 
   module H = Heap.Make(S)
 
-  let search ~invariants ~visited s =
+  let search ~invariants ~visited uns =
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -761,7 +764,7 @@ module DFSHL ( X : I ) = struct
 	    search_rec (H.add H.empty l)
 	  end
     in
-    let h = H.add H.empty [0, s] in
+    let h = H.add H.empty (List.map (fun s -> 0, s) uns) in
     search_rec h;
     Profiling.print_report !nb_nodes !invariants !nb_deleted
 

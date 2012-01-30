@@ -269,21 +269,23 @@ let system s =
   let l = init_global_env s in
   init s.init;
   Smt.Typing.Variant.init l;
-  unsafe s.unsafe;
+  List.iter unsafe s.unsafe;
   transitions s.trans;
   Smt.Typing.Variant.close ();
   if Options.debug then Smt.Typing.Variant.print ();
-  let args, p = s.unsafe in
-  let arru = ArrayAtom.of_satom p in
-  { 
-    t_from = [];
-    t_init = s.init;
-    t_invs = s.invs;
-    t_unsafe = s.unsafe;
-    t_arru = arru;
-    t_alpha = ArrayAtom.alpha arru args;
-    t_trans = s.trans;
-    t_deleted = false;
-    t_nb = 0;
-    t_nb_father = -1;
-  }
+  List.map (fun un ->
+    let args, p = un in
+    let arru = ArrayAtom.of_satom p in
+    { 
+      t_from = [];
+      t_init = s.init;
+      t_invs = s.invs;
+      t_unsafe = un;
+      t_arru = arru;
+      t_alpha = ArrayAtom.alpha arru args;
+      t_trans = s.trans;
+      t_deleted = false;
+      t_nb = 0;
+      t_nb_father = -1;
+    }
+  ) s.unsafe

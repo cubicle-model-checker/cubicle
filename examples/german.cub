@@ -24,7 +24,7 @@ init (z) {
 
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }
-(*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }
 
 
 transition send_req_shared(n)
