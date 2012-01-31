@@ -15,70 +15,126 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
 transition send_shared (n)
-require { Chan[n] = Empty && Cache[n] = Invalid }
-Chan[j] := {| j = n : Reqs | _ : Chan[j] }
+requires { Chan[n] = Empty && Cache[n] = Invalid }
+{ 
+  Chan[j] := case 
+  	      | j = n : Reqs 
+	      | _ : Chan[j] 
+}
 
 transition recv_shared (n)
-require { Curcmd = Empty && Chan[n] = Reqs }
-assign { Curcmd := Reqs; Curptr := n }
-Chan[j] := {| j = n : Empty | _ : Chan[j] }
+requires { Curcmd = Empty && Chan[n] = Reqs }
+{ 
+  Curcmd := Reqs; 
+  Curptr := n;
+  Chan[j] := case 
+  	      | j = n : Empty 
+	      | _ : Chan[j] 
+}
     
 transition send_exclusive (n)
-require { Chan[n] = Empty && Cache[n] <> Exclusive }
-Chan[j] := {| j = n : Reqe | _ : Chan[j] }
+requires { Chan[n] = Empty && Cache[n] <> Exclusive }
+{
+  Chan[j] := case
+  	      | j = n : Reqe 
+	      | _ : Chan[j] 
+}
 
 transition recv_exclusive (n)
-require { Curcmd = Empty && Chan[n] = Reqe }
-assign { Curcmd := Reqe; Curptr := n }
-Chan[j] := {| j = n : Empty | _ : Chan[j] }
+requires { Curcmd = Empty && Chan[n] = Reqe }
+{ 
+  Curcmd := Reqe; 
+  Curptr := n;
+  Chan[j] := case 
+  	      | j = n : Empty 
+	      | _ : Chan[j] 
+}
     
 transition sendinv_1 (n)
-require { Chan[n] = Empty && Shrset[n]=True  &&  Curcmd = Reqe }
-Chan[j] := {| j = n : Inv | _ : Chan[j] }
-
+requires { Chan[n] = Empty && Shrset[n]=True  &&  Curcmd = Reqe }
+{ 
+  Chan[j] := case
+  	      | j = n : Inv 
+	      | _ : Chan[j] 
+}
 
 transition sendinv_2 (n)
-require { Chan[n] = Empty && Shrset[n]=True  &&
+requires { Chan[n] = Empty && Shrset[n]=True  &&
 	   Curcmd = Reqs && Exgntd=True }
-Chan[j] := {| j = n : Inv | _ : Chan[j] }
-
+{ 
+  Chan[j] := case
+  	      | j = n : Inv 
+	      | _ : Chan[j] 
+}
 
 transition recv_inv(n)
-require { Chan[n] = Inv }
-Chan[j] := {| j = n : Invack | _ : Chan[j] }
-Cache[j] := {| j = n : Invalid | _ : Cache[j] }
+requires { Chan[n] = Inv }
+{ 
+  Chan[j] := case
+  	      | j = n : Invack 
+	      | _ : Chan[j] ;
+  Cache[j] := case 
+  	       | j = n : Invalid 
+	       | _ : Cache[j] 
+}
     
 transition recv_invack(n)
-require { Chan[n] = Invack && Curcmd <> Empty }
-assign { Exgntd := False }
-Chan[j] := {| j = n : Empty | _ : Chan[j] }
-Shrset[j] := {| j = n : False | _ : Shrset[j] }
-
-
-
+requires { Chan[n] = Invack && Curcmd <> Empty }
+{ 
+  Exgntd := False;
+  Chan[j] := case 
+  	      | j = n : Empty 
+	      | _ : Chan[j];
+  Shrset[j] := case 
+  	        | j = n : False 
+		| _ : Shrset[j] 
+}
 
 transition send_gnt_shared(n)
-require { Curptr = n && Curcmd = Reqs && 
-	  Exgntd = False && Chan[n] = Empty }
-assign { Curcmd := Empty}
-Chan[j] := {| j = n : Gnts | _ : Chan[j] }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
+requires { Curptr = n && Curcmd = Reqs && 
+	   Exgntd = False && Chan[n] = Empty }
+{ 
+  Curcmd := Empty;
+  Chan[j] := case 
+  	      | j = n : Gnts 
+	      | _ : Chan[j];
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j] 
+}
 
 transition send_gnt_exclusive(n)
-require { Curptr = n && Curcmd = Reqe &&
-	  Chan[n] = Empty }
-uguard (j) { Shrset[j] = False }
-assign { Curcmd := Empty; Exgntd := True }
-Chan[j] := {| j = n : Gnte | _ : Chan[j] }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-
+requires { Curptr = n && Curcmd = Reqe && Chan[n] = Empty && 
+	   forall_other j.  Shrset[j] = False }
+{ 
+  Curcmd := Empty; 
+  Exgntd := True;
+  Chan[j] := case 
+  	      | j = n : Gnte 
+	      | _ : Chan[j];
+  Shrset[j] := case 
+  	       	| j = n : True 
+		| _ : Shrset[j] 
+}
 
 transition recv_gnt_shared(n)
-require {Chan[n] = Gnts}
-Cache[j] := {| j = n : Shared | _ : Cache[j] }
-Chan[j] := {| j = n : Empty | _ : Chan[j] }
+requires {Chan[n] = Gnts}
+{ 
+  Cache[j] := case 
+  	       | j = n : Shared 
+	       | _ : Cache[j];
+  Chan[j] := case 
+  	       | j = n : Empty 
+	       | _ : Chan[j] 
+}
 
 transition recv_gnt_exclusive(n)
-require { Chan[n] = Gnte }
-Cache[j] := {| j = n : Exclusive | _ : Cache[j] }
-Chan[j] := {| j = n : Empty | _ : Chan[j] }
+requires { Chan[n] = Gnte }
+{ 
+  Cache[j] := case 
+  	       | j = n : Exclusive 
+	       | _ : Cache[j];
+  Chan[j] := case
+  	      | j = n : Empty 
+	      | _ : Chan[j] 
+}

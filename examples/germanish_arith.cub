@@ -23,36 +23,66 @@ invariant (z) { 3 < Curcmd }
 
 unsafe (z1 z2) { Cache[z1] = 3 && Cache[z2] = 2 }
 
-
 transition t1 (n)
-require { Curcmd = 1 && Cache[n] = 1 }
-assign { Curcmd := 2; Curptr := n }
+requires { Curcmd = 1 && Cache[n] = 1 }
+{ 
+  Curcmd := 2; 
+  Curptr := n 
+}
     
 transition t2 (n)
-require { Curcmd = 1 && Cache[n] < 3 }
-assign { Curcmd := 3; Curptr := n }
+requires { Curcmd = 1 && Cache[n] < 3 }
+{ 
+  Curcmd := 3; 
+  Curptr := n 
+}
     
 transition t3 (n)
-require { Shrset[n]=True  &&  Curcmd = 3 }
-assign { Exgntd := False }
-Cache[j] := {| j = n : 1 | _ : Cache[j] }
-Shrset[j] := {| j= n : False | _ : Shrset[j] }
+requires { Shrset[n]=True  &&  Curcmd = 3 }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	       | j = n : 1 
+	       | _ : Cache[j] ;
+  Shrset[j] := case 
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
 
 transition t4 (n)
-require { Shrset[n]=True  && Curcmd = 2 && Exgntd=True }
-assign { Exgntd := False }
-Cache[j] := {| j = n : 1 | _ : Cache[j] }
-Shrset[j] := {| j= n : False | _ : Shrset[j] }
+requires { Shrset[n]=True  && Curcmd = 2 && Exgntd=True }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	       | j = n : 1 
+	       | _ : Cache[j];
+  Shrset[j] := case 
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
     
 transition t5 (n)
-require { Curptr = n && Curcmd = 2 && Exgntd = False }
-assign { Curcmd := 1 }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-Cache[j] := {| j = n : 2 | _ : Cache[j] }
+requires { Curptr = n && Curcmd = 2 && Exgntd = False }
+{ 
+  Curcmd := 1;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j];
+  Cache[j] := case 
+  	       | j = n : 2 
+	       | _ : Cache[j] 
+}
 
 transition t6 (n)
-require {  Shrset[n] = False && Curcmd = 3 && Exgntd = False && Curptr = n}
-uguard (l) { Shrset[l] = False }
-assign { Curcmd := 1; Exgntd := True }
-Shrset[j] := {| j = n : True | _ : Shrset[j] }
-Cache[j] := {| j = n : 3 | _ : Cache[j] }
+requires {  Shrset[n] = False && Curcmd = 3 && Exgntd = False && Curptr = n &&
+	    forall_other l. Shrset[l] = False }
+{ 
+  Curcmd := 1; 
+  Exgntd := True;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j];
+  Cache[j] := case 
+  	       | j = n : 3 
+	       | _ : Cache[j] 
+}
