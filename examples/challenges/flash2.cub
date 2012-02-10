@@ -544,7 +544,7 @@ requires { UnetMtype[src] = GetX &&
   ShWBnet_mtype := FAck;
   CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] ;
   UnetProc[j] := case | j = src : dst | _ : UnetProc[j] ;
-  UnetMtype[j] := case | j = src : Put | _ : UnetMtype[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
   UnetData[j] := case | j = src : CacheData[dst] | _ : UnetData[j]
 }
 
