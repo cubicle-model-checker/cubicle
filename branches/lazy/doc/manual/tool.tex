@@ -1,0 +1,589 @@
+% /nfs/pdx/proj/dt/scl03/fpv/agoel3/tools/cubicle
+
+\documentclass{llncs}
+%\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{verbatim}
+\usepackage{alltt}
+\usepackage{xspace}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+
+\pagestyle{plain}
+
+\title{Cubicle: A Parallel SMT-based Model Checker for Parameterized
+Systems}
+\subtitle{Tool Paper}
+
+\author{Sylvain Conchon$^1$ \and Amit Goel$^2$ \and Sava Krsti\'c$^2$
+%  \\ Alain Mebsout$^1$ \and Fatiha Za\"{\i}di$^1$}
+  \\ Alain Mebsout$^1$ \and Fatiha Za\"{i}di$^1$}
+\institute{$^1$LRI, Universit\'e Paris Sud\\$^2$Strategic CAD Labs, Intel
+  Corporation}
+
+\definecolor{green}{rgb}{0.4,0.4,0.4}
+%\newcommand{\trcolor}[1]{\textcolor{blue}{#1}}
+\newcommand{\trcolor}[1]{\textcolor{black}{#1}}
+%\newcommand{\guard}[1]{\textcolor{red}{#1}}
+\newcommand{\guard}[1]{\textcolor{black}{#1}}
+\newcommand{\affect}[1]{\textcolor{green}{#1}}
+
+\definecolor{lightred}{rgb}{1.0,0.3,0.3}
+\definecolor{darkred}{rgb}{0.4,0.0,0.0}
+% Command for inserting a todo item
+\newcommand{\todo}[1]{%
+  \marginpar{%
+      \fcolorbox{darkred}{lightred}{%
+        \parbox{\marginparwidth}{\scriptsize \textbf{[TODO]} \small #1}%
+      }%
+ }%
+}%
+
+\def\figref#1{Figure~\ref{#1}}
+\def\MCMT{\textsc{mcmt}\xspace}
+\def\marginal#1{\marginpar{\scriptsize{#1}}} 
+\def\pre{\mathit{pre}}
+%\def\VV{\mathcal{V}}
+\def\VV{{V}}
+%\def\QQ{\mathcal{Q}}
+\def\QQ{{Q}}
+\def\eqdef{\triangleq}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  Cubicle is a new model checker for verifying safety properties of
+  parameterized systems. It implements a parallel symbolic backward reachability
+  procedure using Satisfiabilty Modulo Theories.  Experiments done on classic
+  and challenging mutual exclusion algorithms and cache coherence protocols show
+  that Cubicle is effective and competitive with state-of-the-art model
+  checkers.
+\end{abstract}
+
+\section{Tool Overview}
+
+Cubicle is used to verify safety properties of \emph{array-based systems}. This
+is a syntactically restricted class of para­metrized transition systems with
+states represented as arrays indexed by an arbitrary number of
+processes~\cite{GhilardiNRZ08}. Cache coherence protocols and mutual exclusion
+algorithms are typical examples of such systems. Cubicle model-checks by a
+symbolic backward reachability analysis on infinite sets of states represented
+by specific simple formulas, called \emph{cubes}.
+
+%, that are existentially quantified conjunctions of predicates.
+
+Cubicle is an open source software based on theoretical work in
+\cite{AbdullaCJT96} and \cite{mcmt-foundations}. It is inspired by and
+closely related to the model checker MCMT~\cite{mcmt}, from which, in
+addition to revealing the implementation details, it mainly differs in
+a more friendly input language and concurrent architecture.
+
+%It consists in repeatedly computing the preimages of cubes, and discharging
+%safety and fixpoint checks by an SMT solver.  The tool takes advantage of the
+%symbolic representation of states as cubes (by finding symmetries, inclusions
+%etc.), as well as a tightly integrated ad-hoc SMT solver. Its implementation
+%also exploits multi-core architectures.
+
+Cubicle is written in OCaml. Its SMT solver is a tightly integrated, lightweight
+and enhanced version of Alt-Ergo~\cite{ccx}; and its parallel implementation
+relies on the Functory library~\cite{functory}. Cubicle is available at
+\verb|http://cubicle.lri.fr|.
+
+%Cubicle is written in OCaml. Its SMT solver is a lightweight and enhanced
+%version of Alt-Ergo~\cite{ccx} and its parallel implementation relies on the
+%Functory library~\cite{functory}. Cubicle is available at
+%\verb|http://cubicle.lri.fr|.
+
+% (2600 \emph{loc.}  for the model checker)
+%  and 4500 \emph{loc.}  for the SMT solver)
+% implemented in the model checker MCMT~\cite{mcmt}.
+
+
+
+\section{System Description Language}
+
+Cubicle's input language is a typed version of Mur$\varphi$~\cite{murphi},
+rudimentary at the moment, but more user-friendly than \MCMT and sufficiently
+expressive for typical parameterized systems. A system is described in Cubicle
+by: (1) a set of type, variable, and array declarations; (2) a formula for the
+initial states; and (3) a set of transitions. \figref{fig-dekk} shows the
+language on an example system \texttt{Mutex}.
+
+
+Systems are parametrized by a set of \emph{process identifiers}, denoted by the
+built-in type \texttt{proc}.  Standard types \texttt{int}, \texttt{real}, and
+\texttt{bool} are also built in. Additionally, the user can specify abstract
+types and enumerations with simple declarations like ``\texttt {type data}'' and
+``\texttt{type msg = Empty | Req | Ack}''.
+%
+
+\begin{figure}[ht]
+\begin{minipage}[b]{0.5\linewidth}
+\centering
+\begin{alltt}
+{\bf{var}} Turn : proc
+{\bf{array}} Want[proc] : bool
+{\bf{array}} Crit[proc] : bool
+
+{\bf{init}} (z) \{ 
+  Want[z] = False && Crit[z] = False 
+\}
+
+{\bf{unsafe}} (x y) \{ 
+  Crit[x] = True && Crit[y] = True 
+\}
+
+{\bf{transition}} req (i)
+{\bf{requires}} \{ Want[i] = False \}
+\{ Want[j] := case 
+           | i = j : True
+           | _ : Want[j]  \}
+\end{alltt}
+%
+\end{minipage}
+\hspace{0.5cm}
+\begin{minipage}[b]{0.5\linewidth}
+\centering
+\begin{alltt}
+{\bf{transition}} enter (i)
+{\bf{requires}} \{ Want[i] = True 
+        && Crit[i] = False 
+        && Turn = i \}
+\{ Crit[j] := case
+           | i = j : True
+           | _ : Crit[j]  \}
+
+{\bf{transition}} exit (i)
+{\bf{requires}} \{ Crit[i] = True \}
+\{ Turn := . ;
+  Crit[j] := case
+           | i = j : False 
+           | _ : Crit[j]  ;
+  Want[j] := case
+           | i = j : False
+           | _ : Want[j]  \}
+\end{alltt}
+%
+\end{minipage}
+\caption{Complete Cubicle code of \texttt{Mutex}, a simple mutual exclusion algrorithm.}
+\label{fig-dekk}
+\end{figure}
+
+
+The system's state is defined by a set of global variables and
+\texttt{proc}-indexed arrays. The initial states are defined by a universal
+conjunction of literals characterizing the values for some variables and array
+entries. A state of our example system \texttt{Mutex} consists of a process
+identifier \texttt{Turn} and two boolean arrays \texttt{Want} and \texttt{Crit};
+a state is initial iff both arrays are constantly \texttt{false}.
+
+Transitions are given in the usual guard/action form and may be
+parameterized by (one or more) process identifiers. They define the
+system's execution: an infinite loop that at each iteration: (1)
+non-deterministically chooses a transition instance whose guard is
+true in the current state; and (2) updates state variables according
+to the action of the fired transition instance.  Guards must be of the
+form $F \land \forall\bar x.(\Delta \Rightarrow F')$, where $F,F'$
+are conjunctions of literals (equations, disequations or inequations),
+and $\Delta$ says that every $\bar x$-variable is distinct from every
+parameter of the transition.  Assignments can be non-deterministic, as
+in ``\texttt{Turn~:=~.}'' in transition \texttt{exit} in
+\texttt{Mutex}. Array updates are coded by a case construct where each
+condition is a conjunction of literals, and the default case is
+denoted by \verb|_|.
+
+%These formulas must be in disjunctive normal form and
+%universally quantified by processes different from the transition's arguments.
+%\marginal{Clarify} 
+
+
+
+The safety property to be verified is expressed in its negated form as
+a formula that represents unsafe states. Each unsafe formula must be a
+\emph{cube}, i.e., have the form $\exists \bar x. (\Delta \land F)$,
+where $\Delta$ is the conjunction of all disequations between the
+variables in $\bar x$, and $F$ is a conjunction of literals. In the
+code, we leave the $\Delta$ part implicit. Thus in \texttt{Mutex}, the
+unsafe states are those in which \texttt{Crit[x]} and \texttt{Crit[y]}
+are true for two distinct process identifiers \texttt{x,y}.
+
+
+\section{Implementation Details and Optimizations}
+\label{sec:optims}
+
+
+
+For a state formula $\Phi$ and a transition instance $t$, let
+$\pre_t(\Phi)$ be the formula describing the set of states from which
+a $\Phi$-state can be reached in one $t$-step. Let also $\pre(\Phi)$
+be the union of $\pre_t(\Phi)$ for all possible $t$. In its simplest
+form, the backward reachability algorithm constructs a sequence
+$\Phi_0,\Phi_1,\ldots$ such that $\Phi_0$ is the system's unsafe
+condition and $\Phi_{i+1} = \Phi_i \lor \pre(\Phi_{i})$. The algorithm
+terminates with the first $\Phi_n$ that fails the \emph{safety check}
+(consistency with the initial condition), or passes the \emph{fixpoint
+  check} $\Phi_{n}\vdash\Phi_{n-1}$.
+
+In array-based systems, $\pre_t(\phi)$ can be representend as a union
+(disjunction) of cubes, for every cube $\phi$ and every $t$. Thus, the
+$\Phi_i$ above are unions of cubes too, and the algorithm above can be
+modified to work only with cubes, as follows.  Maintain a set $\VV$
+and a priority queue $\QQ$ of \emph{visited} and \emph{unvisited
+  cubes} respectively. Initially, let $\VV$ be empty and let $\QQ$
+contain the system's unsafe condition. Then, at each iteration, take
+the highest-priority cube $\phi$ from $\QQ$ and do the safety check
+for it, same as the above. If it fails, terminate with ``system
+unsafe''.  If the safety check passes, proceed to the
+\emph{subsumption check} $\phi \vdash \bigvee_{\psi\in\VV}\psi$. If
+this fails, then add $\phi$ to $\VV$, compute all cubes in
+$\pre_t(\phi)$ (for every $t$), add them to $\QQ$, and move on to the
+next iteration. If the subsumption check succeeds, then drop $\phi$
+from consideration and move on. The algorithm terminates when a safety
+check fails or $\QQ$ becomes empty.  When an unsafe cube is found,
+Cubicle actually produces a counterexample trace.
+
+
+
+Safety checks, being ground satisfiablity queries, are easy for SMT
+solvers. The challenge is in subsumption checks $\phi
+\vdash\bigvee_{\psi\in\VV}\psi$ because of their size and the
+``existential implies existential'' logical form. Assuming $\phi
+\eqdef \exists\bar x.F$ and $\psi \eqdef \exists\bar y. G_\psi$
+($\psi\in\VV$), the subsumption check translates into the validity
+check for the ground formula $H \eqdef (F \Rightarrow
+\bigvee_{\psi\in\VV}\bigvee_{\sigma\in\Sigma}(G_\psi)\sigma)$, where
+$\Sigma$ is the set of all substitutions from $\bar y$ to $\bar
+x$. Now, viewing any cube $G_\psi\sigma$ as a set of literals, one can
+make two useful comparisons with $F$: (1) if $G_\psi\sigma$ is a
+subset of $F$, then $H$ is valid; (2) if $G_\psi\sigma$ contains a
+literal that directly contradicts a literal of $F$, then
+$G_\psi\sigma$ is redundant in $H$ (can be removed without logically
+changing $H$). Cubicle aggressively attempts to prove $H$ by building
+and verifying it incrementally, adding one disjunct to its consequent
+at a time. Essentially, it examines all pairs $(\psi,\sigma)$
+one-by-one, stopping the process when the current overapproximation of
+$H$ becomes known to be valid.  For each pair $(\psi,\sigma)$, the
+cube $G_\psi\sigma$ is first checked for redundancy; if redundant, it
+is ignored and a new pair $(\psi,\sigma)$ is processed. If not
+redundant, the cube is subject to the subset check for $F \vdash
+G_\psi\sigma$. If this check succeeds, $H$ is claimed valid; otherwise
+$G_\psi\sigma$ gets added to $H$ (as a disjunct of its consequent) and
+the SMT solver checks if the newly obtained (weakened) $H$ becomes
+valid.
+
+
+
+Cubicle's integration with the SMT solver at the API level is crucial for
+efficient treatment of the subsumption check. For any such check, a single
+context for the SMT solver is used; it just gets incremented and repeatedly
+verified.  To support the efficient (symmetry-reduced) and exhaustive
+application of the inexpensive redundancy and subset checks, cubes are
+maintained in normal form where variables are renamed and implied literals
+removed at construction time.
+
+
+
+The strategy for exploring the cube space is also essential. It pays to visit as
+few cubes as possible, which suggess giving priority to more ``generic'' cubes
+(those that represent larger sets of states).  Thus, neither breadth-first nor
+depth-first search are good in their pure form.  By default, Cubicle uses BFS
+(changeable with the \texttt{-search} option to DFS or some variants) combined
+with a heuristically delayed treatment of some cubes.  Currently, a cube is
+delayed if it introduces new process variables or does not contribute new
+information on arrays. Finally, Cubicle can remove cubes from $\mathcal{V}$ when
+they become subsumed by a new cube.
+
+Following \MCMT, Cubicle supports user-supplied invariants and invariant
+synthesis, both of which can significantly reduce the search.  Subsets of
+visited nodes that only contain predicates over a unique process variable are
+used as candidate invariants. Each of them is verified by starting a new
+resource limited backward reachability analysis. Cubicle can also discover
+``subtyping invariants'' (saying that a variable can take only a selected subset
+of values) by a static analysis and these invariants can be natively exploited
+by the SMT solver which supports definitions of subtypes for enumerated
+data-types.
+
+
+\section{Multi-Core Architecture}
+
+A natural way to scale up model checkers is to parallelize their CPU
+intensive tasks to take advantage of the widespread availability of
+multi-core machines or clusters~\cite{GrumbergHIS05,divine,eddy}.  In
+our framework, this is achieved by parallelizing the backward
+reachability loop and the generation of invariants. As mentioned
+above, since invariant synthesis is done independently from the main
+loop, it is straightforward to do it in parallel. However, concerning
+the loop itself, a naive parallel implementation would lose the
+precise guidance of the exploration\footnote{Our experiments showed
+  that a non-deterministic parallel exploration can be worse than a
+  guided sequential search.}, and more importantly, could break the
+correctness of the tool because of an unsafe use of some optimizations
+described in the previous section.
+
+In our setting, the most resource consuming tasks are fixpoints checks
+which can be hard problems even for efficient SMT solvers. To gain
+efficiency, we implemented a concurrent version of BFS based on the
+observation that all such computations arising at the same level of
+the search tree can be executed in parallel.  Our implementation is
+based on a centralized master/workers architecture.  The master
+assigns fixpoints to workers and a synchronization barrier is placed
+at each level of the tree to retain a BFS order. The master
+asynchronously computes the preimages of nodes that are not verified
+as fixpoints by the workers. In the meanwhile, the master can also
+assign invariant generation tasks that will be processed by available
+workers. Finally, to safely delete nodes from $\mathcal{V}$, the
+master must discard the results about nodes that have been deleted
+while they were being checked by a worker.
+
+Cubicle provides a concurrent breadth-first exploration of the search
+space using $n$ parallel processes on a multi-core machine with the
+\texttt{-j} $n$ option. The implementation is based on
+Functory~\cite{functory}, an OCaml library with a rich functional
+interface which facilitates the execution of parallel
+algorithms. Functory supports multi-core architectures and distributed
+networks; it has also a robust fault-tolerance mechanism.
+%
+Concerning a distributed implementation, one of the main issues is to
+limit the size of data involved in transactions between the master and
+the workers. For instance, the size of $\mathcal{V}$ can quickly
+become a bottleneck in an architecture based on message passing
+communications. As a future work, we plan to develop a distributed
+implementation that will only need to send updates of data-structures.
+
+\section{Experimental Results and Future Works}
+\label{experiments}
+
+We have evaluated Cubicle on some classic and challenging mutual
+exclusion algorithms and cache coherence protocols. In the table
+bellow,
+%Figure~\ref{fig:benchs}, 
+we compare Cubicle's performances with state-of-the-art model checkers
+for parameterized systems.  All benchmarks have been executed on a 64
+bits machine with a quad-core Intel$^{\textregistered}$
+Xeon$^{\textregistered}$ processor @ 3.2 GHz and 24 GB of memory.  For
+each tool, we report the results obtained with the best settings we
+found. Note that the parallel version of Cubicle was run on 4 cores
+and that we only give its results for significantly time consuming
+problems. We denote by \textsf{X} benchmarks that we were unable to
+translate due to syntactic restrictions.
+
+%\begin{figure}[htb]
+%  \centering 
+\begin{center}
+  \begin{tabular}{|l|c|c|c|c|c|}
+    \cline{2-6}
+    \multicolumn{1}{l|}{} & \multicolumn{2}{c|}{\textbf{Cubicle}} & ~MCMT~\cite{mcmt}~ &
+     ~Undip~\cite{undip}~ & ~PFS~\cite{pfs}~ \\
+    \multicolumn{1}{l|}{} & seq & 4 cores & & & \\
+    \hline
+    \textsf{bakery} & 0.01s & - & 0.01s & 0.04s & 0.01s \\
+%    \hline
+%    \textsf{Dekker} & 0.01s & - & & & \\
+    \hline
+    \textsf{Dijkstra} & 0.24s & - & 0.99s & \textbf{0.04s} & 0.26s \\
+    \hline
+    \textsf{Distributed\_Lamport} & \textbf{2.3s} & - & 12.7s & unsafe & \textsf{X} \\
+    \hline
+    \textsf{Java\_Mlock} & 0.04s & - & 0.06s & 0.25s & 0.02s \\
+%    \hline
+%    \textsf{mux\_sem} & \textbf{0.01s} & - & \textbf{0.01s} & & \\
+    \hline
+    \textsf{Ricart\_Agrawala} & \textbf{1.8s} & - & 1m12s & 4.3s & \textsf{X} \\
+    \hline
+    \textsf{Szymanski\_at} & \textbf{0.12s} & - & 0.71s & 13.5s  & timeout \\
+%    \hline
+%    \textsf{two-semaphores} & \textbf{0.01s} & - & \textbf{0.01s} & & \\
+    \hline \hline
+    \textsf{Berkeley} & 0.01s & - & 0.01s & 0.01s & 0.01s \\
+     \hline
+    \textsf{flash\_aggregated~\cite{flash_pvs}}& 0.01s & - & 0.02s & 0.01s & \textsf{X} \\
+    \hline
+    \textsf{German\_Baukus}& \textbf{25.0s} & 17.1s & 3h39m & 9m43s & \textsf{X} \\
+    \hline
+    \textsf{German\_pfs}& \textbf{6m23s} & 3m8s & 11m31s & timeout & 47m22s \\
+    \hline
+    \textsf{German\_undip} & \textbf{0.17s} & - & 0.57s & 1m32 & \textsf{X} \\
+    \hline
+    \textsf{Illinois} & 0.02s & - & 0.04s & 0.06s & 0.06s \\
+    % \hline
+    % \textsf{Mesi} & 0.01s & - & 0.01s & 0.01s & 0.01s \\
+    \hline
+    \textsf{Moesi} & 0.01s & - & 0.01s & 0.01s & 0.01s \\
+    % \hline
+    % \textsf{synapse} & 0.01s & - & 0.01s & 0.01s & 0.01s \\
+    \hline
+  \end{tabular}
+\end{center}
+%  \caption{Benchmarks}
+%  \label{fig:benchs}
+%\end{figure}
+
+%   \begin{tabular}{|l|c|c|c|c|c|}
+%     \cline{2-6}
+%     \multicolumn{1}{l|}{} & \multicolumn{2}{c|}{\textbf{Cubicle}} & ~MCMT~\cite{mcmt}~ &
+%     ~PFS~\cite{pfs}~ & ~Undip~\cite{undip}~ \\
+%     \multicolumn{1}{l|}{} & seq & 4 cores & & & \\
+%     \hline
+%     \textsf{Bakery} & \textbf{0.01s} & / & \textbf{0.01s} & \textbf{0.01s} & \\
+% %    \hline
+% %    \textsf{Dekker} & 0.01s & / & & & \\
+%     \hline
+%     \textsf{Dijkstra} & \textbf{0.24s} & / & 0.99s & 0.26 s & \\
+%     \hline
+%     \textsf{Distrib\_Lamport} & ? & / & & & \\
+%     \hline
+%     \textsf{Java\_Mlock} & \textbf{0.04s} & / & 0.06s & &  \\
+% %    \hline
+% %    \textsf{mux\_sem} & \textbf{0.01s} & / & \textbf{0.01s} & & \\
+%     \hline
+%     \textsf{Rickart} & ? & / & & & \\
+%     \hline
+%     \textsf{Szymanski\_at} & \textbf{0.12s} & / & 0.71s & timeout & \\
+% %    \hline
+% %    \textsf{two-semaphores} & \textbf{0.01s} & / & \textbf{0.01s} & & \\
+%     \hline \hline
+%     \textsf{Berkeley} & \textbf{0.01s} & / & \textbf{0.01s} & & \\
+%      \hline
+%     \textsf{flash\_aggregated~\cite{flash_pvs}}& 0.01s & / & & & \\
+%     \hline
+%     \textsf{German\_Baukus}& \textbf{25.0s} & 17.4s & 3h39m & & \\
+%     \hline
+%     \textsf{German\_pfs}& \textbf{6m5s} & 3m12s & 11m31s & 47m22s & \\
+%     \hline
+%     \textsf{German\_undip} & 0.17s & / & & & 1m32 \\
+%     \hline
+%     \textsf{Illinois} & \textbf{0.02s} & / & 0.04s & & \\
+% %    \hline
+% %    \textsf{Mesi} & \textbf{0.01s} & / & \textbf{0.01s} & & \\
+%     \hline
+%     \textsf{Moesi} & \textbf{0.01s} & / & \textbf{0.01s} & & \\
+%     \hline
+%     \textsf{synapse} & \textbf{0.01s} & / & \textbf{0.01s} & & \\
+%     \hline
+%  \end{tabular}
+%  \caption{Benchmarks}
+%  \label{fig:benchs}
+%\end{figure}
+
+
+Our experiments are very promising. They show first that the
+sequential version of Cubicle is competitive. The parallel version on
+4 cores achieves speedups of $1.8$ approximately, which is a good
+result considering the fact that cores cannot be fully exploited
+because of the synchronization required to perform a pertinent search.
+%
+In practice, we found that the best setting for Cubicle is to use all
+the optimizations described in Section~\ref{sec:optims} (except for
+invariant synthesis which can be time consuming). In the table bellow,
+%Figure~\ref{fig:german}, 
+we show the respective effect of these optimizations on the version of
+the German protocol from~\cite{baukus} (\textsf{German\_baukus}). In
+particular, it is worth noting that the subtyping analysis increases
+performances by an order of magnitude on this example.
+
+\medskip
+\begin{center}
+  \begin{tabular}{|c|c|c||c|c|}
+    \hline
+    \multicolumn{3}{|c||}{Optimizations} &
+    \multicolumn{2}{c|}{\textbf{Real Time} (\# nodes)}\\
+    
+    delete nodes & subtyping & invariant generation
+    & sequential & 4 cores \\
+    \hline
+ %    \textsf{german\_pfs} 
+%     & No  & 1 & / & No  & 3 & 19217 &  18m0s  \\
+%     \cline{2-8}
+%     & Yes & 1 & / & No  & 3 & 15737 &  11m31s \\
+%     \cline{2-8}
+%     & Yes & 1 & / & Yes (110) & 3 & 8004  &  \textbf{6m5s}  \\
+%     \cline{2-8}
+%     & Yes & \textbf{8} & / & No  & 3 &  15517 & 4m17s  \\
+%     \cline{2-8}
+%     & Yes & \textbf{8} & / & Yes (169) & 3 & 8031  & \textbf{2m5s}  \\
+% 
+    No & No & No  & 50m8s (22580) & 27m13s (20710) \\
+    \hline    
+    Yes & No & No  & 35m16s (20405) & 19m39s (19685) \\ %14m36s (20179)\\
+    \hline
+    Yes & No & Yes  & 20m45s (15089) & 13m55s (14527) \\
+    \hline
+    Yes & Yes & No  & \textbf{25.0s} (3322) & \textbf{17.1s} (3188) \\
+    % \cline{2-8}
+    % & Yes & 1 & Yes & Yes (40) & 3 & 2892 & 51.4s  \\
+    % \cline{2-8}
+
+    % \cline{2-8}
+    % & Yes & \textbf{8} & Yes & Yes (46) & 3 & 2899 & 20.3s  \\
+    \hline
+  \end{tabular}
+\end{center}
+\medskip
+
+% \begin{figure}[htb]
+%   \centering 
+%   \begin{tabular}{|c|c|c||c|c|}
+%     \hline
+%     \multicolumn{3}{|c||}{Optimizations} &
+%     \multicolumn{2}{c|}{\textbf{Real Time} (\# nodes)}\\
+    
+%     delete nodes & subtyping & invariant generation
+%     & sequential & 4 cores \\
+%     \hline
+%  %    \textsf{german\_pfs} 
+% %     & No  & 1 & / & No  & 3 & 19217 &  18m0s  \\
+% %     \cline{2-8}
+% %     & Yes & 1 & / & No  & 3 & 15737 &  11m31s \\
+% %     \cline{2-8}
+% %     & Yes & 1 & / & Yes (110) & 3 & 8004  &  \textbf{6m5s}  \\
+% %     \cline{2-8}
+% %     & Yes & \textbf{8} & / & No  & 3 &  15517 & 4m17s  \\
+% %     \cline{2-8}
+% %     & Yes & \textbf{8} & / & Yes (169) & 3 & 8031  & \textbf{2m5s}  \\
+% % 
+%     No & No & No  & 50m8s (22580) & 27m13s (20710) \\
+%     \hline    
+%     Yes & No & No  & 35m16s (20405) & 19m39s (19685) \\ %14m36s (20179)\\
+%     \hline
+%     Yes & No & Yes  & 20m9s (15089) & 14m4s (14516) \\
+%     \hline
+%     Yes & Yes & No  & \textbf{25.0s} (3322) & \textbf{17.4s} (3159) \\
+%     % \cline{2-8}
+%     % & Yes & 1 & Yes & Yes (40) & 3 & 2892 & 51.4s  \\
+%     % \cline{2-8}
+
+%     % \cline{2-8}
+%     % & Yes & \textbf{8} & Yes & Yes (46) & 3 & 2899 & 20.3s  \\
+
+%     \hline
+%   \end{tabular}
+%   \caption{Cubicle's optimizations on the
+%     \textsf{German\_baukus} protocol}
+%   \label{fig:german}
+% \end{figure}
+
+% \begin{itemize}
+
+% \item Comparison between seq and concurrent bench with our different
+% strategies (killed geninv?)
+
+% \item comparison with MCMT (others?) on the german (and its variants?)
+
+% \item other benchs?
+% \end{itemize}
+
+As future work, we would like to harness the full power of the SMT
+solver by sharing its data structures and even more tightly
+integrating its features in the model checker. In particular, this
+would be very useful to discover symmetries and to simplify nodes by
+finding semantic redundancies modulo theories.  We are also interested
+in exploiting the unsat cores returned by the solver to improve our
+node deletion mechanism.
+
+\bibliographystyle{abbrv}
+\bibliography{tool}
+
+\end{document}

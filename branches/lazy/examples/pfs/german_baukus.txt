@@ -1,0 +1,110 @@
+local
+
+chan1 [0..2] *
+#empty, req_shared, req_exclusive
+
+chan2 [0..3] *
+#empty, grant_shared, grant_exclusive, invalidate
+
+chan3 [0..1] *
+#empty, invalidate_ack
+
+shrset [0..1] * 
+
+invset [0..1] *
+
+curptr [0..1] *
+
+cache [0..2]
+#invalid, shared, exclusive
+
+
+global
+
+exgntd [0..1] *
+
+curcmd [0..2]
+#empty, req_shared, req_exclusive
+
+
+transitions
+
+# send_req_shared
+local (cache=0 & chan1=0) => chan1:=1;
+
+# send_req_exclusive
+local (cache=0 & chan1=0) => chan1:=2;
+local (cache=1 & chan1=0) => chan1:=2;
+
+
+# recv_req_shared
+local (chan1=1 & shrset=0) & global curcmd=0 =>
+      curcmd:=1 & curptr:=1 & invset:=0
+      & chan1:=0
+      & foralla (curptr:=0 & invset:=shrset);
+
+
+
+local (channel2=0 & curr_client=1) & global ((flag=0 & curr_command=1) & exclusive_granted=0 ) 
+									      => sharer_list:=1 & curr_command:=0 & channel2:=1;
+
+local ((channel2=0 & curr_client=1) & sharer_list=0) & global (flag=0 & curr_command=2)  & foralla sharer_list=0 
+						      => sharer_list:=1 & curr_command:=0 & exclusive_granted:=1 & channel2:=2;
+
+local (channel1 = 1 & sharer_list=0) & global (flag=0 & curr_command=0) 
+		      => curr_command:=1 & channel1:=0 & invalidate_list:=0 & foralla curr_client:=0 & curr_client:=1 & flag:=1;
+
+local (channel1 = 2 & sharer_list=0)& global (flag=0 & curr_command=0)  
+		      => curr_command:=2 & channel1:=0 & invalidate_list:=0 & foralla curr_client:=0 & curr_client:=1 & flag:=1;
+
+local (channel1 = 1 & sharer_list=1) & global (flag=0 & curr_command=0)  
+		      => curr_command:=1 & channel1:=0 & invalidate_list:=1 & foralla curr_client:=0 & curr_client:=1 & flag:=1;
+
+local (channel1 = 2 & sharer_list=1) & global (flag=0 & curr_command=0) 
+		      => curr_command:=2 & channel1:=0 & invalidate_list:=1 & foralla curr_client:=0 & curr_client:=1 & flag:=1;
+
+global flag=1 & local sharer_list=0   
+		=> invalidate_list:=0;
+
+global flag=1 & local sharer_list=1   
+		=> invalidate_list:=1;
+
+local invalidate_list=sharer_list & global flag =1 & foralla (invalidate_list=sharer_list)	
+											=> flag:=0 ;
+
+local  (invalidate_list=1 & channel2=0)& global ((flag = 0 & curr_command=1) & exclusive_granted=1)
+											=> channel2:=3 & invalidate_list:=0;
+
+local (invalidate_list=1 & channel2=0)  & global (flag = 0 & curr_command = 2) 
+								=> channel2:=3 & invalidate_list:=0;
+
+local channel3=1   & global (flag = 0 & curr_command != 0) 
+						     => sharer_list:=0 & exclusive_granted:=0 & channel3:=0;
+
+
+
+local (cache = 0 & channel1 = 0) & global flag = 0 
+					  => channel1:=1;
+
+local ((cache=0 | cache=1) & channel1 =0) & global flag=0 
+					  => channel1 := 2;
+
+local (channel2=3 & channel3=0) & global flag = 0 
+					  => channel2:=0 & channel3 :=1 & cache:=0;
+
+local channel2=1 & global flag=0 
+		   => cache:=1 & channel2:=0;
+
+local channel2=2 & global flag=0 
+		   => cache:=2 & channel2:=0;
+
+
+initial
+exclusive_granted=0 & curr_command=0 & flag=0:	 channel1=0 & channel2=0 & channel3=0 & sharer_list=0 & invalidate_list=0 & curr_client=1 & cache=0,
+	 channel1=0 & channel2=0 & channel3=0 & sharer_list=0 & invalidate_list=0 & curr_client=0 & cache=0,
+	 channel1=0 & channel2=0 & channel3=0 & sharer_list=0 & invalidate_list=0 & curr_client=0 & cache=0,
+	 channel1=0 & channel2=0 & channel3=0 & sharer_list=0 & invalidate_list=0 & curr_client=0 & cache=0;
+
+
+final
+flag=0 : cache=2 , cache=1;

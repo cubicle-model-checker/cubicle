@@ -1,0 +1,723 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;
+					     charset=UTF-8">
+    <link title="new" rel="stylesheet" href="cubicle.css"
+	  type="text/css">
+    <title>Cubicle</title>
+  </head>
+
+  <body>
+
+    <div id="menu-banner">
+      <img src="cubicle.svg"/>
+    </div>
+   
+    <div id="banner">
+      <h1>Cubicle</h1>
+    </div>
+
+
+   
+    <div id="menu">
+      <ul>
+	<li><a href="#overview">Overview</a></li>
+	<li><a href="#download">Download</a>
+	  <ul>
+	    <li><a href="#sources">Sources</a>
+	    <li><a href="#install">Installation instructions </a>
+	  </ul>
+	</li>
+	<li><a href="#experiments">Experiments</a></li>
+	<li><a href="#manual">Manual</a>
+	  <ul>
+	    <li><a href="#language">Description<br/> language</a>
+	    <li><a href="#options">Options</a>
+	  </ul>
+	</li>
+	<li><a href="#examples">Examples</a></li>
+	<li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+
+
+    <div id="menu-right">
+
+      <div>
+	<table>
+	  <tr>
+	    <td colspan="2">Last version: #version# (#date#)</td>
+	  </tr>
+	  <tr>
+	    <td>
+	      <a href="cubicle-#version#.tar.gz"><img src="down.svg"></a>
+	    </td>
+	    <td>
+	      <a href="cubicle-#version#.tar.gz">Download v#version#</a>
+	    </td>
+	  </tr>
+	</table>
+      </div>
+
+      <br/>
+
+      <div>
+	<h>Developpers</h>
+
+	<ul>
+	  <li><a href="http://www.lri.fr/~conchon/">Sylvain Conchon</a></li>
+	  <li><a href="http://www.lri.fr/~mebsout/">Alain Mebsout</a></li>
+	</ul>
+
+	<h>Team members</h>
+
+	<ul>
+	  <li><a href="">Amit Goel</a></li>
+	  <li><a href="http://www.csee.ogi.edu/~krstics/">Sava Krsti&#263;</a></li>
+	  <li><a href="http://www.lri.fr/~zaidi/">Fatiha Zaïdi</a></li>
+	</ul>
+      </div>
+
+    </div>
+
+    <div id="content">
+      
+      <a name="overview"></a><h2>Overview</h2>
+
+      <p>
+	Cubicle is an open source model checker for verifying safety properties
+	of array-based systems.
+	This is a syntactically restricted class of
+	parametrized transition systems with states represented 
+	as arrays indexed by an arbitrary number of processes.
+	Cache coherence protocols and mutual exclusion algorithms are
+	typical examples of such systems.
+      </p>
+      
+      <p>
+	Cubicle model-checks by a symbolic backward reachability
+	analysis on infinite 
+	sets of states represented by specific simple formulas, called cubes.
+	Cubicle is based on ideas introduced by <a href="http://www.dsi.unimi.it/~ghilardi/mcmt/">MCMT</a> from which, in addition to revealing
+	the implementation details, it differs in a more friendly
+	input language and a concurrent architecture.
+	Cubicle is written
+	in <a href="http://caml.inria.fr/">OCaml</a>. Its SMT solver
+	is a tightly integrated, lightweight 
+	and enhanced version
+	of <a href="http://alt-ergo.lri.fr">Alt-Ergo</a>; and its
+	parallel implementation relies on 
+	the <a href="http://functory.lri.fr">Functory library</a>.
+	
+      </p>
+
+      <a name="download"></a>
+      <h2>Download</h2>
+      
+      <a name="sources"></a>
+      <h3>Sources</h3>
+      
+      <p>
+	Cubicle is distributed under
+	the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache
+	licence</a>. 
+	
+	<br/>
+	<br/>
+	
+	You can download the sources of the latest version of
+	Cubicle <a href="cubicle-#version#.tar.gz">here</a>.
+	
+      </p>
+
+      <a name="install"></a>
+      <h3>Installation instructions</h3>
+      
+      <p>
+	To compile Cubicle you will need OCaml version 3.11 (or
+	newer) and the Ocaml Functory library version 0.5 (or newer)
+	which can be downloaded <a href="http://functory.lri.fr">here</a>.
+      </p>
+
+      <p class="note">
+	<b>Note:</b> You can still compile Cubile without Functory but
+	you will not be able to use its parallel features.
+      </p>
+
+      <p>
+	Uncompress the archive and do: <br/>
+
+	<span class="code">
+	  <span class="incode">$</span> cd cubicle-#version# <br/>
+	  <span class="incode">$</span> ./configure <br/>
+	  <span class="incode">$</span> make <br/>
+	</span>
+	<br/>
+	
+	then with superuser rigths:
+	<br/>
+
+	<span class="code">
+	  <span class="incode">#</span> make install <br/>
+	</span>
+	<br/>
+
+	to run Cubicle on a file <span class="tt">file.cub</span>
+	simply do:
+	<br/>
+	<span class="code">
+	  <span class="incode">$</span> cubicle file.cub <br/>
+	</span>
+	<br/>
+	
+      </p>
+
+      
+      
+
+      <a name="experiments"></a>
+      <h2>Experiments</h2>
+
+      <p>
+	We have experimented Cubicle on classical and challenging
+	problems (mutual exclusion algorithms and cache coherence
+	protocols) from the literature.
+      </p>
+
+      <p>
+	All the following benchmarks have been executed on a 64 bits
+	machine with a quad-core 
+	Intel &reg; Xeon &reg; processor @ 3.2 GHz and 24 GB of memory. These results were obtained whith the default settings excepted for times followed by * that were obtained with the <span class="tt">-geninv</span> option to synthetize invariants. Note that the parallel version of Cubicle was run on 4
+	cores and that we only give its results for significantly time
+	consuming problems.
+      </p>
+
+      <table>
+	<tr>
+	  <th></th><th>sequential</th> <th>4 cores</th>
+	</tr>
+
+	<tr class="mex">
+	  <td class="bench"> <a href="examples/bakery_uguard.cub">bakery</a> </td>
+	
+	  <td> 0.01s </td> <td> - </td>
+
+	</tr>
+
+	<tr class="mex">
+	  <td class="bench"> <a href="examples/dijkstra.cub">Dijkstra</a> </td>
+	
+	  <td> 0.24s </td> <td> - </td>
+
+	</tr>
+
+
+	<tr class="mex">
+	  <td class="bench"> <a href="examples/distrib_lamport.cub">Distributed Lamport</a> </td>
+
+	  <td> 2.3s* </td> <td> - </td>
+
+	</tr>
+
+	<tr class="mex">
+	  <td class="bench"> <a href="examples/jml.cub">Java-Mlock</a> </td>
+	
+	  <td> 0.04s </td> <td> - </td>
+
+	</tr>
+
+
+	<tr class="mex">
+	  <td class="bench"> <a href="examples/ricart_agrawala.cub">Ricart Agrawala</a> </td>
+
+	  <td> 1.8s* </td> <td> - </td>
+
+	</tr>
+
+	<tr class="mex">
+	  <td class="bench"> <a href="examples/szymanski_at.cub">Szymanski_at</a> </td>
+
+	  <td> 0.12s* </td> <td> - </td>
+
+	</tr>
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/berkeley.cub">Berkeley</a> </td>
+	
+	  <td> 0.01s </td> <td> - </td>
+
+	</tr>
+
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/flash_eager.cub">flash_aggregated</a> </td>
+	
+	  <td> 0.01s </td> <td> - </td> 
+
+	</tr>
+
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/german.cub">German_Baukus</a> </td>
+	
+	  <td> 25.0s </td> <td> 17.1s </td>
+
+	</tr>
+
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/german_pfs.cub">German_pfs</a> </td>
+	
+
+	  <td> 6m23s* </td> <td> 3m8s* </td>
+	</tr>
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/german_undip.cub">German_undip</a> </td>
+	
+	  <td> 0.17s </td> <td> - </td>
+
+	</tr>
+
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/illinois.cub">Illinois</a> </td>
+	
+	  <td> 0.02s </td> <td> - </td>
+
+	</tr>
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/mesi.cub">Mesi</a> </td>
+	
+	  <td> 0.01s </td> <td> - </td>
+	
+
+	</tr>
+
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/moesi.cub">Moesi</a> </td>
+
+	  <td> 0.01s </td> <td> - </td> 
+		
+
+	</tr>
+
+
+	<tr class="ccp">
+	  <td class="bench"> <a href="examples/synapse.cub">synapse</a> </td>
+	
+	  <td> 0.01s </td> <td> - </td>
+	
+
+	</tr>
+
+      </table>
+      
+
+      <a name="manual"></a>
+      <h2>Manual</h2>
+
+      <a name="language"></a>
+      <h3>Description language</h3>
+      
+      
+      <p>
+	Cubicle's input
+	language contains some conventional programming constructs (arrays,
+	enumerated and abstract types etc.). However, since we have designed
+	our language with a particular set of protocols in mind, some of its
+	aspects would need to be improved for describing other classes of
+	algorithms.
+      </p>
+
+      <p>
+	In Cubicle, array-based systems are described by a set of type
+	declarations, a set of array declarations, an initial configuration,
+	and a transition relation given as a set of parameterized
+	transitions.
+      </p>
+
+      <p>
+
+	The language has four built-in data types: integers
+	(<span class="tt">int</span>), 
+	reals (<span class="tt">real</span>), boolean
+	(<span class="tt">bool</span>) and the type of process 
+	identifiers (<span class="tt">proc</span>). It also supports
+	user-defined abstract 
+	and enumerated data types. For instance,
+	<br/>
+	
+	<span class="code">
+	<span class="incode">type</span> data<br/>
+	<span class="incode">type</span> msg = Empty | Req | Ack<br/>
+	</span>
+
+	defines an abstract type <span class="tt">data</span>, and an enumeration type
+	<span class="tt">msg</span> with the three given values.
+      </p>
+
+      <p>
+	The state of a system is described by a set of global variables and
+	arrays indexed by process identifiers. Thus,
+	<br/>
+
+	<span class="code">
+	<span class="incode">var</span> Memory : data<br/>
+	<span class="incode">var</span> Counter : int<br/>
+	<span class="incode">array</span> Channel[proc] : msg<br/>
+	</span>
+
+	describe the state consisting of two global
+	variables <span class="tt">Memory</span> 
+	and <span class="tt">Counter</span>, respectively of
+	type <span class="tt">data</span> and 
+	<span class="tt">int</span>, and an
+	array <span class="tt">Channel</span> containing values of
+	type <span class="tt">msg</span>.
+      </p>
+
+      <p>
+	The initial state is defined by a universal conjunction of
+	literals characterizing the values for some variables and arrays. For
+	example, the configuration
+	where <span class="tt">Counter</span> initially equals to 
+	<span class="tt">1</span> and <span class="tt">Channel[z]</span>
+	contains the value <span class="tt">Empty</span> 
+	for any process <span class="tt">z</span> is expressed by:
+	<br/>
+
+	<span class="code">
+	<span class="incode">init</span> (z) { Counter = 1 && Channel[z] = Empty }<br/>
+	</span>
+      </p>
+
+      <p>
+
+	The execution of a parameterized system is defined by a set of
+	guarded transitions and consists of an infinite loop which
+	non-deterministically triggers at each iteration a transition whose
+	guard is true and whose action is to update state variables. Each
+	transition can take one or several process identifiers as arguments. A
+	guard is a conjunction of literals (equations, disequations or
+	inequations) and universal formulas. These formulas must be in
+	disjunctive normal form and are universally quantified by processes
+	different from the transition's arguments. Assignments of variables
+	can possibly be non-deterministic (denoted by <span class="tt">:= .</span>). Arrays
+	updates are realized through a case-defined construct where each
+	condition is expressed as a conjunction of literals and the default
+	case is denoted by <span class="tt">_</span>.
+	<br/>
+	<br/>
+	
+	<span class="code">
+	<span class="incode">transition</span> send_req(i)<br/>
+	<span class="incode">requires</span> 
+	{ Channel[i] = Empty && Counter &lt; 10 && <br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		forall_other j. (j &lt; i || Channel[j] &lt;&gt; Req) }<br/>
+        {<br/>
+        &nbsp;&nbsp;  Counter := Counter + 1 ; <br/>
+        &nbsp;&nbsp;  Memory := . ;<br/>
+	&nbsp;&nbsp;  Channel[j] := case <br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | j = i : Req <br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | _ : Channel[j]; <br/>
+	}
+	</span>
+      </p>
+
+      <p>
+	The safety property to be verified is expressed in its negated form as
+	a cube, existentially quantified by <em>distinct</em> processes, and
+	characterizes <em>unsafe</em> states.  The user also has an option to
+	specify invariants of the system. For instance, the following formula
+	expresses that a state is unsafe when there exists two distinct
+	processes <span class="tt">z1</span>
+	and <span class="tt">z2</span> such
+	that <span class="tt">Channel</span> 
+	contains <span class="tt">Req</span> for both.
+	<br/>
+
+	<span class="code">
+	<span class="incode">unsafe</span> (z1 z2)
+         { Channel[z1] = Req && Channel[z2] = Req }
+	</span>
+      </p>
+  
+      <a name="options"></a>
+      <h3>Options</h3>
+      
+      <p>
+	Cubicle can be run with different options that are shown
+	below:
+      </p>
+
+      <table class="opts">
+	
+	<tr>
+	  <td class="opt"> -version
+	  </td>
+	  
+	  <td class="opt-desc"> Print the version number on stdout
+	  and exit.
+	  </td>
+	</tr>
+
+	
+	<tr>
+	  <td class="opt"> -quiet
+	  </td>
+	  
+	  <td class="opt-desc"> Prevent Cubicle from printing the
+	  search trace while it performs backward reachability.
+	  </td>
+	</tr>
+
+		
+	<tr>
+	  <td class="opt"> -depth <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Limit the depth of the search tree
+	  to <em>n</em> at maximum. If this limit si excedeed Cubicle
+	  will print <span class="tt">reach bound</span> on
+	  stderr. This value is set to 100 by default.
+	  </td>
+	</tr>
+
+		
+	<tr>
+	  <td class="opt"> -nodes <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Limit the number of nodes to explore
+	  to <em>n</em> at maximum. If this limit si excedeed Cubicle
+	  will print <span class="tt">reach bound</span> on
+	  stderr. This value is set to 100000 by default.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -search <em>s</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Set the search strategy
+	  to <em>s</em>. <em>s</em> can be either
+	  breadth-first search (<span class="tt">bfs</span>) or depth-first search
+	  (<span class="tt">dfs</span>) or a variant of DFS
+	  (<span class="tt">dfsl</span>, <span class="tt">dfsh</span>, <span class="tt">dfshl</span>). By default,
+	  Cubicle explores the search space breadth-first
+	  (<span class="tt">bfs</span>).
+	  </td>
+	</tr>
+
+
+	<tr>
+	  <td class="opt"> -debug
+	  </td>
+	  
+	  <td class="opt-desc"> When this flag is present, Cubicle
+	  will output cubes that were computed during
+	  the <em>pre</em>, and that are being explored.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -v
+	  </td>
+	  
+	  <td class="opt-desc"> When this flag is present together
+	  with <b>-debug</b>, Cubicle
+	  will output the result of the <em>pre</em>.
+	  </td>
+	</tr>
+
+
+
+
+	<tr>
+	  <td class="opt"> -profiling
+	  </td>
+	  
+	  <td class="opt-desc"> Tells cubicle to output profiling
+	  informations at the end of the search. Such as the time that
+	  was spent in computing pre-images, in the fixpoint checks,
+	  in computing relevant permutations, in applying
+	  substitutions, in the solver, etc.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -geninv
+	  </td>
+	  
+	  <td class="opt-desc"> Activate invariant discovery during
+	    the search. If this flag is present, Cubicle will attempt to
+	    synthesize invariants with candidates being subsets of
+	    visited nodes that only contain predicates over a 
+	    unique process variable. Each of these subsets
+	    is checked for safety by starting a new resource limited
+	    backward reachability analysis.
+
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -postpone <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Select the strategy to postpone
+	  nodes. Values for <em>n</em> can be:
+	    <ul>
+	      <li>0: Nodes will not be postponed</li>
+	      <li>1: Postpone nodes that add another process
+	      variable (default for BFS)</li>
+	      <li>2: Postpone nodes that do not contribute new
+	      information on arrays (default for DFS and variants)</li>
+	    </ul>
+
+	  </td>
+	</tr>
+
+
+	<tr>
+	  <td class="opt"> -nodelete
+	  </td>
+	  
+	  <td class="opt-desc"> Deactivate <em>a posteriori</em>
+	  deletion of nodes that become subsumed.
+
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -j <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Run Cubicle in parallel on <em>n</em>
+	  cores. This option can only be used with the search strategy
+	  set to BFS.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -h, --help
+	  </td>
+	  
+	  <td class="opt-desc"> Display a message with usage and the
+	  list of options.
+	  </td>
+	</tr>	
+
+
+      </table>
+
+
+      <p>
+	When running, Cubicle will produce traces on stdout for each
+	node that is explored. For example, a node with the following
+	trace <br/>
+
+	<span class="code">
+	   inv_2(#2) -> gnt_shared(#1) -> unsafe
+	</span>
+	
+	will represent states that can reach the unsafe state by
+	first applying transistion <span class="tt">inv_2</span> in
+	process <span class="tt">#2</span> and then applying
+	transition <span class="tt">gnt_shared</span> in
+	process <span class="tt">#1</span>.	
+      </p>
+
+      <p>
+	If a system is proved unsafe, Cubicle will say so and output a
+	couterexample trace from the inital state to the unsafe state
+	in the same format.
+      </p>
+
+    
+
+      <a name="examples"></a>
+      <h2>Examples</h2>
+      
+      <p>
+	Below is an example of a simple mutal exclustion algorithm
+	<span class="tt">Mutex</span>:
+	<br/>
+	<br/>
+
+
+      <span class="code">
+<span class="incode">var</span> Turn : proc<br/>
+<span class="incode">array</span> Want[proc] : bool<br/>
+<span class="incode">array</span> Crit[proc] : bool<br/>
+<br/>
+<span class="incode">init</span> (z) {<br/>
+&nbsp;&nbsp; Want[z] = False && Crit[z] = False<br/>
+}<br/>
+<br/>
+<span class="incode">unsafe</span> (x y) {<br/>
+&nbsp;&nbsp;Crit[x] = True && Crit[y] = True<br/>
+}<br/>
+<br/>
+<span class="incode">transition</span> req (i)<br/>
+<span class="incode">requires</span> { Want[i] = False }<br/>
+{<br/>
+&nbsp;&nbsp;Want[j] := case <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;           | i = j : True<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Want[j]<br/>
+}<br/>
+<br/>
+<span class="incode">transition</span> enter (i)<br/>
+<span class="incode">requires</span> { <br/>
+&nbsp;&nbsp;  Want[i] = True <br/>
+&nbsp;&nbsp;  && Crit[i] = False<br/>
+&nbsp;&nbsp;  && Turn = i }<br/>
+{<br/>
+&nbsp;&nbsp;Crit[j] := case<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | i = j : True<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Crit[j]<br/>
+}<br/>
+<br/>
+<span class="incode">transition</span> exit (i)<br/>
+<span class="incode">requires</span> { Crit[i] = True }<br/>
+{<br/>
+&nbsp;&nbsp;Turn := . ;<br/>
+&nbsp;&nbsp;Crit[j] := case<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | i = j : False <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Crit[j]  ;<br/>
+&nbsp;&nbsp;Want[j] := case<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | i = j : False<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;            | _ : Want[j]<br/>
+}<br/>
+
+      </span>
+      </p>
+      
+
+
+      <a name="contact"></a>
+      <h2>Contact</h2>
+
+      <p>
+	You can contact us at our respective email addresses.
+      </p>
+
+
+
+
+
+
+    </div>
+
+
+
+
+
+  </body>
+
+
+</html>

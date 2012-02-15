@@ -1,0 +1,88 @@
+(*
+type req = Empty | Reqs | Reqe
+type cstate = Invalid | Shared | Exclusive
+*)
+
+var Exgntd : bool
+var Curcmd : int
+var Curptr : proc
+
+array Cache[proc] : int
+array Shrset[proc] : bool
+
+init (z) { Cache[z] = 1 && Shrset[z] = False &&
+           Exgntd = False && Curcmd = 1 }
+
+
+(* encoding of subranges *)
+invariant (z) { Cache[z] < 1 }
+invariant (z) { 3 < Cache[z] }
+invariant (z) { Curcmd < 1 }
+invariant (z) { 3 < Curcmd }
+
+
+unsafe (z1 z2) { Cache[z1] = 3 && Cache[z2] = 2 }
+
+transition t1 (n)
+requires { Curcmd = 1 && Cache[n] = 1 }
+{ 
+  Curcmd := 2; 
+  Curptr := n 
+}
+    
+transition t2 (n)
+requires { Curcmd = 1 && Cache[n] < 3 }
+{ 
+  Curcmd := 3; 
+  Curptr := n 
+}
+    
+transition t3 (n)
+requires { Shrset[n]=True  &&  Curcmd = 3 }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	       | j = n : 1 
+	       | _ : Cache[j] ;
+  Shrset[j] := case 
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
+
+transition t4 (n)
+requires { Shrset[n]=True  && Curcmd = 2 && Exgntd=True }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	       | j = n : 1 
+	       | _ : Cache[j];
+  Shrset[j] := case 
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
+    
+transition t5 (n)
+requires { Curptr = n && Curcmd = 2 && Exgntd = False }
+{ 
+  Curcmd := 1;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j];
+  Cache[j] := case 
+  	       | j = n : 2 
+	       | _ : Cache[j] 
+}
+
+transition t6 (n)
+requires {  Shrset[n] = False && Curcmd = 3 && Exgntd = False && Curptr = n &&
+	    forall_other l. Shrset[l] = False }
+{ 
+  Curcmd := 1; 
+  Exgntd := True;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j];
+  Cache[j] := case 
+  	       | j = n : 3 
+	       | _ : Cache[j] 
+}

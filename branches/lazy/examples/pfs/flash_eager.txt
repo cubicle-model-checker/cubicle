@@ -1,0 +1,38 @@
+local
+  cachestate [0..2] *
+  #invalid, shared, exclusive
+  cachedata [0..9999] *
+
+global
+
+transitions
+
+# atomwb
+local cachestate=2 => cachestate:=0;
+
+
+# atom_invalidate
+local (cachestate=0 | cachestate=1) => cachestate:=0;
+
+
+#atom_get1
+local (cachestate=0 | cachestate=1) & foralla (cachestate=0 | cachestate=1) => cachestate:=1;
+
+
+# atom_get2
+local cachestate=2 => cachestate:=1;
+
+
+#atom_getX_1
+local (cachestate=0 | cachestate=1) & foralla (cachestate=0 |
+cachestate=1) => cachestate:=2;
+
+# atom_getX_2
+local cachestate=2 => cachestate:=0 ;
+
+initial
+: cachestate=0;
+
+
+final
+: cachestate=2, cachestate=2;
