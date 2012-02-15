@@ -563,7 +563,7 @@ let closed = H.H.create (if simpl_by_uc then 8191 else 0)
 let already_closed s tr args =
   let sa = s.t_arru in
   try
-    let tr_margs = H.H.find closed tr in
+    let tr_margs = H.H.find closed tr.tr_name in
     let ls = MArgs.find args tr_margs in
     let rec find = function
       | [] -> None
@@ -609,9 +609,9 @@ let add_to_closed s fixa fix =
       let sa = s.t_arru in
       let simpl = ArrayAtom.diff fa (ArrayAtom.diff sa fixa) in
       let tr_margs = 
-	try H.H.find closed tr with Not_found -> MArgs.empty in
+	try H.H.find closed tr.tr_name with Not_found -> MArgs.empty in
       let ls = try MArgs.find args tr_margs with Not_found -> [] in
-      H.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
+      H.H.add closed tr.tr_name (MArgs.add args ((simpl, fix) :: ls) tr_margs)
 
 (**********************************************************************)
 
@@ -1119,6 +1119,22 @@ let simplify_atoms np =
     in
     List.rev (List.rev_map const_simplification lsa)
   with Exit -> []
+
+(********************)
+(* Lazy Abstraction *)
+(********************)
+
+let abstract sign np =
+  let in_sign = function
+    | True | False -> true
+    | Comp (t1, _, t2) -> STerm.mem t1 sign || STerm.mem t2 sign
+    | Ite _ -> assert false
+  in
+  SAtom.filter in_sign np
+
+
+let post sa = assert false
+
 (**********************)
 (* Postponed Formulas *)
 (**********************)
@@ -1164,12 +1180,11 @@ let add_list n l =
     in
       n :: l
 
-let max_lnp = ref 0
-
 let make_cubes =
   let cpt = ref 0 in
   fun (ls, post) (args, rargs) 
-    ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
+    ({ t_unsafe = (uargs, p); t_nb = nb; 
+       t_abstract_signature = sign} as s) tr np ->
       let nb_uargs = List.length uargs in
       let cube acc sigma =
 	let lnp = simplify_atoms (subst_atoms sigma np) in
@@ -1182,7 +1197,8 @@ let make_cubes =
 	       (fun (ls, post) ureq ->
 		 try
 		  let ureq = simplification_atoms np ureq in
-		  let np = SAtom.union ureq np in 
+		  let np = SAtom.union ureq np in
+		  let np = if lazy_abs then abstract sign np else np in
 		  if debug && !verbose > 0 then Debug.pre_cubes np nargs;
 		  if inconsistent np then begin
 		    if debug && !verbose > 0 then eprintf "(inconsistent)@.";
@@ -1190,14 +1206,14 @@ let make_cubes =
 		  end
 		  else
 		    if simpl_by_uc && 
-		      already_closed s tr.tr_name tr_args <> None 
+		      already_closed s tr tr_args <> None 
 		    then ls, post
 		    else
 		      let arr_np = ArrayAtom.of_satom np in
 		      incr cpt;
 		      let new_s = 
 			{ s with
-			    t_from = (tr.tr_name, tr_args, s)::s.t_from;
+			    t_from = (tr, tr_args, s)::s.t_from;
 			    t_unsafe = nargs, np;
 			    t_arru = arr_np;
 			    t_alpha = ArrayAtom.alpha arr_np nargs;

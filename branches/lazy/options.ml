@@ -35,6 +35,7 @@ let post_strategy = ref (-1)
 let delete = ref true
 let simpl_by_uc = ref false
 let cores = ref 0
+let lazy_abs = ref false
 
 let mode = ref Bfs
 let set_mode = function
@@ -60,6 +61,7 @@ let specs =
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-geninv", Arg.Set gen_inv, " invariant generation";
+    "-lazy", Arg.Set lazy_abs, " lazy abstraction";
     "-postpone", Arg.Set_int post_strategy, "<0|1|2> 0: do not postpone nodes\n                        1: postpone nodes with n+1 processes\n                        2: postpone nodes that don't add information";
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
@@ -88,6 +90,7 @@ let dmcmt = !dmcmt
 let profiling = !profiling
 let file = !file
 let gen_inv = !gen_inv
+let lazy_abs = !lazy_abs
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
 let cores = !cores

@@ -287,5 +287,6 @@ let system s =
       t_deleted = false;
       t_nb = 0;
       t_nb_father = -1;
+      t_abstract_signature = STerm.empty;
     }
   ) s.unsafe
