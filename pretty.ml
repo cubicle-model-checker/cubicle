@@ -111,21 +111,21 @@ let print_unsafe fmt s =
   fprintf fmt "  Unsafe property (from %aunsafe):@.        %a@."
     (fun fmt ->
        List.iter 
-	 (fun (l, args, _) ->
+	 (fun (tr, args, _) ->
 	   if dmcmt then 
-	     fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+	     fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
 	   else
-	     fprintf fmt "%s(%a) -> " (Hstring.view l) print_args args
+	     fprintf fmt "%s(%a) -> " (Hstring.view tr.tr_name) print_args args
 	 )) s.t_from
     print_system s
 
 
 let print_node fmt s =
   (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
-  List.iter (fun (l, args, _) ->
+  List.iter (fun (tr, args, _) ->
     if dmcmt then 
-      fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+      fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
     else 
-      fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
+      fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args
   ) s.t_from;
   if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"

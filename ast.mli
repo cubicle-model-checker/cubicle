@@ -102,10 +102,12 @@ type system = {
   trans : transition list
 }
 
+module STerm : Set.S with type elt = term
+
 (* Types AST *)
  
 type t_system = {
-  t_from : (Hstring.t * Hstring.t list * t_system) list;
+  t_from : (transition * Hstring.t list * t_system) list;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
@@ -115,6 +117,7 @@ type t_system = {
   mutable t_deleted : bool;
   t_nb : int;
   t_nb_father : int;
+  t_abstract_signature : STerm.t;
 }
 
 val declared_terms : ArrayAtom.t -> bool
