@@ -1124,6 +1124,22 @@ let simplify_atoms np =
 (* Lazy Abstraction *)
 (********************)
 
+let uguard sigma args tr_args = function
+  | [] -> [SAtom.empty]
+  | [j, dnf] ->
+      let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
+      List.fold_left 
+	(fun lureq z ->
+	   let m = List.map (subst_atoms ((j, z)::sigma)) dnf in
+	   List.fold_left 
+	     (fun acc sa -> 
+		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
+	)
+	[SAtom.empty]
+	uargs
+
+  | _ -> assert false
+
 let abstract sign np =
   let in_sign = function
     | True | False -> true
@@ -1133,7 +1149,65 @@ let abstract sign np =
   SAtom.filter in_sign np
 
 
-let post sa = assert false
+let contain_arg z = function
+  | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
+  | Access (x, y) -> Hstring.equal y z
+  | Const _ -> false
+
+let has_var z = function
+  | True | False -> false
+  | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
+  | Ite _ -> assert false
+
+let mkinit arg init args =
+  match arg with
+    | None -> init
+    | Some z ->
+	let sa, cst = SAtom.partition (has_var z) init in
+	List.fold_left (fun acc h ->
+	  SAtom.union (subst_atoms [z, h] sa) acc) cst args
+
+exception Impos_trans of transition * Hstring.t list
+
+let apply_assigns sa assigns =
+  let nsa = 
+    SAtom.fold (fun a acc -> match a with
+      | Comp (Elem (x, _), op, _) 
+	  when Hstring.list_mem_assoc x assigns -> acc
+      | Comp (_, op, Elem (x, _)) 
+	  when Hstring.list_mem_assoc x assigns -> acc
+      | _ -> SAtom.add a acc) sa SAtom.empty  
+  in
+  List.fold_left (fun acc (h, t) -> SAtom.add (Comp (Elem (h, Glob), Eq, t)) acc)
+    nsa assigns
+
+let apply_updates sa upds = assert false
+  
+
+  
+let post sa ({ tr_args = tr_args; tr_reqs = req; tr_ureq = ureq;} as tr) 
+    args procs =
+  let sigma = List.combine tr_args args in
+  let guard = subst_atoms sigma req in
+  let uguards = uguard sigma procs args ureq in
+  let possible_guards = List.map (fun u -> SAtom.union u guard) uguards in
+  let possible = 
+    List.exists (fun g -> 
+      try Prover.guard procs g; true with
+	| Smt.Unsat _ -> false
+	| Smt.Sat | Smt.IDontknow -> true) possible_guards
+  in
+  if not possible then raise (Impos_trans (tr, args))
+  else assert false
+  
+
+
+let check_trace { t_unsafe = args, sa; t_trans = trs; 
+	   t_from = from; t_init = ia, init} =
+  let sinit = mkinit ia init args in
+  assert false
+  
+  
 
 (**********************)
 (* Postponed Formulas *)
@@ -1153,22 +1227,6 @@ let postpone args p np =
   let sa1 = SAtom.filter (has_args args) p in
   let sa2 = SAtom.filter (has_args args) np in
   SAtom.equal sa2 sa1
-
-let uguard sigma args tr_args = function
-  | [] -> [SAtom.empty]
-  | [j, dnf] ->
-      let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
-      List.fold_left 
-	(fun lureq z ->
-	   let m = List.map (subst_atoms ((j, z)::sigma)) dnf in
-	   List.fold_left 
-	     (fun acc sa -> 
-		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
-	)
-	[SAtom.empty]
-	uargs
-
-  | _ -> assert false
 
 let add_list n l = 
   if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l

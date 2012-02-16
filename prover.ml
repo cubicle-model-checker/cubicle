@@ -170,3 +170,12 @@ let assume_node ap =
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   Smt.assume f;
   Smt.check ~profiling
+
+let guard args sa =
+  Smt.clear ();
+  Smt.assume (distinct_vars (List.length args));
+  (* Smt.assume (order_vars (List.length args)); *)
+  let f = make_formula_set sa in
+  if debug_smt then eprintf "[smt] guard: %a@." F.print f;
+  Smt.assume f;
+  Smt.check ~profiling

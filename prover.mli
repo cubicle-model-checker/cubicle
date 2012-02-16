@@ -17,5 +17,5 @@ open Ast
 val unsafe : t_system -> unit
 val assume_goal : t_system -> unit
 val assume_node : ArrayAtom.t -> unit
-
+val guard : Hstring.t list -> SAtom.t -> unit
 
