@@ -76,7 +76,7 @@ end
 (* SMT solver interface *)
 
 exception Sat 
-exception Unsat of Explanation.t 
+exception Unsat of Literal.LT.t list list
 exception IDontknow
 
 val get_time : unit -> float

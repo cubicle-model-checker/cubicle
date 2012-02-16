@@ -18,7 +18,7 @@ module Th = Cc.Make(Combine.CX)
 module Ex = Explanation
 
 exception Sat
-exception Unsat
+exception Unsat of clause list
 exception Restart
 
 exception Conflict of clause
@@ -28,8 +28,10 @@ module TimerSat = Timer.Make (struct end)
 type env = 
     { 
       (* si vrai, les contraintes sont deja fausses *)
-      mutable unsat : bool;
-      
+      mutable is_unsat : bool;
+
+      mutable unsat_core : clause list;
+
       (* clauses du probleme *)
       mutable clauses : clause Vec.t;
       
@@ -130,8 +132,10 @@ type env =
       
 let env =
     { 
-      unsat = false;   
+      is_unsat = false;   
       
+      unsat_core = [] ;
+
       clauses = Vec.make 0 dummy_clause; (*sera mis a jour lors du parsing*)
       
       learnts = Vec.make 0 dummy_clause; (*sera mis a jour lors du parsing*)
@@ -311,7 +315,8 @@ let rec pick_branch_lit () =
 let enqueue a lvl reason = 
   assert (not a.is_true && not a.neg.is_true && 
             a.var.level < 0 && a.var.reason = None && lvl >= 0);
-  let reason = if lvl = 0 then None else reason in
+  (* Garder la reason car elle est utile pour les unsat-core *)
+  (*let reason = if lvl = 0 then None else reason in*)
   a.is_true <- true;
   a.var.level <- lvl;
   a.var.reason <- reason;
@@ -401,13 +406,13 @@ let theory_propagate () =
   while not (Queue.is_empty env.tatoms_queue) do
     let a = Queue.pop env.tatoms_queue in
     if a.is_true then
-      let ex = if a.var.level > 0 then Ex.singleton a else Ex.empty in
-      (* let ex = Ex.singleton a in *) (* Usefull for debugging *)
+      (*let ex = if a.var.level > 0 then Ex.singleton a else Ex.empty in*)
+      let ex = Ex.singleton a in (* Usefull for debugging *)
       facts := (a.lit, ex) :: !facts
     else 
       if a.neg.is_true then
-	let ex = if a.var.level > 0 then Ex.singleton a.neg else Ex.empty in
-        (* let ex = Ex.singleton a.neg in *) (* Usefull for debugging *)
+	(*let ex = if a.var.level > 0 then Ex.singleton a.neg else Ex.empty in*)
+        let ex = Ex.singleton a.neg in (* Usefull for debugging *)
 	facts := (a.neg.lit, ex) :: !facts
       else assert false;
   done;
@@ -418,7 +423,9 @@ let theory_propagate () =
       env.tenv !facts;
     if nb_assigns() = env.nb_init_vars then expensive_theory_propagate ()
     else None
-  with Exception.Inconsistent dep -> Some dep
+  with Exception.Inconsistent dep -> 
+    (* eprintf "th inconsistent : %a @." Ex.print dep; *)
+    Some dep
 
 let propagate () = 
   let num_props = ref 0 in
@@ -445,9 +452,10 @@ let analyze c_clause =
   let c      = ref c_clause in
   let tr_ind = ref (Vec.size env.trail - 1) in
   let size   = ref 1 in
+  let history = ref [] in
   while !cond do
     if !c.learnt then clause_bump_activity !c;
-
+    history := !c :: !history;
     (* visit the current predecessors *)
     for j = 0 to Vec.size !c.atoms - 1 do
       let q = Vec.get !c.atoms j in
@@ -479,7 +487,7 @@ let analyze c_clause =
       | n, Some cl -> c := cl
   done;
   List.iter (fun q -> q.var.seen <- false) !seen;
-  !blevel, !learnt, !size
+  !blevel, !learnt, !history, !size
 
 let f_sort_db c1 c2 = 
   let sz1 = Vec.size c1.atoms in
@@ -537,11 +545,107 @@ let remove_satisfied vec =
   done;
   Vec.shrink vec (k + 1 - !j)
 
+
+module HUC = Hashtbl.Make 
+  (struct type t = clause let equal = (==) let hash = Hashtbl.hash end)
+
+
+let report_b_unsat ({atoms=atoms} as confl) =
+  let l = ref [confl] in
+  for i = 0 to Vec.size atoms - 1 do
+    let v = (Vec.get atoms i).var in
+    l := List.rev_append v.vpremise !l;
+    match v.reason with None -> () | Some c -> l := c :: !l
+  done;
+  if false then begin
+    eprintf "@.>>UNSAT Deduction made from:@.";
+    List.iter
+      (fun hc ->
+        eprintf "    %a@." Debug.clause hc
+      )!l;
+  end; 
+  let uc = HUC.create 17 in
+  let rec roots todo = 
+    match todo with
+      | [] -> ()
+      | c::r ->
+	  for i = 0 to Vec.size c.atoms - 1 do
+	    let v = (Vec.get c.atoms i).var in
+	    if not v.seen then begin 
+	      v.seen <- true;
+	      roots v.vpremise
+	    end
+	  done;
+          match c.cpremise with
+            | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
+            | prems -> roots prems; roots r
+  in roots !l;
+  let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
+  if false then begin
+    eprintf "@.>>UNSAT_CORE:@.";
+    List.iter
+      (fun hc ->
+        eprintf "    %a@." Debug.clause hc
+      )unsat_core;
+  end;
+  env.is_unsat <- true;
+  env.unsat_core <- unsat_core;
+  raise (Unsat unsat_core)
+
+
+let report_t_unsat dep =
+  let l = 
+    Ex.fold_atoms
+      (fun {var=v} l ->
+        let l = List.rev_append v.vpremise l in
+        match v.reason with None -> l | Some c -> c :: l
+      )dep []
+  in
+  if false then begin
+    eprintf "@.>>UNSAT Deduction made from:@.";
+    List.iter
+      (fun hc ->
+        eprintf "    %a@." Debug.clause hc
+      )l;
+  end;
+  let uc = HUC.create 17 in
+  let rec roots todo = 
+    match todo with
+      | [] -> ()
+      | c::r ->
+	  for i = 0 to Vec.size c.atoms - 1 do
+	    let v = (Vec.get c.atoms i).var in
+	    if not v.seen then begin 
+	      v.seen <- true;
+	      roots v.vpremise
+	    end
+	  done;
+          match c.cpremise with
+            | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
+            | prems -> roots prems; roots r
+  in roots l;
+  let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
+  if false then begin
+    eprintf "@.>>UNSAT_CORE:@.";
+    List.iter
+      (fun hc ->
+        eprintf "    %a@." Debug.clause hc
+      ) unsat_core;
+  end;
+  env.is_unsat <- true;
+  env.unsat_core <- unsat_core;
+  raise (Unsat unsat_core)
+
 let simplify () = 
   assert (decision_level () = 0);
-  if env.unsat || propagate () <> None || theory_propagate () <> None then begin
-    env.unsat <- true;
-    raise Unsat
+  if env.is_unsat then raise (Unsat env.unsat_core);
+  begin 
+    match propagate () with
+      | Some confl -> report_b_unsat confl
+      | None ->
+        match theory_propagate () with
+            Some dep -> report_t_unsat dep
+          | None -> ()
   end;
   if nb_assigns() <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
     if Vec.size env.learnts > 0 then remove_satisfied env.learnts;
@@ -551,15 +655,16 @@ let simplify () =
     env.simpDB_props <- env.clauses_literals + env.learnts_literals;
   end
 
-let record_learnt_clause blevel learnt size = 
+let record_learnt_clause blevel learnt history size = 
   begin match learnt with
     | [] -> assert false
     | [fuip] ->
         assert (blevel = 0);
+        fuip.var.vpremise <- history;
         enqueue fuip 0 None
     | fuip :: _ ->
         let name = fresh_lname () in
-        let lclause = make_clause name learnt size true in
+        let lclause = make_clause name learnt size true history in
         Vec.push env.learnts lclause;
         attach_clause lclause;
         clause_bump_activity lclause;
@@ -568,7 +673,7 @@ let record_learnt_clause blevel learnt size =
   var_decay_activity ();
   clause_decay_activity()
 
-let check_inconsistence_of dep =
+let check_inconsistence_of dep = 
   try
     let env = ref (Th.empty()) in ();
     Ex.iter_atoms
@@ -581,23 +686,21 @@ let check_inconsistence_of dep =
   with Exception.Inconsistent _ -> ()
 
 let theory_analyze dep = 
-  let atoms = ref []in
-  Ex.iter_atoms (fun a -> atoms := a.neg :: !atoms) dep;
-  let atoms = !atoms in
-  let atoms, sz, max_lvl = 
-    List.fold_left
-      (fun (acc, sz,max_lvl) a -> 
-	 if a.var.level = 0 then acc,sz,max_lvl
-	 else 
-	   a::acc, sz + 1, max max_lvl a.var.level)
-      ([], 0,0) atoms 
+  let atoms, sz, max_lvl, c_hist = 
+    Ex.fold_atoms
+      (fun a (acc, sz, max_lvl, c_hist) ->
+	 let c_hist = List.rev_append a.var.vpremise c_hist in
+	 if a.var.level = 0 then acc, sz, max_lvl, c_hist
+	 else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
+      ) dep ([], 0, 0, [])
   in
   if atoms = [] then begin
     check_inconsistence_of dep;
-    raise Unsat; (* une conjonction de faits unitaires etaient deja unsat *)
+    report_t_unsat dep
+	(* une conjonction de faits unitaires etaient deja unsat *)
   end;
   let name = fresh_dname() in
-  let c_clause = make_clause name atoms sz false in
+  let c_clause = make_clause name atoms sz false c_hist in
   c_clause.removed <- true;
 
   let pathC  = ref 0 in
@@ -608,9 +711,10 @@ let theory_analyze dep =
   let c      = ref c_clause in
   let tr_ind = ref (Vec.size env.trail - 1) in
   let size   = ref 1 in
+  let history = ref [] in
   while !cond do
     if !c.learnt then clause_bump_activity !c;
-
+    history := !c :: !history;
     (* visit the current predecessors *)
     for j = 0 to Vec.size !c.atoms - 1 do
       let q = Vec.get !c.atoms j in
@@ -642,16 +746,16 @@ let theory_analyze dep =
       | n, Some cl -> c := cl
   done;
   List.iter (fun q -> q.var.seen <- false) !seen;
-  !blevel, !learnt, !size
+  !blevel, !learnt, !history, !size
 
 
 
 let add_boolean_conflict confl =
   env.conflicts <- env.conflicts + 1;
-  if decision_level() = 0 then raise Unsat; (* Top-level conflict *)
-  let blevel, learnt, size = analyze confl in
+  if decision_level() = 0 then report_b_unsat confl; (* Top-level conflict *)
+  let blevel, learnt, history, size = analyze confl in
   cancel_until blevel;
-  record_learnt_clause blevel learnt size
+  record_learnt_clause blevel learnt history size
 
 let search n_of_conflicts n_of_learnts = 
   let conflictC = ref 0 in
@@ -667,10 +771,10 @@ let search n_of_conflicts n_of_learnts =
 	    | Some dep -> 
 		incr conflictC;
 		env.conflicts <- env.conflicts + 1;
-		if decision_level() = 0 then raise Unsat; (* T-L conflict *)
-		let blevel, learnt, size = theory_analyze dep in
+		if decision_level() = 0 then report_t_unsat dep; (* T-L conflict *)
+		let blevel, learnt, history, size = theory_analyze dep in
 		cancel_until blevel;
-		record_learnt_clause blevel learnt size
+		record_learnt_clause blevel learnt history size
 		  
 	    | None -> 
 		if nb_assigns () = env.nb_init_vars then raise Sat;
@@ -711,8 +815,9 @@ let check_model () =
   check_vec env.clauses;
   check_vec env.learnts
 
+
 let solve () = 
-  if env.unsat then raise Unsat;
+  if env.is_unsat then raise (Unsat env.unsat_core);
   let n_of_conflicts = ref (to_float env.restart_first) in
   let n_of_learnts = ref ((to_float (nb_clauses())) *. env.learntsize_factor) in
   try
@@ -726,46 +831,53 @@ let solve () =
     | Sat -> 
         (*check_model ();*)
         raise Sat
-    | Unsat -> 
-        env.unsat <- true; 
-        raise Unsat
+    | (Unsat cl) as e -> 
+        (* check_unsat_core cl; *)
+        raise e
 
 exception Trivial
 
-let partition atoms =
-  let rec partition_aux trues unassigned falses = function
-    | [] -> trues @ unassigned @ falses
+let partition atoms init =
+  let rec partition_aux trues unassigned falses init = function
+    | [] -> trues @ unassigned @ falses, init
     | a::r -> 
       if a.is_true then 
 	if a.var.level = 0 then raise Trivial
-	else (a::trues) @ unassigned @ falses @ r
+	else (a::trues) @ unassigned @ falses @ r, init
       else if a.neg.is_true then
-	if a.var.level = 0 then partition_aux trues unassigned falses r
-	else partition_aux trues unassigned (a::falses) r
-      else partition_aux trues (a::unassigned) falses r
+	if a.var.level = 0 then 
+	  partition_aux trues unassigned falses 
+	    (List.rev_append (a.var.vpremise) init) r
+	else partition_aux trues unassigned (a::falses) init r
+      else partition_aux trues (a::unassigned) falses init r
   in
-  partition_aux [] [] [] atoms
+  partition_aux [] [] [] init atoms
+
 
 let add_clause atoms =
-  if env.unsat then raise Unsat;
+  if env.is_unsat then raise (Unsat env.unsat_core);
+  let init0 = make_clause "INIT" atoms (List.length atoms) false [] in
     try
-      let atoms = 
+      let atoms, init = 
 	if decision_level () = 0 then
-	  let atoms = List.filter 
-	    (fun a -> 
+	  let atoms, init = List.fold_left
+	    (fun (atoms, init) a -> 
 	      if a.is_true then raise Trivial;
-	      not a.neg.is_true
-	    ) atoms in
-	  List.fast_sort (fun a b -> a.var.vid - b.var.vid) atoms
-	else partition atoms
+	      if a.neg.is_true then 
+		atoms, (List.rev_append (a.var.vpremise) init)
+	      else a::atoms, init
+	    ) ([], [init0]) atoms in
+	  List.fast_sort (fun a b -> a.var.vid - b.var.vid) atoms, init
+	else partition atoms [init0]
       in
       let size = List.length atoms in
       match atoms with
-	| []    -> env.unsat <- true; raise Unsat
+	| [] -> 
+            report_b_unsat init0;
             
 	| a::_::_ -> 
             let name = fresh_name () in
-            let clause = make_clause name atoms size false in
+            let clause = make_clause name atoms size false init in
             attach_clause clause;
             Vec.push env.clauses clause;
 	    
@@ -777,20 +889,16 @@ let add_clause atoms =
             
 	| [a]   ->
 	    cancel_until 0;
+            a.var.vpremise <- init;
             enqueue a 0 None;
-            if propagate () <> None then
-	      begin
-                env.unsat <- true; 
-                raise Unsat
-              end
+        match propagate () with 
+            None -> () | Some confl -> report_b_unsat confl
     with Trivial -> ()
 
 let add_clauses cnf = 
   List.iter add_clause cnf;
-  if theory_propagate () <> None then begin
-    env.unsat <- true; 
-    raise Unsat
-  end
+  match theory_propagate () with
+      None -> () | Some dep -> report_t_unsat dep
   
 let init_solver cnf =
   TimerSat.start ();
@@ -819,7 +927,11 @@ let assume cnf =
 
 let clear () =
   let empty_theory = Th.empty () in
-  env.unsat <- false;   
+
+  env.is_unsat <- false;
+
+  env.unsat_core <- [];
+
   env.clauses <- Vec.make 0 dummy_clause; 
 
   env.learnts <- Vec.make 0 dummy_clause; 

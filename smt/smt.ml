@@ -361,15 +361,45 @@ let get_time = Time.get
 let get_calls () = !calls
 
 exception Sat 
-exception Unsat of Explanation.t 
+exception Unsat of Literal.LT.t list list
 exception IDontknow
 
 let clear () = Solver.clear ()
 
 
+let check_unsatcore uc =
+  eprintf "Unsat Core : @.";
+  List.iter 
+    (fun c -> 
+      eprintf "%a@." (Formula.print_list "or") 
+	(List.map (fun x -> Formula.Lit x) c)) uc;
+  eprintf "@.";
+  try 
+    clear ();
+    Solver.assume uc;
+    Solver.solve ();
+    eprintf "Not an unsat core !!!@.";
+    assert false
+  with 
+    | Solver.Unsat _ -> ();
+    | Solver.Sat  -> 
+      eprintf "Sat: Not an unsat core !!!@.";
+      assert false
+  
+  
+
+let export_unsatcore cl = 
+  let uc = List.map (fun {Solver_types.atoms=atoms} ->
+    let l = ref [] in
+    for i = 0 to Vec.size atoms - 1 do
+      l := (Vec.get atoms i).Solver_types.lit :: !l
+    done; 
+    !l) cl
+  in check_unsatcore uc; uc
+
 let assume f =
   try Solver.assume (Formula.make_cnf f)
-  with Solver.Unsat -> raise (Unsat Explanation.empty)
+  with Solver.Unsat ex -> raise (Unsat (export_unsatcore ex))
 
 let check ~profiling  =
   incr calls;
@@ -379,6 +409,46 @@ let check ~profiling  =
     if profiling then Time.pause ()
   with
     | Solver.Sat -> if profiling then Time.pause ()
-    | Solver.Unsat -> 
+    | Solver.Unsat ex -> 
 	if profiling then Time.pause ();
-	raise (Unsat Explanation.empty)
+	raise (Unsat (export_unsatcore ex))
+
+
+
+
+(* let x = Hstring.make "x";; *)
+(* let y = Hstring.make "y";; *)
+(* let z = Hstring.make "z";; *)
+(* let w = Hstring.make "w";; *)
+
+(* Typing.declare_name x [] Typing.type_int;; *)
+(* Typing.declare_name y [] Typing.type_int;; *)
+(* Typing.declare_name z [] Typing.type_int;; *)
+(* Typing.declare_name w [] Typing.type_int;; *)
+
+(* let tx = (Term.make_app x []);; *)
+(* let ty = (Term.make_app y []);; *)
+(* let tz = (Term.make_app z []);; *)
+(* let tw = (Term.make_app w []);; *)
+
+(* let f1 = Formula.make_lit Formula.Eq [tx; ty];; *)
+(* let f2 = Formula.make_lit Formula.Eq [tz; tw];; *)
+
+(* let f3 = Formula.make_lit Formula.Neq [ty; tx];; *)
+(* let f4 = Formula.make_lit Formula.Neq [tw; tz];; *)
+
+(* let f5 = Formula.make Formula.Or [f3; f4];; *)
+
+(* Format.eprintf "%a@." Formula.print f1;; *)
+(* Format.eprintf "%a@." Formula.print f2;; *)
+(* Format.eprintf "%a@." Formula.print f5;; *)
+
+
+(* clear ();; *)
+
+(* assume f1;; *)
+(* assume f2;; *)
+(* assume f5;; *)
+
+(* check ~profiling:false;; *)
+(* exit 0;; *)
