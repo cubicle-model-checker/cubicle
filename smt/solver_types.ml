@@ -244,9 +244,13 @@ module Debug = struct
     else if a.neg.is_true then sprintf ":0%s" (level a)
     else ":X"
 
+  let premise fmt v = 
+    List.iter (fun {name=name} -> fprintf fmt "%s," name) v
+
   let atom fmt a = 
-    fprintf fmt "%s%d%s [lit:%a]" 
+    fprintf fmt "%s%d%s [lit:%a] vpremise={{%a}}" 
       (sign a) (a.var.vid+1) (value a) Literal.LT.print a.lit
+      premise a.var.vpremise
 
 
   let atoms_list fmt l = List.iter (fprintf fmt "%a ; " atom) l
@@ -257,6 +261,9 @@ module Debug = struct
       fprintf fmt "%a ; " atom (Vec.get vec i)
     done
 
-  let clause fmt {name=name; atoms=arr} =
-    fprintf fmt "%s:{ %a}" name atoms_vec arr
+  let clause fmt {name=name; atoms=arr; cpremise=cp} =
+    fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec arr premise cp
+
+
+
 end

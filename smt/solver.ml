@@ -293,6 +293,7 @@ let cancel_until lvl =
       a.neg.is_true <- false;
       a.var.level <- -1;
       a.var.reason <- None;
+      a.var.vpremise <- [];
       insert_var_order a.var
     done;
     Queue.clear env.tatoms_queue;
@@ -312,7 +313,7 @@ let rec pick_branch_lit () =
   end
   else v
 
-let enqueue a lvl reason = 
+let enqueue a lvl reason =
   assert (not a.is_true && not a.neg.is_true && 
             a.var.level < 0 && a.var.reason = None && lvl >= 0);
   (* Garder la reason car elle est utile pour les unsat-core *)
@@ -320,6 +321,7 @@ let enqueue a lvl reason =
   a.is_true <- true;
   a.var.level <- lvl;
   a.var.reason <- reason;
+  (* eprintf "enqueue: %a@." Debug.atom a; *)
   Vec.push env.trail a
 
 let progress_estimate () = 
@@ -573,7 +575,8 @@ let report_b_unsat ({atoms=atoms} as confl) =
 	    let v = (Vec.get c.atoms i).var in
 	    if not v.seen then begin 
 	      v.seen <- true;
-	      roots v.vpremise
+	      roots v.vpremise;
+	      match v.reason with None -> () | Some r -> roots [r];
 	    end
 	  done;
           match c.cpremise with
@@ -599,10 +602,10 @@ let report_t_unsat dep =
       (fun {var=v} l ->
         let l = List.rev_append v.vpremise l in
         match v.reason with None -> l | Some c -> c :: l
-      )dep []
+      ) dep []
   in
   if false then begin
-    eprintf "@.>>UNSAT Deduction made from:@.";
+    eprintf "@.>>T-UNSAT Deduction made from:@.";
     List.iter
       (fun hc ->
         eprintf "    %a@." Debug.clause hc
@@ -617,7 +620,8 @@ let report_t_unsat dep =
 	    let v = (Vec.get c.atoms i).var in
 	    if not v.seen then begin 
 	      v.seen <- true;
-	      roots v.vpremise
+	      roots v.vpremise;
+	      match v.reason with None -> () | Some r -> roots [r];
 	    end
 	  done;
           match c.cpremise with
@@ -626,7 +630,7 @@ let report_t_unsat dep =
   in roots l;
   let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
   if false then begin
-    eprintf "@.>>UNSAT_CORE:@.";
+    eprintf "@.>>T-UNSAT_CORE:@.";
     List.iter
       (fun hc ->
         eprintf "    %a@." Debug.clause hc
@@ -690,6 +694,8 @@ let theory_analyze dep =
     Ex.fold_atoms
       (fun a (acc, sz, max_lvl, c_hist) ->
 	 let c_hist = List.rev_append a.var.vpremise c_hist in
+	 let c_hist = match a.var.reason with 
+	   | None -> c_hist | Some r -> r:: c_hist in
 	 if a.var.level = 0 then acc, sz, max_lvl, c_hist
 	 else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
       ) dep ([], 0, 0, [])
@@ -701,6 +707,7 @@ let theory_analyze dep =
   end;
   let name = fresh_dname() in
   let c_clause = make_clause name atoms sz false c_hist in
+  (* eprintf "c_clause: %a@." Debug.clause c_clause; *)
   c_clause.removed <- true;
 
   let pathC  = ref 0 in
@@ -796,6 +803,7 @@ let search n_of_conflicts n_of_learnts =
 		let next = pick_branch_lit () in
 		let current_level = decision_level () in
 		assert (next.level < 0);
+		(* eprintf "decide: %a@." Debug.atom next.pa; *)
 		enqueue next.pa current_level None
   done
 
