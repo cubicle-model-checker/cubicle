@@ -59,7 +59,8 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     let equal a1 a2 = 
       match a1, a2 with
 	| Eq(t1, t2), Eq(u1, u2) -> 
-	    X.compare t1 u1 = 0 && X.compare t2 u2 = 0
+	    (X.compare t1 u1 = 0 && X.compare t2 u2 = 0) ||
+	    (X.compare t1 u2 = 0 && X.compare t2 u1 = 0)
 	| Distinct (b1,lt1), Distinct (b2,lt2) ->
 	    (try 
 	       b1 = b2 && 

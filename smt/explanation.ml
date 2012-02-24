@@ -40,6 +40,11 @@ let iter_atoms f s =
   S.iter (fun e -> match e with
     | Fresh _ -> ()
     | Atom a -> f a) s
+
+let fold_atoms f s acc = 
+  S.fold (fun e acc -> match e with
+    | Fresh _ -> acc
+    | Atom a -> f a acc) s acc
       
 let merge e1 e2 = e1
 
@@ -55,3 +60,10 @@ let remove_fresh i s =
 
 let add_fresh i = S.add (Fresh i)
 
+
+let print fmt ex = 
+  fprintf fmt "{";
+  S.iter (function 
+    | Atom a -> fprintf fmt "%a, " Debug.atom a
+    | Fresh i -> fprintf fmt "Fresh%d " i) ex; 
+  fprintf fmt "}"

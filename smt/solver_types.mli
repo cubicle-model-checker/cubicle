@@ -19,7 +19,8 @@ type var =
       mutable weight : float;
       mutable seen : bool;
       mutable level : int;
-      mutable reason : reason}
+      mutable reason : reason;
+      mutable vpremise : premise }
     
 and atom = 
     { var : var;
@@ -34,9 +35,13 @@ and clause =
       mutable atoms : atom Vec.t;
       mutable activity : float;
       mutable removed : bool;
-      learnt : bool }
+      learnt : bool;
+      cpremise : premise }
 
 and reason = clause option
+
+and premise = clause list
+
 
 val dummy_var : var
 val dummy_atom : atom
@@ -46,7 +51,7 @@ val make_var : Literal.LT.t -> var * bool
 
 val add_atom : Literal.LT.t -> atom 
 
-val make_clause : string -> atom list -> int -> bool -> clause
+val make_clause : string -> atom list -> int -> bool -> premise-> clause
 
 val fresh_name : unit -> string
 
@@ -59,3 +64,12 @@ val to_float : int -> float
 val to_int : float -> int
 val made_vars_info : unit -> int * var list
 val clear : unit -> unit
+
+
+module Debug: sig
+    
+  val atom : Format.formatter -> atom -> unit
+    
+  val clause : Format.formatter -> clause -> unit
+
+end

@@ -26,9 +26,12 @@ val merge : t -> t -> t
 
 val iter_atoms : (Solver_types.atom -> unit)  -> t -> unit
 
+val fold_atoms : (Solver_types.atom -> 'a -> 'a )  -> t -> 'a -> 'a
+
 val fresh_exp : unit -> int
 
 val remove_fresh : int -> t -> t option
 
 val add_fresh : int -> t -> t
 
+val print : Format.formatter -> t -> unit

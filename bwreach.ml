@@ -1169,7 +1169,7 @@ let mkinit arg init args =
 
 exception Impos_trans of transition * Hstring.t list
 
-let apply_assigns sa assigns =
+let apply_assigns sa assigns prime =
   let nsa = 
     SAtom.fold (fun a acc -> match a with
       | Comp (Elem (x, _), op, _) 

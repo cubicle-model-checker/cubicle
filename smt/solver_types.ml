@@ -11,6 +11,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Format
+
 let ale = Hstring.make "<=" 
 let alt = Hstring.make "<"
 let agt = Hstring.make ">"
@@ -27,8 +29,9 @@ type var =
        mutable weight : float;
        mutable seen : bool;
        mutable level : int;
-       mutable reason: reason}
-
+       mutable reason: reason;
+       mutable vpremise : premise}
+      
 and atom = 
     { var : var;
       lit : Literal.LT.t;
@@ -42,9 +45,12 @@ and clause =
       mutable atoms : atom Vec.t ; 
       mutable activity : float;
       mutable removed : bool;
-      learnt : bool }
+      learnt : bool;
+      cpremise : premise }
 
 and reason = clause option
+
+and premise = clause list
 
 let dummy_lit = Literal.LT.make (Literal.Eq(Term.vrai,Term.vrai))
 
@@ -55,7 +61,8 @@ let rec dummy_var =
     level = -1;
     reason = None;
     weight = -1.;
-    seen = false}
+    seen = false;
+    vpremise = [] }
 and dummy_atom = 
   { var = dummy_var; 
     lit = dummy_lit;
@@ -68,7 +75,8 @@ and dummy_clause =
     atoms = {Vec.dummy=dummy_atom; data=[||]; sz=0};
     activity = -1.;
     removed = false;
-    learnt = false }
+    learnt = false;
+    cpremise = [] }
 
 
 module MA = Literal.LT.Map
@@ -143,7 +151,9 @@ let make_var =
 	  level = -1;
 	  reason = None;
 	  weight = 0.;
-	  seen = false}
+	  seen = false;
+	  vpremise = [];
+	}
       and pa = 
 	{ var = var; 
 	  lit = lit;
@@ -168,13 +178,14 @@ let add_atom lit =
   let var, negated = make_var lit in
   if negated then var.na else var.pa 
 
-let make_clause name ali sz_ali is_learnt = 
+let make_clause name ali sz_ali is_learnt premise = 
   let atoms = Vec.from_list ali sz_ali dummy_atom in
   { name  = name;
     atoms = atoms;
     removed = false;
     learnt = is_learnt;
-    activity = 0. }
+    activity = 0.;
+    cpremise = premise}
     
 let fresh_lname =
   let cpt = ref 0 in 
@@ -209,86 +220,50 @@ let clear () =
  cpt_mk_var := 0;
   ma := MA.empty
 
-(**************************************************
-For later: compute tags for clauses or use dnets
-***************************************************
 
-let abstraction_of_clause atoms = 
-  let atoms = Sort.sort atoms in
-  let acc = ref (Gmp.Z.from_int 0) in
-  for i = 0 to atoms.Vec.sz - 1 do
+
+module Debug = struct
     
-  done
-  Array.iter
-    (
+  let sign a = if a==a.var.pa then "" else "-"
+      
+  let level a =
+    match a.var.level, a.var.reason with 
+      | n, _ when n < 0 -> assert false
+      | 0, Some c -> sprintf "->0/%s" c.name
+      | 0, None   -> "@0"
+      | n, Some c -> sprintf "->%d/%s" n c.name
+      | n, None   -> sprintf "@@%d" n
 
-    )
-  assert false
+  let value a = 
+    if a.is_true then sprintf "[T%s]" (level a)
+    else if a.neg.is_true then sprintf "[F%s]" (level a)
+    else ""
 
+  let value_ms_like a = 
+    if a.is_true then sprintf ":1%s" (level a)
+    else if a.neg.is_true then sprintf ":0%s" (level a)
+    else ":X"
 
-open Gmp
+  let premise fmt v = 
+    List.iter (fun {name=name} -> fprintf fmt "%s," name) v
 
-let int i = Z.from_int i
-
-let ( * ) i j = Z.mul i j
-let ( + ) i j = Z.add i j
-let ( / ) i j = Z.tdiv_q i j
-
-let l1 = [int 0 ; int 2 ; int 5 ; int 7;  int 6]
-
-let l2 = [int 2 ; int 555 ; int 7;  int 6]
-
-let l3 = [int 2 ; int 1111555 ; int 7;  int 6]
-
-let l4 = [int 1; int 10 ]
-
-let l5 = [int 1; int 12; int 25; int 99; int 100; int 199 ]
-
-let l6 = [int 11555]
-
-let rec basis2 acc e =
-  if e = int 0 then acc
-  else basis2 (acc * (int 10)) (e / (int 10))
-
-let basis l = List.fold_left (fun acc e -> max acc (basis2 (int 1) e)) (int 10) l
-
-let convert_to_basis b l = 
-  (*let b' = if b = int 10 then int 0 else b / (int 10) in*)
-  let b' = b in
-  List.map (fun e -> b' + e) l
-  
-let tag_of b l = 
-  (*let b' = b / (int 10) in*)
-  let res, _ = 
-    List.fold_right
-      (fun e (res,rang) ->
-         let res = res + rang*e in
-         Format.printf "> e=%a  et %a@." Z.print res;
-         res, rang*b
-      )l (int 0, int 1)
-  in 
-  Format.printf "-----@.res = %a@.------@." Z.print res;
-  res
+  let atom fmt a = 
+    fprintf fmt "%s%d%s [lit:%a] vpremise={{%a}}" 
+      (sign a) (a.var.vid+1) (value a) Literal.LT.print a.lit
+      premise a.var.vpremise
 
 
-let b = basis l1
-let l = convert_to_basis b l1
-let _ = tag_of b l
-let b = basis l2
-let l = convert_to_basis b l2
-let _ = tag_of b l
-let b = basis l3
-let l = convert_to_basis b l3
-let _ = tag_of b l
-let b = basis l4
-let l = convert_to_basis b l4
-let _ = tag_of b l
-let b = basis l5
-let l = convert_to_basis b l5
-let _ = tag_of b l
-let b = basis l6
-let l = convert_to_basis b l6
-let _ = tag_of b l
+  let atoms_list fmt l = List.iter (fprintf fmt "%a ; " atom) l
+  let atoms_array fmt arr = Array.iter (fprintf fmt "%a ; " atom) arr
 
-**********)
+  let atoms_vec fmt vec = 
+    for i = 0 to Vec.size vec - 1 do
+      fprintf fmt "%a ; " atom (Vec.get vec i)
+    done
 
+  let clause fmt {name=name; atoms=arr; cpremise=cp} =
+    fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec arr premise cp
+
+
+
+end
