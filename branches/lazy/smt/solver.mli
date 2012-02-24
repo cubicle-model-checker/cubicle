@@ -12,7 +12,7 @@
 (**************************************************************************)
 
 exception Sat
-exception Unsat
+exception Unsat of Solver_types.clause list
 
 val solve : unit -> unit
 val assume : Literal.LT.t list list -> unit

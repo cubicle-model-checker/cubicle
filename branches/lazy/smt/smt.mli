@@ -61,9 +61,11 @@ module Term : sig
 end
 
 module Formula : sig
-  type t
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
+  type t = 
+    | Lit of Literal.LT.t  
+    | Comb of combinator * t list
 
   val vrai : t
   val faux : t
@@ -76,7 +78,7 @@ end
 (* SMT solver interface *)
 
 exception Sat 
-exception Unsat of Explanation.t 
+exception Unsat of Literal.LT.t list list
 exception IDontknow
 
 val get_time : unit -> float
