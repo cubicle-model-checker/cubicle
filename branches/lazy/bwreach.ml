@@ -16,6 +16,8 @@ open Options
 open Ast
 open Atom
 
+exception BUnsafe of t_system
+
 module H = Hstring
 module S = Set.Make(H) 
 let hempty = H.make ""
@@ -538,12 +540,12 @@ let check_safety s =
       begin
 	Prover.unsafe s;
 	if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
-	raise Search.Unsafe
+	raise (BUnsafe s)
       end
   with
     | Smt.Sat ->
       if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
-      raise Search.Unsafe
+      raise (BUnsafe s)
     | Smt.IDontknow -> exit 2
     | Smt.Unsat _ -> ()
 
@@ -1120,34 +1122,6 @@ let simplify_atoms np =
     List.rev (List.rev_map const_simplification lsa)
   with Exit -> []
 
-(********************)
-(* Lazy Abstraction *)
-(********************)
-
-let uguard sigma args tr_args = function
-  | [] -> [SAtom.empty]
-  | [j, dnf] ->
-      let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
-      List.fold_left 
-	(fun lureq z ->
-	   let m = List.map (subst_atoms ((j, z)::sigma)) dnf in
-	   List.fold_left 
-	     (fun acc sa -> 
-		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
-	)
-	[SAtom.empty]
-	uargs
-
-  | _ -> assert false
-
-let abstract sign np =
-  let in_sign = function
-    | True | False -> true
-    | Comp (t1, _, t2) -> STerm.mem t1 sign || STerm.mem t2 sign
-    | Ite _ -> assert false
-  in
-  SAtom.filter in_sign np
-
 
 let contain_arg z = function
   | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
@@ -1159,7 +1133,136 @@ let has_var z = function
   | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
   | Ite _ -> assert false
 
+(********************)
+(* Lazy Abstraction *)
+(********************)
+
+let abstract sign np =
+  let in_sign = function
+    | True | False -> true
+    | Comp (t1, _, t2) -> STerm.mem t1 sign || STerm.mem t2 sign
+    | Ite _ -> assert false
+  in
+  SAtom.filter in_sign np
+
+
+let prime_h h level =
+  Hstring.make ((Hstring.view h)^"@"^(string_of_int level))
+
+let prime_term level t = match t with
+  | Elem (e, Glob) -> Elem (prime_h e level, Glob)
+  | Arith (a, Glob, c) -> Arith (prime_h a level, Glob, c)
+  | Access (a, x) -> Access (prime_h a level, x)
+  | _ -> t
+
+let rec prime_atom level a = match a with
+  | True | False -> a
+  | Comp (t1, op, t2) -> Comp (prime_term level t1, op, prime_term level t2)
+  | Ite (sa, a1, a2) -> 
+    Ite (prime_satom level sa, prime_atom level a1, prime_atom level a2)
+  
+and prime_satom level sa =
+  SAtom.fold (fun a acc -> SAtom.add (prime_atom level a) acc) sa SAtom.empty
+
+let unprime_h h =
+  let s = Hstring.view h in
+  Hstring.make (String.sub s 0 (String.index s '@'))
+
+let unprime_term t = match t with
+  | Elem (e, Glob) -> Elem (unprime_h e, Glob)
+  | Arith (a, Glob, c) -> Arith (unprime_h a, Glob, c)
+  | Access (a, x) -> Access (unprime_h a, x)
+  | _ -> t
+
+let variables_term t acc = match t with
+  | Elem (a, Glob) | Access (a, _) -> STerm.add t acc
+  | Arith (a, Glob, _) -> STerm.add (Elem (a, Glob)) acc
+  | _ -> acc
+
+let rec variables_atom a acc = match a with
+  | True | False -> acc
+  | Comp (t1, _, t2) -> variables_term t1 (variables_term t2 acc) 
+  | Ite (sa, a1, a2) -> 
+    STerm.union (variables_of sa) (variables_atom a1 (variables_atom a2 acc))
+
+and variables_of sa = SAtom.fold variables_atom sa STerm.empty
+
+
+let apply_assigns assigns sigma level =
+  List.fold_left 
+    (fun (nsa, terms) (h, t) ->
+      let nt = Elem (h, Glob) in
+      let t = subst_term sigma t in
+      SAtom.add (Comp (prime_term (level+1) nt, Eq, prime_term level t)) nsa,
+      STerm.add nt terms)
+    (SAtom.empty, STerm.empty) assigns
+
+
+let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma level =
+  let rec sd acc = function
+    | [] -> assert false
+    | [d] -> List.rev acc, d
+    | s::r -> sd (s::acc) r in
+  let swts, (d, t) = sd [] swts in
+  assert (d = SAtom.singleton True);
+  let at = prime_term (level+1) (Access (a, j)) in
+  let t = prime_term level t in
+  let default = Comp (at, Eq, t) in
+  let ites = 
+    List.fold_left (fun ites (sa, t) ->
+      let sa = prime_satom level sa in
+      let t = prime_term level t in
+      Ite (sa, Comp (at, Eq, t), ites)) default swts
+  in
+  List.fold_left (fun (sa, st) i ->
+    SAtom.add (subst_atom [j, i] ites) sa,
+    STerm.add (Access (a, j)) st
+  ) (sa, st) procs
+
+let apply_updates upds procs sigma level =
+  List.fold_left 
+    (fun acc up -> add_update acc up procs sigma level)
+    (SAtom.empty, STerm.empty) upds
+
+let preserve_terms upd_terms sa level =
+  let vsa = STerm.fold 
+    (fun t acc -> STerm.add (unprime_term t) acc) (variables_of sa) STerm.empty
+  in
+  let unc = STerm.diff vsa upd_terms in
+  STerm.fold (fun t acc ->
+    SAtom.add (Comp (prime_term (level+1) t, Eq, prime_term level t)) acc)
+    unc SAtom.empty
+
+
+let uguard_dnf sigma args tr_args level = function
+  | [] -> []
+  | [j, dnf] ->
+      let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
+      List.map (fun i ->
+	List.map (fun sa ->
+	  prime_satom level (subst_atoms ((j, i)::sigma) sa)) dnf) uargs
+  | _ -> assert false
+  
+  
+let post sa tr args procs level =
+  let sigma = List.combine tr.tr_args args in
+  let guard = prime_satom level (subst_atoms sigma tr.tr_reqs) in
+  let udnf = uguard_dnf sigma procs args level tr.tr_ureq in
+  begin 
+    try
+      Prover.check_guard procs sa guard udnf
+    with
+      | Smt.Sat | Smt.IDontknow -> ()
+      | Smt.Unsat uc -> raise (Smt.Unsat uc)
+  end;
+  let assi, assi_terms = apply_assigns tr.tr_assigns sigma level in
+  let upd, upd_terms = apply_updates tr.tr_upds procs sigma level in
+  let unchaged = preserve_terms (STerm.union assi_terms upd_terms) sa level in
+  SAtom.union unchaged (SAtom.union assi (SAtom.union upd sa)) 
+
+
 let mkinit arg init args =
+  let init = prime_satom 0 init in
   match arg with
     | None -> init
     | Some z ->
@@ -1169,45 +1272,26 @@ let mkinit arg init args =
 
 exception Impos_trans of transition * Hstring.t list
 
-let apply_assigns sa assigns prime =
-  let nsa = 
-    SAtom.fold (fun a acc -> match a with
-      | Comp (Elem (x, _), op, _) 
-	  when Hstring.list_mem_assoc x assigns -> acc
-      | Comp (_, op, Elem (x, _)) 
-	  when Hstring.list_mem_assoc x assigns -> acc
-      | _ -> SAtom.add a acc) sa SAtom.empty  
+
+let check_trace ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s) =
+  Smt.Typing.declare_primed 0;
+  let sinit = mkinit ia init procs in
+  eprintf "sinit:%a@." Pretty.print_cube sinit;
+  let nsa, level, unsafe = 
+    List.fold_left (fun (sa, level, _) (tr, args, {t_unsafe = _, unsafe}) ->
+      Smt.Typing.declare_primed (level + 1);
+      let nsa = post sa tr args procs level in
+      nsa, level + 1, unsafe) (sinit, 0, un) from
   in
-  List.fold_left (fun acc (h, t) -> SAtom.add (Comp (Elem (h, Glob), Eq, t)) acc)
-    nsa assigns
+  begin 
+    try
+      Prover.check_guard procs nsa (prime_satom level unsafe) []
+    with
+      | Smt.Sat | Smt.IDontknow -> ()
+      | Smt.Unsat uc -> raise (Smt.Unsat uc)
+  end;
+  raise (BUnsafe s)
 
-let apply_updates sa upds = assert false
-  
-
-  
-let post sa ({ tr_args = tr_args; tr_reqs = req; tr_ureq = ureq;} as tr) 
-    args procs =
-  let sigma = List.combine tr_args args in
-  let guard = subst_atoms sigma req in
-  let uguards = uguard sigma procs args ureq in
-  let possible_guards = List.map (fun u -> SAtom.union u guard) uguards in
-  let possible = 
-    List.exists (fun g -> 
-      try Prover.guard procs g; true with
-	| Smt.Unsat _ -> false
-	| Smt.Sat | Smt.IDontknow -> true) possible_guards
-  in
-  if not possible then raise (Impos_trans (tr, args))
-  else assert false
-  
-
-
-let check_trace { t_unsafe = args, sa; t_trans = trs; 
-	   t_from = from; t_init = ia, init} =
-  let sinit = mkinit ia init args in
-  assert false
-  
-  
 
 (**********************)
 (* Postponed Formulas *)
@@ -1227,6 +1311,22 @@ let postpone args p np =
   let sa1 = SAtom.filter (has_args args) p in
   let sa2 = SAtom.filter (has_args args) np in
   SAtom.equal sa2 sa1
+
+let uguard sigma args tr_args = function
+  | [] -> [SAtom.empty]
+  | [j, dnf] ->
+      let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
+      List.fold_left 
+	(fun lureq z ->
+	   let m = List.map (subst_atoms ((j, z)::sigma)) dnf in
+	   List.fold_left 
+	     (fun acc sa -> 
+		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
+	)
+	[SAtom.empty]
+	uargs
+
+  | _ -> assert false
 
 let add_list n l = 
   if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
@@ -1573,6 +1673,9 @@ let is_inv search p invs =
 module T = struct
   type t = t_system
 
+  exception Unsafe of t
+
+
   let invariants s = 
     List.map (fun ((a,u) as i) -> 
       let ar = ArrayAtom.of_satom u in
@@ -1599,7 +1702,14 @@ module T = struct
   let fixpoint = fixpoint
   let easy_fixpoint = easy_fixpoint
   let hard_fixpoint = hard_fixpoint
-  let safety = check_safety
+
+  let safety s = 
+    try check_safety s 
+    with BUnsafe s -> 
+      try check_trace s 
+      with BUnsafe s -> raise (Unsafe s)
+
+
   let pre = pre_system
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
