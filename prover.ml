@@ -122,6 +122,10 @@ and make_literal = function
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
+let make_dnfs dnfs =
+  F.make F.And 
+    (List.map (fun l -> F.make F.Or (List.map make_formula_set l)) dnfs)
+
 let contain_arg z = function
   | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
   | Access (x, y) -> Hstring.equal y z
@@ -171,11 +175,18 @@ let assume_node ap =
   Smt.assume f;
   Smt.check ~profiling
 
-let guard args sa =
+let check_guard args sa guard udnf =
   Smt.clear ();
   Smt.assume (distinct_vars (List.length args));
   (* Smt.assume (order_vars (List.length args)); *)
-  let f = make_formula_set sa in
+  let fg = make_formula_set (SAtom.union sa guard) in
+  let f = 
+    if udnf = [] then fg
+    else 
+      let fudnfs = make_dnfs udnf in
+      F.make F.And [fg; fudnfs] 
+  in
   if debug_smt then eprintf "[smt] guard: %a@." F.print f;
   Smt.assume f;
   Smt.check ~profiling
+

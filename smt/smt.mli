@@ -29,6 +29,7 @@ module Typing : sig
     
   val declare_type : Hstring.t * Hstring.t list -> unit
   val declare_name : Hstring.t -> Hstring.t list -> Hstring.t -> unit
+  val declare_primed : int -> unit
 
   module Variant : sig
 

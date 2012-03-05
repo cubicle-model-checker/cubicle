@@ -71,6 +71,17 @@ module Typing = struct
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
+  
+  let prime h level =
+    Hstring.make ((Hstring.view h)^"@"^(string_of_int level))
+
+
+  let declare_primed level =
+    let s = H.fold (fun f (_, args, ret) acc -> (f,args,ret)::acc) decl_symbs [] in
+    List.iter (fun (f,args,ret) -> 
+      let f' = prime f level in
+      H.add decl_symbs f' (Symbols.name f', args, ret)) s    
+
   let find s = let _, args, ret = H.find decl_symbs s in args, ret
 
   let declared s = 
@@ -395,7 +406,7 @@ let export_unsatcore cl =
       l := (Vec.get atoms i).Solver_types.lit :: !l
     done; 
     !l) cl
-  in (* check_unsatcore uc; *) 
+  in check_unsatcore uc; 
   uc
 
 let assume f =
