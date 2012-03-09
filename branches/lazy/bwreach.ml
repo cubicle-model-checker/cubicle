@@ -1273,8 +1273,18 @@ let mkinit arg init args =
 exception Impos_trans of transition * Hstring.t list
 
 
+let rec procs_from_trace trace =
+  let procs = 
+    List.fold_left (fun acc (_, args, {t_unsafe = nargs, unsafe}) ->
+      List.fold_left (fun acc x -> S.add x acc) acc (args@nargs))
+      S.empty trace in
+  S.elements procs
+
 let check_trace ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s) =
   Smt.Typing.declare_primed 0;
+  
+  let procs = procs_from_trace from in
+
   let sinit = mkinit ia init procs in
   eprintf "sinit:%a@." Pretty.print_cube sinit;
   let nsa, level, unsafe = 
@@ -1357,6 +1367,9 @@ let make_cubes =
 		  let ureq = simplification_atoms np ureq in
 		  let np = SAtom.union ureq np in
 		  let np = if lazy_abs then abstract sign np else np in
+		  let np, nargs = 
+		    if lazy_abs then let np, (nargs, _) = proper_cube np in np, nargs 
+		    else np, nargs in
 		  if debug && !verbose > 0 then Debug.pre_cubes np nargs;
 		  if inconsistent np then begin
 		    if debug && !verbose > 0 then eprintf "(inconsistent)@.";

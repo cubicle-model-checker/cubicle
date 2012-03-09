@@ -190,3 +190,13 @@ let check_guard args sa guard udnf =
   Smt.assume f;
   Smt.check ~profiling
 
+
+let rec terms_from_smtterm level t =
+  let {Term.f=f; xs=xs; ty=ty} = Term.view t in assert false
+
+let terms_from_lit level = function
+  | _ -> assert false
+
+let terms_from_unsat level uc =
+  List.fold_left (fun acc l ->
+    List.fold_left (fun acc l -> (terms_from_lit level l)@acc) acc l) [] uc
