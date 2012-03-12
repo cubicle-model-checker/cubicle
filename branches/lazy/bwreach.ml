@@ -1379,6 +1379,8 @@ let make_cubes =
 		 try
 		  let ureq = simplification_atoms np ureq in
 		  let np = SAtom.union ureq np in
+		  let real_np = np in
+		  let real_nargs = nargs in
 		  let np = if lazy_abs then abstract sign np else np in
 		  let np, nargs = 
 		    if lazy_abs then let np, (nargs, _) = proper_cube np in np, nargs 
@@ -1399,6 +1401,7 @@ let make_cubes =
 			{ s with
 			    t_from = (tr, tr_args, s)::s.t_from;
 			    t_unsafe = nargs, np;
+			    t_real = real_nargs, real_np;
 			    t_arru = arr_np;
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
 			    t_nb = !cpt;
@@ -1707,6 +1710,7 @@ module T = struct
       let ar = ArrayAtom.of_satom u in
       { s with 
 	t_unsafe = i; 
+	t_real = i;
 	t_arru = ar;
 	t_alpha = ArrayAtom.alpha ar a
       }) s.t_invs
