@@ -191,11 +191,43 @@ let check_guard args sa guard udnf =
   Smt.check ~profiling
 
 
-let rec terms_from_smtterm level t =
-  let {Term.f=f; xs=xs; ty=ty} = Term.view t in assert false
+let proc_var_from_smtterm t =
+  let {Term.f=f; xs=xs; ty=ty} = Term.view t in
+  match f with
+    | Symbols.Name (h, Symbols.Other) -> h
+    | _ -> assert false
 
-let terms_from_lit level = function
-  | _ -> assert false
+let rec terms_from_smtterm level t =
+  let {Term.f=f; xs=xs; ty=ty} = Term.view t in
+  match f with
+    | Symbols.Name (h, Symbols.Other) ->
+      begin 
+	try
+	  let s = Hstring.view h in
+	  let ind = String.index s '@' + 1 in
+	  let l = int_of_string (String.sub s ind (String.length s - ind)) in
+	  if l = level then
+	    match xs with
+	      | [] ->
+		let r = Hstring.make (String.sub s 0 (ind - 1)) in
+		[Elem (r, Glob)]
+	      | [t] -> 
+		let r = Hstring.make (String.sub s 0 (ind - 1)) in
+		let i = proc_var_from_smtterm t in
+		[Access (r, i)]
+	      | _ -> assert false
+	  else []
+	with Not_found -> []
+      end
+    | Symbols.Op _ ->
+      List.flatten (List.map (terms_from_smtterm level) xs)
+    | _ -> []
+
+let terms_from_lit level l =
+  match Literal.LT.view l with
+    | Literal.Eq (a, b) -> (terms_from_smtterm level a)@(terms_from_smtterm level b)
+    | Literal.Distinct (_, ls) | Literal.Builtin (_, _, ls) ->
+      List.flatten (List.map (terms_from_smtterm level) ls)
 
 let terms_from_unsat level uc =
   List.fold_left (fun acc l ->
