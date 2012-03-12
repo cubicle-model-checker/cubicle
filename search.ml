@@ -283,7 +283,8 @@ module BFS_base ( X : I ) = struct
 
   type t = X.t 
 
-  let search inv_search invgen ~invariants ~visited uns = 
+  let search inv_search invgen ~invariants ~visited uns =
+
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -291,6 +292,22 @@ module BFS_base ( X : I ) = struct
     let invariants = ref invariants in
     let not_invariants = ref [] in
     let q = Queue.create () in
+    let backstack = Stack.create () in
+    
+    let push_backstack s =
+      Stack.push (s, Queue.copy q, !visited, !postponed)
+    in
+
+
+    let backtrack s =
+      let found = ref false in
+      while not !found do
+	assert false
+      done;
+      assert false
+    in
+
+
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
