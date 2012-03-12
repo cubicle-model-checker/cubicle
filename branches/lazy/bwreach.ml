@@ -1242,7 +1242,9 @@ let uguard_dnf sigma args tr_args level = function
 	List.map (fun sa ->
 	  prime_satom level (subst_atoms ((j, i)::sigma) sa)) dnf) uargs
   | _ -> assert false
-  
+
+
+exception UnsatGuard of int * Literal.LT.t list list
   
 let post sa tr args procs level =
   let sigma = List.combine tr.tr_args args in
@@ -1253,7 +1255,7 @@ let post sa tr args procs level =
       Prover.check_guard procs sa guard udnf
     with
       | Smt.Sat | Smt.IDontknow -> ()
-      | Smt.Unsat uc -> raise (Smt.Unsat uc)
+      | Smt.Unsat uc -> raise (UnsatGuard (level, uc))
   end;
   let assi, assi_terms = apply_assigns tr.tr_assigns sigma level in
   let upd, upd_terms = apply_updates tr.tr_upds procs sigma level in
@@ -1280,27 +1282,38 @@ let rec procs_from_trace trace =
       S.empty trace in
   S.elements procs
 
-let check_trace ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s) =
-  Smt.Typing.declare_primed 0;
-  
-  let procs = procs_from_trace from in
 
-  let sinit = mkinit ia init procs in
-  eprintf "sinit:%a@." Pretty.print_cube sinit;
-  let nsa, level, unsafe = 
-    List.fold_left (fun (sa, level, _) (tr, args, {t_unsafe = _, unsafe}) ->
-      Smt.Typing.declare_primed (level + 1);
-      let nsa = post sa tr args procs level in
-      nsa, level + 1, unsafe) (sinit, 0, un) from
-  in
-  begin 
-    try
-      Prover.check_guard procs nsa (prime_satom level unsafe) []
-    with
-      | Smt.Sat | Smt.IDontknow -> ()
-      | Smt.Unsat uc -> raise (Smt.Unsat uc)
-  end;
-  raise (BUnsafe s)
+
+let check_trace ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s) =
+  try
+    Smt.Typing.declare_primed 0;
+    
+    let procs = procs_from_trace from in
+
+    let sinit = mkinit ia init procs in
+    eprintf "sinit:%a@." Pretty.print_cube sinit;
+    let nsa, level, unsafe = 
+      List.fold_left (fun (sa, level, _) (tr, args, {t_unsafe = _, unsafe}) ->
+	Smt.Typing.declare_primed (level + 1);
+	let nsa = post sa tr args procs level in
+	nsa, level + 1, unsafe) (sinit, 0, un) from
+    in
+    begin 
+      try
+	Prover.check_guard procs nsa (prime_satom level unsafe) []
+      with
+	| Smt.Sat | Smt.IDontknow -> ()
+	| Smt.Unsat uc -> raise (UnsatGuard (level, uc))
+    end;
+    raise (BUnsafe s)
+  with (UnsatGuard (level, uc)) ->
+    let signature = 
+      List.fold_left (fun acc t -> STerm.add t acc) 
+	STerm.empty (Prover.terms_from_unsat level uc) in
+    eprintf "New signature:@.";
+    STerm.iter (fun t -> eprintf ">> %a@." Pretty.print_term t) signature;
+    exit 1
+	
 
 
 (**********************)

@@ -19,4 +19,4 @@ val assume_goal : t_system -> unit
 val assume_node : ArrayAtom.t -> unit
 val check_guard : 
   Hstring.t list -> SAtom.t -> SAtom.t -> SAtom.t list list -> unit
-
+val terms_from_unsat : int -> Literal.LT.t list list -> term list

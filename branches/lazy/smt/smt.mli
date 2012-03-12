@@ -65,7 +65,7 @@ module Formula : sig
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
   type t = 
-    | Lit of Literal.LT.t  
+    | Lit of Literal.LT.t
     | Comb of combinator * t list
 
   val vrai : t
