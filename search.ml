@@ -139,6 +139,9 @@ end
 module type I = sig
   type t
 
+  exception Unsafe of t
+  exception NewSignature of t * Ast.STerm.t
+
   val size : t -> int
   val maxrounds : int
   val maxnodes : int
@@ -174,6 +177,10 @@ module type I = sig
   val print : formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
+
+  val change_signature : t -> Ast.STerm.t -> t
+  val equal : t -> t -> bool
+
 end
 
 module type S = sig 
@@ -294,17 +301,26 @@ module BFS_base ( X : I ) = struct
     let q = Queue.create () in
     let backstack = Stack.create () in
     
-    let push_backstack s =
-      Stack.push (s, Queue.copy q, !visited, !postponed)
+    let push_backstack s cpt =
+      Stack.push (s, cpt, Queue.copy q, !visited, !postponed) backstack
     in
 
 
-    let backtrack s =
+    let backtrack s sign =
       let found = ref false in
+      let cpt = ref 0 in
       while not !found do
-	assert false
+	let s', cpt', q', vis, post = Stack.pop backstack in
+	if X.equal s s' then begin
+	  found := true;
+	  cpt := cpt';
+	  visited := vis;
+	  postponed := post;
+	  Queue.clear q;
+	  Queue.transfer q' q;
+	end
       done;
-      assert false
+      X.change_signature s sign, !cpt
     in
 
 
@@ -313,10 +329,19 @@ module BFS_base ( X : I ) = struct
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	(Profiling.print_report !nb_nodes !invariants !nb_deleted;
 	 raise ReachBound);
-      X.safety s;
+      
+      let s, cpt = 
+	try 
+	  X.safety s;
+	  s, cpt
+	with X.NewSignature (orig, sign) ->
+	  backtrack orig sign
+      in
+	
       if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) 
       then
 	begin
+	  push_backstack s cpt;	  
 	  incr nb_nodes;
 	  if not quiet then begin
 	    Profiling.print "BFS" !nb_nodes (X.size s);

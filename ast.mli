@@ -111,7 +111,6 @@ type t_system = {
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
-  t_real : Hstring.t list * SAtom.t;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;
   t_trans : transition list;
