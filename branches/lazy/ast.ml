@@ -124,7 +124,7 @@ let add a s =
 
   (* Substitute an indice variable j by i in a set of atoms *)
 
-let svar sigma v = Hstring.list_assoc v sigma
+let svar sigma v = try Hstring.list_assoc v sigma with Not_found -> v
     
 let subst_term sigma t = 
   match t with
@@ -300,7 +300,6 @@ type t_system = {
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
-  t_real : Hstring.t list * SAtom.t;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;
   t_trans : transition list;

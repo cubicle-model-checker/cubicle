@@ -281,7 +281,6 @@ let system s =
       t_init = s.init;
       t_invs = s.invs;
       t_unsafe = un;
-      t_real = un;
       t_arru = arru;
       t_alpha = ArrayAtom.alpha arru args;
       t_trans = s.trans;

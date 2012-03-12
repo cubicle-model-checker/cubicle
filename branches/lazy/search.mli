@@ -19,6 +19,9 @@ exception Unsafe
 module type I = sig
   type t
 
+  exception Unsafe of t
+  exception NewSignature of t * Ast.STerm.t
+
   val size : t -> int
   val maxrounds : int
   val maxnodes : int
@@ -54,6 +57,9 @@ module type I = sig
   val print : Format.formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
+
+  val change_signature : t -> Ast.STerm.t -> t
+  val equal : t -> t -> bool
 
 end
 

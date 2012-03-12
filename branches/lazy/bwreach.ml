@@ -539,12 +539,12 @@ let check_safety s =
     if not (obviously_safe s) then
       begin
 	Prover.unsafe s;
-	if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
+	if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_unsafe s;
 	raise (BUnsafe s)
       end
   with
     | Smt.Sat ->
-      if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
+      if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_unsafe s;
       raise (BUnsafe s)
     | Smt.IDontknow -> exit 2
     | Smt.Unsat _ -> ()
@@ -651,23 +651,24 @@ let proper_cube sa =
   if profiling then TimerApply.start ();
   let args = args_of_atoms sa in
   let cpt = ref 1 in
-  let sa = 
+  let sa, sigma = 
     List.fold_left 
-      (fun sa arg -> 
+      (fun (sa,sigma) arg -> 
 	 let n = number_of (H.view arg) in
-	 if n = !cpt then (incr cpt; sa)
+	 if n = !cpt then (incr cpt; sa, sigma)
 	 else 
 	   let sa = 
-	     subst_atoms [arg, H.make ("#"^(string_of_int !cpt))] sa in 
-	   incr cpt; sa)
-      sa args
+	     subst_atoms [arg, H.make ("#"^(string_of_int !cpt))] sa in
+	   let sigma = (arg, H.make ("#"^(string_of_int !cpt)))::sigma in
+	   incr cpt; sa, sigma)
+      (sa, []) args
   in
   let l = ref [] in
   for n = !cpt - 1 downto 1 do 
     l := (H.make ("#"^(string_of_int n))) :: !l
   done;
   if profiling then TimerApply.pause ();
-  sa, (!l, H.make ("#"^(string_of_int !cpt)))
+  sa, (!l, H.make ("#"^(string_of_int !cpt))), sigma
 
 
 (****************************************************)
@@ -1244,9 +1245,10 @@ let uguard_dnf sigma args tr_args level = function
   | _ -> assert false
 
 
-exception UnsatGuard of int * Literal.LT.t list list
+exception UnsatGuard of int * t_system * Literal.LT.t list list
+exception BNewSignature of t_system * STerm.t
   
-let post sa tr args procs level =
+let post s sa tr args procs level =
   let sigma = List.combine tr.tr_args args in
   let guard = prime_satom level (subst_atoms sigma tr.tr_reqs) in
   let udnf = uguard_dnf sigma procs args level tr.tr_ureq in
@@ -1255,7 +1257,7 @@ let post sa tr args procs level =
       Prover.check_guard procs sa guard udnf
     with
       | Smt.Sat | Smt.IDontknow -> ()
-      | Smt.Unsat uc -> raise (UnsatGuard (level, uc))
+      | Smt.Unsat uc -> raise (UnsatGuard (level, s, uc))
   end;
   let assi, assi_terms = apply_assigns tr.tr_assigns sigma level in
   let upd, upd_terms = apply_updates tr.tr_upds procs sigma level in
@@ -1284,7 +1286,8 @@ let rec procs_from_trace trace =
 
 
 
-let check_trace ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s) =
+let check_trace
+    ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s) =
   try
     Smt.Typing.declare_primed 0;
     
@@ -1292,27 +1295,30 @@ let check_trace ({ t_unsafe = procs, un; t_from = from; t_init = ia, init} as s)
 
     let sinit = mkinit ia init procs in
     eprintf "sinit:%a@." Pretty.print_cube sinit;
-    let nsa, level, unsafe = 
-      List.fold_left (fun (sa, level, _) (tr, args, {t_unsafe = _, unsafe}) ->
-	Smt.Typing.declare_primed (level + 1);
-	let nsa = post sa tr args procs level in
-	nsa, level + 1, unsafe) (sinit, 0, un) from
+    let nsa, level, unsafe, s = 
+      List.fold_left 
+	(fun (sa, level, _, _) (tr, args, ({t_unsafe = _, unsafe} as s)) ->
+	  eprintf "declare...@.";
+	  Smt.Typing.declare_primed (level + 1);
+	  eprintf "post...@.";
+	  let nsa = post s sa tr args procs level in
+	  eprintf "level %d:%a@." (level+1) Pretty.print_cube nsa;
+	  nsa, level + 1, unsafe, s)
+	(sinit, 0, un, s) from
     in
     begin 
       try
 	Prover.check_guard procs nsa (prime_satom level unsafe) []
       with
 	| Smt.Sat | Smt.IDontknow -> ()
-	| Smt.Unsat uc -> raise (UnsatGuard (level, uc))
-    end;
-    raise (BUnsafe s)
-  with (UnsatGuard (level, uc)) ->
+	| Smt.Unsat uc -> raise (UnsatGuard (level, s, uc))
+    end
+  with (UnsatGuard (level, s, uc)) ->
     let signature = 
       List.fold_left (fun acc t -> STerm.add t acc) 
 	STerm.empty (Prover.terms_from_unsat level uc) in
-    eprintf "New signature:@.";
-    STerm.iter (fun t -> eprintf ">> %a@." Pretty.print_term t) signature;
-    exit 1
+      eprintf "backtrack to %a @." Pretty.print_unsafe s;
+    raise (BNewSignature (s, signature))
 	
 
 
@@ -1372,25 +1378,21 @@ let make_cubes =
 	let tr_args = List.map (svar sigma) tr.tr_args in
 	List.fold_left
 	  (fun (ls, post) np ->
-	     let np, (nargs, _) = proper_cube np in
+	     let np, (nargs, _), psigma = proper_cube np in
+	     let tr_args = List.map (svar psigma) tr_args in
 	     let lureq = uguard sigma nargs tr_args tr.tr_ureq in
 	     List.fold_left 
 	       (fun (ls, post) ureq ->
 		 try
 		  let ureq = simplification_atoms np ureq in
 		  let np = SAtom.union ureq np in
-		  let real_np = np in
-		  let real_nargs = nargs in
-		  let np = if lazy_abs then abstract sign np else np in
-		  let np, nargs = 
-		    if lazy_abs then let np, (nargs, _) = proper_cube np in np, nargs 
-		    else np, nargs in
 		  if debug && !verbose > 0 then Debug.pre_cubes np nargs;
 		  if inconsistent np then begin
 		    if debug && !verbose > 0 then eprintf "(inconsistent)@.";
 		    (ls, post)
 		  end
 		  else
+		    let np = if lazy_abs then abstract sign np else np in
 		    if simpl_by_uc && 
 		      already_closed s tr tr_args <> None 
 		    then ls, post
@@ -1401,7 +1403,6 @@ let make_cubes =
 			{ s with
 			    t_from = (tr, tr_args, s)::s.t_from;
 			    t_unsafe = nargs, np;
-			    t_real = real_nargs, real_np;
 			    t_arru = arr_np;
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
 			    t_nb = !cpt;
@@ -1463,7 +1464,7 @@ let pre tr unsafe =
       (SAtom.fold (fun a -> add (pre_atom tau a)) unsafe SAtom.empty)
   in
   if debug && !verbose > 0 then Debug.pre tr pre_unsafe;
-  let pre_unsafe, (args, m) = proper_cube pre_unsafe in
+  let pre_unsafe, (args, m), _ = proper_cube pre_unsafe in
   if tr.tr_args = [] then tr, pre_unsafe, (args, args)
   else tr, pre_unsafe, (args, m::args)
 
@@ -1703,6 +1704,7 @@ module T = struct
   type t = t_system
 
   exception Unsafe of t
+  exception NewSignature of t * STerm.t
 
 
   let invariants s = 
@@ -1710,7 +1712,6 @@ module T = struct
       let ar = ArrayAtom.of_satom u in
       { s with 
 	t_unsafe = i; 
-	t_real = i;
 	t_arru = ar;
 	t_alpha = ArrayAtom.alpha ar a
       }) s.t_invs
@@ -1736,8 +1737,10 @@ module T = struct
   let safety s = 
     try check_safety s 
     with BUnsafe s -> 
-      try check_trace s 
-      with BUnsafe s -> raise (Unsafe s)
+      try 
+	check_trace s;
+	raise (Unsafe s)
+      with BNewSignature (s, sign) -> raise (NewSignature (s, sign))
 
 
   let pre = pre_system
@@ -1746,6 +1749,15 @@ module T = struct
   let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
     Pervasives.compare (List.length args1) (List.length args2))
   let nb_father s = s.t_nb_father
+
+  let change_signature s sign =
+    let new_sign = STerm.union sign s.t_abstract_signature in
+    eprintf "New signature:@.";
+    STerm.iter (fun t -> eprintf ">> %a@." Pretty.print_term t) new_sign;
+    { s with t_abstract_signature = new_sign }
+
+  let equal s1 s2 = s1.t_nb = s2.t_nb
+
 end
 
 module StratDFS = Search.DFS(T)
