@@ -752,17 +752,53 @@ module DFSHL ( X : I ) = struct
     let postponed = ref [] in
     let invariants = ref invariants in
     let not_invariants = ref [] in
+
+    let backstack = Stack.create () in
+    
+    let push_backstack s cpt h =
+      Stack.push (s, cpt, h, !visited, !postponed) backstack
+    in
+
+
+    let backtrack s sign =
+      let found = ref false in
+      let cpt = ref 0 in
+      let h = ref H.empty in
+      while not !found do
+	let s', cpt', h', vis, post = Stack.pop backstack in
+	if X.equal s s' then begin
+	  found := true;
+	  cpt := cpt';
+	  h := h';
+	  visited := vis;
+	  postponed := post;
+	end
+      done;
+      X.change_signature s sign, !cpt, !h
+    in
+
+
+
     let rec search_rec_aux h =
 	let (cpt, s), h = H.pop h in
 	if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	  raise ReachBound;
-	X.safety s;
+
+	let s, cpt, h = 
+	  try 
+	    X.safety s;
+	    s, cpt, h
+	  with X.NewSignature (orig, sign) ->
+	    backtrack orig sign
+	in
+	
 	let h  =
 	  if X.fixpoint ~invariants:!invariants 
 	    ~visited:!visited (* (List.rev_append !visited !postponed) *) s
 	  then (incr Profiling.cpt_fix; h)
 	  else
 	    begin
+	      push_backstack s cpt h;
 	      incr nb_nodes;
 	      if not quiet then Profiling.print "DFSHL" !nb_nodes (X.size s);
 	      if not quiet then printf " node %d= @[%a@]@." !nb_nodes 

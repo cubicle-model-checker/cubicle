@@ -120,4 +120,8 @@ type t_system = {
   t_abstract_signature : STerm.t;
 }
 
+val subst_system : (Hstring.t * Hstring.t) list -> t_system -> t_system
+
+val variables_of : SAtom.t -> STerm.t
+
 val declared_terms : ArrayAtom.t -> bool

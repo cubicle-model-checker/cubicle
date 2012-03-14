@@ -670,6 +670,47 @@ let proper_cube sa =
   if profiling then TimerApply.pause ();
   sa, (!l, H.make ("#"^(string_of_int !cpt))), sigma
 
+let proper_subst sa =
+  let args = args_of_atoms sa in
+  let cpt = ref 1 in
+  let sigma = 
+    List.fold_left 
+      (fun sigma arg -> 
+	 let n = number_of (H.view arg) in
+	 if n = !cpt then (incr cpt; sigma)
+	 else 
+	   let sigma = (arg, H.make ("#"^(string_of_int !cpt)))::sigma in
+	   incr cpt; sigma)
+      [] args
+  in
+  let l = ref [] in
+  for n = !cpt - 1 downto 1 do 
+    l := (H.make ("#"^(string_of_int n))) :: !l
+  done;
+  (!l, H.make ("#"^(string_of_int !cpt))), sigma
+
+let proper_cube sa = 
+  if profiling then TimerApply.start ();
+  let ar, sigma = proper_subst sa in
+  let sa = subst_atoms sigma sa in
+  if profiling then TimerApply.pause ();
+  sa, ar
+
+let proper_args sa =
+  let args = args_of_atoms sa in
+  let cpt = ref 1 in
+  try 
+    List.iter
+      (fun arg -> 
+	let n = number_of (H.view arg) in
+	if n = !cpt then incr cpt
+	else (* raise Exit *) incr cpt)
+      args;
+    args, H.make ("#"^(string_of_int !cpt))
+  with Exit -> args, H.make ("#"^(string_of_int !cpt))
+
+  
+
 
 (****************************************************)
 (* Find relevant quantifier instantiation for 	    *)
@@ -849,13 +890,13 @@ exception Fixpoint
 let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
   
   Prover.assume_goal s;
-  (* let nb_nargs = List.length nargs in *)
+  let nb_nargs = List.length nargs in
   let nodes = List.fold_left
     (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp)->
-      let dif = extra_args real_args nargs in
-      (* if List.length args > nb_nargs then nodes *)
-      (* else *)
-      let nargs = if dif = [] then nargs else nargs@dif in
+      if List.length args > nb_nargs then nodes
+      else
+      (* let dif = extra_args real_args nargs in *)
+      (* let nargs = if dif = [] then nargs else nargs@dif in *)
       let d = relevant_permutations anp ap args nargs in
       List.fold_left
 	(fun nodes ss ->
@@ -1175,20 +1216,6 @@ let unprime_term t = match t with
   | Access (a, x) -> Access (unprime_h a, x)
   | _ -> t
 
-let variables_term t acc = match t with
-  | Elem (a, Glob) | Access (a, _) -> STerm.add t acc
-  | Arith (a, Glob, _) -> STerm.add (Elem (a, Glob)) acc
-  | _ -> acc
-
-let rec variables_atom a acc = match a with
-  | True | False -> acc
-  | Comp (t1, _, t2) -> variables_term t1 (variables_term t2 acc) 
-  | Ite (sa, a1, a2) -> 
-    STerm.union (variables_of sa) (variables_atom a1 (variables_atom a2 acc))
-
-and variables_of sa = SAtom.fold variables_atom sa STerm.empty
-
-
 let apply_assigns assigns sigma level =
   List.fold_left 
     (fun (nsa, terms) (h, t) ->
@@ -1205,19 +1232,19 @@ let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma level =
     | [d] -> List.rev acc, d
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
-  assert (d = SAtom.singleton True);
+  (* assert (d = SAtom.singleton True); *)
   let at = prime_term (level+1) (Access (a, j)) in
-  let t = prime_term level t in
+  let t = subst_term sigma (prime_term level t) in
   let default = Comp (at, Eq, t) in
   let ites = 
     List.fold_left (fun ites (sa, t) ->
-      let sa = prime_satom level sa in
-      let t = prime_term level t in
+      let sa = subst_atoms sigma (prime_satom level sa) in
+      let t = subst_term sigma (prime_term level t) in
       Ite (sa, Comp (at, Eq, t), ites)) default swts
   in
   List.fold_left (fun (sa, st) i ->
     SAtom.add (subst_atom [j, i] ites) sa,
-    STerm.add (Access (a, j)) st
+    STerm.add (Access (a, i)) st
   ) (sa, st) procs
 
 let apply_updates upds procs sigma level =
@@ -1262,7 +1289,8 @@ let post s sa tr args procs level =
   let assi, assi_terms = apply_assigns tr.tr_assigns sigma level in
   let upd, upd_terms = apply_updates tr.tr_upds procs sigma level in
   let unchaged = preserve_terms (STerm.union assi_terms upd_terms) sa level in
-  SAtom.union unchaged (SAtom.union assi (SAtom.union upd sa)) 
+  simplification_atoms SAtom.empty
+    (SAtom.union unchaged (SAtom.union assi (SAtom.union upd sa)))
 
 
 let mkinit arg init args =
@@ -1374,12 +1402,14 @@ let make_cubes =
        t_abstract_signature = sign} as s) tr np ->
       let nb_uargs = List.length uargs in
       let cube acc sigma =
+	if debug && !verbose > 0 then Debug.pre_cubes np uargs;
 	let lnp = simplify_atoms (subst_atoms sigma np) in
 	let tr_args = List.map (svar sigma) tr.tr_args in
 	List.fold_left
 	  (fun (ls, post) np ->
-	     let np, (nargs, _), psigma = proper_cube np in
-	     let tr_args = List.map (svar psigma) tr_args in
+	     (* let (nargs, _), psigma = proper_subst np in *)
+	     let nargs = args_of_atoms np in
+	     (* let tr_args = List.map (svar psigma) tr_args in *)
 	     let lureq = uguard sigma nargs tr_args tr.tr_ureq in
 	     List.fold_left 
 	       (fun (ls, post) ureq ->
@@ -1408,6 +1438,7 @@ let make_cubes =
 			    t_nb = !cpt;
 			    t_nb_father = nb;
 			} in
+		      (* let new_s = subst_system psigma new_s in *)
 		      match post_strategy with
 			| 0 -> add_list new_s ls, post
 			| 1 -> 
@@ -1464,7 +1495,8 @@ let pre tr unsafe =
       (SAtom.fold (fun a -> add (pre_atom tau a)) unsafe SAtom.empty)
   in
   if debug && !verbose > 0 then Debug.pre tr pre_unsafe;
-  let pre_unsafe, (args, m), _ = proper_cube pre_unsafe in
+  (* let pre_unsafe, (args, m) = proper_cube pre_unsafe in *)
+  let args, m = proper_args pre_unsafe in
   if tr.tr_args = [] then tr, pre_unsafe, (args, args)
   else tr, pre_unsafe, (args, m::args)
 
@@ -1507,7 +1539,9 @@ let init_parameters ({t_unsafe = (args, sa); t_arru = a; t_invs = invs } as s) =
   let a = ArrayAtom.of_satom sa in
   let invs = List.map (fun (argsi, sai) -> init_atoms argsi sai) invs in
   { s with t_unsafe = (args, sa); t_arru = a; 
-    t_alpha = ArrayAtom.alpha a args; t_invs = invs }
+    t_alpha = ArrayAtom.alpha a args; t_invs = invs;
+    t_abstract_signature = variables_of sa;
+  }
 
 
 
@@ -1751,9 +1785,13 @@ module T = struct
   let nb_father s = s.t_nb_father
 
   let change_signature s sign =
+    eprintf "Old signature:@.";
+    STerm.iter (fun t -> eprintf ">> %a@." Pretty.print_term t)
+      s.t_abstract_signature;
     let new_sign = STerm.union sign s.t_abstract_signature in
     eprintf "New signature:@.";
     STerm.iter (fun t -> eprintf ">> %a@." Pretty.print_term t) new_sign;
+    assert (new_sign <> s.t_abstract_signature);
     { s with t_abstract_signature = new_sign }
 
   let equal s1 s2 = s1.t_nb = s2.t_nb
