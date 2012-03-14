@@ -410,7 +410,7 @@ let export_unsatcore cl =
       l := (Vec.get atoms i).Solver_types.lit :: !l
     done; 
     !l) cl
-  in (* check_unsatcore uc;  *)
+  in check_unsatcore uc;
   uc
 
 let assume f =

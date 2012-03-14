@@ -309,6 +309,39 @@ type t_system = {
   t_abstract_signature : STerm.t;
 }
 
+
+let rec subst_from sigma = function
+  | [] -> []
+  | (tr, args, s)::l ->
+    (tr, List.map (svar sigma) args, subst_system sigma s)::(subst_from sigma l)
+
+and subst_system sigma s =
+  let args, sa = s.t_unsafe in
+  { s with
+    t_from = subst_from sigma s.t_from;
+    t_unsafe = List.map (svar sigma) args, subst_atoms sigma sa;
+    t_arru = ArrayAtom.apply_subst sigma s.t_arru;
+    t_abstract_signature = 
+      STerm.fold 
+	(fun t acc -> STerm.add (subst_term sigma t) acc)
+	s.t_abstract_signature STerm.empty;
+  }
+
+
+let variables_term t acc = match t with
+  | Elem (a, Glob) | Access (a, _) -> STerm.add t acc
+  | Arith (a, Glob, _) -> STerm.add (Elem (a, Glob)) acc
+  | _ -> acc
+
+let rec variables_atom a acc = match a with
+  | True | False -> acc
+  | Comp (t1, _, t2) -> variables_term t1 (variables_term t2 acc) 
+  | Ite (sa, a1, a2) -> 
+    STerm.union (variables_of sa) (variables_atom a1 (variables_atom a2 acc))
+
+and variables_of sa = SAtom.fold variables_atom sa STerm.empty
+
+
 let declared_term x =
   match x with
     | Elem (_, Var) -> true
