@@ -93,9 +93,40 @@ init (p) {
 
 invariant (z) { z = Home }
 
-unsafe (p1 p2) { CacheState[p1] = Exclusive && CacheState[p2] = Exclusive }
 
-(* unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive } *)
+(*
+(* Lemma 1 *)
+unsafe (i) { CacheState[i] = Exclusive && Dirty = False }
+unsafe (i) { CacheState[i] = Exclusive && WBnet_mtype = WB }
+unsafe (i) { CacheState[i] = Exclusive && ShWBnet_mtype = ShWB }
+unsafe (i) { CacheState[i] = Exclusive && UnetMtype_home = Put }
+unsafe (i j) { CacheState[i] = Exclusive && UnetMtype[j] = PutX }
+
+
+(* Lemma 2 *)
+unsafe (i) { UnetMtype[i] = Get && UnetProc[i] <> Home && Pending = False }
+unsafe (i) { UnetMtype[i] = Get && UnetProc[i] <> Home && Local = True }
+
+
+(* Lemma 3 *)
+unsafe (i) { UnetMtype[i] = GetX && UnetProc[i] <> Home && Pending = False }
+unsafe (i) { UnetMtype[i] = GetX && UnetProc[i] <> Home && Local = True }
+
+
+(* Lemma 3 *)
+unsafe (i) { Invnet[i] = InvAck && Pending = False }
+unsafe (i) { Invnet[i] = InvAck && Nakc = True }
+unsafe (i) { Invnet[i] = InvAck && ShWBnet_mtype <> Empty_shwb }
+unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = Get && UnetProc[j] <> Home }
+unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = GetX && UnetProc[j] <> Home }
+unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = PutX && UnetProc[j] <> Home }
+*)
+
+
+invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX }
+
+
+unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive }
 
 
 
