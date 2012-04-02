@@ -105,7 +105,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.2.2
+VERSION=0.2.3
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -168,15 +168,15 @@ tags:
 # installation
 ##############
 
-install: install-man
+install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
 
-install-byte: install-man
+install-byte:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).byte $(BINDIR)/$(NAME)$(EXE)
 
-install-opt: install-man
+install-opt:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).opt $(BINDIR)/$(NAME)$(EXE)
 

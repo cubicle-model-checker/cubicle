@@ -795,7 +795,7 @@ let obvious_impossible a1 a2 =
 	   end
        | Comp (Access (a1, x1, Var), op, 
 	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
-	 Comp (Access (a, _,_), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
+	 Comp (Access (a, _,Var), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
 	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
