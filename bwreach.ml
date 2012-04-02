@@ -81,11 +81,11 @@ let rec m_number a s =
     | True | False -> s
     | Comp (Elem (x, Glob), Eq, Elem (y, Constr)) 
     | Comp (Elem (x, Constr), Eq, Elem (y, Glob)) -> SS.add (x,y) s
-    | Comp (Access (a, _), _, Elem (x, xs)) -> 
+    | Comp (Access (a, _, _), _, Elem (x, xs)) -> 
 	if xs = Glob || xs = Constr then
 	  SS.add (a, x) s 
 	else SS.add (a, hempty) s
-    | Comp (_, _, Access (a, _)) -> SS.add (a, hempty) s
+    | Comp (_, _, Access (a, _, _)) -> SS.add (a, hempty) s
     | Comp _ ->  s
     | Ite (sa, a1, a2) -> 
 	SAtom.fold m_number sa (m_number a1 (m_number a2 s))
@@ -312,14 +312,16 @@ let fresh_nondet =
     Smt.Typing.declare_name s args ret;
     s
 
-let rec find_update a i = function
+let rec find_update a i si = function
   | [] -> raise Not_found
   | { up_arr = a'; up_arg = j; up_swts = ls} :: _ when a=a' -> 
       let ls = 
 	List.map 
-	  (fun (ci, ti) -> subst_atoms [j, i] ci, subst_term [j, i] ti) ls in
+	  (fun (ci, ti) -> 
+            subst_atoms [j, i] ~sigma_sort:[Var, si] ci,
+            subst_term [j, i] ~sigma_sort:[Var, si] ti) ls in
       Branch { up_arr = a'; up_arg = i; up_swts = ls}
-  | _ :: l -> find_update a i l
+  | _ :: l -> find_update a i si l
 
 
 let find_assign tr = function
@@ -349,17 +351,17 @@ let find_assign tr = function
 	  | Arith (y, sy, cs2) -> Single (Arith (y, sy, add_constants cs1 cs2))
 	  | Access _ -> assert false
       end
-  | Access (a, i ) -> 
-      let ni = 
+  | Access (a, i, si) -> 
+      let ni, sni = 
 	if H.list_mem i tr.tr_nondets then 
-	  fresh_nondet (Smt.Typing.find i)
+	  fresh_nondet (Smt.Typing.find i), si
 	else 
 	  try (match H.list_assoc i tr.tr_assigns with
-		 | Elem (ni, _) -> ni
+		 | Elem (ni, sni) -> ni, sni
 		 | Const _ | Arith _ | Access _ -> assert false)
-	  with Not_found -> i
+	  with Not_found -> i, si
       in
-      try find_update a ni tr.tr_upds
+      try find_update a ni sni tr.tr_upds
       with Not_found -> 
 	let na = 
 	  try (match H.list_assoc a tr.tr_assigns with
@@ -367,7 +369,7 @@ let find_assign tr = function
 		 | Const _ | Arith _ | Access _ -> assert false)
 	  with Not_found -> a
 	in
-	Single (Access (na, ni))
+	Single (Access (na, ni, sni))
 
 let make_tau tr x op y =
   match find_assign tr x, find_assign tr y with
@@ -625,7 +627,7 @@ let number_of s =
   else 1
 
 let add_arg args = function
-  | Elem (s, _) | Access (_, s) | Arith (s, _, _) ->
+  | Elem (s, _) | Access (_, s ,_) | Arith (s, _, _) ->
       let s' = H.view s in
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
   | Const _ -> args
@@ -763,24 +765,24 @@ let find_impossible a1 x1 op c1 i2 a2 n2 impos obvs =
   while !i2 < n2 do
     let a2i = a2.(!i2) in
     (match a2i, op with
-      | Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
+      | Comp (Access (a2, _, _), _, _), _ when not (H.equal a1 a2) ->
 	  i2 := n2
 
-      | Comp (Access (a2, x2), Eq,
+      | Comp (Access (a2, x2, _), Eq,
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), (Neq | Lt)
 	  when compare_term c1 c2 = 0 ->
 	  
 	  if H.list_mem_couple (x1, x2) obvs then raise NoPermutations;
 	  impos := (x1, x2) :: !impos
 	    
-      | Comp (Access (a2, x2), (Neq | Lt),
+      | Comp (Access (a2, x2, _), (Neq | Lt),
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), Eq
 	  when compare_term c1 c2 = 0 ->
 	  
 	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
 	  impos := (x1, x2) :: !impos
 
-      | Comp (Access (a2, x2), Eq, (Elem (_, Constr) as c2)), Eq 
+      | Comp (Access (a2, x2, _), Eq, (Elem (_, Constr) as c2)), Eq 
 	  when compare_term c1 c2 <> 0 ->
 	  
 	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
@@ -835,9 +837,9 @@ let obvious_impossible a1 a2 =
     		   raise NoPermutations
     	       | _ -> ()
 	   end
-       | Comp (Access (a1, x1), op, 
+       | Comp (Access (a1, x1, Var), op, 
 	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
-	 Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
+	 Comp (Access (a, _,_), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
 	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
@@ -1167,7 +1169,7 @@ let simplify_atoms np =
 
 let contain_arg z = function
   | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
-  | Access (x, y) -> Hstring.equal y z
+  | Access (x, y, _) -> Hstring.equal y z
   | Const _ -> false
 
 let has_var z = function
@@ -1194,7 +1196,8 @@ let prime_h h level =
 let prime_term level t = match t with
   | Elem (e, Glob) -> Elem (prime_h e level, Glob)
   | Arith (a, Glob, c) -> Arith (prime_h a level, Glob, c)
-  | Access (a, x) -> Access (prime_h a level, x)
+  | Access (a, x, Glob) -> Access (prime_h a level, prime_h x level, Glob)
+  | Access (a, x, sx) -> Access (prime_h a level, x, sx)
   | _ -> t
 
 let rec prime_atom level a = match a with
@@ -1213,7 +1216,8 @@ let unprime_h h =
 let unprime_term t = match t with
   | Elem (e, Glob) -> Elem (unprime_h e, Glob)
   | Arith (a, Glob, c) -> Arith (unprime_h a, Glob, c)
-  | Access (a, x) -> Access (unprime_h a, x)
+  | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob)
+  | Access (a, x, sx) -> Access (unprime_h a, x, sx)
   | _ -> t
 
 let apply_assigns assigns sigma level =
@@ -1233,7 +1237,7 @@ let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma level =
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
-  let at = prime_term (level+1) (Access (a, j)) in
+  let at = prime_term (level+1) (Access (a, j, Var)) in
   let t = subst_term sigma (prime_term level t) in
   let default = Comp (at, Eq, t) in
   let ites = 
@@ -1244,7 +1248,7 @@ let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma level =
   in
   List.fold_left (fun (sa, st) i ->
     SAtom.add (subst_atom [j, i] ites) sa,
-    STerm.add (Access (a, i)) st
+    STerm.add (Access (a, i, Var)) st
   ) (sa, st) procs
 
 let apply_updates upds procs sigma level =
@@ -1355,7 +1359,7 @@ let check_trace
 (**********************)
 
 let has_args_term args = function
-  | Elem (x, Var) | Access (_, x) | Arith (x, Var, _) -> H.list_mem x args
+  | Elem (x, Var) | Access (_, x, _) | Arith (x, Var, _) -> H.list_mem x args
   | _ -> false
 
 let rec has_args args = function
@@ -1602,7 +1606,7 @@ let same_number z = function
   | Const _ -> true
   | Elem (s, v) | Arith (s, v, _) -> 
       H.equal s z || v = Glob || v = Constr
-  | Access (_, s) -> H.equal s z
+  | Access (_, s, _) -> H.equal s z
 
 let rec contains_only z = function
   | True | False -> true

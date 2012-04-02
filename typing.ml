@@ -96,7 +96,7 @@ let infer_type x1 x2 =
   try
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
-      | Elem (h1, _) | Access (h1, _) -> h1
+      | Elem (h1, _) | Access (h1, _, _) -> h1
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -135,7 +135,7 @@ let term args = function
 	  args, ret
 	with Not_found -> error (UnknownGlobal x)
       end
-  | Access(a, i) -> 
+  | Access(a, i, _) -> 
       let args_a, ty_a = 
 	try Smt.Typing.find a with Not_found -> error (UnknownArray a) in
       let ty_i =
@@ -161,7 +161,7 @@ let assignment ?(init_variant=false) g x (_, ty) =
     match x with
       | Elem (n, Constr) -> 
 	  Smt.Typing.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) -> 
+      | Elem (n, _) | Access (n, _, _) -> 
 	  Smt.Typing.Variant.assign_var g n;
 	  if init_variant then 
 	    Smt.Typing.Variant.assign_var n g
@@ -171,8 +171,8 @@ let atom init_variant args = function
   | True | False -> ()
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
-  | Comp (y, Eq, (Access(g, _) as x))
-  | Comp (Access(g, _) as x, Eq, y) -> 
+  | Comp (y, Eq, (Access(g, _, _) as x))
+  | Comp (Access(g, _, _) as x, Eq, y) -> 
       let ty = term args y in
       unify (term args x) ty;
       if init_variant then assignment ~init_variant g y ty
