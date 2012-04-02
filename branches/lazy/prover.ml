@@ -96,7 +96,7 @@ let make_cs cs =
 let make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
-  | Access (a, i) -> T.make_app a [T.make_app i []]
+  | Access (a, i, _) -> T.make_app a [T.make_app i []]
   | Arith (x, _, cs) -> 
       let tx = T.make_app x [] in
       make_arith_cs cs tx
@@ -128,7 +128,7 @@ let make_dnfs dnfs =
 
 let contain_arg z = function
   | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
-  | Access (x, y) -> Hstring.equal y z
+  | Access (x, y, _) -> Hstring.equal y z
   | Const _ -> false
 
 let has_var z = function
@@ -214,7 +214,7 @@ let rec terms_from_smtterm level t =
 	      | [t] -> 
 		let r = Hstring.make (String.sub s 0 (ind - 1)) in
 		let i = proc_var_from_smtterm t in
-		[Access (r, i)]
+		[Access (r, i, Var)]
 	      | _ -> assert false
 	  else []
 	with Not_found -> []

@@ -28,7 +28,7 @@ val compare_constants : int MConst.t -> int MConst.t -> int
 type term = 
   | Const of int MConst.t
   | Elem of Hstring.t * sort
-  | Access of Hstring.t * Hstring.t
+  | Access of Hstring.t * Hstring.t * sort
   | Arith of Hstring.t * sort * int MConst.t
 
 val compare_term : term -> term -> int
@@ -52,9 +52,12 @@ val fresh_vars : Hstring.t list
 
 val add : Atom.t -> SAtom.t -> SAtom.t
 val svar : (Hstring.t * Hstring.t) list -> Hstring.t -> Hstring.t
-val subst_term : (Hstring.t * Hstring.t) list -> term -> term
-val subst_atom : (Hstring.t * Hstring.t) list -> Atom.t -> Atom.t
-val subst_atoms : (Hstring.t * Hstring.t) list -> SAtom.t -> SAtom.t
+val subst_term : (Hstring.t * Hstring.t) list ->
+  ?sigma_sort:(sort * sort) list -> term -> term
+val subst_atom : (Hstring.t * Hstring.t) list ->
+  ?sigma_sort:(sort * sort) list -> Atom.t -> Atom.t
+val subst_atoms : (Hstring.t * Hstring.t) list ->
+  ?sigma_sort:(sort * sort) list -> SAtom.t -> SAtom.t
 val build_subst : Hstring.t list -> Hstring.t list -> 
   (Hstring.t * Hstring.t) list
 

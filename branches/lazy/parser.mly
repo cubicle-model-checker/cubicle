@@ -287,8 +287,8 @@ term:
     if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
     else Elem ($1, sort $1) }
 | lident { Elem ($1, Var) }
-| mident LEFTSQ lident RIGHTSQ { Access($1,$3) }
-| mident LEFTSQ mident RIGHTSQ { Access($1,$3) }
+| mident LEFTSQ lident RIGHTSQ { Access($1,$3, Var) }
+| mident LEFTSQ mident RIGHTSQ { Access($1,$3, sort $3) }
 | mident PLUS constnum { Arith($1, sort $1, MConst.add $3 1 MConst.empty) }
 | mident MINUS constnum { Arith($1, sort $1, MConst.add $3 (-1) MConst.empty) }
 | mident PLUS mident 

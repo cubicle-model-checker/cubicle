@@ -45,7 +45,7 @@ let compare_constants = MConst.compare Pervasives.compare
 type term = 
   | Const of int MConst.t
   | Elem of Hstring.t * sort
-  | Access of Hstring.t * Hstring.t
+  | Access of Hstring.t * Hstring.t * sort
   | Arith of Hstring.t * sort * int MConst.t
 
 let rec compare_term t1 t2 = 
@@ -54,7 +54,7 @@ let rec compare_term t1 t2 =
     | Const _, _ -> -1 | _, Const _ -> 1
     | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
     | Elem _, _ -> -1 | _, Elem _ -> 1
-    | Access (a1, i1), Access (a2, i2) ->
+    | Access (a1, i1, _), Access (a2, i2, _) ->
 	let c = Hstring.compare a1 a2 in
 	if c<>0 then c else Hstring.compare i1 i2
     | Access _, _ -> -1 | _, Access _ -> 1 
@@ -125,13 +125,15 @@ let add a s =
   (* Substitute an indice variable j by i in a set of atoms *)
 
 let svar sigma v = Hstring.list_assoc v sigma
+
+let ssort sigma_sort s = try List.assoc s sigma_sort with Not_found -> s
     
-let subst_term sigma t = 
+let subst_term sigma ?(sigma_sort=[]) t = 
   match t with
     | Elem (x, s) -> 
-	(try Elem (svar sigma x, s) with Not_found -> t)
-    | Access (a, z) -> 
-	(try Access (a, svar sigma z) with Not_found -> t)
+	(try Elem (svar sigma x, ssort sigma_sort s) with Not_found -> t)
+    | Access (a, z, s) -> 
+	(try Access (a, svar sigma z, ssort sigma_sort s) with Not_found -> t)
     | _ -> t
 	
 
@@ -141,15 +143,17 @@ module TimerApply = Timer.Make (struct end)
 
 open Atom
 
-let rec subst_atoms sigma sa = 
-  SAtom.fold (fun a -> add (subst_atom sigma a)) sa SAtom.empty
-and subst_atom sigma a = 
+let rec subst_atoms sigma ?(sigma_sort=[]) sa = 
+  SAtom.fold (fun a -> add (subst_atom sigma ~sigma_sort a)) sa SAtom.empty
+and subst_atom sigma ?(sigma_sort=[]) a = 
   match a with
     | Ite (sa, a1, a2) -> 
-	Ite(subst_atoms sigma sa, subst_atom sigma a1, subst_atom sigma a2)
+	Ite(subst_atoms sigma ~sigma_sort sa, 
+            subst_atom sigma ~sigma_sort a1, 
+            subst_atom sigma ~sigma_sort a2)
     | Comp (x, op, y) -> 
-	let sx = subst_term sigma x in
-	let sy = subst_term sigma y in
+	let sx = subst_term sigma ~sigma_sort x in
+	let sy = subst_term sigma ~sigma_sort y in
 	Comp(sx, op, sy)
     | _ -> a
 
@@ -309,7 +313,7 @@ type t_system = {
 let declared_term x =
   match x with
     | Elem (_, Var) -> true
-    | Elem (s, _) | Access (s, _) -> Smt.Typing.declared s
+    | Elem (s, _) | Access (s, _, _) -> Smt.Typing.declared s
     | _ -> true
 
 let declared_terms ar =
