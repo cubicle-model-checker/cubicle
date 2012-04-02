@@ -240,7 +240,7 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 FILES = ast.ml ast.mli bwreach.ml bwreach.mli fake_functory.ml\
 	fake_functory.mli lexer.mll main.ml options.ml options.mli\
 	parser.mly pretty.ml pretty.mli prover.ml prover.mli search.ml\
-	search.mli test.ml typing.ml typing.mli version.ml
+	search.mli typing.ml typing.mli version.ml
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 
