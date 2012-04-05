@@ -1220,7 +1220,7 @@ let make_cubes =
 		 with Exit -> ls, post
 	       ) (ls, post) lureq ) acc lnp
       in
-      if List.length tr.tr_args > List.length rargs then (ls, post)
+      if List.length tr.tr_args > List.length rargs then assert false (* (ls, post) *)
       else
 	let d = all_permutations tr.tr_args rargs in
 	List.fold_left cube (ls, post) d
@@ -1250,6 +1250,14 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	  upds}
 
 
+let append_extra args tr_args =
+  let rec aux acc cpt = function
+    | [] -> List.rev acc
+    | _::r -> aux ((H.make ("#"^(string_of_int cpt))) :: acc) (cpt+1) r
+  in
+  aux (List.rev args) (List.length args + 1) tr_args   
+  
+
 (*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
@@ -1263,8 +1271,9 @@ let pre tr unsafe =
   in
   if debug && !verbose > 0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
-  if tr.tr_args = [] then tr, pre_unsafe, (args, args)
-  else tr, pre_unsafe, (args, m::args)
+  tr, pre_unsafe, (args, append_extra args tr.tr_args)
+  (* if tr.tr_args = [] then tr, pre_unsafe, (args, args) *)
+  (* else tr, pre_unsafe, (args, m::args) *)
 
 
 (*********************************************************************)
@@ -1407,7 +1416,7 @@ let worker_inv search invariants not_invs p =
 	Pretty.print_system p;
       Inv
     end
-  with | Search.Unsafe | Search.ReachBound -> NotInv
+  with | Search.Unsafe | ReachBound -> NotInv
 
 let init_thread search invariants not_invs visited postponed candidates =
   
@@ -1460,7 +1469,7 @@ let gen_inv search ~invariants not_invs s =
 	     Pretty.print_system p;
 	   p::invs, not_invs
 	 end
-       with | Search.Unsafe | Search.ReachBound -> invs, p::not_invs) 
+       with | Search.Unsafe | ReachBound -> invs, p::not_invs) 
     ([], not_invs) (partition s)
 
 
@@ -1478,7 +1487,7 @@ let gen_inv_proc search invs not_invs s =
 		Pretty.print_system p;
 	    p::new_invs, p::invs, new_not_invs, not_invs
 	  end
-	with Search.Unsafe | Search.ReachBound ->
+	with Search.Unsafe | ReachBound ->
 	  new_invs, invs, p::new_not_invs, p::not_invs) 
       ([], invs, [], not_invs) (partition s)
   in
@@ -1494,7 +1503,7 @@ let is_inv search p invs =
     if not quiet then 
       eprintf "Good! We found an invariant :-) \n %a @." Pretty.print_system p;
     true
-  with Search.Unsafe | Search.ReachBound -> false
+  with Search.Unsafe | ReachBound -> false
 
 (* ----------------- Search strategy selection -------------------*)
 
@@ -1510,6 +1519,7 @@ module T = struct
 	t_alpha = ArrayAtom.alpha ar a
       }) s.t_invs
   let size s = List.length (fst s.t_unsafe)
+  let card s = SAtom.cardinal (snd s.t_unsafe)
   let maxrounds = maxrounds
   let maxnodes = maxnodes
   let gen_inv = gen_inv

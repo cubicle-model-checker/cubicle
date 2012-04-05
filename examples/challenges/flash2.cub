@@ -122,9 +122,11 @@ unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = GetX && UnetProc[j] <> Home 
 unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = PutX && UnetProc[j] <> Home }
 *)
 
+(* invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX } *)
 
-invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX }
 
+
+unsafe (i j) { CacheState[i] = Exclusive && CacheState[j] = Exclusive }
 
 unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive }
 

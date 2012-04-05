@@ -13,6 +13,8 @@
 
 open Options
 
+exception ReachBound
+
 type op_comp = Eq | Lt | Le | Neq
 type op_arith = Plus | Minus
 
@@ -164,7 +166,7 @@ let build_subst args a_args =
       | [], _ -> acc
       | x::args, ax::a_args ->
 	a_subst ((x, ax)::acc) args a_args
-      | _ -> assert false
+      | _ -> raise ReachBound
   in
   a_subst [] args a_args
 

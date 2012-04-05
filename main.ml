@@ -43,7 +43,7 @@ let _ =
     | Typing.Error e -> 
 	printf "typing error: %a\n@." Typing.report e;
 	exit 2
-    | Search.ReachBound ->
+    | ReachBound ->
 	printf "reach bound\n@.";
 	exit 1
     | Search.Unsafe ->

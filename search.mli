@@ -13,13 +13,13 @@
 
 (* Backward reachability search strategies *)
 
-exception ReachBound
 exception Unsafe
 
 module type I = sig
   type t
 
   val size : t -> int
+  val card : t -> int
   val maxrounds : int
   val maxnodes : int
   val invariants : t -> t list

@@ -13,8 +13,8 @@
 
 open Options
 open Format
+open Ast
 
-exception ReachBound
 exception Unsafe
 
 module TimeFix = Timer.Make (struct end)
@@ -140,6 +140,7 @@ module type I = sig
   type t
 
   val size : t -> int
+  val card : t -> int
   val maxrounds : int
   val maxnodes : int
   val invariants : t -> t list
@@ -696,6 +697,18 @@ module DFSHL ( X : I ) = struct
       else
     	let c = Pervasives.compare v1 v2 in
     	if c <> 0 then c else Pervasives.compare l2 l1
+
+    (* efficient bfs *)
+    (* let compare (l1, s1) (l2, s2) = *)
+    (*   let v1 = X.size s1 in *)
+    (*   let v2 = X.size s2 in       *)
+    (*   let c = Pervasives.compare v1 v2 in *)
+    (*   if c <> 0 then c else *)
+    (*     let c1 = X.card s1 in *)
+    (*     let c2 = X.card s2 in *)
+    (*     let c = Pervasives.compare c1 c2 in *)
+    (*     if c <> 0 then c else *)
+    (*       Pervasives.compare l1 l2 *)
       
   end
 
