@@ -1,9 +1,22 @@
+(*
+
+Cache Coherence Protocol (Steve German, 2001)
+
+ExGntd   |------|                                 |-----------|
+CurCmd   |      | <-- Chan1 (excl/shared req.) -- |           |  Invalide/
+CurPtr   | Home | --- Chan2 (grants or inv.) ---> | Client(i) |  Shared/
+InvSet   |      | <-- Chan3 (inv. ack) ---------- |           |  Exclusive
+ShrSet   |------|                                 |-----------|
+
+
+*)
+
 type state = Invalid | Shared | Exclusive
 type msg = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
 
 var Exgntd : bool
 var Curcmd : msg
-var Curptr : proc
+var CurClient : proc
 
 array Chan1[proc] : msg
 array Chan2[proc] : msg
@@ -55,7 +68,7 @@ transition recv_req_shared(n)
 requires { Curcmd = Empty && Chan1[n] = Reqs }
 { 
   Curcmd := Reqs; 
-  Curptr := n; 
+  CurClient := n; 
   Invset := Shrset;
   Chan1[j] := case 
   	       | j = n: Empty 
@@ -66,7 +79,7 @@ transition recv_req_exclusive(n)
 requires { Curcmd = Empty && Chan1[n] = Reqe }
 { 
   Curcmd := Reqe; 
-  Curptr := n; 
+  CurClient := n; 
   Invset := Shrset;
   Chan1[j] := case 
   	       | j = n : Empty 
@@ -123,7 +136,7 @@ requires { Chan3[n] = Invack && Curcmd <> Empty }
 }
 
 transition send_gnt_shared(n)
-requires { Curptr = n && Curcmd = Reqs && 
+requires { CurClient = n && Curcmd = Reqs && 
 	  Exgntd = False && Chan2[n] = Empty }
 { 	  
   Curcmd := Empty;
@@ -136,7 +149,7 @@ requires { Curptr = n && Curcmd = Reqs &&
 }
 
 transition send_gnt_exclusive(n)
-requires { Curptr = n && Curcmd = Reqe &&
+requires { CurClient = n && Curcmd = Reqe &&
 	  Chan2[n] = Empty && Shrset[n] = False && 
           forall_other j. Shrset[j] = False }
 { 

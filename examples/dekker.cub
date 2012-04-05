@@ -11,9 +11,12 @@ unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
 transition req (i)
 requires { Want[i] = False }
 { 
-  Want[j] := case 
+
+Want[i] := True
+
+(*  Want[j] := case 
              | i=j : True 
-	     | _ : Want[j] ;
+	     | _ : Want[j] ;*)
 }
 
 transition enter (i)
