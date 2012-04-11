@@ -59,6 +59,10 @@
 
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
 
+  let fresh_var = 
+    let cpt = ref 0 in
+    fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
+
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
@@ -236,8 +240,14 @@ require:
 ;
 
 update:
-mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs
+| mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs
 { Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
+| mident LEFTSQ lident RIGHTSQ AFFECT term
+{ let j = fresh_var () in
+  let cube = 
+    SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, Var))) in
+  let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
+  Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
 ;
 
 switchs:
