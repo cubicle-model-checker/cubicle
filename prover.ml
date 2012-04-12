@@ -149,7 +149,7 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
   Smt.clear ();
   Smt.assume (distinct_vars (List.length args));
   (* Smt.assume (order_vars (List.length args)); *)
-  let init = make_init ts args in
+  let init = make_init ts (List.rev_append ts.t_glob_proc args) in
   let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   Smt.assume init;

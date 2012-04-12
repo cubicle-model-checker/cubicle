@@ -539,12 +539,14 @@ let check_safety s =
     if not (obviously_safe s) then
       begin
 	Prover.unsafe s;
-	if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
+	if not quiet then printf "\nUnsafe trace: @[%a@]@." 
+	  Pretty.print_verbose_node s;
 	raise Search.Unsafe
       end
   with
     | Smt.Sat ->
-      if not quiet then printf "\nUnsafe trace: @[%a@]@." Pretty.print_node s;
+      if not quiet then printf "\nUnsafe trace: @[%a@]@."
+	Pretty.print_verbose_node s;
       raise Search.Unsafe
     | Smt.IDontknow -> exit 2
     | Smt.Unsat _ -> ()

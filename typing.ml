@@ -273,6 +273,14 @@ let system s =
   transitions s.trans;
   Smt.Typing.Variant.close ();
   if Options.debug then Smt.Typing.Variant.print ();
+  
+  let glob_proc = 
+    List.fold_left 
+      (fun acc (n, t) -> 
+	 if Hstring.equal t Smt.Typing.type_proc then n::acc else acc)
+      [] s.globals
+  in
+  
   List.map (fun un ->
     let args, p = un in
     let arru = ArrayAtom.of_satom p in
@@ -287,5 +295,6 @@ let system s =
       t_deleted = false;
       t_nb = 0;
       t_nb_father = -1;
+      t_glob_proc = glob_proc;
     }
   ) s.unsafe

@@ -310,6 +310,7 @@ type t_system = {
   mutable t_deleted : bool;
   t_nb : int;
   t_nb_father : int;
+  t_glob_proc : Hstring.t list;
 }
 
 let declared_term x =

@@ -129,3 +129,15 @@ let print_node fmt s =
       fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
   ) s.t_from;
   if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
+
+
+let print_verbose_node fmt s =
+  if !verbose = 0 then print_node fmt s else begin
+    (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
+    fprintf fmt " %a\n@." print_system s;
+    List.iter (fun (l, args, s') ->
+		 fprintf fmt "  %s(%a) -> %a\n@." (Hstring.view l) print_args args 
+		   print_system s'
+	      ) s.t_from;
+    fprintf fmt "    = unsafe"
+  end
