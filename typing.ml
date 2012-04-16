@@ -22,6 +22,7 @@ type error =
   | DuplicateName of Hstring.t
   | DuplicateTypeName of Hstring.t
   | DuplicateAssign of Hstring.t
+  | DuplicateUpdate of Hstring.t
   | UnknownArray of Hstring.t
   | UnknownType of Hstring.t
   | UnknownName of Hstring.t
@@ -51,6 +52,10 @@ let report fmt = function
       fprintf fmt "duplicate type name for %a" Hstring.print s
   | DuplicateAssign s ->
       fprintf fmt "duplicate assignment for %a" Hstring.print s
+  | DuplicateUpdate s ->
+      fprintf fmt 
+	"duplicate array update for %a (You may want to use a case construct)"
+	Hstring.print s
   | UnknownVar x ->
       fprintf fmt "unknown variable %a" Hstring.print x
   | UnknownArray a ->
@@ -223,13 +228,16 @@ let switchs a args ty_e l =
        assignment a t ty) l
 
 let updates args = 
+  let dv = ref [] in
   List.iter 
     (fun {up_arr=a; up_arg=j; up_swts=swts} -> 
+       if Hstring.list_mem a !dv then error (DuplicateUpdate a);
        if Hstring.list_mem j args then error (ClashParam j);
        let args_a, ty_a = 
 	 try Smt.Typing.find a with Not_found -> error (UnknownArray a)
        in       
        if args_a = [] then error (MustBeAnArray a);
+       dv := a ::!dv;
        switchs a (j::args) ([], ty_a) swts) 
 
 let transitions = 

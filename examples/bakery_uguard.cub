@@ -7,13 +7,13 @@ unsafe (x y) { A[x] = Crit && A[y] = Crit }
 transition tr1_1 (z)
 requires { A[z] = Idle && forall_other j. (j < z || A[j] = Idle) }
 { 
-  A[z] := Wait
+  A[z] := Wait;
 }
 
 transition tr2_1 (z)
 requires { A[z] = Wait && forall_other j. (z < j || A[j] = Idle) }
 {
-  A[Z] := Crit
+  A[z] := Crit
 }
 
 transition tr3 (z)
