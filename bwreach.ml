@@ -544,11 +544,6 @@ let check_safety s =
 	raise Search.Unsafe
       end
   with
-    | Smt.Sat ->
-      if not quiet then printf "\nUnsafe trace: @[%a@]@."
-	Pretty.print_verbose_node s;
-      raise Search.Unsafe
-    | Smt.IDontknow -> exit 2
     | Smt.Unsat _ -> ()
 
 
@@ -927,7 +922,6 @@ let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   with 
     | Fixpoint -> true
     | Exit -> false
-    | Smt.Sat | Smt.IDontknow -> false
     | Smt.Unsat _ -> true
   
 

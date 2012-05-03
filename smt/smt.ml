@@ -360,9 +360,7 @@ end
 let get_time = Time.get
 let get_calls () = !calls
 
-exception Sat 
 exception Unsat of Literal.LT.t list list
-exception IDontknow
 
 let clear () = Solver.clear ()
 
@@ -413,72 +411,3 @@ let check ~profiling  =
     | Solver.Unsat ex -> 
 	if profiling then Time.pause ();
 	raise (Unsat (export_unsatcore ex))
-
-
-
-
-(* let x = Hstring.make "x";; *)
-(* let y = Hstring.make "y";; *)
-(* let z = Hstring.make "z";; *)
-(* let w = Hstring.make "w";; *)
-(* let a = Hstring.make "a";; *)
-(* let b = Hstring.make "b";; *)
-(* let u = Hstring.make "u";; *)
-(* let v = Hstring.make "v";; *)
-
-(* Typing.declare_name x [] Typing.type_int;; *)
-(* Typing.declare_name y [] Typing.type_int;; *)
-(* Typing.declare_name z [] Typing.type_int;; *)
-(* Typing.declare_name w [] Typing.type_int;; *)
-(* Typing.declare_name a [] Typing.type_int;; *)
-(* Typing.declare_name b [] Typing.type_int;; *)
-(* Typing.declare_name u [] Typing.type_int;; *)
-(* Typing.declare_name v [] Typing.type_int;; *)
-
-(* let tx = (Term.make_app x []);; *)
-(* let ty = (Term.make_app y []);; *)
-(* let tz = (Term.make_app z []);; *)
-(* let tw = (Term.make_app w []);; *)
-(* let ta = (Term.make_app a []);; *)
-(* let tb = (Term.make_app b []);; *)
-(* let tu = (Term.make_app u []);; *)
-(* let tv = (Term.make_app v []);; *)
-
-
-(* let f1 = Formula.make_lit Formula.Eq [tx; ty];; *)
-(* let f2 = Formula.make_lit Formula.Eq [tz; tw];; *)
-
-(* let f3 = Formula.make_lit Formula.Neq [ty; tx];; *)
-(* let f4 = Formula.make_lit Formula.Neq [tw; tz];; *)
-
-(* let f5 = Formula.make_lit Formula.Eq [ta; tb];; *)
-(* let f6 = Formula.make_lit Formula.Neq [tb; ta];; *)
-
-(* let f11 = Formula.make_lit Formula.Eq [tu; tv];; *)
-(* let f12 = Formula.make_lit Formula.Neq [tv; tu];; *)
-
-
-(* let f7 = Formula.make Formula.Or [f3; f5];; *)
-(* let f8 = Formula.make Formula.Or [f6; f4];; *)
-
-(* let f9 = Formula.make Formula.Or [f6; f3; f4; f11];; *)
-(* let f10 = Formula.make Formula.Or [f6; f3; f4; f12];; *)
-
-(* Format.eprintf "%a@." Formula.print f5;; *)
-(* Format.eprintf "%a@." Formula.print f1;; *)
-(* Format.eprintf "%a@." Formula.print f2;; *)
-(* Format.eprintf "%a@." Formula.print f9;; *)
-(* Format.eprintf "%a@." Formula.print f10;; *)
-
-
-(* clear ();; *)
-
-(* assume f5;; *)
-(* assume f1;; *)
-(* assume f2;; *)
-(* assume f11;; *)
-(* assume f9;; *)
-(* assume f10;; *)
-
-(* check ~profiling:false;; *)
-(* exit 0;; *)
