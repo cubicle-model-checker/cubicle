@@ -224,9 +224,14 @@ module Formula = struct
 
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
-  type t = 
+
+  type ground = 
     | Lit of Literal.LT.t  
-    | Comb of combinator * t list
+    | Comb of combinator * ground list
+
+  type lemma = Hstring.t list * ground
+
+  type t = Ground of ground | Lemma of lemma
 
   let vrai = Lit Literal.LT.vrai
   let faux = Lit Literal.LT.faux
@@ -342,18 +347,25 @@ module Formula = struct
 
   let rec print fmt f =
     match f with
+      | Ground phi -> print_ground fmt phi
+      | Lemma (l, phi) ->
+	  fprintf fmt "forall %a. %a" 
+	    (fun fmt -> 
+	       List.iter (fprintf fmt "%a " Hstring.print)) l print_ground phi
+  and print_ground fmt phi = 
+    match phi with
       | Lit a -> Literal.LT.print fmt a
       | Comb (Not, [f]) -> 
-	  fprintf fmt "not (%a)" print f
+	  fprintf fmt "not (%a)" print_ground f
       | Comb (And, l) -> print_list "and" fmt l
       | Comb (Or, l) ->  print_list "or" fmt l
       | Comb (Imp, [f1; f2]) -> 
-	  fprintf fmt "%a => %a" print f1 print f2
+	  fprintf fmt "%a => %a" print_ground f1 print_ground f2
       | _ -> assert false
   and print_list sep fmt = function
     | [] -> ()
-    | [f] -> print fmt f
-    | f::l -> fprintf fmt "%a %s %a" print f sep (print_list sep) l
+    | [f] -> print_ground fmt f
+    | f::l -> fprintf fmt "%a %s %a" print_ground f sep (print_list sep) l
 
 end
 
@@ -396,9 +408,14 @@ let export_unsatcore cl =
   in (* check_unsatcore uc; *) 
   uc
 
-let assume f =
-  try Solver.assume (Formula.make_cnf f)
-  with Solver.Unsat ex -> raise (Unsat (export_unsatcore ex))
+let assume f = 
+  match f with
+  | Formula.Ground phi ->
+      begin
+	try Solver.assume (Formula.make_cnf phi)
+	with Solver.Unsat ex -> raise (Unsat (export_unsatcore ex))
+      end
+  | Formula.Lemma (x, phi) -> () 
 
 let check ~profiling  =
   incr calls;

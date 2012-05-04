@@ -63,15 +63,21 @@ end
 module Formula : sig
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
-  type t = 
+
+  type ground = 
     | Lit of Literal.LT.t  
-    | Comb of combinator * t list
+    | Comb of combinator * ground list
 
-  val vrai : t
-  val faux : t
+  type lemma = Hstring.t list * ground
 
-  val make_lit : comparator -> Term.t list -> t
-  val make : combinator -> t list -> t
+  type t = Ground of ground | Lemma of lemma
+
+  val vrai : ground
+  val faux : ground
+
+  val make_lit : comparator -> Term.t list -> ground
+  val make : combinator -> ground list -> ground
+
   val print : Format.formatter -> t -> unit
 end
 

@@ -147,10 +147,10 @@ let make_init {t_init = arg, sa } lvars =
 
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
   Smt.clear ();
-  Smt.assume (distinct_vars (List.length args));
+  Smt.assume (F.Ground (distinct_vars (List.length args)));
   (* Smt.assume (order_vars (List.length args)); *)
-  let init = make_init ts (List.rev_append ts.t_glob_proc args) in
-  let f = make_formula_set sa in
+  let init = F.Ground (make_init ts (List.rev_append ts.t_glob_proc args)) in
+  let f = F.Ground (make_formula_set sa) in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   Smt.assume init;
   Smt.assume f;
@@ -158,15 +158,15 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
 
 let assume_goal {t_unsafe = (args, _); t_arru = ap } =
   Smt.clear ();
-  Smt.assume (distinct_vars (List.length args));
+  Smt.assume (F.Ground (distinct_vars (List.length args)));
   (* Smt.assume (order_vars (List.length args)); *)
-  let f = make_formula ap in
+  let f = F.Ground (make_formula ap) in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   Smt.assume f;
   Smt.check ~profiling
 
 let assume_node ap =
-  let f = F.make F.Not [make_formula ap] in
+  let f = F.Ground (F.make F.Not [make_formula ap]) in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   Smt.assume f;
   Smt.check ~profiling
