@@ -98,9 +98,9 @@ module Make (X : Sig.X) = struct
   end
     
   let bottom = Hstring.make "@bottom"
+  let one, _ = X.make (Term.make (S.name bottom) [] Ty.Tint)
 
   let concat_leaves uf l = 
-    let one, _ = X.make (Term.make (S.name bottom) [] Ty.Tint) in 
     let rec concat_rec acc t = 
       match  X.leaves (fst (Uf.find uf t)) , acc with
 	  [] , _ -> one::acc
@@ -135,54 +135,6 @@ module Make (X : Sig.X) = struct
 
   let congruents env t1 s acc ex = 
     SetT.fold (equal_only_by_congruence env ex t1) s acc
-
-  let rec add_term ex (env, l) t =
-    Print.add_to_use t;
-    (* nothing to do if the term already exists *)
-    if Uf.mem env.uf t then env, l
-    else
-      (* we add t's arguments in env *)
-      let {T.f = f; xs = xs} = T.view t in
-      let env, l = List.fold_left (add_term ex) (env, l) xs in
-      (* we update uf and use *)
-      let nuf, ctx  = Uf.add env.uf t in 
-      Print.make_cst t ctx;
-      let rt,_   = Uf.find nuf t in (* XXX : ctx only in terms *)
-      let lvs = concat_leaves nuf xs in
-      let nuse = Use.up_add env.use t rt lvs in
-      
-      (* If finitetest is used we add the term to the relation *)
-      let rel = X.Rel.add env.relation rt in
-      Use.print nuse;
-
-      (* we compute terms to consider for congruence *)
-      (* we do this only for non-atomic terms with uninterpreted head-symbol *)
-      let st_uset = Use.congr_add nuse lvs in
-      
-      (* we check the congruence of each term *)
-      let env = {uf = nuf; use = nuse; relation = rel} in 
-      let ct = congruents env t st_uset l ex in
-      env, (List.map (fun lt -> LTerm lt, ex) ctx) @ ct
-	
-  let add a ex env =
-    match A.LT.view a with
-      | A.Eq (t1, t2) -> 
-	  let env, l1 = add_term ex (env, []) t1 in
-	  let env, l2 = add_term ex (env, l1) t2 in
-	  env, l2
-      | A.Distinct (_, lt) 
-      | A.Builtin (_, _, lt) ->
-	  let env, l = List.fold_left (add_term ex) (env,[]) lt in
-	  let lvs = concat_leaves env.uf lt in (* A verifier *)
-	  let env =
-	    List.fold_left
-	      (fun env rx ->
-		 let st, sa = Use.find rx env.use in
-		 { env with 
-		    use = Use.add rx (st,SetA.add (a, ex) sa) env.use }
-	      ) env lvs
-	  in
-	  env, l
 
   let fold_find_with_explanation find ex l = 
     List.fold_left 
@@ -298,64 +250,112 @@ module Make (X : Sig.X) = struct
     let env = clean_use env result.remove in
     env, result.assume
 
+  let rec add_term env choices t ex =
+    (* nothing to do if the term already exists *)
+    if Uf.mem env.uf t then env, choices
+    else begin
+      Print.add_to_use t;
+      (* we add t's arguments in env *)
+      let {T.f = f; xs = xs} = T.view t in
+      let env, choices = 
+	List.fold_left (fun (env, ch) t -> add_term env ch t ex)
+	  (env, choices) xs 
+      in
+      (* we update uf and use *)
+      let nuf, ctx  = Uf.add env.uf t in 
+      Print.make_cst t ctx;
+      let rt, _ = Uf.find nuf t in (* XXX : ctx only in terms *)
+      let lvs = concat_leaves nuf xs in
+      let nuse = Use.up_add env.use t rt lvs in
+      
+      (* If finitetest is used we add the term to the relation *)
+      let rel = X.Rel.add env.relation rt in
+      Use.print nuse;
 
-  let semantic_view env la = 
+      (* we compute terms to consider for congruence *)
+      (* we do this only for non-atomic terms with uninterpreted head-symbol *)
+      let st_uset = Use.congr_add nuse lvs in
+      
+      (* we check the congruence of each term *)
+      let env = {uf = nuf; use = nuse; relation = rel} in 
+      let ct = congruents env t st_uset [] ex in
+      let ct = (List.map (fun lt -> LTerm lt, ex) ctx) @ ct in
+      assume_literal env choices ct
+    end
+	
+  and add env choices a ex =
+    match A.LT.view a with
+      | A.Eq (t1, t2) -> 
+	  let env, choices = add_term env choices t1 ex in
+	  add_term env choices t2 ex
+      | A.Distinct (_, lt) 
+      | A.Builtin (_, _, lt) ->
+	  let env, choices = List.fold_left 
+	    (fun (env, ch) t-> add_term env ch t ex) (env, choices) lt in
+	  let lvs = concat_leaves env.uf lt in (* A verifier *)
+	  let env = List.fold_left
+	    (fun env rx ->
+	      let st, sa = Use.find rx env.use in
+	      { env with 
+		use = Use.add rx (st,SetA.add (a, ex) sa) env.use }
+	    ) env lvs
+	  in
+	  env, choices
+
+  and semantic_view env choices la = 
     List.fold_left 
-      (fun (env, acc, lsa) (a, ex) ->
+      (fun (env, choices, lsa) (a, ex) ->
 	 match a with 
-	   | LTerm ta -> 
-	       let env, l = add ta ex env in
-	       let sa, ex = term_canonical_view env ta ex in
-	       env, l@acc, (sa, Some ta, ex)::lsa
+	   | LTerm a -> 
+	       let env, choices = add env choices a ex in
+	       let sa, ex = term_canonical_view env a ex in
+	       env, choices, (sa, Some a, ex)::lsa
 
            (* XXX si on fait canonical_view pour
 	      A.Distinct, la theorie des tableaux
               part dans les choux *)
 	   | LSem (A.Builtin _  (*| A.Distinct _*) as sa) ->
-	       let sa, ex = canonical_view env sa ex in 
-	       env, acc, (sa, None, ex)::lsa
+	       let sa, ex = canonical_view env sa ex in
+	       env, choices, (sa, None, ex)::lsa
 	   | LSem sa ->
-	       env, acc, (sa, None, ex)::lsa)
-      (env, [], []) la
-    
+	       env, choices, (sa, None, ex)::lsa)
+      (env, choices, []) la
 
-  let rec assume_literal lt env la =
-    if la = [] then env, lt
+  and assume_literal env choices la =
+    if la = [] then env, choices
     else 
-      let env, newc, lsa = semantic_view env la in
-      let env, lt = 
+      let env, choices, lsa = semantic_view env choices la in
+      let env, choices =
 	List.fold_left
-	  (fun (env, lt) (sa, _, ex) ->
+	  (fun (env, choices) (sa, _, ex) ->
 	    Print.assume_literal sa;
 	    match sa with
 	      | A.Eq(r1, r2) ->
 		let env, l = congruence_closure env r1 r2 ex in
-		let env, lt = assume_literal lt env l in
-		let env, lt = 
-		  assume_literal lt env (contra_congruence env r1 ex) 
+		let env, choices = assume_literal env choices l in
+		let env, choices = 
+		  assume_literal env choices (contra_congruence env r1 ex) 
 		in
-		assume_literal lt env (contra_congruence env r2 ex)
+		assume_literal env choices (contra_congruence env r2 ex)
 	      | A.Distinct (false, lr) ->
-		if Uf.already_distinct env.uf lr then env, lt
+		if Uf.already_distinct env.uf lr then env, choices
 		else 
-		  {env with uf = Uf.distinct env.uf lr ex}, lt
+		  {env with uf = Uf.distinct env.uf lr ex}, choices
 	      | A.Distinct (true, _) -> assert false
-	      | A.Builtin _ ->
-		  env, lt)
-	  (env, lt) lsa
+	      | A.Builtin _ -> env, choices)
+	  (env, choices) lsa
       in
-      let env, lt = assume_literal lt env newc in
       let env, l = replay_atom env lsa in
-      assume_literal (lt@l) env l
+      assume_literal env (choices@l) l
 
-
-  let look_for_sat ?(bad_last=No) lt t base_env l =
-    let rec aux lt bad_last dl base_env li = match li, bad_last with
+  let look_for_sat ?(bad_last=No) ch t base_env l =
+    let rec aux ch bad_last dl base_env li = 
+      match li, bad_last with
       | [], _ -> 
 	begin
           match X.Rel.case_split base_env.relation with
 	    | [] -> 
-		{ t with gamma_finite = base_env; choices = List.rev dl }, lt
+		{ t with gamma_finite = base_env; choices = List.rev dl }, ch
 	    | l ->
 	      let l = 
 		List.map
@@ -369,26 +369,19 @@ module Make (X : Sig.X) = struct
 		  (fun acc (a,s,_,_) ->
 		     Num.mult_num acc s) (Num.Int 1) (l@dl) in
               Print.split_size sz;
-	      if Num.le_num sz max_split then aux lt No dl base_env l
+	      if Num.le_num sz max_split then aux ch No dl base_env l
 	      else
-		{ t with gamma_finite = base_env; choices = List.rev dl }, lt
+		{ t with gamma_finite = base_env; choices = List.rev dl }, ch
 	end
       | ((c, size, CNeg, ex_c) as a)::l, _ ->
-	  let base_env, lt = assume_literal lt base_env [LSem c, ex_c] in
-	  aux lt bad_last (a::dl) base_env l
-
-      (** This optimisation is not correct with the current explanation *)
-      (* | [(c, size, CPos exp, ex_c)], Yes dep -> *)
-      (*     let neg_c = LR.neg (LR.make c) in *)
-      (* 	  let ex_c = Ex.union ex_c dep in *)
-      (*     Print.split_backtrack neg_c ex_c; *)
-      (*     aux No dl base_env [LR.view neg_c, Num.Int 1, CNeg, ex_c] *)
+	  let base_env, ch = assume_literal base_env ch [LSem c, ex_c] in
+	  aux ch bad_last (a::dl) base_env l
 
       | ((c, size, CPos exp, ex_c_exp) as a)::l, _ ->
 	  try
             Print.split_assume (LR.make c) ex_c_exp;
-	    let base_env, lt = assume_literal lt base_env [LSem c, ex_c_exp] in
-	    aux lt bad_last (a::dl) base_env l
+	    let base_env, ch = assume_literal base_env ch [LSem c, ex_c_exp] in
+	    aux ch bad_last (a::dl) base_env l
 	  with Exception.Inconsistent dep ->
             match Ex.remove_fresh exp dep with
               | None ->
@@ -399,9 +392,9 @@ module Make (X : Sig.X) = struct
                 (* The choice participates to the inconsistency *)
                 let neg_c = LR.neg (LR.make c) in
 	        Print.split_backtrack neg_c dep;
-	        aux lt No dl base_env [LR.view neg_c, Num.Int 1, CNeg, dep]
+	        aux ch No dl base_env [LR.view neg_c, Num.Int 1, CNeg, dep]
     in
-    aux lt bad_last (List.rev t.choices) base_env l
+    aux ch bad_last (List.rev t.choices) base_env l
 
   let try_it f t =
     Print.begin_case_split ();
@@ -449,19 +442,18 @@ module Make (X : Sig.X) = struct
 
   let assume a ex t = 
     let a = LTerm a in
-    let gamma, lt = assume_literal [] t.gamma [a, ex] in
+    let gamma, ch = assume_literal t.gamma [] [a, ex] in
     let t = { t with gamma = gamma } in
-    let t, lt = try_it (fun env -> assume_literal lt env [a, ex] ) t  in 
+    let t, ch = try_it (fun env -> assume_literal env ch [a, ex] ) t  in 
     let choices = extract_terms_from_choices SetT.empty t.choices in
-    let all_terms = extract_terms_from_assumed choices lt in
+    let all_terms = extract_terms_from_assumed choices ch in
     t, all_terms, 1
-
 
   let class_of t term = Uf.class_of t.gamma.uf term
 
   let add_and_process a t =
     let aux a ex env = 
-      let gamma, l = add a ex env in assume_literal [] gamma l
+      let gamma, l = add env [] a ex in assume_literal gamma [] l
     in
     let gamma, _ = aux a Ex.empty t.gamma in
     let t = { t with gamma = gamma } in
