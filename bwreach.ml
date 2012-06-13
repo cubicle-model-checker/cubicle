@@ -503,9 +503,11 @@ let inconsistent sa =
 
 let inconsistent_array ar =
   try
+    if profiling then Prover.TimeF.start ();
     let _ = Array.fold_left inconsistent_aux ([], [], [], [], [], [], []) ar in
+    if profiling then Prover.TimeF.pause ();
     false
-  with Exit -> true
+  with Exit -> if profiling then Prover.TimeF.pause (); true
 
 let inconsistent_2arrays ar1 ar2 =
   try
@@ -843,11 +845,10 @@ let extra_args args nargs =
 exception Fixpoint
 
 let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
-  
   Prover.assume_goal s;
   (* let nb_nargs = List.length nargs in *)
   let nodes = List.fold_left
-    (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp)->
+    (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) ->
       let dif = extra_args real_args nargs in
       (* if List.length args > nb_nargs then nodes *)
       (* else *)
@@ -870,18 +871,7 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
     ) [] visited
   in
   if profiling then TimeSort.start ();
-  let nodes = 
-    List.fast_sort
-      (fun p1 p2 ->
-	 Pervasives.compare 
-      	   (ArrayAtom.nb_diff p1 anp)
-      	   (ArrayAtom.nb_diff p2 anp)
-      (* Better sorting but more expensive *)
-      (* if c <> 0 then c *)
-      (* else  *)
-      (*   Pervasives.compare (closeness anp p1) (closeness anp p2) *)
-      )
-      nodes in
+  let nodes = List.fast_sort (ArrayAtom.compare_nb_common anp) nodes in
   if profiling then TimeSort.pause ();
   List.iter (fun p -> Prover.assume_node p) nodes
   
@@ -1152,7 +1142,7 @@ let uguard sigma args tr_args = function
 
   | _ -> assert false
 
-let add_list n l = 
+let add_list n l =
   if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
   else
     let l =
@@ -1161,6 +1151,7 @@ let add_list n l =
       else l
     in
       n :: l
+
 
 let max_lnp = ref 0
 
@@ -1267,8 +1258,8 @@ let pre tr unsafe =
   in
   if debug && !verbose > 0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
-  tr, pre_unsafe, (args, append_extra args tr.tr_args)
-  (* if tr.tr_args = [] then tr, pre_unsafe, (args, args) *)
+  if tr.tr_args = [] then tr, pre_unsafe, (args, args)
+  else tr, pre_unsafe, (args, append_extra args tr.tr_args)
   (* else tr, pre_unsafe, (args, m::args) *)
 
 

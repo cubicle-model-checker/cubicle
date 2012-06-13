@@ -74,6 +74,8 @@ module ArrayAtom : sig
   val union : t -> t -> t
   val apply_subst : (Hstring.t * Hstring.t) list -> t -> t
   val nb_diff : t -> t -> int
+  val compare_nb_diff : t -> t -> t -> int
+  val compare_nb_common : t -> t -> t -> int
   val diff : t -> t -> t
   val alpha : t -> Hstring.t list -> Hstring.t list * t
 end

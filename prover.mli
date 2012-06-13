@@ -13,9 +13,10 @@
 
 open Ast
 
+module TimeF : Timer.S
+
 (* Checks if the system is unsafe *)
 val unsafe : t_system -> unit
 val assume_goal : t_system -> unit
 val assume_node : ArrayAtom.t -> unit
-
 

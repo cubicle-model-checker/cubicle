@@ -77,6 +77,7 @@ module Formula : sig
 
   val make_lit : comparator -> Term.t list -> ground
   val make : combinator -> ground list -> ground
+  val make_cnf : ground -> Literal.LT.t list list
 
   val print : Format.formatter -> t -> unit
 end
@@ -89,7 +90,7 @@ val get_time : unit -> float
 val get_calls : unit -> int
 
 val clear : unit -> unit
-val assume : Formula.t -> unit
+val assume : profiling:bool -> Formula.t -> unit
 val check : profiling:bool -> unit
 
 

@@ -19,6 +19,9 @@ open Options
 module T = Smt.Term
 module F = Smt.Formula
 
+module TimeF = Timer.Make(struct end)
+
+
 let proc_terms =
   List.iter 
     (fun x -> Smt.Typing.declare_name x [] Smt.Typing.type_proc) proc_vars;
@@ -147,26 +150,33 @@ let make_init {t_init = arg, sa } lvars =
 
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
   Smt.clear ();
-  Smt.assume (F.Ground (distinct_vars (List.length args)));
+  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
   (* Smt.assume (order_vars (List.length args)); *)
+  if profiling then TimeF.start ();
   let init = F.Ground (make_init ts (List.rev_append ts.t_glob_proc args)) in
   let f = F.Ground (make_formula_set sa) in
+  if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
-  Smt.assume init;
-  Smt.assume f;
+  Smt.assume ~profiling init;
+  Smt.assume ~profiling f;
   Smt.check ~profiling
+
 
 let assume_goal {t_unsafe = (args, _); t_arru = ap } =
   Smt.clear ();
-  Smt.assume (F.Ground (distinct_vars (List.length args)));
+  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
   (* Smt.assume (order_vars (List.length args)); *)
+  if profiling then TimeF.start ();
   let f = F.Ground (make_formula ap) in
+  if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  Smt.assume f;
+  Smt.assume ~profiling f;
   Smt.check ~profiling
 
 let assume_node ap =
+  if profiling then TimeF.start ();
   let f = F.Ground (F.make F.Not [make_formula ap]) in
+  if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  Smt.assume f;
+  Smt.assume ~profiling f;
   Smt.check ~profiling

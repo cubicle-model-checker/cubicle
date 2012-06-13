@@ -223,6 +223,7 @@ module ArrayAtom = struct
     a'
 
   let nb_diff a1 a2 =
+    if profiling then TimerSubset.start ();
     let cpt = ref 0 in
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
@@ -234,7 +235,33 @@ module ArrayAtom = struct
       else if c < 0 then (incr cpt; incr i1)
       else incr i2
     done;
+    if profiling then TimerSubset.pause ();
     !cpt + (n1 - !i1)
+
+  let compare_nb_diff a p1 p2 =
+    Pervasives.compare (nb_diff p1 a) (nb_diff p2 a)
+
+
+  let nb_common a1 a2 =
+    if profiling then TimerSubset.start ();
+    let cpt = ref 0 in
+    let n1 = Array.length a1 in
+    let n2 = Array.length a2 in
+    let i1 = ref 0 in 
+    let i2 = ref 0 in
+    while !i1 < n1 && !i2 < n2 do
+      let c = Atom.compare a1.(!i1) a2.(!i2) in
+      if c = 0 then (incr cpt; incr i1; incr i2)
+      else if c < 0 then incr i1
+      else incr i2
+    done;
+    if profiling then TimerSubset.pause ();
+    (float_of_int !cpt) /. (float_of_int n1)
+
+
+  let compare_nb_common a p1 p2 =
+    Pervasives.compare (nb_common p2 a) (nb_common p1 a)
+
 
   let diff a1 a2 =
     let n1 = Array.length a1 in

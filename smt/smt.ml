@@ -298,6 +298,11 @@ module Formula = struct
     | Lit a :: r -> (Lit a)::(flatten_or r)
     | _ -> assert false
     
+  let rec flatten_and = function
+    | [] -> []
+    | Comb (And, l)::r -> l@(flatten_and r)
+    | a :: r -> a::(flatten_and r)
+    
   let rec cnf f = 
     match f with
       | Comb (Or, l) -> 
@@ -408,16 +413,21 @@ let export_unsatcore cl =
   in (* check_unsatcore uc; *) 
   uc
 
-let assume f = 
+let assume ~profiling f = 
+  if profiling then Time.start ();
   match f with
-  | Formula.Ground phi ->
+    | Formula.Ground phi ->
       begin
-	try Solver.assume (Formula.make_cnf phi)
-	with Solver.Unsat ex -> raise (Unsat (export_unsatcore ex))
+	try 
+	  Solver.assume (Formula.make_cnf phi);
+	  if profiling then Time.pause ()
+	with Solver.Unsat ex ->
+	  if profiling then Time.pause ();
+	  raise (Unsat (export_unsatcore ex))
       end
-  | Formula.Lemma (x, phi) -> () 
+    | Formula.Lemma (x, phi) -> () 
 
-let check ~profiling  =
+let check ~profiling =
   incr calls;
   if profiling then Time.start ();
   try 

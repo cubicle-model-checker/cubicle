@@ -23,7 +23,6 @@ exception Restart
 
 exception Conflict of clause
 
-module TimerSat = Timer.Make (struct end)
 
 type env = 
     { 
@@ -909,8 +908,7 @@ let add_clauses cnf =
       None -> () | Some dep -> report_t_unsat dep
   
 let init_solver cnf =
-  TimerSat.start ();
-    let nbv, _ = made_vars_info () in
+  let nbv, _ = made_vars_info () in
   let nbc = env.nb_init_clauses + List.length cnf in
   Vec.grow_to_by_double env.vars nbv;
   Iheap.grow_to_by_double env.order nbv;

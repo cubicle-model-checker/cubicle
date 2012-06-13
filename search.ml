@@ -69,6 +69,13 @@ module Profiling = struct
     printf "├─Time for relevant permutations : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
+  let print_time_formulas () =
+    let sec = Prover.TimeF.get () in
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    printf "├─Time in formulas               : %dm%2.3fs@."
+      (int_of_float minu) extrasec
+
   let print_time_prover () =
     let sec = Smt.get_time () in
     let minu = floor (sec /. 60.) in
@@ -129,6 +136,7 @@ module Profiling = struct
       print_time_subset ();
       print_time_apply ();
       print_time_sort ();
+      print_time_formulas ();
       print_time_prover ();
       printf "----------------------------------------------@."
     end
@@ -310,6 +318,9 @@ module BFS_base ( X : I ) = struct
 	      (if debug then fun _ _ -> () else X.print) s
 	  end;
 	  let ls, post = X.pre s in
+	  (* eprintf "pre : %d@." (List.length ls + List.length post); *)
+	  (* eprintf "done : %d - remaining : %d@." *)
+	  (*   (List.length !visited) (Queue.length q + List.length !postponed); *)
 	  let ls = List.rev ls in
 	  let post = List.rev post in
 	  (* Uncomment for pure bfs search *)
@@ -701,14 +712,16 @@ module DFSHL ( X : I ) = struct
     (* efficient bfs *)
     (* let compare (l1, s1) (l2, s2) = *)
     (*   let v1 = X.size s1 in *)
-    (*   let v2 = X.size s2 in       *)
+    (*   let v2 = X.size s2 in *)
     (*   let c = Pervasives.compare v1 v2 in *)
     (*   if c <> 0 then c else *)
     (*     let c1 = X.card s1 in *)
     (*     let c2 = X.card s2 in *)
     (*     let c = Pervasives.compare c1 c2 in *)
     (*     if c <> 0 then c else *)
-    (*       Pervasives.compare l1 l2 *)
+    (* 	  let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in *)
+    (*       if c <> 0 then c else *)
+    (*         Pervasives.compare l1 l2 *)
       
   end
 
@@ -726,7 +739,8 @@ module DFSHL ( X : I ) = struct
     let rec search_rec_aux h =
 	let (cpt, s), h = H.pop h in
 	if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	  raise ReachBound;
+	  (Profiling.print_report !nb_nodes !invariants !nb_deleted;
+	   raise ReachBound);
 	X.safety s;
 	let h  =
 	  if X.fixpoint ~invariants:!invariants 
@@ -739,6 +753,9 @@ module DFSHL ( X : I ) = struct
 	      if not quiet then printf " node %d= @[%a@]@." !nb_nodes 
 		(if debug then fun _ _ -> () else X.print) s;
 	      let ls, post = X.pre s in
+	      (* eprintf "pre : %d@." (List.length ls + List.length post); *)
+	      (* eprintf "done : %d - remaining : %d@."  *)
+	      (* 	(List.length !visited) (List.length (H.elements h)); *)
 	      let post = List.rev post in
 	      let inv, not_invs =
 		if gen_inv && post <> [] then

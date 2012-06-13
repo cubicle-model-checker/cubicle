@@ -94,7 +94,7 @@ init (p) {
 invariant (z) { z = Home }
 
 
-(*
+
 (* Lemma 1 *)
 unsafe (i) { CacheState[i] = Exclusive && Dirty = False }
 unsafe (i) { CacheState[i] = Exclusive && WBnet_mtype = WB }
@@ -120,16 +120,15 @@ unsafe (i) { Invnet[i] = InvAck && ShWBnet_mtype <> Empty_shwb }
 unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = Get && UnetProc[j] <> Home }
 unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = GetX && UnetProc[j] <> Home }
 unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = PutX && UnetProc[j] <> Home }
-*)
-
-(* invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX } *)
 
 
+(* invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX }  *)
+(* invariant (i j) { CacheState[i] = Exclusive && UnetMtype[j] = PutX }  *)
 
-unsafe (i j) { CacheState[i] = Exclusive && CacheState[j] = Exclusive }
+
 
 unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive }
-
+unsafe (i j) { CacheState[i] = Exclusive && CacheState[j] = Exclusive }
 
 
 transition pi_Local_Get_Dirty ()
@@ -694,7 +693,8 @@ requires { Invnet[dst] = Inv &&
 
 transition ni_InvAck1 (src other)
 requires { Pending = True && 
-	  Invnet[src] = InvAck && Real[other] = True }
+	   Invnet[src] = InvAck && Real[src] = True &&
+           Real[other] = True }
 {
   Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j];
   Real[j] := case | j = src : False | _ : Real[j] 
@@ -702,7 +702,7 @@ requires { Pending = True &&
 
 transition ni_InvAck2 (src)
 requires { Pending = True && 
-	   Invnet[src] = InvAck &&
+	   Invnet[src] = InvAck && Real[src] = True &&           
 	   Dirty = False && 
            forall_other j. Real[j] = False }
 { 
@@ -713,8 +713,9 @@ requires { Pending = True &&
 
 transition ni_InvAck3 (src)
 requires { Pending = True && 
-	  Invnet[src] = InvAck &&
-	  Dirty = True && forall_other j. Real[j] = False }
+	   Invnet[src] = InvAck && Real[src] = True &&
+	   Dirty = True &&
+           forall_other j. Real[j] = False }
 { Pending := False ;
   Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j] ;
   Real[j] := case | j = src : False | _ : Real[j] }
