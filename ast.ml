@@ -324,6 +324,8 @@ type system = {
   trans : transition list
 }
 
+module STerm = Set.Make (struct type t = term let compare = compare_term end)
+
 (* Types AST *)
 
 type t_system = {
@@ -351,3 +353,30 @@ let declared_terms ar =
   (fun acc -> function
     | Comp (t1, _ , t2) -> acc && declared_term t1 && declared_term t2
     | _ -> acc) true ar
+
+
+
+let variables_term t acc = match t with
+  | Elem (a, Glob) | Access (a, _, _) -> STerm.add t acc
+  | Arith (a, Glob, _) -> STerm.add (Elem (a, Glob)) acc
+  | _ -> acc
+
+let rec variables_atom a acc = match a with
+  | True | False -> acc
+  | Comp (t1, _, t2) -> variables_term t1 (variables_term t2 acc) 
+  | Ite (sa, a1, a2) -> 
+    STerm.union (variables_of sa) (variables_atom a1 (variables_atom a2 acc))
+
+and variables_of sa = SAtom.fold variables_atom sa STerm.empty
+
+
+
+let contain_arg z = function
+  | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
+  | Access (x, y, _) -> Hstring.equal y z
+  | Const _ -> false
+
+let has_var z = function
+  | True | False -> false
+  | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
+  | Ite _ -> assert false

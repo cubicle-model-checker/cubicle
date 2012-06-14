@@ -13,11 +13,6 @@
 
 open Ast
 
-module TimeF : Timer.S
+val search : Hstring.t list -> t_system -> t_system list
 
-(* Checks if the system is unsafe *)
-val unsafe : t_system -> unit
-val assume_goal : t_system -> unit
-val assume_node : ArrayAtom.t -> unit
-
-val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
+val search_nb : int -> t_system -> t_system list

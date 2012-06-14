@@ -206,7 +206,8 @@ requires { Head_valid = True &&
 		       | Shlist[j] = True : Inv
 		       | _ : Empty_inv ;
 	 Real[j] := case | j = Head_pointer : True 
-		         | _ : Shlist[j] }
+		         | Shlist[j] = True : True
+		         | _ : False }
 
 
 
@@ -477,7 +478,8 @@ requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
   Real[j] := case 
                | j = src : False
 	       | j = Head_pointer : True 
-	       | _ : Shlist[j] ;
+	       | Shlist[j] = True : True
+	       | _ : False;
   Invnet[j] := case 
 	       | j = src : Empty_inv
 	       | j = Head_pointer : Inv
@@ -507,8 +509,10 @@ requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
   Real[j] := case
                | j = src : False
 	       | j = Head_pointer : True 
-	       | _ : Shlist[j] ;
-  Invnet[j] := case | j = src : Empty_inv
+	       | Shlist[j] = True : True
+	       | _ : False;
+  Invnet[j] := case 
+	       | j = src : Empty_inv
 	       | j = Head_pointer : Inv
 	       | Shlist[j] = True : Inv
 	       | _ : Empty_inv 
@@ -534,7 +538,8 @@ requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
   Real[j] := case 
                | j = src : False
 	       | j = Head_pointer : True 
-	       | _ : Shlist[j] ;
+	       | Shlist[j] = True : True
+	       | _ : False;
   Invnet[j] := case 
 	       | j = src : Empty_inv
 	       | j = Head_pointer : Inv

@@ -125,15 +125,10 @@ and make_literal = function
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
-let contain_arg z = function
-  | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
-  | Access (x, y, _) -> Hstring.equal y z
-  | Const _ -> false
-
-let has_var z = function
-  | True | False -> false
-  | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
-  | Ite _ -> assert false
+let make_conjuct atoms1 atoms2 =
+  let l = Array.fold_left (fun l a -> make_literal a::l) [] atoms1 in
+  let l = Array.fold_left (fun l a -> make_literal a::l) l atoms2 in
+  F.make F.And l
 
 let make_init {t_init = arg, sa } lvars =
   match arg with
@@ -180,3 +175,14 @@ let assume_node ap =
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   Smt.assume ~profiling f;
   Smt.check ~profiling
+
+let check_guard args sa reqs =
+  Smt.clear ();
+  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
+  if profiling then TimeF.start ();
+  let f = F.Ground (make_formula_set (SAtom.union sa reqs)) in
+  if profiling then TimeF.pause ();
+  Smt.assume ~profiling f;
+  Smt.check ~profiling
+  
+  

@@ -82,7 +82,8 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      prover.cmo search.cmo bwreach.cmo typing.cmo main.cmo
+      prover.cmo search.cmo cube.cmo forward.cmo bwreach.cmo \
+      typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -237,8 +238,10 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 	      common/iheap.ml common/iheap.mli common/timer.ml\
 	      common/timer.mli common/vec.ml common/vec.mli
 
-FILES = ast.ml ast.mli bwreach.ml bwreach.mli fake_functory.ml\
-	fake_functory.mli lexer.mll main.ml options.ml options.mli\
+FILES = ast.ml ast.mli cube.ml forward.mli forwkard.ml\
+	bwreach.ml bwreach.mli\
+	fake_functory.ml fake_functory.mli\
+	lexer.mll main.ml options.ml options.mli\
 	parser.mly pretty.ml pretty.mli prover.ml prover.mli search.ml\
 	search.mli typing.ml typing.mli version.ml
 

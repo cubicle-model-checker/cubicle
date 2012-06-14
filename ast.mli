@@ -109,6 +109,8 @@ type system = {
   trans : transition list
 }
 
+module STerm : Set.S with type elt = term
+
 (* Types AST *)
  
 type t_system = {
@@ -126,3 +128,7 @@ type t_system = {
 }
 
 val declared_terms : ArrayAtom.t -> bool
+
+val variables_of : SAtom.t -> STerm.t
+
+val has_var : Hstring.t -> Atom.t -> bool
