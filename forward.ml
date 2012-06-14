@@ -76,9 +76,9 @@ let find_const_value g init =
   try
     SAtom.iter (function
       | Comp (g', op, t') when compare_term g g' = 0 ->
-	raise (Found_const (op, t'))
+	  if is_const t' then raise (Found_const (op, t'))
       | Comp (t', op, g') when compare_term g g' = 0 ->
-	raise (Found_const (op, t'))
+	  if is_const t' then raise (Found_const (op, t'))
       | _ -> ()) init;
     raise Not_found
   with Found_const c -> c
@@ -126,7 +126,7 @@ let apply_assigns assigns sigma =
 let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma =
   let rec sd acc = function
     | [] -> assert false
-    | [d] -> List.rev acc, d
+    | [d] -> acc, d
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
@@ -188,9 +188,9 @@ let post ({ t_unsafe = _, init } as s_init) procs { tr_args = tr_args;
   if possible_guard procs sigma init reqs then
     let assi, assi_terms = apply_assigns assigns sigma in
     let upd, upd_terms = apply_updates upds procs sigma in
-    let unchaged = preserve_terms (STerm.union assi_terms upd_terms) init in
+    let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
     let sa = simplification_atoms SAtom.empty
-      (SAtom.union unchaged (SAtom.union assi upd)) in
+      (SAtom.union unchanged (SAtom.union assi upd)) in
     let sa = elim_prime (prime_satom init) sa in
     let sa, (nargs, _) = proper_cube sa in
     let ar =  ArrayAtom.of_satom sa in
@@ -239,76 +239,4 @@ let search_nb n =
       else acc, n) ([], n) proc_vars in
   let procs = List.rev rp in
   search procs
-
-
-
-
-
-
-(*
-let post s sa tr args procs =
-  let sigma = List.combine tr.tr_args args in
-  let guard = prime_satom (subst_atoms sigma tr.tr_reqs) in
-  let udnf = uguard_dnf sigma procs args tr.tr_ureq in
-  begin 
-    try
-      Prover.check_guard procs sa guard udnf
-    with
-      | Smt.Sat | Smt.IDontknow -> ()
-      | Smt.Unsat uc -> raise (UnsatGuard (level, s, uc))
-  end;
-  let assi, assi_terms = apply_assigns tr.tr_assigns sigma in
-  let upd, upd_terms = apply_updates tr.tr_upds procs sigma in
-  let unchaged = preserve_terms (STerm.union assi_terms upd_terms) sa in
-  simplification_atoms SAtom.empty
-    (SAtom.union unchaged (SAtom.union assi (SAtom.union upd sa)))
-*)
-
-
-
-(* let find_value g init = *)
-(*   let t = ref (Eq, g) in *)
-(*   Array.iter (function  *)
-(*     | Comp (g', op, t') | Comp (t', op, g') when compare_term g g' = 0 -> *)
-(*       t := op, t' *)
-(*     | _ -> ()) init; *)
-(*   !t *)
-    
-
-(* let apply_assigns init a assigns = *)
-(*   let na = Array.copy a in *)
-(*   Array.iteri (fun i -> function *)
-(*     | Comp (Elem (g, Glob), _, _) -> *)
-(*       (try  *)
-(* 	 let t1 = subst_term subst (Hstring.list_assoc g assigns) in *)
-(* 	 let op, t' = find_value t1 init in *)
-(* 	 na.(i) <- Comp (t1, op, t') *)
-(*        with Not_found -> ()) *)
-(*     | _ -> ()) a; *)
-(*   na *)
-
-
-(* let apply_upds init a upds = *)
-(*   let na = Array.copy a in *)
-(*   List.iter (fun {up_arr = a; up_arg=i; } *)
-(*   Array.iteri (fun i -> function *)
-(*     | Comp (Elem (g, Glob), Eq, t2) -> *)
-(*       (try  *)
-(* 	 let t1 = subst_term subst (Hstring.list_assoc g assigns) in *)
-(* 	 let op, t' = find_value t1 init in *)
-(* 	 na.(i) <- Comp (t1, op, t') *)
-(*        with Not_found -> ()) *)
-(*     | _ -> ()) a; *)
-(*   na *)
-
-(* let rec post visited init args { tr_args = tr_args;  *)
-(* 				 tr_reqs = reqs;  *)
-(* 				 tr_assigns = assigns;  *)
-(* 				 tr_upds = upds;  *)
-(* 				 tr_nondets = nondets } = *)
-(*   assert (List.length args >= List.length tr_args); *)
-(*   let subst = build_subst tr_args args in *)
-(*   if possible_guard args subst init reqs then *)
-    
-(*   else None *)
 

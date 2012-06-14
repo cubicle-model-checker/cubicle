@@ -35,8 +35,29 @@ init (z) {
      Curcmd=Empty &&
      Exgntd = False }
 
+(*
+unsafe (z) { Cache[z] = Exclusive && Exgntd  = False }
+unsafe (z) { Cache[z] = Shared && Shrset[z] = False }
+unsafe (z) { Cache[z] = Exclusive && Shrset[z] = False }
+unsafe (z) { Chan2[z] = Gnte && Exgntd = False }
+unsafe (z) { Shrset[z] = False && Chan2[z] = Inv }
+
+unsafe (z) { Shrset[z] = False && Chan3[z] = Invack }
+
+unsafe (z) { Invset[z] = True && Shrset[z] = False }
+unsafe (z) { Chan3[z] = Invack && Cache[z] = Shared }
+unsafe (z) { Chan3[z] = Invack && Cache[z] = Exclusive }
+unsafe (z) { Chan3[z] = Invack && Chan2[z] = Inv }
+unsafe (z) { Chan2[z] = Inv && Invset[z] = True }
+unsafe (z) { Chan3[z] = Invack && Invset[z] = True }
+unsafe (z) { Chan2[z] = Inv && Shrset[z] = False }
+unsafe (z) { Chan3[z] = Invack && Shrset[z] = False }
+
+unsafe (z1 z2) { Exgntd = True && Shrset[z1] = True && Shrset[z2] = True}
+*)
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }
+
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
 
 
@@ -56,7 +77,7 @@ requires { Cache[n] = Invalid && Chan1[n] = Empty }
 	       | _ : Chan1[j] ;
 }
 
-transition send_req_exclusive(n)
+transition send_req_exclusive_2(n)
 requires { Cache[n] = Shared && Chan1[n] = Empty }
 {
   Chan1[j] := case 
