@@ -625,7 +625,9 @@ let system uns =
 
   let forw1_nodes = Forward.search_nb 1 (List.hd uns) in
   eprintf "FORWARD ONE :\n-------------\n@.";
-  List.iter (fun s -> eprintf "%a\n@." Pretty.print_system s)
+  let cpt = ref 0 in
+  List.iter 
+    (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s)
     (List.rev forw1_nodes);
   eprintf "-------------\n@.";
 

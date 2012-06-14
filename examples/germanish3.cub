@@ -12,9 +12,10 @@ array Chan[proc] : req
 init (z) { Cache[z] = Invalid && Shrset[z] = False &&
            Exgntd = False && Curcmd = Empty && Chan[z]=Empty }
 
+(*
 invariant (z) { Cache[z] = Exclusive && Exgntd  = False }
 invariant (z) { Cache[z] = Shared && Shrset[z] = False }
-
+*)
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
