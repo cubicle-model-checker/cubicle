@@ -17,6 +17,69 @@ open Ast
 
 exception Unsafe
 
+
+
+
+module type I = sig
+  type t
+
+  val size : t -> int
+  val card : t -> int
+  val maxrounds : int
+  val maxnodes : int
+  val invariants : t -> t list
+  val gen_inv :
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) -> 
+    invariants : t list -> t list -> t -> t list * t list
+  val gen_inv_with_forward :
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) -> 
+    invariants : t list -> forward_nodes : t list -> 
+    t list -> t -> t list * t list
+  val gen_inv_proc : 
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) ->
+    t list -> t list -> t -> t list * t list
+  val init_thread : 
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) ->
+    t list ref -> t list ref -> t list ref -> t list ref -> 
+    t Queue.t -> Thread.t
+
+  val extract_candidates : t -> t list -> t list
+  val is_inv :
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) ->
+    t -> t list -> bool
+
+  val delete_nodes : t -> t list ref -> int ref -> bool -> unit
+  val delete_nodes_inv : t list -> t list ref -> unit
+  val delete_node : t -> unit
+  val is_deleted : t -> bool
+
+  val safety : t -> unit
+  val fixpoint : invariants : t list -> visited : t list -> t -> bool
+  val easy_fixpoint : t -> t list -> bool
+  val hard_fixpoint : t -> t list -> bool
+
+  val pre : t -> t list * t list
+  val has_deleted_ancestor : t -> bool
+  val print : formatter -> t -> unit
+  val print_system : formatter -> t -> unit
+  val sort : t list -> t list
+  val nb_father : t -> int
+end
+
+module type S = sig 
+  type t
+  val search : invariants : t list -> visited : t list -> 
+    forward_nodes : t list -> t list -> unit
+end
+
+
+
+
 module TimeFix = Timer.Make (struct end)
 
 module TimeRP = Timer.Make (struct end)
@@ -24,6 +87,8 @@ module TimeRP = Timer.Make (struct end)
 module TimePre = Timer.Make (struct end)
 
 module TimeSort = Timer.Make (struct end)
+
+
 
 module Profiling = struct
   
@@ -118,7 +183,7 @@ module Profiling = struct
     printf "├─Nodes sorting                  : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
-  let print_report nb inv del =
+  let print_report nb inv del print_system =
     printf "\n----------------------------------------------@.";
     printf "Number of visited nodes          : %d@." nb;
     printf "Fixpoints                        : %d@." !cpt_fix;
@@ -139,63 +204,23 @@ module Profiling = struct
       print_time_formulas ();
       print_time_prover ();
       printf "----------------------------------------------@."
-    end
+    end;
+    
+    if gen_inv then begin
+      printf "Invariants : @.";
+      List.iter (fun i -> printf "\n%a@." print_system i) inv
+    end;
 
 end
 
 
-module type I = sig
-  type t
-
-  val size : t -> int
-  val card : t -> int
-  val maxrounds : int
-  val maxnodes : int
-  val invariants : t -> t list
-  val gen_inv : 
-    (invariants : t list -> visited : t list -> t list -> unit) ->
-    invariants : t list -> t list -> t -> t list * t list
-  val gen_inv_proc : 
-    (invariants : t list -> visited : t list -> t list -> unit) ->
-    t list -> t list -> t -> t list * t list
-  val init_thread : 
-    (invariants : t list -> visited : t list -> t list -> unit) ->
-    t list ref -> t list ref -> t list ref -> t list ref -> 
-    t Queue.t -> Thread.t
-
-  val extract_candidates : t -> t list -> t list
-  val is_inv :
-    (invariants : t list -> visited : t list -> t list -> unit) ->
-    t -> t list -> bool
-
-  val delete_nodes : t -> t list ref -> int ref -> bool -> unit
-  val delete_nodes_inv : t list -> t list ref -> unit
-  val delete_node : t -> unit
-  val is_deleted : t -> bool
-
-  val safety : t -> unit
-  val fixpoint : invariants : t list -> visited : t list -> t -> bool
-  val easy_fixpoint : t -> t list -> bool
-  val hard_fixpoint : t -> t list -> bool
-
-  val pre : t -> t list * t list
-  val has_deleted_ancestor : t -> bool
-  val print : formatter -> t -> unit
-  val sort : t list -> t list
-  val nb_father : t -> int
-end
-
-module type S = sig 
-  type t
-  val search : invariants : t list -> visited : t list -> t list -> unit
-end
 
 
 module DFS ( X : I ) = struct
 
   type t = X.t
 
-  let search ~invariants ~visited uns =
+  let search ~invariants ~visited ~forward_nodes uns =
     let nb_nodes = ref 0 in
     let rec search_rec cpt visited s =
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
@@ -215,7 +240,7 @@ module DFSL ( X : I ) = struct
 
   type t = X.t
   
-  let search ~invariants ~visited uns =
+  let search ~invariants ~visited ~forward_nodes uns =
     let visited = ref visited in
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let rec search_rec cpt s =
@@ -233,7 +258,7 @@ module DFSL ( X : I ) = struct
     in
     List.iter (search_rec 0) uns;
     eprintf "[DFSL]";
-    Profiling.print_report !nb_nodes [] 0
+    Profiling.print_report !nb_nodes [] 0 X.print_system
 
 end
 
@@ -260,7 +285,7 @@ module DFSH ( X : I ) = struct
 
   module H = Heap.Make(S)
 
-  let search ~invariants ~visited uns =
+  let search ~invariants ~visited ~forward_nodes uns =
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let rec search_rec h =
       let (cpt, s, visited), h = H.pop h in
@@ -284,7 +309,7 @@ module DFSH ( X : I ) = struct
 	search_rec (H.add H.empty (List.map (fun s -> 0, s, visited) uns))
       with Heap.EmptyHeap -> ()
     end;
-    Profiling.print_report !nb_nodes [] 0
+    Profiling.print_report !nb_nodes [] 0 X.print_system
 
 end
 
@@ -292,7 +317,7 @@ module BFS_base ( X : I ) = struct
 
   type t = X.t 
 
-  let search inv_search invgen ~invariants ~visited uns = 
+  let search inv_search invgen ~invariants ~visited ~forward_nodes uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -303,7 +328,8 @@ module BFS_base ( X : I ) = struct
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	(Profiling.print_report !nb_nodes !invariants !nb_deleted;
+	(Profiling.print_report !nb_nodes !invariants !nb_deleted
+	   X.print_system;
 	 raise ReachBound);
       X.safety s;
       if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) 
@@ -329,9 +355,10 @@ module BFS_base ( X : I ) = struct
 
 	  (* invariant search *)
 	  let inv, not_invs =
-	    if invgen && gen_inv && post <> [] then 
+	    if invgen && gen_inv (* && post <> []  *)then 
 	      begin
-		X.gen_inv inv_search ~invariants:!invariants 
+		X.gen_inv_with_forward inv_search 
+		  ~invariants:!invariants ~forward_nodes
 		  !not_invariants s
 	      end
 	    else [], !not_invariants
@@ -366,7 +393,7 @@ module BFS_base ( X : I ) = struct
     List.iter (fun s -> Queue.add (0, s) q) uns;
     search_rec ();
     if invgen || not gen_inv then 
-      Profiling.print_report !nb_nodes !invariants !nb_deleted
+      Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
 
 end
 
@@ -376,7 +403,7 @@ module BFSinvp_base ( X : I ) = struct
 
   let () = Functory.Cores.set_number_of_cores cores
 
-  let search inv_search ~invariants ~visited uns = 
+  let search inv_search ~invariants ~visited ~forward_nodes uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -442,7 +469,7 @@ module BFSinvp_base ( X : I ) = struct
     in
     List.iter (fun s -> Queue.add (0, s) q) uns;
     search_rec ();
-    Profiling.print_report !nb_nodes !invariants !nb_deleted;
+    Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system;
 
 end
 
@@ -496,7 +523,7 @@ module BFS_dist_base ( X : I ) = struct
       if X.is_inv inv_search s invariants then Inv else NotInv
 	
 
-  let search inv_search invgen ~invariants ~visited uns = 
+  let search inv_search invgen ~invariants ~visited ~forward_nodes uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in 
@@ -639,7 +666,7 @@ module BFS_dist_base ( X : I ) = struct
 
     search_rec ~post:false ;
     if invgen || not gen_inv then 
-      Profiling.print_report !nb_nodes !invariants !nb_deleted
+      Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
     
 
 end
@@ -650,7 +677,9 @@ module BFSnoINV ( X : I ) = struct
 
   include BFS_base(X)
 
-  let search = search (fun ~invariants:_ ~visited:_ _ -> ()) false
+  let search ~invariants ~visited ~(forward_nodes:X.t list) = 
+    search (fun ~invariants:_ ~visited:_ ~forward_nodes:(_:X.t list) _ -> ())
+      false ~invariants ~visited ~forward_nodes
 
 end
 
@@ -729,7 +758,7 @@ module DFSHL ( X : I ) = struct
 
   module H = Heap.Make(S)
 
-  let search ~invariants ~visited uns =
+  let search ~invariants ~visited ~forward_nodes uns =
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
     let visited = ref visited in
@@ -739,7 +768,8 @@ module DFSHL ( X : I ) = struct
     let rec search_rec_aux h =
 	let (cpt, s), h = H.pop h in
 	if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	  (Profiling.print_report !nb_nodes !invariants !nb_deleted;
+	  (Profiling.print_report !nb_nodes !invariants !nb_deleted
+	     X.print_system;
 	   raise ReachBound);
 	X.safety s;
 	let h  =
@@ -796,7 +826,7 @@ module DFSHL ( X : I ) = struct
     in
     let h = H.add H.empty (List.map (fun s -> 0, s) uns) in
     search_rec h;
-    Profiling.print_report !nb_nodes !invariants !nb_deleted
+    Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
 
 end
 

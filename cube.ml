@@ -406,7 +406,56 @@ let inconsistent_2cubes sa1 sa2 =
   with Exit -> true
 
 
+let inconsistencies ap other =
+  if inconsistent_2arrays ap other then
+    Array.fold_left (fun acc a ->
+      let sa = SAtom.singleton a in
+      Array.fold_left (fun acc o -> 
+	let so = SAtom.singleton o in
+	if inconsistent_2cubes sa so then a :: acc
+	else acc) acc other
+    ) [] ap
+  else []
 
+
+let distrib_one l acc x =
+  List.fold_left (fun acc y ->
+    let n = SAtom.add y x in 
+    if List.mem n acc then acc else n :: acc) acc l
+
+let distrib_cand l1 l2 =
+  List.fold_left (distrib_one l1) [] l2
+
+
+let rec fold_candidates_rec acc ap = function
+  | [] -> List.sort SAtom.compare acc
+  | fp :: fs ->
+      (* XXX *)
+      let incs = inconsistencies ap fp in
+      (* eprintf "inconsistencies %a >>> %a === @." *)
+      (* 	Pretty.print_array ap Pretty.print_array fp; *)
+      (* List.iter (fun a -> eprintf "%a\n----@." *)
+      (* 	Pretty.print_atom a) incs; *)
+      if incs = [] then raise Exit;
+      (* let sfp = ArrayAtom.to_satom fp in *)
+      (* List.rev_append  *)
+      (* 	(List.rev_map (fun inc -> SAtom.add inc acc) incs) *)
+      (* 	(fold_candidates ap fs) *)
+      fold_candidates_rec (distrib_cand incs acc) ap fs
+
+let fold_candidates = fold_candidates_rec [SAtom.empty]
+
+let simple_extract_candidates ap forward_nodes =
+  List.fold_left (fun acc fs ->
+    try
+      let cs = 
+	List.fold_left (fun acc c ->
+	  (* eprintf "fold_cand %a @." Pretty.print_cube c; *)
+	  if SAtom.cardinal c > 1 then c :: acc else acc
+	) [] (fold_candidates ap fs) in
+      cs @ acc
+    with Exit -> acc)
+    [] forward_nodes
 
 
 

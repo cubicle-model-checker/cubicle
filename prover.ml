@@ -125,6 +125,10 @@ and make_literal = function
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
+
+let make_disjunction nodes = F.make F.Or (List.map make_formula nodes)
+
+
 let make_conjuct atoms1 atoms2 =
   let l = Array.fold_left (fun l a -> make_literal a::l) [] atoms1 in
   let l = Array.fold_left (fun l a -> make_literal a::l) l atoms2 in
@@ -185,4 +189,36 @@ let check_guard args sa reqs =
   Smt.assume ~profiling f;
   Smt.check ~profiling
   
+
+let unsat_core_wrt_node uc ap =
+  Array.fold_left (fun acc a ->
+    match make_literal a with
+      | F.Lit la when List.mem [la] uc -> SAtom.add a acc
+      | _ -> acc) 
+    SAtom.empty ap
   
+let extract_candidates args ap forward_nodes =
+  List.fold_left (fun acc fs ->
+    try
+      let c = 
+	List.fold_left (fun acc fp ->
+	  Smt.clear ();
+	  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
+	  if profiling then TimeF.start ();
+	  let f = F.Ground (make_conjuct ap fp) in
+	  if profiling then TimeF.pause ();
+	  try 
+	    Smt.assume ~profiling f;
+	    Smt.check ~profiling;
+	    raise Exit
+	  with Smt.Unsat uc ->
+	    let c = unsat_core_wrt_node uc ap in
+	    SAtom.union c acc
+	    (* let acc =  *)
+	    (*   if !first then (first := false; c) *)
+	    (*   else SAtom.inter c acc in *)
+	    (* if SAtom.is_empty acc then raise Exit else acc *)
+	) SAtom.empty fs
+      in if SAtom.cardinal c > 1 then c :: acc else acc
+    with Exit -> acc)
+    [] forward_nodes

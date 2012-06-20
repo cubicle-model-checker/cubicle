@@ -71,6 +71,7 @@ module ArrayAtom : sig
   val equal : t -> t -> bool
   val subset : t -> t -> bool
   val of_satom : SAtom.t -> t
+  val to_satom : t -> SAtom.t
   val union : t -> t -> t
   val apply_subst : (Hstring.t * Hstring.t) list -> t -> t
   val nb_diff : t -> t -> int

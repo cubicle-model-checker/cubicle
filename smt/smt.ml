@@ -233,6 +233,28 @@ module Formula = struct
 
   type t = Ground of ground | Lemma of lemma
 
+  let rec print fmt f =
+    match f with
+      | Ground phi -> print_ground fmt phi
+      | Lemma (l, phi) ->
+	  fprintf fmt "forall %a. %a" 
+	    (fun fmt -> 
+	       List.iter (fprintf fmt "%a " Hstring.print)) l print_ground phi
+  and print_ground fmt phi = 
+    match phi with
+      | Lit a -> Literal.LT.print fmt a
+      | Comb (Not, [f]) -> 
+	  fprintf fmt "not (%a)" print_ground f
+      | Comb (And, l) -> fprintf fmt "(%a)" (print_list "and") l
+      | Comb (Or, l) ->  fprintf fmt "(%a)" (print_list "or") l
+      | Comb (Imp, [f1; f2]) -> 
+	  fprintf fmt "%a => %a" print_ground f1 print_ground f2
+      | _ -> assert false
+  and print_list sep fmt = function
+    | [] -> ()
+    | [f] -> print_ground fmt f
+    | f::l -> fprintf fmt "%a %s %a" print_ground f sep (print_list sep) l
+
   let vrai = Lit Literal.LT.vrai
   let faux = Lit Literal.LT.faux
 
@@ -331,6 +353,30 @@ module Formula = struct
 	  Comb (And, List.map cnf l)
       | f -> f    
 
+
+let ( @@ ) l1 l2 = List.rev_append l1 l2
+
+let rec mk_cnf = function
+  | Comb (And, l) ->
+      List.fold_left (fun acc f ->  (mk_cnf f) @@ acc) [] l
+
+  | Comb (Or, [f1;f2]) ->
+      let ll1 = mk_cnf f1 in
+      let ll2 = mk_cnf f2 in
+      List.fold_left 
+	(fun acc l1 -> (List.rev_map (fun l2 -> l1 @@ l2)ll2) @@ acc) [] ll1
+
+  | Comb (Or, f1 :: l) ->
+      let ll1 = mk_cnf f1 in
+      let ll2 = mk_cnf (Comb (Or, l)) in
+      List.fold_left 
+	(fun acc l1 -> (List.rev_map (fun l2 -> l1 @@ l2)ll2) @@ acc) [] ll1
+
+  | Lit a -> [[a]]
+  | Comb (Not, [Lit a]) -> [[Literal.LT.neg a]]
+  | _ -> assert false
+
+
   let rec unfold mono f = 
     match f with
       | Lit a -> a::mono 
@@ -350,27 +396,8 @@ module Formula = struct
     let sfnc = cnf (sform f) in
     init [] sfnc
 
-  let rec print fmt f =
-    match f with
-      | Ground phi -> print_ground fmt phi
-      | Lemma (l, phi) ->
-	  fprintf fmt "forall %a. %a" 
-	    (fun fmt -> 
-	       List.iter (fprintf fmt "%a " Hstring.print)) l print_ground phi
-  and print_ground fmt phi = 
-    match phi with
-      | Lit a -> Literal.LT.print fmt a
-      | Comb (Not, [f]) -> 
-	  fprintf fmt "not (%a)" print_ground f
-      | Comb (And, l) -> print_list "and" fmt l
-      | Comb (Or, l) ->  print_list "or" fmt l
-      | Comb (Imp, [f1; f2]) -> 
-	  fprintf fmt "%a => %a" print_ground f1 print_ground f2
-      | _ -> assert false
-  and print_list sep fmt = function
-    | [] -> ()
-    | [f] -> print_ground fmt f
-    | f::l -> fprintf fmt "%a %s %a" print_ground f sep (print_list sep) l
+  (* let make_cnf f = mk_cnf (sform f) *)
+
 
 end
 
@@ -438,3 +465,4 @@ let check ~profiling =
     | Solver.Unsat ex -> 
 	if profiling then Time.pause ();
 	raise (Unsat (export_unsatcore ex))
+    

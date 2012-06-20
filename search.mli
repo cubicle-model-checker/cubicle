@@ -24,19 +24,28 @@ module type I = sig
   val maxnodes : int
   val invariants : t -> t list
   val gen_inv :
-    (invariants : t list -> visited : t list -> t list -> unit) -> 
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) -> 
     invariants : t list -> t list -> t -> t list * t list
+  val gen_inv_with_forward :
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) -> 
+    invariants : t list -> forward_nodes : t list -> 
+    t list -> t -> t list * t list
   val gen_inv_proc : 
-    (invariants : t list -> visited : t list -> t list -> unit) ->
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) ->
     t list -> t list -> t -> t list * t list
   val init_thread : 
-    (invariants : t list -> visited : t list -> t list -> unit) ->
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) ->
     t list ref -> t list ref -> t list ref -> t list ref -> 
     t Queue.t -> Thread.t
 
   val extract_candidates : t -> t list -> t list
   val is_inv :
-    (invariants : t list -> visited : t list -> t list -> unit) ->
+    (invariants : t list -> visited : t list -> forward_nodes : t list ->
+     t list -> unit) ->
     t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
@@ -52,10 +61,20 @@ module type I = sig
   val pre : t -> t list * t list
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
+  val print_system : Format.formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
 
 end
+
+
+module type S = sig 
+  type t
+  val search : invariants : t list -> visited : t list -> 
+    forward_nodes : t list -> t list -> unit
+end
+
+
 
 module TimeFix : Timer.S
 
@@ -64,14 +83,6 @@ module TimeRP  : Timer.S
 module TimePre : Timer.S
 
 module TimeSort : Timer.S
-
-
-module type S = sig 
-  type t
-
-  val search : invariants : t list -> visited : t list -> t list -> unit
-
-end
 
 (* Dfs search where fixpoint nodes are only looked on the current
    branch *)

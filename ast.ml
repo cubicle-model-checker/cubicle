@@ -211,6 +211,9 @@ module ArrayAtom = struct
   let of_satom s =
     Array.of_list (SAtom.elements s)
 
+  let to_satom =
+    Array.fold_left (fun s a -> SAtom.add a s) SAtom.empty
+
   let union = Array.append 
     (* let a = Array.append a1 a2 in *)
     (* Array.fast_sort Atom.compare a; a *)
