@@ -350,20 +350,34 @@ let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
 (* Renames the parameters of the initial unsafe formula *)
 (********************************************************)
 
-let init_atoms args sa = 
+let init_atoms_sigma args sa = 
   let cpt = ref 0 in
   let sigma = 
     List.map 
       (fun z -> incr cpt; z, H.make ("#"^(string_of_int !cpt))) args in
   let sa = apply_subst sa sigma in
   let args = List.map snd sigma in
+  sigma, args, sa
+
+let init_atoms args sa =
+  let sigma, args, sa = init_atoms_sigma args sa in
   args, sa
 
-let init_parameters ({t_unsafe = (args, sa); t_arru = a; t_invs = invs } as s) =
+let init_forward (args, ex_args, sa) = 
+  let sigma, args, sa = init_atoms_sigma args sa in
+  let ex_args = List.map (svar sigma) ex_args in
+  args, ex_args, sa
+  
+
+let init_parameters ({t_unsafe = (args, sa); 
+		      t_arru = a; t_invs = invs } as s) =
   let args, sa = init_atoms args sa in
   let a = ArrayAtom.of_satom sa in
   let invs = List.map (fun (argsi, sai) -> init_atoms argsi sai) invs in
-  { s with t_unsafe = (args, sa); t_arru = a; 
+  { s with
+    t_unsafe = args, sa;
+    t_forward = List.map init_forward s.t_forward;
+    t_arru = a; 
     t_alpha = ArrayAtom.alpha a args; t_invs = invs }
 
 
@@ -718,12 +732,27 @@ let system uns =
     | [] -> assert false
   in
 
-  let forward_nodes = List.rev (Forward.search_nb 1 (List.hd uns)) in
-  eprintf "FORWARD ONE :\n-------------\n@.";
-  let cpt = ref 0 in
-  List.iter 
-    (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s)
-    forward_nodes;
-  eprintf "-------------\n@.";
+  if only_forward then begin
+    
+    let forward_nodes = List.rev (Forward.search_only (List.hd uns)) in
+    eprintf "FORWARD :\n-------------\n@.";
+    let cpt = ref 0 in
+    List.iter 
+      (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s)
+      forward_nodes;
+    eprintf "-------------\n@.";
+    exit 0
+  end
+  else begin
 
-  search ~invariants ~visited:[] ~forward_nodes uns
+    let forward_nodes = List.rev (Forward.search_nb 1 (List.hd uns)) in
+    eprintf "FORWARD ONE :\n-------------\n@.";
+    let cpt = ref 0 in
+    List.iter 
+      (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s)
+      forward_nodes;
+    eprintf "-------------\n@.";
+
+    search ~invariants ~visited:[] ~forward_nodes uns
+  end
+

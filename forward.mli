@@ -16,3 +16,5 @@ open Ast
 val search : Hstring.t list -> t_system -> t_system list
 
 val search_nb : int -> t_system -> t_system list
+
+val search_only : t_system -> t_system list

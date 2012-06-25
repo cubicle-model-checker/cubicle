@@ -66,7 +66,7 @@
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
-%token ASSIGN UGUARD REQUIRE NEQ UNSAFE
+%token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
 %token <string> LIDENT
 %token <string> MIDENT
@@ -93,6 +93,7 @@ declarations
 init
 invariants
 unsafe_list
+forward_list
 transitions 
 { let consts, vars, arrays = $2 in
   { type_defs = $1; 
@@ -102,7 +103,8 @@ transitions
     init = $3; 
     invs = $4;
     unsafe = $5; 
-    trans = $6 } }
+    forward = $6;
+    trans = $7 } }
 ;
 
 declarations :
@@ -175,6 +177,16 @@ UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR
 unsafe_list:
 | unsafe { [$1] }
 | unsafe unsafe_list { $1::$2 }
+;
+
+forward:
+FORWARD LEFTPAR lidents COMMA lidents RIGHTPAR LEFTBR cube RIGHTBR 
+{ $3, $5, $8 }
+;
+
+forward_list:
+| { [] }
+| forward forward_list { $1::$2 }
 ;
 
 transitions:

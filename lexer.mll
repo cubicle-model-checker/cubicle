@@ -30,6 +30,7 @@
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;
+        "forward", FORWARD;
 	"case", CASE;
 	"forall_other", FORALL;
       ]

@@ -213,6 +213,15 @@ let rec forward visited procs trs = function
 	  else s :: new_td) [] trs in
     forward (init :: visited) procs trs (to_do @ new_td)
     
+(* let mkinit_multi args init args = *)
+(*   match args with *)
+(*     | [] -> init *)
+(*     | _ -> *)
+(* 	let sa, cst = SAtom.partition (fun a ->  *)
+(* 	  List.exists (fun z -> has_var z a) args) init in *)
+(* 	List.fold_left (fun acc h -> *)
+(* 	  SAtom.union (subst_atoms [z, h] sa) acc) cst args *)
+
 let mkinit arg init args =
   match arg with
     | None -> init
@@ -230,6 +239,18 @@ let mkinit_s procs ({t_init = ia, init} as s) =
     t_alpha = ArrayAtom.alpha ar nargs;
   }
 
+let mkforward_s s =
+  List.map (fun fo ->
+    let _,_,sa = fo in
+    let sa, (nargs, _) = proper_cube sa in
+    let ar = ArrayAtom.of_satom sa in
+    { s with
+      t_unsafe = nargs, sa;
+      t_arru = ar;
+      t_alpha = ArrayAtom.alpha ar nargs;
+    })
+    s.t_forward
+
 let search procs init = forward [] procs init.t_trans [mkinit_s procs init]
 
 let search_nb n =
@@ -240,3 +261,8 @@ let search_nb n =
   let procs = List.rev rp in
   search procs
 
+
+let search_only s =
+  let ex_args = 
+    match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in
+  forward [] ex_args s.t_trans (mkforward_s s)

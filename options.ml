@@ -30,6 +30,7 @@ let debug_smt = ref false
 let dmcmt = ref false
 let profiling = ref false
 
+let only_forward = ref false
 let gen_inv = ref false
 let post_strategy = ref (-1)
 let delete = ref true
@@ -59,6 +60,7 @@ let specs =
     "-debug", Arg.Set debug, " debug mode";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
+    "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-postpone", Arg.Set_int post_strategy, "<0|1|2> 0: do not postpone nodes\n                        1: postpone nodes with n+1 processes\n                        2: postpone nodes that don't add information";
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
@@ -87,6 +89,7 @@ let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling
 let file = !file
+let only_forward = !only_forward
 let gen_inv = !gen_inv
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc

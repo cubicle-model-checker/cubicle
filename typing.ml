@@ -278,6 +278,7 @@ let system s =
   init s.init;
   Smt.Typing.Variant.init l;
   List.iter unsafe s.unsafe;
+  List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
   transitions s.trans;
   Smt.Typing.Variant.close ();
   if Options.debug then Smt.Typing.Variant.print ();
@@ -297,6 +298,7 @@ let system s =
       t_init = s.init;
       t_invs = s.invs;
       t_unsafe = un;
+      t_forward = s.forward;
       t_arru = arru;
       t_alpha = ArrayAtom.alpha arru args;
       t_trans = s.trans;

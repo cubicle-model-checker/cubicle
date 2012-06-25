@@ -21,6 +21,7 @@ val type_only : bool ref
 val maxrounds : int
 val maxnodes : int
 
+val only_forward : bool
 val gen_inv : bool
 val post_strategy : int
 val delete : bool
