@@ -35,6 +35,9 @@ type term =
 
 val compare_term : term -> term -> int
 
+val htrue : Hstring.t
+val hfalse : Hstring.t
+
 type acc_eq = { a : Hstring.t; i: Hstring.t; e: term }
 
 module rec Atom : sig
@@ -45,6 +48,7 @@ module rec Atom : sig
     | Ite of SAtom.t * t * t
 
   val compare : t -> t -> int
+  val neg : t -> t
 end 
 and SAtom : Set.S with type elt = Atom.t
 

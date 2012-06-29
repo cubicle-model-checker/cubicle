@@ -35,10 +35,8 @@ init (z) {
      Curcmd=Empty &&
      Exgntd = False }
 
-(*
-unsafe (z) { Cache[z] = Exclusive && Exgntd  = False }
-unsafe (z) { Cache[z] = Shared && Shrset[z] = False }
-unsafe (z) { Cache[z] = Exclusive && Shrset[z] = False }
+
+(*unsafe (z) { Cache[z] = Shared && Exgntd  = False }
 unsafe (z) { Chan2[z] = Gnte && Exgntd = False }
 unsafe (z) { Shrset[z] = False && Chan2[z] = Inv }
 
@@ -56,6 +54,161 @@ unsafe (z) { Chan3[z] = Invack && Shrset[z] = False }
 unsafe (z1 z2) { Exgntd = True && Shrset[z1] = True && Shrset[z2] = True}
 *)
 
+(* invariant (z) { Chan2[z] <> Empty && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] <> Empty && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Cache[z] <> Invalid && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Invset[z] = True && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Inv && *)
+(*  Invset[z] = True *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] <> Empty && *)
+(*  Invset[z] = True *)
+
+(* } *)
+
+(* invariant (z) {Exgntd = False && *)
+(*  Cache[z] = Exclusive *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] <> Empty && *)
+(*  Cache[z] = Exclusive *)
+
+(* } *)
+
+(* invariant (z) {Cache[z] = Exclusive && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Exgntd = True && *)
+(*  Cache[z] = Shared *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnte && *)
+(*  Cache[z] = Shared *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] <> Empty && *)
+(*  Cache[z] = Shared *)
+
+(* } *)
+
+(* invariant (z) {Cache[z] = Shared && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Inv && *)
+(*  Cache[z] = Invalid *)
+
+(* } *)
+
+(* invariant (z) {Curcmd = Empty && *)
+(*  Chan3[z] = Invack *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] <> Empty && *)
+(*  Chan3[z] = Invack *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] = Invack && *)
+(*  Cache[z] <> Invalid *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] = Invack && *)
+(*  Invset[z] = True *)
+
+(* } *)
+
+(* invariant (z) {Chan3[z] = Invack && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Exgntd = False && *)
+(*  Chan2[z] = Gnte *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnte && *)
+(*  Chan3[z] <> Empty *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnte && *)
+(*  Cache[z] <> Invalid *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnte && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Exgntd = True && *)
+(*  Chan2[z] = Gnts *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnts && *)
+(*  Chan3[z] <> Empty *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnts && *)
+(*  Cache[z] = Exclusive *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Gnts && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Curcmd = Empty && *)
+(*  Chan2[z] = Inv *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Inv && *)
+(*  Chan3[z] <> Empty *)
+
+(* } *)
+
+(* invariant (z) {Chan2[z] = Inv && *)
+(*  Shrset[z] = False *)
+
+(* } *)
+
+(* invariant (z) {Curcmd = Empty && *)
+(*  Chan3[z] <> Empty *)
+(* 	      } *)
+
+(* unsafe (z1 z2) { Exgntd = True && Shrset[z1] = True && Shrset[z2] = True} *)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }
 
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
@@ -90,7 +243,7 @@ requires { Curcmd = Empty && Chan1[n] = Reqs }
 { 
   Curcmd := Reqs; 
   CurClient := n; 
-  Invset := Shrset;
+  Invset[j] := case | _ : Shrset[j];
   Chan1[j] := case 
   	       | j = n: Empty 
 	       | _ : Chan1[j];
@@ -101,7 +254,7 @@ requires { Curcmd = Empty && Chan1[n] = Reqe }
 { 
   Curcmd := Reqe; 
   CurClient := n; 
-  Invset := Shrset;
+  Invset[j] := case | _ : Shrset[j];
   Chan1[j] := case 
   	       | j = n : Empty 
 	       | _ : Chan1[j] ;

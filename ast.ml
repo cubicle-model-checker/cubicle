@@ -64,6 +64,9 @@ let rec compare_term t1 t2 =
 	let c = Hstring.compare t1 t2 in
 	if c<>0 then c else compare_constants cs1 cs2
 
+let htrue = Hstring.make "True"
+let hfalse = Hstring.make "False"
+
 type acc_eq = { a : Hstring.t; i: Hstring.t; e: term }
 
 module rec Atom : sig
@@ -74,6 +77,7 @@ module rec Atom : sig
     | Ite of SAtom.t * t * t
 
   val compare : t -> t -> int
+  val neg : t -> t
 
 end = struct
   
@@ -103,6 +107,17 @@ end = struct
 	  if c<>0 then c else 
 	    let c = compare a1 a2 in
 	    if c<>0 then c else compare b1 b2
+
+
+  let neg = function
+    | True -> False
+    | False -> True
+    | Comp (x, Eq, y) -> Comp (x, Neq, y)
+    | Comp (x, Lt, y) -> Comp (y, Le, x)
+    | Comp (x, Le, y) -> Comp (y, Lt, x)
+    | Comp (x, Neq, y) -> Comp (x, Eq, y)
+    | _ -> assert false
+
 
 end
 and SAtom : Set.S with type elt = Atom.t = Set.Make(Atom)
@@ -166,7 +181,7 @@ let build_subst args a_args =
       | [], _ -> acc
       | x::args, ax::a_args ->
 	a_subst ((x, ax)::acc) args a_args
-      | _ -> raise ReachBound
+      | _ -> assert false
   in
   a_subst [] args a_args
 

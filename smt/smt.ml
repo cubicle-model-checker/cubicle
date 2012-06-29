@@ -134,6 +134,10 @@ module Typing = struct
 	(fun x c -> 
 	   Format.eprintf "%a = {%a}@." Hstring.print x hset_print c) 
 	constructors
+
+
+    let get_variants = H.find constructors
+
  
     let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
 

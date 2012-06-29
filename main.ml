@@ -46,7 +46,7 @@ let _ =
     | ReachBound ->
 	printf "reach bound\n@.";
 	exit 1
-    | Search.Unsafe ->
+    | Search.Unsafe _ ->
 	printf "\n\nUNSAFE !\n@.";
 	exit 1
 

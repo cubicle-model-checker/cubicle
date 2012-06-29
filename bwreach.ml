@@ -492,6 +492,18 @@ let impossible_inv { t_arru = p } not_invs =
 let trivial_inv { t_arru = p } invs =
   List.exists (fun { t_arru = i } -> ArrayAtom.subset i p) invs
 
+let impossible_inv { t_unsafe = args,_; t_alpha = aa, ap } not_invs =
+  let d = all_permutations aa args in
+  List.exists (fun sigma ->
+    let p = ArrayAtom.apply_subst sigma ap in
+    List.exists (fun { t_arru = ni } -> ArrayAtom.subset p ni) not_invs) d
+
+let trivial_inv { t_unsafe = args,_; t_alpha = aa, ap } invs =
+  let d = all_permutations aa args in
+  List.exists (fun sigma ->
+    let p = ArrayAtom.apply_subst sigma ap in
+    List.exists (fun { t_arru = i } -> ArrayAtom.subset i p) invs) d
+
 type inv_result =  Inv | NotInv | Nothing
 
 let worker_inv search invariants not_invs p =
@@ -503,7 +515,7 @@ let worker_inv search invariants not_invs p =
 	Pretty.print_system p;
       Inv
     end
-  with | Search.Unsafe | ReachBound -> NotInv
+  with | Search.Unsafe _ | ReachBound -> NotInv
 
 let init_thread search invariants not_invs visited postponed candidates =
   
@@ -554,7 +566,7 @@ let gen_inv search ~invariants not_invs s =
 	     Pretty.print_system p;
 	   p::invs, not_invs
 	 end
-       with | Search.Unsafe | ReachBound -> invs, p::not_invs) 
+       with | Search.Unsafe _ | ReachBound -> invs, p::not_invs) 
     ([], not_invs) (partition s)
 
 
@@ -563,15 +575,18 @@ let rec try_inv search ~invariants invs not_invs candidates =
     (fun (invs, not_invs) p ->
        try
 	 let invariants' = invs@invariants in
-	 if impossible_inv p not_invs || trivial_inv p not_invs 
-	 then invs, not_invs
+	 if impossible_inv p not_invs || trivial_inv p invs then invs, not_invs
 	 else begin
+	   eprintf "candidate : %a @." Pretty.print_system p;
 	   search ~invariants:invariants' ~visited:[] ~forward_nodes:[] [p]; 
-	   if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
-	     Pretty.print_system p;
-	   try_inv search ~invariants (p::invs) not_invs (sub_cubes p)
+	   if not quiet then eprintf "INVARIANT : %a @." Pretty.print_system p;
+	   p::invs, not_invs
+	 (* recursisvely try sub-cubes to find a more general invariant *)
+	   (* try_inv search ~invariants (p::invs) not_invs (sub_cubes p) *)
 	 end
-       with | Search.Unsafe | ReachBound -> invs, p::not_invs)
+       with 
+	 | Search.Unsafe _ -> invs, p::not_invs
+	 | ReachBound -> invs, not_invs)
     (invs, not_invs) candidates
 
 let rec gen_inv search ~invariants not_invs s =
@@ -612,21 +627,22 @@ let candidates forward_nodes ({t_unsafe = args, sp; t_arru = ap} as s) =
 
 
 let gen_inv_with_forward search ~invariants ~forward_nodes not_invs s =
-  List.fold_left 
-    (fun (invs, not_invs) p ->
-       try
-	 let invariants = invs@invariants in
-	 (* if fixpoint ~invariants:invariants ~visited:[] p then invs  *)
-	 (* else *)
-	 if impossible_inv p not_invs || trivial_inv p invs then invs, not_invs
-	 else begin
-	   eprintf "candidate : %a @." Pretty.print_system p;
-	   search ~invariants:invariants ~visited:[] ~forward_nodes:[] [p]; 
-	   if not quiet then eprintf "INVARIANT : %a @." Pretty.print_system p;
-	   p::invs, not_invs
-	 end
-       with | Search.Unsafe | ReachBound -> invs, p::not_invs) 
-    ([], not_invs) (candidates forward_nodes s)
+  try_inv search ~invariants [] not_invs (candidates forward_nodes s)
+  (* List.fold_left  *)
+  (*   (fun (invs, not_invs) p -> *)
+  (*      try *)
+  (* 	 let invariants = invs@invariants in *)
+  (* 	 (\* if fixpoint ~invariants:invariants ~visited:[] p then invs  *\) *)
+  (* 	 (\* else *\) *)
+  (* 	 if impossible_inv p not_invs || trivial_inv p invs then invs, not_invs *)
+  (* 	 else begin *)
+  (* 	   eprintf "candidate : %a @." Pretty.print_system p; *)
+  (* 	   search ~invariants:invariants ~visited:[] ~forward_nodes:[] [p];  *)
+  (* 	   if not quiet then eprintf "INVARIANT : %a @." Pretty.print_system p; *)
+  (* 	   p::invs, not_invs *)
+  (* 	 end *)
+  (*      with | Search.Unsafe | ReachBound -> invs, p::not_invs)  *)
+  (*   ([], not_invs) (candidates forward_nodes s) *)
 
 
 
@@ -644,7 +660,7 @@ let gen_inv_proc search invs not_invs s =
 		Pretty.print_system p;
 	    p::new_invs, p::invs, new_not_invs, not_invs
 	  end
-	with Search.Unsafe | ReachBound ->
+	with Search.Unsafe _ | ReachBound ->
 	  new_invs, invs, p::new_not_invs, p::not_invs) 
       ([], invs, [], not_invs) (partition s)
   in
@@ -660,7 +676,7 @@ let is_inv search p invs =
     if not quiet then 
       eprintf "Good! We found an invariant :-) \n %a @." Pretty.print_system p;
     true
-  with Search.Unsafe | ReachBound -> false
+  with Search.Unsafe _ | ReachBound -> false
 
 (* ----------------- Search strategy selection -------------------*)
 
@@ -715,6 +731,9 @@ module StratBFS_dist = Search.BFS_dist(T)
 module StratBFSinvp = Search.BFSinvp(T)
 module StratDFSHL = Search.DFSHL(T)
 
+
+module InvSearch = Search.BFS(struct include T let maxnodes = 10000 end)
+
 let search = 
   match mode with
     | Dfs -> StratDFS.search
@@ -724,6 +743,30 @@ let search =
     | BfsDist -> StratBFS_dist.search
     | Bfsinvp -> StratBFSinvp.search
     | DfsHL -> StratDFSHL.search
+
+
+
+let rec origin s = match s.t_from with
+  | [] -> s
+  | (_,_, p)::_ -> origin p
+
+let rec remove_cand s candidates =
+  let nc = 
+    List.fold_left 
+      (fun acc s' -> 
+	if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc
+	else s'::acc)
+      [] candidates in
+  List.rev nc
+
+let rec elim_bogus_invariants invariants candidates =
+  try
+    search ~invariants ~visited:[] ~forward_nodes:[] candidates;
+    candidates
+  with
+    | Search.Unsafe s ->
+      elim_bogus_invariants invariants (remove_cand (origin s) candidates)
+
 
 let system uns =
   let uns = List.map init_parameters uns in
@@ -745,13 +788,28 @@ let system uns =
   end
   else begin
 
-    let forward_nodes = List.rev (Forward.search_nb 1 (List.hd uns)) in
     eprintf "FORWARD ONE :\n-------------\n@.";
+    let forward_nodes = List.rev (Forward.search_nb 1 (List.hd uns)) in
     let cpt = ref 0 in
-    List.iter 
+    List.iter
       (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s)
       forward_nodes;
     eprintf "-------------\n@.";
+
+    eprintf "CANDIDATES from trace :\n-----------------------\n@.";
+    let candidates = extract_candidates_from_trace forward_nodes (List.hd uns) 
+    in
+    let cpt = ref 0 in
+    List.iter (fun sa -> incr cpt; 
+      eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
+      candidates;
+    eprintf "-----------------------\n@.";
+
+    
+
+    (* let invs, _ = try_inv InvSearch.search ~invariants [] [] candidates in *)
+    let invs = elim_bogus_invariants invariants candidates in
+    let invariants = List.rev_append invs invariants in
 
     search ~invariants ~visited:[] ~forward_nodes uns
   end

@@ -164,28 +164,44 @@ let uguard_dnf sigma args tr_args = function
   | [j, dnf] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.map (fun i ->
-	List.map (fun sa ->
-	  prime_satom (subst_atoms ((j, i)::sigma) sa)) dnf) uargs
+	List.map (fun sa -> subst_atoms ((j, i)::sigma) sa) dnf) uargs
   | _ -> assert false
 
 
-
-
-let possible_guard args sigma init reqs =
-  let reqs = subst_atoms sigma reqs in
+let possible_init args init reqs =
   not (inconsistent_2cubes init reqs) &&
     try Prover.check_guard args init reqs; true
     with Smt.Unsat _ -> false
 
+let possible_guard args all_args tr_args sigma init reqs ureqs =
+  let reqs = subst_atoms sigma reqs in
+  possible_init args init reqs &&
+    let t_args_ef = List.map (svar sigma) tr_args in
+    let udnfs = uguard_dnf sigma all_args t_args_ef ureqs in
+    List.for_all (List.exists (possible_init all_args init)) udnfs
 
-let post ({ t_unsafe = _, init } as s_init) procs { tr_args = tr_args; 
-						    tr_reqs = reqs; 
+
+let missing_args procs tr_args =
+  let rec aux p t pv =
+  match p, t, pv with
+    | [], _::_, _ -> List.rev (snd (List.split (build_subst t pv)))
+    | _::rp, _::rt, _::rpv -> aux rp rt rpv
+    | _, [], _ -> []
+    | _, _::_, [] -> assert false
+  in
+  aux procs tr_args proc_vars
+
+let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args; 
+						    tr_reqs = reqs;
+						    tr_ureq = ureqs;
 						    tr_assigns = assigns; 
 						    tr_upds = upds; 
 						    tr_nondets = nondets } =
-  assert (List.length procs >= List.length tr_args);
+  let others = missing_args procs tr_args in
+  let d = all_permutations tr_args (procs@others) in
+  (* TODO : fold + abstract on others *)
   let sigma = build_subst tr_args procs in
-  if possible_guard procs sigma init reqs then
+  if possible_guard procs all_procs tr_args sigma init reqs ureqs then
     let assi, assi_terms = apply_assigns assigns sigma in
     let upd, upd_terms = apply_updates upds procs sigma in
     let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in

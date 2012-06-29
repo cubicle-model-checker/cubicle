@@ -17,7 +17,7 @@ open Ast
 open Atom
 
 module H = Hstring
-module S = Set.Make(H) 
+module S = H.HSet
 let hempty = H.make ""
 
 
@@ -406,6 +406,9 @@ let inconsistent_2cubes sa1 sa2 =
   with Exit -> true
 
 
+
+(*----------------------------------------------------------------*)
+
 let inconsistencies ap other =
   if inconsistent_2arrays ap other then
     Array.fold_left (fun acc a ->
@@ -416,7 +419,6 @@ let inconsistencies ap other =
 	else acc) acc other
     ) [] ap
   else []
-
 
 let distrib_one l acc x =
   List.fold_left (fun acc y ->
@@ -456,6 +458,8 @@ let simple_extract_candidates ap forward_nodes =
       cs @ acc
     with Exit -> acc)
     [] forward_nodes
+
+(*----------------------------------------------------------------*)
 
 
 
@@ -669,17 +673,6 @@ let closeness anp ap =
   SS.cardinal (SS.diff (magic_number_arr anp) (magic_number_arr ap))
 
 
-
-let neg = function
-  | True -> False
-  | False -> True
-  | Comp (x, Eq, y) -> Comp (x, Neq, y)
-  | Comp (x, Lt, y) -> Comp (y, Le, x)
-  | Comp (x, Le, y) -> Comp (y, Lt, x)
-  | Comp (x, Neq, y) -> Comp (x, Eq, y)
-  | _ -> assert false
-
-
 let const_nul c =
   try
     let n = ref (Num.Int 0) in
@@ -801,7 +794,7 @@ let rec break a =
   	  match SAtom.elements sa with
   	    | [] -> assert false
   	    | c ->
-  	        let nc = List.map neg c in
+  	        let nc = List.map Atom.neg c in
   		let l = break a2 in
   		let a1_and_c = SAtom.add a1 sa in
   		let a1_and_a2 = List.map (SAtom.add a1) l in
@@ -883,7 +876,7 @@ let check_safety s =
 	Prover.unsafe s;
 	if not quiet then printf "\nUnsafe trace: @[%a@]@." 
 	  Pretty.print_verbose_node s;
-	raise Search.Unsafe
+	raise (Search.Unsafe s)
       end
   with
     | Smt.Unsat _ -> ()
@@ -920,7 +913,7 @@ let suitable_for_closing simpl s (*fix_from tr args*) =
       true
     end
     else false
-  with Search.Unsafe -> false
+  with Search.Unsafe _ -> false
   (* && not ( List.exists (fun (tr', args', f) -> *)
   (*   H.equal tr tr' && H.compare_list args args' = 0 && *)
   (*     ArrayAtom.subset simpl f.t_arru) fix_from) *)
@@ -1050,3 +1043,104 @@ let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   let f = easy_fixpoint s nodes || hard_fixpoint s nodes in
   if profiling then TimeFix.pause ();
   f
+
+
+
+(*********************************)
+(* Initial invariants generation *)
+(*********************************)
+
+module HA = Hashtbl.Make (struct 
+  include Atom 
+  let equal a b = compare a b = 0
+  let hash = Hashtbl.hash end)
+
+module MA = Map.Make (Atom)
+module MT = Map.Make (struct type t = term let compare = compare_term end)
+
+
+let all_litterals = List.fold_left (fun acc {t_unsafe = _, sa} ->
+  SAtom.union sa acc) SAtom.empty
+
+let compagnions_from_trace forward_nodes =
+  let lits = all_litterals forward_nodes in
+  SAtom.fold (fun a acc ->
+    let compagnions =
+      List.fold_left (fun acc {t_unsafe = _, sa} ->
+	if SAtom.mem a sa then
+	  SAtom.union (SAtom.remove a sa) acc
+	else acc)
+	SAtom.empty forward_nodes
+    in
+    (a, compagnions)::acc) lits []
+
+
+
+let compagnions_values compagnions =
+  SAtom.fold (fun c (acc, compagnions) -> 
+    match c with
+      | Comp (Elem (x, Constr), Eq, t1)
+      | Comp (t1, Eq, Elem (x, Constr)) ->
+	let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
+	MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
+      | Comp (Elem (x, Var), Eq, t1)
+      | Comp (t1, Eq, Elem (x, Var)) ->
+	acc, SAtom.remove c compagnions
+      | _ -> acc, compagnions)
+    compagnions (MT.empty, compagnions)
+
+
+let candidates_from_compagnions acc (a, compagnions) =
+  let singl_a = SAtom.singleton a in
+  let mt, remaining = compagnions_values compagnions in
+  let acc = 
+    SAtom.fold (fun c acc -> SAtom.add (Atom.neg c) singl_a :: acc)
+    remaining acc
+  in
+  MT.fold (fun c vals acc -> match c with
+    | Elem (x, _) | Access (x, _, _) ->
+      begin
+	match H.HSet.elements vals with
+	  | [v] when Hstring.equal v htrue ->
+	    SAtom.add (Comp (c, Eq, (Elem (hfalse, Constr)))) singl_a :: acc	
+	  | [v] when Hstring.equal v hfalse ->
+	    SAtom.add (Comp (c, Eq, (Elem (htrue, Constr)))) singl_a :: acc
+	  | [v] -> SAtom.add (Comp (c, Neq, (Elem (v, Constr)))) singl_a :: acc
+	  | _ ->
+	    try
+	      let dif = H.HSet.diff (Smt.Typing.Variant.get_variants x) vals in
+	      (* missing constructors for bool *)
+	      match H.HSet.elements dif with
+		| [cs] -> 
+		  SAtom.add (Comp (c, Eq, (Elem (cs, Constr)))) singl_a :: acc
+		| _ -> acc
+	    with Not_found -> acc
+      end
+    | _ -> assert false)
+    mt acc
+
+
+let extract_candidates_from_trace forward_nodes s =
+  let comps = compagnions_from_trace forward_nodes in
+  List.iter (fun (a, compagnions) ->
+    eprintf "compagnons %a : %a@." 
+      Pretty.print_atom a Pretty.print_cube compagnions) comps;
+  let sas = List.fold_left candidates_from_compagnions [] comps in
+  List.fold_left (fun acc sa ->
+    let sa', (args, _) = proper_cube sa in
+    let ar' = ArrayAtom.of_satom sa' in
+    { s with
+      t_from = [];
+      t_unsafe = args, sa';
+      t_arru = ar';
+      t_alpha = ArrayAtom.alpha ar' args;
+      t_deleted = false;
+      t_nb = 0;
+      t_nb_father = -1;
+    } :: acc) [] sas
+
+
+  
+
+(*----------------------------------------------------------------*)
+

@@ -39,6 +39,7 @@ module Typing : sig
     val assign_var : Hstring.t -> Hstring.t -> unit
 
     val print : unit -> unit
+    val get_variants : Hstring.t -> Hstring.HSet.t
   end
 
   val find : Hstring.t -> Hstring.t list * Hstring.t

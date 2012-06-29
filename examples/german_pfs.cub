@@ -101,7 +101,8 @@ transition t3(x)
 requires { M = Empty1 && U[x] = Reqs && F = False }
 { 
   F := True ; 
-  L := S ; 
+  (* L := S ;  *)
+  L[j] := case | _ : S[j];
   M := Reqs;
   U[j] := case | j = x : Empty1 | _ : U[j] ;
   C[j] := case | j = x : True | _ : False 
@@ -110,7 +111,10 @@ requires { M = Empty1 && U[x] = Reqs && F = False }
 (*:comment h2  t3*)
 transition t3bis(x)
 requires { M = Empty1 && U[x] = Reqe && F = False }
-{ F := True ; L := S ; M := Reqe;
+{ F := True ; 
+  (* L := S ;  *)
+  L[j] := case | _ : S[j];
+  M := Reqe;
   U[j] := case | j = x : Empty1 | _ : U[j] ;
   C[j] := case | j = x : True | _ : False 
 }

@@ -13,11 +13,17 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
-forward (z1 z2, z1) { 
+forward (z1 z2, z1) {
   Cache[z1] = Invalid && Shrset[z1] = False &&
-  Exgntd = False && Curcmd = Empty && 
-  Cache[z2] = Shared && Shrset[z2] = False
+  Cache[z2] = Shared && Shrset[z2] = True
+  (* Exgntd = False && Curcmd = Empty *)
 }
+
+(* forward (z1 z2, z2) {  *)
+(*   Cache[z1] = Invalid && Shrset[z1] = False && *)
+(*   Cache[z2] = Shared (\* && Shrset[z2] = False  *\) *)
+(*   (\* && Exgntd = False && Curcmd = Empty *\) *)
+(* } *)
 
 transition req_shared (n)
 requires { Curcmd = Empty && Cache[n] = Invalid }

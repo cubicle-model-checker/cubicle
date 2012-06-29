@@ -13,7 +13,7 @@
 
 (* Backward reachability search strategies *)
 
-exception Unsafe
+exception Unsafe of Ast.t_system
 
 module type I = sig
   type t

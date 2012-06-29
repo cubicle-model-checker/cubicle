@@ -56,6 +56,8 @@ var Real_home : bool
 
 
 init (p) {
+     Home <> p &&
+
      Pending = False &&
      Local = False &&
      Dirty = False &&

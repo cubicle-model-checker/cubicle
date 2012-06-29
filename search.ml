@@ -15,7 +15,7 @@ open Options
 open Format
 open Ast
 
-exception Unsafe
+exception Unsafe of t_system
 
 
 
@@ -191,7 +191,7 @@ module Profiling = struct
     printf "Max Number of processes          : %d@." !cpt_process;
     if delete then 
       printf "Number of deleted nodes          : %d@." del;
-    if gen_inv then 
+    if true || gen_inv then 
       printf "Number of invariants             : %d@." (List.length inv);  
     printf "----------------------------------------------@.";
     if profiling then begin
@@ -206,7 +206,7 @@ module Profiling = struct
       printf "----------------------------------------------@."
     end;
     
-    if gen_inv then begin
+    if true || gen_inv then begin
       printf "Invariants : @.";
       List.iter (fun i -> printf "\n%a@." print_system i) inv
     end;
@@ -355,7 +355,7 @@ module BFS_base ( X : I ) = struct
 
 	  (* invariant search *)
 	  let inv, not_invs =
-	    if invgen && gen_inv (* && post <> []  *)then 
+	    if invgen && gen_inv && post <> [] then 
 	      begin
 		X.gen_inv_with_forward inv_search 
 		  ~invariants:!invariants ~forward_nodes
@@ -512,7 +512,7 @@ module BFS_dist_base ( X : I ) = struct
 	  if X.hard_fixpoint s nodes then Fix
 	  else NotFix
 	with
-	  | Unsafe -> Unsafe_res
+	  | Unsafe _ -> Unsafe_res
 	  | ReachBound -> ReachBound_res
       end
     | Geninv (s, invariants, not_invariants) ->
@@ -538,7 +538,10 @@ module BFS_dist_base ( X : I ) = struct
     let master (task, ()) res =
       begin
 	match res, task with
-	  | Unsafe_res, _ -> raise Unsafe
+	  | Unsafe_res, Fixcheck (s, _, _)
+	  | Unsafe_res, Geninv (s, _, _)
+	  | Unsafe_res, Tryinv (s, _) -> raise (Unsafe (assert false))
+
 	  | ReachBound_res, _ -> raise ReachBound
 	  | Fix, _ ->
 	      decr remaining_tasks;
@@ -689,7 +692,7 @@ module BFS ( X : I ) = struct
   include BFS_base(X)
 
   module Search = BFSnoINV (struct
-    include X let maxnodes = 100
+    include X let maxnodes = 200
   end)
     
   let search = search Search.search true
@@ -739,18 +742,18 @@ module DFSHL ( X : I ) = struct
     	if c <> 0 then c else Pervasives.compare l2 l1
 
     (* efficient bfs *)
-    (* let compare (l1, s1) (l2, s2) = *)
-    (*   let v1 = X.size s1 in *)
-    (*   let v2 = X.size s2 in *)
-    (*   let c = Pervasives.compare v1 v2 in *)
-    (*   if c <> 0 then c else *)
-    (*     let c1 = X.card s1 in *)
-    (*     let c2 = X.card s2 in *)
-    (*     let c = Pervasives.compare c1 c2 in *)
-    (*     if c <> 0 then c else *)
-    (* 	  let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in *)
-    (*       if c <> 0 then c else *)
-    (*         Pervasives.compare l1 l2 *)
+    let compare (l1, s1) (l2, s2) =
+      let v1 = X.size s1 in
+      let v2 = X.size s2 in
+      let c = Pervasives.compare v1 v2 in
+      if c <> 0 then c else
+        let c1 = X.card s1 in
+        let c2 = X.card s2 in
+        let c = Pervasives.compare c1 c2 in
+        if c <> 0 then c else
+    	  let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in
+          if c <> 0 then c else
+            Pervasives.compare l1 l2
       
   end
 
