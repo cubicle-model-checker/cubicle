@@ -84,23 +84,33 @@ let find_const_value g init =
   with Found_const c -> c
 
 
-let elim_prime_atom init = function
+let rec elim_prime_atom init = function
   | True -> None 
   | False -> Some False
   | Comp (t1, Eq, t2) as a ->
+      let t1, t2 = 
+	if is_prime_term t1 && not (is_prime_term t2) then t2, t1
+	else t1, t2 in
       assert (not (is_prime_term t1));
-      if not (is_prime_term t2) then Some a
+      if not (is_prime_term t2) then Some (Comp (t1, Eq, t2))
       else begin
 	try
 	  let op, t2' = find_const_value t2 init in
 	  Some (Comp (t1, op, t2'))
 	with Not_found -> None
       end
+  | Ite (sa, a1, a2) ->
+      let a1 = match elim_prime_atom init a1 with
+	| None -> True
+	| Some a1 -> a1 in
+      let a2 = match elim_prime_atom init a2 with
+	| None -> True
+	| Some a2 -> a2 in
+      Some (Ite (elim_prime init sa, a1, a2))
   | _ -> assert false
-    
 
-
-let elim_prime init sa =
+and elim_prime init sa =
+  (* eprintf "elim prime : %a@." Pretty.print_cube sa; *)
   let sa = 
     SAtom.fold 
       (fun a acc ->
@@ -110,6 +120,7 @@ let elim_prime init sa =
       sa SAtom.empty
   in
   assert (not (SAtom.exists is_prime_atom sa));
+  (* eprintf "   == %a@." Pretty.print_cube sa; *)
   sa
 
 
@@ -169,9 +180,10 @@ let uguard_dnf sigma args tr_args = function
 
 
 let possible_init args init reqs =
-  not (inconsistent_2cubes init reqs) &&
-    try Prover.check_guard args init reqs; true
-    with Smt.Unsat _ -> false
+  (** Very incomplete semantic test **)
+  not (inconsistent_2cubes init reqs) (*  && *)
+    (* try Prover.check_guard args init reqs; true *)
+    (* with Smt.Unsat _ -> false *)
 
 let possible_guard args all_args tr_args sigma init reqs ureqs =
   let reqs = subst_atoms sigma reqs in
@@ -191,6 +203,22 @@ let missing_args procs tr_args =
   in
   aux procs tr_args proc_vars
 
+let term_contains_arg z = function
+  | Elem (x, Var) | Access (_, x, Var) | Arith (x, Var, _) 
+      when Hstring.equal x z -> true
+  | _ -> false
+
+let rec atom_contains_arg z = function
+  | True | False -> false
+  | Comp (t1, _, t2) -> term_contains_arg z t1 || term_contains_arg z t2
+  | Ite (sa, a1, a2) -> atom_contains_arg z a1 || atom_contains_arg z a2 ||
+                        SAtom.exists (atom_contains_arg z) sa
+
+
+let abstract_others sa others =
+  SAtom.filter (fun a ->
+    not (List.exists (fun z -> atom_contains_arg z a) others)) sa
+
 let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args; 
 						    tr_reqs = reqs;
 						    tr_ureq = ureqs;
@@ -199,35 +227,55 @@ let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args;
 						    tr_nondets = nondets } =
   let others = missing_args procs tr_args in
   let d = all_permutations tr_args (procs@others) in
-  (* TODO : fold + abstract on others *)
-  let sigma = build_subst tr_args procs in
-  if possible_guard procs all_procs tr_args sigma init reqs ureqs then
-    let assi, assi_terms = apply_assigns assigns sigma in
-    let upd, upd_terms = apply_updates upds procs sigma in
-    let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
-    let sa = simplification_atoms SAtom.empty
-      (SAtom.union unchanged (SAtom.union assi upd)) in
-    let sa = elim_prime (prime_satom init) sa in
-    let sa, (nargs, _) = proper_cube sa in
-    let ar =  ArrayAtom.of_satom sa in
-    let s = { s_init with
-              t_unsafe = nargs, sa;
-              t_arru = ar;
-	      t_alpha = ArrayAtom.alpha ar nargs; } 
-    in
-    Some s
-  else None
+  List.fold_left (fun acc sigma ->
+  (* let sigma = build_subst tr_args procs in *)
+    if possible_guard procs all_procs tr_args sigma init reqs ureqs then
+      let assi, assi_terms = apply_assigns assigns sigma in
+      let upd, upd_terms = apply_updates upds procs sigma in
+      let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
+      let sa = simplification_atoms SAtom.empty
+	(SAtom.union unchanged (SAtom.union assi upd)) in
+      let sa = abstract_others sa others in
+      let sa = elim_prime (prime_satom init) sa in
+      let sa = simplification_atoms SAtom.empty sa in
+      let sa, (nargs, _) = proper_cube sa in
+      let ar =  ArrayAtom.of_satom sa in
+      let s = { s_init with
+        t_unsafe = nargs, sa;
+        t_arru = ar;
+	t_alpha = ArrayAtom.alpha ar nargs; } 
+      in
+      s::acc
+    else acc
+  ) [] d
+
+let cpt_f = ref 0
+
+module HA = Hashtbl.Make (struct include ArrayAtom let hash = Hashtbl.hash end)
+let h_visited = HA.create 1001
 
 let rec forward visited procs trs = function
   | [] -> visited
   | init :: to_do ->
-    let new_td = List.fold_left (fun new_td tr -> 
-      match post init procs tr with
-	| None -> new_td
-	| Some s -> 
-	  if fixpoint ~invariants:[] ~visited s then new_td
-	  else s :: new_td) [] trs in
-    forward (init :: visited) procs trs (to_do @ new_td)
+    (* if fixpoint ~invariants:[] ~visited init then *)
+    (* if easy_fixpoint init visited then *)
+    (** Very incomplete hash test **)
+    if HA.mem h_visited init.t_arru then
+      forward visited procs trs to_do
+    else
+    let new_td =
+      List.fold_left (fun new_td tr ->
+	List.fold_left (fun new_td s ->
+	  (* if fixpoint ~invariants:[] ~visited s then new_td *)
+	  (* else *) (s :: new_td)
+	) new_td (post init procs tr)
+      ) [] trs
+    in
+    incr cpt_f; 
+    eprintf "%d\n" !cpt_f; 
+    if !cpt_f mod 1000 = 0 then pp_print_flush err_formatter ();
+    HA.add h_visited init.t_arru ();
+    forward (init :: visited) procs trs (List.rev_append new_td to_do)(* (to_do @ (List.rev new_td)) *)
     
 (* let mkinit_multi args init args = *)
 (*   match args with *)

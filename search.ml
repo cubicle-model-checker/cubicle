@@ -69,6 +69,8 @@ module type I = sig
   val print_system : formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
+
+  val system : t -> t_system
 end
 
 module type S = sig 
@@ -540,7 +542,7 @@ module BFS_dist_base ( X : I ) = struct
 	match res, task with
 	  | Unsafe_res, Fixcheck (s, _, _)
 	  | Unsafe_res, Geninv (s, _, _)
-	  | Unsafe_res, Tryinv (s, _) -> raise (Unsafe (assert false))
+	  | Unsafe_res, Tryinv (s, _) -> raise (Unsafe (X.system s))
 
 	  | ReachBound_res, _ -> raise ReachBound
 	  | Fix, _ ->

@@ -65,6 +65,8 @@ module type I = sig
   val sort : t list -> t list
   val nb_father : t -> int
 
+  val system : t -> Ast.t_system
+
 end
 
 

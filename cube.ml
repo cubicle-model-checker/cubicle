@@ -1083,9 +1083,10 @@ let compagnions_values compagnions =
       | Comp (t1, Eq, Elem (x, Constr)) ->
 	let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
 	MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
-      | Comp (Elem (x, Var), Eq, t1)
-      | Comp (t1, Eq, Elem (x, Var)) ->
-	acc, SAtom.remove c compagnions
+      (* heuristic: remove proc variables *)
+      (* | Comp (Elem (x, Var), Eq, t1) *)
+      (* | Comp (t1, Eq, Elem (x, Var)) -> *)
+      (* 	acc, SAtom.remove c compagnions *)
       | _ -> acc, compagnions)
     compagnions (MT.empty, compagnions)
 

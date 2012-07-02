@@ -971,10 +971,11 @@ requires { Home = home &&
 		    | _ : CacheState[j] 
 }
 
-transition ni_InvAck1 (src home)
+transition ni_InvAck1 (src home other)
 requires { Home = home &&
            Pending = True && 
- 	   Invnet[src] = InvAck && Real[src] = True }
+ 	   Invnet[src] = InvAck && Real[src] = True &&
+           Real[other] = False }
 { 
   Home:= home;
   Invnet[j] := case 
