@@ -64,6 +64,12 @@ let rec compare_term t1 t2 =
 	let c = Hstring.compare t1 t2 in
 	if c<>0 then c else compare_constants cs1 cs2
 
+let hash_term = function
+  | Const c -> Hashtbl.hash c
+  | Elem (s, _) -> Hstring.hash s
+  | Access (a, x, _) -> Hstring.hash a * Hstring.hash x
+  | Arith (x, _, c) -> Hstring.hash x + Hashtbl.hash c
+
 let htrue = Hstring.make "True"
 let hfalse = Hstring.make "False"
 
@@ -78,6 +84,7 @@ module rec Atom : sig
 
   val compare : t -> t -> int
   val neg : t -> t
+  val hash : t -> int
 
 end = struct
   
@@ -117,6 +124,16 @@ end = struct
     | Comp (x, Le, y) -> Comp (y, Lt, x)
     | Comp (x, Neq, y) -> Comp (x, Eq, y)
     | _ -> assert false
+
+  let rec hash = function
+    | True -> 7 | False -> 11
+    | Comp (x, Eq, y) -> 7 * (hash_term x + hash_term y)
+    | Comp (x, Neq, y) -> 11 * (hash_term x + hash_term y)
+    | Comp (x, Le, y) -> 5 * hash_term x + 7 * hash_term y
+    | Comp (x, Lt, y) -> 5 * hash_term x + 11 * hash_term y
+    | Ite (sa, a1, a2) -> hash_set sa + (7 * hash a1) + (11 * hash a2) 
+
+  and hash_set sa = SAtom.fold (fun a acc -> hash a + acc) sa 0
 
 
 end
@@ -202,6 +219,11 @@ module ArrayAtom = struct
 	incr i
       done;
       !res
+
+  let hash ar = 
+    let _, h = Array.fold_left (fun (n,acc) a -> n * Atom.hash a + acc, n + 1)
+      (1,0) ar in
+    h
 
   let subset a1 a2 =
     if profiling then TimerSubset.start ();

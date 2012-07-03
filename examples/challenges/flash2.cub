@@ -93,7 +93,7 @@ init (p) {
 }
 
 
-invariant (z) { z = Home }
+(* invariant (z) { z = Home } *)
 
 
 

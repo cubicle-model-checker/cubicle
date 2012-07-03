@@ -486,7 +486,7 @@ module BFS_dist_base ( X : I ) = struct
     | Tryinv of t * t list
 
   type worker_return = 
-    | Fix | NotFix | Unsafe_res | ReachBound_res
+    | Fix | NotFix | Unsafe_res of t_system | ReachBound_res
     | InvRes of t list * t list
     | Inv | NotInv
   
@@ -514,7 +514,7 @@ module BFS_dist_base ( X : I ) = struct
 	  if X.hard_fixpoint s nodes then Fix
 	  else NotFix
 	with
-	  | Unsafe _ -> Unsafe_res
+	  | Unsafe s -> Unsafe_res s
 	  | ReachBound -> ReachBound_res
       end
     | Geninv (s, invariants, not_invariants) ->
@@ -540,9 +540,7 @@ module BFS_dist_base ( X : I ) = struct
     let master (task, ()) res =
       begin
 	match res, task with
-	  | Unsafe_res, Fixcheck (s, _, _)
-	  | Unsafe_res, Geninv (s, _, _)
-	  | Unsafe_res, Tryinv (s, _) -> raise (Unsafe (X.system s))
+	  | Unsafe_res s, _ -> raise (Unsafe s)
 
 	  | ReachBound_res, _ -> raise ReachBound
 	  | Fix, _ ->

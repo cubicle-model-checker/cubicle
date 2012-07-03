@@ -251,11 +251,17 @@ let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args;
 
 let cpt_f = ref 0
 
-module HA = Hashtbl.Make (struct include ArrayAtom let hash = Hashtbl.hash end)
-let h_visited = HA.create 1001
+(* let _ = Ocamlviz.init () *)
+
+module HA = Hashtbl.Make (ArrayAtom)
+
+(* let h_visited = Ocamlviz.Hashtable.observe ~period:10 "h_visited"  *)
+(*   (HA.create 200_001) *)
+
+let h_visited = HA.create 200_001
 
 let rec forward visited procs trs = function
-  | [] -> visited
+  | [] -> eprintf "%d@." !cpt_f; visited
   | init :: to_do ->
     (* if fixpoint ~invariants:[] ~visited init then *)
     (* if easy_fixpoint init visited then *)
@@ -272,8 +278,7 @@ let rec forward visited procs trs = function
       ) [] trs
     in
     incr cpt_f; 
-    eprintf "%d\n" !cpt_f; 
-    if !cpt_f mod 1000 = 0 then pp_print_flush err_formatter ();
+    if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
     HA.add h_visited init.t_arru ();
     forward (init :: visited) procs trs (List.rev_append new_td to_do)(* (to_do @ (List.rev new_td)) *)
     

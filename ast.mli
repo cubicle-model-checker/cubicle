@@ -73,6 +73,7 @@ module TimerApply  : Timer.S
 module ArrayAtom : sig
   type t = Atom.t array
   val equal : t -> t -> bool
+  val hash : t -> int
   val subset : t -> t -> bool
   val of_satom : SAtom.t -> t
   val to_satom : t -> SAtom.t

@@ -766,13 +766,15 @@ let rec elim_bogus_invariants invariants candidates =
     candidates
   with
     | Search.Unsafe s ->
+      (* FIXME Bug when search is parallel *)
       elim_bogus_invariants invariants (remove_cand (origin s) candidates)
 
 let rec search_bogus_invariants invariants candidates uns =
   try
     search ~invariants ~visited:[] ~forward_nodes:[] candidates
   with
-    | Search.Unsafe s ->
+    | Search.Unsafe s -> 
+      (* FIXME Bug when search is parallel *)
       let o = origin s in
       if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
 	raise (Search.Unsafe s)
