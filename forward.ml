@@ -220,7 +220,8 @@ let abstract_others sa others =
     not (List.exists (fun z -> atom_contains_arg z a) others)) sa
 
 let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args; 
-						    tr_reqs = reqs;
+						    tr_reqs = reqs; 
+						    tr_name = name;
 						    tr_ureq = ureqs;
 						    tr_assigns = assigns; 
 						    tr_upds = upds; 
@@ -241,6 +242,8 @@ let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args;
       let sa, (nargs, _) = proper_cube sa in
       let ar =  ArrayAtom.of_satom sa in
       let s = { s_init with
+	(* t_from =  *)
+	(*   (name, (List.map (svar sigma) tr_args),s_init) :: s_init.t_from; *)
         t_unsafe = nargs, sa;
         t_arru = ar;
 	t_alpha = ArrayAtom.alpha ar nargs; } 
@@ -260,14 +263,28 @@ module HA = Hashtbl.Make (ArrayAtom)
 
 let h_visited = HA.create 200_001
 
-let rec forward visited procs trs = function
+
+let visited_from_h s h = HA.fold (fun ar _ acc ->
+  let sa, (nargs, _) = proper_cube (ArrayAtom.to_satom ar) in 
+  { s with 
+    t_unsafe = nargs, sa;
+    t_arru = ar;
+    t_alpha = ArrayAtom.alpha ar nargs } :: acc) h []
+
+let rec forward s visited procs trs = function
   | [] -> eprintf "%d@." !cpt_f; visited
   | init :: to_do ->
+    (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
+    (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
+    (*   raise (Search.Unsafe init) *)
+    (* end; *)
+    if !cpt_f > 400_000 then visited
+    else (
     (* if fixpoint ~invariants:[] ~visited init then *)
     (* if easy_fixpoint init visited then *)
     (** Very incomplete hash test **)
     if HA.mem h_visited init.t_arru then
-      forward visited procs trs to_do
+      forward s visited procs trs to_do
     else
     let new_td =
       List.fold_left (fun new_td tr ->
@@ -278,10 +295,11 @@ let rec forward visited procs trs = function
       ) [] trs
     in
     incr cpt_f; 
-    if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+    if true || !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
     HA.add h_visited init.t_arru ();
-    forward (init :: visited) procs trs (List.rev_append new_td to_do)(* (to_do @ (List.rev new_td)) *)
-    
+    forward s (init ::visited) procs trs (List.rev_append new_td to_do)(* (to_do @ (List.rev new_td)) *)
+    )
+
 (* let mkinit_multi args init args = *)
 (*   match args with *)
 (*     | [] -> init *)
@@ -320,7 +338,7 @@ let mkforward_s s =
     })
     s.t_forward
 
-let search procs init = forward [] procs init.t_trans [mkinit_s procs init]
+let search procs init = forward init [] procs init.t_trans [mkinit_s procs init]
 
 let search_nb n =
   let rp, _ = 
@@ -334,4 +352,4 @@ let search_nb n =
 let search_only s =
   let ex_args = 
     match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in
-  forward [] ex_args s.t_trans (mkforward_s s)
+  forward s [] ex_args s.t_trans (mkforward_s s)

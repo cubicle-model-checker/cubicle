@@ -626,8 +626,53 @@ let candidates forward_nodes ({t_unsafe = args, sp; t_arru = ap} as s) =
     (simple_extract_candidates ap inst_forward_nodes)
 
 
+
+
+(*----------------------------------------------------------------------------*)
+
+let rec origin s = match s.t_from with
+  | [] -> s
+  | (_,_, p)::_ -> origin p
+
+let rec remove_cand s candidates =
+  let nc = 
+    List.fold_left 
+      (fun acc s' -> 
+	if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc
+	else s'::acc)
+      [] candidates in
+  List.rev nc
+
+let rec elim_bogus_invariants search invariants candidates =
+  try
+    search ~invariants ~visited:[] ~forward_nodes:[] candidates;
+    candidates
+  with
+    | Search.Unsafe s ->
+      (* FIXME Bug when search is parallel *)
+      elim_bogus_invariants search invariants 
+	(remove_cand (origin s) candidates)
+
+let rec search_bogus_invariants search invariants candidates uns =
+  try
+    search ~invariants ~visited:[] ~forward_nodes:[] candidates
+  with
+    | Search.Unsafe s -> 
+      (* FIXME Bug when search is parallel *)
+      let o = origin s in
+      if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
+	raise (Search.Unsafe s)
+      else
+	search_bogus_invariants search invariants (remove_cand o candidates) uns
+
+
+(*----------------------------------------------------------------------------*)
+
+
 let gen_inv_with_forward search ~invariants ~forward_nodes not_invs s =
-  try_inv search ~invariants [] not_invs (candidates forward_nodes s)
+  (* try_inv search ~invariants [] not_invs (candidates forward_nodes s) *)
+  elim_bogus_invariants search invariants
+    (select_relevant_candidates s forward_nodes), []
   (* List.fold_left  *)
   (*   (fun (invs, not_invs) p -> *)
   (*      try *)
@@ -746,42 +791,6 @@ let search =
     | DfsHL -> StratDFSHL.search
 
 
-
-let rec origin s = match s.t_from with
-  | [] -> s
-  | (_,_, p)::_ -> origin p
-
-let rec remove_cand s candidates =
-  let nc = 
-    List.fold_left 
-      (fun acc s' -> 
-	if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc
-	else s'::acc)
-      [] candidates in
-  List.rev nc
-
-let rec elim_bogus_invariants invariants candidates =
-  try
-    search ~invariants ~visited:[] ~forward_nodes:[] candidates;
-    candidates
-  with
-    | Search.Unsafe s ->
-      (* FIXME Bug when search is parallel *)
-      elim_bogus_invariants invariants (remove_cand (origin s) candidates)
-
-let rec search_bogus_invariants invariants candidates uns =
-  try
-    search ~invariants ~visited:[] ~forward_nodes:[] candidates
-  with
-    | Search.Unsafe s -> 
-      (* FIXME Bug when search is parallel *)
-      let o = origin s in
-      if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
-	raise (Search.Unsafe s)
-      else
-	search_bogus_invariants invariants (remove_cand o candidates) uns
-
-
 let system uns =
   let uns = List.map init_parameters uns in
   let invariants = match uns with
@@ -803,7 +812,7 @@ let system uns =
   else begin
 
     eprintf "FORWARD ONE :\n-------------\n@.";
-    let forward_nodes = List.rev (Forward.search_nb 1 (List.hd uns)) in
+    let forward_nodes = List.rev (Forward.search_nb 2 (List.hd uns)) in
     (* for debug *)
     (* let cpt = ref 0 in *)
     (* List.iter *)
@@ -815,6 +824,7 @@ let system uns =
     eprintf "CANDIDATES from trace :\n-----------------------\n@.";
     let candidates = extract_candidates_from_trace forward_nodes (List.hd uns)
     in
+    (* let candidates = T.sort candidates in *)
     let cpt = ref 0 in
     List.iter (fun sa -> incr cpt;
       eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
@@ -825,11 +835,11 @@ let system uns =
 
     (* let invs, _ = try_inv InvSearch.search ~invariants [] [] candidates in *)
 
-    (* let invs = elim_bogus_invariants invariants candidates in *)
+    (* let invs = elim_bogus_invariants search invariants candidates in *)
     (* let invariants = List.rev_append invs invariants in *)
 
-    (* search ~invariants ~visited:[] ~forward_nodes:[] uns *)
+    (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
       
-    search_bogus_invariants invariants (candidates@uns) uns
+    search_bogus_invariants search invariants (candidates@uns) uns
   end
 

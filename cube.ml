@@ -874,7 +874,7 @@ let check_safety s =
     if not (obviously_safe s) then
       begin
 	Prover.unsafe s;
-	if not quiet then printf "\nUnsafe trace: @[%a@]@." 
+	if not quiet then eprintf "\nUnsafe trace: @[%a@]@." 
 	  Pretty.print_verbose_node s;
 	raise (Search.Unsafe s)
       end
@@ -1084,9 +1084,9 @@ let compagnions_values compagnions =
 	let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
 	MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
       (* heuristic: remove proc variables *)
-      (* | Comp (Elem (x, Var), Eq, t1) *)
-      (* | Comp (t1, Eq, Elem (x, Var)) -> *)
-      (* 	acc, SAtom.remove c compagnions *)
+      | Comp (Elem (_, Var), _, _)
+      | Comp (_, _, Elem (_, Var)) ->
+      	acc, SAtom.remove c compagnions
       | _ -> acc, compagnions)
     compagnions (MT.empty, compagnions)
 
@@ -1121,6 +1121,15 @@ let candidates_from_compagnions acc (a, compagnions) =
     mt acc
 
 
+let useless_candidate =
+  SAtom.exists (function
+    (* heuristic: remove proc variables *)
+    | Comp (Elem (_, Var), _, _)
+    | Comp (_, _, Elem (_, Var)) -> true
+    | _ -> false)
+
+
+
 let extract_candidates_from_trace forward_nodes s =
   let comps = compagnions_from_trace forward_nodes in
   List.iter (fun (a, compagnions) ->
@@ -1128,18 +1137,26 @@ let extract_candidates_from_trace forward_nodes s =
       Pretty.print_atom a Pretty.print_cube compagnions) comps;
   let sas = List.fold_left candidates_from_compagnions [] comps in
   List.fold_left (fun acc sa ->
-    let sa', (args, _) = proper_cube sa in
-    let ar' = ArrayAtom.of_satom sa' in
-    { s with
-      t_from = [];
-      t_unsafe = args, sa';
-      t_arru = ar';
-      t_alpha = ArrayAtom.alpha ar' args;
-      t_deleted = false;
-      t_nb = 0;
-      t_nb_father = -1;
-    } :: acc) [] sas
+    if useless_candidate sa then acc
+    else
+      let sa', (args, _) = proper_cube sa in
+      let ar' = ArrayAtom.of_satom sa' in
+      { s with
+	t_from = [];
+	t_unsafe = args, sa';
+	t_arru = ar';
+	t_alpha = ArrayAtom.alpha ar' args;
+	t_deleted = false;
+	t_nb = 0;
+	t_nb_father = -1;
+      } :: acc) [] sas
 
+
+
+let select_relevant_candidates {t_unsafe = _, sa} =
+  List.filter (fun {t_unsafe = _, ca} ->
+    not (SAtom.is_empty (SAtom.inter ca sa))
+  )
 
   
 

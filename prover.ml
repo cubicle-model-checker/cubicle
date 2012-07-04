@@ -152,7 +152,7 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
   Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
   (* Smt.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
-  let init = F.Ground (make_init ts (List.rev_append ts.t_glob_proc args)) in
+  let init = F.Ground (make_init ts (* (List.rev_append ts.t_glob_proc  *) args) in
   let f = F.Ground (make_formula_set sa) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;

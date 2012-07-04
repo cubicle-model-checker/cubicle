@@ -357,7 +357,7 @@ module BFS_base ( X : I ) = struct
 
 	  (* invariant search *)
 	  let inv, not_invs =
-	    if invgen && gen_inv && post <> [] then 
+	    if invgen && gen_inv (* && post <> [] *) then 
 	      begin
 		X.gen_inv_with_forward inv_search 
 		  ~invariants:!invariants ~forward_nodes
@@ -373,6 +373,11 @@ module BFS_base ( X : I ) = struct
 	  postponed := List.rev_append post !postponed;
 	  if delete then X.delete_nodes s postponed nb_deleted true;
 	  if delete && invgen && gen_inv then X.delete_nodes_inv inv postponed;
+
+	  (* TODO *)
+	  (* if not (fixpoint) then *)
+	  (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
+
 
 	  if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;
@@ -692,7 +697,7 @@ module BFS ( X : I ) = struct
   include BFS_base(X)
 
   module Search = BFSnoINV (struct
-    include X let maxnodes = 200
+    include X let maxnodes = 100000
   end)
     
   let search = search Search.search true
