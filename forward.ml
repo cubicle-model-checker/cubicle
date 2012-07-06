@@ -228,6 +228,8 @@ let post init all_procs procs { tr_args = tr_args;
 				   tr_nondets = nondets } =
   let others = missing_args procs tr_args in
   let d = all_permutations tr_args (procs@others) in
+  (* do it even if no arguments *)
+  let d = if d = [] then [[]] else d in
   List.fold_left (fun acc sigma ->
   (* let sigma = build_subst tr_args procs in *)
     if possible_guard procs all_procs tr_args sigma init reqs ureqs then
