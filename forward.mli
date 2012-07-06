@@ -13,8 +13,23 @@
 
 open Ast
 
-val search : Hstring.t list -> t_system -> t_system list
+module HSA : Hashtbl.S with type key = SAtom.t
 
-val search_nb : int -> t_system -> t_system list
+module MA : Map.S
 
-val search_only : t_system -> t_system list
+(* val search : Hstring.t list -> t_system -> SAtom.t list *)
+
+val search_nb : int -> t_system -> unit HSA.t
+
+val search_stateless_nb : int -> t_system -> SAtom.t MA.t
+
+(* val search_only : t_system -> SAtom.t list *)
+
+
+val extract_candidates_from_trace : unit HSA.t -> t_system -> t_system list
+
+val extract_candidates_from_compagnons : 
+  SAtom.t MA.t -> t_system -> t_system list
+
+
+val select_relevant_candidates : t_system -> t_system list -> t_system list

@@ -637,8 +637,12 @@ let rec origin s = match s.t_from with
 let rec remove_cand s candidates =
   let nc = 
     List.fold_left 
-      (fun acc s' -> 
-	if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc
+      (fun acc s' ->
+	(* if fixpoint ~invariants:[] ~visited:[s'] s then acc *)
+	
+	if List.exists (fun (_,_,s) -> 
+	  fixpoint ~invariants:[] ~visited:[s'] s) s.t_from then acc
+	(* if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc *)
 	else s'::acc)
       [] candidates in
   List.rev nc
@@ -663,7 +667,7 @@ let rec search_bogus_invariants search invariants candidates uns =
       if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
 	raise (Search.Unsafe s)
       else
-	search_bogus_invariants search invariants (remove_cand o candidates) uns
+	search_bogus_invariants search invariants (remove_cand s candidates) uns
 
 
 (*----------------------------------------------------------------------------*)
@@ -672,7 +676,7 @@ let rec search_bogus_invariants search invariants candidates uns =
 let gen_inv_with_forward search ~invariants ~forward_nodes not_invs s =
   (* try_inv search ~invariants [] not_invs (candidates forward_nodes s) *)
   elim_bogus_invariants search invariants
-    (select_relevant_candidates s forward_nodes), []
+    (Forward.select_relevant_candidates s forward_nodes), []
   (* List.fold_left  *)
   (*   (fun (invs, not_invs) p -> *)
   (*      try *)
@@ -800,19 +804,20 @@ let system uns =
 
   if only_forward then begin
     
-    let forward_nodes = List.rev (Forward.search_only (List.hd uns)) in
-    eprintf "FORWARD :\n-------------\n@.";
-    let cpt = ref 0 in
-    List.iter 
-      (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s)
-      forward_nodes;
-    eprintf "-------------\n@.";
+    (* let forward_nodes = List.rev (Forward.search_only (List.hd uns)) in *)
+    (* eprintf "FORWARD :\n-------------\n@."; *)
+    (* let cpt = ref 0 in *)
+    (* List.iter  *)
+    (*   (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_cube s) *)
+    (*   forward_nodes; *)
+    (* eprintf "-------------\n@."; *)
     exit 0
   end
-  else begin
+
+  else if forward_inv then begin
 
     eprintf "FORWARD ONE :\n-------------\n@.";
-    let forward_nodes = List.rev (Forward.search_nb 2 (List.hd uns)) in
+    let comps = (Forward.search_stateless_nb 2 (List.hd uns)) in
     (* for debug *)
     (* let cpt = ref 0 in *)
     (* List.iter *)
@@ -822,7 +827,8 @@ let system uns =
 
 
     eprintf "CANDIDATES from trace :\n-----------------------\n@.";
-    let candidates = extract_candidates_from_trace forward_nodes (List.hd uns)
+    let candidates = 
+      Forward.extract_candidates_from_compagnons comps (List.hd uns)
     in
     (* let candidates = T.sort candidates in *)
     let cpt = ref 0 in
@@ -831,7 +837,6 @@ let system uns =
       candidates;
     eprintf "-----------------------\n@.";
 
-    
 
     (* let invs, _ = try_inv InvSearch.search ~invariants [] [] candidates in *)
 
@@ -841,5 +846,47 @@ let system uns =
     (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
       
     search_bogus_invariants search invariants (candidates@uns) uns
+
+  end
+
+  else if forward_inv then begin
+
+    eprintf "FORWARD ONE :\n-------------\n@.";
+    let forward_nodes = (Forward.search_nb 2 (List.hd uns)) in
+    (* for debug *)
+    (* let cpt = ref 0 in *)
+    (* List.iter *)
+    (*   (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s) *)
+    (*   forward_nodes; *)
+    eprintf "-------------\n@.";
+
+
+    eprintf "CANDIDATES from trace :\n-----------------------\n@.";
+    let candidates = 
+      Forward.extract_candidates_from_trace forward_nodes (List.hd uns)
+    in
+    (* let candidates = T.sort candidates in *)
+    let cpt = ref 0 in
+    List.iter (fun sa -> incr cpt;
+      eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
+      candidates;
+    eprintf "-----------------------\n@.";
+
+
+    (* let invs, _ = try_inv InvSearch.search ~invariants [] [] candidates in *)
+
+    (* let invs = elim_bogus_invariants search invariants candidates in *)
+    (* let invariants = List.rev_append invs invariants in *)
+
+    (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
+      
+    search_bogus_invariants search invariants (candidates@uns) uns
+
+  end
+
+  else begin
+
+    search ~invariants ~visited:[] ~forward_nodes:[] uns
+    
   end
 

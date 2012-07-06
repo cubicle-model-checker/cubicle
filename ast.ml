@@ -131,13 +131,31 @@ end = struct
     | Comp (x, Neq, y) -> 11 * (hash_term x + hash_term y)
     | Comp (x, Le, y) -> 5 * hash_term x + 7 * hash_term y
     | Comp (x, Lt, y) -> 5 * hash_term x + 11 * hash_term y
-    | Ite (sa, a1, a2) -> hash_set sa + (7 * hash a1) + (11 * hash a2) 
+    | Ite (sa, a1, a2) -> SAtom.hash sa + (7 * hash a1) + (11 * hash a2) 
 
   and hash_set sa = SAtom.fold (fun a acc -> hash a + acc) sa 0
 
 
 end
-and SAtom : Set.S with type elt = Atom.t = Set.Make(Atom)
+
+and SAtom : sig 
+
+  include Set.S with type elt = Atom.t
+
+  val equal : t -> t -> bool
+  val hash : t -> int
+
+end = struct 
+    
+  include Set.Make(Atom)
+
+  let equal sa1 sa2 = compare sa1 sa2 = 0
+
+  let hash sa = 
+    let _, h = fold (fun a (n,acc) -> n + 1, n + Atom.hash a * acc)
+      sa (2,1) in
+    h
+end
 
 let gen_vars s n = 
   let l = ref [] in
@@ -221,8 +239,8 @@ module ArrayAtom = struct
       !res
 
   let hash ar = 
-    let _, h = Array.fold_left (fun (n,acc) a -> n * Atom.hash a + acc, n + 1)
-      (1,0) ar in
+    let _, h = Array.fold_left (fun (n,acc) a -> n+1,  n + Atom.hash a * acc)
+      (2,1) ar in
     h
 
   let subset a1 a2 =

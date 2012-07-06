@@ -50,7 +50,10 @@ module rec Atom : sig
   val compare : t -> t -> int
   val neg : t -> t
 end 
-and SAtom : Set.S with type elt = Atom.t
+and SAtom : sig 
+  include Set.S with type elt = Atom.t
+  val hash : t -> int
+end
 
 val proc_vars : Hstring.t list
 val alpha_vars : Hstring.t list

@@ -219,13 +219,13 @@ let abstract_others sa others =
   SAtom.filter (fun a ->
     not (List.exists (fun z -> atom_contains_arg z a) others)) sa
 
-let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args; 
-						    tr_reqs = reqs; 
-						    tr_name = name;
-						    tr_ureq = ureqs;
-						    tr_assigns = assigns; 
-						    tr_upds = upds; 
-						    tr_nondets = nondets } =
+let post init all_procs procs { tr_args = tr_args; 
+				   tr_reqs = reqs; 
+				   tr_name = name;
+				   tr_ureq = ureqs;
+				   tr_assigns = assigns; 
+				   tr_upds = upds; 
+				   tr_nondets = nondets } =
   let others = missing_args procs tr_args in
   let d = all_permutations tr_args (procs@others) in
   List.fold_left (fun acc sigma ->
@@ -240,65 +240,115 @@ let post ({ t_unsafe = all_procs, init } as s_init) procs { tr_args = tr_args;
       let sa = elim_prime (prime_satom init) sa in
       let sa = simplification_atoms SAtom.empty sa in
       let sa, (nargs, _) = proper_cube sa in
-      let ar =  ArrayAtom.of_satom sa in
-      let s = { s_init with
-	(* t_from =  *)
-	(*   (name, (List.map (svar sigma) tr_args),s_init) :: s_init.t_from; *)
-        t_unsafe = nargs, sa;
-        t_arru = ar;
-	t_alpha = ArrayAtom.alpha ar nargs; } 
-      in
-      s::acc
+      (sa, nargs) :: acc
+      (* let ar =  ArrayAtom.of_satom sa in *)
+      (* let s = { s_init with *)
+      (* 	(\* t_from =  *\) *)
+      (* 	(\*   (name, (List.map (svar sigma) tr_args),s_init) :: s_init.t_from; *\) *)
+      (*   t_unsafe = nargs, sa; *)
+      (*   t_arru = ar; *)
+      (* 	t_alpha = ArrayAtom.alpha ar nargs; }  *)
+      (* in *)
+      (* s::acc *)
     else acc
   ) [] d
 
-let cpt_f = ref 0
+
+(* module HA = Hashtbl.Make (ArrayAtom) *)
+
+module HSA : Hashtbl.S with type key = SAtom.t = Hashtbl.Make (SAtom)
 
 (* let _ = Ocamlviz.init () *)
 
-module HA = Hashtbl.Make (ArrayAtom)
+(* let h_visited = Ocamlviz.Hashtable.observe ~period:100 "h_visited" *)
+(*   (HA.create 200_029) *)
 
-(* let h_visited = Ocamlviz.Hashtable.observe ~period:10 "h_visited"  *)
-(*   (HA.create 200_001) *)
-
-let h_visited = HA.create 200_001
+(* let h_visited = HSA.create 200_029 *)
 
 
-let visited_from_h s h = HA.fold (fun ar _ acc ->
-  let sa, (nargs, _) = proper_cube (ArrayAtom.to_satom ar) in 
+let visited_from_h s h = HSA.fold (fun sa _ acc ->
+  let sa, (nargs, _) = proper_cube sa in
+  let ar = ArrayAtom.of_satom sa in
   { s with 
     t_unsafe = nargs, sa;
     t_arru = ar;
     t_alpha = ArrayAtom.alpha ar nargs } :: acc) h []
 
-let rec forward s visited procs trs = function
-  | [] -> eprintf "%d@." !cpt_f; visited
-  | init :: to_do ->
+
+let forward s procs trs l =
+  let h_visited = HSA.create 200_029 in
+  let cpt_f = ref 0 in
+  let rec forward_rec s procs trs = function
+    | [] -> eprintf "%d@." !cpt_f
+    | (sa, args) :: to_do ->
     (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
     (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
     (*   raise (Search.Unsafe init) *)
     (* end; *)
-    if !cpt_f > 400_000 then visited
-    else (
+      if false && !cpt_f > 400_000 then ()
+      else (
     (* if fixpoint ~invariants:[] ~visited init then *)
     (* if easy_fixpoint init visited then *)
     (** Very incomplete hash test **)
-    if HA.mem h_visited init.t_arru then
-      forward s visited procs trs to_do
-    else
-    let new_td =
-      List.fold_left (fun new_td tr ->
-	List.fold_left (fun new_td s ->
+	if HSA.mem h_visited sa then
+	  forward_rec s procs trs to_do
+	else
+	  let new_td =
+	    List.fold_left (fun new_td tr ->
+	      List.fold_left (fun new_td s ->
 	  (* if fixpoint ~invariants:[] ~visited s then new_td *)
 	  (* else *) (s :: new_td)
-	) new_td (post init procs tr)
-      ) [] trs
-    in
-    incr cpt_f; 
-    if true || !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-    HA.add h_visited init.t_arru ();
-    forward s (init ::visited) procs trs (List.rev_append new_td to_do)(* (to_do @ (List.rev new_td)) *)
-    )
+	      ) new_td (post sa args procs tr)
+	    ) [] trs
+	  in
+	  incr cpt_f; 
+	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	  HSA.add h_visited sa ();
+	  forward_rec s procs trs (List.rev_append new_td to_do)
+      )
+  in
+  forward_rec s procs trs l;
+  h_visited
+
+
+
+module MA = Map.Make (Atom)
+
+let add_compagnions_from_node sa =
+  SAtom.fold (fun a mc ->
+    let comps = SAtom.remove a sa in
+    let old_comps = try MA.find a mc with Not_found -> SAtom.empty in
+    MA.add a (SAtom.union comps old_comps) mc) sa
+
+
+let stateless_forward s procs trs l =
+  let h_visited = Hashtbl.create 200_029 in
+  let cpt_f = ref 0 in
+  let rec forward_rec s procs trs mc = function
+    | [] -> eprintf "%d@." !cpt_f; mc
+    | (sa, args) :: to_do ->
+      let hsa = Hashtbl.hash sa in
+      if Hashtbl.mem h_visited hsa then
+	forward_rec s procs trs mc to_do
+      else
+	let new_td =
+	  List.fold_left (fun new_td tr ->
+	    List.fold_left (fun new_td s ->
+	  (* if fixpoint ~invariants:[] ~visited s then new_td *)
+	  (* else *) (s :: new_td)
+	    ) new_td (post sa args procs tr)
+	  ) [] trs
+	in
+	incr cpt_f; 
+	if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	Hashtbl.add h_visited hsa ();
+	let mc = add_compagnions_from_node sa mc in
+	forward_rec s procs trs mc (List.rev_append new_td to_do)
+  in
+  forward_rec s procs trs MA.empty l
+  
+  
+
 
 (* let mkinit_multi args init args = *)
 (*   match args with *)
@@ -317,28 +367,33 @@ let mkinit arg init args =
 	List.fold_left (fun acc h ->
 	  SAtom.union (subst_atoms [z, h] sa) acc) cst args
 
-let mkinit_s procs ({t_init = ia, init} as s) =
+let mkinit_s procs ({t_init = ia, init}) =
   let sa, (nargs, _) = proper_cube (mkinit ia init procs) in
-  let ar = ArrayAtom.of_satom sa in
-  { s with
-    t_unsafe = nargs, sa;
-    t_arru = ar;
-    t_alpha = ArrayAtom.alpha ar nargs;
-  }
+  sa, nargs
+  (* let ar = ArrayAtom.of_satom sa in *)
+  (* { s with *)
+  (*   t_unsafe = nargs, sa; *)
+  (*   t_arru = ar; *)
+  (*   t_alpha = ArrayAtom.alpha ar nargs; *)
+  (* } *)
 
 let mkforward_s s =
   List.map (fun fo ->
     let _,_,sa = fo in
     let sa, (nargs, _) = proper_cube sa in
-    let ar = ArrayAtom.of_satom sa in
-    { s with
-      t_unsafe = nargs, sa;
-      t_arru = ar;
-      t_alpha = ArrayAtom.alpha ar nargs;
-    })
-    s.t_forward
+    sa, nargs
+    (* let ar = ArrayAtom.of_satom sa in *)
+    (* { s with *)
+    (*   t_unsafe = nargs, sa; *)
+    (*   t_arru = ar; *)
+    (*   t_alpha = ArrayAtom.alpha ar nargs; *)
+    (* } *)
+  ) s.t_forward
 
-let search procs init = forward init [] procs init.t_trans [mkinit_s procs init]
+let search procs init = forward init procs init.t_trans [mkinit_s procs init]
+
+let search_stateless procs init = 
+  stateless_forward init procs init.t_trans [mkinit_s procs init]
 
 let search_nb n =
   let rp, _ = 
@@ -349,7 +404,156 @@ let search_nb n =
   search procs
 
 
+let search_stateless_nb n =
+  let rp, _ = 
+    List.fold_left (fun (acc, n) v ->
+      if n > 0 then v :: acc, n - 1
+      else acc, n) ([], n) proc_vars in
+  let procs = List.rev rp in
+  search_stateless procs
+
+
 let search_only s =
   let ex_args = 
     match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in
-  forward s [] ex_args s.t_trans (mkforward_s s)
+  forward s ex_args s.t_trans (mkforward_s s)
+
+
+
+
+
+
+(*********************************)
+(* Extract candidates from trace *)
+(*********************************)
+
+module HA = Hashtbl.Make (struct 
+  include Atom 
+  let equal a b = compare a b = 0
+  let hash = Hashtbl.hash end)
+
+module MT = Map.Make (struct type t = term let compare = compare_term end)
+
+
+let all_litterals h = HSA.fold (fun sa _ acc ->
+  SAtom.union sa acc) h SAtom.empty
+
+let compagnions_from_trace forward_nodes =
+  let lits = all_litterals forward_nodes in
+  SAtom.fold (fun a acc ->
+    let compagnions =
+      HSA.fold (fun sa _ acc ->
+	if SAtom.mem a sa then
+	  SAtom.union (SAtom.remove a sa) acc
+	else acc)
+	forward_nodes SAtom.empty
+    in
+    MA.add a compagnions acc) lits MA.empty
+
+
+
+let compagnions_values compagnions =
+  SAtom.fold (fun c (acc, compagnions) -> 
+    match c with
+      | Comp (Elem (x, Constr), Eq, t1)
+      | Comp (t1, Eq, Elem (x, Constr)) ->
+	let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
+	MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
+      (* heuristic: remove proc variables *)
+      | Comp (Elem (_, Var), _, _)
+      | Comp (_, _, Elem (_, Var)) ->
+      	acc, SAtom.remove c compagnions
+      | _ -> acc, compagnions)
+    compagnions (MT.empty, compagnions)
+
+
+let get_variants x =
+  (* add missing constructors for bool *)
+  if Hstring.equal (snd (Smt.Typing.find x)) Smt.Typing.type_bool then
+    H.HSet.add htrue (H.HSet.singleton hfalse)
+  else Smt.Typing.Variant.get_variants x
+
+
+let candidates_from_compagnions a compagnions acc =
+  let singl_a = SAtom.singleton a in
+  let mt, remaining = compagnions_values compagnions in
+  let acc = 
+    SAtom.fold (fun c acc -> SAtom.add (Atom.neg c) singl_a :: acc)
+    remaining acc
+  in
+  MT.fold (fun c vals acc -> match c with
+    | Elem (x, _) | Access (x, _, _) ->
+      begin
+	match H.HSet.elements vals with
+	  | [v] when Hstring.equal v htrue ->
+	    SAtom.add (Comp (c, Eq, (Elem (hfalse, Constr)))) singl_a :: acc	
+	  | [v] when Hstring.equal v hfalse ->
+	    SAtom.add (Comp (c, Eq, (Elem (htrue, Constr)))) singl_a :: acc
+	  | [v] -> SAtom.add (Comp (c, Neq, (Elem (v, Constr)))) singl_a :: acc
+	  | vs ->
+	    try
+	      let dif = H.HSet.diff (get_variants x) vals in
+	      match H.HSet.elements dif with
+		| [] -> acc
+		| [cs] -> 
+		  SAtom.add (Comp (c, Eq, (Elem (cs, Constr)))) singl_a :: acc
+		| _ -> raise Not_found
+	    with Not_found ->
+	      let sa = List.fold_left (fun sa v ->
+		SAtom.add (Comp (c, Neq, (Elem (v, Constr)))) sa)
+		singl_a vs in
+	      sa :: acc
+      end
+    | _ -> assert false)
+    mt acc
+
+
+let useless_candidate =
+  SAtom.exists (function
+    (* heuristic: remove proc variables *)
+    | Comp (Elem (_, Var), _, _)
+    | Comp (_, _, Elem (_, Var)) -> true
+    | _ -> false)
+
+
+
+let extract_candidates_from_compagnons comps s =
+  MA.iter (fun a compagnions ->
+    eprintf "compagnons %a : %a@." 
+      Pretty.print_atom a Pretty.print_cube compagnions) comps;
+  let sas = MA.fold candidates_from_compagnions comps [] in
+  let sas = List.rev sas in
+  Gc.full_major ();
+  List.fold_left (fun acc sa ->
+    if useless_candidate sa then acc
+    else
+      let sa', (args, _) = proper_cube sa in
+      let ar' = ArrayAtom.of_satom sa' in
+      let s' = 
+	{ s with
+	  t_from = [];
+	  t_unsafe = args, sa';
+	  t_arru = ar';
+	  t_alpha = ArrayAtom.alpha ar' args;
+	  t_deleted = false;
+	  t_nb = 0;
+	  t_nb_father = -1 } in
+      if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
+      else s' :: acc) [] sas
+
+let extract_candidates_from_trace forward_nodes s =
+  let comps = compagnions_from_trace forward_nodes in
+  HSA.clear forward_nodes;
+  extract_candidates_from_compagnons comps s
+
+
+
+let select_relevant_candidates {t_unsafe = _, sa} =
+  List.filter (fun {t_unsafe = _, ca} ->
+    not (SAtom.is_empty (SAtom.inter ca sa))
+  )
+
+  
+
+(*----------------------------------------------------------------*)
+

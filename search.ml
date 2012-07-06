@@ -378,6 +378,8 @@ module BFS_base ( X : I ) = struct
 	  (* if not (fixpoint) then *)
 	  (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
 
+	  printf "    (%d remaining)\n@."
+	    (List.length ls + List.length !postponed);
 
 	  if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;
