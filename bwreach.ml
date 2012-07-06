@@ -814,15 +814,10 @@ let system uns =
     exit 0
   end
 
-  else if forward_inv then begin
+  else if stateless && forward_inv then begin
 
-    eprintf "FORWARD ONE :\n-------------\n@.";
+    eprintf "FORWARD :\n-------------\n@.";
     let comps = (Forward.search_stateless_nb 2 (List.hd uns)) in
-    (* for debug *)
-    (* let cpt = ref 0 in *)
-    (* List.iter *)
-    (*   (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s) *)
-    (*   forward_nodes; *)
     eprintf "-------------\n@.";
 
 
@@ -830,7 +825,6 @@ let system uns =
     let candidates = 
       Forward.extract_candidates_from_compagnons comps (List.hd uns)
     in
-    (* let candidates = T.sort candidates in *)
     let cpt = ref 0 in
     List.iter (fun sa -> incr cpt;
       eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
@@ -838,20 +832,13 @@ let system uns =
     eprintf "-----------------------\n@.";
 
 
-    (* let invs, _ = try_inv InvSearch.search ~invariants [] [] candidates in *)
-
-    (* let invs = elim_bogus_invariants search invariants candidates in *)
-    (* let invariants = List.rev_append invs invariants in *)
-
-    (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
-      
     search_bogus_invariants search invariants (candidates@uns) uns
 
   end
 
   else if forward_inv then begin
 
-    eprintf "FORWARD ONE :\n-------------\n@.";
+    eprintf "FORWARD :\n-------------\n@.";
     let forward_nodes = (Forward.search_nb 2 (List.hd uns)) in
     (* for debug *)
     (* let cpt = ref 0 in *)

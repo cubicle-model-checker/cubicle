@@ -374,12 +374,12 @@ module BFS_base ( X : I ) = struct
 	  if delete then X.delete_nodes s postponed nb_deleted true;
 	  if delete && invgen && gen_inv then X.delete_nodes_inv inv postponed;
 
-	  (* TODO *)
-	  (* if not (fixpoint) then *)
-	  (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
-
-	  printf "    (%d remaining)\n@."
+	  if not quiet then printf "    (%d remaining)\n@."
 	    (List.length ls + List.length !postponed);
+
+	  (* TODO *)
+	  (* if not (fixpoint inv s) then *)
+	  (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
 
 	  if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	end else incr Profiling.cpt_fix;

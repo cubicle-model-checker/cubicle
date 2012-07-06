@@ -87,7 +87,7 @@ let find_const_value g init =
 let rec elim_prime_atom init = function
   | True -> None 
   | False -> Some False
-  | Comp (t1, Eq, t2) as a ->
+  | Comp (t1, Eq, t2)  ->
       let t1, t2 = 
 	if is_prime_term t1 && not (is_prime_term t2) then t2, t1
 	else t1, t2 in
@@ -258,6 +258,14 @@ let post init all_procs procs { tr_args = tr_args;
 
 module HSA : Hashtbl.S with type key = SAtom.t = Hashtbl.Make (SAtom)
 
+
+module HI = Hashtbl.Make 
+  (struct 
+  type t = int 
+  let equal = (=) 
+  let hash x = x end)
+
+
 (* let _ = Ocamlviz.init () *)
 
 (* let h_visited = Ocamlviz.Hashtable.observe ~period:100 "h_visited" *)
@@ -322,13 +330,13 @@ let add_compagnions_from_node sa =
 
 
 let stateless_forward s procs trs l =
-  let h_visited = Hashtbl.create 200_029 in
+  let h_visited = HI.create 200_029 in
   let cpt_f = ref 0 in
   let rec forward_rec s procs trs mc = function
     | [] -> eprintf "%d@." !cpt_f; mc
     | (sa, args) :: to_do ->
       let hsa = Hashtbl.hash sa in
-      if Hashtbl.mem h_visited hsa then
+      if HI.mem h_visited hsa then
 	forward_rec s procs trs mc to_do
       else
 	let new_td =
@@ -341,7 +349,7 @@ let stateless_forward s procs trs l =
 	in
 	incr cpt_f; 
 	if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	Hashtbl.add h_visited hsa ();
+	HI.add h_visited hsa ();
 	let mc = add_compagnions_from_node sa mc in
 	forward_rec s procs trs mc (List.rev_append new_td to_do)
   in
