@@ -337,7 +337,7 @@ let stateless_forward s procs trs l =
   let rec forward_rec s procs trs mc = function
     | [] -> eprintf "%d@." !cpt_f; mc
     | (sa, args) :: to_do ->
-      let hsa = Hashtbl.hash sa in
+      let hsa = SAtom.hash sa in
       if HI.mem h_visited hsa then
 	forward_rec s procs trs mc to_do
       else
@@ -349,8 +349,11 @@ let stateless_forward s procs trs l =
 	    ) new_td (post sa args procs tr)
 	  ) [] trs
 	in
-	incr cpt_f; 
-	if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	incr cpt_f;
+      
+	if !cpt_f mod 1000 = 0 then 
+	  eprintf "%d@." !cpt_f;
+
 	HI.add h_visited hsa ();
 	let mc = add_compagnions_from_node sa mc in
 	forward_rec s procs trs mc (List.rev_append new_td to_do)

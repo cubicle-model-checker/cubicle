@@ -127,12 +127,11 @@ end = struct
 
   let rec hash = function
     | True -> 7 | False -> 11
-    | Comp (x, Eq, y) -> 7 * (hash_term x + hash_term y)
-    | Comp (x, Neq, y) -> 11 * (hash_term x + hash_term y)
-    | Comp (x, Le, y) -> 5 * hash_term x + 7 * hash_term y
-    | Comp (x, Lt, y) -> 5 * hash_term x + 11 * hash_term y
-    | Ite (sa, a1, a2) -> SAtom.hash sa + (7 * hash a1) + (11 * hash a2) 
-
+    | Comp (x, Eq, y) -> 7 * (hash_term x * hash_term y)
+    | Comp (x, Neq, y) -> 11 * (hash_term x * hash_term y)
+    | Comp (x, Le, y) -> 5 * hash_term x * 7 * hash_term y
+    | Comp (x, Lt, y) -> 5 * hash_term x * 11 * hash_term y
+    | Ite (sa, a1, a2) -> SAtom.hash sa + (7 * hash a1) + (11 * hash a2)
   and hash_set sa = SAtom.fold (fun a acc -> hash a + acc) sa 0
 
 
@@ -151,7 +150,7 @@ end = struct
 
   let equal sa1 sa2 = compare sa1 sa2 = 0
 
-  let hash sa = 
+  let hash sa =
     let _, h = fold (fun a (n,acc) -> n + 1, n + Atom.hash a * acc)
       sa (2,1) in
     h
