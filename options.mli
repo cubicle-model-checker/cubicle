@@ -23,7 +23,7 @@ val maxnodes : int
 
 val only_forward : bool
 val gen_inv : bool
-val forward_inv : bool
+val forward_inv : int
 val stateless : bool
 val post_strategy : int
 val delete : bool

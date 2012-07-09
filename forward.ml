@@ -521,12 +521,14 @@ let candidates_from_compagnions a compagnions acc =
     mt acc
 
 
-let useless_candidate =
+let useless_candidate sa =
   SAtom.exists (function
     (* heuristic: remove proc variables *)
     | Comp (Elem (_, Var), _, _)
     | Comp (_, _, Elem (_, Var)) -> true
-    | _ -> false)
+    | _ -> false) sa
+  (* || List.length (args_of_atoms sa) > 1 *)
+
 
 
 

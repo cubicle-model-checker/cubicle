@@ -32,7 +32,7 @@ let profiling = ref false
 
 let only_forward = ref false
 let gen_inv = ref false
-let forward_inv = ref false
+let forward_inv = ref (-1)
 let stateless = ref false
 let post_strategy = ref (-1)
 let delete = ref true
@@ -64,7 +64,7 @@ let specs =
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
-    "-forward-inv", Arg.Set forward_inv, "forward invariant generation";
+    "-forward-inv", Arg.Set_int forward_inv, "<n> forward invariant generation with n processes";
     "-stateless", Arg.Set stateless, "stateless forward search";
     "-postpone", Arg.Set_int post_strategy, "<0|1|2> 0: do not postpone nodes\n                        1: postpone nodes with n+1 processes\n                        2: postpone nodes that don't add information";
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";

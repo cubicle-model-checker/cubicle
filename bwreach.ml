@@ -814,10 +814,10 @@ let system uns =
     exit 0
   end
 
-  else if stateless && forward_inv then begin
+  else if stateless && forward_inv <> -1 then begin
 
     eprintf "FORWARD :\n-------------\n@.";
-    let comps = (Forward.search_stateless_nb 2 (List.hd uns)) in
+    let comps = (Forward.search_stateless_nb forward_inv (List.hd uns)) in
     eprintf "-------------\n@.";
 
 
@@ -836,10 +836,10 @@ let system uns =
 
   end
 
-  else if forward_inv then begin
+  else if forward_inv <> -1 then begin
 
     eprintf "FORWARD :\n-------------\n@.";
-    let forward_nodes = (Forward.search_nb 2 (List.hd uns)) in
+    let forward_nodes = (Forward.search_nb forward_inv (List.hd uns)) in
     (* for debug *)
     (* let cpt = ref 0 in *)
     (* List.iter *)
