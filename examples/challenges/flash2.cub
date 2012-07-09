@@ -127,8 +127,6 @@ init (p) {
 (* invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX }  *)
 (* invariant (i j) { CacheState[i] = Exclusive && UnetMtype[j] = PutX }  *)
 
-
-
 unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive }
 unsafe (i j) { CacheState[i] = Exclusive && CacheState[j] = Exclusive }
 
@@ -764,7 +762,8 @@ requires { ShWBnet_mtype = ShWB }
   ShWBnet_mtype := Empty_shwb; Pending := False;
   Dirty := False; Memory := ShWBnet_data;
   Shlist[j] := case | j = ShWBnet_proc : True | _ : Shlist[j] ;
-  Real[j] := case | j = ShWBnet_proc : True | _ : Shlist[j] 
+  Real[j] := case | j = ShWBnet_proc : True | _ : Shlist[j];
+  Real_home := Shlist_home;
 }
 
 
