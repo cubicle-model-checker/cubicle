@@ -130,7 +130,6 @@ init (p) {
 unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive }
 unsafe (i j) { CacheState[i] = Exclusive && CacheState[j] = Exclusive }
 
-
 transition pi_Local_Get_Dirty ()
 requires { CacheState_home = Invalid && CacheWait_home = None && 
 	  Pending = False && Dirty = True }
