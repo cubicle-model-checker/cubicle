@@ -16,7 +16,6 @@ const Tick : real
 
 init (z) { State[z] = Empty && Clock[z] = 0.0 && Last[z] = 0.0 && Timer = 1.0 }
 
-
 invariant () { Tick <= 0.0 }
 
 unsafe (z1 z2) { State[z1] = Use && State[z2] = Use }
