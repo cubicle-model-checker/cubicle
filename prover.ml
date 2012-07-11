@@ -96,12 +96,12 @@ let make_cs cs =
   if MConst.is_empty r then mult_const t_c c i
   else make_arith_cs r (mult_const t_c c i)
 	 
-let make_term = function
+let rec make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, i, _) -> T.make_app a [T.make_app i []]
-  | Arith (x, _, cs) -> 
-      let tx = T.make_app x [] in
+  | Arith (x, cs) -> 
+      let tx = make_term x in
       make_arith_cs cs tx
 
 let rec make_formula_set sa = 

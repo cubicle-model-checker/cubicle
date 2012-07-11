@@ -103,7 +103,7 @@ let rec find_update a i si = function
   | _ :: l -> find_update a i si l
 
 
-let find_assign tr = function
+let rec find_assign tr = function
   | Elem (x, sx) -> 
       let t = 
 	if H.list_mem x tr.tr_nondets then 
@@ -115,20 +115,23 @@ let find_assign tr = function
 
   | Const i as a -> Single a
 
-  | Arith (x, sx, cs1) ->
+  | Arith (x, cs1) ->
       begin
-	let t = 
-	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
-	in 
+	let t = find_assign tr x in
 	match t with
-	  | Const cs2 -> 
+	  | Single (Const cs2) -> 
 	      let c = 
 		Const (add_constants cs1 cs2)
 	      in
 	      Single c
-	  | Elem (x, sx) -> Single (Arith (x, sx, cs1))
-	  | Arith (y, sy, cs2) -> Single (Arith (y, sy, add_constants cs1 cs2))
-	  | Access _ -> assert false
+	  | Single (Arith (y, cs2)) ->
+	      Single (Arith (y, add_constants cs1 cs2))
+	  | Single y -> Single (Arith (y, cs1))
+	  | Branch up ->
+	      Branch { up with 
+		up_swts = List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
+		  up.up_swts
+	      }
       end
   | Access (a, i, si) -> 
       let ni, sni = 
@@ -174,8 +177,9 @@ let make_tau tr x op y =
 (* Postponed Formulas *)
 (**********************)
 
-let has_args_term args = function
-  | Elem (x, Var) | Access (_, x, _) | Arith (x, Var, _) -> H.list_mem x args
+let rec has_args_term args = function
+  | Elem (x, Var) | Access (_, x, _) -> H.list_mem x args
+  | Arith (x, _) ->  has_args_term args x
   | _ -> false
 
 let rec has_args args = function
@@ -435,11 +439,12 @@ let delete_node s = s.t_deleted <- true
 (* Invariant generation stuff...  *)
 (**********************************)
 
-let same_number z = function 
+let rec same_number z = function 
   | Const _ -> true
-  | Elem (s, v) | Arith (s, v, _) -> 
+  | Elem (s, v) -> 
       H.equal s z || v = Glob || v = Constr
   | Access (_, s, _) -> H.equal s z
+  | Arith (x, _) -> same_number z x
 
 let rec contains_only z = function
   | True | False -> true

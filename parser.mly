@@ -304,20 +304,38 @@ constnum:
 | INT { ConstInt $1 }
 ;
 
-term:
+var_term:
 | mident { 
     if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
     else Elem ($1, sort $1) }
 | lident { Elem ($1, Var) }
+;
+
+array_term:
 | mident LEFTSQ lident RIGHTSQ { Access($1,$3, Var) }
 | mident LEFTSQ mident RIGHTSQ { Access($1,$3, sort $3) }
-| mident PLUS constnum { Arith($1, sort $1, MConst.add $3 1 MConst.empty) }
-| mident MINUS constnum { Arith($1, sort $1, MConst.add $3 (-1) MConst.empty) }
-| mident PLUS mident 
-      { Arith($1, sort $1, MConst.add (ConstName $3) 1 MConst.empty) }
-| mident MINUS mident 
-      { Arith($1, sort $1, MConst.add (ConstName $3) (-1) MConst.empty) }
+;
+
+var_or_array_term:
+| var_term { $1 }
+| array_term { $1 }
+;
+
+arith_term:
+| var_or_array_term PLUS constnum 
+    { Arith($1, MConst.add $3 1 MConst.empty) }
+| var_or_array_term MINUS constnum 
+    { Arith($1, MConst.add $3 (-1) MConst.empty) }
+| var_or_array_term PLUS mident 
+    { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+| var_or_array_term MINUS mident 
+    { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
 | constnum { Const (MConst.add $1 1 MConst.empty) }
+;
+
+term:
+| var_or_array_term { $1 }
+| arith_term { $1 }
 ;
 
 mident:

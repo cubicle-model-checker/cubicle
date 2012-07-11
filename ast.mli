@@ -31,7 +31,7 @@ type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Hstring.t * sort
-  | Arith of Hstring.t * sort * int MConst.t
+  | Arith of term * int MConst.t
 
 val compare_term : term -> term -> int
 

@@ -228,22 +228,22 @@ let rec simplification np a =
   match a with
     | True | False -> a 
     | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
-    | Comp (Arith (i, si, csi), op, (Arith (j, sj, csj)))
-      when compare_constants csi csj = 0 -> simplify_comp i si op j sj
+    | Comp (Arith (i, csi), op, (Arith (j, csj)))
+      when compare_constants csi csj = 0 -> simplification np (Comp (i, op, j))
     (* | Comp (Const cx, op, Arith (y, sy, cy)) -> *)
     (* 	Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
     (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
     (* | Comp ( Arith (x, sx, cx), op, Const cy) -> *)
     (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
     (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
-    | Comp (Elem (x, sx), op, Arith (y, sy, cy)) when Hstring.equal x y ->
+    | Comp (x, op, Arith (y, cy)) when compare_term x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
 	let my = MConst.remove c cy in
 	let cy = 
 	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
         Comp (Const cx, op, Const cy)
-    | Comp (Arith (y, sy, cy), op, Elem (x, sx)) when Hstring.equal x y ->
+    | Comp (Arith (y, cy), op, x) when compare_term x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
 	let my = MConst.remove c cy in
@@ -468,10 +468,11 @@ let number_of s =
     int_of_string (String.sub s 1 (String.length s - 1))
   else 1
 
-let add_arg args = function
-  | Elem (s, _) | Access (_, s ,_) | Arith (s, _, _) ->
+let rec add_arg args = function
+  | Elem (s, _) | Access (_, s ,_) ->
       let s' = H.view s in
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
+  | Arith (t, _) -> add_arg args t
   | Const _ -> args
 
 let args_of_atoms sa = 
@@ -726,14 +727,14 @@ let remove_tick tick e op x =
 	    else raise Not_found
 	  with Not_found -> Comp (e, op, x)
 	end
-    | Arith (v, sv, m ) ->
+    | Arith (v, m) ->
 	begin
 	  try
 	    let c = MConst.find tick m in
 	    if c > 0 then 
 	      let m = MConst.remove tick m in
 	      let e = 
-		if MConst.is_empty m then Elem (v, sv) else Arith(v, sv, m)
+		if MConst.is_empty m then v else Arith(v, m)
 	      in
 	      simplification SAtom.empty (Comp (e, Lt, x))
 	    else raise Not_found
@@ -743,7 +744,7 @@ let remove_tick tick e op x =
       
 
 let contains_tick_term tick = function
-  | Const m | Arith (_, _, m) ->
+  | Const m | Arith (_, m) ->
       (try MConst.find tick m <> 0 with Not_found -> false)
   | _ -> false
 
@@ -757,8 +758,8 @@ let remove_tick_atom sa (tick, at) =
   (* let flag = ref false in *)
   let remove a sa = 
     let a = match a with
-      | Comp ((Const _ | Arith (_, _, _) as e), (Le|Lt|Eq as op), x)
-      | Comp (x, (Eq as op), (Const _ | Arith (_, _, _) as e))  ->
+      | Comp ((Const _ | Arith (_, _) as e), (Le|Lt|Eq as op), x)
+      | Comp (x, (Eq as op), (Const _ | Arith (_, _) as e))  ->
 	  remove_tick tick e op x
       | _ -> a 
     in

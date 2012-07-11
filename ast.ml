@@ -48,7 +48,7 @@ type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Hstring.t * sort
-  | Arith of Hstring.t * sort * int MConst.t
+  | Arith of term * int MConst.t
 
 let rec compare_term t1 t2 = 
   match t1, t2 with
@@ -60,15 +60,15 @@ let rec compare_term t1 t2 =
 	let c = Hstring.compare a1 a2 in
 	if c<>0 then c else Hstring.compare i1 i2
     | Access _, _ -> -1 | _, Access _ -> 1 
-    | Arith (t1, _, cs1), Arith (t2, _, cs2) ->
-	let c = Hstring.compare t1 t2 in
+    | Arith (t1, cs1), Arith (t2, cs2) ->
+	let c = compare_term t1 t2 in
 	if c<>0 then c else compare_constants cs1 cs2
 
-let hash_term = function
+let rec hash_term = function
   | Const c -> Hashtbl.hash c
   | Elem (s, _) -> Hstring.hash s
   | Access (a, x, _) -> Hstring.hash a * Hstring.hash x
-  | Arith (x, _, c) -> Hstring.hash x + Hashtbl.hash c
+  | Arith (x, c) -> hash_term x + Hashtbl.hash c
 
 let htrue = Hstring.make "True"
 let hfalse = Hstring.make "False"
@@ -179,12 +179,13 @@ let svar sigma v = Hstring.list_assoc v sigma
 
 let ssort sigma_sort s = try List.assoc s sigma_sort with Not_found -> s
     
-let subst_term sigma ?(sigma_sort=[]) t = 
+let rec subst_term sigma ?(sigma_sort=[]) t = 
   match t with
     | Elem (x, s) -> 
 	(try Elem (svar sigma x, ssort sigma_sort s) with Not_found -> t)
     | Access (a, z, s) -> 
 	(try Access (a, svar sigma z, ssort sigma_sort s) with Not_found -> t)
+    | Arith (x, c) -> Arith (subst_term sigma ~sigma_sort x, c)
     | _ -> t
 	
 
@@ -415,9 +416,9 @@ let declared_terms ar =
 
 
 
-let variables_term t acc = match t with
+let rec variables_term t acc = match t with
   | Elem (a, Glob) | Access (a, _, _) -> STerm.add t acc
-  | Arith (a, Glob, _) -> STerm.add (Elem (a, Glob)) acc
+  | Arith (x, _) -> variables_term x acc
   | _ -> acc
 
 let rec variables_atom a acc = match a with
@@ -430,9 +431,10 @@ and variables_of sa = SAtom.fold variables_atom sa STerm.empty
 
 
 
-let contain_arg z = function
-  | Elem (x, _) | Arith (x, _, _) -> Hstring.equal x z
+let rec contain_arg z = function
+  | Elem (x, _) -> Hstring.equal x z
   | Access (x, y, _) -> Hstring.equal y z
+  | Arith (t, _) -> contain_arg z t
   | Const _ -> false
 
 let has_var z = function

@@ -258,6 +258,7 @@ export:
 	cp $(FILES) export/$(EXPORTDIR)/
 	cp $(OTHERFILES) export/$(EXPORTDIR)/
 	cp examples/*.cub export/$(EXPORTDIR)/examples/
+	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
 
 release: export

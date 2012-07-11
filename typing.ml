@@ -31,7 +31,7 @@ type error =
   | ClashParam of Hstring.t
   | MustBeAnArray of Hstring.t
   | MustBeOfType of Hstring.t * Hstring.t
-  | MustBeNum of Hstring.t
+  | MustBeNum of term
   | MustBeOfTypeProc of Hstring.t 
   | IncompatibleType of Hstring.t list * Hstring.t * Hstring.t list * Hstring.t
   | NotATerm of Hstring.t
@@ -77,7 +77,7 @@ let report fmt = function
   | MustBeOfType (s, ty) ->
       fprintf fmt "%a must be of type %a" Hstring.print s Hstring.print ty
   | MustBeNum s ->
-      fprintf fmt "%a must be of type int or real" Hstring.print s
+      fprintf fmt "%a must be of type int or real" Pretty.print_term s
   | MustBeOfTypeProc s ->
       fprintf fmt "%a must be of proc" Hstring.print s
   | IncompatibleType (args1, ty1, args2, ty2) ->
@@ -113,7 +113,7 @@ let infer_type x1 x2 =
 
 let refinement_cycles () = (* TODO *) ()
 
-let term args = function
+let rec term args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
       (match c with
@@ -127,18 +127,13 @@ let term args = function
 	try Smt.Typing.find e with Not_found -> error (UnknownName e)
       end
   | Elem (e, _) -> Smt.Typing.find e
-  | Arith (x, (Var | Constr | Arr), _) ->
-      error (MustBeNum x)
-  | Arith (x, _, _) ->
+  | Arith (x, _) ->
       begin
-	try 
-	  let args, ret = Smt.Typing.find x in
-	  if args <> [] then error (NotATerm x);
-	  if not (Hstring.equal ret Smt.Typing.type_int) 
-	    && not (Hstring.equal ret Smt.Typing.type_real) then 
-	    error (MustBeNum x);
-	  args, ret
-	with Not_found -> error (UnknownGlobal x)
+	let args, tx = term args x in
+	if not (Hstring.equal tx Smt.Typing.type_int) 
+	  && not (Hstring.equal tx Smt.Typing.type_real) then 
+	  error (MustBeNum x);
+	args, tx
       end
   | Access(a, i, _) -> 
       let args_a, ty_a = 

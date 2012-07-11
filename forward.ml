@@ -23,9 +23,9 @@ open Cube
 let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
-let prime_term t = match t with
+let rec prime_term t = match t with
   | Elem (e, Glob) -> Elem (prime_h e, Glob)
-  | Arith (a, Glob, c) -> Arith (prime_h a, Glob, c)
+  | Arith (x, c) -> Arith (prime_term x, c)
   | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob)
   | Access (a, x, sx) -> Access (prime_h a, x, sx)
   | _ -> t
@@ -43,9 +43,9 @@ let unprime_h h =
   let s = Hstring.view h in
   Hstring.make (String.sub s 0 (String.index s '@'))
 
-let unprime_term t = match t with
+let rec unprime_term t = match t with
   | Elem (e, Glob) -> Elem (unprime_h e, Glob)
-  | Arith (a, Glob, c) -> Arith (unprime_h a, Glob, c)
+  | Arith (x, c) -> Arith (unprime_term x, c)
   | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob)
   | Access (a, x, sx) -> Access (unprime_h a, x, sx)
   | _ -> t
@@ -53,10 +53,11 @@ let unprime_term t = match t with
 
 let is_prime s = String.contains s '@'
 
-let is_prime_term = function
+let rec is_prime_term = function
   | Const _ -> false 
-  | Elem (s, _) | Access (s, _, _) | Arith (s, _, _) ->
+  | Elem (s, _) | Access (s, _, _) ->
       is_prime (Hstring.view s)
+  | Arith (x, _) -> is_prime_term x
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -66,8 +67,9 @@ let rec is_prime_atom = function
     is_prime_atom a1 || is_prime_atom a2 || SAtom.exists is_prime_atom sa
 
 
-let is_const = function
-  | Const _ | Elem (_, (Constr | Var)) | Arith (_, (Constr | Var), _) -> true
+let rec is_const = function
+  | Const _ | Elem (_, (Constr | Var)) -> true
+  | Arith (x, _) -> is_const x 
   | _ -> false
 
 exception Found_const of (op_comp * term)
@@ -203,9 +205,10 @@ let missing_args procs tr_args =
   in
   aux procs tr_args proc_vars
 
-let term_contains_arg z = function
-  | Elem (x, Var) | Access (_, x, Var) | Arith (x, Var, _) 
+let rec term_contains_arg z = function
+  | Elem (x, Var) | Access (_, x, Var)
       when Hstring.equal x z -> true
+  | Arith (x, _) -> term_contains_arg z x
   | _ -> false
 
 let rec atom_contains_arg z = function
