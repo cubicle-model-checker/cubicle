@@ -1,0 +1,89 @@
+
+
+(*
+
+ On réalise une barrière pour N processus.
+
+ On suppose une variable globale sense initialisée à false et une
+ variable count initialisée à N.
+
+ Chaque processus dispose d'une variable locale local_sense
+ (initialisée à false) ainsi qu'une variable level (initialisée à 0).
+ 
+ L1:  local_sense := not sense;
+ L2:  count := count - 1;
+ L3 : if count = 0 then (count := N; goto L5);
+ L4 : if local_sense <> sense then goto L4;
+ L5 : level := level + 1; goto L1
+
+ La variable count est représentée par un tableau Count[proc] : bool.
+ 
+*)
+
+
+type loc = L1 | L2 | L3 | L4 | L5
+
+var Sense : bool
+array Local_sense[proc] : bool
+array Level[proc] : int
+array Count[proc] : bool
+array PC[proc] : loc
+
+var C : int
+var D : int
+var E : int
+
+init (z) { Sense = False && Local_sense[z] = False &&
+           Level[z] = C && Count[z] = True && PC[z] = L1 }
+
+unsafe (z1 z2) { Level[z1] = D && D + 2 <= Level[z2] }
+
+transition enter (i)
+requires { PC[i] = L1 }
+{ 
+  PC[i] := L2;
+  Local_sense[j] := case | i = j && Local_sense[j] = True : False 
+                         | i = j && Local_sense[j] = False : True
+                         | _ : Local_sense[j];
+}
+
+transition decr (i)
+requires { PC[i] = L2 }
+{
+  PC[i] := L3;
+  Count[i] := False;
+}
+
+
+transition test_last (i)
+requires { PC[i] = L3 && Count[i] = False && forall_other j. Count[j] = False }
+{ 
+  PC[i] := L5;
+  Count[j] := case | _ : True;
+  Sense := Local_sense[i]
+}
+
+transition test_wait (i k)
+requires { PC[i] = L3 && Count[i] = True && Count[k] = False }
+{ 
+  PC[i] := L4;
+}
+
+transition wait (i)
+requires { PC[i] = L4 && Local_sense[i] <> Sense }
+{ 
+  PC[i] := L4;
+}
+
+transition exit (i)
+requires { PC[i] = L4 && Local_sense[i] = Sense }
+{ 
+  PC[i] := L5;
+}
+
+transition end (i)
+requires { PC[i] = L5 && Level[i] = E }
+{ 
+  PC[i] := L1;
+  Level[i] := E + 1;
+}
