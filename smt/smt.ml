@@ -13,8 +13,13 @@
 
 open Format
 
-exception AlreadyDeclared of Hstring.t
-exception Undefined of Hstring.t
+type error = 
+  | DuplicateTypeName of Hstring.t
+  | DuplicateSymb of Hstring.t
+  | UnknownType of Hstring.t
+  | UnknownSymb of Hstring.t
+
+exception Error of error
 
 let calls = ref 0
 module Time = Timer.Make(struct end)
@@ -50,12 +55,12 @@ module Typing = struct
     tproc
 
   let declare_constructor ty c = 
-    if H.mem decl_symbs c then raise (AlreadyDeclared c);
+    if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
       
   let declare_type (n, l) = 
-    if H.mem decl_types n then raise (AlreadyDeclared n);
+    if H.mem decl_types n then raise (Error (DuplicateTypeName n));
     match l with
       | [] -> 
 	  H.add decl_types n (Ty.Tabstract n)
@@ -65,9 +70,10 @@ module Typing = struct
 	  List.iter (fun c -> declare_constructor n c) l
 
   let declare_name f args ret  = 
-    if H.mem decl_symbs f then raise (AlreadyDeclared f);
+    if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
-      (fun t -> if not (H.mem decl_types t) then raise (Undefined t)) 
+      (fun t -> 
+	 if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
@@ -200,7 +206,7 @@ module Term = struct
       let (sb, _, nty) = H.find Typing.decl_symbs s in
       let ty = H.find Typing.decl_types nty in
       Term.make sb l ty
-    with Not_found -> raise (Undefined s)
+    with Not_found -> raise (Error (UnknownSymb s))
 
   let make_arith op t1 t2 = 
     let op = 

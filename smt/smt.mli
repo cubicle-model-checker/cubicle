@@ -11,9 +11,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
+type error = 
+  | DuplicateTypeName of Hstring.t
+  | DuplicateSymb of Hstring.t
+  | UnknownType of Hstring.t
+  | UnknownSymb of Hstring.t
 
-exception AlreadyDeclared of Hstring.t
-exception Undefined of Hstring.t
+exception Error of error
 
 (* API for the construction of types, terms and formulas *)
 

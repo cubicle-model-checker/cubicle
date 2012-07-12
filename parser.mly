@@ -253,13 +253,13 @@ require:
 
 update:
 | mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs
-{ Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
+    { Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
 | mident LEFTSQ lident RIGHTSQ AFFECT term
-{ let j = fresh_var () in
-  let cube = 
-    SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, Var))) in
-  let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
-  Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
+    { let j = fresh_var () in
+      let cube = 
+	SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, Var))) in
+      let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
+      Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
 ;
 
 switchs:

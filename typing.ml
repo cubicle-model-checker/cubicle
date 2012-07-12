@@ -19,12 +19,10 @@ type error =
   | UnknownConstr of Hstring.t
   | UnknownVar of Hstring.t
   | UnknownGlobal of Hstring.t
-  | DuplicateName of Hstring.t
-  | DuplicateTypeName of Hstring.t
   | DuplicateAssign of Hstring.t
+  | DuplicateName of Hstring.t 
   | DuplicateUpdate of Hstring.t
   | UnknownArray of Hstring.t
-  | UnknownType of Hstring.t
   | UnknownName of Hstring.t
   | DuplicateInit of Hstring.t
   | NoMoreThanOneArray
@@ -35,6 +33,7 @@ type error =
   | MustBeOfTypeProc of Hstring.t 
   | IncompatibleType of Hstring.t list * Hstring.t * Hstring.t list * Hstring.t
   | NotATerm of Hstring.t
+  | Smt of Smt.error
 
 exception Error of error
 
@@ -46,12 +45,10 @@ let print_htype fmt (args, ty) =
 let report fmt = function
   | UnknownConstr e ->
       fprintf fmt "unknown constructor %a" Hstring.print e
-  | DuplicateName e ->
-      fprintf fmt "duplicate name for %a" Hstring.print e
-  | DuplicateTypeName s ->
-      fprintf fmt "duplicate type name for %a" Hstring.print s
   | DuplicateAssign s ->
       fprintf fmt "duplicate assignment for %a" Hstring.print s
+  | DuplicateName e ->
+      fprintf fmt "duplicate name for %a" Hstring.print e
   | DuplicateUpdate s ->
       fprintf fmt 
 	"duplicate array update for %a (You may want to use a case construct)"
@@ -64,8 +61,6 @@ let report fmt = function
       fprintf fmt "unknown name %a" Hstring.print s
   | UnknownGlobal s ->
       fprintf fmt "unknown global %a" Hstring.print s
-  | UnknownType s ->
-      fprintf fmt "unknown type %a" Hstring.print s
   | DuplicateInit a ->
       fprintf fmt "duplicate initialization for %a" Hstring.print a
   | NoMoreThanOneArray ->
@@ -84,6 +79,14 @@ let report fmt = function
       fprintf fmt "types %a and %a are not compatible" 
 	print_htype (args1, ty1) print_htype (args2, ty2)
   | NotATerm s -> fprintf fmt "%a is not a term" Hstring.print s
+  | Smt (Smt.DuplicateTypeName s) ->
+      fprintf fmt "duplicate type name for %a" Hstring.print s
+  | Smt (Smt.DuplicateSymb e) ->
+      fprintf fmt "duplicate name for %a" Hstring.print e
+  | Smt (Smt.UnknownType s) ->
+      fprintf fmt "unknown type %a" Hstring.print s
+  | Smt (Smt.UnknownSymb s) ->
+      fprintf fmt "unknown symbol %a" Hstring.print s
 
 let error e = raise (Error e)
 
@@ -264,42 +267,45 @@ let init_global_env s =
        l := (n, ret)::!l) s.arrays;
   !l
 
+
 let init_proc () = 
   List.iter 
     (fun n -> Smt.Typing.declare_name n [] Smt.Typing.type_proc) proc_vars
 
 let system s = 
-  let l = init_global_env s in
-  init s.init;
-  Smt.Typing.Variant.init l;
-  List.iter unsafe s.unsafe;
-  List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
-  transitions s.trans;
-  Smt.Typing.Variant.close ();
-  if Options.debug then Smt.Typing.Variant.print ();
-  
-  let glob_proc = 
-    List.fold_left 
-      (fun acc (n, t) -> 
-	 if Hstring.equal t Smt.Typing.type_proc then n::acc else acc)
-      [] s.globals
-  in
-  
-  List.map (fun un ->
-    let args, p = un in
-    let arru = ArrayAtom.of_satom p in
-    { 
-      t_from = [];
-      t_init = s.init;
-      t_invs = s.invs;
-      t_unsafe = un;
-      t_forward = s.forward;
-      t_arru = arru;
-      t_alpha = ArrayAtom.alpha arru args;
-      t_trans = s.trans;
-      t_deleted = false;
-      t_nb = 0;
-      t_nb_father = -1;
-      t_glob_proc = glob_proc;
-    }
-  ) s.unsafe
+  try
+    let l = init_global_env s in
+    init s.init;
+    Smt.Typing.Variant.init l;
+    List.iter unsafe s.unsafe;
+    List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
+    transitions s.trans;
+    Smt.Typing.Variant.close ();
+    if Options.debug then Smt.Typing.Variant.print ();
+    
+    let glob_proc = 
+      List.fold_left 
+	(fun acc (n, t) -> 
+	   if Hstring.equal t Smt.Typing.type_proc then n::acc else acc)
+	[] s.globals
+    in
+    
+    List.map (fun un ->
+		let args, p = un in
+		let arru = ArrayAtom.of_satom p in
+		{ 
+		  t_from = [];
+		  t_init = s.init;
+		  t_invs = s.invs;
+		  t_unsafe = un;
+		  t_forward = s.forward;
+		  t_arru = arru;
+		  t_alpha = ArrayAtom.alpha arru args;
+		  t_trans = s.trans;
+		  t_deleted = false;
+		  t_nb = 0;
+		  t_nb_father = -1;
+		  t_glob_proc = glob_proc;
+		}
+	     ) s.unsafe
+  with Smt.Error e -> raise (Error (Smt e))
