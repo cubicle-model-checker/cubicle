@@ -32,8 +32,8 @@ const Init_level : int
 init (z) { Sense = False && Local_sense[z] = False &&
            Level[z] = 0 && Count[z] = True && PC[z] = L1 }
 
-unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] }
-unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] < Level[z2] }
+(* unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] } *)
+unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] }
 
 transition enter (i)
 requires { PC[i] = L1 }
