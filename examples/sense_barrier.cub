@@ -27,13 +27,13 @@ array Level[proc] : int
 array Count[proc] : bool
 array PC[proc] : loc
 
-var Init_level : int
+const Init_level : int
 
 init (z) { Sense = False && Local_sense[z] = False &&
-           Level[z] = Init_level && Count[z] = True && PC[z] = L1 }
+           Level[z] = 0 && Count[z] = True && PC[z] = L1 }
 
 unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] }
-unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] }
+unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] < Level[z2] }
 
 transition enter (i)
 requires { PC[i] = L1 }
@@ -61,13 +61,7 @@ requires { PC[i] = L3 && Count[i] = False && forall_other j. Count[j] = False }
 }
 
 transition test_wait (i k)
-requires { PC[i] = L3 && Count[i] = True && Count[k] = False }
-{ 
-  PC[i] := L4;
-}
-
-transition test_wait (i)
-requires { PC[i] = L3 && Count[i] = False }
+requires { PC[i] = L3 && Count[k] = True }
 { 
   PC[i] := L4;
 }
