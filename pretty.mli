@@ -30,6 +30,8 @@ val print_unsafe : formatter -> t_system -> unit
 
 val print_node : formatter -> t_system -> unit
 
+val print_dead_node : formatter -> t_system -> unit
+
 val print_verbose_node : formatter -> t_system -> unit
 
 val syscall : string -> string

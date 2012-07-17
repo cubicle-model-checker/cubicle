@@ -29,7 +29,8 @@ let _ =
     let ts = Typing.system s in
     if !type_only then exit 0;
     Bwreach.system ts;
-    printf "\n\nThe system is SAFE\n@."
+    if dot then eprintf "\n\nThe system is SAFE\n@."
+    else printf "\n\nThe system is SAFE\n@."
   with
     | Lexer.Lexical_error s -> 
 	report (lexeme_start_p lb, lexeme_end_p lb);

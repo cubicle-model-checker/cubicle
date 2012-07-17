@@ -119,25 +119,81 @@ let print_unsafe fmt s =
 	 )) s.t_from
     print_system s
 
+let rec print_atom_dot fmt = function
+  | True -> fprintf fmt "true"
+  | False -> fprintf fmt "false"
+  | Comp (x, Eq,  Elem (n, Constr)) when Hstring.equal n htrue -> 
+      fprintf fmt "%a" print_term x
+  | Comp (x, Eq, Elem (n, Constr)) when  Hstring.equal n hfalse-> 
+      fprintf fmt "!%a" print_term x
+  | Comp (x, op, y) -> 
+      fprintf fmt "%a %s %a" print_term x (op_comp op) print_term y
+  | Ite (la, a1, a2) ->
+      fprintf fmt "@[ite(%a,@ %a,@ %a)@]" 
+	print_atoms_dot (SAtom.elements la) 
+	print_atom_dot a1 print_atom_dot a2
+
+and print_atoms_dot fmt = function
+  | [] -> ()
+  | [a] -> print_atom_dot fmt a
+  | a::l -> fprintf fmt "%a\\n%a" print_atom_dot a print_atoms_dot l
+
+let print_cube_dot fmt sa = 
+  fprintf fmt "@[%a@]" print_atoms_dot (SAtom.elements sa)
+
+let print_system_dot fmt s = print_cube_dot fmt (snd s.t_unsafe)
 
 let print_node fmt s =
-  (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
-  List.iter (fun (l, args, _) ->
-    if dmcmt then 
-      fprintf fmt "[%s%a]" (Hstring.view l) print_args args
-    else 
-      fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
-  ) s.t_from;
-  if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
+  if dot then
+    begin
+      if List.length s.t_from  = 0 then
+	fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+      else
+	let (l, args, _)= List.hd s.t_from in 
+	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
+	  s.t_nb_father s.t_nb (Hstring.view l) print_args args;
+	fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+    end
+  else
+    begin
+(*      fprintf fmt "@.%a" print_system s*)
+     List.iter 
+       (fun (l, args, _) ->
+	  if dmcmt then 
+	    fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+	  else 
+	    fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
+       ) s.t_from;
+     if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
+   end
 
+let print_dead_node fmt s =
+  if dot && !verbose > 0 then
+    begin
+      if List.length s.t_from  = 0 then
+	if !verbose = 1 then
+	  fprintf fmt "%d [color = red];" s.t_nb
+	else
+	  fprintf fmt 
+	    "%d [label=\"%a\" color = red];" s.t_nb print_system_dot s
+      else
+	let (l, args, _)= List.hd s.t_from in 
+	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
+	  s.t_nb_father s.t_nb (Hstring.view l) print_args args;
+	if !verbose = 1 then 
+	  fprintf fmt "%d [label=\"\" color=red];" s.t_nb
+	else
+	  fprintf fmt "%d [label=\"%a\" color=red];" s.t_nb print_system_dot s
+    end
 
 let print_verbose_node fmt s =
   if !verbose = 0 then print_node fmt s else begin
     (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
     fprintf fmt " %a\n@." print_system s;
-    List.iter (fun (l, args, s') ->
-		 fprintf fmt "  %s(%a) -> %a\n@." (Hstring.view l) print_args args 
-		   print_system s'
-	      ) s.t_from;
+    List.iter 
+      (fun (l, args, s') ->
+	 fprintf fmt "  %s(%a) -> %a\n@." (Hstring.view l) print_args args 
+	   print_system s'
+      ) s.t_from;
     fprintf fmt "    = unsafe"
   end

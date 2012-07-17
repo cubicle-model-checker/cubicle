@@ -14,6 +14,8 @@
 exception Sat
 exception Unsat of Solver_types.clause list
 
-val solve : unit -> unit
-val assume : Literal.LT.t list list -> unit
-val clear : unit -> unit
+module Make (Dummy : sig end) : sig
+  val solve : unit -> unit
+  val assume : Literal.LT.t list list -> unit
+  val clear : unit -> unit
+end

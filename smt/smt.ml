@@ -143,7 +143,6 @@ module Typing = struct
 
 
     let get_variants = H.find constructors
-
  
     let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
 
@@ -416,7 +415,9 @@ let get_calls () = !calls
 
 exception Unsat of Literal.LT.t list list
 
-let clear () = Solver.clear ()
+module CSolver = Solver.Make (struct end)
+
+let clear () = CSolver.clear ()
 
 
 let check_unsatcore uc =
@@ -428,8 +429,8 @@ let check_unsatcore uc =
   eprintf "@.";
   try 
     clear ();
-    Solver.assume uc;
-    Solver.solve ();
+    CSolver.assume uc;
+    CSolver.solve ();
     eprintf "Not an unsat core !!!@.";
     assert false
   with 
@@ -456,7 +457,7 @@ let assume ~profiling f =
     | Formula.Ground phi ->
       begin
 	try 
-	  Solver.assume (Formula.make_cnf phi);
+	  CSolver.assume (Formula.make_cnf phi);
 	  if profiling then Time.pause ()
 	with Solver.Unsat ex ->
 	  if profiling then Time.pause ();
@@ -468,7 +469,7 @@ let check ~profiling =
   incr calls;
   if profiling then Time.start ();
   try 
-    Solver.solve ();
+    CSolver.solve ();
     if profiling then Time.pause ()
   with
     | Solver.Sat -> if profiling then Time.pause ()

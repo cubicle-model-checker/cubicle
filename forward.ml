@@ -536,6 +536,7 @@ let useless_candidate sa =
 
 
 let extract_candidates_from_compagnons comps s =
+  let cpt = ref (-1) in
   MA.iter (fun a compagnions ->
     eprintf "compagnons %a : %a@." 
       Pretty.print_atom a Pretty.print_cube compagnions) comps;
@@ -554,10 +555,10 @@ let extract_candidates_from_compagnons comps s =
 	  t_arru = ar';
 	  t_alpha = ArrayAtom.alpha ar' args;
 	  t_deleted = false;
-	  t_nb = 0;
+	  t_nb = !cpt;
 	  t_nb_father = -1 } in
       if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
-      else s' :: acc) [] sas
+      else (decr cpt; s' :: acc)) [] sas
 
 let extract_candidates_from_trace forward_nodes s =
   let comps = compagnions_from_trace forward_nodes in

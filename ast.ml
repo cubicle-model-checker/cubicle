@@ -280,6 +280,10 @@ module ArrayAtom = struct
     if profiling then TimerApply.pause ();
     a'
 
+  let alpha atoms args =
+    let subst = build_subst args alpha_vars in
+    List.map snd subst, apply_subst subst atoms
+
   let nb_diff a1 a2 =
     if profiling then TimerSubset.start ();
     let cpt = ref 0 in
@@ -320,7 +324,6 @@ module ArrayAtom = struct
   let compare_nb_common a p1 p2 =
     Pervasives.compare (nb_common p2 a) (nb_common p1 a)
 
-
   let diff a1 a2 =
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
@@ -345,10 +348,6 @@ module ArrayAtom = struct
       incr i1
     done;
     Array.sub d 0 !cpt
-
-  let alpha atoms args =
-    let subst = build_subst args alpha_vars in
-    List.map snd subst, apply_subst subst atoms
 
 end
 
@@ -385,7 +384,7 @@ type system = {
 
 module STerm = Set.Make (struct type t = term let compare = compare_term end)
 
-(* Types AST *)
+(* Typed AST *)
 
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;

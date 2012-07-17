@@ -290,9 +290,8 @@ let system s =
 	[] s.globals
     in
     
-    List.map (fun un ->
-		let args, p = un in
-		let arru = ArrayAtom.of_satom p in
+    List.map (fun ((args, p) as un) ->
+		let arru = ArrayAtom.of_satom p in (* inutile ? *)
 		{ 
 		  t_from = [];
 		  t_init = s.init;
@@ -300,7 +299,7 @@ let system s =
 		  t_unsafe = un;
 		  t_forward = s.forward;
 		  t_arru = arru;
-		  t_alpha = ArrayAtom.alpha arru args;
+		  t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
 		  t_trans = s.trans;
 		  t_deleted = false;
 		  t_nb = 0;

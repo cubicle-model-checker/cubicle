@@ -38,12 +38,10 @@ module Debug = struct
 
   let unsafe = 
     if not debug then fun _ -> () else 
-      fun s ->
-	eprintf "    %a@." Pretty.print_unsafe s
+      fun s -> eprintf "    %a@." Pretty.print_unsafe s
 
   let invariant = 
-      fun s ->
-	eprintf "Invariant ?@. %a@." Pretty.print_cube s
+      fun s -> eprintf "Invariant ?@. %a@." Pretty.print_cube s
 
   let pre = 
     if not debug then fun _ _ -> () else 
@@ -274,7 +272,8 @@ let make_cubes =
 		 with Exit -> ls, post
 	       ) (ls, post) lureq ) acc lnp
       in
-      if List.length tr.tr_args > List.length rargs then assert false (* (ls, post) *)
+      if List.length tr.tr_args > List.length rargs then 
+	assert false (* (ls, post) *)
       else
 	let d = all_permutations tr.tr_args rargs in
 	List.fold_left cube (ls, post) d
@@ -364,7 +363,7 @@ let init_atoms_sigma args sa =
   sigma, args, sa
 
 let init_atoms args sa =
-  let sigma, args, sa = init_atoms_sigma args sa in
+  let _, args, sa = init_atoms_sigma args sa in
   args, sa
 
 let init_forward (args, ex_args, sa) = 
@@ -373,8 +372,7 @@ let init_forward (args, ex_args, sa) =
   args, ex_args, sa
   
 
-let init_parameters ({t_unsafe = (args, sa); 
-		      t_arru = a; t_invs = invs } as s) =
+let init_parameters ({t_unsafe = (args, sa); t_invs = invs } as s) =
   let args, sa = init_atoms args sa in
   let a = ArrayAtom.of_satom sa in
   let invs = List.map (fun (argsi, sai) -> init_atoms argsi sai) invs in
@@ -382,7 +380,8 @@ let init_parameters ({t_unsafe = (args, sa);
     t_unsafe = args, sa;
     t_forward = List.map init_forward s.t_forward;
     t_arru = a; 
-    t_alpha = ArrayAtom.alpha a args; t_invs = invs }
+    t_alpha = ArrayAtom.alpha a args; 
+    t_invs = invs }
 
 
 
@@ -398,17 +397,26 @@ let filter_rev p =
 
 let is_deleted s = s.t_deleted || has_deleted_ancestor s
 
+let ancestor_of n s = 
+  (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) *)
+  List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru) s.t_from
+
+let subsumed_by n s =
+  try 
+    ArrayAtom.subset s.t_arru n.t_arru ||
+      (Prover.assume_goal n; 
+       Prover.assume_node s.t_arru; 
+       false)
+  with Smt.Unsat _ -> true
+
 let delete_nodes s nodes nb_del inc =
   (* if (not s.t_deleted) && not (has_deleted_ancestor s) then *)
     nodes := filter_rev
       (fun n -> 
-	if (not n.t_deleted) &&
-	  (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) && *)
-	  not (List.exists (fun (_,_,anc) -> 
-	      ArrayAtom.equal n.t_arru anc.t_arru)
-       		 s.t_from) &&
-	  (ArrayAtom.subset s.t_arru n.t_arru
-	   || has_deleted_ancestor n ) then 
+	if not n.t_deleted && 
+	  (has_deleted_ancestor n ||
+	     (not (ancestor_of n s) && ArrayAtom.subset s.t_arru n.t_arru )) 
+	then 
 	  begin
 	    (* eprintf "deleted node@."; *)
 	    n.t_deleted <- true;
@@ -419,7 +427,6 @@ let delete_nodes s nodes nb_del inc =
 	  end
 	else true)
       (List.rev !nodes)
-
 
 let delete_nodes_inv inv nodes = 
   nodes := List.filter
@@ -738,13 +745,15 @@ module T = struct
   type t = t_system
 
   let invariants s = 
-    List.map (fun ((a,u) as i) -> 
-      let ar = ArrayAtom.of_satom u in
-      { s with 
-	t_unsafe = i; 
-	t_arru = ar;
-	t_alpha = ArrayAtom.alpha ar a
-      }) s.t_invs
+    List.map 
+      (fun ((a,u) as i) -> 
+	 let ar = ArrayAtom.of_satom u in
+	 { s with 
+	     t_unsafe = i; 
+	     t_arru = ar;
+	     t_alpha = ArrayAtom.alpha ar a
+	 }) s.t_invs
+
   let size s = List.length (fst s.t_unsafe)
   let card s = SAtom.cardinal (snd s.t_unsafe)
   let maxrounds = maxrounds
@@ -769,6 +778,7 @@ module T = struct
   let pre = pre_system
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
+  let print_dead = Pretty.print_dead_node
   let print_system = Pretty.print_system
   let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
     Pervasives.compare (List.length args1) (List.length args2))
@@ -848,7 +858,7 @@ let system uns =
     (* for debug *)
     (* let cpt = ref 0 in *)
     (* List.iter *)
-    (*   (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s) *)
+    (* (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s) *)
     (*   forward_nodes; *)
     eprintf "-------------\n@.";
 

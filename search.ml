@@ -17,9 +17,6 @@ open Ast
 
 exception Unsafe of t_system
 
-
-
-
 module type I = sig
   type t
 
@@ -66,6 +63,7 @@ module type I = sig
   val pre : t -> t list * t list
   val has_deleted_ancestor : t -> bool
   val print : formatter -> t -> unit
+  val print_dead : Format.formatter -> t -> unit
   val print_system : formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
@@ -79,9 +77,6 @@ module type S = sig
     forward_nodes : t list -> t list -> unit
 end
 
-
-
-
 module TimeFix = Timer.Make (struct end)
 
 module TimeRP = Timer.Make (struct end)
@@ -89,8 +84,6 @@ module TimeRP = Timer.Make (struct end)
 module TimePre = Timer.Make (struct end)
 
 module TimeSort = Timer.Make (struct end)
-
-
 
 module Profiling = struct
   
@@ -264,8 +257,6 @@ module DFSL ( X : I ) = struct
 
 end
 
-
-
 module DFSH ( X : I ) = struct
   
   type t = X.t
@@ -327,6 +318,19 @@ module BFS_base ( X : I ) = struct
     let invariants = ref invariants in
     let not_invariants = ref [] in
     let q = Queue.create () in
+    let name = ref "" in
+    let fmt = 
+      if not dot then std_formatter else 
+	let n, cout = Filename.open_temp_file "tmp_graph" ".dot" in
+	name := n;
+	formatter_of_out_channel cout
+    in
+    if dot then 
+      begin
+	fprintf fmt "digraph G {@.";
+	fprintf fmt "   orientation = landscape;@.";
+	fprintf fmt "   fontsize = 10;@."
+      end;
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
@@ -334,21 +338,32 @@ module BFS_base ( X : I ) = struct
 	   X.print_system;
 	 raise ReachBound);
       X.safety s;
-      if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) 
-      then
+      if X.fixpoint ~invariants:!invariants ~visited:!visited s
+      then 
+	begin
+	  if dot then fprintf fmt "@[%a@]@." X.print_dead s;
+	  incr Profiling.cpt_fix
+	end
+      else
 	begin
 	  incr nb_nodes;
 	  if not quiet then begin
 	    Profiling.print "BFS" !nb_nodes (X.size s);
-	    let prefpr = 
-	      if (not invgen) && gen_inv then "     inv gen " else " " in
-	    printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
-	      (if debug then fun _ _ -> () else X.print) s
+	    if dot then
+	      fprintf fmt "@[%a@]@." X.print s
+	    else
+	      begin
+		let prefpr = 
+		  if (not invgen) && gen_inv then "     inv gen " else " " in
+		printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+		  (if debug then fun _ _ -> () else X.print) s
+	      end
 	  end;
 	  let ls, post = X.pre s in
 	  (* eprintf "pre : %d@." (List.length ls + List.length post); *)
 	  (* eprintf "done : %d - remaining : %d@." *)
-	  (*   (List.length !visited) (Queue.length q + List.length !postponed); *)
+	  (*   (List.length !visited) 
+	       (Queue.length q + List.length !postponed); *)
 	  let ls = List.rev ls in
 	  let post = List.rev post in
 	  (* Uncomment for pure bfs search *)
@@ -380,10 +395,10 @@ module BFS_base ( X : I ) = struct
 
 	  if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
 	  
-	  if not quiet then printf "    (%d remaining)\n@."
-	    (Queue.length q + List.length !postponed)
+	(*if not quiet then printf "    (%d remaining)\n@."
+	  (Queue.length q + List.length !postponed) *)
 
-	end else incr Profiling.cpt_fix;
+	end;
       search_rec_aux ()
     in
     let rec search_rec () =
@@ -402,7 +417,13 @@ module BFS_base ( X : I ) = struct
     in
     List.iter (fun s -> Queue.add (0, s) q) uns;
     search_rec ();
-    if invgen || not gen_inv then 
+    if dot then 
+      begin
+	fprintf fmt "}@.";
+	let pdf = !name^".pdf" in
+	ignore(Sys.command ("dot -Tpdf "^(!name)^" > "^pdf^" && open "^pdf))
+      end
+    else if invgen || not gen_inv then 
       Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
 
 end

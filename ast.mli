@@ -121,7 +121,7 @@ type system = {
 
 module STerm : Set.S with type elt = term
 
-(* Types AST *)
+(* Typed AST *)
  
 type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;

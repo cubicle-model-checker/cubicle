@@ -17,7 +17,12 @@ module TimeF : Timer.S
 
 (* Checks if the system is unsafe *)
 val unsafe : t_system -> unit
+
+(* Clears the context and assumes a goal formula *)
 val assume_goal : t_system -> unit
+
+(* Assumes the negation of a node; raises Unsat if the context becomes
+   unsatisfiable *)
 val assume_node : ArrayAtom.t -> unit
 
 val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit

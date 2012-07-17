@@ -61,6 +61,7 @@ module type I = sig
   val pre : t -> t list * t list
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
+  val print_dead : Format.formatter -> t -> unit
   val print_system : Format.formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int

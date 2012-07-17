@@ -129,7 +129,9 @@ type env =
 
     }
       
-let env =
+module Make (Dummy : sig end) = struct
+
+  let env =
     { 
       is_unsat = false;   
       
@@ -991,3 +993,5 @@ let clear () =
 
   env.tatoms_queue <- Queue.create ();
   Solver_types.clear ()
+
+end
