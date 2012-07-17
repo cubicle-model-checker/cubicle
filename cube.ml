@@ -27,9 +27,6 @@ module TimeFix = Search.TimeFix
 
 module TimeSort = Search.TimeSort
 
-
-
-
 module Debug = struct
 
   let fixpoint = 
@@ -47,8 +44,6 @@ module Debug = struct
 	eprintf "    %a@." Pretty.print_unsafe s
 
 end
-
-
 
 module SS = Set.Make
   (struct 
@@ -964,7 +959,7 @@ let extra_args args nargs =
   aux [] args nargs
 
 
-exception Fixpoint
+exception Fixpoint of int list
 
 let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
   Prover.assume_goal s;
@@ -981,21 +976,25 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
 	  let pp = ArrayAtom.apply_subst ss ap in
 	  if ArrayAtom.subset pp anp then begin
 	    if simpl_by_uc then add_to_closed s pp sp ;
-	    raise Fixpoint
+	    raise (Fixpoint [sp.t_nb])
 	  end
-	  (* Heruristic : throw away nodes too much different *)
+	  (* Heuristic : throw away nodes too much different *)
 	  (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	  (* line below useful for arith : ricart *)
 	  else if inconsistent_array (ArrayAtom.union pp anp) then nodes
-	  else if ArrayAtom.nb_diff pp anp > 1 then pp::nodes
-	  else (Prover.assume_node pp; nodes)
+	  else if ArrayAtom.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
+	  else (Prover.assume_node pp ~cnumber:sp.t_nb; nodes)
 	) nodes d
     ) [] visited
   in
   if profiling then TimeSort.start ();
-  let nodes = List.fast_sort (ArrayAtom.compare_nb_common anp) nodes in
+  let nodes = 
+    List.fast_sort 
+      (fun (a1, n1) (a2, n2) -> ArrayAtom.compare_nb_common anp a1 a2) 
+      nodes 
+  in
   if profiling then TimeSort.pause ();
-  List.iter (fun p -> Prover.assume_node p) nodes
+  List.iter (fun (p, cnum) -> Prover.assume_node p ~cnumber:cnum) nodes
   
 
 let has_deleted_ancestor s =
@@ -1012,36 +1011,40 @@ let has_deleted_ancestor s =
 let has_deleted_ancestor s =
   List.exists (fun (_, _, a) -> a.t_deleted) s.t_from
 
-
 let easy_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  (delete && (s.t_deleted || has_deleted_ancestor s))
-  ||
+  if (delete && (s.t_deleted || has_deleted_ancestor s))
+    ||
     (simpl_by_uc && has_alredy_closed_ancestor s)
-  ||
-    List.exists (fun ({ t_arru = pa } as sp) -> 
-      if ArrayAtom.subset pa npa then begin
-	if simpl_by_uc then add_to_closed s pa sp;
-	true
-      end
-      else false
-    ) nodes
-
+  then Some []
+  else
+    let db = ref None in
+    ignore (List.exists 
+	      (fun ({ t_arru = pa } as sp) -> 
+		 if ArrayAtom.subset pa npa then
+		   (db := Some [sp.t_nb];
+		    if simpl_by_uc then add_to_closed s pa sp; true)
+		 else false) nodes);
+    !db
 
 let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
   try
     check_fixpoint s nodes;
-    false
+    None
   with 
-    | Fixpoint -> true
-    | Exit -> false
-    | Smt.Unsat _ -> true
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
   
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   Debug.unsafe s;
   if profiling then TimeFix.start ();
   let nodes = (List.rev_append invariants visited) in
-  let f = easy_fixpoint s nodes || hard_fixpoint s nodes in
+  let r = 
+    match easy_fixpoint s nodes with
+      | None -> hard_fixpoint s nodes
+      | r -> r
+  in
   if profiling then TimeFix.pause ();
-  f
+  r
 

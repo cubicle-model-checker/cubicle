@@ -89,13 +89,13 @@ end
 
 (* SMT solver interface *)
 
-exception Unsat of Literal.LT.t list list
+exception Unsat of int list
 
 val get_time : unit -> float
 val get_calls : unit -> int
 
 val clear : unit -> unit
-val assume : profiling:bool -> Formula.t -> unit
+val assume : profiling:bool -> Formula.t -> cnumber:int -> unit
 val check : profiling:bool -> unit
 
 

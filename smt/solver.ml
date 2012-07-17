@@ -863,9 +863,10 @@ let partition atoms init =
   partition_aux [] [] [] init atoms
 
 
-let add_clause atoms =
+let add_clause ~cnumber atoms =
   if env.is_unsat then raise (Unsat env.unsat_core);
-  let init0 = make_clause "INIT" atoms (List.length atoms) false [] in
+  let init_name = string_of_int cnumber in
+  let init0 = make_clause init_name atoms (List.length atoms) false [] in
     try
       let atoms, init = 
 	if decision_level () = 0 then
@@ -904,12 +905,12 @@ let add_clause atoms =
             None -> () | Some confl -> report_b_unsat confl
     with Trivial -> ()
 
-let add_clauses cnf = 
-  List.iter add_clause cnf;
+let add_clauses cnf ~cnumber = 
+  List.iter (add_clause ~cnumber) cnf;
   match theory_propagate () with
       None -> () | Some dep -> report_t_unsat dep
   
-let init_solver cnf =
+let init_solver cnf ~cnumber =
   let nbv, _ = made_vars_info () in
   let nbc = env.nb_init_clauses + List.length cnf in
   Vec.grow_to_by_double env.vars nbv;
@@ -926,12 +927,12 @@ let init_solver cnf =
   Vec.grow_to_by_double env.clauses nbc;
   Vec.grow_to_by_double env.learnts nbc;
   env.nb_init_clauses <- nbc;
-  add_clauses cnf
+  add_clauses cnf ~cnumber
 
 
-let assume cnf =
+let assume cnf ~cnumber =
   let cnf = List.map (List.map Solver_types.add_atom) cnf in
-  init_solver cnf
+  init_solver cnf ~cnumber
 
 let clear () =
   let empty_theory = Th.empty () in

@@ -413,13 +413,13 @@ end
 let get_time = Time.get
 let get_calls () = !calls
 
-exception Unsat of Literal.LT.t list list
+exception Unsat of int list
 
 module CSolver = Solver.Make (struct end)
 
 let clear () = CSolver.clear ()
 
-
+(*
 let check_unsatcore uc =
   eprintf "Unsat Core : @.";
   List.iter 
@@ -438,8 +438,7 @@ let check_unsatcore uc =
     | Solver.Sat  -> 
       eprintf "Sat: Not an unsat core !!!@.";
       assert false
-  
-  
+*)
 
 let export_unsatcore cl = 
   let uc = List.map (fun {Solver_types.atoms=atoms} ->
@@ -451,17 +450,28 @@ let export_unsatcore cl =
   in (* check_unsatcore uc; *) 
   uc
 
-let assume ~profiling f = 
+module SInt = 
+  Set.Make (struct type t = int let compare = Pervasives.compare end)
+
+let export_unsatcore2 cl = 
+  let s = 
+    List.fold_left 
+      (fun s {Solver_types.name = n} ->
+	 try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
+  in 
+  SInt.elements s
+
+let assume ~profiling f ~cnumber = 
   if profiling then Time.start ();
   match f with
     | Formula.Ground phi ->
       begin
 	try 
-	  CSolver.assume (Formula.make_cnf phi);
+	  CSolver.assume (Formula.make_cnf phi) cnumber;
 	  if profiling then Time.pause ()
 	with Solver.Unsat ex ->
 	  if profiling then Time.pause ();
-	  raise (Unsat (export_unsatcore ex))
+	  raise (Unsat (export_unsatcore2 ex))
       end
     | Formula.Lemma (x, phi) -> () 
 
@@ -475,5 +485,5 @@ let check ~profiling =
     | Solver.Sat -> if profiling then Time.pause ()
     | Solver.Unsat ex -> 
 	if profiling then Time.pause ();
-	raise (Unsat (export_unsatcore ex))
+	raise (Unsat (export_unsatcore2 ex))
     

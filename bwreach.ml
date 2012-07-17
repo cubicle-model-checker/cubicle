@@ -405,7 +405,7 @@ let subsumed_by n s =
   try 
     ArrayAtom.subset s.t_arru n.t_arru ||
       (Prover.assume_goal n; 
-       Prover.assume_node s.t_arru; 
+       Prover.assume_node s.t_arru s.t_nb; 
        false)
   with Smt.Unsat _ -> true
 
@@ -652,8 +652,9 @@ let rec remove_cand s candidates =
       (fun acc s' ->
 	(* if fixpoint ~invariants:[] ~visited:[s'] s then acc *)
 	
-	if List.exists (fun (_,_,s) -> 
-	  fixpoint ~invariants:[] ~visited:[s'] s) s.t_from then acc
+	if List.exists 
+	  (fun (_,_,s) -> 
+	     None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from then acc
 	(* if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc *)
 	else s'::acc)
       [] candidates in

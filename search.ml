@@ -56,14 +56,17 @@ module type I = sig
   val is_deleted : t -> bool
 
   val safety : t -> unit
-  val fixpoint : invariants : t list -> visited : t list -> t -> bool
-  val easy_fixpoint : t -> t list -> bool
-  val hard_fixpoint : t -> t list -> bool
+
+  val fixpoint : 
+    invariants : t list -> visited : t list -> t -> (int list) option
+
+  val easy_fixpoint : t -> t list -> (int list) option
+  val hard_fixpoint : t -> t list -> (int list) option
 
   val pre : t -> t list * t list
   val has_deleted_ancestor : t -> bool
   val print : formatter -> t -> unit
-  val print_dead : Format.formatter -> t -> unit
+  val print_dead : Format.formatter -> (t * int list) -> unit
   val print_system : formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
@@ -223,7 +226,7 @@ module DFS ( X : I ) = struct
       incr nb_nodes;
       if not quiet then Profiling.print "DFS" !nb_nodes (X.size s);
       X.safety s;
-      if not (X.fixpoint ~invariants:invariants ~visited:visited s) then
+      if X.fixpoint ~invariants:invariants ~visited:visited s = None then
 	let ls, post = X.pre s in
 	List.iter (search_rec (cpt+1) (s::visited)) (ls@post)
     in
@@ -244,7 +247,7 @@ module DFSL ( X : I ) = struct
       incr nb_nodes;
       if not quiet then Profiling.print "DFSL" !nb_nodes (X.size s);
       X.safety s;
-      if not (X.fixpoint ~invariants:invariants ~visited:!visited s) then
+      if X.fixpoint ~invariants:invariants ~visited:!visited s = None then
 	begin
 	  let ls, post = X.pre s in
 	  visited := s :: !visited;
@@ -288,12 +291,13 @@ module DFSH ( X : I ) = struct
 	raise ReachBound;
       X.safety s;
       let  h =
-	if X.fixpoint ~invariants:invariants ~visited:visited s
-	then h 
-	else
-	  let ls, post = X.pre s in
+	if X.fixpoint ~invariants:invariants ~visited:visited s = None
+	then
+ 	  let ls, post = X.pre s in
 	  let l = List.map (fun s' -> cpt+1, s', s::visited) (ls@post) in
 	  (H.add h l)
+	else
+	  h 
       in
       search_rec h
     in
@@ -338,67 +342,68 @@ module BFS_base ( X : I ) = struct
 	   X.print_system;
 	 raise ReachBound);
       X.safety s;
-      if X.fixpoint ~invariants:!invariants ~visited:!visited s
-      then 
-	begin
-	  if dot then fprintf fmt "@[%a@]@." X.print_dead s;
-	  incr Profiling.cpt_fix
-	end
-      else
-	begin
-	  incr nb_nodes;
-	  if not quiet then begin
-	    Profiling.print "BFS" !nb_nodes (X.size s);
-	    if dot then
-	      fprintf fmt "@[%a@]@." X.print s
-	    else
-	      begin
-		let prefpr = 
-		  if (not invgen) && gen_inv then "     inv gen " else " " in
-		printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
-		  (if debug then fun _ _ -> () else X.print) s
-	      end
-	  end;
-	  let ls, post = X.pre s in
-	  (* eprintf "pre : %d@." (List.length ls + List.length post); *)
-	  (* eprintf "done : %d - remaining : %d@." *)
-	  (*   (List.length !visited) 
-	       (Queue.length q + List.length !postponed); *)
-	  let ls = List.rev ls in
-	  let post = List.rev post in
-	  (* Uncomment for pure bfs search *)
-	  (* let ls,post= List.rev_append ls post, [] in *)
-	  Profiling.update_nb_proc (X.size s);
+      (match X.fixpoint ~invariants:!invariants ~visited:!visited s with
+	| Some db ->
+	    if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
+	    incr Profiling.cpt_fix
+	| None ->
+	    begin
+	      incr nb_nodes;
+	      if not quiet then begin
+		Profiling.print "BFS" !nb_nodes (X.size s);
+		if dot then
+		  fprintf fmt "@[%a@]@." X.print s
+		else
+		  begin
+		    let prefpr = 
+		      if (not invgen) && gen_inv then "     inv gen " 
+		      else " " in
+		    printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+		      (if debug then fun _ _ -> () else X.print) s
+		  end
+	      end;
+	      let ls, post = X.pre s in
+	      (* eprintf "pre : %d@." (List.length ls + List.length post); *)
+	      (* eprintf "done : %d - remaining : %d@." *)
+	      (*   (List.length !visited) 
+		   (Queue.length q + List.length !postponed); *)
+	      let ls = List.rev ls in
+	      let post = List.rev post in
+	      (* Uncomment for pure bfs search *)
+	      (* let ls,post= List.rev_append ls post, [] in *)
+	      Profiling.update_nb_proc (X.size s);
+	      
+	      (* invariant search *)
+	      let inv, not_invs =
+		if invgen && gen_inv (* && post <> [] *) then 
+		  begin
+		    X.gen_inv_with_forward inv_search 
+		      ~invariants:!invariants ~forward_nodes
+		      !not_invariants s
+		  end
+		else [], !not_invariants
+	      in
+	      invariants := List.rev_append inv !invariants;
+	      not_invariants := not_invs;
+	      if delete then X.delete_nodes s visited nb_deleted false;
+	      if delete && invgen && gen_inv then 
+		X.delete_nodes_inv inv visited;
+	      visited := s :: !visited;
+	      postponed := List.rev_append post !postponed;
+	      if delete then X.delete_nodes s postponed nb_deleted true;
+	      if delete && invgen && gen_inv then 
+		X.delete_nodes_inv inv postponed;
+	      
+	      (* TODO *)
+	      (* if not (fixpoint inv s) then *)
+	      (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
 
-	  (* invariant search *)
-	  let inv, not_invs =
-	    if invgen && gen_inv (* && post <> [] *) then 
-	      begin
-		X.gen_inv_with_forward inv_search 
-		  ~invariants:!invariants ~forward_nodes
-		  !not_invariants s
-	      end
-	    else [], !not_invariants
-	  in
-	  invariants := List.rev_append inv !invariants;
-	  not_invariants := not_invs;
-	  if delete then X.delete_nodes s visited nb_deleted false;
-	  if delete && invgen && gen_inv then X.delete_nodes_inv inv visited;
-	  visited := s :: !visited;
-	  postponed := List.rev_append post !postponed;
-	  if delete then X.delete_nodes s postponed nb_deleted true;
-	  if delete && invgen && gen_inv then X.delete_nodes_inv inv postponed;
-
-	  (* TODO *)
-	  (* if not (fixpoint inv s) then *)
-	  (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
-
-	  if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
-	  
-	(*if not quiet then printf "    (%d remaining)\n@."
-	  (Queue.length q + List.length !postponed) *)
-
-	end;
+	      if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
+	      
+	    (*if not quiet then printf "    (%d remaining)\n@."
+	      (Queue.length q + List.length !postponed) *)
+	      
+	    end);
       search_rec_aux ()
     in
     let rec search_rec () =
@@ -454,7 +459,7 @@ module BFSinvp_base ( X : I ) = struct
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	raise ReachBound;
       X.safety s;
-      if not (X.fixpoint ~invariants:!invariants ~visited:!visited s) 
+      if X.fixpoint ~invariants:!invariants ~visited:!visited s = None
       then
 	begin
 	  incr nb_nodes;
@@ -527,7 +532,7 @@ module BFS_dist_base ( X : I ) = struct
     let _, tasks = 
       List.fold_left (fun (nodes, acc) (cpt, s) ->
 	if cpt = X.maxrounds then raise ReachBound;
-	if X.easy_fixpoint s nodes then nodes, acc
+	if None <> X.easy_fixpoint s nodes then nodes, acc
 	else 
 	  s::nodes,
 	  (Fixcheck (s, cpt, nodes), ())::acc) 
@@ -540,8 +545,8 @@ module BFS_dist_base ( X : I ) = struct
       begin
 	try
 	  X.safety s;
-	  if X.hard_fixpoint s nodes then Fix
-	  else NotFix
+	  if X.hard_fixpoint s nodes = None then NotFix
+	  else Fix
 	with
 	  | Unsafe s -> Unsafe_res s
 	  | ReachBound -> ReachBound_res
@@ -798,50 +803,51 @@ module DFSHL ( X : I ) = struct
     let invariants = ref invariants in
     let not_invariants = ref [] in
     let rec search_rec_aux h =
-	let (cpt, s), h = H.pop h in
-	if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	  (Profiling.print_report !nb_nodes !invariants !nb_deleted
-	     X.print_system;
-	   raise ReachBound);
-	X.safety s;
-	let h  =
-	  if X.fixpoint ~invariants:!invariants 
-	    ~visited:!visited (* (List.rev_append !visited !postponed) *) s
-	  then (incr Profiling.cpt_fix; h)
-	  else
-	    begin
-	      incr nb_nodes;
-	      if not quiet then Profiling.print "DFSHL" !nb_nodes (X.size s);
-	      if not quiet then printf " node %d= @[%a@]@." !nb_nodes 
-		(if debug then fun _ _ -> () else X.print) s;
-	      let ls, post = X.pre s in
-	      (* eprintf "pre : %d@." (List.length ls + List.length post); *)
-	      (* eprintf "done : %d - remaining : %d@."  *)
-	      (* 	(List.length !visited) (List.length (H.elements h)); *)
-	      let post = List.rev post in
-	      let inv, not_invs =
-		if gen_inv && post <> [] then
-		  begin
-		    X.gen_inv Search.search ~invariants:!invariants
-		      !not_invariants s
-		  end
-		else [], !not_invariants
-	      in
-	      invariants :=  List.rev_append inv !invariants;
-	      not_invariants :=  not_invs;
-	      Profiling.update_nb_proc (X.size s);
-	      if delete then X.delete_nodes s visited nb_deleted false;
-	      visited := s :: !visited;
-	      postponed := List.rev_append post !postponed;
-	      if delete then X.delete_nodes s postponed nb_deleted true;
-	      if inv = [] then
-		let ls = List.rev (List.rev_map (fun s' -> cpt+1, s') ls) in
-		(H.add h ls)
-	      else
-		h
-	    end
-	in
-	search_rec_aux h
+      let (cpt, s), h = H.pop h in
+      if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
+	(Profiling.print_report !nb_nodes !invariants !nb_deleted
+	   X.print_system;
+	 raise ReachBound);
+      X.safety s;
+      let h  =
+	match X.fixpoint ~invariants:!invariants 
+	  ~visited:!visited (* (List.rev_append !visited !postponed) *) s
+	with 
+	  | Some _ -> incr Profiling.cpt_fix; h
+	  | None ->
+	      begin
+		incr nb_nodes;
+		if not quiet then Profiling.print "DFSHL" !nb_nodes (X.size s);
+		if not quiet then printf " node %d= @[%a@]@." !nb_nodes 
+		  (if debug then fun _ _ -> () else X.print) s;
+		let ls, post = X.pre s in
+		(* eprintf "pre : %d@." (List.length ls + List.length post); *)
+		(* eprintf "done : %d - remaining : %d@."  *)
+		(* 	(List.length !visited) (List.length (H.elements h)); *)
+		let post = List.rev post in
+		let inv, not_invs =
+		  if gen_inv && post <> [] then
+		    begin
+		      X.gen_inv Search.search ~invariants:!invariants
+			!not_invariants s
+		    end
+		  else [], !not_invariants
+		in
+		invariants :=  List.rev_append inv !invariants;
+		not_invariants :=  not_invs;
+		Profiling.update_nb_proc (X.size s);
+		if delete then X.delete_nodes s visited nb_deleted false;
+		visited := s :: !visited;
+		postponed := List.rev_append post !postponed;
+		if delete then X.delete_nodes s postponed nb_deleted true;
+		if inv = [] then
+		  let ls = List.rev (List.rev_map (fun s' -> cpt+1, s') ls) in
+		  (H.add h ls)
+		else
+		  h
+	      end
+      in
+      search_rec_aux h
     in
     let rec search_rec h =
       try search_rec_aux h

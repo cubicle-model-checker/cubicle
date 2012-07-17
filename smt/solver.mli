@@ -16,6 +16,6 @@ exception Unsat of Solver_types.clause list
 
 module Make (Dummy : sig end) : sig
   val solve : unit -> unit
-  val assume : Literal.LT.t list list -> unit
+  val assume : Literal.LT.t list list -> cnumber : int -> unit
   val clear : unit -> unit
 end

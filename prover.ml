@@ -149,37 +149,40 @@ let make_init {t_init = arg, sa } lvars =
 
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
   Smt.clear ();
-  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
+  Smt.assume 
+    ~profiling (F.Ground (distinct_vars (List.length args))) ~cnumber:ts.t_nb;
   (* Smt.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
   let init = F.Ground (make_init ts (* (List.rev_append ts.t_glob_proc  *) args) in
   let f = F.Ground (make_formula_set sa) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
-  Smt.assume ~profiling init;
-  Smt.assume ~profiling f;
+  Smt.assume ~profiling init ~cnumber:ts.t_nb;
+  Smt.assume ~profiling f ~cnumber:ts.t_nb;
   Smt.check ~profiling
 
 
-let assume_goal {t_unsafe = (args, _); t_arru = ap } =
+let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
   Smt.clear ();
-  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
+  Smt.assume 
+    ~profiling (F.Ground (distinct_vars (List.length args))) ~cnumber:ts.t_nb;
   (* Smt.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
   let f = F.Ground (make_formula ap) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  Smt.assume ~profiling f;
+  Smt.assume ~profiling f ~cnumber:ts.t_nb;
   Smt.check ~profiling
 
-let assume_node ap =
+let assume_node ap ~cnumber =
   if profiling then TimeF.start ();
   let f = F.Ground (F.make F.Not [make_formula ap]) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  Smt.assume ~profiling f;
+  Smt.assume ~profiling f ~cnumber;
   Smt.check ~profiling
 
+(*
 let check_guard args sa reqs =
   Smt.clear ();
   Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
@@ -188,7 +191,7 @@ let check_guard args sa reqs =
   if profiling then TimeF.pause ();
   Smt.assume ~profiling f;
   Smt.check ~profiling
-  
+*)
 
 let unsat_core_wrt_node uc ap =
   Array.fold_left (fun acc a ->
@@ -197,6 +200,7 @@ let unsat_core_wrt_node uc ap =
       | _ -> acc) 
     SAtom.empty ap
   
+(*
 let extract_candidates args ap forward_nodes =
   List.fold_left (fun acc fs ->
     try
@@ -222,3 +226,4 @@ let extract_candidates args ap forward_nodes =
       in if SAtom.cardinal c > 1 then c :: acc else acc
     with Exit -> acc)
     [] forward_nodes
+*)

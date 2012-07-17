@@ -167,15 +167,18 @@ let print_node fmt s =
      if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
    end
 
-let print_dead_node fmt s =
+let print_dead_node fmt (s, db) =
   if dot && !verbose > 0 then
     begin
       if List.length s.t_from  = 0 then
 	if !verbose = 1 then
 	  fprintf fmt "%d [color = red];" s.t_nb
 	else
-	  fprintf fmt 
-	    "%d [label=\"%a\" color = red];" s.t_nb print_system_dot s
+	  begin
+	    fprintf fmt 
+	      "%d [label=\"%a\" color = red];" s.t_nb print_system_dot s;
+	    if !verbose = 2 then ()
+	  end
       else
 	let (l, args, _)= List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
@@ -183,7 +186,17 @@ let print_dead_node fmt s =
 	if !verbose = 1 then 
 	  fprintf fmt "%d [label=\"\" color=red];" s.t_nb
 	else
-	  fprintf fmt "%d [label=\"%a\" color=red];" s.t_nb print_system_dot s
+	  begin
+	    fprintf fmt "%d [label=\"%a\" color=red];" 
+	      s.t_nb print_system_dot s;
+	    if !verbose = 2 then
+	      begin
+		fprintf fmt "@.";
+		List.iter 
+		  (fun d -> fprintf fmt " %d -> %d [style=dotted] @." 
+		     s.t_nb d) db
+	      end
+	  end
     end
 
 let print_verbose_node fmt s =
