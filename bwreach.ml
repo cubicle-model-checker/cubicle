@@ -666,21 +666,23 @@ let rec elim_bogus_invariants search invariants candidates =
     candidates
   with
     | Search.Unsafe s ->
-      (* FIXME Bug when search is parallel *)
-      elim_bogus_invariants search invariants 
-	(remove_cand (origin s) candidates)
+	(* FIXME Bug when search is parallel *)
+	elim_bogus_invariants search invariants 
+	  (remove_cand (origin s) candidates)
 
 let rec search_bogus_invariants search invariants candidates uns =
   try
     search ~invariants ~visited:[] ~forward_nodes:[] candidates
   with
     | Search.Unsafe s -> 
-      (* FIXME Bug when search is parallel *)
-      let o = origin s in
-      if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
-	raise (Search.Unsafe s)
-      else
-	search_bogus_invariants search invariants (remove_cand s candidates) uns
+	eprintf "The node %d is UNSAFE@." (origin s).t_nb;
+	(* FIXME Bug when search is parallel *)
+	let o = origin s in
+	if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
+	  raise (Search.Unsafe s)
+	else
+	  search_bogus_invariants 
+	    search invariants (remove_cand s candidates) uns
 
 
 (*----------------------------------------------------------------------------*)
@@ -830,7 +832,7 @@ let system uns =
     exit 0
   end
 
-  else if stateless && forward_inv <> -1 then begin
+  else (*if stateless && forward_inv <> -1 then begin
 
     eprintf "FORWARD :\n-------------\n@.";
     let comps = (Forward.search_stateless_nb forward_inv (List.hd uns)) in
@@ -852,7 +854,7 @@ let system uns =
 
   end
 
-  else if forward_inv <> -1 then begin
+  else *)if forward_inv <> -1 then begin
 
     eprintf "FORWARD :\n-------------\n@.";
     let forward_nodes = (Forward.search_nb forward_inv (List.hd uns)) in
@@ -883,7 +885,7 @@ let system uns =
 
     (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
       
-    search_bogus_invariants search invariants (candidates@uns) uns
+    search_bogus_invariants search invariants candidates uns
 
   end
 

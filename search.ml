@@ -314,6 +314,9 @@ module BFS_base ( X : I ) = struct
 
   type t = X.t 
 
+  let cpt_nodes = ref 0
+  let cpt_dot = ref 0
+
   let search inv_search invgen ~invariants ~visited ~forward_nodes uns = 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
@@ -322,88 +325,105 @@ module BFS_base ( X : I ) = struct
     let invariants = ref invariants in
     let not_invariants = ref [] in
     let q = Queue.create () in
-    let name = ref "" in
-    let fmt = 
-      if not dot then std_formatter else 
-	let n, cout = Filename.open_temp_file "tmp_graph" ".dot" in
-	name := n;
-	formatter_of_out_channel cout
+    let fmt, close_dot = 
+      if not dot then std_formatter, fun () -> () else       
+	begin
+	  let bfile = Filename.basename file in
+	  let n, cout = 
+	    if not profiling then Filename.open_temp_file bfile ".dot" 
+	    else 
+	      begin 
+		incr cpt_dot; 
+		let n = file^(string_of_int !cpt_dot)^".dot" in
+		let cout = open_out n in
+		n, cout
+	      end
+	  in
+	  let fmt = formatter_of_out_channel cout in
+	  fprintf fmt "digraph G {@.";
+	  fprintf fmt "   orientation = landscape;@.";
+	  fprintf fmt "   fontsize = 10;@.";
+	  let close_dot () = 
+	    fprintf fmt "}@.";
+	    if not profiling then
+	      let pdf = n^".pdf" in
+	      ignore(Sys.command ("dot -Tpdf "^n^" > "^pdf^" && open "^pdf))
+	  in
+	  fmt, close_dot
+	end
     in
-    if dot then 
-      begin
-	fprintf fmt "digraph G {@.";
-	fprintf fmt "   orientation = landscape;@.";
-	fprintf fmt "   fontsize = 10;@."
-      end;
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
+      incr cpt_nodes;
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	(Profiling.print_report !nb_nodes !invariants !nb_deleted
 	   X.print_system;
 	 raise ReachBound);
-      X.safety s;
+      (try X.safety s with 
+	 | Unsafe s -> 
+	     close_dot (); raise (Unsafe s));
       (match X.fixpoint ~invariants:!invariants ~visited:!visited s with
-	| Some db ->
-	    if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
-	    incr Profiling.cpt_fix
-	| None ->
-	    begin
-	      incr nb_nodes;
-	      if not quiet then begin
-		Profiling.print "BFS" !nb_nodes (X.size s);
-		if dot then
-		  fprintf fmt "@[%a@]@." X.print s
-		else
-		  begin
-		    let prefpr = 
-		      if (not invgen) && gen_inv then "     inv gen " 
-		      else " " in
-		    printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
-		      (if debug then fun _ _ -> () else X.print) s
-		  end
-	      end;
-	      let ls, post = X.pre s in
-	      (* eprintf "pre : %d@." (List.length ls + List.length post); *)
-	      (* eprintf "done : %d - remaining : %d@." *)
-	      (*   (List.length !visited) 
-		   (Queue.length q + List.length !postponed); *)
-	      let ls = List.rev ls in
-	      let post = List.rev post in
-	      (* Uncomment for pure bfs search *)
-	      (* let ls,post= List.rev_append ls post, [] in *)
-	      Profiling.update_nb_proc (X.size s);
-	      
-	      (* invariant search *)
-	      let inv, not_invs =
-		if invgen && gen_inv (* && post <> [] *) then 
-		  begin
-		    X.gen_inv_with_forward inv_search 
-		      ~invariants:!invariants ~forward_nodes
-		      !not_invariants s
-		  end
-		else [], !not_invariants
-	      in
-	      invariants := List.rev_append inv !invariants;
-	      not_invariants := not_invs;
-	      if delete then X.delete_nodes s visited nb_deleted false;
-	      if delete && invgen && gen_inv then 
-		X.delete_nodes_inv inv visited;
-	      visited := s :: !visited;
-	      postponed := List.rev_append post !postponed;
-	      if delete then X.delete_nodes s postponed nb_deleted true;
-	      if delete && invgen && gen_inv then 
-		X.delete_nodes_inv inv postponed;
-	      
-	      (* TODO *)
-	      (* if not (fixpoint inv s) then *)
-	      (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
+	 | Some db ->
+	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
+	     incr Profiling.cpt_fix
+	 | None ->
+	     begin
+	       incr nb_nodes;
+	       if not quiet then begin
+		 Profiling.print "BFS" !nb_nodes (X.size s);
+		 if dot then
+		   fprintf fmt "@[%a@]@." X.print s
+		 else
+		   begin
+		     let prefpr = 
+		       if (not invgen) && gen_inv then "     inv gen " 
+		       else " " in
+		     printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+		       (if debug then fun _ _ -> () else X.print) s
+		   end
+	       end;
+	       let ls, post = X.pre s in
+	       (* eprintf "pre : %d@." (List.length ls + List.length post); *)
+	       (* eprintf "done : %d - remaining : %d@." *)
+	       (*   (List.length !visited) 
+		    (Queue.length q + List.length !postponed); *)
+	       let ls = List.rev ls in
+	       let post = List.rev post in
+	       (* Uncomment for pure bfs search *)
+	       (* let ls,post= List.rev_append ls post, [] in *)
+	       Profiling.update_nb_proc (X.size s);
+	       
+	       (* invariant search *)
+	       let inv, not_invs =
+		 if invgen && gen_inv (* && post <> [] *) then 
+		   begin
+		     X.gen_inv_with_forward inv_search 
+		       ~invariants:!invariants ~forward_nodes
+		       !not_invariants s
+		   end
+		 else [], !not_invariants
+	       in
+	       invariants := List.rev_append inv !invariants;
+	       not_invariants := not_invs;
+	       if delete then X.delete_nodes s visited nb_deleted false;
+	       if delete && invgen && gen_inv then 
+		 X.delete_nodes_inv inv visited;
+	       visited := s :: !visited;
+	       postponed := List.rev_append post !postponed;
+	       if delete then X.delete_nodes s postponed nb_deleted true;
+	       if delete && invgen && gen_inv then 
+		 X.delete_nodes_inv inv postponed;
+	       
+	       (* TODO *)
+	       (* if not (fixpoint inv s) then *)
+	       (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
 
-	      if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
-	      
-	    (*if not quiet then printf "    (%d remaining)\n@."
-	      (Queue.length q + List.length !postponed) *)
-	      
-	    end);
+	       if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
+	       
+	     (*if not quiet then printf "    (%d remaining)\n@."
+	       (Queue.length q + List.length !postponed) *)
+	       
+	     end);
       search_rec_aux ()
     in
     let rec search_rec () =
@@ -422,12 +442,8 @@ module BFS_base ( X : I ) = struct
     in
     List.iter (fun s -> Queue.add (0, s) q) uns;
     search_rec ();
-    if dot then 
-      begin
-	fprintf fmt "}@.";
-	let pdf = !name^".pdf" in
-	ignore(Sys.command ("dot -Tpdf "^(!name)^" > "^pdf^" && open "^pdf))
-      end
+    eprintf "nodes : %d@." !cpt_nodes;
+    if dot then close_dot ()
     else if invgen || not gen_inv then 
       Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
 

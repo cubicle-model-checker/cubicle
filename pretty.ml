@@ -141,18 +141,28 @@ and print_atoms_dot fmt = function
 let print_cube_dot fmt sa = 
   fprintf fmt "@[%a@]" print_atoms_dot (SAtom.elements sa)
 
-let print_system_dot fmt s = print_cube_dot fmt (snd s.t_unsafe)
+let print_system_dot fmt s = 
+  if !verbose = 3 then print_cube_dot fmt (snd s.t_unsafe)
+  else fprintf fmt "%d" s.t_nb
 
 let print_node fmt s =
   if dot then
     begin
       if List.length s.t_from  = 0 then
-	fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+	if s.t_nb = 0 then
+	  fprintf fmt "%d [label=\"%a\", color = green, style=filled];" 
+	    s.t_nb print_system_dot s
+	else 
+	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
       else
 	let (l, args, _)= List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
 	  s.t_nb_father s.t_nb (Hstring.view l) print_args args;
-	fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+	if s.t_nb = 0 then
+	  fprintf fmt "%d [label=\"%a\", color = green, style = filled];" 
+	    s.t_nb print_system_dot s
+	else 
+	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
     end
   else
     begin
@@ -172,24 +182,41 @@ let print_dead_node fmt (s, db) =
     begin
       if List.length s.t_from  = 0 then
 	if !verbose = 1 then
-	  fprintf fmt "%d [color = red];" s.t_nb
+	  if s.t_nb = 0 then 
+	    fprintf fmt "%d [color = green, style = filled];" s.t_nb
+	  else 
+	    fprintf fmt "%d [color = red];" s.t_nb
 	else
 	  begin
-	    fprintf fmt 
-	      "%d [label=\"%a\" color = red];" s.t_nb print_system_dot s;
-	    if !verbose = 2 then ()
+	    (if s.t_nb = 0 then
+	      fprintf fmt 
+		"%d [label=\"%a\" , color = green, style=filled];" 
+		s.t_nb print_system_dot s
+	    else 
+	      fprintf fmt 
+		"%d [label=\"%a\" color = red];" s.t_nb print_system_dot s);
+	    if !verbose >= 2 then 
+	      begin
+		fprintf fmt "@.";
+		List.iter 
+		  (fun d -> fprintf fmt " %d -> %d [style=dotted] @." 
+		     s.t_nb d) db
+	      end
 	  end
       else
 	let (l, args, _)= List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
 	  s.t_nb_father s.t_nb (Hstring.view l) print_args args;
 	if !verbose = 1 then 
-	  fprintf fmt "%d [label=\"\" color=red];" s.t_nb
+	  if s.t_nb = 0 then
+	    fprintf fmt "%d [label=\"\" , color=green, style = filled];" s.t_nb
+	  else 
+	    fprintf fmt "%d [label=\"\" color=red];" s.t_nb
 	else
 	  begin
 	    fprintf fmt "%d [label=\"%a\" color=red];" 
 	      s.t_nb print_system_dot s;
-	    if !verbose = 2 then
+	    if !verbose >= 2 then
 	      begin
 		fprintf fmt "@.";
 		List.iter 
