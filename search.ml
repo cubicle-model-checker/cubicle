@@ -94,7 +94,7 @@ module TimeSort = Timer.Make (struct end)
 module Profiling = struct
   
   let round = 
-    if not (profiling  && !verbose > 0) then fun _ -> () 
+    if not (profiling  && verbose > 0) then fun _ -> () 
     else fun cpt -> eprintf "@.-- Round %d@." cpt
 
   let cpt_fix = ref 0
@@ -105,7 +105,7 @@ module Profiling = struct
     cpt_process := max !cpt_process s
     
   let print_visited = 
-    if not (profiling && !verbose > 0) then fun _ -> ()
+    if not (profiling && verbose > 0) then fun _ -> ()
     else fun nb -> eprintf "Number of visited nodes : %d@." nb
 
   let print_states st pr = 
@@ -114,7 +114,7 @@ module Profiling = struct
       (eprintf "%a@." pr) st
 
   let print = 
-    if not (profiling  && !verbose > 0) then fun _ _ _ -> ()
+    if not (profiling  && verbose > 0) then fun _ _ _ -> ()
     else fun str d size -> 
       eprintf "[%s %d] Number of processes : %d@." str d size
 
@@ -384,11 +384,12 @@ module BFS_base ( X : I ) = struct
 	 | Some db ->
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
 	     incr Profiling.cpt_fix;
-	     let ss = (X.system s).t_nb in
-	     let db' = List.filter (fun x -> x <> ss) db in
-	     let post, cands = extract_candidates db' !candidates in
-	     List.iter (fun s -> Queue.add (cpt+1, s) q) post;
-	     candidates := cands;
+	     if lazyinv then
+	       let ss = (X.system s).t_nb in
+	       let db' = List.filter (fun x -> x <> ss) db in
+	       let post, cands = extract_candidates db' !candidates in
+	       List.iter (fun s -> Queue.add (cpt+1, s) q) post;
+	       candidates := cands;
 
 	 | None ->
 	     begin

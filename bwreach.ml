@@ -237,9 +237,9 @@ let make_cubes =
 		 try
 		  let ureq = simplification_atoms np ureq in
 		  let np = SAtom.union ureq np in 
-		  if debug && !verbose > 0 then Debug.pre_cubes np nargs;
+		  if debug && verbose > 0 then Debug.pre_cubes np nargs;
 		  if inconsistent np then begin
-		    if debug && !verbose > 0 then eprintf "(inconsistent)@.";
+		    if debug && verbose > 0 then eprintf "(inconsistent)@.";
 		    (ls, post)
 		  end
 		  else
@@ -322,7 +322,7 @@ let pre tr unsafe =
     SAtom.union tr.tr_reqs 
       (SAtom.fold (fun a -> add (pre_atom tau a)) unsafe SAtom.empty)
   in
-  if debug && !verbose > 0 then Debug.pre tr pre_unsafe;
+  if debug && verbose > 0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
   if tr.tr_args = [] then tr, pre_unsafe, (args, args)
   else tr, pre_unsafe, (args, append_extra args tr.tr_args)

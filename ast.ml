@@ -115,10 +115,13 @@ end = struct
 	    let c = compare a1 a2 in
 	    if c<>0 then c else compare b1 b2
 
-
   let neg = function
     | True -> False
     | False -> True
+    | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x hfalse -> 
+	Comp (c, Eq, (Elem (htrue, Constr)))
+    | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x htrue -> 
+	Comp (c, Eq, (Elem (hfalse, Constr)))
     | Comp (x, Eq, y) -> Comp (x, Neq, y)
     | Comp (x, Lt, y) -> Comp (y, Le, x)
     | Comp (x, Le, y) -> Comp (y, Lt, x)

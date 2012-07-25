@@ -325,7 +325,8 @@ let forward s procs trs l =
 	    ) [] trs
 	  in
 	  incr cpt_f;
-	  if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
+	  if debug && verbose > 2 then 
+	    eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
 	  else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
 	  HSA.add h_visited sa ();
 	  forward_rec s procs trs (List.rev_append new_td to_do)
@@ -333,8 +334,6 @@ let forward s procs trs l =
   in
   forward_rec s procs trs l;
   h_visited
-
-
 
 module MA = Map.Make (Atom)
 
@@ -429,7 +428,6 @@ let search_nb n =
   let procs = List.rev rp in
   search procs
 
-
 let search_stateless_nb n =
   let rp, _ = 
     List.fold_left (fun (acc, n) v ->
@@ -438,16 +436,10 @@ let search_stateless_nb n =
   let procs = List.rev rp in
   search_stateless procs
 
-
 let search_only s =
   let ex_args = 
     match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in
   forward s ex_args s.t_trans (mkforward_s s)
-
-
-
-
-
 
 (*********************************)
 (* Extract candidates from trace *)
@@ -476,8 +468,6 @@ let compagnions_from_trace forward_nodes =
     in
     MA.add a compagnions acc) lits MA.empty
 
-
-
 let compagnions_values compagnions =
   SAtom.fold (fun c (acc, compagnions) -> 
     match c with
@@ -492,47 +482,40 @@ let compagnions_values compagnions =
       | _ -> acc, compagnions)
     compagnions (MT.empty, compagnions)
 
-
 let get_variants x =
   (* add missing constructors for bool *)
   if Hstring.equal (snd (Smt.Typing.find x)) Smt.Typing.type_bool then
     H.HSet.add htrue (H.HSet.singleton hfalse)
   else Smt.Typing.Variant.get_variants x
 
-
 let candidates_from_compagnions a compagnions acc =
-  let singl_a = SAtom.singleton a in
   let mt, remaining = compagnions_values compagnions in
   let acc = 
-    SAtom.fold (fun c acc -> SAtom.add (Atom.neg c) singl_a :: acc)
-    remaining acc
+    SAtom.fold (fun c acc -> (a, [Atom.neg c]) :: acc) remaining acc
   in
   MT.fold (fun c vals acc -> match c with
     | Elem (x, _) | Access (x, _, _) ->
       begin
 	match H.HSet.elements vals with
 	  | [v] when Hstring.equal v htrue ->
-	    SAtom.add (Comp (c, Eq, (Elem (hfalse, Constr)))) singl_a :: acc	
+	    (a, [Comp (c, Eq, (Elem (hfalse, Constr)))]) :: acc	
 	  | [v] when Hstring.equal v hfalse ->
-	    SAtom.add (Comp (c, Eq, (Elem (htrue, Constr)))) singl_a :: acc
-	  | [v] -> SAtom.add (Comp (c, Neq, (Elem (v, Constr)))) singl_a :: acc
+	    (a, [Comp (c, Eq, (Elem (htrue, Constr)))]) :: acc
+	  | [v] -> (a, [Comp (c, Neq, (Elem (v, Constr)))]) :: acc
 	  | vs ->
 	    try
 	      let dif = H.HSet.diff (get_variants x) vals in
 	      match H.HSet.elements dif with
 		| [] -> acc
 		| [cs] -> 
-		  SAtom.add (Comp (c, Eq, (Elem (cs, Constr)))) singl_a :: acc
+		    (a, [Comp (c, Eq, (Elem (cs, Constr)))]) :: acc
 		| _ -> raise Not_found
 	    with Not_found ->
-	      let sa = List.fold_left (fun sa v ->
-		SAtom.add (Comp (c, Neq, (Elem (v, Constr)))) sa)
-		singl_a vs in
-	      sa :: acc
+	      (a, List.map (fun v -> Comp (c, Neq, (Elem (v, Constr)))) vs) 
+	      :: acc
       end
     | _ -> assert false)
     mt acc
-
 
 let useless_candidate sa =
   SAtom.exists (function
@@ -542,41 +525,122 @@ let useless_candidate sa =
     | _ -> false) sa
   (* || List.length (args_of_atoms sa) > 1 *)
 
+let make_satom_from_list s la = 
+  List.fold_left (fun sa x -> SAtom.add x sa) s la
 
+let no_conflict_with a b = 
+  match a, b with
+    | True, False | False, True -> false
+    | Comp(ta1, Eq, ta2), Comp(tb1, Eq, tb2) ->
+	not (compare_term ta1 tb1 = 0 && compare_term ta2 tb2 <> 0)
+    | Ite _, _ | _, Ite _ -> assert false
+    | _, _ -> true
 
+let asym_union sa1 sa2 = 
+  SAtom.fold 
+    (fun a s -> SAtom.add a (SAtom.filter (no_conflict_with a) s) ) sa1 sa2
 
-let extract_candidates_from_compagnons comps s =
+let still_alive fwd candidates s a la = 
+  let sla = make_satom_from_list SAtom.empty la in
+  if debug && verbose > 0 then 
+    eprintf "We check that (%a, %a) is alive with an extra process@."
+      Pretty.print_atom a Pretty.print_cube sla;
+  let nodes = 
+    HSA.fold 
+      (fun node _ nodes -> 
+	 if SAtom.subset sla node && not (SAtom.mem a node)
+	 then node :: nodes else nodes) fwd [] in
+  if debug && verbose > 0 then
+    eprintf "We're running %d forward traces! @." (List.length nodes); 
+  let args = fst s.t_unsafe in
+  let np = [Hstring.make ("#"^(string_of_int (List.length args + 1)))] in
+  let init_np = mkinit (fst s.t_init) (snd s.t_init) np in
+  let dead = 
+    List.exists
+      (fun node -> 
+	 if debug && verbose > 1 then
+	   eprintf "The node in the trace is :%a@." Pretty.print_cube node;
+	 let depart = asym_union node init_np in
+	 if debug && verbose > 1 then
+	   eprintf "We run the trace from :%a@." Pretty.print_cube depart;
+	 let tr = forward s np s.t_trans [depart, args@np] in
+	 let comps = compagnions_from_trace tr in
+	 HSA.clear tr;
+	 let comps_a = try MA.find a comps with Not_found -> SAtom.empty in
+	 List.for_all (fun x -> SAtom.mem x comps_a) la
+      ) nodes
+  in
+  if debug && verbose > 0 then
+    if dead then eprintf "Dead!@." else eprintf "Still alive!@.";
+  not dead
+
+let filter_alive_candidates fwd candidates = 
+  let dead_candidates = ref 0 in
+  if debug then 
+    begin
+      eprintf "Potential candidates:@.";
+      List.iter 
+	(fun (a, (la, _)) ->
+	   let sa = make_satom_from_list (SAtom.singleton a) la in
+	   eprintf "candidate : %a\n@." Pretty.print_cube sa)
+	candidates;
+      eprintf "@."
+    end;
+  let candidates = 
+    List.fold_left 
+      (fun acc (a, (la, s)) -> 
+	 if still_alive fwd candidates s a la then s::acc 
+	 else (incr dead_candidates; acc)) [] candidates
+  in
+  eprintf "Number of dead candidates : %d@." !dead_candidates;
+  candidates
+
+let extract_candidates comps s =
   let cpt = ref (-1) in
-  MA.iter (fun a compagnions ->
-    eprintf "compagnons %a : %a@." 
-      Pretty.print_atom a Pretty.print_cube compagnions) comps;
+  if debug && verbose > 0 then
+    MA.iter (fun a compagnions ->
+	       eprintf "compagnons %a : %a@." 
+		 Pretty.print_atom a Pretty.print_cube compagnions) comps;
   let sas = MA.fold candidates_from_compagnions comps [] in
   let sas = List.rev sas in
   Gc.full_major ();
-  List.fold_left (fun acc sa ->
-    if useless_candidate sa then acc
-    else
-      let sa', (args, _) = proper_cube sa in
-      let ar' = ArrayAtom.of_satom sa' in
-      let s' = 
-	{ s with
-	  t_from = [];
-	  t_unsafe = args, sa';
-	  t_arru = ar';
-	  t_alpha = ArrayAtom.alpha ar' args;
-	  t_deleted = false;
-	  t_nb = !cpt;
-	  t_nb_father = -1 } in
-      if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
-      else (decr cpt; s' :: acc)) [] sas
+  List.fold_left 
+    (fun acc (a, la) ->
+       let sa = make_satom_from_list (SAtom.singleton a) la in
+       if useless_candidate sa then acc
+       else
+	 let sa', (args, _) = proper_cube sa in
+	 let ar' = ArrayAtom.of_satom sa' in
+	 let s' = 
+	   { s with
+	       t_from = [];
+	       t_unsafe = args, sa';
+	       t_arru = ar';
+	       t_alpha = ArrayAtom.alpha ar' args;
+	       t_deleted = false;
+	       t_nb = !cpt;
+	       t_nb_father = -1 } in
+	 if List.exists 
+	   (fun (_,(_,s)) -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
+	 else 
+	   (decr cpt; (a, (la, s')) :: acc)) [] sas
+
+
+let extract_candidates_from_compagnons comps s =
+  let c = extract_candidates comps s in
+  List.rev_map (fun (_,(_,s)) -> s) c
 
 let extract_candidates_from_trace forward_nodes s =
   let comps = compagnions_from_trace forward_nodes in
-  HSA.clear forward_nodes;
-  extract_candidates_from_compagnons comps s
-
-
-
+  if refine then
+    let c = extract_candidates comps s in
+    filter_alive_candidates forward_nodes c
+  else
+    begin
+      HSA.clear forward_nodes;
+      extract_candidates_from_compagnons comps s
+    end  
+  
 let select_relevant_candidates {t_unsafe = _, sa} =
   List.filter (fun {t_unsafe = _, ca} ->
     not (SAtom.is_empty (SAtom.inter ca sa))

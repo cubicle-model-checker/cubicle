@@ -35,6 +35,7 @@ let only_forward = ref false
 let gen_inv = ref false
 let forward_inv = ref (-1)
 let lazyinv = ref false
+let refine = ref false
 let stateless = ref false
 let post_strategy = ref (-1)
 let delete = ref true
@@ -71,7 +72,10 @@ let specs =
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-forward-inv", Arg.Set_int forward_inv, 
                     "<n> forward invariant generation with n processes";
-    "-lazy", Arg.Set lazyinv, " add candidate invariants in a lazy way (BFS only)";
+    "-lazy", Arg.Set lazyinv, 
+                " add candidate invariants in a lazy way (BFS only)";
+    "-refine", Arg.Set refine, 
+                " refine the selection of candidates (if no stateless search) ";
     "-stateless", Arg.Set stateless, " stateless forward search";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
@@ -108,13 +112,14 @@ let file = !file
 let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
+let refine = !refine && not !stateless
 let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
 let cores = !cores
 let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode
-
+let verbose = !verbose
 let post_strategy =
   if !post_strategy <> -1 then !post_strategy
   else match mode with
