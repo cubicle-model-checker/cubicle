@@ -71,7 +71,7 @@ let specs =
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-forward-inv", Arg.Set_int forward_inv, 
                     "<n> forward invariant generation with n processes";
-    "-lazy", Arg.Set lazyinv, " add candidate invariants in a lazy way";
+    "-lazy", Arg.Set lazyinv, " add candidate invariants in a lazy way (BFS only)";
     "-stateless", Arg.Set stateless, " stateless forward search";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
