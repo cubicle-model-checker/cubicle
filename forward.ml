@@ -314,8 +314,9 @@ let forward s procs trs l =
 	      ) new_td (post sa args procs tr)
 	    ) [] trs
 	  in
-	  incr cpt_f; 
-	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	  incr cpt_f;
+	  if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
+	  else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
 	  HSA.add h_visited sa ();
 	  forward_rec s procs trs (List.rev_append new_td to_do)
       )
@@ -353,10 +354,9 @@ let stateless_forward s procs trs l =
 	  ) [] trs
 	in
 	incr cpt_f;
-      
-	if !cpt_f mod 1000 = 0 then 
-	  eprintf "%d@." !cpt_f;
-
+	
+	if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
+	else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
 	HI.add h_visited hsa ();
 	let mc = add_compagnions_from_node sa mc in
 	forward_rec s procs trs mc (List.rev_append new_td to_do)

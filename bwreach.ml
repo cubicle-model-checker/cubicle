@@ -646,7 +646,7 @@ let rec origin s = match s.t_from with
   | [] -> s
   | (_,_, p)::_ -> origin p
 
-let rec remove_cand s candidates =
+let rec remove_cand s candidates uns =
   let nc = 
     List.fold_left 
       (fun acc s' ->
@@ -654,8 +654,13 @@ let rec remove_cand s candidates =
 	
 	if List.exists 
 	  (fun (_,_,s) -> 
-	     None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from then acc
-	(* if SAtom.compare (snd s.t_unsafe) (snd s'.t_unsafe) = 0 then acc *)
+	     None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from 
+	then
+	  (* raise UNSAFE if we try to remove a candidate 
+	     which is an unsafe property *)
+	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
+	    raise (Search.Unsafe s)
+	  else acc
 	else s'::acc)
       [] candidates in
   List.rev nc
@@ -668,21 +673,18 @@ let rec elim_bogus_invariants search invariants candidates =
     | Search.Unsafe s ->
 	(* FIXME Bug when search is parallel *)
 	elim_bogus_invariants search invariants 
-	  (remove_cand (origin s) candidates)
+	  (remove_cand s candidates [])
 
 let rec search_bogus_invariants search invariants candidates uns =
   try
     search ~invariants ~visited:[] ~forward_nodes:[] candidates
   with
     | Search.Unsafe s -> 
-	eprintf "The node %d is UNSAFE@." (origin s).t_nb;
 	(* FIXME Bug when search is parallel *)
 	let o = origin s in
-	if List.exists (fun s -> ArrayAtom.equal s.t_arru o.t_arru) uns then
-	  raise (Search.Unsafe s)
-	else
-	  search_bogus_invariants 
-	    search invariants (remove_cand s candidates) uns
+	eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
+	search_bogus_invariants search invariants 
+	  (remove_cand s candidates uns) uns
 
 
 (*----------------------------------------------------------------------------*)
@@ -832,9 +834,9 @@ let system uns =
     exit 0
   end
 
-  else (*if stateless && forward_inv <> -1 then begin
+  else if stateless && forward_inv <> -1 then begin
 
-    eprintf "FORWARD :\n-------------\n@.";
+    eprintf "STATELESS FORWARD :\n-------------\n@.";
     let comps = (Forward.search_stateless_nb forward_inv (List.hd uns)) in
     eprintf "-------------\n@.";
 
@@ -854,7 +856,7 @@ let system uns =
 
   end
 
-  else *)if forward_inv <> -1 then begin
+  else if forward_inv <> -1 then begin
 
     eprintf "FORWARD :\n-------------\n@.";
     let forward_nodes = (Forward.search_nb forward_inv (List.hd uns)) in
@@ -885,7 +887,7 @@ let system uns =
 
     (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
       
-    search_bogus_invariants search invariants candidates uns
+    search_bogus_invariants search invariants (candidates@uns) uns
 
   end
 
