@@ -27,8 +27,6 @@ array Level[proc] : int
 array Count[proc] : bool
 array PC[proc] : loc
 
-const Init_level : int
-
 init (z) { Sense = False && Local_sense[z] = False &&
            Level[z] = 0 && Count[z] = True && PC[z] = L1 }
 

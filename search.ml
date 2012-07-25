@@ -341,13 +341,18 @@ module BFS_base ( X : I ) = struct
 	  in
 	  let fmt = formatter_of_out_channel cout in
 	  fprintf fmt "digraph G {@.";
-	  fprintf fmt "   orientation = landscape;@.";
+	  fprintf fmt "   orientation = portrait;@.";
 	  fprintf fmt "   fontsize = 10;@.";
 	  let close_dot () = 
 	    fprintf fmt "}@.";
 	    if not profiling then
 	      let pdf = n^".pdf" in
-	      ignore(Sys.command ("dot -Tpdf "^n^" > "^pdf^" && open "^pdf))
+	      let com = (* dirty hack to find os *)
+		if Sys.file_exists "/System" then "open"
+		else if Sys.file_exists "/home" then "gnome-open"
+		else "AcroRd32.exe"
+	      in
+	      ignore(Sys.command ("dot -Tpdf "^n^" > "^pdf^" && "^com^" "^pdf))
 	  in
 	  fmt, close_dot
 	end

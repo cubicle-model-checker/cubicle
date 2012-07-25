@@ -85,6 +85,16 @@ let find_const_value g init =
     raise Not_found
   with Found_const c -> c
 
+let find_const_value g init = match g with
+  | Arith (g', c) -> 
+      begin
+	let op, t = find_const_value g' init in
+	match t with
+	  | Const c' -> op, Const (add_constants c c')
+	  | _ -> assert false
+      end
+  | _ -> find_const_value g init
+
 
 let rec elim_prime_atom init = function
   | True -> None 
@@ -183,7 +193,7 @@ let uguard_dnf sigma args tr_args = function
 
 let possible_init args init reqs =
   (** Very incomplete semantic test **)
-  not (inconsistent_2cubes init reqs) (*  && *)
+  not (inconsistent_2cubes init reqs) (* && *)
     (* try Prover.check_guard args init reqs; true *)
     (* with Smt.Unsat _ -> false *)
 

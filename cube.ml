@@ -225,6 +225,10 @@ let rec simplification np a =
     | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
     | Comp (Arith (i, csi), op, (Arith (j, csj)))
       when compare_constants csi csj = 0 -> simplification np (Comp (i, op, j))
+    | Comp (Arith (i, csi), op, (Arith (j, csj))) ->
+        let cs = add_constants (mult_const (-1) csi) csj in
+	if MConst.is_empty cs then Comp (i, op, j)
+	else Comp (i, op, (Arith (j, cs)))
     (* | Comp (Const cx, op, Arith (y, sy, cy)) -> *)
     (* 	Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
     (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
