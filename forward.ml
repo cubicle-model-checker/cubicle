@@ -247,7 +247,7 @@ let post init all_procs procs { tr_args = tr_args;
   (* let sigma = build_subst tr_args procs in *)
     if possible_guard procs all_procs tr_args sigma init reqs ureqs then
       let assi, assi_terms = apply_assigns assigns sigma in
-      let upd, upd_terms = apply_updates upds procs sigma in
+      let upd, upd_terms = apply_updates upds all_procs sigma in
       let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
       let sa = simplification_atoms SAtom.empty
 	(SAtom.union unchanged (SAtom.union assi upd)) in
