@@ -292,7 +292,7 @@ let forward s procs trs l =
   let h_visited = HSA.create 200_029 in
   let cpt_f = ref 0 in
   let rec forward_rec s procs trs = function
-    | [] -> eprintf "%d@." !cpt_f
+    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
     | (sa, args) :: to_do ->
     (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
     (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
@@ -339,7 +339,7 @@ let stateless_forward s procs trs l =
   let h_visited = HI.create 200_029 in
   let cpt_f = ref 0 in
   let rec forward_rec s procs trs mc = function
-    | [] -> eprintf "%d@." !cpt_f; mc
+    | [] -> eprintf "Total forward nodes : %d@." !cpt_f; mc
     | (sa, args) :: to_do ->
       let hsa = SAtom.hash sa in
       if HI.mem h_visited hsa then
