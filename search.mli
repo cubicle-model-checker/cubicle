@@ -18,35 +18,32 @@ exception Unsafe of Ast.t_system
 module type I = sig
   type t
 
+  type fsearch = 
+    invariants : t list -> 
+    visited : t list -> 
+    forward_nodes : t list -> 
+    candidates : t list ->
+    t list -> unit
+
   val size : t -> int
   val card : t -> int
   val maxrounds : int
   val maxnodes : int
   val invariants : t -> t list
-  val gen_inv :
-    (invariants : t list -> visited : t list -> forward_nodes : t list ->
-     t list -> unit) -> 
-    invariants : t list -> t list -> t -> t list * t list
+  val gen_inv : 
+    fsearch -> invariants : t list -> t list -> t -> t list * t list
   val gen_inv_with_forward :
-    (invariants : t list -> visited : t list -> forward_nodes : t list ->
-     t list -> unit) -> 
-    invariants : t list -> forward_nodes : t list -> 
+    fsearch -> invariants : t list -> forward_nodes : t list -> 
     t list -> t -> t list * t list
   val gen_inv_proc : 
-    (invariants : t list -> visited : t list -> forward_nodes : t list ->
-     t list -> unit) ->
-    t list -> t list -> t -> t list * t list
+    fsearch -> t list -> t list -> t -> t list * t list
   val init_thread : 
-    (invariants : t list -> visited : t list -> forward_nodes : t list ->
-     t list -> unit) ->
+    fsearch ->
     t list ref -> t list ref -> t list ref -> t list ref -> 
     t Queue.t -> Thread.t
 
   val extract_candidates : t -> t list -> t list
-  val is_inv :
-    (invariants : t list -> visited : t list -> forward_nodes : t list ->
-     t list -> unit) ->
-    t -> t list -> bool
+  val is_inv : fsearch -> t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
   val delete_nodes_inv : t list -> t list ref -> unit
@@ -56,7 +53,7 @@ module type I = sig
   val safety : t -> unit
     
   (* None = not a fixpoint ; Some l = fixpoint by l *)
-  val fixpoint : 
+  val fixpoint :
     invariants : t list -> visited : t list -> t -> (int list) option
 
   val easy_fixpoint : t -> t list -> (int list) option
@@ -77,8 +74,13 @@ end
 
 module type S = sig 
   type t
-  val search : invariants : t list -> visited : t list -> 
-    forward_nodes : t list -> t list -> unit
+
+  val search : 
+    invariants : t list -> 
+    visited : t list -> 
+    forward_nodes : t list -> 
+    candidates : t list ->
+    t list -> unit
 end
 
 
@@ -99,7 +101,9 @@ module DFS ( X : I ) : S with type t = X.t
 (* Dfs search which extends the previous one with fixpoint nodes
    looked in the all tree on the left. *)
 
+
 module DFSL ( X : I ) : S  with type t = X.t
+
 
 
 (* Dfs search where nodes with less than 2 process variables are
@@ -123,6 +127,7 @@ module BFS  ( X : I ) : S  with type t = X.t
 (* Concurrent Bfs search *)
 
 module BFS_dist  ( X : I ) : S  with type t = X.t 
+
 
 (* Bfs search with concurent invariant generation *)
 

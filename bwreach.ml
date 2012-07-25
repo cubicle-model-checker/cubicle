@@ -522,7 +522,9 @@ let worker_inv search invariants not_invs p =
   try 
     if impossible_inv p !not_invs then Nothing
     else begin  
-      search ~invariants:!invariants ~visited:[] ~forward_nodes:[] [p]; 
+      search 
+	~invariants:!invariants ~visited:[] 
+	~forward_nodes:[] ~candidates:[] [p]; 
       if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
 	Pretty.print_system p;
       Inv
@@ -590,7 +592,9 @@ let rec try_inv search ~invariants invs not_invs candidates =
 	 if impossible_inv p not_invs || trivial_inv p invs then invs, not_invs
 	 else begin
 	   eprintf "candidate : %a @." Pretty.print_system p;
-	   search ~invariants:invariants' ~visited:[] ~forward_nodes:[] [p]; 
+	   search 
+	     ~invariants:invariants' ~visited:[] 
+	     ~forward_nodes:[] ~candidates:[] [p]; 
 	   if not quiet then eprintf "INVARIANT : %a @." Pretty.print_system p;
 	   p::invs, not_invs
 	 (* recursisvely try sub-cubes to find a more general invariant *)
@@ -667,7 +671,7 @@ let rec remove_cand s candidates uns =
 
 let rec elim_bogus_invariants search invariants candidates =
   try
-    search ~invariants ~visited:[] ~forward_nodes:[] candidates;
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:[] candidates;
     candidates
   with
     | Search.Unsafe s ->
@@ -677,7 +681,8 @@ let rec elim_bogus_invariants search invariants candidates =
 
 let rec search_bogus_invariants search invariants candidates uns =
   try
-    search ~invariants ~visited:[] ~forward_nodes:[] candidates
+    let uns, cands = if lazyinv then uns, candidates else candidates@uns, [] in
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:cands uns
   with
     | Search.Unsafe s -> 
 	(* FIXME Bug when search is parallel *)
@@ -720,7 +725,9 @@ let gen_inv_proc search invs not_invs s =
 	try
 	  if impossible_inv p not_invs then acc
 	  else begin
-	    search ~invariants:invs ~visited:[] ~forward_nodes:[] [p]; 
+	    search 
+	      ~invariants:invs ~visited:[] 
+	      ~forward_nodes:[] ~candidates:[] [p]; 
 	    if not quiet then 
 	      eprintf "Good! We found an invariant :-) \n %a @." 
 		Pretty.print_system p;
@@ -738,7 +745,9 @@ let extract_candidates s not_invs =
 
 let is_inv search p invs =
   try
-    search ~invariants:invs ~visited:[] ~forward_nodes:[] [p]; 
+    search 
+      ~invariants:invs ~visited:[] 
+      ~forward_nodes:[] ~candidates:[] [p]; 
     if not quiet then 
       eprintf "Good! We found an invariant :-) \n %a @." Pretty.print_system p;
     true
@@ -748,6 +757,13 @@ let is_inv search p invs =
 
 module T = struct
   type t = t_system
+
+  type fsearch = 
+    invariants : t list -> 
+    visited : t list -> 
+    forward_nodes : t list -> 
+    candidates : t list ->
+    t list -> unit
 
   let invariants s = 
     List.map 
@@ -801,7 +817,6 @@ module StratBFS_dist = Search.BFS_dist(T)
 module StratBFSinvp = Search.BFSinvp(T)
 module StratDFSHL = Search.DFSHL(T)
 
-
 module InvSearch = Search.BFS(struct include T let maxnodes = 10000 end)
 
 let search = 
@@ -852,7 +867,7 @@ let system uns =
     eprintf "-----------------------\n@.";
 
 
-    search_bogus_invariants search invariants (candidates@uns) uns
+    search_bogus_invariants search invariants candidates uns
 
   end
 
@@ -887,13 +902,13 @@ let system uns =
 
     (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
       
-    search_bogus_invariants search invariants (candidates@uns) uns
+    search_bogus_invariants search invariants candidates uns
 
   end
 
   else begin
 
-    search ~invariants ~visited:[] ~forward_nodes:[] uns
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:[] uns
     
   end
 
