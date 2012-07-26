@@ -866,7 +866,7 @@ let system uns =
       candidates;
     eprintf "-----------------------\n@.";
 
-
+    if refine_only then exit 0;
     search_bogus_invariants search invariants candidates uns
 
   end
@@ -901,7 +901,8 @@ let system uns =
     (* let invariants = List.rev_append invs invariants in *)
 
     (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
-      
+
+    if refine_only then exit 0;      
     search_bogus_invariants search invariants candidates uns
 
   end

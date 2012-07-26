@@ -27,7 +27,7 @@ let _ =
   try
     let s = Parser.system Lexer.token lb in
     let ts = Typing.system s in
-    if !type_only then exit 0;
+    if type_only then exit 0;
     Bwreach.system ts;
     if dot then eprintf "\n\nThe system is SAFE\n@."
     else printf "\n\nThe system is SAFE\n@."

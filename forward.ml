@@ -540,36 +540,69 @@ let asym_union sa1 sa2 =
   SAtom.fold 
     (fun a s -> SAtom.add a (SAtom.filter (no_conflict_with a) s) ) sa1 sa2
 
+(* naive version *)
+let global_var = function
+  | Comp(Elem(_,Glob),_,Elem(_,Constr)) 
+  | Comp(Elem(_,Constr),_,Elem(_,Glob)) -> true
+  | _ -> false
+
+let update_array up = function
+  | Comp (Access(m,_,_),_,_) | Comp (_,_,Access(m,_,_)) -> 
+      (Hstring.compare up.up_arr m = 0) && 
+	List.exists 
+	(fun (sa, t) -> 
+	   SAtom.is_empty sa && (match t with Access _ -> false | _ -> true)) 
+	up.up_swts
+
+  | _ -> false
+
+let potential_update l trs = 
+  List.exists global_var l ||
+    List.exists 
+    (fun tr -> 
+       List.exists 
+	 (fun up -> List.exists (update_array up) l) tr.tr_upds) trs
+
+let dead_candidate np args init_np s nodes a la = 
+  let sla = make_satom_from_list (SAtom.singleton a) la in
+  List.exists
+    (fun node -> 
+       if debug && verbose > 1 then
+	 eprintf "The node in the trace is :%a@." Pretty.print_cube node;
+       let depart = asym_union node init_np in
+       if debug && verbose > 1 then
+	 eprintf "We run the trace from :%a@." Pretty.print_cube depart;
+       let tr = forward s np s.t_trans [depart, args@np] in
+       try 
+	 HSA.iter (fun sa _ -> if SAtom.subset sla sa then raise Exit) tr;
+	 false
+       with Exit -> true
+    ) nodes
+
 let still_alive fwd candidates s a la = 
   let sla = make_satom_from_list SAtom.empty la in
   if debug && verbose > 0 then 
     eprintf "We check that (%a, %a) is alive with an extra process@."
       Pretty.print_atom a Pretty.print_cube sla;
-  let nodes = 
-    HSA.fold 
-      (fun node _ nodes -> 
-	 if SAtom.subset sla node && not (SAtom.mem a node)
-	 then node :: nodes else nodes) fwd [] in
-  if debug && verbose > 0 then
-    eprintf "We're running %d forward traces! @." (List.length nodes); 
+
   let args = fst s.t_unsafe in
   let np = [Hstring.make ("#"^(string_of_int (List.length args + 1)))] in
   let init_np = mkinit (fst s.t_init) (snd s.t_init) np in
-  let dead = 
-    List.exists
-      (fun node -> 
-	 if debug && verbose > 1 then
-	   eprintf "The node in the trace is :%a@." Pretty.print_cube node;
-	 let depart = asym_union node init_np in
-	 if debug && verbose > 1 then
-	   eprintf "We run the trace from :%a@." Pretty.print_cube depart;
-	 let tr = forward s np s.t_trans [depart, args@np] in
-	 let comps = compagnions_from_trace tr in
-	 HSA.clear tr;
-	 let comps_a = try MA.find a comps with Not_found -> SAtom.empty in
-	 List.for_all (fun x -> SAtom.mem x comps_a) la
-      ) nodes
-  in
+
+  let pla = potential_update la s.t_trans in
+  let pa =  potential_update [a] s.t_trans in
+  let nodes = 
+    HSA.fold 
+      (fun node _ nodes -> 
+	 if (SAtom.subset sla node && pa) || 
+	    (SAtom.mem a node && pla)
+	 then node :: nodes else nodes) fwd [] in
+
+  if debug && verbose > 0 then
+    eprintf "We're running %d forward traces! @." (List.length nodes); 
+
+  let dead = dead_candidate np args init_np s nodes a la in
+
   if debug && verbose > 0 then
     if dead then eprintf "Dead!@." else eprintf "Still alive!@.";
   not dead
@@ -649,4 +682,3 @@ let select_relevant_candidates {t_unsafe = _, sa} =
   
 
 (*----------------------------------------------------------------*)
-

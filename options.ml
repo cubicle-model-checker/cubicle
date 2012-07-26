@@ -18,6 +18,7 @@ let file = ref " stdin"
 
 let max_proc = 10
 let type_only = ref false
+let refine_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
@@ -58,6 +59,7 @@ let specs =
   [ "-version", Arg.Unit show_version, " prints the version number";
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-type-only", Arg.Set type_only, " stop after typing";
+    "-refine-only", Arg.Set refine_only, " stop after refining invariants";
     "-depth", Arg.Set_int maxrounds, 
               "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxnodes, 
@@ -101,6 +103,8 @@ let cin =
   match !ofile with Some f -> file := f ; open_in f 
     | None -> stdin
 
+let type_only = !type_only
+let refine_only = !refine_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let debug = !debug
@@ -112,7 +116,7 @@ let file = !file
 let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
-let refine = !refine && not !stateless
+let refine = (!refine || refine_only) && not !stateless
 let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
