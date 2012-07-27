@@ -78,6 +78,7 @@ module H = Hashtbl.Make(HS)
 
 module HSet = Set.Make(HS)
 
+module HMap = Map.Make(HS)
 (* struct *)
 (*   include Hashtbl.Make(HS) *)
 

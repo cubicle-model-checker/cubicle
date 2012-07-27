@@ -77,6 +77,12 @@ init (z) {
 unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Shared }
 (*unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Exclusive }*)
 
+(*unsafe (z) { T[z] = Invack && S[z] = False }*)
+
+(*unsafe (z) { M = Empty1 && T[z] = Invack }*)
+
+(*unsafe (z) { C[z] = False && T[z] <> Empty3 }*)
+
 (*:comment h0    t1*)
 transition t1(x)
 requires { M = Reqs && G = False && D[x] = Empty2 && C[x] = True && F = False }

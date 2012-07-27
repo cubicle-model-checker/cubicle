@@ -680,6 +680,9 @@ let rec elim_bogus_invariants search invariants candidates =
 	  (remove_cand s candidates [])
 
 let rec search_bogus_invariants search invariants candidates uns =
+  eprintf "Nombre d'invariants restant : %d (%a)@." 
+    (List.length candidates) 
+    (fun fmt l -> List.iter (fun x -> fprintf fmt "%d " x.t_nb) l) candidates;
   try
     let uns, cands = if lazyinv then uns, candidates else candidates@uns, [] in
     search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:cands uns
@@ -837,7 +840,7 @@ let system uns =
     | [] -> assert false
   in
 
-  if only_forward then begin
+(*  if only_forward then begin
     
     (* let forward_nodes = List.rev (Forward.search_only (List.hd uns)) in *)
     (* eprintf "FORWARD :\n-------------\n@."; *)
@@ -849,7 +852,7 @@ let system uns =
     exit 0
   end
 
-  else if stateless && forward_inv <> -1 then begin
+  else*) if stateless && forward_inv <> -1 then begin
 
     eprintf "STATELESS FORWARD :\n-------------\n@.";
     let comps = (Forward.search_stateless_nb forward_inv (List.hd uns)) in
@@ -866,7 +869,7 @@ let system uns =
       candidates;
     eprintf "-----------------------\n@.";
 
-    if refine_only then exit 0;
+    if only_forward then exit 0;
     search_bogus_invariants search invariants candidates uns
 
   end
@@ -890,7 +893,7 @@ let system uns =
     (* let candidates = T.sort candidates in *)
     let cpt = ref 0 in
     List.iter (fun sa -> incr cpt;
-      eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
+      eprintf "candidate %d (%d) : %a\n@." !cpt sa.t_nb Pretty.print_system sa)
       candidates;
     eprintf "-----------------------\n@.";
 
@@ -902,13 +905,13 @@ let system uns =
 
     (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
 
-    if refine_only then exit 0;      
+    if only_forward then exit 0;      
     search_bogus_invariants search invariants candidates uns
 
   end
 
   else begin
-
+    if only_forward then exit 0;      
     search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:[] uns
     
   end

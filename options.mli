@@ -18,7 +18,6 @@ val cin : in_channel
 
 val max_proc : int
 val type_only : bool
-val refine_only : bool
 val maxrounds : int
 val maxnodes : int
 

@@ -17,9 +17,6 @@ open Ast
 open Atom
 open Cube
 
-
-
-
 let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
@@ -563,6 +560,36 @@ let potential_update l trs =
        List.exists 
 	 (fun up -> List.exists (update_array up) l) tr.tr_upds) trs
 
+module MM = Hstring.HMap
+
+let subset_node s1 s2 = 
+  SAtom.subset s1 s2 || 
+    try
+      let s = SAtom.diff s1 s2 in
+      let neqs = 
+	SAtom.fold 
+	  (fun a neqs ->
+	     match a with
+	       | Comp((Access(x,_,_) | Elem(x,Glob)),Neq,Elem(c,Constr)) 
+	       | Comp(Elem(c,Constr),Neq,(Access(x,_,_) | Elem(x,Glob))) -> 
+		   let cs = try MM.find x neqs with Not_found -> [] in
+		   MM.add x (c::cs) neqs
+	       | _ -> raise Exit ) s MM.empty
+      in
+      if MM.is_empty neqs then raise Exit;
+      MM.for_all 
+	(fun x cs -> 
+	   SAtom.exists 
+	     (fun a ->
+		match a with
+		  | Comp((Access(y,_,_) | Elem(y,Glob)),Eq,Elem(c,Constr)) 
+		  | Comp(Elem(c,Constr),Eq,(Access(y,_,_) | Elem(y,Glob))) -> 
+		      Hstring.equal x y && not (List.mem c cs)
+		  | _ -> false
+	     ) s2
+	) neqs
+    with Exit -> false
+
 let dead_candidate np args init_np s nodes a la = 
   let sla = make_satom_from_list (SAtom.singleton a) la in
   List.exists
@@ -574,7 +601,7 @@ let dead_candidate np args init_np s nodes a la =
 	 eprintf "We run the trace from :%a@." Pretty.print_cube depart;
        let tr = forward s np s.t_trans [depart, args@np] in
        try 
-	 HSA.iter (fun sa _ -> if SAtom.subset sla sa then raise Exit) tr;
+	 HSA.iter (fun sa _ -> if subset_node sla sa then raise Exit) tr;
 	 false
        with Exit -> true
     ) nodes
@@ -594,8 +621,8 @@ let still_alive fwd candidates s a la =
   let nodes = 
     HSA.fold 
       (fun node _ nodes -> 
-	 if (SAtom.subset sla node && pa) || 
-	    (SAtom.mem a node && pla)
+	 if (subset_node sla node && pa) || 
+	    (subset_node (SAtom.singleton a) node && pla)
 	 then node :: nodes else nodes) fwd [] in
 
   if debug && verbose > 0 then
@@ -607,6 +634,7 @@ let still_alive fwd candidates s a la =
     if dead then eprintf "Dead!@." else eprintf "Still alive!@.";
   not dead
 
+ 
 let filter_alive_candidates fwd candidates = 
   let dead_candidates = ref 0 in
   if debug then 
@@ -614,8 +642,10 @@ let filter_alive_candidates fwd candidates =
       eprintf "Potential candidates:@.";
       List.iter 
 	(fun (a, (la, _)) ->
-	   let sa = make_satom_from_list (SAtom.singleton a) la in
-	   eprintf "candidate : %a\n@." Pretty.print_cube sa)
+	   let la = make_satom_from_list SAtom.empty la in
+	   eprintf "candidate : %a && %a\n@." 
+	     Pretty.print_atom a 
+	     Pretty.print_cube la)
 	candidates;
       eprintf "@."
     end;
