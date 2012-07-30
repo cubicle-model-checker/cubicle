@@ -2,43 +2,24 @@ var Turn : proc
 array Want[proc] : bool
 array Crit[proc] : bool
 
-const E : int
-
 init (z) { Want[z] = False && Crit[z] = False }
 
 unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
 
 transition req (i)
 requires { Want[i] = False }
-{ 
-
-Want[i] := True
-
-(*  Want[j] := case 
-             | i=j : True 
-	     | _ : Want[j] ;*)
-}
+{ Want[i] := True }
 
 transition enter (i)
 requires { Want[i]=True && Crit[i] = False && Turn = i}
-{ 
-  Crit[j] := case 
-              | i=j : True 
- 	      | _ : Crit[j] ;
-}
+{ Crit[i] := True }
 
 transition exit (i)
 requires { Crit[i] = True }
 { 
   Turn := . ;
-
-  Crit[j] := case 
-  	      | i=j : False 
-	      | _ : Crit[j] ;
-
-  Want[j] := case
-  	      | i=j : False 
-	      | _ : Want[j] ;
+  Crit[i] := False; 
+  Want[i] := False
 }
 
 

@@ -756,6 +756,7 @@ let is_inv search p invs =
     true
   with Search.Unsafe _ | ReachBound -> false
 
+
 (* ----------------- Search strategy selection -------------------*)
 
 module T = struct
@@ -800,6 +801,9 @@ module T = struct
   let hard_fixpoint = hard_fixpoint
   let safety = check_safety
   let pre = pre_system
+
+  let post = Forward.post_system
+
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
   let print_dead = Pretty.print_dead_node
@@ -822,6 +826,8 @@ module StratDFSHL = Search.DFSHL(T)
 
 module InvSearch = Search.BFS(struct include T let maxnodes = 10000 end)
 
+module Induct = Search.Inductification (T)
+
 let search = 
   match mode with
     | Dfs -> StratDFS.search
@@ -831,6 +837,7 @@ let search =
     | BfsDist -> StratBFS_dist.search
     | Bfsinvp -> StratBFSinvp.search
     | DfsHL -> StratDFSHL.search
+    | Induct -> Induct.search
 
 
 let system uns =

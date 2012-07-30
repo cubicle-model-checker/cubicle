@@ -332,6 +332,7 @@ let forward s procs trs l =
   forward_rec s procs trs l;
   h_visited
 
+
 module MA = Map.Make (Atom)
 
 let add_compagnions_from_node sa =
@@ -590,6 +591,54 @@ let subset_node s1 s2 =
 	) neqs
     with Exit -> false
 
+
+let forward_and_check s procs trs l sla =
+  let h_visited = HSA.create 200_029 in
+  let cpt_f = ref 0 in
+  let rec forward_rec s procs trs = function
+    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
+    | (sa, args) :: to_do ->
+	if subset_node sla sa then raise Exit;
+	if HSA.mem h_visited sa then
+	  forward_rec s procs trs to_do
+	else
+	  let new_td =
+	    List.fold_left (fun new_td tr ->
+			      List.fold_left (fun new_td s -> (s :: new_td)
+	      ) new_td (post sa args procs tr)
+	    ) [] trs
+	  in
+	  incr cpt_f;
+	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	  HSA.add h_visited sa ();
+	  forward_rec s procs trs (List.rev_append new_td to_do)
+  in
+  forward_rec s procs trs l
+
+let stateless_forward_and_check s procs trs l sla =
+  let h_visited = HI.create 200_029 in
+  let cpt_f = ref 0 in
+  let rec forward_rec s procs trs = function
+    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
+    | (sa, args) :: to_do ->
+	if subset_node sla sa then raise Exit;
+	let hsa = SAtom.hash sa in
+	if HI.mem h_visited hsa then
+	  forward_rec s procs trs to_do
+	else
+	  let new_td =
+	    List.fold_left (fun new_td tr ->
+			      List.fold_left (fun new_td s -> (s :: new_td)
+					     ) new_td (post sa args procs tr)
+			   ) [] trs
+	  in
+	  incr cpt_f;
+	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	  HI.add h_visited hsa ();
+	  forward_rec s procs trs (List.rev_append new_td to_do)
+  in
+  forward_rec s procs trs l
+
 let dead_candidate np args init_np s nodes a la = 
   let sla = make_satom_from_list (SAtom.singleton a) la in
   List.exists
@@ -599,10 +648,16 @@ let dead_candidate np args init_np s nodes a la =
        let depart = asym_union node init_np in
        if debug && verbose > 1 then
 	 eprintf "We run the trace from :%a@." Pretty.print_cube depart;
-       let tr = forward s np s.t_trans [depart, args@np] in
+       (*let tr = forward s np s.t_trans [depart, args@np] in
        try 
 	 HSA.iter (fun sa _ -> if subset_node sla sa then raise Exit) tr;
 	 false
+       with Exit -> true*)
+(*       try  
+	 forward_and_check s np s.t_trans [depart, args@np] sla; false
+       with Exit -> true*)
+       try  
+	 stateless_forward_and_check s np s.t_trans [depart, args@np] sla; false
        with Exit -> true
     ) nodes
 
@@ -709,6 +764,12 @@ let select_relevant_candidates {t_unsafe = _, sa} =
     not (SAtom.is_empty (SAtom.inter ca sa))
   )
 
-  
+ 
+(*-------------- interface for inductification ---------------------------*)
 
-(*----------------------------------------------------------------*)
+let post_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
+  List.fold_left
+    (fun ls tr -> assert false ) 
+    [] 
+    trs 
+    

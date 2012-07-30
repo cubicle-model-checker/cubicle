@@ -33,3 +33,5 @@ val extract_candidates_from_compagnons :
 
 
 val select_relevant_candidates : t_system -> t_system list -> t_system list
+
+val post_system : t_system -> t_system list

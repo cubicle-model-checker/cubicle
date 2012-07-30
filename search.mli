@@ -60,6 +60,9 @@ module type I = sig
   val hard_fixpoint : t -> t list -> (int list) option
 
   val pre : t -> t list * t list
+  val post : t -> t list
+
+
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
   val print_dead : Format.formatter -> (t * int list) -> unit
@@ -132,3 +135,6 @@ module BFS_dist  ( X : I ) : S  with type t = X.t
 (* Bfs search with concurent invariant generation *)
 
 module BFSinvp  ( X : I ) : S  with type t = X.t 
+
+(* Prototype for Amit and Sava's algorithm *)
+module Inductification ( X : I ) : S with type t = X.t

@@ -61,6 +61,8 @@ module type I = sig
   val hard_fixpoint : t -> t list -> (int list) option
 
   val pre : t -> t list * t list
+  val post : t -> t list
+
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
   val print_dead : Format.formatter -> (t * int list) -> unit
@@ -916,3 +918,19 @@ module DFSHL ( X : I ) = struct
 
 end
 
+
+module Inductification ( X : I ) = struct
+
+  type t = X.t
+
+  let search ~invariants ~visited ~forward_nodes ~candidates safes = 
+    let q = Queue.create () in
+    let rec search_rec () =
+      let cpt, s = Queue.take q in
+      let _ = X.post s in
+      ()
+    in
+    List.iter (fun s -> Queue.add (0, s) q) safes;
+    search_rec ();
+    
+end

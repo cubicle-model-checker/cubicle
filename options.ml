@@ -11,7 +11,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist | Bfsinvp
+type mode = 
+  | Dfs | DfsL | DfsH | DfsHL 
+  | Bfs | BfsDist | Bfsinvp 
+  | Induct
 
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
@@ -50,6 +53,7 @@ let set_mode = function
   | "dfshl" -> mode := DfsHL
   | "bfs" -> mode := Bfs
   | "bfsinvp" -> mode := Bfsinvp
+  | "induct" -> mode := Induct
   | _ -> raise (Arg.Bad "search strategy not supported")
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
@@ -63,7 +67,8 @@ let specs =
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-               "<bfs(default) | dfs | dfsl | dfsh | dfshl> search strategies";
+               "<bfs(default) | dfs | dfsl | dfsh | dfshl | induct> 
+               search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Set dot, " graphviz (dot) output";
     "-v", Arg.Unit incr_verbose, " more debugging information";

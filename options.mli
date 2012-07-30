@@ -11,7 +11,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = Dfs | DfsL | DfsH | DfsHL | Bfs | BfsDist | Bfsinvp
+type mode = 
+  | Dfs | DfsL | DfsH | DfsHL 
+  | Bfs | BfsDist | Bfsinvp 
+  | Induct
 
 val file : string
 val cin : in_channel
