@@ -321,6 +321,7 @@ module BFS_base ( X : I ) = struct
 
   let cpt_nodes = ref 0
   let cpt_dot = ref 0
+  let cpt_cands = ref 0
 
   let extract_candidates db candidates = 
     let l = List.filter (fun n -> n <0) db in
@@ -386,12 +387,19 @@ module BFS_base ( X : I ) = struct
 	 | Some db ->
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
 	     incr Profiling.cpt_fix;
-	     if lazyinv then
+	     if lazyinv then begin
 	       let ss = (X.system s).t_nb in
 	       let db' = List.filter (fun x -> x <> ss) db in
 	       let post, cands = extract_candidates db' !candidates in
-	       List.iter (fun s -> Queue.add (cpt+1, s) q) post;
+	       cpt_cands := !cpt_cands + (List.length post);
+	       if post <> [] then
+	       	 eprintf "\n>>> Adding %d candidates (total %d) :@."
+		   (List.length post) !cpt_cands;
+	       List.iter (fun s ->
+		 eprintf ">>> %a@." X.print_system s;
+		 Queue.add (cpt+1, s) q) post;
 	       candidates := cands;
+	     end
 
 	 | None ->
 	     begin

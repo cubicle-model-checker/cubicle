@@ -289,13 +289,14 @@ let system s =
 	   if Hstring.equal t Smt.Typing.type_proc then n::acc else acc)
 	[] s.globals
     in
-    
+
     List.map (fun ((args, p) as un) ->
 		let arru = ArrayAtom.of_satom p in (* inutile ? *)
 		{ 
 		  t_from = [];
 		  t_init = s.init;
 		  t_invs = s.invs;
+		  t_cands = s.cands;
 		  t_unsafe = un;
 		  t_forward = s.forward;
 		  t_arru = arru;

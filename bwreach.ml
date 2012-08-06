@@ -372,16 +372,19 @@ let init_forward (args, ex_args, sa) =
   args, ex_args, sa
   
 
-let init_parameters ({t_unsafe = (args, sa); t_invs = invs } as s) =
+let init_parameters ({t_unsafe = (args, sa); t_invs = invs; t_cands = cands } as s) =
   let args, sa = init_atoms args sa in
   let a = ArrayAtom.of_satom sa in
   let invs = List.map (fun (argsi, sai) -> init_atoms argsi sai) invs in
+  let cands = List.map (fun (argsi, sai) -> init_atoms argsi sai) cands in
   { s with
     t_unsafe = args, sa;
     t_forward = List.map init_forward s.t_forward;
     t_arru = a; 
     t_alpha = ArrayAtom.alpha a args; 
-    t_invs = invs }
+    t_invs = invs;
+    t_cands = cands;
+  }
 
 
 
@@ -779,6 +782,22 @@ module T = struct
 	     t_alpha = ArrayAtom.alpha ar a
 	 }) s.t_invs
 
+  let candidates s =
+    let cpt = ref 0 in
+    List.map
+      (fun ((a,u) as i) ->
+	 decr cpt;
+	 let ar = ArrayAtom.of_satom u in
+	 { s with
+	     t_from = [];
+	     t_unsafe = i; 
+	     t_arru = ar;
+	     t_alpha = ArrayAtom.alpha ar a;
+	     t_deleted = false;
+	     t_nb = !cpt;
+	     t_nb_father = -1;
+	 }) s.t_cands
+
   let size s = List.length (fst s.t_unsafe)
   let card s = SAtom.cardinal (snd s.t_unsafe)
   let maxrounds = maxrounds
@@ -842,10 +861,11 @@ let search =
 
 let system uns =
   let uns = List.map init_parameters uns in
-  let invariants = match uns with
-    | s::_ -> T.invariants s
+  let invariants, candidates = match uns with
+    | s::_ -> T.invariants s, T.candidates s
     | [] -> assert false
   in
+
 
 (*  if only_forward then begin
     
@@ -919,7 +939,7 @@ let system uns =
 
   else begin
     if only_forward then exit 0;      
-    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:[] uns
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates uns
     
   end
 

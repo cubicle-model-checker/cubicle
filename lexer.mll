@@ -23,6 +23,7 @@
 	"init", INIT;
 	"transition", TRANSITION;
 	"invariant", INVARIANT;
+	"candidate", CANDIDATE;
 	"requires", REQUIRE;
 	"uguard", UGUARD;
 	"assign", ASSIGN;

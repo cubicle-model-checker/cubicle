@@ -380,6 +380,7 @@ type system = {
   type_defs : elem list;
   init : Hstring.t option * SAtom.t;
   invs : (Hstring.t list * SAtom.t) list;
+  cands : (Hstring.t list * SAtom.t) list;
   unsafe : (Hstring.t list * SAtom.t) list;  
   forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
   trans : transition list
@@ -393,6 +394,7 @@ type t_system = {
   t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
+  t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
   t_forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
   t_arru : ArrayAtom.t;

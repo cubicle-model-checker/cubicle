@@ -65,7 +65,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
 %token <string> LIDENT
@@ -92,6 +92,7 @@ type_defs
 declarations
 init
 invariants
+candidates
 unsafe_list
 forward_list
 transitions 
@@ -102,9 +103,10 @@ transitions
     arrays = arrays; 
     init = $3; 
     invs = $4;
-    unsafe = $5; 
-    forward = $6;
-    trans = $7 } }
+    cands = $5;
+    unsafe = $6; 
+    forward = $7;
+    trans = $8 } }
 ;
 
 declarations :
@@ -167,6 +169,15 @@ invariants:
 
 invariant:
   | INVARIANT LEFTPAR lident_plus RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+;
+
+candidates:
+  | { [] }
+  | candidate candidates { $1 :: $2 }
+;
+
+candidate:
+  | CANDIDATE LEFTPAR lident_plus RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
 ;
 
 unsafe:
