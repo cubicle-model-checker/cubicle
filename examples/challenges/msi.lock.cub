@@ -1,0 +1,146 @@
+(*
+  Extended MSI protocol
+
+  When a thread enters a critical section, the cache line is locked.
+  Waiting threads are notified by a message for the new value of the
+  cache line.
+*)
+
+(*
+ * Cache management.
+ *)
+
+(* Possible states for a cache line. *)
+type state = M | S | I | SLocked | MLocked | SWait | MWait
+
+(* Possible messages. *)
+type cstate = Data | Empty | Done
+
+(* Cache line. *)
+array L[proc] : state
+
+(*
+ * Critical section management.
+ *)
+
+(* Pending request for entering a critical section. *)
+array Want[proc] : bool
+
+(* Is a process in the critical section. *)
+array Crit[proc] : bool
+
+(* Scheduling. *)
+var Turn : proc
+
+(* Messages. *)
+array Chan[proc] : cstate
+
+(*
+ * Initialization.
+ *)
+
+(* At the beginning, all processes are outside of a critical section
+ * and all cache lines are invalid. *)
+init (z) { L[z] = I &&
+           Crit[z] = False && Want[z] = False &&
+           Chan[z] = Empty }
+
+(*
+ * Unsafe states.
+ *)
+
+(* Two cache lines cannot be modified at the same time. *)
+unsafe (x y) { L[x] = M && L[y] = M }
+
+(* One cache line is Modified and the other is Shared. *)
+unsafe (x y) { L[x] = M && L[y] = S }
+
+(* A cache line cannot be in Modified state and locked elsewhere. *)
+unsafe (x y) { L[x] = M && L[y] = SLocked }
+unsafe (x y) { L[x] = M && L[y] = MLocked }
+
+(* A cache line cannot be in Shared state and locked-Modified elsewhere. *)
+unsafe (x y) { L[x] = S && L[y] = MLocked }
+
+(* Critical sections. *)
+unsafe (x y) { Crit[x] = True && Crit[y] = True }
+
+(*
+ * Transitions.
+ *)
+
+(* A cache reads the data inside the line. *)
+transition read (i)
+requires { Crit[i] = False && L[i] = I &&
+           forall_other j. ( L[j] = M || L[j] = S || L[j] = I ) }
+{ L[j] := case | i = j : S | L[j] = M : S | L[j] = I : I | _ : S }
+
+(* A cache writes the data inside the line. *)
+transition write (i)
+requires { Crit[i] = False &&
+           L[i] = I &&
+           forall_other j. ( L[j] = M || L[j] = S || L[j] = I ) }
+{ L[j] := case | i = j : M | _ : I }
+
+(* A thread requests for entering the critical section. *)
+transition req (i)
+requires { Want[i] = False }
+{ Want[j] := case | i = j : True | _ : Want[j] }
+
+(* A thread receives the right for entering the critical section. *)
+transition enter (i)
+requires { Crit[i] = False && Want[i] = True && Turn = i }
+{ Crit[j] := case | i = j : True | _ : Crit[j] }
+
+(* A thread exit a critical section. *)
+transition exit_and_release (i)
+requires { Crit[i] = True &&
+           forall_other j. ( L[j] <> SWait && L[j] <> MWait ) }
+{ Turn := .;
+  Crit[j] := case | i = j : False | _ : Crit[j];
+  Want[j] := case | i = j : False | _ : Want[j];
+  L[j]    := case | i = j && L[i] = MLocked : M
+                  | i = j && L[i] = SLocked : S
+                  | _ : L[j] }  
+
+transition exit_and_forward (i j)
+requires { Crit[i] = True && Want[j] = True &&
+           L[j] <> M && L[j] <> S && L[j] <> I }
+{ Turn := .;
+  Crit[k] := case | i = k : False | _ : Crit[k];
+  Want[k] := case | i = k : False | _ : Want[k];
+  Chan[k] := case | j = k && L[j] = SWait : Data
+                  | j = k && L[j] = MWait : Done
+                  | _ : Chan[k];
+  L[k]    := case | i = k : I | _ : L[k] }
+
+(* Read/writes inside critical sections. *)
+
+(* A cache reads the data in the line inside the critical section. *)
+transition read_on_acquire (i)
+requires { Crit[i] = True && L[i] = I && forall_other j. L[j] <> MLocked }
+{ L[j] := case | j = i : SLocked | L[j] = M : S | _ : L[j] }
+
+transition wait_on_read (i j)
+requires { Crit[i] = True && L[i] = I && L[j] = MLocked }
+{ L[k] := case | i = k : SWait | _ : L[k] }
+
+transition read_on_forward (i)
+requires { Crit[i] = True && L[i] = SWait && Chan[i] = Data }
+{ L[j] := case | i = j : SLocked | _ : L[j];
+  Chan[j] := case | i = j : Empty | _ : Chan[j] }
+
+(* A cache writes the data in the line inside the critical section. *)
+transition write_on_acquire (i)
+requires { Crit[i] = True && L[i] = I &&
+           forall_other j. ( L[j] <> MLocked && L[j] <> SLocked ) }
+{ L[j] := case | i = j : MLocked | L[j] = M : I | L[j] = S : I | _ : L[j] }
+
+transition wait_on_write (i j)
+requires { Crit[i] = True && L[i] = I && L[j] = SLocked }
+{ L[k] := case | i = k : MWait | _ : L[k] }
+
+transition write_on_forward (i)
+requires { Crit[i] = True && L[i] = MWait && Chan[i] = Done }
+{ L[j] := case | i = j : MLocked |  _ : L[j];
+  Chan[j] := case | i = j : Empty | _ : Chan[j] }
