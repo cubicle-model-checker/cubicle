@@ -139,7 +139,8 @@ let add_constant c i cs =
 let is_int_const = function
   | ConstInt _ -> true
   | ConstReal _ -> false
-  | ConstName n -> Hstring.equal (snd (Smt.Typing.find n)) Smt.Typing.type_int
+  | ConstName n -> 
+    Hstring.equal (snd (Smt.Symbol.find n)) Smt.Type.type_int
 
 let add_constants cs1 cs2 =
   let m = MConst.fold add_constant cs2 cs1 in

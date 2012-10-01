@@ -30,86 +30,100 @@ type error =
 exception Error of error
 
 (** Typing of terms *)
-module Typing : sig
+module Type : sig
 
   (** {2 Builtin types } *)
 
-  val type_int : Hstring.t
+  type t = Hstring.t
+
+  val type_int : t
   (** The type of integers *)
 
-  val type_real : Hstring.t
+  val type_real : t
   (** The type of reals *)
 
-  val type_bool : Hstring.t
+  val type_bool : t
   (** The type of booleans *)
 
-  val type_proc : Hstring.t
+  val type_proc : t
   (** The type processes (identifiers) *)
-    
-  val declare_type : Hstring.t * Hstring.t list -> unit
+
+  val declare : Hstring.t -> Hstring.t list -> unit
   (** {ul {- [declare_type (n, cstrs)] declares a new enumerated data-type with
       name [n] and constructors [cstrs].}
       {- [declare_type (n, [])] declares a new abstract type with name [n].}}*)
 
-  val declare_name : Hstring.t -> Hstring.t list -> Hstring.t -> unit
-  (** [declare_name s in out] declares a new symbol with type [in -> out] *)
+  val all_constructors : unit -> Hstring.t list
+  (** [all_constructors ()] returns a list of all the defined constructors. *)
+
+end
 
 
-  (** {2 Variants }
+(** {2 Symbols }
+    
+*)
+
+module Symbol : sig
+    
+  type t = Hstring.t
+    
+  val declare : Hstring.t -> t list -> t -> unit
+  (** [declare_name s [arg1;...;argn] out] declares a new function
+      symbol with type [ (arg1, ... , argn) -> out] *)
+    
+  (** {2 Querying about types } *)
+    
+  val find : t -> Type.t list * Type.t
+    (** [find x] returns the type of x. *)
+    
+  val has_abstract_type : t -> bool
+    (** [has_abstract_type x] is [true] if the type of x is abstract. *)
+    
+  val has_type_proc : t -> bool
+  (** [has_type_proc x] is [true] if x has the type of a process
+      identifier. *)
+        
+  val declared : t -> bool
+  (** [declared x] is [true] if [x] is already declared. *)
       
-      The types of symbols (when they are enumerated data types) can be refined
-      to substypes of their original type (i.e. a subset of their constructors).
-  *)
+end
 
-  module Variant : sig
+(** {2 Variants }
+      
+    The types of symbols (when they are enumerated data types) can be refined
+    to substypes of their original type (i.e. a subset of their constructors).
+*)
+  
+module Variant : sig
 
-    val init : (Hstring.t * Hstring.t) list -> unit
-    (** [init l] where [l] is a list of pairs [(s,ty)] initializes the
-        constructors of each [s] to its original type [ty].
+  val init : (Symbol.t * Type.t) list -> unit
+  (** [init l] where [l] is a list of pairs [(s,ty)] initializes the
+      constructors of each [s] to its original type [ty].
+      
+      This function must be called with a list of all symbols before
+      attempting to refine the types. *)
 
-        This function must be called with a list of all symbols before
-        attempting to refine the types. *)
+  val close : unit -> unit
+  (** [close ()] will compute the smallest type possible for each symbol.
 
-    val close : unit -> unit
-    (** [close ()] will compute the smallest type possible for each symbol.
+      This function must be called when all information has been added.*)
 
-        This function must be called when all information has been added.*)
-
-    val assign_constr : Hstring.t -> Hstring.t -> unit
+  val assign_constr : Symbol.t -> Hstring.t -> unit
     (** [assign_constr s cstr] will add the constructor cstr to the refined
         type of s *)
 
-    val assign_var : Hstring.t -> Hstring.t -> unit
+  val assign_var : Hstring.t -> Hstring.t -> unit
     (** [assign_var x y] will add the constraint that the type of [y] is a
         subtype of [x] (use this function when [x := y] appear in your 
         program *)
 
-    val print : unit -> unit
+  val print : unit -> unit
     (** [print ()] will output the computed refined types on std_err. This
         function is here only for debugging purposes. Use it afer [close ()].*)
 
-    val get_variants : Hstring.t -> Hstring.HSet.t
-    (** [get_variants s] returns a set of constructors, which is the refined
-        type of [s].*)
-
-  end
-
-  (** {2 Querying about types } *)
-
-  val find : Hstring.t -> Hstring.t list * Hstring.t
-  (** [find x] returns the type of x. *)
-
-  val has_abstract_type : Hstring.t -> bool
-  (** [has_abstract_type x] is [true] if the type of x is abstract. *)
-
-  val has_type_proc : Hstring.t -> bool
-  (** [has_type_proc x] is [true] if x has the type of a process identifier. *)
-
-  val all_constructors : unit -> Hstring.t list
-  (** [all_constructors ()] returns a list of all the defined constructors. *)
-
-  val declared : Hstring.t -> bool
-  (** [declared x] is [true] if [x] is already declared. *)
+  val get_variants : Symbol.t -> Hstring.HSet.t
+  (** [get_variants s] returns a set of constructors, which is the refined
+      type of [s].*)
 
 end
 

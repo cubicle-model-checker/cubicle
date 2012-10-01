@@ -86,7 +86,7 @@ let fresh_nondet =
   fun (args, ret) -> 
     incr cpt; 
     let s = H.make ("*"^(string_of_int !cpt)) in
-    Smt.Typing.declare_name s args ret;
+    Smt.Symbol.declare s args ret;
     s
 
 let rec find_update a i si = function
@@ -105,7 +105,7 @@ let rec find_assign tr = function
   | Elem (x, sx) -> 
       let t = 
 	if H.list_mem x tr.tr_nondets then 
-	  Elem (fresh_nondet (Smt.Typing.find x), sx)
+	  Elem (fresh_nondet (Smt.Symbol.find x), sx)
 	else 
 	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
       in 
@@ -134,7 +134,7 @@ let rec find_assign tr = function
   | Access (a, i, si) -> 
       let ni, sni = 
 	if H.list_mem i tr.tr_nondets then 
-	  fresh_nondet (Smt.Typing.find i), si
+	  fresh_nondet (Smt.Symbol.find i), si
 	else 
 	  try (match H.list_assoc i tr.tr_assigns with
 		 | Elem (ni, sni) -> ni, sni

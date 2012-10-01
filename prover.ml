@@ -25,7 +25,7 @@ module SMT = Smt.Make (struct end)
 
 let proc_terms =
   List.iter 
-    (fun x -> Smt.Typing.declare_name x [] Smt.Typing.type_proc) proc_vars;
+    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) proc_vars;
   List.map (fun x -> T.make_app x []) proc_vars
 
 let distinct_vars = 
@@ -68,14 +68,14 @@ let make_const = function
   | ConstName n -> T.make_app n []
 
 let ty_const = function
-  | ConstInt _ -> Smt.Typing.type_int
-  | ConstReal _ -> Smt.Typing.type_real
-  | ConstName n -> snd (Smt.Typing.find n)
+  | ConstInt _ -> Smt.Type.type_int
+  | ConstReal _ -> Smt.Type.type_real
+  | ConstName n -> snd (Smt.Symbol.find n)
 
 let rec mult_const tc c i =
  match i with
   | 0 -> 
-    if ty_const c = Smt.Typing.type_int then T.make_int (Num.Int 0)
+    if ty_const c = Smt.Type.type_int then T.make_int (Num.Int 0)
     else T.make_real (Num.Int 0)
   | 1 -> tc
   | -1 -> T.make_arith T.Minus (mult_const tc c 0) tc

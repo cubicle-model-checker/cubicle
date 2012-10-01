@@ -120,54 +120,54 @@ let rec term args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
       (match c with
-	| ConstInt _ -> [], Smt.Typing.type_int
-	| ConstReal _ -> [], Smt.Typing.type_real
+	| ConstInt _ -> [], Smt.Type.type_int
+	| ConstReal _ -> [], Smt.Type.type_real
 	| ConstName x -> 
-	    try Smt.Typing.find x with Not_found -> error (UnknownName x))
+	    try Smt.Symbol.find x with Not_found -> error (UnknownName x))
   | Elem (e, Var) ->
-      if Hstring.list_mem e args then [], Smt.Typing.type_proc
+      if Hstring.list_mem e args then [], Smt.Type.type_proc
       else begin 
-	try Smt.Typing.find e with Not_found -> error (UnknownName e)
+	try Smt.Symbol.find e with Not_found -> error (UnknownName e)
       end
-  | Elem (e, _) -> Smt.Typing.find e
+  | Elem (e, _) -> Smt.Symbol.find e
   | Arith (x, _) ->
       begin
 	let args, tx = term args x in
-	if not (Hstring.equal tx Smt.Typing.type_int) 
-	  && not (Hstring.equal tx Smt.Typing.type_real) then 
+	if not (Hstring.equal tx Smt.Type.type_int) 
+	  && not (Hstring.equal tx Smt.Type.type_real) then 
 	  error (MustBeNum x);
 	args, tx
       end
   | Access(a, i, _) -> 
       let args_a, ty_a = 
-	try Smt.Typing.find a with Not_found -> error (UnknownArray a) in
+	try Smt.Symbol.find a with Not_found -> error (UnknownArray a) in
       let ty_i =
-	if Hstring.list_mem i args then Smt.Typing.type_proc
+	if Hstring.list_mem i args then Smt.Type.type_proc
 	else 
 	  try 
-	    let ia, tyi = Smt.Typing.find i in
+	    let ia, tyi = Smt.Symbol.find i in
 	    if ia <> [] then error (MustBeOfTypeProc i);
 	    tyi
 	  with Not_found -> error (UnknownName i) 
       in
       if args_a = [] then error (MustBeAnArray a);
-      if not (Hstring.equal ty_i Smt.Typing.type_proc) then
+      if not (Hstring.equal ty_i Smt.Type.type_proc) then
 	error (MustBeOfTypeProc i);	    
       [], ty_a
 
 let assignment ?(init_variant=false) g x (_, ty) = 
-  if ty = Smt.Typing.type_proc 
-    || ty = Smt.Typing.type_bool
-    || ty = Smt.Typing.type_int
+  if ty = Smt.Type.type_proc 
+    || ty = Smt.Type.type_bool
+    || ty = Smt.Type.type_int
   then ()
   else
     match x with
       | Elem (n, Constr) -> 
-	  Smt.Typing.Variant.assign_constr g n
+	  Smt.Variant.assign_constr g n
       | Elem (n, _) | Access (n, _, _) -> 
-	  Smt.Typing.Variant.assign_var g n;
+	  Smt.Variant.assign_var g n;
 	  if init_variant then 
-	    Smt.Typing.Variant.assign_var n g
+	    Smt.Variant.assign_var n g
       | _ -> ()
 
 let atom init_variant args = function
@@ -199,9 +199,9 @@ let nondets l =
   List.iter 
     (fun g -> 
        try
-	 let args_g, ty_g = Smt.Typing.find g in
+	 let args_g, ty_g = Smt.Symbol.find g in
 	 if args_g <> [] then error (NotATerm g);
-	 (* if not (Hstring.equal ty_g Smt.Typing.type_proc) then  *)
+	 (* if not (Hstring.equal ty_g Smt.Type.type_proc) then  *)
 	 (*   error (MustBeOfTypeProc g) *)
        with Not_found -> error (UnknownGlobal g)) l
 
@@ -211,7 +211,7 @@ let assigns args =
     (fun (g, x) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g);
        let ty_g = 
-	 try Smt.Typing.find g with Not_found -> error (UnknownGlobal g) in
+	 try Smt.Symbol.find g with Not_found -> error (UnknownGlobal g) in
        let ty_x = term args x in
        unify ty_x ty_g;
        assignment g x ty_x;
@@ -232,7 +232,7 @@ let updates args =
        if Hstring.list_mem a !dv then error (DuplicateUpdate a);
        if Hstring.list_mem j args then error (ClashParam j);
        let args_a, ty_a = 
-	 try Smt.Typing.find a with Not_found -> error (UnknownArray a)
+	 try Smt.Symbol.find a with Not_found -> error (UnknownArray a)
        in       
        if args_a = [] then error (MustBeAnArray a);
        dv := a ::!dv;
@@ -251,42 +251,42 @@ let transitions =
        nondets t.tr_nondets)
 
 let init_global_env s = 
-  List.iter Smt.Typing.declare_type s.type_defs;
+  List.iter (fun (x,y) -> Smt.Type.declare x y) s.type_defs;
   let l = ref [] in
   List.iter 
     (fun (n, t) -> 
-       Smt.Typing.declare_name n [] t;
+       Smt.Symbol.declare n [] t;
        l := (n, t)::!l) s.consts;
   List.iter 
     (fun (n, t) -> 
-       Smt.Typing.declare_name n [] t;
+       Smt.Symbol.declare n [] t;
        l := (n, t)::!l) s.globals;
   List.iter 
     (fun (n, (arg, ret)) -> 
-       Smt.Typing.declare_name n [arg] ret;
+       Smt.Symbol.declare n [arg] ret;
        l := (n, ret)::!l) s.arrays;
   !l
 
 
 let init_proc () = 
   List.iter 
-    (fun n -> Smt.Typing.declare_name n [] Smt.Typing.type_proc) proc_vars
+    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) proc_vars
 
 let system s = 
   try
     let l = init_global_env s in
     init s.init;
-    Smt.Typing.Variant.init l;
+    Smt.Variant.init l;
     List.iter unsafe s.unsafe;
     List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
     transitions s.trans;
-    Smt.Typing.Variant.close ();
-    if Options.debug then Smt.Typing.Variant.print ();
+    Smt.Variant.close ();
+    if Options.debug then Smt.Variant.print ();
     
     let glob_proc = 
       List.fold_left 
 	(fun acc (n, t) -> 
-	   if Hstring.equal t Smt.Typing.type_proc then n::acc else acc)
+	   if Hstring.equal t Smt.Type.type_proc then n::acc else acc)
 	[] s.globals
     in
 

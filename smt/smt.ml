@@ -24,12 +24,14 @@ exception Error of error
 module H = Hstring.H
 module HSet = Hstring.HSet
 
-module Typing = struct
+let decl_types = H.create 17
+let decl_symbs = H.create 17
 
-  type t = Ty.t
+module Type = struct
 
-  let decl_types = H.create 17
-  let decl_symbs = H.create 17
+  type t = Hstring.t
+
+  let equal = Hstring.equal
 
   let type_int = 
     let tint = Hstring.make "int" in
@@ -56,28 +58,33 @@ module Typing = struct
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
 
+  let declare t constrs = 
+    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
+    match constrs with
+      | [] -> 
+	  H.add decl_types t (Ty.Tabstract t)
+      | _ -> 
+	  let ty = Ty.Tsum (t, constrs) in
+	  H.add decl_types t ty;
+	  List.iter (fun c -> declare_constructor t c) constrs
+
   let all_constructors () =
     H.fold (fun _ c acc -> match c with
       | Symbols.Name (h, Symbols.Constructor), _, _ -> h :: acc
       | _ -> acc
     ) decl_symbs [Hstring.make "True"; Hstring.make "False"]
     
-      
-  let declare_type (n, l) = 
-    if H.mem decl_types n then raise (Error (DuplicateTypeName n));
-    match l with
-      | [] -> 
-	  H.add decl_types n (Ty.Tabstract n)
-      | _ -> 
-	  let ty = Ty.Tsum (n, l) in
-	  H.add decl_types n ty;
-	  List.iter (fun c -> declare_constructor n c) l
+end
 
-  let declare_name f args ret  = 
+module Symbol = struct
+    
+  type t = Hstring.t
+
+  let declare f args ret  = 
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
       (fun t -> 
-	 if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
+	if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
@@ -91,121 +98,123 @@ module Typing = struct
 	eprintf "%a (=?%b) -> %a@." Hstring.print hs 
 	  (Hstring.compare hs s = 0)
 	  Symbols.print sy)
-	decl_symbs;
-    end;
-    res
+	  decl_symbs;
+      end;
+      res
 
-  module Variant = struct
+  let not_builtin ty = Hstring.equal ty Type.type_proc ||
+    not (Hstring.equal ty Type.type_int || Hstring.equal ty Type.type_real ||
+	   Hstring.equal ty Type.type_bool || Hstring.equal ty Type.type_proc)
     
-    let constructors = H.create 17
-    let assignments = H.create 17
-
-    let find t x = try H.find t x with Not_found -> HSet.empty
-
-    let add t x v = 
-      let s = find t x in
-      H.replace t x (HSet.add v s)
-
-    let assign_constr = add constructors
-
-    let assign_var x y = 
-      if not (Hstring.equal x y) then
-	add assignments x y
-
-    let rec compute () = 
-      let flag = ref false in
-      let visited = ref HSet.empty in
-      let rec dfs x s = 
-	if not (HSet.mem x !visited) then
-	  begin
-	    visited := HSet.add x !visited;
-	    HSet.iter 
-	      (fun y -> 
-		 let c_x = find constructors x in
-		 let c_y = find constructors y in
-		 let c = HSet.union c_x c_y in
-		 if not (HSet.equal c c_x) then
-		   begin
-		     H.replace constructors x c;
-		     flag := true
-		   end;
-		 dfs y (find assignments y)
-	      ) s
-	  end
-      in
-      H.iter dfs assignments;
-      if !flag then compute ()
-      
-    let hset_print fmt s = 
-      HSet.iter (fun c -> Format.eprintf "%a, " Hstring.print c) s
-
-    let print () = 
-      H.iter 
-	(fun x c -> 
-	   Format.eprintf "%a = {%a}@." Hstring.print x hset_print c) 
-	constructors
-
-
-    let get_variants = H.find constructors
- 
-    let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
-
-    let init l = 
-      compute ();
-      List.iter 
-	(fun (x, nty) -> 
-	   if not (H.mem constructors x) then
-	     let ty = H.find decl_types nty in
-	     match ty with
-	       | Ty.Tsum (_, l) ->
-		   H.add constructors x (set_of_list l)
-	       | _ -> ()) l;
-      H.clear assignments
-
-    let update_decl_types s = 
-      let nty = ref "" in
-      let l = ref [] in
-      HSet.iter 
-	(fun x -> 
-	   l := x :: !l; 
-	   let vx = Hstring.view x in 
-	   nty := if !nty = "" then vx else !nty ^ "|" ^ vx) s;
-      let nty = Hstring.make !nty in
-      let ty = Ty.Tsum (nty, List.rev !l) in
-      H.replace decl_types nty ty;
-      nty
-
-    let close () = 
-      compute ();
-      H.iter 
-	(fun x s -> 
-	   let nty = update_decl_types s in
-	   let sy, args, _ = H.find decl_symbs x in
-	   H.replace decl_symbs x (sy, args, nty))
-	constructors
-      
-  end
-    
-  let not_builtin ty = Hstring.equal ty type_proc ||
-    not (Hstring.equal ty type_int || Hstring.equal ty type_real ||
-	 Hstring.equal ty type_bool || Hstring.equal ty type_proc)
-
   let has_abstract_type s =
-    not_builtin (snd (find s)) && 
-    not (H.mem Variant.constructors s)
-
+    let _, ret = find s in
+    match H.find decl_types ret with
+      | Ty.Tabstract _ -> true
+      | _ -> false
+     
   let has_type_proc s =
-    Hstring.equal (snd (find s)) type_proc
-
+    Hstring.equal (snd (find s)) Type.type_proc
+      
   let _ = 
     H.add decl_symbs (Hstring.make "True") 
       (Symbols.True, [], Hstring.make "bool");
     H.add decl_symbs (Hstring.make "False") 
       (Symbols.False, [], Hstring.make "bool");
-
     
 end
 
+
+module Variant = struct
+    
+  let constructors = H.create 17
+  let assignments = H.create 17
+
+  let find t x = try H.find t x with Not_found -> HSet.empty
+    
+  let add t x v = 
+    let s = find t x in
+    H.replace t x (HSet.add v s)
+      
+  let assign_constr = add constructors
+    
+  let assign_var x y = 
+    if not (Hstring.equal x y) then
+      add assignments x y
+	
+  let rec compute () = 
+    let flag = ref false in
+    let visited = ref HSet.empty in
+    let rec dfs x s = 
+      if not (HSet.mem x !visited) then
+	begin
+	  visited := HSet.add x !visited;
+	  HSet.iter 
+	    (fun y -> 
+	      let c_x = find constructors x in
+	      let c_y = find constructors y in
+	      let c = HSet.union c_x c_y in
+	      if not (HSet.equal c c_x) then
+		begin
+		     H.replace constructors x c;
+		     flag := true
+		end;
+	      dfs y (find assignments y)
+	    ) s
+	end
+    in
+    H.iter dfs assignments;
+    if !flag then compute ()
+      
+  let hset_print fmt s = 
+    HSet.iter (fun c -> Format.eprintf "%a, " Hstring.print c) s
+      
+  let print () = 
+      H.iter 
+	(fun x c -> 
+	  Format.eprintf "%a = {%a}@." Hstring.print x hset_print c) 
+	constructors
+	
+	
+  let get_variants = H.find constructors
+    
+  let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
+    
+  let init l = 
+    compute ();
+    List.iter 
+      (fun (x, nty) -> 
+	if not (H.mem constructors x) then
+	  let ty = H.find decl_types nty in
+	  match ty with
+	    | Ty.Tsum (_, l) ->
+	      H.add constructors x (set_of_list l)
+	    | _ -> ()) l;
+    H.clear assignments
+
+  let update_decl_types s = 
+    let nty = ref "" in
+    let l = ref [] in
+    HSet.iter 
+      (fun x -> 
+	l := x :: !l; 
+	let vx = Hstring.view x in 
+	nty := if !nty = "" then vx else !nty ^ "|" ^ vx) s;
+    let nty = Hstring.make !nty in
+    let ty = Ty.Tsum (nty, List.rev !l) in
+    H.replace decl_types nty ty;
+    nty
+
+  let close () = 
+    compute ();
+    H.iter 
+      (fun x s -> 
+	let nty = update_decl_types s in
+	let sy, args, _ = H.find decl_symbs x in
+	H.replace decl_symbs x (sy, args, nty))
+      constructors
+      
+end
+  
 module Term = struct
 
   type t = Term.t
@@ -217,8 +226,8 @@ module Term = struct
 
   let make_app s l =
     try
-      let (sb, _, nty) = H.find Typing.decl_symbs s in
-      let ty = H.find Typing.decl_types nty in
+      let (sb, _, nty) = H.find decl_symbs s in
+      let ty = H.find decl_types nty in
       Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
 

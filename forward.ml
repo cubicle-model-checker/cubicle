@@ -352,13 +352,13 @@ module MH = Map.Make (Hstring)
 let rec type_of_term = function
   | Const m ->
       MConst.fold (fun c _ _ -> match c with
-	| ConstReal _ -> Smt.Typing.type_real
-	| ConstInt _ -> Smt.Typing.type_int
-	| ConstName x -> snd (Smt.Typing.find (unprime_h x))
-      ) m Smt.Typing.type_int
+	| ConstReal _ -> Smt.Type.type_real
+	| ConstInt _ -> Smt.Type.type_int
+	| ConstName x -> snd (Smt.Symbol.find (unprime_h x))
+      ) m Smt.Type.type_int
   | Elem (x, _) | Access (x, _, _) -> 
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      snd (Smt.Typing.find x)
+      snd (Smt.Symbol.find x)
   | Arith (t, _) -> type_of_term t
 
 let rec type_of_atom = function
@@ -387,8 +387,8 @@ let elim_prime_type1 sa =
   mtype SAtom.empty
 
 let is_finite_type ty = 
-  try ignore(Smt.Typing.Variant.get_variants ty); true
-  with Not_found -> Hstring.equal ty Smt.Typing.type_bool
+  try ignore(Smt.Variant.get_variants ty); true
+  with Not_found -> Hstring.equal ty Smt.Type.type_bool
 
 let elim_prime_type2 init sa =
   let i_mtype, i_other = partition_by_type init in
@@ -732,7 +732,7 @@ module MA = Map.Make (Atom)
 
 let lit_abstract = function
   | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
-      Smt.Typing.has_abstract_type x
+      Smt.Symbol.has_abstract_type x
   | _ -> false
 
 let add_compagnions_from_node all_var_terms sa =
@@ -947,9 +947,9 @@ let compagnions_values compagnions uncs =
 
 let get_variants x =
   (* add missing constructors for bool *)
-  if Hstring.equal (snd (Smt.Typing.find x)) Smt.Typing.type_bool then
+  if Hstring.equal (snd (Smt.Symbol.find x)) Smt.Type.type_bool then
     H.HSet.add htrue (H.HSet.singleton hfalse)
-  else Smt.Typing.Variant.get_variants x
+  else Smt.Variant.get_variants x
 
 
 let variable_term_has_value v t =
@@ -1015,7 +1015,7 @@ let useless_candidate sa =
 
     | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      Smt.Typing.has_type_proc x
+      Smt.Symbol.has_type_proc x
 
     | _ -> false) sa
   (*(* || List.length (args_of_atoms sa) > 1 *)*)

@@ -421,7 +421,7 @@ type t_system = {
 let declared_term x =
   match x with
     | Elem (_, Var) -> true
-    | Elem (s, _) | Access (s, _, _) -> Smt.Typing.declared s
+    | Elem (s, _) | Access (s, _, _) -> Smt.Symbol.declared s
     | _ -> true
 
 let declared_terms ar =

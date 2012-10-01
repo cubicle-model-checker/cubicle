@@ -91,7 +91,7 @@ let state_to_cube env st =
     
 
 let all_constr_terms () =
-  List.rev_map (fun x -> Elem (x, Constr)) (Smt.Typing.all_constructors ())
+  List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
 
 let proc_terms =
   List.map (fun x -> Elem (x, Var))
