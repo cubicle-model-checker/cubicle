@@ -70,7 +70,7 @@ let make_const = function
 let ty_const = function
   | ConstInt _ -> Smt.Type.type_int
   | ConstReal _ -> Smt.Type.type_real
-  | ConstName n -> snd (Smt.Symbol.find n)
+  | ConstName n -> snd (Smt.Symbol.type_of n)
 
 let rec mult_const tc c i =
  match i with

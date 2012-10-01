@@ -18,8 +18,6 @@ module S =
 		       let hash = Hashtbl.hash 
 		       let equal = (=)     end)
 
-module TimeHS = Timer.Make (struct end)
-
 module HS = struct
 
   type t = string Hashcons.hash_consed
@@ -79,6 +77,7 @@ module H = Hashtbl.Make(HS)
 module HSet = Set.Make(HS)
 
 module HMap = Map.Make(HS)
+
 (* struct *)
 (*   include Hashtbl.Make(HS) *)
 

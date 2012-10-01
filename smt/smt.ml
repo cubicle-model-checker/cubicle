@@ -88,7 +88,7 @@ module Symbol = struct
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
-  let find s = let _, args, ret = H.find decl_symbs s in args, ret
+  let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
   let declared s = 
     let res = H.mem decl_symbs s in
@@ -107,13 +107,13 @@ module Symbol = struct
 	   Hstring.equal ty Type.type_bool || Hstring.equal ty Type.type_proc)
     
   let has_abstract_type s =
-    let _, ret = find s in
+    let _, ret = type_of s in
     match H.find decl_types ret with
       | Ty.Tabstract _ -> true
       | _ -> false
      
   let has_type_proc s =
-    Hstring.equal (snd (find s)) Type.type_proc
+    Hstring.equal (snd (type_of s)) Type.type_proc
       
   let _ = 
     H.add decl_symbs (Hstring.make "True") 

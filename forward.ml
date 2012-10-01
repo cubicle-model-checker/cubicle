@@ -354,11 +354,11 @@ let rec type_of_term = function
       MConst.fold (fun c _ _ -> match c with
 	| ConstReal _ -> Smt.Type.type_real
 	| ConstInt _ -> Smt.Type.type_int
-	| ConstName x -> snd (Smt.Symbol.find (unprime_h x))
+	| ConstName x -> snd (Smt.Symbol.type_of (unprime_h x))
       ) m Smt.Type.type_int
   | Elem (x, _) | Access (x, _, _) -> 
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      snd (Smt.Symbol.find x)
+      snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
 
 let rec type_of_atom = function
@@ -947,7 +947,7 @@ let compagnions_values compagnions uncs =
 
 let get_variants x =
   (* add missing constructors for bool *)
-  if Hstring.equal (snd (Smt.Symbol.find x)) Smt.Type.type_bool then
+  if Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_bool then
     H.HSet.add htrue (H.HSet.singleton hfalse)
   else Smt.Variant.get_variants x
 

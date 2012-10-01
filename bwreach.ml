@@ -105,7 +105,7 @@ let rec find_assign tr = function
   | Elem (x, sx) -> 
       let t = 
 	if H.list_mem x tr.tr_nondets then 
-	  Elem (fresh_nondet (Smt.Symbol.find x), sx)
+	  Elem (fresh_nondet (Smt.Symbol.type_of x), sx)
 	else 
 	  try H.list_assoc x tr.tr_assigns with Not_found -> Elem (x, sx)
       in 
@@ -134,7 +134,7 @@ let rec find_assign tr = function
   | Access (a, i, si) -> 
       let ni, sni = 
 	if H.list_mem i tr.tr_nondets then 
-	  fresh_nondet (Smt.Symbol.find i), si
+	  fresh_nondet (Smt.Symbol.type_of i), si
 	else 
 	  try (match H.list_assoc i tr.tr_assigns with
 		 | Elem (ni, sni) -> ni, sni

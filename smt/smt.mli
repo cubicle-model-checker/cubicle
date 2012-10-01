@@ -19,22 +19,29 @@
     - Arithmetic (linear, non-linear, integer, reals)
     - Enumerated data-types
 
- *)
+    This API makes heavy use of hash-consed strings. Please take a moment to
+    look at {! Hstring}.
+*)
 
-type error = 
-  | DuplicateTypeName of Hstring.t
-  | DuplicateSymb of Hstring.t
-  | UnknownType of Hstring.t
-  | UnknownSymb of Hstring.t
+(** {2 Error handling } *)
+
+type error =
+  | DuplicateTypeName of Hstring.t (** raised when a type is already declared *)
+  | DuplicateSymb of Hstring.t (** raised when a symbol is already declared *)
+  | UnknownType of Hstring.t (** raised when the given type is not declared *)
+  | UnknownSymb of Hstring.t (** raised when the given symbol is not declared *)
 
 exception Error of error
 
-(** Typing of terms *)
+(** {2 Typing } *)
+
+(** {3 Typing } *)
 module Type : sig
 
-  (** {2 Builtin types } *)
-
   type t = Hstring.t
+  (** The type of types in Alt-Ergo light *)
+
+  (** {4 Builtin types } *)
 
   val type_int : t
   (** The type of integers *)
@@ -48,10 +55,12 @@ module Type : sig
   val type_proc : t
   (** The type processes (identifiers) *)
 
+  (** {4 Declaring new types } *)
+
   val declare : Hstring.t -> Hstring.t list -> unit
-  (** {ul {- [declare_type (n, cstrs)] declares a new enumerated data-type with
+  (** {ul {- [declare n cstrs] declares a new enumerated data-type with
       name [n] and constructors [cstrs].}
-      {- [declare_type (n, [])] declares a new abstract type with name [n].}}*)
+      {- [declare n []] declares a new abstract type with name [n].}}*)
 
   val all_constructors : unit -> Hstring.t list
   (** [all_constructors ()] returns a list of all the defined constructors. *)
@@ -59,22 +68,18 @@ module Type : sig
 end
 
 
-(** {2 Symbols }
-    
-*)
-
+(** {3 Function symbols} *)
 module Symbol : sig
     
   type t = Hstring.t
+  (** The type of function symbols *)
     
   val declare : Hstring.t -> t list -> t -> unit
-  (** [declare_name s [arg1;...;argn] out] declares a new function
-      symbol with type [ (arg1, ... , argn) -> out] *)
+  (** [declare s [arg_1; ... ; arg_n] out] declares a new function
+      symbol with type [ (arg_1, ... , arg_n) -> out] *)
     
-  (** {2 Querying about types } *)
-    
-  val find : t -> Type.t list * Type.t
-    (** [find x] returns the type of x. *)
+  val type_of : t -> Type.t list * Type.t
+    (** [type_of x] returns the type of x. *)
     
   val has_abstract_type : t -> bool
     (** [has_abstract_type x] is [true] if the type of x is abstract. *)
@@ -88,17 +93,16 @@ module Symbol : sig
       
 end
 
-(** {2 Variants }
-      
+(** {3 Variants}
+   
     The types of symbols (when they are enumerated data types) can be refined
     to substypes of their original type (i.e. a subset of their constructors).
 *)
-  
 module Variant : sig
 
   val init : (Symbol.t * Type.t) list -> unit
-  (** [init l] where [l] is a list of pairs [(s,ty)] initializes the
-      constructors of each [s] to its original type [ty].
+  (** [init l] where [l] is a list of pairs [(s, ty)] initializes the
+      type (and associated constructors) of each [s] to its original type [ty].
       
       This function must be called with a list of all symbols before
       attempting to refine the types. *)
@@ -109,8 +113,8 @@ module Variant : sig
       This function must be called when all information has been added.*)
 
   val assign_constr : Symbol.t -> Hstring.t -> unit
-    (** [assign_constr s cstr] will add the constructor cstr to the refined
-        type of s *)
+    (** [assign_constr s cstr] will add the constraint that the constructor 
+        [cstr] must be in the type of [s] *)
 
   val assign_var : Hstring.t -> Hstring.t -> unit
     (** [assign_var x y] will add the constraint that the type of [y] is a
@@ -127,8 +131,10 @@ module Variant : sig
 
 end
 
-(** Building terms *)
+(** {2 Building terms} *)
+
 module Term : sig
+
   type t
   (** The type of terms *)
 
@@ -168,7 +174,8 @@ module Term : sig
 end
 
 
-(** Building formulas *)
+(** {2 Building formulas} *)
+
 module Formula : sig
 
   (** The type of comparators: *)
@@ -190,13 +197,14 @@ module Formula : sig
     | Lit of Literal.LT.t  
     | Comb of combinator * ground list
 
+  (**/**)
   (** The type of lemmas or universally quantified formulas.
       {b Not implemented }*)
   type lemma = Hstring.t list * ground
 
   (** The type of formulas. {b Not implemented } *)
   type t = Ground of ground | Lemma of lemma
-
+  (**/**)
 
   val f_true : ground
   (** The formula which represents [true]*)
@@ -205,30 +213,28 @@ module Formula : sig
   (** The formula which represents [false]*)
 
   val make_lit : comparator -> Term.t list -> ground
-  (** [make_lit cmp [t1; t2]] creates the litteral [(t1 <cmp> t2)]. *)
+  (** [make_lit cmp [t1; t2]] creates the literal [(t1 <cmp> t2)]. *)
 
   val make : combinator -> ground list -> ground
-  (** [make_lit cmb [f_1; ...; f_n]] creates the formula
-      [(f_1 <cmb> ... <cmb> f_n)]. *)
+  (** [make cmb [f_1; ...; f_n]] creates the formula
+      [(f_1 <cmb> ... <cmb> f_n)].*)
 
   val make_cnf : ground -> Literal.LT.t list list
   (** [make_cnf f] returns a conjunctive normal form of [f] under the form: a
       list (which is a conjunction) of lists (which are disjunctions) of
-      litterals. *)
+      literals. *)
 
   val print : Format.formatter -> t -> unit
   (** [print fmt f] prints the formula on the formatter [fmt].*)
 
 end
 
-(* SMT solver interface *)
+(** {2 The SMT solver} *)
 
 exception Unsat of int list
-(** The exception raised by {! Smt.Solver.check} when the formula is
-    unsatisfiable. *)
+(** The exception raised by {! Smt.Solver.check} and {! Smt.Solver.assume} when
+    the formula is unsatisfiable. *)
 
-
-(** The SMT solver *)
 module type Solver = sig
 
   (** This SMT solver is imperative in the sense that it maintains a global
@@ -238,8 +244,8 @@ module type Solver = sig
   (** {2 Profiling functions} *)
 
   val get_time : unit -> float
-  (** [get_time ()] returns the cumulated time spent in the solver in seconds.
-  *)
+  (** [get_time ()] returns the cumulated time spent in the solver in seconds.*)
+
   val get_calls : unit -> int
   (** [get_calls ()] returns the cumulated number of calls to {! check}.*)
 

@@ -123,13 +123,13 @@ let rec term args = function
 	| ConstInt _ -> [], Smt.Type.type_int
 	| ConstReal _ -> [], Smt.Type.type_real
 	| ConstName x -> 
-	    try Smt.Symbol.find x with Not_found -> error (UnknownName x))
+	    try Smt.Symbol.type_of x with Not_found -> error (UnknownName x))
   | Elem (e, Var) ->
       if Hstring.list_mem e args then [], Smt.Type.type_proc
       else begin 
-	try Smt.Symbol.find e with Not_found -> error (UnknownName e)
+	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e)
       end
-  | Elem (e, _) -> Smt.Symbol.find e
+  | Elem (e, _) -> Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
 	let args, tx = term args x in
@@ -140,12 +140,12 @@ let rec term args = function
       end
   | Access(a, i, _) -> 
       let args_a, ty_a = 
-	try Smt.Symbol.find a with Not_found -> error (UnknownArray a) in
+	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) in
       let ty_i =
 	if Hstring.list_mem i args then Smt.Type.type_proc
 	else 
 	  try 
-	    let ia, tyi = Smt.Symbol.find i in
+	    let ia, tyi = Smt.Symbol.type_of i in
 	    if ia <> [] then error (MustBeOfTypeProc i);
 	    tyi
 	  with Not_found -> error (UnknownName i) 
@@ -199,7 +199,7 @@ let nondets l =
   List.iter 
     (fun g -> 
        try
-	 let args_g, ty_g = Smt.Symbol.find g in
+	 let args_g, ty_g = Smt.Symbol.type_of g in
 	 if args_g <> [] then error (NotATerm g);
 	 (* if not (Hstring.equal ty_g Smt.Type.type_proc) then  *)
 	 (*   error (MustBeOfTypeProc g) *)
@@ -211,7 +211,7 @@ let assigns args =
     (fun (g, x) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g);
        let ty_g = 
-	 try Smt.Symbol.find g with Not_found -> error (UnknownGlobal g) in
+	 try Smt.Symbol.type_of g with Not_found -> error (UnknownGlobal g) in
        let ty_x = term args x in
        unify ty_x ty_g;
        assignment g x ty_x;
@@ -232,7 +232,7 @@ let updates args =
        if Hstring.list_mem a !dv then error (DuplicateUpdate a);
        if Hstring.list_mem j args then error (ClashParam j);
        let args_a, ty_a = 
-	 try Smt.Symbol.find a with Not_found -> error (UnknownArray a)
+	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a)
        in       
        if args_a = [] then error (MustBeAnArray a);
        dv := a ::!dv;

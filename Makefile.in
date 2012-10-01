@@ -263,7 +263,7 @@ export-alt-ergo-light:
 	cp $(AELIGHTFILES) export/$(EXPORTAE)/
 #	cp smt/smt.mli export/$(EXPORTAE)/altErgoLight.mli
 	mkdir -p export/$(EXPORTAE)/doc/
-	ocamldoc -html -d export/$(EXPORTAE)/doc/ -I smt -I common smt/smt.mli
+	ocamldoc -html -colorize-code -d export/$(EXPORTAE)/doc/ -I smt -I common smt/smt.mli common/hstring.mli
 	cd export ; tar cf $(TARAE) $(EXPORTAE) ; gzip -f --best $(TARAE)
 
 
