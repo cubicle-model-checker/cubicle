@@ -35,6 +35,8 @@ type term =
 
 val compare_term : term -> term -> int
 
+val hash_term : term -> int
+
 val htrue : Hstring.t
 val hfalse : Hstring.t
 
@@ -125,6 +127,8 @@ module STerm : Set.S with type elt = term
 (* Typed AST *)
  
 type t_system = {
+  t_globals : Hstring.t list;
+  t_arrays : Hstring.t list;
   t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;

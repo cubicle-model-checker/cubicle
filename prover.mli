@@ -15,6 +15,8 @@ open Ast
 
 module TimeF : Timer.S
 
+module SMT : Smt.Solver
+
 (* Checks if the system is unsafe *)
 val unsafe : t_system -> unit
 
@@ -25,7 +27,7 @@ val assume_goal : t_system -> unit
    unsatisfiable *)
 val assume_node : ArrayAtom.t -> cnumber:int -> unit
 
-(*val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit*)
+val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 
 (*val extract_candidates : 
   Hstring.t list -> ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list*)

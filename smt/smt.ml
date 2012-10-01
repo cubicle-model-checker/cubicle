@@ -21,9 +21,6 @@ type error =
 
 exception Error of error
 
-let calls = ref 0
-module Time = Timer.Make(struct end)
-
 module H = Hstring.H
 module HSet = Hstring.HSet
 
@@ -58,6 +55,13 @@ module Typing = struct
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
+
+  let all_constructors () =
+    H.fold (fun _ c acc -> match c with
+      | Symbols.Name (h, Symbols.Constructor), _, _ -> h :: acc
+      | _ -> acc
+    ) decl_symbs [Hstring.make "True"; Hstring.make "False"]
+    
       
   let declare_type (n, l) = 
     if H.mem decl_types n then raise (Error (DuplicateTypeName n));
@@ -182,6 +186,17 @@ module Typing = struct
       
   end
     
+  let not_builtin ty = Hstring.equal ty type_proc ||
+    not (Hstring.equal ty type_int || Hstring.equal ty type_real ||
+	 Hstring.equal ty type_bool || Hstring.equal ty type_proc)
+
+  let has_abstract_type s =
+    not_builtin (snd (find s)) && 
+    not (H.mem Variant.constructors s)
+
+  let has_type_proc s =
+    Hstring.equal (snd (find s)) type_proc
+
   let _ = 
     H.add decl_symbs (Hstring.make "True") 
       (Symbols.True, [], Hstring.make "bool");
@@ -200,12 +215,15 @@ module Term = struct
 
   let make_real r = Term.real (Num.string_of_num r)
 
-  let make_app s l = 
+  let make_app s l =
     try
       let (sb, _, nty) = H.find Typing.decl_symbs s in
       let ty = H.find Typing.decl_types nty in
       Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
+
+  let t_true = Term.vrai
+  let t_false = Term.faux
 
   let make_arith op t1 t2 = 
     let op = 
@@ -264,8 +282,8 @@ module Formula = struct
     | [f] -> print_ground fmt f
     | f::l -> fprintf fmt "%a %s %a" print_ground f sep (print_list sep) l
 
-  let vrai = Lit Literal.LT.vrai
-  let faux = Lit Literal.LT.faux
+  let f_true = Lit Literal.LT.vrai
+  let f_false = Lit Literal.LT.faux
 
   let make_lit cmp l = 
     let lit = 
@@ -410,80 +428,98 @@ let rec mk_cnf = function
 
 end
 
-let get_time = Time.get
-let get_calls () = !calls
-
 exception Unsat of int list
 
-module CSolver = Solver.Make (struct end)
 
-let clear () = CSolver.clear ()
+module type Solver = sig
+
+  val get_time : unit -> float
+  val get_calls : unit -> int
+
+  val clear : unit -> unit
+  val assume : profiling:bool -> Formula.t -> cnumber:int -> unit
+  val check : profiling:bool -> unit
+
+end
+
+module Make (Dummy : sig end) = struct
+
+  let calls = ref 0
+  module Time = Timer.Make (Dummy)
+
+  let get_time = Time.get
+  let get_calls () = !calls
+
+  module CSolver = Solver.Make (Dummy)
+
+  let clear () = CSolver.clear ()
 
 (*
-let check_unsatcore uc =
+  let check_unsatcore uc =
   eprintf "Unsat Core : @.";
   List.iter 
-    (fun c -> 
-      eprintf "%a@." (Formula.print_list "or") 
-	(List.map (fun x -> Formula.Lit x) c)) uc;
+  (fun c -> 
+  eprintf "%a@." (Formula.print_list "or") 
+  (List.map (fun x -> Formula.Lit x) c)) uc;
   eprintf "@.";
   try 
-    clear ();
-    CSolver.assume uc;
-    CSolver.solve ();
-    eprintf "Not an unsat core !!!@.";
-    assert false
+  clear ();
+  CSolver.assume uc;
+  CSolver.solve ();
+  eprintf "Not an unsat core !!!@.";
+  assert false
   with 
-    | Solver.Unsat _ -> ();
-    | Solver.Sat  -> 
-      eprintf "Sat: Not an unsat core !!!@.";
-      assert false
+  | Solver.Unsat _ -> ();
+  | Solver.Sat  -> 
+  eprintf "Sat: Not an unsat core !!!@.";
+  assert false
 *)
 
-let export_unsatcore cl = 
-  let uc = List.map (fun {Solver_types.atoms=atoms} ->
-    let l = ref [] in
-    for i = 0 to Vec.size atoms - 1 do
-      l := (Vec.get atoms i).Solver_types.lit :: !l
-    done; 
-    !l) cl
-  in (* check_unsatcore uc; *) 
-  uc
+  let export_unsatcore cl = 
+    let uc = List.map (fun {Solver_types.atoms=atoms} ->
+      let l = ref [] in
+      for i = 0 to Vec.size atoms - 1 do
+        l := (Vec.get atoms i).Solver_types.lit :: !l
+      done; 
+      !l) cl
+    in (* check_unsatcore uc; *) 
+    uc
 
-module SInt = 
-  Set.Make (struct type t = int let compare = Pervasives.compare end)
+  module SInt = 
+    Set.Make (struct type t = int let compare = Pervasives.compare end)
 
-let export_unsatcore2 cl = 
-  let s = 
-    List.fold_left 
-      (fun s {Solver_types.name = n} ->
-	 try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
-  in 
-  SInt.elements s
+  let export_unsatcore2 cl = 
+    let s = 
+      List.fold_left 
+        (fun s {Solver_types.name = n} ->
+	  try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
+    in 
+    SInt.elements s
 
-let assume ~profiling f ~cnumber = 
-  if profiling then Time.start ();
-  match f with
-    | Formula.Ground phi ->
-      begin
-	try 
-	  CSolver.assume (Formula.make_cnf phi) cnumber;
-	  if profiling then Time.pause ()
-	with Solver.Unsat ex ->
+  let assume ~profiling f ~cnumber = 
+    if profiling then Time.start ();
+    match f with
+      | Formula.Ground phi ->
+          begin
+	    try 
+	      CSolver.assume (Formula.make_cnf phi) cnumber;
+	      if profiling then Time.pause ()
+	    with Solver.Unsat ex ->
+	      if profiling then Time.pause ();
+	      raise (Unsat (export_unsatcore2 ex))
+          end
+      | Formula.Lemma (x, phi) -> () 
+
+  let check ~profiling =
+    incr calls;
+    if profiling then Time.start ();
+    try 
+      CSolver.solve ();
+      if profiling then Time.pause ()
+    with
+      | Solver.Sat -> if profiling then Time.pause ()
+      | Solver.Unsat ex -> 
 	  if profiling then Time.pause ();
 	  raise (Unsat (export_unsatcore2 ex))
-      end
-    | Formula.Lemma (x, phi) -> () 
 
-let check ~profiling =
-  incr calls;
-  if profiling then Time.start ();
-  try 
-    CSolver.solve ();
-    if profiling then Time.pause ()
-  with
-    | Solver.Sat -> if profiling then Time.pause ()
-    | Solver.Unsat ex -> 
-	if profiling then Time.pause ();
-	raise (Unsat (export_unsatcore2 ex))
-    
+end

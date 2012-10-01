@@ -19,8 +19,9 @@ open Options
 module T = Smt.Term
 module F = Smt.Formula
 
-module TimeF = Timer.Make(struct end)
+module TimeF = Timer.Make (struct end)
 
+module SMT = Smt.Make (struct end)
 
 let proc_terms =
   List.iter 
@@ -28,7 +29,7 @@ let proc_terms =
   List.map (fun x -> T.make_app x []) proc_vars
 
 let distinct_vars = 
-  let t = Array.create max_proc F.vrai in
+  let t = Array.create max_proc F.f_true in
   let _ = 
     List.fold_left 
       (fun (acc,i) v -> 
@@ -36,10 +37,10 @@ let distinct_vars =
 	 v::acc, i+1) 
       ([],0) proc_terms 
   in
-  function n -> if n = 0 then F.vrai else t.(n-1)
+  function n -> if n = 0 then F.f_true else t.(n-1)
 
 let order_vars =
-  let t = Array.create max_proc F.vrai in
+  let t = Array.create max_proc F.f_true in
   let _ =
     List.fold_left
       (fun (acc, lf, i) v ->
@@ -51,7 +52,7 @@ let order_vars =
           | [] -> v::acc, lf, i+1)
       ([], [], 0) proc_terms
   in
-  function n -> if n = 0 then F.vrai else t.(n-1)
+  function n -> if n = 0 then F.f_true else t.(n-1)
 
 
 let make_op_arith = function Plus -> T.Plus | Minus -> T.Minus
@@ -108,8 +109,8 @@ let rec make_formula_set sa =
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
 
 and make_literal = function
-  | True -> F.vrai 
-  | False -> F.faux
+  | True -> F.f_true 
+  | False -> F.f_false
   | Comp (x, op, y) ->
       let tx = make_term x in
       let ty = make_term y in
@@ -148,50 +149,49 @@ let make_init {t_init = arg, sa } lvars =
 	F.make F.And (f::fsa)
 
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
-  Smt.clear ();
-  Smt.assume 
+  SMT.clear ();
+  SMT.assume 
     ~profiling (F.Ground (distinct_vars (List.length args))) ~cnumber:ts.t_nb;
-  (* Smt.assume (order_vars (List.length args)); *)
+  (* SMT.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
   let init = F.Ground (make_init ts (* (List.rev_append ts.t_glob_proc  *) args) in
   let f = F.Ground (make_formula_set sa) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
-  Smt.assume ~profiling init ~cnumber:ts.t_nb;
-  Smt.assume ~profiling f ~cnumber:ts.t_nb;
-  Smt.check ~profiling
+  SMT.assume ~profiling init ~cnumber:ts.t_nb;
+  SMT.assume ~profiling f ~cnumber:ts.t_nb;
+  SMT.check ~profiling
 
 
 let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
-  Smt.clear ();
-  Smt.assume 
+  SMT.clear ();
+  SMT.assume 
     ~profiling (F.Ground (distinct_vars (List.length args))) ~cnumber:ts.t_nb;
-  (* Smt.assume (order_vars (List.length args)); *)
+  (* SMT.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
   let f = F.Ground (make_formula ap) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  Smt.assume ~profiling f ~cnumber:ts.t_nb;
-  Smt.check ~profiling
+  SMT.assume ~profiling f ~cnumber:ts.t_nb;
+  SMT.check ~profiling
 
 let assume_node ap ~cnumber =
   if profiling then TimeF.start ();
   let f = F.Ground (F.make F.Not [make_formula ap]) in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  Smt.assume ~profiling f ~cnumber;
-  Smt.check ~profiling
+  SMT.assume ~profiling f ~cnumber;
+  SMT.check ~profiling
 
-(*
+
 let check_guard args sa reqs =
-  Smt.clear ();
-  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
+  SMT.clear ();
+  SMT.assume ~profiling ~cnumber:0 (F.Ground (distinct_vars (List.length args)));
   if profiling then TimeF.start ();
   let f = F.Ground (make_formula_set (SAtom.union sa reqs)) in
   if profiling then TimeF.pause ();
-  Smt.assume ~profiling f;
-  Smt.check ~profiling
-*)
+  SMT.assume ~profiling f ~cnumber:0;
+  SMT.check ~profiling
 
 let unsat_core_wrt_node uc ap =
   Array.fold_left (fun acc a ->
@@ -206,14 +206,14 @@ let extract_candidates args ap forward_nodes =
     try
       let c = 
 	List.fold_left (fun acc fp ->
-	  Smt.clear ();
-	  Smt.assume ~profiling (F.Ground (distinct_vars (List.length args)));
+	  SMT.clear ();
+	  SMT.assume ~profiling (F.Ground (distinct_vars (List.length args)));
 	  if profiling then TimeF.start ();
 	  let f = F.Ground (make_conjuct ap fp) in
 	  if profiling then TimeF.pause ();
 	  try 
-	    Smt.assume ~profiling f;
-	    Smt.check ~profiling;
+	    SMT.assume ~profiling f;
+	    SMT.check ~profiling;
 	    raise Exit
 	  with Smt.Unsat uc ->
 	    let c = unsat_core_wrt_node uc ap in

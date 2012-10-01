@@ -306,7 +306,7 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 let append_extra args tr_args =
   let rec aux acc cpt = function
     | [] -> List.rev acc
-    | _::r -> aux ((H.make ("#"^(string_of_int cpt))) :: acc) (cpt+1) r
+    | _::r -> aux ((List.nth proc_vars (cpt - 1)) :: acc) (cpt+1) r
   in
   aux (List.rev args) (List.length args + 1) tr_args   
   
@@ -659,9 +659,10 @@ let rec remove_cand s candidates uns =
       (fun acc s' ->
 	(* if fixpoint ~invariants:[] ~visited:[s'] s then acc *)
 	
-	if List.exists 
-	  (fun (_,_,s) -> 
-	     None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from 
+	if None <> fixpoint ~invariants:[] ~visited:[s'] s ||
+	   List.exists 
+	   (fun (_,_,s) -> 
+	     None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from
 	then
 	  (* raise UNSAFE if we try to remove a candidate 
 	     which is an unsafe property *)
@@ -694,8 +695,9 @@ let rec search_bogus_invariants search invariants candidates uns =
 	(* FIXME Bug when search is parallel *)
 	let o = origin s in
 	eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
+	if o.t_nb >= 0 then raise (Search.Unsafe s);
 	search_bogus_invariants search invariants 
-	  (remove_cand s candidates uns) uns
+	  (remove_cand o candidates uns) uns
 
 
 (*----------------------------------------------------------------------------*)
@@ -798,8 +800,8 @@ module T = struct
 	     t_nb_father = -1;
 	 }) s.t_cands
 
-  let size s = List.length (fst s.t_unsafe)
-  let card s = SAtom.cardinal (snd s.t_unsafe)
+  let size = size_system
+  let card = card_system
   let maxrounds = maxrounds
   let maxnodes = maxnodes
   let gen_inv = gen_inv
@@ -881,11 +883,12 @@ let system uns =
 
   else*) if stateless && forward_inv <> -1 then begin
 
+    let procs = Forward.procs_from_nb forward_inv in
+
     eprintf "STATELESS FORWARD :\n-------------\n@.";
-    let comps = (Forward.search_stateless_nb forward_inv (List.hd uns)) in
+    let comps = (Forward.search_stateless procs (List.hd uns)) in
     eprintf "-------------\n@.";
-
-
+    
     eprintf "CANDIDATES from trace :\n-----------------------\n@.";
     let candidates = 
       Forward.extract_candidates_from_compagnons comps (List.hd uns)
@@ -903,19 +906,23 @@ let system uns =
 
   else if forward_inv <> -1 then begin
 
+    let procs = Forward.procs_from_nb forward_inv in
+
     eprintf "FORWARD :\n-------------\n@.";
-    let forward_nodes = (Forward.search_nb forward_inv (List.hd uns)) in
+    let forward_nodes = (Forward.search procs (List.hd uns)) in
     (* for debug *)
     (* let cpt = ref 0 in *)
     (* List.iter *)
     (* (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s) *)
     (*   forward_nodes; *)
     eprintf "-------------\n@.";
-
+    
+    let var_terms = Cube.all_var_terms procs (List.hd uns) in
 
     eprintf "CANDIDATES from trace :\n-----------------------\n@.";
     let candidates = 
-      Forward.extract_candidates_from_trace forward_nodes (List.hd uns)
+      Forward.extract_candidates_from_trace 
+	forward_nodes var_terms (List.hd uns)
     in
     (* let candidates = T.sort candidates in *)
     let cpt = ref 0 in
@@ -934,6 +941,33 @@ let system uns =
 
     if only_forward then exit 0;      
     search_bogus_invariants search invariants candidates uns
+
+  end
+
+  else if enumerative <> -1 then begin
+
+    let procs = Forward.procs_from_nb enumerative in
+
+    eprintf "ENUMERATIVE FORWARD :\n-------------\n@.";
+    
+    let comps = Enumerative.stateless_search procs (List.hd uns) in
+
+    eprintf "-------------\n@.";
+    
+    eprintf "CANDIDATES from trace :\n-----------------------\n@.";
+    let candidates = 
+      Forward.extract_candidates_from_compagnons comps (List.hd uns)
+    in
+    let cpt = ref 0 in
+    List.iter (fun sa -> incr cpt;
+      eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
+      candidates;
+    eprintf "-----------------------\n@.";
+
+    if only_forward then exit 0;
+    search_bogus_invariants search invariants candidates uns
+
+    (* TODO *)
 
   end
 

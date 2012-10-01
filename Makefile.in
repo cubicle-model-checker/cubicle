@@ -82,7 +82,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      prover.cmo search.cmo cube.cmo forward.cmo bwreach.cmo \
+      prover.cmo search.cmo cube.cmo forward.cmo enumerative.cmo bwreach.cmo \
       typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
@@ -221,6 +221,9 @@ LONGDATE=$(shell date +%Y%m%d%H%M)
 EXPORTDIR=$(NAME)-$(VERSION)
 TAR=$(EXPORTDIR).tar
 
+EXPORTAE=alt-ergo-light
+TARAE=$(EXPORTAE).tar
+
 WEB = $$HOME/WWW/cubicle/
 
 SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
@@ -238,7 +241,11 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 	      common/iheap.ml common/iheap.mli common/timer.ml\
 	      common/timer.mli common/vec.ml common/vec.mli
 
-FILES = ast.ml ast.mli cube.ml forward.mli forwkard.ml\
+AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
+	       alt-ergo-light/configure.in alt-ergo-light/configure
+
+FILES = ast.ml ast.mli cube.ml forward.mli forward.ml\
+	enumerative.mli enumerative.ml\
 	bwreach.ml bwreach.mli\
 	fake_functory.ml fake_functory.mli\
 	lexer.mll main.ml options.ml options.mli\
@@ -246,6 +253,19 @@ FILES = ast.ml ast.mli cube.ml forward.mli forwkard.ml\
 	search.mli typing.ml typing.mli version.ml
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
+
+export-alt-ergo-light:
+	mkdir -p export/$(EXPORTAE)/
+	mkdir -p export/$(EXPORTAE)/smt
+	mkdir -p export/$(EXPORTAE)/common
+	cp $(SMTFILES) export/$(EXPORTAE)/smt
+	cp $(COMMONFILES) export/$(EXPORTAE)/common
+	cp $(AELIGHTFILES) export/$(EXPORTAE)/
+#	cp smt/smt.mli export/$(EXPORTAE)/altErgoLight.mli
+	mkdir -p export/$(EXPORTAE)/doc/
+	ocamldoc -html -d export/$(EXPORTAE)/doc/ -I smt -I common smt/smt.mli
+	cd export ; tar cf $(TARAE) $(EXPORTAE) ; gzip -f --best $(TARAE)
+
 
 export:
 	mkdir -p export

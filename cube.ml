@@ -216,6 +216,11 @@ let simplify_comp i si op j sj =
 	if not (H.equal i j) then True else False
     | Le, _ when H.equal i j -> True
     | Lt, _ when H.equal i j -> False
+    | (Eq | Neq) , _ -> 
+        let ti = Elem (i, si) in
+	let tj = Elem (j, sj) in 
+	if compare_term ti tj < 0 then Comp (tj, op, ti)
+	else Comp (ti, op, tj)
     | _ -> Comp (Elem (i, si), op, Elem (j, sj))
 
 let rec simplification np a =
@@ -251,6 +256,7 @@ let rec simplification np a =
         Comp (Const cy, op, Const cx)
     | Comp (Const _ as c, Eq, y) -> Comp (y, Eq, c)
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
+    | Comp (x, (Eq | Neq as op), y) when compare_term x y < 0 -> Comp (y, op, x)
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
 	let sa = 
@@ -502,16 +508,16 @@ let proper_cube sa =
 	 if n = !cpt then (incr cpt; sa)
 	 else 
 	   let sa = 
-	     subst_atoms [arg, H.make ("#"^(string_of_int !cpt))] sa in 
+	     subst_atoms [arg, List.nth proc_vars (!cpt - 1)] sa in 
 	   incr cpt; sa)
       sa args
   in
   let l = ref [] in
   for n = !cpt - 1 downto 1 do 
-    l := (H.make ("#"^(string_of_int n))) :: !l
+    l := (List.nth proc_vars (n - 1)) :: !l
   done;
   if profiling then TimerApply.pause ();
-  sa, (!l, H.make ("#"^(string_of_int !cpt)))
+  sa, (!l, List.nth proc_vars (!cpt - 1))
 
 
 (****************************************************)
@@ -529,8 +535,22 @@ and cross l pr x st =
     | [] -> []
     | y::p -> 
 	let acc = all_permutations l (pr@p) in
-	let acc = List.map (fun ds -> (x, y)::ds) acc in
+	let acc = 
+	  if acc = [] then [[x,y]]
+	  else List.map (fun ds -> (x, y)::ds) acc in
 	acc@(cross l (y::pr) x p)
+
+let rec all_parts l = match l with
+  | [] -> []
+  | x::r -> let pr = all_parts r in
+	    [x]::pr@(List.map (fun p -> x::p) pr)
+
+let all_parts_elem l = List.map (fun x -> [x]) l
+
+let rec all_partial_permutations l1 l2 =
+  List.flatten (
+    List.fold_left (fun acc l -> (all_permutations l l2)::acc) [] (all_parts l1)
+  )
 
 
 (*********************************************)
@@ -1052,3 +1072,25 @@ let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   if profiling then TimeFix.pause ();
   r
 
+
+
+let size_system s = List.length (fst s.t_unsafe)
+let card_system s = SAtom.cardinal (snd s.t_unsafe)
+
+
+  
+
+let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
+  let acc, gp = 
+    List.fold_left 
+      (fun (acc, gp) g -> 
+	STerm.add (Elem (g, Glob)) acc,
+	(* if Smt.Typing.has_type_proc g && Hstring.view g = "Home" then g :: gp *)
+	(* else *) gp
+      ) (STerm.empty, []) globals
+  in
+  List.fold_left (fun acc p ->
+    List.fold_left (fun acc a ->
+      STerm.add (Access (a, p, Var)) acc)
+      acc arrays)
+    acc (procs@gp)

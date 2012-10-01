@@ -45,6 +45,8 @@ init (z) { L[z] = I &&
            Crit[z] = False && Want[z] = False &&
            Chan[z] = Empty }
 
+
+
 (*
  * Unsafe states.
  *)
@@ -71,15 +73,15 @@ unsafe (x y) { Crit[x] = True && Crit[y] = True }
 
 (* A cache reads the data inside the line. *)
 transition read (i)
-requires { Crit[i] = False && L[i] = I &&
-           forall_other j. ( L[j] = M || L[j] = S || L[j] = I ) }
+requires { Crit[i] = False && L[i] = I (* && *)
+           (* forall_other j. ( L[j] = M || L[j] = S || L[j] = I ) *) }
 { L[j] := case | i = j : S | L[j] = M : S | L[j] = I : I | _ : S }
 
 (* A cache writes the data inside the line. *)
 transition write (i)
 requires { Crit[i] = False &&
-           L[i] = I &&
-           forall_other j. ( L[j] = M || L[j] = S || L[j] = I ) }
+           L[i] = I (* && *)
+           (* forall_other j. ( L[j] = M || L[j] = S || L[j] = I ) *) }
 { L[j] := case | i = j : M | _ : I }
 
 (* A thread requests for entering the critical section. *)
@@ -118,7 +120,7 @@ requires { Crit[i] = True && Want[j] = True &&
 
 (* A cache reads the data in the line inside the critical section. *)
 transition read_on_acquire (i)
-requires { Crit[i] = True && L[i] = I && forall_other j. L[j] <> MLocked }
+requires { Crit[i] = True && L[i] = I (* && forall_other j. L[j] <> MLocked *) }
 { L[j] := case | j = i : SLocked | L[j] = M : S | _ : L[j] }
 
 transition wait_on_read (i j)
@@ -132,8 +134,8 @@ requires { Crit[i] = True && L[i] = SWait && Chan[i] = Data }
 
 (* A cache writes the data in the line inside the critical section. *)
 transition write_on_acquire (i)
-requires { Crit[i] = True && L[i] = I &&
-           forall_other j. ( L[j] <> MLocked && L[j] <> SLocked ) }
+requires { Crit[i] = True && L[i] = I (* && *)
+           (* forall_other j. ( L[j] <> MLocked && L[j] <> SLocked ) *) }
 { L[j] := case | i = j : MLocked | L[j] = M : I | L[j] = S : I | _ : L[j] }
 
 transition wait_on_write (i j)

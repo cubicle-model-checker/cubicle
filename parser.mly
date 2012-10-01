@@ -168,7 +168,7 @@ invariants:
 ;
 
 invariant:
-  | INVARIANT LEFTPAR lident_plus RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
 ;
 
 candidates:
@@ -177,12 +177,11 @@ candidates:
 ;
 
 candidate:
-  | CANDIDATE LEFTPAR lident_plus RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+  | CANDIDATE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
 ;
 
 unsafe:
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR 
-      { $3, $6 }
+  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
 ;
 
 unsafe_list:
@@ -211,7 +210,7 @@ transitions_list:
 ;
 
 transition:
-  | TRANSITION lident LEFTPAR lident_plus RIGHTPAR 
+  | TRANSITION lident LEFTPAR lidents RIGHTPAR 
       require
       LEFTBR assigns_nondets_updates RIGHTBR
       { let reqs, ureq = $6 in
@@ -269,6 +268,12 @@ update:
       { let j = fresh_var () in
 	let cube = 
 	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, Var))) in
+	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
+	Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
+  | mident LEFTSQ mident RIGHTSQ AFFECT term
+      { let j = fresh_var () in
+	let cube = 
+	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, sort $3))) in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
 	Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
 ;
@@ -353,13 +358,8 @@ mident:
   | MIDENT { Hstring.make $1 }
 ;
 
-lident_plus:
-  |  { [] }
-  | lidents { $1 }
-;
-
 lidents:
-  | lident        { [$1] }
+  |  { [] }
   | lident lidents { $1::$2 }
 ;
 

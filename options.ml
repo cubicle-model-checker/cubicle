@@ -37,6 +37,7 @@ let profiling = ref false
 let only_forward = ref false
 let gen_inv = ref false
 let forward_inv = ref (-1)
+let enumerative = ref (-1)
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
@@ -76,7 +77,9 @@ let specs =
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-forward-inv", Arg.Set_int forward_inv, 
-                    "<n> forward invariant generation with n processes";
+                    "<n> symbolic forward invariant generation with n processes";
+    "-enumerative", Arg.Set_int enumerative, 
+                    "<n> enumerative forward invariant generation with n processes";
     "-lazy", Arg.Set lazyinv, 
                 " add candidate invariants in a lazy way (BFS only)";
     "-refine", Arg.Set refine, 
@@ -118,6 +121,7 @@ let file = !file
 let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
+let enumerative = !enumerative
 let refine = !refine && not !stateless
 let lazyinv = !lazyinv
 let stateless = !stateless

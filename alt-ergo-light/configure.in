@@ -11,7 +11,7 @@
 #                                                                        #
 ##########################################################################
 
-AC_INIT(main.ml)
+AC_INIT(smt/smt.mli)
 
 AC_CHECK_PROGS(OCAMLC,ocp-ocamlc.opt ocamlc.opt,no)
 if test "$OCAMLC" = no ; then
@@ -46,24 +46,20 @@ if test "$OCAMLYACC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlyacc.)
 fi
 
-AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
-if test "$FUNCTORYLD" = no ; then
-      AC_MSG_RESULT(Cannot find functory library.)
-      FUNCTORYLIB=""
-else
-   FUNCTORYLIB="-I +functory"
-fi
-
 AC_MSG_CHECKING(platform)
 if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then
     echo "Windows platform"
     AC_MSG_RESULT(Win32)
     OCAMLWIN32=yes
     EXE=.exe
+    LIBEXT=.lib
+    OBJEXT=.obj
 else
     echo "Unix platform"
     OCAMLWIN32=no
     EXE=
+    LIBEXT=.a
+    OBJEXT=.o
 fi
 
 AC_SUBST(OCAMLC)

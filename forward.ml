@@ -17,6 +17,14 @@ open Ast
 open Atom
 open Cube
 
+type inst_trans =
+    {
+      i_reqs : SAtom.t;
+      i_udnfs : SAtom.t list list;
+      i_actions : SAtom.t;
+      i_touched_terms : STerm.t;
+    }
+
 let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
@@ -66,7 +74,7 @@ let rec is_prime_atom = function
 
 let rec is_const = function
   | Const _ | Elem (_, (Constr | Var)) -> true
-  | Arith (x, _) -> is_const x 
+  | Arith (x, _) -> is_const x
   | _ -> false
 
 exception Found_const of (op_comp * term)
@@ -93,6 +101,7 @@ let find_const_value g init = match g with
   | _ -> find_const_value g init
 
 
+
 let rec elim_prime_atom init = function
   | True -> None 
   | False -> Some False
@@ -106,7 +115,7 @@ let rec elim_prime_atom init = function
 	try
 	  let op, t2' = find_const_value t2 init in
 	  Some (Comp (t1, op, t2'))
-	with Not_found -> None
+	with Not_found -> None (* Some (Comp (t1, Eq, t2)) *)
       end
   | Ite (sa, a1, a2) ->
       let a1 = match elim_prime_atom init a1 with
@@ -119,7 +128,7 @@ let rec elim_prime_atom init = function
   | _ -> assert false
 
 and elim_prime init sa =
-  (* eprintf "elim prime : %a@." Pretty.print_cube sa; *)
+  (* eprintf "elim prime : %a@." Pretty.print_cube (SAtom.union init sa); *)
   let sa = 
     SAtom.fold 
       (fun a acc ->
@@ -128,9 +137,295 @@ and elim_prime init sa =
 	  | Some na -> SAtom.add na acc)
       sa SAtom.empty
   in
-  assert (not (SAtom.exists is_prime_atom sa));
+  (* assert (not (SAtom.exists is_prime_atom sa)); *)
   (* eprintf "   == %a@." Pretty.print_cube sa; *)
   sa
+
+
+exception Found_eq of term * term * Atom.t
+exception Found_neq of term * term * Atom.t
+
+let rec apply_subst_terms_atom t t' a = match a with
+  | True | False -> a
+  | Comp (t1, op, t2) ->
+      if compare_term t t1 = 0 then Comp (t', op, t2)
+      else if compare_term t t2 = 0 then Comp (t1, op, t')
+      else a
+  | Ite (sa, a1, a2) -> Ite (apply_subst_terms_atoms t t' sa, 
+			     apply_subst_terms_atom t t' a1,
+			     apply_subst_terms_atom t t' a2)
+
+and apply_subst_terms_atoms t t' sa =
+  SAtom.fold 
+    (fun a acc -> SAtom.add (apply_subst_terms_atom t t' a) acc)
+    sa SAtom.empty
+
+
+let elim_primed_term t sa =		     
+  try
+    SAtom.iter (fun a -> match a with
+      | Comp (t1, Eq, t2) -> 
+	if compare_term t t1 = 0 && is_const t2 then raise (Found_eq (t1, t2, a));
+	if compare_term t t2 = 0 && is_const t1 then raise (Found_eq (t2, t1, a))
+      | _ -> ()) sa;
+    SAtom.iter (fun a -> match a with
+      | Comp (t1, Eq, t2) -> 
+	if compare_term t t1 = 0 then raise (Found_eq (t1, t2, a));
+	if compare_term t t2 = 0 then raise (Found_eq (t2, t1, a))
+      | _ -> ()) sa;
+    SAtom.iter (fun a -> match a with
+      | Comp (t1, Neq, t2) -> 
+	if compare_term t t1 = 0 then raise (Found_neq (t1, t2, a));
+	if compare_term t t2 = 0 then raise (Found_neq (t2, t1, a))
+      | _ -> ()) sa;
+    sa
+  with
+    | Found_eq (t, t', a) -> 
+        let rsa = SAtom.remove a sa in
+	apply_subst_terms_atoms t t' rsa
+
+    | Found_neq (t, t', a) -> (* TODO *) sa
+
+type primed_value = Const_Eq | Var_Eq | Var_Neq
+
+let elim_primed_term t sa =
+  let r = SAtom.fold (fun a res -> match a with
+    | Comp (t1, Eq, t2) ->
+      begin
+	if compare_term t t1 = 0 then
+	  match res with
+	    | None -> 
+	        Some (Eq, t1, t2, a)
+	    | Some (Eq, _, t', _) when compare_term t2 t' < 0 ->
+	        Some (Eq, t1, t2, a)
+	    | _ -> res	    
+      else if compare_term t t2 = 0 then
+	  match res with
+	    | None ->
+	        Some (Eq, t2, t1, a)
+	    | Some (Eq, _, t', _) when compare_term t1 t' < 0 ->
+	        Some (Eq, t2, t1, a)
+	    | _ -> res
+      else res
+      end
+    | Comp (t1, Neq, t2) -> 
+      begin
+	if compare_term t t1 = 0 then
+	  match res with
+	    | None -> Some (Neq, t1, t2, a)
+	    | _ -> res
+	else if compare_term t t2 = 0 then
+	  match res with
+	    | None -> Some (Neq, t2, t1, a)
+	    | _ -> res
+	else res
+      end
+    | _ -> res) sa None
+  in
+  match r with
+    | None -> sa
+    | Some (Eq, t, t', a) ->
+        let rsa = SAtom.remove a sa in
+	apply_subst_terms_atoms t t' rsa
+    | _ -> (* TODO *) sa
+
+let primed_terms_of_atom a =
+  let rec primed_terms_of_atom a acc = match a with
+    | True | False -> acc
+    | Comp (t1, _, t2) ->
+      let acc = if is_prime_term t1 then STerm.add t1 acc else acc in
+      if is_prime_term t2 then STerm.add t2 acc else acc
+    | Ite (sa, a1, a2) -> 
+      primed_terms_of_atom a1 
+	(primed_terms_of_atom a2 
+	   (SAtom.fold primed_terms_of_atom sa acc))
+  in
+  primed_terms_of_atom a STerm.empty
+
+exception First_primed_atom of Atom.t * STerm.t
+
+let first_primed_atom sa =
+  try
+    SAtom.iter (fun a -> 
+      let pts = primed_terms_of_atom a in
+      if not (STerm.is_empty pts) then raise (First_primed_atom (a, pts))
+    ) sa;
+    raise Not_found
+  with First_primed_atom (a, pts) -> a, pts
+
+let rec elim_prime2 sa =
+  let sa =
+    try
+      let a, pts = first_primed_atom sa in
+      let sa = STerm.fold elim_primed_term pts sa in
+      elim_prime2 sa
+    with Not_found -> sa
+  in
+  (* assert (not (SAtom.exists is_prime_atom sa)); *)
+  sa
+
+(* let elim_prime2 sa = *)
+(*   eprintf "elim prime 2 : %a@." Pretty.print_cube sa; *)
+(*   let sa = elim_prime2 sa in *)
+(*   eprintf "   == %a@." Pretty.print_cube sa; *)
+(*   sa *)
+
+let rec elim_prime3 init sa =
+  let pts = 
+    SAtom.fold (fun a acc -> STerm.union (primed_terms_of_atom a) acc )
+      sa STerm.empty in
+  let sa =
+    SAtom.fold (fun a sa -> match a with
+      | Comp (t1, op, t2) ->
+	if STerm.mem t1 pts || STerm.mem t2 pts then SAtom.add a sa
+	else sa
+      | _ -> sa) init sa
+  in
+  elim_prime2 sa
+
+let gauss_elim sa =
+  SAtom.fold (fun a sa -> match a with
+    | Comp ((Elem(_,Glob) as t1), Eq, (Elem(_,Glob) as t2)) ->
+      let rsa = SAtom.remove a sa in
+      let rsa = apply_subst_terms_atoms t1 t2 rsa in
+      SAtom.add a rsa
+    | _ -> sa
+  ) sa sa
+
+
+exception Found_prime_term of term
+
+let choose_prime_term sa =
+  try
+    SAtom.iter (function
+      | Comp (t1, eq, t2) ->
+	if is_prime_term t1 then raise (Found_prime_term t1);
+	if is_prime_term t2 then raise (Found_prime_term t2)
+      | _ -> ()) sa;
+    raise Not_found
+  with Found_prime_term t -> t
+
+
+let split_prime_atoms t sa =
+  SAtom.fold (fun a (yes, no) -> match a with
+    | Comp (t1, Eq, t2) when compare_term t t1 = 0 || compare_term t t2 = 0 ->
+        SAtom.add a yes, no
+    | _ -> yes, SAtom.add a no) sa (SAtom.empty, SAtom.empty)
+    
+
+let aux_corss t t' sa =
+  SAtom.fold (fun a acc -> match a with
+    | Comp (t1, Eq, t2) ->
+        if compare_term t t1 = 0 then SAtom.add (Comp (t', Eq, t2)) acc
+	else if compare_term t t2 = 0 then SAtom.add (Comp (t', Eq, t1)) acc
+	else assert false
+    | _ -> assert false) sa SAtom.empty
+      
+
+let cross t sa =
+  SAtom.fold (fun a acc -> match a with
+    | Comp (t1, Eq, t2) ->
+        let t' = if compare_term t t1 = 0 then t2 else t1 in
+        SAtom.union (aux_corss t t' (SAtom.remove a sa)) acc
+    | _ -> assert false
+  ) sa SAtom.empty
+
+
+let rec gauss_prime_elim sa =
+  try
+    let t = choose_prime_term sa in
+    let yes, no = split_prime_atoms t sa in
+    let sa = SAtom.union (cross t yes) no in
+    gauss_prime_elim sa
+  with Not_found -> sa
+
+(* let gauss_prime_elim sa = *)
+(*   eprintf "gauss elim prime : %a@." Pretty.print_cube sa; *)
+(*   let sa = gauss_prime_elim sa in *)
+(*   eprintf "   == %a@." Pretty.print_cube sa; *)
+(*   sa *)
+
+
+module MH = Map.Make (Hstring)
+
+
+let rec type_of_term = function
+  | Const m ->
+      MConst.fold (fun c _ _ -> match c with
+	| ConstReal _ -> Smt.Typing.type_real
+	| ConstInt _ -> Smt.Typing.type_int
+	| ConstName x -> snd (Smt.Typing.find (unprime_h x))
+      ) m Smt.Typing.type_int
+  | Elem (x, _) | Access (x, _, _) -> 
+      let x = if is_prime (Hstring.view x) then unprime_h x else x in
+      snd (Smt.Typing.find x)
+  | Arith (t, _) -> type_of_term t
+
+let rec type_of_atom = function
+  | True | False -> None
+  | Comp (t, _, _) -> Some (type_of_term t)
+  | Ite (_, a1, a2) -> 
+      let ty = type_of_atom a1 in if ty = None then type_of_atom a2 else ty
+
+let partition_by_type sa =
+  let mtype, other =
+    SAtom.fold (fun a (mtype, other) ->
+      match type_of_atom a with
+	| None -> mtype, SAtom.add a other
+	| Some ty ->
+	  try
+	    let sty = try MH.find ty mtype with Not_found -> SAtom.empty in
+	    MH.add ty (SAtom.add a sty) mtype, other
+	  with Not_found -> mtype, SAtom.add a other
+    ) sa (MH.empty, SAtom.empty)
+  in mtype, other
+
+let elim_prime_type1 sa =
+  let mtype, other = partition_by_type sa in
+  MH.fold (fun _ sa acc ->
+    SAtom.union (elim_prime2 sa) acc)
+  mtype SAtom.empty
+
+let is_finite_type ty = 
+  try ignore(Smt.Typing.Variant.get_variants ty); true
+  with Not_found -> Hstring.equal ty Smt.Typing.type_bool
+
+let elim_prime_type2 init sa =
+  let i_mtype, i_other = partition_by_type init in
+  let mtype, other = partition_by_type sa in
+  MH.fold (fun ty sa acc ->
+    let si = try MH.find ty i_mtype with Not_found -> SAtom.empty in
+    let s = 
+      if is_finite_type ty then elim_prime si sa
+      else elim_prime2 (SAtom.union si sa)
+    in SAtom.union s acc
+  ) mtype SAtom.empty
+
+
+let wrapper_elim_prime p_init sa =
+  (* let ori = SAtom.union p_init sa in *)
+  (* let sa' = elim_prime p_init sa in *)
+  (* let sa = elim_prime p_init sa in *)
+  (* (\* NO *\) let sa = elim_prime3 p_init sa in *)
+  (* (\* NO *\) let sa = elim_prime2 (SAtom.union p_init sa) in *)
+  (* (\* NO *\) let sa = elim_prime_type1 (SAtom.union p_init sa) in *)
+  let sa = elim_prime_type2 p_init sa in
+  (* if not (SAtom.equal *)
+  (* 	    (simplification_atoms SAtom.empty sa) *)
+  (* 	    (simplification_atoms SAtom.empty sa')) *)
+  (* then begin *)
+  (*   (\* eprintf "ELIM PRIME : %a\n@." Pretty.print_cube ori; *\) *)
+  (*   let s1 = simplification_atoms SAtom.empty sa' in *)
+  (*   let s2 = simplification_atoms SAtom.empty sa in *)
+  (*   (\* eprintf "ONE : %a\n\nDEUX : %a\n@." *\) *)
+  (*   (\*   Pretty.print_cube s1 *\) *)
+  (*   (\*   Pretty.print_cube s2; *\) *)
+  (*   eprintf "DIFF ONE : %a\n\nDIFF DEUX : %a\n@." *)
+  (*     Pretty.print_cube (SAtom.diff s1 (SAtom.inter s1 s2)) *)
+  (*     Pretty.print_cube (SAtom.diff s2 (SAtom.inter s1 s2)); *)
+  (* end; *)
+  (* let sa = gauss_prime_elim (SAtom.union p_init sa) in *)
+  simplification_atoms SAtom.empty sa
 
 
 let apply_assigns assigns sigma =
@@ -170,14 +465,10 @@ let apply_updates upds procs sigma =
     (SAtom.empty, STerm.empty) upds
 
 let preserve_terms upd_terms sa =
-  let vsa = STerm.fold 
-    (fun t acc -> STerm.add t acc) (variables_of sa) STerm.empty
-  in
-  let unc = STerm.diff vsa upd_terms in
+  let unc = STerm.diff (variables_of sa) upd_terms in
   STerm.fold (fun t acc ->
     SAtom.add (Comp (t, Eq, prime_term t)) acc)
     unc SAtom.empty
-
 
 let uguard_dnf sigma args tr_args = function
   | [] -> []
@@ -197,17 +488,28 @@ let possible_init args init reqs =
 let possible_guard args all_args tr_args sigma init reqs ureqs =
   let reqs = subst_atoms sigma reqs in
   possible_init args init reqs &&
-    let t_args_ef = List.map (svar sigma) tr_args in
+    let t_args_ef = 
+      List.fold_left (fun acc p -> 
+	try (svar sigma p) :: acc
+	with Not_found -> p :: acc) [] tr_args in
     let udnfs = uguard_dnf sigma all_args t_args_ef ureqs in
+    List.for_all (List.exists (possible_init all_args init)) udnfs
+
+
+let possible_inst_guard args all_args init reqs udnfs =
+  possible_init args init reqs &&
     List.for_all (List.exists (possible_init all_args init)) udnfs
 
 
 let missing_args procs tr_args =
   let rec aux p t pv =
   match p, t, pv with
-    | [], _::_, _ -> List.rev (snd (List.split (build_subst t pv)))
+    | [], _::_, _ ->
+      let f, s = List.split (build_subst t pv) in
+      List.rev f, List.rev s
+      (* List.rev (snd (List.split (build_subst t pv))) *)
     | _::rp, _::rt, _::rpv -> aux rp rt rpv
-    | _, [], _ -> []
+    | _, [], _ -> [],[]
     | _, _::_, [] -> assert false
   in
   aux procs tr_args proc_vars
@@ -226,44 +528,82 @@ let rec atom_contains_arg z = function
 
 
 let abstract_others sa others =
+  (* let sa = SAtom.filter (function *)
+  (*   | Comp ((Elem (x, _) | Access (x,_,_)), _, _) -> *)
+  (*     let x = if is_prime (Hstring.view x) then unprime_h x else x in *)
+  (*     not (Smt.Typing.has_abstract_type x) *)
+  (*   | Ite _ -> false *)
+  (*   | _ -> true) sa in *)
   SAtom.filter (fun a ->
     not (List.exists (fun z -> atom_contains_arg z a) others)) sa
 
+
 let post init all_procs procs { tr_args = tr_args; 
-				   tr_reqs = reqs; 
-				   tr_name = name;
-				   tr_ureq = ureqs;
-				   tr_assigns = assigns; 
-				   tr_upds = upds; 
-				   tr_nondets = nondets } =
-  let others = missing_args procs tr_args in
-  let d = all_permutations tr_args (procs@others) in
+				tr_reqs = reqs; 
+				tr_name = name;
+				tr_ureq = ureqs;
+				tr_assigns = assigns; 
+				tr_upds = upds; 
+				tr_nondets = nondets } =
+  let tr_others, others = missing_args procs tr_args in
+  let d = all_permutations tr_args procs in
   (* do it even if no arguments *)
   let d = if d = [] then [[]] else d in
+  let p_init = prime_satom init in
   List.fold_left (fun acc sigma ->
-  (* let sigma = build_subst tr_args procs in *)
     if possible_guard procs all_procs tr_args sigma init reqs ureqs then
       let assi, assi_terms = apply_assigns assigns sigma in
       let upd, upd_terms = apply_updates upds all_procs sigma in
       let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
-      let sa = simplification_atoms SAtom.empty
-	(SAtom.union unchanged (SAtom.union assi upd)) in
-      let sa = abstract_others sa others in
-      let sa = elim_prime (prime_satom init) sa in
-      let sa = simplification_atoms SAtom.empty sa in
+      let sa = simplification_atoms p_init
+      	(SAtom.union unchanged (SAtom.union assi upd)) in
+      let sa = abstract_others sa tr_others in
+      let sa = wrapper_elim_prime p_init sa in
+      (* let sa = gauss_elim sa in *)
       let sa, (nargs, _) = proper_cube sa in
       (sa, nargs) :: acc
-      (* let ar =  ArrayAtom.of_satom sa in *)
-      (* let s = { s_init with *)
-      (* 	(\* t_from =  *\) *)
-      (* 	(\*   (name, (List.map (svar sigma) tr_args),s_init) :: s_init.t_from; *\) *)
-      (*   t_unsafe = nargs, sa; *)
-      (*   t_arru = ar; *)
-      (* 	t_alpha = ArrayAtom.alpha ar nargs; }  *)
-      (* in *)
-      (* s::acc *)
     else acc
   ) [] d
+
+let post2 init all_procs procs { tr_args = tr_args; 
+				tr_reqs = reqs; 
+				tr_name = name;
+				tr_ureq = ureqs;
+				tr_assigns = assigns; 
+				tr_upds = upds; 
+				tr_nondets = nondets } =
+  let tr_others,others = missing_args procs tr_args in
+  let sigma = build_subst tr_args procs in
+  if possible_guard procs all_procs tr_args sigma init reqs ureqs then
+    let assi, assi_terms = apply_assigns assigns sigma in
+    let upd, upd_terms = apply_updates upds all_procs sigma in
+    let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
+    let p_init = prime_satom init in
+    let sa = simplification_atoms p_init
+      (SAtom.union unchanged (SAtom.union assi upd)) in
+    let sa = abstract_others sa tr_others in
+    let sa = wrapper_elim_prime p_init sa in
+    (* let sa = gauss_elim sa in *)
+    let sa, (nargs, _) = proper_cube sa in
+    let d = all_permutations nargs nargs in
+    List.fold_left (fun acc sp -> (subst_atoms sp sa, nargs) :: acc) [] d
+  else []
+
+
+
+
+let post_inst init all_procs procs {i_reqs = reqs;
+				    i_udnfs = udnfs;
+				    i_actions = actions;
+				    i_touched_terms = touched_terms } =
+  if possible_inst_guard procs all_procs init reqs udnfs then
+    let p_init = prime_satom init in
+    let unchanged = preserve_terms touched_terms init in
+    let sa = simplification_atoms p_init (SAtom.union unchanged actions) in
+    let sa = wrapper_elim_prime p_init sa in
+    let sa, (nargs, _) = proper_cube sa in
+    [sa, nargs]    
+  else []
 
 
 (* module HA = Hashtbl.Make (ArrayAtom) *)
@@ -295,6 +635,12 @@ let visited_from_h s h = HSA.fold (fun sa _ acc ->
     t_alpha = ArrayAtom.alpha ar nargs } :: acc) h []
 
 
+let already_seen sa args h =
+  let d = all_permutations args args in
+  List.exists (fun sigma ->
+    let sa = subst_atoms sigma sa in
+    HSA.mem h sa) d
+
 let forward s procs trs l =
   let h_visited = HSA.create 200_029 in
   let cpt_f = ref 0 in
@@ -316,16 +662,18 @@ let forward s procs trs l =
 	  let new_td =
 	    List.fold_left (fun new_td tr ->
 	      List.fold_left (fun new_td s ->
-	  (* if fixpoint ~invariants:[] ~visited s then new_td *)
-	  (* else *) (s :: new_td)
-	      ) new_td (post sa args procs tr)
+		s :: new_td
+	      ) new_td (post_inst sa args procs tr)
 	    ) [] trs
 	  in
 	  incr cpt_f;
-	  if debug && verbose > 2 then 
-	    eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
-	  else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	  HSA.add h_visited sa ();
+	  if debug then 
+	    eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
+	  else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
+	    (List.length to_do + List.length new_td);
+	  (* HSA.add h_visited sa (); *)
+	  let d = all_permutations args args in
+	  List.iter (fun sigma -> HSA.add h_visited (subst_atoms sigma sa) ()) d;
 	  forward_rec s procs trs (List.rev_append new_td to_do)
       )
   in
@@ -333,17 +681,74 @@ let forward s procs trs l =
   h_visited
 
 
+let forward2 s procs trs l =
+  let h_visited = HSA.create 200_029 in
+  let cpt_f = ref 0 in
+  let rec forward_rec s procs trs = function
+    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
+    | l :: to_do ->
+    (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
+    (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
+    (*   raise (Search.Unsafe init) *)
+    (* end; *)
+      if false && !cpt_f > 400_000 then ()
+      else (
+    (* if fixpoint ~invariants:[] ~visited init then *)
+    (* if easy_fixpoint init visited then *)
+    (** Very incomplete hash test **)
+	if List.exists (fun (sa, _) -> HSA.mem h_visited sa) l then
+	  forward_rec s procs trs to_do
+	else
+	  let new_td =
+	    List.fold_left (fun new_td (sa, args) ->
+	      incr cpt_f;
+	      HSA.add h_visited sa ();
+	      if debug then 
+		eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
+	      else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	      List.fold_left (fun new_td tr ->
+		let ls = post sa args procs tr in
+		if ls = [] then new_td else ls :: new_td
+	      ) new_td trs
+	    ) [] l
+	  in
+	  forward_rec s procs trs (List.rev_append new_td to_do)
+      )
+  in
+  forward_rec s procs trs l;
+  h_visited
+
+
+
+
+let var_term_unconstrained sa t =
+  SAtom.for_all (function
+    | Comp (t1, _, t2) -> compare_term t t1 <> 0 && compare_term t t2 <> 0
+    | _ -> true) sa
+
+let unconstrained_terms sa = STerm.filter (var_term_unconstrained sa)
+
 module MA = Map.Make (Atom)
 
-let add_compagnions_from_node sa =
+let lit_abstract = function
+  | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
+      Smt.Typing.has_abstract_type x
+  | _ -> false
+
+let add_compagnions_from_node all_var_terms sa =
   SAtom.fold (fun a mc ->
-    let comps = SAtom.remove a sa in
-    let old_comps = try MA.find a mc with Not_found -> SAtom.empty in
-    MA.add a (SAtom.union comps old_comps) mc) sa
+    if lit_abstract a then mc
+    else
+      let rsa = SAtom.remove a sa in
+      let unc = unconstrained_terms rsa all_var_terms in 
+      let old_comps, old_uncs = 
+	try MA.find a mc with Not_found -> SAtom.empty, STerm.empty in
+      MA.add a (SAtom.union rsa old_comps, STerm.union unc old_uncs) mc
+  ) sa
 
 
-let stateless_forward s procs trs l =
-  let h_visited = HI.create 200_029 in
+let stateless_forward s procs trs all_var_terms l =
+  let h_visited = HI.create 2_000_029 in
   let cpt_f = ref 0 in
   let rec forward_rec s procs trs mc = function
     | [] -> eprintf "Total forward nodes : %d@." !cpt_f; mc
@@ -356,22 +761,30 @@ let stateless_forward s procs trs l =
 	  List.fold_left (fun new_td tr ->
 	    List.fold_left (fun new_td s ->
 	  (* if fixpoint ~invariants:[] ~visited s then new_td *)
-	  (* else *) (s :: new_td)
-	    ) new_td (post sa args procs tr)
+	  (* else *) 
+	      (* if HI.mem h_visited (SAtom.hash (fst s)) then new_td else *)
+	      s :: new_td
+	    ) new_td (post_inst sa args procs tr)
 	  ) [] trs
 	in
 	incr cpt_f;
 	
 	if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
-	else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	HI.add h_visited hsa ();
-	let mc = add_compagnions_from_node sa mc in
+	else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
+	  (List.length to_do + List.length new_td);
+	(* HI.add h_visited hsa (); *)
+	(* let mc = add_compagnions_from_node all_var_terms sa mc in *)
+	let d = all_permutations args args in
+	let mc = 
+	  List.fold_left (fun mc sigma ->
+	    let sa = subst_atoms sigma sa in
+	    HI.add h_visited (SAtom.hash sa) ();
+	    add_compagnions_from_node all_var_terms sa mc
+	  ) mc d in
 	forward_rec s procs trs mc (List.rev_append new_td to_do)
   in
   forward_rec s procs trs MA.empty l
   
-  
-
 
 (* let mkinit_multi args init args = *)
 (*   match args with *)
@@ -386,7 +799,12 @@ let mkinit arg init args =
   match arg with
     | None -> init
     | Some z ->
-	let sa, cst = SAtom.partition (has_var z) init in
+        let abs_init = (* SAtom.filter (function *)
+	  (* | Comp ((Elem (x, _) | Access (x,_,_)), _, _) -> *)
+	  (*     not (Smt.Typing.has_abstract_type x) *)
+	  (* | _ -> true) *) init in
+	let abs_init = simplification_atoms SAtom.empty abs_init in
+	let sa, cst = SAtom.partition (has_var z) abs_init in
 	List.fold_left (fun acc h ->
 	  SAtom.union (subst_atoms [z, h] sa) acc) cst args
 
@@ -413,31 +831,68 @@ let mkforward_s s =
     (* } *)
   ) s.t_forward
 
-let search procs init = forward init procs init.t_trans [mkinit_s procs init]
 
-let search_stateless procs init = 
-  stateless_forward init procs init.t_trans [mkinit_s procs init]
 
-let search_nb n =
+let instantiate_transitions all_procs procs trans = 
+  let aux acc { tr_args = tr_args; 
+		tr_reqs = reqs; 
+		tr_name = name;
+		tr_ureq = ureqs;
+		tr_assigns = assigns; 
+		tr_upds = upds; 
+		tr_nondets = nondets } =
+    let tr_others,others = missing_args procs tr_args in
+    let d = all_permutations tr_args procs in
+    (* do it even if no arguments *)
+    let d = if d = [] then [[]] else d in
+    List.fold_left (fun acc sigma ->
+      let reqs = subst_atoms sigma reqs in
+      let t_args_ef = 
+	List.fold_left (fun acc p -> 
+	  try (svar sigma p) :: acc
+	  with Not_found -> p :: acc) [] tr_args in
+      let udnfs = uguard_dnf sigma all_procs t_args_ef ureqs in
+      let assi, assi_terms = apply_assigns assigns sigma in
+      let upd, upd_terms = apply_updates upds all_procs sigma in
+      let act = simplification_atoms SAtom.empty (SAtom.union assi upd) in
+      let act = abstract_others act tr_others in
+      (* eprintf "%a (%a) =\nrequires {\n%a\n}\n{\n%a\n}\n@." *)
+      (* 	Hstring.print name  *)
+      (* 	Pretty.print_args (snd (List.split sigma))  *)
+      (* 	Pretty.print_cube reqs *)
+      (* 	Pretty.print_cube act; *)
+      {
+	i_reqs = reqs;
+	i_udnfs = udnfs;
+	i_actions = act;
+	i_touched_terms = STerm.union assi_terms upd_terms
+      } :: acc
+    ) acc d
+  in
+  List.fold_left aux [] trans
+
+
+
+let search procs init = 
+  let inst_trans = instantiate_transitions procs procs init.t_trans in
+  forward init procs inst_trans [mkinit_s procs init]
+
+let search_stateless procs init =
+  let var_terms = all_var_terms procs init in
+  let inst_trans = instantiate_transitions procs procs init.t_trans in
+  stateless_forward init procs inst_trans var_terms [mkinit_s procs init]
+
+let procs_from_nb n =
   let rp, _ = 
     List.fold_left (fun (acc, n) v ->
       if n > 0 then v :: acc, n - 1
       else acc, n) ([], n) proc_vars in
-  let procs = List.rev rp in
-  search procs
+  List.rev rp
 
-let search_stateless_nb n =
-  let rp, _ = 
-    List.fold_left (fun (acc, n) v ->
-      if n > 0 then v :: acc, n - 1
-      else acc, n) ([], n) proc_vars in
-  let procs = List.rev rp in
-  search_stateless procs
-
-let search_only s =
-  let ex_args = 
-    match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in
-  forward s ex_args s.t_trans (mkforward_s s)
+let search_only s = assert false
+  (* let ex_args =  *)
+  (*   match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in *)
+  (* forward s ex_args s.t_trans (mkforward_s s) *)
 
 (*********************************)
 (* Extract candidates from trace *)
@@ -454,30 +909,40 @@ module MT = Map.Make (struct type t = term let compare = compare_term end)
 let all_litterals h = HSA.fold (fun sa _ acc ->
   SAtom.union sa acc) h SAtom.empty
 
-let compagnions_from_trace forward_nodes =
+let compagnions_from_trace forward_nodes all_var_terms =
   let lits = all_litterals forward_nodes in
   SAtom.fold (fun a acc ->
-    let compagnions =
-      HSA.fold (fun sa _ acc ->
-	if SAtom.mem a sa then
-	  SAtom.union (SAtom.remove a sa) acc
-	else acc)
-	forward_nodes SAtom.empty
-    in
-    MA.add a compagnions acc) lits MA.empty
+    if lit_abstract a then acc else
+      let compagnions_uncs =
+	HSA.fold (fun sa _ (acc, uncs) ->
+	  if SAtom.mem a sa then
+	    let rsa = SAtom.remove a sa in
+	    let unc = unconstrained_terms rsa all_var_terms in
+	    SAtom.union rsa acc, STerm.union unc uncs
+	  else acc, uncs)
+	  forward_nodes (SAtom.empty, STerm.empty)
+      in 
+      MA.add a compagnions_uncs acc
+  ) lits MA.empty
 
-let compagnions_values compagnions =
-  SAtom.fold (fun c (acc, compagnions) -> 
-    match c with
-      | Comp (Elem (x, Constr), Eq, t1)
-      | Comp (t1, Eq, Elem (x, Constr)) ->
-	let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
-	MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
+let contains_unconstrained uncs = function
+  | Comp (t1, op, t2) -> STerm.mem t1 uncs || STerm.mem t2 uncs
+  | _ -> false
+
+let compagnions_values compagnions uncs =
+  SAtom.fold (fun c (acc, compagnions) ->
+    if contains_unconstrained uncs c then acc, SAtom.remove c compagnions
+    else
+      match c with
+	| Comp (Elem (x, Constr), Eq, t1)
+	| Comp (t1, Eq, Elem (x, Constr)) ->
+	  let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
+	  MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
       (* heuristic: remove proc variables *)
-      | Comp (Elem (_, Var), _, _)
-      | Comp (_, _, Elem (_, Var)) ->
-      	acc, SAtom.remove c compagnions
-      | _ -> acc, compagnions)
+	| Comp (Elem (_, Var), _, _)
+	| Comp (_, _, Elem (_, Var)) ->
+      	  acc, SAtom.remove c compagnions
+	| _ -> acc, compagnions)
     compagnions (MT.empty, compagnions)
 
 let get_variants x =
@@ -486,10 +951,36 @@ let get_variants x =
     H.HSet.add htrue (H.HSet.singleton hfalse)
   else Smt.Typing.Variant.get_variants x
 
-let candidates_from_compagnions a compagnions acc =
-  let mt, remaining = compagnions_values compagnions in
+
+let variable_term_has_value v t =
+  SAtom.exists (function
+    | Comp (t1, Eq, t2) -> 
+        compare_term v t1 = 0 && compare_term t t2 = 0
+    | _ -> false)
+
+let variable_term_has_other_values v t =
+  SAtom.exists (function
+    | Comp (t1, Eq, t2) ->
+        (compare_term v t1 = 0 && compare_term t t2 <> 0) ||
+	(compare_term v t2 = 0 && compare_term t t1 <> 0)
+    | Comp (t1, Neq, t2) -> 
+        compare_term v t1 = 0 && compare_term t t2 = 0
+    | _ -> false)
+
+let only_value_possible c sa =
+  let sa = SAtom.remove c sa in
+  match c with
+    | Comp (v, Eq, t) -> not (variable_term_has_other_values v t sa)
+    | Comp (v, Neq, t) -> not (variable_term_has_value v t sa)
+    | _ -> false
+
+let candidates_from_compagnions a (compagnions, uncs) acc =
+  let mt, remaining = compagnions_values compagnions uncs in
   let acc = 
-    SAtom.fold (fun c acc -> (a, [Atom.neg c]) :: acc) remaining acc
+    SAtom.fold (fun c acc ->
+      if only_value_possible c remaining then (a, [Atom.neg c]) :: acc
+      else acc
+    ) remaining acc
   in
   MT.fold (fun c vals acc -> match c with
     | Elem (x, _) | Access (x, _, _) ->
@@ -515,13 +1006,19 @@ let candidates_from_compagnions a compagnions acc =
     | _ -> assert false)
     mt acc
 
+
 let useless_candidate sa =
   SAtom.exists (function
     (* heuristic: remove proc variables *)
     | Comp (Elem (_, Var), _, _)
     | Comp (_, _, Elem (_, Var)) -> true
+
+    | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
+      let x = if is_prime (Hstring.view x) then unprime_h x else x in
+      Smt.Typing.has_type_proc x
+
     | _ -> false) sa
-  (* || List.length (args_of_atoms sa) > 1 *)
+  (*(* || List.length (args_of_atoms sa) > 1 *)*)
 
 let make_satom_from_list s la = 
   List.fold_left (fun sa x -> SAtom.add x sa) s la
@@ -616,7 +1113,7 @@ let forward_and_check s procs trs l sla =
   forward_rec s procs trs l
 
 let stateless_forward_and_check s procs trs l sla =
-  let h_visited = HI.create 200_029 in
+  let h_visited = HI.create 2_000_029 in
   let cpt_f = ref 0 in
   let rec forward_rec s procs trs = function
     | [] -> eprintf "Total forward nodes : %d@." !cpt_f
@@ -715,10 +1212,16 @@ let filter_alive_candidates fwd candidates =
 
 let extract_candidates comps s =
   let cpt = ref (-1) in
-  if debug && verbose > 0 then
-    MA.iter (fun a compagnions ->
-	       eprintf "compagnons %a : %a@." 
-		 Pretty.print_atom a Pretty.print_cube compagnions) comps;
+  if debug then
+    MA.iter (fun a (compagnions, uncs) ->
+      eprintf "compagnons %a : %a@."
+	Pretty.print_atom a Pretty.print_cube compagnions;
+      eprintf "> unconstrained :\n";
+      STerm.iter 
+	(fun t -> eprintf "               %a\n" Pretty.print_term t)
+	uncs;
+      eprintf "@.";      
+    ) comps;
   let sas = MA.fold candidates_from_compagnions comps [] in
   let sas = List.rev sas in
   Gc.full_major ();
@@ -743,21 +1246,38 @@ let extract_candidates comps s =
 	 else 
 	   (decr cpt; (a, (la, s')) :: acc)) [] sas
 
+let compare_candidates s1 s2 =
+  let v1 = Cube.size_system s1 in
+  let v2 = Cube.size_system s2 in
+  let c = Pervasives.compare v1 v2 in
+  if c <> 0 then c else
+    let c1 = Cube.card_system s1 in
+    let c2 = Cube.card_system s2 in
+    Pervasives.compare c1 c2
+
+
+let sort_candidates =
+  List.fast_sort compare_candidates
 
 let extract_candidates_from_compagnons comps s =
   let c = extract_candidates comps s in
-  List.rev_map (fun (_,(_,s)) -> s) c
+  let cands = List.rev_map (fun (_,(_,s)) -> s) c in
+  (* sort_candidates *) cands
 
-let extract_candidates_from_trace forward_nodes s =
-  let comps = compagnions_from_trace forward_nodes in
-  if refine then
-    let c = extract_candidates comps s in
-    filter_alive_candidates forward_nodes c
-  else
-    begin
-      HSA.clear forward_nodes;
-      extract_candidates_from_compagnons comps s
-    end  
+let extract_candidates_from_trace forward_nodes all_var_terms s =
+  let comps = compagnions_from_trace forward_nodes all_var_terms in
+  let cands = 
+    if refine then
+      let c = extract_candidates comps s in
+      filter_alive_candidates forward_nodes c
+    else
+      begin
+	HSA.clear forward_nodes;
+	extract_candidates_from_compagnons comps s
+      end
+  in
+  (* sort_candidates *) cands
+  
   
 let select_relevant_candidates {t_unsafe = _, sa} =
   List.filter (fun {t_unsafe = _, ca} ->

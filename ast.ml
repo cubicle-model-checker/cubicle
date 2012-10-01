@@ -54,6 +54,8 @@ let rec compare_term t1 t2 =
   match t1, t2 with
     | Const c1, Const c2 -> compare_constants c1 c2
     | Const _, _ -> -1 | _, Const _ -> 1
+    | Elem (_, (Constr | Var)), Elem (_, (Glob | Arr)) -> -1
+    | Elem (_, (Glob | Arr)), Elem (_, (Constr | Var)) -> 1
     | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
     | Elem _, _ -> -1 | _, Elem _ -> 1
     | Access (a1, i1, _), Access (a2, i2, _) ->
@@ -66,8 +68,9 @@ let rec compare_term t1 t2 =
 
 let rec hash_term = function
   | Const c -> Hashtbl.hash c
+  (* | Elem (_, Var) -> 31 *)
   | Elem (s, _) -> Hstring.hash s
-  | Access (a, x, _) -> Hstring.hash a * Hstring.hash x
+  | Access (a, x, _) -> Hstring.hash a * Hstring.hash x (* * 29 *)
   | Arith (x, c) -> hash_term x + Hashtbl.hash c
 
 let htrue = Hstring.make "True"
@@ -131,7 +134,7 @@ end = struct
   let rec hash = function
     | True -> 7 | False -> 11
     | Comp (x, Eq, y) -> 7 * (hash_term x * hash_term y)
-    | Comp (x, Neq, y) -> 11 * (hash_term x * hash_term y)
+    | Comp (x, Neq, y) -> 13 * (hash_term x * hash_term y)
     | Comp (x, Le, y) -> 5 * hash_term x * 7 * hash_term y
     | Comp (x, Lt, y) -> 5 * hash_term x * 11 * hash_term y
     | Ite (sa, a1, a2) -> SAtom.hash sa + (7 * hash a1) + (11 * hash a2)
@@ -156,7 +159,7 @@ end = struct
   let hash sa =
     let _, h = fold (fun a (n,acc) -> n + 1, n + Atom.hash a * acc)
       sa (2,1) in
-    h
+    h (* mod 1_000_000 *)
 end
 
 let gen_vars s n = 
@@ -211,6 +214,13 @@ and subst_atom sigma ?(sigma_sort=[]) a =
 	let sy = subst_term sigma ~sigma_sort y in
 	Comp(sx, op, sy)
     | _ -> a
+
+
+let subst_atoms sigma ?(sigma_sort=[]) sa =
+  if profiling then TimerApply.start ();
+  let sa = subst_atoms sigma ~sigma_sort sa in
+  if profiling then TimerApply.pause ();
+  sa
 
 
 let build_subst args a_args =
@@ -391,6 +401,8 @@ module STerm = Set.Make (struct type t = term let compare = compare_term end)
 (* Typed AST *)
 
 type t_system = {
+  t_globals : Hstring.t list;
+  t_arrays : Hstring.t list;
   t_from : (Hstring.t * Hstring.t list * t_system) list;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;

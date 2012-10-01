@@ -11,29 +11,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
+
 open Ast
 
-val print_term : formatter -> term -> unit
+val stateless_search : Hstring.t list -> t_system ->
+  (SAtom.t * STerm.t) Forward.MA.t
 
-val print_atom : formatter -> Atom.t -> unit
-
-val print_cube : formatter -> SAtom.t -> unit
-
-val print_array : formatter -> ArrayAtom.t -> unit
-
-val print_system : formatter -> t_system -> unit
-
-val print_args : formatter -> Hstring.t list -> unit
-
-val print_subst : formatter -> (Hstring.t * Hstring.t) list -> unit
-
-val print_unsafe : formatter -> t_system -> unit
-
-val print_node : formatter -> t_system -> unit
-
-val print_dead_node : formatter -> (t_system * int list) -> unit
-
-val print_verbose_node : formatter -> t_system -> unit
-
-val syscall : string -> string

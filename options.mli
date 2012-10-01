@@ -27,6 +27,7 @@ val maxnodes : int
 val only_forward : bool
 val gen_inv : bool
 val forward_inv : int
+val enumerative : int
 val lazyinv : bool
 val refine : bool
 val stateless : bool

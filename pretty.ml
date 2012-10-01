@@ -107,6 +107,13 @@ let rec print_args fmt = function
     if dmcmt then  fprintf fmt "_%s%a" s print_args r
     else  fprintf fmt "%s, %a" s print_args r
 
+let rec print_subst fmt = function
+  | [] -> ()
+  | [x,y] ->
+    fprintf fmt "%a -> %a" Hstring.print x Hstring.print y
+  | (x,y)::r -> 
+    fprintf fmt "%a -> %a, %a" Hstring.print x Hstring.print y print_subst r
+
 let print_unsafe fmt s = 
   fprintf fmt "  Unsafe property (from %aunsafe):@.        %a@."
     (fun fmt ->

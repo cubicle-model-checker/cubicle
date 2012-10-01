@@ -201,8 +201,8 @@ let nondets l =
        try
 	 let args_g, ty_g = Smt.Typing.find g in
 	 if args_g <> [] then error (NotATerm g);
-	 if not (Hstring.equal ty_g Smt.Typing.type_proc) then 
-	   error (MustBeOfTypeProc g)
+	 (* if not (Hstring.equal ty_g Smt.Typing.type_proc) then  *)
+	 (*   error (MustBeOfTypeProc g) *)
        with Not_found -> error (UnknownGlobal g)) l
 
 let assigns args = 
@@ -290,9 +290,14 @@ let system s =
 	[] s.globals
     in
 
+    let t_globals = List.map fst s.globals in
+    let t_arrays = List.map fst s.arrays in
+
     List.map (fun ((args, p) as un) ->
 		let arru = ArrayAtom.of_satom p in (* inutile ? *)
 		{ 
+		  t_globals = t_globals;
+		  t_arrays = t_arrays;
 		  t_from = [];
 		  t_init = s.init;
 		  t_invs = s.invs;

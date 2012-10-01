@@ -145,7 +145,7 @@ module Profiling = struct
       (int_of_float minu) extrasec
 
   let print_time_prover () =
-    let sec = Smt.get_time () in
+    let sec = Prover.SMT.get_time () in
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
     printf "└─Time in solver                 : %dm%2.3fs@."
@@ -186,11 +186,17 @@ module Profiling = struct
     printf "├─Nodes sorting                  : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
-  let print_report nb inv del print_system =
+  let print_report nb inv del used_cands print_system =
+    if used_cands <> [] then begin
+      printf "\n-----------------\n";
+      printf "Used candidates :\n";
+      printf "-----------------@.";
+      List.iter (fun i -> printf "\n%a@." print_system i) used_cands
+    end;
     printf "\n----------------------------------------------@.";
     printf "Number of visited nodes          : %d@." nb;
     printf "Fixpoints                        : %d@." !cpt_fix;
-    printf "Number of solver calls           : %d@." (Smt.get_calls ());
+    printf "Number of solver calls           : %d@." (Prover.SMT.get_calls ());
     printf "Max Number of processes          : %d@." !cpt_process;
     if delete then 
       printf "Number of deleted nodes          : %d@." del;
@@ -209,10 +215,6 @@ module Profiling = struct
       printf "----------------------------------------------@."
     end;
     
-    if true || gen_inv then begin
-      printf "Invariants : @.";
-      List.iter (fun i -> printf "\n%a@." print_system i) inv
-    end;
 
 end
 
@@ -261,7 +263,7 @@ module DFSL ( X : I ) = struct
     in
     List.iter (search_rec 0) uns;
     eprintf "[DFSL]";
-    Profiling.print_report !nb_nodes [] 0 X.print_system
+    Profiling.print_report !nb_nodes [] 0 [] X.print_system
 
 end
 
@@ -311,7 +313,7 @@ module DFSH ( X : I ) = struct
 	search_rec (H.add H.empty (List.map (fun s -> 0, s, visited) uns))
       with Heap.EmptyHeap -> ()
     end;
-    Profiling.print_report !nb_nodes [] 0 X.print_system
+    Profiling.print_report !nb_nodes [] 0 [] X.print_system
 
 end
 
@@ -337,6 +339,7 @@ module BFS_base ( X : I ) = struct
     let visited = ref visited in
     let postponed = ref [] in
     let invariants = ref invariants in
+    let used_candidates = if lazyinv then ref [] else ref candidates in
     let candidates = ref candidates in
     let not_invariants = ref [] in
     let q = Queue.create () in
@@ -377,13 +380,15 @@ module BFS_base ( X : I ) = struct
       incr cpt_nodes;
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
 	(Profiling.print_report !nb_nodes !invariants !nb_deleted
-	   X.print_system;
+	   !used_candidates X.print_system;
 	 raise ReachBound);
       (try X.safety s with 
 	 | Unsafe s -> 
 	     close_dot (); raise (Unsafe s));
-      (let invs = List.rev_append !invariants !candidates in
-	match X.fixpoint ~invariants:invs ~visited:!visited s with
+      (let nodes = 
+	 if !candidates = [] then !visited 
+	 else !visited @ !candidates in
+       match X.fixpoint ~invariants:!invariants ~visited:nodes s with
 	 | Some db ->
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
 	     incr Profiling.cpt_fix;
@@ -392,13 +397,18 @@ module BFS_base ( X : I ) = struct
 	       let db' = List.filter (fun x -> x <> ss) db in
 	       let post, cands = extract_candidates db' !candidates in
 	       cpt_cands := !cpt_cands + (List.length post);
-	       if post <> [] then
+	       if post <> [] then begin
 	       	 eprintf "\n>>> Adding %d candidates (total %d) :@."
 		   (List.length post) !cpt_cands;
-	       List.iter (fun s ->
-		 eprintf ">>> %a@." X.print_system s;
-		 Queue.add (cpt+1, s) q) post;
-	       candidates := cands;
+		 List.iter (fun s ->
+		   (* eprintf "\n (\* %d *\) unsafe (z1 z2) = { %a }@."  *)
+		   (*   !cpt_cands X.print_system s; *)
+		   eprintf ">> %a@." X.print_system s;
+		   Queue.add (cpt+1, s) q) post;
+		 (* Queue.add (cpt, s) q; *)
+		 candidates := cands;
+		 used_candidates := !used_candidates @ post;
+	       end;
 	     end
 
 	 | None ->
@@ -419,9 +429,9 @@ module BFS_base ( X : I ) = struct
 	       end;
 	       let ls, post = X.pre s in
 	       (* eprintf "pre : %d@." (List.length ls + List.length post); *)
-	       (* eprintf "done : %d - remaining : %d@." *)
-	       (*   (List.length !visited) 
-		    (Queue.length q + List.length !postponed); *)
+	       eprintf "done : %d - remaining : %d@."
+	         (List.length !visited)
+	       	    (Queue.length q + List.length !postponed);
 	       let ls = List.rev ls in
 	       let post = List.rev post in
 	       (* Uncomment for pure bfs search *)
@@ -480,7 +490,8 @@ module BFS_base ( X : I ) = struct
     eprintf "nodes : %d@." !cpt_nodes;
     if dot then close_dot ()
     else if invgen || not gen_inv then 
-      Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
+      Profiling.print_report !nb_nodes !invariants !nb_deleted !used_candidates
+	X.print_system
 
 end
 
@@ -556,7 +567,7 @@ module BFSinvp_base ( X : I ) = struct
     in
     List.iter (fun s -> Queue.add (0, s) q) uns;
     search_rec ();
-    Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system;
+    Profiling.print_report !nb_nodes !invariants !nb_deleted [] X.print_system;
 
 end
 
@@ -755,7 +766,7 @@ module BFS_dist_base ( X : I ) = struct
 
     search_rec ~post:false ;
     if invgen || not gen_inv then 
-      Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
+      Profiling.print_report !nb_nodes !invariants !nb_deleted [] X.print_system
     
 
 end
@@ -863,7 +874,7 @@ module DFSHL ( X : I ) = struct
     let rec search_rec_aux h =
       let (cpt, s), h = H.pop h in
       if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	(Profiling.print_report !nb_nodes !invariants !nb_deleted
+	(Profiling.print_report !nb_nodes !invariants !nb_deleted []
 	   X.print_system;
 	 raise ReachBound);
       X.safety s;
@@ -922,7 +933,7 @@ module DFSHL ( X : I ) = struct
     in
     let h = H.add H.empty (List.map (fun s -> 0, s) uns) in
     search_rec h;
-    Profiling.print_report !nb_nodes !invariants !nb_deleted X.print_system
+    Profiling.print_report !nb_nodes !invariants !nb_deleted [] X.print_system
 
 end
 
