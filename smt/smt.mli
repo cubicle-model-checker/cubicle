@@ -243,7 +243,15 @@ module type Solver = sig
 
   (** This SMT solver is imperative in the sense that it maintains a global
       context. To create different instances of Alt-Ergo light use the
-      functor {! Smt.Make}. *)
+      functor {! Smt.Make}.
+
+      A typical use of this solver is to do the following :{[
+      clear ();
+      assume f_1;
+      ...
+      assume f_n;
+      check ();]}
+  *)
 
   (** {2 Profiling functions} *)
 

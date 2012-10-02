@@ -148,6 +148,10 @@ val bw_or  : t -> t -> t
 val bw_xor : t -> t -> t
 val bw_not : t -> t
 
+val bw_and_in_place : t -> t -> unit
+val bw_or_in_place  : t -> t -> unit
+val bw_not_in_place : t -> unit
+
 val shiftl : t -> int -> t
 val shiftr : t -> int -> t
 
