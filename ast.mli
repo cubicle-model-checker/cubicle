@@ -51,6 +51,8 @@ module rec Atom : sig
 
   val compare : t -> t -> int
   val neg : t -> t
+  val hash : t -> int
+  val equal : t -> t -> bool
 end 
 and SAtom : sig 
   include Set.S with type elt = Atom.t
@@ -58,6 +60,7 @@ and SAtom : sig
 end
 
 val proc_vars : Hstring.t list
+val proc_vars_int : int list
 val alpha_vars : Hstring.t list
 val fresh_vars : Hstring.t list
 

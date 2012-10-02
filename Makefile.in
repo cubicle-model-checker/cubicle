@@ -78,11 +78,14 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
-	    common/vec.cmo common/heap.cmo common/iheap.cmo
+	    common/vec.cmo common/heap.cmo common/iheap.cmo\
+	    common/bitv.cmo
 
 CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      prover.cmo search.cmo cube.cmo forward.cmo enumerative.cmo bwreach.cmo \
+      prover.cmo bitsolver.cmo \
+      search.cmo cube.cmo forward.cmo \
+      enumerative.cmo bwreach.cmo \
       typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
@@ -239,7 +242,8 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 	      common/heap.mli common/hstring.ml common/hstring.mli\
 	      common/iheap.ml common/iheap.mli common/timer.ml\
-	      common/timer.mli common/vec.ml common/vec.mli
+	      common/timer.mli common/vec.ml common/vec.mli\
+	      common/bitv.ml common/bitv.mli
 
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
@@ -248,9 +252,9 @@ FILES = ast.ml ast.mli cube.ml forward.mli forward.ml\
 	enumerative.mli enumerative.ml\
 	bwreach.ml bwreach.mli\
 	fake_functory.ml fake_functory.mli\
-	lexer.mll main.ml options.ml options.mli\
-	parser.mly pretty.ml pretty.mli prover.ml prover.mli search.ml\
-	search.mli typing.ml typing.mli version.ml
+	lexer.mll main.ml options.ml options.mli parser.mly\
+	pretty.ml pretty.mli prover.ml prover.mli bitsolver.ml bitsolver.mli\
+	search.ml search.mli typing.ml typing.mli version.ml
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 

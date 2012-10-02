@@ -27,6 +27,9 @@ module HSet = Hstring.HSet
 let decl_types = H.create 17
 let decl_symbs = H.create 17
 
+let htrue = Hstring.make "True"
+let hfalse = Hstring.make "False"
+
 module Type = struct
 
   type t = Hstring.t
@@ -72,7 +75,13 @@ module Type = struct
     H.fold (fun _ c acc -> match c with
       | Symbols.Name (h, Symbols.Constructor), _, _ -> h :: acc
       | _ -> acc
-    ) decl_symbs [Hstring.make "True"; Hstring.make "False"]
+    ) decl_symbs [htrue; hfalse]
+
+  let constructors ty =
+    if Hstring.equal ty type_bool then [htrue; hfalse]
+    else match H.find decl_types ty with
+      | Ty.Tsum (_ , cstrs) -> cstrs
+      | _ -> raise Not_found
     
 end
 
@@ -116,10 +125,8 @@ module Symbol = struct
     Hstring.equal (snd (type_of s)) Type.type_proc
       
   let _ = 
-    H.add decl_symbs (Hstring.make "True") 
-      (Symbols.True, [], Hstring.make "bool");
-    H.add decl_symbs (Hstring.make "False") 
-      (Symbols.False, [], Hstring.make "bool");
+    H.add decl_symbs htrue (Symbols.True, [], Type.type_bool);
+    H.add decl_symbs hfalse (Symbols.False, [], Type.type_bool);
     
 end
 

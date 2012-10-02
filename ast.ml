@@ -79,6 +79,7 @@ let hfalse = Hstring.make "False"
 type acc_eq = { a : Hstring.t; i: Hstring.t; e: term }
 
 module rec Atom : sig
+
   type t =
     | True
     | False
@@ -88,6 +89,7 @@ module rec Atom : sig
   val compare : t -> t -> int
   val neg : t -> t
   val hash : t -> int
+  val equal : t -> t -> bool
 
 end = struct
   
@@ -140,6 +142,7 @@ end = struct
     | Ite (sa, a1, a2) -> SAtom.hash sa + (7 * hash a1) + (11 * hash a2)
   and hash_set sa = SAtom.fold (fun a acc -> hash a + acc) sa 0
 
+  let equal x y = compare x y = 0
 
 end
 
@@ -172,6 +175,12 @@ let gen_vars s n =
 let alpha_vars = gen_vars "$" max_proc
 let proc_vars = gen_vars "#" max_proc
 let fresh_vars = gen_vars "?" max_proc
+let proc_vars_int = 
+  let l = ref [] in
+  for i = 1 to max_proc do
+    l := i :: !l
+  done;
+  List.rev !l
 
 let add a s = 
   match a with

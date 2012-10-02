@@ -158,13 +158,6 @@ module Profiling = struct
     printf "Time for pre-image computation   : %dm%2.3fs@."
       (int_of_float minu) extrasec
 
-  let print_time_hs () =
-    let sec = Hstring.TimeHS.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "Hstring.find                     : %dm%2.3fs@."
-      (int_of_float minu) extrasec
-
   let print_time_subset () =
     let sec = Ast.TimerSubset.get () in
     let minu = floor (sec /. 60.) in
