@@ -27,6 +27,7 @@ let debug = ref false
 let dot = ref false
 let verbose = ref 0
 let quiet = ref false
+let bitsolver = ref false
 
 let incr_verbose () = incr verbose
 
@@ -94,7 +95,8 @@ let specs =
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
-    "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format"
+    "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
+    "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types"
   ]
 
 let alspecs = Arg.align specs
@@ -137,3 +139,4 @@ let post_strategy =
     | _ -> 2
 
 let quiet = !quiet
+let bitsolver = !bitsolver

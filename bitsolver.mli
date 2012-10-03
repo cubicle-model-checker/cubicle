@@ -29,11 +29,11 @@ val apply_subst : (Hstring.t * Hstring.t) list -> Bitv.t -> Bitv.t
 (** applies a process substitution on a bit-vector representation of a cube.*)
 
 
-val solve : Bitv.t list -> Bitv.t list -> unit
-(** {b Raises} {! Unsat } *)
+val is_unsat : Bitv.t list -> Bitv.t list -> bool
 
-
-val fixpoint : Ast.t_system -> Ast.t_system list -> bool
+val fixpoint : 
+  invariants : Ast.t_system list -> visited : Ast.t_system list ->
+  Ast.t_system -> int list option
 
 val safe : Ast.t_system -> bool
 

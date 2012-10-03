@@ -13,6 +13,7 @@
 
 open Options
 open Ast
+open Format
 
 module HS = Hstring.H
 module HSet = Hstring.HSet
@@ -32,13 +33,18 @@ type env = {
   mutable proc_section : (int * int) HS.t;
 }
 
-let env = {
-  size = 0;
-  term_bounds = HT.create 0;
-  bounds = [];
-  proc_bits = HS.create 0;
-  proc_section = HS.create 0;
-}
+let env = 
+  let proc_bits = HS.create max_proc in
+  List.iter (fun p ->
+    HS.add proc_bits p [];
+  ) proc_vars;
+  {
+    size = 0;
+    term_bounds = HT.create 0;
+    bounds = [];
+    proc_bits = proc_bits;
+    proc_section = HS.create max_proc;
+  }
 
 (* let bits_procs = *)
 (*   let rec aux n = *)
@@ -66,11 +72,11 @@ let bitvsize_from_pb s =
   size_globals + max_proc * size_arrays
 
 
-let add_proc_bits offset pbts =
+let add_proc_bits offset =
   let i = ref 0 in
   List.iter (fun p -> 
-    let l = try HS.find pbts p with Not_found -> [] in
-    HS.add pbts p ((!i + offset)::l);
+    let l = HS.find env.proc_bits p in
+    HS.add env.proc_bits p ((!i + offset)::l);
     incr i
   ) proc_vars
 
@@ -81,14 +87,12 @@ let bitvbounds_from_pb s =
   let h = HT.create nb_vars in
   let i = ref 0 in
   let bounds = ref [] in
-  let proc_bits = HS.create max_proc in
-  let proc_section = HS.create max_proc in
   List.iter (fun g ->
     let right = !i in
     let left = right + size_of_symbol g - 1 in
     HT.add h (Elem (g, Glob)) (right, left);
     bounds := right :: !bounds;
-    if Smt.Symbol.has_type_proc g then add_proc_bits right proc_bits;
+    if Smt.Symbol.has_type_proc g then add_proc_bits right;
     i := left + 1
   ) s.t_globals;
   List.iter (fun p ->
@@ -98,24 +102,30 @@ let bitvbounds_from_pb s =
       let left = right + size_of_symbol a - 1 in
       HT.add h (Access (a, p, Var)) (right, left);
       bounds := right :: !bounds;
-      if Smt.Symbol.has_type_proc a then add_proc_bits right proc_bits;
+      if Smt.Symbol.has_type_proc a then add_proc_bits right;
       i := left + 1
     ) s.t_arrays;
     let left_sec_p = !i - 1 in
-    HS.add proc_section p (right_sec_p, left_sec_p);
+    HS.add env.proc_section p (right_sec_p, left_sec_p);
   ) proc_vars;
-  h, List.rev !bounds, proc_bits, proc_section
+  h, List.rev (List.tl !bounds)
 
-(** returns an environnement with the bitvector size needed for the
-    representation of cubes of system [s] and the associated bounds
-    (see {!bitvbounds_from_pb}).*)
+
 let init_env s = 
-  let term_bounds, bounds, proc_bits, proc_section = bitvbounds_from_pb s in
+  let term_bounds, bounds = bitvbounds_from_pb s in
+  if debug then begin
+    HT.iter (fun t (r,l) ->
+      eprintf "%a \t: %d  to %d@." Pretty.print_term t r l
+    ) term_bounds ;
+    eprintf "bounds : [";
+    List.iter (fun bn ->
+      eprintf "%d," bn
+    ) bounds;
+    eprintf "]@.";
+  end;
   env.size <- bitvsize_from_pb s;
   env.term_bounds <- term_bounds;
-  env.bounds <- bounds;
-  env.proc_bits <- proc_bits;
-  env.proc_section <- proc_section
+  env.bounds <- bounds
 
 let values_of_type ty =
   let vals =
@@ -139,17 +149,19 @@ let index_value x v =
   !i
 
 let create_mask_value_aux x op v right left =
-  let i = index_value x v in
-  let b = Bitv.create env.size true in
-  begin match op with
-    | Eq -> 
-        Bitv.fill b right (left - right) false;
-        Bitv.set b (i + right) true
-    | Neq ->
-        Bitv.set b (i + right) false
-    | _ -> assert false
-  end;
-  b
+  try
+    let i = index_value x v in
+    let b = Bitv.create env.size true in
+    begin match op with
+      | Eq -> 
+          Bitv.fill b right (left - right + 1) false;
+          Bitv.set b (i + right) true
+      | Neq ->
+          Bitv.set b (i + right) false
+      | _ -> assert false
+    end;
+    b
+  with Not_found -> Bitv.create env.size false
 
 let create_mask_value x op v =
   let r,l = HT.find env.term_bounds x in
@@ -208,20 +220,23 @@ let apply_subst sigma b =
   List.iter (fun (x,y) ->
     let bits_x = HS.find env.proc_bits x in
     let bits_y = HS.find env.proc_bits y in
-    List.iter2 (fun i j -> Bitv.set nbv i (Bitv.get b j)) bits_x bits_y;
-    let right_sec_x, _ = HS.find env.proc_section x in
+    List.iter2 (fun i j -> 
+      Bitv.set nbv j (Bitv.get b i);
+      Bitv.set nbv i (Bitv.get b j);
+      (* Bitv.set nbv j true; *)
+    ) bits_x bits_y;
+    let right_sec_x, left_sec_x = HS.find env.proc_section x in
     let right_sec_y, left_sec_y = HS.find env.proc_section y in
-    Bitv.blit b right_sec_y nbv right_sec_x (left_sec_y - right_sec_y)
+    Bitv.blit b right_sec_x nbv right_sec_y (left_sec_x - right_sec_x + 1);
+    Bitv.blit b right_sec_y nbv right_sec_x (left_sec_y - right_sec_y + 1);
+    (* Bitv.fill nbv right_sec_x (left_sec_x - right_sec_x + 1) true; *)
   ) sigma;
   nbv
 
-
-exception Not_unit
-
 let in_bounds i =
-  let rec next_bound i left = function
-    | [] -> left, env.size - 1
-    | bn :: r -> if i < bn then left, bn - 1 else next_bound i bn r
+  let rec next_bound i right = function
+    | [] -> right, env.size - 1
+    | bn :: r -> if i < bn then right, bn - 1 else next_bound i bn r
   in
   next_bound i 0 env.bounds
 
@@ -231,63 +246,98 @@ let is_unit b =
     let bnds = ref (-1, -1) in
     Bitv.iteri_true (fun i ->
       if !first then (bnds := in_bounds i; first := false)
-      else if i > snd !bnds then raise Not_unit
+      else if i > snd !bnds then raise Exit
     ) b;
-    let right, left = !bnds in
-    let u = Bitv.create env.size false in
-    Bitv.fill u right (left - right + 1) false;
-    Bitv.bw_or_in_place b u;
-    true
-  with Not_unit -> false
+    Some !bnds
+  with Exit -> None
+
+let to_unit b (right,left) =
+  let u = Bitv.create env.size true in
+  Bitv.fill u right (left - right + 1) false;
+  Bitv.bw_or_in_place b u
+
+
+(* inefficient and useless *)
+let is_top b =
+  try
+    HT.iter (fun _ (r, l) ->
+      let u = Bitv.create env.size true in
+      Bitv.fill u r (l - r + 1) false;
+      Bitv.bw_or_in_place u b;
+      if Bitv.all_ones u then raise Exit
+    ) env.term_bounds;
+    false
+  with Exit -> true
+    
+  
 
 let is_bottom = Bitv.all_zeros
 
 exception Unsat
 
 let rec propagate conj neg_visited =
-  let todo, remaining =
-    List.fold_left (fun (todo, remaining) b ->
+  let unit, remaining =
+    List.fold_left (fun (unit, remaining) b ->
       Bitv.bw_and_in_place b conj;
       if is_bottom b then raise Unsat;
-      if is_unit b then b :: todo, remaining
-      else todo, b :: remaining
-    ) ([],[]) neg_visited in
-  match todo with
-    | conj :: todo -> propagate conj (todo @ remaining)
-    | [] -> ()
-
+      if unit = None then
+        match is_unit b with
+          | Some bnds -> to_unit b bnds; Some b, remaining
+          | _ -> unit, b :: remaining
+      else unit, b :: remaining
+    ) (None, []) neg_visited in
+  match unit with
+    | Some conj -> propagate conj remaining
+    | None -> ()
 
 let copy_visited = List.map Bitv.copy
 
-let solve cubes neg_visited =
-  List.iter (fun conj ->
+let is_unsat cubes neg_visited =
+  List.for_all (fun conj ->
     let neg_visited = copy_visited neg_visited in
-    propagate conj neg_visited)
+    try propagate conj neg_visited; false with Unsat -> true)
     cubes
 
-let fixpoint {t_unsafe = args, sa} visited =
+let fixpoint ~invariants ~visited ({t_unsafe = args, sa} as s) =
+  let visited = (List.rev_append invariants visited) in
   let cubes = cube_to_bitvs sa in
-  let p_cubes = 
-    List.fold_left (fun acc sigma ->
-      List.fold_left (fun acc c ->
-        apply_subst sigma c :: acc
-      ) acc cubes
-    ) [] (Cube.all_permutations args args)
-  in
+  if debug then eprintf "fixpoint:\ncube: %a@." Pretty.print_cube sa;
+  if debug then 
+    List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes;
   let neg_visited = 
-    List.fold_left (fun acc {t_unsafe = _, sa} ->
+    List.fold_left (fun acc {t_unsafe = vargs, sa} ->
+      if debug then eprintf "visited: %a@." Pretty.print_cube sa;
       let bvs = cube_to_bitvs sa in
-      List.iter Bitv.bw_not_in_place bvs;
-      bvs @ acc) [] visited
+      let perms = Cube.all_permutations vargs args in
+
+      List.fold_left (fun acc bv ->
+        List.fold_left (fun acc sigma ->
+          let bv = apply_subst sigma bv in
+          Bitv.bw_not_in_place bv;
+          bv :: acc) acc perms
+      ) acc bvs
+
+    ) [] visited
   in
-  try
-    solve p_cubes neg_visited;
-    false
-  with Unsat -> true
+  if is_unsat cubes neg_visited then begin
+    if debug then eprintf "FIXPONT!@.";
+    if Cube.fixpoint ~invariants ~visited s = None then
+      (eprintf "PROBLEM (completude) !!!!!!@."; exit 1);
+    Some []
+  end else begin
+    if debug then eprintf "NOT fixpoint@.";
+    if Cube.fixpoint ~invariants ~visited s <> None then
+      (eprintf "PROBLEM (correction) !!!!!!@."; exit 1);
+    None
+  end
 
 
+
+(* Buggy : need to check if at least one term is 0 *)
 let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
   let cubes = cube_to_bitvs sa in
+  eprintf "safety : \ncube: %a@." Pretty.print_cube sa;
+  List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes;
   let init_sa = match iargs with
     | None -> inisa
     | Some a ->
@@ -297,6 +347,8 @@ let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
 	(List.map (fun b -> [a, b]) args)
   in
   let init_cubes = cube_to_bitvs init_sa in
+  eprintf "\ninit: %a@." Pretty.print_cube init_sa;
+  List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) init_cubes;
   List.for_all (fun c ->
     List.for_all (fun init ->
       Bitv.all_zeros (Bitv.bw_and c init)
@@ -305,3 +357,5 @@ let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
 
 let check_safety s =
   if not (safe s) then raise (Search.Unsafe s)
+
+

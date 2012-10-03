@@ -34,6 +34,7 @@ val stateless : bool
 val post_strategy : int
 val delete : bool
 val simpl_by_uc : bool
+val bitsolver : bool
 
 val cores : int
 

@@ -817,10 +817,15 @@ module T = struct
   let delete_node = delete_node
   let is_deleted = is_deleted
 
-  let fixpoint = fixpoint
   let easy_fixpoint = easy_fixpoint
   let hard_fixpoint = hard_fixpoint
-  let safety = check_safety
+
+  (* let fixpoint = fixpoint *)
+  (* let safety = check_safety *)
+
+  let fixpoint = if bitsolver then Bitsolver.fixpoint else fixpoint
+  let safety = (* if bitsolver then Bitsolver.check_safety else *) check_safety
+
   let pre = pre_system
 
   let post = Forward.post_system
