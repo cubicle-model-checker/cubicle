@@ -83,8 +83,8 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      prover.cmo bitsolver.cmo \
-      search.cmo cube.cmo forward.cmo \
+      prover.cmo \
+      search.cmo cube.cmo bitsolver.cmo forward.cmo \
       enumerative.cmo bwreach.cmo \
       typing.cmo main.cmo
 

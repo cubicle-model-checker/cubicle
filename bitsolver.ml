@@ -25,11 +25,19 @@ end)
 
 
 type env = {
-  size : int;
-  term_bounds : (int * int) HT.t;
-  bounds : int list;
-  proc_bits : (int list) HS.t;
-  proc_section : (int * int) HS.t;
+  mutable size : int;
+  mutable term_bounds : (int * int) HT.t;
+  mutable bounds : int list;
+  mutable proc_bits : (int list) HS.t;
+  mutable proc_section : (int * int) HS.t;
+}
+
+let env = {
+  size = 0;
+  term_bounds = HT.create 0;
+  bounds = [];
+  proc_bits = HS.create 0;
+  proc_section = HS.create 0;
 }
 
 (* let bits_procs = *)
@@ -101,15 +109,13 @@ let bitvbounds_from_pb s =
 (** returns an environnement with the bitvector size needed for the
     representation of cubes of system [s] and the associated bounds
     (see {!bitvbounds_from_pb}).*)
-let create_env s = 
+let init_env s = 
   let term_bounds, bounds, proc_bits, proc_section = bitvbounds_from_pb s in
-  {
-    size = bitvsize_from_pb s;
-    term_bounds = term_bounds;
-    bounds = bounds;
-    proc_bits = proc_bits;
-    proc_section = proc_section;
-  }
+  env.size <- bitvsize_from_pb s;
+  env.term_bounds <- term_bounds;
+  env.bounds <- bounds;
+  env.proc_bits <- proc_bits;
+  env.proc_section <- proc_section
 
 let values_of_type ty =
   let vals =
@@ -132,7 +138,7 @@ let index_value x v =
   if !i = -1 then raise Not_found;
   !i
 
-let create_mask_value_aux env x op v right left =
+let create_mask_value_aux x op v right left =
   let i = index_value x v in
   let b = Bitv.create env.size true in
   begin match op with
@@ -145,11 +151,11 @@ let create_mask_value_aux env x op v right left =
   end;
   b
 
-let create_mask_value env x op v =
+let create_mask_value x op v =
   let r,l = HT.find env.term_bounds x in
-  create_mask_value_aux env x op v r l
+  create_mask_value_aux x op v r l
 
-let create_mask_comp env x op y =
+let create_mask_comp x op y =
   let rx,lx = HT.find env.term_bounds x in
   let ry,ly = HT.find env.term_bounds y in
   let values_x = values_of_term x in
@@ -159,8 +165,8 @@ let create_mask_comp env x op y =
         HSet.fold (fun vy acc ->
           HSet.fold (fun vx acc -> 
             if Hstring.equal vx vy then
-              let bx = create_mask_value_aux env x Eq vx rx lx in
-              let by = create_mask_value_aux env y Eq vy ry ly in
+              let bx = create_mask_value_aux x Eq vx rx lx in
+              let by = create_mask_value_aux y Eq vy ry ly in
               Bitv.bw_and bx by :: acc
             else acc
           ) values_x acc
@@ -168,36 +174,36 @@ let create_mask_comp env x op y =
     | Neq ->
         HSet.fold (fun vy acc ->
           if HSet.mem vy values_x then
-            let by = create_mask_value_aux env y Eq vy ry ly in
-            let bx = create_mask_value_aux env x Neq vy rx lx in
+            let by = create_mask_value_aux y Eq vy ry ly in
+            let bx = create_mask_value_aux x Neq vy rx lx in
             Bitv.bw_and bx by :: acc
           else acc
         ) values_y []
     | _ -> assert false  
 
 
-let atom_masks env = function
+let atom_masks = function
   | Atom.True -> [Bitv.create env.size true]
   | Atom.False -> [Bitv.create env.size false]
   | Atom.Comp (x, op, Elem (v, (Constr | Var)))
   | Atom.Comp (Elem (v, (Constr | Var)), op, x) ->
-      [create_mask_value env x op v]
+      [create_mask_value x op v]
   | Atom.Comp (x, op, y) ->
-      create_mask_comp env x op y
+      create_mask_comp x op y
   | _ -> assert false
 
 
-let add_atom_to_bitv env a bvs =
+let add_atom_to_bitv a bvs =
   List.flatten (List.map (fun m -> 
-    List.map (Bitv.bw_and m) bvs) (atom_masks env a))
+    List.map (Bitv.bw_and m) bvs) (atom_masks a))
 
-let cube_to_bitvs env sa =
-  SAtom.fold (add_atom_to_bitv env) sa (atom_masks env Atom.True)
+let cube_to_bitvs sa =
+  SAtom.fold add_atom_to_bitv sa (atom_masks Atom.True)
         
       
 
 
-let apply_subst env sigma b =
+let apply_subst sigma b =
   let nbv = Bitv.copy b in
   List.iter (fun (x,y) ->
     let bits_x = HS.find env.proc_bits x in
@@ -212,23 +218,24 @@ let apply_subst env sigma b =
 
 exception Not_unit
 
-let next_bound env i =
-  let rec next_bound env i = function
-    | [] -> env.size - 1
-    | bn :: r -> if i < bn then bn - 1 else next_bound env i r
+let in_bounds i =
+  let rec next_bound i left = function
+    | [] -> left, env.size - 1
+    | bn :: r -> if i < bn then left, bn - 1 else next_bound i bn r
   in
-  next_bound env i env.bounds
+  next_bound i 0 env.bounds
 
-let is_unit env b =
+let is_unit b =
   try
-    let first = ref (-1) in
-    let last = ref (-1) in
+    let first = ref true in
+    let bnds = ref (-1, -1) in
     Bitv.iteri_true (fun i ->
-      if !first <> -1 then (last := next_bound env i; first := i)
-      else if i > !last then raise Not_unit
+      if !first then (bnds := in_bounds i; first := false)
+      else if i > snd !bnds then raise Not_unit
     ) b;
+    let right, left = !bnds in
     let u = Bitv.create env.size false in
-    Bitv.fill u !first (!last - !first + 1) false;
+    Bitv.fill u right (left - right + 1) false;
     Bitv.bw_or_in_place b u;
     true
   with Not_unit -> false
@@ -237,14 +244,64 @@ let is_bottom = Bitv.all_zeros
 
 exception Unsat
 
-let rec propagate env conj neg_visited =
+let rec propagate conj neg_visited =
   let todo, remaining =
     List.fold_left (fun (todo, remaining) b ->
       Bitv.bw_and_in_place b conj;
       if is_bottom b then raise Unsat;
-      if is_unit env b then b :: todo, remaining
+      if is_unit b then b :: todo, remaining
       else todo, b :: remaining
     ) ([],[]) neg_visited in
   match todo with
-    | conj :: todo -> propagate env conj (todo @ remaining)
+    | conj :: todo -> propagate conj (todo @ remaining)
     | [] -> ()
+
+
+let copy_visited = List.map Bitv.copy
+
+let solve cubes neg_visited =
+  List.iter (fun conj ->
+    let neg_visited = copy_visited neg_visited in
+    propagate conj neg_visited)
+    cubes
+
+let fixpoint {t_unsafe = args, sa} visited =
+  let cubes = cube_to_bitvs sa in
+  let p_cubes = 
+    List.fold_left (fun acc sigma ->
+      List.fold_left (fun acc c ->
+        apply_subst sigma c :: acc
+      ) acc cubes
+    ) [] (Cube.all_permutations args args)
+  in
+  let neg_visited = 
+    List.fold_left (fun acc {t_unsafe = _, sa} ->
+      let bvs = cube_to_bitvs sa in
+      List.iter Bitv.bw_not_in_place bvs;
+      bvs @ acc) [] visited
+  in
+  try
+    solve p_cubes neg_visited;
+    false
+  with Unsat -> true
+
+
+let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
+  let cubes = cube_to_bitvs sa in
+  let init_sa = match iargs with
+    | None -> inisa
+    | Some a ->
+      List.fold_left (fun acc ss ->
+	SAtom.union (Cube.apply_subst inisa ss) acc)
+	SAtom.empty
+	(List.map (fun b -> [a, b]) args)
+  in
+  let init_cubes = cube_to_bitvs init_sa in
+  List.for_all (fun c ->
+    List.for_all (fun init ->
+      Bitv.all_zeros (Bitv.bw_and c init)
+    ) init_cubes
+  ) cubes
+
+let check_safety s =
+  if not (safe s) then raise (Search.Unsafe s)
