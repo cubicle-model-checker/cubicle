@@ -108,7 +108,7 @@ let bitvbounds_from_pb s =
     let left_sec_p = !i - 1 in
     HS.add env.proc_section p (right_sec_p, left_sec_p);
   ) proc_vars;
-  h, List.rev (List.tl !bounds)
+  h, List.rev (!bounds)
 
 
 let init_env s = 
@@ -148,26 +148,45 @@ let index_value x v =
   if !i = -1 then raise Not_found;
   !i
 
-let create_mask_value_aux x op v right left =
+let not_index_values x v =
+  let cpt = ref 0 in
+  HSet.fold (fun vx acc ->
+    let acc = if not (Hstring.equal v vx) then !cpt :: acc else acc in
+    incr cpt;
+    acc
+  ) (values_of_term x) []  
+
+
+let create_masks_value_aux ~dnf x op v right left =
   try
-    let i = index_value x v in
-    let b = Bitv.create env.size true in
-    begin match op with
-      | Eq -> 
+    match op with
+      | Eq ->
+          let b = Bitv.create env.size true in
           Bitv.fill b right (left - right + 1) false;
-          Bitv.set b (i + right) true
+          let i = index_value x v in
+          Bitv.set b (i + right) true;
+          [b]
       | Neq ->
-          Bitv.set b (i + right) false
+          if not dnf then 
+            let b = Bitv.create env.size true in
+            let i = index_value x v in
+            Bitv.set b (i + right) false;
+            [b]
+          else
+            let b = Bitv.create env.size true in
+            Bitv.fill b right (left - right + 1) false;
+            List.fold_left (fun acc i ->
+              let b = Bitv.copy b in
+              Bitv.set b (i + right) true;
+              b :: acc) [] (not_index_values x v)
       | _ -> assert false
-    end;
-    b
-  with Not_found -> Bitv.create env.size false
+  with Not_found -> [Bitv.create env.size false]
 
-let create_mask_value x op v =
+let create_masks_value ~dnf x op v =
   let r,l = HT.find env.term_bounds x in
-  create_mask_value_aux x op v r l
+  create_masks_value_aux ~dnf x op v r l
 
-let create_mask_comp x op y =
+let create_masks_comp ~dnf x op y =
   let rx,lx = HT.find env.term_bounds x in
   let ry,ly = HT.find env.term_bounds y in
   let values_x = values_of_term x in
@@ -177,42 +196,104 @@ let create_mask_comp x op y =
         HSet.fold (fun vy acc ->
           HSet.fold (fun vx acc -> 
             if Hstring.equal vx vy then
-              let bx = create_mask_value_aux x Eq vx rx lx in
-              let by = create_mask_value_aux y Eq vy ry ly in
-              Bitv.bw_and bx by :: acc
+              let bxs = create_masks_value_aux ~dnf x Eq vx rx lx in
+              let bys = create_masks_value_aux ~dnf y Eq vy ry ly in
+              List.fold_left (fun acc bx ->
+                List.fold_left (fun acc by ->
+                  Bitv.bw_and bx by :: acc
+                ) acc bys
+              ) acc bxs
             else acc
           ) values_x acc
         ) values_y []
     | Neq ->
         HSet.fold (fun vy acc ->
           if HSet.mem vy values_x then
-            let by = create_mask_value_aux y Eq vy ry ly in
-            let bx = create_mask_value_aux x Neq vy rx lx in
-            Bitv.bw_and bx by :: acc
+            let bys = create_masks_value_aux ~dnf y Eq vy ry ly in
+            let bxs = create_masks_value_aux ~dnf x Neq vy rx lx in
+              List.fold_left (fun acc bx ->
+                List.fold_left (fun acc by ->
+                  Bitv.bw_and bx by :: acc
+                ) acc bys
+              ) acc bxs
           else acc
         ) values_y []
     | _ -> assert false  
 
 
-let atom_masks = function
+let atom_masks ~dnf = function
   | Atom.True -> [Bitv.create env.size true]
   | Atom.False -> [Bitv.create env.size false]
   | Atom.Comp (x, op, Elem (v, (Constr | Var)))
   | Atom.Comp (Elem (v, (Constr | Var)), op, x) ->
-      [create_mask_value x op v]
+      create_masks_value ~dnf x op v
   | Atom.Comp (x, op, y) ->
-      create_mask_comp x op y
+      create_masks_comp ~dnf x op y
   | _ -> assert false
 
 
-let add_atom_to_bitv a bvs =
+let add_atom_to_bitv ~dnf a bvs =
   List.flatten (List.map (fun m -> 
-    List.map (Bitv.bw_and m) bvs) (atom_masks a))
+    List.map (Bitv.bw_and m) bvs) (atom_masks ~dnf a))
 
-let cube_to_bitvs sa =
-  SAtom.fold add_atom_to_bitv sa (atom_masks Atom.True)
-        
-      
+let cube_to_bitvs ~dnf sa =
+  SAtom.fold (add_atom_to_bitv ~dnf) sa (atom_masks ~dnf Atom.True)
+
+
+let in_bounds i =
+  let rec next_bound i right = function
+    | [] -> right, env.size - 1
+    | bn :: r -> if i < bn then right, bn - 1 else next_bound i bn r
+  in
+  next_bound i 0 env.bounds
+
+
+exception Found of term
+let term_in_bounds bn =
+  try
+    HT.iter (fun t bn' -> if bn = bn' then raise (Found t)) env.term_bounds;
+    raise Not_found
+  with Found t -> t
+
+let value_of_index i vals =
+  let cpt = ref 0 in
+  let v = ref (Hstring.empty) in
+  HSet.iter (fun v' -> if !cpt = i then v := v'; incr cpt) vals;
+  !v
+
+let print_bitv_to_cube b =
+  let values = HT.create 17 in
+  HT.iter (fun t _ -> HT.add values t HSet.empty) env.term_bounds;
+  Bitv.iteri_true (fun i ->
+    let r,l = in_bounds i in
+    let t = term_in_bounds (r,l) in
+    let id = i - r in
+    let v = value_of_index id (values_of_term t) in
+    let vals = HT.find values t in
+    HT.replace values t (HSet.add v vals) 
+  ) b;
+  eprintf "-----------------------@.";
+  HT.iter (fun x vals ->
+    (* if not (vals = values_of_term x) then begin *)
+    if not (HSet.is_empty vals) then begin
+      eprintf "%a = " Pretty.print_term x;
+      eprintf "{";
+      HSet.iter (fun v -> eprintf " %a |" Hstring.print v) vals;
+      eprintf "}@.";
+    end
+  ) values
+
+
+
+let cube_to_bitvs2 ~dnf sa =
+  let bs = cube_to_bitvs ~dnf sa in
+  eprintf "CUBE : %a\n--->\nBITV : " Pretty.print_cube sa;
+  List.iter (fun b ->
+    eprintf "---------------\n";
+    print_bitv_to_cube b) bs;
+  eprintf "@.";
+  bs
+
 
 
 let apply_subst sigma b =
@@ -233,13 +314,6 @@ let apply_subst sigma b =
   ) sigma;
   nbv
 
-let in_bounds i =
-  let rec next_bound i right = function
-    | [] -> right, env.size - 1
-    | bn :: r -> if i < bn then right, bn - 1 else next_bound i bn r
-  in
-  next_bound i 0 env.bounds
-
 let is_unit b =
   try
     let first = ref true in
@@ -248,8 +322,15 @@ let is_unit b =
       if !first then (bnds := in_bounds i; first := false)
       else if i > snd !bnds then raise Exit
     ) b;
+    (* eprintf "IS_UNIT : "; *)
+    (* print_bitv_to_cube b; *)
+    (* eprintf "@."; *)
     Some !bnds
-  with Exit -> None
+  with Exit -> 
+    (* eprintf "NOT_UNIT : "; *)
+    (* print_bitv_to_cube b; *)
+    (* eprintf "@."; *)
+    None
 
 let to_unit b (right,left) =
   let u = Bitv.create env.size true in
@@ -276,6 +357,7 @@ let is_bottom = Bitv.all_zeros
 exception Unsat
 
 let rec propagate conj neg_visited =
+  if is_bottom conj then raise Unsat;
   let unit, remaining =
     List.fold_left (fun (unit, remaining) b ->
       Bitv.bw_and_in_place b conj;
@@ -298,44 +380,66 @@ let is_unsat cubes neg_visited =
     try propagate conj neg_visited; false with Unsat -> true)
     cubes
 
+
 let fixpoint ~invariants ~visited ({t_unsafe = args, sa} as s) =
-  let visited = (List.rev_append invariants visited) in
-  let cubes = cube_to_bitvs sa in
-  if debug then eprintf "fixpoint:\ncube: %a@." Pretty.print_cube sa;
-  if debug then 
-    List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes;
-  let neg_visited = 
-    List.fold_left (fun acc {t_unsafe = vargs, sa} ->
-      if debug then eprintf "visited: %a@." Pretty.print_cube sa;
-      let bvs = cube_to_bitvs sa in
-      let perms = Cube.all_permutations vargs args in
+  if (delete && (s.t_deleted || Cube.has_deleted_ancestor s)) then Some []
+  else
+    let visited = (List.rev_append invariants visited) in
+    let cubes = cube_to_bitvs ~dnf:true sa in
+    if debug then eprintf "fixpoint:\ncube: %a@." Pretty.print_cube sa;
+    if debug then 
+      List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes;
+    (* let neg_visited = *)
+    (*   List.fold_left (fun acc {t_unsafe = vargs, sa} -> *)
+    (*     if debug then eprintf "visited: %a@." Pretty.print_cube sa; *)
+    (*     let bvs = cube_to_bitvs ~dnf:false sa in *)
+    (*     let perms = Cube.all_permutations vargs args in *)
 
-      List.fold_left (fun acc bv ->
+    (*     List.fold_left (fun acc bv -> *)
+    (*       List.fold_left (fun acc sigma -> *)
+    (*         let bv = apply_subst sigma bv in *)
+    (*         Bitv.bw_not_in_place bv; *)
+    (*         bv :: acc) acc perms *)
+    (*     ) acc bvs *)
+
+    (*   ) [] visited *)
+    (* in *)
+    let neg_visited =
+      List.fold_left (fun acc {t_alpha = vargs, sa; t_nb = nb} ->
+        let sa = ArrayAtom.to_satom sa in
+        if debug then eprintf "%d visited: %a@." nb Pretty.print_cube sa;
+        let perms = Cube.all_permutations vargs args in
+
         List.fold_left (fun acc sigma ->
-          let bv = apply_subst sigma bv in
-          Bitv.bw_not_in_place bv;
-          bv :: acc) acc perms
-      ) acc bvs
+          
+          let sa = Cube.apply_subst sa sigma in
+          let bvs = cube_to_bitvs ~dnf:false sa in
+          List.iter Bitv.bw_not_in_place bvs;
+          bvs @ acc) acc perms
 
-    ) [] visited
-  in
-  if is_unsat cubes neg_visited then begin
-    if debug then eprintf "FIXPONT!@.";
-    if Cube.fixpoint ~invariants ~visited s = None then
-      (eprintf "PROBLEM (completude) !!!!!!@."; exit 1);
-    Some []
-  end else begin
-    if debug then eprintf "NOT fixpoint@.";
-    if Cube.fixpoint ~invariants ~visited s <> None then
-      (eprintf "PROBLEM (correction) !!!!!!@."; exit 1);
-    None
-  end
+      ) [] visited
+    in
+    if is_unsat cubes neg_visited then begin
+      (* if debug then eprintf "FIXPONT!@."; *)
+      (* if Cube.fixpoint ~invariants ~visited s = None then *)
+      (*   (eprintf "PROBLEM (correction) !!!!!!@."; exit 1); *)
+      Some []
+    end else begin
+      if debug then eprintf "NOT fixpoint@.";
+      (* (match Cube.fixpoint ~invariants ~visited s with  *)
+      (*   | Some uc -> *)
+      (*       eprintf "UC:@."; *)
+      (*       List.iter (fun i -> eprintf "%d@." i) uc; *)
+      (*       (eprintf "PROBLEM (completude) !!!!!!@."; exit 1); *)
+      (*   | _ -> ()); *)
+      None
+    end
 
 
 
 (* Buggy : need to check if at least one term is 0 *)
 let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
-  let cubes = cube_to_bitvs sa in
+  let cubes = cube_to_bitvs ~dnf:false sa in
   eprintf "safety : \ncube: %a@." Pretty.print_cube sa;
   List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes;
   let init_sa = match iargs with
@@ -346,7 +450,7 @@ let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
 	SAtom.empty
 	(List.map (fun b -> [a, b]) args)
   in
-  let init_cubes = cube_to_bitvs init_sa in
+  let init_cubes = cube_to_bitvs ~dnf:false init_sa in
   eprintf "\ninit: %a@." Pretty.print_cube init_sa;
   List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) init_cubes;
   List.for_all (fun c ->

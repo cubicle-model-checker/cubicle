@@ -20,7 +20,7 @@ val init_env : Ast.t_system -> unit
     representation of cubes of system [s] and the associated bounds
     (see {!bitvbounds_from_pb}).*)
 
-val cube_to_bitvs : Ast.SAtom.t -> Bitv.t list
+val cube_to_bitvs : dnf:bool -> Ast.SAtom.t -> Bitv.t list
 (** [cube_to_bitvs env c] returns the bit-vector representation of the
     cube [c].*)
 

@@ -470,26 +470,25 @@ module Make (Dummy : sig end) = struct
 
   let clear () = CSolver.clear ()
 
-(*
+
   let check_unsatcore uc =
-  eprintf "Unsat Core : @.";
-  List.iter 
-  (fun c -> 
-  eprintf "%a@." (Formula.print_list "or") 
-  (List.map (fun x -> Formula.Lit x) c)) uc;
-  eprintf "@.";
-  try 
-  clear ();
-  CSolver.assume uc;
-  CSolver.solve ();
-  eprintf "Not an unsat core !!!@.";
-  assert false
-  with 
-  | Solver.Unsat _ -> ();
-  | Solver.Sat  -> 
-  eprintf "Sat: Not an unsat core !!!@.";
-  assert false
-*)
+    eprintf "Unsat Core : @.";
+    List.iter 
+      (fun c -> 
+        eprintf "%a@." (Formula.print_list "or") 
+          (List.map (fun x -> Formula.Lit x) c)) uc;
+    eprintf "@.";
+    try 
+      clear ();
+      CSolver.assume uc 0;
+      CSolver.solve ();
+      eprintf "Not an unsat core !!!@.";
+      assert false
+    with 
+      | Solver.Unsat _ -> ();
+      | Solver.Sat  -> 
+          eprintf "Sat: Not an unsat core !!!@.";
+          assert false
 
   let export_unsatcore cl = 
     let uc = List.map (fun {Solver_types.atoms=atoms} ->
@@ -498,13 +497,13 @@ module Make (Dummy : sig end) = struct
         l := (Vec.get atoms i).Solver_types.lit :: !l
       done; 
       !l) cl
-    in (* check_unsatcore uc; *) 
+    in (* check_unsatcore uc; *)
     uc
 
   module SInt = 
     Set.Make (struct type t = int let compare = Pervasives.compare end)
 
-  let export_unsatcore2 cl = 
+  let export_unsatcore2 cl =
     let s = 
       List.fold_left 
         (fun s {Solver_types.name = n} ->
