@@ -21,82 +21,81 @@ exception Sat
 exception Unsat of clause list
 exception Restart
 
-exception Conflict of clause
 
 
 type env = 
     { 
-      (* si vrai, les contraintes sont deja fausses *)
+        (* si vrai, les contraintes sont deja fausses *)
       mutable is_unsat : bool;
 
       mutable unsat_core : clause list;
 
-      (* clauses du probleme *)
+        (* clauses du probleme *)
       mutable clauses : clause Vec.t;
       
-      (* clauses apprises *)
+        (* clauses apprises *)
       mutable learnts : clause Vec.t;
       
-      (* valeur de l'increment pour l'activite des clauses *)
+        (* valeur de l'increment pour l'activite des clauses *)
       mutable clause_inc : float;
       
-      (* valeur de l'increment pour l'activite des variables *)
+        (* valeur de l'increment pour l'activite des variables *)
       mutable var_inc : float;
       
-      (* un vecteur des variables du probleme *)
+        (* un vecteur des variables du probleme *)
       mutable vars : var Vec.t;
       
-      (* la pile de decisions avec les faits impliques *)
+        (* la pile de decisions avec les faits impliques *)
       mutable trail : atom Vec.t;
 
-      (* une pile qui pointe vers les niveaux de decision dans trail *)
+        (* une pile qui pointe vers les niveaux de decision dans trail *)
       mutable trail_lim : int Vec.t;
 
-      (* Tete de la File des faits unitaires a propager. 
-	 C'est un index vers le trail *)
+        (* Tete de la File des faits unitaires a propager. 
+	   C'est un index vers le trail *)
       mutable qhead : int;
       
-      (* Nombre des assignements top-level depuis la derniere 
-         execution de 'simplify()' *)
+        (* Nombre des assignements top-level depuis la derniere 
+           execution de 'simplify()' *)
       mutable simpDB_assigns : int;
 
-      (* Nombre restant de propagations a faire avant la prochaine 
-         execution de 'simplify()' *)
+        (* Nombre restant de propagations a faire avant la prochaine 
+           execution de 'simplify()' *)
       mutable simpDB_props : int;
 
-      (* Un tas ordone en fonction de l'activite des variables *)
+        (* Un tas ordone en fonction de l'activite des variables *)
       mutable order : Iheap.t;
 
-      (* estimation de progressions, mis a jour par 'search()' *)
+        (* estimation de progressions, mis a jour par 'search()' *)
       mutable progress_estimate : float;
 
-      (* *)
+        (* *)
       remove_satisfied : bool;
 
-      (* inverse du facteur d'acitivte des variables, vaut 1/0.999 par defaut *)
+        (* inverse du facteur d'acitivte des variables, vaut 1/0.999 par defaut *)
       var_decay : float;
 
-      (* inverse du facteur d'activite des clauses, vaut 1/0.95 par defaut *)
+        (* inverse du facteur d'activite des clauses, vaut 1/0.95 par defaut *)
       clause_decay : float;
 
-      (* la limite de restart initiale, vaut 100 par defaut *)
+        (* la limite de restart initiale, vaut 100 par defaut *)
       mutable restart_first : int;
 
-      (* facteur de multiplication de restart limite, vaut 1.5 par defaut*)
+        (* facteur de multiplication de restart limite, vaut 1.5 par defaut*)
       restart_inc : float;
       
-      (* limite initiale du nombre de clause apprises, vaut 1/3 
-         des clauses originales par defaut *)
+        (* limite initiale du nombre de clause apprises, vaut 1/3 
+           des clauses originales par defaut *)
       mutable learntsize_factor : float;
       
-      (* multiplier learntsize_factor par cette valeur a chaque restart, 
-         vaut 1.1 par defaut *)
+        (* multiplier learntsize_factor par cette valeur a chaque restart, 
+           vaut 1.1 par defaut *)
       learntsize_inc : float;
 
-      (* controler la minimisation des clauses conflit, vaut true par defaut *)
+        (* controler la minimisation des clauses conflit, vaut true par defaut *)
       expensive_ccmin : bool;
 
-      (* controle la polarite a choisir lors de la decision *)
+        (* controle la polarite a choisir lors de la decision *)
       polarity_mode : bool;
       
       mutable starts : int;
@@ -129,7 +128,19 @@ type env =
 
     }
       
+
+
+exception Conflict of clause
 module Make (Dummy : sig end) = struct
+
+
+  type state = 
+      {
+        env : env; 
+        st_cpt_mk_var: int;
+        st_ma : var Literal.LT.Map.t;
+      }
+
 
   let env =
     { 
@@ -936,63 +947,95 @@ let assume cnf ~cnumber =
 
 let clear () =
   let empty_theory = Th.empty () in
-
   env.is_unsat <- false;
-
   env.unsat_core <- [];
-
   env.clauses <- Vec.make 0 dummy_clause; 
-
   env.learnts <- Vec.make 0 dummy_clause; 
-
   env.clause_inc <- 1.;
-
   env.var_inc <- 1.;
-
   env.vars <- Vec.make 0 dummy_var; 
-
   env.qhead <- 0;
-
   env.simpDB_assigns <- -1;
-
   env.simpDB_props <- 0;
-
   env.order <- Iheap.init 0; (* sera mis a jour dans solve *)
-
   env.progress_estimate <- 0.;
-
   env.restart_first <- 100;
-
   env.starts <- 0;
-
   env.decisions <- 0;
-
   env.propagations <- 0;
-
   env.conflicts <- 0;
-
   env.clauses_literals <- 0;
-
   env.learnts_literals <- 0;
-
   env.max_literals <- 0;
-
   env.tot_literals <- 0;
-
   env.nb_init_vars <- 0;
-
   env.nb_init_clauses <- 0;
-
   env.tenv <- empty_theory;
-
   env.model <- Vec.make 0 dummy_var;
-
   env.trail <- Vec.make 601 dummy_atom;
-
   env.trail_lim <- Vec.make 601 (-105);
   env.tenv_queue <- Vec.make 100 (empty_theory);
-
   env.tatoms_queue <- Queue.create ();
   Solver_types.clear ()
+
+
+(* a bit ugly *)
+let rec copy t =
+  if Obj.is_int t then t else
+    let tag = Obj.tag t in
+    if tag = Obj.double_tag then t else
+      if tag = Obj.closure_tag then t else
+        if tag = Obj.string_tag then Obj.repr (String.copy (Obj.obj t)) else
+          if tag = 0 || tag = Obj.double_array_tag then begin
+            let size = Obj.size t in
+            let r = Obj.new_block tag size in
+            for i = 0 to pred size do
+              Obj.set_field r i (copy (Obj.field t i))
+            done;
+            r
+          end else failwith "copy" ;;
+
+let copy (v : 'a) : 'a = Obj.obj (copy (Obj.repr v))
+
+let save () = 
+  { 
+    env = copy env;
+    st_cpt_mk_var = !Solver_types.cpt_mk_var;
+    st_ma = !Solver_types.ma;
+  }
+
+let restore { env = s_env; st_cpt_mk_var = st_cpt_mk_var; st_ma = st_ma } =
+  env.is_unsat <- s_env.is_unsat;
+  env.unsat_core <- s_env.unsat_core;
+  env.clauses <- s_env.clauses;
+  env.learnts <- s_env.learnts;
+  env.clause_inc <- s_env.clause_inc;
+  env.var_inc <- s_env.var_inc;
+  env.vars <- s_env.vars;
+  env.qhead <- s_env.qhead;
+  env.simpDB_assigns <- s_env.simpDB_assigns;
+  env.simpDB_props <- s_env.simpDB_props;
+  env.order <- s_env.order;
+  env.progress_estimate <- s_env.progress_estimate;
+  env.restart_first <- s_env.restart_first;
+  env.starts <- s_env.starts;
+  env.decisions <- s_env.decisions;
+  env.propagations <- s_env.propagations;
+  env.conflicts <- s_env.conflicts;
+  env.clauses_literals <- s_env.clauses_literals;
+  env.learnts_literals <- s_env.learnts_literals;
+  env.max_literals <- s_env.max_literals;
+  env.tot_literals <- s_env.tot_literals;
+  env.nb_init_vars <- s_env.nb_init_vars;
+  env.nb_init_clauses <- s_env.nb_init_clauses;
+  env.tenv <- s_env.tenv;
+  env.model <- s_env.model;
+  env.trail <- s_env.trail;
+  env.trail_lim <- s_env.trail_lim;
+  env.tenv_queue <- s_env.tenv_queue;
+  env.tatoms_queue <- s_env.tatoms_queue;
+  Solver_types.cpt_mk_var := st_cpt_mk_var;
+  Solver_types.ma := st_ma
+
 
 end

@@ -43,6 +43,9 @@ and reason = clause option
 and premise = clause list
 
 
+val cpt_mk_var : int ref
+val ma : var Literal.LT.Map.t ref
+
 val dummy_var : var
 val dummy_atom : atom
 val dummy_clause : clause
@@ -64,7 +67,6 @@ val to_float : int -> float
 val to_int : float -> int
 val made_vars_info : unit -> int * var list
 val clear : unit -> unit
-
 
 module Debug: sig
     

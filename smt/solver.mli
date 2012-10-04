@@ -15,7 +15,13 @@ exception Sat
 exception Unsat of Solver_types.clause list
 
 module Make (Dummy : sig end) : sig
+  type state
+
   val solve : unit -> unit
   val assume : Literal.LT.t list list -> cnumber : int -> unit
   val clear : unit -> unit
+
+  val save : unit -> state
+  val restore : state -> unit
+
 end

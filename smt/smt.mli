@@ -205,10 +205,10 @@ module Formula : sig
   (** The type of lemmas or universally quantified formulas.
       {b Not implemented }*)
   type lemma = Hstring.t list * ground
-
-  (** The type of formulas. {b Not implemented } *)
-  type t = Ground of ground | Lemma of lemma
   (**/**)
+
+  (** The type of formulas.*)
+  type t = Ground of ground | Lemma of lemma (** {b Not implemented } *)
 
   val f_true : ground
   (** The formula which represents [true]*)
@@ -252,6 +252,11 @@ module type Solver = sig
       assume f_n;
       check ();]}
   *)
+    
+  type state
+  (** The type of the internal state of the solver (see {!save_state} and
+      {!restore_state}).*)
+    
 
   (** {2 Profiling functions} *)
 
@@ -289,6 +294,17 @@ module type Solver = sig
       {b Raises} {! Unsat} [[id_1; ...; id_n]] if the context is unsatisfiable.
       [id_1, ..., id_n] is the unsat core (returned as the identifiers of the
       formulas given to the solver). *)
+
+  val save_state : unit -> state
+  (** [save_state ()] returns a {b copy} of the current state of the solver.*)
+
+  val restore_state : state -> unit
+  (** [restore_state s] restores a previously saved state [s].*)
+
+  val entails : profiling:bool -> Formula.t -> bool
+  (** [entails ~profiling f] returns [true] if the context of the solver entails
+      the formula [f]. It doesn't modify the context of the solver (the state
+      when this function is called is restored on exit).*)
 
 end
 

@@ -217,7 +217,7 @@ let to_float i = float_of_int i
 let to_int f = int_of_float f
 
 let clear () =
- cpt_mk_var := 0;
+  cpt_mk_var := 0;
   ma := MA.empty
 
 

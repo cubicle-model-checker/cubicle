@@ -448,6 +448,7 @@ exception Unsat of int list
 
 
 module type Solver = sig
+  type state
 
   val get_time : unit -> float
   val get_calls : unit -> int
@@ -456,6 +457,9 @@ module type Solver = sig
   val assume : profiling:bool -> Formula.t -> cnumber:int -> unit
   val check : profiling:bool -> unit
 
+  val save_state : unit -> state
+  val restore_state : state -> unit
+  val entails : profiling:bool -> Formula.t -> bool
 end
 
 module Make (Dummy : sig end) = struct
@@ -536,5 +540,27 @@ module Make (Dummy : sig end) = struct
       | Solver.Unsat ex -> 
 	  if profiling then Time.pause ();
 	  raise (Unsat (export_unsatcore2 ex))
+
+  type state = CSolver.state
+
+  let save_state = CSolver.save
+
+  let restore_state = CSolver.restore
+
+  let entails ~profiling f =
+    let st = save_state () in
+    let ans = 
+      try
+        match f with
+          | Formula.Lemma _ -> assert false
+          | Formula.Ground f ->
+              assume ~profiling 
+                (Formula.Ground (Formula.make Formula.Not [f])) ~cnumber:0;
+              check ~profiling;
+              false
+      with Unsat _ -> true
+    in
+    restore_state st;
+    ans
 
 end
