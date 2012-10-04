@@ -979,7 +979,7 @@ let clear () =
   Solver_types.clear ()
 
 
-(* a bit ugly *)
+(* a bit ugly and doesn't work with cyclic structures *)
 let rec copy t =
   if Obj.is_int t then t else
     let tag = Obj.tag t in
@@ -996,6 +996,9 @@ let rec copy t =
           end else failwith "copy" ;;
 
 let copy (v : 'a) : 'a = Obj.obj (copy (Obj.repr v))
+
+
+let copy (v : 'a) : 'a = Marshal.from_string (Marshal.to_string v []) 0
 
 let save () = 
   { 
