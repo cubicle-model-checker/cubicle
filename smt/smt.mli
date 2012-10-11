@@ -197,33 +197,24 @@ module Formula : sig
     | Not (** negation *)
 
   (** The type of ground formulas *)
-  type ground = 
+  type t = 
     | Lit of Literal.LT.t  
-    | Comb of combinator * ground list
+    | Comb of combinator * t list
 
-  (**/**)
-  (** The type of lemmas or universally quantified formulas.
-      {b Not implemented }*)
-  type lemma = Hstring.t list * ground
-  (**/**)
-
-  (** The type of formulas.*)
-  type t = Ground of ground | Lemma of lemma (** {b Not implemented } *)
-
-  val f_true : ground
+  val f_true : t
   (** The formula which represents [true]*)
 
-  val f_false : ground
+  val f_false : t
   (** The formula which represents [false]*)
 
-  val make_lit : comparator -> Term.t list -> ground
+  val make_lit : comparator -> Term.t list -> t
   (** [make_lit cmp [t1; t2]] creates the literal [(t1 <cmp> t2)]. *)
 
-  val make : combinator -> ground list -> ground
+  val make : combinator -> t list -> t
   (** [make cmb [f_1; ...; f_n]] creates the formula
       [(f_1 <cmb> ... <cmb> f_n)].*)
 
-  val make_cnf : ground -> Literal.LT.t list list
+  val make_cnf : t -> Literal.LT.t list list
   (** [make_cnf f] returns a conjunctive normal form of [f] under the form: a
       list (which is a conjunction) of lists (which are disjunctions) of
       literals. *)

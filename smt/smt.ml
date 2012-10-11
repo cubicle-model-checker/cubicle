@@ -268,35 +268,24 @@ module Formula = struct
   type comparator = Eq | Neq | Le | Lt
   type combinator = And | Or | Imp | Not
 
-  type ground = 
+  type t = 
     | Lit of Literal.LT.t  
-    | Comb of combinator * ground list
+    | Comb of combinator * t list
 
-  type lemma = Hstring.t list * ground
-
-  type t = Ground of ground | Lemma of lemma
-
-  let rec print fmt f =
-    match f with
-      | Ground phi -> print_ground fmt phi
-      | Lemma (l, phi) ->
-	  fprintf fmt "forall %a. %a" 
-	    (fun fmt -> 
-	       List.iter (fprintf fmt "%a " Hstring.print)) l print_ground phi
-  and print_ground fmt phi = 
+  let rec print fmt phi = 
     match phi with
       | Lit a -> Literal.LT.print fmt a
       | Comb (Not, [f]) -> 
-	  fprintf fmt "not (%a)" print_ground f
+	  fprintf fmt "not (%a)" print f
       | Comb (And, l) -> fprintf fmt "(%a)" (print_list "and") l
       | Comb (Or, l) ->  fprintf fmt "(%a)" (print_list "or") l
       | Comb (Imp, [f1; f2]) -> 
-	  fprintf fmt "%a => %a" print_ground f1 print_ground f2
+	  fprintf fmt "%a => %a" print f1 print f2
       | _ -> assert false
   and print_list sep fmt = function
     | [] -> ()
-    | [f] -> print_ground fmt f
-    | f::l -> fprintf fmt "%a %s %a" print_ground f sep (print_list sep) l
+    | [f] -> print fmt f
+    | f::l -> fprintf fmt "%a %s %a" print f sep (print_list sep) l
 
   let f_true = Lit Literal.LT.vrai
   let f_false = Lit Literal.LT.faux
@@ -517,17 +506,12 @@ module Make (Dummy : sig end) = struct
 
   let assume ~profiling f ~cnumber = 
     if profiling then Time.start ();
-    match f with
-      | Formula.Ground phi ->
-          begin
-	    try 
-	      CSolver.assume (Formula.make_cnf phi) cnumber;
-	      if profiling then Time.pause ()
-	    with Solver.Unsat ex ->
-	      if profiling then Time.pause ();
-	      raise (Unsat (export_unsatcore2 ex))
-          end
-      | Formula.Lemma (x, phi) -> () 
+    try 
+      CSolver.assume (Formula.make_cnf f) cnumber;
+      if profiling then Time.pause ()
+    with Solver.Unsat ex ->
+      if profiling then Time.pause ();
+      raise (Unsat (export_unsatcore2 ex))
 
   let check ~profiling =
     incr calls;
@@ -551,13 +535,9 @@ module Make (Dummy : sig end) = struct
     let st = save_state () in
     let ans = 
       try
-        match f with
-          | Formula.Lemma _ -> assert false
-          | Formula.Ground f ->
-              assume ~profiling 
-                (Formula.Ground (Formula.make Formula.Not [f])) ~cnumber:0;
-              check ~profiling;
-              false
+        assume ~profiling (Formula.make Formula.Not [f]) ~cnumber:0;
+        check ~profiling;
+        false
       with Unsat _ -> true
     in
     restore_state st;

@@ -151,11 +151,11 @@ let make_init {t_init = arg, sa } lvars =
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
   SMT.clear ();
   SMT.assume 
-    ~profiling (F.Ground (distinct_vars (List.length args))) ~cnumber:ts.t_nb;
+    ~profiling (distinct_vars (List.length args)) ~cnumber:ts.t_nb;
   (* SMT.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
-  let init = F.Ground (make_init ts (* (List.rev_append ts.t_glob_proc  *) args) in
-  let f = F.Ground (make_formula_set sa) in
+  let init = make_init ts (* (List.rev_append ts.t_glob_proc  *) args in
+  let f = make_formula_set sa in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~profiling init ~cnumber:ts.t_nb;
@@ -166,10 +166,10 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
 let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
   SMT.clear ();
   SMT.assume 
-    ~profiling (F.Ground (distinct_vars (List.length args))) ~cnumber:ts.t_nb;
+    ~profiling (distinct_vars (List.length args)) ~cnumber:ts.t_nb;
   (* SMT.assume (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
-  let f = F.Ground (make_formula ap) in
+  let f = make_formula ap in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~profiling f ~cnumber:ts.t_nb;
@@ -177,7 +177,7 @@ let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
 
 let assume_node ap ~cnumber =
   if profiling then TimeF.start ();
-  let f = F.Ground (F.make F.Not [make_formula ap]) in
+  let f = F.make F.Not [make_formula ap] in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~profiling f ~cnumber;
@@ -186,9 +186,9 @@ let assume_node ap ~cnumber =
 
 let check_guard args sa reqs =
   SMT.clear ();
-  SMT.assume ~profiling ~cnumber:0 (F.Ground (distinct_vars (List.length args)));
+  SMT.assume ~profiling ~cnumber:0 (distinct_vars (List.length args));
   if profiling then TimeF.start ();
-  let f = F.Ground (make_formula_set (SAtom.union sa reqs)) in
+  let f = make_formula_set (SAtom.union sa reqs) in
   if profiling then TimeF.pause ();
   SMT.assume ~profiling f ~cnumber:0;
   SMT.check ~profiling
