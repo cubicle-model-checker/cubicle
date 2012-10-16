@@ -30,7 +30,8 @@
     ("\\b\\(forall_other\\)\\b" (1 font-lock-builtin-face))
     ("\\b\\(case\\)\\b" (1 font-lock-keyword-face))
     ("\\(&&\\)" (1 font-lock-variable-name-face))
-    ("\\(|\\)" (1 font-lock-variable-name-face))
+    ("\\(||\\)" (1 font-lock-variable-name-face))
+    ;("\\(|\\)" (1 font-lock-keyword-face))
     ("\\<[a-z][a-zA-Z0-9_]*" . font-lock-constant-face)
 
     "Keyword highlighting specification for `cubicle-mode'."))

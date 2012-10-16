@@ -443,12 +443,12 @@ module type Solver = sig
   val get_calls : unit -> int
 
   val clear : unit -> unit
-  val assume : profiling:bool -> Formula.t -> cnumber:int -> unit
-  val check : profiling:bool -> unit
+  val assume : ?profiling:bool -> id:int -> Formula.t -> unit
+  val check : ?profiling:bool -> unit -> unit
 
   val save_state : unit -> state
   val restore_state : state -> unit
-  val entails : profiling:bool -> Formula.t -> bool
+  val entails : ?profiling:bool -> id:int -> Formula.t -> bool
 end
 
 module Make (Dummy : sig end) = struct
@@ -504,16 +504,16 @@ module Make (Dummy : sig end) = struct
     in 
     SInt.elements s
 
-  let assume ~profiling f ~cnumber = 
+  let assume ?(profiling = false) ~id f = 
     if profiling then Time.start ();
     try 
-      CSolver.assume (Formula.make_cnf f) cnumber;
+      CSolver.assume (Formula.make_cnf f) id;
       if profiling then Time.pause ()
     with Solver.Unsat ex ->
       if profiling then Time.pause ();
       raise (Unsat (export_unsatcore2 ex))
 
-  let check ~profiling =
+  let check ?(profiling = false) () =
     incr calls;
     if profiling then Time.start ();
     try 
@@ -531,12 +531,12 @@ module Make (Dummy : sig end) = struct
 
   let restore_state = CSolver.restore
 
-  let entails ~profiling f =
+  let entails ?(profiling=false) ~id f =
     let st = save_state () in
     let ans = 
       try
-        assume ~profiling (Formula.make Formula.Not [f]) ~cnumber:0;
-        check ~profiling;
+        assume ~profiling ~id (Formula.make Formula.Not [f]) ;
+        check ~profiling ();
         false
       with Unsat _ -> true
     in

@@ -83,6 +83,7 @@ module ArrayAtom : sig
   val equal : t -> t -> bool
   val hash : t -> int
   val subset : t -> t -> bool
+  val trivial_is_implied : t -> t -> bool
   val of_satom : SAtom.t -> t
   val to_satom : t -> SAtom.t
   val union : t -> t -> t

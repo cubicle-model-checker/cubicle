@@ -87,6 +87,7 @@ module rec Atom : sig
     | Ite of SAtom.t * t * t
 
   val compare : t -> t -> int
+  val trivial_is_implied : t -> t -> int
   val neg : t -> t
   val hash : t -> int
   val equal : t -> t -> bool
@@ -119,6 +120,13 @@ end = struct
 	  if c<>0 then c else 
 	    let c = compare a1 a2 in
 	    if c<>0 then c else compare b1 b2
+
+  let trivial_is_implied a1 a2 =
+    match a1, a2 with
+      | Comp (x1, Neq, Elem (v1, (Constr|Var))),
+        Comp (x2, Eq, Elem (v2, (Constr|Var))) 
+          when not (Hstring.equal v1 v2) && compare_term x1 x2 = 0 -> 0
+      | _ -> compare a1 a2
 
   let neg = function
     | True -> False
@@ -284,6 +292,28 @@ module ArrayAtom = struct
     in
     if profiling then TimerSubset.pause ();
     s
+
+  let trivial_is_implied a1 a2 =
+    if profiling then TimerSubset.start ();
+    let n1 = Array.length a1 in
+    let n2 = Array.length a2 in
+    let s = 
+      if n1 > n2 then false
+      else
+	let i1 = ref 0 in 
+	let i2 = ref 0 in
+	while !i1 < n1 && !i2 < n2 do
+	  let c = Atom.trivial_is_implied a1.(!i1) a2.(!i2) in
+	  if c = 0 then (incr i1; incr i2)
+	  else if c < 0 then i2 := n2
+	  else incr i2
+	done;
+	!i1 = n1
+    in
+    if profiling then TimerSubset.pause ();
+    s
+
+  let subset = trivial_is_implied
 
   let of_satom s =
     Array.of_list (SAtom.elements s)

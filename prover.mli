@@ -25,7 +25,7 @@ val assume_goal : t_system -> unit
 
 (* Assumes the negation of a node; raises Unsat if the context becomes
    unsatisfiable *)
-val assume_node : ArrayAtom.t -> cnumber:int -> unit
+val assume_node : ArrayAtom.t -> id:int -> unit
 
 val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 

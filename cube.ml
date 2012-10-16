@@ -1008,7 +1008,7 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
 	  (* line below useful for arith : ricart *)
 	  else if inconsistent_array (ArrayAtom.union pp anp) then nodes
 	  else if ArrayAtom.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
-	  else (Prover.assume_node pp ~cnumber:sp.t_nb; nodes)
+	  else (Prover.assume_node pp ~id:sp.t_nb; nodes)
 	) nodes d
     ) [] visited
   in
@@ -1019,7 +1019,7 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
       nodes 
   in
   if profiling then TimeSort.pause ();
-  List.iter (fun (p, cnum) -> Prover.assume_node p ~cnumber:cnum) nodes
+  List.iter (fun (p, cnum) -> Prover.assume_node p ~id:cnum) nodes
   
 
 let has_deleted_ancestor s =

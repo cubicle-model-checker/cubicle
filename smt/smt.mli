@@ -78,7 +78,7 @@ module Symbol : sig
   type t = Hstring.t
   (** The type of function symbols *)
     
-  val declare : Hstring.t -> t list -> t -> unit
+  val declare : Hstring.t -> Type.t list -> Type.t -> unit
   (** [declare s [arg_1; ... ; arg_n] out] declares a new function
       symbol with type [ (arg_1, ... , arg_n) -> out] *)
     
@@ -120,7 +120,7 @@ module Variant : sig
     (** [assign_constr s cstr] will add the constraint that the constructor 
         [cstr] must be in the type of [s] *)
 
-  val assign_var : Hstring.t -> Hstring.t -> unit
+  val assign_var : Symbol.t -> Symbol.t -> unit
     (** [assign_var x y] will add the constraint that the type of [y] is a
         subtype of [x] (use this function when [x := y] appear in your 
         program *)
@@ -156,7 +156,7 @@ module Term : sig
   val make_real : Num.num -> t
   (** [make_real n] creates an real constant of value [n]. *)
 
-  val make_app : Hstring.t -> t list -> t
+  val make_app : Symbol.t -> t list -> t
   (** [make_app f l] creates the application of function symbol [f] to a list
       of terms [l]. *)
 
@@ -264,7 +264,7 @@ module type Solver = sig
       raised {! Unsat} or if you want to restart the solver. *)
 
 
-  val assume : profiling:bool -> Formula.t -> cnumber:int -> unit
+  val assume : ?profiling:bool -> id:int -> Formula.t -> unit
   (** [assume ~profiling:b f id] adds the formula [f] to the context of the
       solver with idetifier [id].
       This function only performs unit propagation.
@@ -275,8 +275,8 @@ module type Solver = sig
       {b Raises} {! Unsat} if the context becomes inconsistent after unit
       propagation. *)
 
-  val check : profiling:bool -> unit  
-  (** [check ~profiling:b] runs Alt-Ergo light on its context. If [()] is
+  val check : ?profiling:bool -> unit -> unit
+  (** [check ()] runs Alt-Ergo light on its context. If [()] is
       returned then the context is satifiable.
       
       @param profiling if set to [true] then profiling information (time) will
@@ -292,8 +292,8 @@ module type Solver = sig
   val restore_state : state -> unit
   (** [restore_state s] restores a previously saved state [s].*)
 
-  val entails : profiling:bool -> Formula.t -> bool
-  (** [entails ~profiling f] returns [true] if the context of the solver entails
+  val entails : ?profiling:bool -> id:int -> Formula.t -> bool
+  (** [entails ~id f] returns [true] if the context of the solver entails
       the formula [f]. It doesn't modify the context of the solver (the state
       when this function is called is restored on exit).*)
 
