@@ -230,6 +230,10 @@ exception Unsat of int list
 (** The exception raised by {! Smt.Solver.check} and {! Smt.Solver.assume} when
     the formula is unsatisfiable. *)
 
+val set_cc : bool -> unit
+(** set_cc [false] deactivates congruence closure algorithm
+    ([true] by default).*)
+
 module type Solver = sig
 
   (** This SMT solver is imperative in the sense that it maintains a global
@@ -295,7 +299,7 @@ module type Solver = sig
   val entails : ?profiling:bool -> id:int -> Formula.t -> bool
   (** [entails ~id f] returns [true] if the context of the solver entails
       the formula [f]. It doesn't modify the context of the solver (the state
-      when this function is called is restored on exit).*)
+      is saved when this function is called and restored on exit).*)
 
 end
 

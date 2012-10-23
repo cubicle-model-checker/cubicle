@@ -17,6 +17,8 @@
   open Parsing
   open Atom
 
+  let _ = Smt.set_cc false
+
   type t = 
     | Assign of Hstring.t * term
     | Nondet of Hstring.t
@@ -271,7 +273,8 @@ update:
 	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
 	Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
   | mident LEFTSQ mident RIGHTSQ AFFECT term
-      { let j = fresh_var () in
+      { Smt.set_cc true;
+        let j = fresh_var () in
 	let cube = 
 	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, sort $3))) in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
@@ -329,7 +332,8 @@ var_term:
 
 array_term:
   | mident LEFTSQ lident RIGHTSQ { Access($1,$3, Var) }
-  | mident LEFTSQ mident RIGHTSQ { Access($1,$3, sort $3) }
+  | mident LEFTSQ mident RIGHTSQ { Smt.set_cc true;
+                                   Access($1,$3, sort $3) }
 ;
 
 var_or_array_term:

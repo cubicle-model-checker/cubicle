@@ -435,6 +435,7 @@ end
 
 exception Unsat of int list
 
+let set_cc b = Cc.cc_active := b
 
 module type Solver = sig
   type state
@@ -462,7 +463,6 @@ module Make (Dummy : sig end) = struct
   module CSolver = Solver.Make (Dummy)
 
   let clear () = CSolver.clear ()
-
 
   let check_unsatcore uc =
     eprintf "Unsat Core : @.";

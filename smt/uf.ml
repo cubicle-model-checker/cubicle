@@ -57,7 +57,7 @@ module Make ( R : Sig.X ) = struct
   module MapL = Lit.Map  
 
   module MapR = Map.Make(struct type t = R.r let compare = R.compare end)
-    
+
   module SetR = Set.Make(struct type t = R.r let compare = R.compare end)
 
   module SetRR = Set.Make(struct 
@@ -219,7 +219,7 @@ module Make ( R : Sig.X ) = struct
 	       let ex  = Ex.union ex dep in
                let env = 
 		 {env with
-		   repr = MapR.add r (nrr, ex) env .repr;
+		   repr = MapR.add r (nrr, ex) env.repr;
 		   gamma = add_to_gamma r nrr env.gamma } 
 	       in
 	       env, (r, nrr, ex)::touched, SetRR.add (rr, nrr) neqs_to_up
@@ -236,14 +236,15 @@ module Make ( R : Sig.X ) = struct
 	
   end
     
-  let add env t = 
+  let add env t =
     if MapT.mem t env.make then env, [] else Env.init_term env t
 
   let ac_solve eqs dep (env, tch) (p, v) = 
     (* pourquoi recuperer le representant de rv? r = rv d'apres testopt *)
-    assert ( let rp, _ = Env.find_or_normal_form env p in R.equal p rp);
+    (* assert ( let rp, _ = Env.find_or_normal_form env p in R.equal p rp); *)
     let rv, ex_rv = Env.find_or_normal_form env v in
-    assert ( let rv, _ = Env.find_or_normal_form env v in R.equal v rv);
+    (* let rv = v in *)
+    (* assert ( let rv, _ = Env.find_or_normal_form env v in R.equal v rv); *)
     let dep = Ex.union ex_rv dep in
     Env.apply_sigma eqs env tch (p, rv, dep)
 

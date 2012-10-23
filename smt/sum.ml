@@ -208,21 +208,21 @@ module Make(X : ALIEN) = struct
     (* XXXXXX : TODO -> ajouter les explications dans les choix du
        case split *)
 
-    let case_split env = 
-      let acc = MX.fold
-        (fun r (hss, ex) acc ->
-           let sz = HSS.cardinal hss in
-           if sz = 1 then acc
-           else match acc with
-	     | Some (n,r,hs) when n <= sz -> acc
-	     | _ -> Some (sz, r, HSS.choose hss)
-        ) env None 
-      in
-      match acc with 
-        | Some (n,r,hs) -> 
-	    let r' = is_mine (Cons(hs,X.type_info r)) in
-	    [A.Eq(r, r'), Ex.empty, Num.Int n]
-        | None -> []
+    let case_split env = []
+      (* let acc = MX.fold *)
+      (*   (fun r (hss, ex) acc -> *)
+      (*      let sz = HSS.cardinal hss in *)
+      (*      if sz = 1 then acc *)
+      (*      else match acc with *)
+      (*        | Some (n,r,hs) when n <= sz -> acc *)
+      (*        | _ -> Some (sz, r, HSS.choose hss) *)
+      (*   ) env None  *)
+      (* in *)
+      (* match acc with  *)
+      (*   | Some (n,r,hs) ->  *)
+      (*       let r' = is_mine (Cons(hs,X.type_info r)) in *)
+      (*       [A.Eq(r, r'), Ex.empty, Num.Int n] *)
+      (*   | None -> [] *)
       
 
     let query env a_ex =

@@ -18,6 +18,8 @@ open Exception
 
 let max_split = Num.Int 1000000
 
+let cc_active = ref true
+
 module type S = sig
   type t
 
@@ -45,8 +47,10 @@ module Make (X : Sig.X) = struct
 
   module SetX = Set.Make(struct type t = X.r let compare = X.compare end)
     
+  (* module Uf = Pptarjan.Uf *)
+
   type env = { 
-    use : Use.t;  
+    use : Use.t;
     uf : Uf.t ;
     relation : X.Rel.t
   }
@@ -265,22 +269,28 @@ module Make (X : Sig.X) = struct
       let nuf, ctx  = Uf.add env.uf t in 
       Print.make_cst t ctx;
       let rt, _ = Uf.find nuf t in (* XXX : ctx only in terms *)
-      let lvs = concat_leaves nuf xs in
-      let nuse = Use.up_add env.use t rt lvs in
-      
-      (* If finitetest is used we add the term to the relation *)
-      let rel = X.Rel.add env.relation rt in
-      Use.print nuse;
 
-      (* we compute terms to consider for congruence *)
-      (* we do this only for non-atomic terms with uninterpreted head-symbol *)
-      let st_uset = Use.congr_add nuse lvs in
-      
-      (* we check the congruence of each term *)
-      let env = {uf = nuf; use = nuse; relation = rel} in 
-      let ct = congruents env t st_uset [] ex in
-      let ct = (List.map (fun lt -> LTerm lt, ex) ctx) @ ct in
-      assume_literal env choices ct
+      if !cc_active then
+        let lvs = concat_leaves nuf xs in
+        let nuse = Use.up_add env.use t rt lvs in
+        
+        (* If finitetest is used we add the term to the relation *)
+        let rel = X.Rel.add env.relation rt in
+        Use.print nuse;
+
+        (* we compute terms to consider for congruence *)
+        (* we do this only for non-atomic terms with uninterpreted head-symbol *)
+        let st_uset = Use.congr_add nuse lvs in
+        
+        (* we check the congruence of each term *)
+        let env = {uf = nuf; use = nuse; relation = rel} in 
+        let ct = congruents env t st_uset [] ex in
+        let ct = (List.map (fun lt -> LTerm lt, ex) ctx) @ ct in
+        assume_literal env choices ct
+      else
+        let rel = X.Rel.add env.relation rt in
+        let env = {env with uf = nuf; relation = rel} in 
+        env, choices
     end
 	
   and add env choices a ex =
@@ -326,24 +336,27 @@ module Make (X : Sig.X) = struct
     else 
       let env, choices, lsa = semantic_view env choices la in
       let env, choices =
-	List.fold_left
-	  (fun (env, choices) (sa, _, ex) ->
-	    Print.assume_literal sa;
-	    match sa with
-	      | A.Eq(r1, r2) ->
-		let env, l = congruence_closure env r1 r2 ex in
-		let env, choices = assume_literal env choices l in
-		let env, choices = 
-		  assume_literal env choices (contra_congruence env r1 ex) 
-		in
-		assume_literal env choices (contra_congruence env r2 ex)
-	      | A.Distinct (false, lr) ->
-		if Uf.already_distinct env.uf lr then env, choices
-		else 
-		  {env with uf = Uf.distinct env.uf lr ex}, choices
-	      | A.Distinct (true, _) -> assert false
-	      | A.Builtin _ -> env, choices)
-	  (env, choices) lsa
+        List.fold_left
+          (fun (env, choices) (sa, _, ex) ->
+            Print.assume_literal sa;
+            match sa with
+              | A.Eq(r1, r2) ->
+                  if !cc_active then
+        	    let env, l = congruence_closure env r1 r2 ex in
+        	    let env, choices = assume_literal env choices l in
+        	    let env, choices =
+        	      assume_literal env choices (contra_congruence env r1 ex)
+        	    in
+        	    assume_literal env choices (contra_congruence env r2 ex)
+                  else
+                    {env with uf = fst(Uf.union env.uf r1 r2 ex)}, choices
+              | A.Distinct (false, lr) ->
+        	if Uf.already_distinct env.uf lr then env, choices
+        	else
+        	  {env with uf = Uf.distinct env.uf lr ex}, choices
+              | A.Distinct (true, _) -> assert false
+              | A.Builtin _ -> env, choices)
+          (env, choices) lsa
       in
       let env, l = replay_atom env lsa in
       assume_literal env (choices@l) l
@@ -376,6 +389,13 @@ module Make (X : Sig.X) = struct
       | ((c, size, CNeg, ex_c) as a)::l, _ ->
 	  let base_env, ch = assume_literal base_env ch [LSem c, ex_c] in
 	  aux ch bad_last (a::dl) base_env l
+
+      (** This optimisation is not correct with the current explanation *)
+      (* | [(c, size, CPos exp, ex_c)], Yes dep -> *)
+      (*       let neg_c = LR.neg (LR.make c) in *)
+      (*       let ex_c = Ex.union ex_c dep in *)
+      (*       Print.split_backtrack neg_c ex_c; *)
+      (*       aux ch No dl base_env [LR.view neg_c, Num.Int 1, CNeg, ex_c] *)
 
       | ((c, size, CPos exp, ex_c_exp) as a)::l, _ ->
 	  try
