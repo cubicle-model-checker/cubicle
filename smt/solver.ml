@@ -430,12 +430,13 @@ let theory_propagate () =
 	facts := (a.neg.lit, ex) :: !facts
       else assert false;
   done;
-  try 
+  try
+    let full_model = nb_assigns() = env.nb_init_vars in
     env.tenv <- 
       List.fold_left 
-      (fun t (a,ex) -> let t,_,_ = Th.assume a ex t in t) 
+      (fun t (a,ex) -> let t,_,_ = Th.assume ~cs:full_model a ex t in t) 
       env.tenv !facts;
-    if nb_assigns() = env.nb_init_vars then expensive_theory_propagate ()
+    if full_model then expensive_theory_propagate ()
     else None
   with Exception.Inconsistent dep -> 
     (* eprintf "th inconsistent : %a @." Ex.print dep; *)
@@ -694,7 +695,7 @@ let check_inconsistence_of dep =
     let env = ref (Th.empty()) in ();
     Ex.iter_atoms
       (fun atom ->
-    	let t,_,_ = Th.assume atom.lit (Ex.singleton atom) !env in
+    	let t,_,_ = Th.assume ~cs:true atom.lit (Ex.singleton atom) !env in
     	env := t)
       dep;
     (* ignore (Th.expensive_processing !env); *)
@@ -713,7 +714,7 @@ let theory_analyze dep =
       ) dep ([], 0, 0, [])
   in
   if atoms = [] then begin
-    check_inconsistence_of dep;
+    (* check_inconsistence_of dep; *)
     report_t_unsat dep
 	(* une conjonction de faits unitaires etaient deja unsat *)
   end;

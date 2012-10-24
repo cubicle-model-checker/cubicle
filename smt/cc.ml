@@ -26,7 +26,8 @@ module type S = sig
   module TimerCC : Timer.S
 
   val empty : unit -> t
-  val assume : Literal.LT.t -> Explanation.t -> t -> t * Term.Set.t * int
+  val assume : cs:bool -> 
+    Literal.LT.t -> Explanation.t -> t -> t * Term.Set.t * int
   val query : Literal.LT.t -> t -> answer
   val class_of : t -> Term.t -> Term.t list
 end
@@ -460,11 +461,14 @@ module Make (X : Sig.X) = struct
 	     end
 	   | _ -> acc)
 
-  let assume a ex t = 
+  let assume ~cs a ex t = 
     let a = LTerm a in
     let gamma, ch = assume_literal t.gamma [] [a, ex] in
     let t = { t with gamma = gamma } in
-    let t, ch = try_it (fun env -> assume_literal env ch [a, ex] ) t  in 
+    let t, ch = 
+      if cs then try_it (fun env -> assume_literal env ch [a, ex] ) t
+      else t, ch 
+    in
     let choices = extract_terms_from_choices SetT.empty t.choices in
     let all_terms = extract_terms_from_assumed choices ch in
     t, all_terms, 1
@@ -513,7 +517,8 @@ module Make (X : Sig.X) = struct
     in
     let t = { gamma = env; gamma_finite = env; choices = [] } in
     let t, _, _ = 
-      assume (A.LT.make (A.Distinct (false, [T.vrai; T.faux]))) Ex.empty t
+      assume ~cs:false 
+        (A.LT.make (A.Distinct (false, [T.vrai; T.faux]))) Ex.empty t
     in t
 
 end

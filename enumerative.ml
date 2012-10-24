@@ -147,10 +147,10 @@ let mkinit arg init args =
   match arg with
     | None -> init
     | Some z ->
-        let abs_init = (* SAtom.filter (function *)
-	  (* | Comp ((Elem (x, _) | Access (x,_,_)), _, _) -> *)
-	  (*     not (Smt.Typing.has_abstract_type x) *)
-	  (* | _ -> true) *) init in
+        let abs_init = SAtom.filter (function
+	  | Atom.Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
+	      not (Smt.Symbol.has_abstract_type x)
+	  | _ -> true) init in
 	let abs_init = simplification_atoms SAtom.empty abs_init in
 	let sa, cst = SAtom.partition (has_var z) abs_init in
 	List.fold_left (fun acc h ->
