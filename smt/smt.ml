@@ -120,6 +120,15 @@ module Symbol = struct
     match H.find decl_types ret with
       | Ty.Tabstract _ -> true
       | _ -> false
+
+  let has_infinite_type s =
+    let _, ret = type_of s in
+    Hstring.equal ret Type.type_real ||
+    Hstring.equal ret Type.type_int ||
+    (* Hstring.equal ret Type.type_proc || *)
+    match H.find decl_types ret with
+      | Ty.Tabstract _ -> true
+      | _ -> false
      
   let has_type_proc s =
     Hstring.equal (snd (type_of s)) Type.type_proc

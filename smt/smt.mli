@@ -88,6 +88,9 @@ module Symbol : sig
   val has_abstract_type : t -> bool
     (** [has_abstract_type x] is [true] if the type of x is abstract. *)
     
+  val has_infinite_type : t -> bool
+    (** [has_infinite_type x] is [true] if the type of x is not finite. *)
+    
   val has_type_proc : t -> bool
   (** [has_type_proc x] is [true] if x has the type of a process
       identifier. *)

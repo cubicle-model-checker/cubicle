@@ -435,9 +435,11 @@ module BFS_base ( X : I ) = struct
 	       let inv, not_invs =
 		 if invgen && gen_inv (* && post <> [] *) then 
 		   begin
-		     X.gen_inv_with_forward inv_search 
-		       ~invariants:!invariants ~forward_nodes
+		     X.gen_inv inv_search ~invariants:!invariants
 		       !not_invariants s
+		     (* X.gen_inv_with_forward inv_search  *)
+		     (*   ~invariants:!invariants ~forward_nodes *)
+		     (*   !not_invariants s *)
 		   end
 		 else [], !not_invariants
 	       in
