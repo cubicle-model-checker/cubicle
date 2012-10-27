@@ -14,7 +14,7 @@
 type mode = 
   | Dfs | DfsL | DfsH | DfsHL 
   | Bfs | BfsDist | Bfsinvp 
-  | Induct
+  | Induct | Bfstrie
 
 val file : string
 val cin : in_channel

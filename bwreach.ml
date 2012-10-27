@@ -824,6 +824,10 @@ module T = struct
   (* let safety = check_safety *)
 
   let fixpoint = if bitsolver then Bitsolver.fixpoint else fixpoint
+
+  let fixpoint_trie = fixpoint_trie
+
+
   let safety = (* if bitsolver then Bitsolver.check_safety else *) check_safety
 
   let pre = pre_system
@@ -849,6 +853,7 @@ module StratBFS = Search.BFS(T)
 module StratBFS_dist = Search.BFS_dist(T)
 module StratBFSinvp = Search.BFSinvp(T)
 module StratDFSHL = Search.DFSHL(T)
+module StratBFS_trie = Search.BFS_trie(T)
 
 module InvSearch = Search.BFS(struct include T let maxnodes = 10000 end)
 
@@ -862,6 +867,7 @@ let search =
     | Bfs -> StratBFS.search
     | BfsDist -> StratBFS_dist.search
     | Bfsinvp -> StratBFSinvp.search
+    | Bfstrie -> StratBFS_trie.search
     | DfsHL -> StratDFSHL.search
     | Induct -> Induct.search
 

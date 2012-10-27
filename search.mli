@@ -16,7 +16,7 @@
 exception Unsafe of Ast.t_system
 
 module type I = sig
-  type t
+  type t = Ast.t_system
 
   type fsearch = 
     invariants : t list -> 
@@ -59,6 +59,9 @@ module type I = sig
   val easy_fixpoint : t -> t list -> (int list) option
   val hard_fixpoint : t -> t list -> (int list) option
 
+  val fixpoint_trie : t -> Ast.Atom.t list -> t Cubetrie.t ref ->
+    t Cubetrie.t ref -> t list ref -> (int list) option
+
   val pre : t -> t list * t list
   val post : t -> t list
 
@@ -89,6 +92,8 @@ end
 
 
 module TimeFix : Timer.S
+module TimeEasyFix : Timer.S
+module TimeHardFix : Timer.S
 
 module TimeRP  : Timer.S
 
@@ -138,3 +143,8 @@ module BFSinvp  ( X : I ) : S  with type t = X.t
 
 (* Prototype for Amit and Sava's algorithm *)
 module Inductification ( X : I ) : S with type t = X.t
+
+
+(* Bfs search with trie data structures *)
+
+module BFS_trie  ( X : I ) : S  with type t = X.t 

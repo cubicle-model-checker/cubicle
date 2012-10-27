@@ -24,6 +24,8 @@ let hempty = H.make ""
 module TimeRP = Search.TimeRP
 
 module TimeFix = Search.TimeFix
+module TimeEasyFix = Search.TimeEasyFix
+module TimeHardFix = Search.TimeHardFix
 
 module TimeSort = Search.TimeSort
 
@@ -1095,3 +1097,111 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
       STerm.add (Access (a, p, Var)) acc)
       acc arrays)
     acc (procs@gp)
+
+
+
+(*************** Things with tries *******************)
+
+let invert_subst = List.map (fun (x,y) -> y,x)
+
+let medium_fixpoint_trie {t_unsafe = (nargs,_); 
+                          t_alpha = args, ap; 
+                          t_arru = anp} visited learnt =
+  if profiling then TimeEasyFix.start ();
+  let substs = all_permutations args nargs in
+  let substs = List.tl substs in (* Drop 'identity' permutation. 
+                                    Already checked in easy_fixpoint. *)
+  try
+    List.iter (fun ss -> 
+      let u = ArrayAtom.apply_subst ss ap in
+      let lstu = Array.to_list u in
+      match Cubetrie.mem lstu !visited with
+        | Some uc -> raise (Fixpoint uc)
+        | None -> match Cubetrie.mem lstu !learnt with
+            | Some uc -> raise (Fixpoint uc)
+            | None -> ()
+    ) substs;
+    if profiling then TimeEasyFix.pause ();
+    None
+  with Fixpoint uc -> 
+    if profiling then TimeEasyFix.pause ();
+    Some uc
+
+let hard_fixpoint_trie s visited learnt =
+  if profiling then TimeHardFix.start (); 
+  let anp = s.t_arru in
+  let nargs = fst s.t_unsafe in
+  let substs = all_permutations nargs nargs in
+  let relevant ss =
+    let u = ArrayAtom.apply_subst ss anp in
+    let lstu = Array.to_list u in
+    let nodes = Cubetrie.consistent lstu !visited in
+    let nodes = List.filter (fun s -> not (s.t_deleted)) nodes in
+    let ss' = invert_subst ss in
+    List.map (fun n -> 
+      let p = ArrayAtom.apply_subst ss' n.t_arru in
+      (p, n.t_nb), ArrayAtom.nb_diff p u
+    ) nodes
+  in
+  let cubes = List.flatten (List.map relevant substs) in
+  let res = 
+    if cubes = [] then None
+    else begin
+      if profiling then TimeSort.start ();
+      let cubes =
+        List.fast_sort
+          (fun c1 c2 -> Pervasives.compare (snd c1) (snd c2))
+          cubes
+      in
+        if profiling then TimeSort.pause ();
+        try
+          Prover.assume_goal s;
+          List.iter (fun ((p, id), _) -> Prover.assume_node p ~id) cubes;
+          None
+        with
+          | Exit -> None
+          | Smt.Unsat uc -> 
+              learnt := Cubetrie.add (Array.to_list anp) s !learnt;
+              Some uc
+    end
+  in
+  if profiling then TimeHardFix.pause ();
+  res
+
+
+let delete_node s  = s.t_deleted <- true
+
+
+let fixpoint_trie s lstu visited learnt postponed =
+  if profiling then begin TimeFix.start (); TimeEasyFix.start () end;
+  let res = 
+    match Cubetrie.mem lstu !visited with
+      | (Some _) as r -> r
+      | None -> match Cubetrie.mem lstu !learnt with
+          | (Some _) as r -> r
+          | None ->
+              if delete then
+                if s.t_deleted then begin
+                  (* Node was postponed earlier, now visit it.*)
+                  s.t_deleted <- false;
+                  None
+                end
+                else if has_deleted_ancestor s then begin
+                  (* Postpone the node. *)
+                  delete_node s;
+                  postponed := s::!postponed;
+                  Some []
+                end
+                else None
+              else None
+  in
+  if profiling then TimeEasyFix.pause ();
+  let res = 
+    match res with 
+      | Some _ -> res
+      | None -> match medium_fixpoint_trie s visited learnt with
+          | (Some _) as r -> r
+          | None -> hard_fixpoint_trie s visited learnt
+  in
+  if profiling then TimeFix.pause ();
+  res

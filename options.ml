@@ -14,7 +14,7 @@
 type mode = 
   | Dfs | DfsL | DfsH | DfsHL 
   | Bfs | BfsDist | Bfsinvp 
-  | Induct
+  | Induct | Bfstrie
 
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
@@ -55,6 +55,7 @@ let set_mode = function
   | "dfshl" -> mode := DfsHL
   | "bfs" -> mode := Bfs
   | "bfsinvp" -> mode := Bfsinvp
+  | "bfstrie" -> mode := Bfstrie
   | "induct" -> mode := Induct
   | _ -> raise (Arg.Bad "search strategy not supported")
 
