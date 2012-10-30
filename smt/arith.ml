@@ -410,7 +410,7 @@ module Make
     let ty = P.type_info p2 in
     let p = P.add p1 (P.mult (P.create [] (Int (-1)) ty) p2) in
     let pp = safe_distribution p in
-    solve_int pp
+    if ty = Ty.Treal then solve_real pp else solve_int pp
 
   let solve r1 r2 =
     let sbs = solve_aux r1 r2 in
