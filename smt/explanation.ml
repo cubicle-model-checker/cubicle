@@ -19,7 +19,7 @@ type exp = Atom of Solver_types.atom | Fresh of int
 
 module S = 
   Set.Make
-    (struct 
+    (struct
        type t = exp
        let compare a b = match a,b with
 	 | Atom _, Fresh _ -> -1

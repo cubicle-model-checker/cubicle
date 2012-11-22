@@ -974,11 +974,43 @@ let only_value_possible c sa =
     | Comp (v, Neq, t) -> not (variable_term_has_value v t sa)
     | _ -> false
 
+
+exception Reduced_cand of Atom.t
+
+let add_cand (a1, la) acc =
+  match la with
+    | [] | _::_::_ -> (a1, la) :: acc
+    | [a2] ->
+        try
+          List.iter (fun (b1,lb) ->
+            match lb with
+              | [b2] ->
+                  if Atom.equal a2 b2 && 
+                    Cube.inconsistent_list [Atom.neg a1; Atom.neg b1] then
+                    raise (Reduced_cand a2);
+                  if Atom.equal a1 b1 &&
+                    Cube.inconsistent_list [Atom.neg a2; Atom.neg b2] then
+                    raise (Reduced_cand a1);
+                  if Atom.equal a1 b2 &&
+                    Cube.inconsistent_list [Atom.neg a2; Atom.neg b1] then
+                    raise (Reduced_cand a1);
+                  if Atom.equal a2 b1 &&
+                    Cube.inconsistent_list [Atom.neg a1; Atom.neg b2] then
+                    raise (Reduced_cand a2)
+              | _ -> ()
+          ) acc;
+          (a1, la) :: acc
+        with
+          | Reduced_cand a -> (a, []) :: acc
+    
+
+(* let add_cand (a1, la) acc = (a1, la) :: acc     *)
+
 let candidates_from_compagnions a (compagnions, uncs) acc =
   let mt, remaining = compagnions_values compagnions uncs in
   let acc = 
     SAtom.fold (fun c acc ->
-      if only_value_possible c remaining then (a, [Atom.neg c]) :: acc
+      if only_value_possible c remaining then add_cand (a, [Atom.neg c])  acc
       else acc
     ) remaining acc
   in
@@ -987,9 +1019,9 @@ let candidates_from_compagnions a (compagnions, uncs) acc =
       begin
 	match H.HSet.elements vals with
 	  | [v] when Hstring.equal v htrue ->
-	    (a, [Comp (c, Eq, (Elem (hfalse, Constr)))]) :: acc	
+	    add_cand (a, [Comp (c, Eq, (Elem (hfalse, Constr)))])  acc	
 	  | [v] when Hstring.equal v hfalse ->
-	    (a, [Comp (c, Eq, (Elem (htrue, Constr)))]) :: acc
+	    add_cand (a, [Comp (c, Eq, (Elem (htrue, Constr)))])  acc
 	  | [v] -> (a, [Comp (c, Neq, (Elem (v, Constr)))]) :: acc
 	  | vs ->
 	    try
@@ -997,15 +1029,14 @@ let candidates_from_compagnions a (compagnions, uncs) acc =
 	      match H.HSet.elements dif with
 		| [] -> acc
 		| [cs] -> 
-		    (a, [Comp (c, Eq, (Elem (cs, Constr)))]) :: acc
+		    add_cand (a, [Comp (c, Eq, (Elem (cs, Constr)))])  acc
 		| _ -> raise Not_found
 	    with Not_found ->
-	      (a, List.map (fun v -> Comp (c, Neq, (Elem (v, Constr)))) vs) 
-	      :: acc
+	      add_cand (a, List.map (fun v -> Comp (c, Neq, (Elem (v, Constr)))) vs) 
+	      acc
       end
     | _ -> assert false)
     mt acc
-
 
 let useless_candidate sa =
   SAtom.exists (function
@@ -1020,6 +1051,15 @@ let useless_candidate sa =
     | _ -> false) sa
   (*(* || List.length (args_of_atoms sa) > 1 *)*)
 
+
+let remove_subsumed_candidates cands = cands
+  (* List.fold_left (fun acc c -> *)
+  (*   let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in *)
+  (*   (\* if fixpoint ~invariants:[] ~visited:acc' c <> None *\) *)
+  (*   if easy_fixpoint c acc' <> None *)
+  (*   then acc' *)
+  (*   else acc) cands cands *)
+  
 let make_satom_from_list s la = 
   List.fold_left (fun sa x -> SAtom.add x sa) s la
 
@@ -1262,7 +1302,8 @@ let sort_candidates =
 let extract_candidates_from_compagnons comps s =
   let c = extract_candidates comps s in
   let cands = List.rev_map (fun (_,(_,s)) -> s) c in
-  (* sort_candidates *) cands
+  (* sort_candidates *) (*cands*)
+  remove_subsumed_candidates cands
 
 let extract_candidates_from_trace forward_nodes all_var_terms s =
   let comps = compagnions_from_trace forward_nodes all_var_terms in
@@ -1287,7 +1328,7 @@ let select_relevant_candidates {t_unsafe = _, sa} =
  
 (*-------------- interface for inductification ---------------------------*)
 
-let post_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
+let post_system ({ t_unsafe = uargs, u; t_trans = trs}) =
   List.fold_left
     (fun ls tr -> assert false ) 
     [] 

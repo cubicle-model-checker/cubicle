@@ -17,7 +17,7 @@
   open Parsing
   open Atom
 
-  let _ = Smt.set_cc false
+  let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
   type t = 
     | Assign of Hstring.t * term
@@ -58,6 +58,8 @@
     else Var
 
   let hproc = Hstring.make "proc"
+  let hreal = Hstring.make "real"
+  let hint = Hstring.make "int"
 
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
 
@@ -122,17 +124,24 @@ declarations :
 ;
 
 var_decl:
-  | VAR mident COLON lident { Globals.add $2; $2, $4 }
+  | VAR mident COLON lident { 
+    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
+    Globals.add $2; 
+    $2, $4 }
 ;
 
 const_decl:
-  | CONST mident COLON lident { Consts.add $2; $2, $4 }
+  | CONST mident COLON lident { 
+    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
+    Consts.add $2;
+    $2, $4 }
 ;
 
 array_decl:
-  | ARRAY mident LEFTSQ lident RIGHTSQ COLON lident 
-      { if Hstring.compare $4 hproc <> 0 then raise Parsing.Parse_error;
-	Arrays.add $2; 
+  | ARRAY mident LEFTSQ lident RIGHTSQ COLON lident { 
+        if not (Hstring.equal $4 hproc) then raise Parsing.Parse_error;
+        if Hstring.equal $7 hint || Hstring.equal $4 hreal then Smt.set_arith true;
+	Arrays.add $2;
 	$2, ($4, $7)}
 ;
 
@@ -149,9 +158,9 @@ type_def_plus:
 type_def:
   | TYPE lident { ($2, []) }
   | TYPE lident EQ constructors 
-      { List.iter Constructors.add $4; ($2, $4) }
+      { Smt.set_sum true; List.iter Constructors.add $4; ($2, $4) }
   | TYPE lident EQ BAR constructors 
-      { List.iter Constructors.add $5; ($2, $5) }
+      { Smt.set_sum true; List.iter Constructors.add $5; ($2, $5) }
 ;
 
 constructors:
@@ -355,7 +364,7 @@ arith_term:
 
 term:
   | var_or_array_term { $1 }
-  | arith_term { $1 }
+  | arith_term { Smt.set_arith true; $1 }
 ;
 
 mident:
@@ -379,5 +388,5 @@ lident:
 operator:
   | EQ { Eq }
   | NEQ { Neq }
-  | LT { Lt }
-  | LE { Le }
+  | LT { Smt.set_arith true; Lt }
+  | LE { Smt.set_arith true; Le }

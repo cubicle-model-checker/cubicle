@@ -11,11 +11,19 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Solver_types
+open Enumsolver_types
 open Format
 
-module Th = Cc.Make(Combine.CX)
-module Ex = Explanation
+module Th = struct 
+  type t = unit
+  let empty _ = ()
+  let assume _ _ _ _ = assert false
+end
+
+module Ex = Set.Make (struct
+  type t = Enumsolver_types.atom
+  let compare a1 a2 = a2.aid - a1.aid
+end)
 
 exception Sat
 exception Unsat of clause list
@@ -120,17 +128,18 @@ type env =
       
       mutable model : var Vec.t;
       
-      mutable tenv : Th.t;
+      (* mutable tenv : Th.t; *)
 
-      mutable tenv_queue : Th.t Vec.t;
+      (* mutable tenv_queue : Th.t Vec.t; *)
       
-      mutable tatoms_queue : atom Queue.t;
+      (* mutable tatoms_queue : atom Queue.t; *)
 
     }
       
 
 
 exception Conflict of clause
+exception TConflict of clause
 module Make (Dummy : sig end) = struct
 
 
@@ -138,7 +147,8 @@ module Make (Dummy : sig end) = struct
       {
         env : env; 
         st_cpt_mk_var: int;
-        st_ma : var Literal.LT.Map.t;
+        st_ha : ((Hstring.t * int), Enumsolver_types.atom) Hashtbl.t;
+        st_hi : (Hstring.t, Enumsolver_types.ident) Hashtbl.t;
       }
 
 
@@ -212,14 +222,13 @@ module Make (Dummy : sig end) = struct
       
       model = Vec.make 0 dummy_var;
       
-      tenv = Th.empty();
+      (* tenv = Th.empty(); *)
 
-      tenv_queue = Vec.make 100 (Th.empty());
+      (* tenv_queue = Vec.make 100 (Th.empty()); *)
 
-      tatoms_queue = Queue.create ();
+      (* tatoms_queue = Queue.create (); *)
 
     }
-
 
 let f_weight i j = (Vec.get env.vars j).weight < (Vec.get env.vars i).weight
     
@@ -263,8 +272,8 @@ let nb_learnts () = Vec.size env.learnts
 let nb_vars    () = Vec.size env.vars
 
 let new_decision_level() = 
-  Vec.push env.trail_lim (Vec.size env.trail);
-  Vec.push env.tenv_queue env.tenv (* save the current tenv *)
+  Vec.push env.trail_lim (Vec.size env.trail)
+  (* Vec.push env.tenv_queue env.tenv (\* save the current tenv *\) *)
 
 let attach_clause c = 
   Vec.push (Vec.get c.atoms 0).neg.watched c;
@@ -306,17 +315,19 @@ let cancel_until lvl =
       a.var.level <- -1;
       a.var.reason <- None;
       a.var.vpremise <- [];
-      insert_var_order a.var
+      insert_var_order a.var;
+      pop_ident a;
     done;
-    Queue.clear env.tatoms_queue;
-    env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
+    (* Queue.clear env.tatoms_queue; *)
+    (* env.tenv <- Vec.get env.tenv_queue lvl; (\* recover the right tenv *\) *)
     Vec.shrink env.trail ((Vec.size env.trail) - env.qhead);
-    Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl);
-    Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl)
-  end;
-  assert (Vec.size env.trail_lim = Vec.size env.tenv_queue)
+    Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl)
+    (* Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl) *)
+  end
+  (* assert (Vec.size env.trail_lim = Vec.size env.tenv_queue) *)
 
 let rec pick_branch_lit () = 
+  if Iheap.is_empty env.order then raise Sat;
   let max = Iheap.remove_min f_weight env.order in
   let v = Vec.get env.vars max in
   if v.level>= 0 then  begin
@@ -325,16 +336,31 @@ let rec pick_branch_lit () =
   end
   else v
 
-let enqueue a lvl reason =
+let rec enqueue a lvl reason =
+  (* eprintf "enqueue: %a@." Debug.atom a; *)
   assert (not a.is_true && not a.neg.is_true && 
             a.var.level < 0 && a.var.reason = None && lvl >= 0);
+  (* for i = 0 to Vec.size env.clauses -1 do *)
+  (*   eprintf "attached %a@." Debug.clause (Vec.get env.clauses i); *)
+  (*   assert(is_attached (Vec.get env.clauses i)); *)
+  (* done; *)
   (* Garder la reason car elle est utile pour les unsat-core *)
   (*let reason = if lvl = 0 then None else reason in*)
   a.is_true <- true;
   a.var.level <- lvl;
   a.var.reason <- reason;
-  (* eprintf "enqueue: %a@." Debug.atom a; *)
-  Vec.push env.trail a
+  (* eprintf "-->enqueue: %a@." Debug.atom a; *)
+  Vec.push env.trail a;
+  List.iter (fun (a, c, lvl) ->
+    if a.var.level < 0 then 
+      if Vec.size c.atoms > 1 then begin
+        Vec.push env.learnts c;
+        attach_clause c;
+        clause_bump_activity c;
+        enqueue a lvl (Some c)
+      end
+      else enqueue a 0 None
+  ) (enqueue_ident a)
 
 let progress_estimate () = 
   let prg = ref 0. in
@@ -415,32 +441,32 @@ let expensive_theory_propagate () = None
   (*   if D1.d then eprintf "expensive_theory_propagate => Inconsistent@."; *)
   (*   Some dep *)
     
-let theory_propagate () =
-  let facts = ref [] in
-  while not (Queue.is_empty env.tatoms_queue) do
-    let a = Queue.pop env.tatoms_queue in
-    if a.is_true then
-      (*let ex = if a.var.level > 0 then Ex.singleton a else Ex.empty in*)
-      let ex = Ex.singleton a in (* Usefull for debugging *)
-      facts := (a.lit, ex) :: !facts
-    else 
-      if a.neg.is_true then
-	(*let ex = if a.var.level > 0 then Ex.singleton a.neg else Ex.empty in*)
-        let ex = Ex.singleton a.neg in (* Usefull for debugging *)
-	facts := (a.neg.lit, ex) :: !facts
-      else assert false;
-  done;
-  try
-    let full_model = nb_assigns() = env.nb_init_vars in
-    env.tenv <- 
-      List.fold_left 
-      (fun t (a,ex) -> let t,_,_ = Th.assume ~cs:full_model a ex t in t) 
-      env.tenv !facts;
-    if full_model then expensive_theory_propagate ()
-    else None
-  with Exception.Inconsistent dep -> 
-    (* eprintf "th inconsistent : %a @." Ex.print dep; *)
-    Some dep
+let theory_propagate () = None
+  (* let facts = ref [] in *)
+  (* while not (Queue.is_empty env.tatoms_queue) do *)
+  (*   let a = Queue.pop env.tatoms_queue in *)
+  (*   if a.is_true then *)
+  (*     (\*let ex = if a.var.level > 0 then Ex.singleton a else Ex.empty in*\) *)
+  (*     let ex = Ex.singleton a in (\* Usefull for debugging *\) *)
+  (*     facts := (a.lit, ex) :: !facts *)
+  (*   else  *)
+  (*     if a.neg.is_true then *)
+  (*       (\*let ex = if a.var.level > 0 then Ex.singleton a.neg else Ex.empty in*\) *)
+  (*       let ex = Ex.singleton a.neg in (\* Usefull for debugging *\) *)
+  (*       facts := (a.neg.lit, ex) :: !facts *)
+  (*     else assert false; *)
+  (* done; *)
+  (* try *)
+  (*   let full_model = nb_assigns() = env.nb_init_vars in *)
+  (*   env.tenv <-  *)
+  (*     List.fold_left  *)
+  (*     (fun t (a,ex) -> let t,_,_ = Th.assume ~cs:full_model a ex t in t)  *)
+  (*     env.tenv !facts; *)
+  (*   if full_model then expensive_theory_propagate () *)
+  (*   else None *)
+  (* with Exception.Inconsistent dep ->  *)
+  (*   (\* eprintf "th inconsistent : %a @." Ex.print dep; *\) *)
+  (*   Some dep *)
 
 let propagate () = 
   let num_props = ref 0 in
@@ -450,15 +476,16 @@ let propagate () =
     let a = Vec.get env.trail env.qhead in
     env.qhead <- env.qhead + 1;
     incr num_props;
-    propagate_atom a res;
-    Queue.push a env.tatoms_queue;
+    propagate_atom a res
+    (* Queue.push a env.tatoms_queue; *)
   done;
   env.propagations <- env.propagations + !num_props;
   env.simpDB_props <- env.simpDB_props - !num_props;
   !res
 
 
-let analyze c_clause = 
+let analyze c_clause =
+  (* printf "I analyze %a@." Debug.clause c_clause; *)
   let pathC  = ref 0 in
   let learnt = ref [] in
   let cond   = ref true in
@@ -494,6 +521,9 @@ let analyze c_clause =
     decr pathC;
     let p = Vec.get env.trail !tr_ind in
     decr tr_ind;
+    (* printf "%d pathC : %d - add reason of %a@." *)
+    (*   (decision_level ()) !pathC Debug.atom p; *)
+    
     match !pathC, p.var.reason with
       | 0, _ -> 
           cond := false;
@@ -504,7 +534,7 @@ let analyze c_clause =
   List.iter (fun q -> q.var.seen <- false) !seen;
   !blevel, !learnt, !history, !size
 
-let f_sort_db c1 c2 = 
+let f_sort_db c1 c2 =
   let sz1 = Vec.size c1.atoms in
   let sz2 = Vec.size c2.atoms in
   let c = compare c1.activity c2.activity in
@@ -609,60 +639,13 @@ let report_b_unsat ({atoms=atoms} as confl) =
   raise (Unsat unsat_core)
 
 
-let report_t_unsat dep =
-  let l = 
-    Ex.fold_atoms
-      (fun {var=v} l ->
-        let l = List.rev_append v.vpremise l in
-        match v.reason with None -> l | Some c -> c :: l
-      ) dep []
-  in
-  if false then begin
-    eprintf "@.>>T-UNSAT Deduction made from:@.";
-    List.iter
-      (fun hc ->
-        eprintf "    %a@." Debug.clause hc
-      )l;
-  end;
-  let uc = HUC.create 17 in
-  let rec roots todo = 
-    match todo with
-      | [] -> ()
-      | c::r ->
-	  for i = 0 to Vec.size c.atoms - 1 do
-	    let v = (Vec.get c.atoms i).var in
-	    if not v.seen then begin 
-	      v.seen <- true;
-	      roots v.vpremise;
-	      match v.reason with None -> () | Some r -> roots [r];
-	    end
-	  done;
-          match c.cpremise with
-            | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
-            | prems -> roots prems; roots r
-  in roots l;
-  let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-  if false then begin
-    eprintf "@.>>T-UNSAT_CORE:@.";
-    List.iter
-      (fun hc ->
-        eprintf "    %a@." Debug.clause hc
-      ) unsat_core;
-  end;
-  env.is_unsat <- true;
-  env.unsat_core <- unsat_core;
-  raise (Unsat unsat_core)
-
 let simplify () = 
   assert (decision_level () = 0);
   if env.is_unsat then raise (Unsat env.unsat_core);
   begin 
     match propagate () with
       | Some confl -> report_b_unsat confl
-      | None ->
-        match theory_propagate () with
-            Some dep -> report_t_unsat dep
-          | None -> ()
+      | None -> ()
   end;
   if nb_assigns() <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
     if Vec.size env.learnts > 0 then remove_satisfied env.learnts;
@@ -690,83 +673,83 @@ let record_learnt_clause blevel learnt history size =
   var_decay_activity ();
   clause_decay_activity()
 
-let check_inconsistence_of dep = 
-  try
-    let env = ref (Th.empty()) in ();
-    Ex.iter_atoms
-      (fun atom ->
-    	let t,_,_ = Th.assume ~cs:true atom.lit (Ex.singleton atom) !env in
-    	env := t)
-      dep;
-    (* ignore (Th.expensive_processing !env); *)
-    assert false
-  with Exception.Inconsistent _ -> ()
+let check_inconsistence_of dep = ()
+  (* try *)
+  (*   let env = ref (Th.empty()) in (); *)
+  (*   Ex.iter_atoms *)
+  (*     (fun atom -> *)
+  (*   	let t,_,_ = Th.assume ~cs:true atom.lit (Ex.singleton atom) !env in *)
+  (*   	env := t) *)
+  (*     dep; *)
+  (*   (\* ignore (Th.expensive_processing !env); *\) *)
+  (*   assert false *)
+  (* with Exception.Inconsistent _ -> () *)
 
-let theory_analyze dep = 
-  let atoms, sz, max_lvl, c_hist = 
-    Ex.fold_atoms
-      (fun a (acc, sz, max_lvl, c_hist) ->
-	 let c_hist = List.rev_append a.var.vpremise c_hist in
-	 let c_hist = match a.var.reason with 
-	   | None -> c_hist | Some r -> r:: c_hist in
-	 if a.var.level = 0 then acc, sz, max_lvl, c_hist
-	 else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
-      ) dep ([], 0, 0, [])
-  in
-  if atoms = [] then begin
-    (* check_inconsistence_of dep; *)
-    report_t_unsat dep
-	(* une conjonction de faits unitaires etaient deja unsat *)
-  end;
-  let name = fresh_dname() in
-  let c_clause = make_clause name atoms sz false c_hist in
-  (* eprintf "c_clause: %a@." Debug.clause c_clause; *)
-  c_clause.removed <- true;
+(* let theory_analyze dep =  *)
+(*   let atoms, sz, max_lvl, c_hist =  *)
+(*     Ex.fold_atoms *)
+(*       (fun a (acc, sz, max_lvl, c_hist) -> *)
+(* 	 let c_hist = List.rev_append a.var.vpremise c_hist in *)
+(* 	 let c_hist = match a.var.reason with  *)
+(* 	   | None -> c_hist | Some r -> r:: c_hist in *)
+(* 	 if a.var.level = 0 then acc, sz, max_lvl, c_hist *)
+(* 	 else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist *)
+(*       ) dep ([], 0, 0, []) *)
+(*   in *)
+(*   if atoms = [] then begin *)
+(*     (\* check_inconsistence_of dep; *\) *)
+(*     report_t_unsat dep *)
+(* 	(\* une conjonction de faits unitaires etaient deja unsat *\) *)
+(*   end; *)
+(*   let name = fresh_dname() in *)
+(*   let c_clause = make_clause name atoms sz false c_hist in *)
+(*   (\* eprintf "c_clause: %a@." Debug.clause c_clause; *\) *)
+(*   c_clause.removed <- true; *)
 
-  let pathC  = ref 0 in
-  let learnt = ref [] in
-  let cond   = ref true in
-  let blevel = ref 0 in
-  let seen   = ref [] in
-  let c      = ref c_clause in
-  let tr_ind = ref (Vec.size env.trail - 1) in
-  let size   = ref 1 in
-  let history = ref [] in
-  while !cond do
-    if !c.learnt then clause_bump_activity !c;
-    history := !c :: !history;
-    (* visit the current predecessors *)
-    for j = 0 to Vec.size !c.atoms - 1 do
-      let q = Vec.get !c.atoms j in
-      (*printf "I visit %a@." D1.atom q;*)
-      assert (q.is_true || q.neg.is_true && q.var.level >= 0); (* Pas sur *)
-      if not q.var.seen && q.var.level > 0 then begin
-        var_bump_activity q.var;
-        q.var.seen <- true;
-        seen := q :: !seen;
-        if q.var.level >= max_lvl then incr pathC
-        else begin
-          learnt := q :: !learnt; 
-          incr size;
-          blevel := max !blevel q.var.level
-        end
-      end
-    done;
+(*   let pathC  = ref 0 in *)
+(*   let learnt = ref [] in *)
+(*   let cond   = ref true in *)
+(*   let blevel = ref 0 in *)
+(*   let seen   = ref [] in *)
+(*   let c      = ref c_clause in *)
+(*   let tr_ind = ref (Vec.size env.trail - 1) in *)
+(*   let size   = ref 1 in *)
+(*   let history = ref [] in *)
+(*   while !cond do *)
+(*     if !c.learnt then clause_bump_activity !c; *)
+(*     history := !c :: !history; *)
+(*     (\* visit the current predecessors *\) *)
+(*     for j = 0 to Vec.size !c.atoms - 1 do *)
+(*       let q = Vec.get !c.atoms j in *)
+(*       (\*printf "I visit %a@." D1.atom q;*\) *)
+(*       assert (q.is_true || q.neg.is_true && q.var.level >= 0); (\* Pas sur *\) *)
+(*       if not q.var.seen && q.var.level > 0 then begin *)
+(*         var_bump_activity q.var; *)
+(*         q.var.seen <- true; *)
+(*         seen := q :: !seen; *)
+(*         if q.var.level >= max_lvl then incr pathC *)
+(*         else begin *)
+(*           learnt := q :: !learnt;  *)
+(*           incr size; *)
+(*           blevel := max !blevel q.var.level *)
+(*         end *)
+(*       end *)
+(*     done; *)
     
-    (* look for the next node to expand *)
-    while not (Vec.get env.trail !tr_ind).var.seen do decr tr_ind done;
-    decr pathC;
-    let p = Vec.get env.trail !tr_ind in
-    decr tr_ind;
-    match !pathC, p.var.reason with
-      | 0, _ -> 
-          cond := false;
-          learnt := p.neg :: (List.rev !learnt)
-      | n, None   -> assert false
-      | n, Some cl -> c := cl
-  done;
-  List.iter (fun q -> q.var.seen <- false) !seen;
-  !blevel, !learnt, !history, !size
+(*     (\* look for the next node to expand *\) *)
+(*     while not (Vec.get env.trail !tr_ind).var.seen do decr tr_ind done; *)
+(*     decr pathC; *)
+(*     let p = Vec.get env.trail !tr_ind in *)
+(*     decr tr_ind; *)
+(*     match !pathC, p.var.reason with *)
+(*       | 0, _ ->  *)
+(*           cond := false; *)
+(*           learnt := p.neg :: (List.rev !learnt) *)
+(*       | n, None   -> assert false *)
+(*       | n, Some cl -> c := cl *)
+(*   done; *)
+(*   List.iter (fun q -> q.var.seen <- false) !seen; *)
+(*   !blevel, !learnt, !history, !size *)
 
 
 
@@ -787,37 +770,27 @@ let search n_of_conflicts n_of_learnts =
 	  add_boolean_conflict confl
             
       | None -> (* No Conflict *)
-	  match theory_propagate () with
-	    | Some dep -> 
-		incr conflictC;
-		env.conflicts <- env.conflicts + 1;
-		if decision_level() = 0 then report_t_unsat dep; (* T-L conflict *)
-		let blevel, learnt, history, size = theory_analyze dep in
-		cancel_until blevel;
-		record_learnt_clause blevel learnt history size
-		  
-	    | None -> 
-		if nb_assigns () = env.nb_init_vars then raise Sat;
-		if n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then 
-		  begin
-		    env.progress_estimate <- progress_estimate();
-		    cancel_until 0;
-		    raise Restart
-		  end;
-		if decision_level() = 0 then simplify ();
-		
-		if n_of_learnts >= 0 && 
-		  Vec.size env.learnts - nb_assigns() >= n_of_learnts then 
-		    reduce_db();
-		
-		env.decisions <- env.decisions + 1;
-		
-		new_decision_level();
-		let next = pick_branch_lit () in
-		let current_level = decision_level () in
-		assert (next.level < 0);
-		(* eprintf "decide: %a@." Debug.atom next.pa; *)
-		enqueue next.na current_level None
+	  if nb_assigns () = env.nb_init_vars then raise Sat;
+	  if n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then 
+	    begin
+	      env.progress_estimate <- progress_estimate();
+	      cancel_until 0;
+	      raise Restart
+	    end;
+	  if decision_level() = 0 then simplify ();
+	  
+	  if n_of_learnts >= 0 && 
+	    Vec.size env.learnts - nb_assigns() >= n_of_learnts then 
+	    reduce_db();
+	  
+	  env.decisions <- env.decisions + 1;
+	  
+	  new_decision_level();
+	  let next = pick_branch_lit () in
+	  let current_level = decision_level () in
+	  assert (next.level < 0);
+	  (* eprintf "decide: %a@." Debug.atom next.na; *)
+	  enqueue next.na current_level None
   done
 
 let check_clause c = 
@@ -841,7 +814,7 @@ let solve () =
   (* printf "------------SMT---------------@."; *)
   (* for i = 0 to Vec.size env.vars - 1 do *)
   (*   let v = Vec.get env.vars i in *)
-  (*   if v.level = 0 then  *)
+  (*   if v.level = 0 then *)
   (*     printf "%a@." Debug.atom (if v.pa.is_true then v.pa else v.na); *)
   (* done; *)
   (* for i = 0 to Vec.size env.clauses - 1 do *)
@@ -928,9 +901,7 @@ let add_clause ~cnumber atoms =
     with Trivial -> ()
 
 let add_clauses cnf ~cnumber = 
-  List.iter (add_clause ~cnumber) cnf;
-  match theory_propagate () with
-      None -> () | Some dep -> report_t_unsat dep
+  List.iter (add_clause ~cnumber) cnf
   
 let init_solver cnf ~cnumber =
   let nbv, _ = made_vars_info () in
@@ -952,12 +923,35 @@ let init_solver cnf ~cnumber =
   add_clauses cnf ~cnumber
 
 
+let min_blevel =
+  List.fold_left (fun m (a,_, lvl) ->
+    min m lvl) 
+  (decision_level ())
+
 let assume cnf ~cnumber =
-  let cnf = List.map (List.map Solver_types.add_atom) cnf in
+  let implied = ref [] in
+  let cnf = List.map (List.map (Enumsolver_types.add_atom implied)) cnf in
+  let blevel = min_blevel !implied in
+  assert (blevel >= 0 && blevel <= decision_level ());
+  cancel_until blevel;
+  List.iter (fun (a, c, lvl) ->
+    if lvl = blevel && a.var.level < 0 then begin
+      Vec.push env.learnts c;
+      attach_clause c;
+      clause_bump_activity c;
+      enqueue a lvl (Some c)
+    end) !implied;
+  (match propagate () with
+    | None -> ()
+    | Some confl ->
+        if decision_level () = 0 then report_b_unsat confl
+        else cancel_until 0);
   init_solver cnf ~cnumber
 
+
+
 let clear () =
-  let empty_theory = Th.empty () in
+  (* let empty_theory = Th.empty () in *)
   env.is_unsat <- false;
   env.unsat_core <- [];
   env.clauses <- Vec.make 0 dummy_clause; 
@@ -981,75 +975,39 @@ let clear () =
   env.tot_literals <- 0;
   env.nb_init_vars <- 0;
   env.nb_init_clauses <- 0;
-  env.tenv <- empty_theory;
   env.model <- Vec.make 0 dummy_var;
   env.trail <- Vec.make 601 dummy_atom;
   env.trail_lim <- Vec.make 601 (-105);
-  env.tenv_queue <- Vec.make 100 (empty_theory);
-  env.tatoms_queue <- Queue.create ();
-  Solver_types.clear ()
-
-
-(* a bit ugly and doesn't work with cyclic structures *)
-let rec copy t =
-  if Obj.is_int t then t else
-    let tag = Obj.tag t in
-    if tag = Obj.double_tag then t else
-      if tag = Obj.closure_tag then assert false (* t *) else
-        if tag = Obj.string_tag then Obj.repr (String.copy (Obj.obj t)) else
-          if tag < Obj.no_scan_tag || tag = Obj.double_array_tag then begin
-            let size = Obj.size t in
-            let r = Obj.new_block tag size in
-            for i = 0 to pred size do
-              Obj.set_field r i (copy (Obj.field t i))
-            done;
-            r
-          end else failwith "copy" ;;
-
-let copy (v : 'a) : 'a = Obj.obj (copy (Obj.repr v))
-
+  (* env.tenv <- empty_theory; *)
+  (* env.tenv_queue <- Vec.make 100 (empty_theory); *)
+  (* env.tatoms_queue <- Queue.create (); *)
+  Enumsolver_types.clear ()
 
 let copy (v : 'a) : 'a = Marshal.from_string (Marshal.to_string v []) 0
 
-let save () = 
-  { 
-    env = copy env;
-    st_cpt_mk_var = !Solver_types.cpt_mk_var;
-    st_ma = !Solver_types.ma;
-  }
+let save () =  assert false
 
-let restore { env = s_env; st_cpt_mk_var = st_cpt_mk_var; st_ma = st_ma } =
-  env.is_unsat <- s_env.is_unsat;
-  env.unsat_core <- s_env.unsat_core;
-  env.clauses <- s_env.clauses;
-  env.learnts <- s_env.learnts;
-  env.clause_inc <- s_env.clause_inc;
-  env.var_inc <- s_env.var_inc;
-  env.vars <- s_env.vars;
-  env.qhead <- s_env.qhead;
-  env.simpDB_assigns <- s_env.simpDB_assigns;
-  env.simpDB_props <- s_env.simpDB_props;
-  env.order <- s_env.order;
-  env.progress_estimate <- s_env.progress_estimate;
-  env.restart_first <- s_env.restart_first;
-  env.starts <- s_env.starts;
-  env.decisions <- s_env.decisions;
-  env.propagations <- s_env.propagations;
-  env.conflicts <- s_env.conflicts;
-  env.clauses_literals <- s_env.clauses_literals;
-  env.learnts_literals <- s_env.learnts_literals;
-  env.max_literals <- s_env.max_literals;
-  env.tot_literals <- s_env.tot_literals;
-  env.nb_init_vars <- s_env.nb_init_vars;
-  env.nb_init_clauses <- s_env.nb_init_clauses;
-  env.tenv <- s_env.tenv;
-  env.model <- s_env.model;
-  env.trail <- s_env.trail;
-  env.trail_lim <- s_env.trail_lim;
-  env.tenv_queue <- s_env.tenv_queue;
-  env.tatoms_queue <- s_env.tatoms_queue;
-  Solver_types.cpt_mk_var := st_cpt_mk_var;
-  Solver_types.ma := st_ma
+let restore _ = assert false
 
+
+
+
+let test () =
+  let l1 = Hstring.make "Cache#1", 3, 7 in
+  let l2 = Hstring.make "Curcmd", 1, 31 in
+  let l3 = Hstring.make "Cache#2", 5, 7 in
+  let l4 = Hstring.make "Cache#1", 5, 7 in
+
+  (* let c1 = [Hstring.make "Cache#2", 3, 7; Hstring.make "Cache#1", 6, 7; *)
+  (*           Hstring.make "Curcmd", 6, 31] in *)
+
+  let c2 = [Hstring.make "Cache#1", 6, 7;
+            Hstring.make "Curcmd", 6, 31] in
+
+
+  let cnf = [c2; [l1]; [l2]; [l3]; [l4]] in
+  
+  assume cnf ~cnumber:0;
+  solve ();
 
 end

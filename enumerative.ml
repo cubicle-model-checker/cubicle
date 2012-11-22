@@ -1,3 +1,16 @@
+(**************************************************************************)
+(*                                                                        *)
+(*                                  Cubicle                               *)
+(*             Combining model checking algorithms and SMT solvers        *)
+(*                                                                        *)
+(*                  Sylvain Conchon and Alain Mebsout                     *)
+(*                  Universite Paris-Sud 11                               *)
+(*                                                                        *)
+(*  Copyright 2011. This file is distributed under the terms of the       *)
+(*  Apache Software License version 2.0                                   *)
+(*                                                                        *)
+(**************************************************************************)
+
 open Options
 open Format
 open Ast
@@ -109,7 +122,8 @@ let init_tables procs s =
   let first_proc = !i in
   List.iter (fun t -> HT.add ht t !i; proc_ids := !i :: !proc_ids; incr i)
     proc_terms;
-  (* XXX dirty hack to add an extra process *)
+  (* add an extra process in case we need it : change this to statically compute
+     how many extra processes are needed *)
   let ep = List.nth Ast.proc_vars (List.length proc_terms) in
   let all_procs = procs @ [ep] in
   HT.add ht (Elem (ep, Var)) !i;
@@ -122,9 +136,8 @@ let init_tables procs s =
     List.filter (fun sigma ->
       List.exists (fun (x,y) -> x <> y) sigma
     ) (Cube.all_permutations proc_ids proc_ids) in
-  HT.iter (fun t i ->
-    eprintf "%a -> %d@." Pretty.print_term t i
-  ) ht;
+  if debug then
+    HT.iter (fun t i -> eprintf "%a -> %d@." Pretty.print_term t i ) ht;
   { var_terms = var_terms;
     nb_vars = nb_vars;
     perm_procs = prem_procs;
@@ -164,12 +177,11 @@ let mkinit_s procs ({t_init = ia, init}) =
 
 let write_atom_to_state env st = function
   | Atom.Comp (t1, Eq, t2) ->
-    (* eprintf "%a = %a@." Pretty.print_term t1 Pretty.print_term t2; *)
-    (* eprintf "%d <- %d@." (HT.find env.id_terms t1) (HT.find env.id_terms t2); *)
-    st.(HT.find env.id_terms t1) <- HT.find env.id_terms t2
+      st.(HT.find env.id_terms t1) <- HT.find env.id_terms t2
   | Atom.Comp (t1, Neq, Elem(_, Var)) ->
-    (* (\* dirty hack as well : to change *\) *)
-    st.(HT.find env.id_terms t1) <- env.extra_proc
+      (* Assume an extra process if a disequality is mentioned on
+         type proc in init formula : change this to something more robust *)
+      st.(HT.find env.id_terms t1) <- env.extra_proc
   | _ -> assert false
   
 let write_cube_to_state env st =
@@ -249,6 +261,14 @@ let assigns_to_actions env sigma acc =
       with Not_found -> acc
     ) acc
 
+let nondets_to_actions env sigma acc =
+  List.fold_left 
+    (fun acc (h) ->
+      let nt = Elem (h, Glob) in
+      try (St_assign (HT.find env.id_terms nt, -1)) :: acc
+      with Not_found -> acc
+    ) acc
+
 let update_to_actions procs sigma env acc {up_arr=a; up_arg=j; up_swts=swts} =
   let rec sd acc = function
     | [] -> assert false
@@ -278,7 +298,13 @@ let update_to_actions procs sigma env acc {up_arr=a; up_arg=j; up_swts=swts} =
     in ites :: acc
   ) acc procs
 
-
+let missing_reqs_to_actions acct =
+  List.fold_left (fun acc -> function
+    | (a, Eq, b) ->
+        if List.exists (function St_assign (a', _) -> a = a' | _ -> false) acct
+        then acc
+        else (St_assign (a,b)) :: acc
+    | _ -> acc) acct
 
 exception Not_applicable
 
@@ -305,7 +331,6 @@ let rec apply_action env st st' = function
     begin
       try
 	let v2 = value_in_state env st i2 in
-      (* eprintf "action : %d <- %d@." i1 v2; *)
 	st'.(i1) <- v2
       with Not_found -> ()
     end 
@@ -342,6 +367,8 @@ let rec extra_args procs tr_args =
 
 let rec print_action env fmt = function
   | St_ignore -> ()
+  | St_assign (i, -1) -> 
+      fprintf fmt "%a = ." Pretty.print_term (id_to_term env i)
   | St_assign (i, v) -> 
       fprintf fmt "%a" Pretty.print_atom 
 	(Atom.Comp (id_to_term env i, Eq, id_to_term env v))
@@ -381,7 +408,6 @@ let print_transition_fun env name sigma st_reqs st_udnfs st_actions fmt =
   
 
 let transitions_to_func procs trans env =
-  (* let trs = Forward.instantiate_transitions procs procs trans in *)
   let aux acc { tr_args = tr_args; 
 		tr_reqs = reqs; 
 		tr_name = name;
@@ -403,11 +429,14 @@ let transitions_to_func procs trans env =
       let st_reqs = satom_to_st_req env reqs in
       let st_udnfs = List.map (List.map (satom_to_st_req env)) udnfs in
       let st_actions = assigns_to_actions env sigma [] assigns in
+      let st_actions = nondets_to_actions env sigma st_actions nondets in
       let st_actions = List.fold_left 
 	(update_to_actions procs sigma env)
 	st_actions upds in
-      print_transition_fun env name sigma st_reqs st_udnfs st_actions 
-	err_formatter;
+      let st_actions = missing_reqs_to_actions st_actions st_reqs in
+      if debug then
+        print_transition_fun env name sigma st_reqs st_udnfs st_actions 
+	  err_formatter;
       let f = fun st ->
 	if not (check_reqs env st st_reqs) then raise Not_applicable;
 	if not (List.for_all (List.exists (check_reqs env st)) st_udnfs)
@@ -430,9 +459,9 @@ let post st trs acc =
 module MC = Map.Make 
   (struct type t = int * int let compare = Pervasives.compare end)
 
-
 module SC = Set.Make 
   (struct type t = int * int let compare = Pervasives.compare end)
+
 
 
 let pair_to_atom env (x,y) =
@@ -450,7 +479,7 @@ let add_companions st mc =
       Array.fold_left (fun sc v -> 
 	incr i;
 	let iv = !i, v in
-	if iv <> lit then SC.add (!i, v) sc else sc
+	if iv <> lit then SC.add iv sc else sc
       ) comps st in
     MC.add lit comps mc) mc st
 
@@ -484,7 +513,8 @@ let stateless_forward s procs trs env l =
       else
 	let to_do = post st trs to_do in
 	incr cpt_f;
-	(* eprintf "%d : %a\n@." !cpt_f Pretty.print_cube (state_to_cube env st); *)
+	if debug && verbose > 1 then 
+          eprintf "%d : %a\n@." !cpt_f Pretty.print_cube (state_to_cube env st);
 	if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
 	  !cpt_f (List.length to_do);
 	HI.add h_visited hst ();
@@ -504,11 +534,9 @@ let stateless_forward s procs trs env l =
 let stateless_search procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
-  List.iter 
-    (fun st -> eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
-    st_inits;
+  if debug then 
+    List.iter (fun st ->
+      eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
+      st_inits;
   let trs = transitions_to_func procs init.t_trans env in
   stateless_forward init procs trs env st_inits
-  
-  
-  

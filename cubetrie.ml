@@ -26,6 +26,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Options
 open Ast
 
 module H = Hstring
@@ -53,6 +54,23 @@ and add_to_list atom cube v l = match l with
       else if cmp > 0 then (atom',t')::(add_to_list atom cube v n)
       else (atom, add cube v Empty)::l
 
+(* Add a mapping cube->v to trie *)
+let rec add_array cube v trie = match trie with
+  | Empty -> Array.fold_right (fun a t -> Node [a,t]) cube (Full v)
+  | Full _ -> trie
+  | Node l -> 
+      if Array.length cube = 0 then Full v
+      else Node (add_array_to_list 
+                   cube.(0) (Array.sub cube 1 (Array.length cube - 1))
+                   v l)
+and add_array_to_list atom cube v l = match l with
+  | [] -> [atom, add_array cube v Empty]
+  | (atom',t')::n ->
+      let cmp = Atom.compare atom atom' in
+      if cmp = 0 then (atom, add_array cube v t')::n
+      else if cmp > 0 then (atom',t')::(add_array_to_list atom cube v n)
+      else (atom, add_array cube v Empty)::l
+
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem cube trie = match trie with 
   | Empty -> None
@@ -64,18 +82,69 @@ let rec mem cube trie = match trie with
 and mem_list atom cube l = match l with
   | [] -> None
   | (atom',t')::n ->
-      let cmp = Atom.compare atom atom' in
-      if cmp = 0 then mem cube t'
+      (* let cmp = Atom.compare atom atom' in *)
+      let cmp = - (Atom.trivial_is_implied atom' atom) in
+      if cmp = 0 then match mem cube t' with
+        | Some _ as r -> r
+        | None -> match cube with
+            | [] -> None
+            | atom::cube -> mem_list atom cube l
       else if cmp > 0 then mem_list atom cube n
       else match cube with
           | [] -> None
           | atom::cube -> mem_list atom cube l
 
+(* Is cube subsumed by some cube in the trie? *)
+let rec mem_array cube trie = 
+  match trie with 
+  | Empty -> None
+  | Full {t_nb = id} -> Some [id]
+  | Node l ->
+      if Array.length cube = 0 then None
+      else mem_array_list
+        cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
+and mem_array_list atom cube l = match l with
+  | [] -> None
+  | (atom',t')::n ->
+      (* let cmp = Atom.compare atom atom' in *)
+      let cmp = - (Atom.trivial_is_implied atom' atom) in
+      if cmp = 0 then 
+        match mem_array cube t' with
+          | None -> 
+              if Array.length cube = 0 then None
+              else mem_array_list
+                cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
+          | Some _ as r -> r
+      else if cmp > 0 then mem_array_list atom cube n
+      else if Array.length cube = 0 then None
+      else mem_array_list
+        cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
+       
+let mem c t =
+  if profiling then TimerSubset.start ();
+  let res = mem c t in
+  if profiling then TimerSubset.pause ();
+  res
+   
 (* Apply f to all values mapped to in the trie. *)
 let rec iter f trie = match trie with
   | Empty -> ()
   | Full v -> f v
   | Node l -> List.iter (fun (_,t) -> iter f t) l
+
+let mem_array c t =
+  (* Format.eprintf "memarray %a in@." Pretty.print_array c; *)
+  (* iter (fun s -> Format.eprintf ">>> %a\n@." Pretty.print_array s.t_arru) t; *)
+  if profiling then TimerSubset.start ();
+  let res = mem_array c t in
+  if profiling then TimerSubset.pause ();
+  res
+
+(* Fold f to all values mapped to in the trie. *)
+let rec fold f acc trie = match trie with
+  | Empty -> acc
+  | Full v -> f acc v
+  | Node l -> List.fold_left (fun acc (_,t) -> fold f acc t) acc l
 
 (* Apply f to all values whose keys (cubes) are subsumed by the given cube. *)
 let rec iter_subsumed f cube trie = match cube, trie with

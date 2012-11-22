@@ -123,9 +123,20 @@ and make_literal = function
       let ff2 = F.make F.Imp [F.make F.Not [f]; a2] in
       F.make F.And [ff1; ff2]
 
+
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
+module HAA = Hashtbl.Make (ArrayAtom)
+
+let make_formula =
+  let cache = HAA.create 200001 in
+  fun atoms ->
+    try HAA.find cache atoms
+    with Not_found ->
+      let f = make_formula atoms in
+      HAA.add cache atoms f;
+      f
 
 let make_disjunction nodes = F.make F.Or (List.map make_formula nodes)
 
@@ -147,6 +158,139 @@ let make_init {t_init = arg, sa } lvars =
 	    (fun h -> make_formula_set (subst_atoms [z, h] sa)) lvars
 	in
 	F.make F.And (f::fsa)
+
+
+
+(**************************************************************)
+(*   let all_values ty = *)
+(*     try *)
+(*       if Hstring.equal ty Smt.Type.type_proc then  *)
+(*         List.map (fun p -> Elem(p,Var)) proc_vars *)
+(*       else List.map (fun c -> Elem(c,Constr)) (Smt.Type.constructors ty) *)
+(*     with Not_found -> assert false *)
+
+(*   let type_of_term = function *)
+(*     | Elem (x, _) | Access (x, _, _) -> snd (Smt.Symbol.type_of x) *)
+(*     | _ -> assert false *)
+
+(*   (\* let val_and_mask v ty = *\) *)
+(*   (\*   let mask, va, _ = *\) *)
+(*   (\*     List.fold_left (fun (mask, va, n) c ->  *\) *)
+(*   (\*       (1 lsl n) lor mask, *\) *)
+(*   (\*       (if Hstring.equal v c then (1 lsl n) lor va else va), *\) *)
+(*   (\*       n + 1) *\) *)
+(*   (\*       (0, 0, 0) (all_values ty) *\) *)
+(*   (\*   in va, mask *\) *)
+
+(*   let make_eq t v =  make_literal (Comp (t, Eq, v)) *)
+(*     (\* | Elem (x, Glob) -> *\) *)
+(*     (\*     let ty = snd (Smt.Symbol.type_of x) in *\) *)
+(*     (\*     let va, mask = val_and_mask v ty in *\) *)
+(*     (\*     x, va, mask *\) *)
+(*     (\* | Access (a, x, Var) -> *\) *)
+(*     (\*     let ty = snd (Smt.Symbol.type_of a) in *\) *)
+(*     (\*     let va, mask = val_and_mask v ty in         *\) *)
+(*     (\*     Hstring.make ((Hstring.view a)^(Hstring.view x)), va, mask *\) *)
+(*     (\* | _ -> assert false *\) *)
+
+
+(*   (\* let neg_lit (h, va, mask) = h, mask land (lnot va), mask *\) *)
+(*   let neg_lit a = F.make F.Not [a] *)
+    
+(*   let make_neq t v = make_literal (Comp (t, Neq, v)) *)
+
+(*   let make_dnf_literal = function *)
+(*     | True -> [[make_literal True]] *)
+(*     | False -> [[make_literal False]] *)
+
+(*     | Comp (Elem (x, (Constr|Var)), Eq, Elem (y, (Constr|Var))) -> *)
+(*         if Hstring.equal x y then [[make_literal True]] *)
+(*         else [[make_literal False]] *)
+
+(*     | Comp (Elem (x, (Constr|Var)), Neq, Elem (y, (Constr|Var))) -> *)
+(*         if Hstring.equal x y then [[make_literal False]] *)
+(*         else [[make_literal True]] *)
+          
+(*     | Comp (t, Eq, (Elem (_, (Constr|Var)) as v)) *)
+(*     | Comp ((Elem (_, (Constr|Var)) as v), Eq, t) -> *)
+(*         [[make_eq t v]] *)
+          
+(*     | Comp (t, Neq, (Elem (_, (Constr|Var)) as v)) *)
+(*     | Comp ((Elem (_, (Constr|Var)) as v), Neq, t) -> *)
+(*         [[make_neq t v]] *)
+
+(*     | Comp (x, Eq, y) -> *)
+(*         let vs_x = all_values (type_of_term x) in *)
+(*         let vs_y = all_values (type_of_term y) in *)
+(*         List.fold_left (fun acc vx -> *)
+(*           if List.mem vx vs_y then *)
+(*             [make_eq x vx; make_eq y vx] :: acc *)
+(*           else acc) [] vs_x *)
+          
+(*     | Comp (x, Neq, y) -> *)
+(*         let vs_x = all_values (type_of_term x) in *)
+(*         let vs_y = all_values (type_of_term y) in *)
+(*         List.fold_left (fun acc vx -> *)
+(*           if List.mem vx vs_y then *)
+(*             [make_eq x vx; make_neq y vx] :: acc *)
+(*           else [make_eq x vx] :: acc) [] vs_x *)
+          
+(*     | _ -> assert false *)
+
+(*   let make_literall a = *)
+(*     List.rev_map (List.rev_map neg_lit) (make_dnf_literal (neg a))         *)
+
+(*   let make_formula atoms = *)
+(*     Array.fold_left (fun acc a -> *)
+(*       List.rev_append (make_literall a) acc) *)
+(*       [] atoms *)
+
+(* module HAA = Hashtbl.Make (ArrayAtom) *)
+
+(*   let make_formula = *)
+(*     let cache = HAA.create 200001 in *)
+(*     fun atoms -> *)
+(*       try HAA.find cache atoms *)
+(*       with Not_found -> *)
+(*         let f = make_formula atoms in *)
+(*         HAA.add cache atoms f; *)
+(*         f *)
+
+(*   let make_formula_set atoms = *)
+(*     SAtom.fold (fun a acc -> List.rev_append (make_literall a) acc) atoms [] *)
+
+(*   let make_neg_formula atoms = *)
+(*     Array.fold_left (fun acc a -> *)
+(*       List.fold_left (fun acc' l ->  *)
+(*         List.rev_append (List.rev_map (fun d -> l @ d) acc) acc') *)
+(*         [] (make_literall (neg a))) *)
+(*       [[]] atoms *)
+
+(*   let make_neg_formula = *)
+(*     let cache = HAA.create 200001 in *)
+(*     fun atoms -> *)
+(*       try HAA.find cache atoms *)
+(*       with Not_found -> *)
+(*         let f = make_neg_formula atoms in *)
+(*         HAA.add cache atoms f; *)
+(*         f *)
+
+
+(*   let make_init {t_init = arg, sa } lvars = *)
+(*     match arg with *)
+(*       | None ->    *)
+(* 	  make_formula_set sa *)
+(*       | Some z -> *)
+(* 	  let sa, cst = SAtom.partition (has_var z) sa in *)
+(* 	  let f = make_formula_set cst in *)
+(*           List.fold_left (fun acc h -> *)
+(*             List.rev_append (make_formula_set (subst_atoms [z, h] sa)) acc) *)
+(*             f lvars *)
+
+(*   let mkf f = F.make F.And (List.map (F.make F.Or) f) *)
+
+(**************************************************************)
+
 
 let unsafe ({ t_unsafe = (args, sa) } as ts) =
   SMT.clear ();
@@ -227,3 +371,202 @@ let extract_candidates args ap forward_nodes =
     with Exit -> acc)
     [] forward_nodes
 *)
+
+
+
+(**************************************)
+(* Using enumerated data types solver *)
+(**************************************)
+
+module ESMT = Smt.MakeEnum (struct end)
+
+module Enum = struct
+
+  let all_values ty =
+    try
+      if Hstring.equal ty Smt.Type.type_proc then proc_vars
+      else Smt.Type.constructors ty
+    with Not_found -> assert false
+
+  let type_of_term = function
+    | Elem (x, _) | Access (x, _, _) -> snd (Smt.Symbol.type_of x)
+    | _ -> assert false
+
+  let val_and_mask v ty =
+    let mask, va, _ =
+      List.fold_left (fun (mask, va, n) c -> 
+        (1 lsl n) lor mask,
+        (if Hstring.equal v c then (1 lsl n) lor va else va),
+        n + 1)
+        (0, 0, 0) (all_values ty)
+    in va, mask
+
+  let make_eq t v = match t with
+    | Elem (x, Glob) ->
+        let ty = snd (Smt.Symbol.type_of x) in
+        let va, mask = val_and_mask v ty in
+        x, va, mask
+    | Access (a, x, Var) ->
+        let ty = snd (Smt.Symbol.type_of a) in
+        let va, mask = val_and_mask v ty in        
+        Hstring.make ((Hstring.view a)^(Hstring.view x)), va, mask
+    | _ -> assert false
+
+
+  let neg_lit (h, va, mask) = h, mask land (lnot va), mask
+    
+  let make_neq t v = neg_lit (make_eq t v)    
+
+  let make_dnf_literal = function
+    | True -> [[Hstring.empty, 1, 1]]
+    | False -> [[Hstring.empty, 0, 1]]
+
+    | Comp (Elem (x, (Constr|Var)), Eq, Elem (y, (Constr|Var))) ->
+        if Hstring.equal x y then [[Hstring.empty, 1, 1]]
+        else [[Hstring.empty, 0, 1]]
+
+    | Comp (Elem (x, (Constr|Var)), Neq, Elem (y, (Constr|Var))) ->
+        if Hstring.equal x y then [[Hstring.empty, 0, 1]]
+        else [[Hstring.empty, 1, 1]]
+          
+    | Comp (t, Eq, Elem (v, (Constr|Var)))
+    | Comp (Elem (v, (Constr|Var)), Eq, t) ->
+        [[make_eq t v]]
+          
+    | Comp (t, Neq, Elem (v, (Constr|Var)))
+    | Comp (Elem (v, (Constr|Var)), Neq, t) ->
+        [[make_neq t v]]
+
+    | Comp (x, Eq, y) ->
+        let vs_x = all_values (type_of_term x) in
+        let vs_y = all_values (type_of_term y) in
+        List.fold_left (fun acc vx ->
+          if Hstring.list_mem vx vs_y then
+            [make_eq x vx; make_eq y vx] :: acc
+          else acc) [] vs_x
+          
+    | Comp (x, Neq, y) ->
+        let vs_x = all_values (type_of_term x) in
+        let vs_y = all_values (type_of_term y) in
+        List.fold_left (fun acc vx ->
+          if Hstring.list_mem vx vs_y then
+            [make_eq x vx; make_neq y vx] :: acc
+          else [make_eq x vx] :: acc) [] vs_x
+          
+    | _ -> assert false
+
+  let make_literal a =
+    List.rev_map (List.rev_map neg_lit) (make_dnf_literal (neg a))        
+
+  let make_formula atoms =
+    Array.fold_left (fun acc a ->
+      List.rev_append (make_literal a) acc)
+      [] atoms
+
+  (* let make_formula = *)
+  (*   let cache = HAA.create 200001 in *)
+  (*   fun atoms -> *)
+  (*     try HAA.find cache atoms *)
+  (*     with Not_found -> *)
+  (*       let f = make_formula atoms in *)
+  (*       HAA.add cache atoms f; *)
+  (*       f *)
+
+  let make_formula_set atoms =
+    SAtom.fold (fun a acc -> List.rev_append (make_literal a) acc) atoms []
+
+  let make_neg_formula atoms =
+    let res = 
+    Array.fold_left (fun acc a ->
+      List.fold_left (fun acc' l -> 
+        List.rev_append (List.rev_map (fun d -> l @ d) acc) acc')
+        [] (make_literal (neg a)))
+      [[]] atoms
+    in
+    (* if List.length res > 1 then begin *)
+    (*   eprintf "make neg of %a =@." Pretty.print_array atoms; *)
+    (*   List.iter (fun d -> *)
+    (*     eprintf "[ "; *)
+    (*     List.iter (fun (x,v,_) -> eprintf "%a = %d , " Hstring.print x v) d; *)
+    (*     eprintf "]@."; *)
+    (*   ) res; *)
+    (*   eprintf "@."; *)
+    (* end; *)
+    res
+    
+
+  let make_neg_formula =
+    let cache = HAA.create 200001 in
+    fun atoms ->
+      try HAA.find cache atoms
+      with Not_found ->
+        let f = make_neg_formula atoms in
+        HAA.add cache atoms f;
+        f
+
+  let make_init {t_init = arg, sa } lvars =
+    match arg with
+      | None ->   
+	  make_formula_set sa
+      | Some z ->
+	  let sa, cst = SAtom.partition (has_var z) sa in
+	  let f = make_formula_set cst in
+          List.fold_left (fun acc h ->
+            List.rev_append (make_formula_set (subst_atoms [z, h] sa)) acc)
+            f lvars
+
+  let unsafe ({ t_unsafe = (args, sa) } as ts) =
+    ESMT.clear ();
+    if profiling then TimeF.start ();
+    let init = make_init ts (* (List.rev_append ts.t_glob_proc  *) args in
+    let f = make_formula_set sa in
+    if profiling then TimeF.pause ();
+    (* if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init; *)
+    ESMT.assume ~profiling ~id:ts.t_nb init;
+    ESMT.assume ~profiling ~id:ts.t_nb f;
+    ESMT.check  ~profiling ()
+
+
+  let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
+    ESMT.clear ();
+    if profiling then TimeF.start ();
+    let f = make_formula ap in
+    if profiling then TimeF.pause ();
+    (* if debug_smt then eprintf "[smt] goal g: %a@." F.print f; *)
+    ESMT.assume ~profiling ~id:ts.t_nb f;
+    ESMT.check  ~profiling ()
+
+  let assume_node ap ~id =
+    if profiling then TimeF.start ();
+    let f = make_neg_formula ap in
+    if profiling then TimeF.pause ();
+    (* if debug_smt then eprintf "[smt] assume node: %a@." F.print f; *)
+    ESMT.assume ~profiling ~id f;
+    ESMT.check  ~profiling ()
+
+end
+
+
+
+let unsafe s = if Options.enumsolver then Enum.unsafe s else unsafe s
+
+let assume_goal s = 
+  if Options.enumsolver then Enum.assume_goal s else assume_goal s
+
+let assume_node ap ~id =
+  if Options.enumsolver then Enum.assume_node ap ~id else assume_node ap ~id
+
+
+(* let assume_goal s = *)
+(*   let res = try assume_goal s; false with Smt.Unsat _ -> true in *)
+(*   let eres = try Enum.assume_goal s; false with Smt.Unsat _ -> true in *)
+(*   if res <> eres then assert false; *)
+(*   if res then raise (Smt.Unsat []) *)
+(*   (\* if Options.enumsolver then Enum.assume_goal s else assume_goal s *\) *)
+
+(* let assume_node ap ~id = *)
+(*   let res = try assume_node ap ~id; false with Smt.Unsat _ -> true in *)
+(*   let eres =try Enum.assume_node ap ~id; false with Smt.Unsat _ -> true in *)
+(*   if res <> eres then (printf "smt : %b - enum %b@." res eres; assert false); *)
+(*   if res then raise (Smt.Unsat []) *)
+(*   (\* if Options.enumsolver then Enum.assume_node ap ~id else assume_node ap ~id *\) *)

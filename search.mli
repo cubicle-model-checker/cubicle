@@ -14,6 +14,7 @@
 (* Backward reachability search strategies *)
 
 exception Unsafe of Ast.t_system
+exception Unsafes of Ast.t_system list
 
 module type I = sig
   type t = Ast.t_system
@@ -46,6 +47,7 @@ module type I = sig
   val is_inv : fsearch -> t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
+  val delete_nodes_trie : t -> t Cubetrie.t ref -> int ref -> bool -> unit
   val delete_nodes_inv : t list -> t list ref -> unit
   val delete_node : t -> unit
   val is_deleted : t -> bool
@@ -61,6 +63,8 @@ module type I = sig
 
   val fixpoint_trie : t -> Ast.Atom.t list -> t Cubetrie.t ref ->
     t Cubetrie.t ref -> t list ref -> (int list) option
+
+  val fixpoint_trie2 : t Cubetrie.t -> t -> (int list) option
 
   val pre : t -> t list * t list
   val post : t -> t list

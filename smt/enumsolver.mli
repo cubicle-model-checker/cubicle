@@ -3,7 +3,7 @@
 (*                                  Cubicle                               *)
 (*             Combining model checking algorithms and SMT solvers        *)
 (*                                                                        *)
-(*                  Sylvain Conchon and Alain Mebsout                     *)
+(*                  Mohamed Iguernelala                                   *)
 (*                  Universite Paris-Sud 11                               *)
 (*                                                                        *)
 (*  Copyright 2011. This file is distributed under the terms of the       *)
@@ -11,41 +11,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = 
-  | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsDist | Bfsinvp 
-  | Induct | Bfstrie
+exception Sat
+exception Unsat of Enumsolver_types.clause list
 
-val file : string
-val cin : in_channel
+module Make (Dummy : sig end) : sig
+  type state
 
-val max_proc : int
-val type_only : bool
-val maxrounds : int
-val maxnodes : int
+  val solve : unit -> unit
+  val assume : (Hstring.t * int * int) list list -> cnumber : int -> unit
+  val clear : unit -> unit
 
-val only_forward : bool
-val gen_inv : bool
-val forward_inv : int
-val enumerative : int
-val lazyinv : bool
-val refine : bool
-val stateless : bool
-val post_strategy : int
-val delete : bool
-val simpl_by_uc : bool
-val bitsolver : bool
-val enumsolver : bool
+  val save : unit -> state
+  val restore : state -> unit
 
-val cores : int
-
-val mode : mode
-
-val debug : bool
-val dot : bool
-val quiet : bool
-val verbose : int
-
-val debug_smt : bool
-val dmcmt : bool
-val profiling : bool
+end

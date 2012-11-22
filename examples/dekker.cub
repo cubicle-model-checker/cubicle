@@ -12,7 +12,7 @@ requires { Want[i] = False }
 
 transition enter (i)
 requires { Want[i]=True && Crit[i] = False && Turn = i}
-{ Crit[i] := True }
+{ Crit[i] := True; }
 
 transition exit (i)
 requires { Crit[i] = True }

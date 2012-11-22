@@ -75,7 +75,8 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
          smt/solver_types.cmo smt/explanation.cmo \
          smt/polynome.cmo smt/uf.cmo smt/use.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
-         smt/combine.cmo smt/cc.cmo smt/solver.cmo smt/smt.cmo
+         smt/combine.cmo smt/cc.cmo smt/solver.cmo \
+	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo\
@@ -247,7 +248,9 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 	   smt/intervals.ml smt/intervals.mli smt/literal.ml\
 	   smt/literal.mli smt/polynome.ml smt/polynome.mli smt/sig.mli\
 	   smt/smt.ml smt/smt.mli smt/solver.ml smt/solver.mli\
-	   smt/solver_types.ml smt/solver_types.mli smt/sum.ml smt/sum.mli\
+	   smt/solver_types.ml smt/solver_types.mli smt/enumsolver.ml\
+	   smt/enumsolver.mli smt/enumsolver_types.ml smt/enumsolver_types.mli\
+	   smt/sum.ml smt/sum.mli\
 	   smt/symbols.ml smt/symbols.mli smt/term.ml smt/term.mli\
 	   smt/ty.ml smt/ty.mli smt/uf.ml smt/uf.mli smt/use.ml smt/use.mli
 

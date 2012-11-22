@@ -61,7 +61,7 @@ let push_none t =
   t.data.(t.sz) <- t.dummy;
   t.sz <- t.sz + 1
   
-let last t = 
+let last t =
   let e = t.data.(t.sz - 1) in
   assert (not (e == t.dummy));
   e

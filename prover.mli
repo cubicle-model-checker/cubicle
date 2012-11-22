@@ -16,6 +16,7 @@ open Ast
 module TimeF : Timer.S
 
 module SMT : Smt.Solver
+module ESMT : Smt.EnumSolver
 
 (* Checks if the system is unsafe *)
 val unsafe : t_system -> unit

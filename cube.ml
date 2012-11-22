@@ -18,7 +18,7 @@ open Atom
 
 module H = Hstring
 module S = H.HSet
-let hempty = H.make ""
+let hempty = H.empty
 
 
 module TimeRP = Search.TimeRP
@@ -994,7 +994,7 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
   let nodes = List.fold_left
     (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) ->
       let dif = extra_args real_args nargs in
-      (* if List.length args > nb_nargs then nodes *)
+      (* if List.length args > List.length nargs then nodes *)
       (* else *)
       let nargs = if dif = [] then nargs else nargs@dif in
       let d = relevant_permutations anp ap args nargs in
@@ -1076,20 +1076,15 @@ let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   r
 
 
-
 let size_system s = List.length (fst s.t_unsafe)
-let card_system s = SAtom.cardinal (snd s.t_unsafe)
+let card_system s = Array.length s.t_arru
 
-
-  
 
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
   let acc, gp = 
     List.fold_left 
       (fun (acc, gp) g -> 
-	STerm.add (Elem (g, Glob)) acc,
-	(* if Smt.Typing.has_type_proc g && Hstring.view g = "Home" then g :: gp *)
-	(* else *) gp
+	STerm.add (Elem (g, Glob)) acc, gp
       ) (STerm.empty, []) globals
   in
   List.fold_left (fun acc p ->
@@ -1100,7 +1095,7 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
 
 
 
-(*************** Things with tries *******************)
+(*************** Operations with tries (Amit Goel) *******************)
 
 let invert_subst = List.map (fun (x,y) -> y,x)
 
@@ -1205,3 +1200,166 @@ let fixpoint_trie s lstu visited learnt postponed =
   in
   if profiling then TimeFix.pause ();
   res
+
+
+
+
+
+(*************** Other version with tries *******************)
+
+
+let check_and_add nargs anp nodes
+    ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) =
+  let dif = extra_args real_args nargs in
+  (* if List.length args > nb_nargs then nodes *)
+  (* else *)
+  let nargs = if dif = [] then nargs else nargs@dif in
+  let d = relevant_permutations anp ap args nargs in
+  List.fold_left
+    (fun nodes ss ->
+      let pp = ArrayAtom.apply_subst ss ap in
+      (* if ArrayAtom.subset pp anp then begin *)
+      (*   if simpl_by_uc then add_to_closed s pp sp ; *)
+      (*   raise (Fixpoint [sp.t_nb]) *)
+      (* end *)
+      (* Heuristic : throw away nodes too much different *)
+      (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+      (* line below useful for arith : ricart *)
+      if inconsistent_array (ArrayAtom.union pp anp) then nodes
+      else if ArrayAtom.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
+      else (Prover.assume_node pp ~id:sp.t_nb; nodes)
+    ) nodes d
+  
+
+let check_fixpoint_trie2 ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
+  Prover.assume_goal s;
+  (* let nb_nargs = List.length nargs in *)
+  let unprioritize_cands = false (* lazyinv *) in
+  let nodes, cands = Cubetrie.fold
+    (fun (nodes, cands) sp ->
+      if unprioritize_cands && sp.t_nb < 0 then nodes, sp :: cands
+      else check_and_add nargs anp nodes sp, cands
+    ) ([], []) visited in
+  let nodes = List.fold_left (check_and_add nargs anp) nodes cands in
+  if profiling then TimeSort.start ();
+  let nodes = 
+    List.fast_sort 
+      (fun (a1, n1) (a2, n2) ->
+        if unprioritize_cands && n1 < 0 && n2 >= 0 then 1 
+        (* a1 is a candidate *)
+        else if unprioritize_cands && n2 < 0 && n1 >= 0 then -1
+        (* a2 is a candidate *)
+        else ArrayAtom.compare_nb_common anp a1 a2) 
+      nodes 
+  in
+  if profiling then TimeSort.pause ();
+  List.iter (fun (p, cnum) -> Prover.assume_node p ~id:cnum) nodes
+  
+let easy_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
+  if (delete && (s.t_deleted || has_deleted_ancestor s))
+    ||
+    (simpl_by_uc && has_alredy_closed_ancestor s)
+  then Some []
+  else Cubetrie.mem_array npa nodes
+
+let medium_fixpoint_trie2 {t_unsafe = (nargs,_); 
+                          t_alpha = args, ap; 
+                          t_arru = anp} visited  =
+  let substs = all_permutations args nargs in
+  let substs = List.tl substs in (* Drop 'identity' permutation. 
+                                    Already checked in easy_fixpoint. *)
+  try
+    List.iter (fun ss -> 
+      let u = ArrayAtom.apply_subst ss ap in
+      match Cubetrie.mem_array u visited with
+        | Some uc -> raise (Fixpoint uc)
+        | None -> ()
+    ) substs;
+    None
+  with Fixpoint uc -> Some uc
+
+let hard_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
+  try
+    check_fixpoint_trie2 s nodes;
+    None
+  with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+  
+
+let fixpoint_trie2 nodes ({ t_unsafe = (_,np) } as s) =
+  Debug.unsafe s;
+  if profiling then TimeFix.start ();
+  let r = 
+    match easy_fixpoint_trie2 s nodes with
+      | None ->
+          (match medium_fixpoint_trie2 s nodes with
+            | None -> hard_fixpoint_trie2 s nodes
+            | r -> r)
+      | r -> r
+  in
+  if profiling then TimeFix.pause ();
+  r
+
+
+
+
+(* Experimental expansion of cubes to dnf : depreciated *)
+
+let values_of_type ty =
+  let vals =
+    if Hstring.equal ty Smt.Type.type_proc then proc_vars
+    else Smt.Type.constructors ty in
+  List.fold_left (fun acc v -> S.add v acc) S.empty vals      
+
+let values_of_term = function
+  | Elem (x, Glob) | Access (x, _, Var) ->
+      values_of_type (snd (Smt.Symbol.type_of x))
+  | Elem (x, (Var | Constr)) -> S.singleton x
+  | _ -> assert false
+
+let sort_of_term = function
+  | Elem (x, Glob) | Access (x, _, Var) ->
+      let ty = (snd (Smt.Symbol.type_of x)) in
+      if Hstring.equal  ty Smt.Type.type_proc then Var
+      else if Smt.Symbol.has_abstract_type x then raise Not_found
+      else Constr
+  | Elem (x, (Var | Constr as s)) -> s
+  | _ -> assert false
+
+let expand_cube c =
+  SAtom.fold (fun a acc -> match a with
+    | True | False -> assert false
+    | Comp (x, Eq, Elem (y, (Constr|Var)))
+    | Comp (Elem (y, (Constr|Var)), Eq, x) ->
+        List.rev_map (SAtom.add a) acc
+    | Comp (x, Neq, Elem (y, (Constr|Var)))
+    | Comp (Elem (y, (Constr|Var)), Neq, x) ->
+        List.rev_map (SAtom.add a) acc    | Comp(x, Eq, y) ->
+        (try
+           let s = sort_of_term x in
+           let la = S.fold
+             (fun v acc -> 
+               (Comp (x, Eq, Elem (v, s)), Comp (y, Eq, Elem (v, s)))::acc)
+             (values_of_term x) [] in
+           List.fold_left (fun acc' (a1, a2) -> List.rev_append
+             (List.rev_map
+                (fun sa -> SAtom.add a2 (SAtom.add a1 sa)) acc) acc') [] la
+         with Not_found -> List.rev_map (SAtom.add a) acc)
+    | Comp(x, Neq, y) ->
+        (try
+           let s = sort_of_term x in
+           let la = S.fold
+             (fun v acc -> 
+               (Comp (x, Neq, Elem (v, s)), Comp (y, Eq, Elem (v, s)))::acc)
+             (values_of_term y) [] in
+           List.fold_left (fun acc' (a1, a2) -> List.rev_append
+             (List.rev_map
+                (fun sa -> SAtom.add a2 (SAtom.add a1 sa)) acc) acc') [] la
+         with Not_found -> List.rev_map (SAtom.add a) acc)           
+    | _ ->  List.rev_map (SAtom.add a) acc
+  ) c [SAtom.empty]
+
+
+let expand_cube c = List.rev_map proper_cube (expand_cube c)

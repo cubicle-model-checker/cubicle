@@ -237,6 +237,14 @@ val set_cc : bool -> unit
 (** set_cc [false] deactivates congruence closure algorithm
     ([true] by default).*)
 
+val set_arith : bool -> unit
+(** set_arith [false] deactivates the theory of arithmetic
+    ([true] by default).*)
+
+val set_sum : bool -> unit
+(** set_sum [false] deactivates the theory of enumerated data types
+    ([true] by default).*)
+
 module type Solver = sig
 
   (** This SMT solver is imperative in the sense that it maintains a global
@@ -308,4 +316,17 @@ end
 
 (** Functor to create several instances of the solver *)
 module Make (Dummy : sig end) : Solver
+
+
+module type EnumSolver = sig
+  val get_time : unit -> float
+  val get_calls : unit -> int
+
+  val clear : unit -> unit
+  val assume : ?profiling:bool -> id:int ->
+    (Hstring.t * int * int) list list -> unit
+  val check : ?profiling:bool -> unit -> unit
+end
+
+module MakeEnum (Dummy : sig end) : EnumSolver
 

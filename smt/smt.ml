@@ -445,6 +445,8 @@ end
 exception Unsat of int list
 
 let set_cc b = Cc.cc_active := b
+let set_arith = Combine.CX. set_arith_active
+let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
   type state
@@ -551,5 +553,63 @@ module Make (Dummy : sig end) = struct
     in
     restore_state st;
     ans
+
+end
+
+
+
+module type EnumSolver = sig
+  val get_time : unit -> float
+  val get_calls : unit -> int
+
+  val clear : unit -> unit
+  val assume : ?profiling:bool -> id:int ->
+    (Hstring.t * int * int) list list -> unit
+  val check : ?profiling:bool -> unit -> unit
+end
+
+module MakeEnum (Dummy : sig end) = struct
+
+  let calls = ref 0
+  module Time = Timer.Make (Dummy)
+
+  let get_time = Time.get
+  let get_calls () = !calls
+
+  module ESolver = Enumsolver.Make (Dummy)
+
+  let clear () = ESolver.clear ()
+
+  module SInt = 
+    Set.Make (struct type t = int let compare = Pervasives.compare end)
+
+  let export_unsatcore2 cl =
+    let s = 
+      List.fold_left 
+        (fun s {Enumsolver_types.name = n} ->
+	  try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
+    in 
+    SInt.elements s
+
+  let assume ?(profiling = false) ~id f = 
+    if profiling then Time.start ();
+    try 
+      ESolver.assume f id;
+      if profiling then Time.pause ()
+    with Enumsolver.Unsat ex ->
+      if profiling then Time.pause ();
+      raise (Unsat (export_unsatcore2 ex))
+
+  let check ?(profiling = false) () =
+    incr calls;
+    if profiling then Time.start ();
+    try 
+      ESolver.solve ();
+      if profiling then Time.pause ()
+    with
+      | Enumsolver.Sat -> if profiling then Time.pause ()
+      | Enumsolver.Unsat ex -> 
+	  if profiling then Time.pause ();
+	  raise (Unsat (export_unsatcore2 ex))
 
 end

@@ -18,10 +18,7 @@ open Atom
 open Cube
 
 module H = Hstring
-module S = Set.Make(H) 
-let hempty = H.make ""
-
-  (* changer la fonction compare pour avoir dans l'ordre #1<#2<..<#9<#10 etc. *)
+module S = Set.Make(H)
 
 module TimePre = Search.TimePre
 
@@ -402,7 +399,8 @@ let is_deleted s = s.t_deleted || has_deleted_ancestor s
 
 let ancestor_of n s = 
   (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) *)
-  List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru) s.t_from
+  (* List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru) s.t_from *)
+  List.exists (fun (_,_,anc) -> n.t_nb = anc.t_nb) s.t_from
 
 let subsumed_by n s =
   try 
@@ -430,6 +428,23 @@ let delete_nodes s nodes nb_del inc =
 	  end
 	else true)
       (List.rev !nodes)
+
+let delete_nodes_trie ({t_unsafe = (nargs,_);
+                        t_alpha = args, ap;
+                        t_arru = anp} as s) nodes nb_del inc =
+  let substs = all_permutations args nargs in
+  List.iter (fun ss ->
+    let u = ArrayAtom.apply_subst ss ap in
+    Cubetrie.iter_subsumed (fun n ->
+      if has_deleted_ancestor n || (not (ancestor_of n s)) then begin
+        n.t_deleted <- true;
+        if inc then incr nb_del;
+      end
+    ) (Array.to_list u) !nodes;
+  ) substs;
+  nodes := 
+    Cubetrie.delete (fun n -> n.t_deleted || has_deleted_ancestor n) !nodes
+
 
 let delete_nodes_inv inv nodes = 
   nodes := List.filter
@@ -656,13 +671,14 @@ let rec origin s = match s.t_from with
 let rec remove_cand s candidates uns =
   let nc = 
     List.fold_left 
-      (fun acc s' ->
+      (fun acc s' -> 
 	(* if fixpoint ~invariants:[] ~visited:[s'] s then acc *)
 	
-	if None <> fixpoint ~invariants:[] ~visited:[s'] s ||
-	   List.exists 
-	   (fun (_,_,s) -> 
-	     None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from
+	if (* None <> fixpoint ~invariants:[] ~visited:[s'] s || *)
+	   (* List.exists  *)
+	   (* (fun (_,_,s) ->  *)
+	   (*   None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from *)
+           ArrayAtom.equal s.t_arru s'.t_arru
 	then
 	  (* raise UNSAFE if we try to remove a candidate 
 	     which is an unsafe property *)
@@ -691,14 +707,21 @@ let rec search_bogus_invariants search invariants candidates uns =
     let uns, cands = if lazyinv then uns, candidates else candidates@uns, [] in
     search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:cands uns
   with
-    | Search.Unsafe s -> 
+    | Search.Unsafe s | Search.Unsafes [s] -> 
 	(* FIXME Bug when search is parallel *)
 	let o = origin s in
 	eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	if o.t_nb >= 0 then raise (Search.Unsafe s);
 	search_bogus_invariants search invariants 
 	  (remove_cand o candidates uns) uns
-
+    | Search.Unsafes ls ->
+        let candidates = 
+          List.fold_left (fun candidates s ->
+            let o = origin s in
+	    eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
+	    if o.t_nb >= 0 then raise (Search.Unsafe s);
+            remove_cand o candidates uns) candidates ls in
+        search_bogus_invariants search invariants candidates uns
 
 (*----------------------------------------------------------------------------*)
 
@@ -814,21 +837,18 @@ module T = struct
 
   let delete_nodes = delete_nodes
   let delete_nodes_inv = delete_nodes_inv
+  let delete_nodes_trie = delete_nodes_trie
   let delete_node = delete_node
   let is_deleted = is_deleted
 
   let easy_fixpoint = easy_fixpoint
   let hard_fixpoint = hard_fixpoint
 
-  (* let fixpoint = fixpoint *)
-  (* let safety = check_safety *)
-
-  let fixpoint = if bitsolver then Bitsolver.fixpoint else fixpoint
+  let fixpoint = fixpoint
+  let safety = check_safety
 
   let fixpoint_trie = fixpoint_trie
-
-
-  let safety = (* if bitsolver then Bitsolver.check_safety else *) check_safety
+  let fixpoint_trie2 = fixpoint_trie2
 
   let pre = pre_system
 
@@ -879,24 +899,13 @@ let system uns =
     | [] -> assert false
   in
 
+  (*--------------- Forward invariants inference -------------------*)
 
-(*  if only_forward then begin
-    
-    (* let forward_nodes = List.rev (Forward.search_only (List.hd uns)) in *)
-    (* eprintf "FORWARD :\n-------------\n@."; *)
-    (* let cpt = ref 0 in *)
-    (* List.iter  *)
-    (*   (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_cube s) *)
-    (*   forward_nodes; *)
-    (* eprintf "-------------\n@."; *)
-    exit 0
-  end
-
-  else*) if stateless && forward_inv <> -1 then begin
+  if stateless && forward_inv <> -1 then begin
 
     let procs = Forward.procs_from_nb forward_inv in
 
-    eprintf "STATELESS FORWARD :\n-------------\n@.";
+    eprintf "STATELESS SYMBOLIC FORWARD :\n-------------\n@.";
     let comps = (Forward.search_stateless procs (List.hd uns)) in
     eprintf "-------------\n@.";
     
@@ -919,13 +928,8 @@ let system uns =
 
     let procs = Forward.procs_from_nb forward_inv in
 
-    eprintf "FORWARD :\n-------------\n@.";
+    eprintf "SYMBOLIC FORWARD :\n-------------\n@.";
     let forward_nodes = (Forward.search procs (List.hd uns)) in
-    (* for debug *)
-    (* let cpt = ref 0 in *)
-    (* List.iter *)
-    (* (fun s -> incr cpt; eprintf "%d : %a\n@." !cpt Pretty.print_system s) *)
-    (*   forward_nodes; *)
     eprintf "-------------\n@.";
     
     let var_terms = Cube.all_var_terms procs (List.hd uns) in
@@ -941,14 +945,6 @@ let system uns =
       eprintf "candidate %d (%d) : %a\n@." !cpt sa.t_nb Pretty.print_system sa)
       candidates;
     eprintf "-----------------------\n@.";
-
-
-    (* let invs, _ = try_inv InvSearch.search ~invariants [] [] candidates in *)
-
-    (* let invs = elim_bogus_invariants search invariants candidates in *)
-    (* let invariants = List.rev_append invs invariants in *)
-
-    (* search ~invariants ~visited:[] ~forward_nodes:candidates uns *)
 
     if only_forward then exit 0;      
     search_bogus_invariants search invariants candidates uns
@@ -987,4 +983,3 @@ let system uns =
     search ~invariants ~visited:[] ~forward_nodes:[] ~candidates uns
     
   end
-

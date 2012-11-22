@@ -1530,3 +1530,29 @@ requires { RpMsg_Cmd_home = RP_Replace && Dir_ShrVld = False }
 }
 
 (*-----------------------------------------------------------------------*)
+
+
+
+
+(*
+
+Unsafe trace: pi_Remote_Get(#1) -> ni_Local_Get_Put1(#1) ->
+               pi_Remote_GetX(#2) -> ni_Local_GetX_PutX_9(#2) ->
+               ni_Inv_get(#1) -> ni_InvAck_done_2(#1) ->
+               ni_Remote_PutX(#2) -> pi_Remote_GetX(#3) ->
+               ni_Local_GetX_GetX(#3) -> ni_Remote_GetX_PutX(#3, #2) ->
+               unsafe
+The node -325 = ShWbMsg_Cmd = SHWB_FAck &&
+                InvMarked[#1] = True is UNSAFE
+
+Unsafe trace: pi_Remote_Get(#1) -> ni_Local_Get_Put1(#1) ->
+               pi_Remote_GetX(#2) -> ni_Local_GetX_PutX_9(#2) ->
+               ni_Inv_get(#1) -> ni_InvAck_done_2(#1) ->
+               ni_Remote_PutX(#2) -> pi_Remote_GetX(#3) ->
+               ni_Local_GetX_GetX(#3) -> ni_Remote_GetX_PutX(#3, #2) ->
+               unsafe
+The node -329 = ShWbMsg_Cmd = SHWB_FAck &&
+                UniMsg_Cmd[#1] = UNI_Put is UNSAFE
+
+
+*)

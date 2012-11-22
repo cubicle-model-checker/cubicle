@@ -50,6 +50,7 @@ module rec Atom : sig
     | Ite of SAtom.t * t * t
 
   val compare : t -> t -> int
+  val trivial_is_implied : t -> t -> int
   val neg : t -> t
   val hash : t -> int
   val equal : t -> t -> bool

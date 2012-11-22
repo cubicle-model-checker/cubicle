@@ -322,6 +322,74 @@ module BFS_base ( X : I ) = struct
 
   type t = X.t 
 
+
+  module MCube = Map.Make (struct
+    type t = X.t
+    let compare x y = Pervasives.compare x.t_nb y.t_nb 
+  end)
+    
+  let rec origin s = match s.t_from with
+    | [] -> s
+    | (_,_, p)::_ -> origin p
+
+  exception Found of t
+
+  let find_orig_id visited id =
+    try
+      Cubetrie.iter (fun s -> if id = s.t_nb then raise (Found s)) visited;
+      raise Not_found
+    with Found s -> (origin s).t_nb
+
+  let add_origins_discharged s uc visited m =
+    let uc = List.filter (fun id -> id <> s.t_nb) uc in
+    (* let _,_,father = List.hd (s.t_from) in *)
+    let origs = List.map (find_orig_id visited) uc in
+    let l = try MCube.find s m with Not_found -> [] in
+    MCube.add s (List.rev_append l origs) m
+
+  let rec clean_unsafe_candidate s m visited postponed q =
+    eprintf "The node %d is UNSAFE@." s.t_nb;
+    visited := Cubetrie.delete
+      (fun t -> (origin t).t_nb = s.t_nb)
+      !visited;
+    postponed := List.filter (fun t -> (origin t).t_nb <> s.t_nb) !postponed;
+    let q' = Queue.create () in
+    Queue.iter (fun (cpt,t) ->
+      if (origin t).t_nb <> s.t_nb then Queue.push (cpt,t) q') q;
+    Queue.clear q; Queue.transfer q' q;
+    let reconsider, m' = MCube.fold (fun f ol (acc,m) ->
+      if (origin f).t_nb <> s.t_nb &&
+        List.exists (fun oid -> oid = s.t_nb) ol then f :: acc, MCube.remove f m
+      else if (origin f).t_nb = s.t_nb then acc, MCube.remove f m
+      else acc, m) !m ([],!m) in
+    m := m';
+    List.iter (fun s -> Queue.push (0,s) q) reconsider
+
+let to_remove s candidates =
+  let nc, cands = 
+    List.fold_left 
+      (fun (acc,cands) s' ->
+	(* if fixpoint ~invariants:[] ~visited:[s'] s then acc *)
+	
+	if None <> X.fixpoint ~invariants:[] ~visited:[s'] s ||
+	   List.exists 
+	   (fun (_,_,s) -> 
+	     None <> X.fixpoint ~invariants:[] ~visited:[s'] s) s.t_from
+	then s'::acc, cands
+	else acc, s'::cands)
+      ([],[]) !candidates in
+  candidates := List.rev cands;
+  nc
+
+  let clean_and_restart s m visited postponed candidates q =
+    let o = origin s in
+    if o.t_nb >= 0 then raise (Unsafe s);
+    clean_unsafe_candidate o m visited postponed q
+    (* List.iter (fun s -> *)
+    (*   clean_unsafe_candidate s m visited postponed q) *)
+    (*   (to_remove o candidates) *)
+
+
   let cpt_nodes = ref 0
   let cpt_dot = ref 0
   let cpt_cands = ref 0
@@ -332,6 +400,11 @@ module BFS_base ( X : I ) = struct
       match l with
       | [] -> false | x :: l-> x = c.t_nb || mem l c in
     List.partition (fun c -> mem l (X.system c)) candidates
+
+
+  let has_unsafe_ancestor unsafes s =
+    List.exists (fun s' -> 
+      List.exists (fun (_,_,s'') -> s'.t_nb = s''.t_nb) s.t_from) unsafes
 
   let search 
       inv_search invgen ~invariants ~visited ~forward_nodes ~candidates uns =
@@ -344,12 +417,16 @@ module BFS_base ( X : I ) = struct
 
     let nb_nodes = ref (if dmcmt then -1 else 0) in
     let nb_deleted = ref 0 in
+    (* let visited = ref visited in *)
     let postponed = ref [] in
     let invariants = ref invariants in
     let used_candidates = if lazyinv then ref [] else ref candidates in
     let candidates = ref candidates in
     let not_invariants = ref [] in
     let q = Queue.create () in
+    (* let mdischarged = ref MCube.empty in *)
+
+    (* let unsafes = ref [] in *)
 
     let fmt, close_dot = 
       if not dot then std_formatter, fun () -> () else       
@@ -369,7 +446,7 @@ module BFS_base ( X : I ) = struct
 	  fprintf fmt "digraph G {@.";
 	  fprintf fmt "   orientation = portrait;@.";
 	  fprintf fmt "   fontsize = 10;@.";
-	  let close_dot () =
+	  let close_dot () = 
 	    fprintf fmt "}@.";
 	    if not profiling then
 	      let pdf = n^".pdf" in
@@ -390,10 +467,38 @@ module BFS_base ( X : I ) = struct
 	(Profiling.print_report !nb_nodes !invariants !nb_deleted
 	   !used_candidates X.print_system;
 	 raise ReachBound);
-      (try X.safety s with 
-	| Unsafe s -> close_dot (); raise (Unsafe s));
-      (match X.fixpoint_trie2 !visited s with
+      let cpt, s = (try X.safety s; cpt, s with 
+	| Unsafe s -> 
+            (* clean_and_restart s mdischarged visited postponed candidates q; *)
+            (* snd (Queue.take q); *)
+
+            (* let o = origin s in *)
+            (* if o.t_nb >= 0 then raise (Unsafe s); *)
+            (* unsafes := o :: !unsafes; *)
+            (* MCube.iter (fun f ol -> *)
+            (*   let orf = origin f in *)
+            (*   if orf.t_nb < 0 && orf.t_nb <> o.t_nb && *)
+            (*     List.exists (fun oid ->(\*  List.exists  *\) *)
+            (*       (\* (fun o ->  *\) oid = o.t_nb) (\* !unsafes) *\) ol then  *)
+            (*     unsafes := orf :: !unsafes *)
+            (* ) !mdischarged; *)
+            (* postponed := List.filter  *)
+            (*   (fun t -> (origin t).t_nb <> o.t_nb) !postponed; *)
+            (* let q' = Queue.create () in *)
+            (* Queue.iter (fun (cpt,t) -> *)
+            (*   if (origin t).t_nb <> o.t_nb then Queue.push (cpt,t) q') q; *)
+            (* Queue.clear q; Queue.transfer q' q; *)
+            (* visited := Cubetrie.add_array s.t_arru s !visited; *)
+            (* Queue.take q*)
+ 
+	    close_dot (); raise (Unsafe s)) in
+      (let nodes = !visited in
+	 (* if !candidates = [] then !visited  *)
+	 (* else !visited @ !candidates in *)
+       (* if not (has_unsafe_ancestor !unsafes s) then *)
+       match X.fixpoint_trie2 nodes s with
 	 | Some db ->
+             (* mdischarged := add_origins_discharged s db !visited !mdischarged; *)
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
 	     incr Profiling.cpt_fix;
 	     if lazyinv then begin
@@ -409,8 +514,8 @@ module BFS_base ( X : I ) = struct
 		   (*   !cpt_cands X.print_system s; *)
 		   eprintf ">> %a@." X.print_system s;
 		   Queue.add (cpt+1, s) q) post;
+		 (* Queue.add (cpt, s) q; *)
 		 candidates := cands;
-                 (* remove used candidates from the trie of visited *)
                  visited := Cubetrie.delete (fun {t_nb =id} -> 
                    List.exists (fun {t_nb = id2 } -> id = id2) post)
                    !visited;
@@ -435,6 +540,10 @@ module BFS_base ( X : I ) = struct
 		   end
 	       end;
 	       let ls, post = X.pre s in
+	       (* eprintf "pre : %d@." (List.length ls + List.length post); *)
+	       (* eprintf "done : %d - remaining : %d@." *)
+	       (*   (List.length !visited) *)
+	       (* 	    (Queue.length q + List.length !postponed); *)
 	       let ls = List.rev ls in
 	       let post = List.rev post in
 	       (* Uncomment for pure bfs search *)
@@ -443,10 +552,13 @@ module BFS_base ( X : I ) = struct
 	       
 	       (* invariant search *)
 	       let inv, not_invs =
-		 if invgen && gen_inv && post <> [] then 
+		 if invgen && gen_inv (* && post <> [] *) then 
 		   begin
 		     X.gen_inv inv_search ~invariants:!invariants
 		       !not_invariants s
+		     (* X.gen_inv_with_forward inv_search  *)
+		     (*   ~invariants:!invariants ~forward_nodes *)
+		     (*   !not_invariants s *)
 		   end
 		 else [], !not_invariants
 	       in
@@ -455,6 +567,7 @@ module BFS_base ( X : I ) = struct
 	       if delete then X.delete_nodes_trie s visited nb_deleted true;
 	       (* if delete && invgen && gen_inv then  *)
 	       (*   X.delete_nodes_inv inv visited; *)
+	       (* visited := s :: !visited; *)
                visited := Cubetrie.add_array s.t_arru s !visited;
 	       postponed := List.rev_append post !postponed;
 	       if delete then X.delete_nodes s postponed nb_deleted true;
@@ -490,6 +603,7 @@ module BFS_base ( X : I ) = struct
     List.iter (fun s -> Queue.add (0, s) q) uns;
     search_rec ();
     eprintf "nodes : %d@." !cpt_nodes;
+    (* if !unsafes <> [] then raise (Unsafes !unsafes); *)
     if dot then close_dot ()
     else if invgen || not gen_inv then 
       Profiling.print_report !nb_nodes !invariants !nb_deleted !used_candidates

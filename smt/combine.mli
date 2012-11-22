@@ -11,4 +11,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CX : Sig.X
+module CX : sig
+  include Sig.X
+
+  val set_arith_active : bool -> unit
+  val set_sum_active : bool -> unit
+end

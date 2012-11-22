@@ -35,11 +35,20 @@ val empty : 'a t
 (** Add a mapping cube->v to trie *)
 val add : Ast.Atom.t list -> 'a -> 'a t -> 'a t
 
+(** Add a mapping cube->v to trie *)
+val add_array : Ast.ArrayAtom.t -> 'a -> 'a t -> 'a t
+
 (** Is cube subsumed by some cube in the trie? *)
 val mem : Ast.Atom.t list -> Ast.t_system t -> int list option
 
+(** Is cube subsumed by some cube in the trie? *)
+val mem_array : Ast.ArrayAtom.t -> Ast.t_system t -> int list option
+
 (** Apply f to all values mapped to in the trie. *)
 val iter : ('a -> unit) -> 'a t -> unit
+
+(** fold f to all values mapped to in the trie. *)
+val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
 
 (** Delete all values which satisfy the predicate p *)
 val delete : ('a -> bool) -> 'a t -> 'a t
