@@ -1007,7 +1007,7 @@ let add_cand (a1, la) acc =
           | Reduced_cand a -> (a, []) :: acc
     
 
-(* let add_cand (a1, la) acc = (a1, la) :: acc *)
+let add_cand (a1, la) acc = (a1, la) :: acc
 
 let candidates_from_compagnions a (compagnions, uncs) acc =
   let mt, remaining = compagnions_values compagnions uncs in
