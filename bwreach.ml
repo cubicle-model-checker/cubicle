@@ -241,14 +241,14 @@ let make_cubes =
 		  end
 		  else
 		    if simpl_by_uc && 
-		      already_closed s tr.tr_name tr_args <> None 
+		      already_closed s tr tr_args <> None 
 		    then ls, post
 		    else
 		      let arr_np = ArrayAtom.of_satom np in
 		      incr cpt;
 		      let new_s = 
 			{ s with
-			    t_from = (tr.tr_name, tr_args, s)::s.t_from;
+			    t_from = (tr, tr_args, s)::s.t_from;
 			    t_unsafe = nargs, np;
 			    t_arru = arr_np;
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
@@ -668,7 +668,8 @@ let rec origin s = match s.t_from with
   | [] -> s
   | (_,_, p)::_ -> origin p
 
-let rec remove_cand s candidates uns =
+let rec remove_cand s faulty candidates uns =
+  let trace = List.map (fun (tr, args, _) -> tr, args) faulty.t_from in 
   let nc = 
     List.fold_left 
       (fun acc s' -> 
@@ -685,6 +686,7 @@ let rec remove_cand s candidates uns =
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
 	  else acc
+        else if Forward.reachable_on_trace s' trace then acc
 	else s'::acc)
       [] candidates in
   List.rev nc
@@ -697,7 +699,7 @@ let rec elim_bogus_invariants search invariants candidates =
     | Search.Unsafe s ->
 	(* FIXME Bug when search is parallel *)
 	elim_bogus_invariants search invariants 
-	  (remove_cand s candidates [])
+	  (remove_cand s s candidates [])
 
 let rec search_bogus_invariants search invariants candidates uns =
   eprintf "Nombre d'invariants restant : %d (%a)@." 
@@ -707,21 +709,13 @@ let rec search_bogus_invariants search invariants candidates uns =
     let uns, cands = if lazyinv then uns, candidates else candidates@uns, [] in
     search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:cands uns
   with
-    | Search.Unsafe s | Search.Unsafes [s] -> 
+    | Search.Unsafe faulty ->
 	(* FIXME Bug when search is parallel *)
-	let o = origin s in
+	let o = origin faulty in
 	eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
-	if o.t_nb >= 0 then raise (Search.Unsafe s);
+	if o.t_nb >= 0 then raise (Search.Unsafe faulty);
 	search_bogus_invariants search invariants 
-	  (remove_cand o candidates uns) uns
-    | Search.Unsafes ls ->
-        let candidates = 
-          List.fold_left (fun candidates s ->
-            let o = origin s in
-	    eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
-	    if o.t_nb >= 0 then raise (Search.Unsafe s);
-            remove_cand o candidates uns) candidates ls in
-        search_bogus_invariants search invariants candidates uns
+	  (remove_cand o faulty candidates uns) uns
 
 (*----------------------------------------------------------------------------*)
 

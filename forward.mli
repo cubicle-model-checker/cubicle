@@ -51,4 +51,8 @@ val instantiate_transitions : Hstring.t list -> Hstring.t list ->
 
 val missing_args : Hstring.t list -> Hstring.t list ->
   Hstring.t list * Hstring.t list
+
 val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
+
+val reachable_on_trace :
+  t_system -> (transition * Hstring.t list) list -> bool

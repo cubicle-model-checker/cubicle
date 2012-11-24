@@ -118,11 +118,11 @@ let print_unsafe fmt s =
   fprintf fmt "  Unsafe property (from %aunsafe):@.        %a@."
     (fun fmt ->
        List.iter 
-	 (fun (l, args, _) ->
+	 (fun (tr, args, _) ->
 	   if dmcmt then 
-	     fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+	     fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
 	   else
-	     fprintf fmt "%s(%a) -> " (Hstring.view l) print_args args
+	     fprintf fmt "%s(%a) -> " (Hstring.view tr.tr_name) print_args args
 	 )) s.t_from
     print_system s
 
@@ -162,9 +162,9 @@ let print_node fmt s =
 	else 
 	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
       else
-	let (l, args, _)= List.hd s.t_from in 
+	let (tr, args, _)= List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
-	  s.t_nb_father s.t_nb (Hstring.view l) print_args args;
+	  s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
 	if s.t_nb = 0 then
 	  fprintf fmt "%d [label=\"%a\", color = green, style = filled];" 
 	    s.t_nb print_system_dot s
@@ -175,11 +175,11 @@ let print_node fmt s =
     begin
 (*      fprintf fmt "@.%a" print_system s*)
      List.iter 
-       (fun (l, args, _) ->
+       (fun (tr, args, _) ->
 	  if dmcmt then 
-	    fprintf fmt "[%s%a]" (Hstring.view l) print_args args
+	    fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
 	  else 
-	    fprintf fmt "%s(%a) ->@ " (Hstring.view l) print_args args
+	    fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args
        ) s.t_from;
      if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
    end
@@ -211,9 +211,9 @@ let print_dead_node fmt (s, db) =
 	      end
 	  end
       else
-	let (l, args, _)= List.hd s.t_from in 
+	let (tr, args, _) = List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
-	  s.t_nb_father s.t_nb (Hstring.view l) print_args args;
+	  s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
 	if verbose = 1 then 
 	  if s.t_nb = 0 then
 	    fprintf fmt "%d [label=\"\" , color=green, style = filled];" s.t_nb
@@ -238,9 +238,9 @@ let print_verbose_node fmt s =
     (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
     fprintf fmt " %a\n@." print_system s;
     List.iter 
-      (fun (l, args, s') ->
-	 fprintf fmt "  %s(%a) -> %a\n@." (Hstring.view l) print_args args 
-	   print_system s'
+      (fun (tr, args, s') ->
+	 fprintf fmt "  %s(%a) -> %a\n@." (Hstring.view tr.tr_name) 
+           print_args args print_system s'
       ) s.t_from;
     fprintf fmt "    = unsafe"
   end

@@ -919,7 +919,7 @@ let closed = H.H.create (if simpl_by_uc then 8191 else 0)
 let already_closed s tr args =
   let sa = s.t_arru in
   try
-    let tr_margs = H.H.find closed tr in
+    let tr_margs = H.H.find closed tr.tr_name in
     let ls = MArgs.find args tr_margs in
     let rec find = function
       | [] -> None
@@ -965,9 +965,9 @@ let add_to_closed s fixa fix =
       let sa = s.t_arru in
       let simpl = ArrayAtom.diff fa (ArrayAtom.diff sa fixa) in
       let tr_margs = 
-	try H.H.find closed tr with Not_found -> MArgs.empty in
+	try H.H.find closed tr.tr_name with Not_found -> MArgs.empty in
       let ls = try MArgs.find args tr_margs with Not_found -> [] in
-      H.H.add closed tr (MArgs.add args ((simpl, fix) :: ls) tr_margs)
+      H.H.add closed tr.tr_name (MArgs.add args ((simpl, fix) :: ls) tr_margs)
 
 (**********************************************************************)
 

@@ -21,6 +21,8 @@ module ESMT : Smt.EnumSolver
 (* Checks if the system is unsafe *)
 val unsafe : t_system -> unit
 
+val reached : Hstring.t list -> SAtom.t -> SAtom.t -> unit
+
 (* Clears the context and assumes a goal formula *)
 val assume_goal : t_system -> unit
 

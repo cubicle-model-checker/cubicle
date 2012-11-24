@@ -307,6 +307,18 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
   SMT.check  ~profiling ()
 
 
+let reached args s sa =
+  SMT.clear ();
+  SMT.assume 
+    ~profiling ~id:0 (distinct_vars (List.length args));
+  (* SMT.assume (order_vars (List.length args)); *)
+  if profiling then TimeF.start ();
+  let f = make_formula_set (SAtom.union sa s) in
+  if profiling then TimeF.pause ();
+  SMT.assume ~profiling ~id:0 f;
+  SMT.check  ~profiling ()
+
+
 let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
   SMT.clear ();
   SMT.assume 

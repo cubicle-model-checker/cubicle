@@ -832,48 +832,51 @@ let mkforward_s s =
   ) s.t_forward
 
 
-
-let instantiate_transitions all_procs procs trans = 
-  let aux acc { tr_args = tr_args; 
-		tr_reqs = reqs; 
-		tr_name = name;
-		tr_ureq = ureqs;
-		tr_assigns = assigns; 
-		tr_upds = upds; 
-		tr_nondets = nondets } =
-    let tr_others,others = missing_args procs tr_args in
-    let d = all_permutations tr_args procs in
-    (* do it even if no arguments *)
-    let d = if d = [] then [[]] else d in
-    List.fold_left (fun acc sigma ->
-      let reqs = subst_atoms sigma reqs in
-      let t_args_ef = 
-	List.fold_left (fun acc p -> 
-	  try (svar sigma p) :: acc
-	  with Not_found -> p :: acc) [] tr_args in
-      let udnfs = uguard_dnf sigma all_procs t_args_ef ureqs in
-      let assi, assi_terms = apply_assigns assigns sigma in
-      let upd, upd_terms = apply_updates upds all_procs sigma in
-      let act = simplification_atoms SAtom.empty (SAtom.union assi upd) in
-      let act = abstract_others act tr_others in
+let instance_of_transition { tr_args = tr_args; 
+		             tr_reqs = reqs; 
+		             tr_name = name;
+		             tr_ureq = ureqs;
+		             tr_assigns = assigns; 
+		             tr_upds = upds; 
+		             tr_nondets = nondets } all_procs tr_others sigma =
+  let reqs = subst_atoms sigma reqs in
+  let t_args_ef = 
+    List.fold_left (fun acc p -> 
+      try (svar sigma p) :: acc
+      with Not_found -> p :: acc) [] tr_args in
+  let udnfs = uguard_dnf sigma all_procs t_args_ef ureqs in
+  let assi, assi_terms = apply_assigns assigns sigma in
+  let upd, upd_terms = apply_updates upds all_procs sigma in
+  let act = simplification_atoms SAtom.empty (SAtom.union assi upd) in
+  let act = abstract_others act tr_others in
       (* eprintf "%a (%a) =\nrequires {\n%a\n}\n{\n%a\n}\n@." *)
       (* 	Hstring.print name  *)
       (* 	Pretty.print_args (snd (List.split sigma))  *)
       (* 	Pretty.print_cube reqs *)
       (* 	Pretty.print_cube act; *)
-      {
-	i_reqs = reqs;
-	i_udnfs = udnfs;
-	i_actions = act;
-	i_touched_terms = STerm.union assi_terms upd_terms
-      } :: acc
+  {
+    i_reqs = reqs;
+    i_udnfs = udnfs;
+    i_actions = act;
+    i_touched_terms = STerm.union assi_terms upd_terms
+  }
+
+
+let instantiate_transitions all_procs procs trans = 
+  let aux acc tr =
+    let tr_others,others = missing_args procs tr.tr_args in
+    let d = all_permutations tr.tr_args procs in
+    (* do it even if no arguments *)
+    let d = if d = [] then [[]] else d in
+    List.fold_left (fun acc sigma ->
+      instance_of_transition tr all_procs tr_others sigma :: acc
     ) acc d
   in
   List.fold_left aux [] trans
 
 
 
-let search procs init = 
+let search procs init =
   let inst_trans = instantiate_transitions procs procs init.t_trans in
   forward init procs inst_trans [mkinit_s procs init]
 
@@ -1004,7 +1007,7 @@ let add_cand (a1, la) acc =
           | Reduced_cand a -> (a, []) :: acc
     
 
-(* let add_cand (a1, la) acc = (a1, la) :: acc     *)
+(* let add_cand (a1, la) acc = (a1, la) :: acc *)
 
 let candidates_from_compagnions a (compagnions, uncs) acc =
   let mt, remaining = compagnions_values compagnions uncs in
@@ -1049,14 +1052,15 @@ let useless_candidate sa =
       Smt.Symbol.has_type_proc x
 
     | _ -> false) sa
-  (*(* || List.length (args_of_atoms sa) > 1 *)*)
+  (* || List.length (args_of_atoms sa) > 1 *)
 
 
 let remove_subsumed_candidates cands = cands
   (* List.fold_left (fun acc c -> *)
   (*   let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in *)
-  (*   (\* if fixpoint ~invariants:[] ~visited:acc' c <> None *\) *)
-  (*   if easy_fixpoint c acc' <> None *)
+  (*   if fixpoint ~invariants:[] ~visited:acc' c <> None *)
+  (*   (\* if easy_fixpoint c acc' <> None *\) *)
+  (*   (\* if List.exists (fun c' -> easy_fixpoint c' [c] <> None) acc' *\) *)
   (*   then acc' *)
   (*   else acc) cands cands *)
   
@@ -1334,3 +1338,29 @@ let post_system ({ t_unsafe = uargs, u; t_trans = trs}) =
     [] 
     trs 
     
+
+
+
+(********************************************)
+(* Check if formula is unreachable on trace *)
+(********************************************)
+
+let reachable_on_trace s trace =
+  let all_procs, usa = s.t_unsafe in
+  let rec forward_rec ls trace = match trace with
+    | [] -> ()
+    | (tr, procs) :: rest_trace ->
+        let sigma = List.combine tr.tr_args procs in
+        let itr = instance_of_transition tr all_procs [] sigma in
+        let nls = 
+          List.fold_left (fun acc (sa, args) ->
+            List.fold_left (fun acc (nsa, nargs) ->
+              try Prover.reached all_procs usa nsa; raise Exit
+              with Smt.Unsat _ -> (nsa, nargs) :: acc
+            ) acc (post_inst sa args all_procs itr)
+          ) [] ls
+        in
+        forward_rec nls rest_trace
+  in
+  try forward_rec [mkinit_s all_procs s] trace; false
+  with Exit -> true

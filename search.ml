@@ -16,7 +16,6 @@ open Format
 open Ast
 
 exception Unsafe of t_system
-exception Unsafes of t_system list
 
 module type I = sig
   type t = Ast.t_system

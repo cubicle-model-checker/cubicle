@@ -442,7 +442,7 @@ module STerm = Set.Make (struct type t = term let compare = compare_term end)
 type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
-  t_from : (Hstring.t * Hstring.t list * t_system) list;
+  t_from : (transition * Hstring.t list * t_system) list;
   t_init : Hstring.t option * SAtom.t;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_cands : (Hstring.t list * SAtom.t) list;

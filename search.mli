@@ -14,7 +14,6 @@
 (* Backward reachability search strategies *)
 
 exception Unsafe of Ast.t_system
-exception Unsafes of Ast.t_system list
 
 module type I = sig
   type t = Ast.t_system
