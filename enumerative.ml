@@ -84,7 +84,7 @@ exception Found of term
 let id_to_term env id =
   try
     HT.iter (fun t i -> if id = i then raise (Found t)) env.id_terms;
-    assert false
+    raise Not_found
   with Found t -> t
       
 
@@ -539,22 +539,24 @@ let check_cand env state (l1, l2) =
 let ids_to_candidates s env =
   let cpt = ref (-1) in
   List.fold_left (fun acc ((a1, op1, b1), (a2, op2, b2)) ->
-    let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
-    let l2 = Atom.Comp (id_to_term env a2, op2, id_to_term env b2) in
-    let sa = SAtom.add (Atom.neg l2) (SAtom.singleton l1) in    
-    let sa', (args, _) = proper_cube sa in
-    let ar' = ArrayAtom.of_satom sa' in
-    let s' = 
-      { s with
-	t_from = [];
-	t_unsafe = args, sa';
-	t_arru = ar';
-	t_alpha = ArrayAtom.alpha ar' args;
-	t_deleted = false;
-	t_nb = !cpt;
-	t_nb_father = -1 } in
-    if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
-    else (decr cpt; s' :: acc)
+    try
+      let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
+      let l2 = Atom.Comp (id_to_term env a2, op2, id_to_term env b2) in
+      let sa = SAtom.add (Atom.neg l2) (SAtom.singleton l1) in    
+      let sa', (args, _) = proper_cube sa in
+      let ar' = ArrayAtom.of_satom sa' in
+      let s' = 
+        { s with
+	  t_from = [];
+	  t_unsafe = args, sa';
+	  t_arru = ar';
+	  t_alpha = ArrayAtom.alpha ar' args;
+	  t_deleted = false;
+	  t_nb = !cpt;
+	  t_nb_father = -1 } in
+      if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
+      else (decr cpt; s' :: acc)
+    with Not_found -> acc
   ) []
 
 
