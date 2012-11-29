@@ -539,11 +539,11 @@ let check_cand env state (l1, l2) =
 let useless_candidate sa =
   SAtom.exists (function
     (* heuristic: remove proc variables and abstract data types *)
-    (* | Atom.Comp (Elem (_, Var), _, _) *)
-    (* | Atom.Comp (_, _, Elem (_, Var)) -> true *)
+    | Atom.Comp (Elem (_, Var), _, _)
+    | Atom.Comp (_, _, Elem (_, Var)) -> true
 
     | Atom.Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
-      (* Smt.Symbol.has_type_proc x ||  *) Smt.Symbol.has_abstract_type x
+      Smt.Symbol.has_type_proc x || Smt.Symbol.has_abstract_type x
 
     | _ -> false) sa
 
