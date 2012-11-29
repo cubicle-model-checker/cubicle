@@ -409,7 +409,7 @@ module BFS_base ( X : I ) = struct
 		   (* eprintf "\n (\* %d *\) unsafe (z1 z2) = { %a }@."  *)
 		   (*   !cpt_cands X.print_system s; *)
 		   eprintf ">> %a@." X.print_system s;
-		   Queue.add (cpt+1, s) q) post;
+		   Queue.add (cpt, s) q) post;
                  Queue.transfer q' q;
 		 candidates := cands;
                  (* remove used candidates from the trie of visited *)

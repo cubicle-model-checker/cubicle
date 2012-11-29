@@ -536,26 +536,39 @@ let check_cand env state (l1, l2) =
   not (check_req env state l1) || check_req env state l2
 
 
+let useless_candidate sa =
+  SAtom.exists (function
+    (* heuristic: remove proc variables and abstract data types *)
+    (* | Atom.Comp (Elem (_, Var), _, _) *)
+    (* | Atom.Comp (_, _, Elem (_, Var)) -> true *)
+
+    | Atom.Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
+      (* Smt.Symbol.has_type_proc x ||  *) Smt.Symbol.has_abstract_type x
+
+    | _ -> false) sa
+
 let ids_to_candidates s env =
   let cpt = ref (-1) in
   List.fold_left (fun acc ((a1, op1, b1), (a2, op2, b2)) ->
     try
       let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
       let l2 = Atom.Comp (id_to_term env a2, op2, id_to_term env b2) in
-      let sa = SAtom.add (Atom.neg l2) (SAtom.singleton l1) in    
-      let sa', (args, _) = proper_cube sa in
-      let ar' = ArrayAtom.of_satom sa' in
-      let s' = 
-        { s with
-	  t_from = [];
-	  t_unsafe = args, sa';
-	  t_arru = ar';
-	  t_alpha = ArrayAtom.alpha ar' args;
-	  t_deleted = false;
-	  t_nb = !cpt;
-	  t_nb_father = -1 } in
-      if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
-      else (decr cpt; s' :: acc)
+      let sa = SAtom.add (Atom.neg l2) (SAtom.singleton l1) in
+      if useless_candidate sa then acc
+      else
+        let sa', (args, _) = proper_cube sa in
+        let ar' = ArrayAtom.of_satom sa' in
+        let s' = 
+          { s with
+	    t_from = [];
+	    t_unsafe = args, sa';
+	    t_arru = ar';
+	    t_alpha = ArrayAtom.alpha ar' args;
+	    t_deleted = false;
+	    t_nb = !cpt;
+	    t_nb_father = -1 } in
+        if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
+        else (decr cpt; s' :: acc)
     with Not_found -> acc
   ) []
 
