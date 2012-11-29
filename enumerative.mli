@@ -13,6 +13,8 @@
 
 open Ast
 
-val stateless_search : Hstring.t list -> t_system ->
-  (SAtom.t * STerm.t) Forward.MA.t
+(* val stateless_search : Hstring.t list -> t_system -> *)
+(*   (SAtom.t * STerm.t) Forward.MA.t *)
+
+val stateless_search : Hstring.t list -> t_system -> t_system list
 

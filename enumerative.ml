@@ -407,19 +407,24 @@ let print_transition_fun env name sigma st_reqs st_udnfs st_actions fmt =
       fprintf fmt "}\n@."
   
 
+let rec action_to_lits = function
+  | St_ignore -> []
+  | St_assign (a, b) -> [a, Eq, b]
+  | St_ite (reqs, a1, a2) -> reqs @ (action_to_lits a1) @ (action_to_lits a2)
+
 let transitions_to_func procs trans env =
-  let aux acc { tr_args = tr_args; 
-		tr_reqs = reqs; 
-		tr_name = name;
-		tr_ureq = ureqs;
-		tr_assigns = assigns; 
-		tr_upds = upds; 
-		tr_nondets = nondets } =
+  let aux (acc, loc_cands) { tr_args = tr_args; 
+		             tr_reqs = reqs; 
+		             tr_name = name;
+		             tr_ureq = ureqs;
+		             tr_assigns = assigns; 
+		             tr_upds = upds; 
+		             tr_nondets = nondets } =
     (* let _, others = Forward.missing_args procs tr_args in *)
     let d = all_permutations tr_args procs in
     (* do it even if no arguments *)
     let d = if d = [] then [[]] else d in
-    List.fold_left (fun acc sigma ->
+    List.fold_left (fun (acc, loc_cands) sigma ->
       let reqs = subst_atoms sigma reqs in
       let t_args_ef = 
 	List.fold_left (fun acc p -> 
@@ -442,10 +447,22 @@ let transitions_to_func procs trans env =
 	if not (List.for_all (List.exists (check_reqs env st)) st_udnfs)
 	then raise Not_applicable;
 	apply_actions env st st_actions
-      in f :: acc
-    ) acc d
+      in
+      let lits =
+        (List.fold_left (fun acc act -> action_to_lits act @ acc) [] st_actions) @
+        (List.flatten (List.flatten st_udnfs)) @ st_reqs in
+      let loc_cands =
+        List.fold_left (fun acc ((a1, _, b1) as l1) ->
+          if a1 = b1 then acc
+          else
+            List.fold_left (fun acc ((a2, _, b2) as l2) ->
+              if a2 <> b2 && l1 <> l2 then (l1, l2) :: acc else acc
+            ) acc lits
+        ) loc_cands lits in
+      f :: acc, loc_cands
+    ) (acc, loc_cands) d
   in
-  List.fold_left aux [] trans
+  List.fold_left aux ([], []) trans
 
 
 
@@ -462,6 +479,22 @@ module MC = Map.Make
 module SC = Set.Make 
   (struct type t = int * int let compare = Pervasives.compare end)
 
+
+let localized_candidates_init init_state =
+  let a = ref (-1) in
+  Array.fold_left (fun acc va ->
+    incr a;
+    if va <> -1 then
+      let lita = (!a, Eq, va) in
+      let b = ref (-1) in
+      Array.fold_left (fun acc vb ->
+        incr b;    
+        let litb = (!b, Eq, vb) in
+        if vb <> -1 && lita <> litb then    
+          (lita, litb) :: acc
+        else acc) acc init_state
+    else acc) [] init_state
+  
 
 
 let pair_to_atom env (x,y) =
@@ -498,36 +531,60 @@ let ids_to_companions env mc =
       Forward.MA.add a sa_comps_unc fmc)
     mc Forward.MA.empty
 
-    
-let stateless_forward s procs trs env l =
+
+let check_cand env state (l1, l2) =
+  not (check_req env state l1) || check_req env state l2
+
+
+let ids_to_candidates s env =
+  let cpt = ref (-1) in
+  List.fold_left (fun acc ((a1, op1, b1), (a2, op2, b2)) ->
+    let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
+    let l2 = Atom.Comp (id_to_term env a2, op2, id_to_term env b2) in
+    let sa = SAtom.add (Atom.neg l2) (SAtom.singleton l1) in    
+    let sa', (args, _) = proper_cube sa in
+    let ar' = ArrayAtom.of_satom sa' in
+    let s' = 
+      { s with
+	t_from = [];
+	t_unsafe = args, sa';
+	t_arru = ar';
+	t_alpha = ArrayAtom.alpha ar' args;
+	t_deleted = false;
+	t_nb = !cpt;
+	t_nb_father = -1 } in
+    if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
+    else (decr cpt; s' :: acc)
+  ) []
+
+
+let stateless_forward s procs trs loc_cands env l =
   let h_visited = HI.create 2_000_029 in
   let cpt_f = ref 0 in
-  let rec forward_rec s procs trs mc = function
+  let rec forward_rec s procs trs loc_cands mc = function
     | [] ->
-      eprintf "Total forward nodes : %d@." !cpt_f;
-      ids_to_companions env mc
+        eprintf "Total forward nodes : %d@." !cpt_f;
+        if localized then ids_to_candidates s env loc_cands
+        else Forward.extract_candidates_from_compagnons (ids_to_companions env mc) s
     | st :: to_do ->
-      let hst = hash_state st in
-      if HI.mem h_visited hst then
-	forward_rec s procs trs mc to_do
-      else
-	let to_do = post st trs to_do in
-	incr cpt_f;
-	if debug && verbose > 1 then 
-          eprintf "%d : %a\n@." !cpt_f Pretty.print_cube (state_to_cube env st);
-	if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
-	  !cpt_f (List.length to_do);
-	HI.add h_visited hst ();
-	let mc = add_companions st mc in
-	(* let mc = List.fold_left (fun mc sigma -> *)
-	(*   let st = apply_subst env st sigma in *)
-	(*   let hst = hash_state st in *)
-	(*   HI.add h_visited hst (); *)
-	(*   add_companions st mc) *)
-	(*   mc env.perm_procs in *)
-	forward_rec s procs trs mc to_do
+        let hst = hash_state st in
+        if HI.mem h_visited hst then
+	  forward_rec s procs trs loc_cands mc to_do
+        else
+          let loc_cands =
+            if localized then List.filter (check_cand env st) loc_cands
+            else loc_cands in
+	  let to_do = post st trs to_do in
+	  incr cpt_f;
+	  if debug && verbose > 1 then 
+            eprintf "%d : %a\n@." !cpt_f Pretty.print_cube (state_to_cube env st);
+	  if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
+	    !cpt_f (List.length to_do);
+	  HI.add h_visited hst ();
+	  let mc = if localized then mc else add_companions st mc in
+	  forward_rec s procs trs loc_cands mc to_do
   in
-  forward_rec s procs trs MC.empty l
+  forward_rec s procs trs loc_cands MC.empty l
 
 
 
@@ -538,5 +595,18 @@ let stateless_search procs init =
     List.iter (fun st ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
-  let trs = transitions_to_func procs init.t_trans env in
-  stateless_forward init procs trs env st_inits
+  let trs, loc_cands = transitions_to_func procs init.t_trans env in
+  let loc_cands = 
+    List.fold_left (fun acc i ->
+      localized_candidates_init i @ acc) loc_cands st_inits in
+  stateless_forward init procs trs loc_cands env st_inits
+
+
+
+
+
+
+
+
+
+

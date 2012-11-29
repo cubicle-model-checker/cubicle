@@ -951,14 +951,15 @@ let system uns =
 
     eprintf "ENUMERATIVE FORWARD :\n-------------\n@.";
     
-    let comps = Enumerative.stateless_search procs (List.hd uns) in
+    (* let comps = Enumerative.stateless_search procs (List.hd uns) in *)
+    let candidates = Enumerative.stateless_search procs (List.hd uns) in
 
     eprintf "-------------\n@.";
     
     eprintf "CANDIDATES from trace :\n-----------------------\n@.";
-    let candidates = 
-      Forward.extract_candidates_from_compagnons comps (List.hd uns)
-    in
+    (* let candidates =  *)
+    (*   Forward.extract_candidates_from_compagnons comps (List.hd uns) *)
+    (* in *)
     let cpt = ref 0 in
     List.iter (fun sa -> incr cpt;
       eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)

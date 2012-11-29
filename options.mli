@@ -28,6 +28,7 @@ val only_forward : bool
 val gen_inv : bool
 val forward_inv : int
 val enumerative : int
+val localized : bool
 val lazyinv : bool
 val refine : bool
 val stateless : bool

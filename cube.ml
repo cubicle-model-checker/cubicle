@@ -219,12 +219,16 @@ let simplify_comp i si op j sj =
 	if not (H.equal i j) then True else False
     | Le, _ when H.equal i j -> True
     | Lt, _ when H.equal i j -> False
-    | (Eq | Neq) , _ -> 
-        let ti = Elem (i, si) in
-	let tj = Elem (j, sj) in 
-	if compare_term ti tj < 0 then Comp (tj, op, ti)
-	else Comp (ti, op, tj)
-    | _ -> Comp (Elem (i, si), op, Elem (j, sj))
+    | (Eq | Neq) , _ ->
+        if si = Glob && (Hstring.view i).[0] = '*' then True
+        else
+          let ti = Elem (i, si) in
+	  let tj = Elem (j, sj) in 
+	  if compare_term ti tj < 0 then Comp (tj, op, ti)
+	  else Comp (ti, op, tj)
+    | _ -> 
+        if si = Glob && (Hstring.view i).[0] = '*' then True
+        else Comp (Elem (i, si), op, Elem (j, sj))
 
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in

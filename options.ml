@@ -40,6 +40,7 @@ let only_forward = ref false
 let gen_inv = ref false
 let forward_inv = ref (-1)
 let enumerative = ref (-1)
+let localized = ref false 
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
@@ -83,6 +84,8 @@ let specs =
                     "<n> symbolic forward invariant generation with n processes";
     "-enumerative", Arg.Set_int enumerative, 
                     "<n> enumerative forward invariant generation with n processes";
+    "-local", Arg.Set localized, 
+                    "localized invariant candidates";
     "-lazy", Arg.Set lazyinv, 
                 " add candidate invariants in a lazy way (BFS only)";
     "-refine", Arg.Set refine, 
@@ -127,6 +130,7 @@ let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
 let enumerative = !enumerative
+let localized = !localized
 let refine = !refine && not !stateless
 let lazyinv = !lazyinv
 let stateless = !stateless
