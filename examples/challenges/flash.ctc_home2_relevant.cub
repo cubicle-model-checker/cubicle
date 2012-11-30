@@ -7,7 +7,7 @@ type wb_cmd = WB_None | WB_Wb
 type shwb_cmd = SHWB_None | SHWB_ShWb | SHWB_FAck
 type nakc_cmd = NAKC_None | NAKC_Nakc
 
-type data = Data1 | Data2
+type data (* = Data1 | Data2 *)
 
 
 
@@ -76,7 +76,7 @@ var NakcMsg_Cmd : nakc_cmd
 
 var CurrData : data
 var PrevData : data
-(* var Store_data : data *)
+var StoreData : data
 
 var Collecting : bool
 
@@ -89,8 +89,6 @@ var Collecting : bool
 init (p) {
 
      Home <> p &&
-
-     MemData = Data1 &&
 
      Dir_Pending = False &&
      Dir_Local = False &&
@@ -125,8 +123,8 @@ init (p) {
      InvMsg_Cmd_home = INV_None &&
      RpMsg_Cmd_home = RP_None &&
 
-     CurrData = Data1 &&
-     PrevData = Data2 &&
+     CurrData = MemData &&
+     PrevData = MemData &&
 
      Collecting = False
 }
@@ -1928,34 +1926,50 @@ unsafe (p) { CacheState[p] = CACHE_S && Collecting = False &&
 
 (*-------------------------- Muphi rule Store ---------------------------*)
 
-transition store1 (src)
+(* transition store1 (src) *)
+(* requires { CacheState[src] = CACHE_E } *)
+(* { *)
+(* 	CacheData[src] := Data1; *)
+(*   	CurrData := Data1; *)
+(* } *)
+
+(* transition store2 (src) *)
+(* requires { CacheState[src] = CACHE_E } *)
+(* { *)
+(* 	CacheData[src] := Data2; *)
+(*   	CurrData := Data2; *)
+(* } *)
+
+(* transition store1_home () *)
+(* requires { CacheState_home = CACHE_E } *)
+(* { *)
+(* 	CacheData_home := Data1; *)
+(*   	CurrData := Data1; *)
+(* } *)
+
+(* transition store2_home () *)
+(* requires { CacheState_home = CACHE_E } *)
+(* { *)
+(* 	CacheData_home := Data2; *)
+(*   	CurrData := Data2; *)
+(* } *)
+
+
+transition store (src)
 requires { CacheState[src] = CACHE_E }
 {
-	CacheData[src] := Data1;
-  	CurrData := Data1;
+	CacheData[src] := StoreData;
+  	CurrData := StoreData;
+	StoreData := .;
 }
 
-transition store2 (src)
-requires { CacheState[src] = CACHE_E }
-{
-	CacheData[src] := Data2;
-  	CurrData := Data2;
-}
-
-transition store1_home ()
+transition store_home ()
 requires { CacheState_home = CACHE_E }
 {
-	CacheData_home := Data1;
-  	CurrData := Data1;
+	CacheData_home := StoreData;
+  	CurrData := StoreData;
+	StoreData := .;
 }
-
-transition store2_home ()
-requires { CacheState_home = CACHE_E }
-{
-	CacheData_home := Data2;
-  	CurrData := Data2;
-}
-
 
 
 (*----------------------- Muphi rule PI_Remote_Get ----------------------*)

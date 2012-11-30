@@ -412,6 +412,9 @@ let rec action_to_lits = function
   | St_assign (a, b) -> [a, Eq, b]
   | St_ite (reqs, a1, a2) -> reqs @ (action_to_lits a1) @ (action_to_lits a2)
 
+
+type cand = CUnit of st_req | CImp of st_req * st_req 
+
 let transitions_to_func procs trans env =
   let aux (acc, loc_cands) { tr_args = tr_args; 
 		             tr_reqs = reqs; 
@@ -455,8 +458,11 @@ let transitions_to_func procs trans env =
         List.fold_left (fun acc ((a1, _, b1) as l1) ->
           if a1 = b1 then acc
           else
+            let acc = 
+              if List.mem (CUnit l1) acc then acc 
+              else  (CUnit l1) :: acc in
             List.fold_left (fun acc ((a2, _, b2) as l2) ->
-              if a2 <> b2 && l1 <> l2 then (l1, l2) :: acc else acc
+              if a2 <> b2 && l1 <> l2 then (CImp (l1, l2)) :: acc else acc
             ) acc lits
         ) loc_cands lits in
       f :: acc, loc_cands
@@ -486,12 +492,15 @@ let localized_candidates_init init_state =
     incr a;
     if va <> -1 then
       let lita = (!a, Eq, va) in
+      let acc = 
+        if List.mem (CUnit lita) acc then acc 
+        else  (CUnit lita) :: acc in
       let b = ref (-1) in
       Array.fold_left (fun acc vb ->
         incr b;    
         let litb = (!b, Eq, vb) in
         if vb <> -1 && lita <> litb then    
-          (lita, litb) :: acc
+          (CImp (lita, litb)) :: acc
         else acc) acc init_state
     else acc) [] init_state
   
@@ -531,10 +540,46 @@ let ids_to_companions env mc =
       Forward.MA.add a sa_comps_unc fmc)
     mc Forward.MA.empty
 
+let neg_req = function
+  | a, Eq, b -> a, Neq, b
+  | a, Neq, b -> a, Eq, b
+  | a, Le, b -> b, Lt, a
+  | a, Lt, b -> b, Le, a
 
-let check_cand env state (l1, l2) =
-  not (check_req env state l1) || check_req env state l2
 
+let add_to_do s seen l = match s with
+  | CImp (a, b) when a = b -> l
+  | _ -> if List.mem s seen || List.mem s l then l else s :: l 
+
+let transitive_closure =
+  let cpt = ref 0 in
+  let rec rec_transitive_closure seen = function
+    | [] -> seen
+    | x :: l ->
+        incr cpt;
+	eprintf "%d@." !cpt; 
+        let to_do = match x with
+          | CImp (a, b) ->
+              List.fold_left (fun acc -> function
+                | CImp (c, d) when c = b -> add_to_do (CImp (a, d)) seen acc
+                | CImp (c, d) when c = neg_req a -> add_to_do (CImp (neg_req b, d)) seen acc
+                | CImp (c, d) when d = a -> add_to_do (CImp (c, a)) seen acc
+                | CUnit c when c = neg_req b -> add_to_do (CUnit (neg_req a)) seen acc
+                | CUnit c when c = a -> add_to_do (CUnit b) seen acc
+                | _ -> acc) l l
+          | CUnit a ->
+              List.fold_left (fun acc -> function
+                | CImp (c, d) when c = a -> add_to_do (CUnit d) seen acc
+                | CImp (c, d) when d = neg_req a ->  add_to_do (CUnit (neg_req c)) seen acc
+                | _ -> acc) l l
+        in
+        rec_transitive_closure (x :: seen) to_do     
+  in
+  rec_transitive_closure []
+
+let check_cand env state = function
+  | CUnit l -> check_req env state l
+  | CImp  (l1, l2) -> not (check_req env state l1) || check_req env state l2
 
 let useless_candidate sa =
   SAtom.exists (function
@@ -547,13 +592,19 @@ let useless_candidate sa =
 
     | _ -> false) sa
 
-let ids_to_candidates s env =
+let ids_to_candidates s env loc_cands =
   let cpt = ref (-1) in
-  List.fold_left (fun acc ((a1, op1, b1), (a2, op2, b2)) ->
+  let cands = List.fold_left (fun acc c ->
     try
-      let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
-      let l2 = Atom.Comp (id_to_term env a2, op2, id_to_term env b2) in
-      let sa = SAtom.add (Atom.neg l2) (SAtom.singleton l1) in
+      let sa = match c with
+        | CUnit (a1, op1, b1) ->
+            let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
+            SAtom.singleton (Atom.neg l1)
+        | CImp ((a1, op1, b1), (a2, op2, b2)) ->
+            let l1 = Atom.Comp (id_to_term env a1, op1, id_to_term env b1) in
+            let l2 = Atom.Comp (id_to_term env a2, op2, id_to_term env b2) in
+            SAtom.add (Atom.neg l2) (SAtom.singleton l1)
+      in
       if useless_candidate sa then acc
       else
         let sa', (args, _) = proper_cube sa in
@@ -570,16 +621,23 @@ let ids_to_candidates s env =
         if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
         else (decr cpt; s' :: acc)
     with Not_found -> acc
-  ) []
-
-
+  ) [] loc_cands
+  in
+  List.fast_sort (fun s1 s2 -> 
+    let c = compare (Cube.card_system s1) (Cube.card_system s2) in
+    if c <> 0 then c
+    else compare (Cube.size_system s1) (Cube.size_system s2)) cands
+    
 let stateless_forward s procs trs loc_cands env l =
   let h_visited = HI.create 2_000_029 in
   let cpt_f = ref 0 in
   let rec forward_rec s procs trs loc_cands mc = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f;
-        if localized then ids_to_candidates s env loc_cands
+        (* let c2 = ids_to_candidates s env (transitive_closure loc_cands) in *)
+        (* let c1 = Forward.extract_candidates_from_compagnons (ids_to_companions env mc) s in *)
+        (* List.filter (fun s -> not (List.exists (fun s' -> ArrayAtom.equal s.t_arru s'.t_arru) c2)) c1 *)
+        if localized then ids_to_candidates s env (transitive_closure loc_cands)
         else Forward.extract_candidates_from_compagnons (ids_to_companions env mc) s
     | st :: to_do ->
         let hst = hash_state st in
@@ -591,7 +649,7 @@ let stateless_forward s procs trs loc_cands env l =
             else loc_cands in
 	  let to_do = post st trs to_do in
 	  incr cpt_f;
-	  if debug && verbose > 1 then 
+	  if debug && verbose > 1 then
             eprintf "%d : %a\n@." !cpt_f Pretty.print_cube (state_to_cube env st);
 	  if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
 	    !cpt_f (List.length to_do);
