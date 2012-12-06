@@ -475,7 +475,7 @@ module BFS_base ( X : I ) = struct
 	       invariants := List.rev_append inv !invariants;
 	       not_invariants := not_invs;
                (match ls with
-                 | {t_nb = nb} :: _ when nb < 0 -> ()
+                 (* | {t_nb = nb} :: _ when nb < 0 -> () *)
                  | _ ->
 	             if delete then X.delete_nodes_trie s visited nb_deleted true;
 	             (* if delete && invgen && gen_inv then  *)
@@ -500,7 +500,7 @@ module BFS_base ( X : I ) = struct
                        Queue.transfer q q';
                        List.iter (fun sc -> Queue.add (cpt, sc) q) ls;
                        (* Queue.add (cpt, sc) q; *)
-                       Queue.add (cpt, s) q;
+                       (* Queue.add (cpt, s) q; *)
                        Queue.transfer q' q;
                    | _ ->
                        List.iter (fun s -> Queue.add (cpt+1, s) q) ls;

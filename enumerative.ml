@@ -551,6 +551,14 @@ let post st trs acc =
     with Not_applicable -> acc) acc trs
 
 
+let post2 st h trs acc =
+  List.fold_left (fun acc f_tr ->
+    try 
+      let s = f_tr st in
+      if HI.mem h  (hash_state s) then acc else s :: acc
+    with Not_applicable -> acc) acc trs
+
+
 
 module MC = Map.Make 
   (struct type t = int * int let compare = Pervasives.compare end)
@@ -761,7 +769,7 @@ let forward s procs trs env l =
         if HI.mem explicit_states hst then
 	  forward_rec s procs trs to_do
         else
-	  let to_do = post st trs to_do in
+	  let to_do = post2 st explicit_states trs to_do in
 	  incr cpt_f;
 	  if debug && verbose > 1 then
             eprintf "%d : %a\n@." !cpt_f
