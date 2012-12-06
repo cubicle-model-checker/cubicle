@@ -854,6 +854,14 @@ let local_parts =
           ) acc acc
       ) sa init
     in
+    (* let parts = SSAtoms.fold (fun sa' acc -> *)
+    (*   eprintf "expand %a ==@." Pretty.print_cube sa'; *)
+    (*   List.fold_left (fun acc (esa, _) ->  *)
+    (*   eprintf "  %a -----@." Pretty.print_cube esa; *)
+    (*   SSAtoms.add esa acc)  *)
+    (*     acc (Cube.expand_cube sa') *)
+    (* ) parts SSAtoms.empty *)
+    (* in *)
     let parts = SSAtoms.fold (fun sa' acc ->
       if SAtom.equal sa' sa then acc
       (* else if SAtom.cardinal sa' <> 3 then acc *)

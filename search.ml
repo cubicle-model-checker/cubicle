@@ -474,30 +474,33 @@ module BFS_base ( X : I ) = struct
 	       in
 	       invariants := List.rev_append inv !invariants;
 	       not_invariants := not_invs;
-	       if delete then X.delete_nodes_trie s visited nb_deleted true;
-	       (* if delete && invgen && gen_inv then  *)
-	       (*   X.delete_nodes_inv inv visited; *)
-               visited := 
-                 Cubetrie.add_array s.t_arru s !visited;
-                 (* X.add_and_resolve s !visited; *)
-	       postponed := List.rev_append post !postponed;
-	       if delete then X.delete_nodes s postponed nb_deleted true;
-	       (* if delete && invgen && gen_inv then *)
-	       (*   X.delete_nodes_inv inv postponed; *)
-	       
-	       (* TODO *)
-	       (* if not (fixpoint inv s) then *)
-	       (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
-
+               (match ls with
+                 | {t_nb = nb} :: _ when nb < 0 -> ()
+                 | _ ->
+	             if delete then X.delete_nodes_trie s visited nb_deleted true;
+	             (* if delete && invgen && gen_inv then  *)
+	             (*   X.delete_nodes_inv inv visited; *)
+                     visited := 
+                       Cubetrie.add_array s.t_arru s !visited;
+                     (* X.add_and_resolve s !visited; *)
+	             postponed := List.rev_append post !postponed;
+	             if delete then X.delete_nodes s postponed nb_deleted true;
+	             (* if delete && invgen && gen_inv then *)
+	             (*   X.delete_nodes_inv inv postponed; *)
+	             
+	             (* TODO *)
+	             (* if not (fixpoint inv s) then *)
+	             (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
+               );
 	       if inv = [] then begin
                  match ls with
-                   | {t_nb = -1} :: _ -> (* A candidate was added, 
-                                               in this case treat it before *)
+                   | {t_nb = nb} :: _ when nb < 0-> (* A candidate was added, 
+                                            in this case treat it before *)
                        let q' = Queue.create () in
                        Queue.transfer q q';
-                       List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
+                       List.iter (fun sc -> Queue.add (cpt, sc) q) ls;
                        (* Queue.add (cpt, sc) q; *)
-                       (* Queue.add (cpt, s) q; *)
+                       Queue.add (cpt, s) q;
                        Queue.transfer q' q;
                    | _ ->
                        List.iter (fun s -> Queue.add (cpt+1, s) q) ls;

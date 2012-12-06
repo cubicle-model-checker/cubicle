@@ -1338,9 +1338,20 @@ let expand_cube c =
     | Comp (x, Eq, Elem (y, (Constr|Var)))
     | Comp (Elem (y, (Constr|Var)), Eq, x) ->
         List.rev_map (SAtom.add a) acc
-    | Comp (x, Neq, Elem (y, (Constr|Var)))
-    | Comp (Elem (y, (Constr|Var)), Neq, x) ->
-        List.rev_map (SAtom.add a) acc    | Comp(x, Eq, y) ->
+    | Comp (x, Neq, Elem (y, (Constr|Var as s)))
+    | Comp (Elem (y, (Constr|Var as s)), Neq, x) ->
+        (try
+           let la = S.fold
+             (fun v acc ->
+               if Hstring.equal v y then acc
+               else (Comp (x, Eq, Elem (v, s)))::acc)
+             (values_of_term x) [] in
+           List.fold_left (fun acc' a1 -> List.rev_append
+             (List.rev_map
+                (fun sa -> SAtom.add a1 sa) acc) acc') [] la
+         with Not_found -> List.rev_map (SAtom.add a) acc)           
+        (* List.rev_map (SAtom.add a) acc *)
+    | Comp(x, Eq, y) ->
         (try
            let s = sort_of_term x in
            let la = S.fold
