@@ -56,3 +56,7 @@ val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
 
 val reachable_on_trace :
   t_system -> (transition * Hstring.t list) list -> bool
+
+val remove_subsumed_candidates : t_system list -> t_system list
+
+val useless_candidate : SAtom.t -> bool

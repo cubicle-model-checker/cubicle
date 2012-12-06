@@ -22,7 +22,7 @@ module type I = sig
     invariants : t list -> 
     visited : t list -> 
     forward_nodes : t list -> 
-    candidates : t list ->
+    candidates : t list ref ->
     t list -> unit
 
   val size : t -> int
@@ -68,6 +68,7 @@ module type I = sig
   val pre : t -> t list * t list
   val post : t -> t list
 
+  val add_and_resolve : t -> t Cubetrie.t -> t Cubetrie.t
 
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
@@ -77,6 +78,8 @@ module type I = sig
   val nb_father : t -> int
 
   val system : t -> Ast.t_system
+
+  val subsuming_candidate : Ast.t_system -> Ast.t_system list
 
 end
 
@@ -88,7 +91,7 @@ module type S = sig
     invariants : t list -> 
     visited : t list -> 
     forward_nodes : t list -> 
-    candidates : t list ->
+    candidates : t list ref ->
     t list -> unit
 end
 

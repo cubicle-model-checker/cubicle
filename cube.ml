@@ -279,7 +279,7 @@ let rec simplification np a =
 
 
 (***********************************)
-(* Cheap check of inconsitant cube *)
+(* Cheap check of inconsitent cube *)
 (***********************************)
 
 let rec list_assoc_term t = function
@@ -1367,3 +1367,57 @@ let expand_cube c =
 
 
 let expand_cube c = List.rev_map proper_cube (expand_cube c)
+
+
+
+let resolve_two ar1 ar2 =
+  let n1 = Array.length ar1 in
+  let n2 = Array.length ar2 in
+  if n1 <> n2 then None
+  else
+    let nb_eq = ref 0 in
+    let unsat_i = ref None in
+    try
+      for i = 0 to n1 - 1 do
+        let a1 = ar1.(i) in
+        let a2 = ar2.(i) in
+        if Atom.equal a1 a2 then incr nb_eq
+        else if inconsistent_list [Atom.neg a1;Atom.neg  a2] then match !unsat_i with
+          | Some _ -> raise Exit
+          | None -> unsat_i := Some i
+        else raise Exit
+      done;
+      match !unsat_i with
+        | None -> None
+        | Some i -> 
+            if !nb_eq <> n1 - 1 then raise Exit;
+            let ar = Array.make !nb_eq True in
+            for j = 0 to !nb_eq - 1 do
+              if j < i then ar.(j) <- ar1.(j)
+              else ar.(j) <- ar1.(j+1)
+            done;
+            Some ar
+    with Exit -> None
+
+
+let new_cube_id =
+  let cpt = ref 0 in
+  fun () -> incr cpt; !cpt
+
+let rec add_and_resolve s visited =
+  let visited =
+    Cubetrie.fold (fun visited sv ->
+      match resolve_two s.t_arru sv.t_arru with
+        | None -> visited
+        | Some ar ->
+            let sa, (args, _) = proper_cube (ArrayAtom.to_satom ar) in
+            let ar = ArrayAtom.of_satom sa in
+            let aar = ArrayAtom.alpha ar args in
+            let s = { s with
+              t_unsafe = args, sa;
+              t_arru = ar;
+              t_alpha = aar;
+	      t_nb = new_cube_id () } in
+            add_and_resolve s visited
+    ) visited visited in
+  Cubetrie.add_array s.t_arru s visited

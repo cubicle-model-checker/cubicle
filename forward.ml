@@ -1041,7 +1041,29 @@ let candidates_from_compagnions a (compagnions, uncs) acc =
     | _ -> assert false)
     mt acc
 
+
+(* let bac_flash1 = *)
+(*   let a1 = *)
+(*     Comp (Elem (Hstring.make "ShWbMsg_Cmd", Glob), Eq, *)
+(*           Elem (Hstring.make "SHWB_FAck", Constr)) in *)
+(*   let a2 = *)
+(*     Comp (Access (Hstring.make "InvMarked", Hstring.make "#1",Var), Eq, *)
+(*           Elem (Hstring.make "True", Constr)) in *)
+(*   SAtom.add a1 (SAtom.singleton a2) *)
+  
+(* let bac_flash2 = *)
+(*   let a1 = *)
+(*     Comp (Elem (Hstring.make "ShWbMsg_Cmd", Glob), Eq, *)
+(*           Elem (Hstring.make "SHWB_FAck", Constr)) in *)
+(*   let a2 = *)
+(*     Comp (Access (Hstring.make "UniMsg_Cmd", Hstring.make "#1",Var), Eq, *)
+(*           Elem (Hstring.make "UNI_Put", Constr)) in *)
+(*   SAtom.add a1 (SAtom.singleton a2) *)
+
+
 let useless_candidate sa =
+  (* let psa, _ = proper_cube sa in *)
+  (* SAtom.equal psa bac_flash1 || SAtom.equal psa bac_flash2 || *)
   SAtom.exists (function
     (* heuristic: remove proc variables *)
     | Comp (Elem (_, Var), _, _)
@@ -1049,20 +1071,21 @@ let useless_candidate sa =
 
     | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      Smt.Symbol.has_type_proc x
+      Smt.Symbol.has_type_proc x || 
+        (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
 
     | _ -> false) sa
   (* || List.length (args_of_atoms sa) > 1 *)
 
 
-let remove_subsumed_candidates cands = cands
-  (* List.fold_left (fun acc c -> *)
-  (*   let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in *)
-  (*   if fixpoint ~invariants:[] ~visited:acc' c <> None *)
-  (*   (\* if easy_fixpoint c acc' <> None *\) *)
-  (*   (\* if List.exists (fun c' -> easy_fixpoint c' [c] <> None) acc' *\) *)
-  (*   then acc' *)
-  (*   else acc) cands cands *)
+let remove_subsumed_candidates cands =
+  List.fold_left (fun acc c ->
+    let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in
+    (* if fixpoint ~invariants:[] ~visited:acc' c <> None *)
+    (* if easy_fixpoint c acc' <> None *)
+    if List.exists (fun c' -> easy_fixpoint c' [c] <> None) acc'
+    then acc'
+    else acc) cands cands
   
 let make_satom_from_list s la = 
   List.fold_left (fun sa x -> SAtom.add x sa) s la

@@ -32,6 +32,8 @@ val localized : bool
 val lazyinv : bool
 val refine : bool
 val stateless : bool
+val backforth : bool
+
 val post_strategy : int
 val delete : bool
 val simpl_by_uc : bool

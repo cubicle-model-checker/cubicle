@@ -44,6 +44,8 @@ let localized = ref false
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
+let backforth = ref false
+
 let post_strategy = ref (-1)
 let delete = ref true
 let simpl_by_uc = ref false
@@ -90,6 +92,8 @@ let specs =
                 " add candidate invariants in a lazy way (BFS only)";
     "-refine", Arg.Set refine, 
                 " refine the selection of candidates (if no stateless search) ";
+    "-backforth", Arg.Set backforth,
+                " interleaves backward reasoning and forward invariant generations";
     "-stateless", Arg.Set stateless, " stateless forward search";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
@@ -148,3 +152,4 @@ let post_strategy =
 let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
+let backforth = !backforth

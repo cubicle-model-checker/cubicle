@@ -218,7 +218,7 @@ let add_list n l =
 let max_lnp = ref 0
 
 let make_cubes =
-  let cpt = ref 0 in
+  (* let cpt = ref 0 in *)
   fun (ls, post) (args, rargs) 
     ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
       let nb_uargs = List.length uargs in
@@ -245,14 +245,14 @@ let make_cubes =
 		    then ls, post
 		    else
 		      let arr_np = ArrayAtom.of_satom np in
-		      incr cpt;
+		      (* incr cpt; *)
 		      let new_s = 
 			{ s with
 			    t_from = (tr, tr_args, s)::s.t_from;
 			    t_unsafe = nargs, np;
 			    t_arru = arr_np;
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
-			    t_nb = !cpt;
+			    t_nb = new_cube_id ();
 			    t_nb_father = nb;
 			} in
 		      match post_strategy with
@@ -542,7 +542,7 @@ let worker_inv search invariants not_invs p =
     else begin  
       search 
 	~invariants:!invariants ~visited:[] 
-	~forward_nodes:[] ~candidates:[] [p]; 
+	~forward_nodes:[] ~candidates:(ref []) [p]; 
       if not quiet then eprintf "Good! We found an invariant :-) \n %a @." 
 	Pretty.print_system p;
       Inv
@@ -612,7 +612,7 @@ let rec try_inv search ~invariants invs not_invs candidates =
 	   eprintf "candidate : %a @." Pretty.print_system p;
 	   search 
 	     ~invariants:invariants' ~visited:[] 
-	     ~forward_nodes:[] ~candidates:[] [p]; 
+	     ~forward_nodes:[] ~candidates:(ref []) [p]; 
 	   if not quiet then eprintf "INVARIANT : %a @." Pretty.print_system p;
 	   p::invs, not_invs
 	 (* recursisvely try sub-cubes to find a more general invariant *)
@@ -664,9 +664,22 @@ let candidates forward_nodes ({t_unsafe = args, sp; t_arru = ap} as s) =
 
 (*----------------------------------------------------------------------------*)
 
+let bad_candidates = ref []
+let bad_traces = ref []
+
 let rec origin s = match s.t_from with
   | [] -> s
   | (_,_, p)::_ -> origin p
+
+let add_bad_candidate {t_unsafe = args, _; t_alpha = a_args, ar } trace =
+  List.iter (fun sigma ->
+    bad_candidates := 
+      ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar) :: !bad_candidates
+  ) (all_permutations a_args args)(* ; *)
+  (* match trace with *)
+  (*   | Some tr ->  *)
+  (*       if not (List.mem tr !bad_traces) then bad_traces := tr :: !bad_traces *)
+  (*   | None -> () *)
 
 let rec remove_cand s faulty candidates uns =
   let trace = List.map (fun (tr, args, _) -> tr, args) faulty.t_from in 
@@ -685,15 +698,16 @@ let rec remove_cand s faulty candidates uns =
 	     which is an unsafe property *)
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
-	  else acc
-        else if Forward.reachable_on_trace s' trace then acc
+	  else (add_bad_candidate s' (Some trace); acc)
+        else if Forward.reachable_on_trace s' trace then 
+          (add_bad_candidate s' None; acc)
 	else s'::acc)
       [] candidates in
   List.rev nc
 
 let rec elim_bogus_invariants search invariants candidates =
   try
-    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:[] candidates;
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:(ref []) candidates;
     candidates
   with
     | Search.Unsafe s ->
@@ -707,7 +721,7 @@ let rec search_bogus_invariants search invariants candidates uns =
     (fun fmt l -> List.iter (fun x -> fprintf fmt "%d " x.t_nb) l) candidates;
   try
     let uns, cands = if lazyinv then uns, candidates else candidates@uns, [] in
-    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:cands uns
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:(ref cands) uns
   with
     | Search.Unsafe faulty ->
 	(* FIXME Bug when search is parallel *)
@@ -716,6 +730,29 @@ let rec search_bogus_invariants search invariants candidates uns =
 	if o.t_nb >= 0 then raise (Search.Unsafe faulty);
 	search_bogus_invariants search invariants 
 	  (remove_cand o faulty candidates uns) uns
+
+
+let search_backtrack_backforth search invariants uns =
+  let candidates = ref [] in
+  let rec search_rec uns =
+    try
+      search ~invariants ~visited:[] ~forward_nodes:[] ~candidates uns
+    with
+      | Search.Unsafe faulty ->
+	(* FIXME Bug when search is parallel *)
+	  let o = origin faulty in
+	  eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
+	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
+          eprintf "%d used candidates :@." (List.length !candidates);
+          List.iter (fun s ->
+            eprintf "   %a\n@." Pretty.print_system s) !candidates;
+          candidates := remove_cand o faulty !candidates uns;
+          eprintf "%d bad candidates :@." (List.length !bad_candidates);
+          List.iter (fun sa ->
+            eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates;
+          search_rec uns
+  in
+  search_rec uns
 
 (*----------------------------------------------------------------------------*)
 
@@ -752,7 +789,7 @@ let gen_inv_proc search invs not_invs s =
 	  else begin
 	    search 
 	      ~invariants:invs ~visited:[] 
-	      ~forward_nodes:[] ~candidates:[] [p]; 
+	      ~forward_nodes:[] ~candidates:(ref []) [p]; 
 	    if not quiet then 
 	      eprintf "Good! We found an invariant :-) \n %a @." 
 		Pretty.print_system p;
@@ -772,11 +809,90 @@ let is_inv search p invs =
   try
     search 
       ~invariants:invs ~visited:[] 
-      ~forward_nodes:[] ~candidates:[] [p]; 
+      ~forward_nodes:[] ~candidates:(ref []) [p]; 
     if not quiet then 
       eprintf "Good! We found an invariant :-) \n %a @." Pretty.print_system p;
     true
   with Search.Unsafe _ | ReachBound -> false
+
+
+module SSAtoms = Set.Make(SAtom)
+
+let nb_arrays s =
+  SAtom.fold (fun a n -> match a with
+    | Comp (Elem _, _, Elem _) -> n
+    | Comp (Elem _, _, Access _) | Comp (Access _, _, Elem _) -> n + 1
+    | Comp (Access _, _, Access _) -> n + 2
+    | _ -> n
+  ) (snd s.t_unsafe) 0
+
+let nb_neq s =
+  SAtom.fold (fun a n -> match a with
+    | Comp (_, Neq, _) -> n + 1
+    | _ -> n
+  ) (snd s.t_unsafe) 0
+
+
+let local_parts =
+  let cpt = ref 0 in
+  fun ({ t_unsafe = (args, sa) } as s) ->
+    let init = 
+      SAtom.fold (fun a acc ->
+        if Forward.useless_candidate (SAtom.singleton a) then acc
+        else SSAtoms.add (SAtom.singleton a) acc)
+        sa SSAtoms.empty in
+    let parts =
+      SAtom.fold (fun a acc ->
+        if Forward.useless_candidate (SAtom.singleton a) then acc
+        else
+          SSAtoms.fold (fun sa' acc ->
+            let nsa = SAtom.add a sa' in
+            let nargs = args_of_atoms nsa in
+            if List.length nargs > enumerative then acc
+            else if SAtom.cardinal nsa > 3 then acc
+            else SSAtoms.add nsa acc
+          ) acc acc
+      ) sa init
+    in
+    let parts = SSAtoms.fold (fun sa' acc ->
+      if SAtom.equal sa' sa then acc
+      (* else if SAtom.cardinal sa' <> 3 then acc *)
+      else
+        let sa', (args', _) = proper_cube sa' in
+        (* if List.exists (SAtom.subset sa') !bad_candidates then acc *)
+        if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa') !bad_candidates then acc
+        (* else if Forward.useless_candidate sa' then acc *)
+        else
+          let ar' = ArrayAtom.of_satom sa' in
+          decr cpt;
+          let s' = 
+            { s with
+	      t_from = [];
+	      t_unsafe = args', sa';
+	      t_arru = ar';
+	      t_alpha = ArrayAtom.alpha ar' args';
+	      t_deleted = false;
+	      t_nb = !cpt;
+	      t_nb_father = -1;
+            } in
+          (* if List.exists (Forward.reachable_on_trace s') !bad_traces then acc *)
+          (* else *) 
+          s' :: acc
+    ) parts []
+    in
+    List.fast_sort (fun s1 s2 -> 
+      let c = Pervasives.compare (card_system s1) (card_system s2) in
+      if c <> 0 then c
+      else 
+        let c = Pervasives.compare (size_system s1) (size_system s2) in
+      if c <> 0 then c
+      else Pervasives.compare (nb_neq s1) (nb_neq s2)
+    ) parts
+
+
+let subsuming_candidate s =
+  let parts = local_parts s in
+  Enumerative.smallest_to_resist_on_trace parts
 
 
 (* ----------------- Search strategy selection -------------------*)
@@ -788,7 +904,7 @@ module T = struct
     invariants : t list -> 
     visited : t list -> 
     forward_nodes : t list -> 
-    candidates : t list ->
+    candidates : t list ref ->
     t list -> unit
 
   let invariants s = 
@@ -848,6 +964,8 @@ module T = struct
 
   let post = Forward.post_system
 
+  let add_and_resolve = add_and_resolve
+
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
   let print_dead = Pretty.print_dead_node
@@ -858,6 +976,7 @@ module T = struct
     
   let system s  : t_system = s
 
+  let subsuming_candidate = subsuming_candidate
 end
 
 module StratDFS = Search.DFS(T)
@@ -945,24 +1064,44 @@ let system uns =
 
   end
 
+  else if enumerative <> -1 && backforth then begin
+
+    let procs = Forward.procs_from_nb enumerative in
+    eprintf "STATEFULL ENUMERATIVE FORWARD :\n-------------\n@.";
+    Enumerative.search procs (List.hd uns);
+
+    eprintf "-------------\n@.";
+    
+    if only_forward then exit 0;
+    (* search_bogus_invariants search invariants candidates uns *)
+    (* search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:(ref []) uns *)
+    search_backtrack_backforth search invariants uns
+
+  end
+
   else if enumerative <> -1 then begin
 
     let procs = Forward.procs_from_nb enumerative in
 
-    eprintf "ENUMERATIVE FORWARD :\n-------------\n@.";
-    
-    (* let comps = Enumerative.stateless_search procs (List.hd uns) in *)
-    let candidates = Enumerative.stateless_search procs (List.hd uns) in
+    let candidates =
+      if localized then begin
+        eprintf "STATELESS ENUMERATIVE FORWARD (localized):\n-------------\n@.";
+        Enumerative.local_stateless_search procs (List.hd uns) 
+      end
+      else begin
+        eprintf "STATELESS ENUMERATIVE FORWARD :\n-------------\n@.";
+        Enumerative.stateless_search procs (List.hd uns)
+      end in
 
     eprintf "-------------\n@.";
     
     eprintf "CANDIDATES from trace :\n-----------------------\n@.";
-    (* let candidates =  *)
-    (*   Forward.extract_candidates_from_compagnons comps (List.hd uns) *)
-    (* in *)
     let cpt = ref 0 in
     List.iter (fun sa -> incr cpt;
-      eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa)
+      (* eprintf "candidate %d : %a\n@." !cpt Pretty.print_system sa) *)
+      (* candidates; *)
+      eprintf "(*candidate %d *) unsafe (%a) { %a }\n@." !cpt 
+        Pretty.print_args (fst sa.t_unsafe) Pretty.print_system sa)
       candidates;
     eprintf "-----------------------\n@.";
 
@@ -975,6 +1114,6 @@ let system uns =
 
   else begin
     if only_forward then exit 0;      
-    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates uns
+    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:(ref candidates) uns
     
   end

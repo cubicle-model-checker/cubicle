@@ -24,7 +24,7 @@ module type I = sig
     invariants : t list -> 
     visited : t list -> 
     forward_nodes : t list -> 
-    candidates : t list ->
+    candidates : t list ref ->
     t list -> unit
 
   val size : t -> int
@@ -68,6 +68,8 @@ module type I = sig
   val pre : t -> t list * t list
   val post : t -> t list
 
+  val add_and_resolve : t -> t Cubetrie.t -> t Cubetrie.t
+
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
   val print_dead : Format.formatter -> (t * int list) -> unit
@@ -76,6 +78,8 @@ module type I = sig
   val nb_father : t -> int
 
   val system : t -> Ast.t_system
+
+  val subsuming_candidate : Ast.t_system -> Ast.t_system list
 
 end
 
@@ -86,7 +90,7 @@ module type S = sig
     invariants : t list -> 
     visited : t list -> 
     forward_nodes : t list -> 
-    candidates : t list -> 
+    candidates : t list ref -> 
     t list -> unit
 end
 
@@ -335,9 +339,15 @@ module BFS_base ( X : I ) = struct
   let search 
       inv_search invgen ~invariants ~visited ~forward_nodes ~candidates uns =
 
+    let uns = if lazyinv then uns else !candidates@uns in
+
+    let discharging_allowed = 
+      if lazyinv then invariants @ visited @ !candidates
+      else invariants @ visited in
+
     let trie_visited = List.fold_left (fun acc s ->
       Cubetrie.add_array s.t_arru s acc
-    ) Cubetrie.empty (invariants @ visited @ candidates)
+    ) Cubetrie.empty discharging_allowed
     in
     let visited = ref trie_visited in
 
@@ -345,8 +355,8 @@ module BFS_base ( X : I ) = struct
     let nb_deleted = ref 0 in
     let postponed = ref [] in
     let invariants = ref invariants in
-    let used_candidates = if lazyinv then ref [] else ref candidates in
-    let candidates = ref candidates in
+    let used_candidates = if lazyinv then ref [] else ref !candidates in
+    (* let candidates = ref candidates in *)
     let not_invariants = ref [] in
     let q = Queue.create () in
 
@@ -436,7 +446,17 @@ module BFS_base ( X : I ) = struct
 		       (if debug then fun _ _ -> () else X.print) s
 		   end
 	       end;
-	       let ls, post = X.pre s in
+	       let ls, post = 
+                 if backforth && s.t_nb >= 0 then match X.subsuming_candidate s with 
+                   | [] -> X.pre s
+                   | l ->
+                       List.iter (fun s' ->
+		         eprintf "Adding subsuming candidate : %a@." X.print_system s';
+                       ) l;
+                       candidates := l @ !candidates;
+                       l, []
+                 else X.pre s
+               in
 	       let ls = List.rev ls in
 	       let post = List.rev post in
 	       (* Uncomment for pure bfs search *)
@@ -457,7 +477,9 @@ module BFS_base ( X : I ) = struct
 	       if delete then X.delete_nodes_trie s visited nb_deleted true;
 	       (* if delete && invgen && gen_inv then  *)
 	       (*   X.delete_nodes_inv inv visited; *)
-               visited := Cubetrie.add_array s.t_arru s !visited;
+               visited := 
+                 Cubetrie.add_array s.t_arru s !visited;
+                 (* X.add_and_resolve s !visited; *)
 	       postponed := List.rev_append post !postponed;
 	       if delete then X.delete_nodes s postponed nb_deleted true;
 	       (* if delete && invgen && gen_inv then *)
@@ -467,8 +489,20 @@ module BFS_base ( X : I ) = struct
 	       (* if not (fixpoint inv s) then *)
 	       (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
 
-	       if inv = [] then List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
-	       
+	       if inv = [] then begin
+                 match ls with
+                   | {t_nb = -1} :: _ -> (* A candidate was added, 
+                                               in this case treat it before *)
+                       let q' = Queue.create () in
+                       Queue.transfer q q';
+                       List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
+                       (* Queue.add (cpt, sc) q; *)
+                       (* Queue.add (cpt, s) q; *)
+                       Queue.transfer q' q;
+                   | _ ->
+                       List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
+	       end;
+
 	       if not quiet then printf "    (%d remaining)\n@."
 	         (Queue.length q + List.length !postponed)
 	       
@@ -494,7 +528,8 @@ module BFS_base ( X : I ) = struct
     eprintf "nodes : %d@." !cpt_nodes;
     if dot then close_dot ()
     else if invgen || not gen_inv then 
-      Profiling.print_report !nb_nodes !invariants !nb_deleted !used_candidates
+      Profiling.print_report !nb_nodes !invariants !nb_deleted 
+        (if lazyinv then !used_candidates else !candidates)
 	X.print_system
 
 end
@@ -782,13 +817,13 @@ module BFSnoINV ( X : I ) = struct
   include BFS_base(X)
 
   let search 
-      ~invariants ~visited ~(forward_nodes:X.t list) ~(candidates:X.t list) = 
+      ~invariants ~visited ~(forward_nodes:X.t list) ~(candidates:X.t list ref) = 
     search 
       (fun 
 	 ~invariants:_ 
 	 ~visited:_ 
 	 ~forward_nodes:(_:X.t list) 
-	 ~candidates:(_:X.t list) _ -> () )
+	 ~candidates:(_:X.t list ref) _ -> () )
       false ~invariants ~visited ~forward_nodes ~candidates
 
 end
@@ -1014,7 +1049,7 @@ module BFS_trie  ( X : I ) = struct
       else incr closed
     in
     
-    postponed := uns @ candidates;
+    postponed := uns @ !candidates;
     while (!postponed <> []) do
       List.iter (add_to_queue closed visited q 0) !postponed;
       postponed := [];
