@@ -922,11 +922,11 @@ let local_parts =
 
 let subsuming_candidate s =
   let parts = local_parts s in
-  List.filter (fun s ->
+  let check = fun s ->
     if List.exists (Forward.reachable_on_trace s) !bad_traces then 
       (add_bad_candidate s None; false)
-    else true)
-    (Enumerative.smallest_to_resist_on_trace parts)
+    else true in
+  Enumerative.smallest_to_resist_on_trace check parts
 
 
 (* ----------------- Search strategy selection -------------------*)

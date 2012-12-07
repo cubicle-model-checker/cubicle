@@ -65,6 +65,20 @@ module HST = Hashtbl.Make (struct
   let hash = hash_state
 end)
 
+type st_req = int * op_comp * int
+
+type st_action = 
+  | St_ignore
+  | St_assign of int * int 
+  | St_ite of st_req list * st_action * st_action
+
+
+type state_transistion = {
+  st_reqs : st_req list;
+  st_udnfs : st_req list list list;
+  st_actions : st_action list;
+  st_f : state -> state;
+}
 
 
 type env = {
@@ -77,6 +91,7 @@ type env = {
   id_terms : int HT.t;
   id_true : int;
   id_false : int;
+  st_trs : state_transistion list;
 }
 
 let empty_env = {
@@ -88,7 +103,8 @@ let empty_env = {
   all_procs = [];
   id_terms = HT.create 0;
   id_true = 0;
-  id_false = 0;  
+  id_false = 0;
+  st_trs = [];
 }
 
 
@@ -163,6 +179,7 @@ let init_tables procs s =
     id_terms = ht;
     id_true = id_true;
     id_false = id_false;
+    st_trs = [];
   }
 
 
@@ -213,13 +230,6 @@ let init_to_states env procs s =
   let init, _ = mkinit_s procs s in
   write_cube_to_state env st_init init;
   [hash_state st_init, st_init]
-
-type st_req = int * op_comp * int
-
-type st_action = 
-  | St_ignore
-  | St_assign of int * int 
-  | St_ite of st_req list * st_action * st_action
 
 let atom_to_st_req env = function 
   | Atom.Comp (t1, op, t2) -> 
@@ -400,7 +410,9 @@ let rec print_action env fmt = function
       fprintf fmt ", %a , %a )" (print_action env) a1 (print_action env) a2
 
 
-let print_transition_fun env name sigma st_reqs st_udnfs st_actions fmt =
+let print_transition_fun env name sigma { st_reqs = st_reqs;
+                                          st_udnfs = st_udnfs;
+                                          st_actions = st_actions } fmt =
   fprintf fmt "%a (%a)\n" Hstring.print name Pretty.print_subst sigma;
   fprintf fmt "requires { \n";
       List.iter (fun (i, op, v) -> 
@@ -452,22 +464,26 @@ let transitions_to_func_aux procs env reduce acc { tr_args = tr_args;
 	(update_to_actions procs sigma env)
 	st_actions upds in
       let st_actions = missing_reqs_to_actions st_actions st_reqs in
-      if debug then
-        print_transition_fun env name sigma st_reqs st_udnfs st_actions 
-	  err_formatter;
       let f = fun st ->
 	if not (check_reqs env st st_reqs) then raise Not_applicable;
 	if not (List.for_all (List.exists (check_reqs env st)) st_udnfs)
 	then raise Not_applicable;
 	apply_actions env st st_actions
       in
-      reduce acc f st_reqs st_udnfs st_actions
+      let st_tr = {
+        st_reqs = st_reqs;
+        st_udnfs = st_udnfs;
+        st_actions = st_actions;
+        st_f = f;
+      } in
+      if debug then print_transition_fun env name sigma st_tr err_formatter;
+      reduce acc st_tr
     ) acc d
 
 
 let transitions_to_func procs env =
   List.fold_left 
-    (transitions_to_func_aux procs env (fun acc f _ _ _ -> f :: acc)) []
+    (transitions_to_func_aux procs env (fun acc st_tr -> st_tr :: acc)) []
 
 
 let neg_req env = function
@@ -516,7 +532,10 @@ let product_literals env n lits =
 let transitions_to_func_locals procs env =
   List.fold_left 
     (transitions_to_func_aux procs env 
-       (fun (acc, loc_cands, same_var_cands) f st_reqs st_udnfs st_actions ->
+       (fun (acc, loc_cands, same_var_cands) ({ st_reqs = st_reqs;
+                                                st_udnfs = st_udnfs;
+                                                st_actions = st_actions;
+                                                st_f = f } as st_tr) ->
          let lits_reqs =
            let ul = List.flatten (List.flatten st_udnfs) in
            let nul = List.map (neg_req env) ul in
@@ -541,23 +560,23 @@ let transitions_to_func_locals procs env =
            (*     ) (loc_cands, same_var_cands) lits *)
            (* ) (loc_cands, same_var_cands) lits in *)
            SCands.union (product_literals env 2 lits) loc_cands, [] in
-         f :: acc, loc_cands, same_var_cands))
+         st_tr :: acc, loc_cands, same_var_cands))
     ([], SCands.empty, [])
 
 
 let post st trs acc =
-  List.fold_left (fun acc f_tr ->
+  List.fold_left (fun acc st_tr ->
     try 
-      let s = f_tr st in
+      let s = st_tr.st_f st in
       let hs = hash_state s in
       (hs, s) :: acc
     with Not_applicable -> acc) acc trs
 
 
 let post2 st visited trs acc cpt_q =
-  List.fold_left (fun acc f_tr ->
+  List.fold_left (fun acc st_tr ->
     try 
-      let s = f_tr st in
+      let s = st_tr.st_f st in
       let hs = hash_state s in
       if HI.mem visited hs then acc else 
         (incr cpt_q; (hs, s) :: acc)
@@ -691,9 +710,10 @@ let ids_to_candidates s env loc_cands =
     else compare (Cube.size_system s1) (Cube.size_system s2)) cands
     
 
-let stateless_forward s procs trs env l =
+let stateless_forward s procs env l =
   let h_visited = HI.create 2_000_029 in
   let cpt_f = ref 0 in
+  let trs = env.st_trs in
   let rec forward_rec s procs trs mc = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f;
@@ -718,9 +738,10 @@ let stateless_forward s procs trs env l =
   forward_rec s procs trs MC.empty l
 
 
-let local_stateless_forward s procs trs loc_cands env l =
+let local_stateless_forward s procs loc_cands env l =
   let h_visited = HI.create 2_000_029 in
   let cpt_f = ref 0 in
+  let trs = env.st_trs in
   let rec forward_rec s procs trs loc_cands = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f;
@@ -751,8 +772,8 @@ let stateless_search procs init =
     List.iter (fun (_, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
-  let trs = transitions_to_func procs env init.t_trans in
-  stateless_forward init procs trs env st_inits
+  let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
+  stateless_forward init procs env st_inits
 
 
 let explicit_states = HI.create 2_000_029
@@ -761,10 +782,11 @@ let global_env = ref empty_env
 
 let verified_candidates = ref SCands.empty
 
-let forward s procs trs env l =
+let forward s procs env l =
   global_env := env;
   let cpt_f = ref 0 in
   let cpt_q = ref 1 in
+  let trs = env.st_trs in
   let rec forward_rec s procs trs = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f
@@ -793,8 +815,8 @@ let search procs init =
     List.iter (fun (_, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
-  let trs = transitions_to_func procs env init.t_trans in
-  forward init procs trs env st_inits
+  let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
+  forward init procs env st_inits
 
   
 
@@ -858,6 +880,7 @@ let local_stateless_search procs init =
       st_inits;
   eprintf "ici1@.";
   let trs, loc_cands, same_var_cands = transitions_to_func_locals procs env init.t_trans in
+  let env = { env with st_trs = trs } in
   eprintf "ici2@.";
   let loc_cands = 
     List.fold_left (fun acc (_, i) ->
@@ -877,7 +900,7 @@ let local_stateless_search procs init =
   (* in *)
   (* let glob_cands = SCands.elements glob_cands in *)
   let loc_cands = SCands.elements loc_cands in
-  local_stateless_forward init procs trs loc_cands env st_inits
+  local_stateless_forward init procs loc_cands env st_inits
 
 
 let satom_to_cand env sa =
@@ -889,7 +912,7 @@ let satom_to_cand env sa =
 
 exception Already_verified of t_system
 
-let smallest_to_resist_on_trace ls =
+let smallest_to_resist_on_trace check ls =
   let env = !global_env in
   let cands =
     List.fold_left (fun acc s ->
@@ -911,22 +934,9 @@ let smallest_to_resist_on_trace ls =
         if !cands = [] then raise Exit;
       ) explicit_states;
       eprintf "@.";
-      match !cands with
-        | [] -> []
-        | ((_, s) :: _) as l ->
-            (* let ver = List.fold_left  *)
-            (*   (fun ver (c,_) -> SCands.add c ver) !verified_candidates l in *)
-            (* verified_candidates := ver; *)
-            [s]
-            (* List.fold_left (fun acc (_, s') -> *)
-            (*   if Cube.card_system s' = Cube.card_system s && *)
-            (*     Cube.size_system s' = Cube.size_system s then s' :: acc  *)
-            (*   else acc) [] l *)
+      [snd (List.find (fun (_,s) -> check s) !cands)]
     with
-      | Already_verified s ->  
-          eprintf "@.";
-          [s]
-      | Exit -> 
+      | Exit | Not_found -> 
           eprintf "@.";
           []
 
