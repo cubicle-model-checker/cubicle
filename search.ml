@@ -446,16 +446,16 @@ module BFS_base ( X : I ) = struct
 		       (if debug then fun _ _ -> () else X.print) s
 		   end
 	       end;
-	       let ls, post = 
+	       let (ls, post), candidate_found = 
                  if backforth && s.t_nb >= 0 then match X.subsuming_candidate s with 
-                   | [] -> X.pre s
+                   | [] -> X.pre s, false
                    | l ->
                        List.iter (fun s' ->
 		         eprintf "Adding subsuming candidate : %a@." X.print_system s';
                        ) l;
                        candidates := l @ !candidates;
-                       l, []
-                 else X.pre s
+                       (l, []), true
+                 else X.pre s, false
                in
 	       let ls = List.rev ls in
 	       let post = List.rev post in
@@ -474,36 +474,43 @@ module BFS_base ( X : I ) = struct
 	       in
 	       invariants := List.rev_append inv !invariants;
 	       not_invariants := not_invs;
-               (match ls with
-                 (* | {t_nb = nb} :: _ when nb < 0 -> () *)
-                 | _ ->
-	             if delete then X.delete_nodes_trie s visited nb_deleted true;
-	             (* if delete && invgen && gen_inv then  *)
-	             (*   X.delete_nodes_inv inv visited; *)
-                     visited := 
-                       Cubetrie.add_array s.t_arru s !visited;
-                     (* X.add_and_resolve s !visited; *)
-	             postponed := List.rev_append post !postponed;
-	             if delete then X.delete_nodes s postponed nb_deleted true;
-	             (* if delete && invgen && gen_inv then *)
-	             (*   X.delete_nodes_inv inv postponed; *)
-	             
-	             (* TODO *)
-	             (* if not (fixpoint inv s) then *)
-	             (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
-               );
+
+               if true || not candidate_found then begin
+	         if delete then X.delete_nodes_trie s visited nb_deleted true;
+	         (* if delete && invgen && gen_inv then  *)
+	         (*   X.delete_nodes_inv inv visited; *)
+                 visited := 
+                   Cubetrie.add_array s.t_arru s !visited;
+                 (* X.add_and_resolve s !visited; *)
+	         postponed := List.rev_append post !postponed;
+	         if delete then X.delete_nodes s postponed nb_deleted true;
+	       (* if delete && invgen && gen_inv then *)
+	       (*   X.delete_nodes_inv inv postponed; *)
+	         
+	       (* TODO *)
+	       (* if not (fixpoint inv s) then *)
+	       (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
+               end;
+
 	       if inv = [] then begin
-                 match ls with
-                   | {t_nb = nb} :: _ when nb < 0-> (* A candidate was added, 
-                                            in this case treat it before *)
-                       let q' = Queue.create () in
-                       Queue.transfer q q';
-                       List.iter (fun sc -> Queue.add (cpt, sc) q) ls;
-                       (* Queue.add (cpt, sc) q; *)
-                       (* Queue.add (cpt, s) q; *)
-                       Queue.transfer q' q;
-                   | _ ->
-                       List.iter (fun s -> Queue.add (cpt+1, s) q) ls;
+                 if candidate_found then begin
+                   (* A candidate was added, in this case treat it before *)
+                   let q' = Queue.create () in
+                   Queue.transfer q q';
+                   (* (try *)
+                   (*    while true do *)
+                   (*      if (snd (Queue.top q')).t_nb < 0 then *)
+                   (*        Queue.add (Queue.pop q') q *)
+                   (*      else raise Exit *)
+                   (*    done *)
+                   (*  with Exit | Queue.Empty -> ()); *)
+                   List.iter (fun sc -> Queue.add (cpt, sc) q) ls;                   
+                   (* Queue.add (cpt, sc) q; *)
+                   (* Queue.add (cpt, s) q; *)
+                   Queue.transfer q' q
+                 end
+                 else
+                       List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	       end;
 
 	       if not quiet then printf "    (%d remaining)\n@."

@@ -669,17 +669,19 @@ let bad_traces = ref []
 
 let rec origin s = match s.t_from with
   | [] -> s
-  | (_,_, p)::_ -> origin p
+  | (_,_, p)::_ ->
+      if p.t_nb < 0 then p
+      else origin p
 
 let add_bad_candidate {t_unsafe = args, _; t_alpha = a_args, ar } trace =
   List.iter (fun sigma ->
     bad_candidates := 
       ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar) :: !bad_candidates
-  ) (all_permutations a_args args)(* ; *)
-  (* match trace with *)
-  (*   | Some tr ->  *)
-  (*       if not (List.mem tr !bad_traces) then bad_traces := tr :: !bad_traces *)
-  (*   | None -> () *)
+  ) (all_permutations a_args args);
+  match trace with
+    | Some tr ->
+        if not (List.mem tr !bad_traces) then bad_traces := tr :: !bad_traces
+    | None -> ()
 
 let rec remove_cand s faulty candidates uns =
   let trace = List.map (fun (tr, args, _) -> tr, args) faulty.t_from in 
@@ -818,13 +820,15 @@ let is_inv search p invs =
 
 module SSAtoms = Set.Make(SAtom)
 
-let nb_arrays s =
+let nb_arrays_sa sa =
   SAtom.fold (fun a n -> match a with
     | Comp (Elem _, _, Elem _) -> n
     | Comp (Elem _, _, Access _) | Comp (Access _, _, Elem _) -> n + 1
     | Comp (Access _, _, Access _) -> n + 2
     | _ -> n
-  ) (snd s.t_unsafe) 0
+  ) sa 0
+
+let nb_arrays s = nb_arrays_sa (snd s.t_unsafe)
 
 let nb_neq s =
   SAtom.fold (fun a n -> match a with
@@ -865,23 +869,34 @@ let local_parts =
     let parts = SSAtoms.fold (fun sa' acc ->
       if SAtom.equal sa' sa then acc
       (* else if SAtom.cardinal sa' <> 3 then acc *)
+      else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > 1 then acc
       else
         let sa', (args', _) = proper_cube sa' in
         (* if List.exists (SAtom.subset sa') !bad_candidates then acc *)
-        if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa') !bad_candidates then acc
+        if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
+          !bad_candidates then acc
         (* else if Forward.useless_candidate sa' then acc *)
         else
           let ar' = ArrayAtom.of_satom sa' in
           decr cpt;
+          let bidon_tr = {
+            tr_name = Hstring.empty;
+            tr_args = [];
+            tr_reqs = SAtom.empty;
+            tr_ureq = [];
+            tr_assigns = [];
+            tr_upds = [];
+            tr_nondets = [];
+          } in
           let s' = 
             { s with
-	      t_from = [];
+	      t_from = (* (bidon_tr, [], s)::s.t_from; *) [];
 	      t_unsafe = args', sa';
 	      t_arru = ar';
 	      t_alpha = ArrayAtom.alpha ar' args';
 	      t_deleted = false;
 	      t_nb = !cpt;
-	      t_nb_father = -1;
+	      t_nb_father = -1 (* s.t_nb *);
             } in
           (* if List.exists (Forward.reachable_on_trace s') !bad_traces then acc *)
           (* else *) 
@@ -893,14 +908,25 @@ let local_parts =
       if c <> 0 then c
       else 
         let c = Pervasives.compare (size_system s1) (size_system s2) in
-      if c <> 0 then c
-      else Pervasives.compare (nb_neq s1) (nb_neq s2)
+        if c <> 0 then c
+        else 
+          let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in
+          if c <> 0 then c
+          else
+            Pervasives.compare (nb_arrays s1) (nb_arrays s2)
+          (* if c <> 0 then c *)
+          (* else *)
+          (*   SAtom.compare (snd s1.t_unsafe) (snd s2.t_unsafe) *)
     ) parts
 
 
 let subsuming_candidate s =
   let parts = local_parts s in
-  Enumerative.smallest_to_resist_on_trace parts
+  List.filter (fun s ->
+    if List.exists (Forward.reachable_on_trace s) !bad_traces then 
+      (add_bad_candidate s None; false)
+    else true)
+    (Enumerative.smallest_to_resist_on_trace parts)
 
 
 (* ----------------- Search strategy selection -------------------*)

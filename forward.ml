@@ -1078,14 +1078,14 @@ let useless_candidate sa =
   (* || List.length (args_of_atoms sa) > 1 *)
 
 
-let remove_subsumed_candidates cands =
-  List.fold_left (fun acc c ->
-    let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in
-    (* if fixpoint ~invariants:[] ~visited:acc' c <> None *)
-    (* if easy_fixpoint c acc' <> None *)
-    if List.exists (fun c' -> easy_fixpoint c' [c] <> None) acc'
-    then acc'
-    else acc) cands cands
+let remove_subsumed_candidates cands = cands
+  (* List.fold_left (fun acc c -> *)
+  (*   let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in *)
+  (*   if fixpoint ~invariants:[] ~visited:acc' c <> None *)
+  (*   (\* if easy_fixpoint c acc' <> None *\) *)
+  (*   (\* if List.exists (fun c' -> easy_fixpoint c' [c] <> None) acc' *\) *)
+  (*   then acc' *)
+  (*   else acc) cands cands *)
   
 let make_satom_from_list s la = 
   List.fold_left (fun sa x -> SAtom.add x sa) s la

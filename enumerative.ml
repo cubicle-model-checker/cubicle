@@ -212,7 +212,7 @@ let init_to_states env procs s =
   let st_init = Array.make nb (-1) in
   let init, _ = mkinit_s procs s in
   write_cube_to_state env st_init init;
-  [st_init]
+  [hash_state st_init, st_init]
 
 type st_req = int * op_comp * int
 
@@ -540,22 +540,27 @@ let transitions_to_func_locals procs env =
            (*       else acc *)
            (*     ) (loc_cands, same_var_cands) lits *)
            (* ) (loc_cands, same_var_cands) lits in *)
-           SCands.union (product_literals env 3 lits) loc_cands, [] in
+           SCands.union (product_literals env 2 lits) loc_cands, [] in
          f :: acc, loc_cands, same_var_cands))
     ([], SCands.empty, [])
 
 
 let post st trs acc =
   List.fold_left (fun acc f_tr ->
-    try (f_tr st) :: acc
+    try 
+      let s = f_tr st in
+      let hs = hash_state s in
+      (hs, s) :: acc
     with Not_applicable -> acc) acc trs
 
 
-let post2 st h trs acc =
+let post2 st visited trs acc cpt_q =
   List.fold_left (fun acc f_tr ->
     try 
       let s = f_tr st in
-      if HI.mem h  (hash_state s) then acc else s :: acc
+      let hs = hash_state s in
+      if HI.mem visited hs then acc else 
+        (incr cpt_q; (hs, s) :: acc)
     with Not_applicable -> acc) acc trs
 
 
@@ -695,8 +700,7 @@ let stateless_forward s procs trs env l =
         let cands = Forward.extract_candidates_from_compagnons
           (ids_to_companions env mc) s
         in Forward.remove_subsumed_candidates cands
-    | st :: to_do ->
-        let hst = hash_state st in
+    | (hst, st) :: to_do ->
         if HI.mem h_visited hst then
 	  forward_rec s procs trs mc to_do
         else
@@ -723,8 +727,7 @@ let local_stateless_forward s procs trs loc_cands env l =
         let cands = ids_to_candidates s env loc_cands
           (* (transitive_closure env loc_cands) *)
         in Forward.remove_subsumed_candidates cands
-    | st :: to_do ->
-        let hst = hash_state st in
+    | (hst, st) :: to_do ->
         if HI.mem h_visited hst then
 	  forward_rec s procs trs loc_cands to_do
         else
@@ -745,7 +748,7 @@ let stateless_search procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun st ->
+    List.iter (fun (_, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let trs = transitions_to_func procs env init.t_trans in
@@ -761,21 +764,22 @@ let verified_candidates = ref SCands.empty
 let forward s procs trs env l =
   global_env := env;
   let cpt_f = ref 0 in
+  let cpt_q = ref 1 in
   let rec forward_rec s procs trs = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f
-    | st :: to_do ->
-        let hst = hash_state st in
+    | (hst, st) :: to_do ->
+	decr cpt_q;
         if HI.mem explicit_states hst then
 	  forward_rec s procs trs to_do
         else
-	  let to_do = post2 st explicit_states trs to_do in
+	  let to_do = post2 st explicit_states trs to_do cpt_q in
 	  incr cpt_f;
 	  if debug && verbose > 1 then
             eprintf "%d : %a\n@." !cpt_f
               Pretty.print_cube (state_to_cube env st);
 	  if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
-	    !cpt_f (List.length to_do);
+	    !cpt_f !cpt_q;
 	  HI.add explicit_states hst st;
 	  forward_rec s procs trs to_do
   in
@@ -786,12 +790,13 @@ let search procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun st ->
+    List.iter (fun (_, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let trs = transitions_to_func procs env init.t_trans in
   forward init procs trs env st_inits
 
+  
 
 let localized_candidates_init env init_state =
   let a = ref (-1) in
@@ -848,14 +853,14 @@ let local_stateless_search procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun st ->
+    List.iter (fun (_, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   eprintf "ici1@.";
   let trs, loc_cands, same_var_cands = transitions_to_func_locals procs env init.t_trans in
   eprintf "ici2@.";
   let loc_cands = 
-    List.fold_left (fun acc i ->
+    List.fold_left (fun acc (_, i) ->
       SCands.union (localized_candidates_init env i) acc) loc_cands st_inits in
   eprintf "ici3@.";
   (* let loc_cands = add_related env same_var_cands loc_cands in *)
