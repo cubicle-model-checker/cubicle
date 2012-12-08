@@ -912,6 +912,28 @@ let satom_to_cand env sa =
 
 exception Already_verified of t_system
 
+
+let is_local_to_reqs c reqs = 
+  List.mem c reqs || List.mem (neg_req !global_env c) reqs
+  
+let rec is_local_to_action ((a, op, b) as c) = function
+      | St_ignore -> false
+      | St_assign (a',b') -> a = a' && b = b'
+      | St_ite (req, a1, a2) ->
+          is_local_to_reqs c req ||
+            is_local_to_action c a1 || is_local_to_action c a2
+
+let is_local_lit
+    {st_reqs = st_reqs; st_udnfs = st_udnfs; st_actions = st_actions}
+     ((a, op, b) as c) =
+  is_local_to_reqs c st_reqs ||
+    List.exists (List.exists (is_local_to_reqs c)) st_udnfs ||
+    List.exists (is_local_to_action c) st_actions
+  
+let is_local cand tr = List.for_all (is_local_lit tr) cand
+
+let is_localized cand = List.exists (is_local cand) !global_env.st_trs
+
 let smallest_to_resist_on_trace check ls =
   let env = !global_env in
   let cands =
@@ -939,9 +961,6 @@ let smallest_to_resist_on_trace check ls =
       | Exit | Not_found -> 
           eprintf "@.";
           []
-
-
-
 
 
 

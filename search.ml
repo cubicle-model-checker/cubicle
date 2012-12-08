@@ -475,7 +475,7 @@ module BFS_base ( X : I ) = struct
 	       invariants := List.rev_append inv !invariants;
 	       not_invariants := not_invs;
 
-               if true || not candidate_found then begin
+               if not candidate_found then begin
 	         if delete then X.delete_nodes_trie s visited nb_deleted true;
 	         (* if delete && invgen && gen_inv then  *)
 	         (*   X.delete_nodes_inv inv visited; *)
