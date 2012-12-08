@@ -7,7 +7,7 @@ type wb_cmd = WB_None | WB_Wb
 type shwb_cmd = SHWB_None | SHWB_ShWb | SHWB_FAck
 type nakc_cmd = NAKC_None | NAKC_Nakc
 
-type data = Data1 | Data2
+type data
 
 
 
@@ -62,18 +62,9 @@ var NakcMsg_Cmd : nakc_cmd
 
 var CurrData : data
 var PrevData : data
-var Store_data : data
+var StoreData : data
 
 var Collecting : bool
-
-var LastWrVld : bool
-var LastWrPtr : proc
-var PendReqSrc : proc
-var PendReqCmd : uni_cmd
-var FwdCmd : uni_cmd
-var FwdSrc : proc
-var LastInvAck : proc
-var LastOtherInvAck : proc
 
 (*-----------------------------------------------------------------------*)
 
@@ -82,9 +73,6 @@ var LastOtherInvAck : proc
 (*---------------------------- Initial states ---------------------------*)
 
 init (p) {
-
-     MemData = Data1 &&
-
      Dir_Pending = False &&
      Dir_Local = False &&
      Dir_Dirty = False &&
@@ -107,23 +95,21 @@ init (p) {
      RpMsg_Cmd[p] = RP_None &&
 
 
-     ProcCmd[Home] = NODE_None &&
-     InvMarked[Home] = False &&
-     CacheState[Home] = CACHE_I &&
+     (* ProcCmd[Home] = NODE_None && *)
+     (* InvMarked[Home] = False && *)
+     (* CacheState[Home] = CACHE_I && *)
 
-     Dir_ShrSet[Home] = False &&
-     Dir_InvSet[Home] = False &&
+     (* Dir_ShrSet[Home] = False && *)
+     (* Dir_InvSet[Home] = False && *)
 
-     UniMsg_Cmd[Home] = UNI_None &&
-     InvMsg_Cmd[Home] = INV_None &&
-     RpMsg_Cmd[Home] = RP_None &&
+     (* UniMsg_Cmd[Home] = UNI_None && *)
+     (* InvMsg_Cmd[Home] = INV_None && *)
+     (* RpMsg_Cmd[Home] = RP_None && *)
 
-     CurrData = Data1 &&
-     PrevData = Data2 &&
+     CurrData = MemData &&
+     PrevData = MemData &&
 
-     LastWrVld = False &&
-     Collecting = False &&
-     FwdCmd = UNI_None 
+     Collecting = False
 
 }
 
@@ -163,24 +149,13 @@ unsafe (i j) { CacheState[i] = CACHE_E && CacheState[j] = CACHE_E }
 
 (*-------------------------- Muphi rule Store ---------------------------*)
 
-transition store1 (src)
+transition store (src)
 requires { CacheState[src] = CACHE_E }
 {
-	CacheData[src] := Data1;
-  	CurrData := Data1;
-  	LastWrVld := True;
-  	LastWrPtr := src;
+	CacheData[src] := StoreData;
+  	CurrData := StoreData;
+	StoreData := .;
 }
-
-transition store2 (src)
-requires { CacheState[src] = CACHE_E }
-{
-	CacheData[src] := Data2;
-  	CurrData := Data2;
-  	LastWrVld := True;
-  	LastWrPtr := src;
-}
-
 
 
 (*----------------------- Muphi rule PI_Remote_Get ----------------------*)
@@ -211,9 +186,6 @@ requires { ProcCmd[Home] = NODE_None &&
 	UniMsg_Cmd[Home] := UNI_Get;
 	UniMsg_Proc[Home] := Dir_HeadPtr;
   	(* undefine UniMsg_Data[Home]; *)
-     	FwdCmd := UNI_Get;
-  	PendReqSrc := Home;
-  	PendReqCmd := UNI_Get;
   	Collecting := False;
 }
 
@@ -229,8 +201,6 @@ requires { ProcCmd[Home] = NODE_None &&
 	UniMsg_Cmd[Home] := UNI_Get;
 	UniMsg_Proc[Home] := Dir_HeadPtr;
   	(* undefine UniMsg_Data[Home]; *)
-  	PendReqSrc := Home;
-  	PendReqCmd := UNI_Get;
   	Collecting := False;
 }
 
@@ -291,8 +261,6 @@ requires { ProcCmd[Home] = NODE_None &&
   UniMsg_Cmd[Home] := UNI_GetX;
   UniMsg_Proc[Home] := Dir_HeadPtr;
   (* undefine UniMsg_Data[Home]; *)
-  PendReqSrc := Home;
-  PendReqCmd := UNI_GetX;
   Collecting := False;
 }
 
@@ -307,9 +275,6 @@ requires { ProcCmd[Home] = NODE_None &&
   UniMsg_Cmd[Home] := UNI_GetX;
   UniMsg_Proc[Home] := Dir_HeadPtr;
   (* undefine UniMsg_Data[Home]; *)
-  FwdCmd := UNI_GetX;
-  PendReqSrc := Home;
-  PendReqCmd := UNI_GetX;
   Collecting := False;
 }
 
@@ -347,7 +312,6 @@ requires { ProcCmd[Home] = NODE_None &&
 
 	Collecting := True;
         PrevData := CurrData;
-    	LastOtherInvAck := Dir_HeadPtr;
 
   	ProcCmd[Home] := NODE_None;
   	InvMarked[Home] := False;
@@ -520,8 +484,6 @@ requires { Home <> src &&
   UniMsg_Cmd[src] := UNI_Get;
   UniMsg_Proc[src] := Dir_HeadPtr;
   (* undefine UniMsg_Data[src]; *)
-  PendReqSrc := src;
-  PendReqCmd := UNI_Get;
   Collecting := False;
 }
 
@@ -540,9 +502,6 @@ requires { Home <> src &&
   UniMsg_Cmd[src] := UNI_Get;
   UniMsg_Proc[src] := Dir_HeadPtr;
   (* undefine UniMsg_Data[src]; *)
-  FwdCmd := UNI_Get;
-  PendReqSrc := src;
-  PendReqCmd := UNI_Get;
   Collecting := False;
 }
 
@@ -619,8 +578,6 @@ requires { Home <> dst &&
   	UniMsg_Proc[src] := dst;
   	(* undefine UniMsg_Data[src]; *)
   	NakcMsg_Cmd := NAKC_Nakc;
-  	FwdCmd := UNI_None;
-  	FwdSrc := src;
 }
 
 
@@ -639,8 +596,6 @@ requires { Home <> dst && Home <> src &&
     	ShWbMsg_Cmd := SHWB_ShWb;
     	ShWbMsg_Proc := src;
     	ShWbMsg_Data := CacheData[dst];
-  	FwdCmd := UNI_None;
-  	FwdSrc := src;
 }
 
 transition ni_Remote_Get_Put (src dst)
@@ -653,8 +608,6 @@ requires { Home <> dst && Home = src &&
   	UniMsg_Cmd[src] := UNI_Put;
   	UniMsg_Proc[src] := dst;
   	UniMsg_Data[src] := CacheData[dst];
-  	FwdCmd := UNI_None;
-  	FwdSrc := src;
 }
 
 
@@ -712,8 +665,6 @@ requires { Home <> src &&
   	UniMsg_Cmd[src] := UNI_GetX;
   	UniMsg_Proc[src] := Dir_HeadPtr;
   	(* undefine UniMsg_Data[src]; *)
-  	PendReqSrc := src;
-  	PendReqCmd := UNI_GetX;
   	Collecting := False;
 }
 
@@ -731,9 +682,6 @@ requires { Home <> src &&
   	UniMsg_Cmd[src] := UNI_GetX;
   	UniMsg_Proc[src] := Dir_HeadPtr;
   	(* undefine UniMsg_Data[src]; *)
-    	FwdCmd := UNI_GetX;
-  	PendReqSrc := src;
-  	PendReqCmd := UNI_GetX;
   	Collecting := False;
 }
 
@@ -940,12 +888,9 @@ requires { Home <> src &&
       	CacheState[Home] := CACHE_I;
       	(* undefine CacheData[Home]; *)
     
-	PendReqSrc := src;
-    	PendReqCmd := UNI_GetX;
     	Collecting := True;
     	PrevData := CurrData;
 
-        LastOtherInvAck := Dir_HeadPtr;
 }
 transition ni_Local_GetX_PutX_8 (src pp)
 requires { Home <> src &&
@@ -988,12 +933,9 @@ requires { Home <> src &&
       	CacheState[Home] := CACHE_I;
       	(* undefine CacheData[Home]; *)
     
-	PendReqSrc := src;
-    	PendReqCmd := UNI_GetX;
     	Collecting := True;
     	PrevData := CurrData;
 
-    	LastOtherInvAck := pp;
 }
 
 
@@ -1034,12 +976,9 @@ requires { Home <> src &&
     	UniMsg_Proc[src] := Home;
     	UniMsg_Data[src] := MemData;
 
-	PendReqSrc := src;
-    	PendReqCmd := UNI_GetX;
     	Collecting := True;
     	PrevData := CurrData;
     	
-	LastOtherInvAck := Dir_HeadPtr;
 }
 
 
@@ -1081,12 +1020,9 @@ requires { Home <> src &&
     	UniMsg_Proc[src] := Home;
     	UniMsg_Data[src] := MemData;
 
-	PendReqSrc := src;
-    	PendReqCmd := UNI_GetX;
     	Collecting := True;
     	PrevData := CurrData;
     
-	LastOtherInvAck := pp;
 }
 
 
@@ -1129,8 +1065,6 @@ requires { Home <> dst &&
   	UniMsg_Proc[src] := dst;
   	(* undefine UniMsg_Data[src]; *)
   	NakcMsg_Cmd := NAKC_Nakc;
-  	FwdCmd := UNI_None;
-  	FwdSrc := src;
 }
 
 
@@ -1147,8 +1081,6 @@ requires { Home <> dst && Home = src &&
   	UniMsg_Cmd[src] := UNI_PutX;
   	UniMsg_Proc[src] := dst;
   	UniMsg_Data[src] := CacheData[dst];
-  	FwdCmd := UNI_None;
-  	FwdSrc := src;
 }
 
 transition ni_Remote_GetX_PutX (src dst)
@@ -1165,8 +1097,6 @@ requires { Home <> dst && Home <> src &&
     	ShWbMsg_Cmd := SHWB_FAck;
     	ShWbMsg_Proc := src;
     	(* undefine ShWbMsg_Data; *)
-  	FwdCmd := UNI_None;
-  	FwdSrc := src;
 }
 
 
@@ -1305,8 +1235,6 @@ requires { Home <> src &&
 {
 	InvMsg_Cmd[src] := INV_None;
   	Dir_InvSet[src] := False;
-    	LastInvAck := src;
-	LastOtherInvAck := pp;
 }
 
 transition ni_InvAck_done_1 (src)
@@ -1322,7 +1250,6 @@ requires { Home <> src &&
     	Dir_Pending := False;
       	Dir_Local := False;
     	Collecting := False;
-    	LastInvAck := src;
 }
 
 transition ni_InvAck_done_2 (src)
@@ -1337,7 +1264,6 @@ requires { Home <> src &&
   	Dir_InvSet[src] := False;
     	Dir_Pending := False;
     	Collecting := False;
-    	LastInvAck := src;
 }
 
 transition ni_InvAck_done_3 (src)
@@ -1352,7 +1278,6 @@ requires { Home <> src &&
   	Dir_InvSet[src] := False;
     	Dir_Pending := False;
     	Collecting := False;
-    	LastInvAck := src;
 }
 
 
