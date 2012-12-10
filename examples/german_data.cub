@@ -258,4 +258,5 @@ requires { CacheState[n] = Exclusive }
   CacheData[j] := case 
     	       	  | j = n : Store_data
 	       	  | _  : CacheData[j];
+  Store_data := .;
 }
