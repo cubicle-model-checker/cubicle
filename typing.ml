@@ -308,7 +308,7 @@ let system s =
 		  t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
 		  t_trans = s.trans;
 		  t_deleted = false;
-		  t_nb = 0;
+		  t_nb = Cube.new_cube_id ();
 		  t_nb_father = -1;
 		  t_glob_proc = glob_proc;
 		}

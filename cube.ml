@@ -1412,7 +1412,7 @@ let resolve_two ar1 ar2 =
 
 
 let new_cube_id =
-  let cpt = ref 0 in
+  let cpt = ref (-1) in
   fun () -> incr cpt; !cpt
 
 let rec add_and_resolve s visited =

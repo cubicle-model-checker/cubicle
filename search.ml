@@ -504,7 +504,7 @@ module BFS_base ( X : I ) = struct
                    (*      else raise Exit *)
                    (*    done *)
                    (*  with Exit | Queue.Empty -> ()); *)
-                   List.iter (fun sc -> Queue.add (cpt, sc) q) ls;                   
+                   List.iter (fun sc -> Queue.add (cpt, sc) q) ls;    
                    (* Queue.add (cpt, sc) q; *)
                    (* Queue.add (cpt, s) q; *)
                    Queue.transfer q' q

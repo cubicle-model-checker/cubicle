@@ -156,11 +156,12 @@ let print_node fmt s =
   if dot then
     begin
       if List.length s.t_from  = 0 then
-	if s.t_nb = 0 then
+	if s.t_nb >= 0 then
 	  fprintf fmt "%d [label=\"%a\", color = green, style=filled];" 
 	    s.t_nb print_system_dot s
-	else 
-	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+	else
+	  fprintf fmt "%d [label=\"%a\", color = orange, style=filled];" 
+	    s.t_nb print_system_dot s
       else
 	let (tr, args, _)= List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 

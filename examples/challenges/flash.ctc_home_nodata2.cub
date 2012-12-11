@@ -117,7 +117,6 @@ init (p) {
 
 
 
-
 (*-------------------------- Control property ---------------------------*)
 
 unsafe (p) { CacheState_home = CACHE_E && CacheState[p] = CACHE_E }
@@ -125,6 +124,94 @@ unsafe (i j) { CacheState[i] = CACHE_E && CacheState[j] = CACHE_E }
 
 (*-----------------------------------------------------------------------*)
 
+(* Invariants discovered by backforth *)
+
+(* unsafe () { CacheState_home = CACHE_I && *)
+(*  Dir_Local = True && *)
+(*  Dir_Dirty = True } *)
+
+(* unsafe (z1) { Dir_HeadVld = False && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe () { ProcCmd_home = NODE_Get && *)
+(*  Dir_Local = True } *)
+
+(* unsafe () { CacheState_home = CACHE_E && *)
+(*  Dir_Dirty = False } *)
+
+(* unsafe (z1) { Dir_HeadVld = False && *)
+(*  CacheState[z1] = CACHE_E } *)
+
+(* unsafe () { WbMsg_Cmd = WB_Wb && *)
+(*  ShWbMsg_Cmd = SHWB_ShWb } *)
+
+(* unsafe () { UniMsg_Cmd_home = UNI_Put && *)
+(*  ShWbMsg_Cmd = SHWB_ShWb } *)
+
+(* unsafe () { UniMsg_Cmd_home = UNI_PutX && *)
+(*  ShWbMsg_Cmd = SHWB_ShWb } *)
+
+(* unsafe () { Dir_Dirty = False && *)
+(*  ShWbMsg_Cmd = SHWB_ShWb } *)
+
+(* unsafe () { Dir_HeadVld = False && *)
+(*  ShWbMsg_Cmd = SHWB_ShWb } *)
+
+(* unsafe () { Dir_Dirty = False && *)
+(*  WbMsg_Cmd = WB_Wb } *)
+
+(* unsafe () { Dir_HeadVld = False && *)
+(*  WbMsg_Cmd = WB_Wb } *)
+
+(* unsafe () { UniMsg_Cmd_home = UNI_Put && *)
+(*  Dir_Dirty = False } *)
+
+(* unsafe () { UniMsg_Cmd_home = UNI_Put && *)
+(*  Dir_HeadVld = False } *)
+
+(* unsafe (z1) { CacheState[z1] = CACHE_E && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe () { UniMsg_Cmd_home = UNI_PutX && *)
+(*  Dir_Dirty = False } *)
+
+(* unsafe () { UniMsg_Cmd_home = UNI_PutX && *)
+(*  Dir_HeadVld = False } *)
+
+(* unsafe (z1) { ShWbMsg_Cmd = SHWB_ShWb && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe (z1) { UniMsg_Cmd_home = UNI_Put && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe (z1 z2) { UniMsg_Cmd[z1] = UNI_PutX && *)
+(*  UniMsg_Cmd[z2] = UNI_PutX } *)
+
+(* unsafe () { CacheState_home = CACHE_E && *)
+(*  Dir_HeadVld = True } *)
+
+(* unsafe (z1) { UniMsg_Cmd_home = UNI_PutX && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe (z1) { ShWbMsg_Cmd = SHWB_ShWb && *)
+(*  CacheState[z1] = CACHE_E } *)
+
+(* unsafe (z1) { Dir_Dirty = False && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe (z1) { UniMsg_Cmd_home = UNI_Put && *)
+(*  CacheState[z1] = CACHE_E } *)
+
+(* unsafe () { InvMarked_home = True } *)
+
+(* unsafe (z1 z2) { CacheState[z2] = CACHE_E && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe (z1) { CacheState_home = CACHE_E && *)
+(*  UniMsg_Cmd[z1] = UNI_PutX } *)
+
+(* unsafe (z1) { Dir_Dirty = False && *)
+(*  CacheState[z1] = CACHE_E } *)
 
 
 
