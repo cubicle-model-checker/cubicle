@@ -85,64 +85,6 @@ init (z) {
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
 
-(* 1 *)
-unsafe (z1) { Cache[z1] = Shared && Exgntd = True }
-
-(*unsafe (z1) { Cache[z1] = Shared && Chan2[z1] = Gnte}
-unsafe (z1) { Exgntd = True &&  Chan2[z1] = Gnts }
-*)
-
-(* 2 *)
-
-unsafe (z1) { Cache[z1] = Exclusive && Exgntd = False }
-
-(*unsafe (z1) { Exgntd = False && Chan2[z1] = Gnte}
-unsafe (z1) { Cache[z1] = Exclusive && Chan2[z1] = Gnts}
-*)
-
-(* 3 *)
-unsafe (z1) { Shrset[z1] = False && Cache[z1] <> Invalid }
-
-(*unsafe (z1) { Cache[z1] <> Invalid && Chan2[z1] = Gnte}
-unsafe (z1) { Chan2[z1] = Inv && Shrset[z1] = False}
-unsafe (z1) { Chan2[z1] = Gnts && Shrset[z1] = False}
-*)
-(*
-unsafe (z1) { Cache[z1] <> Invalid && Chan3[z1] = Invack}
-unsafe (z1) { Cache[z1] = Invalid && Chan2[z1] = Inv}
-*)
-
-
-unsafe (z1) { Curcmd = Empty1 && Flag = True}
-unsafe (z1) { Curcmd = Empty1 && Chan2[z1] = Inv}
-unsafe (z1) { Curcmd = Empty1 && Chan3[z1] <> Empty3}
-unsafe (z1) { Flag = True &&  Chan2[z1] = Inv}
-
-(*unsafe (z1) { Flag = True && Chan3[z1] <> Empty3} pas local *)
-(*unsafe (z1) { Chan2[z1] = Inv && Chan3[z1] <> Empty3} pas local *)
-(*unsafe (z1) { Chan2[z1] = Gnts && Chan3[z1] <> Empty3} *)
-(*unsafe (z1) { Chan2[z1] = Gnte && Chan3[z1] <> Empty3}*)
-(*unsafe (z1) { Curcmd = Empty1 && Chan3[z1] = Invack}*)
-
-
-unsafe (z1) { Flag = True && Chan3[z1] = Invack}
-unsafe (z1) { Chan2[z1] <> Empty2 && Chan3[z1] = Invack}
-
-
-
-(*unsafe (z1) { Chan3[z1] = Invack && Shrset[z1] = False}
-unsafe (z1) { Chan2[z1] <> Empty2 && Shrset[z1] = False}
-unsafe (z1) { Chan3[z1] <> Empty3 && Shrset[z1] = False}
-*)
-
-(*
-unsafe (z1) { Chan3[z1] = Invack && Invset[z1] = True}
-unsafe (z1) { Chan3[z1] <> Empty3 && Invset[z1] = True}
-unsafe (z1) { Chan2[z1] = Inv && Invset[z1] = True}
-*)
-
-
-
 
 
 (*:comment h0    t1*)

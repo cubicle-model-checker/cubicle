@@ -41,20 +41,6 @@ init (z) {
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
 
 
-
-unsafe (z1) { Exgntd = True && Cache[z1] = Shared }
-
-unsafe (z1) { Exgntd = False && Cache[z1] = Exclusive }
-
-unsafe (z1) { Cache[z1] = Shared && Shrset[z1] = False }
-
-unsafe (z1) { Cache[z1] = Exclusive && Shrset[z1] = False }
-
-unsafe (z1) { Cache[z1] <> Invalid && Shrset[z1] = False}
-
-
-
-
 transition send_req_shared(n)
 requires { Cache[n] = Invalid && Chan1[n] = Empty }
 {
