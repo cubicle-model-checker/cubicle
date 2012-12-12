@@ -12,56 +12,51 @@ unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
 transition t0 (x)
 requires { A[x] = L8 }
 { 
-  A[j] := case
-       	   | j = x : L1 
-	   | _ : A[j] ;
-  B[j] := case 
-       	   | j = x : True 
-	   | _ : B[j];
+  A[x] := L1;
+  B[x] := True;
 }
 
 transition t1 (x)
 requires { A[x] = L1 && forall_other y. S[y] = False }
 { 
-  A[j] := case
-       	   | j = x : L2 | _ : A[j];
+  A[x] := L2;
 }
 
 transition t2 (x)
 requires { A[x] = L2 }
-{ A[j] := case | j = x : L3 | _ : A[j]; }
+{ A[x] := L3; }
 
 transition t3 (x)
 requires { A[x] = L3 && forall_other y. ( B[y] =  False && W[y] = True ) }
-{ A[j] := case | j = x : L5 | _ : A[j] ;
+{ A[x] := L5;
   W[j] := case | j = x : False | _ : B[j] ;
 }
 
 transition t4 (x y)
 requires { A[x] = L3 && B[y] = False && W[y] = False }
-{ A[j] := case | j = x : L4 | _ : A[j] ;
-  S[j] := case | j = x : False | _ : S[j] ;
+{ A[x] := L4;
+  S[x] := False
 }
 
 transition t5 (x y)
 requires { A[x] = L4 && S[y] = True && W[y] = False }
-{ A[j] := case | j = x : L5 | _ : A[j] ;
-  S[j] := case | j = x : True | _ : S[j] ;
-  W[j] := case | j = x : False | _ : W[j] ; 
+{ A[x] := L5;
+  S[x] := True;
+  W[x] := False; 
 }
 
 transition t6 (x)
 requires { A[x] = L5 && forall_other y. W[y] = False }
-{ A[j] := case | j = x: L6 | _ : A[j] ;}
+{ A[x] := L6 }
 
 transition t7_1 (x)
 requires { A[x] = L6 && forall_other j. (x < j || S[j] = False) }
-{ A[j] := case | j = x : L7 | _ : A[j] ; }
+{ A[x] := L7 }
 
 transition t8 (x)
 requires { A[x] = L7 }
-{ A[j] := case | j = x : L8 | _ : A[j] ;
-  S[j] := case | j = x : False | _ : S[j] ;
-  B[j] := case | j = x : False | _ : B[j] ; }
+{ A[x] := L8;
+  S[x] := False;
+  B[x] := False }
 
 

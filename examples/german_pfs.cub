@@ -83,6 +83,19 @@ unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Shared }
 
 (*unsafe (z) { C[z] = False && T[z] <> Empty3 }*)
 
+
+(*
+
+unsafe (z1) { G = True && A[z1] = Shared }
+
+unsafe (z1) { G = False && A[z1] = Exclusive }
+
+unsafe (z1) { A[z1] <> Invalid && S[z1] = False}
+
+*)
+
+
+
 (*:comment h0    t1*)
 transition t1(x)
 requires { M = Reqs && G = False && D[x] = Empty2 && C[x] = True && F = False }
