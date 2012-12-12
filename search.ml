@@ -72,7 +72,9 @@ module type I = sig
 
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
+  val print_bad : Format.formatter -> t -> unit
   val print_dead : Format.formatter -> (t * int list) -> unit
+  val print_cand : Format.formatter -> (t * int list) -> unit
   val print_system : Format.formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
@@ -400,7 +402,9 @@ module BFS_base ( X : I ) = struct
 	   !used_candidates X.print_system;
 	 raise ReachBound);
       (try X.safety s with 
-	| Unsafe s -> close_dot (); raise (Unsafe s));
+	| Unsafe s ->
+            if dot then fprintf fmt "@[%a@]@." X.print_bad s;
+            close_dot (); raise (Unsafe s));
       (match X.fixpoint_trie2 !visited s with
 	 | Some db ->
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
@@ -474,7 +478,10 @@ module BFS_base ( X : I ) = struct
 	       in
 	       invariants := List.rev_append inv !invariants;
 	       not_invariants := not_invs;
-
+               if inv <> [] then
+                 visited := List.fold_left (fun visited s -> 
+                   Cubetrie.add_array s.t_arru s visited) !visited inv;
+               
                if not candidate_found then begin
 	         if delete then X.delete_nodes_trie s visited nb_deleted true;
 	         (* if delete && invgen && gen_inv then  *)
@@ -494,6 +501,7 @@ module BFS_base ( X : I ) = struct
 
 	       if inv = [] then begin
                  if candidate_found then begin
+	           if dot then fprintf fmt "@[%a@]@." X.print_cand (s, List.map (fun sc -> sc.t_nb) ls);
                    (* A candidate was added, in this case treat it before *)
                    let q' = Queue.create () in
                    Queue.transfer q q';
@@ -510,7 +518,7 @@ module BFS_base ( X : I ) = struct
                    Queue.transfer q' q
                  end
                  else
-                       List.iter (fun s -> Queue.add (cpt+1, s) q) ls
+                   List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	       end;
 
 	       if not quiet then printf "    (%d remaining)\n@."
@@ -844,7 +852,7 @@ module BFS ( X : I ) = struct
   include BFS_base(X)
 
   module Search = BFSnoINV (struct
-    include X let maxnodes = 100000
+    include X let maxnodes = 100
   end)
     
   let search = search Search.search true

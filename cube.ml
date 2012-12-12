@@ -1349,7 +1349,7 @@ let expand_cube c =
            List.fold_left (fun acc' a1 -> List.rev_append
              (List.rev_map
                 (fun sa -> SAtom.add a1 sa) acc) acc') [] la
-         with Not_found -> List.rev_map (SAtom.add a) acc)           
+         with Not_found -> List.rev_map (SAtom.add a) acc)
         (* List.rev_map (SAtom.add a) acc *)
     | Comp(x, Eq, y) ->
         (try

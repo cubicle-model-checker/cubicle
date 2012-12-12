@@ -32,7 +32,11 @@ val print_unsafe : formatter -> t_system -> unit
 
 val print_node : formatter -> t_system -> unit
 
+val print_bad : formatter -> t_system -> unit
+
 val print_dead_node : formatter -> (t_system * int list) -> unit
+
+val print_dead_node_to_cand : formatter -> (t_system * int list) -> unit
 
 val print_verbose_node : formatter -> t_system -> unit
 

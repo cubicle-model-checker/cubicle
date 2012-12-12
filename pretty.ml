@@ -183,9 +183,21 @@ let print_node fmt s =
 	    fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args
        ) s.t_from;
      if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
-   end
+    end
 
-let print_dead_node fmt (s, db) =
+let print_bad fmt s =
+  if List.length s.t_from  = 0 then
+      fprintf fmt "%d [label=\"%a\", color = red, style=filled];" 
+	s.t_nb print_system_dot s
+  else
+    let (tr, args, _)= List.hd s.t_from in 
+    fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
+      s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
+    fprintf fmt "%d [label=\"%a\", color = red, style = filled];" 
+	s.t_nb print_system_dot s
+  
+
+let print_subsumed_node cand fmt (s, db) =
   if dot && verbose > 0 then
     begin
       if List.length s.t_from  = 0 then
@@ -207,8 +219,11 @@ let print_dead_node fmt (s, db) =
 	      begin
 		fprintf fmt "@.";
 		List.iter 
-		  (fun d -> fprintf fmt " %d -> %d [style=dotted] @." 
-		     s.t_nb d) db
+		  (fun d -> fprintf fmt " %d -> %d [style=dotted, color=%s %s] @." 
+		     s.t_nb d 
+                    (if cand then "orange" else "black")
+                    (if cand then "" else ", constraint=false")
+                  ) db
 	      end
 	  end
       else
@@ -228,11 +243,20 @@ let print_dead_node fmt (s, db) =
 	      begin
 		fprintf fmt "@.";
 		List.iter 
-		  (fun d -> fprintf fmt " %d -> %d [style=dotted] @." 
-		     s.t_nb d) db
+		  (fun d -> fprintf fmt " %d -> %d [style=dotted, color=%s %s] @." 
+		     s.t_nb d
+                    (if cand then "orange" else "black")
+                    (if cand then "" else ", constraint=false")
+                  ) db
 	      end
 	  end
     end
+
+
+let print_dead_node  = print_subsumed_node false
+
+let print_dead_node_to_cand  = print_subsumed_node true
+
 
 let print_verbose_node fmt s =
   if verbose = 0 then print_node fmt s else begin

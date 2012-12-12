@@ -218,7 +218,7 @@ let write_atom_to_state env st = function
       (* Assume an extra process if a disequality is mentioned on
          type proc in init formula : change this to something more robust *)
       st.(HT.find env.id_terms t1) <- env.extra_proc
-  | _ -> assert false
+  | _ -> ()
   
 let write_cube_to_state env st =
   SAtom.iter (write_atom_to_state env st)
@@ -934,11 +934,14 @@ let is_local cand tr = List.for_all (is_local_lit tr) cand
 
 let is_localized cand = List.exists (is_local cand) !global_env.st_trs
 
+exception Sustainable of t_system
+
 let smallest_to_resist_on_trace check ls =
   let env = !global_env in
   let cands =
-    List.fold_left (fun acc s ->
-      try (satom_to_cand env (snd s.t_unsafe), s) :: acc
+    List.fold_left (fun acc p ->
+      try 
+        (List.map (fun s -> satom_to_cand env (snd s.t_unsafe), s) p) :: acc
       with Not_found -> acc
     ) [] ls in
   let cands = ref (List.rev cands) in
@@ -952,15 +955,22 @@ let smallest_to_resist_on_trace check ls =
       HI.iter (fun _ st ->
         incr cpt;
         if !cpt mod 1000 = 0 then eprintf ".@?";
-        cands := List.filter (fun (c, _) -> check_cand env st c) !cands;
+        cands := List.filter (fun p -> 
+          List.for_all (fun (c, _) -> check_cand env st c) p
+        ) !cands;
         if !cands = [] then raise Exit;
       ) explicit_states;
       eprintf "@.";
-      [snd (List.find (fun (_,s) -> check s) !cands)]
+      List.iter (function 
+        | (_,s) :: _ -> if check s then raise (Sustainable s)
+        | [] -> ()
+      ) !cands;
+      []
     with
       | Exit | Not_found -> 
           eprintf "@.";
           []
+      | Sustainable s -> [s]
 
 
 

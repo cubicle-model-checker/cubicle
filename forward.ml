@@ -220,6 +220,13 @@ let elim_primed_term t sa =
 	    | _ -> res
 	else res
       end
+    | Comp (t1, op, t2) ->
+        (* TODO: perform fourier motzkin instead *)
+        if compare_term t t1 = 0 || compare_term t t2 = 0 then
+          match res with
+	    | None -> Some (op, t1, t2, a) 
+            | _ -> res
+        else res
     | _ -> res) sa None
   in
   match r with
@@ -227,7 +234,7 @@ let elim_primed_term t sa =
     | Some (Eq, t, t', a) ->
         let rsa = SAtom.remove a sa in
 	apply_subst_terms_atoms t t' rsa
-    | _ -> (* TODO *) sa
+    | Some (_, _, _, a) -> SAtom.remove a sa
 
 let primed_terms_of_atom a =
   let rec primed_terms_of_atom a acc = match a with
@@ -558,10 +565,12 @@ let post init all_procs procs { tr_args = tr_args;
       let sa = simplification_atoms p_init
       	(SAtom.union unchanged (SAtom.union assi upd)) in
       let sa = abstract_others sa tr_others in
-      let sa = wrapper_elim_prime p_init sa in
-      (* let sa = gauss_elim sa in *)
-      let sa, (nargs, _) = proper_cube sa in
-      (sa, nargs) :: acc
+      List.fold_left (fun acc sa ->
+        let sa = wrapper_elim_prime p_init sa in
+        (* let sa = gauss_elim sa in *)
+        let sa, (nargs, _) = proper_cube sa in
+        (sa, nargs) :: acc)
+        acc (Cube.simplify_atoms sa)
     else acc
   ) [] d
 
@@ -582,11 +591,13 @@ let post2 init all_procs procs { tr_args = tr_args;
     let sa = simplification_atoms p_init
       (SAtom.union unchanged (SAtom.union assi upd)) in
     let sa = abstract_others sa tr_others in
-    let sa = wrapper_elim_prime p_init sa in
-    (* let sa = gauss_elim sa in *)
-    let sa, (nargs, _) = proper_cube sa in
-    let d = all_permutations nargs nargs in
-    List.fold_left (fun acc sp -> (subst_atoms sp sa, nargs) :: acc) [] d
+    List.fold_left (fun acc sa ->
+      let sa = wrapper_elim_prime p_init sa in
+      (* let sa = gauss_elim sa in *)
+      let sa, (nargs, _) = proper_cube sa in
+      let d = all_permutations nargs nargs in
+      List.fold_left (fun acc sp -> (subst_atoms sp sa, nargs) :: acc) acc d)
+      [] (Cube.simplify_atoms sa)
   else []
 
 
@@ -600,9 +611,13 @@ let post_inst init all_procs procs {i_reqs = reqs;
     let p_init = prime_satom init in
     let unchanged = preserve_terms touched_terms init in
     let sa = simplification_atoms p_init (SAtom.union unchanged actions) in
-    let sa = wrapper_elim_prime p_init sa in
-    let sa, (nargs, _) = proper_cube sa in
-    [sa, nargs]    
+    List.fold_left (fun acc sa ->
+      try
+        let sa = wrapper_elim_prime p_init sa in
+        let sa, (nargs, _) = proper_cube sa in
+        (sa, nargs) :: acc
+      with Exit -> acc)
+      [] (Cube.simplify_atoms sa) 
   else []
 
 
@@ -1061,18 +1076,30 @@ let candidates_from_compagnions a (compagnions, uncs) acc =
 (*   SAtom.add a1 (SAtom.singleton a2) *)
 
 
+let proc_present p a sa =
+  let rest = SAtom.remove a sa in
+  SAtom.exists (function
+    | Comp (Elem (h, Var), _, _)
+    | Comp (_, _, Elem (h, Var)) when Hstring.equal h p -> true
+    | _ -> false) rest
+
+
 let useless_candidate sa =
   (* let psa, _ = proper_cube sa in *)
   (* SAtom.equal psa bac_flash1 || SAtom.equal psa bac_flash2 || *)
   SAtom.exists (function
     (* heuristic: remove proc variables *)
-    | Comp (Elem (_, Var), _, _)
-    | Comp (_, _, Elem (_, Var)) -> true
+    | (Comp (Elem (p, Var), _, _) as a)
+    | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
 
     | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      Smt.Symbol.has_type_proc x || 
+      (* Smt.Symbol.has_type_proc x ||  *)
         (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
+        (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
+        (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_int) *)
+
+    | Comp ((Arith _), _, _) -> true
 
     | _ -> false) sa
   (* || List.length (args_of_atoms sa) > 1 *)
@@ -1387,3 +1414,25 @@ let reachable_on_trace s trace =
   in
   try forward_rec [mkinit_s all_procs s] trace; false
   with Exit -> true
+
+
+let conflicting_from_trace s trace =
+  let all_procs_set = List.fold_left (fun acc (_, procs) ->
+    List.fold_left (fun acc h -> Hstring.HSet.add h acc) acc procs)
+    Hstring.HSet.empty trace in
+  let all_procs = Hstring.HSet.elements all_procs_set in
+  let rec forward_rec acc ls trace = match trace with
+    | [] -> acc
+    | (tr, procs) :: rest_trace ->
+        let sigma = List.combine tr.tr_args procs in
+        let itr = instance_of_transition tr all_procs [] sigma in
+        let nls, acc = 
+          List.fold_left (fun (nls, acc) (sa, args) ->
+            List.fold_left (fun (nls, acc) (nsa, nargs) ->
+              (nsa, nargs) :: nls, nsa :: acc
+            ) (nls, acc) (post_inst sa args all_procs itr)
+          ) ([], acc) ls
+        in
+        forward_rec acc nls rest_trace
+  in
+  forward_rec [] [mkinit_s all_procs s] trace

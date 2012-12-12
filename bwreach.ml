@@ -673,14 +673,16 @@ let rec origin s = match s.t_from with
       if p.t_nb < 0 then p
       else origin p
 
-let add_bad_candidate {t_unsafe = args, _; t_alpha = a_args, ar } trace =
+let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
   List.iter (fun sigma ->
     bad_candidates := 
       ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar) :: !bad_candidates
   ) (all_permutations a_args args);
   match trace with
     | Some tr ->
-        if not (List.mem tr !bad_traces) then bad_traces := tr :: !bad_traces
+        List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
+          (Forward.conflicting_from_trace s tr);
+        (* if not (List.mem tr !bad_traces) then bad_traces := tr :: !bad_traces *)
     | None -> ()
 
 let rec remove_cand s faulty candidates uns =
@@ -877,33 +879,31 @@ let local_parts =
           !bad_candidates then acc
         (* else if Forward.useless_candidate sa' then acc *)
         else
-          let ar' = ArrayAtom.of_satom sa' in
-          decr cpt;
-          let bidon_tr = {
-            tr_name = Hstring.empty;
-            tr_args = [];
-            tr_reqs = SAtom.empty;
-            tr_ureq = [];
-            tr_assigns = [];
-            tr_upds = [];
-            tr_nondets = [];
-          } in
-          let s' = 
-            { s with
-	      t_from = (* (bidon_tr, [], s)::s.t_from; *) [];
-	      t_unsafe = args', sa';
-	      t_arru = ar';
-	      t_alpha = ArrayAtom.alpha ar' args';
-	      t_deleted = false;
-	      t_nb = !cpt;
-	      t_nb_father = -1 (* s.t_nb *);
-            } in
-          (* if List.exists (Forward.reachable_on_trace s') !bad_traces then acc *)
-          (* else *) 
-          s' :: acc
+          let d = all_permutations args' args' in
+          let perms = List.fold_left (fun p sigma ->
+            let sa' = subst_atoms sigma sa' in
+            let ar' = ArrayAtom.of_satom sa' in
+            decr cpt;
+            let s' = 
+              { s with
+	        t_from = [];
+	        t_unsafe = args', sa';
+	        t_arru = ar';
+	        t_alpha = ArrayAtom.alpha ar' args';
+	        t_deleted = false;
+	        t_nb = !cpt;
+	        t_nb_father = -1;
+              } in
+            (* if List.exists (Forward.reachable_on_trace s') !bad_traces then acc *)
+            (* else *) 
+            s' :: p) [] d
+          in
+          perms :: acc
     ) parts []
     in
-    List.fast_sort (fun s1 s2 -> 
+    List.fast_sort (fun l1 l2 ->
+      let s1 = List.hd l1 in
+      let s2 = List.hd l2 in
       let c = Pervasives.compare (card_system s1) (card_system s2) in
       if c <> 0 then c
       else 
@@ -1002,7 +1002,9 @@ module T = struct
 
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
+  let print_bad = Pretty.print_bad
   let print_dead = Pretty.print_dead_node
+  let print_cand = Pretty.print_dead_node_to_cand
   let print_system = Pretty.print_system
   let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
     Pervasives.compare (List.length args1) (List.length args2))
