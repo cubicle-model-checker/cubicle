@@ -287,7 +287,8 @@ update:
 	let cube = 
 	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, sort $3))) in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
-	Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
+	  Upd { up_arr = $1; up_arg = j; up_swts = sw}
+      }
 ;
 
 switchs:

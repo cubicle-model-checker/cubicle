@@ -24,19 +24,32 @@ requires { A[x] = L1 && forall_other y. S[y] = False }
 
 transition t2 (x)
 requires { A[x] = L2 }
-{ A[x] := L3; }
+{ A[x] := L3; S[x] := True; W[x] := True }
+
+(*transition t3 (x)
+requires { A[x] = L3 && forall_other y. ( B[y] =  False || W[y] = True ) }
+{ A[x] := L5;
+  W[x] := False;
+}*)
 
 transition t3 (x)
-requires { A[x] = L3 && forall_other y. ( B[y] =  False && W[y] = True ) }
+requires { A[x] = L3 && forall_other y. ( A[y] =  L1 || W[y] = True ) }
 { A[x] := L5;
-  W[j] := case | j = x : False | _ : B[j] ;
+  W[x] := False;
 }
 
-transition t4 (x y)
+(*transition t4 (x y)
 requires { A[x] = L3 && B[y] = False && W[y] = False }
 { A[x] := L4;
   S[x] := False
+}*)
+
+transition t4 (x y)
+requires { A[x] = L3 && A[y] <> L1 && W[y] = False }
+{ A[x] := L4;
+  S[x] := False
 }
+
 
 transition t5 (x y)
 requires { A[x] = L4 && S[y] = True && W[y] = False }
@@ -50,7 +63,7 @@ requires { A[x] = L5 && forall_other y. W[y] = False }
 { A[x] := L6 }
 
 transition t7_1 (x)
-requires { A[x] = L6 && forall_other j. (x < j || S[j] = False) }
+requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
 { A[x] := L7 }
 
 transition t8 (x)

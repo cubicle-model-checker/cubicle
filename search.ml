@@ -451,11 +451,13 @@ module BFS_base ( X : I ) = struct
 		   end
 	       end;
 	       let (ls, post), candidate_found = 
-                 if backforth && s.t_nb >= 0 then match X.subsuming_candidate s with 
-                   | [] -> X.pre s, false
-                   | l ->
+                 if backforth && s.t_nb >= 0 then 
+		   match X.subsuming_candidate s with 
+                     | [] -> X.pre s, false
+                     | l ->
                        List.iter (fun s' ->
-		         eprintf "Adding subsuming candidate : %a@." X.print_system s';
+		         eprintf "Adding subsuming candidate : %a@." 
+			   X.print_system s';
                        ) l;
                        candidates := l @ !candidates;
                        (l, []), true

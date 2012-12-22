@@ -287,30 +287,30 @@ let system s =
       List.fold_left 
 	(fun acc (n, t) -> 
 	   if Hstring.equal t Smt.Type.type_proc then n::acc else acc)
-	[] s.globals
+	[] (*s.globals*) s.consts
     in
 
     let t_globals = List.map fst s.globals in
     let t_arrays = List.map fst s.arrays in
 
     List.map (fun ((args, p) as un) ->
-		let arru = ArrayAtom.of_satom p in (* inutile ? *)
-		{ 
-		  t_globals = t_globals;
-		  t_arrays = t_arrays;
-		  t_from = [];
-		  t_init = s.init;
-		  t_invs = s.invs;
-		  t_cands = s.cands;
-		  t_unsafe = un;
-		  t_forward = s.forward;
-		  t_arru = arru;
-		  t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
-		  t_trans = s.trans;
-		  t_deleted = false;
-		  t_nb = Cube.new_cube_id ();
-		  t_nb_father = -1;
-		  t_glob_proc = glob_proc;
-		}
-	     ) s.unsafe
+      let arru = ArrayAtom.of_satom p in (* inutile ? *)
+      { 
+	t_globals = t_globals;
+	t_arrays = t_arrays;
+	t_from = [];
+	t_init = s.init;
+	t_invs = s.invs;
+	t_cands = s.cands;
+	t_unsafe = un;
+	t_forward = s.forward;
+	t_arru = arru;
+	t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
+	t_trans = s.trans;
+	t_deleted = false;
+	t_nb = Cube.new_cube_id ();
+	t_nb_father = -1;
+	t_glob_proc = glob_proc;
+      }
+    ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

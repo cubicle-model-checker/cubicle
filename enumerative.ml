@@ -51,12 +51,15 @@ let equal_state a1 a2 =
     !res
 
 let hash_state st =
+  eprintf "start hashing@.";
   let h = ref 1 in
   let n = ref 2 in
   for i = 0 to Array.length st - 1 do
+    eprintf "hash : %d -> %d@." i st.(i);
     h := !h * st.(i) + !n;
     n := 13 * !n + 7;      
   done;
+  eprintf "hash : le noeud %d devient %d@." (Array.length st) !h;
   !h
 
 module HST = Hashtbl.Make (struct 
@@ -136,25 +139,26 @@ let state_to_cube env st =
 let all_constr_terms () =
   List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
 
-let proc_terms =
+let terms_of_procs =
   List.map (fun x -> Elem (x, Var))
 
 let init_tables procs s =
   let var_terms = all_var_terms procs s in
-  let proc_terms = proc_terms procs in
-  let constr_terms = all_constr_terms () in
+  let proc_terms = terms_of_procs procs in (* constantes *)
+  let constr_terms = all_constr_terms () in (* constantes *)
   let nb_vars = STerm.cardinal var_terms in
-  let nb_consts = List.length proc_terms + List.length constr_terms in
+  let nb_procs = List.length proc_terms in
+  let nb_consts = nb_procs + List.length constr_terms in
   let ht = HT.create (nb_vars + nb_consts) in
   let i = ref 0 in
-  let proc_ids = ref [] in
   STerm.iter (fun t -> HT.add ht t !i; incr i) var_terms;
+  let proc_ids = ref [] in
   let first_proc = !i in
   List.iter (fun t -> HT.add ht t !i; proc_ids := !i :: !proc_ids; incr i)
     proc_terms;
   (* add an extra process in case we need it : change this to statically compute
      how many extra processes are needed *)
-  let ep = List.nth Ast.proc_vars (List.length proc_terms) in
+  let ep = List.nth Ast.proc_vars nb_procs in
   let all_procs = procs @ [ep] in
   HT.add ht (Elem (ep, Var)) !i;
   let extra_proc = !i in
@@ -209,8 +213,6 @@ let mkinit_s procs ({t_init = ia, init}) =
   let sa, (nargs, _) = proper_cube (mkinit ia init procs) in
   sa, nargs
 
-
-
 let write_atom_to_state env st = function
   | Atom.Comp (t1, Eq, t2) ->
       st.(HT.find env.id_terms t1) <- HT.find env.id_terms t2
@@ -222,7 +224,6 @@ let write_atom_to_state env st = function
   
 let write_cube_to_state env st =
   SAtom.iter (write_atom_to_state env st)
-
 
 let init_to_states env procs s =
   let nb = env.nb_vars in
@@ -775,7 +776,6 @@ let stateless_search procs init =
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   stateless_forward init procs env st_inits
 
-
 let explicit_states = HI.create 2_000_029
 
 let global_env = ref empty_env
@@ -807,8 +807,8 @@ let forward s procs env l =
   in
   forward_rec s procs trs l
 
-
 let search procs init =
+  let procs = procs (*@ init.t_glob_proc*) in
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
@@ -817,8 +817,6 @@ let search procs init =
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   forward init procs env st_inits
-
-  
 
 let localized_candidates_init env init_state =
   let a = ref (-1) in

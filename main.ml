@@ -52,7 +52,7 @@ let _ =
     | Parsing.Parse_error ->
 	let  loc = (lexeme_start_p lb, lexeme_end_p lb) in
 	report loc;
-        printf "syntax error\n@.";
+        printf "\nsyntax error\n@.";
 	exit 2
     | Typing.Error e -> 
 	printf "typing error: %a\n@." Typing.report e;
