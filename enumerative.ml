@@ -51,15 +51,15 @@ let equal_state a1 a2 =
     !res
 
 let hash_state st =
-  eprintf "start hashing@.";
+  (* eprintf "start hashing@."; *)
   let h = ref 1 in
   let n = ref 2 in
   for i = 0 to Array.length st - 1 do
-    eprintf "hash : %d -> %d@." i st.(i);
+    (* eprintf "hash : %d -> %d@." i st.(i); *)
     h := !h * st.(i) + !n;
     n := 13 * !n + 7;      
   done;
-  eprintf "hash : le noeud %d devient %d@." (Array.length st) !h;
+  (* eprintf "hash : le noeud %d devient %d@." (Array.length st) !h; *)
   !h
 
 module HST = Hashtbl.Make (struct 
