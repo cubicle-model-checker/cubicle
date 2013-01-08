@@ -157,17 +157,17 @@ let print_node fmt s =
     begin
       if List.length s.t_from  = 0 then
 	if s.t_nb >= 0 then
-	  fprintf fmt "%d [label=\"%a\", color = green, style=filled];" 
+	  fprintf fmt "%d [label=\"%a\", color = red, shape=tripleoctagon, style=filled];" 
 	    s.t_nb print_system_dot s
 	else
-	  fprintf fmt "%d [label=\"%a\", color = orange, style=filled];" 
+	  fprintf fmt "%d [label=\"%a\", color = orange, shape=doubleoctagon, style=filled];" 
 	    s.t_nb print_system_dot s
       else
 	let (tr, args, _)= List.hd s.t_from in 
 	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
 	  s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
 	if s.t_nb = 0 then
-	  fprintf fmt "%d [label=\"%a\", color = green, style = filled];" 
+	  fprintf fmt "%d [label=\"%a\", color = red, shape=tripleoctagon, style = filled];" 
 	    s.t_nb print_system_dot s
 	else 
 	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
@@ -187,13 +187,13 @@ let print_node fmt s =
 
 let print_bad fmt s =
   if List.length s.t_from  = 0 then
-      fprintf fmt "%d [label=\"%a\", color = red, style=filled];" 
+      fprintf fmt "%d [label=\"%a\", color = green, shape=doublecircle, style=filled];" 
 	s.t_nb print_system_dot s
   else
     let (tr, args, _)= List.hd s.t_from in 
     fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
       s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
-    fprintf fmt "%d [label=\"%a\", color = red, style = filled];" 
+    fprintf fmt "%d [label=\"%a\", color = green, shape=doublecircle, style = filled];" 
 	s.t_nb print_system_dot s
   
 
@@ -203,18 +203,18 @@ let print_subsumed_node cand fmt (s, db) =
       if List.length s.t_from  = 0 then
 	if verbose = 1 then
 	  if s.t_nb = 0 then 
-	    fprintf fmt "%d [color = green, style = filled];" s.t_nb
+	    fprintf fmt "%d [color = red, shape=tripleoctagon, style = filled];" s.t_nb
 	  else 
-	    fprintf fmt "%d [color = red];" s.t_nb
+	    fprintf fmt "%d [color = gray, fontcolor=gray];" s.t_nb
 	else
 	  begin
 	    (if s.t_nb = 0 then
 	      fprintf fmt 
-		"%d [label=\"%a\" , color = green, style=filled];" 
+		"%d [label=\"%a\" , color = red, shape=tripleoctagon,  style=filled];" 
 		s.t_nb print_system_dot s
 	    else 
 	      fprintf fmt 
-		"%d [label=\"%a\" color = red];" s.t_nb print_system_dot s);
+		"%d [label=\"%a\" color = gray, fontcolor=gray];" s.t_nb print_system_dot s);
 	    if verbose >= 2 then 
 	      begin
 		fprintf fmt "@.";
@@ -232,12 +232,12 @@ let print_subsumed_node cand fmt (s, db) =
 	  s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
 	if verbose = 1 then 
 	  if s.t_nb = 0 then
-	    fprintf fmt "%d [label=\"\" , color=green, style = filled];" s.t_nb
+	    fprintf fmt "%d [label=\"\" , color = red, shape=tripleoctagon, style = filled];" s.t_nb
 	  else 
-	    fprintf fmt "%d [label=\"\" color=red];" s.t_nb
+	    fprintf fmt "%d [label=\"\" color = gray, fontcolor=gray];" s.t_nb
 	else
 	  begin
-	    fprintf fmt "%d [label=\"%a\" color=red];" 
+	    fprintf fmt "%d [label=\"%a\" color = gray, fontcolor=gray];" 
 	      s.t_nb print_system_dot s;
 	    if verbose >= 2 then
 	      begin

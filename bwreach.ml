@@ -860,24 +860,14 @@ let local_parts =
           ) acc acc
       ) sa init
     in
-    (* let parts = SSAtoms.fold (fun sa' acc -> *)
-    (*   eprintf "expand %a ==@." Pretty.print_cube sa'; *)
-    (*   List.fold_left (fun acc (esa, _) ->  *)
-    (*   eprintf "  %a -----@." Pretty.print_cube esa; *)
-    (*   SSAtoms.add esa acc)  *)
-    (*     acc (Cube.expand_cube sa') *)
-    (* ) parts SSAtoms.empty *)
-    (* in *)
     let parts = SSAtoms.fold (fun sa' acc ->
       if SAtom.equal sa' sa then acc
-      (* else if SAtom.cardinal sa' <> 3 then acc *)
+      (* Heuristic : usefull for flash *)
       else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > 1 then acc
       else
         let sa', (args', _) = proper_cube sa' in
-        (* if List.exists (SAtom.subset sa') !bad_candidates then acc *)
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc
-        (* else if Forward.useless_candidate sa' then acc *)
         else
           let d = all_permutations args' args' in
           let perms = List.fold_left (fun p sigma ->
@@ -894,8 +884,6 @@ let local_parts =
 	        t_nb = !cpt;
 	        t_nb_father = -1;
               } in
-            (* if List.exists (Forward.reachable_on_trace s') !bad_traces then acc *)
-            (* else *) 
             s' :: p) [] d
           in
           perms :: acc

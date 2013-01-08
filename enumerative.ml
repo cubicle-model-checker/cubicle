@@ -759,8 +759,8 @@ let local_stateless_forward s procs loc_cands env l =
 	  if debug && verbose > 1 then
             eprintf "%d : %a\n@." !cpt_f
               Pretty.print_cube (state_to_cube env st);
-	  if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
-	    !cpt_f (List.length to_do);
+	  if not quiet && !cpt_f mod 1000 = 0 then
+            eprintf "%d (%d)@." !cpt_f (List.length to_do);
 	  HI.add h_visited hst ();
 	  forward_rec s procs trs loc_cands to_do
   in
@@ -800,8 +800,8 @@ let forward s procs env l =
 	  if debug && verbose > 1 then
             eprintf "%d : %a\n@." !cpt_f
               Pretty.print_cube (state_to_cube env st);
-	  if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@."
-	    !cpt_f !cpt_q;
+	  if not quiet && !cpt_f mod 1000 = 0 then
+            eprintf "%d (%d)@." !cpt_f !cpt_q;
 	  HI.add explicit_states hst st;
 	  forward_rec s procs trs to_do
   in
@@ -952,13 +952,13 @@ let smallest_to_resist_on_trace check ls =
       let cpt = ref 0 in
       HI.iter (fun _ st ->
         incr cpt;
-        if !cpt mod 1000 = 0 then eprintf ".@?";
+        if not quiet && !cpt mod 1000 = 0 then eprintf ".@?";
         cands := List.filter (fun p -> 
           List.for_all (fun (c, _) -> check_cand env st c) p
         ) !cands;
         if !cands = [] then raise Exit;
       ) explicit_states;
-      eprintf "@.";
+      if not quiet then eprintf "@.";
       List.iter (function 
         | (_,s) :: _ -> if check s then raise (Sustainable s)
         | [] -> ()
@@ -966,7 +966,7 @@ let smallest_to_resist_on_trace check ls =
       []
     with
       | Exit | Not_found -> 
-          eprintf "@.";
+          if not quiet then eprintf "@.";
           []
       | Sustainable s -> [s]
 

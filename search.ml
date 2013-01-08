@@ -206,8 +206,9 @@ module Profiling = struct
     printf "Max Number of processes          : %d@." !cpt_process;
     if delete then 
       printf "Number of deleted nodes          : %d@." del;
-    if true || gen_inv then 
-      printf "Number of invariants             : %d@." (List.length inv);  
+    if gen_inv then 
+      printf "Number of invariants             : %d@." (List.length inv); 
+    printf "Number of invariants             : %d@." (List.length used_cands);  
     printf "----------------------------------------------@.";
     if profiling then begin
       print_time_pre ();
@@ -380,6 +381,7 @@ module BFS_base ( X : I ) = struct
 	  fprintf fmt "digraph G {@.";
 	  fprintf fmt "   orientation = portrait;@.";
 	  fprintf fmt "   fontsize = 10;@.";
+	  fprintf fmt "   rankdir = BT;@.";
 	  let close_dot () =
 	    fprintf fmt "}@.";
 	    if not profiling then
@@ -415,14 +417,15 @@ module BFS_base ( X : I ) = struct
 	       let post, cands = extract_candidates db' !candidates in
 	       cpt_cands := !cpt_cands + (List.length post);
 	       if post <> [] then begin
-	       	 eprintf "\n>>> Adding %d candidates (total %d) :@."
-		   (List.length post) !cpt_cands;
+	       	 if not quiet then 
+                   eprintf "\n>>> Adding %d candidates (total %d) :@."
+		     (List.length post) !cpt_cands;
                  let q' = Queue.create () in
                  Queue.transfer q q';
 		 List.iter (fun s ->
 		   (* eprintf "\n (\* %d *\) unsafe (z1 z2) = { %a }@."  *)
 		   (*   !cpt_cands X.print_system s; *)
-		   eprintf ">> %a@." X.print_system s;
+		   if not quiet then eprintf ">> %a@." X.print_system s;
 		   Queue.add (cpt, s) q) post;
                  Queue.transfer q' q;
 		 candidates := cands;
@@ -455,10 +458,10 @@ module BFS_base ( X : I ) = struct
 		   match X.subsuming_candidate s with 
                      | [] -> X.pre s, false
                      | l ->
-                       List.iter (fun s' ->
-		         eprintf "Adding subsuming candidate : %a@." 
-			   X.print_system s';
-                       ) l;
+                       if not quiet then 
+                         List.iter (fun s' ->
+		           eprintf "Adding subsuming candidate : %a@." X.print_system s';
+                         ) l;
                        candidates := l @ !candidates;
                        (l, []), true
                  else X.pre s, false
