@@ -1,16 +1,16 @@
-type location = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8
+type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
 
 array A[proc] : location
 array B[proc] : bool
 array S[proc] : bool
 array W[proc] : bool 
 
-init (x) { A[x] = L8 && S[x] = False && W[x] = False && B[x] = False }
+init (x) { A[x] = L0 && S[x] = False && W[x] = False && B[x] = False }
  
 unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
 
 transition t0 (x)
-requires { A[x] = L8 }
+requires { A[x] = L0 }
 { 
   A[x] := L1;
   B[x] := True;
@@ -26,29 +26,29 @@ transition t2 (x)
 requires { A[x] = L2 }
 { A[x] := L3; S[x] := True; W[x] := True }
 
-(*transition t3 (x)
-requires { A[x] = L3 && forall_other y. ( B[y] =  False || W[y] = True ) }
+transition t3 (x)
+requires { A[x] = L3 && forall_other y. ( B[y] =  True || W[y] = True ) }
 { A[x] := L5;
   W[x] := False;
-}*)
+}
 
-transition t3 (x)
+(*transition t3 (x)
 requires { A[x] = L3 && forall_other y. ( A[y] =  L1 || W[y] = True ) }
 { A[x] := L5;
   W[x] := False;
-}
-
-(*transition t4 (x y)
-requires { A[x] = L3 && B[y] = False && W[y] = False }
-{ A[x] := L4;
-  S[x] := False
 }*)
 
 transition t4 (x y)
-requires { A[x] = L3 && A[y] <> L1 && W[y] = False }
+requires { A[x] = L3 && B[y] = False && W[y] = False }
 { A[x] := L4;
   S[x] := False
 }
+
+(*transition t4 (x y)
+requires { A[x] = L3 && A[y] <> L1 && W[y] = False }
+{ A[x] := L4;
+  S[x] := False
+}*)
 
 
 transition t5 (x y)
@@ -62,14 +62,13 @@ transition t6 (x)
 requires { A[x] = L5 && forall_other y. W[y] = False }
 { A[x] := L6 }
 
-transition t7_1 (x)
+transition t7 (x)
 requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
 { A[x] := L7 }
 
 transition t8 (x)
 requires { A[x] = L7 }
-{ A[x] := L8;
+{ A[x] := L0;
   S[x] := False;
   B[x] := False }
-
 
