@@ -56,8 +56,11 @@ let hash_state st =
   let n = ref 2 in
   for i = 0 to Array.length st - 1 do
     (* eprintf "hash : %d -> %d@." i st.(i); *)
-    h := !h * st.(i) + !n;
-    n := 13 * !n + 7;      
+    let v = st.(i) in
+    if v <> -1 then begin
+      h := !h * (st.(i) + 2) + !n;
+      n := 13 * !n + 7;
+    end
   done;
   (* eprintf "hash : le noeud %d devient %d@." (Array.length st) !h; *)
   !h

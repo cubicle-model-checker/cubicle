@@ -11,64 +11,36 @@ unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
 
 transition t0 (x)
 requires { A[x] = L0 }
-{ 
-  A[x] := L1;
-  B[x] := True;
-}
+{ A[x] := L1; B[x] := True }
 
 transition t1 (x)
 requires { A[x] = L1 && forall_other y. S[y] = False }
-{ 
-  A[x] := L2;
-}
+{ A[x] := L2; B[x] := False }
 
 transition t2 (x)
 requires { A[x] = L2 }
 { A[x] := L3; S[x] := True; W[x] := True }
 
-transition t3 (x)
-requires { A[x] = L3 && forall_other y. ( B[y] =  True || W[y] = True ) }
-{ A[x] := L5;
-  W[x] := False;
-}
+transition t3_then (x y)
+requires { A[x] = L3 && B[y] = False && W[y] = False }
+{ A[x] := L4; S[x] := False }
 
-(*transition t3 (x)
-requires { A[x] = L3 && forall_other y. ( A[y] =  L1 || W[y] = True ) }
-{ A[x] := L5;
-  W[x] := False;
-}*)
+transition t3_else (x)
+requires { A[x] = L3 && forall_other y. ( B[y] =  True || W[y] = True ) }
+{ A[x] := L5; W[x] := False }
 
 transition t4 (x y)
-requires { A[x] = L3 && B[y] = False && W[y] = False }
-{ A[x] := L4;
-  S[x] := False
-}
-
-(*transition t4 (x y)
-requires { A[x] = L3 && A[y] <> L1 && W[y] = False }
-{ A[x] := L4;
-  S[x] := False
-}*)
-
-
-transition t5 (x y)
 requires { A[x] = L4 && S[y] = True && W[y] = False }
-{ A[x] := L5;
-  S[x] := True;
-  W[x] := False; 
-}
+{ A[x] := L5; S[x] := True; W[x] := False }
 
-transition t6 (x)
+transition t5 (x)
 requires { A[x] = L5 && forall_other y. W[y] = False }
 { A[x] := L6 }
 
-transition t7 (x)
+transition t6 (x)
 requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
 { A[x] := L7 }
 
-transition t8 (x)
+transition t7 (x)
 requires { A[x] = L7 }
-{ A[x] := L0;
-  S[x] := False;
-  B[x] := False }
-
+{ A[x] := L0; S[x] := False }
