@@ -110,7 +110,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.2.5
+VERSION=0.3b
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -292,6 +292,7 @@ export:
 	mkdir -p export/$(EXPORTDIR)/smt
 	mkdir -p export/$(EXPORTDIR)/common
 	mkdir -p export/$(EXPORTDIR)/examples
+	mkdir -p export/$(EXPORTDIR)/emacs
 	cp $(SMTFILES) export/$(EXPORTDIR)/smt
 	cp $(COMMONFILES) export/$(EXPORTDIR)/common
 	cp $(FILES) export/$(EXPORTDIR)/

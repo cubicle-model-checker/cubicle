@@ -843,7 +843,7 @@ let nb_neq s =
 
 
 let local_parts =
-  let forward_procs = Forward.procs_from_nb enumerative in
+  (* let forward_procs = Forward.procs_from_nb enumerative in *)
   let cpt = ref 0 in
   fun ({ t_unsafe = (args, sa) } as s) ->
     let init = 
@@ -873,7 +873,8 @@ let local_parts =
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc
         else
-          let d = List.rev (all_permutations args' forward_procs) in
+          (* let d = List.rev (all_permutations args' forward_procs) in *)
+          let d = List.rev (all_permutations args' args') in
           (* keep list.rev in order for the first element of perm to be
              a normalized cube as we will keep this only one if none of
              perm can be disproved *)
