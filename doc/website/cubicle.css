@@ -153,6 +153,11 @@ ul ul li {
     background-color: lightblue;
 }
 
+#content ul li {
+    margin-left:3em;
+}
+
+
 .inlinecode {
     font-family: monospace, "Courier New";
     color: #0000c8;
