@@ -40,9 +40,9 @@
 (define-derived-mode cubicle-mode fundamental-mode "Cubicle"
   "A major mode for editing Cubicle files."
   :syntax-table cubicle-mode-syntax-table
-  (setq comment-start "(*")  
-  (setq comment-end "*)")
-  (setq compile-command 
+  (set (make-local-variable 'comment-start) "(*")  
+  (set (make-local-variable 'comment-end) "*)")
+  (set (make-local-variable 'compile-command)
 	(format "cubicle %s" (file-name-nondirectory buffer-file-name)))
   (set (make-local-variable 'font-lock-defaults)'(cubicle-font-lock-keywords))
   )
