@@ -125,6 +125,7 @@ ul ul li {
     display: block;
     margin-left:10em;
     margin-right:15em;
+    padding-bottom:3em;
 }
 
 #content  p, #content h2, #content h3 {
@@ -150,6 +151,12 @@ ul ul li {
     padding-left: 0.8em;
     margin: 15px;
     background-color: lightblue;
+}
+
+.inlinecode {
+    font-family: monospace, "Courier New";
+    color: #0000c8;
+    font-size: 1.0em;
 }
 
 .code {
@@ -202,6 +209,14 @@ th {
     background-color: #DDDAEC;
 }
 
+tr.zebra {
+    background-color: #DDDAEC;
+}
+
+tr.zebra:nth-of-type(odd) {
+    background-color: #EEEEFF;
+}
+
 #content table {
     empty-cells: hide;
     text-align: center;
@@ -209,6 +224,10 @@ th {
     min-width: 400px;
 }
 
+th.colsep,td.colsep
+{
+    border-left:4px solid white;
+}
 
 #content td.opt-desc {
     vertical-align: top;
