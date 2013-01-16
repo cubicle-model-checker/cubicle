@@ -676,7 +676,10 @@ let rec origin s = match s.t_from with
 let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
   List.iter (fun sigma ->
     bad_candidates := 
-      ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar) :: !bad_candidates
+      fst 
+        (proper_cube
+           (ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar))) ::
+      !bad_candidates
   ) (all_permutations a_args args);
   match trace with
     | Some tr ->
@@ -840,6 +843,7 @@ let nb_neq s =
 
 
 let local_parts =
+  let forward_procs = Forward.procs_from_nb enumerative in
   let cpt = ref 0 in
   fun ({ t_unsafe = (args, sa) } as s) ->
     let init = 
@@ -869,7 +873,10 @@ let local_parts =
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc
         else
-          let d = all_permutations args' args' in
+          let d = List.rev (all_permutations args' forward_procs) in
+          (* keep list.rev in order for the first element of perm to be
+             a normalized cube as we will keep this only one if none of
+             perm can be disproved *)
           let perms = List.fold_left (fun p sigma ->
             let sa' = subst_atoms sigma sa' in
             let ar' = ArrayAtom.of_satom sa' in
@@ -907,6 +914,7 @@ let local_parts =
           (*   SAtom.compare (snd s1.t_unsafe) (snd s2.t_unsafe) *)
     ) parts
 
+(* TODO : approx trees *)
 
 let subsuming_candidate s =
   let parts = local_parts s in

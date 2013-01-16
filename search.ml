@@ -382,6 +382,7 @@ module BFS_base ( X : I ) = struct
 	  fprintf fmt "   orientation = portrait;@.";
 	  fprintf fmt "   fontsize = 10;@.";
 	  fprintf fmt "   rankdir = BT;@.";
+          fprintf fmt "   concentrate=true;@.";
 	  let close_dot () =
 	    fprintf fmt "}@.";
 	    if not profiling then

@@ -129,10 +129,6 @@ let print_unsafe fmt s =
 let rec print_atom_dot fmt = function
   | True -> fprintf fmt "true"
   | False -> fprintf fmt "false"
-  | Comp (x, Eq,  Elem (n, Constr)) when Hstring.equal n htrue -> 
-      fprintf fmt "%a" print_term x
-  | Comp (x, Eq, Elem (n, Constr)) when  Hstring.equal n hfalse-> 
-      fprintf fmt "!%a" print_term x
   | Comp (x, op, y) -> 
       fprintf fmt "%a %s %a" print_term x (op_comp op) print_term y
   | Ite (la, a1, a2) ->
@@ -198,6 +194,7 @@ let print_bad fmt s =
   
 
 let print_subsumed_node cand fmt (s, db) =
+  let db = List.filter (fun x -> x <> s.t_nb) db in 
   if dot && verbose > 0 then
     begin
       if List.length s.t_from  = 0 then
@@ -219,10 +216,10 @@ let print_subsumed_node cand fmt (s, db) =
 	      begin
 		fprintf fmt "@.";
 		List.iter 
-		  (fun d -> fprintf fmt " %d -> %d [style=dotted, color=%s %s] @." 
+		  (fun d -> fprintf fmt " %d -> %d [style=dashed, arrowhead=onormal, color=%s %s] @." 
 		     s.t_nb d 
-                    (if cand then "orange" else "black")
-                    (if cand then "" else ", constraint=false")
+                    (if cand then "orange" else "gray")
+                    (if cand then ", penwidth=4" else ", constraint=false")
                   ) db
 	      end
 	  end
@@ -243,10 +240,10 @@ let print_subsumed_node cand fmt (s, db) =
 	      begin
 		fprintf fmt "@.";
 		List.iter 
-		  (fun d -> fprintf fmt " %d -> %d [style=dotted, color=%s %s] @." 
+		  (fun d -> fprintf fmt " %d -> %d [style=dashed, arrowhead=onormal, color=%s %s] @." 
 		     s.t_nb d
-                    (if cand then "orange" else "black")
-                    (if cand then "" else ", constraint=false")
+                    (if cand then "orange" else "gray")
+                    (if cand then ", penwidth=4" else ", constraint=false")
                   ) db
 	      end
 	  end

@@ -50,26 +50,11 @@ let equal_state a1 a2 =
     done;
     !res
 
-let hash_state st =
-  (* eprintf "start hashing@."; *)
-  let h = ref 1 in
-  let n = ref 2 in
-  for i = 0 to Array.length st - 1 do
-    (* eprintf "hash : %d -> %d@." i st.(i); *)
-    let v = st.(i) in
-    if v <> -1 then begin
-      h := !h * (st.(i) + 2) + !n;
-      n := 13 * !n + 7;
-    end
-  done;
-  (* eprintf "hash : le noeud %d devient %d@." (Array.length st) !h; *)
-  !h
-
-module HST = Hashtbl.Make (struct 
-  type t = state
-  let equal = equal_state
-  let hash = hash_state
-end)
+(* module HST = Hashtbl.Make (struct  *)
+(*   type t = state *)
+(*   let equal = equal_state *)
+(*   let hash = hash_state *)
+(* end) *)
 
 type st_req = int * op_comp * int
 
@@ -94,6 +79,7 @@ type env = {
   first_proc : int;
   extra_proc : int;
   all_procs : Hstring.t list;
+  proc_ids : int list;
   id_terms : int HT.t;
   id_true : int;
   id_false : int;
@@ -107,6 +93,7 @@ let empty_env = {
   first_proc = 0;
   extra_proc = 0;
   all_procs = [];
+  proc_ids = [];
   id_terms = HT.create 0;
   id_true = 0;
   id_false = 0;
@@ -183,6 +170,7 @@ let init_tables procs s =
     first_proc = first_proc;
     extra_proc = extra_proc;
     all_procs = all_procs;
+    proc_ids = proc_ids;
     id_terms = ht;
     id_true = id_true;
     id_false = id_false;
@@ -197,6 +185,40 @@ let apply_subst env st sigma =
     with Not_found -> ()
   done;
   st'
+
+let normalize_state env st =
+  let met = ref [] in
+  let remaining = ref env.proc_ids in
+  let sigma = ref [] in
+  for i = 0 to Array.length st - 1 do
+    let v = st.(i) in
+    if !remaining <> [] then
+      let r = List.hd !remaining in
+      if env.first_proc <= v && v < env.extra_proc && 
+        not (List.mem v !met) && v <> r then begin
+          met := v :: !met;
+          remaining := List.tl !remaining;
+          sigma := (v,r) :: (r,v) :: !sigma
+        end;
+  done;
+  apply_subst env st !sigma
+
+
+let hash_state st =
+  (* eprintf "start hashing@."; *)
+  let h = ref 1 in
+  (*let n = ref 2 in*)
+  for i = 0 to Array.length st - 1 do
+    (* eprintf "hash : %d -> %d@." i st.(i); *)
+    let v = st.(i) in
+    if v <> -1 then begin
+      (*h := !h * (v + 2) + !n;*)
+      (*n := 13 * !n + 7;*)
+      h := (!h + 7) * (v + 11);
+    end
+  done;
+  (* eprintf "hash : le noeud %d devient %d@." (Array.length st) !h; *)
+  !h
 
 
 let mkinit arg init args =
@@ -450,6 +472,8 @@ let transitions_to_func_aux procs env reduce acc { tr_args = tr_args;
 		                                   tr_upds = upds; 
 		                                   tr_nondets = nondets } =
     (* let _, others = Forward.missing_args procs tr_args in *)
+  if List.length tr_args > List.length procs then acc
+  else 
     let d = all_permutations tr_args procs in
     (* do it even if no arguments *)
     let d = if d = [] then [[]] else d in
