@@ -739,7 +739,7 @@ let rec search_bogus_invariants search invariants candidates uns =
 	  (remove_cand o faulty candidates uns) uns
 
 
-let search_backtrack_backforth search invariants uns =
+let search_backtrack_brab search invariants uns =
   let candidates = ref [] in
   let rec search_rec uns =
     try
@@ -1096,7 +1096,7 @@ let system uns =
 
   end
 
-  else if enumerative <> -1 && backforth then begin
+  else if do_brab then begin
 
     let procs = Forward.procs_from_nb enumerative in
     eprintf "STATEFULL ENUMERATIVE FORWARD :\n-------------\n@.";
@@ -1107,7 +1107,7 @@ let system uns =
     if only_forward then exit 0;
     (* search_bogus_invariants search invariants candidates uns *)
     (* search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:(ref []) uns *)
-    search_backtrack_backforth search invariants uns
+    search_backtrack_brab search invariants uns
 
   end
 

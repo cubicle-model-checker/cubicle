@@ -116,6 +116,8 @@ module Profiling = struct
 
   let cpt_process = ref 0
 
+  let cpt_restart = ref (-1)
+
   let update_nb_proc s =
     cpt_process := max !cpt_process s
     
@@ -195,7 +197,7 @@ module Profiling = struct
   let print_report nb inv del used_cands print_system =
     if used_cands <> [] then begin
       printf "\n-----------------\n";
-      printf "Used candidates :\n";
+      printf "Inferred candidates :\n";
       printf "-----------------@.";
       List.iter (fun i -> printf "\n%a@." print_system i) used_cands
     end;
@@ -209,6 +211,7 @@ module Profiling = struct
     if gen_inv then 
       printf "Number of invariants             : %d@." (List.length inv); 
     printf "Number of invariants             : %d@." (List.length used_cands);  
+    printf "Restarts                         : %d@." !cpt_restart;
     printf "----------------------------------------------@.";
     if profiling then begin
       print_time_pre ();
@@ -342,6 +345,7 @@ module BFS_base ( X : I ) = struct
   let search 
       inv_search invgen ~invariants ~visited ~forward_nodes ~candidates uns =
 
+    incr Profiling.cpt_restart;
     let uns = if lazyinv then uns else !candidates@uns in
 
     let discharging_allowed = 
@@ -455,7 +459,7 @@ module BFS_base ( X : I ) = struct
 		   end
 	       end;
 	       let (ls, post), candidate_found = 
-                 if backforth && s.t_nb >= 0 then 
+                 if do_brab && s.t_nb >= 0 then 
 		   match X.subsuming_candidate s with 
                      | [] -> X.pre s, false
                      | l ->

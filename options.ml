@@ -40,11 +40,11 @@ let only_forward = ref false
 let gen_inv = ref false
 let forward_inv = ref (-1)
 let enumerative = ref (-1)
+let brab = ref (-1)
 let localized = ref false 
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
-let backforth = ref false
 
 let post_strategy = ref (-1)
 let delete = ref true
@@ -92,8 +92,8 @@ let specs =
                 " add candidate invariants in a lazy way (BFS only)";
     "-refine", Arg.Set refine, 
                 " refine the selection of candidates (if no stateless search) ";
-    "-backforth", Arg.Set backforth,
-                " interleaves backward reasoning and forward invariant generations";
+    "-brab", Arg.Set_int brab,
+                "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
     "-stateless", Arg.Set stateless, " stateless forward search";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
@@ -133,7 +133,9 @@ let file = !file
 let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
-let enumerative = !enumerative
+let brab = !brab
+let enumerative = if brab <> -1 then brab else !enumerative
+let do_brab = if brab <> -1 then true else false
 let localized = !localized
 let refine = !refine && not !stateless
 let lazyinv = !lazyinv
@@ -152,4 +154,3 @@ let post_strategy =
 let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
-let backforth = !backforth
