@@ -1099,7 +1099,7 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
 
 
 
-(*************** Operations with tries (Amit Goel) *******************)
+(*************** Operations with tries () *******************)
 
 let invert_subst = List.map (fun (x,y) -> y,x)
 
