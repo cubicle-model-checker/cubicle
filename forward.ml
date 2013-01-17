@@ -1154,6 +1154,10 @@ let potential_update l trs =
 
 module MM = Hstring.HMap
 
+let mm_for_all f m = 
+  try MM.iter (fun x y -> ignore (f x y || raise Exit)) m; true
+  with Exit -> false
+
 let subset_node s1 s2 = 
   SAtom.subset s1 s2 || 
     try
@@ -1169,7 +1173,7 @@ let subset_node s1 s2 =
 	       | _ -> raise Exit ) s MM.empty
       in
       if MM.is_empty neqs then raise Exit;
-      MM.for_all 
+      mm_for_all 
 	(fun x cs -> 
 	   SAtom.exists 
 	     (fun a ->
