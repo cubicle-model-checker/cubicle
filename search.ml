@@ -196,7 +196,7 @@ module Profiling = struct
 
   let print_report nb inv del used_cands print_system =
     if used_cands <> [] then begin
-      printf "\n--------------------\n";
+      printf "\n---------------------\n";
       printf "Inferred invariants :\n";
       printf "---------------------@.";
       List.iter (fun i -> printf "\n%a@." print_system i) used_cands
