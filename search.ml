@@ -511,7 +511,8 @@ module BFS_base ( X : I ) = struct
 
 	       if inv = [] then begin
                  if candidate_found then begin
-	           if dot then fprintf fmt "@[%a@]@." X.print_cand (s, List.map (fun sc -> sc.t_nb) ls);
+	           if dot then fprintf fmt "@[%a@]@."
+                     X.print_cand (s, List.map (fun sc -> sc.t_nb) ls);
                    (* A candidate was added, in this case treat it before *)
                    let q' = Queue.create () in
                    Queue.transfer q q';
@@ -912,18 +913,18 @@ module DFSHL ( X : I ) = struct
     	if c <> 0 then c else Pervasives.compare l2 l1
 
     (* efficient bfs *)
-    let compare (l1, s1) (l2, s2) =
-      let v1 = X.size s1 in
-      let v2 = X.size s2 in
-      let c = Pervasives.compare v1 v2 in
-      if c <> 0 then c else
-        let c1 = X.card s1 in
-        let c2 = X.card s2 in
-        let c = Pervasives.compare c1 c2 in
-        if c <> 0 then c else
-    	  (* let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in *)
-          (* if c <> 0 then c else *)
-            Pervasives.compare l2 l1
+    (* let compare (l1, s1) (l2, s2) = *)
+    (*   let v1 = X.size s1 in *)
+    (*   let v2 = X.size s2 in *)
+    (*   let c = Pervasives.compare v1 v2 in *)
+    (*   if c <> 0 then c else *)
+    (*     let c1 = X.card s1 in *)
+    (*     let c2 = X.card s2 in *)
+    (*     let c = Pervasives.compare c1 c2 in *)
+    (*     if c <> 0 then c else *)
+    (* 	  (\* let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in *\) *)
+    (*       (\* if c <> 0 then c else *\) *)
+    (*         Pervasives.compare l2 l1 *)
       
   end
 

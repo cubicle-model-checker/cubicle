@@ -17,6 +17,8 @@ open Ast
 open Atom
 open Cube
 
+module H = Hstring
+
 type inst_trans =
     {
       i_reqs : SAtom.t;
@@ -633,14 +635,6 @@ module HI = Hashtbl.Make
   let hash x = x end)
 
 
-(* let _ = Ocamlviz.init () *)
-
-(* let h_visited = Ocamlviz.Hashtable.observe ~period:100 "h_visited" *)
-(*   (HA.create 200_029) *)
-
-(* let h_visited = HSA.create 200_029 *)
-
-
 let visited_from_h s h = HSA.fold (fun sa _ acc ->
   let sa, (nargs, _) = proper_cube sa in
   let ar = ArrayAtom.of_satom sa in
@@ -662,35 +656,35 @@ let forward s procs trs l =
   let rec forward_rec s procs trs = function
     | [] -> eprintf "Total forward nodes : %d@." !cpt_f
     | (sa, args) :: to_do ->
-    (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
-    (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
-    (*   raise (Search.Unsafe init) *)
-    (* end; *)
-      if false && !cpt_f > 400_000 then ()
-      else (
-    (* if fixpoint ~invariants:[] ~visited init then *)
-    (* if easy_fixpoint init visited then *)
-    (** Very incomplete hash test **)
-	if HSA.mem h_visited sa then
-	  forward_rec s procs trs to_do
-	else
-	  let new_td =
-	    List.fold_left (fun new_td tr ->
-	      List.fold_left (fun new_td s ->
-		s :: new_td
-	      ) new_td (post_inst sa args procs tr)
-	    ) [] trs
-	  in
-	  incr cpt_f;
-	  if debug then 
-	    eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
-	  else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
-	    (List.length to_do + List.length new_td);
-	  (* HSA.add h_visited sa (); *)
-	  let d = all_permutations args args in
-	  List.iter (fun sigma -> HSA.add h_visited (subst_atoms sigma sa) ()) d;
-	  forward_rec s procs trs (List.rev_append new_td to_do)
-      )
+        (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
+        (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
+        (*   raise (Search.Unsafe init) *)
+        (* end; *)
+        if false && !cpt_f > 400_000 then ()
+        else (
+          (* if fixpoint ~invariants:[] ~visited init then *)
+          (* if easy_fixpoint init visited then *)
+          (** Very incomplete hash test **)
+	  if HSA.mem h_visited sa then
+	    forward_rec s procs trs to_do
+	  else
+	    let new_td =
+	      List.fold_left (fun new_td tr ->
+	        List.fold_left (fun new_td s ->
+		  s :: new_td
+	        ) new_td (post_inst sa args procs tr)
+	      ) [] trs
+	    in
+	    incr cpt_f;
+	    if debug then 
+	      eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
+	    else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
+	      (List.length to_do + List.length new_td);
+	    (* HSA.add h_visited sa (); *)
+	    let d = all_permutations args args in
+	    List.iter (fun sigma -> HSA.add h_visited (subst_atoms sigma sa) ()) d;
+	    forward_rec s procs trs (List.rev_append new_td to_do)
+        )
   in
   forward_rec s procs trs l;
   h_visited
@@ -702,33 +696,33 @@ let forward2 s procs trs l =
   let rec forward_rec s procs trs = function
     | [] -> eprintf "Total forward nodes : %d@." !cpt_f
     | l :: to_do ->
-    (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
-    (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
-    (*   raise (Search.Unsafe init) *)
-    (* end; *)
-      if false && !cpt_f > 400_000 then ()
-      else (
-    (* if fixpoint ~invariants:[] ~visited init then *)
-    (* if easy_fixpoint init visited then *)
-    (** Very incomplete hash test **)
-	if List.exists (fun (sa, _) -> HSA.mem h_visited sa) l then
-	  forward_rec s procs trs to_do
-	else
-	  let new_td =
-	    List.fold_left (fun new_td (sa, args) ->
-	      incr cpt_f;
-	      HSA.add h_visited sa ();
-	      if debug then 
-		eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
-	      else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	      List.fold_left (fun new_td tr ->
-		let ls = post sa args procs tr in
-		if ls = [] then new_td else ls :: new_td
-	      ) new_td trs
-	    ) [] l
-	  in
-	  forward_rec s procs trs (List.rev_append new_td to_do)
-      )
+        (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
+        (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
+        (*   raise (Search.Unsafe init) *)
+        (* end; *)
+        if false && !cpt_f > 400_000 then ()
+        else (
+          (* if fixpoint ~invariants:[] ~visited init then *)
+          (* if easy_fixpoint init visited then *)
+          (** Very incomplete hash test **)
+	  if List.exists (fun (sa, _) -> HSA.mem h_visited sa) l then
+	    forward_rec s procs trs to_do
+	  else
+	    let new_td =
+	      List.fold_left (fun new_td (sa, args) ->
+	        incr cpt_f;
+	        HSA.add h_visited sa ();
+	        if debug then 
+		  eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
+	        else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
+	        List.fold_left (fun new_td tr ->
+		  let ls = post sa args procs tr in
+		  if ls = [] then new_td else ls :: new_td
+	        ) new_td trs
+	      ) [] l
+	    in
+	    forward_rec s procs trs (List.rev_append new_td to_do)
+        )
   in
   forward_rec s procs trs l;
   h_visited
@@ -768,35 +762,35 @@ let stateless_forward s procs trs all_var_terms l =
   let rec forward_rec s procs trs mc = function
     | [] -> eprintf "Total forward nodes : %d@." !cpt_f; mc
     | (sa, args) :: to_do ->
-      let hsa = SAtom.hash sa in
-      if HI.mem h_visited hsa then
-	forward_rec s procs trs mc to_do
-      else
-	let new_td =
-	  List.fold_left (fun new_td tr ->
-	    List.fold_left (fun new_td s ->
-	  (* if fixpoint ~invariants:[] ~visited s then new_td *)
-	  (* else *) 
-	      (* if HI.mem h_visited (SAtom.hash (fst s)) then new_td else *)
-	      s :: new_td
-	    ) new_td (post_inst sa args procs tr)
-	  ) [] trs
-	in
-	incr cpt_f;
-	
-	if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
-	else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
-	  (List.length to_do + List.length new_td);
-	(* HI.add h_visited hsa (); *)
-	(* let mc = add_compagnions_from_node all_var_terms sa mc in *)
-	let d = all_permutations args args in
-	let mc = 
-	  List.fold_left (fun mc sigma ->
-	    let sa = subst_atoms sigma sa in
-	    HI.add h_visited (SAtom.hash sa) ();
-	    add_compagnions_from_node all_var_terms sa mc
-	  ) mc d in
-	forward_rec s procs trs mc (List.rev_append new_td to_do)
+        let hsa = SAtom.hash sa in
+        if HI.mem h_visited hsa then
+	  forward_rec s procs trs mc to_do
+        else
+	  let new_td =
+	    List.fold_left (fun new_td tr ->
+	      List.fold_left (fun new_td s ->
+	        (* if fixpoint ~invariants:[] ~visited s then new_td *)
+	        (* else *) 
+	        (* if HI.mem h_visited (SAtom.hash (fst s)) then new_td else *)
+	        s :: new_td
+	      ) new_td (post_inst sa args procs tr)
+	    ) [] trs
+	  in
+	  incr cpt_f;
+	  
+	  if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
+	  else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
+	    (List.length to_do + List.length new_td);
+	  (* HI.add h_visited hsa (); *)
+	  (* let mc = add_compagnions_from_node all_var_terms sa mc in *)
+	  let d = all_permutations args args in
+	  let mc = 
+	    List.fold_left (fun mc sigma ->
+	      let sa = subst_atoms sigma sa in
+	      HI.add h_visited (SAtom.hash sa) ();
+	      add_compagnions_from_node all_var_terms sa mc
+	    ) mc d in
+	  forward_rec s procs trs mc (List.rev_append new_td to_do)
   in
   forward_rec s procs trs MA.empty l
   
@@ -826,24 +820,12 @@ let mkinit arg init args =
 let mkinit_s procs ({t_init = ia, init}) =
   let sa, (nargs, _) = proper_cube (mkinit ia init procs) in
   sa, nargs
-  (* let ar = ArrayAtom.of_satom sa in *)
-  (* { s with *)
-  (*   t_unsafe = nargs, sa; *)
-  (*   t_arru = ar; *)
-  (*   t_alpha = ArrayAtom.alpha ar nargs; *)
-  (* } *)
 
 let mkforward_s s =
   List.map (fun fo ->
     let _,_,sa = fo in
     let sa, (nargs, _) = proper_cube sa in
     sa, nargs
-    (* let ar = ArrayAtom.of_satom sa in *)
-    (* { s with *)
-    (*   t_unsafe = nargs, sa; *)
-    (*   t_arru = ar; *)
-    (*   t_alpha = ArrayAtom.alpha ar nargs; *)
-    (* } *)
   ) s.t_forward
 
 
@@ -864,11 +846,6 @@ let instance_of_transition { tr_args = tr_args;
   let upd, upd_terms = apply_updates upds all_procs sigma in
   let act = simplification_atoms SAtom.empty (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
-      (* eprintf "%a (%a) =\nrequires {\n%a\n}\n{\n%a\n}\n@." *)
-      (* 	Hstring.print name  *)
-      (* 	Pretty.print_args (snd (List.split sigma))  *)
-      (* 	Pretty.print_cube reqs *)
-      (* 	Pretty.print_cube act; *)
   {
     i_reqs = reqs;
     i_udnfs = udnfs;
@@ -956,7 +933,7 @@ let compagnions_values compagnions uncs =
 	| Comp (t1, Eq, Elem (x, Constr)) ->
 	  let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
 	  MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
-      (* heuristic: remove proc variables *)
+        (* heuristic: remove proc variables *)
 	| Comp (Elem (_, Var), _, _)
 	| Comp (_, _, Elem (_, Var)) ->
       	  acc, SAtom.remove c compagnions
@@ -1057,25 +1034,6 @@ let candidates_from_compagnions a (compagnions, uncs) acc =
     mt acc
 
 
-(* let bac_flash1 = *)
-(*   let a1 = *)
-(*     Comp (Elem (Hstring.make "ShWbMsg_Cmd", Glob), Eq, *)
-(*           Elem (Hstring.make "SHWB_FAck", Constr)) in *)
-(*   let a2 = *)
-(*     Comp (Access (Hstring.make "InvMarked", Hstring.make "#1",Var), Eq, *)
-(*           Elem (Hstring.make "True", Constr)) in *)
-(*   SAtom.add a1 (SAtom.singleton a2) *)
-  
-(* let bac_flash2 = *)
-(*   let a1 = *)
-(*     Comp (Elem (Hstring.make "ShWbMsg_Cmd", Glob), Eq, *)
-(*           Elem (Hstring.make "SHWB_FAck", Constr)) in *)
-(*   let a2 = *)
-(*     Comp (Access (Hstring.make "UniMsg_Cmd", Hstring.make "#1",Var), Eq, *)
-(*           Elem (Hstring.make "UNI_Put", Constr)) in *)
-(*   SAtom.add a1 (SAtom.singleton a2) *)
-
-
 let proc_present p a sa =
   let rest = SAtom.remove a sa in
   SAtom.exists (function
@@ -1085,8 +1043,6 @@ let proc_present p a sa =
 
 
 let useless_candidate sa =
-  (* let psa, _ = proper_cube sa in *)
-  (* SAtom.equal psa bac_flash1 || SAtom.equal psa bac_flash2 || *)
   SAtom.exists (function
     (* heuristic: remove proc variables *)
     | (Comp (Elem (p, Var), _, _) as a)
@@ -1243,14 +1199,6 @@ let dead_candidate np args init_np s nodes a la =
        let depart = asym_union node init_np in
        if debug && verbose > 1 then
 	 eprintf "We run the trace from :%a@." Pretty.print_cube depart;
-       (*let tr = forward s np s.t_trans [depart, args@np] in
-       try 
-	 HSA.iter (fun sa _ -> if subset_node sla sa then raise Exit) tr;
-	 false
-       with Exit -> true*)
-(*       try  
-	 forward_and_check s np s.t_trans [depart, args@np] sla; false
-       with Exit -> true*)
        try  
 	 stateless_forward_and_check s np s.t_trans [depart, args@np] sla; false
        with Exit -> true

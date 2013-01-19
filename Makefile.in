@@ -263,7 +263,8 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
 
-FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.ml forward.mli forward.ml\
+FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.mli\
+	cube.ml forward.mli forward.ml\
 	enumerative.mli enumerative.ml\
 	bwreach.ml bwreach.mli\
 	fake_functory.ml fake_functory.mli\
@@ -297,7 +298,7 @@ export:
 	cp $(COMMONFILES) export/$(EXPORTDIR)/common
 	cp $(FILES) export/$(EXPORTDIR)/
 	cp $(OTHERFILES) export/$(EXPORTDIR)/
-	cp examples/*.cub export/$(EXPORTDIR)/examples/
+#	cp examples/*.cub export/$(EXPORTDIR)/examples/
 	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
 

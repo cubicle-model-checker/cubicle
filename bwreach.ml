@@ -218,7 +218,6 @@ let add_list n l =
 let max_lnp = ref 0
 
 let make_cubes =
-  (* let cpt = ref 0 in *)
   fun (ls, post) (args, rargs) 
     ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
       let nb_uargs = List.length uargs in
@@ -245,7 +244,6 @@ let make_cubes =
 		    then ls, post
 		    else
 		      let arr_np = ArrayAtom.of_satom np in
-		      (* incr cpt; *)
 		      let new_s = 
 			{ s with
 			    t_from = (tr, tr_args, s)::s.t_from;
@@ -665,7 +663,6 @@ let candidates forward_nodes ({t_unsafe = args, sp; t_arru = ap} as s) =
 (*----------------------------------------------------------------------------*)
 
 let bad_candidates = ref []
-let bad_traces = ref []
 
 let rec origin s = match s.t_from with
   | [] -> s
@@ -685,7 +682,6 @@ let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
     | Some tr ->
         List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
           (Forward.conflicting_from_trace s tr);
-        (* if not (List.mem tr !bad_traces) then bad_traces := tr :: !bad_traces *)
     | None -> ()
 
 let rec remove_cand s faulty candidates uns =
@@ -723,7 +719,7 @@ let rec elim_bogus_invariants search invariants candidates =
 	  (remove_cand s s candidates [])
 
 let rec search_bogus_invariants search invariants candidates uns =
-  eprintf "Nombre d'invariants restant : %d (%a)@." 
+  eprintf "Remaining candidates : %d (%a)@." 
     (List.length candidates) 
     (fun fmt l -> List.iter (fun x -> fprintf fmt "%d " x.t_nb) l) candidates;
   try
@@ -746,7 +742,7 @@ let search_backtrack_brab search invariants uns =
       search ~invariants ~visited:[] ~forward_nodes:[] ~candidates uns
     with
       | Search.Unsafe faulty ->
-	(* FIXME Bug when search is parallel *)
+	  (* FIXME Bug when search is parallel *)
 	  let o = origin faulty in
 	  eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
@@ -919,11 +915,7 @@ let local_parts =
 
 let subsuming_candidate s =
   let parts = local_parts s in
-  let check = fun s ->
-    if List.exists (Forward.reachable_on_trace s) !bad_traces then 
-      (add_bad_candidate s None; false)
-    else true in
-  Enumerative.smallest_to_resist_on_trace check parts
+  Enumerative.smallest_to_resist_on_trace parts
 
 
 (* ----------------- Search strategy selection -------------------*)
@@ -1141,12 +1133,11 @@ let system uns =
     if only_forward then exit 0;
     search_bogus_invariants search invariants candidates uns
 
-    (* TODO *)
-
   end
 
   else begin
     if only_forward then exit 0;      
-    search ~invariants ~visited:[] ~forward_nodes:[] ~candidates:(ref candidates) uns
+    search ~invariants ~visited:[] ~forward_nodes:[]
+      ~candidates:(ref candidates) uns
     
   end

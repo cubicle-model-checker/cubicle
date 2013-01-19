@@ -16,6 +16,8 @@ open Format
 open Ast
 open Cube
 
+module H = Hstring
+
 module MapT = Map.Make (struct type t = term let compare = compare_term end)
 
 
@@ -961,7 +963,7 @@ let is_localized cand = List.exists (is_local cand) !global_env.st_trs
 
 exception Sustainable of t_system
 
-let smallest_to_resist_on_trace check ls =
+let smallest_to_resist_on_trace ls =
   let env = !global_env in
   let cands =
     List.fold_left (fun acc p ->
@@ -973,9 +975,6 @@ let smallest_to_resist_on_trace check ls =
   if !cands = [] then []
   else
     try
-      (* List.iter (fun (c, sc) ->  *)
-      (*   if SCands.mem c !verified_candidates then raise (Already_verified sc) *)
-      (* ) !cands; *)
       let cpt = ref 0 in
       HI.iter (fun _ st ->
         incr cpt;
@@ -987,7 +986,7 @@ let smallest_to_resist_on_trace check ls =
       ) explicit_states;
       if not quiet then eprintf "@.";
       List.iter (function 
-        | (_,s) :: _ -> if check s then raise (Sustainable s)
+        | (_,s) :: _ -> raise (Sustainable s)
         | [] -> ()
       ) !cands;
       []
@@ -996,13 +995,3 @@ let smallest_to_resist_on_trace check ls =
           if not quiet then eprintf "@.";
           []
       | Sustainable s -> [s]
-
-
-
-
-
-
-
-
-
-
