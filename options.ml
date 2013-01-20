@@ -14,7 +14,7 @@
 type mode = 
   | Dfs | DfsL | DfsH | DfsHL 
   | Bfs | BfsDist | Bfsinvp 
-  | Induct | Bfstrie
+  | Induct
 
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
@@ -59,7 +59,6 @@ let set_mode = function
   | "dfshl" -> mode := DfsHL
   | "bfs" -> mode := Bfs
   | "bfsinvp" -> mode := Bfsinvp
-  | "bfstrie" -> mode := Bfstrie
   | "induct" -> mode := Induct
   | _ -> raise (Arg.Bad "search strategy not supported")
 
@@ -82,19 +81,15 @@ let specs =
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
-    "-forward-inv", Arg.Set_int forward_inv, 
+    "-symbolic", Arg.Set_int forward_inv, 
                     "<n> symbolic forward invariant generation with n processes";
     "-enumerative", Arg.Set_int enumerative, 
                     "<n> enumerative forward invariant generation with n processes";
     "-local", Arg.Set localized, 
                     "localized invariant candidates";
-    "-lazy", Arg.Set lazyinv, 
-                " add candidate invariants in a lazy way (BFS only)";
-    "-refine", Arg.Set refine, 
-                " refine the selection of candidates (if no stateless search) ";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
-    "-stateless", Arg.Set stateless, " stateless forward search";
+    "-stateless", Arg.Set stateless, " stateless symbolic forward search";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
                           0: do not postpone nodes
@@ -142,7 +137,12 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
-let cores = !cores
+let cores = 
+  if !cores > 0 && do_brab then begin
+    Format.eprintf "Error: parallel BRAB not implemented";
+    exit 1;
+  end
+  else !cores
 let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode
 let verbose = !verbose
 let post_strategy =

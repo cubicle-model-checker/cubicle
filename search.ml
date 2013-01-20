@@ -17,15 +17,15 @@ open Ast
 
 exception Unsafe of t_system
 
+type fsearch = 
+    invariants : t_system list -> 
+    visited : t_system list -> 
+    forward_nodes : t_system list -> 
+    candidates : t_system list ref ->
+    t_system list -> unit
+
 module type I = sig
   type t = Ast.t_system
-
-  type fsearch = 
-    invariants : t list -> 
-    visited : t list -> 
-    forward_nodes : t list -> 
-    candidates : t list ref ->
-    t list -> unit
 
   val size : t -> int
   val card : t -> int
@@ -34,9 +34,6 @@ module type I = sig
   val invariants : t -> t list
   val gen_inv : 
     fsearch -> invariants : t list -> t list -> t -> t list * t list
-  val gen_inv_with_forward :
-    fsearch -> invariants : t list -> forward_nodes : t list -> 
-    t list -> t -> t list * t list
   val gen_inv_proc : 
     fsearch -> t list -> t list -> t -> t list * t list
   val init_thread : 
@@ -44,7 +41,6 @@ module type I = sig
     t list ref -> t list ref -> t list ref -> t list ref -> 
     t Queue.t -> Thread.t
 
-  val extract_candidates : t -> t list -> t list
   val is_inv : fsearch -> t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
@@ -61,14 +57,10 @@ module type I = sig
   val easy_fixpoint : t -> t list -> (int list) option
   val hard_fixpoint : t -> t list -> (int list) option
 
-  val fixpoint_trie : t -> Atom.t list -> t Cubetrie.t ref -> t Cubetrie.t ref -> t list ref -> (int list) option
-
   val fixpoint_trie2 : t Cubetrie.t -> t -> (int list) option
 
   val pre : t -> t list * t list
   val post : t -> t list
-
-  val add_and_resolve : t -> t Cubetrie.t -> t Cubetrie.t
 
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
@@ -498,7 +490,6 @@ module BFS_base ( X : I ) = struct
 	         (*   X.delete_nodes_inv inv visited; *)
                  visited := 
                    Cubetrie.add_array s.t_arru s !visited;
-                 (* X.add_and_resolve s !visited; *)
 	         postponed := List.rev_append post !postponed;
 	         if delete then X.delete_nodes s postponed nb_deleted true;
 	       (* if delete && invgen && gen_inv then *)
@@ -1020,71 +1011,4 @@ module Inductification ( X : I ) = struct
     List.iter (fun s -> Queue.add (0, s) q) safes;
     search_rec ();
     
-end
-
-
-module BFS_trie  ( X : I ) = struct
-
-  type t = X.t
-
-
-  let subsumed closed visited s =
-    let lstu = Array.to_list s.t_arru in
-    Cubetrie.mem lstu !visited <> None
-      
-  let unsubsumed closed visited s = 
-    let tmp = subsumed closed visited s in
-    if tmp then incr closed;
-    not tmp
-      
-  let add_to_queue closed visited q c s =
-    if subsumed closed visited s then incr closed
-    else Queue.add (c,s) q
-
-  let search ~invariants ~visited ~forward_nodes ~candidates uns =
-
-    let trie_visited = List.fold_left (fun acc s -> 
-      Cubetrie.add (Array.to_list s.t_arru) s acc
-    ) Cubetrie.empty (invariants @ visited)
-    in
-
-    let nb_nodes = ref 0 in
-    let closed = ref 0 in
-    let visited = ref trie_visited in (* visited*)
-    let q = Queue.create () in (* Work queue *)
-    let postponed = ref [] in (* Postponed work. *)
-    let learnt = ref Cubetrie.empty in (* Learnt cubes *)
-
-
-    let search_aux () =
-      let cpt, s = Queue.take q in
-      X.safety s;
-      let lstu = Array.to_list s.t_arru in
-      if X.fixpoint_trie s lstu visited learnt postponed = None then begin
-        incr nb_nodes;
-        printf " node %d= @[%a@]@." !nb_nodes Pretty.print_node s;
-        if delete then begin
-          Cubetrie.iter_subsumed X.delete_node lstu !visited;
-          visited := Cubetrie.delete (fun s -> s.t_deleted) !visited
-        end;
-        visited := Cubetrie.add lstu s !visited;
-        let ls, post = X.pre s in
-        let ls = List.rev ls in
-        let post = List.filter (unsubsumed closed visited) post in
-        let post = List.rev post in
-        List.iter (add_to_queue closed visited q (cpt+1)) ls;
-        postponed := List.rev_append post !postponed;
-      end 
-      else incr closed
-    in
-    
-    postponed := uns @ !candidates;
-    while (!postponed <> []) do
-      List.iter (add_to_queue closed visited q 0) !postponed;
-      postponed := [];
-      while not (Queue.is_empty q) do search_aux () done;
-    done;
-    Profiling.print_report !nb_nodes invariants !closed [] X.print_system
-
-      
 end

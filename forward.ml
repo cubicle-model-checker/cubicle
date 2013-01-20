@@ -576,32 +576,6 @@ let post init all_procs procs { tr_args = tr_args;
     else acc
   ) [] d
 
-let post2 init all_procs procs { tr_args = tr_args; 
-				tr_reqs = reqs; 
-				tr_name = name;
-				tr_ureq = ureqs;
-				tr_assigns = assigns; 
-				tr_upds = upds; 
-				tr_nondets = nondets } =
-  let tr_others,others = missing_args procs tr_args in
-  let sigma = build_subst tr_args procs in
-  if possible_guard procs all_procs tr_args sigma init reqs ureqs then
-    let assi, assi_terms = apply_assigns assigns sigma in
-    let upd, upd_terms = apply_updates upds all_procs sigma in
-    let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
-    let p_init = prime_satom init in
-    let sa = simplification_atoms p_init
-      (SAtom.union unchanged (SAtom.union assi upd)) in
-    let sa = abstract_others sa tr_others in
-    List.fold_left (fun acc sa ->
-      let sa = wrapper_elim_prime p_init sa in
-      (* let sa = gauss_elim sa in *)
-      let sa, (nargs, _) = proper_cube sa in
-      let d = all_permutations nargs nargs in
-      List.fold_left (fun acc sp -> (subst_atoms sp sa, nargs) :: acc) acc d)
-      [] (Cube.simplify_atoms sa)
-  else []
-
 
 
 
@@ -622,8 +596,6 @@ let post_inst init all_procs procs {i_reqs = reqs;
       [] (Cube.simplify_atoms sa) 
   else []
 
-
-(* module HA = Hashtbl.Make (ArrayAtom) *)
 
 module HSA : Hashtbl.S with type key = SAtom.t = Hashtbl.Make (SAtom)
 
@@ -682,52 +654,13 @@ let forward s procs trs l =
 	      (List.length to_do + List.length new_td);
 	    (* HSA.add h_visited sa (); *)
 	    let d = all_permutations args args in
-	    List.iter (fun sigma -> HSA.add h_visited (subst_atoms sigma sa) ()) d;
+	    List.iter 
+              (fun sigma -> HSA.add h_visited (subst_atoms sigma sa) ()) d;
 	    forward_rec s procs trs (List.rev_append new_td to_do)
         )
   in
   forward_rec s procs trs l;
   h_visited
-
-
-let forward2 s procs trs l =
-  let h_visited = HSA.create 200_029 in
-  let cpt_f = ref 0 in
-  let rec forward_rec s procs trs = function
-    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
-    | l :: to_do ->
-        (* if ArrayAtom.subset s.t_arru init.t_arru then begin *)
-        (*   eprintf "\nUnsafe trace: @[%a@]@."  Pretty.print_verbose_node init; *)
-        (*   raise (Search.Unsafe init) *)
-        (* end; *)
-        if false && !cpt_f > 400_000 then ()
-        else (
-          (* if fixpoint ~invariants:[] ~visited init then *)
-          (* if easy_fixpoint init visited then *)
-          (** Very incomplete hash test **)
-	  if List.exists (fun (sa, _) -> HSA.mem h_visited sa) l then
-	    forward_rec s procs trs to_do
-	  else
-	    let new_td =
-	      List.fold_left (fun new_td (sa, args) ->
-	        incr cpt_f;
-	        HSA.add h_visited sa ();
-	        if debug then 
-		  eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
-	        else if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	        List.fold_left (fun new_td tr ->
-		  let ls = post sa args procs tr in
-		  if ls = [] then new_td else ls :: new_td
-	        ) new_td trs
-	      ) [] l
-	    in
-	    forward_rec s procs trs (List.rev_append new_td to_do)
-        )
-  in
-  forward_rec s procs trs l;
-  h_visited
-
-
 
 
 let var_term_unconstrained sa t =
@@ -794,15 +727,6 @@ let stateless_forward s procs trs all_var_terms l =
   in
   forward_rec s procs trs MA.empty l
   
-
-(* let mkinit_multi args init args = *)
-(*   match args with *)
-(*     | [] -> init *)
-(*     | _ -> *)
-(* 	let sa, cst = SAtom.partition (fun a ->  *)
-(* 	  List.exists (fun z -> has_var z a) args) init in *)
-(* 	List.fold_left (fun acc h -> *)
-(* 	  SAtom.union (subst_atoms [z, h] sa) acc) cst args *)
 
 let mkinit arg init args =
   match arg with

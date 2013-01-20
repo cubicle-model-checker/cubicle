@@ -15,15 +15,15 @@
 
 exception Unsafe of Ast.t_system
 
+type fsearch = 
+    invariants : Ast.t_system list -> 
+    visited : Ast.t_system list -> 
+    forward_nodes : Ast.t_system list -> 
+    candidates : Ast.t_system list ref ->
+    Ast.t_system list -> unit
+
 module type I = sig
   type t = Ast.t_system
-
-  type fsearch = 
-    invariants : t list -> 
-    visited : t list -> 
-    forward_nodes : t list -> 
-    candidates : t list ref ->
-    t list -> unit
 
   val size : t -> int
   val card : t -> int
@@ -32,9 +32,6 @@ module type I = sig
   val invariants : t -> t list
   val gen_inv : 
     fsearch -> invariants : t list -> t list -> t -> t list * t list
-  val gen_inv_with_forward :
-    fsearch -> invariants : t list -> forward_nodes : t list -> 
-    t list -> t -> t list * t list
   val gen_inv_proc : 
     fsearch -> t list -> t list -> t -> t list * t list
   val init_thread : 
@@ -42,7 +39,6 @@ module type I = sig
     t list ref -> t list ref -> t list ref -> t list ref -> 
     t Queue.t -> Thread.t
 
-  val extract_candidates : t -> t list -> t list
   val is_inv : fsearch -> t -> t list -> bool
 
   val delete_nodes : t -> t list ref -> int ref -> bool -> unit
@@ -60,15 +56,10 @@ module type I = sig
   val easy_fixpoint : t -> t list -> (int list) option
   val hard_fixpoint : t -> t list -> (int list) option
 
-  val fixpoint_trie : t -> Ast.Atom.t list -> t Cubetrie.t ref ->
-    t Cubetrie.t ref -> t list ref -> (int list) option
-
   val fixpoint_trie2 : t Cubetrie.t -> t -> (int list) option
 
   val pre : t -> t list * t list
   val post : t -> t list
-
-  val add_and_resolve : t -> t Cubetrie.t -> t Cubetrie.t
 
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
@@ -151,8 +142,3 @@ module BFSinvp  ( X : I ) : S  with type t = X.t
 
 (* Prototype for Amit and Sava's algorithm *)
 module Inductification ( X : I ) : S with type t = X.t
-
-
-(* Bfs search with trie data structures *)
-
-module BFS_trie  ( X : I ) : S  with type t = X.t 

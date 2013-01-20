@@ -63,3 +63,8 @@ val conflicting_from_trace :
 val remove_subsumed_candidates : t_system list -> t_system list
 
 val useless_candidate : SAtom.t -> bool
+
+val uguard_dnf : 
+  (Hstring.t * Hstring.t) list ->
+  Hstring.t list -> Hstring.t list ->
+  (Hstring.t * SAtom.t list) list -> SAtom.t list list

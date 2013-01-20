@@ -17,10 +17,6 @@ open Ast
 
 val search : Hstring.t list -> t_system -> unit
 
-val stateless_search : Hstring.t list -> t_system -> t_system list
-
-val local_stateless_search : Hstring.t list -> t_system -> t_system list
-
 val smallest_to_resist_on_trace : t_system list list -> t_system list
 
 

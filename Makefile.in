@@ -86,7 +86,7 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
       cubetrie.cmo prover.cmo \
       search.cmo cube.cmo bitsolver.cmo forward.cmo \
-      enumerative.cmo bwreach.cmo \
+      enumerative.cmo brab.cmo bwreach.cmo \
       typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
@@ -266,7 +266,7 @@ AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.mli\
 	cube.ml forward.mli forward.ml\
 	enumerative.mli enumerative.ml\
-	bwreach.ml bwreach.mli\
+	brab.mli brab.ml bwreach.ml bwreach.mli\
 	fake_functory.ml fake_functory.mli\
 	lexer.mll main.ml options.ml options.mli parser.mly\
 	pretty.ml pretty.mli prover.ml prover.mli bitsolver.ml bitsolver.mli\
