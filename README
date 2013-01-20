@@ -14,14 +14,8 @@ This program is distributed under the Apache Software License version
 INSTALLATION
 ============
 
-To compile Cubicle you will need OCaml version 3.11 (or
-newer) and the Ocaml Functory library version 0.5 (or newer)
-which can be downloaded at http://functory.lri.fr
-
-Note: You can still compile Cubile without Functory but
-you will not be able to use its parallel features.
-
-Install Functory and do:
+To compile Cubicle you will need OCaml version 3.11 (or newer) and
+issue:
 
    ./configure
     make
@@ -30,10 +24,16 @@ then with superuser rigths:
 
     make install
 
-to run Cubicle on a file file.cub simply do:
+To run Cubicle with its classical bacward reachability algorithm on a
+file file.cub simply do:
  
     cubicle file.cub
 
-You can see al list of Cubcile's options by doing:
+To run Cubicle with the BRAB algorithm (with a preliminar forward
+exploration using 2 processes) on a file file.cub simply do:
+ 
+    cubicle -brab 2 file.cub
+
+You can see the list of Cubcile's options by doing:
 
     cubicle -h
