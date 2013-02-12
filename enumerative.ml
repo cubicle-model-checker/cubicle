@@ -546,6 +546,7 @@ let forward s procs env l =
   forward_rec s procs trs l
 
 let search procs init =
+  if profiling then Search.TimeForward.start ();
   let procs = procs (*@ init.t_glob_proc*) in
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
@@ -554,7 +555,8 @@ let search procs init =
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
-  forward init procs env st_inits
+  forward init procs env st_inits;
+  if profiling then Search.TimeForward.pause ()
 
 
 
@@ -569,6 +571,7 @@ exception Sustainable of t_system
 
 let smallest_to_resist_on_trace ls =
   let env = !global_env in
+  let progress_inc = (HI.length explicit_states) / Pretty.vt_width + 1 in
   let cands =
     List.fold_left (fun acc p ->
       try 
@@ -579,23 +582,31 @@ let smallest_to_resist_on_trace ls =
   if !cands = [] then []
   else
     try
+      if profiling then Search.TimeCustom.start ();
+      if not quiet && not nocolor then eprintf "[100;1m";
+      let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
       let cpt = ref 0 in
       HI.iter (fun _ st ->
         incr cpt;
-        if not quiet && !cpt mod 1000 = 0 then eprintf ".@?";
+        if not quiet && !cpt mod progress_inc = 0 then one_step ();
         cands := List.filter (fun p -> 
           List.for_all (fun (c, _) -> check_cand env st c) p
         ) !cands;
         if !cands = [] then raise Exit;
       ) explicit_states;
-      if not quiet then eprintf "@.";
       List.iter (function 
         | (_,s) :: _ -> raise (Sustainable s)
         | [] -> ()
       ) !cands;
-      []
+      raise Not_found
     with
-      | Exit | Not_found -> 
-          if not quiet then eprintf "@.";
+      | Exit | Not_found ->
+          if profiling then Search.TimeCustom.pause ();
+          if not quiet  && not nocolor then eprintf "[1;0m";
+          if not quiet then eprintf "%s@." (Pretty.red "X");
           []
-      | Sustainable s -> [s]
+      | Sustainable s ->
+          if profiling then Search.TimeCustom.pause ();
+          if not quiet  && not nocolor then eprintf "[1;0m";
+          if not quiet then eprintf "%s@." (Pretty.greenbg "!");
+          [s]

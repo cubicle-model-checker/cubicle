@@ -39,11 +39,60 @@ let rec remove_trailing_whitespaces_end str =
   else str
 
 (* Set width of pretty printing boxes to number of columns *)
-let _ =
+let vt_width =
   try
     let scol = syscall "tput cols" in
-    set_margin (int_of_string (remove_trailing_whitespaces_end scol));
-  with Not_found | Failure _ -> ()
+    let w = int_of_string (remove_trailing_whitespaces_end scol) in
+    set_margin w;
+    w
+  with Not_found | Failure _ -> 80
+
+(* following functions add colors to output on VGA ttys *)
+
+let green = 
+  if nocolor then fun s -> s else fun s -> sprintf "[1;32m%s[1;0m" s
+
+let red =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;31m%s[1;0m" s
+
+let blue =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;34m%s[1;0m" s
+
+let cyan =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;36m%s[1;0m" s
+
+let magenta =
+  if nocolor then fun s -> s else fun s -> sprintf "[0;35m%s[1;0m" s
+
+let yellow =
+  if nocolor then fun s -> s else fun s -> sprintf "[0;33m%s[1;0m" s
+
+let magentab =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;35m%s[1;0m" s
+
+let yellowb =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;33m%s[1;0m" s
+
+let bold =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;1m%s[1;0m" s
+
+let boldu =
+  if nocolor then fun s -> s else fun s -> sprintf "[4;1m%s[4;0m" s
+
+let underline =
+  if nocolor then fun s -> s else fun s -> sprintf "[0;4m%s[0;0m" s
+
+let greenbg =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;102m%s[1;0m" s
+
+let redbg =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;101m%s[1;0m" s
+
+let magentabg =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;105m%s[1;0m" s
+
+let yellowbg =
+  if nocolor then fun s -> s else fun s -> sprintf "[1;103m%s[1;0m" s
 
 
 let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
@@ -173,14 +222,19 @@ let print_node fmt s =
   else
     begin
 (*      fprintf fmt "@.%a" print_system s*)
-     List.iter 
-       (fun (tr, args, _) ->
+      let last = List.fold_left 
+       (fun last (tr, args, uns) ->
 	  if dmcmt then 
 	    fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
 	  else 
-	    fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args
-       ) s.t_from;
-     if dmcmt then fprintf fmt "[0]  " else fprintf fmt "unsafe"
+	    fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args;
+         uns
+       ) s s.t_from in
+     if dmcmt then fprintf fmt "[0]  "
+     else
+       let col, qual = 
+         if last.t_nb < 0 then magenta, "approx" else yellow, "unsafe" in
+       fprintf fmt "%s" (col (sprintf "%s[%d]" qual last.t_nb))
     end
 
 let print_bad fmt s =
@@ -261,10 +315,13 @@ let print_verbose_node fmt s =
   if verbose = 0 then print_node fmt s else begin
     (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
     fprintf fmt " %a\n@." print_system s;
-    List.iter 
-      (fun (tr, args, s') ->
+    let last = List.fold_left
+      (fun last (tr, args, s') ->
 	 fprintf fmt "  %s(%a) -> %a\n@." (Hstring.view tr.tr_name) 
-           print_args args print_system s'
-      ) s.t_from;
-    fprintf fmt "    = unsafe"
+           print_args args print_system s';
+        s'
+      ) s s.t_from in
+    let col, qual = 
+      if last.t_nb < 0 then magenta, "approx" else yellow, "unsafe" in
+    fprintf fmt "    = %s" (col (sprintf "%s[%d]" qual last.t_nb))
   end

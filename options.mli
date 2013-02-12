@@ -50,6 +50,7 @@ val debug : bool
 val dot : bool
 val quiet : bool
 val verbose : int
+val nocolor : bool
 
 val debug_smt : bool
 val dmcmt : bool

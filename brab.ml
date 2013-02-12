@@ -73,15 +73,18 @@ let search_backtrack_brab search invariants uns =
       | Search.Unsafe faulty ->
 	  (* FIXME Bug when search is parallel *)
 	  let o = origin faulty in
-	  eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
+	  if not quiet then
+            eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
-          eprintf "%d used candidates :@." (List.length !candidates);
-          List.iter (fun s ->
-            eprintf "   %a\n@." Pretty.print_system s) !candidates;
+          if not quiet then eprintf "%d used candidates :@." (List.length !candidates);
+          if not quiet then 
+            List.iter (fun s ->
+              eprintf "   %a\n@." Pretty.print_system s) !candidates;
           candidates := remove_cand o faulty !candidates uns;
-          eprintf "%d bad candidates :@." (List.length !bad_candidates);
-          List.iter (fun sa ->
-            eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates;
+          if not quiet then eprintf "%d bad candidates :@." (List.length !bad_candidates);
+          if not quiet then 
+            List.iter (fun sa ->
+              eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates;
           search_rec uns
   in
   search_rec uns

@@ -26,6 +26,11 @@ type 'a t =
 
 let empty = Empty
 
+(** Test emptiness of a trie *)
+let is_empty = function
+  | Empty -> true
+  | _ -> false
+
 (* Add a mapping cube->v to trie *)
 let rec add cube v trie = match trie with
   | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full v)
@@ -40,6 +45,20 @@ and add_to_list atom cube v l = match l with
       if cmp = 0 then (atom, add cube v t')::n
       else if cmp > 0 then (atom',t')::(add_to_list atom cube v n)
       else (atom, add cube v Empty)::l
+
+(* Add a mapping cube->v to trie without checking for subsomption *)
+let rec add_force cube v trie = match trie with
+  | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full v)
+  | Full _ -> trie
+  | Node l -> match cube with
+      | [] -> Full v
+      | atom::cube -> Node (add_force_to_list atom cube v l)
+and add_force_to_list atom cube v l = match l with
+  | [] -> [atom, add_force cube v Empty]
+  | (atom',t')::n ->
+      let cmp = Atom.compare atom atom' in
+      if cmp > 0 then (atom',t')::(add_force_to_list atom cube v n)
+      else (atom, add_force cube v Empty)::l
 
 (* Add a mapping cube->v to trie *)
 let rec add_array cube v trie = match trie with
@@ -57,6 +76,22 @@ and add_array_to_list atom cube v l = match l with
       if cmp = 0 then (atom, add_array cube v t')::n
       else if cmp > 0 then (atom',t')::(add_array_to_list atom cube v n)
       else (atom, add_array cube v Empty)::l
+
+(* Add a mapping cube->v to trie without checking for subsomption *)
+let rec add_array_force cube v trie = match trie with
+  | Empty -> Array.fold_right (fun a t -> Node [a,t]) cube (Full v)
+  | Full _ -> trie
+  | Node l -> 
+      if Array.length cube = 0 then Full v
+      else Node (add_array_force_to_list 
+                   cube.(0) (Array.sub cube 1 (Array.length cube - 1))
+                   v l)
+and add_array_force_to_list atom cube v l = match l with
+  | [] -> [atom, add_array_force cube v Empty]
+  | (atom',t')::n ->
+      let cmp = Atom.compare atom atom' in
+      if cmp > 0 then (atom',t')::(add_array_force_to_list atom cube v n)
+      else (atom, add_array_force cube v Empty)::l
 
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem cube trie = match trie with 
@@ -165,6 +200,7 @@ and delete_list p l = match l with
       let n' = delete_list p n in
       if t'==t && n'==n then l else (atom,t')::n'
 
+
 (* List of all values mapped by the trie *)
 let rec all_vals = function
   | Empty -> []
@@ -206,3 +242,4 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
         | [] -> all_vals t'
         | atom::cube -> consistent_list atom cube n
       else consistent (atom::cube) t'
+

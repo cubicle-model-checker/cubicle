@@ -16,6 +16,21 @@
 open Format
 open Ast
 
+val vt_width : int
+
+val green : string -> string
+val red : string -> string
+val blue : string -> string
+val cyan : string -> string
+val magenta : string -> string
+val bold : string -> string
+val boldu : string -> string
+val underline : string -> string
+val greenbg : string -> string
+val redbg : string -> string
+val magentabg : string -> string
+val yellowbg : string -> string
+
 val print_term : formatter -> term -> unit
 
 val print_atom : formatter -> Atom.t -> unit

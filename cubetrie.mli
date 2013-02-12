@@ -19,11 +19,20 @@ type 'a t
 (** The empty trie. *)
 val empty : 'a t
 
+(** Test emptyness of a trie *)
+val is_empty : 'a t -> bool
+
 (** Add a mapping cube->v to trie *)
 val add : Ast.Atom.t list -> 'a -> 'a t -> 'a t
 
+(** Add a mapping cube->v to trie without checking for subsomption *)
+val add_force : Ast.Atom.t list -> 'a -> 'a t -> 'a t
+
 (** Add a mapping cube->v to trie *)
 val add_array : Ast.ArrayAtom.t -> 'a -> 'a t -> 'a t
+
+(** Add a mapping cube->v to trie without checking for subsomption *)
+val add_array_force : Ast.ArrayAtom.t -> 'a -> 'a t -> 'a t
 
 (** Is cube subsumed by some cube in the trie? *)
 val mem : Ast.Atom.t list -> Ast.t_system t -> int list option

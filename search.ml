@@ -93,12 +93,11 @@ end
 module TimeFix = Timer.Make (struct end)
 module TimeEasyFix = Timer.Make (struct end)
 module TimeHardFix = Timer.Make (struct end)
-
 module TimeRP = Timer.Make (struct end)
-
 module TimePre = Timer.Make (struct end)
-
 module TimeSort = Timer.Make (struct end)
+module TimeForward = Timer.Make (struct end)
+module TimeCustom = Timer.Make (struct end)
 
 module Profiling = struct
   
@@ -132,66 +131,47 @@ module Profiling = struct
   let print2 str d size =
       eprintf "[%s %d] Number of processes : %d@." str d size
 
-  let print_time_fix () =
-    let sec = TimeFix.get () in
+  let print_time fmt sec =
     let minu = floor (sec /. 60.) in
     let extrasec = sec -. (minu *. 60.) in
-    printf "Time for fixpoint                : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
+    
+
+  let print_time_fix () =
+    printf "Time for fixpoint                : %a@." print_time (TimeFix.get ())
 
   let print_time_rp () =
-    let sec = TimeRP.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "├─Time for relevant permutations : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "├─Time for relevant permutations : %a@." print_time (TimeRP.get ())
 
   let print_time_formulas () =
-    let sec = Prover.TimeF.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "├─Time in formulas               : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "├─Time in formulas               : %a@." print_time (Prover.TimeF.get ())
 
   let print_time_prover () =
     let sec = if enumsolver then Prover.ESMT.get_time () else Prover.SMT.get_time () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "└─Time in solver                 : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "└─Time in solver                 : %a@." print_time sec
       
   let print_time_pre () =
-    let sec = TimePre.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "Time for pre-image computation   : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "Time for pre-image computation   : %a@." print_time (TimePre.get ())
 
   let print_time_subset () =
-    let sec = Ast.TimerSubset.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "├─Subset tests                   : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "├─Subset tests                   : %a@." print_time (Ast.TimerSubset.get ())
 
   let print_time_apply () =
-    let sec = Ast.TimerApply.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "├─Apply substitutions            : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "├─Apply substitutions            : %a@." print_time (Ast.TimerApply.get ())
 
   let print_time_sort () =
-    let sec = TimeSort.get () in
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    printf "├─Nodes sorting                  : %dm%2.3fs@."
-      (int_of_float minu) extrasec
+    printf "├─Nodes sorting                  : %a@." print_time (TimeSort.get ())
+
+  let print_time_custom () =
+    printf "Custom timer                     : %a@." print_time (TimeCustom.get ())
+
+  let print_time_forward () =
+    printf "Forward exploration              : %a@." print_time (TimeForward.get ())
 
   let print_report nb inv del used_cands print_system =
     if used_cands <> [] then begin
       printf "\n---------------------\n";
-      printf "Inferred invariants :\n";
+      printf "%s\n" (Pretty.bold "Inferred invariants :");
       printf "---------------------@.";
       List.iter (fun i -> printf "\n%a@." print_system i) used_cands
     end;
@@ -216,6 +196,8 @@ module Profiling = struct
       print_time_sort ();
       print_time_formulas ();
       print_time_prover ();
+      print_time_forward ();
+      print_time_custom ();
       printf "----------------------------------------------@."
     end;
     
@@ -448,7 +430,8 @@ module BFS_base ( X : I ) = struct
 		     let prefpr = 
 		       if (not invgen) && gen_inv then "     inv gen " 
 		       else " " in
-		     printf "%snode %d= @[%a@]@." prefpr !nb_nodes 
+		     printf "%snode %s= @[%a@]@." prefpr 
+                       (Pretty.bold (string_of_int !nb_nodes))
 		       (if debug then fun _ _ -> () else X.print) s
 		   end
 	       end;

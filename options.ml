@@ -37,6 +37,7 @@ let incr_verbose () = incr verbose
 let debug_smt = ref false
 let dmcmt = ref false
 let profiling = ref false
+let nocolor = ref false
 
 let only_forward = ref false
 let gen_inv = ref false
@@ -69,6 +70,7 @@ let show_version () = Format.printf "%s@." Version.version; exit 0
 let specs = 
   [ "-version", Arg.Unit show_version, " prints the version number";
     "-quiet", Arg.Set quiet, " do not output search trace";
+    "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-depth", Arg.Set_int maxrounds, 
               "<nb> max depth of the search tree (default 100)";
@@ -122,6 +124,7 @@ let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let debug = !debug
+let nocolor = !nocolor
 let dot = !dot
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
@@ -156,3 +159,4 @@ let post_strategy =
 let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
+
