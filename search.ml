@@ -430,8 +430,9 @@ module BFS_base ( X : I ) = struct
 		     let prefpr = 
 		       if (not invgen) && gen_inv then "     inv gen " 
 		       else " " in
-		     printf "%snode %s= @[%a@]@." prefpr 
-                       (Pretty.bold (string_of_int !nb_nodes))
+                     let snb = string_of_int !nb_nodes in
+		     printf "%snode @<%d>%s= @[%a@]@." prefpr (String.length snb)
+                       (Pretty.bold snb)
 		       (if debug then fun _ _ -> () else X.print) s
 		   end
 	       end;
@@ -508,8 +509,11 @@ module BFS_base ( X : I ) = struct
                    List.iter (fun s -> Queue.add (cpt+1, s) q) ls
 	       end;
 
-	       if not quiet then printf "    (%d remaining)\n@."
-	         (Queue.length q + List.length !postponed)
+	       if not quiet then 
+                 let r = Queue.length q + List.length !postponed in
+                 printf "%s%s\n@."
+                 (String.make (Pretty.vt_width - 10 - (String.length (string_of_int r))) ' ') 
+                 (Pretty.dim (sprintf "%d remaining" r))
 	       
 	     end);
       search_rec_aux ()

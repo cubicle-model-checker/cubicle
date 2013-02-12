@@ -24,6 +24,7 @@ val blue : string -> string
 val cyan : string -> string
 val magenta : string -> string
 val bold : string -> string
+val dim : string -> string
 val boldu : string -> string
 val underline : string -> string
 val greenbg : string -> string

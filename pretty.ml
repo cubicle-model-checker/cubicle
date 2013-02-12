@@ -76,6 +76,9 @@ let yellowb =
 let bold =
   if nocolor then fun s -> s else fun s -> sprintf "[1;1m%s[1;0m" s
 
+let dim =
+  if nocolor then fun s -> s else fun s -> sprintf "[0;2m%s[0;0m" s
+
 let boldu =
   if nocolor then fun s -> s else fun s -> sprintf "[4;1m%s[4;0m" s
 
