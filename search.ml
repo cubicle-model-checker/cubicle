@@ -171,7 +171,7 @@ module Profiling = struct
   let print_report nb inv del used_cands print_system =
     if used_cands <> [] then begin
       printf "\n---------------------\n";
-      printf "%s\n" (Pretty.bold "Inferred invariants :");
+      printf "@{<b>Inferred invariants :@}\n";
       printf "---------------------@.";
       List.iter (fun i -> printf "\n%a@." print_system i) used_cands
     end;
@@ -429,10 +429,8 @@ module BFS_base ( X : I ) = struct
 		   begin
 		     let prefpr = 
 		       if (not invgen) && gen_inv then "     inv gen " 
-		       else " " in
-                     let snb = string_of_int !nb_nodes in
-		     printf "%snode @<%d>%s= @[%a@]@." prefpr (String.length snb)
-                       (Pretty.bold snb)
+		       else "" in
+		     printf "%snode @{<b>%d@}= @[%a@]@." prefpr !nb_nodes
 		       (if debug then fun _ _ -> () else X.print) s
 		   end
 	       end;
@@ -443,7 +441,8 @@ module BFS_base ( X : I ) = struct
                      | l ->
                        if not quiet then 
                          List.iter (fun s' ->
-		           eprintf "Adding subsuming candidate : %a@." X.print_system s';
+		           eprintf "Approximating by @{<fg_magenta>[%d]@}: %a@."
+                             s'.t_nb X.print_system s';
                          ) l;
                        candidates := l @ !candidates;
                        (l, []), true
@@ -511,9 +510,9 @@ module BFS_base ( X : I ) = struct
 
 	       if not quiet then 
                  let r = Queue.length q + List.length !postponed in
-                 printf "%s%s\n@."
-                 (String.make (Pretty.vt_width - 10 - (String.length (string_of_int r))) ' ') 
-                 (Pretty.dim (sprintf "%d remaining" r))
+                 printf "%s@{<dim>%d remaining@}\n@."
+                 (String.make (Pretty.vt_width - 10 - (String.length (string_of_int r))) ' ')
+                 r
 	       
 	     end);
       search_rec_aux ()

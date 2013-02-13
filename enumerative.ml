@@ -583,8 +583,8 @@ let smallest_to_resist_on_trace ls =
   else
     try
       if profiling then Search.TimeCustom.start ();
-      if not quiet && not nocolor then eprintf "[100;1m";
-      let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
+      if not quiet then eprintf "@{<bg_black_b>"; (* will be forgotten by flushs *)
+      let one_step () = if nocolor then eprintf "#@?" else eprintf " " in
       let cpt = ref 0 in
       HI.iter (fun _ st ->
         incr cpt;
@@ -602,11 +602,11 @@ let smallest_to_resist_on_trace ls =
     with
       | Exit | Not_found ->
           if profiling then Search.TimeCustom.pause ();
-          if not quiet  && not nocolor then eprintf "[1;0m";
-          if not quiet then eprintf "%s@." (Pretty.red "X");
+          if not quiet then eprintf "@{<bg_default>@}";
+          if not quiet then eprintf "@{<fg_red>X@}@.";
           []
       | Sustainable s ->
           if profiling then Search.TimeCustom.pause ();
-          if not quiet  && not nocolor then eprintf "[1;0m";
-          if not quiet then eprintf "%s@." (Pretty.greenbg "!");
+          if not quiet then eprintf "@{<bg_default>@}";
+          if not quiet then eprintf "@{<fg_green>!@}@.";
           [s]
