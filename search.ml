@@ -441,7 +441,7 @@ module BFS_base ( X : I ) = struct
                      | l ->
                        if not quiet then 
                          List.iter (fun s' ->
-		           eprintf "Approximating by @{<fg_magenta>[%d]@}: %a@."
+		           eprintf "Approximating by @{<fg_blue>[%d]@}: %a@."
                              s'.t_nb X.print_system s';
                          ) l;
                        candidates := l @ !candidates;

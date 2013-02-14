@@ -44,8 +44,8 @@ let _ =
     if bitsolver then Bitsolver.init_env (List.hd ts);
     if type_only then exit 0;
     Bwreach.system ts;
-    if dot then eprintf "\n\nThe system is @{<b>@{<fg_green_b>SAFE@}@}\n@."
-    else printf "\n\nThe system is @{<b>@{<fg_green_b>SAFE@}@}\n@."
+    if dot then eprintf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
+    else printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
   with
     | Lexer.Lexical_error s -> 
 	report (lexeme_start_p lb, lexeme_end_p lb);
@@ -63,6 +63,6 @@ let _ =
 	printf "reach bound\n@.";
 	exit 1
     | Search.Unsafe _ ->
-	printf "\n\n@{<b>@{<bg_red_b>UNSAFE@} !@}\n@.";
+	printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
 	exit 1
 

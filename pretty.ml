@@ -156,7 +156,7 @@ let style_of_tag = function
   | "/u" -> Underline_off
   | "i" -> Inverse
   | "/i" -> Inverse_off
-  | "bl" -> Blink_off
+  | "/bl" -> Blink_off
   | "fg_black" -> FG_Black
   | "fg_red" -> FG_Red
   | "fg_green" -> FG_Green
@@ -375,9 +375,9 @@ let print_node fmt s =
      if dmcmt then fprintf fmt "[0]  "
      else
        if last.t_nb < 0 then 
-         fprintf fmt "@{<fg_magenta>approx[%d]@}" last.t_nb
+         fprintf fmt "@{<fg_blue>approx[%d]@}" last.t_nb
        else 
-         fprintf fmt "@{<fg_yellow>unsafe[%d]@}" last.t_nb
+         fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.t_nb
        
     end
 
@@ -467,7 +467,7 @@ let print_verbose_node fmt s =
       ) s s.t_from in
     
     if last.t_nb < 0 then 
-      fprintf fmt "    = @{<fg_magenta>approx[%d]@}" last.t_nb
+      fprintf fmt "    = @{<fg_blue>approx[%d]@}" last.t_nb
     else 
-      fprintf fmt "    = @{<fg_yellow>unsafe[%d]@}" last.t_nb
+      fprintf fmt "    = @{<fg_magenta>unsafe[%d]@}" last.t_nb
   end

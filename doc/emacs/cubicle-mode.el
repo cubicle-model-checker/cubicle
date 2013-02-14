@@ -14,6 +14,14 @@
 ;;       (cons '("\\.cub$" . cubicle-mode) auto-mode-alist))                  ;;
 ;; (autoload 'cubicle-mode "cubicle-mode" "Major mode for Cubicle." t)        ;;
 ;;                                                                            ;;
+;; To add colors to the compilation buffer, also add this:                    ;;
+;; (require 'ansi-color)                                                      ;;
+;; (defun colorize-compilation-buffer ()                                      ;;
+;;   (toggle-read-only)                                                       ;;
+;;   (ansi-color-apply-on-region (point-min) (point-max))                     ;;
+;;   (toggle-read-only))                                                      ;;
+;; (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)           ;;
+;;                                                                            ;;
 ;;                                                                            ;;
 ;; You can also use Cubicle in org-mode through babel by adding the following ;;
 ;; to your .emacs:                                                            ;;
