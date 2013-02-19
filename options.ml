@@ -49,6 +49,10 @@ let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
 
+let abstr_num = ref false
+let num_range_low = ref 0
+let num_range_up = ref 0
+
 let post_strategy = ref (-1)
 let delete = ref true
 let simpl_by_uc = ref false
@@ -77,8 +81,7 @@ let specs =
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-               "<bfs(default) | dfs | dfsl | dfsh | dfshl | induct> 
-               search strategies";
+               "<bfs(default) | dfs | dfsl | dfsh | dfshl | induct> search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Set dot, " graphviz (dot) output";
     "-v", Arg.Unit incr_verbose, " more debugging information";
@@ -90,9 +93,11 @@ let specs =
     "-enumerative", Arg.Set_int enumerative, 
                     "<n> enumerative forward invariant generation with n processes";
     "-local", Arg.Set localized, 
-                    "localized invariant candidates";
+                    " localized invariant candidates";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
+    "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
+                "<low> <up> abstract numerical values in [<low>; <up>] during forward exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
@@ -156,7 +161,22 @@ let post_strategy =
     | Bfs | BfsDist | Bfsinvp -> 1
     | _ -> 2
 
+let abstr_num = !abstr_num
+let num_range = (!num_range_low, !num_range_up)
+
 let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -1,12 +1,12 @@
 (*
 
- On réalise une barrière pour N processus.
+ Barrier for N process.
 
- On suppose une variable globale sense initialisée à false et une
- variable count initialisée à N.
+ We assume a global variable sense initialized to false and a variable
+ count initialized to N.
 
- Chaque processus dispose d'une variable locale local_sense
- (initialisée à false) ainsi qu'une variable level (initialisée à 0).
+ Each process has a local variable local_sense (initialized to false) as
+ well as a variable level (initialized to 0).
  
  L1:  local_sense := not sense;
  L2:  count := count - 1;
@@ -14,7 +14,7 @@
  L4 : if local_sense <> sense then goto L4;
  L5 : level := level + 1; goto L1
 
- La variable count est représentée par un tableau Count[proc] : bool.
+ The variable count is represented by an array Count[proc] : bool.
  
 *)
 

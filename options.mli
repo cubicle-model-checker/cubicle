@@ -36,6 +36,9 @@ val refine : bool
 val stateless : bool
 val do_brab : bool
 
+val abstr_num : bool
+val num_range : int * int
+
 val post_strategy : int
 val delete : bool
 val simpl_by_uc : bool

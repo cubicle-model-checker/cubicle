@@ -109,6 +109,17 @@ let nb_neq s =
   ) (snd s.t_unsafe) 0
 
 
+let nb_arith s =
+  SAtom.fold (fun a n -> match a with
+    | Atom.Comp (_, (Le|Lt), _)
+    | Atom.Comp (Arith _, _, _) 
+    | Atom.Comp (_, _, Arith _) 
+    | Atom.Comp (Const _, _, _) 
+    | Atom.Comp (_, _, Const _) -> n + 1
+    | _ -> n
+  ) (snd s.t_unsafe) 0
+  
+
 let approximations =
   (* let forward_procs = Forward.procs_from_nb enumerative in *)
   let cpt = ref 0 in

@@ -974,14 +974,15 @@ let useless_candidate sa =
     | (Comp (Elem (p, Var), _, _) as a)
     | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
 
-    | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
+    | Comp ((Elem (x, _) | Access (x,_,_)), _, _)
+    | Comp (_, _, (Elem (x, _) | Access (x,_,_))) ->
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       (* Smt.Symbol.has_type_proc x ||  *)
         (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
         (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
         (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_int) *)
 
-    | Comp ((Arith _), _, _) -> true
+    | Comp ((Arith _), _, _) when not abstr_num -> true
 
     | _ -> false) sa
   (* || List.length (args_of_atoms sa) > 1 *)
