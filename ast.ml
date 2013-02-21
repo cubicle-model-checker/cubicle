@@ -224,7 +224,7 @@ let rec subst_atoms sigma ?(sigma_sort=[]) sa =
   SAtom.fold (fun a -> add (subst_atom sigma ~sigma_sort a)) sa SAtom.empty
 and subst_atom sigma ?(sigma_sort=[]) a = 
   match a with
-    | Ite (sa, a1, a2) -> 
+    | Ite (sa, a1, a2) ->
 	Ite(subst_atoms sigma ~sigma_sort sa, 
             subst_atom sigma ~sigma_sort a1, 
             subst_atom sigma ~sigma_sort a2)
@@ -498,3 +498,38 @@ let has_var z = function
   | True | False -> false
   | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
   | Ite _ -> assert false
+
+let is_int_const = function
+  | ConstInt _ -> true
+  | ConstReal _ -> false
+  | ConstName n -> 
+    Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
+
+let rec type_of_term = function
+  | Const cs ->
+      if is_int_const (fst (MConst.choose cs)) then
+        Smt.Type.type_int
+      else Smt.Type.type_real
+  | Elem (x, Var) -> Smt.Type.type_proc
+  | Elem (x, _) | Access (x, _, _) -> snd (Smt.Symbol.type_of x)
+  | Arith(t, _) -> type_of_term t
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

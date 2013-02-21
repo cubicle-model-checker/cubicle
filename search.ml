@@ -66,6 +66,7 @@ module type I = sig
 
   val has_deleted_ancestor : t -> bool
   val print : Format.formatter -> t -> unit
+  val print_unsafe : Format.formatter -> t -> unit
   val print_bad : Format.formatter -> t -> unit
   val print_dead : Format.formatter -> (t * int list) -> unit
   val print_cand : Format.formatter -> (t * int list) -> unit
@@ -431,7 +432,11 @@ module BFS_base ( X : I ) = struct
 		       if (not invgen) && gen_inv then "     inv gen " 
 		       else "" in
 		     printf "%snode @{<b>%d@}= @[%a@]@." prefpr !nb_nodes
-		       (if debug then fun _ _ -> () else X.print) s
+		       (if debug then fun _ _ -> ()
+                        else if verbose > 0 then X.print_unsafe 
+                        else if verbose > 0 then 
+                          fun fmt s -> fprintf fmt "%a@\n%a" X.print s X.print_system s
+                        else X.print) s;
 		   end
 	       end;
 	       let (ls, post), candidate_found = 

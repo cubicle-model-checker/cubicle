@@ -60,3 +60,4 @@ val fixpoint_trie2 : t_system Cubetrie.t -> t_system -> int list option
 val add_and_resolve : t_system -> t_system Cubetrie.t -> t_system Cubetrie.t
 val simple_extract_candidates :
   ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list
+

@@ -140,12 +140,6 @@ let add_constant c i cs =
 	if i = 0 then MConst.remove c cs
 	else MConst.add c i cs
 
-let is_int_const = function
-  | ConstInt _ -> true
-  | ConstReal _ -> false
-  | ConstName n -> 
-    Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
-
 let add_constants cs1 cs2 =
   let m = MConst.fold add_constant cs2 cs1 in
   if MConst.is_empty m then 
@@ -506,26 +500,25 @@ let args_of_atoms sa =
 (* Good renaming of a cube's variables *)
 (***************************************)
 
-let proper_cube sa = 
-  if profiling then TimerApply.start ();
+let proper_cube sa =
   let args = args_of_atoms sa in
   let cpt = ref 1 in
-  let sa = 
-    List.fold_left 
-      (fun sa arg -> 
+  let sigma =
+    List.fold_left
+      (fun sigma arg ->
 	 let n = number_of (H.view arg) in
-	 if n = !cpt then (incr cpt; sa)
-	 else 
-	   let sa = 
-	     subst_atoms [arg, List.nth proc_vars (!cpt - 1)] sa in 
-	   incr cpt; sa)
-      sa args
+	 if n = !cpt then (incr cpt; sigma)
+	 else
+	   let sigma =
+	     (arg, List.nth proc_vars (!cpt - 1)):: sigma in
+	   incr cpt; sigma)
+      [] args
   in
+  let sa = subst_atoms (List.rev sigma) sa in
   let l = ref [] in
-  for n = !cpt - 1 downto 1 do 
+  for n = !cpt - 1 downto 1 do
     l := (List.nth proc_vars (n - 1)) :: !l
   done;
-  if profiling then TimerApply.pause ();
   sa, (!l, List.nth proc_vars (!cpt - 1))
 
 

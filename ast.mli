@@ -156,3 +156,7 @@ val declared_terms : ArrayAtom.t -> bool
 val variables_of : SAtom.t -> STerm.t
 
 val has_var : Hstring.t -> Atom.t -> bool
+
+val is_int_const : const -> bool
+
+val type_of_term : term -> Smt.Type.t

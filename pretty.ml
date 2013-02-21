@@ -307,17 +307,25 @@ let rec print_subst fmt = function
   | (x,y)::r -> 
     fprintf fmt "%a -> %a, %a" Hstring.print x Hstring.print y print_subst r
 
+let print_trace fmt s =
+  let last = List.fold_left 
+    (fun last (tr, args, uns) ->
+      if dmcmt then 
+	fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
+      else 
+	fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args;
+      uns
+    ) s s.t_from in
+  if dmcmt then fprintf fmt "[0]  "
+  else
+    if last.t_nb < 0 then 
+      fprintf fmt "@{<fg_blue>approx[%d]@}" last.t_nb
+    else 
+      fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.t_nb
+
 let print_unsafe fmt s = 
-  fprintf fmt "  Unsafe property (from %aunsafe):@.        %a@."
-    (fun fmt ->
-       List.iter 
-	 (fun (tr, args, _) ->
-	   if dmcmt then 
-	     fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
-	   else
-	     fprintf fmt "%s(%a) -> " (Hstring.view tr.tr_name) print_args args
-	 )) s.t_from
-    print_system s
+  fprintf fmt "Unsafe property (from %a):@\n        %a@."
+    print_trace s print_system s
 
 let rec print_atom_dot fmt = function
   | True -> fprintf fmt "true"
@@ -362,24 +370,7 @@ let print_node fmt s =
 	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
     end
   else
-    begin
-(*      fprintf fmt "@.%a" print_system s*)
-      let last = List.fold_left 
-       (fun last (tr, args, uns) ->
-	  if dmcmt then 
-	    fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
-	  else 
-	    fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args;
-         uns
-       ) s s.t_from in
-     if dmcmt then fprintf fmt "[0]  "
-     else
-       if last.t_nb < 0 then 
-         fprintf fmt "@{<fg_blue>approx[%d]@}" last.t_nb
-       else 
-         fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.t_nb
-       
-    end
+    print_trace fmt s
 
 let print_bad fmt s =
   if List.length s.t_from  = 0 then

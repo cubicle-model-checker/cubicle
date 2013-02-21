@@ -736,6 +736,7 @@ module T = struct
 
   let has_deleted_ancestor = has_deleted_ancestor
   let print = Pretty.print_node
+  let print_unsafe  = Pretty.print_unsafe
   let print_bad = Pretty.print_bad
   let print_dead = Pretty.print_dead_node
   let print_cand = Pretty.print_dead_node_to_cand
