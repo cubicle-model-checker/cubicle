@@ -102,7 +102,7 @@ let bitvbounds_from_pb s =
     List.iter (fun a ->
       let right = !i in
       let left = right + size_of_symbol a - 1 in
-      HT.add h (Access (a, p, Var)) (right, left);
+      HT.add h (Access (a, [p])) (right, left);
       bounds := right :: !bounds;
       if Smt.Symbol.has_type_proc a then add_proc_bits right;
       i := left + 1
@@ -136,7 +136,7 @@ let values_of_type ty =
   List.fold_left (fun acc v -> HSet.add v acc) HSet.empty vals      
 
 let values_of_term = function
-  | Elem (x, Glob) | Access (x, _, Var) ->
+  | Elem (x, Glob) | Access (x, _) ->
       values_of_type (snd (Smt.Symbol.type_of x))
   | Elem (x, (Var | Constr)) -> HSet.singleton x
   | _ -> assert false
@@ -410,7 +410,7 @@ let fixpoint ~invariants ~visited ({t_unsafe = args, sa} as s) =
       List.fold_left (fun acc {t_alpha = vargs, sa; t_nb = nb} ->
         let sa = ArrayAtom.to_satom sa in
         if debug then eprintf "%d visited: %a@." nb Pretty.print_cube sa;
-        let perms = Cube.all_permutations vargs args in
+        let perms = all_permutations vargs args in
 
         List.fold_left (fun acc sigma ->
           
@@ -440,26 +440,26 @@ let fixpoint ~invariants ~visited ({t_unsafe = args, sa} as s) =
 
 
 (* Buggy : need to check if at least one term is 0 *)
-let safe {t_unsafe = args, sa; t_init = iargs, inisa} =
-  let cubes = cube_to_bitvs ~dnf:false sa in
-  eprintf "safety : \ncube: %a@." Pretty.print_cube sa;
-  List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes;
-  let init_sa = match iargs with
-    | None -> inisa
-    | Some a ->
-      List.fold_left (fun acc ss ->
-	SAtom.union (Cube.apply_subst inisa ss) acc)
-	SAtom.empty
-	(List.map (fun b -> [a, b]) args)
-  in
-  let init_cubes = cube_to_bitvs ~dnf:false init_sa in
-  eprintf "\ninit: %a@." Pretty.print_cube init_sa;
-  List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) init_cubes;
-  List.for_all (fun c ->
-    List.for_all (fun init ->
-      Bitv.all_zeros (Bitv.bw_and c init)
-    ) init_cubes
-  ) cubes
+let safe {t_unsafe = args, sa; t_init = iargs, inisa} = assert false
+  (* let cubes = cube_to_bitvs ~dnf:false sa in *)
+  (* eprintf "safety : \ncube: %a@." Pretty.print_cube sa; *)
+  (* List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) cubes; *)
+  (* let init_sa = match iargs with *)
+  (*   | [] -> inisa *)
+  (*   | _ -> *)
+  (*     List.fold_left (fun acc ss -> *)
+  (*       SAtom.union (Cube.apply_subst inisa ss) acc) *)
+  (*       SAtom.empty *)
+  (*       (all_instantiations iargs args) *)
+  (* in *)
+  (* let init_cubes = cube_to_bitvs ~dnf:false init_sa in *)
+  (* eprintf "\ninit: %a@." Pretty.print_cube init_sa; *)
+  (* List.iter (fun c -> eprintf "Bitv : %s@." (Bitv.L.to_string c)) init_cubes; *)
+  (* List.for_all (fun c -> *)
+  (*   List.for_all (fun init -> *)
+  (*     Bitv.all_zeros (Bitv.bw_and c init) *)
+  (*   ) init_cubes *)
+  (* ) cubes *)
 
 let check_safety s =
   if not (safe s) then raise (Search.Unsafe s)

@@ -225,15 +225,15 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
     Atom.Comp (Elem (v2, Glob), (Neq|Lt), Elem (x2, Constr))
       when H.equal v1 v2 && H.equal x1 x2 ->
       []
-  | Atom.Comp (Access (a1,i1,Var), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x1)),
-    Atom.Comp (Access (a2,i2,Var), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x2))
-      when H.equal a1 a2 && H.equal i1 i2 && compare_term x1 x2 <> 0 ->
+  | Atom.Comp (Access (a1,li1), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x1)),
+    Atom.Comp (Access (a2,li2), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x2))
+      when H.equal a1 a2 && H.list_equal li1 li2 && compare_term x1 x2 <> 0 ->
       []
-  | Atom.Comp (Access (a1,i1,Var), Eq,
+  | Atom.Comp (Access (a1,li1), Eq,
                (Elem (_, (Constr|Glob)) | Arith _ as x1)),
-    Atom.Comp (Access (a2,i2,Var), (Neq | Lt), 
+    Atom.Comp (Access (a2,li2), (Neq | Lt), 
                (Elem (_, (Constr|Glob)) | Arith _ as x2))
-      when H.equal a1 a2 && H.equal i1 i2 && compare_term x1 x2 = 0 ->
+      when H.equal a1 a2 && H.list_equal li1 li2 && compare_term x1 x2 = 0 ->
       []
   | _, _ ->
       let cmp = Atom.compare atom atom' in

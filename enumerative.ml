@@ -152,7 +152,7 @@ let id_to_term env id =
       
 
 let is_int_real = function
-  | Elem (x,Glob) | Access (x, _, _) -> 
+  | Elem (x,Glob) | Access (x, _) -> 
       snd (Smt.Symbol.type_of x) = Smt.Type.type_int ||
       snd (Smt.Symbol.type_of x) = Smt.Type.type_real
   | _ -> false
@@ -209,7 +209,7 @@ let init_tables procs s =
   let prem_procs = 
     List.filter (fun sigma ->
       List.exists (fun (x,y) -> x <> y) sigma
-    ) (Cube.all_permutations proc_ids proc_ids) in
+    ) (all_permutations proc_ids proc_ids) in
   if debug then
     HT.iter (fun t i -> eprintf "%a -> %d@." Pretty.print_term t i ) ht;
   let id_true = try HT.find ht (Elem (htrue, Constr)) with Not_found -> -2 in
@@ -281,23 +281,52 @@ let hash_state st =
   !h
 
 
-let mkinit arg init args =
-  match arg with
-    | None -> init
-    | Some z ->
-        let abs_init = SAtom.filter (function
-	  | Atom.Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
-	      if abstr_num then not (Smt.Symbol.has_abstract_type x)
-              else not (Smt.Symbol.has_infinite_type x)
-	  | _ -> true) init in
-	let abs_init = simplification_atoms SAtom.empty abs_init in
-	let sa, cst = SAtom.partition (has_var z) abs_init in
-	List.fold_left (fun acc h ->
-	  SAtom.union (subst_atoms [z, h] sa) acc) cst args
+let abs_inf = 
+  SAtom.filter (function
+    | Atom.Comp ((Elem (x, Glob) | Access (x,_)), _, _) ->
+	if abstr_num then not (Smt.Symbol.has_abstract_type x)
+        else not (Smt.Symbol.has_infinite_type x)
+    | _ -> true)
 
-let mkinit_s procs ({t_init = ia, init}) =
-  let sa, (nargs, _) = proper_cube (mkinit ia init procs) in
-  sa, nargs
+
+let make_init_cdnf args lsa lvars =
+  match args, lvars with
+    | [], _ ->   
+	[lsa]
+    | _, [] ->
+        [List.map 
+            (SAtom.filter (fun a -> 
+              not (List.exists (fun z -> has_var z a) args)))
+            lsa]
+    | _ ->
+        let lsigs = all_instantiations args lvars in
+        List.fold_left (fun conj sigma ->
+          let dnf = List.fold_left (fun dnf sa ->
+            let sa = abs_inf sa in
+            let sa = subst_atoms sigma sa in
+            try (simplification_atoms SAtom.empty sa) :: dnf
+            with Exit -> dnf
+          ) [] lsa in
+          dnf :: conj
+        ) [] lsigs
+
+let rec cdnf_to_dnf_rec acc = function
+  | [] -> acc
+  | [] :: r ->
+      cdnf_to_dnf_rec acc r
+  | dnf :: r ->
+      let acc = 
+        List.flatten (List.rev_map (fun sac -> 
+          List.rev_map (SAtom.union sac) dnf) acc) in
+      cdnf_to_dnf_rec acc r
+
+let cdnf_to_dnf = function
+  | [] -> [SAtom.singleton Atom.False]
+  | l -> cdnf_to_dnf_rec [SAtom.singleton Atom.True] l
+
+let mkinits procs ({t_init = ia, l_init}) =
+  cdnf_to_dnf (make_init_cdnf ia l_init procs) 
+
 
 let int_of_const = function
   | ConstInt n -> Num.int_of_num n
@@ -348,9 +377,13 @@ let write_cube_to_states env st sa =
 
 let init_to_states env procs s =
   let nb = env.nb_vars in
-  let st_init = Array.make nb (-1) in
-  let init, _ = mkinit_s procs s in
-  let sts = write_cube_to_states env st_init init in
+  let l_inits = mkinits procs s in
+  let sts =
+    List.fold_left (fun acc init -> 
+      let st_init = Array.make nb (-1) in
+      let sts = write_cube_to_states env st_init init in
+      List.rev_append sts acc
+    ) [] l_inits in
   List.map (fun st -> hash_state st, st) sts
   
 
@@ -414,19 +447,27 @@ let nondets_to_actions env sigma acc =
     ) acc
 
 let update_to_actions procs sigma env acc
-    {up_arr=a; up_arg=j; up_swts=swts} =
+    {up_arr=a; up_arg=lj; up_swts=swts} =
   let rec sd acc = function
     | [] -> assert false
     | [d] -> acc, d
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
-  List.fold_left (fun acc i ->
-    let sigma = (j,i)::sigma in
-    let at = Access (a, i, Var) in
+  let indexes = all_arrangements (arity a) procs in
+  List.fold_left (fun acc li ->
+    let sigma = (List.combine lj li) @ sigma in
+    let at = Access (a, li) in
     let t = subst_term sigma t in
     let default =
-      St_assign (HT.find env.id_terms at, HT.find env.id_terms t) in
+      try match t with
+        | Arith (t', cs) ->
+            St_arith (HT.find env.id_terms at,
+                      HT.find env.id_terms t', int_of_consts cs)            
+        | _ ->
+            St_assign (HT.find env.id_terms at, HT.find env.id_terms t)
+      with Not_found -> St_ignore
+    in
     let ites = 
       List.fold_left (fun ites (sa, t) ->
 	let sa = subst_atoms sigma sa in
@@ -447,7 +488,7 @@ let update_to_actions procs sigma env acc
 	  | Not_trivial -> St_ite (satom_to_st_req env sa, sta, ites)
       ) default swts
     in ites :: acc
-  ) acc procs
+  ) acc indexes
 
 let missing_reqs_to_actions acct =
   List.fold_left (fun acc -> function

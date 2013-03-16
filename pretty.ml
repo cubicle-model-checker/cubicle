@@ -261,7 +261,8 @@ let print_cs fmt cs =
 let rec print_term fmt = function
   | Const cs -> print_cs fmt cs
   | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
-  | Access (a, i, _) -> fprintf fmt "%a[%a]" Hstring.print a Hstring.print i
+  | Access (a, li) ->
+      fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
   | Arith (x, cs) -> 
       fprintf fmt "@[%a%a@]" print_term x print_cs cs
 

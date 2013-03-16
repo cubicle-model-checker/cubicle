@@ -63,11 +63,11 @@ let rec m_number a s =
     | True | False -> s
     | Comp (Elem (x, Glob), Eq, Elem (y, Constr)) 
     | Comp (Elem (x, Constr), Eq, Elem (y, Glob)) -> SS.add (x,y) s
-    | Comp (Access (a, _, _), _, Elem (x, xs)) -> 
+    | Comp (Access (a, _), _, Elem (x, xs)) -> 
 	if xs = Glob || xs = Constr then
 	  SS.add (a, x) s 
 	else SS.add (a, hempty) s
-    | Comp (_, _, Access (a, _, _)) -> SS.add (a, hempty) s
+    | Comp (_, _, Access (a, _)) -> SS.add (a, hempty) s
     | Comp _ ->  s
     | Ite (sa, a1, a2) -> 
 	SAtom.fold m_number sa (m_number a1 (m_number a2 s))
@@ -477,9 +477,14 @@ let number_of s =
   else 1
 
 let rec add_arg args = function
-  | Elem (s, _) | Access (_, s ,_) ->
+  | Elem (s, _) ->
       let s' = H.view s in
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
+  | Access (_, ls) ->
+      List.fold_left (fun args s ->
+        let s' = H.view s in
+        if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args)
+        args ls        
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
 
@@ -522,39 +527,6 @@ let proper_cube sa =
   sa, (!l, List.nth proc_vars (!cpt - 1))
 
 
-(****************************************************)
-(* Find relevant quantifier instantiation for 	    *)
-(* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
-(****************************************************)
-
-let rec all_permutations l1 l2 = 
-  (*assert (List.length l1 <= List.length l2);*)
-  match l1 with
-    | [] -> [[]]
-    | x::l -> cross l [] x l2
-and cross l pr x st =
-  match st with
-    | [] -> []
-    | y::p -> 
-	let acc = all_permutations l (pr@p) in
-	let acc = 
-	  if acc = [] then [[x,y]]
-	  else List.map (fun ds -> (x, y)::ds) acc in
-	acc@(cross l (y::pr) x p)
-
-let rec all_parts l = match l with
-  | [] -> []
-  | x::r -> let pr = all_parts r in
-	    [x]::pr@(List.map (fun p -> x::p) pr)
-
-let all_parts_elem l = List.map (fun x -> [x]) l
-
-let rec all_partial_permutations l1 l2 =
-  List.flatten (
-    List.fold_left (fun acc l -> (all_permutations l l2)::acc) [] (all_parts l1)
-  )
-
-
 (*********************************************)
 (* all permutations excepted impossible ones *)
 (*********************************************)
@@ -582,33 +554,39 @@ and cross_impos impos l pr x st =
 
 exception NoPermutations
 
-let find_impossible a1 x1 op c1 i2 a2 n2 impos obvs =
+let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
   let i2 = ref i2 in
   while !i2 < n2 do
     let a2i = a2.(!i2) in
     (match a2i, op with
-      | Comp (Access (a2, _, _), _, _), _ when not (H.equal a1 a2) ->
+      | Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
 	  i2 := n2
 
-      | Comp (Access (a2, x2, _), Eq,
+      | Comp (Access (a2, lx2), Eq,
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), (Neq | Lt)
 	  when compare_term c1 c2 = 0 ->
 	  
-	  if H.list_mem_couple (x1, x2) obvs then raise NoPermutations;
-	  impos := (x1, x2) :: !impos
-	    
-      | Comp (Access (a2, x2, _), (Neq | Lt),
+	  if List.exists2 
+            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
+            raise NoPermutations;
+          List.iter2 (fun x1 x2 -> impos := (x1, x2) :: !impos) lx1 lx2
+	      
+      | Comp (Access (a2, lx2), (Neq | Lt),
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), Eq
 	  when compare_term c1 c2 = 0 ->
-	  
-	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
-	  impos := (x1, x2) :: !impos
 
-      | Comp (Access (a2, x2, _), Eq, (Elem (_, Constr) as c2)), Eq 
+	  if List.exists2 
+            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
+            raise NoPermutations;
+          List.iter2 (fun x1 x2 -> impos := (x1, x2) :: !impos) lx1 lx2
+
+      | Comp (Access (a2, lx2), Eq, (Elem (_, Constr) as c2)), Eq 
 	  when compare_term c1 c2 <> 0 ->
 	  
-	  if H.list_mem_couple (x1,x2) obvs then raise NoPermutations;
-	  impos := (x1, x2) :: !impos
+	  if List.exists2 
+            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
+            raise NoPermutations;
+          List.iter2 (fun x1 x2 -> impos := (x1, x2) :: !impos) lx1 lx2
 	    
       | _ -> ());
     incr i2
@@ -659,11 +637,11 @@ let obvious_impossible a1 a2 =
     		   raise NoPermutations
     	       | _ -> ()
 	   end
-       | Comp (Access (a1, x1, Var), op, 
+       | Comp (Access (a1, lx1), op, 
 	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
-	 Comp (Access (a, _,Var), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
+	 Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
-	   find_impossible a1 x1 op c1 !i2 a2 n2 impos !obvs
+	   find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
   done;
@@ -769,9 +747,12 @@ let contains_tick_term tick = function
       (try MConst.find tick m <> 0 with Not_found -> false)
   | _ -> false
 
-let contains_tick_atom tick = function
+let rec contains_tick_atom tick = function
   | Comp (t1, _, t2) -> 
       contains_tick_term tick t1 || contains_tick_term tick t2
+  (* | Ite (sa, a1, a2) -> *)
+  (*     contains_tick_atom tick a1 || contains_tick_atom tick a2 || *)
+  (*       SAtom.exists (contains_tick_atom tick) sa *)
   | _ -> false
 
 let remove_tick_atom sa (tick, at) = 
@@ -876,19 +857,16 @@ let simplify_atoms np =
 (* Safety check : s /\ init must be inconsistent *)
 (*************************************************)
 
-let obviously_safe 
-    { t_unsafe = args, _; t_arru = ua; t_init = iargs, inisa } =
-  let init_conj = match iargs with
-    | None -> inisa
-    | Some a ->
-      List.fold_left (fun acc ss ->
-	SAtom.union (apply_subst inisa ss) acc)
-	SAtom.empty
-	(List.map (fun b -> [a, b]) args)
-  in 
-  inconsistent_list
-    (List.rev_append (Array.to_list ua) (SAtom.elements init_conj))
+let dnf_safe sa = List.for_all (inconsistent_2cubes sa)
 
+let cdnf_asafe ua =
+  List.exists (
+    List.for_all (fun a ->
+      inconsistent_array (Array.append ua a)))
+
+let obviously_safe { t_unsafe = args,_ ; t_arru = ua } =
+  let _, cdnf_ai = Hashtbl.find init_instances (List.length args) in
+  cdnf_asafe ua cdnf_ai
  
 let check_safety s =
   (*Debug.unsafe s;*)
@@ -1086,11 +1064,12 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
 	STerm.add (Elem (g, Glob)) acc, gp
       ) (STerm.empty, []) globals
   in
-  List.fold_left (fun acc p ->
-    List.fold_left (fun acc a ->
-      STerm.add (Access (a, p, Var)) acc)
-      acc arrays)
-    acc (procs@gp)
+  List.fold_left (fun acc a ->
+    let indexes = all_arrangements (arity a) (procs@gp) in
+    List.fold_left (fun acc lp ->
+      STerm.add (Access (a, lp)) acc)
+      acc indexes)
+    acc arrays
 
 
 
@@ -1313,13 +1292,13 @@ let values_of_type ty =
   List.fold_left (fun acc v -> S.add v acc) S.empty vals      
 
 let values_of_term = function
-  | Elem (x, Glob) | Access (x, _, Var) ->
+  | Elem (x, Glob) | Access (x, _) ->
       values_of_type (snd (Smt.Symbol.type_of x))
   | Elem (x, (Var | Constr)) -> S.singleton x
   | _ -> assert false
 
 let sort_of_term = function
-  | Elem (x, Glob) | Access (x, _, Var) ->
+  | Elem (x, Glob) | Access (x, _) ->
       let ty = (snd (Smt.Symbol.type_of x)) in
       if Hstring.equal  ty Smt.Type.type_proc then Var
       else if Smt.Symbol.has_abstract_type x then raise Not_found

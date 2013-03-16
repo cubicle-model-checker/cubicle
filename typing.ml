@@ -35,6 +35,7 @@ type error =
   | MustBeOfTypeProc of Hstring.t 
   | IncompatibleType of Hstring.t list * Hstring.t * Hstring.t list * Hstring.t
   | NotATerm of Hstring.t
+  | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
 
 exception Error of error
@@ -81,6 +82,7 @@ let report fmt = function
       fprintf fmt "types %a and %a are not compatible" 
 	print_htype (args1, ty1) print_htype (args2, ty2)
   | NotATerm s -> fprintf fmt "%a is not a term" Hstring.print s
+  | WrongNbArgs (a, nb) -> fprintf fmt "%a must have %d arguments" Hstring.print a nb
   | Smt (Smt.DuplicateTypeName s) ->
       fprintf fmt "duplicate type name for %a" Hstring.print s
   | Smt (Smt.DuplicateSymb e) ->
@@ -106,7 +108,7 @@ let infer_type x1 x2 =
   try
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
-      | Elem (h1, _) | Access (h1, _, _) -> h1
+      | Elem (h1, _) | Access (h1, _) -> h1
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -140,21 +142,26 @@ let rec term args = function
 	  error (MustBeNum x);
 	args, tx
       end
-  | Access(a, i, _) -> 
+  | Access(a, li) -> 
       let args_a, ty_a = 
 	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) in
-      let ty_i =
-	if Hstring.list_mem i args then Smt.Type.type_proc
-	else 
-	  try 
-	    let ia, tyi = Smt.Symbol.type_of i in
-	    if ia <> [] then error (MustBeOfTypeProc i);
-	    tyi
-	  with Not_found -> error (UnknownName i) 
-      in
-      if args_a = [] then error (MustBeAnArray a);
-      if not (Hstring.equal ty_i Smt.Type.type_proc) then
-	error (MustBeOfTypeProc i);	    
+      if List.length args_a <> List.length li then
+        error (WrongNbArgs (a, List.length args_a))
+      else
+        List.iter (fun i ->
+          let ty_i =
+	    if Hstring.list_mem i args then Smt.Type.type_proc
+	    else 
+	      try 
+	        let ia, tyi = Smt.Symbol.type_of i in
+	        if ia <> [] then error (MustBeOfTypeProc i);
+	        tyi
+	      with Not_found -> error (UnknownName i) 
+          in
+          if args_a = [] then error (MustBeAnArray a);
+          if not (Hstring.equal ty_i Smt.Type.type_proc) then
+	    error (MustBeOfTypeProc i);
+	) li;
       [], ty_a
 
 let assignment ?(init_variant=false) g x (_, ty) = 
@@ -166,7 +173,7 @@ let assignment ?(init_variant=false) g x (_, ty) =
     match x with
       | Elem (n, Constr) -> 
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _, _) -> 
+      | Elem (n, _) | Access (n, _) -> 
 	  Smt.Variant.assign_var g n;
 	  if init_variant then 
 	    Smt.Variant.assign_var n g
@@ -176,8 +183,8 @@ let atom init_variant args = function
   | True | False -> ()
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
-  | Comp (y, Eq, (Access(g, _, _) as x))
-  | Comp (Access(g, _, _) as x, Eq, y) -> 
+  | Comp (y, Eq, (Access(g, _) as x))
+  | Comp (Access(g, _) as x, Eq, y) -> 
       let ty = term args y in
       unify (term args x) ty;
       if init_variant then assignment ~init_variant g y ty
@@ -187,10 +194,7 @@ let atom init_variant args = function
 
 let atoms ?(init_variant=false) args = SAtom.iter (atom init_variant args)
 
-let init (arg, sa) =
-  match arg with
-    | None -> atoms ~init_variant:true [] sa
-    | Some z -> atoms ~init_variant:true  [z] sa
+let init (args, lsa) = List.iter (atoms ~init_variant:true args) lsa
 
 let unsafe (args, sa) = 
   unique (fun x-> error (DuplicateName x)) args; 
@@ -230,15 +234,16 @@ let switchs a args ty_e l =
 let updates args = 
   let dv = ref [] in
   List.iter 
-    (fun {up_arr=a; up_arg=j; up_swts=swts} -> 
+    (fun {up_arr=a; up_arg=lj; up_swts=swts} -> 
        if Hstring.list_mem a !dv then error (DuplicateUpdate a);
-       if Hstring.list_mem j args then error (ClashParam j);
+       List.iter (fun j -> 
+         if Hstring.list_mem j args then error (ClashParam j)) lj;
        let args_a, ty_a = 
 	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a)
        in       
        if args_a = [] then error (MustBeAnArray a);
        dv := a ::!dv;
-       switchs a (j::args) ([], ty_a) swts) 
+       switchs a (lj @ args) ([], ty_a) swts) 
 
 let transitions = 
   List.iter 
@@ -264,8 +269,8 @@ let init_global_env s =
        Smt.Symbol.declare n [] t;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (n, (arg, ret)) -> 
-       Smt.Symbol.declare n [arg] ret;
+    (fun (n, (args, ret)) -> 
+       Smt.Symbol.declare n args ret;
        l := (n, ret)::!l) s.arrays;
   !l
 
@@ -294,6 +299,8 @@ let system s =
 
     let t_globals = List.map fst s.globals in
     let t_arrays = List.map fst s.arrays in
+
+    fill_init_instances s.init;
 
     List.map (fun ((args, p) as un) ->
       let arru = ArrayAtom.of_satom p in (* inutile ? *)

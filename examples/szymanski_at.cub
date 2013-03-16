@@ -1,3 +1,18 @@
+(* Szymanski's mutual exclusion algorithm
+
+0 : Bx := true
+1 : await forall y. x <> y => not Sy then Bx := false
+2 : Wx := true ; Sx := true ;
+3 : if exists y. x <> y not By /\ not Wy
+       then Sx := false ; goto 4
+       else Wx := false ; goto 5
+4 : await exists y. x <> y => Sy /\ not Wy then Wx := false ; Sx := true;
+5 : await forall y. x <> y => not Wy
+6 : await forall y. y < x => not Sy
+7 : {Critical section}
+    Sx := false ; goto 0
+*)
+
 type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
 
 array A[proc] : location

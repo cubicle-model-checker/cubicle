@@ -32,7 +32,7 @@ val compare_constants : int MConst.t -> int MConst.t -> int
 type term = 
   | Const of int MConst.t
   | Elem of Hstring.t * sort
-  | Access of Hstring.t * Hstring.t * sort
+  | Access of Hstring.t * Hstring.t list
   | Arith of term * int MConst.t
 
 val compare_term : term -> term -> int
@@ -100,7 +100,7 @@ end
 
 type update = {
   up_arr : Hstring.t;
-  up_arg : Hstring.t;
+  up_arg : Hstring.t list;
   up_swts : (SAtom.t * term) list;
 }
 
@@ -119,9 +119,9 @@ type elem = Hstring.t * (Hstring.t list)
 type system = {
   globals : (Hstring.t * Hstring.t) list;
   consts : (Hstring.t * Hstring.t) list;
-  arrays : (Hstring.t * (Hstring.t * Hstring.t)) list;
+  arrays : (Hstring.t * (Hstring.t list * Hstring.t)) list;
   type_defs : elem list;
-  init : Hstring.t option * SAtom.t;
+  init : Hstring.t list * SAtom.t list;
   invs : (Hstring.t list * SAtom.t) list;
   cands : (Hstring.t list * SAtom.t) list;
   unsafe : (Hstring.t list * SAtom.t) list;
@@ -137,7 +137,7 @@ type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
   t_from : (transition * Hstring.t list * t_system) list;
-  t_init : Hstring.t option * SAtom.t;
+  t_init : Hstring.t list * SAtom.t list;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
@@ -160,3 +160,24 @@ val has_var : Hstring.t -> Atom.t -> bool
 val is_int_const : const -> bool
 
 val type_of_term : term -> Smt.Type.t
+
+val arity : Hstring.t -> int
+
+val all_permutations : 'a list -> 'b list -> ('a * 'b) list list
+val all_instantiations : 'a list -> 'b list -> ('a * 'b) list list
+val all_arrangements : int -> 'a list -> 'a list list
+
+
+val init_instances : (int, SAtom.t list list * ArrayAtom.t list list) Hashtbl.t
+
+val fill_init_instances : Hstring.t list * SAtom.t list -> unit
+
+
+
+
+
+
+
+
+
+

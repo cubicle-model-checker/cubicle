@@ -312,6 +312,15 @@ module BFS_base ( X : I ) = struct
   let cpt_dot = ref 0
   let cpt_cands = ref 0
 
+  let nb_digits n =
+    if n < 10 then 1
+    else if n < 100 then 2
+    else if n < 1000 then 3
+    else if n < 10000 then 4
+    else if n < 100000 then 5
+    else if n < 1000000 then 6
+    else String.length (string_of_int n)
+
   let extract_candidates db candidates = 
     let l = List.filter (fun n -> n <0) db in
     let rec mem l c = 
@@ -516,7 +525,7 @@ module BFS_base ( X : I ) = struct
 	       if not quiet then 
                  let r = Queue.length q + List.length !postponed in
                  printf "%s@{<dim>%d remaining@}\n@."
-                 (String.make (Pretty.vt_width - 10 - (String.length (string_of_int r))) ' ')
+                 (String.make (Pretty.vt_width - 10 - nb_digits r) ' ')
                  r
 	       
 	     end);
@@ -897,18 +906,18 @@ module DFSHL ( X : I ) = struct
     	if c <> 0 then c else Pervasives.compare l2 l1
 
     (* efficient bfs *)
-    (* let compare (l1, s1) (l2, s2) = *)
-    (*   let v1 = X.size s1 in *)
-    (*   let v2 = X.size s2 in *)
-    (*   let c = Pervasives.compare v1 v2 in *)
-    (*   if c <> 0 then c else *)
-    (*     let c1 = X.card s1 in *)
-    (*     let c2 = X.card s2 in *)
-    (*     let c = Pervasives.compare c1 c2 in *)
-    (*     if c <> 0 then c else *)
-    (* 	  (\* let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in *\) *)
-    (*       (\* if c <> 0 then c else *\) *)
-    (*         Pervasives.compare l2 l1 *)
+    let compare (l1, s1) (l2, s2) =
+      let v1 = X.size s1 in
+      let v2 = X.size s2 in
+      let c = Pervasives.compare v1 v2 in
+      if c <> 0 then c else
+        let c1 = X.card s1 in
+        let c2 = X.card s2 in
+        let c = Pervasives.compare c1 c2 in
+        if c <> 0 then c else
+    	  (* let c = Pervasives.compare (X.nb_father s1) (X.nb_father s2) in *)
+          (* if c <> 0 then c else *)
+            Pervasives.compare l2 l1
       
   end
 

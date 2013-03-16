@@ -32,7 +32,7 @@ let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
         (Cube.proper_cube
            (ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar))) ::
       !bad_candidates
-  ) (Cube.all_permutations a_args args);
+  ) (all_permutations a_args args);
   match trace with
     | Some tr ->
         List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
@@ -121,7 +121,7 @@ let nb_arith s =
   
 
 let approximations =
-  (* let forward_procs = Forward.procs_from_nb enumerative in *)
+  let forward_procs = Forward.procs_from_nb enumerative in
   let cpt = ref 0 in
   fun ({ t_unsafe = (args, sa) } as s) ->
     let init = 
@@ -151,8 +151,9 @@ let approximations =
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc
         else
-          (* let d = List.rev (Cube.all_permutations args' forward_procs) in *)
-          let d = List.rev (Cube.all_permutations args' args') in
+          let d = List.rev (all_permutations args' forward_procs) in
+          (* let d = List.rev (all_permutations args' args') in *)
+          (* let d = [List.combine args' args'] in *)
           (* keep list.rev in order for the first element of perm to be
              a normalized cube as we will keep this only one if none of
              perm can be disproved *)

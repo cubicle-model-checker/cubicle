@@ -23,8 +23,6 @@ val new_cube_id : unit -> int
 val has_deleted_ancestor : t_system -> bool
 val already_closed : t_system -> transition -> Hstring.t list -> t_system option
 
-val all_permutations : 'a list -> 'b list -> ('a * 'b) list list
-
 val apply_subst : SAtom.t -> (Hstring.t * Hstring.t) list -> SAtom.t
 
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t

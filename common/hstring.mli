@@ -67,7 +67,13 @@ val list_mem_couple : t * t -> (t * t) list -> bool
 val compare_list : t list -> t list -> int
 (** [compare_list l1 l2] returns [0] if and only if [l1] is equal to [l2].*)
 
+val list_equal : t list -> t list -> bool
+(** [list_equal l1 l2] returns [true] if and only if [l1] is equal to [l2].*)
+
 val print : Format.formatter -> t -> unit
+(** Prints a hash-consed strings on a formatter. *)
+
+val print_list : string -> Format.formatter -> t list -> unit
 (** Prints a list of hash-consed strings on a formatter. *)
 
 module H : Hashtbl.S with type key = t

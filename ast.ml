@@ -49,7 +49,7 @@ let compare_constants = MConst.compare Pervasives.compare
 type term = 
   | Const of int MConst.t
   | Elem of Hstring.t * sort
-  | Access of Hstring.t * Hstring.t * sort
+  | Access of Hstring.t * Hstring.t list
   | Arith of term * int MConst.t
 
 let rec compare_term t1 t2 = 
@@ -60,9 +60,9 @@ let rec compare_term t1 t2 =
     | Elem (_, (Glob | Arr)), Elem (_, (Constr | Var)) -> 1
     | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
     | Elem _, _ -> -1 | _, Elem _ -> 1
-    | Access (a1, i1, _), Access (a2, i2, _) ->
+    | Access (a1, l1), Access (a2, l2) ->
 	let c = Hstring.compare a1 a2 in
-	if c<>0 then c else Hstring.compare i1 i2
+	if c<>0 then c else Hstring.compare_list l1 l2
     | Access _, _ -> -1 | _, Access _ -> 1 
     | Arith (t1, cs1), Arith (t2, cs2) ->
 	let c = compare_term t1 t2 in
@@ -72,7 +72,9 @@ let rec hash_term = function
   | Const c -> Hashtbl.hash c
   (* | Elem (_, Var) -> 31 *)
   | Elem (s, _) -> Hstring.hash s
-  | Access (a, x, _) -> Hstring.hash a * Hstring.hash x (* * 29 *)
+  | Access (a, lx) -> 
+      List.fold_left (fun acc x -> acc * Hstring.hash x (* * 29 *))
+        (Hstring.hash a) lx
   | Arith (x, c) -> hash_term x + Hashtbl.hash c
 
 let htrue = Hstring.make "True"
@@ -208,8 +210,10 @@ let rec subst_term sigma ?(sigma_sort=[]) t =
   match t with
     | Elem (x, s) -> 
 	(try Elem (svar sigma x, ssort sigma_sort s) with Not_found -> t)
-    | Access (a, z, s) -> 
-	(try Access (a, svar sigma z, ssort sigma_sort s) with Not_found -> t)
+    | Access (a, lz) -> 
+	Access (a, List.map
+          (fun z ->
+            try svar sigma z with Not_found -> z) lz)
     | Arith (x, c) -> Arith (subst_term sigma ~sigma_sort x, c)
     | _ -> t
 	
@@ -408,7 +412,7 @@ end
 
 type update = {
   up_arr : Hstring.t;
-  up_arg : Hstring.t;
+  up_arg : Hstring.t list;
   up_swts : (SAtom.t * term) list;
 }
 
@@ -427,9 +431,9 @@ type elem = Hstring.t * (Hstring.t list)
 type system = {
   globals : (Hstring.t * Hstring.t) list;
   consts : (Hstring.t * Hstring.t) list;
-  arrays : (Hstring.t * (Hstring.t * Hstring.t)) list;
+  arrays : (Hstring.t * (Hstring.t list * Hstring.t)) list;
   type_defs : elem list;
-  init : Hstring.t option * SAtom.t;
+  init : Hstring.t list * SAtom.t list;
   invs : (Hstring.t list * SAtom.t) list;
   cands : (Hstring.t list * SAtom.t) list;
   unsafe : (Hstring.t list * SAtom.t) list;  
@@ -445,7 +449,7 @@ type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
   t_from : (transition * Hstring.t list * t_system) list;
-  t_init : Hstring.t option * SAtom.t;
+  t_init : Hstring.t list * SAtom.t list;
   t_invs : (Hstring.t list * SAtom.t) list;
   t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
@@ -462,7 +466,7 @@ type t_system = {
 let declared_term x =
   match x with
     | Elem (_, Var) -> true
-    | Elem (s, _) | Access (s, _, _) -> Smt.Symbol.declared s
+    | Elem (s, _) | Access (s, _) -> Smt.Symbol.declared s
     | _ -> true
 
 let declared_terms ar =
@@ -474,7 +478,7 @@ let declared_terms ar =
 
 
 let rec variables_term t acc = match t with
-  | Elem (a, Glob) | Access (a, _, _) -> STerm.add t acc
+  | Elem (a, Glob) | Access (a, _) -> STerm.add t acc
   | Arith (x, _) -> variables_term x acc
   | _ -> acc
 
@@ -490,7 +494,7 @@ and variables_of sa = SAtom.fold variables_atom sa STerm.empty
 
 let rec contain_arg z = function
   | Elem (x, _) -> Hstring.equal x z
-  | Access (x, y, _) -> Hstring.equal y z
+  | Access (_, lx) -> Hstring.list_mem z lx
   | Arith (t, _) -> contain_arg z t
   | Const _ -> false
 
@@ -511,8 +515,113 @@ let rec type_of_term = function
         Smt.Type.type_int
       else Smt.Type.type_real
   | Elem (x, Var) -> Smt.Type.type_proc
-  | Elem (x, _) | Access (x, _, _) -> snd (Smt.Symbol.type_of x)
+  | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
   | Arith(t, _) -> type_of_term t
+
+
+let arity s = List.length (fst (Smt.Symbol.type_of s))
+
+
+
+
+(****************************************************)
+(* Find relevant quantifier instantiation for 	    *)
+(* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
+(****************************************************)
+
+let rec all_permutations l1 l2 = 
+  (*assert (List.length l1 <= List.length l2);*)
+  match l1 with
+    | [] -> [[]]
+    | x::l -> cross l [] x l2
+and cross l pr x st =
+  match st with
+    | [] -> []
+    | y::p -> 
+	let acc = all_permutations l (pr@p) in
+	let acc = 
+	  if acc = [] then [[x,y]]
+	  else List.map (fun ds -> (x, y)::ds) acc in
+	acc@(cross l (y::pr) x p)
+
+let rec all_parts l = match l with
+  | [] -> []
+  | x::r -> let pr = all_parts r in
+	    [x]::pr@(List.map (fun p -> x::p) pr)
+
+let all_parts_elem l = List.map (fun x -> [x]) l
+
+let rec all_partial_permutations l1 l2 =
+  List.flatten (
+    List.fold_left (fun acc l -> (all_permutations l l2)::acc) [] (all_parts l1)
+  )
+
+let rec all_arrangements n l =
+  assert (n > 0);
+  match n with
+    | 1 -> List.map (fun x -> [x]) l
+    | _ -> 
+        List.fold_left (fun acc l' ->
+          List.fold_left (fun acc x -> (x :: l') :: acc) acc l
+        ) [] (all_arrangements (n - 1) l)
+
+
+let rec all_instantiations l1 l2 =
+  match l1 with
+    | [] -> []
+    | [x1] -> List.map (fun x2 -> [x1, x2]) l2
+    | x1 :: r1 -> 
+        List.fold_left (fun acc l' ->
+          List.fold_left (fun acc x2 -> ((x1, x2) :: l') :: acc) acc l2
+        ) [] (all_instantiations r1 l2)
+
+
+let init_instances = Hashtbl.create 11
+
+let fill_init_instances (iargs, l_init) = match l_init with
+  | [init] ->
+      let sa, cst = SAtom.partition (fun a ->
+        List.exists (fun z -> has_var z a) iargs) init in
+      let ar0 = ArrayAtom.of_satom cst in
+      Hashtbl.add init_instances 0 ([[cst]], [[ar0]]);
+      let cpt = ref 1 in
+      ignore (List.fold_left (fun v_acc v ->
+        let v_acc = v :: v_acc in
+        let vars = List.rev v_acc in
+        let si = List.fold_left (fun si sigma ->
+          SAtom.union (subst_atoms sigma sa) si)
+          cst (all_instantiations iargs vars) in
+        let ar = ArrayAtom.of_satom si in
+        Hashtbl.add init_instances !cpt ([[si]], [[ar]]);
+        incr cpt;
+        v_acc) [] proc_vars)
+
+  | _ ->
+      let dnf_sa0, dnf_ar0 =
+        List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
+          let sa0 = SAtom.filter (fun a ->
+            not (List.exists (fun z -> has_var z a) iargs)) sa in
+          let ar0 = ArrayAtom.of_satom sa0 in
+          sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
+      Hashtbl.add init_instances 0  ([dnf_sa0], [dnf_ar0]);
+      let cpt = ref 1 in
+      ignore (List.fold_left (fun v_acc v ->
+        let v_acc = v :: v_acc in
+        let vars = List.rev v_acc in
+        let inst =
+          List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
+            let dnf_sa, dnf_ar = 
+              List.fold_left (fun (dnf_sa, dnf_ar) init ->
+              let sa = subst_atoms sigma init in
+              let ar = ArrayAtom.of_satom sa in
+              sa :: dnf_sa, ar :: dnf_ar
+            ) ([],[]) l_init in
+            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
+          ) ([],[]) (all_instantiations iargs vars) in
+        Hashtbl.add init_instances !cpt inst;
+        incr cpt;
+        v_acc) [] proc_vars)
+        
 
 
 

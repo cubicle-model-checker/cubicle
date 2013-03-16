@@ -35,8 +35,8 @@ let prime_h h =
 let rec prime_term t = match t with
   | Elem (e, Glob) -> Elem (prime_h e, Glob)
   | Arith (x, c) -> Arith (prime_term x, c)
-  | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob)
-  | Access (a, x, sx) -> Access (prime_h a, x, sx)
+  (* | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob) *)
+  | Access (a, lx) -> Access (prime_h a, lx)
   | _ -> t
 
 let rec prime_atom a = match a with
@@ -55,8 +55,8 @@ let unprime_h h =
 let rec unprime_term t = match t with
   | Elem (e, Glob) -> Elem (unprime_h e, Glob)
   | Arith (x, c) -> Arith (unprime_term x, c)
-  | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob)
-  | Access (a, x, sx) -> Access (unprime_h a, x, sx)
+  (* | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob) *)
+  | Access (a, lx) -> Access (unprime_h a, lx)
   | _ -> t
 
 
@@ -64,7 +64,7 @@ let is_prime s = String.contains s '@'
 
 let rec is_prime_term = function
   | Const _ -> false 
-  | Elem (s, _) | Access (s, _, _) ->
+  | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
 
@@ -367,7 +367,7 @@ let rec type_of_term = function
 	| ConstInt _ -> Smt.Type.type_int
 	| ConstName x -> snd (Smt.Symbol.type_of (unprime_h x))
       ) m Smt.Type.type_int
-  | Elem (x, _) | Access (x, _, _) -> 
+  | Elem (x, _) | Access (x, _) -> 
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
@@ -449,14 +449,14 @@ let apply_assigns assigns sigma =
     (SAtom.empty, STerm.empty) assigns
 
 
-let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma =
+let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
   let rec sd acc = function
     | [] -> assert false
     | [d] -> acc, d
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
-  let at = Access (a, j, Var) in
+  let at = Access (a, lj) in
   let t = subst_term sigma (prime_term t) in
   let default = Comp (at, Eq, t) in
   let ites = 
@@ -465,10 +465,12 @@ let add_update (sa, st) {up_arr=a; up_arg=j; up_swts=swts} procs sigma =
       let t = subst_term sigma (prime_term t) in
       Ite (sa, Comp (at, Eq, t), ites)) default swts
   in
-  List.fold_left (fun (sa, st) i ->
-    SAtom.add (subst_atom [j, i] ites) sa,
-    STerm.add (Access (a, i, Var)) st
-  ) (sa, st) procs
+  let indexes = all_arrangements (arity a) procs in
+  List.fold_left (fun (sa, st) li ->
+    let sigma = List.combine lj li in
+    SAtom.add (subst_atom sigma ites) sa,
+    STerm.add (Access (a, li)) st
+  ) (sa, st) indexes
 
 let apply_updates upds procs sigma =
   List.fold_left 
@@ -526,8 +528,8 @@ let missing_args procs tr_args =
   aux procs tr_args proc_vars
 
 let rec term_contains_arg z = function
-  | Elem (x, Var) | Access (_, x, Var)
-      when Hstring.equal x z -> true
+  | Elem (x, Var) -> Hstring.equal x z
+  | Access (_, lx) -> Hstring.list_mem z lx
   | Arith (x, _) -> term_contains_arg z x
   | _ -> false
 
@@ -675,7 +677,7 @@ let unconstrained_terms sa = STerm.filter (var_term_unconstrained sa)
 module MA = Map.Make (Atom)
 
 let lit_abstract = function
-  | Comp ((Elem (x, _) | Access (x,_,_)), _, _) ->
+  | Comp ((Elem (x, _) | Access (x,_)), _, _) ->
       Smt.Symbol.has_abstract_type x
   | _ -> false
 
@@ -730,22 +732,66 @@ let stateless_forward s procs trs all_var_terms l =
   forward_rec s procs trs MA.empty l
   
 
-let mkinit arg init args =
-  match arg with
-    | None -> init
-    | Some z ->
-        let abs_init = (* SAtom.filter (function *)
-	  (* | Comp ((Elem (x, _) | Access (x,_,_)), _, _) -> *)
-	  (*     not (Smt.Typing.has_abstract_type x) *)
-	  (* | _ -> true) *) init in
-	let abs_init = simplification_atoms SAtom.empty abs_init in
-	let sa, cst = SAtom.partition (has_var z) abs_init in
-	List.fold_left (fun acc h ->
-	  SAtom.union (subst_atoms [z, h] sa) acc) cst args
+(* let mkinit args init all_args = *)
+(*   match args with *)
+(*     | [] -> init *)
+(*     | _ -> *)
+(*         let abs_init = (\* SAtom.filter (function *\) *)
+(* 	  (\* | Comp ((Elem (x, _) | Access (x,_,_)), _, _) -> *\) *)
+(* 	  (\*     not (Smt.Typing.has_abstract_type x) *\) *)
+(* 	  (\* | _ -> true) *\) init in *)
+(* 	let abs_init = simplification_atoms SAtom.empty abs_init in *)
+(* 	let sa, cst =  *)
+(*           SAtom.partition (fun a ->  *)
+(*             List.exists (fun z -> has_var z a) args) abs_init in *)
+(*         let lsigs = all_instantiations args all_args in *)
+(*         List.fold_left (fun acc sigma -> *)
+(*             SAtom.union (subst_atoms sigma sa) acc) cst lsigs *)
 
-let mkinit_s procs ({t_init = ia, init}) =
-  let sa, (nargs, _) = proper_cube (mkinit ia init procs) in
-  sa, nargs
+(* let mkinits procs ({t_init = ia, l_init}) = *)
+(*   List.map (fun init -> *)
+(*     let sa, (nargs, _) = proper_cube (mkinit ia init procs) in *)
+(*     sa, nargs *)
+(*   ) l_init *)
+
+let make_init_cdnf args lsa lvars =
+  match args, lvars with
+    | [], _ ->   
+	[lsa]
+    | _, [] ->
+        [List.map 
+            (SAtom.filter (fun a -> 
+              not (List.exists (fun z -> has_var z a) args)))
+            lsa]
+    | _ ->
+        let lsigs = all_instantiations args lvars in
+        List.fold_left (fun conj sigma ->
+          let dnf = List.fold_left (fun dnf sa ->
+            (* let sa = abs_inf sa in *)
+            let sa = subst_atoms sigma sa in
+            try (simplification_atoms SAtom.empty sa) :: dnf
+            with Exit -> dnf
+          ) [] lsa in
+          dnf :: conj
+        ) [] lsigs
+
+let rec cdnf_to_dnf_rec acc = function
+  | [] ->
+      List.rev_map (fun sa -> sa, args_of_atoms sa) acc
+  | [] :: r ->
+      cdnf_to_dnf_rec acc r
+  | dnf :: r ->
+      let acc = 
+        List.flatten (List.rev_map (fun sac -> 
+          List.rev_map (SAtom.union sac) dnf) acc) in
+      cdnf_to_dnf_rec acc r
+
+let cdnf_to_dnf = function
+  | [] -> [SAtom.singleton Atom.False, []]
+  | l -> cdnf_to_dnf_rec [SAtom.singleton Atom.True] l
+
+let mkinits procs ({t_init = ia, l_init}) =
+  cdnf_to_dnf (make_init_cdnf ia l_init procs) 
 
 let mkforward_s s =
   List.map (fun fo ->
@@ -796,12 +842,12 @@ let instantiate_transitions all_procs procs trans =
 
 let search procs init =
   let inst_trans = instantiate_transitions procs procs init.t_trans in
-  forward init procs inst_trans [mkinit_s procs init]
+  forward init procs inst_trans (mkinits procs init)
 
 let search_stateless procs init =
   let var_terms = all_var_terms procs init in
   let inst_trans = instantiate_transitions procs procs init.t_trans in
-  stateless_forward init procs inst_trans var_terms [mkinit_s procs init]
+  stateless_forward init procs inst_trans var_terms (mkinits procs init)
 
 let procs_from_nb n =
   let rp, _ = 
@@ -936,7 +982,7 @@ let candidates_from_compagnions a (compagnions, uncs) acc =
     ) remaining acc
   in
   MT.fold (fun c vals acc -> match c with
-    | Elem (x, _) | Access (x, _, _) ->
+    | Elem (x, _) | Access (x, _) ->
       begin
 	match H.HSet.elements vals with
 	  | [v] when Hstring.equal v htrue ->
@@ -974,8 +1020,8 @@ let useless_candidate sa =
     | (Comp (Elem (p, Var), _, _) as a)
     | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
 
-    | Comp ((Elem (x, _) | Access (x,_,_)), _, _)
-    | Comp (_, _, (Elem (x, _) | Access (x,_,_))) ->
+    | Comp ((Elem (x, _) | Access (x,_)), _, _)
+    | Comp (_, _, (Elem (x, _) | Access (x,_))) ->
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       (* Smt.Symbol.has_type_proc x ||  *)
         (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
@@ -1019,7 +1065,7 @@ let global_var = function
   | _ -> false
 
 let update_array up = function
-  | Comp (Access(m,_,_),_,_) | Comp (_,_,Access(m,_,_)) -> 
+  | Comp (Access(m,_),_,_) | Comp (_,_,Access(m,_)) -> 
       (Hstring.compare up.up_arr m = 0) && 
 	List.exists 
 	(fun (sa, t) -> 
@@ -1049,8 +1095,8 @@ let subset_node s1 s2 =
 	SAtom.fold 
 	  (fun a neqs ->
 	     match a with
-	       | Comp((Access(x,_,_) | Elem(x,Glob)),Neq,Elem(c,Constr)) 
-	       | Comp(Elem(c,Constr),Neq,(Access(x,_,_) | Elem(x,Glob))) -> 
+	       | Comp((Access(x,_) | Elem(x,Glob)),Neq,Elem(c,Constr)) 
+	       | Comp(Elem(c,Constr),Neq,(Access(x,_) | Elem(x,Glob))) -> 
 		   let cs = try MM.find x neqs with Not_found -> [] in
 		   MM.add x (c::cs) neqs
 	       | _ -> raise Exit ) s MM.empty
@@ -1061,8 +1107,8 @@ let subset_node s1 s2 =
 	   SAtom.exists 
 	     (fun a ->
 		match a with
-		  | Comp((Access(y,_,_) | Elem(y,Glob)),Eq,Elem(c,Constr)) 
-		  | Comp(Elem(c,Constr),Eq,(Access(y,_,_) | Elem(y,Glob))) -> 
+		  | Comp((Access(y,_) | Elem(y,Glob)),Eq,Elem(c,Constr)) 
+		  | Comp(Elem(c,Constr),Eq,(Access(y,_) | Elem(y,Glob))) -> 
 		      Hstring.equal x y && not (List.mem c cs)
 		  | _ -> false
 	     ) s2
@@ -1139,7 +1185,9 @@ let still_alive fwd candidates s a la =
 
   let args = fst s.t_unsafe in
   let np = [Hstring.make ("#"^(string_of_int (List.length args + 1)))] in
-  let init_np = mkinit (fst s.t_init) (snd s.t_init) np in
+  let init_np = assert false 
+  (* TODO : change this for dnf init or remove all: mkinit (fst s.t_init) (snd s.t_init) np*)
+  in
 
   let pla = potential_update la s.t_trans in
   let pa =  potential_update [a] s.t_trans in
@@ -1291,7 +1339,7 @@ let reachable_on_trace s trace =
         in
         forward_rec nls rest_trace
   in
-  try forward_rec [mkinit_s all_procs s] trace; false
+  try forward_rec (mkinits all_procs s) trace; false
   with Exit -> true
 
 
@@ -1314,4 +1362,4 @@ let conflicting_from_trace s trace =
         in
         forward_rec acc nls rest_trace
   in
-  forward_rec [] [mkinit_s all_procs s] trace
+  forward_rec [] (mkinits all_procs s) trace

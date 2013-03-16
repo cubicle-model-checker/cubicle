@@ -63,12 +63,24 @@ module HS = struct
 	if c <> 0 then c
 	else compare_list r1 r2
 
+  let rec list_equal l1 l2 =
+    match l1, l2 with
+      | [], [] -> true
+      | [], _ -> false
+      | _, [] -> false
+      | x::r1, y::r2 -> equal x y && list_equal r1 r2
+
   let rec list_mem_couple c = function
     | [] -> false
     | d :: l -> compare_couple c d  = 0 || list_mem_couple c l
 
   let print fmt s = 
     Format.fprintf fmt "%s" (view s)
+
+  let rec print_list sep fmt = function
+    | [] -> ()
+    | [s] -> print fmt s
+    | s::r -> Format.fprintf fmt "%a%s%a" print s sep (print_list sep) r
 
 end
 

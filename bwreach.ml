@@ -88,16 +88,17 @@ let fresh_nondet =
     Smt.Symbol.declare s args ret;
     s
 
-let rec find_update a i si = function
+let rec find_update a li = function
   | [] -> raise Not_found
-  | { up_arr = a'; up_arg = j; up_swts = ls} :: _ when a=a' -> 
+  | { up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
       let ls = 
 	List.map 
-	  (fun (ci, ti) -> 
-            subst_atoms [j, i] ~sigma_sort:[Var, si] ci,
-            subst_term [j, i] ~sigma_sort:[Var, si] ti) ls in
-      Branch { up_arr = a'; up_arg = i; up_swts = ls}
-  | _ :: l -> find_update a i si l
+	  (fun (ci, ti) ->
+            let sigma  = List.combine lj li in
+            subst_atoms sigma (* ~sigma_sort:[Var, si] *) ci,
+            subst_term sigma (* ~sigma_sort:[Var, si] *) ti) ls in
+      Branch { up_arr = a'; up_arg = li; up_swts = ls}
+  | _ :: l -> find_update a li l
 
 
 let rec find_assign tr = function
@@ -130,17 +131,18 @@ let rec find_assign tr = function
 		  up.up_swts
 	      }
       end
-  | Access (a, i, si) -> 
-      let ni, sni = 
-	if H.list_mem i tr.tr_nondets then 
-	  fresh_nondet (Smt.Symbol.type_of i), si
-	else 
-	  try (match H.list_assoc i tr.tr_assigns with
-		 | Elem (ni, sni) -> ni, sni
-		 | Const _ | Arith _ | Access _ -> assert false)
-	  with Not_found -> i, si
-      in
-      try find_update a ni sni tr.tr_upds
+  | Access (a, li) -> 
+      let nli =
+        List.map (fun i ->
+	  if H.list_mem i tr.tr_nondets then 
+	    fresh_nondet (Smt.Symbol.type_of i)
+	  else 
+	    try (match H.list_assoc i tr.tr_assigns with
+	      | Elem (ni, _) -> ni
+	      | Const _ | Arith _ | Access _ -> assert false)
+	    with Not_found -> i
+        ) li in
+      try find_update a nli tr.tr_upds
       with Not_found -> 
 	let na = 
 	  try (match H.list_assoc a tr.tr_assigns with
@@ -148,7 +150,7 @@ let rec find_assign tr = function
 		 | Const _ | Arith _ | Access _ -> assert false)
 	  with Not_found -> a
 	in
-	Single (Access (na, ni, sni))
+	Single (Access (na, nli))
 
 let make_tau tr x op y =
   match find_assign tr x, find_assign tr y with
@@ -175,7 +177,8 @@ let make_tau tr x op y =
 (**********************)
 
 let rec has_args_term args = function
-  | Elem (x, Var) | Access (_, x, _) -> H.list_mem x args
+  | Elem (x, Var) -> H.list_mem x args
+  | Access (_, lx) -> List.exists (fun z -> H.list_mem z lx) args 
   | Arith (x, _) ->  has_args_term args x
   | _ -> false
 
@@ -272,6 +275,7 @@ let make_cubes =
       if List.length tr.tr_args > List.length rargs then 
 	assert false (* (ls, post) *)
       else
+        (* let rargs = if List.length rargs > 2 then [Hstring.make "#1"; Hstring.make "#2"] else rargs in *)
 	let d = all_permutations tr.tr_args rargs in
 	List.fold_left cube (ls, post) d
 
@@ -317,7 +321,7 @@ let pre tr unsafe =
   let tau = make_tau tr in
   let pre_unsafe = 
     SAtom.union tr.tr_reqs 
-      (SAtom.fold (fun a -> add (pre_atom tau a)) unsafe SAtom.empty)
+      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
   if debug && verbose > 0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
@@ -468,7 +472,7 @@ let rec same_number z = function
   | Const _ -> true
   | Elem (s, v) -> 
       H.equal s z || v = Glob || v = Constr
-  | Access (_, s, _) -> H.equal s z
+  | Access (_, ls) -> H.list_mem z ls
   | Arith (x, _) -> same_number z x
 
 let rec contains_only z = function

@@ -140,9 +140,10 @@ const_decl:
 ;
 
 array_decl:
-  | ARRAY mident LEFTSQ lident RIGHTSQ COLON lident { 
-        if not (Hstring.equal $4 hproc) then raise Parsing.Parse_error;
-        if Hstring.equal $7 hint || Hstring.equal $4 hreal then Smt.set_arith true;
+  | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+          raise Parsing.Parse_error;
+        if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
 	$2, ($4, $7)}
 ;
@@ -171,7 +172,7 @@ constructors:
 ;
 
 init:
-  | INIT LEFTPAR lident_option RIGHTPAR LEFTBR cube RIGHTBR 
+  | INIT LEFTPAR lidents RIGHTPAR LEFTBR dnf RIGHTBR 
       { $3, $6 }
 ;
 
@@ -275,22 +276,25 @@ require:
 ;
 
 update:
-  | mident LEFTSQ lident RIGHTSQ AFFECT CASE switchs
+  | mident LEFTSQ lident_list_plus RIGHTSQ AFFECT CASE switchs
       { Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
-  | mident LEFTSQ lident RIGHTSQ AFFECT term
-      { let j = fresh_var () in
-	let cube = 
-	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, Var))) in
-	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
-	Upd { up_arr = $1; up_arg = j; up_swts = sw}  }
-  | mident LEFTSQ mident RIGHTSQ AFFECT term
+  | mident LEFTSQ lident_list_plus RIGHTSQ AFFECT term
+      { let cube, rjs =
+          List.fold_left (fun (cube, rjs) i ->
+            let j = fresh_var () in
+            let c = Comp(Elem (j, Var), Eq, Elem (i, Var)) in
+            SAtom.add c cube, j :: rjs) (SAtom.empty, []) $3 in
+        let js = List.rev rjs in
+	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
+	Upd { up_arr = $1; up_arg = js; up_swts = sw}  }
+  /* | mident LEFTSQ mident RIGHTSQ AFFECT term
       { Smt.set_cc true;
         let j = fresh_var () in
 	let cube = 
 	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, sort $3))) in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
 	  Upd { up_arr = $1; up_arg = j; up_swts = sw}
-      }
+      } */
 ;
 
 switchs:
@@ -343,9 +347,9 @@ var_term:
 ;
 
 array_term:
-  | mident LEFTSQ lident RIGHTSQ { Access($1,$3, Var) }
-  | mident LEFTSQ mident RIGHTSQ { Smt.set_cc true;
-                                   Access($1,$3, sort $3) }
+  | mident LEFTSQ lident_list_plus RIGHTSQ { Access($1,$3) }
+  /* | ident LEFTSQ mident RIGHTSQ { Smt.set_cc true;
+                                   Access($1,$3, sort $3) } */
 ;
 
 var_or_array_term:
@@ -379,10 +383,15 @@ lidents:
   | lident lidents { $1::$2 }
 ;
 
-lident_option:
+lident_list_plus:
+  | lident { [$1] }
+  | lident COMMA lident_list_plus { $1::$3 }
+;
+
+/*lident_option:
   | { None }
   | LIDENT { Some (Hstring.make $1) }
-;
+;*/
 
 lident:
   | LIDENT { Hstring.make $1 }

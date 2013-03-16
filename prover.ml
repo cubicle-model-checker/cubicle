@@ -48,7 +48,7 @@ let order_vars =
       (fun (acc, lf, i) v ->
         match acc with
           | v2::r ->
-            let lf = (F.make_lit F.Lt [v;v2]) :: lf in
+            let lf = (F.make_lit F.Lt [v2;v]) :: lf in
             t.(i) <- F.make F.And lf;
             v::acc, lf, i+1
           | [] -> v::acc, lf, i+1)
@@ -102,7 +102,7 @@ let make_cs cs =
 let rec make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
-  | Access (a, i, _) -> T.make_app a [T.make_app i []]
+  | Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
@@ -148,19 +148,10 @@ let make_conjuct atoms1 atoms2 =
   let l = Array.fold_left (fun l a -> make_literal a::l) l atoms2 in
   F.make F.And l
 
-let make_init {t_init = arg, sa } lvars =
-  match arg with
-    | None ->   
-	make_formula_set sa
-    | Some z ->
-	let sa, cst = SAtom.partition (has_var z) sa in
-	let f = make_formula_set cst in
-	let fsa = 
-	  List.rev_map
-	    (fun h -> make_formula_set (subst_atoms [z, h] sa)) lvars
-	in
-	F.make F.And (f::fsa)
 
+let make_init_dnfs args =
+  let cdnf_sa, _ = Hashtbl.find init_instances (List.length args) in
+  List.rev_map (List.rev_map make_formula_set) cdnf_sa
 
 
 (**************************************************************)
@@ -294,13 +285,13 @@ let make_init {t_init = arg, sa } lvars =
 (**************************************************************)
 
 
-let unsafe ({ t_unsafe = (args, sa) } as ts) =
+let unsafe_conj ({ t_unsafe = (args, sa) } as ts) init =
+  if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume 
     ~profiling ~id:ts.t_nb (distinct_vars (List.length args));
-  (* SMT.assume (order_vars (List.length args)); *)
+  (* SMT.assume ~profiling ~id:ts.t_nb (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
-  let init = make_init ts (* (List.rev_append ts.t_glob_proc  *) args in
   let f = make_formula_set sa in
   if profiling then TimeF.pause ();
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
@@ -308,12 +299,32 @@ let unsafe ({ t_unsafe = (args, sa) } as ts) =
   SMT.assume ~profiling ~id:ts.t_nb f;
   SMT.check  ~profiling ()
 
+let unsafe_dnf ts dnf =
+  try
+    let uc =
+      List.fold_left (fun accuc init ->
+        try 
+          unsafe_conj ts init;
+          raise Exit
+        with Smt.Unsat uc -> List.rev_append uc accuc)
+        [] dnf in
+    raise (Smt.Unsat uc)
+  with Exit -> ()
+
+let unsafe_cdnf ({ t_unsafe = args,_; t_init = i_args, l_inits } as ts) =
+  let cdnf_init = make_init_dnfs args in
+  List.iter (unsafe_dnf ts) cdnf_init
+
+let unsafe = unsafe_cdnf
+  
+
+
 
 let reached args s sa =
   SMT.clear ();
   SMT.assume 
     ~profiling ~id:0 (distinct_vars (List.length args));
-  (* SMT.assume (order_vars (List.length args)); *)
+  (* SMT.assume ~profiling ~id:0 (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
   let f = make_formula_set (SAtom.union sa s) in
   if profiling then TimeF.pause ();
@@ -325,7 +336,7 @@ let assume_goal ({t_unsafe = (args, _); t_arru = ap } as ts) =
   SMT.clear ();
   SMT.assume 
     ~profiling ~id:ts.t_nb (distinct_vars (List.length args));
-  (* SMT.assume (order_vars (List.length args)); *)
+  (* SMT.assume ~profiling ~id:ts.t_nb (order_vars (List.length args)); *)
   if profiling then TimeF.start ();
   let f = make_formula ap in
   if profiling then TimeF.pause ();
@@ -403,7 +414,7 @@ module Enum = struct
     with Not_found -> assert false
 
   let type_of_term = function
-    | Elem (x, _) | Access (x, _, _) -> snd (Smt.Symbol.type_of x)
+    | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | _ -> assert false
 
   let val_and_mask v ty =
@@ -420,10 +431,13 @@ module Enum = struct
         let ty = snd (Smt.Symbol.type_of x) in
         let va, mask = val_and_mask v ty in
         x, va, mask
-    | Access (a, x, Var) ->
+    | Access (a, lx) ->
         let ty = snd (Smt.Symbol.type_of a) in
-        let va, mask = val_and_mask v ty in        
-        Hstring.make ((Hstring.view a)^(Hstring.view x)), va, mask
+        let va, mask = val_and_mask v ty in
+        let s = 
+          List.fold_left (fun acc x -> acc^(Hstring.view x)) (Hstring.view a) lx
+        in
+        Hstring.make s, va, mask
     | _ -> assert false
 
 
@@ -518,16 +532,16 @@ module Enum = struct
         HAA.add cache atoms f;
         f
 
-  let make_init {t_init = arg, sa } lvars =
-    match arg with
-      | None ->   
-	  make_formula_set sa
-      | Some z ->
-	  let sa, cst = SAtom.partition (has_var z) sa in
-	  let f = make_formula_set cst in
-          List.fold_left (fun acc h ->
-            List.rev_append (make_formula_set (subst_atoms [z, h] sa)) acc)
-            f lvars
+  let make_init {t_init = arg, sa } lvars = assert false
+    (* match arg with *)
+    (*   | None ->    *)
+    (*       make_formula_set sa *)
+    (*   | Some z -> *)
+    (*       let sa, cst = SAtom.partition (has_var z) sa in *)
+    (*       let f = make_formula_set cst in *)
+    (*       List.fold_left (fun acc h -> *)
+    (*         List.rev_append (make_formula_set (subst_atoms [z, h] sa)) acc) *)
+    (*         f lvars *)
 
   let unsafe ({ t_unsafe = (args, sa) } as ts) =
     ESMT.clear ();
