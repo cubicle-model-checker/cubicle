@@ -1,4 +1,5 @@
-type proc_type = L1 | Cluster
+(* type proc_type = Proc | Cluster *)
+type proc_type = L1Id | CId
 
 type cache_state = Invld | Shrd | Excl
 type command = None | Get | GetX | Putt | PutX | NAck | ShWb 
@@ -6,414 +7,377 @@ type command = None | Get | GetX | Putt | PutX | NAck | ShWb
 type data
 
 
-  L1Id:      scalarset(L1Cnt);
-  CId: scalarset(ClusterCnt);
-  Datas:     scalarset(DataCnt);
-
-  ClusterRange: 0 .. ClusterCnt;
-
-  CacheState: enum {Invld, Shrd, Excl};
-  Commands: enum {None, Get, GetX, Putt, PutX, NAck, ShWb, 
-		  Inv, InvAck, DxFer, WINV, WB};
-
-  L1State: record
-    State: CacheState;
-    Data: Datas;
-    Req: Commands;
-  end;
-
-  L2State: record
-    State: CacheState;
-    Data: Datas; 
-    pending: boolean;
-  end;
-
-  ClusterState: record
-    L1s: array [L1Id] of L1State;
-    L2: L2State;
-    OnlyCopy: boolean;
-
-    ifInReq: boolean;
-    ReqCmd: Commands;
-
-    ifOutRpy: boolean;
-    outRpy: record
-      Cmd: Commands;
-      Data: Datas;
-    end;
-
-    ifOutReq: boolean;
-    outReq: record
-      Cmd: Commands;
-      Cluster: CId;
-    end;
-
-    ifInRpy: boolean;
-    inRpy: record
-      Cmd: Commands;
-      Data: Datas;
-      Dest: CId;
-    end;
-
-    WbReq: record
-      Cmd: Commands;
-      Data: Datas;
-    end;
-
-    RAC: record
-      Cmd: Commands;
-      InvCnt: ClusterRange;
-    end;
-  end;
-
-  GUni_Msg: record
-    Cmd: Commands;
-    Cluster: CId;
-    Data: Datas;
-    InvCnt: ClusterRange;
-  end;
-
-  GInv_Msg: record
-    Cmd: Commands;
-    Cluster: CId;
-  end;
-
-  GShWb_Msg: record
-    Cmd: Commands;
-    Data: Datas;
-    Cluster: CId;
-  end;
-
-  GWb_Msg: record
-    Cmd: Commands;
-    Cluster: CId;
-    Data: Datas;
-  end;
-
-  DirState: record
-    State: CacheState;
-    ShrSet: array [CId] of boolean;
-    Owner: CId;
-    pending: boolean;
-    Mem: Datas;
-  end;
-
-var
-
-  Clusters: array [CId] of ClusterState;
-  GUniMsg: array [CId] of GUni_Msg;
-  GInvMsg: array [CId] of GInv_Msg;
-  GShWbMsg: GShWb_Msg;
-  GWbMsg: GWb_Msg;
-  GDir:      DirState;
-  SysData:  Datas;
-
-
-ruleset d: Datas do
-startstate "initializer"
-  for c: CId do
-    for i: L1Id do
-      Clusters[c].L1s[i].State := Invld;
-      undefine Clusters[c].L1s[i].Data;
-      Clusters[c].L1s[i].Req := None;
-    end;
-
-    Clusters[c].L2.State := Invld;
-    undefine Clusters[c].L2.Data;
-    Clusters[c].L2.pending := false;
-    Clusters[c].OnlyCopy := false;
-
-    Clusters[c].ifInReq := false;
-    Clusters[c].ReqCmd := None;
-    Clusters[c].ifOutRpy := false;
-    Clusters[c].outRpy.Cmd := None;
-    undefine Clusters[c].outRpy.Data;
-
-    Clusters[c].ifOutReq := false;
-    Clusters[c].outReq.Cmd := None;
-    undefine Clusters[c].outReq.Cluster;
-    Clusters[c].ifInRpy := false;
-    Clusters[c].inRpy.Cmd := None;
-    undefine Clusters[c].inRpy.Data;
-    undefine Clusters[c].inRpy.Dest;
-    Clusters[c].WbReq.Cmd := None;
-    undefine Clusters[c].WbReq.Data;
-
-    Clusters[c].RAC.Cmd := None;
-    Clusters[c].RAC.InvCnt := 0;
-
-    GUniMsg[c].Cmd := None;
-    undefine GUniMsg[c].Cluster;
-    undefine GUniMsg[c].Data;
-    GUniMsg[c].InvCnt := 0;
-
-    GInvMsg[c].Cmd := None;
-    undefine GInvMsg[c].Cluster;
-  end;
-
-  GShWbMsg.Cmd := None;
-  undefine GShWbMsg.Data;
-  undefine GShWbMsg.Cluster;
-  GWbMsg.Cmd := None;
-  undefine GWbMsg.Data;
-  undefine GWbMsg.Cluster;
-
-  SysData := d;
-
-  GDir.State := Invld;
-  GDir.Mem := d;
-  undefine GDir.Owner;
-  GDir.pending := false;
-  for c: CId do
-    GDir.ShrSet[c] := false;
-  end;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id; d: Datas do
-rule "1 L1 cache update cache"
-  Clusters[c].L1s[i].State = Excl 
-==>
-  Clusters[c].L1s[i].Data := d;
-  SysData := d;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "2 L1 cache write back cache"
-  Clusters[c].L1s[i].State = Excl
-==>
-  Clusters[c].L2.State := Excl;
-  Clusters[c].L2.Data := Clusters[c].L1s[i].Data;
-
-  Clusters[c].L1s[i].State := Invld;
-  undefine Clusters[c].L1s[i].Data;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "3 L1 req shrd copy"
-  Clusters[c].L1s[i].State = Invld &
-  Clusters[c].L1s[i].Req = None 
-==>
-  Clusters[c].L1s[i].Req := Get;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "4 L1 req excl copy"
-  (Clusters[c].L1s[i].State = Invld |
-   Clusters[c].L1s[i].State = Shrd) &
-  Clusters[c].L1s[i].Req = None 
-==>
-  Clusters[c].L1s[i].Req := GetX;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "5 L1 req copy, cluster invld, fwd outside"
-  (Clusters[c].L1s[i].Req = Get  |
-   Clusters[c].L1s[i].Req = GetX) &
-  forall j: L1Id do
-    Clusters[c].L1s[j].State = Invld
-  end &
-  Clusters[c].L2.State = Invld &
-  Clusters[c].L2.pending = false
-==>
-  Clusters[c].L2.pending := true;
-  Clusters[c].ifInReq := true;
-  Clusters[c].ReqCmd := Clusters[c].L1s[i].Req;
-
-  Clusters[c].L1s[i].Req := None;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "6 L1 req copy, cluster busy, NAck"
-  (Clusters[c].L1s[i].Req = Get  |
-   Clusters[c].L1s[i].Req = GetX) &
-  Clusters[c].L2.pending = true
-==>
-  Clusters[c].L1s[i].Req := None;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "7 L1 req shrd copy, L2 reply"
-  Clusters[c].L1s[i].Req = Get &
-  Clusters[c].L2.State = Shrd &
-  Clusters[c].L2.pending = false
-==>
-  Clusters[c].L1s[i].State := Shrd;
-  Clusters[c].L1s[i].Data := Clusters[c].L2.Data;
-  Clusters[c].L1s[i].Req := None;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id; j: L1Id do
-rule "8 L1 req shrd copy, another L1 reply"
-  Clusters[c].L1s[i].Req = Get &
-  Clusters[c].L1s[j].State = Shrd &
-  Clusters[c].L2.State = Invld &
-  Clusters[c].L2.pending = false
-==>
-  Clusters[c].L1s[i].State := Shrd;
-  Clusters[c].L1s[i].Data := Clusters[c].L1s[j].Data;
-  Clusters[c].L1s[i].Req := None;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "9 L1 req excl copy, L2 reply"
-  Clusters[c].L1s[i].Req = GetX &
-  Clusters[c].L2.State = Excl &
-  Clusters[c].L2.pending = false  
-==>
-  Clusters[c].L1s[i].State := Excl;
-  Clusters[c].L1s[i].Data := Clusters[c].L2.Data;
-  Clusters[c].L1s[i].Req := None;
-
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id; j: L1Id do
-rule "10 L1 req excl copy, another L1 reply"
-  Clusters[c].L1s[i].Req = GetX &
-  Clusters[c].L1s[j].State = Excl &
-  Clusters[c].L2.State = Invld &
-  Clusters[c].L2.pending = false
-==>
-  Clusters[c].L1s[i].State := Excl;
-  Clusters[c].L1s[i].Data := Clusters[c].L1s[j].Data;
-  Clusters[c].L1s[i].Req := None;
-
-  Clusters[c].L1s[j].State := Invld;
-  undefine Clusters[c].L1s[j].Data;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "11 L1 req excl copy, L2 reply"
-  Clusters[c].L1s[i].Req = GetX &
-  Clusters[c].L2.State = Shrd &
-  Clusters[c].OnlyCopy = true &
-  Clusters[c].L2.pending = false  
-==>
-  for j: L1Id do
-    if (i != j & Clusters[c].L1s[j].State = Shrd) then
-      Clusters[c].L1s[j].State := Invld;
-      undefine Clusters[c].L1s[j].Data;
-    end;
-  end;
-
-  Clusters[c].L1s[i].State := Excl;
-  Clusters[c].L1s[i].Data := Clusters[c].L2.Data;
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
-end;
-end;
-
-
-ruleset c: CId; i: L1Id do
-rule "12 L1 req excl copy, cluster fwd outside"
-  Clusters[c].L1s[i].Req = GetX &
-  Clusters[c].OnlyCopy = false &
-  Clusters[c].L2.pending = false  
-==>
-  for j: L1Id do
-    if Clusters[c].L1s[j].State = Shrd then
-      Clusters[c].L1s[j].State := Invld;
-      undefine Clusters[c].L1s[j].Data;
-    end;
-  end;
-
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
-
-  Clusters[c].L2.pending := true;
-  Clusters[c].ifInReq := true;
-  Clusters[c].ReqCmd := Clusters[c].L1s[i].Req;
-  Clusters[c].L1s[i].Req := None;
-end;
-end;
-
-
-ruleset c: CId do
-rule "13 Cluster sends req to global dir"
-  Clusters[c].ifInReq = true &
-  Clusters[c].RAC.Cmd = None &
-  Clusters[c].WbReq.Cmd = None 
-==>
-  Clusters[c].RAC.Cmd := Clusters[c].ReqCmd;
-  GUniMsg[c].Cmd := Clusters[c].ReqCmd;
-  GUniMsg[c].Cluster := c;
-
-  Clusters[c].ifInReq := false;
-end;
-end;
-
-
-ruleset c: CId do
-rule "14 global dir reply cluster shrd req"
-  GUniMsg[c].Cmd = Get &
-  GUniMsg[c].Cluster = c &
-  (GDir.State = Shrd |
-   GDir.State = Invld) &
-  GDir.pending = false
-==>
-  GUniMsg[c].Cmd := Putt;
-  GUniMsg[c].Data := GDir.Mem;
-  GDir.ShrSet[c] := true;
-  GDir.State := Shrd;
-end;
-end;
-
-
-ruleset c: CId do
-rule "15 global dir reply cluster excl req"
-  GUniMsg[c].Cmd = GetX &
-  GUniMsg[c].Cluster = c &
-  GDir.State = Invld &
-  GDir.pending = false
-==>
-  GUniMsg[c].Cmd := PutX;
-  GUniMsg[c].Data := GDir.Mem;
-  GUniMsg[c].InvCnt := 0;
-  GDir.Owner := c;
-  GDir.State := Excl;
-end;
-end;
+(*-------------------- Global Network -------------------------*)
+array GUniMsg_Cmd[proc] : command
+array GUniMsg_Cluster[proc] : proc
+array GUniMsg_Data[proc] : data
+array GUniMsg_InvCnt[proc,proc] : bool (* ClusterRange *)
 
+array GInvMsg_Cmd[proc] : command
+array GInvMsg_Cluster[proc] : proc
+
+var GShWbMsg_Cmd : command
+var GShWbMsg_Data : data
+var GShWbMsg_Cluster : proc
+
+var GWbMsg_Cmd : command
+var GWbMsg_Data : data
+var GWbMsg_Cluster : proc
+
+
+(*-------------------- Global Directory -----------------------*)
+var SysData : data
+
+var GDir_State : cache_state
+array GDir_ShrSet[proc] : bool
+var GDir_Owner : proc
+var GDir_Pending : bool
+var GDir_Mem : data 
+
+
+
+(*------------------------ Clusters ---------------------------*)
+
+array Clusters_L1s_State[proc, proc] : cache_state
+array Clusters_L1s_Data[proc, proc] : data
+array Clusters_L1s_Req[proc, proc] : command
+
+array Clusters_L2_State[proc] : cache_state
+array Clusters_L2_Data[proc] : data
+array Clusters_L2_pending[proc] : bool
+
+array Clusters_inInReq[proc] : bool
+array Clusters_ReqCmd[proc] : command
+
+array Clusters_ifOutRpy[proc] : bool
+array Clusters_outRpy_Cmd[proc] : command
+array Clusters_outRpy_Data[proc] : data
+
+array Clusters_ifOutReq[proc] : bool
+array Clusters_outReq_Cmd[proc] : command
+array Clusters_outReq_Cluster[proc] : proc
+
+array Clusters_ifInRpy[proc] : bool
+array Clusters_inRpy_Cmd[proc] : command
+array Clusters_inRpy_Data[proc] : data
+array Clusters_inRpy_Dest[proc] : proc
+
+array Clusters_WbReq_Cmd[proc] : command
+array Clusters_WbReq_Data[proc] : data
+
+array Clusters_RAC_Cmd[proc] : command
+array Clusters_RAC_InvCnt[proc,proc] : bool (* ClusterRange *)
+
+
+array Sort[proc] : proc_type
+
+
+init (c i) {
+    (* Sort[c] = Cluster && Sort[i] = Proc => *)
+    Clusters_L1s_State[c,i] = Invld &&
+    Clusters_L1s_Req[c,i] = None &&
+
+    Clusters_L2_State[c] = Invld &&
+    Clusters_L2_pending[c] = False &&
+    Clusters_OnlyCopy[c] = False &&
+
+    Clusters_ifInReq[c] = False &&
+    Clusters_ReqCmd[c] = None &&
+    Clusters_ifOutRpy[c] = False &&
+    Clusters_outRpy_Cmd[c] = None &&
+
+    Clusters_ifOutReq[c] = False &&
+    Clusters_outReq_Cmd[c] = None &&
+    Clusters_ifInRpy[c] = False &&
+    Clusters_inRpy_Cmd[c] = None &&
+    Clusters_WbReq_Cmd[c] = None &&
+
+    Clusters_RAC_Cmd[c] = None &&
+    (* Clusters_RAC_InvCnt[c] = 0 && *)
+    Clusters_RAC_InvCnt[c] = False &&
+
+    GUniMsg_Cmd[c] = None &&
+    (* GUniMsg_InvCnt[c] = 0 && *)
+    GUniMsg_InvCnt[c,i] = False &&
+
+    GInvMsg_Cmd[c] = None &&
+
+  GShWbMsg_Cmd = None &&
+  GWbMsg_Cmd = None &&
+
+  (* SysData = d && *)
+  (* GDir_Mem = d && *)
+  SysData = GDir_Mem &&
+
+  GDir_State = Invld &&
+  GDir_pending = False &&
+  GDir_ShrSet[c] = False &&
+}
+
+
+
+(*------------ Murphi rule "1 L1 cache update cache" ----------*)
+transition t1 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] = Excl }
+{
+  Clusters_L1s_Data[c,i] := SysData;
+  SysData := .;
+}
+
+
+(*------------ Murphi rule "2 L1 cache write back cache" ------*)
+transition t2 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] = Excl }
+{
+
+  Clusters_L2_State[c] := Excl;
+  Clusters_L2_Data[c] := Clusters_L1s_Data[c,i];
+
+  Clusters_L1s_State[c,i] := Invld;
+  (* undefine Clusters_L1s_Data[c,i]; *)
+}
+
+
+
+(*------------ Murphi rule "3 L1 req shrd copy" --------------*)
+transition t3 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] = Invld &&
+           Clusters_L1s_Req[c,i] = None 
+{
+  Clusters_L1s_Req[c,i] := Get;
+}
+
+
+(*------------ Murphi rule "4 L1 req excl copy" -------------*)
+transition t4 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] <> Excl &&
+           Clusters_L1s_Req[c,i] = None }
+{
+  Clusters_L1s_Req[c,i] := GetX;
+}
+
+
+
+(*--- Murphi rule "5 L1 req copy, cluster invld, fwd outside" ---*)
+transition t5 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = Get &&
+           forall_other j. {Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L2_pending[c] := True;
+  Clusters_ifInReq[c] := True;
+  Clusters_ReqCmd[c] := Clusters_L1s_Req[c,i];
+
+  Clusters_L1s_Req[c,i] := None;
+}
+
+transition t5_x (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           forall_other j. {Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L2_pending[c] := True;
+  Clusters_ifInReq[c] := True;
+  Clusters_ReqCmd[c] := Clusters_L1s_Req[c,i];
+
+  Clusters_L1s_Req[c,i] := None;
+}
+
+
+(*----------- Murphi rule "6 L1 req copy, cluster busy, NAck" ------*)
+transition t6 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = Get &&
+           Clusters_L2_pending[c] = True }
+{
+  Clusters_L1s_Req[c,i] := None;
+}
+
+transition t6_x (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           Clusters_L2_pending[c] = True }
+{
+  Clusters_L1s_Req[c,i] := None;
+}
+
+
+
+(*----------- Murphi rule "7 L1 req shrd copy, L2 reply" ----------*)
+transition t7 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = Get &&
+           Clusters_L2_State[c] = Shrd &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L1s_State[c,i] := Shrd;
+  Clusters_L1s_Data[c,i] := Clusters_L2_Data[c];
+  Clusters_L1s_Req[c,i] := None;
+}
+
+
+(*------- Murphi rule "8 L1 req shrd copy, another L1 reply" ----*)
+transition t8 (c i j)
+requires { Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
+           Clusters_L1s_Req[c,i] = Get &&
+           Clusters_L1s_State[c,j] = Shrd &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L1s_State[c,i] := Shrd;
+  Clusters_L1s_Data[c,i] := Clusters_L1s_Data[c,j];
+  Clusters_L1s_Req[c,i] := None;
+}
+
+
+(*------- Murphi rule "9 L1 req excl copy, L2 reply" --------*)
+transition t9 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           Clusters_L2_State[c] = Excl &&
+           Clusters_L2_pending[c] = False }  
+{
+  Clusters_L1s_State[c,i] := Excl;
+  Clusters_L1s_Data[c,i] := Clusters_L2_Data[c];
+  Clusters_L1s_Req[c,i] := None;
+
+  Clusters_L2_State[c] := Invld;
+  (* undefine Clusters_L2_Data[c]; *)
+}
+
+
+
+(*------- Murphi rule "10 L1 req excl copy, another L1 reply" ------*)
+transition t10 (c i j)
+requires { Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           Clusters_L1s_State[c,j] = Excl &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L1s_State[c,i] := Excl;
+  Clusters_L1s_Data[c,i] := Clusters_L1s_Data[c,j];
+  Clusters_L1s_Req[c,i] := None;
+
+  Clusters_L1s_State[c,j] := Invld;
+  (* undefine Clusters_L1s_Data[c,i]; *)
+}
+
+
+
+(*------- Murphi rule "11 L1 req excl copy, L2 reply" ---------*)
+transition t11 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           Clusters_L2_State[c] = Shrd &&
+           Clusters_OnlyCopy[c] = True &&
+           Clusters_L2_pending[c] = False }
+{  
+  Clusters_L1s_State[oc,j] := case
+                            | oc = c && j <> i : Invld
+                            (* undefine Clusters[c]_L1s[j]_Data; *)
+                            | _ : Clusters_L1s_State[oc,j];
+
+  Clusters_L1s_State[c,i] := Excl;
+  Clusters_L1s_Data[c,i] := Clusters_L2_Data[c];
+  Clusters_L2_State[c] := Invld;
+  (* undefine Clusters_L2_Data[c]; *)
+}
+
+
+
+(*------- Murphi rule "12 L1 req excl copy, cluster fwd outside" ----*)
+transition t12 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           Clusters_OnlyCopy[c] = False &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L1s_State[oc,j] :=
+    case | oc = c && Clusters_L1s_State[oc,j] = Shrd : Invld;
+      (* undefine Clusters[c]_L1s[j]_Data; *)
+         | _ : Clusters_L1s_State[oc,j];
+
+  Clusters_L2_State[c] := Invld;
+  (* undefine Clusters_L2_Data[c]; *)
+
+  Clusters_L2_pending[c] := True;
+  Clusters_ifInReq[c] := True;
+  Clusters_ReqCmd[c] := Clusters_L1s_Req[c,i];
+  Clusters_L1s_Req[c,i] := None;
+}
+
+
+(*------- Murphi rule "13 Cluster sends req to global dir" -----*)
+transition t13 (c)
+requires { Sort[c] = CId &&
+           Clusters_ifInReq[c] = True &&
+           Clusters_RAC_Cmd[c] = None &&
+           Clusters_WbReq_Cmd[c] = None }
+{
+  Clusters_RAC_Cmd[c] := Clusters_ReqCmd[c];
+  GUniMsg_Cmd[c] := Clusters_ReqCmd[c];
+  GUniMsg_Cluster[c] := c;
+
+  Clusters_ifInReq[c] := False;
+}
+
+
+
+(*------- Murphi rule "14 global dir reply cluster shrd req" -------*)
+transition t14 (c)
+requires { Sort[c] = CId &&
+         GUniMsg_Cmd[c] = Get &&
+         GUniMsg_Cluster[c] = c &&
+         GDir_State <> Excl &&
+         GDir_pending = False }
+{
+  GUniMsg_Cmd[c] := Putt;
+  GUniMsg_Data[c] := GDir_Mem;
+  GDir_ShrSet[c] := True;
+  GDir_State := Shrd;
+}
+
+
+(*------- Murphi rule "15 global dir reply cluster excl req" ------*)
+transition t15 (c)
+requires { Sort[c] = CId &&
+           GUniMsg_Cmd[c] = GetX &&
+           GUniMsg_Cluster[c] = c &&
+           GDir_State = Invld &&
+           GDir_pending = False }
+{
+  GUniMsg_Cmd[c] := PutX;
+  GUniMsg_Data[c] := GDir_Mem;
+  GUniMsg_InvCnt[c] := 0;
+  GDir_Owner := c;
+  GDir_State := Excl;
+}
 
 ruleset c: CId do
 rule "16 global dir fwd req to owner cluster"
-  (GUniMsg[c].Cmd = Get |
-   GUniMsg[c].Cmd = GetX) &
-  GUniMsg[c].Cluster = c &
-  GDir.State = Excl &
-  GDir.pending = false 
+  (GUniMsg[c]_Cmd = Get |
+   GUniMsg[c]_Cmd = GetX) &
+  GUniMsg[c]_Cluster = c &
+  GDir_State = Excl &
+  GDir_pending = False 
 ==>
-if (c = GDir.Owner) then
-  GUniMsg[c].Cmd := NAck;
-  undefine GUniMsg[c].Cluster;
+if (c = GDir_Owner) then
+  GUniMsg[c]_Cmd := NAck;
+  undefine GUniMsg[c]_Cluster;
 else 
-  GDir.pending := true;
+  GDir_pending := True;
 
-  GUniMsg[c].Cmd := GUniMsg[c].Cmd; 
-  GUniMsg[c].Cluster := GDir.Owner;
+  GUniMsg[c]_Cmd := GUniMsg[c]_Cmd; 
+  GUniMsg[c]_Cluster := GDir_Owner;
 end;
 end;
 end;
@@ -421,532 +385,532 @@ end;
 
 ruleset c1: CId; c2: CId do
 rule "17 Cluster c2 busy, NAck c1's req"
-  (GUniMsg[c1].Cmd = Get |
-   GUniMsg[c1].Cmd = GetX) &
-  GUniMsg[c1].Cluster = c2 &
+  (GUniMsg[c1]_Cmd = Get |
+   GUniMsg[c1]_Cmd = GetX) &
+  GUniMsg[c1]_Cluster = c2 &
   c1 != c2 &
-  Clusters[c2].RAC.Cmd != None
+  Clusters[c2]_RAC_Cmd != None
 ==>
-  GUniMsg[c1].Cmd := NAck;
-  undefine GUniMsg[c1].Cluster;
-  undefine GUniMsg[c1].Data;
+  GUniMsg[c1]_Cmd := NAck;
+  undefine GUniMsg[c1]_Cluster;
+  undefine GUniMsg[c1]_Data;
 
-  GShWbMsg.Cmd := NAck;
-  undefine GShWbMsg.Cluster;
-  undefine GShWbMsg.Data;
+  GShWbMsg_Cmd := NAck;
+  undefine GShWbMsg_Cluster;
+  undefine GShWbMsg_Data;
 end;
 end;
 
 
 rule "18 Global dir receive NAck"
-  GShWbMsg.Cmd = NAck &
-  GDir.pending = true
+  GShWbMsg_Cmd = NAck &
+  GDir_pending = True
 ==>
-  GShWbMsg.Cmd := None;
-  GDir.pending := false;
+  GShWbMsg_Cmd := None;
+  GDir_pending := False;
 end;
 
 
 ruleset c1: CId; c2: CId do
 rule "19 Cluster c2 takes c1's req"
-  (GUniMsg[c1].Cmd = Get | 
-   GUniMsg[c1].Cmd = GetX) &
-  GUniMsg[c1].Cluster = c2 &
+  (GUniMsg[c1]_Cmd = Get | 
+   GUniMsg[c1]_Cmd = GetX) &
+  GUniMsg[c1]_Cluster = c2 &
   c1 != c2 &
-  Clusters[c2].RAC.Cmd = None 
+  Clusters[c2]_RAC_Cmd = None 
 ==>
-  Clusters[c2].outReq.Cmd := GUniMsg[c1].Cmd;
-  Clusters[c2].outReq.Cluster := c1;
+  Clusters[c2]_outReq_Cmd := GUniMsg[c1]_Cmd;
+  Clusters[c2]_outReq_Cluster := c1;
 
-  GUniMsg[c1].Cmd := None;
-  undefine GUniMsg[c1].Cluster;
-  undefine GUniMsg[c1].Data;
+  GUniMsg[c1]_Cmd := None;
+  undefine GUniMsg[c1]_Cluster;
+  undefine GUniMsg[c1]_Data;
 end;
 end;
 
 
 ruleset c: CId do
 rule "20 Cluster busy, NAck outside req"
-  (Clusters[c].outReq.Cmd = Get |
-   Clusters[c].outReq.Cmd = GetX) &
-  Clusters[c].L2.pending = true
+  (Clusters[c]_outReq_Cmd = Get |
+   Clusters[c]_outReq_Cmd = GetX) &
+  Clusters[c]_L2_pending = True
 ==>
-  Clusters[c].inRpy.Cmd := NAck;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  undefine Clusters[c].inRpy.Data;
+  Clusters[c]_inRpy_Cmd := NAck;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  undefine Clusters[c]_inRpy_Data;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
 
 ruleset c: CId do
 rule "21 Cluster reply fwd req by Put"
-  Clusters[c].outReq.Cmd = Get &
-  Clusters[c].L2.pending = false &
-  Clusters[c].L2.State = Shrd
+  Clusters[c]_outReq_Cmd = Get &
+  Clusters[c]_L2_pending = False &
+  Clusters[c]_L2_State = Shrd
 ==>
-  Clusters[c].inRpy.Cmd := Putt;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  Clusters[c].inRpy.Data := Clusters[c].L2.Data;
+  Clusters[c]_inRpy_Cmd := Putt;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  Clusters[c]_inRpy_Data := Clusters[c]_L2_Data;
 
-  assert Clusters[c].OnlyCopy = true;
-  Clusters[c].OnlyCopy := false;
+  assert Clusters[c]_OnlyCopy = True;
+  Clusters[c]_OnlyCopy := False;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
 
 ruleset c: CId do
 rule "22 Cluster reply fwd req by PutX1"
-  Clusters[c].outReq.Cmd = GetX &
-  Clusters[c].L2.pending = false &
-  Clusters[c].L2.State = Excl
+  Clusters[c]_outReq_Cmd = GetX &
+  Clusters[c]_L2_pending = False &
+  Clusters[c]_L2_State = Excl
 ==>
-  Clusters[c].inRpy.Cmd := PutX;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  Clusters[c].inRpy.Data := Clusters[c].L2.Data;
+  Clusters[c]_inRpy_Cmd := PutX;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  Clusters[c]_inRpy_Data := Clusters[c]_L2_Data;
 
-  assert Clusters[c].OnlyCopy = true;
-  Clusters[c].OnlyCopy := false;
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
+  assert Clusters[c]_OnlyCopy = True;
+  Clusters[c]_OnlyCopy := False;
+  Clusters[c]_L2_State := Invld;
+  undefine Clusters[c]_L2_Data;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
 
 ruleset c: CId; i: L1Id do
 rule "23 Cluster reply fwd req by PutX2"
-  Clusters[c].outReq.Cmd = GetX &
-  Clusters[c].L2.pending = false &
-  Clusters[c].L2.State = Invld &
-  Clusters[c].L1s[i].State = Excl
+  Clusters[c]_outReq_Cmd = GetX &
+  Clusters[c]_L2_pending = False &
+  Clusters[c]_L2_State = Invld &
+  Clusters[c]_L1s[i]_State = Excl
 ==>
-  Clusters[c].inRpy.Cmd := PutX;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  Clusters[c].inRpy.Data := Clusters[c].L1s[i].Data;
+  Clusters[c]_inRpy_Cmd := PutX;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  Clusters[c]_inRpy_Data := Clusters[c]_L1s[i]_Data;
 
-  assert Clusters[c].OnlyCopy = true;
-  Clusters[c].OnlyCopy := false;
-  Clusters[c].L1s[i].State := Invld;
-  undefine Clusters[c].L1s[i].Data;
+  assert Clusters[c]_OnlyCopy = True;
+  Clusters[c]_OnlyCopy := False;
+  Clusters[c]_L1s[i]_State := Invld;
+  undefine Clusters[c]_L1s[i]_Data;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
 
 ruleset c: CId do
 rule "24 Cluster reply fwd req by PutX3"
-  Clusters[c].outReq.Cmd = GetX &
-  Clusters[c].L2.pending = false &
-  Clusters[c].L2.State = Shrd
+  Clusters[c]_outReq_Cmd = GetX &
+  Clusters[c]_L2_pending = False &
+  Clusters[c]_L2_State = Shrd
 ==>
-  Clusters[c].inRpy.Cmd := PutX;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  Clusters[c].inRpy.Data := Clusters[c].L2.Data;
+  Clusters[c]_inRpy_Cmd := PutX;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  Clusters[c]_inRpy_Data := Clusters[c]_L2_Data;
 
-  assert Clusters[c].OnlyCopy = true;
-  Clusters[c].OnlyCopy := false;
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
+  assert Clusters[c]_OnlyCopy = True;
+  Clusters[c]_OnlyCopy := False;
+  Clusters[c]_L2_State := Invld;
+  undefine Clusters[c]_L2_Data;
 
   for i: L1Id do
-    Clusters[c].L1s[i].State := Invld;
-    undefine Clusters[c].L1s[i].Data;
+    Clusters[c]_L1s[i]_State := Invld;
+    undefine Clusters[c]_L1s[i]_Data;
   end;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
 
 ruleset c: CId; i: L1Id do
 rule "25 Cluster reply fwd req by Put"
-  Clusters[c].outReq.Cmd = Get &
-  Clusters[c].L2.pending = false &
-  Clusters[c].L2.State = Invld &
-  Clusters[c].L1s[i].State = Shrd
+  Clusters[c]_outReq_Cmd = Get &
+  Clusters[c]_L2_pending = False &
+  Clusters[c]_L2_State = Invld &
+  Clusters[c]_L1s[i]_State = Shrd
 ==>
-  Clusters[c].inRpy.Cmd := Putt;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  Clusters[c].inRpy.Data := Clusters[c].L1s[i].Data;
+  Clusters[c]_inRpy_Cmd := Putt;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  Clusters[c]_inRpy_Data := Clusters[c]_L1s[i]_Data;
 
-  assert Clusters[c].OnlyCopy = true;
-  Clusters[c].OnlyCopy := false;
+  assert Clusters[c]_OnlyCopy = True;
+  Clusters[c]_OnlyCopy := False;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
 
 ruleset c: CId do
 rule "26 cluster send Put reply to another cluster"
-  Clusters[c].inRpy.Cmd = Putt
+  Clusters[c]_inRpy_Cmd = Putt
 ==>
 var dest: CId;
 begin
-  dest := Clusters[c].inRpy.Dest;
+  dest := Clusters[c]_inRpy_Dest;
 
-  GShWbMsg.Cmd := ShWb;
-  GShWbMsg.Data := Clusters[c].inRpy.Data;
-  GShWbMsg.Cluster := dest;
+  GShWbMsg_Cmd := ShWb;
+  GShWbMsg_Data := Clusters[c]_inRpy_Data;
+  GShWbMsg_Cluster := dest;
 
-  GUniMsg[dest].Cmd := Putt;
-  GUniMsg[dest].Data := Clusters[c].inRpy.Data;
-  undefine GUniMsg[dest].Cluster;
+  GUniMsg[dest]_Cmd := Putt;
+  GUniMsg[dest]_Data := Clusters[c]_inRpy_Data;
+  undefine GUniMsg[dest]_Cluster;
 
-  Clusters[c].inRpy.Cmd := None;
-  undefine Clusters[c].inRpy.Dest;
+  Clusters[c]_inRpy_Cmd := None;
+  undefine Clusters[c]_inRpy_Dest;
 end;
 end;
 
 
 ruleset c: CId do
 rule "27 Cluster reply fwded excl req"
-  Clusters[c].inRpy.Cmd = PutX
+  Clusters[c]_inRpy_Cmd = PutX
 ==>
 var dest: CId;
 begin
-  dest := Clusters[c].inRpy.Dest;
+  dest := Clusters[c]_inRpy_Dest;
 
-  GShWbMsg.Cmd := DxFer;
-  undefine GShWbMsg.Data;
-  GShWbMsg.Cluster := dest;
+  GShWbMsg_Cmd := DxFer;
+  undefine GShWbMsg_Data;
+  GShWbMsg_Cluster := dest;
 
-  GUniMsg[dest].Cmd := PutX;
-  GUniMsg[dest].Data := Clusters[c].inRpy.Data;
-  GUniMsg[dest].InvCnt := 0;
+  GUniMsg[dest]_Cmd := PutX;
+  GUniMsg[dest]_Data := Clusters[c]_inRpy_Data;
+  GUniMsg[dest]_InvCnt := 0;
 
-  Clusters[c].inRpy.Cmd := None;
-  undefine Clusters[c].inRpy.Dest;
+  Clusters[c]_inRpy_Cmd := None;
+  undefine Clusters[c]_inRpy_Dest;
 end;
 end;
 
 
 rule "28 Global dir receive ShWb"
-  GShWbMsg.Cmd = ShWb 
+  GShWbMsg_Cmd = ShWb 
 ==>
 var c: CId;
 begin
-  c := GShWbMsg.Cluster;
+  c := GShWbMsg_Cluster;
 
-  GDir.State := Shrd;
+  GDir_State := Shrd;
 
-  assert GDir.pending = true;
-  GDir.pending := false;
-  GDir.Mem := GShWbMsg.Data;
-  GDir.ShrSet[c] := true;
-  if (! isundefined(GDir.Owner)) then 
-    GDir.ShrSet[GDir.Owner] := true;
-    undefine GDir.Owner;
+  assert GDir_pending = True;
+  GDir_pending := False;
+  GDir_Mem := GShWbMsg_Data;
+  GDir_ShrSet[c] := True;
+  if (! isundefined(GDir_Owner)) then 
+    GDir_ShrSet[GDir_Owner] := True;
+    undefine GDir_Owner;
   end;
 
-  GShWbMsg.Cmd := None;
-  undefine GShWbMsg.Data;
-  undefine GShWbMsg.Cluster;
+  GShWbMsg_Cmd := None;
+  undefine GShWbMsg_Data;
+  undefine GShWbMsg_Cluster;
 end;
 
 
 rule "29 Global dir receive DxFer"
-  GShWbMsg.Cmd = DxFer
+  GShWbMsg_Cmd = DxFer
 ==>
 begin
-  assert GDir.pending = true;
-  GDir.pending := false;
+  assert GDir_pending = True;
+  GDir_pending := False;
 
-  GDir.Owner := GShWbMsg.Cluster;
+  GDir_Owner := GShWbMsg_Cluster;
 
-  GShWbMsg.Cmd := None;
-  undefine GShWbMsg.Data;
-  undefine GShWbMsg.Cluster;
+  GShWbMsg_Cmd := None;
+  undefine GShWbMsg_Data;
+  undefine GShWbMsg_Cluster;
 end;
  
 
 ruleset c1: CId  do
 rule "30 Cluster c1 sends NAck rpy to c2"
-  Clusters[c1].inRpy.Cmd = NAck
+  Clusters[c1]_inRpy_Cmd = NAck
 ==>
 var c2: CId;
 begin
-  c2 := Clusters[c1].inRpy.Dest;
+  c2 := Clusters[c1]_inRpy_Dest;
 
-  GUniMsg[c2].Cmd := NAck;
-  undefine GUniMsg[c2].Data;
-  undefine GUniMsg[c2].Cluster;
+  GUniMsg[c2]_Cmd := NAck;
+  undefine GUniMsg[c2]_Data;
+  undefine GUniMsg[c2]_Cluster;
 
-  Clusters[c1].inRpy.Cmd := None;
-  undefine Clusters[c1].inRpy.Dest;
+  Clusters[c1]_inRpy_Cmd := None;
+  undefine Clusters[c1]_inRpy_Dest;
 
-  GShWbMsg.Cmd := NAck;
-  undefine GShWbMsg.Cluster;
-  undefine GShWbMsg.Data;
+  GShWbMsg_Cmd := NAck;
+  undefine GShWbMsg_Cluster;
+  undefine GShWbMsg_Data;
 end;
 end;
 
 
 ruleset c: CId do
 rule "31 Cluster receive NAck reply"
-  GUniMsg[c].Cmd = NAck 
+  GUniMsg[c]_Cmd = NAck 
 ==>
-  assert Clusters[c].RAC.Cmd != None;
-  Clusters[c].RAC.Cmd := None;
+  assert Clusters[c]_RAC_Cmd != None;
+  Clusters[c]_RAC_Cmd := None;
 
-  Clusters[c].outRpy.Cmd := NAck;
+  Clusters[c]_outRpy_Cmd := NAck;
 
-  GUniMsg[c].Cmd := None;
-  Clusters[c].ReqCmd := None;
+  GUniMsg[c]_Cmd := None;
+  Clusters[c]_ReqCmd := None;
 end;
 end;
 
 
 ruleset c: CId do
 rule "32 Cluster receive Put reply"
-  GUniMsg[c].Cmd = Putt  
+  GUniMsg[c]_Cmd = Putt  
 ==>
-  assert Clusters[c].RAC.Cmd != None;
-  Clusters[c].RAC.Cmd := None;
+  assert Clusters[c]_RAC_Cmd != None;
+  Clusters[c]_RAC_Cmd := None;
 
-  Clusters[c].outRpy.Cmd := GUniMsg[c].Cmd;
-  Clusters[c].outRpy.Data := GUniMsg[c].Data;
+  Clusters[c]_outRpy_Cmd := GUniMsg[c]_Cmd;
+  Clusters[c]_outRpy_Data := GUniMsg[c]_Data;
 
-  GUniMsg[c].Cmd := None;
-  undefine GUniMsg[c].Data;
-  Clusters[c].ReqCmd := None;
+  GUniMsg[c]_Cmd := None;
+  undefine GUniMsg[c]_Data;
+  Clusters[c]_ReqCmd := None;
 end;
 end;
 
 
 ruleset c: CId do
 rule "33 Cluster receive PutX reply"
-  GUniMsg[c].Cmd = PutX 
+  GUniMsg[c]_Cmd = PutX 
 ==>
-  assert Clusters[c].RAC.Cmd != None;
-  if (GUniMsg[c].InvCnt = 0) then
-    Clusters[c].RAC.Cmd := None;
+  assert Clusters[c]_RAC_Cmd != None;
+  if (GUniMsg[c]_InvCnt = 0) then
+    Clusters[c]_RAC_Cmd := None;
   else
-    Clusters[c].RAC.InvCnt := GUniMsg[c].InvCnt - Clusters[c].RAC.InvCnt;
-    if (Clusters[c].RAC.InvCnt > 0) then
-      Clusters[c].RAC.Cmd := WINV;
+    Clusters[c]_RAC_InvCnt := GUniMsg[c]_InvCnt - Clusters[c]_RAC_InvCnt;
+    if (Clusters[c]_RAC_InvCnt > 0) then
+      Clusters[c]_RAC_Cmd := WINV;
     else
-      Clusters[c].RAC.Cmd := None;
+      Clusters[c]_RAC_Cmd := None;
     end;
   end;
 
-  Clusters[c].outRpy.Cmd := GUniMsg[c].Cmd;
-  Clusters[c].outRpy.Data := GUniMsg[c].Data;
+  Clusters[c]_outRpy_Cmd := GUniMsg[c]_Cmd;
+  Clusters[c]_outRpy_Data := GUniMsg[c]_Data;
 
-  GUniMsg[c].Cmd := None;
-  undefine GUniMsg[c].Data;
-  Clusters[c].ReqCmd := None;
+  GUniMsg[c]_Cmd := None;
+  undefine GUniMsg[c]_Data;
+  Clusters[c]_ReqCmd := None;
 end;
 end;
 
 
 ruleset c: CId do
 rule "34 Cluster receive NAck, reset pending"
-  Clusters[c].outRpy.Cmd = NAck
+  Clusters[c]_outRpy_Cmd = NAck
 ==>
-  assert Clusters[c].L2.pending = true;
-  Clusters[c].L2.pending := false;
+  assert Clusters[c]_L2_pending = True;
+  Clusters[c]_L2_pending := False;
 
-  Clusters[c].outRpy.Cmd := None;
+  Clusters[c]_outRpy_Cmd := None;
 end;
 end;
 
 
 ruleset c: CId do
 rule "35 Cluster receive Put reply"
-  Clusters[c].outRpy.Cmd = Putt
+  Clusters[c]_outRpy_Cmd = Putt
 ==>
-  assert Clusters[c].L2.pending = true;
-  Clusters[c].L2.pending := false;
+  assert Clusters[c]_L2_pending = True;
+  Clusters[c]_L2_pending := False;
 
-  Clusters[c].L2.Data := Clusters[c].outRpy.Data;
-  Clusters[c].L2.State := Shrd;
-  Clusters[c].OnlyCopy := false;
+  Clusters[c]_L2_Data := Clusters[c]_outRpy_Data;
+  Clusters[c]_L2_State := Shrd;
+  Clusters[c]_OnlyCopy := False;
 
-  Clusters[c].outRpy.Cmd := None;
+  Clusters[c]_outRpy_Cmd := None;
 end;
 end;
 
 
 ruleset c: CId do
 rule "36 Cluster receive PutX reply"
-  Clusters[c].outRpy.Cmd = PutX
+  Clusters[c]_outRpy_Cmd = PutX
 ==>
-  assert Clusters[c].L2.pending = true;
-  Clusters[c].L2.pending := false;
+  assert Clusters[c]_L2_pending = True;
+  Clusters[c]_L2_pending := False;
 
-  Clusters[c].L2.Data := Clusters[c].outRpy.Data;
-  Clusters[c].L2.State := Excl;
-  Clusters[c].OnlyCopy := true;
+  Clusters[c]_L2_Data := Clusters[c]_outRpy_Data;
+  Clusters[c]_L2_State := Excl;
+  Clusters[c]_OnlyCopy := True;
 
-  Clusters[c].outRpy.Cmd := None;
+  Clusters[c]_outRpy_Cmd := None;
 end;
 end;
 
 
 ruleset c: CId do
 rule "37 Cluster req excl copy, global dir shrd"
-  GUniMsg[c].Cmd = GetX &
-  GDir.pending = false &
-  GDir.State = Shrd &
+  GUniMsg[c]_Cmd = GetX &
+  GDir_pending = False &
+  GDir_State = Shrd &
   exists i: CId do
-    GDir.ShrSet[i] = true
+    GDir_ShrSet[i] = True
   end
 ==>
 var cnt: ClusterRange;
 begin
-  GUniMsg[c].Cmd := PutX;
-  GUniMsg[c].Data := GDir.Mem;
-  GDir.State := Excl;
-  GDir.Owner := c;
+  GUniMsg[c]_Cmd := PutX;
+  GUniMsg[c]_Data := GDir_Mem;
+  GDir_State := Excl;
+  GDir_Owner := c;
 
   cnt := 0;
   for i: CId do
-    if GDir.ShrSet[i] = true then
-      GDir.ShrSet[i] := false;
+    if GDir_ShrSet[i] = True then
+      GDir_ShrSet[i] := False;
 
       if (i != c) then
-        GInvMsg[i].Cmd := Inv;
-        GInvMsg[i].Cluster := c;
+        GInvMsg[i]_Cmd := Inv;
+        GInvMsg[i]_Cluster := c;
         cnt := cnt + 1;
       end;
     end;
   end;
 
-  GUniMsg[c].InvCnt := cnt;
+  GUniMsg[c]_InvCnt := cnt;
 end;
 end;
 
 
 ruleset c: CId do
 rule "38 Cluster receive Inv"
-  GInvMsg[c].Cmd = Inv
+  GInvMsg[c]_Cmd = Inv
 ==>
-  GInvMsg[c].Cmd := None;
-  Clusters[c].outReq.Cmd := Inv;
-  Clusters[c].outReq.Cluster := GInvMsg[c].Cluster;
+  GInvMsg[c]_Cmd := None;
+  Clusters[c]_outReq_Cmd := Inv;
+  Clusters[c]_outReq_Cluster := GInvMsg[c]_Cluster;
 end;
 end;
 
 
 ruleset c: CId do
 rule "38-1 Cluster reply InvAck"
-  Clusters[c].inRpy.Cmd = InvAck
+  Clusters[c]_inRpy_Cmd = InvAck
 ==>
-  GInvMsg[c].Cmd := InvAck;
-  GInvMsg[c].Cluster := Clusters[c].inRpy.Dest;
+  GInvMsg[c]_Cmd := InvAck;
+  GInvMsg[c]_Cluster := Clusters[c]_inRpy_Dest;
 
-  Clusters[c].inRpy.Cmd := None;
-  undefine Clusters[c].inRpy.Dest;
+  Clusters[c]_inRpy_Cmd := None;
+  undefine Clusters[c]_inRpy_Dest;
 end;
 end;
 
 
 ruleset c1: CId; c2: CId do
 rule "39 Cluster receive InvAck"
-  GInvMsg[c1].Cmd = InvAck &
-  ! isundefined(GInvMsg[c1].Cluster) &
-  GInvMsg[c1].Cluster = c2 &
-  Clusters[c2].RAC.Cmd != WINV
+  GInvMsg[c1]_Cmd = InvAck &
+  ! isundefined(GInvMsg[c1]_Cluster) &
+  GInvMsg[c1]_Cluster = c2 &
+  Clusters[c2]_RAC_Cmd != WINV
 ==>
-  Clusters[c2].RAC.InvCnt := Clusters[c2].RAC.InvCnt + 1;
-  GInvMsg[c1].Cmd := None;
-  undefine GInvMsg[c1].Cluster;
+  Clusters[c2]_RAC_InvCnt := Clusters[c2]_RAC_InvCnt + 1;
+  GInvMsg[c1]_Cmd := None;
+  undefine GInvMsg[c1]_Cluster;
 end;
 end;
 
 
 ruleset c1: CId; c2: CId do
 rule "40 Cluster receive InvAck"
-  GInvMsg[c1].Cmd = InvAck &
-  GInvMsg[c1].Cluster = c2 &
-  Clusters[c2].RAC.Cmd = WINV
+  GInvMsg[c1]_Cmd = InvAck &
+  GInvMsg[c1]_Cluster = c2 &
+  Clusters[c2]_RAC_Cmd = WINV
 ==>
-  Clusters[c2].RAC.InvCnt := Clusters[c2].RAC.InvCnt - 1;
-  if Clusters[c2].RAC.InvCnt = 0 then
-    Clusters[c2].RAC.Cmd := None;
+  Clusters[c2]_RAC_InvCnt := Clusters[c2]_RAC_InvCnt - 1;
+  if Clusters[c2]_RAC_InvCnt = 0 then
+    Clusters[c2]_RAC_Cmd := None;
   end;
 
-  GInvMsg[c1].Cmd := None;
-  undefine GInvMsg[c1].Cluster;
+  GInvMsg[c1]_Cmd := None;
+  undefine GInvMsg[c1]_Cluster;
 end;
 end;
 
 
 ruleset c: CId do
 rule "41 Cluster write back cache copy"
-  Clusters[c].L2.State = Excl &
-  Clusters[c].L2.pending = false
+  Clusters[c]_L2_State = Excl &
+  Clusters[c]_L2_pending = False
 ==>
-  Clusters[c].WbReq.Cmd := WB;
-  Clusters[c].WbReq.Data := Clusters[c].L2.Data;
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
-  Clusters[c].OnlyCopy := false;
+  Clusters[c]_WbReq_Cmd := WB;
+  Clusters[c]_WbReq_Data := Clusters[c]_L2_Data;
+  Clusters[c]_L2_State := Invld;
+  undefine Clusters[c]_L2_Data;
+  Clusters[c]_OnlyCopy := False;
 end;
 end;
 
 
 ruleset c: CId do
 rule "42 Cluster write back cache copy"
-  Clusters[c].WbReq.Cmd = WB 
+  Clusters[c]_WbReq_Cmd = WB 
 /* comment the following is our inserted bug */
   &
-  Clusters[c].RAC.Cmd = None
+  Clusters[c]_RAC_Cmd = None
 ==>
-  GWbMsg.Cmd := WB;
-  GWbMsg.Data := Clusters[c].WbReq.Data;
-  GWbMsg.Cluster := c;
+  GWbMsg_Cmd := WB;
+  GWbMsg_Data := Clusters[c]_WbReq_Data;
+  GWbMsg_Cluster := c;
 
-  Clusters[c].WbReq.Cmd := None;
-  undefine Clusters[c].WbReq.Data;
+  Clusters[c]_WbReq_Cmd := None;
+  undefine Clusters[c]_WbReq_Data;
 end;
 end;
 
 
 rule "43 Global dir receive writeback"
-  GWbMsg.Cmd = WB
+  GWbMsg_Cmd = WB
 ==>
-  GDir.Mem := GWbMsg.Data;
-  GDir.State := Invld;
-  undefine GDir.Owner;
+  GDir_Mem := GWbMsg_Data;
+  GDir_State := Invld;
+  undefine GDir_Owner;
 
-  GWbMsg.Cmd := None;
-  undefine GWbMsg.Data;
-  undefine GWbMsg.Cluster;
+  GWbMsg_Cmd := None;
+  undefine GWbMsg_Data;
+  undefine GWbMsg_Cluster;
 end;
 
 
 ruleset c: CId do
 rule "44 Cluster invalidate itself"
-  Clusters[c].outReq.Cmd = Inv
+  Clusters[c]_outReq_Cmd = Inv
 ==>
   for i: L1Id do
-    Clusters[c].L1s[i].State := Invld;
-    undefine Clusters[c].L1s[i].Data;
+    Clusters[c]_L1s[i]_State := Invld;
+    undefine Clusters[c]_L1s[i]_Data;
   end;
 
-  Clusters[c].L2.State := Invld;
-  undefine Clusters[c].L2.Data;
+  Clusters[c]_L2_State := Invld;
+  undefine Clusters[c]_L2_Data;
 
-  Clusters[c].inRpy.Cmd := InvAck;
-  Clusters[c].inRpy.Dest := Clusters[c].outReq.Cluster;
-  undefine Clusters[c].inRpy.Data;
+  Clusters[c]_inRpy_Cmd := InvAck;
+  Clusters[c]_inRpy_Dest := Clusters[c]_outReq_Cluster;
+  undefine Clusters[c]_inRpy_Data;
 
-  Clusters[c].outReq.Cmd := None;
-  undefine Clusters[c].outReq.Cluster;
+  Clusters[c]_outReq_Cmd := None;
+  undefine Clusters[c]_outReq_Cluster;
 end;
 end;
 
@@ -956,11 +920,11 @@ forall c: CId do
   forall i: L1Id do
     forall j: L1Id do
       i != j ->
-      ! (Clusters[c].L1s[i].State = Excl & 
-	 Clusters[c].L1s[j].State = Excl)
+      ! (Clusters[c]_L1s[i]_State = Excl & 
+	 Clusters[c]_L1s[j]_State = Excl)
     end &
-    ! (Clusters[c].L2.State = Excl &
-       Clusters[c].L1s[i].State = Excl)
+    ! (Clusters[c]_L2_State = Excl &
+       Clusters[c]_L1s[i]_State = Excl)
   end
 end;
 
@@ -972,32 +936,32 @@ forall c2: CId do
 ->
   forall i: L1Id do
     forall j: L1Id do
-      ! (Clusters[c1].L1s[i].State = Excl & 
-	 Clusters[c2].L1s[j].State = Excl)
+      ! (Clusters[c1]_L1s[i]_State = Excl & 
+	 Clusters[c2]_L1s[j]_State = Excl)
     end &
-    ! (Clusters[c1].L2.State = Excl &
-       Clusters[c2].L1s[i].State = Excl) &
-    ! (Clusters[c1].L2.State = Excl &
-       Clusters[c2].L2.State = Excl)
+    ! (Clusters[c1]_L2_State = Excl &
+       Clusters[c2]_L1s[i]_State = Excl) &
+    ! (Clusters[c1]_L2_State = Excl &
+       Clusters[c2]_L2_State = Excl)
   end
 end
 end;
 
 
 invariant "I3"
-  GDir.State = Shrd 
+  GDir_State = Shrd 
 ->
-  GDir.Mem = SysData;
+  GDir_Mem = SysData;
 
 
 invariant "I4"
 forall c: CId do
   forall i: L1Id do
-    Clusters[c].L1s[i].State = Excl 
+    Clusters[c]_L1s[i]_State = Excl 
     ->
-    Clusters[c].L1s[i].Data = SysData
+    Clusters[c]_L1s[i]_Data = SysData
   end &
-  Clusters[c].L2.State = Excl
+  Clusters[c]_L2_State = Excl
   ->
-  Clusters[c].L2.Data = SysData
+  Clusters[c]_L2_Data = SysData
 end;
