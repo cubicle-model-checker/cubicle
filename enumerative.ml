@@ -410,18 +410,18 @@ let trivial_cond env (i, op, v) =
   else Not_trivial
 
 let trivial_conds env l =
+  let some_non_trivial = ref false in
   if l = [] then Trivial false
   else
     try
       List.iter (fun c -> match trivial_cond env c with
 	| Trivial true -> ()
 	| Trivial false -> raise Exit
-	| Not_trivial -> raise Not_found
+	| Not_trivial -> some_non_trivial := true
       ) l;
-      Trivial true
+      if !some_non_trivial then Not_trivial else Trivial true
     with 
       | Exit -> Trivial false
-      | Not_found -> Not_trivial
 
 let assigns_to_actions env sigma acc =
   List.fold_left 

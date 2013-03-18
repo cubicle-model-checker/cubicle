@@ -4,13 +4,11 @@ type proc_type = L1Id | CId
 type cache_state = Invld | Shrd | Excl
 type command = None | Get | GetX | Putt | PutX | NAck | ShWb 
               | Inv | InvAck | DxFer | WINV | WB
-type data
 
 
 (*-------------------- Global Network -------------------------*)
 array GUniMsg_Cmd[proc] : command
 array GUniMsg_Cluster[proc] : proc
-array GUniMsg_Data[proc] : data
 array GUniMsg_InvCnt[proc,proc] : bool (* ClusterRange *)
 
 array GInvMsg_Cmd[proc] : command
@@ -18,34 +16,27 @@ array GInvMsg_Cluster[proc] : proc
 array GInvMsg_Cluster_defined[proc] : bool
 
 var GShWbMsg_Cmd : command
-var GShWbMsg_Data : data
 var GShWbMsg_Cluster : proc
 
 var GWbMsg_Cmd : command
-var GWbMsg_Data : data
 var GWbMsg_Cluster : proc
 
 
 (*-------------------- Global Directory -----------------------*)
-var SysData : data
-
 var GDir_State : cache_state
 array GDir_ShrSet[proc] : bool
 var GDir_Owner : proc
 var GDir_Owner_defined : bool 
 var GDir_pending : bool
-var GDir_Mem : data 
 
 
 
 (*------------------------ Clusters ---------------------------*)
 
 array Clusters_L1s_State[proc, proc] : cache_state
-array Clusters_L1s_Data[proc, proc] : data
 array Clusters_L1s_Req[proc, proc] : command
 
 array Clusters_L2_State[proc] : cache_state
-array Clusters_L2_Data[proc] : data
 array Clusters_L2_pending[proc] : bool
 
 array Clusters_OnlyCopy[proc] : bool
@@ -55,7 +46,6 @@ array Clusters_ReqCmd[proc] : command
 
 array Clusters_ifOutRpy[proc] : bool
 array Clusters_outRpy_Cmd[proc] : command
-array Clusters_outRpy_Data[proc] : data
 
 array Clusters_ifOutReq[proc] : bool
 array Clusters_outReq_Cmd[proc] : command
@@ -63,11 +53,9 @@ array Clusters_outReq_Cluster[proc] : proc
 
 array Clusters_ifInRpy[proc] : bool
 array Clusters_inRpy_Cmd[proc] : command
-array Clusters_inRpy_Data[proc] : data
 array Clusters_inRpy_Dest[proc] : proc
 
 array Clusters_WbReq_Cmd[proc] : command
-array Clusters_WbReq_Data[proc] : data
 
 array Clusters_RAC_Cmd[proc] : command
 array Clusters_RAC_InvCnt[proc,proc] : bool (* ClusterRange *)
@@ -110,9 +98,7 @@ init (c i) {
   GShWbMsg_Cmd = None &&
   GWbMsg_Cmd = None &&
 
-  (* SysData = d && *)
   (* GDir_Mem = d && *)
-  SysData = GDir_Mem &&
   (* undefine GDir.Owner; *)
   GDir_Owner_defined = False &&
 
@@ -152,33 +138,6 @@ unsafe (c1 c2) {
 }
 
 
-(* invariant "I3" *)
-unsafe () { GDir_State = Shrd && GDir_Mem <> SysData }
-
-
-(* invariant "I4" *)
-unsafe (c i) { 
-       Sort[c] = CId && Sort[i] = L1Id &&
-       Clusters_L1s_State[c,i] = Excl && Clusters_L1s_Data[c,i] <> SysData
-}
-
-unsafe (c) {
-       Sort[c] = CId && 
-       Clusters_L2_State[c] = Excl && Clusters_L2_Data[c] <> SysData
-}
-
-
-
-
-
-(*------------ Murphi rule "1 L1 cache update cache" ----------*)
-transition t1 (c i)
-requires { Sort[c] = CId && Sort[i] = L1Id &&
-           Clusters_L1s_State[c,i] = Excl }
-{
-  Clusters_L1s_Data[c,i] := SysData;
-  SysData := .;
-}
 
 
 (*------------ Murphi rule "2 L1 cache write back cache" ------*)
@@ -188,10 +147,8 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 {
 
   Clusters_L2_State[c] := Excl;
-  Clusters_L2_Data[c] := Clusters_L1s_Data[c,i];
 
   Clusters_L1s_State[c,i] := Invld;
-  (* undefine Clusters_L1s_Data[c,i]; *)
 }
 
 
@@ -274,7 +231,6 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
            Clusters_L2_pending[c] = False }
 {
   Clusters_L1s_State[c,i] := Shrd;
-  Clusters_L1s_Data[c,i] := Clusters_L2_Data[c];
   Clusters_L1s_Req[c,i] := None;
 }
 
@@ -288,7 +244,6 @@ requires { Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
            Clusters_L2_pending[c] = False }
 {
   Clusters_L1s_State[c,i] := Shrd;
-  Clusters_L1s_Data[c,i] := Clusters_L1s_Data[c,j];
   Clusters_L1s_Req[c,i] := None;
 }
 
@@ -301,11 +256,9 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
            Clusters_L2_pending[c] = False }  
 {
   Clusters_L1s_State[c,i] := Excl;
-  Clusters_L1s_Data[c,i] := Clusters_L2_Data[c];
   Clusters_L1s_Req[c,i] := None;
 
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
 }
 
 
@@ -322,11 +275,9 @@ requires { Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
                               | oc = c && x = i : Excl
                               | oc = c && x = j : Invld
                               | _ : Clusters_L1s_State[oc,x];
-  Clusters_L1s_Data[c,i] := Clusters_L1s_Data[c,j];
   Clusters_L1s_Req[c,i] := None;
 
 
-  (* undefine Clusters_L1s_Data[c,i]; *)
 }
 
 
@@ -342,12 +293,9 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   Clusters_L1s_State[oc,j] := case
                             | oc = c && j <> i : Invld
                             | oc = c && j = i : Excl
-                            (* undefine Clusters[c]_L1s[j]_Data; *)
                             | _ : Clusters_L1s_State[oc,j];
 
-  Clusters_L1s_Data[c,i] := Clusters_L2_Data[c];
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
 }
 
 
@@ -361,11 +309,9 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 {
   Clusters_L1s_State[oc,j] :=
     case | oc = c && Clusters_L1s_State[oc,j] = Shrd : Invld
-      (* undefine Clusters[c]_L1s[j]_Data; *)
          | _ : Clusters_L1s_State[oc,j];
 
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
 
   Clusters_L2_pending[c] := True;
   Clusters_ifInReq[c] := True;
@@ -399,7 +345,6 @@ requires { Sort[c] = CId &&
          GDir_pending = False }
 {
   GUniMsg_Cmd[c] := Putt;
-  GUniMsg_Data[c] := GDir_Mem;
   GDir_ShrSet[c] := True;
   GDir_State := Shrd;
 }
@@ -414,7 +359,6 @@ requires { Sort[c] = CId &&
            GDir_pending = False }
 {
   GUniMsg_Cmd[c] := PutX;
-  GUniMsg_Data[c] := GDir_Mem;
   GUniMsg_InvCnt[oc,x] := case | oc = c : False | _ : GUniMsg_InvCnt[oc,x];
   GDir_Owner := c;
   GDir_State := Excl;
@@ -482,11 +426,9 @@ requires { Sort[c1] = CId && Sort[c2] = CId &&
 {
   GUniMsg_Cmd[c1] := NAck;
   (* undefine GUniMsg_Cluster[c1]; *)
-  (* undefine GUniMsg_Data[c1]; *)
 
   GShWbMsg_Cmd := NAck;
   (* undefine GShWbMsg_Cluster; *)
-  (* undefine GShWbMsg_Data; *)
 }
 
 transition t17_x (c1 c2)
@@ -497,11 +439,9 @@ requires { Sort[c1] = CId && Sort[c2] = CId &&
 {
   GUniMsg_Cmd[c1] := NAck;
   (* undefine GUniMsg_Cluster[c1]; *)
-  (* undefine GUniMsg_Data[c1]; *)
 
   GShWbMsg_Cmd := NAck;
   (* undefine GShWbMsg_Cluster; *)
-  (* undefine GShWbMsg_Data; *)
 }
 
 
@@ -528,7 +468,6 @@ requires { Sort[c1] = CId && Sort[c2] = CId &&
 
   GUniMsg_Cmd[c1] := None;
   (* undefine GUniMsg_Cluster[c1]; *)
-  (* undefine GUniMsg_Data[c1]; *)
 }
 
 transition t19_x (c1 c2)
@@ -542,7 +481,6 @@ requires { Sort[c1] = CId && Sort[c2] = CId &&
 
   GUniMsg_Cmd[c1] := None;
   (* undefine GUniMsg_Cluster[c1]; *)
-  (* undefine GUniMsg_Data[c1]; *)
 }
 
 
@@ -554,7 +492,6 @@ requires { Sort[c] = CId &&
 {
   Clusters_inRpy_Cmd[c] := NAck;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  (* undefine Clusters_inRpy_Data[c]; *)
 
   Clusters_outReq_Cmd[c] := None;
   (* undefine Clusters_outReq_Cluster[c]; *)
@@ -567,7 +504,6 @@ requires { Sort[c] = CId &&
 {
   Clusters_inRpy_Cmd[c] := NAck;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  (* undefine Clusters_inRpy_Data[c]; *)
 
   Clusters_outReq_Cmd[c] := None;
   (* undefine Clusters_outReq_Cluster[c]; *)
@@ -583,7 +519,6 @@ requires { Sort[c] = CId &&
 {
   Clusters_inRpy_Cmd[c] := Putt;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  Clusters_inRpy_Data[c] := Clusters_L2_Data[c];
 
   (* assert Clusters_OnlyCopy[c] = True; *)
   Clusters_OnlyCopy[c] := False;
@@ -603,12 +538,10 @@ requires { Sort[c] = CId &&
 {
   Clusters_inRpy_Cmd[c] := PutX;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  Clusters_inRpy_Data[c] := Clusters_L2_Data[c];
 
   (* assert Clusters_OnlyCopy[c] = True; *)
   Clusters_OnlyCopy[c] := False;
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
 
   Clusters_outReq_Cmd[c] := None;
   (* undefine Clusters_outReq_Cluster[c]; *)
@@ -626,12 +559,10 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 {
   Clusters_inRpy_Cmd[c] := PutX;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  Clusters_inRpy_Data[c] := Clusters_L1s_Data[c,i];
 
   (* assert Clusters_OnlyCopy[c] = True; *)
   Clusters_OnlyCopy[c] := False;
   Clusters_L1s_State[c,i] := Invld;
-  (* undefine Clusters_L1s_Data[c,i]; *)
 
   Clusters_outReq_Cmd[c] := None;
   (* undefine Clusters_outReq_Cluster[c]; *)
@@ -648,16 +579,13 @@ requires { Sort[c] = CId &&
 {
   Clusters_inRpy_Cmd[c] := PutX;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  Clusters_inRpy_Data[c] := Clusters_L2_Data[c];
 
   (* assert Clusters_OnlyCopy[c] = True; *)
   Clusters_OnlyCopy[c] := False;
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
 
   Clusters_L1s_State[oc,i] := case
                                | oc = c : Invld
-                               (* undefine Clusters_L1s_Data[c,i]; *)
                                | _ : Clusters_L1s_State[oc,i];
 
   Clusters_outReq_Cmd[c] := None;
@@ -676,7 +604,6 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 {
   Clusters_inRpy_Cmd[c] := Putt;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  Clusters_inRpy_Data[c] := Clusters_L1s_Data[c,i];
 
   (* assert Clusters_OnlyCopy[c] = True; *)
   Clusters_OnlyCopy[c] := False;
@@ -693,11 +620,9 @@ requires { Sort[c] = CId && Sort[dest] = CId &&
            Clusters_inRpy_Dest[c] = dest }
 {
   GShWbMsg_Cmd := ShWb;
-  GShWbMsg_Data := Clusters_inRpy_Data[c];
   GShWbMsg_Cluster := dest;
 
   GUniMsg_Cmd[dest] := Putt;
-  GUniMsg_Data[dest] := Clusters_inRpy_Data[c];
   (* undefine GUniMsg_Cluster[dest]; *)
 
   Clusters_inRpy_Cmd[c] := None;
@@ -712,11 +637,9 @@ requires { Sort[c] = CId && Sort[dest] = CId &&
            Clusters_inRpy_Dest[c] = dest }
 {
   GShWbMsg_Cmd := DxFer;
-  (* undefine GShWbMsg_Data; *)
   GShWbMsg_Cluster := dest;
 
   GUniMsg_Cmd[dest] := PutX;
-  GUniMsg_Data[dest] := Clusters_inRpy_Data[c];
   (* GUniMsg_InvCnt[dest] := 0; *)
   GUniMsg_InvCnt[x,y] := case | x = dest : False | _ : GUniMsg_InvCnt[x,y];
 
@@ -738,12 +661,10 @@ requires { Sort[c] = CId && Sort[gd] = CId &&
 
   (* assert GDir_pending = True; *)
   GDir_pending := False;
-  GDir_Mem := GShWbMsg_Data;
   GDir_ShrSet[oc] := case | oc = c : True | oc = gd : True;
   GDir_Owner_defined := False;
 
   (* GShWbMsg_Cmd := None; *)
-  (* undefine GShWbMsg_Data; *)
   (* undefine GShWbMsg_Cluster; *)
 }
 
@@ -758,12 +679,10 @@ requires { Sort[c] = CId &&
 
   (* assert GDir_pending = True; *)
   GDir_pending := False;
-  GDir_Mem := GShWbMsg_Data;
   GDir_ShrSet[c] := True;
   GDir_Owner_defined := False;
 
   (* GShWbMsg_Cmd := None; *)
-  (* undefine GShWbMsg_Data; *)
   (* undefine GShWbMsg_Cluster; *)
 }
 
@@ -777,11 +696,9 @@ requires { Sort[c] = CId &&
 
   (* assert GDir_pending = True; *)
   GDir_pending := False;
-  GDir_Mem := GShWbMsg_Data;
   GDir_ShrSet[c] := True;
 
   (* GShWbMsg_Cmd := None; *)
-  (* undefine GShWbMsg_Data; *)
   (* undefine GShWbMsg_Cluster; *)
 }
 
@@ -796,7 +713,6 @@ requires { GShWbMsg_Cmd = DxFer }
   GDir_Owner := GShWbMsg_Cluster;
 
   GShWbMsg_Cmd := None;
-  (* undefine GShWbMsg_Data; *)
   (* undefine GShWbMsg_Cluster; *)
 }
 
@@ -809,7 +725,6 @@ requires { Sort[c1] = CId && Sort[c2] = CId &&
            Clusters_inRpy_Dest[c1] = c2 }
 {
   GUniMsg_Cmd[c2] := NAck;
-  (* undefine GUniMsg_Data[c2]; *)
   (* undefine GUniMsg_Cluster[c2]; *)
 
   (* Clusters_inRpy_Cmd[c1] := None; *)
@@ -817,7 +732,6 @@ requires { Sort[c1] = CId && Sort[c2] = CId &&
 
   GShWbMsg_Cmd := NAck;
   (* undefine GShWbMsg_Cluster; *)
-  (* undefine GShWbMsg_Data; *)
 }
 
 
@@ -846,10 +760,8 @@ requires { Sort[c] = CId &&
   Clusters_RAC_Cmd[c] := None;
 
   Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-  Clusters_outRpy_Data[c] := GUniMsg_Data[c];
 
   GUniMsg_Cmd[c] := None;
-  (* undefine GUniMsg_Data[c]; *)
   Clusters_ReqCmd[c] := None;
 }
 
@@ -866,10 +778,8 @@ requires { Sort[c] = CId &&
   Clusters_RAC_Cmd[c] := None;
 
   Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-  Clusters_outRpy_Data[c] := GUniMsg_Data[c];
 
   GUniMsg_Cmd[c] := None;
-  (* undefine GUniMsg_Data[c]; *)
   Clusters_ReqCmd[c] := None;
 }
 
@@ -892,10 +802,8 @@ requires { Sort[c] = CId && Sort[o] = CId &&
   Clusters_RAC_Cmd[c] := WINV;
 
   Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-  Clusters_outRpy_Data[c] := GUniMsg_Data[c];
 
   GUniMsg_Cmd[c] := None;
-  (* undefine GUniMsg_Data[c]; *)
   Clusters_ReqCmd[c] := None;
 }
 
@@ -919,10 +827,8 @@ requires { Sort[c] = CId && Sort[o] = CId && Sort[p] = CId &&
   Clusters_RAC_Cmd[c] := WINV;
 
   Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-  Clusters_outRpy_Data[c] := GUniMsg_Data[c];
 
   GUniMsg_Cmd[c] := None;
-  (* undefine GUniMsg_Data[c]; *)
   Clusters_ReqCmd[c] := None;
 }
 
@@ -940,10 +846,8 @@ requires { Sort[c] = CId && Sort[o] = CId &&
   Clusters_RAC_Cmd[c] := None;
 
   Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-  Clusters_outRpy_Data[c] := GUniMsg_Data[c];
 
   GUniMsg_Cmd[c] := None;
-  (* undefine GUniMsg_Data[c]; *)
   Clusters_ReqCmd[c] := None;
 }
 
@@ -972,7 +876,6 @@ requires { Sort[c] = CId &&
   (* assert Clusters_L2_pending[c] = True; *)
   Clusters_L2_pending[c] := False;
 
-  Clusters_L2_Data[c] := Clusters_outRpy_Data[c];
   Clusters_L2_State[c] := Shrd;
   Clusters_OnlyCopy[c] := False;
 
@@ -989,7 +892,6 @@ requires { Sort[c] = CId &&
   (* assert Clusters_L2_pending[c] = True; *)
   Clusters_L2_pending[c] := False;
 
-  Clusters_L2_Data[c] := Clusters_outRpy_Data[c];
   Clusters_L2_State[c] := Excl;
   Clusters_OnlyCopy[c] := True;
 
@@ -1007,7 +909,6 @@ requires { Sort[c] = CId && Sort[i] = CId &&
            GDir_ShrSet[i] = True }
 {
   GUniMsg_Cmd[c] := PutX;
-  GUniMsg_Data[c] := GDir_Mem;
   GDir_State := Excl;
   GDir_Owner := c;
 
@@ -1274,9 +1175,7 @@ requires { Sort[c] = CId &&
            Clusters_L2_pending[c] = False }
 {
   Clusters_WbReq_Cmd[c] := WB;
-  Clusters_WbReq_Data[c] := Clusters_L2_Data[c];
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
   Clusters_OnlyCopy[c] := False;
 }
 
@@ -1290,11 +1189,9 @@ requires { Sort[c] = CId &&
            && Clusters_RAC_Cmd[c] = None }
 {
   GWbMsg_Cmd := WB;
-  GWbMsg_Data := Clusters_WbReq_Data[c];
   GWbMsg_Cluster := c;
 
   Clusters_WbReq_Cmd[c] := None;
-  (* undefine Clusters_WbReq_Data[c]; *)
 }
 
 
@@ -1303,12 +1200,10 @@ requires { Sort[c] = CId &&
 transition t43 ()
 requires { GWbMsg_Cmd = WB }
 {
-  GDir_Mem := GWbMsg_Data;
   GDir_State := Invld;
   (* undefine GDir_Owner; *)
 
   GWbMsg_Cmd := None;
-  (* undefine GWbMsg_Data; *)
   (* undefine GWbMsg_Cluster; *)
 }
 
@@ -1322,15 +1217,12 @@ requires { Sort[c] = CId &&
 {
   Clusters_L1s_State[oc,i] := case
                               | oc = c && Sort[i] = L1Id : Invld
-                              (* undefine Clusters_L1s_Data[c,i]; *)
                               | _ : Clusters_L1s_State[oc,i];
 
   Clusters_L2_State[c] := Invld;
-  (* undefine Clusters_L2_Data[c]; *)
 
   Clusters_inRpy_Cmd[c] := InvAck;
   Clusters_inRpy_Dest[c] := Clusters_outReq_Cluster[c];
-  (* undefine Clusters_inRpy_Data[c]; *)
 
   Clusters_outReq_Cmd[c] := None;
   (* undefine Clusters_outReq_Cluster[c]; *)
