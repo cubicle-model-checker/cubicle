@@ -9,7 +9,8 @@ type command = None | Get | GetX | Putt | PutX | NAck | ShWb
 (*-------------------- Global Network -------------------------*)
 array GUniMsg_Cmd[proc] : command
 array GUniMsg_Cluster[proc] : proc
-array GUniMsg_InvCnt[proc,proc] : bool (* ClusterRange *)
+(* array GUniMsg_InvCnt[proc,proc] : bool (\* ClusterRange *\) *)
+array GUniMsg_ToInv[proc,proc] : bool
 
 array GInvMsg_Cmd[proc] : command
 array GInvMsg_Cluster[proc] : proc
@@ -58,7 +59,8 @@ array Clusters_inRpy_Dest[proc] : proc
 array Clusters_WbReq_Cmd[proc] : command
 
 array Clusters_RAC_Cmd[proc] : command
-array Clusters_RAC_InvCnt[proc,proc] : bool (* ClusterRange *)
+array Clusters_RAC_Inved[proc,proc] : bool
+array Clusters_RAC_ToInv[proc,proc] : bool
 
 
 array Sort[proc] : proc_type
@@ -86,11 +88,12 @@ init (c i) {
 
     Clusters_RAC_Cmd[c] = None &&
     (* Clusters_RAC_InvCnt[c] = 0 && *)
-    Clusters_RAC_InvCnt[c,i] = False &&
+    Clusters_RAC_Inved[c,i] = False &&
+    Clusters_RAC_ToInv[c,i] = False &&
 
     GUniMsg_Cmd[c] = None &&
     (* GUniMsg_InvCnt[c] = 0 && *)
-    GUniMsg_InvCnt[c,i] = False &&
+    GUniMsg_ToInv[c,i] = False &&
 
     GInvMsg_Cmd[c] = None &&
     GInvMsg_Cluster_defined[c] = False &&
@@ -359,7 +362,7 @@ requires { Sort[c] = CId &&
            GDir_pending = False }
 {
   GUniMsg_Cmd[c] := PutX;
-  GUniMsg_InvCnt[oc,x] := case | oc = c : False | _ : GUniMsg_InvCnt[oc,x];
+  GUniMsg_ToInv[oc,x] := case | oc = c : False | _ : GUniMsg_ToInv[oc,x];
   GDir_Owner := c;
   GDir_State := Excl;
 }
@@ -641,7 +644,7 @@ requires { Sort[c] = CId && Sort[dest] = CId &&
 
   GUniMsg_Cmd[dest] := PutX;
   (* GUniMsg_InvCnt[dest] := 0; *)
-  GUniMsg_InvCnt[x,y] := case | x = dest : False | _ : GUniMsg_InvCnt[x,y];
+  GUniMsg_ToInv[x,y] := case | x = dest : False | _ : GUniMsg_ToInv[x,y];
 
   Clusters_inRpy_Cmd[c] := None;
   (* undefine Clusters_inRpy_Dest[c]; *)
@@ -771,8 +774,8 @@ requires { Sort[c] = CId &&
 transition t33_then (c)
 requires { Sort[c] = CId &&
            GUniMsg_Cmd[c] = PutX &&
-           GUniMsg_InvCnt[c,c] = False &&
-           forall_other i. (Sort[i] = L1Id || GUniMsg_InvCnt[c,i] = False) }
+           forall_other i. (Sort[i] <> CId || GUniMsg_ToInv[c,i] = False || 
+                                              Clusters_RAC_Inved[c,i] = True) }
 {
   (* assert Clusters_RAC_Cmd[c] <> None; *)
   Clusters_RAC_Cmd[c] := None;
@@ -783,21 +786,23 @@ requires { Sort[c] = CId &&
   Clusters_ReqCmd[c] := None;
 }
 
-transition t33_else_then1 (c o)
-requires { Sort[c] = CId && Sort[o] = CId &&
+transition t33_else (c c2)
+requires { Sort[c] = CId && Sort[c2] = CId &&
            GUniMsg_Cmd[c] = PutX &&
-           GUniMsg_InvCnt[c,o] = True &&
-           Clusters_RAC_InvCnt[c,o] = False }
+           GUniMsg_ToInv[c,c2] = True && Clusters_RAC_Inved[c,c2] = False }
 {
   (* assert Clusters_RAC_Cmd[c] <> None; *)
-
   (* Clusters_RAC_InvCnt[c] := GUniMsg_InvCnt[c] - Clusters_RAC_InvCnt[c]; *)
-  Clusters_RAC_InvCnt[x,y] := case
+  Clusters_RAC_ToInv[x,y] := case
      | x = c && 
-       GUniMsg_InvCnt[c,y] = True && 
-       Clusters_RAC_InvCnt[c,y] = False : True
+       GUniMsg_ToInv[c,y] = True && 
+       Clusters_RAC_Inved[c,y] = False : True
      | x = c : False
-     | _ : Clusters_RAC_InvCnt[x,y];
+     | _ : Clusters_RAC_ToInv[x,y];
+
+  Clusters_RAC_Inved[x,y] := case
+     | x = c : False
+     | _ : Clusters_RAC_ToInv[x,y];
 
   Clusters_RAC_Cmd[c] := WINV;
 
@@ -806,51 +811,6 @@ requires { Sort[c] = CId && Sort[o] = CId &&
   GUniMsg_Cmd[c] := None;
   Clusters_ReqCmd[c] := None;
 }
-
-transition t33_else_then2 (c o p)
-requires { Sort[c] = CId && Sort[o] = CId && Sort[p] = CId &&
-           GUniMsg_Cmd[c] = PutX &&
-           GUniMsg_InvCnt[c,o] = True &&
-           GUniMsg_InvCnt[c,p] = True &&
-           Clusters_RAC_InvCnt[c,p] = False }
-{
-  (* assert Clusters_RAC_Cmd[c] <> None; *)
-
-  (* Clusters_RAC_InvCnt[c] := GUniMsg_InvCnt[c] - Clusters_RAC_InvCnt[c]; *)
-  Clusters_RAC_InvCnt[x,y] := case
-     | x = c && 
-       GUniMsg_InvCnt[c,y] = True && 
-       Clusters_RAC_InvCnt[c,y] = False : True
-     | x = c : False
-     | _ : Clusters_RAC_InvCnt[x,y];
-
-  Clusters_RAC_Cmd[c] := WINV;
-
-  Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-
-  GUniMsg_Cmd[c] := None;
-  Clusters_ReqCmd[c] := None;
-}
-
-
-transition t33_else_else (c o)
-requires { Sort[c] = CId && Sort[o] = CId &&
-           GUniMsg_Cmd[c] = PutX &&
-           GUniMsg_InvCnt[c,o] = True &&
-           forall_other j. 
-             (Sort[j] = L1Id ||
-              GUniMsg_InvCnt[c,j] = False ||
-              Clusters_RAC_InvCnt[c,j] = True) }
-{
-  (* assert Clusters_RAC_Cmd[c] <> None; *)
-  Clusters_RAC_Cmd[c] := None;
-
-  Clusters_outRpy_Cmd[c] := GUniMsg_Cmd[c];
-
-  GUniMsg_Cmd[c] := None;
-  Clusters_ReqCmd[c] := None;
-}
-
 
 
 
@@ -921,10 +881,10 @@ requires { Sort[c] = CId && Sort[i] = CId &&
   GInvMsg_Cluster[y] := case
                     | Sort[y] = CId && GDir_ShrSet[y] = True && y <> c : c
                     | _ : GInvMsg_Cluster[y];
-  GUniMsg_InvCnt[oc,y] := case
+  GUniMsg_ToInv[oc,y] := case
      | oc = c && Sort[y] = CId && GDir_ShrSet[y] = True && y <> c : True
      | oc = c : False
-     | _ : GUniMsg_InvCnt[oc,y];
+     | _ : GUniMsg_ToInv[oc,y];
 }
 
 
@@ -956,67 +916,32 @@ requires { Sort[c] = CId &&
 
 
 (*------- Murphi rule "39 Cluster receive InvAck" -----*)
-transition t39 (c1 c2 y)
-requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster_defined[c1] = True &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] <> WINV &&
-           Clusters_RAC_InvCnt[c2,y] = False }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] + 1; *)
-  Clusters_RAC_InvCnt[c2,y] := True; 
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-transition t39_c1 (c1 c2)
+transition t39 (c1 c2)
 requires { Sort[c1] = CId && Sort[c2] = CId &&
            GInvMsg_Cmd[c1] = InvAck &&
            GInvMsg_Cluster_defined[c1] = True &&
            GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] <> WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = False }
+           Clusters_RAC_Cmd[c2] <> WINV }
 {
   (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] + 1; *)
-  Clusters_RAC_InvCnt[c2,c1] := True; 
+  Clusters_RAC_Inved[c2,c1] := True; 
   GInvMsg_Cmd[c1] := None;
   (* undefine GInvMsg_Cluster[c1]; *)
   GInvMsg_Cluster_defined[c1] := False;
 }
-
-transition t39_c2 (c1 c2)
-requires { Sort[c1] = CId && Sort[c2] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster_defined[c1] = True &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] <> WINV &&
-           Clusters_RAC_InvCnt[c2,c2] = False }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] + 1; *)
-  Clusters_RAC_InvCnt[c2,c2] := True; 
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
 
 
 (*------- Murphi rule "40 Cluster receive InvAck" -----*)
-transition t40_last (c1 c2 y)
-requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
+transition t40_then (c1 c2)
+requires { Sort[c1] = CId && Sort[c2] = CId &&
            GInvMsg_Cmd[c1] = InvAck &&
            GInvMsg_Cluster[c1] = c2 &&
            Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,y] = True &&
-           Clusters_RAC_InvCnt[c2,c1] = False &&
-           Clusters_RAC_InvCnt[c2,c2] = False &&
            forall_other j. (Sort[j] <> CId ||
-                            Clusters_RAC_InvCnt[c2,j] = False) }
+                            Clusters_RAC_ToInv[c2,j] = False) }
 {
   (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,y] := False;
+  Clusters_RAC_ToInv[c2,c1] := False;
   Clusters_RAC_Cmd[c2] := None;
 
   GInvMsg_Cmd[c1] := None;
@@ -1024,141 +949,15 @@ requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
   GInvMsg_Cluster_defined[c1] := False;
 }
 
-transition t40_last_c1 (c1 c2)
-requires { Sort[c1] = CId && Sort[c2] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = True &&
-           Clusters_RAC_InvCnt[c2,c2] = False &&
-           forall_other j. (Sort[j] <> CId ||
-                            Clusters_RAC_InvCnt[c2,j] = False) }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,c1] := False;
-  Clusters_RAC_Cmd[c2] := None;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-transition t40_last_c2 (c1 c2)
-requires { Sort[c1] = CId && Sort[c2] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = False &&
-           Clusters_RAC_InvCnt[c2,c2] = True &&
-           forall_other j. (Sort[j] <> CId ||
-                            Clusters_RAC_InvCnt[c2,j] = False) }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,c2] := False;
-  Clusters_RAC_Cmd[c2] := None;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-
-transition t40_more_c1 (c1 c2)
-requires { Sort[c1] = CId && Sort[c2] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = True &&
-           Clusters_RAC_InvCnt[c2,c2] = True }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,c1] := False;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-
-transition t40_more_c2 (c1 c2)
-requires { Sort[c1] = CId && Sort[c2] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = True &&
-           Clusters_RAC_InvCnt[c2,c2] = True }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,c2] := False;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-
-transition t40_more_1 (c1 c2 y)
+transition t40_more (c1 c2 y)
 requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
            GInvMsg_Cmd[c1] = InvAck &&
            GInvMsg_Cluster[c1] = c2 &&
            Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = True &&
-           Clusters_RAC_InvCnt[c2,c2] = False &&
-           Clusters_RAC_InvCnt[c2,y] = True }
+           Clusters_RAC_ToInv[c2,y] = True }
 {
   (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,y] := False;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-transition t40_more_2 (c1 c2 y)
-requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = True &&
-           Clusters_RAC_InvCnt[c2,c2] = False &&
-           Clusters_RAC_InvCnt[c2,y] = True }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,c1] := False;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-transition t40_more_3 (c1 c2 y)
-requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = False &&
-           Clusters_RAC_InvCnt[c2,c2] = True &&
-           Clusters_RAC_InvCnt[c2,y] = True }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,y] := False;
-
-  GInvMsg_Cmd[c1] := None;
-  (* undefine GInvMsg_Cluster[c1]; *)
-  GInvMsg_Cluster_defined[c1] := False;
-}
-
-transition t40_more_4 (c1 c2 y)
-requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
-           GInvMsg_Cmd[c1] = InvAck &&
-           GInvMsg_Cluster[c1] = c2 &&
-           Clusters_RAC_Cmd[c2] = WINV &&
-           Clusters_RAC_InvCnt[c2,c1] = False &&
-           Clusters_RAC_InvCnt[c2,c2] = True &&
-           Clusters_RAC_InvCnt[c2,y] = True }
-{
-  (* Clusters_RAC_InvCnt[c2] := Clusters_RAC_InvCnt[c2] - 1; *)
-  Clusters_RAC_InvCnt[c2,c2] := False;
+  Clusters_RAC_ToInv[c2,c1] := False;
 
   GInvMsg_Cmd[c1] := None;
   (* undefine GInvMsg_Cluster[c1]; *)
