@@ -44,6 +44,7 @@ let gen_inv = ref false
 let forward_inv = ref (-1)
 let enumerative = ref (-1)
 let brab = ref (-1)
+let forward_depth = ref (-1)
 let localized = ref false 
 let lazyinv = ref false
 let refine = ref false
@@ -96,6 +97,8 @@ let specs =
                     " localized invariant candidates";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
+    "-forward-depth", Arg.Set_int forward_depth,
+                "<d> Limit the depth of the forward exploration to at most d";
     "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
                 "<low> <up> abstract numerical values in [<low>; <up>] during forward exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
@@ -140,7 +143,9 @@ let gen_inv = !gen_inv
 let forward_inv = !forward_inv
 let brab = !brab
 let enumerative = if brab <> -1 then brab else !enumerative
-let do_brab = if brab <> -1 then true else false
+let do_brab = brab <> -1
+let forward_depth = !forward_depth
+let limit_forward_depth = forward_depth <> -1
 let localized = !localized
 let refine = !refine && not !stateless
 let lazyinv = !lazyinv

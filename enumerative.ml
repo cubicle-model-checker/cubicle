@@ -107,7 +107,53 @@ let empty_env = {
 }
 
 
-let explicit_states = HI.create 2_000_029
+let apply_subst env st sigma =
+  let st' = Array.copy st in
+  for i = 0 to env.nb_vars - 1 do
+    try let v = List.assoc st'.(i) sigma in st'.(i) <- v
+    with Not_found -> ()
+  done;
+  st'
+
+let normalize_state env st =
+  let met = ref [] in
+  let remaining = ref env.proc_ids in
+  let sigma = ref [] in
+  for i = 0 to Array.length st - 1 do
+    let v = st.(i) in
+    if !remaining <> [] then
+      let r = List.hd !remaining in
+      if env.first_proc <= v && v < env.extra_proc && 
+        not (List.mem v !met) && v <> r then begin
+          met := v :: !met;
+          remaining := List.tl !remaining;
+          sigma := (v,r) :: (r,v) :: !sigma
+        end;
+  done;
+  apply_subst env st !sigma
+
+
+let hash_state st =
+  let h = ref 1 in
+  let n = ref 2 in
+  for i = 0 to Array.length st - 1 do
+    let v = st.(i) in
+    if v <> -1 then begin
+      h := !h * (v + 2) + !n;
+      n := 13 * !n + 7;
+      (* h := (!h + 7) * (v + 11); *)
+    end
+  done;
+  !h
+
+module HST = Hashtbl.Make 
+  (struct 
+    type t = state
+    let equal = (=)
+    let hash = hash_state
+   end)
+
+let explicit_states = HST.create 2_000_009
 let global_env = ref empty_env
 
 
@@ -241,45 +287,6 @@ let init_tables procs s =
   }
 
 
-let apply_subst env st sigma =
-  let st' = Array.copy st in
-  for i = 0 to env.nb_vars - 1 do
-    try let v = List.assoc st'.(i) sigma in st'.(i) <- v
-    with Not_found -> ()
-  done;
-  st'
-
-let normalize_state env st =
-  let met = ref [] in
-  let remaining = ref env.proc_ids in
-  let sigma = ref [] in
-  for i = 0 to Array.length st - 1 do
-    let v = st.(i) in
-    if !remaining <> [] then
-      let r = List.hd !remaining in
-      if env.first_proc <= v && v < env.extra_proc && 
-        not (List.mem v !met) && v <> r then begin
-          met := v :: !met;
-          remaining := List.tl !remaining;
-          sigma := (v,r) :: (r,v) :: !sigma
-        end;
-  done;
-  apply_subst env st !sigma
-
-
-let hash_state st =
-  let h = ref 1 in
-  (*let n = ref 2 in*)
-  for i = 0 to Array.length st - 1 do
-    let v = st.(i) in
-    if v <> -1 then begin
-      (*h := !h * (v + 2) + !n;*)
-      (*n := 13 * !n + 7;*)
-      h := (!h + 7) * (v + 11);
-    end
-  done;
-  !h
-
 
 let abs_inf = 
   SAtom.filter (function
@@ -324,8 +331,22 @@ let cdnf_to_dnf = function
   | [] -> [SAtom.singleton Atom.False]
   | l -> cdnf_to_dnf_rec [SAtom.singleton Atom.True] l
 
+(* let make_sorts = *)
+(*   let cpt = ref 0 in *)
+(*   List.fold_left (fun sa p -> *)
+(*     incr cpt; *)
+(*     let s = if !cpt <= 2 then "CId" else "L1Id" in *)
+(*     let a = Atom.Comp (Access (Hstring.make "Sort", [p]), Eq, *)
+(*                   Elem (Hstring.make s, Constr)) in *)
+(*     SAtom.add a sa) SAtom.empty *)
+
+(* let add_sorts procs = *)
+(*   let sorts = make_sorts procs in *)
+(*   List.map (SAtom.union sorts) *)
+
 let mkinits procs ({t_init = ia, l_init}) =
-  cdnf_to_dnf (make_init_cdnf ia l_init procs) 
+  let lsa = cdnf_to_dnf (make_init_cdnf ia l_init procs) in
+  (* add_sorts procs *) lsa
 
 
 let int_of_const = function
@@ -384,7 +405,7 @@ let init_to_states env procs s =
       let sts = write_cube_to_states env st_init init in
       List.rev_append sts acc
     ) [] l_inits in
-  List.map (fun st -> hash_state st, st) sts
+  List.map (fun st -> hash_state st, 0, st) sts
   
 
 let atom_to_st_req env = function
@@ -669,16 +690,19 @@ let transitions_to_func procs env =
 
 
 
-let post st visited trs acc cpt_q =
-  List.fold_left (fun acc st_tr ->
-    try 
-      let sts = st_tr.st_f st in
-      List.fold_left (fun acc s ->
-        let hs = hash_state s in
-        if HI.mem visited hs then acc else 
-          (incr cpt_q; (hs, s) :: acc)
-      ) acc sts
-    with Not_applicable -> acc) acc trs
+let post st visited trs acc cpt_q depth =
+  if limit_forward_depth && depth > forward_depth then acc
+  else
+    List.fold_left (fun acc st_tr ->
+      try 
+        let sts = st_tr.st_f st in
+        List.fold_left (fun acc s ->
+          let hs = hash_state s in
+        (* if HI.mem visited hs then acc else  *)
+          if HST.mem visited s then acc else
+            (incr cpt_q; (hs, depth + 1, s) :: acc)
+        ) acc sts
+      with Not_applicable -> acc) acc trs
 
 
 
@@ -694,19 +718,21 @@ let forward s procs env l =
   let rec forward_rec s procs trs = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f
-    | (hst, st) :: to_do ->
+    | (hst, depth, st) :: to_do ->
 	decr cpt_q;
-        if HI.mem explicit_states hst then
+        (* if HI.mem explicit_states hst then *)
+	if HST.mem explicit_states st then
 	  forward_rec s procs trs to_do
         else
-	  let to_do = post st explicit_states trs to_do cpt_q in
+	  let to_do = post st explicit_states trs to_do cpt_q depth in
 	  incr cpt_f;
 	  if debug && verbose > 1 then
             eprintf "%d : %a\n@." !cpt_f
               Pretty.print_cube (state_to_cube env st);
 	  if not quiet && !cpt_f mod 1000 = 0 then
             eprintf "%d (%d)@." !cpt_f !cpt_q;
-	  HI.add explicit_states hst st;
+	  (* HI.add explicit_states hst st; *)
+	  HST.add explicit_states st ();
 	  forward_rec s procs trs to_do
   in
   forward_rec s procs trs l
@@ -717,7 +743,7 @@ let search procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun (_, st) ->
+    List.iter (fun (_, _, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
@@ -738,7 +764,7 @@ exception Sustainable of t_system list
 
 let smallest_to_resist_on_trace ls =
   let env = !global_env in
-  let progress_inc = (HI.length explicit_states) / Pretty.vt_width + 1 in
+  let progress_inc = (HST.length explicit_states) / Pretty.vt_width + 1 in
   let cands =
     List.fold_left (fun acc p ->
       try 
@@ -753,7 +779,7 @@ let smallest_to_resist_on_trace ls =
       if not quiet then eprintf "@{<fg_black_b>@{<i>"; (* will be forgotten by flushs *)
       let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
       let cpt = ref 0 in
-      HI.iter (fun _ st ->
+      HST.iter (fun st _ ->
         incr cpt;
         if not quiet && !cpt mod progress_inc = 0 then one_step ();
         cands := List.filter (fun p -> 

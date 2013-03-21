@@ -36,6 +36,9 @@ val refine : bool
 val stateless : bool
 val do_brab : bool
 
+val limit_forward_depth : bool
+val forward_depth : int
+
 val abstr_num : bool
 val num_range : int * int
 

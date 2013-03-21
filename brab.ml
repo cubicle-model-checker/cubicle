@@ -76,15 +76,18 @@ let search_backtrack_brab search invariants uns =
 	  if not quiet then
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
-          if not quiet then eprintf "%d used candidates :@." (List.length !candidates);
-          if not quiet then 
+
+          candidates := remove_cand o faulty !candidates uns;
+          
+          if verbose > 0 && not quiet then begin
+            eprintf "%d used candidates :@." (List.length !candidates);
             List.iter (fun s ->
               eprintf "   %a\n@." Pretty.print_system s) !candidates;
-          candidates := remove_cand o faulty !candidates uns;
-          if not quiet then eprintf "%d bad candidates :@." (List.length !bad_candidates);
-          if not quiet then 
+            eprintf "%d bad candidates :@." (List.length !bad_candidates);
             List.iter (fun sa ->
               eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates;
+          end;
+          
           search_rec uns
   in
   search_rec uns
@@ -137,7 +140,7 @@ let approximations =
             let nsa = SAtom.add a sa' in
             let nargs = Cube.args_of_atoms nsa in
             if List.length nargs > enumerative then acc
-            else if SAtom.cardinal nsa > 3 then acc
+            else if SAtom.cardinal nsa > enumerative + 1 then acc
             else SSAtoms.add nsa acc
           ) acc acc
       ) sa init
@@ -145,7 +148,8 @@ let approximations =
     let parts = SSAtoms.fold (fun sa' acc ->
       if SAtom.equal sa' sa then acc
       (* Heuristic : usefull for flash *)
-      else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > 1 then acc
+      else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > enumerative - 1 then acc
+      (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then acc *)
       else
         let sa', (args', _) = Cube.proper_cube sa' in
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
@@ -197,8 +201,17 @@ let approximations =
 
 (* TODO : approx trees *)
 
+let keep n l =
+  let rec aux acc n l = match l,n with
+    | [], _ | _, 0 -> List.rev acc
+    | x::r, _ -> aux (x::acc) (n-1) r in
+  aux [] n l
+
 let subsuming_candidate s =
   let approx = approximations s in
+  (* let approx = keep 70 approx in *)
+  if verbose > 0 && not quiet then 
+    eprintf "Checking %d approximations:@." (List.length approx);
   Enumerative.smallest_to_resist_on_trace approx
 
 
@@ -211,3 +224,11 @@ let brab search invariants uns =
     
     if only_forward then exit 0;
     search_backtrack_brab search invariants uns
+
+
+
+
+
+
+
+

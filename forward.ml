@@ -1013,12 +1013,17 @@ let proc_present p a sa =
     | Comp (_, _, Elem (h, Var)) when Hstring.equal h p -> true
     | _ -> false) rest
 
+let hsort = Hstring.make "Sort"
 
 let useless_candidate sa =
   SAtom.exists (function
     (* heuristic: remove proc variables *)
     | (Comp (Elem (p, Var), _, _) as a)
     | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
+
+    | (Comp (Access (s, [p]), _, _) as a)
+    | (Comp (_, _, Access (s, [p])) as a) when Hstring.equal s hsort ->
+       not (proc_present p a sa)
 
     | Comp ((Elem (x, _) | Access (x,_)), _, _)
     | Comp (_, _, (Elem (x, _) | Access (x,_))) ->
