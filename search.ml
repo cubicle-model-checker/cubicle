@@ -398,7 +398,10 @@ module BFS_base ( X : I ) = struct
 	| Unsafe s ->
             if dot then fprintf fmt "@[%a@]@." X.print_bad s;
             close_dot (); raise (Unsafe s));
-      (match X.fixpoint_trie2 !visited s with
+      (let visited_invs =
+          List.fold_left (fun visited s ->
+            Cubetrie.add_array s.t_arru s visited) !visited !invariants in
+        match X.fixpoint_trie2 visited_invs s with
 	 | Some db ->
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
 	     incr Profiling.cpt_fix;

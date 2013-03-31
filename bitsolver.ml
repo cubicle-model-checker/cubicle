@@ -66,12 +66,12 @@ let size_of_type ty =
 let size_of_symbol x = size_of_type (snd (Smt.Symbol.type_of x))
 
 (** number of bits required to represtent cubes of system [s]*)  
-let bitvsize_from_pb s =
+let bitvsize_from_pb s nb_procs =
   let size_globals = 
     List.fold_left (fun n g -> size_of_symbol g + n) 0 s.t_globals in
   let size_arrays =
     List.fold_left (fun n a -> size_of_symbol a + n) 0 s.t_arrays in
-  size_globals + max_proc * size_arrays
+  size_globals + nb_procs * size_arrays
 
 
 let add_proc_bits offset =
@@ -113,7 +113,7 @@ let bitvbounds_from_pb s =
   h, List.rev (!bounds)
 
 
-let init_env s = 
+let init_env s nb_procs = 
   let term_bounds, bounds = bitvbounds_from_pb s in
   if debug then begin
     HT.iter (fun t (r,l) ->
@@ -125,7 +125,7 @@ let init_env s =
     ) bounds;
     eprintf "]@.";
   end;
-  env.size <- bitvsize_from_pb s;
+  env.size <- bitvsize_from_pb s nb_procs;
   env.term_bounds <- term_bounds;
   env.bounds <- bounds
 

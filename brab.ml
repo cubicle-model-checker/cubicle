@@ -76,9 +76,10 @@ let search_backtrack_brab search invariants uns =
 	  if not quiet then
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
-
-          candidates := remove_cand o faulty !candidates uns;
           
+          candidates := remove_cand o faulty !candidates uns;
+          assert false;
+
           if verbose > 0 && not quiet then begin
             eprintf "%d used candidates :@." (List.length !candidates);
             List.iter (fun s ->
@@ -87,7 +88,7 @@ let search_backtrack_brab search invariants uns =
             List.iter (fun sa ->
               eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates;
           end;
-          
+
           search_rec uns
   in
   search_rec uns
@@ -123,10 +124,41 @@ let nb_arith s =
   ) (snd s.t_unsafe) 0
   
 
+let hsort = Hstring.make "Sort"
+let hhome = Hstring.make "Home"
+
+let sorted_variables sa =
+  let procs = Cube.args_of_atoms sa in
+  List.for_all (fun p ->
+    SAtom.exists (function 
+      | Atom.Comp (Access (s, [x]), _, _) 
+        when Hstring.equal s hsort && Hstring.equal x p -> true
+      | _ -> false) sa) procs
+
+let isolate_sorts =
+  SAtom.partition (function 
+    | Atom.Comp (Access (s, _), _, _) -> Hstring.equal s hsort
+    | Atom.Comp (Elem (h, Glob), _, _) -> Hstring.equal h hhome
+    | _ -> false)
+
+
+let reattach_sorts sorts sa =
+  let procs = Cube.args_of_atoms sa in
+  SAtom.fold (fun a sa -> match a with
+    | Atom.Comp (Access (s, [x]), _, _) 
+        when Hstring.equal s hsort && Hstring.list_mem x procs ->
+        SAtom.add a sa
+    | Atom.Comp (Elem (h, Glob), _, Elem (x, Var))
+    | Atom.Comp (Elem (x, Var), _, Elem (h, Glob)) 
+        when Hstring.equal h hhome && Hstring.list_mem x procs ->
+        SAtom.add a sa
+    | _ -> sa) sorts sa
+
 let approximations =
   let forward_procs = Forward.procs_from_nb enumerative in
   let cpt = ref 0 in
   fun ({ t_unsafe = (args, sa) } as s) ->
+    let sorts_sa, sa = isolate_sorts sa in
     let init = 
       SAtom.fold (fun a acc ->
         if Forward.useless_candidate (SAtom.singleton a) then acc
@@ -151,6 +183,9 @@ let approximations =
       else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > enumerative - 1 then acc
       (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then acc *)
       else
+        let sa' = reattach_sorts sorts_sa sa' in
+        if SAtom.equal sa' sa then acc
+        else
         let sa', (args', _) = Cube.proper_cube sa' in
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc

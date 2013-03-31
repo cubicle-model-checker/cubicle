@@ -17,7 +17,7 @@ type env
 
 exception Unsat
 
-val init_env : Ast.t_system -> unit
+val init_env : Ast.t_system -> int -> unit
 (** returns an environnement with the bitvector size needed for the
     representation of cubes of system [s] and the associated bounds
     (see {!bitvbounds_from_pb}).*)

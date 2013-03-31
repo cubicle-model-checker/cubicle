@@ -41,7 +41,7 @@ let _ =
   try
     let s = Parser.system Lexer.token lb in
     let ts = Typing.system s in
-    if bitsolver then Bitsolver.init_env (List.hd ts);
+    if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;
     if type_only then exit 0;
     Bwreach.system ts;
     if dot then eprintf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."

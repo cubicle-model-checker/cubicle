@@ -26,11 +26,11 @@ module HT = Hashtbl.Make (struct
   let hash = hash_term
 end)
 
-module HI = Hashtbl.Make 
-  (struct 
+module HI = Hashtbl.Make (struct 
   type t = int 
   let equal = (=) 
-  let hash x = x end)
+  let hash x = x
+end)
 
 
 type state = int array
@@ -67,6 +67,7 @@ type state_transistion = {
   st_udnfs : st_req list list list;
   st_actions : st_action list;
   st_f : state -> state list;
+  st_vars : Hstring.HSet.t;
 }
 
 
@@ -74,6 +75,8 @@ type env = {
   var_terms : STerm.t;
   nb_vars : int;
   perm_procs : (int * int) list list;
+  perm_states : ((Hstring.t * Hstring.t) list *
+                    (int * int) list * (int * int) list) list;
   first_proc : int;
   extra_proc : int;
   all_procs : Hstring.t list;
@@ -92,6 +95,7 @@ let empty_env = {
   var_terms = STerm.empty;
   nb_vars = 0;
   perm_procs = [];
+  perm_states = [];
   first_proc = 0;
   extra_proc = 0;
   all_procs = [];
@@ -107,6 +111,38 @@ let empty_env = {
 }
 
 
+let build_state_procs_map id_terms procs var_terms proc_terms =
+  let build_int_perms sigma lt =
+    List.fold_left (fun acc_s t ->
+      let t_s = subst_term sigma t in
+      if not (compare_term t_s t = 0) then
+        (HT.find id_terms t, HT.find id_terms t_s) :: acc_s
+      else acc_s
+    ) [] lt
+  in
+  let d = all_permutations procs procs in
+  List.rev_map (fun sigma ->
+    let p_vars = build_int_perms sigma (STerm.elements var_terms) in
+    let p_procs = build_int_perms sigma proc_terms in
+    sigma, p_vars, p_procs
+  ) d
+
+
+let swap a (i,j) =
+  if i <> j then
+    let tmp = a.(i) in
+    a.(i) <- a.(j);
+    a.(j) <- tmp
+    
+let apply_perm_state env st (_, p_vars, p_procs) =
+  let st' = Array.copy st in
+  List.iter (swap st') p_vars;
+  for i = 0 to env.nb_vars - 1 do
+    try let v = List.assoc st'.(i) p_procs in st'.(i) <- v
+    with Not_found -> ()
+  done;
+  st'
+  
 let apply_subst env st sigma =
   let st' = Array.copy st in
   for i = 0 to env.nb_vars - 1 do
@@ -252,10 +288,11 @@ let init_tables procs s =
 
   List.iter (fun t -> HT.add ht t !i; incr i) constr_terms;
   let proc_ids = List.rev !proc_ids in
-  let prem_procs = 
+  let perm_procs = 
     List.filter (fun sigma ->
       List.exists (fun (x,y) -> x <> y) sigma
     ) (all_permutations proc_ids proc_ids) in
+  let perm_states = build_state_procs_map ht procs var_terms proc_terms in
   if debug then
     HT.iter (fun t i -> eprintf "%a -> %d@." Pretty.print_term t i ) ht;
   let id_true = try HT.find ht (Elem (htrue, Constr)) with Not_found -> -2 in
@@ -270,7 +307,8 @@ let init_tables procs s =
 
   { var_terms = var_terms;
     nb_vars = nb_vars;
-    perm_procs = prem_procs;
+    perm_procs = perm_procs;
+    perm_states = perm_states;
     first_proc = first_proc;
     extra_proc = extra_proc;
     all_procs = all_procs;
@@ -405,7 +443,7 @@ let init_to_states env procs s =
       let sts = write_cube_to_states env st_init init in
       List.rev_append sts acc
     ) [] l_inits in
-  List.map (fun st -> hash_state st, 0, st) sts
+  List.map (fun st -> 0, st) sts
   
 
 let atom_to_st_req env = function
@@ -635,7 +673,17 @@ let print_transition_fun env name sigma { st_reqs = st_reqs;
 	fprintf fmt "         %a\n" (print_action env) a;
       ) st_actions;
       fprintf fmt "}\n@."
-  
+
+
+let rec ordered_subst = function
+  | [] | [_] -> true
+  | (_, x) :: ((_, y) :: _ as r) ->
+      Hstring.compare x y <= 0 && ordered_subst r
+
+let ordered_fst_subst = function
+  | [] -> true
+  | (_, x) :: _ as sb ->
+      Hstring.equal x (List.hd proc_vars) && ordered_subst sb
 
 let transitions_to_func_aux procs env reduce acc { tr_args = tr_args; 
 		                                   tr_reqs = reqs; 
@@ -650,6 +698,7 @@ let transitions_to_func_aux procs env reduce acc { tr_args = tr_args;
     let d = all_permutations tr_args procs in
     (* do it even if no arguments *)
     let d = if d = [] then [[]] else d in
+    (* let d = List.filter ordered_subst d in *)
     List.fold_left (fun acc sigma ->
       let reqs = subst_atoms sigma reqs in
       let t_args_ef = 
@@ -671,10 +720,14 @@ let transitions_to_func_aux procs env reduce acc { tr_args = tr_args;
 	then raise Not_applicable;
 	apply_actions env st st_actions
       in
+      let st_vars = 
+        List.fold_left (fun acc (_, x) ->
+          Hstring.HSet.add x acc) Hstring.HSet.empty sigma in
       let st_tr = {
         st_reqs = st_reqs;
         st_udnfs = st_udnfs;
         st_actions = st_actions;
+        st_vars = st_vars;
         st_f = f;
       } in
       if debug then print_transition_fun env name sigma st_tr err_formatter;
@@ -697,20 +750,66 @@ let post st visited trs acc cpt_q depth =
       try 
         let sts = st_tr.st_f st in
         List.fold_left (fun acc s ->
-          let hs = hash_state s in
-        (* if HI.mem visited hs then acc else  *)
           if HST.mem visited s then acc else
-            (incr cpt_q; (hs, depth + 1, s) :: acc)
+            (incr cpt_q; (depth + 1, s) :: acc)
         ) acc sts
       with Not_applicable -> acc) acc trs
 
+
+let post_bfs st visited trs q cpt_q depth =
+  if not limit_forward_depth || depth <= forward_depth then
+    List.iter (fun st_tr ->
+      try 
+        let sts = st_tr.st_f st in
+        List.iter (fun s ->
+          if not (HST.mem visited s) then begin
+            incr cpt_q;
+            Queue.add (depth + 1, s) q
+          end
+        ) sts
+      with Not_applicable -> ()) trs
+
+let hset_none = Hstring.HSet.singleton (Hstring.make "none")
+
+let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
+  let temp_table = HST.create 2009 in
+  let rec aux = function
+    | [] -> ()
+    | (st, last_vars) :: r ->
+        let to_do =
+          List.fold_left (fun to_do st_tr ->
+            try 
+              let sts = st_tr.st_f st in
+              let vars = st_tr.st_vars in
+              let switching = Hstring.HSet.equal vars last_vars ||
+                Hstring.HSet.equal last_vars hset_none in
+              List.fold_left (fun to_do s ->
+                if not (HST.mem visited s || HST.mem temp_table s) then
+                  if switching then begin
+                    incr cpt_q;
+                    Queue.add (depth + 1, vars, s) q;
+                    incr cpt_f;
+                    HST.add visited st ();
+                    to_do
+                  end 
+                  else begin 
+                    HST.add temp_table st ();
+                    (s, vars) :: to_do
+                  end
+                else to_do
+              ) to_do sts
+            with Not_applicable -> to_do) r trs
+        in
+        aux to_do
+  in
+  if not limit_forward_depth || depth <= forward_depth then aux [st, prev_vars]
 
 
 let check_cand env state cand = 
   not (List.for_all (fun l -> check_req env state (neg_req env l)) cand)
 
 
-let forward s procs env l =
+let forward_dfs s procs env l =
   global_env := env;
   let cpt_f = ref 0 in
   let cpt_q = ref 1 in
@@ -718,9 +817,8 @@ let forward s procs env l =
   let rec forward_rec s procs trs = function
     | [] ->
         eprintf "Total forward nodes : %d@." !cpt_f
-    | (hst, depth, st) :: to_do ->
+    | (depth, st) :: to_do ->
 	decr cpt_q;
-        (* if HI.mem explicit_states hst then *)
 	if HST.mem explicit_states st then
 	  forward_rec s procs trs to_do
         else
@@ -737,17 +835,78 @@ let forward s procs env l =
   in
   forward_rec s procs trs l
 
+let remove_first h =
+  try HST.iter (fun hst _ -> HST.remove h hst; raise Exit) h
+  with Exit -> ()
+
+let already_visited env h st =
+  HST.mem h st ||
+  List.exists (fun st_sigma ->
+    HST.mem h (apply_perm_state env st st_sigma)) env.perm_states
+
+let forward_bfs s procs env l =
+  global_env := env;
+  let cpt_f = ref 0 in
+  let cpt_r = ref 0 in
+  let cpt_q = ref 1 in
+  let trs = env.st_trs in
+  let to_do = Queue.create () in
+  List.iter (fun td -> Queue.add td to_do) l;
+  while not (Queue.is_empty to_do) do
+    let depth, st = Queue.take to_do in
+    decr cpt_q;
+    (* if not (HST.mem explicit_states st) then begin *)
+    if not (already_visited env explicit_states st) then begin
+      post_bfs st explicit_states trs to_do cpt_q depth;
+      incr cpt_f;
+      if debug && verbose > 1 then
+        eprintf "%d : %a\n@." !cpt_f
+          Pretty.print_cube (state_to_cube env st);
+      if not quiet && !cpt_f mod 1000 = 0 then
+        eprintf "%d (%d)@." !cpt_f !cpt_q;
+      (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
+      (* if !cpt_f mod 3 = 1 then *) (incr cpt_r; HST.add explicit_states st ())
+    end
+  done;
+  eprintf "Total forward nodes : %d@." !cpt_r
+
+let forward_bfs_switches s procs env l =
+  global_env := env;
+  let cpt_f = ref 0 in
+  let cpt_q = ref 1 in
+  let trs = env.st_trs in
+  let to_do = Queue.create () in
+  List.iter (fun (idp, ist)  -> 
+    Queue.add (idp, hset_none, ist) to_do) l;
+  while not (Queue.is_empty to_do) do
+    let depth, last_vars, st = Queue.take to_do in
+    decr cpt_q;
+    if not (HST.mem explicit_states st) then begin
+      post_bfs_switches 
+        st explicit_states trs to_do cpt_q cpt_f depth last_vars;
+      incr cpt_f;
+      if debug && verbose > 1 then
+        eprintf "%d : %a\n@." !cpt_f
+          Pretty.print_cube (state_to_cube env st);
+      if not quiet (* && !cpt_f mod 1000 = 0 *) then
+        eprintf "%d (%d)@." !cpt_f !cpt_q;
+      (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
+      HST.add explicit_states st ();
+    end
+  done;
+  eprintf "Total forward nodes : %d@." !cpt_f
+
 let search procs init =
   if profiling then Search.TimeForward.start ();
   let procs = procs (*@ init.t_glob_proc*) in
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun (_, _, st) ->
+    List.iter (fun (_, st) ->
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
-  forward init procs env st_inits;
+  forward_bfs init procs env st_inits;
   if profiling then Search.TimeForward.pause ()
 
 
