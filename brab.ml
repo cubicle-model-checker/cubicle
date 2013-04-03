@@ -64,7 +64,7 @@ let rec remove_cand s faulty candidates uns =
   List.rev nc
 
 
-let search_backtrack_brab search invariants uns =
+let search_backtrack_brab search invariants procs uns =
   let candidates = ref [] in
   let rec search_rec uns =
     try
@@ -78,7 +78,9 @@ let search_backtrack_brab search invariants uns =
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
           
           candidates := remove_cand o faulty !candidates uns;
-          assert false;
+          (* assert false; *)
+
+          Enumerative.replay_trace_and_expand procs faulty; 
 
           if verbose > 0 && not quiet then begin
             eprintf "%d used candidates :@." (List.length !candidates);
@@ -258,7 +260,7 @@ let brab search invariants uns =
     eprintf "-------------\n@.";
     
     if only_forward then exit 0;
-    search_backtrack_brab search invariants uns
+    search_backtrack_brab search invariants procs uns
 
 
 

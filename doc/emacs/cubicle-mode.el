@@ -58,7 +58,8 @@
     ("\\(transition\\)\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-function-name-face))
     ("\\(type\\)\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-type-face))
     ("\\(var\\)\\s-+\\sw+\\s-+:\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-type-face))
-    ("\\(array\\)\\s-+\\sw+\\[\\(\\sw+\\)\\]\\s-+:\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-type-face) (3 font-lock-type-face))
+    ("\\(array\\)\\s-+\\sw+\\[\\(\\sw+\\s-*,?\\s-*\\)*\\]\\s-*:\\s-*\\(\\sw+\\)"
+     (1 font-lock-keyword-face) (2 font-lock-type-face) (3 font-lock-type-face))
     ("\\b\\(bool\\)\\b" (1 font-lock-type-face))
     ("\\b\\(int\\)\\b" (1 font-lock-type-face))
     ("\\b\\(real\\)\\b" (1 font-lock-type-face))

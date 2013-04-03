@@ -63,11 +63,13 @@ type st_action =
 exception Not_applicable
 
 type state_transistion = {
+  st_name : Hstring.t;
   st_reqs : st_req list;
   st_udnfs : st_req list list list;
   st_actions : st_action list;
   st_f : state -> state list;
   st_vars : Hstring.HSet.t;
+  st_args : Hstring.t list;
 }
 
 
@@ -724,10 +726,12 @@ let transitions_to_func_aux procs env reduce acc { tr_args = tr_args;
         List.fold_left (fun acc (_, x) ->
           Hstring.HSet.add x acc) Hstring.HSet.empty sigma in
       let st_tr = {
+        st_name = name;
         st_reqs = st_reqs;
         st_udnfs = st_udnfs;
         st_actions = st_actions;
         st_vars = st_vars;
+        st_args = t_args_ef;
         st_f = f;
       } in
       if debug then print_transition_fun env name sigma st_tr err_formatter;
@@ -844,7 +848,12 @@ let already_visited env h st =
   List.exists (fun st_sigma ->
     HST.mem h (apply_perm_state env st st_sigma)) env.perm_states
 
-let forward_bfs s procs env l =
+let add_all_syms env h st =
+  HST.add h st ();
+  List.iter (fun st_sigma ->
+    HST.add h (apply_perm_state env st st_sigma) ()) env.perm_states
+
+let forward_bfs s procs env h_store h_visited l =
   global_env := env;
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
@@ -855,17 +864,20 @@ let forward_bfs s procs env l =
   while not (Queue.is_empty to_do) do
     let depth, st = Queue.take to_do in
     decr cpt_q;
-    (* if not (HST.mem explicit_states st) then begin *)
-    if not (already_visited env explicit_states st) then begin
-      post_bfs st explicit_states trs to_do cpt_q depth;
+    if not (HST.mem h_visited st) then begin
+    (* if not (already_visited env explicit_states st) then begin *)
+      post_bfs st h_visited trs to_do cpt_q depth;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
           Pretty.print_cube (state_to_cube env st);
       if not quiet && !cpt_f mod 1000 = 0 then
         eprintf "%d (%d)@." !cpt_f !cpt_q;
-      (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
-      (* if !cpt_f mod 3 = 1 then *) (incr cpt_r; HST.add explicit_states st ())
+      (* if !cpt_f mod 3 = 1 then *)
+      incr cpt_r;
+      HST.add h_visited st ();
+      if not (h_store == h_visited) then HST.add h_store st ()
+      (* add_all_syms env explicit_states st *)
     end
   done;
   eprintf "Total forward nodes : %d@." !cpt_r
@@ -906,9 +918,52 @@ let search procs init =
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
-  forward_bfs init procs env st_inits;
+  forward_bfs init procs env explicit_states explicit_states st_inits;
   if profiling then Search.TimeForward.pause ()
 
+
+let resume_search_from procs init = assert false
+
+
+exception Found_f of state_transistion
+
+let find_tr_fun env name args =
+  try
+    List.iter (fun ({st_name = n; st_args = a} as f) ->
+      if Hstring.equal n name && Hstring.list_equal a args then
+        raise (Found_f f))
+      env.st_trs;
+    raise Not_found
+  with Found_f f -> f
+
+
+let replay_trace_and_expand procs faulty =
+  let env = !global_env in
+  let tmp_visited = HST.create 2_000_001 in
+  let st_inits = List.map snd (init_to_states env procs faulty) in
+  let trc = faulty.t_from in
+  let rec replay trc sts depth =
+    (* if depth > forward_depth + 1 then sts *)
+    (* else *) match sts, trc with
+      | [], _ | _, [] -> sts
+      | _, ({tr_name = name}, args, _) :: trc ->
+          let st_tr = find_tr_fun env name args in
+          let to_do = List.fold_left (fun acc st ->
+            
+            eprintf ">>> : %a\n@."
+              Pretty.print_cube (state_to_cube env st);
+
+            try List.rev_append (st_tr.st_f st) acc
+            with Not_applicable -> acc) [] sts in
+          eprintf "%a ( %a )@." Hstring.print name Pretty.print_args args; 
+          replay trc to_do (depth + 1)
+  in
+  let new_inits = replay trc st_inits 0 in
+  List.iter (fun (st) ->
+  eprintf "new_inits : %a\n@." Pretty.print_cube (state_to_cube env st))
+    new_inits;
+  forward_bfs faulty procs env explicit_states tmp_visited
+    (List.map (fun s -> 0, s) new_inits)
 
 
 let satom_to_cand env sa =
