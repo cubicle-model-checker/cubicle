@@ -927,15 +927,8 @@ let resume_search_from procs init = assert false
 
 exception Found_f of state_transistion
 
-let find_tr_fun env name args =
-  try
-    List.iter (fun ({st_name = n; st_args = a} as f) ->
-      if Hstring.equal n name && Hstring.list_equal a args then
-        raise (Found_f f))
-      env.st_trs;
-    raise Not_found
-  with Found_f f -> f
-
+let find_tr_funs env name =
+  List.filter (fun tr -> Hstring.equal tr.st_name name) env.st_trs
 
 let replay_trace_and_expand procs faulty =
   let env = !global_env in
@@ -943,18 +936,21 @@ let replay_trace_and_expand procs faulty =
   let st_inits = List.map snd (init_to_states env procs faulty) in
   let trc = faulty.t_from in
   let rec replay trc sts depth =
-    (* if depth > forward_depth + 1 then sts *)
-    (* else *) match sts, trc with
+    if depth > forward_depth then sts
+    else match sts, trc with
       | [], _ | _, [] -> sts
       | _, ({tr_name = name}, args, _) :: trc ->
-          let st_tr = find_tr_fun env name args in
-          let to_do = List.fold_left (fun acc st ->
-            
-            eprintf ">>> : %a\n@."
-              Pretty.print_cube (state_to_cube env st);
+          let st_trs = find_tr_funs env name in
+          let to_do =
+            List.fold_left (fun acc st_tr ->
+              List.fold_left (fun acc st ->
+                
+                eprintf ">>> : %a\n@."
+                  Pretty.print_cube (state_to_cube env st);
 
-            try List.rev_append (st_tr.st_f st) acc
-            with Not_applicable -> acc) [] sts in
+                try List.rev_append (st_tr.st_f st) acc
+                with Not_applicable -> acc) acc sts
+            ) [] st_trs in
           eprintf "%a ( %a )@." Hstring.print name Pretty.print_args args; 
           replay trc to_do (depth + 1)
   in

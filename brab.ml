@@ -57,7 +57,8 @@ let rec remove_cand s faulty candidates uns =
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
 	  else (add_bad_candidate s' (Some trace); acc)
-        else if Forward.reachable_on_trace s' trace then 
+        else if Forward.reachable_on_trace s' trace ||
+                Enumerative.smallest_to_resist_on_trace [[s']] = [] then 
           (add_bad_candidate s' None; acc)
 	else s'::acc)
       [] candidates in
@@ -77,10 +78,12 @@ let search_backtrack_brab search invariants procs uns =
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
           
-          candidates := remove_cand o faulty !candidates uns;
+          Enumerative.replay_trace_and_expand procs faulty;
+          
+          (* candidates := remove_cand o faulty !candidates uns; *)
+          candidates := [];
           (* assert false; *)
 
-          Enumerative.replay_trace_and_expand procs faulty; 
 
           if verbose > 0 && not quiet then begin
             eprintf "%d used candidates :@." (List.length !candidates);
