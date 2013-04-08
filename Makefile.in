@@ -274,6 +274,12 @@ FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.mli\
 	pretty.ml pretty.mli prover.ml prover.mli bitsolver.ml bitsolver.mli\
 	search.ml search.mli typing.ml typing.mli version.ml
 
+EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
+	   ricart_agrawala.cub szymanski_at.cub berkeley.cub flash_eager.cub\
+	   german.cub german_pfs.cub german_undip.cub illinois.cub mesi.cub\
+	   moesi.cub synapse.cub swimming_pool.cub xerox_dragon.cub\
+	   sense_barrier.cub
+
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 
 export-alt-ergo-light:
@@ -289,7 +295,7 @@ export-alt-ergo-light:
 	cd export ; tar cf $(TARAE) $(EXPORTAE) ; gzip -f --best $(TARAE)
 
 
-export:
+export/$(EXPORTDIR).tar.gz:
 	mkdir -p export
 	mkdir -p export/$(EXPORTDIR)
 	mkdir -p export/$(EXPORTDIR)/smt
@@ -304,7 +310,7 @@ export:
 	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
 
-release: export
+release: export/$(EXPORTDIR).tar.gz
 	mkdir -p export/release
 	mkdir -p export/release/examples/
 	cp export/$(TAR).gz export/release/

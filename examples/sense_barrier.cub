@@ -15,6 +15,8 @@
  L5 : level := level + 1; goto L1
 
  The variable count is represented by an array Count[proc] : bool.
+
+ (Example contributed by Luc Maranget)
  
 *)
 
