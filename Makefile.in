@@ -112,7 +112,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.3b
+VERSION=0.5b
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -313,4 +313,5 @@ release: export
 	cd export/release/; sed "s@#version#@$(VERSION)@g" index.html > index.html.tmp; sed  "s@#date#@$(DATE)@g" index.html.tmp > index.html; rm -f index.html.tmp
 	mkdir -p $(WEB)/backup/$(LONGDATE)
 	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
+	cp $(WEB)/backup/$(LONGDATE)/google*.html $(WEB)
 	cp -f -R export/release/* $(WEB)
