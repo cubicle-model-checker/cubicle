@@ -856,6 +856,12 @@ let simplify_atoms np =
 (*************************************************)
 (* Safety check : s /\ init must be inconsistent *)
 (*************************************************)
+    
+let rec origin s = match s.t_from with
+  | [] -> s
+  | (_,_, p)::_ ->
+      if p.t_nb < 0 then p
+      else origin p
 
 let dnf_safe sa = List.for_all (inconsistent_2cubes sa)
 
@@ -876,7 +882,7 @@ let check_safety s =
 	Prover.unsafe s;
 	if not quiet then eprintf "\nUnsafe trace: @[%a@]@." 
 	  Pretty.print_verbose_node s;
-	raise (Search.Unsafe s)
+        raise (Search.Unsafe s)
       end
   with
     | Smt.Unsat _ -> ()

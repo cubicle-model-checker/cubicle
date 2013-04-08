@@ -448,7 +448,8 @@ let print_dead_node_to_cand  = print_subsumed_node true
 
 
 let print_verbose_node fmt s =
-  if false && verbose = 0 then print_node fmt s else begin
+  if verbose = 0 then print_node fmt s
+  else begin
     (* fprintf fmt "(%d -> %d) " s.t_nb_father s.t_nb; *)
     fprintf fmt " %a\n@." print_system s;
     let last = List.fold_left

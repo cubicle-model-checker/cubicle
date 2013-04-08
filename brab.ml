@@ -19,12 +19,6 @@ open Ast
 
 let bad_candidates = ref []
 
-let rec origin s = match s.t_from with
-  | [] -> s
-  | (_,_, p)::_ ->
-      if p.t_nb < 0 then p
-      else origin p
-
 let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
   List.iter (fun sigma ->
     bad_candidates := 
@@ -57,8 +51,8 @@ let rec remove_cand s faulty candidates uns =
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
 	  else (add_bad_candidate s' (Some trace); acc)
-        else if Forward.reachable_on_trace s' trace ||
-                Enumerative.smallest_to_resist_on_trace [[s']] = [] then 
+        else if Forward.reachable_on_trace s' trace <> None
+                (* Enumerative.smallest_to_resist_on_trace [[s']] = [] *) then 
           (add_bad_candidate s' None; acc)
 	else s'::acc)
       [] candidates in
@@ -73,17 +67,15 @@ let search_backtrack_brab search invariants procs uns =
     with
       | Search.Unsafe faulty ->
 	  (* FIXME Bug when search is parallel *)
-	  let o = origin faulty in
+	  let o = Cube.origin faulty in
 	  if not quiet then
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
           
-          Enumerative.replay_trace_and_expand procs faulty;
+          (* Enumerative.replay_trace_and_expand procs faulty; *)
           
-          (* candidates := remove_cand o faulty !candidates uns; *)
-          candidates := [];
-          (* assert false; *)
-
+          candidates := remove_cand o faulty !candidates uns;
+          (* candidates := []; *)
 
           if verbose > 0 && not quiet then begin
             eprintf "%d used candidates :@." (List.length !candidates);
@@ -264,11 +256,3 @@ let brab search invariants uns =
     
     if only_forward then exit 0;
     search_backtrack_brab search invariants procs uns
-
-
-
-
-
-
-
-

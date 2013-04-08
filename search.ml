@@ -433,7 +433,7 @@ module BFS_base ( X : I ) = struct
 
 	 | None ->
 	     begin
-	       incr nb_nodes;
+	       if s.t_nb >= 0 then incr nb_nodes;
 	       if not quiet then begin
 		 Profiling.print "BFS" !nb_nodes (X.size s);
 		 if dot then

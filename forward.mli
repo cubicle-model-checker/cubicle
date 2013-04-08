@@ -57,7 +57,10 @@ val missing_args : Hstring.t list -> Hstring.t list ->
 val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
 
 val reachable_on_trace :
-  t_system -> (transition * Hstring.t list) list -> bool
+  t_system -> (transition * Hstring.t list) list ->
+  (transition * (Hstring.t * Hstring.t) list) list option
+
+val spurious : t_system -> bool
 
 val conflicting_from_trace :
   t_system -> (transition * Hstring.t list) list -> SAtom.t list

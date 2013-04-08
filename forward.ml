@@ -1327,26 +1327,55 @@ let post_system ({ t_unsafe = uargs, u; t_trans = trs}) =
 (* Check if formula is unreachable on trace *)
 (********************************************)
 
+exception Reachable of (transition * (Hstring.t * Hstring.t) list) list
+    
 let reachable_on_trace s trace =
-  let all_procs, usa = s.t_unsafe in
+  let _, usa = s.t_unsafe in
+  let all_procs_set =
+    List.fold_left (fun acc (_, procs) ->
+      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc procs
+    ) Hstring.HSet.empty trace in
+  let all_procs = Hstring.HSet.elements all_procs_set in
   let rec forward_rec ls trace = match trace with
     | [] -> ()
-    | (tr, procs) :: rest_trace ->
-        let sigma = List.combine tr.tr_args procs in
-        let itr = instance_of_transition tr all_procs [] sigma in
-        let nls = 
-          List.fold_left (fun acc (sa, args) ->
-            List.fold_left (fun acc (nsa, nargs) ->
-              try Prover.reached all_procs usa nsa; raise Exit
-              with Smt.Unsat _ -> (nsa, nargs) :: acc
-            ) acc (post_inst sa args all_procs itr)
-          ) [] ls
+    | (tr, _) :: rest_trace ->
+        let nls =
+          List.fold_left (fun acc sigma ->
+            let itr = instance_of_transition tr all_procs [] sigma in
+            List.fold_left (fun acc (sa, args, hist) ->
+              List.fold_left (fun acc (nsa, nargs) ->
+                let new_hist = (tr, sigma) :: hist in
+                try Prover.reached all_procs usa nsa; raise (Reachable new_hist)
+                with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
+              ) acc (post_inst sa args all_procs itr)
+            ) acc ls
+          ) [] (all_permutations tr.tr_args all_procs)
         in
         forward_rec nls rest_trace
   in
-  try forward_rec (mkinits all_procs s) trace; false
-  with Exit -> true
+  try
+    let init = List.map (fun (sa, ar) -> sa, ar, []) (mkinits all_procs s) in
+    forward_rec init trace; None
+  with
+    | Reachable hist -> Some hist
 
+let spurious s =
+  let trace = List.map (fun (tr, args, _) -> tr, args) s.t_from in 
+  match reachable_on_trace (origin s) trace with
+    | None -> true
+    | Some hist ->
+        eprintf "\n@{<fg_red>Error trace:@} @[";
+        List.iter (fun (tr, sigma) ->
+          eprintf "%a(%a) ->@ " Hstring.print tr.tr_name
+            Pretty.print_args (List.map snd sigma)
+        ) (List.rev hist);
+        let nun = (origin s).t_nb in
+        if nun < 0 then 
+          eprintf "@{<fg_blue>approx[%d]@}" nun
+        else 
+          eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
+        eprintf "@]@.";
+        false
 
 let conflicting_from_trace s trace =
   let all_procs_set = List.fold_left (fun acc (_, procs) ->

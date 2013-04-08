@@ -523,7 +523,6 @@ let arity s = List.length (fst (Smt.Symbol.type_of s))
 
 
 
-
 (****************************************************)
 (* Find relevant quantifier instantiation for 	    *)
 (* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)

@@ -62,7 +62,9 @@ let _ =
     | ReachBound ->
 	printf "reach bound\n@.";
 	exit 1
-    | Search.Unsafe _ ->
-	printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+    | Search.Unsafe s ->
+        if Forward.spurious s then
+          printf "\n\n@{<b>@{<fg_yellow>Spurious trace@} !@}\n@."
+	else printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
 	exit 1
 
