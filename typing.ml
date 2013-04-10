@@ -279,6 +279,7 @@ let init_proc () =
   List.iter 
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) proc_vars
 
+    
 let system s = 
   try
     let l = init_global_env s in

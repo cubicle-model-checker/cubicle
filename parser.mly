@@ -72,8 +72,10 @@
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL
+%token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
+%token <string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR 
@@ -94,6 +96,7 @@
 %%
 
 system:
+size_proc
 type_defs
 declarations
 init
@@ -102,17 +105,17 @@ candidates
 unsafe_list
 forward_list
 transitions 
-{ let consts, vars, arrays = $2 in
-  { type_defs = $1; 
+{ let consts, vars, arrays = $3 in
+  { type_defs = $2; 
     consts = consts; 
     globals = vars;
     arrays = arrays; 
-    init = $3; 
-    invs = $4;
-    cands = $5;
-    unsafe = $6; 
-    forward = $7;
-    trans = $8 } }
+    init = $4; 
+    invs = $5;
+    cands = $6;
+    unsafe = $7; 
+    forward = $8;
+    trans = $9 } }
 ;
 
 declarations :
@@ -158,6 +161,11 @@ type_def_plus:
   | type_def type_def_plus { $1::$2 }
 ;
 
+size_proc:
+  | { () }
+  | SIZEPROC INT { Options.size_proc := Num.int_of_num $2 }
+;
+      
 type_def:
   | TYPE lident { ($2, []) }
   | TYPE lident EQ constructors 
@@ -223,8 +231,12 @@ transitions_list:
   | transition transitions_list { $1::$2 }
 ;
 
+transition_name:
+  | lident {$1}
+  | mident {$1}
+
 transition:
-  | TRANSITION lident LEFTPAR lidents RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
       require
       LEFTBR assigns_nondets_updates RIGHTBR
       { let reqs, ureq = $6 in
@@ -276,9 +288,13 @@ require:
 ;
 
 update:
-  | mident LEFTSQ lident_list_plus RIGHTSQ AFFECT CASE switchs
-      { Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
-  | mident LEFTSQ lident_list_plus RIGHTSQ AFFECT term
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
+      { List.iter (fun p ->
+          if (Hstring.view p).[0] = '#' then
+            raise Parsing.Parse_error;
+        ) $3;
+        Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
@@ -287,14 +303,6 @@ update:
         let js = List.rev rjs in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
 	Upd { up_arr = $1; up_arg = js; up_swts = sw}  }
-  /* | mident LEFTSQ mident RIGHTSQ AFFECT term
-      { Smt.set_cc true;
-        let j = fresh_var () in
-	let cube = 
-	  SAtom.singleton (Comp(Elem (j, Var), Eq, Elem ($3, sort $3))) in
-	let sw = [(cube, $6); (SAtom.empty, Access($1, j, Var))] in
-	  Upd { up_arr = $1; up_arg = j; up_swts = sw}
-      } */
 ;
 
 switchs:
@@ -343,13 +351,14 @@ var_term:
   | mident { 
       if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
-  | lident { Elem ($1, Var) }
+  | proc_name { Elem ($1, Var) }
 ;
 
+
 array_term:
-  | mident LEFTSQ lident_list_plus RIGHTSQ { Access($1,$3) }
-  /* | ident LEFTSQ mident RIGHTSQ { Smt.set_cc true;
-                                   Access($1,$3, sort $3) } */
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ {
+    Access ($1, $3)
+  }
 ;
 
 var_or_array_term:
@@ -374,6 +383,24 @@ term:
   | arith_term { Smt.set_arith true; $1 }
 ;
 
+lident:
+  | LIDENT { Hstring.make $1 }
+;
+
+const_proc:
+  | CONSTPROC { Hstring.make $1 }
+;
+
+proc_name:
+  | lident { $1 }
+  | const_proc { $1 }
+;
+
+proc_name_list_plus:
+  | proc_name { [$1] }
+  | proc_name COMMA proc_name_list_plus { $1::$3 }
+;
+
 mident:
   | MIDENT { Hstring.make $1 }
 ;
@@ -386,15 +413,6 @@ lidents:
 lident_list_plus:
   | lident { [$1] }
   | lident COMMA lident_list_plus { $1::$3 }
-;
-
-/*lident_option:
-  | { None }
-  | LIDENT { Some (Hstring.make $1) }
-;*/
-
-lident:
-  | LIDENT { Hstring.make $1 }
 ;
 
 operator:

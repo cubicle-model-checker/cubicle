@@ -173,15 +173,4 @@ let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
 
-
-
-
-
-
-
-
-
-
-
-
-
+let size_proc = ref 0

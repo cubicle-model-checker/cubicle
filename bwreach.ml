@@ -272,8 +272,10 @@ let make_cubes =
 		 with Exit -> ls, post
 	       ) (ls, post) lureq ) acc lnp
       in
-      if List.length tr.tr_args > List.length rargs then 
-	assert false (* (ls, post) *)
+      if List.length tr.tr_args > List.length rargs then begin
+        if !size_proc = 0 then assert false;
+        (ls, post)
+      end
       else
         (* let rargs = if List.length rargs > 2 then [Hstring.make "#1"; Hstring.make "#2"] else rargs in *)
 	let d = all_permutations tr.tr_args rargs in
@@ -326,8 +328,11 @@ let pre tr unsafe =
   if debug && verbose > 0 then Debug.pre tr pre_unsafe;
   let pre_unsafe, (args, m) = proper_cube pre_unsafe in
   if tr.tr_args = [] then tr, pre_unsafe, (args, args)
-  else tr, pre_unsafe, (args, append_extra args tr.tr_args)
-  (* else tr, pre_unsafe, (args, m::args) *)
+  else
+    let nargs = append_extra args tr.tr_args in
+    if !size_proc <> 0 && List.length nargs > !size_proc then
+      tr, pre_unsafe, (args, args)
+    else tr, pre_unsafe, (args, nargs)
 
 
 (*********************************************************************)

@@ -507,25 +507,28 @@ let args_of_atoms sa =
 
 let proper_cube sa =
   let args = args_of_atoms sa in
-  let cpt = ref 1 in
-  let sigma =
-    List.fold_left
-      (fun sigma arg ->
-	 let n = number_of (H.view arg) in
-	 if n = !cpt then (incr cpt; sigma)
-	 else
-	   let sigma =
-	     (arg, List.nth proc_vars (!cpt - 1)):: sigma in
-	   incr cpt; sigma)
-      [] args
-  in
-  let sa = subst_atoms (List.rev sigma) sa in
-  let l = ref [] in
-  for n = !cpt - 1 downto 1 do
-    l := (List.nth proc_vars (n - 1)) :: !l
-  done;
-  sa, (!l, List.nth proc_vars (!cpt - 1))
-
+  if !size_proc <> 0 && List.length args > !size_proc then
+    SAtom.singleton (Atom.False), ([], List.hd proc_vars)
+  else
+    let cpt = ref 1 in
+    let sigma =
+      List.fold_left
+        (fun sigma arg ->
+	  let n = number_of (H.view arg) in
+	  if n = !cpt then (incr cpt; sigma)
+	  else
+	    let sigma =
+	      (arg, List.nth proc_vars (!cpt - 1)):: sigma in
+	    incr cpt; sigma)
+        [] args
+    in
+    let sa = subst_atoms (List.rev sigma) sa in
+    let l = ref [] in
+    for n = !cpt - 1 downto 1 do
+      l := (List.nth proc_vars (n - 1)) :: !l
+    done;
+    sa, (!l, List.nth proc_vars (!cpt - 1))
+ 
 
 (*********************************************)
 (* all permutations excepted impossible ones *)

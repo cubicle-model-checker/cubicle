@@ -1,85 +1,65 @@
-type msg = Empty | Reqs | Reqe
-type state = Invalid | Shared | Exclusive
+type msg = Epsilon | RS | RE
+type state = I | S | E
 
-var Exgntd : bool
-var Curcmd : msg
-var Curptr : proc
+var Exg : bool
+var Cmd : msg
+var Ptr : proc
 
 array Cache[proc] : state
-array Shrset[proc] : bool
+array Shr[proc] : bool
 
-init (z) { Cache[z] = Invalid && Shrset[z] = False &&
-           Exgntd = False && Curcmd = Empty }
-
-(*
-invariant (z) { Exgntd = False && Cache[z] = Exclusive }
-
-invariant (z) { Cache[z] = Shared && Shrset[z] = False }
-*)
-
-(* unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive } *)
-(* unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared } *)
-unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid  }
-
-(*unsafe (z1 z2) { Cache[z1] = Exclusive && Shrset[z2] = True }
-
-unsafe (z) { Cache[z] = Shared && Shrset[z] = False }
-
-unsafe (z) { Exgntd = False && Cache[z] = Exclusive }
-*)
-
-(*
-unsafe (z) { Cache[z] = Invalid && Shrset[z] = True }
-*)
+init (z) { Cache[z] = I && Shr[z] = False &&
+           Exg = False && Cmd = Epsilon }
 
 
-(*unsafe (z1 z2) { Cache[z1] = Exclusive && Shrset[z2] = True }*)
+unsafe (z1 z2) { Cache[z1] = E && Cache[z2] <> I  }
 
-transition req_shared (n)
-requires { Curcmd = Empty && Cache[n] = Invalid }
+
+transition T_1 (n)
+requires { Cmd = Epsilon && Cache[n] = I }
 { 
-  Curcmd := Reqs; 
-  Curptr := n ;
+  Cmd := RS; 
+  Ptr := n ;
 }
     
-transition req_exclusive (n)
-requires { Curcmd = Empty && Cache[n] <> Exclusive }
+transition T_2 (n)
+requires { Cmd = Epsilon && Cache[n] <> E }
 { 
-  Curcmd := Reqe; 
-  Curptr := n;
+  Cmd := RE; 
+  Ptr := n;
 }
     
-transition inv_1 (n)
-requires { Shrset[n]=True  &&  Curcmd = Reqe }
+transition T_3 (n)
+requires { Shr[n]=True  &&  Cmd = RE }
 { 
-  Exgntd := False;
-  Cache[n] := Invalid;
-  Shrset[n] :=False;
+  Exg := False;
+  Cache[n] := I;
+  Shr[n] :=False;
 }
 
-transition inv_2 (n)
-requires { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
+transition T_4 (n)
+requires { Shr[n]=True  && Cmd = RS && Exg=True }
 { 
-  Exgntd := False;
-  Cache[n] := Shared;
-  Shrset[n] := True;
+  Exg := False;
+  Cache[n] := S;
+  Shr[n] := True;
 }
     
-transition gnt_shared (n)
-requires { Curptr = n && Curcmd = Reqs && Exgntd = False }
+transition T_5 (n)
+requires { Ptr = n && Cmd = RS && Exg = False }
 { 
-  Curcmd := Empty;
-  Shrset[n] := True;
-  Cache[n] := Shared;
+  Cmd := Epsilon;
+  Shr[n] := True;
+  Cache[n] := S;
 }
 
-transition gnt_exclusive (n)
-requires { Shrset[n] = False && Curcmd = Reqe &&
-           Exgntd = False && Curptr = n &&
-	   forall_other l. Shrset[l] = False }
+transition T_6 (n)
+requires { Shr[n] = False && Cmd = RE &&
+           Exg = False && Ptr = n &&
+	   forall_other l. Shr[l] = False }
 { 
-  Curcmd := Empty; 
-  Exgntd := True;
-  Shrset[n] := True;
-  Cache[n] := Exclusive;
+  Cmd := Epsilon; 
+  Exg := True;
+  Shr[n] := True;
+  Cache[n] := E;
 }

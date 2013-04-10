@@ -622,8 +622,15 @@ let fill_init_instances (iargs, l_init) = match l_init with
         v_acc) [] proc_vars)
         
 
-
-
+let make_finite_inst_array a args =
+    let rec add_args acc = function
+      | [] -> acc
+      | [x] -> acc ^ (Hstring.view x)
+      | x :: r -> add_args (acc ^ "," ^ (Hstring.view x)) r in
+    let a_str = Hstring.view a in
+    let s = add_args (a_str ^ "[") args ^ "]" in
+    Hstring.make s
+    
 
 
 

@@ -36,6 +36,7 @@
         "forward", FORWARD;
 	"case", CASE;
 	"forall_other", FORALL;
+	"number_procs", SIZEPROC;
       ]
 	       
   let newline lexbuf =
@@ -81,6 +82,9 @@ rule token = parse
   | lident as id
       { try Hashtbl.find keywords id
 	with Not_found -> LIDENT id }
+  | '#'(['1'-'9']['0'-'9']* as n) as id
+      { if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;
+        CONSTPROC id }
   | mident as id { MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }

@@ -61,3 +61,5 @@ val nocolor : bool
 val debug_smt : bool
 val dmcmt : bool
 val profiling : bool
+
+val size_proc : int ref
