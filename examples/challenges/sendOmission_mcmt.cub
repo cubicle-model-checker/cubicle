@@ -53,21 +53,21 @@ init (x) {
 
 (*---------------- suggested invariants from mcmt --------------------*)
 
-(* (\* Exists only one Coordinator in the system *\) *)
-(* unsafe (x y) { *)
-(*   Coord[x] = True && Coord[y] = True *)
-(* } *)
+(* Exists only one Coordinator in the system *)
+unsafe (x y) {
+  Coord[x] = True && Coord[y] = True
+}
 
-(* (\* If 'c' is Coordinator, all other process with Id < c have *)
-(*    already been Coordinator *\) *)
-(* unsafe (x y) { *)
-(*   Coord[x] = True && ACoord[y] = False && y < x *)
-(* } *)
+(* If 'c' is Coordinator, all other process with Id < c have
+   already been Coordinator *)
+unsafe (x y) {
+  Coord[x] = True && ACoord[y] = False && y < x
+}
 
-(* (\* A Coordinator can't have Id[] greater than his Identificator *\) *)
-(* unsafe(x) { *)
-(*   Coord[x] = True && Id_valid[x] = MValid && x < Id[x] *)
-(* } *)
+(* A Coordinator can't have Id[] greater than his Identificator *)
+unsafe(x) {
+  Coord[x] = True && Id_valid[x] = MValid && x < Id[x]
+}
 
 (* A process can't have Id[] greater than Coordinator's Identificator *)
 unsafe (x y) {
@@ -80,37 +80,37 @@ unsafe (x y) {
   Round = R1 && Coord[x] = True && Id_valid[y] = MValid && Id[y] = x
 }
 
-(* (\* A correct process can't receive any Nack *\) *)
-(* unsafe (x) { *)
-(*   Faulty[x] = False && Nack[x] = True *)
-(* } *)
+(* A correct process can't receive any Nack *)
+unsafe (x) {
+  Faulty[x] = False && Nack[x] = True
+}
 
-(* (\* Coordinators are elected in order by Identificator *\) *)
-(* unsafe (x y) { *)
-(*   Coord[x] = True && ACoord[y] = True && x < y *)
-(* } *)
+(* Coordinators are elected in order by Identificator *)
+unsafe (x y) {
+  Coord[x] = True && ACoord[y] = True && x < y
+}
 
 
 (*--------------------------------------------------------------------*)
 
-(* (\* LEMMA 2.1 *\) *)
-(* unsafe (x y z) { *)
-(*   State[x] = True && Received[x] = True && Coord[y] = True &&  *)
-(*   State[z] = False && Faulty[z]= False && Estimate[y] <> Estimate[z] *)
-(* } *)
+(* LEMMA 2.1 *)
+unsafe (x y z) {
+  State[x] = True && Received[x] = True && Coord[y] = True &&
+  State[z] = False && Faulty[z]= False && Estimate[y] <> Estimate[z]
+}
 
-(* (\* LEMMA 2.2 *\) *)
-(* unsafe (x y) { *)
-(*   Round <> R1 && State[x] = False && Faulty[x] = False &&  *)
-(*   ProcessReceivedEstimate[x] = True && Coord[y] = True &&  *)
-(*   Estimate[x] <> Estimate[y] *)
-(* } *)
+(* LEMMA 2.2 *)
+unsafe (x y) {
+  Round <> R1 && State[x] = False && Faulty[x] = False &&
+  ProcessReceivedEstimate[x] = True && Coord[y] = True &&
+  Estimate[x] <> Estimate[y]
+}
 
-(* (\* LEMMA 2.3 *\) *)
-(* unsafe (x y) { *)
-(*   Coord[x] = True && Faulty[x] = False && Round = R6 &&  *)
-(*   State[y] = False && Faulty[y] = False *)
-(* } *)
+(* LEMMA 2.3 *)
+unsafe (x y) {
+  Coord[x] = True && Faulty[x] = False && Round = R6 &&
+  State[y] = False && Faulty[y] = False
+}
 
 (* AGREEMENT - nothing wrong happens *)
 unsafe (x y) {

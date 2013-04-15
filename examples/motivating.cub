@@ -15,21 +15,21 @@ init (z) { Cache[z] = I && Shr[z] = False &&
 unsafe (z1 z2) { Cache[z1] = E && Cache[z2] <> I  }
 
 
-transition T_1 (n)
+transition t1 (n)
 requires { Cmd = Epsilon && Cache[n] = I }
 { 
   Cmd := RS; 
   Ptr := n ;
 }
     
-transition T_2 (n)
+transition t2 (n)
 requires { Cmd = Epsilon && Cache[n] <> E }
 { 
   Cmd := RE; 
   Ptr := n;
 }
     
-transition T_3 (n)
+transition t3 (n)
 requires { Shr[n]=True  &&  Cmd = RE }
 { 
   Exg := False;
@@ -37,7 +37,7 @@ requires { Shr[n]=True  &&  Cmd = RE }
   Shr[n] :=False;
 }
 
-transition T_4 (n)
+transition t4 (n)
 requires { Shr[n]=True  && Cmd = RS && Exg=True }
 { 
   Exg := False;
@@ -45,7 +45,7 @@ requires { Shr[n]=True  && Cmd = RS && Exg=True }
   Shr[n] := True;
 }
     
-transition T_5 (n)
+transition t5 (n)
 requires { Ptr = n && Cmd = RS && Exg = False }
 { 
   Cmd := Epsilon;
@@ -53,7 +53,7 @@ requires { Ptr = n && Cmd = RS && Exg = False }
   Cache[n] := S;
 }
 
-transition T_6 (n)
+transition t6 (n)
 requires { Shr[n] = False && Cmd = RE &&
            Exg = False && Ptr = n &&
 	   forall_other l. Shr[l] = False }
