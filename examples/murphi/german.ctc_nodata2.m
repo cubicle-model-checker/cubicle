@@ -9,6 +9,8 @@ type   ---- Type declarations ----
   ABS_NODE : union {NODE, enum{Other}};
 
   CACHE_STATE : enum {I, S, E};
+  CACHE : record State : CACHE_STATE; end;
+
 
   MSG_CMD : enum {Empty, ReqS, ReqE, Inv, InvAck, GntS, GntE};
   MSG : record Cmd : MSG_CMD; end;
