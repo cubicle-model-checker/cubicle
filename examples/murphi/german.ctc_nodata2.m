@@ -1,6 +1,6 @@
 const  ---- Configuration parameters ----
 
-  NODE_NUM : 8;
+  NODE_NUM : 16;
 
 type   ---- Type declarations ----
 
