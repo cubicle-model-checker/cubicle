@@ -1,12 +1,10 @@
 const  ---- Configuration parameters ----
 
-  NODE_NUM : 2;
+  NODE_NUM : 8;
 
 type   ---- Type declarations ----
 
   NODE : scalarset(NODE_NUM);
-
-  ABS_NODE : union {NODE, enum{Other}};
 
   CACHE_STATE : enum {I, S, E};
   CACHE : record State : CACHE_STATE; end;
@@ -25,16 +23,16 @@ var   ---- State variables ----
   ShrSet : array [NODE] of boolean;   -- Set of nodes having S or E copies
   ExGntd : boolean;                   -- E copy has been granted
   CurCmd : MSG_CMD;                   -- Current request command
-  CurPtr : ABS_NODE;                  -- Current request node
+  CurPtr : NODE;                      -- Current request node
 
 ---- Initial states ----
 
-rule do startstate "Init"
+ruleset h : NODE do startstate "Init"
   for i : NODE do
     Chan1[i].Cmd := Empty; Chan2[i].Cmd := Empty; Chan3[i].Cmd := Empty;
     Cache[i].State := I; InvSet[i] := false; ShrSet[i] := false;
   end;
-  ExGntd := false; CurCmd := Empty; MemData := d; AuxData := d;
+ExGntd := false; CurCmd := Empty; CurPtr := h;
 end end;
 
 ---- State transitions ----
