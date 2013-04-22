@@ -4,7 +4,7 @@ const  ---- Configuration parameters ----
 
 type   ---- Type declarations ----
 
-  NODE : scalarset(NODE_NUM);
+  PROC : scalarset(PROC_NUM);
 
   LOCATION : enum {L0, L1, L2, L3, L4, L5, L6, L7}
 
