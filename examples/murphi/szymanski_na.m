@@ -1,6 +1,6 @@
 const  ---- Configuration parameters ----
 
-  PROC_NUM : 4;
+  PROC_NUM : 8;
 
 type   ---- Type declarations ----
 
@@ -88,14 +88,14 @@ end end;
 
 ruleset x : PROC; y : PROC do rule "t3_incr_for"
   A[x] = L3 & CPT[x] < PROC_NUM &
-  (W[CPT[x] + 1] = true | B[CPT[x] + 1] = true) &
+  (W[CPT[x] + 1] = true | B[CPT[x] + 1] = true)
 ==>
   CPT[x] := CPT[x] + 1;
 end end;
 
 
 ruleset x : PROC do rule "t3_exit_for"
-  A[x] = L3 & B[y] = false & CPT[x] = PROC_NUM
+  A[x] = L3 & CPT[x] = PROC_NUM
 ==>
   A[x] := L5; W[x] := false;
   CPT[x] := 0;
