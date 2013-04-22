@@ -1,11 +1,11 @@
 const  ---- Configuration parameters ----
 
-  PROC_NUM : 2;
+  PROC_NUM : 12;
 
 type   ---- Type declarations ----
 
-  PROC : scalarset(PROC_NUM);
-
+  -- PROC : scalarset(PROC_NUM);
+  PROC : 1..PROC_NUM;
   LOCATION : enum {L0, L1, L2, L3, L4, L5, L6, L7};
 
 var   ---- State variables ----
