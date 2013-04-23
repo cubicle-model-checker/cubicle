@@ -1,6 +1,6 @@
 const  ---- Configuration parameters ----
        
-  PROC_NUM : 4;
+  PROC_NUM : 2;
 
 type   ---- Type declarations ----
 
@@ -69,8 +69,10 @@ ruleset i : PROC do rule "t3"
   Curcmd := Reqs;
   Chan1[i] := Empty;
   Flag := true;
-  for j : PROC do Invset[j] := Shrset[j]; Curptr[j] := false end;
-  Curptr[i] := true; 
+  for j : PROC do
+    Invset[j] := Shrset[j];
+    if i = j then Curptr[j] := true else Curptr[j] := false end;
+  end;
 end end;
 
 
@@ -80,8 +82,10 @@ ruleset i : PROC do rule "t3bis"
   Curcmd := Reqe;
   Chan1[i] := Empty;
   Flag := true;
-  for j : PROC do Invset[j] := Shrset[j]; Curptr[j] := false end;
-  Curptr[i] := true;
+  for j : PROC do
+    Invset[j] := Shrset[j];
+    if i = j then Curptr[j] := true else Curptr[j] := false end;
+  end;
 end end;
 
 
