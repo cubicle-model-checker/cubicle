@@ -142,23 +142,49 @@ let init fmt (vars, dnf) =
   reset_local_vars vars;
   match dnf with
     | [sa] ->
-        fprintf ":inital\n";
+        fprintf fmt ":inital\n";
         List.iter (fun x ->
-          fprintf ":var %a\n" print_local_var x) vars;
-        fprintf ":cnj %a" cube sa
+          fprintf fmt ":var %a\n" print_local_var x) vars;
+        fprintf fmt ":cnj %a" cube sa
     | _ -> assert false
 
 
 let unsafe (vars, dnf) =
   reset_local_vars vars;
-  fprintf ":unsafe\n";
+  fprintf fmt ":unsafe\n";
   List.iter (fun x ->
-    fprintf ":var %a\n" print_local_var x) vars;
-  List.iter (fun sa -> fprintf ":u_cnj %a\n" cube sa) dnf
+    fprintf fmt ":var %a\n" print_local_var x) vars;
+  List.iter (fun sa -> fprintf fmt ":u_cnj %a\n" cube sa) dnf
 
 
-let transition
+let update_dnf { up_arr = a; up_args = args; up_swts = swts} =
+  let up_t = Access (a, args) in
+  List.map (fun (sa, t) -> (sa, (up_t, t))) swts
+
+let fact_updates upds =
   
+    
+let transition { tr_name = n;
+                 tr_args = args;
+                 tr_reqs = reqs;
+                 tr_ureq = ureqs;
+                 tr_assigns = assigns;
+                 tr_upds = upds;
+                 tr_nondets = nondets; } =
+  reset_local_vars args;
+  fprintf fmt ":comment transition %a\n" Hstring.print n;
+  fprintf fmt ":transition\n";
+  List.iter (fun x ->
+    fprintf fmt ":var %a\n" print_local_var x) args;
+  if ureqs <> [] then fprintf fmt ":var j\n";
+  fprintf fmt ":guard %a\n" cube reqs;
+  begin match ureqs with
+    | [] -> ()
+    | [dnf] -> List.iter (fun sa -> fprintf fmt ":uguard %a\n" cube sa) dnf
+    | _ -> assert false
+  end;    
+  
+
       
 
 
