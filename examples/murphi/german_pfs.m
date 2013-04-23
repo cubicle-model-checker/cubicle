@@ -1,6 +1,6 @@
 const  ---- Configuration parameters ----
        
-  PROC_NUM : 2;
+  PROC_NUM : 8;
 
 type   ---- Type declarations ----
 
@@ -25,7 +25,7 @@ var   ---- State variables ----
 
 ---- Initial states ----
 
-ruleset h : PROC do startstate "Init"
+startstate "Init"
   for i : PROC do
     Chan1[i] := Empty;
     Chan2[i] := Empty;
@@ -38,7 +38,7 @@ ruleset h : PROC do startstate "Init"
 Exgntd := false;
 Curcmd := Empty;
 Flag := false;
-end end;
+end;
     
 ---- State transitions ----
 
@@ -69,6 +69,7 @@ ruleset i : PROC do rule "t3"
   Curcmd := Reqs;
   Chan1[i] := Empty;
   Flag := true;
+  -- Invset[i] := Shrset[i];
   for j : PROC do
     Invset[j] := Shrset[j];
     if i = j then Curptr[j] := true else Curptr[j] := false end;
@@ -82,6 +83,7 @@ ruleset i : PROC do rule "t3bis"
   Curcmd := Reqe;
   Chan1[i] := Empty;
   Flag := true;
+  -- Invset[i] := Shrset[i];
   for j : PROC do
     Invset[j] := Shrset[j];
     if i = j then Curptr[j] := true else Curptr[j] := false end;
@@ -103,7 +105,7 @@ ruleset i : PROC do rule "t5"
 end end;
 
 ruleset i : PROC do rule "t6"
-  Flag = true & forall j : PROC do Invset[i] = Shrset[j] end
+  Flag = true & forall j : PROC do Invset[j] = Shrset[j] end
 ==>
   Flag := false;
 end end;
@@ -112,7 +114,7 @@ end end;
 
 ruleset i : PROC do rule "t7 t8"
   Chan2[i] = Empty & Invset[i] = true & Flag = false &
-  ( Curcmd = Reqe | Curcmd = Reqs & Exgntd = true )
+  ( Curcmd = Reqe | ( Curcmd = Reqs & Exgntd = true ) )
 ==>
   Chan2[i] := Inv; Invset[i] := false;
 end end;
