@@ -98,6 +98,7 @@ requires { Chan3Cmd[i] = Invack && Curcmd <> Empty }
 {
   Chan3Cmd[i] := Empty;
   Shrset[i] := False;
+  Exgntd := False;
 }
 
 transition sendGnts (i)
