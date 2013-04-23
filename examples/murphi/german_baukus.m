@@ -27,7 +27,7 @@ var   ---- State variables ----
 ruleset h : PROC do startstate "Init"
   for i : PROC do
     Chan1[i] := Empty; Chan2[i] := Empty; Chan3[i] := Empty;
-    Cache[i] := Invalid; InvSet[i] := false; ShrSet[i] := false;
+    Cache[i] := Invalid; Invset[i] := false; Shrset[i] := false;
   end;
 Exgntd := false; Curcmd := Empty; CurClient := h;
 end end;
@@ -47,22 +47,22 @@ ruleset i : PROC do rule "send_req_exclusive"
 end end;
 
 ruleset i : PROC do rule "recv_req_shqred"
-  CurCmd = Empty & Chan1[i] = Reqs
+  Curcmd = Empty & Chan1[i] = Reqs
 ==>
-  CurCmd := Reqs; CurClient := i; Chan1[i] := Empty;
+  Curcmd := Reqs; CurClient := i; Chan1[i] := Empty;
   for j : PROC do Invset[j] := Shrset[j] end;
 end end;
 
 ruleset i : PROC do rule "recv_req_exclusive"
-  CurCmd = Empty & Chan1[i] = Reqe
+  Curcmd = Empty & Chan1[i] = Reqe
 ==>
-  CurCmd := Reqe; CurClient := i; Chan1[i] := Empty;
+  Curcmd := Reqe; CurClient := i; Chan1[i] := Empty;
   for j : PROC do Invset[j] := Shrset[j] end;
 end end;
 
 ruleset i : PROC do rule "send_inv"
-  Chan2[i] = Empty & InvSet[i] = true &
-  ( CurCmd = Reqe | CurCmd = Reqs & Exgntd = true )
+  Chan2[i] = Empty & Invset[i] = true &
+  ( Curcmd = Reqe | Curcmd = Reqs & Exgntd = true )
 ==>
   Chan2[i] := Inv; Invset[i] := false;
 end end;
@@ -71,34 +71,34 @@ ruleset i : PROC do rule "send_invack"
   Chan2[i] = Inv & Chan3[i] = Empty
 ==>
   Chan2[i] := Empty;
-  Chan3[i] := Invack;
+  Chan3[i] := InvAck;
   Cache[i] := Invalid;
 end end;
 
 ruleset i : PROC do rule "recv_invack"
-  Chan3[i] = Invack & CurCmd != Empty
+  Chan3[i] = InvAck & Curcmd != Empty
 ==>
   Chan3[i] := Empty;
-  ShrSet[i] := false;
+  Shrset[i] := false;
   Exgntd := false;
 end end;
 
 ruleset i : PROC do rule "send_gnt_shared"
-  CurCmd = Reqs & CurClient = i & Chan2[i] = Empty & Exgntd = false
+  Curcmd = Reqs & CurClient = i & Chan2[i] = Empty & Exgntd = false
 ==>
   Chan2[i] := Gnts;
   Shrset[i] := true;
-  CurCmd := Empty;
+  Curcmd := Empty;
 end end;
 
 ruleset i : PROC do rule "send_gnt_exclusive"
-  CurCmd = Reqe & CurClient = i & Chan2[i] = Empty & Exgntd = false &
+  Curcmd = Reqe & CurClient = i & Chan2[i] = Empty & Exgntd = false &
   forall j : PROC do Shrset[j] = false end
 ==>
   Chan2[i] := Gnte;
   Shrset[i] := true;
   Exgntd := true;
-  CurCmd := Empty;
+  Curcmd := Empty;
 end end;
 
 ruleset i : PROC do rule "Recv_Gnt_Shared"
