@@ -27,7 +27,8 @@ LC	a=2 & a'=3 & s'=1 & w'=1
 # rule 2: All other processes are either waiting, 
 # or idle. Reset "w".
 BDP    a=3 & a'=5 & w'=0  
-	& [LR: p.w=1 | p.b=1]
+	& [LR: p.w=1]
+        & [LR: p.b=1]
 
 
 

@@ -163,13 +163,11 @@
 
 
 :unsafe 
-:var x 
-:var y
-:cnj (= i[x] 3)  (= i[y] 2)
-
-:u_cnj (= f[x] false)  (not (= m[x] n[x]))
-
-:u_cnj (not (= i[x] 1))  (not (= s[x] n[x]))
+:var z1
+:var z2
+:cnj (= i[z1] 3)  (= i[z2] 2)
+:u_cnj (= f[z1] false)  (not (= m[z1] n[z1]))
+:u_cnj (not (= i[z1] 1))  (not (= s[z1] n[z1]))
 
 
 :comment :no_backward_simplification
@@ -182,7 +180,7 @@
 :var x
 :var y
 :var j
-:guard (= t[x] 1) (= t[y] 2) (=  a[x]  3)
+:guard (= t[x] 1) (= t[y] 2) (=  i[x]  3)
 :numcases 2
 :case (= x j)
  :val a[j]
