@@ -513,7 +513,7 @@
 :transition
 :var x
 :var j
-:guard (= t[x] 1) (=  b[x]  4) (= c[x] 1) (= a[x] 3)
+:guard (= t[x] 1) (=  b[x]  4) (= c[x] 1) (= i[x] 3)
 :numcases 2
 :case (= x j)
  :val a[j]
@@ -555,7 +555,7 @@
 :transition
 :var x
 :var j
-:guard (= t[x] 1) (=  b[x]  4) (= c[x] 1) (not (= a[x] 3))
+:guard (= t[x] 1) (=  b[x]  4) (= c[x] 1) (not (= i[x] 3))
 :numcases 2
 :case (= x j)
  :val a[j]
