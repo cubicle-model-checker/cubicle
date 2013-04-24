@@ -16,7 +16,7 @@ with
 LC	a=0 & a'=1 & b'=1
 
 # rule 0: No other process with "s" set.
-BDP    a=1 & a'=2 & b'=0 &
+BDP    a=1 & a'=2 & b'=0
 	& [LR: p.s=0]
 
 
