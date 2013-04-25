@@ -119,7 +119,15 @@ let nb_arith s =
     | Atom.Comp (_, _, Const _) -> n + 1
     | _ -> n
   ) (snd s.t_unsafe) 0
-  
+
+let respect_finite_order =
+  SAtom.for_all (function
+    | Atom.Comp (Elem (x, Var), Le, Elem (y, Var)) ->
+        Hstring.compare x y <= 0
+    | Atom.Comp (Elem (x, Var), Lt, Elem (y, Var)) ->
+        Hstring.compare x y < 0
+    | _ -> true
+  )
 
 let hsort = Hstring.make "Sort"
 let hhome = Hstring.make "Home"
@@ -151,6 +159,11 @@ let reattach_sorts sorts sa =
         SAtom.add a sa
     | _ -> sa) sorts sa
 
+
+(*****************************************)
+(* Potential approximations for a node s *)
+(*****************************************)
+    
 let approximations =
   let forward_procs = Forward.procs_from_nb enumerative in
   let cpt = ref 0 in
@@ -161,6 +174,7 @@ let approximations =
         if Forward.useless_candidate (SAtom.singleton a) then acc
         else SSAtoms.add (SAtom.singleton a) acc)
         sa SSAtoms.empty in
+    (* All subsets of sa of relevant size *)
     let parts =
       SAtom.fold (fun a acc ->
         if Forward.useless_candidate (SAtom.singleton a) then acc
@@ -174,6 +188,7 @@ let approximations =
           ) acc acc
       ) sa init
     in
+    (* Filter non interresting candidates *)
     let parts = SSAtoms.fold (fun sa' acc ->
       if SAtom.equal sa' sa then acc
       (* Heuristic : usefull for flash *)
@@ -212,6 +227,7 @@ let approximations =
           perms :: acc
     ) parts []
     in
+    (* Sorting heuristic of approximations with most general ones first *)
     List.fast_sort (fun l1 l2 ->
       let s1 = List.hd l1 in
       let s2 = List.hd l2 in
@@ -247,6 +263,10 @@ let subsuming_candidate s =
   Enumerative.smallest_to_resist_on_trace approx
 
 
+(**************************************************************)
+(* Backward reachability with approximations and backtracking *)
+(**************************************************************)
+    
 let brab search invariants uns =
     let procs = Forward.procs_from_nb enumerative in
     eprintf "STATEFULL ENUMERATIVE FORWARD :\n-------------\n@.";

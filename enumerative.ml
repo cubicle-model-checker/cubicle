@@ -687,6 +687,12 @@ let ordered_fst_subst = function
   | (_, x) :: _ as sb ->
       Hstring.equal x (List.hd proc_vars) && ordered_subst sb
 
+
+
+(****************************************************)
+(* Instantiate transitions and transform to closure *)
+(****************************************************)
+        
 let transitions_to_func_aux procs env reduce acc { tr_args = tr_args; 
 		                                   tr_reqs = reqs; 
 		                                   tr_name = name;
@@ -908,6 +914,12 @@ let forward_bfs_switches s procs env l =
   done;
   eprintf "Total forward nodes : %d@." !cpt_f
 
+    
+(************************************************************************)
+(* Forward enumerative search, states are insterted in the global hash- *)
+(* table explicit_states                                                *)
+(************************************************************************)
+
 let search procs init =
   if profiling then Search.TimeForward.start ();
   let procs = procs (*@ init.t_glob_proc*) in
@@ -972,6 +984,12 @@ let satom_to_cand env sa =
 
 exception Sustainable of t_system list
 
+
+(*********************************************************************)
+(* Check if there exists one (or many) approximation candidates that *)
+(* cannot be disproved by the finite model                           *)
+(*********************************************************************)
+    
 let smallest_to_resist_on_trace ls =
   let env = !global_env in
   let progress_inc = (HST.length explicit_states) / Pretty.vt_width + 1 in
