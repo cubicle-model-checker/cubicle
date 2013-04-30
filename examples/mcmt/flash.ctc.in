@@ -1,0 +1,10773 @@
+:smt (define-type cache_state  (subrange 1 3) )
+:smt (define-type node_cmd  (subrange 1 3) )
+:smt (define-type uni_cmd  (subrange 1 6) )
+:smt (define-type inv_cmd  (subrange 1 3) )
+:smt (define-type rp_cmd  (subrange 1 2) )
+:smt (define-type wb_cmd  (subrange 1 2) )
+:smt (define-type shwb_cmd  (subrange 1 3) )
+:smt (define-type nakc_cmd  (subrange 1 3) )
+:smt (define-type sort  (subrange 1 2) )
+
+:index nat
+
+
+
+
+:comment ---------- FUNCTIONS and PREDICATES -----------
+
+
+:map_back Home
+:global a nat
+:map_back ProcCmd_home
+:global b node_cmd
+:map_back InvMarked_home
+:global c bool
+:map_back CacheState_home
+:global d cache_state
+:map_back CacheData_home
+:global e nat
+:map_back UniMsg_Cmd_home
+:global f uni_cmd
+:map_back UniMsg_Proc_home
+:global g nat
+:map_back UniMsg_Data_home
+:global h nat
+:map_back InvMsg_Cmd_home
+:global i inv_cmd
+:map_back RpMsg_Cmd_home
+:global k rp_cmd
+:map_back ProcCmd
+:local l node_cmd
+:map_back InvMarked
+:local m bool
+:map_back CacheState
+:local n cache_state
+:map_back CacheData
+:local o nat
+:map_back Dir_Pending
+:global p bool
+:map_back Dir_Local
+:global q bool
+:map_back Dir_Dirty
+:global r bool
+:map_back Dir_HeadVld
+:global s bool
+:map_back Dir_HeadPtr
+:global t nat
+:map_back Dir_ShrVld
+:global u bool
+:map_back Dir_ShrSet
+:local v bool
+:map_back Dir_InvSet
+:local w bool
+:map_back Dir_ShrSet_home
+:global z bool
+:map_back Dir_InvSet_home
+:global A bool
+:map_back MemData
+:global B nat
+:map_back UniMsg_Cmd
+:local C uni_cmd
+:map_back UniMsg_Proc
+:local D nat
+:map_back UniMsg_Data
+:local E nat
+:map_back InvMsg_Cmd
+:local F inv_cmd
+:map_back RpMsg_Cmd
+:local G rp_cmd
+:map_back WbMsg_Cmd
+:global H wb_cmd
+:map_back WbMsg_Proc
+:global I nat
+:map_back WbMsg_Data
+:global J nat
+:map_back ShWbMsg_Cmd
+:global K shwb_cmd
+:map_back ShWbMsg_Proc
+:global L nat
+:map_back ShWbMsg_Data
+:global W nat
+:map_back NakcMsg_Cmd
+:global X nakc_cmd
+:map_back CurrData
+:global Y nat
+:map_back PrevData
+:global Z nat
+:map_back Collecting
+:global _ bool
+:map_back Sort
+:local ` sort
+
+
+
+
+
+
+:initial
+:var x
+:cnj (not (=  a[x] x) ) (=  p[x]  false) (=  q[x]  false) (=  r[x]  false) (=  s[x]  false) (=  u[x]  false) (=  H[x]  1) (=  K[x]  1) (=  X[x]  1) (=  l[x]  1) (=  m[x]  false) (=  n[x]  1) (=  v[x]  false) (=  w[x]  false) (=  C[x]  1) (=  F[x]  1) (=  G[x]  1) (=  b[x]  1) (=  c[x]  false) (=  d[x]  1) (=  z[x]  false) (=  A[x]  false) (=  f[x]  1) (=  i[x]  1) (=  k[x]  1) (=  Y[x]  B[x]) (=  Z[x]  B[x]) (=  _[x]  false) 
+
+
+:u_cnj (=  d[z1]  3) (=  n[z1]  3) 
+
+:u_cnj (=  n[z1]  3) (=  n[z2]  3) 
+
+:u_cnj (=  r[z1]  false) (not (=  B[z1]  Y[z1]) ) 
+
+:u_cnj (=  d[z1]  3) (not (=  e[z1]  Y[z1]) ) 
+
+:u_cnj (=  n[z1]  3) (not (=  o[z1]  Y[z1]) ) 
+
+:u_cnj (=  d[z1]  2) (=  _[z1]  true) (not (=  e[z1]  Z[z1]) ) 
+
+:u_cnj (=  n[z1]  2) (=  _[z1]  true) (not (=  o[z1]  Z[z1]) ) 
+
+:u_cnj (=  d[z1]  2) (=  _[z1]  false) (not (=  e[z1]  Y[z1]) ) 
+
+:u_cnj (=  n[z1]  2) (=  _[z1]  false) (not (=  o[z1]  Y[z1]) ) 
+
+
+
+
+:comment T 1
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  1) (=  n[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val y
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val y
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val y
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 2
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[y]  1) (=  d[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val y
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val y
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val y
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val y
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 3
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  l[x]  1) (=  n[x]  1) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val  2
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  2
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 4
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (=  d[x]  1) (=  p[x]  false) (=  r[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  2
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  2
+ :val  t[x]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val  2
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  2
+ :val  t[x]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 5
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (=  d[x]  1) (=  p[x]  false) (=  r[x]  false) (=  c[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  true
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  true
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 6
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (=  d[x]  1) (=  p[x]  false) (=  r[x]  false) (=  c[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val c[j]
+ :val  2
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  true
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val c[j]
+ :val  2
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  true
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 7
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  l[x]  1) (=  n[x]  1) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val  3
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  3
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 8
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (not (=  d[x]  3) ) (=  p[x]  false) (=  r[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  3
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  3
+ :val  t[x]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val  3
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  3
+ :val  t[x]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 9
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (not (=  d[x]  3) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) 
+:numcases 5
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[x] j) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  u[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[x] j) ) (not (=  u[j]  false) ) (not (=  v[j]  false) ) 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 10
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (not (=  d[x]  3) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  u[x]  true) (=  v[x]  true) 
+:numcases 5
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[x] j) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  u[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[x] j) ) (not (=  u[j]  false) ) (not (=  v[j]  false) ) 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 11
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (not (=  d[x]  3) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  v[x]  false) 
+:numcases 5
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[x] j) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  u[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[x] j) ) (not (=  u[j]  false) ) (not (=  v[j]  false) ) 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 12
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (not (=  d[x]  3) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  u[x]  false) 
+:numcases 5
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[x] j) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  u[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  false) (not(= x j))
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[x] j) ) (not (=  u[j]  false) ) (not (=  v[j]  false) ) 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  true
+ :val  true
+ :val  false
+ :val t[j]
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 13
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (not (=  d[x]  3) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  true
+ :val  true
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  B[x]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  true
+ :val  true
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 14
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  l[x]  1) (=  n[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val  2
+ :val x
+ :val  o[x]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val  2
+ :val x
+ :val  o[x]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 15
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (=  d[x]  3) (=  p[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  e[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  e[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 16
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (=  d[x]  3) (=  p[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  e[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  e[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 17
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  l[x]  1) (=  n[x]  2) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val  2
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 18
+:transition
+:var x
+:var j
+:guard (=  b[x]  1) (=  d[x]  2) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 19
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (=  C[x]  6) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val  1
+ :val  false
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  1
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 20
+:transition
+:var x
+:var j
+:guard (=  f[x]  6) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val d[j]
+ :val e[j]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val  false
+ :val d[j]
+ :val e[j]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 21
+:transition
+:var x
+:var j
+:guard (=  X[x]  2) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  1
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  1
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 22
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  p[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 23
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  r[x]  true) (=  q[x]  true) (not (=  d[x]  3) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 24
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  r[x]  true) (=  q[x]  false) (=  t[x] x) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 25
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  p[x]  false) (=  r[x]  true) (=  q[x]  false) (not (=  t[x] x) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  2
+ :val  t[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 26
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  true
+ :val  true
+ :val z[j]
+ :val  z[x]
+ :val B[j]
+ :val  4
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (= j x) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val v[j]
+ :val  true
+ :val z[j]
+ :val  z[x]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (not (= x j)) (not (= j x) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val v[j]
+ :val  v[j]
+ :val z[j]
+ :val  z[x]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 27
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  p[x]  false) (=  r[x]  false) (=  s[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val  true
+ :val x
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  4
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val  true
+ :val x
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 28
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x]  a[x]) (not (=  G[x]  2) ) (=  p[x]  false) (=  r[x]  true) (=  q[x]  true) (=  d[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  2
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val  false
+ :val  true
+ :val x
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  e[x]
+ :val  4
+ :val  a[x]
+ :val  e[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  2
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val  false
+ :val  true
+ :val x
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  e[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 29
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[y]  2) (not (=  a[x] y) ) (=  C[x]  2) (=  D[x] y) (not (=  n[y]  3) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val y
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  2
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  2
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 30
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] y) ) (not (=  a[x] x) ) (=  C[x]  2) (=  D[x] y) (=  n[y]  3) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  4
+ :val y
+ :val  o[y]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  2
+ :val x
+ :val  o[y]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (= j y) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  2
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  2
+ :val x
+ :val  o[y]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (not (= x j)) (not (= j y) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  2
+ :val x
+ :val  o[y]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 31
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  f[x]  2) (=  g[x] x) (=  n[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  4
+ :val x
+ :val  o[x]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  2
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  4
+ :val x
+ :val  o[x]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 32
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 33
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  r[x]  true) (=  q[x]  true) (not (=  d[x]  3) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 34
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  r[x]  true) (=  q[x]  false) (=  t[x] x) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val  a[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 35
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  true) (=  q[x]  false) (not (=  t[x] x) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  3
+ :val  t[x]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 36
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  false) (=  q[x]  true) (=  b[x]  2) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val  true
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val  true
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 37
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  false) (=  q[x]  true) (not (=  b[x]  2) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 38
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  false) (=  q[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 39
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  true) (=  b[x]  2) (=  z[x]  false) 
+:uguard (=  v[j]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val  true
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val  true
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 40
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  true) (not (=  b[x]  2) ) (=  z[x]  false) 
+:uguard (=  v[j]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 41
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  false) (=  z[x]  false) 
+:uguard (=  v[j]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 42
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  true) 
+:numcases 4
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 43
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 44
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 45
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 46
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  true) 
+:numcases 4
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 47
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 48
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 49
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 50
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  true) 
+:numcases 4
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 51
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 52
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 53
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 54
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  false) (=  u[x]  true) (=  s[x]  true) 
+:numcases 4
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 55
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  false) (=  u[x]  true) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 56
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  false) (=  u[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 57
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (not (=  t[x] x) ) (=  q[x]  false) (=  u[x]  false) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 58
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  true) 
+:numcases 4
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 59
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 60
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 61
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  v[y]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 62
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  true) 
+:numcases 4
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 63
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  v[j]  true) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  v[j]  true) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 64
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  true) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  true
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  2
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 65
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  false) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  B[x]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (=  t[j] j) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+:case (not (= x j)) (not (=  t[j] j) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val  1
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  true
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val  Y[x]
+ :val  true
+ :val `[j]
+
+
+
+:comment T 66
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  true) (=  q[x]  true) (=  d[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val  5
+ :val  a[x]
+ :val  e[x]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val  1
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val  false
+ :val  true
+ :val  true
+ :val x
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 67
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] y) ) (=  C[x]  3) (=  D[x] y) (not (=  n[y]  3) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  6
+ :val y
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  2
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  2
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 68
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  f[x]  3) (=  g[x] x) (not (=  n[x]  3) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  6
+ :val x
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  2
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  6
+ :val x
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val  2
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 69
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  f[x]  3) (=  g[x] x) (=  n[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  5
+ :val x
+ :val  o[x]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val  5
+ :val x
+ :val  o[x]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 70
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] y) ) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x] y) (=  n[y]  3) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  5
+ :val y
+ :val  o[y]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  3
+ :val x
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (= j y) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  3
+ :val x
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (not (= x j)) (not (= j y) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  3
+ :val x
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 71
+:transition
+:var x
+:var j
+:guard (=  f[x]  4) (=  c[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  1
+ :val e[j]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  true
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  h[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  1
+ :val e[j]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  true
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  h[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 72
+:transition
+:var x
+:var j
+:guard (=  f[x]  4) (=  c[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val c[j]
+ :val  2
+ :val  h[x]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  true
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  h[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val c[j]
+ :val  2
+ :val  h[x]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  true
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  h[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 73
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  4) (=  m[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val  1
+ :val  false
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  1
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 74
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  4) (=  m[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val  1
+ :val m[j]
+ :val  2
+ :val  E[x]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  1
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 75
+:transition
+:var x
+:var j
+:guard (=  f[x]  5) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  h[x]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  true
+ :val r[j]
+ :val  false
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  h[x]
+ :val  1
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  true
+ :val r[j]
+ :val  false
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 76
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  5) (=  l[x]  3) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val  1
+ :val  false
+ :val  3
+ :val  E[x]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val  1
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 77
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  F[x]  2) (=  l[x]  2) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val  true
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  3
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 78
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  F[x]  2) (not (=  l[x]  2) ) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val  1
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  3
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 79
+:transition
+:var x
+:var y
+:var j
+:guard (=  `[x]  2) (=  `[y]  2) (not (=  a[x] x) ) (=  F[x]  3) (=  p[x]  true) (=  w[x]  true) (=  w[y]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val  false
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 80
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  F[x]  3) (=  p[x]  true) (=  w[x]  true) (=  A[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val  false
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 81
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  F[x]  3) (=  p[x]  true) (=  w[x]  true) (=  q[x]  true) (=  r[x]  false) (=  A[x]  false) 
+:uguard (=  w[j]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  false
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val  false
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val  false
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 82
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  F[x]  3) (=  p[x]  true) (=  w[x]  true) (=  q[x]  false) (=  A[x]  false) 
+:uguard (=  w[j]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val  false
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 83
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  F[x]  3) (=  p[x]  true) (=  w[x]  true) (=  r[x]  true) (=  A[x]  false) 
+:uguard (=  w[j]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val  false
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val  1
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val  false
+ :val `[j]
+
+
+
+:comment T 84
+:transition
+:var x
+:var j
+:guard (=  H[x]  2) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val  false
+ :val  false
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  J[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val  1
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val  false
+ :val  false
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val  J[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val  1
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 85
+:transition
+:var x
+:var j
+:guard (=  K[x]  3) (=  r[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val  L[x]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val  L[x]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 86
+:transition
+:var x
+:var j
+:guard (=  K[x]  3) (=  r[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 87
+:transition
+:var x
+:var j
+:guard (=  K[x]  2) (=  L[x]  a[x]) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val v[j]
+ :val  v[j]
+ :val  true
+ :val  true
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val v[j]
+ :val  v[j]
+ :val  true
+ :val  true
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 88
+:transition
+:var x
+:var j
+:guard (=  K[x]  2) (not (=  L[x]  a[x]) ) (=  L[x] x) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  true
+ :val  true
+ :val z[j]
+ :val  z[x]
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (= j  L[x]) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  true
+ :val  true
+ :val z[j]
+ :val  z[x]
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (not (= x j)) (not (= j  L[x]) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  v[j]
+ :val  v[j]
+ :val z[j]
+ :val  z[x]
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 89
+:transition
+:var x
+:var j
+:guard (=  K[x]  2) (not (=  L[x]  a[x]) ) (not (=  L[x] x) ) 
+:numcases 3
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  v[j]
+ :val  v[j]
+ :val z[j]
+ :val  z[x]
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (= j  L[x]) (not(= x j))
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  true
+ :val  true
+ :val z[j]
+ :val  z[x]
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case (not (= x j)) (not (= j  L[x]) ) 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val  false
+ :val q[j]
+ :val  false
+ :val s[j]
+ :val t[j]
+ :val  true
+ :val  v[j]
+ :val  v[j]
+ :val z[j]
+ :val  z[x]
+ :val  W[x]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val  1
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 90
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (=  G[x]  2) (=  u[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val  false
+ :val  false
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val  1
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 91
+:transition
+:var x
+:var j
+:guard (=  k[x]  2) (=  u[x]  true) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val  1
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val  1
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val  false
+ :val  false
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 92
+:transition
+:var x
+:var j
+:guard (=  `[x]  2) (=  G[x]  2) (=  u[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val  1
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val k[j]
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+
+
+
+:comment T 93
+:transition
+:var x
+:var j
+:guard (=  k[x]  2) (=  u[x]  false) 
+:numcases 2
+:case (= x j)
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val  1
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]
+:case 
+ :val a[j]
+ :val b[j]
+ :val c[j]
+ :val d[j]
+ :val e[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+ :val  1
+ :val l[j]
+ :val m[j]
+ :val n[j]
+ :val o[j]
+ :val p[j]
+ :val q[j]
+ :val r[j]
+ :val s[j]
+ :val t[j]
+ :val u[j]
+ :val v[j]
+ :val w[j]
+ :val z[j]
+ :val A[j]
+ :val B[j]
+ :val C[j]
+ :val D[j]
+ :val E[j]
+ :val F[j]
+ :val G[j]
+ :val H[j]
+ :val I[j]
+ :val J[j]
+ :val K[j]
+ :val L[j]
+ :val W[j]
+ :val X[j]
+ :val Y[j]
+ :val Z[j]
+ :val _[j]
+ :val `[j]

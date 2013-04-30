@@ -92,4 +92,5 @@ exclusive_granted=0 & curr_command=0 & flag=0:	 channel1=0 & channel2=0 & channe
 
 
 final
+flag=0 : cache=2 , cache=2;
 flag=0 : cache=2 , cache=1;

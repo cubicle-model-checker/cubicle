@@ -33,7 +33,7 @@
 :var y
 :comment cnj (= a[x] 3)  (= a[y] 2) (= f[y] false) 
 :comment cnj (= a[x] 3)  (> a[y] 1) (< a[y] 4)
-:cnj (= a[x] 3)  (= a[y] 2)
+:cnj (= a[x] 3)  (not (= a[y] 1))
  
 :comment :no_backward_simplification
 :key_search m

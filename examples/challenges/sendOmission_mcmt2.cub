@@ -3,6 +3,8 @@
 
 type round = R1 | R2 | R3 | R4 | R5 | R6 | R7
 
+type prep = M2 | M1 | MValid
+
 (* Round of the execution *)
 var Round : round
 (* estimate of the processes (true = m; false = undefined) *)
@@ -27,24 +29,15 @@ array Received[proc] : bool
 array Nack[proc] : bool
 (* id of the coordinator who sent me an estimate *)
 array Id[proc] : proc
-array Id_valid[proc] : bool
+array Id_valid[proc] : prep
 (* id of the coordinator who sent the estimate saved in tmpEstimate *)
 var MaxId : proc
-var MaxId_valid : bool
+var MaxId_valid : prep
 (* temp. var used to send the estimate to the coordinator *)
 var TmpEstimate : bool
 (* used for the Lemma 2.2 of the paper *)
 array ProcessReceivedEstimate[proc] : bool
-(* something wrong happened ? *)
-var Sh : bool
     
-
-(* constraints for numerical vars *)
-(* system_axiom (universal x:nat) { *)
-(*   (Round[x] < 8) AND ( (maxId[x] + 3) > 0) AND ( (id[x] + 2) > 0) *)
-(* } *)
-
-
 
 (* initial configuration *)
 init (x) {
@@ -52,8 +45,8 @@ init (x) {
   ACoord[x] = False && Done[x] = False && Received[x] = False &&
   Nack[x] = False &&
   (* Id[x] = -1 && MaxId = -2 &&  *)
-  Id_valid[x] = False && MaxId_valid = False &&
-  ProcessReceivedEstimate[x] = False && Sh = False
+  Id_valid[x] = M1 && MaxId_valid = M2 &&
+  ProcessReceivedEstimate[x] = False
 }
 
 (*---------------- suggested invariants from mcmt --------------------*)
@@ -71,18 +64,18 @@ unsafe (x y) {
 
 (* A Coordinator can't have Id[] greater than his Identificator *)
 unsafe(x) {
-  Coord[x] = True && Id_valid[x] = True && x < Id[x]
+  Coord[x] = True && Id_valid[x] = MValid && x < Id[x]
 }
 
 (* A process can't have Id[] greater than Coordinator's Identificator *)
 unsafe (x y) {
-  Coord[x] = True && Id_valid[y] = True && x < Id[y]
+  Coord[x] = True && Id_valid[y] = MValid && x < Id[y]
 }
 
 (* In the first Round a process can't have Id[] equals to the
    Coordinator's Identificator *)
 unsafe (x y) {
-  Round = R1 && Coord[x] = True && Id_valid[y] = True && Id[y] = x
+  Round = R1 && Coord[x] = True && Id_valid[y] = MValid && Id[y] = x
 }
 
 (* A correct process can't receive any Nack *)
@@ -100,30 +93,22 @@ unsafe (x y) {
 
 (* LEMMA 2.1 *)
 unsafe (x y z) {
-  State[x] = True && Received[x] = True && Coord[y] = True && 
+  State[x] = True && Received[x] = True && Coord[y] = True &&
   State[z] = False && Faulty[z]= False && Estimate[y] <> Estimate[z]
 }
 
 (* LEMMA 2.2 *)
 unsafe (x y) {
-  Round <> R1 && State[x] = False && Faulty[x] = False && 
-  ProcessReceivedEstimate[x] = True && Coord[y] = True && 
+  Round <> R1 && State[x] = False && Faulty[x] = False &&
+  ProcessReceivedEstimate[x] = True && Coord[y] = True &&
   Estimate[x] <> Estimate[y]
 }
 
 (* LEMMA 2.3 *)
 unsafe (x y) {
-  Coord[x] = True && Faulty[x] = False && Round = R6 && 
+  Coord[x] = True && Faulty[x] = False && Round = R6 &&
   State[y] = False && Faulty[y] = False
 }
-
-(* AGREEMENT - nothing wrong happens *)
-unsafe (x y) {
-  Sh = False && State[x] = True && Faulty[x] = False && 
-  State[y] = True && Faulty[y] = False && 
-  DecisionValue[x] <> DecisionValue[y]
-}
-
 
 (* AGREEMENT - complete *)
 unsafe (x y) {
@@ -140,7 +125,7 @@ unsafe (x y) {
 transition t1_v (x y)
 requires { Round = R1 && Done[x] = False && State[x] = False && 
            Coord[y] = True &&
-           Id_valid[x] = True && MaxId_valid = True && MaxId < Id[x] }
+           Id_valid[x] = MValid && MaxId_valid = MValid && MaxId < Id[x] }
 {
     Done[x] := True;
     MaxId := Id[x];
@@ -149,7 +134,8 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
 
 transition t1_nv (x y)
 requires { Round = R1 && Done[x] = False && State[x] = False && 
-           Coord[y] = True && MaxId_valid = False }
+           Coord[y] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M2 }
 {
     Done[x] := True;
     MaxId := Id[x];
@@ -157,13 +143,34 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
     TmpEstimate := Estimate[x];
 }
 
+transition t1_nv2 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t1_nv3 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M1 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
 
 (* 2) UndecIded processes want to send a Request, but their Id
       is less or equal than MaxId *)
 transition t2_v (x y)
 requires { Round = R1 && Done[x] = False && State[x] = False && 
            Coord[y] = True &&
-           Id_valid[x] = True && MaxId_valid = True && Id[x] <= MaxId }
+           Id_valid[x] = MValid && MaxId_valid = MValid && Id[x] <= MaxId }
 {
     Done[x] := True;
 }
@@ -171,11 +178,18 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
 transition t2_nv (x y)
 requires { Round = R1 && Done[x] = False && State[x] = False && 
            Coord[y] = True &&
-           Id_valid[x] = False && MaxId_valid = True }
+           Id_valid[x] = M1 && MaxId_valid = MValid }
 {
     Done[x] := True;
 }
 
+transition t2_nv2 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M1 }
+{
+    Done[x] := True;
+}
 
 (* 3) An undecIded Faulty process fails sending a Request *)
 transition t3 (x y)
@@ -183,7 +197,6 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
            Coord[y] = True && Faulty[x] = True }
 {
     Done[x] := True;
-    Sh := True;
 }
 
 (* 4) An undecIded Coordinator (with Id > MaxId) sends
@@ -191,7 +204,7 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
 transition t4 (x)
 requires { Round = R1 && Done[x] = False && State[x] = False && 
            Coord[x] = True &&
-           Id_valid[x] = True && MaxId_valid = True &&  MaxId < Id[x] }
+           Id_valid[x] = MValid && MaxId_valid = MValid &&  MaxId < Id[x] }
 {
     Done[x] := True;
     MaxId := Id[x];
@@ -200,7 +213,30 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
 
 transition t4_nv (x)
 requires { Round = R1 && Done[x] = False && State[x] = False && 
-           Coord[x] = True && MaxId_valid = False }
+           Coord[x] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t4_nv2 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[x] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t4_nv3 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[x] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M1 }
 {
     Done[x] := True;
     MaxId := Id[x];
@@ -213,15 +249,23 @@ requires { Round = R1 && Done[x] = False && State[x] = False &&
 transition t5 (x)
 requires { Round = R1 && Done[x] = False && State[x] = False &&
            Coord[x] = True && 
-           Id_valid[x] = True && MaxId_valid = True &&  Id[x] <= MaxId }
+           Id_valid[x] = MValid && MaxId_valid = MValid && Id[x] <= MaxId }
 {
     Done[x] := True;
 }
 
 transition t5_nv (x)
 requires { Round = R1 && Done[x] = False && State[x] = False &&
-           Coord[x] = True && 
-           Id_valid[x] = False  }
+           Coord[x] = True &&
+           Id_valid[x] = M1 && MaxId_valid = MValid }
+{
+    Done[x] := True;
+}
+
+transition t5_nv2 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False &&
+           Coord[x] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M1 }
 {
     Done[x] := True;
 }
@@ -237,7 +281,7 @@ requires { Round = R1 && Done[x] = False && State[x] = True }
       Received a Request (i.e. MaxId > -2), the Coordinator set his Estimate
       to TmpEstimate value and all the processes go to 2nd Round *)
 transition t7 (x)
-requires { Round = R1 && MaxId_valid = True &&
+requires { Round = R1 && MaxId_valid <> M2 &&
            Done[x] = True && Coord[x] = True &&
            forall_other j. Done[j] = True }
 {
@@ -249,7 +293,7 @@ requires { Round = R1 && MaxId_valid = True &&
 (* 8) ... otherwise (no Request have been Received by the Coordinator)
       the Coordinator is dismissed. *)
 transition t8 (x)
-requires { Round = R1 && MaxId_valid = False &&
+requires { Round = R1 && MaxId_valid = M2 &&
            Done[x] = True && Coord[x] = True &&
            forall_other j. Done[j] = True }
 {
@@ -266,7 +310,7 @@ requires { Round = R2 && Done[x] = False &&
     Done[x] := True;
     Received[x] := True;
     Id[x] := y;
-    Id_valid[x] := True;
+    Id_valid[x] := MValid;
     ProcessReceivedEstimate[x] := True;
 }
 
@@ -276,7 +320,6 @@ requires { Round = R2 && Done[x] = False && State[x] = False &&
            Coord[y] = True && Faulty[y] = True }
 {
     Done[x] := True;
-    Sh := True;
 }
 
 (* 11) If the Coordinator is undecIded sends an Estimate to himself *)
@@ -287,7 +330,7 @@ requires { Round = R2 && Done[x] = False &&
     Done[x] := True;
     Received[x] := True;
     Id[x] := x;
-    Id_valid[x] := True;
+    Id_valid[x] := MValid;
     ProcessReceivedEstimate[x] := True;
 }
 
@@ -323,7 +366,6 @@ requires { Round = R3 && State[x] = False && Done[x] = False &&
            Received[x] = False && Coord[y] = True && Faulty[x] = True }
 {
     Done[x] := True;
-    Sh := True;
 }
 
 (* 16) Af an undecIded process has Received the Estimate does nothing *)
@@ -383,7 +425,6 @@ requires { Round = R5 && Done[x] = False && State[x] = False &&
            Coord[y] = True && Faulty[y] = True }
 { 
     Done[x] := True;
-    Sh := True;
 }
 
 (* 23) A Faulty Coordinator sends a decIde to himself *)
@@ -440,5 +481,5 @@ requires { Coord[x] = False && ACoord[x] = False && Round = R7 &&
     Received[j] := case | _ : False;
     Done[j] := case | _ : False;
     Nack[j] := case | _ : False;
-    MaxId_valid := False;
+    MaxId_valid := M2;
 }

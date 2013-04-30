@@ -162,7 +162,7 @@
 :unsafe 
 :var x 
 :var y
-:cnj (= i[x] 3)  (= i[y] 2) 
+:cnj (= i[x] 3)  (not (= i[y] 1)) 
 
 
 :comment :no_backward_simplification

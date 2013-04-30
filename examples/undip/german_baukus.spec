@@ -13,13 +13,13 @@
 shared= exgntd [true,false]
         curcmd [empty,reqs,reqe,inv,gnts,gnte,invack]
 
-process= chan1       [empty,reqs,reqe,inv,gnts,gnte,invack]
-         chan2       [empty,reqs,reqe,inv,gnts,gnte,invack]
-         chan3       [empty,reqs,reqe,inv,gnts,gnte,invack]
-         shrset    [true,false]
+process= chan1  [empty,reqs,reqe,inv,gnts,gnte,invack]
+         chan2  [empty,reqs,reqe,inv,gnts,gnte,invack]
+         chan3  [empty,reqs,reqe,inv,gnts,gnte,invack]
+         shrset [true,false]
          invset [true,false]
 	 curptr [true,false]
-	 cache [invalid,shared,exclusive]
+	 cache  [invalid,shared,exclusive]
 
 
 
@@ -27,7 +27,7 @@ commands:
 
 UPRED
 
-from 2: cache[1]=exclusive & cache[2]=shared
+from 2: cache[1]=exclusive & cache[2]!=invalid
 
 with
 
