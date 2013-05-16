@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE why3session PUBLIC "-//Why3//proof session v2//EN" "http://why3.lri.fr/why3session.dtd">
+<why3session shape_version="2">
+ <prover
+  id="0"
+  name="Alt-Ergo"
+  version="0.95-dev"/>
+ <prover
+  id="1"
+  name="CVC3"
+  version="2.3-smtcomp2010"/>
+ <prover
+  id="2"
+  name="Z3"
+  version="2.5"/>
+ <file
+  name="../cubicle.mlw"
+  verified="false"
+  expanded="true">
+  <theory
+   name="FOL"
+   locfile="../cubicle.mlw"
+   loclnum="1" loccnumb="7" loccnume="10"
+   verified="true"
+   expanded="true">
+  </theory>
+  <theory
+   name="Reachability"
+   locfile="../cubicle.mlw"
+   loclnum="26" loccnumb="7" loccnume="19"
+   verified="true"
+   expanded="true">
+  </theory>
+  <theory
+   name="Cubicle"
+   locfile="../cubicle.mlw"
+   loclnum="45" loccnumb="7" loccnume="14"
+   verified="false"
+   expanded="true">
+   <goal
+    name="WP_parameter bwd"
+    locfile="../cubicle.mlw"
+    loclnum="64" loccnumb="6" loccnume="9"
+    expl="VC for bwd"
+    sum="274e7b3933e859db3e1671160e60aaca"
+    proved="false"
+    expanded="true"
+    shape="iainfix =V7aTrueNfIainfix =V5aNilAainfix =V8V5FAiasataandafnotV6V10NareachableV0V13AamemV13V12EIareachableV0V1AasataandV0V11NIainfix =V12aConsapreV10V9FIainfix =V11aorV10V6FareachableV0V14AamemV14V9EIareachableV0V1AasataandV0V6NIasataandV0V10NIaminimal_eltV10V5AapermutaConsV10V9V5FFareachableV0V1NIainfix =V5aNilqainfix =V7aTrueFIareachableV0V15AamemV15V5EIareachableV0V1AasataandV0V6NFAareachableV0V16AamemV16V4EIareachableV0V1AasataandV0V2NIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+    <label
+     name="expl:VC for bwd"/>
+    <transf
+     name="split_goal_wp"
+     proved="false"
+     expanded="true">
+     <goal
+      name="WP_parameter bwd.1"
+      locfile="../cubicle.mlw"
+      loclnum="64" loccnumb="6" loccnume="9"
+      expl="1. loop invariant init"
+      sum="1bb43796f51398fe83af83f56b74344b"
+      proved="true"
+      expanded="true"
+      shape="areachableV0V5AamemV5V4EIareachableV0V1AasataandV0V2NIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.01"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.2"
+      locfile="../cubicle.mlw"
+      loclnum="64" loccnumb="6" loccnume="9"
+      expl="2. loop invariant preservation"
+      sum="2325140e9477fa4b1128edd0e55082f3"
+      proved="false"
+      expanded="true"
+      shape="areachableV0V12AamemV12V11EIareachableV0V1AasataandV0V10NIainfix =V11aConsapreV9V8FIainfix =V10aorV9V6FIasataandafnotV6V9NIasataandV0V9NIaminimal_eltV9V5AapermutaConsV9V8V5FFIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V13AamemV13V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="timeout" time="4.87"/>
+      </proof>
+      <transf
+       name="split_goal_wp"
+       proved="false"
+       expanded="true">
+       <goal
+        name="WP_parameter bwd.2.1"
+        locfile="../cubicle.mlw"
+        loclnum="64" loccnumb="6" loccnume="9"
+        expl="1."
+        sum="74691810b55568c62a55483ef028a725"
+        proved="false"
+        expanded="true"
+        shape="asataandV0V10NIainfix =V11aConsapreV9V8FIainfix =V10aorV9V6FIasataandafnotV6V9NIasataandV0V9NIaminimal_eltV9V5AapermutaConsV9V8V5FFIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V12AamemV12V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="4.93"/>
+        </proof>
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.33"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="6.45"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.2.2"
+        locfile="../cubicle.mlw"
+        loclnum="64" loccnumb="6" loccnume="9"
+        expl="2."
+        sum="fc64fa77e1953b2984a1cf9b847fcca4"
+        proved="true"
+        expanded="true"
+        shape="areachableV0V12AamemV12V11EIareachableV0V1IasataandV0V10NIainfix =V11aConsapreV9V8FIainfix =V10aorV9V6FIasataandafnotV6V9NIasataandV0V9NIaminimal_eltV9V5AapermutaConsV9V8V5FFIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V13AamemV13V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.56"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+     <goal
+      name="WP_parameter bwd.3"
+      locfile="../cubicle.mlw"
+      loclnum="64" loccnumb="6" loccnume="9"
+      expl="3. loop invariant preservation"
+      sum="00c80c9374f1ab8b24a09a4a489b46ad"
+      proved="false"
+      expanded="true"
+      shape="areachableV0V10AamemV10V8EIareachableV0V1AasataandV0V6NIasataandafnotV6V9NNIasataandV0V9NIaminimal_eltV9V5AapermutaConsV9V8V5FFIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V11AamemV11V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="timeout" time="4.48"/>
+      </proof>
+      <transf
+       name="split_goal_wp"
+       proved="false"
+       expanded="true">
+       <goal
+        name="WP_parameter bwd.3.1"
+        locfile="../cubicle.mlw"
+        loclnum="64" loccnumb="6" loccnume="9"
+        expl="1."
+        sum="6c3ef66bdc8c506057398a03bb5f6582"
+        proved="true"
+        expanded="true"
+        shape="asataandV0V6NIasataandafnotV6V9NNIasataandV0V9NIaminimal_eltV9V5AapermutaConsV9V8V5FFIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V10AamemV10V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.01"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.3.2"
+        locfile="../cubicle.mlw"
+        loclnum="64" loccnumb="6" loccnume="9"
+        expl="2."
+        sum="eea6d22f4ce27d7a01bf61c409967204"
+        proved="false"
+        expanded="true"
+        shape="areachableV0V10AamemV10V8EIareachableV0V1IasataandV0V6NIasataandafnotV6V9NNIasataandV0V9NIaminimal_eltV9V5AapermutaConsV9V8V5FFIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V11AamemV11V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.00"/>
+        </proof>
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.43"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="6.35"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+     <goal
+      name="WP_parameter bwd.4"
+      locfile="../cubicle.mlw"
+      loclnum="64" loccnumb="6" loccnume="9"
+      expl="4. unreachable point"
+      sum="624bb21baa5ac5c9cb48c3305de61448"
+      proved="true"
+      expanded="false"
+      shape="fIainfix =V5aNilAainfix =V8V5FIainfix =V7aTrueNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V9AamemV9V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.01"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.5"
+      locfile="../cubicle.mlw"
+      loclnum="64" loccnumb="6" loccnume="9"
+      expl="5. postcondition"
+      sum="f3c06bb5536ffebe6b3fef5a13fdcc91"
+      proved="true"
+      expanded="false"
+      shape="areachableV0V1NIainfix =V7aTrueNNIainfix =V5aNilqainfix =V7aTrueFIareachableV0V8AamemV8V5EIareachableV0V1AasataandV0V6NFIainfix =V4aConsV1V3FIainfix =V3aNilFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.01"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+  </theory>
+ </file>
+</why3session>

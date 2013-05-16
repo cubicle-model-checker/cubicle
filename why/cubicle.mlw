@@ -1,0 +1,88 @@
+theory FOL
+
+   type t
+
+   predicate sat t
+
+   function ffalse : t
+   axiom ffaslse_def : not (sat ffalse)
+   
+   function ttrue : t
+   axiom ttrue_def : sat ttrue
+
+   function fnot t : t
+   axiom fnot_def : forall f : t. sat (fnot f) ->  not (sat f)
+
+   function and t t : t
+   axiom and_def : forall f1 f2 : t. sat (and f1 f2) -> (sat f1) /\ (sat f2)
+   
+   function or t t : t
+   axiom or_def : forall f1 f2 : t. sat (or f1 f2) -> (sat f1) \/ (sat f2)
+   
+   predicate valid (f : t) = not (sat (fnot f))
+
+end
+
+theory Reachability
+
+   use import FOL
+
+   predicate reachable t t
+
+   axiom directly_reachable :
+     forall init f : t. sat (and init f) -> reachable init f 
+   
+   function pre t : t
+
+   axiom pre_def1 :
+     forall init f : t. reachable init (pre f) -> reachable init f
+     
+   axiom pre_def2 :
+     forall init f : t. reachable init f -> reachable init (pre f)
+   
+end
+
+module Cubicle
+
+  use import list.Mem
+  use import ref.Ref
+  use import FOL as F
+  clone import pqueue.Pqueue as Q with type elt = F.t
+  use import Reachability
+  (* use import set.Fset *)
+
+  type result = Safe | Unsafe
+  exception Unsafe_trace
+
+  val visited : ref F.t
+  val q : Q.t
+  
+  (* let visited = ref Fset.empty *)
+  (* let visited = ref F.ffalse *)
+  (* let q = Q.create ()     *)
+    
+  let bwd (init : F.t) (theta : F.t) =
+    ensures { result = Safe -> not (reachable init theta) }
+    visited := F.ffalse;
+    Q.clear q;
+    Q.push theta q;
+    try
+      while not (Q.is_empty q) do
+        invariant {
+          not (sat (F.and init !visited)) &&
+          (reachable init theta ->
+           (exists f : F.t. mem f q.elts /\ reachable init f)) }
+        let phi = Q.pop q in
+        if F.sat (F.and init phi) then raise Unsafe_trace;
+        if not (F.sat (F.and (F.fnot !visited) phi)) then (
+          visited := F.or phi !visited;
+          Q.push (pre phi) q
+        )
+       done;
+      Safe
+    with
+        | Unsafe_trace -> Unsafe
+        | Q.Empty -> absurd
+    end
+
+end
