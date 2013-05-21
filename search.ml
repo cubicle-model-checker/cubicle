@@ -353,40 +353,8 @@ module BFS_base ( X : I ) = struct
     let not_invariants = ref [] in
     let q = Queue.create () in
 
-    let fmt, close_dot = 
-      if not dot then std_formatter, fun () -> () else       
-	begin
-	  let bfile = Filename.basename file in
-	  let n, cout = 
-	    if not profiling then Filename.open_temp_file bfile ".dot" 
-	    else 
-	      begin 
-		incr cpt_dot; 
-		let n = file^(string_of_int !cpt_dot)^".dot" in
-		let cout = open_out n in
-		n, cout
-	      end
-	  in
-	  let fmt = formatter_of_out_channel cout in
-	  fprintf fmt "digraph G {@.";
-	  fprintf fmt "   orientation = portrait;@.";
-	  fprintf fmt "   fontsize = 10;@.";
-	  fprintf fmt "   rankdir = BT;@.";
-          fprintf fmt "   concentrate=true;@.";
-	  let close_dot () =
-	    fprintf fmt "}@.";
-	    if not profiling then
-	      let pdf = n^".pdf" in
-	      let com = (* find os based on dir structure *)
-		if Sys.file_exists "/System" then "open" (* Mac OS X *)
-		else if Sys.file_exists "/home" then "xdg-open" (* Unix *)
-		else "cmd /c start" (* Windows *)
-	      in
-	      ignore(Sys.command ("dot -Tpdf "^n^" > "^pdf^" && "^com^" "^pdf))
-	  in
-	  fmt, close_dot
-	end
-    in
+    let fmt, close_dot = Pretty.dot_config file cpt_dot in
+    
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
       incr cpt_nodes;

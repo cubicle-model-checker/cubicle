@@ -1001,3 +1001,6 @@ invariant "CacheDataProp"
 
 invariant "MemDataProp"
   !Sta.Dir.Dirty -> Sta.MemData = Sta.CurrData;
+
+invariant "cubicle"
+  !Sta.Proc[Home].InvMarked

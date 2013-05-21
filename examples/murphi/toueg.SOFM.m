@@ -1,6 +1,6 @@
 const  ---- Configuration parameters ----
        
-  PROC_NUM : 7;
+  PROC_NUM : 5;
 
 type   ---- Type declarations ----
 

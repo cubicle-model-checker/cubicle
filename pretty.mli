@@ -42,6 +42,8 @@ val print_dead_node : formatter -> (t_system * int list) -> unit
 
 val print_dead_node_to_cand : formatter -> (t_system * int list) -> unit
 
+val dot_config : string -> int ref -> Format.formatter * (unit -> unit)
+
 val print_verbose_node : formatter -> t_system -> unit
 
 val syscall : string -> string

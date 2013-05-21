@@ -169,7 +169,7 @@ requires { Chan2Cmd[i] = Gnts }
   Chan2Cmd[i] := Empty;
 }
 
-transition recvGnts (i)
+transition recvGnte (i)
 requires { Chan2Cmd[i] = Gnte }
 {
   CacheState[i] := Exclusive;

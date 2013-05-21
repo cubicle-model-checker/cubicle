@@ -346,99 +346,83 @@ and print_atoms_dot fmt = function
 let print_cube_dot fmt sa = 
   fprintf fmt "@[%a@]" print_atoms_dot (SAtom.elements sa)
 
-let print_system_dot fmt s = 
-  if verbose = 3 then print_cube_dot fmt (snd s.t_unsafe)
-  else fprintf fmt "%d" s.t_nb
+let print_system_dot fmt s = match verbose with
+  | 0 -> ()
+  | 1 | 2 ->
+      if List.length s.t_from = 0 then print_cube_dot fmt (snd s.t_unsafe)
+      else fprintf fmt "%d" s.t_nb
+  | _ -> if verbose >= 3 then print_cube_dot fmt (snd s.t_unsafe)
 
+
+let print_unsafe_dot_node fmt s =
+  fprintf fmt
+    "%d [label=\"%a\", color = red, fontcolor=white, fontsize=20, shape=octagon, style=filled]"
+    s.t_nb print_system_dot s
+    
+let print_approx_dot_node fmt s =
+  fprintf fmt
+    "%d [label=\"%a\", color = blue, shape=rectangle, fontcolor=white, fontsize=20, style=filled]"
+    s.t_nb print_system_dot s
+    
+let print_dot_node fmt s =
+  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+    
+let print_subsumed_dot_node fmt s =
+  if verbose > 1 then
+    fprintf fmt 
+      "%d [label=\"%a\" color = gray, fontcolor=gray];"
+      s.t_nb print_system_dot s
+      
+let print_init_dot_node fmt s =
+  fprintf fmt
+    "%d [label=\"%a\", color = green, shape=doublecircle, style=filled]"
+    s.t_nb print_system_dot s
+    
+let print_subsume_dot_arrow fmt a b =
+  if verbose > 1 then
+    fprintf fmt
+      "%d -> %d [style=dashed, arrowhead=onormal, color=gray, constraint=false]@."
+      a b
+
+let print_approx_dot_arrow fmt a b =
+  fprintf fmt
+    "%d -> %d [style=dashed, arrowhead=onormal, color=blue, penwidth=4]@."
+    a b
+    
+let print_pre_dot_arrow fmt s =
+  if List.length s.t_from > 0 then
+    let (tr, args, _)= List.hd s.t_from in
+    fprintf fmt "%d -> %d [label=\"%s(%a)\", penwidth=2];@." 
+      s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args
+
+  
 let print_node fmt s =
   if dot then
     begin
-      if List.length s.t_from  = 0 then
-	if s.t_nb >= 0 then
-	  fprintf fmt "%d [label=\"%a\", color = red, shape=tripleoctagon, style=filled];" 
-	    s.t_nb print_system_dot s
-	else
-	  fprintf fmt "%d [label=\"%a\", color = orange, shape=doubleoctagon, style=filled];" 
-	    s.t_nb print_system_dot s
-      else
-	let (tr, args, _)= List.hd s.t_from in 
-	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
-	  s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
-	if s.t_nb = 0 then
-	  fprintf fmt "%d [label=\"%a\", color = red, shape=tripleoctagon, style = filled];" 
-	    s.t_nb print_system_dot s
-	else 
-	  fprintf fmt "%d [label=\"%a\"];" s.t_nb print_system_dot s
+      print_pre_dot_arrow fmt s;
+      if List.length s.t_from = 0 then
+        if s.t_nb >= 0 then print_unsafe_dot_node fmt s
+        else print_approx_dot_node fmt s
+      else print_dot_node fmt s
     end
   else
     print_trace fmt s
 
 let print_bad fmt s =
-  if List.length s.t_from  = 0 then
-      fprintf fmt "%d [label=\"%a\", color = green, shape=doublecircle, style=filled];" 
-	s.t_nb print_system_dot s
-  else
-    let (tr, args, _)= List.hd s.t_from in 
-    fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
-      s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
-    fprintf fmt "%d [label=\"%a\", color = green, shape=doublecircle, style = filled];" 
-	s.t_nb print_system_dot s
+  print_pre_dot_arrow fmt s;
+  print_init_dot_node fmt s
   
 
-let print_subsumed_node cand fmt (s, db) =
-  let db = List.filter (fun x -> x <> s.t_nb) db in 
-  if dot && verbose > 0 then
+let print_subsumed_node appr fmt (s, db) =
+  if dot then
     begin
-      if List.length s.t_from  = 0 then
-	if verbose = 1 then
-	  if s.t_nb = 0 then 
-	    fprintf fmt "%d [color = red, shape=tripleoctagon, style = filled];" s.t_nb
-	  else 
-	    fprintf fmt "%d [color = gray, fontcolor=gray];" s.t_nb
-	else
-	  begin
-	    (if s.t_nb = 0 then
-	      fprintf fmt 
-		"%d [label=\"%a\" , color = red, shape=tripleoctagon,  style=filled];" 
-		s.t_nb print_system_dot s
-	    else 
-	      fprintf fmt 
-		"%d [label=\"%a\" color = gray, fontcolor=gray];" s.t_nb print_system_dot s);
-	    if verbose >= 2 then 
-	      begin
-		fprintf fmt "@.";
-		List.iter 
-		  (fun d -> fprintf fmt " %d -> %d [style=dashed, arrowhead=onormal, color=%s %s] @." 
-		     s.t_nb d 
-                    (if cand then "orange" else "gray")
-                    (if cand then ", penwidth=4" else ", constraint=false")
-                  ) db
-	      end
-	  end
-      else
-	let (tr, args, _) = List.hd s.t_from in 
-	fprintf fmt "%d -> %d [label=\"%s(%a)\"];@." 
-	  s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args;
-	if verbose = 1 then 
-	  if s.t_nb = 0 then
-	    fprintf fmt "%d [label=\"\" , color = red, shape=tripleoctagon, style = filled];" s.t_nb
-	  else 
-	    fprintf fmt "%d [label=\"\" color = gray, fontcolor=gray];" s.t_nb
-	else
-	  begin
-	    fprintf fmt "%d [label=\"%a\" color = gray, fontcolor=gray];" 
-	      s.t_nb print_system_dot s;
-	    if verbose >= 2 then
-	      begin
-		fprintf fmt "@.";
-		List.iter 
-		  (fun d -> fprintf fmt " %d -> %d [style=dashed, arrowhead=onormal, color=%s %s] @." 
-		     s.t_nb d
-                    (if cand then "orange" else "gray")
-                    (if cand then ", penwidth=4" else ", constraint=false")
-                  ) db
-	      end
-	  end
+      let db = List.filter (fun x -> x <> s.t_nb) db in
+      if verbose > 1 then print_pre_dot_arrow fmt s;
+      if s.t_nb = 0 then print_unsafe_dot_node fmt s
+      else print_subsumed_dot_node fmt s;
+      fprintf fmt "@.";
+      if appr then List.iter (print_approx_dot_arrow fmt s.t_nb) db
+      else List.iter (print_subsume_dot_arrow fmt s.t_nb) db
     end
 
 
@@ -446,6 +430,39 @@ let print_dead_node  = print_subsumed_node false
 
 let print_dead_node_to_cand  = print_subsumed_node true
 
+let dot_config file cpt_dot =
+  if not dot then std_formatter, fun () -> () else       
+    begin
+      let bfile = Filename.basename file in
+      let n, cout = 
+	if not profiling then Filename.open_temp_file bfile ".dot" 
+	else 
+	  begin 
+	    incr cpt_dot; 
+	    let n = file^(string_of_int !cpt_dot)^".dot" in
+	    let cout = open_out n in
+	    n, cout
+	  end
+      in
+      let fmt = formatter_of_out_channel cout in
+      fprintf fmt "digraph G {@.";
+      fprintf fmt "   orientation = portrait;@.";
+      fprintf fmt "   fontsize = 10;@.";
+      fprintf fmt "   rankdir = BT;@.";
+      fprintf fmt "   concentrate=true;@.";
+      let close_dot () =
+	fprintf fmt "}@.";
+	if not profiling then
+	  let pdf = n^".pdf" in
+	  let com = (* find os based on dir structure *)
+	    if Sys.file_exists "/System" then "open" (* Mac OS X *)
+	    else if Sys.file_exists "/home" then "xdg-open" (* Unix *)
+	    else "cmd /c start" (* Windows *)
+	  in
+	  ignore(Sys.command ("dot -Tpdf "^n^" > "^pdf^" && "^com^" "^pdf))
+      in
+      fmt, close_dot
+    end
 
 let print_verbose_node fmt s =
   if verbose = 0 then print_node fmt s
