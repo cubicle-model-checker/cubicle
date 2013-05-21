@@ -375,7 +375,7 @@ let print_subsumed_dot_node fmt s =
       
 let print_init_dot_node fmt s =
   fprintf fmt
-    "%d [label=\"%a\", color = green, shape=doublecircle, style=filled]"
+    "%d [label=\"%a\", color = green, fontsize=20, shape=doublecircle, style=filled]"
     s.t_nb print_system_dot s
     
 let print_subsume_dot_arrow fmt a b =
@@ -396,6 +396,30 @@ let print_pre_dot_arrow fmt s =
       s.t_nb_father s.t_nb (Hstring.view tr.tr_name) print_args args
 
   
+let print_buggy_dot_arrow fmt s =
+  if List.length s.t_from > 0 then
+    fprintf fmt
+      "%d -> %d [color=red, constraint=false, dir=back, pencolor=red];@." 
+      s.t_nb_father s.t_nb
+
+let print_buggy_dot_node fmt s =
+  if s.t_from <> [] then
+    fprintf fmt
+      "%d [label=\"%a\", color=red, fillcolor=lightpink, style=filled];"
+      s.t_nb print_system_dot s
+
+let print_trace_dot fmt s =
+  (* print_buggy_dot_arrow fmt s; *)
+  List.iter (fun (_, _, s') ->
+    (* print_buggy_dot_arrow fmt s'; *)
+    print_buggy_dot_node fmt s'
+  ) s.t_from 
+      
+let print_init_dot_node fmt s =
+  fprintf fmt
+    "%d [label=\"%a\", color = green, fontsize=20, shape=doublecircle, style=filled]"
+    s.t_nb print_system_dot s
+    
 let print_node fmt s =
   if dot then
     begin
@@ -409,8 +433,13 @@ let print_node fmt s =
     print_trace fmt s
 
 let print_bad fmt s =
+  (* fprintf fmt "subgraph cluster_trace {\ *)
+  (*       	style=filled; *)
+  (*       	color=lightpink;@."; *)
   print_pre_dot_arrow fmt s;
-  print_init_dot_node fmt s
+  print_init_dot_node fmt s;
+  print_trace_dot fmt s
+  (* fprintf fmt "}@." *)
   
 
 let print_subsumed_node appr fmt (s, db) =
@@ -430,6 +459,7 @@ let print_dead_node  = print_subsumed_node false
 
 let print_dead_node_to_cand  = print_subsumed_node true
 
+  
 let dot_config file cpt_dot =
   if not dot then std_formatter, fun () -> () else       
     begin
@@ -446,10 +476,10 @@ let dot_config file cpt_dot =
       in
       let fmt = formatter_of_out_channel cout in
       fprintf fmt "digraph G {@.";
-      fprintf fmt "   orientation = portrait;@.";
-      fprintf fmt "   fontsize = 10;@.";
-      fprintf fmt "   rankdir = BT;@.";
-      fprintf fmt "   concentrate=true;@.";
+      fprintf fmt "orientation = portrait;@.";
+      fprintf fmt "fontsize = 10;@.";
+      fprintf fmt "rankdir = BT;@.";
+      fprintf fmt "concentrate=true;@.";
       let close_dot () =
 	fprintf fmt "}@.";
 	if not profiling then
