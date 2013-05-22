@@ -754,7 +754,7 @@ let transitions_to_func procs env =
 
 
 let post st visited trs acc cpt_q depth =
-  if limit_forward_depth && depth > forward_depth then acc
+  if limit_forward_depth && depth >= forward_depth then acc
   else
     List.fold_left (fun acc st_tr ->
       try 
@@ -767,7 +767,7 @@ let post st visited trs acc cpt_q depth =
 
 
 let post_bfs st visited trs q cpt_q depth =
-  if not limit_forward_depth || depth <= forward_depth then
+  if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try 
         let sts = st_tr.st_f st in
@@ -812,7 +812,7 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
         in
         aux to_do
   in
-  if not limit_forward_depth || depth <= forward_depth then aux [st, prev_vars]
+  if not limit_forward_depth || depth < forward_depth then aux [st, prev_vars]
 
 
 let check_cand env state cand = 
@@ -948,7 +948,7 @@ let replay_trace_and_expand procs faulty =
   let st_inits = List.map snd (init_to_states env procs faulty) in
   let trc = faulty.t_from in
   let rec replay trc sts depth =
-    if depth > forward_depth then sts
+    if depth >= forward_depth then sts
     else match sts, trc with
       | [], _ | _, [] -> sts
       | _, ({tr_name = name}, args, _) :: trc ->
