@@ -112,7 +112,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.5b
+VERSION=0.5
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -282,6 +282,13 @@ EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 
+ARCH = $(shell uname -m)
+OSNAME = $(shell uname -s)
+
+binary: $(OPT)
+	strip $(OPT)
+	cp $(OPT) export/$(NAME)-$(VERSION)-$(OSNAME)-$(ARCH)
+
 export-alt-ergo-light:
 	mkdir -p export/$(EXPORTAE)/
 	mkdir -p export/$(EXPORTAE)/smt
@@ -309,6 +316,8 @@ export/$(EXPORTDIR).tar.gz:
 	cd examples/; cp $(EXAMPLES) ../export/$(EXPORTDIR)/examples/; cd ..
 	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
+
+export: export/$(EXPORTDIR).tar.gz
 
 release: export/$(EXPORTDIR).tar.gz
 	mkdir -p export/release
