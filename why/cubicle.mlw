@@ -1,28 +1,3 @@
-(* theory FOL *)
-
-(*    type t *)
-
-(*    predicate sat t *)
-
-(*    function ffalse : t *)
-(*    axiom ffaslse_def : not (sat ffalse) *)
-   
-(*    function ttrue : t *)
-(*    axiom ttrue_def : sat ttrue *)
-
-(*    function fnot t : t *)
-(*    axiom fnot_def : forall f : t. sat (fnot f) ->  not (sat f) *)
-
-(*    function and t t : t *)
-(*    axiom and_def : forall f1 f2 : t. sat (and f1 f2) -> (sat f1) /\ (sat f2) *)
-   
-(*    function or t t : t *)
-(*    axiom or_def : forall f1 f2 : t. sat (or f1 f2) -> (sat f1) \/ (sat f2) *)
-   
-(*    predicate valid (f : t) = not (sat (fnot f)) *)
-
-(* end *)
-
 theory FOL
 
    type t
@@ -36,22 +11,27 @@ theory FOL
    axiom ttrue_def : valid ttrue
 
    function fnot t : t
-   axiom fnot_def : forall f : t. valid (fnot f) ->  not (valid f)
-   axiom fnot_def2 : forall f : t. fnot (fnot f) = f
+   axiom fnot_def1 : forall f : t. valid (fnot f) <->  not (valid f)
+   (* axiom fnot_def2 : forall f : t. fnot (fnot f) = f *)
+   (* axiom fnot_def3 : fnot(ffalse) = ttrue *)
+   (* axiom fnot_def4 : fnot(ttrue) = ffalse *)
 
    function and t t : t
-   axiom and_def : forall f1 f2 : t. valid (and f1 f2) -> (valid f1) /\ (valid f2)
-   axiom and_def2 : forall f : t. and f ffalse = ffalse
-   axiom and_def3 : forall f : t. and f ttrue = f
-   axiom and_def4 : forall f1 f2 : t. and f1 f2 = and f2 f1
+   axiom and_def1 : forall f1 f2 : t. valid (and f1 f2) <-> (valid f1) /\ (valid f2)
+   (* axiom and_def2 : forall f : t. and f ffalse = ffalse *)
+   (* axiom and_def3 : forall f : t. and f ttrue = f *)
+   (* axiom and_def4 : forall f1 f2 : t. and f1 f2 = and f2 f1 *)
    
    function or t t : t
-   axiom or_def : forall f1 f2 : t. valid (or f1 f2) -> (valid f1) \/ (valid f2)
-   axiom or_def2 : forall f : t. or f ffalse = f
-   axiom or_def3 : forall f : t. or f ttrue = ttrue
-   axiom or_def4 : forall f1 f2 : t. or f1 f2 = or f2 f1
+   axiom or_def1 : forall f1 f2 : t. valid (or f1 f2) <-> (valid f1) \/ (valid f2)
+   (* axiom or_def2 : forall f : t. or f ffalse = f *)
+   (* axiom or_def3 : forall f : t. or f ttrue = ttrue *)
+   (* axiom or_def4 : forall f1 f2 : t. or f1 f2 = or f2 f1 *)
    
    predicate sat (f : t) = not (valid (fnot f))
+
+   (* axiom valid_true : forall f : t. valid(f) -> f = ttrue *)
+   (* axiom valid_false : forall f : t. valid(fnot(f)) -> f = ffalse *)
 
 end
 
@@ -65,21 +45,32 @@ theory Reachability
      forall init f : t. sat (and init f) -> reachable init f 
    
    function pre t : t
-
-   axiom pre_def1 :
-     forall init f : t. reachable init (pre f) -> reachable init f
+ 
+   (* axiom pre_def1 : *)
+   (*   forall init f : t. reachable init (pre f) -> reachable init f *)
      
-   axiom pre_def2 :
-     forall init f : t. reachable init f -> reachable init (pre f)
+   (* axiom pre_def2 : *)
+   (*   forall init f : t. reachable init f -> reachable init (pre f) *)
+ 
+
+   function pre_star t : t
+     
+   axiom pre_star_def1 : forall f : t. valid f -> valid (pre_star f)
+   axiom pre_star_def2 : forall f : t. pre (pre_star f) = pre_star f
+
+   axiom reachability_pre_star :
+         forall init f : t. reachable init f <-> not sat (and (pre_star f) init)
    
 end
 
 module Cubicle
 
   use import list.Mem
+  use import list.List as List
   use import ref.Ref
   use import FOL as F
   clone import pqueue.Pqueue as Q with type elt = F.t
+  (* use import Impset as Q *)
   use import Reachability
   (* use import set.Fset *)
 
@@ -88,6 +79,23 @@ module Cubicle
 
   val visited : ref F.t
   val q : Q.t
+
+  (* function disjunct_q Q.t : F.t   *)
+  let rec pre_star_l (l : list F.t) =
+    match l with
+    | Nil -> F.ffalse
+    | Cons x r -> or (pre_star x) (pre_star_l l)
+    end
+ 
+  (* let disjunct_q (q : Q.t) = disjunct_l q.elts -- does not work *)
+  
+  function pre_star_q (list F.t) : F.t
+
+  axiom pre_star_q_def :
+    forall q : list F.t, f : F.t.
+      mem f q ->
+       (valid (pre_star f) -> valid (pre_star_q q))
+
   
   (* let visited = ref Fset.empty *)
   (* let visited = ref F.ffalse *)
@@ -101,13 +109,13 @@ module Cubicle
     Q.push theta q;
     try
       while not (Q.is_empty q) do
-        invariant {
-          not (sat (F.and init !visited)) /\
-          (reachable init theta ->
-           (exists f : F.t. mem f q.elts /\ reachable init f)) }
+        invariant { not (sat (F.and init !visited)) }
+        invariant { reachable init theta ->
+                      (exists f : F.t. mem f q.elts /\ reachable init f) }
+        invariant { valid (pre_star theta) -> (valid !visited) \/ valid (pre_star_q q.elts) }
         let phi = Q.pop q in
         if F.sat (F.and init phi) then raise Unsafe_trace;
-        if F.valid (F.or (F.fnot phi) !visited) then (
+        if not (F.valid (F.or (F.fnot phi) !visited)) then (
           visited := F.or phi !visited;
           Q.push (pre phi) q
         )
