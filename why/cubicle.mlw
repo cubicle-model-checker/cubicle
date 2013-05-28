@@ -1,51 +1,77 @@
 theory FOL
 
    type t
+   type structure
 
-   predicate valid t
+   predicate models structure t
 
    function ffalse : t
-   axiom ffaslse_def : not (valid ffalse)
    
    function ttrue : t
-   axiom ttrue_def : valid ttrue
 
-   function fnot t : t
-   axiom fnot_def1 : forall f : t. valid (fnot f) <->  not (valid f)
-   (* axiom fnot_def2 : forall f : t. fnot (fnot f) = f *)
-   (* axiom fnot_def3 : fnot(ffalse) = ttrue *)
-   (* axiom fnot_def4 : fnot(ttrue) = ffalse *)
-
+   function neg t : t
    function and t t : t
+   function or t t : t
+
+   
+   axiom notnot : forall f: t. neg (neg f) = f
+   
+   axiom model_neg_different :
+     forall m : structure. forall f : t.
+       (models m f -> not (models m (neg f))) /\
+       (models m (neg f) -> not (models m f))
+
+       
+   predicate sat (f : t) = exists m: structure. models m f
+   
+   
+   predicate valid (f : t) = not (sat (neg f))
+
+   lemma sat_def: forall f: t. sat f <-> not (valid (neg f))
+   
+   lemma unsat_invalid : forall f: t. not (valid f) -> sat (neg f)
+
+   axiom valid_sat : forall f: t. valid f -> sat f
+   
+   axiom ttrue_valid : valid ttrue
+   axiom ffaslse_invalid : not (valid ffalse)
+
+   
+   (* axiom valid_true : forall f : t. valid(f) -> f = ttrue *)
+   (* axiom valid_false : forall f : t. valid(neg(f)) -> f = ffalse *)
+
+   lemma ttrue_sat : sat ttrue
+   lemma ffalse_unsat : not (sat ffalse)
+
+
+
+   
+   (* axiom neg_def1 : forall f : t. valid (neg f) ->  not (valid f) *)
+   (* axiom neg_def2 : forall f : t. neg (neg f) = f *)
+   (* axiom neg_def3 : neg(ffalse) = ttrue *)
+   (* axiom neg_def4 : neg(ttrue) = ffalse *)
+
    axiom and_def1 : forall f1 f2 : t. valid (and f1 f2) <-> (valid f1) /\ (valid f2)
    (* axiom and_def2 : forall f : t. and f ffalse = ffalse *)
    (* axiom and_def3 : forall f : t. and f ttrue = f *)
-   (* axiom and_def4 : forall f1 f2 : t. and f1 f2 = and f2 f1 *)
+   (* axiom and_def4 : forall f1 f2 : t. and f1 f26 = and f2 f1 *)
    
-   function or t t : t
    axiom or_def1 : forall f1 f2 : t. valid (or f1 f2) <-> (valid f1) \/ (valid f2)
    (* axiom or_def2 : forall f : t. or f ffalse = f *)
    (* axiom or_def3 : forall f : t. or f ttrue = ttrue *)
    (* axiom or_def4 : forall f1 f2 : t. or f1 f2 = or f2 f1 *)
    
-   predicate sat (f : t) = not (valid (fnot f))
-
-   (* axiom valid_true : forall f : t. valid(f) -> f = ttrue *)
-   (* axiom valid_false : forall f : t. valid(fnot(f)) -> f = ffalse *)
-
+   
 end
 
 theory Reachability
 
    use import FOL
 
-   predicate reachable t t
-
-   axiom directly_reachable :
-     forall init f : t. sat (and init f) -> reachable init f 
-   
    function pre t : t
  
+   axiom pre_false : pre ffalse = ffalse
+   
    (* axiom pre_def1 : *)
    (*   forall init f : t. reachable init (pre f) -> reachable init f *)
      
@@ -58,18 +84,107 @@ theory Reachability
    axiom pre_star_def1 : forall f : t. valid f -> valid (pre_star f)
    axiom pre_star_def2 : forall f : t. pre (pre_star f) = pre_star f
 
-   axiom reachability_pre_star :
-         forall init f : t. reachable init f <-> not sat (and (pre_star f) init)
+   axiom pre_star_false : pre_star ffalse = ffalse
    
+   (* axiom pre_star_and : *)
+   (*   forall f1 f2 : t. pre_star (and f1 f2) = and (pre_star f1) (pre_star f2) *)
+     
+   (* axiom pre_star_or : *)
+   (*   forall f1 f2 : t. pre_star (or f1 f2) = or (pre_star f1) (pre_star f2) *)
+     
+   (* axiom pre_star_not : *)
+   (*   forall f : t. pre_star (neg f) = neg (pre_star f) *)
+     
+   (* predicate reachable t t *)
+
+   (* axiom reachability_pre_star : *)
+   (*       forall init f : t. reachable init f <-> not sat (and (pre_star f) init) *)
+         
+   predicate reachable (init : t) (f : t) = not sat (and (pre_star f) init)
+         
+   axiom directly_reachable :
+     forall init f : t. sat (and init f) -> reachable init f 
+   
+   (* axiom true_reachable : *)
+   (*   forall init : t. reachable init ttrue *)
+     
+   axiom false_unreachable :
+     forall init : t. not (reachable init ffalse)
+     
+
+
+   
+end
+
+
+module AbstractQueue
+
+  use import FOL as F
+  use import set.Fset as S
+
+  type t model { mutable formula: F.t; mutable elts: S.set F.t }
+
+  val create () : t ensures { result.formula = F.ffalse /\ result.elts = S.empty }
+
+  val push (f: F.t) (q: t) : unit writes {q}
+    ensures { q.formula = F.or f (old q.formula) /\
+              q.elts = S.add f (old q.elts) }
+  
+  exception Empty
+
+  val is_empty (q: t) : bool reads {q}
+    ensures { result = True <-> (S.is_empty q.elts /\ q.formula = F.ffalse)}
+    
+  val pop (q: t) : 'a writes {q}
+    ensures { not (S.is_empty (old q.elts)) /\
+              q.elts = S.remove (S.choose (old q.elts)) (old q.elts) /\
+              q.formula = F.and (F.neg (S.choose (old q.elts))) (old q.formula) }
+    raises  { Empty -> S.is_empty q.elts /\ q.formula = F.ffalse /\
+                       S.is_empty (old q.elts) /\ old q.formula = F.ffalse }
+
+
+  val clear (q: t) : unit writes {q}
+  ensures { q.formula = F.ffalse /\ q.elts = S.empty }
+  
+end
+
+module AbstractQueue2
+
+  use import FOL as F
+  use import set.Fset as S
+
+  type t model { mutable formula: F.t; mutable elts: S.set F.t }
+
+  val create () : t ensures { result.formula = F.ffalse /\ result.elts = S.empty }
+
+  val push (f: F.t) (q: t) : unit writes {q}
+    ensures { q.formula = F.or f (old q.formula) /\
+              q.elts = S.add f (old q.elts) }
+  
+  exception Empty
+
+  val is_empty (q: t) : bool reads {q}
+    ensures { result = True <-> (S.is_empty q.elts /\ F.valid (F.neg q.formula))}
+    
+  val pop (q: t) : 'a writes {q}
+    ensures { not (S.is_empty (old q.elts)) /\
+              q.elts = S.remove (S.choose (old q.elts)) (old q.elts) /\
+              q.formula = F.and (F.neg (S.choose (old q.elts))) (old q.formula) }
+    raises  { Empty -> S.is_empty q.elts /\ F.valid (F.neg q.formula) /\
+                       S.is_empty (old q.elts) /\ F.valid (F.neg (old q.formula)) }
+
+
+  val clear (q: t) : unit writes {q}
+  ensures { q.formula = F.ffalse /\ q.elts = S.empty }
+  
 end
 
 module Cubicle
 
-  use import list.Mem
-  use import list.List as List
   use import ref.Ref
   use import FOL as F
-  clone import pqueue.Pqueue as Q with type elt = F.t
+  (* clone import pqueue.Pqueue as Q with type elt = F.t *)
+  use import AbstractQueue as Q
   (* use import Impset as Q *)
   use import Reachability
   (* use import set.Fset *)
@@ -81,20 +196,20 @@ module Cubicle
   val q : Q.t
 
   (* function disjunct_q Q.t : F.t   *)
-  let rec pre_star_l (l : list F.t) =
-    match l with
-    | Nil -> F.ffalse
-    | Cons x r -> or (pre_star x) (pre_star_l l)
-    end
+  (* let rec pre_star_l (l : list F.t) = *)
+  (*   match l with *)
+  (*   | Nil -> F.ffalse *)
+  (*   | Cons x r -> or (pre_star x) (pre_star_l l) *)
+  (*   end *)
  
   (* let disjunct_q (q : Q.t) = disjunct_l q.elts -- does not work *)
   
-  function pre_star_q (list F.t) : F.t
+  (* function pre_star_q (list F.t) : F.t *)
 
-  axiom pre_star_q_def :
-    forall q : list F.t, f : F.t.
-      mem f q ->
-       (valid (pre_star f) -> valid (pre_star_q q))
+  (* axiom pre_star_q_def : *)
+  (*   forall q : list F.t, f : F.t. *)
+  (*     mem f q -> *)
+  (*      (valid (pre_star f) -> valid (pre_star_q q)) *)
 
   
   (* let visited = ref Fset.empty *)
@@ -110,12 +225,12 @@ module Cubicle
     try
       while not (Q.is_empty q) do
         invariant { not (sat (F.and init !visited)) }
-        invariant { reachable init theta ->
-                      (exists f : F.t. mem f q.elts /\ reachable init f) }
-        invariant { valid (pre_star theta) -> (valid !visited) \/ valid (pre_star_q q.elts) }
+        invariant { reachable init theta -> reachable init q.formula }
+        (* invariant { valid (pre_star theta) -> (valid !visited) \/ valid (pre_star_q q.elts) } *)
+        assert {not (S.is_empty q.elts /\ q.formula = F.ffalse)};
         let phi = Q.pop q in
         if F.sat (F.and init phi) then raise Unsafe_trace;
-        if not (F.valid (F.or (F.fnot phi) !visited)) then (
+        if not (F.valid (F.or (F.neg phi) !visited)) then (
           visited := F.or phi !visited;
           Q.push (pre phi) q
         )
