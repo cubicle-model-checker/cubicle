@@ -5,61 +5,109 @@ theory FOL
 
    predicate models structure t
 
-   function ffalse : t
+   constant ffalse : t
    
-   function ttrue : t
+   constant ttrue : t
 
    function neg t : t
    function and t t : t
    function or t t : t
 
-   
-   axiom notnot : forall f: t. neg (neg f) = f
-   
-   axiom model_neg_different :
-     forall m : structure. forall f : t.
-       (models m f -> not (models m (neg f))) /\
-       (models m (neg f) -> not (models m f))
+   (*
+   axiom notnot : forall f: t [neg (neg f)]. neg (neg f) = f
+   axiom notand : forall f1 f2: t [neg (and f1 f2)].
+                    neg (and f1 f2) = or (neg f1) (neg f2)
+   axiom notor : forall f1 f2: t [neg (or f1 f2)].
+                    neg (or f1 f2) = and (neg f1) (neg f2)
+   *)
 
+   (* Just for instantiation *)
+   axiom structure_exists :
+     exists m : structure. exists f: t. models m f
+     
+   axiom true_false : ttrue <> ffalse
+   
+   axiom model_true :
+     forall m : structure. models m ttrue
+     
+   axiom model_false :
+     forall m : structure. not (models m ffalse)
+          
+   axiom model_neg :
+     forall m : structure. forall f : t (* [models m (neg f)] *).
+       models m (neg f) <-> not (models m f)
+       
+   axiom model_and :
+      forall m : structure. forall f1 f2 : t (* [models m (and f1 f2)] *).
+        models m (and f1 f2) <-> models m f1 /\ models m f2
+        
+   axiom model_or :
+      forall m : structure. forall f1 f2 : t (* [models m (or f1 f2)] *).
+        models m (or f1 f2) <-> models m f1 \/ models m f2
        
    predicate sat (f : t) = exists m: structure. models m f
    
-   
    predicate valid (f : t) = not (sat (neg f))
 
-   lemma sat_def: forall f: t. sat f <-> not (valid (neg f))
+   lemma valid_def :
+     forall f : t. valid (f) <-> forall m: structure [m]. (models m f)
    
-   lemma unsat_invalid : forall f: t. not (valid f) -> sat (neg f)
-
-   axiom valid_sat : forall f: t. valid f -> sat f
+   (*
+   constant s : structure
+   constant f : t
+   axiom eqeq : (models s f <-> models s f) /\
+                (sat f <-> sat f) /\
+                (valid f <-> valid f)
+   *)
    
-   axiom ttrue_valid : valid ttrue
-   axiom ffaslse_invalid : not (valid ffalse)
-
+   lemma sat_def: forall f: t (* [valid (neg f)] *). sat f <-> not (valid (neg f))
    
-   (* axiom valid_true : forall f : t. valid(f) -> f = ttrue *)
-   (* axiom valid_false : forall f : t. valid(neg(f)) -> f = ffalse *)
+   lemma unsat_invalid : forall f: t (* [valid f] *). not (valid f) -> sat (neg f)
 
+   lemma valid_sat : forall f: t (* [valid f] *). valid f -> sat f
+   
+   lemma ttrue_valid : valid ttrue
+   lemma ffaslse_invalid : not (valid ffalse)
    lemma ttrue_sat : sat ttrue
    lemma ffalse_unsat : not (sat ffalse)
 
 
+   (* axiom valid_true : forall f : t. valid(f) -> f = ttrue *)
+   (* axiom valid_false : forall f : t. valid(neg(f)) -> f = ffalse *)
 
    
    (* axiom neg_def1 : forall f : t. valid (neg f) ->  not (valid f) *)
    (* axiom neg_def2 : forall f : t. neg (neg f) = f *)
    (* axiom neg_def3 : neg(ffalse) = ttrue *)
    (* axiom neg_def4 : neg(ttrue) = ffalse *)
-
-   axiom and_def1 : forall f1 f2 : t. valid (and f1 f2) <-> (valid f1) /\ (valid f2)
    (* axiom and_def2 : forall f : t. and f ffalse = ffalse *)
    (* axiom and_def3 : forall f : t. and f ttrue = f *)
    (* axiom and_def4 : forall f1 f2 : t. and f1 f26 = and f2 f1 *)
-   
-   axiom or_def1 : forall f1 f2 : t. valid (or f1 f2) <-> (valid f1) \/ (valid f2)
    (* axiom or_def2 : forall f : t. or f ffalse = f *)
    (* axiom or_def3 : forall f : t. or f ttrue = ttrue *)
    (* axiom or_def4 : forall f1 f2 : t. or f1 f2 = or f2 f1 *)
+
+   lemma sat_neg :
+     forall f : t [sat (neg f)].  not (sat f) -> sat (neg f)
+   
+   lemma valid_neg :
+     forall f : t [valid (neg f)]. valid (neg f) -> not (valid f)
+   
+   lemma sat_or :
+     forall f1 f2 : t [sat (or f1 f2)].
+       sat (or f1 f2) <-> (sat f1) \/ (sat f2)
+   
+   lemma valid_and :
+     forall f1 f2 : t [valid (and f1 f2)].
+       valid (and f1 f2) <-> (valid f1) /\ (valid f2)
+   
+   lemma valid_or :
+     forall f1 f2 : t [valid (or f1 f2)].
+       (valid f1) \/ (valid f2) -> valid (or f1 f2)
+   
+   lemma sat_and :
+     forall f1 f2 : t [sat (and f1 f2)].
+       sat (and f1 f2) -> (sat f1) /\ (sat f2)
    
    
 end
@@ -89,8 +137,8 @@ theory Reachability
    (* axiom pre_star_and : *)
    (*   forall f1 f2 : t. pre_star (and f1 f2) = and (pre_star f1) (pre_star f2) *)
      
-   (* axiom pre_star_or : *)
-   (*   forall f1 f2 : t. pre_star (or f1 f2) = or (pre_star f1) (pre_star f2) *)
+   axiom pre_star_or :
+     forall f1 f2 : t. pre_star (or f1 f2) = or (pre_star f1) (pre_star f2)
      
    (* axiom pre_star_not : *)
    (*   forall f : t. pre_star (neg f) = neg (pre_star f) *)
@@ -100,7 +148,7 @@ theory Reachability
    (* axiom reachability_pre_star : *)
    (*       forall init f : t. reachable init f <-> not sat (and (pre_star f) init) *)
          
-   predicate reachable (init : t) (f : t) = not sat (and (pre_star f) init)
+   predicate reachable (init : t) (f : t) = sat (and (pre_star f) init)
          
    axiom directly_reachable :
      forall init f : t. sat (and init f) -> reachable init f 
@@ -108,9 +156,22 @@ theory Reachability
    (* axiom true_reachable : *)
    (*   forall init : t. reachable init ttrue *)
      
-   axiom false_unreachable :
+   lemma false_unreachable :
      forall init : t. not (reachable init ffalse)
-     
+
+   lemma reachable_or :
+     forall f1 f2 init :t.
+       reachable init (or f1 f2) <-> reachable f1 init \/ reachable f2 init
+       
+   lemma reachable_and :
+     forall f1 f2 init :t.
+       reachable init (and f1 f2) <-> reachable f1 init /\ reachable f2 init
+
+
+       (* FAUX *)
+   (* lemma reachable_neg : *)
+   (*   forall f init :t. *)
+   (*     reachable init (neg f) <-> not (reachable f init) *)
 
 
    
@@ -148,36 +209,6 @@ module AbstractQueue
   
 end
 
-module AbstractQueue2
-
-  use import FOL as F
-  use import set.Fset as S
-
-  type t model { mutable formula: F.t; mutable elts: S.set F.t }
-
-  val create () : t ensures { result.formula = F.ffalse /\ result.elts = S.empty }
-
-  val push (f: F.t) (q: t) : unit writes {q}
-    ensures { q.formula = F.or f (old q.formula) /\
-              q.elts = S.add f (old q.elts) }
-  
-  exception Empty
-
-  val is_empty (q: t) : bool reads {q}
-    ensures { result = True <-> (S.is_empty q.elts /\ F.valid (F.neg q.formula))}
-    
-  val pop (q: t) : 'a writes {q}
-    ensures { not (S.is_empty (old q.elts)) /\
-              q.elts = S.remove (S.choose (old q.elts)) (old q.elts) /\
-              q.formula = F.and (F.neg (S.choose (old q.elts))) (old q.formula) }
-    raises  { Empty -> S.is_empty q.elts /\ F.valid (F.neg q.formula) /\
-                       S.is_empty (old q.elts) /\ F.valid (F.neg (old q.formula)) }
-
-
-  val clear (q: t) : unit writes {q}
-  ensures { q.formula = F.ffalse /\ q.elts = S.empty }
-  
-end
 
 module Cubicle
 
@@ -227,7 +258,6 @@ module Cubicle
         invariant { not (sat (F.and init !visited)) }
         invariant { reachable init theta -> reachable init q.formula }
         (* invariant { valid (pre_star theta) -> (valid !visited) \/ valid (pre_star_q q.elts) } *)
-        assert {not (S.is_empty q.elts /\ q.formula = F.ffalse)};
         let phi = Q.pop q in
         if F.sat (F.and init phi) then raise Unsafe_trace;
         if not (F.valid (F.or (F.neg phi) !visited)) then (
