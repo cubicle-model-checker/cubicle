@@ -11,8 +11,8 @@
   version="2.4.1"/>
  <prover
   id="2"
-  name="Z3"
-  version="2.5"/>
+  name="Coq"
+  version="8.3pl4"/>
  <prover
   id="3"
   name="Z3"
@@ -26,12 +26,12 @@
    locfile="../cubicle.mlw"
    loclnum="1" loccnumb="7" loccnume="10"
    verified="true"
-   expanded="true">
+   expanded="false">
    <goal
     name="valid_def"
     locfile="../cubicle.mlw"
-    loclnum="52" loccnumb="9" loccnume="18"
-    sum="af41bffbf936e3e2a0901be1cc547d43"
+    loclnum="54" loccnumb="9" loccnume="18"
+    sum="bd1a6ce2b4119ed19c6b8928c2eefed3"
     proved="true"
     expanded="false"
     shape="amodelsV1V0FV1qavalidV0F">
@@ -47,8 +47,8 @@
    <goal
     name="sat_def"
     locfile="../cubicle.mlw"
-    loclnum="63" loccnumb="9" loccnume="16"
-    sum="ee4678f9b7a6cb2d0f5487067c5cad4b"
+    loclnum="65" loccnumb="9" loccnume="16"
+    sum="1a7f33caf3a20c834ceb4229b83f513b"
     proved="true"
     expanded="false"
     shape="avalidanegV0NqasatV0F">
@@ -64,8 +64,8 @@
    <goal
     name="unsat_invalid"
     locfile="../cubicle.mlw"
-    loclnum="65" loccnumb="9" loccnume="22"
-    sum="7566ec93b84637f218a74c98c0bbce81"
+    loclnum="67" loccnumb="9" loccnume="22"
+    sum="cb284901f07121c99b6954bb3d443c8a"
     proved="true"
     expanded="false"
     shape="asatanegV0IavalidV0NF">
@@ -81,8 +81,8 @@
    <goal
     name="valid_sat"
     locfile="../cubicle.mlw"
-    loclnum="67" loccnumb="9" loccnume="18"
-    sum="7175f7c1cf71f398111729c63a816f3c"
+    loclnum="69" loccnumb="9" loccnume="18"
+    sum="4c83a335d9e8eb833bd654b55518f861"
     proved="true"
     expanded="false"
     shape="asatV0IavalidV0F">
@@ -99,8 +99,8 @@
    <goal
     name="ttrue_valid"
     locfile="../cubicle.mlw"
-    loclnum="69" loccnumb="9" loccnume="20"
-    sum="c0ead95b0e45da44e074296806c62d80"
+    loclnum="71" loccnumb="9" loccnume="20"
+    sum="6c54ccf5b871ff6f67ee62a736bb8e2d"
     proved="true"
     expanded="false"
     shape="avalidattrue">
@@ -116,8 +116,8 @@
    <goal
     name="ffaslse_invalid"
     locfile="../cubicle.mlw"
-    loclnum="70" loccnumb="9" loccnume="24"
-    sum="0faf87457894ceeb39bbeee548059e5f"
+    loclnum="72" loccnumb="9" loccnume="24"
+    sum="92c2c71fe512de39b1c631e3a1d2c0b6"
     proved="true"
     expanded="false"
     shape="avalidaffalseN">
@@ -133,8 +133,8 @@
    <goal
     name="ttrue_sat"
     locfile="../cubicle.mlw"
-    loclnum="71" loccnumb="9" loccnume="18"
-    sum="b3a29f4fc0dd373404f0b4e5bc5884e5"
+    loclnum="73" loccnumb="9" loccnume="18"
+    sum="0c513e77f2108e386ed60293d0d79472"
     proved="true"
     expanded="false"
     shape="asatattrue">
@@ -150,8 +150,8 @@
    <goal
     name="ffalse_unsat"
     locfile="../cubicle.mlw"
-    loclnum="72" loccnumb="9" loccnume="21"
-    sum="4d35c98d36a6f912eecfea3559c2b7d5"
+    loclnum="74" loccnumb="9" loccnume="21"
+    sum="30380f7470dd1aec85f01bae439d36bd"
     proved="true"
     expanded="false"
     shape="asataffalseN">
@@ -167,8 +167,8 @@
    <goal
     name="sat_neg"
     locfile="../cubicle.mlw"
-    loclnum="90" loccnumb="9" loccnume="16"
-    sum="e4da9d9bd4c8d8e5bae446dd8c8ded97"
+    loclnum="92" loccnumb="9" loccnume="16"
+    sum="fbe7e0197459676a80c342e9f7e5019b"
     proved="true"
     expanded="false"
     shape="asatanegV0IasatV0NFasatanegV0">
@@ -184,8 +184,8 @@
    <goal
     name="valid_neg"
     locfile="../cubicle.mlw"
-    loclnum="93" loccnumb="9" loccnume="18"
-    sum="c58d4cc96e4416f44a68426040bb1f25"
+    loclnum="95" loccnumb="9" loccnume="18"
+    sum="9f4b312ed86e0694dabbcf7a85bfbd0b"
     proved="true"
     expanded="false"
     shape="avalidV0NIavalidanegV0FavalidanegV0">
@@ -201,8 +201,8 @@
    <goal
     name="sat_or"
     locfile="../cubicle.mlw"
-    loclnum="96" loccnumb="9" loccnume="15"
-    sum="b752bb193dca5b706e58db2d723bd8c1"
+    loclnum="98" loccnumb="9" loccnume="15"
+    sum="acdcf6962ee3e4bd18035f1c37efb052"
     proved="true"
     expanded="false"
     shape="asatV1OasatV0qasataorV0V1FasataorV0V1">
@@ -213,9 +213,9 @@
      <goal
       name="sat_or.1"
       locfile="../cubicle.mlw"
-      loclnum="96" loccnumb="9" loccnume="15"
+      loclnum="98" loccnumb="9" loccnume="15"
       expl="1."
-      sum="0c1ea4d2eecd96350de8680f54dc7b10"
+      sum="e9438e272e69cd4b1d68ea186887101a"
       proved="true"
       expanded="false"
       shape="asatV1OasatV0IasataorV0V1FasataorV0V1">
@@ -231,9 +231,9 @@
      <goal
       name="sat_or.2"
       locfile="../cubicle.mlw"
-      loclnum="96" loccnumb="9" loccnume="15"
+      loclnum="98" loccnumb="9" loccnume="15"
       expl="2."
-      sum="a1e615dfb0aef31134fd1ff8ad303498"
+      sum="85dcab1d076a28f507a15af57559b8c3"
       proved="true"
       expanded="false"
       shape="asataorV0V1IasatV1OasatV0FasataorV0V1">
@@ -252,8 +252,8 @@
    <goal
     name="valid_and"
     locfile="../cubicle.mlw"
-    loclnum="100" loccnumb="9" loccnume="18"
-    sum="a980156d03f14ca3c91083c9bf2da3e7"
+    loclnum="102" loccnumb="9" loccnume="18"
+    sum="6bb49e3f703cbb2dc601f9647aa99171"
     proved="true"
     expanded="false"
     shape="avalidV1AavalidV0qavalidaandV0V1FavalidaandV0V1">
@@ -269,8 +269,8 @@
    <goal
     name="valid_or"
     locfile="../cubicle.mlw"
-    loclnum="104" loccnumb="9" loccnume="17"
-    sum="c3bc3571d8e323d13f1ae27926fed46b"
+    loclnum="106" loccnumb="9" loccnume="17"
+    sum="0b413dcb95756c2e4ee37bf84c10e886"
     proved="true"
     expanded="false"
     shape="avalidaorV0V1IavalidV1OavalidV0FavalidaorV0V1">
@@ -286,8 +286,8 @@
    <goal
     name="sat_and"
     locfile="../cubicle.mlw"
-    loclnum="108" loccnumb="9" loccnume="16"
-    sum="bd9273a3e2174c8be5aa9c6d6420b3eb"
+    loclnum="110" loccnumb="9" loccnume="16"
+    sum="9a35ea5f03ffb2fb011984032e8e109e"
     proved="true"
     expanded="false"
     shape="asatV1AasatV0IasataandV0V1FasataandV0V1">
@@ -304,14 +304,14 @@
   <theory
    name="Reachability"
    locfile="../cubicle.mlw"
-   loclnum="115" loccnumb="7" loccnume="19"
-   verified="false"
+   loclnum="117" loccnumb="7" loccnume="19"
+   verified="true"
    expanded="true">
    <goal
     name="false_unreachable"
     locfile="../cubicle.mlw"
-    loclnum="159" loccnumb="9" loccnume="26"
-    sum="6efb326b559c205da53aaaa898de4073"
+    loclnum="161" loccnumb="9" loccnume="26"
+    sum="0688172001eab77fdb9280c154dcdde0"
     proved="true"
     expanded="false"
     shape="areachableV0affalseNF">
@@ -327,32 +327,157 @@
    <goal
     name="reachable_or"
     locfile="../cubicle.mlw"
-    loclnum="162" loccnumb="9" loccnume="21"
-    sum="a110e44a53ce022243d7c42dcfde8bd8"
+    loclnum="164" loccnumb="9" loccnume="21"
+    sum="59242307af04b4834036a9ed43344ba7"
+    proved="true"
+    expanded="false"
+    shape="areachableV2V1OareachableV2V0qareachableV2aorV0V1F">
+    <transf
+     name="split_goal_wp"
+     proved="true"
+     expanded="false">
+     <goal
+      name="reachable_or.1"
+      locfile="../cubicle.mlw"
+      loclnum="164" loccnumb="9" loccnume="21"
+      expl="1."
+      sum="72d692358ba82c355e823f3d3a7a122b"
+      proved="true"
+      expanded="false"
+      shape="areachableV2V1OareachableV2V0IareachableV2aorV0V1F">
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       edited="cubicle_Reachability_reachable_or_1.v"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.64"/>
+      </proof>
+     </goal>
+     <goal
+      name="reachable_or.2"
+      locfile="../cubicle.mlw"
+      loclnum="164" loccnumb="9" loccnume="21"
+      expl="2."
+      sum="23efefaa461cfd731cd0bc616fe8a565"
+      proved="true"
+      expanded="false"
+      shape="areachableV2aorV0V1IareachableV2V1OareachableV2V0F">
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       edited="cubicle_Reachability_reachable_or_2.v"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.64"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+   <goal
+    name="reachable_and"
+    locfile="../cubicle.mlw"
+    loclnum="168" loccnumb="9" loccnume="22"
+    sum="9e6adafcce69e78a07cfe4c1b874d77e"
+    proved="true"
+    expanded="false"
+    shape="areachableV2V1AareachableV2V0IareachableV2aandV0V1F">
+    <transf
+     name="split_goal_wp"
+     proved="true"
+     expanded="false">
+     <goal
+      name="reachable_and.1"
+      locfile="../cubicle.mlw"
+      loclnum="168" loccnumb="9" loccnume="22"
+      expl="1."
+      sum="47be7ca18d1b7f48ed6f36e2062eee1a"
+      proved="true"
+      expanded="false"
+      shape="areachableV2V0IareachableV2aandV0V1F">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="3.29"/>
+      </proof>
+     </goal>
+     <goal
+      name="reachable_and.2"
+      locfile="../cubicle.mlw"
+      loclnum="168" loccnumb="9" loccnume="22"
+      expl="2."
+      sum="9357fc5859763f8cde76751a8468a964"
+      proved="true"
+      expanded="false"
+      shape="areachableV2V1IareachableV2aandV0V1F">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="3.86"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+   <goal
+    name="reachable_imply"
+    locfile="../cubicle.mlw"
+    loclnum="178" loccnumb="9" loccnume="24"
+    sum="b2589ed4e5864a1902b67b8103d96cc8"
+    proved="true"
+    expanded="false"
+    shape="areachableV2V1IareachableV2V0IavalidaandanegV0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.07"/>
+    </proof>
+   </goal>
+  </theory>
+  <theory
+   name="AbstractQueue"
+   locfile="../cubicle.mlw"
+   loclnum="192" loccnumb="7" loccnume="20"
+   verified="false"
+   expanded="true">
+   <goal
+    name="formula_sat"
+    locfile="../cubicle.mlw"
+    loclnum="222" loccnumb="8" loccnume="19"
+    sum="8252df750f039d20bbfc9f8b33d378e2"
     proved="false"
     expanded="true"
-    shape="areachableV1V2OareachableV0V2qareachableV2aorV0V1F">
+    shape="asatV1AamemV1aeltsV0EqasataformulaV0F">
     <transf
      name="split_goal_wp"
      proved="false"
      expanded="true">
      <goal
-      name="reachable_or.1"
+      name="formula_sat.1"
       locfile="../cubicle.mlw"
-      loclnum="162" loccnumb="9" loccnume="21"
+      loclnum="222" loccnumb="8" loccnume="19"
       expl="1."
-      sum="a008fec942c48c1e5358610ca19ebcfc"
+      sum="9cc86cb6b469a065e8bd9ae551b00e84"
       proved="false"
       expanded="false"
-      shape="areachableV1V2OareachableV0V2IareachableV2aorV0V1F">
+      shape="asatV1AamemV1aeltsV0EIasataformulaV0F">
       <proof
        prover="0"
        timelimit="5"
        memlimit="1000"
-       edited="cubicle-Reachability-reachable_or_2.why"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="timeout" time="4.93"/>
+       <result status="timeout" time="4.52"/>
       </proof>
       <proof
        prover="1"
@@ -360,15 +485,82 @@
        memlimit="1000"
        obsolete="true"
        archived="false">
-       <result status="timeout" time="5.18"/>
+       <result status="timeout" time="6.01"/>
+      </proof>
+     </goal>
+     <goal
+      name="formula_sat.2"
+      locfile="../cubicle.mlw"
+      loclnum="222" loccnumb="8" loccnume="19"
+      expl="2."
+      sum="04a71e58aff3dc7676ae55f766957786"
+      proved="false"
+      expanded="false"
+      shape="asataformulaV0IasatV1AamemV1aeltsV0EF">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
+       <result status="timeout" time="4.86"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
+       <result status="timeout" time="5.40"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+   <goal
+    name="formula_set"
+    locfile="../cubicle.mlw"
+    loclnum="226" loccnumb="8" loccnume="19"
+    sum="8f89c5b03849b7b1389ace3a82c51677"
+    proved="false"
+    expanded="true"
+    shape="areachableV0V2AamemV2aeltsV1EqareachableV0aformulaV1FF">
+    <transf
+     name="split_goal_wp"
+     proved="false"
+     expanded="true">
+     <goal
+      name="formula_set.1"
+      locfile="../cubicle.mlw"
+      loclnum="226" loccnumb="8" loccnume="19"
+      expl="1."
+      sum="95e3eba502ea7d3890b06476ebe0d65a"
+      proved="false"
+      expanded="false"
+      shape="areachableV0V2AamemV2aeltsV1EIareachableV0aformulaV1FF">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
+       <result status="timeout" time="4.63"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
+       <result status="timeout" time="5.47"/>
       </proof>
       <proof
        prover="2"
        timelimit="5"
        memlimit="1000"
-       obsolete="true"
+       edited="cubicle_AbstractQueue_formula_set_2.v"
+       obsolete="false"
        archived="false">
-       <result status="timeout" time="5.52"/>
+       <result status="unknown" time="0.77"/>
       </proof>
       <proof
        prover="3"
@@ -376,23 +568,23 @@
        memlimit="1000"
        obsolete="true"
        archived="false">
-       <result status="timeout" time="5.72"/>
+       <result status="timeout" time="5.18"/>
       </proof>
      </goal>
      <goal
-      name="reachable_or.2"
+      name="formula_set.2"
       locfile="../cubicle.mlw"
-      loclnum="162" loccnumb="9" loccnume="21"
+      loclnum="226" loccnumb="8" loccnume="19"
       expl="2."
-      sum="c04adb5f135c8cff580dd839f888e77f"
+      sum="c1289ebc39e58b1e3c9ffbbf9f23b802"
       proved="false"
       expanded="false"
-      shape="areachableV2aorV0V1IareachableV1V2OareachableV0V2F">
+      shape="areachableV0aformulaV1IareachableV0V2AamemV2aeltsV1EFF">
       <proof
        prover="0"
        timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
        <result status="timeout" time="4.87"/>
       </proof>
@@ -402,15 +594,7 @@
        memlimit="1000"
        obsolete="true"
        archived="false">
-       <result status="timeout" time="5.42"/>
-      </proof>
-      <proof
-       prover="2"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.30"/>
+       <result status="timeout" time="5.26"/>
       </proof>
       <proof
        prover="3"
@@ -418,147 +602,24 @@
        memlimit="1000"
        obsolete="true"
        archived="false">
-       <result status="timeout" time="5.82"/>
+       <result status="timeout" time="5.38"/>
       </proof>
      </goal>
     </transf>
    </goal>
-   <goal
-    name="reachable_and"
-    locfile="../cubicle.mlw"
-    loclnum="166" loccnumb="9" loccnume="22"
-    sum="6157a1e27f4aae43aecaa3b018e1badc"
-    proved="false"
-    expanded="true"
-    shape="areachableV1V2AareachableV0V2qareachableV2aandV0V1F">
-    <transf
-     name="split_goal_wp"
-     proved="false"
-     expanded="true">
-     <goal
-      name="reachable_and.1"
-      locfile="../cubicle.mlw"
-      loclnum="166" loccnumb="9" loccnume="22"
-      expl="1."
-      sum="990dbba1fddb2b2d77e19abd2fb47fc3"
-      proved="false"
-      expanded="false"
-      shape="areachableV0V2IareachableV2aandV0V1F">
-      <proof
-       prover="0"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="timeout" time="4.94"/>
-      </proof>
-      <proof
-       prover="1"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.30"/>
-      </proof>
-      <proof
-       prover="2"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.16"/>
-      </proof>
-     </goal>
-     <goal
-      name="reachable_and.2"
-      locfile="../cubicle.mlw"
-      loclnum="166" loccnumb="9" loccnume="22"
-      expl="2."
-      sum="c86cf55ce46f8c9bdcae410476719025"
-      proved="false"
-      expanded="false"
-      shape="areachableV1V2IareachableV2aandV0V1F">
-      <proof
-       prover="0"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="timeout" time="4.70"/>
-      </proof>
-      <proof
-       prover="1"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.28"/>
-      </proof>
-      <proof
-       prover="2"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.26"/>
-      </proof>
-     </goal>
-     <goal
-      name="reachable_and.3"
-      locfile="../cubicle.mlw"
-      loclnum="166" loccnumb="9" loccnume="22"
-      expl="3."
-      sum="1a018141fcb0138473484490c145339a"
-      proved="false"
-      expanded="false"
-      shape="areachableV2aandV0V1IareachableV1V2AareachableV0V2F">
-      <proof
-       prover="0"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="timeout" time="4.85"/>
-      </proof>
-      <proof
-       prover="1"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.30"/>
-      </proof>
-      <proof
-       prover="2"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="true"
-       archived="false">
-       <result status="timeout" time="5.26"/>
-      </proof>
-     </goal>
-    </transf>
-   </goal>
-  </theory>
-  <theory
-   name="AbstractQueue"
-   locfile="../cubicle.mlw"
-   loclnum="181" loccnumb="7" loccnume="20"
-   verified="true"
-   expanded="false">
   </theory>
   <theory
    name="Cubicle"
    locfile="../cubicle.mlw"
-   loclnum="213" loccnumb="7" loccnume="14"
+   loclnum="234" loccnumb="7" loccnume="14"
    verified="false"
    expanded="true">
    <goal
     name="WP_parameter bwd"
     locfile="../cubicle.mlw"
-    loclnum="250" loccnumb="6" loccnume="9"
+    loclnum="271" loccnumb="6" loccnume="9"
     expl="VC for bwd"
-    sum="23ea3378ca2ca0614675a09517f63df9"
+    sum="5e6d84888befe461c54d9179df529e73"
     proved="false"
     expanded="true"
     shape="iainfix =V10aTrueNfIainfix =V8affalseAais_emptyV7Aainfix =V12affalseAais_emptyV11FAiavalidaoranegV15V9NareachableV0V18IareachableV0V1AasataandV0V16NIainfix =V17aaddapreV15V13Aainfix =V18aorapreV15V14FIainfix =V16aorV15V9FareachableV0V14IareachableV0V1AasataandV0V9NIasataandV0V15NIainfix =V14aandanegachooseV7V8Aainfix =V13aremoveachooseV7V7Aais_emptyV7NFFareachableV0V1NIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFAareachableV0V6IareachableV0V1AasataandV0V2NIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
@@ -571,9 +632,9 @@
      <goal
       name="WP_parameter bwd.1"
       locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
+      loclnum="271" loccnumb="6" loccnume="9"
       expl="1. loop invariant init"
-      sum="683947493cfb8faef52eb732677e3bf6"
+      sum="b247720f1d0b59f82ffdde517a43bdac"
       proved="true"
       expanded="false"
       shape="asataandV0V2NIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
@@ -591,52 +652,12 @@
      <goal
       name="WP_parameter bwd.2"
       locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
+      loclnum="271" loccnumb="6" loccnume="9"
       expl="2. loop invariant init"
-      sum="fdd485c5b98a8f109d0bfc62a476b11c"
+      sum="f6d13dd138c5a9b31ed7976c0e7b3fa6"
       proved="true"
       expanded="false"
       shape="areachableV0V6IareachableV0V1Iainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
-      <label
-       name="expl:VC for bwd"/>
-      <proof
-       prover="1"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="valid" time="2.27"/>
-      </proof>
-     </goal>
-     <goal
-      name="WP_parameter bwd.3"
-      locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
-      expl="3. loop invariant preservation"
-      sum="a62d83db066228cb5af7bcb0153e3782"
-      proved="true"
-      expanded="false"
-      shape="asataandV0V14NIainfix =V15aaddapreV13V11Aainfix =V16aorapreV13V12FIainfix =V14aorV13V9FIavalidaoranegV13V9NIasataandV0V13NIainfix =V12aandanegachooseV7V8Aainfix =V11aremoveachooseV7V7Aais_emptyV7NFFIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
-      <label
-       name="expl:VC for bwd"/>
-      <proof
-       prover="1"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="valid" time="0.45"/>
-      </proof>
-     </goal>
-     <goal
-      name="WP_parameter bwd.4"
-      locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
-      expl="4. loop invariant preservation"
-      sum="15229b3291c1c9b2535e762aa3bfd4b7"
-      proved="false"
-      expanded="false"
-      shape="areachableV0V16IareachableV0V1Iainfix =V15aaddapreV13V11Aainfix =V16aorapreV13V12FIainfix =V14aorV13V9FIavalidaoranegV13V9NIasataandV0V13NIainfix =V12aandanegachooseV7V8Aainfix =V11aremoveachooseV7V7Aais_emptyV7NFFIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
       <label
        name="expl:VC for bwd"/>
       <proof
@@ -645,7 +666,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="timeout" time="4.90"/>
+       <result status="valid" time="0.01"/>
       </proof>
       <proof
        prover="1"
@@ -653,13 +674,78 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
+       <result status="timeout" time="5.42"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.3"
+      locfile="../cubicle.mlw"
+      loclnum="271" loccnumb="6" loccnume="9"
+      expl="3. loop invariant preservation"
+      sum="b3890e1cf56629a5333790dbc406206e"
+      proved="true"
+      expanded="false"
+      shape="asataandV0V14NIainfix =V15aaddapreV13V11Aainfix =V16aorapreV13V12FIainfix =V14aorV13V9FIavalidaoranegV13V9NIasataandV0V13NIainfix =V12aandanegachooseV7V8Aainfix =V11aremoveachooseV7V7Aais_emptyV7NFFIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
+       <result status="timeout" time="4.45"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.87"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.4"
+      locfile="../cubicle.mlw"
+      loclnum="271" loccnumb="6" loccnume="9"
+      expl="4. loop invariant preservation"
+      sum="3398f1f0249454469c6ddd9ea7799cb0"
+      proved="false"
+      expanded="true"
+      shape="areachableV0V16IareachableV0V1Iainfix =V15aaddapreV13V11Aainfix =V16aorapreV13V12FIainfix =V14aorV13V9FIavalidaoranegV13V9NIasataandV0V13NIainfix =V12aandanegachooseV7V8Aainfix =V11aremoveachooseV7V7Aais_emptyV7NFFIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
+       <result status="timeout" time="4.85"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="true"
+       archived="false">
        <result status="timeout" time="5.20"/>
+      </proof>
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       edited="cubicle_Cubicle_WP_parameter_bwd_2.v"
+       obsolete="false"
+       archived="false">
+       <result status="failure" time="0.77"/>
       </proof>
       <proof
        prover="3"
        timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
        <result status="timeout" time="5.28"/>
       </proof>
@@ -667,9 +753,9 @@
      <goal
       name="WP_parameter bwd.5"
       locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
+      loclnum="271" loccnumb="6" loccnume="9"
       expl="5. loop invariant preservation"
-      sum="257a8d8cbcf483337ad9c3e28b9e5014"
+      sum="53875dad953986f0ffa1259ad244261b"
       proved="true"
       expanded="false"
       shape="asataandV0V9NIavalidaoranegV13V9NNIasataandV0V13NIainfix =V12aandanegachooseV7V8Aainfix =V11aremoveachooseV7V7Aais_emptyV7NFFIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
@@ -683,13 +769,21 @@
        archived="false">
        <result status="valid" time="0.01"/>
       </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.02"/>
+      </proof>
      </goal>
      <goal
       name="WP_parameter bwd.6"
       locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
+      loclnum="271" loccnumb="6" loccnume="9"
       expl="6. loop invariant preservation"
-      sum="68a8f26b6da4d8e30bc1a84ba5b05eb2"
+      sum="7c0eae723ddc4c79400153448a6757aa"
       proved="false"
       expanded="false"
       shape="areachableV0V12IareachableV0V1IavalidaoranegV13V9NNIasataandV0V13NIainfix =V12aandanegachooseV7V8Aainfix =V11aremoveachooseV7V7Aais_emptyV7NFFIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
@@ -699,7 +793,7 @@
        prover="0"
        timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
        <result status="timeout" time="4.95"/>
       </proof>
@@ -707,15 +801,24 @@
        prover="1"
        timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
        <result status="timeout" time="5.24"/>
+      </proof>
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       edited="cubicle_Cubicle_WP_parameter_bwd_1.v"
+       obsolete="false"
+       archived="false">
+       <result status="unknown" time="0.78"/>
       </proof>
       <proof
        prover="3"
        timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
        <result status="timeout" time="5.31"/>
       </proof>
@@ -723,9 +826,9 @@
      <goal
       name="WP_parameter bwd.7"
       locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
+      loclnum="271" loccnumb="6" loccnume="9"
       expl="7. unreachable point"
-      sum="89eb70d50a3b9ae208acd2bf28bea0e4"
+      sum="80592893978f7ce75b88fa0306295e76"
       proved="true"
       expanded="false"
       shape="fIainfix =V8affalseAais_emptyV7Aainfix =V12affalseAais_emptyV11FIainfix =V10aTrueNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
@@ -739,13 +842,21 @@
        archived="false">
        <result status="valid" time="0.02"/>
       </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.01"/>
+      </proof>
      </goal>
      <goal
       name="WP_parameter bwd.8"
       locfile="../cubicle.mlw"
-      loclnum="250" loccnumb="6" loccnume="9"
+      loclnum="271" loccnumb="6" loccnume="9"
       expl="8. postcondition"
-      sum="69bedf37afc866804219927ad979adce"
+      sum="28845fdfe0199b2ab12f11bfb88e51cc"
       proved="true"
       expanded="false"
       shape="areachableV0V1NIainfix =V10aTrueNNIainfix =V8affalseAais_emptyV7qainfix =V10aTrueFIareachableV0V8IareachableV0V1AasataandV0V9NFIainfix =V5aaddV1V3Aainfix =V6aorV1V4FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
@@ -753,6 +864,14 @@
        name="expl:VC for bwd"/>
       <proof
        prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.02"/>
+      </proof>
+      <proof
+       prover="1"
        timelimit="5"
        memlimit="1000"
        obsolete="false"
