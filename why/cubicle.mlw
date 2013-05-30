@@ -161,17 +161,17 @@ theory Reachability
 
    lemma reachable_or :
      forall f1 f2 init :t.
-       reachable init (or f1 f2) <-> reachable f1 init \/ reachable f2 init
+       reachable init (or f1 f2) <-> reachable init f1 \/ reachable init f2
        
    lemma reachable_and :
      forall f1 f2 init :t.
-       reachable init (and f1 f2) <-> reachable f1 init /\ reachable f2 init
+       reachable init (and f1 f2) <-> reachable init f1 /\ reachable init f2
 
 
        (* FAUX *)
    (* lemma reachable_neg : *)
    (*   forall f init :t. *)
-   (*     reachable init (neg f) <-> not (reachable f init) *)
+   (*     reachable init (neg f) <-> not (reachable init f) *)
 
 
    
