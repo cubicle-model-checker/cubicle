@@ -13,11 +13,13 @@ theory FOL
    function and t t : t
    function or t t : t
 
+   
+   axiom negneg : forall f: t [neg (neg f)]. neg (neg f) = f
+   
    (*
-   axiom notnot : forall f: t [neg (neg f)]. neg (neg f) = f
-   axiom notand : forall f1 f2: t [neg (and f1 f2)].
+   axiom negand : forall f1 f2: t [neg (and f1 f2)].
                     neg (and f1 f2) = or (neg f1) (neg f2)
-   axiom notor : forall f1 f2: t [neg (or f1 f2)].
+   axiom negor : forall f1 f2: t [neg (or f1 f2)].
                     neg (or f1 f2) = and (neg f1) (neg f2)
    *)
 
@@ -134,8 +136,8 @@ theory Reachability
 
    axiom pre_star_false : pre_star ffalse = ffalse
    
-   (* axiom pre_star_and : *)
-   (*   forall f1 f2 : t. pre_star (and f1 f2) = and (pre_star f1) (pre_star f2) *)
+   axiom pre_star_and :
+     forall f1 f2 : t. pre_star (and f1 f2) = and (pre_star f1) (pre_star f2)
      
    axiom pre_star_or :
      forall f1 f2 : t. pre_star (or f1 f2) = or (pre_star f1) (pre_star f2)
@@ -165,7 +167,7 @@ theory Reachability
        
    lemma reachable_and :
      forall f1 f2 init :t.
-       reachable init (and f1 f2) <-> reachable init f1 /\ reachable init f2
+       reachable init (and f1 f2) -> reachable init f1 /\ reachable init f2
 
 
        (* FAUX *)
@@ -173,7 +175,16 @@ theory Reachability
    (*   forall f init :t. *)
    (*     reachable init (neg f) <-> not (reachable init f) *)
 
+   lemma reachable_imply:
+     forall x f init : t.
+       valid (and (neg x) f) -> reachable init x -> reachable init f
 
+  (*
+   lemma reachable_imply2:
+     forall x q vis init : t.
+       valid (and (neg x) vis) -> reachable init q ->
+         (reachable init (and (neg x) q) -> reachable init vis)
+   *)
    
 end
 
@@ -182,6 +193,7 @@ module AbstractQueue
 
   use import FOL as F
   use import set.Fset as S
+  use import Reachability
 
   type t model { mutable formula: F.t; mutable elts: S.set F.t }
 
@@ -206,6 +218,15 @@ module AbstractQueue
 
   val clear (q: t) : unit writes {q}
   ensures { q.formula = F.ffalse /\ q.elts = S.empty }
+
+  lemma formula_sat :
+      (forall q: t. sat q.formula <->
+        exists f: F.t. S.mem f q.elts /\ sat f)
+        
+  lemma formula_set :
+    forall init : F.t.
+      (forall q: t. reachable init q.formula <->
+        exists f: F.t. S.mem f q.elts /\ reachable init f)
   
 end
 
