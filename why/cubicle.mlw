@@ -177,12 +177,12 @@ theory Reachability
 
    lemma reachable_imply:
      forall x f init : t.
-       valid (and (neg x) f) -> reachable init x -> reachable init f
+       valid (or (neg x) f) -> reachable init x -> reachable init f
 
   (*
    lemma reachable_imply2:
      forall x q vis init : t.
-       valid (and (neg x) vis) -> reachable init q ->
+       valid (or (neg x) vis) -> reachable init q ->
          (reachable init (and (neg x) q) -> reachable init vis)
    *)
    
