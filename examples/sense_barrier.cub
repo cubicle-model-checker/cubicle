@@ -18,6 +18,47 @@
 
  (Example contributed by Luc Maranget)
  
+ #define DECR(x) __sync_add_and_fetch(x,-1)
+
+ typedef struct {
+   unsigned int nprocs ;
+   volatile unsigned int count ;
+   volatile int go ;
+ } barrier_t ;
+
+ barrier_t alloc_barrier(int nprocs) {
+   barrier_t *p = malloc_check(sizeof(*p)) ;
+   p->nprocs = p->count = nprocs ;
+   p->go = 0 ;
+   return p ;
+ }
+
+ free_barrier(barrier_t *p { free(p) ; }
+
+ void wait_barrier(barrier_t *p) {
+   int sense = p->go ;
+   int rem = DECR(&p->count) ;
+
+   if (rem == 0) {
+     p->count = p->nprocs ;
+     p->go = !sense ;
+   } else {
+     while (p->go == sense) ;
+   }
+ }
+
+
+ void *T1(void *_p) {
+  ...
+  for (int k = size-1 ; k >= 0 ; k--) {
+   wait(q->b,&sense) ;
+   q->x[k] = 1 ;
+   int r1 = q->y[k] ;
+   t[k] = r1 ;
+  }
+  ...
+ }
+
 *)
 
 

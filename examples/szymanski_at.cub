@@ -53,7 +53,7 @@ requires { A[x] = L5 && forall_other y. W[y] = False }
 { A[x] := L6 }
 
 transition t6 (x)
-requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
+requires { A[x] = L6 (*&& forall_other j. (x <= j || S[j] = False)*) }
 { A[x] := L7 }
 
 transition t7 (x)
