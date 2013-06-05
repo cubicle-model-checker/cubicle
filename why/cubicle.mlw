@@ -13,16 +13,10 @@ theory FOL
    function and t t : t
    function or t t : t
 
+   axiom extensionality :
+     forall f1 f2 : t.
+       f1 = f2 <-> (forall m : structure. models m f1 <-> models m f2)
    
-   axiom negneg : forall f: t [neg (neg f)]. neg (neg f) = f
-   
-   (*
-   axiom negand : forall f1 f2: t [neg (and f1 f2)].
-                    neg (and f1 f2) = or (neg f1) (neg f2)
-   axiom negor : forall f1 f2: t [neg (or f1 f2)].
-                    neg (or f1 f2) = and (neg f1) (neg f2)
-   *)
-
    (* Just for instantiation *)
    axiom structure_exists :
      exists m : structure. exists f: t. models m f
@@ -61,6 +55,45 @@ theory FOL
                 (sat f <-> sat f) /\
                 (valid f <-> valid f)
    *)
+
+
+   
+   lemma negneg : forall f: t [neg (neg f)]. neg (neg f) = f
+
+   lemma and_a : forall f1 f2 f3 : t. and (and f1 f2) f3 = and f1 (and f2 f3)
+   
+   lemma and_c : forall f1 f2 : t. and f1 f2 = and f2 f1
+   
+   lemma or_a : forall f1 f2 f3 : t. or (or f1 f2) f3 = or f1 (or f2 f3)
+   
+   lemma or_c : forall f1 f2 : t. or f1 f2 = or f2 f1
+
+   lemma distr_and :
+     forall f1 f2 f3 : t. and f1 (or f2 f3) = or (and f1 f2) (and f1 f3)
+     
+   lemma distr_or :
+     forall f1 f2 f3 : t. or f1 (and f2 f3) = and (or f1 f2) (or f1 f3)
+     
+   lemma neutral_and : forall f: t. and f ttrue = f
+   
+   lemma neutral_or : forall f: t. or f ffalse = f
+   
+   lemma absorb_and : forall f: t. and f ffalse = ffalse
+   
+   lemma absorb_or : forall f: t. or f ttrue = ttrue
+
+   
+   
+   (*
+   axiom negand : forall f1 f2: t [neg (and f1 f2)].
+                    neg (and f1 f2) = or (neg f1) (neg f2)
+   axiom negor : forall f1 f2: t [neg (or f1 f2)].
+                    neg (or f1 f2) = and (neg f1) (neg f2)
+   *)
+
+
+
+   
    
    lemma sat_def: forall f: t (* [valid (neg f)] *). sat f <-> not (valid (neg f))
    
@@ -110,7 +143,14 @@ theory FOL
    lemma sat_and :
      forall f1 f2 : t [sat (and f1 f2)].
        sat (and f1 f2) -> (sat f1) /\ (sat f2)
-   
+
+
+   lemma forget_subsumed :
+     forall f v : t.
+       valid (or (neg f) v) -> or f v = v
+
+   lemma classic_neg : forall f : t. or (neg f) f = ttrue
+       
    
 end
 
@@ -131,9 +171,18 @@ theory Reachability
 
    function pre_star t : t
      
-   axiom pre_star_def1 : forall f : t. valid f -> valid (pre_star f)
+   axiom pre_star_def1 : forall f : t. valid (or (neg f) (pre_star f))
    axiom pre_star_def2 : forall f : t. pre (pre_star f) = pre_star f
+   axiom pre_star_def3 : forall f : t. pre_star (pre_star f) = pre_star f
+   axiom pre_star_def4 : forall f : t. pre_star (pre f) = pre_star f
 
+   axiom pre_and :
+     forall f1 f2 : t. pre (and f1 f2) = and (pre f1) (pre f2)
+     
+   axiom pre_or :
+     forall f1 f2 : t. pre (or f1 f2) = or (pre f1) (pre f2)
+
+     
    axiom pre_star_false : pre_star ffalse = ffalse
    
    axiom pre_star_and :
@@ -208,10 +257,10 @@ module AbstractQueue
   val is_empty (q: t) : bool reads {q}
     ensures { result = True <-> (S.is_empty q.elts /\ q.formula = F.ffalse)}
     
-  val pop (q: t) : 'a writes {q}
-    ensures { not (S.is_empty (old q.elts)) /\
-              q.elts = S.remove (S.choose (old q.elts)) (old q.elts) /\
-              q.formula = F.and (F.neg (S.choose (old q.elts))) (old q.formula) }
+  val pop (q: t) : F.t writes {q}
+    ensures { not (S.is_empty (old q.elts)) /\ result = S.choose (old q.elts) /\
+              q.elts = S.remove result (old q.elts) /\
+              q.formula = F.and (F.neg result) (old q.formula) }
     raises  { Empty -> S.is_empty q.elts /\ q.formula = F.ffalse /\
                        S.is_empty (old q.elts) /\ old q.formula = F.ffalse }
 
@@ -219,14 +268,17 @@ module AbstractQueue
   val clear (q: t) : unit writes {q}
   ensures { q.formula = F.ffalse /\ q.elts = S.empty }
 
-  lemma formula_sat :
+  (*
+  lemma sat_queue :
       (forall q: t. sat q.formula <->
         exists f: F.t. S.mem f q.elts /\ sat f)
-        
-  lemma formula_set :
+
+  
+  lemma reachable_queue :
     forall init : F.t.
       (forall q: t. reachable init q.formula <->
         exists f: F.t. S.mem f q.elts /\ reachable init f)
+  *)
   
 end
 
@@ -273,11 +325,18 @@ module Cubicle
     (* ensures { result = Unsafe -> reachable init theta } *)
     visited := F.ffalse;
     Q.clear q;
-    Q.push theta q;
     try
-      while not (Q.is_empty q) do
+       if F.sat (F.and init theta) then raise Unsafe_trace;
+       visited := F.or theta !visited;
+       Q.push (pre theta) q;
+       while not (Q.is_empty q) do
         invariant { not (sat (F.and init !visited)) }
-        invariant { reachable init theta -> reachable init q.formula }
+        (* invariant { forall m:structure. *)
+        (*  models m q.formula <-> exists f: F.t. S.mem f q.elts /\ models m f } *)
+        (* invariant { or (neg q.formula) (pre_star !visited) = ttrue } *)
+        invariant { pre_star !visited = F.or !visited (pre_star q.formula) }
+        invariant { pre_star theta = F.or !visited (pre_star q.formula) }
+        (* invariant { reachable init theta -> reachable init q.formula } *)
         (* invariant { valid (pre_star theta) -> (valid !visited) \/ valid (pre_star_q q.elts) } *)
         let phi = Q.pop q in
         if F.sat (F.and init phi) then raise Unsafe_trace;
