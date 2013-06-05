@@ -174,7 +174,7 @@ theory Reachability
    axiom pre_star_def1 : forall f : t. valid (or (neg f) (pre_star f))
    axiom pre_star_def2 : forall f : t. pre (pre_star f) = pre_star f
    axiom pre_star_def3 : forall f : t. pre_star (pre_star f) = pre_star f
-   axiom pre_star_def4 : forall f : t. pre_star (pre f) = pre_star f
+   axiom pre_star_def4 : forall f : t. (or (pre_star (pre f)) f) = pre_star f
 
    axiom pre_and :
      forall f1 f2 : t. pre (and f1 f2) = and (pre f1) (pre f2)
@@ -322,7 +322,7 @@ module Cubicle
     
   let bwd (init : F.t) (theta : F.t) =
     ensures { result = Safe -> not (reachable init theta) }
-    (* ensures { result = Unsafe -> reachable init theta } *)
+    ensures { result = Unsafe -> reachable init theta }
     visited := F.ffalse;
     Q.clear q;
     try
