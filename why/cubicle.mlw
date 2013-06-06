@@ -260,6 +260,7 @@ module AbstractQueue
   val pop (q: t) : F.t writes {q}
     ensures { not (S.is_empty (old q.elts)) /\ result = S.choose (old q.elts) /\
               q.elts = S.remove result (old q.elts) /\
+              F.valid (F.or (F.neg result) (old q.formula)) /\
               q.formula = F.and (F.neg result) (old q.formula) }
     raises  { Empty -> S.is_empty q.elts /\ q.formula = F.ffalse /\
                        S.is_empty (old q.elts) /\ old q.formula = F.ffalse }
@@ -268,6 +269,7 @@ module AbstractQueue
   val clear (q: t) : unit writes {q}
   ensures { q.formula = F.ffalse /\ q.elts = S.empty }
 
+  
   (*
   lemma sat_queue :
       (forall q: t. sat q.formula <->
@@ -330,12 +332,12 @@ module Cubicle
        visited := F.or theta !visited;
        Q.push (pre theta) q;
        while not (Q.is_empty q) do
-        invariant { not (sat (F.and init !visited)) }
+        invariant { not (sat (F.and init !visited)) &&
+                    pre_star !visited = F.or !visited (pre_star q.formula) &&
+                    pre_star theta = F.or !visited (pre_star q.formula) }
         (* invariant { forall m:structure. *)
         (*  models m q.formula <-> exists f: F.t. S.mem f q.elts /\ models m f } *)
         (* invariant { or (neg q.formula) (pre_star !visited) = ttrue } *)
-        invariant { pre_star !visited = F.or !visited (pre_star q.formula) }
-        invariant { pre_star theta = F.or !visited (pre_star q.formula) }
         (* invariant { reachable init theta -> reachable init q.formula } *)
         (* invariant { valid (pre_star theta) -> (valid !visited) \/ valid (pre_star_q q.elts) } *)
         let phi = Q.pop q in
