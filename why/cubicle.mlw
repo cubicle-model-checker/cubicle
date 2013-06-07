@@ -3,7 +3,7 @@ theory FOL
    type t
    type structure
 
-   predicate models structure t
+   predicate (|=) structure t
 
    constant ffalse : t
    
@@ -15,38 +15,38 @@ theory FOL
 
    axiom extensionality :
      forall f1 f2 : t.
-       (forall m : structure. models m f1 <-> models m f2) -> f1 = f2
+       (forall m : structure. m |= f1 <-> m |= f2) -> f1 = f2
    
    (* Just for instantiation *)
    axiom structure_exists :
-     exists m : structure. exists f: t. models m f
+     exists m : structure. exists f: t. m |= f
      
    axiom true_false : ttrue <> ffalse
    
    axiom model_true :
-     forall m : structure. models m ttrue
+     forall m : structure. m |= ttrue
      
    axiom model_false :
-     forall m : structure. not (models m ffalse)
+     forall m : structure. not (m |= ffalse)
           
    axiom model_neg :
      forall m : structure. forall f : t.
-       models m (neg f) <-> not (models m f)
+       m |= (neg f) <-> not (m |= f)
        
    axiom model_and :
       forall m : structure. forall f1 f2 : t.
-        models m (and f1 f2) <-> models m f1 /\ models m f2
+        m |= (and f1 f2) <-> m |= f1 /\ m |= f2
         
    axiom model_or :
       forall m : structure. forall f1 f2 : t.
-        models m (or f1 f2) <-> models m f1 \/ models m f2
+        m |= (or f1 f2) <-> m |= f1 \/ m |= f2
        
-   predicate sat (f : t) = exists m: structure. models m f
+   predicate sat (f : t) = exists m: structure. m |= f
    
    predicate valid (f : t) = not (sat (neg f))
 
    lemma valid_def :
-     forall f : t. valid (f) <-> forall m: structure [m]. (models m f)
+     forall f : t. valid (f) <-> forall m: structure [m]. (m |= f)
    
    lemma negneg : forall f: t [neg (neg f)]. neg (neg f) = f
 

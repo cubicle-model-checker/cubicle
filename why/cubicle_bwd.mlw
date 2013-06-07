@@ -1,0 +1,62 @@
+module Cubicle_Bwd
+
+  use import ref.Ref
+  use import fol.FOL as F
+  use import abstract_queue.AbstractQueue as Q
+  use import reachability.Reachability
+
+  type result = Safe | Unsafe
+  exception Unsafe_trace
+
+  val visited : ref F.t
+  val q : Q.t
+
+    
+  let bwd (init : F.t) (theta : F.t) =
+    (* Soundness *)
+    ensures { result = Safe -> not (reachable init theta) }
+    (* Completeness *)
+    ensures { result = Unsafe -> reachable init theta }
+    visited := F.ffalse;
+    Q.clear q;
+    try
+       if F.sat (F.and init theta) then raise Unsafe_trace;
+       visited := F.or theta !visited;
+       Q.push (pre theta) q;
+       while not (Q.is_empty q) do
+        invariant { not (sat (F.and init !visited)) &&
+                    pre_star !visited = F.or !visited (pre_star q.formula) &&
+                    pre_star theta = F.or !visited (pre_star q.formula) }
+        let ghost old_q = Q.copy q in
+        let phi = Q.pop q in
+        if F.sat (F.and init phi) then raise Unsafe_trace;
+        if not (F.valid (F.or (F.neg phi) !visited)) then (
+          let ghost old_v = !visited in
+          visited := F.or phi !visited;
+          Q.push (pre phi) q;
+          assert { 
+                   or !visited (pre_star q.formula) =
+                    or old_v (pre_star (and F.ttrue (or phi old_q.formula))) }
+        )
+        else
+          assert {
+                valid (or (neg (neg phi)) (pre_star (neg phi)))
+
+                &&
+
+                or !visited (pre_star (and (neg phi) old_q.formula)) =
+                and (or !visited (or ttrue (pre_star (neg phi)))) (pre_star !visited)
+
+                &&
+
+                or !visited (pre_star (and (neg phi) old_q.formula)) =
+                and ttrue (pre_star !visited)
+          }
+        
+       done;
+      Safe
+    with
+        | Unsafe_trace -> Unsafe
+        | Q.Empty -> absurd
+    end
+end

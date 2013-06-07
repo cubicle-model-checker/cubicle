@@ -1,0 +1,34 @@
+module AbstractQueue
+
+  use import fol.FOL as F
+  use import set.Fset as S
+  use import reachability.Reachability
+
+  type t model { mutable formula: F.t; mutable elts: S.set F.t }
+
+  val create () : t ensures { result.formula = F.ffalse /\ result.elts = S.empty }
+
+  val push (f: F.t) (q: t) : unit writes {q}
+    ensures { q.formula = F.or f (old q.formula) /\
+              q.elts = S.add f (old q.elts) }
+  
+  exception Empty
+
+  val is_empty (q: t) : bool reads {q}
+    ensures { result = True <-> (S.is_empty q.elts /\ q.formula = F.ffalse)}
+    
+  val pop (q: t) : F.t writes {q}
+    ensures { not (S.is_empty (old q.elts)) /\ result = S.choose (old q.elts) /\
+              q.elts = S.remove result (old q.elts) /\
+              F.valid (F.or (F.neg result) (old q.formula)) /\
+              q.formula = F.and (F.neg result) (old q.formula) }
+    raises  { Empty -> S.is_empty q.elts /\ q.formula = F.ffalse /\
+                       S.is_empty (old q.elts) /\ old q.formula = F.ffalse }
+
+
+  val clear (q: t) : unit writes {q}
+  ensures { q.formula = F.ffalse /\ q.elts = S.empty }
+
+  val copy (q: t) : t ensures { result.formula = q.formula /\ result.elts = q.elts }
+
+end

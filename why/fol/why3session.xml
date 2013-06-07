@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE why3session PUBLIC "-//Why3//proof session v2//EN" "http://why3.lri.fr/why3session.dtd">
+<why3session shape_version="2">
+ <prover
+  id="0"
+  name="Alt-Ergo"
+  version="0.96"/>
+ <prover
+  id="1"
+  name="CVC3"
+  version="2.4.1"/>
+ <prover
+  id="2"
+  name="Coq"
+  version="8.3pl4"/>
+ <prover
+  id="3"
+  name="Eprover"
+  version="1.6"/>
+ <file
+  name="../fol.why"
+  verified="true"
+  expanded="true">
+  <theory
+   name="FOL"
+   locfile="../fol.why"
+   loclnum="1" loccnumb="7" loccnume="10"
+   verified="true"
+   expanded="true">
+   <goal
+    name="valid_def"
+    locfile="../fol.why"
+    loclnum="48" loccnumb="9" loccnume="18"
+    sum="0435d326c620e9be68fa205922fdfd36"
+    proved="true"
+    expanded="true"
+    shape="ainfix |=V1V0FV1qavalidV0FavalidV0">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol-FOL-valid_def_1.why"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+   </goal>
+   <goal
+    name="negneg"
+    locfile="../fol.why"
+    loclnum="51" loccnumb="9" loccnume="15"
+    sum="b422e0b0661d83bbbba80608d25702a2"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aneganegV0V0FaneganegV0">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_negneg_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.80"/>
+    </proof>
+   </goal>
+   <goal
+    name="and_a"
+    locfile="../fol.why"
+    loclnum="53" loccnumb="9" loccnume="14"
+    sum="951e64b781db1ee323dc3884fdfdcf2d"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandaandV0V1V2aandV0aandV1V2F">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_and_a_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.63"/>
+    </proof>
+   </goal>
+   <goal
+    name="and_c"
+    locfile="../fol.why"
+    loclnum="55" loccnumb="9" loccnume="14"
+    sum="19437753f8d0d8d6890ba09715c84ecc"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0V1aandV1V0F">
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.68"/>
+    </proof>
+   </goal>
+   <goal
+    name="or_a"
+    locfile="../fol.why"
+    loclnum="57" loccnumb="9" loccnume="13"
+    sum="0445a54b536c3a235abf780b8a7e2121"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aoraorV0V1V2aorV0aorV1V2F">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_or_a_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+   <goal
+    name="or_c"
+    locfile="../fol.why"
+    loclnum="59" loccnumb="9" loccnume="13"
+    sum="038a3bd018e1573de9a0c64e305e9ce3"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0V1aorV1V0F">
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.63"/>
+    </proof>
+   </goal>
+   <goal
+    name="distr_and"
+    locfile="../fol.why"
+    loclnum="61" loccnumb="9" loccnume="18"
+    sum="b0b7c52cfe2ac78b5116eefa8bc2383b"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0aorV1V2aoraandV0V1aandV0V2F">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_distr_and_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+   <goal
+    name="distr_or"
+    locfile="../fol.why"
+    loclnum="64" loccnumb="9" loccnume="17"
+    sum="39a979b0fa2fcc35750b77029e5da5a1"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0aandV1V2aandaorV0V1aorV0V2F">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_distr_or_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+   <goal
+    name="neutral_and"
+    locfile="../fol.why"
+    loclnum="67" loccnumb="9" loccnume="20"
+    sum="eca696ae8cbb28d63800b9834bee90f6"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0attrueV0F">
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.12"/>
+    </proof>
+   </goal>
+   <goal
+    name="neutral_or"
+    locfile="../fol.why"
+    loclnum="69" loccnumb="9" loccnume="19"
+    sum="76c22dca787e14dae0eaebd817f1ea77"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0affalseV0F">
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.39"/>
+    </proof>
+   </goal>
+   <goal
+    name="absorb_and"
+    locfile="../fol.why"
+    loclnum="71" loccnumb="9" loccnume="19"
+    sum="ddd7abd72e09037efa3ab46d2ef749e7"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0affalseaffalseF">
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="absorb_or"
+    locfile="../fol.why"
+    loclnum="73" loccnumb="9" loccnume="18"
+    sum="5b10b0429fa21561dd70ba87c318a4b2"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0attrueattrueF">
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_def"
+    locfile="../fol.why"
+    loclnum="76" loccnumb="9" loccnume="16"
+    sum="7de89b4c4bf330e31dfbae81804da23b"
+    proved="true"
+    expanded="true"
+    shape="avalidanegV0NqasatV0F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="unsat_invalid"
+    locfile="../fol.why"
+    loclnum="78" loccnumb="9" loccnume="22"
+    sum="0f5c171d142c9f885ca4945e855fe8e9"
+    proved="true"
+    expanded="true"
+    shape="asatanegV0IavalidV0NF">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_sat"
+    locfile="../fol.why"
+    loclnum="80" loccnumb="9" loccnume="18"
+    sum="d0f4b641cc038959ad335a7ef6b9d7ee"
+    proved="true"
+    expanded="true"
+    shape="asatV0IavalidV0F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="ttrue_valid"
+    locfile="../fol.why"
+    loclnum="82" loccnumb="9" loccnume="20"
+    sum="61eee23d37d76cc0a94f97152c8d3ccd"
+    proved="true"
+    expanded="true"
+    shape="avalidattrue">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="ffaslse_invalid"
+    locfile="../fol.why"
+    loclnum="83" loccnumb="9" loccnume="24"
+    sum="67739986ebb345520bb38bbe2efa2484"
+    proved="true"
+    expanded="true"
+    shape="avalidaffalseN">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="ttrue_sat"
+    locfile="../fol.why"
+    loclnum="84" loccnumb="9" loccnume="18"
+    sum="6dc371ff38fd2e120ccecedfb99efbc0"
+    proved="true"
+    expanded="true"
+    shape="asatattrue">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="ffalse_unsat"
+    locfile="../fol.why"
+    loclnum="85" loccnumb="9" loccnume="21"
+    sum="ec0bc02ce2f107cea698bd26a52359c2"
+    proved="true"
+    expanded="true"
+    shape="asataffalseN">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_neg"
+    locfile="../fol.why"
+    loclnum="88" loccnumb="9" loccnume="16"
+    sum="f5567b3f58762e90dae7d1efc4d5a0c6"
+    proved="true"
+    expanded="true"
+    shape="asatanegV0IasatV0NF">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_neg"
+    locfile="../fol.why"
+    loclnum="91" loccnumb="9" loccnume="18"
+    sum="24d60366f8bfbad020e399ef12f3a23f"
+    proved="true"
+    expanded="true"
+    shape="avalidV0NIavalidanegV0F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_or"
+    locfile="../fol.why"
+    loclnum="94" loccnumb="9" loccnume="15"
+    sum="be29326ebb9dc41bcb203fdd7d02db5a"
+    proved="true"
+    expanded="true"
+    shape="asatV1OasatV0qasataorV0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="1.80"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_and"
+    locfile="../fol.why"
+    loclnum="98" loccnumb="9" loccnume="18"
+    sum="c966c3b5d71fcef3af29f4ec7a64f380"
+    proved="true"
+    expanded="true"
+    shape="avalidV1AavalidV0qavalidaandV0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.22"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_or"
+    locfile="../fol.why"
+    loclnum="102" loccnumb="9" loccnume="17"
+    sum="6cdd5d247036b6502405fc8d8dbdec4b"
+    proved="true"
+    expanded="true"
+    shape="avalidaorV0V1IavalidV1OavalidV0F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.06"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_and"
+    locfile="../fol.why"
+    loclnum="106" loccnumb="9" loccnume="16"
+    sum="32911dd2ca580945ffb1b93527ac6df6"
+    proved="true"
+    expanded="true"
+    shape="asatV1AasatV0IasataandV0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.08"/>
+    </proof>
+   </goal>
+   <goal
+    name="forget_subsumed"
+    locfile="../fol.why"
+    loclnum="111" loccnumb="9" loccnume="24"
+    sum="48b176d667c7c5055a5d714ca83e8b52"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0V1V1IavalidaoranegV0V1F">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_forget_subsumed_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+   <goal
+    name="classic_neg"
+    locfile="../fol.why"
+    loclnum="115" loccnumb="9" loccnume="20"
+    sum="5352194b86036e3c37efecfa6e5dbfda"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aoranegV0V0attrueF">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="fol_FOL_classic_neg_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+  </theory>
+ </file>
+</why3session>

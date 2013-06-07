@@ -34,7 +34,7 @@
     sum="e423b5876eeffa659fa4b3e8c6729837"
     proved="true"
     expanded="true"
-    shape="amodelsV1V0FV1qavalidV0F">
+    shape="ainfix |=V1V0FV1qavalidV0F">
     <proof
      prover="0"
      timelimit="15"
@@ -809,31 +809,14 @@
       shape="ainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
       <label
        name="expl:VC for bwd"/>
-      <transf
-       name="split_goal_wp"
-       proved="true"
-       expanded="true">
-       <goal
-        name="WP_parameter bwd.4.1"
-        locfile="../cubicle.mlw"
-        loclnum="260" loccnumb="6" loccnume="9"
-        expl="1. assertion"
-        sum="cc4ac9595e1273fd531132de451c2ddc"
-        proved="true"
-        expanded="true"
-        shape="ainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
-        <label
-         name="expl:VC for bwd"/>
-        <proof
-         prover="0"
-         timelimit="15"
-         memlimit="1000"
-         obsolete="false"
-         archived="false">
-         <result status="valid" time="6.25"/>
-        </proof>
-       </goal>
-      </transf>
+      <proof
+       prover="0"
+       timelimit="15"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="5.68"/>
+      </proof>
      </goal>
      <goal
       name="WP_parameter bwd.5"
