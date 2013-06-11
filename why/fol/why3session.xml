@@ -600,10 +600,10 @@
     name="or_same"
     locfile="../fol.why"
     loclnum="150" loccnumb="9" loccnume="16"
-    sum="659f44b990aadb67fed102b1934acc7b"
+    sum="d1c8cc2e1e3912463757f2ccc205b1f6"
     proved="true"
     expanded="false"
-    shape="ainfix =ainfix ++V0V1V0Iainfix =V0V1F">
+    shape="ainfix =ainfix ++V0V0V0F">
     <proof
      prover="0"
      timelimit="5"
