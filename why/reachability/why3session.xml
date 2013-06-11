@@ -27,7 +27,7 @@
     name="false_unreachable"
     locfile="../reachability.why"
     loclnum="37" loccnumb="9" loccnume="26"
-    sum="815c00b211cbecd0769aa5ea5747e76f"
+    sum="ae1e1110cc4e5b49147ed4c99bde091e"
     proved="true"
     expanded="true"
     shape="areachableV0affalseNF">
@@ -44,7 +44,7 @@
     name="reachable_or"
     locfile="../reachability.why"
     loclnum="40" loccnumb="9" loccnume="21"
-    sum="7f05107a2f6996eaa49592a6d2515882"
+    sum="3b1ebf5e193042476f5ea24cc0f740ff"
     proved="true"
     expanded="true"
     shape="areachableV2V1OareachableV2V0qareachableV2ainfix ++V0V1F">
@@ -57,7 +57,7 @@
       locfile="../reachability.why"
       loclnum="40" loccnumb="9" loccnume="21"
       expl="1."
-      sum="4b51f655d7fcf32794aaf51acb198665"
+      sum="424d4dd2c4c673c3810f30a239f55980"
       proved="true"
       expanded="true"
       shape="areachableV2V1OareachableV2V0IareachableV2ainfix ++V0V1F">
@@ -76,7 +76,7 @@
       locfile="../reachability.why"
       loclnum="40" loccnumb="9" loccnume="21"
       expl="2."
-      sum="b68d0f224f8cfaccf86bf1d6dd9878c0"
+      sum="ebc6cc141379383d57d00889a791faa1"
       proved="true"
       expanded="true"
       shape="areachableV2ainfix ++V0V1IareachableV2V1OareachableV2V0F">
@@ -95,7 +95,7 @@
     name="reachable_and"
     locfile="../reachability.why"
     loclnum="44" loccnumb="9" loccnume="22"
-    sum="b61b198f42cc1a2bc2e627332afbe327"
+    sum="750c93bf13194c7b438f81455c3b51cf"
     proved="true"
     expanded="true"
     shape="areachableV2V1AareachableV2V0IareachableV2ainfix &amp;V0V1F">
@@ -108,7 +108,7 @@
       locfile="../reachability.why"
       loclnum="44" loccnumb="9" loccnume="22"
       expl="1."
-      sum="ccd0db602907a06af307c2559ee0d899"
+      sum="3da8a3c8dd03bf771aecdc6cc1ddb1f2"
       proved="true"
       expanded="true"
       shape="areachableV2V0IareachableV2ainfix &amp;V0V1F">
@@ -118,7 +118,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.23"/>
+       <result status="valid" time="0.40"/>
       </proof>
      </goal>
      <goal
@@ -126,7 +126,7 @@
       locfile="../reachability.why"
       loclnum="44" loccnumb="9" loccnume="22"
       expl="2."
-      sum="dbf66c9bd7179baf024a4123295e0f14"
+      sum="00afbc72fca1d5c6f2d18c0f8e24d146"
       proved="true"
       expanded="true"
       shape="areachableV2V1IareachableV2ainfix &amp;V0V1F">
@@ -136,7 +136,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.21"/>
+       <result status="valid" time="0.40"/>
       </proof>
      </goal>
     </transf>
@@ -145,7 +145,7 @@
     name="reachable_imply"
     locfile="../reachability.why"
     loclnum="48" loccnumb="9" loccnume="24"
-    sum="0bb1b3a2871e3ecd05683231bf2465a3"
+    sum="b41811f13d6efe1c0006e42e0f04c4fb"
     proved="true"
     expanded="true"
     shape="areachableV2V1IareachableV2V0Iavalidainfix =&gt;V0V1F">
@@ -162,7 +162,7 @@
     name="reachable_bigger"
     locfile="../reachability.why"
     loclnum="52" loccnumb="9" loccnume="25"
-    sum="b9941485ce3dc81f8b70e9077b84ba76"
+    sum="c9227e3e02a190ec5b183acf598bf76d"
     proved="true"
     expanded="true"
     shape="areachableV2V1IareachableV2V0Iainfix |==V0V1F">
@@ -179,7 +179,7 @@
     name="pre_star_bigger"
     locfile="../reachability.why"
     loclnum="56" loccnumb="9" loccnume="24"
-    sum="2a2a93dea8cb687b2d9cf62e6fa1421d"
+    sum="21df7b780dce3f0bd3ea8e815534800b"
     proved="true"
     expanded="true"
     shape="ainfix |==apre_starV0apre_starV1Iainfix |==V0V1F">

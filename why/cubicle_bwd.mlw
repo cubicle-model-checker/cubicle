@@ -35,6 +35,13 @@ module Cubicle_Bwd
   meta remove_prop prop unsat_invalid
   meta remove_prop prop model_extensionality
   meta remove_prop prop forget_subsumed_or
+  meta remove_prop prop imply_or
+  meta remove_prop prop imply_bigger
+  meta remove_prop prop imply_transitive
+  meta remove_prop prop or_same
+  meta remove_prop prop pre_star_bigger
+  meta remove_prop prop reachable_bigger
+  
   
   
   type result = Safe | Unsafe
