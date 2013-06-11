@@ -34,11 +34,16 @@ Parameter ffalse: t.
 
 Parameter ttrue: t.
 
-Parameter neg: t -> t.
+Parameter prefix_tl: t -> t.
 
-Parameter and: t -> t -> t.
+Parameter infix_et: t -> t -> t.
 
-Parameter or: t -> t -> t.
+Parameter infix_plpl: t -> t -> t.
+
+Parameter infix_eqgt: t -> t -> t.
+
+Axiom imply_def : forall (f1:t) (f2:t), ((infix_eqgt f1
+  f2) = (infix_plpl (prefix_tl f1) f2)).
 
 Axiom true_false : ~ (ttrue = ffalse).
 
@@ -46,33 +51,33 @@ Axiom true_false : ~ (ttrue = ffalse).
 Definition sat (f:t): Prop := exists m:structure, (infix_breq m f).
 
 (* Why3 assumption *)
-Definition valid (f:t): Prop := ~ (sat (neg f)).
+Definition valid (f:t): Prop := ~ (sat (prefix_tl f)).
 
-Axiom negneg : forall (f:t), ((neg (neg f)) = f).
+Axiom negneg : forall (f:t), ((prefix_tl (prefix_tl f)) = f).
 
-Axiom and_a : forall (f1:t) (f2:t) (f3:t), ((and (and f1 f2) f3) = (and f1
-  (and f2 f3))).
+Axiom and_a : forall (f1:t) (f2:t) (f3:t), ((infix_et (infix_et f1 f2)
+  f3) = (infix_et f1 (infix_et f2 f3))).
 
-Axiom and_c : forall (f1:t) (f2:t), ((and f1 f2) = (and f2 f1)).
+Axiom and_c : forall (f1:t) (f2:t), ((infix_et f1 f2) = (infix_et f2 f1)).
 
-Axiom or_a : forall (f1:t) (f2:t) (f3:t), ((or (or f1 f2) f3) = (or f1 (or f2
-  f3))).
+Axiom or_a : forall (f1:t) (f2:t) (f3:t), ((infix_plpl (infix_plpl f1 f2)
+  f3) = (infix_plpl f1 (infix_plpl f2 f3))).
 
-Axiom or_c : forall (f1:t) (f2:t), ((or f1 f2) = (or f2 f1)).
+Axiom or_c : forall (f1:t) (f2:t), ((infix_plpl f1 f2) = (infix_plpl f2 f1)).
 
-Axiom distr_and : forall (f1:t) (f2:t) (f3:t), ((and f1 (or f2
-  f3)) = (or (and f1 f2) (and f1 f3))).
+Axiom distr_and : forall (f1:t) (f2:t) (f3:t), ((infix_et f1 (infix_plpl f2
+  f3)) = (infix_plpl (infix_et f1 f2) (infix_et f1 f3))).
 
-Axiom distr_or : forall (f1:t) (f2:t) (f3:t), ((or f1 (and f2
-  f3)) = (and (or f1 f2) (or f1 f3))).
+Axiom distr_or : forall (f1:t) (f2:t) (f3:t), ((infix_plpl f1 (infix_et f2
+  f3)) = (infix_et (infix_plpl f1 f2) (infix_plpl f1 f3))).
 
-Axiom neutral_and : forall (f:t), ((and f ttrue) = f).
+Axiom neutral_and : forall (f:t), ((infix_et f ttrue) = f).
 
-Axiom neutral_or : forall (f:t), ((or f ffalse) = f).
+Axiom neutral_or : forall (f:t), ((infix_plpl f ffalse) = f).
 
-Axiom absorb_and : forall (f:t), ((and f ffalse) = ffalse).
+Axiom absorb_and : forall (f:t), ((infix_et f ffalse) = ffalse).
 
-Axiom absorb_or : forall (f:t), ((or f ttrue) = ttrue).
+Axiom absorb_or : forall (f:t), ((infix_plpl f ttrue) = ttrue).
 
 Axiom ttrue_valid : (valid ttrue).
 
@@ -82,13 +87,16 @@ Axiom ttrue_sat : (sat ttrue).
 
 Axiom ffalse_unsat : ~ (sat ffalse).
 
-Axiom sat_or : forall (f1:t) (f2:t), (sat (or f1 f2)) <-> ((sat f1) \/ (sat
-  f2)).
+Axiom sat_or : forall (f1:t) (f2:t), (sat (infix_plpl f1 f2)) <-> ((sat
+  f1) \/ (sat f2)).
 
-Axiom forget_subsumed : forall (f:t) (v:t), (valid (or (neg f) v)) -> ((or f
-  v) = v).
+Axiom forget_subsumed : forall (f:t) (v:t), (valid (infix_eqgt f v)) ->
+  ((infix_plpl f v) = v).
 
-Axiom classic_neg : forall (f:t), ((or (neg f) f) = ttrue).
+Axiom forget_subsumed_or : forall (f:t) (v:t), (valid
+  (infix_plpl (prefix_tl f) v)) -> ((infix_plpl f v) = v).
+
+Axiom classic_neg : forall (f:t), ((infix_plpl (prefix_tl f) f) = ttrue).
 
 Axiom set : forall (a:Type) {a_WT:WhyType a}, Type.
 Parameter set_WhyType : forall (a:Type) {a_WT:WhyType a}, WhyType (set a).
@@ -193,29 +201,33 @@ Axiom pre_false : ((pre ffalse) = ffalse).
 
 Parameter pre_star: t -> t.
 
-Axiom pre_star_def1 : forall (f:t), (valid (or (neg f) (pre_star f))).
+Axiom pre_star_def1 : forall (f:t), (valid (infix_eqgt f (pre_star f))).
 
-Axiom pre_star_def4 : forall (f:t), ((or (pre_star (pre f))
+Axiom pre_star_def4 : forall (f:t), ((infix_plpl (pre_star (pre f))
   f) = (pre_star f)).
 
 Axiom pre_star_false : ((pre_star ffalse) = ffalse).
 
-Axiom pre_star_and : forall (f1:t) (f2:t), ((pre_star (and f1
-  f2)) = (and (pre_star f1) (pre_star f2))).
+Axiom pre_star_and : forall (f1:t) (f2:t), ((pre_star (infix_et f1
+  f2)) = (infix_et (pre_star f1) (pre_star f2))).
 
-Axiom pre_star_or : forall (f1:t) (f2:t), ((pre_star (or f1
-  f2)) = (or (pre_star f1) (pre_star f2))).
+Axiom pre_star_or : forall (f1:t) (f2:t), ((pre_star (infix_plpl f1
+  f2)) = (infix_plpl (pre_star f1) (pre_star f2))).
 
 (* Why3 assumption *)
-Definition reachable (init:t) (f:t): Prop := (sat (and (pre_star f) init)).
+Definition reachable (init:t) (f:t): Prop := (sat (infix_et (pre_star f)
+  init)).
 
-Axiom directly_reachable : forall (init:t) (f:t), (sat (and init f)) ->
+Axiom directly_reachable : forall (init:t) (f:t), (sat (infix_et init f)) ->
   (reachable init f).
 
 Axiom false_unreachable : forall (init:t), ~ (reachable init ffalse).
 
-Axiom reachable_or : forall (f1:t) (f2:t) (init:t), (reachable init (or f1
-  f2)) <-> ((reachable init f1) \/ (reachable init f2)).
+Axiom reachable_or : forall (f1:t) (f2:t) (init:t), (reachable init
+  (infix_plpl f1 f2)) <-> ((reachable init f1) \/ (reachable init f2)).
+
+(* Why3 assumption *)
+Definition f := t.
 
 (* Why3 assumption *)
 Inductive t1 :=
@@ -243,28 +255,24 @@ Existing Instance result_WhyType.
 (* Why3 goal *)
 Theorem WP_parameter_bwd : forall (init:t) (theta:t), forall (visited:t),
   (visited = ffalse) -> forall (rho:(set t)) (rho1:t), ((rho1 = ffalse) /\
-  (rho = (empty :(set t)))) -> ((~ (sat (and init theta))) ->
-  forall (visited1:t), (visited1 = (or theta visited)) -> forall (rho2:(set
-  t)) (rho3:t), ((rho3 = (or (pre theta) rho1)) /\ (rho2 = (add (pre theta)
-  rho))) -> forall (rho4:(set t)) (rho5:t) (visited2:t), ((~ (sat (and init
-  visited2))) /\ (((pre_star visited2) = (or visited2 (pre_star rho5))) /\
-  ((pre_star theta) = (or visited2 (pre_star rho5))))) -> forall (o:bool),
-  ((o = true) <-> ((is_empty rho4) /\ (rho5 = ffalse))) -> ((~ (o = true)) ->
-  forall (old_q:t) (old_q1:(set t)), ((old_q = rho5) /\ (old_q1 = rho4)) ->
-  forall (rho6:(set t)) (rho7:t), let phi := (choose rho4) in (((~ (is_empty
-  rho4)) /\ ((rho6 = (remove phi rho4)) /\ ((valid (or (neg phi) rho5)) /\
-  (rho7 = (and (neg phi) rho5))))) -> ((~ (sat (and init phi))) -> ((valid
-  (or (neg phi) visited2)) -> (((valid (or (neg (neg phi))
-  (pre_star (neg phi)))) /\ (((or visited2 (pre_star (and (neg phi)
-  old_q))) = (and (or visited2 (or ttrue (pre_star (neg phi))))
-  (pre_star visited2))) /\ ((or visited2 (pre_star (and (neg phi)
-  old_q))) = (and ttrue (pre_star visited2))))) -> ((~ (sat (and init
-  visited2))) -> ((pre_star visited2) = (or visited2
-  (pre_star rho7)))))))))).
+  (rho = (empty :(set t)))) -> ((~ (sat (infix_et init theta))) ->
+  forall (visited1:t), (visited1 = (infix_plpl theta visited)) ->
+  forall (rho2:(set t)) (rho3:t), ((rho3 = (infix_plpl (pre theta) rho1)) /\
+  (rho2 = (add (pre theta) rho))) -> ((~ (sat (infix_et init visited1))) ->
+  ((pre_star visited1) = (infix_plpl visited1 (pre_star rho3))))).
+(* Why3 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2
+        rho3 (h6,h7) h8. *)
 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2
         rho3 (h6,h7) rho4 rho5 visited2 (h8,(h9,h10)) o h11 h12 old_q old_q1
         (oqdef,oq1def) rho6 rho7 phi (h13,(h14,(hnew,h15))) h16 h17
         assertion_else h18.
+
+
+Notation "A & B" := (infix_et A B) (at level 80, right associativity).
+Notation "A | B" := (infix_plpl A B) (at level 85, right associativity).
+Notation "-- A" := (prefix_tl A) (at level 75, right associativity).
+Notation "A => B" := (infix_eqgt A B) (at level 70, right associativity).
+Notation "A |= B" := (infix_breq A B) (at level 65, right associativity).
 
 
 rewrite h15.

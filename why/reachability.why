@@ -9,73 +9,52 @@ theory Reachability
 
    function pre_star t : t
      
-   axiom pre_star_def1 : forall f : t. valid (or (neg f) (pre_star f))
+   axiom pre_star_def1 : forall f : t. valid (f => pre_star f)
    axiom pre_star_def2 : forall f : t. pre (pre_star f) = pre_star f
    axiom pre_star_def3 : forall f : t. pre_star (pre_star f) = pre_star f
-   axiom pre_star_def4 : forall f : t. (or (pre_star (pre f)) f) = pre_star f
+   axiom pre_star_def4 : forall f : t. ((pre_star (pre f)) ++ f) = pre_star f
 
    axiom pre_and :
-     forall f1 f2 : t. pre (and f1 f2) = and (pre f1) (pre f2)
+     forall f1 f2 : t. pre (f1 & f2) = (pre f1) & (pre f2)
      
    axiom pre_or :
-     forall f1 f2 : t. pre (or f1 f2) = or (pre f1) (pre f2)
+     forall f1 f2 : t. pre (f1 ++ f2) = (pre f1) ++ (pre f2)
 
      
    axiom pre_star_false : pre_star ffalse = ffalse
    
    axiom pre_star_and :
-     forall f1 f2 : t. pre_star (and f1 f2) = and (pre_star f1) (pre_star f2)
+     forall f1 f2 : t. pre_star (f1 & f2) = (pre_star f1) & (pre_star f2)
      
    axiom pre_star_or :
-     forall f1 f2 : t. pre_star (or f1 f2) = or (pre_star f1) (pre_star f2)
+     forall f1 f2 : t. pre_star (f1 ++ f2) = (pre_star f1) ++ (pre_star f2)
      
-   predicate reachable (init : t) (f : t) = sat (and (pre_star f) init)
+   predicate reachable (init : t) (f : t) = sat ((pre_star f) & init)
          
    axiom directly_reachable :
-     forall init f : t. sat (and init f) -> reachable init f 
+     forall init f : t. sat (init & f) -> reachable init f 
    
    lemma false_unreachable :
      forall init : t. not (reachable init ffalse)
 
    lemma reachable_or :
      forall f1 f2 init :t.
-       reachable init (or f1 f2) <-> reachable init f1 \/ reachable init f2
+       reachable init (f1 ++ f2) <-> reachable init f1 \/ reachable init f2
        
    lemma reachable_and :
      forall f1 f2 init :t.
-       reachable init (and f1 f2) -> reachable init f1 /\ reachable init f2
+       reachable init (f1 & f2) -> reachable init f1 /\ reachable init f2
 
    lemma reachable_imply:
      forall x f init : t.
-       valid (or (neg x) f) -> reachable init x -> reachable init f
+       valid (x => f) -> reachable init x -> reachable init f
 
+   lemma reachable_bigger:
+     forall f1 f2 init : t.
+       f1 |== f2 -> reachable init f1 -> reachable init f2
 
-  (* remove unecessary axioms for solvers *)
-  meta remove_prop prop extensionality
-  meta remove_prop prop structure_exists
-  meta remove_prop prop model_true
-  meta remove_prop prop model_false
-  meta remove_prop prop model_and
-  meta remove_prop prop model_or
-  meta remove_prop prop model_neg
-  meta remove_prop prop valid_def
-  (* meta remove_prop prop and_a *)
-  (* meta remove_prop prop and_c *)
-  (* meta remove_prop prop or_a *)
-  (* meta remove_prop prop or_c *)
-  meta remove_prop prop sat_def
-  (* meta remove_prop prop sat_or *)
-  meta remove_prop prop sat_neg
-  meta remove_prop prop sat_and
-  meta remove_prop prop valid_or
-  meta remove_prop prop valid_neg
-  meta remove_prop prop valid_and
-  meta remove_prop prop valid_sat
-  meta remove_prop prop pre_star_def2
-  meta remove_prop prop pre_star_def3
-  meta remove_prop prop reachable_imply
-  meta remove_prop prop reachable_and
-  meta remove_prop prop pre_and
-  meta remove_prop prop pre_or
-  meta remove_prop prop unsat_invalid
+   lemma pre_star_bigger:
+     forall f1 f2 : t.
+       f1 |== f2 -> pre_star f1 |== pre_star f2
+
 end

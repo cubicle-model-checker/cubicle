@@ -20,6 +20,16 @@ Definition contents {a:Type} {a_WT:WhyType a} (v:(ref a)): a :=
   | (mk_ref x) => x
   end.
 
+(* Why3 assumption *)
+Inductive option
+  (a:Type) {a_WT:WhyType a} :=
+  | None : option a
+  | Some : a -> option a.
+Axiom option_WhyType : forall (a:Type) {a_WT:WhyType a}, WhyType (option a).
+Existing Instance option_WhyType.
+Implicit Arguments None [[a] [a_WT]].
+Implicit Arguments Some [[a] [a_WT]].
+
 Axiom t : Type.
 Parameter t_WhyType : WhyType t.
 Existing Instance t_WhyType.
@@ -102,6 +112,17 @@ Axiom forget_subsumed_imply : forall (f:t) (v:t), (valid (infix_eqgt f v)) ->
   ((infix_plpl f v) = v).
 
 Axiom classic_neg : forall (f:t), ((infix_plpl (prefix_tl f) f) = ttrue).
+
+Axiom imply_transitive : forall (f1:t) (f2:t) (f3:t), ((infix_breqeq f1
+  f2) /\ (infix_breqeq f2 f3)) -> (infix_breqeq f1 f3).
+
+Axiom imply_bigger : forall (f1:t) (f2:t), (infix_breqeq f1 (infix_plpl f1
+  f2)).
+
+Axiom imply_or : forall (f1:t) (f2:t) (f3:t), (infix_breqeq f1 f2) ->
+  (infix_breqeq (infix_plpl f1 f3) (infix_plpl f2 f3)).
+
+Axiom or_same : forall (f:t), ((infix_plpl f f) = f).
 
 Axiom set : forall (a:Type) {a_WT:WhyType a}, Type.
 Parameter set_WhyType : forall (a:Type) {a_WT:WhyType a}, WhyType (set a).
@@ -231,6 +252,12 @@ Axiom false_unreachable : forall (init:t), ~ (reachable init ffalse).
 Axiom reachable_or : forall (f1:t) (f2:t) (init:t), (reachable init
   (infix_plpl f1 f2)) <-> ((reachable init f1) \/ (reachable init f2)).
 
+Axiom reachable_bigger : forall (f1:t) (f2:t) (init:t), (infix_breqeq f1
+  f2) -> ((reachable init f1) -> (reachable init f2)).
+
+Axiom pre_star_bigger : forall (f1:t) (f2:t), (infix_breqeq f1 f2) ->
+  (infix_breqeq (pre_star f1) (pre_star f2)).
+
 (* Why3 assumption *)
 Definition f := t.
 
@@ -264,67 +291,57 @@ Theorem WP_parameter_bwd : forall (init:t) (theta:t), forall (visited:t),
   forall (visited1:t), (visited1 = (infix_plpl theta visited)) ->
   forall (rho2:(set t)) (rho3:t), ((rho3 = (infix_plpl (pre theta) rho1)) /\
   (rho2 = (add (pre theta) rho))) -> forall (rho4:(set t)) (rho5:t)
-  (visited2:t), ((~ (sat (infix_et init visited2))) /\
-  (((pre_star visited2) = (infix_plpl visited2 (pre_star rho5))) /\
-  ((pre_star theta) = (infix_plpl visited2 (pre_star rho5))))) ->
+  (visited2:t), ((~ (sat (infix_et init visited2))) /\ (infix_breqeq
+  (pre_star theta) (infix_plpl visited2 (pre_star rho5)))) ->
   forall (o:bool), ((o = true) <-> ((is_empty rho4) /\ (rho5 = ffalse))) ->
   ((~ (o = true)) -> forall (old_q:t) (old_q1:(set t)), ((old_q = rho5) /\
   (old_q1 = rho4)) -> forall (rho6:(set t)) (rho7:t), let phi :=
   (choose rho4) in (((~ (is_empty rho4)) /\ ((rho6 = (remove phi rho4)) /\
   ((valid (infix_eqgt phi rho5)) /\ (rho7 = (infix_et (prefix_tl phi)
-  rho5))))) -> ((~ (sat (infix_et init phi))) -> ((~ (infix_breqeq phi
-  visited2)) -> forall (visited3:t), (visited3 = (infix_plpl phi
-  visited2)) -> forall (rho8:(set t)) (rho9:t),
-  ((rho9 = (infix_plpl (pre phi) rho7)) /\ (rho8 = (add (pre phi) rho6))) ->
-  (((infix_plpl visited3 (pre_star rho9)) = (infix_plpl visited2
-  (pre_star (infix_et ttrue (infix_plpl phi old_q))))) -> ((~ (sat
-  (infix_et init visited3))) -> ((pre_star visited3) = (infix_plpl visited3
-  (pre_star rho9)))))))))).
+  rho5))))) -> ((~ (sat (infix_et init phi))) -> ((infix_breqeq phi
+  visited2) -> ((~ (sat (infix_et init visited2))) -> (infix_breqeq
+  (pre_star theta) (infix_plpl visited2 (pre_star rho7))))))))).
 (* Why3 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2
-        rho3 (h6,h7) rho4 rho5 visited2 (h8,(h9,h10)) o h11 h12 old_q old_q1
-        (h13,h14) rho6 rho7 phi (h15,(h16,(h17,h18))) h19 h20 visited3 h21
-        rho8 rho9 (h22,h23) h24 h25. *)
-intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2
-        rho3 (h6,h7) rho4 rho5 visited2 (h8,(h9,h10)) o h11 h12 old_q old_q1
-        (oqdef,od1def) rho6 rho7 phi (h13,(h14,(hnew,h15)))
-        h16 h17 visited3 h18 rho8 rho9 (h19,h20) assert4 h21.
-
-Notation "A & B" := (infix_et A B) (at level 80, right associativity).
-Notation "A | B" := (infix_plpl A B) (at level 85, right associativity).
-Notation "-- A" := (prefix_tl A) (at level 75, right associativity).
-Notation "A => B" := (infix_eqgt A B) (at level 70, right associativity).
-Notation "A |= B" := (infix_breq A B) (at level 65, right associativity).
+        rho3 (h6,h7) rho4 rho5 visited2 (h8,h9) o h10 h11 old_q old_q1
+        (h12,h13) rho6 rho7 phi (h14,(h15,(h16,h17))) h18 h19 h20. *)
+intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2 rho3
+(h6,h7) rho4 rho5 visited2 (h8,h9) o h10 h11 old_q old_q1 (h12,h13) rho6 rho7
+phi (h14,(h15,(h16,h17))) h18 h19 h20.
 
 
+Notation "A & B" := (infix_et A B) (at level 80).
+Notation "A | B" := (infix_plpl A B) (at level 85).
+Notation "-- A" := (prefix_tl A) (at level 75).
+Notation "A => B" := (infix_eqgt A B) (at level 70).
+Notation "A |= B" := (infix_breq A B) (at level 65).
+Notation "A |== B" := (infix_breqeq A B) (at level 64).
 
-rewrite h19.
-rewrite h18.
-rewrite h15.
-rewrite pre_star_or with (f1 := pre phi).
-rewrite or_c with (f1 := phi).
-rewrite or_a with (f1 := visited2).
-rewrite <- or_a with (f1 := phi).
-rewrite or_c with (f1 := phi).
-rewrite pre_star_def4.
-rewrite <- pre_star_or.
+
+rewrite h17.
+rewrite pre_star_and.
 rewrite distr_or.
-rewrite or_c with (f2 := -- phi).
-rewrite classic_neg.
+(* rewrite <- h9. *)
+
+assert (valid ((-- phi) => pre_star (-- phi))).
+apply pre_star_def1.
+apply forget_subsumed_imply in H.
+rewrite <- H.
+
+apply forget_subsumed in h19.
+assert (((visited2 | ((-- phi) | (pre_star (-- phi)))) =
+        (((phi | visited2) | ((-- phi) | (pre_star (-- phi))))))).
+rewrite h19. reflexivity.
+rewrite H0.
+rewrite or_c with (f1 := phi).
+rewrite or_a.
+rewrite <- or_a with (f1 := phi).
+rewrite or_c with (f1 := phi). rewrite classic_neg.
+rewrite or_c with (f1 := ttrue).
+rewrite absorb_or.
+rewrite absorb_or.
 rewrite and_c.
 rewrite neutral_and.
-rewrite pre_star_or.
-rewrite h9.
-rewrite pre_star_or.
-(*
-assert (valid (or (neg phi) (pre_star phi))).
-apply pre_star_def1.
-apply forget_subsumed in H.
-rewrite <- H.
-*)
-rewrite or_a.
-(* rewrite H. *)
-rewrite or_c with (f2 := pre_star phi).
-reflexivity.
+auto.
 
 Qed.
 

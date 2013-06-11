@@ -17,11 +17,18 @@ Parameter ffalse: t.
 
 Parameter ttrue: t.
 
-Parameter neg: t -> t.
+Parameter prefix_tl: t -> t.
 
-Parameter and: t -> t -> t.
+Parameter infix_et: t -> t -> t.
 
-Parameter or: t -> t -> t.
+Parameter infix_plpl: t -> t -> t.
+
+Parameter infix_eqgt: t -> t -> t.
+
+Parameter infix_breqeq: t -> t -> Prop.
+
+Axiom model_extensionality : forall (f1:t) (f2:t), (infix_breqeq f1 f2) <->
+  forall (m:structure), (infix_breq m f1) -> (infix_breq m f2).
 
 Axiom extensionality : forall (f1:t) (f2:t), (forall (m:structure),
   (infix_breq m f1) <-> (infix_breq m f2)) -> (f1 = f2).
@@ -35,52 +42,58 @@ Axiom model_true : forall (m:structure), (infix_breq m ttrue).
 Axiom model_false : forall (m:structure), ~ (infix_breq m ffalse).
 
 Axiom model_neg : forall (m:structure), forall (f:t), (infix_breq m
-  (neg f)) <-> ~ (infix_breq m f).
+  (prefix_tl f)) <-> ~ (infix_breq m f).
 
 Axiom model_and : forall (m:structure), forall (f1:t) (f2:t), (infix_breq m
-  (and f1 f2)) <-> ((infix_breq m f1) /\ (infix_breq m f2)).
+  (infix_et f1 f2)) <-> ((infix_breq m f1) /\ (infix_breq m f2)).
 
 Axiom model_or : forall (m:structure), forall (f1:t) (f2:t), (infix_breq m
-  (or f1 f2)) <-> ((infix_breq m f1) \/ (infix_breq m f2)).
+  (infix_plpl f1 f2)) <-> ((infix_breq m f1) \/ (infix_breq m f2)).
 
 (* Why3 assumption *)
 Definition sat (f:t): Prop := exists m:structure, (infix_breq m f).
 
 (* Why3 assumption *)
-Definition valid (f:t): Prop := ~ (sat (neg f)).
+Definition valid (f:t): Prop := ~ (sat (prefix_tl f)).
 
 Axiom valid_def : forall (f:t), (valid f) <-> forall (m:structure),
   (infix_breq m f).
 
-Axiom negneg : forall (f:t), ((neg (neg f)) = f).
+Axiom imply_def : forall (f1:t) (f2:t), ((infix_eqgt f1
+  f2) = (infix_plpl (prefix_tl f1) f2)).
 
-Axiom and_a : forall (f1:t) (f2:t) (f3:t), ((and (and f1 f2) f3) = (and f1
-  (and f2 f3))).
+Axiom imply_models : forall (f1:t) (f2:t), (valid (infix_eqgt f1 f2)) <->
+  (infix_breqeq f1 f2).
 
-Axiom and_c : forall (f1:t) (f2:t), ((and f1 f2) = (and f2 f1)).
+Axiom negneg : forall (f:t), ((prefix_tl (prefix_tl f)) = f).
 
-Axiom or_a : forall (f1:t) (f2:t) (f3:t), ((or (or f1 f2) f3) = (or f1 (or f2
-  f3))).
+Axiom and_a : forall (f1:t) (f2:t) (f3:t), ((infix_et (infix_et f1 f2)
+  f3) = (infix_et f1 (infix_et f2 f3))).
 
-Axiom or_c : forall (f1:t) (f2:t), ((or f1 f2) = (or f2 f1)).
+Axiom and_c : forall (f1:t) (f2:t), ((infix_et f1 f2) = (infix_et f2 f1)).
 
-Axiom distr_and : forall (f1:t) (f2:t) (f3:t), ((and f1 (or f2
-  f3)) = (or (and f1 f2) (and f1 f3))).
+Axiom or_a : forall (f1:t) (f2:t) (f3:t), ((infix_plpl (infix_plpl f1 f2)
+  f3) = (infix_plpl f1 (infix_plpl f2 f3))).
 
-Axiom distr_or : forall (f1:t) (f2:t) (f3:t), ((or f1 (and f2
-  f3)) = (and (or f1 f2) (or f1 f3))).
+Axiom or_c : forall (f1:t) (f2:t), ((infix_plpl f1 f2) = (infix_plpl f2 f1)).
 
-Axiom neutral_and : forall (f:t), ((and f ttrue) = f).
+Axiom distr_and : forall (f1:t) (f2:t) (f3:t), ((infix_et f1 (infix_plpl f2
+  f3)) = (infix_plpl (infix_et f1 f2) (infix_et f1 f3))).
 
-Axiom neutral_or : forall (f:t), ((or f ffalse) = f).
+Axiom distr_or : forall (f1:t) (f2:t) (f3:t), ((infix_plpl f1 (infix_et f2
+  f3)) = (infix_et (infix_plpl f1 f2) (infix_plpl f1 f3))).
 
-Axiom absorb_and : forall (f:t), ((and f ffalse) = ffalse).
+Axiom neutral_and : forall (f:t), ((infix_et f ttrue) = f).
 
-Axiom absorb_or : forall (f:t), ((or f ttrue) = ttrue).
+Axiom neutral_or : forall (f:t), ((infix_plpl f ffalse) = f).
 
-Axiom sat_def : forall (f:t), (sat f) <-> ~ (valid (neg f)).
+Axiom absorb_and : forall (f:t), ((infix_et f ffalse) = ffalse).
 
-Axiom unsat_invalid : forall (f:t), (~ (valid f)) -> (sat (neg f)).
+Axiom absorb_or : forall (f:t), ((infix_plpl f ttrue) = ttrue).
+
+Axiom sat_def : forall (f:t), (sat f) <-> ~ (valid (prefix_tl f)).
+
+Axiom unsat_invalid : forall (f:t), (~ (valid f)) -> (sat (prefix_tl f)).
 
 Axiom valid_sat : forall (f:t), (valid f) -> (sat f).
 
@@ -92,43 +105,44 @@ Axiom ttrue_sat : (sat ttrue).
 
 Axiom ffalse_unsat : ~ (sat ffalse).
 
-Axiom sat_neg : forall (f:t), (~ (sat f)) -> (sat (neg f)).
+Axiom sat_neg : forall (f:t), (~ (sat f)) -> (sat (prefix_tl f)).
 
-Axiom valid_neg : forall (f:t), (valid (neg f)) -> ~ (valid f).
+Axiom valid_neg : forall (f:t), (valid (prefix_tl f)) -> ~ (valid f).
 
-Axiom sat_or : forall (f1:t) (f2:t), (sat (or f1 f2)) <-> ((sat f1) \/ (sat
-  f2)).
+Axiom sat_or : forall (f1:t) (f2:t), (sat (infix_plpl f1 f2)) <-> ((sat
+  f1) \/ (sat f2)).
 
-Axiom valid_and : forall (f1:t) (f2:t), (valid (and f1 f2)) <-> ((valid
+Axiom valid_and : forall (f1:t) (f2:t), (valid (infix_et f1 f2)) <-> ((valid
   f1) /\ (valid f2)).
 
 Axiom valid_or : forall (f1:t) (f2:t), ((valid f1) \/ (valid f2)) -> (valid
-  (or f1 f2)).
+  (infix_plpl f1 f2)).
 
-Axiom sat_and : forall (f1:t) (f2:t), (sat (and f1 f2)) -> ((sat f1) /\ (sat
-  f2)).
+Axiom sat_and : forall (f1:t) (f2:t), (sat (infix_et f1 f2)) -> ((sat f1) /\
+  (sat f2)).
 
 (* Why3 goal *)
-Theorem forget_subsumed : forall (f:t) (v:t), (valid (or (neg f) v)) ->
-  ((or f v) = v).
+Theorem forget_subsumed : forall (f:t) (v:t), (infix_breqeq f v) ->
+  ((infix_plpl f v) = v).
+(* Why3 intros f v h1. *)
 intros f v h1.
 
-unfold valid in h1.
-unfold sat in h1.
-assert (forall m : structure, not (infix_breq m (neg (or (neg f) v)))).
-firstorder.
-apply extensionality. intro. split.
+Notation "A & B" := (infix_et A B) (at level 80, right associativity).
+Notation "A | B" := (infix_plpl A B) (at level 85, right associativity).
+Notation "-- A" := (prefix_tl A) (at level 75, right associativity).
+Notation "A => B" := (infix_eqgt A B) (at level 70, right associativity).
+Notation "A |= B" := (infix_breq A B) (at level 65, right associativity).
+Notation "A |== B" := (infix_breqeq A B) (at level 64, right associativity).
+
+rewrite model_extensionality in h1.
+apply extensionality. intro.
+assert (m |= f -> m |= v).
+auto.
+split.
 intro.
 apply model_or in H0.
 destruct H0.
-assert ( ~ infix_breq m (neg (or (neg f) v))). auto.
-assert (forall (m:structure), forall (f:t), ~ (infix_breq m f) -> (infix_breq m (neg f))).
-firstorder. apply model_neg. assumption.
-apply H2 in H1. rewrite negneg in H1. apply model_or in H1.
-destruct H1.
-apply model_neg in H1. intuition.
-assumption.
-assumption.
+apply H. auto. auto.
 intro. apply model_or.
 right; assumption.
 Qed.

@@ -9,9 +9,16 @@ theory FOL
    
    constant ttrue : t
 
-   function neg t : t
-   function and t t : t
-   function or t t : t
+   function (~_) t : t
+   function (&) t t : t
+   function (++) t t : t
+   function (=>) t t : t
+   
+   predicate (|==) t t
+
+   axiom model_extensionality :
+     forall f1 f2 : t.
+       f1 |== f2 <-> (forall m : structure [m]. m |= f1 -> m |= f2)
 
    axiom extensionality :
      forall f1 f2 : t.
@@ -31,51 +38,57 @@ theory FOL
           
    axiom model_neg :
      forall m : structure. forall f : t.
-       m |= (neg f) <-> not (m |= f)
+       m |= (~ f) <-> not (m |= f)
        
    axiom model_and :
       forall m : structure. forall f1 f2 : t.
-        m |= (and f1 f2) <-> m |= f1 /\ m |= f2
+        m |= (f1 & f2) <-> m |= f1 /\ m |= f2
         
    axiom model_or :
       forall m : structure. forall f1 f2 : t.
-        m |= (or f1 f2) <-> m |= f1 \/ m |= f2
+        m |= (f1 ++ f2) <-> m |= f1 \/ m |= f2
        
    predicate sat (f : t) = exists m: structure. m |= f
    
-   predicate valid (f : t) = not (sat (neg f))
+   predicate valid (f : t) = not (sat (~ f))
 
    lemma valid_def :
      forall f : t [valid (f)]. valid (f) <-> forall m: structure [m]. (m |= f)
    
-   lemma negneg : forall f: t [neg (neg f)]. neg (neg f) = f
+   axiom imply_def :
+     forall f1 f2 : t. f1 => f2 = (~ f1) ++ f2
 
-   lemma and_a : forall f1 f2 f3 : t. and (and f1 f2) f3 = and f1 (and f2 f3)
-   
-   lemma and_c : forall f1 f2 : t. and f1 f2 = and f2 f1
-   
-   lemma or_a : forall f1 f2 f3 : t. or (or f1 f2) f3 = or f1 (or f2 f3)
-   
-   lemma or_c : forall f1 f2 : t. or f1 f2 = or f2 f1
+   lemma imply_models :
+     forall f1 f2 : t. valid (f1 => f2) <-> f1 |== f2
+     
+   lemma negneg : forall f: t [~ ~ f]. ~ ~ f = f
 
-   lemma distr_and :
-     forall f1 f2 f3 : t. and f1 (or f2 f3) = or (and f1 f2) (and f1 f3)
+   lemma and_a : forall f1 f2 f3 : t. (f1 & f2) & f3 = f1 & (f2 & f3)
+   
+   lemma and_c : forall f1 f2 : t. f1 & f2 = f2 & f1
+   
+   lemma or_a : forall f1 f2 f3 : t. (f1 ++ f2) ++ f3 = f1 ++ (f2 ++ f3)
+   
+   lemma or_c : forall f1 f2 : t. f1 ++ f2 = f2 ++ f1
+
+   lemma distr_and:
+     forall f1 f2 f3 : t. f1 & (f2 ++ f3) = (f1 & f2) ++ (f1 & f3)
      
    lemma distr_or :
-     forall f1 f2 f3 : t. or f1 (and f2 f3) = and (or f1 f2) (or f1 f3)
+     forall f1 f2 f3 : t. f1 ++ (f2 & f3) = (f1 ++ f2) & (f1 ++ f3)
      
-   lemma neutral_and : forall f: t. and f ttrue = f
+   lemma neutral_and : forall f: t. f & ttrue = f
    
-   lemma neutral_or : forall f: t. or f ffalse = f
+   lemma neutral_or : forall f: t. f ++ ffalse = f
    
-   lemma absorb_and : forall f: t. and f ffalse = ffalse
+   lemma absorb_and : forall f: t. f & ffalse = ffalse
    
-   lemma absorb_or : forall f: t. or f ttrue = ttrue
+   lemma absorb_or : forall f: t. f ++ ttrue = ttrue
 
    
-   lemma sat_def: forall f: t. sat f <-> not (valid (neg f))
+   lemma sat_def: forall f: t. sat f <-> not (valid (~ f))
    
-   lemma unsat_invalid : forall f: t. not (valid f) -> sat (neg f)
+   lemma unsat_invalid : forall f: t. not (valid f) -> sat (~ f)
 
    lemma valid_sat : forall f: t. valid f -> sat f
    
@@ -86,38 +99,58 @@ theory FOL
 
 
    lemma sat_neg :
-     forall f : t.  not (sat f) -> sat (neg f)
+     forall f : t.  not (sat f) -> sat (~ f)
    
    lemma valid_neg :
-     forall f : t. valid (neg f) -> not (valid f)
+     forall f : t. valid (~ f) -> not (valid f)
    
    lemma sat_or :
      forall f1 f2 : t.
-       sat (or f1 f2) <-> (sat f1) \/ (sat f2)
+       sat (f1 ++ f2) <-> (sat f1) \/ (sat f2)
    
    lemma valid_and :
      forall f1 f2 : t.
-       valid (and f1 f2) <-> (valid f1) /\ (valid f2)
+       valid (f1 & f2) <-> (valid f1) /\ (valid f2)
    
    lemma valid_or :
      forall f1 f2 : t.
-       (valid f1) \/ (valid f2) -> valid (or f1 f2)
+       (valid f1) \/ (valid f2) -> valid (f1 ++ f2)
    
    lemma sat_and :
      forall f1 f2 : t.
-       sat (and f1 f2) -> (sat f1) /\ (sat f2)
+       sat (f1 & f2) -> (sat f1) /\ (sat f2)
 
 
    lemma forget_subsumed :
      forall f v : t.
-       valid (or (neg f) v) -> or f v = v
+       f |== v -> f ++ v = v
 
-   lemma classic_neg : forall f : t. or (neg f) f = ttrue
+   lemma forget_subsumed_imply :
+     forall f v : t.
+       valid (f => v) -> f ++ v = v
+       
+   lemma forget_subsumed_or :
+     forall f v : t.
+       valid ((~ f) ++ v) -> f ++ v = v
+
+   lemma classic_neg : forall f : t. (~ f) ++ f = ttrue
 
 
+   lemma imply_transitive :
+     forall f1 f2 f3 : t. f1 |== f2 /\ f2 |== f3 -> f1 |== f3
+     
+   lemma imply_bigger :
+     forall f1 f2 : t. f1 |== f1 ++ f2
+
+
+   lemma imply_or:
+      forall f1 f2 f3 : t. f1 |== f2 -> f1 ++ f3 |== f2 ++ f3
+
+
+   lemma or_same : forall f : t. f ++ f = f
+   
   (* Use AC builtin facility of Alt-Ergo but add AC axioms to others *)
-  (* meta AC function and *)
-  (* meta AC function or *)
-
+  (* meta AC function (&) *)
+  (* meta AC function (++) *)
 
 end

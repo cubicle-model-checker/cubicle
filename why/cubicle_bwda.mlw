@@ -1,6 +1,7 @@
 module Cubicle_Bwd
 
   use import ref.Ref
+  use import option.Option
   use import fol.FOL
   use import abstract_queue.AbstractQueue as Q
   use import reachability.Reachability
@@ -44,12 +45,23 @@ module Cubicle_Bwd
   val visited : ref f
   val q : Q.t
 
+
+  val approx (phi : f) : option f
+  ensures { match result with
+            | Some psi -> phi |== psi
+	    | None -> true end }
+
+  let pre_or_approx (phi : f) =
+    ensures { result = pre phi \/ phi |== result }
+    match approx phi with
+      | Some psi -> psi
+      | None -> pre phi
+    end
+  
     
   let bwd (init : f) (theta : f) =
     (* Soundness *)
     ensures { result = Safe -> not (reachable init theta) }
-    (* Completeness *)
-    ensures { result = Unsafe -> reachable init theta }
     visited := ffalse;
     Q.clear q;
     try
@@ -58,26 +70,26 @@ module Cubicle_Bwd
        Q.push (pre theta) q;
        while not (Q.is_empty q) do
         invariant { not (sat (init & !visited)) &&
-                    pre_star !visited = !visited ++ (pre_star q.formula) &&
-                    pre_star theta = !visited ++ (pre_star q.formula) }
+                    (* pre_star !visited |== !visited ++ (pre_star q.formula) && *)
+                    pre_star theta |== !visited ++ (pre_star q.formula) }
         let ghost old_q = Q.copy q in
         let phi = Q.pop q in
         if sat (init & phi) then raise Unsafe_trace;
         if not (phi |== !visited) then (
           let ghost old_v = !visited in
           visited := phi ++ !visited;
-          Q.push (pre phi) q;
-          assert {
+          Q.push (pre_or_approx phi) q
+          (* assert { 
                    !visited ++ (pre_star q.formula) =
 	  	     old_v ++ pre_star phi ++ pre_star (~ phi & old_q.formula)
 
 		   &&
 	  
                    !visited ++ (pre_star q.formula) =
-                     old_v ++ (pre_star (ttrue & (phi ++ old_q.formula))) }
+                    old_v ++ (pre_star (ttrue & (phi ++ old_q.formula))) } *)
         )
-        else
-          assert {
+        (* else
+           assert {
                 valid ((~ (~ phi)) ++ (pre_star (~ phi)))
 
                 &&
@@ -89,7 +101,7 @@ module Cubicle_Bwd
 
                 !visited ++ (pre_star ((~ phi) & old_q.formula)) =
                 ttrue & (pre_star !visited)
-          }
+          } *)
         
        done;
       Safe

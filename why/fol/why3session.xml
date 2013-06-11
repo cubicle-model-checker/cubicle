@@ -15,8 +15,8 @@
   version="8.3pl4"/>
  <prover
   id="3"
-  name="Eprover"
-  version="1.6"/>
+  name="Vampire"
+  version="0.6"/>
  <file
   name="../fol.why"
   verified="true"
@@ -30,10 +30,10 @@
    <goal
     name="valid_def"
     locfile="../fol.why"
-    loclnum="48" loccnumb="9" loccnume="18"
-    sum="0435d326c620e9be68fa205922fdfd36"
+    loclnum="55" loccnumb="9" loccnume="18"
+    sum="612d418fcea2320d58072d00285189a4"
     proved="true"
-    expanded="true"
+    expanded="false"
     shape="ainfix |=V1V0FV1qavalidV0FavalidV0">
     <proof
      prover="0"
@@ -46,13 +46,30 @@
     </proof>
    </goal>
    <goal
+    name="imply_models"
+    locfile="../fol.why"
+    loclnum="61" loccnumb="9" loccnume="21"
+    sum="60ca4a5c43ff4ad1a181e0dfc1e0a267"
+    proved="true"
+    expanded="false"
+    shape="ainfix |==V0V1qavalidainfix =&gt;V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
     name="negneg"
     locfile="../fol.why"
-    loclnum="51" loccnumb="9" loccnume="15"
-    sum="b422e0b0661d83bbbba80608d25702a2"
+    loclnum="64" loccnumb="9" loccnume="15"
+    sum="7cdd072d6137e0df919458ea8ae057f4"
     proved="true"
-    expanded="true"
-    shape="ainfix =aneganegV0V0FaneganegV0">
+    expanded="false"
+    shape="ainfix =aprefix ~aprefix ~V0V0Faprefix ~aprefix ~V0">
     <proof
      prover="2"
      timelimit="5"
@@ -66,11 +83,11 @@
    <goal
     name="and_a"
     locfile="../fol.why"
-    loclnum="53" loccnumb="9" loccnume="14"
-    sum="951e64b781db1ee323dc3884fdfdcf2d"
+    loclnum="66" loccnumb="9" loccnume="14"
+    sum="532cc252fa3b5cdad3e4d5459de48396"
     proved="true"
-    expanded="true"
-    shape="ainfix =aandaandV0V1V2aandV0aandV1V2F">
+    expanded="false"
+    shape="ainfix =ainfix &amp;ainfix &amp;V0V1V2ainfix &amp;V0ainfix &amp;V1V2F">
     <proof
      prover="2"
      timelimit="5"
@@ -84,11 +101,11 @@
    <goal
     name="and_c"
     locfile="../fol.why"
-    loclnum="55" loccnumb="9" loccnume="14"
-    sum="19437753f8d0d8d6890ba09715c84ecc"
+    loclnum="68" loccnumb="9" loccnume="14"
+    sum="34afec072fa8095b774c8b520642b61e"
     proved="true"
-    expanded="true"
-    shape="ainfix =aandV0V1aandV1V0F">
+    expanded="false"
+    shape="ainfix =ainfix &amp;V0V1ainfix &amp;V1V0F">
     <proof
      prover="1"
      timelimit="5"
@@ -101,11 +118,11 @@
    <goal
     name="or_a"
     locfile="../fol.why"
-    loclnum="57" loccnumb="9" loccnume="13"
-    sum="0445a54b536c3a235abf780b8a7e2121"
+    loclnum="70" loccnumb="9" loccnume="13"
+    sum="0a5a51fd5e72e12e31c1f5a25923a32d"
     proved="true"
-    expanded="true"
-    shape="ainfix =aoraorV0V1V2aorV0aorV1V2F">
+    expanded="false"
+    shape="ainfix =ainfix ++ainfix ++V0V1V2ainfix ++V0ainfix ++V1V2F">
     <proof
      prover="2"
      timelimit="5"
@@ -119,11 +136,11 @@
    <goal
     name="or_c"
     locfile="../fol.why"
-    loclnum="59" loccnumb="9" loccnume="13"
-    sum="038a3bd018e1573de9a0c64e305e9ce3"
+    loclnum="72" loccnumb="9" loccnume="13"
+    sum="d5b9c476512e3286788a4681cfd2e95c"
     proved="true"
-    expanded="true"
-    shape="ainfix =aorV0V1aorV1V0F">
+    expanded="false"
+    shape="ainfix =ainfix ++V0V1ainfix ++V1V0F">
     <proof
      prover="1"
      timelimit="5"
@@ -136,11 +153,11 @@
    <goal
     name="distr_and"
     locfile="../fol.why"
-    loclnum="61" loccnumb="9" loccnume="18"
-    sum="b0b7c52cfe2ac78b5116eefa8bc2383b"
+    loclnum="74" loccnumb="9" loccnume="18"
+    sum="92ee05d54b56a271c993ee94c0e67c78"
     proved="true"
-    expanded="true"
-    shape="ainfix =aandV0aorV1V2aoraandV0V1aandV0V2F">
+    expanded="false"
+    shape="ainfix =ainfix &amp;V0ainfix ++V1V2ainfix ++ainfix &amp;V0V1ainfix &amp;V0V2F">
     <proof
      prover="2"
      timelimit="5"
@@ -154,11 +171,11 @@
    <goal
     name="distr_or"
     locfile="../fol.why"
-    loclnum="64" loccnumb="9" loccnume="17"
-    sum="39a979b0fa2fcc35750b77029e5da5a1"
+    loclnum="77" loccnumb="9" loccnume="17"
+    sum="117e85a9d28938b48540f0ea0e7c775c"
     proved="true"
-    expanded="true"
-    shape="ainfix =aorV0aandV1V2aandaorV0V1aorV0V2F">
+    expanded="false"
+    shape="ainfix =ainfix ++V0ainfix &amp;V1V2ainfix &amp;ainfix ++V0V1ainfix ++V0V2F">
     <proof
      prover="2"
      timelimit="5"
@@ -172,11 +189,11 @@
    <goal
     name="neutral_and"
     locfile="../fol.why"
-    loclnum="67" loccnumb="9" loccnume="20"
-    sum="eca696ae8cbb28d63800b9834bee90f6"
+    loclnum="80" loccnumb="9" loccnume="20"
+    sum="403130a0a5935474c0f4ad45b686ecab"
     proved="true"
-    expanded="true"
-    shape="ainfix =aandV0attrueV0F">
+    expanded="false"
+    shape="ainfix =ainfix &amp;V0attrueV0F">
     <proof
      prover="1"
      timelimit="5"
@@ -189,62 +206,62 @@
    <goal
     name="neutral_or"
     locfile="../fol.why"
-    loclnum="69" loccnumb="9" loccnume="19"
-    sum="76c22dca787e14dae0eaebd817f1ea77"
+    loclnum="82" loccnumb="9" loccnume="19"
+    sum="f3bfdf1edf6eaf9d742eef851e171537"
     proved="true"
-    expanded="true"
-    shape="ainfix =aorV0affalseV0F">
+    expanded="false"
+    shape="ainfix =ainfix ++V0affalseV0F">
     <proof
      prover="3"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="2.39"/>
+     <result status="valid" time="0.17"/>
     </proof>
    </goal>
    <goal
     name="absorb_and"
     locfile="../fol.why"
-    loclnum="71" loccnumb="9" loccnume="19"
-    sum="ddd7abd72e09037efa3ab46d2ef749e7"
+    loclnum="84" loccnumb="9" loccnume="19"
+    sum="84831931a3d1ed953038a0eac319c721"
     proved="true"
-    expanded="true"
-    shape="ainfix =aandV0affalseaffalseF">
+    expanded="false"
+    shape="ainfix =ainfix &amp;V0affalseaffalseF">
     <proof
      prover="3"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.01"/>
+     <result status="valid" time="0.14"/>
     </proof>
    </goal>
    <goal
     name="absorb_or"
     locfile="../fol.why"
-    loclnum="73" loccnumb="9" loccnume="18"
-    sum="5b10b0429fa21561dd70ba87c318a4b2"
+    loclnum="86" loccnumb="9" loccnume="18"
+    sum="c7a510d9a98ff0f089a61c2ded3575ab"
     proved="true"
-    expanded="true"
-    shape="ainfix =aorV0attrueattrueF">
+    expanded="false"
+    shape="ainfix =ainfix ++V0attrueattrueF">
     <proof
      prover="3"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.02"/>
+     <result status="valid" time="0.08"/>
     </proof>
    </goal>
    <goal
     name="sat_def"
     locfile="../fol.why"
-    loclnum="76" loccnumb="9" loccnume="16"
-    sum="7de89b4c4bf330e31dfbae81804da23b"
+    loclnum="89" loccnumb="9" loccnume="16"
+    sum="ea48596c6b6eef0e5e1c6c3910014641"
     proved="true"
-    expanded="true"
-    shape="avalidanegV0NqasatV0F">
+    expanded="false"
+    shape="avalidaprefix ~V0NqasatV0F">
     <proof
      prover="0"
      timelimit="5"
@@ -257,11 +274,11 @@
    <goal
     name="unsat_invalid"
     locfile="../fol.why"
-    loclnum="78" loccnumb="9" loccnume="22"
-    sum="0f5c171d142c9f885ca4945e855fe8e9"
+    loclnum="91" loccnumb="9" loccnume="22"
+    sum="beda6f992d59c86f3f8392ad4ed7be69"
     proved="true"
-    expanded="true"
-    shape="asatanegV0IavalidV0NF">
+    expanded="false"
+    shape="asataprefix ~V0IavalidV0NF">
     <proof
      prover="0"
      timelimit="5"
@@ -274,10 +291,10 @@
    <goal
     name="valid_sat"
     locfile="../fol.why"
-    loclnum="80" loccnumb="9" loccnume="18"
-    sum="d0f4b641cc038959ad335a7ef6b9d7ee"
+    loclnum="93" loccnumb="9" loccnume="18"
+    sum="234ef08f9a9c4c3147305b4f1035674c"
     proved="true"
-    expanded="true"
+    expanded="false"
     shape="asatV0IavalidV0F">
     <proof
      prover="0"
@@ -291,10 +308,10 @@
    <goal
     name="ttrue_valid"
     locfile="../fol.why"
-    loclnum="82" loccnumb="9" loccnume="20"
-    sum="61eee23d37d76cc0a94f97152c8d3ccd"
+    loclnum="95" loccnumb="9" loccnume="20"
+    sum="f56df5685dbecc43a982a6616c4a7b73"
     proved="true"
-    expanded="true"
+    expanded="false"
     shape="avalidattrue">
     <proof
      prover="0"
@@ -308,10 +325,10 @@
    <goal
     name="ffaslse_invalid"
     locfile="../fol.why"
-    loclnum="83" loccnumb="9" loccnume="24"
-    sum="67739986ebb345520bb38bbe2efa2484"
+    loclnum="96" loccnumb="9" loccnume="24"
+    sum="cb8e36122452cb7e6fa2781a50950593"
     proved="true"
-    expanded="true"
+    expanded="false"
     shape="avalidaffalseN">
     <proof
      prover="0"
@@ -325,10 +342,10 @@
    <goal
     name="ttrue_sat"
     locfile="../fol.why"
-    loclnum="84" loccnumb="9" loccnume="18"
-    sum="6dc371ff38fd2e120ccecedfb99efbc0"
+    loclnum="97" loccnumb="9" loccnume="18"
+    sum="882ef80277a3728e9dc5b1ab478010db"
     proved="true"
-    expanded="true"
+    expanded="false"
     shape="asatattrue">
     <proof
      prover="0"
@@ -342,10 +359,10 @@
    <goal
     name="ffalse_unsat"
     locfile="../fol.why"
-    loclnum="85" loccnumb="9" loccnume="21"
-    sum="ec0bc02ce2f107cea698bd26a52359c2"
+    loclnum="98" loccnumb="9" loccnume="21"
+    sum="625c5fef6055ff5c6bcbc027c817e8bf"
     proved="true"
-    expanded="true"
+    expanded="false"
     shape="asataffalseN">
     <proof
      prover="0"
@@ -359,11 +376,11 @@
    <goal
     name="sat_neg"
     locfile="../fol.why"
-    loclnum="88" loccnumb="9" loccnume="16"
-    sum="f5567b3f58762e90dae7d1efc4d5a0c6"
+    loclnum="101" loccnumb="9" loccnume="16"
+    sum="f9270d01df98eedcb56f0bef0122e2d1"
     proved="true"
-    expanded="true"
-    shape="asatanegV0IasatV0NF">
+    expanded="false"
+    shape="asataprefix ~V0IasatV0NF">
     <proof
      prover="0"
      timelimit="5"
@@ -376,11 +393,11 @@
    <goal
     name="valid_neg"
     locfile="../fol.why"
-    loclnum="91" loccnumb="9" loccnume="18"
-    sum="24d60366f8bfbad020e399ef12f3a23f"
+    loclnum="104" loccnumb="9" loccnume="18"
+    sum="edcaca75ceb55ae2a0a8a5b61d59ac3e"
     proved="true"
-    expanded="true"
-    shape="avalidV0NIavalidanegV0F">
+    expanded="false"
+    shape="avalidV0NIavalidaprefix ~V0F">
     <proof
      prover="0"
      timelimit="5"
@@ -393,11 +410,11 @@
    <goal
     name="sat_or"
     locfile="../fol.why"
-    loclnum="94" loccnumb="9" loccnume="15"
-    sum="be29326ebb9dc41bcb203fdd7d02db5a"
+    loclnum="107" loccnumb="9" loccnume="15"
+    sum="6049d3e27e1fd69bda2d344411a74153"
     proved="true"
-    expanded="true"
-    shape="asatV1OasatV0qasataorV0V1F">
+    expanded="false"
+    shape="asatV1OasatV0qasatainfix ++V0V1F">
     <proof
      prover="0"
      timelimit="5"
@@ -410,11 +427,11 @@
    <goal
     name="valid_and"
     locfile="../fol.why"
-    loclnum="98" loccnumb="9" loccnume="18"
-    sum="c966c3b5d71fcef3af29f4ec7a64f380"
+    loclnum="111" loccnumb="9" loccnume="18"
+    sum="6a57636610885f3db36366220298965f"
     proved="true"
-    expanded="true"
-    shape="avalidV1AavalidV0qavalidaandV0V1F">
+    expanded="false"
+    shape="avalidV1AavalidV0qavalidainfix &amp;V0V1F">
     <proof
      prover="0"
      timelimit="5"
@@ -427,11 +444,11 @@
    <goal
     name="valid_or"
     locfile="../fol.why"
-    loclnum="102" loccnumb="9" loccnume="17"
-    sum="6cdd5d247036b6502405fc8d8dbdec4b"
+    loclnum="115" loccnumb="9" loccnume="17"
+    sum="8d9cfc0bd1f131062398657619f9331f"
     proved="true"
-    expanded="true"
-    shape="avalidaorV0V1IavalidV1OavalidV0F">
+    expanded="false"
+    shape="avalidainfix ++V0V1IavalidV1OavalidV0F">
     <proof
      prover="0"
      timelimit="5"
@@ -444,11 +461,11 @@
    <goal
     name="sat_and"
     locfile="../fol.why"
-    loclnum="106" loccnumb="9" loccnume="16"
-    sum="32911dd2ca580945ffb1b93527ac6df6"
+    loclnum="119" loccnumb="9" loccnume="16"
+    sum="7d23b91111253cd18457cf2c4277013f"
     proved="true"
-    expanded="true"
-    shape="asatV1AasatV0IasataandV0V1F">
+    expanded="false"
+    shape="asatV1AasatV0Iasatainfix &amp;V0V1F">
     <proof
      prover="0"
      timelimit="5"
@@ -461,11 +478,11 @@
    <goal
     name="forget_subsumed"
     locfile="../fol.why"
-    loclnum="111" loccnumb="9" loccnume="24"
-    sum="48b176d667c7c5055a5d714ca83e8b52"
+    loclnum="124" loccnumb="9" loccnume="24"
+    sum="944c18018c4414be23a2d4a4a21e2095"
     proved="true"
-    expanded="true"
-    shape="ainfix =aorV0V1V1IavalidaoranegV0V1F">
+    expanded="false"
+    shape="ainfix =ainfix ++V0V1V1Iainfix |==V0V1F">
     <proof
      prover="2"
      timelimit="5"
@@ -477,13 +494,47 @@
     </proof>
    </goal>
    <goal
+    name="forget_subsumed_imply"
+    locfile="../fol.why"
+    loclnum="128" loccnumb="9" loccnume="30"
+    sum="2c316e59d34d5d0090d90632ac4f7bd8"
+    proved="true"
+    expanded="false"
+    shape="ainfix =ainfix ++V0V1V1Iavalidainfix =&gt;V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="forget_subsumed_or"
+    locfile="../fol.why"
+    loclnum="132" loccnumb="9" loccnume="27"
+    sum="364a578b2343855187d60441fffe5b47"
+    proved="true"
+    expanded="false"
+    shape="ainfix =ainfix ++V0V1V1Iavalidainfix ++aprefix ~V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+   </goal>
+   <goal
     name="classic_neg"
     locfile="../fol.why"
-    loclnum="115" loccnumb="9" loccnume="20"
-    sum="5352194b86036e3c37efecfa6e5dbfda"
+    loclnum="136" loccnumb="9" loccnume="20"
+    sum="8494be96459c37ca7fd6ce5d602e703b"
     proved="true"
-    expanded="true"
-    shape="ainfix =aoranegV0V0attrueF">
+    expanded="false"
+    shape="ainfix =ainfix ++aprefix ~V0V0attrueF">
     <proof
      prover="2"
      timelimit="5"
@@ -492,6 +543,74 @@
      obsolete="false"
      archived="false">
      <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+   <goal
+    name="imply_transitive"
+    locfile="../fol.why"
+    loclnum="139" loccnumb="9" loccnume="25"
+    sum="0f6d8a54d431da73958c8e5bb97cf2cf"
+    proved="true"
+    expanded="false"
+    shape="ainfix |==V0V2Iainfix |==V1V2Aainfix |==V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+   </goal>
+   <goal
+    name="imply_bigger"
+    locfile="../fol.why"
+    loclnum="142" loccnumb="9" loccnume="21"
+    sum="0fa0632d9edddb8965bcbb1ae0e9b931"
+    proved="true"
+    expanded="false"
+    shape="ainfix |==V0ainfix ++V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="imply_or"
+    locfile="../fol.why"
+    loclnum="146" loccnumb="9" loccnume="17"
+    sum="344a960aaa66552b0f30647d735e6baa"
+    proved="true"
+    expanded="false"
+    shape="ainfix |==ainfix ++V0V2ainfix ++V1V2Iainfix |==V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.73"/>
+    </proof>
+   </goal>
+   <goal
+    name="or_same"
+    locfile="../fol.why"
+    loclnum="150" loccnumb="9" loccnume="16"
+    sum="659f44b990aadb67fed102b1934acc7b"
+    proved="true"
+    expanded="false"
+    shape="ainfix =ainfix ++V0V1V0Iainfix =V0V1F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
     </proof>
    </goal>
   </theory>
