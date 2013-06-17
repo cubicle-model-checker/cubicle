@@ -78,30 +78,59 @@ module Cubicle_Bwd
         if not (phi |== !visited) then (
           let ghost old_v = !visited in
           visited := phi ++ !visited;
-          Q.push (pre_or_approx phi) q
-          (* assert { 
-                   !visited ++ (pre_star q.formula) =
-	  	     old_v ++ pre_star phi ++ pre_star (~ phi & old_q.formula)
+          let poa = pre_or_approx phi in
+          Q.push poa q;
+          assert {
+		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
+		     old_v ++ (pre_star phi ++ pre_star (~ phi & old_q.formula))
 
 		   &&
-	  
-                   !visited ++ (pre_star q.formula) =
-                    old_v ++ (pre_star (ttrue & (phi ++ old_q.formula))) } *)
+		   
+		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
+		     old_v ++ pre_star (ttrue & (phi ++ old_q.formula))
+		     
+		   &&
+
+		   (phi |== poa ->
+		     ((phi ++ old_v) ++
+		      (pre_star phi ++ pre_star (~ phi & old_q.formula))) |==
+		     ((phi ++ old_v) ++ (pre_star poa ++
+		       pre_star (~ phi & old_q.formula))))
+		     
+		 }
+
         )
-        (* else
+        else
            assert {
-                valid ((~ (~ phi)) ++ (pre_star (~ phi)))
+	        valid ((~ phi) => pre_star (~ phi))
 
                 &&
-
-                !visited ++ (pre_star ((~ phi) & old_q.formula)) =
-                (!visited ++ (ttrue ++ (pre_star (~ phi)))) & (pre_star !visited)
-
+		
+		!visited ++ ((~ phi) ++ (pre_star (~ phi))) =
+        	  (phi ++ !visited) ++ ((~ phi) ++ (pre_star (~ phi)))
+		  
                 &&
+		
 
-                !visited ++ (pre_star ((~ phi) & old_q.formula)) =
-                ttrue & (pre_star !visited)
-          } *)
+		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
+		   & (!visited ++ pre_star old_q.formula)) = 
+                 ((!visited ++  ((phi ++ ~ phi) ++ pre_star (~ phi))) &
+		   (!visited ++ pre_star old_q.formula))
+		   
+                &&
+		
+
+		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
+		   & (!visited ++ pre_star old_q.formula)) = 
+                 ((!visited ++  (ttrue ++ pre_star (~ phi))) &
+		   (!visited ++ pre_star old_q.formula))
+
+		&&
+
+		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
+		   & (!visited ++ pre_star old_q.formula)) = 
+		 (!visited ++ ttrue) & (!visited ++ pre_star old_q.formula)
+          }
         
        done;
       Safe

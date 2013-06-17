@@ -299,14 +299,33 @@ Theorem WP_parameter_bwd : forall (init:t) (theta:t), forall (visited:t),
   (choose rho4) in (((~ (is_empty rho4)) /\ ((rho6 = (remove phi rho4)) /\
   ((valid (infix_eqgt phi rho5)) /\ (rho7 = (infix_et (prefix_tl phi)
   rho5))))) -> ((~ (sat (infix_et init phi))) -> ((infix_breqeq phi
-  visited2) -> ((~ (sat (infix_et init visited2))) -> (infix_breqeq
-  (pre_star theta) (infix_plpl visited2 (pre_star rho7))))))))).
+  visited2) -> (((valid (infix_eqgt (prefix_tl phi)
+  (pre_star (prefix_tl phi)))) /\ (((infix_plpl visited2
+  (infix_plpl (prefix_tl phi)
+  (pre_star (prefix_tl phi)))) = (infix_plpl (infix_plpl phi visited2)
+  (infix_plpl (prefix_tl phi) (pre_star (prefix_tl phi))))) /\
+  (((infix_et (infix_plpl visited2 (infix_plpl (prefix_tl phi)
+  (pre_star (prefix_tl phi)))) (infix_plpl visited2
+  (pre_star old_q))) = (infix_et (infix_plpl visited2
+  (infix_plpl (infix_plpl phi (prefix_tl phi)) (pre_star (prefix_tl phi))))
+  (infix_plpl visited2 (pre_star old_q)))) /\
+  (((infix_et (infix_plpl visited2 (infix_plpl (prefix_tl phi)
+  (pre_star (prefix_tl phi)))) (infix_plpl visited2
+  (pre_star old_q))) = (infix_et (infix_plpl visited2 (infix_plpl ttrue
+  (pre_star (prefix_tl phi)))) (infix_plpl visited2 (pre_star old_q)))) /\
+  ((infix_et (infix_plpl visited2 (infix_plpl (prefix_tl phi)
+  (pre_star (prefix_tl phi)))) (infix_plpl visited2
+  (pre_star old_q))) = (infix_et (infix_plpl visited2 ttrue)
+  (infix_plpl visited2 (pre_star old_q)))))))) -> ((~ (sat (infix_et init
+  visited2))) -> (infix_breqeq (pre_star theta) (infix_plpl visited2
+  (pre_star rho7)))))))))).
 (* Why3 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2
         rho3 (h6,h7) rho4 rho5 visited2 (h8,h9) o h10 h11 old_q old_q1
-        (h12,h13) rho6 rho7 phi (h14,(h15,(h16,h17))) h18 h19 h20. *)
+        (h12,h13) rho6 rho7 phi (h14,(h15,(h16,h17))) h18 h19
+        (h20,(h21,(h22,(h23,h24)))) h25. *)
 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2 rho3
 (h6,h7) rho4 rho5 visited2 (h8,h9) o h10 h11 old_q old_q1 (h12,h13) rho6 rho7
-phi (h14,(h15,(h16,h17))) h18 h19 h20.
+phi (h14,(h15,(h16,h17))) h18 h19 assertions_else h20.
 
 
 Notation "A & B" := (infix_et A B) (at level 80).

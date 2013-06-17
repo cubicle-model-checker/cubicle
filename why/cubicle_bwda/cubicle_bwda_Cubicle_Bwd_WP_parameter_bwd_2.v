@@ -300,33 +300,43 @@ Theorem WP_parameter_bwd : forall (init:t) (theta:t), forall (visited:t),
   ((valid (infix_eqgt phi rho5)) /\ (rho7 = (infix_et (prefix_tl phi)
   rho5))))) -> ((~ (sat (infix_et init phi))) -> ((~ (infix_breqeq phi
   visited2)) -> forall (visited3:t), (visited3 = (infix_plpl phi
-  visited2)) -> forall (o1:t), ((o1 = (pre phi)) \/ (infix_breqeq phi o1)) ->
-  forall (rho8:(set t)) (rho9:t), ((rho9 = (infix_plpl o1 rho7)) /\
-  (rho8 = (add o1 rho6))) -> ((~ (sat (infix_et init visited3))) ->
-  (infix_breqeq (pre_star theta) (infix_plpl visited3
-  (pre_star rho9))))))))).
+  visited2)) -> forall (poa:t), ((poa = (pre phi)) \/ (infix_breqeq phi
+  poa)) -> forall (rho8:(set t)) (rho9:t), ((rho9 = (infix_plpl poa rho7)) /\
+  (rho8 = (add poa rho6))) -> ((((infix_plpl (infix_plpl phi visited2)
+  (pre_star (infix_plpl (pre phi) (infix_et (prefix_tl phi)
+  old_q)))) = (infix_plpl visited2 (infix_plpl (pre_star phi)
+  (pre_star (infix_et (prefix_tl phi) old_q))))) /\
+  (((infix_plpl (infix_plpl phi visited2) (pre_star (infix_plpl (pre phi)
+  (infix_et (prefix_tl phi) old_q)))) = (infix_plpl visited2
+  (pre_star (infix_et ttrue (infix_plpl phi old_q))))) /\ ((infix_breqeq phi
+  poa) -> (infix_breqeq (infix_plpl (infix_plpl phi visited2)
+  (infix_plpl (pre_star phi) (pre_star (infix_et (prefix_tl phi) old_q))))
+  (infix_plpl (infix_plpl phi visited2) (infix_plpl (pre_star poa)
+  (pre_star (infix_et (prefix_tl phi) old_q)))))))) -> ((~ (sat
+  (infix_et init visited3))) -> (infix_breqeq (pre_star theta)
+  (infix_plpl visited3 (pre_star rho9)))))))))).
 (* Why3 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2
         rho3 (h6,h7) rho4 rho5 visited2 (h8,h9) o h10 h11 old_q old_q1
-        (h12,h13) rho6 rho7 phi (h14,(h15,(h16,h17))) h18 h19 visited3 h20 o1
-        h21 rho8 rho9 (h22,h23) h24. *)
+        (h12,h13) rho6 rho7 phi (h14,(h15,(h16,h17))) h18 h19 visited3 h20
+        poa h21 rho8 rho9 (h22,h23) (h24,(h25,h26)) h27. *)
 intros init theta visited h1 rho rho1 (h2,h3) h4 visited1 h5 rho2 rho3
 (h6,h7) rho4 rho5 visited2 (h8,h9) o h10 h11 old_q old_q1 (h12,h13) rho6 rho7
-phi (h14,(h15,(h16,h17))) h18 h19 visited3 h20 o1 h21 rho8 rho9 (h22,h23)
-h24.
+phi (h14,(h15,(h16,h17))) h18 h19 visited3 h20 poa h21 rho8 rho9 (h22,h23)
+assertion_if h24.
 
 
-Notation "A & B" := (infix_et A B) (at level 80, right associativity).
-Notation "A | B" := (infix_plpl A B) (at level 85, right associativity).
-Notation "-- A" := (prefix_tl A) (at level 75, right associativity).
-Notation "A => B" := (infix_eqgt A B) (at level 70, right associativity).
-Notation "A |= B" := (infix_breq A B) (at level 65, right associativity).
-Notation "A |== B" := (infix_breqeq A B) (at level 64, right associativity).
+Notation "A & B" := (infix_et A B) (at level 80).
+Notation "A | B" := (infix_plpl A B) (at level 85).
+Notation "-- A" := (prefix_tl A) (at level 75).
+Notation "A => B" := (infix_eqgt A B) (at level 70).
+Notation "A |= B" := (infix_breq A B) (at level 65).
+Notation "A |== B" := (infix_breqeq A B) (at level 64).
 
 rewrite h22.
 rewrite h17.
 rewrite h20.
 
-assert ((visited2 | pre_star rho5) |== (visited2 | pre_star phi | pre_star rho5)).
+assert ((visited2 | pre_star rho5) |== (visited2 | (pre_star phi | pre_star rho5))).
 rewrite or_c with (f1 := pre_star phi).
 rewrite <- or_a.
 apply imply_bigger with (f1 := (visited2 | pre_star rho5)).
@@ -355,14 +365,14 @@ rewrite H1. auto.
 
 
 rewrite pre_star_or.
-assert (((phi | visited2) | pre_star phi | pre_star (-- phi & rho5)) |== ((phi | visited2) | pre_star o1 | pre_star (-- phi & rho5))).
+assert (((phi | visited2) | (pre_star phi | pre_star (-- phi & rho5))) |== ((phi | visited2) | (pre_star poa | pre_star (-- phi & rho5)))).
 rewrite or_c with (f1 := (phi | visited2)).
 rewrite or_c with (f1 := (phi | visited2)).
 rewrite or_a.
 rewrite or_a.
 apply imply_or.
 apply pre_star_bigger. auto.
-apply imply_transitive with (f2 := ((phi | visited2) | pre_star phi | pre_star (-- phi & rho5))).
+apply imply_transitive with (f2 := ((phi | visited2) | (pre_star phi | pre_star (-- phi & rho5)))).
 split.
 rewrite <- pre_star_def4 with (f := phi).
 rewrite or_c with (f1 := pre_star (pre phi)).
