@@ -318,14 +318,15 @@ let cancel_until lvl =
   end;
   assert (Vec.size env.trail_lim = Vec.size env.tenv_queue)
 
-let rec pick_branch_lit () = 
+let rec pick_branch_lit () =
+  if Iheap.size env.order = 0 then raise Sat; (* new *)
   let max = Iheap.remove_min f_weight env.order in
   let v = Vec.get env.vars max in
   if v.level>= 0 then  begin
     assert (v.pa.is_true || v.na.is_true);
     pick_branch_lit ()
   end
-  else v
+  else v 
 
 let enqueue a lvl reason =
   assert (not a.is_true && not a.neg.is_true && 
