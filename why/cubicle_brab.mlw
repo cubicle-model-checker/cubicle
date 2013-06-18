@@ -41,7 +41,7 @@ module Cubicle_BRAB
   type result = Safe | Unsafe
   exception Unsafe_trace
 
-  type kind = Appr | Orig
+  type kind = Undef | Appr | Orig
   
   val visited : ref f
   val bad : ref f
@@ -58,27 +58,28 @@ module Cubicle_BRAB
   ensures { match result with
             | Some psi -> not (!bad |== psi) /\ not (finite_model |== psi) /\
 	      	       	  phi |== psi /\ kind psi = Appr /\
-	                  if kind phi = Orig then from psi = psi
-			  else from psi = from phi
+	                  (kind phi = Orig -> from psi = psi) /\
+			  (kind phi = Appr -> from psi = from phi)
 	    | None -> true end }
 
-  let pre_or_approx (phi : f) =
-    ensures { (result = pre phi \/ phi |== result) /\
-	      (result = pre phi -> kind result = kind phi /\ from result = from phi) \/
-              (phi |== result ->
+  val pre_or_approx (phi : f) : f
+    ensures { (result = pre phi /\ kind result = kind phi /\ from result = from phi) \/
+              (phi |== result /\ kind result = Appr /\
 	       not (!bad |== result) /\ not (finite_model |== result) /\
-	       kind result = Appr /\
-	       if kind phi = Orig then from result = result
-	       else from result = from phi) }
-    match approx phi with
-      | Some psi -> psi
-      | None -> pre phi
-    end
+	       (kind phi = Orig -> from result = result) /\
+	       (kind phi = Appr -> from result = from phi)) }
+    (* match approx phi with *)
+    (*   | Some psi -> psi *)
+    (*   | None -> pre phi *)
+    (* end *)
   
     
   let bwd (init : f) (theta : f) =
+    requires { forall psi:f. psi <> theta -> kind psi = Undef /\ from psi = psi }
+    requires { kind theta = Orig /\ from theta = theta }
     (* Soundness *)
     ensures { result = Safe -> not (reachable init theta) }
+    ensures { result = Unsafe -> kind !faulty = Orig -> reachable init theta }
     visited := ffalse;
     Q.clear q;
     try
@@ -88,7 +89,9 @@ module Cubicle_BRAB
        while not (Q.is_empty q) do
         invariant { not (sat (init & !visited)) &&
                     (* pre_star !visited |== !visited ++ (pre_star q.formula) && *)
-                    pre_star theta |== !visited ++ (pre_star q.formula) }
+                    pre_star theta |== !visited ++ (pre_star q.formula) &&
+		    forall psi:f. kind psi = Orig -> from psi = theta &&
+		    forall psi:f. reachable init psi -> reachable init (from psi) }
         let ghost old_q = Q.copy q in
         let phi = Q.pop q in
         if sat (init & phi) then (faulty := phi; raise Unsafe_trace);
@@ -98,6 +101,11 @@ module Cubicle_BRAB
           let poa = pre_or_approx phi in
           Q.push poa q;
           assert {
+	           old_v ++ pre_star q.formula |==
+		     old_v ++ (pre_star phi ++ pre_star q.formula)
+
+		   &&
+		   
 		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
 		     old_v ++ (pre_star phi ++ pre_star (~ phi & old_q.formula))
 
@@ -159,9 +167,10 @@ module Cubicle_BRAB
 
     
     let brab (init : f) (theta : f) =
-	requires { kind theta = Orig }
-	requires { from theta = theta }
+	requires { kind theta = Orig /\ from theta = theta }
+        requires { forall psi:f. psi <> theta -> kind psi = Undef /\ from psi = psi }
 	ensures { result = Safe -> not (reachable init theta) }
+	ensures { result = Unsafe -> reachable init theta }
     	bad := ffalse;
 	try
 	    while bwd init theta = Unsafe do
