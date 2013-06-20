@@ -56,5 +56,8 @@ theory Reachability
    lemma pre_star_bigger:
      forall f1 f2 : t.
        f1 |== f2 -> pre_star f1 |== pre_star f2
+       
+   lemma reachable_by_pre:
+     forall f init : t. reachable init (pre f) -> reachable init f
 
 end

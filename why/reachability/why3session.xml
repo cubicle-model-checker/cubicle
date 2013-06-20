@@ -192,6 +192,23 @@
      <result status="valid" time="0.03"/>
     </proof>
    </goal>
+   <goal
+    name="reachable_by_pre"
+    locfile="../reachability.why"
+    loclnum="60" loccnumb="9" loccnume="25"
+    sum="f8af5097049605edae31fefc89d10cf1"
+    proved="true"
+    expanded="true"
+    shape="areachableV1V0IareachableV1apreV0F">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.11"/>
+    </proof>
+   </goal>
   </theory>
  </file>
 </why3session>

@@ -3,7 +3,7 @@ module Cubicle_BRAB
   use import ref.Ref
   use import option.Option
   use import fol.FOL
-  use import abstract_queue.AbstractQueue as Q
+  use import abstract_annoted_queue.AbstractQueue as Q
   use import reachability.Reachability
 
   (* remove unecessary axioms for solvers *)
@@ -41,120 +41,126 @@ module Cubicle_BRAB
   type result = Safe | Unsafe
   exception Unsafe_trace
 
-  type kind = Undef | Appr | Orig
   
   val visited : ref f
   val bad : ref f
-  val faulty : ref f
   
   val q : Q.t
 
   constant finite_model : f
-  function kind f : kind
-  function from f : f
+
+  (* function kind f : kind *)
+  (* function from f : f *)
+
+  
+  val faulty : ref f_annot
+
+  let init_annot (phi: f) =
+  { f = phi; kind = Undef; from = phi }
   
 
-  val approx (phi : f) : option f
-  ensures { match result with
-            | Some psi -> not (!bad |== psi) /\ not (finite_model |== psi) /\
-	      	       	  phi |== psi /\ kind psi = Appr /\
-	                  (kind phi = Orig -> from psi = psi) /\
-			  (kind phi = Appr -> from psi = from phi)
-	    | None -> true end }
+  (* val approx (phi : f) : option f *)
+  (* ensures { match result with *)
+  (*           | Some psi -> not (!bad |== psi) /\ not (finite_model |== psi) /\ *)
+  (* 	      	       	  phi |== psi /\ kind psi = Appr /\ *)
+  (* 	                  (kind phi = Orig -> from psi = psi) /\ *)
+  (* 			  (kind phi = Appr -> from psi = from phi) *)
+  (* 	    | None -> true end } *)
 
-  val pre_or_approx (phi : f) : f
-    ensures { (result = pre phi /\ kind result = kind phi /\ from result = from phi) \/
-              (phi |== result /\ kind result = Appr /\
-	       not (!bad |== result) /\ not (finite_model |== result) /\
-	       (kind phi = Orig -> from result = result) /\
-	       (kind phi = Appr -> from result = from phi)) }
+  val pre_or_approx (phi : f_annot) : f_annot (* writes { phi } *)
+    ensures { (result.f = pre phi.f /\ result.kind = phi.kind /\ result.from = phi.from) \/
+              (phi.f |== result.f /\ result.kind = Appr /\
+	       not (!bad |== result.f) /\ not (finite_model |== result.f) /\
+	       (phi.kind = Orig -> result.from = result.f) /\
+	       (phi.kind = Appr -> result.from = phi.from)) }
     (* match approx phi with *)
     (*   | Some psi -> psi *)
     (*   | None -> pre phi *)
     (* end *)
   
     
-  let bwd (init : f) (theta : f) =
-    requires { forall psi:f. psi <> theta -> kind psi = Undef /\ from psi = psi }
-    requires { kind theta = Orig /\ from theta = theta }
+  let bwd (init : f) (theta : f_annot) =
     (* Soundness *)
-    ensures { result = Safe -> not (reachable init theta) }
-    ensures { result = Unsafe -> kind !faulty = Orig -> reachable init theta }
+    ensures { result = Safe -> not (reachable init theta.f) }
+    ensures { result = Unsafe -> kind !faulty = Orig -> reachable init theta.f }
     visited := ffalse;
     Q.clear q;
     try
-       if sat (init & theta) then raise Unsafe_trace;
-       visited := theta ++ !visited;
-       Q.push (pre theta) q;
+       !faulty.kind <- Undef; (* Just for init *)
+       if sat (init & theta.f) then raise Unsafe_trace;
+       visited := theta.f ++ !visited;
+       let pre_theta = init_annot (pre theta.f) in
+       pre_theta.kind <- theta.kind;
+       Q.push pre_theta q;
        while not (Q.is_empty q) do
         invariant { not (sat (init & !visited)) &&
                     (* pre_star !visited |== !visited ++ (pre_star q.formula) && *)
-                    pre_star theta |== !visited ++ (pre_star q.formula) &&
-		    forall psi:f. kind psi = Orig -> from psi = theta &&
-		    forall psi:f. reachable init psi -> reachable init (from psi) }
+                    pre_star theta.f |== !visited ++ (pre_star q.formula.f) &&
+		    !faulty.kind = Orig -> !faulty.from = theta.f &&
+		    reachable init !faulty.f -> reachable init !faulty.from }
         let ghost old_q = Q.copy q in
         let phi = Q.pop q in
-        if sat (init & phi) then (faulty := phi; raise Unsafe_trace);
-        if not (phi |== !visited) then (
+        if sat (init & phi.f) then (faulty := phi; raise Unsafe_trace);
+        if not (phi.f |== !visited) then (
           let ghost old_v = !visited in
-          visited := phi ++ !visited;
+          visited := phi.f ++ !visited;
           let poa = pre_or_approx phi in
           Q.push poa q;
           assert {
-	           old_v ++ pre_star q.formula |==
-		     old_v ++ (pre_star phi ++ pre_star q.formula)
+	           old_v ++ pre_star q.formula.f |==
+		     old_v ++ (pre_star phi.f ++ pre_star q.formula.f)
 
 		   &&
 		   
-		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
-		     old_v ++ (pre_star phi ++ pre_star (~ phi & old_q.formula))
+		   (phi.f ++ old_v) ++ pre_star (pre phi.f ++ ((~ phi.f) & old_q.formula.f)) =
+		     old_v ++ (pre_star phi.f ++ pre_star (~ phi.f & old_q.formula.f))
 
 		   &&
 		   
-		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
-		     old_v ++ pre_star (ttrue & (phi ++ old_q.formula))
+		   (phi.f ++ old_v) ++ pre_star (pre phi.f ++ ((~ phi.f) & old_q.formula.f)) =
+		     old_v ++ pre_star (ttrue & (phi.f ++ old_q.formula.f))
 		     
 		   &&
 
-		   (phi |== poa ->
-		     ((phi ++ old_v) ++
-		      (pre_star phi ++ pre_star (~ phi & old_q.formula))) |==
-		     ((phi ++ old_v) ++ (pre_star poa ++
-		       pre_star (~ phi & old_q.formula))))
+		   (phi.f |== poa.f ->
+		     ((phi.f ++ old_v) ++
+		      (pre_star phi.f ++ pre_star (~ phi.f & old_q.formula.f))) |==
+		     ((phi.f ++ old_v) ++ (pre_star poa.f ++
+		       pre_star (~ phi.f & old_q.formula.f))))
 		     
 		 }
 
         )
         else
            assert {
-	        valid ((~ phi) => pre_star (~ phi))
+	        valid ((~ phi.f) => pre_star (~ phi.f))
 
                 &&
 		
-		!visited ++ ((~ phi) ++ (pre_star (~ phi))) =
-        	  (phi ++ !visited) ++ ((~ phi) ++ (pre_star (~ phi)))
+		!visited ++ ((~ phi.f) ++ (pre_star (~ phi.f))) =
+        	  (phi.f ++ !visited) ++ ((~ phi.f) ++ (pre_star (~ phi.f)))
 		  
                 &&
 		
 
-		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
-		   & (!visited ++ pre_star old_q.formula)) = 
-                 ((!visited ++  ((phi ++ ~ phi) ++ pre_star (~ phi))) &
-		   (!visited ++ pre_star old_q.formula))
+		 ((!visited ++ (~ phi.f ++ pre_star (~ phi.f)))
+		   & (!visited ++ pre_star old_q.formula.f)) = 
+                 ((!visited ++  ((phi.f ++ ~ phi.f) ++ pre_star (~ phi.f))) &
+		   (!visited ++ pre_star old_q.formula.f))
 		   
                 &&
 		
 
-		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
-		   & (!visited ++ pre_star old_q.formula)) = 
-                 ((!visited ++  (ttrue ++ pre_star (~ phi))) &
-		   (!visited ++ pre_star old_q.formula))
+		 ((!visited ++ (~ phi.f ++ pre_star (~ phi.f)))
+		   & (!visited ++ pre_star old_q.formula.f)) = 
+                 ((!visited ++  (ttrue ++ pre_star (~ phi.f))) &
+		   (!visited ++ pre_star old_q.formula.f))
 
 		&&
 
-		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
-		   & (!visited ++ pre_star old_q.formula)) = 
-		 (!visited ++ ttrue) & (!visited ++ pre_star old_q.formula)
+		 ((!visited ++ (~ phi.f ++ pre_star (~ phi.f)))
+		   & (!visited ++ pre_star old_q.formula.f)) = 
+		 (!visited ++ ttrue) & (!visited ++ pre_star old_q.formula.f)
           }
         
        done;
