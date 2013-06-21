@@ -93,6 +93,7 @@ module Cubicle_BRAB
           psi
       | None ->
           let psi = pre phi in
+	  assert { reachable init psi -> reachable init phi };
           kind := !kind[psi <- !kind[phi]];
           from := !from[psi <- !from[phi]];
           psi
