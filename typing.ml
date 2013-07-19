@@ -321,6 +321,7 @@ let system s =
 	t_nb = Cube.new_cube_id ();
 	t_nb_father = -1;
 	t_glob_proc = glob_proc;
+	t_from_forall = false;
       }
     ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

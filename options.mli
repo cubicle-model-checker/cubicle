@@ -47,6 +47,7 @@ val delete : bool
 val simpl_by_uc : bool
 val bitsolver : bool
 val enumsolver : bool
+val refine_universal : bool
 
 val cores : int
 

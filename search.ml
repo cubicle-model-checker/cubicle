@@ -433,6 +433,7 @@ module BFS_base ( X : I ) = struct
                        (l, []), true
                  else X.pre s, false
                in
+	       
 	       let ls = List.rev ls in
 	       let post = List.rev post in
 	       (* Uncomment for pure bfs search *)

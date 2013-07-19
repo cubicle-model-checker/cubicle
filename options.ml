@@ -58,6 +58,7 @@ let post_strategy = ref (-1)
 let delete = ref true
 let simpl_by_uc = ref false
 let cores = ref 0
+let refine_universal = ref false
 
 let mode = ref Bfs
 let set_mode = function
@@ -109,6 +110,7 @@ let specs =
                           2: postpone nodes that don't add information";
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
+    "-refine-universal", Arg.Set refine_universal, " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
@@ -174,3 +176,5 @@ let bitsolver = !bitsolver
 let enumsolver = !enumsolver
 
 let size_proc = ref 0
+
+let refine_universal = !refine_universal

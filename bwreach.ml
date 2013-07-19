@@ -257,7 +257,15 @@ let make_cubes =
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
 			    t_nb = new_cube_id ();
 			    t_nb_father = nb;
+			    t_from_forall = s.t_from_forall || tr.tr_ureq <> [];
 			} in
+		      
+		      if refine_universal && new_s.t_from_forall &&
+			 List.length nargs > List.length uargs &&
+			 Forward.spurious new_s then
+			ls, post
+		      else
+
 		      match post_strategy with
 			| 0 -> add_list new_s ls, post
 			| 1 -> 

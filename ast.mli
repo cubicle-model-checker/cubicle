@@ -149,6 +149,7 @@ type t_system = {
   t_nb : int;
   t_nb_father : int;
   t_glob_proc : Hstring.t list;
+  t_from_forall: bool;
 }
 
 val declared_terms : ArrayAtom.t -> bool
