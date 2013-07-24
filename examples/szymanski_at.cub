@@ -1,17 +1,23 @@
-(* Szymanski's mutual exclusion algorithm
+(*****************************************************************************)
+(* Szymanski's mutual exclusion algorithm                                    *)
+(*****************************************************************************)
+(*                                                                           *)
+(* 0 : Bx := true                                                            *)
+(* 1 : await forall y. x <> y => not Sy then Bx := false                     *)
+(* 2 : Wx := true ; Sx := true ;                                             *)
+(* 3 : if exists y. x <> y not By /\ not Wy                                  *)
+(*        then Sx := false ; goto 4                                          *)
+(*        else Wx := false ; goto 5                                          *)
+(* 4 : await exists y. x <> y => Sy /\ not Wy then Wx := false ; Sx := true; *)
+(* 5 : await forall y. x <> y => not Wy                                      *)
+(* 6 : await forall y. y < x => not Sy                                       *)
+(* 7 : {Critical section}                                                    *)
+(*     Sx := false ; goto 0                                                  *)
+(*                                                                           *)
+(* A simple solution to Lamport's concurrent programming problem with        *)
+(* linear wait.  Boleslaw K. Szymanski. ICS, page 621-626. (1988)            *)
+(*****************************************************************************)
 
-0 : Bx := true
-1 : await forall y. x <> y => not Sy then Bx := false
-2 : Wx := true ; Sx := true ;
-3 : if exists y. x <> y not By /\ not Wy
-       then Sx := false ; goto 4
-       else Wx := false ; goto 5
-4 : await exists y. x <> y => Sy /\ not Wy then Wx := false ; Sx := true;
-5 : await forall y. x <> y => not Wy
-6 : await forall y. y < x => not Sy
-7 : {Critical section}
-    Sx := false ; goto 0
-*)
 
 type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
 
@@ -53,7 +59,7 @@ requires { A[x] = L5 && forall_other y. W[y] = False }
 { A[x] := L6 }
 
 transition t6 (x)
-requires { A[x] = L6 (*&& forall_other j. (x <= j || S[j] = False)*) }
+requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
 { A[x] := L7 }
 
 transition t7 (x)
