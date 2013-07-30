@@ -1,8 +1,10 @@
+;;; cubicle-mode.el --- Cubicle major mode for emacs
+
+;; Author: Alain Mebsout
+;; Version: 0.1
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Cubicle major mode for emacs                                               ;;
-;;                                                                            ;;
-;; Author: Alain Mebsout                                                      ;;
-;;                                                                            ;;
 ;; Usage:                                                                     ;;
 ;;   Copy this file to a location of your load path (e.g. ~/.emacs.d) and add ;;
 ;;   the following to your .emacs (or .emacs.d/init.el):                      ;;
@@ -94,3 +96,5 @@
   (set (make-local-variable 'font-lock-defaults)'(cubicle-font-lock-keywords))
   )
 (provide 'cubicle-mode)
+
+;;; cubicle-mode.el ends here
