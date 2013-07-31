@@ -1,5 +1,5 @@
-module S =  Set.Make (Ast.Satom)
+module S =  Set.Make (Ast.ArrayAtom)
 
-type set = S.t
+type 'a set = S.t
 
 open S

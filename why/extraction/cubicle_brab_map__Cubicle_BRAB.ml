@@ -1,5 +1,8 @@
 (* This file has been generated from Why3 module Cubicle_BRAB *)
 
+open Fol__FOL
+module AQ = Abstract_queue__AbstractQueue
+
 type result =
   | Safe
   | Unsafe
@@ -15,32 +18,32 @@ let finite_model  : Fol__FOL.t =
 exception Unsafe_trace
 
 let visited  : (Fol__FOL.t Pervasives.ref) =
-  failwith "to be implemented" (* val *)
+  ref ffalse
 
 
 
 let bad  : (Fol__FOL.t Pervasives.ref) =
-  failwith "to be implemented" (* val *)
+  ref ffalse
 
 
 
 let faulty  : (Fol__FOL.t Pervasives.ref) =
-  failwith "to be implemented" (* val *)
+  ref ffalse
 
 
 
-let q  : Abstract_queue__AbstractQueue.t =
-  failwith "to be implemented" (* val *)
+let q  : Abstract_queue__AbstractQueue.t = AQ.empty
+
 
 
 
 let kind  : (((Fol__FOL.t, kind) Map__Map.map) Pervasives.ref) =
-  failwith "to be implemented" (* val *)
+  ref Map__Map.empty
 
 
 
 let from  : (((Fol__FOL.t, Fol__FOL.t) Map__Map.map) Pervasives.ref) =
-  failwith "to be implemented" (* val *)
+  ref Map__Map.empty
 
 
 
@@ -148,12 +151,14 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
   | Abstract_queue__AbstractQueue.Empty -> assert false (* absurd *)) end end
 
 let reset_maps (theta1: Fol__FOL.t) : unit =
-  failwith "to be implemented" (* val *)
-
+  kind := Map__Map.empty;
+  kind := Map__Map.empty;
+  from := Map__Map.empty
+  
 
 
 let bwd_res  : (result Pervasives.ref) =
-  failwith "to be implemented" (* val *)
+  ref Unsafe
 
 
 
