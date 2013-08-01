@@ -8,6 +8,29 @@ type t =
   | Or of t list
   | And of t list
 
+exception Compare of int
+let rec compare f1 f2 = match f1, f2 with
+  | Lit a1, Lit a2 -> Atom.compare a1 a2
+  | Lit _, _ -> -1
+  | _, Lit _ -> 1
+  | Not x1, Not x2 -> compare x1 x2
+  | Not _, _ -> -1
+  | _, Not _ -> 1
+  | And l1, And l2 | Or l1, Or, l2 ->
+    let r = Pervasives.compare (List.length l1) (List.length l2) in
+    if r <> 0 then r
+    else begin
+      try 
+	List.iter2 (fun x1 x2 ->
+	  let r = compare x1 x2 in
+	  if r <> 0 then raise Compare r
+	) l1 l2;
+	0	
+      with Compare r -> r
+    end
+  | And _, _ -> -1
+  | _, And -> 1
+
 
 (* type structure to be defined (uninterpreted type) *)
 
@@ -20,7 +43,7 @@ let ttrue  : t = Lit True
 
 (*------------ helper functions -------------*)
 let rec push_neg p = function
-  | Lit _ as x -> if p then x else Not x
+  | Lit _ as x -> if p then x else Atom.neg x
   | Not f -> push_neg (not p) f
   | Or l ->
       if p then Or (List.map (push_neg p) l)
@@ -54,7 +77,7 @@ let infix_eqgt (x: t) (x1: t) : t = dnfize (Or [Not x; x1])
 let infix_breqeq (x: t) (x1: t) : bool = assert false
 
 
-(* Notataiont *)
+(* Notataions *)
 
 let neg = prefix_tl
 

@@ -1,6 +1,6 @@
 (* This file has been generated from Why3 module AbstractQueue *)
 module F = Fol__FOL
-module S = Set__Fset
+(* module S = Set__Fset *)
 module Q = Queue
 open F
 
@@ -17,8 +17,14 @@ let create (us: unit) : t =
   
 
 let push (f: Fol__FOL.t) (q: t) : unit =
-  q.formula <- f ++ q.formula;
-  Q.push f q.elts
+  let l = match f with
+    | Lit _ | And _ -> [f]
+    | Or l -> l
+  in
+  List.iter (fun f ->
+    q.formula <- f ++ q.formula;
+    Q.push f q.elts
+  ) l
 
 
 exception Empty

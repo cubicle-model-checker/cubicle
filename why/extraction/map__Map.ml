@@ -1,4 +1,4 @@
-module M = Map.Make (ArrayAtom)
+module M = Map.Make (Fol__FOL)
 
 type ('a, 'b) map = 'b M.t
 
