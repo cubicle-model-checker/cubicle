@@ -41,7 +41,39 @@ let ffalse  : t = Lit False
 
 let ttrue  : t = Lit True
 
-(*------------ helper functions -------------*)
+
+(*---------- Helper functions ----------------*)
+let conj_to_cube = function
+  | And l -> 
+    List.fold_left (fun acc x -> SAtom.add x acc) SAtom.empty l
+  | _ -> assert false
+
+let fol_to_cubes = function
+  | Lit x -> [SAtom.singleton x]
+  | And _ as f -> [conj_to_cube f]
+  | Or l -> List.map conj_to_cube l
+  | _ -> assert false
+
+let cube_to_fol sa = 
+  And (SAtom.fold (fun x acc -> Lit x :: acc) sa [])
+
+let cubes_to_fol = function
+  | [] -> []
+  | [sa] -> cubes_to_fol sa
+  | lsa -> Or (List.map cube_to_fol lsa)
+
+
+let wrap_system sa =
+  let sa, (args, _) = proper_cube sa in
+  let arr_sa = ArrayAtom.of_satom sa in
+  { global_system with 
+    t_unsafe = args, sa;
+    t_arru = arr_sa;
+    t_alpha = ArrayAtom.alpha arr_sa args }
+    
+
+let fol_to_systems f = List.map wrap_system (fol_to_cubes f)
+
 let rec push_neg p = function
   | Lit _ as x -> if p then x else Atom.neg x
   | Not f -> push_neg (not p) f
@@ -74,7 +106,11 @@ let infix_plpl (x: t) (x1: t) : t = dnfize (Or [x; x1])
 
 let infix_eqgt (x: t) (x1: t) : t = dnfize (Or [Not x; x1])
   
-let infix_breqeq (x: t) (x1: t) : bool = assert false
+let infix_breqeq (x: t) (x1: t) : bool =
+  let ls = fol_to_systems x in
+  match ls with
+  | [s] -> fixpoint ~invariants:[] ~visited:(fol_to_systems x1) s <> None
+  | _ -> assert false
 
 
 (* Notataions *)
@@ -90,7 +126,13 @@ let (=>) x x1 = infix_eqgt x x1
 let (|=) x x1 = infix_breqeq x x1
 
 
+
+(* let cnf_split_quantified f = *)
+(*   match push_neg false f with *)
+(*   | Lit _ as nf -> *)
   
-let sat (f: t) : bool = (* TODO solver cnf : push_neg false f *)
+let sat (f: t) : bool = not ((Lit True) |= push_neg false f)
+  
+
 
 let valid (f: t) : bool = not (sat (prefix_tl f))
