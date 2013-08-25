@@ -1,5 +1,5 @@
-module S =  Set.Make (Ast.ArrayAtom)
+module S =  Set.Make (Ast.SAtom)
 
 type 'a set = S.t
 
-open S
+include S

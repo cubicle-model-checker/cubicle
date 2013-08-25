@@ -12,8 +12,8 @@ type kind =
   | Appr
   | Orig
 
-let finite_model  : Fol__FOL.t =
-  failwith "to be implemented" (* uninterpreted symbol *)
+let finite_model  : Fol__FOL.t = (* TODO: change this *)
+  Fol__FOL.ffalse
 
 exception Unsafe_trace
 
@@ -32,7 +32,7 @@ let faulty  : (Fol__FOL.t Pervasives.ref) =
 
 
 
-let q  : Abstract_queue__AbstractQueue.t = AQ.empty
+let q  : Abstract_queue__AbstractQueue.t = AQ.create ()
 
 
 
@@ -67,13 +67,13 @@ let pre_or_approx (phi: Fol__FOL.t) ((* ghost *)) ((* ghost *)) =
                    (let o1 = (Pervasives.(!) from) in
                    (Map__Map.mixfix_lblsmnrb o1 psi psi)) in
               ((Pervasives.(:=) from) o)
-            else let o =
+            else begin let o =
                    (let o1 =
                       (let o2 = (Pervasives.(!) from) in
                       (Map__Map.mixfix_lbrb o2 phi)) in
                    let o2 = (Pervasives.(!) from) in
                    (Map__Map.mixfix_lblsmnrb o2 psi o1)) in
-              ((Pervasives.(:=) from) o);
+              ((Pervasives.(:=) from) o) end;
       psi end end
   | None ->
       let psi = (Reachability__Reachability.pre phi) in
@@ -106,7 +106,7 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
                (let o1 = (Pervasives.(!) kind) in
                (Map__Map.mixfix_lblsmnrb o1 theta Orig)) in
        ((Pervasives.(:=) kind) o);
-       begin if (Fol__FOL.sat Fol__FOL.infix_et init theta)
+       begin if (Fol__FOL.sat (Fol__FOL.infix_et init theta))
              then raise Unsafe_trace
              else (());
        begin let o =
@@ -127,7 +127,7 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
                   if let o = (Abstract_queue__AbstractQueue.is_empty q) in
                   (not (o = true))
                   then let phi1 = (Abstract_queue__AbstractQueue.pop q) in
-                    begin if (Fol__FOL.sat Fol__FOL.infix_et init phi1)
+                    begin if (Fol__FOL.sat (Fol__FOL.infix_et init phi1))
                           then begin ((Pervasives.(:=) faulty) phi1);
                                raise Unsafe_trace end
                           else (());
