@@ -394,7 +394,7 @@ module Formula = struct
 	  end
       | Comb (And, l) -> 
 	  Comb (And, List.map cnf l)
-      | f -> f    
+      | f -> f
 
 
 let ( @@ ) l1 l2 = List.rev_append l1 l2

@@ -36,3 +36,5 @@ val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 
 (*val extract_candidates : 
   Hstring.t list -> ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list*)
+
+val make_literal : Atom.t -> Smt.Formula.t

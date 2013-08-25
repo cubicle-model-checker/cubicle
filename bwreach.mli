@@ -15,4 +15,8 @@
 
 open Ast
 
+val init_parameters : t_system -> t_system
+
+val pre_system : t_system -> t_system list * t_system list
+
 val system : t_system list -> unit

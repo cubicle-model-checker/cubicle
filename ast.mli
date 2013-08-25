@@ -174,3 +174,5 @@ val init_instances : (int, SAtom.t list list * ArrayAtom.t list list) Hashtbl.t
 val fill_init_instances : Hstring.t list * SAtom.t list -> unit
 
 val make_finite_inst_array : Hstring.t -> Hstring.t list -> Hstring.t
+
+val has_var : Hstring.t -> Atom.t -> bool
