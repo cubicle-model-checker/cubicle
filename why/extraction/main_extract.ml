@@ -46,6 +46,11 @@ let _ =
       Global.global_system := List.hd ts;
       if type_only then exit 0;
 
+      let procs = Forward.procs_from_nb enumerative in
+      eprintf "STATEFULL ENUMERATIVE FORWARD :\n-------------\n@.";
+      Enumerative.search procs !Global.global_system;
+      eprintf "-------------\n@.";
+    
       let theta = match ts with 
 	| [] -> assert false
 	| [s] -> Fol__FOL.cube_to_fol s 

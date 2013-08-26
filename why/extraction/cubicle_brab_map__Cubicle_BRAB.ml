@@ -47,8 +47,19 @@ let from  : (((Fol__FOL.t, Fol__FOL.t) Map__Map.map) Pervasives.ref) =
 
 
 
-let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) = None
-  (* failwith "to be implemented" (\* val *\) *)
+let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
+  if not Options.do_brab then None
+  else
+    let ls = Fol__FOL.fol_to_cubes phi in
+    let la = List.fold_left (fun acc s ->
+			     Brab.subsuming_candidate s @ acc) [] ls in
+    match la with
+    | [] -> None 
+    | _ ->
+       let psi = Fol__FOL.cubes_to_fol la in
+       Format.eprintf ">> %a APproximated BY %a@." 
+	       Fol__FOL.print phi Fol__FOL.print psi;
+       Some psi
 
 
 let cpt = ref 0
@@ -190,7 +201,9 @@ let brab (init1: Fol__FOL.t) (theta1: Fol__FOL.t) =
                        ((Pervasives.(:=) bad) o2);
                        begin (reset_maps theta1);
                        let o2 = ((bwd init1) theta1) in
-                       ((Pervasives.(:=) bwd_res) o2) end end end
+                       ((Pervasives.(:=) bwd_res) o2) end end;
+		       Format.eprintf "Backtracking ...@.";
+		       end
                   else raise Why3__Prelude.PcExit done with
              | Why3__Prelude.PcExit -> (()));
        (Safe) end end with

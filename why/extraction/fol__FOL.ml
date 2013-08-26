@@ -103,7 +103,8 @@ let rec fol_to_cubes = function
   | Exists (_, And _) | Exists (_, Lit _) | Lit _ | And _ as f ->
 						     if Options.debug then eprintf "f2c: %a @." print f;
 						     [conj_to_cube f]
-  | Or l as f -> List.fold_left (fun acc f -> fol_to_cubes f @ acc) [] l
+  | Or l as f -> List.fold_left (fun acc f ->
+				 List.rev_append (fol_to_cubes f) acc) [] l
   | _ -> assert false
 
 let sa_to_f sa = And (SAtom.fold (fun x acc -> Lit x :: acc) sa [])
@@ -208,7 +209,7 @@ let infix_eqgt (x: t) (x1: t) : t = dnfize (Or [Not x; x1])
   
 let infix_breqeq (x: t) (x1: t) : bool =
   if Options.debug then eprintf "do: %a  |=  %a@." print x print x1;
-  let x, x1 = dnfize x, dnfize x1 in 
+  (* let x, x1 = dnfize x, dnfize x1 in  *)
   let ls = fol_to_cubes x in
   match ls with
   | [s] -> Cube.fixpoint ~invariants:[] ~visited:(fol_to_cubes x1) s <> None
