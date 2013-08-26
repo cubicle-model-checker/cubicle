@@ -13,7 +13,7 @@
 #                                                                        #
 ##########################################################################
 
-AC_INIT(main.ml)
+AC_INIT(main_extract.ml)
 
 AC_CHECK_PROGS(OCAMLC,ocp-ocamlc.opt ocamlc.opt,no)
 if test "$OCAMLC" = no ; then

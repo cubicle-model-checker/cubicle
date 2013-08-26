@@ -157,13 +157,16 @@ let rec push_neg p = function
 let dnf f =
   let cons x xs = x :: xs in
   let rec fold g = function
-    | And hs -> List.fold_left fold g hs
-    | Or hs -> List.concat (List.map (fold g) hs)
-    | h -> List.map (cons h) g in
+    | And (_::_::_ as hs) -> List.fold_left fold g hs
+    | Or (_::_::_ as hs) -> List.concat (List.map (fold g) hs)
+    | And [h] | Or [h] | h -> List.map (cons h) g in
   fold [[]] (push_neg true f)
 
 let reconstruct_dnf f =
-  let l = List.map (fun conj -> And conj) (dnf f) in
+  let l = List.map (function 
+		       | [] -> ffalse
+		       | [f] -> f
+		       | conj -> And conj) (dnf f) in
   match l with
   | [] -> ffalse
   | [f'] -> f'
@@ -203,6 +206,7 @@ let infix_plpl (x: t) (x1: t) : t = dnfize (Or [x; x1])
 let infix_eqgt (x: t) (x1: t) : t = dnfize (Or [Not x; x1])
   
 let infix_breqeq (x: t) (x1: t) : bool =
+  eprintf "do: %a  |=  %a@." print x print x1;
   let x, x1 = dnfize x, dnfize x1 in 
   let ls = fol_to_cubes x in
   match ls with

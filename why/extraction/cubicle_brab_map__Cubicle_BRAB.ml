@@ -47,12 +47,15 @@ let from  : (((Fol__FOL.t, Fol__FOL.t) Map__Map.map) Pervasives.ref) =
 
 
 
-let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
-  failwith "to be implemented" (* val *)
+let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) = None
+  (* failwith "to be implemented" (\* val *\) *)
 
 
+let cpt = ref 0
 
 let pre_or_approx (phi: Fol__FOL.t) ((* ghost *)) ((* ghost *)) =
+  incr cpt; Format.eprintf "\n%d\n@." !cpt;
+  Format.eprintf "pre_or_approx %a@." Fol__FOL.print phi;
   (match (approx phi) with
   | (Some psi) ->
       begin let o =
