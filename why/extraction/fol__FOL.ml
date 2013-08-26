@@ -80,7 +80,7 @@ let ttrue  : t = Lit Atom.True
 
 (*---------- Helper functions ----------------*)
 let conj_to_cube_aux args l =
-  eprintf "c2ca: %a@." (print_list " , ") l;
+  if Options.debug then eprintf "c2ca: %a@." (print_list " , ") l;
   let sa = List.fold_left (fun acc f -> 
 			   match f with 
 			   | Lit x -> SAtom.add x acc
@@ -101,7 +101,7 @@ let conj_to_cube = function
 
 let rec fol_to_cubes = function
   | Exists (_, And _) | Exists (_, Lit _) | Lit _ | And _ as f ->
-						     eprintf "f2c: %a @." print f;
+						     if Options.debug then eprintf "f2c: %a @." print f;
 						     [conj_to_cube f]
   | Or l as f -> List.fold_left (fun acc f -> fol_to_cubes f @ acc) [] l
   | _ -> assert false
@@ -123,8 +123,9 @@ let init_to_fol {t_init = args, lsa} = match lsa with
 
 let init_to_fol ({t_init = args, lsa} as i) =
   let r = init_to_fol i in
-  List.iter (fun sa -> eprintf "init: %a ===> @." Pretty.print_cube sa) lsa;
-  eprintf "         ===> %a @." print r;
+  if Options.debug then
+  (List.iter (fun sa -> eprintf "init: %a ===> @." Pretty.print_cube sa) lsa;
+   eprintf "         ===> %a @." print r);
   r
 
 (* let wrap_system sa = *)
@@ -206,7 +207,7 @@ let infix_plpl (x: t) (x1: t) : t = dnfize (Or [x; x1])
 let infix_eqgt (x: t) (x1: t) : t = dnfize (Or [Not x; x1])
   
 let infix_breqeq (x: t) (x1: t) : bool =
-  eprintf "do: %a  |=  %a@." print x print x1;
+  if Options.debug then eprintf "do: %a  |=  %a@." print x print x1;
   let x, x1 = dnfize x, dnfize x1 in 
   let ls = fol_to_cubes x in
   match ls with
@@ -294,13 +295,13 @@ let distinct vars =
 		       (List.map (fun v -> Smt.Term.make_app v []) vars)
 
 let sat (f: t) : bool =
-  eprintf "sat: %a@." print f;
+  if Options.debug then eprintf "sat: %a@." print f;
   try
     SMT.clear ();
-    eprintf "is: %a, cs: %a@." print f Pretty.print_args
+    if Options.debug then eprintf "is: %a, cs: %a@." print f Pretty.print_args
     (HSet.elements (collect_constants HSet.empty f));
     let f = instantiate_and_skolem f in
-    eprintf "is2: %a@." print f;
+    if Options.debug then eprintf "is2: %a@." print f;
   
     SMT.assume 
       ~profiling:false ~id:0
