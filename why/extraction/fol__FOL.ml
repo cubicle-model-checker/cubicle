@@ -164,20 +164,41 @@ let dnf f =
     | And [h] | Or [h] | h -> List.map (cons h) g in
   fold [[]] (push_neg true f)
 
+let already_conj = function
+  | Lit _ -> true
+  | And l -> List.for_all (function Lit _ -> true | _ -> false) l
+  | _ -> false
+		
+let rec already_dnf f = 
+  already_conj f ||
+    match f with
+    | Or l -> List.for_all already_conj l
+    | Exists (_, f) -> already_dnf f
+    | _ -> false
+
 let reconstruct_dnf f =
-  let l = List.map (function 
+  (* eprintf "\nALREADY DNF %b === %a@." (already_dnf f) print f ; *)
+  if already_dnf f then f
+  else
+    let l = List.map (function 
 		       | [] -> ffalse
 		       | [f] -> f
 		       | conj -> And conj) (dnf f) in
-  match l with
-  | [] -> ffalse
-  | [f'] -> f'
-  | _ -> Or l
+    match l with
+    | [] -> ffalse
+    | [f'] -> f'
+    | _ -> Or l
 	       
 let rec dnfize = function
   | Forall (v,f) -> Forall (v, dnfize f)
   | Exists (v,f) -> Exists (v, dnfize f)
   | f -> reconstruct_dnf f
+
+let dnfize2 f =
+  Prover.TimeF.start ();
+  let f = dnfize f in
+  Prover.TimeF.pause ();
+  f
 
 (*-----------------------------------------------*)
 
@@ -203,7 +224,11 @@ let prefix_tl (x: t) : t = dnfize (Not x)
 
 let infix_et (x: t) (x1: t) : t = dnfize (And [x; x1])
 
-let infix_plpl (x: t) (x1: t) : t = dnfize (Or [x; x1])
+let infix_plpl (x: t) (x1: t) : t =
+  (* match x1 with *)
+  (* | Or l -> dnfize (Or (x :: l)) *)
+  (* | _ -> *)
+     dnfize (Or [x; x1])
 
 let infix_eqgt (x: t) (x1: t) : t = dnfize (Or [Not x; x1])
   

@@ -59,7 +59,8 @@ let _ =
       let init = Fol__FOL.init_to_fol !Global.global_system in
       match Cubicle_brab_map__Cubicle_BRAB.bwd init theta with
       | Cubicle_brab_map__Cubicle_BRAB.Safe ->
-	 printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
+	 printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+	 printf "timer: %f s@." (Prover.TimeF.get ());
       | Cubicle_brab_map__Cubicle_BRAB.Unsafe ->
 	 printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@."; exit 1
 							     
