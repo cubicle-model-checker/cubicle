@@ -109,7 +109,10 @@ let rec fol_to_cubes = function
 
 let sa_to_f sa = And (SAtom.fold (fun x acc -> Lit x :: acc) sa [])
 
-let cube_to_fol {t_unsafe = args, sa} = Exists (args, sa_to_f sa)
+let cube_to_fol {t_unsafe = args, sa} = 
+  match args with
+  | [] -> sa_to_f sa
+  | _ -> Exists (args, sa_to_f sa)
 
 let cubes_to_fol = function
   | [] -> ffalse
@@ -196,7 +199,9 @@ let rec dnfize = function
 
 let dnfize2 f =
   Prover.TimeF.start ();
+  eprintf "indnf ... @.";
   let f = dnfize f in
+  eprintf "outdnf ... @.";
   Prover.TimeF.pause ();
   f
 
@@ -299,7 +304,8 @@ let rec inst_aux constants f =
 
 let instantiate_and_skolem f =
   let constants = HSet.elements (collect_constants HSet.empty f) in
-  dnfize (inst_aux constants f)
+  let constants = if constants <> [] then constants else [Hstring.make "#1"] in
+  dnfize (inst_aux constants f), constants
 
 
 (* let cnf_split_quantified f = *)
@@ -324,14 +330,12 @@ let sat (f: t) : bool =
   if Options.debug then eprintf "sat: %a@." print f;
   try
     SMT.clear ();
+    let f, constants = instantiate_and_skolem f in
     if Options.debug then eprintf "is: %a, cs: %a@." print f Pretty.print_args
-    (HSet.elements (collect_constants HSet.empty f));
-    let f = instantiate_and_skolem f in
+				  constants;
     if Options.debug then eprintf "is2: %a@." print f;
   
-    SMT.assume 
-      ~profiling:false ~id:0
-      (distinct (HSet.elements (collect_constants HSet.empty f)));
+    SMT.assume ~profiling:false ~id:0 (distinct constants);
     let f = make_formula f in
     SMT.assume ~profiling:false ~id:0 f;
     SMT.check  ~profiling:false ();

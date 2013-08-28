@@ -57,7 +57,7 @@ let _ =
 	| _ -> Fol__FOL.Or (List.map Fol__FOL.cube_to_fol ts)
       in
       let init = Fol__FOL.init_to_fol !Global.global_system in
-      match Cubicle_brab_map__Cubicle_BRAB.bwd init theta with
+      match Cubicle_brab_map__Cubicle_BRAB.brab init theta with
       | Cubicle_brab_map__Cubicle_BRAB.Safe ->
 	 printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
 	 printf "timer: %f s@." (Prover.TimeF.get ());

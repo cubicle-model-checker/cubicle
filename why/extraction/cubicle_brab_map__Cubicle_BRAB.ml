@@ -143,6 +143,7 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
                   then let phi1 = (Abstract_queue__AbstractQueue.pop q) in
                     begin if (Fol__FOL.sat (Fol__FOL.infix_et init phi1))
                           then begin ((Pervasives.(:=) faulty) phi1);
+				     Format.eprintf "unsafe %a@." Fol__FOL.print !faulty;
                                raise Unsafe_trace end
                           else (());
                     if let o =
@@ -189,7 +190,8 @@ let brab (init1: Fol__FOL.t) (theta1: Fol__FOL.t) =
                                   let o4 = (Pervasives.(!) kind) in
                                   (Map__Map.mixfix_lbrb o4 o3)) in
                              ((o2 = Orig))
-                             then raise Unsafe_trace
+                             then 
+			       (Format.eprintf "unsafe %a@." Fol__FOL.print !faulty; raise Unsafe_trace)
                              else (());
                        begin let o2 =
                                (let o3 = (Pervasives.(!) bad) in
