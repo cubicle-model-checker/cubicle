@@ -93,7 +93,8 @@ CUBICLECMO = \
       ../../typing.cmo
 
 CMO = $(COMMONCMO) $(SMTCMO) $(CUBICLECMO) \
-	global.cmo set__Fset.cmo fol__FOL.cmo map__Map.cmo why3__Prelude.cmo \
+	global.cmo set__Fset.cmo translation.cmo fol__FOL.cmo map__Map.cmo \
+	why3__Prelude.cmo \
 	abstract_queue__AbstractQueue.cmo reachability__Reachability.cmo \
 	cubicle_brab_map__Cubicle_BRAB.cmo main_extract.cmo
 

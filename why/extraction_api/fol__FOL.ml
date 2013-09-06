@@ -7,7 +7,7 @@ module S = Set__Fset
 open Why3
 
 type t = Term.term
-module Caca = Map.Make(Mlw_wp)
+
 (* let compare = Term.compare *)
 
 
@@ -24,7 +24,6 @@ let ttrue  : t = Term.t_false
 
 
 let declarations_task = ref None
-
 
 let init_declarations s =
   declarations_task := 
