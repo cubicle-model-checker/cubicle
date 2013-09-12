@@ -8,15 +8,13 @@ open Why3
 (*---------------------------- Theories ---------------------------*)
 
 let env,config =
-  try
-    (* reads the Why3 config file *)
-    let config : Whyconf.config = Whyconf.read_config None in
-    (* the [main] section of the config file *)
-    let main : Whyconf.main = Whyconf.get_main config in
-    let env : Env.env = Env.create_env (Whyconf.loadpath main) in
-    env,config
-  with e ->
-    Self.fatal "Exception raised in Why3 env:@ %a" Exn_printer.exn_printer e
+  (* reads the Why3 config file *)
+  let config : Whyconf.config = Whyconf.read_config None in
+  (* the [main] section of the config file *)
+  let main : Whyconf.main = Whyconf.get_main config in
+  let env : Env.env = Env.create_env (Whyconf.loadpath main) in
+  env,config
+
 
 let find th s = Theory.ns_find_ls th.Theory.th_export [s]
 let find_type th s = Theory.ns_find_ts th.Theory.th_export [s]
@@ -51,8 +49,6 @@ let get_fun : Mlw_expr.psymbol =
 
 let set_fun : Mlw_expr.psymbol =
   Mlw_module.ns_find_ps ref_module.Mlw_module.mod_export ["infix :="]
-
-
 
 
 (*---------------- Formulas to why data structures ----------------*)
@@ -103,12 +99,22 @@ let var_to_pv x =
   let pvs = var_pvsymbol x in
   Term.t_var pvs.Mlw_ty.pv_vs
   
+let glob_to_ref x = Term.t_app_infer get_logic_fun [var_to_pv x]
+
+let access_to_map a lx =
+  match lx with
+  | [x] -> 
+     let va, vx = var_to_pv a, var_to_pv x in
+     Term.t_app_infer map_get [va; vx]
+  | _ -> failwith "access_to_map not implemented for matrices"
 
 let term_to_why = function
   | Const _ -> failwith "term_to_why Const: Not implemented"
   | Elem (x, Var) -> var_to_why x
-  | Elem (x, _) -> app_to_why x []
-  | Access (a, lx) -> app_to_why a lx
+  | Elem (x, Constr) -> app_to_why x []
+  | Elem (x, Glob) -> glob_to_ref x
+  | Elem (_, Arr) -> assert false
+  | Access (a, lx) -> access_to_map a lx
   | Arith _ -> failwith "term_to_why Arith: Not implemented"
 
 
@@ -142,12 +148,12 @@ let ureq_to_fol (j, disj) =
 
 let transition_spec t =
   let pv_args = List.map var_pvsymbol t.tr_args in
-  let c_req = cube_to_why t.tr_req in
+  let c_req = cube_to_why t.tr_reqs in
   let req = List.fold_left 
 	      (fun acc u -> Term.t_and_simp (ureq_to_fol u) acc)
 	      c_req t.tr_ureq in
   (* TODO : post + effects -- see regions *)
-  { c_pre     = req;
+  { Mlw_ty.c_pre     = req;
     c_post    = post;
     c_xpost   = Mlw_ty.Mexn.empty;
     c_effect  = Mlw_ty.eff_empty;
