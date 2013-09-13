@@ -142,6 +142,68 @@ let ureq_to_fol (j, disj) =
 
 (*--------------------------------------------------------------------*)
 
+let rec push_neg p = function
+  | Lit a as x -> if p then x else Lit (Atom.neg a)
+  | Not f -> push_neg (not p) f
+  | Or l ->
+      if p then Or (List.map (push_neg p) l)
+      else And (List.map (push_neg p) l)
+  | And l ->
+      if p then And (List.map (push_neg p) l)
+      else Or (List.map (push_neg p) l)
+  | Forall (v,f) ->
+      if p then Forall (v, push_neg p f)
+      else Exists (v, push_neg p f)
+  | Exists (v,f) ->
+      if p then Exists (v, push_neg p f)
+      else Forall (v, push_neg p f)
+
+let dnf f =
+  let cons x xs = x :: xs in
+  let rec fold g = function
+    | And (_::_::_ as hs) -> List.fold_left fold g hs
+    | Or (_::_::_ as hs) -> List.concat (List.map (fold g) hs)
+    | And [h] | Or [h] | h -> List.map (cons h) g in
+  fold [[]] (push_neg true f)
+
+let already_conj = function
+  | Lit _ -> true
+  | And l -> List.for_all (function Lit _ -> true | _ -> false) l
+  | _ -> false
+		
+let rec already_dnf f = 
+  already_conj f ||
+    match f with
+    | Or l -> List.for_all already_conj l
+    | Exists (_, f) -> already_dnf f
+    | _ -> false
+
+let reconstruct_dnf f =
+  (* eprintf "\nALREADY DNF %b === %a@." (already_dnf f) print f ; *)
+  if already_dnf f then f
+  else
+    let l = List.map (function 
+		       | [] -> ffalse
+		       | [f] -> f
+		       | conj -> And conj) (dnf f) in
+    match l with
+    | [] -> ffalse
+    | [f'] -> f'
+    | _ -> Or l
+	       
+let rec dnfize = function
+  | Forall (v,f) -> Forall (v, dnfize f)
+  | Exists (v,f) -> Exists (v, dnfize f)
+  | f -> reconstruct_dnf f
+
+let dnfize2 f =
+  Prover.TimeF.start ();
+  eprintf "indnf ... @.";
+  let f = dnfize f in
+  eprintf "outdnf ... @.";
+  Prover.TimeF.pause ();
+  f
+
 
 
 (*---------------- transitions to why data structures ----------------*)
@@ -153,12 +215,12 @@ let transition_spec t =
 	      (fun acc u -> Term.t_and_simp (ureq_to_fol u) acc)
 	      c_req t.tr_ureq in
   (* TODO : post + effects -- see regions *)
-  { Mlw_ty.c_pre     = req;
-    c_post    = post;
-    c_xpost   = Mlw_ty.Mexn.empty;
-    c_effect  = Mlw_ty.eff_empty;
-    c_variant = [];
-    c_letrec  = 0;
+  { Mlw_ty.c_pre = req;
+           c_post = post;
+	   c_xpost = Mlw_ty.Mexn.empty;
+	   c_effect  = Mlw_ty.eff_empty;
+	   c_variant = [];
+	   c_letrec  = 0;
   }
 
 let transition_to_lambda = assert false
