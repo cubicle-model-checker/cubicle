@@ -142,59 +142,83 @@ let ureq_to_fol (j, disj) =
 
 (*--------------------------------------------------------------------*)
 
-let rec push_neg p = function
-  | Lit a as x -> if p then x else Lit (Atom.neg a)
-  | Not f -> push_neg (not p) f
-  | Or l ->
-      if p then Or (List.map (push_neg p) l)
-      else And (List.map (push_neg p) l)
-  | And l ->
-      if p then And (List.map (push_neg p) l)
-      else Or (List.map (push_neg p) l)
-  | Forall (v,f) ->
-      if p then Forall (v, push_neg p f)
-      else Exists (v, push_neg p f)
-  | Exists (v,f) ->
-      if p then Exists (v, push_neg p f)
-      else Forall (v, push_neg p f)
+
+(*---------------------------    DNF    ------------------------------*)
+
+let rec push_neg p f = match f.Term.t_node with
+  | Term.Tvar _ | Term.Tconst _ | Term.Tapp _ | Term.Ttrue | Term.Tfalse ->
+      if p then f else Term.t_not_simp f
+  | Term.Tnot f2 -> push_neg (not p) f2
+  | Term.Tquant (q, tq) ->
+     let vs, tr, t = Term.t_open_quant tq in
+     let tq' = Term.t_close_quant vs tr (push_neg p t) in
+     if p then Term.t_quant_simp q tq'
+     else 
+       let q' = match q with 
+	 | Term.Tforall -> Term.Texists
+	 | Term.Texists -> Term.Tforall in 
+       Term.t_quant_simp q' tq'
+  | Term.Teps tb ->
+     let vs, t = Term.t_open_bound tb in
+     Term.t_eps (Term.t_close_bound vs (push_neg p t))
+  | Term.Tif (c, t1, t2) ->
+     push_neg p (Term.t_and_simp 
+		   (Term.t_or_simp (Term.t_not_simp c) t1)
+		   (Term.t_or_simp c t2))
+  | Term.Tbinop (Term.Timplies, t1, t2) ->
+     push_neg p (Term.t_or_simp (Term.t_not_simp t1) t2)
+  | Term.Tbinop (Term.Tiff, t1, t2) ->
+     push_neg p (Term.t_and_simp 
+		   (Term.t_or_simp (Term.t_not_simp t1) t2)
+		   (Term.t_or_simp (Term.t_not_simp t2) t1))
+  | Term.Tbinop (Term.Tand, t1, t2) ->
+     if p then Term.t_and_simp (push_neg p t1) (push_neg p t2)
+     else Term.t_or_simp (push_neg p t1) (push_neg p t2)
+  | Term.Tbinop (Term.Tor, t1, t2) ->
+     if p then Term.t_or_simp (push_neg p t1) (push_neg p t2)
+     else Term.t_and_simp (push_neg p t1) (push_neg p t2)
+  | Term.Tcase _ | Term.Tlet _ -> assert false
 
 let dnf f =
   let cons x xs = x :: xs in
-  let rec fold g = function
-    | And (_::_::_ as hs) -> List.fold_left fold g hs
-    | Or (_::_::_ as hs) -> List.concat (List.map (fold g) hs)
-    | And [h] | Or [h] | h -> List.map (cons h) g in
+  let rec fold g f = match f.Term.t_node with
+    | Term.Tbinop (Term.Tand, t1, t2) -> fold (fold g t1) t2
+    | Term.Tbinop (Term.Tor, t1, t2) -> (fold g t1) @ (fold g t2)
+    | _ -> List.map (cons f) g in
   fold [[]] (push_neg true f)
 
-let already_conj = function
-  | Lit _ -> true
-  | And l -> List.for_all (function Lit _ -> true | _ -> false) l
-  | _ -> false
+(* let already_conj = function *)
+(*   | Lit _ -> true *)
+(*   | And l -> List.for_all (function Lit _ -> true | _ -> false) l *)
+(*   | _ -> false *)
 		
-let rec already_dnf f = 
-  already_conj f ||
-    match f with
-    | Or l -> List.for_all already_conj l
-    | Exists (_, f) -> already_dnf f
-    | _ -> false
+(* let rec already_dnf f =  *)
+(*   already_conj f || *)
+(*     match f with *)
+(*     | Or l -> List.for_all already_conj l *)
+(*     | Exists (_, f) -> already_dnf f *)
+(*     | _ -> false *)
 
 let reconstruct_dnf f =
-  (* eprintf "\nALREADY DNF %b === %a@." (already_dnf f) print f ; *)
-  if already_dnf f then f
-  else
-    let l = List.map (function 
-		       | [] -> ffalse
-		       | [f] -> f
-		       | conj -> And conj) (dnf f) in
-    match l with
-    | [] -> ffalse
-    | [f'] -> f'
-    | _ -> Or l
+  let l = List.map (function 
+		     | [] -> Term.t_false
+		     | [f] -> f
+		     | conj -> 
+			List.fold_left (fun acc l -> Term.t_and_simp l acc)
+				       Term.t_true conj
+		   ) (dnf f) in
+  match l with
+  | [] -> Term.t_false
+  | [f'] -> f'
+  | _ -> List.fold_left (fun acc c -> Term.t_or_simp c acc)
+			Term.t_false l
 	       
-let rec dnfize = function
-  | Forall (v,f) -> Forall (v, dnfize f)
-  | Exists (v,f) -> Exists (v, dnfize f)
-  | f -> reconstruct_dnf f
+let rec dnfize f = match f.Term.t_node with
+  | Term.Tquant (q, tq) ->
+     let vs, tr, t = Term.t_open_quant tq in
+     let tq' = Term.t_close_quant vs tr (dnfize t) in
+     Term.t_quant_simp q tq'
+  | _ -> reconstruct_dnf f
 
 let dnfize2 f =
   Prover.TimeF.start ();
@@ -205,8 +229,69 @@ let dnfize2 f =
   f
 
 
+(*--------------------------------------------------------------------*)
+
 
 (*---------------- transitions to why data structures ----------------*)
+
+
+let assign_to_post (a, t) =
+  let aw = glob_to_ref a in
+  let old_tw = Mlw_wp.t_at_old (term_to_why t) in
+  Term.t_equ_simp aw old_tw (* , Mlw_ty.eff_empty *)
+
+
+let switches_to_ite at swts =
+  match List.rev swts with
+  | (_, default) :: rswts ->
+     let def = Mlw_wp.t_at_old (term_to_why default) in
+     List.fold_left (fun acc (sa, t) ->
+		     let cond = Mlw_wp.t_at_old (cube_to_why sa) in
+		     let old_tw = Mlw_wp.t_at_old (term_to_why t) in
+		     Term.t_if_simp cond (Term.t_equ_simp at old_tw) acc
+		    )  (Term.t_equ_simp at def) rswts
+  | _ -> assert false
+		
+		
+let simple_update a j swts =
+  match List.rev swts with
+  | (_, default) :: rswts ->
+     begin 
+       try
+	 let assigns = List.fold_left (fun acc (c, t) ->
+		    match SAtom.elements c with
+		    | [Atom.Comp (Elem(i, Var), Eq, Elem(k, Var))] ->
+		      if Hstring.equal i j then (k, t) :: acc
+		      else if Hstring.equal k j then (i, t) :: acc
+		      else raise Exit
+		    | _ -> raise Exit) [] rswts in
+	 let utw = List.fold_left (fun acc (i, t) ->
+			 let ai = access_to_map a [i] in
+			 let old_tw = Mlw_wp.t_at_old (term_to_why t) in
+			 Term.t_and_simp (Term.t_equ_simp ai old_tw) acc
+			) Term.t_true assigns in
+			 
+	 Some utw
+       with Exit -> None
+     end    
+  | _ -> assert false
+  
+  
+
+let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
+  match js with
+  | [j] ->
+     begin match simple_update a j swts with
+     | Some utw -> utw
+     | None ->
+	let vj = var_symb j in
+	let aj = access_to_map a js in
+	let swtsw = switches_to_ite aj swts in
+	Term.t_quant_simp Term.Tforall (Term.t_close_quant [vj] [] swtsw)
+     end
+  | _ -> failwith "update to post not implemented for matrices"
+  
+
 
 let transition_spec t =
   let pv_args = List.map var_pvsymbol t.tr_args in
@@ -214,7 +299,13 @@ let transition_spec t =
   let req = List.fold_left 
 	      (fun acc u -> Term.t_and_simp (ureq_to_fol u) acc)
 	      c_req t.tr_ureq in
-  (* TODO : post + effects -- see regions *)
+  let post = List.fold_left (fun post ass ->
+			     Term.t_and_simp (assign_to_post ass) post)
+			    Term.t_true t.tr_assigns in
+  let post = List.fold_left (fun post upd ->
+			     Term.t_and_simp (update_to_post upd) post)
+			    post t.tr_upds in
+  (* TODO : effects in updates and assigns -- see regions *)
   { Mlw_ty.c_pre = req;
            c_post = post;
 	   c_xpost = Mlw_ty.Mexn.empty;
