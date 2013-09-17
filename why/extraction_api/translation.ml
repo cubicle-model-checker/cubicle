@@ -294,7 +294,6 @@ let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
 
 
 let transition_spec t =
-  let pv_args = List.map var_pvsymbol t.tr_args in
   let c_req = cube_to_why t.tr_reqs in
   let req = List.fold_left 
 	      (fun acc u -> Term.t_and_simp (ureq_to_fol u) acc)
@@ -314,7 +313,13 @@ let transition_spec t =
 	   c_letrec  = 0;
   }
 
-let transition_to_lambda = assert false
+
+let transition_to_lambda t =
+  {
+    Mlw_expr.l_args = List.map var_pvsymbol t.tr_args;
+	     l_expr = Mlw_expr.e_void;
+	     l_spec = transition_spec t;
+  }
 
 
 
