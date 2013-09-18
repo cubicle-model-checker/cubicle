@@ -134,6 +134,20 @@ and cube_to_why sa =
 
 let cube_to_fol = cube_to_why
 
+
+let system_to_why {t_unsafe = args, sa} =
+  match args with
+  | [] -> cube_to_why sa
+  | _ ->
+     let vsl = List.map var_symb args in
+     Term.t_exists_close vsl [] (cube_to_why sa)
+
+let systems_to_why =
+  List.fold_left (fun acc s -> Term.t_or_simp (system_to_why s) acc)
+		 Term.t_false
+
+
+
 let ureq_to_fol (j, disj) =
   let tdisj = List.fold_left 
     (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc) Term.t_false disj in
@@ -200,6 +214,12 @@ let why_to_system f =
     t_unsafe = args, sa;
     t_arru = arr_sa;
     t_alpha = ArrayAtom.alpha arr_sa args }
+
+
+let rec why_to_systems f = match f.Term.t_node with
+  | Term.Tbinop (Term.Tor, f1, f2) ->
+     List.rev_append (why_to_systems f1) (why_to_systems f2)
+  | _ -> [why_to_system f]
 
 (*--------------------------------------------------------------------*)
 

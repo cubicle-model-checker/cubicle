@@ -66,6 +66,12 @@ let init_declarations s =
 
 
 
+
+let fol_to_cubes = Translation.why_to_systems
+
+let cubes_to_fol = Translation.systems_to_why
+
+
 	
 (* neg *)  
 let prefix_tl (x: t) : t = Term.t_not_simp x
@@ -77,15 +83,23 @@ let infix_plpl (x: t) (x1: t) : t = Term.t_or_simp x x1
 let infix_eqgt (x: t) (x1: t) : t = Term.t_implies_simp x x1
 
 
+(* let infix_breqeq (x: t) (x1: t) : bool = *)
+(*   if Options.debug then eprintf "do: %a  |=  %a@." print x print x1; *)
+
+(*   let f = infix_eqgt x x1 in *)
+
+(*   let goal_id = Decl.create_prsymbol (Ident.id_fresh "goal") in *)
+(*   let task = Task.add_prop_decl !declarations_task Decl.Pgoal goal_id f in *)
+
+(*   assert false *)
+
 let infix_breqeq (x: t) (x1: t) : bool =
   if Options.debug then eprintf "do: %a  |=  %a@." print x print x1;
-
-  let f = infix_eqgt x x1 in
-
-  let goal_id = Decl.create_prsymbol (Ident.id_fresh "goal") in
-  let task = Task.add_prop_decl !declarations_task Decl.Pgoal goal_id f in
-
-  assert false
+  (* let x, x1 = dnfize x, dnfize x1 in  *)
+  let ls = fol_to_cubes x in
+  match ls with
+  | [s] -> Cube.fixpoint ~invariants:[] ~visited:(fol_to_cubes x1) s <> None
+  | _ -> assert false
 
 (* Notataions *)
 
