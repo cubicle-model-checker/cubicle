@@ -143,6 +143,69 @@ let ureq_to_fol (j, disj) =
 (*--------------------------------------------------------------------*)
 
 
+
+(*--------------- Why data structures to cubicle cubes ---------------*)
+
+let why_var_to_hstring f = match f.Term.t_node with
+  | Term.Tvar vs -> Hstring.make vs.Term.vs_name.Ident.id_string
+  | _ -> assert false
+
+
+let rec why_to_term ?(glob=false) f = match f.Term.t_node with
+  | Term.Tvar vs ->
+     Elem (Hstring.make vs.Term.vs_name.Ident.id_string,
+	   if glob then Glob else Var)
+  | Term.Tconst _ -> 
+     failwith "why_to_term: Tconst to arith translation not implemented"
+  | Term.Tapp (s, []) ->
+     Elem (Hstring.make s.Term.ls_name.Ident.id_string, Constr)
+  | Term.Tapp (s, [t]) when Term.ls_equal s get_logic_fun (* ref *) ->
+     why_to_term ~glob:true t
+  | Term.Tapp (s, a::li) when Term.ls_equal s map_get ->
+     Access (Hstring.make s.Term.ls_name.Ident.id_string,
+	     List.map why_var_to_hstring li)
+  | _ -> assert false
+
+
+let rec why_to_atom f = match f.Term.t_node with
+  | Term.Ttrue -> Atom.True
+  | Term.Tfalse -> Atom.False
+  | Term.Tnot t -> Atom.neg (why_to_atom t)
+  | Term.Tapp (s, [t1; t2]) when Term.ls_equal s Term.ps_equ ->
+     Atom.Comp (why_to_term t1, Eq, why_to_term t2)
+  | _ -> assert false
+
+let rec why_to_cube f = match f.Term.t_node with
+  | Term.Ttrue | Term.Tfalse | Term.Tnot _ | Term.Tapp _ ->
+     SAtom.singleton (why_to_atom f)
+  | Term.Tbinop (Term.Tand, f1, f2) ->
+     SAtom.union (why_to_cube f1) (why_to_cube f2)
+  | _ -> assert false
+
+
+let why_to_system f = 
+  let args, sa = match f.Term.t_node with
+    | Term.Tquant (Term.Texists, tq) ->
+       let vsl, _, t = Term.t_open_quant tq in     
+       let args =
+	 List.map (fun vs -> Hstring.make vs.Term.vs_name.Ident.id_string)
+		  vsl in
+       args, why_to_cube t
+    | _ ->
+       [], why_to_cube f
+  in
+  (* XXX: proper cube ? *)
+  let arr_sa = ArrayAtom.of_satom sa in
+  { !Global.global_system with 
+    t_unsafe = args, sa;
+    t_arru = arr_sa;
+    t_alpha = ArrayAtom.alpha arr_sa args }
+
+(*--------------------------------------------------------------------*)
+
+
+
+
 (*---------------------------    DNF    ------------------------------*)
 
 let rec push_neg p f = match f.Term.t_node with
