@@ -74,7 +74,6 @@ let constr_why x =
   Term.fs_app (constr_symb_ty x ty) [] ty
 
 
-(* TODO : Use ref instead *)
 let f_to_why f =
   let hargs_ty, hret_ty = Smt.Symbol.type_of f in
   let args_ty, ret_ty = List.map type_why hargs_ty, type_why hret_ty in
@@ -409,3 +408,79 @@ let transition_to_lambda t =
 
 (*--------------------------------------------------------------------*)
 
+
+module HSet = Hstring.HSet
+
+
+let rec skolemize f =
+  let csts = ref [] in
+  let h_csts = ref [] in
+  let simpl = 
+    fun f -> match f.Term.t_node with
+	     | Term.Tquant (Term.Texists, tq) ->
+		let vsl, _, t = Term.t_open_quant tq in
+	        assert
+		  (List.for_all 
+		     (fun vs -> Ty.ty_equal vs.Term.vs_ty ty_proc) vsl);
+		let subst, _ = List.fold_left (fun (acc, vh) v -> 
+		    match vh with
+		    | h :: rh -> let th = app_to_why h [] in
+				 csts := th :: !csts; 
+				 h_csts := h :: !h_csts; 
+				 Term.Mvs.add v th acc, rh
+		    | _ -> assert false) (Term.Mvs.empty, proc_vars) vsl in
+		Term.t_subst subst t
+	     | _ -> f
+  in
+  Term.t_map_simp simpl f, !csts, !h_csts
+
+
+let perm_to_subst =
+  List.fold_left (fun acc (a,b) -> Term.Mvs.add a b acc) Term.Mvs.empty
+
+let rec instanciate_proc csts f =
+  let simpl =
+    fun f -> match f.Term.t_node with
+	     | Term.Tquant (Term.Tforall, tq) ->
+		let vsl, _, t = Term.t_open_quant tq in
+		List.fold_left (fun instances d ->
+		  let ni = Term.t_subst (perm_to_subst d) t in
+		  Term.t_and_simp (instanciate_proc csts ni) instances
+		) Term.t_true (all_permutations vsl csts)
+	     | _ -> f
+  in
+  Term.t_map_simp simpl f
+
+
+let skolem_instanciate f =
+  let f, csts, h_csts = skolemize f in
+  let f = instanciate_proc csts f in
+  dnfize f, h_csts
+
+
+
+(* XXX : change this *)
+let why_to_smt f =
+  let ss = why_to_systems f in
+  List.map (fun {t_arru = ap} -> Prover.make_formula ap) ss
+
+
+
+let distinct vars = 
+  Smt.Formula.make_lit Smt.Formula.Neq 
+		       (List.map (fun v -> Smt.Term.make_app v []) vars)
+
+let safety_formulas f =
+  let f, h_csts = skolem_instanciate f in
+  distinct h_csts, why_to_smt f
+  
+
+
+
+let init_to_fol {t_init = args, lsa} = match lsa with
+  | [] -> Term.t_false
+  | _ ->
+     let vsl = List.map var_symb args in
+     let t = List.fold_left (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc)
+			    Term.t_false lsa in
+     Term.t_forall_close_simp vsl [] t

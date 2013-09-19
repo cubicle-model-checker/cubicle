@@ -55,8 +55,7 @@ let _ =
     
       let theta = match ts with 
 	| [] -> assert false
-	| [s] -> Fol__FOL.cube_to_fol s 
-	| _ -> Fol__FOL.Or (List.map Fol__FOL.cube_to_fol ts)
+	| _ -> Fol__FOL.cubes_to_fol ts 
       in
       let init = Fol__FOL.init_to_fol !Global.global_system in
       match Cubicle_brab_map__Cubicle_BRAB.brab init theta with

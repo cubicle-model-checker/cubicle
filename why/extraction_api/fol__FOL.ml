@@ -65,6 +65,15 @@ let init_declarations s =
       ) !declarations_task s.arrays
 
 
+(* let init_to_fol ({t_init = args, lsa} as i) = *)
+(*   let r = Translation.init_to_fol i in *)
+(*   if Options.debug then *)
+(*   (List.iter (fun sa -> eprintf "init: %a ===> @." Pretty.print_cube sa) lsa; *)
+(*    eprintf "         ===> %a @." print r); *)
+(*   r *)
+
+
+let init_to_fol = Translation.init_to_fol
 
 
 let fol_to_cubes = Translation.why_to_systems
@@ -113,8 +122,21 @@ let (=>) x x1 = infix_eqgt x x1
   
 let (|=) x x1 = infix_breqeq x x1
 
-module HSet = Hstring.HSet
 
-let sat (f: t) : bool = assert false
+
+module SMT = Prover.SMT
+
+let sat (f: t) : bool =
+  if Options.debug then eprintf "sat: %a@." print f;
+  let dist, fs = Translation.safety_formulas f in
+  List.exists (fun f ->
+	       try
+		 SMT.clear ();
+		 SMT.assume ~profiling:false ~id:0 dist;
+		 SMT.assume ~profiling:false ~id:0 f;
+		 SMT.check  ~profiling:false ();
+		 true
+	       with Smt.Unsat _ -> false 
+	      ) fs
 
 let valid (f: t) : bool = not (sat (prefix_tl f))
