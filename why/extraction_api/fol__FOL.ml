@@ -23,46 +23,46 @@ let ffalse  : t = Term.t_true
 let ttrue  : t = Term.t_false
 
 
-let declarations_task = ref None
+(* let declarations_task = ref None *)
 
-let init_declarations s =
-  declarations_task := 
-    List.fold_left (fun task (x,y) ->
-		    let tys = Ty.create_tysymbol
-				(Ident.id_fresh (Hstring.view x))
-				[] None in
-		    match y with
-		    | [] -> Task.add_ty_decl task tys
-		    | _ -> 
-		       let constrs = 
-			 List.map (fun s ->
-				   Term.create_lsymbol 
-				     (Ident.id_fresh (Hstring.view s))
-				     [] None, []) y in
-		       Task.add_data_decl task [tys, constrs]
-		   ) !declarations_task s.type_defs;
-  declarations_task :=
-    List.fold_left 
-      (fun task (n, t) ->
-       let ty = Ty.ty_app (Ty.create_tysymbol
-		   (Ident.id_fresh (Hstring.view n))
-		   [] None) [] in
-       let f = Term.create_fsymbol (Ident.id_fresh (Hstring.view n)) [] ty in
-       Task.add_param_decl task f
-      ) !declarations_task (s.consts @ s.globals);
-  declarations_task :=
-    List.fold_left 
-      (fun task (n, (args, ret)) ->
-       let ty_ret = Ty.ty_app (Ty.create_tysymbol
-		   (Ident.id_fresh (Hstring.view ret))
-		   [] None) []  in
-       let ty_args = List.map (fun t-> Ty.ty_app (Ty.create_tysymbol
-		   (Ident.id_fresh (Hstring.view t))
-		   [] None) []) args in
-       let f = Term.create_fsymbol (Ident.id_fresh (Hstring.view n))
-				   ty_args ty_ret in
-       Task.add_param_decl task f
-      ) !declarations_task s.arrays
+(* let init_declarations s = *)
+(*   declarations_task :=  *)
+(*     List.fold_left (fun task (x,y) -> *)
+(* 		    let tys = Ty.create_tysymbol *)
+(* 				(Ident.id_fresh (Hstring.view x)) *)
+(* 				[] None in *)
+(* 		    match y with *)
+(* 		    | [] -> Task.add_ty_decl task tys *)
+(* 		    | _ ->  *)
+(* 		       let constrs =  *)
+(* 			 List.map (fun s -> *)
+(* 				   Term.create_lsymbol  *)
+(* 				     (Ident.id_fresh (Hstring.view s)) *)
+(* 				     [] None, []) y in *)
+(* 		       Task.add_data_decl task [tys, constrs] *)
+(* 		   ) !declarations_task s.type_defs; *)
+(*   declarations_task := *)
+(*     List.fold_left  *)
+(*       (fun task (n, t) -> *)
+(*        let ty = Ty.ty_app (Ty.create_tysymbol *)
+(* 		   (Ident.id_fresh (Hstring.view n)) *)
+(* 		   [] None) [] in *)
+(*        let f = Term.create_fsymbol (Ident.id_fresh (Hstring.view n)) [] ty in *)
+(*        Task.add_param_decl task f *)
+(*       ) !declarations_task (s.consts @ s.globals); *)
+(*   declarations_task := *)
+(*     List.fold_left  *)
+(*       (fun task (n, (args, ret)) -> *)
+(*        let ty_ret = Ty.ty_app (Ty.create_tysymbol *)
+(* 		   (Ident.id_fresh (Hstring.view ret)) *)
+(* 		   [] None) []  in *)
+(*        let ty_args = List.map (fun t-> Ty.ty_app (Ty.create_tysymbol *)
+(* 		   (Ident.id_fresh (Hstring.view t)) *)
+(* 		   [] None) []) args in *)
+(*        let f = Term.create_fsymbol (Ident.id_fresh (Hstring.view n)) *)
+(* 				   ty_args ty_ret in *)
+(*        Task.add_param_decl task f *)
+(*       ) !declarations_task s.arrays *)
 
 
 (* let init_to_fol ({t_init = args, lsa} as i) = *)

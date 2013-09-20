@@ -45,7 +45,7 @@ let _ =
       let ts = List.map Bwreach.init_parameters ts in
       Global.global_system := List.hd ts;
       Global.info := s;
-      Fol__FOL.init_declarations s;
+      (* Fol__FOL.init_declarations s; *)
       if type_only then exit 0;
 
       let procs = Forward.procs_from_nb enumerative in

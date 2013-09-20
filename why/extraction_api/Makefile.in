@@ -38,7 +38,7 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLUDES = $(FUNCTORYLIB) -thread -I ../../ -I ../../common/ -I ../../smt/ -I +why3 -I `ocamlfind query ocamlgraph`
+INCLUDES = $(FUNCTORYLIB) -thread -I ../../ -I ../../common/ -I ../../smt/ -I `ocamlfind query why3` -I `ocamlfind query ocamlgraph`
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes $(INCLUDES) -annot

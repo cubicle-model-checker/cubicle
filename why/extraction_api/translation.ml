@@ -1,6 +1,9 @@
 open Ast
 open Global
 open Format
+
+module P = Pretty
+
 open Why3
 
 
@@ -38,6 +41,8 @@ let ref_module : Mlw_module.modul = Stdlib.Mstr.find "Ref" ref_modules
 let ref_type : Mlw_ty.T.itysymbol =
   Mlw_module.ns_find_its ref_module.Mlw_module.mod_export ["ref"]
 
+let ref_ts = ref_type.Mlw_ty.T.its_ts
+
 let ref_fun : Mlw_expr.psymbol =
   Mlw_module.ns_find_ps ref_module.Mlw_module.mod_export ["ref"]
 
@@ -59,24 +64,32 @@ let ty_proc =
   let tys = Ty.create_tysymbol (Ident.id_fresh "proc") [] (Some Ty.ty_int) in
   Ty.ty_app tys []
 
-let type_why ty = 
+
+(* FIXME type maps and refs *)
+let type_why kind ty = 
   let tys = Ty.create_tysymbol (hs_id ty) [] None in
-  Ty.ty_app tys []
+  let tyap = Ty.ty_app tys [] in
+  match kind with
+  | Var -> ty_proc
+  | Constr -> tyap
+  | Glob -> Ty.ty_app ref_ts [tyap]
+  | Arr -> Ty.ty_app map_ts [tyap; ty_proc]
+
 
 let constr_symb_ty x ty = Term.create_fsymbol (hs_id x) [] ty
 
 let constr_symb x =
   let _, hty = Smt.Symbol.type_of x in
-  constr_symb_ty x (type_why hty)
+  constr_symb_ty x (type_why Constr hty)
 
 let constr_why x = 
-  let ty = type_why (snd (Smt.Symbol.type_of x)) in
+  let ty = type_why Constr (snd (Smt.Symbol.type_of x)) in
   Term.fs_app (constr_symb_ty x ty) [] ty
 
 
 let f_to_why f =
   let hargs_ty, hret_ty = Smt.Symbol.type_of f in
-  let args_ty, ret_ty = List.map type_why hargs_ty, type_why hret_ty in
+  let args_ty, ret_ty = List.map (type_why Arr) hargs_ty, type_why hret_ty in
   Term.create_fsymbol (hs_id f) args_ty ret_ty
 		
 let rec app_to_why f ls = 
@@ -120,7 +133,9 @@ let term_to_why = function
 let rec atom_to_why = function
   | Atom.True -> Term.t_true
   | Atom.False -> Term.t_false
-  | Atom.Comp (x, Eq, y) -> Term.t_equ_simp (term_to_why x) (term_to_why y)
+  | Atom.Comp (x, Eq, y) ->
+     eprintf ">>%a@." P.print_atom (Atom.Comp (x, Eq, y));
+     Term.t_equ_simp (term_to_why x) (term_to_why y)
   | Atom.Comp (x, Neq, y) -> Term.t_neq_simp (term_to_why x) (term_to_why y)
   | Atom.Comp _ -> failwith "atom_to_why: Not implemented"
   | Atom.Ite (sa, a1, a2) ->
