@@ -64,66 +64,138 @@ let ty_proc =
   let tys = Ty.create_tysymbol (Ident.id_fresh "proc") [] (Some Ty.ty_int) in
   Ty.ty_app tys []
 
+let user_types = Hstring.H.create 13
 
-(* FIXME type maps and refs *)
-let type_why kind ty = 
-  let tys = Ty.create_tysymbol (hs_id ty) [] None in
-  let tyap = Ty.ty_app tys [] in
-  match kind with
-  | Var -> ty_proc
-  | Constr -> tyap
-  | Glob -> Ty.ty_app ref_ts [tyap]
-  | Arr -> Ty.ty_app map_ts [tyap; ty_proc]
+let hs_to_tys ty =
+  try Hstring.H.find user_types ty
+  with Not_found ->
+       let ts = Ty.create_tysymbol (hs_id ty) [] None in
+       Hstring.H.add user_types ty ts;
+       ts
+
+let tysymb = hs_to_tys
+
+let type_var ty = ty_proc
+
+let type_constr ty = Ty.ty_app (tysymb ty) []
+
+let type_glob ty =
+  let tyap = Ty.ty_app (tysymb ty) [] in
+  Ty.ty_app ref_ts [tyap]
+
+let type_array ty =
+  let tyap = Ty.ty_app (tysymb ty) [] in
+  Ty.ty_app map_ts [ty_proc; tyap]
 
 
-let constr_symb_ty x ty = Term.create_fsymbol (hs_id x) [] ty
+let user_symbols = Hstring.H.create 13
+
+let constr_symb_ty x ty =
+  try Hstring.H.find user_symbols x
+  with Not_found ->
+       let s = Term.create_fsymbol (hs_id x) [] ty in
+       Hstring.H.add user_symbols x s;
+       s
 
 let constr_symb x =
   let _, hty = Smt.Symbol.type_of x in
-  constr_symb_ty x (type_why Constr hty)
+  constr_symb_ty x (type_constr hty)
 
-let constr_why x = 
-  let ty = type_why Constr (snd (Smt.Symbol.type_of x)) in
+let constr_to_why x = 
+  let ty = type_constr (snd (Smt.Symbol.type_of x)) in
   Term.fs_app (constr_symb_ty x ty) [] ty
 
 
-let f_to_why f =
-  let hargs_ty, hret_ty = Smt.Symbol.type_of f in
-  let args_ty, ret_ty = List.map (type_why Arr) hargs_ty, type_why hret_ty in
-  Term.create_fsymbol (hs_id f) args_ty ret_ty
+(* let f_to_why f = *)
+(*   let hargs_ty, hret_ty = Smt.Symbol.type_of f in *)
+(*   let args_ty, ret_ty = List.map type_array hargs_ty, type_arr hret_ty in *)
+(*   Term.create_fsymbol (hs_id f) args_ty ret_ty *)
 		
-let rec app_to_why f ls = 
-  let tls = List.map (fun s -> app_to_why s []) ls in  
-  Term.t_app_infer (f_to_why f) tls
+(* let rec app_to_why f ls =  *)
+(*   let tls = List.map (fun s -> app_to_why s []) ls in   *)
+(*   Term.t_app_infer (f_to_why f) tls *)
+
+let user_vsymbols = Hstring.H.create 13
 
 let var_symb x =
-  let _, hty = Smt.Symbol.type_of x in
-  Term.create_vsymbol (hs_id x) (type_why hty)
-  (* try Mlw_ty.restore_pv vs with Not_found -> vs *)
+  try Hstring.H.find user_vsymbols x
+  with Not_found ->
+    eprintf "ty:%a@." Hstring.print x;
+    let _, hty = Smt.Symbol.type_of x in
+    let s = Term.create_vsymbol (hs_id x) (type_glob hty) in
+    Hstring.H.add user_vsymbols x s;
+    s
+      
+
+
+let var_symb_proc x =
+  try Hstring.H.find user_vsymbols x
+  with Not_found ->
+       let s = Term.create_vsymbol (hs_id x) ty_proc in
+       Hstring.H.add user_vsymbols x s;
+       s
+		 
 
 let var_to_why x = Term.t_var (var_symb x)
   
+let user_pvsymbols = Hstring.H.create 13
+
+let create_pvs x ty = 
+  try Hstring.H.find user_pvsymbols x
+  with Not_found ->
+    try Mlw_ty.restore_pv (Hstring.H.find user_vsymbols x)
+    with Not_found ->
+      let ps = Mlw_ty.create_pvsymbol (hs_id x) (Mlw_ty.ity_of_ty ty) in
+      Hstring.H.add user_pvsymbols x ps;
+      ps
+       
+
 let var_pvsymbol x = 
-  let _, hty = Smt.Symbol.type_of x in
-  Mlw_ty.create_pvsymbol (hs_id x) (Mlw_ty.ity_of_ty (type_why hty))
+    eprintf "ty:%a@." Hstring.print x;
+    let _, hty = Smt.Symbol.type_of x in
+    create_pvs x (type_var hty)    
 
 let var_to_pv x =
   let pvs = var_pvsymbol x in
   Term.t_var pvs.Mlw_ty.pv_vs
+
+
+let proc_pvsymbol x = create_pvs x ty_proc
+
+let proc_to_pv x =
+  let pvs = proc_pvsymbol x in
+  Term.t_var pvs.Mlw_ty.pv_vs
+
+let glob_pvsymbol x = 
+  let _, hty = Smt.Symbol.type_of x in
+  create_pvs x (type_glob hty)
+
+let glob_to_pv x =
+  let pvs = glob_pvsymbol x in
+  Term.t_var pvs.Mlw_ty.pv_vs
+
+let arr_pvsymbol x = 
+  let _, hty = Smt.Symbol.type_of x in
+  create_pvs x (type_array hty)
+
+let arr_to_pv x =
+  let pvs = arr_pvsymbol x in
+  Term.t_var pvs.Mlw_ty.pv_vs
   
-let glob_to_ref x = Term.t_app_infer get_logic_fun [var_to_pv x]
+  
+let glob_to_ref x = Term.t_app_infer get_logic_fun [glob_to_pv x]
 
 let access_to_map a lx =
   match lx with
   | [x] -> 
-     let va, vx = var_to_pv a, var_to_pv x in
-     Term.t_app_infer map_get [va; vx]
+     let va, vx = arr_to_pv a, proc_to_pv x in
+     Term.t_app_infer map_get [va; vx] 
   | _ -> failwith "access_to_map not implemented for matrices"
 
 let term_to_why = function
   | Const _ -> failwith "term_to_why Const: Not implemented"
   | Elem (x, Var) -> var_to_why x
-  | Elem (x, Constr) -> app_to_why x []
+  | Elem (x, Constr) -> constr_to_why x
   | Elem (x, Glob) -> glob_to_ref x
   | Elem (_, Arr) -> assert false
   | Access (a, lx) -> access_to_map a lx
@@ -135,6 +207,9 @@ let rec atom_to_why = function
   | Atom.False -> Term.t_false
   | Atom.Comp (x, Eq, y) ->
      eprintf ">>%a@." P.print_atom (Atom.Comp (x, Eq, y));
+     
+     eprintf "x: %a, y: %a@." Pretty.print_ty (Term.t_type  (term_to_why x))
+	     Pretty.print_ty  (Term.t_type (term_to_why y)) ;
      Term.t_equ_simp (term_to_why x) (term_to_why y)
   | Atom.Comp (x, Neq, y) -> Term.t_neq_simp (term_to_why x) (term_to_why y)
   | Atom.Comp _ -> failwith "atom_to_why: Not implemented"
@@ -146,6 +221,11 @@ and cube_to_why sa =
   else SAtom.fold (fun a -> Term.t_and_simp (atom_to_why a)) sa Term.t_true
 
 
+let cube_to_why sa = 
+  let f = cube_to_why sa in
+  eprintf "%a ----> %a@." P.print_cube sa Pretty.print_term f;
+  f
+
 let cube_to_fol = cube_to_why
 
 
@@ -154,6 +234,9 @@ let system_to_why {t_unsafe = args, sa} =
   | [] -> cube_to_why sa
   | _ ->
      let vsl = List.map var_symb args in
+     Term.Mvs.iter (fun vs i ->
+     		    eprintf "> %a:%d@." Pretty.print_vs vs i;
+     	       ) (Term.t_freevars Term.Mvs.empty (cube_to_why sa));
      Term.t_exists_close vsl [] (cube_to_why sa)
 
 let systems_to_why =
@@ -428,18 +511,22 @@ module HSet = Hstring.HSet
 
 
 let rec skolemize f =
+  eprintf "skolemize: %a@." Pretty.print_term f;
   let csts = ref [] in
   let h_csts = ref [] in
   let simpl = 
     fun f -> match f.Term.t_node with
 	     | Term.Tquant (Term.Texists, tq) ->
 		let vsl, _, t = Term.t_open_quant tq in
-	        assert
-		  (List.for_all 
-		     (fun vs -> Ty.ty_equal vs.Term.vs_ty ty_proc) vsl);
+	        (* assert *)
+		(*   (List.for_all  *)
+		(*      (fun vs -> *)
+		(*       eprintf "%s : %a@." (vs.Term.vs_name.Ident.id_string) *)
+		(* 	      Pretty.print_ty vs.Term.vs_ty; *)
+		(*       Ty.ty_equal vs.Term.vs_ty ty_proc) vsl); *)
 		let subst, _ = List.fold_left (fun (acc, vh) v -> 
 		    match vh with
-		    | h :: rh -> let th = app_to_why h [] in
+		    | h :: rh -> let th = constr_to_why h in
 				 csts := th :: !csts; 
 				 h_csts := h :: !h_csts; 
 				 Term.Mvs.add v th acc, rh
@@ -495,7 +582,7 @@ let safety_formulas f =
 let init_to_fol {t_init = args, lsa} = match lsa with
   | [] -> Term.t_false
   | _ ->
-     let vsl = List.map var_symb args in
+     let vsl = List.map var_symb_proc args in
      let t = List.fold_left (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc)
 			    Term.t_false lsa in
      Term.t_forall_close_simp vsl [] t
