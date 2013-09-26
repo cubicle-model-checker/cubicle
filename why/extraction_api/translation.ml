@@ -123,7 +123,6 @@ let user_vsymbols = Hstring.H.create 13
 let var_symb x =
   try Hstring.H.find user_vsymbols x
   with Not_found ->
-    eprintf "ty:%a@." Hstring.print x;
     let _, hty = Smt.Symbol.type_of x in
     let s = Term.create_vsymbol (hs_id x) (type_glob hty) in
     Hstring.H.add user_vsymbols x s;
@@ -154,7 +153,6 @@ let create_pvs x ty =
        
 
 let var_pvsymbol x = 
-    eprintf "ty:%a@." Hstring.print x;
     let _, hty = Smt.Symbol.type_of x in
     create_pvs x (type_var hty)    
 
@@ -210,10 +208,6 @@ let rec atom_to_why = function
   | Atom.True -> Term.t_true
   | Atom.False -> Term.t_false
   | Atom.Comp (x, Eq, y) ->
-     eprintf ">>%a@." P.print_atom (Atom.Comp (x, Eq, y));
-     
-     eprintf "x: %a, y: %a@." Pretty.print_ty (Term.t_type  (term_to_why x))
-	     Pretty.print_ty  (Term.t_type (term_to_why y)) ;
      Term.t_equ_simp (term_to_why x) (term_to_why y)
   | Atom.Comp (x, Neq, y) ->
      Term.t_neq_simp (term_to_why x) (term_to_why y)
@@ -224,14 +218,13 @@ let rec atom_to_why = function
 and cube_to_why sa =
   if SAtom.is_empty sa then Term.t_false
   else SAtom.fold (fun a -> 
-     eprintf ">>>>>>>>>>%a@." P.print_atom a;
      Term.t_and_simp (atom_to_why a)) sa Term.t_true
 
 
-let cube_to_why sa = 
-  let f = cube_to_why sa in
-  eprintf "%a ----> %a@." P.print_cube sa Pretty.print_term f;
-  f
+(* let cube_to_why sa =  *)
+(*   let f = cube_to_why sa in *)
+(*   eprintf "%a ----> %a@." P.print_cube sa Pretty.print_term f; *)
+(*   f *)
 
 let cube_to_fol = cube_to_why
 
@@ -242,9 +235,9 @@ let system_to_why {t_unsafe = args, sa} =
   | _ ->
      (* let vsl = List.map var_symb_proc args in *)
      let vsl = List.map (fun vs -> (proc_pvsymbol vs).Mlw_ty.pv_vs) args in
-     Term.Mvs.iter (fun vs i ->
-     		    eprintf "> %a:%d@." Pretty.print_vs vs i;
-     	       ) (Term.t_freevars Term.Mvs.empty (cube_to_why sa));
+     (* Term.Mvs.iter (fun vs i -> *)
+     (* 		    eprintf "> %a:%d@." Pretty.print_vs vs i; *)
+     (* 	       ) (Term.t_freevars Term.Mvs.empty (cube_to_why sa)); *)
      Term.t_exists_close(* _simp *) vsl [] (cube_to_why sa)
 
 let systems_to_why =
@@ -547,7 +540,7 @@ module HSet = Hstring.HSet
 
 
 let skolemize f =
-  eprintf "skolemize: %a@." Pretty.print_term f;
+  (* eprintf "skolemize: %a@." Pretty.print_term f; *)
   let csts = ref [] in
   let h_csts = ref [] in
   let simpl = 
@@ -567,11 +560,11 @@ let skolemize f =
 				 h_csts := h :: !h_csts; 
 				 Term.Mvs.add v th acc, rh
 		    | _ -> assert false) (Term.Mvs.empty, proc_vars) vsl in
-		Term.Mvs.iter (fun vs t ->
-			       eprintf "%a -> %a:%a@." Pretty.print_vs vs Pretty.print_term t
-				       Pretty.print_ty (Term.t_type t)
-			      ) subst;
-		eprintf "in subst %a @." Pretty.print_term t;
+		(* Term.Mvs.iter (fun vs t -> *)
+		(* 	       eprintf "%a -> %a:%a@." Pretty.print_vs vs Pretty.print_term t *)
+		(* 		       Pretty.print_ty (Term.t_type t) *)
+		(* 	      ) subst; *)
+		(* eprintf "in subst %a @." Pretty.print_term t; *)
 		Term.t_subst subst t
 	     | _ -> f
   in
@@ -588,11 +581,11 @@ let rec instanciate_proc csts f =
 	     | Term.Tquant (Term.Tforall, tq) ->
 		let vsl, _, t = Term.t_open_quant tq in
 		List.fold_left (fun instances d ->
-				eprintf "inst:";
-		Term.Mvs.iter (fun vs t ->
-			       eprintf "%a -> %a:%a@." Pretty.print_vs vs Pretty.print_term t
-				       Pretty.print_ty (Term.t_type t)
-			      ) (perm_to_subst d);
+		(* 		eprintf "inst:"; *)
+		(* Term.Mvs.iter (fun vs t -> *)
+		(* 	       eprintf "%a -> %a:%a@." Pretty.print_vs vs Pretty.print_term t *)
+		(* 		       Pretty.print_ty (Term.t_type t) *)
+		(* 	      ) (perm_to_subst d); *)
 				
 		  let ni = Term.t_subst (perm_to_subst d) t in
 		  Term.t_and_simp (instanciate_proc csts ni) instances
@@ -625,7 +618,7 @@ let distinct vars =
 
 let safety_formulas f =
   List.map (fun (f, h_csts) ->
-    eprintf "SAFETY: %a@." Pretty.print_term f;
+    (* eprintf "SAFETY: %a@." Pretty.print_term f; *)
     distinct h_csts,
     why_to_smt f
   ) (skolem_instanciate f)
@@ -639,7 +632,7 @@ let init_to_fol {t_init = args, lsa} = match lsa with
   | _ ->
      (* let vsl = List.map var_symb_proc args in *)
      let vsl = List.map (fun vs -> (proc_pvsymbol vs).Mlw_ty.pv_vs) args in
-     List.iter (fun vs -> eprintf "## %a@." Pretty.print_vs vs) vsl;
+     (* List.iter (fun vs -> eprintf "## %a@." Pretty.print_vs vs) vsl; *)
      let t = List.fold_left (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc)
 			    Term.t_false lsa in
      Term.t_forall_close_simp vsl [] t

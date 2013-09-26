@@ -86,9 +86,7 @@ let prefix_tl (x: t) : t = Term.t_not_simp x
 
 let infix_et (x: t) (x1: t) : t = Term.t_and_simp x x1
 
-let infix_plpl (x: t) (x1: t) : t = 
-  eprintf "++++++++++++++ %a +++ %a === %a@." print x print x1 print (Term.t_or_simp x x1);
-  Term.t_or_simp x x1
+let infix_plpl (x: t) (x1: t) : t =  Term.t_or_simp x x1
 
 let infix_eqgt (x: t) (x1: t) : t = Term.t_implies_simp x x1
 
