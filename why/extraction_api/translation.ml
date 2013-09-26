@@ -399,18 +399,20 @@ let dnf f =
 (*     | Exists (_, f) -> already_dnf f *)
 (*     | _ -> false *)
 
+let reconstruct_conj f =
+  List.map (function 
+	     | [] -> Term.t_false
+	     | [f] -> f
+	     | conj -> 
+		List.fold_left (fun acc l -> Term.t_and_simp l acc)
+			       Term.t_true conj
+	   ) (dnf f)
+
 let reconstruct_dnf f =
-  let l = List.map (function 
-		     | [] -> Term.t_false
-		     | [f] -> f
-		     | conj -> 
-			List.fold_left (fun acc l -> Term.t_and_simp l acc)
-				       Term.t_true conj
-		   ) (dnf f) in
-  match l with
+  match reconstruct_conj f with
   | [] -> Term.t_false
   | [f'] -> f'
-  | _ -> List.fold_left (fun acc c -> Term.t_or_simp c acc)
+  | l -> List.fold_left (fun acc c -> Term.t_or_simp c acc)
 			Term.t_false l
 	       
 let rec dnfize f = match f.Term.t_node with
@@ -419,6 +421,13 @@ let rec dnfize f = match f.Term.t_node with
      let tq' = Term.t_close_quant vs tr (dnfize t) in
      Term.t_quant_simp q tq'
   | _ -> reconstruct_dnf f
+	       
+let rec dnfize_list f = match f.Term.t_node with
+  | Term.Tquant (q, tq) ->
+     let vs, tr, t = Term.t_open_quant tq in
+     let tq' = Term.t_close_quant vs tr (dnfize t) in
+     [Term.t_quant_simp q tq']
+  | _ -> reconstruct_conj f
 
 let dnfize2 f =
   Prover.TimeF.start ();
@@ -428,6 +437,13 @@ let dnfize2 f =
   Prover.TimeF.pause ();
   f
 
+
+let rec dnf_to_conj_list acc f = match f.Term.t_node with
+  | Term.Tbinop (Term.Tor, f1, f2) ->
+     dnf_to_conj_list (dnf_to_conj_list acc f1) f2
+  | _ -> f :: acc
+
+let dnf_to_conj_list = dnf_to_conj_list []
 
 (*--------------------------------------------------------------------*)
 
@@ -587,19 +603,19 @@ let rec instanciate_proc csts f =
 
 
 let skolem_instanciate f =
-  let f = dnfize f in
-  let f, csts, h_csts = skolemize f in
-  let f = instanciate_proc csts f in
-  f, h_csts
-
+  List.map (fun f ->
+	    let f, csts, h_csts = skolemize f in
+	    let f = instanciate_proc csts f in
+	    f, h_csts
+	   ) (dnfize_list f)
 
 
 (* XXX : change this *)
-let why_to_smt f =
-  let ss = why_to_systems f in
-  List.map (fun {t_arru = ap} -> 
-  eprintf "CUB SAFETY: %a@." P.print_array ap;
-  Prover.make_formula ap) ss
+let why_to_smt f = Prover.make_formula_set (why_to_cube f)
+  (* let ss = why_to_systems f in *)
+  (* List.map (fun {t_arru = ap} ->  *)
+  (* eprintf "CUB SAFETY: %a@." P.print_array ap; *)
+  (* Prover.make_formula ap) ss *)
 
 
 
@@ -608,10 +624,12 @@ let distinct vars =
 		       (List.map (fun v -> Smt.Term.make_app v []) vars)
 
 let safety_formulas f =
-  let f, h_csts = skolem_instanciate f in
-  eprintf "SAFETY: %a@." Pretty.print_term f;
-  distinct h_csts,
-  why_to_smt f
+  List.map (fun (f, h_csts) ->
+    eprintf "SAFETY: %a@." Pretty.print_term f;
+    distinct h_csts,
+    why_to_smt f
+  ) (skolem_instanciate f)
+
   
 
 

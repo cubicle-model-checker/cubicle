@@ -18,9 +18,9 @@ let rec print = Why3.Pretty.print_term
 (* let infix_breq (x: structure) (x1: t) : bool = *)
 (*   failwith "to be implemented" (\* uninterpreted symbol *\) *)
 
-let ffalse  : t = Term.t_true
+let ffalse  : t = Term.t_false
 
-let ttrue  : t = Term.t_false
+let ttrue  : t = Term.t_true
 
 
 (* let declarations_task = ref None *)
@@ -80,14 +80,15 @@ let fol_to_cubes = Translation.why_to_systems
 
 let cubes_to_fol = Translation.systems_to_why
 
-
 	
 (* neg *)  
 let prefix_tl (x: t) : t = Term.t_not_simp x
 
 let infix_et (x: t) (x1: t) : t = Term.t_and_simp x x1
 
-let infix_plpl (x: t) (x1: t) : t = Term.t_or_simp x x1
+let infix_plpl (x: t) (x1: t) : t = 
+  eprintf "++++++++++++++ %a +++ %a === %a@." print x print x1 print (Term.t_or_simp x x1);
+  Term.t_or_simp x x1
 
 let infix_eqgt (x: t) (x1: t) : t = Term.t_implies_simp x x1
 
@@ -128,8 +129,7 @@ module SMT = Prover.SMT
 
 let sat (f: t) : bool =
   if Options.debug then eprintf "sat: %a@." print f;
-  let dist, fs = Translation.safety_formulas f in
-  List.exists (fun f ->
+  List.exists (fun (dist, f) ->
 	       try
 		 SMT.clear ();
 		 SMT.assume ~profiling:false ~id:0 dist;
@@ -137,6 +137,6 @@ let sat (f: t) : bool =
 		 SMT.check  ~profiling:false ();
 		 true
 	       with Smt.Unsat _ -> false 
-	      ) fs
+	      ) (Translation.safety_formulas f)
 
 let valid (f: t) : bool = not (sat (prefix_tl f))

@@ -4,6 +4,7 @@ module F = Fol__FOL
 module Q = Queue
 open F
 
+
 type f = F.t
 
 type t =
@@ -17,15 +18,11 @@ let create (us: unit) : t =
   
 
 let push (f: Fol__FOL.t) (q: t) : unit =
-  (* let l = match f with *)
-  (*   | Lit _ | And _ | Exists _ | Forall _ | Not _ -> [f] *)
-  (*   | Or l -> l *)
-  (* in *)
-  (* List.iter (fun f -> *)
-  (*   (\* q.formula <- f ++ q.formula; *\) *)
-  (*   Q.push f q.elts *)
-  (* ) l *)
-  Q.push f q.elts
+  List.iter (fun f ->
+    (* q.formula <- f ++ q.formula; *)
+    Q.push f q.elts
+  ) (Translation.dnf_to_conj_list f)
+  (* Q.push f q.elts *)
 
 exception Empty
 
