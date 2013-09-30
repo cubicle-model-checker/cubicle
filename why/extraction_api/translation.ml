@@ -7,6 +7,9 @@ module P = Pretty
 open Why3
 
 
+let env : Env.env = Env.create_env (Whyconf.loadpath main)
+
+(*     TODO:    Use Decl.known_map *)
 
 (*---------------------------- Theories ---------------------------*)
 
@@ -496,11 +499,12 @@ let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
 	let vj = var_symb j in
 	let aj = access_to_map a js in
 	let swtsw = switches_to_ite aj swts in
-	Term.t_quant_simp Term.Tforall (Term.t_close_quant [vj] [] swtsw)
+	Term.t_forall_close_simp [vj] [] swtsw
      end
   | _ -> failwith "update to post not implemented for matrices"
   
 
+let dummy_vsymbol = Term.create_vsymbol (Ident.id_fresh "@dummy@") ty_proc
 
 let transition_spec t =
   let c_req = cube_to_why t.tr_reqs in
@@ -513,6 +517,7 @@ let transition_spec t =
   let post = List.fold_left (fun post upd ->
 			     Term.t_and_simp (update_to_post upd) post)
 			    post t.tr_upds in
+  let post = Term.t_eps_close dummy_vsymbol post in
   (* TODO : effects in updates and assigns -- see regions *)
   { Mlw_ty.c_pre = req;
            c_post = post;
