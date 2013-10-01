@@ -153,6 +153,10 @@ let declarations_map s =
                   |> add_glob_decls s
                   |> add_array_decls s
 
+let known_map = ref Iden.Mid.empty
+
+let set_decl_map s = known_map := declarations_map s
+
 
 (*------------------------------------------------------------------*)
 
