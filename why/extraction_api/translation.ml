@@ -7,8 +7,6 @@ module P = Pretty
 open Why3
 
 
-let env : Env.env = Env.create_env (Whyconf.loadpath main)
-
 (*     TODO:    Use Decl.known_map *)
 
 (*---------------------------- Theories ---------------------------*)
@@ -64,6 +62,10 @@ let set_fun : Mlw_expr.psymbol =
 let hs_id s = Ident.id_fresh (Hstring.view s)
 
 
+
+
+
+
 let user_types = Hstring.H.create 13
 
 let ty_proc = 
@@ -92,6 +94,67 @@ let type_glob ty =
 let type_array ty =
   let tyap = Ty.ty_app (tysymb ty) [] in
   Ty.ty_app ref_ts [Ty.ty_app map_ts [ty_proc; tyap]]
+
+
+
+
+
+(*------------------------ Declarations ----------------------------*)
+
+
+let find_type kn t =
+  match (Ident.Mid.find (Ident.id_register (hs_id t)) kn).Mlw_decl.pd_node with
+  | Mlw_decl.PDtype tys | Mlw_decl.PDdata [tys, _, _] ->
+	Mlw_ty.ity_app_fresh tys []
+  | _ -> assert false
+
+
+let add_type_decls s kn =
+  let kn = 
+    let tys = Mlw_ty.create_itysymbol
+		(Ident.id_fresh "proc") [] [] (Some Mlw_ty.ity_int) in
+    Mlw_decl.known_add_decl Ident.Mid.empty kn (Mlw_decl.create_ty_decl tys) in
+  List.fold_left (fun kn (n, c) ->
+	      let tys = Mlw_ty.create_itysymbol (hs_id n) [] [] None in
+	      let d = match c with
+		| [] -> Mlw_decl.create_ty_decl tys
+		| _ -> 
+		   let constrs = List.map (fun s -> hs_id s, []) c in
+		   Mlw_decl.create_data_decl [tys, constrs] in
+	      Mlw_decl.known_add_decl Ident.Mid.empty kn d
+	     ) kn s.type_defs
+
+let add_glob_decls s kn =
+   List.fold_left (fun kn (n, t) ->
+	      let ret_ity = find_type kn t in
+	      let rity = Mlw_ty.ity_app_fresh ref_type [ret_ity] in
+	      let ps = Mlw_ty.create_pvsymbol (hs_id n) rity in
+	      let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
+	      Mlw_decl.known_add_decl Ident.Mid.empty kn d
+	     ) kn s.globals
+
+let add_array_decls s kn =
+    List.fold_left (fun kn (n, (args, ret)) ->
+	      let ret_ity = find_type kn ret in
+	      let args_ity = List.map (find_type kn) args in
+	      match args_ity with
+	      | [arg_ity] ->
+		 let map_ty = Mlw_ty.ity_pur map_ts [arg_ity; ret_ity] in
+		 let aty = Mlw_ty.ity_app_fresh ref_type [map_ty] in
+		 let ps = Mlw_ty.create_pvsymbol (hs_id n) aty in
+		 let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
+		 Mlw_decl.known_add_decl Ident.Mid.empty kn d
+	      | _ -> assert false
+	    ) kn s.arrays
+
+
+let declarations_map s =
+  Ident.Mid.empty |> add_type_decls s
+                  |> add_glob_decls s
+                  |> add_array_decls s
+
+
+(*------------------------------------------------------------------*)
 
 
 let user_symbols = Hstring.H.create 13
