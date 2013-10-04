@@ -152,6 +152,7 @@ type t_system = {
   t_glob_proc : Hstring.t list;
   t_from_forall: bool;
   t_refine: bool;
+  mutable t_spurious: bool;
 }
 
 val declared_terms : ArrayAtom.t -> bool

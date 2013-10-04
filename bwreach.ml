@@ -260,8 +260,9 @@ let make_cubes =
 			    t_nb = new_cube_id ();
 			    t_nb_father = nb;
 			    t_from_forall = from_forall;
-			    t_refine = from_forall
-				 (* && List.length nargs > List.length uargs *);
+			    t_refine = from_forall;
+				 (* && List.length nargs > List.length uargs *)
+			    t_spurious = false;
 			} in
 		      
 		      match post_strategy with
@@ -508,6 +509,8 @@ let partition ({ t_unsafe = (args, sa) } as s) =
 	   t_deleted = false;
 	   t_nb = 0;
 	   t_nb_father = -1;
+	   t_refine = false;
+	   t_spurious = false;
 	 } :: l)
     [] args
 
@@ -528,6 +531,8 @@ let sub_cubes s =
 	t_deleted = false;
 	t_nb = 0;
 	t_nb_father = -1;
+	t_refine = false;
+	t_spurious = false;
       } :: acc) sa []
       
 
@@ -718,6 +723,8 @@ module T = struct
 	     t_deleted = false;
 	     t_nb = !cpt;
 	     t_nb_father = -1;
+	     t_refine = false;
+	     t_spurious = false;
 	 }) s.t_cands
 
   let size = size_system

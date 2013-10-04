@@ -342,7 +342,7 @@ module BFS_base ( X : I ) = struct
   let safety_test s =
     try X.safety s with 
     | Unsafe s ->
-       if refine_universal && X.spurious_error_trace s then ()
+       if refine_universal && X.spurious_error_trace s then s.t_spurious <- true
        else
 	 begin
            if dot then fprintf fmt "@[%a@]@." X.print_bad s;
@@ -477,8 +477,8 @@ module BFS_base ( X : I ) = struct
 	         if delete then X.delete_nodes_trie s visited nb_deleted true;
 	         (* if delete && invgen && gen_inv then  *)
 	         (*   X.delete_nodes_inv inv visited; *)
-                 visited := 
-                   Cubetrie.add_array s.t_arru s !visited;
+                 if not s.t_spurious then
+		   visited := Cubetrie.add_array s.t_arru s !visited;
 	         postponed := List.rev_append post !postponed;
 	         if delete then X.delete_nodes s postponed nb_deleted true;
 	       (* if delete && invgen && gen_inv then *)

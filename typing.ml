@@ -323,6 +323,7 @@ let system s =
 	t_glob_proc = glob_proc;
 	t_from_forall = false;
 	t_refine = false;
+	t_spurious = false;
       }
     ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

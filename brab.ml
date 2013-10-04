@@ -214,6 +214,8 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
 	      t_deleted = false;
 	      t_nb = !cpt_approx;
 	      t_nb_father = -1;
+	      t_refine = false;
+	      t_spurious = false;
             } in
           s' :: acc
     ) parts []
