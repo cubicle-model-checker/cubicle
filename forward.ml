@@ -583,10 +583,10 @@ let post init all_procs procs { tr_args = tr_args;
 
 
 
-let post_inst init all_procs procs {i_reqs = reqs;
-				    i_udnfs = udnfs;
-				    i_actions = actions;
-				    i_touched_terms = touched_terms } =
+let post_inst init all_procs procs { i_reqs = reqs;
+				     i_udnfs = udnfs;
+				     i_actions = actions;
+				     i_touched_terms = touched_terms } =
   if possible_inst_guard procs all_procs init reqs udnfs then
     let p_init = prime_satom init in
     let unchanged = preserve_terms touched_terms init in
@@ -1328,63 +1328,122 @@ let post_system ({ t_unsafe = uargs, u; t_trans = trs}) =
 (********************************************)
 
 exception Reachable of (transition * (Hstring.t * Hstring.t) list) list
-    
-let reachable_on_trace s trace =
-  let _, usa = s.t_unsafe in
-  let all_procs_set =
-    List.fold_left (fun acc (_, procs) ->
-      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc procs
-    ) Hstring.HSet.empty trace in
-  let all_procs = Hstring.HSet.elements all_procs_set in
+
+let all_partitions s =
+  List.fold_left (fun acc x ->
+    [x] :: List.map (fun l -> x :: l) acc) [] (List.rev s)
+
+
+let mkinits_up_to procs_sets s =
+  if procs_sets = [] then mkinits [] s
+  else
+    List.fold_left
+      (fun acc procs -> List.rev_append (mkinits procs s) acc) [] procs_sets
+
+
+let possible_trace ~starts ~finish ~procs ~trace =
+  let _, usa = finish.t_unsafe in
   let rec forward_rec ls trace = match trace with
     | [] -> ()
-    | (tr, _) :: rest_trace ->
+    | (tr, _, _) :: rest_trace ->
         let nls =
           List.fold_left (fun acc sigma ->
-            let itr = instance_of_transition tr all_procs [] sigma in
+            let itr = instance_of_transition tr procs [] sigma in
             List.fold_left (fun acc (sa, args, hist) ->
               List.fold_left (fun acc (nsa, nargs) ->
                 let new_hist = (tr, sigma) :: hist in
-                try Prover.reached all_procs usa nsa; raise (Reachable new_hist)
+                try Prover.reached procs usa nsa; raise (Reachable new_hist)
                 with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
-              ) acc (post_inst sa args all_procs itr)
+              ) acc (post_inst sa args procs itr)
             ) acc ls
-          ) [] (all_permutations tr.tr_args all_procs)
+          ) [] (all_permutations tr.tr_args procs)
         in
         forward_rec nls rest_trace
   in
   try
-    let init = List.map (fun (sa, ar) -> sa, ar, []) (mkinits all_procs s) in
+    let init = List.map (fun (isa, iargs)-> isa, iargs, []) starts in
     forward_rec init trace; None
   with
     | Reachable hist -> Some hist
+  
 
+  
+let reachable_on_trace_from_init s trace =
+  let all_procs_set =
+    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
+      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
+		     (List.rev_append procs_t procs_c)
+    ) Hstring.HSet.empty trace in
+  let all_procs = Hstring.HSet.elements all_procs_set in
+  let proc_sets = all_partitions all_procs in
+  let inits = mkinits_up_to proc_sets s in
+  possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace
+
+
+let possible_history s =
+  let trace = s.t_from in
+  let all_procs_set =
+    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
+      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
+		     (List.rev_append procs_t procs_c)
+    ) Hstring.HSet.empty trace in
+  let all_procs = Hstring.HSet.elements all_procs_set in
+  let iargs, isa = s.t_unsafe in 
+  possible_trace ~starts:[isa, iargs] ~finish:(origin s) ~procs:all_procs ~trace
+
+		 
 let spurious s =
-  let trace = List.map (fun (tr, args, _) -> tr, args) s.t_from in 
-  match reachable_on_trace (origin s) trace with
+  match possible_history s with
     | None -> true
     | Some hist ->
-        eprintf "\n@{<fg_red>Error trace:@} @[";
-        List.iter (fun (tr, sigma) ->
-          eprintf "%a(%a) ->@ " Hstring.print tr.tr_name
-            Pretty.print_args (List.map snd sigma)
-        ) (List.rev hist);
-        let nun = (origin s).t_nb in
-        if nun < 0 then 
-          eprintf "@{<fg_blue>approx[%d]@}" nun
-        else 
-          eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
-        eprintf "@]@.";
+        if debug then
+	  begin
+	    eprintf "\n@{<fg_red>Error trace:@} @[";
+	    List.iter (fun (tr, sigma) ->
+		       eprintf "%a(%a) ->@ " Hstring.print tr.tr_name
+			       Pretty.print_args (List.map snd sigma)
+		      ) (List.rev hist);
+	    let nun = (origin s).t_nb in
+	    if nun < 0 then 
+	      eprintf "@{<fg_blue>approx[%d]@}" nun
+	    else 
+	      eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
+	    eprintf "@]@.";
+	  end;
         false
 
+
+let spurious_error_trace s =
+  match reachable_on_trace_from_init (origin s) s.t_from with
+  | None -> true
+  | Some hist ->
+        if debug then
+	  begin
+	    eprintf "\n@{<fg_red>Error trace:@} @[";
+	    List.iter (fun (tr, sigma) ->
+		       eprintf "%a(%a) ->@ " Hstring.print tr.tr_name
+			       Pretty.print_args (List.map snd sigma)
+		      ) (List.rev hist);
+	    let nun = (origin s).t_nb in
+	    if nun < 0 then 
+	      eprintf "@{<fg_blue>approx[%d]@}" nun
+	    else 
+	      eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
+	    eprintf "@]@.";
+	  end;
+        false
+
+
 let conflicting_from_trace s trace =
-  let all_procs_set = List.fold_left (fun acc (_, procs) ->
-    List.fold_left (fun acc h -> Hstring.HSet.add h acc) acc procs)
-    Hstring.HSet.empty trace in
+  let all_procs_set =
+    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
+      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
+		     (List.rev_append procs_t procs_c)
+    ) Hstring.HSet.empty trace in
   let all_procs = Hstring.HSet.elements all_procs_set in
   let rec forward_rec acc ls trace = match trace with
     | [] -> acc
-    | (tr, procs) :: rest_trace ->
+    | (tr, procs, _) :: rest_trace ->
         let sigma = List.combine tr.tr_args procs in
         let itr = instance_of_transition tr all_procs [] sigma in
         let nls, acc = 

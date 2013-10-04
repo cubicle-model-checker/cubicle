@@ -42,6 +42,13 @@ module MConst = struct
       raise Not_found
     with Choose (c, i) -> c, i
 
+  let is_num m =
+    if M.cardinal m = 1 then
+      match choose m with
+      | (ConstInt n | ConstReal n), i -> Some (Num.mult_num (Num.Int i) n)
+      | _ -> None
+    else None
+			       
 end
 
 let compare_constants = MConst.compare Pervasives.compare 
@@ -462,6 +469,7 @@ type t_system = {
   t_nb_father : int;
   t_glob_proc : Hstring.t list;
   t_from_forall: bool;
+  t_refine: bool;
 }
 
 let declared_term x =
@@ -624,28 +632,17 @@ let fill_init_instances (iargs, l_init) = match l_init with
         
 
 let make_finite_inst_array a args =
-    let rec add_args acc = function
-      | [] -> acc
-      | [x] -> acc ^ (Hstring.view x)
-      | x :: r -> add_args (acc ^ "," ^ (Hstring.view x)) r in
-    let a_str = Hstring.view a in
-    let s = add_args (a_str ^ "[") args ^ "]" in
-    Hstring.make s
+  let rec add_args acc = function
+    | [] -> acc
+    | [x] -> acc ^ (Hstring.view x)
+    | x :: r -> add_args (acc ^ "," ^ (Hstring.view x)) r in
+  let a_str = Hstring.view a in
+  let s = add_args (a_str ^ "[") args ^ "]" in
+  Hstring.make s
     
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let rec origin s = match s.t_from with
+  | [] -> s
+  | (_,_, p)::_ ->
+     if p.t_nb < 0 then p
+     else origin p

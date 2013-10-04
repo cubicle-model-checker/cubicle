@@ -35,6 +35,7 @@ val lazyinv : bool
 val refine : bool
 val stateless : bool
 val do_brab : bool
+val brab_up_to : bool
 
 val limit_forward_depth : bool
 val forward_depth : int
@@ -64,3 +65,5 @@ val dmcmt : bool
 val profiling : bool
 
 val size_proc : int ref
+
+val subtyping : bool

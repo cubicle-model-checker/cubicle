@@ -51,6 +51,28 @@ let equal_state a1 a2 =
     done;
     !res
 
+
+let hash_state st =
+  let h = ref 1 in
+  let n = ref 2 in
+  for i = 0 to Array.length st - 1 do
+    let v = st.(i) in
+    if v <> -1 then begin
+      h := !h * (v + 2) + !n;
+      n := 13 * !n + 7;
+      (* h := (!h + 7) * (v + 11); *)
+    end
+  done;
+  !h
+
+module HST = Hashtbl.Make 
+  (struct 
+    type t = state
+    let equal = (=)
+    let hash = hash_state
+   end)
+
+  
 type st_req = int * op_comp * int
 
 type st_action = 
@@ -74,6 +96,7 @@ type state_transistion = {
 
 
 type env = {
+  model_cardinal : int;
   var_terms : STerm.t;
   nb_vars : int;
   perm_procs : (int * int) list list;
@@ -91,9 +114,12 @@ type env = {
   up_int_abstr : int;
   pinf_int_abstr : int;
   minf_int_abstr : int;
+
+  explicit_states : unit HST.t;
 }
 
 let empty_env = {
+  model_cardinal = 0;
   var_terms = STerm.empty;
   nb_vars = 0;
   perm_procs = [];
@@ -110,6 +136,8 @@ let empty_env = {
   up_int_abstr = 0;
   pinf_int_abstr = 0;
   minf_int_abstr = 0;
+
+  explicit_states = HST.create 0;
 }
 
 
@@ -171,28 +199,7 @@ let normalize_state env st =
   apply_subst env st !sigma
 
 
-let hash_state st =
-  let h = ref 1 in
-  let n = ref 2 in
-  for i = 0 to Array.length st - 1 do
-    let v = st.(i) in
-    if v <> -1 then begin
-      h := !h * (v + 2) + !n;
-      n := 13 * !n + 7;
-      (* h := (!h + 7) * (v + 11); *)
-    end
-  done;
-  !h
-
-module HST = Hashtbl.Make 
-  (struct 
-    type t = state
-    let equal = (=)
-    let hash = hash_state
-   end)
-
-let explicit_states = HST.create 2_000_009
-let global_env = ref empty_env
+let global_envs = ref []
 
 
 exception Found of term
@@ -263,8 +270,7 @@ let state_to_cube env st =
 let all_constr_terms () =
   List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
 
-let terms_of_procs =
-  List.map (fun x -> Elem (x, Var))
+let terms_of_procs = List.map (fun x -> Elem (x, Var))
 
 let init_tables procs s =
   let var_terms = all_var_terms procs s in
@@ -307,7 +313,8 @@ let init_tables procs s =
     incr i) abstr_range;
   let a_up = !i - 1 in
 
-  { var_terms = var_terms;
+  { model_cardinal = nb_procs;
+    var_terms = var_terms;
     nb_vars = nb_vars;
     perm_procs = perm_procs;
     perm_states = perm_states;
@@ -324,6 +331,8 @@ let init_tables procs s =
     up_int_abstr = a_up;
     pinf_int_abstr = a_up + 1;
     minf_int_abstr = -3;
+
+    explicit_states = HST.create 2_000_009;
   }
 
 
@@ -820,7 +829,7 @@ let check_cand env state cand =
 
 
 let forward_dfs s procs env l =
-  global_env := env;
+  let explicit_states = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_q = ref 1 in
   let trs = env.st_trs in
@@ -859,8 +868,8 @@ let add_all_syms env h st =
   List.iter (fun st_sigma ->
     HST.add h (apply_perm_state env st st_sigma) ()) env.perm_states
 
-let forward_bfs s procs env h_store h_visited l =
-  global_env := env;
+let forward_bfs s procs env l =
+  let h_visited = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
   let cpt_q = ref 1 in
@@ -882,14 +891,13 @@ let forward_bfs s procs env h_store h_visited l =
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
       HST.add h_visited st ();
-      if not (h_store == h_visited) then HST.add h_store st ()
       (* add_all_syms env explicit_states st *)
     end
   done;
   eprintf "Total forward nodes : %d@." !cpt_r
 
 let forward_bfs_switches s procs env l =
-  global_env := env;
+  let explicit_states = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_q = ref 1 in
   let trs = env.st_trs in
@@ -930,7 +938,20 @@ let search procs init =
       eprintf "init : %a\n@." Pretty.print_cube (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
-  forward_bfs init procs env explicit_states explicit_states st_inits;
+  global_envs := env :: !global_envs;
+  forward_bfs init procs env st_inits;
+  let st = HST.stats env.explicit_states in
+  if verbose > 0 then begin
+    printf "\nStatistics@.";
+    printf   "----------@.";
+    printf "num_bindings : %d@." st.Hashtbl.num_bindings;
+    printf "num_buckets : %d@." st.Hashtbl.num_buckets;
+    printf "max_bucket_length : %d@." st.Hashtbl.max_bucket_length;
+    printf "Bucket histogram : @?";
+    Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v )
+		st.Hashtbl.bucket_histogram;
+    printf "@.";
+  end;
   if profiling then Search.TimeForward.pause ()
 
 
@@ -943,8 +964,8 @@ let find_tr_funs env name =
   List.filter (fun tr -> Hstring.equal tr.st_name name) env.st_trs
 
 let replay_trace_and_expand procs faulty =
-  let env = !global_env in
-  let tmp_visited = HST.create 2_000_001 in
+  List.iter (fun env ->
+  (* let tmp_visited = HST.create 2_000_001 in *)
   let st_inits = List.map snd (init_to_states env procs faulty) in
   let trc = faulty.t_from in
   let rec replay trc sts depth =
@@ -970,8 +991,8 @@ let replay_trace_and_expand procs faulty =
   List.iter (fun (st) ->
   eprintf "new_inits : %a\n@." Pretty.print_cube (state_to_cube env st))
     new_inits;
-  forward_bfs faulty procs env explicit_states tmp_visited
-    (List.map (fun s -> 0, s) new_inits)
+  forward_bfs faulty procs env (List.map (fun s -> 0, s) new_inits)
+ ) !global_envs
 
 
 let satom_to_cand env sa =
@@ -989,22 +1010,54 @@ exception Sustainable of t_system list
 (* Check if there exists one (or many) approximation candidates that *)
 (* cannot be disproved by the finite model                           *)
 (*********************************************************************)
-    
-let smallest_to_resist_on_trace ls =
-  let env = !global_env in
-  let progress_inc = (HST.length explicit_states) / Pretty.vt_width + 1 in
-  let cands =
-    List.fold_left (fun acc p ->
-      try 
-        (List.map (fun s -> satom_to_cand env (snd s.t_unsafe), s) p) :: acc
-      with Not_found -> acc
-    ) [] ls in
+
+
+exception TooBig of t_system list
+
+let alpha_renamings cpt_approx env procs ({ t_unsafe = args, sa} as s) =
+  let d = List.rev (all_permutations args procs) in
+  (* keep list.rev in order for the first element of perm to be
+     a normalized cube as we will keep this only one if none of
+     perm can be disproved *)
+  List.fold_left (fun p sigma ->
+    let sa = subst_atoms sigma sa in
+    let ar = ArrayAtom.of_satom sa in
+    decr cpt_approx;
+    let s' = 
+      { s with
+	t_from = [];
+	t_unsafe = args, sa;
+	t_arru = ar;
+	t_alpha = ArrayAtom.alpha ar args;
+	t_deleted = false;
+	t_nb = !cpt_approx;
+	t_nb_father = -1;
+	t_from_forall = false;
+	t_refine = false;
+      } in
+    (satom_to_cand env sa, s') :: p
+  ) [] d
+
+
+
+let resist_on_trace_size cpt_approx progress_inc ls env =
+  let explicit_states = env.explicit_states in
+  let procs = List.rev (List.tl (List.rev env.all_procs)) in
+  let cands, too_big =
+    List.fold_left (fun (acc, too_big) s ->
+      if Cube.size_system s > env.model_cardinal then acc, s :: too_big
+      else
+	try (alpha_renamings cpt_approx env procs s) :: acc, too_big
+	with Not_found -> acc, too_big
+    ) ([], []) ls  in
   let cands = ref (List.rev cands) in
+  let too_big = List.rev too_big in
   if !cands = [] then []
   else
     try
       if profiling then Search.TimeCustom.start ();
-      if not quiet then eprintf "@{<fg_black_b>@{<i>"; (* will be forgotten by flushs *)
+      if not quiet then eprintf "@{<fg_black_b>@{<i>";
+                        (* will be forgotten by flushs *)
       let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
       let cpt = ref 0 in
       HST.iter (fun st _ ->
@@ -1015,17 +1068,34 @@ let smallest_to_resist_on_trace ls =
         ) !cands;
         if !cands = [] then raise Exit;
       ) explicit_states;
-      List.iter (function
-        | (_,s) :: _ -> raise (Sustainable [s])
-        | [] -> ()
-      ) !cands;
-      raise Not_found
-    with
-      | Exit | Not_found ->
-          if profiling then Search.TimeCustom.pause ();
-          if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
-          []
-      | Sustainable ls ->
-          if profiling then Search.TimeCustom.pause ();
-          if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
-          ls
+      let remain = List.fold_left (fun acc clas ->
+	match clas with
+	| [] -> acc
+	| (_, s) :: _ -> s :: acc) [] !cands in
+      List.rev_append remain too_big
+    with 
+      | Exit | Not_found -> too_big
+
+
+let smallest_to_resist_on_trace cpt_approx ls =
+  try
+    let nb =
+      List.fold_left (fun nb env -> nb + HST.length env.explicit_states)
+		     0 !global_envs
+    in
+    let progress_inc = nb / Pretty.vt_width + 1 in
+    let resistants =
+      List.fold_left
+	(resist_on_trace_size cpt_approx progress_inc) ls !global_envs in
+    match resistants with
+      | s :: _ -> raise (Sustainable [s])
+      | [] -> raise Not_found
+  with
+  | Exit | Not_found ->
+     if profiling then Search.TimeCustom.pause ();
+     if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
+     []
+  | Sustainable ls ->
+     if profiling then Search.TimeCustom.pause ();
+     if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
+     ls

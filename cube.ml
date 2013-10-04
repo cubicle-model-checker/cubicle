@@ -257,6 +257,20 @@ let rec simplification np a =
 	let cy = 
 	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
         Comp (Const cy, op, Const cx)
+    | Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
+       True 
+    | Comp (Const c1, Le, Const c2) ->
+       begin
+	 match MConst.is_num c1, MConst.is_num c2 with
+	 | Some n1, Some n2 -> if Num.le_num n1 n2 then True else False
+	 | _ -> a
+       end
+    | Comp (Const c1, Lt, Const c2) ->
+       begin
+	 match MConst.is_num c1, MConst.is_num c2 with
+	 | Some n1, Some n2 -> if Num.lt_num n1 n2 then True else False
+	 | _ -> a
+       end
     | Comp (Const _ as c, Eq, y) -> Comp (y, Eq, c)
     | Comp (x, Eq, y) when compare_term x y = 0 -> True
     | Comp (x, (Eq | Neq as op), y) when compare_term x y < 0 -> Comp (y, op, x)
@@ -860,12 +874,6 @@ let simplify_atoms np =
 (* Safety check : s /\ init must be inconsistent *)
 (*************************************************)
     
-let rec origin s = match s.t_from with
-  | [] -> s
-  | (_,_, p)::_ ->
-      if p.t_nb < 0 then p
-      else origin p
-
 let dnf_safe sa = List.for_all (inconsistent_2cubes sa)
 
 let cdnf_asafe ua =
@@ -914,18 +922,6 @@ let already_closed s tr args =
 	else find r
     in find ls
   with Not_found -> None
-
-let suitable_for_closing simpl s (*fix_from tr args*) =
-  try
-    if Array.length simpl <> 0 then begin
-      check_safety {s with t_arru = simpl};
-      true
-    end
-    else false
-  with Search.Unsafe _ -> false
-  (* && not ( List.exists (fun (tr', args', f) -> *)
-  (*   H.equal tr tr' && H.compare_list args args' = 0 && *)
-  (*     ArrayAtom.subset simpl f.t_arru) fix_from) *)
 
 let has_alredy_closed_ancestor s =
   let rec has acc = function
@@ -1278,13 +1274,13 @@ let hard_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
 let fixpoint_trie2 nodes ({ t_unsafe = (_,np) } as s) =
   Debug.unsafe s;
   if profiling then TimeFix.start ();
-  let r = 
+  let r =
     match easy_fixpoint_trie2 s nodes with
-      | None ->
-          (match medium_fixpoint_trie2 s nodes with
-            | None -> hard_fixpoint_trie2 s nodes
-            | r -> r)
-      | r -> r
+    | None ->
+       (match medium_fixpoint_trie2 s nodes with
+        | None -> hard_fixpoint_trie2 s nodes
+        | r -> r)
+    | r -> r
   in
   if profiling then TimeFix.pause ();
   r

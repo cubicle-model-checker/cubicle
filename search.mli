@@ -72,6 +72,8 @@ module type I = sig
   val print_system : Format.formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
+  val spurious : t -> bool
+  val spurious_error_trace : t -> bool
 
   val system : t -> Ast.t_system
 

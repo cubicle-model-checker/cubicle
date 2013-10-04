@@ -38,3 +38,7 @@ val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
   Hstring.t list -> ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list*)
 
 val make_literal : Atom.t -> Smt.Formula.t
+val make_formula : ArrayAtom.t -> Smt.Formula.t
+val make_formula_set : SAtom.t -> Smt.Formula.t
+
+val run : unit -> unit

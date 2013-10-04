@@ -45,7 +45,9 @@ let _ =
     if type_only then exit 0;
     Bwreach.system ts;
     if dot then eprintf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
-    else printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
+    else printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+    if refine_universal then
+      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement is an experimental feature. Use at your own risks.\n@."
   with
     | Lexer.Lexical_error s -> 
 	report (lexeme_start_p lb, lexeme_end_p lb);
@@ -63,7 +65,7 @@ let _ =
 	printf "reach bound\n@.";
 	exit 1
     | Search.Unsafe s ->
-        if Forward.spurious s then
+        if Forward.spurious_error_trace s then
           printf "\n\n@{<b>@{<fg_yellow>Spurious trace@} !@}\n@."
 	else printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
 	exit 1

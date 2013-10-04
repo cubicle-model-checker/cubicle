@@ -56,7 +56,8 @@ module Debug = struct
 	eprintf "Cubes (%a) :%a@." Pretty.print_args args Pretty.print_cube p
 
 end
-	  
+
+
 (***********************************************************************)
 (* Pre-image of an atom w.r.t a transition, simply represented here by *)
 (* a function tau						       *)
@@ -249,6 +250,7 @@ let make_cubes =
 		    then ls, post
 		    else
 		      let arr_np = ArrayAtom.of_satom np in
+		      let from_forall = s.t_from_forall || tr.tr_ureq <> [] in
 		      let new_s = 
 			{ s with
 			    t_from = (tr, tr_args, s)::s.t_from;
@@ -257,15 +259,11 @@ let make_cubes =
 			    t_alpha = ArrayAtom.alpha arr_np nargs;
 			    t_nb = new_cube_id ();
 			    t_nb_father = nb;
-			    t_from_forall = s.t_from_forall || tr.tr_ureq <> [];
+			    t_from_forall = from_forall;
+			    t_refine = from_forall
+				 (* && List.length nargs > List.length uargs *);
 			} in
 		      
-		      if refine_universal && new_s.t_from_forall &&
-			 List.length nargs > List.length uargs &&
-			 Forward.spurious new_s then
-			ls, post
-		      else
-
 		      match post_strategy with
 			| 0 -> add_list new_s ls, post
 			| 1 -> 
@@ -761,7 +759,9 @@ module T = struct
   let sort = List.stable_sort (fun {t_unsafe=args1,_} {t_unsafe=args2,_} ->
     Pervasives.compare (List.length args1) (List.length args2))
   let nb_father s = s.t_nb_father
-    
+  let spurious = Forward.spurious
+  let spurious_error_trace = Forward.spurious_error_trace
+
   let system s : t_system = s
 
   let subsuming_candidate = Brab.subsuming_candidate

@@ -41,8 +41,6 @@ val all_var_terms : Hstring.t list -> t_system -> STerm.t
 
 val size_system : t_system -> int
 val card_system : t_system -> int
-
-val origin : t_system -> t_system
   
 val check_safety : t_system -> unit
 

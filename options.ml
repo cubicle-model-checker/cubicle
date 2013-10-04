@@ -44,6 +44,7 @@ let gen_inv = ref false
 let forward_inv = ref (-1)
 let enumerative = ref (-1)
 let brab = ref (-1)
+let brab_up_to = ref false
 let forward_depth = ref (-1)
 let localized = ref false 
 let lazyinv = ref false
@@ -59,6 +60,8 @@ let delete = ref true
 let simpl_by_uc = ref false
 let cores = ref 0
 let refine_universal = ref false
+
+let subtyping = ref true
 
 let mode = ref Bfs
 let set_mode = function
@@ -98,6 +101,8 @@ let specs =
                     " localized invariant candidates";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
+    "-upto", Arg.Set brab_up_to,
+                "in combination with -brab <n>, finite models up to size <n>";
     "-forward-depth", Arg.Set_int forward_depth,
                 "<d> Limit the depth of the forward exploration to at most d";
     "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
@@ -109,6 +114,7 @@ let specs =
                           1: postpone nodes with n+1 processes
                           2: postpone nodes that don't add information";
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
+    "-nosubtyping", Arg.Clear subtyping, " no static subtyping analysis";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
     "-refine-universal", Arg.Set refine_universal, " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
@@ -146,6 +152,11 @@ let forward_inv = !forward_inv
 let brab = !brab
 let enumerative = if brab <> -1 then brab else !enumerative
 let do_brab = brab <> -1
+let brab_up_to =
+  if !brab_up_to && not do_brab then
+    raise (Arg.Bad "use -upto in combination with brab")
+  else !brab_up_to
+
 let forward_depth = !forward_depth
 let limit_forward_depth = forward_depth <> -1
 let localized = !localized
@@ -178,3 +189,5 @@ let enumsolver = !enumsolver
 let size_proc = ref 0
 
 let refine_universal = !refine_universal
+
+let subtyping = !subtyping

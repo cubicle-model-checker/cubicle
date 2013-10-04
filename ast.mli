@@ -25,6 +25,7 @@ type const = ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
 module MConst : sig 
   include Map.S with type key = const
   val choose : int t -> key * int
+  val is_num : int t -> Num.num option
 end
 
 val compare_constants : int MConst.t -> int MConst.t -> int
@@ -150,6 +151,7 @@ type t_system = {
   t_nb_father : int;
   t_glob_proc : Hstring.t list;
   t_from_forall: bool;
+  t_refine: bool;
 }
 
 val declared_terms : ArrayAtom.t -> bool
@@ -176,3 +178,5 @@ val fill_init_instances : Hstring.t list * SAtom.t list -> unit
 val make_finite_inst_array : Hstring.t -> Hstring.t list -> Hstring.t
 
 val has_var : Hstring.t -> Atom.t -> bool
+				       
+val origin : t_system -> t_system

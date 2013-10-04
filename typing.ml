@@ -288,7 +288,7 @@ let system s =
     List.iter unsafe s.unsafe;
     List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
     transitions s.trans;
-    Smt.Variant.close ();
+    if Options.subtyping then Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
     
     let glob_proc = 
@@ -322,6 +322,7 @@ let system s =
 	t_nb_father = -1;
 	t_glob_proc = glob_proc;
 	t_from_forall = false;
+	t_refine = false;
       }
     ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

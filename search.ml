@@ -73,6 +73,8 @@ module type I = sig
   val print_system : Format.formatter -> t -> unit
   val sort : t list -> t list
   val nb_father : t -> int
+  val spurious : t -> bool
+  val spurious_error_trace : t -> bool
 
   val system : t -> Ast.t_system
 
@@ -328,6 +330,27 @@ module BFS_base ( X : I ) = struct
       | [] -> false | x :: l-> x = c.t_nb || mem l c in
     List.partition (fun c -> mem l (X.system c)) candidates
 
+  let fmt, close_dot = Pretty.dot_config file cpt_dot
+    
+  let fixpoint_test visited s =
+    match X.fixpoint_trie2 visited s with
+    | None -> if refine_universal && s.t_refine && X.spurious s then Some []
+	      else None
+    | r -> r
+
+
+  let safety_test s =
+    try X.safety s with 
+    | Unsafe s ->
+       if refine_universal && X.spurious_error_trace s then ()
+       else
+	 begin
+           if dot then fprintf fmt "@[%a@]@." X.print_bad s;
+           close_dot ();
+	   raise (Unsafe s)
+	 end
+
+
   let search 
       inv_search invgen ~invariants ~visited ~forward_nodes ~candidates uns =
 
@@ -353,8 +376,6 @@ module BFS_base ( X : I ) = struct
     let not_invariants = ref [] in
     let q = Queue.create () in
 
-    let fmt, close_dot = Pretty.dot_config file cpt_dot in
-    
     let rec search_rec_aux () =
       let cpt, s = Queue.take q in
       incr cpt_nodes;
@@ -362,14 +383,11 @@ module BFS_base ( X : I ) = struct
 	(Profiling.print_report !nb_nodes !invariants !nb_deleted
 	   !used_candidates X.print_system;
 	 raise ReachBound);
-      (try X.safety s with 
-	| Unsafe s ->
-            if dot then fprintf fmt "@[%a@]@." X.print_bad s;
-            close_dot (); raise (Unsafe s));
+      safety_test s;
       (let visited_invs =
           List.fold_left (fun visited s ->
             Cubetrie.add_array s.t_arru s visited) !visited !invariants in
-        match X.fixpoint_trie2 visited_invs s with
+        match fixpoint_test visited_invs s with
 	 | Some db ->
 	     if dot then fprintf fmt "@[%a@]@." X.print_dead (s, db);
 	     incr Profiling.cpt_fix;

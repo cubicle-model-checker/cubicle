@@ -65,6 +65,7 @@ make_functory:
 	cp -f fake_functory.mli functory.mli;\
 	cp -f fake_functory.ml functory.ml;\
 	$(OCAMLC) -c functory.mli;\
+	$(OCAMLC) -o functory.cma -a functory.ml;\
 	$(OCAMLOPT) -c functory.ml;\
 	$(OCAMLOPT) -o functory.cmxa -a functory.cmx;\
 	fi

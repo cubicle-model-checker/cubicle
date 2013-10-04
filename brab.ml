@@ -34,7 +34,7 @@ let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
     | None -> ()
 
 let rec remove_cand s faulty candidates uns =
-  let trace = List.map (fun (tr, args, _) -> tr, args) faulty.t_from in 
+  let trace = faulty.t_from in 
   let nc = 
     List.fold_left 
       (fun acc s' -> 
@@ -51,8 +51,9 @@ let rec remove_cand s faulty candidates uns =
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
 	  else (add_bad_candidate s' (Some trace); acc)
-        else if Forward.reachable_on_trace s' trace <> None
-                (* Enumerative.smallest_to_resist_on_trace [[s']] = [] *) then 
+        else if false && Forward.reachable_on_trace_from_init s' trace <> None
+                (* Enumerative.smallest_to_resist_on_trace (ref 0) [s'] = [] *)
+	then 
           (add_bad_candidate s' None; acc)
 	else s'::acc)
       [] candidates in
@@ -67,7 +68,7 @@ let search_backtrack_brab search invariants procs uns =
     with
       | Search.Unsafe faulty ->
 	  (* FIXME Bug when search is parallel *)
-	  let o = Cube.origin faulty in
+	  let o = origin faulty in
 	  if not quiet then
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
@@ -163,11 +164,11 @@ let reattach_sorts sorts sa =
 (*****************************************)
 (* Potential approximations for a node s *)
 (*****************************************)
-    
-let approximations =
-  let forward_procs = Forward.procs_from_nb enumerative in
-  let cpt = ref 0 in
-  fun ({ t_unsafe = (args, sa) } as s) ->
+
+let cpt_approx = ref 0
+
+
+let approximations ({ t_unsafe = (args, sa) } as s) =
     let sorts_sa, sa = isolate_sorts sa in
     let init = 
       SAtom.fold (fun a acc ->
@@ -202,35 +203,23 @@ let approximations =
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc
         else
-          let d = List.rev (all_permutations args' forward_procs) in
-          (* let d = List.rev (all_permutations args' args') in *)
-          (* let d = [List.combine args' args'] in *)
-          (* keep list.rev in order for the first element of perm to be
-             a normalized cube as we will keep this only one if none of
-             perm can be disproved *)
-          let perms = List.fold_left (fun p sigma ->
-            let sa' = subst_atoms sigma sa' in
-            let ar' = ArrayAtom.of_satom sa' in
-            decr cpt;
-            let s' = 
-              { s with
-	        t_from = [];
-	        t_unsafe = args', sa';
-	        t_arru = ar';
-	        t_alpha = ArrayAtom.alpha ar' args';
-	        t_deleted = false;
-	        t_nb = !cpt;
-	        t_nb_father = -1;
-              } in
-            s' :: p) [] d
-          in
-          perms :: acc
+          let ar' = ArrayAtom.of_satom sa' in
+          decr cpt_approx;
+          let s' = 
+            { s with
+	      t_from = [];
+	      t_unsafe = args', sa';
+	      t_arru = ar';
+	      t_alpha = ArrayAtom.alpha ar' args';
+	      t_deleted = false;
+	      t_nb = !cpt_approx;
+	      t_nb_father = -1;
+            } in
+          s' :: acc
     ) parts []
     in
     (* Sorting heuristic of approximations with most general ones first *)
-    List.fast_sort (fun l1 l2 ->
-      let s1 = List.hd l1 in
-      let s2 = List.hd l2 in
+    List.fast_sort (fun s1 s2 ->
       let c = Pervasives.compare (Cube.card_system s1) (Cube.card_system s2) in
       if c <> 0 then c
       else 
@@ -260,7 +249,7 @@ let subsuming_candidate s =
   (* let approx = keep 70 approx in *)
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
-  Enumerative.smallest_to_resist_on_trace approx
+  Enumerative.smallest_to_resist_on_trace cpt_approx approx
 
 
 (**************************************************************)
@@ -268,11 +257,16 @@ let subsuming_candidate s =
 (**************************************************************)
     
 let brab search invariants uns =
-    let procs = Forward.procs_from_nb enumerative in
-    eprintf "STATEFULL ENUMERATIVE FORWARD :\n-------------\n@.";
-    Enumerative.search procs (List.hd uns);
+  let low = if brab_up_to then 1 else enumerative in
+  for i = enumerative downto low do
+    let procs = Forward.procs_from_nb i in
+    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n-------------\n@." i;
 
-    eprintf "-------------\n@.";
+    Enumerative.search procs (List.hd uns);
     
-    if only_forward then exit 0;
-    search_backtrack_brab search invariants procs uns
+    eprintf "-------------\n@.";
+  done;
+
+  if only_forward then exit 0;
+  let procs = Forward.procs_from_nb enumerative in
+  search_backtrack_brab search invariants procs uns

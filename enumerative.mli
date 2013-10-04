@@ -25,7 +25,7 @@ val resume_search_from : Hstring.t list -> t_system -> unit
 
 val replay_trace_and_expand : Hstring.t list -> t_system -> unit
 
-val smallest_to_resist_on_trace : t_system list list -> t_system list
+val smallest_to_resist_on_trace : int ref -> t_system list -> t_system list
 (** Given a list of candidate approximations (and their permutations),
     checks if one is satisfiable on the finite model constructed by
     [search]. *)

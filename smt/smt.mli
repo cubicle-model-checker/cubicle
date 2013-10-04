@@ -68,7 +68,7 @@ module Type : sig
   val all_constructors : unit -> Hstring.t list
   (** [all_constructors ()] returns a list of all the defined constructors. *)
 
-  val  constructors : t -> Hstring.t list
+  val constructors : t -> Hstring.t list
   (** [constructors ty] returns the list of constructors of [ty] when type is
       an enumerated data-type, otherwise returns [[]].*)
 

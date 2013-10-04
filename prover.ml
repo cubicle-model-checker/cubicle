@@ -352,6 +352,7 @@ let assume_node ap ~id =
   SMT.assume ~profiling ~id f;
   SMT.check  ~profiling ()
 
+let run () = SMT.check ~profiling ()
 
 let check_guard args sa reqs =
   SMT.clear ();
