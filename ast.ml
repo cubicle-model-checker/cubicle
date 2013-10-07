@@ -75,14 +75,7 @@ let rec compare_term t1 t2 =
 	let c = compare_term t1 t2 in
 	if c<>0 then c else compare_constants cs1 cs2
 
-let rec hash_term = function
-  | Const c -> Hashtbl.hash c
-  (* | Elem (_, Var) -> 31 *)
-  | Elem (s, _) -> Hstring.hash s
-  | Access (a, lx) -> 
-      List.fold_left (fun acc x -> acc * Hstring.hash x (* * 29 *))
-        (Hstring.hash a) lx
-  | Arith (x, c) -> hash_term x + Hashtbl.hash c
+let hash_term = Hashtbl.hash_param 50 50
 
 let htrue = Hstring.make "True"
 let hfalse = Hstring.make "False"
@@ -152,14 +145,7 @@ end = struct
     | Comp (x, Neq, y) -> Comp (x, Eq, y)
     | _ -> assert false
 
-  let rec hash = function
-    | True -> 7 | False -> 11
-    | Comp (x, Eq, y) -> 7 * (hash_term x * hash_term y)
-    | Comp (x, Neq, y) -> 13 * (hash_term x * hash_term y)
-    | Comp (x, Le, y) -> 5 * hash_term x * 7 * hash_term y
-    | Comp (x, Lt, y) -> 5 * hash_term x * 11 * hash_term y
-    | Ite (sa, a1, a2) -> SAtom.hash sa + (7 * hash a1) + (11 * hash a2)
-  and hash_set sa = SAtom.fold (fun a acc -> hash a + acc) sa 0
+  let hash (sa: Atom.t) = Hashtbl.hash_param 50 100 sa
 
   let equal x y = compare x y = 0
 
@@ -178,10 +164,7 @@ end = struct
 
   let equal sa1 sa2 = compare sa1 sa2 = 0
 
-  let hash sa =
-    let _, h = fold (fun a (n,acc) -> n + 1, n + Atom.hash a * acc)
-      sa (2,1) in
-    h (* mod 1_000_000 *)
+  let hash (sa:t) = Hashtbl.hash_param 100 500 sa
 end
 
 let gen_vars s n = 
@@ -281,10 +264,7 @@ module ArrayAtom = struct
       done;
       !res
 
-  let hash ar = 
-    let _, h = Array.fold_left (fun (n,acc) a -> n+1,  n + Atom.hash a * acc)
-      (2,1) ar in
-    h
+  let hash = Hashtbl.hash_param 100 500
 
   let subset a1 a2 =
     if profiling then TimerSubset.start ();

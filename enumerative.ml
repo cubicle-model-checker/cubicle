@@ -52,18 +52,8 @@ let equal_state a1 a2 =
     !res
 
 
-let hash_state st =
-  let h = ref 1 in
-  let n = ref 2 in
-  for i = 0 to Array.length st - 1 do
-    let v = st.(i) in
-    if v <> -1 then begin
-      h := !h * (v + 2) + !n;
-      n := 13 * !n + 7;
-      (* h := (!h + 7) * (v + 11); *)
-    end
-  done;
-  !h
+let hash_state st = Hashtbl.hash_param 100 500 st
+
 
 module HST = Hashtbl.Make 
   (struct 
