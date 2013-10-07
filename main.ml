@@ -65,7 +65,7 @@ let _ =
 	printf "reach bound\n@.";
 	exit 1
     | Search.Unsafe s ->
-        if Forward.spurious_error_trace s then
+        if refine_universal && Forward.spurious_error_trace s then
           printf "\n\n@{<b>@{<fg_yellow>Spurious trace@} !@}\n@."
 	else printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
 	exit 1
