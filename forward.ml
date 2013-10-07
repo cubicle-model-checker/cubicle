@@ -494,7 +494,7 @@ let uguard_dnf sigma args tr_args = function
 
 let possible_init args init reqs =
   (** Very incomplete semantic test **)
-  not (inconsistent_2cubes init reqs) (* && *)
+  not (inconsistent (SAtom.union init reqs)) (* && *)
     (* try Prover.check_guard args init reqs; true *)
     (* with Smt.Unsat _ -> false *)
 
@@ -1347,7 +1347,9 @@ let possible_trace ~starts ~finish ~procs ~trace =
     | [] -> ()
     | (tr, _, _) :: rest_trace ->
         let nls =
-          List.fold_left (fun acc sigma ->
+	  if List.length tr.tr_args > List.length procs then []
+	  else
+           List.fold_left (fun acc sigma ->
             let itr = instance_of_transition tr procs [] sigma in
             List.fold_left (fun acc (sa, args, hist) ->
               List.fold_left (fun acc (nsa, nargs) ->
@@ -1356,7 +1358,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
                 with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
               ) acc (post_inst sa args procs itr)
             ) acc ls
-          ) [] (all_permutations tr.tr_args procs)
+           ) [] (all_permutations tr.tr_args procs)
         in
         forward_rec nls rest_trace
   in
@@ -1375,7 +1377,7 @@ let reachable_on_trace_from_init s trace =
 		     (List.rev_append procs_t procs_c)
     ) Hstring.HSet.empty trace in
   let all_procs = Hstring.HSet.elements all_procs_set in
-  let proc_sets = all_partitions all_procs in
+  let proc_sets = (* all_partitions *) [all_procs] in
   let inits = mkinits_up_to proc_sets s in
   possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace
 
