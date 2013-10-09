@@ -113,7 +113,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.5
+VERSION=0.6b
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
