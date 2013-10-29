@@ -205,6 +205,12 @@ let redondant_or_false others a = match a with
        with Exit -> False)
   | _ -> a
 
+	   
+let rec simplify_term = function
+  | Arith (Arith (x, c1), c2) -> simplify_term (Arith (x, add_constants c1 c2))
+  | t -> t
+	   
+
 let simplify_comp i si op j sj =  
   match op, (si, sj) with
     | Eq, _ when H.equal i j -> True
@@ -225,7 +231,7 @@ let simplify_comp i si op j sj =
     | _ -> 
         if si = Glob && (Hstring.view i).[0] = '*' then True
         else Comp (Elem (i, si), op, Elem (j, sj))
-
+		  
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
@@ -243,6 +249,10 @@ let rec simplification np a =
     (* | Comp ( Arith (x, sx, cx), op, Const cy) -> *)
     (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
     (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
+    | Comp (Arith (x, cx), op, Const cy) | Comp (Const cy, op, Arith (x, cx)) ->
+       let mcx = mult_const (-1) cy in
+       Comp (x, op, Const (add_constants cy mcx))
+	    
     | Comp (x, op, Arith (y, cy)) when compare_term x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
@@ -286,6 +296,14 @@ let rec simplification np a =
 	else if SAtom.mem False sa then a2
 	else Ite(sa, a1, a2)
 
+
+
+let rec simplification_terms a = match a with
+    | True | False -> a
+    | Comp (t1, op, t2) -> Comp (simplify_term t1, op, simplify_term t2)
+    | Ite (sa, a1, a2) ->
+       Ite (SAtom.fold (fun a -> SAtom.add (simplification_terms a)) sa SAtom.empty,
+	    simplification_terms a1, simplification_terms a2)
 
 
 (***********************************)
@@ -668,6 +686,11 @@ let obvious_impossible a1 a2 =
 (* Relevant permuations for fixpoint check *)
 (*******************************************)
 
+(****************************************************)
+(* Find relevant quantifier instantiation for 	    *)
+(* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
+(****************************************************)
+
 let relevant_permutations np p l1 l2 =
   if profiling then TimeRP.start ();
   try
@@ -798,6 +821,7 @@ let const_simplification sa =
 let simplification_atoms base sa =
   SAtom.fold 
     (fun a sa ->
+       let a = simplification_terms a in
        let a = simplification base a in
        let a = simplification sa a in
        match a with

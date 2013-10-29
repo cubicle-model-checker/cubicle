@@ -132,8 +132,10 @@ type system = {
 
 module STerm : Set.S with type elt = term
 
+type cube_card = AtLeast of int | Exactly of int
+
 (* Typed AST *)
- 
+
 type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
@@ -142,6 +144,7 @@ type t_system = {
   t_invs : (Hstring.t list * SAtom.t) list;
   t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
+  t_card: cube_card;
   t_forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;

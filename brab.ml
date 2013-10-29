@@ -51,7 +51,7 @@ let rec remove_cand s faulty candidates uns =
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
 	  else (add_bad_candidate s' (Some trace); acc)
-        else if false && Forward.reachable_on_trace_from_init s' trace <> None
+        else if Forward.reachable_on_trace_from_init s' trace <> None
                 (* Enumerative.smallest_to_resist_on_trace (ref 0) [s'] = [] *)
 	then 
           (add_bad_candidate s' None; acc)
@@ -209,6 +209,7 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
             { s with
 	      t_from = [];
 	      t_unsafe = args', sa';
+	      t_card = AtLeast (List.length args');
 	      t_arru = ar';
 	      t_alpha = ArrayAtom.alpha ar' args';
 	      t_deleted = false;

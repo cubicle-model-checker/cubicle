@@ -1017,6 +1017,7 @@ let alpha_renamings cpt_approx env procs ({ t_unsafe = args, sa} as s) =
       { s with
 	t_from = [];
 	t_unsafe = args, sa;
+	t_card = AtLeast (List.length args);
 	t_arru = ar;
 	t_alpha = ArrayAtom.alpha ar args;
 	t_deleted = false;

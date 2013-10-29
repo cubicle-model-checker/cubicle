@@ -430,6 +430,8 @@ type system = {
 
 module STerm = Set.Make (struct type t = term let compare = compare_term end)
 
+type cube_card = AtLeast of int | Exactly of int
+
 (* Typed AST *)
 
 type t_system = {
@@ -440,6 +442,7 @@ type t_system = {
   t_invs : (Hstring.t list * SAtom.t) list;
   t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
+  t_card: cube_card;
   t_forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;
@@ -512,11 +515,6 @@ let rec type_of_term = function
 let arity s = List.length (fst (Smt.Symbol.type_of s))
 
 
-
-(****************************************************)
-(* Find relevant quantifier instantiation for 	    *)
-(* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
-(****************************************************)
 
 let rec all_permutations l1 l2 = 
   (*assert (List.length l1 <= List.length l2);*)

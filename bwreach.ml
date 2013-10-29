@@ -392,6 +392,7 @@ let init_parameters ({t_unsafe = (args, sa); t_invs = invs; t_cands = cands } as
   let cands = List.map (fun (argsi, sai) -> init_atoms argsi sai) cands in
   { s with
     t_unsafe = args, sa;
+    t_card = AtLeast (List.length args);
     t_forward = List.map init_forward s.t_forward;
     t_arru = a; 
     t_alpha = ArrayAtom.alpha a args; 
@@ -504,6 +505,7 @@ let partition ({ t_unsafe = (args, sa) } as s) =
 	 { s with
 	   t_from = [];
 	   t_unsafe = [z], sa';
+	   t_card = AtLeast 1;
 	   t_arru = ar';
 	   t_alpha = ArrayAtom.alpha ar' [z];
 	   t_deleted = false;
@@ -526,6 +528,7 @@ let sub_cubes s =
       { s with
 	t_from = [];
 	t_unsafe = args, sa';
+	t_card = AtLeast (List.length args);
 	t_arru = ar';
 	t_alpha = ArrayAtom.alpha ar' args;
 	t_deleted = false;
@@ -704,7 +707,8 @@ module T = struct
       (fun ((a,u) as i) -> 
 	 let ar = ArrayAtom.of_satom u in
 	 { s with 
-	     t_unsafe = i; 
+	     t_unsafe = i;
+	     t_card = AtLeast (List.length a);
 	     t_arru = ar;
 	     t_alpha = ArrayAtom.alpha ar a
 	 }) s.t_invs
@@ -717,7 +721,8 @@ module T = struct
 	 let ar = ArrayAtom.of_satom u in
 	 { s with
 	     t_from = [];
-	     t_unsafe = i; 
+	     t_unsafe = i;
+	     t_card = AtLeast (List.length a);
 	     t_arru = ar;
 	     t_alpha = ArrayAtom.alpha ar a;
 	     t_deleted = false;

@@ -313,6 +313,7 @@ let system s =
 	t_invs = s.invs;
 	t_cands = s.cands;
 	t_unsafe = un;
+	t_card = AtLeast (List.length args);
 	t_forward = s.forward;
 	t_arru = arru;
 	t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
