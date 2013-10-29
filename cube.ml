@@ -250,7 +250,7 @@ let rec simplification np a =
     (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
     (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
     | Comp (Arith (x, cx), op, Const cy) | Comp (Const cy, op, Arith (x, cx)) ->
-       let mcx = mult_const (-1) cy in
+       let mcx = mult_const (-1) cx in
        Comp (x, op, Const (add_constants cy mcx))
 	    
     | Comp (x, op, Arith (y, cy)) when compare_term x y = 0 ->
