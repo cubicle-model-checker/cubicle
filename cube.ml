@@ -249,10 +249,13 @@ let rec simplification np a =
     (* | Comp ( Arith (x, sx, cx), op, Const cy) -> *)
     (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
     (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
-    | Comp (Arith (x, cx), op, Const cy) | Comp (Const cy, op, Arith (x, cx)) ->
+    | Comp (Arith (x, cx), op, Const cy) ->
        let mcx = mult_const (-1) cx in
        Comp (x, op, Const (add_constants cy mcx))
-	    
+    | Comp (Const cx, op, Arith (y, cy)) ->
+       let mcy = mult_const (-1) cy in
+       Comp (Const (add_constants cx mcy), op, y)
+       
     | Comp (x, op, Arith (y, cy)) when compare_term x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
@@ -713,7 +716,7 @@ let closeness anp ap =
   SS.cardinal (SS.diff (magic_number_arr anp) (magic_number_arr ap))
 
 
-let const_nul c =
+let const_sign c =
   try
     let n = ref (Num.Int 0) in
     MConst.iter (fun c i -> if i <> 0 then 
@@ -721,9 +724,10 @@ let const_nul c =
 		     | ConstName _ -> raise Exit
 		     | ConstInt a | ConstReal a -> 
 			 n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
-    Num.compare_num !n (Num.Int 0) = 0
-  with Exit -> false
+    Some (Num.compare_num !n (Num.Int 0))
+  with Exit -> None
 
+let const_nul c = const_sign c = Some 0
 
 let tick_pos sa = 
   let ticks = ref [] in 

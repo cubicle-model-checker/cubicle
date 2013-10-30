@@ -167,7 +167,18 @@ let reattach_sorts sorts sa =
 
 let cpt_approx = ref 0
 
-
+let approx_arith a = match a with
+  | Atom.Comp (t, Eq, Const c) ->
+     begin
+       match Cube.const_sign c with
+       | None | Some 0 -> a
+       | Some n ->
+	  let zer = Const (Cube.add_constants c (Cube.mult_const (-1) c)) in
+	  if n < 0 then Atom.Comp (t, Lt, zer)
+	  else Atom.Comp (zer, Lt, t)
+     end
+  | _ -> a
+		     
 let approximations ({ t_unsafe = (args, sa) } as s) =
     let sorts_sa, sa = isolate_sorts sa in
     let init = 
@@ -178,6 +189,7 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
     (* All subsets of sa of relevant size *)
     let parts =
       SAtom.fold (fun a acc ->
+	let a = approx_arith a in 
         if Forward.useless_candidate (SAtom.singleton a) then acc
         else
           SSAtoms.fold (fun sa' acc ->

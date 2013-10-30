@@ -26,6 +26,8 @@ val already_closed : t_system -> transition -> Hstring.t list -> t_system option
 val apply_subst : SAtom.t -> (Hstring.t * Hstring.t) list -> SAtom.t
 
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t
+val const_sign : int MConst.t -> int option
+val mult_const : int -> int MConst.t -> int MConst.t
 
 val proper_cube : SAtom.t -> SAtom.t * (Hstring.t list * Hstring.t)
 val args_of_atoms : SAtom.t -> Hstring.t list
