@@ -83,7 +83,7 @@ module Type = struct
     if Hstring.equal ty type_bool then [htrue; hfalse]
     else match H.find decl_types ty with
       | Ty.Tsum (_ , cstrs) -> cstrs
-      | _ -> raise Not_found
+      | _ -> []
     
 end
 

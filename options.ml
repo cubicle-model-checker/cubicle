@@ -18,6 +18,8 @@ type mode =
   | Bfs | BfsDist | Bfsinvp 
   | Induct
 
+type trace =  NoTrace | AltErgoTr | WhyTr
+
 let usage = "usage: cubicle file.cub"
 let file = ref " stdin"
 
@@ -62,6 +64,12 @@ let cores = ref 0
 let refine_universal = ref false
 
 let subtyping = ref true
+
+let trace = ref NoTrace
+let set_trace = function
+  | "alt-ergo" -> trace := AltErgoTr
+  | "why" -> trace := WhyTr
+  | _ -> raise (Arg.Bad "Proof format = alt-ergo | why")
 
 let mode = ref Bfs
 let set_mode = function
@@ -121,7 +129,8 @@ let specs =
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
-    "-enumsolver", Arg.Set enumsolver, " use Enumerated data types solver for finite types"
+    "-enumsolver", Arg.Set enumsolver, " use Enumerated data types solver for finite types";
+    "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
   ]
 
 let alspecs = Arg.align specs
@@ -191,3 +200,5 @@ let size_proc = ref 0
 let refine_universal = !refine_universal
 
 let subtyping = !subtyping
+
+let trace = !trace

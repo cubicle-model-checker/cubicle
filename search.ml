@@ -24,7 +24,7 @@ type fsearch =
     visited : t_system list -> 
     forward_nodes : t_system list -> 
     candidates : t_system list ref ->
-    t_system list -> unit
+    t_system list -> t_system list
 
 module type I = sig
   type t = Ast.t_system
@@ -90,7 +90,7 @@ module type S = sig
     visited : t list -> 
     forward_nodes : t list -> 
     candidates : t list ref -> 
-    t list -> unit
+    t list -> t list
 end
 
 module TimeFix = Timer.Make (struct end)
@@ -224,9 +224,10 @@ module DFS ( X : I ) = struct
       X.safety s;
       if X.fixpoint ~invariants:invariants ~visited:visited s = None then
 	let ls, post = X.pre s in
-	List.iter (search_rec (cpt+1) (s::visited)) (ls@post)
+	List.fold_left (search_rec (cpt+1)) (s::visited) (ls@post)
+      else visited
     in
-    List.iter (search_rec 0 []) uns
+    List.fold_left (search_rec 0) visited uns
 
 end
 
@@ -252,7 +253,8 @@ module DFSL ( X : I ) = struct
     in
     List.iter (search_rec 0) uns;
     eprintf "[DFSL]";
-    Profiling.print_report !nb_nodes [] 0 [] X.print_system
+    Profiling.print_report !nb_nodes [] 0 [] X.print_system;
+    !visited
 
 end
 
@@ -278,31 +280,32 @@ module DFSH ( X : I ) = struct
   module H = Heap.Make(S)
 
   let search ~invariants ~visited ~forward_nodes ~candidates uns =
-    let nb_nodes = ref (if dmcmt then -1 else 0) in
-    let rec search_rec h =
-      let (cpt, s, visited), h = H.pop h in
-      incr nb_nodes;
-      if not quiet then Profiling.print "DFSH" !nb_nodes (X.size s);
-      if cpt = X.maxrounds || !nb_nodes > X.maxnodes then
-	raise ReachBound;
-      X.safety s;
-      let  h =
-	if X.fixpoint ~invariants:invariants ~visited:visited s = None
-	then
- 	  let ls, post = X.pre s in
-	  let l = List.map (fun s' -> cpt+1, s', s::visited) (ls@post) in
-	  (H.add h l)
-	else
-	  h 
-      in
-      search_rec h
-    in
-    begin
-      try
-	search_rec (H.add H.empty (List.map (fun s -> 0, s, visited) uns))
-      with Heap.EmptyHeap -> ()
-    end;
-    Profiling.print_report !nb_nodes [] 0 [] X.print_system
+    assert false
+    (* let nb_nodes = ref (if dmcmt then -1 else 0) in *)
+    (* let rec search_rec h = *)
+    (*   let (cpt, s, visited), h = H.pop h in *)
+    (*   incr nb_nodes; *)
+    (*   if not quiet then Profiling.print "DFSH" !nb_nodes (X.size s); *)
+    (*   if cpt = X.maxrounds || !nb_nodes > X.maxnodes then *)
+    (* 	raise ReachBound; *)
+    (*   X.safety s; *)
+    (*   let  h = *)
+    (* 	if X.fixpoint ~invariants:invariants ~visited:visited s = None *)
+    (* 	then *)
+    (* 	  let ls, post = X.pre s in *)
+    (* 	  let l = List.map (fun s' -> cpt+1, s', s::visited) (ls@post) in *)
+    (* 	  (H.add h l) *)
+    (* 	else *)
+    (* 	  h  *)
+    (*   in *)
+    (*   search_rec h *)
+    (* in *)
+    (* begin *)
+    (*   try *)
+    (* 	search_rec (H.add H.empty (List.map (fun s -> 0, s, visited) uns)) *)
+    (*   with Heap.EmptyHeap -> () *)
+    (* end; *)
+    (* Profiling.print_report !nb_nodes [] 0 [] X.print_system *)
 
 end
 
@@ -544,7 +547,8 @@ module BFS_base ( X : I ) = struct
     else if invgen || not gen_inv then 
       Profiling.print_report !nb_nodes !invariants !nb_deleted 
         (if lazyinv then !used_candidates else !candidates)
-	X.print_system
+	X.print_system;
+    Cubetrie.all_vals !visited
 
 end
 
@@ -831,14 +835,15 @@ module BFSnoINV ( X : I ) = struct
   include BFS_base(X)
 
   let search 
-      ~invariants ~visited ~(forward_nodes:X.t list) ~(candidates:X.t list ref) = 
+      ~invariants ~visited ~(forward_nodes:X.t list) ~(candidates:X.t list ref) 
+      uns = 
     search 
       (fun 
 	 ~invariants:_ 
 	 ~visited:_ 
 	 ~forward_nodes:(_:X.t list) 
-	 ~candidates:(_:X.t list ref) _ -> () )
-      false ~invariants ~visited ~forward_nodes ~candidates
+	 ~candidates:(_:X.t list ref) _ -> [] )
+      false ~invariants ~visited ~forward_nodes ~candidates uns
 
 end
 
@@ -863,7 +868,8 @@ module BFS_dist ( X : I ) = struct
     include X let maxnodes = 100
   end)
     
-  let search = search Search.search true
+  let search ~invariants ~visited ~forward_nodes ~candidates _ = assert false
+    (* search Search.search true *)
 
 end
 
@@ -875,7 +881,8 @@ module BFSinvp ( X : I ) = struct
     include X let maxnodes = 100
   end)
     
-  let search = search Search.search
+  let search ~invariants ~visited ~forward_nodes ~candidates _ = assert false
+    (* search Search.search *)
 
 end
 
@@ -986,7 +993,8 @@ module DFSHL ( X : I ) = struct
     in
     let h = H.add H.empty (List.map (fun s -> 0, s) uns) in
     search_rec h;
-    Profiling.print_report !nb_nodes !invariants !nb_deleted [] X.print_system
+    Profiling.print_report !nb_nodes !invariants !nb_deleted [] X.print_system;
+    !visited
 
 end
 
@@ -1004,5 +1012,6 @@ module Inductification ( X : I ) = struct
     in
     List.iter (fun s -> Queue.add (0, s) q) safes;
     search_rec ();
-    
+    assert false
+
 end

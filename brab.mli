@@ -21,7 +21,7 @@ open Ast
 val subsuming_candidate : t_system -> t_system list
 (** Candidate approximations *)
 
-val brab : Search.fsearch -> t_system list -> t_system list -> unit
+val brab : Search.fsearch -> t_system list -> t_system list -> t_system list
 (** Backward reachability with Approximations and Backtracking :
     [brab search invariants unsafes] calls the BRAB algorithm with a
     backward reachability function [search] a list of invariants and

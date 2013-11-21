@@ -810,8 +810,17 @@ let system uns =
     | [] -> assert false
   in
 
-  if do_brab then
-    Brab.brab search invariants uns
-  else
-    search ~invariants ~visited:[] ~forward_nodes:[]
-      ~candidates:(ref candidates) uns
+  let visited =
+    if do_brab then
+      Brab.brab search invariants uns
+    else
+      search ~invariants ~visited:[] ~forward_nodes:[]
+	     ~candidates:(ref candidates) uns
+  in
+  
+  match trace with
+  | AltErgoTr ->
+     Trace.AltErgo.certificate Format.std_formatter uns visited
+  | WhyTr -> assert false
+  | NoTrace -> ()
+  

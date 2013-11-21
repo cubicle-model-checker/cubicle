@@ -22,7 +22,7 @@ type fsearch =
     visited : Ast.t_system list -> 
     forward_nodes : Ast.t_system list -> 
     candidates : Ast.t_system list ref ->
-    Ast.t_system list -> unit
+    Ast.t_system list -> Ast.t_system list
 
 module type I = sig
   type t = Ast.t_system
@@ -90,7 +90,7 @@ module type S = sig
     visited : t list -> 
     forward_nodes : t list -> 
     candidates : t list ref ->
-    t list -> unit
+    t list -> t list
 end
 
 
