@@ -616,7 +616,6 @@ let visited_from_h s h = HSA.fold (fun sa _ acc ->
   let ar = ArrayAtom.of_satom sa in
   { s with 
     t_unsafe = nargs, sa;
-    t_card = AtLeast (List.length nargs);
     t_arru = ar;
     t_alpha = ArrayAtom.alpha ar nargs } :: acc) h []
 
@@ -1263,7 +1262,6 @@ let extract_candidates comps s =
 	   { s with
 	       t_from = [];
 	       t_unsafe = args, sa';
-	       t_card = AtLeast (List.length args);
 	       t_arru = ar';
 	       t_alpha = ArrayAtom.alpha ar' args;
 	       t_deleted = false;

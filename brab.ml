@@ -221,14 +221,11 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
             { s with
 	      t_from = [];
 	      t_unsafe = args', sa';
-	      t_card = AtLeast (List.length args');
 	      t_arru = ar';
 	      t_alpha = ArrayAtom.alpha ar' args';
 	      t_deleted = false;
 	      t_nb = !cpt_approx;
 	      t_nb_father = -1;
-	      t_refine = false;
-	      t_spurious = false;
             } in
           s' :: acc
     ) parts []

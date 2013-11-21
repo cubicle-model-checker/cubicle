@@ -412,7 +412,7 @@ module AltErgo = struct
     fprintf fmt "axiom induction_hypothesis:@.";
     fprintf fmt "(* invariant before *)\n(%a)@."
 	    (print_invariant ~prime:false) visited;
-    fprintf fmt "\n\naxiom transition_realtion:@.";
+    fprintf fmt "\n\naxiom transition_relation:@.";
     fprintf fmt "%a@." transition_relation s;
     fprintf fmt "\n(* invariant after *)\n%a@."
 	    (print_invariant_split ~prime:true) visited

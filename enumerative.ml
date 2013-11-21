@@ -1017,15 +1017,12 @@ let alpha_renamings cpt_approx env procs ({ t_unsafe = args, sa} as s) =
       { s with
 	t_from = [];
 	t_unsafe = args, sa;
-	t_card = AtLeast (List.length args);
 	t_arru = ar;
 	t_alpha = ArrayAtom.alpha ar args;
 	t_deleted = false;
 	t_nb = !cpt_approx;
 	t_nb_father = -1;
 	t_from_forall = false;
-	t_refine = false;
-	t_spurious = false;
       } in
     (satom_to_cand env sa, s') :: p
   ) [] d

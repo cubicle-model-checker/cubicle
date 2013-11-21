@@ -260,9 +260,6 @@ let make_cubes =
 			    t_nb = new_cube_id ();
 			    t_nb_father = nb;
 			    t_from_forall = from_forall;
-			    t_refine = from_forall;
-				 (* && List.length nargs > List.length uargs *)
-			    t_spurious = false;
 			} in
 		      
 		      match post_strategy with
@@ -284,7 +281,6 @@ let make_cubes =
         (ls, post)
       end
       else
-        (* let rargs = if List.length rargs > 2 then [Hstring.make "#1"; Hstring.make "#2"] else rargs in *)
 	let d = all_permutations tr.tr_args rargs in
 	List.fold_left cube (ls, post) d
 
@@ -392,7 +388,6 @@ let init_parameters ({t_unsafe = (args, sa); t_invs = invs; t_cands = cands } as
   let cands = List.map (fun (argsi, sai) -> init_atoms argsi sai) cands in
   { s with
     t_unsafe = args, sa;
-    t_card = AtLeast (List.length args);
     t_forward = List.map init_forward s.t_forward;
     t_arru = a; 
     t_alpha = ArrayAtom.alpha a args; 
@@ -505,14 +500,11 @@ let partition ({ t_unsafe = (args, sa) } as s) =
 	 { s with
 	   t_from = [];
 	   t_unsafe = [z], sa';
-	   t_card = AtLeast 1;
 	   t_arru = ar';
 	   t_alpha = ArrayAtom.alpha ar' [z];
 	   t_deleted = false;
 	   t_nb = 0;
 	   t_nb_father = -1;
-	   t_refine = false;
-	   t_spurious = false;
 	 } :: l)
     [] args
 
@@ -528,14 +520,11 @@ let sub_cubes s =
       { s with
 	t_from = [];
 	t_unsafe = args, sa';
-	t_card = AtLeast (List.length args);
 	t_arru = ar';
 	t_alpha = ArrayAtom.alpha ar' args;
 	t_deleted = false;
 	t_nb = 0;
 	t_nb_father = -1;
-	t_refine = false;
-	t_spurious = false;
       } :: acc) sa []
       
 
@@ -708,7 +697,6 @@ module T = struct
 	 let ar = ArrayAtom.of_satom u in
 	 { s with 
 	     t_unsafe = i;
-	     t_card = AtLeast (List.length a);
 	     t_arru = ar;
 	     t_alpha = ArrayAtom.alpha ar a
 	 }) s.t_invs
@@ -722,14 +710,11 @@ module T = struct
 	 { s with
 	     t_from = [];
 	     t_unsafe = i;
-	     t_card = AtLeast (List.length a);
 	     t_arru = ar;
 	     t_alpha = ArrayAtom.alpha ar a;
 	     t_deleted = false;
 	     t_nb = !cpt;
 	     t_nb_father = -1;
-	     t_refine = false;
-	     t_spurious = false;
 	 }) s.t_cands
 
   let size = size_system

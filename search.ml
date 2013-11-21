@@ -335,24 +335,14 @@ module BFS_base ( X : I ) = struct
 
   let fmt, close_dot = Pretty.dot_config file cpt_dot
     
-  let fixpoint_test visited s =
-    match X.fixpoint_trie2 visited s with
-    | None -> if refine_universal && s.t_refine && X.spurious s then Some []
-	      else None
-    | r -> r
-
+  let fixpoint_test = X.fixpoint_trie2
 
   let safety_test s =
     try X.safety s with 
     | Unsafe s ->
-       if refine_universal && X.spurious_error_trace s then
-	 s.t_spurious <- true
-       else
-	 begin
-           if dot then fprintf fmt "@[%a@]@." X.print_bad s;
-           close_dot ();
-	   raise (Unsafe s)
-	 end
+      if dot then fprintf fmt "@[%a@]@." X.print_bad s;
+      close_dot ();
+      raise (Unsafe s)
 
 
   let search 
@@ -479,19 +469,13 @@ module BFS_base ( X : I ) = struct
                
                if not candidate_found then begin
 	         postponed := List.rev_append post !postponed;
-		 if not s.t_spurious then begin
-	           if delete then X.delete_nodes_trie s visited nb_deleted true;
-	           (* if delete && invgen && gen_inv then  *)
-	           (*   X.delete_nodes_inv inv visited; *)
-		   visited := Cubetrie.add_array s.t_arru s !visited;
-	           if delete then X.delete_nodes s postponed nb_deleted true;
-		   (* if delete && invgen && gen_inv then *)
-	           (*   X.delete_nodes_inv inv postponed; *)
-		 end;
+	         if delete then X.delete_nodes_trie s visited nb_deleted true;
+	         visited := Cubetrie.add_array s.t_arru s !visited;
+	         if delete then X.delete_nodes s postponed nb_deleted true;
 	         
-	       (* TODO *)
-	       (* if not (fixpoint inv s) then *)
-	       (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
+	         (* TODO *)
+	         (* if not (fixpoint inv s) then *)
+	         (*   List.iter (fun s -> Queue.add (cpt+1, s) q) ls *)
                end;
 
 	       if inv = [] then begin

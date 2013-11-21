@@ -132,8 +132,6 @@ type system = {
 
 module STerm : Set.S with type elt = term
 
-type cube_card = AtLeast of int | Exactly of int
-
 (* Typed AST *)
 
 type t_system = {
@@ -144,7 +142,6 @@ type t_system = {
   t_invs : (Hstring.t list * SAtom.t) list;
   t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
-  t_card: cube_card;
   t_forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;
@@ -154,8 +151,6 @@ type t_system = {
   t_nb_father : int;
   t_glob_proc : Hstring.t list;
   t_from_forall: bool;
-  t_refine: bool;
-  mutable t_spurious: bool;
 }
 
 val declared_terms : ArrayAtom.t -> bool

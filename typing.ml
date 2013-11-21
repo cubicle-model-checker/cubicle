@@ -313,7 +313,6 @@ let system s =
 	t_invs = s.invs;
 	t_cands = s.cands;
 	t_unsafe = un;
-	t_card = AtLeast (List.length args);
 	t_forward = s.forward;
 	t_arru = arru;
 	t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
@@ -323,8 +322,6 @@ let system s =
 	t_nb_father = -1;
 	t_glob_proc = glob_proc;
 	t_from_forall = false;
-	t_refine = false;
-	t_spurious = false;
       }
     ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))
