@@ -439,7 +439,9 @@ module BFS_base ( X : I ) = struct
 		   end
 	       end;
 	       let (ls, post), candidate_found = 
-                 if do_brab && s.t_nb >= 0 then 
+                 if do_brab && s.t_nb >= 0 &&
+		    (match s.t_card with Exactly _ -> false | AtLeast _ -> true)
+		 then 
 		   match X.subsuming_candidate s with 
                      | [] -> X.pre s, false
                      | l ->
@@ -480,7 +482,11 @@ module BFS_base ( X : I ) = struct
 	           if delete then X.delete_nodes_trie s visited nb_deleted true;
 	           (* if delete && invgen && gen_inv then  *)
 	           (*   X.delete_nodes_inv inv visited; *)
-		   visited := Cubetrie.add_array s.t_arru s !visited;
+		   visited := 
+                     begin match s.t_card with
+                     | Exactly _ -> Cubetrie.add_array_force s.t_arru s !visited
+                     | AtLeast _ -> Cubetrie.add_array s.t_arru s !visited;
+                     end;
 	           if delete then X.delete_nodes s postponed nb_deleted true;
 		   (* if delete && invgen && gen_inv then *)
 	           (*   X.delete_nodes_inv inv postponed; *)

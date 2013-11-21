@@ -173,6 +173,46 @@ let make_tau tr x op y =
 		  Ite(SAtom.union ci cj, Comp(ti, op, tj), f)) ls2 f)
 	  ls1 True
 
+
+(************************************************************)
+(* Consider domains with cardinality less than n separately *)
+(* (used to overcome overapprox introduced by forall ...)   *)
+(************************************************************)
+
+let args_of_card n =
+  let rec aux acc procs n = 
+    if n = 0 then List.rev acc else 
+      match procs with p :: r -> aux (p :: acc) r (n-1) | _ -> assert false
+  in
+  aux [] proc_vars n
+
+let change_domain s card = match card with
+  | AtLeast n | Exactly n ->
+     let args_n = args_of_card n in
+     { s with
+       t_card = card;
+       t_unsafe = args_n, snd s.t_unsafe;
+       t_alpha = ArrayAtom.alpha s.t_arru args_n;
+     }
+
+let split_worlds n s = match s.t_card with 
+  | AtLeast n' ->
+     let res = ref [change_domain s (AtLeast n)] in
+     for i = n - 1 downto n' do
+       res := change_domain s (Exactly i) :: !res;
+     done;
+     !res
+  | _ -> assert false
+
+let split_worlds_when_possible n s = match s.t_card with
+  | Exactly _ -> [s]
+  | AtLeast n' -> if n' > n then [s] else split_worlds n s
+
+let split_increase s  = match s.t_card with
+  | Exactly _ -> [s]
+  | AtLeast n -> split_worlds (n+1) s
+
+
 (**********************)
 (* Postponed Formulas *)
 (**********************)
@@ -211,82 +251,103 @@ let uguard sigma args tr_args = function
   | _ -> assert false
 
 let add_list n l =
-  if List.exists (fun n' -> ArrayAtom.subset n'.t_arru n.t_arru) l then l
-  else
-    let l =
-      if true || delete then
-  	List.filter (fun n' -> not (ArrayAtom.subset n.t_arru n'.t_arru)) l
-      else l
-    in
+  (* match n.t_card with  *)
+  (* | AtLeast p -> *)
+  (*   if List.exists (fun n' -> *)
+  (*       match n'.t_card with *)
+  (*       | Exactly _ -> false *)
+  (*       | AtLeast _ -> ArrayAtom.subset n'.t_arru n.t_arru) l *)
+  (*   then l *)
+  (*   else *)
+  (*     let l = *)
+  (*       if true || delete then *)
+  (* 	  List.filter (fun n' ->  *)
+  (*             match n'.t_card with *)
+  (*             | Exactly p' -> not (p' >= p && ArrayAtom.subset n.t_arru n'.t_arru) *)
+  (*             | AtLeast _ -> not (ArrayAtom.subset n.t_arru n'.t_arru) *)
+  (*           ) l *)
+  (*       else l *)
+  (*     in *)
+  (*     n :: l *)
+  (* | Exactly p ->  *)
+  (*   if List.exists (fun n' -> *)
+  (*       match n'.t_card with *)
+  (*       | Exactly p' -> p' = p && ArrayAtom.subset n'.t_arru n.t_arru *)
+  (*       | AtLeast _ -> false) l *)
+  (*   then l *)
+  (*   else *)
+  (*     let l = *)
+  (*       if true || delete then *)
+  (* 	  List.filter (fun n' ->  *)
+  (*             match n'.t_card with *)
+  (*             | Exactly p' -> not (p' = p && ArrayAtom.subset n.t_arru n'.t_arru) *)
+  (*             | AtLeast _ -> true) l *)
+  (*       else l *)
+  (*     in *)
       n :: l
 
 
 let max_lnp = ref 0
 
-let make_cubes =
-  fun (ls, post) (args, rargs) 
-    ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np ->
-      let nb_uargs = List.length uargs in
-      let cube acc sigma =
-	let lnp = simplify_atoms (subst_atoms sigma np) in
-	let tr_args = List.map (svar sigma) tr.tr_args in
-	List.fold_left
-	  (fun (ls, post) np ->
-	     let np, (nargs, _) = proper_cube np in
-	     let lureq = uguard sigma nargs tr_args tr.tr_ureq in
-	     List.fold_left 
-	       (fun (ls, post) ureq ->
-		 try
-		  let ureq = simplification_atoms np ureq in
-		  let np = SAtom.union ureq np in 
-		  if debug && verbose > 0 then Debug.pre_cubes np nargs;
-		  if inconsistent np then begin
-		    if debug && verbose > 0 then eprintf "(inconsistent)@.";
-		    (ls, post)
-		  end
-		  else
-		    if simpl_by_uc && 
-		      already_closed s tr tr_args <> None 
-		    then ls, post
-		    else
-		      let arr_np = ArrayAtom.of_satom np in
-		      let from_forall = s.t_from_forall || tr.tr_ureq <> [] in
-		      let new_s = 
-			{ s with
-			    t_from = (tr, tr_args, s)::s.t_from;
-			    t_unsafe = nargs, np;
-			    t_arru = arr_np;
-			    t_alpha = ArrayAtom.alpha arr_np nargs;
-			    t_nb = new_cube_id ();
-			    t_nb_father = nb;
-			    t_from_forall = from_forall;
-			    t_refine = from_forall;
-				 (* && List.length nargs > List.length uargs *)
-			    t_spurious = false;
-			} in
-		      
-		      match post_strategy with
-			| 0 -> add_list new_s ls, post
-			| 1 -> 
-			    if List.length nargs > nb_uargs then
-			      ls, add_list new_s post
-			    else add_list new_s ls, post
-			| 2 -> 
-			    if not (SAtom.is_empty ureq) || postpone args p np 
-			    then ls, add_list new_s post
-			    else add_list new_s ls, post
-			| _ -> assert false
-		 with Exit -> ls, post
-	       ) (ls, post) lureq ) acc lnp
-      in
-      if List.length tr.tr_args > List.length rargs then begin
-        if !size_proc = 0 then assert false;
-        (ls, post)
-      end
-      else
-        (* let rargs = if List.length rargs > 2 then [Hstring.make "#1"; Hstring.make "#2"] else rargs in *)
-	let d = all_permutations tr.tr_args rargs in
-	List.fold_left cube (ls, post) d
+let make_cubes (args, rargs) ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np =
+  let nb_uargs = List.length uargs in
+  fun acc sigma ->
+    let lnp = simplify_atoms (subst_atoms sigma np) in
+    let tr_args = List.map (svar sigma) tr.tr_args in
+    List.fold_left
+      (fun (ls, post) np ->
+	 let np, (nargs, _) = proper_cube np in
+         let card, nargs = match s.t_card with
+             | AtLeast n as c -> let m = List.length nargs in
+               if n > m then c, args_of_card n
+               else AtLeast m, nargs
+             | Exactly n as c -> c, args_of_card n in
+	 let lureq = uguard sigma nargs tr_args tr.tr_ureq in
+	 List.fold_left 
+	   (fun (ls, post) ureq ->
+	      try
+		let ureq = simplification_atoms np ureq in
+		let np = SAtom.union ureq np in 
+		if debug && verbose > 0 then Debug.pre_cubes np nargs;
+		if inconsistent np then begin
+		  if debug && verbose > 0 then eprintf "(inconsistent)@.";
+		  (ls, post)
+		end
+		else
+		if simpl_by_uc && 
+		   already_closed s tr tr_args <> None 
+		then ls, post
+		else
+		  let arr_np = ArrayAtom.of_satom np in
+		  let from_forall = s.t_from_forall || tr.tr_ureq <> [] in
+		  let new_s = 
+		    { s with
+		      t_card = card;
+		      t_from = (tr, tr_args, s)::s.t_from;
+		      t_unsafe = nargs, np;
+		      t_arru = arr_np;
+		      t_alpha = ArrayAtom.alpha arr_np nargs;
+		      t_nb = new_cube_id ();
+		      t_nb_father = nb;
+		      t_from_forall = from_forall;
+		      t_refine = from_forall;
+		      (* && List.length nargs > List.length uargs *)
+		      t_spurious = false;
+		    } in
+                  if verbose > 0 then eprintf ">> %a@." Pretty.print_system new_s;
+		  match post_strategy with
+		  | 0 -> add_list new_s ls, post
+		  | 1 -> 
+		    if List.length nargs > nb_uargs then
+		      ls, add_list new_s post
+		    else add_list new_s ls, post
+		  | 2 -> 
+		    if not (SAtom.is_empty ureq) || postpone args p np 
+		    then ls, add_list new_s post
+		    else add_list new_s ls, post
+		  | _ -> assert false
+	      with Exit -> ls, post
+	   ) (ls, post) lureq ) acc lnp
 
 
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
@@ -325,21 +386,24 @@ let append_extra args tr_args =
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
-let pre tr unsafe =
+let safe_extra_args tr { t_unsafe = args, _; t_card = card } =
+  match card with 
+  | Exactly _ -> args
+  | AtLeast _ ->
+    let nargs = append_extra args tr.tr_args in
+    if !size_proc <> 0 && List.length nargs > !size_proc then args
+    else nargs
+
+let pre tr ({ t_unsafe = args, u; t_card = card } as s) =
   let tr = fresh_args tr in
   let tau = make_tau tr in
-  let pre_unsafe = 
+  let pre_unsafe =
     SAtom.union tr.tr_reqs 
-      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
+      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) u SAtom.empty)
   in
   if debug && verbose > 0 then Debug.pre tr pre_unsafe;
-  let pre_unsafe, (args, m) = proper_cube pre_unsafe in
   if tr.tr_args = [] then tr, pre_unsafe, (args, args)
-  else
-    let nargs = append_extra args tr.tr_args in
-    if !size_proc <> 0 && List.length nargs > !size_proc then
-      tr, pre_unsafe, (args, args)
-    else tr, pre_unsafe, (args, nargs)
+  else tr, pre_unsafe, (args, safe_extra_args tr s)
 
 
 (*********************************************************************)
@@ -347,19 +411,39 @@ let pre tr unsafe =
 (* systems							     *)
 (*********************************************************************)
 
+
+let pre_instances s acc tr =
+  let rargs = safe_extra_args tr s in
+  if List.length tr.tr_args > List.length rargs then
+    (* if !size_proc = 0 then assert false; *)
+    acc
+  else
+    let tr, pre_u, info_args = pre tr s in
+    let d = all_permutations tr.tr_args rargs in
+    List.fold_left (fun ((ls_acc, post_acc) as acc) sigma ->
+        if verbose > 0 then eprintf "PRE -%a(%a)- %a : @." Hstring.print tr.tr_name
+            Pretty.print_args (List.map snd sigma) Pretty.print_system s;
+        if tr.tr_ureq = [] ||
+           (match s.t_card with Exactly _ -> true |_-> false) 
+        then make_cubes info_args s tr pre_u acc sigma
+        else
+          let ls, post = make_cubes info_args s tr pre_u ([],[]) sigma in
+          if Enumerative.all_unreachable (ls@post) then
+            (ls @ ls_acc, post @ post_acc)
+          else
+            List.fold_left (fun acc s ->
+                let tr, pre_u, info_args = pre tr s in
+                make_cubes info_args s tr pre_u acc sigma)
+              acc (split_increase s)
+      ) acc d
+
+
 let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
   if profiling then TimePre.start (); 
   Debug.unsafe s;
-  let ls, post = 
-    List.fold_left
-    (fun acc tr ->
-       let tr, pre_u, info_args = pre tr u in
-       make_cubes acc info_args s tr pre_u) 
-    ([], []) 
-    trs 
-  in
+  let ls_post = List.fold_left (pre_instances s) ([],[]) trs in
   if profiling then TimePre.pause ();
-  ls, post
+  ls_post
 
 
 (********************************************************)
@@ -446,6 +530,11 @@ let delete_nodes s nodes nb_del inc =
 	else true)
       (List.rev !nodes)
 
+
+let card_allow_subsumtion s s' = match s.t_card with
+  | Exactly n -> s'.t_card = Exactly n
+  | AtLeast _ -> true
+
 let delete_nodes_trie ({t_unsafe = (nargs,_);
                         t_alpha = args, ap;
                         t_arru = anp} as s) nodes nb_del inc =
@@ -453,7 +542,8 @@ let delete_nodes_trie ({t_unsafe = (nargs,_);
   List.iter (fun ss ->
     let u = ArrayAtom.apply_subst ss ap in
     Cubetrie.iter_subsumed (fun n ->
-      if has_deleted_ancestor n || (not (ancestor_of n s)) then begin
+      if has_deleted_ancestor n ||
+         (card_allow_subsumtion s n && not (ancestor_of n s)) then begin
         n.t_deleted <- true;
         if inc then incr nb_del;
       end
@@ -813,5 +903,7 @@ let system uns =
   if do_brab then
     Brab.brab search invariants uns
   else
+    let procs = Forward.procs_from_nb 2 in
+    Enumerative.search procs (List.hd uns);
     search ~invariants ~visited:[] ~forward_nodes:[]
-      ~candidates:(ref candidates) uns
+	   ~candidates:(ref candidates) uns

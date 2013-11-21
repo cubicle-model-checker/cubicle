@@ -242,4 +242,3 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
         | [] -> all_vals t'
         | atom::cube -> consistent_list atom cube n
       else consistent (atom::cube) t'
-

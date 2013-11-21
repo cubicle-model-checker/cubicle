@@ -286,8 +286,6 @@ let print_cube fmt sa =
 let print_array fmt a =
   fprintf fmt "@[%a@]" (print_atoms "&&") (Array.to_list a)
 
-let print_system fmt s = print_cube fmt (snd s.t_unsafe)
-
 let rec print_args fmt = function
   | [] -> ()
   | [a] ->
@@ -300,6 +298,15 @@ let rec print_args fmt = function
     let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
     if dmcmt then  fprintf fmt "_%s%a" s print_args r
     else  fprintf fmt "%s, %a" s print_args r
+
+let print_system fmt s =
+  if verbose > 0 then begin
+    match s.t_card with
+    | AtLeast n ->
+       fprintf fmt "(|P| >= %d) exists %a. " n print_args (fst s.t_unsafe)
+    | Exactly n -> fprintf fmt "(|P| = %d) " n
+  end;
+  print_cube fmt (snd s.t_unsafe)
 
 let rec print_subst fmt = function
   | [] -> ()
@@ -346,12 +353,21 @@ and print_atoms_dot fmt = function
 let print_cube_dot fmt sa = 
   fprintf fmt "@[%a@]" print_atoms_dot (SAtom.elements sa)
 
+let print_system_dot fmt s =
+  if verbose > 0 then begin
+    match s.t_card with
+    | AtLeast n ->
+       fprintf fmt "(|P| >= %d)\\nexists %a.\\n" n print_args (fst s.t_unsafe)
+    | Exactly n -> fprintf fmt "(|P| = %d)\\n" n
+  end;
+  print_cube_dot fmt (snd s.t_unsafe)
+
 let print_system_dot fmt s = match verbose with
   | 0 -> ()
   | 1 | 2 ->
-      if List.length s.t_from = 0 then print_cube_dot fmt (snd s.t_unsafe)
+      if List.length s.t_from = 0 then print_system_dot fmt s
       else fprintf fmt "%d" s.t_nb
-  | _ -> if verbose >= 3 then print_cube_dot fmt (snd s.t_unsafe)
+  | _ -> if verbose >= 3 then print_system_dot fmt s
 
 
 let print_unsafe_dot_node fmt s =
@@ -405,8 +421,8 @@ let print_buggy_dot_arrow fmt s =
 let print_buggy_dot_node fmt s =
   if s.t_from <> [] then
     fprintf fmt
-      "%d [label=\"%a\", color=red, fillcolor=lightpink, style=filled];"
-      s.t_nb print_system_dot s
+      "%d [color=red, fillcolor=lightpink, style=filled];\n"
+      s.t_nb
 
 let print_trace_dot fmt s =
   (* print_buggy_dot_arrow fmt s; *)

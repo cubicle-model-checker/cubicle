@@ -1091,3 +1091,26 @@ let smallest_to_resist_on_trace cpt_approx ls =
      if profiling then Search.TimeCustom.pause ();
      if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
      ls
+
+
+let all_unreachable ls =
+  let ls = List.filter (fun s ->
+      match s.t_card with 
+      | AtLeast n ->
+        List.exists (fun env -> n <= env.model_cardinal) !global_envs
+      | _ -> assert false) ls in
+  let nb =
+    List.fold_left (fun nb env -> nb + HST.length env.explicit_states)
+		   0 !global_envs
+  in
+  let progress_inc = nb / (Pretty.vt_width-3) + 1 in
+  let nn = List.length ls in
+  let r = List.for_all (fun env -> 
+    let resistants = resist_on_trace_size (ref 0) progress_inc ls env in
+    List.length resistants = nn
+  ) !global_envs in
+  if not quiet then 
+    if r then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>CFM@}@."
+    else eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>Split@}@.";
+  r
+  

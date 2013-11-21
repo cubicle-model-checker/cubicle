@@ -87,8 +87,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      cubetrie.cmo prover.cmo \
-      search.cmo cube.cmo bitsolver.cmo forward.cmo \
+      cubetrie.cmo prover.cmo search.cmo cube.cmo bitsolver.cmo forward.cmo \
       enumerative.cmo brab.cmo bwreach.cmo \
       typing.cmo main.cmo
 
@@ -211,10 +210,8 @@ clean::
 
 .depend depend:: $(GENERATED)
 	@rm -f .depend
-	@$(OCAMLDEP) -slash -I common/ common/*.ml common/*.mli > .depend
-	@$(OCAMLDEP) -I common/ -I smt/ smt/*.ml smt/*.mli >> .depend
-	@$(OCAMLDEP) -I common/ -I smt/ -slash *.ml *.mli >> .depend
-
+	@$(OCAMLDEP) -slash -I common/ -I smt/ \
+	common/*.ml common/*.mli smt/*.ml smt/*.mli *.ml *.mli > .depend
 
 include .depend
 

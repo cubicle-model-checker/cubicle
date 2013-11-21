@@ -304,27 +304,27 @@ let system s =
     fill_init_instances s.init;
 
     List.map (fun ((args, p) as un) ->
-      let arru = ArrayAtom.of_satom p in (* inutile ? *)
-      { 
-	t_globals = t_globals;
-	t_arrays = t_arrays;
-	t_from = [];
-	t_init = s.init;
-	t_invs = s.invs;
-	t_cands = s.cands;
-	t_unsafe = un;
-	t_card = AtLeast (List.length args);
-	t_forward = s.forward;
-	t_arru = arru;
-	t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
-	t_trans = s.trans;
-	t_deleted = false;
-	t_nb = Cube.new_cube_id ();
-	t_nb_father = -1;
-	t_glob_proc = glob_proc;
-	t_from_forall = false;
-	t_refine = false;
-	t_spurious = false;
-      }
-    ) s.unsafe
+        let arru = ArrayAtom.of_satom p in (* inutile ? *)
+        { t_globals = t_globals;
+          t_arrays = t_arrays;
+          t_from = [];
+          t_init = s.init;
+          t_invs = s.invs;
+          t_cands = s.cands;
+          t_unsafe = un;
+          t_card = AtLeast (List.length args);
+          t_splitted = [];
+	  t_forward = s.forward;
+	  t_arru = arru;
+	  t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
+	  t_trans = s.trans;
+	  t_deleted = false;
+	  t_nb = Cube.new_cube_id ();
+	  t_nb_father = -1;
+	  t_glob_proc = glob_proc;
+	  t_from_forall = false;
+	  t_refine = false;
+	  t_spurious = false;
+        }
+      ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

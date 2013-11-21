@@ -443,6 +443,7 @@ type t_system = {
   t_cands : (Hstring.t list * SAtom.t) list;
   t_unsafe : Hstring.t list * SAtom.t;
   t_card: cube_card;
+  t_splitted: t_system list;
   t_forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
   t_arru : ArrayAtom.t;
   t_alpha : Hstring.t list * ArrayAtom.t;

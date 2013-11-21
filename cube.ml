@@ -708,6 +708,27 @@ let relevant_permutations np p l1 l2 =
   with NoPermutations -> if profiling then TimeRP.pause (); []
 
 
+
+
+(**********************************)
+(* Keep nodes with bigger domains *)
+(**********************************)
+
+let filter_good s = match s.t_card with
+  | AtLeast n -> 
+     (fun s' -> match s'.t_card with AtLeast _ -> true | _ -> false)
+  | Exactly n ->
+     (fun s' -> match s'.t_card with Exactly n' -> n' = n | AtLeast _ -> false)
+
+let select_good_nodes s nodes =
+  List.filter (filter_good s) nodes
+
+let select_good_trie s nodes =
+  Cubetrie.delete (fun n -> not (filter_good s n)) nodes
+
+
+
+
 let possible_imply anp ap =
   SS.subset (magic_number_arr ap) (magic_number_arr anp)  
 
@@ -1077,6 +1098,7 @@ let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   Debug.unsafe s;
   if profiling then TimeFix.start ();
   let nodes = (List.rev_append invariants visited) in
+  let nodes = select_good_nodes s nodes in
   let r = 
     match easy_fixpoint s nodes with
       | None -> hard_fixpoint s nodes
@@ -1302,6 +1324,7 @@ let hard_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
 let fixpoint_trie2 nodes ({ t_unsafe = (_,np) } as s) =
   Debug.unsafe s;
   if profiling then TimeFix.start ();
+  let nodes = select_good_trie s nodes in
   let r =
     match easy_fixpoint_trie2 s nodes with
     | None ->
