@@ -33,6 +33,12 @@ let collect_types s =
 			   ) in
   add (add HSet.empty s.t_globals) s.t_arrays
 
+let need_bool s =
+  let f = List.fold_left (fun acc t ->
+      acc || Hstring.equal Smt.Type.type_bool (snd (Smt.Symbol.type_of t))
+    ) in
+  f (f false s.t_globals) s.t_arrays
+
 module AltErgo = struct
 
   let rec print_constructors fmt = function
@@ -509,8 +515,6 @@ module Why3 = struct
   let rec print_term ~prime fmt = function
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) when Hstring.equal s hfalse -> fprintf fmt "false"
-    | Elem (s, Constr) when Hstring.equal s htrue -> fprintf fmt "true"
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
     | Elem (s, (Glob | Arr)) -> fprintf fmt "%a%s" print_name s (spr prime) 
     | Access (a, li) ->
@@ -526,7 +530,7 @@ module Why3 = struct
 	       (print_term ~prime) x (op_comp op) (print_term ~prime) y
     | Ite (la, a1, a2) ->
        fprintf fmt "@[(if %a then@ %a@ else@ %a)@]" 
-	       (print_atoms ~prime "and") (SAtom.elements la) 
+	       (print_atoms ~prime "/\\") (SAtom.elements la) 
 	       (print_atom ~prime) a1 (print_atom ~prime) a2
 
   and print_atoms ~prime sep fmt = function
@@ -609,7 +613,7 @@ module Why3 = struct
     | [g,t] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
     | (g,t) :: r ->
-       fprintf fmt "%a and\n" print_assign (g,t);
+       fprintf fmt "%a /\\\n" print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
   let rec print_assigns_unchanged fmt = function
@@ -829,9 +833,13 @@ module Why3 = struct
     fprintf fmt "\n->\n\n(* property *)\n(%a)@."
 	    (print_invariant ~prime:false) uns
 
+  let add_imports fmt s =
+    if need_bool s then fprintf fmt "use import bool.Bool\n@."
+
   let certificate fmt uns visited =
     let s = List.hd uns in
     fprintf fmt "theory CERTIFY\n@.";
+    add_imports fmt s;
     add_type_defs fmt s;
     fprintf fmt "@.";
     add_decls fmt s;
