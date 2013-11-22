@@ -806,6 +806,7 @@ let system uns =
   match trace with
   | AltErgoTr ->
      Trace.AltErgo.certificate Format.std_formatter uns visited
-  | WhyTr -> assert false
+  | WhyTr ->
+     Trace.Why3.certificate Format.std_formatter uns visited
   | NoTrace -> ()
   

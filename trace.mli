@@ -23,3 +23,5 @@ module type S = sig
 end
 
 module AltErgo : S
+
+module Why3 : S
