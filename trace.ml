@@ -21,7 +21,7 @@ open Options
 module HSet = Hstring.HSet
 
 module type S = sig
-    val certificate : formatter -> t_system list -> t_system list -> unit
+    val certificate : t_system list -> t_system list -> unit
 end
 
 
@@ -431,7 +431,11 @@ module AltErgo = struct
     fprintf fmt "\n->\n\n(* property *)\n(%a)@."
 	    (print_invariant ~prime:false) uns
 
-  let certificate fmt uns visited =
+  let certificate uns visited =
+    let bench = Filename.basename file in
+    let why_certif = out_trace^"/"^bench^"_certif_altergo.why" in
+    let cout = open_out why_certif in
+    let fmt = formatter_of_out_channel cout in
     let s = List.hd uns in
     add_type_defs fmt s;
     fprintf fmt "@.";
@@ -441,7 +445,8 @@ module AltErgo = struct
     fprintf fmt "\n@.";
     goal_property fmt uns visited;
     fprintf fmt "\n@.";
-    goal_inductive_split fmt s visited    
+    goal_inductive_split fmt s visited;
+    flush cout; close_out cout;
 
 end
 
@@ -833,22 +838,82 @@ module Why3 = struct
     fprintf fmt "\n->\n\n(* property *)\n(%a)@."
 	    (print_invariant ~prime:false) uns
 
-  let add_imports fmt s =
-    if need_bool s then fprintf fmt "use import bool.Bool\n@."
+  let assume_invariant ~prime fmt visited =
+    let cpt = ref 0 in
+    List.iter (fun s ->
+	       incr cpt;
+	       fprintf fmt "axiom induction_hypothesis_%d:\n" !cpt;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	      ) visited
 
-  let certificate fmt uns visited =
-    let s = List.hd uns in
-    fprintf fmt "theory CERTIFY\n@.";
-    add_imports fmt s;
+  let goal_invariant ~prime fmt visited =
+    let cpt = ref 0 in
+    List.iter (fun s ->
+	       incr cpt;
+	       fprintf fmt "goal invariant_%d:\n" !cpt;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	      ) visited    
+
+  let add_imports fmt s l =
+    if need_bool s then fprintf fmt "use import bool.Bool\n";
+    List.iter (fprintf fmt "use import %s\n") l;
+    fprintf fmt "@."
+
+
+  let capital_base f =
+    String.capitalize (Filename.chop_extension (Filename.basename f))
+
+  let theory_defs fmt s =
+    let name = (capital_base file)^"_defs" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s [];
     add_type_defs fmt s;
     fprintf fmt "@.";
-    add_decls fmt s;
-    fprintf fmt "@.";
-    goal_init fmt s visited;
-    fprintf fmt "\n@.";
-    goal_property fmt uns visited;
-    fprintf fmt "\n@.";
-    goal_inductive_split fmt s visited;
-    fprintf fmt "\nend@."
+    add_decls fmt s;    
+    fprintf fmt "\nend\n\n@.";
+    name
+
+  let theory_init fmt s visited imports =
+    let name = (capital_base file)^"_initialisation" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    fprintf fmt "axiom initial:\n%a\n@." print_init s.t_init;
+    goal_invariant ~prime:false fmt visited;
+    fprintf fmt "\nend\n\n@."
+    
+  let theory_property fmt s uns visited imports =
+    let name = (capital_base file)^"_property" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    assume_invariant ~prime:false fmt visited;
+    goal_invariant ~prime:false fmt uns;
+    fprintf fmt "\nend\n\n@."
+
+  let theory_preservation fmt s visited imports =
+    let name = (capital_base file)^"_preservation" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    assume_invariant ~prime:false fmt visited;
+    fprintf fmt "\naxiom transition_relation:@.";
+    fprintf fmt "%a\n@." transition_relation s;
+    goal_invariant ~prime:true fmt visited;
+    fprintf fmt "\nend\n\n@."
+    
+    
+
+  let certificate uns visited =
+    let bench = Filename.chop_extension (Filename.basename file) in
+    let why_certif = out_trace^"/"^bench^"_certif.why" in
+    let cout = open_out why_certif in
+    let fmt = formatter_of_out_channel cout in
+
+    let s = List.hd uns in
+
+    let defs = theory_defs fmt s in
+    theory_init fmt s visited [defs];
+    theory_property fmt s uns visited [defs];
+    theory_preservation fmt s visited [defs];
+
+    flush cout; close_out cout
 
 end

@@ -23,8 +23,8 @@ let set_gc_control =
   let gc_c =
     { gc_c with
         (* Gc.verbose = 0x3FF; *)
-        Gc.minor_heap_size = 32000000; (* default 32000*)
-        (*major_heap_increment = 0;    (* default 124000*)*)
+        Gc.minor_heap_size = 64000000; (* default 32000*)
+        (* major_heap_increment = 3200000;    (\* default 124000*\) *)
         space_overhead = 80; (* default 80% des donnes vivantes *)
     }
   in

@@ -19,7 +19,7 @@ open Atom
 open Options
 
 module type S = sig
-    val certificate : formatter -> t_system list -> t_system list -> unit
+    val certificate : t_system list -> t_system list -> unit
 end
 
 module AltErgo : S

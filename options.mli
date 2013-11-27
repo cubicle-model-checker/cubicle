@@ -71,3 +71,4 @@ val size_proc : int ref
 val subtyping : bool
 
 val trace : trace
+val out_trace : string

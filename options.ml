@@ -21,7 +21,7 @@ type mode =
 type trace =  NoTrace | AltErgoTr | WhyTr
 
 let usage = "usage: cubicle file.cub"
-let file = ref " stdin"
+let file = ref "_stdin"
 
 let max_proc = 10
 let type_only = ref false
@@ -70,6 +70,13 @@ let set_trace = function
   | "alt-ergo" -> trace := AltErgoTr
   | "why" -> trace := WhyTr
   | _ -> raise (Arg.Bad "Proof format = alt-ergo | why")
+
+let out = ref "."
+let set_out o =
+  if not (Sys.file_exists o) then Unix.mkdir o 0o755
+  else if not (Sys.is_directory o) then
+    raise (Arg.Bad "-out takes a directory as argument");
+  out := o
 
 let mode = ref Bfs
 let set_mode = function
@@ -131,6 +138,7 @@ let specs =
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
     "-enumsolver", Arg.Set enumsolver, " use Enumerated data types solver for finite types";
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
+    "-out", Arg.String set_out, "<dir> set output directory for certificate traces to <dir>";
   ]
 
 let alspecs = Arg.align specs
@@ -142,8 +150,9 @@ let cin =
     else raise (Arg.Bad "no .cub extension");
   in
   Arg.parse alspecs set_file usage;
-  match !ofile with Some f -> file := f ; open_in f 
-    | None -> stdin
+  match !ofile with 
+  | Some f -> file := f ; open_in f 
+  | None -> stdin
 
 let type_only = !type_only
 let maxrounds = !maxrounds
@@ -202,3 +211,4 @@ let refine_universal = !refine_universal
 let subtyping = !subtyping
 
 let trace = !trace
+let out_trace = !out
