@@ -13,10 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
 open Ast
-open Atom
-open Options
 
 module type S = sig
     val certificate : t_system list -> t_system list -> unit

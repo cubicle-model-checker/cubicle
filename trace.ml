@@ -167,6 +167,14 @@ module AltErgo = struct
     end;
     fprintf fmt "%a" (print_cube ~prime) sa
 
+  let print_neg_system ~prime fmt {t_unsafe = args, sa} = 
+    begin match args with
+	  | [] -> fprintf fmt "not ("
+	  | _  -> fprintf fmt "forall %a:int. not (%a" 
+			  print_args args print_distinct args
+    end;
+    fprintf fmt "%a)" (print_cube ~prime) sa
+
   let rec print_invariant ~prime fmt visited = match visited with
     | [] -> assert false
     | [s] -> fprintf fmt "not (%a)" (print_system ~prime) s
@@ -190,7 +198,8 @@ module AltErgo = struct
   let print_init fmt (args, lsa) =
     begin match args with
 	  | [] -> () 
-	  | _  -> fprintf fmt "forall %a:int. " print_args args
+	  | _  -> fprintf fmt "forall %a:int[%a]. "
+			  print_args args print_args args
     end;
     print_disj ~prime:false fmt lsa
 
@@ -431,22 +440,82 @@ module AltErgo = struct
     fprintf fmt "\n->\n\n(* property *)\n(%a)@."
 	    (print_invariant ~prime:false) uns
 
-  let certificate uns visited =
-    let bench = Filename.basename file in
-    let why_certif = out_trace^"/"^bench^"_certif_altergo.why" in
-    let cout = open_out why_certif in
-    let fmt = formatter_of_out_channel cout in
-    let s = List.hd uns in
+  let out_dir = ref ""
+
+  let base file = Filename.chop_extension (Filename.basename file)
+
+  let create_dir () =
+    let bench = base file in
+    let dir = out_trace^"/"^bench^"_certif_altergo" in
+    begin 
+      try if not (Sys.is_directory dir) then failwith (dir^" is not a directory")
+      with Sys_error _ -> Unix.mkdir dir 0o755
+    end;
+    out_dir := dir
+
+  let add_definitions fmt s =
     add_type_defs fmt s;
     fprintf fmt "@.";
     add_decls fmt s;
-    fprintf fmt "@.";
-    goal_init fmt s visited;
-    fprintf fmt "\n@.";
-    goal_property fmt uns visited;
-    fprintf fmt "\n@.";
-    goal_inductive_split fmt s visited;
-    flush cout; close_out cout;
+    fprintf fmt "@."
+
+  let assume_invariant ~prime fmt visited =
+    let cpt = ref 0 in
+    List.iter (fun s ->
+	       incr cpt;
+	       fprintf fmt "axiom induction_hypothesis_%d:\n" !cpt;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	       (* fprintf fmt "    @[%a@]\n@." (print_neg_system ~prime) s; *)
+	      ) visited
+
+  let goal_invariant ~prime fmt visited =
+    let cpt = ref 0 in
+    List.iter (fun s ->
+	       incr cpt;
+	       fprintf fmt "goal invariant_%d:\n" !cpt;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	       (* fprintf fmt "    @[%a@]\n@." (print_neg_system ~prime) s; *)
+	      ) visited    
+
+  let create_init s visited =
+    let bench = base file in
+    let init_file = !out_dir ^"/"^bench^"_init.why" in
+    let cout = open_out init_file in
+    let fmt = formatter_of_out_channel cout in
+    add_definitions fmt s;
+    fprintf fmt "axiom initial:\n%a\n@." print_init s.t_init;
+    goal_invariant ~prime:false fmt visited;    
+    flush cout; close_out cout
+
+  let create_property s uns visited =
+    let bench = base file in
+    let init_file = !out_dir ^"/"^bench^"_property.why" in
+    let cout = open_out init_file in
+    let fmt = formatter_of_out_channel cout in
+    add_definitions fmt s;
+    assume_invariant ~prime:false fmt visited;
+    goal_invariant ~prime:false fmt uns;    
+    flush cout; close_out cout
+
+  let create_inductive s visited =
+    let bench = base file in
+    let init_file = !out_dir ^"/"^bench^"_inductive.why" in
+    let cout = open_out init_file in
+    let fmt = formatter_of_out_channel cout in
+    add_definitions fmt s;
+    assume_invariant ~prime:false fmt visited;
+    fprintf fmt "\naxiom transition_relation:@.";
+    fprintf fmt "%a\n@." transition_relation s;
+    goal_invariant ~prime:true fmt visited;
+    flush cout; close_out cout
+
+  let certificate uns visited =
+    let s = List.hd uns in
+    create_dir ();
+    create_init s visited;
+    create_property s uns visited;
+    create_inductive s visited;
+    printf "Alt-Ergo certificates created in %s@." !out_dir
 
 end
 
@@ -906,14 +975,12 @@ module Why3 = struct
     let why_certif = out_trace^"/"^bench^"_certif.why" in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
-
     let s = List.hd uns in
-
     let defs = theory_defs fmt s in
     theory_init fmt s visited [defs];
     theory_property fmt s uns visited [defs];
     theory_preservation fmt s visited [defs];
-
-    flush cout; close_out cout
+    flush cout; close_out cout;
+    printf "Why3 certificate created in %s@." why_certif
 
 end
