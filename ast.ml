@@ -620,3 +620,8 @@ let rec origin s = match s.t_from with
   | (_,_, p)::_ ->
      if p.t_nb < 0 then p
      else origin p
+
+
+let t_system_equal s1 s2 = s1.t_nb = s2.t_nb
+
+let t_system_hash s = s.t_nb

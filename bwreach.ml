@@ -261,6 +261,7 @@ let make_cubes =
 			    t_nb_father = nb;
 			    t_from_forall = from_forall;
 			} in
+		      register_system new_s;
 		      
 		      match post_strategy with
 			| 0 -> add_list new_s ls, post

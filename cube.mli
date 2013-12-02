@@ -19,6 +19,9 @@ open Ast
 open Atom
 
 val new_cube_id : unit -> int
+val register_system : t_system -> unit
+val from_register : int -> t_system
+val discharged_on : t_system -> t_system list
 
 val has_deleted_ancestor : t_system -> bool
 val already_closed : t_system -> transition -> Hstring.t list -> t_system option

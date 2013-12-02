@@ -51,7 +51,7 @@ let rec remove_cand s faulty candidates uns =
 	  if List.exists (fun s -> ArrayAtom.equal s.t_arru s'.t_arru) uns then
 	    raise (Search.Unsafe s)
 	  else (add_bad_candidate s' (Some trace); acc)
-        else if Forward.reachable_on_trace_from_init s' trace <> None
+        else if Forward.reachable_on_trace_from_init faulty s' trace <> Forward.Unreach
                 (* Enumerative.smallest_to_resist_on_trace (ref 0) [s'] = [] *)
 	then 
           (add_bad_candidate s' None; acc)
@@ -227,6 +227,7 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
 	      t_nb = !cpt_approx;
 	      t_nb_father = -1;
             } in
+	  Cube.register_system s';
           s' :: acc
     ) parts []
     in

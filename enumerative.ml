@@ -1024,6 +1024,7 @@ let alpha_renamings cpt_approx env procs ({ t_unsafe = args, sa} as s) =
 	t_nb_father = -1;
 	t_from_forall = false;
       } in
+    Cube.register_system s';
     (satom_to_cand env sa, s') :: p
   ) [] d
 

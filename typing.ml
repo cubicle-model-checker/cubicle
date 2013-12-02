@@ -305,7 +305,7 @@ let system s =
 
     List.map (fun ((args, p) as un) ->
       let arru = ArrayAtom.of_satom p in (* inutile ? *)
-      { 
+      let s = { 
 	t_globals = t_globals;
 	t_arrays = t_arrays;
 	t_from = [];
@@ -322,6 +322,8 @@ let system s =
 	t_nb_father = -1;
 	t_glob_proc = glob_proc;
 	t_from_forall = false;
-      }
+      } in
+      Cube.register_system s;
+      s
     ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

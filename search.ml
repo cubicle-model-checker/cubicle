@@ -340,9 +340,15 @@ module BFS_base ( X : I ) = struct
   let safety_test s =
     try X.safety s with 
     | Unsafe s ->
-      if dot then fprintf fmt "@[%a@]@." X.print_bad s;
-      close_dot ();
-      raise (Unsafe s)
+       if X.spurious_error_trace s then
+	 (eprintf "\nSpurious trace: @[%a@]@." Pretty.print_verbose_node s;
+	  exit 1)
+       else
+	 begin
+	   if dot then fprintf fmt "@[%a@]@." X.print_bad s;
+	   close_dot ();
+	   raise (Unsafe s)
+	 end
 
 
   let search 

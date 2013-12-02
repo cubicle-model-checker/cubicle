@@ -27,6 +27,11 @@ type inst_trans =
       i_touched_terms : STerm.t;
     }
 
+type possible_result = 
+  | Reach of (transition * (Hstring.t * Hstring.t) list) list 
+  | Spurious of (transition * Hstring.t list * t_system) list
+  | Unreach
+
 (* val search : Hstring.t list -> t_system -> SAtom.t list *)
 
 val procs_from_nb : int -> Hstring.t list
@@ -57,8 +62,8 @@ val missing_args : Hstring.t list -> Hstring.t list ->
 val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
 
 val reachable_on_trace_from_init :
-  t_system -> (transition * Hstring.t list * t_system) list ->
-  (transition * (Hstring.t * Hstring.t) list) list option
+  t_system -> t_system ->
+  (transition * Hstring.t list * t_system) list -> possible_result
 
 val spurious : t_system -> bool
 			     

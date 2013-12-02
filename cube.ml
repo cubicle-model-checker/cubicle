@@ -23,6 +23,22 @@ module S = H.HSet
 let hempty = H.empty
 
 
+module HSystem =
+  Hashtbl.Make (struct
+		 type t = t_system
+		 let equal = t_system_equal
+		 let hash = t_system_hash		 
+	       end)
+
+
+let discharged = HSystem.create 2001
+let discharged_on d = try HSystem.find discharged d with Not_found -> []
+let add_discharged s d = HSystem.add discharged d (s :: (discharged_on d))
+
+let register = Hashtbl.create 200_001
+let register_system s = Hashtbl.add register s.t_nb s
+let from_register = Hashtbl.find register
+
 module TimeRP = Search.TimeRP
 
 module TimeFix = Search.TimeFix
@@ -1218,7 +1234,6 @@ let fixpoint_trie s lstu visited learnt postponed =
 
 (*************** Other version with tries *******************)
 
-
 let check_and_add nargs anp nodes
     ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) =
   let dif = extra_args real_args nargs in
@@ -1312,6 +1327,14 @@ let fixpoint_trie2 nodes ({ t_unsafe = (_,np) } as s) =
   in
   if profiling then TimeFix.pause ();
   r
+
+
+let fixpoint_trie2 nodes s =
+  match fixpoint_trie2 nodes s with
+  | None -> None
+  | (Some uc) as r ->
+     List.iter (fun d -> add_discharged s (from_register d)) uc;
+     r
 
 
 

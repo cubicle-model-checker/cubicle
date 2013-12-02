@@ -153,6 +153,10 @@ type t_system = {
   t_from_forall: bool;
 }
 
+val t_system_equal : t_system -> t_system -> bool
+
+val t_system_hash : t_system -> int
+
 val declared_terms : ArrayAtom.t -> bool
 
 val variables_of : SAtom.t -> STerm.t
