@@ -1343,40 +1343,12 @@ let mkinits_up_to procs_sets s =
 exception Spurious_step of t_system
 
 let above s trace =
-	  begin
-	    eprintf "\n@{<fg_red>above trace:@} @[";
-	    List.iter (fun (tr, sigma, x) ->
-		       eprintf "%a(%a) ->%d-> @ " Hstring.print tr.tr_name
-			       Pretty.print_args  sigma x.t_nb
-		      ) trace;
-	    let nun = (origin s).t_nb in
-	    if nun < 0 then 
-	      eprintf "@{<fg_blue>approx[%d]@}" nun
-	    else 
-	      eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
-	    eprintf "@]@.";
-	  end;
   let rec above_rec s acc = function
     | tx :: (_, _, y) :: _ when s.t_nb = y.t_nb -> List.rev (tx :: acc)
     | tx :: r -> above_rec s (tx :: acc) r
     | _ -> assert false
   in
-  let trace = above_rec s [] trace in
-  
-	  begin
-	    eprintf "\n@{<fg_red>2above trace:@} @[";
-	    List.iter (fun (tr, sigma, x) ->
-		       eprintf "%a(%a) ->%d-> @ " Hstring.print tr.tr_name
-			       Pretty.print_args  sigma x.t_nb
-		      ) trace;
-	    let nun = (origin s).t_nb in
-	    if nun < 0 then 
-	      eprintf "@{<fg_blue>approx[%d]@}" nun
-	    else 
-	      eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
-	    eprintf "@]@.";
-	  end;
-trace
+  above_rec s [] trace
 
 
 type possible_result = 
@@ -1389,7 +1361,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
   let _, usa = finish.t_unsafe in
   let rec forward_rec ls rtrace = match ls, rtrace with
     | _, [] -> Unreach
-    | [], (_, _, s) ::_ ->  Spurious (above s trace)
+    | [], (_, _, s) ::_ -> Spurious (above s trace)
     | _, (tr, _, _) :: rest_trace ->
         let nls =
 	  if List.length tr.tr_args > List.length procs then []
@@ -1414,16 +1386,15 @@ let possible_trace ~starts ~finish ~procs ~trace =
     | Reachable hist -> Reach hist
   
 
-let discharged_with_full_trace top above = assert false;
-  eprintf "dwft: %d@." top.t_nb;
-
-	  begin
-	    eprintf "\n@{<fg_red>3above:@} @[";
-	    List.iter (fun (tr, sigma, x) ->
-		       eprintf "%a(%a) ->%d-> @ " Hstring.print tr.tr_name
-			       Pretty.print_args  sigma x.t_nb
-		      ) above;
-	  end;
+let discharged_with_full_trace prefix above =
+  (* eprintf "dwft: %d@." top.t_nb; *)
+  (* begin *)
+  (*   eprintf "\n@{<fg_red>3above:@} @["; *)
+  (*   List.iter (fun (tr, sigma, x) -> *)
+  (* 	       eprintf "%a(%a) ->%d-> @ " Hstring.print tr.tr_name *)
+  (* 		       Pretty.print_args  sigma x.t_nb *)
+  (* 	      ) above; *)
+  (* end; *)
   let rec aux acc rev_top rest_above =
     match rest_above with
     | (_, _, x) as tx :: r ->
@@ -1433,25 +1404,37 @@ let discharged_with_full_trace top above = assert false;
 	    let rev_top = match rev_top with 
 	      | [] -> [] 
 	      | (tr, ar, _) :: rt -> (tr, ar, s) :: rt in
-	    (s, List.rev_append rev_top s.t_from) :: acc)
+	    (rev_top, s.t_from) :: acc)
 	   acc (Cube.discharged_on x) in
        aux acc (tx :: rev_top) r
     | [] -> acc
   in
-  let rec drop_top acc above =
-    match above with
-    | (tr, args, x) as tx :: r ->
-       if x.t_nb = top.t_nb then (tr, args, top) :: acc, r
-       else drop_top (tx :: acc) r
-    | [] -> (* don't drop *)
-       [], List.rev acc
-  in
-  let rt, ra = drop_top [] above in
-  aux [] rt ra
+  aux [] prefix above
 
+let rec list_excedent = function
+  | _, [] -> assert false
+  | [], l2 -> l2
+  | _ :: l1, _ :: l2 -> list_excedent (l1, l2)
   
 
-let rec reachable_on_trace_from_init top_orig s trace =
+let rec equal_trace_woargs tr1 tr2 =
+  match tr1, tr2 with
+  | [], [] -> true
+  | [], _ -> false
+  | _, [] -> false
+  | (x, _, _)::r1, (y, _, _)::r2 ->
+     Hstring.equal x.tr_name y.tr_name && equal_trace_woargs r1 r2
+
+module HTrace = 
+  Hashtbl.Make (
+      struct
+	type t = (transition * Hstring.t list * t_system) list
+	let equal = equal_trace_woargs
+	let hash = Hashtbl.hash_param 50 100
+      end)
+			       
+
+let reachable_on_trace_from_init s trace =
   let all_procs_set =
     List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
       List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
@@ -1460,18 +1443,42 @@ let rec reachable_on_trace_from_init top_orig s trace =
   let all_procs = Hstring.HSet.elements all_procs_set in
   let proc_sets = (* all_partitions *) [all_procs] in
   let inits = mkinits_up_to proc_sets s in
-  let rec reachable_split_from_init s trace_top trace_bot =
-    let trace = List.rev_append trace_top trace_bot in
+  possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace
+
+let reachable_on_all_traces_from_init s trace =
+  let checked = HTrace.create 2001 in
+  let all_procs_set =
+    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
+      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
+		     (List.rev_append procs_t procs_c)
+    ) Hstring.HSet.empty trace in
+  let all_procs = Hstring.HSet.elements all_procs_set in
+  let proc_sets = (* all_partitions *) [all_procs] in
+  let inits = mkinits_up_to proc_sets s in
+  let rec reachable_split_from_init s prefix_tr trace_bot =
+    eprintf "rsfi %d@." s.t_nb;
+    let trace = List.rev_append prefix_tr trace_bot in
+    eprintf "\n@{<fg_red>reach on trace:@} @[";
+    List.iter (fun (tr, sigma, x) ->
+	       eprintf "%a(%a) ->%d-> @ " Hstring.print tr.tr_name
+		       Pretty.print_args  sigma x.t_nb
+	      ) trace;
+    HTrace.add checked trace ();
     match possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace with
     | (Unreach | Reach _) as r -> r
     | Spurious above_trace ->
-       try List.iter
-     	     (fun (top, trace_top, trace_bot) ->
-     	      match reachable_split_from_init s trace_top trace_bot with
+       let problematic_trace_section = list_excedent (prefix_tr, above_trace) in
+       try 
+	 eprintf "\n\n>> check %d@." (List.length (discharged_with_full_trace prefix_tr problematic_trace_section));
+	 List.iter
+     	   (fun (prefix, trace) ->
+	    if HTrace.mem checked (List.rev_append prefix trace) then ()
+     	    else
+	      match reachable_split_from_init s prefix trace with
      	      | Reach hist -> raise (Reachable hist)
      	      | _ -> ())
-     	     (discharged_with_full_trace above_trace);
-	   Unreach
+     	   (discharged_with_full_trace prefix_tr problematic_trace_section);
+	 Unreach
        with Reachable hist -> Reach hist
   in
   reachable_split_from_init s [] trace
@@ -1510,7 +1517,7 @@ let spurious s =
 
 
 let spurious_error_trace s =
-  match reachable_on_trace_from_init s (origin s) s.t_from with
+  match reachable_on_all_traces_from_init (origin s) s.t_from with
   | Spurious _ -> assert false
   | Unreach -> true
   | Reach hist ->

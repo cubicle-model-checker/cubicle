@@ -18,6 +18,8 @@ open Options
 open Ast
 open Atom
 
+module HSystem : Hashtbl.S with type key = t_system
+
 val new_cube_id : unit -> int
 val register_system : t_system -> unit
 val from_register : int -> t_system
