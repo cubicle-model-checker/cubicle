@@ -227,7 +227,6 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
 	      t_nb = !cpt_approx;
 	      t_nb_father = -1;
             } in
-	  Cube.register_system s';
           s' :: acc
     ) parts []
     in

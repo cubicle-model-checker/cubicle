@@ -341,8 +341,7 @@ module BFS_base ( X : I ) = struct
     try X.safety s with 
     | Unsafe s ->
        if refine && X.spurious_error_trace s then
-	 (eprintf "\nSpurious trace: @[%a@]@." Pretty.print_verbose_node s;
-	  )
+	 eprintf "\nSpurious trace: @[%a@]@." Pretty.print_verbose_node s
        else
 	 begin
 	   if dot then fprintf fmt "@[%a@]@." X.print_bad s;
