@@ -1418,7 +1418,9 @@ let reachable_on_trace_from_init s trace =
   let all_procs = Hstring.HSet.elements all_procs_set in
   let proc_sets = (* all_partitions *) [all_procs] in
   let inits = mkinits_up_to proc_sets s in
-  possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace
+  match possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace with
+  | Spurious _ | Unreach -> Unreach
+  | Reach _  as r -> r
 
 let reachable_on_all_traces_from_init s trace =
   let all_procs_set =
