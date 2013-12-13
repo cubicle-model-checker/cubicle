@@ -1488,6 +1488,12 @@ let spurious_error_trace s =
         false
 
 
+let spurious_due_to_cfm s =
+  match reachable_on_trace_from_init (origin s) s.t_from with
+    | Unreach | Spurious _ -> true
+    | Reach hist -> false
+
+
 let conflicting_from_trace s trace =
   let all_procs_set =
     List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->

@@ -68,6 +68,8 @@ val spurious : t_system -> bool
 			     
 val spurious_error_trace : t_system -> bool
 
+val spurious_due_to_cfm : t_system -> bool
+
 val conflicting_from_trace :
   t_system -> (transition * Hstring.t list * t_system) list -> SAtom.t list
 

@@ -19,6 +19,11 @@ open Ast
 
 let bad_candidates = ref []
 
+let non_cfm_literals = ref SAtom.empty
+
+let contains_non_cfm s = not (SAtom.is_empty (SAtom.inter s !non_cfm_literals))
+let lit_non_cfm a = SAtom.mem a !non_cfm_literals
+
 let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
   List.iter (fun sigma ->
     bad_candidates := 
@@ -59,6 +64,11 @@ let rec remove_cand s faulty candidates uns =
       [] candidates in
   List.rev nc
 
+let remove_non_cfm_cand =
+  List.filter (fun ({t_unsafe = _, c} as sc) ->
+	       if contains_non_cfm c then false 
+	       else (add_bad_candidate sc None; true))
+
 
 let search_backtrack_brab search invariants procs uns =
   let candidates = ref [] in
@@ -77,6 +87,16 @@ let search_backtrack_brab search invariants procs uns =
           
           candidates := remove_cand o faulty !candidates uns;
           (* candidates := []; *)
+
+	  (* Find out if bactrack is due to crash failure model,
+             in which case record literals that do not respect CMF model *)
+	  if Forward.spurious_due_to_cfm faulty then
+	    begin
+	      non_cfm_literals := 
+		SAtom.union (snd o.t_unsafe) !non_cfm_literals;
+	      candidates := remove_non_cfm_cand !candidates;
+	      eprintf "Non CFM literals = %a@." Pretty.print_cube !non_cfm_literals;
+	    end;
 
           if verbose > 0 && not quiet then begin
             eprintf "%d used candidates :@." (List.length !candidates);
@@ -178,12 +198,13 @@ let approx_arith a = match a with
 	  else Atom.Comp (zer, Lt, t)
      end
   | _ -> a
-		     
+
 let approximations ({ t_unsafe = (args, sa) } as s) =
     let sorts_sa, sa = isolate_sorts sa in
     let init = 
       SAtom.fold (fun a acc ->
-        if Forward.useless_candidate (SAtom.singleton a) then acc
+        if Forward.useless_candidate (SAtom.singleton a) || lit_non_cfm a 
+	then acc
         else SSAtoms.add (SAtom.singleton a) acc)
         sa SSAtoms.empty in
     (* All subsets of sa of relevant size *)
@@ -191,6 +212,7 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
       SAtom.fold (fun a acc ->
 	let a = approx_arith a in 
         if Forward.useless_candidate (SAtom.singleton a) then acc
+        else if lit_non_cfm a then acc
         else
           SSAtoms.fold (fun sa' acc ->
             let nsa = SAtom.add a sa' in
