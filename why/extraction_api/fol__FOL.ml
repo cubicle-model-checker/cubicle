@@ -8,8 +8,7 @@ open Why3
 
 type t = Term.term
 
-(* let compare = Term.compare *)
-
+(* let compare = Term.t_compare *)
 
 let rec print = Why3.Pretty.print_term
 
@@ -22,6 +21,24 @@ let ffalse  : t = Term.t_false
 
 let ttrue  : t = Term.t_true
 
+
+let size f =
+  Term.t_fold (fun acc t ->
+	       match t.Term.t_node with
+	       | Term.Tquant (Term.Texists, tq) -> acc + 1
+	       | _ -> acc
+	      ) 0 f
+
+let card f = Term.t_fold (fun acc _ -> acc + 1) 0 f
+
+(* let size f = *)
+(*   let tf = fun acc t -> *)
+(*     match t.Term.t_node with *)
+(*     | Term.Tquant (Term.Texists, tq) -> acc + 1 *)
+(*     | _ -> acc in *)
+(*   Term.TermTF.t_fold tf tf 0 f *)
+
+(* let card f = Term.TermTF.t_fold (fun acc _ -> acc + 1) (fun acc _ -> acc + 1) 0 f *)
 
 (* let declarations_task = ref None *)
 

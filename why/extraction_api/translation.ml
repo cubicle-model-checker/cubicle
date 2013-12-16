@@ -59,6 +59,19 @@ let set_fun : Mlw_expr.psymbol =
   Mlw_module.ns_find_ps ref_module.Mlw_module.mod_export ["infix :="]
 
 
+(* int.Int theory *)
+let int_type : Ty.ty = Ty.ty_int
+let int_theory : Theory.theory = Env.find_theory env ["int"] "Int"
+let add_int : Term.lsymbol = find int_theory "infix +"
+let sub_int : Term.lsymbol = find int_theory "infix -"
+let minus_int : Term.lsymbol = find int_theory "prefix -"
+let mul_int : Term.lsymbol = find int_theory "infix *"
+let ge_int : Term.lsymbol = find int_theory "infix >="
+let le_int : Term.lsymbol = find int_theory "infix <="
+let gt_int : Term.lsymbol = find int_theory "infix >"
+let lt_int : Term.lsymbol = find int_theory "infix <"
+
+
 (*---------------- Formulas to why data structures ----------------*)
 
 let hs_id s = Ident.id_fresh (Hstring.view s)
@@ -284,7 +297,10 @@ let rec atom_to_why = function
      Term.t_equ_simp (term_to_why x) (term_to_why y)
   | Atom.Comp (x, Neq, y) ->
      Term.t_neq_simp (term_to_why x) (term_to_why y)
-  | Atom.Comp _ -> failwith "atom_to_why: Not implemented"
+  | Atom.Comp (x, Le, y) ->
+     Term.t_app_infer le_int [term_to_why x; term_to_why y]
+  | Atom.Comp (x, Lt, y) ->
+     Term.t_app_infer lt_int [term_to_why x; term_to_why y]
   | Atom.Ite (sa, a1, a2) ->
      Term.t_if_simp (cube_to_why sa) (atom_to_why a1) (atom_to_why a2)
 
@@ -370,6 +386,10 @@ let rec why_to_atom f = match f.Term.t_node with
   | Term.Tnot t -> Atom.neg (why_to_atom t)
   | Term.Tapp (s, [t1; t2]) when Term.ls_equal s Term.ps_equ ->
      Atom.Comp (why_to_term t1, Eq, why_to_term t2)
+  | Term.Tapp (s, [t1; t2]) when Term.ls_equal s le_int ->
+     Atom.Comp (why_to_term t1, Le, why_to_term t2)
+  | Term.Tapp (s, [t1; t2]) when Term.ls_equal s lt_int ->
+     Atom.Comp (why_to_term t1, Lt, why_to_term t2)
   | _ -> assert false
 
 let rec why_to_cube f = match f.Term.t_node with
@@ -495,11 +515,11 @@ let rec dnfize_list f = match f.Term.t_node with
      [Term.t_quant_simp q tq']
   | _ -> reconstruct_conj f
 
-let dnfize2 f =
+let dnfize_list2 f =
   Prover.TimeF.start ();
-  eprintf "indnf ... @.";
-  let f = dnfize f in
-  eprintf "outdnf ... @.";
+  (* eprintf "indnf ... @."; *)
+  let f = dnfize_list f in
+  (* eprintf "outdnf ... @."; *)
   Prover.TimeF.pause ();
   f
 

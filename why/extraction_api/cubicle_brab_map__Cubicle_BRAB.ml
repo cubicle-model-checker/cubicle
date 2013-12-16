@@ -47,6 +47,11 @@ let from  : (((Fol__FOL.t, Fol__FOL.t) Map__Map.map) Pervasives.ref) =
 
 
 
+(*-----------------  Begin manually edited ------------------*)
+let cpt = ref 0
+(*------------------  End manually edited -------------------*)
+
+
 let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
   (*-----------------  Begin manually edited ------------------*)
   if not Options.do_brab then None
@@ -57,6 +62,7 @@ let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
     match la with
     | [] -> None 
     | _ ->
+       decr cpt;
        let psi = Fol__FOL.cubes_to_fol la in
        Format.eprintf ">> %a APproximated BY %a@." 
 	       Fol__FOL.print phi Fol__FOL.print psi;
@@ -64,12 +70,10 @@ let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
   (*------------------  End manually edited -------------------*)
 
 
-let cpt = ref 0
-
 let pre_or_approx (phi: Fol__FOL.t) ((* ghost *)) ((* ghost *)) =
   (*-----------------  Begin manually edited ------------------*)
   incr cpt; Format.eprintf "\n%d@." !cpt;
-  if Options.debug then Format.eprintf "pre_or_approx %a@." Fol__FOL.print phi;
+  if Options.verbose > 0 then Format.eprintf "pre_or_approx %a@." Fol__FOL.print phi;
   (*------------------  End manually edited -------------------*)
   (match (approx phi) with
   | (Some psi) ->
