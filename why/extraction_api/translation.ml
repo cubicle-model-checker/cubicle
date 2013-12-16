@@ -1,3 +1,5 @@
+(*-----------------  Begin manually edited ------------------*)
+
 open Ast
 open Global
 open Format
@@ -154,7 +156,7 @@ let declarations_map s =
                   |> add_array_decls s
 
 
-let known_map = ref Iden.Mid.empty
+let known_map = ref Ident.Mid.empty
 
 let set_decl_map s = known_map := declarations_map s
 
@@ -709,3 +711,5 @@ let init_to_fol {t_init = args, lsa} = match lsa with
      let t = List.fold_left (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc)
 			    Term.t_false lsa in
      Term.t_forall_close_simp vsl [] t
+
+(*------------------  End manually edited -------------------*)

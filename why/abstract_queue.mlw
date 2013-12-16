@@ -6,7 +6,7 @@ module AbstractQueue
 
   type f = t
   
-  type t model { mutable formula: f; mutable elts: S.set f }
+  type t model { ghost mutable formula: f; mutable elts: S.set f }
 
   val create () : t ensures { result.formula = ffalse /\ result.elts = S.empty }
 

@@ -48,6 +48,7 @@ let from  : (((Fol__FOL.t, Fol__FOL.t) Map__Map.map) Pervasives.ref) =
 
 
 let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
+  (*-----------------  Begin manually edited ------------------*)
   if not Options.do_brab then None
   else
     let ls = Fol__FOL.fol_to_cubes phi in
@@ -60,13 +61,16 @@ let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
        Format.eprintf ">> %a APproximated BY %a@." 
 	       Fol__FOL.print phi Fol__FOL.print psi;
        Some psi
+  (*------------------  End manually edited -------------------*)
 
 
 let cpt = ref 0
 
 let pre_or_approx (phi: Fol__FOL.t) ((* ghost *)) ((* ghost *)) =
+  (*-----------------  Begin manually edited ------------------*)
   incr cpt; Format.eprintf "\n%d@." !cpt;
   if Options.debug then Format.eprintf "pre_or_approx %a@." Fol__FOL.print phi;
+  (*------------------  End manually edited -------------------*)
   (match (approx phi) with
   | (Some psi) ->
       begin let o =
@@ -143,7 +147,9 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
                   then let phi1 = (Abstract_queue__AbstractQueue.pop q) in
                     begin if (Fol__FOL.sat (Fol__FOL.infix_et init phi1))
                           then begin ((Pervasives.(:=) faulty) phi1);
+				     (*-----------------  Begin manually edited ------------------*)
 				     Format.eprintf "unsafe %a@." Fol__FOL.print !faulty;
+				     (*------------------  End manually edited -------------------*)
                                raise Unsafe_trace end
                           else (());
                     if let o =
@@ -204,11 +210,11 @@ let brab (init1: Fol__FOL.t) (theta1: Fol__FOL.t) =
                        begin (reset_maps theta1);
                        let o2 = ((bwd init1) theta1) in
                        ((Pervasives.(:=) bwd_res) o2) end end;
+		       (*-----------------  Begin manually edited ------------------*)
 		       Format.eprintf "Backtracking ...@.";
+		       (*------------------  End manually edited -------------------*)
 		       end
                   else raise Why3__Prelude.PcExit done with
              | Why3__Prelude.PcExit -> (()));
        (Safe) end end with
   | Unsafe_trace -> (Unsafe)) end
-
-

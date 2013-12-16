@@ -89,7 +89,7 @@ CUBICLECMO = \
       version.cmo ../../options.cmo ../../ast.cmo ../../parser.cmo ../../lexer.cmo ../../pretty.cmo \
       ../../cubetrie.cmo ../../prover.cmo \
       ../../search.cmo ../../cube.cmo ../../bitsolver.cmo ../../forward.cmo \
-      ../../enumerative.cmo ../../brab.cmo ../../bwreach.cmo \
+      ../../enumerative.cmo ../../brab.cmo ../../trace.cmo ../../bwreach.cmo \
       ../../typing.cmo
 
 CMO = $(COMMONCMO) $(SMTCMO) $(CUBICLECMO) \
