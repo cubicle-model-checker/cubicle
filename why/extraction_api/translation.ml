@@ -626,6 +626,9 @@ let transition_to_lambda t =
   }
 
 
+let transition_to_fun t = 
+  Mlw_expr.create_fun_defn (hs_id t.tr_name) (transition_to_lambda t)
+
 
 
 (*--------------------------------------------------------------------*)

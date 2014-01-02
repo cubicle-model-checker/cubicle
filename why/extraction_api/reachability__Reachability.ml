@@ -1,8 +1,10 @@
 (* This file has been generated from Why3 theory Reachability *)
 
+open Why3
 
 let pre (x: Fol__FOL.t) : Fol__FOL.t =
   (*-----------------  Begin manually edited ------------------*)
+  ignore (Mlw_wp.wp_expr);
   let res_cubes = 
     List.fold_left (fun acc s ->
       let ls, post = Bwreach.pre_system s in
