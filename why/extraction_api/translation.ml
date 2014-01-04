@@ -13,13 +13,13 @@ open Why3
 
 (*---------------------------- Theories ---------------------------*)
 
-let env,config =
+let env, config =
   (* reads the Why3 config file *)
   let config : Whyconf.config = Whyconf.read_config None in
   (* the [main] section of the config file *)
   let main : Whyconf.main = Whyconf.get_main config in
   let env : Env.env = Env.create_env (Whyconf.loadpath main) in
-  env,config
+  env, config
 
 
 let find th s = Theory.ns_find_ls th.Theory.th_export [s]
@@ -72,6 +72,11 @@ let gt_int : Term.lsymbol = find int_theory "infix >"
 let lt_int : Term.lsymbol = find int_theory "infix <"
 
 
+let th_known = Decl.merge_known 
+		 Mlw_wp.th_mark_at.Theory.th_known
+		 Mlw_wp.th_mark_old.Theory.th_known
+
+
 (*---------------- Formulas to why data structures ----------------*)
 
 let hs_id s = Ident.id_fresh (Hstring.view s)
@@ -80,12 +85,15 @@ let hs_id s = Ident.id_fresh (Hstring.view s)
 
 
 
+let h_proc = Hstring.make "proc"
+let h_bool = Hstring.make "bool"
+let h_int = Hstring.make "int"
 
 let user_types = Hstring.H.create 13
 
 let ty_proc = 
   let tys = Ty.create_tysymbol (Ident.id_fresh "proc") [] (Some Ty.ty_int) in
-  Hstring.H.add user_types (Hstring.make "proc") tys;
+  Hstring.H.add user_types h_proc tys;
   let ts = Ty.ty_app tys [] in
   ts
 
@@ -117,18 +125,26 @@ let type_array ty =
 (*------------------------ Declarations ----------------------------*)
 
 
+let type_decls = Hstring.H.create 13
+
 let find_type kn t =
-  match (Ident.Mid.find (Ident.id_register (hs_id t)) kn).Mlw_decl.pd_node with
-  | Mlw_decl.PDtype tys | Mlw_decl.PDdata [tys, _, _] ->
-	Mlw_ty.ity_app_fresh tys []
-  | _ -> assert false
+  eprintf "find type %a@." Hstring.print t;
+  if Hstring.equal t h_proc then Mlw_ty.ity_of_ty ty_proc
+  else if Hstring.equal t h_bool then Mlw_ty.ity_bool
+  else if Hstring.equal t h_int then Mlw_ty.ity_int
+  else Hstring.H.find type_decls t
+    (* (\* TODO pas mettre id_register *\) *)
+    (* match (Ident.Mid.find (Ident.id_register (hs_id t)) kn).Mlw_decl.pd_node with *)
+    (* | Mlw_decl.PDtype tys | Mlw_decl.PDdata [tys, _, _] -> *)
+    (* 			     Mlw_ty.ity_app_fresh tys [] *)
+    (* | _ -> assert false *)
 
 
 let add_type_decls s kn =
   let kn = 
     let tys = Mlw_ty.create_itysymbol
 		(Ident.id_fresh "proc") [] [] (Some Mlw_ty.ity_int) in
-    Mlw_decl.known_add_decl Ident.Mid.empty kn (Mlw_decl.create_ty_decl tys) in
+    Mlw_decl.known_add_decl th_known kn (Mlw_decl.create_ty_decl tys) in
   List.fold_left (fun kn (n, c) ->
 	      let tys = Mlw_ty.create_itysymbol (hs_id n) [] [] None in
 	      let d = match c with
@@ -136,7 +152,8 @@ let add_type_decls s kn =
 		| _ -> 
 		   let constrs = List.map (fun s -> hs_id s, []) c in
 		   Mlw_decl.create_data_decl [tys, constrs] in
-	      Mlw_decl.known_add_decl Ident.Mid.empty kn d
+	      Hstring.H.add type_decls n (Mlw_ty.ity_app_fresh tys []);
+	      Mlw_decl.known_add_decl th_known kn d
 	     ) kn s.type_defs
 
 let add_glob_decls s kn =
@@ -145,7 +162,7 @@ let add_glob_decls s kn =
 	      let rity = Mlw_ty.ity_app_fresh ref_type [ret_ity] in
 	      let ps = Mlw_ty.create_pvsymbol (hs_id n) rity in
 	      let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
-	      Mlw_decl.known_add_decl Ident.Mid.empty kn d
+	      Mlw_decl.known_add_decl th_known kn d
 	     ) kn s.globals
 
 let add_array_decls s kn =
@@ -158,20 +175,9 @@ let add_array_decls s kn =
 		 let aty = Mlw_ty.ity_app_fresh ref_type [map_ty] in
 		 let ps = Mlw_ty.create_pvsymbol (hs_id n) aty in
 		 let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
-		 Mlw_decl.known_add_decl Ident.Mid.empty kn d
+		 Mlw_decl.known_add_decl th_known kn d
 	      | _ -> assert false
 	    ) kn s.arrays
-
-
-let declarations_map s =
-  Ident.Mid.empty |> add_type_decls s
-                  |> add_glob_decls s
-                  |> add_array_decls s
-
-
-let known_map = ref Ident.Mid.empty
-
-let set_decl_map s = known_map := declarations_map s
 
 
 (*------------------------------------------------------------------*)
@@ -238,8 +244,8 @@ let create_pvs x ty =
       ps
        
 
-let var_pvsymbol x = 
-    let _, hty = Smt.Symbol.type_of x in
+let var_pvsymbol x =
+    let hty = try snd (Smt.Symbol.type_of x) with Not_found -> h_proc in
     create_pvs x (type_var hty)    
 
 let var_to_pv x =
@@ -399,6 +405,13 @@ let rec why_to_cube f = match f.Term.t_node with
      SAtom.union (why_to_cube f1) (why_to_cube f2)
   | _ -> assert false
 
+
+let procs_of_why f =
+  match f.Term.t_node with
+  | Term.Tquant (Term.Texists, tq) ->
+     let vsl, _, _ = Term.t_open_quant tq in     
+     List.map (fun vs -> Hstring.make vs.Term.vs_name.Ident.id_string) vsl
+  | _ -> []
 
 let why_to_system f = 
   let args, sa = match f.Term.t_node with
@@ -594,7 +607,8 @@ let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
   | _ -> failwith "update to post not implemented for matrices"
   
 
-let dummy_vsymbol = Term.create_vsymbol (Ident.id_fresh "@dummy@") ty_proc
+let dummy_vsymbol =
+  Term.create_vsymbol (Ident.id_fresh "@dummy@") Mlw_ty.ty_unit
 
 let transition_spec t =
   let c_req = cube_to_why t.tr_reqs in
@@ -626,12 +640,52 @@ let transition_to_lambda t =
   }
 
 
-let transition_to_fun t = 
-  Mlw_expr.create_fun_defn (hs_id t.tr_name) (transition_to_lambda t)
+let trans_symbols = Hstring.H.create 21
+
+let add_transition_fun_decl kn t =
+  let p_name = hs_id t.tr_name in
+  let lamb = transition_to_lambda t in
+  let f = Mlw_expr.create_fun_defn p_name lamb in(*  with  *)
+  (* Ty.TypeMismatch (t1,t2) ->  *)
+  (* 	    eprintf "%a =/= %a@." Why3.Pretty.print_ty t1 Why3.Pretty.print_ty t2; *)
+  (* 	    assert false in *)
+  Hstring.H.add trans_symbols t.tr_name f.Mlw_expr.fun_ps;
+  kn
+  (* let d = Mlw_decl.create_rec_decl [f] in *)
+  (* Mlw_decl.known_add_decl th_known kn d *)
+
+let add_transitions_decls s kn =
+  List.fold_left add_transition_fun_decl kn s.trans
+
+let transition_to_fun t =
+  eprintf "find %a@." Hstring.print t.tr_name;
+  let pst = Hstring.H.find trans_symbols t.tr_name in
+  Mlw_expr.e_arrow pst
+		   (List.map (fun _ -> Mlw_ty.ity_of_ty ty_proc) t.tr_args)
+		   Mlw_ty.ity_unit
 
 
+let instantiate_trans t args =
+  let e_args = List.map (fun x -> Mlw_expr.e_value (proc_pvsymbol x)) args in
+  let ft = transition_to_fun t in
+  Mlw_expr.e_app ft e_args
+  
 
 (*--------------------------------------------------------------------*)
+
+let known_map = ref Ident.Mid.empty
+
+let declarations_map s =
+  Ident.Mid.empty |> add_type_decls s
+                  |> add_glob_decls s
+                  |> add_array_decls s
+                  |> add_transitions_decls s
+
+let set_decl_map s = known_map := declarations_map s
+			 (* with Decl.UnknownIdent(i) -> eprintf "%s@." i.Ident.id_string; assert false6 *)
+
+(*--------------------------------------------------------------------*)
+
 
 
 module HSet = Hstring.HSet
@@ -641,7 +695,7 @@ let skolemize f =
   (* eprintf "skolemize: %a@." Pretty.print_term f; *)
   let csts = ref [] in
   let h_csts = ref [] in
-  let simpl = 
+  let rec simpl = 
     fun f -> match f.Term.t_node with
 	     | Term.Tquant (Term.Texists, tq) ->
 		let vsl, _, t = Term.t_open_quant tq in
@@ -663,10 +717,11 @@ let skolemize f =
 		(* 		       Pretty.print_ty (Term.t_type t) *)
 		(* 	      ) subst; *)
 		(* eprintf "in subst %a @." Pretty.print_term t; *)
-		Term.t_subst subst t
-	     | _ -> f
+		simpl (Term.t_subst subst t)
+	     | _ -> Term.t_map_simp simpl f
   in
-  let f = Term.t_map_simp simpl f in
+  let f = simpl f in
+  (* let f = Term.t_map_simp simpl f in *)
   f, !csts, !h_csts
 
 
@@ -715,8 +770,10 @@ let distinct vars =
 		       (List.map (fun v -> Smt.Term.make_app v []) vars)
 
 let safety_formulas f =
+
+  eprintf "SAFETY bef: %a@." Pretty.print_term f;
   List.map (fun (f, h_csts) ->
-    (* eprintf "SAFETY: %a@." Pretty.print_term f; *)
+    eprintf "SAFETY: %a@." Pretty.print_term f;
     distinct h_csts,
     why_to_smt f
   ) (skolem_instanciate f)
