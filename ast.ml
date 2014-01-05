@@ -14,6 +14,7 @@
 (**************************************************************************)
 
 open Options
+module HSet = Hstring.HSet
 
 exception ReachBound
 
@@ -625,3 +626,22 @@ let rec origin s = match s.t_from with
 let t_system_equal s1 s2 = s1.t_nb = s2.t_nb
 
 let t_system_hash s = s.t_nb
+
+
+
+let rec procs_of_term acc = function
+  | Elem (x, Var) -> HSet.add x acc
+  | Access (_, lx) -> List.fold_left (fun acc x -> HSet.add x acc) acc lx
+  | Arith (t, _) -> procs_of_term acc t
+  | _ -> acc
+
+let rec procs_of_atom acc = function
+  | True | False -> acc
+  | Comp (t1, _, t2) -> procs_of_term (procs_of_term acc t1) t2
+  | Ite (sa, a1, a2) ->
+     procs_of_satom (procs_of_atom (procs_of_atom acc a1) a2) sa
+
+  and procs_of_satom acc sa =
+    SAtom.fold (fun a acc -> procs_of_atom acc a) sa acc
+
+let procs_of_cube sa = HSet.elements (procs_of_satom HSet.empty sa)

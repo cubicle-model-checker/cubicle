@@ -255,6 +255,8 @@ let var_to_pv x =
 
 let proc_pvsymbol x = create_pvs x ty_proc
 
+let proc_vsymbol x = (proc_pvsymbol x).Mlw_ty.pv_vs
+
 let proc_to_pv x =
   let pvs = proc_pvsymbol x in
   Term.t_var pvs.Mlw_ty.pv_vs
@@ -277,6 +279,40 @@ let arr_to_pv x =
   
   
 let glob_to_ref x = Term.t_app_infer get_logic_fun [glob_to_pv x]
+
+let rec cross acc = function
+    | [] -> acc
+    | x :: r -> cross (List.fold_left (fun acc y -> (x, y)::acc) acc r) r
+
+let distinct_why procs =
+  List.fold_left 
+    (fun acc (v1, v2) ->
+     Term.t_and_simp acc 
+		     (Term.t_neq_simp
+			(proc_to_pv v1) (proc_to_pv v2))
+    ) Term.t_true (cross [] procs)
+
+let distinct_from_why x others =
+  let vx = proc_to_pv x in
+  List.fold_left 
+    (fun acc y -> Term.t_and_simp acc (Term.t_neq_simp vx (proc_to_pv y)))
+    Term.t_true others
+
+
+(* let procs_of_why f = *)
+(*   match f.Term.t_node with *)
+(*   | Term.Tquant (Term.Texists, tq) -> *)
+(*      let vsl, _, _ = Term.t_open_quant tq in      *)
+(*      List.map (fun vs -> Hstring.make vs.Term.vs_name.Ident.id_string) vsl *)
+(*   | _ -> [] *)
+
+let procs_of_why f =
+  Term.Mvs.fold (fun vs _ acc ->
+    let n = vs.Term.vs_name.Ident.id_string in
+    if n.[0] = '#' then (proc_pvsymbol (Hstring.make n)) :: acc
+    else acc
+  ) (Term.t_vars f) []
+  
 
 let access_to_map a lx =
   match lx with
@@ -312,8 +348,11 @@ let rec atom_to_why = function
 
 and cube_to_why sa =
   if SAtom.is_empty sa then Term.t_false
-  else SAtom.fold (fun a -> 
-     Term.t_and_simp (atom_to_why a)) sa Term.t_true
+  else 
+    let f = 
+      SAtom.fold (fun a -> Term.t_and_simp (atom_to_why a)) sa Term.t_true in
+    let procs = Ast.procs_of_cube sa in
+    Term.t_and_simp (distinct_why procs) f
 
 
 (* let cube_to_why sa =  *)
@@ -341,10 +380,11 @@ let systems_to_why =
 
 
 
-let ureq_to_fol (j, disj) =
+let ureq_to_fol (j, disj) others =
   let tdisj = List.fold_left 
     (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc) Term.t_false disj in
-  Term.t_forall_close_simp [var_symb_proc j] [] tdisj
+  let tdisj = Term.t_and_simp (distinct_from_why j others) tdisj in
+  Term.t_forall_close_simp [(proc_pvsymbol j).Mlw_ty.pv_vs] [] tdisj
 
 
 (*--------------------------------------------------------------------*)
@@ -404,14 +444,6 @@ let rec why_to_cube f = match f.Term.t_node with
   | Term.Tbinop (Term.Tand, f1, f2) ->
      SAtom.union (why_to_cube f1) (why_to_cube f2)
   | _ -> assert false
-
-
-let procs_of_why f =
-  match f.Term.t_node with
-  | Term.Tquant (Term.Texists, tq) ->
-     let vsl, _, _ = Term.t_open_quant tq in     
-     List.map (fun vs -> Hstring.make vs.Term.vs_name.Ident.id_string) vsl
-  | _ -> []
 
 let why_to_system f = 
   let args, sa = match f.Term.t_node with
@@ -613,7 +645,7 @@ let dummy_vsymbol =
 let transition_spec t =
   let c_req = cube_to_why t.tr_reqs in
   let req = List.fold_left 
-	      (fun acc u -> Term.t_and_simp (ureq_to_fol u) acc)
+	      (fun acc u -> Term.t_and_simp acc (ureq_to_fol u t.tr_args))
 	      c_req t.tr_ureq in
   let post = List.fold_left (fun post ass ->
 			     Term.t_and_simp (assign_to_post ass) post)
@@ -650,8 +682,10 @@ let add_transition_fun_decl kn t =
   (* 	    eprintf "%a =/= %a@." Why3.Pretty.print_ty t1 Why3.Pretty.print_ty t2; *)
   (* 	    assert false in *)
   Hstring.H.add trans_symbols t.tr_name f.Mlw_expr.fun_ps;
-  kn
-  (* let d = Mlw_decl.create_rec_decl [f] in *)
+  
+  let d = Mlw_decl.create_rec_decl [f] in
+
+  eprintf "!>> %a@." Mlw_pretty.print_pdecl d; kn
   (* Mlw_decl.known_add_decl th_known kn d *)
 
 let add_transitions_decls s kn =
@@ -666,7 +700,7 @@ let transition_to_fun t =
 
 
 let instantiate_trans t args =
-  let e_args = List.map (fun x -> Mlw_expr.e_value (proc_pvsymbol x)) args in
+  let e_args = List.map Mlw_expr.e_value args in
   let ft = transition_to_fun t in
   Mlw_expr.e_app ft e_args
   

@@ -1,7 +1,9 @@
 (* This file has been generated from Why3 theory Reachability *)
 
+module CPretty = Pretty
 open Why3
 open Ast
+open Format
 
 
 
@@ -33,7 +35,10 @@ let rec remove_at f =
 let append_extra args tr_args =
   let rec aux acc cpt = function
     | [] -> List.rev acc
-    | _::r -> aux ((List.nth proc_vars (cpt - 1)) :: acc) (cpt+1) r
+    | _::r ->
+       aux 
+	 (Translation.proc_pvsymbol (List.nth proc_vars (cpt - 1)) :: acc)
+	 (cpt+1) r
   in
   aux (List.rev args) (List.length args + 1) tr_args   
 
@@ -43,14 +48,26 @@ let append_extra args tr_args =
 
 
 let pre_one_trans t f =
-  let args = Translation.procs_of_why f in
-  let nargs = append_extra args t.tr_args in
+  let f, _, _ = Translation.skolemize f in
+  let procs_pvs = Translation.procs_of_why f in
+  List.iter (eprintf "args : %a@." Mlw_pretty.print_pv) procs_pvs;
+  let nargs = append_extra procs_pvs t.tr_args in
   let args_list = all_arrangements (List.length t.tr_args) nargs in
   List.fold_left (fun pre_f args ->
+    eprintf "pre %a BY %a === "
+	    Pretty.print_term (Term.t_eps_close Translation.dummy_vsymbol f)
+	    Mlw_pretty.print_expr (Translation.instantiate_trans t args);
     let c = Mlw_wp.wp_expr Translation.env ! Translation.known_map
 			   (Translation.instantiate_trans t args)
 			   (Term.t_eps_close Translation.dummy_vsymbol f)
 			   Mlw_ty.Mexn.empty in
+    let procs_c =
+      List.map (fun p -> p.Mlw_ty.pv_vs) (Translation.procs_of_why c) in
+    let procs_ch = 
+      List.map (fun v -> Hstring.make v.Term.vs_name.Ident.id_string) procs_c in
+    let c = Term.t_and_simp (Translation.distinct_why procs_ch) c in
+    let c = Term.t_exists_close procs_c [] c in
+    eprintf "%a@." Pretty.print_term c;
     (* let c =  (remove_at c) in *)
     Term.t_or_simp c pre_f
   ) Term.t_false args_list
