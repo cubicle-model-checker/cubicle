@@ -156,12 +156,17 @@ let add_type_decls s kn =
 	      Mlw_decl.known_add_decl th_known kn d
 	     ) kn s.type_defs
 
+let user_regions = Hstring.H.create 21
+
 let add_glob_decls s kn =
    List.fold_left (fun kn (n, t) ->
+	      let pid = hs_id n in
 	      let ret_ity = find_type kn t in
 	      let rity = Mlw_ty.ity_app_fresh ref_type [ret_ity] in
-	      let ps = Mlw_ty.create_pvsymbol (hs_id n) rity in
+	      let ps = Mlw_ty.create_pvsymbol pid rity in
 	      let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
+	      let reg = Mlw_ty.create_region pid rity in
+	      Hstring.H.add user_regions n reg;
 	      Mlw_decl.known_add_decl th_known kn d
 	     ) kn s.globals
 
@@ -171,10 +176,13 @@ let add_array_decls s kn =
 	      let args_ity = List.map (find_type kn) args in
 	      match args_ity with
 	      | [arg_ity] ->
+		 let pid = hs_id n in
 		 let map_ty = Mlw_ty.ity_pur map_ts [arg_ity; ret_ity] in
 		 let aty = Mlw_ty.ity_app_fresh ref_type [map_ty] in
-		 let ps = Mlw_ty.create_pvsymbol (hs_id n) aty in
+		 let ps = Mlw_ty.create_pvsymbol pid aty in
 		 let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
+		 let reg = Mlw_ty.create_region pid aty in
+		 Hstring.H.add user_regions n reg;
 		 Mlw_decl.known_add_decl th_known kn d
 	      | _ -> assert false
 	    ) kn s.arrays
@@ -349,7 +357,7 @@ let rec atom_to_why = function
 and cube_to_why sa =
   if SAtom.is_empty sa then Term.t_false
   else 
-    let f = 
+    let f =
       SAtom.fold (fun a -> Term.t_and_simp (atom_to_why a)) sa Term.t_true in
     let procs = Ast.procs_of_cube sa in
     Term.t_and_simp (distinct_why procs) f
@@ -584,8 +592,10 @@ let dnf_to_conj_list = dnf_to_conj_list []
 
 let assign_to_post (a, t) =
   let aw = glob_to_ref a in
+  let reg_a = Hstring.H.find user_regions a in
+  let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in
   let old_tw = Mlw_wp.t_at_old (term_to_why t) in
-  Term.t_equ_simp aw old_tw (* , Mlw_ty.eff_empty *)
+  Term.t_equ_simp aw old_tw , eff
 
 
 let switches_to_ite at swts =
@@ -626,15 +636,17 @@ let simple_update a j swts =
   
 
 let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
+  let reg_a = Hstring.H.find user_regions a in
+  let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in
   match js with
   | [j] ->
      begin match simple_update a j swts with
-     | Some utw -> utw
+     | Some utw -> utw, eff
      | None ->
 	let vj = var_symb j in
 	let aj = access_to_map a js in
 	let swtsw = switches_to_ite aj swts in
-	Term.t_forall_close_simp [vj] [] swtsw
+	Term.t_forall_close_simp [vj] [] swtsw, eff
      end
   | _ -> failwith "update to post not implemented for matrices"
   
@@ -647,18 +659,24 @@ let transition_spec t =
   let req = List.fold_left 
 	      (fun acc u -> Term.t_and_simp acc (ureq_to_fol u t.tr_args))
 	      c_req t.tr_ureq in
-  let post = List.fold_left (fun post ass ->
-			     Term.t_and_simp (assign_to_post ass) post)
-			    Term.t_true t.tr_assigns in
-  let post = List.fold_left (fun post upd ->
-			     Term.t_and_simp (update_to_post upd) post)
-			    post t.tr_upds in
+  let post, eff = 
+    List.fold_left (fun (post, eff) ass ->
+		    let ta, eff_ass = assign_to_post ass in
+		    Term.t_and_simp ta post,
+		    Mlw_ty.eff_union eff eff_ass)
+		   (Term.t_true, Mlw_ty.eff_empty) t.tr_assigns in
+  let post, eff = 
+    List.fold_left (fun (post, eff) upd ->
+		    let ta, eff_upd = update_to_post upd in
+		    Term.t_and_simp ta post,
+		    Mlw_ty.eff_union eff eff_upd)
+		   (post, eff) t.tr_upds in
   let post = Term.t_eps_close dummy_vsymbol post in
   (* TODO : effects in updates and assigns -- see regions *)
   { Mlw_ty.c_pre = req;
            c_post = post;
 	   c_xpost = Mlw_ty.Mexn.empty;
-	   c_effect  = Mlw_ty.eff_empty;
+	   c_effect  = eff;
 	   c_variant = [];
 	   c_letrec  = 0;
   }
