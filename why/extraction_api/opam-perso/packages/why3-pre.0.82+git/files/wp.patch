@@ -1,0 +1,31 @@
+diff --git src/whyml/mlw_wp.ml src/whyml/mlw_wp.ml
+index 3fb1702..e266654 100644
+--- src/whyml/mlw_wp.ml
++++ src/whyml/mlw_wp.ml
+@@ -2002,3 +2002,8 @@ let wp_rec ~wp env kn th fdl =
+       th
+   in
+   List.fold_left add_one th fdl
++
++let wp_expr env kn e q xq =
++  let th = create_theory (Ident.id_fresh "@dummy_theory@") in
++  let env = mk_env env kn th in
++  wp_expr env e q xq
+diff --git src/whyml/mlw_wp.mli src/whyml/mlw_wp.mli
+index 22e2468..fe86042 100644
+--- src/whyml/mlw_wp.mli
++++ src/whyml/mlw_wp.mli
+@@ -35,6 +35,7 @@ val e_now : expr
+ 
+ val pv_old : pvsymbol
+ val remove_old : Term.term -> Term.term
++val remove_at : Term.term -> Term.term
+ 
+ val full_invariant :
+   Decl.known_map -> Mlw_decl.known_map -> Term.vsymbol -> ity -> Term.term
+@@ -48,4 +49,5 @@ val wp_let:
+ val wp_rec:
+   wp:bool -> Env.env -> known_map -> theory_uc -> fun_defn list -> theory_uc
+ 
++val wp_expr: Env.env -> known_map -> expr -> post -> xpost -> invariant
+ 
