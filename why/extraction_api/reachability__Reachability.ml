@@ -6,32 +6,6 @@ open Ast
 open Format
 
 
-
-(* replace every occurrence of [at(t,'now)] with [t] *)
-let rec remove_at f =
-  let open Stdlib in
-  let open Ident
- in
-  let open Ty
- in
-  let open Term
- in
-  let open Decl
- in
-  let open Theory
- in
-  let open Mlw_ty
- in
-  let open Mlw_ty.T
- in
-  let open Mlw_expr in
-  match f.t_node with
-  | Tapp (ls, [t; { t_node = Tapp (fs,[]) }])
-    when ls_equal ls Mlw_wp.fs_at -> Term.t_true 
-  | _ -> t_map remove_at f
-
-
-
 let append_extra args tr_args =
   let rec aux acc cpt = function
     | [] -> List.rev acc
@@ -57,19 +31,21 @@ let pre_one_trans t f =
     eprintf "pre %a BY %a === "
 	    Pretty.print_term (Term.t_eps_close Translation.dummy_vsymbol f)
 	    Mlw_pretty.print_expr (Translation.instantiate_trans t args);
-    let c = Mlw_wp.wp_expr Translation.env ! Translation.known_map
+    let c = Mlw_wp.wp_expr Translation.env !Translation.known_map
 			   (Translation.instantiate_trans t args)
 			   (Term.t_eps_close Translation.dummy_vsymbol f)
 			   Mlw_ty.Mexn.empty in
-    let procs_c =
-      List.map (fun p -> p.Mlw_ty.pv_vs) (Translation.procs_of_why c) in
-    let procs_ch = 
-      List.map (fun v -> Hstring.make v.Term.vs_name.Ident.id_string) procs_c in
-    let c = Term.t_and_simp (Translation.distinct_why procs_ch) c in
-    let c = Term.t_exists_close procs_c [] c in
-    eprintf "%a@." Pretty.print_term c;
-    (* let c =  (remove_at c) in *)
-    Term.t_or_simp c pre_f
+    let c =  (Mlw_wp.remove_at c) in
+    List.fold_left (fun pre_f c ->
+      let procs_c =
+	List.map (fun p -> p.Mlw_ty.pv_vs) (Translation.procs_of_why c) in
+      let procs_ch = 
+	List.map (fun v -> Hstring.make v.Term.vs_name.Ident.id_string) procs_c in
+      let c = Term.t_and_simp (Translation.distinct_why procs_ch) c in
+      let c = Term.t_exists_close procs_c [] c in
+      eprintf "%a@." Pretty.print_term c;
+      Term.t_or_simp c pre_f
+    ) pre_f (Translation.dnfize_list c)
   ) Term.t_false args_list
 
 
