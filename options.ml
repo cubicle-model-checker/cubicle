@@ -23,7 +23,7 @@ type trace =  NoTrace | AltErgoTr | WhyTr
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
-let max_proc = 10
+let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
@@ -96,6 +96,8 @@ let specs =
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
+    "-max-procs", Arg.Set_int max_proc, 
+              "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds, 
               "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxnodes, 
@@ -157,6 +159,7 @@ let cin =
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
+let max_proc = !max_proc
 let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
