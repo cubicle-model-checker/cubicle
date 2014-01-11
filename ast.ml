@@ -559,6 +559,72 @@ let rec all_instantiations l1 l2 =
         ) [] (all_instantiations r1 l2)
 
 
+let rec mix x = function
+  | [] -> [[x]]
+  | y::r as l -> 
+     (x :: l) :: (List.map (fun l' -> y :: l') (mix x r))
+
+let rec interleave l1 l2 = 
+  let rec aux acc = function
+    | [], [] -> acc
+    | l, [] | [], l -> List.map (List.rev_append l) acc
+    | (x :: r1 as l1), (y :: r2 as l2) ->
+       let acc1 = List.map (fun n -> x :: n) acc in
+       let acc1 = aux acc1 (r1, l2) in
+       let acc2 = List.map (fun n -> y :: n) acc in
+       let acc2 = aux acc2 (l1, r2) in
+       List.rev_append acc1 acc2
+  in
+  aux [[]] (List.rev l1, List.rev l2)
+
+let rec perms = function
+  | [] -> [[]]
+  | x :: r -> List.flatten (List.map (mix x) (perms r))
+
+let extra_args args tr_args =
+  let rec aux acc cpt = function
+    | [] -> List.rev acc
+    | _::r -> aux ((List.nth proc_vars (cpt - 1)) :: acc) (cpt+1) r
+  in
+  aux [] (List.length args + 1) tr_args   
+
+let rec first_n n l =
+  assert (n >= 0);
+  let rec aux acc = function
+    | 0, _ | _, [] -> List.rev acc
+    | n, x :: r -> aux (x :: acc) (n-1, r)
+  in aux [] (n, l)
+
+let missing args tr_args extra =
+  let nb = List.length tr_args - List.length args in
+  if nb <= 0 then []
+  else first_n nb extra
+    
+let insert_missing l tr_args =
+  let ex = extra_args l tr_args in
+  let ms = missing l tr_args ex in 
+  List.flatten (List.map (fun x -> mix x l) ms)
+
+
+
+
+let rec all_parts_max n l =
+  List.filter (fun p -> List.length p <= n) (all_parts l)
+  
+let permutations_missing tr_args l =
+  let parts = [] :: List.flatten 
+		      (List.map perms (all_parts_max (List.length tr_args) l))
+  in
+  let ex = extra_args l tr_args in
+  let l' = List.fold_left 
+    (fun acc l ->
+     let ms = missing l tr_args ex in
+     List.rev_append (interleave l ms) acc)
+    [] parts in
+  List.map (List.combine tr_args) l'
+  (* List.map (insert_missing tr_args) parts *)
+
+
 let init_instances = Hashtbl.create 11
 
 let fill_init_instances (iargs, l_init) = match l_init with

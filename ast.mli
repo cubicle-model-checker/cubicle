@@ -172,7 +172,7 @@ val arity : Hstring.t -> int
 val all_permutations : 'a list -> 'b list -> ('a * 'b) list list
 val all_instantiations : 'a list -> 'b list -> ('a * 'b) list list
 val all_arrangements : int -> 'a list -> 'a list list
-
+val permutations_missing : 'a list -> Hstring.t list -> ('a * Hstring.t) list list
 
 val init_instances : (int, SAtom.t list list * ArrayAtom.t list list) Hashtbl.t
 

@@ -220,6 +220,18 @@ let add_list n l =
     in
       n :: l
 
+let add_list a l = a :: l
+
+let add_array_to_list n l =
+  if List.exists (fun n' -> ArrayAtom.subset n' n) l then l
+  else
+    let l =
+      if true || delete then
+  	List.filter (fun n' -> not (ArrayAtom.subset n n')) l
+      else l
+    in
+      n :: l
+
 
 let max_lnp = ref 0
 
@@ -280,8 +292,76 @@ let make_cubes =
         (ls, post)
       end
       else
-	let d = all_permutations tr.tr_args rargs in
+	(* TODO: Benchmark this *)
+	let d_old = all_permutations tr.tr_args rargs in
+	let d = permutations_missing tr.tr_args args in
+	assert (List.length d_old >= List.length d);
 	List.fold_left cube (ls, post) d
+
+let make_cubes_new (ls, post) (args, rargs)
+	       ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np =
+  if List.length tr.tr_args > List.length rargs then
+    begin
+      if !size_proc = 0 then assert false;
+      (ls, post)
+    end
+  else
+    let nb_uargs = List.length uargs in
+    let np, (nargs, _) = proper_cube np in
+    let lureq = uguard [] nargs tr.tr_args tr.tr_ureq in
+    let new_arrs = 
+      List.fold_left
+	(fun acc ureq ->
+	 try
+	   let ureq = simplification_atoms np ureq in
+	   let np = SAtom.union ureq np in 
+	   if debug && verbose > 0 then Debug.pre_cubes np nargs;
+	   if inconsistent np then acc
+	   else np :: acc (* (ArrayAtom.of_satom np) acc *)
+	 with Exit -> acc
+	) [] lureq
+    in
+    (* let d = all_permutations tr.tr_args rargs in *)
+    let d = permutations_missing tr.tr_args args in
+    let from_forall = s.t_from_forall || tr.tr_ureq <> [] in
+    List.fold_left 
+      (fun acc np ->
+       List.fold_left 
+	 (fun (ls, post) sigma ->
+	  let tr_args = List.map (svar sigma) tr.tr_args in
+	  let np = subst_atoms sigma np in
+	  let lnp = simplify_atoms np in
+	  List.fold_left
+	    (fun (ls, post) np ->
+	     let np, (nargs, _) = proper_cube np in
+	     let arr_np = ArrayAtom.of_satom np in
+	     if inconsistent np then ls, post
+	     else
+	       let new_s = 
+		 { s with
+		   t_from = (tr, tr_args, s)::s.t_from;
+		   t_unsafe = nargs, np;
+		   t_arru = arr_np;
+		   t_alpha = ArrayAtom.alpha arr_np nargs;
+		   t_nb = new_cube_id ();
+		   t_nb_father = nb;
+		   t_from_forall = from_forall;
+		 } in
+	       match post_strategy with
+	       | 0 -> add_list new_s ls, post
+	       | 1 -> 
+		  if List.length nargs > nb_uargs then
+		    ls, add_list new_s post
+		  else add_list new_s ls, post
+	       | 2 -> 
+		  if from_forall || postpone args p np 
+		  then ls, add_list new_s post
+		  else add_list new_s ls, post
+	       | _ -> assert false
+	    ) (ls, post) lnp
+	 ) acc d
+      ) (ls, post) new_arrs
+
 
 
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
