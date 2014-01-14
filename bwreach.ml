@@ -293,9 +293,9 @@ let make_cubes =
       end
       else
 	(* TODO: Benchmark this *)
-	let d_old = all_permutations tr.tr_args rargs in
+	(* let d_old = all_permutations tr.tr_args rargs in *)
 	let d = permutations_missing tr.tr_args args in
-	assert (List.length d_old >= List.length d);
+	(* assert (List.length d_old >= List.length d); *)
 	List.fold_left cube (ls, post) d
 
 let make_cubes_new (ls, post) (args, rargs)
@@ -422,7 +422,7 @@ let pre tr unsafe =
 (* systems							     *)
 (*********************************************************************)
 
-let pre_system ({ t_unsafe = uargs, u; t_trans = trs} as s) =
+let pre_system ({t_unsafe = uargs, u; t_trans = trs} as s) =
   if profiling then TimePre.start (); 
   Debug.unsafe s;
   let ls, post = 

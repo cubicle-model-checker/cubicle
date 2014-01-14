@@ -615,6 +615,7 @@ let permutations_missing tr_args l =
   let parts = [] :: List.flatten 
 		      (List.map perms (all_parts_max (List.length tr_args) l))
   in
+  (* let parts = if parts = [] then [[]] else parts in *)
   let ex = extra_args l tr_args in
   let l' = List.fold_left 
     (fun acc l ->
