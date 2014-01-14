@@ -292,12 +292,18 @@ let make_cubes =
         (ls, post)
       end
       else
-	(* TODO: Benchmark this *)
 	(* let d_old = all_permutations tr.tr_args rargs in *)
+	(* TODO: Benchmark this *)
 	let d = permutations_missing tr.tr_args args in
 	(* assert (List.length d_old >= List.length d); *)
 	List.fold_left cube (ls, post) d
 
+
+(* The following version computes the pre-image once for each transition and
+   instantiates afterwards.
+   FIXME: This is supposed to be faster but this implementation is not.
+          (check order, ...)
+*)
 let make_cubes_new (ls, post) (args, rargs)
 	       ({ t_unsafe = (uargs, p); t_nb = nb} as s) tr np =
   if List.length tr.tr_args > List.length rargs then

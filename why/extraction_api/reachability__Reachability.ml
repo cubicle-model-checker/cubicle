@@ -29,11 +29,11 @@ let pre_one_trans t f =
   let args_list = all_arrangements (List.length t.tr_args) nargs in
   List.fold_left (fun pre_f args ->
     eprintf "pre %a BY %a === "
-	    Pretty.print_term (Term.t_eps_close Translation.dummy_vsymbol f)
+	    Pretty.print_term (Mlw_ty.create_post Translation.dummy_vsymbol f)
 	    Mlw_pretty.print_expr (Translation.instantiate_trans t args);
     let c = Mlw_wp.wp_expr Translation.env !Translation.known_map
 			   (Translation.instantiate_trans t args)
-			   (Term.t_eps_close Translation.dummy_vsymbol f)
+			   (Mlw_ty.create_post Translation.dummy_vsymbol f)
 			   Mlw_ty.Mexn.empty in
     let c =  (Mlw_wp.remove_at c) in
     List.fold_left (fun pre_f c ->

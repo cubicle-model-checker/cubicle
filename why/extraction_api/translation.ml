@@ -671,7 +671,7 @@ let transition_spec t =
 		    Term.t_and_simp ta post,
 		    Mlw_ty.eff_union eff eff_upd)
 		   (post, eff) t.tr_upds in
-  let post = Term.t_eps_close dummy_vsymbol post in
+  let post = Mlw_ty.create_post dummy_vsymbol post in
   (* TODO : effects in updates and assigns -- see regions *)
   { Mlw_ty.c_pre = req;
            c_post = post;
