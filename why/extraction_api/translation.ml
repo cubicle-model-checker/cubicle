@@ -9,7 +9,7 @@ module P = Pretty
 open Why3
 
 
-(*     TODO:    Use Decl.known_map *)
+(*     TODO:    Use Decl.known_map DONE *)
 
 (*---------------------------- Theories ---------------------------*)
 

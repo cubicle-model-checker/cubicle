@@ -94,7 +94,7 @@ let search_backtrack_brab search invariants procs uns =
 	    begin
 	      non_cfm_literals := 
 		SAtom.union (snd o.t_unsafe) !non_cfm_literals;
-	      candidates := remove_non_cfm_cand !candidates;
+              candidates := remove_non_cfm_cand !candidates;
 	      eprintf "Non CFM literals = %a@." Pretty.print_cube !non_cfm_literals;
 	    end;
 
@@ -294,11 +294,12 @@ let brab search invariants uns =
   let low = if brab_up_to then 1 else enumerative in
   for i = enumerative downto low do
     let procs = Forward.procs_from_nb i in
-    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n-------------\n@." i;
+    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
+	     ----------------------------------------\n@." i;
 
     Enumerative.search procs (List.hd uns);
     
-    eprintf "-------------\n@.";
+    eprintf "----------------------------------------\n@.";
   done;
 
   if only_forward then exit 0;
