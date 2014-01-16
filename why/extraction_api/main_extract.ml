@@ -45,7 +45,7 @@ let _ =
       let ts = List.map Bwreach.init_parameters ts in
       Global.global_system := List.hd ts;
       Global.info := s;
-      Translation.set_decl_map s;
+      Translation.set_decl_module s;
       (* Fol__FOL.init_declarations s; *)
       if type_only then exit 0;
 

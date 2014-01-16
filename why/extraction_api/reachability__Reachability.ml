@@ -20,6 +20,17 @@ let append_extra args tr_args =
 
 (* proc_pv_symbol #1 ... *)
 
+let close_free_procs c =
+  let procs_c =
+    List.map (fun p -> p.Mlw_ty.pv_vs) (Translation.procs_of_why c) in
+  let procs_ch = 
+    List.map (fun v -> Hstring.make v.Term.vs_name.Ident.id_string) procs_c
+  in
+  let c = Term.t_and_simp (Translation.distinct_why procs_ch) c in
+  Term.t_exists_close procs_c [] c
+
+(* TODO ~ essayer conj post + unsafe *)
+let get_post_trans = () 
 
 let pre_one_trans t f =
   let f, _, _ = Translation.skolemize f in
@@ -27,23 +38,22 @@ let pre_one_trans t f =
   List.iter (eprintf "args : %a@." Mlw_pretty.print_pv) procs_pvs;
   let nargs = append_extra procs_pvs t.tr_args in
   let args_list = all_arrangements (List.length t.tr_args) nargs in
+  let inst_t = Translation.instantiate_trans t args in
   List.fold_left (fun pre_f args ->
     eprintf "pre %a BY %a === "
 	    Pretty.print_term (Mlw_ty.create_post Translation.dummy_vsymbol f)
 	    Mlw_pretty.print_expr (Translation.instantiate_trans t args);
-    let c = Mlw_wp.wp_expr Translation.env !Translation.known_map
-			   (Translation.instantiate_trans t args)
+    let kn = Mlw_module.get_known !Translation.sys_module in
+    let th = Mlw_module.get_theory !Translation.sys_module in
+    let c = Mlw_wp.wp_expr Translation.env kn th
+			   
 			   (Mlw_ty.create_post Translation.dummy_vsymbol f)
 			   Mlw_ty.Mexn.empty in
-    let c =  (Mlw_wp.remove_at c) in
+    let c = (Mlw_wp.remove_at c) in
     List.fold_left (fun pre_f c ->
-      let procs_c =
-	List.map (fun p -> p.Mlw_ty.pv_vs) (Translation.procs_of_why c) in
-      let procs_ch = 
-	List.map (fun v -> Hstring.make v.Term.vs_name.Ident.id_string) procs_c in
-      let c = Term.t_and_simp (Translation.distinct_why procs_ch) c in
-      let c = Term.t_exists_close procs_c [] c in
+      let c = close_free_procs c in
       eprintf "%a@." Pretty.print_term c;
+      assert false;
       Term.t_or_simp c pre_f
     ) pre_f (Translation.dnfize_list c)
   ) Term.t_false args_list

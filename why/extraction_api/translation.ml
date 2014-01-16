@@ -127,7 +127,7 @@ let type_array ty =
 
 let type_decls = Hstring.H.create 13
 
-let find_type kn t =
+let find_type t =
   eprintf "find type %a@." Hstring.print t;
   if Hstring.equal t h_proc then Mlw_ty.ity_of_ty ty_proc
   else if Hstring.equal t h_bool then Mlw_ty.ity_bool
@@ -140,12 +140,12 @@ let find_type kn t =
     (* | _ -> assert false *)
 
 
-let add_type_decls s kn =
-  let kn = 
+let add_type_decls s sm =
+  let sm = 
     let tys = Mlw_ty.create_itysymbol
 		(Ident.id_fresh "proc") [] [] (Some Mlw_ty.ity_int) in
-    Mlw_decl.known_add_decl th_known kn (Mlw_decl.create_ty_decl tys) in
-  List.fold_left (fun kn (n, c) ->
+    Mlw_module.add_pdecl ~wp:false sm (Mlw_decl.create_ty_decl tys) in
+  List.fold_left (fun sm (n, c) ->
 	      let tys = Mlw_ty.create_itysymbol (hs_id n) [] [] None in
 	      let d = match c with
 		| [] -> Mlw_decl.create_ty_decl tys
@@ -153,27 +153,27 @@ let add_type_decls s kn =
 		   let constrs = List.map (fun s -> hs_id s, []) c in
 		   Mlw_decl.create_data_decl [tys, constrs] in
 	      Hstring.H.add type_decls n (Mlw_ty.ity_app_fresh tys []);
-	      Mlw_decl.known_add_decl th_known kn d
-	     ) kn s.type_defs
+	      Mlw_module.add_pdecl ~wp:false sm d
+	     ) sm s.type_defs
 
 let user_regions = Hstring.H.create 21
 
-let add_glob_decls s kn =
-   List.fold_left (fun kn (n, t) ->
+let add_glob_decls s sm =
+   List.fold_left (fun sm (n, t) ->
 	      let pid = hs_id n in
-	      let ret_ity = find_type kn t in
+	      let ret_ity = find_type t in
 	      let rity = Mlw_ty.ity_app_fresh ref_type [ret_ity] in
 	      let ps = Mlw_ty.create_pvsymbol pid rity in
 	      let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
 	      let reg = Mlw_ty.create_region pid rity in
 	      Hstring.H.add user_regions n reg;
-	      Mlw_decl.known_add_decl th_known kn d
-	     ) kn s.globals
+	      Mlw_module.add_pdecl ~wp:false sm d
+	     ) sm s.globals
 
-let add_array_decls s kn =
-    List.fold_left (fun kn (n, (args, ret)) ->
-	      let ret_ity = find_type kn ret in
-	      let args_ity = List.map (find_type kn) args in
+let add_array_decls s sm =
+    List.fold_left (fun sm (n, (args, ret)) ->
+	      let ret_ity = find_type ret in
+	      let args_ity = List.map find_type args in
 	      match args_ity with
 	      | [arg_ity] ->
 		 let pid = hs_id n in
@@ -183,9 +183,9 @@ let add_array_decls s kn =
 		 let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
 		 let reg = Mlw_ty.create_region pid aty in
 		 Hstring.H.add user_regions n reg;
-		 Mlw_decl.known_add_decl th_known kn d
+		 Mlw_module.add_pdecl ~wp:false sm d
 	      | _ -> assert false
-	    ) kn s.arrays
+	    ) sm s.arrays
 
 
 (*------------------------------------------------------------------*)
@@ -589,11 +589,12 @@ let dnf_to_conj_list = dnf_to_conj_list []
 
 (*---------------- transitions to why data structures ----------------*)
 
+(* TODO Create val with specification instead of unit functions *)
 
 let assign_to_post (a, t) =
   let aw = glob_to_ref a in
   let reg_a = Hstring.H.find user_regions a in
-  let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in
+  let eff =  (* Mlw_ty.eff_write *) Mlw_ty.eff_empty (* reg_a *) in
   let old_tw = Mlw_wp.t_at_old (term_to_why t) in
   Term.t_equ_simp aw old_tw , eff
 
@@ -637,7 +638,7 @@ let simple_update a j swts =
 
 let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
   let reg_a = Hstring.H.find user_regions a in
-  let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in
+  let eff =  (* Mlw_ty.eff_write *) Mlw_ty.eff_empty (* reg_a *) in
   match js with
   | [j] ->
      begin match simple_update a j swts with
@@ -692,19 +693,16 @@ let transition_to_lambda t =
 
 let trans_symbols = Hstring.H.create 21
 
-let add_transition_fun_decl kn t =
+let add_transition_fun_decl sm t =
   let p_name = hs_id t.tr_name in
   let lamb = transition_to_lambda t in
-  let f = Mlw_expr.create_fun_defn p_name lamb in(*  with  *)
-  (* Ty.TypeMismatch (t1,t2) ->  *)
-  (* 	    eprintf "%a =/= %a@." Why3.Pretty.print_ty t1 Why3.Pretty.print_ty t2; *)
-  (* 	    assert false in *)
+  let f = Mlw_expr.create_fun_defn p_name lamb in
   Hstring.H.add trans_symbols t.tr_name f.Mlw_expr.fun_ps;
-  
   let d = Mlw_decl.create_rec_decl [f] in
+  eprintf "!>> %a@." Mlw_pretty.print_pdecl d;
+  (* Mlw_module.add_pdecl ~wp:false sm d *)
+  sm
 
-  eprintf "!>> %a@." Mlw_pretty.print_pdecl d; kn
-  (* Mlw_decl.known_add_decl th_known kn d *)
 
 let add_transitions_decls s kn =
   List.fold_left add_transition_fun_decl kn s.trans
@@ -725,16 +723,32 @@ let instantiate_trans t args =
 
 (*--------------------------------------------------------------------*)
 
-let known_map = ref Ident.Mid.empty
+let sys_module_uc =
+  let cub_module_uc =
+    Mlw_module.create_module env (Ident.id_fresh "cub_module") in
+  let cub_module_uc = Mlw_module.use_export cub_module_uc ref_module in
+  let cub_module_uc = Mlw_module.use_export_theory cub_module_uc map_theory in
+  let cub_module_uc = 
+    Mlw_module.use_export_theory cub_module_uc Mlw_wp.th_mark_at in
+  let cub_module_uc = 
+    Mlw_module.use_export_theory cub_module_uc Mlw_wp.th_mark_old in
+  cub_module_uc
 
-let declarations_map s =
-  Ident.Mid.empty |> add_type_decls s
-                  |> add_glob_decls s
-                  |> add_array_decls s
-                  |> add_transitions_decls s
+(* let known_map = ref Ident.Mid.empty *)
 
-let set_decl_map s = known_map := declarations_map s
-			 (* with Decl.UnknownIdent(i) -> eprintf "%s@." i.Ident.id_string; assert false6 *)
+let module_declarations s =
+  sys_module_uc |> add_type_decls s
+                |> add_glob_decls s
+                |> add_array_decls s
+                |> add_transitions_decls s
+
+let sys_module =
+  (* Dummy module *)
+  ref (* (Mlw_module.close_module *)
+         (Mlw_module.create_module env (Ident.id_fresh "@dummy_module@"))
+                                     
+let set_decl_module s =
+  sys_module := (* Mlw_module.close_module *) (module_declarations s)
 
 (*--------------------------------------------------------------------*)
 
@@ -843,5 +857,8 @@ let init_to_fol {t_init = args, lsa} = match lsa with
      let t = List.fold_left (fun acc sa -> Term.t_or_simp (cube_to_why sa) acc)
 			    Term.t_false lsa in
      Term.t_forall_close_simp vsl [] t
+
+
+
 
 (*------------------  End manually edited -------------------*)
