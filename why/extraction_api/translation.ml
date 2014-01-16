@@ -699,7 +699,7 @@ let add_transition_fun_decl sm t =
   let f = Mlw_expr.create_fun_defn p_name lamb in
   Hstring.H.add trans_symbols t.tr_name f.Mlw_expr.fun_ps;
   let d = Mlw_decl.create_rec_decl [f] in
-  eprintf "!>> %a@." Mlw_pretty.print_pdecl d;
+  eprintf "!>> %a\n@." Mlw_pretty.print_pdecl d;
   (* Mlw_module.add_pdecl ~wp:false sm d *)
   sm
 

@@ -38,15 +38,14 @@ let pre_one_trans t f =
   List.iter (eprintf "args : %a@." Mlw_pretty.print_pv) procs_pvs;
   let nargs = append_extra procs_pvs t.tr_args in
   let args_list = all_arrangements (List.length t.tr_args) nargs in
-  let inst_t = Translation.instantiate_trans t args in
   List.fold_left (fun pre_f args ->
-    eprintf "pre %a BY %a === "
+    let inst_t = Translation.instantiate_trans t args in
+    eprintf "\npre %a\nBY %a\n===\n"
 	    Pretty.print_term (Mlw_ty.create_post Translation.dummy_vsymbol f)
-	    Mlw_pretty.print_expr (Translation.instantiate_trans t args);
+	    Mlw_pretty.print_expr inst_t;
     let kn = Mlw_module.get_known !Translation.sys_module in
     let th = Mlw_module.get_theory !Translation.sys_module in
-    let c = Mlw_wp.wp_expr Translation.env kn th
-			   
+    let c = Mlw_wp.wp_expr Translation.env kn th inst_t
 			   (Mlw_ty.create_post Translation.dummy_vsymbol f)
 			   Mlw_ty.Mexn.empty in
     let c = (Mlw_wp.remove_at c) in
