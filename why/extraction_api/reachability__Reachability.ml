@@ -30,7 +30,16 @@ let close_free_procs c =
   Term.t_exists_close procs_c [] c
 
 (* TODO ~ essayer conj post + unsafe *)
-let get_post_trans = () 
+let get_post_trans e = match e.Mlw_expr.e_node with
+  | Mlw_expr.Eapp (_, _, sp) -> 
+     begin
+       match sp.Mlw_ty.c_post.Term.t_node with
+       | Term.Teps b ->
+          let _, f = Term.t_open_bound b in
+          f
+       | _ -> assert false
+     end
+  | _ -> assert false 
 
 let pre_one_trans t f =
   let f, _, _ = Translation.skolemize f in
@@ -40,6 +49,7 @@ let pre_one_trans t f =
   let args_list = all_arrangements (List.length t.tr_args) nargs in
   List.fold_left (fun pre_f args ->
     let inst_t = Translation.instantiate_trans t args in
+    (* let f = Term.t_and_simp (get_post_trans inst_t) f in *)
     eprintf "\npre %a\nBY %a\n===\n"
 	    Pretty.print_term (Mlw_ty.create_post Translation.dummy_vsymbol f)
 	    Mlw_pretty.print_expr inst_t;

@@ -79,10 +79,14 @@ let th_known = Decl.merge_known
 
 (*---------------- Formulas to why data structures ----------------*)
 
-let hs_id s = Ident.id_fresh (Hstring.view s)
+let user_idents = Hstring.H.create 19
 
-
-
+let hs_id s =
+  try Hstring.H.find user_idents s
+  with Not_found ->
+       let id = Ident.id_fresh (Hstring.view s) in
+       Hstring.H.add user_idents s id;
+       id
 
 
 let h_proc = Hstring.make "proc"
@@ -120,75 +124,7 @@ let type_array ty =
 
 
 
-
-
-(*------------------------ Declarations ----------------------------*)
-
-
-let type_decls = Hstring.H.create 13
-
-let find_type t =
-  eprintf "find type %a@." Hstring.print t;
-  if Hstring.equal t h_proc then Mlw_ty.ity_of_ty ty_proc
-  else if Hstring.equal t h_bool then Mlw_ty.ity_bool
-  else if Hstring.equal t h_int then Mlw_ty.ity_int
-  else Hstring.H.find type_decls t
-    (* (\* TODO pas mettre id_register *\) *)
-    (* match (Ident.Mid.find (Ident.id_register (hs_id t)) kn).Mlw_decl.pd_node with *)
-    (* | Mlw_decl.PDtype tys | Mlw_decl.PDdata [tys, _, _] -> *)
-    (* 			     Mlw_ty.ity_app_fresh tys [] *)
-    (* | _ -> assert false *)
-
-
-let add_type_decls s sm =
-  let sm = 
-    let tys = Mlw_ty.create_itysymbol
-		(Ident.id_fresh "proc") [] [] (Some Mlw_ty.ity_int) in
-    Mlw_module.add_pdecl ~wp:false sm (Mlw_decl.create_ty_decl tys) in
-  List.fold_left (fun sm (n, c) ->
-	      let tys = Mlw_ty.create_itysymbol (hs_id n) [] [] None in
-	      let d = match c with
-		| [] -> Mlw_decl.create_ty_decl tys
-		| _ -> 
-		   let constrs = List.map (fun s -> hs_id s, []) c in
-		   Mlw_decl.create_data_decl [tys, constrs] in
-	      Hstring.H.add type_decls n (Mlw_ty.ity_app_fresh tys []);
-	      Mlw_module.add_pdecl ~wp:false sm d
-	     ) sm s.type_defs
-
-let user_regions = Hstring.H.create 21
-
-let add_glob_decls s sm =
-   List.fold_left (fun sm (n, t) ->
-	      let pid = hs_id n in
-	      let ret_ity = find_type t in
-	      let rity = Mlw_ty.ity_app_fresh ref_type [ret_ity] in
-	      let ps = Mlw_ty.create_pvsymbol pid rity in
-	      let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
-	      let reg = Mlw_ty.create_region pid rity in
-	      Hstring.H.add user_regions n reg;
-	      Mlw_module.add_pdecl ~wp:false sm d
-	     ) sm s.globals
-
-let add_array_decls s sm =
-    List.fold_left (fun sm (n, (args, ret)) ->
-	      let ret_ity = find_type ret in
-	      let args_ity = List.map find_type args in
-	      match args_ity with
-	      | [arg_ity] ->
-		 let pid = hs_id n in
-		 let map_ty = Mlw_ty.ity_pur map_ts [arg_ity; ret_ity] in
-		 let aty = Mlw_ty.ity_app_fresh ref_type [map_ty] in
-		 let ps = Mlw_ty.create_pvsymbol pid aty in
-		 let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
-		 let reg = Mlw_ty.create_region pid aty in
-		 Hstring.H.add user_regions n reg;
-		 Mlw_module.add_pdecl ~wp:false sm d
-	      | _ -> assert false
-	    ) sm s.arrays
-
-
-(*------------------------------------------------------------------*)
+(*--------------------------------------------------------------------*)
 
 
 let user_symbols = Hstring.H.create 13
@@ -344,7 +280,8 @@ let rec atom_to_why = function
   | Atom.True -> Term.t_true
   | Atom.False -> Term.t_false
   | Atom.Comp (x, Eq, y) ->
-     Term.t_equ_simp (term_to_why x) (term_to_why y)
+     let tx, ty = term_to_why x, term_to_why y in
+     Term.t_equ_simp tx ty
   | Atom.Comp (x, Neq, y) ->
      Term.t_neq_simp (term_to_why x) (term_to_why y)
   | Atom.Comp (x, Le, y) ->
@@ -355,12 +292,14 @@ let rec atom_to_why = function
      Term.t_if_simp (cube_to_why sa) (atom_to_why a1) (atom_to_why a2)
 
 and cube_to_why sa =
+try
   if SAtom.is_empty sa then Term.t_false
   else 
     let f =
       SAtom.fold (fun a -> Term.t_and_simp (atom_to_why a)) sa Term.t_true in
     let procs = Ast.procs_of_cube sa in
     Term.t_and_simp (distinct_why procs) f
+with e -> eprintf "%a@." Exn_printer.exn_printer e; assert false
 
 
 (* let cube_to_why sa =  *)
@@ -395,7 +334,81 @@ let ureq_to_fol (j, disj) others =
   Term.t_forall_close_simp [(proc_pvsymbol j).Mlw_ty.pv_vs] [] tdisj
 
 
-(*--------------------------------------------------------------------*)
+(*------------------------ Declarations ----------------------------*)
+
+
+let type_decls = Hstring.H.create 13
+
+let find_type t =
+  eprintf "find type %a@." Hstring.print t;
+  if Hstring.equal t h_proc then Mlw_ty.ity_of_ty ty_proc
+  else if Hstring.equal t h_bool then Mlw_ty.ity_bool
+  else if Hstring.equal t h_int then Mlw_ty.ity_int
+  else Hstring.H.find type_decls t
+    (* (\* TODO pas mettre id_register *\) *)
+    (* match (Ident.Mid.find (Ident.id_register (hs_id t)) kn).Mlw_decl.pd_node with *)
+    (* | Mlw_decl.PDtype tys | Mlw_decl.PDdata [tys, _, _] -> *)
+    (* 			     Mlw_ty.ity_app_fresh tys [] *)
+    (* | _ -> assert false *)
+
+
+let add_type_decls s sm =
+  let sm = 
+    let tys = Mlw_ty.create_itysymbol
+		(Ident.id_fresh "proc") [] [] (Some Mlw_ty.ity_int) in
+    Mlw_module.add_pdecl ~wp:false sm (Mlw_decl.create_ty_decl tys) in
+  List.fold_left (fun sm (n, c) ->
+	          let tys = Mlw_ty.create_itysymbol (hs_id n) [] [] None in
+	          let d = match c with
+		    | [] -> Mlw_decl.create_ty_decl tys
+		    | _ -> 
+		       let constrs = 
+                         List.map (fun s ->
+                                   (* ignore (constr_to_why s); *)
+                                   hs_id s, []) c in
+		       Mlw_decl.create_data_decl [tys, constrs] in
+	          Hstring.H.add type_decls n (Mlw_ty.ity_app_fresh tys []);
+                  eprintf "!>> %a\n@." Mlw_pretty.print_pdecl d;
+	          Mlw_module.add_pdecl ~wp:false sm d
+	         ) sm s.type_defs
+
+let user_regions = Hstring.H.create 21
+
+let add_glob_decls s sm =
+   List.fold_left (fun sm (n, t) ->
+              ignore (glob_to_ref n);
+	      let pid = hs_id n in
+	      let ret_ity = find_type t in
+	      let rity = Mlw_ty.ity_app_fresh ref_type [ret_ity] in
+	      let ps = create_pvs n (Mlw_ty.ty_of_ity rity) in
+	      let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
+	      let reg = Mlw_ty.create_region pid rity in
+	      Hstring.H.add user_regions n reg;
+              eprintf "!>> %a\n@." Mlw_pretty.print_pdecl d;
+	      Mlw_module.add_pdecl ~wp:false sm d
+	     ) sm s.globals
+
+let add_array_decls s sm =
+    List.fold_left (fun sm (n, (args, ret)) ->
+	      let ret_ity = find_type ret in
+	      let args_ity = List.map find_type args in
+	      match args_ity with
+	      | [arg_ity] ->
+                 ignore (arr_to_pv n);
+		 let pid = hs_id n in
+		 let map_ty = Mlw_ty.ity_pur map_ts [arg_ity; ret_ity] in
+		 let aty = Mlw_ty.ity_app_fresh ref_type [map_ty] in
+		 let ps = create_pvs n (Mlw_ty.ty_of_ity aty) in
+		 let d = Mlw_decl.create_val_decl (Mlw_expr.LetV ps) in
+		 let reg = Mlw_ty.create_region pid aty in
+		 Hstring.H.add user_regions n reg;
+                 eprintf "!>> %a\n@." Mlw_pretty.print_pdecl d;
+		 Mlw_module.add_pdecl ~wp:false sm d
+	      | _ -> assert false
+	    ) sm s.arrays
+
+
+(*------------------------------------------------------------------*)
 
 
 
@@ -591,21 +604,33 @@ let dnf_to_conj_list = dnf_to_conj_list []
 
 (* TODO Create val with specification instead of unit functions *)
 
-let assign_to_post (a, t) =
+let t_old t =
+  (* Term.t_app_infer Mlw_wp.fs_old [t]*)
+  Mlw_wp.t_at_old t
+                   
+  
+let assign_to_post globals (a, t) =
   let aw = glob_to_ref a in
   let reg_a = Hstring.H.find user_regions a in
-  let eff =  (* Mlw_ty.eff_write *) Mlw_ty.eff_empty (* reg_a *) in
-  let old_tw = Mlw_wp.t_at_old (term_to_why t) in
-  Term.t_equ_simp aw old_tw , eff
+  let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in
+  let old_tw = t_old (term_to_why t) in
+  Term.t_equ_simp aw old_tw , eff, Hstring.HSet.remove a globals
 
+
+let unchanged_globals globals =
+  Hstring.HSet.fold 
+    (fun a acc ->
+     let aw = glob_to_ref a in
+     Term.t_and_simp acc (Term.t_equ_simp aw (t_old aw))
+    ) globals Term.t_true
 
 let switches_to_ite at swts =
   match List.rev swts with
   | (_, default) :: rswts ->
-     let def = Mlw_wp.t_at_old (term_to_why default) in
+     let def = t_old (term_to_why default) in
      List.fold_left (fun acc (sa, t) ->
-		     let cond = Mlw_wp.t_at_old (cube_to_why sa) in
-		     let old_tw = Mlw_wp.t_at_old (term_to_why t) in
+		     let cond = t_old (cube_to_why sa) in
+		     let old_tw = t_old (term_to_why t) in
 		     Term.t_if_simp cond (Term.t_equ_simp at old_tw) acc
 		    )  (Term.t_equ_simp at def) rswts
   | _ -> assert false
@@ -625,7 +650,7 @@ let simple_update a j swts =
 		    | _ -> raise Exit) [] rswts in
 	 let utw = List.fold_left (fun acc (i, t) ->
 			 let ai = access_to_map a [i] in
-			 let old_tw = Mlw_wp.t_at_old (term_to_why t) in
+			 let old_tw = t_old (term_to_why t) in
 			 Term.t_and_simp (Term.t_equ_simp ai old_tw) acc
 			) Term.t_true assigns in
 			 
@@ -636,42 +661,67 @@ let simple_update a j swts =
   
   
 
-let update_to_post { up_arr = a; up_arg = js; up_swts = swts } =
+let update_to_post arrays { up_arr = a; up_arg = js; up_swts = swts } =
   let reg_a = Hstring.H.find user_regions a in
-  let eff =  (* Mlw_ty.eff_write *) Mlw_ty.eff_empty (* reg_a *) in
+  let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in
+  let arrays = Hstring.HSet.remove a arrays in
   match js with
   | [j] ->
      begin match simple_update a j swts with
-     | Some utw -> utw, eff
+     | Some utw -> utw, eff, arrays
      | None ->
 	let vj = var_symb j in
 	let aj = access_to_map a js in
 	let swtsw = switches_to_ite aj swts in
-	Term.t_forall_close_simp [vj] [] swtsw, eff
+	Term.t_forall_close_simp [vj] [] swtsw, eff, arrays
      end
   | _ -> failwith "update to post not implemented for matrices"
-  
+
+
+let unchanged_arrays arrays =
+  Hstring.HSet.fold
+    (fun a acc ->
+     let j = Hstring.make "j" in
+     let vj = proc_vsymbol
+ j in
+     let aj = access_to_map a [j] in
+     let unch = Term.t_equ_simp aj (t_old aj) in
+     Term.t_and_simp acc (Term.t_forall_close_simp [vj] [] unch)
+    ) arrays Term.t_true
+
 
 let dummy_vsymbol =
   Term.create_vsymbol (Ident.id_fresh "@dummy@") Mlw_ty.ty_unit
 
 let transition_spec t =
+  let globals = 
+    List.fold_left 
+      (fun acc (g, _) -> Hstring.HSet.add g acc)
+      Hstring.HSet.empty !Global.info.globals in
+  let arrays = 
+    List.fold_left 
+      (fun acc (a, _) -> Hstring.HSet.add a acc)
+      Hstring.HSet.empty !Global.info.arrays in
+  
   let c_req = cube_to_why t.tr_reqs in
+  
   let req = List.fold_left 
 	      (fun acc u -> Term.t_and_simp acc (ureq_to_fol u t.tr_args))
 	      c_req t.tr_ureq in
-  let post, eff = 
-    List.fold_left (fun (post, eff) ass ->
-		    let ta, eff_ass = assign_to_post ass in
+  let post, eff, globals = 
+    List.fold_left (fun (post, eff, globals) ass ->
+		    let ta, eff_ass, globals = assign_to_post globals ass in
 		    Term.t_and_simp ta post,
-		    Mlw_ty.eff_union eff eff_ass)
-		   (Term.t_true, Mlw_ty.eff_empty) t.tr_assigns in
-  let post, eff = 
-    List.fold_left (fun (post, eff) upd ->
-		    let ta, eff_upd = update_to_post upd in
+		    Mlw_ty.eff_union eff eff_ass, globals)
+		   (Term.t_true, Mlw_ty.eff_empty, globals) t.tr_assigns in
+  let post, eff, arrays = 
+    List.fold_left (fun (post, eff, arrays) upd ->
+		    let ta, eff_upd, arrays = update_to_post arrays upd in
 		    Term.t_and_simp ta post,
-		    Mlw_ty.eff_union eff eff_upd)
-		   (post, eff) t.tr_upds in
+		    Mlw_ty.eff_union eff eff_upd, arrays)
+		   (post, eff, arrays) t.tr_upds in
+  (* let post = Term.t_and_simp_l *)
+  (*              [post; unchanged_globals globals; unchanged_arrays arrays ] in *)
   let post = Mlw_ty.create_post dummy_vsymbol post in
   (* TODO : effects in updates and assigns -- see regions *)
   { Mlw_ty.c_pre = req;
@@ -699,9 +749,14 @@ let add_transition_fun_decl sm t =
   let f = Mlw_expr.create_fun_defn p_name lamb in
   Hstring.H.add trans_symbols t.tr_name f.Mlw_expr.fun_ps;
   let d = Mlw_decl.create_rec_decl [f] in
+  (* let d = Mlw_decl.create_val_decl (Mlw_expr.LetA f.Mlw_expr.fun_ps) in *)
   eprintf "!>> %a\n@." Mlw_pretty.print_pdecl d;
-  (* Mlw_module.add_pdecl ~wp:false sm d *)
-  sm
+  try
+    Mlw_module.add_pdecl ~wp:false sm d
+  with Decl.UnknownIdent (i) ->
+    eprintf "uknowkwd : %s@." i.Ident.id_string;
+    assert false
+  (* sm *)
 
 
 let add_transitions_decls s kn =
