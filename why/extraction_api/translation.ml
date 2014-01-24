@@ -275,7 +275,6 @@ let term_to_why = function
   | Access (a, lx) -> access_to_map a lx
   | Arith _ -> failwith "term_to_why Arith: Not implemented"
 
-
 let rec atom_to_why = function
   | Atom.True -> Term.t_true
   | Atom.False -> Term.t_false
@@ -425,7 +424,8 @@ let why_var_to_hstring f = match f.Term.t_node with
   | _ -> assert false
 
 
-let rec why_to_term ?(glob=false) f = match f.Term.t_node with
+let rec why_to_term ?(glob=false) f =
+ match f.Term.t_node with
   | Term.Tvar vs ->
      Elem (Hstring.make vs.Term.vs_name.Ident.id_string,
 	   if glob then Glob else Var)
@@ -616,6 +616,20 @@ let assign_to_post globals (a, t) =
   let old_tw = t_old (term_to_why t) in
   Term.t_equ_simp aw old_tw , eff, Hstring.HSet.remove a globals
 
+(* let assign_to_expr (a, t) = *)
+(*   let va = glob_to_pv a in *)
+(*   let ity_va = va.Mlw_ty.pv_ity in *)
+(*   let ret_ty = match ity_va.Mlw_ty.ity_node with *)
+(*     | Mlw_ty.Ityapp (_, [r], _) -> r *)
+(*     | _ -> assert false in *)
+(*   let bang = Mlw_expr.e_arrow get_fun [ity_va] ret_ty in *)
+(*   let coleq = Mlw_expr.e_arrow get_fun [ity_va; ret_ty] Mlw_ty.ity_unit in *)
+(*   Mlw_expr.e_app coleq [Mlw_expr.e_value va; ] *)
+
+(*   let reg_a = Hstring.H.find user_regions a in *)
+(*   let eff =  Mlw_ty.eff_write Mlw_ty.eff_empty reg_a in *)
+(*   let old_tw = t_old (term_to_why t) in *)
+  
 
 let unchanged_globals globals =
   Hstring.HSet.fold 
@@ -894,9 +908,11 @@ let safety_formulas f =
 
   eprintf "SAFETY bef: %a@." Pretty.print_term f;
   List.map (fun (f, h_csts) ->
-    eprintf "SAFETY: %a@." Pretty.print_term f;
+    eprintf "SAFETY: %a\n@." Pretty.print_term f;
     distinct h_csts,
-    why_to_smt f
+    let sf  = why_to_smt f in
+    eprintf "SMT: %a\n@." Smt.Formula.print sf;
+    sf
   ) (skolem_instanciate f)
 
   

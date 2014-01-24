@@ -41,14 +41,20 @@ let get_post_trans e = match e.Mlw_expr.e_node with
      end
   | _ -> assert false 
 
-let pre_one_trans t f =
+
+let instantiate_trans t args =
+  let e_args = List.map Mlw_expr.e_value args in
+  Mlw_expr.e_app t e_args
+
+
+let pre_one_trans t tr_args f =
   let f, _, _ = Translation.skolemize f in
   let procs_pvs = Translation.procs_of_why f in
   List.iter (eprintf "args : %a@." Mlw_pretty.print_pv) procs_pvs;
-  let nargs = append_extra procs_pvs t.tr_args in
-  let args_list = all_arrangements (List.length t.tr_args) nargs in
+  let nargs = append_extra procs_pvs tr_args in
+  let args_list = all_arrangements (List.length tr_args) nargs in
   List.fold_left (fun pre_f args ->
-    let inst_t = Translation.instantiate_trans t args in
+    let inst_t = instantiate_trans t args in
     (* let f = Term.t_and_simp (get_post_trans inst_t) f in *)
     eprintf "\npre %a\nBY %a\n===\n"
 	    Pretty.print_term (Mlw_ty.create_post Translation.dummy_vsymbol f)
@@ -70,8 +76,10 @@ let pre_one_trans t f =
 
 let pre (x: Fol__FOL.t) : Fol__FOL.t =
   (*-----------------  Begin manually edited ------------------*)
-  List.fold_left (fun pre_x t -> Term.t_or_simp (pre_one_trans t x) pre_x)
-		 Term.t_false (!Global.info).trans
+  List.fold_left 
+    (fun pre_x (ft, tr_args) -> 
+     Term.t_or_simp (pre_one_trans ft tr_args x) pre_x
+    ) Term.t_false Global.sys_env.Global.s_trans
   (*------------------  End manually edited -------------------*)
 
   (* ignore (Mlw_wp.wp_expr); *)

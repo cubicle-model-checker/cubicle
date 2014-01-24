@@ -1,4 +1,6 @@
 open Ast
+open Why3
+
 
 let global_system = ref {
   t_globals = [];
@@ -31,3 +33,18 @@ let info = ref {
   forward = [];
   trans = [];
 }
+
+
+type sys_env = 
+    {
+      mutable s_init : Term.term;
+      mutable s_unsafe : Term.term;
+      mutable s_trans : (Mlw_expr.expr * Mlw_ty.pvsymbol list) list;
+    }
+
+let sys_env = 
+  {
+    s_init = Term.t_true;
+    s_unsafe = Term.t_true;
+    s_trans = [];
+  }
