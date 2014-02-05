@@ -1,3 +1,4 @@
+open Options
 open Ast
 open Ast.Atom
 open Format
@@ -9,9 +10,6 @@ exception Error of error
 let error e = raise (Error e)
 
 (* GLOBAL VARIABLES *)
-
-(* TODO : This variable must be a parameter of the program *)
-let nb_process = 4
 
 (* Idea : We keep the visited transitions and their fathers *)
 let (htbl_visited_transitions : (Hstring.t, Hstring.t list) Hashtbl.t) = Hashtbl.create 17
@@ -32,7 +30,22 @@ let (htbl_globals : (Hstring.t, Hstring.t) Hashtbl.t) = Hashtbl.create 17
 (* Hashtbl : name tbl -> tbl, indexes : process number *)
 let (htbl_arrays : (Hstring.t, Hstring.t array) Hashtbl.t) = Hashtbl.create 17
 
-(* DISPLAY METHODS *)
+(* USEFUL METHODS *)
+
+let default_type g_type =
+  try
+    match Hashtbl.find htbl_types g_type with
+      | [] -> g_type
+      | hd::_ -> hd
+  with Not_found -> printf "error %a\t" Hstring.print g_type; g_type
+
+let value_c c =
+  match MConst.is_num c with
+    | Some e -> Hstring.make (Num.string_of_num e)
+    | None -> error (MustBeSingleNum)
+
+(* DISPLAY METHODS AND MODULES TO HSTRING *)
+
 let display_system () =
   Hashtbl.iter (
     fun id value -> 
@@ -48,19 +61,39 @@ let display_system () =
       printf "@."
   ) htbl_arrays
 
-(* USEFUL METHODS *)
+let rec hstring_of_term t =
+  match t with
+    | Const c -> [value_c c]
+    | Elem (e, _) -> [e]
+    | Access (arr, pl) -> [arr] @ [Hstring.make "["] @ pl @ [Hstring.make "]"]
+    | Arith (t, c) -> (hstring_of_term t) @ [value_c c]
 
-let default_type g_type =
-  try
-    match Hashtbl.find htbl_types g_type with
-      | [] -> g_type
-      | hd::_ -> hd
-  with Not_found -> printf "error %a\t" Hstring.print g_type; g_type
+let hstring_of_op op =
+  match op with
+    | Eq -> [Hstring.make "="]
+    | Lt -> [Hstring.make "<"]
+    | Le -> [Hstring.make "<="]
+    | Neq -> [Hstring.make "!="]
 
-let value_c c =
-  match MConst.is_num c with
-    | Some e -> Hstring.make (Num.string_of_num e)
-    | None -> error (MustBeSingleNum)
+let h_new_line = [Hstring.make "\n"]
+
+let rec hstring_of_satom sa = SAtom.fold (fun a acc -> (hstring_of_atom a) @ h_new_line @ acc) sa []
+  
+and hstring_of_atom a =
+  match a with
+    | True -> [htrue]
+    | False -> [hfalse]
+    | Comp (t1, op, t2) -> let ht1 = hstring_of_term t1 in
+			   let hop = hstring_of_op op in
+			   let ht2 = hstring_of_term t2 in
+			   ht1 @ hop @ ht2
+    | Ite (sa, a1, a2) -> let hsa = hstring_of_satom sa in
+			  let ha1 = hstring_of_atom a1 in
+			  let ha2 = hstring_of_atom a2 in
+			  hsa @ ha1 @ ha2
+
+let display_satom sa =
+  printf "%a@." (Hstring.print_list " ") (hstring_of_satom sa)
 
 (* INITIALIZATION *)
 
@@ -82,7 +115,7 @@ let init_arrays arrays =
     fun (a_name, (a_dims, a_type)) ->
       let dims = List.length a_dims in
       let default_type = default_type a_type in
-      let new_t = Array.make (nb_process * dims) default_type in
+      let new_t = Array.make (nb_threads * dims) default_type in
       Hashtbl.add htbl_arrays a_name new_t
   ) arrays
     
@@ -122,7 +155,19 @@ let init_system se =
   init_types se.type_defs;
   init_arrays se.arrays;
   init_globals se.globals;
-  fill_system se.init;
-  display_system ()
+  fill_system se.init
 
 (* SCHEDULING *)
+
+let display_transition trans =
+  List.iter (
+    fun {tr_name; tr_args; tr_reqs; tr_ureq; tr_assigns; tr_upds; tr_nondets} ->
+      printf "%a@. " (Hstring.print_list " ") ([tr_name]@tr_args);
+      display_satom tr_reqs
+  ) trans
+
+(* MAIN *)
+
+let scheduler se =
+  init_system se;
+  display_transition se.trans

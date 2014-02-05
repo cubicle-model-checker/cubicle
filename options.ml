@@ -89,6 +89,8 @@ let set_mode = function
   | "induct" -> mode := Induct
   | _ -> raise (Arg.Bad "search strategy not supported")
 
+let nb_threads = ref 2
+
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
 let specs = 
@@ -141,6 +143,7 @@ let specs =
     "-enumsolver", Arg.Set enumsolver, " use Enumerated data types solver for finite types";
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
     "-out", Arg.String set_out, "<dir> set output directory for certificate traces to <dir>";
+    "-schedule", Arg.Set_int nb_threads, "<n> number of threads to use";
   ]
 
 let alspecs = Arg.align specs
@@ -215,3 +218,4 @@ let subtyping = !subtyping
 
 let trace = !trace
 let out_trace = !out
+let nb_threads = !nb_threads

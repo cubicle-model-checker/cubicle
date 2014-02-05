@@ -181,7 +181,7 @@ val fill_init_instances : Hstring.t list * SAtom.t list -> unit
 val make_finite_inst_array : Hstring.t -> Hstring.t list -> Hstring.t
 
 val has_var : Hstring.t -> Atom.t -> bool
-				       
+  
 val origin : t_system -> t_system
 
 val procs_of_cube : SAtom.t -> Hstring.t list

@@ -41,7 +41,7 @@ let _ =
   try
     let s = Parser.system Lexer.token lb in
     let _ = Typing.system s in
-    let _ = Scheduler.init_system s in ();
+    let _ = Scheduler.scheduler s in ();
     (*if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;
     if type_only then exit 0;
     Bwreach.system ts;

@@ -72,3 +72,5 @@ val subtyping : bool
 
 val trace : trace
 val out_trace : string
+
+val nb_threads : int
