@@ -40,14 +40,15 @@ let _ =
   let lb = from_channel cin in 
   try
     let s = Parser.system Lexer.token lb in
-    let ts = Typing.system s in
-    if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;
+    let _ = Typing.system s in
+    let _ = Scheduler.init_system s in ();
+    (*if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;
     if type_only then exit 0;
     Bwreach.system ts;
     if dot then eprintf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
     else printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
     if refine_universal then
-      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement is an experimental feature. Use at your own risks.\n@."
+      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement is an experimental feature. Use at your own risks.\n@."*)
   with
     | Lexer.Lexical_error s -> 
 	report (lexeme_start_p lb, lexeme_end_p lb);

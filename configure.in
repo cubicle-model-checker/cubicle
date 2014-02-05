@@ -25,21 +25,6 @@ echo "ocaml version is $OCAMLVERSION"
 OCAMLLIB=`$OCAMLC -where`
 echo "ocaml library path is $OCAMLLIB"
 
-# we look for ocamlfind; if not present, we just don't use it to find
-# libraries
-AC_CHECK_PROG(USEOCAMLFIND,ocamlfind,yes,no)
-
-if test "$USEOCAMLFIND" = yes; then
-   OCAMLFINDLIB=$(ocamlfind printconf stdlib)
-   OCAMLFIND=$(which ocamlfind)
-   if test "$OCAMLFINDLIB" != "$OCAMLLIB"; then
-    USEOCAMLFIND=no;
-    echo "but your ocamlfind is not compatible with your ocamlc:"
-    echo "ocamlfind : $OCAMLFINDLIB, ocamlc : $OCAMLLIB"
-   fi
-fi
-
-
 AC_CHECK_PROG(OCAMLOPT,ocamlopt.opt,ocamlopt.opt,no)
 OCAMLBEST=byte
 if test "$OCAMLOPT" = no ; then
@@ -63,26 +48,13 @@ if test "$OCAMLYACC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlyacc.)
 fi
 
-
-#looking for functory library
-
-if test "$USEOCAMLFIND" = yes; then
-  FUNCTORYLIB=$(ocamlfind query -i-format functory)
-fi
-
-if test -n "$FUNCTORYLIB";then
-  echo "ocamlfind found functory in $FUNCTORYLIB"
-  FUNCTORYLD=yes
-else
-  AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
-  if test "$FUNCTORYLD" = no ; then
+AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
+if test "$FUNCTORYLD" = no ; then
       AC_MSG_RESULT(Cannot find functory library.)
       FUNCTORYLIB=""
-  else
-     FUNCTORYLIB="-I +functory"
-  fi
+else
+   FUNCTORYLIB="-I +functory"
 fi
-
 
 AC_MSG_CHECKING(platform)
 if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then
