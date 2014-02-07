@@ -1,17 +1,33 @@
 diff --git src/whyml/mlw_wp.ml src/whyml/mlw_wp.ml
-index 3fb1702..aad3be8 100644
+index 3fb1702..57a37f1 100644
 --- src/whyml/mlw_wp.ml
 +++ src/whyml/mlw_wp.ml
-@@ -2002,3 +2002,7 @@ let wp_rec ~wp env kn th fdl =
+@@ -2002,3 +2002,23 @@ let wp_rec ~wp env kn th fdl =
        th
    in
    List.fold_left add_one th fdl
 +
-+let wp_expr env kn th e q xq =
-+  let env = mk_env env kn th in
++
++let mk_env_known env km kt =
++  let th_int = Env.find_theory env ["int"] "Int" in
++  { prog_known = km;
++    pure_known = kt;
++    global_env = env;
++    ps_int_le  = Theory.ns_find_ls th_int.th_export ["infix <="];
++    ps_int_ge  = Theory.ns_find_ls th_int.th_export ["infix >="];
++    ps_int_lt  = Theory.ns_find_ls th_int.th_export ["infix <"];
++    ps_int_gt  = Theory.ns_find_ls th_int.th_export ["infix >"];
++    fs_int_pl  = Theory.ns_find_ls th_int.th_export ["infix +"];
++    fs_int_mn  = Theory.ns_find_ls th_int.th_export ["infix -"];
++    letrec_var = Mint.empty;
++  }
++
++
++let wp_expr env kn kt e q xq =
++  let env = mk_env_known env kn kt in
 +  wp_expr env e q xq
 diff --git src/whyml/mlw_wp.mli src/whyml/mlw_wp.mli
-index 61b531b..3b9785e 100644
+index 61b531b..b4b9baf 100644
 --- src/whyml/mlw_wp.mli
 +++ src/whyml/mlw_wp.mli
 @@ -36,6 +36,7 @@ val e_now : expr
@@ -22,10 +38,11 @@ index 61b531b..3b9785e 100644
  
  val full_invariant :
    Decl.known_map -> Mlw_decl.known_map -> Term.vsymbol -> ity -> Term.term
-@@ -49,4 +50,6 @@ val wp_let:
+@@ -49,4 +50,7 @@ val wp_let:
  val wp_rec:
    wp:bool -> Env.env -> known_map -> theory_uc -> fun_defn list -> theory_uc
  
 +val wp_expr:
-+  Env.env -> known_map -> theory_uc -> expr -> post -> xpost -> invariant
++  Env.env -> Mlw_decl.known_map -> Decl.known_map -> expr -> post -> xpost ->
++  invariant
  

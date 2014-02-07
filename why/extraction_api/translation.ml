@@ -529,7 +529,12 @@ let rec push_neg p f = match f.Term.t_node with
   | Term.Tbinop (Term.Tor, t1, t2) ->
      if p then Term.t_or_simp (push_neg p t1) (push_neg p t2)
      else Term.t_and_simp (push_neg p t1) (push_neg p t2)
-  | Term.Tcase _ | Term.Tlet _ -> assert false
+  | Term.Tcase (c, [br]) ->
+     let pat, t = Term.t_open_branch br in
+     Term.t_case_close_simp c [pat, (push_neg p t)]
+  | Term.Tcase _ -> assert false
+  | Term.Tlet (x, tb) ->
+     Term.t_let_simp (push_neg p x) tb
 
 let dnf f =
   let cons x xs = x :: xs in
@@ -599,6 +604,34 @@ let dnf_to_conj_list = dnf_to_conj_list []
 
 (*--------------------------------------------------------------------*)
 
+
+let rec simplify f = match f.Term.t_node with
+  | Term.Tvar _ | Term.Tconst _ | Term.Tapp _ | Term.Ttrue | Term.Tfalse -> f
+  | Term.Tnot f2 -> Term.t_not_simp (simplify f2)
+  | Term.Tquant (q, tq) ->
+     let vs, tr, t = Term.t_open_quant tq in
+     let tq' = Term.t_close_quant vs tr (simplify t) in
+     Term.t_quant_simp q tq'
+  | Term.Teps tb ->
+     let v, t = Term.t_open_bound tb in
+     Term.t_eps_close v (simplify t)
+  | Term.Tif (c, t1, t2) ->
+     Term.t_if_simp c (simplify t1) (simplify t2)
+  | Term.Tbinop (op, t1, t2) ->
+     Term.t_binary_simp op (simplify t1) (simplify t2)
+  | Term.Tlet (x, tb) ->
+     let v, t = Term.t_open_bound tb in
+     Term.t_let_close_simp v (simplify x) (simplify t)
+  | Term.Tcase (c, [br]) ->
+     let pat, t = Term.t_open_branch br in
+     begin 
+       match pat.Term.pat_node with 
+       | Term.Papp (ls, _) when ls.Term.ls_name.Ident.id_string = "mk ref" ->
+          eprintf "simpl CASE %a == %a@." Pretty.print_term f Pretty.print_term t;
+          t
+       | _ -> f   
+     end
+  | _ -> f
 
 (*---------------- transitions to why data structures ----------------*)
 

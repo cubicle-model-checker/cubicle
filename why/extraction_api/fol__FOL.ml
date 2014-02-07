@@ -2,13 +2,13 @@
 open Ast
 open Global
 open Format
-module S = Set__Fset
+module S = Set__Fset.Make(SAtom)
 
 open Why3
 
 type t = Term.term
 
-(* let compare = Term.t_compare *)
+let compare = Term.t_compare
 
 let rec print = Why3.Pretty.print_term
 
@@ -142,16 +142,16 @@ let (|=) x x1 = infix_breqeq x x1
 
 module SMT = Prover.SMT
 
-let sat (f: t) : bool =
-  if Options.debug then eprintf "sat: %a@." print f;
-  List.exists (fun (dist, f) ->
-	       try
-		 SMT.clear ();
-		 SMT.assume ~profiling:false ~id:0 dist;
-		 SMT.assume ~profiling:false ~id:0 f;
-		 SMT.check  ~profiling:false ();
-		 true
-	       with Smt.Unsat _ -> false 
-	      ) (Translation.safety_formulas f)
+let sat (f: t) : bool = false
+  (* if Options.debug then eprintf "sat: %a@." print f; *)
+  (* List.exists (fun (dist, f) -> *)
+  (*              try *)
+  (*       	 SMT.clear (); *)
+  (*       	 SMT.assume ~profiling:false ~id:0 dist; *)
+  (*       	 SMT.assume ~profiling:false ~id:0 f; *)
+  (*       	 SMT.check  ~profiling:false (); *)
+  (*       	 false *)
+  (*              with Smt.Unsat _ -> false  *)
+  (*             ) (Translation.safety_formulas f) *)
 
 let valid (f: t) : bool = not (sat (prefix_tl f))

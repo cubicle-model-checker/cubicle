@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE why3session PUBLIC "-//Why3//proof session v2//EN" "http://why3.lri.fr/why3session.dtd">
-<why3session shape_version="2">
+<why3session shape_version="4">
  <prover
   id="0"
   name="Alt-Ergo"
@@ -11,12 +11,20 @@
   version="2.4.1"/>
  <prover
   id="2"
-  name="Coq"
-  version="8.3pl4"/>
+  name="CVC4"
+  version="1.3"/>
  <prover
   id="3"
-  name="Vampire"
-  version="0.6"/>
+  name="Coq"
+  version="8.4pl2"/>
+ <prover
+  id="4"
+  name="Eprover"
+  version="1.8-001"/>
+ <prover
+  id="5"
+  name="Spass"
+  version="3.5"/>
  <file
   name="../fol.why"
   verified="true"
@@ -31,9 +39,9 @@
     name="valid_def"
     locfile="../fol.why"
     loclnum="55" loccnumb="9" loccnume="18"
-    sum="612d418fcea2320d58072d00285189a4"
+    sum="247e5d5cccd0c096f634ccbb52385c64"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix |=V1V0FV1qavalidV0FavalidV0">
     <proof
      prover="0"
@@ -44,17 +52,49 @@
      archived="false">
      <result status="valid" time="0.00"/>
     </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
    </goal>
    <goal
     name="imply_models"
     locfile="../fol.why"
     loclnum="61" loccnumb="9" loccnume="21"
-    sum="60ca4a5c43ff4ad1a181e0dfc1e0a267"
+    sum="8fafaeeb2d412429fd6823bd75c88c61"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix |==V0V1qavalidainfix =&gt;V0V1F">
     <proof
      prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
@@ -66,45 +106,402 @@
     name="negneg"
     locfile="../fol.why"
     loclnum="64" loccnumb="9" loccnume="15"
-    sum="7cdd072d6137e0df919458ea8ae057f4"
+    sum="b58d63042d11fbeaace75d2353a13f8d"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =aprefix ~aprefix ~V0V0Faprefix ~aprefix ~V0">
     <proof
-     prover="2"
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.15"/>
+    </proof>
+    <proof
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_negneg_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.80"/>
+     <result status="valid" time="1.14"/>
     </proof>
    </goal>
    <goal
     name="and_a"
     locfile="../fol.why"
     loclnum="66" loccnumb="9" loccnume="14"
-    sum="532cc252fa3b5cdad3e4d5459de48396"
+    sum="2650eab938895652510b2058487589c9"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix &amp;ainfix &amp;V0V1V2ainfix &amp;V0ainfix &amp;V1V2F">
     <proof
-     prover="2"
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_and_a_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.63"/>
+     <result status="valid" time="1.07"/>
     </proof>
+    <metas
+     proved="true"
+     expanded="true">
+     <ts_pos
+      name="int"
+      arity="0"
+      id="1"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="int"/>
+     </ts_pos>
+     <ts_pos
+      name="real"
+      arity="0"
+      id="2"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="real"/>
+     </ts_pos>
+     <ls_pos
+      name="infix ="
+      id="10"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="infix ="/>
+     </ls_pos>
+     <ls_pos
+      name="infix |="
+      id="276"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |="/>
+     </ls_pos>
+     <ls_pos
+      name="ffalse"
+      id="279"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffalse"/>
+     </ls_pos>
+     <ls_pos
+      name="ttrue"
+      id="280"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue"/>
+     </ls_pos>
+     <ls_pos
+      name="prefix ~"
+      id="281"
+      ip_theory="FOL">
+      <ip_qualid
+       name="prefix ~"/>
+     </ls_pos>
+     <ls_pos
+      name="infix &amp;"
+      id="283"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix &amp;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix ++"
+      id="286"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix ++"/>
+     </ls_pos>
+     <ls_pos
+      name="infix =&gt;"
+      id="289"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix =&gt;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix |=="
+      id="292"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |=="/>
+     </ls_pos>
+     <ls_pos
+      name="sat"
+      id="340"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat"/>
+     </ls_pos>
+     <ls_pos
+      name="valid"
+      id="348"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid"/>
+     </ls_pos>
+     <pr_pos
+      name="model_extensionality"
+      id="295"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_extensionality"/>
+     </pr_pos>
+     <pr_pos
+      name="structure_exists"
+      id="309"
+      ip_theory="FOL">
+      <ip_qualid
+       name="structure_exists"/>
+     </pr_pos>
+     <pr_pos
+      name="true_false"
+      id="314"
+      ip_theory="FOL">
+      <ip_qualid
+       name="true_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_true"
+      id="315"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_true"/>
+     </pr_pos>
+     <pr_pos
+      name="model_false"
+      id="318"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_neg"
+      id="321"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_neg"/>
+     </pr_pos>
+     <pr_pos
+      name="model_or"
+      id="333"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_or"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_def"
+      id="353"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_def"
+      id="358"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_models"
+      id="363"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_models"/>
+     </pr_pos>
+     <pr_pos
+      name="negneg"
+      id="368"
+      ip_theory="FOL">
+      <ip_qualid
+       name="negneg"/>
+     </pr_pos>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="10"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="276"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="279"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="280"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="281"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="283"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="286"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="289"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="292"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="340"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="348"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="295"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="309"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="314"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="315"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="318"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="321"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="333"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="353"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="358"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="363"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="368"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="1"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="2"/>
+     </meta>
+     <goal
+      name="and_a"
+      locfile="../fol.why"
+      loclnum="66" loccnumb="9" loccnume="14"
+      sum="748e93d20b9922a8e95f894aa0800a47"
+      proved="true"
+      expanded="true"
+      shape="ainfix =ainfix &amp;ainfix &amp;V0V1V2ainfix &amp;V0ainfix &amp;V1V2F">
+      <transf
+       name="eliminate_builtin"
+       proved="true"
+       expanded="true">
+       <goal
+        name="and_a.1"
+        locfile="../fol.why"
+        loclnum="66" loccnumb="9" loccnume="14"
+        expl="1."
+        sum="0289e33d7dca388646bc510fdee7c170"
+        proved="true"
+        expanded="true"
+        shape="ainfix =ainfix &amp;ainfix &amp;V0V1V2ainfix &amp;V0ainfix &amp;V1V2F">
+        <proof
+         prover="1"
+         timelimit="30"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.13"/>
+        </proof>
+        <proof
+         prover="3"
+         timelimit="5"
+         memlimit="1000"
+         edited="fol_FOL_and_a_2.v"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="1.07"/>
+        </proof>
+        <proof
+         prover="4"
+         timelimit="30"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.83"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+    </metas>
    </goal>
    <goal
     name="and_c"
     locfile="../fol.why"
     loclnum="68" loccnumb="9" loccnume="14"
-    sum="34afec072fa8095b774c8b520642b61e"
+    sum="96223b6dc9fe016f8a520cd1998e07a9"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix &amp;V0V1ainfix &amp;V1V0F">
     <proof
      prover="1"
@@ -112,34 +509,386 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.68"/>
+     <result status="valid" time="0.13"/>
     </proof>
+    <metas
+     proved="true"
+     expanded="true">
+     <ts_pos
+      name="int"
+      arity="0"
+      id="1"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="int"/>
+     </ts_pos>
+     <ts_pos
+      name="real"
+      arity="0"
+      id="2"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="real"/>
+     </ts_pos>
+     <ls_pos
+      name="infix ="
+      id="10"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="infix ="/>
+     </ls_pos>
+     <ls_pos
+      name="infix |="
+      id="276"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |="/>
+     </ls_pos>
+     <ls_pos
+      name="ffalse"
+      id="279"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffalse"/>
+     </ls_pos>
+     <ls_pos
+      name="ttrue"
+      id="280"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue"/>
+     </ls_pos>
+     <ls_pos
+      name="prefix ~"
+      id="281"
+      ip_theory="FOL">
+      <ip_qualid
+       name="prefix ~"/>
+     </ls_pos>
+     <ls_pos
+      name="infix &amp;"
+      id="283"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix &amp;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix ++"
+      id="286"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix ++"/>
+     </ls_pos>
+     <ls_pos
+      name="infix =&gt;"
+      id="289"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix =&gt;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix |=="
+      id="292"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |=="/>
+     </ls_pos>
+     <ls_pos
+      name="sat"
+      id="340"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat"/>
+     </ls_pos>
+     <ls_pos
+      name="valid"
+      id="348"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid"/>
+     </ls_pos>
+     <pr_pos
+      name="model_extensionality"
+      id="295"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_extensionality"/>
+     </pr_pos>
+     <pr_pos
+      name="structure_exists"
+      id="309"
+      ip_theory="FOL">
+      <ip_qualid
+       name="structure_exists"/>
+     </pr_pos>
+     <pr_pos
+      name="true_false"
+      id="314"
+      ip_theory="FOL">
+      <ip_qualid
+       name="true_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_true"
+      id="315"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_true"/>
+     </pr_pos>
+     <pr_pos
+      name="model_false"
+      id="318"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_neg"
+      id="321"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_neg"/>
+     </pr_pos>
+     <pr_pos
+      name="model_or"
+      id="333"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_or"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_def"
+      id="353"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_def"
+      id="358"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_models"
+      id="363"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_models"/>
+     </pr_pos>
+     <pr_pos
+      name="negneg"
+      id="368"
+      ip_theory="FOL">
+      <ip_qualid
+       name="negneg"/>
+     </pr_pos>
+     <pr_pos
+      name="and_a"
+      id="371"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_a"/>
+     </pr_pos>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="10"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="276"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="279"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="280"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="281"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="283"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="286"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="289"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="292"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="340"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="348"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="295"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="309"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="314"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="315"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="318"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="321"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="333"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="353"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="358"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="363"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="368"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="371"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="1"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="2"/>
+     </meta>
+     <goal
+      name="and_c"
+      locfile="../fol.why"
+      loclnum="68" loccnumb="9" loccnume="14"
+      sum="f99002c3e2c6734fc0187a8b5765c132"
+      proved="true"
+      expanded="true"
+      shape="ainfix =ainfix &amp;V0V1ainfix &amp;V1V0F">
+      <transf
+       name="eliminate_builtin"
+       proved="true"
+       expanded="true">
+       <goal
+        name="and_c.1"
+        locfile="../fol.why"
+        loclnum="68" loccnumb="9" loccnume="14"
+        expl="1."
+        sum="d2158ae53cccfe56d9873d73eccb886b"
+        proved="true"
+        expanded="true"
+        shape="ainfix =ainfix &amp;V0V1ainfix &amp;V1V0F">
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.01"/>
+        </proof>
+        <proof
+         prover="4"
+         timelimit="30"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.56"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+    </metas>
    </goal>
    <goal
     name="or_a"
     locfile="../fol.why"
     loclnum="70" loccnumb="9" loccnume="13"
-    sum="0a5a51fd5e72e12e31c1f5a25923a32d"
+    sum="50c2a4f83ca7895cb3f5cc257a528d07"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++ainfix ++V0V1V2ainfix ++V0ainfix ++V1V2F">
     <proof
-     prover="2"
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_or_a_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.65"/>
+     <result status="valid" time="1.00"/>
     </proof>
    </goal>
    <goal
     name="or_c"
     locfile="../fol.why"
     loclnum="72" loccnumb="9" loccnume="13"
-    sum="d5b9c476512e3286788a4681cfd2e95c"
+    sum="53d6083894a65039364cc04ee045658c"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0V1ainfix ++V1V0F">
     <proof
      prover="1"
@@ -147,52 +896,428 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.63"/>
+     <result status="valid" time="0.12"/>
     </proof>
+    <metas
+     proved="true"
+     expanded="true">
+     <ts_pos
+      name="int"
+      arity="0"
+      id="1"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="int"/>
+     </ts_pos>
+     <ts_pos
+      name="real"
+      arity="0"
+      id="2"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="real"/>
+     </ts_pos>
+     <ls_pos
+      name="infix ="
+      id="10"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="infix ="/>
+     </ls_pos>
+     <ls_pos
+      name="infix |="
+      id="276"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |="/>
+     </ls_pos>
+     <ls_pos
+      name="ffalse"
+      id="279"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffalse"/>
+     </ls_pos>
+     <ls_pos
+      name="ttrue"
+      id="280"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue"/>
+     </ls_pos>
+     <ls_pos
+      name="prefix ~"
+      id="281"
+      ip_theory="FOL">
+      <ip_qualid
+       name="prefix ~"/>
+     </ls_pos>
+     <ls_pos
+      name="infix &amp;"
+      id="283"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix &amp;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix ++"
+      id="286"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix ++"/>
+     </ls_pos>
+     <ls_pos
+      name="infix =&gt;"
+      id="289"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix =&gt;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix |=="
+      id="292"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |=="/>
+     </ls_pos>
+     <ls_pos
+      name="sat"
+      id="340"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat"/>
+     </ls_pos>
+     <ls_pos
+      name="valid"
+      id="348"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid"/>
+     </ls_pos>
+     <pr_pos
+      name="model_extensionality"
+      id="295"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_extensionality"/>
+     </pr_pos>
+     <pr_pos
+      name="structure_exists"
+      id="309"
+      ip_theory="FOL">
+      <ip_qualid
+       name="structure_exists"/>
+     </pr_pos>
+     <pr_pos
+      name="true_false"
+      id="314"
+      ip_theory="FOL">
+      <ip_qualid
+       name="true_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_true"
+      id="315"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_true"/>
+     </pr_pos>
+     <pr_pos
+      name="model_false"
+      id="318"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_neg"
+      id="321"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_neg"/>
+     </pr_pos>
+     <pr_pos
+      name="model_and"
+      id="326"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_and"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_def"
+      id="353"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_def"
+      id="358"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_models"
+      id="363"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_models"/>
+     </pr_pos>
+     <pr_pos
+      name="negneg"
+      id="368"
+      ip_theory="FOL">
+      <ip_qualid
+       name="negneg"/>
+     </pr_pos>
+     <pr_pos
+      name="and_a"
+      id="371"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_a"/>
+     </pr_pos>
+     <pr_pos
+      name="and_c"
+      id="378"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_c"/>
+     </pr_pos>
+     <pr_pos
+      name="or_a"
+      id="383"
+      ip_theory="FOL">
+      <ip_qualid
+       name="or_a"/>
+     </pr_pos>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="10"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="276"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="279"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="280"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="281"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="283"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="286"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="289"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="292"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="340"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="348"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="295"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="309"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="314"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="315"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="318"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="321"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="326"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="353"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="358"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="363"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="368"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="371"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="378"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="383"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="1"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="2"/>
+     </meta>
+     <goal
+      name="or_c"
+      locfile="../fol.why"
+      loclnum="72" loccnumb="9" loccnume="13"
+      sum="adf33edfba686849b9b1203aafddadb8"
+      proved="true"
+      expanded="true"
+      shape="ainfix =ainfix ++V0V1ainfix ++V1V0F">
+      <transf
+       name="eliminate_builtin"
+       proved="true"
+       expanded="true">
+       <goal
+        name="or_c.1"
+        locfile="../fol.why"
+        loclnum="72" loccnumb="9" loccnume="13"
+        expl="1."
+        sum="fe057db2b04a55bdca5ef1ea291d9ca3"
+        proved="true"
+        expanded="true"
+        shape="ainfix =ainfix ++V0V1ainfix ++V1V0F">
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.00"/>
+        </proof>
+        <proof
+         prover="4"
+         timelimit="30"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="29.79"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+    </metas>
    </goal>
    <goal
     name="distr_and"
     locfile="../fol.why"
     loclnum="74" loccnumb="9" loccnume="18"
-    sum="92ee05d54b56a271c993ee94c0e67c78"
+    sum="714de94002b2f4b0024107fc2bdfa56e"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix &amp;V0ainfix ++V1V2ainfix ++ainfix &amp;V0V1ainfix &amp;V0V2F">
     <proof
-     prover="2"
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_distr_and_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.65"/>
+     <result status="valid" time="1.00"/>
     </proof>
    </goal>
    <goal
     name="distr_or"
     locfile="../fol.why"
     loclnum="77" loccnumb="9" loccnume="17"
-    sum="117e85a9d28938b48540f0ea0e7c775c"
+    sum="c2cbdd466ba4f396e1bc6900a58eb6fd"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0ainfix &amp;V1V2ainfix &amp;ainfix ++V0V1ainfix ++V0V2F">
     <proof
-     prover="2"
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_distr_or_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.65"/>
+     <result status="valid" time="0.97"/>
     </proof>
    </goal>
    <goal
     name="neutral_and"
     locfile="../fol.why"
     loclnum="80" loccnumb="9" loccnume="20"
-    sum="403130a0a5935474c0f4ad45b686ecab"
+    sum="811fe976baec28ed060425b7e1c5b45b"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix &amp;V0attrueV0F">
     <proof
      prover="1"
@@ -202,51 +1327,462 @@
      archived="false">
      <result status="valid" time="0.12"/>
     </proof>
+    <metas
+     proved="true"
+     expanded="true">
+     <ts_pos
+      name="int"
+      arity="0"
+      id="1"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="int"/>
+     </ts_pos>
+     <ts_pos
+      name="real"
+      arity="0"
+      id="2"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="real"/>
+     </ts_pos>
+     <ls_pos
+      name="infix ="
+      id="10"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="infix ="/>
+     </ls_pos>
+     <ls_pos
+      name="infix |="
+      id="276"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |="/>
+     </ls_pos>
+     <ls_pos
+      name="ffalse"
+      id="279"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffalse"/>
+     </ls_pos>
+     <ls_pos
+      name="ttrue"
+      id="280"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue"/>
+     </ls_pos>
+     <ls_pos
+      name="prefix ~"
+      id="281"
+      ip_theory="FOL">
+      <ip_qualid
+       name="prefix ~"/>
+     </ls_pos>
+     <ls_pos
+      name="infix &amp;"
+      id="283"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix &amp;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix ++"
+      id="286"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix ++"/>
+     </ls_pos>
+     <ls_pos
+      name="infix =&gt;"
+      id="289"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix =&gt;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix |=="
+      id="292"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |=="/>
+     </ls_pos>
+     <ls_pos
+      name="sat"
+      id="340"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat"/>
+     </ls_pos>
+     <ls_pos
+      name="valid"
+      id="348"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid"/>
+     </ls_pos>
+     <pr_pos
+      name="model_extensionality"
+      id="295"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_extensionality"/>
+     </pr_pos>
+     <pr_pos
+      name="structure_exists"
+      id="309"
+      ip_theory="FOL">
+      <ip_qualid
+       name="structure_exists"/>
+     </pr_pos>
+     <pr_pos
+      name="true_false"
+      id="314"
+      ip_theory="FOL">
+      <ip_qualid
+       name="true_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_false"
+      id="318"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_or"
+      id="333"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_or"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_def"
+      id="353"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_def"
+      id="358"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_models"
+      id="363"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_models"/>
+     </pr_pos>
+     <pr_pos
+      name="negneg"
+      id="368"
+      ip_theory="FOL">
+      <ip_qualid
+       name="negneg"/>
+     </pr_pos>
+     <pr_pos
+      name="and_a"
+      id="371"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_a"/>
+     </pr_pos>
+     <pr_pos
+      name="and_c"
+      id="378"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_c"/>
+     </pr_pos>
+     <pr_pos
+      name="or_a"
+      id="383"
+      ip_theory="FOL">
+      <ip_qualid
+       name="or_a"/>
+     </pr_pos>
+     <pr_pos
+      name="or_c"
+      id="390"
+      ip_theory="FOL">
+      <ip_qualid
+       name="or_c"/>
+     </pr_pos>
+     <pr_pos
+      name="distr_and"
+      id="395"
+      ip_theory="FOL">
+      <ip_qualid
+       name="distr_and"/>
+     </pr_pos>
+     <pr_pos
+      name="distr_or"
+      id="402"
+      ip_theory="FOL">
+      <ip_qualid
+       name="distr_or"/>
+     </pr_pos>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="10"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="276"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="279"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="280"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="281"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="283"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="286"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="289"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="292"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="340"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="348"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="295"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="309"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="314"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="318"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="333"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="353"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="358"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="363"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="368"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="371"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="378"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="383"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="390"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="395"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="402"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="1"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="2"/>
+     </meta>
+     <goal
+      name="neutral_and"
+      locfile="../fol.why"
+      loclnum="80" loccnumb="9" loccnume="20"
+      sum="72a600c79cc7ed3608d415505864311a"
+      proved="true"
+      expanded="true"
+      shape="ainfix =ainfix &amp;V0attrueV0F">
+      <transf
+       name="eliminate_builtin"
+       proved="true"
+       expanded="true">
+       <goal
+        name="neutral_and.1"
+        locfile="../fol.why"
+        loclnum="80" loccnumb="9" loccnume="20"
+        expl="1."
+        sum="d614bb8096b8ec0e15e13529d186ed27"
+        proved="true"
+        expanded="true"
+        shape="ainfix =ainfix &amp;V0attrueV0F">
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.00"/>
+        </proof>
+        <proof
+         prover="4"
+         timelimit="30"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="2.75"/>
+        </proof>
+        <proof
+         prover="5"
+         timelimit="30"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.04"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+    </metas>
    </goal>
    <goal
     name="neutral_or"
     locfile="../fol.why"
     loclnum="82" loccnumb="9" loccnume="19"
-    sum="f3bfdf1edf6eaf9d742eef851e171537"
+    sum="1ee9840d88a56d399fd4b2a263d8abfd"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0affalseV0F">
     <proof
-     prover="3"
+     prover="1"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.17"/>
+     <result status="valid" time="0.08"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="1.28"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.10"/>
     </proof>
    </goal>
    <goal
     name="absorb_and"
     locfile="../fol.why"
     loclnum="84" loccnumb="9" loccnume="19"
-    sum="84831931a3d1ed953038a0eac319c721"
+    sum="d9e57bd4039f0f087ff266678fa0e80d"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix &amp;V0affalseaffalseF">
     <proof
-     prover="3"
+     prover="1"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.14"/>
+     <result status="valid" time="0.05"/>
     </proof>
-   </goal>
-   <goal
-    name="absorb_or"
-    locfile="../fol.why"
-    loclnum="86" loccnumb="9" loccnume="18"
-    sum="c7a510d9a98ff0f089a61c2ded3575ab"
-    proved="true"
-    expanded="false"
-    shape="ainfix =ainfix ++V0attrueattrueF">
     <proof
-     prover="3"
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.05"/>
+    </proof>
+    <proof
+     prover="5"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
@@ -255,13 +1791,54 @@
     </proof>
    </goal>
    <goal
+    name="absorb_or"
+    locfile="../fol.why"
+    loclnum="86" loccnumb="9" loccnume="18"
+    sum="d16ebe35d638590335e0d3e8d3a7665c"
+    proved="true"
+    expanded="true"
+    shape="ainfix =ainfix ++V0attrueattrueF">
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.05"/>
+    </proof>
+   </goal>
+   <goal
     name="sat_def"
     locfile="../fol.why"
     loclnum="89" loccnumb="9" loccnume="16"
-    sum="ea48596c6b6eef0e5e1c6c3910014641"
+    sum="b47c9e7568d96751e4d41f698c1baca3"
     proved="true"
-    expanded="false"
-    shape="avalidaprefix ~V0NqasatV0F">
+    expanded="true"
+    shape="Navalidaprefix ~V0qasatV0F">
     <proof
      prover="0"
      timelimit="5"
@@ -269,16 +1846,48 @@
      obsolete="false"
      archived="false">
      <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
     </proof>
    </goal>
    <goal
     name="unsat_invalid"
     locfile="../fol.why"
     loclnum="91" loccnumb="9" loccnume="22"
-    sum="beda6f992d59c86f3f8392ad4ed7be69"
+    sum="c62dba1c347a94f7b9aea272644eeb76"
     proved="true"
-    expanded="false"
-    shape="asataprefix ~V0IavalidV0NF">
+    expanded="true"
+    shape="asataprefix ~V0INavalidV0F">
     <proof
      prover="0"
      timelimit="5"
@@ -287,14 +1896,46 @@
      archived="false">
      <result status="valid" time="0.01"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="valid_sat"
     locfile="../fol.why"
     loclnum="93" loccnumb="9" loccnume="18"
-    sum="234ef08f9a9c4c3147305b4f1035674c"
+    sum="00ae2bbf5d64806cb4ade10ddba624b5"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="asatV0IavalidV0F">
     <proof
      prover="0"
@@ -304,17 +1945,81 @@
      archived="false">
      <result status="valid" time="0.01"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="ttrue_valid"
     locfile="../fol.why"
     loclnum="95" loccnumb="9" loccnume="20"
-    sum="f56df5685dbecc43a982a6616c4a7b73"
+    sum="8c35063eb540ab61a58175d1e370b111"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="avalidattrue">
     <proof
      prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
@@ -326,10 +2031,10 @@
     name="ffaslse_invalid"
     locfile="../fol.why"
     loclnum="96" loccnumb="9" loccnume="24"
-    sum="cb8e36122452cb7e6fa2781a50950593"
+    sum="6af45fa8e6a967e4a787672c68f8461d"
     proved="true"
-    expanded="false"
-    shape="avalidaffalseN">
+    expanded="true"
+    shape="Navalidaffalse">
     <proof
      prover="0"
      timelimit="5"
@@ -338,17 +2043,81 @@
      archived="false">
      <result status="valid" time="0.01"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="ttrue_sat"
     locfile="../fol.why"
     loclnum="97" loccnumb="9" loccnume="18"
-    sum="882ef80277a3728e9dc5b1ab478010db"
+    sum="bd54093737f3495086e3519604994fbd"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="asatattrue">
     <proof
      prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
@@ -360,10 +2129,10 @@
     name="ffalse_unsat"
     locfile="../fol.why"
     loclnum="98" loccnumb="9" loccnume="21"
-    sum="625c5fef6055ff5c6bcbc027c817e8bf"
+    sum="951512936e8826f981c615ee9abe0a12"
     proved="true"
-    expanded="false"
-    shape="asataffalseN">
+    expanded="true"
+    shape="Nasataffalse">
     <proof
      prover="0"
      timelimit="5"
@@ -372,15 +2141,47 @@
      archived="false">
      <result status="valid" time="0.01"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="sat_neg"
     locfile="../fol.why"
     loclnum="101" loccnumb="9" loccnume="16"
-    sum="f9270d01df98eedcb56f0bef0122e2d1"
+    sum="3cfbef0e321d0499adfab39b876dad60"
     proved="true"
-    expanded="false"
-    shape="asataprefix ~V0IasatV0NF">
+    expanded="true"
+    shape="asataprefix ~V0INasatV0F">
     <proof
      prover="0"
      timelimit="5"
@@ -389,15 +2190,47 @@
      archived="false">
      <result status="valid" time="0.00"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="valid_neg"
     locfile="../fol.why"
     loclnum="104" loccnumb="9" loccnume="18"
-    sum="edcaca75ceb55ae2a0a8a5b61d59ac3e"
+    sum="239cae9fbf12ab147e4938292ed8e0ab"
     proved="true"
-    expanded="false"
-    shape="avalidV0NIavalidaprefix ~V0F">
+    expanded="true"
+    shape="NavalidV0Iavalidaprefix ~V0F">
     <proof
      prover="0"
      timelimit="5"
@@ -406,14 +2239,46 @@
      archived="false">
      <result status="valid" time="0.01"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="sat_or"
     locfile="../fol.why"
     loclnum="107" loccnumb="9" loccnume="15"
-    sum="6049d3e27e1fd69bda2d344411a74153"
+    sum="e1f47767cc82f09832bcec7bdd3066ff"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="asatV1OasatV0qasatainfix ++V0V1F">
     <proof
      prover="0"
@@ -421,16 +2286,40 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="1.80"/>
+     <result status="valid" time="0.16"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.94"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.07"/>
     </proof>
    </goal>
    <goal
     name="valid_and"
     locfile="../fol.why"
     loclnum="111" loccnumb="9" loccnume="18"
-    sum="6a57636610885f3db36366220298965f"
+    sum="993f597cb8cfa82abee04f3370ca824f"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="avalidV1AavalidV0qavalidainfix &amp;V0V1F">
     <proof
      prover="0"
@@ -438,16 +2327,48 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.22"/>
+     <result status="valid" time="0.05"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="4.19"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.18"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.08"/>
     </proof>
    </goal>
    <goal
     name="valid_or"
     locfile="../fol.why"
     loclnum="115" loccnumb="9" loccnume="17"
-    sum="8d9cfc0bd1f131062398657619f9331f"
+    sum="1ac0a948709e783781120e4463ffe2e5"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="avalidainfix ++V0V1IavalidV1OavalidV0F">
     <proof
      prover="0"
@@ -457,14 +2378,46 @@
      archived="false">
      <result status="valid" time="0.06"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="1.35"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.05"/>
+    </proof>
    </goal>
    <goal
     name="sat_and"
     locfile="../fol.why"
     loclnum="119" loccnumb="9" loccnume="16"
-    sum="7d23b91111253cd18457cf2c4277013f"
+    sum="ae80315574b3a93b8ef95de112b81107"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="asatV1AasatV0Iasatainfix &amp;V0V1F">
     <proof
      prover="0"
@@ -474,32 +2427,669 @@
      archived="false">
      <result status="valid" time="0.08"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.07"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.07"/>
+    </proof>
    </goal>
    <goal
     name="forget_subsumed"
     locfile="../fol.why"
     loclnum="124" loccnumb="9" loccnume="24"
-    sum="944c18018c4414be23a2d4a4a21e2095"
+    sum="5918329444089395fc728e6e6a0d6fd9"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0V1V1Iainfix |==V0V1F">
     <proof
-     prover="2"
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_forget_subsumed_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.65"/>
+     <result status="valid" time="0.90"/>
     </proof>
+    <metas
+     proved="true"
+     expanded="true">
+     <ts_pos
+      name="int"
+      arity="0"
+      id="1"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="int"/>
+     </ts_pos>
+     <ts_pos
+      name="real"
+      arity="0"
+      id="2"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="real"/>
+     </ts_pos>
+     <ls_pos
+      name="infix ="
+      id="10"
+      ip_theory="BuiltIn">
+      <ip_library
+       name="why3"/>
+      <ip_qualid
+       name="infix ="/>
+     </ls_pos>
+     <ls_pos
+      name="infix |="
+      id="276"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |="/>
+     </ls_pos>
+     <ls_pos
+      name="ffalse"
+      id="279"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffalse"/>
+     </ls_pos>
+     <ls_pos
+      name="ttrue"
+      id="280"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue"/>
+     </ls_pos>
+     <ls_pos
+      name="prefix ~"
+      id="281"
+      ip_theory="FOL">
+      <ip_qualid
+       name="prefix ~"/>
+     </ls_pos>
+     <ls_pos
+      name="infix &amp;"
+      id="283"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix &amp;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix ++"
+      id="286"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix ++"/>
+     </ls_pos>
+     <ls_pos
+      name="infix =&gt;"
+      id="289"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix =&gt;"/>
+     </ls_pos>
+     <ls_pos
+      name="infix |=="
+      id="292"
+      ip_theory="FOL">
+      <ip_qualid
+       name="infix |=="/>
+     </ls_pos>
+     <ls_pos
+      name="sat"
+      id="340"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat"/>
+     </ls_pos>
+     <ls_pos
+      name="valid"
+      id="348"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid"/>
+     </ls_pos>
+     <pr_pos
+      name="structure_exists"
+      id="309"
+      ip_theory="FOL">
+      <ip_qualid
+       name="structure_exists"/>
+     </pr_pos>
+     <pr_pos
+      name="true_false"
+      id="314"
+      ip_theory="FOL">
+      <ip_qualid
+       name="true_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_true"
+      id="315"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_true"/>
+     </pr_pos>
+     <pr_pos
+      name="model_false"
+      id="318"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_false"/>
+     </pr_pos>
+     <pr_pos
+      name="model_neg"
+      id="321"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_neg"/>
+     </pr_pos>
+     <pr_pos
+      name="model_and"
+      id="326"
+      ip_theory="FOL">
+      <ip_qualid
+       name="model_and"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_def"
+      id="353"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_def"
+      id="358"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_def"/>
+     </pr_pos>
+     <pr_pos
+      name="imply_models"
+      id="363"
+      ip_theory="FOL">
+      <ip_qualid
+       name="imply_models"/>
+     </pr_pos>
+     <pr_pos
+      name="negneg"
+      id="368"
+      ip_theory="FOL">
+      <ip_qualid
+       name="negneg"/>
+     </pr_pos>
+     <pr_pos
+      name="and_a"
+      id="371"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_a"/>
+     </pr_pos>
+     <pr_pos
+      name="and_c"
+      id="378"
+      ip_theory="FOL">
+      <ip_qualid
+       name="and_c"/>
+     </pr_pos>
+     <pr_pos
+      name="or_a"
+      id="383"
+      ip_theory="FOL">
+      <ip_qualid
+       name="or_a"/>
+     </pr_pos>
+     <pr_pos
+      name="or_c"
+      id="390"
+      ip_theory="FOL">
+      <ip_qualid
+       name="or_c"/>
+     </pr_pos>
+     <pr_pos
+      name="distr_and"
+      id="395"
+      ip_theory="FOL">
+      <ip_qualid
+       name="distr_and"/>
+     </pr_pos>
+     <pr_pos
+      name="distr_or"
+      id="402"
+      ip_theory="FOL">
+      <ip_qualid
+       name="distr_or"/>
+     </pr_pos>
+     <pr_pos
+      name="neutral_and"
+      id="409"
+      ip_theory="FOL">
+      <ip_qualid
+       name="neutral_and"/>
+     </pr_pos>
+     <pr_pos
+      name="neutral_or"
+      id="412"
+      ip_theory="FOL">
+      <ip_qualid
+       name="neutral_or"/>
+     </pr_pos>
+     <pr_pos
+      name="absorb_and"
+      id="415"
+      ip_theory="FOL">
+      <ip_qualid
+       name="absorb_and"/>
+     </pr_pos>
+     <pr_pos
+      name="absorb_or"
+      id="418"
+      ip_theory="FOL">
+      <ip_qualid
+       name="absorb_or"/>
+     </pr_pos>
+     <pr_pos
+      name="sat_def"
+      id="421"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat_def"/>
+     </pr_pos>
+     <pr_pos
+      name="unsat_invalid"
+      id="424"
+      ip_theory="FOL">
+      <ip_qualid
+       name="unsat_invalid"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_sat"
+      id="427"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_sat"/>
+     </pr_pos>
+     <pr_pos
+      name="ttrue_valid"
+      id="430"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue_valid"/>
+     </pr_pos>
+     <pr_pos
+      name="ffaslse_invalid"
+      id="431"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffaslse_invalid"/>
+     </pr_pos>
+     <pr_pos
+      name="ttrue_sat"
+      id="432"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ttrue_sat"/>
+     </pr_pos>
+     <pr_pos
+      name="ffalse_unsat"
+      id="433"
+      ip_theory="FOL">
+      <ip_qualid
+       name="ffalse_unsat"/>
+     </pr_pos>
+     <pr_pos
+      name="sat_neg"
+      id="434"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat_neg"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_neg"
+      id="437"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_neg"/>
+     </pr_pos>
+     <pr_pos
+      name="sat_or"
+      id="440"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat_or"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_and"
+      id="445"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_and"/>
+     </pr_pos>
+     <pr_pos
+      name="valid_or"
+      id="450"
+      ip_theory="FOL">
+      <ip_qualid
+       name="valid_or"/>
+     </pr_pos>
+     <pr_pos
+      name="sat_and"
+      id="455"
+      ip_theory="FOL">
+      <ip_qualid
+       name="sat_and"/>
+     </pr_pos>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="10"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="276"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="279"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="280"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="281"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="283"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="286"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="289"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="292"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="340"/>
+     </meta>
+     <meta
+      name="remove_logic">
+      <meta_arg_ls
+       id="348"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="309"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="314"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="315"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="318"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="321"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="326"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="353"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="358"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="363"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="368"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="371"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="378"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="383"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="390"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="395"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="402"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="409"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="412"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="415"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="418"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="421"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="424"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="427"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="430"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="431"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="432"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="433"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="434"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="437"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="440"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="445"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="450"/>
+     </meta>
+     <meta
+      name="remove_prop">
+      <meta_arg_pr
+       id="455"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="1"/>
+     </meta>
+     <meta
+      name="remove_type">
+      <meta_arg_ts
+       id="2"/>
+     </meta>
+     <goal
+      name="forget_subsumed"
+      locfile="../fol.why"
+      loclnum="124" loccnumb="9" loccnume="24"
+      sum="edf0a3fb5fc93aebde2303a889af6922"
+      proved="true"
+      expanded="true"
+      shape="ainfix =ainfix ++V0V1V1Iainfix |==V0V1F">
+      <transf
+       name="eliminate_builtin"
+       proved="true"
+       expanded="true">
+       <goal
+        name="forget_subsumed.1"
+        locfile="../fol.why"
+        loclnum="124" loccnumb="9" loccnume="24"
+        expl="1."
+        sum="5f0d3e5f9f633d891e82377a67fd7376"
+        proved="true"
+        expanded="true"
+        shape="ainfix =ainfix ++V0V1V1Iainfix |==V0V1F">
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.01"/>
+        </proof>
+        <proof
+         prover="3"
+         timelimit="5"
+         memlimit="1000"
+         edited="fol_FOL_forget_subsumed_2.v"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.90"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+    </metas>
    </goal>
    <goal
     name="forget_subsumed_imply"
     locfile="../fol.why"
     loclnum="128" loccnumb="9" loccnume="30"
-    sum="2c316e59d34d5d0090d90632ac4f7bd8"
+    sum="449f72e13617444a58cee0dd5bbbc583"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0V1V1Iavalidainfix =&gt;V0V1F">
     <proof
      prover="0"
@@ -509,17 +3099,81 @@
      archived="false">
      <result status="valid" time="0.02"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.19"/>
+    </proof>
    </goal>
    <goal
     name="forget_subsumed_or"
     locfile="../fol.why"
     loclnum="132" loccnumb="9" loccnume="27"
-    sum="364a578b2343855187d60441fffe5b47"
+    sum="a15ae3b64e4535048164143a59f7cfc5"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0V1V1Iavalidainfix ++aprefix ~V0V1F">
     <proof
      prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="5"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
@@ -531,27 +3185,51 @@
     name="classic_neg"
     locfile="../fol.why"
     loclnum="136" loccnumb="9" loccnume="20"
-    sum="8494be96459c37ca7fd6ce5d602e703b"
+    sum="426757132ecd4dd7655e7291536c4631"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++aprefix ~V0V0attrueF">
     <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.03"/>
+    </proof>
+    <proof
      prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.40"/>
+    </proof>
+    <proof
+     prover="3"
      timelimit="5"
      memlimit="1000"
      edited="fol_FOL_classic_neg_1.v"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.65"/>
+     <result status="valid" time="1.04"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
     </proof>
    </goal>
    <goal
     name="imply_transitive"
     locfile="../fol.why"
     loclnum="139" loccnumb="9" loccnume="25"
-    sum="0f6d8a54d431da73958c8e5bb97cf2cf"
+    sum="e3ab1ecd8f1d236f9b4dc6d636391f5a"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix |==V0V2Iainfix |==V1V2Aainfix |==V0V1F">
     <proof
      prover="0"
@@ -561,14 +3239,46 @@
      archived="false">
      <result status="valid" time="0.03"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.05"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
    </goal>
    <goal
     name="imply_bigger"
     locfile="../fol.why"
     loclnum="142" loccnumb="9" loccnume="21"
-    sum="0fa0632d9edddb8965bcbb1ae0e9b931"
+    sum="447301193c3e6d3db5395bc264817b8e"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix |==V0ainfix ++V0V1F">
     <proof
      prover="0"
@@ -578,14 +3288,46 @@
      archived="false">
      <result status="valid" time="0.02"/>
     </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.20"/>
+    </proof>
    </goal>
    <goal
     name="imply_or"
     locfile="../fol.why"
     loclnum="146" loccnumb="9" loccnume="17"
-    sum="344a960aaa66552b0f30647d735e6baa"
+    sum="02e1a0ededa7194c721dd754d59623fb"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix |==ainfix ++V0V2ainfix ++V1V2Iainfix |==V0V1F">
     <proof
      prover="0"
@@ -593,16 +3335,48 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.73"/>
+     <result status="valid" time="0.08"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.13"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="1.26"/>
     </proof>
    </goal>
    <goal
     name="or_same"
     locfile="../fol.why"
     loclnum="150" loccnumb="9" loccnume="16"
-    sum="d1c8cc2e1e3912463757f2ccc205b1f6"
+    sum="fb25f4f54e74a6018122583a5877901e"
     proved="true"
-    expanded="false"
+    expanded="true"
     shape="ainfix =ainfix ++V0V0V0F">
     <proof
      prover="0"
@@ -611,6 +3385,38 @@
      obsolete="false"
      archived="false">
      <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
     </proof>
    </goal>
   </theory>

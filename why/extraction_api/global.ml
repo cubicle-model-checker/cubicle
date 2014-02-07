@@ -48,3 +48,8 @@ let sys_env =
     s_unsafe = Term.t_true;
     s_trans = [];
   }
+
+
+let global_module : Mlw_module.modul ref = ref (Obj.magic 0)
+let global_theory : Theory.theory ref = ref (Obj.magic 0)
+

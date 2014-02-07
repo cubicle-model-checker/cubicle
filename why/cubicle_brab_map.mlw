@@ -56,17 +56,20 @@ module Cubicle_BRAB
   
 
   val approx (phi : f) : option f
+  reads { bad }
   ensures { match result with
             | Some psi -> not (!bad |== psi) /\ not (finite_model |== psi) /\
 	      	       	  phi |== psi
 	    | None -> true end }
 
-  let pre_or_approx (phi : f) (ghost theta :f) (ghost init :f) = writes { kind, from }
+  let pre_or_approx (tau: trans_rel) (phi : f) (ghost theta :f) (ghost init :f) =
+    writes { kind, from }
+    reads { bad }
     requires { (forall phi:f. !kind[phi] = Orig -> !from[phi] = theta) /\
 	       (forall phi:f. !kind[phi] = Orig ->
-	          reachable init phi -> reachable init !from[phi])}
+	          reachable tau init phi -> reachable tau init !from[phi])}
     ensures { (
-              (result = pre phi /\ !kind[result] = !kind[phi] /\ !from[result] = !from[phi])
+              (result = pre tau phi /\ !kind[result] = !kind[phi] /\ !from[result] = !from[phi])
     	      \/
               (phi |== result /\ !kind[result] = Appr /\
     	       (!kind[phi] = Orig -> !from[result] = result) /\
@@ -83,7 +86,7 @@ module Cubicle_BRAB
 
 	       (forall phi:f. !kind[phi] = Orig -> !from[phi] = theta) &&
 	       (forall phi:f. !kind[phi] = Orig ->
-	          reachable init phi -> reachable init !from[phi])
+	          reachable tau init phi -> reachable tau init !from[phi])
 	       }
     match approx phi with
       | Some psi ->
@@ -92,19 +95,21 @@ module Cubicle_BRAB
 	  else from := !from[psi <- !from[phi]];
           psi
       | None ->
-          let psi = pre phi in
-	  assert { reachable init psi -> reachable init phi };
+          let psi = pre tau phi in
+	  assert { reachable tau init psi -> reachable tau init phi };
           kind := !kind[psi <- !kind[phi]];
           from := !from[psi <- !from[phi]];
           psi
     end
   
     
-  let bwd (init : f) (theta : f) = writes { kind, from, visited, faulty, q }
+  let bwd (tau: trans_rel)  (init : f) (theta : f) =
+    writes { kind, from, visited, faulty, q }
+    reads { bad }
     requires { forall psi:f. !kind[psi] = Undef /\ !from[psi] = psi }
     (* Soundness *)
-    ensures { result = Safe -> not (reachable init theta) }
-    ensures { result = Unsafe -> !kind[ !faulty ] = Orig -> reachable init theta }
+    ensures { result = Safe -> not (reachable tau init theta) }
+    ensures { result = Unsafe -> !kind[ !faulty ] = Orig -> reachable tau init theta }
     visited := ffalse;
     Q.clear q;
     try
@@ -113,17 +118,17 @@ module Cubicle_BRAB
        kind := !kind[ theta <- Orig ];
        if sat (init & theta) then raise Unsafe_trace;
        visited := theta ++ !visited;
-       let pre_theta = pre theta in
+       let pre_theta = pre tau theta in
        from := !from[ pre_theta <- theta ];
        kind := !kind[ pre_theta <- Orig ];       
        Q.push (pre_theta) q;
        while not (Q.is_empty q) do
-        invariant { not (sat (init & !visited)) &&
+        invariant { not (sat (!visited & init)) &&
                     (* pre_star !visited |== !visited ++ (pre_star q.formula) && *)
-                    pre_star theta |== !visited ++ (pre_star q.formula) &&
+                    pre_star tau theta |== !visited ++ (pre_star tau q.formula) &&
 	            (forall phi:f. !kind[phi] = Orig -> !from[phi] = theta) &&
 	            (forall phi:f. !kind[phi] = Orig ->
-		       reachable init phi -> reachable init (!from[phi]) )
+		       reachable tau init phi -> reachable tau init (!from[phi]) )
 
 		    (* (!kind[ !faulty ] = Orig -> !from[ !faulty ] = theta) && *)
 		    (* (!kind[ !faulty ] = Orig -> reachable init !faulty -> reachable init (!from[ !faulty ])) *) }
@@ -135,67 +140,67 @@ module Cubicle_BRAB
           let ghost old_kind = !kind in
           let ghost old_from = !from in
           visited := phi ++ !visited;
-          let poa = pre_or_approx phi theta init in
+          let poa = pre_or_approx tau phi theta init in
 	  (* assert { (\* !kind[ phi ] = Orig -> !from[phi] = theta && *\) *)
 	  (*        (\* (!kind[phi] = Orig -> phi <> theta -> *\) *)
 	  (* 	 (\*       reachable init phi -> reachable init (!from[phi])) *\) *)
 	  (* 	  }; *)
           Q.push poa q;
           assert {
-	           old_v ++ pre_star q.formula |==
-		     old_v ++ (pre_star phi ++ pre_star q.formula)
+	           old_v ++ pre_star tau q.formula |==
+		     old_v ++ (pre_star tau phi ++ pre_star tau q.formula)
 
 		   &&
 		   
-		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
-		     old_v ++ (pre_star phi ++ pre_star (~ phi & old_q.formula))
+		   (phi ++ old_v) ++ pre_star tau (pre tau phi ++ ((~ phi) & old_q.formula)) =
+		     old_v ++ (pre_star tau phi ++ pre_star tau (~ phi & old_q.formula))
 
 		   &&
 		   
-		   (phi ++ old_v) ++ pre_star (pre phi ++ ((~ phi) & old_q.formula)) =
-		     old_v ++ pre_star (ttrue & (phi ++ old_q.formula))
+		   (phi ++ old_v) ++ pre_star tau (pre tau phi ++ ((~ phi) & old_q.formula)) =
+		     old_v ++ pre_star tau (ttrue & (phi ++ old_q.formula))
 		     
 		   &&
 
 		   (phi |== poa ->
 		     ((phi ++ old_v) ++
-		      (pre_star phi ++ pre_star (~ phi & old_q.formula))) |==
-		     ((phi ++ old_v) ++ (pre_star poa ++
-		       pre_star (~ phi & old_q.formula))))
+		      (pre_star tau phi ++ pre_star tau (~ phi & old_q.formula))) |==
+		     ((phi ++ old_v) ++ (pre_star tau poa ++
+		       pre_star tau (~ phi & old_q.formula))))
 		     
 		 }
 
         )
         else
            assert {
-	        valid ((~ phi) => pre_star (~ phi))
+	        valid ((~ phi) => pre_star tau (~ phi))
 
                 &&
 		
-		!visited ++ ((~ phi) ++ (pre_star (~ phi))) =
-        	  (phi ++ !visited) ++ ((~ phi) ++ (pre_star (~ phi)))
+		!visited ++ ((~ phi) ++ (pre_star tau (~ phi))) =
+        	  (phi ++ !visited) ++ ((~ phi) ++ (pre_star tau (~ phi)))
 		  
                 &&
 		
 
-		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
-		   & (!visited ++ pre_star old_q.formula)) = 
-                 ((!visited ++  ((phi ++ ~ phi) ++ pre_star (~ phi))) &
-		   (!visited ++ pre_star old_q.formula))
+		 ((!visited ++ (~ phi ++ pre_star tau (~ phi)))
+		   & (!visited ++ pre_star tau old_q.formula)) = 
+                 ((!visited ++  ((phi ++ ~ phi) ++ pre_star tau (~ phi))) &
+		   (!visited ++ pre_star tau old_q.formula))
 		   
                 &&
 		
 
-		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
-		   & (!visited ++ pre_star old_q.formula)) = 
-                 ((!visited ++  (ttrue ++ pre_star (~ phi))) &
-		   (!visited ++ pre_star old_q.formula))
+		 ((!visited ++ (~ phi ++ pre_star tau (~ phi)))
+		   & (!visited ++ pre_star tau old_q.formula)) = 
+                 ((!visited ++  (ttrue ++ pre_star tau (~ phi))) &
+		   (!visited ++ pre_star tau old_q.formula))
 
 		&&
 
-		 ((!visited ++ (~ phi ++ pre_star (~ phi)))
-		   & (!visited ++ pre_star old_q.formula)) = 
-		 (!visited ++ ttrue) & (!visited ++ pre_star old_q.formula)
+		 ((!visited ++ (~ phi ++ pre_star tau (~ phi)))
+		   & (!visited ++ pre_star tau old_q.formula)) = 
+		 (!visited ++ ttrue) & (!visited ++ pre_star tau old_q.formula)
           }
         
        done;
@@ -211,21 +216,21 @@ module Cubicle_BRAB
 
     val bwd_res : ref result
     
-    let brab (init : f) (theta : f) =
+    let brab (tau: trans_rel) (init : f) (theta : f) =
         requires { forall psi:f. !kind[psi] = Undef /\ !from[psi] = psi }
-	ensures { result = Safe -> not (reachable init theta) }
-	ensures { result = Unsafe -> reachable init theta }
+	ensures { result = Safe -> not (reachable tau init theta) }
+	ensures { result = Unsafe -> reachable tau init theta }
     	bad := ffalse;
 	try
-	    bwd_res := bwd init theta;
+	    bwd_res := bwd tau init theta;
 	    while !bwd_res = Unsafe do
-                invariant { !bwd_res = Safe -> not (reachable init theta) }
+                invariant { !bwd_res = Safe -> not (reachable tau init theta) }
                 invariant { !bwd_res = Unsafe ->
-		                !kind[ !faulty ] = Orig -> reachable init theta }
+		                !kind[ !faulty ] = Orig -> reachable tau init theta }
 	        if !kind[ !faulty ] = Orig then raise Unsafe_trace;
 	    	bad := !from[ !faulty ] ++ !bad;
 		reset_maps theta;
-	        bwd_res := bwd init theta
+	        bwd_res := bwd tau init theta
 	    done;
 	    Safe
         with

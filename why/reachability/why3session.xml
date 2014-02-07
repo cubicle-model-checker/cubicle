@@ -1,18 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE why3session PUBLIC "-//Why3//proof session v2//EN" "http://why3.lri.fr/why3session.dtd">
-<why3session shape_version="2">
+<why3session shape_version="4">
  <prover
   id="0"
   name="Alt-Ergo"
   version="0.96"/>
  <prover
   id="1"
-  name="Coq"
-  version="8.3pl4"/>
+  name="CVC3"
+  version="2.4.1"/>
  <prover
   id="2"
+  name="CVC4"
+  version="1.3"/>
+ <prover
+  id="3"
   name="Eprover"
-  version="1.6"/>
+  version="1.8-001"/>
+ <prover
+  id="4"
+  name="Spass"
+  version="3.5"/>
+ <prover
+  id="5"
+  name="Z3"
+  version="4.3.2"/>
  <file
   name="../reachability.why"
   verified="true"
@@ -24,15 +36,96 @@
    verified="true"
    expanded="true">
    <goal
+    name="directly_reachable"
+    locfile="../reachability.why"
+    loclnum="55" loccnumb="9" loccnume="27"
+    sum="dbc0572cee41fa3794b197383bdf9e35"
+    proved="true"
+    expanded="false"
+    shape="areachableV0V1V2Iasatainfix &amp;V2V1FF">
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.58"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.07"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.17"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.30"/>
+    </proof>
+   </goal>
+   <goal
     name="false_unreachable"
     locfile="../reachability.why"
-    loclnum="37" loccnumb="9" loccnume="26"
-    sum="ae1e1110cc4e5b49147ed4c99bde091e"
+    loclnum="59" loccnumb="9" loccnume="26"
+    sum="8f0fe2eb71f631911e1026b27ce86fcb"
     proved="true"
-    expanded="true"
-    shape="areachableV0affalseNF">
+    expanded="false"
+    shape="NareachableV0V1affalseFF">
     <proof
      prover="0"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="5"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
@@ -43,11 +136,11 @@
    <goal
     name="reachable_or"
     locfile="../reachability.why"
-    loclnum="40" loccnumb="9" loccnume="21"
-    sum="3b1ebf5e193042476f5ea24cc0f740ff"
+    loclnum="63" loccnumb="9" loccnume="21"
+    sum="3aaaa0893a7248e4710fce45facecc65"
     proved="true"
     expanded="true"
-    shape="areachableV2V1OareachableV2V0qareachableV2ainfix ++V0V1F">
+    shape="areachableV0V3V2OareachableV0V3V1qareachableV0V3ainfix ++V1V2FF">
     <transf
      name="split_goal_wp"
      proved="true"
@@ -55,38 +148,69 @@
      <goal
       name="reachable_or.1"
       locfile="../reachability.why"
-      loclnum="40" loccnumb="9" loccnume="21"
+      loclnum="63" loccnumb="9" loccnume="21"
       expl="1."
-      sum="424d4dd2c4c673c3810f30a239f55980"
+      sum="dda0f24340cdfa8ff18be60a16bf9c5c"
       proved="true"
-      expanded="true"
-      shape="areachableV2V1OareachableV2V0IareachableV2ainfix ++V0V1F">
-      <proof
-       prover="1"
-       timelimit="5"
-       memlimit="1000"
-       edited="reachability_Reachability_reachable_or_2.v"
-       obsolete="false"
-       archived="false">
-       <result status="valid" time="0.66"/>
-      </proof>
-     </goal>
-     <goal
-      name="reachable_or.2"
-      locfile="../reachability.why"
-      loclnum="40" loccnumb="9" loccnume="21"
-      expl="2."
-      sum="ebc6cc141379383d57d00889a791faa1"
-      proved="true"
-      expanded="true"
-      shape="areachableV2ainfix ++V0V1IareachableV2V1OareachableV2V0F">
+      expanded="false"
+      shape="areachableV0V3V2OareachableV0V3V1IareachableV0V3ainfix ++V1V2FF">
       <proof
        prover="0"
        timelimit="5"
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="7.02"/>
+       <result status="valid" time="3.97"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="1.11"/>
+      </proof>
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.05"/>
+      </proof>
+     </goal>
+     <goal
+      name="reachable_or.2"
+      locfile="../reachability.why"
+      loclnum="63" loccnumb="9" loccnume="21"
+      expl="2."
+      sum="bba72dc0af02b7993c4929d112375fd6"
+      proved="true"
+      expanded="false"
+      shape="areachableV0V3ainfix ++V1V2IareachableV0V3V2OareachableV0V3V1FF">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.58"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="2.50"/>
+      </proof>
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.05"/>
       </proof>
      </goal>
     </transf>
@@ -94,11 +218,11 @@
    <goal
     name="reachable_and"
     locfile="../reachability.why"
-    loclnum="44" loccnumb="9" loccnume="22"
-    sum="750c93bf13194c7b438f81455c3b51cf"
+    loclnum="69" loccnumb="9" loccnume="22"
+    sum="161effb3d1f04b46e3f179edaceb245e"
     proved="true"
     expanded="true"
-    shape="areachableV2V1AareachableV2V0IareachableV2ainfix &amp;V0V1F">
+    shape="areachableV0V3V2AareachableV0V3V1IareachableV0V3ainfix &amp;V1V2FF">
     <transf
      name="split_goal_wp"
      proved="true"
@@ -106,37 +230,93 @@
      <goal
       name="reachable_and.1"
       locfile="../reachability.why"
-      loclnum="44" loccnumb="9" loccnume="22"
+      loclnum="69" loccnumb="9" loccnume="22"
       expl="1."
-      sum="3da8a3c8dd03bf771aecdc6cc1ddb1f2"
+      sum="65fe9780e8f808144d400aa004785d34"
       proved="true"
-      expanded="true"
-      shape="areachableV2V0IareachableV2ainfix &amp;V0V1F">
+      expanded="false"
+      shape="areachableV0V3V1IareachableV0V3ainfix &amp;V1V2FF">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="1.41"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.66"/>
+      </proof>
       <proof
        prover="2"
        timelimit="5"
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.40"/>
+       <result status="valid" time="0.04"/>
+      </proof>
+      <proof
+       prover="3"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="2.72"/>
+      </proof>
+      <proof
+       prover="5"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.05"/>
       </proof>
      </goal>
      <goal
       name="reachable_and.2"
       locfile="../reachability.why"
-      loclnum="44" loccnumb="9" loccnume="22"
+      loclnum="69" loccnumb="9" loccnume="22"
       expl="2."
-      sum="00afbc72fca1d5c6f2d18c0f8e24d146"
+      sum="7c0a1a852391f8725d2ac94b84701320"
       proved="true"
-      expanded="true"
-      shape="areachableV2V1IareachableV2ainfix &amp;V0V1F">
+      expanded="false"
+      shape="areachableV0V3V2IareachableV0V3ainfix &amp;V1V2FF">
+      <proof
+       prover="0"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.97"/>
+      </proof>
+      <proof
+       prover="1"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.85"/>
+      </proof>
       <proof
        prover="2"
        timelimit="5"
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.40"/>
+       <result status="valid" time="0.04"/>
+      </proof>
+      <proof
+       prover="5"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.03"/>
       </proof>
      </goal>
     </transf>
@@ -144,28 +324,60 @@
    <goal
     name="reachable_imply"
     locfile="../reachability.why"
-    loclnum="48" loccnumb="9" loccnume="24"
-    sum="b41811f13d6efe1c0006e42e0f04c4fb"
+    loclnum="75" loccnumb="9" loccnume="24"
+    sum="19aff4fee76af3e10f814cc561c19f1a"
     proved="true"
-    expanded="true"
-    shape="areachableV2V1IareachableV2V0Iavalidainfix =&gt;V0V1F">
+    expanded="false"
+    shape="areachableV0V3V2IareachableV0V3V1Iavalidainfix =&gt;V1V2FF">
     <proof
      prover="0"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.57"/>
+     <result status="valid" time="0.06"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.29"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.38"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
     </proof>
    </goal>
    <goal
     name="reachable_bigger"
     locfile="../reachability.why"
-    loclnum="52" loccnumb="9" loccnume="25"
-    sum="c9227e3e02a190ec5b183acf598bf76d"
+    loclnum="80" loccnumb="9" loccnume="25"
+    sum="4ff6839f484cd4158cc98806b2999c6a"
     proved="true"
-    expanded="true"
-    shape="areachableV2V1IareachableV2V0Iainfix |==V0V1F">
+    expanded="false"
+    shape="areachableV0V3V2IareachableV0V3V1Iainfix |==V1V2FF">
     <proof
      prover="0"
      timelimit="5"
@@ -173,40 +385,128 @@
      obsolete="false"
      archived="false">
      <result status="valid" time="0.03"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
     </proof>
    </goal>
    <goal
     name="pre_star_bigger"
     locfile="../reachability.why"
-    loclnum="56" loccnumb="9" loccnume="24"
-    sum="21df7b780dce3f0bd3ea8e815534800b"
+    loclnum="85" loccnumb="9" loccnume="24"
+    sum="809418c3fae6724c4362d7f4bed1ff8f"
     proved="true"
-    expanded="true"
-    shape="ainfix |==apre_starV0apre_starV1Iainfix |==V0V1F">
+    expanded="false"
+    shape="ainfix |==apre_starV0V1apre_starV0V2Iainfix |==V1V2FF">
     <proof
      prover="0"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="0.03"/>
+     <result status="valid" time="0.11"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.13"/>
     </proof>
    </goal>
    <goal
     name="reachable_by_pre"
     locfile="../reachability.why"
-    loclnum="60" loccnumb="9" loccnume="25"
-    sum="f8af5097049605edae31fefc89d10cf1"
+    loclnum="90" loccnumb="9" loccnume="25"
+    sum="24ad9e2dc44259b22883dbfc864b688b"
     proved="true"
-    expanded="true"
-    shape="areachableV1V0IareachableV1apreV0F">
+    expanded="false"
+    shape="areachableV0V2V1IareachableV0V2apreV0V1FF">
     <proof
      prover="0"
      timelimit="5"
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="2.11"/>
+     <result status="valid" time="0.09"/>
+    </proof>
+    <proof
+     prover="1"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.06"/>
+    </proof>
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+    <proof
+     prover="4"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="1.25"/>
+    </proof>
+    <proof
+     prover="5"
+     timelimit="5"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
     </proof>
    </goal>
   </theory>

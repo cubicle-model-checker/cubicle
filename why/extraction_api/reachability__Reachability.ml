@@ -59,16 +59,24 @@ let pre_one_trans t tr_args f =
     eprintf "\npre %a\nBY %a\n===\n"
 	    Pretty.print_term (Mlw_ty.create_post Translation.dummy_vsymbol f)
 	    Mlw_pretty.print_expr inst_t;
-    let kn = Mlw_module.get_known !Translation.sys_module in
-    let th = Mlw_module.get_theory !Translation.sys_module in
-    let c = Mlw_wp.wp_expr Translation.env kn th inst_t
+    let kn = (!Global.global_module).Mlw_module.mod_known in
+    let kt = (!Global.global_theory).Theory.th_known in
+    let c = Mlw_wp.wp_expr Translation.env kn kt inst_t
 			   (Mlw_ty.create_post Translation.dummy_vsymbol f)
 			   Mlw_ty.Mexn.empty in
-    let c = (Mlw_wp.remove_at c) in
+    (* let c = (Mlw_wp.remove_at c) in *)
+    let c = Translation.simplify c in
+    (* let c = Eval_match.eval_match ~inline:Eval_match.inline_nonrec_linear *)
+    (*                               kt c in *)
+    (* let c = Simplify_formula.fmla_cond_subst (fun t1 t2 -> t1 < t2) c in *)
+    (* let c = Simplify_formula.fmla_remove_quant c in *)
+
+    eprintf "%a\nafter dnf:@." Pretty.print_term c;
+
     List.fold_left (fun pre_f c ->
       let c = close_free_procs c in
       eprintf "%a@." Pretty.print_term c;
-      assert false;
+      (* assert false; *)
       Term.t_or_simp c pre_f
     ) pre_f (Translation.dnfize_list c)
   ) Term.t_false args_list

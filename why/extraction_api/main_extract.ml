@@ -111,7 +111,8 @@ try
          let n = pvs.Mlw_ty.pv_vs.Term.vs_name.Ident.id_string in
          begin 
            match pvs.Mlw_ty.pv_ity.Mlw_ty.T.ity_node with
-           | Mlw_ty.T.Ityapp (_, [it], _) ->
+           | Mlw_ty.T.Ityapp (r, [it], _)
+                when r.Mlw_ty.T.its_ts.Ty.ts_name.Ident.id_string = "ref" ->
               
               eprintf "REF : %a@." Mlw_pretty.print_pdecl d;
               begin
@@ -134,6 +135,35 @@ try
                    
                 | _ -> assert false
               end
+
+           | Mlw_ty.T.Ityapp (r, [it], _)
+                when r.Mlw_ty.T.its_ts.Ty.ts_name.Ident.id_string = "array" ->
+              let tyn = match it.Mlw_ty.T.ity_node with
+                | Mlw_ty.T.Itypur (s, []) ->
+                   s.Ty.ts_name.Ident.id_string
+                | _ -> assert false
+              in
+              Smt.Symbol.declare (Hstring.make n)
+                                 [Smt.Type.type_proc] (Hstring.make tyn);
+              (Hstring.make n, Hstring.make tyn) :: acc
+
+           | Mlw_ty.T.Itypur (_, [_(* proc *); it]) ->
+              (* Array variable : map proc (ref it) *)
+              let tyn = match it.Mlw_ty.T.ity_node with
+                | Mlw_ty.T.Ityapp (_, [it], _) ->
+                   begin
+                     match it.Mlw_ty.T.ity_node with
+                     | Mlw_ty.T.Itypur (s, []) ->
+                        s.Ty.ts_name.Ident.id_string
+                     | _ -> assert false
+                   end
+                | _ -> assert false
+              in
+              Smt.Symbol.declare (Hstring.make n)
+                                 [Smt.Type.type_proc] (Hstring.make tyn);
+              (Hstring.make n, Hstring.make tyn) :: acc
+                                                      
+
            | _ ->
               eprintf "DD : %a@." Mlw_pretty.print_pdecl d;
               assert false
@@ -142,8 +172,10 @@ try
                                
      ) [] (m.Mlw_module.mod_decls) in
 
-   Smt.Variant.init assoc_types
-
+   Smt.Variant.init assoc_types;
+   
+   Smt.Variant.print ();
+   
 with
   | Smt.Error (Smt.DuplicateSymb _) -> assert false
   | Smt.Error (Smt.DuplicateTypeName n) -> eprintf "dup %a@." Hstring.print n;
@@ -171,12 +203,16 @@ let _ =
     let mm, thm = Mlw_main.read_channel lib [] file cin in
     
     let m = match Stdlib.Mstr.values mm with
-      | [m] -> m
+      | [m] ->
+         Global.global_module := m;
+         m
       | _ -> failwith "There can only be one module inside a file."
     in
 
     let th = match Stdlib.Mstr.values thm with
-      | [th] -> th
+      | [th] ->
+         Global.global_theory := th;
+         th
       | _ -> failwith "There can only be one theory inside a file."
     in
 
@@ -186,7 +222,7 @@ let _ =
 
     Global.sys_env.s_init <- (get_init m);
     Global.sys_env.s_unsafe <- (get_unsafe m);
-    Global.sys_env.s_trans <- (get_transitions m);
+    Global.sys_env.s_trans <- List.rev (get_transitions m);
     
 
     match Cubicle_brab_map__Cubicle_BRAB.brab
