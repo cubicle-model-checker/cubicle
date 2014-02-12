@@ -2,12 +2,15 @@ open Options
 open Ast
 open Ast.Atom
 open Format
+open Random
 
 type error = MustBeSingleNum
 
 exception Error of error
 
 let error e = raise (Error e)
+
+type values = Int of int | Hstr of Hstring.t | Proc of int
 
 (* GLOBAL VARIABLES *)
 
@@ -19,88 +22,55 @@ let htbl_types = Hashtbl.create 11
 let () = List.iter (
   fun (constr, fields) -> 
     Hashtbl.add htbl_types constr fields
-) [ Hstring.make "proc", [Hstring.make "1"];
-    Hstring.make "bool", [Hstring.make "False"];
-    Hstring.make "int", [Hstring.make "0"]
+) [ Hstring.make "proc", [Proc 1];
+    Hstring.make "bool", [Hstr Ast.hfalse];
+    Hstring.make "int", [Int 0]
   ]
 
 (* Global variables with their value *)
-let (htbl_globals : (Hstring.t, Hstring.t) Hashtbl.t) = Hashtbl.create 17
+let (htbl_globals : (Hstring.t, values) Hashtbl.t) = Hashtbl.create 17
 
 (* Hashtbl : name tbl -> tbl, indexes : process number *)
-let (htbl_arrays : (Hstring.t, Hstring.t array) Hashtbl.t) = Hashtbl.create 17
+let (htbl_arrays : (Hstring.t, values array) Hashtbl.t) = Hashtbl.create 17
 
 (* USEFUL METHODS *)
 
 let default_type g_type =
   try
     match Hashtbl.find htbl_types g_type with
-      | [] -> g_type
+      | [] -> Hstr g_type
       | hd::_ -> hd
-  with Not_found -> printf "error %a\t" Hstring.print g_type; g_type
+  with Not_found -> printf "error %a\t@." Hstring.print g_type; Hstr g_type
 
 let value_c c =
   match MConst.is_num c with
-    | Some e -> Hstring.make (Num.string_of_num e)
+    | Some e -> Num.int_of_num e
     | None -> error (MustBeSingleNum)
 
-(* DISPLAY METHODS AND MODULES TO HSTRING *)
-
-let display_system () =
-  Hashtbl.iter (
-    fun id value -> 
-      printf "%a@." (Hstring.print_list "\t") [id; value]
-  ) htbl_globals;
-  Hashtbl.iter (
-    fun id array -> 
-      printf "%a\t" Hstring.print id;
-      Array.iteri (
-	fun i el -> 
-	  printf "%a " (Hstring.print_list " ") [Hstring.make (string_of_int i); el]
-      ) array;
-      printf "@."
-  ) htbl_arrays
-
-let rec hstring_of_term t =
+let value_t ?ind:(i=0) t =
   match t with
-    | Const c -> [value_c c]
-    | Elem (e, _) -> [e]
-    | Access (arr, pl) -> [arr] @ [Hstring.make "["] @ pl @ [Hstring.make "]"]
-    | Arith (t, c) -> (hstring_of_term t) @ [value_c c]
+    | Const c -> Int (value_c c)
+    | Elem (e, _) -> Hstr e
+    | Access (arr, pl) -> 
+      let arr = Hashtbl.find htbl_arrays arr in
+      arr.(i)
+    | _ -> assert false
 
-let hstring_of_op op =
-  match op with
-    | Eq -> [Hstring.make "="]
-    | Lt -> [Hstring.make "<"]
-    | Le -> [Hstring.make "<="]
-    | Neq -> [Hstring.make "!="]
+let array_exists p arr =
+  try
+    for i = 0 to Array.length arr - 1 do
+      if p arr.(i) then raise Exit
+    done; false
+  with Exit -> true
 
-let h_new_line = [Hstring.make "\n"]
-
-let rec hstring_of_satom sa = SAtom.fold (fun a acc -> (hstring_of_atom a) @ h_new_line @ acc) sa []
-  
-and hstring_of_atom a =
-  match a with
-    | True -> [htrue]
-    | False -> [hfalse]
-    | Comp (t1, op, t2) -> let ht1 = hstring_of_term t1 in
-			   let hop = hstring_of_op op in
-			   let ht2 = hstring_of_term t2 in
-			   ht1 @ hop @ ht2
-    | Ite (sa, a1, a2) -> let hsa = hstring_of_satom sa in
-			  let ha1 = hstring_of_atom a1 in
-			  let ha2 = hstring_of_atom a2 in
-			  hsa @ ha1 @ ha2
-
-let display_satom sa =
-  printf "%a@." (Hstring.print_list " ") (hstring_of_satom sa)
 
 (* INITIALIZATION *)
 
 let init_types type_defs =
   List.iter (
     fun (t_name, t_fields) ->
-      Hashtbl.add htbl_types t_name t_fields
+      let fields = List.fold_left (fun acc field -> acc@[Hstr field]) [] t_fields in
+      Hashtbl.add htbl_types t_name fields
   ) type_defs
 
 let init_globals globals =
@@ -128,8 +98,8 @@ let rec fill_system (vars, atoms) =
 	    (* Init global variables *)
 	    | Comp (Elem (id1, _), Eq, term) ->
 	      let value = match term with
-		| Elem (id2, _) -> id2
-		| Const c -> value_c c
+		| Elem (id2, _) -> Hstr id2
+		| Const c -> Int (value_c c)
 		| Access (id2, [i2]) -> failwith "TODO"
 		| _ -> assert false
 	      in
@@ -138,8 +108,8 @@ let rec fill_system (vars, atoms) =
 	    (* Init arrays *)
 	    | Comp (Access (id1, _), Eq, term) ->
 	      let value = match term with
-		| Elem (id2, _) -> id2
-		| Const c -> value_c c
+		| Elem (id2, _) -> Hstr id2
+		| Const c -> Int (value_c c)
 		| Access (id2, [i2]) -> failwith "TODO"
 		| _ -> assert false
 	      in 
@@ -159,15 +129,72 @@ let init_system se =
 
 (* SCHEDULING *)
 
-let display_transition trans =
-  List.iter (
-    fun {tr_name; tr_args; tr_reqs; tr_ureq; tr_assigns; tr_upds; tr_nondets} ->
-      printf "%a@. " (Hstring.print_list " ") ([tr_name]@tr_args);
-      display_satom tr_reqs
-  ) trans
+let find_op op =
+  match op with
+    | Eq -> (=)
+    | Lt -> (<)
+    | Le -> (<=)
+    | Neq -> (<>)
+    
+let compare_to_elem op t2 t1v =
+  let t2v = value_t t2 in
+  match t1v, t2v with
+    | Int v1, Int v2 | Proc v1, Proc v2 ->
+      let operator = find_op op in
+      operator v1 v2
+    | Hstr h1, Hstr h2 ->
+      begin
+	match op with
+	  | Eq -> Hstring.equal h1 h2
+	  | Neq -> not (Hstring.equal h1 h2)
+	  | _ -> assert false
+      end
+    | _ -> assert false
+
+
+
+let valid_transition acc t =
+  if SAtom.for_all (
+    fun req -> match req with
+      | Comp (t1, op, t2) -> 
+	let compare =
+	  match t2 with
+	    | Access (_, _) -> compare_to_array
+	    | Const _ -> compare_to_elem
+	in
+	begin
+	  match ht1l with
+	    (* Elem *)
+	    | [ht1] -> let t1v = Hashtbl.find htbl_globals ht1 in
+		       compare op t2 t1v
+	    (* Array *)
+	    | name::_ -> let array = Hashtbl.find htbl_arrays name in
+			 array_exists (compare op t2) array
+	    | _ -> assert false
+	end
+      | _ -> assert false
+  ) t.tr_reqs then t::acc
+  else acc
+
+let transition_list se_trans =
+  let valid_trans = List.fold_left valid_transition [] se_trans in
+  (*List.iter (fun t -> printf "%a\n" Hstring.print t.tr_name) valid_trans;*)
+  valid_trans
+
+let random_transition se_trans =
+  let valid_trans = transition_list se_trans in
+  let n = Random.int (List.length valid_trans) in
+  let trans = List.nth valid_trans n in
+  (*printf "%a\n" Hstring.print trans.tr_name*)
+  trans
+
+let update_system se_trans =
+  let trans = random_transition se_trans in
+  ()
+  
 
 (* MAIN *)
-
+    
 let scheduler se =
-  init_system se;
-  display_transition se.trans
+  Random.self_init ();
+  init_system se
