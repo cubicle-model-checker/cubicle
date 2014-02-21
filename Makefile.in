@@ -90,7 +90,7 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       cubetrie.cmo prover.cmo \
       search.cmo cube.cmo bitsolver.cmo forward.cmo \
       enumerative.cmo brab.cmo trace.cmo bwreach.cmo \
-      typing.cmo display.cmo scheduler.cmo main.cmo
+      typing.cmo scheduler.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 

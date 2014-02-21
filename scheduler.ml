@@ -12,6 +12,16 @@ let error e = raise (Error e)
 
 type values = Int of int | Hstr of Hstring.t | Proc of int
 
+let trans_list = ref []
+
+let threads = 
+  let rec buildlist i n =
+    if i > n then [] 
+    else
+      i::(buildlist (i+1) n)
+  in
+  buildlist 1 nb_threads
+
 (* GLOBAL VARIABLES *)
 
 (* Idea : We keep the visited transitions and their fathers *)
@@ -62,6 +72,12 @@ let array_exists p arr =
       if p arr.(i) then raise Exit
     done; false
   with Exit -> true
+
+let subst_guard p reqs ureq =
+  p
+
+let subst_updates p assigns upds =
+  p
 
 
 (* INITIALIZATION *)
@@ -127,6 +143,20 @@ let init_system se =
   init_globals se.globals;
   fill_system se.init
 
+let init_transitions trans =
+  trans_list := List.fold_left (
+    fun acc tr ->
+      let permutations = 
+	if List.length tr.tr_args > List.length threads then [] 
+	else Ast.all_permutations tr.tr_args threads
+      in
+      List.fold_left (
+	fun acc' p -> let s_guard = subst_guard p tr.tr_reqs tr.tr_ureq in
+		      let s_updts = subst_updates p tr.tr_assigns tr.tr_upds in
+		      (tr.tr_name, s_guard, s_updts)::acc'
+      ) acc permutations
+  ) [] trans
+
 (* SCHEDULING *)
 
 let find_op op =
@@ -144,12 +174,16 @@ let compare_to_elem op t2 t1v =
       operator v1 v2
     | Hstr h1, Hstr h2 ->
       begin
+	let hequal = Hstring.equal h1 h2 in
 	match op with
-	  | Eq -> Hstring.equal h1 h2
-	  | Neq -> not (Hstring.equal h1 h2)
+	  | Eq -> hequal
+	  | Neq -> not hequal
 	  | _ -> assert false
       end
     | _ -> assert false
+
+let compare_to_array op t2 t1v =
+  assert false
 
 
 
@@ -161,14 +195,15 @@ let valid_transition acc t =
 	  match t2 with
 	    | Access (_, _) -> compare_to_array
 	    | Const _ -> compare_to_elem
+	    | _ -> assert false
 	in
 	begin
-	  match ht1l with
+	  match t1 with
 	    (* Elem *)
-	    | [ht1] -> let t1v = Hashtbl.find htbl_globals ht1 in
+	    | Elem (ht1, _) -> let t1v = Hashtbl.find htbl_globals ht1 in
 		       compare op t2 t1v
 	    (* Array *)
-	    | name::_ -> let array = Hashtbl.find htbl_arrays name in
+	    | Access (name, _) -> let array = Hashtbl.find htbl_arrays name in
 			 array_exists (compare op t2) array
 	    | _ -> assert false
 	end
@@ -185,7 +220,7 @@ let random_transition se_trans =
   let valid_trans = transition_list se_trans in
   let n = Random.int (List.length valid_trans) in
   let trans = List.nth valid_trans n in
-  (*printf "%a\n" Hstring.print trans.tr_name*)
+  printf "%a\n" Hstring.print trans.tr_name;
   trans
 
 let update_system se_trans =
@@ -197,4 +232,12 @@ let update_system se_trans =
     
 let scheduler se =
   Random.self_init ();
-  init_system se
+  init_system se;
+  init_transitions se.trans;
+  List.iter (
+    fun (n, p, _) ->
+      printf "%a : " Hstring.print n;
+      List.iter (
+	fun (hst, i) -> printf "%a %d\n@." Hstring.print hst i
+      ) p
+  ) !trans_list
