@@ -89,7 +89,7 @@ let set_mode = function
   | "induct" -> mode := Induct
   | _ -> raise (Arg.Bad "search strategy not supported")
 
-let nb_threads = ref 2
+let nb_threads = ref 4
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
