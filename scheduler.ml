@@ -35,8 +35,8 @@ let htbl_types = Hashtbl.create 11
 let () = List.iter (
   fun (constr, fields) -> 
     Hashtbl.add htbl_types constr fields
-) [ Hstring.make "proc", [Proc 1];
-    Hstring.make "bool", [Hstr Ast.hfalse];
+) [ Hstring.make "proc", List.map (fun i -> Proc i) threads;
+    Hstring.make "bool", [Hstr Ast.hfalse; Hstr Ast.htrue];
     Hstring.make "int", [Int 0]
   ]
 
@@ -64,9 +64,9 @@ let value_t t =
   match t with
     | Const c -> Int (value_c c)
     | Elem (e, _) -> Hstr e
-    (*| Access (arr, pl) -> 
+    | Access (arr, pl) -> 
       let arr = Hashtbl.find htbl_arrays arr in
-      arr.(i) *)
+      arr.(0)
     | _ -> assert false
 
 let find_op =
@@ -88,13 +88,15 @@ let find_value sub =
     | Elem (id, Constr) -> Hstr id
     | Elem (id, _) -> let (_, i) = try
 				     List.find (fun (e, _) -> Hstring.equal e id) sub 
-      with Not_found -> printf "Sub not found -> %a@." Hstring.print id; exit 1
+      with Not_found -> printf "Sub Elem not found -> %a@." Hstring.print id; exit 1
 		      in
 		      Proc i
     | Access (id, [ind]) -> 
       let (_, i) = try
 		     List.find (fun (e, _) -> Hstring.equal e ind) sub 
-	with Not_found -> printf "Sub not found -> %a@." Hstring.print id; exit 1
+	with Not_found -> match sub with
+	  | [sub] -> sub
+	  | _ -> assert false
       in
       let array = 
 	try
@@ -124,6 +126,7 @@ let subst_req sub req =
 		  | Neq -> not (Hstring.equal h1 h2)
 		  | _ -> assert false
 	      end
+	    (* Problem with ref_count.cub *)
 	    | _ -> assert false
 	end
       | _ -> assert false
@@ -166,11 +169,48 @@ let substitute_guard sub reqs =
     ) reqs [] 
   with ETrue -> [fun () -> true]
     
+let print_satom sa = 
+  SAtom.iter (
+    function 
+      | True -> printf "true ->"
+      | False -> printf "false ->"
+      | Comp (t1, op, t2) ->
+	(match value_t t1 with
+	  | Int i -> printf "%d " i
+	  | Proc i -> printf "%d " i
+	  | Hstr h -> printf "%a " Hstring.print h
+	);
+	(match op with 
+	  | Eq -> printf "= "
+	  | Neq -> printf "<> "
+	  | Lt -> printf "< "
+	  | Le -> printf "<= "
+	);
+	(match value_t t2 with 
+	  | Int i -> printf "%d -> " i
+	  | Proc i -> printf "%d -> " i
+	  | Hstr h -> printf "%a -> " Hstring.print h
+	)
+      | _ -> assert false
+  ) sa
+
 let substitute_updts sub assigns upds =
-  sub
+  let subst_assigns = List.fold_left (
+    fun acc (var, ass) -> 
+      let value = find_value sub ass in
+      (fun () -> Hashtbl.replace htbl_globals var value)::acc
+  ) [] assigns in
+  let subst_updts = List.iter (
+    fun u -> 
+      printf "Updates : %a : " Hstring.print u.up_arr;
+      printf "%a@." (Hstring.print_list " ") u.up_arg;
+  ) upds in
+  (subst_assigns, upds)
 
 (* INITIALIZATION *)
 
+(* Each type is associated to his constructors 
+   The first one is considered as the default type *)
 let init_types type_defs =
   List.iter (
     fun (t_name, t_fields) ->
@@ -178,6 +218,8 @@ let init_types type_defs =
       Hashtbl.add htbl_types t_name fields
   ) type_defs
 
+(* Initialization of the global variables to their
+   default constructor. *)
 let init_globals globals =
   List.iter (
     fun (g_name, g_type) ->
@@ -185,16 +227,20 @@ let init_globals globals =
       Hashtbl.add htbl_globals g_name default_type
   ) globals
 
+(* Initialization of the arrays with their default
+   constructor (deterministic version) *)
 let init_arrays arrays =
   List.iter (
     fun (a_name, (a_dims, a_type)) ->
       let dims = List.length a_dims in
+      (* Deterministic initialization *)
       let default_type = default_type a_type in
       let new_t = Array.make (nb_threads * dims) default_type in
       Hashtbl.add htbl_arrays a_name new_t
   ) arrays
     
-let rec fill_system (vars, atoms) =
+(* Execution of the proper init of the cubicle file *)
+let rec initialization (vars, atoms) =
   List.iter (
     fun satom ->
       SAtom.iter (
@@ -230,9 +276,11 @@ let rec fill_system (vars, atoms) =
 
 let init_system se =
   init_types se.type_defs;
+  (* This part may change, deterministic for now *)
   init_arrays se.arrays;
   init_globals se.globals;
-  fill_system se.init
+  (* --- After this, all the variables and arrays are initialized --- *)
+  initialization se.init
 
 let init_transitions trans =
   trans_list := List.fold_left (
@@ -242,16 +290,16 @@ let init_transitions trans =
 	if List.length tr.tr_args > List.length threads then [] 
 	else Ast.all_permutations tr.tr_args threads
       in
-      List.fold_left (
-	fun acc' sub -> 
-	  try 
-	    let substitutions_msub = List.filter (fun e -> e <> sub) substitutions in
-	    (*List.iter ( 
+      (*List.iter ( 
 	      fun sub ->
 		List.iter (
 		  fun (h, i) -> printf "%a %d@." Hstring.print h i
 		) sub
-	    ) substitutions_msub;*)
+	    ) substitutions;*)
+      List.fold_left (
+	fun acc' sub -> 
+	  try 
+	    let substitutions_msub = List.filter (fun e -> e <> sub) substitutions in
 	    let subst_ureq = subst_ureq substitutions_msub tr.tr_ureq in
 	    let subst_guard = substitute_guard sub tr.tr_reqs in
 	    let subst_updates = substitute_updts sub tr.tr_assigns tr.tr_upds in
@@ -288,13 +336,26 @@ let random_transition () =
   let valid_trans = valid_trans_list () in
   let n = Random.int (List.length valid_trans) in
   let (name, updts) = List.nth valid_trans n in
-  (*printf "%a\n" Hstring.print name;*)
+  printf "Tr : %a\n" Hstring.print name;
   updts
 
+(* SYSTEM UPDATE *)
+
+let print_globals () =
+  Hashtbl.iter (
+    fun var value ->
+      printf "%a -> " Hstring.print var;
+      match value with
+	| Int i -> printf "i %d@." i
+	| Proc i -> printf "p %d@." i
+	| Hstr h -> printf "h %a@." Hstring.print h
+  ) htbl_globals
+
 let update_system () =
-  let _ = random_transition () in
-  ()
-    
+  print_globals ();
+  let (assigns, _) = random_transition () in
+  List.iter (fun a -> a ()) assigns;
+  print_globals ()
 
 (* MAIN *)
     
