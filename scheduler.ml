@@ -30,26 +30,26 @@ let list_threads =
 let trans_list = ref []
 
 (* Module to manage multi-dimensional arrays *)
-module DimArray : sig
+module type DA = sig
+    
+  type 'a t
+    
+  type 'a dima
+
+  val init : int -> int -> 'a -> 'a dima
+  val get : 'a dima -> int list -> 'a
+  val set : 'a dima -> int list -> 'a -> unit
+  val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
+    
+end 
+
+module DimArray : DA = struct
     
   type 'a t = 
     | Arr of 'a array 
     | Mat of 'a t array
 
-  type 'a dimt = {dim:int; darr:'a t}
-      
-  val init : int -> int -> 'a -> 'a dimt
-  val get : 'a dimt -> int list -> 'a
-  val set : 'a dimt -> int list -> 'a -> unit
-  val print : 'a dimt ->  (Format.formatter -> 'a -> unit) -> unit
-    
-end = struct
-    
-  type 'a t = 
-    | Arr of 'a array 
-    | Mat of 'a t array
-
-  type 'a dimt = {dim:int; darr:'a t}
+  type 'a dima = {dim:int; darr:'a t}
 
   let init d nb_elem v =
     let darr = 
@@ -65,7 +65,7 @@ end = struct
       match t, ind with 
 	| Arr a, [i] -> a.(i) 
 	| Mat m, hd::tl -> let t = m.(hd) in get' t tl 
-	| _ -> failwith "Index error in Arr module, get"
+	| _ -> failwith "DimArray.get : Index error"
     in get' t.darr ind
 
   let set t ind v =
@@ -73,30 +73,131 @@ end = struct
       match t, ind with
 	| Arr a, [i] -> a.(i) <- v
 	| Mat m, hd::tl -> let t = m.(hd) in set' t tl
-	| _ -> failwith "Index error in Arr module, set"
+	| _ -> failwith "DimArray.set : Index error"
     in set' t.darr ind
 
-  let print t p =
+  let rec print t f =
     let rec print' t =
       match t with
-	| Arr a -> printf "[| "; Array.iter (fun e -> printf " %a |" p e) a; printf "]"
-	| Mat m -> Array.iter (fun e -> print' e; printf "@.") m
+	| Arr a -> printf "[| ";
+	  Array.iter (fun e -> printf "%a " f e) a;
+	  printf "|]"
+	| Mat m -> printf "[| ";
+	  Array.iter (fun a -> print' a) m;
+	  printf "|]"
     in print' t.darr
+end
+
+module type St = sig
+
+    type 'a da
+    type 'a t = {globs :(Hstring.t, 'a) Hashtbl.t; arrs : (Hstring.t, 'a da) Hashtbl.t}
+      
+    val init : unit -> 'a t
+      
+    val equal : 'a t -> 'a t -> bool
+    val hash : 'a t -> int
+      
+    val get_v : 'a t -> Hstring.t -> 'a
+    val get_a : 'a t -> Hstring.t -> 'a da
+    val get_e : 'a t -> Hstring.t -> int list -> 'a
+      
+    val set_v : 'a t -> Hstring.t -> 'a -> unit
+    val set_a : 'a t -> Hstring.t -> 'a da -> unit
+    val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
+      
+    val copy : 'a t -> 'a t
+      
+  end
+
+module State ( A : DA ) : St with type 'a da = 'a A.dima = struct
+      
+    type 'a t = {globs: (Hstring.t, 'a) Hashtbl.t; arrs: (Hstring.t, 'a A.dima) Hashtbl.t}
+    type 'a da = 'a A.dima
+
+    let init () = {globs = Hashtbl.create 17; arrs = Hashtbl.create 17}
+
+    let equal s1 s2 =
+      try
+	let gs1 = s1.globs in
+	let gs2 = s2.globs in
+	Hashtbl.iter (
+	  fun g v1 -> let v2 = Hashtbl.find gs2 g in
+		      if v1 <> v2 then raise Exit
+	) gs1;
+	true
+      with
+	  Exit -> false
+
+    let hash = Hashtbl.hash
+
+    let get_v t h = Hashtbl.find t.globs h
+    let get_a t h = Hashtbl.find t.arrs h
+    let get_e t h pl = let arr = get_a t h in
+		       A.get arr pl
+
+    let set_v t h v = Hashtbl.replace t.globs h v
+    let set_a t h arr = Hashtbl.replace t.arrs h arr
+    let set_e t h pl v = let arr = get_a t h in
+			 A.set arr pl v
+
+    let copy t = {globs = Hashtbl.copy t.globs; arrs = Hashtbl.copy t.arrs}
+
+  end
+
+
+module type Sys = sig
+
+  type 'a s
+  type 'a da
+  type 'a t = {old_s:'a s; new_s:'a s}
+
+  val init : unit -> 'a t
+
+  val get_v : 'a t -> Hstring.t -> 'a
+  val get_a : 'a t -> Hstring.t -> 'a da
+  val get_e : 'a t -> Hstring.t -> int list -> 'a
+
+  val set_v : 'a t -> Hstring.t -> 'a -> unit
+  val set_a : 'a t -> Hstring.t -> 'a da -> unit
+  val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
+
+  val update_s : 'a t -> 'a t
+
+  end
+
+module System ( S : St ) : Sys with type 'a da = 'a S.da and type 'a s = 'a S.t = struct
+
+  type 'a da = 'a S.da
+  type 'a s = 'a S.t
+  type 'a t = {old_s:'a S.t; new_s:'a S.t}
+ 
+  let init () = {old_s = S.init (); new_s = S.init ()}
+
+  let get_v s h = let state = s.old_s in
+		  S.get_v state h
+  let get_a s h = let state = s.old_s in
+  		  S.get_a state h
+  let get_e s h pl = let state = s.old_s in
+  		     S.get_e state h pl
+
+  let set_v s h v = let state = s.new_s in
+  		    S.set_v state h v
+  let set_a s h a = let state = s.new_s in
+  		    S.set_a state h a
+  let set_e s h pl v = let state = s.new_s in
+  		       S.set_e state h pl v
+
+  let update_s s = {old_s = s.new_s; new_s = S.copy s.new_s}
 
 end
 
-
-
-
 (* GLOBAL VARIABLES *)
+module Etat = State (DimArray)
+module Syst = System (Etat)
 
-
-(* Global variables with their value *)
-let (htbl_globals : (Hstring.t, value) Hashtbl.t) = Hashtbl.create 17
-
-(* Hashtbl : name tbl -> tbl, indexes : process number *)
-let (htbl_arrays : (Hstring.t, value DimArray.dimt) Hashtbl.t) = Hashtbl.create 17
-
+let system = ref (Syst.init ())
+    
 (* Types *)
 let htbl_types = Hashtbl.create 11
 
@@ -156,7 +257,7 @@ let inter l1 l2s =
 let get_value sub =
   function
     | Const c -> Int (value_c c)
-    | Elem (id, Glob) -> Hashtbl.find htbl_globals id
+    | Elem (id, Glob) -> Syst.get_v !system id
     | Elem (id, Constr) -> Hstr id
     | Elem (id, _) -> let (_, i) = 
 			List.find (fun (e, _) -> Hstring.equal e id) sub 
@@ -168,17 +269,15 @@ let get_value sub =
 	    fun (p', _) -> p = p'
 	  ) sub in i
       ) pl in
-      let tab = Hashtbl.find htbl_arrays id in
-      DimArray.get tab ind
+      Syst.get_e !system id ind
     | _ -> assert false
 
 
 let print_value f v =
   match v with
-    | Int i -> printf "Int %d" i
-    | Proc p -> printf "Proc %d" p
-    | Hstr h -> printf "Hstr %a" Hstring.print h
-
+    | Int i -> printf "%d" i
+    | Proc p -> printf "%d" p
+    | Hstr h -> printf "%a" Hstring.print h
 
 
 
@@ -254,11 +353,11 @@ let substitute_updts sub assigns upds =
   let subst_assigns = List.fold_left (
     fun acc (var, assign) -> 
       (fun () -> let value = get_value sub assign in
-		 Hashtbl.replace htbl_globals var value)::acc
+		 Syst.set_v !system var value)::acc
   ) [] assigns in
   let subst_upds = List.fold_left (
     fun tab_acc u -> 
-      let arr = Hashtbl.find htbl_arrays u.up_arr in
+      let arr = Syst.get_a !system u.up_arr in
       let arg = u.up_arg in
       let subs = Ast.all_permutations arg list_threads in
       let upd_tab =
@@ -273,10 +372,10 @@ let substitute_updts sub assigns upds =
 		    SAtom.fold (
 		      fun cond conj_acc -> (subst_req s cond)::conj_acc
 		    ) conds [] in 
-		  let t = get_value s term in
 		  let f = fun () ->
+		    let t = get_value s term in
 		    DimArray.set arr pl t;
-		    Hashtbl.replace htbl_arrays u.up_arr arr
+		    Syst.set_a !system u.up_arr arr
 		  in
 		  (filter, f)::disj_acc
 	      ) u.up_swts []
@@ -285,21 +384,7 @@ let substitute_updts sub assigns upds =
       in upd_tab::tab_acc
   ) [] upds in
   (subst_assigns, subst_upds)
-				    
-(*
-	    printf "%a :@." Hstring.print u.up_arr;
-	    let arr = Hashtbl.find htbl_arrays u.up_arr in
-       	    List.iter (
-	      fun (cond, t) ->
-		print_satom cond;
-		match t with
-		  | Const i -> printf "%d@." (value_c i)
-		  | Elem (h, _) -> printf "%a@." Hstring.print h
-		  | Access (n, pl) -> printf "%a [%a]@." Hstring.print n (Hstring.print_list " ") pl
-		  | _ -> assert false
-	    ) u.up_swts;
-	    printf "end %a@." Hstring.print u.up_arr
-*)
+				  
 
 
 (* INITIALIZATION *)
@@ -322,7 +407,7 @@ let init_globals globals =
   List.iter (
     fun (g_name, g_type) ->
       let default_type = default_type g_type in
-      Hashtbl.add htbl_globals g_name default_type
+      Syst.set_v !system g_name default_type
   ) globals
 
 (* Initialization of the arrays with their default
@@ -335,7 +420,7 @@ let init_arrays arrays =
       let default_type = default_type a_type in
       let new_t = DimArray.init dims nb_threads default_type in
       (* End of the deterministic initialization *)
-      Hashtbl.add htbl_arrays a_name new_t
+      Syst.set_a !system a_name new_t
   ) arrays
     
 (* Execution of the real init method from the cubicle file *)
@@ -356,20 +441,22 @@ let rec initialization (vars, atoms) =
 		match t1 with 
 		  (* Init global variables *)
 		  | Elem (id1, _) ->
-		    Hashtbl.replace htbl_globals id1 value
+		    Syst.set_v !system id1 value
 		  (* Init arrays *)
 		  | Access (id1, pl) -> 
 		    let tbl = DimArray.init (List.length pl) nb_threads value in
 		    (*DimArray.print tbl print_value;
 		      printf "\n@.";
-		    *)Hashtbl.replace htbl_arrays id1 tbl	
+		    *)
+		    Syst.set_a !system id1 tbl	
 		  (* Should not occure *)
 		  | _ -> assert false
 	      end
 	    | _ -> assert false
 	      
       ) satom
-  ) atoms
+  ) atoms;
+  system := Syst.update_s !system
 
 let init_system se =
   init_types se.type_defs;
@@ -460,34 +547,42 @@ let random_transition () =
 
 let print_globals () =
   printf "@.";
+  printf "Read : @.";
   Hashtbl.iter (
     fun var value ->
       printf "%a -> " Hstring.print var;
       match value with
-	| Int i -> printf "i %d@." i
-	| Proc i -> printf "p %d@." i
-	| Hstr h -> printf "h %a@." Hstring.print h
-  ) htbl_globals;
+	| Int i -> printf "%d@." i
+	| Proc i -> printf "%d@." i
+	| Hstr h -> printf "%a@." Hstring.print h
+  ) !system.Syst.old_s.Etat.globs;
   Hashtbl.iter (
     fun name tbl -> printf "%a " Hstring.print name;
       DimArray.print tbl print_value;
       printf "@."
-  ) htbl_arrays;
+  ) !system.Syst.old_s.Etat.arrs;
+  printf "Write :@.";
+  Hashtbl.iter (
+    fun var value ->
+      printf "%a -> " Hstring.print var;
+      match value with
+	| Int i -> printf "%d@." i
+	| Proc i -> printf "%d@." i
+	| Hstr h -> printf "%a@." Hstring.print h
+  ) !system.Syst.new_s.Etat.globs;
+  Hashtbl.iter (
+    fun name tbl -> printf "%a " Hstring.print name;
+      DimArray.print tbl print_value;
+      printf "@."
+  ) !system.Syst.new_s.Etat.arrs;
   printf "\n@."
 
 let update_system () =
-  print_globals ();
   let (assigns, updates) = random_transition () in
   List.iter (fun a -> a ()) assigns;
-  let updts = valid_upd updates in List.iter (fun us -> List.iter (fun u -> u ()) us )  updts;
-  print_globals ();
-  let (assigns, updates) = random_transition () in
-  List.iter (fun a -> a ()) assigns;
-  let updts = valid_upd updates in List.iter (fun us -> List.iter (fun u -> u ()) us )  updts;
-  print_globals ();
-  let (assigns, updates) = random_transition () in
-  List.iter (fun a -> a ()) assigns;
-  let updts = valid_upd updates in List.iter (fun us -> List.iter (fun u -> u ()) us )  updts;
+  let updts = valid_upd updates in 
+  List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+  system := Syst.update_s !system;
   print_globals ()
     
 
@@ -500,4 +595,6 @@ let scheduler se =
   Random.self_init ();
   init_system se;
   init_transitions se.trans;
-  update_system ()
+  for i = 1 to 3 do
+    update_system ()
+  done
