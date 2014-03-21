@@ -1,0 +1,66 @@
+type location = NCS | INT | TURN | TURN2 | CS
+
+array P[proc] : location
+array X[proc] : bool
+
+var T : proc
+var T_set : bool
+
+init (i) { T_set = False && X[i] = False && P[i] = NCS }
+
+unsafe (i j) { P[i] = CS && P[j] = CS }
+
+
+transition t1 (i)
+requires { P[i] = NCS }
+{
+  P[i] := INT;
+  X[i] := True;  
+}
+
+
+transition t2 (i j)
+requires { P[i] = INT && X[j] = True }
+{
+  P[i] := TURN;
+  X[i] := False;  
+}
+
+
+transition t3 (i)
+requires { P[i] = INT && forall_other j. X[j] = False }
+{
+  P[i] := CS;
+}
+
+
+transition t4_1 (i)
+requires { P[i] = TURN && T_set = False }
+{
+  P[i] := TURN2;
+}
+
+transition t4_2 (i)
+requires { P[i] = TURN && T_set = True && T = i }
+{
+  P[i] := TURN2;
+}
+
+
+transition t5 (i)
+requires { P[i] = TURN2 }
+{
+  P[i] := INT;
+  X[i] := True;
+  T_set := True;
+  T := i;
+}
+
+
+transition t6 (i)
+requires { P[i] = CS }
+{
+  P[i] := NCS;
+  X[i] := False;
+  T_set := False;
+}
