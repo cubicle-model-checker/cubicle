@@ -1,3 +1,31 @@
+(*
+   Generalization of Dekker mutual exclusion algorithm by Alain J. Martin from
+   A new generalization of dekker’s algorithm for mutual
+   exclusion. Inf. Process. Lett., 23(6) :295–297, Dec. 1986.
+
+   -------------------------------------------
+   p(i) =
+        while true do
+              NCS(i);
+              x(i) := true;
+              INT(i);
+              while (exists j ≠ i. x(i)) do
+                    TURN(i);
+                    x(i) := false;
+                    await [ t = 0 or t = i ];
+                    TURN2(i);
+                    t := i;
+                    x(i) := false;
+              done;
+              CS(i);
+              x(i) := false; t := 0;                    
+        done
+   -------------------------------------------
+
+   Translated from MCMT v2 model.
+*)
+
+
 type location = NCS | INT | TURN | TURN2 | CS
 
 array P[proc] : location
