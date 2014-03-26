@@ -18,6 +18,7 @@ module type DA =
     val get : 'a dima -> int list -> 'a
     val set : 'a dima -> int list -> 'a -> unit
     val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
+    val copy : 'a dima -> 'a dima
   end
 module DimArray : DA
 module type St =
@@ -61,7 +62,8 @@ module type Sys =
   sig
     type 'a s
     type 'a da
-    type 'a t = { old_s : 'a s; new_s : 'a s; }
+    type 'a set
+    type 'a t = { syst : 'a set; read_st : 'a s; write_st : 'a s; }
     val init : unit -> 'a t
     val get_v : 'a t -> Hstring.t -> 'a
     val get_a : 'a t -> Hstring.t -> 'a da
@@ -69,14 +71,16 @@ module type Sys =
     val set_v : 'a t -> Hstring.t -> 'a -> unit
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val update_s : 'a t -> 'a t
+    val exists : ('a s -> bool) -> 'a set -> bool
+    val update_s : Hstring.t -> 'a t -> 'a t
   end
 module System :
   functor (S : St) ->
     sig
       type 'a s = 'a S.t
       type 'a da = 'a S.da
-      type 'a t = { old_s : 'a s; new_s : 'a s; }
+      type 'a set = (Hstring.t * 'a S.t) list
+      type 'a t = { syst : 'a set; read_st : 'a s; write_st : 'a s; }
       val init : unit -> 'a t
       val get_v : 'a t -> Hstring.t -> 'a
       val get_a : 'a t -> Hstring.t -> 'a da
@@ -84,7 +88,8 @@ module System :
       val set_v : 'a t -> Hstring.t -> 'a -> unit
       val set_a : 'a t -> Hstring.t -> 'a da -> unit
       val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-      val update_s : 'a t -> 'a t
+      val exists : ('a s -> bool) -> 'a set -> bool
+      val update_s : Hstring.t -> 'a t -> 'a t
     end
 module Etat :
   sig
@@ -109,7 +114,13 @@ module Syst :
   sig
     type 'a s = 'a Etat.t
     type 'a da = 'a Etat.da
-    type 'a t = 'a System(Etat).t = { old_s : 'a s; new_s : 'a s; }
+    type 'a set = (Hstring.t * 'a Etat.t) list
+    type 'a t =
+      'a System(Etat).t = {
+      syst : 'a set;
+      read_st : 'a s;
+      write_st : 'a s;
+    }
     val init : unit -> 'a t
     val get_v : 'a t -> Hstring.t -> 'a
     val get_a : 'a t -> Hstring.t -> 'a da
@@ -117,7 +128,8 @@ module Syst :
     val set_v : 'a t -> Hstring.t -> 'a -> unit
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val update_s : 'a t -> 'a t
+    val exists : ('a s -> bool) -> 'a set -> bool
+    val update_s : Hstring.t -> 'a t -> 'a t
   end
 val system : value Syst.t ref
 val htbl_types : (Hstring.t, value list) Hashtbl.t
@@ -156,7 +168,13 @@ val valid_trans_list :
   list
 val random_transition :
   unit ->
-  (unit -> unit) list * ((unit -> bool) list * (unit -> unit)) list list list
-val print_globals : unit -> unit
+  Hstring.t *
+  ((unit -> unit) list *
+   ((unit -> bool) list * (unit -> unit)) list list list)
+val print_system : Hstring.t * value Etat.t -> unit
 val update_system : unit -> unit
+val get_value_st :
+  (Hstring.t * int) list -> value Etat.t -> Ast.term -> value
+val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
+val filter : Ast.t_system list -> Ast.t_system option
 val scheduler : Ast.system -> unit
