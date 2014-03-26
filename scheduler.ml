@@ -673,7 +673,34 @@ let scheduler se =
     update_system ();
     incr count
   done;
-  let count = ref 1 in
-  List.iter (
-    fun st -> printf "%d : " !count; incr count; print_system st
-  ) (List.rev !system.Syst.syst)
+  if verbose > 0 then
+    begin
+      let count = ref 1 in
+      List.iter (
+          fun st -> printf "%d : " !count; incr count; print_system st
+        ) (List.rev !system.Syst.syst)
+    end;
+  printf "Scheduled %d states\n" !count;
+  printf "--------------------------@."
+
+let dummy_system = {
+  globals = [];
+  consts = [];
+  arrays = [];
+  type_defs = [];
+  init = [],[];
+  invs = [];
+  cands = [];
+  unsafe = [];
+  forward = [];
+  trans = [];
+}
+
+
+let current_system = ref dummy_system
+
+let register_system s = current_system := s
+
+let run () =
+  assert (!current_system <> dummy_system);
+  scheduler !current_system

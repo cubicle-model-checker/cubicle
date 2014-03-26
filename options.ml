@@ -91,6 +91,8 @@ let set_mode = function
 
 let nb_threads = ref 4
 let nb_exec = ref 500
+let schedule = ref false
+
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
@@ -145,7 +147,8 @@ let specs =
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
     "-out", Arg.String set_out, "<dir> set output directory for certificate traces to <dir>";
     "-threads", Arg.Set_int nb_threads, "<n> number of threads to use";
-    "-exec", Arg.Set_int nb_exec, "<n> number of executions in the scheduler"
+    "-exec", Arg.Set_int nb_exec, "<n> number of executions in the scheduler";
+    "-schedule", Arg.Set schedule, "use scheduler instead of enumeration for BRAB"
   ]
 
 let alspecs = Arg.align specs
@@ -220,5 +223,7 @@ let subtyping = !subtyping
 
 let trace = !trace
 let out_trace = !out
-let nb_threads = !nb_threads
+
+let nb_threads = if brab <> -1 then brab else !nb_threads
 let nb_exec = !nb_exec
+let schedule = !schedule

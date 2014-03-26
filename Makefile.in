@@ -89,8 +89,8 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
       cubetrie.cmo prover.cmo \
       search.cmo cube.cmo bitsolver.cmo forward.cmo \
-      enumerative.cmo brab.cmo trace.cmo bwreach.cmo \
-      typing.cmo scheduler.cmo main.cmo
+      enumerative.cmo scheduler.cmo brab.cmo trace.cmo bwreach.cmo \
+      typing.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -273,7 +273,8 @@ FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.mli\
 	fake_functory.ml fake_functory.mli\
 	lexer.mll main.ml options.ml options.mli parser.mly\
 	pretty.ml pretty.mli prover.ml prover.mli bitsolver.ml bitsolver.mli\
-	search.ml search.mli typing.ml typing.mli trace.ml trace.mli display.ml display.mli scheduler.ml scheduler.mli version.ml
+	search.ml search.mli typing.ml typing.mli trace.ml trace.mli\
+	display.ml display.mli scheduler.ml scheduler.mli version.ml
 
 EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
 	   ricart_agrawala.cub szymanski_at.cub berkeley.cub flash_eager.cub\

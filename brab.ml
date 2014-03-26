@@ -283,7 +283,12 @@ let subsuming_candidate s =
   (* let approx = keep 70 approx in *)
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
-  Enumerative.smallest_to_resist_on_trace cpt_approx approx
+  if schedule then
+    match Scheduler.filter approx with
+    | None -> []
+    | Some cand -> [cand]
+  else
+    Enumerative.smallest_to_resist_on_trace cpt_approx approx
 
 
 (**************************************************************)
@@ -291,16 +296,23 @@ let subsuming_candidate s =
 (**************************************************************)
     
 let brab search invariants uns =
-  let low = if brab_up_to then 1 else enumerative in
-  for i = enumerative downto low do
-    let procs = Forward.procs_from_nb i in
-    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
-	     ----------------------------------------\n@." i;
 
-    Enumerative.search procs (List.hd uns);
-    
-    eprintf "----------------------------------------\n@.";
-  done;
+  (* initialization of oracle *)
+  if schedule then
+    Scheduler.run ()
+  else
+    begin
+      let low = if brab_up_to then 1 else enumerative in
+      for i = enumerative downto low do
+        let procs = Forward.procs_from_nb i in
+        eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
+	         ----------------------------------------\n@." i;
+
+        Enumerative.search procs (List.hd uns);
+        
+        eprintf "----------------------------------------\n@.";
+      done;
+    end;
 
   if only_forward then exit 0;
   let procs = Forward.procs_from_nb enumerative in

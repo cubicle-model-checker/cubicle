@@ -176,5 +176,9 @@ val update_system : unit -> unit
 val get_value_st :
   (Hstring.t * int) list -> value Etat.t -> Ast.term -> value
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
-val filter : Ast.t_system list -> Ast.t_system option
+
 val scheduler : Ast.system -> unit
+val register_system : Ast.system -> unit
+val run : unit -> unit
+
+val filter : Ast.t_system list -> Ast.t_system option

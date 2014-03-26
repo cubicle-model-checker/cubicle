@@ -75,3 +75,4 @@ val out_trace : string
 
 val nb_threads : int
 val nb_exec : int
+val schedule : bool
