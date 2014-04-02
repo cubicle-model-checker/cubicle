@@ -3,20 +3,31 @@ open Ast
 open Ast.Atom
 open Format
 open Random
+open Num
 
 type error = MustBeSingleNum
 
 exception ETrue
 exception EFalse
+exception Inversion
 
 exception Error of error
 
 let error e = raise (Error e)
 
 type value = 
-  | Int of int 
+  | Numb of num
   | Hstr of Hstring.t 
   | Proc of int
+
+type rep =
+  | Constr
+  | RGlob of Hstring.t
+  | RArr of (Hstring.t * int)
+
+type ty =
+  | N
+  | O
 
 (* List of processes *)
 let list_threads = 
@@ -41,6 +52,7 @@ module type DA = sig
   val set : 'a dima -> int list -> 'a -> unit
   val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
   val copy : 'a dima -> 'a dima
+  val dim : 'a dima -> int
     
 end 
 
@@ -94,13 +106,16 @@ module DimArray : DA = struct
 	| Arr a -> Arr (Array.copy a)
 	| Mat m -> Mat (Array.map (fun a -> copy' a) m)
     in {dim = t.dim; darr = copy' t.darr}
+
+  let dim t = t.dim
+
 end
 
 module type St = sig
 
-    (* A dimensional array *)
+  (* A dimensional array *)
   type 'a da
-    (* The state : global variables and arrays *)
+  (* The state : global variables and arrays *)
   type 'a t = {globs :(Hstring.t, 'a) Hashtbl.t; arrs : (Hstring.t, 'a da) Hashtbl.t}
       
   val init : unit -> 'a t
@@ -108,18 +123,18 @@ module type St = sig
   val equal : 'a t -> 'a t -> bool
   val hash : 'a t -> int
     
-    (* Get a global variable value *)
+  (* Get a global variable value *)
   val get_v : 'a t -> Hstring.t -> 'a
-    (* Get an array by its name *)
+  (* Get an array by its name *)
   val get_a : 'a t -> Hstring.t -> 'a da
-    (* Get an element in an array by its name and a a param list*)
+  (* Get an element in an array by its name and a a param list*)
   val get_e : 'a t -> Hstring.t -> int list -> 'a
     
-    (* Set a global variable value *)
+  (* Set a global variable value *)
   val set_v : 'a t -> Hstring.t -> 'a -> unit
-    (* Set an array by its name and a new array *)
+  (* Set an array by its name and a new array *)
   val set_a : 'a t -> Hstring.t -> 'a da -> unit
-    (* Set an element in an array by its name, a param list and a value *)
+  (* Set an element in an array by its name, a param list and a value *)
   val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     
   val copy : 'a t -> 'a t
@@ -219,13 +234,18 @@ module System ( S : St ) : Sys
     let update_s tr s = {syst = (tr, S.copy s.write_st) :: s.syst; read_st = s.write_st; write_st = s.write_st}
 
   end
+				  
 
 (* GLOBAL VARIABLES *)
+
 module Etat = State (DimArray)
 module Syst = System (Etat)
 
 let system = ref (Syst.init ())
   
+let ce = Hashtbl.create 17
+let gdiff = Hashtbl.create 17
+
 (* Types *)
 let htbl_types = Hashtbl.create 11
 
@@ -236,7 +256,8 @@ let () =
       Hashtbl.add htbl_types constr fields
   ) [ Hstring.make "proc", List.map (fun i -> Proc i) list_threads;
       Hstring.make "bool", [Hstr Ast.hfalse; Hstr Ast.htrue];
-      Hstring.make "int", [Int 0]
+      Hstring.make "int", [Numb (Int 0)];
+      Hstring.make "real", [Numb (Int 0)]
     ]
 
 (* USEFUL METHODS *)
@@ -245,16 +266,24 @@ let () =
 (* Tranform a constant in an int *)
 let value_c c =
   match MConst.is_num c with
-    | Some e -> Num.int_of_num e
+    | Some e -> e
     | None -> error (MustBeSingleNum)
 
-(* Operators on int and real *)
+(* Operators on int (for proc) *)
 let find_op =
   function
     | Eq -> (=)
     | Lt -> (<)
     | Le -> (<=)
     | Neq -> (<>)
+
+(* Operators on Num.num (for int and real) *)
+let find_nop =
+  function
+    | Eq -> (=/)
+    | Lt -> (</)
+    | Le -> (<=/)
+    | Neq -> (<>/)
 
 (* Return the first type constructor *)
 let default_type g_type =
@@ -284,7 +313,7 @@ let inter l1 l2s =
 
 let get_value sub =
   function
-    | Const c -> Int (value_c c)
+    | Const c -> Numb (value_c c)
     | Elem (id, Glob) -> Syst.get_v !system id
     | Elem (id, Constr) -> Hstr id
     | Elem (id, _) -> let (_, i) = 
@@ -303,10 +332,126 @@ let get_value sub =
 
 let print_value f v =
   match v with
-    | Int i -> printf "%d" i
+    | Numb i -> printf "%s" (Num.string_of_num i)
     | Proc p -> printf "%d" p
     | Hstr h -> printf "%a" Hstring.print h
 
+
+
+(* INITIALIZATION METHODS *)
+
+
+(* Each type is associated to his constructors 
+   The first one is considered as the default type *)
+let init_types type_defs =
+  List.iter (
+    fun (t_name, t_fields) ->
+      let fields = List.fold_right (
+	fun field acc -> (Hstr field)::acc
+      ) t_fields [] in
+      Hashtbl.add htbl_types t_name fields
+  ) type_defs
+
+
+
+(* Initialization of the global variables to their
+   default constructor. *)
+let init_globals globals =
+  let i = Hstring.make "int" in
+  let r = Hstring.make "real" in
+  List.iter (
+    fun (g_name, g_type) ->
+      let default_type = default_type g_type in
+      Syst.set_v !system g_name default_type;
+      Hashtbl.add ce g_name (Elem (g_name, Glob), RGlob g_type, RGlob g_type);
+      let types = Hashtbl.find htbl_types g_type in
+      let ty = if (Hstring.equal g_type i || Hstring.equal g_type r) then N else O in
+      Hashtbl.add gdiff g_name (ty, types, [])
+  ) globals
+
+(* Initialization of the arrays with their default
+   constructor (deterministic version) *)
+let init_arrays arrays =
+  let i = Hstring.make "int" in
+  let r = Hstring.make "real" in
+  List.iter (
+    fun (a_name, (a_dims, a_type)) ->
+      let dims = List.length a_dims in
+      (* Here is the deterministic initialization *)
+      let default_type = default_type a_type in
+      let new_t = DimArray.init dims nb_threads default_type in
+      (* End of the deterministic initialization *)
+      Syst.set_a !system a_name new_t;
+      Hashtbl.add ce a_name (Access (a_name, []), RArr (a_type, dims) , RArr (a_type, dims));
+      let ty, types = 
+	if (Hstring.equal a_type i || Hstring.equal a_type r) 
+	then N, [] 
+	else O, Hashtbl.find htbl_types a_type in
+      Hashtbl.add gdiff a_name (ty, types, [])
+  ) arrays
+    
+(* Execution of the real init method from the cubicle file *)
+let rec init_ce (vars, atoms) =
+  List.iter (
+    fun satom ->
+      SAtom.iter (
+	fun atom ->
+	  match atom with
+	    | Comp (t1, Eq, t2) ->
+	      begin
+		match t1, t2 with
+		  (* Var = Constr or Constr = Var *)
+		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as r) 
+		  | ((Elem (_, Constr) | Const _) as r), (Elem (id1, Glob) | Access (id1, _)) ->
+		    let (rep, _, _) = Hashtbl.find ce id1 in
+		    Hashtbl.iter ( 
+		      fun n (rep', tself, _) ->
+			if (rep' == rep)
+			then Hashtbl.replace ce n (r, tself, Constr)
+		    ) ce
+		  (* Var or Tab[] = Var or Tab[] *)
+		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
+		    let (rep, _, trep) = let (_, _, trep) as t = Hashtbl.find ce id1 in
+					 if (trep == Constr) then t
+					 else Hashtbl.find ce id2 in
+		    Hashtbl.iter (
+		      fun n (rep', tself, _) ->
+			if (rep' == rep)
+			then Hashtbl.replace ce n (rep, tself, trep)
+		    ) ce
+		  | _ -> assert false
+	      end
+	    | Comp (t1, Neq, t2) ->
+	      begin
+		match t1, t2 with
+		  | (Elem (id1, Glob) | Access (id1, _)), Elem (id, Constr) ->
+		    
+	    | _ -> assert false
+      ) satom
+  ) atoms
+
+let initialization init =
+  init_ce init;
+  Hashtbl.iter (
+    fun n (rep, tself, trep) ->
+      let value = 
+	match rep, trep with 
+	  | Const c, _ -> Numb (value_c c)
+	  | Elem (id, Constr), _ -> Hstr id
+	  | Elem (_, Glob), RGlob g_type -> default_type g_type
+	  | Access _, RArr (g_type, _) -> default_type g_type
+	  | _ -> assert false
+      in
+      match tself with
+	(* Init global variables *)
+	| RGlob t -> 
+	  Syst.set_v !system n value
+	(* Init arrays *)
+	| RArr (t, d) -> let tbl = DimArray.init d nb_threads value in
+			 Syst.set_a !system n tbl
+	| _ -> assert false
+  ) ce;	
+  system := Syst.update_s (Hstring.make "init") !system
 
 
 (* SUBSTITUTION METHODS *)
@@ -323,9 +468,12 @@ let subst_req sub req =
 	let t2_v = get_value sub t2 in
 	begin 
 	  match t1_v, t2_v with
-	    | Int i1, Int i2 | Proc i1, Proc i2 -> 
+	    | Numb n1, Numb n2 ->
+	      let op' = find_nop op in
+	      op' n1 n2
+	    | Proc p1, Proc p2 -> 
 	      let op' = find_op op in
-	      op' i1 i2
+	      op' p1 p2
 	    | Hstr h1, Hstr h2 ->
 	      begin
 		match op with
@@ -334,6 +482,9 @@ let subst_req sub req =
 		  | _ -> assert false
 	      end
 	    (* Problem with ref_count.cub, assertion failure *)
+	    | Hstr h, Proc i1 -> let (p, _) = List.find (fun (_, i) -> i1 = i) sub in 
+				 printf "TODO %a, %a = %d@." Hstring.print h Hstring.print p i1; 
+				 exit 1
 	    | _ -> assert false
 	end
       | _ -> assert false
@@ -414,77 +565,7 @@ let substitute_updts sub assigns upds =
   (subst_assigns, subst_upds)
     
 
-
-(* INITIALIZATION *)
-
-
-(* Each type is associated to his constructors 
-   The first one is considered as the default type *)
-let init_types type_defs =
-  List.iter (
-    fun (t_name, t_fields) ->
-      let fields = List.fold_right (
-	fun field acc -> (Hstr field)::acc
-      ) t_fields [] in
-      Hashtbl.add htbl_types t_name fields
-  ) type_defs
-
-(* Initialization of the global variables to their
-   default constructor. *)
-let init_globals globals =
-  List.iter (
-    fun (g_name, g_type) ->
-      let default_type = default_type g_type in
-      Syst.set_v !system g_name default_type
-  ) globals
-
-(* Initialization of the arrays with their default
-   constructor (deterministic version) *)
-let init_arrays arrays =
-  List.iter (
-    fun (a_name, (a_dims, a_type)) ->
-      let dims = List.length a_dims in
-      (* Here is the deterministic initialization *)
-      let default_type = default_type a_type in
-      let new_t = DimArray.init dims nb_threads default_type in
-      (* End of the deterministic initialization *)
-      Syst.set_a !system a_name new_t
-  ) arrays
-    
-(* Execution of the real init method from the cubicle file *)
-let rec initialization (vars, atoms) =
-  List.iter (
-    fun satom ->
-      SAtom.iter (
-	fun atom ->
-	  match atom with
-	    | Comp (t1, Eq, t2) ->
-	      begin
-		let value = match t2 with
-		  | Elem (id2, _) -> Hstr id2
-		  | Const c -> Int (value_c c)
-		  | Access (id2, [i2]) -> failwith "TODO"
-		  | _ -> assert false
-		in
-		match t1 with 
-		  (* Init global variables *)
-		  | Elem (id1, _) ->
-		    Syst.set_v !system id1 value
-		  (* Init arrays *)
-		  | Access (id1, pl) -> 
-		    let tbl = DimArray.init (List.length pl) nb_threads value in
-		    (*DimArray.print tbl print_value;
-		      printf "\n@.";
-		    *)
-		    Syst.set_a !system id1 tbl	
-		  (* Should not occure *)
-		  | _ -> assert false
-	      end
-	    | _ -> assert false
-	      
-      ) satom
-  ) atoms;
-  system := Syst.update_s (Hstring.make "init") !system
+(* SYSTEM INIT *)
 
 let init_system se =
   init_types se.type_defs;
@@ -579,8 +660,8 @@ let print_system (tr, {Etat.globs; Etat.arrs}) =
     fun var value ->
       printf "%a -> " Hstring.print var;
       match value with
-  	| Int i -> printf "%d@." i
-  	| Proc i -> printf "%d@." i
+	| Numb n -> printf "%s@." (string_of_num n)
+  	| Proc p -> printf "%d@." p
   	| Hstr h -> printf "%a@." Hstring.print h
   ) globs;
   Hashtbl.iter (
@@ -603,7 +684,7 @@ let update_system () =
 
 let get_value_st sub st =
   function
-    | Const c -> Int (value_c c)
+    | Const c -> Numb (value_c c)
     | Elem (id, Glob) -> Etat.get_v st id
     | Elem (id, Constr) -> Hstr id
     | Elem (id, _) -> let (_, i) =
@@ -627,43 +708,47 @@ let contains sub sa s =
 	  match a with
 	    | True -> true
 	    | False -> false
-	    | Comp (t1, op, t2) -> let t1_v = get_value_st sub state t1 in
-				   let t2_v = get_value_st sub state t2 in
-				   begin
-				     match t1_v, t2_v with
-				       | Int i1, Int i2 | Proc i1, Proc i2 -> 
-					 let op' = find_op op in
-					 op' i1 i2
-				       | Hstr h1, Hstr h2 ->
-					 begin
-					   match op with
-					     | Eq -> Hstring.equal h1 h2
-					     | Neq -> not (Hstring.equal h1 h2)
-					     | _ -> assert false
-					 end
-				       (* Problem with ref_count.cub, assertion failure *)
-				       | _ -> assert false
-				   end
+	    | Comp (t1, op, t2) -> 
+	      let t1_v = get_value_st sub state t1 in
+	      let t2_v = get_value_st sub state t2 in
+	      begin
+		match t1_v, t2_v with
+		  | Numb n1, Numb n2 ->
+		    let op' = find_nop op in
+		    op' n1 n2
+		  | Proc p1, Proc p2 -> 
+		    let op' = find_op op in
+		    op' p1 p2
+		  | Hstr h1, Hstr h2 ->
+		    begin
+		      match op with
+			| Eq -> Hstring.equal h1 h2
+			| Neq -> not (Hstring.equal h1 h2)
+			| _ -> assert false
+		    end
+		  (* Problem with ref_count.cub, assertion failure *)
+		  | _ -> assert false
+	      end
 	    | _ -> assert false
       ) sa
   ) !system.Syst.syst
-		
-  let filter t_syst_l =
-    try
-      let rcube = List.find (
-	fun t_syst -> let (pl, sa) = t_syst.t_unsafe in
-		      let subst = Ast.all_permutations pl list_threads in
-		      List.for_all (
-			fun sub ->
-			  not (contains sub sa !system)
-		      ) subst
-      ) t_syst_l in
-      Some rcube
-    with Not_found -> None
+    
+let filter t_syst_l =
+  try
+    let rcube = List.find (
+      fun t_syst -> let (pl, sa) = t_syst.t_unsafe in
+		    let subst = Ast.all_permutations pl list_threads in
+		    List.for_all (
+		      fun sub ->
+			not (contains sub sa !system)
+		    ) subst
+    ) t_syst_l in
+    Some rcube
+  with Not_found -> None
 
 (* MAIN *)
 
-      
+    
 let scheduler se =
   Random.self_init ();
   init_system se;
@@ -677,8 +762,8 @@ let scheduler se =
     begin
       let count = ref 1 in
       List.iter (
-          fun st -> printf "%d : " !count; incr count; print_system st
-        ) (List.rev !system.Syst.syst)
+        fun st -> printf "%d : " !count; incr count; print_system st
+      ) (List.rev !system.Syst.syst)
     end;
   printf "Scheduled %d states\n" !count;
   printf "--------------------------@."

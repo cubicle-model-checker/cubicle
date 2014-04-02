@@ -1,9 +1,11 @@
 type error = MustBeSingleNum
 exception ETrue
 exception EFalse
+exception Inversion
 exception Error of error
 val error : error -> 'a
-type value = Int of int | Hstr of Hstring.t | Proc of int
+type value = Numb of Num.num | Hstr of Hstring.t | Proc of int
+type rep = Constr | RGlob of Hstring.t | RArr of (Hstring.t * int)
 val list_threads : int list
 val trans_list :
   (Hstring.t * (unit -> bool) list * (unit -> bool) list list list *
@@ -19,6 +21,7 @@ module type DA =
     val set : 'a dima -> int list -> 'a -> unit
     val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
     val copy : 'a dima -> 'a dima
+    val dim : 'a dima -> int
   end
 module DimArray : DA
 module type St =
@@ -132,9 +135,11 @@ module Syst :
     val update_s : Hstring.t -> 'a t -> 'a t
   end
 val system : value Syst.t ref
+val ce : (Hstring.t, Ast.term * rep * rep) Hashtbl.t
 val htbl_types : (Hstring.t, value list) Hashtbl.t
-val value_c : int Ast.MConst.t -> int
+val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
+val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
 val default_type : Hstring.t -> value
 val inter : 'a list -> 'a list -> 'a list
 val get_value : (Hstring.t * int) list -> Ast.term -> value
@@ -154,6 +159,7 @@ val substitute_updts :
 val init_types : (Hstring.t * Hstring.t list) list -> unit
 val init_globals : (Hstring.t * Hstring.t) list -> unit
 val init_arrays : (Hstring.t * ('a list * Hstring.t)) list -> unit
+val init_ce : 'a * Ast.SAtom.t list -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit
 val init_system : Ast.system -> unit
 val init_transitions : Ast.transition list -> unit
@@ -176,9 +182,9 @@ val update_system : unit -> unit
 val get_value_st :
   (Hstring.t * int) list -> value Etat.t -> Ast.term -> value
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
-
+val filter : Ast.t_system list -> Ast.t_system option
 val scheduler : Ast.system -> unit
+val dummy_system : Ast.system
+val current_system : Ast.system ref
 val register_system : Ast.system -> unit
 val run : unit -> unit
-
-val filter : Ast.t_system list -> Ast.t_system option
