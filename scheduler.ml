@@ -306,6 +306,16 @@ let inter l1 l2s =
 		       hd2::l'
   in inter' l1s l2s
 
+let rep_name n =
+  let (rep, _, _) = Hashtbl.find ce n in
+  match rep with
+    | Elem (id, _) | Access (id, _) -> id
+    | _ -> assert false
+
+let diff_id id =
+  function
+    | Elem (id', _) | Access (id', _) -> id <> id'
+    | _ -> assert false
 
 
 (* VALUE METHODS *)
@@ -403,35 +413,87 @@ let rec init_ce (vars, atoms) =
 		  (* Var = Constr or Constr = Var *)
 		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as r) 
 		  | ((Elem (_, Constr) | Const _) as r), (Elem (id1, Glob) | Access (id1, _)) ->
-		    let (rep, _, _) = Hashtbl.find ce id1 in
+		    printf "Var = Constr %a@." Hstring.print id1;
+	    	    let (rep, _, _) = Hashtbl.find ce id1 in
 		    Hashtbl.iter ( 
 		      fun n (rep', tself, _) ->
 			if (rep' == rep)
-			then Hashtbl.replace ce n (r, tself, Constr)
+			then
+			  (
+			    Hashtbl.remove gdiff n;
+			    Hashtbl.replace ce n (r, tself, Constr)
+			  )
 		    ) ce
 		  (* Var or Tab[] = Var or Tab[] *)
 		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
-		    let (rep, _, trep) = let (_, _, trep) as t = Hashtbl.find ce id1 in
-					 if (trep == Constr) then t
-					 else Hashtbl.find ce id2 in
+		    printf "Var = Var %a %a@." Hstring.print id1 Hstring.print id2;
+	    	    let (_, _, trep1) as t1 = Hashtbl.find ce id1 in
+		    let t2 = Hashtbl.find ce id2 in
+		    let idd, (sr, _, str), (_, dts, _) = 
+		      if (trep1 == Constr) then id2, t1, t2 
+		      else id1, t2, t1 
+		    in
+		    Hashtbl.replace ce idd (sr, dts, str);
+		    Hashtbl.remove gdiff idd;
 		    Hashtbl.iter (
 		      fun n (rep', tself, _) ->
-			if (rep' == rep)
-			then Hashtbl.replace ce n (rep, tself, trep)
+			if (rep' == sr)
+			then 
+			  Hashtbl.replace ce n (sr, tself, str)
 		    ) ce
+		      
 		  | _ -> assert false
 	      end
 	    | Comp (t1, Neq, t2) ->
 	      begin
-		match t1, t2 with
-		  | (Elem (id1, Glob) | Access (id1, _)), Elem (id, Constr) ->
-		    
+	    	match t1, t2 with
+	    	  | (Elem (id1, Glob) | Access (id1, _)), Elem (id, Constr) ->
+		    printf "Var <> Constr %a %a@." Hstring.print id1 Hstring.print id;
+	    	    let rep1 = rep_name id1 in
+	    	    let (ty, types, diffs) = Hashtbl.find gdiff rep1 in
+	    	    let v = Hstr id in
+	    	    let types' = List.filter (fun v' -> v' <> v) types in
+	    	    Hashtbl.replace gdiff rep1 (ty, types', diffs)
+	    	  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
+	    	    printf "Var <> Var %a %a@." Hstring.print id1 Hstring.print id2;
+	    	    begin
+	    	      try
+	    		let (ty1, types1, diffs1) = Hashtbl.find gdiff id1 in
+	    		let (ty2, types2, diffs2) = Hashtbl.find gdiff id2 in
+	    		let rep1 = rep_name id1 in
+	    		let rep2 = rep_name id2 in
+	    		Hashtbl.replace gdiff rep1 (ty1, types1, rep2::diffs1);
+	    		Hashtbl.replace gdiff rep2 (ty2, types2, rep1::diffs2)
+	    	      with Not_found -> ()
+	    	    end
+		  | _ -> assert false
+	      end
 	    | _ -> assert false
       ) satom
   ) atoms
 
 let initialization init =
   init_ce init;
+  Hashtbl.iter (
+    fun n (rep, tself, trep) ->
+      printf "%a : " Hstring.print n;
+      (match rep with
+	| Elem (id, _)
+	| Access (id, _) -> printf "%a " Hstring.print id
+	| Const c -> let n = value_c c in
+		     printf "%s " (Num.string_of_num n)
+	| _ -> assert false
+      );
+      printf "@.";
+  ) ce;
+  printf "\nGdiff@.";
+  Hashtbl.iter (
+    fun n (ty, types, diffs) ->
+      printf "%a : " Hstring.print n;
+      List.iter (fun (Hstr id) -> printf "%a " Hstring.print id) types;
+      printf "@."
+  ) gdiff;
+  printf "@.";
   Hashtbl.iter (
     fun n (rep, tself, trep) ->
       let value = 
@@ -444,8 +506,7 @@ let initialization init =
       in
       match tself with
 	(* Init global variables *)
-	| RGlob t -> 
-	  Syst.set_v !system n value
+	| RGlob t -> Syst.set_v !system n value
 	(* Init arrays *)
 	| RArr (t, d) -> let tbl = DimArray.init d nb_threads value in
 			 Syst.set_a !system n tbl
@@ -456,7 +517,7 @@ let initialization init =
 
 (* SUBSTITUTION METHODS *)
 
-      
+    
 (* Here, optimization needed if constant values *)     
 let subst_req sub req =
   let f = fun () ->
@@ -762,7 +823,7 @@ let scheduler se =
     begin
       let count = ref 1 in
       List.iter (
-        fun st -> printf "%d : " !count; incr count; print_system st
+	fun st -> printf "%d : " !count; incr count; print_system st
       ) (List.rev !system.Syst.syst)
     end;
   printf "Scheduled %d states\n" !count;
