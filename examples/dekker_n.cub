@@ -3,30 +3,27 @@
    A new generalization of dekker’s algorithm for mutual
    exclusion. Inf. Process. Lett., 23(6) :295–297, Dec. 1986.
 
-   -------------------------------------------
-   p(i) =
-        while true do
-              NCS(i);
-              x(i) := true;
-              INT(i);
-              while (exists j ≠ i. x(i)) do
-                    TURN(i);
-                    x(i) := false;
-                    await [ t = 0 or t = i ];
-                    TURN2(i);
-                    t := i;
-                    x(i) := false;
-              done;
-              CS(i);
-              x(i) := false; t := 0;                    
-        done
-   -------------------------------------------
+          --------------------------------------
+          p(i) =
+   NCS:       while true do
+                  x(i) := true;
+   LOOP:          while (exists j ≠ i. x(j)) do
+   AWAIT:             x(i) := false;      
+                      await [ t = 0 or t = i ];
+   TURN:              t := i;
+                      x(i) := true;
+                  done;
+   CS:            // CS(i);
+                  x(i) := false;
+                  t := 0;
+              done
+          --------------------------------------
 
    Translated from MCMT v2 model.
 *)
 
 
-type location = NCS | INT | TURN | TURN2 | CS
+type location = NCS | LOOP | AWAIT | TURN | CS
 
 array P[proc] : location
 array X[proc] : bool
@@ -39,53 +36,53 @@ init (i) { T_set = False && X[i] = False && P[i] = NCS }
 unsafe (i j) { P[i] = CS && P[j] = CS }
 
 
-transition t1 (i)
+transition start (i)
 requires { P[i] = NCS }
 {
-  P[i] := INT;
+  P[i] := LOOP;
   X[i] := True;  
 }
 
 
-transition t2 (i j)
-requires { P[i] = INT && X[j] = True }
+transition wait (i j)
+requires { P[i] = LOOP && X[j] = True }
 {
-  P[i] := TURN;
+  P[i] := AWAIT;
   X[i] := False;  
 }
 
 
-transition t3 (i)
-requires { P[i] = INT && forall_other j. X[j] = False }
+transition enter (i)
+requires { P[i] = LOOP && forall_other j. X[j] = False }
 {
   P[i] := CS;
 }
 
 
-transition t4_1 (i)
-requires { P[i] = TURN && T_set = False }
+transition awaited_1 (i)
+requires { P[i] = AWAIT && T_set = False }
 {
-  P[i] := TURN2;
+  P[i] := TURN;
 }
 
-transition t4_2 (i)
-requires { P[i] = TURN && T_set = True && T = i }
+transition awaited_2 (i)
+requires { P[i] = AWAIT && T_set = True && T = i }
 {
-  P[i] := TURN2;
+  P[i] := TURN;
 }
 
 
-transition t5 (i)
-requires { P[i] = TURN2 }
+transition turn (i)
+requires { P[i] = TURN }
 {
-  P[i] := INT;
+  P[i] := LOOP;
   X[i] := True;
   T_set := True;
   T := i;
 }
 
 
-transition t6 (i)
+transition loop (i)
 requires { P[i] = CS }
 {
   P[i] := NCS;

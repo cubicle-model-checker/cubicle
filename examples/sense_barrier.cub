@@ -27,7 +27,7 @@
  } barrier_t ;
 
  barrier_t alloc_barrier(int nprocs) {
-   barrier_t *p = malloc_check(sizeof(*p)) ;
+   barrier_t *p = malloc_check(sizeof( *p)) ;
    p->nprocs = p->count = nprocs ;
    p->go = 0 ;
    return p ;
