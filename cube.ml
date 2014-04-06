@@ -569,26 +569,29 @@ let proper_cube sa =
 (* all permutations excepted impossible ones *)
 (*********************************************)
 
-let rec all_permutations_impos l1 l2 impos = 
-  assert (List.length l1 <= List.length l2);
-  match l1 with
-    | [] -> [[]]
-    | x::l -> cross_impos impos l [] x l2
-and cross_impos impos l pr x st =
-  match st with
-    | [] -> []
-    | y::p -> 
-	if H.list_mem_couple (x,y) impos then 
-	  cross_impos impos l (y::pr) x p
-	else
-	  let acc = all_permutations_impos l (pr@p) impos in
-	  let acc = List.map (fun ds -> (x, y)::ds) acc in
-	  acc@(cross_impos impos l (y::pr) x p)
+let filter_impos perms impos =
+  List.filter (fun sigma ->
+               not (List.exists (List.for_all 
+                    (fun (x,y) -> H.list_mem_couple (x,y) sigma))
+                    impos))
+              perms
+
+let rec all_permutations_impos l1 l2 impos =
+  filter_impos (all_permutations l1 l2) impos
+
+
 
 
 (****************************************************)
 (* Improved relevant permutations (still quadratic) *)
 (****************************************************)
+
+let list_rev_split =
+  List.fold_left (fun (l1, l2) (x, y) -> x::l1, y::l2) ([], [])
+
+let list_rev_combine =
+  List.fold_left2 (fun acc x1 x2 -> (x1, x2) :: acc) []
+
 
 exception NoPermutations
 
@@ -604,27 +607,27 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), (Neq | Lt)
 	  when compare_term c1 c2 = 0 ->
 	  
-	  if List.exists2 
+	  if List.for_all2 
             (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
-          List.iter2 (fun x1 x2 -> impos := (x1, x2) :: !impos) lx1 lx2
+          impos := (list_rev_combine lx1 lx2) :: !impos
 	      
       | Comp (Access (a2, lx2), (Neq | Lt),
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), Eq
 	  when compare_term c1 c2 = 0 ->
 
-	  if List.exists2 
+	  if List.for_all2
             (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
-          List.iter2 (fun x1 x2 -> impos := (x1, x2) :: !impos) lx1 lx2
+          impos := (list_rev_combine lx1 lx2) :: !impos
 
       | Comp (Access (a2, lx2), Eq, (Elem (_, Constr) as c2)), Eq 
 	  when compare_term c1 c2 <> 0 ->
 	  
-	  if List.exists2 
+	  if List.for_all2
             (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
-          List.iter2 (fun x1 x2 -> impos := (x1, x2) :: !impos) lx1 lx2
+          impos := (list_rev_combine lx1 lx2) :: !impos
 	    
       | _ -> ());
     incr i2
@@ -698,7 +701,7 @@ let relevant_permutations np p l1 l2 =
   if profiling then TimeRP.start ();
   try
     let obvs, impos = obvious_impossible p np in
-    let obvl1, obvl2 = List.split obvs in
+    let obvl1, obvl2 = list_rev_split obvs in
     let l1 = List.filter (fun b -> not (H.list_mem b obvl1)) l1 in
     let l2 = List.filter (fun b -> not (H.list_mem b obvl2)) l2 in
     let perm = all_permutations_impos l1 l2 impos in
@@ -998,7 +1001,7 @@ let extra_args args nargs =
 
 exception Fixpoint of int list
 
-let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
+let check_fixpoint ?(pure_smt=false) ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
   Prover.assume_goal s;
   (* let nb_nargs = List.length nargs in *)
   let nodes = List.fold_left
@@ -1011,14 +1014,15 @@ let check_fixpoint ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
       List.fold_left
 	(fun nodes ss ->
 	  let pp = ArrayAtom.apply_subst ss ap in
-	  if ArrayAtom.subset pp anp then begin
+	  if not pure_smt && ArrayAtom.subset pp anp then begin
 	    if simpl_by_uc then add_to_closed s pp sp ;
 	    raise (Fixpoint [sp.t_nb])
 	  end
 	  (* Heuristic : throw away nodes too much different *)
 	  (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	  (* line below useful for arith : ricart *)
-	  else if inconsistent_array (ArrayAtom.union pp anp) then nodes
+	  else if not pure_smt &&
+                  inconsistent_array (ArrayAtom.union pp anp) then nodes
 	  else if ArrayAtom.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
 	  else (Prover.assume_node pp ~id:sp.t_nb; nodes)
 	) nodes d
@@ -1072,6 +1076,18 @@ let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
     | Exit -> None
     | Smt.Unsat db -> Some db
   
+
+
+let pure_smt_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
+  try
+    check_fixpoint ~pure_smt:true s nodes;
+    None
+  with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+  
+
 
 let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
   Debug.unsafe s;

@@ -48,6 +48,7 @@ val check_safety : t_system -> unit
 
 val easy_fixpoint : t_system -> t_system list -> int list option
 val hard_fixpoint : t_system -> t_system list -> int list option
+val pure_smt_fixpoint : t_system -> t_system list -> int list option
 val fixpoint : 
   invariants: t_system list -> visited: t_system list ->
   t_system -> int list option
