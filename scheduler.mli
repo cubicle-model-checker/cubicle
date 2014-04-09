@@ -2,10 +2,16 @@ type error = MustBeSingleNum
 exception ETrue
 exception EFalse
 exception Inversion
+exception ConstrRep
 exception Error of error
 val error : error -> 'a
-type value = Numb of Num.num | Hstr of Hstring.t | Proc of int
-type rep = Constr | RGlob of Hstring.t | RArr of (Hstring.t * int)
+type value =
+    Var of Hstring.t
+  | Numb of Num.num
+  | Hstr of Hstring.t
+  | Proc of int
+type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
+type ty = N | O
 val list_threads : int list
 val trans_list :
   (Hstring.t * (unit -> bool) list * (unit -> bool) list list list *
@@ -135,15 +141,94 @@ module Syst :
     val update_s : Hstring.t -> 'a t -> 'a t
   end
 val system : value Syst.t ref
-val ce : (Hstring.t, Ast.term * rep * rep) Hashtbl.t
 val htbl_types : (Hstring.t, value list) Hashtbl.t
+val compare_value : value -> value -> int
+module TS :
+  sig
+    type elt = value
+    type t
+    val empty : t
+    val is_empty : t -> bool
+    val mem : elt -> t -> bool
+    val add : elt -> t -> t
+    val singleton : elt -> t
+    val remove : elt -> t -> t
+    val union : t -> t -> t
+    val inter : t -> t -> t
+    val diff : t -> t -> t
+    val compare : t -> t -> int
+    val equal : t -> t -> bool
+    val subset : t -> t -> bool
+    val iter : (elt -> unit) -> t -> unit
+    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+    val for_all : (elt -> bool) -> t -> bool
+    val exists : (elt -> bool) -> t -> bool
+    val filter : (elt -> bool) -> t -> t
+    val partition : (elt -> bool) -> t -> t * t
+    val cardinal : t -> int
+    val elements : t -> elt list
+    val min_elt : t -> elt
+    val max_elt : t -> elt
+    val choose : t -> elt
+    val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
+  end
+module TI :
+  sig
+    type elt = Hstring.t
+    type t
+    val empty : t
+    val is_empty : t -> bool
+    val mem : elt -> t -> bool
+    val add : elt -> t -> t
+    val singleton : elt -> t
+    val remove : elt -> t -> t
+    val union : t -> t -> t
+    val inter : t -> t -> t
+    val diff : t -> t -> t
+    val compare : t -> t -> int
+    val equal : t -> t -> bool
+    val subset : t -> t -> bool
+    val iter : (elt -> unit) -> t -> unit
+    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+    val for_all : (elt -> bool) -> t -> bool
+    val exists : (elt -> bool) -> t -> bool
+    val filter : (elt -> bool) -> t -> t
+    val partition : (elt -> bool) -> t -> t * t
+    val cardinal : t -> int
+    val elements : t -> elt list
+    val min_elt : t -> elt
+    val max_elt : t -> elt
+    val choose : t -> elt
+    val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
+  end
+val ec : (Hstring.t, value * stype) Hashtbl.t
+val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
 val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
 val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
 val default_type : Hstring.t -> value
 val inter : 'a list -> 'a list -> 'a list
+val rep_name : Hstring.t -> Hstring.t
+val hst_var : value -> Hstring.t
+val get_cvalue : Ast.term -> value
 val get_value : (Hstring.t * int) list -> Ast.term -> value
 val print_value : 'a -> value -> unit
+val v_equal : value -> value -> bool
+val init_types : (Hstring.t * Hstring.t list) list -> unit
+val init_globals : (Hstring.t * Hstring.t) list -> unit
+val init_arrays : (Hstring.t * ('a list * Hstring.t)) list -> unit
+val init_htbls : 'a * Ast.SAtom.t list -> unit
+val update : unit -> unit
+val g : (int, (Hstring.t * (ty * TS.t * TI.t)) list) Hashtbl.t
+val c : int ref
+val comp_node :
+  Hstring.t * ('a * TS.t * TI.t) -> Hstring.t * ('b * TS.t * TI.t) -> int
+val graphs : unit -> unit
+val print_ce_diffs : unit -> unit
+val print_g : unit -> unit
+val initialization : 'a * Ast.SAtom.t list -> unit
 val subst_req : (Hstring.t * int) list -> Ast.Atom.t -> unit -> bool
 val subst_ureq :
   (Hstring.t * int) list ->
@@ -156,11 +241,6 @@ val substitute_updts :
   (Hstring.t * Ast.term) list ->
   Ast.update list ->
   (unit -> unit) list * ((unit -> bool) list * (unit -> unit)) list list list
-val init_types : (Hstring.t * Hstring.t list) list -> unit
-val init_globals : (Hstring.t * Hstring.t) list -> unit
-val init_arrays : (Hstring.t * ('a list * Hstring.t)) list -> unit
-val init_ce : 'a * Ast.SAtom.t list -> unit
-val initialization : 'a * Ast.SAtom.t list -> unit
 val init_system : Ast.system -> unit
 val init_transitions : Ast.transition list -> unit
 val valid_req : (unit -> bool) list -> bool

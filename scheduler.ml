@@ -10,24 +10,25 @@ type error = MustBeSingleNum
 exception ETrue
 exception EFalse
 exception Inversion
+exception ConstrRep
 
 exception Error of error
 
 let error e = raise (Error e)
 
 type value = 
+  | Var of Hstring.t
   | Numb of num
   | Hstr of Hstring.t 
   | Proc of int
 
-type rep =
-  | Constr
+type stype =
   | RGlob of Hstring.t
   | RArr of (Hstring.t * int)
 
 type ty =
-  | N
-  | O
+  | N (* int or real *)
+  | O (* everything else *)
 
 (* List of processes *)
 let list_threads = 
@@ -242,14 +243,11 @@ module Etat = State (DimArray)
 module Syst = System (Etat)
 
 let system = ref (Syst.init ())
-  
-let ce = Hashtbl.create 17
-let gdiff = Hashtbl.create 17
 
 (* Types *)
 let htbl_types = Hashtbl.create 11
 
-(* Filling htbl_types with default types (proc, bool and int) *)
+(* Filling htbl_types with default types (proc, bool, int and real) *)
 let () = 
   List.iter (
     fun (constr, fields) -> 
@@ -260,16 +258,37 @@ let () =
       Hstring.make "real", [Numb (Int 0)]
     ]
 
+let compare_value v1 v2 = 
+  match v1, v2 with
+    | Numb n1, Numb n2 -> Num.compare_num n1 n2
+    | Hstr h1, Hstr h2 
+    | Var h1, Var h2 -> Hstring.compare h1 h2
+    | Proc p1, Proc p2 -> Pervasives.compare p1 p2
+    | _ -> assert false
+
+module TS = Set.Make (struct type t = value let compare = compare_value end)
+module TI = Set.Make (struct type t = Hstring.t let compare = Hstring.compare end)
+
+(* This hashtbl contains variables binded to their representant
+   and their type *)
+let ec = Hashtbl.create 17
+(* This hashtbl contains variables binded to :
+   - int or real : the list of their forbiddent values
+   - rest : the list of their possible values
+   and the list of the representants with which they differ *)
+let dc = Hashtbl.create 17
+
+
 (* USEFUL METHODS *)
 
 
-(* Tranform a constant in an int *)
+(* Tranform a constant in a num *)
 let value_c c =
   match MConst.is_num c with
     | Some e -> e
     | None -> error (MustBeSingleNum)
 
-(* Operators on int (for proc) *)
+(* Return the operator on int (for proc) *)
 let find_op =
   function
     | Eq -> (=)
@@ -277,7 +296,7 @@ let find_op =
     | Le -> (<=)
     | Neq -> (<>)
 
-(* Operators on Num.num (for int and real) *)
+(* Return the operator on Num.num (for int and real) *)
 let find_nop =
   function
     | Eq -> (=/)
@@ -291,7 +310,7 @@ let default_type g_type =
     | [] -> Hstr g_type
     | hd::_ -> hd
 
-(* Intersection of two lists *)
+(* Intersection of two int lists *)
 let inter l1 l2s =
   let l1s = List.sort Pervasives.compare l1 in
   (* l2s is already sorted *)
@@ -306,26 +325,33 @@ let inter l1 l2s =
 		       hd2::l'
   in inter' l1s l2s
 
+(* Return the name of the representant (Hstring.t) *)
 let rep_name n =
-  let (rep, _, _) = Hashtbl.find ce n in
+  let (rep, _) = Hashtbl.find ec n in
   match rep with
-    | Elem (id, _) | Access (id, _) -> id
-    | _ -> assert false
+    | Var id -> id
+    | _ -> raise ConstrRep
 
-let diff_id id =
+let hst_var =
   function
-    | Elem (id', _) | Access (id', _) -> id <> id'
+    | Var h -> h
     | _ -> assert false
-
 
 (* VALUE METHODS *)
 
-
-let get_value sub =
+(* Return a constant value *)
+let get_cvalue =
   function
     | Const c -> Numb (value_c c)
-    | Elem (id, Glob) -> Syst.get_v !system id
     | Elem (id, Constr) -> Hstr id
+    | _ -> assert false
+
+(* Return a constant value or the value of a variable
+   (global or array) *)
+let get_value sub =
+  function
+    | (Const _ as v) | (Elem (_, Constr) as v) -> get_cvalue v
+    | Elem (id, Glob) -> Syst.get_v !system id
     | Elem (id, _) -> let (_, i) = 
 			List.find (fun (e, _) -> Hstring.equal e id) sub 
 		      in Proc i
@@ -339,12 +365,19 @@ let get_value sub =
       Syst.get_e !system id ind
     | _ -> assert false
 
-
 let print_value f v =
   match v with
-    | Numb i -> printf "%s" (Num.string_of_num i)
-    | Proc p -> printf "%d" p
-    | Hstr h -> printf "%a" Hstring.print h
+    | Numb i -> printf "%s " (Num.string_of_num i)
+    | Proc p -> printf "%d " p
+    | Hstr h | Var h -> printf "%a " Hstring.print h
+
+let v_equal v1 v2 =
+  match v1, v2 with
+    | Var h1, Var h2
+    | Hstr h1, Hstr h2 -> Hstring.equal h1 h2
+    | Numb i1, Numb i2 -> i1 =/ i2
+    | Proc p1, Proc p2 -> p1 == p2
+    | _ -> false
 
 
 
@@ -362,25 +395,36 @@ let init_types type_defs =
       Hashtbl.add htbl_types t_name fields
   ) type_defs
 
-
-
 (* Initialization of the global variables to their
-   default constructor. *)
+   default constructor, of the equivalence classes and
+   of the difference classes *)
 let init_globals globals =
   let i = Hstring.make "int" in
   let r = Hstring.make "real" in
   List.iter (
     fun (g_name, g_type) ->
+      (* Here is the deterministic initialization *)
       let default_type = default_type g_type in
       Syst.set_v !system g_name default_type;
-      Hashtbl.add ce g_name (Elem (g_name, Glob), RGlob g_type, RGlob g_type);
-      let types = Hashtbl.find htbl_types g_type in
-      let ty = if (Hstring.equal g_type i || Hstring.equal g_type r) then N else O in
-      Hashtbl.add gdiff g_name (ty, types, [])
+      (* End of the deterministic initialization *)
+      (* First, each var is its own representant *)
+      Hashtbl.add ec g_name (Var g_name, RGlob g_type);
+      let ty, stypes = 
+	if (Hstring.equal g_type i || Hstring.equal g_type r) 
+	(* Int or real*)
+	then N, TS.empty
+	(* Other type*)
+	else 
+	  let ty = Hashtbl.find htbl_types g_type in
+	  let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
+	  O, st
+      in
+      Hashtbl.add dc g_name (ty, stypes, TI.empty)
   ) globals
 
 (* Initialization of the arrays with their default
-   constructor (deterministic version) *)
+   constructor (deterministic version) of the equivalence classes and
+   of the difference classes *)
 let init_arrays arrays =
   let i = Hstring.make "int" in
   let r = Hstring.make "real" in
@@ -390,18 +434,25 @@ let init_arrays arrays =
       (* Here is the deterministic initialization *)
       let default_type = default_type a_type in
       let new_t = DimArray.init dims nb_threads default_type in
-      (* End of the deterministic initialization *)
       Syst.set_a !system a_name new_t;
-      Hashtbl.add ce a_name (Access (a_name, []), RArr (a_type, dims) , RArr (a_type, dims));
-      let ty, types = 
+      (* End of the deterministic initialization *)
+      Hashtbl.add ec a_name (Var a_name, RArr (a_type, dims));
+      let ty, stypes = 
 	if (Hstring.equal a_type i || Hstring.equal a_type r) 
-	then N, [] 
-	else O, Hashtbl.find htbl_types a_type in
-      Hashtbl.add gdiff a_name (ty, types, [])
+	(* Int or real *)
+	then N, TS.empty 
+	(* Other type *)
+	else
+	  let ty = Hashtbl.find htbl_types a_type in
+	  let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
+	  O, st
+      in
+      Hashtbl.add dc a_name (ty, stypes, TI.empty)
   ) arrays
     
-(* Execution of the real init method from the cubicle file *)
-let rec init_ce (vars, atoms) =
+(* Execution of the real init method from the cubicle file 
+   to initialize the equivalence classes and difference classes *)
+let init_htbls (vars, atoms) =
   List.iter (
     fun satom ->
       SAtom.iter (
@@ -410,108 +461,247 @@ let rec init_ce (vars, atoms) =
 	    | Comp (t1, Eq, t2) ->
 	      begin
 		match t1, t2 with
-		  (* Var = Constr or Constr = Var *)
+		  (* Var = Const or Const = Var *)
 		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as r) 
 		  | ((Elem (_, Constr) | Const _) as r), (Elem (id1, Glob) | Access (id1, _)) ->
-		    printf "Var = Constr %a@." Hstring.print id1;
-	    	    let (rep, _, _) = Hashtbl.find ce id1 in
+	    	    let (rep, _) = Hashtbl.find ec id1 in
+		    let h = hst_var rep in
+		    let v = get_cvalue r in
+		    (* Change the representant of the equivalence class with the constant. 
+		       Remove the equivalence class from the difference classes hashtbl *)
 		    Hashtbl.iter ( 
-		      fun n (rep', tself, _) ->
+		      fun n (rep', tself) ->
 			if (rep' == rep)
 			then
 			  (
-			    Hashtbl.remove gdiff n;
-			    Hashtbl.replace ce n (r, tself, Constr)
+			    Hashtbl.remove dc n;
+			    Hashtbl.replace ec n (v, tself)
 			  )
-		    ) ce
+		    ) ec;
+		    (* Change the difference classes so the representant 
+		       is now an impossible value *)
+		    Hashtbl.iter (
+		      fun n (ty, types, diffs) ->
+			if (TI.mem h diffs)
+			then let diffs' = TI.remove h diffs in
+			     let types' = TS.remove v types in
+			     Hashtbl.replace dc n (ty, types', diffs')
+		    ) dc
+		      
 		  (* Var or Tab[] = Var or Tab[] *)
 		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
-		    printf "Var = Var %a %a@." Hstring.print id1 Hstring.print id2;
-	    	    let (_, _, trep1) as t1 = Hashtbl.find ce id1 in
-		    let t2 = Hashtbl.find ce id2 in
-		    let idd, (sr, _, str), (_, dts, _) = 
-		      if (trep1 == Constr) then id2, t1, t2 
-		      else id1, t2, t1 
+		    let (rep, _) as t1 = Hashtbl.find ec id1 in
+		    let t2 = Hashtbl.find ec id2 in
+		    let ids, idd, (sr, _), (dr, dts) = 
+		      match rep with
+			| Var _ -> id2, id1, t2, t1
+			| _ -> id1, id2, t1, t2 
 		    in
-		    Hashtbl.replace ce idd (sr, dts, str);
-		    Hashtbl.remove gdiff idd;
+		    (match sr with
+		      (* If the future representant is not a constant,
+			 modify the difference class of the representant. *)
+		      | Var _ -> let (ty1, types1, diffs1) = Hashtbl.find dc ids in
+				 let (ty2, types2, diffs2) = Hashtbl.find dc idd in
+				 let types = 
+				   match ty1 with
+				     | N -> TS.union types1 types2
+				     | O -> TS.inter types1 types2
+				 in 
+				 let diffs = TI.union diffs1 diffs2 in 
+				 Hashtbl.replace dc ids (ty1, types, diffs)
+		      | _ -> ()
+		    );
+		    (* Remove the non-chosen variable from the difference classes hashtbl *)
+		    Hashtbl.remove dc idd;
+		    (* Modify the representant of each variable which representant was the 
+		       non-chosen variable *)
 		    Hashtbl.iter (
-		      fun n (rep', tself, _) ->
-			if (rep' == sr)
+		      fun n (rep', tself) ->
+			if (rep' == dr)
 			then 
-			  Hashtbl.replace ce n (sr, tself, str)
-		    ) ce
-		      
+			  Hashtbl.replace ec n (sr, tself)
+		    ) ec		    		 
 		  | _ -> assert false
 	      end
 	    | Comp (t1, Neq, t2) ->
 	      begin
 	    	match t1, t2 with
-	    	  | (Elem (id1, Glob) | Access (id1, _)), Elem (id, Constr) ->
-		    printf "Var <> Constr %a %a@." Hstring.print id1 Hstring.print id;
-	    	    let rep1 = rep_name id1 in
-	    	    let (ty, types, diffs) = Hashtbl.find gdiff rep1 in
-	    	    let v = Hstr id in
-	    	    let types' = List.filter (fun v' -> v' <> v) types in
-	    	    Hashtbl.replace gdiff rep1 (ty, types', diffs)
+		  (* Var or Tab[] <> Const or Const <> Var or Tab[] *)
+	    	  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as c) 
+		  | ((Elem (_, Constr) | Const _) as c), (Elem (id1, Glob) | Access (id1, _)) ->
+		    (* Delete the constr from the possible values of the variable representant *)
+		    begin
+		      try
+			let h = rep_name id1 in
+	    		let (ty, types, diffs) = Hashtbl.find dc h in
+	    		let v = get_cvalue c in
+			let types' = match ty with
+			  | N -> TS.add v types
+			  | O -> TS.remove v types 
+			in
+	    		Hashtbl.replace dc h (ty, types', diffs)
+		      with ConstrRep -> () (* Strange but allowed *)
+		    end
+		  (* Var or Tab[] <> Var or Tab[] *)
 	    	  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
-	    	    printf "Var <> Var %a %a@." Hstring.print id1 Hstring.print id2;
 	    	    begin
-	    	      try
-	    		let (ty1, types1, diffs1) = Hashtbl.find gdiff id1 in
-	    		let (ty2, types2, diffs2) = Hashtbl.find gdiff id2 in
-	    		let rep1 = rep_name id1 in
-	    		let rep2 = rep_name id2 in
-	    		Hashtbl.replace gdiff rep1 (ty1, types1, rep2::diffs1);
-	    		Hashtbl.replace gdiff rep2 (ty2, types2, rep1::diffs2)
-	    	      with Not_found -> ()
-	    	    end
+		      let (rep1, tself1) = Hashtbl.find ec id1 in
+		      let (rep2, tself2) = Hashtbl.find ec id2 in
+		      match rep1, rep2 with
+			| Var h1, Var h2 -> let (ty1, types1, diffs1) = Hashtbl.find dc h1 in
+	    				    let (ty2, types2, diffs2) = Hashtbl.find dc h2 in
+	    				    Hashtbl.replace dc h1 (ty1, types1, TI.add h2 diffs1);
+	    				    Hashtbl.replace dc h2 (ty2, types2, TI.add h1 diffs2)
+	    		| Var h, (_ as rep') 
+			| (_ as rep'), Var h -> 	
+		  let (ty, types, diffs) = Hashtbl.find dc h in
+			  let types' = match ty with
+			    | N -> TS.add rep' types
+			    | O -> TS.remove rep' types
+			  in
+			  Hashtbl.replace dc h (ty, types', diffs)
+			| _ -> () (* Strange but that's your problem *)
+		    end
+		  | Elem (id, Glob), Elem (_, Var)
+		  | Elem (_, Var), Elem (id, Glob) ->
+		    let h = rep_name id in
+		    let (ty, _, diffs) = Hashtbl.find dc h in
+		    Hashtbl.replace dc h (ty, TS.empty, diffs)
 		  | _ -> assert false
 	      end
 	    | _ -> assert false
       ) satom
   ) atoms
 
-let initialization init =
-  init_ce init;
+let c = ref 0
+let groups = Hashtbl.create 17
+
+let update () =  
   Hashtbl.iter (
-    fun n (rep, tself, trep) ->
+    fun n (_, types, diffs) ->
+      if TS.cardinal types == 1
+      then
+	(
+	  Hashtbl.remove dc n;
+	  let v = TS.choose types in
+	  Hashtbl.iter (
+	    fun n' (rep, tself) ->
+	      match rep with
+		| Var h -> if (h == n)
+		  then Hashtbl.replace ec n' (v, tself)
+		| _ -> ()
+	  ) ec;
+	  Hashtbl.iter (
+	    fun n' (ty, types, diffs) ->
+	      if (TI.mem n diffs)
+	      then let diffs' = TI.remove n diffs in
+		   let types' = TS.remove v types in
+		   Hashtbl.replace dc n' (ty, types', diffs')
+	  ) dc
+	)
+      else if TI.cardinal diffs > 0
+      then
+	()
+	
+  ) dc
+
+let g = Hashtbl.create 17
+
+
+let comp_node (h1, (_, ty1, di1)) (h2, (_, ty2, di2)) =
+  let ct1 = TS.cardinal ty1 in
+  let ct2 = TS.cardinal ty2 in
+  if ct1 < ct2
+  then -1
+  else 
+    (
+      if ct1 > ct2
+      then 1
+      else (
+	let cd1 = TI.cardinal di1 in
+	let cd2 = TI.cardinal di2 in
+	if cd1 > cd2
+	then 1
+	else 
+	  if cd1 < cd2 then -1
+	  else 0
+      )
+    )
+
+let graphs () =
+  let dc' = Hashtbl.copy dc in
+  Hashtbl.iter (
+    fun n ((ty, types, diffs) as b) ->
+      let list =
+	TI.fold (
+	  fun e l -> 
+	    let elt = Hashtbl.find dc e in
+	    (* Hashtbl.remove dc e; *)
+	    (e, elt)::l
+	) diffs [] in
+      TI.iter (
+	fun e ->
+	  Hashtbl.remove dc' e
+      ) diffs;
+      let slist = List.sort comp_node ((n,b)::list) in
+      Hashtbl.add g !c slist;
+      Hashtbl.remove dc' n;
+      incr c  
+  ) dc'  
+
+let print_ce_diffs () =
+  printf "\nce :@.";
+  Hashtbl.iter (
+    fun n (rep, tself) ->
       printf "%a : " Hstring.print n;
-      (match rep with
-	| Elem (id, _)
-	| Access (id, _) -> printf "%a " Hstring.print id
-	| Const c -> let n = value_c c in
-		     printf "%s " (Num.string_of_num n)
-	| _ -> assert false
-      );
+      print_value printf rep;
       printf "@.";
-  ) ce;
-  printf "\nGdiff@.";
+  ) ec;
+  printf "\nDc@.";
   Hashtbl.iter (
     fun n (ty, types, diffs) ->
       printf "%a : " Hstring.print n;
-      List.iter (fun (Hstr id) -> printf "%a " Hstring.print id) types;
+      TS.iter (print_value printf) types;
+      TI.iter (printf "%a " Hstring.print) diffs;
       printf "@."
-  ) gdiff;
-  printf "@.";
+  ) dc;
+  printf "@."
+
+let print_g () =
   Hashtbl.iter (
-    fun n (rep, tself, trep) ->
-      let value = 
-	match rep, trep with 
-	  | Const c, _ -> Numb (value_c c)
-	  | Elem (id, Constr), _ -> Hstr id
-	  | Elem (_, Glob), RGlob g_type -> default_type g_type
-	  | Access _, RArr (g_type, _) -> default_type g_type
-	  | _ -> assert false
+    fun c l ->
+      printf "%d :@." c;
+      List.iter (
+	fun (n, (ty, types, diffs)) ->
+	  printf "%a : " Hstring.print n;
+	  TS.iter (print_value printf) types;
+	  TI.iter (printf "%a " Hstring.print) diffs;
+	  printf "@."
+      ) l;
+  ) g;
+  printf "@."
+
+let initialization init =
+  init_htbls init;
+  
+  update ();
+  graphs ();
+  print_ce_diffs ();
+  print_g ();
+  Hashtbl.iter (
+    fun n (rep, tself) ->
+      let value =
+	match rep, tself with
+	  | Var _, (RGlob t | RArr (t, _)) -> default_type t
+	  | _ as v, _ -> v
       in
       match tself with
 	(* Init global variables *)
-	| RGlob t -> Syst.set_v !system n value
+	| RGlob _ -> Syst.set_v !system n value
 	(* Init arrays *)
-	| RArr (t, d) -> let tbl = DimArray.init d nb_threads value in
+	| RArr (_, d) -> let tbl = DimArray.init d nb_threads value in
 			 Syst.set_a !system n tbl
-	| _ -> assert false
-  ) ce;	
+  ) ec;
   system := Syst.update_s (Hstring.make "init") !system
 
 
@@ -723,7 +913,7 @@ let print_system (tr, {Etat.globs; Etat.arrs}) =
       match value with
 	| Numb n -> printf "%s@." (string_of_num n)
   	| Proc p -> printf "%d@." p
-  	| Hstr h -> printf "%a@." Hstring.print h
+  	| Hstr h | Var h -> printf "%a@." Hstring.print h
   ) globs;
   Hashtbl.iter (
     fun name tbl -> printf "%a " Hstring.print name;
