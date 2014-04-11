@@ -205,6 +205,9 @@ module TI :
   end
 val ec : (Hstring.t, value * stype) Hashtbl.t
 val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
+val upd_dc : Hstring.t -> TS.t -> ty -> TI.t -> unit
+val groups : (int, TI.t) Hashtbl.t
+val graphs : (int, (Hstring.t * (ty * TS.t * TI.t)) list) Hashtbl.t
 val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
 val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
@@ -212,22 +215,26 @@ val default_type : Hstring.t -> value
 val inter : 'a list -> 'a list -> 'a list
 val rep_name : Hstring.t -> Hstring.t
 val hst_var : value -> Hstring.t
+val ec_replace : value -> value -> unit
 val get_cvalue : Ast.term -> value
 val get_value : (Hstring.t * int) list -> Ast.term -> value
-val print_value : 'a -> value -> unit
 val v_equal : value -> value -> bool
-val init_types : (Hstring.t * Hstring.t list) list -> unit
+val print_value : 'a -> value -> unit
+val print_ce_diffs : unit -> unit
+val print_g : unit -> unit
+val print_groups : unit -> unit
+val print_system : Hstring.t * value Etat.t -> unit
+val init_types :
+  (Hstring.t * Hstring.t list) list ->
+  (Hstring.t * Hstring.t) list -> (Hstring.t * ('a * Hstring.t)) list -> unit
 val init_globals : (Hstring.t * Hstring.t) list -> unit
 val init_arrays : (Hstring.t * ('a list * Hstring.t)) list -> unit
 val init_htbls : 'a * Ast.SAtom.t list -> unit
-val update : unit -> unit
-val g : (int, (Hstring.t * (ty * TS.t * TI.t)) list) Hashtbl.t
 val c : int ref
-val comp_node :
-  Hstring.t * ('a * TS.t * TI.t) -> Hstring.t * ('b * TS.t * TI.t) -> int
-val graphs : unit -> unit
-val print_ce_diffs : unit -> unit
-val print_g : unit -> unit
+val update : unit -> unit
+val comp_node : 'a * ('b * TS.t * TI.t) -> 'c * ('d * TS.t * TI.t) -> int
+val upd_graphs : unit -> unit
+val graphs_to_ec : unit -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit
 val subst_req : (Hstring.t * int) list -> Ast.Atom.t -> unit -> bool
 val subst_ureq :
@@ -257,7 +264,6 @@ val random_transition :
   Hstring.t *
   ((unit -> unit) list *
    ((unit -> bool) list * (unit -> unit)) list list list)
-val print_system : Hstring.t * value Etat.t -> unit
 val update_system : unit -> unit
 val get_value_st :
   (Hstring.t * int) list -> value Etat.t -> Ast.term -> value
