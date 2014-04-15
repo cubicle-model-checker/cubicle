@@ -82,7 +82,8 @@ let search_backtrack_brab search invariants procs uns =
 	  if not quiet then
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
-          
+          (* Restarting *)
+
           (* Enumerative.replay_trace_and_expand procs faulty; *)
           
           candidates := remove_cand o faulty !candidates uns;
@@ -280,7 +281,7 @@ let keep n l =
 
 let subsuming_candidate s =
   let approx = approximations s in
-  (* let approx = keep 70 approx in *)
+  let approx = if max_cands = -1 then approx else keep max_cands approx in
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
   Enumerative.smallest_to_resist_on_trace cpt_approx approx
@@ -291,6 +292,7 @@ let subsuming_candidate s =
 (**************************************************************)
     
 let brab search invariants uns =
+  set_liberal_gc ();
   let low = if brab_up_to then 1 else enumerative in
   for i = enumerative downto low do
     let procs = Forward.procs_from_nb i in
@@ -304,4 +306,5 @@ let brab search invariants uns =
 
   if only_forward then exit 0;
   let procs = Forward.procs_from_nb enumerative in
+  reset_gc_params ();
   search_backtrack_brab search invariants procs uns

@@ -105,7 +105,8 @@ type env = {
   pinf_int_abstr : int;
   minf_int_abstr : int;
 
-  explicit_states : unit HST.t;
+  mutable explicit_states : unit HST.t;
+  mutable states : state list;
 }
 
 let empty_env = {
@@ -128,6 +129,7 @@ let empty_env = {
   minf_int_abstr = 0;
 
   explicit_states = HST.create 0;
+  states = [];
 }
 
 
@@ -262,6 +264,16 @@ let all_constr_terms () =
 
 let terms_of_procs = List.map (fun x -> Elem (x, Var))
 
+
+let rec power_p i p = if p <= 0 then 1 else i * power_p i (p-1)
+
+let table_size nb_procs nb_vars =
+  let r = min 2_000_009
+  (max 100 ((power_p (nb_procs * nb_vars) nb_procs) * (nb_procs ))) in
+  if not quiet then eprintf "table size : %d@." r;
+  r
+
+
 let init_tables procs s =
   let var_terms = all_var_terms procs s in
   let proc_terms = terms_of_procs procs in (* constantes *)
@@ -322,7 +334,8 @@ let init_tables procs s =
     pinf_int_abstr = a_up + 1;
     minf_int_abstr = -3;
 
-    explicit_states = HST.create 2_000_009;
+    explicit_states = HST.create (table_size nb_procs nb_vars);
+    states = [];
   }
 
 
@@ -840,6 +853,7 @@ let forward_dfs s procs env l =
             eprintf "%d (%d)@." !cpt_f !cpt_q;
 	  (* HI.add explicit_states hst st; *)
 	  HST.add explicit_states st ();
+          env.states <- st :: env.states;
 	  forward_rec s procs trs to_do
   in
   forward_rec s procs trs l
@@ -866,7 +880,8 @@ let forward_bfs s procs env l =
   let trs = env.st_trs in
   let to_do = Queue.create () in
   List.iter (fun td -> Queue.add td to_do) l;
-  while not (Queue.is_empty to_do) do
+  while not (Queue.is_empty to_do) &&
+          (max_forward = -1 || !cpt_f < max_forward) do
     let depth, st = Queue.take to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
@@ -881,6 +896,7 @@ let forward_bfs s procs env l =
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
       HST.add h_visited st ();
+      env.states <- st :: env.states;
       (* add_all_syms env explicit_states st *)
     end
   done;
@@ -908,6 +924,7 @@ let forward_bfs_switches s procs env l =
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
       HST.add explicit_states st ();
+      env.states <- st :: env.states;
     end
   done;
   eprintf "Total forward nodes : %d@." !cpt_f
@@ -942,6 +959,8 @@ let search procs init =
 		st.Hashtbl.bucket_histogram;
     printf "@.";
   end;
+  env.explicit_states <- HST.create 1;
+  Gc.compact ();
   if profiling then Search.TimeForward.pause ()
 
 
@@ -1030,7 +1049,6 @@ let alpha_renamings cpt_approx env procs ({ t_unsafe = args, sa} as s) =
 
 
 let resist_on_trace_size cpt_approx progress_inc ls env =
-  let explicit_states = env.explicit_states in
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
   let cands, too_big =
     List.fold_left (fun (acc, too_big) s ->
@@ -1049,14 +1067,14 @@ let resist_on_trace_size cpt_approx progress_inc ls env =
                         (* will be forgotten by flushs *)
       let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
       let cpt = ref 0 in
-      HST.iter (fun st _ ->
+      List.iter (fun st ->
         incr cpt;
         if not quiet && !cpt mod progress_inc = 0 then one_step ();
         cands := List.filter (fun p -> 
           List.for_all (fun (c, _) -> check_cand env st c) p
         ) !cands;
         if !cands = [] then raise Exit;
-      ) explicit_states;
+      ) env.states;
       let remain = List.fold_left (fun acc clas ->
 	match clas with
 	| [] -> acc
@@ -1069,7 +1087,7 @@ let resist_on_trace_size cpt_approx progress_inc ls env =
 let smallest_to_resist_on_trace cpt_approx ls =
   try
     let nb =
-      List.fold_left (fun nb env -> nb + HST.length env.explicit_states)
+      List.fold_left (fun nb env -> nb + List.length env.states)
 		     0 !global_envs
     in
     let progress_inc = nb / Pretty.vt_width + 1 in
@@ -1088,3 +1106,44 @@ let smallest_to_resist_on_trace cpt_approx ls =
      if profiling then Search.TimeCustom.pause ();
      if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
      ls
+
+
+
+let one_resist_on_trace_size cpt_approx ({t_unsafe = _, sa} as s) env =
+    if Cube.size_system s > env.model_cardinal then true
+    else
+      try
+        let procs = List.rev (List.tl (List.rev env.all_procs)) in
+        let ls = alpha_renamings cpt_approx env procs s in
+        List.iter (fun st ->
+          if not (List.for_all (fun (c, _) -> check_cand env st c) ls) then
+            raise Exit;
+        ) env.states;
+        true
+    with 
+      | Exit | Not_found -> false
+
+
+let fast_resist_on_trace cpt_approx ls =
+  let progress_inc = (List.length ls) / Pretty.vt_width + 1 in
+  if not quiet then eprintf "@{<fg_black_b>@{<i>";
+  (* will be forgotten by flushs *)
+  let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
+  let cpt = ref 0 in
+  if profiling then Search.TimeCustom.start ();
+  try 
+    List.iter (fun s ->
+      incr cpt;
+      if not quiet && !cpt mod progress_inc = 0 then one_step ();
+      if (List.for_all (one_resist_on_trace_size cpt_approx s) !global_envs)
+      then raise (Sustainable [s])
+    ) ls;
+    if profiling then Search.TimeCustom.pause ();
+    if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
+    []
+  with Sustainable cand ->
+       if profiling then Search.TimeCustom.pause ();
+       if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
+       cand
+
+let smallest_to_resist_on_trace = fast_resist_on_trace

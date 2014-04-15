@@ -18,18 +18,6 @@ open Format
 open Options
 open Ast
 
-let set_gc_control =
-  let gc_c = Gc.get() in
-  let gc_c =
-    { gc_c with
-        (* Gc.verbose = 0x3FF; *)
-        Gc.minor_heap_size = 64000000; (* default 32000*)
-        (* major_heap_increment = 3200000;    (\* default 124000*\) *)
-        space_overhead = 80; (* default 80% des donnes vivantes *)
-    }
-  in
-  Gc.set gc_c
-
 let report (b,e) =
   let l = b.pos_lnum in
   let fc = b.pos_cnum - b.pos_bol + 1 in

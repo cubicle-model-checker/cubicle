@@ -185,3 +185,7 @@ val has_var : Hstring.t -> Atom.t -> bool
 val origin : t_system -> t_system
 
 val procs_of_cube : SAtom.t -> Hstring.t list
+
+
+val reset_gc_params : unit -> unit
+val set_liberal_gc : unit -> unit

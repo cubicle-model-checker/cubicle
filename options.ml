@@ -52,6 +52,8 @@ let localized = ref false
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
+let max_cands = ref (-1)
+let max_forward = ref (-1)
 
 let abstr_num = ref false
 let num_range_low = ref 0
@@ -122,6 +124,10 @@ let specs =
                 "in combination with -brab <n>, finite models up to size <n>";
     "-forward-depth", Arg.Set_int forward_depth,
                 "<d> Limit the depth of the forward exploration to at most d";
+    "-max-forward", Arg.Set_int max_forward,
+                "<d> Limit the number of states of the forward exploration to at most d";
+    "-max-cands", Arg.Set_int max_cands,
+                "<d> Limit the number of candidates considered for approximationsto at most d";
     "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
                 "<low> <up> abstract numerical values in [<low>; <up>] during forward exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
@@ -178,6 +184,8 @@ let brab_up_to =
     raise (Arg.Bad "use -upto in combination with brab")
   else !brab_up_to
 
+let max_cands = !max_cands
+let max_forward = !max_forward
 let forward_depth = !forward_depth
 let limit_forward_depth = forward_depth <> -1
 let localized = !localized
