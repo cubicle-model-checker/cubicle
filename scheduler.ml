@@ -31,11 +31,13 @@ type ty =
   | N (* int or real *)
   | O (* everything else *)
 
+let fproc = ref (Proc 0)
+
 (* List of processes *)
 let list_threads = 
   let rec lthreads l =
     function
-      | n when n = nb_threads -> l
+      | n when n = nb_threads -> fproc := Proc n; l
       | n -> n::(lthreads l (n+1))
   in lthreads [] 0
 
@@ -710,7 +712,7 @@ let init_htbls (vars, atoms) =
 		  | Elem (_, Var), Elem (id, Glob) ->
 		    let h = rep_name id in
 		    let (ty, _, diffs) = Hashtbl.find dc h in
-		    Hashtbl.replace dc h (ty, TS.empty, diffs)
+		    Hashtbl.replace dc h (ty, TS.singleton !fproc, diffs)
 		  | _ -> assert false
 	      end
 	    | _ -> assert false
@@ -811,12 +813,12 @@ let graphs_to_ec () =
 let initialization init =
   init_htbls init;
   update ();
-  print_groups ();
+  (* print_groups (); *)
   upd_graphs ();
-  print_ce_diffs ();
-  print_g ();
+  (* print_ce_diffs (); *)
+  (* print_g (); *)
   graphs_to_ec ();
-  print_ce_diffs ();
+  (* print_ce_diffs (); *)
   Hashtbl.iter (
     fun n (rep, tself) ->
       let value =
@@ -1038,11 +1040,9 @@ let random_transition () =
 
 let update_system () =
   let (tr, (assigns, updates)) = random_transition () in
-  (* print_system (tr, !system.Syst.read_st); *)
   List.iter (fun a -> a ()) assigns;
   let updts = valid_upd updates in 
   List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-  (* print_system (tr, !system.Syst.read_st); *)
   system := Syst.update_s tr !system
     
 (* INTERFACE WITH BRAB *)
@@ -1119,10 +1119,14 @@ let scheduler se =
   init_system se;
   init_transitions se.trans;
   let count = ref 1 in
-  while !count < nb_exec do
-    update_system ();
-    incr count
-  done;
+  (
+    try
+      while !count < nb_exec do
+	update_system ();
+	incr count
+      done;
+    with Invalid_argument _ -> ()
+  );
   if verbose > 0 then
     begin
       let count = ref 1 in
