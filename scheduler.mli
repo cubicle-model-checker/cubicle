@@ -12,6 +12,7 @@ type value =
   | Proc of int
 type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
 type ty = A | N | O
+val fproc : value ref
 val list_threads : int list
 val trans_list :
   (Hstring.t * (unit -> bool) list * (unit -> bool) list list list *
