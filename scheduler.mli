@@ -11,7 +11,7 @@ type value =
   | Hstr of Hstring.t
   | Proc of int
 type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
-type ty = N | O
+type ty = A | N | O
 val list_threads : int list
 val trans_list :
   (Hstring.t * (unit -> bool) list * (unit -> bool) list list list *
@@ -142,6 +142,7 @@ module Syst :
   end
 val system : value Syst.t ref
 val htbl_types : (Hstring.t, value list) Hashtbl.t
+val htbl_abstypes : (Hstring.t, unit) Hashtbl.t
 val compare_value : value -> value -> int
 module TS :
   sig

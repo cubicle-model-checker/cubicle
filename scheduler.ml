@@ -27,6 +27,7 @@ type stype =
   | RArr of (Hstring.t * int)
 
 type ty =
+  | A (* abstract type *)
   | N (* int or real *)
   | O (* everything else *)
 
@@ -247,6 +248,8 @@ let system = ref (Syst.init ())
 (* Types *)
 let htbl_types = Hashtbl.create 11
 
+let htbl_abstypes = Hashtbl.create 11
+
 (* Filling htbl_types with default types (proc, bool, int and real) *)
 let () = 
   List.iter (
@@ -282,7 +285,7 @@ let dc = Hashtbl.create 17
    delete the variables from the difference classes
    and update the equivalence classes with this value *)
 let upd_dc h types ty diffs =
-  if TS.cardinal types == 1 && ty <> N
+  if TS.cardinal types == 1 && ty <> N && ty <> A
   then
     (
       Hashtbl.remove dc h;
@@ -339,9 +342,12 @@ let find_nop =
 
 (* Return the first type constructor *)
 let default_type g_type =
-  match Hashtbl.find htbl_types g_type with
-    | hd::_ -> hd
-    | _ -> assert false
+  if Hashtbl.mem htbl_abstypes g_type 
+  then raise Exit 
+  else
+    match Hashtbl.find htbl_types g_type with
+      | hd::_ -> hd
+      | _ -> assert false
 
 (* Intersection of two int lists *)
 let inter l1 l2s =
@@ -421,7 +427,7 @@ let print_value f v =
     | Numb i -> printf "%s " (Num.string_of_num i)
     | Proc p -> printf "%d " p
     | Hstr h -> printf "%a " Hstring.print h
-    | Var h -> printf "Var %a " Hstring.print h
+    | Var h -> printf "%a " Hstring.print h
 
 let print_ce_diffs () =
   printf "\nce :@.";
@@ -489,22 +495,26 @@ let print_system (tr, {Etat.globs; Etat.arrs}) =
 let init_types type_defs globals arrays =
   List.iter (
     fun (t_name, t_fields) ->
-      let fields = 
-	if (List.length t_fields > 0)
-	then 
-	  List.fold_right (
-	    fun field acc -> (Hstr field)::acc
-	  ) t_fields [] 
-	else
-	  let acc' =
-	    List.fold_left (
-	      fun acc (n, ty) -> if ty = t_name then (Hstr n)::acc else acc) [] globals in
-	  List.fold_left (
-	    fun acc (n, (_, ty)) -> if ty = t_name then (Hstr n)::acc else acc) acc' arrays
-      in
-      Hashtbl.add htbl_types t_name fields
+      if not (Hashtbl.mem htbl_types t_name) then
+	let fields = 
+	  if (List.length t_fields > 0)
+	  then 
+	    List.fold_right (
+	      fun field acc -> (Hstr field)::acc
+	    ) t_fields [] 
+	  else
+	    (
+	      Hashtbl.add htbl_abstypes t_name ();
+	      let acc' =
+		List.fold_left (
+		  fun acc (n, ty) -> if ty = t_name then (Hstr n)::acc else acc) [] globals in
+	      List.fold_left (
+		fun acc (n, (_, ty)) -> if ty = t_name then (Hstr n)::acc else acc) acc' arrays
+	    )
+	in
+	Hashtbl.add htbl_types t_name fields
   ) type_defs
-
+    
 (* Initialization of the global variables to their
    default constructor, of the equivalence classes and
    of the difference classes *)
@@ -514,22 +524,34 @@ let init_globals globals =
   List.iter (
     fun (g_name, g_type) ->
       (* Here is the deterministic initialization *)
-      let default_type = default_type g_type in
+      let default_type = 
+	try default_type g_type 
+	with Exit -> Var g_name
+      in
       Syst.set_v !system g_name default_type;
       (* End of the deterministic initialization *)
       (* First, each var is its own representant *)
       Hashtbl.add ec g_name (Var g_name, RGlob g_type);
-      let ty, stypes = 
+      let ty, stypes, diffs = 
 	if (Hstring.equal g_type i || Hstring.equal g_type r) 
 	(* Int or real*)
-	then N, TS.empty
-	(* Other type*)
-	else 
+	then N, TS.empty, TI.empty
+	(* Abstract or other type*)
+	else
 	  let ty = Hashtbl.find htbl_types g_type in
-	  let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
-	  O, st
+	  if Hashtbl.mem htbl_abstypes g_type 
+	  then
+	    let ti = List.fold_left (
+	      fun acc t -> match t with
+		| Var h when h != g_name -> TI.add h acc
+		| _ -> acc
+	    ) TI.empty ty in
+	    A, TS.singleton (Var g_name), ti 
+	  else 
+	    let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
+	    O, st, TI.empty 
       in
-      Hashtbl.add dc g_name (ty, stypes, TI.empty)
+      Hashtbl.add dc g_name (ty, stypes, diffs)
   ) globals
 
 (* Initialization of the arrays with their default
@@ -542,22 +564,34 @@ let init_arrays arrays =
     fun (a_name, (a_dims, a_type)) ->
       let dims = List.length a_dims in
       (* Here is the deterministic initialization *)
-      let default_type = default_type a_type in
+      let default_type = 
+	try default_type a_type 
+	with Exit -> Var a_name
+      in
       let new_t = DimArray.init dims nb_threads default_type in
       Syst.set_a !system a_name new_t;
       (* End of the deterministic initialization *)
       Hashtbl.add ec a_name (Var a_name, RArr (a_type, dims));
-      let ty, stypes = 
+      let ty, stypes, diffs = 
 	if (Hstring.equal a_type i || Hstring.equal a_type r) 
 	(* Int or real *)
-	then N, TS.empty 
+	then N, TS.empty, TI.empty
 	(* Other type *)
 	else
 	  let ty = Hashtbl.find htbl_types a_type in
-	  let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
-	  O, st
+	  if Hashtbl.mem htbl_abstypes a_type 
+	  then
+	    let ti = List.fold_left (
+	      fun acc t -> match t with
+		| Var h when h != a_name -> TI.add h acc
+		| _ -> acc
+	    ) TI.empty ty in
+	    A, TS.singleton (Var a_name), ti
+	  else 
+	    let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
+	    O, st, TI.empty
       in
-      Hashtbl.add dc a_name (ty, stypes, TI.empty)
+      Hashtbl.add dc a_name (ty, stypes, diffs)
   ) arrays
     
 (* Execution of the real init method from the cubicle file 
@@ -597,7 +631,7 @@ let init_htbls (vars, atoms) =
 			     let types' = 
 			       match ty with
 				 | N -> TS.add v types
-				 | O -> TS.remove v types 
+				 | O | A -> TS.remove v types 
 			     in
 			     upd_dc n types' ty diffs';
 		    ) dc
@@ -618,6 +652,7 @@ let init_htbls (vars, atoms) =
 				 let (ty2, types2, diffs2) = Hashtbl.find dc idd in
 				 let types = 
 				   match ty1 with
+				     | A -> types1
 				     | N -> TS.union types1 types2
 				     | O -> TS.inter types1 types2
 				 in 
@@ -646,7 +681,7 @@ let init_htbls (vars, atoms) =
 	    		let v = get_cvalue c in
 			let types' = match ty with
 			  | N -> TS.add v types
-			  | O -> TS.remove v types 
+			  | O | A -> TS.remove v types 
 			in
 			upd_dc h types' ty diffs
 		      with ConstrRep -> () (* Strange but allowed *)
@@ -666,7 +701,7 @@ let init_htbls (vars, atoms) =
 			  let (ty, types, diffs) = Hashtbl.find dc h in
 			  let types' = match ty with
 			    | N -> TS.add rep' types
-			    | O -> TS.remove rep' types
+			    | O | A -> TS.remove rep' types
 			  in upd_dc h types' ty diffs
 			  
 			| _ -> () (* Strange but that's your problem *)
@@ -781,12 +816,15 @@ let initialization init =
   print_ce_diffs ();
   print_g ();
   graphs_to_ec ();
-  (* print_ce_diffs (); *)
+  print_ce_diffs ();
   Hashtbl.iter (
     fun n (rep, tself) ->
       let value =
 	match rep, tself with
-	  | Var _, (RGlob t | RArr (t, _)) -> default_type t
+	  | Var _, (RGlob t | RArr (t, _)) -> (
+	    try default_type t
+	    with Exit -> rep
+	  )
 	  | _ as v, _ -> v
       in
       match tself with
