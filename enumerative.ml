@@ -1109,7 +1109,7 @@ let smallest_to_resist_on_trace cpt_approx ls =
 
 
 
-let one_resist_on_trace_size cpt_approx ({t_unsafe = _, sa} as s) env =
+let one_resist_on_trace_size cpt_approx s env =
     if Cube.size_system s > env.model_cardinal then true
     else
       try

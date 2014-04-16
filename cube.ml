@@ -23,6 +23,25 @@ module S = H.HSet
 let hempty = H.empty
 
 
+type t =
+ private {
+   vars : Hstring.t list;
+   litterals : SAtom.t;
+   array : ArrayAtom.t;
+ }
+
+
+type kind = Orig | Approx | Inv
+
+type node =
+  { cube : t;
+    alpha : t;
+    tag : int;
+    kind : kind;
+    deleted : bool;
+    from : (transition * Hstring.t list * node) list }
+
+
 module TimeRP = Search.TimeRP
 
 module TimeFix = Search.TimeFix
