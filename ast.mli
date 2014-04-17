@@ -55,7 +55,6 @@ type t_system = {
   t_init_instances : (int, (dnf list, Atom.Array.t list list)) Hashtbl.t;
   t_invs : Cube.t list;
   t_unsafe : Cube.t list;
-  t_forward : (Hstring.t list * Hstring.t list * Atom.Set.t) list;
   t_trans : transition list;
 }
 

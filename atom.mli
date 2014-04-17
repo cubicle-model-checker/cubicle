@@ -45,6 +45,7 @@ and Set : sig
   val subst : Variable.subst -> ?sigma_sort:Term.subst_sort -> t -> t
   val variables : t -> Variable.Set.t
   val glob_terms : t -> Term.Set.t
+  val print : Format.formatter -> t -> unit
 end
 
 module Array : sig
@@ -63,6 +64,7 @@ module Array : sig
   val compare_nb_common : t -> t -> t -> int
   val diff : t -> t -> t
   val alpha : t -> Variable.t list -> Variable.t list * t
+  val print : Format.formatter -> t -> unit
 end
 
 (* type aliases for convenience *)

@@ -23,7 +23,15 @@ module TimePre : Timer.S
 module TimeSort : Timer.S
 module TimeForward : Timer.S
 module TimeCustom : Timer.S
+module TimeFormula : Timer.S
 
+
+val nb_digits : int -> int
+(** Returns the number of digits of a positive integer *)
+
+val set_liberal_gc : unit -> unit
+(** Changes garbage collector parameters limit its effect *)
 
 val reset_gc_params : unit -> unit
-val set_liberal_gc : unit -> unit
+(** Reset the parameters of the GC to its default values. Call after
+    {!set_liberal_gc}. *)

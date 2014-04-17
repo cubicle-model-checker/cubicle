@@ -49,6 +49,14 @@ let create vars sa =
   }
 
 
+let create_array vars ar =
+  {
+    vars = vars;
+    litterals = Atom.Array.to_satom ar;
+    array = ar;
+  }
+
+
 let cube_false =
 {
   vars = [];
@@ -78,7 +86,7 @@ let normal_form { litterals = sa; array = ar } =
 
 let create_normal sa = normal_form (create [] sa)
 
-
+let create_normal_array ar = normal_form (create_array [] ar)
 
 
 let size c = List.length c.vars
@@ -616,447 +624,8 @@ let simplify { litterals = sa; } =
 let elim_ite_simplify { litterals = sa; } =
   create_normal (elim_ite_atoms sa)
 
-(* TODO ici *)
 
-(**********************************************************************)
-(* Use unsat cores from fixpoints check to close nodes : experimental *)
-(**********************************************************************)
-
-module MArgs = Map.Make (struct 
-  type t = H.t list 
-  let compare = H.compare_list 
-end)
-
-let closed = H.H.create (if simpl_by_uc then 8191 else 0)
-
-let already_closed s tr args =
-  let sa = s.t_arru in
-  try
-    let tr_margs = H.H.find closed tr.tr_name in
-    let ls = MArgs.find args tr_margs in
-    let rec find = function
-      | [] -> None
-      | (na, fix) :: r -> 
-	if Atom.Array.subset na sa then Some fix
-	else find r
-    in find ls
-  with Not_found -> None
-
-let has_alredy_closed_ancestor s =
-  let rec has acc = function
-    | [] -> false
-    | (tr, args, f) :: r ->
-      match already_closed f tr args with
-	| None -> has (f :: acc) r
-	| Some fix -> 
-	  not (List.exists (fun f -> Atom.Array.equal f.t_arru fix.t_arru) acc)
-  in
-  has [] s.t_from
-
-(* let has_alredy_closed_father s = *)
-(*   match s.t_from with  *)
-(*     | [] -> false *)
-(*     | (tr, args, f)::_ -> already_closed f tr args *)
-
-let add_to_closed s fixa fix =
-  match s.t_from with
-    | [] -> ()
-    | (tr, args, f)::_ ->
-      let fa = f.t_arru in
-      let sa = s.t_arru in
-      let simpl = Atom.Array.diff fa (Atom.Array.diff sa fixa) in
-      let tr_margs = 
-	try H.H.find closed tr.tr_name with Not_found -> MArgs.empty in
-      let ls = try MArgs.find args tr_margs with Not_found -> [] in
-      H.H.add closed tr.tr_name (MArgs.add args ((simpl, fix) :: ls) tr_margs)
-
-(**********************************************************************)
-
-(********************************************************)
-(* Incremental fixpoint check : s => \/_{p \in nodes} p *)
-(********************************************************)
-
-
-let extra_args args nargs =
-  let rec aux dif args nargs = match args, nargs with
-    | [], [] -> dif
-    | _::_, [] -> args
-    | [], _::_ -> dif
-    | a::ra, b::rb -> aux dif ra rb
-  in
-  aux [] args nargs
-
-
-exception Fixpoint of int list
-
-let check_fixpoint ?(pure_smt=false) ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
-  Prover.assume_goal s;
-  (* let nb_nargs = List.length nargs in *)
-  let nodes = List.fold_left
-    (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) ->
-      let dif = extra_args real_args nargs in
-      (* if List.length args > List.length nargs then nodes *)
-      (* else *)
-      let nargs = if dif = [] then nargs else nargs@dif in
-      let d = relevant_permutations anp ap args nargs in
-      List.fold_left
-	(fun nodes ss ->
-	  let pp = Atom.Array.apply_subst ss ap in
-	  if not pure_smt && Atom.Array.subset pp anp then begin
-	    if simpl_by_uc then add_to_closed s pp sp ;
-	    raise (Fixpoint [sp.t_nb])
-	  end
-	  (* Heuristic : throw away nodes too much different *)
-	  (* else if Atom.Array.nb_diff pp anp > 2 then nodes *)
-	  (* line below useful for arith : ricart *)
-	  else if not pure_smt &&
-                  inconsistent_array (Atom.Array.union pp anp) then nodes
-	  else if Atom.Array.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
-	  else (Prover.assume_node pp ~id:sp.t_nb; nodes)
-	) nodes d
-    ) [] visited
-  in
-  TimeSort.start ();
-  let nodes = 
-    List.fast_sort 
-      (fun (a1, n1) (a2, n2) -> Atom.Array.compare_nb_common anp a1 a2) 
-      nodes 
-  in
-  TimeSort.pause ();
-  List.iter (fun (p, cnum) -> Prover.assume_node p ~id:cnum) nodes
-  
-
-let easy_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  if (delete && (s.t_deleted || has_deleted_ancestor s))
-    ||
-    (simpl_by_uc && has_alredy_closed_ancestor s)
-  then Some []
-  else
-    let db = ref None in
-    ignore (List.exists 
-	      (fun ({ t_arru = pa } as sp) -> 
-		 if Atom.Array.subset pa npa then
-		   (db := Some [sp.t_nb];
-		    if simpl_by_uc then add_to_closed s pa sp; true)
-		 else false) nodes);
-    !db
-
-let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  try
-    check_fixpoint s nodes;
-    None
-  with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-  
-
-
-let pure_smt_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  try
-    check_fixpoint ~pure_smt:true s nodes;
-    None
-  with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-  
-
-
-let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
-  Debug.unsafe s;
-  TimeFix.start ();
-  let nodes = (List.rev_append invariants visited) in
-  let r = 
-    match easy_fixpoint s nodes with
-      | None -> hard_fixpoint s nodes
-      | r -> r
-  in
-  TimeFix.pause ();
-  r
-
-(*************** Operations with tries () *******************)
-
-let invert_subst = List.map (fun (x,y) -> y,x)
-
-let medium_fixpoint_trie {t_unsafe = (nargs,_); 
-                          t_alpha = args, ap; 
-                          t_arru = anp} visited learnt =
-  TimeEasyFix.start ();
-  let substs = all_permutations args nargs in
-  let substs = List.tl substs in (* Drop 'identity' permutation. 
-                                    Already checked in easy_fixpoint. *)
-  try
-    List.iter (fun ss -> 
-      let u = Atom.Array.apply_subst ss ap in
-      let lstu = Array.to_list u in
-      match Cubetrie.mem lstu !visited with
-        | Some uc -> raise (Fixpoint uc)
-        | None -> match Cubetrie.mem lstu !learnt with
-            | Some uc -> raise (Fixpoint uc)
-            | None -> ()
-    ) substs;
-    TimeEasyFix.pause ();
-    None
-  with Fixpoint uc -> 
-    TimeEasyFix.pause ();
-    Some uc
-
-let hard_fixpoint_trie s visited learnt =
-  TimeHardFix.start (); 
-  let anp = s.t_arru in
-  let nargs = fst s.t_unsafe in
-  let substs = all_permutations nargs nargs in
-  let relevant ss =
-    let u = Atom.Array.apply_subst ss anp in
-    let lstu = Array.to_list u in
-    let nodes = Cubetrie.consistent lstu !visited in
-    let nodes = List.filter (fun s -> not (s.t_deleted)) nodes in
-    let ss' = invert_subst ss in
-    List.map (fun n -> 
-      let p = Atom.Array.apply_subst ss' n.t_arru in
-      (p, n.t_nb), Atom.Array.nb_diff p u
-    ) nodes
-  in
-  let cubes = List.flatten (List.map relevant substs) in
-  let res = 
-    if cubes = [] then None
-    else begin
-      TimeSort.start ();
-      let cubes =
-        List.fast_sort
-          (fun c1 c2 -> Pervasives.compare (snd c1) (snd c2))
-          cubes
-      in
-        TimeSort.pause ();
-        try
-          Prover.assume_goal s;
-          List.iter (fun ((p, id), _) -> Prover.assume_node p ~id) cubes;
-          None
-        with
-          | Exit -> None
-          | Smt.Unsat uc -> 
-              learnt := Cubetrie.add (Array.to_list anp) s !learnt;
-              Some uc
-    end
-  in
-  TimeHardFix.pause ();
-  res
-
-
-let delete_node s  = s.t_deleted <- true
-
-
-let fixpoint_trie s lstu visited learnt postponed =
-  TimeFix.start ();
-  TimeEasyFix.start ();
-  let res = 
-    match Cubetrie.mem lstu !visited with
-      | (Some _) as r -> r
-      | None -> match Cubetrie.mem lstu !learnt with
-          | (Some _) as r -> r
-          | None ->
-              if delete then
-                if s.t_deleted then begin
-                  (* Node was postponed earlier, now visit it.*)
-                  s.t_deleted <- false;
-                  None
-                end
-                else if has_deleted_ancestor s then begin
-                  (* Postpone the node. *)
-                  delete_node s;
-                  postponed := s::!postponed;
-                  Some []
-                end
-                else None
-              else None
-  in
-  TimeEasyFix.pause ();
-  let res = 
-    match res with 
-      | Some _ -> res
-      | None -> match medium_fixpoint_trie s visited learnt with
-          | (Some _) as r -> r
-          | None -> hard_fixpoint_trie s visited learnt
-  in
-  TimeFix.pause ();
-  res
-
-
-
-
-
-(*************** Other version with tries *******************)
-
-let check_and_add nargs anp nodes
-    ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) =
-  let dif = extra_args real_args nargs in
-  (* if List.length args > nb_nargs then nodes *)
-  (* else *)
-  let nargs = if dif = [] then nargs else nargs@dif in
-  let d = relevant_permutations anp ap args nargs in
-  List.fold_left
-    (fun nodes ss ->
-      let pp = Atom.Array.apply_subst ss ap in
-      (* if Atom.Array.subset pp anp then begin *)
-      (*   if simpl_by_uc then add_to_closed s pp sp ; *)
-      (*   raise (Fixpoint [sp.t_nb]) *)
-      (* end *)
-      (* Heuristic : throw away nodes too much different *)
-      (* else if Atom.Array.nb_diff pp anp > 2 then nodes *)
-      (* line below useful for arith : ricart *)
-      if inconsistent_array (Atom.Array.union pp anp) then nodes
-      else if Atom.Array.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
-      else (Prover.assume_node pp ~id:sp.t_nb; nodes)
-    ) nodes d
-  
-
-let check_fixpoint_trie2 ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
-  Prover.assume_goal s;
-  (* let nb_nargs = List.length nargs in *)
-  let unprioritize_cands = false (* lazyinv *) in
-  let nodes, cands = Cubetrie.fold
-    (fun (nodes, cands) sp ->
-      if unprioritize_cands && sp.t_nb < 0 then nodes, sp :: cands
-      else check_and_add nargs anp nodes sp, cands
-    ) ([], []) visited in
-  let nodes = List.fold_left (check_and_add nargs anp) nodes cands in
-  TimeSort.start ();
-  let nodes = 
-    List.fast_sort 
-      (fun (a1, n1) (a2, n2) ->
-        if unprioritize_cands && n1 < 0 && n2 >= 0 then 1 
-        (* a1 is a candidate *)
-        else if unprioritize_cands && n2 < 0 && n1 >= 0 then -1
-        (* a2 is a candidate *)
-        else Atom.Array.compare_nb_common anp a1 a2) 
-      nodes 
-  in
-  TimeSort.pause ();
-  List.iter (fun (p, cnum) -> Prover.assume_node p ~id:cnum) nodes
-  
-let easy_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  if (delete && (s.t_deleted || has_deleted_ancestor s))
-    ||
-    (simpl_by_uc && has_alredy_closed_ancestor s)
-  then Some []
-  else Cubetrie.mem_array npa nodes
-
-let medium_fixpoint_trie2 {t_unsafe = (nargs,_); 
-                          t_alpha = args, ap; 
-                          t_arru = anp} visited  =
-  let substs = all_permutations args nargs in
-  let substs = List.tl substs in (* Drop 'identity' permutation. 
-                                    Already checked in easy_fixpoint. *)
-  try
-    List.iter (fun ss -> 
-      let u = Atom.Array.apply_subst ss ap in
-      match Cubetrie.mem_array u visited with
-        | Some uc -> raise (Fixpoint uc)
-        | None -> ()
-    ) substs;
-    None
-  with Fixpoint uc -> Some uc
-
-let hard_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  try
-    check_fixpoint_trie2 s nodes;
-    None
-  with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-  
-
-let fixpoint_trie2 nodes ({ t_unsafe = (_,np) } as s) =
-  Debug.unsafe s;
-  TimeFix.start ();
-  let r =
-    match easy_fixpoint_trie2 s nodes with
-    | None ->
-       (match medium_fixpoint_trie2 s nodes with
-        | None -> hard_fixpoint_trie2 s nodes
-        | r -> r)
-    | r -> r
-  in
-  TimeFix.pause ();
-  r
-
-
-
-(* Experimental expansion of cubes to dnf : depreciated *)
-
-let values_of_type ty =
-  let vals =
-    if Hstring.equal ty Smt.Type.type_proc then proc_vars
-    else Smt.Type.constructors ty in
-  List.fold_left (fun acc v -> S.add v acc) S.empty vals      
-
-let values_of_term = function
-  | Elem (x, Glob) | Access (x, _) ->
-      values_of_type (snd (Smt.Symbol.type_of x))
-  | Elem (x, (Var | Constr)) -> S.singleton x
-  | _ -> assert false
-
-let sort_of_term = function
-  | Elem (x, Glob) | Access (x, _) ->
-      let ty = (snd (Smt.Symbol.type_of x)) in
-      if Hstring.equal  ty Smt.Type.type_proc then Var
-      else if Smt.Symbol.has_abstract_type x then raise Not_found
-      else Constr
-  | Elem (x, (Var | Constr as s)) -> s
-  | _ -> assert false
-
-let expand_cube c =
-  Atom.Set.fold (fun a acc -> match a with
-    | True | False -> assert false
-    | Comp (x, Eq, Elem (y, (Constr|Var)))
-    | Comp (Elem (y, (Constr|Var)), Eq, x) ->
-        List.rev_map (Atom.Set.add a) acc
-    | Comp (x, Neq, Elem (y, (Constr|Var as s)))
-    | Comp (Elem (y, (Constr|Var as s)), Neq, x) ->
-        (try
-           let la = S.fold
-             (fun v acc ->
-               if Hstring.equal v y then acc
-               else (Comp (x, Eq, Elem (v, s)))::acc)
-             (values_of_term x) [] in
-           List.fold_left (fun acc' a1 -> List.rev_append
-             (List.rev_map
-                (fun sa -> Atom.Set.add a1 sa) acc) acc') [] la
-         with Not_found -> List.rev_map (Atom.Set.add a) acc)
-        (* List.rev_map (Atom.Set.add a) acc *)
-    | Comp(x, Eq, y) ->
-        (try
-           let s = sort_of_term x in
-           let la = S.fold
-             (fun v acc -> 
-               (Comp (x, Eq, Elem (v, s)), Comp (y, Eq, Elem (v, s)))::acc)
-             (values_of_term x) [] in
-           List.fold_left (fun acc' (a1, a2) -> List.rev_append
-             (List.rev_map
-                (fun sa -> Atom.Set.add a2 (Atom.Set.add a1 sa)) acc) acc') [] la
-         with Not_found -> List.rev_map (Atom.Set.add a) acc)
-    | Comp(x, Neq, y) ->
-        (try
-           let s = sort_of_term x in
-           let la = S.fold
-             (fun v acc -> 
-               (Comp (x, Neq, Elem (v, s)), Comp (y, Eq, Elem (v, s)))::acc)
-             (values_of_term y) [] in
-           List.fold_left (fun acc' (a1, a2) -> List.rev_append
-             (List.rev_map
-                (fun sa -> Atom.Set.add a2 (Atom.Set.add a1 sa)) acc) acc') [] la
-         with Not_found -> List.rev_map (Atom.Set.add a) acc)           
-    | _ ->  List.rev_map (Atom.Set.add a) acc
-  ) c [Atom.Set.empty]
-
-
-let expand_cube c = List.rev_map proper_cube (expand_cube c)
-
-
-
-let resolve_two ar1 ar2 =
+let resolve_two_arrays ar1 ar2 =
   let n1 = Array.length ar1 in
   let n2 = Array.length ar2 in
   if n1 <> n2 then None
@@ -1068,7 +637,8 @@ let resolve_two ar1 ar2 =
         let a1 = ar1.(i) in
         let a2 = ar2.(i) in
         if Atom.equal a1 a2 then incr nb_eq
-        else if inconsistent_list [Atom.neg a1;Atom.neg  a2] then match !unsat_i with
+        else if inconsistent_list [Atom.neg a1;Atom.neg  a2] then
+          match !unsat_i with
           | Some _ -> raise Exit
           | None -> unsat_i := Some i
         else raise Exit
@@ -1085,20 +655,11 @@ let resolve_two ar1 ar2 =
             Some ar
     with Exit -> None
 
-let rec add_and_resolve s visited =
-  let visited =
-    Cubetrie.fold (fun visited sv ->
-      match resolve_two s.t_arru sv.t_arru with
-        | None -> visited
-        | Some ar ->
-            let sa, (args, _) = proper_cube (Atom.Array.to_satom ar) in
-            let ar = Atom.Array.of_satom sa in
-            let aar = Atom.Array.alpha ar args in
-            let s = { s with
-              t_unsafe = args, sa;
-              t_arru = ar;
-              t_alpha = aar;
-	      t_nb = new_cube_id () } in
-            add_and_resolve s visited
-    ) visited visited in
-  Cubetrie.add_array s.t_arru s visited
+
+let resolve_two c1 c2 =
+  match resolve_two_arrays c1.array c2.array with
+  | None -> None
+  | Some ar -> Some (create_normal_array ar)
+
+
+let print fmt { litterals = sa } = Atom.Set.print fmt sa 

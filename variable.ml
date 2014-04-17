@@ -182,6 +182,17 @@ let permutations_missing tr_args l =
   (* List.map (insert_missing tr_args) parts *)
 
 
+let extra_vars vs1 vs2 =
+  let rec aux dif vs1 vs2 = match vs1, vs2 with
+    | [], [] -> dif
+    | _::_, [] -> vs1
+    | [], _::_ -> dif
+    | a::ra, b::rb -> aux dif ra rb
+  in
+  aux [] vs1 vs2
+
+
+
 let print fmt v = Hstring.print fmt v
 
 let rec print_vars fmt = function

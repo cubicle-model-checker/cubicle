@@ -340,38 +340,21 @@ let system s =
     if Options.subtyping then Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
     
-    let glob_proc = 
-      List.fold_left 
-	(fun acc (n, t) -> 
-	   if Hstring.equal t Smt.Type.type_proc then n::acc else acc)
-	[] (*s.globals*) s.consts
-    in
+    (* let glob_proc =  *)
+    (*   List.fold_left  *)
+    (*     (fun acc (n, t) ->  *)
+    (*        if Hstring.equal t Smt.Type.type_proc then n::acc else acc) *)
+    (*     [] (\*s.globals*\) s.consts *)
+    (* in *)
 
-    let t_globals = List.map fst s.globals in
-    let t_arrays = List.map fst s.arrays in
+    { 
+      t_globals = List.map fst s.globals;
+      t_arrays = List.map fst s.arrays;
+      t_init = s.init;
+      t_init_instances = create_init_instances s.init;
+      t_invs = s.invs;
+      t_unsafe = List.map Cube.create s.unsafe;
+      t_trans = s.trans;
+    }
 
-    create_init_instances s.init;
-
-    List.map (fun ((args, p) as un) ->
-      let arru = ArrayAtom.of_satom p in (* inutile ? *)
-      { 
-	t_globals = t_globals;
-	t_arrays = t_arrays;
-	t_from = [];
-	t_init = s.init;
-        t_init_instances = create_init_instances s.init;
-	t_invs = s.invs;
-	t_cands = s.cands;
-	t_unsafe = un;
-	t_forward = s.forward;
-	t_arru = arru;
-	t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
-	t_trans = s.trans;
-	t_deleted = false;
-	t_nb = Cube.new_cube_id ();
-	t_nb_father = -1;
-	t_glob_proc = glob_proc;
-	t_from_forall = false;
-      }
-    ) s.unsafe
   with Smt.Error e -> raise (Error (Smt e))

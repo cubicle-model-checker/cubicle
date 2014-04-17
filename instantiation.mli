@@ -13,11 +13,4 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module FixpointList : sig
-  val pure_smt_check : Node.t -> Node.t list -> int list option
-  val check : Node.t -> Node.t list -> int list option
-end
-
-module FixpointTrie : sig
-  val check : Node.t -> Node.t Cubetrie.t -> int list option
-end
+val relevant : ~of_cube:Cube.t -> ~to_cube:Cube.t -> Variable.subst

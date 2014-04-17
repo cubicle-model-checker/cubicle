@@ -13,6 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Format
 open Options
 module HSet = Hstring.HSet
 
@@ -171,3 +172,30 @@ let rec type_of = function
   | Elem (x, Var) -> Smt.Type.type_proc
   | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
   | Arith(t, _) -> type_of t
+
+
+let rec print_strings fmt = function
+  | [] -> ()
+  | [s] -> fprintf fmt "%s" s
+  | s :: l -> fprintf fmt "%s %a" s print_strings l
+
+let print_const fmt = function
+  | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+  | ConstName n -> fprintf fmt "%a" Hstring.print n
+
+let print_cs fmt cs =
+  MConst.iter 
+    (fun c i ->
+       fprintf fmt " %s %a" 
+	 (if i = 1 then "+" else if i = -1 then "-" 
+	  else if i < 0 then "- "^(string_of_int (abs i)) 
+	  else "+ "^(string_of_int (abs i)))
+	 print_const c) cs
+
+let rec print fmt = function
+  | Const cs -> print_cs fmt cs
+  | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
+  | Access (a, li) ->
+      fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
+  | Arith (x, cs) -> 
+      fprintf fmt "@[%a%a@]" print x print_cs cs

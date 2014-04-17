@@ -33,6 +33,8 @@ val all_arrangements : int -> t list -> subst list
 val all_arrangements_arity : Hstring.t -> t list -> subst list
 val permutations_missing : t list -> t list -> subst list
 
+val extra_vars : t list -> t list -> t list
+
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit
 val print_subst : formatter -> subst -> unit

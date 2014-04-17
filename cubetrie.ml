@@ -14,7 +14,8 @@
 (**************************************************************************)
 
 open Options
-open Ast
+open Util
+open Term.Type
 
 module H = Hstring
 
@@ -26,7 +27,7 @@ type 'a t =
 
 let empty = Empty
 
-(** Test emptiness of a trie *)
+(* Test emptiness of a trie *)
 let is_empty = function
   | Empty -> true
   | _ -> false
@@ -143,9 +144,9 @@ and mem_array_list atom cube l = match l with
         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
        
 let mem c t =
-  if profiling then TimerSubset.start ();
+  TimerSubset.start ();
   let res = mem c t in
-  if profiling then TimerSubset.pause ();
+  TimerSubset.pause ();
   res
    
 (* Apply f to all values mapped to in the trie. *)
@@ -157,9 +158,9 @@ let rec iter f trie = match trie with
 let mem_array c t =
   (* Format.eprintf "memarray %a in@." Pretty.print_array c; *)
   (* iter (fun s -> Format.eprintf ">>> %a\n@." Pretty.print_array s.t_arru) t; *)
-  if profiling then TimerSubset.start ();
+  TimerSubset.start ();
   let res = mem_array c t in
-  if profiling then TimerSubset.pause ();
+  TimerSubset.pause ();
   res
 
 (* Fold f to all values mapped to in the trie. *)

@@ -30,8 +30,17 @@ val card: t -> int
 val inconsistent : ?use_sets:bool -> t -> bool
 val inconsistent_2 : ?use_sets:bool -> t -> t -> bool
 
+val inconsistent_array : Atom.Array.t -> bool
+
+
 val simplify : t -> t
 val elim_ite_simplify : t -> t list
+
+val resolve_two : t -> t -> t option
+
+val print :  Format.formatter -> t -> unit
+
+
 
 
 

@@ -282,23 +282,17 @@ module type Solver = sig
       raised {! Unsat} or if you want to restart the solver. *)
 
 
-  val assume : ?profiling:bool -> id:int -> Formula.t -> unit
-  (** [assume ~profiling:b f id] adds the formula [f] to the context of the
+  val assume : id:int -> Formula.t -> unit
+  (** [assume id f] adds the formula [f] to the context of the
       solver with idetifier [id].
       This function only performs unit propagation.
-      
-      @param profiling if set to [true] then profiling information (time) will
-      be computed (expensive because of system calls).
       
       {b Raises} {! Unsat} if the context becomes inconsistent after unit
       propagation. *)
 
-  val check : ?profiling:bool -> unit -> unit
+  val check : unit -> unit
   (** [check ()] runs Alt-Ergo light on its context. If [()] is
       returned then the context is satifiable.
-      
-      @param profiling if set to [true] then profiling information (time) will
-      be computed (expensive because of system calls).
       
       {b Raises} {! Unsat} [[id_1; ...; id_n]] if the context is unsatisfiable.
       [id_1, ..., id_n] is the unsat core (returned as the identifiers of the
@@ -310,7 +304,7 @@ module type Solver = sig
   val restore_state : state -> unit
   (** [restore_state s] restores a previously saved state [s].*)
 
-  val entails : ?profiling:bool -> id:int -> Formula.t -> bool
+  val entails : id:int -> Formula.t -> bool
   (** [entails ~id f] returns [true] if the context of the solver entails
       the formula [f]. It doesn't modify the context of the solver (the state
       is saved when this function is called and restored on exit).*)
@@ -318,18 +312,4 @@ module type Solver = sig
 end
 
 (** Functor to create several instances of the solver *)
-module Make (Dummy : sig end) : Solver
-
-
-module type EnumSolver = sig
-  val get_time : unit -> float
-  val get_calls : unit -> int
-
-  val clear : unit -> unit
-  val assume : ?profiling:bool -> id:int ->
-    (Hstring.t * int * int) list list -> unit
-  val check : ?profiling:bool -> unit -> unit
-end
-
-module MakeEnum (Dummy : sig end) : EnumSolver
-
+module Make (Options : sig val profiling : bool end) : Solver

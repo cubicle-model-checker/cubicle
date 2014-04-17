@@ -25,7 +25,6 @@
 	"init", INIT;
 	"transition", TRANSITION;
 	"invariant", INVARIANT;
-	"candidate", CANDIDATE;
 	"requires", REQUIRE;
 	"uguard", UGUARD;
 	"assign", ASSIGN;
@@ -33,7 +32,6 @@
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;
-        "forward", FORWARD;
 	"case", CASE;
 	"forall_other", FORALL;
 	"number_procs", SIZEPROC;

@@ -59,4 +59,6 @@ val hfalse : Hstring.t
 val procs_of : t -> Variable.Set.t
 val type_of : t -> Smt.Type.t
 
+val print : Format.formatter -> t -> unit
+
 module Set : Set.S with type elt = t

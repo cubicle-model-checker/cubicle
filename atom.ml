@@ -13,6 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Format
 open Util
 module HSet = Hstring.HSet
 
@@ -101,6 +102,22 @@ and Atom = struct
     | Comp (t1, _, t2) -> Term.variables (Term.variables acc t1) t2
     | Ite (sa, a1, a2) -> SAtom.variables (variables (variables acc a1) a2) sa
 
+  let str_op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
+
+  let rec print fmt = function
+    | True -> fprintf fmt "true"
+    | False -> fprintf fmt "false"
+    | Comp (x, op, y) -> 
+       fprintf fmt "%a %s %a" Term.print x (str_op_comp op) Term.print y
+    | Ite (la, a1, a2) ->
+       fprintf fmt "@[ite(%a,@ %a,@ %a)@]" 
+	       (print_atoms "&&") (SAtom.elements la) print a1 print a2
+
+  and print_atoms sep fmt = function
+    | [] -> ()
+    | [a] -> print fmt a
+    | a::l -> fprintf fmt "%a %s@\n%a" print a sep (print_atoms sep) l
+
 end
 
 and SAtom = struct 
@@ -136,6 +153,9 @@ and SAtom = struct
        Term.Set.union (glob_terms sa) (atom_globs a1 (atom_globs a2 acc))
 
   and glob_terms sa = fold atom_globs sa Term.Set.empty
+
+  let print fmt sa = 
+    fprintf fmt "@[%a@]" (Atom.print_atoms "&&") (elements sa)
 
 end
 
@@ -287,6 +307,9 @@ module ArrayAtom = struct
     done;
     Array.sub d 0 !cpt
 
+  let print fmt a =
+    fprintf fmt "@[%a@]" (Atom.print_atoms "&&") (Array.to_list a)
+
 end
 
 
@@ -301,7 +324,8 @@ module Set : sig
   val hash : t -> int
   val subst : Variables.subst -> ?sigma_sort:Term.subst_sort -> t -> t
   val variables : t -> Variables.Set.t
-  val glob_terms : t -> Term.Set.t
+  val glob_terms : t -> Term.Set.t_term
+  val print : Format.formatter -> t -> unit
 
 end = struct
   
