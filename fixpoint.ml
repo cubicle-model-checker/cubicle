@@ -163,7 +163,7 @@ end = struct
        (* Heuristic : throw away nodes too much different *)
        (* else if Atom.Array.nb_diff pp anp > 2 then nodes *)
        (* line below useful for arith : ricart *)
-       else if Cube.inconsistent_array
+       if Cube.inconsistent_array
                  (Atom.Array.union vis_renamed n_array) then nodes
        else if Atom.Array.nb_diff vis_renamed n_array > 1 then
          (vis_n, vis_renamed)::nodes

@@ -23,22 +23,22 @@ val empty : 'a t
 val is_empty : 'a t -> bool
 
 (** Add a mapping cube->v to trie *)
-val add : Ast.Atom.t list -> 'a -> 'a t -> 'a t
+val add : Atom.t list -> 'a -> 'a t -> 'a t
 
 (** Add a mapping cube->v to trie without checking for subsomption *)
-val add_force : Ast.Atom.t list -> 'a -> 'a t -> 'a t
+val add_force : Atom.t list -> 'a -> 'a t -> 'a t
 
 (** Add a mapping cube->v to trie *)
-val add_array : Ast.ArrayAtom.t -> 'a -> 'a t -> 'a t
+val add_array : Atom.Array.t -> 'a -> 'a t -> 'a t
 
 (** Add a mapping cube->v to trie without checking for subsomption *)
-val add_array_force : Ast.ArrayAtom.t -> 'a -> 'a t -> 'a t
+val add_array_force : Atom.Array.t -> 'a -> 'a t -> 'a t
 
 (** Is cube subsumed by some cube in the trie? *)
-val mem : Ast.Atom.t list -> Ast.t_system t -> int list option
+val mem : Atom.t list -> Node.t t -> int list option
 
 (** Is cube subsumed by some cube in the trie? *)
-val mem_array : Ast.ArrayAtom.t -> Ast.t_system t -> int list option
+val mem_array : Atom.Array.t -> t_system t -> int list option
 
 (** Apply f to all values mapped to in the trie. *)
 val iter : ('a -> unit) -> 'a t -> unit
@@ -50,10 +50,10 @@ val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
 val delete : ('a -> bool) -> 'a t -> 'a t
 
 (** Apply f to all values whose keys (cubes) are subsumed by the given cube. *)
-val iter_subsumed : ('a -> unit) -> Ast.Atom.t list -> 'a t -> unit
+val iter_subsumed : ('a -> unit) -> Atom.t list -> 'a t -> unit
 
 (** List of all values mapped by the trie *)
 val all_vals : 'a t -> 'a list
 
 (** All values whose keys (cubes) are not inconsistent with the given cube. *)
-val consistent : Ast.Atom.t list -> 'a t -> 'a list
+val consistent : Atom.t list -> 'a t -> 'a list

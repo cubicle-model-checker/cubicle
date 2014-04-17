@@ -15,10 +15,9 @@
 
 open Format
 open Options
-open Ast
 open Util
-open Term.Type
-open Atom.Type
+open Types
+
 
 module H = Hstring
 module S = H.HSet
@@ -36,8 +35,8 @@ module SS = Set.Make
 type t =
  private {
    vars : Variable.t list;
-   litterals : Atom.Set.t;
-   array : Atom.Array.t;
+   litterals : SAtom.t;
+   array : ArrayAtom.t;
  }
 
 
@@ -45,14 +44,14 @@ let create vars sa =
   {
     vars = vars;
     litterals = sa;
-    array = Atom.Array.of_satom sa;
+    array = ArrayAtom.of_satom sa;
   }
 
 
 let create_array vars ar =
   {
     vars = vars;
-    litterals = Atom.Array.to_satom ar;
+    litterals = ArrayAtom.to_satom ar;
     array = ar;
   }
 
@@ -60,7 +59,7 @@ let create_array vars ar =
 let cube_false =
 {
   vars = [];
-  litterals = Atom.Set.singleton False;
+  litterals = SAtom.singleton False;
   array = Array.of_list [False];
 }
 
@@ -69,14 +68,14 @@ let cube_false =
 (***************************************)
 
 let normal_form { litterals = sa; array = ar } =
-  let vars = Atom.Set.variables sa in
+  let vars = SAtom.variables sa in
   if !size_proc <> 0 && List.length vars > !size_proc then
     cube_false
   else
   let sigma = Variables.build_subst vars Variables.procs in
   let new_vars = List.map snd sigma in
-  let new_ar = Atom.Array.apply_subst sigma ar in
-  let new_sa = Atom.Array.to_satom ar in
+  let new_ar = ArrayAtom.apply_subst sigma ar in
+  let new_sa = ArrayAtom.to_satom ar in
   {
     vars = new_vars;
     litterals = new_sa;
@@ -108,7 +107,7 @@ let redondant_or_false others a = match a with
   | Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))
   | Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->
       (try 
-	 (Atom.Set.iter (function 
+	 (SAtom.iter (function 
 	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
 	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
 	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) ->
@@ -123,7 +122,7 @@ let redondant_or_false others a = match a with
   | Comp (t1, Eq, (Elem (x, (Var | Constr)) as t2))
   | Comp ((Elem (x, (Var | Constr)) as t2), Eq, t1) ->
       (try 
-	 (Atom.Set.iter (function
+	 (SAtom.iter (function
 	   | Comp (t1', Neq, (Elem (x', (Var | Constr)) as t2'))
 	   | Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1') 
 	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) ->
@@ -136,7 +135,7 @@ let redondant_or_false others a = match a with
        with Not_found -> True | Exit -> False)
   | Comp (t1, Neq, t2) ->
       (try 
-	 (Atom.Set.iter (function 
+	 (SAtom.iter (function 
 	   | Comp (t1', Eq, t2') 
 	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
 		 || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0) ->
@@ -145,7 +144,7 @@ let redondant_or_false others a = match a with
        with Exit -> False)
   | Comp (t1, Eq, t2) ->
       (try 
-	 (Atom.Set.iter (function 
+	 (SAtom.iter (function 
 	   | Comp (t1', Neq, t2') 
 	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
 		 || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0)  ->
@@ -182,7 +181,7 @@ let simplify_comp i si op j sj =
         else Comp (Elem (i, si), op, Elem (j, sj))
 		  
 let rec simplification np a =
-  let a = redondant_or_false (Atom.Set.remove a np) a in
+  let a = redondant_or_false (SAtom.remove a np) a in
   match a with
     | True | False -> a 
     | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
@@ -239,13 +238,13 @@ let rec simplification np a =
     | Comp _ -> a
     | Ite (sa, a1, a2) -> 
 	let sa = 
-	  Atom.Set.fold 
-	    (fun a -> add (simplification np a)) sa Atom.Set.empty
+	  SAtom.fold 
+	    (fun a -> add (simplification np a)) sa SAtom.empty
 	in
 	let a1 = simplification np a1 in
 	let a2 = simplification np a2 in
-	if Atom.Set.is_empty sa || Atom.Set.subset sa np then a1
-	else if Atom.Set.mem False sa then a2
+	if SAtom.is_empty sa || SAtom.subset sa np then a1
+	else if SAtom.mem False sa then a2
 	else Ite(sa, a1, a2)
 
 
@@ -254,7 +253,7 @@ let rec simplification_terms a = match a with
     | True | False -> a
     | Comp (t1, op, t2) -> Comp (simplify_term t1, op, simplify_term t2)
     | Ite (sa, a1, a2) ->
-       Ite (Atom.Set.fold (fun a -> Atom.Set.add (simplification_terms a)) sa Atom.Set.empty,
+       Ite (SAtom.fold (fun a -> SAtom.add (simplification_terms a)) sa SAtom.empty,
 	    simplification_terms a1, simplification_terms a2)
 
 
@@ -352,7 +351,7 @@ let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
     | _  -> acc
 
 let inconsistent sa = 
-  let l = Atom.Set.elements sa in
+  let l = SAtom.elements sa in
   inconsistent_list l
 
 let inconsistent_array a =
@@ -363,7 +362,7 @@ let inconsistent_array a =
 let inconsistent_set sa =
   try
     let _ = 
-      Atom.Set.fold (fun a acc -> inconsistent_aux acc a) 
+      SAtom.fold (fun a acc -> inconsistent_aux acc a) 
 	sa ([], [], [], [], [], [], []) in
     false
   with Exit -> true
@@ -388,27 +387,27 @@ let inconsistent_2arrays ar1 ar2 =
 
 let inconsistent_2sets sa1 sa2 =
   try
-    let acc = Atom.Set.fold 
+    let acc = SAtom.fold 
       (fun a acc -> inconsistent_aux acc a) 
       sa1 ([], [], [], [], [], [], []) in
-    let _ = Atom.Set.fold 
+    let _ = SAtom.fold 
       (fun a acc -> inconsistent_aux acc a) 
       sa2 acc in
     false
   with Exit -> true
 
-let inconsistent ?(use_sets:false) { litterals: sa; array: ar } =
+let inconsistent ?(use_sets=false) { litterals = sa; array = ar } =
   if use_sets then inconsistent_set sa
   else inconsistent_array ar
 
-let inconsistent_2 ?(use_sets:false)
-    { litterals: sa1; array: ar1 } { litterals: sa2; array: ar2 } =
+let inconsistent_2 ?(use_sets=false)
+    { litterals = sa1; array = ar1 } { litterals = sa2; array = ar2 } =
   if use_sets then inconsistent_2sets sa1 sa2
   else inconsistent_2arrays ar1 ar2
 
 
 
-(* ---------- TODO : doublon avec Atom.Set.variables -----------*)
+(* ---------- TODO : doublon avec SAtom.variables -----------*)
 
 let rec add_arg args = function
   | Elem (s, _) ->
@@ -424,35 +423,22 @@ let rec add_arg args = function
 
 let args_of_atoms sa = 
   let rec args_rec sa args = 
-    Atom.Set.fold 
+    SAtom.fold 
       (fun a args -> 
 	 match a with 
 	   | True | False -> args
 	   | Comp (x, _, y) -> add_arg (add_arg args x) y
 	   | Ite (sa, a1, a2) -> 
-	       args_rec (Atom.Set.add a1 (Atom.Set.add a2 sa)) args) 
+	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args) 
       sa args
   in 
   S.elements (args_rec sa S.empty)
 
 (* --------------------------------------------------------------*)
 
-let const_sign c =
-  try
-    let n = ref (Num.Int 0) in
-    MConst.iter (fun c i -> if i <> 0 then 
-		   match c with
-		     | ConstName _ -> raise Exit
-		     | ConstInt a | ConstReal a -> 
-			 n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
-    Some (Num.compare_num !n (Num.Int 0))
-  with Exit -> None
-
-let const_nul c = const_sign c = Some 0
-
 let tick_pos sa = 
   let ticks = ref [] in 
-  Atom.Set.iter
+  SAtom.iter
     (fun a -> match a with
        | Comp(Const c,Lt, Const m) when const_nul c -> 
 	  begin
@@ -487,7 +473,7 @@ let remove_tick tick e op x =
 		  MConst.add (ConstReal (Num.Int 0)) 1 m
 		else m
 	      in
-	      simplification Atom.Set.empty (Comp (Const m, Lt, x))
+	      simplification SAtom.empty (Comp (Const m, Lt, x))
 	    else raise Not_found
 	  with Not_found -> Comp (e, op, x)
 	end
@@ -500,7 +486,7 @@ let remove_tick tick e op x =
 	      let e = 
 		if MConst.is_empty m then v else Arith(v, m)
 	      in
-	      simplification Atom.Set.empty (Comp (e, Lt, x))
+	      simplification SAtom.empty (Comp (e, Lt, x))
 	    else raise Not_found
 	  with Not_found -> Comp (e, op, x)
 	end	
@@ -517,11 +503,11 @@ let rec contains_tick_atom tick = function
       contains_tick_term tick t1 || contains_tick_term tick t2
   (* | Ite (sa, a1, a2) -> *)
   (*     contains_tick_atom tick a1 || contains_tick_atom tick a2 || *)
-  (*       Atom.Set.exists (contains_tick_atom tick) sa *)
+  (*       SAtom.exists (contains_tick_atom tick) sa *)
   | _ -> false
 
 let remove_tick_atom sa (tick, at) = 
-  let sa = Atom.Set.remove at sa in
+  let sa = SAtom.remove at sa in
   (* let flag = ref false in *)
   let remove a sa = 
     let a = match a with
@@ -532,10 +518,10 @@ let remove_tick_atom sa (tick, at) =
     in
     (* flag := !flag || contains_tick_atom tick a; *)
     if contains_tick_atom tick a then sa else
-    Atom.Set.add a sa
+    SAtom.add a sa
   in
-  Atom.Set.fold remove sa Atom.Set.empty
-  (* if !flag then Atom.Set.add at sa else sa *)
+  SAtom.fold remove sa SAtom.empty
+  (* if !flag then SAtom.add at sa else sa *)
 
 let const_simplification sa = 
   try
@@ -544,7 +530,7 @@ let const_simplification sa =
   with Not_found -> sa
 
 let simplification_atoms base sa =
-  Atom.Set.fold 
+  SAtom.fold 
     (fun a sa ->
        let a = simplification_terms a in
        let a = simplification base a in
@@ -553,47 +539,47 @@ let simplification_atoms base sa =
 	 | True -> sa
 	 | False -> raise Exit
 	 | _ -> add a sa)
-    sa Atom.Set.empty
+    sa SAtom.empty
 
 let rec break a =
   match a with
-    | True | False | Comp _ -> [Atom.Set.singleton a]
+    | True | False | Comp _ -> [SAtom.singleton a]
     | Ite (sa, a1, a2) ->
   	begin
-  	  match Atom.Set.elements sa with
+  	  match SAtom.elements sa with
   	    | [] -> assert false
   	    | c ->
   	        let nc = List.map Atom.neg c in
   		let l = break a2 in
-  		let a1_and_c = Atom.Set.add a1 sa in
-  		let a1_and_a2 = List.map (Atom.Set.add a1) l in
+  		let a1_and_c = SAtom.add a1 sa in
+  		let a1_and_a2 = List.map (SAtom.add a1) l in
   		let a2_and_nc_r = 
 		  List.fold_left 
 		    (fun acc c' ->
   		       List.fold_left 
-			 (fun acc li -> Atom.Set.add c' li :: acc) acc l)
+			 (fun acc li -> SAtom.add c' li :: acc) acc l)
   		    a1_and_a2 nc 
 		in
   		a1_and_c :: a2_and_nc_r
   	end
 
 let add_without_redondancy sa l =
-  if List.exists (fun sa' -> Atom.Set.subset sa' sa) l then l
+  if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
   else
     let l =
       if true || delete then 
-	List.filter (fun sa' -> not (Atom.Set.subset sa sa')) l
+	List.filter (fun sa' -> not (SAtom.subset sa sa')) l
       else l
     in
     sa :: l
 
 let elim_ite_atoms np =
   try
-    let ites, base = Atom.Set.partition (function Ite _ -> true | _ -> false) np in
-    let base = simplification_atoms Atom.Set.empty base in
+    let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
+    let base = simplification_atoms SAtom.empty base in
     let ites = simplification_atoms base ites in
     let lsa = 
-      Atom.Set.fold 
+      SAtom.fold 
 	(fun ite cubes ->
 	   List.fold_left
 	     (fun acc sa ->
@@ -601,7 +587,7 @@ let elim_ite_atoms np =
 		  (fun sa_cubes cube ->
 		     try
 		       let sa = simplification_atoms cube sa in
-		       let sa = Atom.Set.union sa cube in
+		       let sa = SAtom.union sa cube in
 		       if inconsistent sa then sa_cubes else 
 			 add_without_redondancy sa sa_cubes
 		     with Exit -> sa_cubes
@@ -619,7 +605,7 @@ let elim_ite_atoms np =
 
 
 let simplify { litterals = sa; } =
-  create_normal (simplification_atoms Atom.Set.empty sa)
+  create_normal (simplification_atoms SAtom.empty sa)
 
 let elim_ite_simplify { litterals = sa; } =
   create_normal (elim_ite_atoms sa)
@@ -662,4 +648,4 @@ let resolve_two c1 c2 =
   | Some ar -> Some (create_normal_array ar)
 
 
-let print fmt { litterals = sa } = Atom.Set.print fmt sa 
+let print fmt { litterals = sa } = SAtom.print fmt sa 

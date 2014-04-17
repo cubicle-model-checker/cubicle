@@ -13,4 +13,4 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val relevant : ~of_cube:Cube.t -> ~to_cube:Cube.t -> Variable.subst
+val relevant : of_cube:Cube.t -> to_cube:Cube.t -> Variable.subst

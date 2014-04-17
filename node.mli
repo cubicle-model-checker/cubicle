@@ -12,6 +12,7 @@
 (*  License version 2.0                                                   *)
 (*                                                                        *)
 (**************************************************************************)
+open Ast
 
 type kind = Node | Approx | Inv
 
@@ -22,7 +23,7 @@ type t =
       tag : int;
       kind : kind;
       mutable deleted : bool;
-      from : (transition * Variable.t list * node) list;
+      from : (transition * Variable.t list * t) list;
     }
 
 val variables : t -> Variable.t list
@@ -35,6 +36,7 @@ val origin : t -> t
 
 val has_deleted_ancestor : t -> bool
 
+(* TODO *)
 val add_and_resolve : t -> t Cubetrie.t -> t Cubetrie.t
 
 val print :  Format.formatter -> t -> unit

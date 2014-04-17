@@ -22,7 +22,7 @@ type type_constructors = Hstring.t * (Hstring.t list)
 type update = {
   up_arr : Hstring.t;
   up_arg : Variable.t list;
-  up_swts : (Atom.Set.t * Term.t) list;
+  up_swts : (Atom.Set.t * Cterm.t) list;
 }
 
 type transition = {
@@ -30,7 +30,7 @@ type transition = {
   tr_args : Variable.t list;
   tr_reqs : Atom.Set.t;
   tr_ureq : (Variable.t * dnf) list;
-  tr_assigns : (Hstring.t * Term.t) list;
+  tr_assigns : (Hstring.t * Cterm.t) list;
   tr_upds : update list;
   tr_nondets : Hstring.t list;
 }
@@ -52,10 +52,10 @@ type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
   t_init : Variable.t list * dnf;
-  t_init_instances : (int, (dnf list, Atom.Array.t list list)) Hashtbl.t;
+  t_init_instances : (int, (dnf list * Atom.Array.t list list)) Hashtbl.t;
   t_invs : Cube.t list;
   t_unsafe : Cube.t list;
   t_trans : transition list;
 }
 
-val all_var_terms : Variable.t list -> t_system -> Term.Set.t
+val all_var_terms : Variable.t list -> t_system -> Cterm.Set.t

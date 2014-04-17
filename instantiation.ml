@@ -17,7 +17,7 @@ open Format
 open Options
 open Ast
 open Util
-open Term.Type
+open Cterm.Type
 open Atom.Type
 
 
@@ -172,5 +172,6 @@ let relevant_permutations np p l1 l2 =
 let relevant ~of_cube ~to_cube =
   let of_vars, to_vars = of_cube.Cube.vars, to_cube.Cube.vars in
   let dif = Variable.extra_vars of_vars to_vars in
-  let to_vars = if dif = [] then  else to_vars@dif in
+  let to_vars = if dif = [] then to_vars else to_vars@dif in
   relevant_permutations to_cube.Cube.array of_cube.Cube.array of_vars to_vars
+

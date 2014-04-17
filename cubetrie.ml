@@ -15,7 +15,7 @@
 
 open Options
 open Util
-open Term.Type
+open Cterm.Type
 
 module H = Hstring
 

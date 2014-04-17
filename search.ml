@@ -317,15 +317,6 @@ module BFS_base ( X : I ) = struct
   let cpt_dot = ref 0
   let cpt_cands = ref 0
 
-  let nb_digits n =
-    if n < 10 then 1
-    else if n < 100 then 2
-    else if n < 1000 then 3
-    else if n < 10000 then 4
-    else if n < 100000 then 5
-    else if n < 1000000 then 6
-    else String.length (string_of_int n)
-
   let extract_candidates db candidates = 
     let l = List.filter (fun n -> n <0) db in
     let rec mem l c = 

@@ -237,34 +237,9 @@ let _ =
     add_colors err_formatter;
   end
 
-let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
-let op_arith = function Plus -> "+" | Minus -> "-"
 
-let rec print_strings fmt = function
-  | [] -> ()
-  | [s] -> fprintf fmt "%s" s
-  | s :: l -> fprintf fmt "%s %a" s print_strings l
 
-let print_const fmt = function
-  | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
-  | ConstName n -> fprintf fmt "%a" Hstring.print n
-
-let print_cs fmt cs =
-  MConst.iter 
-    (fun c i ->
-       fprintf fmt " %s %a" 
-	 (if i = 1 then "+" else if i = -1 then "-" 
-	  else if i < 0 then "- "^(string_of_int (abs i)) 
-	  else "+ "^(string_of_int (abs i)))
-	 print_const c) cs
-
-let rec print_term fmt = function
-  | Const cs -> print_cs fmt cs
-  | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
-  | Access (a, li) ->
-      fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
-  | Arith (x, cs) -> 
-      fprintf fmt "@[%a%a@]" print_term x print_cs cs
+(* TODO ici *)
 
 let rec print_atom fmt = function
   | True -> fprintf fmt "true"
@@ -307,22 +282,6 @@ let rec print_subst fmt = function
     fprintf fmt "%a -> %a" Hstring.print x Hstring.print y
   | (x,y)::r -> 
     fprintf fmt "%a -> %a, %a" Hstring.print x Hstring.print y print_subst r
-
-let print_trace fmt s =
-  let last = List.fold_left 
-    (fun last (tr, args, uns) ->
-      if dmcmt then 
-	fprintf fmt "[%s%a]" (Hstring.view tr.tr_name) print_args args
-      else 
-	fprintf fmt "%s(%a) ->@ " (Hstring.view tr.tr_name) print_args args;
-      uns
-    ) s s.t_from in
-  if dmcmt then fprintf fmt "[0]  "
-  else
-    if last.t_nb < 0 then 
-      fprintf fmt "@{<fg_blue>approx[%d]@}" last.t_nb
-    else 
-      fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.t_nb
 
 let print_unsafe fmt s = 
   fprintf fmt "Unsafe property (from %a):@\n        %a@."

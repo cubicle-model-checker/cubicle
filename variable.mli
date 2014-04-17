@@ -18,10 +18,12 @@ type t = Hstring.t
 
 type subst = (t * t) list
 
-val proc_vars : t list
+module Set : Set.S with type elt = t
+
+val procs : t list
 val proc_vars_int : int list
-val alpha_vars : t list
-val fresh_vars : t list
+val alphas : t list
+val freshs : t list
 val number : t -> int
 
 val build_subst : t list -> t list -> subst
@@ -29,8 +31,8 @@ val subst : subst -> t -> t
 
 val all_permutations : t list -> t list -> subst list
 val all_instantiations : t list -> t list -> subst list
-val all_arrangements : int -> t list -> subst list
-val all_arrangements_arity : Hstring.t -> t list -> subst list
+val all_arrangements : int -> t list -> t list list
+val all_arrangements_arity : Hstring.t -> t list -> t list list
 val permutations_missing : t list -> t list -> subst list
 
 val extra_vars : t list -> t list -> t list

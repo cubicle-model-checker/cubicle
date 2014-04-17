@@ -468,12 +468,12 @@ end
 module Make (Options : sig val profiling : bool end) = struct
 
   let calls = ref 0
-  module Time = Timer.Make (Dummy)
+  module Time = Timer.Make (Options)
 
   let get_time = Time.get
   let get_calls () = !calls
 
-  module CSolver = Solver.Make (Dummy)
+  module CSolver = Solver.Make (Options)
 
   let clear () = CSolver.clear ()
 

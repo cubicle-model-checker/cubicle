@@ -252,7 +252,7 @@ let make_cubes =
 		  let ureq = simplification_atoms np ureq in
 		  let np = SAtom.union ureq np in 
 		  if debug && verbose > 0 then Debug.pre_cubes np nargs;
-		  if inconsistent np then begin
+		     if inconsistent np then begin
 		    if debug && verbose > 0 then eprintf "(inconsistent)@.";
 		    (ls, post)
 		  end

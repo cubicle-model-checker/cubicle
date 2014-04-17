@@ -20,6 +20,7 @@ type t = Hstring.t
 
 type subst = (t * t) list
 
+module Set = Hstring.HSet
 
 let gen_vars s n = 
   let l = ref [] in
@@ -141,7 +142,7 @@ let rec perms = function
 let extra_args args tr_args =
   let rec aux acc cpt = function
     | [] -> List.rev acc
-    | _::r -> aux ((List.nth proc_vars (cpt - 1)) :: acc) (cpt+1) r
+    | _::r -> aux ((List.nth procs (cpt - 1)) :: acc) (cpt+1) r
   in
   aux [] (List.length args + 1) tr_args   
 

@@ -55,7 +55,11 @@
   let sort s = 
     if Constructors.mem s then Constr 
     else if Globals.mem s then Glob
-    else assert not (Arrays.mem s); Var
+    else
+      begin
+        assert (not (Arrays.mem s));
+        Var
+      end
 
   let hproc = Hstring.make "proc"
   let hreal = Hstring.make "real"

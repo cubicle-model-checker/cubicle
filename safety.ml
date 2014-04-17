@@ -25,6 +25,8 @@ let cdnf_asafe ua =
     List.for_all (fun a ->
       Cube.inconsistent (Array.append ua a)))
 
+
+(* fast check for inconsistence *)
 let obviously_safe { t_init_instances = init_inst; } n =
   let nb_procs = Cube.size n.Node.cube in
   let _, cdnf_ai = Hashtbl.find init_inst nb_procs in
