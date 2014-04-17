@@ -17,7 +17,6 @@
 
   open Ast
   open Parsing
-  open Atom
 
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -56,8 +55,7 @@
   let sort s = 
     if Constructors.mem s then Constr 
     else if Globals.mem s then Glob
-    else if Arrays.mem s then Arr
-    else Var
+    else assert not (Arrays.mem s); Var
 
   let hproc = Hstring.make "proc"
   let hreal = Hstring.make "real"

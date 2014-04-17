@@ -19,7 +19,7 @@ module type S = sig
   val get : unit -> float    
 end
 
-module Make (X : sig end) = struct
+module Make (X : sig val profiling : bool end) = struct
 
   open Unix
     
@@ -27,9 +27,13 @@ module Make (X : sig end) = struct
 
   let cpt = ref 0.0
     
-  let start () = u:=(times()).tms_utime
+  let start = 
+    if profiling then fun () -> ()
+    else fun () -> u:=(times()).tms_utime
 
-  let pause () = cpt := !cpt +. ((times()).tms_utime -. !u)
+  let pause
+    if profiling then fun () -> ()
+    else fun () -> cpt := !cpt +. ((times()).tms_utime -. !u)
 
   let get () = 
     !cpt

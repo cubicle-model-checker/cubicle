@@ -13,10 +13,23 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module type S = sig
-  val start : unit -> unit
-  val pause : unit -> unit
-  val get : unit -> float    
-end
+type kind = Node | Approx | Inv
 
-module Make (X : sig val profiling : bool end) : S
+type t =
+    { 
+      cube : Cube.t;
+      alpha : Variable.t list * Atom.Array.t;
+      tag : int;
+      kind : kind;
+      mutable deleted : bool;
+      from : (transition * Variable.t list * node) list;
+    }
+
+val create :
+  ?kind:kind -> ?from:(Ast.transition * Variable.t list * t) option -> t
+
+val origin : t -> t
+
+val has_deleted_ancestor : t -> bool
+
+val print :  Format.formatter -> t -> unit

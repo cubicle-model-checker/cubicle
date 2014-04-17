@@ -13,10 +13,4 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module type S = sig
-  val start : unit -> unit
-  val pause : unit -> unit
-  val get : unit -> float    
-end
-
-module Make (X : sig val profiling : bool end) : S
+exception Unsafe of Node.t

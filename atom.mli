@@ -13,7 +13,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module rec Atom : sig
+module rec Type : sig
+  type t =
+    | True
+    | False
+    | Comp of Term.t * Term.op_comp * Term.t
+    | Ite of Set.t * t * t
+end
+and Atom : sig
   type t =
     | True
     | False
@@ -27,6 +34,7 @@ module rec Atom : sig
   val equal : t -> t -> bool
   val subst : Variable.subst -> ?sigma_sort:Term.subst_sort -> t -> t
   val has_var : Variable.t -> t -> bool
+  val variables : t -> Variables.Set.t
   val print : Format.formatter -> t -> unit
 end
 and Set : sig 
@@ -35,6 +43,8 @@ and Set : sig
   val equal : t -> t -> bool
   val hash : t -> int
   val subst : Variable.subst -> ?sigma_sort:Term.subst_sort -> t -> t
+  val variables : t -> Variable.Set.t
+  val glob_terms : t -> Term.Set.t
 end
 
 module Array : sig
@@ -44,15 +54,15 @@ module Array : sig
   val hash : t -> int
   val subset : t -> t -> bool
   val trivial_is_implied : t -> t -> bool
-  val of_satom : SAtom.t -> t
-  val to_satom : t -> SAtom.t
+  val of_satom : Set.t -> t
+  val to_satom : t -> Set.t
   val union : t -> t -> t
-  val apply_subst : (Hstring.t * Hstring.t) list -> t -> t
+  val apply_subst : Variable.subst -> t -> t
   val nb_diff : t -> t -> int
   val compare_nb_diff : t -> t -> t -> int
   val compare_nb_common : t -> t -> t -> int
   val diff : t -> t -> t
-  val alpha : t -> Hstring.t list -> Hstring.t list * t
+  val alpha : t -> Variable.t list -> Variable.t list * t
 end
 
 (* type aliases for convenience *)
@@ -71,6 +81,7 @@ module type S = sig
   val equal : t -> t -> bool
   val subst : Variable.subst -> ?sigma_sort:Term.subst_sort -> t -> t
   val has_var : Variable.t -> t -> bool
+  val variables : t -> Variables.Set.t
   val print : Format.formatter -> t -> unit
 end
 

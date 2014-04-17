@@ -13,21 +13,32 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
-open Options
-open Ast
-open Atom
+type t =
+ private {
+   vars : Variable.t list;
+   litterals : Atom.Set.t;
+   array : Atom.Array.t;
+ }
+
+val create : Variables.t list -> Atom.Set.t -> t
+val normal_form : t -> t
+val create_normal : Atom.Set.t -> t
+
+val size : t -> int
+val card: t -> int
+
+val inconsistent : ?use_sets:bool -> t -> bool
+val inconsistent_2 : ?use_sets:bool -> t -> t -> bool
+
+val simplify : t -> t
+val elim_ite_simplify : t -> t list
+
+
 
 val new_cube_id : unit -> int
 
 val has_deleted_ancestor : t_system -> bool
 val already_closed : t_system -> transition -> Hstring.t list -> t_system option
-
-val apply_subst : SAtom.t -> (Hstring.t * Hstring.t) list -> SAtom.t
-
-val add_constants : int MConst.t -> int MConst.t -> int MConst.t
-val const_sign : int MConst.t -> int option
-val mult_const : int -> int MConst.t -> int MConst.t
 
 val proper_cube : SAtom.t -> SAtom.t * (Hstring.t list * Hstring.t)
 val args_of_atoms : SAtom.t -> Hstring.t list
@@ -59,6 +70,4 @@ val fixpoint_trie : t_system -> Atom.t list -> t_system Cubetrie.t ref ->
 val fixpoint_trie2 : t_system Cubetrie.t -> t_system -> int list option
 
 val add_and_resolve : t_system -> t_system Cubetrie.t -> t_system Cubetrie.t
-val simple_extract_candidates :
-  ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list
 

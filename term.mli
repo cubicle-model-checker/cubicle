@@ -13,33 +13,39 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Options
+module type SType = sig
+  type op_comp = Eq | Lt | Le | Neq
+  type op_arith = Plus | Minus
 
-type op_comp = Eq | Lt | Le | Neq
-type op_arith = Plus | Minus
+  type sort = Glob | Constr | Var
+  type subst_sort = (sort * sort) list
 
-type sort = Glob | Constr | Var
-type subst_sort = (sort * sort) list
+  type const =
+      ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
+
+  module MConst : sig 
+    include Map.S with type key = const
+    val choose : int t -> key * int
+    val is_num : int t -> Num.num option
+  end
+
+  type t = 
+    | Const of int MConst.t
+    | Elem of Hstring.t * sort
+    | Access of Hstring.t * Variable.t list
+    | Arith of t * int MConst.t
+end
+
+module Type : SType
+
+include SType
 
 val subst_sort : subst_sort -> sort -> sort
 
-type const = ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
-
-module MConst : sig 
-  include Map.S with type key = const
-  val choose : int t -> key * int
-  val is_num : int t -> Num.num option
-end
-
 val compare_constants : int MConst.t -> int MConst.t -> int
-
-type t = 
-  | Const of int MConst.t
-  | Var of Variable.t
-  | Constr of Hstring.t
-  | Glob of Hstring.t
-  | Access of Hstring.t * Variable.t list
-  | Arith of t * int MConst.t
+val add_constants : int MConst.t -> int MConst.t -> int MConst.t
+val const_sign : int MConst.t -> int option
+val mult_const : int -> int MConst.t -> int MConst.t
 
 val compare : t -> t -> int
 
@@ -50,4 +56,7 @@ val subst : Variables.subst -> ?sigma_sort:subst_sort -> t -> t
 val htrue : Hstring.t
 val hfalse : Hstring.t
 
-type acc_eq = { a : Hstring.t; i: Hstring.t; e: t }
+val procs_of : t -> Variable.Set.t
+val type_of : t -> Smt.Type.t
+
+module Set : Set.S with type elt = t

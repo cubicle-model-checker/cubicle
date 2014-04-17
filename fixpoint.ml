@@ -13,10 +13,21 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module type S = sig
-  val start : unit -> unit
-  val pause : unit -> unit
-  val get : unit -> float    
-end
 
-module Make (X : sig val profiling : bool end) : S
+module Debug = struct
+
+  let fixpoint = 
+    if not debug then fun _ -> () else 
+      fun ls ->
+	eprintf "\nAfter simplification, subsumption and fixpoint check : @.";
+	match ls with
+	  | [] -> eprintf "No new branches@."
+	  | _ -> 
+	      List.iter (eprintf "@.New branch : %a@." Pretty.print_system) ls
+
+  let unsafe = 
+    if not debug then fun _ -> () else 
+      fun s ->
+	eprintf "    %a@." Pretty.print_unsafe s
+
+end

@@ -44,6 +44,13 @@ let proc_vars_int =
   List.rev !l
 
 
+let number v =
+  let s = Hstring.view v in
+  if s.[0] = '#' then 
+    int_of_string (String.sub s 1 (String.length s - 1))
+  else 1
+
+
 let build_subst args a_args =
   let rec a_subst acc args a_args =
     match args, a_args with
@@ -93,6 +100,10 @@ let rec all_arrangements n l =
         List.fold_left (fun acc l' ->
           List.fold_left (fun acc x -> (x :: l') :: acc) acc l
         ) [] (all_arrangements (n - 1) l)
+
+let arity s = List.length (fst (Smt.Symbol.type_of s))
+
+let rec all_arrangements_arity s l = all_arrangements (arity s) l
 
 
 let rec all_instantiations l1 l2 =
@@ -169,54 +180,6 @@ let permutations_missing tr_args l =
     [] parts in
   List.map (List.combine tr_args) l'
   (* List.map (insert_missing tr_args) parts *)
-
-
-let init_instances = Hashtbl.create 11
-
-let fill_init_instances (iargs, l_init) = match l_init with
-  | [init] ->
-      let sa, cst = SAtom.partition (fun a ->
-        List.exists (fun z -> has_var z a) iargs) init in
-      let ar0 = ArrayAtom.of_satom cst in
-      Hashtbl.add init_instances 0 ([[cst]], [[ar0]]);
-      let cpt = ref 1 in
-      ignore (List.fold_left (fun v_acc v ->
-        let v_acc = v :: v_acc in
-        let vars = List.rev v_acc in
-        let si = List.fold_left (fun si sigma ->
-          SAtom.union (subst_atoms sigma sa) si)
-          cst (all_instantiations iargs vars) in
-        let ar = ArrayAtom.of_satom si in
-        Hashtbl.add init_instances !cpt ([[si]], [[ar]]);
-        incr cpt;
-        v_acc) [] proc_vars)
-
-  | _ ->
-      let dnf_sa0, dnf_ar0 =
-        List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
-          let sa0 = SAtom.filter (fun a ->
-            not (List.exists (fun z -> has_var z a) iargs)) sa in
-          let ar0 = ArrayAtom.of_satom sa0 in
-          sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
-      Hashtbl.add init_instances 0  ([dnf_sa0], [dnf_ar0]);
-      let cpt = ref 1 in
-      ignore (List.fold_left (fun v_acc v ->
-        let v_acc = v :: v_acc in
-        let vars = List.rev v_acc in
-        let inst =
-          List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
-            let dnf_sa, dnf_ar = 
-              List.fold_left (fun (dnf_sa, dnf_ar) init ->
-              let sa = subst_atoms sigma init in
-              let ar = ArrayAtom.of_satom sa in
-              sa :: dnf_sa, ar :: dnf_ar
-            ) ([],[]) l_init in
-            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
-          ) ([],[]) (all_instantiations iargs vars) in
-        Hashtbl.add init_instances !cpt inst;
-        incr cpt;
-        v_acc) [] proc_vars)
-
 
 
 let print fmt v = Hstring.print fmt v

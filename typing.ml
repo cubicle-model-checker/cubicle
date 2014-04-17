@@ -279,6 +279,55 @@ let init_proc () =
   List.iter 
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) proc_vars
 
+let create_init_instances (iargs, l_init) = 
+  let init_instances = Hashtbl.create 11 in
+  begin
+    match l_init with
+    | [init] ->
+      let sa, cst = Atom.Set.partition (fun a ->
+        List.exists (fun z -> has_var z a) iargs) init in
+      let ar0 = Atom.Array.of_satom cst in
+      Hashtbl.add init_instances 0 ([[cst]], [[ar0]]);
+      let cpt = ref 1 in
+      ignore (List.fold_left (fun v_acc v ->
+        let v_acc = v :: v_acc in
+        let vars = List.rev v_acc in
+        let si = List.fold_left (fun si sigma ->
+          Atom.Set.union (subst_atoms sigma sa) si)
+          cst (all_instantiations iargs vars) in
+        let ar = Atom.Array.of_satom si in
+        Hashtbl.add init_instances !cpt ([[si]], [[ar]]);
+        incr cpt;
+        v_acc) [] proc_vars)
+
+    | _ ->
+      let dnf_sa0, dnf_ar0 =
+        List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
+          let sa0 = Atom.Set.filter (fun a ->
+            not (List.exists (fun z -> has_var z a) iargs)) sa in
+          let ar0 = Atom.Array.of_satom sa0 in
+          sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
+      Hashtbl.add init_instances 0  ([dnf_sa0], [dnf_ar0]);
+      let cpt = ref 1 in
+      ignore (List.fold_left (fun v_acc v ->
+        let v_acc = v :: v_acc in
+        let vars = List.rev v_acc in
+        let inst =
+          List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
+            let dnf_sa, dnf_ar = 
+              List.fold_left (fun (dnf_sa, dnf_ar) init ->
+              let sa = subst_atoms sigma init in
+              let ar = Atom.Array.of_satom sa in
+              sa :: dnf_sa, ar :: dnf_ar
+            ) ([],[]) l_init in
+            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
+          ) ([],[]) (all_instantiations iargs vars) in
+        Hashtbl.add init_instances !cpt inst;
+        incr cpt;
+        v_acc) [] proc_vars)
+    end
+    init_instances
+
     
 let system s = 
   try
@@ -301,7 +350,7 @@ let system s =
     let t_globals = List.map fst s.globals in
     let t_arrays = List.map fst s.arrays in
 
-    fill_init_instances s.init;
+    create_init_instances s.init;
 
     List.map (fun ((args, p) as un) ->
       let arru = ArrayAtom.of_satom p in (* inutile ? *)
@@ -310,6 +359,7 @@ let system s =
 	t_arrays = t_arrays;
 	t_from = [];
 	t_init = s.init;
+        t_init_instances = create_init_instances s.init;
 	t_invs = s.invs;
 	t_cands = s.cands;
 	t_unsafe = un;

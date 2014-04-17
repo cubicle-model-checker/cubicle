@@ -14,14 +14,19 @@
 (**************************************************************************)
 
 open Util
+module HSet = Hstring.HSet
 
-module rec Atom = struct
-  
+
+module rec Type = struct  
   type t =
     | True
     | False
     | Comp of term * op_comp * term
     | Ite of SAtom.t * t * t
+end
+and Atom = struct
+  
+  include Type
 
   let rec compare a1 a2 = 
     match a1, a2 with
@@ -91,6 +96,11 @@ module rec Atom = struct
     | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
     | Ite _ -> assert false
 
+  let rec variables acc = function
+    | True | False -> acc
+    | Comp (t1, _, t2) -> Term.variables (Term.variables acc t1) t2
+    | Ite (sa, a1, a2) -> SAtom.variables (variables (variables acc a1) a2) sa
+
 end
 
 and SAtom = struct 
@@ -111,6 +121,21 @@ and SAtom = struct
   let subst sigma ?(sigma_sort=[]) sa = 
   fold (fun a -> add (Atom.subst sigma ~sigma_sort a)) sa empty
 
+  let variables acc sa = fold (fun a acc -> Atom.variables acc a) sa acc
+                             
+
+  let rec term_globs t acc = match t with
+    | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
+    | Arith (x, _) -> terms_globs x acc
+    | _ -> acc
+
+  let rec atom_globs a acc = match a with
+    | True | False -> acc
+    | Comp (t1, _, t2) -> term_globs t1 (term_globs t2 acc) 
+    | Ite (sa, a1, a2) -> 
+       Term.Set.union (glob_terms sa) (atom_globs a1 (atom_globs a2 acc))
+
+  and glob_terms sa = fold atom_globs sa Term.Set.empty
 
 end
 
@@ -194,7 +219,7 @@ module ArrayAtom = struct
     a'
 
   let alpha atoms args =
-    let subst = build_subst args alpha_vars in
+    let subst = Variable.build_subst args alpha_vars in
     List.map snd subst, apply_subst subst atoms
 
   let nb_diff a1 a2 =
@@ -275,6 +300,8 @@ module Set : sig
   val equal : t -> t -> bool
   val hash : t -> int
   val subst : Variables.subst -> ?sigma_sort:Term.subst_sort -> t -> t
+  val variables : t -> Variables.Set.t
+  val glob_terms : t -> Term.Set.t
 
 end = struct
   

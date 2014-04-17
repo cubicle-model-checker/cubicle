@@ -15,177 +15,48 @@
 
 exception ReachBound
 
-type op_comp = Eq | Lt | Le | Neq
-type op_arith = Plus | Minus
+type dnf = Atom.Set.t list
 
-type sort = Glob | Arr | Constr | Var
-
-type const = ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
-
-module MConst : sig 
-  include Map.S with type key = const
-  val choose : int t -> key * int
-  val is_num : int t -> Num.num option
-end
-
-val compare_constants : int MConst.t -> int MConst.t -> int
-
-type term = 
-  | Const of int MConst.t
-  | Elem of Hstring.t * sort
-  | Access of Hstring.t * Hstring.t list
-  | Arith of term * int MConst.t
-
-val compare_term : term -> term -> int
-
-val hash_term : term -> int
-
-val htrue : Hstring.t
-val hfalse : Hstring.t
-
-type acc_eq = { a : Hstring.t; i: Hstring.t; e: term }
-
-module rec Atom : sig
-  type t =
-    | True
-    | False
-    | Comp of term * op_comp * term
-    | Ite of SAtom.t * t * t
-
-  val compare : t -> t -> int
-  val trivial_is_implied : t -> t -> int
-  val neg : t -> t
-  val hash : t -> int
-  val equal : t -> t -> bool
-end 
-and SAtom : sig 
-  include Set.S with type elt = Atom.t
-  val hash : t -> int
-end
-
-val proc_vars : Hstring.t list
-val proc_vars_int : int list
-val alpha_vars : Hstring.t list
-val fresh_vars : Hstring.t list
-
-val add : Atom.t -> SAtom.t -> SAtom.t
-val svar : (Hstring.t * Hstring.t) list -> Hstring.t -> Hstring.t
-val subst_term : (Hstring.t * Hstring.t) list ->
-  ?sigma_sort:(sort * sort) list -> term -> term
-val subst_atom : (Hstring.t * Hstring.t) list ->
-  ?sigma_sort:(sort * sort) list -> Atom.t -> Atom.t
-val subst_atoms : (Hstring.t * Hstring.t) list ->
-  ?sigma_sort:(sort * sort) list -> SAtom.t -> SAtom.t
-val build_subst : Hstring.t list -> Hstring.t list -> 
-  (Hstring.t * Hstring.t) list
-
-module TimerSubset : Timer.S
-module TimerApply  : Timer.S
-
-module ArrayAtom : sig
-  type t = Atom.t array
-  val equal : t -> t -> bool
-  val hash : t -> int
-  val subset : t -> t -> bool
-  val trivial_is_implied : t -> t -> bool
-  val of_satom : SAtom.t -> t
-  val to_satom : t -> SAtom.t
-  val union : t -> t -> t
-  val apply_subst : (Hstring.t * Hstring.t) list -> t -> t
-  val nb_diff : t -> t -> int
-  val compare_nb_diff : t -> t -> t -> int
-  val compare_nb_common : t -> t -> t -> int
-  val diff : t -> t -> t
-  val alpha : t -> Hstring.t list -> Hstring.t list * t
-end
+type type_constructors = Hstring.t * (Hstring.t list)
 
 type update = {
   up_arr : Hstring.t;
-  up_arg : Hstring.t list;
-  up_swts : (SAtom.t * term) list;
+  up_arg : Variable.t list;
+  up_swts : (Atom.Set.t * Term.t) list;
 }
 
 type transition = {
   tr_name : Hstring.t;
-  tr_args : Hstring.t list;
-  tr_reqs : SAtom.t;
-  tr_ureq : (Hstring.t * SAtom.t list) list;
-  tr_assigns : (Hstring.t * term) list;
+  tr_args : Variable.t list;
+  tr_reqs : Atom.Set.t;
+  tr_ureq : (Variable.t * dnf) list;
+  tr_assigns : (Hstring.t * Term.t) list;
   tr_upds : update list;
   tr_nondets : Hstring.t list;
 }
 
-type elem = Hstring.t * (Hstring.t list)
-
 type system = {
-  globals : (Hstring.t * Hstring.t) list;
-  consts : (Hstring.t * Hstring.t) list;
-  arrays : (Hstring.t * (Hstring.t list * Hstring.t)) list;
-  type_defs : elem list;
-  init : Hstring.t list * SAtom.t list;
-  invs : (Hstring.t list * SAtom.t) list;
-  cands : (Hstring.t list * SAtom.t) list;
-  unsafe : (Hstring.t list * SAtom.t) list;
-  forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
+  globals : (Hstring.t * Smt.Type.t) list;
+  consts : (Hstring.t * Smt.Type.t) list;
+  arrays : (Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  type_defs : type_constructors list;
+  init : Variable.t list * dnf;
+  invs : (Variable.t list * Atom.Set.t) list;
+  unsafe : (Variable.t list * Atom.Set.t) list;  
   trans : transition list
 }
-
-module STerm : Set.S with type elt = term
 
 (* Typed AST *)
 
 type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
-  t_from : (transition * Hstring.t list * t_system) list;
-  t_init : Hstring.t list * SAtom.t list;
-  t_invs : (Hstring.t list * SAtom.t) list;
-  t_cands : (Hstring.t list * SAtom.t) list;
-  t_unsafe : Hstring.t list * SAtom.t;
-  t_forward : (Hstring.t list * Hstring.t list * SAtom.t) list;
-  t_arru : ArrayAtom.t;
-  t_alpha : Hstring.t list * ArrayAtom.t;
+  t_init : Variable.t list * dnf;
+  t_init_instances : (int, (dnf list, Atom.Array.t list list)) Hashtbl.t;
+  t_invs : Cube.t list;
+  t_unsafe : Cube.t list;
+  t_forward : (Hstring.t list * Hstring.t list * Atom.Set.t) list;
   t_trans : transition list;
-  mutable t_deleted : bool;
-  t_nb : int;
-  t_nb_father : int;
-  t_glob_proc : Hstring.t list;
-  t_from_forall: bool;
 }
 
-val t_system_equal : t_system -> t_system -> bool
-
-val t_system_hash : t_system -> int
-
-val declared_terms : ArrayAtom.t -> bool
-
-val variables_of : SAtom.t -> STerm.t
-
-val has_var : Hstring.t -> Atom.t -> bool
-
-val is_int_const : const -> bool
-
-val type_of_term : term -> Smt.Type.t
-
-val arity : Hstring.t -> int
-
-val all_permutations : 'a list -> 'b list -> ('a * 'b) list list
-val all_instantiations : 'a list -> 'b list -> ('a * 'b) list list
-val all_arrangements : int -> 'a list -> 'a list list
-val permutations_missing : 'a list -> Hstring.t list -> ('a * Hstring.t) list list
-
-val init_instances : (int, SAtom.t list list * ArrayAtom.t list list) Hashtbl.t
-
-val fill_init_instances : Hstring.t list * SAtom.t list -> unit
-
-val make_finite_inst_array : Hstring.t -> Hstring.t list -> Hstring.t
-
-val has_var : Hstring.t -> Atom.t -> bool
-				       
-val origin : t_system -> t_system
-
-val procs_of_cube : SAtom.t -> Hstring.t list
-
-
-val reset_gc_params : unit -> unit
-val set_liberal_gc : unit -> unit
+val all_var_terms : Variable.t list -> t_system -> Term.Set.t

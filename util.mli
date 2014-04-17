@@ -15,6 +15,14 @@
 
 module TimerSubset : Timer.S
 module TimerApply  : Timer.S
+module TimeFix : Timer.S
+module TimeEasyFix : Timer.S
+module TimeHardFix : Timer.S
+module TimeRP : Timer.S
+module TimePre : Timer.S
+module TimeSort : Timer.S
+module TimeForward : Timer.S
+module TimeCustom : Timer.S
 
 
 val reset_gc_params : unit -> unit

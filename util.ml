@@ -13,10 +13,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
-module TimerSubset = Timer.Make (struct end)
-
-module TimerApply = Timer.Make (struct end)
+(* Timers for profiling *)
+module TimerSubset = Timer.Make (Options)
+module TimerApply = Timer.Make (Options)
+module TimeFix = Timer.Make (Options)
+module TimeEasyFix = Timer.Make (Options)
+module TimeHardFix = Timer.Make (Options)
+module TimeRP = Timer.Make (Options)
+module TimePre = Timer.Make (Options)
+module TimeSort = Timer.Make (Options)
+module TimeForward = Timer.Make (Options)
+module TimeCustom = Timer.Make (Options)
 
 
 let reset_gc_params =
