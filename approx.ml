@@ -23,7 +23,7 @@ let SA = Set.Make(Atom)
 
 let bad_candidates = ref Cubetrie.empty
 
-let register_bad cand trace =
+let register_bad system cand trace =
   let cvars = Node.variables cand in
   assert (cand.Node.kind = Node.Approx);
   let bads =
@@ -35,10 +35,9 @@ let register_bad cand trace =
   bad_candidates := !bads;
   match trace with
   | [] -> ()
-  | _ -> ()
-     (* TODO apres avoir changé forward *)
-     (* List.iter (fun sa -> bad_candidates := sa :: !bad_candidates) *)
-     (*           (Forward.conflicting_from_trace s trace) *)
+  | _ ->
+     List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
+               (Forward.conflicting_from_trace system trace)
 
 
 let cube_same c1 c2 = ArrayAtom.equal c1.Cube.array c2.Cube.array
@@ -57,9 +56,9 @@ let rec remove_bad_candidates sys faulty candidates =
 	    raise (Safety.Unsafe faulty)
 	  else (register_bad c' trace; acc)
         (* TODO apres avoir changé forward *)                 
-        (* else if Forward.reachable_on_trace_from_init c' trace <> Forward.Unreach *)
-	(* then  *)
-        (*   (register_bad c' []; acc) *)
+        else if Forward.reachable_on_trace_from_init system trace <> Forward.Unreach
+	then
+          (register_bad c' []; acc)
 	else c'::acc)
       [] candidates in
   List.rev nc
@@ -134,11 +133,39 @@ let reattach_sorts sorts sa =
     | _ -> sa) sorts sa
 
 
+let proc_present p a sa =
+  let rest = SAtom.remove a sa in
+  SAtom.exists (function
+    | Atom.Comp (Elem (h, Var), _, _)
+    | Atom.Comp (_, _, Elem (h, Var)) when Hstring.equal h p -> true
+    | _ -> false) rest
+
+let useless_candidate sa =
+  let open Atom in
+  SAtom.exists (function
+    (* heuristic: remove proc variables *)
+    | (Comp (Elem (p, Var), _, _) as a)
+    | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
+
+    | (Comp (Access (s, [p]), _, _) as a)
+    | (Comp (_, _, Access (s, [p])) as a) when Hstring.equal s hsort ->
+       not (proc_present p a sa)
+
+    | Comp ((Elem (x, _) | Access (x,_)), _, _)
+    | Comp (_, _, (Elem (x, _) | Access (x,_))) ->
+      let x = if is_prime (Hstring.view x) then unprime_h x else x in
+      (* Smt.Symbol.has_type_proc x ||  *)
+        (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
+        (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
+        (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_int) *)
+
+    | Comp ((Arith _), _, _) when not abstr_num -> true
+
+    | _ -> false) sa
+
 (*****************************************)
 (* Potential approximations for a node s *)
 (*****************************************)
-
-let cpt_approx = ref 0
 
 let approx_arith a = match a with
   | Atom.Comp (t, Eq, Const c) ->
@@ -156,7 +183,7 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
     let sorts_sa, sa = isolate_sorts sa in
     let init = 
       SAtom.fold (fun a acc ->
-        if Forward.useless_candidate (SAtom.singleton a) || lit_non_cfm a 
+        if useless_candidate (SAtom.singleton a) || lit_non_cfm a 
 	then acc
         else SSAtoms.add (SAtom.singleton a) acc)
         sa SSAtoms.empty in
@@ -164,7 +191,7 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
     let parts =
       SAtom.fold (fun a acc ->
 	let a = approx_arith a in 
-        if Forward.useless_candidate (SAtom.singleton a) then acc
+        if useless_candidate (SAtom.singleton a) then acc
         else if lit_non_cfm a then acc
         else
           SSAtoms.fold (fun sa' acc ->
@@ -236,7 +263,7 @@ let subsuming_candidate s =
   let approx = if max_cands = -1 then approx else keep max_cands approx in
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
-  Enumerative.smallest_to_resist_on_trace cpt_approx approx
+  Oracle.first_good_candidate approx
 
 
 let good n =

@@ -40,6 +40,7 @@ val permutations_missing : t list -> t list -> subst list
 val extra_vars : t list -> t list -> t list
 val extra_procs : t list -> t list -> t list
 val append_extra_procs : t list -> t list -> t list
+val give_procs : int -> t list
 
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit

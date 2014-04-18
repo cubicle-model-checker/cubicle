@@ -16,8 +16,9 @@
 open Format
 open Options
 open Ast
+open Types
 open Atom
-open Cube
+open Pervasives
 
 module H = Hstring
 
@@ -26,7 +27,7 @@ type inst_trans =
       i_reqs : SAtom.t;
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
-      i_touched_terms : STerm.t;
+      i_touched_terms : Term.Set.t;
     }
 
 let prime_h h =
@@ -165,7 +166,7 @@ and apply_subst_terms_atoms t t' sa =
     sa SAtom.empty
 
 
-let elim_primed_term t sa =		     
+let elim_primed_term t sa =	     
   try
     SAtom.iter (fun a -> match a with
       | Comp (t1, Eq, t2) -> 
@@ -849,13 +850,6 @@ let search_stateless procs init =
   let inst_trans = instantiate_transitions procs procs init.t_trans in
   stateless_forward init procs inst_trans var_terms (mkinits procs init)
 
-let procs_from_nb n =
-  let rp, _ = 
-    List.fold_left (fun (acc, n) v ->
-      if n > 0 then v :: acc, n - 1
-      else acc, n) ([], n) proc_vars in
-  List.rev rp
-
 let search_only s = assert false
   (* let ex_args =  *)
   (*   match s.t_forward with (_, args, _) :: _ -> args | _ -> assert false in *)
@@ -865,181 +859,180 @@ let search_only s = assert false
 (* Extract candidates from trace *)
 (*********************************)
 
-module HA = Hashtbl.Make (struct 
-  include Atom 
-  let equal a b = compare a b = 0
-  let hash = Hashtbl.hash end)
+(* module HA = Hashtbl.Make (struct  *)
+(*   include Atom  *)
+(*   let equal a b = compare a b = 0 *)
+(*   let hash = Hashtbl.hash end) *)
 
-module MT = Map.Make (struct type t = term let compare = compare_term end)
-
-
-let all_litterals h = HSA.fold (fun sa _ acc ->
-  SAtom.union sa acc) h SAtom.empty
-
-let compagnions_from_trace forward_nodes all_var_terms =
-  let lits = all_litterals forward_nodes in
-  SAtom.fold (fun a acc ->
-    if lit_abstract a then acc else
-      let compagnions_uncs =
-	HSA.fold (fun sa _ (acc, uncs) ->
-	  if SAtom.mem a sa then
-	    let rsa = SAtom.remove a sa in
-	    let unc = unconstrained_terms rsa all_var_terms in
-	    SAtom.union rsa acc, STerm.union unc uncs
-	  else acc, uncs)
-	  forward_nodes (SAtom.empty, STerm.empty)
-      in 
-      MA.add a compagnions_uncs acc
-  ) lits MA.empty
-
-let contains_unconstrained uncs = function
-  | Comp (t1, op, t2) -> STerm.mem t1 uncs || STerm.mem t2 uncs
-  | _ -> false
-
-let compagnions_values compagnions uncs =
-  SAtom.fold (fun c (acc, compagnions) ->
-    if contains_unconstrained uncs c then acc, SAtom.remove c compagnions
-    else
-      match c with
-	| Comp (Elem (x, Constr), Eq, t1)
-	| Comp (t1, Eq, Elem (x, Constr)) ->
-	  let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in
-	  MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions
-        (* heuristic: remove proc variables *)
-	| Comp (Elem (_, Var), _, _)
-	| Comp (_, _, Elem (_, Var)) ->
-      	  acc, SAtom.remove c compagnions
-	| _ -> acc, compagnions)
-    compagnions (MT.empty, compagnions)
-
-let get_variants x =
-  (* add missing constructors for bool *)
-  if Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_bool then
-    H.HSet.add htrue (H.HSet.singleton hfalse)
-  else Smt.Variant.get_variants x
+(* module MT = Map.Make (struct type t = term let compare = compare_term end) *)
 
 
-let variable_term_has_value v t =
-  SAtom.exists (function
-    | Comp (t1, Eq, t2) -> 
-        compare_term v t1 = 0 && compare_term t t2 = 0
-    | _ -> false)
+(* let all_litterals h = HSA.fold (fun sa _ acc -> *)
+(*   SAtom.union sa acc) h SAtom.empty *)
 
-let variable_term_has_other_values v t =
-  SAtom.exists (function
-    | Comp (t1, Eq, t2) ->
-        (compare_term v t1 = 0 && compare_term t t2 <> 0) ||
-	(compare_term v t2 = 0 && compare_term t t1 <> 0)
-    | Comp (t1, Neq, t2) -> 
-        compare_term v t1 = 0 && compare_term t t2 = 0
-    | _ -> false)
+(* let compagnions_from_trace forward_nodes all_var_terms = *)
+(*   let lits = all_litterals forward_nodes in *)
+(*   SAtom.fold (fun a acc -> *)
+(*     if lit_abstract a then acc else *)
+(*       let compagnions_uncs = *)
+(* 	HSA.fold (fun sa _ (acc, uncs) -> *)
+(* 	  if SAtom.mem a sa then *)
+(* 	    let rsa = SAtom.remove a sa in *)
+(* 	    let unc = unconstrained_terms rsa all_var_terms in *)
+(* 	    SAtom.union rsa acc, STerm.union unc uncs *)
+(* 	  else acc, uncs) *)
+(* 	  forward_nodes (SAtom.empty, STerm.empty) *)
+(*       in  *)
+(*       MA.add a compagnions_uncs acc *)
+(*   ) lits MA.empty *)
 
-let only_value_possible c sa =
-  let sa = SAtom.remove c sa in
-  match c with
-    | Comp (v, Eq, t) -> not (variable_term_has_other_values v t sa)
-    | Comp (v, Neq, t) -> not (variable_term_has_value v t sa)
-    | _ -> false
+(* let contains_unconstrained uncs = function *)
+(*   | Comp (t1, op, t2) -> STerm.mem t1 uncs || STerm.mem t2 uncs *)
+(*   | _ -> false *)
+
+(* let compagnions_values compagnions uncs = *)
+(*   SAtom.fold (fun c (acc, compagnions) -> *)
+(*     if contains_unconstrained uncs c then acc, SAtom.remove c compagnions *)
+(*     else *)
+(*       match c with *)
+(* 	| Comp (Elem (x, Constr), Eq, t1) *)
+(* 	| Comp (t1, Eq, Elem (x, Constr)) -> *)
+(* 	  let vals = try MT.find t1 acc with Not_found -> H.HSet.empty in *)
+(* 	  MT.add t1 (H.HSet.add x vals) acc, SAtom.remove c compagnions *)
+(*         (\* heuristic: remove proc variables *\) *)
+(* 	| Comp (Elem (_, Var), _, _) *)
+(* 	| Comp (_, _, Elem (_, Var)) -> *)
+(*       	  acc, SAtom.remove c compagnions *)
+(* 	| _ -> acc, compagnions) *)
+(*     compagnions (MT.empty, compagnions) *)
+
+(* let get_variants x = *)
+(*   (\* add missing constructors for bool *\) *)
+(*   if Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_bool then *)
+(*     H.HSet.add htrue (H.HSet.singleton hfalse) *)
+(*   else Smt.Variant.get_variants x *)
 
 
-exception Reduced_cand of Atom.t
+(* let variable_term_has_value v t = *)
+(*   SAtom.exists (function *)
+(*     | Comp (t1, Eq, t2) ->  *)
+(*         compare_term v t1 = 0 && compare_term t t2 = 0 *)
+(*     | _ -> false) *)
 
-let add_cand (a1, la) acc =
-  match la with
-    | [] | _::_::_ -> (a1, la) :: acc
-    | [a2] ->
-        try
-          List.iter (fun (b1,lb) ->
-            match lb with
-              | [b2] ->
-                  if Atom.equal a2 b2 && 
-                    Cube.inconsistent_list [Atom.neg a1; Atom.neg b1] then
-                    raise (Reduced_cand a2);
-                  if Atom.equal a1 b1 &&
-                    Cube.inconsistent_list [Atom.neg a2; Atom.neg b2] then
-                    raise (Reduced_cand a1);
-                  if Atom.equal a1 b2 &&
-                    Cube.inconsistent_list [Atom.neg a2; Atom.neg b1] then
-                    raise (Reduced_cand a1);
-                  if Atom.equal a2 b1 &&
-                    Cube.inconsistent_list [Atom.neg a1; Atom.neg b2] then
-                    raise (Reduced_cand a2)
-              | _ -> ()
-          ) acc;
-          (a1, la) :: acc
-        with
-          | Reduced_cand a -> (a, []) :: acc
+(* let variable_term_has_other_values v t = *)
+(*   SAtom.exists (function *)
+(*     | Comp (t1, Eq, t2) -> *)
+(*         (compare_term v t1 = 0 && compare_term t t2 <> 0) || *)
+(* 	(compare_term v t2 = 0 && compare_term t t1 <> 0) *)
+(*     | Comp (t1, Neq, t2) ->  *)
+(*         compare_term v t1 = 0 && compare_term t t2 = 0 *)
+(*     | _ -> false) *)
+
+(* let only_value_possible c sa = *)
+(*   let sa = SAtom.remove c sa in *)
+(*   match c with *)
+(*     | Comp (v, Eq, t) -> not (variable_term_has_other_values v t sa) *)
+(*     | Comp (v, Neq, t) -> not (variable_term_has_value v t sa) *)
+(*     | _ -> false *)
+
+
+(* exception Reduced_cand of Atom.t *)
+
+(* let add_cand (a1, la) acc = *)
+(*   match la with *)
+(*     | [] | _::_::_ -> (a1, la) :: acc *)
+(*     | [a2] -> *)
+(*         try *)
+(*           List.iter (fun (b1,lb) -> *)
+(*             match lb with *)
+(*               | [b2] -> *)
+(*                   if Atom.equal a2 b2 &&  *)
+(*                     Cube.inconsistent_list [Atom.neg a1; Atom.neg b1] then *)
+(*                     raise (Reduced_cand a2); *)
+(*                   if Atom.equal a1 b1 && *)
+(*                     Cube.inconsistent_list [Atom.neg a2; Atom.neg b2] then *)
+(*                     raise (Reduced_cand a1); *)
+(*                   if Atom.equal a1 b2 && *)
+(*                     Cube.inconsistent_list [Atom.neg a2; Atom.neg b1] then *)
+(*                     raise (Reduced_cand a1); *)
+(*                   if Atom.equal a2 b1 && *)
+(*                     Cube.inconsistent_list [Atom.neg a1; Atom.neg b2] then *)
+(*                     raise (Reduced_cand a2) *)
+(*               | _ -> () *)
+(*           ) acc; *)
+(*           (a1, la) :: acc *)
+(*         with *)
+(*           | Reduced_cand a -> (a, []) :: acc *)
     
 
-let add_cand (a1, la) acc = (a1, la) :: acc
+(* let add_cand (a1, la) acc = (a1, la) :: acc *)
 
-let candidates_from_compagnions a (compagnions, uncs) acc =
-  let mt, remaining = compagnions_values compagnions uncs in
-  let acc = 
-    SAtom.fold (fun c acc ->
-      if only_value_possible c remaining then add_cand (a, [Atom.neg c])  acc
-      else acc
-    ) remaining acc
-  in
-  MT.fold (fun c vals acc -> match c with
-    | Elem (x, _) | Access (x, _) ->
-      begin
-	match H.HSet.elements vals with
-	  | [v] when Hstring.equal v htrue ->
-	    add_cand (a, [Comp (c, Eq, (Elem (hfalse, Constr)))])  acc	
-	  | [v] when Hstring.equal v hfalse ->
-	    add_cand (a, [Comp (c, Eq, (Elem (htrue, Constr)))])  acc
-	  | [v] -> (a, [Comp (c, Neq, (Elem (v, Constr)))]) :: acc
-	  | vs ->
-	    try
-	      let dif = H.HSet.diff (get_variants x) vals in
-	      match H.HSet.elements dif with
-		| [] -> acc
-		| [cs] -> 
-		    add_cand (a, [Comp (c, Eq, (Elem (cs, Constr)))])  acc
-		| _ -> raise Not_found
-	    with Not_found ->
-	      add_cand (a, List.map (fun v -> Comp (c, Neq, (Elem (v, Constr)))) vs) 
-	      acc
-      end
-    | _ -> assert false)
-    mt acc
-
-
-let proc_present p a sa =
-  let rest = SAtom.remove a sa in
-  SAtom.exists (function
-    | Comp (Elem (h, Var), _, _)
-    | Comp (_, _, Elem (h, Var)) when Hstring.equal h p -> true
-    | _ -> false) rest
-
-let hsort = Hstring.make "Sort"
-
-let useless_candidate sa =
-  SAtom.exists (function
-    (* heuristic: remove proc variables *)
-    | (Comp (Elem (p, Var), _, _) as a)
-    | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
-
-    | (Comp (Access (s, [p]), _, _) as a)
-    | (Comp (_, _, Access (s, [p])) as a) when Hstring.equal s hsort ->
-       not (proc_present p a sa)
-
-    | Comp ((Elem (x, _) | Access (x,_)), _, _)
-    | Comp (_, _, (Elem (x, _) | Access (x,_))) ->
-      let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      (* Smt.Symbol.has_type_proc x ||  *)
-        (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
-        (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
-        (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_int) *)
-
-    | Comp ((Arith _), _, _) when not abstr_num -> true
-
-    | _ -> false) sa
-  (* || List.length (args_of_atoms sa) > 1 *)
+(* let candidates_from_compagnions a (compagnions, uncs) acc = *)
+(*   let mt, remaining = compagnions_values compagnions uncs in *)
+(*   let acc =  *)
+(*     SAtom.fold (fun c acc -> *)
+(*       if only_value_possible c remaining then add_cand (a, [Atom.neg c])  acc *)
+(*       else acc *)
+(*     ) remaining acc *)
+(*   in *)
+(*   MT.fold (fun c vals acc -> match c with *)
+(*     | Elem (x, _) | Access (x, _) -> *)
+(*       begin *)
+(* 	match H.HSet.elements vals with *)
+(* 	  | [v] when Hstring.equal v htrue -> *)
+(* 	    add_cand (a, [Comp (c, Eq, (Elem (hfalse, Constr)))])  acc	 *)
+(* 	  | [v] when Hstring.equal v hfalse -> *)
+(* 	    add_cand (a, [Comp (c, Eq, (Elem (htrue, Constr)))])  acc *)
+(* 	  | [v] -> (a, [Comp (c, Neq, (Elem (v, Constr)))]) :: acc *)
+(* 	  | vs -> *)
+(* 	    try *)
+(* 	      let dif = H.HSet.diff (get_variants x) vals in *)
+(* 	      match H.HSet.elements dif with *)
+(* 		| [] -> acc *)
+(* 		| [cs] ->  *)
+(* 		    add_cand (a, [Comp (c, Eq, (Elem (cs, Constr)))])  acc *)
+(* 		| _ -> raise Not_found *)
+(* 	    with Not_found -> *)
+(* 	      add_cand (a, List.map (fun v -> Comp (c, Neq, (Elem (v, Constr)))) vs)  *)
+(* 	      acc *)
+(*       end *)
+(*     | _ -> assert false) *)
+(*     mt acc *)
 
 
-let remove_subsumed_candidates cands = cands
+(* let proc_present p a sa = *)
+(*   let rest = SAtom.remove a sa in *)
+(*   SAtom.exists (function *)
+(*     | Comp (Elem (h, Var), _, _) *)
+(*     | Comp (_, _, Elem (h, Var)) when Hstring.equal h p -> true *)
+(*     | _ -> false) rest *)
+
+(* let hsort = Hstring.make "Sort" *)
+
+(* let useless_candidate sa = *)
+(*   SAtom.exists (function *)
+(*     (\* heuristic: remove proc variables *\) *)
+(*     | (Comp (Elem (p, Var), _, _) as a) *)
+(*     | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa) *)
+
+(*     | (Comp (Access (s, [p]), _, _) as a) *)
+(*     | (Comp (_, _, Access (s, [p])) as a) when Hstring.equal s hsort -> *)
+(*        not (proc_present p a sa) *)
+
+(*     | Comp ((Elem (x, _) | Access (x,_)), _, _) *)
+(*     | Comp (_, _, (Elem (x, _) | Access (x,_))) -> *)
+(*       let x = if is_prime (Hstring.view x) then unprime_h x else x in *)
+(*       (\* Smt.Symbol.has_type_proc x ||  *\) *)
+(*         (enumerative <> -1 && Smt.Symbol.has_abstract_type x) *)
+(*         (\* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *\) *)
+(*         (\* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_int) *\) *)
+
+(*     | Comp ((Arith _), _, _) when not abstr_num -> true *)
+
+(*     | _ -> false) sa *)
+
+
+(* let remove_subsumed_candidates cands = cands *)
   (* List.fold_left (fun acc c -> *)
   (*   let acc' = List.filter (fun c' -> c.t_nb <> c'.t_nb) acc in *)
   (*   if fixpoint ~invariants:[] ~visited:acc' c <> None *)
@@ -1048,279 +1041,268 @@ let remove_subsumed_candidates cands = cands
   (*   then acc' *)
   (*   else acc) cands cands *)
   
-let make_satom_from_list s la = 
-  List.fold_left (fun sa x -> SAtom.add x sa) s la
+(* let make_satom_from_list s la =  *)
+(*   List.fold_left (fun sa x -> SAtom.add x sa) s la *)
 
-let no_conflict_with a b = 
-  match a, b with
-    | True, False | False, True -> false
-    | Comp(ta1, Eq, ta2), Comp(tb1, Eq, tb2) ->
-	not (compare_term ta1 tb1 = 0 && compare_term ta2 tb2 <> 0)
-    | Ite _, _ | _, Ite _ -> assert false
-    | _, _ -> true
+(* let no_conflict_with a b =  *)
+(*   match a, b with *)
+(*     | True, False | False, True -> false *)
+(*     | Comp(ta1, Eq, ta2), Comp(tb1, Eq, tb2) -> *)
+(* 	not (compare_term ta1 tb1 = 0 && compare_term ta2 tb2 <> 0) *)
+(*     | Ite _, _ | _, Ite _ -> assert false *)
+(*     | _, _ -> true *)
 
-let asym_union sa1 sa2 = 
-  SAtom.fold 
-    (fun a s -> SAtom.add a (SAtom.filter (no_conflict_with a) s) ) sa1 sa2
+(* let asym_union sa1 sa2 =  *)
+(*   SAtom.fold  *)
+(*     (fun a s -> SAtom.add a (SAtom.filter (no_conflict_with a) s) ) sa1 sa2 *)
 
 (* naive version *)
-let global_var = function
-  | Comp(Elem(_,Glob),_,Elem(_,Constr)) 
-  | Comp(Elem(_,Constr),_,Elem(_,Glob)) -> true
-  | _ -> false
+(* let global_var = function *)
+(*   | Comp(Elem(_,Glob),_,Elem(_,Constr))  *)
+(*   | Comp(Elem(_,Constr),_,Elem(_,Glob)) -> true *)
+(*   | _ -> false *)
 
-let update_array up = function
-  | Comp (Access(m,_),_,_) | Comp (_,_,Access(m,_)) -> 
-      (Hstring.compare up.up_arr m = 0) && 
-	List.exists 
-	(fun (sa, t) -> 
-	   SAtom.is_empty sa && (match t with Access _ -> false | _ -> true)) 
-	up.up_swts
+(* let update_array up = function *)
+(*   | Comp (Access(m,_),_,_) | Comp (_,_,Access(m,_)) ->  *)
+(*       (Hstring.compare up.up_arr m = 0) &&  *)
+(* 	List.exists  *)
+(* 	(fun (sa, t) ->  *)
+(* 	   SAtom.is_empty sa && (match t with Access _ -> false | _ -> true))  *)
+(* 	up.up_swts *)
 
-  | _ -> false
+(*   | _ -> false *)
 
-let potential_update l trs = 
-  List.exists global_var l ||
-    List.exists 
-    (fun tr -> 
-       List.exists 
-	 (fun up -> List.exists (update_array up) l) tr.tr_upds) trs
+(* let potential_update l trs =  *)
+(*   List.exists global_var l || *)
+(*     List.exists  *)
+(*     (fun tr ->  *)
+(*        List.exists  *)
+(* 	 (fun up -> List.exists (update_array up) l) tr.tr_upds) trs *)
 
-module MM = Hstring.HMap
+(* module MM = Hstring.HMap *)
 
-let mm_for_all f m = 
-  try MM.iter (fun x y -> ignore (f x y || raise Exit)) m; true
-  with Exit -> false
+(* let mm_for_all f m =  *)
+(*   try MM.iter (fun x y -> ignore (f x y || raise Exit)) m; true *)
+(*   with Exit -> false *)
 
-let subset_node s1 s2 = 
-  SAtom.subset s1 s2 || 
-    try
-      let s = SAtom.diff s1 s2 in
-      let neqs = 
-	SAtom.fold 
-	  (fun a neqs ->
-	     match a with
-	       | Comp((Access(x,_) | Elem(x,Glob)),Neq,Elem(c,Constr)) 
-	       | Comp(Elem(c,Constr),Neq,(Access(x,_) | Elem(x,Glob))) -> 
-		   let cs = try MM.find x neqs with Not_found -> [] in
-		   MM.add x (c::cs) neqs
-	       | _ -> raise Exit ) s MM.empty
-      in
-      if MM.is_empty neqs then raise Exit;
-      mm_for_all 
-	(fun x cs -> 
-	   SAtom.exists 
-	     (fun a ->
-		match a with
-		  | Comp((Access(y,_) | Elem(y,Glob)),Eq,Elem(c,Constr)) 
-		  | Comp(Elem(c,Constr),Eq,(Access(y,_) | Elem(y,Glob))) -> 
-		      Hstring.equal x y && not (List.mem c cs)
-		  | _ -> false
-	     ) s2
-	) neqs
-    with Exit -> false
-
-
-let forward_and_check s procs trs l sla =
-  let h_visited = HSA.create 200_029 in
-  let cpt_f = ref 0 in
-  let rec forward_rec s procs trs = function
-    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
-    | (sa, args) :: to_do ->
-	if subset_node sla sa then raise Exit;
-	if HSA.mem h_visited sa then
-	  forward_rec s procs trs to_do
-	else
-	  let new_td =
-	    List.fold_left (fun new_td tr ->
-			      List.fold_left (fun new_td s -> (s :: new_td)
-	      ) new_td (post sa args procs tr)
-	    ) [] trs
-	  in
-	  incr cpt_f;
-	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	  HSA.add h_visited sa ();
-	  forward_rec s procs trs (List.rev_append new_td to_do)
-  in
-  forward_rec s procs trs l
-
-let stateless_forward_and_check s procs trs l sla =
-  let h_visited = HI.create 2_000_029 in
-  let cpt_f = ref 0 in
-  let rec forward_rec s procs trs = function
-    | [] -> eprintf "Total forward nodes : %d@." !cpt_f
-    | (sa, args) :: to_do ->
-	if subset_node sla sa then raise Exit;
-	let hsa = SAtom.hash sa in
-	if HI.mem h_visited hsa then
-	  forward_rec s procs trs to_do
-	else
-	  let new_td =
-	    List.fold_left (fun new_td tr ->
-			      List.fold_left (fun new_td s -> (s :: new_td)
-					     ) new_td (post sa args procs tr)
-			   ) [] trs
-	  in
-	  incr cpt_f;
-	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f;
-	  HI.add h_visited hsa ();
-	  forward_rec s procs trs (List.rev_append new_td to_do)
-  in
-  forward_rec s procs trs l
-
-let dead_candidate np args init_np s nodes a la = 
-  let sla = make_satom_from_list (SAtom.singleton a) la in
-  List.exists
-    (fun node -> 
-       if debug && verbose > 1 then
-	 eprintf "The node in the trace is :%a@." Pretty.print_cube node;
-       let depart = asym_union node init_np in
-       if debug && verbose > 1 then
-	 eprintf "We run the trace from :%a@." Pretty.print_cube depart;
-       try  
-	 stateless_forward_and_check s np s.t_trans [depart, args@np] sla; false
-       with Exit -> true
-    ) nodes
-
-let still_alive fwd candidates s a la = 
-  let sla = make_satom_from_list SAtom.empty la in
-  if debug && verbose > 0 then 
-    eprintf "We check that (%a, %a) is alive with an extra process@."
-      Pretty.print_atom a Pretty.print_cube sla;
-
-  let args = fst s.t_unsafe in
-  let np = [Hstring.make ("#"^(string_of_int (List.length args + 1)))] in
-  let init_np = assert false 
-  (* TODO : change this for dnf init or remove all: mkinit (fst s.t_init) (snd s.t_init) np*)
-  in
-
-  let pla = potential_update la s.t_trans in
-  let pa =  potential_update [a] s.t_trans in
-  let nodes = 
-    HSA.fold 
-      (fun node _ nodes -> 
-	 if (subset_node sla node && pa) || 
-	    (subset_node (SAtom.singleton a) node && pla)
-	 then node :: nodes else nodes) fwd [] in
-
-  if debug && verbose > 0 then
-    eprintf "We're running %d forward traces! @." (List.length nodes); 
-
-  let dead = dead_candidate np args init_np s nodes a la in
-
-  if debug && verbose > 0 then
-    if dead then eprintf "Dead!@." else eprintf "Still alive!@.";
-  not dead
-
- 
-let filter_alive_candidates fwd candidates = 
-  let dead_candidates = ref 0 in
-  if debug then 
-    begin
-      eprintf "Potential candidates:@.";
-      List.iter 
-	(fun (a, (la, _)) ->
-	   let la = make_satom_from_list SAtom.empty la in
-	   eprintf "candidate : %a && %a\n@." 
-	     Pretty.print_atom a 
-	     Pretty.print_cube la)
-	candidates;
-      eprintf "@."
-    end;
-  let candidates = 
-    List.fold_left 
-      (fun acc (a, (la, s)) -> 
-	 if still_alive fwd candidates s a la then s::acc 
-	 else (incr dead_candidates; acc)) [] candidates
-  in
-  eprintf "Number of dead candidates : %d@." !dead_candidates;
-  candidates
-
-let extract_candidates comps s =
-  let cpt = ref (-1) in
-  if debug then
-    MA.iter (fun a (compagnions, uncs) ->
-      eprintf "compagnons %a : %a@."
-	Pretty.print_atom a Pretty.print_cube compagnions;
-      eprintf "> unconstrained :\n";
-      STerm.iter 
-	(fun t -> eprintf "               %a\n" Pretty.print_term t)
-	uncs;
-      eprintf "@.";      
-    ) comps;
-  let sas = MA.fold candidates_from_compagnions comps [] in
-  let sas = List.rev sas in
-  Gc.full_major ();
-  List.fold_left 
-    (fun acc (a, la) ->
-       let sa = make_satom_from_list (SAtom.singleton a) la in
-       if useless_candidate sa then acc
-       else
-	 let sa', (args, _) = proper_cube sa in
-	 let ar' = ArrayAtom.of_satom sa' in
-	 let s' = 
-	   { s with
-	       t_from = [];
-	       t_unsafe = args, sa';
-	       t_arru = ar';
-	       t_alpha = ArrayAtom.alpha ar' args;
-	       t_deleted = false;
-	       t_nb = !cpt;
-	       t_nb_father = -1 } in
-	 if List.exists 
-	   (fun (_,(_,s)) -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc
-	 else 
-	   (decr cpt; (a, (la, s')) :: acc)) [] sas
-
-let compare_candidates s1 s2 =
-  let v1 = Cube.size_system s1 in
-  let v2 = Cube.size_system s2 in
-  let c = Pervasives.compare v1 v2 in
-  if c <> 0 then c else
-    let c1 = Cube.card_system s1 in
-    let c2 = Cube.card_system s2 in
-    Pervasives.compare c1 c2
+(* let subset_node s1 s2 =  *)
+(*   SAtom.subset s1 s2 ||  *)
+(*     try *)
+(*       let s = SAtom.diff s1 s2 in *)
+(*       let neqs =  *)
+(* 	SAtom.fold  *)
+(* 	  (fun a neqs -> *)
+(* 	     match a with *)
+(* 	       | Comp((Access(x,_) | Elem(x,Glob)),Neq,Elem(c,Constr))  *)
+(* 	       | Comp(Elem(c,Constr),Neq,(Access(x,_) | Elem(x,Glob))) ->  *)
+(* 		   let cs = try MM.find x neqs with Not_found -> [] in *)
+(* 		   MM.add x (c::cs) neqs *)
+(* 	       | _ -> raise Exit ) s MM.empty *)
+(*       in *)
+(*       if MM.is_empty neqs then raise Exit; *)
+(*       mm_for_all  *)
+(* 	(fun x cs ->  *)
+(* 	   SAtom.exists  *)
+(* 	     (fun a -> *)
+(* 		match a with *)
+(* 		  | Comp((Access(y,_) | Elem(y,Glob)),Eq,Elem(c,Constr))  *)
+(* 		  | Comp(Elem(c,Constr),Eq,(Access(y,_) | Elem(y,Glob))) ->  *)
+(* 		      Hstring.equal x y && not (List.mem c cs) *)
+(* 		  | _ -> false *)
+(* 	     ) s2 *)
+(* 	) neqs *)
+(*     with Exit -> false *)
 
 
-let sort_candidates =
-  List.fast_sort compare_candidates
+(* let forward_and_check s procs trs l sla = *)
+(*   let h_visited = HSA.create 200_029 in *)
+(*   let cpt_f = ref 0 in *)
+(*   let rec forward_rec s procs trs = function *)
+(*     | [] -> eprintf "Total forward nodes : %d@." !cpt_f *)
+(*     | (sa, args) :: to_do -> *)
+(* 	if subset_node sla sa then raise Exit; *)
+(* 	if HSA.mem h_visited sa then *)
+(* 	  forward_rec s procs trs to_do *)
+(* 	else *)
+(* 	  let new_td = *)
+(* 	    List.fold_left (fun new_td tr -> *)
+(* 			      List.fold_left (fun new_td s -> (s :: new_td) *)
+(* 	      ) new_td (post sa args procs tr) *)
+(* 	    ) [] trs *)
+(* 	  in *)
+(* 	  incr cpt_f; *)
+(* 	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f; *)
+(* 	  HSA.add h_visited sa (); *)
+(* 	  forward_rec s procs trs (List.rev_append new_td to_do) *)
+(*   in *)
+(*   forward_rec s procs trs l *)
 
-let extract_candidates_from_compagnons comps s =
-  let c = extract_candidates comps s in
-  let cands = List.rev_map (fun (_,(_,s)) -> s) c in
-  (* sort_candidates *) (*cands*)
-  remove_subsumed_candidates cands
+(* let stateless_forward_and_check s procs trs l sla = *)
+(*   let h_visited = HI.create 2_000_029 in *)
+(*   let cpt_f = ref 0 in *)
+(*   let rec forward_rec s procs trs = function *)
+(*     | [] -> eprintf "Total forward nodes : %d@." !cpt_f *)
+(*     | (sa, args) :: to_do -> *)
+(* 	if subset_node sla sa then raise Exit; *)
+(* 	let hsa = SAtom.hash sa in *)
+(* 	if HI.mem h_visited hsa then *)
+(* 	  forward_rec s procs trs to_do *)
+(* 	else *)
+(* 	  let new_td = *)
+(* 	    List.fold_left (fun new_td tr -> *)
+(* 			      List.fold_left (fun new_td s -> (s :: new_td) *)
+(* 					     ) new_td (post sa args procs tr) *)
+(* 			   ) [] trs *)
+(* 	  in *)
+(* 	  incr cpt_f; *)
+(* 	  if !cpt_f mod 1000 = 0 then eprintf "%d@." !cpt_f; *)
+(* 	  HI.add h_visited hsa (); *)
+(* 	  forward_rec s procs trs (List.rev_append new_td to_do) *)
+(*   in *)
+(*   forward_rec s procs trs l *)
 
-let extract_candidates_from_trace forward_nodes all_var_terms s =
-  let comps = compagnions_from_trace forward_nodes all_var_terms in
-  let cands = 
-    if refine then
-      let c = extract_candidates comps s in
-      filter_alive_candidates forward_nodes c
-    else
-      begin
-	HSA.clear forward_nodes;
-	extract_candidates_from_compagnons comps s
-      end
-  in
-  (* sort_candidates *) cands
-  
-  
-let select_relevant_candidates {t_unsafe = _, sa} =
-  List.filter (fun {t_unsafe = _, ca} ->
-    not (SAtom.is_empty (SAtom.inter ca sa))
-  )
+(* let dead_candidate np args init_np s nodes a la =  *)
+(*   let sla = make_satom_from_list (SAtom.singleton a) la in *)
+(*   List.exists *)
+(*     (fun node ->  *)
+(*        if debug && verbose > 1 then *)
+(* 	 eprintf "The node in the trace is :%a@." Pretty.print_cube node; *)
+(*        let depart = asym_union node init_np in *)
+(*        if debug && verbose > 1 then *)
+(* 	 eprintf "We run the trace from :%a@." Pretty.print_cube depart; *)
+(*        try   *)
+(* 	 stateless_forward_and_check s np s.t_trans [depart, args@np] sla; false *)
+(*        with Exit -> true *)
+(*     ) nodes *)
+
+(* let still_alive fwd candidates s a la =  *)
+(*   let sla = make_satom_from_list SAtom.empty la in *)
+(*   if debug && verbose > 0 then  *)
+(*     eprintf "We check that (%a, %a) is alive with an extra process@." *)
+(*       Pretty.print_atom a Pretty.print_cube sla; *)
+
+(*   let args = fst s.t_unsafe in *)
+(*   let np = [Hstring.make ("#"^(string_of_int (List.length args + 1)))] in *)
+(*   let init_np = assert false  *)
+(*   (\* TODO : change this for dnf init or remove all: mkinit (fst s.t_init) (snd s.t_init) np*\) *)
+(*   in *)
+
+(*   let pla = potential_update la s.t_trans in *)
+(*   let pa =  potential_update [a] s.t_trans in *)
+(*   let nodes =  *)
+(*     HSA.fold  *)
+(*       (fun node _ nodes ->  *)
+(* 	 if (subset_node sla node && pa) ||  *)
+(* 	    (subset_node (SAtom.singleton a) node && pla) *)
+(* 	 then node :: nodes else nodes) fwd [] in *)
+
+(*   if debug && verbose > 0 then *)
+(*     eprintf "We're running %d forward traces! @." (List.length nodes);  *)
+
+(*   let dead = dead_candidate np args init_np s nodes a la in *)
+
+(*   if debug && verbose > 0 then *)
+(*     if dead then eprintf "Dead!@." else eprintf "Still alive!@."; *)
+(*   not dead *)
 
  
-(*-------------- interface for inductification ---------------------------*)
+(* let filter_alive_candidates fwd candidates =  *)
+(*   let dead_candidates = ref 0 in *)
+(*   if debug then  *)
+(*     begin *)
+(*       eprintf "Potential candidates:@."; *)
+(*       List.iter  *)
+(* 	(fun (a, (la, _)) -> *)
+(* 	   let la = make_satom_from_list SAtom.empty la in *)
+(* 	   eprintf "candidate : %a && %a\n@."  *)
+(* 	     Pretty.print_atom a  *)
+(* 	     Pretty.print_cube la) *)
+(* 	candidates; *)
+(*       eprintf "@." *)
+(*     end; *)
+(*   let candidates =  *)
+(*     List.fold_left  *)
+(*       (fun acc (a, (la, s)) ->  *)
+(* 	 if still_alive fwd candidates s a la then s::acc  *)
+(* 	 else (incr dead_candidates; acc)) [] candidates *)
+(*   in *)
+(*   eprintf "Number of dead candidates : %d@." !dead_candidates; *)
+(*   candidates *)
 
-let post_system ({ t_unsafe = uargs, u; t_trans = trs}) =
-  List.fold_left
-    (fun ls tr -> assert false ) 
-    [] 
-    trs 
-    
+(* let extract_candidates comps s = *)
+(*   let cpt = ref (-1) in *)
+(*   if debug then *)
+(*     MA.iter (fun a (compagnions, uncs) -> *)
+(*       eprintf "compagnons %a : %a@." *)
+(* 	Pretty.print_atom a Pretty.print_cube compagnions; *)
+(*       eprintf "> unconstrained :\n"; *)
+(*       STerm.iter  *)
+(* 	(fun t -> eprintf "               %a\n" Pretty.print_term t) *)
+(* 	uncs; *)
+(*       eprintf "@.";       *)
+(*     ) comps; *)
+(*   let sas = MA.fold candidates_from_compagnions comps [] in *)
+(*   let sas = List.rev sas in *)
+(*   Gc.full_major (); *)
+(*   List.fold_left  *)
+(*     (fun acc (a, la) -> *)
+(*        let sa = make_satom_from_list (SAtom.singleton a) la in *)
+(*        if useless_candidate sa then acc *)
+(*        else *)
+(* 	 let sa', (args, _) = proper_cube sa in *)
+(* 	 let ar' = ArrayAtom.of_satom sa' in *)
+(* 	 let s' =  *)
+(* 	   { s with *)
+(* 	       t_from = []; *)
+(* 	       t_unsafe = args, sa'; *)
+(* 	       t_arru = ar'; *)
+(* 	       t_alpha = ArrayAtom.alpha ar' args; *)
+(* 	       t_deleted = false; *)
+(* 	       t_nb = !cpt; *)
+(* 	       t_nb_father = -1 } in *)
+(* 	 if List.exists  *)
+(* 	   (fun (_,(_,s)) -> ArrayAtom.equal s.t_arru s'.t_arru) acc then acc *)
+(* 	 else  *)
+(* 	   (decr cpt; (a, (la, s')) :: acc)) [] sas *)
 
+(* let compare_candidates s1 s2 = *)
+(*   let v1 = Cube.size_system s1 in *)
+(*   let v2 = Cube.size_system s2 in *)
+(*   let c = Pervasives.compare v1 v2 in *)
+(*   if c <> 0 then c else *)
+(*     let c1 = Cube.card_system s1 in *)
+(*     let c2 = Cube.card_system s2 in *)
+(*     Pervasives.compare c1 c2 *)
+
+
+(* let sort_candidates = *)
+(*   List.fast_sort compare_candidates *)
+
+(* let extract_candidates_from_compagnons comps s = *)
+(*   let c = extract_candidates comps s in *)
+(*   let cands = List.rev_map (fun (_,(_,s)) -> s) c in *)
+(*   (\* sort_candidates *\) (\*cands*\) *)
+(*   remove_subsumed_candidates cands *)
+
+(* let extract_candidates_from_trace forward_nodes all_var_terms s = *)
+(*   let comps = compagnions_from_trace forward_nodes all_var_terms in *)
+(*   let cands =  *)
+(*     if refine then *)
+(*       let c = extract_candidates comps s in *)
+(*       filter_alive_candidates forward_nodes c *)
+(*     else *)
+(*       begin *)
+(* 	HSA.clear forward_nodes; *)
+(* 	extract_candidates_from_compagnons comps s *)
+(*       end *)
+(*   in *)
+(*   (\* sort_candidates *\) cands *)
+  
+  
+(* let select_relevant_candidates {t_unsafe = _, sa} = *)
+(*   List.filter (fun {t_unsafe = _, ca} -> *)
+(*     not (SAtom.is_empty (SAtom.inter ca sa)) *)
+(*   ) *)
 
 
 (********************************************)
@@ -1340,11 +1322,9 @@ let mkinits_up_to procs_sets s =
     List.fold_left
       (fun acc procs -> List.rev_append (mkinits procs s) acc) [] procs_sets
 
-exception Spurious_step of t_system
-
 let above s trace =
   let rec above_rec s acc = function
-    | tx :: (_, _, y) :: _ when s.t_nb = y.t_nb -> List.rev (tx :: acc)
+    | tx :: (_, _, y) :: _ when s.tag = y.tag -> List.rev (tx :: acc)
     | tx :: r -> above_rec s (tx :: acc) r
     | _ -> assert false
   in
@@ -1358,7 +1338,7 @@ type possible_result =
 
 
 let possible_trace ~starts ~finish ~procs ~trace =
-  let _, usa = finish.t_unsafe in
+  let usa = Node.litterals finish in
   let rec forward_rec ls rtrace = match ls, rtrace with
     | _, [] -> Unreach
     | [], (_, _, s) ::_ -> Spurious (above s trace)
@@ -1409,98 +1389,58 @@ module HTrace =
       end)
 			       
 
-let reachable_on_trace_from_init s trace =
-  let all_procs_set =
-    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
+let procs_on_trace trace =
+  let all_procs_set = 
+    List.fold_left (fun acc (_, procs_t, n) ->
       List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
-		     (List.rev_append procs_t procs_c)
-    ) Hstring.HSet.empty trace in
-  let all_procs = Hstring.HSet.elements all_procs_set in
+		     (List.rev_append procs_t (Node.variables n))
+    ) Hstring.HSet.empty trace
+  in
+  Hstring.HSet.elements all_procs_set
+
+let reachable_on_trace_from_init s unsafe trace =
+  let all_procs = procs_on_trace  trace in
   let proc_sets = (* all_partitions *) [all_procs] in
   let inits = mkinits_up_to proc_sets s in
-  match possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace with
+  match possible_trace ~starts:inits ~finish:unsafe ~procs:all_procs ~trace with
   | Spurious _ | Unreach -> Unreach
   | Reach _  as r -> r
 
-let reachable_on_all_traces_from_init s trace =
-  let all_procs_set =
-    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
-      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
-		     (List.rev_append procs_t procs_c)
-    ) Hstring.HSet.empty trace in
-  let all_procs = Hstring.HSet.elements all_procs_set in
+let reachable_on_all_traces_from_init s unsafe trace =
+  let all_procs = procs_on_trace trace in
   let proc_sets = (* all_partitions *) [all_procs] in
   let inits = mkinits_up_to proc_sets s in
-  possible_trace ~starts:inits ~finish:s ~procs:all_procs ~trace
+  possible_trace ~starts:inits ~finish:unsafe ~procs:all_procs ~trace
 
 let possible_history s =
-  let trace = s.t_from in
-  let all_procs_set =
-    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
-      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
-		     (List.rev_append procs_t procs_c)
-    ) Hstring.HSet.empty trace in
-  let all_procs = Hstring.HSet.elements all_procs_set in
-  let iargs, isa = s.t_unsafe in 
-  possible_trace ~starts:[isa, iargs] ~finish:(origin s) ~procs:all_procs ~trace
+  let trace = s.Node.from in
+  let all_procs = procs_on_trace trace in
+  let iargs, isa = Node.variables s, Node.litterals s in 
+  possible_trace ~starts:[isa, iargs] ~finish:(Node.origin s)
+                 ~procs:all_procs ~trace
 
 		 
 let spurious s =
   match possible_history s with
     | Unreach | Spurious _ -> true
-    | Reach hist ->
-        if debug then
-	  begin
-	    eprintf "\n@{<fg_red>Error trace:@} @[";
-	    List.iter (fun (tr, sigma) ->
-		       eprintf "%a(%a) ->@ " Hstring.print tr.tr_name
-			       Pretty.print_args (List.map snd sigma)
-		      ) (List.rev hist);
-	    let nun = (origin s).t_nb in
-	    if nun < 0 then 
-	      eprintf "@{<fg_blue>approx[%d]@}" nun
-	    else 
-	      eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
-	    eprintf "@]@.";
-	  end;
-        false
+    | Reach hist -> false
 
 
-let spurious_error_trace s =
-  match reachable_on_all_traces_from_init (origin s) s.t_from with
+let spurious_error_trace system s =
+  match reachable_on_all_traces_from_init system (Node.origin s) s.Node.from with
   | Spurious _ -> assert false
   | Unreach -> true
-  | Reach hist ->
-        if debug then
-	  begin
-	    eprintf "\n@{<fg_red>Error trace:@} @[";
-	    List.iter (fun (tr, sigma) ->
-		       eprintf "%a(%a) ->@ " Hstring.print tr.tr_name
-			       Pretty.print_args (List.map snd sigma)
-		      ) (List.rev hist);
-	    let nun = (origin s).t_nb in
-	    if nun < 0 then 
-	      eprintf "@{<fg_blue>approx[%d]@}" nun
-	    else 
-	      eprintf "@{<fg_magenta>unsafe[%d]@}" nun;
-	    eprintf "@]@.";
-	  end;
-        false
+  | Reach hist -> false
 
 
-let spurious_due_to_cfm s =
-  match reachable_on_trace_from_init (origin s) s.t_from with
+let spurious_due_to_cfm system s =
+  match reachable_on_trace_from_init system (Node.origin s) s.Node.from with
     | Unreach | Spurious _ -> true
     | Reach hist -> false
 
 
 let conflicting_from_trace s trace =
-  let all_procs_set =
-    List.fold_left (fun acc (_, procs_t, {t_unsafe = procs_c, _}) ->
-      List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
-		     (List.rev_append procs_t procs_c)
-    ) Hstring.HSet.empty trace in
-  let all_procs = Hstring.HSet.elements all_procs_set in
+  let all_procs = procs_on_trace trace in
   let rec forward_rec acc ls trace = match trace with
     | [] -> acc
     | (tr, procs, _) :: rest_trace ->

@@ -712,7 +712,6 @@ let transitions_to_func_aux procs env reduce acc { tr_args = tr_args;
 		                                   tr_assigns = assigns; 
 		                                   tr_upds = upds; 
 		                                   tr_nondets = nondets } =
-  (* let _, others = Forward.missing_args procs tr_args in *)
   if List.length tr_args > List.length procs then acc
   else 
     let d = all_permutations tr_args procs in
@@ -1023,38 +1022,26 @@ exception Sustainable of t_system list
 
 exception TooBig of t_system list
 
-let alpha_renamings cpt_approx env procs ({ t_unsafe = args, sa} as s) =
-  let d = List.rev (all_permutations args procs) in
+let alpha_renamings env procs s =
+  let d = List.rev (Variable.all_permutations (Node.variables s) procs) in
   (* keep list.rev in order for the first element of perm to be
      a normalized cube as we will keep this only one if none of
      perm can be disproved *)
   List.fold_left (fun p sigma ->
-    let sa = subst_atoms sigma sa in
-    let ar = ArrayAtom.of_satom sa in
-    decr cpt_approx;
-    let s' = 
-      { s with
-	t_from = [];
-	t_unsafe = args, sa;
-	t_arru = ar;
-	t_alpha = ArrayAtom.alpha ar args;
-	t_deleted = false;
-	t_nb = !cpt_approx;
-	t_nb_father = -1;
-	t_from_forall = false;
-      } in
-    (satom_to_cand env sa, s') :: p
+    let c = Cube.subst sigma s.Node.cube in
+    let s' = Node.create ~kind:Node.Approx c in
+    (satom_to_cand env (Node.litterals s'), s') :: p
   ) [] d
 
 
 
-let resist_on_trace_size cpt_approx progress_inc ls env =
+let resist_on_trace_size progress_inc ls env =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
   let cands, too_big =
     List.fold_left (fun (acc, too_big) s ->
       if Cube.size_system s > env.model_cardinal then acc, s :: too_big
       else
-	try (alpha_renamings cpt_approx env procs s) :: acc, too_big
+	try (alpha_renamings env procs s) :: acc, too_big
 	with Not_found -> acc, too_big
     ) ([], []) ls  in
   let cands = ref (List.rev cands) in
@@ -1084,7 +1071,7 @@ let resist_on_trace_size cpt_approx progress_inc ls env =
       | Exit | Not_found -> too_big
 
 
-let smallest_to_resist_on_trace cpt_approx ls =
+let smallest_to_resist_on_trace ls =
   try
     let nb =
       List.fold_left (fun nb env -> nb + List.length env.states)
@@ -1093,28 +1080,28 @@ let smallest_to_resist_on_trace cpt_approx ls =
     let progress_inc = nb / Pretty.vt_width + 1 in
     let resistants =
       List.fold_left
-	(resist_on_trace_size cpt_approx progress_inc) ls !global_envs in
+	(resist_on_trace_size progress_inc) ls !global_envs in
     match resistants with
       | s :: _ -> raise (Sustainable [s])
       | [] -> raise Not_found
   with
   | Exit | Not_found ->
-     if profiling then Search.TimeCustom.pause ();
+     TimeCustom.pause ();
      if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
      []
   | Sustainable ls ->
-     if profiling then Search.TimeCustom.pause ();
+     TimeCustom.pause ();
      if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
      ls
 
 
 
-let one_resist_on_trace_size cpt_approx s env =
-    if Cube.size_system s > env.model_cardinal then true
+let one_resist_on_trace_size s env =
+    if Node.size s > env.model_cardinal then true
     else
       try
         let procs = List.rev (List.tl (List.rev env.all_procs)) in
-        let ls = alpha_renamings cpt_approx env procs s in
+        let ls = alpha_renamings env procs s in
         List.iter (fun st ->
           if not (List.for_all (fun (c, _) -> check_cand env st c) ls) then
             raise Exit;
@@ -1124,26 +1111,50 @@ let one_resist_on_trace_size cpt_approx s env =
       | Exit | Not_found -> false
 
 
-let fast_resist_on_trace cpt_approx ls =
+let fast_resist_on_trace ls =
   let progress_inc = (List.length ls) / Pretty.vt_width + 1 in
   if not quiet then eprintf "@{<fg_black_b>@{<i>";
   (* will be forgotten by flushs *)
   let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
   let cpt = ref 0 in
-  if profiling then Search.TimeCustom.start ();
+  TimeCustom.start ();
   try 
     List.iter (fun s ->
       incr cpt;
       if not quiet && !cpt mod progress_inc = 0 then one_step ();
-      if (List.for_all (one_resist_on_trace_size cpt_approx s) !global_envs)
+      if (List.for_all (one_resist_on_trace_size s) !global_envs)
       then raise (Sustainable [s])
     ) ls;
-    if profiling then Search.TimeCustom.pause ();
+    TimeCustom.pause ();
     if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
     []
   with Sustainable cand ->
-       if profiling then Search.TimeCustom.pause ();
+       TimeCustom.pause ();
        if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
        cand
 
-let smallest_to_resist_on_trace = fast_resist_on_trace
+
+
+
+
+(*-------------- interface -------------*)
+
+
+let init system =
+  set_liberal_gc ();
+  let low = if brab_up_to then 1 else enumerative in
+  for i = enumerative downto low do
+    let procs = Variable.give_procs i in
+    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
+	     ----------------------------------------\n@." i;
+    search procs system;
+    eprintf "----------------------------------------\n@.";
+  done;
+  let procs = Variable.give_procs enumerative in
+  reset_gc_params ()
+   
+
+let first_good_candidate candidates =
+  match fast_resist_on_trace candidates with
+  | c :: _ -> Some c
+  | [] -> None

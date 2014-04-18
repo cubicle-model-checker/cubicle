@@ -14,6 +14,7 @@
 (**************************************************************************)
 
 open Ast
+open Types
 
 module HSA : Hashtbl.S with type key = SAtom.t
 
@@ -24,60 +25,37 @@ type inst_trans =
       i_reqs : SAtom.t;
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
-      i_touched_terms : STerm.t;
+      i_touched_terms : Term.Set.t;
     }
 
 type possible_result = 
-  | Reach of (transition * (Hstring.t * Hstring.t) list) list 
-  | Spurious of (transition * Hstring.t list * t_system) list
+  | Reach of (transition * Variable.subst) list 
+  | Spurious of Node.trace
   | Unreach
 
 (* val search : Hstring.t list -> t_system -> SAtom.t list *)
-
-val procs_from_nb : int -> Hstring.t list
 
 val search : Hstring.t list -> t_system -> unit HSA.t
 
 val search_stateless : Hstring.t list -> t_system -> (SAtom.t * STerm.t) MA.t
 
-(* val search_only : t_system -> SAtom.t list *)
 
-val extract_candidates_from_trace : 
-  unit HSA.t -> STerm.t -> t_system -> t_system list
-
-val extract_candidates_from_compagnons : 
-  (SAtom.t * STerm.t) MA.t -> t_system -> t_system list
-
-
-val select_relevant_candidates : t_system -> t_system list -> t_system list
-
-val post_system : t_system -> t_system list
-
-val instantiate_transitions : Hstring.t list -> Hstring.t list ->
+val instantiate_transitions : Variable.t list -> Variable.t list ->
   transition list -> inst_trans list
-
-val missing_args : Hstring.t list -> Hstring.t list ->
-  Hstring.t list * Hstring.t list
 
 val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
 
-val reachable_on_trace_from_init :
-  t_system -> (transition * Hstring.t list * t_system) list -> possible_result
+val reachable_on_trace_from_init : t_system -> Node.trace -> possible_result
 
-val spurious : t_system -> bool
+val spurious : Node.t -> bool
 			     
-val spurious_error_trace : t_system -> bool
+val spurious_error_trace : t_system -> Node.t -> bool
 
-val spurious_due_to_cfm : t_system -> bool
+val spurious_due_to_cfm : t_system -> Node.t -> bool
 
-val conflicting_from_trace :
-  t_system -> (transition * Hstring.t list * t_system) list -> SAtom.t list
-
-val remove_subsumed_candidates : t_system list -> t_system list
-
-val useless_candidate : SAtom.t -> bool
+val conflicting_from_trace : t_system -> Node.trace -> SAtom.t list
 
 val uguard_dnf : 
-  (Hstring.t * Hstring.t) list ->
-  Hstring.t list -> Hstring.t list ->
-  (Hstring.t * SAtom.t list) list -> SAtom.t list list
+  Variable.susbt ->
+  Variable.t list -> Variable.t list ->
+  (Variable.t * SAtom.t list) list -> SAtom.t list list

@@ -210,6 +210,13 @@ let extra_vars vs1 vs2 =
   aux [] vs1 vs2
 
 
+let give_procs n =
+  let rp, _ = 
+    List.fold_left (fun (acc, n) v ->
+      if n > 0 then v :: acc, n - 1
+      else acc, n) ([], n) procs in
+  List.rev rp
+
 
 let print fmt v = Hstring.print fmt v
 

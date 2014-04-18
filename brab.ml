@@ -74,19 +74,6 @@ let search_backtrack_brab search invariants procs uns =
 (**************************************************************)
     
 let brab search invariants uns =
-  set_liberal_gc ();
-  let low = if brab_up_to then 1 else enumerative in
-  for i = enumerative downto low do
-    let procs = Forward.procs_from_nb i in
-    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
-	     ----------------------------------------\n@." i;
-
-    Enumerative.search procs (List.hd uns);
-    
-    eprintf "----------------------------------------\n@.";
-  done;
-
+  Oracle.init system;
   if only_forward then exit 0;
-  let procs = Forward.procs_from_nb enumerative in
-  reset_gc_params ();
   search_backtrack_brab search invariants procs uns

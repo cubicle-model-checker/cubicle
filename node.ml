@@ -29,8 +29,10 @@ type t =
       kind : kind;
       depth : int;
       mutable deleted : bool;
-      from : (transition * Variable.t list * t) list;
+      from : trace;
     }
+and trace = (transition * Variable.t list * t) list 
+
 
 let variables {cube = {Cube.vars = vars }} = vars 
 

@@ -13,6 +13,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Ast
+
 type op_comp = Eq | Lt | Le | Neq
 type op_arith = Plus | Minus
 type sort = Glob | Constr | Var
