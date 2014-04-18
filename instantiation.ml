@@ -17,9 +17,9 @@ open Format
 open Options
 open Ast
 open Util
-open Cterm.Type
-open Atom.Type
+open Types
 
+module H = Hstring
 
 (*********************************************)
 (* all permutations excepted impossible ones *)
@@ -33,7 +33,7 @@ let filter_impos perms impos =
               perms
 
 let rec all_permutations_impos l1 l2 impos =
-  filter_impos (all_permutations l1 l2) impos
+  filter_impos (Variable.all_permutations l1 l2) impos
 
 
 
@@ -56,29 +56,29 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
   while !i2 < n2 do
     let a2i = a2.(!i2) in
     (match a2i, op with
-      | Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
+      | Atom.Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
 	  i2 := n2
 
-      | Comp (Access (a2, lx2), Eq,
+      | Atom.Comp (Access (a2, lx2), Eq,
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), (Neq | Lt)
-	  when compare_term c1 c2 = 0 ->
+	  when Term.compare c1 c2 = 0 ->
 	  
 	  if List.for_all2 
             (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
           impos := (list_rev_combine lx1 lx2) :: !impos
 	      
-      | Comp (Access (a2, lx2), (Neq | Lt),
+      | Atom.Comp (Access (a2, lx2), (Neq | Lt),
 	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), Eq
-	  when compare_term c1 c2 = 0 ->
+	  when Term.compare c1 c2 = 0 ->
 
 	  if List.for_all2
             (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
           impos := (list_rev_combine lx1 lx2) :: !impos
 
-      | Comp (Access (a2, lx2), Eq, (Elem (_, Constr) as c2)), Eq 
-	  when compare_term c1 c2 <> 0 ->
+      | Atom.Comp (Access (a2, lx2), Eq, (Elem (_, Constr) as c2)), Eq 
+	  when Term.compare c1 c2 <> 0 ->
 	  
 	  if List.for_all2
             (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
@@ -108,8 +108,8 @@ let obvious_impossible a1 a2 =
     let a1i = a1.(!i1) in
     let a2i = a2.(!i2) in
     (match a1i, a2i with
-       | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
-	 Comp (Elem (x2, sx2), Eq, Elem (y2, sy2)) ->
+       | Atom.Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
+	 Atom.Comp (Elem (x2, sx2), Eq, Elem (y2, sy2)) ->
 	   begin
     	     match sx1, sy1, sx2, sy2 with
     	       | Glob, Constr, Glob, Constr 
@@ -125,8 +125,8 @@ let obvious_impossible a1 a2 =
     		   add_obv (x1,x2) obvs
     	       | _ -> ()
     	   end
-       | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
-	 Comp (Elem (x2, sx2), (Neq | Lt), Elem (y2, sy2)) ->
+       | Atom.Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
+	 Atom.Comp (Elem (x2, sx2), (Neq | Lt), Elem (y2, sy2)) ->
     	   begin
 	     match sx1, sy1, sx2, sy2 with
     	       | Glob, Constr, Glob, Constr 
@@ -134,9 +134,9 @@ let obvious_impossible a1 a2 =
     		   raise NoPermutations
     	       | _ -> ()
 	   end
-       | Comp (Access (a1, lx1), op, 
+       | Atom.Comp (Access (a1, lx1), op, 
 	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
-	 Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
+	 Atom.Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
 	   find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());

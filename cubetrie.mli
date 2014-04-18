@@ -12,6 +12,7 @@
 (*  License version 2.0                                                   *)
 (*                                                                        *)
 (**************************************************************************)
+open Types
 
 (** Trie, mapping cubes to value of type 'a *)
 type 'a t
@@ -29,16 +30,16 @@ val add : Atom.t list -> 'a -> 'a t -> 'a t
 val add_force : Atom.t list -> 'a -> 'a t -> 'a t
 
 (** Add a mapping cube->v to trie *)
-val add_array : Atom.Array.t -> 'a -> 'a t -> 'a t
+val add_array : ArrayAtom.t -> 'a -> 'a t -> 'a t
 
 (** Add a mapping cube->v to trie without checking for subsomption *)
-val add_array_force : Atom.Array.t -> 'a -> 'a t -> 'a t
+val add_array_force : ArrayAtom.t -> 'a -> 'a t -> 'a t
 
 (** Is cube subsumed by some cube in the trie? *)
 val mem : Atom.t list -> Node.t t -> int list option
 
 (** Is cube subsumed by some cube in the trie? *)
-val mem_array : Atom.Array.t -> t_system t -> int list option
+val mem_array : ArrayAtom.t -> Node.t t -> int list option
 
 (** Apply f to all values mapped to in the trie. *)
 val iter : ('a -> unit) -> 'a t -> unit
@@ -57,3 +58,7 @@ val all_vals : 'a t -> 'a list
 
 (** All values whose keys (cubes) are not inconsistent with the given cube. *)
 val consistent : Atom.t list -> 'a t -> 'a list
+
+val add_and_resolve : Node.t -> Node.t t -> Node.t t
+
+val delete_subsumed : Node.t -> Node.t t -> Node.t t

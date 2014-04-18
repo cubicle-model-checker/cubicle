@@ -12,6 +12,7 @@
 (*  License version 2.0                                                   *)
 (*                                                                        *)
 (**************************************************************************)
+
 open Format
 
 type t = Hstring.t
@@ -36,6 +37,8 @@ val all_arrangements_arity : Hstring.t -> t list -> t list list
 val permutations_missing : t list -> t list -> subst list
 
 val extra_vars : t list -> t list -> t list
+val extra_procs : t list -> t list -> t list
+val append_extra_procs : t list -> t list -> t list
 
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit

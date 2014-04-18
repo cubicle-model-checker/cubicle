@@ -76,6 +76,7 @@ module rec Atom : sig
   val equal : t -> t -> bool
   val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
   val has_var : Variable.t -> t -> bool
+  val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
 end

@@ -139,12 +139,28 @@ let rec perms = function
   | [] -> [[]]
   | x :: r -> List.flatten (List.map (mix x) (perms r))
 
-let extra_args args tr_args =
-  let rec aux acc cpt = function
-    | [] -> List.rev acc
-    | _::r -> aux ((List.nth procs (cpt - 1)) :: acc) (cpt+1) r
+
+(* renamed in extra_procs *)
+(* let extra_args args tr_args = *)
+(*   let rec aux acc cpt = function *)
+(*     | [] -> List.rev acc *)
+(*     | _::r -> aux ((List.nth procs (cpt - 1)) :: acc) (cpt+1) r *)
+(*   in *)
+(*   aux [] (List.length args + 1) tr_args *)
+
+let append_extra_procs_to acc args tr_args =
+  let rec aux acc args tr_args procs =
+    match args, tr_args, procs with
+    | [], [], _ -> List.rev acc
+    | [], x :: rtr, p :: rpr -> aux (p::acc) [] rtr rpr
+    | a :: ra, _, p :: rpr -> aux acc ra tr_args rpr
+    | _, _, [] -> failwith "Not enough procs"
   in
-  aux [] (List.length args + 1) tr_args   
+  aux (List.rev acc) args tr_args procs
+
+let append_extra_procs args tr_args = append_extra_procs_to args args tr_args
+
+let extra_procs args tr_args = append_extra_procs_to [] args tr_args
 
 let rec first_n n l =
   assert (n >= 0);
@@ -159,11 +175,9 @@ let missing args tr_args extra =
   else first_n nb extra
     
 let insert_missing l tr_args =
-  let ex = extra_args l tr_args in
+  let ex = extra_procs l tr_args in
   let ms = missing l tr_args ex in 
   List.flatten (List.map (fun x -> mix x l) ms)
-
-
 
 
 let rec all_parts_max n l =
@@ -173,7 +187,7 @@ let permutations_missing tr_args l =
   let parts = [] :: List.flatten 
 		      (List.map perms (all_parts_max (List.length tr_args) l))
   in
-  let ex = extra_args l tr_args in
+  let ex = extra_procs l tr_args in
   let l' = List.fold_left 
     (fun acc l ->
      let ms = missing l tr_args ex in

@@ -17,17 +17,18 @@ open Format
 open Options
 open Ast
 open Util
+open Types
 
 type kind = Node | Approx | Inv
 
 type t =
     { 
       cube : Cube.t;
-      alpha : Variable.t list * Atom.Array.t;
+      alpha : Variable.t list * ArrayAtom.t;
       tag : int;
       kind : kind;
       mutable deleted : bool;
-      from : (transition * Variable.t list * node) list;
+      from : (transition * Variable.t list * t) list;
     }
 
 let variables {cube = {Cube.vars = vars }} = vars 
@@ -52,19 +53,20 @@ let new_tag =
 let create ?(kind=Node) ?(from=None) cube =
   { 
     cube = cube;
-    alpha = Atom.Array.alpha cube.array cube.vars;
-    tag = new_tag ~kind;
+    alpha = ArrayAtom.alpha cube.Cube.array cube.Cube.vars;
+    tag = new_tag ~kind ();
+    kind = kind;
     deleted = false;
     from = match from with
            | None -> []
-           | Some (tr, args, n) as f -> f :: n.from
+           | Some ((tr, args, n) as f) -> f :: n.from
   }
 
 let has_deleted_ancestor n =
   let rec has acc = function
     | [] -> false, acc
     | (_, _, a) :: r ->
-       if a.t_deleted then true, acc
+       if a.deleted then true, acc
        else has (a :: acc) r
   in
   let del, children = has [] n.from in
@@ -74,16 +76,13 @@ let has_deleted_ancestor n =
 let has_deleted_ancestor n =
   List.exists (fun (_, _, a) -> a.deleted) n.from
 
+let ancestor_of n s =
+  (* not (List.exists (fun (_,anc) -> n == anc) s.t_from) *)
+  (* List.exists (fun (_,_,anc) -> ArrayAtom.equal n.t_arru anc.t_arru) s.t_from *)
+  List.exists (fun (_, _, ps) -> n.tag = ps.tag) s.from
 
-let rec add_and_resolve n visited =
-  let visited =
-    Cubetrie.fold (fun visited nv ->
-      match Cube.resolve_two n.cube nv.cube with
-        | None -> visited
-        | Some cube_res -> add_and_resolve (create cube_res) visited
-    ) visited visited in
-  Cubetrie.add_array s.t_arru s visited
 
+let subset n1 n2 = ArrayAtom.subset (array n1) (array n2)
        
 let print fmt n = Cube.print fmt n.cube
 
@@ -92,9 +91,9 @@ let print_history fmt n =
   let last = List.fold_left 
     (fun last (tr, args, a) ->
       if dmcmt then 
-	fprintf fmt "[%s%a]" Hstring.print tr.tr_name Variable.print_vars args
+	fprintf fmt "[%a%a]" Hstring.print tr.tr_name Variable.print_vars args
       else 
-	fprintf fmt "%s(%a) ->@ " Hstring.print tr.tr_name
+	fprintf fmt "%a(%a) ->@ " Hstring.print tr.tr_name
                 Variable.print_vars args;
       a
     ) n n.from in

@@ -13,9 +13,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Format
 open Options
 open Util
-
+open Types
 
 module Debug = struct
 
@@ -26,12 +27,12 @@ module Debug = struct
 	match ls with
 	  | [] -> eprintf "No new branches@."
 	  | _ -> 
-	      List.iter (eprintf "@.New branch : %a@." Pretty.print_system) ls
+	      List.iter (eprintf "@.New branch : %a@." Node.print) ls
 
   let unsafe = 
     if not debug then fun _ -> () else 
       fun s ->
-	eprintf "    %a@." Pretty.print_unsafe s
+	eprintf "    %a@." Node.print s
 
 end
 
@@ -65,20 +66,20 @@ end = struct
       List.fold_left
         (fun nodes vis_n ->
          let vis_cube = vis_n.Node.cube in
-         let d = Instantitaion.relevant
+         let d = Instantiation.relevant
                    ~of_cube:vis_cube ~to_cube:n.Node.cube in
          List.fold_left
 	   (fun nodes ss ->
-	    let vis_renamed = Atom.Array.apply_subst ss vis_cube.Cube.array in
-	    if not pure_smt && Atom.Array.subset vis_renamed n_array then
+	    let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
+	    if not pure_smt && ArrayAtom.subset vis_renamed n_array then
 	        raise (Fixpoint [vis_n.Node.tag])
 	    (* Heuristic : throw away nodes too much different *)
-	    (* else if Atom.Array.nb_diff pp anp > 2 then nodes *)
+	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	    (* line below useful for arith : ricart *)
 	    else if not pure_smt &&
                     Cube.inconsistent_array
-                      (Atom.Array.union vis_renamed n_array) then nodes
-	    else if Atom.Array.nb_diff vis_renamed n_array > 1 then
+                      (ArrayAtom.union vis_renamed n_array) then nodes
+	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
               (vis_n, vis_renamed)::nodes
 	    else (Prover.assume_node vis_n vis_renamed; nodes)
 	   ) nodes d
@@ -87,7 +88,7 @@ end = struct
     TimeSort.start ();
     let nodes = 
       List.fast_sort 
-        (fun (n1, a1) (n2, a2) -> Atom.Array.compare_nb_common n_array a1 a2) 
+        (fun (n1, a1) (n2, a2) -> ArrayAtom.compare_nb_common n_array a1 a2) 
         nodes 
     in
     TimeSort.pause ();
@@ -102,7 +103,7 @@ end = struct
       let ars = Node.array s in
       ignore (List.exists 
 	        (fun sp -> 
-		 if Atom.Array.subset (Node.array sp) ars then
+		 if ArrayAtom.subset (Node.array sp) ars then
 		 begin db := Some [sp.Node.tag]; true end
 		 else false
                 ) nodes);
@@ -150,22 +151,22 @@ module FixpointTrie : sig
 
 end = struct
 
-  let check_and_add n vis_n nodes =
+  let check_and_add n nodes vis_n=
     let n_array = Node.array n in
     let vis_cube = vis_n.Node.cube in
     let vis_array = vis_cube.Cube.array in
-    let d = Instantitaion.relevant ~of_cube:vis_cube ~to_cube:n.Node.cube in
+    let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.Node.cube in
     List.fold_left
       (fun nodes ss ->
-       let vis_renamed = Atom.Array.apply_subst ss vis_array in
-       (* if Atom.Array.subset vis_renamed n_array then *)
+       let vis_renamed = ArrayAtom.apply_subst ss vis_array in
+       (* if ArrayAtom.subset vis_renamed n_array then *)
        (*   raise (Fixpoint [vis_n.Node.tag]) *)
        (* Heuristic : throw away nodes too much different *)
-       (* else if Atom.Array.nb_diff pp anp > 2 then nodes *)
+       (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
        (* line below useful for arith : ricart *)
        if Cube.inconsistent_array
-                 (Atom.Array.union vis_renamed n_array) then nodes
-       else if Atom.Array.nb_diff vis_renamed n_array > 1 then
+                 (ArrayAtom.union vis_renamed n_array) then nodes
+       else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
          (vis_n, vis_renamed)::nodes
        else (Prover.assume_node vis_n vis_renamed; nodes)
       ) nodes d
@@ -180,9 +181,9 @@ end = struct
         (fun (nodes, cands) vis_p ->
          if unprioritize_cands && vis_p.Node.kind = Node.Approx then
            nodes, vis_p :: cands
-         else check_and_add nargs s vis_p nodes, cands
+         else check_and_add s nodes vis_p, cands
         ) ([], []) visited in
-    let nodes = List.fold_left (check_and_add nargs anp) nodes cands in
+    let nodes = List.fold_left (check_and_add s) nodes cands in
     TimeSort.start ();
     let nodes = 
       List.fast_sort 
@@ -194,7 +195,7 @@ end = struct
          if unprioritize_cands &&
               n2.Node.kind = Node.Approx && n1.Node.kind <> Node.Approx then 1
          (* a2 is a candidate *)
-         else Atom.Array.compare_nb_common s_array a1 a2) 
+         else ArrayAtom.compare_nb_common s_array a1 a2) 
         nodes 
     in
     TimeSort.pause ();
@@ -203,7 +204,7 @@ end = struct
   let easy_fixpoint s nodes =
     if delete && (s.Node.deleted || Node.has_deleted_ancestor s)
     then Some []
-    else Cubetrie.mem_array npa nodes
+    else Cubetrie.mem_array (Node.array s) nodes
 
   let medium_fixpoint s visited  =
     let vars, s_array = Node.variables s, Node.array s in
@@ -212,7 +213,7 @@ end = struct
                                     Already checked in easy_fixpoint. *)
     try
       List.iter (fun ss -> 
-                 let u = Atom.Array.apply_subst ss s_array in
+                 let u = ArrayAtom.apply_subst ss s_array in
                  match Cubetrie.mem_array u visited with
                  | Some uc -> raise (Fixpoint uc)
                  | None -> ()

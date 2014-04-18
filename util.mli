@@ -35,3 +35,8 @@ val set_liberal_gc : unit -> unit
 val reset_gc_params : unit -> unit
 (** Reset the parameters of the GC to its default values. Call after
     {!set_liberal_gc}. *)
+
+val syscall : string -> string
+(** Captures the output and exit status of a unix command *)
+
+val remove_trailing_whitespaces_end : string -> string

@@ -17,6 +17,8 @@ open Options
 open Format
 open Ast
 
+open Pre
+
 exception Unsafe of t_system
 
 type fsearch = 

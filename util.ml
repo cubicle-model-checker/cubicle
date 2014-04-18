@@ -51,3 +51,24 @@ let set_liberal_gc () =
     }
   in
   Gc.set gc_c
+
+
+(* Captures the output and exit status of a unix command : aux func *)
+let syscall cmd =
+  let ic, oc = Unix.open_process cmd in
+  let buf = Buffer.create 16 in
+  (try
+     while true do
+       Buffer.add_channel buf ic 1
+     done
+   with End_of_file -> ());
+  let _ = Unix.close_process (ic, oc) in
+  (Buffer.contents buf)
+
+let rec remove_trailing_whitespaces_end str =
+  if String.length str > 0 && 
+    (str.[String.length str - 1] = '\n' 
+    || str.[String.length str - 1] = ' '
+      || str.[String.length str - 1] = '\t')  then
+    remove_trailing_whitespaces_end (String.sub str 0 (String.length str - 1))
+  else str

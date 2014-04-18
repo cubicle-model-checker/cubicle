@@ -12,6 +12,8 @@
 (*  License version 2.0                                                   *)
 (*                                                                        *)
 (**************************************************************************)
+open Options
+open Format
 open Ast
 
 exception Unsafe of Node.t
@@ -23,14 +25,14 @@ exception Unsafe of Node.t
 let cdnf_asafe ua =
   List.exists (
     List.for_all (fun a ->
-      Cube.inconsistent (Array.append ua a)))
+      Cube.inconsistent_array (Array.append ua a)))
 
 
 (* fast check for inconsistence *)
 let obviously_safe { t_init_instances = init_inst; } n =
   let nb_procs = Cube.size n.Node.cube in
   let _, cdnf_ai = Hashtbl.find init_inst nb_procs in
-  cdnf_asafe ua cdnf_ai
+  cdnf_asafe (Node.array n) cdnf_ai
  
 let check s n =
   (*Debug.unsafe s;*)

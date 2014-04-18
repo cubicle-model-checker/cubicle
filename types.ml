@@ -255,6 +255,7 @@ module rec Atom : sig
   val equal : t -> t -> bool
   val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
   val has_var : Variable.t -> t -> bool
+  val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_atoms : string -> Format.formatter -> t list -> unit
@@ -324,16 +325,20 @@ end = struct
        Comp(sx, op, sy)
     | _ -> a
 
-  let rec contain_arg z = function
-    | Elem (x, _) -> Hstring.equal x z
-    | Access (_, lx) -> Hstring.list_mem z lx
-    | Arith (t, _) -> contain_arg z t
-    | Const _ -> false
+  let rec has_vars_term vs = function
+    | Elem (x, Var) -> Hstring.list_mem x vs
+    | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs 
+    | Arith (x, _) ->  has_vars_term vs x
+    | _ -> false
 
-  let has_var z = function
+  let rec has_vars vs = function
     | True | False -> false
-    | Comp (t1, _, t2) -> (contain_arg z t1) || (contain_arg z t2)
-    | Ite _ -> assert false
+    | Comp (x, _, y) -> has_vars_term vs x || has_vars_term vs y
+    | Ite (sa, a1, a2) ->
+       SAtom.exists (has_vars vs) sa || has_vars vs a1 || has_vars vs a2
+
+  let has_var v = has_vars [v]
+
 
   let rec variables = function
     | True | False -> Variable.Set.empty

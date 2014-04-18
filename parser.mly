@@ -16,12 +16,13 @@
 %{
 
   open Ast
+  open Types
   open Parsing
 
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
   type t = 
-    | Assign of Hstring.t * term
+    | Assign of Hstring.t * Term.t
     | Nondet of Hstring.t
     | Upd of update
 
@@ -65,7 +66,7 @@
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
 
-  let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
+  let set_from_list = List.fold_left (fun sa a -> SAtom.add a sa) SAtom.empty 
 
   let fresh_var = 
     let cpt = ref 0 in
@@ -277,7 +278,7 @@ update:
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
-            let c = Comp(Elem (j, Var), Eq, Elem (i, Var)) in
+            let c = Atom.Comp(Elem (j, Var), Eq, Elem (i, Var)) in
             SAtom.add c cube, j :: rjs) (SAtom.empty, []) $3 in
         let js = List.rev rjs in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
@@ -318,7 +319,7 @@ dnf:
 ;
 
 literal:
-  | term operator term { Comp($1, $2, $3) }
+  | term operator term { Atom.Comp($1, $2, $3) }
 ;
 
 constnum:

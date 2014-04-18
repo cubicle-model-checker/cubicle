@@ -16,8 +16,8 @@
 open Format
 open Options
 open Util
-open Term.Type
-open Atom.Type
+open Ast
+open Types
 
 
 module T = Smt.Term
@@ -27,8 +27,8 @@ module SMT = Smt.Make (Options)
 
 let proc_terms =
   List.iter 
-    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) proc_vars;
-  List.map (fun x -> T.make_app x []) proc_vars
+    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) Variable.procs;
+  List.map (fun x -> T.make_app x []) Variable.procs
 
 let distinct_vars = 
   let t = Array.create max_proc F.f_true in
@@ -108,16 +108,16 @@ let rec make_term = function
       make_arith_cs cs tx
 
 let rec make_formula_set sa = 
-  F.make F.And (Atom.Set.fold (fun a l -> make_literal a::l) sa [])
+  F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
 
 and make_literal = function
-  | True -> F.f_true 
-  | False -> F.f_false
-  | Comp (x, op, y) ->
+  | Atom.True -> F.f_true 
+  | Atom.False -> F.f_false
+  | Atom.Comp (x, op, y) ->
       let tx = make_term x in
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
-  | Ite (la, a1, a2) -> 
+  | Atom.Ite (la, a1, a2) -> 
       let f = make_formula_set la in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in
@@ -129,7 +129,7 @@ and make_literal = function
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
-module HAA = Hashtbl.Make (Atom.Array)
+module HAA = Hashtbl.Make (ArrayAtom)
 
 let make_formula =
   let cache = HAA.create 200001 in
@@ -163,7 +163,7 @@ let make_conjuct atoms1 atoms2 =
 
 
 let make_init_dnfs s nb_procs =
-  let cdnf_sa, _ = Hashtbl.find s.init_inst nb_procs in
+  let cdnf_sa, _ = Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (List.rev_map make_formula_set) cdnf_sa
 
 
@@ -202,7 +202,7 @@ let unsafe s n = unsafe_cdnf s n
 let reached args s sa =
   SMT.clear ();
   SMT.assume  ~id:0 (distinct_vars (List.length args));
-  let f = make_formula_set (Atom.Set.union sa s) in
+  let f = make_formula_set (SAtom.union sa s) in
   SMT.assume ~id:0 f;
   SMT.check ()
 
@@ -226,13 +226,13 @@ let run () = SMT.check ()
 let check_guard args sa reqs =
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
-  let f = make_formula_set (Atom.Set.union sa reqs) in
+  let f = make_formula_set (SAtom.union sa reqs) in
   SMT.assume ~id:0 f;
   SMT.check ()
 
 let unsat_core_wrt_node uc ap =
   Array.fold_left (fun acc a ->
     match make_literal a with
-      | F.Lit la when List.mem [la] uc -> Atom.Set.add a acc
+      | F.Lit la when List.mem [la] uc -> SAtom.add a acc
       | _ -> acc) 
-    Atom.Set.empty ap
+    SAtom.empty ap

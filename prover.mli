@@ -12,6 +12,7 @@
 (*  License version 2.0                                                   *)
 (*                                                                        *)
 (**************************************************************************)
+open Types
 
 module SMT : Smt.Solver
 
@@ -24,7 +25,7 @@ val reached : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 val assume_goal : Node.t -> unit
 (** Clears the context and assumes a goal formula *)
 
-val assume_node : Node.t -> Atom.Array.t -> unit
+val assume_node : Node.t -> ArrayAtom.t -> unit
 (** [assume_node n a] assumes the negation of a node [n] given in the form of a
     renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
 

@@ -15,7 +15,7 @@
 
 open Options
 open Util
-open Cterm.Type
+open Types
 
 module H = Hstring
 
@@ -97,7 +97,7 @@ and add_array_force_to_list atom cube v l = match l with
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem cube trie = match trie with 
   | Empty -> None
-  | Full {t_nb = id} -> Some [id]
+  | Full { Node.tag = id } -> Some [id]
   | Node l -> match cube with
       | [] -> None
       | atom::cube -> 
@@ -121,7 +121,7 @@ and mem_list atom cube l = match l with
 let rec mem_array cube trie = 
   match trie with 
   | Empty -> None
-  | Full {t_nb = id} -> Some [id]
+  | Full { Node.tag = id } -> Some [id]
   | Node l ->
       if Array.length cube = 0 then None
       else mem_array_list
@@ -228,13 +228,13 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
       []
   | Atom.Comp (Access (a1,li1), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x1)),
     Atom.Comp (Access (a2,li2), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x2))
-      when H.equal a1 a2 && H.list_equal li1 li2 && compare_term x1 x2 <> 0 ->
+      when H.equal a1 a2 && H.list_equal li1 li2 && Term.compare x1 x2 <> 0 ->
       []
   | Atom.Comp (Access (a1,li1), Eq,
                (Elem (_, (Constr|Glob)) | Arith _ as x1)),
     Atom.Comp (Access (a2,li2), (Neq | Lt), 
                (Elem (_, (Constr|Glob)) | Arith _ as x2))
-      when H.equal a1 a2 && H.list_equal li1 li2 && compare_term x1 x2 = 0 ->
+      when H.equal a1 a2 && H.list_equal li1 li2 && Term.compare x1 x2 = 0 ->
       []
   | _, _ ->
       let cmp = Atom.compare atom atom' in
@@ -244,3 +244,27 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
         | atom::cube -> consistent_list atom cube n
       else consistent (atom::cube) t'
 
+
+let rec add_and_resolve n visited =
+  let visited =
+    fold (fun visited nv ->
+      match Cube.resolve_two n.Node.cube nv.Node.cube with
+        | None -> visited
+        | Some cube_res -> add_and_resolve (Node.create cube_res) visited
+    ) visited visited in
+  add_array (Node.array n) n visited
+
+
+let delete_subsumed p nodes =
+  let vars, ap = Node.variables p, Node.array p in
+  let substs = Variable.all_permutations vars vars in
+  List.iter (fun ss ->
+    let u = ArrayAtom.apply_subst ss ap in
+    iter_subsumed (fun n ->
+      if Node.has_deleted_ancestor n || (not (Node.ancestor_of n p)) then begin
+        n.Node.deleted <- true;
+        (* if inc then incr nb_del; *)
+      end
+    ) (Array.to_list u) nodes;
+  ) substs;
+  delete (fun n -> n.Node.deleted || Node.has_deleted_ancestor n) nodes
