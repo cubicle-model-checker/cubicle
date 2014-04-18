@@ -13,23 +13,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-exception EmptyHeap
 
-module type OrderType = sig
-  type t
+open Options
+open Format
+open Ast
 
-  val compare : t -> t -> int
-end
 
-module type S = sig
-  type t
-  type elem 
+val remove_bad_candidates : t_system -> Node.t -> Node.t list -> Node.t list
 
-  val empty : t
-  val pop : t -> elem * t
-  val add : t -> elem list -> t
-  val elements : t -> elem list
-  val length : t -> int
-end
-
-module Make ( X : OrderType ) : S with type elem = X.t
+val good : Node.t -> Node.t option

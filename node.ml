@@ -27,6 +27,7 @@ type t =
       alpha : Variable.t list * ArrayAtom.t;
       tag : int;
       kind : kind;
+      depth : int;
       mutable deleted : bool;
       from : (transition * Variable.t list * t) list;
     }
@@ -34,6 +35,8 @@ type t =
 let variables {cube = {Cube.vars = vars }} = vars 
 
 let array n = n.cube.Cube.array
+
+let litterals n = n.cube.Cube.litterals
 
 let rec origin n = match n.from with
   | [] -> n
@@ -51,15 +54,17 @@ let new_tag =
 
 
 let create ?(kind=Node) ?(from=None) cube =
+  let hist =  match from with
+    | None -> []
+    | Some ((tr, args, n) as f) -> f :: n.from in
   { 
     cube = cube;
     alpha = ArrayAtom.alpha cube.Cube.array cube.Cube.vars;
     tag = new_tag ~kind ();
     kind = kind;
+    depth = List.length hist;
     deleted = false;
-    from = match from with
-           | None -> []
-           | Some ((tr, args, n) as f) -> f :: n.from
+    from = hist;
   }
 
 let has_deleted_ancestor n =

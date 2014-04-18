@@ -29,6 +29,7 @@ val number : t -> int
 
 val build_subst : t list -> t list -> subst
 val subst : subst -> t -> t
+val is_subst_identity : subst -> bool
 
 val all_permutations : t list -> t list -> subst list
 val all_instantiations : t list -> t list -> subst list

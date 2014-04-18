@@ -13,23 +13,20 @@
 (*                                                                        *)
 (**************************************************************************)
 
-exception EmptyHeap
+module Make (Options : sig
+                         val profiling : bool
+                         val verbose : int
+                         val quiet : bool
+                       end) : sig
 
-module type OrderType = sig
-  type t
+  val new_node : Node.t -> unit
 
-  val compare : t -> t -> int
+  val fixpoint : Node.t -> int list option -> unit
+
+  val restart : unit -> unit
+
+  val remaining : int -> unit
+
+  val candidate : Node.t -> unit
+
 end
-
-module type S = sig
-  type t
-  type elem 
-
-  val empty : t
-  val pop : t -> elem * t
-  val add : t -> elem list -> t
-  val elements : t -> elem list
-  val length : t -> int
-end
-
-module Make ( X : OrderType ) : S with type elem = X.t

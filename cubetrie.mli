@@ -41,6 +41,9 @@ val mem : Atom.t list -> Node.t t -> int list option
 (** Is cube subsumed by some cube in the trie? *)
 val mem_array : ArrayAtom.t -> Node.t t -> int list option
 
+(** Is cube subsumed by some cube in the trie? *)
+val mem_array_poly : ArrayAtom.t -> 'a t -> bool
+
 (** Apply f to all values mapped to in the trie. *)
 val iter : ('a -> unit) -> 'a t -> unit
 
@@ -62,3 +65,6 @@ val consistent : Atom.t list -> 'a t -> 'a list
 val add_and_resolve : Node.t -> Node.t t -> Node.t t
 
 val delete_subsumed : Node.t -> Node.t t -> Node.t t
+
+(** Add a node in the trie *)
+val add_node : Node.t -> Node.t t -> Node.t t

@@ -54,8 +54,8 @@ type t_system = {
   t_arrays : Hstring.t list;
   t_init : Variable.t list * dnf;
   t_init_instances : (int, (dnf list * ArrayAtom.t list list)) Hashtbl.t;
-  t_invs : Cube.t list;
-  t_unsafe : Cube.t list;
+  t_invs : Node.t list;
+  t_unsafe : Node.t list;
   t_trans : transition list;
 }
 

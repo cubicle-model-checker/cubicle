@@ -347,16 +347,18 @@ let system s =
     (*     [] (\*s.globals*\) s.consts *)
     (* in *)
 
-    let create_cube_rename (vars, sa) =
-      Cube.normal_form (Cube.create vars sa) in
+    let create_node_rename kind (vars, sa) =
+      let c = Cube.normal_form (Cube.create vars sa) in
+      Node.create ~kind c
+    in
 
     { 
       t_globals = List.map fst s.globals;
       t_arrays = List.map fst s.arrays;
       t_init = s.init;
       t_init_instances = create_init_instances s.init;
-      t_invs = List.map create_cube_rename s.invs;
-      t_unsafe = List.map create_cube_rename s.unsafe;
+      t_invs = List.map create_node_rename Node.Inv s.invs;
+      t_unsafe = List.map create_node_rename Node.Node  s.unsafe;
       t_trans = s.trans;
     }
 

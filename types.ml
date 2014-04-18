@@ -313,7 +313,7 @@ end = struct
 
   let equal x y = compare x y = 0
 
-  let rec subst sigma ?(sigma_sort=[]) a = 
+  let rec subst sigma ?(sigma_sort=[]) a =
     match a with
     | Ite (sa, a1, a2) ->
        Ite(SAtom.subst sigma ~sigma_sort sa, 
@@ -392,13 +392,16 @@ end = struct
 
   let hash (sa:t) = Hashtbl.hash_param 100 500 sa
 
-  let subst sigma ?(sigma_sort=[]) sa = 
-    fold (fun a -> add (Atom.subst sigma ~sigma_sort a)) sa empty
+  let subst sigma ?(sigma_sort=[]) sa =
+    if Variable.is_subst_identity sigma &&
+         Variable.is_subst_identity sigma_sort then sa
+    else
+      fold (fun a -> add (Atom.subst sigma ~sigma_sort a)) sa empty
 
   let subst sigma ?(sigma_sort=[]) sa =
-    if profiling then TimerApply.start ();
+    TimerApply.start ();
     let sa = subst sigma ~sigma_sort sa in
-    if profiling then TimerApply.pause ();
+    TimerApply.pause ();
     sa
 
   let variables sa =
@@ -444,7 +447,7 @@ module ArrayAtom = struct
   let hash = Hashtbl.hash_param 100 500
 
   let subset a1 a2 =
-    if profiling then TimerSubset.start ();
+    TimerSubset.start ();
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
     let s = 
@@ -460,11 +463,11 @@ module ArrayAtom = struct
 	done;
 	!i1 = n1
     in
-    if profiling then TimerSubset.pause ();
+    TimerSubset.pause ();
     s
 
   let trivial_is_implied a1 a2 =
-    if profiling then TimerSubset.start ();
+    TimerSubset.start ();
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
     let s = 
@@ -480,7 +483,7 @@ module ArrayAtom = struct
 	done;
 	!i1 = n1
     in
-    if profiling then TimerSubset.pause ();
+    TimerSubset.pause ();
     s
 
   let subset = trivial_is_implied
@@ -496,18 +499,21 @@ module ArrayAtom = struct
     (* Array.fast_sort Atom.compare a; a *)
 
   let apply_subst sigma a =
-    if profiling then TimerApply.start ();
-    let a' = Array.init (Array.length a) (fun i -> Atom.subst sigma a.(i)) in
-    Array.fast_sort Atom.compare a';
-    if profiling then TimerApply.pause ();
-    a'
+    TimerApply.start ();
+    if Variable.is_subst_identity sigma &&
+         Variable.is_subst_identity sigma_sort then (TimerApply.pause (); a)
+    else
+      let a' = Array.init (Array.length a) (fun i -> Atom.subst sigma a.(i)) in
+      Array.fast_sort Atom.compare a';
+      TimerApply.pause ();
+      a'
 
   let alpha atoms args =
     let subst = Variable.build_subst args Variable.alphas in
     List.map snd subst, apply_subst subst atoms
 
   let nb_diff a1 a2 =
-    if profiling then TimerSubset.start ();
+    TimerSubset.start ();
     let cpt = ref 0 in
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
@@ -519,7 +525,7 @@ module ArrayAtom = struct
       else if c < 0 then (incr cpt; incr i1)
       else incr i2
     done;
-    if profiling then TimerSubset.pause ();
+    TimerSubset.pause ();
     !cpt + (n1 - !i1)
 
   let compare_nb_diff a p1 p2 =
@@ -527,7 +533,7 @@ module ArrayAtom = struct
 
 
   let nb_common a1 a2 =
-    if profiling then TimerSubset.start ();
+    TimerSubset.start ();
     let cpt = ref 0 in
     let n1 = Array.length a1 in
     let n2 = Array.length a2 in
@@ -539,7 +545,7 @@ module ArrayAtom = struct
       else if c < 0 then incr i1
       else incr i2
     done;
-    if profiling then TimerSubset.pause ();
+    TimerSubset.pause ();
     (float_of_int !cpt) /. (float_of_int n1)
 
 

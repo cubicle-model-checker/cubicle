@@ -66,6 +66,9 @@ let build_subst args a_args =
 let subst sigma v = Hstring.list_assoc v sigma
 
 
+let is_subst_identity sigma =
+  List.for_all (fun (x,y) -> Hstring.equal x y) sigma
+
 let rec all_permutations l1 l2 = 
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with

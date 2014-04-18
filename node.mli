@@ -23,12 +23,14 @@ type t =
       alpha : Variable.t list * ArrayAtom.t;
       tag : int;
       kind : kind;
+      depth : int;
       mutable deleted : bool;
       from : (transition * Variable.t list * t) list;
     }
 
 val variables : t -> Variable.t list
 val array : t -> ArrayAtom.t
+val litterals : t -> SAtom.t
 
 val create :
   ?kind:kind -> ?from:(transition * Variable.t list * t) option -> Cube.t -> t

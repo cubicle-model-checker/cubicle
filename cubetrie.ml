@@ -142,7 +142,32 @@ and mem_array_list atom cube l = match l with
       else if Array.length cube = 0 then None
       else mem_array_list
         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
-       
+
+(* Is cube subsumed by some cube in the trie? *)
+let rec mem_array_poly cube trie = 
+  match trie with 
+  | Empty -> None
+  | Full _ -> true
+  | Node l ->
+      if Array.length cube = 0 then false
+      else mem_array_poly_list
+        cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
+and mem_array_poly_list atom cube l = match l with
+  | [] -> None
+  | (atom',t')::n ->
+      (* let cmp = Atom.compare atom atom' in *)
+      let cmp = - (Atom.trivial_is_implied atom' atom) in
+      if cmp = 0 then 
+        mem_array_poly cube t' ||
+          (Array.length cube <> 0 &&
+             mem_array_poly_list
+               cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
+          )
+      else if cmp > 0 then mem_array_poly_list atom cube n
+      else (Array.length cube <> 0 &&
+              mem_array_poly_list
+                cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l)
+
 let mem c t =
   TimerSubset.start ();
   let res = mem c t in
@@ -268,3 +293,6 @@ let delete_subsumed p nodes =
     ) (Array.to_list u) nodes;
   ) substs;
   delete (fun n -> n.Node.deleted || Node.has_deleted_ancestor n) nodes
+
+
+let add_node p trie = add_array (Node.array p) p trie

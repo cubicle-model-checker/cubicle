@@ -13,23 +13,40 @@
 (*                                                                        *)
 (**************************************************************************)
 
-exception EmptyHeap
+open Options
+open Format
+open Ast
 
-module type OrderType = sig
-  type t
 
-  val compare : t -> t -> int
+module type PriorityNodeQueue = sig
+
+    type t
+
+    val create : unit -> t
+    val pop : t -> Node.t
+    val push : Node.t -> t -> unit
+    val push_list : Node.t list -> t -> unit
+    val clear : t -> unit
+    val length : t -> int
+    val is_empty : t -> bool
 end
 
-module type S = sig
-  type t
-  type elem 
 
-  val empty : t
-  val pop : t -> elem * t
-  val add : t -> elem list -> t
-  val elements : t -> elem list
-  val length : t -> int
+type result = Safe of Node.t list | Unsafe of Node.t
+
+exception ReachedLimit
+
+
+module type Strategy = sig
+  
+  val search : ?invariants -> ?candidates -> t_system -> result
+
 end
 
-module Make ( X : OrderType ) : S with type elem = X.t
+
+module Make ( Q : PriorityNodeQueue ) : Strategy
+
+module BFS : Strategy
+module DFS : Strategy
+module BFSH : Strategy
+module DFSH : Strategy

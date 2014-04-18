@@ -63,24 +63,34 @@ let cube_false =
   array = Array.of_list [Atom.False];
 }
 
+let subst sigma { vars = vs; array = ar } =
+  let nar = ArrayAtom.apply_subst sigma ar in
+  {
+    vars = List.map (Variable.subst sigma) vs;
+    litterals = ArrayAtom.to_satom nar;
+    array = nar;
+  }
+
 (***************************************)
 (* Good renaming of a cube's variables *)
 (***************************************)
 
-let normal_form { litterals = sa; array = ar } =
+let normal_form ({ litterals = sa; array = ar } as c) =
   let vars = Variable.Set.elements (SAtom.variables sa) in
   if !size_proc <> 0 && List.length vars > !size_proc then
     cube_false
   else
   let sigma = Variable.build_subst vars Variable.procs in
-  let new_vars = List.map snd sigma in
-  let new_ar = ArrayAtom.apply_subst sigma ar in
-  let new_sa = ArrayAtom.to_satom ar in
-  {
-    vars = new_vars;
-    litterals = new_sa;
-    array = new_ar;
-  }
+  if Variable.is_subst_identity sigma then c
+  else
+    let new_vars = List.map snd sigma in
+    let new_ar = ArrayAtom.apply_subst sigma ar in
+    let new_sa = ArrayAtom.to_satom ar in
+    {
+      vars = new_vars;
+      litterals = new_sa;
+      array = new_ar;
+    }
 
 
 let create_normal sa = normal_form (create [] sa)
@@ -609,6 +619,10 @@ let simplify { litterals = sa; } =
 
 let elim_ite_simplify { litterals = sa; } =
   List.map create_normal (elim_ite_atoms sa)
+
+let simplify_atoms_base = simplification_atoms
+let simplify_atoms sa = simplification_atoms SAtom.empty sa
+let elim_ite_simplify_atoms = elim_ite_atoms
 
 
 let resolve_two_arrays ar1 ar2 =

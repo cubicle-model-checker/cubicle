@@ -25,6 +25,7 @@ type t =
 val create : Variable.t list -> SAtom.t -> t
 val normal_form : t -> t
 val create_normal : SAtom.t -> t
+val subst : Variable.subst -> t -> t
 
 val size : t -> int
 val card: t -> int
@@ -32,8 +33,12 @@ val card: t -> int
 val inconsistent : ?use_sets:bool -> t -> bool
 val inconsistent_2 : ?use_sets:bool -> t -> t -> bool
 
+val inconsistent_set : SAtom.t -> bool
 val inconsistent_array : ArrayAtom.t -> bool
 
+val simplify_atoms_base : SAtom.t -> SAtom.t -> SAtom.t
+val simplify_atoms : SAtom.t -> SAtom.t
+val elim_ite_simplify_atoms : SAtom.t -> SAtom.t list
 
 val simplify : t -> t
 val elim_ite_simplify : t -> t list
