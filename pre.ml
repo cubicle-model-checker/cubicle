@@ -344,4 +344,4 @@ let pre_image trs s =
     trs 
   in
   TimePre.pause ();
-  ls, post
+  List.rev ls, List.rev post
