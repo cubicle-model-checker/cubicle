@@ -49,13 +49,27 @@ type system = {
 
 (* Typed AST *)
 
+type kind = Approx | Node | Inv
+
+type node_cube =
+    { 
+      cube : Cube.t;
+      alpha : Variable.t list * ArrayAtom.t;
+      tag : int;
+      kind : kind;
+      depth : int;
+      mutable deleted : bool;
+      from : trace;
+    }
+and trace = (transition * Variable.t list * node_cube) list
+
 type t_system = {
   t_globals : Hstring.t list;
   t_arrays : Hstring.t list;
   t_init : Variable.t list * dnf;
   t_init_instances : (int, (dnf list * ArrayAtom.t list list)) Hashtbl.t;
-  t_invs : Node.t list;
-  t_unsafe : Node.t list;
+  t_invs : node_cube list;
+  t_unsafe : node_cube list;
   t_trans : transition list;
 }
 

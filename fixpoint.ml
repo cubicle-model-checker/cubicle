@@ -16,6 +16,7 @@
 open Format
 open Options
 open Util
+open Ast
 open Types
 
 module Debug = struct
@@ -32,7 +33,7 @@ module Debug = struct
   let unsafe = 
     if not debug then fun _ -> () else 
       fun s ->
-	eprintf "    %a@." Node.print s
+	eprintf "FIX:    %a@." Node.print s
 
 end
 
@@ -61,18 +62,17 @@ end = struct
 
   let check_fixpoint ?(pure_smt=false) n visited =
     Prover.assume_goal n;
-    let n_array = n.Node.cube.Cube.array in
+    let n_array = n.cube.Cube.array in
     let nodes = 
       List.fold_left
         (fun nodes vis_n ->
-         let vis_cube = vis_n.Node.cube in
-         let d = Instantiation.relevant
-                   ~of_cube:vis_cube ~to_cube:n.Node.cube in
+         let vis_cube = vis_n.cube in
+         let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
          List.fold_left
 	   (fun nodes ss ->
 	    let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
 	    if not pure_smt && ArrayAtom.subset vis_renamed n_array then
-	        raise (Fixpoint [vis_n.Node.tag])
+	        raise (Fixpoint [vis_n.tag])
 	    (* Heuristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	    (* line below useful for arith : ricart *)
@@ -96,7 +96,7 @@ end = struct
 
 
   let easy_fixpoint s nodes =
-    if delete && (s.Node.deleted || Node.has_deleted_ancestor s)
+    if delete && (s.deleted || Node.has_deleted_ancestor s)
     then Some []
     else
       let db = ref None in
@@ -104,7 +104,7 @@ end = struct
       ignore (List.exists 
 	        (fun sp -> 
 		 if ArrayAtom.subset (Node.array sp) ars then
-		 begin db := Some [sp.Node.tag]; true end
+		 begin db := Some [sp.tag]; true end
 		 else false
                 ) nodes);
       !db
@@ -153,9 +153,9 @@ end = struct
 
   let check_and_add n nodes vis_n=
     let n_array = Node.array n in
-    let vis_cube = vis_n.Node.cube in
+    let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
-    let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.Node.cube in
+    let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
     List.fold_left
       (fun nodes ss ->
        let vis_renamed = ArrayAtom.apply_subst ss vis_array in
@@ -179,7 +179,7 @@ end = struct
     let nodes, cands =
       Cubetrie.fold
         (fun (nodes, cands) vis_p ->
-         if unprioritize_cands && vis_p.Node.kind = Node.Approx then
+         if unprioritize_cands && vis_p.kind = Approx then
            nodes, vis_p :: cands
          else check_and_add s nodes vis_p, cands
         ) ([], []) visited in
@@ -189,11 +189,11 @@ end = struct
       List.fast_sort 
         (fun (n1, a1) (n2, a2) ->
          if unprioritize_cands &&
-              n1.Node.kind = Node.Approx && n2.Node.kind <> Node.Approx then 1 
+              n1.kind = Approx && n2.kind <> Approx then 1 
          (* a1 is a candidate *)
          else
          if unprioritize_cands &&
-              n2.Node.kind = Node.Approx && n1.Node.kind <> Node.Approx then 1
+              n2.kind = Approx && n1.kind <> Approx then 1
          (* a2 is a candidate *)
          else ArrayAtom.compare_nb_common s_array a1 a2) 
         nodes 
@@ -202,7 +202,7 @@ end = struct
     List.iter (fun (vn, ar_renamed) -> Prover.assume_node vn ar_renamed) nodes
               
   let easy_fixpoint s nodes =
-    if delete && (s.Node.deleted || Node.has_deleted_ancestor s)
+    if delete && (s.deleted || Node.has_deleted_ancestor s)
     then Some []
     else Cubetrie.mem_array (Node.array s) nodes
 

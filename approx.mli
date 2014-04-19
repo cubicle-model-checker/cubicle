@@ -21,4 +21,11 @@ open Ast
 
 val remove_bad_candidates : t_system -> Node.t -> Node.t list -> Node.t list
 
-val good : Node.t -> Node.t option
+module type S = sig
+    val good : Node.t -> Node.t option
+end
+
+module Make ( O : Oracle.S ) : S
+
+module SelectedOracle : Oracle.S
+module Selected : S

@@ -19,19 +19,7 @@ open Ast
 open Util
 open Types
 
-type kind = Node | Approx | Inv
-
-type t =
-    { 
-      cube : Cube.t;
-      alpha : Variable.t list * ArrayAtom.t;
-      tag : int;
-      kind : kind;
-      depth : int;
-      mutable deleted : bool;
-      from : trace;
-    }
-and trace = (transition * Variable.t list * t) list 
+type t = node_cube
 
 
 let variables {cube = {Cube.vars = vars }} = vars 
@@ -39,6 +27,10 @@ let variables {cube = {Cube.vars = vars }} = vars
 let array n = n.cube.Cube.array
 
 let litterals n = n.cube.Cube.litterals
+
+let size n = Cube.size n.cube
+
+let card n = Cube.card n.cube
 
 let rec origin n = match n.from with
   | [] -> n

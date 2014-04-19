@@ -21,13 +21,15 @@ val search : Variable.t list -> t_system -> unit
 
 val resume_search_from : Variable.t list -> t_system -> unit
 
-val replay_trace_and_expand : Variable.t list -> t_system -> unit
+val replay_trace_and_expand : Variable.t list -> t_system -> Node.t -> unit
 
 val smallest_to_resist_on_trace : Node.t list -> Node.t list
 (** Given a list of candidate approximations (and their permutations),
     checks if one is satisfiable on the finite model constructed by
     [search]. *)
 
+
+(** {2 Oracle interface } *)
 
 val init : t_system -> unit
 

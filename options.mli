@@ -15,7 +15,7 @@
 
 type mode = 
   | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsDist | Bfsinvp 
+  | Bfs | BfsH | BfsDist | Bfsinvp 
   | Induct
 
 type trace =  NoTrace | AltErgoTr | WhyTr

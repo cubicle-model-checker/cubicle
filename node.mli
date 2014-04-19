@@ -15,22 +15,14 @@
 open Ast
 open Types
 
-type kind = Node | Approx | Inv
-
-type t =
-    { 
-      cube : Cube.t;
-      alpha : Variable.t list * ArrayAtom.t;
-      tag : int;
-      kind : kind;
-      depth : int;
-      mutable deleted : bool;
-      from : (transition * Variable.t list * t) list;
-    }
+type t = node_cube
 
 val variables : t -> Variable.t list
 val array : t -> ArrayAtom.t
 val litterals : t -> SAtom.t
+
+val size : t -> int
+val card : t -> int
 
 val create :
   ?kind:kind -> ?from:(transition * Variable.t list * t) option -> Cube.t -> t

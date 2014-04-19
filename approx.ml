@@ -19,47 +19,78 @@ open Format
 open Ast
 open Types
 
-let SA = Set.Make(Atom)
+module SA = SAtom
 
 let bad_candidates = ref Cubetrie.empty
 
+let non_cfm_literals = ref SA.empty
+
+let contains_non_cfm s = not (SA.is_empty (SA.inter s !non_cfm_literals))
+let lit_non_cfm a = SA.mem a !non_cfm_literals
+
+
 let register_bad system cand trace =
   let cvars = Node.variables cand in
-  assert (cand.Node.kind = Node.Approx);
+  assert (cand.kind = Approx);
   let bads =
     List.fold_left 
       (fun acc sigma ->
-       Cubetrie.add_array (Node.array (Cube.subst sigma cand.Node.cube)) () acc)
+       Cubetrie.add_array (Cube.subst sigma cand.cube).Cube.array () acc)
       !bad_candidates (Variable.all_permutations cvars cvars)
   in
-  bad_candidates := !bads;
+  bad_candidates := bads;
   match trace with
   | [] -> ()
   | _ ->
-     List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
-               (Forward.conflicting_from_trace system trace)
+  let bads =
+    List.fold_left 
+      (fun acc sa ->
+       Cubetrie.add (SAtom.elements sa) () acc)
+      !bad_candidates (Forward.conflicting_from_trace system trace)
+  in
+  bad_candidates := bads
 
 
-let cube_same c1 c2 = ArrayAtom.equal c1.Cube.array c2.Cube.array
+let remove_non_cfm_cand system candidates =
+  List.filter (fun sc ->
+	       if contains_non_cfm (Node.litterals sc) then false 
+	       else (register_bad system sc []; true))
+              candidates
+
+
+let node_same n1 n2 = ArrayAtom.equal (Node.array n1) (Node.array n2)
 
 let rec remove_bad_candidates sys faulty candidates =
-  let trace = faulty.Node.from in
+  let trace = faulty.from in
   let cand = Node.origin faulty in
   let nc = 
     List.fold_left 
       (fun acc c' ->
-	if cube_same cand.Node.cube c'.Node.cube
+	if node_same cand c'
 	then
 	  (* raise UNSAFE if we try to remove a candidate 
 	     which is an unsafe property *)
-	  if List.exists (cube_same c'.Node.cube) sys.unsafe then
+	  if List.exists (node_same c') sys.t_unsafe then
 	    raise (Safety.Unsafe faulty)
-	  else (register_bad c' trace; acc)
-        (* TODO apres avoir changé forward *)                 
-        else if Forward.reachable_on_trace_from_init system trace <> Forward.Unreach
-	then
-          (register_bad c' []; acc)
-	else c'::acc)
+	  else (register_bad sys c' trace; acc)
+        else 
+          if Forward.spurious_due_to_cfm sys faulty then
+            (* Find out if bactrack is due to crash failure model, in which
+               case record literals that do not respect CMF model *)
+            begin
+              non_cfm_literals := SA.union (Node.litterals cand) !non_cfm_literals;
+              if not quiet && verbose > 0 then 
+                eprintf "Non CFM literals = %a@." SAtom.print !non_cfm_literals;
+              remove_non_cfm_cand sys acc
+            end
+          else
+            (* remove candidates that are reachable on the same trace modulo
+               renaming of parameters *)
+            if Forward.reachable_on_trace_from_init sys c' trace <> 
+                 Forward.Unreach
+	    then
+              (register_bad sys c' []; acc)
+	    else c'::acc)
       [] candidates in
   List.rev nc
 
@@ -74,13 +105,13 @@ let nb_arrays_sa sa =
     | _ -> n
   ) sa 0
 
-let nb_arrays s = nb_arrays_sa (snd s.t_unsafe)
+let nb_arrays s = nb_arrays_sa (Node.litterals s)
 
 let nb_neq s =
   SAtom.fold (fun a n -> match a with
     | Atom.Comp (_, Neq, _) -> n + 1
     | _ -> n
-  ) (snd s.t_unsafe) 0
+  ) (Node.litterals s) 0
 
 
 let nb_arith s =
@@ -91,7 +122,7 @@ let nb_arith s =
     | Atom.Comp (Const _, _, _) 
     | Atom.Comp (_, _, Const _) -> n + 1
     | _ -> n
-  ) (snd s.t_unsafe) 0
+  ) (Node.litterals s) 0
 
 let respect_finite_order =
   SAtom.for_all (function
@@ -106,8 +137,8 @@ let hsort = Hstring.make "Sort"
 let hhome = Hstring.make "Home"
 
 let sorted_variables sa =
-  let procs = Cube.args_of_atoms sa in
-  List.for_all (fun p ->
+  let procs = SAtom.variables sa in
+  Variable.Set.for_all (fun p ->
     SAtom.exists (function 
       | Atom.Comp (Access (s, [x]), _, _) 
         when Hstring.equal s hsort && Hstring.equal x p -> true
@@ -121,7 +152,7 @@ let isolate_sorts =
 
 
 let reattach_sorts sorts sa =
-  let procs = Cube.args_of_atoms sa in
+  let procs = Variable.Set.elements (SAtom.variables sa) in
   SAtom.fold (fun a sa -> match a with
     | Atom.Comp (Access (s, [x]), _, _) 
         when Hstring.equal s hsort && Hstring.list_mem x procs ->
@@ -153,7 +184,6 @@ let useless_candidate sa =
 
     | Comp ((Elem (x, _) | Access (x,_)), _, _)
     | Comp (_, _, (Elem (x, _) | Access (x,_))) ->
-      let x = if is_prime (Hstring.view x) then unprime_h x else x in
       (* Smt.Symbol.has_type_proc x ||  *)
         (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
         (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
@@ -163,6 +193,17 @@ let useless_candidate sa =
 
     | _ -> false) sa
 
+
+let cube_likely_bad c = (* heuristic *)
+  Cubetrie.mem_array_poly c.Cube.array !bad_candidates
+
+let cube_known_bad c = 
+  try Cubetrie.iter_subsumed (fun _ -> raise Exit)
+          (Array.to_list c.Cube.array) !bad_candidates;
+      false
+  with Exit -> true
+
+
 (*****************************************)
 (* Potential approximations for a node s *)
 (*****************************************)
@@ -170,86 +211,81 @@ let useless_candidate sa =
 let approx_arith a = match a with
   | Atom.Comp (t, Eq, Const c) ->
      begin
-       match Cube.const_sign c with
+       match const_sign c with
        | None | Some 0 -> a
        | Some n ->
-	  let zer = Const (Cube.add_constants c (Cube.mult_const (-1) c)) in
+	  let zer = Const (add_constants c (mult_const (-1) c)) in
 	  if n < 0 then Atom.Comp (t, Lt, zer)
 	  else Atom.Comp (zer, Lt, t)
      end
   | _ -> a
 
-let approximations ({ t_unsafe = (args, sa) } as s) =
-    let sorts_sa, sa = isolate_sorts sa in
-    let init = 
-      SAtom.fold (fun a acc ->
-        if useless_candidate (SAtom.singleton a) || lit_non_cfm a 
-	then acc
-        else SSAtoms.add (SAtom.singleton a) acc)
-        sa SSAtoms.empty in
-    (* All subsets of sa of relevant size *)
-    let parts =
-      SAtom.fold (fun a acc ->
-	let a = approx_arith a in 
-        if useless_candidate (SAtom.singleton a) then acc
-        else if lit_non_cfm a then acc
-        else
-          SSAtoms.fold (fun sa' acc ->
+let approximations s =
+  let args, sa = Node.variables s, Node.litterals s in
+  let sorts_sa, sa = isolate_sorts sa in
+  let init = 
+    SAtom.fold 
+      (fun a acc ->
+       if useless_candidate (SAtom.singleton a) || lit_non_cfm a 
+       then acc
+       else SSAtoms.add (SAtom.singleton a) acc)
+      sa SSAtoms.empty in
+  (* All subsets of sa of relevant size *)
+  let parts =
+    SAtom.fold
+      (fun a acc ->
+       let a = approx_arith a in 
+       if useless_candidate (SAtom.singleton a) then acc
+       else if lit_non_cfm a then acc
+       else
+         SSAtoms.fold
+           (fun sa' acc ->
             let nsa = SAtom.add a sa' in
-            let nargs = Cube.args_of_atoms nsa in
-            if List.length nargs > enumerative then acc
+            if Variable.Set.cardinal (SAtom.variables nsa) > enumerative then
+              acc
             else if SAtom.cardinal nsa > enumerative + 1 then acc
             else SSAtoms.add nsa acc
-          ) acc acc
+           ) acc acc
       ) sa init
-    in
-    (* Filter non interresting candidates *)
-    let parts = SSAtoms.fold (fun sa' acc ->
-      if SAtom.equal sa' sa then acc
-      (* Heuristic : usefull for flash *)
-      else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > enumerative - 1 then acc
-      (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then acc *)
-      else
-        let sa' = reattach_sorts sorts_sa sa' in
-        if SAtom.equal sa' sa then acc
-        else
-        let sa', (args', _) = Cube.proper_cube sa' in
-        if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
-          !bad_candidates then acc
-        else
-          let ar' = ArrayAtom.of_satom sa' in
-          decr cpt_approx;
-          let s' = 
-            { s with
-	      t_from = [];
-	      t_unsafe = args', sa';
-	      t_arru = ar';
-	      t_alpha = ArrayAtom.alpha ar' args';
-	      t_deleted = false;
-	      t_nb = !cpt_approx;
-	      t_nb_father = -1;
-            } in
-          s' :: acc
-    ) parts []
-    in
-    (* Sorting heuristic of approximations with most general ones first *)
-    List.fast_sort (fun s1 s2 ->
-      let c = Pervasives.compare (Cube.card_system s1) (Cube.card_system s2) in
-      if c <> 0 then c
-      else 
-        let c =
-          Pervasives.compare (Cube.size_system s1) (Cube.size_system s2) in
-        if c <> 0 then c
-        else 
-          let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in
-          if c <> 0 then c
-          else
-            Pervasives.compare (nb_arrays s1) (nb_arrays s2)
-          (* if c <> 0 then c *)
-          (* else *)
-          (*   SAtom.compare (snd s1.t_unsafe) (snd s2.t_unsafe) *)
+  in
+  (* Filter non interresting candidates *)
+  let parts =
+    SSAtoms.fold
+      (fun sa' acc ->
+       if SAtom.equal sa' sa then acc
+       (* Heuristic : usefull for flash *)
+       else if SAtom.cardinal sa' >= 3 &&
+                 nb_arrays_sa sa' > enumerative - 1 then acc
+       (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then
+               acc *)
+       else
+         let sa' = reattach_sorts sorts_sa sa' in
+         if SAtom.equal sa' sa then acc
+         else
+           let c = Cube.create_normal sa' in
+           if cube_known_bad c || cube_likely_bad c then acc
+           else (Node.create ~kind:Approx c) :: acc
+      ) parts []
+  in
+  (* Sorting heuristic of approximations with most general ones first *)
+  List.fast_sort
+    (fun s1 s2 ->
+     let c = Pervasives.compare (Node.card s1) (Node.card s2) in
+     if c <> 0 then c
+     else 
+       let c =
+         Pervasives.compare (Node.size s1) (Node.size s2) in
+       if c <> 0 then c
+       else 
+         let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in
+         if c <> 0 then c
+         else
+           Pervasives.compare (nb_arrays s1) (nb_arrays s2)
+         (* if c <> 0 then c *)
+         (* else *)
+         (*   SAtom.compare (Node.litterals s1) (Node.litterals s1) *)
     ) parts
-
+    
 (* TODO : approx trees or bdds *)
 
 let keep n l =
@@ -258,20 +294,59 @@ let keep n l =
     | x::r, _ -> aux (x::acc) (n-1) r in
   aux [] n l
 
-let subsuming_candidate s =
-  let approx = approximations s in
-  let approx = if max_cands = -1 then approx else keep max_cands approx in
-  if verbose > 0 && not quiet then 
-    eprintf "Checking %d approximations:@." (List.length approx);
-  Oracle.first_good_candidate approx
 
 
-let good n =
-  if not do_brab then None
-  else
-    match n.Node.kind with
+module type S = sig
+    val good : Node.t -> Node.t option
+end
+
+module Make ( O : Oracle.S ) : S = struct
+
+  let subsuming_candidate s =
+    let approx = approximations s in
+    let approx = if max_cands = -1 then approx else keep max_cands approx in
+    if verbose > 0 && not quiet then 
+      eprintf "Checking %d approximations:@." (List.length approx);
+    O.first_good_candidate approx
+
+
+  let good n = match n.kind with
     | Approx ->
-    (* It's useless to look for approximations of an approximation *)
+       (* It's useless to look for approximations of an approximation *)
        None
-    | Node ->
+    | _ ->
        subsuming_candidate n
+
+end
+
+
+module GrumpyOracle : Oracle.S = struct
+
+  let init _ = ()
+  let first_good_candidate _ =
+    failwith "You should not call Grumpy Oracle."
+
+end
+
+module GrumpyApprox : S = struct
+
+  let good _ = None
+
+end
+
+
+let select_oracle =
+  if do_brab then
+    (module Enumerative : Oracle.S)
+  else
+    (module GrumpyOracle : Oracle.S)
+
+module SelectedOracle : Oracle.S = (val select_oracle)
+
+
+
+let select_approx =
+  if do_brab then (module Make(SelectedOracle) : S)
+  else (module GrumpyApprox)
+
+module Selected : S = (val select_approx)

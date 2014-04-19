@@ -71,6 +71,9 @@ type term =
 let subst_sort sigma_sort s = try List.assoc s sigma_sort with Not_found -> s
 
 
+let is_subst_sort_identity sigma =
+  List.for_all (fun (x,y) -> x = y) sigma
+
 let is_int_const = function
   | ConstInt _ -> true
   | ConstReal _ -> false
@@ -167,6 +170,8 @@ module Term = struct
 
   let hash = Hashtbl.hash_param 50 50
 
+  let equal t1 t2 = compare t1 t2 = 0
+
   let htrue = Hstring.make "True"
   let hfalse = Hstring.make "False"
 
@@ -197,6 +202,9 @@ module Term = struct
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t
     | _ -> Variable.Set.empty
+
+
+  let variables_proc t = Variable.Set.filter Variable.is_proc (variables t)
 
   let rec type_of = function
     | Const cs ->
@@ -257,6 +265,7 @@ module rec Atom : sig
   val has_var : Variable.t -> t -> bool
   val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
+  val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_atoms : string -> Format.formatter -> t list -> unit
 
@@ -348,6 +357,10 @@ end = struct
        let acc = Variable.Set.union (variables a1) (variables a2) in
        Variable.Set.union acc (SAtom.variables sa)
 
+
+  let variables_proc a = Variable.Set.filter Variable.is_proc (variables a)
+
+
   let str_op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
   let rec print fmt = function
@@ -374,7 +387,7 @@ and SAtom : sig
   val hash : t -> int
   val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
   val variables : t -> Variable.Set.t
-  val glob_terms : t -> Term.Set.t
+  val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
 
 end = struct 
@@ -394,7 +407,7 @@ end = struct
 
   let subst sigma ?(sigma_sort=[]) sa =
     if Variable.is_subst_identity sigma &&
-         Variable.is_subst_identity sigma_sort then sa
+         is_subst_sort_identity sigma_sort then sa
     else
       fold (fun a -> add (Atom.subst sigma ~sigma_sort a)) sa empty
 
@@ -406,20 +419,8 @@ end = struct
 
   let variables sa =
     fold (fun a -> Variable.Set.union (Atom.variables a)) sa Variable.Set.empty
-                             
 
-  let rec term_globs t acc = match t with
-    | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
-    | Arith (x, _) -> term_globs x acc
-    | _ -> acc
-
-  let rec atom_globs a acc = assert false (* match a with *)
-(*     | Atom.True | Atom.False -> acc *)
-(*     | Atom.Comp (t1, _, t2) -> term_globs t1 (term_globs t2 acc)  *)
-(*     | Atom.Ite (sa, a1, a2) ->  *)
-(*        Term.Set.union (glob_terms sa) (atom_globs a1 (atom_globs a2 acc)) *)
-(* - *)
-  and glob_terms sa = fold atom_globs sa Term.Set.empty
+  let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
 
   let print fmt sa = 
     fprintf fmt "@[%a@]" (Atom.print_atoms "&&") (elements sa)
@@ -500,8 +501,7 @@ module ArrayAtom = struct
 
   let apply_subst sigma a =
     TimerApply.start ();
-    if Variable.is_subst_identity sigma &&
-         Variable.is_subst_identity sigma_sort then (TimerApply.pause (); a)
+    if Variable.is_subst_identity sigma then (TimerApply.pause (); a)
     else
       let a' = Array.init (Array.length a) (fun i -> Atom.subst sigma a.(i)) in
       Array.fast_sort Atom.compare a';

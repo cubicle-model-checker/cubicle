@@ -30,14 +30,14 @@ type inst_trans =
 
 type possible_result = 
   | Reach of (transition * Variable.subst) list 
-  | Spurious of Node.trace
+  | Spurious of trace
   | Unreach
 
 (* val search : Hstring.t list -> t_system -> SAtom.t list *)
 
 val search : Hstring.t list -> t_system -> unit HSA.t
 
-val search_stateless : Hstring.t list -> t_system -> (SAtom.t * STerm.t) MA.t
+val search_stateless : Hstring.t list -> t_system -> (SAtom.t * Term.Set.t) MA.t
 
 
 val instantiate_transitions : Variable.t list -> Variable.t list ->
@@ -45,7 +45,8 @@ val instantiate_transitions : Variable.t list -> Variable.t list ->
 
 val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
 
-val reachable_on_trace_from_init : t_system -> Node.trace -> possible_result
+val reachable_on_trace_from_init :
+  t_system -> Node.t -> trace -> possible_result
 
 val spurious : Node.t -> bool
 			     
@@ -53,9 +54,9 @@ val spurious_error_trace : t_system -> Node.t -> bool
 
 val spurious_due_to_cfm : t_system -> Node.t -> bool
 
-val conflicting_from_trace : t_system -> Node.trace -> SAtom.t list
+val conflicting_from_trace : t_system -> trace -> SAtom.t list
 
 val uguard_dnf : 
-  Variable.susbt ->
+  Variable.subst ->
   Variable.t list -> Variable.t list ->
   (Variable.t * SAtom.t list) list -> SAtom.t list list

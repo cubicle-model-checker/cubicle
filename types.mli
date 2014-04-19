@@ -13,8 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ast
-
 type op_comp = Eq | Lt | Le | Neq
 type op_arith = Plus | Minus
 type sort = Glob | Constr | Var
@@ -50,11 +48,13 @@ module Term : sig
   type t = term
 
   val compare : t -> t -> int
+  val equal : t -> t -> bool
   val hash : t -> int
   val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
   val htrue : Hstring.t
   val hfalse : Hstring.t
   val variables : t -> Variable.Set.t
+  val variables_proc : t -> Variable.Set.t
   val type_of : t -> Smt.Type.t
   val print : Format.formatter -> t -> unit
 
@@ -80,6 +80,7 @@ module rec Atom : sig
   val has_var : Variable.t -> t -> bool
   val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
+  val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
 end
 and SAtom : sig 
@@ -89,7 +90,7 @@ and SAtom : sig
   val hash : t -> int
   val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
   val variables : t -> Variable.Set.t
-  val glob_terms : t -> Term.Set.t
+  val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
 end
 

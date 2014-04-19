@@ -218,7 +218,7 @@ let add_array_to_list n l =
       n :: l
 
 let make_cubes (ls, post) rargs s tr cnp =
-  let { Node.cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in
+  let { cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
   let cube acc sigma =

@@ -13,20 +13,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Make (Options : sig
-                         val profiling : bool
-                         val verbose : int
-                         val quiet : bool
-                       end) : sig
-
   val new_node : Node.t -> unit
 
-  val fixpoint : Node.t -> int list option -> unit
+  val fixpoint : Node.t -> int list -> unit
 
   val restart : unit -> unit
 
   val remaining : int -> unit
 
   val candidate : Node.t -> unit
-
-end

@@ -87,9 +87,9 @@ exception Found_const of (op_comp * term)
 let find_const_value g init =
   try
     SAtom.iter (function
-      | Comp (g', op, t') when compare_term g g' = 0 ->
+      | Comp (g', op, t') when Term.compare g g' = 0 ->
 	  if is_const t' then raise (Found_const (op, t'))
-      | Comp (t', op, g') when compare_term g g' = 0 ->
+      | Comp (t', op, g') when Term.compare g g' = 0 ->
 	  if is_const t' then raise (Found_const (op, t'))
       | _ -> ()) init;
     raise Not_found
@@ -153,8 +153,8 @@ exception Found_neq of term * term * Atom.t
 let rec apply_subst_terms_atom t t' a = match a with
   | True | False -> a
   | Comp (t1, op, t2) ->
-      if compare_term t t1 = 0 then Comp (t', op, t2)
-      else if compare_term t t2 = 0 then Comp (t1, op, t')
+      if Term.compare t t1 = 0 then Comp (t', op, t2)
+      else if Term.compare t t2 = 0 then Comp (t1, op, t')
       else a
   | Ite (sa, a1, a2) -> Ite (apply_subst_terms_atoms t t' sa, 
 			     apply_subst_terms_atom t t' a1,
@@ -170,18 +170,18 @@ let elim_primed_term t sa =
   try
     SAtom.iter (fun a -> match a with
       | Comp (t1, Eq, t2) -> 
-	if compare_term t t1 = 0 && is_const t2 then raise (Found_eq (t1, t2, a));
-	if compare_term t t2 = 0 && is_const t1 then raise (Found_eq (t2, t1, a))
+	if Term.compare t t1 = 0 && is_const t2 then raise (Found_eq (t1, t2, a));
+	if Term.compare t t2 = 0 && is_const t1 then raise (Found_eq (t2, t1, a))
       | _ -> ()) sa;
     SAtom.iter (fun a -> match a with
       | Comp (t1, Eq, t2) -> 
-	if compare_term t t1 = 0 then raise (Found_eq (t1, t2, a));
-	if compare_term t t2 = 0 then raise (Found_eq (t2, t1, a))
+	if Term.compare t t1 = 0 then raise (Found_eq (t1, t2, a));
+	if Term.compare t t2 = 0 then raise (Found_eq (t2, t1, a))
       | _ -> ()) sa;
     SAtom.iter (fun a -> match a with
       | Comp (t1, Neq, t2) -> 
-	if compare_term t t1 = 0 then raise (Found_neq (t1, t2, a));
-	if compare_term t t2 = 0 then raise (Found_neq (t2, t1, a))
+	if Term.compare t t1 = 0 then raise (Found_neq (t1, t2, a));
+	if Term.compare t t2 = 0 then raise (Found_neq (t2, t1, a))
       | _ -> ()) sa;
     sa
   with
@@ -197,29 +197,29 @@ let elim_primed_term t sa =
   let r = SAtom.fold (fun a res -> match a with
     | Comp (t1, Eq, t2) ->
       begin
-	if compare_term t t1 = 0 then
+	if Term.compare t t1 = 0 then
 	  match res with
 	    | None -> 
 	        Some (Eq, t1, t2, a)
-	    | Some (Eq, _, t', _) when compare_term t2 t' < 0 ->
+	    | Some (Eq, _, t', _) when Term.compare t2 t' < 0 ->
 	        Some (Eq, t1, t2, a)
 	    | _ -> res	    
-      else if compare_term t t2 = 0 then
+      else if Term.compare t t2 = 0 then
 	  match res with
 	    | None ->
 	        Some (Eq, t2, t1, a)
-	    | Some (Eq, _, t', _) when compare_term t1 t' < 0 ->
+	    | Some (Eq, _, t', _) when Term.compare t1 t' < 0 ->
 	        Some (Eq, t2, t1, a)
 	    | _ -> res
       else res
       end
     | Comp (t1, Neq, t2) -> 
       begin
-	if compare_term t t1 = 0 then
+	if Term.compare t t1 = 0 then
 	  match res with
 	    | None -> Some (Neq, t1, t2, a)
 	    | _ -> res
-	else if compare_term t t2 = 0 then
+	else if Term.compare t t2 = 0 then
 	  match res with
 	    | None -> Some (Neq, t2, t1, a)
 	    | _ -> res
@@ -227,7 +227,7 @@ let elim_primed_term t sa =
       end
     | Comp (t1, op, t2) ->
         (* TODO: perform fourier motzkin instead *)
-        if compare_term t t1 = 0 || compare_term t t2 = 0 then
+        if Term.compare t t1 = 0 || Term.compare t t2 = 0 then
           match res with
 	    | None -> Some (op, t1, t2, a) 
             | _ -> res
@@ -245,22 +245,22 @@ let primed_terms_of_atom a =
   let rec primed_terms_of_atom a acc = match a with
     | True | False -> acc
     | Comp (t1, _, t2) ->
-      let acc = if is_prime_term t1 then STerm.add t1 acc else acc in
-      if is_prime_term t2 then STerm.add t2 acc else acc
+      let acc = if is_prime_term t1 then Term.Set.add t1 acc else acc in
+      if is_prime_term t2 then Term.Set.add t2 acc else acc
     | Ite (sa, a1, a2) -> 
       primed_terms_of_atom a1 
 	(primed_terms_of_atom a2 
 	   (SAtom.fold primed_terms_of_atom sa acc))
   in
-  primed_terms_of_atom a STerm.empty
+  primed_terms_of_atom a Term.Set.empty
 
-exception First_primed_atom of Atom.t * STerm.t
+exception First_primed_atom of Atom.t * Term.Set.t
 
 let first_primed_atom sa =
   try
     SAtom.iter (fun a -> 
       let pts = primed_terms_of_atom a in
-      if not (STerm.is_empty pts) then raise (First_primed_atom (a, pts))
+      if not (Term.Set.is_empty pts) then raise (First_primed_atom (a, pts))
     ) sa;
     raise Not_found
   with First_primed_atom (a, pts) -> a, pts
@@ -269,7 +269,7 @@ let rec elim_prime2 sa =
   let sa =
     try
       let a, pts = first_primed_atom sa in
-      let sa = STerm.fold elim_primed_term pts sa in
+      let sa = Term.Set.fold elim_primed_term pts sa in
       elim_prime2 sa
     with Not_found -> sa
   in
@@ -284,12 +284,12 @@ let rec elim_prime2 sa =
 
 let rec elim_prime3 init sa =
   let pts = 
-    SAtom.fold (fun a acc -> STerm.union (primed_terms_of_atom a) acc )
-      sa STerm.empty in
+    SAtom.fold (fun a acc -> Term.Set.union (primed_terms_of_atom a) acc )
+      sa Term.Set.empty in
   let sa =
     SAtom.fold (fun a sa -> match a with
       | Comp (t1, op, t2) ->
-	if STerm.mem t1 pts || STerm.mem t2 pts then SAtom.add a sa
+	if Term.Set.mem t1 pts || Term.Set.mem t2 pts then SAtom.add a sa
 	else sa
       | _ -> sa) init sa
   in
@@ -320,7 +320,7 @@ let choose_prime_term sa =
 
 let split_prime_atoms t sa =
   SAtom.fold (fun a (yes, no) -> match a with
-    | Comp (t1, Eq, t2) when compare_term t t1 = 0 || compare_term t t2 = 0 ->
+    | Comp (t1, Eq, t2) when Term.compare t t1 = 0 || Term.compare t t2 = 0 ->
         SAtom.add a yes, no
     | _ -> yes, SAtom.add a no) sa (SAtom.empty, SAtom.empty)
     
@@ -328,8 +328,8 @@ let split_prime_atoms t sa =
 let aux_corss t t' sa =
   SAtom.fold (fun a acc -> match a with
     | Comp (t1, Eq, t2) ->
-        if compare_term t t1 = 0 then SAtom.add (Comp (t', Eq, t2)) acc
-	else if compare_term t t2 = 0 then SAtom.add (Comp (t', Eq, t1)) acc
+        if Term.compare t t1 = 0 then SAtom.add (Comp (t', Eq, t2)) acc
+	else if Term.compare t t2 = 0 then SAtom.add (Comp (t', Eq, t1)) acc
 	else assert false
     | _ -> assert false) sa SAtom.empty
       
@@ -337,7 +337,7 @@ let aux_corss t t' sa =
 let cross t sa =
   SAtom.fold (fun a acc -> match a with
     | Comp (t1, Eq, t2) ->
-        let t' = if compare_term t t1 = 0 then t2 else t1 in
+        let t' = if Term.compare t t1 = 0 then t2 else t1 in
         SAtom.union (aux_corss t t' (SAtom.remove a sa)) acc
     | _ -> assert false
   ) sa SAtom.empty
@@ -437,17 +437,17 @@ let wrapper_elim_prime p_init sa =
   (*     Pretty.print_cube (SAtom.diff s2 (SAtom.inter s1 s2)); *)
   (* end; *)
   (* let sa = gauss_prime_elim (SAtom.union p_init sa) in *)
-  simplification_atoms SAtom.empty sa
+  Cube.simplify_atoms sa
 
 
 let apply_assigns assigns sigma =
   List.fold_left 
     (fun (nsa, terms) (h, t) ->
       let nt = Elem (h, Glob) in
-      let t = subst_term sigma t in
+      let t = Term.subst sigma t in
       SAtom.add (Comp (nt, Eq, prime_term t)) nsa,
-      STerm.add nt terms)
-    (SAtom.empty, STerm.empty) assigns
+      Term.Set.add nt terms)
+    (SAtom.empty, Term.Set.empty) assigns
 
 
 let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
@@ -458,29 +458,29 @@ let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
   let at = Access (a, lj) in
-  let t = subst_term sigma (prime_term t) in
+  let t = Term.subst sigma (prime_term t) in
   let default = Comp (at, Eq, t) in
   let ites = 
     List.fold_left (fun ites (sa, t) ->
-      let sa = subst_atoms sigma (prime_satom sa) in
-      let t = subst_term sigma (prime_term t) in
+      let sa = SAtom.subst sigma (prime_satom sa) in
+      let t = Term.subst sigma (prime_term t) in
       Ite (sa, Comp (at, Eq, t), ites)) default swts
   in
-  let indexes = all_arrangements (arity a) procs in
+  let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun (sa, st) li ->
     let sigma = List.combine lj li in
-    SAtom.add (subst_atom sigma ites) sa,
-    STerm.add (Access (a, li)) st
+    SAtom.add (Atom.subst sigma ites) sa,
+    Term.Set.add (Access (a, li)) st
   ) (sa, st) indexes
 
 let apply_updates upds procs sigma =
   List.fold_left 
     (fun acc up -> add_update acc up procs sigma)
-    (SAtom.empty, STerm.empty) upds
+    (SAtom.empty, Term.Set.empty) upds
 
 let preserve_terms upd_terms sa =
-  let unc = STerm.diff (variables_of sa) upd_terms in
-  STerm.fold (fun t acc ->
+  let unc = Term.Set.diff (Cube.satom_globs sa) upd_terms in
+  Term.Set.fold (fun t acc ->
     SAtom.add (Comp (t, Eq, prime_term t)) acc)
     unc SAtom.empty
 
@@ -489,22 +489,22 @@ let uguard_dnf sigma args tr_args = function
   | [j, dnf] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.map (fun i ->
-	List.map (fun sa -> subst_atoms ((j, i)::sigma) sa) dnf) uargs
+	List.map (fun sa -> SAtom.subst ((j, i)::sigma) sa) dnf) uargs
   | _ -> assert false
 
 
 let possible_init args init reqs =
   (** Very incomplete semantic test **)
-  not (inconsistent (SAtom.union init reqs)) (* && *)
+  not (Cube.inconsistent_set (SAtom.union init reqs)) (* && *)
     (* try Prover.check_guard args init reqs; true *)
     (* with Smt.Unsat _ -> false *)
 
 let possible_guard args all_args tr_args sigma init reqs ureqs =
-  let reqs = subst_atoms sigma reqs in
+  let reqs = SAtom.subst sigma reqs in
   possible_init args init reqs &&
     let t_args_ef = 
       List.fold_left (fun acc p -> 
-	try (svar sigma p) :: acc
+	try (Variable.subst sigma p) :: acc
 	with Not_found -> p :: acc) [] tr_args in
     let udnfs = uguard_dnf sigma all_args t_args_ef ureqs in
     List.for_all (List.exists (possible_init all_args init)) udnfs
@@ -519,14 +519,14 @@ let missing_args procs tr_args =
   let rec aux p t pv =
   match p, t, pv with
     | [], _::_, _ ->
-      let f, s = List.split (build_subst t pv) in
+      let f, s = List.split (Variable.build_subst t pv) in
       List.rev f, List.rev s
       (* List.rev (snd (List.split (build_subst t pv))) *)
     | _::rp, _::rt, _::rpv -> aux rp rt rpv
     | _, [], _ -> [],[]
     | _, _::_, [] -> assert false
   in
-  aux procs tr_args proc_vars
+  aux procs tr_args Variable.procs
 
 let rec term_contains_arg z = function
   | Elem (x, Var) -> Hstring.equal x z
@@ -560,7 +560,7 @@ let post init all_procs procs { tr_args = tr_args;
 				tr_upds = upds; 
 				tr_nondets = nondets } =
   let tr_others, others = missing_args procs tr_args in
-  let d = all_permutations tr_args procs in
+  let d = Variable.all_permutations tr_args procs in
   (* do it even if no arguments *)
   let d = if d = [] then [[]] else d in
   let p_init = prime_satom init in
@@ -568,16 +568,17 @@ let post init all_procs procs { tr_args = tr_args;
     if possible_guard procs all_procs tr_args sigma init reqs ureqs then
       let assi, assi_terms = apply_assigns assigns sigma in
       let upd, upd_terms = apply_updates upds all_procs sigma in
-      let unchanged = preserve_terms (STerm.union assi_terms upd_terms) init in
-      let sa = simplification_atoms p_init
+      let unchanged = preserve_terms (Term.Set.union assi_terms upd_terms) init in
+      let sa = Cube.simplify_atoms_base p_init
       	(SAtom.union unchanged (SAtom.union assi upd)) in
       let sa = abstract_others sa tr_others in
       List.fold_left (fun acc sa ->
         let sa = wrapper_elim_prime p_init sa in
         (* let sa = gauss_elim sa in *)
-        let sa, (nargs, _) = proper_cube sa in
+        let csa = Cube.create_normal sa in
+        let sa, nargs = csa.Cube.litterals, csa.Cube.vars in
         (sa, nargs) :: acc)
-        acc (Cube.simplify_atoms sa)
+        acc (Cube.elim_ite_simplify_atoms sa)
     else acc
   ) [] d
 
@@ -591,14 +592,15 @@ let post_inst init all_procs procs { i_reqs = reqs;
   if possible_inst_guard procs all_procs init reqs udnfs then
     let p_init = prime_satom init in
     let unchanged = preserve_terms touched_terms init in
-    let sa = simplification_atoms p_init (SAtom.union unchanged actions) in
+    let sa = Cube.simplify_atoms_base p_init (SAtom.union unchanged actions) in
     List.fold_left (fun acc sa ->
       try
         let sa = wrapper_elim_prime p_init sa in
-        let sa, (nargs, _) = proper_cube sa in
+        let csa = Cube.create_normal sa in
+        let sa, nargs = csa.Cube.litterals, csa.Cube.vars in
         (sa, nargs) :: acc
       with Exit -> acc)
-      [] (Cube.simplify_atoms sa) 
+      [] (Cube.elim_ite_simplify_atoms sa) 
   else []
 
 
@@ -612,19 +614,11 @@ module HI = Hashtbl.Make
   let hash x = x end)
 
 
-let visited_from_h s h = HSA.fold (fun sa _ acc ->
-  let sa, (nargs, _) = proper_cube sa in
-  let ar = ArrayAtom.of_satom sa in
-  { s with 
-    t_unsafe = nargs, sa;
-    t_arru = ar;
-    t_alpha = ArrayAtom.alpha ar nargs } :: acc) h []
-
 
 let already_seen sa args h =
-  let d = all_permutations args args in
+  let d = Variable.all_permutations args args in
   List.exists (fun sigma ->
-    let sa = subst_atoms sigma sa in
+    let sa = SAtom.subst sigma sa in
     HSA.mem h sa) d
 
 let forward s procs trs l =
@@ -654,13 +648,13 @@ let forward s procs trs l =
 	    in
 	    incr cpt_f;
 	    if debug then 
-	      eprintf "%d : %a\n@." !cpt_f Pretty.print_cube sa
+	      eprintf "%d : %a\n@." !cpt_f SAtom.print sa
 	    else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
 	      (List.length to_do + List.length new_td);
 	    (* HSA.add h_visited sa (); *)
-	    let d = all_permutations args args in
+	    let d = Variable.all_permutations args args in
 	    List.iter 
-              (fun sigma -> HSA.add h_visited (subst_atoms sigma sa) ()) d;
+              (fun sigma -> HSA.add h_visited (SAtom.subst sigma sa) ()) d;
 	    forward_rec s procs trs (List.rev_append new_td to_do)
         )
   in
@@ -670,10 +664,10 @@ let forward s procs trs l =
 
 let var_term_unconstrained sa t =
   SAtom.for_all (function
-    | Comp (t1, _, t2) -> compare_term t t1 <> 0 && compare_term t t2 <> 0
+    | Comp (t1, _, t2) -> Term.compare t t1 <> 0 && Term.compare t t2 <> 0
     | _ -> true) sa
 
-let unconstrained_terms sa = STerm.filter (var_term_unconstrained sa)
+let unconstrained_terms sa = Term.Set.filter (var_term_unconstrained sa)
 
 module MA = Map.Make (Atom)
 
@@ -689,8 +683,8 @@ let add_compagnions_from_node all_var_terms sa =
       let rsa = SAtom.remove a sa in
       let unc = unconstrained_terms rsa all_var_terms in 
       let old_comps, old_uncs = 
-	try MA.find a mc with Not_found -> SAtom.empty, STerm.empty in
-      MA.add a (SAtom.union rsa old_comps, STerm.union unc old_uncs) mc
+	try MA.find a mc with Not_found -> SAtom.empty, Term.Set.empty in
+      MA.add a (SAtom.union rsa old_comps, Term.Set.union unc old_uncs) mc
   ) sa
 
 
@@ -716,15 +710,15 @@ let stateless_forward s procs trs all_var_terms l =
 	  in
 	  incr cpt_f;
 	  
-	  if debug then eprintf "%d : %a@." !cpt_f Pretty.print_cube sa
+	  if debug then eprintf "%d : %a@." !cpt_f SAtom.print sa
 	  else if !cpt_f mod 1000 = 0 then eprintf "%d (%d)@." !cpt_f
 	    (List.length to_do + List.length new_td);
 	  (* HI.add h_visited hsa (); *)
 	  (* let mc = add_compagnions_from_node all_var_terms sa mc in *)
-	  let d = all_permutations args args in
+	  let d = Variable.all_permutations args args in
 	  let mc = 
 	    List.fold_left (fun mc sigma ->
-	      let sa = subst_atoms sigma sa in
+	      let sa = SAtom.subst sigma sa in
 	      HI.add h_visited (SAtom.hash sa) ();
 	      add_compagnions_from_node all_var_terms sa mc
 	    ) mc d in
@@ -747,7 +741,7 @@ let stateless_forward s procs trs all_var_terms l =
 (*             List.exists (fun z -> has_var z a) args) abs_init in *)
 (*         let lsigs = all_instantiations args all_args in *)
 (*         List.fold_left (fun acc sigma -> *)
-(*             SAtom.union (subst_atoms sigma sa) acc) cst lsigs *)
+(*             SAtom.union (SAtom.subst sigma sa) acc) cst lsigs *)
 
 (* let mkinits procs ({t_init = ia, l_init}) = *)
 (*   List.map (fun init -> *)
@@ -765,12 +759,12 @@ let make_init_cdnf args lsa lvars =
               not (List.exists (fun z -> has_var z a) args)))
             lsa]
     | _ ->
-        let lsigs = all_instantiations args lvars in
+        let lsigs = Variable.all_instantiations args lvars in
         List.fold_left (fun conj sigma ->
           let dnf = List.fold_left (fun dnf sa ->
             (* let sa = abs_inf sa in *)
-            let sa = subst_atoms sigma sa in
-            try (simplification_atoms SAtom.empty sa) :: dnf
+            let sa = SAtom.subst sigma sa in
+            try (Cube.simplify_atoms_base SAtom.empty sa) :: dnf
             with Exit -> dnf
           ) [] lsa in
           dnf :: conj
@@ -778,7 +772,8 @@ let make_init_cdnf args lsa lvars =
 
 let rec cdnf_to_dnf_rec acc = function
   | [] ->
-      List.rev_map (fun sa -> sa, args_of_atoms sa) acc
+      List.rev_map (fun sa ->
+                    sa, Variable.Set.elements (SAtom.variables sa)) acc
   | [] :: r ->
       cdnf_to_dnf_rec acc r
   | dnf :: r ->
@@ -794,13 +789,6 @@ let cdnf_to_dnf = function
 let mkinits procs ({t_init = ia, l_init}) =
   cdnf_to_dnf (make_init_cdnf ia l_init procs) 
 
-let mkforward_s s =
-  List.map (fun fo ->
-    let _,_,sa = fo in
-    let sa, (nargs, _) = proper_cube sa in
-    sa, nargs
-  ) s.t_forward
-
 
 let instance_of_transition { tr_args = tr_args; 
 		             tr_reqs = reqs; 
@@ -809,28 +797,28 @@ let instance_of_transition { tr_args = tr_args;
 		             tr_assigns = assigns; 
 		             tr_upds = upds; 
 		             tr_nondets = nondets } all_procs tr_others sigma =
-  let reqs = subst_atoms sigma reqs in
+  let reqs = SAtom.subst sigma reqs in
   let t_args_ef = 
     List.fold_left (fun acc p -> 
-      try (svar sigma p) :: acc
+      try (Variable.subst sigma p) :: acc
       with Not_found -> p :: acc) [] tr_args in
   let udnfs = uguard_dnf sigma all_procs t_args_ef ureqs in
   let assi, assi_terms = apply_assigns assigns sigma in
   let upd, upd_terms = apply_updates upds all_procs sigma in
-  let act = simplification_atoms SAtom.empty (SAtom.union assi upd) in
+  let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
   {
     i_reqs = reqs;
     i_udnfs = udnfs;
     i_actions = act;
-    i_touched_terms = STerm.union assi_terms upd_terms
+    i_touched_terms = Term.Set.union assi_terms upd_terms
   }
 
 
 let instantiate_transitions all_procs procs trans = 
   let aux acc tr =
     let tr_others,others = missing_args procs tr.tr_args in
-    let d = all_permutations tr.tr_args procs in
+    let d = Variable.all_permutations tr.tr_args procs in
     (* do it even if no arguments *)
     let d = if d = [] then [[]] else d in
     List.fold_left (fun acc sigma ->
@@ -864,7 +852,7 @@ let search_only s = assert false
 (*   let equal a b = compare a b = 0 *)
 (*   let hash = Hashtbl.hash end) *)
 
-(* module MT = Map.Make (struct type t = term let compare = compare_term end) *)
+(* module MT = Map.Make (struct type t = term let compare = Term.compare end) *)
 
 
 (* let all_litterals h = HSA.fold (fun sa _ acc -> *)
@@ -879,15 +867,15 @@ let search_only s = assert false
 (* 	  if SAtom.mem a sa then *)
 (* 	    let rsa = SAtom.remove a sa in *)
 (* 	    let unc = unconstrained_terms rsa all_var_terms in *)
-(* 	    SAtom.union rsa acc, STerm.union unc uncs *)
+(* 	    SAtom.union rsa acc, Term.Set.union unc uncs *)
 (* 	  else acc, uncs) *)
-(* 	  forward_nodes (SAtom.empty, STerm.empty) *)
+(* 	  forward_nodes (SAtom.empty, Term.Set.empty) *)
 (*       in  *)
 (*       MA.add a compagnions_uncs acc *)
 (*   ) lits MA.empty *)
 
 (* let contains_unconstrained uncs = function *)
-(*   | Comp (t1, op, t2) -> STerm.mem t1 uncs || STerm.mem t2 uncs *)
+(*   | Comp (t1, op, t2) -> Term.Set.mem t1 uncs || Term.Set.mem t2 uncs *)
 (*   | _ -> false *)
 
 (* let compagnions_values compagnions uncs = *)
@@ -916,16 +904,16 @@ let search_only s = assert false
 (* let variable_term_has_value v t = *)
 (*   SAtom.exists (function *)
 (*     | Comp (t1, Eq, t2) ->  *)
-(*         compare_term v t1 = 0 && compare_term t t2 = 0 *)
+(*         Term.compare v t1 = 0 && Term.compare t t2 = 0 *)
 (*     | _ -> false) *)
 
 (* let variable_term_has_other_values v t = *)
 (*   SAtom.exists (function *)
 (*     | Comp (t1, Eq, t2) -> *)
-(*         (compare_term v t1 = 0 && compare_term t t2 <> 0) || *)
-(* 	(compare_term v t2 = 0 && compare_term t t1 <> 0) *)
+(*         (Term.compare v t1 = 0 && Term.compare t t2 <> 0) || *)
+(* 	(Term.compare v t2 = 0 && Term.compare t t1 <> 0) *)
 (*     | Comp (t1, Neq, t2) ->  *)
-(*         compare_term v t1 = 0 && compare_term t t2 = 0 *)
+(*         Term.compare v t1 = 0 && Term.compare t t2 = 0 *)
 (*     | _ -> false) *)
 
 (* let only_value_possible c sa = *)
@@ -1048,7 +1036,7 @@ let search_only s = assert false
 (*   match a, b with *)
 (*     | True, False | False, True -> false *)
 (*     | Comp(ta1, Eq, ta2), Comp(tb1, Eq, tb2) -> *)
-(* 	not (compare_term ta1 tb1 = 0 && compare_term ta2 tb2 <> 0) *)
+(* 	not (Term.compare ta1 tb1 = 0 && Term.compare ta2 tb2 <> 0) *)
 (*     | Ite _, _ | _, Ite _ -> assert false *)
 (*     | _, _ -> true *)
 
@@ -1236,7 +1224,7 @@ let search_only s = assert false
 (*       eprintf "compagnons %a : %a@." *)
 (* 	Pretty.print_atom a Pretty.print_cube compagnions; *)
 (*       eprintf "> unconstrained :\n"; *)
-(*       STerm.iter  *)
+(*       Term.Set.iter  *)
 (* 	(fun t -> eprintf "               %a\n" Pretty.print_term t) *)
 (* 	uncs; *)
 (*       eprintf "@.";       *)
@@ -1333,7 +1321,7 @@ let above s trace =
 
 type possible_result = 
   | Reach of (transition * (Hstring.t * Hstring.t) list) list 
-  | Spurious of (transition * Hstring.t list * t_system) list
+  | Spurious of trace
   | Unreach
 
 
@@ -1355,7 +1343,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
                 with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
               ) acc (post_inst sa args procs itr)
             ) acc ls
-           ) [] (all_permutations tr.tr_args procs)
+           ) [] (Variable.all_permutations tr.tr_args procs)
         in
         forward_rec nls rest_trace
   in
@@ -1413,7 +1401,7 @@ let reachable_on_all_traces_from_init s unsafe trace =
   possible_trace ~starts:inits ~finish:unsafe ~procs:all_procs ~trace
 
 let possible_history s =
-  let trace = s.Node.from in
+  let trace = s.from in
   let all_procs = procs_on_trace trace in
   let iargs, isa = Node.variables s, Node.litterals s in 
   possible_trace ~starts:[isa, iargs] ~finish:(Node.origin s)
@@ -1427,14 +1415,14 @@ let spurious s =
 
 
 let spurious_error_trace system s =
-  match reachable_on_all_traces_from_init system (Node.origin s) s.Node.from with
+  match reachable_on_all_traces_from_init system (Node.origin s) s.from with
   | Spurious _ -> assert false
   | Unreach -> true
   | Reach hist -> false
 
 
 let spurious_due_to_cfm system s =
-  match reachable_on_trace_from_init system (Node.origin s) s.Node.from with
+  match reachable_on_trace_from_init system (Node.origin s) s.from with
     | Unreach | Spurious _ -> true
     | Reach hist -> false
 

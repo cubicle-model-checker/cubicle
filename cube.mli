@@ -44,5 +44,6 @@ val simplify : t -> t
 val elim_ite_simplify : t -> t list
 
 val resolve_two : t -> t -> t option
+val satom_globs : SAtom.t -> Term.Set.t
 
 val print :  Format.formatter -> t -> unit

@@ -15,7 +15,10 @@
 
 open Format
 open Ast
+open Types
 open Atom
+ open Pervasives
+
 
 type error = 
   | UnknownConstr of Hstring.t
@@ -75,7 +78,7 @@ let report fmt = function
   | MustBeOfType (s, ty) ->
       fprintf fmt "%a must be of type %a" Hstring.print s Hstring.print ty
   | MustBeNum s ->
-      fprintf fmt "%a must be of type int or real" Pretty.print_term s
+      fprintf fmt "%a must be of type int or real" Term.print s
   | MustBeOfTypeProc s ->
       fprintf fmt "%a must be of proc" Hstring.print s
   | IncompatibleType (args1, ty1, args2, ty2) ->
@@ -277,35 +280,35 @@ let init_global_env s =
 
 let init_proc () = 
   List.iter 
-    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) proc_vars
+    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
 let create_init_instances (iargs, l_init) = 
   let init_instances = Hashtbl.create 11 in
   begin
     match l_init with
     | [init] ->
-      let sa, cst = Atom.Set.partition (fun a ->
+      let sa, cst = SAtom.partition (fun a ->
         List.exists (fun z -> has_var z a) iargs) init in
-      let ar0 = Atom.Array.of_satom cst in
+      let ar0 = ArrayAtom.of_satom cst in
       Hashtbl.add init_instances 0 ([[cst]], [[ar0]]);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
         let vars = List.rev v_acc in
         let si = List.fold_left (fun si sigma ->
-          Atom.Set.union (subst_atoms sigma sa) si)
-          cst (all_instantiations iargs vars) in
-        let ar = Atom.Array.of_satom si in
+          SAtom.union (SAtom.subst sigma sa) si)
+          cst (Variable.all_instantiations iargs vars) in
+        let ar = ArrayAtom.of_satom si in
         Hashtbl.add init_instances !cpt ([[si]], [[ar]]);
         incr cpt;
-        v_acc) [] proc_vars)
+        v_acc) [] Variable.procs)
 
     | _ ->
       let dnf_sa0, dnf_ar0 =
         List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
-          let sa0 = Atom.Set.filter (fun a ->
+          let sa0 = SAtom.filter (fun a ->
             not (List.exists (fun z -> has_var z a) iargs)) sa in
-          let ar0 = Atom.Array.of_satom sa0 in
+          let ar0 = ArrayAtom.of_satom sa0 in
           sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
       Hashtbl.add init_instances 0  ([dnf_sa0], [dnf_ar0]);
       let cpt = ref 1 in
@@ -316,17 +319,24 @@ let create_init_instances (iargs, l_init) =
           List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
             let dnf_sa, dnf_ar = 
               List.fold_left (fun (dnf_sa, dnf_ar) init ->
-              let sa = subst_atoms sigma init in
-              let ar = Atom.Array.of_satom sa in
+              let sa = SAtom.subst sigma init in
+              let ar = ArrayAtom.of_satom sa in
               sa :: dnf_sa, ar :: dnf_ar
             ) ([],[]) l_init in
             dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
-          ) ([],[]) (all_instantiations iargs vars) in
+          ) ([],[]) (Variable.all_instantiations iargs vars) in
         Hashtbl.add init_instances !cpt inst;
         incr cpt;
-        v_acc) [] proc_vars)
-    end
-    init_instances
+        v_acc) [] Variable.procs)
+    end;
+  init_instances
+
+let create_node_rename kind (vars, sa) =
+  let sigma = Variable.build_subst vars Variable.procs in
+  let c = Cube.subst sigma (Cube.create vars sa) in
+  let c = Cube.normal_form c in
+  Node.create ~kind c
+
 
     
 let system s = 
@@ -335,7 +345,6 @@ let system s =
     init s.init;
     Smt.Variant.init l;
     List.iter unsafe s.unsafe;
-    List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
     transitions s.trans;
     if Options.subtyping then Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
@@ -347,18 +356,13 @@ let system s =
     (*     [] (\*s.globals*\) s.consts *)
     (* in *)
 
-    let create_node_rename kind (vars, sa) =
-      let c = Cube.normal_form (Cube.create vars sa) in
-      Node.create ~kind c
-    in
-
     { 
       t_globals = List.map fst s.globals;
       t_arrays = List.map fst s.arrays;
       t_init = s.init;
       t_init_instances = create_init_instances s.init;
-      t_invs = List.map create_node_rename Node.Inv s.invs;
-      t_unsafe = List.map create_node_rename Node.Node  s.unsafe;
+      t_invs = List.map (create_node_rename Inv) s.invs;
+      t_unsafe = List.map (create_node_rename Node) s.unsafe;
       t_trans = s.trans;
     }
 

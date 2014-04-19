@@ -15,7 +15,7 @@
 
 type mode = 
   | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsDist | Bfsinvp 
+  | Bfs | BfsH | BfsDist | Bfsinvp 
   | Induct
 
 type trace =  NoTrace | AltErgoTr | WhyTr
@@ -87,6 +87,7 @@ let set_mode = function
   | "dfsh" -> mode := DfsH
   | "dfshl" -> mode := DfsHL
   | "bfs" -> mode := Bfs
+  | "bfsh" -> mode := BfsH
   | "bfsinvp" -> mode := Bfsinvp
   | "induct" -> mode := Induct
   | _ -> raise (Arg.Bad "search strategy not supported")

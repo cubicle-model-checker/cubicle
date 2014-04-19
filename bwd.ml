@@ -17,7 +17,6 @@ open Options
 open Format
 open Ast
 
-
 module type PriorityNodeQueue = sig
 
     type t
@@ -32,15 +31,23 @@ module type PriorityNodeQueue = sig
 end
 
 
-type result = Safe of Node.t list | Unsafe of Node.t
+type result = Safe of Node.t list | Unsafe of Node.t * Node.t list
 
 exception ReachedLimit
 
 
-module Make ( Q : PriorityNodeQueue ) = struct
+module type Strategy = sig
+  
+  val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
+               t_system -> result
 
-  module Fix = Fixpoint.FixpointTrie
+end
 
+
+module Make ( Q : PriorityNodeQueue ) : Strategy = struct
+
+  module Fixpoint = Fixpoint.FixpointTrie
+  module Approx = Approx.Selected
 
   let search ?(invariants=[]) ?(candidates=[]) system =
     
@@ -50,20 +57,22 @@ module Make ( Q : PriorityNodeQueue ) = struct
     let postponed = ref [] in
 
     (* Initialization *)
-    Q.add_list !candidates q;
-    Q.add_list system.t_unsafe q;
+    Q.push_list !candidates q;
+    Q.push_list system.t_unsafe q;
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
               (invariants @ system.t_invs);
 
     try
+      let cpt = ref 0 in
       while not (Q.is_empty q) do
         let n = Q.pop q in
         Safety.check system n;
         begin
-          match Fix.fixpoint n !visited with
+          incr cpt;
+          match Fixpoint.check n !visited with
           | Some db ->
              Stats.fixpoint n db
-          | None db ->
+          | None ->
              Stats.new_node n;
              let n = begin
                  match Approx.good n with
@@ -78,15 +87,19 @@ module Make ( Q : PriorityNodeQueue ) = struct
              if delete then visited := Cubetrie.delete_subsumed n !visited;
 	     postponed := List.rev_append post !postponed;
              visited := Cubetrie.add_node n !visited;
-             Q.add_list ls q;
-             Stats.remaining ();
+             Q.push_list ls q;
+             Stats.remaining (Q.length q);
         end;
         
-        if Q.is_empty then Q.add_list !postponed q
+        if Q.is_empty q then
+          begin
+            Q.push_list !postponed q;
+            postponed := []
+          end
       done;
       Safe (Cubetrie.all_vals !visited)
     with Safety.Unsafe faulty ->
-      Unsafe faulty
+      Unsafe (faulty, !candidates)
 
 end
 
@@ -97,6 +110,9 @@ module BreadthOrder = struct
   type t = Node.t
 
   let compare s1 s2 =
+    let c = Pervasives.compare s2.kind s1.kind in
+    if c <> 0 then c else
+      
     let v1 = Node.size s1 in
     let v2 = Node.size s2 in
     let c = Pervasives.compare v1 v2 in
@@ -105,7 +121,7 @@ module BreadthOrder = struct
       let c2 = Node.card s2 in
       let c = Pervasives.compare c1 c2 in
       if c <> 0 then c else
-        Pervasives.compare s1.Node.depth s2.Node.depth
+        Pervasives.compare s1.depth s2.depth
 end
 
 
@@ -122,10 +138,10 @@ module DepthOrder = struct
       let c2 = Node.card s2 in
       let c = Pervasives.compare c1 c2 in
       if c <> 0 then c else
-        Pervasives.compare s2.Node.depth s1.Node.depth s1
+        Pervasives.compare s2.depth s1.depth
 end
 
-module NodeHeap (X : OrderedType) : PriorityNodeQueue = struct
+module NodeHeap (X : Set.OrderedType with type t = Node.t) : PriorityNodeQueue = struct
 
   module H = Heap.Make(X)
 
@@ -151,23 +167,43 @@ module NodeHeap (X : OrderedType) : PriorityNodeQueue = struct
 end
 
 
-module NodeQueue : PriorityNodeQueue = struct
-  include Queue              
-  type t = Node.t Queue.t
+module type StdQ = sig
+    type 'a t
 
+    val create : unit -> 'a t
+    val pop : 'a t -> 'a
+    val push : 'a -> 'a t -> unit
+    val clear : 'a t -> unit
+    val length : 'a t -> int
+    val is_empty : 'a t -> bool
+end
+
+module NodeQ (Q : StdQ) : PriorityNodeQueue = struct
+
+  type t = Node.t Q.t
+
+  let create = Q.create
+  let pop = Q.pop
+  let push = Q.push
+  let clear = Q.clear
+  let length = Q.length
+  let is_empty = Q.is_empty
   let push_list l q = List.iter (fun e -> push e q) l
+
 end
 
-
-module NodeStack : PriorityNodeQueue = struct
-  include Stack
-  type t = Node.t Stack.t
-
-  let push_list l s = List.iter (fun e -> push e s) l
-end
+module BFS : Strategy = Make (NodeQ (Queue))
+module DFS : Strategy = Make (NodeQ (Stack))
+module BFSH : Strategy = Make (NodeHeap (BreadthOrder))
+module DFSH : Strategy = Make (NodeHeap (DepthOrder))
 
 
-module BFS = Make (NodeQueue)
-module DFS = Make (NodeStack)
-module BFSH = Make (NodeHeap (BreadthOrder))
-module DFSH = Make (NodeHeap (DepthOrder))
+let select_search =
+  match mode with
+  | Bfs -> (module BFS : Strategy)
+  | Dfs -> (module DFS)
+  | BfsH -> (module BFSH)
+  | DfsH -> (module DFSH)
+  | _ -> failwith "This strategy is not yet implemented."
+
+module Selected : Strategy = (val (select_search)) 

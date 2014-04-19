@@ -63,7 +63,7 @@ module Make ( X : OrderType ) = struct
     elements_aux [] h
 
   let length h =
-    let length_aux acc = function
+    let rec length_aux acc = function
       | Empty -> acc
       | Node (_ ,g ,d) -> length_aux (length_aux (acc + 1) g) d
     in

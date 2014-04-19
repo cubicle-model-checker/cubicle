@@ -32,21 +32,37 @@ module type PriorityNodeQueue = sig
 end
 
 
-type result = Safe of Node.t list | Unsafe of Node.t
+type result =
+  | Safe of Node.t list 
+  (** The system is safe and we return the set of visited nodes *)
+  | Unsafe of Node.t * Node.t list
+  (** The system is unsafe and we return the faulty node and the full list of
+      candidate invariants that were considered *)
+
 
 exception ReachedLimit
 
 
+(** {2 Strategies } *)
+
 module type Strategy = sig
   
-  val search : ?invariants -> ?candidates -> t_system -> result
+  val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
+               t_system -> result
 
 end
 
 
 module Make ( Q : PriorityNodeQueue ) : Strategy
+(** Functor for creating a strategy given a priority queue  *)
+
+
+(** {3 Predefined Strategies } *)
 
 module BFS : Strategy
 module DFS : Strategy
 module BFSH : Strategy
 module DFSH : Strategy
+
+module Selected : Strategy
+(** Strategy selected by the options of the command line *)

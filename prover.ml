@@ -167,7 +167,7 @@ let make_init_dnfs s nb_procs =
   List.rev_map (List.rev_map make_formula_set) cdnf_sa
 
 
-let unsafe_conj { Node.tag = id; cube = cube } nb_procs init =
+let unsafe_conj { tag = id; cube = cube } nb_procs init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
@@ -207,7 +207,7 @@ let reached args s sa =
   SMT.check ()
 
 
-let assume_goal { Node.tag = id; cube = cube } =
+let assume_goal { tag = id; cube = cube } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
@@ -215,7 +215,7 @@ let assume_goal { Node.tag = id; cube = cube } =
   SMT.assume ~id f;
   SMT.check  ()
 
-let assume_node { Node.tag = id } ap =
+let assume_node { tag = id } ap =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;

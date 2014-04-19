@@ -51,6 +51,10 @@ let number v =
     int_of_string (String.sub s 1 (String.length s - 1))
   else 1
 
+let is_proc v =
+  let s = Hstring.view v in
+  s.[0] = '#' || s.[0] = '$'
+  
 
 let build_subst args a_args =
   let rec a_subst acc args a_args =
@@ -62,8 +66,6 @@ let build_subst args a_args =
   in
   a_subst [] args a_args
 
-
-let subst sigma v = Hstring.list_assoc v sigma
 
 
 let is_subst_identity sigma =
@@ -239,3 +241,9 @@ let rec print_subst fmt = function
      fprintf fmt "%a -> %a" print x print y
   | (x,y)::r -> 
      fprintf fmt "%a -> %a, %a" print x print y print_subst r
+
+
+
+let subst sigma v =
+  try Hstring.list_assoc v sigma
+  with Not_found -> v

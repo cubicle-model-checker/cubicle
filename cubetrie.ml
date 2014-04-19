@@ -16,6 +16,7 @@
 open Options
 open Util
 open Types
+open Ast
 
 module H = Hstring
 
@@ -97,7 +98,7 @@ and add_array_force_to_list atom cube v l = match l with
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem cube trie = match trie with 
   | Empty -> None
-  | Full { Node.tag = id } -> Some [id]
+  | Full { tag = id } -> Some [id]
   | Node l -> match cube with
       | [] -> None
       | atom::cube -> 
@@ -121,7 +122,7 @@ and mem_list atom cube l = match l with
 let rec mem_array cube trie = 
   match trie with 
   | Empty -> None
-  | Full { Node.tag = id } -> Some [id]
+  | Full { tag = id } -> Some [id]
   | Node l ->
       if Array.length cube = 0 then None
       else mem_array_list
@@ -143,17 +144,18 @@ and mem_array_list atom cube l = match l with
       else mem_array_list
         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
 
+
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem_array_poly cube trie = 
   match trie with 
-  | Empty -> None
+  | Empty -> false
   | Full _ -> true
   | Node l ->
       if Array.length cube = 0 then false
       else mem_array_poly_list
         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
 and mem_array_poly_list atom cube l = match l with
-  | [] -> None
+  | [] -> false
   | (atom',t')::n ->
       (* let cmp = Atom.compare atom atom' in *)
       let cmp = - (Atom.trivial_is_implied atom' atom) in
@@ -273,7 +275,7 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
 let rec add_and_resolve n visited =
   let visited =
     fold (fun visited nv ->
-      match Cube.resolve_two n.Node.cube nv.Node.cube with
+      match Cube.resolve_two n.cube nv.cube with
         | None -> visited
         | Some cube_res -> add_and_resolve (Node.create cube_res) visited
     ) visited visited in
@@ -287,12 +289,12 @@ let delete_subsumed p nodes =
     let u = ArrayAtom.apply_subst ss ap in
     iter_subsumed (fun n ->
       if Node.has_deleted_ancestor n || (not (Node.ancestor_of n p)) then begin
-        n.Node.deleted <- true;
+        n.deleted <- true;
         (* if inc then incr nb_del; *)
       end
     ) (Array.to_list u) nodes;
   ) substs;
-  delete (fun n -> n.Node.deleted || Node.has_deleted_ancestor n) nodes
+  delete (fun n -> n.deleted || Node.has_deleted_ancestor n) nodes
 
 
 let add_node p trie = add_array (Node.array p) p trie

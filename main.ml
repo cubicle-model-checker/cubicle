@@ -28,33 +28,41 @@ let _ =
   let lb = from_channel cin in 
   try
     let s = Parser.system Lexer.token lb in
-    let ts = Typing.system s in
-    if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;
+    let system = Typing.system s in
     if type_only then exit 0;
-    Bwreach.system ts;
-    if dot then eprintf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@."
-    else printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
     if refine_universal then
-      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement is an experimental feature. Use at your own risks.\n@."
+      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement\
+              is an experimental feature. Use at your own risks.\n@.";
+    begin 
+      match Brab.brab system with
+      | Bwd.Safe visited ->
+         printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+
+      | Bwd.Unsafe (faulty, _) ->
+         if verbose > 1 && Forward.spurious_error_trace system faulty then
+           printf "\n\n@{<b>@{<fg_yellow>Spurious trace@} !@}\n@."
+         else printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+         exit 1
+    end
   with
-    | Lexer.Lexical_error s -> 
-	report (lexeme_start_p lb, lexeme_end_p lb);
-	printf "lexical error: %s\n@." s;
-	exit 2
-    | Parsing.Parse_error ->
-	let  loc = (lexeme_start_p lb, lexeme_end_p lb) in
-	report loc;
-        printf "\nsyntax error\n@.";
-	exit 2
-    | Typing.Error e -> 
-	printf "typing error: %a\n@." Typing.report e;
-	exit 2
-    | ReachBound ->
-	printf "reach bound\n@.";
-	exit 1
-    | Search.Unsafe s ->
-        if refine_universal && Forward.spurious_error_trace s then
-          printf "\n\n@{<b>@{<fg_yellow>Spurious trace@} !@}\n@."
-	else printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
-	exit 1
+  | Lexer.Lexical_error s -> 
+     report (lexeme_start_p lb, lexeme_end_p lb);
+     printf "lexical error: %s\n@." s;
+     exit 2
+
+  | Parsing.Parse_error ->
+     let  loc = (lexeme_start_p lb, lexeme_end_p lb) in
+     report loc;
+     printf "\nsyntax error\n@.";
+     exit 2
+
+  | Typing.Error e -> 
+     printf "typing error: %a\n@." Typing.report e;
+     exit 2
+
+  | Bwd.ReachedLimit ->
+     eprintf "@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
+     eprintf "It is likely that the search diverges, please increase\
+              the limit to explore further.";
+     exit 1
 
