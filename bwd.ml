@@ -31,7 +31,7 @@ module type PriorityNodeQueue = sig
 end
 
 
-type result = Safe of Node.t list | Unsafe of Node.t * Node.t list
+type result = Safe of Node.t list * Node.t list | Unsafe of Node.t * Node.t list
 
 exception ReachedLimit
 
@@ -97,7 +97,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
             postponed := []
           end
       done;
-      Safe (Cubetrie.all_vals !visited)
+      Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
       Unsafe (faulty, !candidates)
 
@@ -109,8 +109,14 @@ module BreadthOrder = struct
 
   type t = Node.t
 
+let compare_kind k1 k2 = match k1, k2 with
+  | Approx, Approx -> 0
+  | Approx, _ -> -1
+  | _, Approx -> 1
+  | _ -> Pervasives.compare k1 k2
+
   let compare s1 s2 =
-    let c = Pervasives.compare s2.kind s1.kind in
+    let c = Pervasives.compare s1.depth s2.depth in
     if c <> 0 then c else
       
     let v1 = Node.size s1 in
@@ -120,8 +126,8 @@ module BreadthOrder = struct
       let c1 = Node.card s1 in
       let c2 = Node.card s2 in
       let c = Pervasives.compare c1 c2 in
-      if c <> 0 then c else
-        Pervasives.compare s1.depth s2.depth
+      if c <> 0 then c else c
+        (* Pervasives.compare s1.depth s2.depth *)
 end
 
 
@@ -130,6 +136,9 @@ module DepthOrder = struct
   type t = Node.t
 
   let compare s1 s2 =
+    (* let c = Pervasives.compare s2.depth s1.depth in *)
+    (* if c <> 0 then c else *)
+      
     let v1 = Node.size s1 in
     let v2 = Node.size s2 in
     let c = Pervasives.compare v1 v2 in

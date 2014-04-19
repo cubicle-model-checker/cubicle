@@ -92,6 +92,7 @@ and SAtom : sig
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
+  val print_inline : Format.formatter -> t -> unit
 end
 
 module ArrayAtom : sig

@@ -836,7 +836,7 @@ let forward_dfs s procs env l =
   let trs = env.st_trs in
   let rec forward_rec s procs trs = function
     | [] ->
-        eprintf "Total forward nodes : %d@." !cpt_f
+        if not quiet then eprintf "Total forward nodes : %d@." !cpt_f
     | (depth, st) :: to_do ->
 	decr cpt_q;
 	if HST.mem explicit_states st then
@@ -898,7 +898,7 @@ let forward_bfs s procs env l =
       (* add_all_syms env explicit_states st *)
     end
   done;
-  eprintf "Total forward nodes : %d@." !cpt_r
+  if not quiet then eprintf "Total forward nodes : %d@." !cpt_r
 
 let forward_bfs_switches s procs env l =
   let explicit_states = env.explicit_states in
@@ -925,7 +925,7 @@ let forward_bfs_switches s procs env l =
       env.states <- st :: env.states;
     end
   done;
-  eprintf "Total forward nodes : %d@." !cpt_f
+  if not quiet then eprintf "Total forward nodes : %d@." !cpt_f
 
     
 (************************************************************************)
@@ -1144,10 +1144,10 @@ let init system =
   let low = if brab_up_to then 1 else enumerative in
   for i = enumerative downto low do
     let procs = Variable.give_procs i in
-    eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
-	     ----------------------------------------\n@." i;
+    if not quiet then eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
+	                       ----------------------------------------\n@." i;
     search procs system;
-    eprintf "----------------------------------------\n@.";
+    if not quiet then eprintf "----------------------------------------\n@.";
   done;
   reset_gc_params ()
    

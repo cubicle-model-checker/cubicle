@@ -17,6 +17,8 @@ open Format
 open Util
 open Ast
 open Options
+open Types
+
 
 let round = 
   if not (profiling  && verbose > 0) then fun _ -> () 
@@ -28,7 +30,9 @@ let cpt_nodes = ref 0
 
 let cpt_process = ref 0
 
-let cpt_restart = ref (-1)
+let cpt_restart = ref 0
+
+let cpt_delete = ref 0
 
 let nodes_pre_run = ref []
 
@@ -39,7 +43,7 @@ let new_node s =
     begin
       printf "node @{<b>%d@}: " !cpt_nodes;
       if verbose < 1 then printf "@[%a@]@." Node.print_history s
-      else printf "@[%a@] = \n---@[%a@]---@." Node.print_history s Node.print s
+      else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
     end
       
 let fixpoint s uc =
@@ -56,16 +60,36 @@ let candidate c =
   if not quiet then
     begin
       printf "└───>> Approximating by @{<b>[%d]@}@." c.tag;
-      if verbose > 0 then printf  "@[%a@]@." Node.print c
+      if verbose > 0 then
+        printf  "                        @[%a@]@." Node.print c
     end    
       
+
+let delete n =
+  cpt_delete := n + !cpt_delete
 
 let remaining r =
   if not quiet then
     printf "%s@{<dim>%d remaining@}\n@."
            (String.make (Pretty.vt_width - 10 - nb_digits r) ' ')
            r
-           
+
+let print_candidates candidates =
+  if not quiet && candidates <> [] then
+    begin
+      printf "\n-----------------------------\n";
+      printf "@{<b>Inferred negated invariants :@}\n";
+      printf "-----------------------------@.";
+      let cpt = ref 0 in
+      List.iter (fun c ->
+                 incr cpt;
+                 printf "\n(%d)  %a@." !cpt
+                        SAtom.print_inline (Node.litterals c))
+                candidates
+    end
+
+
+
 let print_visited = 
   if not (profiling && verbose > 0) then fun _ -> ()
   else fun nb -> eprintf "Number of visited nodes : %d@." nb
@@ -120,21 +144,17 @@ let print_time_custom () =
 let print_time_forward () =
   printf "Forward exploration              : %a@." print_time (TimeForward.get ())
 
-let print_report nb inv del used_cands print_system =
-  if used_cands <> [] then begin
-                          printf "\n---------------------\n";
-                          printf "@{<b>Inferred invariants :@}\n";
-                          printf "---------------------@.";
-                          List.iter (fun i -> printf "\n%a@." print_system i) used_cands
-                        end;
+let print_report visited candidates =
+  print_candidates candidates;
   printf "\n----------------------------------------------@.";
-  printf "Number of visited nodes          : %d@." nb;
+  printf "Number of visited nodes          : %d@." !cpt_nodes;
   printf "Fixpoints                        : %d@." !cpt_fix;
   printf "Number of solver calls           : %d@." (Prover.SMT.get_calls ());
   printf "Max Number of processes          : %d@." !cpt_process;
-  if delete then 
-    printf "Number of deleted nodes          : %d@." del;
-  printf "Number of invariants             : %d@." (List.length used_cands);  
+  if Options.delete then 
+    printf "Number of deleted nodes          : %d@." !cpt_delete;
+  if do_brab then
+    printf "Number of invariants             : %d@." (List.length candidates);  
   printf "Restarts                         : %d@." !cpt_restart;
   printf "----------------------------------------------@.";
   if profiling then

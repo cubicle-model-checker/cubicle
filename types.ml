@@ -267,7 +267,7 @@ module rec Atom : sig
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
-  val print_atoms : string -> Format.formatter -> t list -> unit
+  val print_atoms : bool -> string -> Format.formatter -> t list -> unit
 
 end = struct
 
@@ -370,12 +370,16 @@ end = struct
        fprintf fmt "%a %s %a" Term.print x (str_op_comp op) Term.print y
     | Ite (la, a1, a2) ->
        fprintf fmt "@[ite(%a,@ %a,@ %a)@]" 
-	       (print_atoms "&&") (SAtom.elements la) print a1 print a2
+	       (print_atoms false "&&") (SAtom.elements la) print a1 print a2
 
-  and print_atoms sep fmt = function
+  and print_atoms inline sep fmt = function
     | [] -> ()
     | [a] -> print fmt a
-    | a::l -> fprintf fmt "%a %s@\n%a" print a sep (print_atoms sep) l
+    | a::l -> 
+       if inline then 
+         fprintf fmt "%a %s@ %a" print a sep (print_atoms inline sep) l
+       else
+         fprintf fmt "%a %s@\n%a" print a sep (print_atoms inline sep) l
 
 end
 
@@ -389,6 +393,7 @@ and SAtom : sig
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
+  val print_inline : Format.formatter -> t -> unit
 
 end = struct 
     
@@ -422,8 +427,11 @@ end = struct
 
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
 
-  let print fmt sa = 
-    fprintf fmt "@[%a@]" (Atom.print_atoms "&&") (elements sa)
+  let print fmt sa =
+    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (elements sa)
+
+  let print_inline fmt sa =
+    fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)
 
 end
 
@@ -578,6 +586,6 @@ module ArrayAtom = struct
     Array.sub d 0 !cpt
 
   let print fmt a =
-    fprintf fmt "@[%a@]" (Atom.print_atoms "&&") (Array.to_list a)
+    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (Array.to_list a)
 
 end

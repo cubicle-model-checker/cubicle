@@ -66,5 +66,6 @@ val add_and_resolve : Node.t -> Node.t t -> Node.t t
 
 val delete_subsumed : Node.t -> Node.t t -> Node.t t
 
+
 (** Add a node in the trie *)
 val add_node : Node.t -> Node.t t -> Node.t t

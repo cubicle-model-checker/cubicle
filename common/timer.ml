@@ -28,11 +28,11 @@ module Make (X : sig val profiling : bool end) = struct
   let cpt = ref 0.0
     
   let start = 
-    if X.profiling then fun () -> ()
+    if not (X.profiling) then fun () -> ()
     else fun () -> u:=(times()).tms_utime
 
   let pause =
-    if X.profiling then fun () -> ()
+    if not (X.profiling) then fun () -> ()
     else fun () -> cpt := !cpt +. ((times()).tms_utime -. !u)
 
   let get () = 

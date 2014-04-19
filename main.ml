@@ -35,7 +35,8 @@ let _ =
               is an experimental feature. Use at your own risks.\n@.";
     begin 
       match Brab.brab system with
-      | Bwd.Safe visited ->
+      | Bwd.Safe (visited, candidates) ->
+         if not quiet then Stats.print_report visited candidates;
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
 
       | Bwd.Unsafe (faulty, _) ->
