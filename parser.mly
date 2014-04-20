@@ -221,11 +221,15 @@ transition:
       LEFTBR assigns_nondets_updates RIGHTBR
       { let reqs, ureq = $6 in
 	let assigns, nondets, upds = $8 in
-	{ tr_name = $2; tr_args = $4; 
-	  tr_reqs = reqs; tr_ureq = ureq; 
+	{ tr_name = $2;
+          tr_args = $4; 
+	  tr_reqs = reqs;
+          tr_ureq = ureq; 
 	  tr_assigns = assigns; 
 	  tr_nondets = nondets; 
-	  tr_upds = upds } 
+	  tr_upds = upds;
+          tr_tau = fun _ _ _ -> Atom.True;
+        } 
       }
 ;
 

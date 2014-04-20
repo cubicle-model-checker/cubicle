@@ -14,5 +14,8 @@
 (**************************************************************************)
 
 open Ast
+open Types
+
+val make_tau : transition -> term -> op_comp -> term -> Atom.t
 
 val pre_image : transition list -> Node.t -> Node.t list * Node.t list

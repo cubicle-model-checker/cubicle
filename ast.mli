@@ -34,6 +34,7 @@ type transition = {
   tr_assigns : (Hstring.t * Term.t) list;
   tr_upds : update list;
   tr_nondets : Hstring.t list;
+  tr_tau : Term.t -> op_comp -> Term.t -> Atom.t;
 }
 
 type system = {

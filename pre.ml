@@ -280,37 +280,12 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 
 
 
-let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
-  if args = [] then tr
-  else
-    let sigma = Variable.build_subst args Variable.freshs in
-    { tr with 
-	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
-	tr_reqs = SAtom.subst sigma tr.tr_reqs;
-	tr_ureq = 
-	List.map 
-	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
-	tr_assigns = 
-	List.map (fun (x, t) -> x, Term.subst sigma t) 
-	  tr.tr_assigns;
-	tr_upds = 
-	List.map 
-	  (fun ({up_swts = swts} as up) -> 
-	     let swts = 
-	       List.map 
-		 (fun (sa, t) -> SAtom.subst sigma sa, Term.subst sigma t) swts
-	     in
-	     { up with up_swts = swts }) 
-	  upds}
-
-
 (*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
 let pre tr unsafe =
-  let tr = fresh_args tr in
-  let tau = make_tau tr in
+  let tau = tr.tr_tau in
   let pre_unsafe = 
     SAtom.union tr.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)

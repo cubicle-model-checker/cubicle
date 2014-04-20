@@ -338,6 +338,35 @@ let create_node_rename kind (vars, sa) =
   Node.create ~kind c
 
 
+let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
+  if args = [] then tr
+  else
+    let sigma = Variable.build_subst args Variable.freshs in
+    { tr with 
+	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
+	tr_reqs = SAtom.subst sigma tr.tr_reqs;
+	tr_ureq = 
+	List.map 
+	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
+	tr_assigns = 
+	List.map (fun (x, t) -> x, Term.subst sigma t) 
+	  tr.tr_assigns;
+	tr_upds = 
+	List.map 
+	  (fun ({up_swts = swts} as up) -> 
+	     let swts = 
+	       List.map 
+		 (fun (sa, t) -> SAtom.subst sigma sa, Term.subst sigma t) swts
+	     in
+	     { up with up_swts = swts }) 
+	  upds}
+
+
+let add_tau tr =
+  let tr = fresh_args tr in
+  { tr with
+    tr_tau = Pre.make_tau tr }
+
     
 let system s = 
   try
@@ -363,7 +392,7 @@ let system s =
       t_init_instances = create_init_instances s.init;
       t_invs = List.map (create_node_rename Inv) s.invs;
       t_unsafe = List.map (create_node_rename Node) s.unsafe;
-      t_trans = s.trans;
+      t_trans = List.map add_tau s.trans;
     }
 
   with Smt.Error e -> raise (Error (Smt e))
