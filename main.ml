@@ -24,6 +24,16 @@ let report (b,e) =
   let lc = e.pos_cnum - b.pos_bol + 1 in
   printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
 
+
+let () = 
+  Sys.set_signal Sys.sigint 
+    (Sys.Signal_handle 
+       (fun _ ->
+        Stats.print_report ~safe:false [] [];
+        eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+        exit 1)) 
+
+
 let _ = 
   let lb = from_channel cin in 
   try
@@ -36,13 +46,13 @@ let _ =
     begin 
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
-         if not quiet then Stats.print_report visited candidates;
+         if not quiet then Stats.print_report ~safe:true visited candidates;
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
 
-      | Bwd.Unsafe (faulty, _) ->
-         if verbose > 1 && Forward.spurious_error_trace system faulty then
-           printf "\n\n@{<b>@{<fg_yellow>Spurious trace@} !@}\n@."
-         else printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+      | Bwd.Unsafe (faulty, candidates) ->
+         if not quiet then Stats.print_report ~safe:false [] candidates;
+         if not quiet then Stats.error_trace system faulty;
+         printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
          exit 1
     end
   with

@@ -28,6 +28,19 @@ let vt_width =
     w
   with Not_found | Failure _ -> 80
 
+let print_line = 
+  let s = String.make vt_width '-' in
+  fun fmt () -> fprintf fmt "%s@." s
+
+let print_double_line = 
+  let s = String.make vt_width '=' in
+  fun fmt () -> fprintf fmt "%s@." s
+
+
+let print_title fmt s =
+  printf "\n%a" print_double_line ();
+  printf "* @{<b>%s@}\n" s;
+  printf "%a" print_line ()
 
 
 type style =

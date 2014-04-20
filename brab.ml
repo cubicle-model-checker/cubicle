@@ -33,13 +33,13 @@ let rec search_and_backtrack candidates system =
      else
        (* Bad candidate, we backtrack while keeping interresting candidates *)
        begin
-         if not quiet then eprintf "The candidate %d = %a is BAD@."
+         if not quiet then eprintf "The candidate %d = %a is BAD\n@."
                                    o.tag Node.print o;
+         Stats.restart ();
          let candidates =
            Approx.remove_bad_candidates system faulty candidates
          in
          (* Restarting *)
-         Stats.restart ();
          search_and_backtrack candidates system
        end
 

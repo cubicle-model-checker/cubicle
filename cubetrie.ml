@@ -281,22 +281,18 @@ let rec add_and_resolve n visited =
     ) visited visited in
   add_array (Node.array n) n visited
 
-
-let delete_subsumed p nodes =
+let delete_subsumed ?(cpt=ref 0) p nodes =
   let vars, ap = Node.variables p, Node.array p in
   let substs = Variable.all_permutations vars vars in
-  let cpt =ref 0 in
   List.iter (fun ss ->
     let u = ArrayAtom.apply_subst ss ap in
     iter_subsumed (fun n ->
       if Node.has_deleted_ancestor n || (not (Node.ancestor_of n p)) then begin
         n.deleted <- true;
         incr cpt;
-        (* if inc then incr nb_del; *)
       end
     ) (Array.to_list u) nodes;
   ) substs;
-  Format.eprintf "deleted %d@." !cpt;
   delete (fun n -> n.deleted || Node.has_deleted_ancestor n) nodes
 
 

@@ -207,7 +207,8 @@ let post_strategy =
   if !post_strategy <> -1 then !post_strategy
   else match mode with
     | Bfs | BfsDist | Bfsinvp -> 1
-    | _ -> 2
+    | BfsH | DfsH -> 0
+    | Dfs | _ -> 2
 
 let abstr_num = !abstr_num
 let num_range = (!num_range_low, !num_range_up)

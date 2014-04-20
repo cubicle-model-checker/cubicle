@@ -51,15 +51,26 @@ let fixpoint s uc =
 
 let restart () =
   incr cpt_restart;
-  if not quiet then printf "\n@{<b>@{<fg_yellow>Backtracking@} ...@}\n@." ;
+  if not quiet then
+    printf "%a@{<b>@{<fg_yellow>BACKTRACKING@} : %d restarts ...@}\n%a@."
+           Pretty.print_line () !cpt_restart Pretty.print_line ();
   nodes_pre_run := !cpt_nodes :: !nodes_pre_run;
   cpt_nodes := 0
+
+let rec int_list_sep sep fmt = function
+  | [] -> ()
+  | [x] -> fprintf fmt "%d" x
+  | x :: r -> fprintf fmt "%d%s%a" x sep (int_list_sep sep) r
+
+let print_rounds_nb fmt () =
+  if not quiet && !nodes_pre_run <> [] then
+    fprintf fmt "@\n(%a)" (int_list_sep " + ") !nodes_pre_run
 
 
 let candidate c =
   if not quiet then
     begin
-      printf "└───>> Approximating by @{<b>[%d]@}@." c.tag;
+      printf "└───>> Approximating by @{<fg_blue>[%d]@}@." c.tag;
       if verbose > 0 then
         printf  "                        @[%a@]@." Node.print c
     end    
@@ -68,18 +79,27 @@ let candidate c =
 let delete n =
   cpt_delete := n + !cpt_delete
 
-let remaining r =
+let remaining compute = 
   if not quiet then
-    printf "%s@{<dim>%d remaining@}\n@."
-           (String.make (Pretty.vt_width - 10 - nb_digits r) ' ')
-           r
+    let r, post = compute () in
+    if post_strategy = 0 then
+      printf "%s@{<dim>%d remaining@}\n@."
+             (String.make (Pretty.vt_width - 10 - nb_digits r) ' ') r
+    else
+      let tot = r + post in
+      printf "%s@{<dim>%d (%d+%d) remaining@}\n@."
+             (String.make (Pretty.vt_width - 14 - (nb_digits r) - 
+                             (nb_digits post) - (nb_digits tot)) ' ')
+        tot r post
 
-let print_candidates candidates =
+
+let print_candidates ~safe candidates =
   if not quiet && candidates <> [] then
     begin
-      printf "\n-----------------------------\n";
-      printf "@{<b>Inferred negated invariants :@}\n";
-      printf "-----------------------------@.";
+      if safe then 
+        Pretty.print_title std_formatter "INFERRED NEGATED INVARIANTS"
+      else
+        Pretty.print_title std_formatter "USED CANDIDATES";
       let cpt = ref 0 in
       List.iter (fun c ->
                  incr cpt;
@@ -87,6 +107,15 @@ let print_candidates candidates =
                         SAtom.print_inline (Node.litterals c))
                 candidates
     end
+
+
+let error_trace sys faulty =
+  if not quiet then
+    if Forward.spurious_due_to_cfm sys faulty then
+      printf "@\n@{<fg_red>Spurious trace@}: "
+    else 
+      printf "@\n@{<fg_red>Error trace@}: ";
+  printf "@[%a@]@." Node.print_history faulty
 
 
 
@@ -138,15 +167,15 @@ let print_time_apply () =
 let print_time_sort () =
   printf "├─Nodes sorting                  : %a@." print_time (TimeSort.get ())
 
-let print_time_custom () =
-  printf "Custom timer                     : %a@." print_time (TimeCustom.get ())
+let print_time_ccheck () =
+  printf "Filter candidates                : %a@." print_time (TimeCheckCand.get ())
 
 let print_time_forward () =
   printf "Forward exploration              : %a@." print_time (TimeForward.get ())
 
-let print_report visited candidates =
-  print_candidates candidates;
-  printf "\n----------------------------------------------@.";
+let print_report ~safe visited candidates =
+  print_candidates ~safe candidates;
+  Pretty.print_title std_formatter "STATS";
   printf "Number of visited nodes          : %d@." !cpt_nodes;
   printf "Fixpoints                        : %d@." !cpt_fix;
   printf "Number of solver calls           : %d@." (Prover.SMT.get_calls ());
@@ -154,11 +183,13 @@ let print_report visited candidates =
   if Options.delete then 
     printf "Number of deleted nodes          : %d@." !cpt_delete;
   if do_brab then
-    printf "Number of invariants             : %d@." (List.length candidates);  
-  printf "Restarts                         : %d@." !cpt_restart;
-  printf "----------------------------------------------@.";
+    printf "Number of %s             : %d@."
+           (if safe then "invariants" else "candidates") (List.length candidates);
+  printf "Restarts                         : @[%d%a@]@." !cpt_restart
+         print_rounds_nb ();
   if profiling then
     begin
+      printf "%a" Pretty.print_line ();
       print_time_pre ();
       print_time_fix ();
       print_time_rp ();
@@ -168,6 +199,7 @@ let print_report visited candidates =
       print_time_formulas ();
       print_time_prover ();
       print_time_forward ();
-      print_time_custom ();
-      printf "----------------------------------------------@."
-    end
+      print_time_ccheck ();
+    end;
+    printf "%a" Pretty.print_double_line ()
+

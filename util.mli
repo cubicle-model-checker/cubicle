@@ -22,7 +22,7 @@ module TimeRP : Timer.S
 module TimePre : Timer.S
 module TimeSort : Timer.S
 module TimeForward : Timer.S
-module TimeCustom : Timer.S
+module TimeCheckCand : Timer.S
 module TimeFormula : Timer.S
 
 

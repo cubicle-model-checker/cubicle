@@ -23,7 +23,7 @@ module TimeRP = Timer.Make (Options)
 module TimePre = Timer.Make (Options)
 module TimeSort = Timer.Make (Options)
 module TimeForward = Timer.Make (Options)
-module TimeCustom = Timer.Make (Options)
+module TimeCheckCand = Timer.Make (Options)
 module TimeFormula = Timer.Make (Options)
 
 

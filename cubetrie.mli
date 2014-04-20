@@ -64,7 +64,7 @@ val consistent : Atom.t list -> 'a t -> 'a list
 
 val add_and_resolve : Node.t -> Node.t t -> Node.t t
 
-val delete_subsumed : Node.t -> Node.t t -> Node.t t
+val delete_subsumed : ?cpt:int ref -> Node.t -> Node.t t -> Node.t t
 
 
 (** Add a node in the trie *)

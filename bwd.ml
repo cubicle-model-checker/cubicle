@@ -49,6 +49,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
   module Fixpoint = Fixpoint.FixpointTrie
   module Approx = Approx.Selected
 
+  let nb_remaining q post () = Q.length q, List.length !post
+
   let search ?(invariants=[]) ?(candidates=[]) system =
     
     let visited = ref Cubetrie.empty in
@@ -84,11 +86,13 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
-             if delete then visited := Cubetrie.delete_subsumed n !visited;
+             if delete then
+               visited := 
+                 Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
 	     postponed := List.rev_append post !postponed;
              visited := Cubetrie.add_node n !visited;
              Q.push_list ls q;
-             Stats.remaining (Q.length q);
+             Stats.remaining (nb_remaining q postponed);
         end;
         
         if Q.is_empty q then
@@ -104,41 +108,20 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 end
 
 
+             
+let compare_kind s1 s2 =
+  match s1.kind, s2.kind with
+  | Approx, Approx -> 0
+  | Approx, _ -> -1
+  | _, Approx -> 1
+  | k1, k2 -> Pervasives.compare k1 k2
+
 
 module BreadthOrder = struct
 
   type t = Node.t
-
-let compare_kind k1 k2 = match k1, k2 with
-  | Approx, Approx -> 0
-  | Approx, _ -> -1
-  | _, Approx -> 1
-  | _ -> Pervasives.compare k1 k2
-
+ 
   let compare s1 s2 =
-    let c = Pervasives.compare s1.depth s2.depth in
-    if c <> 0 then c else
-      
-    let v1 = Node.size s1 in
-    let v2 = Node.size s2 in
-    let c = Pervasives.compare v1 v2 in
-    if c <> 0 then c else
-      let c1 = Node.card s1 in
-      let c2 = Node.card s2 in
-      let c = Pervasives.compare c1 c2 in
-      if c <> 0 then c else c
-        (* Pervasives.compare s1.depth s2.depth *)
-end
-
-
-module DepthOrder = struct
-
-  type t = Node.t
-
-  let compare s1 s2 =
-    (* let c = Pervasives.compare s2.depth s1.depth in *)
-    (* if c <> 0 then c else *)
-      
     let v1 = Node.size s1 in
     let v2 = Node.size s2 in
     let c = Pervasives.compare v1 v2 in
@@ -147,10 +130,37 @@ module DepthOrder = struct
       let c2 = Node.card s2 in
       let c = Pervasives.compare c1 c2 in
       if c <> 0 then c else
-        Pervasives.compare s2.depth s1.depth
+        let c =  compare_kind s1 s2 in
+        if c <> 0 then c else
+          let c = Pervasives.compare s1.depth s2.depth in 
+          if c <> 0 then c else
+            Pervasives.compare (abs s1.tag) (abs s2.tag)
 end
 
-module NodeHeap (X : Set.OrderedType with type t = Node.t) : PriorityNodeQueue = struct
+
+module DepthOrder = struct
+
+  type t = Node.t
+ 
+  let compare s1 s2 =
+    let v1 = Node.size s1 in
+    let v2 = Node.size s2 in
+    let c = Pervasives.compare v1 v2 in
+    if c <> 0 then c else
+      let c1 = Node.card s1 in
+      let c2 = Node.card s2 in
+      let c = Pervasives.compare c1 c2 in
+      if c <> 0 then c else
+        let c =  compare_kind s1 s2 in
+        if c <> 0 then c else
+          let c = Pervasives.compare s2.depth s1.depth in 
+          if c <> 0 then c else
+            Pervasives.compare (abs s1.tag) (abs s2.tag)
+end
+
+
+module NodeHeap (X : Set.OrderedType with type t = Node.t) : PriorityNodeQueue =
+struct
 
   module H = Heap.Make(X)
 
@@ -201,11 +211,41 @@ module NodeQ (Q : StdQ) : PriorityNodeQueue = struct
 
 end
 
+
+module ApproxQ (Q : PriorityNodeQueue) = struct
+  
+  type t = Q.t * Q.t
+
+  let create () = Q.create (), Q.create ()
+
+  let pop (aq, nq) = 
+    if not (Q.is_empty aq) then Q.pop aq
+    else Q.pop nq
+
+  let push n (aq, nq) =
+    match n.kind with
+    | Approx -> Q.push n aq
+    | _ -> Q.push n nq
+
+  let clear (aq, nq) = Q.clear aq; Q.clear nq
+
+  let length (aq, nq) = Q.length aq + Q.length nq
+
+  let is_empty (aq, nq) = Q.is_empty aq && Q.is_empty nq
+
+  let push_list l q = List.iter (fun e -> push e q) l
+
+end
+
+
 module BFS : Strategy = Make (NodeQ (Queue))
 module DFS : Strategy = Make (NodeQ (Stack))
+
 module BFSH : Strategy = Make (NodeHeap (BreadthOrder))
 module DFSH : Strategy = Make (NodeHeap (DepthOrder))
 
+module BFSA : Strategy = Make (ApproxQ (NodeQ (Queue)))
+module DFSA : Strategy = Make (ApproxQ (NodeQ (Stack)))
 
 let select_search =
   match mode with

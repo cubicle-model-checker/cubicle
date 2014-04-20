@@ -1076,7 +1076,7 @@ let smallest_to_resist_on_trace ls =
 		     0 !global_envs
     in
     let progress_inc = nb / Pretty.vt_width + 1 in
-    TimeCustom.start ();
+    TimeCheckCand.start ();
     let resistants =
       List.fold_left
 	(resist_on_trace_size progress_inc) ls !global_envs in
@@ -1085,11 +1085,11 @@ let smallest_to_resist_on_trace ls =
       | [] -> raise Not_found
   with
   | Exit | Not_found ->
-     TimeCustom.pause ();
+     TimeCheckCand.pause ();
      if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
      []
   | Sustainable ls ->
-     TimeCustom.pause ();
+     TimeCheckCand.pause ();
      if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
      ls
 
@@ -1116,7 +1116,7 @@ let fast_resist_on_trace ls =
   (* will be forgotten by flushs *)
   let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
   let cpt = ref 0 in
-  TimeCustom.start ();
+  TimeCheckCand.start ();
   try 
     List.iter (fun s ->
       incr cpt;
@@ -1124,11 +1124,11 @@ let fast_resist_on_trace ls =
       if (List.for_all (one_resist_on_trace_size s) !global_envs)
       then raise (Sustainable [s])
     ) ls;
-    TimeCustom.pause ();
+    TimeCheckCand.pause ();
     if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
     []
   with Sustainable cand ->
-       TimeCustom.pause ();
+       TimeCheckCand.pause ();
        if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
        cand
 
@@ -1144,10 +1144,11 @@ let init system =
   let low = if brab_up_to then 1 else enumerative in
   for i = enumerative downto low do
     let procs = Variable.give_procs i in
-    if not quiet then eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
-	                       ----------------------------------------\n@." i;
+    if not quiet then
+      Pretty.print_title std_formatter
+        ("STATEFULL ENUMERATIVE FORWARD ["^(string_of_int i)^" procs]");
     search procs system;
-    if not quiet then eprintf "----------------------------------------\n@.";
+    if not quiet then printf "%a@." Pretty.print_double_line ();
   done;
   reset_gc_params ()
    
