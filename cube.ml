@@ -94,74 +94,6 @@ let normal_form ({ litterals = sa; array = ar } as c) =
       array = new_ar;
     }
 
-let number_of s = 
-  if s.[0] = '#' then 
-    int_of_string (String.sub s 1 (String.length s - 1))
-  else 1
-
-let rec add_arg args = function
-  | Elem (s, _) ->
-      let s' = H.view s in
-      if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
-  | Access (_, ls) ->
-      List.fold_left (fun args s ->
-        let s' = H.view s in
-        if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args)
-        args ls        
-  | Arith (t, _) -> add_arg args t
-  | Const _ -> args
-
-let args_of_atoms sa =
-  let open Atom in
-  let rec args_rec sa args = 
-    SAtom.fold 
-      (fun a args -> 
-	 match a with 
-	   | True | False -> args
-	   | Comp (x, _, y) -> add_arg (add_arg args x) y
-	   | Ite (sa, a1, a2) -> 
-	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args) 
-      sa args
-  in 
-  S.elements (args_rec sa S.empty)
-
-(***************************************)
-(* Good renaming of a cube's variables *)
-(***************************************)
-
-let proper_cube sa =
-  let args = args_of_atoms sa in
-  if !size_proc <> 0 && List.length args > !size_proc then
-    SAtom.singleton (Atom.False), ([], List.hd Variable.procs)
-  else
-    let cpt = ref 1 in
-    let sigma =
-      List.fold_left
-        (fun sigma arg ->
-	  let n = number_of (H.view arg) in
-	  if n = !cpt then (incr cpt; sigma)
-	  else
-	    let sigma =
-	      (arg, List.nth Variable.procs (!cpt - 1)):: sigma in
-	    incr cpt; sigma)
-        [] args
-    in
-    let sa = SAtom.subst (List.rev sigma) sa in
-    let l = ref [] in
-    for n = !cpt - 1 downto 1 do
-      l := (List.nth Variable.procs (n - 1)) :: !l
-    done;
-    sa, (!l, List.nth Variable.procs (!cpt - 1))
-
-let normal_form ( {litterals = sa; array = ar } as c) =
-  let new_sa, (new_vars, _) = proper_cube sa in
-  let new_ar = ArrayAtom.of_satom sa in
-    {
-      vars = new_vars;
-      litterals = new_sa;
-      array = new_ar;
-    }
-
 
 let create_norma_sa_ar sa ar =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
@@ -181,7 +113,6 @@ let create_norma_sa_ar sa ar =
 let create_normal sa = create_norma_sa_ar sa (ArrayAtom.of_satom sa)
 
 let create_normal_array ar = create_norma_sa_ar (ArrayAtom.to_satom ar) ar
-  
 
 let size c = List.length c.vars
 let card c = Array.length c.array

@@ -25,7 +25,7 @@ let round =
   else fun cpt -> eprintf "@.-- Round %d@." cpt
 
 let cpt_fix = ref 0
-                  
+
 let cpt_nodes = ref 0
 
 let cpt_process = ref 0
@@ -103,9 +103,9 @@ let print_candidates ~safe candidates =
       let cpt = ref 0 in
       List.iter (fun c ->
                  incr cpt;
-                 printf "\n(%d)  %a@." !cpt
+                 printf "(%d)  %a@." !cpt
                         SAtom.print_inline (Node.litterals c))
-                candidates
+                candidates;
     end
 
 

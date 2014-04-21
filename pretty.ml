@@ -38,7 +38,7 @@ let print_double_line =
 
 
 let print_title fmt s =
-  printf "\n%a" print_double_line ();
+  printf "%a" print_double_line ();
   printf "* @{<b>%s@}\n" s;
   printf "%a" print_line ()
 

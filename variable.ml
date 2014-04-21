@@ -59,7 +59,7 @@ let is_proc v =
 let build_subst args a_args =
   let rec a_subst acc args a_args =
     match args, a_args with
-      | [], _ -> acc
+      | [], _ -> List.rev acc
       | x::args, ax::a_args ->
 	a_subst ((x, ax)::acc) args a_args
       | _ -> assert false
