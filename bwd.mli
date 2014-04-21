@@ -18,6 +18,14 @@ open Format
 open Ast
 
 
+(** {b Backward reachability with approximation}
+
+    This algorithm of backward reachability performs approxmations guided by an
+    oracle. It is parameterized by a structure of priority queue to define a
+    search strategy.
+ *)
+
+
 module type PriorityNodeQueue = sig
 
     type t
@@ -50,6 +58,10 @@ module type Strategy = sig
   
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
                t_system -> result
+  (** Backward reachability search on a system. The user can also provide
+      invariants that are true of the system to help the search.  Candidate
+      invariants can also be provided, they will be proven as real invariants
+      if necessary. *)
 
 end
 
@@ -64,6 +76,8 @@ module BFS : Strategy
 module DFS : Strategy
 module BFSH : Strategy
 module DFSH : Strategy
+module BFSHA : Strategy
+module DFSHA : Strategy
 
 module Selected : Strategy
 (** Strategy selected by the options of the command line *)

@@ -20,10 +20,7 @@ open Util
 
 module HSet = Hstring.HSet
 
-
 type op_comp = Eq | Lt | Le | Neq
-
-type op_arith = Plus | Minus
 
 type sort = Glob | Constr | Var
 
@@ -40,7 +37,8 @@ let compare_const c1 c2 = match c1, c2 with
   | _, (ConstInt _ | ConstReal _) -> 1
   | ConstName h1, ConstName h2 -> Hstring.compare h1 h2
 
-module MConst = struct 
+module MConst = struct
+
   module M = Map.Make (struct type t = const let compare = compare_const end)
   include M
 
@@ -60,8 +58,7 @@ module MConst = struct
 	   
 end
 
-
-type term = 
+type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list

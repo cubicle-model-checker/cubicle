@@ -57,7 +57,6 @@ let order_vars =
   function n -> if n = 0 then F.f_true else t.(n-1)
 
 
-let make_op_arith = function Plus -> T.Plus | Minus -> T.Minus
 let make_op_comp = function
   | Eq -> F.Eq
   | Lt -> F.Lt

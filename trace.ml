@@ -93,7 +93,6 @@ module AltErgo = struct
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
-  let op_arith = function Plus -> "+" | Minus -> "-"
 
   let print_const fmt c = assert false
 
@@ -572,7 +571,6 @@ module Why3 = struct
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
-  let op_arith = function Plus -> "+" | Minus -> "-"
 
   let print_const fmt c = assert false
 
