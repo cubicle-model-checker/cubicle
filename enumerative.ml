@@ -272,7 +272,7 @@ let table_size nb_procs nb_vars =
 
 
 let init_tables procs s =
-  let var_terms = all_var_terms procs s in
+  let var_terms = Forward.all_var_terms procs s in
   let proc_terms = terms_of_procs procs in (* constantes *)
   let constr_terms = all_constr_terms () in (* constantes *)
   let nb_vars = Term.Set.cardinal var_terms in

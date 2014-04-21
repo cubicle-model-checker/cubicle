@@ -15,8 +15,6 @@
 
 open Types
 
-exception ReachBound
-
 type dnf = SAtom.t list
 
 type type_constructors = Hstring.t * (Hstring.t list)
@@ -73,5 +71,3 @@ type t_system = {
   t_unsafe : node_cube list;
   t_trans : transition list;
 }
-
-val all_var_terms : Variable.t list -> t_system -> Term.Set.t

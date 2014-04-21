@@ -87,7 +87,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo util.cmo variable.cmo types.cmo\
-      cube.cmo node.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
+      cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo approx.cmo  \
       dot.cmo stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
@@ -263,7 +263,7 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
 
-FILES = approx.ml approx.mli ast.ml ast.mli brab.ml brab.mli bwd.ml bwd.mli\
+FILES = approx.ml approx.mli ast.mli brab.ml brab.mli bwd.ml bwd.mli\
 	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
 	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
 	fixpoint.ml fixpoint.mli forward.ml forward.mli\

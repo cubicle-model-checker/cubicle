@@ -807,6 +807,21 @@ let instantiate_transitions all_procs procs trans =
 
 
 
+
+let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
+  let acc, gp = 
+    List.fold_left 
+      (fun (acc, gp) g -> 
+	Term.Set.add (Elem (g, Glob)) acc, gp
+      ) (Term.Set.empty, []) globals
+  in
+  List.fold_left (fun acc a ->
+    let indexes = Variable.all_arrangements_arity a (procs@gp) in
+    List.fold_left (fun acc lp ->
+      Term.Set.add (Access (a, lp)) acc)
+      acc indexes)
+    acc arrays
+
 let search procs init =
   let inst_trans = instantiate_transitions procs procs init.t_trans in
   forward init procs inst_trans (mkinits procs init)

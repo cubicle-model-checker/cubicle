@@ -35,6 +35,8 @@ type possible_result =
 
 (* val search : Hstring.t list -> t_system -> SAtom.t list *)
 
+val all_var_terms : Variable.t list -> t_system -> Term.Set.t
+
 val search : Hstring.t list -> t_system -> unit HSA.t
 
 val search_stateless : Hstring.t list -> t_system -> (SAtom.t * Term.Set.t) MA.t
