@@ -157,6 +157,13 @@ headers:
 		Makefile.in configure.in *.ml *.ml[ily] \
 		common/*.ml common/*.mli smt/*.ml smt/*.mli
 
+# ocamldoc
+##########
+doc: main.ml
+	mkdir -p doc/ocamldoc
+	ocamldoc -html -d doc/ocamldoc -I smt -I common *.mli smt/*.mli common/*.mli
+
+
 # Emacs tags
 ############
 

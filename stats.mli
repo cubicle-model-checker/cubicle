@@ -13,6 +13,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
+exception ReachedLimit
+
+
 val cpt_delete : int ref
 
 val new_node : Node.t -> unit
@@ -30,3 +33,7 @@ val candidate : Node.t -> Node.t -> unit
 val print_report : safe:bool -> Node.t list -> Node.t list -> unit
 
 val error_trace : Ast.t_system -> Node.t -> unit
+
+val check_limit : Node.t -> unit
+(** Raises [ReachedLimit] if the limits given in {! Options} have been
+    exceeded *)

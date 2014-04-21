@@ -46,7 +46,7 @@ let _ =
     let system = Typing.system s in
     if type_only then exit 0;
     if refine_universal then
-      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement\
+      printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
     let close_dot = Dot.open_dot () in 
     begin 
@@ -80,13 +80,13 @@ let _ =
      printf "typing error: %a\n@." Typing.report e;
      exit 2
 
-  | Bwd.ReachedLimit ->
-     eprintf "@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
-     eprintf "It is likely that the search diverges, please increase\
-              the limit to explore further.";
+  | Stats.ReachedLimit ->
+     if not quiet then Stats.print_report ~safe:false [] [];
+     eprintf "\n@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
+     eprintf "It is likely that the search diverges, increase \
+              the limit to explore further.@.";
      exit 1
 
   | Failure str ->
-     eprintf "@{<u>Internal failure:@}%s@." str;
+     eprintf "\n@{<u>Internal failure:@}%s@." str;
      exit 1
-

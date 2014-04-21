@@ -49,9 +49,6 @@ type result =
       candidate invariants that were considered *)
 
 
-exception ReachedLimit
-
-
 (** {2 Strategies } *)
 
 module type Strategy = sig
@@ -76,8 +73,8 @@ module BFS : Strategy
 module DFS : Strategy
 module BFSH : Strategy
 module DFSH : Strategy
-module BFSHA : Strategy
-module DFSHA : Strategy
+module BFSA : Strategy
+module DFSA : Strategy
 
 module Selected : Strategy
 (** Strategy selected by the options of the command line *)

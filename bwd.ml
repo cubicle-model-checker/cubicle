@@ -33,8 +33,6 @@ end
 
 type result = Safe of Node.t list * Node.t list | Unsafe of Node.t * Node.t list
 
-exception ReachedLimit
-
 
 module type Strategy = sig
   
@@ -65,16 +63,15 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
               (invariants @ system.t_invs);
 
     try
-      let cpt = ref 0 in
       while not (Q.is_empty q) do
         let n = Q.pop q in
         Safety.check system n;
         begin
-          incr cpt;
           match Fixpoint.check n !visited with
           | Some db ->
              Stats.fixpoint n db
           | None ->
+             Stats.check_limit n;
              Stats.new_node n;
              let n = begin
                  match Approx.good n with
@@ -103,7 +100,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
       done;
       Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
-      Dot.error_trace faulty;
+      if dot then Dot.error_trace faulty;
       Unsafe (faulty, !candidates)
 
 end

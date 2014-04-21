@@ -19,6 +19,8 @@ open Ast
 open Options
 open Types
 
+exception ReachedLimit
+
 
 let round = 
   if not (profiling  && verbose > 0) then fun _ -> () 
@@ -46,6 +48,9 @@ let new_node s =
       else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
     end;
   if dot then Dot.new_node s
+
+let check_limit s =
+  if !cpt_nodes > maxnodes || s.depth > maxrounds then raise ReachedLimit
       
 let fixpoint s uc =
   incr cpt_fix;
