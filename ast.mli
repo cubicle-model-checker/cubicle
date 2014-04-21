@@ -15,26 +15,39 @@
 
 open Types
 
+(** {b Abstract syntax tree and transition systems } *)
+
+
 type dnf = SAtom.t list
+(** Disjunctive normal form: each element of the list is a disjunct *)
 
 type type_constructors = Hstring.t * (Hstring.t list)
+(** Type and constructors declaration: [("t", ["A";"B"])] represent the
+    declaration of type [t] with two constructors [A] and [B] *)
 
 type update = {
-  up_arr : Hstring.t;
-  up_arg : Variable.t list;
+  up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
+  up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : (SAtom.t * Term.t) list;
+  (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
 }
+(** conditionnal updates with cases, ex. [A[j] := case | C:t | _ ...] *)
 
 type transition = {
-  tr_name : Hstring.t;
+  tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
-  tr_reqs : SAtom.t;
+  (** existentially quantified parameters of the transision *)
+  tr_reqs : SAtom.t; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
-  tr_assigns : (Hstring.t * Term.t) list;
-  tr_upds : update list;
+  (** global condition of the guard, i.e. universally quantified DNF *)
+  tr_assigns : (Hstring.t * Term.t) list; (** updates of global variables *)
+  tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
+  (** non deterministic updates (only for global variables) *)
   tr_tau : Term.t -> op_comp -> Term.t -> Atom.t;
+  (** functionnal form, computed during typing phase *)
 }
+(** type of parameteried transitions *)
 
 type system = {
   globals : (Hstring.t * Smt.Type.t) list;
@@ -46,10 +59,13 @@ type system = {
   unsafe : (Variable.t list * SAtom.t) list;  
   trans : transition list
 }
+(** type of untyped transition systems *)
 
 (* Typed AST *)
 
 type kind = Approx | Orig | Node | Inv
+(** kind of nodes (approximation, original unsafe formula, reguar node or user
+    supplied invariant )*)
 
 type node_cube =
     { 
@@ -60,14 +76,23 @@ type node_cube =
       mutable deleted : bool;
       from : trace;
     }
+(** the type of nodes, i.e. cubes with extra information *)
 and trace = (transition * Variable.t list * node_cube) list
+(** type of error traces, also the type of history of nodes *)
 
 type t_system = {
-  t_globals : Hstring.t list;
-  t_arrays : Hstring.t list;
+  t_globals : Hstring.t list; (** Global variables *)
+  t_arrays : Hstring.t list; (** Array names *)
   t_init : Variable.t list * dnf;
+  (** Formula describing the initial states of the system, universally
+      quantified DNF : \forall i. c1 \/ c2 \/ ... *)
   t_init_instances : (int, (dnf list * ArrayAtom.t list list)) Hashtbl.t;
+  (** pre-computed instances of the initial formula *)
   t_invs : node_cube list;
+  (** user supplied invariants in negated form *)
   t_unsafe : node_cube list;
+  (** unsafe formulas (in the form of cubes *)
   t_trans : transition list;
+  (** transition relation in the form of a list of transitions *)
 }
+(** type of typed transition systems *)

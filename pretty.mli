@@ -15,10 +15,16 @@
 
 open Format
 
+(** {b Pretty printing functions } *)
+
 val vt_width : int
+(** Width of the virtual terminal (80 if cannot be detected) *)
 
 val print_line : formatter -> unit -> unit
+(** prints separating line *)
 
 val print_double_line : formatter -> unit -> unit
+(** prints separating double line *)
 
 val print_title : formatter -> string -> unit
+(** prints section title for stats *)

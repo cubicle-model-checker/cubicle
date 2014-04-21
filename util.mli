@@ -13,6 +13,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** {b Utilitaries } *)
+
+(** {2 Timers } *)
+
 module TimerSubset : Timer.S
 module TimerApply  : Timer.S
 module TimeFix : Timer.S
@@ -25,6 +29,8 @@ module TimeForward : Timer.S
 module TimeCheckCand : Timer.S
 module TimeFormula : Timer.S
 
+
+(** {2 Misc } *)
 
 val nb_digits : int -> int
 (** Returns the number of digits of a positive integer *)

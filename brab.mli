@@ -13,6 +13,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** {b Backward reachability with Approximations and Backtracking} *)
+
 val brab : Ast.t_system -> Bwd.result
-(** Backward reachability with Approximations and Backtracking :
-    [brab system] calls the BRAB on the given system. *)
+(** Backtracking procedure that uses approximated backward reachability
+    ({! Bwd}). [brab system] calls BRAB on the given system. *)

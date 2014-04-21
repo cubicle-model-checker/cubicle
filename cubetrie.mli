@@ -15,6 +15,7 @@
 
 open Types
 
+(** {b Trie structure for cubes sets } *)
 
 type 'a t
 (** Trie, mapping sets of atoms (i.e. cubes) to values of type 'a *)

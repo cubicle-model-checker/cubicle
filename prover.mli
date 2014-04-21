@@ -15,7 +15,10 @@
 
 open Types
 
+(** {b Interface with the SMT solver } *)
+
 module SMT : Smt.Solver
+(** Instance of the SMT solver *)
 
 val unsafe : Ast.t_system -> Node.t -> unit
 (** Checks if the node is directly reachable on init of the system *)

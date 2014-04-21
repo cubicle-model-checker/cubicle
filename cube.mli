@@ -15,6 +15,9 @@
 
 open Types
 
+(** {b Cubes and simplifications } *)
+
+
 type t =
  private {
    vars : Variable.t list; (** existential variables, all distinct *)

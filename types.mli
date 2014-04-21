@@ -13,7 +13,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type op_comp = Eq | Lt | Le | Neq  (** comparison operators for litterals *)
+
+(** {b Terms, atoms and conjunctions } *)
+
+
+(** {2 Terms } *)
 
 type sort = (** sort of single symbol *)
   | Glob (** global variable *)
@@ -86,6 +90,10 @@ module Term : sig
 end
 
 
+(** {2 Atoms } *)
+
+type op_comp = Eq | Lt | Le | Neq  (** comparison operators for litterals *)
+
 
 module rec Atom : sig
   (** Interface for the atoms of the language *)
@@ -134,6 +142,10 @@ module rec Atom : sig
   (** prints an atom *)
 
 end
+
+
+(** {2 Conjunctions } *)
+
 and SAtom : sig
               
   (** Interface for the conjunctions of atoms seen as sets of atoms. This
