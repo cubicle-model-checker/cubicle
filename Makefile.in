@@ -90,7 +90,7 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       cube.cmo node.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo approx.cmo  \
-      stats.cmo bwd.cmo brab.cmo typing.cmo main.cmo
+      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 

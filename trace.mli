@@ -16,9 +16,11 @@
 open Ast
 
 module type S = sig
-    val certificate : t_system list -> t_system list -> unit
+    val certificate : t_system -> Node.t list -> unit
 end
 
 module AltErgo : S
 
 module Why3 : S
+
+module Selected : S

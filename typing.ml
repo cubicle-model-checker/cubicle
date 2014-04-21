@@ -378,13 +378,6 @@ let system s =
     if Options.subtyping then Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
     
-    (* let glob_proc =  *)
-    (*   List.fold_left  *)
-    (*     (fun acc (n, t) ->  *)
-    (*        if Hstring.equal t Smt.Type.type_proc then n::acc else acc) *)
-    (*     [] (\*s.globals*\) s.consts *)
-    (* in *)
-
     { 
       t_globals = List.map fst s.globals;
       t_arrays = List.map fst s.arrays;

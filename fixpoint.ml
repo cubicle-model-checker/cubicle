@@ -209,7 +209,7 @@ end = struct
   let medium_fixpoint s visited  =
     let vars, s_array = Node.variables s, Node.array s in
     let substs = Variable.all_permutations vars vars in
-    (* let substs = List.tl substs in *) (* Drop 'identity' permutation. 
+    let substs = List.tl substs in (* Drop 'identity' permutation. 
                                     Already checked in easy_fixpoint. *)
     try
       List.iter (fun ss -> 

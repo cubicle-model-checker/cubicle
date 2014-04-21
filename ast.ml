@@ -55,7 +55,6 @@ type kind = Approx | Node | Inv
 type node_cube =
     { 
       cube : Cube.t;
-      alpha : Variable.t list * ArrayAtom.t;
       tag : int;
       kind : kind;
       depth : int;

@@ -53,7 +53,6 @@ let create ?(kind=Node) ?(from=None) cube =
     | Some ((tr, args, n) as f) -> f :: n.from in
   { 
     cube = cube;
-    alpha = ArrayAtom.alpha cube.Cube.array cube.Cube.vars;
     tag = new_tag ~kind ();
     kind = kind;
     depth = List.length hist;

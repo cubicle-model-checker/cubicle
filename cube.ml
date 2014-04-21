@@ -87,7 +87,7 @@ let normal_form ({ litterals = sa; array = ar } as c) =
   else
     let new_vars = List.map snd sigma in
     let new_ar = ArrayAtom.apply_subst sigma ar in
-    let new_sa = ArrayAtom.to_satom ar in
+    let new_sa = ArrayAtom.to_satom new_ar in
     {
       vars = new_vars;
       litterals = new_sa;
@@ -153,7 +153,7 @@ let proper_cube sa =
     done;
     sa, (!l, List.nth Variable.procs (!cpt - 1))
 
-let normal_form ({ litterals = sa; array = ar } as c) =
+let normal_form ( {litterals = sa; array = ar } as c) =
   let new_sa, (new_vars, _) = proper_cube sa in
   let new_ar = ArrayAtom.of_satom sa in
     {
@@ -163,12 +163,25 @@ let normal_form ({ litterals = sa; array = ar } as c) =
     }
 
 
+let create_norma_sa_ar sa ar =
+  let vars = Variable.Set.elements (SAtom.variables_proc sa) in
+  if !size_proc <> 0 && List.length vars > !size_proc then
+    cube_false
+  else
+  let sigma = Variable.build_subst vars Variable.procs in
+  let new_vars = List.map snd sigma in
+  let new_ar = ArrayAtom.apply_subst sigma ar in
+  let new_sa = ArrayAtom.to_satom new_ar in
+  {
+    vars = new_vars;
+    litterals = new_sa;
+    array = new_ar;
+  }
 
+let create_normal sa = create_norma_sa_ar sa (ArrayAtom.of_satom sa)
 
-let create_normal sa = normal_form (create [] sa)
-
-let create_normal_array ar = normal_form (create_array [] ar)
-
+let create_normal_array ar = create_norma_sa_ar (ArrayAtom.to_satom ar) ar
+  
 
 let size c = List.length c.vars
 let card c = Array.length c.array

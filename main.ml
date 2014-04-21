@@ -33,6 +33,11 @@ let () =
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
         exit 1)) 
 
+let () = 
+  Sys.set_signal Sys.sigusr1 
+    (Sys.Signal_handle 
+       (fun _ -> Stats.print_report ~safe:false [] [])) 
+
 
 let _ = 
   let lb = from_channel cin in 
@@ -48,6 +53,7 @@ let _ =
       | Bwd.Safe (visited, candidates) ->
          if not quiet then Stats.print_report ~safe:true visited candidates;
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+         Trace.Selected.certificate system visited;
 
       | Bwd.Unsafe (faulty, candidates) ->
          if not quiet then Stats.print_report ~safe:false [] candidates;
