@@ -13,6 +13,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Ast
+open Types
+
 type t = node_cube
 
 val variables : t -> Variable.t list

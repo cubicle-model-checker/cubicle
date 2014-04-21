@@ -13,6 +13,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Types
+
 exception ReachBound
 
 type dnf = SAtom.t list

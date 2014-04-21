@@ -13,6 +13,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Types
+
 module SMT : Smt.Solver
 
 val unsafe : Ast.t_system -> Node.t -> unit
