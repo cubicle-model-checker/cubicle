@@ -221,7 +221,7 @@ let size_proc = ref 0
 
 let refine_universal = !refine_universal
 
-let subtyping = !subtyping
+let subtyping = if !trace = NoTrace then !subtyping else false
 
 let trace = !trace
 let out_trace = !out

@@ -201,12 +201,12 @@ module NodeQ (Q : StdQ) : PriorityNodeQueue = struct
 
   type t = Node.t Q.t
 
-  let create = Q.create
-  let pop = Q.pop
-  let push = Q.push
-  let clear = Q.clear
-  let length = Q.length
-  let is_empty = Q.is_empty
+  let create () = Q.create ()
+  let pop q = Q.pop q
+  let push e q = Q.push e q
+  let clear q = Q.clear q
+  let length q = Q.length q
+  let is_empty q = Q.is_empty q
   let push_list l q = List.iter (fun e -> push e q) l
 
 end
