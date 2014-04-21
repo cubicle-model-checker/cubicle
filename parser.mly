@@ -2,7 +2,7 @@
 /*                                                                        */
 /*                              Cubicle                                   */
 /*                                                                        */
-/*                       Copyright (C) 2011-2013                          */
+/*                       Copyright (C) 2011-2014                          */
 /*                                                                        */
 /*                  Sylvain Conchon and Alain Mebsout                     */
 /*                       Universite Paris-Sud 11                          */

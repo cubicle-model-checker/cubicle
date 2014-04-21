@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -12,7 +12,6 @@
 (*  License version 2.0                                                   *)
 (*                                                                        *)
 (**************************************************************************)
-open Types
 
 (** Trie, mapping cubes to value of type 'a *)
 type 'a t
