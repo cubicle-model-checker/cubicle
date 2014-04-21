@@ -384,7 +384,7 @@ let system s =
       t_init = s.init;
       t_init_instances = create_init_instances s.init;
       t_invs = List.map (create_node_rename Inv) s.invs;
-      t_unsafe = List.map (create_node_rename Node) s.unsafe;
+      t_unsafe = List.map (create_node_rename Orig) s.unsafe;
       t_trans = List.map add_tau s.trans;
     }
 

@@ -90,7 +90,7 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       cube.cmo node.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo approx.cmo  \
-      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
+      dot.cmo stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -263,14 +263,16 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
 
-FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.mli\
-	cube.ml forward.mli forward.ml\
-	enumerative.mli enumerative.ml\
-	brab.mli brab.ml bwreach.ml bwreach.mli\
-	fake_functory.ml fake_functory.mli\
-	lexer.mll main.ml options.ml options.mli parser.mly\
-	pretty.ml pretty.mli prover.ml prover.mli bitsolver.ml bitsolver.mli\
-	search.ml search.mli typing.ml typing.mli trace.ml trace.mli version.ml
+FILES = approx.ml approx.mli ast.ml ast.mli brab.ml brab.mli bwd.ml bwd.mli\
+	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
+	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
+	fixpoint.ml fixpoint.mli forward.ml forward.mli\
+	instantiation.ml instantiation.mli lexer.mll main.ml\
+	node.ml node.mli options.ml options.mli oracle.mli\
+	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
+	safety.ml safety.mli stats.ml stats.mli trace.ml trace.mli\
+	types.ml types.mli typing.ml typing.mli util.ml util.mli\
+	variable.ml variable.mli version.ml
 
 EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
 	   ricart_agrawala.cub szymanski_at.cub berkeley.cub flash_eager.cub\

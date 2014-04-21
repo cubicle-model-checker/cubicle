@@ -50,7 +50,7 @@ type system = {
 
 (* Typed AST *)
 
-type kind = Approx | Node | Inv
+type kind = Approx | Orig | Node | Inv
 
 type node_cube =
     { 

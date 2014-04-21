@@ -81,7 +81,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                  | None -> n
                  | Some c ->
                     candidates := c :: !candidates;
-                    Stats.candidate c;
+                    Stats.candidate n c;
                     c
                end
              in
@@ -103,6 +103,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
       done;
       Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
+      Dot.error_trace faulty;
       Unsafe (faulty, !candidates)
 
 end
@@ -249,10 +250,12 @@ module DFSA : Strategy = Make (ApproxQ (NodeQ (Stack)))
 
 let select_search =
   match mode with
-  | Bfs -> (module BFS : Strategy)
-  | Dfs -> (module DFS)
-  | BfsH -> (module BFSH)
-  | DfsH -> (module DFSH)
-  | _ -> failwith "This strategy is not yet implemented."
+  | "bfs" -> (module BFS : Strategy)
+  | "dfs" -> (module DFS)
+  | "bfsh" -> (module BFSH)
+  | "dfsh" -> (module DFSH)
+  | "bfsa" -> (module BFSA)
+  | "dfsa" -> (module DFSA)
+  | _ -> failwith ("The strategy "^mode^" is not implemented.")
 
 module Selected : Strategy = (val (select_search)) 

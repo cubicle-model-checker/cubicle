@@ -44,10 +44,12 @@ let new_node s =
       printf "node @{<b>%d@}: " !cpt_nodes;
       if verbose < 1 then printf "@[%a@]@." Node.print_history s
       else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
-    end
+    end;
+  if dot then Dot.new_node s
       
 let fixpoint s uc =
-  incr cpt_fix
+  incr cpt_fix;
+  if dot then Dot.fixpoint s uc
 
 let restart () =
   incr cpt_restart;
@@ -55,7 +57,8 @@ let restart () =
     printf "%a@{<b>@{<fg_yellow>BACKTRACKING@} : %d restarts ...@}\n%a@."
            Pretty.print_line () !cpt_restart Pretty.print_line ();
   nodes_pre_run := !cpt_nodes :: !nodes_pre_run;
-  cpt_nodes := 0
+  cpt_nodes := 0;
+  if dot then Dot.restart ()
 
 let rec int_list_sep sep fmt = function
   | [] -> ()
@@ -67,17 +70,18 @@ let print_rounds_nb fmt () =
     fprintf fmt "@\n(%a)" (int_list_sep " + ") !nodes_pre_run
 
 
-let candidate c =
+let candidate n c =
   if not quiet then
     begin
       printf "└───>> Approximating by @{<fg_blue>[%d]@}@." c.tag;
       if verbose > 0 then
         printf  "                        @[%a@]@." Node.print c
-    end    
+    end;
+  if dot then Dot.candidate n c
       
 
-let delete n =
-  cpt_delete := n + !cpt_delete
+let delete nb =
+  cpt_delete := nb + !cpt_delete
 
 let remaining compute = 
   if not quiet then

@@ -13,11 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = 
-  | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsH | BfsDist | Bfsinvp 
-  | Induct
-
 type trace =  NoTrace | AltErgoTr | WhyTr
 
 val file : string
@@ -56,10 +51,11 @@ val refine_universal : bool
 
 val cores : int
 
-val mode : mode
+val mode : string
 
 val debug : bool
 val dot : bool
+val dot_level : int
 val quiet : bool
 val verbose : int
 val nocolor : bool

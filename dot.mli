@@ -13,20 +13,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val cpt_delete : int ref
+open Types
+
 
 val new_node : Node.t -> unit
+
+val candidate : Node.t -> Node.t -> unit
 
 val fixpoint : Node.t -> int list -> unit
 
 val restart : unit -> unit
 
-val remaining : (unit -> int * int) -> unit
+val error_trace : Node.t -> unit
 
-val delete : int -> unit
-
-val candidate : Node.t -> Node.t -> unit
-
-val print_report : safe:bool -> Node.t list -> Node.t list -> unit
-
-val error_trace : Ast.t_system -> Node.t -> unit
+val open_dot : unit -> (unit -> unit)

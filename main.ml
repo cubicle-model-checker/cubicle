@@ -48,17 +48,20 @@ let _ =
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement\
               is an experimental feature. Use at your own risks.\n@.";
+    let close_dot = Dot.open_dot () in 
     begin 
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
          if not quiet then Stats.print_report ~safe:true visited candidates;
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
          Trace.Selected.certificate system visited;
+         close_dot ();
 
       | Bwd.Unsafe (faulty, candidates) ->
          if not quiet then Stats.print_report ~safe:false [] candidates;
          if not quiet then Stats.error_trace system faulty;
          printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+         close_dot ();
          exit 1
     end
   with
@@ -81,5 +84,9 @@ let _ =
      eprintf "@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
      eprintf "It is likely that the search diverges, please increase\
               the limit to explore further.";
+     exit 1
+
+  | Failure str ->
+     eprintf "@{<u>Internal failure:@}%s@." str;
      exit 1
 

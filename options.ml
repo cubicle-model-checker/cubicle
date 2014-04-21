@@ -13,11 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = 
-  | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsH | BfsDist | Bfsinvp 
-  | Induct
-
 type trace =  NoTrace | AltErgoTr | WhyTr
 
 let usage = "usage: cubicle file.cub"
@@ -29,6 +24,7 @@ let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
 let dot = ref false
+let dot_level = ref 0
 let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
@@ -80,17 +76,16 @@ let set_out o =
     raise (Arg.Bad "-out takes a directory as argument");
   out := o
 
-let mode = ref Bfs
-let set_mode = function
-  | "dfs" -> mode := Dfs
-  | "dfsl" -> mode := DfsL
-  | "dfsh" -> mode := DfsH
-  | "dfshl" -> mode := DfsHL
-  | "bfs" -> mode := Bfs
-  | "bfsh" -> mode := BfsH
-  | "bfsinvp" -> mode := Bfsinvp
-  | "induct" -> mode := Induct
-  | _ -> raise (Arg.Bad "search strategy not supported")
+let mode = ref "bfs"
+let set_mode m =
+  mode := m;
+  match m with
+  | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
+  | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
+
+let set_dot d =
+  dot := true;
+  dot_level := d
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
@@ -106,9 +101,10 @@ let specs =
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-               "<bfs(default) | dfs | dfsl | dfsh | dfshl | induct> search strategies";
+               "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
-    "-dot", Arg.Set dot, " graphviz (dot) output";
+    "-dot", Arg.Int set_dot,
+              "<level> graphviz (dot) output with a level of details";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -170,6 +166,7 @@ let max_proc = !max_proc
 let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
+let dot_level = !dot_level
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling
@@ -201,14 +198,15 @@ let cores =
     exit 1;
   end
   else !cores
-let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode
+let mode = if cores > 0 && !mode = "bfs" then "bfsdist" else !mode
 let verbose = !verbose
 let post_strategy =
   if !post_strategy <> -1 then !post_strategy
   else match mode with
-    | Bfs | BfsDist | Bfsinvp -> 1
-    | BfsH | DfsH -> 0
-    | Dfs | _ -> 2
+    | "bfs" | "bfsa" -> 1
+    | "bfsh" | "dfsh" -> 0
+    | "dfs" | "dfsa" -> 2
+    | _ -> 1
 
 let abstr_num = !abstr_num
 let num_range = (!num_range_low, !num_range_up)

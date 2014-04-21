@@ -727,28 +727,6 @@ let stateless_forward s procs trs all_var_terms l =
   forward_rec s procs trs MA.empty l
   
 
-(* let mkinit args init all_args = *)
-(*   match args with *)
-(*     | [] -> init *)
-(*     | _ -> *)
-(*         let abs_init = (\* SAtom.filter (function *\) *)
-(* 	  (\* | Comp ((Elem (x, _) | Access (x,_,_)), _, _) -> *\) *)
-(* 	  (\*     not (Smt.Typing.has_abstract_type x) *\) *)
-(* 	  (\* | _ -> true) *\) init in *)
-(* 	let abs_init = simplification_atoms SAtom.empty abs_init in *)
-(* 	let sa, cst =  *)
-(*           SAtom.partition (fun a ->  *)
-(*             List.exists (fun z -> has_var z a) args) abs_init in *)
-(*         let lsigs = all_instantiations args all_args in *)
-(*         List.fold_left (fun acc sigma -> *)
-(*             SAtom.union (SAtom.subst sigma sa) acc) cst lsigs *)
-
-(* let mkinits procs ({t_init = ia, l_init}) = *)
-(*   List.map (fun init -> *)
-(*     let sa, (nargs, _) = proper_cube (mkinit ia init procs) in *)
-(*     sa, nargs *)
-(*   ) l_init *)
-
 let make_init_cdnf args lsa lvars =
   match args, lvars with
     | [], _ ->   

@@ -29,10 +29,11 @@ let rec search_and_backtrack candidates system =
   | Bwd.Safe _ -> res
   | Bwd.Unsafe (faulty, candidates) ->
      let o = Node.origin faulty in
-     if o.kind <> Approx then res
+     if o.kind = Orig then res
      else
        (* Bad candidate, we backtrack while keeping interresting candidates *)
        begin
+         assert (o.kind = Approx);
          if not quiet then eprintf "The candidate %d = %a is BAD\n@."
                                    o.tag Node.print o;
          Stats.restart ();
