@@ -142,6 +142,8 @@ module type St = sig
   val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     
   val copy : 'a t -> 'a t
+
+  val clear : 'a t -> unit
     
 end
 
@@ -180,6 +182,9 @@ module State ( A : DA ) : St with type 'a da = 'a A.dima = struct
 	       Hashtbl.iter (fun name arr -> Hashtbl.replace carrs name (A.copy arr)) carrs;
 	       {globs = Hashtbl.copy t.globs; arrs = carrs}
 
+  let clear t = Hashtbl.clear t.globs;
+    Hashtbl.clear t.arrs
+
 end
 
 
@@ -191,7 +196,7 @@ module type Sys = sig
   type 'a da
   type 'a set
   (* A record with a readable state and a writable state *)
-  type 'a t = {syst : 'a set; read_st : 'a s; write_st : 'a s}
+  type 'a t = {syst : 'a set; init : 'a set; read_st : 'a s; write_st : 'a s}
 
   val init : unit -> 'a t
 
@@ -204,6 +209,12 @@ module type Sys = sig
   val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
 
   val exists : ('a s -> bool) -> 'a set -> bool
+    
+  val update_init : 'a t -> 'a set -> 'a t
+
+  val get_init : 'a t -> 'a set
+
+  val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
 
   val update_s : Hstring.t -> 'a t -> 'a t
     
@@ -215,9 +226,9 @@ module System ( S : St ) : Sys
     type 'a da = 'a S.da
     type 'a s = 'a S.t
     type 'a set = (Hstring.t * 'a S.t) list
-    type 'a t = {syst : (Hstring.t *'a S.t) list; read_st : 'a S.t; write_st : 'a S.t}
+    type 'a t = {syst : (Hstring.t *'a S.t) list; init : (Hstring.t * 'a S.t) list; read_st : 'a S.t; write_st : 'a S.t}
 	
-    let init () = {syst = []; read_st = S.init (); write_st = S.init ()}
+    let init () = {syst = []; init = []; read_st = S.init (); write_st = S.init ()}
 
     let get_v s h = let state = s.read_st in
 		    S.get_v state h
@@ -235,7 +246,13 @@ module System ( S : St ) : Sys
 
     let exists f s = List.exists (fun (_, e) -> f e) s
 
-    let update_s tr s = {syst = (tr, S.copy s.write_st) :: s.syst; read_st = s.write_st; write_st = s.write_st}
+    let update_init s il = {s with init = il}
+
+    let get_init s = s.init
+
+    let new_init tr s i = {syst = (tr, S.copy i) :: s.syst; init = s.init; read_st = S.copy i; write_st = i}
+
+    let update_s tr s = {syst = (tr, S.copy s.write_st) :: s.syst; init = []; read_st = S.copy s.write_st; write_st = s.write_st}
 
   end
 				  
@@ -282,6 +299,8 @@ let ec = Hashtbl.create 17
    - rest : the list of their possible values
    and the list of the representants with which they differ *)
 let dc = Hashtbl.create 17
+
+let inits = ref []
 
 (* If their is only one possible value left,
    delete the variables from the difference classes
@@ -435,15 +454,13 @@ let print_ce_diffs () =
   printf "\nce :@.";
   Hashtbl.iter (
     fun n (rep, tself) ->
-      printf "%a : " Hstring.print n;
-      print_value printf rep;
-      printf "@.";
+      printf "%a : %a@." Hstring.print n print_value rep
   ) ec;
   printf "\nDc@.";
   Hashtbl.iter (
     fun n (ty, types, diffs) ->
       printf "%a : " Hstring.print n;
-      TS.iter (print_value printf) types;
+      TS.iter (printf "%a " print_value) types;
       TI.iter (printf "%a " Hstring.print) diffs;
       printf "@."
   ) dc;
@@ -456,7 +473,7 @@ let print_g () =
       List.iter (
 	fun (n, (ty, types, diffs)) ->
 	  printf "%a : " Hstring.print n;
-	  TS.iter (print_value printf) types;
+	  TS.iter (printf "%a " print_value) types;
 	  TI.iter (printf "%a " Hstring.print) diffs;
 	  printf "@."
       ) l;
@@ -473,6 +490,20 @@ let print_groups () =
       printf "@."
     ) groups
 
+let print_inits () =
+  List.iter (
+    fun (n, (tself, ts)) ->
+      printf "%a (" Hstring.print n;
+      (match tself with
+	| RGlob h -> printf "G %a) : " Hstring.print h
+	| RArr (h, i) -> printf "A %a %d) : " Hstring.print h i
+      );
+      TS.iter (
+	fun v -> printf "%a " print_value v
+      ) ts;
+      printf "@."
+  ) !inits
+
 let print_system (tr, {Etat.globs; Etat.arrs}) =
   printf "@.";
   printf "%a@." Hstring.print tr;
@@ -486,6 +517,9 @@ let print_system (tr, {Etat.globs; Etat.arrs}) =
       printf "@."
   ) arrs;
   printf "@."
+
+let print_init () =
+  List.iter print_system (Syst.get_init !system)
 
 
 
@@ -525,13 +559,6 @@ let init_globals globals =
   let r = Hstring.make "real" in
   List.iter (
     fun (g_name, g_type) ->
-      (* Here is the deterministic initialization *)
-      let default_type = 
-	try default_type g_type 
-	with Exit -> Var g_name
-      in
-      Syst.set_v !system g_name default_type;
-      (* End of the deterministic initialization *)
       (* First, each var is its own representant *)
       Hashtbl.add ec g_name (Var g_name, RGlob g_type);
       let ty, stypes, diffs = 
@@ -565,14 +592,6 @@ let init_arrays arrays =
   List.iter (
     fun (a_name, (a_dims, a_type)) ->
       let dims = List.length a_dims in
-      (* Here is the deterministic initialization *)
-      let default_type = 
-	try default_type a_type 
-	with Exit -> Var a_name
-      in
-      let new_t = DimArray.init dims nb_threads default_type in
-      Syst.set_a !system a_name new_t;
-      (* End of the deterministic initialization *)
       Hashtbl.add ec a_name (Var a_name, RArr (a_type, dims));
       let ty, stypes, diffs = 
 	if (Hstring.equal a_type i || Hstring.equal a_type r) 
@@ -779,69 +798,107 @@ let upd_graphs () =
       incr c  
   ) groups  
 
-let graphs_to_ec () =
+let graphs_to_inits () =
   let rec l_to_ec v niv ti rtl =
     match rtl with
       | ((n, (_, ts, ti')) as hd)::tl ->
 	if (not (TI.mem n ti)) && (TS.mem v ts)
 	then
 	  (
-	    ec_replace (Var n) v;
+	    let (_, tself) = Hashtbl.find ec n in
+	    inits := (n ,(tself, (TS.singleton v))) :: !inits;
 	    l_to_ec v niv (TI.union ti ti') tl
 	  )
 	else l_to_ec v (hd::niv) ti tl
       | _ -> niv
   in
-  let rec new_v_l n ats ti tl =
+  let rec new_v_l n ats fts ti tl =
     let v = TS.min_elt ats in
-    ec_replace (Var n) v;
+    let (_, tself) = Hashtbl.find ec n in
+    inits := (n ,(tself, (TS.singleton v))) :: !inits;
     let niv = (List.rev (l_to_ec v [] ti tl)) in
     match niv with
-      | (n, (_, ts, ti))::tl -> new_v_l n (TS.remove v ts) ti tl
+      | (n, (_, ts, ti))::tl -> let ats = TS.remove v (TS.diff ts fts) in
+				let fts = TS.add v fts in
+				new_v_l n ats fts ti tl
       | _ -> ()
   in
   Hashtbl.iter (
     fun i lv ->
       match lv with
-	| [(n, (_, ts, _))] -> let v = TS.min_elt ts in
-			       ec_replace (Var n) v
-	| (n, (_, ts, ti))::tl -> new_v_l n ts ti tl
+	| [(n, (_, ts, _))] -> let v = TS.choose ts in
+			       let vs = match v with
+				 | Hstr _ -> ts
+				 | _ -> TS.singleton v
+			       in 
+			       let (_, tself) = Hashtbl.find ec n in
+			       inits :=  (n ,(tself, vs)) :: !inits
+	| (n, (_, ts, ti))::tl -> new_v_l n ts TS.empty ti tl
 	| _ -> assert false
   ) graphs
-    
+
+let ec_to_inits () =
+  Hashtbl.iter (
+    fun n (rep, tself) ->
+      try
+	let vs =
+	  match rep with
+	    | Var h -> if h = n then raise Exit else let (_, vs) = List.assoc h !inits in vs
+	    | _ -> TS.singleton rep
+	in inits :=  (n, (tself, vs)) :: !inits
+      with Exit -> ()
+  ) ec;
+  let comparei (_, (_, ts1)) (_, (_, ts2)) =
+    let lts1 = TS.cardinal ts1 in
+    let lts2 = TS.cardinal ts2 in
+    - Pervasives.compare lts1 lts2
+  in
+  inits := List.sort comparei !inits
     
 let initialization init =
-  init_htbls init;
+  init_htbls init; 
   update ();
   (* print_groups (); *)
   upd_graphs ();
   (* print_ce_diffs (); *)
   (* print_g (); *)
-  graphs_to_ec ();
+  graphs_to_inits ();
+  ec_to_inits ();
+  (* print_inits (); *)
   (* print_ce_diffs (); *)
-  Hashtbl.iter (
-    fun n (rep, tself) ->
-      let value =
-	match rep, tself with
-	  | Var _, (RGlob t | RArr (t, _)) -> (
-	    try default_type t
-	    with Exit -> rep
-	  )
-	  | _ as v, _ -> v
-      in
-      match tself with
-	(* Init global variables *)
-	| RGlob _ -> Syst.set_v !system n value
-	(* Init arrays *)
-	| RArr (_, d) -> let tbl = DimArray.init d nb_threads value in
-			 Syst.set_a !system n tbl
-  ) ec;
-  system := Syst.update_s (Hstring.make "init") !system
+  let etati = Etat.init () in
+  let initl = 
+    (match !inits with
+      | (n, (tself, ts)) :: tl ->
+	let c = ref 0 in
+	TS.fold (
+	  fun v acc ->
+	    (match tself with
+	      | RGlob _ -> Etat.set_v etati n v
+	      | RArr (_, d) -> let tbl = DimArray.init d nb_threads v in
+			       Etat.set_a etati n tbl
+	    );
+	    List.iter
+	      (fun (n', (tself', ts')) ->
+		let v = TS.choose ts' in
+		match tself' with
+		  | RGlob _ -> Etat.set_v etati n' v
+		  | RArr (_, d) -> let tbl = DimArray.init d nb_threads v in
+				   Etat.set_a etati n' tbl
+	      ) tl;
+	    let i = Etat.copy etati in
+	    incr c;
+	    (Hstring.make ("init" ^ (string_of_int !c)), i) :: acc
+	) ts []
+      | _ -> assert false
+    ) in
+  system := Syst.update_init !system initl;
+  print_init ()
 
 
 (* SUBSTITUTION METHODS *)
 
-    
+      
 (* Here, optimization needed if constant values *)     
 let subst_req sub req =
   let f = fun () ->
@@ -921,7 +978,6 @@ let substitute_updts sub assigns upds =
   ) [] assigns in
   let subst_upds = List.fold_left (
     fun tab_acc u -> 
-      let arr = Syst.get_a !system u.up_arr in
       let arg = u.up_arg in
       let subs = Ast.all_permutations arg list_threads in
       let upd_tab =
@@ -938,6 +994,7 @@ let substitute_updts sub assigns upds =
 		    ) conds [] in 
 		  let f = fun () ->
 		    let t = get_value s term in
+		    let arr = Syst.get_a !system u.up_arr in
 		    DimArray.set arr pl t;
 		    Syst.set_a !system u.up_arr arr
 		  in
@@ -1118,15 +1175,21 @@ let scheduler se =
   Random.self_init ();
   init_system se;
   init_transitions se.trans;
-  let count = ref 1 in
-  (
-    try
-      while !count < nb_exec do
-	update_system ();
-	incr count
-      done;
-    with Invalid_argument _ -> ()
-  );
+  let total = ref 1 in
+  List.iter (
+    fun (tr, st) ->
+      system := Syst.new_init tr !system st;
+      let count = ref 1 in
+      (
+	try
+	  while !count < nb_exec do
+	    update_system ();
+	    incr count;
+	    incr total
+	  done;
+	with Invalid_argument _ -> ()
+      );
+  ) (Syst.get_init !system);
   if verbose > 0 then
     begin
       let count = ref 1 in
@@ -1134,9 +1197,9 @@ let scheduler se =
 	fun st -> printf "%d : " !count; incr count; print_system st
       ) (List.rev !system.Syst.syst)
     end;
-  printf "Scheduled %d states\n" !count;
-  printf "--------------------------@."
-
+  printf "Scheduled %d states\n" !total;
+  printf "--------------------------@."    
+    
 let dummy_system = {
   globals = [];
   consts = [];

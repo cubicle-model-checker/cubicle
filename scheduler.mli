@@ -48,6 +48,7 @@ module type St =
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val copy : 'a t -> 'a t
+    val clear : 'a t -> unit
   end
 module State :
   functor (A : DA) ->
@@ -67,13 +68,19 @@ module State :
       val set_a : 'a t -> Hstring.t -> 'a da -> unit
       val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
       val copy : 'a t -> 'a t
+      val clear : 'a t -> unit
     end
 module type Sys =
   sig
     type 'a s
     type 'a da
     type 'a set
-    type 'a t = { syst : 'a set; read_st : 'a s; write_st : 'a s; }
+    type 'a t = {
+      syst : 'a set;
+      init : 'a set;
+      read_st : 'a s;
+      write_st : 'a s;
+    }
     val init : unit -> 'a t
     val get_v : 'a t -> Hstring.t -> 'a
     val get_a : 'a t -> Hstring.t -> 'a da
@@ -82,6 +89,9 @@ module type Sys =
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val exists : ('a s -> bool) -> 'a set -> bool
+    val update_init : 'a t -> 'a set -> 'a t
+    val get_init : 'a t -> 'a set
+    val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
     val update_s : Hstring.t -> 'a t -> 'a t
   end
 module System :
@@ -90,7 +100,12 @@ module System :
       type 'a s = 'a S.t
       type 'a da = 'a S.da
       type 'a set = (Hstring.t * 'a S.t) list
-      type 'a t = { syst : 'a set; read_st : 'a s; write_st : 'a s; }
+      type 'a t = {
+        syst : 'a set;
+        init : 'a set;
+        read_st : 'a s;
+        write_st : 'a s;
+      }
       val init : unit -> 'a t
       val get_v : 'a t -> Hstring.t -> 'a
       val get_a : 'a t -> Hstring.t -> 'a da
@@ -99,6 +114,9 @@ module System :
       val set_a : 'a t -> Hstring.t -> 'a da -> unit
       val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
       val exists : ('a s -> bool) -> 'a set -> bool
+      val update_init : 'a t -> 'a set -> 'a t
+      val get_init : 'a t -> 'a set
+      val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
       val update_s : Hstring.t -> 'a t -> 'a t
     end
 module Etat :
@@ -119,6 +137,7 @@ module Etat :
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val copy : 'a t -> 'a t
+    val clear : 'a t -> unit
   end
 module Syst :
   sig
@@ -128,6 +147,7 @@ module Syst :
     type 'a t =
       'a System(Etat).t = {
       syst : 'a set;
+      init : 'a set;
       read_st : 'a s;
       write_st : 'a s;
     }
@@ -139,6 +159,9 @@ module Syst :
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val exists : ('a s -> bool) -> 'a set -> bool
+    val update_init : 'a t -> 'a set -> 'a t
+    val get_init : 'a t -> 'a set
+    val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
     val update_s : Hstring.t -> 'a t -> 'a t
   end
 val system : value Syst.t ref
@@ -205,8 +228,9 @@ module TI :
     val split : elt -> t -> t * bool * t
     val find : elt -> t -> elt
   end
-val ec : (Hstring.t, value * stype) Hashtbl.t
+val ec : (Hstring.t, TS.elt * stype) Hashtbl.t
 val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
+val inits : (Hstring.t * (stype * TS.t)) list ref
 val upd_dc : Hstring.t -> TS.t -> ty -> TI.t -> unit
 val groups : (int, TI.t) Hashtbl.t
 val graphs : (int, (Hstring.t * (ty * TS.t * TI.t)) list) Hashtbl.t
@@ -217,7 +241,7 @@ val default_type : Hstring.t -> value
 val inter : 'a list -> 'a list -> 'a list
 val rep_name : Hstring.t -> Hstring.t
 val hst_var : value -> Hstring.t
-val ec_replace : value -> value -> unit
+val ec_replace : TS.elt -> TS.elt -> unit
 val get_cvalue : Ast.term -> value
 val get_value : (Hstring.t * int) list -> Ast.term -> value
 val v_equal : value -> value -> bool
@@ -225,7 +249,9 @@ val print_value : 'a -> value -> unit
 val print_ce_diffs : unit -> unit
 val print_g : unit -> unit
 val print_groups : unit -> unit
+val print_inits : unit -> unit
 val print_system : Hstring.t * value Etat.t -> unit
+val print_init : unit -> unit
 val init_types :
   (Hstring.t * Hstring.t list) list ->
   (Hstring.t * Hstring.t) list -> (Hstring.t * ('a * Hstring.t)) list -> unit
@@ -236,7 +262,8 @@ val c : int ref
 val update : unit -> unit
 val comp_node : 'a * ('b * TS.t * TI.t) -> 'c * ('d * TS.t * TI.t) -> int
 val upd_graphs : unit -> unit
-val graphs_to_ec : unit -> unit
+val graphs_to_inits : unit -> unit
+val ec_to_inits : unit -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit
 val subst_req : (Hstring.t * int) list -> Ast.Atom.t -> unit -> bool
 val subst_ureq :
