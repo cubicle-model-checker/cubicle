@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b The Alt-Ergo light SMT library}
+(** The Alt-Ergo zero SMT library
 
     This SMT solver is derived from {{:http://alt-ergo.lri.fr} Alt-Ergo}. It
     uses an efficient SAT solver and supports the following quantifier free
@@ -38,13 +38,13 @@ exception Error of error
 
 (** {2 Typing } *)
 
-(** {3 Typing } *)
+(** Typing *)
 module Type : sig
 
   type t = Hstring.t
   (** The type of types in Alt-Ergo light *)
 
-  (** {4 Builtin types } *)
+  (** {3 Builtin types } *)
 
   val type_int : t
   (** The type of integers *)
@@ -58,7 +58,7 @@ module Type : sig
   val type_proc : t
   (** The type processes (identifiers) *)
 
-  (** {4 Declaring new types } *)
+  (** {3 Declaring new types } *)
 
   val declare : Hstring.t -> Hstring.t list -> unit
   (** {ul {- [declare n cstrs] declares a new enumerated data-type with
@@ -75,7 +75,7 @@ module Type : sig
 end
 
 
-(** {3 Function symbols} *)
+(** Function symbols *)
 module Symbol : sig
     
   type t = Hstring.t
@@ -103,7 +103,7 @@ module Symbol : sig
       
 end
 
-(** {3 Variants}
+(** {b Variants}
    
     The types of symbols (when they are enumerated data types) can be refined
     to substypes of their original type (i.e. a subset of their constructors).

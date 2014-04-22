@@ -15,12 +15,12 @@
 
 module type S = sig
 
-    (** {b Interface for oracles} 
+    (** Interface for oracles
 
         Oracles provide a way to discard candidate invariants. The safety and
         correctness of Cubicle does not depend on the oracle, so any answer
         can be returned. However the efficiency of BRAB does. So the more
-        precise the oracle is, the better !
+        precise the oracle, the better !
 
      *)
 

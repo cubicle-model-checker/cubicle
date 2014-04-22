@@ -15,7 +15,7 @@
 
 open Format
 
-(** {b Pretty printing functions } *)
+(** Pretty printing functions *)
 
 val vt_width : int
 (** Width of the virtual terminal (80 if cannot be detected) *)

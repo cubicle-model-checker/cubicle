@@ -19,7 +19,7 @@ open Format
 open Ast
 
 
-(** {b Approximations and candidates generation } *)
+(** Approximations and candidates generation *)
 
 val remove_bad_candidates : t_system -> Node.t -> Node.t list -> Node.t list
 (** Register bad candidates and try to infer as much inforamtion as possible

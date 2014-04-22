@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b Exhaustive Instantiation features } *)
+(** Exhaustive Instantiation features *)
 
 (** Because the SMT solver only takes as input ground formulas, we need to do
     the instantiation of quantifiers inside the model checker. The simplest

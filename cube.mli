@@ -15,7 +15,7 @@
 
 open Types
 
-(** {b Cubes and simplifications } *)
+(** Cubes and simplifications *)
 
 
 type t =
@@ -48,8 +48,9 @@ val card: t -> int
 (** returns the number of atoms in the conjuction *)
 
 
+(** {2 Inconsistencies detection } *)
 
-(** The following four functions implements cheap checks for detecting
+(** The following five functions implements cheap checks for detecting
     inconsistencies *)
 
 val inconsistent : ?use_sets:bool -> t -> bool
@@ -59,7 +60,16 @@ val inconsistent_2 : ?use_sets:bool -> t -> t -> bool
     are consitent on their own. *)
 
 val inconsistent_set : SAtom.t -> bool
+(** returns [true] if the conjunction inconsistent *)
+
 val inconsistent_array : ArrayAtom.t -> bool
+(** same as {! inconsistent_set} but for arrays *)
+
+val inconsistent_2arrays : ArrayAtom.t -> ArrayAtom.t -> bool
+(** same as {! inconsistent_2} but for arrays *)
+
+
+(** {2 Simplifications of cubes } *)
 
 val simplify_atoms_base : SAtom.t -> SAtom.t -> SAtom.t
 (** [simplify_atoms_base b c] simplifies [c] in the context of [b].
@@ -76,6 +86,9 @@ val elim_ite_simplify_atoms : SAtom.t -> SAtom.t list
 
 val elim_ite_simplify : t -> t list
 (** lifts [if-then-else] constructs and simplify a cube *)
+
+
+(** {2 Misc } *)
 
 val resolve_two : t -> t -> t option
 val satom_globs : SAtom.t -> Term.Set.t

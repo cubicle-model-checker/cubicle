@@ -13,6 +13,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** Options given on the command line  *)
+
 type trace =  NoTrace | AltErgoTr | WhyTr
 
 val file : string

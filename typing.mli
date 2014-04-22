@@ -16,6 +16,9 @@
 open Format
 open Ast
 
+(** Typing of parameterized systems *)
+
+
 type error 
 
 exception Error of error 
@@ -23,3 +26,5 @@ exception Error of error
 val report : Format.formatter -> error -> unit
 
 val system : system -> t_system
+(** Types an untyped system and performs subtyping analysis is the flag
+    {! Options.subtyping} is [true]. *)

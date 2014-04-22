@@ -15,7 +15,7 @@
 
 open Format
 
-(** {b Variables of the parameterized domain} *)
+(** Variables of the parameterized domain *)
 
 type t = Hstring.t
 (** the type of variables *)

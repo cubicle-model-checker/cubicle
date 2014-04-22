@@ -77,8 +77,7 @@ end = struct
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	    (* line below useful for arith : ricart *)
 	    else if not pure_smt &&
-                    Cube.inconsistent_array
-                      (ArrayAtom.union vis_renamed n_array) then nodes
+                      Cube.inconsistent_2arrays vis_renamed n_array then nodes
 	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
               (vis_n, vis_renamed)::nodes
 	    else (Prover.assume_node vis_n vis_renamed; nodes)
@@ -164,8 +163,7 @@ end = struct
        (* Heuristic : throw away nodes too much different *)
        (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
        (* line below useful for arith : ricart *)
-       if Cube.inconsistent_array
-                 (ArrayAtom.union vis_renamed n_array) then nodes
+       if Cube.inconsistent_2arrays vis_renamed n_array then nodes
        else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
          (vis_n, vis_renamed)::nodes
        else (Prover.assume_node vis_n vis_renamed; nodes)

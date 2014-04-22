@@ -15,7 +15,7 @@
 
 open Types
 
-(** {b Abstract syntax tree and transition systems } *)
+(** Abstract syntax tree and transition systems *)
 
 
 type dnf = SAtom.t list

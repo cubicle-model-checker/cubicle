@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b Hash-consed strings}
+(** Hash-consed strings
 
     Hash-consing is a technique to share values that are structurally
     equal. More details on 

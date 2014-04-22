@@ -18,7 +18,7 @@ open Format
 open Ast
 
 
-(** {b Backward reachability with approximation}
+(** Backward reachability with approximation
 
     This algorithm of backward reachability performs approxmations guided by an
     oracle. It is parameterized by a structure of priority queue to define a

@@ -16,7 +16,7 @@
 open Ast
 open Types
 
-(** {b Node of the search graph } *)
+(** Node of the search graph *)
 
 type t = node_cube
 (** the type of nodes constructed during the search *)

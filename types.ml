@@ -500,7 +500,9 @@ module ArrayAtom = struct
   let to_satom =
     Array.fold_left (fun s a -> SAtom.add a s) SAtom.empty
 
-  let union = Array.append 
+  let union a b = Array.append a b
+    (* let cpt = ref 0 in fun a b -> incr cpt; eprintf "%d@." !cpt;  *)
+    (*                               Array.append a b *)
     (* let a = Array.append a1 a2 in *)
     (* Array.fast_sort Atom.compare a; a *)
 

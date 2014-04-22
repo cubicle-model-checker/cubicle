@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b Safety checks } *)
+(** Safety checks *)
 
 exception Unsafe of Node.t
 (** exception to signal that a safety check failed. In this case the current

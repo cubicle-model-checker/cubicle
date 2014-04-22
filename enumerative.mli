@@ -15,7 +15,7 @@
 
 open Ast
 
-(** {b Enumerative forward search } *)
+(** Enumerative forward search *)
 
 val search : Variable.t list -> t_system -> unit
 (** [search procs init] performs enumerative forward search. States are

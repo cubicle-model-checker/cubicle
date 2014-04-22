@@ -15,7 +15,7 @@
 
 open Types
 
-(** {b Interface with the SMT solver } *)
+(** Interface with the SMT solver *)
 
 module SMT : Smt.Solver
 (** Instance of the SMT solver *)

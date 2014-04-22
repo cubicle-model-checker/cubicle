@@ -16,7 +16,7 @@
 open Ast
 open Types
 
-(** {b Pre-image computation} *)
+(** Pre-image computation *)
 
 val make_tau : transition -> term -> op_comp -> term -> Atom.t
 (** functional form of transition *)

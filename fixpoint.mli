@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b Fixpoint tests with optimizations }*)
+(** Fixpoint tests with optimizations *)
 
 (** Fixpoint tests on list structures *)
 module FixpointList : sig

@@ -18,6 +18,9 @@ open Format
 open Options
 open Ast
 
+(** Entry point of Cubicle *)
+
+
 let report (b,e) =
   let l = b.pos_lnum in
   let fc = b.pos_cnum - b.pos_bol + 1 in
@@ -25,6 +28,7 @@ let report (b,e) =
   printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
 
 
+(** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
@@ -33,11 +37,11 @@ let () =
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
         exit 1)) 
 
+(** intercepts SIGUSR1 to display progress *)
 let () = 
   Sys.set_signal Sys.sigusr1 
     (Sys.Signal_handle 
        (fun _ -> Stats.print_report ~safe:false [] [])) 
-
 
 let _ = 
   let lb = from_channel cin in 

@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b Statistics } *)
+(** Statistics *)
 
 exception ReachedLimit
 (** raised if the search exceeds the allocated limits *)

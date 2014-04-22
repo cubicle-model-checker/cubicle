@@ -15,7 +15,7 @@
 
 open Types
 
-(** {b Generation of graphical search graphs with dot/graphviz } *)
+(** Generation of graphical search graphs with dot/graphviz *)
 
 val new_node : Node.t -> unit
 

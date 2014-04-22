@@ -14,21 +14,22 @@
 (**************************************************************************)
 
 
-(** {b Terms, atoms and conjunctions } *)
+(** Terms, atoms and conjunctions *)
 
 
 (** {2 Terms } *)
 
-type sort = (** sort of single symbol *)
+(** sort of single symbol *)
+type sort =
   | Glob (** global variable *)
   | Constr (** constructor *)
   | Var (** variable of the paramterized domain *)
 
 type subst_sort = (sort * sort) list
 
+(** constant: it can be an integer, a real or a constant name *)
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
-(** constant: it can be an integer, a real or a constant name *)
                                                                 
 module MConst : sig 
   include Map.S with type key = const
@@ -45,10 +46,10 @@ val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
 
 
-
-type term = (** the type of terms *)
+(** the type of terms *)
+type term =
   | Const of int MConst.t
-  (** constant given as a map. [1*2 + 3*c] is the map [2 -> 1; c -> 3] *)
+  (** constant given as a map. [1*2 + 3*c] is the map [[2 -> 1; c -> 3]] *)
   | Elem of Hstring.t * sort
   (** element, can be a variable or a process *)
   | Access of Hstring.t * Variable.t list
@@ -57,8 +58,8 @@ type term = (** the type of terms *)
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 
 
+(** Module interface for terms *)
 module Term : sig
-  (** Module interface for terms *)
 
   type t = term
 
@@ -92,12 +93,14 @@ end
 
 (** {2 Atoms } *)
 
-type op_comp = Eq | Lt | Le | Neq  (** comparison operators for litterals *)
+(** comparison operators for litterals *)
+type op_comp = Eq | Lt | Le | Neq
 
 
+(** Interface for the atoms of the language *)
 module rec Atom : sig
-  (** Interface for the atoms of the language *)
 
+  (** the type of atoms *)
   type t =
     | True (** the atom [false] *)
     | False (** the atom [true] *)
@@ -146,10 +149,10 @@ end
 
 (** {2 Conjunctions } *)
 
+(** Interface for the conjunctions of atoms seen as sets of atoms. This
+    module is mutually recursive with [Atom] because of the [if-then-else] *)
 and SAtom : sig
               
-  (** Interface for the conjunctions of atoms seen as sets of atoms. This
-      module is mutually recursive with [Atom] because of the [if-then-else] *)
 
   include Set.S with type elt = Atom.t
 
@@ -173,9 +176,9 @@ and SAtom : sig
 
 end
 
+(** Interface for the conjunctions of atoms seen as arrays of atoms. This
+    is usefull for efficiently applying substitutions *)
 module ArrayAtom : sig
-  (** Interface for the conjunctions of atoms seen as arrays of atoms. This
-      is usefull for efficiently applying substitutions *)
 
   type t = Atom.t array
   (** values of this type should be constructed with the invariant that the

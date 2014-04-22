@@ -14,6 +14,13 @@
 (**************************************************************************)
 
 
+(** Dummy replacement for Functory library
+  
+    This module is renamed to [Functory] if the library Functory was not
+    found by configure. This provides a way to compile cubicle even if 
+    Functory is missing.
+ *)
+
 module Cores : sig
 
   val set_number_of_cores : int -> unit

@@ -16,7 +16,7 @@
 open Ast
 open Types
 
-(** {b Symbolic forward exploration }*)
+(** Symbolic forward exploration *)
 
 
 module HSA : Hashtbl.S with type key = SAtom.t
