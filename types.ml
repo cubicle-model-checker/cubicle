@@ -179,11 +179,12 @@ module Term = struct
 
   module Set = STerm
 
-  let rec subst sigma ?(sigma_sort=[]) t = 
+  let rec subst sigma ?(sigma_sort=[]) t =
     match t with
-    | Elem (x, s) -> 
-       (try Elem (Variable.subst sigma x, subst_sort sigma_sort s)
-        with Not_found -> t)
+    | Elem (x, s) ->
+       let nx = Variable.subst sigma x in
+       if x == nx then t
+       else Elem (nx, subst_sort sigma_sort s)
     | Access (a, lz) -> 
        Access (a, List.map
                     (fun z ->
@@ -328,7 +329,8 @@ end = struct
     | Comp (x, op, y) -> 
        let sx = Term.subst sigma ~sigma_sort x in
        let sy = Term.subst sigma ~sigma_sort y in
-       Comp(sx, op, sy)
+       if x == sx && y == sy then a
+       else Comp(sx, op, sy)
     | _ -> a
 
   let rec has_vars_term vs = function

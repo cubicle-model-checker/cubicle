@@ -277,7 +277,11 @@ let rec simplification np a =
 
 let rec simplification_terms a = match a with
     | Atom.True | Atom.False -> a
-    | Atom.Comp (t1, op, t2) -> Atom.Comp (simplify_term t1, op, simplify_term t2)
+    | Atom.Comp (t1, op, t2) ->
+       let nt1 = simplify_term t1 in
+       let nt2 = simplify_term t2 in
+       if nt1 == t1 && nt2 == t2 then a
+       else Atom.Comp (nt1, op, nt2)
     | Atom.Ite (sa, a1, a2) ->
        Atom.Ite (SAtom.fold (fun a -> SAtom.add (simplification_terms a)) sa SAtom.empty,
 	    simplification_terms a1, simplification_terms a2)

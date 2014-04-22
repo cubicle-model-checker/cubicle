@@ -278,11 +278,12 @@ EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
 	   ricart_agrawala.cub szymanski_at.cub berkeley.cub flash_eager.cub\
 	   german.cub german_pfs.cub german_undip.cub illinois.cub mesi.cub\
 	   moesi.cub synapse.cub swimming_pool.cub xerox_dragon.cub\
-	   sense_barrier.cub doc/papers/fmcad2023/benchs/flash.cub\
-	   doc/papers/fmcad2023/benchs/flash_nodata.cub\
-	   doc/papers/fmcad2023/benchs/flash_buggy.cub\
-	   doc/papers/fmcad2023/benchs/szymanski_na\
-	   doc/papers/fmcad2023/benchs/changra_toueg.cub
+	   sense_barrier.cub\
+	   ../doc/papers/fmcad2013/benchs/flash.cub\
+	   ../doc/papers/fmcad2013/benchs/flash_nodata.cub\
+	   ../doc/papers/fmcad2013/benchs/flash_buggy.cub\
+	   ../doc/papers/fmcad2013/benchs/szymanski_na.cub\
+	   ../doc/papers/fmcad2013/benchs/chandra_toueg.cub
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 
@@ -343,9 +344,19 @@ doc: $(FILES)
 	mkdir -p doc/ocamldoc
 	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
 	ocamldoc -html -keep-code -d doc/ocamldoc \
-	-t "Cubicle ($(VERSION)) documentation and source" \
+	-t "Cubicle $(VERSION) documentation and source" \
 	-intro doc/intro.txt -I smt -I common \
 	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
 	$(COMMONFILES) $(SMTFILES)
+
+
+archi: $(FILES)
+	ocamldoc -dot -dot-reduce -o doc/archi.dot \
+	-t "Cubicle $(VERSION) architecture" \
+	-I smt -I common \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) smt/smt.mli
+	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf
+	rm -f doc/archi.dot
 
 
