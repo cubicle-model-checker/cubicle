@@ -340,7 +340,7 @@ release: export/$(EXPORTDIR).tar.gz
 
 # ocamldoc
 ##########
-doc: $(FILES)
+doc: doc/ocamldoc/index.html
 	mkdir -p doc/ocamldoc
 	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
 	ocamldoc -html -keep-code -d doc/ocamldoc \
@@ -350,7 +350,7 @@ doc: $(FILES)
 	$(COMMONFILES) $(SMTFILES)
 
 
-archi: $(FILES)
+archi: doc/archi.pdf
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \
 	-t "Cubicle $(VERSION) architecture" \
 	-I smt -I common \
