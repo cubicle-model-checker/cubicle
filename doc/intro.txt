@@ -88,22 +88,6 @@ Bitv
 Smt	
 Solver	
 Solver_types	
-Literal	
-Sum	
-Symbols	
-Term	
-Ty	
-Uf	
-Use
-Cc	
-Combine	
-Exception	
-Explanation	
-Sig	
-Arith	
-Polynome	
-Fm	
-Intervals	
 }
 
 
