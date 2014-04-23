@@ -19,6 +19,18 @@ open Types
 open Options
 
 
+type node_info = Empty | Empty_C | Tag | Full
+
+let display_node_contents =
+  match dot_level with
+  | 0 -> Empty
+  | 1 -> Empty_C
+  | 2 -> Tag
+  | 3 | 5 -> Full
+  | _ -> Tag
+
+let display_fixpoints = dot_level >= 4
+
 (* Shape and color configurations for displaying nodes *)
 
 let config = function
@@ -29,8 +41,9 @@ let config = function
   | Inv ->
      " , color = orange, shape=rectangle, fontcolor=white, fontsize=20, style=filled"
   | Node -> 
-     if dot_level = 0 then " , shape=point"
-     else ""
+     match display_node_contents with
+     | Empty | Empty_C ->  " , shape=point"
+     | _ ->  ""
 
 let config_subsumed = " , color = gray, fontcolor=gray"
 
@@ -65,12 +78,13 @@ let rec print_atoms fmt = function
 let print_cube fmt c =
   fprintf fmt "%a" print_atoms (SAtom.elements c.Cube.litterals)
 
-let print_node_info fmt s = match dot_level with
-  | 0 -> ()
-  | 1 | 2 ->
+let print_node_info fmt s = match display_node_contents with
+  | Empty -> ()
+  | Empty_C -> if s.from = [] then print_cube fmt s.cube
+  | Tag ->
       if s.from = [] then print_cube fmt s.cube
       else fprintf fmt "%d" s.tag
-  | _ -> print_cube fmt s.cube
+  | Full -> print_cube fmt s.cube
 
 
 let print_node_c confstr fmt s =
@@ -110,7 +124,7 @@ let new_node n =
 
 
 let fixpoint s db =
-  if dot_level > 1 then
+  if display_fixpoints then
     begin
       fprintf !dot_fmt "%a@." print_subsumed_node s;
       print_pre "" !dot_fmt s;

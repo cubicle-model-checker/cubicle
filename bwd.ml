@@ -77,9 +77,14 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                  match Approx.good n with
                  | None -> n
                  | Some c ->
-                    candidates := c :: !candidates;
-                    Stats.candidate n c;
-                    c
+                    try
+                      (* Replace node with its approximation *)
+                      Safety.check system c;
+                      candidates := c :: !candidates;
+                      Stats.candidate n c;
+                      c
+                    with Safety.Unsafe _ -> n (* If the candidate is directly
+                                              reachable, no need to backtrack *)
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
@@ -93,6 +98,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         end;
         
         if Q.is_empty q then
+          (* When the queue is empty, pour back postponed nodes in it *)
           begin
             Q.push_list !postponed q;
             postponed := []
