@@ -72,7 +72,7 @@ let rec int_list_sep sep fmt = function
 
 let print_rounds_nb fmt () =
   if not quiet && !nodes_pre_run <> [] then
-    fprintf fmt "@\n(%a)" (int_list_sep " + ") !nodes_pre_run
+    fprintf fmt "@ (nodes %a)" (int_list_sep " + ") !nodes_pre_run
 
 
 let candidate n c =

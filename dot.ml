@@ -67,7 +67,7 @@ let cedge_pre =
   else
     "penwidth=2"
 
-let cedge_error = "color=red, dir=back, pencolor=red, fontcolor=red"
+let cedge_error = "color=red, dir=back, pencolor=red, fontcolor=red, penwidth=4"
 
 
 let rec print_atoms fmt = function
@@ -194,6 +194,13 @@ let open_dot () =
     fprintf !dot_fmt "orientation = portrait;\n\
                       fontsize = 10;\n\
                       rankdir = BT;\n\
+                      node [fontname=helvetica];\n\
+                      edge [fontname=helvetica];\n\
+                      graph [fontname=helvetica];\n\
+                      ratio=\"fill\";\n\
+                      size=\"11.7,8.3!\";\n\
+                      margin=0;\n\
+                      splines=polyline;\n\
                       concentrate=false;\n@.";
     dot_header !dot_fmt;
     fun () ->
