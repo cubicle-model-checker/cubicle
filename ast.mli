@@ -60,7 +60,7 @@ type system = {
   unsafe : (Variable.t list * SAtom.t) list;  
   trans : transition list
 }
-(** type of untyped transition systems *)
+(** type of untyped transition systems constructed by parsing *)
 
 (* Typed AST *)
 
@@ -74,12 +74,15 @@ type kind =
 
 type node_cube =
     { 
-      cube : Cube.t;
-      tag : int;
-      kind : kind;
-      depth : int;
-      mutable deleted : bool;
-      from : trace;
+      cube : Cube.t;          (** the associated cube *)
+      tag : int;              (** a unique tag (negative for approximations
+                                  and positive otherwise) *)
+      kind : kind;            (** the kind of the node *)
+      depth : int;            (** its depth in the search tree*)
+      mutable deleted : bool; (** flag changed when the {e a-posteriori}
+                                  simplification detects subsumption
+                                  (see {! Cubetrie.delete_subsumed}) *)
+      from : trace;           (** history of the node *)
     }
 (** the type of nodes, i.e. cubes with extra information *)
 and trace = (transition * Variable.t list * node_cube) list
