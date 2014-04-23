@@ -1038,7 +1038,7 @@ let resist_on_trace_size progress_inc ls env =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
   let cands, too_big =
     List.fold_left (fun (acc, too_big) s ->
-      if Node.size s > env.model_cardinal then acc, s :: too_big
+      if Node.dim s > env.model_cardinal then acc, s :: too_big
       else
 	try (alpha_renamings env procs s) :: acc, too_big
 	with Not_found -> acc, too_big
@@ -1096,7 +1096,7 @@ let smallest_to_resist_on_trace ls =
 
 
 let one_resist_on_trace_size s env =
-    if Node.size s > env.model_cardinal then true
+    if Node.dim s > env.model_cardinal then true
     else
       try
         let procs = List.rev (List.tl (List.rev env.all_procs)) in

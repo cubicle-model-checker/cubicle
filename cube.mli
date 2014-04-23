@@ -41,10 +41,11 @@ val create_normal : SAtom.t -> t
 val subst : Variable.subst -> t -> t
 (** apply a substitution on a cube *)
 
-val size : t -> int
-(** returns the number of exitential distinct variables *)
+val dim : t -> int
+(** returns the number of exitential distinct variables, i.e. the {e dimension}
+    of the cube *)
 
-val card: t -> int
+val size: t -> int
 (** returns the number of atoms in the conjuction *)
 
 

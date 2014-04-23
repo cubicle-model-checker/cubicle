@@ -114,8 +114,8 @@ let create_normal sa = create_norma_sa_ar sa (ArrayAtom.of_satom sa)
 
 let create_normal_array ar = create_norma_sa_ar (ArrayAtom.to_satom ar) ar
 
-let size c = List.length c.vars
-let card c = Array.length c.array
+let dim c = List.length c.vars
+let size c = Array.length c.array
 
 
 

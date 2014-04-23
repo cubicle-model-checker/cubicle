@@ -270,11 +270,11 @@ let approximations s =
   (* Sorting heuristic of approximations with most general ones first *)
   List.fast_sort
     (fun s1 s2 ->
-     let c = Pervasives.compare (Node.card s1) (Node.card s2) in
+     let c = Pervasives.compare (Node.size s1) (Node.size s2) in
      if c <> 0 then c
      else 
        let c =
-         Pervasives.compare (Node.size s1) (Node.size s2) in
+         Pervasives.compare (Node.dim s1) (Node.dim s2) in
        if c <> 0 then c
        else 
          let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in

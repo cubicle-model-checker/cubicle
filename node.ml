@@ -28,9 +28,9 @@ let array n = n.cube.Cube.array
 
 let litterals n = n.cube.Cube.litterals
 
-let size n = Cube.size n.cube
+let dim n = Cube.dim n.cube
 
-let card n = Cube.card n.cube
+let size n = Cube.size n.cube
 
 let rec origin n = match n.from with
   | [] -> n

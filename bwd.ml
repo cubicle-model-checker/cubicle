@@ -126,12 +126,12 @@ module BreadthOrder = struct
   type t = Node.t
  
   let compare s1 s2 =
-    let v1 = Node.size s1 in
-    let v2 = Node.size s2 in
+    let v1 = Node.dim s1 in
+    let v2 = Node.dim s2 in
     let c = Pervasives.compare v1 v2 in
     if c <> 0 then c else
-      let c1 = Node.card s1 in
-      let c2 = Node.card s2 in
+      let c1 = Node.size s1 in
+      let c2 = Node.size s2 in
       let c = Pervasives.compare c1 c2 in
       if c <> 0 then c else
         let c =  compare_kind s1 s2 in
@@ -147,12 +147,12 @@ module DepthOrder = struct
   type t = Node.t
  
   let compare s1 s2 =
-    let v1 = Node.size s1 in
-    let v2 = Node.size s2 in
+    let v1 = Node.dim s1 in
+    let v2 = Node.dim s2 in
     let c = Pervasives.compare v1 v2 in
     if c <> 0 then c else
-      let c1 = Node.card s1 in
-      let c2 = Node.card s2 in
+      let c1 = Node.size s1 in
+      let c2 = Node.size s2 in
       let c = Pervasives.compare c1 c2 in
       if c <> 0 then c else
         let c =  compare_kind s1 s2 in

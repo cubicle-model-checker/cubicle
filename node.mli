@@ -22,10 +22,19 @@ type t = node_cube
 (** the type of nodes constructed during the search *)
 
 val variables : t -> Variable.t list
+(** returns the variables of the associated cube *)
+
 val array : t -> ArrayAtom.t
+(** returns the conjunction in array form of the associated cube *)
+
 val litterals : t -> SAtom.t
+(** returns the conjunction of litterals of the associated cube *)
+
+val dim : t -> int
+(** returns the dimension of the associated cube (see {! Cube.dim} *)
+
 val size : t -> int
-val card : t -> int
+(** returns the size of the associated cube (see {! Cube.size} *)
 
 val create :
   ?kind:kind -> ?from:(transition * Variable.t list * t) option -> Cube.t -> t
