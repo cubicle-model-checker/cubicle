@@ -141,7 +141,8 @@ module rec Atom : sig
   (** returns the existential variables of the given atom *)
 
   val variables_proc : t -> Variable.Set.t
-  (** same as [variables] but only return skolemized variables of the form #i *)
+  (** same as [variables] but only return skolemized variables of the form
+      [#i] *)
 
   val print : Format.formatter -> t -> unit
   (** prints an atom *)
@@ -171,7 +172,8 @@ and SAtom : sig
   (** returns the existential variables of the given conjunction *)
 
   val variables_proc : t -> Variable.Set.t
-  (** same as [variables] but only return skolemized variables of the form #i *)
+  (** same as [variables] but only return skolemized variables of the form
+      [#i] *)
 
   val print : Format.formatter -> t -> unit
   (** prints a conjunction *)
