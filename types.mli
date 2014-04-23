@@ -25,8 +25,6 @@ type sort =
   | Constr (** constructor *)
   | Var (** variable of the paramterized domain *)
 
-type subst_sort = (sort * sort) list
-
 (** constant: it can be an integer, a real or a constant name *)
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
@@ -36,8 +34,6 @@ module MConst : sig
   val choose : int t -> key * int
   val is_num : int t -> Num.num option
 end
-
-val subst_sort : subst_sort -> sort -> sort
 
 val compare_constants : int MConst.t -> int MConst.t -> int
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t
@@ -67,7 +63,7 @@ module Term : sig
   val equal : t -> t -> bool
   val hash : t -> int
 
-  val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
+  val subst : Variable.subst -> t -> t
   (** Apply the substitution given in argument to the term *)
 
   val htrue : Hstring.t
@@ -125,7 +121,7 @@ module rec Atom : sig
   val equal : t -> t -> bool
 
 
-  val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
+  val subst : Variable.subst -> t -> t
   (** Apply the substitution given in argument to the atom *)
 
   val has_var : Variable.t -> t -> bool
@@ -161,7 +157,7 @@ and SAtom : sig
 
   val equal : t -> t -> bool
   val hash : t -> int
-  val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
+  val subst : Variable.subst -> t -> t
   (** Apply the substitution given in argument to the conjunction *)
 
 

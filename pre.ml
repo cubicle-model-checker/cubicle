@@ -93,8 +93,8 @@ let rec find_update a li = function
 	List.map 
 	  (fun (ci, ti) ->
             let sigma  = List.combine lj li in
-            SAtom.subst sigma (* ~sigma_sort:[Var, si] *) ci,
-            Term.subst sigma (* ~sigma_sort:[Var, si] *) ti) ls in
+            SAtom.subst sigma ci,
+            Term.subst sigma ti) ls in
       Branch { up_arr = a'; up_arg = li; up_swts = ls}
   | _ :: l -> find_update a li l
 

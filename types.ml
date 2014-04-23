@@ -24,8 +24,6 @@ type op_comp = Eq | Lt | Le | Neq
 
 type sort = Glob | Constr | Var
 
-type subst_sort = (sort * sort) list
-
 
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
@@ -63,13 +61,6 @@ type term =
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
-
-
-let subst_sort sigma_sort s = try List.assoc s sigma_sort with Not_found -> s
-
-
-let is_subst_sort_identity sigma =
-  List.for_all (fun (x,y) -> x = y) sigma
 
 let is_int_const = function
   | ConstInt _ -> true
@@ -179,17 +170,17 @@ module Term = struct
 
   module Set = STerm
 
-  let rec subst sigma ?(sigma_sort=[]) t =
+  let rec subst sigma t =
     match t with
     | Elem (x, s) ->
        let nx = Variable.subst sigma x in
        if x == nx then t
-       else Elem (nx, subst_sort sigma_sort s)
+       else Elem (nx, s)
     | Access (a, lz) -> 
        Access (a, List.map
                     (fun z ->
                      try Variable.subst sigma z with Not_found -> z) lz)
-    | Arith (x, c) -> Arith (subst sigma ~sigma_sort x, c)
+    | Arith (x, c) -> Arith (subst sigma x, c)
     | _ -> t
 
 
@@ -259,7 +250,7 @@ module rec Atom : sig
   val neg : t -> t
   val hash : t -> int
   val equal : t -> t -> bool
-  val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
+  val subst : Variable.subst -> t -> t
   val has_var : Variable.t -> t -> bool
   val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
@@ -320,15 +311,15 @@ end = struct
 
   let equal x y = compare x y = 0
 
-  let rec subst sigma ?(sigma_sort=[]) a =
+  let rec subst sigma a =
     match a with
     | Ite (sa, a1, a2) ->
-       Ite(SAtom.subst sigma ~sigma_sort sa, 
-           subst sigma ~sigma_sort a1, 
-           subst sigma ~sigma_sort a2)
+       Ite(SAtom.subst sigma sa, 
+           subst sigma a1, 
+           subst sigma a2)
     | Comp (x, op, y) -> 
-       let sx = Term.subst sigma ~sigma_sort x in
-       let sy = Term.subst sigma ~sigma_sort y in
+       let sx = Term.subst sigma x in
+       let sy = Term.subst sigma y in
        if x == sx && y == sy then a
        else Comp(sx, op, sy)
     | _ -> a
@@ -388,7 +379,7 @@ and SAtom : sig
 
   val equal : t -> t -> bool
   val hash : t -> int
-  val subst : Variable.subst -> ?sigma_sort:subst_sort -> t -> t
+  val subst : Variable.subst -> t -> t
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
@@ -409,15 +400,14 @@ end = struct
 
   let hash (sa:t) = Hashtbl.hash_param 100 500 sa
 
-  let subst sigma ?(sigma_sort=[]) sa =
-    if Variable.is_subst_identity sigma &&
-         is_subst_sort_identity sigma_sort then sa
+  let subst sigma sa =
+    if Variable.is_subst_identity sigma then sa
     else
-      fold (fun a -> add (Atom.subst sigma ~sigma_sort a)) sa empty
+      fold (fun a -> add (Atom.subst sigma a)) sa empty
 
-  let subst sigma ?(sigma_sort=[]) sa =
+  let subst sigma sa =
     TimerApply.start ();
-    let sa = subst sigma ~sigma_sort sa in
+    let sa = subst sigma sa in
     TimerApply.pause ();
     sa
 
