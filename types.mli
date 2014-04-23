@@ -126,7 +126,9 @@ module rec Atom : sig
 
 
   val subst : Variable.subst -> t -> t
-  (** Apply the substitution given in argument to the atom *)
+  (** Apply the substitution given in argument to the atom. This function is not
+      very efficient in practice, prefer the use of {! ArrayAtom.apply_sust}
+      when possible. *)
 
   val has_var : Variable.t -> t -> bool
   (** returns [true] if the atom contains the variable given in argument *)
@@ -189,6 +191,7 @@ module ArrayAtom : sig
 
   val equal : t -> t -> bool
   val hash : t -> int
+
   val subset : t -> t -> bool
   (** [subset a b] returns [true] if the elements of [a] are a subsets of the
       elements contained in [b]. [a] and [b] must be sorted with the order
