@@ -90,8 +90,12 @@ let rec remove_bad_candidates sys faulty candidates =
                  Forward.Unreach
 	    then
               (register_bad sys c' []; acc)
-	    else c'::acc)
-      [] candidates in
+	    else begin
+              (* This candidate seems ok, reset its delete flag *)
+              c'.deleted <- false;
+              c'::acc
+            end
+      ) [] candidates in
   List.rev nc
 
 
@@ -270,11 +274,10 @@ let approximations s =
   (* Sorting heuristic of approximations with most general ones first *)
   List.fast_sort
     (fun s1 s2 ->
-     let c = Pervasives.compare (Node.size s1) (Node.size s2) in
+       let c = Pervasives.compare (Node.dim s1) (Node.dim s2) in
      if c <> 0 then c
      else 
-       let c =
-         Pervasives.compare (Node.dim s1) (Node.dim s2) in
+     let c = Pervasives.compare (Node.size s1) (Node.size s2) in
        if c <> 0 then c
        else 
          let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in

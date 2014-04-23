@@ -25,4 +25,8 @@ val relevant : of_cube:Cube.t -> to_cube:Cube.t -> Variable.subst list
     instantiations of the quantifiers of [b] for the test
     [exists i1,... b => exists z1,... a]. Eliminates trivial useless
     (because they make the goal inconsistent) instantiations with simple
-    checks. *)
+    checks.
+
+    Quadratic in the size of the largest contiguous subset of [a] and [b]
+    of atoms with terms of the same type.
+ *)

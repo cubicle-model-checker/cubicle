@@ -83,8 +83,9 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                       candidates := c :: !candidates;
                       Stats.candidate n c;
                       c
-                    with Safety.Unsafe _ -> n (* If the candidate is directly
-                                              reachable, no need to backtrack *)
+                    with Safety.Unsafe _ -> n 
+                         (* If the candidate is directly reachable, no need to
+                            backtrack, just forget it. *)
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in

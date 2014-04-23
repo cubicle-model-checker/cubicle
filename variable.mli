@@ -26,7 +26,7 @@ type subst = (t * t) list
 module Set : Set.S with type elt = t
 (** set of variables *)
 
-(** {3 Predefinied variables } *)
+(** {2 Predefinied variables } *)
 
 val procs : t list
 (** predefinied list of skolem variables [#1], [#2], [#3], ... Their number is
@@ -41,7 +41,7 @@ val number : t -> int
 val is_proc : t -> bool
 (** returns [true] if the variable is a skolem process [#i] *)
 
-(** {3 Substitutions } *)
+(** {2 Substitutions } *)
 
 val build_subst : t list -> t list -> subst
 (** constructs a variable substitution *)
@@ -53,7 +53,7 @@ val is_subst_identity : subst -> bool
 (** returns [true] if the substitution is the identity function *)
 
 
-(** {3 Variable instantiation } *)
+(** {2 Variable instantiation } *)
 
 val all_permutations : 'a list -> 'a list -> ('a * 'a) list list
 (** [all_permutations l1 l2] returns all possible substitutions from 
@@ -74,7 +74,7 @@ val append_extra_procs : t list -> t list -> t list
 val give_procs : int -> t list
 
 
-(** {3 Printing } *)
+(** {2 Printing } *)
 
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit

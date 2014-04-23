@@ -31,10 +31,10 @@ val litterals : t -> SAtom.t
 (** returns the conjunction of litterals of the associated cube *)
 
 val dim : t -> int
-(** returns the dimension of the associated cube (see {! Cube.dim} *)
+(** returns the dimension of the associated cube (see {! Cube.dim}) *)
 
 val size : t -> int
-(** returns the size of the associated cube (see {! Cube.size} *)
+(** returns the size of the associated cube (see {! Cube.size}) *)
 
 val create :
   ?kind:kind -> ?from:(transition * Variable.t list * t) option -> Cube.t -> t

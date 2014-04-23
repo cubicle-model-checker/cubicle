@@ -90,7 +90,11 @@ end
 (** {2 Atoms } *)
 
 (** comparison operators for litterals *)
-type op_comp = Eq | Lt | Le | Neq
+type op_comp = 
+  | Eq  (** equality, [=] *)
+  | Lt  (** comparison less than, [<] *)
+  | Le  (** comparison less or equal, [<=] *)
+  | Neq (** disequality, [<>] *)
 
 
 (** Interface for the atoms of the language *)
@@ -107,8 +111,8 @@ module rec Atom : sig
 
   val compare : t -> t -> int
   (** compares two atoms. The order defined by this function is important
-      as it gives a way to efficiently apply substitutions in the module
-      [ArrayAtom] *)
+      as it gives a way to efficiently find relevant substitutions in the module
+      {! Instantiation} *)
 
   val trivial_is_implied : t -> t -> int
   (** return [true] if it can be immediately said that the atom in the first
@@ -186,12 +190,26 @@ module ArrayAtom : sig
   val equal : t -> t -> bool
   val hash : t -> int
   val subset : t -> t -> bool
+  (** [subset a b] returns [true] if the elements of [a] are a subsets of the
+      elements contained in [b]. [a] and [b] must be sorted with the order
+      defined by {! Atom.compare} *)
+
   val trivial_is_implied : t -> t -> bool
+
   val of_satom : SAtom.t -> t
+  (** transforms a conjunction if the form of a set of atoms to an equivalent
+      representation with an array *)
+
   val to_satom : t -> SAtom.t
+  (** returns the set of atoms corresponding to the conjuntion encoded
+      in the array*)
+
   val union : t -> t -> t
+  (** in fact concatenation, equivalent to taking the conjunctions of two
+      conjunctinos*)
+
   val apply_subst : Variable.subst -> t -> t
-  (** Efficient (quadratic) application of substitution *)
+  (** Efficient application of substitution *)
 
   val nb_diff : t -> t -> int
   (** returns the number of differences, i.e. atoms that are in the first
