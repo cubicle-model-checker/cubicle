@@ -22,8 +22,9 @@ type dnf = SAtom.t list
 (** Disjunctive normal form: each element of the list is a disjunct *)
 
 type type_constructors = Hstring.t * (Hstring.t list)
-(** Type and constructors declaration: [("t", ["A";"B"])] represent the
-    declaration of type [t] with two constructors [A] and [B] *)
+(** Type and constructors declaration: [("t", ["A";"B"])] represents the
+    declaration of type [t] with two constructors [A] and [B]. If the
+    list of constructors is empty, the type [t] is defined abstract. *)
 
 type update = {
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
@@ -31,7 +32,7 @@ type update = {
   up_swts : (SAtom.t * Term.t) list;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
 }
-(** conditionnal updates with cases, ex. [A[j] := case | C:t | _ ...] *)
+(** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
 
 type transition = {
   tr_name : Hstring.t; (** name of the transition *)
@@ -47,7 +48,7 @@ type transition = {
   tr_tau : Term.t -> op_comp -> Term.t -> Atom.t;
   (** functionnal form, computed during typing phase *)
 }
-(** type of parameteried transitions *)
+(** type of parameterized transitions *)
 
 type system = {
   globals : (Hstring.t * Smt.Type.t) list;
@@ -63,9 +64,13 @@ type system = {
 
 (* Typed AST *)
 
-type kind = Approx | Orig | Node | Inv
-(** kind of nodes (approximation, original unsafe formula, reguar node or user
-    supplied invariant )*)
+(** the kind of nodes *)
+type kind = 
+  | Approx (** approximation *)
+  | Orig   (** original unsafe formula *)
+  | Node   (** reguar node *)
+  | Inv    (** or user supplied invariant*)
+
 
 type node_cube =
     { 

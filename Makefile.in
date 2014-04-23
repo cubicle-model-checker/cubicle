@@ -349,6 +349,15 @@ doc: doc/ocamldoc/index.html
 	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
 	$(COMMONFILES) $(SMTFILES)
 
+docpdf: 
+	mkdir -p doc/ocamldoc/latex
+	ocamldoc -latex -keep-code -d doc/ocamldoc -o doc/ocamldoc/latex/doc.tex \
+	-t "Cubicle $(VERSION) documentation and source" \
+	-intro doc/intro.txt -I smt -I common \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) $(SMTFILES)
+	cd doc/ocamldoc/latex/; rubber -d doc
+
 
 archi: doc/archi.pdf
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \

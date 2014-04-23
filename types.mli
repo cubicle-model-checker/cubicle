@@ -155,6 +155,9 @@ and SAtom : sig
               
 
   include Set.S with type elt = Atom.t
+  (** {e Attention}: the function [add] performs some simple semantic
+      simplifications, so it is advised to not use this module for real sets of
+      atoms. *)
 
   val equal : t -> t -> bool
   val hash : t -> int
