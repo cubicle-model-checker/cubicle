@@ -340,7 +340,7 @@ release: export/$(EXPORTDIR).tar.gz
 
 # ocamldoc
 ##########
-doc: doc/ocamldoc/index.html
+doc:
 	mkdir -p doc/ocamldoc
 	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
 	ocamldoc -html -keep-code -d doc/ocamldoc \
@@ -359,7 +359,7 @@ docpdf:
 	cd doc/ocamldoc/latex/; rubber -d doc
 
 
-archi: doc/archi.pdf
+archi:
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \
 	-t "Cubicle $(VERSION) architecture" \
 	-I smt -I common \
@@ -369,3 +369,4 @@ archi: doc/archi.pdf
 	rm -f doc/archi.dot
 
 
+.PHONY: doc docpdf archi export release
