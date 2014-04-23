@@ -1,3 +1,4 @@
+table { font-size: 11pt; }
 .keyword { font-weight : bold ; color : #e74c3c }
 .keywordsign { color : #8e44ad }
 .superscript { font-size : 4 }
@@ -10,10 +11,10 @@
 .info { margin-left : 3em; margin-right: 3em }
 .param_info { margin-top: 4px; margin-left : 3em; margin-right : 3em }
 .code { color : #465F91 ; }
-.typetable { border-style : hidden }
+.typetable { border-style : hidden; font-size: 10.5pt }
 .paramstable { border-style : hidden ; padding: 5pt 5pt}
 tr { background-color : White }
-td.typefieldcomment { background-color : #FFFFFF ; font-size: smaller ;}
+td.typefieldcomment { background-color : #FFFFFF ; font-size: 10pt ;}
 div.sig_block {margin-left: 2em}
 *:target { background: #f1c40f; border-radius:3px}
 
@@ -34,7 +35,8 @@ pre { margin-bottom: 4px;
       font-family: monospace;
     }
 pre.verbatim, pre.codepre { }
-.indextable {background-color: #ecf0f1;
+.indextable {
+             background-color: #ecf0f1;
              border-collapse: collapse;
              border-radius:6px;
              overflow:hidden;
@@ -42,12 +44,14 @@ pre.verbatim, pre.codepre { }
              /* margin-right:auto; */
             }
 .indextable td, .indextable th {
+    /* font-size: 12pt; */
     background-color: #ecf0f1;
     padding:4px;
     padding-left:8px;
     padding-right:8px;
     min-width: 80px}
 .indextable td.module {
+    font-size: 13pt;
     background-color: #dbdfe0;
     padding-left:10px; }
 .indextable td.module a {color:#2c3e50;  }

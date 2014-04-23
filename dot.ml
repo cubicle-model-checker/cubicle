@@ -79,7 +79,7 @@ let print_cube fmt c =
   fprintf fmt "%a" print_atoms (SAtom.elements c.Cube.litterals)
 
 let print_node_info fmt s = match display_node_contents with
-  | Empty -> ()
+  | Empty -> if s.kind = Orig then fprintf fmt "%d" s.tag
   | Empty_C -> if s.from = [] then print_cube fmt s.cube
   | Tag ->
       if s.from = [] then print_cube fmt s.cube
