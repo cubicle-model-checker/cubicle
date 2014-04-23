@@ -33,7 +33,8 @@ val create : Variable.t list -> SAtom.t -> t
 
 val normal_form : t -> t
 (** puts a cube in normal form, so as to have the existential variables
-    contiguous (#1, #2, #3, ...). Performs variable renaming if necessary. *)
+    contiguous ([#1], [#2], [#3], ...). Performs variable renaming if
+    necessary. *)
 
 val create_normal : SAtom.t -> t
 (** create a cube in normal form by finding the quantified variables *)
