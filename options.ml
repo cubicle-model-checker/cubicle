@@ -15,6 +15,8 @@
 
 type trace =  NoTrace | AltErgoTr | WhyTr
 
+type viz_prog = Dot | Sfdp
+
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
@@ -25,6 +27,7 @@ let maxnodes = ref 100_000
 let debug = ref false
 let dot = ref false
 let dot_level = ref 0
+let dot_prog = ref Dot
 let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
@@ -87,6 +90,9 @@ let set_dot d =
   dot := true;
   dot_level := d
 
+let use_sfdp () =
+  dot_prog := Sfdp
+
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
 let specs = 
@@ -105,6 +111,8 @@ let specs =
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
               "<level> graphviz (dot) output with a level of details";
+    "-sfdp", Arg.Unit use_sfdp,
+              " use sfdp for drawing graph instead of dot (for big graphs)";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -167,6 +175,7 @@ let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level
+let dot_prog = !dot_prog
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling

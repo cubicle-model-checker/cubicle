@@ -17,6 +17,8 @@
 
 type trace =  NoTrace | AltErgoTr | WhyTr
 
+type viz_prog = Dot | Sfdp
+
 val file : string
 val cin : in_channel
 
@@ -58,6 +60,7 @@ val mode : string
 val debug : bool
 val dot : bool
 val dot_level : int
+val dot_prog : viz_prog
 val quiet : bool
 val verbose : int
 val nocolor : bool

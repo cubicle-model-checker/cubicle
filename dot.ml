@@ -21,6 +21,10 @@ open Options
 
 type node_info = Empty | Empty_C | Tag | Full
 
+let graphviz_prog nb = match dot_prog with
+  | Dot when nb < 3000 -> "dot"
+  | _ ->  "sfdp -Goverlap=prism"
+
 let display_node_contents =
   match dot_level with
   | 0 -> Empty
@@ -30,6 +34,8 @@ let display_node_contents =
   | _ -> Tag
 
 let display_fixpoints = dot_level >= 4
+
+let splines = if display_fixpoints then "false" else "polyline"
 
 (* Shape and color configurations for displaying nodes *)
 
@@ -45,6 +51,10 @@ let config = function
      | Empty | Empty_C ->  " , shape=point"
      | _ ->  ""
 
+let info_sfdp s = match dot_prog with
+  | Sfdp -> "label=\" \", "^s
+  | _ -> s
+
 let config_subsumed = " , color = gray, fontcolor=gray"
 
 let config_init =
@@ -55,19 +65,22 @@ let config_error = ", color=red, fillcolor=lightpink, style=filled"
 
 (* Shape and color configurations for displaying edges *)
 
-let cedge_subsume =
+let cedge_subsume = info_sfdp
   "style=dashed, arrowhead=onormal, color=gray, constraint=false"
 
-let cedge_candidate =
+let cedge_candidate = info_sfdp
   "style=dashed, arrowhead=onormal, color=blue, penwidth=4"
 
 let cedge_pre =
-  if dot_level = 0 then
-    "label=\"\", arrowhead=none, penwidth=1"
+  if dot_level <= 1 then
+    info_sfdp "label=\" \", arrowhead=none, penwidth=1"
   else
-    "penwidth=2"
+    info_sfdp "penwidth=2"
 
-let cedge_error = "color=red, dir=back, pencolor=red, fontcolor=red, penwidth=4"
+let cedge_error =
+  info_sfdp ("color=red, dir=back, pencolor=red, \
+              fontcolor=red, penwidth=4"^
+               (if dot_level = 1 then "" else ", label=\" \""))
 
 
 let rec print_atoms fmt = function
@@ -87,7 +100,10 @@ let print_node_info fmt s = match display_node_contents with
   | Full -> print_cube fmt s.cube
 
 
+let nb_nodes = ref 0
+
 let print_node_c confstr fmt s =
+  incr nb_nodes;
   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr
 
 let print_node fmt s = print_node_c (config s.kind) fmt s
@@ -102,12 +118,6 @@ let print_pre cedge fmt n =
   match n.from with
   | [] -> ()
   | (tr, args, father) :: _ ->
-    (* if cedge = cedge_error then *)
-    (*  fprintf fmt "%d -> %d [label=\"%a(%a)\", %s]@."  *)
-    (*          father.tag n.tag Hstring.print tr.tr_name *)
-    (*          Variable.print_vars args *)
-    (*          cedge *)
-    (*  else *)
      fprintf fmt "%d -> %d [label=\"%a(%a)\", %s]@." 
              father.tag n.tag Hstring.print tr.tr_name
              Variable.print_vars args
@@ -145,8 +155,6 @@ let error_trace faulty =
   List.iter
     (fun (_, _, s) ->
      print_pre cedge_error !dot_fmt s;
-     (* fprintf !dot_fmt "%d -> %d [%s]@." !prev s.tag cedge_error; *)
-     (* prev := s.tag; *)
      if s.kind = Node then
        fprintf !dot_fmt "%a@." (print_node_c config_error) s
     ) faulty.from
@@ -177,7 +185,8 @@ let display_graph dot_file =
     | "Linux\n" -> "xdg-open"
     | _ -> (* Windows *) "cmd /c start"
   in
-  match Sys.command ("dot -Tpdf "^dot_file^" > "^pdf^" && "^com^" "^pdf) with
+  match Sys.command ((graphviz_prog !nb_nodes)^" -Tpdf "^dot_file^
+                       " > "^pdf^" && "^com^" "^pdf) with
   | 0 -> ()
   | _ ->
      eprintf "There was an error with dot. Make sure graphviz is installed."
@@ -194,13 +203,14 @@ let open_dot () =
     fprintf !dot_fmt "orientation = portrait;\n\
                       fontsize = 10;\n\
                       rankdir = BT;\n\
+                      edge [overlap=prism];\n\
                       node [fontname=helvetica];\n\
                       edge [fontname=helvetica];\n\
                       graph [fontname=helvetica];\n\
                       ratio=\"fill\";\n\
                       size=\"11.7,8.3!\";\n\
                       margin=0;\n\
-                      splines=polyline;\n\
+                      splines=false;\n\
                       concentrate=false;\n@.";
     dot_header !dot_fmt;
     fun () ->
