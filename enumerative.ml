@@ -575,16 +575,14 @@ let value_in_state env st i =
   if i <> -1 && i < env.nb_vars then st.(i) else i
 
 let check_req env st (i1, op, i2) =
-  try
-    let v1 = value_in_state env st i1 in
-    let v2 = value_in_state env st i2 in
-    v1 = -1 || v2 = -1 ||
-	match op with
-	  | Eq -> v1 = v2
-	  | Neq -> v1 <> v2
-	  | Le -> v1 <= v2
-	  | Lt -> v1 < v2
-  with Not_found -> true
+  let v1 = value_in_state env st i1 in
+  let v2 = value_in_state env st i2 in
+  v1 = -1 || v2 = -1 ||
+    match op with
+    | Eq -> v1 = v2
+    | Neq -> v1 <> v2
+    | Le -> v1 <= v2
+    | Lt -> v1 < v2
 
 let check_reqs env st = List.for_all (check_req env st)
 
@@ -790,6 +788,19 @@ let post_bfs st visited trs q cpt_q depth =
         ) sts
       with Not_applicable -> ()) trs
 
+let post_dfs st visited trs q cpt_q depth =
+  if not limit_forward_depth || depth < forward_depth then
+    List.iter (fun st_tr ->
+      try 
+        let sts = st_tr.st_f st in
+        List.iter (fun s ->
+          if not (HST.mem visited s) then begin
+            incr cpt_q;
+            Stack.push (depth + 1, s) q
+          end
+        ) sts
+      with Not_applicable -> ()) trs
+
 let hset_none = Hstring.HSet.singleton (Hstring.make "none")
 
 let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
@@ -829,34 +840,6 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
 let check_cand env state cand = 
   not (List.for_all (fun l -> check_req env state (neg_req env l)) cand)
 
-
-let forward_dfs s procs env l =
-  let explicit_states = env.explicit_states in
-  let cpt_f = ref 0 in
-  let cpt_q = ref 1 in
-  let trs = env.st_trs in
-  let rec forward_rec s procs trs = function
-    | [] ->
-        if not quiet then eprintf "Total forward nodes : %d@." !cpt_f
-    | (depth, st) :: to_do ->
-	decr cpt_q;
-	if HST.mem explicit_states st then
-	  forward_rec s procs trs to_do
-        else
-	  let to_do = post st explicit_states trs to_do cpt_q depth in
-	  incr cpt_f;
-	  if debug && verbose > 1 then
-            eprintf "%d : %a\n@." !cpt_f
-              SAtom.print (state_to_cube env st);
-	  if not quiet && !cpt_f mod 1000 = 0 then
-            eprintf "%d (%d)@." !cpt_f !cpt_q;
-	  (* HI.add explicit_states hst st; *)
-	  HST.add explicit_states st ();
-          env.states <- st :: env.states;
-	  forward_rec s procs trs to_do
-  in
-  forward_rec s procs trs l
-
 let remove_first h =
   try HST.iter (fun hst _ -> HST.remove h hst; raise Exit) h
   with Exit -> ()
@@ -870,6 +853,36 @@ let add_all_syms env h st =
   HST.add h st ();
   List.iter (fun st_sigma ->
     HST.add h (apply_perm_state env st st_sigma) ()) env.perm_states
+
+let forward_dfs s procs env l =
+  let h_visited = env.explicit_states in
+  let cpt_f = ref 0 in
+  let cpt_r = ref 0 in
+  let cpt_q = ref 1 in
+  let trs = env.st_trs in
+  let to_do = Stack.create () in
+  List.iter (fun td -> Stack.push td to_do) l;
+  while not (Stack.is_empty to_do) &&
+          (max_forward = -1 || !cpt_f < max_forward) do
+    let depth, st = Stack.pop to_do in
+    decr cpt_q;
+    if not (HST.mem h_visited st) then begin
+    (* if not (already_visited env explicit_states st) then begin *)
+      post_dfs st h_visited trs to_do cpt_q depth;
+      incr cpt_f;
+      if debug && verbose > 1 then
+        eprintf "%d : %a\n@." !cpt_f
+          SAtom.print (state_to_cube env st);
+      if not quiet && !cpt_f mod 1000 = 0 then
+        eprintf "%d (%d)@." !cpt_f !cpt_q;
+      (* if !cpt_f mod 3 = 1 then *)
+      incr cpt_r;
+      HST.add h_visited st ();
+      env.states <- st :: env.states;
+      (* add_all_syms env explicit_states st *)
+    end
+  done;
+  if not quiet then eprintf "Total forward nodes : %d@." !cpt_r
 
 let forward_bfs s procs env l =
   let h_visited = env.explicit_states in
@@ -947,7 +960,7 @@ let search procs init =
   global_envs := env :: !global_envs;
   forward_bfs init procs env st_inits;
   let st = HST.stats env.explicit_states in
-  if verbose > 0 then begin
+  if verbose > 0 || profiling then begin
     printf "\nStatistics@.";
     printf   "----------@.";
     printf "num_bindings : %d@." st.Hashtbl.num_bindings;
