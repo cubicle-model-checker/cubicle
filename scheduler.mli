@@ -89,7 +89,7 @@ module type Sys =
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val exists : ('a s -> bool) -> 'a set -> bool
-    val update_init : 'a t -> 'a set -> 'a t
+    val update_init : 'a t -> Hstring.t * 'a s -> 'a t
     val get_init : 'a t -> 'a set
     val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
     val update_s : Hstring.t -> 'a t -> 'a t
@@ -114,7 +114,7 @@ module System :
       val set_a : 'a t -> Hstring.t -> 'a da -> unit
       val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
       val exists : ('a s -> bool) -> 'a set -> bool
-      val update_init : 'a t -> 'a set -> 'a t
+      val update_init : 'a t -> Hstring.t * 'a s -> 'a t
       val get_init : 'a t -> 'a set
       val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
       val update_s : Hstring.t -> 'a t -> 'a t
@@ -159,7 +159,7 @@ module Syst :
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val exists : ('a s -> bool) -> 'a set -> bool
-    val update_init : 'a t -> 'a set -> 'a t
+    val update_init : 'a t -> Hstring.t * 'a s -> 'a t
     val get_init : 'a t -> 'a set
     val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
     val update_s : Hstring.t -> 'a t -> 'a t

@@ -210,7 +210,7 @@ module type Sys = sig
 
   val exists : ('a s -> bool) -> 'a set -> bool
     
-  val update_init : 'a t -> 'a set -> 'a t
+  val update_init : 'a t -> (Hstring.t * 'a s) -> 'a t
 
   val get_init : 'a t -> 'a set
 
@@ -246,7 +246,7 @@ module System ( S : St ) : Sys
 
     let exists f s = List.exists (fun (_, e) -> f e) s
 
-    let update_init s il = {s with init = il}
+    let update_init s il = {s with init = il::s.init}
 
     let get_init s = s.init
 
@@ -829,6 +829,7 @@ let graphs_to_inits () =
 	| [(n, (_, ts, _))] -> let v = TS.choose ts in
 			       let vs = match v with
 				 | Hstr _ -> ts
+				 | Proc p -> TS.union (TS.singleton v) (TS.singleton !fproc)
 				 | _ -> TS.singleton v
 			       in 
 			       let (_, tself) = Hashtbl.find ec n in
@@ -867,38 +868,38 @@ let initialization init =
   (* print_inits (); *)
   (* print_ce_diffs (); *)
   let etati = Etat.init () in
-  let initl = 
-    (match !inits with
+  let c = ref 0 in
+  let upd_etati tself n v =
+    match tself with
+      | RGlob _ -> Etat.set_v etati n v
+      | RArr (_, d) -> let tbl = DimArray.init d nb_threads v in
+		       Etat.set_a etati n tbl
+  in     
+  let rec create_init l =
+    match l with
+      | [(n, (tself, ts))] -> 
+	TS.iter (fun v -> 
+	  upd_etati tself n v;
+	  incr c;
+	  let i = Etat.copy etati in
+	  let tr = Hstring.make ("init" ^ (string_of_int !c)) in
+	  system := Syst.update_init !system (tr, i)
+	) ts
       | (n, (tself, ts)) :: tl ->
-	let c = ref 0 in
-	TS.fold (
-	  fun v acc ->
-	    (match tself with
-	      | RGlob _ -> Etat.set_v etati n v
-	      | RArr (_, d) -> let tbl = DimArray.init d nb_threads v in
-			       Etat.set_a etati n tbl
-	    );
-	    List.iter
-	      (fun (n', (tself', ts')) ->
-		let v = TS.choose ts' in
-		match tself' with
-		  | RGlob _ -> Etat.set_v etati n' v
-		  | RArr (_, d) -> let tbl = DimArray.init d nb_threads v in
-				   Etat.set_a etati n' tbl
-	      ) tl;
-	    let i = Etat.copy etati in
-	    incr c;
-	    (Hstring.make ("init" ^ (string_of_int !c)), i) :: acc
-	) ts []
+	TS.iter (
+	  fun v -> 
+	    upd_etati tself n v;
+	    create_init tl
+	) ts
       | _ -> assert false
-    ) in
-  system := Syst.update_init !system initl;
-  print_init ()
+  in 
+  create_init !inits;
+  printf "%d@." (List.length (Syst.get_init !system))
 
 
 (* SUBSTITUTION METHODS *)
 
-      
+       
 (* Here, optimization needed if constant values *)     
 let subst_req sub req =
   let f = fun () ->
