@@ -62,38 +62,43 @@ and add_force_to_list atom cube v l = match l with
       if cmp > 0 then (atom',t')::(add_force_to_list atom cube v n)
       else (atom, add_force cube v Empty)::l
 
-(* Add a mapping cube->v to trie *)
-let rec add_array cube v trie = match trie with
-  | Empty -> Array.fold_right (fun a t -> Node [a,t]) cube (Full v)
-  | Full _ -> trie
-  | Node l -> 
-      if Array.length cube = 0 then Full v
-      else Node (add_array_to_list 
-                   cube.(0) (Array.sub cube 1 (Array.length cube - 1))
-                   v l)
-and add_array_to_list atom cube v l = match l with
-  | [] -> [atom, add_array cube v Empty]
-  | (atom',t')::n ->
-      let cmp = Atom.compare atom atom' in
-      if cmp = 0 then (atom, add_array cube v t')::n
-      else if cmp > 0 then (atom',t')::(add_array_to_list atom cube v n)
-      else (atom, add_array cube v Empty)::l
+(* (\* Add a mapping cube->v to trie *\) *)
+(* let rec add_array cube v trie = match trie with *)
+(*   | Empty -> Array.fold_right (fun a t -> Node [a,t]) cube (Full v) *)
+(*   | Full _ -> trie *)
+(*   | Node l ->  *)
+(*       if Array.length cube = 0 then Full v *)
+(*       else Node (add_array_to_list  *)
+(*                    cube.(0) (Array.sub cube 1 (Array.length cube - 1)) *)
+(*                    v l) *)
+(* and add_array_to_list atom cube v l = match l with *)
+(*   | [] -> [atom, add_array cube v Empty] *)
+(*   | (atom',t')::n -> *)
+(*       let cmp = Atom.compare atom atom' in *)
+(*       if cmp = 0 then (atom, add_array cube v t')::n *)
+(*       else if cmp > 0 then (atom',t')::(add_array_to_list atom cube v n) *)
+(*       else (atom, add_array cube v Empty)::l *)
 
-(* Add a mapping cube->v to trie without checking for subsomption *)
-let rec add_array_force cube v trie = match trie with
-  | Empty -> Array.fold_right (fun a t -> Node [a,t]) cube (Full v)
-  | Full _ -> trie
-  | Node l -> 
-      if Array.length cube = 0 then Full v
-      else Node (add_array_force_to_list 
-                   cube.(0) (Array.sub cube 1 (Array.length cube - 1))
-                   v l)
-and add_array_force_to_list atom cube v l = match l with
-  | [] -> [atom, add_array_force cube v Empty]
-  | (atom',t')::n ->
-      let cmp = Atom.compare atom atom' in
-      if cmp > 0 then (atom',t')::(add_array_force_to_list atom cube v n)
-      else (atom, add_array_force cube v Empty)::l
+(* (\* Add a mapping cube->v to trie without checking for subsomption *\) *)
+(* let rec add_array_force cube v trie = match trie with *)
+(*   | Empty -> Array.fold_right (fun a t -> Node [a,t]) cube (Full v) *)
+(*   | Full _ -> trie *)
+(*   | Node l ->  *)
+(*       if Array.length cube = 0 then Full v *)
+(*       else Node (add_array_force_to_list  *)
+(*                    cube.(0) (Array.sub cube 1 (Array.length cube - 1)) *)
+(*                    v l) *)
+(* and add_array_force_to_list atom cube v l = match l with *)
+(*   | [] -> [atom, add_array_force cube v Empty] *)
+(*   | (atom',t')::n -> *)
+(*       let cmp = Atom.compare atom atom' in *)
+(*       if cmp > 0 then (atom',t')::(add_array_force_to_list atom cube v n) *)
+(*       else (atom, add_array_force cube v Empty)::l *)
+
+
+let add_array cube v trie = add (Array.to_list cube) v trie
+
+let add_array_force cube v trie = add_force (Array.to_list cube) v trie
 
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem cube trie = match trie with 
@@ -118,57 +123,83 @@ and mem_list atom cube l = match l with
           | [] -> None
           | atom::cube -> mem_list atom cube l
 
-(* Is cube subsumed by some cube in the trie? *)
-let rec mem_array cube trie = 
-  match trie with 
-  | Empty -> None
-  | Full { tag = id } -> Some [id]
-  | Node l ->
-      if Array.length cube = 0 then None
-      else mem_array_list
-        cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
-and mem_array_list atom cube l = match l with
-  | [] -> None
-  | (atom',t')::n ->
-      (* let cmp = Atom.compare atom atom' in *)
-      let cmp = - (Atom.trivial_is_implied atom' atom) in
-      if cmp = 0 then 
-        match mem_array cube t' with
-          | None -> 
-              if Array.length cube = 0 then None
-              else mem_array_list
-                cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
-          | Some _ as r -> r
-      else if cmp > 0 then mem_array_list atom cube n
-      else if Array.length cube = 0 then None
-      else mem_array_list
-        cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
-
-
-(* Is cube subsumed by some cube in the trie? *)
-let rec mem_array_poly cube trie = 
-  match trie with 
+let rec mem_poly cube trie = match trie with 
   | Empty -> false
   | Full _ -> true
-  | Node l ->
-      if Array.length cube = 0 then false
-      else mem_array_poly_list
-        cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
-and mem_array_poly_list atom cube l = match l with
+  | Node l -> match cube with
+      | [] -> false
+      | atom::cube -> 
+          mem_poly_list atom cube l
+and mem_poly_list atom cube l = match l with
   | [] -> false
   | (atom',t')::n ->
       (* let cmp = Atom.compare atom atom' in *)
       let cmp = - (Atom.trivial_is_implied atom' atom) in
-      if cmp = 0 then 
-        mem_array_poly cube t' ||
-          (Array.length cube <> 0 &&
-             mem_array_poly_list
-               cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l
-          )
-      else if cmp > 0 then mem_array_poly_list atom cube n
-      else (Array.length cube <> 0 &&
-              mem_array_poly_list
-                cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l)
+      if cmp = 0 then match mem_poly cube t' with
+        | true -> true
+        | false -> match cube with
+            | [] -> false
+            | atom::cube -> mem_poly_list atom cube l
+      else if cmp > 0 then mem_poly_list atom cube n
+      else match cube with
+          | [] -> false
+          | atom::cube -> mem_poly_list atom cube l
+
+(* (\* Is cube subsumed by some cube in the trie? *\) *)
+(* let rec mem_array cube trie =  *)
+(*   match trie with  *)
+(*   | Empty -> None *)
+(*   | Full { tag = id } -> Some [id] *)
+(*   | Node l -> *)
+(*       if Array.length cube = 0 then None *)
+(*       else mem_array_list *)
+(*         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l *)
+(* and mem_array_list atom cube l = match l with *)
+(*   | [] -> None *)
+(*   | (atom',t')::n -> *)
+(*       (\* let cmp = Atom.compare atom atom' in *\) *)
+(*       let cmp = - (Atom.trivial_is_implied atom' atom) in *)
+(*       if cmp = 0 then  *)
+(*         match mem_array cube t' with *)
+(*           | None ->  *)
+(*               if Array.length cube = 0 then None *)
+(*               else mem_array_list *)
+(*                 cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l *)
+(*           | Some _ as r -> r *)
+(*       else if cmp > 0 then mem_array_list atom cube n *)
+(*       else if Array.length cube = 0 then None *)
+(*       else mem_array_list *)
+(*         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l *)
+
+
+let mem_array a trie = mem (Array.to_list a) trie
+
+(* (\* Is cube subsumed by some cube in the trie? *\) *)
+(* let rec mem_array_poly cube trie =  *)
+(*   match trie with  *)
+(*   | Empty -> false *)
+(*   | Full _ -> true *)
+(*   | Node l -> *)
+(*       if Array.length cube = 0 then false *)
+(*       else mem_array_poly_list *)
+(*         cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l *)
+(* and mem_array_poly_list atom cube l = match l with *)
+(*   | [] -> false *)
+(*   | (atom',t')::n -> *)
+(*       (\* let cmp = Atom.compare atom atom' in *\) *)
+(*       let cmp = - (Atom.trivial_is_implied atom' atom) in *)
+(*       if cmp = 0 then  *)
+(*         mem_array_poly cube t' || *)
+(*           (Array.length cube <> 0 && *)
+(*              mem_array_poly_list *)
+(*                cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l *)
+(*           ) *)
+(*       else if cmp > 0 then mem_array_poly_list atom cube n *)
+(*       else (Array.length cube <> 0 && *)
+(*               mem_array_poly_list *)
+(*                 cube.(0) (Array.sub cube 1 (Array.length cube - 1)) l) *)
+
+let mem_array_poly a trie = mem_poly (Array.to_list a) trie
 
 let mem c t =
   TimerSubset.start ();

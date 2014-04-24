@@ -623,8 +623,9 @@ let rec apply_action env st sts' = function
           apply_action env st sts' a1
         else [] in
       let sts'2 =
-        if List.exists (fun req -> check_req env st (neg_req env req)) reqs then 
-          let sts' = List.map Array.copy sts' in 
+        if List.exists (fun req -> check_req env st (neg_req env req)) reqs
+        then 
+          let sts' = List.map Array.copy sts' in
           apply_action env st sts' a2
         else [] in
       begin
@@ -957,6 +958,9 @@ let search procs init =
 		st.Hashtbl.bucket_histogram;
     printf "@.";
   end;
+  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states;
+  (* Prevent the GC from scanning the list env.states as it is going to be
+     kept in memory all the time. *)
   env.explicit_states <- HST.create 1;
   Gc.compact ();
   TimeForward.pause ()

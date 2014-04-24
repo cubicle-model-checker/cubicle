@@ -166,7 +166,8 @@ let relevant_permutations np p l1 l2 =
     r
   with NoPermutations -> TimeRP.pause (); []
 
-
+(* uncomment to deactivate relevant permutations for benchmarking *)
+(* let relevant_permutations nb p l1 l2 = Variable.all_permutations l1 l2 *)
 
 
 let relevant ~of_cube ~to_cube =
