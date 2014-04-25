@@ -161,7 +161,7 @@ let relevant_permutations np p l1 l2 =
     let l1 = List.filter (fun b -> not (H.list_mem b obvl1)) l1 in
     let l2 = List.filter (fun b -> not (H.list_mem b obvl2)) l2 in
     let perm = all_permutations_impos l1 l2 impos in
-    let r = List.map (List.rev_append obvs) perm in
+    let r = List.rev_map (List.rev_append obvs) perm in
     TimeRP.pause ();
     r
   with NoPermutations -> TimeRP.pause (); []

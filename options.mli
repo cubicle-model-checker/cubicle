@@ -72,6 +72,7 @@ val profiling : bool
 val size_proc : int ref
 
 val subtyping : bool
+val notyping : bool
 
 val trace : trace
 val out_trace : string

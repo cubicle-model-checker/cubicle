@@ -65,6 +65,7 @@ let cores = ref 0
 let refine_universal = ref false
 
 let subtyping = ref true
+let notyping = ref false
 
 let trace = ref NoTrace
 let set_trace = function
@@ -229,6 +230,7 @@ let size_proc = ref 0
 let refine_universal = !refine_universal
 
 let subtyping = if !trace = NoTrace then !subtyping else false
+let notyping = !notyping
 
 let trace = !trace
 let out_trace = !out

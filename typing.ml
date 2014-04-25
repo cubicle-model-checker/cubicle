@@ -370,12 +370,12 @@ let add_tau tr =
 let system s = 
   try
     let l = init_global_env s in
-    init s.init;
-    Smt.Variant.init l;
-    List.iter unsafe s.unsafe;
-    transitions s.trans;
-    if Options.subtyping then Smt.Variant.close ();
-    if Options.debug then Smt.Variant.print ();
+    if not Options.notyping then init s.init;
+    if Options.subtyping    then Smt.Variant.init l;
+    if not Options.notyping then List.iter unsafe s.unsafe;
+    if not Options.notyping then transitions s.trans;
+    if Options.subtyping    then Smt.Variant.close ();
+    if Options.debug        then Smt.Variant.print ();
     
     { 
       t_globals = List.map fst s.globals;

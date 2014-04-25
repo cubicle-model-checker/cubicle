@@ -71,6 +71,21 @@ let build_subst args a_args =
 let is_subst_identity sigma =
   List.for_all (fun (x,y) -> Hstring.equal x y) sigma
 
+let rec all_permutations_not_tail_recursive l1 l2 = 
+  (*assert (List.length l1 <= List.length l2);*)
+  match l1 with
+    | [] -> [[]]
+    | x::l -> cross l [] x l2
+and cross l pr x st =
+  match st with
+    | [] -> []
+    | y::p -> 
+	let acc = all_permutations_not_tail_recursive l (pr@p) in
+	let acc = 
+	  if acc = [] then [[x,y]]
+	  else List.map (fun ds -> (x, y)::ds) acc in
+	acc@(cross l (y::pr) x p)
+
 let rec all_permutations l1 l2 = 
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with
@@ -80,14 +95,15 @@ and cross l pr x st =
   match st with
     | [] -> []
     | y::p -> 
-	let acc = all_permutations l (pr@p) in
+	let acc = all_permutations l (List.rev_append pr p) in
 	let acc = 
 	  if acc = [] then [[x,y]]
-	  else List.map (fun ds -> (x, y)::ds) acc in
-	acc@(cross l (y::pr) x p)
+	  else List.rev_map (fun ds -> (x, y)::ds) acc in
+	List.rev_append acc (cross l (y::pr) x p)
 
 let rec all_parts l = match l with
   | [] -> []
+  | [x] -> [[x]]
   | x::r -> let pr = all_parts r in
 	    [x]::pr@(List.map (fun p -> x::p) pr)
 
