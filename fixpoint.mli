@@ -36,3 +36,9 @@ module FixpointTrie : sig
       the disjunction of the nodes in [v]. Otherwise, it returns [None]. *)
 
 end
+
+module FixpointTrieNaive : sig
+
+  val check : Node.t -> Node.t Cubetrie.t -> int list option
+
+end

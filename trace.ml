@@ -924,6 +924,7 @@ module Why3 = struct
 
   let add_imports fmt s l =
     if need_bool s then fprintf fmt "use import bool.Bool\n";
+    fprintf fmt "use import int.Int\n";
     List.iter (fprintf fmt "use import %s\n") l;
     fprintf fmt "@."
 

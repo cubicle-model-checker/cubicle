@@ -79,7 +79,7 @@ let candidate n c =
   if not quiet then
     begin
       printf "└───>> Approximating by @{<fg_blue>[%d]@}@." c.tag;
-      if verbose > 0 then
+      if true || verbose > 0 then
         printf  "                        @[%a@]@." Node.print c
     end;
   if dot then Dot.candidate n c
@@ -103,7 +103,7 @@ let remaining compute =
 
 
 let print_candidates ~safe candidates =
-  if not quiet && candidates <> [] then
+  if candidates <> [] then
     begin
       if safe then 
         Pretty.print_title std_formatter "INFERRED NEGATED INVARIANTS"

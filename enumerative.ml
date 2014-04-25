@@ -838,7 +838,7 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
 
 
 let check_cand env state cand = 
-  not (List.for_all (fun l -> check_req env state (neg_req env l)) cand)
+  not (List.for_all (fun l -> check_req env state l) cand)
 
 let remove_first h =
   try HST.iter (fun hst _ -> HST.remove h hst; raise Exit) h
@@ -1020,7 +1020,7 @@ let replay_trace_and_expand procs system faulty =
 
 
 let satom_to_cand env sa =
-  SAtom.fold (fun a c -> match Atom.neg a with
+  SAtom.fold (fun a c -> match a with
     | Atom.Comp (t1, op, t2) -> 
         (HT.find env.id_terms t1, op, HT.find env.id_terms t2) :: c
     | _ -> raise Not_found)
@@ -1151,6 +1151,25 @@ let fast_resist_on_trace ls =
 
 
 
+(******************************************************)
+(* TODO Extract unsat cores to find minimal candidate *)
+(******************************************************)
+
+
+module SCand =
+  Set.Make (struct
+      type t = st_req * Atom.t
+      let compare (t,_) (t',_) = Pervasives.compare t t'
+  end)
+
+
+let unsat_cand_core env state cand =
+  List.fold_left
+    (fun uc ((l,_) as la) ->
+      if not (check_req env state (neg_req env l)) then
+        SCand.add la uc
+      else uc)
+    SCand.empty cand
 
 
 (*-------------- interface -------------*)

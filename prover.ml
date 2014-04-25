@@ -235,3 +235,18 @@ let unsat_core_wrt_node uc ap =
       | F.Lit la when List.mem [la] uc -> SAtom.add a acc
       | _ -> acc) 
     SAtom.empty ap
+
+
+let assume_node_wo_check ({ tag = id }, ap) =
+  let f = F.make F.Not [make_formula ap] in
+  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  SMT.assume ~id f
+
+let assume_goal_nodes { tag = id; cube = cube } nodes =
+  SMT.clear ();
+  SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
+  let f = make_formula cube.Cube.array in
+  if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
+  SMT.assume ~id f;
+  List.iter assume_node_wo_check nodes;
+  SMT.check  ()

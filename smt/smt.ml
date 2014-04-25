@@ -447,7 +447,7 @@ end
 exception Unsat of int list
 
 let set_cc b = Cc.cc_active := b
-let set_arith = Combine.CX. set_arith_active
+let set_arith = Combine.CX.set_arith_active
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig

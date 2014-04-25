@@ -243,3 +243,75 @@ end = struct
     TimeFix.pause ();
     r
 end
+
+
+
+module FixpointTrieNaive : sig
+
+  val check : Node.t -> Node.t Cubetrie.t -> int list option
+
+end = struct
+
+  let check_and_add n nodes vis_n=
+    let vis_cube = vis_n.cube in
+    let vis_array = vis_cube.Cube.array in
+    let d = Instantiation.exhaustive ~of_cube:vis_cube ~to_cube:n.cube in
+    List.fold_left
+      (fun nodes ss ->
+       let vis_renamed = ArrayAtom.apply_subst ss vis_array in
+         (vis_n, vis_renamed)::nodes
+      ) nodes d
+      
+
+  let check_fixpoint s visited =
+    let nodes =
+      Cubetrie.fold
+        (fun nodes vis_p ->
+         check_and_add s nodes vis_p) [] visited in
+    Prover.assume_goal_nodes s nodes
+
+              
+  let easy_fixpoint s nodes =
+    if delete && (s.deleted || Node.has_deleted_ancestor s)
+    then Some []
+    else Cubetrie.mem_array (Node.array s) nodes
+
+  let medium_fixpoint s visited  =
+    let vars, s_array = Node.variables s, Node.array s in
+    let substs = Variable.all_permutations vars vars in
+    let substs = List.tl substs in (* Drop 'identity' permutation. 
+                                    Already checked in easy_fixpoint. *)
+    try
+      List.iter (fun ss -> 
+                 let u = ArrayAtom.apply_subst ss s_array in
+                 match Cubetrie.mem_array u visited with
+                 | Some uc -> raise (Fixpoint uc)
+                 | None -> ()
+                ) substs;
+      None
+    with Fixpoint uc -> Some uc
+
+  let hard_fixpoint s nodes =
+    try
+      check_fixpoint s nodes;
+      None
+    with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+                           
+
+  let check s nodes =
+    Debug.unsafe s;
+    TimeFix.start ();
+    let r = hard_fixpoint s nodes in
+    (*   match easy_fixpoint s nodes with *)
+    (*   | None -> *)
+    (*      (match medium_fixpoint s nodes with *)
+    (*       | None -> hard_fixpoint s nodes *)
+    (*       | r -> r) *)
+    (*   | r -> r *)
+    (* in *)
+    TimeFix.pause ();
+    r
+end

@@ -30,3 +30,6 @@ val relevant : of_cube:Cube.t -> to_cube:Cube.t -> Variable.subst list
     Quadratic in the size of the largest contiguous subset of [a] and [b]
     of atoms with terms of the same type.
  *)
+
+val exhaustive : of_cube:Cube.t -> to_cube:Cube.t -> Variable.subst list
+(** Same as {! relevant} but does not performs any checks *)

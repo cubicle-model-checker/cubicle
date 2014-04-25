@@ -26,7 +26,7 @@ exception Unsafe of Node.t
 let cdnf_asafe ua =
   List.exists (
     List.for_all (fun a ->
-      Cube.inconsistent_array (Array.append ua a)))
+      Cube.inconsistent_2arrays ua a))
 
 
 (* fast check for inconsistence *)

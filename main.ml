@@ -56,13 +56,15 @@ let _ =
     begin 
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
-         if not quiet then Stats.print_report ~safe:true visited candidates;
+         if (not quiet || profiling) then
+           Stats.print_report ~safe:true visited candidates;
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
          Trace.Selected.certificate system visited;
          close_dot ();
 
       | Bwd.Unsafe (faulty, candidates) ->
-         if not quiet then Stats.print_report ~safe:false [] candidates;
+         if (not quiet || profiling) then
+           Stats.print_report ~safe:false [] candidates;
          if not quiet then Stats.error_trace system faulty;
          printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
          close_dot ();
@@ -85,7 +87,7 @@ let _ =
      exit 2
 
   | Stats.ReachedLimit ->
-     if not quiet then Stats.print_report ~safe:false [] [];
+     if (not quiet || profiling) then Stats.print_report ~safe:false [] [];
      eprintf "\n@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
      eprintf "It is likely that the search diverges, increase \
               the limit to explore further.@.";

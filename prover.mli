@@ -43,3 +43,5 @@ val make_formula_set : SAtom.t -> Smt.Formula.t
 
 val run : unit -> unit
 (** Runs the SMT solver on its current context *)
+
+val assume_goal_nodes : Node.t -> (Node.t * ArrayAtom.t) list -> unit

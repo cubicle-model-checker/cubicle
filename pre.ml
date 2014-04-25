@@ -263,7 +263,7 @@ let make_cubes (ls, post) rargs s tr cnp =
       (ls, post)
     end
   else
-    (* let d_old = all_permutations tr.tr_args rargs in *)
+    (* let d_old = Variable.all_permutations tr.tr_args rargs in *)
     (* TODO: Benchmark this *)
     let d = Variable.permutations_missing tr.tr_args args in
     (* assert (List.length d_old >= List.length d); *)
