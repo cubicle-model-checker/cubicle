@@ -71,7 +71,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
@@ -92,7 +92,8 @@
 %left BAR
 
 %type <Ast.system> system
-%start system
+%type <unit> scheduler
+%start system scheduler
 %%
 
 system:
@@ -420,3 +421,21 @@ operator:
   | NEQ { Neq }
   | LT { Smt.set_arith true; Lt }
   | LE { Smt.set_arith true; Le }
+;
+
+int_list :
+  | LEFTPAR intl RIGHTPAR { $2 }
+;
+
+intl :
+  | INT { [(Num.int_of_num $1)] }
+  | INT COMMA intl { (Num.int_of_num $1)::$3 }
+;
+
+soptions :
+  | 
+
+scheduler:
+  | FPROC { Options.init_proc := true }
+  | TAB lident int_list { Hashtbl.replace Options.tab_init $2 $3 }
+  | EOF { () }

@@ -48,13 +48,7 @@ if test "$OCAMLYACC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlyacc.)
 fi
 
-AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
-if test "$FUNCTORYLD" = no ; then
-      AC_MSG_RESULT(Cannot find functory library.)
-      FUNCTORYLIB=""
-else
-   FUNCTORYLIB="-I +functory"
-fi
+FUNCTORYLIB=""
 
 AC_MSG_CHECKING(platform)
 if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then

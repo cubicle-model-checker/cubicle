@@ -14,6 +14,19 @@ exception ConstrRep
 
 exception Error of error
 
+let () = 
+  let cin = match ofile with 
+    | Some s -> open_in ((Filename.chop_extension s)^".sched")
+    | None -> assert false 
+  in
+  let lb = Lexing.from_channel cin in 
+  Parser.scheduler Lexer.token lb
+
+let init_proc = !init_proc
+
+let () = Hashtbl.iter (fun n il -> printf "%a : " Hstring.print n; List.iter (printf "%d ") il) tab_init;
+  printf "@."
+
 let error e = raise (Error e)
 
 type value = 
@@ -727,8 +740,8 @@ let init_htbls (vars, atoms) =
 			  
 			| _ -> () (* Strange but that's your problem *)
 		    end
-		  | Elem (id, Glob), Elem (_, Var)
-		  | Elem (_, Var), Elem (id, Glob) ->
+		  | Elem (id, Glob), Elem (p, Var)
+		  | Elem (p, Var), Elem (id, Glob) ->
 		    let h = rep_name id in
 		    let (ty, _, diffs) = Hashtbl.find dc h in
 		    Hashtbl.replace dc h (ty, TS.singleton !fproc, diffs)
@@ -826,14 +839,15 @@ let graphs_to_inits () =
   Hashtbl.iter (
     fun i lv ->
       match lv with
-	| [(n, (_, ts, _))] -> let v = TS.choose ts in
-			       let vs = match v with
-				 | Hstr _ -> ts
-				 | Proc p -> TS.union (TS.singleton v) (TS.singleton !fproc)
-				 | _ -> TS.singleton v
-			       in 
-			       let (_, tself) = Hashtbl.find ec n in
-			       inits :=  (n ,(tself, vs)) :: !inits
+	| [(n, (_, ts, ti))] -> let v = TS.choose ts in
+				let vs = match v with
+				  | Hstr _ -> ts
+				  | Proc p -> if init_proc then TS.union (TS.singleton v) (TS.singleton !fproc)
+				    else TS.singleton v
+				  | _ -> TS.singleton v
+				in 
+				let (_, tself) = Hashtbl.find ec n in
+				inits :=  (n ,(tself, vs)) :: !inits
 	| (n, (_, ts, ti))::tl -> new_v_l n ts TS.empty ti tl
 	| _ -> assert false
   ) graphs
@@ -852,7 +866,7 @@ let ec_to_inits () =
   let comparei (_, (_, ts1)) (_, (_, ts2)) =
     let lts1 = TS.cardinal ts1 in
     let lts2 = TS.cardinal ts2 in
-    - Pervasives.compare lts1 lts2
+    Pervasives.compare lts1 lts2
   in
   inits := List.sort comparei !inits
     

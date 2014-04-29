@@ -34,9 +34,11 @@
         "const", CONST;
         "unsafe", UNSAFE;
         "forward", FORWARD;
+	"fproc", FPROC;
 	"case", CASE;
 	"forall_other", FORALL;
 	"number_procs", SIZEPROC;
+	"tab_init", TAB;
       ]
 	       
   let newline lexbuf =

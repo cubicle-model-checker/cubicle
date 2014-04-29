@@ -92,8 +92,30 @@ let set_mode = function
 let nb_threads = ref 4
 let nb_exec = ref 500
 let schedule = ref false
+let init_proc = ref false
 
+let tab_init = Hashtbl.create 11
 
+let arr = ref (Hstring.empty)
+
+let new_tab s = arr := (Hstring.make s)
+
+(*let r = Str.regexp " "*)
+
+(* let tab_procs s =  *)
+(*   if Hashtbl.mem tab_init !arr *)
+(*   then raise (Arg.Bad "You have to give an array name") *)
+(*   else  *)
+(*     let n = Str.split r s in *)
+(*     let nl = List.map ( *)
+(*       fun i ->  *)
+(* 	try (int_of_string i) *)
+(* 	with Failure _ ->  *)
+(* 	  raise (Arg.Bad "You have to give a string of numbers separated by whitespaces") *)
+(*     ) n in *)
+(*     Hashtbl.add tab_init !arr nl *)
+    
+      
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
 let specs = 
@@ -148,13 +170,15 @@ let specs =
     "-out", Arg.String set_out, "<dir> set output directory for certificate traces to <dir>";
     "-threads", Arg.Set_int nb_threads, "<n> number of threads to use";
     "-exec", Arg.Set_int nb_exec, "<n> number of executions in the scheduler";
-    "-schedule", Arg.Set schedule, "use scheduler instead of enumeration for BRAB"
+    "-schedule", Arg.Set schedule, "use scheduler instead of enumeration for BRAB";
+    "-fproc", Arg.Set init_proc, "Initialize every not initialized process to two values";
+(*    "-tab", Arg.Tuple [Arg.String new_tab; Arg.String tab_procs], " <tab_name> <string of int with whitespaces>"*)
   ]
 
 let alspecs = Arg.align specs
 
+let ofile = ref None 
 let cin =
-  let ofile = ref None in
   let set_file s =
     if Filename.check_suffix s ".cub" then ofile := Some s
     else raise (Arg.Bad "no .cub extension");
@@ -227,3 +251,5 @@ let out_trace = !out
 let nb_threads = if brab <> -1 then brab else !nb_threads
 let nb_exec = !nb_exec
 let schedule = !schedule
+
+let ofile = !ofile
