@@ -77,6 +77,9 @@ val nb_threads : int
 val nb_exec : int
 val schedule : bool
 val tab_init : (Hstring.t, (Hstring.t * int) list) Hashtbl.t
+val proc_init : (Hstring.t, unit) Hashtbl.t
+val proc_ninit : (Hstring.t, unit) Hashtbl.t
+
 (* val tab_init : (int * Hstring.t list) Hashtbl.t *)
 
 val ofile : string option

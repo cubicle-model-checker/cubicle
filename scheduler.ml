@@ -38,6 +38,11 @@ let () =
 	  
 let init_proc = !init_proc
 
+let () = printf "%B@.Proc_init :@." init_proc;
+  Hashtbl.iter (fun e _ -> printf "%a@." Hstring.print e) proc_init;
+  printf "Proc_ninit :@.";
+  Hashtbl.iter (fun e _ -> printf "%a@." Hstring.print e) proc_ninit
+
 let error e = raise (Error e)
 
 type value = 
@@ -872,8 +877,12 @@ let graphs_to_inits () =
 	| [(n, (_, ts, ti))] -> let v = TS.choose ts in
 				let vs = match v with
 				  | Hstr _ -> ts
-				  | Proc p -> if init_proc then TS.union (TS.singleton v) (TS.singleton !fproc)
-				    else TS.singleton v
+				  | Proc p -> 
+				    if (init_proc && not (Hashtbl.mem proc_ninit n))
+				      || (not init_proc && Hashtbl.mem proc_init n)
+				    then (printf "DUO INIT %a@." Hstring.print n;
+					  TS.union (TS.singleton v) (TS.singleton !fproc)
+				    ) else TS.singleton v
 				  | _ -> TS.singleton v
 				in 
 				let (_, tself) = Hashtbl.find ec n in

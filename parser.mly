@@ -71,7 +71,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB OPT NOT
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB PROC OPT NOT
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
@@ -455,6 +455,16 @@ option_list :
   | option option_list { () }
 ;
 
+procinit :
+  | PROC mident { Hashtbl.replace Options.proc_init $2 () }
+  | PROC NOT mident { Hashtbl.replace Options.proc_ninit $3 () }
+;
+
+procinit_list :
+  | procinit { () }
+  | procinit procinit_list { () }
+;
+
 tabinit :
   | TAB mident assoc_list { Hashtbl.replace Options.tab_init $2 $3 }
 ;
@@ -466,5 +476,6 @@ tabinit_list :
 
 scheduler:
   option_list
+  procinit_list
   tabinit_list
   EOF { () }

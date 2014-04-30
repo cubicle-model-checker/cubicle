@@ -41,6 +41,7 @@
 	"tab_init", TAB;
 	"opt", OPT;
 	"not", NOT;
+	"proc_init", PROC;
       ]
 	       
   let newline lexbuf =
