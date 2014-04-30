@@ -233,7 +233,7 @@ module TI :
   end
 val ec : (Hstring.t, TS.elt * stype) Hashtbl.t
 val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
-val inits : (Hstring.t * (stype * TS.t)) list ref
+val inits : (Hstring.t * ((stype * TS.t) * Hstring.t)) list ref
 val upd_dc : Hstring.t -> TS.t -> ty -> TI.t -> unit
 val groups : (int, TI.t) Hashtbl.t
 val graphs : (int, (Hstring.t * (ty * TS.t * TI.t)) list) Hashtbl.t

@@ -435,15 +435,15 @@ assocl :
   | LEFTPAR mident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
 ;
 
-/*(*int_list :
+int_list :
   | LEFTSQ intl RIGHTSQ { $2 }
 ;
 
 intl :
+  | MINUS INT { [-(Num.int_of_num $2)] }
   | INT { [Num.int_of_num $1] }
   | INT COMMA intl { Num.int_of_num $1 ::$3 }
 ;
-  *)*/
 
 option :
   | OPT FPROC { Options.init_proc := true }
@@ -456,7 +456,7 @@ option_list :
 ;
 
 procinit :
-  | PROC mident { Hashtbl.replace Options.proc_init $2 () }
+  | PROC mident int_list { Hashtbl.replace Options.proc_init $2 $3 }
   | PROC NOT mident { Hashtbl.replace Options.proc_ninit $3 () }
 ;
 

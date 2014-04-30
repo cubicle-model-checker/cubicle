@@ -22,26 +22,26 @@ let report (b,e) =
   printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
 
 let () =
-  let cin = match ofile with
-    | Some s -> open_in ((Filename.chop_extension s)^".sched")
-    | None -> assert false
-  in
-  let lb = Lexing.from_channel cin in
-  try 
-    Parser.scheduler Lexer.token lb
-  with 
-      Parsing.Parse_error ->
-	let  loc = (Lexing.lexeme_start_p lb, Lexing.lexeme_end_p lb) in
-	report loc;
-        printf "\nsyntax error\n@.";
-	exit 2
+  try
+    let cin = match ofile with
+      | Some s -> (
+	try open_in ((Filename.chop_extension s)^".sched")
+	with Sys_error _ -> raise Exit
+      )
+      | None -> assert false
+    in
+    let lb = Lexing.from_channel cin in
+    try 
+      Parser.scheduler Lexer.token lb
+    with 
+	Parsing.Parse_error ->
+	  let  loc = (Lexing.lexeme_start_p lb, Lexing.lexeme_end_p lb) in
+	  report loc;
+          printf "\nsyntax error\n@.";
+	  exit 2
+  with Exit -> ()
 	  
 let init_proc = !init_proc
-
-let () = printf "%B@.Proc_init :@." init_proc;
-  Hashtbl.iter (fun e _ -> printf "%a@." Hstring.print e) proc_init;
-  printf "Proc_ninit :@.";
-  Hashtbl.iter (fun e _ -> printf "%a@." Hstring.print e) proc_ninit
 
 let error e = raise (Error e)
 
@@ -540,7 +540,7 @@ let print_groups () =
 
 let print_inits () =
   List.iter (
-    fun (n, (tself, ts)) ->
+    fun (n, ((tself, ts), _)) ->
       printf "%a (" Hstring.print n;
       (match tself with
 	| RGlob h -> printf "G %a) : " Hstring.print h
@@ -569,6 +569,15 @@ let print_system (tr, {Etat.globs; Etat.arrs}) =
 let print_init () =
   List.iter print_system (Syst.get_init !system)
 
+let print_procinit () =
+  printf "Proc_init :";
+  Hashtbl.iter (fun n _ -> printf " %a" Hstring.print n) proc_init;
+  printf "@."
+
+let print_procninit () =
+  printf "Proc_ninit : ";
+  Hashtbl.iter (fun n _ -> printf " %a" Hstring.print n) proc_ninit;
+  printf "@."
 
 
 (* INITIALIZATION METHODS *)
@@ -786,6 +795,15 @@ let init_htbls (vars, atoms) =
       ) satom
   ) atoms
 
+let upd_options () =
+  Hashtbl.iter
+    ( fun n (rep, _) ->
+      match rep with
+	| Var h when h <> n && Hashtbl.mem proc_init n -> Hashtbl.add proc_init h (Hashtbl.find proc_init n)
+	| Var h when h <> n && Hashtbl.mem proc_ninit n -> Hashtbl.add proc_ninit h ()
+	| _ -> ()
+    ) ec
+	
 let c = ref 0
 
 let update () =
@@ -853,8 +871,11 @@ let graphs_to_inits () =
 	if (not (TI.mem n ti)) && (TS.mem v ts)
 	then
 	  (
-	    let (_, tself) = Hashtbl.find ec n in
-	    inits := (n ,(tself, (TS.singleton v))) :: !inits;
+	    let (rep, tself) = Hashtbl.find ec n in
+	    let r = match rep with
+	      | Var h -> h
+	      | _ -> n in
+	    inits := (n ,((tself, (TS.singleton v)), r)) :: !inits;
 	    l_to_ec v niv (TI.union ti ti') tl
 	  )
 	else l_to_ec v (hd::niv) ti tl
@@ -862,8 +883,11 @@ let graphs_to_inits () =
   in
   let rec new_v_l n ats fts ti tl =
     let v = TS.min_elt ats in
-    let (_, tself) = Hashtbl.find ec n in
-    inits := (n ,(tself, (TS.singleton v))) :: !inits;
+    let (rep, tself) = Hashtbl.find ec n in
+    let r = match rep with
+	      | Var h -> h
+	      | _ -> n in
+    inits := (n ,((tself, (TS.singleton v)), r)) :: !inits;
     let niv = (List.rev (l_to_ec v [] ti tl)) in
     match niv with
       | (n, (_, ts, ti))::tl -> let ats = TS.remove v (TS.diff ts fts) in
@@ -874,19 +898,29 @@ let graphs_to_inits () =
   Hashtbl.iter (
     fun i lv ->
       match lv with
-	| [(n, (_, ts, ti))] -> let v = TS.choose ts in
-				let vs = match v with
-				  | Hstr _ -> ts
-				  | Proc p -> 
-				    if (init_proc && not (Hashtbl.mem proc_ninit n))
-				      || (not init_proc && Hashtbl.mem proc_init n)
-				    then (printf "DUO INIT %a@." Hstring.print n;
-					  TS.union (TS.singleton v) (TS.singleton !fproc)
-				    ) else TS.singleton v
-				  | _ -> TS.singleton v
-				in 
-				let (_, tself) = Hashtbl.find ec n in
-				inits :=  (n ,(tself, vs)) :: !inits
+	| [(n, (_, ts, ti))] -> 
+	  let v = TS.choose ts in
+	  let (_, tself) = Hashtbl.find ec n in
+	  let vs = match v with
+	    | Hstr _ -> ts
+	    | Proc p -> 
+	      if (init_proc && not (Hashtbl.mem proc_ninit n))
+	      then (
+		printf "DUO INIT %a@." Hstring.print n;
+		TS.union (TS.singleton v) (TS.singleton !fproc)
+	      ) else if  (not init_proc && Hashtbl.mem proc_init n)
+		then (printf "MULT INIT %a@." Hstring.print n;
+		      let l = Hashtbl.find proc_init n in
+		      List.fold_left (
+			fun acc i -> 
+			  let v = if i = -1 then !fproc
+			    else Proc i in
+			  TS.add v acc) TS.empty l
+		) 
+		else TS.singleton v
+	    | _ -> TS.singleton v
+	  in
+	  inits :=  (n ,((tself, vs), n)) :: !inits
 	| (n, (_, ts, ti))::tl -> new_v_l n ts TS.empty ti tl
 	| _ -> assert false
   ) graphs
@@ -895,30 +929,38 @@ let ec_to_inits () =
   Hashtbl.iter (
     fun n (rep, tself) ->
       try
-	let vs =
+	let (vs, r) =
 	  match rep with
-	    | Var h -> if h = n then raise Exit else let (_, vs) = List.assoc h !inits in vs
-	    | _ -> TS.singleton rep
-	in inits :=  (n, (tself, vs)) :: !inits
+	    | Var h -> if h = n then raise Exit 
+	      else let ((_, vs), _) = List.assoc h !inits in (vs, h)
+	    | _ -> (TS.singleton rep, n)
+	in inits :=  (n, ((tself, vs), r)) :: !inits
       with Exit -> ()
   ) ec;
-  let comparei (_, (_, ts1)) (_, (_, ts2)) =
-    let lts1 = TS.cardinal ts1 in
-    let lts2 = TS.cardinal ts2 in
-    Pervasives.compare lts1 lts2
+  let comparei (n1, ((_, ts1), r1)) (n2, ((_, ts2), r2)) =
+      if n1 = r1 then 1
+      else if n2 = r2 then 1
+      else let lts1 = TS.cardinal ts1 in
+	   let lts2 = TS.cardinal ts2 in
+	   Pervasives.compare lts1 lts2 
   in
   inits := List.sort comparei !inits
-    
+   
 let initialization init =
-  init_htbls init; 
+  init_htbls init;
+  (* print_procinit (); *)
+  upd_options ();
   update ();
+  (* print_procinit (); *)
   (* print_groups (); *)
   upd_graphs ();
   (* print_ce_diffs (); *)
   (* print_g (); *)
   graphs_to_inits ();
-  ec_to_inits ();
   (* print_inits (); *)
+  (* printf "@."; *)
+  ec_to_inits ();
+  print_inits ();
   (* print_ce_diffs (); *)
   let etati = Etat.init () in
   let c = ref 0 in
@@ -938,26 +980,33 @@ let initialization init =
 			 with Not_found -> DimArray.init d nb_threads v
 		       in
 		       Etat.set_a etati n tbl
-  in     
-  let rec create_init l =
+  in    
+  let upd_syst n tself v =
+    upd_etati tself n v;
+    incr c;
+    let i = Etat.copy etati in
+    let tr = Hstring.make ("init" ^ (string_of_int !c)) in
+    system := Syst.update_init !system (tr, i) 
+  in
+  let module RMap = Map.Make (Hstring) in
+  let rec create_init l repmap =
     match l with
-      | [(n, (tself, ts))] -> 
-	TS.iter (fun v -> 
-	  upd_etati tself n v;
-	  incr c;
-	  let i = Etat.copy etati in
-	  let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-	  system := Syst.update_init !system (tr, i)
-	) ts
-      | (n, (tself, ts)) :: tl -> 
+      | [(n, ((tself, ts), r))] -> 
+	if n = r then
+	  TS.iter (upd_syst n tself) ts
+	else
+	  let v = RMap.find r repmap in
+	  upd_syst n tself v
+      | (n, ((tself, ts), r)) :: tl -> 
 	TS.iter (
 	  fun v -> 
 	    upd_etati tself n v;
-	    create_init tl
+	    let repmap' = if n = r then RMap.add n v repmap else repmap in
+	    create_init tl repmap'
 	) ts
       | _ -> assert false
   in 
-  create_init !inits;
+  create_init !inits RMap.empty;
   printf "%d@." (List.length (Syst.get_init !system))
 
 
