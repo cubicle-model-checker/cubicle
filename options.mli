@@ -76,7 +76,8 @@ val out_trace : string
 val nb_threads : int
 val nb_exec : int
 val schedule : bool
-val tab_init : (Hstring.t, int list) Hashtbl.t
+val tab_init : (Hstring.t, (Hstring.t * int) list) Hashtbl.t
+(* val tab_init : (int * Hstring.t list) Hashtbl.t *)
 
 val ofile : string option
 val init_proc : bool ref

@@ -4,6 +4,7 @@ open Ast.Atom
 open Format
 open Random
 open Num
+open Lexing
 
 type error = MustBeSingleNum
 
@@ -14,18 +15,28 @@ exception ConstrRep
 
 exception Error of error
 
-let () = 
-  let cin = match ofile with 
+let report (b,e) =
+  let l = b.pos_lnum in
+  let fc = b.pos_cnum - b.pos_bol + 1 in
+  let lc = e.pos_cnum - b.pos_bol + 1 in
+  printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
+
+let () =
+  let cin = match ofile with
     | Some s -> open_in ((Filename.chop_extension s)^".sched")
-    | None -> assert false 
+    | None -> assert false
   in
-  let lb = Lexing.from_channel cin in 
-  Parser.scheduler Lexer.token lb
-
+  let lb = Lexing.from_channel cin in
+  try 
+    Parser.scheduler Lexer.token lb
+  with 
+      Parsing.Parse_error ->
+	let  loc = (Lexing.lexeme_start_p lb, Lexing.lexeme_end_p lb) in
+	report loc;
+        printf "\nsyntax error\n@.";
+	exit 2
+	  
 let init_proc = !init_proc
-
-let () = Hashtbl.iter (fun n il -> printf "%a : " Hstring.print n; List.iter (printf "%d ") il) tab_init;
-  printf "@."
 
 let error e = raise (Error e)
 
@@ -65,6 +76,7 @@ module type DA = sig
   type 'a dima
 
   val init : int -> int -> 'a -> 'a dima
+  val minit : int -> int -> ('a * int) list -> 'a -> 'a dima
   val get : 'a dima -> int list -> 'a
   val set : 'a dima -> int list -> 'a -> unit
   val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
@@ -83,13 +95,31 @@ module DimArray : DA = struct
 
   let init d nb_elem v =
     let darr = 
-      let rec init' d nb_elem v =
+      let rec init' d =
 	match d with
 	  | 1 -> Arr (Array.init nb_elem (fun _ -> v))
-	  | n -> Mat (Array.init nb_elem (fun _ -> (init' (n-1) nb_elem v)))
-      in init' d nb_elem v
+	  | n -> Mat (Array.init nb_elem (fun _ -> init' (n-1)))
+      in init' d
     in {dim=d; darr=darr}
 
+  let minit d nb_elem al v =
+    let darr = 
+      let rec init' d =
+	match d with
+	  | 1 -> let a = Array.init nb_elem (fun _ -> v) in
+		 let i = ref 0 in
+		 List.iter (
+		   fun (c, n) ->
+		     for j = !i to n - 1 do
+		       a.(j) <- c
+		     done;
+		     i := !i + n - 1
+		 ) al;
+		 Arr a
+	  | n -> Mat (Array.init nb_elem (fun _ -> init' (n-1)))
+      in init' d
+    in {dim=d; darr=darr}
+    
   let get t ind = 
     let rec get' t ind =
       match t, ind with 
@@ -884,9 +914,20 @@ let initialization init =
   let etati = Etat.init () in
   let c = ref 0 in
   let upd_etati tself n v =
+    let value_list al =
+      List.map (
+	fun (id, n) ->
+	  (Hstr id, n)
+      ) al
+    in
     match tself with
       | RGlob _ -> Etat.set_v etati n v
-      | RArr (_, d) -> let tbl = DimArray.init d nb_threads v in
+      | RArr (_, d) -> let tbl =
+			 try let al = Hashtbl.find tab_init n in
+			     let vl = value_list al in
+			     DimArray.minit d nb_threads vl v
+			 with Not_found -> DimArray.init d nb_threads v
+		       in
 		       Etat.set_a etati n tbl
   in     
   let rec create_init l =
@@ -899,7 +940,7 @@ let initialization init =
 	  let tr = Hstring.make ("init" ^ (string_of_int !c)) in
 	  system := Syst.update_init !system (tr, i)
 	) ts
-      | (n, (tself, ts)) :: tl ->
+      | (n, (tself, ts)) :: tl -> 
 	TS.iter (
 	  fun v -> 
 	    upd_etati tself n v;

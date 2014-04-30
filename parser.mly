@@ -67,11 +67,11 @@
 
   let fresh_var = 
     let cpt = ref 0 in
-    fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
+    fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt)) 
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB OPT NOT
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
@@ -423,19 +423,48 @@ operator:
   | LE { Smt.set_arith true; Le }
 ;
 
-int_list :
-  | LEFTPAR intl RIGHTPAR { $2 }
+/* (* This part is reserved for the scheduler, it is NOT
+   in the cubicle language. *) */
+
+assoc_list :
+  | LEFTSQ assocl RIGHTSQ { $2 }
+;
+
+assocl :
+  | LEFTPAR mident COMMA INT RIGHTPAR { [($2, Num.int_of_num $4)] }
+  | LEFTPAR mident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
+;
+
+/*(*int_list :
+  | LEFTSQ intl RIGHTSQ { $2 }
 ;
 
 intl :
-  | INT { [(Num.int_of_num $1)] }
-  | INT COMMA intl { (Num.int_of_num $1)::$3 }
+  | INT { [Num.int_of_num $1] }
+  | INT COMMA intl { Num.int_of_num $1 ::$3 }
+;
+  *)*/
+
+option :
+  | OPT FPROC { Options.init_proc := true }
+  | OPT NOT FPROC { Options.init_proc := false }
 ;
 
-soptions :
-  | 
+option_list :
+  | option { () }
+  | option option_list { () }
+;
+
+tabinit :
+  | TAB mident assoc_list { Hashtbl.replace Options.tab_init $2 $3 }
+;
+
+tabinit_list :
+  | tabinit { () }
+  | tabinit tabinit_list { () }
+;
 
 scheduler:
-  | FPROC { Options.init_proc := true }
-  | TAB lident int_list { Hashtbl.replace Options.tab_init $2 $3 }
-  | EOF { () }
+  option_list
+  tabinit_list
+  EOF { () }

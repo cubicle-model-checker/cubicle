@@ -94,27 +94,7 @@ let nb_exec = ref 500
 let schedule = ref false
 let init_proc = ref false
 
-let tab_init = Hashtbl.create 11
-
-let arr = ref (Hstring.empty)
-
-let new_tab s = arr := (Hstring.make s)
-
-(*let r = Str.regexp " "*)
-
-(* let tab_procs s =  *)
-(*   if Hashtbl.mem tab_init !arr *)
-(*   then raise (Arg.Bad "You have to give an array name") *)
-(*   else  *)
-(*     let n = Str.split r s in *)
-(*     let nl = List.map ( *)
-(*       fun i ->  *)
-(* 	try (int_of_string i) *)
-(* 	with Failure _ ->  *)
-(* 	  raise (Arg.Bad "You have to give a string of numbers separated by whitespaces") *)
-(*     ) n in *)
-(*     Hashtbl.add tab_init !arr nl *)
-    
+let tab_init = Hashtbl.create 11    
       
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
@@ -171,8 +151,6 @@ let specs =
     "-threads", Arg.Set_int nb_threads, "<n> number of threads to use";
     "-exec", Arg.Set_int nb_exec, "<n> number of executions in the scheduler";
     "-schedule", Arg.Set schedule, "use scheduler instead of enumeration for BRAB";
-    "-fproc", Arg.Set init_proc, "Initialize every not initialized process to two values";
-(*    "-tab", Arg.Tuple [Arg.String new_tab; Arg.String tab_procs], " <tab_name> <string of int with whitespaces>"*)
   ]
 
 let alspecs = Arg.align specs

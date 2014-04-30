@@ -39,6 +39,8 @@
 	"forall_other", FORALL;
 	"number_procs", SIZEPROC;
 	"tab_init", TAB;
+	"opt", OPT;
+	"not", NOT;
       ]
 	       
   let newline lexbuf =

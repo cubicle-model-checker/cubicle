@@ -4,6 +4,8 @@ exception EFalse
 exception Inversion
 exception ConstrRep
 exception Error of error
+val report : Lexing.position * Lexing.position -> unit
+val init_proc : bool
 val error : error -> 'a
 type value =
     Var of Hstring.t
@@ -24,6 +26,7 @@ module type DA =
     type 'a t
     type 'a dima
     val init : int -> int -> 'a -> 'a dima
+    val minit : int -> int -> ('a * int) list -> 'a -> 'a dima
     val get : 'a dima -> int list -> 'a
     val set : 'a dima -> int list -> 'a -> unit
     val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
