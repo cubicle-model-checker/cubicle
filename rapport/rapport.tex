@@ -1,0 +1,235 @@
+%!TEX encoding = UTF-8 Unicode
+
+\documentclass{memoir}
+
+\usepackage[utf8]{inputenc} 
+\usepackage[T1]{fontenc}     
+\usepackage[francais]{babel} 
+
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{wasysym}
+\usepackage{float}
+
+\usepackage{listings}  %%% Pour pretty-printer le code caml
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor} %%% Pour avoir des noms de
+                                                        %%% couleurs symboliques
+\usepackage{tikz}
+
+\usepackage[ocgcolorlinks]{hyperref}
+
+%%% Ci-dessous, une commande spéciale qui applique un certain style
+%%% si le paramètre commence par une majuscule et un autre style
+%%% sinon.
+
+\makeatletter
+\newcommand*\idstyle{%
+        \expandafter\id@style\the\lst@token\relax
+}
+\def\id@style#1#2\relax{%
+        \ifcat#1\relax\else
+                \ifnum`#1=\uccode`#1%
+                        \color{Maroon}\ttfamily %%% si majuscule
+                \else
+                        \color{DarkBlue}\rmfamily %%% sinon
+                \fi
+        \fi
+}
+\makeatother
+
+%%% On dit que nos listings sont en OCaml et on rajoute d'autres
+%%% options pour tuner un peu le style par défaut.
+\lstset{language=[Objective]Caml,
+  literate={é}{{\'e}}1   %%% lstlisting a un peu du mal avec l'utf8
+           {è}{{\`e}}1   %%% on lui dit de substituer é par {\'e} et que
+           {ê}{{\^e}}1,  %%% cette séquence fait 1 caractère.
+  columns=fullflexible,
+  keywordstyle=\color{Chocolate}\sffamily\textbf,
+  basicstyle=\ttfamily,
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\idstyle %%% lstlisting ne fait pas la différence
+                           %%% entre des identifiants commençant par
+                           %%% une majuscule (modules ou
+                           %%% constructeurs) et des vrais
+                           %%% identifiants. On utilise \idstyle
+                           %%% défini plus haut.
+}
+
+\title{Rapport de TER \\ Réalisation d'un  ordonnanceur programmable pour Cubicle}
+\author{Mattias Roux}
+
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+%changement de mise en page
+
+\chapter{Introduction}
+\label{chap:intro}
+
+\chapterprecishere{
+	La mise au point des programmes concurrents est très difficile. Ceci est principalement dû au non-déterminisme de leur exécution : si on exécute plusieurs fois le même programme, on obtient rarement le même résultat. Ceci est aggravé par le fait que le modèle threads/mémoire partagée est très dfficile à programmer.
+
+	Pour réduire le nombre de bugs dans ces programmes, on a recours à des outils de vérification, appelés model checker, qui tentent de vérifier la sûreté d'un programme concurrent en explorant (statiquement) tous ses comportements possibles à l'exécution.
+
+	Cubicle est un model checker conçu pour vérifier des propriétés de sûreté d'algorithmes faisant intervenir un nombre quelconque de processus. Le fonctionnement de Cubicle repose en partie sur l'analyse de traces d'exécution d'un programme pour un nombre fini de processus.}
+
+	\section{Cubicle et l'algorithme BRAB}
+	\label{sec:cubibrab}
+		
+		Avant d'entrer dans le vif du sujet, il convient de présenter plus précisément le langage utilisé par Cubicle. Attention, nous n'entrerons pas, ici, dans les détails du langage car cela a déja été fait dans \cite{Vérif}. Néanmoins, il convient d'en décrire la syntaxe afin de favoriser la compréhension immédiate du fonctionnement de l'ordonnanceur qui a été réalisé pour ce langage. Voici donc, brièvement, une présentation succincte d'un fichier Cubicle. Celui-ci se décompose en plusieurs parties :
+		\begin{itemize}
+			\item La déclaration des types et de variables typées 
+				\hyperref[subsec:decl_types]{$\downarrow$}
+			\item La déclaration de l'état initial 
+				\hyperref[subsec:decl_init]{$\downarrow$}
+			\item La déclaration d'états unsafe 
+				\hyperref[subsec:decl_unsafe]{$\downarrow$}
+			\item La déclaration de l'ensemble des transitions 
+				\hyperref[subsec:decl_trans]{$\downarrow$}
+		\end{itemize}
+		
+		\newpage
+		\subsection{Déclaration des types et variables typées}
+		\label{subsec:decl_types}
+		
+		Les types \texttt{int}, \texttt{real} et \texttt{bool} sont reconnus par le compilateur de Cubicle ainsi qu'un type \texttt{proc} qui permet d'identifier les processus. Enfin, il est possible pour l'utilisateur de définir deux autres sortes de types, les types énumérés ou les types abstraits (dont nous verrons plus tard qu'ils exigent deux traitement bien distincts) :
+		
+		\begin{figure}[H]
+			\centering	
+			\begin{minipage}{0.65\linewidth}
+				\lstinputlisting[firstline=1,lastline=2]{exemple.cub}
+			\end{minipage}
+			\caption{Définition de types pour Cubicle}
+			\label{fig:type_cub}
+		\end{figure}
+		
+		\paragraph{} Après cette définition, il est possible de déclarer des variables globales ainsi que des tableaux indexés par des variables de type \texttt{proc}
+		
+		\begin{figure}[h]
+			\centering	
+			\begin{minipage}{0.65\linewidth}
+				\lstinputlisting[firstline=4,lastline=6]{exemple.cub}
+			\end{minipage}
+			\caption{Déclarations de variables et de tableaux pour Cubicle}
+			\label{fig:decl_cub}
+		\end{figure}
+		 
+		Ainsi, dans le cadre de German\textit{-ish}, on doit écrire :
+		
+		\begin{figure}[h]
+			\centering	
+			\begin{minipage}{0.65\linewidth}
+					\lstinputlisting[firstline=1,lastline=9]{germanish.cub}
+			\end{minipage}
+			\caption{Déclarations dans German\textit{-ish} pour Cubicle}
+			\label{fig:gish_decl_cub}
+		\end{figure}
+		
+	\newpage
+	
+		\subsection{Déclaration de l'état initial}
+		\label{subsec:decl_init}
+		
+		Un état initial admet une représentation logique et son équivalent dans Cubicle, par exemple, celui de German\textit{-ish} en Cubicle est le suivant :
+		\begin{figure}[H]
+			\centering	
+			\begin{minipage}{0.65\linewidth}
+				\lstinputlisting[firstline=11,lastline=12]{germanish.cub}
+			\end{minipage}
+			\caption{Etat initial du protocole German\textit{-ish} pour Cubicle}
+			\label{fig:gish_init_cub}
+		\end{figure}
+		
+		qui peut être lu comme ceci (on remarquera que la variable \texttt{Curptr} n'est pas initialisée, nous reviendrons dessus plus tard) :
+		
+		\begin{figure}[H]
+			\[\forall z.~ \mathtt{Cache}[z] = \mathsf{Invalid} ~\land~ \neg
+			\mathtt{Shrset}[z] ~\land~ \neg \mathtt{Exgntd} ~\land~ \mathtt{CurCmd} =
+			\mathsf{Empty}\]
+			\caption{Etat initial du protocole German\textit{-ish} sous forme logique}
+			\label{fig:gish_init_log}
+			
+		\end{figure}
+
+		
+					
+		\subsection{Déclaration d'états unsafe}
+		\label{subsec:decl_unsafe}
+
+		De la même manière que pour l'état initial, on définit un ou plusieurs états unsafe. Par exemple, l'état unsafe de German\textit{-ish} :
+		
+		\begin{figure}[h]
+			\centering	
+			\begin{minipage}{0.65\linewidth}
+				\lstinputlisting[firstline=14,lastline=14]{germanish.cub}
+			\end{minipage}
+			\caption{Etat unsafe du protocole German\textit{-ish} pour Cubicle}
+			\label{fig:gish_unsafe_cub}
+		\end{figure}		
+		
+		peut être lu comme ceci :
+		
+		\begin{figure}[h]
+			\[
+				\begin{array}{l}
+				\Theta : ~\exists z1,z2. ~z1\neq z2 ~\land~ \mathtt{Cache}[z1] = \mathsf{Exclusive}
+				~\land~ \mathtt{Cache}[z2] = \mathsf{Shared}
+				\\[0.5em]
+				\end{array}
+			\]
+			\caption{Etat unsafe du protocole German\textit{-ish} sous forme logique}
+			\label{fig:gish_unsafe_log}			
+		\end{figure}
+		
+		\subsection{Déclaration des transitions}
+		\label{subsec:decl_trans}
+		
+		Reprenons notre exemple :
+		
+		\begin{figure}[h]
+			\centering	
+			\begin{minipage}{0.65\linewidth}
+				\lstinputlisting[firstline=55,lastline=64]{germanish.cub}
+			\end{minipage}
+			\caption{Une transition du protocole German\textit{-ish} pour Cubicle}
+			\label{fig:gish_trans_cub}
+		\end{figure}		
+		
+		et intéressons nous à la partie \textit{requires} qui correspond à ce qui sera appelé \textit{garde}. D'un point de vue logique, la garde peut être lue comme ceci :
+		
+		\[\begin{array}{l}$t_6: \exists i.$ \hspace*{-0.5em} & 
+ \mathtt{Ptr} = i ~\land~ \mathtt{Cmd} =  \mathsf{re} ~\land~ 
+\neg \mathtt{Exg} ~\land~
+\forall j.~ \neg \mathtt{Shr}[j]
+\\
+&  \mathtt{Cmd}' = \epsilon ~\land~ 
+\mathtt{Exg}' ~\land~ 
+\mathtt{Shr}'[i] ~\land~ 
+\mathtt{Cache}'[i] = \mathsf{E}
+\end{array}\]
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{germanish_schema_dia.mps}
+  \caption{Diagramme d'états du protocole German\textit{-ish}}
+  \label{fig:motivating_schema}
+\end{figure}
+
+Ici \hyperref[fig:motivating_schema]{Figure~\ref*{fig:motivating_schema}}
+			
+\
+
+\begin{thebibliography}{10}
+
+\bibitem{Vérif}
+Sylvain Conchon, Alain Mebsout, Fatiha Zaïdi
+\newline Vérification de systèmes paramétrés avec Cubicle.
+\newline {\url{https://www.lri.fr/~conchon/TER/2013/1/cubicle.pdf}}
+
+\end{thebibliography}
+
+\end{document}

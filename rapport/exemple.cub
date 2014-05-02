@@ -1,0 +1,6 @@
+type state = Invalid | Shared | Exclusive (* Enuméré *)
+type abstr   	       	      		  (* Abstrait *)
+
+var Timer : int
+var Abs : abstr
+array Arr[proc] : state
