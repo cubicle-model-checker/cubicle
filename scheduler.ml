@@ -15,20 +15,18 @@ exception ConstrRep
 
 exception Error of error
 
-let report (b,e) =
-  let l = b.pos_lnum in
-  let fc = b.pos_cnum - b.pos_bol + 1 in
-  let lc = e.pos_cnum - b.pos_bol + 1 in
-  printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
 
 let () =
+  let report (b,e) file =
+    let l = b.pos_lnum in
+    let fc = b.pos_cnum - b.pos_bol + 1 in
+    let lc = e.pos_cnum - b.pos_bol + 1 in
+    printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
+  in
   try
-    let cin = match ofile with
-      | Some s -> (
-	try open_in ((Filename.chop_extension s)^".sched")
-	with Sys_error _ -> raise Exit
-      )
-      | None -> assert false
+    let file = (Filename.chop_extension file)^".sched" in
+    let cin = try open_in file
+      with Sys_error _ -> raise Exit
     in
     let lb = Lexing.from_channel cin in
     try 
@@ -36,11 +34,11 @@ let () =
     with 
 	Parsing.Parse_error ->
 	  let  loc = (Lexing.lexeme_start_p lb, Lexing.lexeme_end_p lb) in
-	  report loc;
+	  report loc file;
           printf "\nsyntax error\n@.";
 	  exit 2
   with Exit -> ()
-	  
+    
 let init_proc = !init_proc
 
 let error e = raise (Error e)
@@ -87,6 +85,7 @@ module type DA = sig
   val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
   val copy : 'a dima -> 'a dima
   val dim : 'a dima -> int
+  val equal : ('a -> 'a -> bool) -> 'a dima -> 'a dima -> bool
     
 end 
 
@@ -161,6 +160,27 @@ module DimArray : DA = struct
 
   let dim t = t.dim
 
+  let equal eq t1 t2 =
+    let rec equal' t1 t2 =
+      match t1, t2 with
+	| Arr a1, Arr a2 -> 
+	  (try 
+	     Array.iteri (fun i e -> if not (eq a2.(i) e) then raise Exit) a1; 
+	     true
+	   with Exit -> false
+	  )
+	| Mat m1, Mat m2 -> 
+	  (try
+	     Array.iteri (
+	       fun i a -> let b = equal' a m2.(i) in
+			  if not b then raise Exit
+	     ) m1;
+	     true
+	   with Exit -> false
+	  )
+	| _ -> assert false
+    in equal' t1.darr t2.darr
+
 end
 
 module type St = sig
@@ -172,7 +192,7 @@ module type St = sig
       
   val init : unit -> 'a t
     
-  val equal : 'a t -> 'a t -> bool
+  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val hash : 'a t -> int
     
   (* Get a global variable value *)
@@ -190,8 +210,6 @@ module type St = sig
   val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     
   val copy : 'a t -> 'a t
-
-  val clear : 'a t -> unit
     
 end
 
@@ -202,14 +220,20 @@ module State ( A : DA ) : St with type 'a da = 'a A.dima = struct
 
   let init () = {globs = Hashtbl.create 17; arrs = Hashtbl.create 17}
 
-  let equal s1 s2 =
+  let equal eq s1 s2 =
     try
       let gs1 = s1.globs in
       let gs2 = s2.globs in
       Hashtbl.iter (
 	fun g v1 -> let v2 = Hashtbl.find gs2 g in
-		    if v1 <> v2 then raise Exit
+		    if not (eq v1 v2) then raise Exit
       ) gs1;
+      let as1 = s1.arrs in
+      let as2 = s2.arrs in
+      Hashtbl.iter (
+	fun a arr1 -> let arr2 = Hashtbl.find as2 a in
+		      if not (A.equal eq arr1 arr2) then raise Exit
+      ) as1;
       true
     with
 	Exit -> false
@@ -229,9 +253,6 @@ module State ( A : DA ) : St with type 'a da = 'a A.dima = struct
   let copy t = let carrs = Hashtbl.copy t.arrs in
 	       Hashtbl.iter (fun name arr -> Hashtbl.replace carrs name (A.copy arr)) carrs;
 	       {globs = Hashtbl.copy t.globs; arrs = carrs}
-
-  let clear t = Hashtbl.clear t.globs;
-    Hashtbl.clear t.arrs
 
 end
 
@@ -256,7 +277,9 @@ module type Sys = sig
   val set_a : 'a t -> Hstring.t -> 'a da -> unit
   val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
 
-  val exists : ('a s -> bool) -> 'a set -> bool
+  val exists : ('a s -> bool) -> 'a t -> bool
+    
+  val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
     
   val update_init : 'a t -> (Hstring.t * 'a s) -> 'a t
 
@@ -292,7 +315,9 @@ module System ( S : St ) : Sys
     let set_e s h pl v = let state = s.write_st in
   			 S.set_e state h pl v
 
-    let exists f s = List.exists (fun (_, e) -> f e) s
+    let exists f s = List.exists (fun (_, e) -> f e) s.syst
+
+    let exists_init eq i s = List.exists (fun (h, s) -> S.equal eq i s) s.init 
 
     let update_init s il = {s with init = il::s.init}
 
@@ -335,6 +360,9 @@ let compare_value v1 v2 =
     | Var h1, Var h2 -> Hstring.compare h1 h2
     | Proc p1, Proc p2 -> Pervasives.compare p1 p2
     | _ -> assert false
+
+let vequal v1 v2 =
+  if compare_value v1 v2 = 0 then true else false
 
 module TS = Set.Make (struct type t = value let compare = compare_value end)
 module TI = Set.Make (struct type t = Hstring.t let compare = Hstring.compare end)
@@ -864,6 +892,13 @@ let upd_graphs () =
       incr c  
   ) groups  
 
+let upd_inits n v =
+  let (rep, tself) = Hashtbl.find ec n in
+  let r = match rep with
+    | Var h -> h
+    | _ -> n in
+  inits := (n ,((tself, (TS.singleton v)), r)) :: !inits
+
 let graphs_to_inits () =
   let rec l_to_ec v niv ti rtl =
     match rtl with
@@ -871,11 +906,7 @@ let graphs_to_inits () =
 	if (not (TI.mem n ti)) && (TS.mem v ts)
 	then
 	  (
-	    let (rep, tself) = Hashtbl.find ec n in
-	    let r = match rep with
-	      | Var h -> h
-	      | _ -> n in
-	    inits := (n ,((tself, (TS.singleton v)), r)) :: !inits;
+	    upd_inits n v;
 	    l_to_ec v niv (TI.union ti ti') tl
 	  )
 	else l_to_ec v (hd::niv) ti tl
@@ -883,11 +914,7 @@ let graphs_to_inits () =
   in
   let rec new_v_l n ats fts ti tl =
     let v = TS.min_elt ats in
-    let (rep, tself) = Hashtbl.find ec n in
-    let r = match rep with
-	      | Var h -> h
-	      | _ -> n in
-    inits := (n ,((tself, (TS.singleton v)), r)) :: !inits;
+    upd_inits n v;
     let niv = (List.rev (l_to_ec v [] ti tl)) in
     match niv with
       | (n, (_, ts, ti))::tl -> let ats = TS.remove v (TS.diff ts fts) in
@@ -983,10 +1010,14 @@ let initialization init =
   in    
   let upd_syst n tself v =
     upd_etati tself n v;
-    incr c;
-    let i = Etat.copy etati in
-    let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-    system := Syst.update_init !system (tr, i) 
+    if not (Syst.exists_init vequal etati !system) 
+    then
+      (
+	incr c;
+	let i = Etat.copy etati in
+	let tr = Hstring.make ("init" ^ (string_of_int !c)) in
+	system := Syst.update_init !system (tr, i) 
+      )
   in
   let module RMap = Map.Make (Hstring) in
   let rec create_init l repmap =
@@ -1267,7 +1298,7 @@ let contains sub sa s =
 	      end
 	    | _ -> assert false
       ) sa
-  ) !system.Syst.syst
+  ) !system
     
 let filter t_syst_l =
   try

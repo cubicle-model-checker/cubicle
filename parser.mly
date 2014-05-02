@@ -451,7 +451,7 @@ option :
 ;
 
 option_list :
-  | option { () }
+  | { () }
   | option option_list { () }
 ;
 
@@ -461,7 +461,7 @@ procinit :
 ;
 
 procinit_list :
-  | procinit { () }
+  | { () }
   | procinit procinit_list { () }
 ;
 
@@ -470,7 +470,7 @@ tabinit :
 ;
 
 tabinit_list :
-  | tabinit { () }
+  | { () }
   | tabinit tabinit_list { () }
 ;
 

@@ -4,7 +4,6 @@ exception EFalse
 exception Inversion
 exception ConstrRep
 exception Error of error
-val report : Lexing.position * Lexing.position -> unit
 val init_proc : bool
 val error : error -> 'a
 type value =
@@ -32,6 +31,7 @@ module type DA =
     val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
     val copy : 'a dima -> 'a dima
     val dim : 'a dima -> int
+    val equal : ('a -> 'a -> bool) -> 'a dima -> 'a dima -> bool
   end
 module DimArray : DA
 module type St =
@@ -42,7 +42,7 @@ module type St =
       arrs : (Hstring.t, 'a da) Hashtbl.t;
     }
     val init : unit -> 'a t
-    val equal : 'a t -> 'a t -> bool
+    val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
     val hash : 'a t -> int
     val get_v : 'a t -> Hstring.t -> 'a
     val get_a : 'a t -> Hstring.t -> 'a da
@@ -51,7 +51,6 @@ module type St =
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val copy : 'a t -> 'a t
-    val clear : 'a t -> unit
   end
 module State :
   functor (A : DA) ->
@@ -62,7 +61,7 @@ module State :
         arrs : (Hstring.t, 'a da) Hashtbl.t;
       }
       val init : unit -> 'a t
-      val equal : 'a t -> 'a t -> bool
+      val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
       val hash : 'a t -> int
       val get_v : 'a t -> Hstring.t -> 'a
       val get_a : 'a t -> Hstring.t -> 'a da
@@ -71,7 +70,6 @@ module State :
       val set_a : 'a t -> Hstring.t -> 'a da -> unit
       val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
       val copy : 'a t -> 'a t
-      val clear : 'a t -> unit
     end
 module type Sys =
   sig
@@ -91,7 +89,8 @@ module type Sys =
     val set_v : 'a t -> Hstring.t -> 'a -> unit
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val exists : ('a s -> bool) -> 'a set -> bool
+    val exists : ('a s -> bool) -> 'a t -> bool
+    val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
     val update_init : 'a t -> Hstring.t * 'a s -> 'a t
     val get_init : 'a t -> 'a set
     val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
@@ -116,7 +115,8 @@ module System :
       val set_v : 'a t -> Hstring.t -> 'a -> unit
       val set_a : 'a t -> Hstring.t -> 'a da -> unit
       val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-      val exists : ('a s -> bool) -> 'a set -> bool
+      val exists : ('a s -> bool) -> 'a t -> bool
+      val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
       val update_init : 'a t -> Hstring.t * 'a s -> 'a t
       val get_init : 'a t -> 'a set
       val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
@@ -131,7 +131,7 @@ module Etat :
       arrs : (Hstring.t, 'a da) Hashtbl.t;
     }
     val init : unit -> 'a t
-    val equal : 'a t -> 'a t -> bool
+    val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
     val hash : 'a t -> int
     val get_v : 'a t -> Hstring.t -> 'a
     val get_a : 'a t -> Hstring.t -> 'a da
@@ -140,7 +140,6 @@ module Etat :
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
     val copy : 'a t -> 'a t
-    val clear : 'a t -> unit
   end
 module Syst :
   sig
@@ -161,7 +160,8 @@ module Syst :
     val set_v : 'a t -> Hstring.t -> 'a -> unit
     val set_a : 'a t -> Hstring.t -> 'a da -> unit
     val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val exists : ('a s -> bool) -> 'a set -> bool
+    val exists : ('a s -> bool) -> 'a t -> bool
+    val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
     val update_init : 'a t -> Hstring.t * 'a s -> 'a t
     val get_init : 'a t -> 'a set
     val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
@@ -171,6 +171,7 @@ val system : value Syst.t ref
 val htbl_types : (Hstring.t, value list) Hashtbl.t
 val htbl_abstypes : (Hstring.t, unit) Hashtbl.t
 val compare_value : value -> value -> int
+val vequal : value -> value -> bool
 module TS :
   sig
     type elt = value
@@ -255,16 +256,20 @@ val print_groups : unit -> unit
 val print_inits : unit -> unit
 val print_system : Hstring.t * value Etat.t -> unit
 val print_init : unit -> unit
+val print_procinit : unit -> unit
+val print_procninit : unit -> unit
 val init_types :
   (Hstring.t * Hstring.t list) list ->
   (Hstring.t * Hstring.t) list -> (Hstring.t * ('a * Hstring.t)) list -> unit
 val init_globals : (Hstring.t * Hstring.t) list -> unit
 val init_arrays : (Hstring.t * ('a list * Hstring.t)) list -> unit
 val init_htbls : 'a * Ast.SAtom.t list -> unit
+val upd_options : unit -> unit
 val c : int ref
 val update : unit -> unit
 val comp_node : 'a * ('b * TS.t * TI.t) -> 'c * ('d * TS.t * TI.t) -> int
 val upd_graphs : unit -> unit
+val upd_inits : Hstring.t -> TS.elt -> unit
 val graphs_to_inits : unit -> unit
 val ec_to_inits : unit -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit
