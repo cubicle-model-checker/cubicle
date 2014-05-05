@@ -1,0 +1,1787 @@
+%!PS
+%%BoundingBox: 0 -4 2698 1101 
+%%HiResBoundingBox: 0.84706 -3.87769 2697.29556 1100.21692 
+%%Creator: MetaPost 1.208
+%%CreationDate: 2013.05.14:1710
+%%Pages: 1
+%*Font: cmsy10 44.67062 9.96265 6a:8
+%*Font: cmr10 44.67062 9.96265 3d:8
+%*Font: phvr8r 40.34769 9.96265 2e:8
+%*Font: cmtt10 28.8197 9.96265 23:80030000a0008002ec2104
+%*Font: cmmi10 28.8197 9.96265 0f:8
+%*Font: cmss10 28.8197 9.96265 49:8
+%*Font: cmr7 21.18246 6.97385 31:fc
+%*Font: cmsy10 28.8197 9.96265 3a:8
+%*Font: cmr10 28.8197 9.96265 3d:800000028
+%*Font: cmtt10 23.0558 9.96265 23:80030000a0048002ec2144
+%*Font: cmmi10 23.0558 9.96265 0f:80000000001000000000003
+%*Font: cmss10 23.0558 9.96265 45:880200008006
+%*Font: cmsy10 23.0558 9.96265 36:98
+%*Font: cmr10 23.0558 9.96265 3d:800000028
+%*Font: cmtt10 31.70166 9.96265 23:80020000a0000002ec2004
+%*Font: cmmi10 30.26068 9.96265 65:8c15
+%*Font: cmss10 31.70166 9.96265 45:800000000006
+%*Font: cmsy10 31.70166 9.96265 3a:8
+%*Font: cmr10 31.70166 9.96265 3d:800000028
+%*Font: cmtt10 25.93776 9.96265 23:80030000a0048002ac0144
+%*Font: cmmi10 33.14264 9.96265 3a:8000000000018
+%*Font: cmss10 25.93776 9.96265 49:8
+%*Font: cmsy10 25.93776 9.96265 3a:8
+%*Font: cmr10 25.93776 9.96265 3d:800000028
+%*Font: cmtt10 30.26068 9.96265 23:8003
+%*Font: cmss10 33.14264 9.96265 45:880000000006
+%*Font: cmsy10 33.14264 9.96265 36:98
+%*Font: cmr10 30.26068 9.96265 28:c
+%*Font: cmtt10 33.14264 9.96265 43:a0008002ec2104
+%*Font: cmr10 33.14264 9.96265 3d:800000028
+%%BeginProlog
+%%EndProlog
+%%Page: 1 1
+ 1 0.76079 0.31764 setrgbcolor
+newpath 453.16605 164.81522 moveto
+453.16605 134.60368 lineto
+657.95203 134.60368 lineto
+657.95203 164.81522 lineto
+ closepath fill
+ 1 0.7216 0.7216 setrgbcolor 0 0
+ dtransform truncate idtransform setlinewidth pop [] 0 setdash 0 setlinejoin
+ 10 setmiterlimit
+newpath 453.16605 164.81522 moveto
+453.16605 134.60368 lineto
+657.95203 134.60368 lineto
+657.95203 164.81522 lineto
+ closepath stroke
+ 1 0.76079 0.31764 setrgbcolor
+newpath 453.16605 111.57004 moveto
+453.16605 80.65736 lineto
+657.95203 80.65736 lineto
+657.95203 111.57004 lineto
+ closepath fill
+ 1 0.7216 0.7216 setrgbcolor
+newpath 453.16605 111.57004 moveto
+453.16605 80.65736 lineto
+657.95203 80.65736 lineto
+657.95203 111.57004 lineto
+ closepath stroke
+ 1 0.76079 0.31764 setrgbcolor
+newpath 1121.36865 695.01833 moveto
+1121.36865 661.2224 lineto
+1301.71222 661.2224 lineto
+1301.71222 695.01833 lineto
+ closepath fill
+ 1 0.7216 0.7216 setrgbcolor
+newpath 1121.36865 695.01833 moveto
+1121.36865 661.2224 lineto
+1301.71222 661.2224 lineto
+1301.71222 695.01833 lineto
+ closepath stroke
+ 1 0.76079 0.31764 setrgbcolor
+newpath 1121.30334 721.98413 moveto
+1121.30334 691.77217 lineto
+1301.64691 691.77217 lineto
+1301.64691 721.98413 lineto
+ closepath fill
+ 1 0.7216 0.7216 setrgbcolor
+newpath 1121.30334 721.98413 moveto
+1121.30334 691.77217 lineto
+1301.64691 691.77217 lineto
+1301.64691 721.98413 lineto
+ closepath stroke
+ 0.4 0.4 0.4 setrgbcolor 0 2.83482
+ dtransform truncate idtransform setlinewidth pop 0 setlinecap
+newpath 572.85645 905.39696 moveto
+430.17435 873.20961 216.52577 813.03871 191.97783 737.1777 curveto stroke
+ 0 0 0 setrgbcolor
+newpath 637.25102 816.94492 moveto
+622.29533 790.27065 606.41275 761.9497 591.62143 735.57042 curveto stroke
+ 0.4 0.4 0.4 setrgbcolor
+newpath 765.36542 816.94492 moveto
+780.32413 790.27065 796.20369 761.9497 810.995 735.57042 curveto stroke
+ 0 0 0 setrgbcolor
+newpath 829.40575 905.33467 moveto
+971.68819 873.08505 1184.7485 812.84883 1209.22855 737.14656 curveto stroke
+ 0.4 0.4 0.4 setrgbcolor
+newpath 197.31917 738.53845 moveto
+190.156 725.34015 lineto
+187.52533 740.12282 lineto
+197.31917 738.53845 lineto
+ closepath
+gsave fill grestore stroke
+newpath 197.31917 738.53845 moveto
+190.156 725.34015 lineto
+187.52533 740.12282 lineto
+197.31917 738.53845 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor
+newpath 596.4433 735.13962 moveto
+585.18405 725.20435 lineto
+587.7892 739.99263 lineto
+596.4433 735.13962 lineto
+ closepath
+gsave fill grestore stroke
+newpath 596.4433 735.13962 moveto
+585.18405 725.20435 lineto
+587.7892 739.99263 lineto
+596.4433 735.13962 lineto
+ closepath stroke
+ 0.4 0.4 0.4 setrgbcolor
+newpath 814.3255 740.49133 moveto
+816.93065 725.70305 lineto
+805.67139 735.63875 lineto
+814.3255 740.49133 lineto
+ closepath
+gsave fill grestore stroke
+newpath 814.3255 740.49133 moveto
+816.93065 725.70305 lineto
+805.67139 735.63875 lineto
+814.3255 740.49133 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor
+newpath 1214.17499 737.6202 moveto
+1211.54433 722.8345 lineto
+1204.38116 736.03279 lineto
+1214.17499 737.6202 lineto
+ closepath
+gsave fill grestore stroke
+newpath 1214.17499 737.6202 moveto
+1211.54433 722.8345 lineto
+1204.38116 736.03279 lineto
+1214.17499 737.6202 lineto
+ closepath stroke
+ 0.4 0.4 0.4 setrgbcolor
+newpath 181.56331 532.80566 moveto
+179.84831 512.64835 178.02432 491.2155 176.26825 470.5824 curveto stroke
+newpath 181.71167 473.6577 moveto
+175.56581 459.95508 lineto
+171.8257 474.49985 lineto
+181.71167 473.6577 lineto
+ closepath
+gsave fill grestore stroke
+newpath 181.71167 473.6577 moveto
+175.56581 459.95508 lineto
+171.8257 474.49985 lineto
+181.71167 473.6577 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor 2.83482
+ 0 dtransform exch truncate exch idtransform pop setlinewidth
+newpath 531.2295 532.80566 moveto
+531.2295 512.84126 531.2295 491.62943 531.2295 471.17757 curveto stroke
+ 0 2.83482 dtransform truncate idtransform setlinewidth pop
+newpath 536.19023 473.6296 moveto
+531.2295 459.45636 lineto
+526.2688 473.6296 lineto
+536.19023 473.6296 lineto
+ closepath
+gsave fill grestore stroke
+newpath 536.19023 473.6296 moveto
+531.2295 459.45636 lineto
+526.2688 473.6296 lineto
+536.19023 473.6296 lineto
+ closepath stroke
+ 0.4 0.4 0.4 setrgbcolor 2.83482
+ 0 dtransform exch truncate exch idtransform pop setlinewidth
+newpath 871.38692 532.80566 moveto
+871.38692 512.84126 871.38692 491.62943 871.38692 471.17757 curveto stroke
+ 0 2.83482 dtransform truncate idtransform setlinewidth pop
+newpath 876.84938 474.1283 moveto
+871.88866 459.95508 lineto
+866.92795 474.1283 lineto
+876.84938 474.1283 lineto
+ closepath
+gsave fill grestore stroke
+newpath 876.84938 474.1283 moveto
+871.88866 459.95508 lineto
+866.92795 474.1283 lineto
+876.84938 474.1283 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor 2.83482
+ 0 dtransform exch truncate exch idtransform pop setlinewidth
+newpath 1211.54433 532.80566 moveto
+1211.54433 512.84126 1211.54433 491.62943 1211.54433 471.17757 curveto stroke
+ 0 2.83482 dtransform truncate idtransform setlinewidth pop
+newpath 1216.50505 470.62177 moveto
+1211.54433 456.44853 lineto
+1206.58362 470.62177 lineto
+1216.50505 470.62177 lineto
+ closepath
+gsave fill grestore stroke
+newpath 1216.50505 470.62177 moveto
+1211.54433 456.44853 lineto
+1206.58362 470.62177 lineto
+1216.50505 470.62177 lineto
+ closepath stroke
+newpath 114.38669 266.34877 moveto
+89.13197 220.69711 60.26563 168.51553 41.08583 133.84372 curveto stroke
+newpath 45.19273 131.01929 moveto
+33.991 121.01826 lineto
+36.51094 135.8217 lineto
+45.19273 131.01929 lineto
+ closepath
+gsave fill grestore stroke
+newpath 45.19273 131.01929 moveto
+33.991 121.01826 lineto
+36.51094 135.8217 lineto
+45.19273 131.01929 lineto
+ closepath stroke
+ 2.83482 0 dtransform exch truncate exch idtransform pop setlinewidth
+newpath 166.97745 266.34877 moveto
+166.97745 221.30223 166.97745 169.90007 166.97745 135.23389 curveto stroke
+ 0 2.83482 dtransform truncate idtransform setlinewidth pop
+newpath 171.93816 135.1915 moveto
+166.97745 121.01826 lineto
+162.01717 135.1915 lineto
+171.93816 135.1915 lineto
+ closepath
+gsave fill grestore stroke
+newpath 171.93816 135.1915 moveto
+166.97745 121.01826 lineto
+162.01717 135.1915 lineto
+171.93816 135.1915 lineto
+ closepath stroke
+ 0.4 0.4 0.4 setrgbcolor
+newpath 453.35593 266.34877 moveto
+412.83195 216.88132 366.03496 159.74939 338.006 125.53348 curveto stroke
+newpath 341.73355 122.25748 moveto
+328.91502 114.43643 lineto
+334.06 128.54434 lineto
+341.73355 122.25748 lineto
+ closepath
+gsave fill grestore stroke
+newpath 341.73355 122.25748 moveto
+328.91502 114.43643 lineto
+334.06 128.54434 lineto
+341.73355 122.25748 lineto
+ closepath stroke
+newpath 540.33173 266.34877 moveto
+542.26212 246.19016 544.31406 224.75903 546.28986 204.1255 curveto stroke
+newpath 550.72894 207.07883 moveto
+547.14023 192.4973 lineto
+540.85294 206.13332 lineto
+550.72894 207.07883 lineto
+ closepath
+gsave fill grestore stroke
+newpath 550.72894 207.07883 moveto
+547.14023 192.4973 lineto
+540.85294 206.13332 lineto
+550.72894 207.07883 lineto
+ closepath stroke
+newpath 829.76561 266.12904 moveto
+826.81229 257.69897 824.09381 249.22351 821.78064 240.94484 curveto
+811.9669 205.81497 806.0598 164.66469 802.74617 135.02454 curveto stroke
+newpath 807.65282 134.24641 moveto
+801.24097 120.66705 lineto
+797.78546 135.27974 lineto
+807.65282 134.24641 lineto
+ closepath
+gsave fill grestore stroke
+newpath 807.65282 134.24641 moveto
+801.24097 120.66705 lineto
+797.78546 135.27974 lineto
+807.65282 134.24641 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor
+newpath 898.18837 266.34877 moveto
+910.94418 221.1011 925.50885 169.43813 935.28279 134.76848 curveto stroke
+newpath 940.08736 136.0064 moveto
+939.16045 121.01826 lineto
+930.54007 133.31387 lineto
+940.08736 136.0064 lineto
+ closepath
+gsave fill grestore stroke
+newpath 940.08736 136.0064 moveto
+939.16045 121.01826 lineto
+930.54007 133.31387 lineto
+940.08736 136.0064 lineto
+ closepath stroke
+newpath 950.27522 266.34877 moveto
+991.54185 216.61359 1039.24025 159.1313 1067.58107 124.9807 curveto stroke
+newpath 1071.52145 127.99979 moveto
+1076.75423 113.92474 lineto
+1063.88466 121.66447 lineto
+1071.52145 127.99979 lineto
+ closepath
+gsave fill grestore stroke
+newpath 1071.52145 127.99979 moveto
+1076.75423 113.92474 lineto
+1063.88466 121.66447 lineto
+1071.52145 127.99979 lineto
+ closepath stroke
+ 1 0.4078 0 setrgbcolor 0 4.2518
+ dtransform truncate idtransform setlinewidth pop
+newpath 1718.892 633.19473 moveto
+1945.6636 715.39926 lineto stroke
+newpath 1718.892 715.39926 moveto
+1945.6636 633.19473 lineto stroke
+newpath 2436.05728 715.39926 moveto
+2606.13599 633.19473 lineto stroke
+newpath 2436.05728 633.19473 moveto
+2606.13599 715.39926 lineto stroke
+ 0 0 1 setrgbcolor 0 7.08661 dtransform truncate idtransform setlinewidth pop
+ [14.17323 14.17323 ] 0 setdash
+newpath 2012.85579 484.2141 moveto
+1972.04549 527.17322 1919.29295 582.70088 1881.35683 622.63531 curveto stroke
+ 7.08661 0 dtransform exch truncate exch idtransform pop setlinewidth
+newpath 2074.64005 499.89815 moveto
+2074.64005 538.60246 2074.64005 583.98508 2074.64005 618.75203 curveto stroke
+newpath 2307.08084 499.89815 moveto
+2307.08084 538.60246 2307.08084 583.98508 2307.08084 618.75203 curveto stroke
+ 0 7.08661 dtransform truncate idtransform setlinewidth pop
+newpath 2363.8728 486.8759 moveto
+2399.3742 529.19704 2444.41641 582.88817 2477.18205 621.94672 curveto stroke
+ 0 0 0 setrgbcolor 0 4.2518 dtransform truncate idtransform setlinewidth pop
+ [] 0 setdash
+newpath 2043.63177 715.51259 moveto
+2031.62987 733.36537 2018.87665 755.02745 2010.86052 776.34396 curveto
+2002.847 797.65787 1994.1332 830.68994 1993.88666 866.85701 curveto stroke
+newpath 2387.185 715.41353 moveto
+2440.07378 748.47372 2501.044 800.33351 2508.90744 866.81764 curveto stroke
+newpath 2290.64548 715.50134 moveto
+2275.53107 756.90681 2255.03119 823.29147 2252.14836 885.26256 curveto stroke
+newpath 2213.17198 161.77927 moveto
+2151.22337 198.15872 2082.5316 253.38533 2075.3654 324.07066 curveto stroke
+ 4.2518 0 dtransform exch truncate exch idtransform pop setlinewidth
+newpath 2307.08084 161.77927 moveto
+2307.08084 206.30893 2308.08432 277.97957 2308.08432 334.23604 curveto stroke
+ 0 4.2518 dtransform truncate idtransform setlinewidth pop
+newpath 2400.98972 161.77927 moveto
+2461.07843 198.15872 2518.30162 253.67989 2524.15508 320.12207 curveto stroke
+ 1 0.4078 0 setrgbcolor 0 8.50403
+ dtransform truncate idtransform setlinewidth pop [28.34645 13.46474 
+1.4174 13.46474 ] 0 setdash
+newpath 1673.6452 664.2073 moveto
+1453.70804 615.16331 1424.91393 -215.33112 658.33784 94.95386 curveto stroke
+ 1 1 1 setrgbcolor [] 0 setdash
+newpath 1693.17102 661.30069 moveto
+1709.61201 672.22775 lineto
+1690.0862 675.13394 lineto
+ closepath
+gsave fill grestore stroke
+newpath 1675.1876 657.29068 moveto
+1691.6286 668.21732 lineto
+1672.10278 671.12393 lineto
+ closepath
+gsave fill grestore stroke
+ 1 0.4078 0 setrgbcolor
+newpath 1697.32117 662.2263 moveto
+1709.61201 672.22775 lineto
+1694.23634 676.05957 lineto
+ closepath stroke
+newpath 1675.1876 657.29068 moveto
+1687.47845 667.29213 lineto
+1672.10278 671.12393 lineto
+ closepath stroke
+ [28.34645 13.46474 1.4174 13.46474 ] 0 setdash
+newpath 2632.26096 753.69482 moveto
+2996.39278 1287.45508 1618.72006 1134.0916 1302.25288 722.8345 curveto stroke
+ 1 1 1 setrgbcolor [] 0 setdash
+newpath 2616.02325 742.46758 moveto
+2611.49377 723.25319 lineto
+2627.73148 734.48044 lineto
+ closepath
+gsave fill grestore stroke
+newpath 2626.40706 757.6884 moveto
+2621.87758 738.474 lineto
+2638.11528 749.70082 lineto
+ closepath
+gsave fill grestore stroke
+ 1 0.4078 0 setrgbcolor
+newpath 2613.62701 738.95541 moveto
+2611.49377 723.25319 lineto
+2625.33525 730.96783 lineto
+ closepath stroke
+newpath 2626.40706 757.6884 moveto
+2624.2738 741.9866 lineto
+2638.11528 749.70082 lineto
+ closepath stroke
+ 0 0.5569 0 setrgbcolor 0 5.6692
+ dtransform truncate idtransform setlinewidth pop
+newpath 832.26349 931.8567 moveto
+832.26349 859.53139 773.63223 800.90013 701.30692 800.90013 curveto
+628.9816 800.90013 570.35034 859.53139 570.35034 931.8567 curveto
+570.35034 1004.18202 628.9816 1062.81326 701.30692 1062.81326 curveto
+773.63223 1062.81326 832.26349 1004.18202 832.26349 931.8567 curveto closepath
+ stroke
+newpath 817.06473 931.8874 moveto
+817.06462 867.95638 765.23834 816.13004 701.30736 816.13004 curveto
+637.37637 816.13004 585.55008 867.95638 585.54997 931.8874 curveto
+585.54985 995.8186 637.3762 1047.64522 701.30736 1047.64522 curveto
+765.23851 1047.64522 817.06485 995.8186 817.06473 931.8874 curveto closepath
+ stroke
+ 0 0 0 setrgbcolor 0 0 dtransform truncate idtransform setlinewidth pop
+newpath 280.36325 722.8345 moveto
+98.94614 722.8345 lineto
+98.94614 532.91336 lineto
+280.36325 532.91336 lineto
+280.36325 722.8345 lineto
+ closepath stroke
+newpath 621.93806 722.8345 moveto
+440.52095 722.8345 lineto
+440.52095 532.91336 lineto
+621.93806 532.91336 lineto
+621.93806 722.8345 lineto
+ closepath stroke
+newpath 962.09547 722.8345 moveto
+780.67836 722.8345 lineto
+780.67836 532.91336 lineto
+962.09547 532.91336 lineto
+962.09547 722.8345 lineto
+ closepath stroke
+newpath 257.68643 456.37804 moveto
+76.26889 456.37804 lineto
+76.26889 266.45647 lineto
+257.68643 266.45647 lineto
+257.68643 456.37804 lineto
+ closepath stroke
+newpath 621.93806 456.37804 moveto
+440.52095 456.37804 lineto
+440.52095 266.45647 lineto
+621.93806 266.45647 lineto
+621.93806 456.37804 lineto
+ closepath stroke
+newpath 962.09547 456.37804 moveto
+780.67836 456.37804 lineto
+780.67836 266.45647 lineto
+962.09547 266.45647 lineto
+962.09547 456.37804 lineto
+ closepath stroke
+ 1 0 0 setrgbcolor 0 11.33841 dtransform truncate idtransform setlinewidth pop
+newpath 2533.79839 72.80214 moveto
+2533.79839 124.92404 lineto
+2400.98972 161.77927 lineto
+2213.17198 161.77927 lineto
+2080.36287 124.92404 lineto
+2080.36287 72.80214 lineto
+2213.17198 35.94647 lineto
+2400.98972 35.94647 lineto
+2533.79839 72.80214 lineto
+ closepath stroke
+ 1 1 1 setrgbcolor
+newpath 2177.86652 419.17807 moveto
+2177.86652 370.0748 2127.90424 339.00212 2074.64005 339.00212 curveto
+2021.37584 339.00212 1971.41356 370.07478 1971.41356 419.17807 curveto
+1971.41356 468.28136 2021.37584 499.35403 2074.64005 499.35403 curveto
+2127.90424 499.35403 2177.86652 468.28134 2177.86652 419.17807 curveto
+ closepath fill
+ 0 0 0 setrgbcolor 0 1.4174 dtransform truncate idtransform setlinewidth pop
+newpath 2177.86652 419.17807 moveto
+2177.86652 370.0748 2127.90424 339.00212 2074.64005 339.00212 curveto
+2021.37584 339.00212 1971.41356 370.07478 1971.41356 419.17807 curveto
+1971.41356 468.28136 2021.37584 499.35403 2074.64005 499.35403 curveto
+2127.90424 499.35403 2177.86652 468.28134 2177.86652 419.17807 curveto
+ closepath stroke
+ 0 4.2518 dtransform truncate idtransform setlinewidth pop
+newpath 2070.40208 319.47586 moveto
+2074.64005 333.88136 lineto
+2080.31184 319.9776 lineto
+2070.40208 319.47586 lineto
+ closepath
+gsave fill grestore stroke
+newpath 2070.40208 319.47586 moveto
+2074.64005 333.88136 lineto
+2080.31184 319.9776 lineto
+2070.40208 319.47586 lineto
+ closepath stroke
+ 1 1 1 setrgbcolor
+newpath 2410.30733 419.17807 moveto
+2410.30731 370.0748 2360.34503 339.00212 2307.08084 339.00212 curveto
+2253.81665 339.00212 2203.85437 370.0748 2203.85437 419.17807 curveto
+2203.85437 468.28134 2253.81664 499.35403 2307.08084 499.35403 curveto
+2360.34505 499.35403 2410.30733 468.28136 2410.30733 419.17807 curveto
+ closepath fill
+ 0 0 0 setrgbcolor 0 1.4174 dtransform truncate idtransform setlinewidth pop
+newpath 2410.30733 419.17807 moveto
+2410.30731 370.0748 2360.34503 339.00212 2307.08084 339.00212 curveto
+2253.81665 339.00212 2203.85437 370.0748 2203.85437 419.17807 curveto
+2203.85437 468.28134 2253.81664 499.35403 2307.08084 499.35403 curveto
+2360.34505 499.35403 2410.30733 468.28136 2410.30733 419.17807 curveto
+ closepath stroke
+ 0 4.2518 dtransform truncate idtransform setlinewidth pop
+newpath 2303.25986 319.79897 moveto
+2308.22014 333.9722 lineto
+2313.18085 319.79897 lineto
+2303.25986 319.79897 lineto
+ closepath
+gsave fill grestore stroke
+newpath 2303.25986 319.79897 moveto
+2308.22014 333.9722 lineto
+2313.18085 319.79897 lineto
+2303.25986 319.79897 lineto
+ closepath stroke
+newpath 2519.19998 320.3405 moveto
+2524.78441 334.27843 lineto
+2529.11276 319.90105 lineto
+2519.19998 320.3405 lineto
+ closepath
+gsave fill grestore stroke
+newpath 2519.19998 320.3405 moveto
+2524.78441 334.27843 lineto
+2529.11276 319.90105 lineto
+2519.19998 320.3405 lineto
+ closepath stroke
+ 0 0 1 setrgbcolor 0 5.6692 dtransform truncate idtransform setlinewidth pop
+newpath 1945.6636 715.39926 moveto
+1718.892 715.39926 lineto
+1718.892 633.19473 lineto
+1945.6636 633.19473 lineto
+1945.6636 715.39926 lineto
+ closepath stroke
+ 0 7.08661 dtransform truncate idtransform setlinewidth pop
+newpath 1884.87158 611.45564 moveto
+1878.70627 625.14963 lineto
+1892.0659 618.29008 lineto
+1884.87158 611.45564 lineto
+ closepath stroke
+ 0 5.6692 dtransform truncate idtransform setlinewidth pop
+newpath 2178.10442 715.39926 moveto
+1971.17523 715.39926 lineto
+1971.17523 633.19473 lineto
+2178.10442 633.19473 lineto
+2178.10442 715.39926 lineto
+ closepath stroke
+ 0 7.08661 dtransform truncate idtransform setlinewidth pop
+newpath 2069.67932 607.7337 moveto
+2074.64005 621.90692 lineto
+2079.60033 607.7337 lineto
+2069.67932 607.7337 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor 0 1.4174 dtransform truncate idtransform setlinewidth pop
+newpath 2097.07896 962.01244 moveto
+2097.07884 912.90929 2047.11655 881.83691 1993.85248 881.83691 curveto
+1940.58841 881.83691 1890.62613 912.9093 1890.626 962.01244 curveto
+1890.62589 1011.1157 1940.58823 1042.18839 1993.85248 1042.18839 curveto
+2047.11674 1042.18839 2097.07909 1011.1157 2097.07896 962.01244 curveto
+ closepath stroke
+ 0 4.2518 dtransform truncate idtransform setlinewidth pop
+newpath 1988.92593 862.78947 moveto
+1993.85248 876.97394 lineto
+1998.84694 862.81197 lineto
+1988.92593 862.78947 lineto
+ closepath
+gsave fill grestore stroke
+newpath 1988.92593 862.78947 moveto
+1993.85248 876.97394 lineto
+1998.84694 862.81197 lineto
+1988.92593 862.78947 lineto
+ closepath stroke
+ 0 0 1 setrgbcolor 0 5.6692 dtransform truncate idtransform setlinewidth pop
+newpath 2410.54523 715.39926 moveto
+2203.61604 715.39926 lineto
+2203.61604 633.19473 lineto
+2410.54523 633.19473 lineto
+2410.54523 715.39926 lineto
+ closepath stroke
+ 0 7.08661 dtransform truncate idtransform setlinewidth pop
+newpath 2302.12013 609.68097 moveto
+2307.08084 623.85419 lineto
+2312.04156 609.68097 lineto
+2302.12013 609.68097 lineto
+ closepath stroke
+ 0 5.6692 dtransform truncate idtransform setlinewidth pop
+newpath 2606.13599 715.39926 moveto
+2436.05728 715.39926 lineto
+2436.05728 633.19473 lineto
+2606.13599 633.19473 lineto
+2606.13599 715.39926 lineto
+ closepath stroke
+ 0 7.08661 dtransform truncate idtransform setlinewidth pop
+newpath 2467.09668 616.94362 moveto
+2480.00562 624.61415 lineto
+2474.69888 610.56549 lineto
+2467.09668 616.94362 lineto
+ closepath stroke
+ 0 0 0 setrgbcolor 0 1.4174 dtransform truncate idtransform setlinewidth pop
+newpath 2612.98428 962.01244 moveto
+2612.98416 912.90929 2563.02187 881.83691 2509.7578 881.83691 curveto
+2456.49373 881.83691 2406.53145 912.9093 2406.53133 962.01244 curveto
+2406.5312 1011.1157 2456.49355 1042.18839 2509.7578 1042.18839 curveto
+2563.02206 1042.18839 2612.9844 1011.1157 2612.98428 962.01244 curveto
+ closepath stroke
+ 0 4.2518 dtransform truncate idtransform setlinewidth pop
+newpath 2503.37708 861.41185 moveto
+2509.16263 875.26761 lineto
+2513.2812 860.8249 lineto
+2503.37708 861.41185 lineto
+ closepath
+gsave fill grestore stroke
+newpath 2503.37708 861.41185 moveto
+2509.16263 875.26761 lineto
+2513.2812 860.8249 lineto
+2503.37708 861.41185 lineto
+ closepath stroke
+ 0 1.4174 dtransform truncate idtransform setlinewidth pop
+newpath 2381.08975 962.01244 moveto
+2381.08975 909.1595 2313.37689 899.87611 2251.80623 899.87611 curveto
+2190.23555 899.87611 2122.52269 909.1595 2122.52269 962.01244 curveto
+2122.52269 1014.86537 2190.23555 1024.14876 2251.80623 1024.14876 curveto
+2313.37689 1024.14876 2381.08975 1014.86537 2381.08975 962.01244 curveto
+ closepath stroke
+ 0 4.2518 dtransform truncate idtransform setlinewidth pop
+newpath 2247.18462 878.80788 moveto
+2251.80536 893.09444 lineto
+2257.10301 879.04318 lineto
+2247.18462 878.80788 lineto
+ closepath
+gsave fill grestore stroke
+newpath 2247.18462 878.80788 moveto
+2251.80536 893.09444 lineto
+2257.10301 879.04318 lineto
+2247.18462 878.80788 lineto
+ closepath stroke
+ 0 0.85036 dtransform truncate idtransform setlinewidth pop
+newpath 2255.12158 728.7589 moveto
+2262.20258 715.5182 lineto
+2248.4091 721.45386 lineto
+2255.12158 728.7589 lineto
+ closepath stroke
+newpath 2146.98283 719.552 moveto
+2132.52629 715.4901 lineto
+2141.29373 727.68188 lineto
+2146.98283 719.552 lineto
+ closepath stroke
+newpath 2111.68039 724.98592 moveto
+2100.02408 715.5182 lineto
+2103.23303 730.18755 lineto
+2111.68039 724.98592 lineto
+ closepath stroke
+ 1 0.4078 0 setrgbcolor
+1515.00438 390.12357 moveto
+(j) cmsy10 44.67062 fshow
+1519.96793 390.12357 moveto
+(=) cmr10 44.67062 fshow
+1510.58217 960.18196 moveto
+(j) cmsy10 44.67062 fshow
+1515.54572 960.18196 moveto
+(=) cmr10 44.67062 fshow
+ 0 0 0 setrgbcolor
+1181.27873 366.7547 moveto
+(.) phvr8r 40.34769 fshow
+1206.37393 366.7547 moveto
+(.) phvr8r 40.34769 fshow
+1231.46869 366.7547 moveto
+(.) phvr8r 40.34769 fshow
+2489.9889 420.35802 moveto
+(.) phvr8r 40.34769 fshow
+2515.0841 420.35802 moveto
+(.) phvr8r 40.34769 fshow
+2540.17886 420.35802 moveto
+(.) phvr8r 40.34769 fshow
+ 0 0 dtransform truncate idtransform setlinewidth pop
+ [8.50403 8.50403 ] 0 setdash
+newpath 2060.56024 900.50458 moveto
+2117.30418 848.38354 2198.36943 774.15015 2251.76556 725.10486 curveto stroke
+newpath 2214.83853 901.11661 moveto
+2183.26366 849.84074 2137.86116 776.96205 2107.45671 727.58803 curveto stroke
+newpath 2432.8652 907.54837 moveto
+2419.68723 898.51709 2406.03824 889.36687 2393.0242 880.98222 curveto
+2335.0869 843.6499 2317.83836 838.78262 2259.79596 801.61208 curveto
+2220.91043 776.70685 2178.66022 747.70857 2144.13676 723.61694 curveto stroke
+ [] 0 setdash
+newpath 1302.25288 722.8345 moveto
+1120.83577 722.8345 lineto
+1120.83577 532.91336 lineto
+1302.25288 532.91336 lineto
+1302.25288 722.8345 lineto
+ closepath stroke
+newpath 452.78065 190.00505 moveto
+452.78065 -0.09775 lineto
+658.33784 -0.09775 lineto
+658.33784 190.00505 lineto
+ closepath stroke
+669.00632 1002.9685 moveto
+(:) cmsy10 28.8197 fshow
+688.21956 1002.9685 moveto
+(Exg) cmtt10 28.8197 fshow
+653.55092 973.87897 moveto
+(Cmd) cmtt10 28.8197 fshow
+706.94696 973.87897 moveto
+(=) cmr10 28.8197 fshow
+737.36737 973.87897 moveto
+(\017) cmmi10 28.8197 fshow
+617.13132 944.79288 moveto
+(Cache) cmtt10 28.8197 fshow
+692.78235 944.79288 moveto
+([) cmr10 28.8197 fshow
+700.7878 944.79288 moveto
+(#1) cmtt10 28.8197 fshow
+731.0483 944.79288 moveto
+(]) cmr10 28.8197 fshow
+747.05893 944.79288 moveto
+(=) cmr10 28.8197 fshow
+777.47966 944.79288 moveto
+(I) cmss10 28.8197 fshow
+617.13132 914.51302 moveto
+(Cache) cmtt10 28.8197 fshow
+692.78235 914.51302 moveto
+([) cmr10 28.8197 fshow
+700.7878 914.51302 moveto
+(#2) cmtt10 28.8197 fshow
+731.0483 914.51302 moveto
+(]) cmr10 28.8197 fshow
+747.05893 914.51302 moveto
+(=) cmr10 28.8197 fshow
+777.47966 914.51302 moveto
+(I) cmss10 28.8197 fshow
+645.8706 886.62029 moveto
+(:) cmsy10 28.8197 fshow
+665.08385 886.62029 moveto
+(Shr) cmtt10 28.8197 fshow
+710.47438 886.62029 moveto
+([) cmr10 28.8197 fshow
+718.47987 886.62029 moveto
+(#1) cmtt10 28.8197 fshow
+748.74033 886.62029 moveto
+(]) cmr10 28.8197 fshow
+645.8706 858.72453 moveto
+(:) cmsy10 28.8197 fshow
+665.08385 858.72453 moveto
+(Shr) cmtt10 28.8197 fshow
+710.47438 858.72453 moveto
+([) cmr10 28.8197 fshow
+718.47987 858.72453 moveto
+(#2) cmtt10 28.8197 fshow
+748.74033 858.72453 moveto
+(]) cmr10 28.8197 fshow
+163.81314 699.30688 moveto
+(:) cmsy10 23.0558 fshow
+179.18376 699.30688 moveto
+(Exg) cmtt10 23.0558 fshow
+147.06578 673.79526 moveto
+(Cmd) cmtt10 23.0558 fshow
+189.78267 673.79526 moveto
+(=) cmr10 23.0558 fshow
+214.11903 673.79526 moveto
+(re) cmss10 23.0558 fshow
+144.02383 648.28319 moveto
+(Ptr) cmtt10 23.0558 fshow
+186.74072 648.28319 moveto
+(=) cmr10 23.0558 fshow
+211.07709 648.28319 moveto
+(#2) cmtt10 23.0558 fshow
+122.31308 622.77156 moveto
+(Cache) cmtt10 23.0558 fshow
+182.83398 622.77156 moveto
+([) cmr10 23.0558 fshow
+189.23836 622.77156 moveto
+(#1) cmtt10 23.0558 fshow
+213.4468 622.77156 moveto
+(]) cmr10 23.0558 fshow
+226.25533 622.77156 moveto
+(=) cmr10 23.0558 fshow
+250.59193 622.77156 moveto
+(I) cmss10 23.0558 fshow
+122.31308 597.25993 moveto
+(Cache) cmtt10 23.0558 fshow
+182.83398 597.25993 moveto
+([) cmr10 23.0558 fshow
+189.23836 597.25993 moveto
+(#2) cmtt10 23.0558 fshow
+213.4468 597.25993 moveto
+(]) cmr10 23.0558 fshow
+226.25533 597.25993 moveto
+(=) cmr10 23.0558 fshow
+250.59193 597.25993 moveto
+(I) cmss10 23.0558 fshow
+145.30455 571.74786 moveto
+(:) cmsy10 23.0558 fshow
+160.67516 571.74786 moveto
+(Shr) cmtt10 23.0558 fshow
+196.98764 571.74786 moveto
+([) cmr10 23.0558 fshow
+203.39204 571.74786 moveto
+(#1) cmtt10 23.0558 fshow
+227.60043 571.74786 moveto
+(]) cmr10 23.0558 fshow
+145.30455 546.23622 moveto
+(:) cmsy10 23.0558 fshow
+160.67516 546.23622 moveto
+(Shr) cmtt10 23.0558 fshow
+196.98764 546.23622 moveto
+([) cmr10 23.0558 fshow
+203.39204 546.23622 moveto
+(#2) cmtt10 23.0558 fshow
+227.60043 546.23622 moveto
+(]) cmr10 23.0558 fshow
+505.38795 699.30688 moveto
+(:) cmsy10 23.0558 fshow
+520.75858 699.30688 moveto
+(Exg) cmtt10 23.0558 fshow
+488.6406 673.79526 moveto
+(Cmd) cmtt10 23.0558 fshow
+531.35748 673.79526 moveto
+(=) cmr10 23.0558 fshow
+555.69385 673.79526 moveto
+(re) cmss10 23.0558 fshow
+485.59865 648.28319 moveto
+(Ptr) cmtt10 23.0558 fshow
+528.31554 648.28319 moveto
+(=) cmr10 23.0558 fshow
+552.6519 648.28319 moveto
+(#1) cmtt10 23.0558 fshow
+463.8879 622.77156 moveto
+(Cache) cmtt10 23.0558 fshow
+524.4088 622.77156 moveto
+([) cmr10 23.0558 fshow
+530.81317 622.77156 moveto
+(#1) cmtt10 23.0558 fshow
+555.0216 622.77156 moveto
+(]) cmr10 23.0558 fshow
+567.83014 622.77156 moveto
+(=) cmr10 23.0558 fshow
+592.16675 622.77156 moveto
+(I) cmss10 23.0558 fshow
+463.8879 597.25993 moveto
+(Cache) cmtt10 23.0558 fshow
+524.4088 597.25993 moveto
+([) cmr10 23.0558 fshow
+530.81317 597.25993 moveto
+(#2) cmtt10 23.0558 fshow
+555.0216 597.25993 moveto
+(]) cmr10 23.0558 fshow
+567.83014 597.25993 moveto
+(=) cmr10 23.0558 fshow
+592.16675 597.25993 moveto
+(I) cmss10 23.0558 fshow
+486.87936 571.74786 moveto
+(:) cmsy10 23.0558 fshow
+502.24997 571.74786 moveto
+(Shr) cmtt10 23.0558 fshow
+538.56245 571.74786 moveto
+([) cmr10 23.0558 fshow
+544.96686 571.74786 moveto
+(#1) cmtt10 23.0558 fshow
+569.17525 571.74786 moveto
+(]) cmr10 23.0558 fshow
+486.87936 546.23622 moveto
+(:) cmsy10 23.0558 fshow
+502.24997 546.23622 moveto
+(Shr) cmtt10 23.0558 fshow
+538.56245 546.23622 moveto
+([) cmr10 23.0558 fshow
+544.96686 546.23622 moveto
+(#2) cmtt10 23.0558 fshow
+569.17525 546.23622 moveto
+(]) cmr10 23.0558 fshow
+845.54536 699.30688 moveto
+(:) cmsy10 23.0558 fshow
+860.91599 699.30688 moveto
+(Exg) cmtt10 23.0558 fshow
+829.50244 673.79526 moveto
+(Cmd) cmtt10 23.0558 fshow
+872.21933 673.79526 moveto
+(=) cmr10 23.0558 fshow
+896.5557 673.79526 moveto
+(rs) cmss10 23.0558 fshow
+825.75606 648.28319 moveto
+(Ptr) cmtt10 23.0558 fshow
+868.47295 648.28319 moveto
+(=) cmr10 23.0558 fshow
+892.80931 648.28319 moveto
+(#2) cmtt10 23.0558 fshow
+804.0453 622.77156 moveto
+(Cache) cmtt10 23.0558 fshow
+864.56621 622.77156 moveto
+([) cmr10 23.0558 fshow
+870.97058 622.77156 moveto
+(#1) cmtt10 23.0558 fshow
+895.17902 622.77156 moveto
+(]) cmr10 23.0558 fshow
+907.98755 622.77156 moveto
+(=) cmr10 23.0558 fshow
+932.32416 622.77156 moveto
+(I) cmss10 23.0558 fshow
+804.0453 597.25993 moveto
+(Cache) cmtt10 23.0558 fshow
+864.56621 597.25993 moveto
+([) cmr10 23.0558 fshow
+870.97058 597.25993 moveto
+(#2) cmtt10 23.0558 fshow
+895.17902 597.25993 moveto
+(]) cmr10 23.0558 fshow
+907.98755 597.25993 moveto
+(=) cmr10 23.0558 fshow
+932.32416 597.25993 moveto
+(I) cmss10 23.0558 fshow
+827.03677 571.74786 moveto
+(:) cmsy10 23.0558 fshow
+842.40738 571.74786 moveto
+(Shr) cmtt10 23.0558 fshow
+878.71986 571.74786 moveto
+([) cmr10 23.0558 fshow
+885.12427 571.74786 moveto
+(#1) cmtt10 23.0558 fshow
+909.33266 571.74786 moveto
+(]) cmr10 23.0558 fshow
+827.03677 546.23622 moveto
+(:) cmsy10 23.0558 fshow
+842.40738 546.23622 moveto
+(Shr) cmtt10 23.0558 fshow
+878.71986 546.23622 moveto
+([) cmr10 23.0558 fshow
+885.12427 546.23622 moveto
+(#2) cmtt10 23.0558 fshow
+909.33266 546.23622 moveto
+(]) cmr10 23.0558 fshow
+1176.01227 697.1213 moveto
+(:) cmsy10 31.70166 fshow
+1197.14682 697.1213 moveto
+(Exg) cmtt10 31.70166 fshow
+1153.95328 669.22556 moveto
+(Cmd) cmtt10 31.70166 fshow
+1212.6889 669.22556 moveto
+(=) cmr10 31.70166 fshow
+1246.15134 669.22556 moveto
+(rs) cmss10 31.70166 fshow
+1165.91347 642.32506 moveto
+(Ptr) cmtt10 23.0558 fshow
+1208.63036 642.32506 moveto
+(=) cmr10 23.0558 fshow
+1232.96672 642.32506 moveto
+(#1) cmtt10 23.0558 fshow
+1144.20271 616.81299 moveto
+(Cache) cmtt10 23.0558 fshow
+1204.72362 616.81299 moveto
+([) cmr10 23.0558 fshow
+1211.12799 616.81299 moveto
+(#1) cmtt10 23.0558 fshow
+1235.33643 616.81299 moveto
+(]) cmr10 23.0558 fshow
+1248.14496 616.81299 moveto
+(=) cmr10 23.0558 fshow
+1272.48157 616.81299 moveto
+(I) cmss10 23.0558 fshow
+1144.20271 591.30136 moveto
+(Cache) cmtt10 23.0558 fshow
+1204.72362 591.30136 moveto
+([) cmr10 23.0558 fshow
+1211.12799 591.30136 moveto
+(#2) cmtt10 23.0558 fshow
+1235.33643 591.30136 moveto
+(]) cmr10 23.0558 fshow
+1248.14496 591.30136 moveto
+(=) cmr10 23.0558 fshow
+1272.48157 591.30136 moveto
+(I) cmss10 23.0558 fshow
+1167.19418 565.78929 moveto
+(:) cmsy10 23.0558 fshow
+1182.56479 565.78929 moveto
+(Shr) cmtt10 23.0558 fshow
+1218.87727 565.78929 moveto
+([) cmr10 23.0558 fshow
+1225.28168 565.78929 moveto
+(#1) cmtt10 23.0558 fshow
+1249.49007 565.78929 moveto
+(]) cmr10 23.0558 fshow
+1167.19418 540.27766 moveto
+(:) cmsy10 23.0558 fshow
+1182.56479 540.27766 moveto
+(Shr) cmtt10 23.0558 fshow
+1218.87727 540.27766 moveto
+([) cmr10 23.0558 fshow
+1225.28168 540.27766 moveto
+(#2) cmtt10 23.0558 fshow
+1249.49007 540.27766 moveto
+(]) cmr10 23.0558 fshow
+148.8212 432.85042 moveto
+(Exg) cmtt10 23.0558 fshow
+128.77156 407.33836 moveto
+(Cmd) cmtt10 23.0558 fshow
+171.48845 407.33836 moveto
+(=) cmr10 23.0558 fshow
+195.82481 407.33836 moveto
+(\017) cmmi10 23.0558 fshow
+121.34659 381.82672 moveto
+(Ptr) cmtt10 23.0558 fshow
+164.06348 381.82672 moveto
+(=) cmr10 23.0558 fshow
+188.39984 381.82672 moveto
+(#2) cmtt10 23.0558 fshow
+99.63583 356.3151 moveto
+(Cache) cmtt10 23.0558 fshow
+160.15674 356.3151 moveto
+([) cmr10 23.0558 fshow
+166.56111 356.3151 moveto
+(#1) cmtt10 23.0558 fshow
+190.76955 356.3151 moveto
+(]) cmr10 23.0558 fshow
+203.57808 356.3151 moveto
+(=) cmr10 23.0558 fshow
+227.91469 356.3151 moveto
+(I) cmss10 23.0558 fshow
+95.95334 330.80302 moveto
+(Cache) cmtt10 23.0558 fshow
+156.47424 330.80302 moveto
+([) cmr10 23.0558 fshow
+162.87862 330.80302 moveto
+(#2) cmtt10 23.0558 fshow
+187.08704 330.80302 moveto
+(]) cmr10 23.0558 fshow
+199.89557 330.80302 moveto
+(=) cmr10 23.0558 fshow
+224.23218 330.80302 moveto
+(E) cmss10 23.0558 fshow
+122.6273 305.2914 moveto
+(:) cmsy10 23.0558 fshow
+137.99791 305.2914 moveto
+(Shr) cmtt10 23.0558 fshow
+174.3104 305.2914 moveto
+([) cmr10 23.0558 fshow
+180.7148 305.2914 moveto
+(#1) cmtt10 23.0558 fshow
+204.92319 305.2914 moveto
+(]) cmr10 23.0558 fshow
+130.31262 279.77933 moveto
+(Shr) cmtt10 23.0558 fshow
+166.6251 279.77933 moveto
+([) cmr10 23.0558 fshow
+173.02951 279.77933 moveto
+(#2) cmtt10 23.0558 fshow
+197.2379 279.77933 moveto
+(]) cmr10 23.0558 fshow
+513.07326 432.85042 moveto
+(Exg) cmtt10 23.0558 fshow
+493.02362 407.33836 moveto
+(Cmd) cmtt10 23.0558 fshow
+535.74051 407.33836 moveto
+(=) cmr10 23.0558 fshow
+560.07687 407.33836 moveto
+(\017) cmmi10 23.0558 fshow
+485.59865 381.82672 moveto
+(Ptr) cmtt10 23.0558 fshow
+528.31554 381.82672 moveto
+(=) cmr10 23.0558 fshow
+552.6519 381.82672 moveto
+(#1) cmtt10 23.0558 fshow
+460.2054 356.3151 moveto
+(Cache) cmtt10 23.0558 fshow
+520.7263 356.3151 moveto
+([) cmr10 23.0558 fshow
+527.13068 356.3151 moveto
+(#1) cmtt10 23.0558 fshow
+551.3391 356.3151 moveto
+(]) cmr10 23.0558 fshow
+564.14763 356.3151 moveto
+(=) cmr10 23.0558 fshow
+588.48424 356.3151 moveto
+(E) cmss10 23.0558 fshow
+463.8879 330.80302 moveto
+(Cache) cmtt10 23.0558 fshow
+524.4088 330.80302 moveto
+([) cmr10 23.0558 fshow
+530.81317 330.80302 moveto
+(#2) cmtt10 23.0558 fshow
+555.0216 330.80302 moveto
+(]) cmr10 23.0558 fshow
+567.83014 330.80302 moveto
+(=) cmr10 23.0558 fshow
+592.16675 330.80302 moveto
+(I) cmss10 23.0558 fshow
+494.56468 305.2914 moveto
+(Shr) cmtt10 23.0558 fshow
+530.87717 305.2914 moveto
+([) cmr10 23.0558 fshow
+537.28157 305.2914 moveto
+(#1) cmtt10 23.0558 fshow
+561.48996 305.2914 moveto
+(]) cmr10 23.0558 fshow
+486.87936 279.77933 moveto
+(:) cmsy10 23.0558 fshow
+502.24997 279.77933 moveto
+(Shr) cmtt10 23.0558 fshow
+538.56245 279.77933 moveto
+([) cmr10 23.0558 fshow
+544.96686 279.77933 moveto
+(#2) cmtt10 23.0558 fshow
+569.17525 279.77933 moveto
+(]) cmr10 23.0558 fshow
+845.54536 432.85042 moveto
+(:) cmsy10 23.0558 fshow
+860.91599 432.85042 moveto
+(Exg) cmtt10 23.0558 fshow
+833.18103 407.33836 moveto
+(Cmd) cmtt10 23.0558 fshow
+875.89792 407.33836 moveto
+(=) cmr10 23.0558 fshow
+900.23428 407.33836 moveto
+(\017) cmmi10 23.0558 fshow
+825.75606 381.82672 moveto
+(Ptr) cmtt10 23.0558 fshow
+868.47295 381.82672 moveto
+(=) cmr10 23.0558 fshow
+892.80931 381.82672 moveto
+(#2) cmtt10 23.0558 fshow
+804.0453 356.3151 moveto
+(Cache) cmtt10 23.0558 fshow
+864.56621 356.3151 moveto
+([) cmr10 23.0558 fshow
+870.97058 356.3151 moveto
+(#1) cmtt10 23.0558 fshow
+895.17902 356.3151 moveto
+(]) cmr10 23.0558 fshow
+907.98755 356.3151 moveto
+(=) cmr10 23.0558 fshow
+932.32416 356.3151 moveto
+(I) cmss10 23.0558 fshow
+800.84312 330.80302 moveto
+(Cache) cmtt10 23.0558 fshow
+861.36403 330.80302 moveto
+([) cmr10 23.0558 fshow
+867.7684 330.80302 moveto
+(#2) cmtt10 23.0558 fshow
+891.97682 330.80302 moveto
+(]) cmr10 23.0558 fshow
+904.78535 330.80302 moveto
+(=) cmr10 23.0558 fshow
+929.12196 330.80302 moveto
+(S) cmss10 23.0558 fshow
+827.03677 305.2914 moveto
+(:) cmsy10 23.0558 fshow
+842.40738 305.2914 moveto
+(Shr) cmtt10 23.0558 fshow
+878.71986 305.2914 moveto
+([) cmr10 23.0558 fshow
+885.12427 305.2914 moveto
+(#1) cmtt10 23.0558 fshow
+909.33266 305.2914 moveto
+(]) cmr10 23.0558 fshow
+834.72209 279.77933 moveto
+(Shr) cmtt10 23.0558 fshow
+871.03458 279.77933 moveto
+([) cmr10 23.0558 fshow
+877.43898 279.77933 moveto
+(#2) cmtt10 23.0558 fshow
+901.64737 279.77933 moveto
+(]) cmr10 23.0558 fshow
+535.51907 168.67903 moveto
+(Exg) cmtt10 25.93776 fshow
+498.3538 140.65352 moveto
+(Cmd) cmtt10 31.70166 fshow
+557.08943 140.65352 moveto
+(=) cmr10 31.70166 fshow
+590.55186 140.65352 moveto
+(rs) cmss10 31.70166 fshow
+504.61018 114.27466 moveto
+(Ptr) cmtt10 25.93776 fshow
+552.66664 114.27466 moveto
+(=) cmr10 25.93776 fshow
+580.04503 114.27466 moveto
+(#2) cmtt10 25.93776 fshow
+458.91881 87.41093 moveto
+(Cache) cmtt10 31.70166 fshow
+542.1349 87.41093 moveto
+([) cmr10 31.70166 fshow
+550.94089 87.41093 moveto
+(#1) cmtt10 31.70166 fshow
+584.22742 87.41093 moveto
+(]) cmr10 31.70166 fshow
+601.83913 87.41093 moveto
+(=) cmr10 31.70166 fshow
+635.3019 87.41093 moveto
+(E) cmss10 31.70166 fshow
+480.81752 56.85857 moveto
+(Cache) cmtt10 25.93776 fshow
+548.90349 56.85857 moveto
+([) cmr10 25.93776 fshow
+556.10841 56.85857 moveto
+(#2) cmtt10 25.93776 fshow
+583.34286 56.85857 moveto
+(]) cmr10 25.93776 fshow
+597.75246 56.85857 moveto
+(=) cmr10 25.93776 fshow
+625.13112 56.85857 moveto
+(I) cmss10 25.93776 fshow
+515.32889 31.3465 moveto
+(Shr) cmtt10 25.93776 fshow
+556.18039 31.3465 moveto
+([) cmr10 25.93776 fshow
+563.38535 31.3465 moveto
+(#1) cmtt10 25.93776 fshow
+590.61977 31.3465 moveto
+(]) cmr10 25.93776 fshow
+506.05098 2.60687 moveto
+(:) cmsy10 25.93776 fshow
+523.3429 2.60687 moveto
+(Shr) cmtt10 25.93776 fshow
+564.19441 2.60687 moveto
+([) cmr10 25.93776 fshow
+571.39937 2.60687 moveto
+(#2) cmtt10 25.93776 fshow
+598.63379 2.60687 moveto
+(]) cmr10 25.93776 fshow
+ 0.4 0.4 0.4 setrgbcolor
+283.85567 855.65182 moveto
+(t) cmmi10 30.26068 fshow
+294.78305 851.11272 moveto
+(2) cmr7 21.18246 fshow
+308.35849 855.65182 moveto
+(\() cmr10 30.26068 fshow
+320.12666 855.65182 moveto
+(#2) cmtt10 30.26068 fshow
+351.89981 855.65182 moveto
+(\)) cmr10 30.26068 fshow
+ 0 0 0 setrgbcolor
+531.78201 770.75433 moveto
+(t) cmmi10 30.26068 fshow
+542.7094 766.21523 moveto
+(2) cmr7 21.18246 fshow
+556.28484 770.75433 moveto
+(\() cmr10 30.26068 fshow
+568.05301 770.75433 moveto
+(#1) cmtt10 30.26068 fshow
+599.82616 770.75433 moveto
+(\)) cmr10 30.26068 fshow
+ 0.4 0.4 0.4 setrgbcolor
+800.8951 770.75433 moveto
+(t) cmmi10 30.26068 fshow
+811.82248 766.21523 moveto
+(1) cmr7 21.18246 fshow
+825.39792 770.75433 moveto
+(\() cmr10 30.26068 fshow
+837.16609 770.75433 moveto
+(#2) cmtt10 30.26068 fshow
+868.93924 770.75433 moveto
+(\)) cmr10 30.26068 fshow
+ 0 0 0 setrgbcolor
+1023.30417 857.36942 moveto
+(t) cmmi10 30.26068 fshow
+1034.23155 852.8303 moveto
+(1) cmr7 21.18246 fshow
+1047.80699 857.36942 moveto
+(\() cmr10 30.26068 fshow
+1059.57516 857.36942 moveto
+(#1) cmtt10 30.26068 fshow
+1091.34831 857.36942 moveto
+(\)) cmr10 30.26068 fshow
+ 0.4 0.4 0.4 setrgbcolor
+184.30875 492.14241 moveto
+(t) cmmi10 30.26068 fshow
+195.23613 487.6033 moveto
+(6) cmr7 21.18246 fshow
+208.81157 492.14241 moveto
+(\() cmr10 30.26068 fshow
+220.57974 492.14241 moveto
+(#2) cmtt10 30.26068 fshow
+252.35289 492.14241 moveto
+(\)) cmr10 30.26068 fshow
+ 0 0 0 setrgbcolor
+535.5126 490.84135 moveto
+(t) cmmi10 30.26068 fshow
+546.43999 486.30225 moveto
+(6) cmr7 21.18246 fshow
+560.01543 490.84135 moveto
+(\() cmr10 30.26068 fshow
+571.7836 490.84135 moveto
+(#1) cmtt10 30.26068 fshow
+603.55675 490.84135 moveto
+(\)) cmr10 30.26068 fshow
+ 0.4 0.4 0.4 setrgbcolor
+874.47969 489.54332 moveto
+(t) cmmi10 30.26068 fshow
+885.40707 485.00421 moveto
+(5) cmr7 21.18246 fshow
+898.98251 489.54332 moveto
+(\() cmr10 30.26068 fshow
+910.75069 489.54332 moveto
+(#2) cmtt10 30.26068 fshow
+942.52383 489.54332 moveto
+(\)) cmr10 30.26068 fshow
+ 0 0 0 setrgbcolor
+1128.98787 489.54332 moveto
+(t) cmmi10 30.26068 fshow
+1139.91525 485.00421 moveto
+(5) cmr7 21.18246 fshow
+1153.49069 489.54332 moveto
+(\() cmr10 30.26068 fshow
+1165.25887 489.54332 moveto
+(#1) cmtt10 30.26068 fshow
+1197.03201 489.54332 moveto
+(\)) cmr10 30.26068 fshow
+0.84706 216.58893 moveto
+(t) cmmi10 30.26068 fshow
+11.77444 212.04982 moveto
+(2) cmr7 21.18246 fshow
+25.34988 216.58893 moveto
+(\() cmr10 30.26068 fshow
+37.11806 216.58893 moveto
+(#1) cmtt10 30.26068 fshow
+68.8912 216.58893 moveto
+(\)) cmr10 30.26068 fshow
+176.53528 215.28917 moveto
+(t) cmmi10 30.26068 fshow
+187.46266 210.75006 moveto
+(1) cmr7 21.18246 fshow
+201.0381 215.28917 moveto
+(\() cmr10 30.26068 fshow
+212.80627 215.28917 moveto
+(#1) cmtt10 30.26068 fshow
+244.57942 215.28917 moveto
+(\)) cmr10 30.26068 fshow
+ 0.4 0.4 0.4 setrgbcolor
+318.08673 207.49147 moveto
+(t) cmmi10 30.26068 fshow
+329.01411 202.95236 moveto
+(2) cmr7 21.18246 fshow
+342.58955 207.49147 moveto
+(\() cmr10 30.26068 fshow
+354.35773 207.49147 moveto
+(#2) cmtt10 30.26068 fshow
+386.13087 207.49147 moveto
+(\)) cmr10 30.26068 fshow
+553.87837 224.38618 moveto
+(t) cmmi10 30.26068 fshow
+564.80576 219.84708 moveto
+(1) cmr7 21.18246 fshow
+578.3812 224.38618 moveto
+(\() cmr10 30.26068 fshow
+590.14937 224.38618 moveto
+(#2) cmtt10 30.26068 fshow
+621.92252 224.38618 moveto
+(\)) cmr10 30.26068 fshow
+725.85071 198.39444 moveto
+(t) cmmi10 30.26068 fshow
+736.77809 193.85533 moveto
+(2) cmr7 21.18246 fshow
+750.35353 198.39444 moveto
+(\() cmr10 30.26068 fshow
+762.1217 198.39444 moveto
+(#2) cmtt10 30.26068 fshow
+793.89485 198.39444 moveto
+(\)) cmr10 30.26068 fshow
+ 0 0 0 setrgbcolor
+832.864 199.69377 moveto
+(t) cmmi10 30.26068 fshow
+843.79138 195.15466 moveto
+(2) cmr7 21.18246 fshow
+857.36682 199.69377 moveto
+(\() cmr10 30.26068 fshow
+869.135 199.69377 moveto
+(#1) cmtt10 30.26068 fshow
+900.90814 199.69377 moveto
+(\)) cmr10 30.26068 fshow
+1011.16904 200.40659 moveto
+(t) cmmi10 30.26068 fshow
+1022.09642 195.86748 moveto
+(1) cmr7 21.18246 fshow
+1035.67186 200.40659 moveto
+(\() cmr10 30.26068 fshow
+1047.44003 200.40659 moveto
+(#1) cmtt10 30.26068 fshow
+1079.21318 200.40659 moveto
+(\)) cmr10 30.26068 fshow
+2163.60233 102.82552 moveto
+(9) cmsy10 33.14264 fshow
+2182.01492 102.82552 moveto
+(i) cmmi10 33.14264 fshow
+2202.63907 102.82552 moveto
+(6) cmsy10 33.14264 fshow
+2202.63907 102.82552 moveto
+(=) cmr10 33.14264 fshow
+2237.62288 102.82552 moveto
+(j) cmmi10 33.14264 fshow
+2251.32715 102.82552 moveto
+(:) cmmi10 33.14264 fshow
+2269.74673 102.82552 moveto
+(Cache) cmtt10 33.14264 fshow
+2356.74532 102.82552 moveto
+([) cmr10 33.14264 fshow
+2365.95163 102.82552 moveto
+(i) cmmi10 33.14264 fshow
+2377.36983 102.82552 moveto
+(]) cmr10 33.14264 fshow
+2395.78204 102.82552 moveto
+(=) cmr10 33.14264 fshow
+2430.76585 102.82552 moveto
+(E) cmss10 33.14264 fshow
+2219.9044 65.00877 moveto
+(Cache) cmtt10 33.14264 fshow
+2306.90303 65.00877 moveto
+([) cmr10 33.14264 fshow
+2316.1093 65.00877 moveto
+(j) cmmi10 33.14264 fshow
+2331.65494 65.00877 moveto
+(]) cmr10 33.14264 fshow
+2350.06715 65.00877 moveto
+(6) cmsy10 33.14264 fshow
+2350.06715 65.00877 moveto
+(=) cmr10 33.14264 fshow
+2385.05096 65.00877 moveto
+(I) cmss10 33.14264 fshow
+2019.56393 452.34424 moveto
+(9) cmsy10 23.0558 fshow
+2032.37271 452.34424 moveto
+(i) cmmi10 23.0558 fshow
+2046.71999 452.34424 moveto
+(6) cmsy10 23.0558 fshow
+2046.71999 452.34424 moveto
+(=) cmr10 23.0558 fshow
+2071.0566 452.34424 moveto
+(j) cmmi10 23.0558 fshow
+2080.59003 452.34424 moveto
+(:) cmmi10 23.0558 fshow
+2093.40367 452.34424 moveto
+(Exg) cmtt10 23.0558 fshow
+2032.75557 426.83217 moveto
+(Cmd) cmtt10 23.0558 fshow
+2075.47246 426.83217 moveto
+(=) cmr10 23.0558 fshow
+2099.80882 426.83217 moveto
+(rs) cmss10 23.0558 fshow
+2011.74855 401.32054 moveto
+(Cache) cmtt10 23.0558 fshow
+2072.26945 401.32054 moveto
+([) cmr10 23.0558 fshow
+2078.67383 401.32054 moveto
+(i) cmmi10 23.0558 fshow
+2086.61694 401.32054 moveto
+(]) cmr10 23.0558 fshow
+2099.42548 401.32054 moveto
+(=) cmr10 23.0558 fshow
+2123.76212 401.32054 moveto
+(E) cmss10 23.0558 fshow
+2044.67223 375.8089 moveto
+(Shr) cmtt10 23.0558 fshow
+2080.98471 375.8089 moveto
+([) cmr10 23.0558 fshow
+2087.38911 375.8089 moveto
+(j) cmmi10 23.0558 fshow
+2098.20346 375.8089 moveto
+(]) cmr10 23.0558 fshow
+2244.31941 452.34424 moveto
+(9) cmsy10 23.0558 fshow
+2257.12819 452.34424 moveto
+(i) cmmi10 23.0558 fshow
+2271.47545 452.34424 moveto
+(6) cmsy10 23.0558 fshow
+2271.47545 452.34424 moveto
+(=) cmr10 23.0558 fshow
+2295.81206 452.34424 moveto
+(j) cmmi10 23.0558 fshow
+2305.34549 452.34424 moveto
+(:) cmmi10 23.0558 fshow
+2318.15915 452.34424 moveto
+(:) cmsy10 23.0558 fshow
+2333.52975 452.34424 moveto
+(Exg) cmtt10 23.0558 fshow
+2265.19637 426.83217 moveto
+(Cmd) cmtt10 23.0558 fshow
+2307.91325 426.83217 moveto
+(=) cmr10 23.0558 fshow
+2332.24962 426.83217 moveto
+(rs) cmss10 23.0558 fshow
+2268.14703 401.32054 moveto
+(Ptr) cmtt10 23.0558 fshow
+2310.8639 401.32054 moveto
+(=) cmr10 23.0558 fshow
+2335.20027 401.32054 moveto
+(j) cmmi10 23.0558 fshow
+2244.18935 375.8089 moveto
+(Cache) cmtt10 23.0558 fshow
+2304.71025 375.8089 moveto
+([) cmr10 23.0558 fshow
+2311.11462 375.8089 moveto
+(i) cmmi10 23.0558 fshow
+2319.05774 375.8089 moveto
+(]) cmr10 23.0558 fshow
+2331.86627 375.8089 moveto
+(=) cmr10 23.0558 fshow
+2356.20291 375.8089 moveto
+(E) cmss10 23.0558 fshow
+1931.09105 995.17859 moveto
+(9) cmsy10 23.0558 fshow
+1943.89983 995.17859 moveto
+(i) cmmi10 23.0558 fshow
+1958.24709 995.17859 moveto
+(6) cmsy10 23.0558 fshow
+1958.24709 995.17859 moveto
+(=) cmr10 23.0558 fshow
+1982.5837 995.17859 moveto
+(j) cmmi10 23.0558 fshow
+1992.11713 995.17859 moveto
+(:) cmmi10 23.0558 fshow
+2004.93079 995.17859 moveto
+(:) cmsy10 23.0558 fshow
+2020.30139 995.17859 moveto
+(Exg) cmtt10 23.0558 fshow
+1951.968 969.66696 moveto
+(Cmd) cmtt10 23.0558 fshow
+1994.68489 969.66696 moveto
+(=) cmr10 23.0558 fshow
+2019.02126 969.66696 moveto
+(rs) cmss10 23.0558 fshow
+1954.91867 944.15489 moveto
+(Ptr) cmtt10 23.0558 fshow
+1997.63554 944.15489 moveto
+(=) cmr10 23.0558 fshow
+2021.97191 944.15489 moveto
+(j) cmmi10 23.0558 fshow
+1930.96098 918.64326 moveto
+(Cache) cmtt10 23.0558 fshow
+1991.48189 918.64326 moveto
+([) cmr10 23.0558 fshow
+1997.88626 918.64326 moveto
+(i) cmmi10 23.0558 fshow
+2005.82938 918.64326 moveto
+(]) cmr10 23.0558 fshow
+2018.63791 918.64326 moveto
+(=) cmr10 23.0558 fshow
+2042.97455 918.64326 moveto
+(E) cmss10 23.0558 fshow
+2216.67451 648.78493 moveto
+(Cache) cmtt10 33.14264 fshow
+2303.67314 648.78493 moveto
+([) cmr10 33.14264 fshow
+2312.87941 648.78493 moveto
+(i) cmmi10 33.14264 fshow
+2324.29759 648.78493 moveto
+(]) cmr10 33.14264 fshow
+2342.70982 648.78493 moveto
+(=) cmr10 33.14264 fshow
+2377.69368 648.78493 moveto
+(E) cmss10 33.14264 fshow
+2454.68169 995.17859 moveto
+(9) cmsy10 23.0558 fshow
+2467.49046 995.17859 moveto
+(i) cmmi10 23.0558 fshow
+2481.83774 995.17859 moveto
+(6) cmsy10 23.0558 fshow
+2481.83774 995.17859 moveto
+(=) cmr10 23.0558 fshow
+2506.17435 995.17859 moveto
+(j) cmmi10 23.0558 fshow
+2515.70778 995.17859 moveto
+(:) cmmi10 23.0558 fshow
+2528.52142 995.17859 moveto
+(Exg) cmtt10 23.0558 fshow
+2467.87332 969.66696 moveto
+(Cmd) cmtt10 23.0558 fshow
+2510.59021 969.66696 moveto
+(=) cmr10 23.0558 fshow
+2534.92657 969.66696 moveto
+(rs) cmss10 23.0558 fshow
+2446.8663 944.15489 moveto
+(Cache) cmtt10 23.0558 fshow
+2507.3872 944.15489 moveto
+([) cmr10 23.0558 fshow
+2513.79158 944.15489 moveto
+(i) cmmi10 23.0558 fshow
+2521.7347 944.15489 moveto
+(]) cmr10 23.0558 fshow
+2534.54323 944.15489 moveto
+(=) cmr10 23.0558 fshow
+2558.87987 944.15489 moveto
+(E) cmss10 23.0558 fshow
+2479.78998 918.64326 moveto
+(Shr) cmtt10 23.0558 fshow
+2516.10246 918.64326 moveto
+([) cmr10 23.0558 fshow
+2522.50687 918.64326 moveto
+(j) cmmi10 23.0558 fshow
+2533.32121 918.64326 moveto
+(]) cmr10 23.0558 fshow
+2172.2966 978.84833 moveto
+(9) cmsy10 23.0558 fshow
+2185.10538 978.84833 moveto
+(i) cmmi10 23.0558 fshow
+2199.45264 978.84833 moveto
+(6) cmsy10 23.0558 fshow
+2199.45264 978.84833 moveto
+(=) cmr10 23.0558 fshow
+2223.78925 978.84833 moveto
+(j) cmmi10 23.0558 fshow
+2233.32268 978.84833 moveto
+(:) cmmi10 23.0558 fshow
+2246.13632 978.84833 moveto
+(Cmd) cmtt10 23.0558 fshow
+2288.85297 978.84833 moveto
+(=) cmr10 23.0558 fshow
+2313.18958 978.84833 moveto
+(re) cmss10 23.0558 fshow
+2188.91386 953.3367 moveto
+(Cache) cmtt10 23.0558 fshow
+2249.43477 953.3367 moveto
+([) cmr10 23.0558 fshow
+2255.83914 953.3367 moveto
+(i) cmmi10 23.0558 fshow
+2263.78226 953.3367 moveto
+(]) cmr10 23.0558 fshow
+2276.59079 953.3367 moveto
+(=) cmr10 23.0558 fshow
+2300.92743 953.3367 moveto
+(E) cmss10 23.0558 fshow
+2221.83754 927.82463 moveto
+(Shr) cmtt10 23.0558 fshow
+2258.15002 927.82463 moveto
+([) cmr10 23.0558 fshow
+2264.55443 927.82463 moveto
+(j) cmmi10 23.0558 fshow
+2275.36877 927.82463 moveto
+(]) cmr10 23.0558 fshow
+2245.80849 684.21799 moveto
+(9) cmsy10 33.14264 fshow
+2264.22107 684.21799 moveto
+(i:) cmmi10 33.14264 fshow
+2294.05879 684.21799 moveto
+(:) cmsy10 33.14264 fshow
+2316.154 684.21799 moveto
+(Exg) cmtt10 33.14264 fshow
+1747.94405 684.21799 moveto
+(9) cmsy10 33.14264 fshow
+1766.35663 684.21799 moveto
+(i:) cmmi10 33.14264 fshow
+1796.19435 684.21799 moveto
+(Cmd) cmtt10 33.14264 fshow
+1857.5994 684.21799 moveto
+(=) cmr10 33.14264 fshow
+1892.5832 684.21799 moveto
+(rs) cmss10 33.14264 fshow
+1741.87148 648.78493 moveto
+(Cache) cmtt10 33.14264 fshow
+1828.8701 648.78493 moveto
+([) cmr10 33.14264 fshow
+1838.07637 648.78493 moveto
+(i) cmmi10 33.14264 fshow
+1849.49455 648.78493 moveto
+(]) cmr10 33.14264 fshow
+1867.90678 648.78493 moveto
+(=) cmr10 33.14264 fshow
+1902.89064 648.78493 moveto
+(E) cmss10 33.14264 fshow
+2483.94948 684.21799 moveto
+(:) cmsy10 33.14264 fshow
+2506.0447 684.21799 moveto
+(Exg) cmtt10 33.14264 fshow
+2460.88783 648.78493 moveto
+(Cmd) cmtt10 33.14264 fshow
+2522.29323 648.78493 moveto
+(=) cmr10 33.14264 fshow
+2557.27667 648.78493 moveto
+(rs) cmss10 33.14264 fshow
+1978.48921 684.21799 moveto
+(9) cmsy10 33.14264 fshow
+1996.9018 684.21799 moveto
+(i) cmmi10 33.14264 fshow
+2017.52596 684.21799 moveto
+(6) cmsy10 33.14264 fshow
+2017.52596 684.21799 moveto
+(=) cmr10 33.14264 fshow
+2052.50975 684.21799 moveto
+(j) cmmi10 33.14264 fshow
+2066.21404 684.21799 moveto
+(:) cmmi10 33.14264 fshow
+2084.63362 684.21799 moveto
+(Shr) cmtt10 33.14264 fshow
+2136.8327 684.21799 moveto
+([) cmr10 33.14264 fshow
+2146.03897 684.21799 moveto
+(j) cmmi10 33.14264 fshow
+2161.58461 684.21799 moveto
+(]) cmr10 33.14264 fshow
+1984.23372 648.78493 moveto
+(Cache) cmtt10 33.14264 fshow
+2071.23235 648.78493 moveto
+([) cmr10 33.14264 fshow
+2080.43861 648.78493 moveto
+(i) cmmi10 33.14264 fshow
+2091.8568 648.78493 moveto
+(]) cmr10 33.14264 fshow
+2110.26903 648.78493 moveto
+(=) cmr10 33.14264 fshow
+2145.25288 648.78493 moveto
+(E) cmss10 33.14264 fshow
+1982.68991 217.69664 moveto
+(pr) cmmi10 30.26068 fshow
+2012.40768 217.69664 moveto
+(e) cmmi10 30.26068 fshow
+2026.49794 217.69664 moveto
+(\() cmr10 30.26068 fshow
+2038.26607 217.69664 moveto
+(t) cmmi10 30.26068 fshow
+2049.19351 213.15753 moveto
+(4) cmr7 21.18246 fshow
+2062.7689 217.69664 moveto
+(\() cmr10 30.26068 fshow
+2074.53674 217.69664 moveto
+(j) cmmi10 30.26068 fshow
+2088.7306 217.69664 moveto
+(\)\)) cmr10 30.26068 fshow
+2314.10239 218.6867 moveto
+(pr) cmmi10 30.26068 fshow
+2343.82016 218.6867 moveto
+(e) cmmi10 30.26068 fshow
+2357.91042 218.6867 moveto
+(\() cmr10 30.26068 fshow
+2369.67854 218.6867 moveto
+(t) cmmi10 30.26068 fshow
+2380.60599 214.1476 moveto
+(5) cmr7 21.18246 fshow
+2394.18138 218.6867 moveto
+(\() cmr10 30.26068 fshow
+2405.94922 218.6867 moveto
+(j) cmmi10 30.26068 fshow
+2420.14308 218.6867 moveto
+(\)\)) cmr10 30.26068 fshow
+2492.1204 217.40771 moveto
+(pr) cmmi10 30.26068 fshow
+2521.83818 217.40771 moveto
+(e) cmmi10 30.26068 fshow
+2535.92844 217.40771 moveto
+(\() cmr10 30.26068 fshow
+2547.69656 217.40771 moveto
+(t) cmmi10 30.26068 fshow
+2558.62401 212.8686 moveto
+(6) cmr7 21.18246 fshow
+2572.1994 217.40771 moveto
+(\() cmr10 30.26068 fshow
+2583.96724 217.40771 moveto
+(i) cmmi10 30.26068 fshow
+2594.39261 217.40771 moveto
+(\)\)) cmr10 30.26068 fshow
+1870.93951 783.99762 moveto
+(pr) cmmi10 30.26068 fshow
+1900.65729 783.99762 moveto
+(e) cmmi10 30.26068 fshow
+1914.74754 783.99762 moveto
+(\() cmr10 30.26068 fshow
+1926.51567 783.99762 moveto
+(t) cmmi10 30.26068 fshow
+1937.44312 779.45851 moveto
+(5) cmr7 21.18246 fshow
+1951.01851 783.99762 moveto
+(\() cmr10 30.26068 fshow
+1962.78635 783.99762 moveto
+(j) cmmi10 30.26068 fshow
+1976.98021 783.99762 moveto
+(\)\)) cmr10 30.26068 fshow
+2473.70428 767.45454 moveto
+(pr) cmmi10 30.26068 fshow
+2503.42206 767.45454 moveto
+(e) cmmi10 30.26068 fshow
+2517.51231 767.45454 moveto
+(\() cmr10 30.26068 fshow
+2529.28044 767.45454 moveto
+(t) cmmi10 30.26068 fshow
+2540.20789 762.91544 moveto
+(4) cmr7 21.18246 fshow
+2553.78328 767.45454 moveto
+(\() cmr10 30.26068 fshow
+2565.55112 767.45454 moveto
+(j) cmmi10 30.26068 fshow
+2579.74498 767.45454 moveto
+(\)\)) cmr10 30.26068 fshow
+2283.11403 763.78105 moveto
+(pr) cmmi10 30.26068 fshow
+2312.8318 763.78105 moveto
+(e) cmmi10 30.26068 fshow
+2326.92206 763.78105 moveto
+(\() cmr10 30.26068 fshow
+2338.69019 763.78105 moveto
+(t) cmmi10 30.26068 fshow
+2349.61763 759.24194 moveto
+(3) cmr7 21.18246 fshow
+2363.19302 763.78105 moveto
+(\() cmr10 30.26068 fshow
+2374.96086 763.78105 moveto
+(j) cmmi10 30.26068 fshow
+2389.15472 763.78105 moveto
+(\)\)) cmr10 30.26068 fshow
+showpage
+%%EOF
