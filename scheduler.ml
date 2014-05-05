@@ -652,6 +652,7 @@ let init_globals globals =
 	then N, TS.empty, TI.empty
 	(* Abstract or other type*)
 	else
+	  (* Abstract or other type*)
 	  let ty = Hashtbl.find htbl_types g_type in
 	  if Hashtbl.mem htbl_abstypes g_type 
 	  then

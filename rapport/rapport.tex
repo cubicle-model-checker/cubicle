@@ -10,13 +10,20 @@
 \usepackage{geometry}
 \usepackage{wasysym}
 \usepackage{float}
+\usepackage{multirow}
 
 \usepackage{listings}  %%% Pour pretty-printer le code caml
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor} %%% Pour avoir des noms de
                                                         %%% couleurs symboliques
 \usepackage{tikz}
 
-\usepackage[ocgcolorlinks]{hyperref}
+\usepackage[ocgcolorlinks,hyperfootnotes=true]{hyperref}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+\setlength{\parskip}{0pt}
+\raggedbottom
+
 
 %%% Ci-dessous, une commande spéciale qui applique un certain style
 %%% si le paramètre commence par une majuscule et un autre style
@@ -35,6 +42,29 @@
                 \fi
         \fi
 }
+
+\newlength{\RoundedBoxWidth}
+\newsavebox{\GrayRoundedBox}
+\newenvironment{GrayBox}[1][\dimexpr\textwidth-4.5ex]
+   {\setlength{\RoundedBoxWidth}{\dimexpr#1}
+    \begin{lrbox}{\GrayRoundedBox}
+       \begin{minipage}{\RoundedBoxWidth}}
+   {   \end{minipage}
+    \end{lrbox}
+    \begin{center}
+    \begin{tikzpicture}
+       \draw node[draw=black!30,fill=black!4,rounded corners,
+             inner sep=2ex,text width=\RoundedBoxWidth]
+             {\usebox{\GrayRoundedBox}};
+    \end{tikzpicture}
+    \end{center}}
+
+\newenvironment{CodeEx}
+{\vspace{0.2em}
+  \begin{GrayBox}}
+{\end{GrayBox}
+\vspace{0.2em}}
+
 \makeatother
 
 %%% On dit que nos listings sont en OCaml et on rajoute d'autres
@@ -54,6 +84,8 @@
                            %%% identifiants. On utilise \idstyle
                            %%% défini plus haut.
 }
+
+
 
 \title{Rapport de TER \\ Réalisation d'un  ordonnanceur programmable pour Cubicle}
 \author{Mattias Roux}
@@ -75,12 +107,20 @@
 
 	Pour réduire le nombre de bugs dans ces programmes, on a recours à des outils de vérification, appelés model checker, qui tentent de vérifier la sûreté d'un programme concurrent en explorant (statiquement) tous ses comportements possibles à l'exécution.
 
-	Cubicle est un model checker conçu pour vérifier des propriétés de sûreté d'algorithmes faisant intervenir un nombre quelconque de processus. Le fonctionnement de Cubicle repose en partie sur l'analyse de traces d'exécution d'un programme pour un nombre fini de processus.}
+	\textbf{Cubicle} est un model checker conçu pour vérifier des propriétés de sûreté d'algorithmes faisant intervenir un nombre quelconque de processus. Le fonctionnement de \textbf{Cubicle} repose en partie sur l'analyse de traces d'exécution d'un programme pour un nombre fini de processus.}
+	
+	Dans le cadre de mon TER \footnote{Travail d'Etude et de Recherche}, j'ai travaillé au sein de l'équipe Toccata (\href{http://toccata.lri.fr/index.fr.html}{leur site}) et tout particulièrement avec Sylvain Conchon et Alain Mebsout, à l'élaboration d'un ordonnanceur programmable pour Cubicle.
+	Voilà le rapport de ce travail commencé en janvier et que je vais continuer lors d'un stage. Ce rapport est donc à la fois un compte-rendu de ce que j'ai déjà fait et aussi un aperçu de ce que je voudrais faire.
+	
+	
 
-	\section{Cubicle et l'algorithme BRAB}
-	\label{sec:cubibrab}
+	\chapter[Cubicle et l'algorithme BRAB]{Cubicle et l'algorithme BRAB \footnote{Attention, je n'entrerai pas dans les détails du langage car cela a déja été fait dans un des articles que j’eu à lire \cite{Verif} et je n'expliquerai pas non plus les choix sémantiques ou syntaxiques du langage - à moins que cela ne soit nécessaire. Il ne faut pas non plus s'attendre à une explication détaillée de \textbf{BRAB}, décrite dans un autre de ces articles \cite{BRAB}. Je ne décrirai donc que les parties importantes à savoir pour comprendre en quoi a consisté le travail qui m'a été demandé.}}
+	\label{chap:cubibrab}
 		
-		Avant d'entrer dans le vif du sujet, il convient de présenter plus précisément le langage utilisé par Cubicle. Attention, nous n'entrerons pas, ici, dans les détails du langage car cela a déja été fait dans \cite{Vérif}. Néanmoins, il convient d'en décrire la syntaxe afin de favoriser la compréhension immédiate du fonctionnement de l'ordonnanceur qui a été réalisé pour ce langage. Voici donc, brièvement, une présentation succincte d'un fichier Cubicle. Celui-ci se décompose en plusieurs parties :
+		\section{Cubicle}
+		\label{sec:cubi}
+		
+		Avant d'entrer dans le vif du sujet (\hyperref[vif:vif_du_sujet]{ici, pour les connaisseurs de \textbf{Cubicle}}), il convient de présenter le langage utilisé par \textbf{Cubicle} à travers sa syntaxe et sa sémantique afin de favoriser la compréhension immédiate du fonctionnement de l'ordonnanceur qui a été réalisé pour ce langage. Voici donc une présentation succincte de la structure d'un fichier \textbf{Cubicle}. J'ai décidé d'utiliser, plutôt qu'un exemple purement théorique, le fichier \textbf{Cubicle} correspondant au protocole German\textit{-ish}, ce fichier étant celui sur lequel j'ai le plus travaillé car assez riche syntaxiquement sans être trop lourd. Celui-ci se décompose en plusieurs parties :
 		\begin{itemize}
 			\item La déclaration des types et de variables typées 
 				\hyperref[subsec:decl_types]{$\downarrow$}
@@ -96,36 +136,33 @@
 		\subsection{Déclaration des types et variables typées}
 		\label{subsec:decl_types}
 		
-		Les types \texttt{int}, \texttt{real} et \texttt{bool} sont reconnus par le compilateur de Cubicle ainsi qu'un type \texttt{proc} qui permet d'identifier les processus. Enfin, il est possible pour l'utilisateur de définir deux autres sortes de types, les types énumérés ou les types abstraits (dont nous verrons plus tard qu'ils exigent deux traitement bien distincts) :
+		\textbf{Cubicle} est un langage typé. Les types \texttt{int}, \texttt{real} et \texttt{bool} sont reconnus par son compilateur ainsi qu'un type \texttt{proc} qui permet d'identifier les processus. De plus, il est possible pour l'utilisateur de définir deux autres sortes de types, les types énumérés ou les types abstraits \footnote{Dont nous verrons plus tard qu'ils exigent deux traitement bien distincts.\hyperref[chap:donnees]{$\downarrow$}} :
 		
 		\begin{figure}[H]
-			\centering	
-			\begin{minipage}{0.65\linewidth}
+			\begin{CodeEx}
 				\lstinputlisting[firstline=1,lastline=2]{exemple.cub}
-			\end{minipage}
-			\caption{Définition de types pour Cubicle}
+			\end{CodeEx}
+			\caption{Définition de types pour \textbf{Cubicle}}
 			\label{fig:type_cub}
 		\end{figure}
 		
-		\paragraph{} Après cette définition, il est possible de déclarer des variables globales ainsi que des tableaux indexés par des variables de type \texttt{proc}
+		\paragraph{} Après avoir défini ses propres types, il est possible de déclarer des variables globales ainsi que des tableaux indexés par des variables de type \texttt{proc}
 		
-		\begin{figure}[h]
-			\centering	
-			\begin{minipage}{0.65\linewidth}
+		\begin{figure}[ht]
+			\begin{CodeEx}
 				\lstinputlisting[firstline=4,lastline=6]{exemple.cub}
-			\end{minipage}
-			\caption{Déclarations de variables et de tableaux pour Cubicle}
+			\end{CodeEx}
+			\caption{Déclarations de variables et de tableaux pour \textbf{Cubicle}}
 			\label{fig:decl_cub}
 		\end{figure}
 		 
 		Ainsi, dans le cadre de German\textit{-ish}, on doit écrire :
 		
-		\begin{figure}[h]
-			\centering	
-			\begin{minipage}{0.65\linewidth}
-					\lstinputlisting[firstline=1,lastline=9]{germanish.cub}
-			\end{minipage}
-			\caption{Déclarations dans German\textit{-ish} pour Cubicle}
+		\begin{figure}[ht]
+			\begin{CodeEx}
+				\lstinputlisting[firstline=1,lastline=9]{germanish.cub}
+			\end{CodeEx}
+			\caption{Déclarations dans German\textit{-ish} pour \textbf{Cubicle}}
 			\label{fig:gish_decl_cub}
 		\end{figure}
 		
@@ -134,22 +171,25 @@
 		\subsection{Déclaration de l'état initial}
 		\label{subsec:decl_init}
 		
-		Un état initial admet une représentation logique et son équivalent dans Cubicle, par exemple, celui de German\textit{-ish} en Cubicle est le suivant :
+		Un état initial admet une représentation logique et son équivalent dans \textbf{Cubicle}, par exemple, pour celui de German\textit{-ish} :
 		\begin{figure}[H]
-			\centering	
-			\begin{minipage}{0.65\linewidth}
+			\begin{CodeEx}
 				\lstinputlisting[firstline=11,lastline=12]{germanish.cub}
-			\end{minipage}
-			\caption{Etat initial du protocole German\textit{-ish} pour Cubicle}
+			\end{CodeEx}
+			\caption[Etat initial du protocole German\textit{-ish} pour \textbf{Cubicle}]{Etat initial du protocole German\textit{-ish} pour \textbf{Cubicle}\protect\footnotemark}
 			\label{fig:gish_init_cub}
 		\end{figure}
 		
-		qui peut être lu comme ceci (on remarquera que la variable \texttt{Curptr} n'est pas initialisée, nous reviendrons dessus plus tard) :
+		\footnotetext{On remarquera que la variable \texttt{Curptr} n'est pas initialisée, je reviendrai dessus plus tard\hyperref[chap:donnees]{$\downarrow$}}
+		
+		qui peut être lu comme ceci :
 		
 		\begin{figure}[H]
+			\begin{CodeEx}
 			\[\forall z.~ \mathtt{Cache}[z] = \mathsf{Invalid} ~\land~ \neg
 			\mathtt{Shrset}[z] ~\land~ \neg \mathtt{Exgntd} ~\land~ \mathtt{CurCmd} =
 			\mathsf{Empty}\]
+			\end{CodeEx}
 			\caption{Etat initial du protocole German\textit{-ish} sous forme logique}
 			\label{fig:gish_init_log}
 			
@@ -162,25 +202,26 @@
 
 		De la même manière que pour l'état initial, on définit un ou plusieurs états unsafe. Par exemple, l'état unsafe de German\textit{-ish} :
 		
-		\begin{figure}[h]
-			\centering	
-			\begin{minipage}{0.65\linewidth}
+		\begin{figure}[ht]
+\begin{CodeEx}
 				\lstinputlisting[firstline=14,lastline=14]{germanish.cub}
-			\end{minipage}
-			\caption{Etat unsafe du protocole German\textit{-ish} pour Cubicle}
+			
+			\end{CodeEx}
+			\caption{Etat unsafe du protocole German\textit{-ish} pour \textbf{Cubicle}}
 			\label{fig:gish_unsafe_cub}
 		\end{figure}		
 		
 		peut être lu comme ceci :
 		
-		\begin{figure}[h]
-			\[
+		\begin{figure}[ht]
+			\begin{CodeEx}\[
 				\begin{array}{l}
 				\Theta : ~\exists z1,z2. ~z1\neq z2 ~\land~ \mathtt{Cache}[z1] = \mathsf{Exclusive}
 				~\land~ \mathtt{Cache}[z2] = \mathsf{Shared}
 				\\[0.5em]
 				\end{array}
 			\]
+			\end{CodeEx}
 			\caption{Etat unsafe du protocole German\textit{-ish} sous forme logique}
 			\label{fig:gish_unsafe_log}			
 		\end{figure}
@@ -188,47 +229,179 @@
 		\subsection{Déclaration des transitions}
 		\label{subsec:decl_trans}
 		
-		Reprenons notre exemple :
+		Reprenons notre exemple (ici, une transition de German\textit{-ish}) :
 		
-		\begin{figure}[h]
-			\centering	
-			\begin{minipage}{0.65\linewidth}
+		\begin{figure}[H]
+			\begin{CodeEx}
 				\lstinputlisting[firstline=55,lastline=64]{germanish.cub}
-			\end{minipage}
-			\caption{Une transition du protocole German\textit{-ish} pour Cubicle}
+			\end{CodeEx}
+			\caption{Une transition du protocole German\textit{-ish} pour \textbf{Cubicle}}
 			\label{fig:gish_trans_cub}
 		\end{figure}		
 		
 		et intéressons nous à la partie \textit{requires} qui correspond à ce qui sera appelé \textit{garde}. D'un point de vue logique, la garde peut être lue comme ceci :
 		
-		\[\begin{array}{l}$t_6: \exists i.$ \hspace*{-0.5em} & 
- \mathtt{Ptr} = i ~\land~ \mathtt{Cmd} =  \mathsf{re} ~\land~ 
-\neg \mathtt{Exg} ~\land~
-\forall j.~ \neg \mathtt{Shr}[j]
-\\
-&  \mathtt{Cmd}' = \epsilon ~\land~ 
-\mathtt{Exg}' ~\land~ 
-\mathtt{Shr}'[i] ~\land~ 
-\mathtt{Cache}'[i] = \mathsf{E}
-\end{array}\]
+		\begin{figure}[h]
+			\begin{CodeEx}
+				\[
+				\begin{array}{lll}
+				\multirow{2}{*}{$gnt\_exclusive: \exists n.$} \hspace*{-0.5em} 
+				&
+					\neg \mathtt{Shrset}[n] 
+					~\land~ \mathtt{Curcmd} = \mathtt{Reqe} ~\land
+				\\ &
+					\neg \mathtt{Exgntd} 
+					~\land~ \mathtt{Curptr} = n ~\land
+				\\ &  
+					\forall l. l \neq n ~ \neg \mathtt{Shr}[l]
+				\end{array}
+			\]
+			\end{CodeEx}
+			\caption{Une transition du protocole German\textit{-ish} sous forme logique}
+			\label{fig:gish_trans_log}
+		\end{figure}
+		
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\linewidth]{germanish_schema_dia.mps}
-  \caption{Diagramme d'états du protocole German\textit{-ish}}
-  \label{fig:motivating_schema}
-\end{figure}
-
-Ici \hyperref[fig:motivating_schema]{Figure~\ref*{fig:motivating_schema}}
+		La partie correspondant aux modifications du système n'est donc exécutée que si cette garde est vérifiée.
+		
+		\paragraph{} Voilà, donc, un bref aperçu de ce langage et j'espère que ceci a permis une compréhension précise de ce qu'il est possible de faire avec \textbf{Cubicle}. En réalité, le plus simple est de voir \textbf{Cubicle} comme un automate non déterministe avec un état initial et un ou plusieurs états terminaux que sont les états unsafe.
 			
+		\section{BRAB}
+		\label{sec:brab}
+				
+		Attaquons maintenant le corps du sujet, vérifier qu'un algorithme est sûr. Pour cela, on génère l'ensemble des états pouvant mener aux états unsafe et on vérifie que cet ensemble ne contient pas l'état initial. Dans ce cas là, naturellement, toute exécution partant de l'état initial ne conduira jamais à un état critique et l'algorithme est sûr. 
+		
+		\paragraph{} Malheureusement, pour un protocole ayant uniquement dix variables pouvant avoir trois valeurs différentes, on a déjà un ensemble d'état potentiel contenant $3^{10}$ états. Si l'algorithme devait parcourir tous ces états, le temps passé serait beaucoup trop long. De plus, on cherche ici à prouver ces algorithmes quel que soit le nombre de processus. C'est là qu'intervient \textbf{BRAB} et, afin de comprendre comment il fonctionne, je préfère l'illustrer par un exemple.
+		
+		\begin{figure}[H]
+  			\centering 
+  			\includegraphics[width=\linewidth]{brab_total_math.mps}
+  			\caption{Exemple du fonctionnement de \textbf{BRAB} pour German\textit{-ish}}
+  			\label{fig:brab_total}
+		\end{figure}
+
+		L'état \textit{unsafe} est représenté par l'octogone rouge. \textbf{BRAB} exécute un chaînage arrière afin de savoir quels états possibles auraient pu mener à cet état. Ces états sont malheureusement trop restrictifs et conduisent au problème évoqué précédemment. On essaye donc d'en faire des approximations qui sont représentées ici par les rectangles bleus. Or, qui dit approximation, dit chance de se tromper. Ainsi, à chaque approximation faite, on vérifie qu'elle ne représente pas un état vu depuis une exécution du programme depuis l'état initial. Si tel est le cas, l'approximation conduira forcément à une erreur qui n'est pas obligatoirement réaliste. On en cherche donc une nouvelle et ainsi de suite jusqu'à arriver à un ensemble d'état stable par le système de transitions \footnote{Toute pré-image donne un état déjà existant dans cet ensemble}.
+		
+		\paragraph{} Il me semble maintenant que le fonctionnement de base est assez clair. Venons-en donc à la partie qui m'intéresse, la génération d'un nuage d'états assez expressifs pour permettre à \textbf{BRAB} de se tromper le moins possible\footnote{Pas du tout serait même encore mieux.}. En effet, si, lors d'une approximation, \textbf{BRAB} cherche à savoir si celle-ci est judicieuse et qu'il obtient une réponse affirmative alors qu'il s'avère que ce n'est pas le cas, il continuera à chercher des pré-images de cette approximation ce qui le conduira inévitablement à se rendre compte de l'erreur commise et à devoir faire un redémarrage depuis un état précédant cette approximation. Ces redémarrages sont coûteux en temps. Voilà pourquoi il a semblé intéressant à l'équipe travaillant sur ce projet de faire un ordonnanceur programmable afin de pouvoir générer des états qui soient judicieux, assez nombreux, assez expressifs. Nous voilà donc entrés dans le vif du sujet\label{vif:vif_du_sujet}.
+		
+	\chapter{Les données et leur initialisation}
+	\label{chap:donnees}
+	
+		Cette partie est, de loin, celle qui m'a demandé le plus de temps, de corrections, de modifications. Loin d'être triviale, l'initialisation du système est 	une partie \^{o} combien importante car d'elle découle le bon déroulement de l'ordonnancement.
+		
+		\paragraph{} Précisons néanmoins ce qui n'a pas encore été fait pour cet ordonnanceur. J'ai, de commun accord avec Alain Mebsout et Sylvain Conchon, décidé de ne pas m'occuper des entiers et des flottants qui représentent une partie assez restreinte des fichiers \textbf{Cubicle} et qui n'apporte pas un grand intér\^{e}t pour le travail demandé. De plus, il n'y a pas réellement de booléen dans la sémantique de \textbf{Cubicle} car ceux-ci sont remplacés par un type énuméré :
+		\begin{CodeEx}
+			\lstinputlisting[firstline=8,lastline=8]{exemple.cub}
+		\end{CodeEx}		
+		
+		Ainsi, je n'ai eu à m'intéresser qu'aux types énumérés, aux types abstraits et aux types des processus.
+		
+		
+		\section{Les structures de données}
+		\label{sec:struct}
+		
+			Il serait judicieux de commencer la description de cet ordonnanceur par une présentation de ses structures de données. Plusieurs choix se sont proposés à moi. Convertir un fichier \textbf{Cubicle} en fichier \textbf{OCaml} et exécuter ce fichier (compilation) ou, au contraire, exécuter un fichier \textbf{Cubicle} grâce à un programme \textbf{OCAml} (interprétation). J'ai choisi une espèce de mélange des deux et, pour cela, il a fallu que je crée des structures de données pour représenter les tableaux, les variables globales, un état du système, un ensemble de ces états. Pour le moment, je vais uniquement 
+			
+			
+			\paragraph{} Premièrement, avant de commencer, un petit travail de réflexion s'imposait pour pouvoir gérer les tableaux. En effet, bien que cela n'ait pas été mentionné auparavant, il faut savoir que les tableaux de \textbf{Cubicle} sont potentiellement multidimensionnels. Valait-il mieux les gérer un par un ou les regrouper sous un module pouvant représenter un tableau simple comme un tableau à cinq dimensions. J'ai, premièrement, décidé de ne faire que des tableaux à une dimension et de gérer les multidimensionnels en les écrasant. Malheureusement, cela entraînait de sérieuses complications lorsqu'il s'agissait d'accéder à des éléments en particulier et, d'un point de vue de la lisibilité, était catastrophique. J'ai donc décidé de créer un module :
+
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=41,lastline=58]{exemple.cub}
+				\end{CodeEx}	
+				\caption{Le module représentant un tableau}
+				\label{fig:tableau}
+			\end{figure}			
+
+			
+			Les tableaux faits, je pouvais les remplir. Malheureusement, bien que mon module \texttt{DA} soit polymorphe, je ne pouvais pas y stocker tous les types de variables, il me fallait, pour cela, déclarer un type qui les regrouperait tous\footnote{Oui, c'est bien une citation détournée.} (énumérés, abstraits, types de bases...).
+			
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=60,lastline=63]{exemple.cub}
+				\end{CodeEx}	
+				\caption{Le type des éléments}
+				\label{fig:value}
+			\end{figure}						
+			
+			Cela étant fait, je pouvais enfin définir ce qu'était un état de mon point de vue avec un nouveau module.			
+			
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=10,lastline=39]{exemple.cub}
+				\end{CodeEx}	
+				\caption{Le module représentant un état du système}
+				\label{fig:etat}
+			\end{figure}
+			
+			Finalement, un système finissait par être représenté comme ceci :
+			
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=65,lastline=97]{exemple.cub}
+				\end{CodeEx}	
+				\caption{Le module représentant le système}
+				\label{fig:syst}
+			\end{figure}
+			
+			Bien que tout cela puisse para\^{i}tre obscur pour le moment, pas d'inquiétude, je vais expliquer ces choix d'implémentation dans les parties suivantes. 
+			On retiendra simplement que le système contient un ensemble d'états (plus d'autres choses mais qui sont importantes pour l'initialisation et l'ordonnancement) qui contiennent, eux, des \texttt{Hashtbl} de \texttt{value} et des \texttt{Hashtbl} de \texttt{DimArray} de \texttt{value}.
+			
+		\section{Initialisation ? Des classes d'équivalences et de différences}
+		\label{sec:classes}		
+
+				Quatre cas de figures peuvent arriver lors de l'initialisation. Les deux plus simples sont lorsqu'un élément est égal à une valeur ou différent d'une valeur. Deux cas le sont moins : lorsque deux éléments sont égaux ou différents.
+				
+				Afin de mettre en \oe{}uvre une initialisation efficace, j'ai décidé de fonctionner avec un pré-traitement grâce auquel je remplis des classes d'équivalence et de différence\footnote{Je me suis basé, ici, sur une simplification des structures Union-Find}. 
+			
+			Petite astuce, on aura remarqué dans la figure~\ref{fig:value}, la présence de \texttt{Var of Hstring.t}. Cette valeur, qui n'existe que pour l'initialisation, permet de savoir que la valeur actuelle d'un élément est lui-même ou son représentant qui est aussi un élément.
+			
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=99,lastline=104]{exemple.cub}
+				\end{CodeEx}	
+				\caption{Les classes d'équivalence et de différences}
+				\label{fig:ecdc}
+			\end{figure}	
+				
+			Ainsi, dans le cas où un élément est égal à une valeur, on va chercher son représentant dans \texttt{ec} et on modifie celui-ci avec la valeur. 
+			
+		\section{Déterministe vs non déterministe}
+		\label{sec:detvs}
+			
+		
+				
+				
+		\section{Colorions}
+		\label{sec:color}
+
+	\chapter{Les transitions et leur exécution}
+	\label{chap:trans}
+	
+		\section{La garde}
+		\label{sec:garde}
+	
+		\section{Mise à jour}
+		\label{sec:maj}
+	
 \
 
 \begin{thebibliography}{10}
 
-\bibitem{Vérif}
+\bibitem{Verif}
 Sylvain Conchon, Alain Mebsout, Fatiha Zaïdi
-\newline Vérification de systèmes paramétrés avec Cubicle.
+\newline Vérification de systèmes paramétrés avec \textbf{Cubicle}.
 \newline {\url{https://www.lri.fr/~conchon/TER/2013/1/cubicle.pdf}}
+
+\bibitem{BRAB}
+Sylvain Conchon, Amit Goel, Sava Krsti\'{c}, Alain Mebsout, Fatiha Zaïdi
+\newline Invariants for Finite Instances and Beyond
+\newline {\url{https://www.lri.fr/~conchon/TER/2013/1/invariants.pdf}}
+
+\bibitem{CubiC}
+Sylvain Conchon, David Declerck, Luc Maranget, Alain Mebsout
+\newline Vérification de programmes C concurrents avec \textbf{Cubicle} : Enfoncer les barrières
+\newline {\url{https://www.lri.fr/~conchon/TER/2013/1/c2cub.pdf}}
 
 \end{thebibliography}
 

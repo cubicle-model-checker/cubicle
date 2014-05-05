@@ -1,10 +1,25 @@
 \select@language {french}
 \contentsline {chapter}{Table des mati\`eres}{1}{section*.1}
 \contentsline {chapter}{\chapternumberline {1}Introduction}{3}{chapter.1}
-\contentsline {section}{\numberline {1.1}Cubicle et l'algorithme BRAB}{3}{section.1.1}
-\contentsline {subsection}{D\IeC {\'e}claration des types et variables typ\IeC {\'e}es}{4}{section*.2}
-\contentsline {paragraph}{}{4}{section*.3}
-\contentsline {subsection}{D\IeC {\'e}claration de l'\IeC {\'e}tat initial}{5}{section*.4}
-\contentsline {subsection}{D\IeC {\'e}claration d'\IeC {\'e}tats unsafe}{5}{section*.5}
-\contentsline {subsection}{D\IeC {\'e}claration des transitions}{5}{section*.6}
-\contentsline {chapter}{Bibliographie}{7}{section*.8}
+\contentsline {chapter}{\chapternumberline {2}Cubicle et l'algorithme BRAB}{5}{chapter.2}
+\contentsline {section}{\numberline {2.1}Cubicle}{5}{section.2.1}
+\contentsline {subsection}{\numberline {2.1.1}D\IeC {\'e}claration des types et variables typ\IeC {\'e}es}{6}{subsection.2.1.1}
+\contentsline {paragraph}{}{6}{section*.2}
+\contentsline {subsection}{\numberline {2.1.2}D\IeC {\'e}claration de l'\IeC {\'e}tat initial}{7}{subsection.2.1.2}
+\contentsline {subsection}{\numberline {2.1.3}D\IeC {\'e}claration d'\IeC {\'e}tats unsafe}{8}{subsection.2.1.3}
+\contentsline {subsection}{\numberline {2.1.4}D\IeC {\'e}claration des transitions}{8}{subsection.2.1.4}
+\contentsline {paragraph}{}{9}{section*.3}
+\contentsline {section}{\numberline {2.2}BRAB}{9}{section.2.2}
+\contentsline {paragraph}{}{9}{section*.4}
+\contentsline {paragraph}{}{10}{section*.5}
+\contentsline {chapter}{\chapternumberline {3}Les donn\IeC {\'e}es et leur initialisation}{11}{chapter.3}
+\contentsline {paragraph}{}{11}{section*.6}
+\contentsline {section}{\numberline {3.1}Les structures de donn\IeC {\'e}es}{11}{section.3.1}
+\contentsline {paragraph}{}{11}{section*.7}
+\contentsline {section}{\numberline {3.2}Initialisation ? Des classes d'\IeC {\'e}quivalences et de diff\IeC {\'e}rences}{15}{section.3.2}
+\contentsline {section}{\numberline {3.3}D\IeC {\'e}terministe vs non d\IeC {\'e}terministe}{15}{section.3.3}
+\contentsline {section}{\numberline {3.4}Colorions}{15}{section.3.4}
+\contentsline {chapter}{\chapternumberline {4}Les transitions et leur ex\IeC {\'e}cution}{17}{chapter.4}
+\contentsline {section}{\numberline {4.1}La garde}{17}{section.4.1}
+\contentsline {section}{\numberline {4.2}Mise \IeC {\`a} jour}{17}{section.4.2}
+\contentsline {chapter}{Bibliographie}{19}{section*.9}

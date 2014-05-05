@@ -1,6 +1,104 @@
-type state = Invalid | Shared | Exclusive (* Enuméré *)
+type enum = Invalid | Shared | Exclusive (* Enuméré *)
 type abstr   	       	      		  (* Abstrait *)
 
 var Timer : int
 var Abs : abstr
 array Arr[proc] : state
+
+type bool = False | True
+
+module type St = sig
+
+  (* A dimensional array *)
+  type 'a da
+  (* The state : global variables and arrays *)
+  type 'a t = {globs :(Hstring.t, 'a) Hashtbl.t; 
+       	        arrs : (Hstring.t, 'a da) Hashtbl.t}
+      
+  val init : unit -> 'a t
+    
+  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+  val hash : 'a t -> int
+    
+  (* Get a global variable value *)
+  val get_v : 'a t -> Hstring.t -> 'a
+  (* Get an array by its name *)
+  val get_a : 'a t -> Hstring.t -> 'a da
+  (* Get an element in an array by its name and a a param list *)
+  val get_e : 'a t -> Hstring.t -> int list -> 'a
+    
+  (* Set a global variable value *)
+  val set_v : 'a t -> Hstring.t -> 'a -> unit
+  (* Set an array by its name and a new array *)
+  val set_a : 'a t -> Hstring.t -> 'a da -> unit
+  (* Set an element in an array by its name, a param list and a value *)
+  val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
+    
+  val copy : 'a t -> 'a t
+    
+end
+
+module type DA = sig
+    
+  type 'a t (= 
+    | Arr of 'a array 
+    | Mat of 'a t array)
+
+  type 'a dima (= {dim:int; darr:'a t})
+
+  val init : int -> int -> 'a -> 'a dima
+  val minit : int -> int -> ('a * int) list -> 'a -> 'a dima
+  val get : 'a dima -> int list -> 'a
+  val set : 'a dima -> int list -> 'a -> unit
+  val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
+  val copy : 'a dima -> 'a dima
+  val dim : 'a dima -> int
+  val equal : ('a -> 'a -> bool) -> 'a dima -> 'a dima -> bool
+    
+end 
+
+type value = 
+  | Var of Hstring.t
+  | Hstr of Hstring.t 
+  | Proc of int
+
+module type Sys = sig
+
+  (* A state *)
+  type 'a s
+  (* A dimensional array *)
+  type 'a da
+  type 'a set
+  (* A record with a readable state and a writable state *)
+  type 'a t = {syst : 'a set; init : 'a set; read_st : 'a s; write_st : 'a s}
+
+  val init : unit -> 'a t
+
+  val get_v : 'a t -> Hstring.t -> 'a
+  val get_a : 'a t -> Hstring.t -> 'a da
+  val get_e : 'a t -> Hstring.t -> int list -> 'a
+
+  val set_v : 'a t -> Hstring.t -> 'a -> unit
+  val set_a : 'a t -> Hstring.t -> 'a da -> unit
+  val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
+
+  val exists : ('a s -> bool) -> 'a t -> bool
+    
+  val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
+    
+  val update_init : 'a t -> (Hstring.t * 'a s) -> 'a t
+
+  val get_init : 'a t -> 'a set
+
+  val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
+
+  val update_s : Hstring.t -> 'a t -> 'a t
+    
+end
+
+module TS = Set.Make (value)
+(* Ensemble regroupant des noms d'éléments, tableaux ou variables *)
+module TI = Set.Make (Hstring.t)
+
+val ec : (Hstring.t, TS.elt * stype) Hashtbl.t
+val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t

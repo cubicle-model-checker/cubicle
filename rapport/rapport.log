@@ -1,17 +1,11 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.1.15)  2 MAY 2014 18:07
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.5.3)  5 MAY 2014 19:26
 entering extended mode
  %&-line parsing enabled.
 **rapport.tex
 (./rapport.tex
 LaTeX2e <2009/09/24>
 Babel <v3.8l> and hyphenation patterns for english, usenglishmax, dumylang, noh
-yphenation, farsi, arabic, croatian, bulgarian, ukrainian, russian, czech, slov
-ak, danish, dutch, finnish, french, basque, ngerman, german, german-x-2009-06-1
-9, ngerman-x-2009-06-19, ibycus, monogreek, greek, ancientgreek, hungarian, san
-skrit, italian, latin, latvian, lithuanian, mongolian2a, mongolian, bokmal, nyn
-orsk, romanian, irish, coptic, serbian, turkish, welsh, esperanto, uppersorbian
-, estonian, indonesian, interlingua, icelandic, kurmanji, slovenian, polish, po
-rtuguese, spanish, galician, catalan, swedish, ukenglish, pinyin, loaded.
+yphenation, french, basque, loaded.
 (/usr/share/texmf-texlive/tex/latex/memoir/memoir.cls
 Document Class: memoir 2009/09/21 v1.61803398b configurable book, report, artic
 le document class
@@ -552,7 +546,7 @@ Package: fontenc 2005/09/27 v1.99g Standard LaTeX package
 File: t1enc.def 2005/09/27 v1.99g Standard LaTeX file
 LaTeX Font Info:    Redeclaring font encoding T1 on input line 43.
 ))
-(/var/lib/texmf/tex/generic/babel/babel.sty
+(/usr/share/texmf-texlive/tex/generic/babel/babel.sty
 Package: babel 2008/07/06 v3.8l The Babel package
 
 (/usr/share/texmf-texlive/tex/generic/babel/frenchb.ldf
@@ -654,8 +648,7 @@ Package ifvtex Info: VTeX not detected.
 \Gm@odd@mp=\dimen161
 \Gm@even@mp=\dimen162
 \Gm@dimlist=\toks30
-
-(/usr/share/texmf-texlive/tex/xelatex/xetexconfig/geometry.cfg))
+)
 (/usr/share/texmf-texlive/tex/latex/wasysym/wasysym.sty
 Package: wasysym 2003/10/30 v2.0 Wasy-2 symbol support package
 \symwasy=\mathgroup4
@@ -670,19 +663,22 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \@float@everytoks=\toks32
 \@floatcapt=\box31
 )
+(/usr/share/texmf-texlive/tex/latex/multirow/multirow.sty
+\bigstrutjot=\dimen163
+)
 (/usr/share/texmf-texlive/tex/latex/listings/listings.sty
 \lst@mode=\count155
 \lst@gtempboxa=\box32
 \lst@token=\toks33
 \lst@length=\count156
-\lst@currlwidth=\dimen163
+\lst@currlwidth=\dimen164
 \lst@column=\count157
 \lst@pos=\count158
-\lst@lostspace=\dimen164
-\lst@width=\dimen165
+\lst@lostspace=\dimen165
+\lst@width=\dimen166
 \lst@newlines=\count159
 \lst@lineno=\count160
-\lst@maxwidth=\dimen166
+\lst@maxwidth=\dimen167
 
 (/usr/share/texmf-texlive/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2007/02/22 1.4 (Carsten Heinz)
@@ -762,8 +758,8 @@ File: graphics.cfg 2009/08/28 v1.8 graphics configuration of TeX Live
 )
 Package graphics Info: Driver file: pdftex.def on input line 91.
 )
-\Gin@req@height=\dimen167
-\Gin@req@width=\dimen168
+\Gin@req@height=\dimen168
+\Gin@req@width=\dimen169
 )
 (/usr/share/texmf/tex/latex/pgf/systemlayer/pgfsys.sty
 (/usr/share/texmf/tex/generic/pgf/systemlayer/pgfsys.code.tex
@@ -776,14 +772,14 @@ Package: pgfsys 2010/06/30 v2.10 (rcs-revision 1.37)
 (/usr/share/texmf/tex/generic/pgf/utilities/pgfkeysfiltered.code.tex
 \pgfkeys@tmptoks=\toks38
 ))
-\pgf@x=\dimen169
-\pgf@y=\dimen170
-\pgf@xa=\dimen171
-\pgf@ya=\dimen172
-\pgf@xb=\dimen173
-\pgf@yb=\dimen174
-\pgf@xc=\dimen175
-\pgf@yc=\dimen176
+\pgf@x=\dimen170
+\pgf@y=\dimen171
+\pgf@xa=\dimen172
+\pgf@ya=\dimen173
+\pgf@xb=\dimen174
+\pgf@yb=\dimen175
+\pgf@xc=\dimen176
+\pgf@yc=\dimen177
 \w@pgf@writea=\write4
 \r@pgf@reada=\read2
 \c@pgf@counta=\count165
@@ -817,7 +813,7 @@ Package: pgfcore 2010/04/11 v2.10 (rcs-revision 1.7)
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathcalc.code.tex
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathutil.code.tex)
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathparser.code.tex
-\pgfmath@dimen=\dimen177
+\pgfmath@dimen=\dimen178
 \pgfmath@count=\count171
 \pgfmath@box=\box35
 \pgfmath@toks=\toks39
@@ -837,30 +833,30 @@ Package: pgfcore 2010/04/11 v2.10 (rcs-revision 1.7)
 ))
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorepoints.code.tex
 File: pgfcorepoints.code.tex 2010/04/09  (rcs-revision 1.20)
-\pgf@picminx=\dimen178
-\pgf@picmaxx=\dimen179
-\pgf@picminy=\dimen180
-\pgf@picmaxy=\dimen181
-\pgf@pathminx=\dimen182
-\pgf@pathmaxx=\dimen183
-\pgf@pathminy=\dimen184
-\pgf@pathmaxy=\dimen185
-\pgf@xx=\dimen186
-\pgf@xy=\dimen187
-\pgf@yx=\dimen188
-\pgf@yy=\dimen189
-\pgf@zx=\dimen190
-\pgf@zy=\dimen191
+\pgf@picminx=\dimen179
+\pgf@picmaxx=\dimen180
+\pgf@picminy=\dimen181
+\pgf@picmaxy=\dimen182
+\pgf@pathminx=\dimen183
+\pgf@pathmaxx=\dimen184
+\pgf@pathminy=\dimen185
+\pgf@pathmaxy=\dimen186
+\pgf@xx=\dimen187
+\pgf@xy=\dimen188
+\pgf@yx=\dimen189
+\pgf@yy=\dimen190
+\pgf@zx=\dimen191
+\pgf@zy=\dimen192
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorepathconstruct.code.tex
 File: pgfcorepathconstruct.code.tex 2010/08/03  (rcs-revision 1.24)
-\pgf@path@lastx=\dimen192
-\pgf@path@lasty=\dimen193
+\pgf@path@lastx=\dimen193
+\pgf@path@lasty=\dimen194
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorepathusage.code.tex
 File: pgfcorepathusage.code.tex 2008/04/22  (rcs-revision 1.12)
-\pgf@shorten@end@additional=\dimen194
-\pgf@shorten@start@additional=\dimen195
+\pgf@shorten@end@additional=\dimen195
+\pgf@shorten@start@additional=\dimen196
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorescopes.code.tex
 File: pgfcorescopes.code.tex 2010/09/08  (rcs-revision 1.34)
@@ -871,13 +867,13 @@ File: pgfcorescopes.code.tex 2010/09/08  (rcs-revision 1.34)
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoregraphicstate.code.tex
 File: pgfcoregraphicstate.code.tex 2008/04/22  (rcs-revision 1.9)
-\pgflinewidth=\dimen196
+\pgflinewidth=\dimen197
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoretransformations.code.tex
 File: pgfcoretransformations.code.tex 2009/06/10  (rcs-revision 1.11)
-\pgf@pt@x=\dimen197
-\pgf@pt@y=\dimen198
-\pgf@pt@temp=\dimen199
+\pgf@pt@x=\dimen198
+\pgf@pt@y=\dimen199
+\pgf@pt@temp=\dimen200
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorequick.code.tex
 File: pgfcorequick.code.tex 2008/10/09  (rcs-revision 1.3)
@@ -893,7 +889,7 @@ File: pgfcorearrows.code.tex 2008/04/23  (rcs-revision 1.11)
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoreshade.code.tex
 File: pgfcoreshade.code.tex 2008/11/23  (rcs-revision 1.13)
-\pgf@max=\dimen200
+\pgf@max=\dimen201
 \pgf@sys@shading@range@num=\count174
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoreimage.code.tex
@@ -921,8 +917,8 @@ File: pgfmoduleplot.code.tex 2010/10/22  (rcs-revision 1.8)
 )
 (/usr/share/texmf/tex/latex/pgf/compatibility/pgfcomp-version-0-65.sty
 Package: pgfcomp-version-0-65 2007/07/03 v2.10 (rcs-revision 1.7)
-\pgf@nodesepstart=\dimen201
-\pgf@nodesepend=\dimen202
+\pgf@nodesepstart=\dimen202
+\pgf@nodesepend=\dimen203
 )
 (/usr/share/texmf/tex/latex/pgf/compatibility/pgfcomp-version-1-18.sty
 Package: pgfcomp-version-1-18 2007/07/23 v2.10 (rcs-revision 1.1)
@@ -932,8 +928,8 @@ Package: pgfcomp-version-1-18 2007/07/23 v2.10 (rcs-revision 1.1)
 (/usr/share/texmf/tex/generic/pgf/utilities/pgfkeys.code.tex))
 (/usr/share/texmf/tex/generic/pgf/utilities/pgffor.code.tex
 Package: pgffor 2010/03/23 v2.10 (rcs-revision 1.18)
-\pgffor@iter=\dimen203
-\pgffor@skip=\dimen204
+\pgffor@iter=\dimen204
+\pgffor@skip=\dimen205
 \pgffor@stack=\toks42
 \pgffor@toks=\toks43
 ))
@@ -943,14 +939,14 @@ Package: tikz 2010/10/13 v2.10 (rcs-revision 1.76)
 (/usr/share/texmf/tex/generic/pgf/libraries/pgflibraryplothandlers.code.tex
 File: pgflibraryplothandlers.code.tex 2010/05/31 v2.10 (rcs-revision 1.15)
 \pgf@plot@mark@count=\count175
-\pgfplotmarksize=\dimen205
+\pgfplotmarksize=\dimen206
 )
-\tikz@lastx=\dimen206
-\tikz@lasty=\dimen207
-\tikz@lastxsaved=\dimen208
-\tikz@lastysaved=\dimen209
-\tikzleveldistance=\dimen210
-\tikzsiblingdistance=\dimen211
+\tikz@lastx=\dimen207
+\tikz@lasty=\dimen208
+\tikz@lastxsaved=\dimen209
+\tikz@lastysaved=\dimen210
+\tikzleveldistance=\dimen211
+\tikzsiblingdistance=\dimen212
 \tikz@figbox=\box41
 \tikz@tempbox=\box42
 \tikztreelevel=\count176
@@ -979,7 +975,7 @@ O)
 (/usr/share/texmf-texlive/tex/latex/oberdiek/xcolor-patch.sty
 Package: xcolor-patch 2009/10/02 xcolor patch
 ))
-\@linkdim=\dimen212
+\@linkdim=\dimen213
 \Hy@linkcounter=\count184
 \Hy@pagecounter=\count185
 
@@ -1010,6 +1006,7 @@ Package: kvsetkeys 2009/07/30 v1.5 Key value parser with default handler suppor
 t (HO)
 ))
 Package hyperref Info: Option `ocgcolorlinks' set `true' on input line 2864.
+Package hyperref Info: Option `hyperfootnotes' set `true' on input line 2864.
 Package hyperref Info: Hyper figures OFF on input line 2975.
 Package hyperref Info: Link nesting OFF on input line 2980.
 Package hyperref Info: Hyper index ON on input line 2983.
@@ -1046,8 +1043,8 @@ Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 )))
 \Fld@menulength=\count186
-\Field@Width=\dimen213
-\Fld@charsize=\dimen214
+\Field@Width=\dimen214
+\Fld@charsize=\dimen215
 \Field@toks=\toks44
 Package hyperref Info: Hyper figures OFF on input line 4377.
 Package hyperref Info: Link nesting OFF on input line 4382.
@@ -1074,6 +1071,9 @@ File: hpdftex.def 2009/10/09 v6.79a Hyperref driver for pdfTeX
 Package hyperref Info: \pdfminorversion:=5 on input line 136.
 \Fld@listcount=\count190
 )
+\RoundedBoxWidth=\skip177
+\GrayRoundedBox=\box43
+
 (/usr/share/texmf-texlive/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2004/09/05 1.3 listings language file
 )
@@ -1091,29 +1091,29 @@ File: lstmisc.sty 2007/02/22 1.4 (Carsten Heinz)
 ) (./rapport.aux)
 \openout1 = `rapport.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 62.
-LaTeX Font Info:    ... okay on input line 62.
-LaTeX Info: Redefining \degres on input line 62.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 94.
+LaTeX Font Info:    ... okay on input line 94.
+LaTeX Info: Redefining \degres on input line 94.
 
 
 Package frenchb.ldf Warning: The definition of \@makecaption has been changed,
 (frenchb.ldf)                frenchb will NOT customise it;
-(frenchb.ldf)                reported on input line 62.
+(frenchb.ldf)                reported on input line 94.
 
-LaTeX Info: Redefining \dots on input line 62.
-LaTeX Info: Redefining \up on input line 62.
+LaTeX Info: Redefining \dots on input line 94.
+LaTeX Info: Redefining \up on input line 94.
 *geometry auto-detecting driver*
 *geometry detected driver: pdftex*
 -------------------- Geometry parameters
@@ -1159,18 +1159,18 @@ driver: pdftex
 (/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count192
-\scratchdimen=\dimen215
-\scratchbox=\box43
+\scratchdimen=\dimen216
+\scratchbox=\box44
 \nofMPsegments=\count193
 \nofMParguments=\count194
 \everyMPshowfont=\toks45
 \MPscratchCnt=\count195
-\MPscratchDim=\dimen216
+\MPscratchDim=\dimen217
 \MPnumerator=\count196
 \everyMPtoPDFconversion=\toks46
 ) ABD: EveryShipout initializing macros
-Package hyperref Info: Option `colorlinks' set `true' on input line 62.
-Package hyperref Info: Link coloring ON on input line 62.
+Package hyperref Info: Option `colorlinks' set `true' on input line 94.
+Package hyperref Info: Link coloring ON on input line 94.
 
 (/usr/share/texmf-texlive/tex/latex/hyperref/nameref.sty
 Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
@@ -1180,26 +1180,29 @@ Package: refcount 2008/08/11 v3.1 Data extraction from references (HO)
 )
 \c@section@level=\count197
 )
-LaTeX Info: Redefining \ref on input line 62.
-LaTeX Info: Redefining \pageref on input line 62.
+LaTeX Info: Redefining \ref on input line 94.
+LaTeX Info: Redefining \pageref on input line 94.
  (./rapport.out)
 (./rapport.out)
 \@outlinefile=\write5
 \openout5 = `rapport.out'.
 
-\AtBeginShipoutBox=\box44
+\AtBeginShipoutBox=\box45
 
 Redoing nameref's sectioning
 Redoing nameref's label
-LaTeX Font Info:    Try loading font information for U+wasy on input line 64.
+LaTeX Font Info:    Try loading font information for U+wasy on input line 96.
 (/usr/share/texmf-texlive/tex/latex/wasysym/uwasy.fd
 File: uwasy.fd 2003/10/30 v2.0 Wasy-2 symbol font definitions
 ) (./rapport.toc) [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2
 
-] [3]
-LaTeX Font Info:    Try loading font information for T1+cmtt on input line 99.
+] [3] [4
+
+] [5]
+LaTeX Font Info:    Try loading font information for T1+cmtt on input line 139.
+
 
 (/usr/share/texmf-texlive/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 1999/05/25 v2.5h Standard LaTeX font definitions
@@ -1208,140 +1211,65 @@ LaTeX Font Info:    Try loading font information for T1+cmss on input line 1.
 
 (/usr/share/texmf-texlive/tex/latex/base/t1cmss.fd
 File: t1cmss.fd 1999/05/25 v2.5h Standard LaTeX font definitions
-)
-Overfull \hbox (2.86124pt too wide) in paragraph at lines 1--2
-[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
-][][][][][][][][][][][][][] 
- []
-
-) (./exemple.cub) (./germanish.cub) [4] (./germanish.cub) (./germanish.cub)
-Overfull \hbox (37.7555pt too wide) in paragraph at lines 14--168
-[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
-][][][][][][][][][][][][] 
- []
-
-(./germanish.cub)
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.204 		\[\begin{array}{l}$t_
-                             6: \exists i.$ \hspace*{-0.5em} &
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Extra }, or forgotten $.
-<template> \unskip \relax $\hfill \egroup 
-                                          \egroup \begingroup \CT@setup \CT@...
-l.204 ...y}{l}$t_6: \exists i.$ \hspace*{-0.5em} &
-                                                  
-I've deleted a group-closing symbol because it seems to be
-spurious, as in `$x}$'. But perhaps the } is legitimate and
-you forgot something else, as in `\hbox{$x}'. In such cases
-the way to recover is to insert both the forgotten and the
-deleted material, e.g., by typing `I$}'.
-
-! Extra }, or forgotten $.
-<template> \unskip \relax $\hfill \egroup \egroup 
-                                                  \begingroup \CT@setup \CT@...
-l.204 ...y}{l}$t_6: \exists i.$ \hspace*{-0.5em} &
-                                                  
-I've deleted a group-closing symbol because it seems to be
-spurious, as in `$x}$'. But perhaps the } is legitimate and
-you forgot something else, as in `\hbox{$x}'. In such cases
-the way to recover is to insert both the forgotten and the
-deleted material, e.g., by typing `I$}'.
-
-! Missing $ inserted.
-<inserted text> 
-                $
-l.204 ...y}{l}$t_6: \exists i.$ \hspace*{-0.5em} &
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-! Missing } inserted.
-<inserted text> 
-                }
-l.204 ...y}{l}$t_6: \exists i.$ \hspace*{-0.5em} &
-                                                  
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Missing } inserted.
-<inserted text> 
-                }
-l.204 ...y}{l}$t_6: \exists i.$ \hspace*{-0.5em} &
-                                                  
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-! Extra alignment tab has been changed to \cr.
-<recently read> \endtemplate 
-                             
-l.204 ...y}{l}$t_6: \exists i.$ \hspace*{-0.5em} &
-                                                  
-You have given more \span or & marks than there were
-in the preamble to the \halign or \valign now in progress.
-So I'll assume that you meant to type \cr instead.
-
-! Extra alignment tab has been changed to \cr.
-<recently read> \endtemplate 
-                             
-l.209 &
-         \mathtt{Cmd}' = \epsilon ~\land~
-You have given more \span or & marks than there were
-in the preamble to the \halign or \valign now in progress.
-So I'll assume that you meant to type \cr instead.
-
-File: germanish_schema_dia.mps Graphic file (type mps)
-[MP to PDF] (./germanish_schema_dia.mps) [5] [6]
-bibitemlist
-[7
+)) (./exemple.cub)
+(./germanish.cub) [6] (./germanish.cub) (./germanish.cub) [7] (./germanish.cub)
+[8]
+File: brab_total_math.mps Graphic file (type mps)
+ [MP to PDF] (./brab_total_math.mps) [9] [10] (./exemple.cub) [11
 
 ]
+(./exemple.cub) (./exemple.cub) [12] (./exemple.cub) (./exemple.cub) [13]
+[14] (./exemple.cub) [15] [16
+
+] [17] [18
+
+]
+bibitemlist
+[19]
 \tf@toc=\write6
 \openout6 = `rapport.toc'.
 
- (./rapport.aux) ) 
+ (./rapport.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ ) 
 Here is how much of TeX's memory you used:
- 19966 strings out of 493848
- 322433 string characters out of 1152823
- 469080 words of memory out of 3000000
- 22790 multiletter control sequences out of 15000+50000
- 24998 words of font info for 62 fonts, out of 3000000 for 9000
- 714 hyphenation exceptions out of 8191
- 61i,11n,58p,556b,1486s stack positions out of 5000i,500n,10000p,200000b,50000s
-{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}{/usr/s
-hare/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texmf-texlive/f
-onts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-texlive/fonts/type1/
-public/amsfonts/cm/cmr10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfo
-nts/cm/cmss10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy
-10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr
-/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texm
-f/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texmf/fonts/type1/public
-/cm-super/sfbx1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.p
-fb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf
-/fonts/type1/public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/
-cm-super/sfcc1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfit1000.pf
-b></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/texmf/
-fonts/type1/public/cm-super/sfrm1095.pfb></usr/share/texmf/fonts/type1/public/c
-m-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfsl1000.pfb
-></usr/share/texmf/fonts/type1/public/cm-super/sfsx1000.pfb></usr/share/texmf/f
-onts/type1/public/cm-super/sfti1000.pfb></usr/share/texmf/fonts/type1/public/cm
--super/sftt1000.pfb></usr/share/texmf-texlive/fonts/type1/urw/helvetic/uhvr8a.p
-fb>
-Output written on rapport.pdf (7 pages, 323790 bytes).
+ 20485 strings out of 495028
+ 328396 string characters out of 1181230
+ 525059 words of memory out of 3000000
+ 23065 multiletter control sequences out of 15000+50000
+ 40522 words of font info for 110 fonts, out of 3000000 for 9000
+ 28 hyphenation exceptions out of 8191
+ 61i,16n,58p,1067b,1519s stack positions out of 5000i,500n,10000p,200000b,50000s
+{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc} </home/mattias/.texmf-
+var/fonts/pk/ljfour/jknappen/ec/ectt0800.600pk> </home/mattias/.texmf-var/fonts
+/pk/ljfour/jknappen/ec/eccc1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfou
+r/jknappen/ec/ecit1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappe
+n/ec/ecsx1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ectt
+1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1095.600p
+k> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecsl1000.600pk> </home
+/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx0800.600pk> </home/mattias/
+.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1200.600pk> </home/mattias/.texmf-va
+r/fonts/pk/ljfour/jknappen/ec/ecrm0800.600pk> </home/mattias/.texmf-var/fonts/p
+k/ljfour/jknappen/ec/ecrm0700.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/
+jknappen/ec/ecbi1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/
+ec/ecti1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx17
+28.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1000.600pk>
+ </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1000.600pk> </home/m
+attias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx2074.600pk> </home/mattias/.t
+exmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1095.600pk> </home/mattias/.texmf-var/
+fonts/pk/ljfour/jknappen/ec/ecrm1440.600pk></usr/share/texmf-texlive/fonts/type
+1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-texlive/fonts/type1/public/am
+sfonts/cm/cmr10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cm
+r7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss10.pfb></us
+r/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/tex
+mf-texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texmf-texlive/f
+onts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texmf-texlive/fonts/type1/
+urw/helvetic/uhvr8a.pfb>
+Output written on rapport.pdf (19 pages, 330837 bytes).
 PDF statistics:
- 219 PDF objects out of 1000 (max. 8388607)
- 61 named destinations out of 1000 (max. 500000)
- 57 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1017 PDF objects out of 1200 (max. 8388607)
+ 194 named destinations out of 1000 (max. 500000)
+ 169 words of extra memory for PDF output out of 10000 (max. 10000000)
 
