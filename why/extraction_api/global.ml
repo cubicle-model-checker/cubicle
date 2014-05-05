@@ -33,23 +33,3 @@ let info = ref {
   forward = [];
   trans = [];
 }
-
-
-type sys_env = 
-    {
-      mutable s_init : Term.term;
-      mutable s_unsafe : Term.term;
-      mutable s_trans : (Mlw_expr.expr * Mlw_ty.pvsymbol list) list;
-    }
-
-let sys_env = 
-  {
-    s_init = Term.t_true;
-    s_unsafe = Term.t_true;
-    s_trans = [];
-  }
-
-
-let global_module : Mlw_module.modul ref = ref (Obj.magic 0)
-let global_theory : Theory.theory ref = ref (Obj.magic 0)
-

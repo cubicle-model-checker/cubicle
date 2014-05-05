@@ -61,13 +61,44 @@ let approx (phi: Fol__FOL.t) : (Fol__FOL.t option) =
 			     Brab.subsuming_candidate s @ acc) [] ls in
     match la with
     | [] -> None 
-    | _ ->
+    |  _ ->
        decr cpt;
        let psi = Fol__FOL.cubes_to_fol la in
-       Format.eprintf ">> %a APproximated BY %a@." 
-	       Fol__FOL.print phi Fol__FOL.print psi;
-       Some psi
+       if Why3.Term.t_equal psi phi then None else
+       if List.exists (fun sbad -> 
+                       Fol__FOL.infix_breqeq psi sbad
+                      ) (Translation.dnf_to_conj_list !bad) then None
+       else 
+         begin
+           Format.eprintf ">> %a APproximated BY %a@." 
+	                  Fol__FOL.print phi Fol__FOL.print psi;
+           Some psi
+         end
   (*------------------  End manually edited -------------------*)
+
+(* let approx2 phi = match approx phi with *)
+(*   | None -> phi *)
+(*   | (Some psi) -> *)
+(*       begin let o = *)
+(*               (let o1 = (Pervasives.(!) kind) in *)
+(*               (Map__Map.mixfix_lblsmnrb o1 psi Appr)) in *)
+(*       ((Pervasives.(:=) kind) o); *)
+(*       begin if let o = *)
+(*                  (let o1 = (Pervasives.(!) kind) in *)
+(*                  (Map__Map.mixfix_lbrb o1 phi)) in *)
+(*             ((o = Orig)) *)
+(*             then let o = *)
+(*                    (let o1 = (Pervasives.(!) from) in *)
+(*                    (Map__Map.mixfix_lblsmnrb o1 psi psi)) in *)
+(*               ((Pervasives.(:=) from) o) *)
+(*             else begin let o = *)
+(*                    (let o1 = *)
+(*                       (let o2 = (Pervasives.(!) from) in *)
+(*                       (Map__Map.mixfix_lbrb o2 phi)) in *)
+(*                    let o2 = (Pervasives.(!) from) in *)
+(*                    (Map__Map.mixfix_lblsmnrb o2 psi o1)) in *)
+(*               ((Pervasives.(:=) from) o) end; *)
+(*       psi end end *)
 
 
 let pre_or_approx (phi: Fol__FOL.t) ((* ghost *)) ((* ghost *)) =
@@ -97,7 +128,7 @@ let pre_or_approx (phi: Fol__FOL.t) ((* ghost *)) ((* ghost *)) =
                    (Map__Map.mixfix_lblsmnrb o2 psi o1)) in
               ((Pervasives.(:=) from) o) end;
       psi end end
-  | None ->
+  | _ ->
       let psi = (Reachability__Reachability.pre phi) in
       begin ((* assert *));
       begin let o =
@@ -149,6 +180,7 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
                   if let o = (Abstract_queue__AbstractQueue.is_empty q) in
                   (not (o = true))
                   then let phi1 = (Abstract_queue__AbstractQueue.pop q) in
+                       (* let phi1 = approx2 phi1 in *)
                     begin if (Fol__FOL.sat (Fol__FOL.infix_et init phi1))
                           then begin ((Pervasives.(:=) faulty) phi1);
 				     (*-----------------  Begin manually edited ------------------*)
@@ -166,6 +198,8 @@ let bwd (init: Fol__FOL.t) (theta: Fol__FOL.t) =
                          ((Pervasives.(:=) visited) o);
                          let poa = (((pre_or_approx phi1) ((* ghost o *)))
                            ((* ghost o1 *))) in
+                         (* if Map__Map.mixfix_lbrb (!kind) poa = Appr && *)
+                         (*      Map__Map.mixfix_lbrb (!from) poa == poa then visited := o; *)
                          begin ((Abstract_queue__AbstractQueue.push poa) q);
                          ((* assert *)) end end
                     else ((* assert *)) end
@@ -195,13 +229,17 @@ let brab (init1: Fol__FOL.t) (theta1: Fol__FOL.t) =
        begin (try while true do
                   if let o2 = (Pervasives.(!) bwd_res) in
                   ((o2 = Unsafe))
-                  then begin if let o2 =
+                  then begin 
+		 (*-----------------  Begin manually edited ------------------*)
+                  Format.eprintf "unsafe %a@." Fol__FOL.print !faulty;
+ 		 (*------------------  End manually edited -------------------*)
+                             if let o2 =
                                   (let o3 = (Pervasives.(!) faulty) in
                                   let o4 = (Pervasives.(!) kind) in
                                   (Map__Map.mixfix_lbrb o4 o3)) in
                              ((o2 = Orig))
                              then 
-			       (Format.eprintf "unsafe %a@." Fol__FOL.print !faulty; raise Unsafe_trace)
+			       (raise Unsafe_trace)
                              else (());
                        begin let o2 =
                                (let o3 = (Pervasives.(!) bad) in
@@ -215,7 +253,7 @@ let brab (init1: Fol__FOL.t) (theta1: Fol__FOL.t) =
                        let o2 = ((bwd init1) theta1) in
                        ((Pervasives.(:=) bwd_res) o2) end end;
 		       (*-----------------  Begin manually edited ------------------*)
-		       Format.eprintf "Backtracking ...@.";
+		       Format.eprintf "\n---------------BACKTRACKING---------------@.";
 		       (*------------------  End manually edited -------------------*)
 		       end
                   else raise Why3__Prelude.PcExit done with

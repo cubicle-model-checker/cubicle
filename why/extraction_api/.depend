@@ -177,14 +177,16 @@
 ../../brab.cmx : ../../search.cmx ../../pretty.cmx ../../options.cmx \
     ../../common/hstring.cmx ../../forward.cmx ../../enumerative.cmx \
     ../../cube.cmx ../../ast.cmx ../../brab.cmi
-../../bwreach.cmo : ../../smt/smt.cmi ../../search.cmi ../../prover.cmi \
-    ../../pretty.cmi ../../options.cmi ../../common/hstring.cmi functory.cmi \
-    ../../forward.cmi ../../cubetrie.cmi ../../cube.cmi ../../brab.cmi \
-    ../../ast.cmi ../../bwreach.cmi
-../../bwreach.cmx : ../../smt/smt.cmx ../../search.cmx ../../prover.cmx \
-    ../../pretty.cmx ../../options.cmx ../../common/hstring.cmx functory.cmx \
-    ../../forward.cmx ../../cubetrie.cmx ../../cube.cmx ../../brab.cmx \
-    ../../ast.cmx ../../bwreach.cmi
+../../bwreach.cmo : ../../trace.cmi ../../smt/smt.cmi ../../search.cmi \
+    ../../prover.cmi ../../pretty.cmi ../../options.cmi \
+    ../../common/hstring.cmi functory.cmi ../../forward.cmi \
+    ../../cubetrie.cmi ../../cube.cmi ../../brab.cmi ../../ast.cmi \
+    ../../bwreach.cmi
+../../bwreach.cmx : ../../trace.cmx ../../smt/smt.cmx ../../search.cmx \
+    ../../prover.cmx ../../pretty.cmx ../../options.cmx \
+    ../../common/hstring.cmx functory.cmx ../../forward.cmx \
+    ../../cubetrie.cmx ../../cube.cmx ../../brab.cmx ../../ast.cmx \
+    ../../bwreach.cmi
 ../../cube.cmo : ../../smt/smt.cmi ../../search.cmi ../../prover.cmi \
     ../../pretty.cmi ../../options.cmi ../../common/hstring.cmi \
     ../../cubetrie.cmi ../../ast.cmi ../../cube.cmi
@@ -239,6 +241,10 @@
 ../../search.cmx : ../../common/timer.cmx ../../prover.cmx ../../pretty.cmx \
     ../../options.cmx ../../common/heap.cmx functory.cmx ../../cubetrie.cmx \
     ../../ast.cmx ../../search.cmi
+../../trace.cmo : ../../smt/smt.cmi ../../options.cmi \
+    ../../common/hstring.cmi ../../ast.cmi ../../trace.cmi
+../../trace.cmx : ../../smt/smt.cmx ../../options.cmx \
+    ../../common/hstring.cmx ../../ast.cmx ../../trace.cmi
 ../../typing.cmo : ../../smt/smt.cmi ../../pretty.cmi ../../options.cmi \
     ../../common/hstring.cmi ../../cube.cmi ../../ast.cmi ../../typing.cmi
 ../../typing.cmx : ../../smt/smt.cmx ../../pretty.cmx ../../options.cmx \
@@ -264,13 +270,16 @@
 ../../prover.cmi : ../../common/timer.cmi ../../smt/smt.cmi \
     ../../common/hstring.cmi ../../ast.cmi
 ../../search.cmi : ../../common/timer.cmi ../../cubetrie.cmi ../../ast.cmi
+../../trace.cmi : ../../ast.cmi
 ../../typing.cmi : ../../ast.cmi
-abstract_queue__AbstractQueue.cmo : fol__FOL.cmo
-abstract_queue__AbstractQueue.cmx : fol__FOL.cmx
-cubicle_brab_map__Cubicle_BRAB.cmo : why3__Prelude.cmo \
+abstract_queue__AbstractQueue.cmo : translation.cmo set__Fset.cmo \
+    fol__FOL.cmo
+abstract_queue__AbstractQueue.cmx : translation.cmx set__Fset.cmx \
+    fol__FOL.cmx
+cubicle_brab_map__Cubicle_BRAB.cmo : why3__Prelude.cmo translation.cmo \
     reachability__Reachability.cmo ../../options.cmi map__Map.cmo \
     fol__FOL.cmo ../../brab.cmi abstract_queue__AbstractQueue.cmo
-cubicle_brab_map__Cubicle_BRAB.cmx : why3__Prelude.cmx \
+cubicle_brab_map__Cubicle_BRAB.cmx : why3__Prelude.cmx translation.cmx \
     reachability__Reachability.cmx ../../options.cmx map__Map.cmx \
     fol__FOL.cmx ../../brab.cmx abstract_queue__AbstractQueue.cmx
 fol__FOL.cmo : translation.cmo ../../smt/term.cmi ../../smt/smt.cmi \
@@ -281,22 +290,26 @@ fol__FOL.cmx : translation.cmx ../../smt/term.cmx ../../smt/smt.cmx \
     ../../cube.cmx ../../ast.cmx
 functory.cmo : functory.cmi
 functory.cmx : functory.cmi
-global.cmo : ../../ast.cmi
-global.cmx : ../../ast.cmx
-main_extract.cmo : ../../typing.cmi ../../prover.cmi ../../parser.cmi \
-    ../../options.cmi ../../lexer.cmo global.cmo ../../forward.cmi \
-    fol__FOL.cmo ../../enumerative.cmi cubicle_brab_map__Cubicle_BRAB.cmo \
-    ../../bwreach.cmi ../../ast.cmi
-main_extract.cmx : ../../typing.cmx ../../prover.cmx ../../parser.cmx \
-    ../../options.cmx ../../lexer.cmx global.cmx ../../forward.cmx \
-    fol__FOL.cmx ../../enumerative.cmx cubicle_brab_map__Cubicle_BRAB.cmx \
-    ../../bwreach.cmx ../../ast.cmx
-map__Map.cmo : fol__FOL.cmo
-map__Map.cmx : fol__FOL.cmx
-reachability__Reachability.cmo : fol__FOL.cmo ../../bwreach.cmi
-reachability__Reachability.cmx : fol__FOL.cmx ../../bwreach.cmx
-set__Fset.cmo : ../../ast.cmi
-set__Fset.cmx : ../../ast.cmx
+global.cmo : ../../smt/term.cmi ../../ast.cmi
+global.cmx : ../../smt/term.cmx ../../ast.cmx
+main_extract.cmo : ../../typing.cmi translation.cmo ../../prover.cmi \
+    ../../parser.cmi ../../options.cmi ../../lexer.cmo global.cmo \
+    ../../forward.cmi fol__FOL.cmo ../../enumerative.cmi \
+    cubicle_brab_map__Cubicle_BRAB.cmo ../../bwreach.cmi ../../ast.cmi
+main_extract.cmx : ../../typing.cmx translation.cmx ../../prover.cmx \
+    ../../parser.cmx ../../options.cmx ../../lexer.cmx global.cmx \
+    ../../forward.cmx fol__FOL.cmx ../../enumerative.cmx \
+    cubicle_brab_map__Cubicle_BRAB.cmx ../../bwreach.cmx ../../ast.cmx
+map__Map.cmo : translation.cmo fol__FOL.cmo
+map__Map.cmx : translation.cmx fol__FOL.cmx
+reachability__Reachability.cmo : translation.cmo ../../smt/term.cmi \
+    ../../pretty.cmi ../../common/hstring.cmi global.cmo fol__FOL.cmo \
+    ../../ast.cmi
+reachability__Reachability.cmx : translation.cmx ../../smt/term.cmx \
+    ../../pretty.cmx ../../common/hstring.cmx global.cmx fol__FOL.cmx \
+    ../../ast.cmx
+set__Fset.cmo :
+set__Fset.cmx :
 translation.cmo : ../../smt/ty.cmi ../../smt/term.cmi ../../smt/smt.cmi \
     ../../prover.cmi ../../pretty.cmi ../../common/hstring.cmi global.cmo \
     ../../ast.cmi

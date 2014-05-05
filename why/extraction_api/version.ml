@@ -1,3 +1,3 @@
 let version = "0.5"
-let date = "Lun 27 jan 2014 14:25:21 CET"
+let date = "Lun 5 mai 2014 10:01:21 CEST"
 let libdir = "/usr/local/lib/cubicle"

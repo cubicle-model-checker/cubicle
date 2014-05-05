@@ -163,7 +163,6 @@ version.ml: config.status
 ########
 
 .depend depend::
-	@rm -f .depend
 	@$(OCAMLDEP) -slash -I ../../common/ ../../common/*.ml ../../common/*.mli > .depend
 	@$(OCAMLDEP) -I ../../common/ -I ../../smt/ ../../smt/*.ml ../../smt/*.mli >> .depend
 	@$(OCAMLDEP) -I ../../common/ -I ../../smt/ -I ../../ ../../*.ml ../../*.mli >> .depend

@@ -919,6 +919,11 @@ let rec instanciate_proc csts f =
 let skolem_instanciate f =
   List.map (fun f ->
 	    let f, csts, h_csts = skolemize f in
+            let csts, h_csts =
+              (* create at least one instance *)
+              if csts = [] then let h = (Hstring.make "#1") in 
+                                [proc_to_pv h], [h]
+              else csts, h_csts in
 	    let f = instanciate_proc csts f in
 	    f, h_csts
 	   ) (dnfize_list f)
@@ -938,13 +943,9 @@ let distinct vars =
 		       (List.map (fun v -> Smt.Term.make_app v []) vars)
 
 let safety_formulas f =
-
-  eprintf "SAFETY bef: %a@." Pretty.print_term f;
   List.map (fun (f, h_csts) ->
-    eprintf "SAFETY: %a\n@." Pretty.print_term f;
     distinct h_csts,
     let sf  = why_to_smt f in
-    eprintf "SMT: %a\n@." Smt.Formula.print sf;
     sf
   ) (skolem_instanciate f)
 

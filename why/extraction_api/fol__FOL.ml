@@ -4,6 +4,7 @@ open Global
 open Format
 module S = Set__Fset.Make(SAtom)
 
+
 open Why3
 
 type t = Term.term
@@ -123,7 +124,7 @@ let infix_breqeq (x: t) (x1: t) : bool =
   (* let x, x1 = dnfize x, dnfize x1 in  *)
   let ls = fol_to_cubes x in
   match ls with
-  | [s] -> Cube.fixpoint ~invariants:[] ~visited:(fol_to_cubes x1) s <> None
+  | [s] -> Cube.pure_smt_fixpoint s (fol_to_cubes x1) <> None
   | _ -> assert false
 
 (* Notataions *)
@@ -142,16 +143,18 @@ let (|=) x x1 = infix_breqeq x x1
 
 module SMT = Prover.SMT
 
-let sat (f: t) : bool = false
-  (* if Options.debug then eprintf "sat: %a@." print f; *)
-  (* List.exists (fun (dist, f) -> *)
-  (*              try *)
-  (*       	 SMT.clear (); *)
-  (*       	 SMT.assume ~profiling:false ~id:0 dist; *)
-  (*       	 SMT.assume ~profiling:false ~id:0 f; *)
-  (*       	 SMT.check  ~profiling:false (); *)
-  (*       	 false *)
-  (*              with Smt.Unsat _ -> false  *)
-  (*             ) (Translation.safety_formulas f) *)
+let sat (f: t) : bool =
+  if Options.debug then eprintf "sat: %a@." print f;
+  List.exists (fun (dist, f) ->
+               if Options.debug then eprintf "dist2: %a@." Smt.Formula.print dist;
+               if Options.debug then eprintf "sat2: %a@." Smt.Formula.print f;
+               try
+        	 SMT.clear ();
+        	 SMT.assume ~profiling:false ~id:0 dist;
+        	 SMT.assume ~profiling:false ~id:0 f;
+        	 SMT.check  ~profiling:false ();
+        	 true
+               with Smt.Unsat _ -> false
+              ) (Translation.safety_formulas f)
 
 let valid (f: t) : bool = not (sat (prefix_tl f))
