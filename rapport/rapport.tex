@@ -11,6 +11,8 @@
 \usepackage{wasysym}
 \usepackage{float}
 \usepackage{multirow}
+\usepackage{multicol}
+\usepackage{algpseudocode}
 
 \usepackage{listings}  %%% Pour pretty-printer le code caml
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor} %%% Pour avoir des noms de
@@ -42,6 +44,8 @@
                 \fi
         \fi
 }
+
+
 
 \newlength{\RoundedBoxWidth}
 \newsavebox{\GrayRoundedBox}
@@ -87,7 +91,7 @@
 
 
 
-\title{Rapport de TER \\ Réalisation d'un  ordonnanceur programmable pour Cubicle}
+\title{\vspace{-1.0cm}Rapport de TER \\ Réalisation d'un  ordonnanceur programmable pour Cubicle}
 \author{Mattias Roux}
 
 
@@ -109,8 +113,10 @@
 
 	\textbf{Cubicle} est un model checker conçu pour vérifier des propriétés de sûreté d'algorithmes faisant intervenir un nombre quelconque de processus. Le fonctionnement de \textbf{Cubicle} repose en partie sur l'analyse de traces d'exécution d'un programme pour un nombre fini de processus.}
 	
-	Dans le cadre de mon TER \footnote{Travail d'Etude et de Recherche}, j'ai travaillé au sein de l'équipe Toccata (\href{http://toccata.lri.fr/index.fr.html}{leur site}) et tout particulièrement avec Sylvain Conchon et Alain Mebsout, à l'élaboration d'un ordonnanceur programmable pour Cubicle.
+	\paragraph{}Dans le cadre de mon TER \footnote{Travail d'Etude et de Recherche}, j'ai travaillé au sein de l'équipe Toccata (\href{http://toccata.lri.fr/index.fr.html}{leur site}) et tout particulièrement avec Sylvain Conchon et Alain Mebsout, à l'élaboration d'un ordonnanceur programmable pour Cubicle.
 	Voilà le rapport de ce travail commencé en janvier et que je vais continuer lors d'un stage. Ce rapport est donc à la fois un compte-rendu de ce que j'ai déjà fait et aussi un aperçu de ce que je voudrais faire.
+	\paragraph{}Je profite de cette introduction pour expliquer clairement ma démarche lors de la rédaction de ce rapport. J'ai décidé d'y mettre beaucoup de parties de code qui, bien que paraissant obscures de prime abord, se révéleront vite claires grâce aux explications. Ainsi, le code arrive avant l'explication et il sera peut-être nécessaire de s'y référer assez souvent. C'est pour cela que j'ai, dans un souci de lisibilité, décidé de rendre le code remarquable\footnote{J'en profite pour remercier les auteurs de \cite{Verif} qui m'ont permis de réutiliser certaines de leurs fonctions \LaTeX.}. 
+	\paragraph{}Bonne lecture.
 	
 	
 
@@ -155,7 +161,8 @@
 			\caption{Déclarations de variables et de tableaux pour \textbf{Cubicle}}
 			\label{fig:decl_cub}
 		\end{figure}
-		 
+		
+		\newpage 
 		Ainsi, dans le cadre de German\textit{-ish}, on doit écrire :
 		
 		\begin{figure}[ht]
@@ -165,8 +172,6 @@
 			\caption{Déclarations dans German\textit{-ish} pour \textbf{Cubicle}}
 			\label{fig:gish_decl_cub}
 		\end{figure}
-		
-	\newpage
 	
 		\subsection{Déclaration de l'état initial}
 		\label{subsec:decl_init}
@@ -264,7 +269,7 @@
 
 		La partie correspondant aux modifications du système n'est donc exécutée que si cette garde est vérifiée.
 		
-		\paragraph{} Voilà, donc, un bref aperçu de ce langage et j'espère que ceci a permis une compréhension précise de ce qu'il est possible de faire avec \textbf{Cubicle}. En réalité, le plus simple est de voir \textbf{Cubicle} comme un automate non déterministe avec un état initial et un ou plusieurs états terminaux que sont les états unsafe.
+		\paragraph{} Voilà, donc, un bref aperçu de ce langage et j'espère que ceci a permis une compréhension suffisante de ce qu'il est possible de faire avec \textbf{Cubicle} pour comprendre ce que j'ai fait avec mon ordonnanceur. En réalité, le plus simple est de voir \textbf{Cubicle} comme un automate non déterministe avec un état initial et un ou plusieurs états terminaux que sont les états unsafe, l'ordonnanceur se charge donc de faire tourner l'automate et de garder en mémoire les états visités.
 			
 		\section{BRAB}
 		\label{sec:brab}
@@ -300,10 +305,9 @@
 		\section{Les structures de données}
 		\label{sec:struct}
 		
-			Il serait judicieux de commencer la description de cet ordonnanceur par une présentation de ses structures de données. Plusieurs choix se sont proposés à moi. Convertir un fichier \textbf{Cubicle} en fichier \textbf{OCaml} et exécuter ce fichier (compilation) ou, au contraire, exécuter un fichier \textbf{Cubicle} grâce à un programme \textbf{OCAml} (interprétation). J'ai choisi une espèce de mélange des deux et, pour cela, il a fallu que je crée des structures de données pour représenter les tableaux, les variables globales, un état du système, un ensemble de ces états. Pour le moment, je vais uniquement 
+			Il serait judicieux de commencer la description de cet ordonnanceur par une présentation de ses structures de données. Plusieurs choix se sont proposés à moi. Convertir un fichier \textbf{Cubicle} en fichier \textbf{OCaml} et exécuter ce fichier (compilation) ou, au contraire, exécuter un fichier \textbf{Cubicle} grâce à un programme \textbf{OCaml} (interprétation). J'ai choisi une espèce de mélange des deux et, pour cela, il a fallu que je crée des structures de données pour représenter les tableaux, les variables globales, un état du système, un ensemble de ces états. 
 			
-			
-			\paragraph{} Premièrement, avant de commencer, un petit travail de réflexion s'imposait pour pouvoir gérer les tableaux. En effet, bien que cela n'ait pas été mentionné auparavant, il faut savoir que les tableaux de \textbf{Cubicle} sont potentiellement multidimensionnels. Valait-il mieux les gérer un par un ou les regrouper sous un module pouvant représenter un tableau simple comme un tableau à cinq dimensions. J'ai, premièrement, décidé de ne faire que des tableaux à une dimension et de gérer les multidimensionnels en les écrasant. Malheureusement, cela entraînait de sérieuses complications lorsqu'il s'agissait d'accéder à des éléments en particulier et, d'un point de vue de la lisibilité, était catastrophique. J'ai donc décidé de créer un module :
+			\paragraph{} Premièrement, avant de commencer, un petit travail de réflexion s'imposait pour pouvoir gérer les tableaux. En effet, bien que cela n'ait pas été mentionné auparavant, il faut savoir que les tableaux de \textbf{Cubicle} sont potentiellement multidimensionnels. Valait-il mieux les gérer un par un ou les regrouper sous un module pouvant représenter un tableau simple comme un tableau à cinq dimensions. J'ai, premièrement, décidé de ne faire que des tableaux à une dimension et de gérer les multidimensionnels en les écrasant. Malheureusement, cela entraînait de sérieuses complications lorsqu'il s'agissait d'accéder à des éléments en particulier et, d'un point de vue de la lisibilité, était catastrophique. J'ai donc décidé de créer un module permettant de représenter tous les tableaux avec un seul type :
 
 			\begin{figure}[H]
 				\begin{CodeEx}
@@ -314,7 +318,7 @@
 			\end{figure}			
 
 			
-			Les tableaux faits, je pouvais les remplir. Malheureusement, bien que mon module \texttt{DA} soit polymorphe, je ne pouvais pas y stocker tous les types de variables, il me fallait, pour cela, déclarer un type qui les regrouperait tous\footnote{Oui, c'est bien une citation détournée.} (énumérés, abstraits, types de bases...).
+			Les tableaux faits, je pouvais les remplir. Malheureusement, bien que mon module \texttt{DA} soit polymorphe, je ne pouvais pas y stocker tous les types de variables de \textbf{Cubicle}, il me fallait, pour cela, déclarer un type qui les regrouperait tous (énumérés, abstraits, types de bases...) :
 			
 			\begin{figure}[H]
 				\begin{CodeEx}
@@ -324,7 +328,7 @@
 				\label{fig:value}
 			\end{figure}						
 			
-			Cela étant fait, je pouvais enfin définir ce qu'était un état de mon point de vue avec un nouveau module.			
+			Cela étant fait, je pouvais enfin définir ce qu'était un état de mon point de vue avec un nouveau module :			
 			
 			\begin{figure}[H]
 				\begin{CodeEx}
@@ -344,17 +348,20 @@
 				\label{fig:syst}
 			\end{figure}
 			
-			Bien que tout cela puisse para\^{i}tre obscur pour le moment, pas d'inquiétude, je vais expliquer ces choix d'implémentation dans les parties suivantes. 
-			On retiendra simplement que le système contient un ensemble d'états (plus d'autres choses mais qui sont importantes pour l'initialisation et l'ordonnancement) qui contiennent, eux, des \texttt{Hashtbl} de \texttt{value} et des \texttt{Hashtbl} de \texttt{DimArray} de \texttt{value}.
+			On retiendra, ici, que le système contient un ensemble d'états \footnote{Plus d'autres choses mais qui sont importantes pour l'initialisation et l'ordonnancement et qui seront donc expliquées après.} qui contiennent, eux, des \texttt{Hashtbl} de \texttt{value} et des \texttt{Hashtbl} de \texttt{DimArray} de \texttt{value}.
 			
-		\section{Initialisation ? Des classes d'équivalences et de différences}
-		\label{sec:classes}		
-
-				Quatre cas de figures peuvent arriver lors de l'initialisation. Les deux plus simples sont lorsqu'un élément est égal à une valeur ou différent d'une valeur. Deux cas le sont moins : lorsque deux éléments sont égaux ou différents.
+			D'un point de vue apprentissage, cette partie m'a permis de comprendre assez précisément le fonctionnement des modules, des foncteurs et du polymorphisme en \textbf{OCaml}. On remarquera, en effet, que ces trois modules sont indépendants les uns des autres (une implémentation différente d'un état mais qui aurait la même signature, ne changerait rien à l'implémentation du système, par exemple.) et entièrement polymorphes. Nous manipulons ici des éléments de type \texttt{value} mais il aurait tout-à-fait été possible de manipuler des entiers ou des chaînes de caractères.
+			
+		\section{La rentrée des classes}
+		\label{sec:classes}	
+		
+			Il convient, avant de commencer, d'expliciter les choix qui ont été faits pour les types abstraits. Reprenons notre type \texttt{abstr} de la figure~\ref{fig:type_cub}. A la figure~\ref{fig:decl_cub}, on remarque que la variable \texttt{Abs} a ce type et c'est la seule. Dorénavant, le type \texttt{abstr} sera un type énuméré dont la seule valeur possible sera \texttt{Abs}. Ainsi, chaque variable de type abstrait prendra comme valeur elle-même, sinon, si elle a été initialisée avec une autre variable du même type, (qui ne peut pas être une valeur, car ce type n'a pas, à proprement parler, de valeur), les deux variables auront comme valeur une valeur choisie parmi elle deux (si $v:abstr = v':abstr$ alors $v \gets Hstr ~\ v$ et $v' \gets Hstr ~\ v$).	
 				
-				Afin de mettre en \oe{}uvre une initialisation efficace, j'ai décidé de fonctionner avec un pré-traitement grâce auquel je remplis des classes d'équivalence et de différence\footnote{Je me suis basé, ici, sur une simplification des structures Union-Find}. 
+			\paragraph{} Afin de mettre en \oe{}uvre une initialisation efficace, j'ai décidé de fonctionner avec un pré-traitement me permettant de remplir des classes d'équivalence\footnote{Je me suis basé sur une simplification des structures Union-Find} et de différences. 
 			
-			Petite astuce, on aura remarqué dans la figure~\ref{fig:value}, la présence de \texttt{Var of Hstring.t}. Cette valeur, qui n'existe que pour l'initialisation, permet de savoir que la valeur actuelle d'un élément est lui-même ou son représentant qui est aussi un élément.
+			\paragraph{} \textit{Petite astuce, on aura remarqué dans la figure~\ref{fig:value}, la présence de \texttt{Var of Hstring.t}. Cette valeur, qui n'existe que pour l'initialisation, permet de savoir que le représentant actuel d'un élément est un élément et non pas une valeur.}
+			
+			\paragraph{} Sans plus tarder, voici donc les deux classes :						
 			
 			\begin{figure}[H]
 				\begin{CodeEx}
@@ -363,28 +370,295 @@
 				\caption{Les classes d'équivalence et de différences}
 				\label{fig:ecdc}
 			\end{figure}	
-				
-			Ainsi, dans le cas où un élément est égal à une valeur, on va chercher son représentant dans \texttt{ec} et on modifie celui-ci avec la valeur. 
+
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=106,lastline=109]{exemple.cub}
+				\end{CodeEx}
+				\caption{stype : variable ou tableau avec type et dimension}
+				\label{fig:stype}
+			\end{figure}	
 			
-		\section{Déterministe vs non déterministe}
-		\label{sec:detvs}
 			
-		
+			Dont voici l'explication :
+			
+			\paragraph{} ec	: 
+				$\begin{cases}
+					\texttt{Hstring.t} & \text{Le nom de l'élément} \\
+					\texttt{TS.elt} & \text{Son représentant (un élément ou une valeur, cf figure~\ref{fig:value})} \\
+					\texttt{stype} & \text{cf figure~\ref{fig:stype}}
+				\end{cases}$
 				
+			\paragraph{} dc	: 
+				$\begin{cases}
+					\texttt{Hstring.t} & \parbox[t]{.7\textwidth}{Le nom du représentant de la classe (un élément qui représente tous les éléments égaux entre eux)} \\
+					\texttt{ty} & \text{Le type de cette classe : abstrait ou énuméré} \\
+					\texttt{TS.t} & \text{L'ensemble des valeurs possibles pour cette classe} \\
+					\texttt{TI.t} & \text{L'ensemble des représentants différents de celui-ci} \\
+				\end{cases}$	
 				
-		\section{Colorions}
+			\paragraph{} Ces structures sont initialisées avec des valeurs par défaut :
+			
+			\begin{figure}[ht]
+			\begin{CodeEx}\[
+				\begin{array}{l}
+				\text{init\_ce} : ~\forall e. ~\ \texttt{Hashtbl.add} ~\ ec ~\ (Var ~\ e) ~\ (e, ~\ \texttt{stype(}e\texttt{)})
+				\\[0.5em]
+				\text{init\_dc} : ~\forall e. ~\ 
+					\texttt{Hashtbl.add} ~\ dc ~\ e ~\ (\texttt{ty(}e\texttt{)}, ~\ 
+						\begin{cases} 
+							\emptyset & \texttt{ty(}e\texttt{)} = abstract \\
+							\{Var ~\ e\} & \texttt{ty(}e\texttt{)} = other
+						\end{cases}	
+					, ~\ \emptyset)
+				\\[0.5em]
+				\end{array}
+			\]
+			\end{CodeEx}
+			\caption{Initialisation de ec et de dc}
+			\label{fig:ec_dc_init}			
+		\end{figure}
+				
+			\paragraph{} Les classes d'équivalence et de différences étant définies et initialisées, voyons les cinq cas de figures pouvant arriver lors de l'initialisation à proprement parler\footnote{Celle du fichier \textbf{Cubicle}}
+			\begin{alignat}{2}
+			  	& \text{Element e\, =\, Valeur v} & \parbox[t]{.6\textwidth}{On supprime définitivement le représentant \texttt{r} de \texttt{e} de \texttt{dc} et on modifie le représentant dans \texttt{ec} de \texttt{e} ainsi que tous les éléments ayant le même représentant par \texttt{v}. De plus, tout élément de \texttt{dc} étant différent de \texttt{r} voit la valeur \texttt{v} supprimée de ses valeurs possibles.}\label{cas:1} \\
+			       & \text{Element e\, =\, Element e'} & \parbox[t]{.6\textwidth}{On suppose que les représentants de \texttt{e} et de \texttt{e'} ne sont pas des valeurs, auquel cas on serait ramené au premier cas. L'un des deux éléments devient le représentant de tous les éléments de la classe du second. S'ils sont de type abstrait, la valeur possible est le représentant, sinon, c'est l'intersection des types possibles des deux classes de différences. Ensuite, on supprime la classe qui n'est pas représentante de \texttt{dc}.}\label{cas:2} \\
+			       & \text{Element e\, $\neq$ \, Valeur v} & \parbox[t]{.6\textwidth}{Naturellement, ici, on supprime la valeur des valeurs possibles et on ne fait rien d'autre\footnote{Pour des raisons de sécurité du programme, il faudrait néanmoins vérifier qu'il reste des valeurs possibles.}}\label{cas:3} \\
+			       & \text{Element e\, $\neq$ \, Element e'} & \parbox[t]{.6\textwidth}{On suppose que les représentants de \texttt{e} et \texttt{e'} ne sont pas des valeurs. On change uniquement les ensembles \texttt{TI} de chacun des représentants \texttt{r} de \texttt{e} et \texttt{r'} de \texttt{e'} en y ajoutant respectivement \texttt{r'} et \texttt{r}.}\label{cas:4} \\
+			       & \text{Element e\, $\neq$ \, Proc z} & \parbox[t]{.6\textwidth}{Ce cas est particulier et intervient uniquement dans le cas où une variable est différente de tous les processus (cf figure~\ref{fig:gish_init_cub}. Dans ce cas là, on détermine que la seule valeur possible pour celle-ci est un processus fantôme défini depuis le début comme étant égal au nombre de processus plus 1.}\label{cas:5}
+			\end{alignat}
+			
+			Bien que cela n'apparaisse pas ici car étant en cours de construction, le cas des entiers et des réels est géré aussi mais entraîne un traitement différent qu'il ne me semblait pas judicieux d'expliquer.
+			
+			\paragraph{} Désormais, pour l'initialisation, le reste du travail ne se fera qu'avec ces deux groupes. 
+			
+		\section{Coloriage}
 		\label{sec:color}
+			
+			Nous avons donc des classes d'équivalence dans laquelle chaque élément devra avoir la même valeur et des classes de différences où sont répertoriées les valeurs possibles pour chaque classe ainsi que les classes desquelles elles doivent être différentes. 
+		
+		\paragraph{} On épargnera au lecteur la transformation de \texttt{dc} en graphes de différences car cela est surtout le résultat de la lecture de \texttt{dc} afin de remplir une table avec des groupes de différences et nous allons plutôt l'illustrer par un exemple.
+		
+		\begin{figure}[H]
+ 			\begin{minipage}[b]{.40\linewidth}
+  				\begin{figure}[H]
+					\begin{CodeEx}
+						\lstinputlisting[firstline=111,lastline=125]{exemple.cub}
+					\end{CodeEx}
+					\caption{Exemple d'initialisation}
+					\label{fig:ex_init}
+				\end{figure}	
+ 			\end{minipage} \hfill
+ 			\begin{minipage}[b]{.56\linewidth}
+  				\begin{figure}[H]
+					\begin{tikzpicture}
+						% les noeuds seront tous dessinés , entourés d’un cercle :
+						\tikzstyle {every node}=[draw, shape=circle ];
+						% définition des noeuds :
+						\path
+						(4 ,6) node[align=center](A){\{$S_1, S_2$\} \\ \\ \{I, S, E\}}
+						(8 ,4) node[align=center](B){\{$S_3$\} \\ \\ \{I, S, E\}}
+						(6 ,0) node[align=center](C){\{$S_4$\} \\ \\ \{S, E\}}
+						(2 ,0) node[align=center](D){\{$S_5$\} \\ \\ \{I, S, E\}}
+						(0 ,4) node[align=center](E){\{$S_6$\} \\ \\ \{I, S, E\}};
+						% tracé des arêtes en traits rectilignes continus :
+						\draw (A)--(B)
+						(B)--(D)
+						(A)--(E)
+						;
+					\end{tikzpicture} 
+				\caption{Le graphe correspondant}
+				\label{fig:ex_init2}
+				\end{figure}	
+ 			\end{minipage}
+		\end{figure}		
+		
+		Dont une solution possible est :
+		
+		\begin{figure}[H]
+	\centering					
+					\begin{tikzpicture}
+						% les noeuds seront tous dessinés , entourés d’un cercle :
+						\tikzstyle {every node}=[draw, shape=circle ];
+						% définition des noeuds :
+						\path
+						(4 ,6) node[align=center](A){\{$S_1, S_2$\} \\ \\ S}
+						(8 ,4) node[align=center](B){\{$S_3$\} \\ \\ I}
+						(6 ,0) node[align=center](C){\{$S_4$\} \\ \\ S}
+						(2 ,0) node[align=center](D){\{$S_5$\} \\ \\ S}
+						(0 ,4) node[align=center](E){\{$S_6$\} \\ \\ I};
+						% tracé des arêtes en traits rectilignes continus :
+						\draw (A)--(B)
+						(B)--(D)
+						(A)--(E)
+						;
+					\end{tikzpicture} 
+					\caption{Le graphe solution}
+				\label{fig:ex_sol}
+				\end{figure}	
+		
+		Solution que nous avons trouvé en appliquant l'algorithme de coloriage de graphe suivant :
+			
+		\begin{figure}[H]
+			\begin{CodeEx}		
+			\begin{algorithmic}
+				\Function {coloriage} {G(V, E)}			
+  					\State $Q \gets$ \Call{sort\_nodes}{$V$}
+  					\ForAll {$n \in Q$}
+  						\State $v \gets $ \Call{available\_value}{$n$}
+  						\State $n.value \gets v$
+  						\ForAll {$n' \in Q \setminus \{n\}$}
+  							\If {$(n, n') \notin E}$
+  								\State $n'.value \gets v$
+  									\State $Q \gets Q \setminus \{n'\}$
+  							\ElsIf {$n' \in CFC(n)$}
+  								\State \textit{/* $CFC(n)$ est la composante fortement connexe contenant $n$ */}
+  								\State $n'.available\_value \gets n'.available\_value \setminus \{v\}$
+  							\EndIf
+  						\EndFor
+  					\EndFor
+				\EndFunction
+			\end{algorithmic}
+			\end{CodeEx}
+			\caption{Initialisation des variables selon leurs différences}
+  			\label{algo:bra}
+		\end{figure}
+		
+		La fonction \textsc{sort\_nodes($V$)} trie les n\oe{}uds selon deux critères. Les n\oe{}uds ayant le moins de valeurs disponibles sont les premiers, puis arrivent ceux ayant le plus haut degré (donc étant différent du plus grand nombre). Cet algorithme a néanmoins un défaut, il fait une initialisation déterministe (la fonction \textsc{available\_value($n$)} choisit la première valeur disponible). Mais, de toutes façons, bien que cet algorithme ait été intéressant à trouver, il n'est pas très intéressant par rapport aux fichiers que j'avais en ma possession car peu de variables sont initialisées par rapport à leur différence avec d'autres. Voici donc la partie intéressante, l'initialisation multiple.
+		
+		\section{Multiplication}
+		\label{sec:mult}
+		
+			Dans la plupart des cas, il n'y a pas de différences. On peut donc oublier les cas \ref{cas:3} et \ref{cas:4} et se concentrer sur les cas \ref{cas:1}, \ref{cas:2} et \ref{cas:5}\footnote{On considère dorénavant que les variables ne sont pas liées par des relations de différence.}.
+			
+			\paragraph{} Dans les cas \ref{cas:1} et \ref{cas:5}, tout se passe pour le mieux car la classe ne peut avoir qu'une seule valeur et cela introduira donc une seule initialisation possible pour les éléments de cette classe.
+		
+			\paragraph{} Le cas qui nous intéresse est donc le \ref{cas:2}. Cela entra\^{i}ne simplement le fait que deux éléments doivent \^{e}tre égaux mais rien n'est dit sur la valeur qu'ils doivent avoir. Originellement, pour des raisons de simplicité évidente, j'avais décidé d'initialiser ces variables à une valeur choisie par défaut\footnote{Par exemple, la première apparaissant dans la définition du type de la variable.}. Le système avait donc un label \texttt{init} mais celui-ci n'était pas un ensemble d'états, c'était un état unique.
+			
+			\paragraph{} Cela s'est avéré, d'un point de vue expressif, beaucoup trop faible pour des fichiers complexes (adieu German\textit{-ish}, dorénavant il m'a fallu travailler sur Flash). J'ai donc décidé d'initialiser toute variable non initialisée à deux de ses valeurs possibles. Cette solution fut très rapidement abandonnée du fait de l'explosion du nombre d'états qu'elle engendrait. Imaginez un peu, pour quinze variables non initialisées\footnote{On aura enfin compris que "non initialisée" signifie que la variable n'est pas dans les cas \ref{cas:1} ou \ref{cas:5}} on obtient $2^{15}$ états différents. Autant dire que la mémoire ne supportait pas beaucoup ce cas de figure.
+			
+			\paragraph{} Comme d'habitude, il a fallu arrêter de foncer tête baissée dans la programmation pour réfléchir plutôt à ce qui était vraiment intéressant. Alain et moi avons donc lancés plusieurs fichiers pour nous rendre compte qu'il n'y avait, en réalité, que deux cas qui posaient problèmes.
+			
+			\begin{alignat*}{1}
+				& \text{Le cas des variables de type processus non initialisés} \\
+				& \text{Le cas de certains tableaux représentant le contenu des caches non initialisés}
+			\end{alignat*}
+			
+			Il a donc été décidé qu'un fichier de configuration de l'ordonnanceur serait créé pour chaque fichier \textbf{Cubicle} le nécessitant. Nous y voilà enfin, l'ordonnanceur pouvait commencer à devenir programmable.
+			
+			\paragraph{} J'ai donc identifiés les cas nous posant actuellement problème et ai associé à chacun une commande spécifique dans le langage\footnote{Très réduit, pour le moment} que j'ai créé pour l'occasion.
+			
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=127,lastline=130]{exemple.cub}
+				\end{CodeEx}
+				\caption{Les quatre commandes possibles du langage de l'ordonnaceur}
+				\label{fig:lang_sched}
+			\end{figure}	
+			
+			\begin{align*}
+				& \text{\lstinputlisting[firstline=127,lastline=127]{exemple.cub} } & \parbox[t]{.4\textwidth}{Toute variable de type processus non initialisée sera initialisée à une unique valeur par défaut.} \\
+				& \text{\lstinputlisting[firstline=128,lastline=128]{exemple.cub} } & \parbox[t]{.4\textwidth}{Toute variable de type processus non initialisée sera initialisée à deux valeurs. Celle par défaut et le processus fantôme.} \\
+				& \text{\lstinputlisting[firstline=129,lastline=129]{exemple.cub} } & \parbox[t]{.4\textwidth}{Oblige la variable à prendre chacune des valeurs apparaissant dans la liste. La valeur $-1$ correspond au processus fantôme.} \\
+				& \text{\lstinputlisting[firstline=130,lastline=130]{exemple.cub} } & \parbox[t]{.4\textwidth}{Pour chaque élément associé à un nombre $n$ dans la liste, on veut que cet élément apparaisse au moins $n$ fois dans le tableau.}			
+			\end{align*}
+			
+			Nous voilà arrivés à la fin de l'initialisation. Et on comprend maintenant pourquoi le label \texttt{init} du système est un ensemble d'états. Celui-ci représente en effet tous les états initiaux du système en fonction de ce qui a été décidé dans le fichier $.sched$ associé au fichier $.cub$.
 
 	\chapter{Les transitions et leur exécution}
 	\label{chap:trans}
-	
+		
+		Nous voilà maintenant avec un nombre connus d'états initiaux et la volonté de générer des états possibles du système à partir de ces états. En réalité, cette partie n'occupe qu'une place minime dans le travail que j'ai dû faire car elle est assez triviale et, comme je l'avais dit précédemment, il suffit simplement d'exécuter différentes transitions d'un automate. Je ne vais donc pas passer beaucoup de temps à expliquer ce que j'ai fait. Brièvement, on parcourt l'ensemble des transitions du fichier \textbf{Cubicle} et on sauvegarde dans une table les gardes et les mises-à-jour qu'elles entraînent. A chaque exécution, on parcourt toute la table à la recherche des transitions possibles (par une procédure de filtrage dont \textbf{OCaml} munit toutes ses structures) et on garde dans une liste l'ensemble des mises-à-jour possibles. On choisit ensuite aléatoirement une de ces mises-à-jour puis on l'exécute et on recommence à partir du filtrage.
+		
+		Ce qui nous donne :
+		
+		\begin{figure}[H]
+			\begin{CodeEx}		
+			\begin{algorithmic}
+				\Function {select\_and\_execute\_transition} {t\_list : (garde * update) list}			
+					\State $U \gets \emptyset$  				
+  					\ForAll {$(g, u) \in t\_list$}
+  					 	\If {$g ~\ ( )$}
+  					 		\State $U \gets U \cup \{u\}$
+  					 	\EndIf
+  					\EndFor
+  					\State \textsc{upd}$~\ \gets $ \Call{random\_element}{$U$}
+  					\State \Call{upd }{ }
+				\EndFunction
+				\Function {schedule} {nb\_exec, t\_list}
+					\For {$i = 0 ~\ $to$ ~\ nb\_exec$}
+						\State \Call{select\_and\_execute\_transition}{t\_list}
+					\EndFor
+				\EndFunction
+			\end{algorithmic}
+			\end{CodeEx}
+		\end{figure}
+		\begin{figure}[H]
+			\begin{CodeEx}
+				\begin{algorithmic}
+				\Function {schedule\_all} {nb\_exec, t\_list, system}
+					\ForAll {$i \in ~\ $system.$init$}
+						\State system.$read\_st \gets i$
+						\State system.$write\_st \gets i$
+						\State \Call{schedule} {nb\_exec, t\_list}
+					\EndFor
+				\EndFunction
+				\end{algorithmic}
+			\end{CodeEx}
+			\caption{Ordonnancement}
+  			\label{algo:scheduling}
+		\end{figure}	
+		
+		\paragraph{} On comprend donc maintenant les labels \texttt{write\_st} et \texttt{read\_st} du système. Le premier correspond à l'état sur lequel seront effectuées les mises-à-jour, le deuxième, celui sur lequel seront exécutées les vérifications des gardes. Chaque appel à \textsc{upd} sauvegarde l'actuel état \texttt{read\_st}, et remplace \texttt{write\_st} et \texttt{read\_st} par le nouvel état obtenu. Avant de continuer, précisons que ces deux états sont obligatoires car lors d'une mise-à-jour, tout se fait en simultané, ainsi, si $V1 = A$ et la mise-à-jour à effectuer demande que $V1 \leftarrow B$ et si $V1 = A$ alors $V2 \leftarrow Vrai$, $V2$ devra être égal à $Vrai$. Il ne faut donc pas que la modification de l'état modifie les variables sur lesquelles on teste.
+		\paragraph{} Voyons donc comment la garde et la mise-à-jour d'une transition ont été créées par rapport au fichier \textbf{Cubicle}.
+		
 		\section{La garde}
 		\label{sec:garde}
-	
+			
+			Cette partie admet un intérêt qu'il ne faut pas négliger. Comme nous le montrions dans la figure \ref{fig:gish_trans_log}, il faut trouver un processus\footnote{Il se peut qu'il en faille deux ou plus mais le raisonnement est le même} qui vérifie cette garde. Cela revient donc à dire que dans le cas de la figure \ref{fig:gish_init_log} et avec trois processus, il faudra vérifier que cette garde est vraie pour le processus 1, le processus 2 ou le processus 3. J'ai donc réutilisé la fonction all\_permutations de Sylvain Conchon et Alain Mebsout qui à deux listes $l_1:\alpha$ et $l_2:\beta$ telles que $l_1$ contient moins d'éléments que $l_2$ associe une liste $l_3:(\alpha*\beta) \, list$ contenant une liste de chaque élément de $l_1$ associé à un unique élément de $l_2$.
+			
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=132,lastline=133]{exemple.cub}
+				\end{CodeEx}
+				\caption{Exemple d'exécution d'all\_permutations}
+				\label{fig:all_perm}
+			\end{figure}	
+			
+		Chaque garde est donc transformée en une fonction qui à \texttt{unit} associe une disjonction de garde appliquée à chaque liste de $l_3$. Dans notre cas, $l_1$ est la liste des paramètres de la transition et $l_2$ la liste des processus, $l_3$ associe donc à chaque liste de paramètres une liste de processus possibles. 
+		
+		\paragraph{} Le cas du \texttt{forall other l} est particulier. Il faut prendre tous les processus qui n'ont pas été pris dans la sous-liste de $l_3$ qu'on est en train de traiter et vérifier qu'ils vérifient tous la condition demandée. On crée donc une conjonction de cette condition appliquée à chacun de ces processus.
+		
+		\paragraph{} Ainsi, pour trois processus, la garde de la figure \ref{fig:gish_init_log} devient :
+		
+			\begin{figure}[H]
+				\begin{CodeEx}
+					\lstinputlisting[firstline=11,lastline=12]{germanish.cub}
+					\lstinputlisting[firstline=135,lastline=140]{exemple.cub}
+				\end{CodeEx}
+				\caption{La garde de German\textit{-ish} après transformation}
+				\label{fig:all_perm}
+			\end{figure}	
+			
 		\section{Mise à jour}
 		\label{sec:maj}
-	
-\
+		
+		Les mises-à-jour ne sont intéressantes que lorsqu'il s'agit de modifier des tableaux (la mise à jour de variable revient uniquement à modifier la variable, cela ne semble pas très compliqué).
+		
+		\paragraph{} Une mise-à-jour de tableau revient à mettre à jour les cases sous certaines conditions. En réalité, cela revient à créer une garde pour chaque case et à l'exécuter séquentiellement pour savoir quelle condition la case vérifie pour être mise à jour. Vous excuserez la brièveté de cette explication mais l'intérêt de cette partie est moindre et par trop ressemblant à la partie relative aux gardes. Il est donc conseillé de se référer à celle-ci pour tout compréhension supplémentaire.
+		
+	 \chapter{Conclusion}
+	 \label{chap:concl}
+	 
+	 	Afin que ce TER serve à quelque-chose, nous avons branché mon ordonnanceur au programme de l'équipe. Pour ce faire, \textbf{BRAB} envoie à l'ordonnanceur une liste de formules représentant des sous-états du système et celui-ci se charge de trouver la première formule pour laquelle aucun des états qu'il a visités ne la contient. S'il la trouve, il la renvoie, sinon il annonce qu'il n'a rien trouvé \footnote{Ce cas signifie que toutes les approximations trouvées par \textbf{BRAB} découlent de l'ordonnancement depuis les états initiaux.}. Et ça marche ! Enfin, pas pour certains protocoles mais ce sont les plus compliqués et je vais travailler dessus lors de mon stage.
+	 
+	 	\paragraph{} Ce travail, bien que pas terminé mais vraiment prometteur, m'a permis de mettre en application différentes choses que j'ai vues lors de mes études (théorie des graphes, algorithmique, programmation fonctionnelle, programmation impérative) afin de mener à bien la création d'un ordonnanceur programmable. Il était donc à la fois compliqué mais vraiment passionnant pour tout ce qu'il demandait de croisement de connaissances.
+	 	
+	 	 \paragraph{} Bien que cet ordonnanceur n'en soit encore qu'à ses balbutiements, le fait est que certains résultats obtenus sont vraiment engageants pour la suite. Et c'est surtout cela qui m'a plu. Me rendre compte qu'un travail de recherche ne consiste pas forcément à trouver la solution mais à penser qu'explorer tel ou tel chemin permettra de la trouver. 
+	 	 
+	 	 \paragraph{} J'espère que vous n'aurez pas été trop perdu dans la construction de ce rapport mais il est trop difficile d'être exhaustif pour un TER si long. La partie relative aux transitions et aux mises-à-jour aurait peut-être pu bénéficier d'un meilleur traitement mais il s'avère que je ne la trouve vraiment pas intéressante pour la compréhension de l'ordonnanceur ainsi que du travail fourni.
+	 	 
+	 	 \paragraph{} Puisque je ne sais jamais où il faut mettre les remerciements (à vrai dire, je ne sais pas s'il faut en mettre mais ça me fait plaisir), je les place ici. Merci, donc, à Sylvain Conchon pour ce sujet vraiment intéressant et la patience dont il a fait preuve, à Alain Mebsout pour sa patience indéfectible malgré une soutenance de thèse approchant ainsi qu'à Kim Nguy\~{\^{e}}n pour les cafés. Enfin, merci à mes deux camarades de bureau, Albin Coquereau et Thibaut Tachon qui ont supportés mes chants et mes innombrables discussions inutiles.
 
 \begin{thebibliography}{10}
 
@@ -402,6 +676,10 @@ Sylvain Conchon, Amit Goel, Sava Krsti\'{c}, Alain Mebsout, Fatiha Zaïdi
 Sylvain Conchon, David Declerck, Luc Maranget, Alain Mebsout
 \newline Vérification de programmes C concurrents avec \textbf{Cubicle} : Enfoncer les barrières
 \newline {\url{https://www.lri.fr/~conchon/TER/2013/1/c2cub.pdf}}
+
+\bibitem{Wiki}
+Wikipedia
+\newline {\url{https://en.wikipedia.org/wiki/Main_Page}}
 
 \end{thebibliography}
 

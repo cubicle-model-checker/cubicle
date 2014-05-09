@@ -267,9 +267,7 @@ val init_htbls : 'a * Ast.SAtom.t list -> unit
 val upd_options : unit -> unit
 val c : int ref
 val update : unit -> unit
-val comp_node : 'a * ('b * TS.t * TI.t) -> 'c * ('d * TS.t * TI.t) -> int
 val upd_graphs : unit -> unit
-val upd_inits : Hstring.t -> TS.elt -> unit
 val graphs_to_inits : unit -> unit
 val ec_to_inits : unit -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit

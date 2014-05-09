@@ -536,7 +536,9 @@ let print_ce_diffs () =
   Hashtbl.iter (
     fun n (ty, types, diffs) ->
       printf "%a : " Hstring.print n;
+      printf "\n\tTS : ";
       TS.iter (printf "%a " print_value) types;
+      printf "\n\tTI : ";
       TI.iter (printf "%a " Hstring.print) diffs;
       printf "@."
   ) dc;
@@ -652,16 +654,10 @@ let init_globals globals =
 	then N, TS.empty, TI.empty
 	(* Abstract or other type*)
 	else
-	  (* Abstract or other type*)
 	  let ty = Hashtbl.find htbl_types g_type in
 	  if Hashtbl.mem htbl_abstypes g_type 
 	  then
-	    let ti = List.fold_left (
-	      fun acc t -> match t with
-		| Var h when h != g_name -> TI.add h acc
-		| _ -> acc
-	    ) TI.empty ty in
-	    A, TS.singleton (Var g_name), ti 
+	    A, TS.singleton (Var g_name), TI.empty
 	  else 
 	    let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
 	    O, st, TI.empty 
@@ -688,12 +684,7 @@ let init_arrays arrays =
 	  let ty = Hashtbl.find htbl_types a_type in
 	  if Hashtbl.mem htbl_abstypes a_type 
 	  then
-	    let ti = List.fold_left (
-	      fun acc t -> match t with
-		| Var h when h != a_name -> TI.add h acc
-		| _ -> acc
-	    ) TI.empty ty in
-	    A, TS.singleton (Var a_name), ti
+	    A, TS.singleton (Var a_name), TI.empty
 	  else 
 	    let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
 	    O, st, TI.empty
@@ -832,7 +823,7 @@ let upd_options () =
 	| Var h when h <> n && Hashtbl.mem proc_ninit n -> Hashtbl.add proc_ninit h ()
 	| _ -> ()
     ) ec
-	
+    
 let c = ref 0
 
 let update () =
@@ -859,27 +850,27 @@ let update () =
       incr c
   ) dc'
 
-let comp_node (h1, (_, ty1, di1)) (h2, (_, ty2, di2)) =
-  let ct1 = TS.cardinal ty1 in
-  let ct2 = TS.cardinal ty2 in
-  if ct1 < ct2
-  then -1
-  else 
-    (
-      if ct1 > ct2
-      then 1
-      else (
-	let cd1 = TI.cardinal di1 in
-	let cd2 = TI.cardinal di2 in
-	if cd1 > cd2
-	then -1
-	else 
-	  if cd1 < cd2 then 1
-	  else 0
-      )
-    )
-
 let upd_graphs () =
+  let comp_node (h1, (_, ty1, di1)) (h2, (_, ty2, di2)) =
+    let ct1 = TS.cardinal ty1 in
+    let ct2 = TS.cardinal ty2 in
+    if ct1 < ct2
+    then -1
+    else 
+      (
+	if ct1 > ct2
+	then 1
+	else (
+	  let cd1 = TI.cardinal di1 in
+	  let cd2 = TI.cardinal di2 in
+	  if cd1 > cd2
+	  then -1
+	  else 
+	    if cd1 < cd2 then 1
+	    else 0
+	)
+      )
+  in
   Hashtbl.iter (
     fun i ti ->
       let list =
@@ -893,14 +884,14 @@ let upd_graphs () =
       incr c  
   ) groups  
 
-let upd_inits n v =
-  let (rep, tself) = Hashtbl.find ec n in
-  let r = match rep with
-    | Var h -> h
-    | _ -> n in
-  inits := (n ,((tself, (TS.singleton v)), r)) :: !inits
-
 let graphs_to_inits () =
+  let upd_inits n v =
+    let (rep, tself) = Hashtbl.find ec n in
+    let r = match rep with
+      | Var h -> h
+      | _ -> n in
+    inits := (n ,((tself, (TS.singleton v)), r)) :: !inits
+  in
   let rec l_to_ec v niv ti rtl =
     match rtl with
       | ((n, (_, ts, ti')) as hd)::tl ->
@@ -966,14 +957,14 @@ let ec_to_inits () =
       with Exit -> ()
   ) ec;
   let comparei (n1, ((_, ts1), r1)) (n2, ((_, ts2), r2)) =
-      if n1 = r1 then 1
-      else if n2 = r2 then 1
-      else let lts1 = TS.cardinal ts1 in
-	   let lts2 = TS.cardinal ts2 in
-	   Pervasives.compare lts1 lts2 
+    if n1 = r1 then 1
+    else if n2 = r2 then 1
+    else let lts1 = TS.cardinal ts1 in
+	 let lts2 = TS.cardinal ts2 in
+	 Pervasives.compare lts1 lts2 
   in
   inits := List.sort comparei !inits
-   
+    
 let initialization init =
   init_htbls init;
   (* print_procinit (); *)
@@ -1044,7 +1035,7 @@ let initialization init =
 
 (* SUBSTITUTION METHODS *)
 
-       
+    
 (* Here, optimization needed if constant values *)     
 let subst_req sub req =
   let f = fun () ->
@@ -1160,6 +1151,7 @@ let init_system se =
   (* This part may change, deterministic for now *)
   init_arrays se.arrays;
   init_globals se.globals;
+  print_ce_diffs ();
   (* --- After this, all the variables and arrays are initialized --- *)
   initialization se.init
 

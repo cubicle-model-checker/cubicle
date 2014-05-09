@@ -1,11 +1,17 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.5.3)  5 MAY 2014 19:26
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.5.8)  9 MAY 2014 02:56
 entering extended mode
  %&-line parsing enabled.
 **rapport.tex
 (./rapport.tex
 LaTeX2e <2009/09/24>
 Babel <v3.8l> and hyphenation patterns for english, usenglishmax, dumylang, noh
-yphenation, french, basque, loaded.
+yphenation, farsi, arabic, croatian, bulgarian, ukrainian, russian, czech, slov
+ak, danish, dutch, finnish, french, basque, ngerman, german, german-x-2009-06-1
+9, ngerman-x-2009-06-19, ibycus, monogreek, greek, ancientgreek, hungarian, san
+skrit, italian, latin, latvian, lithuanian, mongolian2a, mongolian, bokmal, nyn
+orsk, romanian, irish, coptic, serbian, turkish, welsh, esperanto, uppersorbian
+, estonian, indonesian, interlingua, icelandic, kurmanji, slovenian, polish, po
+rtuguese, spanish, galician, catalan, swedish, ukenglish, pinyin, loaded.
 (/usr/share/texmf-texlive/tex/latex/memoir/memoir.cls
 Document Class: memoir 2009/09/21 v1.61803398b configurable book, report, artic
 le document class
@@ -546,7 +552,7 @@ Package: fontenc 2005/09/27 v1.99g Standard LaTeX package
 File: t1enc.def 2005/09/27 v1.99g Standard LaTeX file
 LaTeX Font Info:    Redeclaring font encoding T1 on input line 43.
 ))
-(/usr/share/texmf-texlive/tex/generic/babel/babel.sty
+(/var/lib/texmf/tex/generic/babel/babel.sty
 Package: babel 2008/07/06 v3.8l The Babel package
 
 (/usr/share/texmf-texlive/tex/generic/babel/frenchb.ldf
@@ -648,7 +654,8 @@ Package ifvtex Info: VTeX not detected.
 \Gm@odd@mp=\dimen161
 \Gm@even@mp=\dimen162
 \Gm@dimlist=\toks30
-)
+
+(/usr/share/texmf-texlive/tex/xelatex/xetexconfig/geometry.cfg))
 (/usr/share/texmf-texlive/tex/latex/wasysym/wasysym.sty
 Package: wasysym 2003/10/30 v2.0 Wasy-2 symbol support package
 \symwasy=\mathgroup4
@@ -666,25 +673,94 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 (/usr/share/texmf-texlive/tex/latex/multirow/multirow.sty
 \bigstrutjot=\dimen163
 )
-(/usr/share/texmf-texlive/tex/latex/listings/listings.sty
-\lst@mode=\count155
-\lst@gtempboxa=\box32
+(/usr/share/texmf-texlive/tex/latex/tools/multicol.sty
+Package: multicol 2008/12/05 v1.6h multicolumn formatting (FMi)
+\c@tracingmulticols=\count155
+\mult@box=\box32
+\multicol@leftmargin=\dimen164
+\c@unbalance=\count156
+\c@collectmore=\count157
+\doublecol@number=\count158
+\multicoltolerance=\count159
+\multicolpretolerance=\count160
+\full@width=\dimen165
+\page@free=\dimen166
+\premulticols=\dimen167
+\postmulticols=\dimen168
+\multicolsep=\skip176
+\multicolbaselineskip=\skip177
+\partial@page=\box33
+\last@line=\box34
+\mult@rightbox=\box35
+\mult@grightbox=\box36
+\mult@gfirstbox=\box37
+\mult@firstbox=\box38
+\@tempa=\box39
+\@tempa=\box40
+\@tempa=\box41
+\@tempa=\box42
+\@tempa=\box43
+\@tempa=\box44
+\@tempa=\box45
+\@tempa=\box46
+\@tempa=\box47
+\@tempa=\box48
+\@tempa=\box49
+\@tempa=\box50
+\@tempa=\box51
+\@tempa=\box52
+\@tempa=\box53
+\@tempa=\box54
+\@tempa=\box55
+\c@columnbadness=\count161
+\c@finalcolumnbadness=\count162
+\last@try=\dimen169
+\multicolovershoot=\dimen170
+\multicolundershoot=\dimen171
+\mult@nat@firstbox=\box56
+\colbreak@box=\box57
+)
+(/usr/share/texmf-texlive/tex/latex/algorithmicx/algpseudocode.sty
+Package: algpseudocode 
+
+(/usr/share/texmf-texlive/tex/latex/base/ifthen.sty
+Package: ifthen 2001/05/26 v1.1c Standard LaTeX ifthen package (DPC)
+)
+(/usr/share/texmf-texlive/tex/latex/algorithmicx/algorithmicx.sty
+Package: algorithmicx 2005/04/27 v1.2 Algorithmicx
+
+Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
+\c@ALG@line=\count163
+\c@ALG@rem=\count164
+\c@ALG@nested=\count165
+\ALG@tlm=\skip178
+\ALG@thistlm=\skip179
+\c@ALG@Lnr=\count166
+\c@ALG@blocknr=\count167
+\c@ALG@storecount=\count168
+\c@ALG@tmpcounter=\count169
+\ALG@tmplength=\skip180
+)
+Document Style - pseudocode environments for use with the `algorithmicx' style
+) (/usr/share/texmf-texlive/tex/latex/listings/listings.sty
+\lst@mode=\count170
+\lst@gtempboxa=\box58
 \lst@token=\toks33
-\lst@length=\count156
-\lst@currlwidth=\dimen164
-\lst@column=\count157
-\lst@pos=\count158
-\lst@lostspace=\dimen165
-\lst@width=\dimen166
-\lst@newlines=\count159
-\lst@lineno=\count160
-\lst@maxwidth=\dimen167
+\lst@length=\count171
+\lst@currlwidth=\dimen172
+\lst@column=\count172
+\lst@pos=\count173
+\lst@lostspace=\dimen173
+\lst@width=\dimen174
+\lst@newlines=\count174
+\lst@lineno=\count175
+\lst@maxwidth=\dimen175
 
 (/usr/share/texmf-texlive/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2007/02/22 1.4 (Carsten Heinz)
-\c@lstnumber=\count161
-\lst@skipnumbers=\count162
-\lst@framebox=\box33
+\c@lstnumber=\count176
+\lst@skipnumbers=\count177
+\lst@framebox=\box59
 )
 (/usr/share/texmf-texlive/tex/latex/listings/listings.cfg
 File: listings.cfg 2007/02/22 1.4 listings configuration
@@ -702,14 +778,14 @@ Package xcolor Info: Driver file: pdftex.def on input line 225.
 
 (/usr/share/texmf-texlive/tex/latex/pdftex-def/pdftex.def
 File: pdftex.def 2010/03/12 v0.04p Graphics/color for pdfTeX
-\Gread@gobject=\count163
+\Gread@gobject=\count178
 )
 (/usr/share/texmf-texlive/tex/latex/colortbl/colortbl.sty
 Package: colortbl 2001/02/13 v0.1j Color table columns (DPC)
 \everycr=\toks34
-\minrowclearance=\skip176
+\minrowclearance=\skip181
 )
-\rownum=\count164
+\rownum=\count179
 Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1337.
 Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1341.
 Package xcolor Info: Model `RGB' extended on input line 1353.
@@ -733,7 +809,7 @@ File: svgnam.def 2007/01/21 v2.11 Predefined colors according to SVG 1.1 (UK)
 \pgfutil@everybye=\toks35
 )
 (/usr/share/texmf/tex/generic/pgf/utilities/pgfutil-latex.def
-\pgfutil@abb=\box34
+\pgfutil@abb=\box60
 
 (/usr/share/texmf-texlive/tex/latex/ms/everyshi.sty
 Package: everyshi 2001/05/15 v3.00 EveryShipout Package (MS)
@@ -758,8 +834,8 @@ File: graphics.cfg 2009/08/28 v1.8 graphics configuration of TeX Live
 )
 Package graphics Info: Driver file: pdftex.def on input line 91.
 )
-\Gin@req@height=\dimen168
-\Gin@req@width=\dimen169
+\Gin@req@height=\dimen176
+\Gin@req@width=\dimen177
 )
 (/usr/share/texmf/tex/latex/pgf/systemlayer/pgfsys.sty
 (/usr/share/texmf/tex/generic/pgf/systemlayer/pgfsys.code.tex
@@ -772,20 +848,20 @@ Package: pgfsys 2010/06/30 v2.10 (rcs-revision 1.37)
 (/usr/share/texmf/tex/generic/pgf/utilities/pgfkeysfiltered.code.tex
 \pgfkeys@tmptoks=\toks38
 ))
-\pgf@x=\dimen170
-\pgf@y=\dimen171
-\pgf@xa=\dimen172
-\pgf@ya=\dimen173
-\pgf@xb=\dimen174
-\pgf@yb=\dimen175
-\pgf@xc=\dimen176
-\pgf@yc=\dimen177
+\pgf@x=\dimen178
+\pgf@y=\dimen179
+\pgf@xa=\dimen180
+\pgf@ya=\dimen181
+\pgf@xb=\dimen182
+\pgf@yb=\dimen183
+\pgf@xc=\dimen184
+\pgf@yc=\dimen185
 \w@pgf@writea=\write4
 \r@pgf@reada=\read2
-\c@pgf@counta=\count165
-\c@pgf@countb=\count166
-\c@pgf@countc=\count167
-\c@pgf@countd=\count168
+\c@pgf@counta=\count180
+\c@pgf@countb=\count181
+\c@pgf@countc=\count182
+\c@pgf@countd=\count183
 
 (/usr/share/texmf/tex/generic/pgf/systemlayer/pgf.cfg
 File: pgf.cfg 2008/05/14  (rcs-revision 1.7)
@@ -800,8 +876,8 @@ File: pgfsys-common-pdf.def 2008/05/19  (rcs-revision 1.10)
 )))
 (/usr/share/texmf/tex/generic/pgf/systemlayer/pgfsyssoftpath.code.tex
 File: pgfsyssoftpath.code.tex 2008/07/18  (rcs-revision 1.7)
-\pgfsyssoftpath@smallbuffer@items=\count169
-\pgfsyssoftpath@bigbuffer@items=\count170
+\pgfsyssoftpath@smallbuffer@items=\count184
+\pgfsyssoftpath@bigbuffer@items=\count185
 )
 (/usr/share/texmf/tex/generic/pgf/systemlayer/pgfsysprotocol.code.tex
 File: pgfsysprotocol.code.tex 2006/10/16  (rcs-revision 1.4)
@@ -813,9 +889,9 @@ Package: pgfcore 2010/04/11 v2.10 (rcs-revision 1.7)
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathcalc.code.tex
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathutil.code.tex)
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathparser.code.tex
-\pgfmath@dimen=\dimen178
-\pgfmath@count=\count171
-\pgfmath@box=\box35
+\pgfmath@dimen=\dimen186
+\pgfmath@count=\count186
+\pgfmath@box=\box61
 \pgfmath@toks=\toks39
 \pgfmath@stack@operand=\toks40
 \pgfmath@stack@operation=\toks41
@@ -829,51 +905,51 @@ Package: pgfcore 2010/04/11 v2.10 (rcs-revision 1.7)
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathfunctions.round.code.tex)
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathfunctions.misc.code.tex)))
 (/usr/share/texmf/tex/generic/pgf/math/pgfmathfloat.code.tex
-\c@pgfmathroundto@lastzeros=\count172
+\c@pgfmathroundto@lastzeros=\count187
 ))
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorepoints.code.tex
 File: pgfcorepoints.code.tex 2010/04/09  (rcs-revision 1.20)
-\pgf@picminx=\dimen179
-\pgf@picmaxx=\dimen180
-\pgf@picminy=\dimen181
-\pgf@picmaxy=\dimen182
-\pgf@pathminx=\dimen183
-\pgf@pathmaxx=\dimen184
-\pgf@pathminy=\dimen185
-\pgf@pathmaxy=\dimen186
-\pgf@xx=\dimen187
-\pgf@xy=\dimen188
-\pgf@yx=\dimen189
-\pgf@yy=\dimen190
-\pgf@zx=\dimen191
-\pgf@zy=\dimen192
+\pgf@picminx=\dimen187
+\pgf@picmaxx=\dimen188
+\pgf@picminy=\dimen189
+\pgf@picmaxy=\dimen190
+\pgf@pathminx=\dimen191
+\pgf@pathmaxx=\dimen192
+\pgf@pathminy=\dimen193
+\pgf@pathmaxy=\dimen194
+\pgf@xx=\dimen195
+\pgf@xy=\dimen196
+\pgf@yx=\dimen197
+\pgf@yy=\dimen198
+\pgf@zx=\dimen199
+\pgf@zy=\dimen200
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorepathconstruct.code.tex
 File: pgfcorepathconstruct.code.tex 2010/08/03  (rcs-revision 1.24)
-\pgf@path@lastx=\dimen193
-\pgf@path@lasty=\dimen194
+\pgf@path@lastx=\dimen201
+\pgf@path@lasty=\dimen202
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorepathusage.code.tex
 File: pgfcorepathusage.code.tex 2008/04/22  (rcs-revision 1.12)
-\pgf@shorten@end@additional=\dimen195
-\pgf@shorten@start@additional=\dimen196
+\pgf@shorten@end@additional=\dimen203
+\pgf@shorten@start@additional=\dimen204
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorescopes.code.tex
 File: pgfcorescopes.code.tex 2010/09/08  (rcs-revision 1.34)
-\pgfpic=\box36
-\pgf@hbox=\box37
-\pgf@layerbox@main=\box38
-\pgf@picture@serial@count=\count173
+\pgfpic=\box62
+\pgf@hbox=\box63
+\pgf@layerbox@main=\box64
+\pgf@picture@serial@count=\count188
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoregraphicstate.code.tex
 File: pgfcoregraphicstate.code.tex 2008/04/22  (rcs-revision 1.9)
-\pgflinewidth=\dimen197
+\pgflinewidth=\dimen205
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoretransformations.code.tex
 File: pgfcoretransformations.code.tex 2009/06/10  (rcs-revision 1.11)
-\pgf@pt@x=\dimen198
-\pgf@pt@y=\dimen199
-\pgf@pt@temp=\dimen200
+\pgf@pt@x=\dimen206
+\pgf@pt@y=\dimen207
+\pgf@pt@temp=\dimen208
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorequick.code.tex
 File: pgfcorequick.code.tex 2008/10/09  (rcs-revision 1.3)
@@ -889,15 +965,15 @@ File: pgfcorearrows.code.tex 2008/04/23  (rcs-revision 1.11)
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoreshade.code.tex
 File: pgfcoreshade.code.tex 2008/11/23  (rcs-revision 1.13)
-\pgf@max=\dimen201
-\pgf@sys@shading@range@num=\count174
+\pgf@max=\dimen209
+\pgf@sys@shading@range@num=\count189
 )
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoreimage.code.tex
 File: pgfcoreimage.code.tex 2010/03/25  (rcs-revision 1.16)
 
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcoreexternal.code.tex
 File: pgfcoreexternal.code.tex 2010/09/01  (rcs-revision 1.17)
-\pgfexternal@startupbox=\box39
+\pgfexternal@startupbox=\box65
 ))
 (/usr/share/texmf/tex/generic/pgf/basiclayer/pgfcorelayers.code.tex
 File: pgfcorelayers.code.tex 2010/08/27  (rcs-revision 1.2)
@@ -910,15 +986,15 @@ File: pgfcorepatterns.code.tex 2009/07/02  (rcs-revision 1.3)
 )))
 (/usr/share/texmf/tex/generic/pgf/modules/pgfmoduleshapes.code.tex
 File: pgfmoduleshapes.code.tex 2010/09/09  (rcs-revision 1.13)
-\pgfnodeparttextbox=\box40
+\pgfnodeparttextbox=\box66
 )
 (/usr/share/texmf/tex/generic/pgf/modules/pgfmoduleplot.code.tex
 File: pgfmoduleplot.code.tex 2010/10/22  (rcs-revision 1.8)
 )
 (/usr/share/texmf/tex/latex/pgf/compatibility/pgfcomp-version-0-65.sty
 Package: pgfcomp-version-0-65 2007/07/03 v2.10 (rcs-revision 1.7)
-\pgf@nodesepstart=\dimen202
-\pgf@nodesepend=\dimen203
+\pgf@nodesepstart=\dimen210
+\pgf@nodesepend=\dimen211
 )
 (/usr/share/texmf/tex/latex/pgf/compatibility/pgfcomp-version-1-18.sty
 Package: pgfcomp-version-1-18 2007/07/23 v2.10 (rcs-revision 1.1)
@@ -928,8 +1004,8 @@ Package: pgfcomp-version-1-18 2007/07/23 v2.10 (rcs-revision 1.1)
 (/usr/share/texmf/tex/generic/pgf/utilities/pgfkeys.code.tex))
 (/usr/share/texmf/tex/generic/pgf/utilities/pgffor.code.tex
 Package: pgffor 2010/03/23 v2.10 (rcs-revision 1.18)
-\pgffor@iter=\dimen204
-\pgffor@skip=\dimen205
+\pgffor@iter=\dimen212
+\pgffor@skip=\dimen213
 \pgffor@stack=\toks42
 \pgffor@toks=\toks43
 ))
@@ -938,29 +1014,29 @@ Package: tikz 2010/10/13 v2.10 (rcs-revision 1.76)
 
 (/usr/share/texmf/tex/generic/pgf/libraries/pgflibraryplothandlers.code.tex
 File: pgflibraryplothandlers.code.tex 2010/05/31 v2.10 (rcs-revision 1.15)
-\pgf@plot@mark@count=\count175
-\pgfplotmarksize=\dimen206
+\pgf@plot@mark@count=\count190
+\pgfplotmarksize=\dimen214
 )
-\tikz@lastx=\dimen207
-\tikz@lasty=\dimen208
-\tikz@lastxsaved=\dimen209
-\tikz@lastysaved=\dimen210
-\tikzleveldistance=\dimen211
-\tikzsiblingdistance=\dimen212
-\tikz@figbox=\box41
-\tikz@tempbox=\box42
-\tikztreelevel=\count176
-\tikznumberofchildren=\count177
-\tikznumberofcurrentchild=\count178
-\tikz@fig@count=\count179
+\tikz@lastx=\dimen215
+\tikz@lasty=\dimen216
+\tikz@lastxsaved=\dimen217
+\tikz@lastysaved=\dimen218
+\tikzleveldistance=\dimen219
+\tikzsiblingdistance=\dimen220
+\tikz@figbox=\box67
+\tikz@tempbox=\box68
+\tikztreelevel=\count191
+\tikznumberofchildren=\count192
+\tikznumberofcurrentchild=\count193
+\tikz@fig@count=\count194
 
 (/usr/share/texmf/tex/generic/pgf/modules/pgfmodulematrix.code.tex
 File: pgfmodulematrix.code.tex 2010/08/24  (rcs-revision 1.4)
-\pgfmatrixcurrentrow=\count180
-\pgfmatrixcurrentcolumn=\count181
-\pgf@matrix@numberofcolumns=\count182
+\pgfmatrixcurrentrow=\count195
+\pgfmatrixcurrentcolumn=\count196
+\pgf@matrix@numberofcolumns=\count197
 )
-\tikz@expandcount=\count183
+\tikz@expandcount=\count198
 
 (/usr/share/texmf/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarytopat
 hs.code.tex
@@ -975,9 +1051,9 @@ O)
 (/usr/share/texmf-texlive/tex/latex/oberdiek/xcolor-patch.sty
 Package: xcolor-patch 2009/10/02 xcolor patch
 ))
-\@linkdim=\dimen213
-\Hy@linkcounter=\count184
-\Hy@pagecounter=\count185
+\@linkdim=\dimen221
+\Hy@linkcounter=\count199
+\Hy@pagecounter=\count200
 
 (/usr/share/texmf-texlive/tex/latex/hyperref/pd1enc.def
 File: pd1enc.def 2009/10/09 v6.79a Hyperref: PDFDocEncoding definition (HO)
@@ -1042,9 +1118,9 @@ Package pdftexcmds Info: LuaTeX not detected.
 Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 )))
-\Fld@menulength=\count186
-\Field@Width=\dimen214
-\Fld@charsize=\dimen215
+\Fld@menulength=\count201
+\Field@Width=\dimen222
+\Fld@charsize=\dimen223
 \Field@toks=\toks44
 Package hyperref Info: Hyper figures OFF on input line 4377.
 Package hyperref Info: Link nesting OFF on input line 4382.
@@ -1057,22 +1133,22 @@ Package hyperref Info: PDF/A mode OFF on input line 4407.
 (/usr/share/texmf-texlive/tex/generic/oberdiek/atbegshi.sty
 Package: atbegshi 2008/07/31 v1.9 At begin shipout hook (HO)
 )
-\Hy@abspage=\count187
-\c@Item=\count188
+\Hy@abspage=\count202
+\c@Item=\count203
 )
 (/usr/share/texmf-texlive/tex/latex/memoir/memhfixc.sty
 Package: memhfixc 2009/02/06 v1.12 nameref/hyperref package fixes for memoir cl
 ass
-\c@memhycontfloat=\count189
+\c@memhycontfloat=\count204
 )
 *hyperref using default driver hpdftex*
 (/usr/share/texmf-texlive/tex/latex/hyperref/hpdftex.def
 File: hpdftex.def 2009/10/09 v6.79a Hyperref driver for pdfTeX
 Package hyperref Info: \pdfminorversion:=5 on input line 136.
-\Fld@listcount=\count190
+\Fld@listcount=\count205
 )
-\RoundedBoxWidth=\skip177
-\GrayRoundedBox=\box43
+\RoundedBoxWidth=\skip182
+\GrayRoundedBox=\box69
 
 (/usr/share/texmf-texlive/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2004/09/05 1.3 listings language file
@@ -1088,32 +1164,36 @@ File: lstlang2.sty 2004/09/05 1.3 listings language file
 )
 (/usr/share/texmf-texlive/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2007/02/22 1.4 (Carsten Heinz)
-) (./rapport.aux)
+) (./rapport.aux
+
+LaTeX Warning: Label `fig:all_perm' multiply defined.
+
+)
 \openout1 = `rapport.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 94.
-LaTeX Font Info:    ... okay on input line 94.
-LaTeX Info: Redefining \degres on input line 94.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 98.
+LaTeX Font Info:    ... okay on input line 98.
+LaTeX Info: Redefining \degres on input line 98.
 
 
 Package frenchb.ldf Warning: The definition of \@makecaption has been changed,
 (frenchb.ldf)                frenchb will NOT customise it;
-(frenchb.ldf)                reported on input line 94.
+(frenchb.ldf)                reported on input line 98.
 
-LaTeX Info: Redefining \dots on input line 94.
-LaTeX Info: Redefining \up on input line 94.
+LaTeX Info: Redefining \dots on input line 98.
+LaTeX Info: Redefining \up on input line 98.
 *geometry auto-detecting driver*
 *geometry detected driver: pdftex*
 -------------------- Geometry parameters
@@ -1155,22 +1235,22 @@ driver: pdftex
 \@twosidetrue \@mparswitchtrue 
 (1in=72.27pt, 1cm=28.45pt)
 -----------------------
-\c@lstlisting=\count191
+\c@lstlisting=\count206
 (/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count192
-\scratchdimen=\dimen216
-\scratchbox=\box44
-\nofMPsegments=\count193
-\nofMParguments=\count194
+\scratchcounter=\count207
+\scratchdimen=\dimen224
+\scratchbox=\box70
+\nofMPsegments=\count208
+\nofMParguments=\count209
 \everyMPshowfont=\toks45
-\MPscratchCnt=\count195
-\MPscratchDim=\dimen217
-\MPnumerator=\count196
+\MPscratchCnt=\count210
+\MPscratchDim=\dimen225
+\MPnumerator=\count211
 \everyMPtoPDFconversion=\toks46
 ) ABD: EveryShipout initializing macros
-Package hyperref Info: Option `colorlinks' set `true' on input line 94.
-Package hyperref Info: Link coloring ON on input line 94.
+Package hyperref Info: Option `colorlinks' set `true' on input line 98.
+Package hyperref Info: Link coloring ON on input line 98.
 
 (/usr/share/texmf-texlive/tex/latex/hyperref/nameref.sty
 Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
@@ -1178,20 +1258,20 @@ Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
 (/usr/share/texmf-texlive/tex/latex/oberdiek/refcount.sty
 Package: refcount 2008/08/11 v3.1 Data extraction from references (HO)
 )
-\c@section@level=\count197
+\c@section@level=\count212
 )
-LaTeX Info: Redefining \ref on input line 94.
-LaTeX Info: Redefining \pageref on input line 94.
+LaTeX Info: Redefining \ref on input line 98.
+LaTeX Info: Redefining \pageref on input line 98.
  (./rapport.out)
 (./rapport.out)
 \@outlinefile=\write5
 \openout5 = `rapport.out'.
 
-\AtBeginShipoutBox=\box45
+\AtBeginShipoutBox=\box71
 
 Redoing nameref's sectioning
 Redoing nameref's label
-LaTeX Font Info:    Try loading font information for U+wasy on input line 96.
+LaTeX Font Info:    Try loading font information for U+wasy on input line 100.
 (/usr/share/texmf-texlive/tex/latex/wasysym/uwasy.fd
 File: uwasy.fd 2003/10/30 v2.0 Wasy-2 symbol font definitions
 ) (./rapport.toc) [1
@@ -1201,7 +1281,7 @@ File: uwasy.fd 2003/10/30 v2.0 Wasy-2 symbol font definitions
 ] [3] [4
 
 ] [5]
-LaTeX Font Info:    Try loading font information for T1+cmtt on input line 139.
+LaTeX Font Info:    Try loading font information for T1+cmtt on input line 145.
 
 
 (/usr/share/texmf-texlive/tex/latex/base/t1cmtt.fd
@@ -1211,65 +1291,93 @@ LaTeX Font Info:    Try loading font information for T1+cmss on input line 1.
 
 (/usr/share/texmf-texlive/tex/latex/base/t1cmss.fd
 File: t1cmss.fd 1999/05/25 v2.5h Standard LaTeX font definitions
-)) (./exemple.cub)
-(./germanish.cub) [6] (./germanish.cub) (./germanish.cub) [7] (./germanish.cub)
+)) (./exemple.cub) [6]
+(./germanish.cub) (./germanish.cub) (./germanish.cub) [7] (./germanish.cub)
 [8]
 File: brab_total_math.mps Graphic file (type mps)
  [MP to PDF] (./brab_total_math.mps) [9] [10] (./exemple.cub) [11
 
 ]
 (./exemple.cub) (./exemple.cub) [12] (./exemple.cub) (./exemple.cub) [13]
-[14] (./exemple.cub) [15] [16
+[14] (./exemple.cub) (./exemple.cub) [15] [16] (./exemple.cub)
+Missing character: There is no ; in font nullfont!
 
-] [17] [18
+Overfull \hbox (47.33272pt too wide) in paragraph at lines 469--470
+[][] 
+ []
+
+[17]
+Missing character: There is no ; in font nullfont!
+ [18] [19] (./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub)
+(./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub)
+(./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub)
+(./exemple.cub) (./exemple.cub) (./exemple.cub)
+Underfull \hbox (badness 2635) in paragraph at lines 564--564
+[]\T1/cmr/m/n/10 Pour chaque élé-ment as-so-cié à un
+ []
+
+(./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub)
+(./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub)
+(./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub) (./exemple.cub)
+(./exemple.cub)
+Underfull \hbox (badness 2635) in paragraph at lines 564--564
+[]\T1/cmr/m/n/10 Pour chaque élé-ment as-so-cié à un
+ []
+
+[20] [21] [22
+
+] [23] (./exemple.cub) [24] (./germanish.cub) (./exemple.cub)
+[25] [26
+
+] [27] [28
 
 ]
 bibitemlist
-[19]
+[29]
 \tf@toc=\write6
 \openout6 = `rapport.toc'.
 
  (./rapport.aux)
 
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 20485 strings out of 495028
- 328396 string characters out of 1181230
- 525059 words of memory out of 3000000
- 23065 multiletter control sequences out of 15000+50000
- 40522 words of font info for 110 fonts, out of 3000000 for 9000
- 28 hyphenation exceptions out of 8191
- 61i,16n,58p,1067b,1519s stack positions out of 5000i,500n,10000p,200000b,50000s
-{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc} </home/mattias/.texmf-
-var/fonts/pk/ljfour/jknappen/ec/ectt0800.600pk> </home/mattias/.texmf-var/fonts
-/pk/ljfour/jknappen/ec/eccc1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfou
-r/jknappen/ec/ecit1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappe
-n/ec/ecsx1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ectt
-1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1095.600p
-k> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecsl1000.600pk> </home
-/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx0800.600pk> </home/mattias/
-.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1200.600pk> </home/mattias/.texmf-va
-r/fonts/pk/ljfour/jknappen/ec/ecrm0800.600pk> </home/mattias/.texmf-var/fonts/p
-k/ljfour/jknappen/ec/ecrm0700.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/
-jknappen/ec/ecbi1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/
-ec/ecti1000.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx17
-28.600pk> </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1000.600pk>
- </home/mattias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx1000.600pk> </home/m
-attias/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecbx2074.600pk> </home/mattias/.t
-exmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1095.600pk> </home/mattias/.texmf-var/
-fonts/pk/ljfour/jknappen/ec/ecrm1440.600pk></usr/share/texmf-texlive/fonts/type
-1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-texlive/fonts/type1/public/am
-sfonts/cm/cmr10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cm
-r7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss10.pfb></us
-r/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/tex
-mf-texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texmf-texlive/f
-onts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texmf-texlive/fonts/type1/
-urw/helvetic/uhvr8a.pfb>
-Output written on rapport.pdf (19 pages, 330837 bytes).
+ 21411 strings out of 493848
+ 341279 string characters out of 1152824
+ 538346 words of memory out of 3000000
+ 23884 multiletter control sequences out of 15000+50000
+ 43474 words of font info for 115 fonts, out of 3000000 for 9000
+ 714 hyphenation exceptions out of 8191
+ 61i,20n,58p,1067b,1519s stack positions out of 5000i,500n,10000p,200000b,50000s
+{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}{/usr/share/texmf/fonts
+/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texmf-texlive/fonts/type1/publi
+c/amsfonts/cm/cmex10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/
+cm/cmmi10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pf
+b></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share
+/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/share/texmf-texl
+ive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-texlive/fonts/t
+ype1/public/amsfonts/cm/cmsy7.pfb></usr/share/texmf-texlive/fonts/type1/public/
+amsfonts/cm/cmsy8.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/
+cmtt10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbi1000.pfb></usr/sha
+re/texmf/fonts/type1/public/cm-super/sfbx0800.pfb></usr/share/texmf/fonts/type1
+/public/cm-super/sfbx1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfb
+x1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/shar
+e/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf/fonts/type1/
+public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfcc
+1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfit1000.pfb></usr/share
+/texmf/fonts/type1/public/cm-super/sfrm0600.pfb></usr/share/texmf/fonts/type1/p
+ublic/cm-super/sfrm0700.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0
+800.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/
+texmf/fonts/type1/public/cm-super/sfrm1095.pfb></usr/share/texmf/fonts/type1/pu
+blic/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfsl10
+00.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfsx1000.pfb></usr/share/t
+exmf/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texmf/fonts/type1/pub
+lic/cm-super/sftt0800.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt100
+0.pfb></usr/share/texmf-texlive/fonts/type1/urw/helvetic/uhvr8a.pfb>
+Output written on rapport.pdf (29 pages, 608512 bytes).
 PDF statistics:
- 1017 PDF objects out of 1200 (max. 8388607)
- 194 named destinations out of 1000 (max. 500000)
- 169 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 698 PDF objects out of 1000 (max. 8388607)
+ 294 named destinations out of 1000 (max. 500000)
+ 177 words of extra memory for PDF output out of 10000 (max. 10000000)
 

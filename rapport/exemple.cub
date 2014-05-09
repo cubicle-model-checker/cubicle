@@ -102,3 +102,43 @@ module TI = Set.Make (Hstring.t)
 
 val ec : (Hstring.t, TS.elt * stype) Hashtbl.t
 val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
+
+(* Hstring.t représente le type de la variable *)
+type stype = 	 
+     | RGlob of Hstring.t 
+     | RArr of (Hstring.t * int)
+
+type state = I | S | E
+
+var S1 : state
+var S2 : state
+var S3 : state
+var S4 : state
+var S5 : state
+var S6 : state
+
+init (z) { 
+     S1 = S2 &&
+     S2 <> S3 &&
+     S3 <> S5 &&
+     S1 <> S6 &&
+     S4 <> I }
+
+opt not fproc
+opt fproc
+proc_init Nom_de_variable [0,-1]
+tab_init Nom_de_tableau [(V1, 1), (V2, 2)]
+
+all_permutations [1;2] ['a'; 'b'];;
+- : (int * char) list list = [[(1, 'a'); (2, 'b')]; [(1, 'b'); (2, 'a')]]
+
+( Shrset[1] = False && Curcmd = Reqe && Exgntd = False && Curptr = 1 &&
+  Shrset[2] = False && Shrset[3] = False ) ||
+( Shrset[2] = False && Curcmd = Reqe && Exgntd = False && Curptr = 2 &&
+  Shrset[1] = False && Shrset[3] = False ) ||
+( Shrset[3] = False && Curcmd = Reqe && Exgntd = False && Curptr = 3 &&
+  Shrset[1] = False && Shrset[2] = False )
+
+Shrset[j] := case 
+	      | j = n : True 
+	      | _ : Shrset[j];
