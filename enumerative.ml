@@ -1050,6 +1050,8 @@ let alpha_renamings env procs s =
   ) [] d
 
 
+let one_step () = if nocolor then eprintf "#@?" else eprintf " @?"
+
 
 let resist_on_trace_size progress_inc ls env =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
@@ -1067,7 +1069,6 @@ let resist_on_trace_size progress_inc ls env =
     try
       if not quiet then eprintf "@{<fg_black_b>@{<i>";
                         (* will be forgotten by flushs *)
-      let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
       let cpt = ref 0 in
       List.iter (fun st ->
         incr cpt;
@@ -1112,35 +1113,60 @@ let smallest_to_resist_on_trace ls =
 
 
 
-let one_resist_on_trace_size s env =
+type result_check = Good | Bad of state | CantSay
+exception EBad of state * env
+exception ECantSay
+
+
+let state_impossible env st s =
     if Node.dim s > env.model_cardinal then true
     else
+      try
+        check_cand env st (satom_to_cand env (Node.litterals s))
+      with 
+      | Not_found -> false
+
+let one_resist_on_trace_size s env =
+    if Node.dim s <= env.model_cardinal then 
       try
         let procs = List.rev (List.tl (List.rev env.all_procs)) in
         let ls = alpha_renamings env procs s in
         List.iter (fun st ->
           if not (List.for_all (fun (c, _) -> check_cand env st c) ls) then
-            raise Exit;
+            raise (EBad (st, env));
         ) env.states;
-        true
-    with 
-      | Exit | Not_found -> false
+      with 
+      | Not_found -> raise ECantSay
 
+
+let check_first_and_filter_rest = function
+  | [] -> []
+  | s :: rs ->
+     try
+       List.iter (one_resist_on_trace_size s) !global_envs;
+       raise (Sustainable [s])
+     with
+     | ECantSay -> rs
+     | EBad (st, env) ->
+        List.filter (state_impossible env st) rs
+     
+
+
+let rec check_remaining_aux cpt progress_inc ls =
+  if not quiet && cpt mod progress_inc = 0 then one_step ();
+  match check_first_and_filter_rest ls with
+  | [] -> []
+  | rs -> check_remaining_aux (cpt+1) progress_inc rs
+
+let check_remaining progress_inc ls = check_remaining_aux 0 progress_inc ls
 
 let fast_resist_on_trace ls =
   let progress_inc = (List.length ls) / Pretty.vt_width + 1 in
   if not quiet then eprintf "@{<fg_black_b>@{<i>";
-  (* will be forgotten by flushs *)
-  let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
-  let cpt = ref 0 in
+                            (* will be forgotten by flushs *)
   TimeCheckCand.start ();
-  try 
-    List.iter (fun s ->
-      incr cpt;
-      if not quiet && !cpt mod progress_inc = 0 then one_step ();
-      if (List.for_all (one_resist_on_trace_size s) !global_envs)
-      then raise (Sustainable [s])
-    ) ls;
+  try
+    assert (check_remaining progress_inc ls = []);
     TimeCheckCand.pause ();
     if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
     []
