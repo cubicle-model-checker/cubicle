@@ -157,6 +157,9 @@ let print_time_fix () =
 let print_time_rp () =
   printf "├─Time for relevant permutations : %a@." print_time (TimeRP.get ())
 
+let print_time_simpl () =
+  printf "├─Time for simplifications       : %a@." print_time (TimeSimpl.get ())
+
 let print_time_formulas () =
   printf "├─Time in formulas               : %a@." print_time (TimeFormula.get ())
 
@@ -202,6 +205,7 @@ let print_report ~safe visited candidates =
       print_time_pre ();
       print_time_fix ();
       print_time_rp ();
+      print_time_simpl ();
       print_time_subset ();
       print_time_apply ();
       print_time_sort ();

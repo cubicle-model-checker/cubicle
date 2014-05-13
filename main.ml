@@ -37,6 +37,14 @@ let () =
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
         exit 1)) 
 
+let () = 
+  Sys.set_signal Sys.sigterm
+    (Sys.Signal_handle 
+       (fun _ ->
+        Stats.print_report ~safe:false [] [];
+        eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
+        exit 1)) 
+
 (** intercepts SIGUSR1 to display progress *)
 let () = 
   Sys.set_signal Sys.sigusr1 

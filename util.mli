@@ -28,6 +28,7 @@ module TimeSort : Timer.S
 module TimeForward : Timer.S
 module TimeCheckCand : Timer.S
 module TimeFormula : Timer.S
+module TimeSimpl : Timer.S
 
 
 (** {2 Misc } *)

@@ -342,7 +342,6 @@ let inconsistent_list l =
   in
   try check [] [] [] [] [] [] [] l; false with Exit -> true
 
-
 let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
     | Atom.True  -> acc
     | Atom.False -> raise Exit
@@ -379,6 +378,27 @@ let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
       then raise Exit
       else values, eqs, neqs, ((t1, t2)::les), lts, ((t2, t1)::ges), gts
     | _  -> acc
+
+
+let inconsistent_list =
+  if not profiling then inconsistent_list
+  else fun l ->
+       TimeSimpl.start ();
+       let r = inconsistent_list l in
+       TimeSimpl.pause ();
+       r
+
+let inconsistent_aux =
+  if not profiling then inconsistent_aux
+  else fun acc a ->
+       try
+         TimeSimpl.start ();
+         let r = inconsistent_aux acc a in
+         TimeSimpl.pause ();
+         r
+       with Exit ->
+         TimeSimpl.pause ();
+         raise Exit
 
 let inconsistent sa = 
   let l = SAtom.elements sa in

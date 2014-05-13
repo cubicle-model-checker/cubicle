@@ -25,6 +25,7 @@ module TimeSort = Timer.Make (Options)
 module TimeForward = Timer.Make (Options)
 module TimeCheckCand = Timer.Make (Options)
 module TimeFormula = Timer.Make (Options)
+module TimeSimpl = Timer.Make (Options)
 
 
 let nb_digits n =
