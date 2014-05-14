@@ -100,7 +100,7 @@ module TS = Set.Make (value)
 (* Ensemble regroupant des noms d'éléments, tableaux ou variables *)
 module TI = Set.Make (Hstring.t)
 
-val ec : (Hstring.t, TS.elt * stype) Hashtbl.t
+val ec : (Hstring.t, value * stype) Hashtbl.t
 val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
 
 (* Hstring.t représente le type de la variable *)
@@ -122,12 +122,13 @@ init (z) {
      S2 <> S3 &&
      S3 <> S5 &&
      S1 <> S6 &&
+     S6 = I &&
      S4 <> I }
 
 opt not fproc
 opt fproc
-proc_init Nom_de_variable [0,-1]
-tab_init Nom_de_tableau [(V1, 1), (V2, 2)]
+proc_init UniMsg_Proc [0,-1]
+tab_init Sort [(Data, 1), (Proc, 2)]
 
 all_permutations [1;2] ['a'; 'b'];;
 - : (int * char) list list = [[(1, 'a'); (2, 'b')]; [(1, 'b'); (2, 'a')]]
@@ -142,3 +143,55 @@ all_permutations [1;2] ['a'; 'b'];;
 Shrset[j] := case 
 	      | j = n : True 
 	      | _ : Shrset[j];
+
+module type DA = sig   
+  type t = 
+    | Arr of value array 
+    | Mat of t array
+end
+
+module type St = sig
+   type t = {globs :(Hstring.t, value) Hashtbl.t; 
+       	     arrs : (Hstring.t, DA.t) Hashtbl.t}     
+end
+
+module type Sys = sig
+  type t = {syst : St.t set; init : St.t set; 
+       	    read_st : St.t; write_st : St.t}
+end
+
+type sort = Data | Proc
+
+array Sort[proc] : sort
+
+var UniMsg_Proc : proc
+var UniMsg_Data : proc
+
+type st = Idle | Want | Crit
+type exec
+
+var Ex : exec
+array State[proc] : st
+array Flag[proc] : bool
+
+init (z) {Flag[z] = False && State[z] = Idle }
+
+unsafe(x y) {State[x] = Crit && State[y] = Crit }
+
+transition t1 (i j)
+requires {i < j && State[i] = Idle && Flag[i] = False &&
+	  forall_other k. (Flag[k] = Flag[j] || State[k] <> Want) }
+{
+	Flag[i] := True;
+	State[k] := case
+			| k = i : Want
+			| State[k] = Crit && k < i : Idle
+			| _ : State[k]
+}
+
+transition t2 (i)
+...
+
+var Home : proc
+					
+init (z) { Home <> z }

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.5.8)  9 MAY 2014 02:56
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.1.15)  12 MAY 2014 13:47
 entering extended mode
  %&-line parsing enabled.
 **rapport.tex
@@ -1343,10 +1343,10 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 21411 strings out of 493848
- 341279 string characters out of 1152824
- 538346 words of memory out of 3000000
- 23884 multiletter control sequences out of 15000+50000
+ 21401 strings out of 493848
+ 341177 string characters out of 1152823
+ 538347 words of memory out of 3000000
+ 23874 multiletter control sequences out of 15000+50000
  43474 words of font info for 115 fonts, out of 3000000 for 9000
  714 hyphenation exceptions out of 8191
  61i,20n,58p,1067b,1519s stack positions out of 5000i,500n,10000p,200000b,50000s
@@ -1375,7 +1375,7 @@ blic/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfsl10
 exmf/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texmf/fonts/type1/pub
 lic/cm-super/sftt0800.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt100
 0.pfb></usr/share/texmf-texlive/fonts/type1/urw/helvetic/uhvr8a.pfb>
-Output written on rapport.pdf (29 pages, 608512 bytes).
+Output written on rapport.pdf (29 pages, 608089 bytes).
 PDF statistics:
  698 PDF objects out of 1000 (max. 8388607)
  294 named destinations out of 1000 (max. 500000)
