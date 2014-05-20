@@ -49,6 +49,17 @@ type value =
   | Hstr of Hstring.t 
   | Proc of int
 
+let compare_value v1 v2 = 
+  match v1, v2 with
+    | Numb n1, Numb n2 -> Num.compare_num n1 n2
+    | Hstr h1, Hstr h2 
+    | Var h1, Var h2 -> Hstring.compare h1 h2
+    | Proc p1, Proc p2 -> Pervasives.compare p1 p2
+    | _ -> -1
+
+let vequal v1 v2 =
+  if compare_value v1 v2 = 0 then true else false
+
 type stype =
   | RGlob of Hstring.t
   | RArr of (Hstring.t * int)
@@ -71,31 +82,46 @@ let list_threads =
 (* This list will contain all the transitions *)
 let trans_list = ref []
 
+module type OrderedType =
+  sig 
+    type t
+    val compare : t -> t -> int
+  end
+
+module OrderedValue =
+  struct
+    type t = value
+    let compare = compare_value
+  end
+
 (* Module to manage multi-dimensional arrays *)
 module type DA = sig
     
-  type 'a t
-    
-  type 'a dima
+  type elt
 
-  val init : int -> int -> 'a -> 'a dima
-  val minit : int -> int -> ('a * int) list -> 'a -> 'a dima
-  val get : 'a dima -> int list -> 'a
-  val set : 'a dima -> int list -> 'a -> unit
-  val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
-  val copy : 'a dima -> 'a dima
-  val dim : 'a dima -> int
-  val equal : ('a -> 'a -> bool) -> 'a dima -> 'a dima -> bool
+  type t
+
+  val init : int -> int -> elt -> t
+  val minit : int -> int -> (elt * int) list -> elt -> t
+  val get : t -> int list -> elt
+  val set : t -> int list -> elt -> unit
+  val print : t -> (Format.formatter -> elt -> unit) -> unit
+  val copy : t -> t
+  val dim : t -> int
+  val dcompare : t -> t -> int
+  val equal : t -> t -> bool
     
 end 
 
-module DimArray : DA = struct
+module DimArray (Elt : OrderedType) : DA with type elt = Elt.t = struct
     
-  type 'a t = 
-    | Arr of 'a array 
-    | Mat of 'a t array
+  type elt = Elt.t
+    
+  type dima = 
+    | Arr of Elt.t array 
+    | Mat of dima array
 
-  type 'a dima = {dim:int; darr:'a t}
+  type t = {dim:int; darr:dima}
 
   let init d nb_elem v =
     let darr = 
@@ -160,187 +186,248 @@ module DimArray : DA = struct
 
   let dim t = t.dim
 
-  let equal eq t1 t2 =
-    let rec equal' t1 t2 =
+  let dcompare t1 t2 =
+    let c = ref 0 in
+    let rec compare' t1 t2 =
       match t1, t2 with
-	| Arr a1, Arr a2 -> 
-	  (try 
-	     Array.iteri (fun i e -> if not (eq a2.(i) e) then raise Exit) a1; 
-	     true
-	   with Exit -> false
-	  )
-	| Mat m1, Mat m2 -> 
+	| Arr a1, Arr a2 ->
 	  (try
 	     Array.iteri (
-	       fun i a -> let b = equal' a m2.(i) in
-			  if not b then raise Exit
+	       fun i e -> 
+		 c := Elt.compare a2.(i) e;
+		 if !c <> 0 then raise Exit
+	     ) a1;
+	     !c
+	   with Exit -> !c
+	  )
+	| Mat m1, Mat m2 ->
+	  (try
+	     Array.iteri (
+	       fun i a -> 
+		 c := compare' a m2.(i);
+		 if !c <> 0 then raise Exit
 	     ) m1;
-	     true
-	   with Exit -> false
+	     !c
+	   with Exit -> !c
 	  )
 	| _ -> assert false
-    in equal' t1.darr t2.darr
+    in compare' t1.darr t2.darr
+
+  let equal t1 t2 =
+    if dcompare t1 t2 = 0 then true else false
 
 end
 
 module type St = sig
 
-  (* A dimensional array *)
-  type 'a da
+  type elt
+  type da
+
   (* The state : global variables and arrays *)
-  type 'a t = {globs :(Hstring.t, 'a) Hashtbl.t; arrs : (Hstring.t, 'a da) Hashtbl.t}
+  type t = {globs :(Hstring.t, elt) Hashtbl.t; arrs : (Hstring.t, da) Hashtbl.t}
       
-  val init : unit -> 'a t
+  val init : unit -> t
+
+  val giter : (Hstring.t -> elt -> unit) -> (Hstring.t, elt) Hashtbl.t -> unit
+  val aiter : (Hstring.t -> da -> unit) -> (Hstring.t, da) Hashtbl.t -> unit
     
-  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-  val hash : 'a t -> int
+  val ecompare : t -> t -> int
+  val equal : t -> t -> bool
     
   (* Get a global variable value *)
-  val get_v : 'a t -> Hstring.t -> 'a
+  val get_v : t -> Hstring.t -> elt
   (* Get an array by its name *)
-  val get_a : 'a t -> Hstring.t -> 'a da
+  val get_a : t -> Hstring.t -> da
   (* Get an element in an array by its name and a a param list*)
-  val get_e : 'a t -> Hstring.t -> int list -> 'a
+  val get_e : t -> Hstring.t -> int list -> elt
     
   (* Set a global variable value *)
-  val set_v : 'a t -> Hstring.t -> 'a -> unit
+  val set_v : t -> Hstring.t -> elt -> unit
   (* Set an array by its name and a new array *)
-  val set_a : 'a t -> Hstring.t -> 'a da -> unit
+  val set_a : t -> Hstring.t -> da -> unit
   (* Set an element in an array by its name, a param list and a value *)
-  val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
+  val set_e : t -> Hstring.t -> int list -> elt -> unit
     
-  val copy : 'a t -> 'a t
+  val copy : t -> t
     
 end
 
-module State ( A : DA ) : St with type 'a da = 'a A.dima = struct
-    
-  type 'a t = {globs: (Hstring.t, 'a) Hashtbl.t; arrs: (Hstring.t, 'a A.dima) Hashtbl.t}
-  type 'a da = 'a A.dima
+module State (Elt : OrderedType)  (A : DA with type elt = Elt.t) : St with type elt = Elt.t and type da = A.t = struct
+
+  type elt = Elt.t 
+  type da = A.t
+  type t = {globs: (Hstring.t, elt) Hashtbl.t; arrs: (Hstring.t, da) Hashtbl.t}
 
   let init () = {globs = Hashtbl.create 17; arrs = Hashtbl.create 17}
 
-  let equal eq s1 s2 =
+  let giter = Hashtbl.iter
+  let aiter = Hashtbl.iter
+
+  let ecompare s1 s2 =
+    let c = ref 0 in
     try
       let gs1 = s1.globs in
       let gs2 = s2.globs in
       Hashtbl.iter (
-	fun g v1 -> let v2 = Hashtbl.find gs2 g in
-		    if not (eq v1 v2) then raise Exit
+  	fun g v1 -> let v2 = Hashtbl.find gs2 g in
+  		    c := Elt.compare v1 v2;
+  		    if !c <> 0 then raise Exit
       ) gs1;
       let as1 = s1.arrs in
       let as2 = s2.arrs in
       Hashtbl.iter (
-	fun a arr1 -> let arr2 = Hashtbl.find as2 a in
-		      if not (A.equal eq arr1 arr2) then raise Exit
+  	fun a arr1 -> let arr2 = Hashtbl.find as2 a in
+  		      c := (A.dcompare arr1 arr2);
+  		      if !c <> 0 then raise Exit
       ) as1;
-      true
-    with
-	Exit -> false
+      !c
+    with Exit -> !c
 
-  let hash = Hashtbl.hash
+  let iter_globs = Hashtbl.iter
+
+  let equal s1 s2 = if ecompare s1 s2 = 0 then true else false
 
   let get_v t h = Hashtbl.find t.globs h
   let get_a t h = Hashtbl.find t.arrs h
   let get_e t h pl = let arr = get_a t h in
-		     A.get arr pl
+  		     A.get arr pl
 
   let set_v t h v = Hashtbl.replace t.globs h v
   let set_a t h arr = Hashtbl.replace t.arrs h arr
   let set_e t h pl v = let arr = get_a t h in
-		       A.set arr pl v
+  		       A.set arr pl v
 
   let copy t = let carrs = Hashtbl.copy t.arrs in
-	       Hashtbl.iter (fun name arr -> Hashtbl.replace carrs name (A.copy arr)) carrs;
-	       {globs = Hashtbl.copy t.globs; arrs = carrs}
+  	       Hashtbl.iter (fun name arr -> Hashtbl.replace carrs name (A.copy arr)) carrs;
+  	       {globs = Hashtbl.copy t.globs; arrs = carrs}
 
 end
-
 
 module type Sys = sig
 
+  type elt
   (* A state *)
-  type 'a s
+  type s
   (* A dimensional array *)
-  type 'a da
-  type 'a set
+  type da
+
+
+  module SSet : 
+  sig
+    type elt = (Hstring.t * s)
+    type t
+    val empty : t
+    val is_empty : t -> bool
+    val mem : elt -> t -> bool
+    val add : elt -> t -> t
+    val singleton : elt -> t
+    val remove : elt -> t -> t
+    val union : t -> t -> t
+    val inter : t -> t -> t
+    val diff : t -> t -> t
+    val compare : t -> t -> int
+    val equal : t -> t -> bool
+    val subset : t -> t -> bool
+    val iter : (elt -> unit) -> t -> unit
+    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+    val for_all : (elt -> bool) -> t -> bool
+    val exists : (elt -> bool) -> t -> bool
+    val filter : (elt -> bool) -> t -> t
+    val partition : (elt -> bool) -> t -> t * t
+    val cardinal : t -> int
+    val elements : t -> elt list
+    val min_elt : t -> elt
+    val max_elt : t -> elt
+    val choose : t -> elt
+    val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
+  end
+
+  type set = SSet.t
   (* A record with a readable state and a writable state *)
-  type 'a t = {syst : 'a set; init : 'a set; read_st : 'a s; write_st : 'a s}
+  type  t = {syst : set; init : set; read_st : s; write_st : s}
 
-  val init : unit -> 'a t
+  val init : unit -> t
 
-  val get_v : 'a t -> Hstring.t -> 'a
-  val get_a : 'a t -> Hstring.t -> 'a da
-  val get_e : 'a t -> Hstring.t -> int list -> 'a
+  val get_v : t -> Hstring.t -> elt
+  val get_a : t -> Hstring.t -> da
+  val get_e : t -> Hstring.t -> int list -> elt
 
-  val set_v : 'a t -> Hstring.t -> 'a -> unit
-  val set_a : 'a t -> Hstring.t -> 'a da -> unit
-  val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
+  val set_v : t -> Hstring.t -> elt -> unit
+  val set_a : t -> Hstring.t -> da -> unit
+  val set_e : t -> Hstring.t -> int list -> elt -> unit
 
-  val exists : ('a s -> bool) -> 'a t -> bool
+  val exists : (s -> bool) -> t -> bool
     
-  val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
-    
-  val update_init : 'a t -> (Hstring.t * 'a s) -> 'a t
+  val update_init : t -> (Hstring.t * s) -> t
 
-  val get_init : 'a t -> 'a set
+  val get_init : t -> set
 
-  val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
+  val new_init : Hstring.t -> t -> s -> t
 
-  val update_s : Hstring.t -> 'a t -> 'a t
+  val update_s : Hstring.t -> t -> t
     
 end
 
-module System ( S : St ) : Sys 
-  with type 'a da = 'a S.da and type 'a s = 'a S.t and type 'a set = (Hstring.t * 'a S.t) list = struct
+module MSystem ( Elt : OrderedType )
+  (A : DA with type elt = Elt.t) 
+  (E : St with type elt = Elt.t and type da = A.t) 
+  : Sys with type elt = Elt.t and type s = E.t and type da = A.t = struct
 
-    type 'a da = 'a S.da
-    type 'a s = 'a S.t
-    type 'a set = (Hstring.t * 'a S.t) list
-    type 'a t = {syst : (Hstring.t *'a S.t) list; init : (Hstring.t * 'a S.t) list; read_st : 'a S.t; write_st : 'a S.t}
+  type elt = Elt.t
+  type da =  A.t
+  type s =  E.t
+    	
+  module SSet = Set.Make (
+    struct
+      type t = (Hstring.t * s)
+      let compare (_, s1) (_, s2) = E.ecompare s1 s2
+    end
+  )
+    
+  type set = SSet.t
+  type t = {syst : set; init : set; read_st : s; write_st : s}
 	
-    let init () = {syst = []; init = []; read_st = S.init (); write_st = S.init ()}
+  let init () = {syst = SSet.empty; init = SSet.empty; read_st = E.init (); write_st = E.init () }
 
-    let get_v s h = let state = s.read_st in
-		    S.get_v state h
-    let get_a s h = let state = s.read_st in
-  		    S.get_a state h
-    let get_e s h pl = let state = s.read_st in
-  		       S.get_e state h pl
+  let get_v s h = let state = s.read_st in
+		  E.get_v state h
+  let get_a s h = let state = s.read_st in
+  		  E.get_a state h
+  let get_e s h pl = let state = s.read_st in
+  		     E.get_e state h pl
 
-    let set_v s h v = let state = s.write_st in
-  		      S.set_v state h v
-    let set_a s h a = let state = s.write_st in
-  		      S.set_a state h a
-    let set_e s h pl v = let state = s.write_st in
-  			 S.set_e state h pl v
+  let set_v s h v = let state = s.write_st in
+  		    E.set_v state h v
+  let set_a s h a = let state = s.write_st in
+  		    E.set_a state h a
+  let set_e s h pl v = let state = s.write_st in
+  		       E.set_e state h pl v
+			 
+  let exists f s = SSet.exists (fun (_, e) -> f e) s.syst
 
-    let exists f s = List.exists (fun (_, e) -> f e) s.syst
+  let update_init s il = {s with init = SSet.add il s.init}
 
-    let exists_init eq i s = List.exists (fun (h, s) -> S.equal eq i s) s.init 
+  let get_init s = s.init
 
-    let update_init s il = {s with init = il::s.init}
+  let new_init tr s i = {syst = SSet.add (tr, E.copy i) s.syst; init = s.init; read_st = E.copy i; write_st = i}
 
-    let get_init s = s.init
-
-    let new_init tr s i = {syst = (tr, S.copy i) :: s.syst; init = s.init; read_st = S.copy i; write_st = i}
-
-    let update_s tr s = {syst = (tr, S.copy s.write_st) :: s.syst; init = []; read_st = S.copy s.write_st; write_st = s.write_st}
+  let update_s tr s = {syst = SSet.add (tr, E.copy s.write_st) s.syst; init = s.init; read_st = E.copy s.write_st; write_st = s.write_st}
 
   end
-				  
-
+			  
 (* GLOBAL VARIABLES *)
 
-module Etat = State (DimArray)
-module Syst = System (Etat)
+module Array = DimArray (OrderedValue)
+module Etat = State (OrderedValue) (Array)
+module Syst = MSystem (OrderedValue) (Array) (Etat)
+
+open Syst
 
 let system = ref (Syst.init ())
 
 (* Types *)
 let htbl_types = Hashtbl.create 11
-
-let htbl_abstypes = Hashtbl.create 11
 
 (* Filling htbl_types with default types (proc, bool, int and real) *)
 let () = 
@@ -353,19 +440,46 @@ let () =
       Hstring.make "real", [Numb (Int 0)]
     ]
 
-let compare_value v1 v2 = 
-  match v1, v2 with
-    | Numb n1, Numb n2 -> Num.compare_num n1 n2
-    | Hstr h1, Hstr h2 
-    | Var h1, Var h2 -> Hstring.compare h1 h2
-    | Proc p1, Proc p2 -> Pervasives.compare p1 p2
-    | _ -> assert false
+module TI = Set.Make (
+  struct 
+    type t = Hstring.t 
+    let compare = Hstring.compare 
+  end
+)
 
-let vequal v1 v2 =
-  if compare_value v1 v2 = 0 then true else false
+module TS = Set.Make (
+  struct 
+    type t = value 
+    let compare = compare_value 
+  end
+)
 
-module TS = Set.Make (struct type t = value let compare = compare_value end)
-module TI = Set.Make (struct type t = Hstring.t let compare = Hstring.compare end)
+module TIS = Set.Make (
+  struct 
+    type t = Hstring.t * TS.t * TI.t
+    let compare (v1, ts1, ti1) (v2, ts2, ti2) = 
+      let ct1 = TS.cardinal ts1 in
+      let ct2 = TS.cardinal ts2 in
+      if ct1 > ct2
+      then -1
+      else 
+	(
+	  if ct1 < ct2
+	  then 1
+	  else (
+	    let cd1 = TI.cardinal ti1 in
+	    let cd2 = TI.cardinal ti2 in
+	    if cd1 < cd2
+	    then -1
+	    else 
+	      if cd1 > cd2 then 1
+	      else Hstring.compare v1 v2
+	  )
+	)
+  end
+)
+
+let htbl_abstypes = Hashtbl.create 11
 
 (* This hashtbl contains variables binded to their representant
    and their type *)
@@ -376,41 +490,9 @@ let ec = Hashtbl.create 17
    and the list of the representants with which they differ *)
 let dc = Hashtbl.create 17
 
-let inits = ref []
+let inits = Hashtbl.create 17
 
-(* If their is only one possible value left,
-   delete the variables from the difference classes
-   and update the equivalence classes with this value *)
-let upd_dc h types ty diffs =
-  if TS.cardinal types == 1 && ty <> N && ty <> A
-  then
-    (
-      Hashtbl.remove dc h;
-      let v = TS.choose types in
-      Hashtbl.iter (
-	fun n' (rep, tself) ->
-	  match rep with
-	    | Var h' -> if (h' = h)
-	      then Hashtbl.replace ec n' (v, tself)
-	    | _ -> ()
-      ) ec;
-      Hashtbl.iter (
-	fun n' (ty, types, diffs) ->
-	  if (TI.mem h diffs)
-	  then let diffs' = TI.remove h diffs in
-	       let types' = TS.remove v types in
-	       Hashtbl.replace dc n' (ty, types', diffs')
-      ) dc
-    )
-  else Hashtbl.replace dc h (ty, types, diffs)
-
-(* Containing the groups of bounded variables *)
-let groups = Hashtbl.create 17
-
-(* Containing the sorted groups of bounded variables *)
-let graphs = Hashtbl.create 17
-
-
+let init_list = ref []
 
 (* USEFUL METHODS *)
 
@@ -473,12 +555,19 @@ let hst_var =
     | Var h -> h
     | _ -> assert false
 
-let ec_replace n v =
+let ec_replace rep v =
   Hashtbl.iter (
-    fun n' (rep, st) ->
-      if rep = n
+    fun n' (rep', st) ->
+      if rep' = rep
       then Hashtbl.replace ec n' (v, st)
   ) ec
+
+let abst_replace id rep ts =
+  Hashtbl.iter (
+    fun a' (rep', ts') ->
+      if rep' = id
+      then Hashtbl.replace htbl_abstypes a' (rep, (TI.union ts ts'))
+  ) htbl_abstypes
 
 (* VALUE METHODS *)
 
@@ -516,6 +605,7 @@ let v_equal v1 v2 =
     | Proc p1, Proc p2 -> p1 = p2
     | _ -> false
 
+let type_st st = match st with RGlob t | RArr (t, _) -> t
 
 (* DISPLAY METHODS *)
 
@@ -534,70 +624,77 @@ let print_ce_diffs () =
   ) ec;
   printf "\nDc@.";
   Hashtbl.iter (
-    fun n (ty, types, diffs) ->
+    fun n (ty, types, diffs, cfc) ->
       printf "%a : " Hstring.print n;
       printf "\n\tTS : ";
       TS.iter (printf "%a " print_value) types;
       printf "\n\tTI : ";
       TI.iter (printf "%a " Hstring.print) diffs;
-      printf "@."
+      printf "\n\tcfc : %d@." cfc
   ) dc;
   printf "@."
 
-let print_g () =
+let print_abst () =
+  printf "\nAbst :@.";
   Hashtbl.iter (
-    fun c l ->
-      printf "%d :@." c;
-      List.iter (
-	fun (n, (ty, types, diffs)) ->
-	  printf "%a : " Hstring.print n;
-	  TS.iter (printf "%a " print_value) types;
-	  TI.iter (printf "%a " Hstring.print) diffs;
-	  printf "@."
-      ) l;
-  ) graphs;
-  printf "@."
-
-let print_groups () =
-  Hashtbl.iter
-    (fun i ti ->
-      printf "%d :@." i;
-      TI.iter (
-	fun n -> printf " %a" Hstring.print n
-      ) ti;
+    fun n (rep, ts) -> 
+      printf "%a -> %a, diffs " Hstring.print n Hstring.print rep;
+      TI.iter (printf "%a " Hstring.print) ts;
       printf "@."
-    ) groups
+  ) htbl_abstypes
+
+let print_types () =
+  printf "\nTypes :@.";
+  Hashtbl.iter (
+    fun n vl ->
+      printf "t : %a -> " Hstring.print n;
+      List.iter (printf "%a " print_value) vl; 
+      printf "@."
+  ) htbl_types
 
 let print_inits () =
-  List.iter (
-    fun (n, ((tself, ts), _)) ->
-      printf "%a (" Hstring.print n;
-      (match tself with
-	| RGlob h -> printf "G %a) : " Hstring.print h
-	| RArr (h, i) -> printf "A %a %d) : " Hstring.print h i
-      );
-      TS.iter (
-	fun v -> printf "%a " print_value v
-      ) ts;
-      printf "@."
-  ) !inits
+  printf "\n INITS \n\n";
+  Hashtbl.iter (
+    fun cfc tis ->
+      printf "%d :\n\t" cfc; 
+      TIS.iter
+	(fun (rep', ts', ti') ->
+	  printf "%a -> " Hstring.print rep';
+	  TS.iter (printf "%a " print_value) ts';
+	  printf "| ";
+	  TI.iter (printf "%a " Hstring.print) ti';
+	  printf "\n\t";
+	) tis;
+      printf "\n"
+  ) inits;
+  printf "@."
+
+let print_init_list () =
+  List.iter
+    (fun (rep, st, ts, ce) ->
+      printf "%a -> " Hstring.print rep;
+      TS.iter (printf "%a " print_value) ts;
+      printf "\n";
+      List.iter (fun (n, _) -> printf "%a " Hstring.print n) ce;
+      printf "@.";
+    ) !init_list
 
 let print_system (tr, {Etat.globs; Etat.arrs}) =
   printf "@.";
   printf "%a@." Hstring.print tr;
-  Hashtbl.iter (
+  Etat.giter (
     fun var value ->
       printf "%a -> %a@." Hstring.print var print_value value
   ) globs;
-  Hashtbl.iter (
+  Etat.aiter (
     fun name tbl -> printf "%a " Hstring.print name;
-      DimArray.print tbl print_value;
+      Array.print tbl print_value;
       printf "@."
   ) arrs;
   printf "@."
 
 let print_init () =
-  List.iter print_system (Syst.get_init !system)
+  SSet.iter print_system (Syst.get_init !system)
 
 let print_procinit () =
   printf "Proc_init :";
@@ -616,80 +713,63 @@ let print_procninit () =
 (* Each type is associated to his constructors 
    The first one is considered as the default type *)
 let init_types type_defs globals arrays =
+  let upd_abst n =
+    Hashtbl.add htbl_abstypes n (n, TI.empty);
+  in
   List.iter (
     fun (t_name, t_fields) ->
-      if not (Hashtbl.mem htbl_types t_name) then
-	let fields = 
-	  if (List.length t_fields > 0)
-	  then 
-	    List.fold_right (
-	      fun field acc -> (Hstr field)::acc
-	    ) t_fields [] 
-	  else
-	    (
-	      Hashtbl.add htbl_abstypes t_name ();
-	      let acc' =
-		List.fold_left (
-		  fun acc (n, ty) -> if ty = t_name then (Hstr n)::acc else acc) [] globals in
+      let fields = 
+	if (List.length t_fields > 0)
+	then (
+	  List.fold_right (
+	    fun field acc -> (Hstr field)::acc
+	  ) t_fields []
+	)
+	else
+	  (
+	    let acc' =
 	      List.fold_left (
-		fun acc (n, (_, ty)) -> if ty = t_name then (Hstr n)::acc else acc) acc' arrays
-	    )
-	in
-	Hashtbl.add htbl_types t_name fields
+		fun acc (n, ty) -> 
+		  if ty = t_name 
+		  then (
+		    upd_abst n;
+		    (Hstr n)::acc
+		  ) else acc
+	      ) [] globals in
+	    List.fold_left (
+	      fun acc (n, (_, ty)) -> 
+		if ty = t_name 
+		then (
+		  upd_abst n;
+		  (Hstr n)::acc
+		) else acc
+	    ) acc' arrays
+	  )
+      in
+      Hashtbl.add htbl_types t_name fields
   ) type_defs
     
 (* Initialization of the global variables to their
    default constructor, of the equivalence classes and
    of the difference classes *)
 let init_globals globals =
-  let i = Hstring.make "int" in
-  let r = Hstring.make "real" in
   List.iter (
     fun (g_name, g_type) ->
-      (* First, each var is its own representant *)
-      Hashtbl.add ec g_name (Var g_name, RGlob g_type);
-      let ty, stypes, diffs = 
-	if (Hstring.equal g_type i || Hstring.equal g_type r) 
-	(* Int or real*)
-	then N, TS.empty, TI.empty
-	(* Abstract or other type*)
-	else
-	  let ty = Hashtbl.find htbl_types g_type in
-	  if Hashtbl.mem htbl_abstypes g_type 
-	  then
-	    A, TS.singleton (Var g_name), TI.empty
-	  else 
-	    let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
-	    O, st, TI.empty 
-      in
-      Hashtbl.add dc g_name (ty, stypes, diffs)
+      let t = 
+	if Hashtbl.mem htbl_abstypes g_name then g_name else g_type in
+      Hashtbl.add ec g_name (Var g_name, RGlob t)
   ) globals
 
 (* Initialization of the arrays with their default
    constructor (deterministic version) of the equivalence classes and
    of the difference classes *)
 let init_arrays arrays =
-  let i = Hstring.make "int" in
-  let r = Hstring.make "real" in
   List.iter (
     fun (a_name, (a_dims, a_type)) ->
       let dims = List.length a_dims in
-      Hashtbl.add ec a_name (Var a_name, RArr (a_type, dims));
-      let ty, stypes, diffs = 
-	if (Hstring.equal a_type i || Hstring.equal a_type r) 
-	(* Int or real *)
-	then N, TS.empty, TI.empty
-	(* Other type *)
-	else
-	  let ty = Hashtbl.find htbl_types a_type in
-	  if Hashtbl.mem htbl_abstypes a_type 
-	  then
-	    A, TS.singleton (Var a_name), TI.empty
-	  else 
-	    let st = List.fold_left (fun acc t -> TS.add t acc) TS.empty ty in
-	    O, st, TI.empty
-      in
-      Hashtbl.add dc a_name (ty, stypes, diffs)
+      let t = 
+	if Hashtbl.mem htbl_abstypes a_name then a_name else a_type in
+      Hashtbl.add ec a_name (Var a_name, RArr (t, dims))
   ) arrays
     
 (* Execution of the real init method from the cubicle file 
@@ -697,6 +777,7 @@ let init_arrays arrays =
 let init_htbls (vars, atoms) =
   List.iter (
     fun satom ->
+      (* First look, equalities *)
       SAtom.iter (
 	fun atom ->
 	  match atom with
@@ -707,110 +788,105 @@ let init_htbls (vars, atoms) =
 		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as r) 
 		  | ((Elem (_, Constr) | Const _) as r), (Elem (id1, Glob) | Access (id1, _)) ->
 	    	    let (rep, _) = Hashtbl.find ec id1 in
-		    let h = hst_var rep in
 		    let v = get_cvalue r in
-		    (* Change the representant of the equivalence class with the constant. 
-		       Remove the equivalence class from the difference classes hashtbl *)
-		    Hashtbl.iter (
-		      fun n' (rep', st) ->
-			if rep' = rep
-			then
-			  (
-			    Hashtbl.remove dc n';
-			    Hashtbl.replace ec n' (v, st)
-			  )
-		    ) ec;
-		    (* Change the difference classes so the representant 
-		       is now an impossible value *)
-		    Hashtbl.iter (
-		      fun n (ty, types, diffs) ->
-			if (TI.mem h diffs)
-			then let diffs' = TI.remove h diffs in
-			     let types' = 
-			       match ty with
-				 | N -> TS.add v types
-				 | O | A -> TS.remove v types 
-			     in
-			     upd_dc n types' ty diffs';
-		    ) dc
-		      
+		    ec_replace rep v
 		  (* Var or Tab[] = Var or Tab[] *)
 		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
-		    let (rep, _) as t1 = Hashtbl.find ec id1 in
-		    let t2 = Hashtbl.find ec id2 in
-		    let ids, idd, (sr, _), (dr, dts) = 
-		      match rep with
-			| Var _ -> id2, id1, t2, t1
-			| _ -> id1, id2, t1, t2 
-		    in
-		    (match sr with
-		      (* If the future representant is not a constant,
-			 modify the difference class of the representant. *)
-		      | Var _ -> let (ty1, types1, diffs1) = Hashtbl.find dc ids in
-				 let (ty2, types2, diffs2) = Hashtbl.find dc idd in
-				 let types = 
-				   match ty1 with
-				     | A -> types1
-				     | N -> TS.union types1 types2
-				     | O -> TS.inter types1 types2
-				 in 
-				 let diffs = TI.union diffs1 diffs2 in 
-				 upd_dc ids types ty1 diffs;
-		      | _ -> ()
+		    let (rep, st) as t1 = Hashtbl.find ec id1 in
+		    let (rep' , st') as t2 = Hashtbl.find ec id2 in
+		    (try let (rep, cfc) = Hashtbl.find htbl_abstypes id1 in 
+			 abst_replace id2 rep cfc
+		     with Not_found -> ()
 		    );
-		    (* Remove the non-chosen variable from the difference classes hashtbl *)
-		    Hashtbl.remove dc idd;
-		    (* Modify the representant of each variable which representant was the 
-		       non-chosen variable *)
-		    ec_replace dr sr	    		 
+		    let sr, dr =
+		      match rep with
+			| Var _ -> rep', rep
+			| _ -> rep, rep'
+		    in ec_replace dr sr
 		  | _ -> assert false
 	      end
+	    | _ -> () (* Will be handled during the second look *)
+      ) satom;
+      let i = Hstring.make "int" in
+      let r = Hstring.make "real" in
+      let cfc = ref 0 in
+      Hashtbl.iter (
+	fun n (rep, st) ->
+	  try
+	    let t = type_st st in
+	    (* Abstract type *)
+	    if n = t then raise Exit
+	    else if (Var n) = rep then
+	      let ty, ts = 
+		if Hstring.equal t i || Hstring.equal t r then N, TS.empty
+		else let vs = Hashtbl.find htbl_types t in
+		     let ts' = List.fold_left (fun acc t -> TS.add t acc) TS.empty vs in
+		     O, ts'
+	      in
+	      Hashtbl.add dc n (ty, ts, TI.empty, !cfc);
+	      incr cfc
+	  with Exit -> Hashtbl.replace ec n (Hstr n, st)
+      ) ec;
+      (* Second look, differences *)
+      SAtom.iter (
+	fun atom ->
+	  match atom with
+	    | Comp (t1, Eq, t2) -> () (* Already handled *)
 	    | Comp (t1, Neq, t2) ->
 	      begin
-	    	match t1, t2 with
+		match t1, t2 with
 		  (* Var or Tab[] <> Const or Const <> Var or Tab[] *)
-	    	  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as c) 
+		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as c) 
 		  | ((Elem (_, Constr) | Const _) as c), (Elem (id1, Glob) | Access (id1, _)) ->
 		    (* Delete the constr from the possible values of the variable representant *)
 		    begin
 		      try
 			let h = rep_name id1 in
-	    		let (ty, types, diffs) = Hashtbl.find dc h in
-	    		let v = get_cvalue c in
-			let types' = match ty with
-			  | N -> TS.add v types
-			  | O | A -> TS.remove v types 
+			let (ty, ts, ti, cfc) = Hashtbl.find dc h in
+			let v = get_cvalue c in
+			let ts' = match ty with
+			  | N -> TS.add v ts
+			  | O -> TS.remove v ts 
+			  | _ -> assert false
 			in
-			upd_dc h types' ty diffs
+			Hashtbl.replace dc h (ty, ts', ti, cfc)
 		      with ConstrRep -> () (* Strange but allowed *)
 		    end
 		  (* Var or Tab[] <> Var or Tab[] *)
-	    	  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
-	    	    begin
-		      let (rep1, tself1) = Hashtbl.find ec id1 in
-		      let (rep2, tself2) = Hashtbl.find ec id2 in
+		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
+		    begin
+		      (try let (rep, cfc) = Hashtbl.find htbl_abstypes id1 in
+			   let (rep', cfc') = Hashtbl.find htbl_abstypes id2 in
+			   abst_replace rep' rep' (TI.singleton rep);
+			   abst_replace rep rep (TI.singleton rep')
+		       with Not_found -> ()
+		      );
+		      let (rep1, _) = Hashtbl.find ec id1 in
+		      let (rep2, _) = Hashtbl.find ec id2 in
 		      match rep1, rep2 with
-			| Var h1, Var h2 -> let (ty1, types1, diffs1) = Hashtbl.find dc h1 in
-	    				    let (ty2, types2, diffs2) = Hashtbl.find dc h2 in
-	    				    Hashtbl.replace dc h1 (ty1, types1, TI.add h2 diffs1);
-	    				    Hashtbl.replace dc h2 (ty2, types2, TI.add h1 diffs2)
-	    		| Var h, (_ as rep') 
+			| Var h1, Var h2 -> let (ty1, ts1, ti1, cfc1) = Hashtbl.find dc h1 in
+					    let (ty2, ts2, ti2, cfc2) = Hashtbl.find dc h2 in
+					    let cfc = min cfc1 cfc2 in
+					    Hashtbl.replace dc h1 (ty1, ts1, TI.add h2 ti1, cfc);
+					    Hashtbl.replace dc h2 (ty2, ts2, TI.add h1 ti2, cfc)
+			| Var h, (_ as rep') 
 			| (_ as rep'), Var h -> 	
-			  let (ty, types, diffs) = Hashtbl.find dc h in
-			  let types' = match ty with
-			    | N -> TS.add rep' types
-			    | O | A -> TS.remove rep' types
-			  in upd_dc h types' ty diffs
-			  
+			  let (ty, ts, ti, cfc) = Hashtbl.find dc h in
+			  let ts' = match ty with
+			    | N -> TS.add rep' ts
+			    | O -> TS.remove rep' ts
+			    | _ -> assert false in
+			  Hashtbl.replace dc h (ty, ts', ti, cfc)
 			| _ -> () (* Strange but that's your problem *)
 		    end
 		  | Elem (id, Glob), Elem (p, Var)
 		  | Elem (p, Var), Elem (id, Glob) ->
-		    let h = rep_name id in
-		    let (ty, _, diffs) = Hashtbl.find dc h in
-		    Hashtbl.replace dc h (ty, TS.singleton !fproc, diffs)
+		    let (rep, st) = Hashtbl.find ec id in
+		    let h = match rep with Var h -> h | _ -> assert false in
+		    Hashtbl.remove dc h;
+		    ec_replace rep !fproc
 		  | _ -> assert false
-	      end
+	      end 
 	    | _ -> assert false
       ) satom
   ) atoms
@@ -823,214 +899,148 @@ let upd_options () =
 	| Var h when h <> n && Hashtbl.mem proc_ninit n -> Hashtbl.add proc_ninit h ()
 	| _ -> ()
     ) ec
-    
-let c = ref 0
 
-let update () =
+let upd_init_list rep ts =
+  let (_, st) = Hashtbl.find ec rep in
+  Hashtbl.remove ec rep;
+  (* Possible values according with the .sched file *)
+  let pr = Hstring.make "proc" in
+  let ts' = 
+    match st with 
+      | RGlob p | RArr (p, _) when p = pr ->
+	if (init_proc && not (Hashtbl.mem proc_ninit rep))
+	then (
+	  TS.union (TS.singleton (TS.min_elt ts)) (TS.singleton !fproc)
+	) else if not init_proc && Hashtbl.mem proc_init rep
+	  then
+	    let l = Hashtbl.find proc_init rep in
+	    List.fold_left (
+	      fun acc i -> 
+		let v = if i = -1 then !fproc
+		  else Proc i in
+		TS.add v acc
+	    ) TS.empty l
+	  else TS.singleton (TS.min_elt ts)
+      | _ -> ts
+  in
+  let ce = Hashtbl.fold (
+    fun n (rep', st) acc ->
+      if (Var rep) = rep' 
+      then (
+	Hashtbl.remove ec n;
+	(n, st) :: acc )
+      else acc
+  ) ec [] in
+  init_list := (rep, st, ts', ce) :: !init_list
+    
+let upd_inits () =
   let dc' = Hashtbl.copy dc in
-  let rec upd_diff diff =
-    TI.iter (
-      fun n' -> 
-	let ti = Hashtbl.find groups !c in
-	(if not (TI.mem n' ti)
-	 then
-	    ( 
-	      let (_, _, diffs') = Hashtbl.find dc' n' in
-	      Hashtbl.replace groups !c (TI.add n' ti);
-	      Hashtbl.remove dc' n';
-	      upd_diff diffs'
-	    )
-	)
-    ) diff in
   Hashtbl.iter (
-    fun n (_, types, diffs) ->
-      Hashtbl.add groups !c (TI.singleton n);
-      Hashtbl.remove dc' n;
-      upd_diff diffs;
-      incr c
+    fun rep (ty, ts, ti, cfc) ->
+      let tis = Hashtbl.fold (
+	fun rep' (ty', ts', ti', cfc') acc ->
+	  if cfc = cfc'
+	  then (
+	    Hashtbl.remove dc' rep';
+	    TIS.add (rep', ts', ti') acc
+	  ) else acc
+      ) dc' TIS.empty in
+      if TIS.cardinal tis = 1 
+      then upd_init_list rep ts
+      else Hashtbl.add inits cfc tis
   ) dc'
 
-let upd_graphs () =
-  let comp_node (h1, (_, ty1, di1)) (h2, (_, ty2, di2)) =
-    let ct1 = TS.cardinal ty1 in
-    let ct2 = TS.cardinal ty2 in
-    if ct1 < ct2
-    then -1
-    else 
-      (
-	if ct1 > ct2
-	then 1
-	else (
-	  let cd1 = TI.cardinal di1 in
-	  let cd2 = TI.cardinal di2 in
-	  if cd1 > cd2
-	  then -1
-	  else 
-	    if cd1 < cd2 then 1
-	    else 0
-	)
-      )
+let graph_coloring () =
+  let rec color ucl cl =
+    match ucl with
+      | [] -> cl
+      | (rep, ts, ti)::tl -> 
+	let ts' = List.fold_left (
+	  fun acc (crep, _, c, _) -> 
+	    if TI.mem crep ti 
+	    then TS.diff acc c
+	    else acc
+	) ts cl in
+	let c = TS.min_elt ts' in
+	let (_, st) = try Hashtbl.find ec rep with Not_found -> printf "Error %a" Hstring.print rep; exit 1 
+	in
+	Hashtbl.remove ec rep;
+	let ce = Hashtbl.fold (
+	  fun n (rep', st) acc ->
+	    if (Var rep) = rep' 
+	    then (
+	      Hashtbl.remove ec n;
+	      (n, st) :: acc )
+	    else acc
+	) ec [] in
+	color tl ((rep, st, TS.singleton c, ce)::cl)	
   in
   Hashtbl.iter (
-    fun i ti ->
-      let list =
-	TI.fold (
-	  fun e l -> 
-	    let elt = Hashtbl.find dc e in
-	    (e, elt)::l
-	) ti [] in
-      let slist = List.sort comp_node list in
-      Hashtbl.add graphs i slist;
-      incr c  
-  ) groups  
+    fun _ tis ->
+      let q = TIS.elements tis in
+      let il = color q [] in
+      init_list := il @ !init_list
+  ) inits
 
-let graphs_to_inits () =
-  let upd_inits n v =
-    let (rep, tself) = Hashtbl.find ec n in
-    let r = match rep with
-      | Var h -> h
-      | _ -> n in
-    inits := (n ,((tself, (TS.singleton v)), r)) :: !inits
-  in
-  let rec l_to_ec v niv ti rtl =
-    match rtl with
-      | ((n, (_, ts, ti')) as hd)::tl ->
-	if (not (TI.mem n ti)) && (TS.mem v ts)
-	then
-	  (
-	    upd_inits n v;
-	    l_to_ec v niv (TI.union ti ti') tl
-	  )
-	else l_to_ec v (hd::niv) ti tl
-      | _ -> niv
-  in
-  let rec new_v_l n ats fts ti tl =
-    let v = TS.min_elt ats in
-    upd_inits n v;
-    let niv = (List.rev (l_to_ec v [] ti tl)) in
-    match niv with
-      | (n, (_, ts, ti))::tl -> let ats = TS.remove v (TS.diff ts fts) in
-				let fts = TS.add v fts in
-				new_v_l n ats fts ti tl
-      | _ -> ()
-  in
-  Hashtbl.iter (
-    fun i lv ->
-      match lv with
-	| [(n, (_, ts, ti))] -> 
-	  let v = TS.choose ts in
-	  let (_, tself) = Hashtbl.find ec n in
-	  let vs = match v with
-	    | Hstr _ -> ts
-	    | Proc p -> 
-	      if (init_proc && not (Hashtbl.mem proc_ninit n))
-	      then (
-		printf "DUO INIT %a@." Hstring.print n;
-		TS.union (TS.singleton v) (TS.singleton !fproc)
-	      ) else if  (not init_proc && Hashtbl.mem proc_init n)
-		then (printf "MULT INIT %a@." Hstring.print n;
-		      let l = Hashtbl.find proc_init n in
-		      List.fold_left (
-			fun acc i -> 
-			  let v = if i = -1 then !fproc
-			    else Proc i in
-			  TS.add v acc) TS.empty l
-		) 
-		else TS.singleton v
-	    | _ -> TS.singleton v
-	  in
-	  inits :=  (n ,((tself, vs), n)) :: !inits
-	| (n, (_, ts, ti))::tl -> new_v_l n ts TS.empty ti tl
-	| _ -> assert false
-  ) graphs
 
-let ec_to_inits () =
-  Hashtbl.iter (
-    fun n (rep, tself) ->
-      try
-	let (vs, r) =
-	  match rep with
-	    | Var h -> if h = n then raise Exit 
-	      else let ((_, vs), _) = List.assoc h !inits in (vs, h)
-	    | _ -> (TS.singleton rep, n)
-	in inits :=  (n, ((tself, vs), r)) :: !inits
-      with Exit -> ()
-  ) ec;
-  let comparei (n1, ((_, ts1), r1)) (n2, ((_, ts2), r2)) =
-    if n1 = r1 then 1
-    else if n2 = r2 then 1
-    else let lts1 = TS.cardinal ts1 in
-	 let lts2 = TS.cardinal ts2 in
-	 Pervasives.compare lts1 lts2 
-  in
-  inits := List.sort comparei !inits
-    
+	    
 let initialization init =
   init_htbls init;
-  (* print_procinit (); *)
-  upd_options ();
-  update ();
-  (* print_procinit (); *)
-  (* print_groups (); *)
-  upd_graphs ();
   (* print_ce_diffs (); *)
-  (* print_g (); *)
-  graphs_to_inits ();
+  upd_inits ();
   (* print_inits (); *)
-  (* printf "@."; *)
-  ec_to_inits ();
-  print_inits ();
+  (* print_init_list (); *)
+  graph_coloring ();
+  (* printf "\nColoring :\n@."; *)
+  (* print_init_list (); *)
+  (* printf "\nRemaining ce :\n@."; *)
   (* print_ce_diffs (); *)
+  (* print_abst () *)
   let etati = Etat.init () in
   let c = ref 0 in
-  let upd_etati tself n v =
-    let value_list al =
-      List.map (
-	fun (id, n) ->
-	  (Hstr id, n)
-      ) al
-    in
+  let value_list al =
+    List.map (
+      fun (id, n) ->
+	(Hstr id, n)
+    ) al
+  in
+  let upd_etati n (v, tself) =
     match tself with
       | RGlob _ -> Etat.set_v etati n v
       | RArr (_, d) -> let tbl =
-			 try let al = Hashtbl.find tab_init n in
-			     let vl = value_list al in
-			     DimArray.minit d nb_threads vl v
-			 with Not_found -> DimArray.init d nb_threads v
-		       in
-		       Etat.set_a etati n tbl
-  in    
-  let upd_syst n tself v =
-    upd_etati tself n v;
-    if not (Syst.exists_init vequal etati !system) 
-    then
-      (
-	incr c;
-	let i = Etat.copy etati in
-	let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-	system := Syst.update_init !system (tr, i) 
-      )
+  			 try let al = Hashtbl.find tab_init n in
+  			     let vl = value_list al in
+  			     Array.minit d nb_threads vl v
+  			 with Not_found -> Array.init d nb_threads v
+  		       in
+  		       Etat.set_a etati n tbl
+  in		       
+  let upd_syst () =
+    incr c;
+    let i = Etat.copy etati in
+    let tr = Hstring.make ("init" ^ (string_of_int !c)) in
+    system := Syst.update_init !system (tr, i)
   in
-  let module RMap = Map.Make (Hstring) in
-  let rec create_init l repmap =
+  let rec create_init l =
     match l with
-      | [(n, ((tself, ts), r))] -> 
-	if n = r then
-	  TS.iter (upd_syst n tself) ts
-	else
-	  let v = RMap.find r repmap in
-	  upd_syst n tself v
-      | (n, ((tself, ts), r)) :: tl -> 
-	TS.iter (
-	  fun v -> 
-	    upd_etati tself n v;
-	    let repmap' = if n = r then RMap.add n v repmap else repmap in
-	    create_init tl repmap'
-	) ts
-      | _ -> assert false
-  in 
-  create_init !inits RMap.empty;
-  printf "%d@." (List.length (Syst.get_init !system))
+      | [(rep, st, vts, oth)] ->
+  	TS.iter (
+	  fun v ->
+	    List.iter (fun (n, tn) -> upd_etati n (v, tn)) oth;
+	    upd_etati rep (v, st);
+	    upd_syst ()
+	) vts
+      | (rep, st, vts, oth) :: tl ->
+  	TS.iter (
+	  fun v ->
+	    List.iter (fun (n, tn) -> upd_etati n (v, tn)) ((rep, st)::oth);
+	    create_init tl
+	) vts
+      | _ -> upd_syst ()
+  in
+  Hashtbl.iter upd_etati ec;
+  create_init !init_list;
+  printf "%d@." (Syst.SSet.cardinal (Syst.get_init !system))
 
 
 (* SUBSTITUTION METHODS *)
@@ -1132,7 +1142,7 @@ let substitute_updts sub assigns upds =
 		  let f = fun () ->
 		    let t = get_value s term in
 		    let arr = Syst.get_a !system u.up_arr in
-		    DimArray.set arr pl t;
+		    Array.set arr pl t;
 		    Syst.set_a !system u.up_arr arr
 		  in
 		  (filter, f)::disj_acc
@@ -1151,7 +1161,6 @@ let init_system se =
   (* This part may change, deterministic for now *)
   init_arrays se.arrays;
   init_globals se.globals;
-  print_ce_diffs ();
   (* --- After this, all the variables and arrays are initialized --- *)
   initialization se.init
 
@@ -1313,27 +1322,45 @@ let scheduler se =
   Random.self_init ();
   init_system se;
   init_transitions se.trans;
+  let nb_ex = 
+    if nb_exec > 0 then nb_exec
+    else 
+      let acc = List.fold_left (
+	fun acc (n, ty) ->
+	  acc * (List.length (try Hashtbl.find htbl_types ty
+	    with Not_found -> Hashtbl.find htbl_types n)
+      )) 1 se.globals 
+      in
+      List.fold_left (
+	fun acc' (n, (_,ty)) ->
+	  acc' * (List.length (try Hashtbl.find htbl_types ty
+	    with Not_found -> Hashtbl.find htbl_types n)
+	  )) acc se.arrays 
+  in
+  let inits = Syst.get_init !system in
+  let nb_ex = nb_ex / (SSet.cardinal inits) in
+  printf "Nb exec : %d@." nb_ex;
   let total = ref 1 in
-  List.iter (
+  SSet.iter (
     fun (tr, st) ->
       system := Syst.new_init tr !system st;
       let count = ref 1 in
       (
-	try
-	  while !count < nb_exec do
-	    update_system ();
-	    incr count;
-	    incr total
-	  done;
-	with Invalid_argument _ -> ()
+  	try
+  	  while !count < nb_ex do
+  	    update_system ();
+  	    incr count;
+  	    incr total
+  	  done;
+  	with Invalid_argument _ -> ()
       );
-  ) (Syst.get_init !system);
+  ) inits;
   if verbose > 0 then
     begin
       let count = ref 1 in
-      List.iter (
-	fun st -> printf "%d : " !count; incr count; print_system st
-      ) (List.rev !system.Syst.syst)
+      SSet.iter (
+  	fun st -> printf "%d : " !count; incr count; print_system st
+      ) (!system.Syst.syst)
     end;
   printf "Scheduled %d states\n" !total;
   printf "--------------------------@."    

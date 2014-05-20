@@ -90,7 +90,7 @@ let set_mode = function
   | _ -> raise (Arg.Bad "search strategy not supported")
 
 let nb_threads = ref 4
-let nb_exec = ref 500
+let nb_exec = ref 0
 let schedule = ref false
 let init_proc = ref false
 

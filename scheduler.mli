@@ -11,6 +11,8 @@ type value =
   | Numb of Num.num
   | Hstr of Hstring.t
   | Proc of int
+val compare_value : value -> value -> int
+val vequal : value -> value -> bool
 type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
 type ty = A | N | O
 val fproc : value ref
@@ -20,188 +22,335 @@ val trans_list :
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
   list ref
+module type OrderedType = sig type t val compare : t -> t -> int end
+module OrderedValue :
+  sig type t = value val compare : value -> value -> int end
 module type DA =
   sig
-    type 'a t
-    type 'a dima
-    val init : int -> int -> 'a -> 'a dima
-    val minit : int -> int -> ('a * int) list -> 'a -> 'a dima
-    val get : 'a dima -> int list -> 'a
-    val set : 'a dima -> int list -> 'a -> unit
-    val print : 'a dima -> (Format.formatter -> 'a -> unit) -> unit
-    val copy : 'a dima -> 'a dima
-    val dim : 'a dima -> int
-    val equal : ('a -> 'a -> bool) -> 'a dima -> 'a dima -> bool
+    type elt
+    type t
+    val init : int -> int -> elt -> t
+    val minit : int -> int -> (elt * int) list -> elt -> t
+    val get : t -> int list -> elt
+    val set : t -> int list -> elt -> unit
+    val print : t -> (Format.formatter -> elt -> unit) -> unit
+    val copy : t -> t
+    val dim : t -> int
+    val dcompare : t -> t -> int
+    val equal : t -> t -> bool
   end
-module DimArray : DA
+module DimArray :
+  functor (Elt : OrderedType) ->
+    sig
+      type elt = Elt.t
+      type t
+      val init : int -> int -> elt -> t
+      val minit : int -> int -> (elt * int) list -> elt -> t
+      val get : t -> int list -> elt
+      val set : t -> int list -> elt -> unit
+      val print : t -> (Format.formatter -> elt -> unit) -> unit
+      val copy : t -> t
+      val dim : t -> int
+      val dcompare : t -> t -> int
+      val equal : t -> t -> bool
+    end
 module type St =
   sig
-    type 'a da
-    type 'a t = {
-      globs : (Hstring.t, 'a) Hashtbl.t;
-      arrs : (Hstring.t, 'a da) Hashtbl.t;
+    type elt
+    type da
+    type t = {
+      globs : (Hstring.t, elt) Hashtbl.t;
+      arrs : (Hstring.t, da) Hashtbl.t;
     }
-    val init : unit -> 'a t
-    val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-    val hash : 'a t -> int
-    val get_v : 'a t -> Hstring.t -> 'a
-    val get_a : 'a t -> Hstring.t -> 'a da
-    val get_e : 'a t -> Hstring.t -> int list -> 'a
-    val set_v : 'a t -> Hstring.t -> 'a -> unit
-    val set_a : 'a t -> Hstring.t -> 'a da -> unit
-    val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val copy : 'a t -> 'a t
+    val init : unit -> t
+    val giter :
+      (Hstring.t -> elt -> unit) -> (Hstring.t, elt) Hashtbl.t -> unit
+    val aiter :
+      (Hstring.t -> da -> unit) -> (Hstring.t, da) Hashtbl.t -> unit
+    val ecompare : t -> t -> int
+    val equal : t -> t -> bool
+    val get_v : t -> Hstring.t -> elt
+    val get_a : t -> Hstring.t -> da
+    val get_e : t -> Hstring.t -> int list -> elt
+    val set_v : t -> Hstring.t -> elt -> unit
+    val set_a : t -> Hstring.t -> da -> unit
+    val set_e : t -> Hstring.t -> int list -> elt -> unit
+    val copy : t -> t
   end
 module State :
-  functor (A : DA) ->
-    sig
-      type 'a da = 'a A.dima
-      type 'a t = {
-        globs : (Hstring.t, 'a) Hashtbl.t;
-        arrs : (Hstring.t, 'a da) Hashtbl.t;
-      }
-      val init : unit -> 'a t
-      val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-      val hash : 'a t -> int
-      val get_v : 'a t -> Hstring.t -> 'a
-      val get_a : 'a t -> Hstring.t -> 'a da
-      val get_e : 'a t -> Hstring.t -> int list -> 'a
-      val set_v : 'a t -> Hstring.t -> 'a -> unit
-      val set_a : 'a t -> Hstring.t -> 'a da -> unit
-      val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-      val copy : 'a t -> 'a t
-    end
+  functor (Elt : OrderedType) ->
+    functor
+      (A : sig
+             type elt = Elt.t
+             type t
+             val init : int -> int -> elt -> t
+             val minit : int -> int -> (elt * int) list -> elt -> t
+             val get : t -> int list -> elt
+             val set : t -> int list -> elt -> unit
+             val print : t -> (Format.formatter -> elt -> unit) -> unit
+             val copy : t -> t
+             val dim : t -> int
+             val dcompare : t -> t -> int
+             val equal : t -> t -> bool
+           end) ->
+      sig
+        type elt = Elt.t
+        type da = A.t
+        type t = {
+          globs : (Hstring.t, elt) Hashtbl.t;
+          arrs : (Hstring.t, da) Hashtbl.t;
+        }
+        val init : unit -> t
+        val giter :
+          (Hstring.t -> elt -> unit) -> (Hstring.t, elt) Hashtbl.t -> unit
+        val aiter :
+          (Hstring.t -> da -> unit) -> (Hstring.t, da) Hashtbl.t -> unit
+        val ecompare : t -> t -> int
+        val equal : t -> t -> bool
+        val get_v : t -> Hstring.t -> elt
+        val get_a : t -> Hstring.t -> da
+        val get_e : t -> Hstring.t -> int list -> elt
+        val set_v : t -> Hstring.t -> elt -> unit
+        val set_a : t -> Hstring.t -> da -> unit
+        val set_e : t -> Hstring.t -> int list -> elt -> unit
+        val copy : t -> t
+      end
 module type Sys =
   sig
-    type 'a s
-    type 'a da
-    type 'a set
-    type 'a t = {
-      syst : 'a set;
-      init : 'a set;
-      read_st : 'a s;
-      write_st : 'a s;
-    }
-    val init : unit -> 'a t
-    val get_v : 'a t -> Hstring.t -> 'a
-    val get_a : 'a t -> Hstring.t -> 'a da
-    val get_e : 'a t -> Hstring.t -> int list -> 'a
-    val set_v : 'a t -> Hstring.t -> 'a -> unit
-    val set_a : 'a t -> Hstring.t -> 'a da -> unit
-    val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val exists : ('a s -> bool) -> 'a t -> bool
-    val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
-    val update_init : 'a t -> Hstring.t * 'a s -> 'a t
-    val get_init : 'a t -> 'a set
-    val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
-    val update_s : Hstring.t -> 'a t -> 'a t
+    type elt
+    type s
+    type da
+    module SSet :
+      sig
+        type elt = Hstring.t * s
+        type t
+        val empty : t
+        val is_empty : t -> bool
+        val mem : elt -> t -> bool
+        val add : elt -> t -> t
+        val singleton : elt -> t
+        val remove : elt -> t -> t
+        val union : t -> t -> t
+        val inter : t -> t -> t
+        val diff : t -> t -> t
+        val compare : t -> t -> int
+        val equal : t -> t -> bool
+        val subset : t -> t -> bool
+        val iter : (elt -> unit) -> t -> unit
+        val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+        val for_all : (elt -> bool) -> t -> bool
+        val exists : (elt -> bool) -> t -> bool
+        val filter : (elt -> bool) -> t -> t
+        val partition : (elt -> bool) -> t -> t * t
+        val cardinal : t -> int
+        val elements : t -> elt list
+        val min_elt : t -> elt
+        val max_elt : t -> elt
+        val choose : t -> elt
+        val split : elt -> t -> t * bool * t
+        val find : elt -> t -> elt
+      end
+    type set = SSet.t
+    type t = { syst : set; init : set; read_st : s; write_st : s; }
+    val init : unit -> t
+    val get_v : t -> Hstring.t -> elt
+    val get_a : t -> Hstring.t -> da
+    val get_e : t -> Hstring.t -> int list -> elt
+    val set_v : t -> Hstring.t -> elt -> unit
+    val set_a : t -> Hstring.t -> da -> unit
+    val set_e : t -> Hstring.t -> int list -> elt -> unit
+    val exists : (s -> bool) -> t -> bool
+    val update_init : t -> Hstring.t * s -> t
+    val get_init : t -> set
+    val new_init : Hstring.t -> t -> s -> t
+    val update_s : Hstring.t -> t -> t
   end
-module System :
-  functor (S : St) ->
-    sig
-      type 'a s = 'a S.t
-      type 'a da = 'a S.da
-      type 'a set = (Hstring.t * 'a S.t) list
-      type 'a t = {
-        syst : 'a set;
-        init : 'a set;
-        read_st : 'a s;
-        write_st : 'a s;
-      }
-      val init : unit -> 'a t
-      val get_v : 'a t -> Hstring.t -> 'a
-      val get_a : 'a t -> Hstring.t -> 'a da
-      val get_e : 'a t -> Hstring.t -> int list -> 'a
-      val set_v : 'a t -> Hstring.t -> 'a -> unit
-      val set_a : 'a t -> Hstring.t -> 'a da -> unit
-      val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-      val exists : ('a s -> bool) -> 'a t -> bool
-      val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
-      val update_init : 'a t -> Hstring.t * 'a s -> 'a t
-      val get_init : 'a t -> 'a set
-      val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
-      val update_s : Hstring.t -> 'a t -> 'a t
-    end
+module MSystem :
+  functor (Elt : OrderedType) ->
+    functor
+      (A : sig
+             type elt = Elt.t
+             type t
+             val init : int -> int -> elt -> t
+             val minit : int -> int -> (elt * int) list -> elt -> t
+             val get : t -> int list -> elt
+             val set : t -> int list -> elt -> unit
+             val print : t -> (Format.formatter -> elt -> unit) -> unit
+             val copy : t -> t
+             val dim : t -> int
+             val dcompare : t -> t -> int
+             val equal : t -> t -> bool
+           end) ->
+      functor
+        (E : sig
+               type elt = Elt.t
+               type da = A.t
+               type t = {
+                 globs : (Hstring.t, elt) Hashtbl.t;
+                 arrs : (Hstring.t, da) Hashtbl.t;
+               }
+               val init : unit -> t
+               val giter :
+                 (Hstring.t -> elt -> unit) ->
+                 (Hstring.t, elt) Hashtbl.t -> unit
+               val aiter :
+                 (Hstring.t -> da -> unit) ->
+                 (Hstring.t, da) Hashtbl.t -> unit
+               val ecompare : t -> t -> int
+               val equal : t -> t -> bool
+               val get_v : t -> Hstring.t -> elt
+               val get_a : t -> Hstring.t -> da
+               val get_e : t -> Hstring.t -> int list -> elt
+               val set_v : t -> Hstring.t -> elt -> unit
+               val set_a : t -> Hstring.t -> da -> unit
+               val set_e : t -> Hstring.t -> int list -> elt -> unit
+               val copy : t -> t
+             end) ->
+        sig
+          type elt = Elt.t
+          type s = E.t
+          type da = A.t
+          module SSet :
+            sig
+              type elt = Hstring.t * s
+              type t
+              val empty : t
+              val is_empty : t -> bool
+              val mem : elt -> t -> bool
+              val add : elt -> t -> t
+              val singleton : elt -> t
+              val remove : elt -> t -> t
+              val union : t -> t -> t
+              val inter : t -> t -> t
+              val diff : t -> t -> t
+              val compare : t -> t -> int
+              val equal : t -> t -> bool
+              val subset : t -> t -> bool
+              val iter : (elt -> unit) -> t -> unit
+              val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+              val for_all : (elt -> bool) -> t -> bool
+              val exists : (elt -> bool) -> t -> bool
+              val filter : (elt -> bool) -> t -> t
+              val partition : (elt -> bool) -> t -> t * t
+              val cardinal : t -> int
+              val elements : t -> elt list
+              val min_elt : t -> elt
+              val max_elt : t -> elt
+              val choose : t -> elt
+              val split : elt -> t -> t * bool * t
+              val find : elt -> t -> elt
+            end
+          type set = SSet.t
+          type t = { syst : set; init : set; read_st : s; write_st : s; }
+          val init : unit -> t
+          val get_v : t -> Hstring.t -> elt
+          val get_a : t -> Hstring.t -> da
+          val get_e : t -> Hstring.t -> int list -> elt
+          val set_v : t -> Hstring.t -> elt -> unit
+          val set_a : t -> Hstring.t -> da -> unit
+          val set_e : t -> Hstring.t -> int list -> elt -> unit
+          val exists : (s -> bool) -> t -> bool
+          val update_init : t -> Hstring.t * s -> t
+          val get_init : t -> set
+          val new_init : Hstring.t -> t -> s -> t
+          val update_s : Hstring.t -> t -> t
+        end
+module Array :
+  sig
+    type elt = OrderedValue.t
+    type t = DimArray(OrderedValue).t
+    val init : int -> int -> elt -> t
+    val minit : int -> int -> (elt * int) list -> elt -> t
+    val get : t -> int list -> elt
+    val set : t -> int list -> elt -> unit
+    val print : t -> (Format.formatter -> elt -> unit) -> unit
+    val copy : t -> t
+    val dim : t -> int
+    val dcompare : t -> t -> int
+    val equal : t -> t -> bool
+  end
 module Etat :
   sig
-    type 'a da = 'a DimArray.dima
-    type 'a t =
-      'a State(DimArray).t = {
-      globs : (Hstring.t, 'a) Hashtbl.t;
-      arrs : (Hstring.t, 'a da) Hashtbl.t;
+    type elt = OrderedValue.t
+    type da = Array.t
+    type t =
+      State(OrderedValue)(Array).t = {
+      globs : (Hstring.t, elt) Hashtbl.t;
+      arrs : (Hstring.t, da) Hashtbl.t;
     }
-    val init : unit -> 'a t
-    val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-    val hash : 'a t -> int
-    val get_v : 'a t -> Hstring.t -> 'a
-    val get_a : 'a t -> Hstring.t -> 'a da
-    val get_e : 'a t -> Hstring.t -> int list -> 'a
-    val set_v : 'a t -> Hstring.t -> 'a -> unit
-    val set_a : 'a t -> Hstring.t -> 'a da -> unit
-    val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val copy : 'a t -> 'a t
+    val init : unit -> t
+    val giter :
+      (Hstring.t -> elt -> unit) -> (Hstring.t, elt) Hashtbl.t -> unit
+    val aiter :
+      (Hstring.t -> da -> unit) -> (Hstring.t, da) Hashtbl.t -> unit
+    val ecompare : t -> t -> int
+    val equal : t -> t -> bool
+    val get_v : t -> Hstring.t -> elt
+    val get_a : t -> Hstring.t -> da
+    val get_e : t -> Hstring.t -> int list -> elt
+    val set_v : t -> Hstring.t -> elt -> unit
+    val set_a : t -> Hstring.t -> da -> unit
+    val set_e : t -> Hstring.t -> int list -> elt -> unit
+    val copy : t -> t
   end
 module Syst :
   sig
-    type 'a s = 'a Etat.t
-    type 'a da = 'a Etat.da
-    type 'a set = (Hstring.t * 'a Etat.t) list
-    type 'a t =
-      'a System(Etat).t = {
-      syst : 'a set;
-      init : 'a set;
-      read_st : 'a s;
-      write_st : 'a s;
+    type elt = OrderedValue.t
+    type s = Etat.t
+    type da = Array.t
+    module SSet :
+      sig
+        type elt = Hstring.t * s
+        type t = MSystem(OrderedValue)(Array)(Etat).SSet.t
+        val empty : t
+        val is_empty : t -> bool
+        val mem : elt -> t -> bool
+        val add : elt -> t -> t
+        val singleton : elt -> t
+        val remove : elt -> t -> t
+        val union : t -> t -> t
+        val inter : t -> t -> t
+        val diff : t -> t -> t
+        val compare : t -> t -> int
+        val equal : t -> t -> bool
+        val subset : t -> t -> bool
+        val iter : (elt -> unit) -> t -> unit
+        val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+        val for_all : (elt -> bool) -> t -> bool
+        val exists : (elt -> bool) -> t -> bool
+        val filter : (elt -> bool) -> t -> t
+        val partition : (elt -> bool) -> t -> t * t
+        val cardinal : t -> int
+        val elements : t -> elt list
+        val min_elt : t -> elt
+        val max_elt : t -> elt
+        val choose : t -> elt
+        val split : elt -> t -> t * bool * t
+        val find : elt -> t -> elt
+      end
+    type set = SSet.t
+    type t =
+      MSystem(OrderedValue)(Array)(Etat).t = {
+      syst : set;
+      init : set;
+      read_st : s;
+      write_st : s;
     }
-    val init : unit -> 'a t
-    val get_v : 'a t -> Hstring.t -> 'a
-    val get_a : 'a t -> Hstring.t -> 'a da
-    val get_e : 'a t -> Hstring.t -> int list -> 'a
-    val set_v : 'a t -> Hstring.t -> 'a -> unit
-    val set_a : 'a t -> Hstring.t -> 'a da -> unit
-    val set_e : 'a t -> Hstring.t -> int list -> 'a -> unit
-    val exists : ('a s -> bool) -> 'a t -> bool
-    val exists_init : ('a -> 'a -> bool) -> 'a s -> 'a t -> bool
-    val update_init : 'a t -> Hstring.t * 'a s -> 'a t
-    val get_init : 'a t -> 'a set
-    val new_init : Hstring.t -> 'a t -> 'a s -> 'a t
-    val update_s : Hstring.t -> 'a t -> 'a t
+    val init : unit -> t
+    val get_v : t -> Hstring.t -> elt
+    val get_a : t -> Hstring.t -> da
+    val get_e : t -> Hstring.t -> int list -> elt
+    val set_v : t -> Hstring.t -> elt -> unit
+    val set_a : t -> Hstring.t -> da -> unit
+    val set_e : t -> Hstring.t -> int list -> elt -> unit
+    val exists : (s -> bool) -> t -> bool
+    val update_init : t -> Hstring.t * s -> t
+    val get_init : t -> set
+    val new_init : Hstring.t -> t -> s -> t
+    val update_s : Hstring.t -> t -> t
   end
-val system : value Syst.t ref
+val system : Syst.t ref
 val htbl_types : (Hstring.t, value list) Hashtbl.t
-val htbl_abstypes : (Hstring.t, unit) Hashtbl.t
-val compare_value : value -> value -> int
-val vequal : value -> value -> bool
-module TS :
-  sig
-    type elt = value
-    type t
-    val empty : t
-    val is_empty : t -> bool
-    val mem : elt -> t -> bool
-    val add : elt -> t -> t
-    val singleton : elt -> t
-    val remove : elt -> t -> t
-    val union : t -> t -> t
-    val inter : t -> t -> t
-    val diff : t -> t -> t
-    val compare : t -> t -> int
-    val equal : t -> t -> bool
-    val subset : t -> t -> bool
-    val iter : (elt -> unit) -> t -> unit
-    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
-    val for_all : (elt -> bool) -> t -> bool
-    val exists : (elt -> bool) -> t -> bool
-    val filter : (elt -> bool) -> t -> t
-    val partition : (elt -> bool) -> t -> t * t
-    val cardinal : t -> int
-    val elements : t -> elt list
-    val min_elt : t -> elt
-    val max_elt : t -> elt
-    val choose : t -> elt
-    val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
-  end
 module TI :
   sig
     type elt = Hstring.t
@@ -232,12 +381,72 @@ module TI :
     val split : elt -> t -> t * bool * t
     val find : elt -> t -> elt
   end
-val ec : (Hstring.t, TS.elt * stype) Hashtbl.t
-val dc : (Hstring.t, ty * TS.t * TI.t) Hashtbl.t
-val inits : (Hstring.t * ((stype * TS.t) * Hstring.t)) list ref
-val upd_dc : Hstring.t -> TS.t -> ty -> TI.t -> unit
-val groups : (int, TI.t) Hashtbl.t
-val graphs : (int, (Hstring.t * (ty * TS.t * TI.t)) list) Hashtbl.t
+module TS :
+  sig
+    type elt = value
+    type t
+    val empty : t
+    val is_empty : t -> bool
+    val mem : elt -> t -> bool
+    val add : elt -> t -> t
+    val singleton : elt -> t
+    val remove : elt -> t -> t
+    val union : t -> t -> t
+    val inter : t -> t -> t
+    val diff : t -> t -> t
+    val compare : t -> t -> int
+    val equal : t -> t -> bool
+    val subset : t -> t -> bool
+    val iter : (elt -> unit) -> t -> unit
+    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+    val for_all : (elt -> bool) -> t -> bool
+    val exists : (elt -> bool) -> t -> bool
+    val filter : (elt -> bool) -> t -> t
+    val partition : (elt -> bool) -> t -> t * t
+    val cardinal : t -> int
+    val elements : t -> elt list
+    val min_elt : t -> elt
+    val max_elt : t -> elt
+    val choose : t -> elt
+    val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
+  end
+module TIS :
+  sig
+    type elt = Hstring.t * TS.t * TI.t
+    type t
+    val empty : t
+    val is_empty : t -> bool
+    val mem : elt -> t -> bool
+    val add : elt -> t -> t
+    val singleton : elt -> t
+    val remove : elt -> t -> t
+    val union : t -> t -> t
+    val inter : t -> t -> t
+    val diff : t -> t -> t
+    val compare : t -> t -> int
+    val equal : t -> t -> bool
+    val subset : t -> t -> bool
+    val iter : (elt -> unit) -> t -> unit
+    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
+    val for_all : (elt -> bool) -> t -> bool
+    val exists : (elt -> bool) -> t -> bool
+    val filter : (elt -> bool) -> t -> t
+    val partition : (elt -> bool) -> t -> t * t
+    val cardinal : t -> int
+    val elements : t -> elt list
+    val min_elt : t -> elt
+    val max_elt : t -> elt
+    val choose : t -> elt
+    val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
+  end
+val htbl_abstypes : (Hstring.t, Hstring.t * TI.t) Hashtbl.t
+val ec : (Hstring.t, value * stype) Hashtbl.t
+val dc : (Hstring.t, ty * TS.t * TI.t * int) Hashtbl.t
+val inits : (int, TIS.t) Hashtbl.t
+val init_list :
+  (Hstring.t * stype * TS.t * (Hstring.t * stype) list) list ref
 val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
 val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
@@ -245,16 +454,19 @@ val default_type : Hstring.t -> value
 val inter : 'a list -> 'a list -> 'a list
 val rep_name : Hstring.t -> Hstring.t
 val hst_var : value -> Hstring.t
-val ec_replace : TS.elt -> TS.elt -> unit
+val ec_replace : value -> value -> unit
+val abst_replace : Hstring.t -> Hstring.t -> TI.t -> unit
 val get_cvalue : Ast.term -> value
-val get_value : (Hstring.t * int) list -> Ast.term -> value
+val get_value : (Hstring.t * int) list -> Ast.term -> Syst.elt
 val v_equal : value -> value -> bool
+val type_st : stype -> Hstring.t
 val print_value : 'a -> value -> unit
 val print_ce_diffs : unit -> unit
-val print_g : unit -> unit
-val print_groups : unit -> unit
+val print_abst : unit -> unit
+val print_types : unit -> unit
 val print_inits : unit -> unit
-val print_system : Hstring.t * value Etat.t -> unit
+val print_init_list : unit -> unit
+val print_system : Hstring.t * Etat.t -> unit
 val print_init : unit -> unit
 val print_procinit : unit -> unit
 val print_procninit : unit -> unit
@@ -265,11 +477,9 @@ val init_globals : (Hstring.t * Hstring.t) list -> unit
 val init_arrays : (Hstring.t * ('a list * Hstring.t)) list -> unit
 val init_htbls : 'a * Ast.SAtom.t list -> unit
 val upd_options : unit -> unit
-val c : int ref
-val update : unit -> unit
-val upd_graphs : unit -> unit
-val graphs_to_inits : unit -> unit
-val ec_to_inits : unit -> unit
+val upd_init_list : Hstring.t -> TS.t -> unit
+val upd_inits : unit -> unit
+val graph_coloring : unit -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit
 val subst_req : (Hstring.t * int) list -> Ast.Atom.t -> unit -> bool
 val subst_ureq :
@@ -300,8 +510,7 @@ val random_transition :
   ((unit -> unit) list *
    ((unit -> bool) list * (unit -> unit)) list list list)
 val update_system : unit -> unit
-val get_value_st :
-  (Hstring.t * int) list -> value Etat.t -> Ast.term -> value
+val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option
 val scheduler : Ast.system -> unit
