@@ -49,16 +49,28 @@ type value =
   | Hstr of Hstring.t 
   | Proc of int
 
-let compare_value v1 v2 = 
+let compare_value v1 v2 =
   match v1, v2 with
     | Numb n1, Numb n2 -> Num.compare_num n1 n2
-    | Hstr h1, Hstr h2 
-    | Var h1, Var h2 -> Hstring.compare h1 h2
+    | Numb _, _ -> -1
+    | _, Numb _ -> -1
+    | Hstr h1, Hstr h2 -> Hstring.compare h1 h2
+    | Hstr _, _ -> -1
+    | _, Hstr _ -> 1
+    | Var h1, Var h2 -> Pervasives.compare h1 h2
+    | Var _, _ -> -1
+    | _, Var _ -> 1
     | Proc p1, Proc p2 -> Pervasives.compare p1 p2
-    | _ -> -1
 
 let vequal v1 v2 =
   if compare_value v1 v2 = 0 then true else false
+
+let print_value f v =
+  match v with
+    | Numb i -> printf "%s " (Num.string_of_num i)
+    | Proc p -> printf "%d " p
+    | Hstr h -> printf "%a " Hstring.print h
+    | Var h -> printf "%a " Hstring.print h
 
 type stype =
   | RGlob of Hstring.t
@@ -301,130 +313,27 @@ module State (Elt : OrderedType)  (A : DA with type elt = Elt.t) : St with type 
   	       Hashtbl.iter (fun name arr -> Hashtbl.replace carrs name (A.copy arr)) carrs;
   	       {globs = Hashtbl.copy t.globs; arrs = carrs}
 
-end
+end	
 
-module type Sys = sig
-
-  type elt
-  (* A state *)
-  type s
-  (* A dimensional array *)
-  type da
-
-
-  module SSet : 
-  sig
-    type elt = (Hstring.t * s)
-    type t
-    val empty : t
-    val is_empty : t -> bool
-    val mem : elt -> t -> bool
-    val add : elt -> t -> t
-    val singleton : elt -> t
-    val remove : elt -> t -> t
-    val union : t -> t -> t
-    val inter : t -> t -> t
-    val diff : t -> t -> t
-    val compare : t -> t -> int
-    val equal : t -> t -> bool
-    val subset : t -> t -> bool
-    val iter : (elt -> unit) -> t -> unit
-    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
-    val for_all : (elt -> bool) -> t -> bool
-    val exists : (elt -> bool) -> t -> bool
-    val filter : (elt -> bool) -> t -> t
-    val partition : (elt -> bool) -> t -> t * t
-    val cardinal : t -> int
-    val elements : t -> elt list
-    val min_elt : t -> elt
-    val max_elt : t -> elt
-    val choose : t -> elt
-    val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
-  end
-
-  type set = SSet.t
-  (* A record with a readable state and a writable state *)
-  type  t = {syst : set; init : set; read_st : s; write_st : s}
-
-  val init : unit -> t
-
-  val get_v : t -> Hstring.t -> elt
-  val get_a : t -> Hstring.t -> da
-  val get_e : t -> Hstring.t -> int list -> elt
-
-  val set_v : t -> Hstring.t -> elt -> unit
-  val set_a : t -> Hstring.t -> da -> unit
-  val set_e : t -> Hstring.t -> int list -> elt -> unit
-
-  val exists : (s -> bool) -> t -> bool
-    
-  val update_init : t -> (Hstring.t * s) -> t
-
-  val get_init : t -> set
-
-  val new_init : Hstring.t -> t -> s -> t
-
-  val update_s : Hstring.t -> t -> t
-    
-end
-
-module MSystem ( Elt : OrderedType )
-  (A : DA with type elt = Elt.t) 
-  (E : St with type elt = Elt.t and type da = A.t) 
-  : Sys with type elt = Elt.t and type s = E.t and type da = A.t = struct
-
-  type elt = Elt.t
-  type da =  A.t
-  type s =  E.t
-    	
-  module SSet = Set.Make (
-    struct
-      type t = (Hstring.t * s)
-      let compare (_, s1) (_, s2) = E.ecompare s1 s2
-    end
-  )
-    
-  type set = SSet.t
-  type t = {syst : set; init : set; read_st : s; write_st : s}
-	
-  let init () = {syst = SSet.empty; init = SSet.empty; read_st = E.init (); write_st = E.init () }
-
-  let get_v s h = let state = s.read_st in
-		  E.get_v state h
-  let get_a s h = let state = s.read_st in
-  		  E.get_a state h
-  let get_e s h pl = let state = s.read_st in
-  		     E.get_e state h pl
-
-  let set_v s h v = let state = s.write_st in
-  		    E.set_v state h v
-  let set_a s h a = let state = s.write_st in
-  		    E.set_a state h a
-  let set_e s h pl v = let state = s.write_st in
-  		       E.set_e state h pl v
-			 
-  let exists f s = SSet.exists (fun (_, e) -> f e) s.syst
-
-  let update_init s il = {s with init = SSet.add il s.init}
-
-  let get_init s = s.init
-
-  let new_init tr s i = {syst = SSet.add (tr, E.copy i) s.syst; init = s.init; read_st = E.copy i; write_st = i}
-
-  let update_s tr s = {syst = SSet.add (tr, E.copy s.write_st) s.syst; init = s.init; read_st = E.copy s.write_st; write_st = s.write_st}
-
-  end
-			  
+	  
 (* GLOBAL VARIABLES *)
 
 module Array = DimArray (OrderedValue)
 module Etat = State (OrderedValue) (Array)
-module Syst = MSystem (OrderedValue) (Array) (Etat)
-
+module Syst = Set.Make (
+  struct
+    type t = (Hstring.t * Etat.t)
+    let compare (_, s1) (_, s2) = if Etat.ecompare s1 s2 = 0 then 0 else 1
+  end
+)
+	
 open Syst
 
-let system = ref (Syst.init ())
+let system = ref (Syst.empty)
+let sinits = ref (Syst.empty)
+
+let read_st = ref (Etat.init ())
+let write_st = ref (Etat.init ())
 
 (* Types *)
 let htbl_types = Hashtbl.create 11
@@ -583,7 +492,7 @@ let get_cvalue =
 let get_value sub =
   function
     | (Const _ as v) | (Elem (_, Constr) as v) -> get_cvalue v
-    | Elem (id, Glob) -> Syst.get_v !system id
+    | Elem (id, Glob) -> Etat.get_v !read_st id
     | Elem (id, _) -> let (_, i) = 
 			List.find (fun (e, _) -> Hstring.equal e id) sub 
 		      in Proc i
@@ -594,7 +503,7 @@ let get_value sub =
 	    fun (p', _) -> p = p'
 	  ) sub in i
       ) pl in
-      Syst.get_e !system id ind
+      Etat.get_e !read_st id ind
     | _ -> assert false
 
 let v_equal v1 v2 =
@@ -694,7 +603,7 @@ let print_system (tr, {Etat.globs; Etat.arrs}) =
   printf "@."
 
 let print_init () =
-  SSet.iter print_system (Syst.get_init !system)
+  Syst.iter print_system (!sinits)
 
 let print_procinit () =
   printf "Proc_init :";
@@ -1019,7 +928,7 @@ let initialization init =
     incr c;
     let i = Etat.copy etati in
     let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-    system := Syst.update_init !system (tr, i)
+    sinits := Syst.add (tr, i) !sinits
   in
   let rec create_init l =
     match l with
@@ -1040,7 +949,7 @@ let initialization init =
   in
   Hashtbl.iter upd_etati ec;
   create_init !init_list;
-  printf "%d@." (Syst.SSet.cardinal (Syst.get_init !system))
+  printf "%d@." (Syst.cardinal (!sinits))
 
 
 (* SUBSTITUTION METHODS *)
@@ -1121,7 +1030,7 @@ let substitute_updts sub assigns upds =
   let subst_assigns = List.fold_left (
     fun acc (var, assign) -> 
       (fun () -> let value = get_value sub assign in
-		 Syst.set_v !system var value)::acc
+		 Etat.set_v !write_st var value)::acc
   ) [] assigns in
   let subst_upds = List.fold_left (
     fun tab_acc u -> 
@@ -1140,10 +1049,8 @@ let substitute_updts sub assigns upds =
 		      fun cond conj_acc -> (subst_req s cond)::conj_acc
 		    ) conds [] in 
 		  let f = fun () ->
-		    let t = get_value s term in
-		    let arr = Syst.get_a !system u.up_arr in
-		    Array.set arr pl t;
-		    Syst.set_a !system u.up_arr arr
+		    let v = get_value s term in
+		    Etat.set_e !write_st u.up_arr pl v
 		  in
 		  (filter, f)::disj_acc
 	      ) u.up_swts []
@@ -1170,7 +1077,7 @@ let init_transitions trans =
       (* Associate the processes to numbers (unique) *)
       let subs = 
 	if List.length tr.tr_args > nb_threads 
-	then [] (* Should not occure *)
+ 	then [] (* Should not occure *)
 	else Ast.all_permutations tr.tr_args list_threads
       in
       List.fold_left (
@@ -1181,10 +1088,13 @@ let init_transitions trans =
 	    let subst_ureq = subst_ureq sub subsm tr.tr_ureq in
 	    let subst_guard = substitute_req sub tr.tr_reqs in
 	    let subst_updates = substitute_updts sub tr.tr_assigns tr.tr_upds in
-	    let tr_name = ref (Hstring.view tr.tr_name) in
-	    List.iter (fun (id, i) -> let si = string_of_int i in
-				      tr_name := !tr_name ^ " " ^ (Hstring.view id) ^ si;) sub;
-	    (Hstring.make !tr_name, subst_guard, subst_ureq, subst_updates)::acc'
+	    let (np, pn) = List.fold_left (
+	      fun (np, pn) (id, i) -> 
+		let si = string_of_int i in
+		let p = (Hstring.view id) ^ "_" ^ si in
+		(np + 1, pn ^ " " ^ p)
+	    ) (0, "") sub in
+	    (tr.tr_name, Hstring.make pn, np, subst_guard, subst_ureq, subst_updates)::acc'
 	  with EFalse -> acc'
       ) acc subs
   ) [] trans
@@ -1223,32 +1133,57 @@ let valid_upd arrs_upd =
       in arrs_u::arr_acc
   ) [] arrs_upd
 
-let valid_trans_list () =
-  let trans_list = !trans_list in
+module TNMap = Map.Make (
+  struct 
+    type t = Hstring.t * Hstring.t * int
+    let compare _ _ = if Random.bool () then -1 else 1
+  end
+)
+
+module TSet = Set.Make (
+  struct
+    type t = Hstring.t
+    let compare = Hstring.compare
+  end
+)
+
+let tTrans = ref TSet.empty
+
+let valid_trans_map () =
   List.fold_left (
-    fun updts_l (name, req, ureq, updts) ->
-      if valid_req req && valid_ureq ureq then (name, updts)::updts_l
-      else updts_l
-  ) [] trans_list
-
-let random_transition () =
-  let valid_trans = valid_trans_list () in
-  let n = Random.int (List.length valid_trans) in
-  let (name, updts) = List.nth valid_trans n in
-  (name, updts)
-
-
+    fun updts_m (name, pn, np, req, ureq, updts) ->
+      if valid_req req && valid_ureq ureq 
+      then TNMap.add (name, pn, np) updts updts_m
+      else updts_m
+  ) TNMap.empty !trans_list
 
 (* SYSTEM UPDATE *)
 
 
 let update_system () =
-  let (tr, (assigns, updates)) = random_transition () in
-  List.iter (fun a -> a ()) assigns;
-  let updts = valid_upd updates in 
-  List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-  system := Syst.update_s tr !system
-    
+  (* let continue = ref true in *)
+  let tmap = ref (valid_trans_map ()) in
+  (* while !continue do *)
+  (*   ( *)
+      let ((tr, pn, _), (assigns, updates)) = TNMap.min_binding !tmap in
+      List.iter (fun a -> a ()) assigns;
+      let updts = valid_upd updates in 
+      List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+      (* let (updated, s) = Syst.update_s tr !system in *)
+      (* if not updated *)
+      (* then ( *)
+      (* 	tmap := TNMap.remove tr !tmap; *)
+      (* 	continue := false *)
+      (* ); *)
+      let s = Etat.copy !write_st in
+      let trn = Hstring.make ((Hstring.view tr) ^ " :" ^ (Hstring.view pn)) in
+      system := Syst.add (trn, s) !system;
+      tTrans := TSet.add tr !tTrans;
+      read_st := s
+      
+  (*   ) *)
+  (* done *)
+
 (* INTERFACE WITH BRAB *)
 
 let get_value_st sub st =
@@ -1271,7 +1206,7 @@ let get_value_st sub st =
 
 let contains sub sa s =
   Syst.exists (
-    fun state ->
+    fun (_, state) ->
       SAtom.for_all (
 	fun a ->
 	  match a with
@@ -1317,6 +1252,19 @@ let filter t_syst_l =
 
 (* MAIN *)
 
+let rec mem ((n1, _, _ , _, _, _) as e) = function
+  | [] -> false
+  | (n2, _, _ , _, _, _)::q when Hstring.equal n1 n2 -> true
+  | _::q -> mem e q
+
+let del_double l = 
+  let rec del' acc = function
+    | [] -> acc
+    | hd::tl when mem hd acc -> del' acc tl
+    | hd::tl -> del' (hd::acc) tl 
+  in
+  del' [] l
+
     
 let scheduler se =
   Random.self_init ();
@@ -1337,33 +1285,44 @@ let scheduler se =
 	    with Not_found -> Hashtbl.find htbl_types n)
 	  )) acc se.arrays 
   in
-  let inits = Syst.get_init !system in
-  let nb_ex = nb_ex / (SSet.cardinal inits) in
   printf "Nb exec : %d@." nb_ex;
-  let total = ref 1 in
-  SSet.iter (
+  Syst.iter (
     fun (tr, st) ->
-      system := Syst.new_init tr !system st;
-      let count = ref 1 in
-      (
-  	try
-  	  while !count < nb_ex do
-  	    update_system ();
-  	    incr count;
-  	    incr total
-  	  done;
-  	with Invalid_argument _ -> ()
-      );
-  ) inits;
+      let count = ref 0 in
+      let s = Etat.copy st in
+      let s' = Etat.copy st in
+      read_st := s;
+      write_st := s';
+      system := Syst.add (tr, s) !system;
+      try
+  	while !count < nb_ex do
+  	  update_system ();
+  	  incr count
+  	done;
+      with Not_found -> printf "Stop : %d@." !count
+  ) !sinits;
+  let not_taken = del_double (List.filter (
+    fun (tr, _, _, _, _, _) -> 
+      not (TSet.mem tr !tTrans)) !trans_list)
+  in 
   if verbose > 0 then
     begin
       let count = ref 1 in
-      SSet.iter (
-  	fun st -> printf "%d : " !count; incr count; print_system st
-      ) (!system.Syst.syst)
+      Syst.iter (
+  	fun st -> 
+	  printf "%d : " !count; 
+	  incr count; 
+	  print_system st
+      ) (!system)
     end;
-  printf "Scheduled %d states\n" !total;
-  printf "--------------------------@."    
+  printf "Scheduled %d states\n" (Syst.cardinal (!system));
+  printf "--------------------------@.";
+  if (List.length not_taken > 0) then
+    (
+      printf "Not taken transitions :@.";
+      List.iter (fun (tr, _, _, _, _, _) -> printf "\t%a@." Hstring.print tr) not_taken
+    ) else (printf "All transitions were taken !@.");
+  printf "--------------------------@."
     
 let dummy_system = {
   globals = [];
