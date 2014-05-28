@@ -298,22 +298,21 @@ let subsuming_candidate s =
 let brab search invariants uns =
 
   (* initialization of oracle *)
-  if schedule then
-    Scheduler.run ()
-  else
-    begin
-      let low = if brab_up_to then 1 else enumerative in
-      for i = enumerative downto low do
-        let procs = Forward.procs_from_nb i in
-        eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
+    if schedule then
+      ignore (Scheduler.run ())
+    else
+      begin
+	let low = if brab_up_to then 1 else enumerative in
+	for i = enumerative downto low do
+          let procs = Forward.procs_from_nb i in
+          eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
 	         ----------------------------------------\n@." i;
-
-        Enumerative.search procs (List.hd uns);
-        
-        eprintf "----------------------------------------\n@.";
-      done;
-    end;
-
+	  
+          Enumerative.search procs (List.hd uns);
+          
+          eprintf "----------------------------------------\n@.";
+	done;
+      end;
   if only_forward then exit 0;
   let procs = Forward.procs_from_nb enumerative in
   search_backtrack_brab search invariants procs uns

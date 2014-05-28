@@ -396,7 +396,10 @@ module TSet :
     val split : elt -> t -> t * bool * t
     val find : elt -> t -> elt
   end
+val pTrans : TSet.t ref
 val tTrans : TSet.t ref
+val ntTrans : TSet.t ref
+val iTrans : TSet.t ref
 val valid_trans_map :
   unit ->
   ((unit -> unit) list *

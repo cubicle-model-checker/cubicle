@@ -949,7 +949,7 @@ let initialization init =
   in
   Hashtbl.iter upd_etati ec;
   create_init !init_list;
-  printf "%d@." (Syst.cardinal (!sinits))
+  printf "Nb init states : %d@." (Syst.cardinal (!sinits))
 
 
 (* SUBSTITUTION METHODS *)
@@ -1069,7 +1069,11 @@ let init_system se =
   init_arrays se.arrays;
   init_globals se.globals;
   (* --- After this, all the variables and arrays are initialized --- *)
-  initialization se.init
+  initialization se.init;
+  Hashtbl.clear ec;
+  Hashtbl.clear dc;
+  Hashtbl.clear inits;
+  init_list := []
 
 let init_transitions trans =
   trans_list := List.fold_left (
@@ -1147,16 +1151,23 @@ module TSet = Set.Make (
   end
 )
 
+let pTrans = ref TSet.empty
 let tTrans = ref TSet.empty
+let ntTrans = ref TSet.empty
+let iTrans = ref TSet.empty
 
 let valid_trans_map () =
   List.fold_left (
     fun updts_m (name, pn, np, req, ureq, updts) ->
       if valid_req req && valid_ureq ureq 
-      then TNMap.add (name, pn, np) updts updts_m
+      then 
+	(
+	  pTrans := TSet.add name !pTrans;
+	  TNMap.add (name, pn, np) updts updts_m
+	)
       else updts_m
   ) TNMap.empty !trans_list
-
+    
 (* SYSTEM UPDATE *)
 
 
@@ -1270,20 +1281,21 @@ let scheduler se =
   Random.self_init ();
   init_system se;
   init_transitions se.trans;
+  let trans = List.fold_left (fun acc (n, _, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
   let nb_ex = 
     if nb_exec > 0 then nb_exec
-    else 
-      let acc = List.fold_left (
-	fun acc (n, ty) ->
-	  acc * (List.length (try Hashtbl.find htbl_types ty
-	    with Not_found -> Hashtbl.find htbl_types n)
-      )) 1 se.globals 
-      in
-      List.fold_left (
-	fun acc' (n, (_,ty)) ->
-	  acc' * (List.length (try Hashtbl.find htbl_types ty
-	    with Not_found -> Hashtbl.find htbl_types n)
-	  )) acc se.arrays 
+    else 4
+      (* let acc = List.fold_left ( *)
+      (* 	fun acc (n, ty) -> *)
+      (* 	  acc * (List.length (try Hashtbl.find htbl_types ty *)
+      (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
+      (* )) 1 se.globals  *)
+      (* in *)
+      (* List.fold_left ( *)
+      (* 	fun acc' (n, (_,ty)) -> *)
+      (* 	  acc' * (List.length (try Hashtbl.find htbl_types ty *)
+      (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
+      (* 	  )) acc se.arrays  *)
   in
   printf "Nb exec : %d@." nb_ex;
   Syst.iter (
@@ -1301,10 +1313,8 @@ let scheduler se =
   	done;
       with Not_found -> printf "Stop : %d@." !count
   ) !sinits;
-  let not_taken = del_double (List.filter (
-    fun (tr, _, _, _, _, _) -> 
-      not (TSet.mem tr !tTrans)) !trans_list)
-  in 
+  ntTrans := TSet.diff !pTrans !tTrans;
+  iTrans := TSet.diff trans !pTrans;
   if verbose > 0 then
     begin
       let count = ref 1 in
@@ -1317,11 +1327,16 @@ let scheduler se =
     end;
   printf "Scheduled %d states\n" (Syst.cardinal (!system));
   printf "--------------------------@.";
-  if (List.length not_taken > 0) then
+  if (TSet.cardinal !ntTrans > 0) then
     (
       printf "Not taken transitions :@.";
-      List.iter (fun (tr, _, _, _, _, _) -> printf "\t%a@." Hstring.print tr) not_taken
+      TSet.iter (printf "\t%a@." Hstring.print) !ntTrans
     ) else (printf "All transitions were taken !@.");
+  if (TSet.cardinal !iTrans > 0) then
+    (
+      printf "Not seen transitions :@.";
+      TSet.iter (printf "\t%a@." Hstring.print) !iTrans
+    ) else (printf "All transitions were seen !@.");
   printf "--------------------------@."
     
 let dummy_system = {
@@ -1344,4 +1359,10 @@ let register_system s = current_system := s
 
 let run () =
   assert (!current_system <> dummy_system);
+  system := Syst.empty;
+  sinits := Syst.empty;
+  read_st := Etat.init ();
+  write_st := Etat.init ();
+  tTrans := TSet.empty;
+  pTrans := TSet.empty;
   scheduler !current_system
