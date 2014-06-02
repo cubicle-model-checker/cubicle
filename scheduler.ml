@@ -76,6 +76,9 @@ type stype =
   | RGlob of Hstring.t
   | RArr of (Hstring.t * int)
 
+let hst = function 			
+  | RGlob h | RArr (h, _) -> h 
+
 type ty =
   | A (* abstract type *)
   | N (* int or real *)
@@ -403,6 +406,8 @@ let inits = Hashtbl.create 17
 
 let init_list = ref []
 
+let ntValues = Hashtbl.create 17
+
 (* USEFUL METHODS *)
 
 
@@ -525,12 +530,14 @@ let print_value f v =
     | Hstr h -> printf "%a " Hstring.print h
     | Var h -> printf "%a " Hstring.print h
 
-let print_ce_diffs () =
+let print_ce () =
   printf "\nce :@.";
   Hashtbl.iter (
     fun n (rep, tself) ->
-      printf "%a : %a@." Hstring.print n print_value rep
-  ) ec;
+      printf "%a : %a %a@." Hstring.print n print_value rep Hstring.print (hst tself)
+  ) ec
+
+let print_diffs () = 
   printf "\nDc@.";
   Hashtbl.iter (
     fun n (ty, types, diffs, cfc) ->
@@ -542,6 +549,15 @@ let print_ce_diffs () =
       printf "\n\tcfc : %d@." cfc
   ) dc;
   printf "@."
+
+let print_ntv () = 			
+  printf "\nntV@."; 			
+  Hashtbl.iter ( 			
+    fun n vl -> 			
+      printf "%a : " Hstring.print n; 			
+      List.iter (printf "%a " print_value) vl; 			
+      printf "@." 			
+  ) ntValues 
 
 let print_abst () =
   printf "\nAbst :@.";
@@ -891,20 +907,17 @@ let graph_coloring () =
       init_list := il @ !init_list
   ) inits
 
-
+let fill_ntv () = 			
+  Hashtbl.iter 			
+    (fun h (_, t) -> 			
+      Hashtbl.add ntValues h (Hashtbl.find htbl_types (hst t)) 			
+    ) ec 
 	    
 let initialization init =
   init_htbls init;
-  (* print_ce_diffs (); *)
+  fill_ntv ();
   upd_inits ();
-  (* print_inits (); *)
-  (* print_init_list (); *)
   graph_coloring ();
-  (* printf "\nColoring :\n@."; *)
-  (* print_init_list (); *)
-  (* printf "\nRemaining ce :\n@."; *)
-  (* print_ce_diffs (); *)
-  (* print_abst () *)
   let etati = Etat.init () in
   let c = ref 0 in
   let value_list al =
@@ -1263,20 +1276,7 @@ let filter t_syst_l =
 
 (* MAIN *)
 
-let rec mem ((n1, _, _ , _, _, _) as e) = function
-  | [] -> false
-  | (n2, _, _ , _, _, _)::q when Hstring.equal n1 n2 -> true
-  | _::q -> mem e q
 
-let del_double l = 
-  let rec del' acc = function
-    | [] -> acc
-    | hd::tl when mem hd acc -> del' acc tl
-    | hd::tl -> del' (hd::acc) tl 
-  in
-  del' [] l
-
-    
 let scheduler se =
   Random.self_init ();
   init_system se;

@@ -14,6 +14,7 @@ type value =
 val compare_value : value -> value -> int
 val vequal : value -> value -> bool
 type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
+val hst : stype -> Hstring.t
 type ty = A | N | O
 val fproc : value ref
 val list_threads : int list
@@ -285,6 +286,7 @@ val dc : (Hstring.t, ty * TS.t * TI.t * int) Hashtbl.t
 val inits : (int, TIS.t) Hashtbl.t
 val init_list :
   (Hstring.t * stype * TS.t * (Hstring.t * stype) list) list ref
+val ntValues : (Hstring.t, value list) Hashtbl.t
 val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
 val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
@@ -299,7 +301,9 @@ val get_value : (Hstring.t * int) list -> Ast.term -> Etat.elt
 val v_equal : value -> value -> bool
 val type_st : stype -> Hstring.t
 val print_value : 'a -> value -> unit
-val print_ce_diffs : unit -> unit
+val print_ce : unit -> unit
+val print_diffs : unit -> unit
+val print_ntv : unit -> unit
 val print_abst : unit -> unit
 val print_types : unit -> unit
 val print_inits : unit -> unit
@@ -318,6 +322,7 @@ val upd_options : unit -> unit
 val upd_init_list : Hstring.t -> TS.t -> unit
 val upd_inits : unit -> unit
 val graph_coloring : unit -> unit
+val fill_ntv : unit -> unit
 val initialization : 'a * Ast.SAtom.t list -> unit
 val subst_req : (Hstring.t * int) list -> Ast.Atom.t -> unit -> bool
 val subst_ureq :
@@ -409,12 +414,6 @@ val update_system : unit -> unit
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option
-val mem :
-  Hstring.t * 'a * 'b * 'c * 'd * 'e ->
-  (Hstring.t * 'f * 'g * 'h * 'i * 'j) list -> bool
-val del_double :
-  (Hstring.t * 'a * 'b * 'c * 'd * 'e) list ->
-  (Hstring.t * 'a * 'b * 'c * 'd * 'e) list
 val scheduler : Ast.system -> unit
 val dummy_system : Ast.system
 val current_system : Ast.system ref
