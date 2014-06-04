@@ -91,12 +91,9 @@ let set_mode = function
 
 let nb_threads = ref 4
 let nb_exec = ref 0
-let equit = ref 0
+let runs = ref 1
 let bequit = ref false
-
-let set_equit n =
-  equit := n;
-  bequit := true
+let compare = ref false
 
 let schedule = ref false
 let init_proc = ref false
@@ -160,7 +157,9 @@ let specs =
     "-threads", Arg.Set_int nb_threads, "<n> number of threads to use";
     "-exec", Arg.Set_int nb_exec, "<n> number of executions in the scheduler";
     "-schedule", Arg.Set schedule, "use scheduler instead of enumeration for BRAB";
-    "-equit", Arg.Int set_equit, "<n> number of executions of the scheduler";
+    "-runs", Arg.Set_int runs, "<n> number of executions of the scheduler";
+    "-equit", Arg.Set bequit, "Try to see if the system is equitable";
+    "-compare", Arg.Set compare, "Use both the oracle to compare the results";
   ]
 
 let alspecs = Arg.align specs
@@ -238,8 +237,9 @@ let out_trace = !out
 
 let nb_threads = if brab <> -1 then brab else !nb_threads
 let nb_exec = !nb_exec
-let equit = !equit
+let runs = !runs
 let bequit = !bequit
+let compare = !compare
 let schedule = !schedule
 
 let ofile = !ofile

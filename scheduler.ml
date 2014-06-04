@@ -302,10 +302,11 @@ module State (Elt : OrderedType)  (A : DA with type elt = Elt.t) : St with type 
 
   let equal s1 s2 = if ecompare s1 s2 = 0 then true else false
 
-  let get_v t h = Hashtbl.find t.globs h
-  let get_a t h = Hashtbl.find t.arrs h
+  let get_v t h = try Hashtbl.find t.globs h with Not_found -> eprintf "%a@." Hstring.print h; exit 1
+  let get_a t h = try Hashtbl.find t.arrs h with Not_found -> eprintf "%a@." Hstring.print h; exit 1
   let get_e t h pl = let arr = get_a t h in
-  		     A.get arr pl
+  		     try A.get arr pl
+		     with Not_found -> eprintf "%a@." Hstring.print h; exit 1
 
   let set_v t h v = Hashtbl.replace t.globs h v
   let set_a t h arr = Hashtbl.replace t.arrs h arr
@@ -494,10 +495,10 @@ let get_cvalue =
 
 (* Return a constant value or the value of a variable
    (global or array) *)
-let get_value sub =
+let rec get_value sub =
   function
     | (Const _ as v) | (Elem (_, Constr) as v) -> get_cvalue v
-    | Elem (id, Glob) -> Etat.get_v !read_st id
+    | Elem (id, Glob) -> (try Etat.get_v !read_st id with Not_found -> eprintf "%a@." Hstring.print id; exit 1)
     | Elem (id, _) -> let (_, i) = 
 			List.find (fun (e, _) -> Hstring.equal e id) sub 
 		      in Proc i
@@ -509,8 +510,13 @@ let get_value sub =
 	  ) sub in i
       ) pl in
       Etat.get_e !read_st id ind
-    | _ -> assert false
-
+    | Arith (t,  c) -> 
+      let v = get_value sub t in
+      let v' = value_c c in
+      match v with
+	| Numb n -> Numb ((+/) n v')
+	| _ -> assert false
+	  
 let v_equal v1 v2 =
   match v1, v2 with
     | Var h1, Var h2
@@ -743,7 +749,12 @@ let init_htbls (vars, atoms) =
 	    if n = t then raise Exit
 	    else if (Var n) = rep then
 	      let ty, ts = 
-		if Hstring.equal t i || Hstring.equal t r then N, TS.empty
+		if Hstring.equal t i || Hstring.equal t r 
+		then begin
+		  let pv = Hashtbl.find htbl_types t in
+		  let ts = List.fold_left (fun acc n -> TS.add n acc) TS.empty pv in
+		  N, ts
+		end
 		else let vs = Hashtbl.find htbl_types t in
 		     let ts' = List.fold_left (fun acc t -> TS.add t acc) TS.empty vs in
 		     O, ts'
@@ -1189,7 +1200,7 @@ let update_system () =
   let tmap = ref (valid_trans_map ()) in
   (* while !continue do *)
   (*   ( *)
-      let ((tr, pn, _), (assigns, updates)) = TNMap.min_binding !tmap in
+  let ((tr, pn, _), (assigns, updates)) = TNMap.min_binding !tmap in
       List.iter (fun a -> a ()) assigns;
       let updts = valid_upd updates in 
       List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
@@ -1282,20 +1293,20 @@ let scheduler se =
   init_system se;
   init_transitions se.trans;
   let trans = List.fold_left (fun acc (n, _, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
-  let nb_ex = 
-    if nb_exec > 0 then nb_exec
-    else 4
-      (* let acc = List.fold_left ( *)
-      (* 	fun acc (n, ty) -> *)
-      (* 	  acc * (List.length (try Hashtbl.find htbl_types ty *)
-      (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
-      (* )) 1 se.globals  *)
-      (* in *)
-      (* List.fold_left ( *)
-      (* 	fun acc' (n, (_,ty)) -> *)
-      (* 	  acc' * (List.length (try Hashtbl.find htbl_types ty *)
-      (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
-      (* 	  )) acc se.arrays  *)
+  let nb_ex = nb_exec 
+  (* if nb_exec > 0 then nb_exec *)
+  (* else 4 *)
+  (* let acc = List.fold_left ( *)
+  (* 	fun acc (n, ty) -> *)
+  (* 	  acc * (List.length (try Hashtbl.find htbl_types ty *)
+  (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
+  (* )) 1 se.globals  *)
+  (* in *)
+  (* List.fold_left ( *)
+  (* 	fun acc' (n, (_,ty)) -> *)
+  (* 	  acc' * (List.length (try Hashtbl.find htbl_types ty *)
+  (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
+  (* 	  )) acc se.arrays  *)
   in
   printf "Nb exec : %d@." nb_ex;
   Syst.iter (
@@ -1311,7 +1322,7 @@ let scheduler se =
   	  update_system ();
   	  incr count
   	done;
-      with Not_found -> printf "Stop : %d@." !count
+      with Not_found -> (* printf "Stop : %d@." !count *)()
   ) !sinits;
   ntTrans := TSet.diff !pTrans !tTrans;
   iTrans := TSet.diff trans !pTrans;

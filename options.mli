@@ -76,8 +76,9 @@ val out_trace : string
 val nb_threads : int
 val nb_exec : int
 val schedule : bool
-val equit : int
+val runs : int
 val bequit : bool
+val compare : bool
 val tab_init : (Hstring.t, (Hstring.t * int) list) Hashtbl.t
 val proc_init : (Hstring.t, int list) Hashtbl.t
 val proc_ninit : (Hstring.t, unit) Hashtbl.t

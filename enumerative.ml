@@ -33,7 +33,7 @@ module HI = Hashtbl.Make (struct
 end)
 
 
-type state = int array
+type state = int array 
 
 
 type state_info = int HT.t
@@ -105,7 +105,7 @@ type env = {
   pinf_int_abstr : int;
   minf_int_abstr : int;
 
-  explicit_states : unit HST.t;
+  explicit_states : (Hstring.t list) HST.t;
 }
 
 let empty_env = {
@@ -765,7 +765,7 @@ let post st visited trs acc cpt_q depth =
       with Not_applicable -> acc) acc trs
 
 
-let post_bfs st visited trs q cpt_q depth =
+let post_bfs st tst visited trs q cpt_q depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try 
@@ -773,7 +773,7 @@ let post_bfs st visited trs q cpt_q depth =
         List.iter (fun s ->
           if not (HST.mem visited s) then begin
             incr cpt_q;
-            Queue.add (depth + 1, s) q
+            Queue.add (depth + 1, s, st_tr.st_name :: tst) q
           end
         ) sts
       with Not_applicable -> ()) trs
@@ -785,6 +785,7 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
   let rec aux = function
     | [] -> ()
     | (st, last_vars) :: r ->
+        let tst = HST.find visited st in
         let to_do =
           List.fold_left (fun to_do st_tr ->
             try 
@@ -796,13 +797,13 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
                 if not (HST.mem visited s || HST.mem temp_table s) then
                   if switching then begin
                     incr cpt_q;
-                    Queue.add (depth + 1, vars, s) q;
+                    Queue.add (depth + 1, vars, s, st_tr.st_name :: tst) q;
                     incr cpt_f;
-                    HST.add visited st ();
+                    HST.add visited st (st_tr.st_name :: tst);
                     to_do
                   end 
                   else begin 
-                    HST.add temp_table st ();
+                    HST.add temp_table st [];
                     (s, vars) :: to_do
                   end
                 else to_do
@@ -839,7 +840,7 @@ let forward_dfs s procs env l =
 	  if not quiet && !cpt_f mod 1000 = 0 then
             eprintf "%d (%d)@." !cpt_f !cpt_q;
 	  (* HI.add explicit_states hst st; *)
-	  HST.add explicit_states st ();
+	  HST.add explicit_states st [];
 	  forward_rec s procs trs to_do
   in
   forward_rec s procs trs l
@@ -865,13 +866,13 @@ let forward_bfs s procs env l =
   let cpt_q = ref 1 in
   let trs = env.st_trs in
   let to_do = Queue.create () in
-  List.iter (fun td -> Queue.add td to_do) l;
+  List.iter (fun (i, k) -> Queue.add (i, k, []) to_do) l;
   while not (Queue.is_empty to_do) do
-    let depth, st = Queue.take to_do in
+    let depth, st, tst = Queue.take to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
     (* if not (already_visited env explicit_states st) then begin *)
-      post_bfs st h_visited trs to_do cpt_q depth;
+      post_bfs st tst h_visited trs to_do cpt_q depth;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
@@ -880,11 +881,13 @@ let forward_bfs s procs env l =
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
-      HST.add h_visited st ();
+      HST.add h_visited st tst;
       (* add_all_syms env explicit_states st *)
     end
   done;
-  eprintf "Total forward nodes : %d@." !cpt_r
+  eprintf "Total forward nodes : %d@." !cpt_r;
+  if verbose > 0 then
+    HST.iter (fun st tst -> printf "%a@." (Hstring.print_list " ") tst) h_visited
 
 let forward_bfs_switches s procs env l =
   let explicit_states = env.explicit_states in
@@ -893,9 +896,9 @@ let forward_bfs_switches s procs env l =
   let trs = env.st_trs in
   let to_do = Queue.create () in
   List.iter (fun (idp, ist)  -> 
-    Queue.add (idp, hset_none, ist) to_do) l;
+    Queue.add (idp, hset_none, ist, []) to_do) l;
   while not (Queue.is_empty to_do) do
-    let depth, last_vars, st = Queue.take to_do in
+    let depth, last_vars, st, tst = Queue.take to_do in
     decr cpt_q;
     if not (HST.mem explicit_states st) then begin
       post_bfs_switches 
@@ -907,7 +910,7 @@ let forward_bfs_switches s procs env l =
       if not quiet (* && !cpt_f mod 1000 = 0 *) then
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
-      HST.add explicit_states st ();
+      HST.add explicit_states st tst;
     end
   done;
   eprintf "Total forward nodes : %d@." !cpt_f
@@ -1049,22 +1052,36 @@ let resist_on_trace_size cpt_approx progress_inc ls env =
                         (* will be forgotten by flushs *)
       let one_step () = if nocolor then eprintf "#@?" else eprintf " @?" in
       let cpt = ref 0 in
-      HST.iter (fun st _ ->
+      HST.iter (fun st hist ->
         incr cpt;
         if not quiet && !cpt mod progress_inc = 0 then one_step ();
         cands := List.filter (fun p -> 
           List.for_all (fun (c, _) -> check_cand env st c) p
         ) !cands;
-        if !cands = [] then raise Exit;
+	if !cands = [] then raise Exit;
       ) explicit_states;
       let remain = List.fold_left (fun acc clas ->
 	match clas with
-	| [] -> acc
-	| (_, s) :: _ -> s :: acc) [] !cands in
+	  | [] -> acc
+	  | (_, s) :: _ -> s :: acc) [] !cands 
+      in
       List.rev_append remain too_big
     with 
       | Exit | Not_found -> too_big
 
+let hist_cand cand cpt_approx =
+  let fl =
+    List.fold_left (fun acc env ->
+      let explicit_states = env.explicit_states in
+      let procs = List.rev (List.tl (List.rev env.all_procs)) in
+      let cand = alpha_renamings cpt_approx env procs cand in
+      let l = HST.fold (fun st hist acc' ->
+	if List.for_all (fun (c, _) -> check_cand env st c) cand then (st, hist)::acc'
+	else acc'
+      ) explicit_states [] in
+      l @ acc
+    ) [] !global_envs
+  in fl
 
 let smallest_to_resist_on_trace cpt_approx ls =
   try

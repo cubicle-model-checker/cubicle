@@ -283,13 +283,25 @@ let subsuming_candidate s =
   (* let approx = keep 70 approx in *)
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
-  if schedule then
+  let sl =
     match Scheduler.filter approx with
-    | None -> []
-    | Some cand -> [cand]
-  else
-    Enumerative.smallest_to_resist_on_trace cpt_approx approx
-
+      | None -> []
+      | Some cand -> [cand]
+  in 
+  if compare then
+    let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in 
+    match sl, el with
+      | [], [] -> []
+      | [c], [] -> eprintf "Blind scheduler@.";
+	printf "Approx : \n\t%a@." Pretty.print_system c;
+	let sl = Enumerative.hist_cand c cpt_approx in
+	printf "Obtained by :@.";
+	List.iter (fun (_, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl;
+	exit 1
+      | [], [c] -> eprintf "Blind enumerative@."; exit 1
+      | [c], [c'] -> sl
+      | _ -> assert false
+  else sl
 
 (**************************************************************)
 (* Backward reachability with approximations and backtracking *)
@@ -298,21 +310,16 @@ let subsuming_candidate s =
 let brab search invariants uns =
 
   (* initialization of oracle *)
-    if schedule then
-      ignore (Scheduler.run ())
-    else
-      begin
-	let low = if brab_up_to then 1 else enumerative in
-	for i = enumerative downto low do
-          let procs = Forward.procs_from_nb i in
-          eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
-	         ----------------------------------------\n@." i;
-	  
-          Enumerative.search procs (List.hd uns);
-          
-          eprintf "----------------------------------------\n@.";
-	done;
-      end;
+  for i = 1 to runs do ignore (Scheduler.run ()) done;
+  let low = if brab_up_to then 1 else enumerative in
+  if compare then 
+    for i = enumerative downto low do
+      let procs = Forward.procs_from_nb i in
+      eprintf "STATEFULL ENUMERATIVE FORWARD [%d procs]:\n\
+	     ----------------------------------------\n@." i;
+      Enumerative.search procs (List.hd uns);
+      eprintf "----------------------------------------\n@.";
+    done;
   if only_forward then exit 0;
   let procs = Forward.procs_from_nb enumerative in
   search_backtrack_brab search invariants procs uns

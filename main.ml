@@ -45,7 +45,7 @@ let equit s =
   in
   let entTrans = ref trans in
   let eiTrans = ref trans in
-  for i = 1 to equit do
+  for i = 1 to runs do
     printf "Execution #%d@." i;
     Scheduler.run ();
     epTrans := TSet.union !epTrans !pTrans;
@@ -53,7 +53,7 @@ let equit s =
     entTrans := TSet.inter !entTrans !ntTrans;
     eiTrans := TSet.inter !eiTrans !iTrans
   done;
-  printf "In %d executions of the scheduler\n and %d states explored.@." equit (nb_exec*nb_threads*(Syst.cardinal (!sinits)));
+  printf "In %d executions of the scheduler\n and %d states explored.@." runs (nb_exec*nb_threads*(Syst.cardinal (!sinits)));
   printf "These are all the transitions that were seen@.";
   TSet.iter (printf "\t%a@." Hstring.print) (!epTrans);
   printf "These transitions were never seen@.";
