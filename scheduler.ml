@@ -44,7 +44,7 @@ let init_proc = !init_proc
 let error e = raise (Error e)
 
 type value = 
-  | Var of Hstring.t
+  | VVar of Hstring.t
   | Numb of num
   | Hstr of Hstring.t 
   | Proc of int
@@ -57,9 +57,9 @@ let compare_value v1 v2 =
     | Hstr h1, Hstr h2 -> Hstring.compare h1 h2
     | Hstr _, _ -> -1
     | _, Hstr _ -> 1
-    | Var h1, Var h2 -> Pervasives.compare h1 h2
-    | Var _, _ -> -1
-    | _, Var _ -> 1
+    | VVar h1, VVar h2 -> Pervasives.compare h1 h2
+    | VVar _, _ -> -1
+    | _, VVar _ -> 1
     | Proc p1, Proc p2 -> Pervasives.compare p1 p2
 
 let vequal v1 v2 =
@@ -70,7 +70,7 @@ let print_value f v =
     | Numb i -> printf "%s " (Num.string_of_num i)
     | Proc p -> printf "%d " p
     | Hstr h -> printf "%a " Hstring.print h
-    | Var h -> printf "%a " Hstring.print h
+    | VVar h -> printf "%a " Hstring.print h
 
 type stype =
   | RGlob of Hstring.t
@@ -462,12 +462,12 @@ let inter l1 l2s =
 let rep_name n =
   let (rep, _) = Hashtbl.find ec n in
   match rep with
-    | Var id -> id
+    | VVar id -> id
     | _ -> raise ConstrRep
 
 let hst_var =
   function
-    | Var h -> h
+    | VVar h -> h
     | _ -> assert false
 
 let ec_replace rep v =
@@ -519,7 +519,7 @@ let rec get_value sub =
 	  
 let v_equal v1 v2 =
   match v1, v2 with
-    | Var h1, Var h2
+    | VVar h1, VVar h2
     | Hstr h1, Hstr h2 -> Hstring.equal h1 h2
     | Numb i1, Numb i2 -> i1 =/ i2
     | Proc p1, Proc p2 -> p1 = p2
@@ -534,7 +534,7 @@ let print_value f v =
     | Numb i -> printf "%s " (Num.string_of_num i)
     | Proc p -> printf "%d " p
     | Hstr h -> printf "%a " Hstring.print h
-    | Var h -> printf "%a " Hstring.print h
+    | VVar h -> printf "%a " Hstring.print h
 
 let print_ce () =
   printf "\nce :@.";
@@ -688,7 +688,7 @@ let init_globals globals =
     fun (g_name, g_type) ->
       let t = 
 	if Hashtbl.mem htbl_abstypes g_name then g_name else g_type in
-      Hashtbl.add ec g_name (Var g_name, RGlob t)
+      Hashtbl.add ec g_name (VVar g_name, RGlob t)
   ) globals
 
 (* Initialization of the arrays with their default
@@ -700,7 +700,7 @@ let init_arrays arrays =
       let dims = List.length a_dims in
       let t = 
 	if Hashtbl.mem htbl_abstypes a_name then a_name else a_type in
-      Hashtbl.add ec a_name (Var a_name, RArr (t, dims))
+      Hashtbl.add ec a_name (VVar a_name, RArr (t, dims))
   ) arrays
     
 (* Execution of the real init method from the cubicle file 
@@ -731,7 +731,7 @@ let init_htbls (vars, atoms) =
 		    );
 		    let sr, dr =
 		      match rep with
-			| Var _ -> rep', rep
+			| VVar _ -> rep', rep
 			| _ -> rep, rep'
 		    in ec_replace dr sr
 		  | _ -> assert false
@@ -747,7 +747,7 @@ let init_htbls (vars, atoms) =
 	    let t = type_st st in
 	    (* Abstract type *)
 	    if n = t then raise Exit
-	    else if (Var n) = rep then
+	    else if (VVar n) = rep then
 	      let ty, ts = 
 		if Hstring.equal t i || Hstring.equal t r 
 		then begin
@@ -800,13 +800,13 @@ let init_htbls (vars, atoms) =
 		      let (rep1, _) = Hashtbl.find ec id1 in
 		      let (rep2, _) = Hashtbl.find ec id2 in
 		      match rep1, rep2 with
-			| Var h1, Var h2 -> let (ty1, ts1, ti1, cfc1) = Hashtbl.find dc h1 in
+			| VVar h1, VVar h2 -> let (ty1, ts1, ti1, cfc1) = Hashtbl.find dc h1 in
 					    let (ty2, ts2, ti2, cfc2) = Hashtbl.find dc h2 in
 					    let cfc = min cfc1 cfc2 in
 					    Hashtbl.replace dc h1 (ty1, ts1, TI.add h2 ti1, cfc);
 					    Hashtbl.replace dc h2 (ty2, ts2, TI.add h1 ti2, cfc)
-			| Var h, (_ as rep') 
-			| (_ as rep'), Var h -> 	
+			| VVar h, (_ as rep') 
+			| (_ as rep'), VVar h -> 	
 			  let (ty, ts, ti, cfc) = Hashtbl.find dc h in
 			  let ts' = match ty with
 			    | N -> TS.add rep' ts
@@ -818,7 +818,7 @@ let init_htbls (vars, atoms) =
 		  | Elem (id, Glob), Elem (p, Var)
 		  | Elem (p, Var), Elem (id, Glob) ->
 		    let (rep, st) = Hashtbl.find ec id in
-		    let h = match rep with Var h -> h | _ -> assert false in
+		    let h = match rep with VVar h -> h | _ -> assert false in
 		    Hashtbl.remove dc h;
 		    ec_replace rep !fproc
 		  | _ -> assert false
@@ -831,8 +831,8 @@ let upd_options () =
   Hashtbl.iter
     ( fun n (rep, _) ->
       match rep with
-	| Var h when h <> n && Hashtbl.mem proc_init n -> Hashtbl.add proc_init h (Hashtbl.find proc_init n)
-	| Var h when h <> n && Hashtbl.mem proc_ninit n -> Hashtbl.add proc_ninit h ()
+	| VVar h when h <> n && Hashtbl.mem proc_init n -> Hashtbl.add proc_init h (Hashtbl.find proc_init n)
+	| VVar h when h <> n && Hashtbl.mem proc_ninit n -> Hashtbl.add proc_ninit h ()
 	| _ -> ()
     ) ec
 
@@ -861,7 +861,7 @@ let upd_init_list rep ts =
   in
   let ce = Hashtbl.fold (
     fun n (rep', st) acc ->
-      if (Var rep) = rep' 
+      if (VVar rep) = rep' 
       then (
 	Hashtbl.remove ec n;
 	(n, st) :: acc )
@@ -903,7 +903,7 @@ let graph_coloring () =
 	Hashtbl.remove ec rep;
 	let ce = Hashtbl.fold (
 	  fun n (rep', st) acc ->
-	    if (Var rep) = rep' 
+	    if (VVar rep) = rep' 
 	    then (
 	      Hashtbl.remove ec n;
 	      (n, st) :: acc )

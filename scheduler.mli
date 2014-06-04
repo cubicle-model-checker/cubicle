@@ -7,7 +7,7 @@ exception Error of error
 val init_proc : bool
 val error : error -> 'a
 type value =
-    Var of Hstring.t
+    VVar of Hstring.t
   | Numb of Num.num
   | Hstr of Hstring.t
   | Proc of int
@@ -382,7 +382,6 @@ val valid_trans_list :
     ((unit -> bool) list * (unit -> unit)) list list list))
   list
 val update_system : unit -> unit
-(* val q : '_a Queue.t *)
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option
