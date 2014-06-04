@@ -66,6 +66,7 @@ let equit s =
 let _ = 
   let lb = from_channel cin in 
   try
+    Random.self_init ();
     let s = Parser.system Lexer.token lb in
     let ts = Typing.system s in
     if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;

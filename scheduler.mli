@@ -157,36 +157,36 @@ module Etat :
   end
 module Syst :
   sig
-    type elt = Hstring.t * Etat.t
-    type t
-    val empty : t
-    val is_empty : t -> bool
-    val mem : elt -> t -> bool
-    val add : elt -> t -> t
-    val singleton : elt -> t
-    val remove : elt -> t -> t
-    val union : t -> t -> t
-    val inter : t -> t -> t
-    val diff : t -> t -> t
-    val compare : t -> t -> int
-    val equal : t -> t -> bool
-    val subset : t -> t -> bool
-    val iter : (elt -> unit) -> t -> unit
-    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
-    val for_all : (elt -> bool) -> t -> bool
-    val exists : (elt -> bool) -> t -> bool
-    val filter : (elt -> bool) -> t -> t
-    val partition : (elt -> bool) -> t -> t * t
-    val cardinal : t -> int
-    val elements : t -> elt list
-    val min_elt : t -> elt
-    val max_elt : t -> elt
-    val choose : t -> elt
-    val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
+    type key = Etat.t
+    type +'a t
+    val empty : 'a t
+    val is_empty : 'a t -> bool
+    val mem : key -> 'a t -> bool
+    val add : key -> 'a -> 'a t -> 'a t
+    val singleton : key -> 'a -> 'a t
+    val remove : key -> 'a t -> 'a t
+    val merge :
+      (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
+    val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
+    val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+    val iter : (key -> 'a -> unit) -> 'a t -> unit
+    val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+    val for_all : (key -> 'a -> bool) -> 'a t -> bool
+    val exists : (key -> 'a -> bool) -> 'a t -> bool
+    val filter : (key -> 'a -> bool) -> 'a t -> 'a t
+    val partition : (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
+    val cardinal : 'a t -> int
+    val bindings : 'a t -> (key * 'a) list
+    val min_binding : 'a t -> key * 'a
+    val max_binding : 'a t -> key * 'a
+    val choose : 'a t -> key * 'a
+    val split : key -> 'a t -> 'a t * 'a option * 'a t
+    val find : key -> 'a t -> 'a
+    val map : ('a -> 'b) -> 'a t -> 'b t
+    val mapi : (key -> 'a -> 'b) -> 'a t -> 'b t
   end
-val system : Syst.t ref
-val sinits : Syst.t ref
+val system : Hstring.t Syst.t ref
+val sinits : Hstring.t Syst.t ref
 val read_st : Etat.t ref
 val write_st : Etat.t ref
 val htbl_types : (Hstring.t, value list) Hashtbl.t
@@ -308,7 +308,7 @@ val print_abst : unit -> unit
 val print_types : unit -> unit
 val print_inits : unit -> unit
 val print_init_list : unit -> unit
-val print_system : Hstring.t * Etat.t -> unit
+val print_system : Etat.t -> Hstring.t -> unit
 val print_init : unit -> unit
 val print_procinit : unit -> unit
 val print_procninit : unit -> unit
@@ -341,36 +341,6 @@ val init_transitions : Ast.transition list -> unit
 val valid_req : (unit -> bool) list -> bool
 val valid_ureq : (unit -> bool) list list list -> bool
 val valid_upd : ((unit -> bool) list * 'a) list list list -> 'a list list
-module TNMap :
-  sig
-    type key = Hstring.t * Hstring.t * int
-    type +'a t
-    val empty : 'a t
-    val is_empty : 'a t -> bool
-    val mem : key -> 'a t -> bool
-    val add : key -> 'a -> 'a t -> 'a t
-    val singleton : key -> 'a -> 'a t
-    val remove : key -> 'a t -> 'a t
-    val merge :
-      (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
-    val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
-    val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-    val iter : (key -> 'a -> unit) -> 'a t -> unit
-    val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-    val for_all : (key -> 'a -> bool) -> 'a t -> bool
-    val exists : (key -> 'a -> bool) -> 'a t -> bool
-    val filter : (key -> 'a -> bool) -> 'a t -> 'a t
-    val partition : (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
-    val cardinal : 'a t -> int
-    val bindings : 'a t -> (key * 'a) list
-    val min_binding : 'a t -> key * 'a
-    val max_binding : 'a t -> key * 'a
-    val choose : 'a t -> key * 'a
-    val split : key -> 'a t -> 'a t * 'a option * 'a t
-    val find : key -> 'a t -> 'a
-    val map : ('a -> 'b) -> 'a t -> 'b t
-    val mapi : (key -> 'a -> 'b) -> 'a t -> 'b t
-  end
 module TSet :
   sig
     type elt = Hstring.t
@@ -405,12 +375,14 @@ val pTrans : TSet.t ref
 val tTrans : TSet.t ref
 val ntTrans : TSet.t ref
 val iTrans : TSet.t ref
-val valid_trans_map :
+val valid_trans_list :
   unit ->
-  ((unit -> unit) list *
-   ((unit -> bool) list * (unit -> unit)) list list list)
-  TNMap.t
+  ((Hstring.t * Hstring.t * int) *
+   ((unit -> unit) list *
+    ((unit -> bool) list * (unit -> unit)) list list list))
+  list
 val update_system : unit -> unit
+(* val q : '_a Queue.t *)
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option

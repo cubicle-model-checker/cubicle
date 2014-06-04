@@ -881,13 +881,13 @@ let forward_bfs s procs env l =
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
-      HST.add h_visited st tst;
+      HST.add h_visited st (List.rev tst);
       (* add_all_syms env explicit_states st *)
     end
   done;
-  eprintf "Total forward nodes : %d@." !cpt_r;
-  if verbose > 0 then
-    HST.iter (fun st tst -> printf "%a@." (Hstring.print_list " ") tst) h_visited
+  eprintf "Total forward nodes : %d@." !cpt_r
+  (* if verbose > 0 then *)
+  (*   HST.iter (fun st tst -> printf "%a@." (Hstring.print_list " ") tst) h_visited *)
 
 let forward_bfs_switches s procs env l =
   let explicit_states = env.explicit_states in
@@ -1070,18 +1070,19 @@ let resist_on_trace_size cpt_approx progress_inc ls env =
       | Exit | Not_found -> too_big
 
 let hist_cand cand cpt_approx =
-  let fl =
-    List.fold_left (fun acc env ->
-      let explicit_states = env.explicit_states in
-      let procs = List.rev (List.tl (List.rev env.all_procs)) in
-      let cand = alpha_renamings cpt_approx env procs cand in
-      let l = HST.fold (fun st hist acc' ->
-	if List.for_all (fun (c, _) -> check_cand env st c) cand then (st, hist)::acc'
-	else acc'
-      ) explicit_states [] in
-      l @ acc
-    ) [] !global_envs
-  in fl
+  List.fold_left (fun acc env ->
+    let explicit_states = env.explicit_states in
+    let procs = List.rev (List.tl (List.rev env.all_procs)) in
+    let cand = alpha_renamings cpt_approx env procs cand in
+    let r = HST.fold (fun st hist ((_, h) as acc') ->
+      if List.for_all (fun (c, _) -> check_cand env st c) cand then acc'
+      else match h, hist with
+	| [], _ -> (st, hist)
+	| l, l' when List.length l > List.length l' -> (st, hist)
+	| _ -> acc'
+    ) explicit_states (Array.make 0 0, []) in
+    r :: acc
+  ) [] !global_envs
 
 let smallest_to_resist_on_trace cpt_approx ls =
   try

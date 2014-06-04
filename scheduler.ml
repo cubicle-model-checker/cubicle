@@ -324,10 +324,10 @@ end
 
 module Array = DimArray (OrderedValue)
 module Etat = State (OrderedValue) (Array)
-module Syst = Set.Make (
+module Syst = Map.Make (
   struct
-    type t = (Hstring.t * Etat.t)
-    let compare (_, s1) (_, s2) = if Etat.ecompare s1 s2 = 0 then 0 else 1
+    type t = Etat.t
+    let compare s1 s2 = if Etat.ecompare s1 s2 = 0 then 0 else 1
   end
 )
 	
@@ -610,15 +610,15 @@ let print_init_list () =
       printf "@.";
     ) !init_list
 
-let print_system (tr, {Etat.globs; Etat.arrs}) =
+let print_system {Etat.globs; Etat.arrs} tr =
   printf "@.";
   printf "%a@." Hstring.print tr;
   Etat.giter (
     fun var value ->
-      printf "%a -> %a@." Hstring.print var print_value value
+      printf "\t%a -> %a@." Hstring.print var print_value value
   ) globs;
   Etat.aiter (
-    fun name tbl -> printf "%a " Hstring.print name;
+    fun name tbl -> printf "\t%a " Hstring.print name;
       Array.print tbl print_value;
       printf "@."
   ) arrs;
@@ -952,7 +952,7 @@ let initialization init =
     incr c;
     let i = Etat.copy etati in
     let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-    sinits := Syst.add (tr, i) !sinits
+    sinits := Syst.add i tr !sinits
   in
   let rec create_init l =
     match l with
@@ -1161,13 +1161,6 @@ let valid_upd arrs_upd =
       in arrs_u::arr_acc
   ) [] arrs_upd
 
-module TNMap = Map.Make (
-  struct 
-    type t = Hstring.t * Hstring.t * int
-    let compare _ _ = if Random.bool () then -1 else 1
-  end
-)
-
 module TSet = Set.Make (
   struct
     type t = Hstring.t
@@ -1180,44 +1173,48 @@ let tTrans = ref TSet.empty
 let ntTrans = ref TSet.empty
 let iTrans = ref TSet.empty
 
-let valid_trans_map () =
+let valid_trans_list () =
   List.fold_left (
-    fun updts_m (name, pn, np, req, ureq, updts) ->
+    fun acc (name, pn, np, req, ureq, updts) -> 
       if valid_req req && valid_ureq ureq 
-      then 
+      then
 	(
 	  pTrans := TSet.add name !pTrans;
-	  TNMap.add (name, pn, np) updts updts_m
+	  ((name, pn, np), updts) :: acc
 	)
-      else updts_m
-  ) TNMap.empty !trans_list
+      else acc
+  ) [] !trans_list
     
 (* SYSTEM UPDATE *)
 
 
 let update_system () =
-  (* let continue = ref true in *)
-  let tmap = ref (valid_trans_map ()) in
-  (* while !continue do *)
-  (*   ( *)
-  let ((tr, pn, _), (assigns, updates)) = TNMap.min_binding !tmap in
-      List.iter (fun a -> a ()) assigns;
-      let updts = valid_upd updates in 
-      List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-      (* let (updated, s) = Syst.update_s tr !system in *)
-      (* if not updated *)
-      (* then ( *)
-      (* 	tmap := TNMap.remove tr !tmap; *)
-      (* 	continue := false *)
-      (* ); *)
-      let s = Etat.copy !write_st in
-      let trn = Hstring.make ((Hstring.view tr) ^ " :" ^ (Hstring.view pn)) in
-      system := Syst.add (trn, s) !system;
-      tTrans := TSet.add tr !tTrans;
-      read_st := s
-      
-  (*   ) *)
-  (* done *)
+  let tlist = ref (valid_trans_list ()) in
+  let i = Random.int (List.length !tlist) in
+  let ((tr, pn, _), (assigns, updates)) = List.nth !tlist i in
+  List.iter (fun a -> a ()) assigns;
+  let updts = valid_upd updates in 
+  List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+  let s = Etat.copy !write_st in
+  let trn = Hstring.make ((Hstring.view tr) ^ " :" ^ (Hstring.view pn)) in
+  system := Syst.add s trn !system;
+  (* printf "Taken trans : %a@." Hstring.print tr; *)
+  tTrans := TSet.add tr !tTrans;
+  read_st := s
+
+(* let q = Queue.create () *)
+
+(* let rec update_system () = *)
+(*   let (st, tl) = Queue.take q in *)
+(*   let i = Random.int (List.length !tlist) in *)
+(*   let ((tr, pn, _), (assigns, updates)) = List.nth !tlist i in *)
+(*   List.iter (fun a -> a ()) assigns; *)
+(*   let updts = valid_upd updates in *)
+(*   List.iter (fun us -> List.iter (fun u -> u ()) us) updts; *)
+(*   let s = Etat.copy !write_st in *)
+(*   if Syst.mem s then *)
+(*     ( *)
+(*       Queue.add (st,  *)
 
 (* INTERFACE WITH BRAB *)
 
@@ -1241,7 +1238,7 @@ let get_value_st sub st =
 
 let contains sub sa s =
   Syst.exists (
-    fun (_, state) ->
+    fun state _ ->
       SAtom.for_all (
 	fun a ->
 	  match a with
@@ -1289,7 +1286,6 @@ let filter t_syst_l =
 
 
 let scheduler se =
-  Random.self_init ();
   init_system se;
   init_transitions se.trans;
   let trans = List.fold_left (fun acc (n, _, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
@@ -1310,13 +1306,13 @@ let scheduler se =
   in
   printf "Nb exec : %d@." nb_ex;
   Syst.iter (
-    fun (tr, st) ->
+    fun st tr ->
       let count = ref 0 in
       let s = Etat.copy st in
       let s' = Etat.copy st in
       read_st := s;
       write_st := s';
-      system := Syst.add (tr, s) !system;
+      system := Syst.add s tr !system;
       try
   	while !count < nb_ex do
   	  update_system ();
@@ -1326,28 +1322,21 @@ let scheduler se =
   ) !sinits;
   ntTrans := TSet.diff !pTrans !tTrans;
   iTrans := TSet.diff trans !pTrans;
-  if verbose > 0 then
-    begin
-      let count = ref 1 in
-      Syst.iter (
-  	fun st -> 
-	  printf "%d : " !count; 
-	  incr count; 
-	  print_system st
-      ) (!system)
-    end;
   printf "Scheduled %d states\n" (Syst.cardinal (!system));
   printf "--------------------------@.";
-  if (TSet.cardinal !ntTrans > 0) then
+  if verbose > 0 then
     (
-      printf "Not taken transitions :@.";
-      TSet.iter (printf "\t%a@." Hstring.print) !ntTrans
-    ) else (printf "All transitions were taken !@.");
-  if (TSet.cardinal !iTrans > 0) then
-    (
-      printf "Not seen transitions :@.";
-      TSet.iter (printf "\t%a@." Hstring.print) !iTrans
-    ) else (printf "All transitions were seen !@.");
+      if (TSet.cardinal !ntTrans > 0) then
+	(
+	  printf "Not taken but seen transitions :@.";
+	  TSet.iter (printf "\t%a@." Hstring.print) !ntTrans
+	) else (printf "All transitions that were seen were taken !@.");
+      if (TSet.cardinal !iTrans > 0) then
+	(
+	  printf "Not seen transitions :@.";
+	  TSet.iter (printf "\t%a@." Hstring.print) !iTrans
+	) else (printf "All transitions were seen !@.");
+    );
   printf "--------------------------@."
     
 let dummy_system = {

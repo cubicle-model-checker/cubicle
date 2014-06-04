@@ -296,7 +296,7 @@ let subsuming_candidate s =
 	printf "Approx : \n\t%a@." Pretty.print_system c;
 	let sl = Enumerative.hist_cand c cpt_approx in
 	printf "Obtained by :@.";
-	List.iter (fun (_, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl;
+	List.iter (fun (st, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl;
 	exit 1
       | [], [c] -> eprintf "Blind enumerative@."; exit 1
       | [c], [c'] -> sl
@@ -310,7 +310,20 @@ let subsuming_candidate s =
 let brab search invariants uns =
 
   (* initialization of oracle *)
-  for i = 1 to runs do ignore (Scheduler.run ()) done;
+  for i = 1 to runs do 
+    printf "Execution #%d@." i;
+    ignore (Scheduler.run ()) 
+  done;
+  if verbose > 0 then
+    begin
+      let count = ref 1 in
+      Scheduler.Syst.iter (
+  	fun st -> 
+	  printf "%d : " !count; 
+	  incr count; 
+	  Scheduler.print_system st
+      ) (Scheduler.(!system))
+    end;
   let low = if brab_up_to then 1 else enumerative in
   if compare then 
     for i = enumerative downto low do
