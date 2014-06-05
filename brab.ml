@@ -19,6 +19,8 @@ open Ast
 
 let bad_candidates = ref []
 
+let cpt_approx = ref 0
+
 let non_cfm_literals = ref SAtom.empty
 
 let contains_non_cfm s = not (SAtom.is_empty (SAtom.inter s !non_cfm_literals))
@@ -79,9 +81,14 @@ let search_backtrack_brab search invariants procs uns =
       | Search.Unsafe faulty ->
 	  (* FIXME Bug when search is parallel *)
 	  let o = origin faulty in
+	  printf "Approx : \n\t%a@." Pretty.print_system o;
+  	  let sl = Enumerative.hist_cand o cpt_approx in
+  	  printf "Obtained by :@.";
+  	  List.iter (fun (st, hl, args) -> List.iter2 (fun t arg -> printf "\n\t%a %a@." Hstring.print t (Hstring.print_list " ") arg) hl args) sl;
 	  if not quiet then
             eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
+	  exit 1;
           
           (* Enumerative.replay_trace_and_expand procs faulty; *)
           
@@ -185,8 +192,6 @@ let reattach_sorts sorts sa =
 (* Potential approximations for a node s *)
 (*****************************************)
 
-let cpt_approx = ref 0
-
 let approx_arith a = match a with
   | Atom.Comp (t, Eq, Const c) ->
      begin
@@ -287,21 +292,21 @@ let subsuming_candidate s =
     match Scheduler.filter approx with
       | None -> []
       | Some cand -> [cand]
-  in 
-  if compare then
-    let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in 
-    match sl, el with
-      | [], [] -> []
-      | [c], [] -> eprintf "Blind scheduler@.";
-	printf "Approx : \n\t%a@." Pretty.print_system c;
-	let sl = Enumerative.hist_cand c cpt_approx in
-	printf "Obtained by :@.";
-	List.iter (fun (st, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl;
-	exit 1
-      | [], [c] -> eprintf "Blind enumerative@."; exit 1
-      | [c], [c'] -> sl
-      | _ -> assert false
-  else sl
+  in sl
+  (* if compare then *)
+  (*   let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in  *)
+  (*   match sl, el with *)
+  (*     | [], [] -> [] *)
+  (*     | [c], [] -> eprintf "Blind scheduler@."; *)
+  (* 	printf "Approx : \n\t%a@." Pretty.print_system c; *)
+  (* 	let sl = Enumerative.hist_cand c cpt_approx in *)
+  (* 	printf "Obtained by :@."; *)
+  (* 	List.iter (fun (st, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl; *)
+  (* 	exit 1 *)
+  (*     | [], [c] -> eprintf "Blind enumerative@."; exit 1 *)
+  (*     | [c], [c'] -> sl *)
+  (*     | _ -> assert false *)
+  (* else sl *)
 
 (**************************************************************)
 (* Backward reachability with approximations and backtracking *)
@@ -310,20 +315,23 @@ let subsuming_candidate s =
 let brab search invariants uns =
 
   (* initialization of oracle *)
-  for i = 1 to runs do 
-    printf "Execution #%d@." i;
-    ignore (Scheduler.run ()) 
-  done;
-  if verbose > 0 then
-    begin
-      let count = ref 1 in
-      Scheduler.Syst.iter (
-  	fun st -> 
-	  printf "%d : " !count; 
-	  incr count; 
-	  Scheduler.print_system st
-      ) (Scheduler.(!system))
-    end;
+  if schedule then
+    (
+      for i = 1 to runs do 
+	printf "Execution #%d@." i;
+	ignore (Scheduler.run ()) 
+      done;
+      if verbose > 0 then
+	begin
+	  let count = ref 1 in
+	  Scheduler.Syst.iter (
+  	    fun st -> 
+	      printf "%d : " !count; 
+	      incr count; 
+	      Scheduler.print_system st
+	  ) (Scheduler.(!system))
+	end;
+    );
   let low = if brab_up_to then 1 else enumerative in
   if compare then 
     for i = enumerative downto low do

@@ -218,7 +218,6 @@ module TI :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 module TS :
   sig
@@ -248,7 +247,6 @@ module TS :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 module TIS :
   sig
@@ -278,7 +276,6 @@ module TIS :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 val htbl_abstypes : (Hstring.t, Hstring.t * TI.t) Hashtbl.t
 val ec : (Hstring.t, value * stype) Hashtbl.t
@@ -369,7 +366,6 @@ module TSet :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 val pTrans : TSet.t ref
 val tTrans : TSet.t ref
