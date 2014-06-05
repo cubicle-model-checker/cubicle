@@ -20,6 +20,12 @@ type mode =
 
 type trace =  NoTrace | AltErgoTr | WhyTr
 
+type value = 
+  | VVar of Hstring.t
+  | Numb of Num.num
+  | Hstr of Hstring.t 
+  | Proc of int
+
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
@@ -236,6 +242,7 @@ let trace = !trace
 let out_trace = !out
 
 let nb_threads = if brab <> -1 then brab else !nb_threads
+let fproc = Proc nb_threads
 let nb_exec = !nb_exec
 let runs = !runs
 let bequit = !bequit

@@ -43,12 +43,6 @@ let init_proc = !init_proc
 
 let error e = raise (Error e)
 
-type value = 
-  | VVar of Hstring.t
-  | Numb of num
-  | Hstr of Hstring.t 
-  | Proc of int
-
 let compare_value v1 v2 =
   match v1, v2 with
     | Numb n1, Numb n2 -> Num.compare_num n1 n2
@@ -84,13 +78,11 @@ type ty =
   | N (* int or real *)
   | O (* everything else *)
 
-let fproc = ref (Proc 0)
-
 (* List of processes *)
 let list_threads = 
   let rec lthreads l =
     function
-      | n when n = nb_threads -> fproc := Proc n; l
+      | n when n = nb_threads ->  l
       | n -> n::(lthreads l (n+1))
   in lthreads [] 0
 
@@ -531,10 +523,10 @@ let type_st st = match st with RGlob t | RArr (t, _) -> t
 
 let print_value f v =
   match v with
-    | Numb i -> printf "%s " (Num.string_of_num i)
-    | Proc p -> printf "%d " p
-    | Hstr h -> printf "%a " Hstring.print h
-    | VVar h -> printf "%a " Hstring.print h
+    | Numb i -> printf "n %s " (Num.string_of_num i)
+    | Proc p -> printf "p %d " p
+    | Hstr h -> printf "h %a " Hstring.print h
+    | VVar h -> printf "v %a " Hstring.print h
 
 let print_ce () =
   printf "\nce :@.";
@@ -629,7 +621,11 @@ let print_init () =
 
 let print_procinit () =
   printf "Proc_init :";
-  Hashtbl.iter (fun n _ -> printf " %a" Hstring.print n) proc_init;
+  Hashtbl.iter (
+    fun n vl -> printf " %a" Hstring.print n; 
+      List.iter (printf "%a " print_value
+      ) vl
+  ) proc_init;
   printf "@."
 
 let print_procninit () =
@@ -820,7 +816,7 @@ let init_htbls (vars, atoms) =
 		    let (rep, st) = Hashtbl.find ec id in
 		    let h = match rep with VVar h -> h | _ -> assert false in
 		    Hashtbl.remove dc h;
-		    ec_replace rep !fproc
+		    ec_replace rep fproc
 		  | _ -> assert false
 	      end 
 	    | _ -> assert false
@@ -839,22 +835,19 @@ let upd_options () =
 let upd_init_list rep ts =
   let (_, st) = Hashtbl.find ec rep in
   Hashtbl.remove ec rep;
-  (* Possible values according with the .sched file *)
+  (* Possible values according to the .sched file *)
   let pr = Hstring.make "proc" in
   let ts' = 
     match st with 
       | RGlob p | RArr (p, _) when p = pr ->
 	if (init_proc && not (Hashtbl.mem proc_ninit rep))
 	then (
-	  TS.union (TS.singleton (TS.min_elt ts)) (TS.singleton !fproc)
+	  TS.union (TS.singleton (TS.min_elt ts)) (TS.singleton fproc)
 	) else if not init_proc && Hashtbl.mem proc_init rep
 	  then
 	    let l = Hashtbl.find proc_init rep in
 	    List.fold_left (
-	      fun acc i -> 
-		let v = if i = -1 then !fproc
-		  else Proc i in
-		TS.add v acc
+	      fun acc i -> TS.add i acc
 	    ) TS.empty l
 	  else TS.singleton (TS.min_elt ts)
       | _ -> ts
@@ -926,6 +919,7 @@ let fill_ntv () =
 	    
 let initialization init =
   init_htbls init;
+  upd_options ();
   fill_ntv ();
   upd_inits ();
   graph_coloring ();
@@ -934,7 +928,7 @@ let initialization init =
   let value_list al =
     List.map (
       fun (id, n) ->
-	(Hstr id, n)
+	(id, n)
     ) al
   in
   let upd_etati n (v, tself) =
@@ -1359,7 +1353,7 @@ let register_system s = current_system := s
 
 let run () =
   assert (!current_system <> dummy_system);
-  system := Syst.empty;
+  (* system := Syst.empty; *)
   sinits := Syst.empty;
   read_st := Etat.init ();
   write_st := Etat.init ();

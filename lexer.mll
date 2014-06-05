@@ -41,7 +41,7 @@
 	"tab_init", TAB;
 	"opt", OPT;
 	"not", NOT;
-	"proc_init", PROC;
+	"var_init", VARI;
       ]
 	       
   let newline lexbuf =
@@ -87,9 +87,13 @@ rule token = parse
   | lident as id
       { try Hashtbl.find keywords id
 	with Not_found -> LIDENT id }
+  | "@"(integer as n)
+      { let n = int_of_string n in
+	if n > Options.nb_threads then raise Parsing.Parse_error;
+	PROCNUM n}
   | '#'(['1'-'9']['0'-'9']* as n) as id
       { if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;
-        CONSTPROC id }
+        CONSTPROC id}
   | mident as id { MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }

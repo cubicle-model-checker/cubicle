@@ -71,10 +71,11 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB PROC OPT NOT
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB VARI OPT NOT
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
+%token <int> PROCNUM
 %token <string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
@@ -406,6 +407,11 @@ mident:
   | MIDENT { Hstring.make $1 }
 ;
 
+sident:
+  | mident { Options.Hstr $1 }
+  | PROCNUM { Options.Proc $1 }
+  | INT { Options.Numb $1 }
+
 lidents:
   |  { [] }
   | lident lidents { $1::$2 }
@@ -431,8 +437,8 @@ assoc_list :
 ;
 
 assocl :
-  | LEFTPAR mident COMMA INT RIGHTPAR { [($2, Num.int_of_num $4)] }
-  | LEFTPAR mident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
+  | LEFTPAR sident COMMA INT RIGHTPAR { [($2, Num.int_of_num $4)] }
+  | LEFTPAR sident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
 ;
 
 int_list :
@@ -440,9 +446,9 @@ int_list :
 ;
 
 intl :
-  | MINUS INT { [-(Num.int_of_num $2)] }
-  | INT { [Num.int_of_num $1] }
-  | INT COMMA intl { Num.int_of_num $1 ::$3 }
+  | MINUS sident { [Options.fproc] }
+  | sident { [$1] }
+  | sident COMMA intl { $1 ::$3 }
 ;
 
 option :
@@ -456,8 +462,8 @@ option_list :
 ;
 
 procinit :
-  | PROC mident int_list { Hashtbl.replace Options.proc_init $2 $3 }
-  | PROC NOT mident { Hashtbl.replace Options.proc_ninit $3 () }
+  | VARI mident int_list { Hashtbl.replace Options.proc_init $2 $3 }
+  | VARI NOT mident { Hashtbl.replace Options.proc_ninit $3 () }
 ;
 
 procinit_list :

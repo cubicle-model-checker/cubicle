@@ -20,6 +20,12 @@ type mode =
 
 type trace =  NoTrace | AltErgoTr | WhyTr
 
+type value = 
+  | VVar of Hstring.t
+  | Numb of Num.num
+  | Hstr of Hstring.t 
+  | Proc of int
+
 val file : string
 val cin : in_channel
 
@@ -74,13 +80,14 @@ val trace : trace
 val out_trace : string
 
 val nb_threads : int
+val fproc : value
 val nb_exec : int
 val schedule : bool
 val runs : int
 val bequit : bool
 val compare : bool
-val tab_init : (Hstring.t, (Hstring.t * int) list) Hashtbl.t
-val proc_init : (Hstring.t, int list) Hashtbl.t
+val tab_init : (Hstring.t, (value * int) list) Hashtbl.t
+val proc_init : (Hstring.t, value list) Hashtbl.t
 val proc_ninit : (Hstring.t, unit) Hashtbl.t
 
 (* val tab_init : (int * Hstring.t list) Hashtbl.t *)

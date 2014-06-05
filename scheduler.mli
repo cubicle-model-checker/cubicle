@@ -6,17 +6,11 @@ exception ConstrRep
 exception Error of error
 val init_proc : bool
 val error : error -> 'a
-type value =
-    VVar of Hstring.t
-  | Numb of Num.num
-  | Hstr of Hstring.t
-  | Proc of int
-val compare_value : value -> value -> int
-val vequal : value -> value -> bool
+val compare_value : Options.value -> Options.value -> int
+val vequal : Options.value -> Options.value -> bool
 type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
 val hst : stype -> Hstring.t
 type ty = A | N | O
-val fproc : value ref
 val list_threads : int list
 val trans_list :
   (Hstring.t * Hstring.t * int * (unit -> bool) list *
@@ -26,7 +20,10 @@ val trans_list :
   list ref
 module type OrderedType = sig type t val compare : t -> t -> int end
 module OrderedValue :
-  sig type t = value val compare : value -> value -> int end
+  sig
+    type t = Options.value
+    val compare : Options.value -> Options.value -> int
+  end
 module type DA =
   sig
     type elt
@@ -189,7 +186,7 @@ val system : Hstring.t Syst.t ref
 val sinits : Hstring.t Syst.t ref
 val read_st : Etat.t ref
 val write_st : Etat.t ref
-val htbl_types : (Hstring.t, value list) Hashtbl.t
+val htbl_types : (Hstring.t, Options.value list) Hashtbl.t
 module TI :
   sig
     type elt = Hstring.t
@@ -218,10 +215,11 @@ module TI :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
   end
 module TS :
   sig
-    type elt = value
+    type elt = Options.value
     type t
     val empty : t
     val is_empty : t -> bool
@@ -247,6 +245,7 @@ module TS :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
   end
 module TIS :
   sig
@@ -276,28 +275,29 @@ module TIS :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
   end
 val htbl_abstypes : (Hstring.t, Hstring.t * TI.t) Hashtbl.t
-val ec : (Hstring.t, value * stype) Hashtbl.t
+val ec : (Hstring.t, Etat.elt * stype) Hashtbl.t
 val dc : (Hstring.t, ty * TS.t * TI.t * int) Hashtbl.t
 val inits : (int, TIS.t) Hashtbl.t
 val init_list :
   (Hstring.t * stype * TS.t * (Hstring.t * stype) list) list ref
-val ntValues : (Hstring.t, value list) Hashtbl.t
+val ntValues : (Hstring.t, Options.value list) Hashtbl.t
 val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
 val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
-val default_type : Hstring.t -> value
+val default_type : Hstring.t -> Options.value
 val inter : 'a list -> 'a list -> 'a list
 val rep_name : Hstring.t -> Hstring.t
-val hst_var : value -> Hstring.t
-val ec_replace : value -> value -> unit
+val hst_var : Options.value -> Hstring.t
+val ec_replace : TS.elt -> TS.elt -> unit
 val abst_replace : Hstring.t -> Hstring.t -> TI.t -> unit
-val get_cvalue : Ast.term -> value
+val get_cvalue : Ast.term -> Options.value
 val get_value : (Hstring.t * int) list -> Ast.term -> Etat.elt
-val v_equal : value -> value -> bool
+val v_equal : Options.value -> Options.value -> bool
 val type_st : stype -> Hstring.t
-val print_value : 'a -> value -> unit
+val print_value : 'a -> Options.value -> unit
 val print_ce : unit -> unit
 val print_diffs : unit -> unit
 val print_ntv : unit -> unit
@@ -366,6 +366,7 @@ module TSet :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
+    val find : elt -> t -> elt
   end
 val pTrans : TSet.t ref
 val tTrans : TSet.t ref
