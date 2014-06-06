@@ -182,8 +182,8 @@ module Syst :
     val map : ('a -> 'b) -> 'a t -> 'b t
     val mapi : (key -> 'a -> 'b) -> 'a t -> 'b t
   end
-val system : Hstring.t Syst.t ref
-val sinits : Hstring.t Syst.t ref
+val system : Hstring.t list Syst.t ref
+val sinits : Hstring.t list Syst.t ref
 val read_st : Etat.t ref
 val write_st : Etat.t ref
 val htbl_types : (Hstring.t, Options.value list) Hashtbl.t
@@ -305,7 +305,7 @@ val print_abst : unit -> unit
 val print_types : unit -> unit
 val print_inits : unit -> unit
 val print_init_list : unit -> unit
-val print_system : Etat.t -> Hstring.t -> unit
+val print_system : Etat.t -> Hstring.t list -> unit
 val print_init : unit -> unit
 val print_procinit : unit -> unit
 val print_procninit : unit -> unit

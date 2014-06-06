@@ -147,10 +147,10 @@ module DimArray (Elt : OrderedType) : DA with type elt = Elt.t = struct
 		 let i = ref 0 in
 		 List.iter (
 		   fun (c, n) ->
-		     for j = !i to n - 1 do
+		     for j = !i to !i + n - 1 do
 		       a.(j) <- c
 		     done;
-		     i := !i + n - 1
+		     i := !i + n
 		 ) al;
 		 Arr a
 	  | n -> Mat (Array.init nb_elem (fun _ -> init' (n-1)))
@@ -523,10 +523,10 @@ let type_st st = match st with RGlob t | RArr (t, _) -> t
 
 let print_value f v =
   match v with
-    | Numb i -> printf "n %s " (Num.string_of_num i)
-    | Proc p -> printf "p %d " p
-    | Hstr h -> printf "h %a " Hstring.print h
-    | VVar h -> printf "v %a " Hstring.print h
+    | Numb i -> printf "%s " (Num.string_of_num i)
+    | Proc p -> printf "%d " p
+    | Hstr h -> printf "%a " Hstring.print h
+    | VVar h -> printf "%a " Hstring.print h
 
 let print_ce () =
   printf "\nce :@.";
@@ -602,9 +602,7 @@ let print_init_list () =
       printf "@.";
     ) !init_list
 
-let print_system {Etat.globs; Etat.arrs} tr =
-  printf "@.";
-  printf "%a@." Hstring.print tr;
+let print_state {Etat.globs; Etat.arrs} =
   Etat.giter (
     fun var value ->
       printf "\t%a -> %a@." Hstring.print var print_value value
@@ -613,7 +611,12 @@ let print_system {Etat.globs; Etat.arrs} tr =
     fun name tbl -> printf "\t%a " Hstring.print name;
       Array.print tbl print_value;
       printf "@."
-  ) arrs;
+  ) arrs
+
+let print_system st trl =
+  printf "@.";
+  printf "%a@." (Hstring.print_list " -> ") (List.rev trl);
+  print_state st;
   printf "@."
 
 let print_init () =
@@ -925,28 +928,21 @@ let initialization init =
   graph_coloring ();
   let etati = Etat.init () in
   let c = ref 0 in
-  let value_list al =
-    List.map (
-      fun (id, n) ->
-	(id, n)
-    ) al
-  in
   let upd_etati n (v, tself) =
     match tself with
       | RGlob _ -> Etat.set_v etati n v
       | RArr (_, d) -> let tbl =
   			 try let al = Hashtbl.find tab_init n in
-  			     let vl = value_list al in
-  			     Array.minit d nb_threads vl v
+			     Array.minit d nb_threads al v
   			 with Not_found -> Array.init d nb_threads v
   		       in
   		       Etat.set_a etati n tbl
   in		       
-  let upd_syst () =
+  let upd_init () =
     incr c;
     let i = Etat.copy etati in
     let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-    sinits := Syst.add i tr !sinits
+    sinits := Syst.add i [tr] !sinits
   in
   let rec create_init l =
     match l with
@@ -955,7 +951,7 @@ let initialization init =
 	  fun v ->
 	    List.iter (fun (n, tn) -> upd_etati n (v, tn)) oth;
 	    upd_etati rep (v, st);
-	    upd_syst ()
+	    upd_init ()
 	) vts
       | (rep, st, vts, oth) :: tl ->
   	TS.iter (
@@ -963,7 +959,7 @@ let initialization init =
 	    List.iter (fun (n, tn) -> upd_etati n (v, tn)) ((rep, st)::oth);
 	    create_init tl
 	) vts
-      | _ -> upd_syst ()
+      | _ -> upd_init ()
   in
   Hashtbl.iter upd_etati ec;
   create_init !init_list;
@@ -1183,18 +1179,31 @@ let valid_trans_list () =
 
 
 let update_system () =
+  let trl = Syst.find !write_st !system in
   let tlist = ref (valid_trans_list ()) in
+  printf "Read state\n@.";
+  printf "%a@." (Hstring.print_list " -> ") (List.rev trl);
+  print_state !read_st;
+  printf "Transitions\n@.";
+  List.iter (fun ((h1, h2, i), _) -> printf "\t%a %a %d@." Hstring.print h1 Hstring.print h2 i) !tlist;
+  printf "@.";
   let i = Random.int (List.length !tlist) in
   let ((tr, pn, _), (assigns, updates)) = List.nth !tlist i in
   List.iter (fun a -> a ()) assigns;
   let updts = valid_upd updates in 
   List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
   let s = Etat.copy !write_st in
-  let trn = Hstring.make ((Hstring.view tr) ^ " :" ^ (Hstring.view pn)) in
-  system := Syst.add s trn !system;
-  (* printf "Taken trans : %a@." Hstring.print tr; *)
+  let s' = Etat.copy !write_st in
+  let trn = Hstring.make ((Hstring.view tr) ^ " (" ^ (Hstring.view pn) ^ ")") in
+  printf "Chosen transition\n@.";
+  printf "\t%a@." Hstring.print trn;
+  printf "\nNew state\n@.";
+  print_state s;
+  system := Syst.add s' (trn::trl) !system;
+    (* printf "Taken trans : %a@." Hstring.print tr; *)
   tTrans := TSet.add tr !tTrans;
-  read_st := s
+  read_st := s;
+  printf "\n------------------------@."
 
 (* let q = Queue.create () *)
 
@@ -1312,7 +1321,8 @@ let scheduler se =
   	  update_system ();
   	  incr count
   	done;
-      with Not_found -> (* printf "Stop : %d@." !count *)()
+      with Not_found -> printf "Not_found : %d@." !count
+	| Invalid_argument s -> printf "%s : %d@." s !count
   ) !sinits;
   ntTrans := TSet.diff !pTrans !tTrans;
   iTrans := TSet.diff trans !pTrans;
