@@ -288,28 +288,33 @@ let subsuming_candidate s =
   (* let approx = keep 70 approx in *)
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
-  if schedule then
-    let sl =
-      match Scheduler.filter approx with
-	| None -> []
-	| Some cand -> [cand]
-    in sl
-  else 
-    Enumerative.smallest_to_resist_on_trace cpt_approx approx
-(* if compare then *)
-(*   let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in  *)
-(*   match sl, el with *)
-(*     | [], [] -> [] *)
-(*     | [c], [] -> eprintf "Blind scheduler@."; *)
-(* 	printf "Approx : \n\t%a@." Pretty.print_system c; *)
-(* 	let sl = Enumerative.hist_cand c cpt_approx in *)
-(* 	printf "Obtained by :@."; *)
-(* 	List.iter (fun (st, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl; *)
-(* 	exit 1 *)
-(*     | [], [c] -> eprintf "Blind enumerative@."; exit 1 *)
-(*     | [c], [c'] -> sl *)
-(*     | _ -> assert false *)
-(* else sl *)
+  (* if schedule then *)
+  let sl =
+    match Scheduler.filter approx with
+    | None -> []
+    | Some cand -> [cand]
+  in
+  (* else  *)
+  (* Enumerative.smallest_to_resist_on_trace cpt_approx approx *)
+  if compare then
+    let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in
+    match sl, el with
+    | [], [] -> []
+    | [c], [] -> eprintf "Blind scheduler@.";
+	         printf "Approx : \n\t%a@." Pretty.print_system c;
+	         let sl = Enumerative.hist_cand c cpt_approx in
+	         printf "Obtained by :@.";
+	         List.iter (fun (st, hl, args) ->
+                            List.iter2 (fun h a ->
+                                        printf "\t%a(%a)@."
+                                               Hstring.print h
+                                               Pretty.print_args a) hl args
+                           ) sl;
+	         exit 1
+    | [], [c] -> eprintf "Blind enumerative@."; exit 1
+    | [c], [c'] -> sl
+    | _ -> assert false
+  else sl
 
 (**************************************************************)
 (* Backward reachability with approximations and backtracking *)
