@@ -1,7 +1,6 @@
 type error = MustBeSingleNum
 exception ETrue
 exception EFalse
-exception Inversion
 exception ConstrRep
 exception Error of error
 val init_proc : bool

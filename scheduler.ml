@@ -10,7 +10,6 @@ type error = MustBeSingleNum
 
 exception ETrue
 exception EFalse
-exception Inversion
 exception ConstrRep
 
 exception Error of error
@@ -1181,12 +1180,6 @@ let valid_trans_list () =
 let update_system () =
   let trl = Syst.find !write_st !system in
   let tlist = ref (valid_trans_list ()) in
-  printf "Read state\n@.";
-  printf "%a@." (Hstring.print_list " -> ") (List.rev trl);
-  print_state !read_st;
-  printf "Transitions\n@.";
-  List.iter (fun ((h1, h2, i), _) -> printf "\t%a %a %d@." Hstring.print h1 Hstring.print h2 i) !tlist;
-  printf "@.";
   let i = Random.int (List.length !tlist) in
   let ((tr, pn, _), (assigns, updates)) = List.nth !tlist i in
   List.iter (fun a -> a ()) assigns;
@@ -1195,16 +1188,11 @@ let update_system () =
   let s = Etat.copy !write_st in
   let s' = Etat.copy !write_st in
   let trn = Hstring.make ((Hstring.view tr) ^ " (" ^ (Hstring.view pn) ^ ")") in
-  printf "Chosen transition\n@.";
-  printf "\t%a@." Hstring.print trn;
-  printf "\nNew state\n@.";
-  print_state s;
   system := Syst.add s' (trn::trl) !system;
     (* printf "Taken trans : %a@." Hstring.print tr; *)
   tTrans := TSet.add tr !tTrans;
-  read_st := s;
-  printf "\n------------------------@."
-
+  read_st := s
+  
 (* let q = Queue.create () *)
 
 (* let rec update_system () = *)

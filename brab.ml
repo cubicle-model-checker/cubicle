@@ -30,14 +30,14 @@ let add_bad_candidate ({t_unsafe = args, _; t_alpha = a_args, ar } as s) trace =
   List.iter (fun sigma ->
     bad_candidates := 
       fst 
-        (Cube.proper_cube
-           (ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar))) ::
+      (Cube.proper_cube
+         (ArrayAtom.to_satom (ArrayAtom.apply_subst sigma ar))) ::
       !bad_candidates
   ) (all_permutations a_args args);
   match trace with
     | Some tr ->
-        List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
-          (Forward.conflicting_from_trace s tr);
+      List.iter (fun sa -> bad_candidates := sa :: !bad_candidates)
+        (Forward.conflicting_from_trace s tr);
     | None -> ()
 
 let rec remove_cand s faulty candidates uns =
@@ -51,7 +51,7 @@ let rec remove_cand s faulty candidates uns =
 	   (* List.exists  *)
 	   (* (fun (_,_,s) ->  *)
 	   (*   None <> fixpoint ~invariants:[] ~visited:[s'] s) s.t_from *)
-           ArrayAtom.equal s.t_arru s'.t_arru
+          ArrayAtom.equal s.t_arru s'.t_arru
 	then
 	  (* raise UNSAFE if we try to remove a candidate 
 	     which is an unsafe property *)
@@ -59,7 +59,7 @@ let rec remove_cand s faulty candidates uns =
 	    raise (Search.Unsafe s)
 	  else (add_bad_candidate s' (Some trace); acc)
         else if Forward.reachable_on_trace_from_init s' trace <> Forward.Unreach
-                (* Enumerative.smallest_to_resist_on_trace (ref 0) [s'] = [] *)
+        (* Enumerative.smallest_to_resist_on_trace (ref 0) [s'] = [] *)
 	then 
           (add_bad_candidate s' None; acc)
 	else s'::acc)
@@ -68,8 +68,8 @@ let rec remove_cand s faulty candidates uns =
 
 let remove_non_cfm_cand =
   List.filter (fun ({t_unsafe = _, c} as sc) ->
-	       if contains_non_cfm c then false 
-	       else (add_bad_candidate sc None; true))
+    if contains_non_cfm c then false 
+    else (add_bad_candidate sc None; true))
 
 
 let search_backtrack_brab search invariants procs uns =
@@ -80,41 +80,41 @@ let search_backtrack_brab search invariants procs uns =
     with
       | Search.Unsafe faulty ->
 	  (* FIXME Bug when search is parallel *)
-	  let o = origin faulty in
-	  printf "Approx : \n\t%a@." Pretty.print_system o;
-  	  let sl = Enumerative.hist_cand o cpt_approx in
-  	  printf "Obtained by :@.";
-  	  List.iter (fun (st, hl, args) -> List.iter2 (fun t arg -> printf "\n\t%a %a@." Hstring.print t (Hstring.print_list " ") arg) hl args) sl;
-	  if not quiet then
-            eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
-	  if o.t_nb >= 0 then raise (Search.Unsafe faulty);
-	  exit 1;
-          
-          (* (\* Enumerative.replay_trace_and_expand procs faulty; *\) *)
-          
-          (* candidates := remove_cand o faulty !candidates uns; *)
-          (* (\* candidates := []; *\) *)
+	let o = origin faulty in
+	printf "Approx : \n\t%a@." Pretty.print_system o;
+  	let sl = Enumerative.hist_cand o cpt_approx in
+  	printf "Obtained by :@.";
+  	List.iter (fun (st, hl, args) -> List.iter2 (fun t arg -> printf "\n\t%a %a@." Hstring.print t (Hstring.print_list " ") arg) hl args) sl;
+	if not quiet then
+          eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
+	if o.t_nb >= 0 then raise (Search.Unsafe faulty);
+	exit 1;
+        
+  (* (\* Enumerative.replay_trace_and_expand procs faulty; *\) *)
+        
+  (* candidates := remove_cand o faulty !candidates uns; *)
+  (* (\* candidates := []; *\) *)
 
-	  (* (\* Find out if bactrack is due to crash failure model, *)
-          (*    in which case record literals that do not respect CMF model *\) *)
-	  (* if Forward.spurious_due_to_cfm faulty then *)
-	  (*   begin *)
-	  (*     non_cfm_literals :=  *)
-	  (* 	SAtom.union (snd o.t_unsafe) !non_cfm_literals; *)
-          (*     candidates := remove_non_cfm_cand !candidates; *)
-	  (*     eprintf "Non CFM literals = %a@." Pretty.print_cube !non_cfm_literals; *)
-	  (*   end; *)
+  (* (\* Find out if bactrack is due to crash failure model, *)
+  (*    in which case record literals that do not respect CMF model *\) *)
+  (* if Forward.spurious_due_to_cfm faulty then *)
+  (*   begin *)
+  (*     non_cfm_literals :=  *)
+  (* 	SAtom.union (snd o.t_unsafe) !non_cfm_literals; *)
+  (*     candidates := remove_non_cfm_cand !candidates; *)
+  (*     eprintf "Non CFM literals = %a@." Pretty.print_cube !non_cfm_literals; *)
+  (*   end; *)
 
-          (* if verbose > 0 && not quiet then begin *)
-          (*   eprintf "%d used candidates :@." (List.length !candidates); *)
-          (*   List.iter (fun s -> *)
-          (*     eprintf "   %a\n@." Pretty.print_system s) !candidates; *)
-          (*   eprintf "%d bad candidates :@." (List.length !bad_candidates); *)
-          (*   List.iter (fun sa -> *)
-          (*     eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates; *)
-          (* end; *)
+  (* if verbose > 0 && not quiet then begin *)
+  (*   eprintf "%d used candidates :@." (List.length !candidates); *)
+  (*   List.iter (fun s -> *)
+  (*     eprintf "   %a\n@." Pretty.print_system s) !candidates; *)
+  (*   eprintf "%d bad candidates :@." (List.length !bad_candidates); *)
+  (*   List.iter (fun sa -> *)
+  (*     eprintf "   %a\n@." Pretty.print_cube sa) !bad_candidates; *)
+  (* end; *)
 
-          (* search_rec uns *)
+  (* search_rec uns *)
   in
   search_rec uns
 
@@ -151,9 +151,9 @@ let nb_arith s =
 let respect_finite_order =
   SAtom.for_all (function
     | Atom.Comp (Elem (x, Var), Le, Elem (y, Var)) ->
-        Hstring.compare x y <= 0
+      Hstring.compare x y <= 0
     | Atom.Comp (Elem (x, Var), Lt, Elem (y, Var)) ->
-        Hstring.compare x y < 0
+      Hstring.compare x y < 0
     | _ -> true
   )
 
@@ -165,7 +165,7 @@ let sorted_variables sa =
   List.for_all (fun p ->
     SAtom.exists (function 
       | Atom.Comp (Access (s, [x]), _, _) 
-        when Hstring.equal s hsort && Hstring.equal x p -> true
+          when Hstring.equal s hsort && Hstring.equal x p -> true
       | _ -> false) sa) procs
 
 let isolate_sorts =
@@ -180,11 +180,11 @@ let reattach_sorts sorts sa =
   SAtom.fold (fun a sa -> match a with
     | Atom.Comp (Access (s, [x]), _, _) 
         when Hstring.equal s hsort && Hstring.list_mem x procs ->
-        SAtom.add a sa
+      SAtom.add a sa
     | Atom.Comp (Elem (h, Glob), _, Elem (x, Var))
     | Atom.Comp (Elem (x, Var), _, Elem (h, Glob)) 
         when Hstring.equal h hhome && Hstring.list_mem x procs ->
-        SAtom.add a sa
+      SAtom.add a sa
     | _ -> sa) sorts sa
 
 
@@ -194,50 +194,50 @@ let reattach_sorts sorts sa =
 
 let approx_arith a = match a with
   | Atom.Comp (t, Eq, Const c) ->
-     begin
-       match Cube.const_sign c with
-       | None | Some 0 -> a
-       | Some n ->
+    begin
+      match Cube.const_sign c with
+	| None | Some 0 -> a
+	| Some n ->
 	  let zer = Const (Cube.add_constants c (Cube.mult_const (-1) c)) in
 	  if n < 0 then Atom.Comp (t, Lt, zer)
 	  else Atom.Comp (zer, Lt, t)
-     end
+    end
   | _ -> a
 
 let approximations ({ t_unsafe = (args, sa) } as s) =
-    let sorts_sa, sa = isolate_sorts sa in
-    let init = 
-      SAtom.fold (fun a acc ->
-        if Forward.useless_candidate (SAtom.singleton a) || lit_non_cfm a 
-	then acc
-        else SSAtoms.add (SAtom.singleton a) acc)
-        sa SSAtoms.empty in
+  let sorts_sa, sa = isolate_sorts sa in
+  let init = 
+    SAtom.fold (fun a acc ->
+      if Forward.useless_candidate (SAtom.singleton a) || lit_non_cfm a 
+      then acc
+      else SSAtoms.add (SAtom.singleton a) acc)
+      sa SSAtoms.empty in
     (* All subsets of sa of relevant size *)
-    let parts =
-      SAtom.fold (fun a acc ->
-	let a = approx_arith a in 
-        if Forward.useless_candidate (SAtom.singleton a) then acc
-        else if lit_non_cfm a then acc
-        else
-          SSAtoms.fold (fun sa' acc ->
-            let nsa = SAtom.add a sa' in
-            let nargs = Cube.args_of_atoms nsa in
-            if List.length nargs > enumerative then acc
-            else if SAtom.cardinal nsa > enumerative + 1 then acc
-            else SSAtoms.add nsa acc
-          ) acc acc
-      ) sa init
-    in
-    (* Filter non interresting candidates *)
-    let parts = SSAtoms.fold (fun sa' acc ->
-      if SAtom.equal sa' sa then acc
-      (* Heuristic : usefull for flash *)
-      else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > enumerative - 1 then acc
-      (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then acc *)
+  let parts =
+    SAtom.fold (fun a acc ->
+      let a = approx_arith a in 
+      if Forward.useless_candidate (SAtom.singleton a) then acc
+      else if lit_non_cfm a then acc
       else
-        let sa' = reattach_sorts sorts_sa sa' in
-        if SAtom.equal sa' sa then acc
-        else
+        SSAtoms.fold (fun sa' acc ->
+          let nsa = SAtom.add a sa' in
+          let nargs = Cube.args_of_atoms nsa in
+          if List.length nargs > enumerative then acc
+          else if SAtom.cardinal nsa > enumerative + 1 then acc
+          else SSAtoms.add nsa acc
+        ) acc acc
+    ) sa init
+  in
+    (* Filter non interresting candidates *)
+  let parts = SSAtoms.fold (fun sa' acc ->
+    if SAtom.equal sa' sa then acc
+      (* Heuristic : usefull for flash *)
+    else if SAtom.cardinal sa' >= 3 && nb_arrays_sa sa' > enumerative - 1 then acc
+      (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then acc *)
+    else
+      let sa' = reattach_sorts sorts_sa sa' in
+      if SAtom.equal sa' sa then acc
+      else
         let sa', (args', _) = Cube.proper_cube sa' in
         if List.exists (fun sa -> SAtom.subset sa' sa || SAtom.subset sa sa')
           !bad_candidates then acc
@@ -255,25 +255,25 @@ let approximations ({ t_unsafe = (args, sa) } as s) =
 	      t_nb_father = -1;
             } in
           s' :: acc
-    ) parts []
-    in
+  ) parts []
+  in
     (* Sorting heuristic of approximations with most general ones first *)
-    List.fast_sort (fun s1 s2 ->
-      let c = Pervasives.compare (Cube.card_system s1) (Cube.card_system s2) in
+  List.fast_sort (fun s1 s2 ->
+    let c = Pervasives.compare (Cube.card_system s1) (Cube.card_system s2) in
+    if c <> 0 then c
+    else 
+      let c =
+        Pervasives.compare (Cube.size_system s1) (Cube.size_system s2) in
       if c <> 0 then c
       else 
-        let c =
-          Pervasives.compare (Cube.size_system s1) (Cube.size_system s2) in
+        let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in
         if c <> 0 then c
-        else 
-          let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in
-          if c <> 0 then c
-          else
-            Pervasives.compare (nb_arrays s1) (nb_arrays s2)
-          (* if c <> 0 then c *)
-          (* else *)
-          (*   SAtom.compare (snd s1.t_unsafe) (snd s2.t_unsafe) *)
-    ) parts
+        else
+          Pervasives.compare (nb_arrays s1) (nb_arrays s2)
+    (* if c <> 0 then c *)
+    (* else *)
+    (*   SAtom.compare (snd s1.t_unsafe) (snd s2.t_unsafe) *)
+  ) parts
 
 (* TODO : approx trees *)
 
@@ -288,30 +288,33 @@ let subsuming_candidate s =
   (* let approx = keep 70 approx in *)
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
-  let sl =
-    match Scheduler.filter approx with
-      | None -> []
-      | Some cand -> [cand]
-  in sl
-  (* if compare then *)
-  (*   let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in  *)
-  (*   match sl, el with *)
-  (*     | [], [] -> [] *)
-  (*     | [c], [] -> eprintf "Blind scheduler@."; *)
-  (* 	printf "Approx : \n\t%a@." Pretty.print_system c; *)
-  (* 	let sl = Enumerative.hist_cand c cpt_approx in *)
-  (* 	printf "Obtained by :@."; *)
-  (* 	List.iter (fun (st, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl; *)
-  (* 	exit 1 *)
-  (*     | [], [c] -> eprintf "Blind enumerative@."; exit 1 *)
-  (*     | [c], [c'] -> sl *)
-  (*     | _ -> assert false *)
-  (* else sl *)
+  if schedule then
+    let sl =
+      match Scheduler.filter approx with
+	| None -> []
+	| Some cand -> [cand]
+    in sl
+  else 
+    Enumerative.smallest_to_resist_on_trace cpt_approx approx
+(* if compare then *)
+(*   let el = Enumerative.smallest_to_resist_on_trace cpt_approx approx in  *)
+(*   match sl, el with *)
+(*     | [], [] -> [] *)
+(*     | [c], [] -> eprintf "Blind scheduler@."; *)
+(* 	printf "Approx : \n\t%a@." Pretty.print_system c; *)
+(* 	let sl = Enumerative.hist_cand c cpt_approx in *)
+(* 	printf "Obtained by :@."; *)
+(* 	List.iter (fun (st, hl) -> printf "\t%a@." (Hstring.print_list " ") hl) sl; *)
+(* 	exit 1 *)
+(*     | [], [c] -> eprintf "Blind enumerative@."; exit 1 *)
+(*     | [c], [c'] -> sl *)
+(*     | _ -> assert false *)
+(* else sl *)
 
 (**************************************************************)
 (* Backward reachability with approximations and backtracking *)
 (**************************************************************)
-    
+      
 let brab search invariants uns =
 
   (* initialization of oracle *)
@@ -322,8 +325,7 @@ let brab search invariants uns =
 	ignore (Scheduler.run ()) 
       done;
       printf "Total scheduled states : %d
-      ----------------------------------------\n@." 
-	(Scheduler.Syst.cardinal !Scheduler.system);
+--------------------------------\n@." (Scheduler.Syst.cardinal !Scheduler.system);
       if verbose > 0 then
 	begin
 	  let count = ref 1 in
