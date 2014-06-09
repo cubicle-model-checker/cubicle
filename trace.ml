@@ -999,4 +999,11 @@ let select_format =
   | WhyTr -> (module Why3 : S)
   | NoTrace -> (module Empty)
 
-module Selected : S = (val select_format)
+module Selected : S = struct 
+  include (val select_format)
+
+  (* Sort nodes first *)
+  let certificate s visited =
+    let visited = List.fast_sort Node.compare_by_breadth visited in
+    certificate s visited
+end

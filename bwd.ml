@@ -90,7 +90,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              in
              let ls, post = Pre.pre_image system.t_trans n in
              if delete then
-               visited := 
+               visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
 	     postponed := List.rev_append post !postponed;
              visited := Cubetrie.add_node n !visited;
@@ -113,33 +113,13 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 end
 
 
-             
-let compare_kind s1 s2 =
-  match s1.kind, s2.kind with
-  | Approx, Approx -> 0
-  | Approx, _ -> -1
-  | _, Approx -> 1
-  | k1, k2 -> Pervasives.compare k1 k2
-
 
 module BreadthOrder = struct
 
   type t = Node.t
  
-  let compare s1 s2 =
-    let v1 = Node.dim s1 in
-    let v2 = Node.dim s2 in
-    let c = Pervasives.compare v1 v2 in
-    if c <> 0 then c else
-      let c1 = Node.size s1 in
-      let c2 = Node.size s2 in
-      let c = Pervasives.compare c1 c2 in
-      if c <> 0 then c else
-        let c =  compare_kind s1 s2 in
-        if c <> 0 then c else
-          let c = Pervasives.compare s1.depth s2.depth in 
-          if c <> 0 then c else
-            Pervasives.compare (abs s1.tag) (abs s2.tag)
+  let compare = Node.compare_by_breadth
+
 end
 
 
@@ -147,20 +127,8 @@ module DepthOrder = struct
 
   type t = Node.t
  
-  let compare s1 s2 =
-    let v1 = Node.dim s1 in
-    let v2 = Node.dim s2 in
-    let c = Pervasives.compare v1 v2 in
-    if c <> 0 then c else
-      let c1 = Node.size s1 in
-      let c2 = Node.size s2 in
-      let c = Pervasives.compare c1 c2 in
-      if c <> 0 then c else
-        let c =  compare_kind s1 s2 in
-        if c <> 0 then c else
-          let c = Pervasives.compare s2.depth s1.depth in 
-          if c <> 0 then c else
-            Pervasives.compare (abs s1.tag) (abs s2.tag)
+  let compare = Node.compare_by_depth
+
 end
 
 

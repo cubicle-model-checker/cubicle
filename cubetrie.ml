@@ -318,12 +318,16 @@ let delete_subsumed ?(cpt=ref 0) p nodes =
   List.iter (fun ss ->
     let u = ArrayAtom.apply_subst ss ap in
     iter_subsumed (fun n ->
-      if Node.has_deleted_ancestor n || (not (Node.ancestor_of n p)) then begin
+      if Node.has_deleted_ancestor n || not (Node.ancestor_of n p) then begin
         n.deleted <- true;
+        if dot then Dot.delete_node_by n p;
         incr cpt;
       end
     ) (Array.to_list u) nodes;
   ) substs;
+  (* iter (fun n -> if Node.has_deleted_ancestor n then *)
+  (*       n.deleted <- true; *)
+  (*       ) nodes; *)
   delete (fun n -> n.deleted || Node.has_deleted_ancestor n) nodes
 
 

@@ -47,3 +47,21 @@ val syscall : string -> string
 (** Captures the output and exit status of a unix command *)
 
 val remove_trailing_whitespaces_end : string -> string
+
+
+
+type color =
+    { c_red : float;
+      c_green : float;
+      c_blue : float; }
+
+val red : color
+val green : color
+val blue : color
+val black : color
+val white : color
+val magenta : color
+
+val hex_color : color -> string
+
+val chromatic : color -> color -> int -> unit -> color 

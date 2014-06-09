@@ -28,3 +28,5 @@ val restart : unit -> unit
 val error_trace : Node.t -> unit
 
 val open_dot : unit -> (unit -> unit)
+
+val delete_node_by : Node.t -> Node.t -> unit

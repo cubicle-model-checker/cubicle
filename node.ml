@@ -32,6 +32,44 @@ let dim n = Cube.dim n.cube
 
 let size n = Cube.size n.cube
 
+
+let compare_kind s1 s2 =
+  match s1.kind, s2.kind with
+  | Approx, Approx -> 0
+  | Approx, _ -> -1
+  | _, Approx -> 1
+  | k1, k2 -> Pervasives.compare k1 k2
+
+let compare_by_breadth s1 s2 =
+  let v1 = dim s1 in
+  let v2 = dim s2 in
+  let c = Pervasives.compare v1 v2 in
+  if c <> 0 then c else
+    let c1 = size s1 in
+    let c2 = size s2 in
+    let c = Pervasives.compare c1 c2 in
+    if c <> 0 then c else
+      let c =  compare_kind s1 s2 in
+      if c <> 0 then c else
+        let c = Pervasives.compare s1.depth s2.depth in 
+        if c <> 0 then c else
+          Pervasives.compare (abs s1.tag) (abs s2.tag)
+
+let compare_by_depth  s1 s2 =
+  let v1 = dim s1 in
+  let v2 = dim s2 in
+  let c = Pervasives.compare v1 v2 in
+  if c <> 0 then c else
+    let c1 = size s1 in
+    let c2 = size s2 in
+    let c = Pervasives.compare c1 c2 in
+    if c <> 0 then c else
+      let c =  compare_kind s1 s2 in
+      if c <> 0 then c else
+        let c = Pervasives.compare s2.depth s1.depth in 
+        if c <> 0 then c else
+          Pervasives.compare (abs s1.tag) (abs s2.tag)
+
 let rec origin n = match n.from with
   | [] -> n
   | (_,_, p)::_ ->

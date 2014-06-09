@@ -17,7 +17,7 @@ open Format
 open Ast
 open Types
 open Options
-
+open Util
 
 type node_info = Empty | Empty_C | Tag | Full
 
@@ -37,19 +37,27 @@ let display_fixpoints = dot_level >= 4
 
 let splines = if display_fixpoints then "false" else "polyline"
 
+let current_color = ref black
+
+let next_shade = chromatic green magenta Options.dot_colors
+
 (* Shape and color configurations for displaying nodes *)
 
 let config = function
   | Orig ->  
-     " , color = red, fontcolor=white, fontsize=20, shape=octagon, style=filled"
+     " , color = red, shape=octagon, \
+      fontcolor=white, fontsize=20, style=filled"
   | Approx ->
-     " , color = blue, shape=rectangle, fontcolor=white, fontsize=20, style=filled"
+     " , color = blue, shape=rectangle, \
+      fontcolor=white, fontsize=20, style=filled"
   | Inv ->
-     " , color = orange, shape=rectangle, fontcolor=white, fontsize=20, style=filled"
+     " , color = orange, shape=rectangle, \
+      fontcolor=white, fontsize=20, style=filled"
   | Node -> 
      match display_node_contents with
-     | Empty | Empty_C ->  " , shape=point"
-     | _ ->  ""
+     | Empty | Empty_C -> 
+         sprintf " , shape=point, color=\"%s\"" (hex_color !current_color)
+     | _ -> sprintf "color=\"%s\"" (hex_color !current_color)
 
 let info_sfdp s = match dot_prog with
   | Sfdp -> "label=\" \", "^s
@@ -71,11 +79,13 @@ let cedge_subsume = info_sfdp
 let cedge_candidate = info_sfdp
   "style=dashed, arrowhead=onormal, color=blue, penwidth=4"
 
-let cedge_pre =
+let cedge_pre () =
   if dot_level <= 1 then
-    info_sfdp "label=\" \", arrowhead=none, penwidth=1"
+    info_sfdp (sprintf "label=\" \", arrowhead=none, penwidth=2, color=\"%s\""
+                       (hex_color !current_color))
   else
-    info_sfdp "penwidth=2"
+    info_sfdp (sprintf "penwidth=2, color=\"%s\""
+                       (hex_color !current_color))
 
 let cedge_error =
   info_sfdp ("color=red, dir=back, pencolor=red, \
@@ -129,15 +139,17 @@ let print_pre cedge fmt n =
 let dot_fmt = ref std_formatter
 
 let new_node n =
+  current_color := next_shade ();
   fprintf !dot_fmt "%a@." print_node n;
-  print_pre cedge_pre !dot_fmt n
+  print_pre (cedge_pre ()) !dot_fmt n
 
 
 let fixpoint s db =
   if display_fixpoints then
     begin
+      current_color := next_shade ();
       fprintf !dot_fmt "%a@." print_subsumed_node s;
-      print_pre "" !dot_fmt s;
+      print_pre (cedge_pre ()^",penwidth=1") !dot_fmt s;
       List.iter (fun d -> 
                  if d <> s.tag then
                    fprintf !dot_fmt "%d -> %d [%s]@." s.tag d cedge_subsume) db
@@ -160,6 +172,18 @@ let error_trace faulty =
     ) faulty.from
 
 
+let delete_node_by n s =
+  if n.deleted then
+    begin
+      fprintf !dot_fmt "%d [color=\"blue\"]@." n.tag;
+              (* (hex_color !current_color); *)
+      if Node.has_deleted_ancestor n then match n.from with
+      | (_,_,p)::_ ->
+         fprintf !dot_fmt "%d -> %d [arrowhead=none, penwidth=2, color=blue]"
+                 p.tag n.tag 
+      | _ -> ()
+      (* fprintf !dot_fmt "%d -> %d [style=dashed, constraint=false]" s.tag n.tag *)
+    end
 
 let dot_header = 
   let run = ref 0 in
@@ -203,7 +227,6 @@ let open_dot () =
     fprintf !dot_fmt "orientation = portrait;\n\
                       fontsize = 10;\n\
                       rankdir = BT;\n\
-                      edge [overlap=prism];\n\
                       node [fontname=helvetica];\n\
                       edge [fontname=helvetica];\n\
                       graph [fontname=helvetica];\n\

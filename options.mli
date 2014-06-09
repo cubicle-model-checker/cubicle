@@ -61,6 +61,7 @@ val debug : bool
 val dot : bool
 val dot_level : int
 val dot_prog : viz_prog
+val dot_colors : int
 val quiet : bool
 val verbose : int
 val nocolor : bool

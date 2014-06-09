@@ -28,6 +28,7 @@ let debug = ref false
 let dot = ref false
 let dot_level = ref 0
 let dot_prog = ref Dot
+let dot_colors = ref 0
 let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
@@ -114,6 +115,8 @@ let specs =
               "<level> graphviz (dot) output with a level of details";
     "-sfdp", Arg.Unit use_sfdp,
               " use sfdp for drawing graph instead of dot (for big graphs)";
+    "-dot-colors", Arg.Set_int dot_colors,
+              "number of colors for dot output";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -176,6 +179,7 @@ let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level
+let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt

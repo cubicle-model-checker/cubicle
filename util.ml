@@ -73,3 +73,47 @@ let rec remove_trailing_whitespaces_end str =
       || str.[String.length str - 1] = '\t')  then
     remove_trailing_whitespaces_end (String.sub str 0 (String.length str - 1))
   else str
+
+
+type color =
+    { c_red : float;
+      c_green : float;
+      c_blue : float; }
+
+let hex_color c =
+  Format.sprintf "#%02X%02X%02X"
+                 (int_of_float c.c_red)
+                 (int_of_float c.c_green)
+                 (int_of_float c.c_blue)
+
+let red = { c_red = 255.; c_green = 0.; c_blue = 0. }
+let green = { c_red = 0.; c_green = 255.; c_blue = 0. }
+            (* { c_red = 46.; c_green = 204.; c_blue = 113. } *)
+            (* { c_red = 26.; c_green = 188.; c_blue = 156. } *)
+let blue = { c_red = 0.; c_green = 0.; c_blue = 255. }
+let black = { c_red = 0.; c_green = 0.; c_blue = 0. }
+let white = { c_red = 255.; c_green = 255.; c_blue = 255. }
+let magenta = { c_red = 255.; c_green = 0.; c_blue = 255. }
+              (* { c_red = 231.; c_green = 76.; c_blue = 60. } *)
+
+let incr_ccomp c inc_c =
+  let r = c +. !inc_c in
+  if r > 255. || r < 0. then c
+  else r
+
+let chromatic start stop steps =
+  let now = ref start in
+  let fstep = float_of_int steps in
+  if fstep = 0. then fun () -> black
+  else
+    let inc_red = ref ((stop.c_red -. start.c_red) /. fstep) in
+    let inc_green = ref ((stop.c_green -. start.c_green) /. fstep) in
+    let inc_blue = ref ((stop.c_blue -. start.c_blue) /. fstep) in
+    fun () ->
+    now := {
+      c_red = incr_ccomp !now.c_red inc_red;
+      c_green = incr_ccomp !now.c_green inc_green;
+      c_blue = incr_ccomp !now.c_blue inc_blue;
+    };
+    !now
+    

@@ -105,6 +105,7 @@ let remaining compute =
 let print_candidates ~safe candidates =
   if candidates <> [] then
     begin
+      let candidates = List.fast_sort Node.compare_by_breadth candidates in
       if safe then 
         Pretty.print_title std_formatter "INFERRED NEGATED INVARIANTS"
       else

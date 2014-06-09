@@ -40,6 +40,14 @@ val create :
   ?kind:kind -> ?from:(transition * Variable.t list * t) option -> Cube.t -> t
 (** given a cube creates a node with a given kind, and a history *)
 
+val compare_by_breadth : t -> t -> int
+(** compare two nodes with a heuristic to find the most general one. Gives
+    priority to nodes that have smaller depth in the search graph *)
+
+val compare_by_depth : t -> t -> int
+(** compare two nodes with a heuristic to find the most general one. Gives
+    priority to nodes that have bigger depth in the search graph *)
+
 val origin : t -> t
 (** returns the origin of the node, i.e. its further ancestor *)
 
