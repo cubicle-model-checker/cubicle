@@ -1266,7 +1266,8 @@ let update_system_width c rs tlist =
 	      )
 	) tlist
       )
-  done
+  done;
+  c
 	    
 (* INTERFACE WITH BRAB *)
 
@@ -1356,7 +1357,6 @@ let scheduler se =
   (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
   (* 	  )) acc se.arrays  *)
   in
-  if alea then printf "alea@." else printf "noc@.";
   printf "Nb exec : %d@." nb_ex;
   Syst.iter (
     fun st tri ->
@@ -1368,11 +1368,14 @@ let scheduler se =
       (* print_state s; *)
       try
 	ignore (
-	  if alea then
-	    update_system_alea 0
-	  else
+	  if upd = 0 then
 	    let tlist = valid_trans_list () in
 	    update_system_noc 0 st tlist []
+	  else if upd = 1 then
+	    let tlist = valid_trans_list () in
+	    update_system_width forward_depth st tlist
+	  else
+	    update_system_alea 0
 	)
       (* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i

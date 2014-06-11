@@ -80,7 +80,7 @@ val trace : trace
 val out_trace : string
 
 val nb_threads : int
-val alea : bool
+val upd : int
 val fproc : value
 val nb_exec : int
 val schedule : bool
