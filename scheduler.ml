@@ -1223,7 +1223,8 @@ let rec update_system_noc c rs tlist parents =
   else
     try 
       read_st := rs;
-      let ((tr, args) as trn, tlist') = find_and_exec_gt tlist in
+      write_st := Etat.copy rs;
+      let ((tr, _) as trn, tlist') = find_and_exec_gt tlist in
       let trl = try Syst.find !read_st !system
 	with Not_found -> printf "Error state :@.";
 	  print_state !read_st; 
@@ -1238,7 +1239,35 @@ let rec update_system_noc c rs tlist parents =
       | [] -> raise (TEnd c)
       | (rs, tlist) :: tl -> update_system_noc c rs tlist tl
 
-
+let update_system_width c rs tlist =
+  let to_do = Queue.create () in
+  Queue.add (0, rs, tlist, []) to_do;
+  system := Syst.add rs [] !system;
+  while not (Queue.is_empty to_do) do
+    let depth, rs, tlist, trn = Queue.take to_do in
+    if depth <= c then
+      (
+	read_st := rs;
+	write_st := Etat.copy rs;
+	List.iter (
+	  fun (((tr, _) as t), (assigns, updates)) ->
+	    List.iter (fun a -> a ()) assigns;
+	    let updts = valid_upd updates in
+	    List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
+	    let nst = Etat.copy !write_st in
+	    if not (Syst.mem nst !system) then
+	      (
+		
+		tTrans := TSet.add tr !tTrans;
+		let trn' = t::trn in
+      		system := Syst.add nst trn' !system;
+		let tlist = valid_trans_list () in
+		Queue.add (depth + 1, nst, tlist, trn') to_do
+	      )
+	) tlist
+      )
+  done
+	    
 (* INTERFACE WITH BRAB *)
 
 let get_value_st sub st =

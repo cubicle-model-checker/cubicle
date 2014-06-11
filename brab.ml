@@ -311,7 +311,7 @@ let subsuming_candidate s =
                                                Pretty.print_args a) hl args
                            ) sl;
 	         exit 1
-    | [], [c] -> eprintf "Blind enumerative@."; exit 1
+    | [], [c] -> eprintf "Blind enumerative@."; []
     | [c], [c'] -> sl
     | _ -> assert false
   else sl
