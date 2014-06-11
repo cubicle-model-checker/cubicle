@@ -1184,7 +1184,7 @@ let valid_trans_list () =
 (* SYSTEM UPDATE *)
 
 
-let rec update_system_alea c parents =
+let rec update_system_alea c =
   if c = nb_exec then c
   else
     let trl = Syst.find !read_st !system in
@@ -1198,7 +1198,7 @@ let rec update_system_alea c parents =
     system := Syst.add s (trn::trl) !system;
     tTrans := TSet.add tr !tTrans;
     read_st := s;
-    update_system_alea (c+1) parents
+    update_system_alea (c+1)
 
  let compare ((n1, pn1), _) ((n2, pn2), _) =
     if TSet.mem n1 !tTrans && not (TSet.mem n2 !tTrans) then 1
@@ -1207,7 +1207,7 @@ let rec update_system_alea c parents =
     (* else if np1 < np2 then 1 *)
     else if Random.bool () then -1 else 1
 
-let rec find_gt =
+let rec find_and_exec_gt =
   function
     | [] -> raise Exit
     | (t, (assigns, updates)) :: tl ->
@@ -1215,22 +1215,16 @@ let rec find_gt =
       let updts = valid_upd updates in
       List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
       if Syst.mem !write_st !system then
-	find_gt tl
+	find_and_exec_gt tl
       else (t, tl)
 
-let rec update_system_noc c parents =
+let rec update_system_noc c rs tlist parents =
   if c = nb_exec then c
   else
     try 
-      let (st, tlist) = List.hd parents in
-      read_st := st;
-      (* printf "Transitions :@.\t"; *)
-      (* List.iter (fun ((tr,args), _) -> printf "%a(%a) " Hstring.print tr (Hstring.print_list " ") args) tlist; *)
-      let ((tr, args) as trn, tlist') = find_gt tlist in
-      (* printf "\n\n Chosen Transitions : %a(%a)\n\n--------------------\n@." Hstring.print tr (Hstring.print_list " ") args; *)
-      let trl =
-	try
-	  Syst.find !read_st !system
+      read_st := rs;
+      let ((tr, args) as trn, tlist') = find_and_exec_gt tlist in
+      let trl = try Syst.find !read_st !system
 	with Not_found -> printf "Error state :@.";
 	  print_state !read_st; 
 	  exit 1
@@ -1238,13 +1232,12 @@ let rec update_system_noc c parents =
       let s = Etat.copy !write_st in
       system := Syst.add s (trn::trl) !system;
       tTrans := TSet.add tr !tTrans;
-      update_system_noc (c+1) ((s, tlist')::parents)
+      let wtlist = valid_trans_list () in
+      update_system_noc (c+1) s wtlist ((rs, tlist')::parents)
     with Exit -> match parents with 
       | [] -> raise (TEnd c)
-      | rs :: tl -> printf "\nBack@."; update_system_noc c tl
+      | (rs, tlist) :: tl -> printf "\nBack@."; update_system_noc c rs tlist tl
 
-let update_system = if alea then update_system_alea else update_system_noc
-	
 
 (* INTERFACE WITH BRAB *)
 
@@ -1339,16 +1332,20 @@ let scheduler se =
     fun st tri ->
       (* printf "Beginning@."; *)
       let s = Etat.copy st in
-      let s' = Etat.copy st in
-      read_st := s;
-      write_st := s';
-      system := Syst.add s tri !system;
+      read_st := st;
+      write_st := s;
+      system := Syst.add st tri !system;
       (* printf "Init state :@."; *)
       (* print_state s; *)
       try
-	let tlist = valid_trans_list () in
-	ignore (update_system 0 [st, tlist])
-	(* printf "Normal end : %d" c *)
+	ignore (
+	  if alea then
+	    update_system_alea 0
+	  else
+	    let tlist = valid_trans_list () in
+	    update_system_noc 0 st tlist []
+	)
+      (* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
   ntTrans := TSet.diff !pTrans !tTrans;

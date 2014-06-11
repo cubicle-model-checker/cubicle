@@ -379,8 +379,9 @@ val valid_trans_list :
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
   list
-val update_system_alea : int -> 'a -> int
-val find_gt :
+val update_system_alea : int -> int
+val compare : (TSet.elt * 'a) * 'b -> (TSet.elt * 'c) * 'd -> int
+val find_and_exec_gt :
   ('a *
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
@@ -392,14 +393,11 @@ val find_gt :
   list
 val update_system_noc :
   int ->
-  (Etat.t *
-   ((Hstring.t * Hstring.t list) *
-    ((unit -> unit) list *
-     ((unit -> bool) list * (unit -> unit)) list list list))
-   list)
-  list -> int
-val update_system :
-  int ->
+  Etat.t ->
+  ((Hstring.t * Hstring.t list) *
+   ((unit -> unit) list *
+    ((unit -> bool) list * (unit -> unit)) list list list))
+  list ->
   (Etat.t *
    ((Hstring.t * Hstring.t list) *
     ((unit -> unit) list *
