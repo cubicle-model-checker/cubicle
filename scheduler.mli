@@ -2,6 +2,7 @@ type error = MustBeSingleNum
 exception ETrue
 exception EFalse
 exception ConstrRep
+exception TEnd of int
 exception Error of error
 val init_proc : bool
 val error : error -> 'a
@@ -12,7 +13,7 @@ val hst : stype -> Hstring.t
 type ty = A | N | O
 val list_threads : int list
 val trans_list :
-  (Hstring.t * Hstring.t * int * (unit -> bool) list *
+  (Hstring.t * Hstring.t list * (unit -> bool) list *
    (unit -> bool) list list list *
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
@@ -181,8 +182,8 @@ module Syst :
     val map : ('a -> 'b) -> 'a t -> 'b t
     val mapi : (key -> 'a -> 'b) -> 'a t -> 'b t
   end
-val system : Hstring.t list Syst.t ref
-val sinits : Hstring.t list Syst.t ref
+val system : (Hstring.t * Hstring.t list) list Syst.t ref
+val sinits : (Hstring.t * Hstring.t list) list Syst.t ref
 val read_st : Etat.t ref
 val write_st : Etat.t ref
 val htbl_types : (Hstring.t, Options.value list) Hashtbl.t
@@ -304,7 +305,8 @@ val print_abst : unit -> unit
 val print_types : unit -> unit
 val print_inits : unit -> unit
 val print_init_list : unit -> unit
-val print_system : Etat.t -> Hstring.t list -> unit
+val print_state : Etat.t -> unit
+val print_system : Etat.t -> (Hstring.t * Hstring.t list) list -> unit
 val print_init : unit -> unit
 val print_procinit : unit -> unit
 val print_procninit : unit -> unit
@@ -373,11 +375,37 @@ val ntTrans : TSet.t ref
 val iTrans : TSet.t ref
 val valid_trans_list :
   unit ->
-  ((Hstring.t * Hstring.t * int) *
+  ((Hstring.t * Hstring.t list) *
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
   list
-val update_system : unit -> unit
+val update_system_alea : int -> 'a -> int
+val find_gt :
+  ('a *
+   ((unit -> unit) list *
+    ((unit -> bool) list * (unit -> unit)) list list list))
+  list ->
+  'a *
+  ('a *
+   ((unit -> unit) list *
+    ((unit -> bool) list * (unit -> unit)) list list list))
+  list
+val update_system_noc :
+  int ->
+  (Etat.t *
+   ((Hstring.t * Hstring.t list) *
+    ((unit -> unit) list *
+     ((unit -> bool) list * (unit -> unit)) list list list))
+   list)
+  list -> int
+val update_system :
+  int ->
+  (Etat.t *
+   ((Hstring.t * Hstring.t list) *
+    ((unit -> unit) list *
+     ((unit -> bool) list * (unit -> unit)) list list list))
+   list)
+  list -> int
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option

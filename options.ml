@@ -96,6 +96,7 @@ let set_mode = function
   | _ -> raise (Arg.Bad "search strategy not supported")
 
 let nb_threads = ref 4
+let alea = ref true
 let nb_exec = ref 0
 let runs = ref 1
 let bequit = ref false
@@ -166,6 +167,7 @@ let specs =
     "-runs", Arg.Set_int runs, "<n> number of executions of the scheduler";
     "-equit", Arg.Set bequit, "Try to see if the system is equitable";
     "-compare", Arg.Set compare, "Use both the oracle to compare the results";
+    "-alea", Arg.Set alea, "Random update or clever update";
   ]
 
 let alspecs = Arg.align specs
@@ -242,6 +244,7 @@ let trace = !trace
 let out_trace = !out
 
 let nb_threads = if brab <> -1 then brab else !nb_threads
+let alea = !alea
 let fproc = Proc nb_threads
 let nb_exec = !nb_exec
 let runs = !runs

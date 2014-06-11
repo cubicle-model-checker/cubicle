@@ -12,6 +12,7 @@ exception ETrue
 exception EFalse
 exception ConstrRep
 
+exception TEnd of int
 exception Error of error
 
 
@@ -318,7 +319,7 @@ module Etat = State (OrderedValue) (Array)
 module Syst = Map.Make (
   struct
     type t = Etat.t
-    let compare s1 s2 = if Etat.ecompare s1 s2 = 0 then 0 else 1
+    let compare = Etat.ecompare
   end
 )
 	
@@ -614,7 +615,12 @@ let print_state {Etat.globs; Etat.arrs} =
 
 let print_system st trl =
   printf "@.";
-  printf "%a@." (Hstring.print_list " -> ") (List.rev trl);
+  let lrt = List.rev trl in
+  List.iter (
+    fun (t, args) -> 
+      printf "%a(%a)@." Hstring.print t 
+	(Hstring.print_list " ") (List.rev args)
+  ) lrt;
   print_state st;
   printf "@."
 
@@ -941,7 +947,7 @@ let initialization init =
     incr c;
     let i = Etat.copy etati in
     let tr = Hstring.make ("init" ^ (string_of_int !c)) in
-    sinits := Syst.add i [tr] !sinits
+    sinits := Syst.add i [(tr, [])] !sinits
   in
   let rec create_init l =
     match l with
@@ -1105,13 +1111,13 @@ let init_transitions trans =
 	    let subst_ureq = subst_ureq sub subsm tr.tr_ureq in
 	    let subst_guard = substitute_req sub tr.tr_reqs in
 	    let subst_updates = substitute_updts sub tr.tr_assigns tr.tr_upds in
-	    let (np, pn) = List.fold_left (
-	      fun (np, pn) (id, i) -> 
+	    let pn = List.fold_right (
+	      fun (id, i) pn -> 
 		let si = string_of_int i in
-		let p = (Hstring.view id) ^ "_" ^ si in
-		(np + 1, pn ^ " " ^ p)
-	    ) (0, "") sub in
-	    (tr.tr_name, Hstring.make pn, np, subst_guard, subst_ureq, subst_updates)::acc'
+		let p = Hstring.make ("#" ^ si) in
+	        p :: pn
+	    ) sub [] in
+	    (tr.tr_name, pn, subst_guard, subst_ureq, subst_updates)::acc'
 	  with EFalse -> acc'
       ) acc subs
   ) [] trans
@@ -1163,74 +1169,82 @@ let ntTrans = ref TSet.empty
 let iTrans = ref TSet.empty
 
 let valid_trans_list () =
-  let compare ((n1, _, np1), _) ((n2, _, np2), _) =
+  (* let compare _ _ = if Random.bool () then -1 else 1 in *)
+  List.fold_left (
+    fun acc (name, pn, req, ureq, updts) -> 
+      if valid_req req && valid_ureq ureq 
+      then
+	(
+	  pTrans := TSet.add name !pTrans;
+	  ((name, pn), updts) :: acc
+	)
+      else acc
+  ) [] !trans_list
+    
+(* SYSTEM UPDATE *)
+
+
+let rec update_system_alea c parents =
+  if c = nb_exec then c
+  else
+    let trl = Syst.find !read_st !system in
+    let tlist = ref (valid_trans_list ()) in
+    let i = Random.int (List.length !tlist) in
+    let (((tr, args) as trn), (assigns, updates)) = List.nth !tlist i in
+    List.iter (fun a -> a ()) assigns;
+    let updts = valid_upd updates in 
+    List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+    let s = Etat.copy !write_st in
+    system := Syst.add s (trn::trl) !system;
+    tTrans := TSet.add tr !tTrans;
+    read_st := s;
+    update_system_alea (c+1) parents
+
+ let compare ((n1, pn1), _) ((n2, pn2), _) =
     if TSet.mem n1 !tTrans && not (TSet.mem n2 !tTrans) then 1
     else if not (TSet.mem n1 !tTrans) && TSet.mem n2 !tTrans then -1
     (* else if np1 > np2 then -1 *)
     (* else if np1 < np2 then 1 *)
     else if Random.bool () then -1 else 1
-  in
-  (* let compare _ _ = if Random.bool () then -1 else 1 in *)
-  let l = List.fold_left (
-    fun acc (name, pn, np, req, ureq, updts) -> 
-      if valid_req req && valid_ureq ureq 
-      then
-	(
-	  pTrans := TSet.add name !pTrans;
-	  ((name, pn, np), updts) :: acc
-	)
-      else acc
-  ) [] !trans_list in
-  List.sort compare l
-    
-(* SYSTEM UPDATE *)
 
+let rec find_gt =
+  function
+    | [] -> raise Exit
+    | (t, (assigns, updates)) :: tl ->
+      List.iter (fun a -> a ()) assigns;
+      let updts = valid_upd updates in
+      List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
+      if Syst.mem !write_st !system then
+	find_gt tl
+      else (t, tl)
 
-let update_system () =
-  let tlist = valid_trans_list () in
-  printf "Transitions :@.\t";
-  List.iter (fun ((tr,_, np), _) -> printf "%a(%d) " Hstring.print tr np) tlist;
-  let rec find_gt tlist =
-    function
-      | [] -> let i = Random.int (List.length tlist) in
-	      let ((tr, pn, _), (assigns, updates)) = List.nth tlist i
-	      in
-	      List.iter (fun a -> a ()) assigns;
-	      let updts = valid_upd updates in
-	      List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
-	      (tr, pn)
-      | ((tr, pn, _), (assigns, updates)) :: tl ->
-	List.iter (fun a -> a ()) assigns;
-	let updts = valid_upd updates in
-	List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
-	if Syst.mem !write_st !system then
-	  find_gt tlist tl
-	else (tr, pn)
-  in
-  let (tr, pn) = find_gt tlist tlist in
-  printf "\n\n Chosen Transitions : %a\n\n--------------------\n@." Hstring.print tr;
-  let trl = Syst.find !write_st !system in
-  let s = Etat.copy !write_st in
-  let s' = Etat.copy !write_st in
-  let trn = Hstring.make ((Hstring.view tr) ^ " (" ^ (Hstring.view pn) ^ ")") in
-  system := Syst.add s' (trn::trl) !system;
-  (* printf "Taken trans : %a@." Hstring.print tr; *)
-  tTrans := TSet.add tr !tTrans;
-  read_st := s
-  
-(* let q = Queue.create () *)
+let rec update_system_noc c parents =
+  if c = nb_exec then c
+  else
+    try 
+      let (st, tlist) = List.hd parents in
+      read_st := st;
+      (* printf "Transitions :@.\t"; *)
+      (* List.iter (fun ((tr,args), _) -> printf "%a(%a) " Hstring.print tr (Hstring.print_list " ") args) tlist; *)
+      let ((tr, args) as trn, tlist') = find_gt tlist in
+      (* printf "\n\n Chosen Transitions : %a(%a)\n\n--------------------\n@." Hstring.print tr (Hstring.print_list " ") args; *)
+      let trl =
+	try
+	  Syst.find !read_st !system
+	with Not_found -> printf "Error state :@.";
+	  print_state !read_st; 
+	  exit 1
+      in
+      let s = Etat.copy !write_st in
+      system := Syst.add s (trn::trl) !system;
+      tTrans := TSet.add tr !tTrans;
+      update_system_noc (c+1) ((s, tlist')::parents)
+    with Exit -> match parents with 
+      | [] -> raise (TEnd c)
+      | rs :: tl -> printf "\nBack@."; update_system_noc c tl
 
-(* let rec update_system () = *)
-(*   let (st, tl) = Queue.take q in *)
-(*   let i = Random.int (List.length !tlist) in *)
-(*   let ((tr, pn, _), (assigns, updates)) = List.nth !tlist i in *)
-(*   List.iter (fun a -> a ()) assigns; *)
-(*   let updts = valid_upd updates in *)
-(*   List.iter (fun us -> List.iter (fun u -> u ()) us) updts; *)
-(*   let s = Etat.copy !write_st in *)
-(*   if Syst.mem s then *)
-(*     ( *)
-(*       Queue.add (st,  *)
+let update_system = if alea then update_system_alea else update_system_noc
+	
 
 (* INTERFACE WITH BRAB *)
 
@@ -1304,7 +1318,7 @@ let filter t_syst_l =
 let scheduler se =
   init_system se;
   init_transitions se.trans;
-  let trans = List.fold_left (fun acc (n, _, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
+  let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
   let nb_ex = nb_exec 
   (* if nb_exec > 0 then nb_exec *)
   (* else 4 *)
@@ -1322,21 +1336,20 @@ let scheduler se =
   in
   printf "Nb exec : %d@." nb_ex;
   Syst.iter (
-    fun st tr ->
-      let count = ref 0 in
-      printf "Beginning : %a@." (Hstring.print_list " ") tr;
+    fun st tri ->
+      (* printf "Beginning@."; *)
       let s = Etat.copy st in
       let s' = Etat.copy st in
       read_st := s;
       write_st := s';
-      system := Syst.add s tr !system;
+      system := Syst.add s tri !system;
+      (* printf "Init state :@."; *)
+      (* print_state s; *)
       try
-  	while !count < nb_ex do
-  	  update_system ();
-  	  incr count
-  	done;
-      with Not_found -> printf "Not_found : %d@." !count
-	| Invalid_argument s -> printf "%s : %d@." s !count
+	let tlist = valid_trans_list () in
+	ignore (update_system 0 [st, tlist])
+	(* printf "Normal end : %d" c *)
+      with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
   ntTrans := TSet.diff !pTrans !tTrans;
   iTrans := TSet.diff trans !pTrans;
