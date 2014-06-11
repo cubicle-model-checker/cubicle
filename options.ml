@@ -96,7 +96,7 @@ let set_mode = function
   | _ -> raise (Arg.Bad "search strategy not supported")
 
 let nb_threads = ref 4
-let alea = ref true
+let alea = ref false
 let nb_exec = ref 0
 let runs = ref 1
 let bequit = ref false

@@ -1236,7 +1236,7 @@ let rec update_system_noc c rs tlist parents =
       update_system_noc (c+1) s wtlist ((rs, tlist')::parents)
     with Exit -> match parents with 
       | [] -> raise (TEnd c)
-      | (rs, tlist) :: tl -> printf "\nBack@."; update_system_noc c rs tlist tl
+      | (rs, tlist) :: tl -> update_system_noc c rs tlist tl
 
 
 (* INTERFACE WITH BRAB *)
@@ -1327,13 +1327,13 @@ let scheduler se =
   (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
   (* 	  )) acc se.arrays  *)
   in
+  if alea then printf "alea@." else printf "noc@.";
   printf "Nb exec : %d@." nb_ex;
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
-      let s = Etat.copy st in
       read_st := st;
-      write_st := s;
+      write_st := Etat.copy st;
       system := Syst.add st tri !system;
       (* printf "Init state :@."; *)
       (* print_state s; *)
