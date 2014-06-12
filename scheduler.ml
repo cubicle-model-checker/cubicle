@@ -1237,8 +1237,8 @@ let rec update_system_noc c rs tlist parents =
 
 let update_system_width c rs tlist =
   let to_do = Queue.create () in
-  Queue.add (0, rs, tlist, []) to_do;
-  system := Syst.add rs [] !system;
+  let trl = Syst.find rs !system in
+  Queue.add (0, rs, tlist, trl) to_do;
   while not (Queue.is_empty to_do) do
     let depth, rs, tlist, trn = Queue.take to_do in
     if depth < c then

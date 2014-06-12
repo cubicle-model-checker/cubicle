@@ -316,7 +316,7 @@ let subsuming_candidate s =
 		 printf "Approx : \n\t%a@." Pretty.print_system c;
 	         printf "State : \n\t"; Scheduler.print_state st;
 	         printf "\nObtained by :\n@."; 
-		 List.iter(fun (t, args) -> printf "\n\t%a(%a)" Hstring.print t (Hstring.print_list "") args) trn;
+		 List.iter(fun (t, args) -> printf "\n\t%a(%a)" Hstring.print t (Hstring.print_list "") args) (List.rev trn);
 		 printf "\nNumber of tranistions : %d@." (List.length trn);
 		 [c]	         
     | [c], [c'] -> sl
