@@ -1225,11 +1225,7 @@ let rec update_system_noc c rs tlist parents =
       read_st := rs;
       write_st := Etat.copy rs;
       let ((tr, _) as trn, tlist') = find_and_exec_gt tlist in
-      let trl = try Syst.find !read_st !system
-	with Not_found -> printf "Error state :@.";
-	  print_state !read_st; 
-	  exit 1
-      in
+      let trl = Syst.find !read_st !system in
       let s = Etat.copy !write_st in
       system := Syst.add s (trn::trl) !system;
       tTrans := TSet.add tr !tTrans;
@@ -1245,7 +1241,7 @@ let update_system_width c rs tlist =
   system := Syst.add rs [] !system;
   while not (Queue.is_empty to_do) do
     let depth, rs, tlist, trn = Queue.take to_do in
-    if depth <= c then
+    if depth < c then
       (
 	read_st := rs;
 	write_st := Etat.copy rs;
@@ -1255,9 +1251,9 @@ let update_system_width c rs tlist =
 	    let updts = valid_upd updates in
 	    List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
 	    let nst = Etat.copy !write_st in
+	    read_st := nst;
 	    if not (Syst.mem nst !system) then
 	      (
-		
 		tTrans := TSet.add tr !tTrans;
 		let trn' = t::trn in
       		system := Syst.add nst trn' !system;
@@ -1372,8 +1368,13 @@ let hist_cand cand =
 	  ) sa
       ) subst
   ) !system in
-  Syst.choose good
-
+  printf "Number of good states %d@." (Syst.cardinal good);
+  let gs = ref (Syst.choose good) in
+  Syst.iter (
+    fun st' trn' -> if List.length trn' < List.length (snd !gs) then gs := (st', trn')
+  ) good;
+  !gs
+    
 (* MAIN *)
 
 

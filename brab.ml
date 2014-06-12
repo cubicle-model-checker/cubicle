@@ -316,7 +316,8 @@ let subsuming_candidate s =
 		 printf "Approx : \n\t"; Scheduler.print_state st;
 	         printf "\nObtained by :\n@."; 
 		 List.iter(fun (t, args) -> printf "\n\t%a(%a)" Hstring.print t (Hstring.print_list "") args) trn;
-		 []	         
+		 printf "\nNumber of tranistions : %d@." (List.length trn);
+		 [c]	         
     | [c], [c'] -> sl
     | _ -> assert false
   else sl
