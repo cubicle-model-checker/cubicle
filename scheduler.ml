@@ -1335,6 +1335,45 @@ let filter t_syst_l =
     Some rcube
   with Not_found -> None
 
+let hist_cand cand =
+  let (pl, sa) = cand.t_unsafe in
+  let subst = Ast.all_permutations pl list_threads in
+  let good = Syst.filter (
+    fun st _ -> 
+      List.exists (
+	fun sub ->
+	  SAtom.for_all (
+	    fun a ->
+	      match a with
+		| True -> true
+		| False -> false
+		| Comp (t1, op, t2) -> 
+		  let t1_v = get_value_st sub st t1 in
+		  let t2_v = get_value_st sub st t2 in
+		  begin
+		    match t1_v, t2_v with
+		      | Numb n1, Numb n2 ->
+			let op' = find_nop op in
+			op' n1 n2
+		      | Proc p1, Proc p2 -> 
+			let op' = find_op op in
+			op' p1 p2
+		      | Hstr h1, Hstr h2 ->
+			begin
+			  match op with
+			    | Eq -> Hstring.equal h1 h2
+			    | Neq -> not (Hstring.equal h1 h2)
+			    | _ -> assert false
+			end
+		  (* Problem with ref_count.cub, assertion failure *)
+		      | _ -> assert false
+		  end
+		| _ -> assert false
+	  ) sa
+      ) subst
+  ) !system in
+  Syst.choose good
+
 (* MAIN *)
 
 

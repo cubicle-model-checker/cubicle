@@ -404,9 +404,17 @@ val update_system_noc :
      ((unit -> bool) list * (unit -> unit)) list list list))
    list)
   list -> int
+val update_system_width :
+  int ->
+  Syst.key ->
+  ((Hstring.t * Hstring.t list) *
+   ((unit -> unit) list *
+    ((unit -> bool) list * (unit -> unit)) list list list))
+  list -> int
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option
+val hist_cand : Ast.t_system -> Syst.key * (Hstring.t * Hstring.t list) list
 val scheduler : Ast.system -> unit
 val dummy_system : Ast.system
 val current_system : Ast.system ref

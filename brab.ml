@@ -311,7 +311,12 @@ let subsuming_candidate s =
                                                Pretty.print_args a) hl args
                            ) sl;
 	         exit 1
-    | [], [c] -> eprintf "Blind enumerative@."; []
+    | [], [c] -> let (st, trn) = Scheduler.hist_cand c in
+		 eprintf "------Blind enumerative@.------";
+		 printf "Approx : \n\t"; Scheduler.print_state st;
+	         printf "\nObtained by :\n@."; 
+		 List.iter(fun (t, args) -> printf "\n\t%a(%a)" Hstring.print t (Hstring.print_list "") args) trn;
+		 []	         
     | [c], [c'] -> sl
     | _ -> assert false
   else sl
