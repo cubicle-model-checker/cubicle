@@ -1238,14 +1238,15 @@ let rec update_system_noc c rs tlist parents =
 let update_system_width c rs tlist =
   let to_do = Queue.create () in
   let trl = Syst.find rs !system in
-  Queue.add (0, rs, tlist, trl) to_do;
+  Queue.add (0, rs, trl) to_do;
   while not (Queue.is_empty to_do) do
-    let depth, rs, tlist, trn = Queue.take to_do in
+    let depth, rs, trn = Queue.take to_do in
     if depth < c then
       (
+	read_st := rs;
+	let tlist = valid_trans_list () in
 	List.iter (
-	  fun (((tr, _) as t), (assigns, updates)) ->
-	    read_st := rs;
+	  fun (((tr, args) as t), (assigns, updates)) ->
 	    write_st := Etat.copy rs;
 	    List.iter (fun a -> a ()) assigns;
 	    let updts = valid_upd updates in
@@ -1256,8 +1257,7 @@ let update_system_width c rs tlist =
 		tTrans := TSet.add tr !tTrans;
 		let trn' = t::trn in
       		system := Syst.add nst trn' !system;
-		let tlist = valid_trans_list () in
-		Queue.add (depth + 1, nst, tlist, trn') to_do
+		Queue.add (depth + 1, nst, trn') to_do
 	      )
 	) tlist
       )
@@ -1360,7 +1360,7 @@ let hist_cand cand =
 			    | Neq -> not (Hstring.equal h1 h2)
 			    | _ -> assert false
 			end
-		  (* Problem with ref_count.cub, assertion failure *)
+		      (* Problem with ref_count.cub, assertion failure *)
 		      | _ -> assert false
 		  end
 		| _ -> assert false
@@ -1381,23 +1381,7 @@ let scheduler se =
   init_system se;
   init_transitions se.trans;
   let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
-  List.iter (fun (n, args, _, _, _) -> printf "%a(%a)@." Hstring.print n (Hstring.print_list " ") args) !trans_list;
-  let nb_ex = nb_exec 
-  (* if nb_exec > 0 then nb_exec *)
-  (* else 4 *)
-  (* let acc = List.fold_left ( *)
-  (* 	fun acc (n, ty) -> *)
-  (* 	  acc * (List.length (try Hashtbl.find htbl_types ty *)
-  (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
-  (* )) 1 se.globals  *)
-  (* in *)
-  (* List.fold_left ( *)
-  (* 	fun acc' (n, (_,ty)) -> *)
-  (* 	  acc' * (List.length (try Hashtbl.find htbl_types ty *)
-  (* 	    with Not_found -> Hashtbl.find htbl_types n) *)
-  (* 	  )) acc se.arrays  *)
-  in
-  printf "Nb exec : %d@." nb_ex;
+  printf "Nb exec : %d@." nb_exec;
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
