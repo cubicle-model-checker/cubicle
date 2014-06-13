@@ -1243,15 +1243,14 @@ let update_system_width c rs tlist =
     let depth, rs, tlist, trn = Queue.take to_do in
     if depth < c then
       (
-	read_st := rs;
-	write_st := Etat.copy rs;
 	List.iter (
 	  fun (((tr, _) as t), (assigns, updates)) ->
+	    read_st := rs;
+	    write_st := Etat.copy rs;
 	    List.iter (fun a -> a ()) assigns;
 	    let updts = valid_upd updates in
 	    List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
 	    let nst = Etat.copy !write_st in
-	    read_st := nst;
 	    if not (Syst.mem nst !system) then
 	      (
 		tTrans := TSet.add tr !tTrans;
@@ -1382,6 +1381,7 @@ let scheduler se =
   init_system se;
   init_transitions se.trans;
   let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
+  List.iter (fun (n, args, _, _, _) -> printf "%a(%a)@." Hstring.print n (Hstring.print_list " ") args) !trans_list;
   let nb_ex = nb_exec 
   (* if nb_exec > 0 then nb_exec *)
   (* else 4 *)
