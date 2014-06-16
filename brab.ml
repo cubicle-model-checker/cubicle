@@ -288,11 +288,13 @@ let subsuming_candidate s =
   if verbose > 0 && not quiet then 
     eprintf "Checking %d approximations:@." (List.length approx);
   (* if schedule then *)
+  Search.TimerSearch.start ();
   let sl =
     match Scheduler.filter approx with
     | None -> []
     | Some cand -> [cand]
   in
+  Search.TimerSearch.pause ();
   (* else  *)
   (* Enumerative.smallest_to_resist_on_trace cpt_approx approx *)
   if compare then

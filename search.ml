@@ -101,6 +101,9 @@ module TimePre = Timer.Make (struct end)
 module TimeSort = Timer.Make (struct end)
 module TimeForward = Timer.Make (struct end)
 module TimeCustom = Timer.Make (struct end)
+module TimerScheduler = Timer.Make (struct end)
+module TimerSearch = Timer.Make (struct end)
+  
 
 module Profiling = struct
   
@@ -169,7 +172,11 @@ module Profiling = struct
     printf "Custom timer                     : %a@." print_time (TimeCustom.get ())
 
   let print_time_forward () =
-    printf "Forward exploration              : %a@." print_time (TimeForward.get ())
+    let f = if schedule then TimerScheduler.get () else TimeForward.get () in
+    printf "Forward exploration              : %a@." print_time f
+
+  let print_time_search () =
+    printf "Search time                      : %a@." print_time (TimerSearch.get ())
 
   let print_report nb inv del used_cands print_system =
     if used_cands <> [] then begin
@@ -201,6 +208,7 @@ module Profiling = struct
       print_time_prover ();
       print_time_forward ();
       print_time_custom ();
+      print_time_search ();
       printf "----------------------------------------------@."
     end;
     

@@ -404,6 +404,11 @@ let ntValues = Hashtbl.create 17
 (* USEFUL METHODS *)
 
 
+let print_time fmt sec =
+    let minu = floor (sec /. 60.) in
+    let extrasec = sec -. (minu *. 60.) in
+    fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
+
 (* Tranform a constant in a num *)
 let value_c c =
   match MConst.is_num c with
@@ -1385,6 +1390,7 @@ let hist_cand cand =
 
 
 let scheduler se =
+  Search.TimerScheduler.start ();
   init_system se;
   init_transitions se.trans;
   let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
@@ -1428,7 +1434,9 @@ let scheduler se =
 	  TSet.iter (printf "\t%a@." Hstring.print) !iTrans
 	) else (printf "All transitions were seen !@.");
     );
-  printf "--------------------------@."
+  printf "--------------------------@.";
+  Search.TimerScheduler.pause ()
+  
     
 let dummy_system = {
   globals = [];

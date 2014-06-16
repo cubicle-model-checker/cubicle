@@ -284,6 +284,7 @@ val inits : (int, TIS.t) Hashtbl.t
 val init_list :
   (Hstring.t * stype * TS.t * (Hstring.t * stype) list) list ref
 val ntValues : (Hstring.t, Options.value list) Hashtbl.t
+val print_time : Format.formatter -> float -> unit
 val value_c : int Ast.MConst.t -> Num.num
 val find_op : Ast.op_comp -> 'a -> 'a -> bool
 val find_nop : Ast.op_comp -> Num.num -> Num.num -> bool
