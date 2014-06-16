@@ -106,8 +106,8 @@ let schedule = ref false
 let init_proc = ref false
 
 let tab_init = Hashtbl.create 11 
-let proc_init = Hashtbl.create 11
-let proc_ninit = Hashtbl.create 11   
+let var_init = Hashtbl.create 11
+let var_ninit = Hashtbl.create 11   
       
 let show_version () = Format.printf "%s@." Version.version; exit 0
 

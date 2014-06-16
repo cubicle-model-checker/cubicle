@@ -30,7 +30,7 @@ let () =
     in
     let lb = Lexing.from_channel cin in
     try 
-      Parser.scheduler Lexer.token lb
+      Parser.scheduler Lexer.token lb;
     with 
 	Parsing.Parse_error ->
 	  let  loc = (Lexing.lexeme_start_p lb, Lexing.lexeme_end_p lb) in
@@ -633,12 +633,12 @@ let print_procinit () =
     fun n vl -> printf " %a" Hstring.print n; 
       List.iter (printf "%a " print_value
       ) vl
-  ) proc_init;
+  ) var_init;
   printf "@."
 
 let print_procninit () =
   printf "Proc_ninit : ";
-  Hashtbl.iter (fun n _ -> printf " %a" Hstring.print n) proc_ninit;
+  Hashtbl.iter (fun n _ -> printf " %a" Hstring.print n) var_ninit;
   printf "@."
 
 
@@ -835,8 +835,8 @@ let upd_options () =
   Hashtbl.iter
     ( fun n (rep, _) ->
       match rep with
-	| VVar h when h <> n && Hashtbl.mem proc_init n -> Hashtbl.add proc_init h (Hashtbl.find proc_init n)
-	| VVar h when h <> n && Hashtbl.mem proc_ninit n -> Hashtbl.add proc_ninit h ()
+	| VVar h when h <> n && Hashtbl.mem var_init n -> Hashtbl.add var_init h (Hashtbl.find var_init n)
+	| VVar h when h <> n && Hashtbl.mem var_ninit n -> Hashtbl.add var_ninit h ()
 	| _ -> ()
     ) ec
 
@@ -844,21 +844,21 @@ let upd_init_list rep ts =
   let (_, st) = Hashtbl.find ec rep in
   Hashtbl.remove ec rep;
   (* Possible values according to the .sched file *)
-  let pr = Hstring.make "proc" in
   let ts' = 
-    match st with 
-      | RGlob p | RArr (p, _) when p = pr ->
-	if (init_proc && not (Hashtbl.mem proc_ninit rep))
-	then (
-	  TS.union (TS.singleton (TS.min_elt ts)) (TS.singleton fproc)
-	) else if not init_proc && Hashtbl.mem proc_init rep
-	  then
-	    let l = Hashtbl.find proc_init rep in
-	    List.fold_left (
-	      fun acc i -> TS.add i acc
-	    ) TS.empty l
-	  else TS.singleton (TS.min_elt ts)
-      | _ -> ts
+    if (init_proc && not (Hashtbl.mem var_ninit rep))
+    then (
+      TS.union (TS.singleton (TS.min_elt ts)) (TS.singleton fproc)
+    ) else if not init_proc && Hashtbl.mem var_init rep
+      then
+	(
+	  let l = Hashtbl.find var_init rep in
+	  List.fold_left (
+	    fun acc i -> TS.add i acc
+	  ) TS.empty l
+	)
+      else (
+	TS.singleton (TS.min_elt ts)
+      )
   in
   let ce = Hashtbl.fold (
     fun n (rep', st) acc ->
@@ -1185,7 +1185,7 @@ let valid_trans_list () =
 
 
 let rec update_system_alea c =
-  if c = nb_exec then c
+  if c = nb_exec then ()
   else
     let trl = Syst.find !read_st !system in
     let tlist = ref (valid_trans_list ()) in
@@ -1218,8 +1218,8 @@ let rec find_and_exec_gt =
 	find_and_exec_gt tl
       else (t, tl)
 
-let rec update_system_noc c rs tlist parents =
-  if c = nb_exec then c
+let rec update_system_dfs c rs tlist parents =
+  if c = nb_exec then ()
   else
     try 
       read_st := rs;
@@ -1229,20 +1229,27 @@ let rec update_system_noc c rs tlist parents =
       let s = Etat.copy !write_st in
       system := Syst.add s (trn::trl) !system;
       tTrans := TSet.add tr !tTrans;
+      read_st := s;
       let wtlist = valid_trans_list () in
-      update_system_noc (c+1) s wtlist ((rs, tlist')::parents)
+      update_system_dfs (c+1) s wtlist ((rs, tlist')::parents)
     with Exit -> match parents with 
       | [] -> raise (TEnd c)
-      | (rs, tlist) :: tl -> update_system_noc c rs tlist tl
+      | (rs, tlist) :: tl -> update_system_dfs c rs tlist tl
 
-let update_system_width c rs tlist =
+let update_system_bfs c rs tlist =
+  let cpt_f = ref 0 in
+  let cpt_q = ref 1 in
   let to_do = Queue.create () in
   let trl = Syst.find rs !system in
   Queue.add (0, rs, trl) to_do;
   while not (Queue.is_empty to_do) do
     let depth, rs, trn = Queue.take to_do in
+    decr cpt_q;
     if depth < c then
       (
+	incr cpt_f;
+	if not quiet && !cpt_f mod 1000 = 0 then
+        eprintf "%d (%d)@." !cpt_f !cpt_q;
 	read_st := rs;
 	let tlist = valid_trans_list () in
 	List.iter (
@@ -1254,6 +1261,7 @@ let update_system_width c rs tlist =
 	    let nst = Etat.copy !write_st in
 	    if not (Syst.mem nst !system) then
 	      (
+		incr cpt_q;
 		tTrans := TSet.add tr !tTrans;
 		let trn' = t::trn in
       		system := Syst.add nst trn' !system;
@@ -1261,8 +1269,7 @@ let update_system_width c rs tlist =
 	      )
 	) tlist
       )
-  done;
-  c
+  done
 	    
 (* INTERFACE WITH BRAB *)
 
@@ -1392,12 +1399,12 @@ let scheduler se =
       (* print_state s; *)
       try
 	ignore (
-	  if upd = 0 then
+	  if upd = 1 then
 	    let tlist = valid_trans_list () in
-	    update_system_noc 0 st tlist []
-	  else if upd = 1 then
+	    update_system_dfs 0 st tlist []
+	  else if upd = 2 then
 	    let tlist = valid_trans_list () in
-	    update_system_width forward_depth st tlist
+	    update_system_bfs forward_depth st tlist
 	  else
 	    update_system_alea 0
 	)

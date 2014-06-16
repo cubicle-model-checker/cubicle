@@ -379,7 +379,7 @@ val valid_trans_list :
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
   list
-val update_system_alea : int -> int
+val update_system_alea : int -> unit
 val compare : (TSet.elt * 'a) * 'b -> (TSet.elt * 'c) * 'd -> int
 val find_and_exec_gt :
   ('a *
@@ -391,7 +391,7 @@ val find_and_exec_gt :
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
   list
-val update_system_noc :
+val update_system_dfs :
   int ->
   Etat.t ->
   ((Hstring.t * Hstring.t list) *
@@ -403,14 +403,8 @@ val update_system_noc :
     ((unit -> unit) list *
      ((unit -> bool) list * (unit -> unit)) list list list))
    list)
-  list -> int
-val update_system_width :
-  int ->
-  Syst.key ->
-  ((Hstring.t * Hstring.t list) *
-   ((unit -> unit) list *
-    ((unit -> bool) list * (unit -> unit)) list list list))
-  list -> int
+  list -> unit
+val update_system_bfs : int -> Syst.key -> 'a -> unit
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option

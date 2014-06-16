@@ -88,8 +88,8 @@ val runs : int
 val bequit : bool
 val compare : bool
 val tab_init : (Hstring.t, (value * int) list) Hashtbl.t
-val proc_init : (Hstring.t, value list) Hashtbl.t
-val proc_ninit : (Hstring.t, unit) Hashtbl.t
+val var_init : (Hstring.t, value list) Hashtbl.t
+val var_ninit : (Hstring.t, unit) Hashtbl.t
 
 (* val tab_init : (int * Hstring.t list) Hashtbl.t *)
 

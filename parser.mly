@@ -441,34 +441,31 @@ assocl :
   | LEFTPAR sident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
 ;
 
-int_list :
-  | LEFTSQ intl RIGHTSQ { $2 }
+var_list :
+  | LEFTSQ varl RIGHTSQ { $2 }
 ;
 
-intl :
-  | MINUS sident { [Options.fproc] }
+varl :
+  | MINUS PROCNUM { [Options.fproc] }
+  | MINUS INT { [Options.Numb (Num.minus_num $2)] }
   | sident { [$1] }
-  | sident COMMA intl { $1 ::$3 }
+  | sident COMMA varl { $1 ::$3 }
 ;
 
 option :
   | OPT FPROC { Options.init_proc := true }
   | OPT NOT FPROC { Options.init_proc := false }
-;
-
-option_list :
   | { () }
-  | option option_list { () }
 ;
 
-procinit :
-  | VARI mident int_list { Hashtbl.replace Options.proc_init $2 $3 }
-  | VARI NOT mident { Hashtbl.replace Options.proc_ninit $3 () }
+varinit :
+  | VARI mident var_list { Hashtbl.replace Options.var_init $2 $3 }
+  | VARI NOT mident { Hashtbl.replace Options.var_ninit $3 () }
 ;
 
-procinit_list :
+varinit_list :
   | { () }
-  | procinit procinit_list { () }
+  | varinit varinit_list { () }
 ;
 
 tabinit :
@@ -481,7 +478,7 @@ tabinit_list :
 ;
 
 scheduler:
-  option_list
-  procinit_list
+  option
+  varinit_list
   tabinit_list
   EOF { () }
