@@ -380,7 +380,8 @@ val valid_trans_list :
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))
   list
-val update_system_alea : int -> unit
+val update_system_alea :
+  Etat.t -> (Hstring.t * Hstring.t list) list -> int -> unit
 val compare : (TSet.elt * 'a) * 'b -> (TSet.elt * 'c) * 'd -> int
 val find_and_exec_gt :
   ('a *
@@ -394,11 +395,7 @@ val find_and_exec_gt :
   list
 val update_system_dfs :
   int ->
-  Etat.t ->
-  ((Hstring.t * Hstring.t list) *
-   ((unit -> unit) list *
-    ((unit -> bool) list * (unit -> unit)) list list list))
-  list ->
+  Etat.t option ->
   (Etat.t *
    ((Hstring.t * Hstring.t list) *
     ((unit -> unit) list *

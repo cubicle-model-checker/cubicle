@@ -1189,28 +1189,30 @@ let valid_trans_list () =
 (* SYSTEM UPDATE *)
 
 
-let rec update_system_alea c =
+let rec update_system_alea rs trl c =
   if c = nb_exec then ()
   else
-    let trl = Syst.find !read_st !system in
-    let tlist = ref (valid_trans_list ()) in
-    let i = Random.int (List.length !tlist) in
-    let (((tr, args) as trn), (assigns, updates)) = List.nth !tlist i in
-    List.iter (fun a -> a ()) assigns;
-    let updts = valid_upd updates in 
-    List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-    let s = Etat.copy !write_st in
-    system := Syst.add s (trn::trl) !system;
-    tTrans := TSet.add tr !tTrans;
-    read_st := s;
-    update_system_alea (c+1)
-
- let compare ((n1, pn1), _) ((n2, pn2), _) =
-    if TSet.mem n1 !tTrans && not (TSet.mem n2 !tTrans) then 1
-    else if not (TSet.mem n1 !tTrans) && TSet.mem n2 !tTrans then -1
-    (* else if np1 > np2 then -1 *)
-    (* else if np1 < np2 then 1 *)
-    else if Random.bool () then -1 else 1
+    (
+      read_st := rs;
+      let tlist = ref (valid_trans_list ()) in
+      let i = Random.int (List.length !tlist) in
+      let (((tr, args) as trn), (assigns, updates)) = List.nth !tlist i in
+      List.iter (fun a -> a ()) assigns;
+      let updts = valid_upd updates in 
+      List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+      let s = Etat.copy !write_st in
+      let trl' = trn::trl in
+      system := Syst.add s trl' !system;
+      tTrans := TSet.add tr !tTrans;
+      update_system_alea s trl' (c+1)
+    )
+      
+let compare ((n1, pn1), _) ((n2, pn2), _) =
+  if TSet.mem n1 !tTrans && not (TSet.mem n2 !tTrans) then 1
+  else if not (TSet.mem n1 !tTrans) && TSet.mem n2 !tTrans then -1
+  (* else if np1 > np2 then -1 *)
+  (* else if np1 < np2 then 1 *)
+  else if Random.bool () then -1 else 1
 
 let rec find_and_exec_gt =
   function
@@ -1223,23 +1225,27 @@ let rec find_and_exec_gt =
 	find_and_exec_gt tl
       else (t, tl)
 
-let rec update_system_dfs c rs tlist parents =
+let rec update_system_dfs c workst parents =
   if c = nb_exec then ()
   else
     try 
-      read_st := rs;
-      write_st := Etat.copy rs;
+      let (tlist, parents) =
+	match workst with
+	  | Some rs -> read_st := rs;
+	    (valid_trans_list (), parents);
+	  | None -> match parents with
+	      | [] -> raise (TEnd c)
+	      | (rs, tli) :: tl -> read_st := rs;
+		(tli, tl)
+      in
+      write_st := Etat.copy (!read_st);
       let ((tr, _) as trn, tlist') = find_and_exec_gt tlist in
       let trl = Syst.find !read_st !system in
       let s = Etat.copy !write_st in
       system := Syst.add s (trn::trl) !system;
       tTrans := TSet.add tr !tTrans;
-      read_st := s;
-      let wtlist = valid_trans_list () in
-      update_system_dfs (c+1) s wtlist ((rs, tlist')::parents)
-    with Exit -> match parents with 
-      | [] -> raise (TEnd c)
-      | (rs, tlist) :: tl -> update_system_dfs c rs tlist tl
+      update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents)
+    with Exit -> update_system_dfs c None parents
 
 let update_system_bfs c rs tlist =
   let cpt_f = ref 0 in
@@ -1405,14 +1411,13 @@ let scheduler se =
       (* print_state s; *)
       try
 	ignore (
-	  if upd = 1 then
-	    let tlist = valid_trans_list () in
-	    update_system_dfs 0 st tlist []
-	  else if upd = 2 then
-	    let tlist = valid_trans_list () in
-	    update_system_bfs forward_depth st tlist
-	  else
-	    update_system_alea 0
+	  (* if upd = 1 then *)
+	  (*   update_system_dfs 0 (Some st) [] *)
+	  (* else if upd = 2 then *)
+	  (*   let tlist = valid_trans_list () in *)
+	  (*   update_system_bfs forward_depth st tlist *)
+	  (* else *)
+	    update_system_alea st tri 0
 	)
       (* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
