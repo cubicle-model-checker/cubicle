@@ -1409,16 +1409,13 @@ let scheduler se =
       system := Syst.add st tri !system;
       (* printf "Init state :@."; *)
       (* print_state s; *)
-      try
-	ignore (
-	  (* if upd = 1 then *)
-	  (*   update_system_dfs 0 (Some st) [] *)
-	  (* else if upd = 2 then *)
-	  (*   let tlist = valid_trans_list () in *)
-	  (*   update_system_bfs forward_depth st tlist *)
-	  (* else *)
-	    update_system_alea st tri 0
-	)
+      try ignore (update_system_alea st tri 0)
+      (* if upd = 1 then *)
+      (*   update_system_dfs 0 (Some st) [] *)
+      (* else if upd = 2 then *)
+      (*   let tlist = valid_trans_list () in *)
+      (*   update_system_bfs forward_depth st tlist *)
+      (* else *)
       (* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
