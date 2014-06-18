@@ -1462,7 +1462,6 @@ let init_sched () =
 
 let run () =
   assert (!current_system <> dummy_system);
-  sinits := Syst.empty;
   read_st := Etat.init ();
   write_st := Etat.init ();
   tTrans := TSet.empty;
