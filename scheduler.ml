@@ -1432,8 +1432,8 @@ let scheduler se =
 	  printf "Not seen transitions :@.";
 	  TSet.iter (printf "\t%a@." Hstring.print) !iTrans
 	) else (printf "All transitions were seen !@.");
+      printf "--------------------------@.";
     );
-  printf "--------------------------@.";
   Search.TimerScheduler.pause ()
   
     
