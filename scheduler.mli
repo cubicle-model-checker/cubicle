@@ -13,7 +13,7 @@ val hst : stype -> Hstring.t
 type ty = A | N | O
 val list_threads : int list
 val trans_list :
-  (Hstring.t * Hstring.t list * (unit -> bool) list *
+  (Hstring.t * Hstring.t list * int * (unit -> bool) list *
    (unit -> bool) list list list *
    ((unit -> unit) list *
     ((unit -> bool) list * (unit -> unit)) list list list))

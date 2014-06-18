@@ -1122,7 +1122,12 @@ let init_transitions trans =
 		let p = Hstring.make ("#" ^ si) in
 	        p :: pn
 	    ) sub [] in
-	    (tr.tr_name, pn, subst_guard, subst_ureq, subst_updates)::acc'
+	    let prio = try
+			 let p = Hashtbl.find trans_prio tr.tr_name in
+			 100 / p
+	      with Not_found -> 0
+	    in
+	    (tr.tr_name, pn, prio, subst_guard, subst_ureq, subst_updates)::acc'
 	  with EFalse -> acc'
       ) acc subs
   ) [] trans
@@ -1173,9 +1178,13 @@ let tTrans = ref TSet.empty
 let ntTrans = ref TSet.empty
 let iTrans = ref TSet.empty
 
+(* let valid_trans_map () = *)
+(*   List.fold_left ( *)
+    
+
 let valid_trans_list () =
   List.fold_left (
-    fun acc (name, pn, req, ureq, updts) -> 
+    fun acc (name, pn, prio, req, ureq, updts) -> 
       if valid_req req && valid_ureq ureq 
       then
 	(
@@ -1396,7 +1405,7 @@ let hist_cand cand =
   
 let scheduler se =
   Search.TimerScheduler.start ();
-  let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
+  let trans = List.fold_left (fun acc (n, _, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
@@ -1458,8 +1467,8 @@ let init_sched () =
   init_system !current_system;
   init_transitions (!current_system).trans;
   Hashtbl.iter (
-    fun id hl -> 
-      printf "%d : %a@." id (Hstring.print_list " ") hl
+    fun tr p -> 
+      printf "%a : %d@." Hstring.print tr p
   ) trans_prio
   
 
