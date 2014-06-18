@@ -1174,7 +1174,6 @@ let ntTrans = ref TSet.empty
 let iTrans = ref TSet.empty
 
 let valid_trans_list () =
-  (* let compare _ _ = if Random.bool () then -1 else 1 in *)
   List.fold_left (
     fun acc (name, pn, req, ureq, updts) -> 
       if valid_req req && valid_ureq ureq 
@@ -1457,7 +1456,11 @@ let register_system s = current_system := s
 
 let init_sched () =
   init_system !current_system;
-  init_transitions (!current_system).trans
+  init_transitions (!current_system).trans;
+  Hashtbl.iter (
+    fun id hl -> 
+      printf "%d : %a@." id (Hstring.print_list " ") hl
+  ) trans_prio
   
 
 let run () =

@@ -139,6 +139,7 @@ rule token = parse
       { UNDERSCORE }
   | "&&"
       { AND }
+  | '%' { PRIORITY }
   | "(*"
       { comment lexbuf; token lexbuf }
   | eof 

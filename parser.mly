@@ -63,6 +63,8 @@
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
 
+  let cptp = ref 0
+
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
 
   let fresh_var = 
@@ -71,7 +73,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB VARI OPT NOT
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB VARI OPT NOT PRIORITY
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
@@ -477,8 +479,27 @@ tabinit_list :
   | tabinit tabinit_list { () }
 ;
 
+transl :
+  | transition_name { [$1] }
+  | transition_name COMMA transl { $1 :: $3 }
+;
+
+trans_name_list :
+  | LEFTSQ transl RIGHTSQ { $2 }
+;
+
+priority :
+  | PRIORITY trans_name_list { Hashtbl.replace Options.trans_prio !cptp $2; incr cptp }
+;
+
+priorities :
+  | { () }
+  | priority priorities { () }
+;
+
 scheduler:
   option
   varinit_list
   tabinit_list
+  priorities
   EOF { () }
