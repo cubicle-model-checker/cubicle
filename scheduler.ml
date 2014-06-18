@@ -1394,11 +1394,9 @@ let hist_cand cand =
     
 (* MAIN *)
 
-
+  
 let scheduler se =
   Search.TimerScheduler.start ();
-  init_system se;
-  init_transitions se.trans;
   let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
   printf "Nb exec : %d@." nb_exec;
   Syst.iter (
@@ -1458,9 +1456,13 @@ let current_system = ref dummy_system
 
 let register_system s = current_system := s
 
+let init_sched () =
+  init_system !current_system;
+  init_transitions (!current_system).trans
+  
+
 let run () =
   assert (!current_system <> dummy_system);
-  (* system := Syst.empty; *)
   sinits := Syst.empty;
   read_st := Etat.init ();
   write_st := Etat.init ();

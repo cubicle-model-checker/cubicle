@@ -407,8 +407,9 @@ val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool
 val filter : Ast.t_system list -> Ast.t_system option
 val hist_cand : Ast.t_system -> Syst.key * (Hstring.t * Hstring.t list) list
-val scheduler : Ast.system -> unit
+val scheduler : 'a -> unit
 val dummy_system : Ast.system
 val current_system : Ast.system ref
 val register_system : Ast.system -> unit
+val init_sched : unit -> unit
 val run : unit -> unit

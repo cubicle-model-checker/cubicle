@@ -333,6 +333,7 @@ let brab search invariants uns =
   (* initialization of oracle *)
   if schedule then
     (
+      Scheduler.init_sched ();
       for i = 1 to runs do 
 	printf "Execution #%d@." i;
 	ignore (Scheduler.run ()) 
