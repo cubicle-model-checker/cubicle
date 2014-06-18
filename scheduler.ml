@@ -1398,7 +1398,6 @@ let hist_cand cand =
 let scheduler se =
   Search.TimerScheduler.start ();
   let trans = List.fold_left (fun acc (n, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
-  printf "Nb exec : %d@." nb_exec;
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
@@ -1419,8 +1418,8 @@ let scheduler se =
   ) !sinits;
   ntTrans := TSet.diff !pTrans !tTrans;
   iTrans := TSet.diff trans !pTrans;
-  printf "Scheduled %d states\n" (Syst.cardinal (!system));
-  printf "--------------------------@.";
+  (* printf "Scheduled %d states\n" (Syst.cardinal (!system)); *)
+  (* printf "--------------------------@."; *)
   if verbose > 0 then
     (
       if (TSet.cardinal !ntTrans > 0) then
