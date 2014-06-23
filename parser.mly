@@ -19,6 +19,8 @@
   open Parsing
   open Atom
 
+  exception ProbError of int
+
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
   type t = 
@@ -63,13 +65,14 @@
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
 
-  let cptp = ref 1
-
   let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
 
   let fresh_var = 
     let cpt = ref 0 in
     fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt)) 
+
+  let cptp = ref 0
+  let cpti = ref 0
 
 %}
 
@@ -485,16 +488,22 @@ transl :
 ;
 
 priority :
-  | PRIORITY transl 
-      { List.iter (
-	fun tr -> Hashtbl.replace Options.trans_prio tr !cptp
-	) $2;
-	cptp := !cptp * 2 }
+  | PRIORITY INT transl 
+      { let i = Num.int_of_num $2 in
+	List.iter (
+	  fun tr -> Hashtbl.replace Options.trans_prio tr !cpti
+	) $3;
+	incr cpti;
+	cptp := !cptp + i;
+	i
+      }
 ;
 
 priorities :
-  | { () }
-  | priority priorities { () }
+  | { let p = 100 - !cptp in
+      if p <= 0 then raise (ProbError p) else
+	[p] }
+  | priority priorities { $1 :: $2 }
 ;
 
 scheduler:
@@ -502,4 +511,4 @@ scheduler:
   varinit_list
   tabinit_list
   priorities
-  EOF { () }
+  EOF { Options.prio_list := $4 }

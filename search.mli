@@ -105,6 +105,7 @@ module TimeForward : Timer.S
 module TimeCustom : Timer.S
 module TimerScheduler : Timer.S
 module TimerSearch : Timer.S
+module TimerRC : Timer.S
 
 (* Dfs search where fixpoint nodes are only looked on the current
    branch *)

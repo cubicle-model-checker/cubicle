@@ -103,7 +103,7 @@ module TimeForward = Timer.Make (struct end)
 module TimeCustom = Timer.Make (struct end)
 module TimerScheduler = Timer.Make (struct end)
 module TimerSearch = Timer.Make (struct end)
-  
+module TimerRC = Timer.Make (struct end)  
 
 module Profiling = struct
   
@@ -178,6 +178,9 @@ module Profiling = struct
   let print_time_search () =
     printf "Search time                      : %a@." print_time (TimerSearch.get ())
 
+  let print_time_rc () = 
+    printf "Add time rc                      : %a@." print_time (TimerRC.get ())
+
   let print_report nb inv del used_cands print_system =
     if used_cands <> [] then begin
       printf "\n---------------------\n";
@@ -209,6 +212,7 @@ module Profiling = struct
       print_time_forward ();
       print_time_custom ();
       print_time_search ();
+      print_time_rc ();
       printf "----------------------------------------------@."
     end;
     

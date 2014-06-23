@@ -5,6 +5,7 @@ exception ConstrRep
 exception TEnd of int
 exception Error of error
 val init_proc : bool
+val prio_list : int list
 val error : error -> 'a
 val compare_value : Options.value -> Options.value -> int
 val vequal : Options.value -> Options.value -> bool
@@ -12,18 +13,16 @@ type stype = RGlob of Hstring.t | RArr of (Hstring.t * int)
 val hst : stype -> Hstring.t
 type ty = A | N | O
 val list_threads : int list
-val trans_list :
-  (Hstring.t * Hstring.t list * int * (unit -> bool) list *
-   (unit -> bool) list list list *
-   ((unit -> unit) list *
-    ((unit -> bool) list * (unit -> unit)) list list list))
-  list ref
 module type OrderedType = sig type t val compare : t -> t -> int end
 module OrderedValue :
   sig
     type t = Options.value
     val compare : Options.value -> Options.value -> int
   end
+type transition =
+    Hstring.t * Hstring.t list *
+    ((unit -> unit) list *
+     ((unit -> bool) list * (unit -> unit)) list list list)
 module type DA =
   sig
     type elt
@@ -114,6 +113,38 @@ module State :
         val set_e : t -> Hstring.t -> int list -> elt -> unit
         val copy : t -> t
       end
+module type RC =
+  sig
+    exception SizeError of int
+    exception BadPercentage of int
+    type elt
+    type t
+    val init : int list -> t
+    val add : int -> elt -> t -> t
+    val choose : t -> elt
+    val update : t -> t
+    val print_rc : t -> unit
+  end
+module RandClasses :
+  sig
+    exception SizeError of int
+    exception BadPercentage of int
+    type elt = transition
+    type t
+    val init : int list -> t
+    val add : int -> elt -> t -> t
+    val choose : t -> elt
+    val update : t -> t
+    val print_rc : t -> unit
+  end
+val trans_list :
+  (int *
+   (Hstring.t * Hstring.t list * (unit -> bool) list *
+    (unit -> bool) list list list *
+    ((unit -> unit) list *
+     ((unit -> bool) list * (unit -> unit)) list list list)))
+  list ref
+val trans_rc : RandClasses.t ref
 module Array :
   sig
     type elt = OrderedValue.t
@@ -215,7 +246,6 @@ module TI :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 module TS :
   sig
@@ -245,7 +275,6 @@ module TS :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 module TIS :
   sig
@@ -275,7 +304,6 @@ module TIS :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 val htbl_abstypes : (Hstring.t, Hstring.t * TI.t) Hashtbl.t
 val ec : (Hstring.t, Etat.elt * stype) Hashtbl.t
@@ -339,6 +367,8 @@ val init_system : Ast.system -> unit
 val init_transitions : Ast.transition list -> unit
 val valid_req : (unit -> bool) list -> bool
 val valid_ureq : (unit -> bool) list list list -> bool
+val valid_trans :
+  (unit -> bool) list -> (unit -> bool) list list list -> bool
 val valid_upd : ((unit -> bool) list * 'a) list list list -> 'a list list
 module TSet :
   sig
@@ -368,12 +398,12 @@ module TSet :
     val max_elt : t -> elt
     val choose : t -> elt
     val split : elt -> t -> t * bool * t
-    val find : elt -> t -> elt
   end
 val pTrans : TSet.t ref
 val tTrans : TSet.t ref
 val ntTrans : TSet.t ref
 val iTrans : TSet.t ref
+val valid_trans_rc : unit -> RandClasses.t
 val valid_trans_list :
   unit ->
   ((Hstring.t * Hstring.t list) *

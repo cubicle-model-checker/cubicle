@@ -334,8 +334,8 @@ let brab search invariants uns =
   if schedule then
     (
       Scheduler.init_sched ();
-      for i = 1 to runs do 
-	if i mod 1000 = 0 then printf "Execution #%d : nb_st : %d@." i (Scheduler.Syst.cardinal !Scheduler.system);
+      for i = 0 to runs - 1 do 
+	if i mod 100 = 0 then printf "Execution #%d : nb_st : %d@." i (Scheduler.Syst.cardinal !Scheduler.system);
 	ignore (Scheduler.run ()) 
       done;
       printf "Total scheduled states : %d

@@ -40,6 +40,7 @@ let () =
   with Exit -> ()
     
 let init_proc = !init_proc
+let prio_list = !prio_list
 
 let error e = raise (Error e)
 
@@ -86,9 +87,6 @@ let list_threads =
       | n -> n::(lthreads l (n+1))
   in lthreads [] 0
 
-(* This list will contain all the transitions *)
-let trans_list = ref []
-
 module type OrderedType =
   sig 
     type t
@@ -100,6 +98,14 @@ module OrderedValue =
     type t = value
     let compare = compare_value
   end
+
+type transition = 
+    (
+      Hstring.t 
+      *	Hstring.t list 
+      *	((unit -> unit) list 
+	 * ((unit -> bool) list * (unit -> unit)) list list list)
+    )
 
 (* Module to manage multi-dimensional arrays *)
 module type DA = sig
@@ -309,7 +315,101 @@ module State (Elt : OrderedType)  (A : DA with type elt = Elt.t) : St with type 
   	       Hashtbl.iter (fun name arr -> Hashtbl.replace carrs name (A.copy arr)) carrs;
   	       {globs = Hashtbl.copy t.globs; arrs = carrs}
 
-end	
+end
+
+module type RC = sig
+
+    exception SizeError of int
+    exception BadPercentage of int
+    
+    type elt
+    type t
+
+    val init : int list -> t
+    val add : int -> elt -> t -> t
+    val choose : t -> elt
+    val update : t -> t
+    val print_rc : t -> unit
+
+end
+
+module RandClasses : RC with type elt = transition = struct
+    
+  exception SizeError of int
+  exception BadPercentage of int
+
+  type elt = transition
+
+  module C : Map.S with type key = int = Map.Make (
+    struct type t = int 
+	   let compare = Pervasives.compare 
+    end)
+
+  type t = (int * (float * float) * (elt C.t)) list
+
+  let init bl =
+    let g = List.length bl in
+    let rec init' acc l ti =
+      match l with
+  	| [] -> if ti <> 100 then raise (BadPercentage ti) else acc
+  	| p :: tl ->
+	  let bsup = p + ti in
+	  if bsup > 100 then raise (BadPercentage (bsup))
+	  else (
+	    let g' = g - List.length l in
+	    let binf = (float_of_int ti) /. 100. in
+	    let bsup = (float_of_int bsup) /. 100. in
+  	    let acc = (g', (binf, bsup), C.empty) :: acc in
+  	    init' acc tl (p + ti)
+	  )
+    in 
+    let nc = init' [] bl 0 in
+    List.rev nc 
+
+  let add i e rc =
+    if i >= List.length rc then raise (SizeError i)
+    else  
+      let rec add' acc rc = 
+	match rc with
+	  | ((i', _, _) as hd)::tl when i' <> i -> add' (hd::acc) tl
+	  | (i, b, c)::tl -> let l = C.cardinal c in
+      			     (List.rev acc)@((i, b, C.add l e c)::tl)
+	  | _ -> assert false
+      in add' [] rc
+
+  let choose rc =
+    let r = Random.float 1. in
+    let (_, _, c) = try
+		   List.find (fun (_, (binf, bsup), c) -> r >= binf && r < bsup) rc
+      with Not_found -> Format.eprintf "Not found %f" r; exit 1
+    in
+    let i = Random.int (C.cardinal c) in
+    C.find i c
+
+  let update rc =
+    let (nrc, sum) = List.fold_left (
+      fun ((nrc, sum) as acc) ((_, (binf, bsup), c) as e) ->
+	if C.is_empty c then acc else (e::nrc, sum +. (bsup -. binf))
+    ) ([], 0.) rc in
+    let (_, nrc) = List.fold_right ( 
+      fun (i, (binf, bsup), c)  (pbi, acc) ->
+	let bsup = pbi +. (bsup -. binf) /. sum in
+	(bsup, (i, (pbi, bsup), c) :: acc)
+    ) nrc (0., []) in
+    List.rev nrc
+
+  let print_rc rc =
+    List.iter (fun (i, (bi, bs), c) -> 
+      Format.printf "%d : %f -> %f \n   {" i bi bs;
+      C.iter (fun i (n, _, _) -> Format.printf "\n\t#%d - %a" i Hstring.print n) c;
+      Format.printf "\n   }@."
+    ) rc
+
+end
+
+(* This list will contain all the transitions *)
+let trans_list = ref []
+let trans_rc = ref (RandClasses.init prio_list)
 
 	  
 (* GLOBAL VARIABLES *)
@@ -1100,6 +1200,7 @@ let init_system se =
   init_list := []
 
 let init_transitions trans =
+  let ub = List.length prio_list - 1 in
   trans_list := List.fold_left (
     fun acc tr ->
       (* Associate the processes to numbers (unique) *)
@@ -1122,12 +1223,10 @@ let init_transitions trans =
 		let p = Hstring.make ("#" ^ si) in
 	        p :: pn
 	    ) sub [] in
-	    let prio = try
-			 let p = Hashtbl.find trans_prio tr.tr_name in
-			 100 / p
-	      with Not_found -> 0
+	    let grp = try Hashtbl.find trans_prio tr.tr_name 
+	      with Not_found -> ub
 	    in
-	    (tr.tr_name, pn, prio, subst_guard, subst_ureq, subst_updates)::acc'
+	    (grp, (tr.tr_name, pn, subst_guard, subst_ureq, subst_updates))::acc'
 	  with EFalse -> acc'
       ) acc subs
   ) [] trans
@@ -1150,6 +1249,8 @@ let valid_ureq ureq =
 	  ) s_atom_funs_list
       ) for_all_other
   ) ureq
+
+let valid_trans req ureq = valid_req req && valid_ureq ureq
 
 let valid_upd arrs_upd =
   List.fold_left (
@@ -1178,14 +1279,26 @@ let tTrans = ref TSet.empty
 let ntTrans = ref TSet.empty
 let iTrans = ref TSet.empty
 
-(* let valid_trans_map () = *)
-(*   List.fold_left ( *)
-    
+let valid_trans_rc () =
+  let rc = List.fold_left (
+    fun acc (prio, (name, pn, req, ureq, updts)) -> 
+      if valid_trans req ureq
+      then
+	(
+	  pTrans := TSet.add name !pTrans;
+	  Search.TimerRC.start ();
+	  let nacc = RandClasses.add prio (name, pn, updts) acc in
+	  Search.TimerRC.pause ();
+	  nacc
+	)
+      else acc
+  ) !trans_rc !trans_list in
+  RandClasses.update rc
 
 let valid_trans_list () =
   List.fold_left (
-    fun acc (name, pn, prio, req, ureq, updts) -> 
-      if valid_req req && valid_ureq ureq 
+    fun acc (prio, (name, pn, req, ureq, updts)) -> 
+      if valid_trans req ureq
       then
 	(
 	  pTrans := TSet.add name !pTrans;
@@ -1202,14 +1315,19 @@ let rec update_system_alea rs trl c =
   else
     (
       read_st := rs;
-      let tlist = ref (valid_trans_list ()) in
-      let i = Random.int (List.length !tlist) in
-      let (((tr, args) as trn), (assigns, updates)) = List.nth !tlist i in
+      let rc = valid_trans_rc () in
+      (* printf "\n------------------------\nTLIST @."; *)
+      (* List.iter ( *)
+      (* 	fun ((n,_),_) -> printf "\n\t%a" Hstring.print n) !tlist; *)
+      (* printf "\nRC @."; *)
+      (* RandClasses.print_rc rc; *)
+      (* printf "\n--------------------------@."; *)
+      let (tr, args, (assigns, updates)) = RandClasses.choose rc in
       List.iter (fun a -> a ()) assigns;
       let updts = valid_upd updates in 
       List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
       let s = Etat.copy !write_st in
-      let trl' = trn::trl in
+      let trl' = (tr,args)::trl in
       system := Syst.add s trl' !system;
       tTrans := TSet.add tr !tTrans;
       update_system_alea s trl' (c+1)
@@ -1405,7 +1523,7 @@ let hist_cand cand =
   
 let scheduler se =
   Search.TimerScheduler.start ();
-  let trans = List.fold_left (fun acc (n, _, _, _, _, _) -> TSet.add n acc) TSet.empty !trans_list in
+  let trans = List.fold_left (fun acc (_, (n, _, _, _, _)) -> TSet.add n acc) TSet.empty !trans_list in
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
@@ -1465,11 +1583,7 @@ let register_system s = current_system := s
 
 let init_sched () =
   init_system !current_system;
-  init_transitions (!current_system).trans;
-  Hashtbl.iter (
-    fun tr p -> 
-      printf "%a : %d@." Hstring.print tr p
-  ) trans_prio
+  init_transitions (!current_system).trans
   
 
 let run () =

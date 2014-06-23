@@ -109,6 +109,7 @@ let tab_init = Hashtbl.create 11
 let var_init = Hashtbl.create 11
 let var_ninit = Hashtbl.create 11  
 let trans_prio = Hashtbl.create 11 
+let prio_list = ref []
       
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
