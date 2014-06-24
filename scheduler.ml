@@ -345,7 +345,7 @@ module RandClasses : RC with type elt = transition = struct
 	   let compare = Pervasives.compare 
     end)
 
-  type t = (int * (float * float) * (elt C.t)) list
+  type t = {rc : (int * (int * int) * (elt C.t)) list; sum : int}
 
   let init bl =
     let g = List.length bl in
@@ -357,17 +357,15 @@ module RandClasses : RC with type elt = transition = struct
 	  if bsup > 100 then raise (BadPercentage (bsup))
 	  else (
 	    let g' = g - List.length l in
-	    let binf = (float_of_int ti) /. 100. in
-	    let bsup = (float_of_int bsup) /. 100. in
-  	    let acc = (g', (binf, bsup), C.empty) :: acc in
+	    let acc = (g', (ti, bsup), C.empty) :: acc in
   	    init' acc tl (p + ti)
 	  )
     in 
     let nc = init' [] bl 0 in
-    List.rev nc 
+    {rc = List.rev nc; sum = 100}
 
   let add i e rc =
-    if i >= List.length rc then raise (SizeError i)
+    if i >= List.length rc.rc then raise (SizeError i)
     else  
       let rec add' acc rc = 
 	match rc with
@@ -375,13 +373,15 @@ module RandClasses : RC with type elt = transition = struct
 	  | (i, b, c)::tl -> let l = C.cardinal c in
       			     (List.rev acc)@((i, b, C.add l e c)::tl)
 	  | _ -> assert false
-      in add' [] rc
+      in
+      let nrc = add' [] rc.rc in
+      {rc = nrc; sum = 100}
 
   let choose rc =
-    let r = Random.float 1. in
+    let r = Random.int rc.sum in
     let (_, _, c) = try
-		   List.find (fun (_, (binf, bsup), c) -> r >= binf && r < bsup) rc
-      with Not_found -> Format.eprintf "Not found %f" r; exit 1
+		   List.find (fun (_, (binf, bsup), c) -> r >= binf && r < bsup) rc.rc
+      with Not_found -> Format.eprintf "Not found %d" r; exit 1
     in
     let i = Random.int (C.cardinal c) in
     C.find i c
@@ -389,23 +389,25 @@ module RandClasses : RC with type elt = transition = struct
   let update rc =
     let (nrc, sum) = List.fold_left (
       fun ((nrc, sum) as acc) ((_, (binf, bsup), c) as e) ->
-	if C.is_empty c then acc else (e::nrc, sum +. (bsup -. binf))
-    ) ([], 0.) rc in
+	if C.is_empty c then acc else (e::nrc, sum + (bsup - binf))
+    ) ([], 0) rc.rc in
     let (_, nrc) = List.fold_right ( 
       fun (i, (binf, bsup), c)  (pbi, acc) ->
-	let bsup = pbi +. (bsup -. binf) /. sum in
+	let bsup = pbi + bsup - binf in
 	(bsup, (i, (pbi, bsup), c) :: acc)
-    ) nrc (0., []) in
-    List.rev nrc
+    ) nrc (0, []) in
+    {rc = List.rev nrc; sum = sum}
 
   let print_rc rc =
     List.iter (fun (i, (bi, bs), c) -> 
-      Format.printf "%d : %f -> %f \n   {" i bi bs;
-      C.iter (fun i (n, _, _) -> Format.printf "\n\t#%d - %a" i Hstring.print n) c;
+      Format.printf "%d : %d -> %d \n   {" i bi bs;
+      C.iter (fun i (n, args, _) -> Format.printf "\n\t#%d - %a(%a)"
+      i Hstring.print n (Hstring.print_list " ") args) c;
       Format.printf "\n   }@."
-    ) rc
+    ) rc.rc;
+    Format.printf "sum : %d@." rc.sum
 
-end
+end    
 
 (* This list will contain all the transitions *)
 let trans_list = ref []
