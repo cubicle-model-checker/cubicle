@@ -19,10 +19,15 @@ module OrderedValue :
     type t = Options.value
     val compare : Options.value -> Options.value -> int
   end
-type transition =
-    Hstring.t * Hstring.t list *
-    ((unit -> unit) list *
-     ((unit -> bool) list * (unit -> unit)) list list list)
+type transition = {
+  t_grp : int;
+  t_name : Hstring.t;
+  t_args : Hstring.t list;
+  t_reqs : (unit -> bool) list;
+  t_ureqs : (unit -> bool) list list list;
+  t_assigns : (unit -> unit) list;
+  t_updates : ((unit -> bool) list * (unit -> unit)) list list list;
+}
 module type DA =
   sig
     type elt
@@ -137,13 +142,7 @@ module RandClasses :
     val update : t -> t
     val print_rc : t -> unit
   end
-val trans_list :
-  (int *
-   (Hstring.t * Hstring.t list * (unit -> bool) list *
-    (unit -> bool) list list list *
-    ((unit -> unit) list *
-     ((unit -> bool) list * (unit -> unit)) list list list)))
-  list ref
+val trans_list : RandClasses.elt list ref
 val trans_rc : RandClasses.t ref
 module Array :
   sig
@@ -404,34 +403,13 @@ val tTrans : TSet.t ref
 val ntTrans : TSet.t ref
 val iTrans : TSet.t ref
 val valid_trans_rc : unit -> RandClasses.t
-val valid_trans_list :
-  unit ->
-  ((Hstring.t * Hstring.t list) *
-   ((unit -> unit) list *
-    ((unit -> bool) list * (unit -> unit)) list list list))
-  list
+val valid_trans_list : unit -> RandClasses.elt list
 val update_system_alea :
   Etat.t -> (Hstring.t * Hstring.t list) list -> int -> unit
 val compare : (TSet.elt * 'a) * 'b -> (TSet.elt * 'c) * 'd -> int
-val find_and_exec_gt :
-  ('a *
-   ((unit -> unit) list *
-    ((unit -> bool) list * (unit -> unit)) list list list))
-  list ->
-  'a *
-  ('a *
-   ((unit -> unit) list *
-    ((unit -> bool) list * (unit -> unit)) list list list))
-  list
+val find_and_exec_gt : transition list -> transition * transition list
 val update_system_dfs :
-  int ->
-  Etat.t option ->
-  (Etat.t *
-   ((Hstring.t * Hstring.t list) *
-    ((unit -> unit) list *
-     ((unit -> bool) list * (unit -> unit)) list list list))
-   list)
-  list -> unit
+  int -> Etat.t option -> (Etat.t * RandClasses.elt list) list -> unit
 val update_system_bfs : int -> Syst.key -> 'a -> unit
 val get_value_st : (Hstring.t * int) list -> Etat.t -> Ast.term -> Etat.elt
 val contains : (Hstring.t * int) list -> Ast.SAtom.t -> 'a -> bool

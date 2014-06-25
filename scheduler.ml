@@ -100,12 +100,15 @@ module OrderedValue =
   end
 
 type transition = 
-    (
-      Hstring.t 
-      *	Hstring.t list 
-      *	((unit -> unit) list 
-	 * ((unit -> bool) list * (unit -> unit)) list list list)
-    )
+    {
+      t_grp : int;
+      t_name : Hstring.t;
+      t_args : Hstring.t list;
+      t_reqs : (unit -> bool) list;
+      t_ureqs : (unit -> bool) list list list;
+      t_assigns : (unit -> unit) list;
+      t_updates : ((unit -> bool) list * (unit -> unit)) list list list;
+    }
 
 (* Module to manage multi-dimensional arrays *)
 module type DA = sig
@@ -401,8 +404,8 @@ module RandClasses : RC with type elt = transition = struct
   let print_rc rc =
     List.iter (fun (i, (bi, bs), c) -> 
       Format.printf "%d : %d -> %d \n   {" i bi bs;
-      C.iter (fun i (n, args, _) -> Format.printf "\n\t#%d - %a(%a)"
-      i Hstring.print n (Hstring.print_list " ") args) c;
+      C.iter (fun i t -> Format.printf "\n\t#%d - %a(%a)"
+      i Hstring.print t.t_name (Hstring.print_list " ") t.t_args) c;
       Format.printf "\n   }@."
     ) rc.rc;
     Format.printf "sum : %d@." rc.sum
@@ -1217,8 +1220,8 @@ let init_transitions trans =
 	    let (_, pl) = List.split sub in
 	    let subsm = inter pl list_threads in
 	    let subst_ureq = subst_ureq sub subsm tr.tr_ureq in
-	    let subst_guard = substitute_req sub tr.tr_reqs in
-	    let subst_updates = substitute_updts sub tr.tr_assigns tr.tr_upds in
+	    let subst_req = substitute_req sub tr.tr_reqs in
+	    let (s_assigns, s_updates) = substitute_updts sub tr.tr_assigns tr.tr_upds in
 	    let pn = List.fold_right (
 	      fun (id, i) pn -> 
 		let si = string_of_int i in
@@ -1228,7 +1231,16 @@ let init_transitions trans =
 	    let grp = try Hashtbl.find trans_prio tr.tr_name 
 	      with Not_found -> ub
 	    in
-	    (grp, (tr.tr_name, pn, subst_guard, subst_ureq, subst_updates))::acc'
+	    let t = 
+	      { t_grp = grp;
+		t_name = tr.tr_name;
+		t_args = pn;
+		t_reqs = subst_req;
+		t_ureqs = subst_ureq;
+		t_assigns = s_assigns;
+		t_updates = s_updates
+	      } in
+	    t::acc'
 	  with EFalse -> acc'
       ) acc subs
   ) [] trans
@@ -1283,13 +1295,13 @@ let iTrans = ref TSet.empty
 
 let valid_trans_rc () =
   let rc = List.fold_left (
-    fun acc (prio, (name, pn, req, ureq, updts)) -> 
-      if valid_trans req ureq
+    fun acc t -> 
+      if valid_trans t.t_reqs t.t_ureqs
       then
 	(
-	  pTrans := TSet.add name !pTrans;
+	  pTrans := TSet.add t.t_name !pTrans;
 	  Search.TimerRC.start ();
-	  let nacc = RandClasses.add prio (name, pn, updts) acc in
+	  let nacc = RandClasses.add t.t_grp t acc in
 	  Search.TimerRC.pause ();
 	  nacc
 	)
@@ -1299,12 +1311,12 @@ let valid_trans_rc () =
 
 let valid_trans_list () =
   List.fold_left (
-    fun acc (prio, (name, pn, req, ureq, updts)) -> 
-      if valid_trans req ureq
+    fun acc t -> 
+      if valid_trans t.t_reqs t.t_ureqs
       then
 	(
-	  pTrans := TSet.add name !pTrans;
-	  ((name, pn), updts) :: acc
+	  pTrans := TSet.add t.t_name !pTrans;
+	  t :: acc
 	)
       else acc
   ) [] !trans_list
@@ -1324,14 +1336,14 @@ let rec update_system_alea rs trl c =
       (* printf "\nRC @."; *)
       (* RandClasses.print_rc rc; *)
       (* printf "\n--------------------------@."; *)
-      let (tr, args, (assigns, updates)) = RandClasses.choose rc in
-      List.iter (fun a -> a ()) assigns;
-      let updts = valid_upd updates in 
+      let t = RandClasses.choose rc in
+      List.iter (fun a -> a ()) t.t_assigns;
+      let updts = valid_upd t.t_updates in 
       List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
       let s = Etat.copy !write_st in
-      let trl' = (tr,args)::trl in
+      let trl' = (t.t_name,t.t_args)::trl in
       system := Syst.add s trl' !system;
-      tTrans := TSet.add tr !tTrans;
+      tTrans := TSet.add t.t_name !tTrans;
       update_system_alea s trl' (c+1)
     )
       
@@ -1345,9 +1357,9 @@ let compare ((n1, pn1), _) ((n2, pn2), _) =
 let rec find_and_exec_gt =
   function
     | [] -> raise Exit
-    | (t, (assigns, updates)) :: tl ->
-      List.iter (fun a -> a ()) assigns;
-      let updts = valid_upd updates in
+    | t :: tl ->
+      List.iter (fun a -> a ()) t.t_assigns;
+      let updts = valid_upd t.t_updates in
       List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
       if Syst.mem !write_st !system then
 	find_and_exec_gt tl
@@ -1367,11 +1379,11 @@ let rec update_system_dfs c workst parents =
 		(tli, tl)
       in
       write_st := Etat.copy (!read_st);
-      let ((tr, _) as trn, tlist') = find_and_exec_gt tlist in
+      let (t, tlist') = find_and_exec_gt tlist in
       let trl = Syst.find !read_st !system in
       let s = Etat.copy !write_st in
-      system := Syst.add s (trn::trl) !system;
-      tTrans := TSet.add tr !tTrans;
+      system := Syst.add s ((t.t_name, t.t_args)::trl) !system;
+      tTrans := TSet.add t.t_name !tTrans;
       update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents)
     with Exit -> update_system_dfs c None parents
 
@@ -1392,17 +1404,17 @@ let update_system_bfs c rs tlist =
 	read_st := rs;
 	let tlist = valid_trans_list () in
 	List.iter (
-	  fun (((tr, args) as t), (assigns, updates)) ->
+	  fun t ->
 	    write_st := Etat.copy rs;
-	    List.iter (fun a -> a ()) assigns;
-	    let updts = valid_upd updates in
+	    List.iter (fun a -> a ()) t.t_assigns;
+	    let updts = valid_upd t.t_updates in
 	    List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
 	    let nst = Etat.copy !write_st in
 	    if not (Syst.mem nst !system) then
 	      (
 		incr cpt_q;
-		tTrans := TSet.add tr !tTrans;
-		let trn' = t::trn in
+		tTrans := TSet.add t.t_name !tTrans;
+		let trn' = (t.t_name, t.t_args)::trn in
       		system := Syst.add nst trn' !system;
 		Queue.add (depth + 1, nst, trn') to_do
 	      )
@@ -1525,7 +1537,7 @@ let hist_cand cand =
   
 let scheduler se =
   Search.TimerScheduler.start ();
-  let trans = List.fold_left (fun acc (_, (n, _, _, _, _)) -> TSet.add n acc) TSet.empty !trans_list in
+  let trans = List.fold_left (fun acc t -> TSet.add t.t_name acc) TSet.empty !trans_list in
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
