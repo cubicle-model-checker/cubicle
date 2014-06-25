@@ -1281,17 +1281,17 @@ let valid_upd arrs_upd =
       in arrs_u::arr_acc
   ) [] arrs_upd
 
-module TSet = Set.Make (
+module TMap = Map.Make (
   struct
     type t = Hstring.t
     let compare = Hstring.compare
   end
 )
 
-let pTrans = ref TSet.empty
-let tTrans = ref TSet.empty
-let ntTrans = ref TSet.empty
-let iTrans = ref TSet.empty
+let trans = ref TMap.empty
+let execTrans = ref TMap.empty
+let notExecTrans = ref TMap.empty
+let notSeenTrans = ref TMap.empty
 
 let valid_trans_rc () =
   let rc = List.fold_left (
@@ -1299,7 +1299,11 @@ let valid_trans_rc () =
       if valid_trans t.t_reqs t.t_ureqs
       then
 	(
-	  pTrans := TSet.add t.t_name !pTrans;
+	  if verbose > 0 then
+	    (
+	      let n = TMap.find t.t_name !trans in
+	      trans := TMap.add t.t_name (n+1) !trans
+	    );
 	  Search.TimerRC.start ();
 	  let nacc = RandClasses.add t.t_grp t acc in
 	  Search.TimerRC.pause ();
@@ -1315,7 +1319,11 @@ let valid_trans_list () =
       if valid_trans t.t_reqs t.t_ureqs
       then
 	(
-	  pTrans := TSet.add t.t_name !pTrans;
+	  if verbose > 0 then
+	    (
+	      let n = TMap.find t.t_name !trans in
+	      trans := TMap.add t.t_name (n+1) !trans
+	    );
 	  t :: acc
 	)
       else acc
@@ -1323,19 +1331,12 @@ let valid_trans_list () =
     
 (* SYSTEM UPDATE *)
 
-
 let rec update_system_alea rs trl c =
   if c = nb_exec then ()
   else
     (
       read_st := rs;
       let rc = valid_trans_rc () in
-      (* printf "\n------------------------\nTLIST @."; *)
-      (* List.iter ( *)
-      (* 	fun ((n,_),_) -> printf "\n\t%a" Hstring.print n) !tlist; *)
-      (* printf "\nRC @."; *)
-      (* RandClasses.print_rc rc; *)
-      (* printf "\n--------------------------@."; *)
       let t = RandClasses.choose rc in
       List.iter (fun a -> a ()) t.t_assigns;
       let updts = valid_upd t.t_updates in 
@@ -1343,13 +1344,17 @@ let rec update_system_alea rs trl c =
       let s = Etat.copy !write_st in
       let trl' = (t.t_name,t.t_args)::trl in
       system := Syst.add s trl' !system;
-      tTrans := TSet.add t.t_name !tTrans;
+      if verbose > 0 then
+	(
+	  let n = TMap.find t.t_name !execTrans in
+	  execTrans := TMap.add t.t_name (n+1) !execTrans
+	);
       update_system_alea s trl' (c+1)
     )
       
 let compare ((n1, pn1), _) ((n2, pn2), _) =
-  if TSet.mem n1 !tTrans && not (TSet.mem n2 !tTrans) then 1
-  else if not (TSet.mem n1 !tTrans) && TSet.mem n2 !tTrans then -1
+  if TMap.mem n1 !execTrans && not (TMap.mem n2 !execTrans) then 1
+  else if not (TMap.mem n1 !execTrans) && TMap.mem n2 !execTrans then -1
   (* else if np1 > np2 then -1 *)
   (* else if np1 < np2 then 1 *)
   else if Random.bool () then -1 else 1
@@ -1383,7 +1388,8 @@ let rec update_system_dfs c workst parents =
       let trl = Syst.find !read_st !system in
       let s = Etat.copy !write_st in
       system := Syst.add s ((t.t_name, t.t_args)::trl) !system;
-      tTrans := TSet.add t.t_name !tTrans;
+      let n = TMap.find t.t_name !execTrans in
+      execTrans := TMap.add t.t_name (n+1) !execTrans;
       update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents)
     with Exit -> update_system_dfs c None parents
 
@@ -1413,7 +1419,8 @@ let update_system_bfs c rs tlist =
 	    if not (Syst.mem nst !system) then
 	      (
 		incr cpt_q;
-		tTrans := TSet.add t.t_name !tTrans;
+		let n = TMap.find t.t_name !execTrans in
+		execTrans := TMap.add t.t_name (n+1) !execTrans;
 		let trn' = (t.t_name, t.t_args)::trn in
       		system := Syst.add nst trn' !system;
 		Queue.add (depth + 1, nst, trn') to_do
@@ -1537,7 +1544,6 @@ let hist_cand cand =
   
 let scheduler se =
   Search.TimerScheduler.start ();
-  let trans = List.fold_left (fun acc t -> TSet.add t.t_name acc) TSet.empty !trans_list in
   Syst.iter (
     fun st tri ->
       (* printf "Beginning@."; *)
@@ -1556,24 +1562,6 @@ let scheduler se =
       (* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
-  ntTrans := TSet.diff !pTrans !tTrans;
-  iTrans := TSet.diff trans !pTrans;
-  (* printf "Scheduled %d states\n" (Syst.cardinal (!system)); *)
-  (* printf "--------------------------@."; *)
-  if verbose > 0 then
-    (
-      if (TSet.cardinal !ntTrans > 0) then
-	(
-	  printf "Not taken but seen transitions :@.";
-	  TSet.iter (printf "\t%a@." Hstring.print) !ntTrans
-	) else (printf "All transitions that were seen were taken !@.");
-      if (TSet.cardinal !iTrans > 0) then
-	(
-	  printf "Not seen transitions :@.";
-	  TSet.iter (printf "\t%a@." Hstring.print) !iTrans
-	) else (printf "All transitions were seen !@.");
-      printf "--------------------------@.";
-    );
   Search.TimerScheduler.pause ()
   
     
@@ -1597,13 +1585,93 @@ let register_system s = current_system := s
 
 let init_sched () =
   init_system !current_system;
-  init_transitions (!current_system).trans
-  
-
-let run () =
+  init_transitions (!current_system).trans;
+  if verbose > 0 then
+    List.iter (
+      fun t -> 
+	trans := TMap.add t.t_name 0 !trans;
+	execTrans := TMap.add t.t_name 0 !execTrans
+    ) !trans_list
+      
+let run () = 
   assert (!current_system <> dummy_system);
   read_st := Etat.init ();
   write_st := Etat.init ();
-  tTrans := TSet.empty;
-  pTrans := TSet.empty;
-  scheduler !current_system
+  init_sched ();
+  for i = 0 to runs - 1 do 
+    if i mod 100 = 0 
+    then printf "Execution #%d : nb_st : %d@." 
+      i (Syst.cardinal !system);
+    ignore (scheduler !current_system) 
+  done;
+  (* if verbose > 0 then ( *)
+  (*   notExecTrans := TMap.filter (fun _ n -> n = 0) !execTrans; *)
+  (*   notSeenTrans := TMap.filter (fun _ n -> n = 0) !trans; *)
+  (* ); *)
+  if verbose > 0 then
+    (
+      let inits = float_of_int (Syst.cardinal (!sinits)) in
+      let nb_ex = float_of_int runs *. inits *. float_of_int nb_exec in
+      printf "Nb exec : %f@." nb_ex;
+      let (tl, ntl) = TMap.fold (
+      	fun t i (tl, ntl) ->
+	  if i > 0 then
+	    ((t, (float_of_int i) /. nb_ex *. 100.) :: tl, ntl)
+	  else (tl, t::ntl)
+      ) !trans ([], []) in
+      let (etl, netl) = TMap.fold (
+      	fun t i (etl, netl) ->
+	  if i > 0 then
+	    let fi = float_of_int i in
+	    let p = float_of_int (TMap.find t !trans) in
+	    ((t, fi /. nb_ex *. 100., fi /. p *. 100.) :: etl, netl)
+	  else (etl, t::netl)
+      ) !execTrans ([], []) in
+      let tl = List.fast_sort (
+	fun (_, p) (_, p') -> - Pervasives.compare p p'
+      ) tl in
+      let etl = List.fast_sort (
+	fun (_, p, _) (_, p', _) -> - Pervasives.compare p p'
+      ) etl in
+      let etl' = List.fast_sort (
+	fun (_, _, p) (_, _, p') -> - Pervasives.compare p p'
+      ) etl in
+      printf "Seen transitions :@.";
+      List.iter (
+	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p
+      ) tl;
+      printf "Executed transitions :@.";
+      printf "\n\t%-26s | %6s | %6s\n@." "Transitions" "ex/nb_ex" "ex/nb_vu";
+      List.iter (
+	fun (t, p, p') -> printf "\t%-26s | %7.2f%% | %7.2f%%@." (Hstring.view t) p p'
+      ) etl;
+      printf "\n\t%-26s | %6s | %6s\n@." "Transitions" "ex/nb_ex" "ex/nb_vu";
+      List.iter (
+	fun (t, p, p') -> printf "\t%-26s | %7.2f%% | %7.2f%%@." (Hstring.view t) p p'
+      ) etl';
+      (* if (TMap.cardinal !notExecTrans > 0) then *)
+      (* 	( *)
+      (* 	  printf "Not taken but seen transitions :@."; *)
+      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
+      (* 	) else (printf "All transitions that were seen were taken !@."); *)
+      (* if (TMap.cardinal !notSeenTrans > 0) then *)
+      (* 	( *)
+      (* 	  printf "Not seen transitions :@."; *)
+      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
+      (* 	) else (printf "All transitions were seen !@."); *)
+      printf "--------------------------@.";
+    );
+  printf "Total scheduled states : %d
+--------------------------------\n@." (Syst.cardinal !system);
+  if verbose > 1 && not quiet then
+    begin
+      let count = ref 1 in
+      Syst.iter (
+  	fun st -> 
+	  printf "%d : " !count; 
+	  incr count; 
+	  print_system st
+      ) (!system)
+    end
+      
+

@@ -333,23 +333,7 @@ let brab search invariants uns =
   (* initialization of oracle *)
   if schedule then
     (
-      Scheduler.init_sched ();
-      for i = 0 to runs - 1 do 
-	if i mod 100 = 0 then printf "Execution #%d : nb_st : %d@." i (Scheduler.Syst.cardinal !Scheduler.system);
-	ignore (Scheduler.run ()) 
-      done;
-      printf "Total scheduled states : %d
---------------------------------\n@." (Scheduler.Syst.cardinal !Scheduler.system);
-      if verbose > 0 then
-	begin
-	  let count = ref 1 in
-	  Scheduler.Syst.iter (
-  	    fun st -> 
-	      printf "%d : " !count; 
-	      incr count; 
-	      Scheduler.print_system st
-	  ) (!Scheduler.system)
-	end;
+      Scheduler.run ()
     );
   let low = if brab_up_to then 1 else enumerative in
   if compare then 
