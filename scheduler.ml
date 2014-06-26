@@ -1397,7 +1397,6 @@ let update_system_bfs c rs tlist =
   let cpt_q = ref 1 in
   let to_do = Queue.create () in
   let trl = Syst.find rs !system in
-  printf "Depth : %d@." c;
   Queue.add (0, rs, trl) to_do;
   while not (Queue.is_empty to_do) do
     let depth, rs, trn = Queue.take to_do in
@@ -1549,28 +1548,16 @@ let scheduler se =
   Search.TimerScheduler.start ();
   Syst.iter (
     fun st tri ->
-      printf "BEGINNING@.";
       read_st := st;
       write_st := Etat.copy st;
       system := Syst.add st tri !system;
-      (* printf "Init state :@."; *)
-      (* print_state st; *)
-      (* try ignore (update_system_alea st tri 0) *)
-      (* if upd = 1 then *)
-      (*   update_system_dfs 0 (Some st) [] *)
-      (* else *) 
-      (try
+      try
 	if upd = 2 then
           let tlist = valid_trans_list () in
-	  printf "TLIST : %d@." (List.length tlist);
-          update_system_bfs forward_depth st tlist
+	  update_system_bfs forward_depth st tlist
 	else
 	  update_system_alea st tri 0
-	      
-	(* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
-      );
-      printf "END@."
   ) !sinits;
   Search.TimerScheduler.pause ()
   
@@ -1608,6 +1595,7 @@ let run () =
   read_st := Etat.init ();
   write_st := Etat.init ();
   init_sched ();
+  let runs = if upd = 2 then 1 else runs in
   for i = 0 to runs - 1 do 
     if i mod 100 = 0 
     then printf "Execution #%d : nb_st : %d@." 
