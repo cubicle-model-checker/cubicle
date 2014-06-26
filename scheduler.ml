@@ -1612,43 +1612,51 @@ let run () =
     (
       let inits = float_of_int (Syst.cardinal (!sinits)) in
       let nb_ex = float_of_int runs *. inits *. float_of_int nb_exec in
-      printf "Nb exec : %f@." nb_ex;
-      let (tl, ntl) = TMap.fold (
-      	fun t i (tl, ntl) ->
-	  if i > 0 then
-	    ((t, (float_of_int i) /. nb_ex *. 100.) :: tl, ntl)
-	  else (tl, t::ntl)
-      ) !trans ([], []) in
+      printf "Nb exec : %.0f@." nb_ex;
+      (* let (tl, ntl) = TMap.fold ( *)
+      (* 	fun t i (tl, ntl) -> *)
+      (* 	  if i > 0 then *)
+      (* 	    ((t, (float_of_int i) /. nb_ex *. 100.) :: tl, ntl) *)
+      (* 	  else (tl, t::ntl) *)
+      (* ) !trans ([], []) in *)
       let (etl, netl) = TMap.fold (
       	fun t i (etl, netl) ->
 	  if i > 0 then
 	    let fi = float_of_int i in
-	    let p = float_of_int (TMap.find t !trans) in
-	    ((t, fi /. nb_ex *. 100., fi /. p *. 100.) :: etl, netl)
+	    let p = TMap.find t !trans in
+	    let fp = float_of_int p in
+	    ((t, fp /. nb_ex *. 100., p, fi /. nb_ex *. 100., fi /. fp *. 100., i) :: etl, netl)
 	  else (etl, t::netl)
       ) !execTrans ([], []) in
-      let tl = List.fast_sort (
-	fun (_, p) (_, p') -> - Pervasives.compare p p'
-      ) tl in
+      (* let tl = List.fast_sort ( *)
+      (* 	fun (_, p) (_, p') -> - Pervasives.compare p p' *)
+      (* ) tl in *)
       let etl = List.fast_sort (
-	fun (_, p, _) (_, p', _) -> - Pervasives.compare p p'
+	fun (_, _, _, p, _, _) (_, _, _,p', _, _) -> - Pervasives.compare p p'
       ) etl in
       let etl' = List.fast_sort (
-	fun (_, _, p) (_, _, p') -> - Pervasives.compare p p'
+	fun (_, _, _, _, p, _) (_, _, _, _, p', _) -> - Pervasives.compare p p'
       ) etl in
-      printf "Seen transitions :@.";
-      List.iter (
-	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p
-      ) tl;
+      let etl'' = List.fast_sort (
+	fun (_, p, _, _, _, _) (_, p', _, _, _, _) -> - Pervasives.compare p p'
+      ) etl in
+      (* printf "Seen transitions :@."; *)
+      (* List.iter ( *)
+      (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
+      (* ) tl; *)
       printf "Executed transitions :@.";
-      printf "\n\t%-26s | %6s | %6s\n@." "Transitions" "ex/nb_ex" "ex/nb_vu";
+      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
       List.iter (
-	fun (t, p, p') -> printf "\t%-26s | %7.2f%% | %7.2f%%@." (Hstring.view t) p p'
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
       ) etl;
-      printf "\n\t%-26s | %6s | %6s\n@." "Transitions" "ex/nb_ex" "ex/nb_vu";
+      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
       List.iter (
-	fun (t, p, p') -> printf "\t%-26s | %7.2f%% | %7.2f%%@." (Hstring.view t) p p'
-      ) etl';
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl'; 
+      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
+      List.iter (
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl'';
       (* if (TMap.cardinal !notExecTrans > 0) then *)
       (* 	( *)
       (* 	  printf "Not taken but seen transitions :@."; *)
