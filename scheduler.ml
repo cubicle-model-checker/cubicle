@@ -88,16 +88,16 @@ let list_threads =
   in lthreads [] 0
 
 module type OrderedType =
-  sig 
-    type t
-    val compare : t -> t -> int
-  end
+sig 
+  type t
+  val compare : t -> t -> int
+end
 
 module OrderedValue =
-  struct
-    type t = value
-    let compare = compare_value
-  end
+struct
+  type t = value
+  let compare = compare_value
+end
 
 type transition = 
     {
@@ -132,7 +132,7 @@ end
 module DimArray (Elt : OrderedType) : DA with type elt = Elt.t = struct
     
   type elt = Elt.t
-    
+      
   type dima = 
     | Arr of Elt.t array 
     | Mat of dima array
@@ -322,17 +322,17 @@ end
 
 module type RC = sig
 
-    exception SizeError of int
-    exception BadPercentage of int
-    
-    type elt
-    type t
+  exception SizeError of int
+  exception BadPercentage of int
+      
+  type elt
+  type t
 
-    val init : int list -> t
-    val add : int -> elt -> t -> t
-    val choose : t -> elt
-    val update : t -> t
-    val print_rc : t -> unit
+  val init : int list -> t
+  val add : int -> elt -> t -> t
+  val choose : t -> elt
+  val update : t -> t
+  val print_rc : t -> unit
 
 end
 
@@ -383,7 +383,7 @@ module RandClasses : RC with type elt = transition = struct
   let choose rc =
     let r = Random.int rc.sum in
     let (_, _, c) = try
-		   List.find (fun (_, (binf, bsup), c) -> r >= binf && r < bsup) rc.rc
+		      List.find (fun (_, (binf, bsup), c) -> r >= binf && r < bsup) rc.rc
       with Not_found -> Format.eprintf "Not found %d" r; exit 1
     in
     let i = Random.int (C.cardinal c) in
@@ -405,7 +405,7 @@ module RandClasses : RC with type elt = transition = struct
     List.iter (fun (i, (bi, bs), c) -> 
       Format.printf "%d : %d -> %d \n   {" i bi bs;
       C.iter (fun i t -> Format.printf "\n\t#%d - %a(%a)"
-      i Hstring.print t.t_name (Hstring.print_list " ") t.t_args) c;
+	i Hstring.print t.t_name (Hstring.print_list " ") t.t_args) c;
       Format.printf "\n   }@."
     ) rc.rc;
     Format.printf "sum : %d@." rc.sum
@@ -416,7 +416,7 @@ end
 let trans_list = ref []
 let trans_rc = ref (RandClasses.init prio_list)
 
-	  
+  
 (* GLOBAL VARIABLES *)
 
 module Array = DimArray (OrderedValue)
@@ -427,7 +427,7 @@ module Syst = Map.Make (
     let compare = Etat.ecompare
   end
 )
-	
+  
 open Syst
 
 let system = ref (Syst.empty)
@@ -510,9 +510,9 @@ let ntValues = Hashtbl.create 17
 
 
 let print_time fmt sec =
-    let minu = floor (sec /. 60.) in
-    let extrasec = sec -. (minu *. 60.) in
-    fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
+  let minu = floor (sec /. 60.) in
+  let extrasec = sec -. (minu *. 60.) in
+  fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
 
 (* Tranform a constant in a num *)
 let value_c c =
@@ -915,10 +915,10 @@ let init_htbls (vars, atoms) =
 		      let (rep2, _) = Hashtbl.find ec id2 in
 		      match rep1, rep2 with
 			| VVar h1, VVar h2 -> let (ty1, ts1, ti1, cfc1) = Hashtbl.find dc h1 in
-					    let (ty2, ts2, ti2, cfc2) = Hashtbl.find dc h2 in
-					    let cfc = min cfc1 cfc2 in
-					    Hashtbl.replace dc h1 (ty1, ts1, TI.add h2 ti1, cfc);
-					    Hashtbl.replace dc h2 (ty2, ts2, TI.add h1 ti2, cfc)
+					      let (ty2, ts2, ti2, cfc2) = Hashtbl.find dc h2 in
+					      let cfc = min cfc1 cfc2 in
+					      Hashtbl.replace dc h1 (ty1, ts1, TI.add h2 ti1, cfc);
+					      Hashtbl.replace dc h2 (ty2, ts2, TI.add h1 ti2, cfc)
 			| VVar h, (_ as rep') 
 			| (_ as rep'), VVar h -> 	
 			  let (ty, ts, ti, cfc) = Hashtbl.find dc h in
@@ -1034,7 +1034,7 @@ let fill_ntv () =
     (fun h (_, t) -> 			
       Hashtbl.add ntValues h (Hashtbl.find htbl_types (hst t)) 			
     ) ec 
-	    
+    
 let initialization init =
   init_htbls init;
   upd_options ();
@@ -1404,8 +1404,8 @@ let update_system_bfs c rs tlist =
     if depth < c then
       (
 	incr cpt_f;
-	if not quiet && !cpt_f mod 1000 = 0 then
-        eprintf "%d (%d)@." !cpt_f !cpt_q;
+	if not quiet then
+          eprintf "%d (%d)@." !cpt_f !cpt_q;
 	read_st := rs;
 	let tlist = valid_trans_list () in
 	List.iter (
@@ -1430,7 +1430,7 @@ let update_system_bfs c rs tlist =
 	) tlist
       )
   done
-	    
+    
 (* INTERFACE WITH BRAB *)
 
 let get_value_st sub st =
@@ -1543,7 +1543,7 @@ let hist_cand cand =
     
 (* MAIN *)
 
-  
+    
 let scheduler se =
   Search.TimerScheduler.start ();
   Syst.iter (
@@ -1560,7 +1560,7 @@ let scheduler se =
       with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
   Search.TimerScheduler.pause ()
-  
+    
     
 let dummy_system = {
   globals = [];
@@ -1596,7 +1596,7 @@ let run () =
   write_st := Etat.init ();
   init_sched ();
   let runs = if upd = 2 then 1 else runs in
-  for i = 0 to runs - 1 do 
+  for i = 1 to runs do 
     if i mod 100 = 0 
     then printf "Execution #%d : nb_st : %d@." 
       i (Syst.cardinal !system);
