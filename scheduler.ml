@@ -1410,6 +1410,11 @@ let update_system_bfs c rs tlist =
 	let tlist = valid_trans_list () in
 	List.iter (
 	  fun t ->
+	    if profiling then
+	      (
+		let n = TMap.find t.t_name !execTrans in
+		execTrans := TMap.add t.t_name (n+1) !execTrans
+	      );
 	    write_st := Etat.copy rs;
 	    List.iter (fun a -> a ()) t.t_assigns;
 	    let updts = valid_upd t.t_updates in
@@ -1418,11 +1423,6 @@ let update_system_bfs c rs tlist =
 	    if not (Syst.mem nst !system) then
 	      (
 		incr cpt_q;
-		if profiling then
-		  (
-		    let n = TMap.find t.t_name !execTrans in
-		    execTrans := TMap.add t.t_name (n+1) !execTrans
-		  );
 		let trn' = (t.t_name, t.t_args)::trn in
       		system := Syst.add nst trn' !system;
 		Queue.add (depth + 1, nst, trn') to_do
