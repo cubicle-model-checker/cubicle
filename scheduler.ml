@@ -1299,7 +1299,7 @@ let valid_trans_rc () =
       if valid_trans t.t_reqs t.t_ureqs
       then
 	(
-	  if verbose > 0 then
+	  if profiling then
 	    (
 	      let n = TMap.find t.t_name !trans in
 	      trans := TMap.add t.t_name (n+1) !trans
@@ -1319,7 +1319,7 @@ let valid_trans_list () =
       if valid_trans t.t_reqs t.t_ureqs
       then
 	(
-	  if verbose > 0 then
+	  if profiling then
 	    (
 	      let n = TMap.find t.t_name !trans in
 	      trans := TMap.add t.t_name (n+1) !trans
@@ -1344,7 +1344,7 @@ let rec update_system_alea rs trl c =
       let s = Etat.copy !write_st in
       let trl' = (t.t_name,t.t_args)::trl in
       system := Syst.add s trl' !system;
-      if verbose > 0 then
+      if profiling then
 	(
 	  let n = TMap.find t.t_name !execTrans in
 	  execTrans := TMap.add t.t_name (n+1) !execTrans
@@ -1419,8 +1419,11 @@ let update_system_bfs c rs tlist =
 	    if not (Syst.mem nst !system) then
 	      (
 		incr cpt_q;
-		let n = TMap.find t.t_name !execTrans in
-		execTrans := TMap.add t.t_name (n+1) !execTrans;
+		if profiling then
+		  (
+		    let n = TMap.find t.t_name !execTrans in
+		    execTrans := TMap.add t.t_name (n+1) !execTrans
+		  );
 		let trn' = (t.t_name, t.t_args)::trn in
       		system := Syst.add nst trn' !system;
 		Queue.add (depth + 1, nst, trn') to_do
@@ -1552,14 +1555,18 @@ let scheduler se =
       system := Syst.add st tri !system;
       (* printf "Init state :@."; *)
       (* print_state s; *)
-      try ignore (update_system_alea st tri 0)
+      (* try ignore (update_system_alea st tri 0) *)
       (* if upd = 1 then *)
       (*   update_system_dfs 0 (Some st) [] *)
-      (* else if upd = 2 then *)
-      (*   let tlist = valid_trans_list () in *)
-      (*   update_system_bfs forward_depth st tlist *)
-      (* else *)
-      (* printf "Normal end : %d" c *)
+      (* else *) 
+      try
+	if upd = 2 then
+          let tlist = valid_trans_list () in
+          update_system_bfs forward_depth st tlist
+	else
+	  ignore (update_system_alea st tri 0)
+	      
+	(* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
   Search.TimerScheduler.pause ()
@@ -1586,7 +1593,7 @@ let register_system s = current_system := s
 let init_sched () =
   init_system !current_system;
   init_transitions (!current_system).trans;
-  if verbose > 0 then
+  if profiling then
     List.iter (
       fun t -> 
 	trans := TMap.add t.t_name 0 !trans;
@@ -1604,21 +1611,11 @@ let run () =
       i (Syst.cardinal !system);
     ignore (scheduler !current_system) 
   done;
-  (* if verbose > 0 then ( *)
-  (*   notExecTrans := TMap.filter (fun _ n -> n = 0) !execTrans; *)
-  (*   notSeenTrans := TMap.filter (fun _ n -> n = 0) !trans; *)
-  (* ); *)
-  if verbose > 0 then
+  if profiling then
     (
       let inits = float_of_int (Syst.cardinal (!sinits)) in
       let nb_ex = float_of_int runs *. inits *. float_of_int nb_exec in
       printf "Nb exec : %.0f@." nb_ex;
-      (* let (tl, ntl) = TMap.fold ( *)
-      (* 	fun t i (tl, ntl) -> *)
-      (* 	  if i > 0 then *)
-      (* 	    ((t, (float_of_int i) /. nb_ex *. 100.) :: tl, ntl) *)
-      (* 	  else (tl, t::ntl) *)
-      (* ) !trans ([], []) in *)
       let (etl, netl) = TMap.fold (
       	fun t i (etl, netl) ->
 	  if i > 0 then
@@ -1628,9 +1625,6 @@ let run () =
 	    ((t, fp /. nb_ex *. 100., p, fi /. nb_ex *. 100., fi /. fp *. 100., i) :: etl, netl)
 	  else (etl, t::netl)
       ) !execTrans ([], []) in
-      (* let tl = List.fast_sort ( *)
-      (* 	fun (_, p) (_, p') -> - Pervasives.compare p p' *)
-      (* ) tl in *)
       let etl = List.fast_sort (
 	fun (_, _, _, p, _, _) (_, _, _,p', _, _) -> - Pervasives.compare p p'
       ) etl in
@@ -1645,15 +1639,15 @@ let run () =
       (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
       (* ) tl; *)
       printf "Executed transitions :@.";
-      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
+      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "EX/NB_EX" "ex/nb_vu" "tot_exec";
       List.iter (
 	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
       ) etl;
-      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
+      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "EX/NB_VU" "tot_exec";
       List.iter (
 	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
       ) etl'; 
-      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
+      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "VUES/TOT" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
       List.iter (
 	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
       ) etl'';
