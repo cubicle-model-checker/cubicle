@@ -1290,8 +1290,6 @@ module TMap = Map.Make (
 
 let trans = ref TMap.empty
 let execTrans = ref TMap.empty
-let notExecTrans = ref TMap.empty
-let notSeenTrans = ref TMap.empty
 
 let valid_trans_rc () =
   let rc = List.fold_left (
@@ -1352,52 +1350,53 @@ let rec update_system_alea rs trl c =
       update_system_alea s trl' (c+1)
     )
       
-let compare ((n1, pn1), _) ((n2, pn2), _) =
-  if TMap.mem n1 !execTrans && not (TMap.mem n2 !execTrans) then 1
-  else if not (TMap.mem n1 !execTrans) && TMap.mem n2 !execTrans then -1
-  (* else if np1 > np2 then -1 *)
-  (* else if np1 < np2 then 1 *)
-  else if Random.bool () then -1 else 1
+(* let compare ((n1, pn1), _) ((n2, pn2), _) = *)
+(*   if TMap.mem n1 !execTrans && not (TMap.mem n2 !execTrans) then 1 *)
+(*   else if not (TMap.mem n1 !execTrans) && TMap.mem n2 !execTrans then -1 *)
+(*   (\* else if np1 > np2 then -1 *\) *)
+(*   (\* else if np1 < np2 then 1 *\) *)
+(*   else if Random.bool () then -1 else 1 *)
 
-let rec find_and_exec_gt =
-  function
-    | [] -> raise Exit
-    | t :: tl ->
-      List.iter (fun a -> a ()) t.t_assigns;
-      let updts = valid_upd t.t_updates in
-      List.iter (fun us -> List.iter (fun u -> u ()) us) updts;
-      if Syst.mem !write_st !system then
-	find_and_exec_gt tl
-      else (t, tl)
+(* let rec find_and_exec_gt = *)
+(*   function *)
+(*     | [] -> raise Exit *)
+(*     | t :: tl -> *)
+(*       List.iter (fun a -> a ()) t.t_assigns; *)
+(*       let updts = valid_upd t.t_updates in *)
+(*       List.iter (fun us -> List.iter (fun u -> u ()) us) updts; *)
+(*       if Syst.mem !write_st !system then *)
+(* 	find_and_exec_gt tl *)
+(*       else (t, tl) *)
 
-let rec update_system_dfs c workst parents =
-  if c = nb_exec then ()
-  else
-    try 
-      let (tlist, parents) =
-	match workst with
-	  | Some rs -> read_st := rs;
-	    (valid_trans_list (), parents);
-	  | None -> match parents with
-	      | [] -> raise (TEnd c)
-	      | (rs, tli) :: tl -> read_st := rs;
-		(tli, tl)
-      in
-      write_st := Etat.copy (!read_st);
-      let (t, tlist') = find_and_exec_gt tlist in
-      let trl = Syst.find !read_st !system in
-      let s = Etat.copy !write_st in
-      system := Syst.add s ((t.t_name, t.t_args)::trl) !system;
-      let n = TMap.find t.t_name !execTrans in
-      execTrans := TMap.add t.t_name (n+1) !execTrans;
-      update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents)
-    with Exit -> update_system_dfs c None parents
+(* let rec update_system_dfs c workst parents = *)
+(*   if c = nb_exec then () *)
+(*   else *)
+(*     try  *)
+(*       let (tlist, parents) = *)
+(* 	match workst with *)
+(* 	  | Some rs -> read_st := rs; *)
+(* 	    (valid_trans_list (), parents); *)
+(* 	  | None -> match parents with *)
+(* 	      | [] -> raise (TEnd c) *)
+(* 	      | (rs, tli) :: tl -> read_st := rs; *)
+(* 		(tli, tl) *)
+(*       in *)
+(*       write_st := Etat.copy (!read_st); *)
+(*       let (t, tlist') = find_and_exec_gt tlist in *)
+(*       let trl = Syst.find !read_st !system in *)
+(*       let s = Etat.copy !write_st in *)
+(*       system := Syst.add s ((t.t_name, t.t_args)::trl) !system; *)
+(*       let n = TMap.find t.t_name !execTrans in *)
+(*       execTrans := TMap.add t.t_name (n+1) !execTrans; *)
+(*       update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents) *)
+(*     with Exit -> update_system_dfs c None parents *)
 
 let update_system_bfs c rs tlist =
   let cpt_f = ref 0 in
   let cpt_q = ref 1 in
   let to_do = Queue.create () in
   let trl = Syst.find rs !system in
+  printf "Depth : %d@." c;
   Queue.add (0, rs, trl) to_do;
   while not (Queue.is_empty to_do) do
     let depth, rs, trn = Queue.take to_do in
@@ -1549,25 +1548,28 @@ let scheduler se =
   Search.TimerScheduler.start ();
   Syst.iter (
     fun st tri ->
-      (* printf "Beginning@."; *)
+      printf "BEGINNING@.";
       read_st := st;
       write_st := Etat.copy st;
       system := Syst.add st tri !system;
       (* printf "Init state :@."; *)
-      (* print_state s; *)
+      (* print_state st; *)
       (* try ignore (update_system_alea st tri 0) *)
       (* if upd = 1 then *)
       (*   update_system_dfs 0 (Some st) [] *)
       (* else *) 
-      try
+      (try
 	if upd = 2 then
           let tlist = valid_trans_list () in
+	  printf "TLIST : %d@." (List.length tlist);
           update_system_bfs forward_depth st tlist
 	else
-	  ignore (update_system_alea st tri 0)
+	  update_system_alea st tri 0
 	      
 	(* printf "Normal end : %d" c *)
       with TEnd i -> printf "Prematured end : %d" i
+      );
+      printf "END@."
   ) !sinits;
   Search.TimerScheduler.pause ()
   
