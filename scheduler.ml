@@ -1391,8 +1391,9 @@ let rec update_system_alea rs trl c =
 (*       update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents) *)
 (*     with Exit -> update_system_dfs c None parents *)
 
+let cpt_f = ref 0
+
 let update_system_bfs c rs tlist =
-  let cpt_f = ref 0 in
   let cpt_q = ref 1 in
   let to_do = Queue.create () in
   let trl = Syst.find rs !system in
@@ -1616,7 +1617,9 @@ let run () =
   if profiling then
     (
       let inits = float_of_int (Syst.cardinal (!sinits)) in
-      let nb_ex = float_of_int runs *. inits *. float_of_int nb_exec in
+      let nb_ex = 
+	if upd = 2 then float_of_int !cpt_f 
+	else float_of_int runs *. inits *. float_of_int nb_exec in
       printf "Nb exec : %.0f@." nb_ex;
       let (etl, netl) = TMap.fold (
       	fun t i (etl, netl) ->
