@@ -1311,6 +1311,7 @@ let valid_trans_rc () =
   ) !trans_rc !trans_list in
   RandClasses.update rc
 
+
 let valid_trans_list () =
   List.fold_left (
     fun acc t -> 
@@ -1393,18 +1394,18 @@ let rec update_system_alea rs trl c =
 
 let cpt_f = ref 0
 
-let update_system_bfs c rs tlist =
+let update_system_bfs c rs =
   let cpt_q = ref 1 in
   let to_do = Queue.create () in
   let trl = Syst.find rs !system in
-  Queue.add (0, rs, trl) to_do;
+  Queue.add (1, rs, trl) to_do;
   while not (Queue.is_empty to_do) do
     let depth, rs, trn = Queue.take to_do in
+    incr cpt_f;
     decr cpt_q;
-    if depth < c then
+    if depth <= c then
       (
-	incr cpt_f;
-	if not quiet then
+	if not quiet && !cpt_f mod 1000 = 0 then
           eprintf "%d (%d)@." !cpt_f !cpt_q;
 	read_st := rs;
 	let tlist = valid_trans_list () in
@@ -1553,8 +1554,10 @@ let scheduler se =
       system := Syst.add st tri !system;
       try
 	if upd = 2 then
-          let tlist = valid_trans_list () in
-	  update_system_bfs forward_depth st tlist
+	  (
+	    decr cpt_f;
+            update_system_bfs forward_depth st
+	  )
 	else
 	  update_system_alea st tri 0
       with TEnd i -> printf "Prematured end : %d" i
@@ -1632,17 +1635,17 @@ let run () =
       (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
       (* ) tl; *)
       printf "Executed transitions :@.";
-      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "EX/NB_EX" "ex/nb_vu" "tot_exec";
+      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "EXEC/TOT" "exec/vues" "exec";
       List.iter (
-	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-      ) etl;
-      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "vues/tot" "tot_vues" "ex/nb_ex" "EX/NB_VU" "tot_exec";
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl; 
+      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "exec/tot" "EXEC/VUES" "exec";
       List.iter (
-	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-      ) etl'; 
-      printf "\n\t%-26s | %6s | %6s | %6s | %6s | %6s\n@." "Transitions" "VUES/TOT" "tot_vues" "ex/nb_ex" "ex/nb_vu" "tot_exec";
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl';
+      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "VUES/TOT" "vues" "exec/tot" "exec/vues" "exec";
       List.iter (
-	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %7.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
       ) etl'';
       (* if (TMap.cardinal !notExecTrans > 0) then *)
       (* 	( *)
