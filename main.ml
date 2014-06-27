@@ -66,7 +66,7 @@ let report (b,e) =
 let _ = 
   let lb = from_channel cin in 
   try
-    Random.self_init ();
+    Random.init seed;
     let s = Parser.system Lexer.token lb in
     let ts = Typing.system s in
     if bitsolver then Bitsolver.init_env (List.hd ts) max_proc;

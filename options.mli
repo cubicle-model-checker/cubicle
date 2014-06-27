@@ -97,3 +97,4 @@ val prio_list : int list ref
 
 val ofile : string option
 val init_proc : bool ref
+val seed : int

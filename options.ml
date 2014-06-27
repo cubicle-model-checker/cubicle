@@ -110,6 +110,7 @@ let var_init = Hashtbl.create 11
 let var_ninit = Hashtbl.create 11  
 let trans_prio = Hashtbl.create 11 
 let prio_list = ref []
+let seed = ref 0
       
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
@@ -170,6 +171,7 @@ let specs =
     "-equit", Arg.Set bequit, "Try to see if the system is equitable";
     "-compare", Arg.Set compare, "Use both the oracle to compare the results";
     "-upd", Arg.Set_int upd, "Random update or clever update";
+    "-seed", Arg.Set_int seed, "Seed to initialize random";
   ]
 
 let alspecs = Arg.align specs
@@ -253,5 +255,6 @@ let runs = !runs
 let bequit = !bequit
 let compare = !compare
 let schedule = !schedule
+let seed = !seed
 
 let ofile = !ofile
