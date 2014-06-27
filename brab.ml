@@ -88,7 +88,7 @@ let search_backtrack_brab search invariants procs uns =
 	if not quiet then
           eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	if o.t_nb >= 0 then raise (Search.Unsafe faulty);
-        
+        exit 1;
   (* Enumerative.replay_trace_and_expand procs faulty; *)
         
 	candidates := remove_cand o faulty !candidates uns;
