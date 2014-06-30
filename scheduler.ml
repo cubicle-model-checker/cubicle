@@ -1503,49 +1503,50 @@ let filter t_syst_l =
   with Not_found -> None
 
 let hist_cand cand =
-  let (pl, sa) = cand.t_unsafe in
-  let subst = Ast.all_permutations pl list_threads in
-  let good = Syst.filter (
-    fun st _ -> 
-      List.exists (
-	fun sub ->
-	  SAtom.for_all (
-	    fun a ->
-	      match a with
-		| True -> true
-		| False -> false
-		| Comp (t1, op, t2) -> 
-		  let t1_v = get_value_st sub st t1 in
-		  let t2_v = get_value_st sub st t2 in
-		  begin
-		    match t1_v, t2_v with
-		      | Numb n1, Numb n2 ->
-			let op' = find_nop op in
-			op' n1 n2
-		      | Proc p1, Proc p2 -> 
-			let op' = find_op op in
-			op' p1 p2
-		      | Hstr h1, Hstr h2 ->
-			begin
-			  match op with
-			    | Eq -> Hstring.equal h1 h2
-			    | Neq -> not (Hstring.equal h1 h2)
-			    | _ -> assert false
-			end
-		       (* Problem with ref_count.cub, assertion failure *)
-		      | _ -> assert false
-		  end
-		| _ -> assert false
-	  ) sa
-      ) subst
-  ) !system in
-  printf "Number of good states %d@." (Syst.cardinal good);
-  let gs = ref (Syst.choose good) in
-  Syst.iter (
-    fun st' trn' -> if List.length trn' < List.length (snd !gs) then gs := (st', trn')
-  ) good;
-  !gs
-
+  try
+    let (pl, sa) = cand.t_unsafe in
+    let subst = Ast.all_permutations pl list_threads in
+    let good = Syst.filter (
+      fun st _ -> 
+	List.exists (
+	  fun sub ->
+	    SAtom.for_all (
+	      fun a ->
+		match a with
+		  | True -> true
+		  | False -> false
+		  | Comp (t1, op, t2) -> 
+		    let t1_v = get_value_st sub st t1 in
+		    let t2_v = get_value_st sub st t2 in
+		    begin
+		      match t1_v, t2_v with
+			| Numb n1, Numb n2 ->
+			  let op' = find_nop op in
+			  op' n1 n2
+			| Proc p1, Proc p2 -> 
+			  let op' = find_op op in
+			  op' p1 p2
+			| Hstr h1, Hstr h2 ->
+			  begin
+			    match op with
+			      | Eq -> Hstring.equal h1 h2
+			      | Neq -> not (Hstring.equal h1 h2)
+			      | _ -> assert false
+			  end
+		      (* Problem with ref_count.cub, assertion failure *)
+			| _ -> assert false
+		    end
+		  | _ -> assert false
+	    ) sa
+	) subst
+    ) !system in
+    printf "Number of good states %d@." (Syst.cardinal good);
+    let gs = ref (Syst.choose good) in
+    Syst.iter (
+      fun st' trn' -> if List.length trn' < List.length (snd !gs) then gs := (st', trn')
+    ) good;
+    !gs
+  with Not_found -> printf "HIST CAND@."; exit 1
  (* MAIN *)
 
 
@@ -1598,82 +1599,83 @@ let init_sched () =
     ) !trans_list
 
 let run () = 
-  assert (!current_system <> dummy_system);
-  read_st := Etat.init ();
-  write_st := Etat.init ();
-  init_sched ();
-  let runs = if upd = 2 then 1 else runs in
-  for i = 1 to runs do 
-    if i mod 100 = 0 
-    then printf "Execution #%d : nb_st : %d@." 
-      i (Syst.cardinal !system);
-    ignore (scheduler !current_system) 
-  done;
-  if profiling then
-    (
-      let inits = float_of_int (Syst.cardinal (!sinits)) in
-      let nb_ex = 
-	if upd = 2 then float_of_int !cpt_f 
-	else float_of_int runs *. inits *. float_of_int nb_exec in
-      printf "Nb exec : %.0f@." nb_ex;
-      let (etl, netl) = TMap.fold (
-	fun t i (etl, netl) ->
-	  if i > 0 then
-	    let fi = float_of_int i in
-	    let p = TMap.find t !trans in
-	    let fp = float_of_int p in
-	    ((t, fp /. nb_ex *. 100., p, fi /. nb_ex *. 100., fi /. fp *. 100., i) :: etl, netl)
-	  else (etl, t::netl)
-      ) !execTrans ([], []) in
-      let etl = List.fast_sort (
-	fun (_, _, _, p, _, _) (_, _, _,p', _, _) -> - Pervasives.compare p p'
-      ) etl in
-      let etl' = List.fast_sort (
-	fun (_, _, _, _, p, _) (_, _, _, _, p', _) -> - Pervasives.compare p p'
-      ) etl in
-      let etl'' = List.fast_sort (
-	fun (_, p, _, _, _, _) (_, p', _, _, _, _) -> - Pervasives.compare p p'
-      ) etl in
-       (* printf "Seen transitions :@."; *)
-       (* List.iter ( *)
-       (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
-       (* ) tl; *)
-      printf "Executed transitions :@.";
-      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "EXEC/TOT" "exec/vues" "exec";
-      List.iter (
-	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-      ) etl; 
-      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "exec/tot" "EXEC/VUES" "exec";
-      List.iter (
-	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-      ) etl';
-      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "VUES/TOT" "vues" "exec/tot" "exec/vues" "exec";
-      List.iter (
-	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-      ) etl'';
-       (* if (TMap.cardinal !notExecTrans > 0) then *)
-       (* 	( *)
-       (* 	  printf "Not taken but seen transitions :@."; *)
-       (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
-       (* 	) else (printf "All transitions that were seen were taken !@."); *)
-       (* if (TMap.cardinal !notSeenTrans > 0) then *)
-       (* 	( *)
-       (* 	  printf "Not seen transitions :@."; *)
-       (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
-       (* 	) else (printf "All transitions were seen !@."); *)
-      printf "--------------------------@.";
-    );
-  printf "Total scheduled states : %d
+  try
+    assert (!current_system <> dummy_system);
+    read_st := Etat.init ();
+    write_st := Etat.init ();
+    init_sched ();
+    let runs = if upd = 2 then 1 else runs in
+    for i = 1 to runs do 
+      if i mod 100 = 0 
+      then printf "Execution #%d : nb_st : %d@." 
+	i (Syst.cardinal !system);
+      ignore (scheduler !current_system) 
+    done;
+    if profiling then
+      (
+	let inits = float_of_int (Syst.cardinal (!sinits)) in
+	let nb_ex = 
+	  if upd = 2 then float_of_int !cpt_f 
+	  else float_of_int runs *. inits *. float_of_int nb_exec in
+	printf "Nb exec : %.0f@." nb_ex;
+	let (etl, netl) = TMap.fold (
+	  fun t i (etl, netl) ->
+	    if i > 0 then
+	      let fi = float_of_int i in
+	      let p = TMap.find t !trans in
+	      let fp = float_of_int p in
+	      ((t, fp /. nb_ex *. 100., p, fi /. nb_ex *. 100., fi /. fp *. 100., i) :: etl, netl)
+	    else (etl, t::netl)
+	) !execTrans ([], []) in
+	let etl = List.fast_sort (
+	  fun (_, _, _, p, _, _) (_, _, _,p', _, _) -> - Pervasives.compare p p'
+	) etl in
+	let etl' = List.fast_sort (
+	  fun (_, _, _, _, p, _) (_, _, _, _, p', _) -> - Pervasives.compare p p'
+	) etl in
+	let etl'' = List.fast_sort (
+	  fun (_, p, _, _, _, _) (_, p', _, _, _, _) -> - Pervasives.compare p p'
+	) etl in
+      (* printf "Seen transitions :@."; *)
+      (* List.iter ( *)
+      (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
+      (* ) tl; *)
+	printf "Executed transitions :@.";
+	printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "EXEC/TOT" "exec/vues" "exec";
+	List.iter (
+	  fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+	) etl; 
+	printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "exec/tot" "EXEC/VUES" "exec";
+	List.iter (
+	  fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+	) etl';
+	printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "VUES/TOT" "vues" "exec/tot" "exec/vues" "exec";
+	List.iter (
+	  fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+	) etl'';
+      (* if (TMap.cardinal !notExecTrans > 0) then *)
+      (* 	( *)
+      (* 	  printf "Not taken but seen transitions :@."; *)
+      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
+      (* 	) else (printf "All transitions that were seen were taken !@."); *)
+      (* if (TMap.cardinal !notSeenTrans > 0) then *)
+      (* 	( *)
+      (* 	  printf "Not seen transitions :@."; *)
+      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
+      (* 	) else (printf "All transitions were seen !@."); *)
+	printf "--------------------------@.";
+      );
+    printf "Total scheduled states : %d
  --------------------------------\n@." (Syst.cardinal !system);
-  if verbose > 1 && not quiet then
-    begin
-      let count = ref 1 in
-      Syst.iter (
-  	fun st -> 
-	  printf "%d : " !count; 
-	  incr count; 
-	  print_system st
-      ) (!system)
-    end
-      
+    if verbose > 1 && not quiet then
+      begin
+	let count = ref 1 in
+	Syst.iter (
+  	  fun st -> 
+	    printf "%d : " !count; 
+	    incr count; 
+	    print_system st
+	) (!system)
+      end
+  with Not_found -> printf "RUN@."; exit 1
 

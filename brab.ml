@@ -82,9 +82,11 @@ let search_backtrack_brab search invariants procs uns =
 	  (* FIXME Bug when search is parallel *)
 	let o = origin faulty in
 	printf "Approx : \n\t%a@." Pretty.print_system o;
-  	let sl = Enumerative.hist_cand o cpt_approx in
-  	printf "Obtained by :@.";
-  	List.iter (fun (st, hl, args) -> List.iter2 (fun t arg -> printf "\n\t%a %a@." Hstring.print t (Hstring.print_list " ") arg) hl args) sl;
+  	(* let sl = try Enumerative.hist_cand o cpt_approx *)
+  	(*   with Not_found -> printf "HIST@." *)
+	(* in *)
+	(* printf "Obtained by :@."; *)
+  	(* List.iter (fun (st, hl, args) -> List.iter2 (fun t arg -> printf "\n\t%a %a@." Hstring.print t (Hstring.print_list " ") arg) hl args) sl; *)
 	if not quiet then
           eprintf "The node %d = %a is UNSAFE@." o.t_nb Pretty.print_system o;
 	if o.t_nb >= 0 then raise (Search.Unsafe faulty);
@@ -303,14 +305,17 @@ let subsuming_candidate s =
     | [], [] -> []
     | [c], [] -> eprintf "Blind scheduler@.";
 	         printf "Approx : \n\t%a@." Pretty.print_system c;
-	         let sl = Enumerative.hist_cand c cpt_approx in
-	         printf "Obtained by :@.";
-	         List.iter (fun (st, hl, args) ->
-                            List.iter2 (fun h a ->
-                                        printf "\t%a(%a)@."
-                                               Hstring.print h
-                                               Pretty.print_args a) hl args
-                           ) sl;
+	         (try 
+		   let sl = Enumerative.hist_cand c cpt_approx in
+	           printf "Obtained by :@.";
+	           List.iter (fun (st, hl, args) ->
+                     List.iter2 (fun h a ->
+                       printf "\t%a(%a)@."
+                         Hstring.print h
+                         Pretty.print_args a) hl args
+                   ) sl
+		  with Not_found -> ())
+		 ;
 		 []
     | [], [c] -> let (st, trn) = Scheduler.hist_cand c in
 	         eprintf "------Blind enumerative@.------";
