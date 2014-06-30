@@ -1336,21 +1336,23 @@ let rec update_system_alea rs trl c =
   if c = nb_exec then ()
   else
     (
-      read_st := rs;
-      let rc = valid_trans_rc () in
-      let t = RandClasses.choose rc in
-      List.iter (fun a -> a ()) t.t_assigns;
-      let updts = valid_upd t.t_updates in 
-      List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-      let s = Etat.copy !write_st in
-      let trl' = (t.t_name,t.t_args)::trl in
-      system := Syst.add s trl' !system;
-      if profiling then
-	(
-	  let n = TMap.find t.t_name !execTrans in
-	  execTrans := TMap.add t.t_name (n+1) !execTrans
-	);
-      update_system_alea s trl' (c+1)
+      try
+	read_st := rs;
+	let rc = valid_trans_rc () in
+	let t = RandClasses.choose rc in
+	List.iter (fun a -> a ()) t.t_assigns;
+	let updts = valid_upd t.t_updates in 
+	List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+	let s = Etat.copy !write_st in
+	let trl' = (t.t_name,t.t_args)::trl in
+	system := Syst.add s trl' !system;
+	if profiling then
+	  (
+	    let n = TMap.find t.t_name !execTrans in
+	    execTrans := TMap.add t.t_name (n+1) !execTrans
+	  );
+	update_system_alea s trl' (c+1)
+      with Invalid_argument _ -> ()
     )
 
  (* let compare ((n1, pn1), _) ((n2, pn2), _) = *)
