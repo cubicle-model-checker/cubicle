@@ -92,8 +92,7 @@ val var_init : (Hstring.t, value list) Hashtbl.t
 val var_ninit : (Hstring.t, unit) Hashtbl.t
 val trans_prio : (Hstring.t, int) Hashtbl.t
 val prio_list : int list ref
-
-(* val tab_init : (int * Hstring.t list) Hashtbl.t *)
+val path : (Hstring.t, Hstring.t list) Hashtbl.t
 
 val ofile : string option
 val init_proc : bool ref

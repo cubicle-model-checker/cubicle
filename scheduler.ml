@@ -108,6 +108,7 @@ type transition =
       t_ureqs : (unit -> bool) list list list;
       t_assigns : (unit -> unit) list;
       t_updates : ((unit -> bool) list * (unit -> unit)) list list list;
+      t_path : transition list;
     }
 
 (* Module to manage multi-dimensional arrays *)
@@ -415,11 +416,11 @@ module RandClasses : RC with type elt = transition = struct
 
 end    
 
- (* This list will contain all the transitions *)
+(* This list will contain all the transitions *)
 let trans_list = ref []
 let trans_rc = ref (RandClasses.init prio_list)
 
- (* GLOBAL VARIABLES *)
+(* GLOBAL VARIABLES *)
 
 module Array = DimArray (OrderedValue)
 module Etat = State (OrderedValue) (Array)
@@ -438,10 +439,10 @@ let sinits = ref (Syst.empty)
 let read_st = ref (Etat.init ())
 let write_st = ref (Etat.init ())
 
- (* Types *)
+(* Types *)
 let htbl_types = Hashtbl.create 11
 
- (* Filling htbl_types with default types (proc, bool, int and real) *)
+(* Filling htbl_types with default types (proc, bool, int and real) *)
 let () = 
   List.iter (
     fun (constr, fields) -> 
@@ -493,13 +494,13 @@ module TIS = Set.Make (
 
 let htbl_abstypes = Hashtbl.create 11
 
- (* This hashtbl contains variables binded to their representant
-    and their type *)
+(* This hashtbl contains variables binded to their representant
+   and their type *)
 let ec = Hashtbl.create 17
- (* This hashtbl contains variables binded to :
-    - int or real : the list of their forbiddent values
-    - rest : the list of their possible values
-    and the list of the representants with which they differ *)
+(* This hashtbl contains variables binded to :
+   - int or real : the list of their forbiddent values
+   - rest : the list of their possible values
+   and the list of the representants with which they differ *)
 let dc = Hashtbl.create 17
 
 let inits = Hashtbl.create 17
@@ -508,7 +509,7 @@ let init_list = ref []
 
 let ntValues = Hashtbl.create 17
 
- (* USEFUL METHODS *)
+(* USEFUL METHODS *)
 
 
 let print_time fmt sec =
@@ -516,13 +517,13 @@ let print_time fmt sec =
   let extrasec = sec -. (minu *. 60.) in
   fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
 
- (* Tranform a constant in a num *)
+(* Tranform a constant in a num *)
 let value_c c =
   match MConst.is_num c with
     | Some e -> e
     | None -> error (MustBeSingleNum)
 
- (* Return the operator on int (for proc) *)
+(* Return the operator on int (for proc) *)
 let find_op =
   function
     | Eq -> (=)
@@ -530,7 +531,7 @@ let find_op =
     | Le -> (<=)
     | Neq -> (<>)
 
- (* Return the operator on Num.num (for int and real) *)
+(* Return the operator on Num.num (for int and real) *)
 let find_nop =
   function
     | Eq -> (=/)
@@ -538,7 +539,7 @@ let find_nop =
     | Le -> (<=/)
     | Neq -> (<>/)
 
- (* Return the first type constructor *)
+(* Return the first type constructor *)
 let default_type g_type =
   if Hashtbl.mem htbl_abstypes g_type 
   then raise Exit 
@@ -547,10 +548,10 @@ let default_type g_type =
       | hd::_ -> hd
       | _ -> assert false
 
- (* Intersection of two int lists *)
+(* Intersection of two int lists *)
 let inter l1 l2s =
   let l1s = List.sort Pervasives.compare l1 in
-   (* l2s is already sorted *)
+  (* l2s is already sorted *)
   let rec inter' l1 l2 =
     match l1, l2 with
       | [], _ -> l2
@@ -562,7 +563,7 @@ let inter l1 l2s =
 		       hd2::l'
   in inter' l1s l2s
 
- (* Return the name of the representant (Hstring.t) *)
+(* Return the name of the representant (Hstring.t) *)
 let rep_name n =
   let (rep, _) = Hashtbl.find ec n in
   match rep with
@@ -588,17 +589,17 @@ let abst_replace id rep ts =
       then Hashtbl.replace htbl_abstypes a' (rep, (TI.union ts ts'))
   ) htbl_abstypes
 
- (* VALUE METHODS *)
+(* VALUE METHODS *)
 
- (* Return a constant value *)
+(* Return a constant value *)
 let get_cvalue =
   function
     | Const c -> Numb (value_c c)
     | Elem (id, Constr) -> Hstr id
     | _ -> assert false
 
- (* Return a constant value or the value of a variable
-    (global or array) *)
+(* Return a constant value or the value of a variable
+   (global or array) *)
 let rec get_value sub =
   function
     | (Const _ as v) | (Elem (_, Constr) as v) -> get_cvalue v
@@ -631,7 +632,7 @@ let v_equal v1 v2 =
 
 let type_st st = match st with RGlob t | RArr (t, _) -> t
 
- (* DISPLAY METHODS *)
+(* DISPLAY METHODS *)
 
 let print_value f v =
   match v with
@@ -754,11 +755,11 @@ let print_procninit () =
   printf "@."
 
 
- (* INITIALIZATION METHODS *)
+(* INITIALIZATION METHODS *)
 
 
- (* Each type is associated to his constructors 
-    The first one is considered as the default type *)
+(* Each type is associated to his constructors 
+   The first one is considered as the default type *)
 let init_types type_defs globals arrays =
   let upd_abst n =
     Hashtbl.add htbl_abstypes n (n, TI.empty);
@@ -796,9 +797,9 @@ let init_types type_defs globals arrays =
       Hashtbl.add htbl_types t_name fields
   ) type_defs
 
- (* Initialization of the global variables to their
-    default constructor, of the equivalence classes and
-    of the difference classes *)
+(* Initialization of the global variables to their
+   default constructor, of the equivalence classes and
+   of the difference classes *)
 let init_globals globals =
   List.iter (
     fun (g_name, g_type) ->
@@ -807,9 +808,9 @@ let init_globals globals =
       Hashtbl.add ec g_name (VVar g_name, RGlob t)
   ) globals
 
- (* Initialization of the arrays with their default
-    constructor (deterministic version) of the equivalence classes and
-    of the difference classes *)
+(* Initialization of the arrays with their default
+   constructor (deterministic version) of the equivalence classes and
+   of the difference classes *)
 let init_arrays arrays =
   List.iter (
     fun (a_name, (a_dims, a_type)) ->
@@ -819,25 +820,25 @@ let init_arrays arrays =
       Hashtbl.add ec a_name (VVar a_name, RArr (t, dims))
   ) arrays
 
- (* Execution of the real init method from the cubicle file 
-    to initialize the equivalence classes and difference classes *)
+(* Execution of the real init method from the cubicle file 
+   to initialize the equivalence classes and difference classes *)
 let init_htbls (vars, atoms) =
   List.iter (
     fun satom ->
-       (* First look, equalities *)
+      (* First look, equalities *)
       SAtom.iter (
 	fun atom ->
 	  match atom with
 	    | Comp (t1, Eq, t2) ->
 	      begin
 		match t1, t2 with
-		   (* Var = Const or Const = Var *)
+		  (* Var = Const or Const = Var *)
 		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as r) 
 		  | ((Elem (_, Constr) | Const _) as r), (Elem (id1, Glob) | Access (id1, _)) ->
 		    let (rep, _) = Hashtbl.find ec id1 in
 		    let v = get_cvalue r in
 		    ec_replace rep v
-		   (* Var or Tab[] = Var or Tab[] *)
+		  (* Var or Tab[] = Var or Tab[] *)
 		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
 		    let (rep, st) as t1 = Hashtbl.find ec id1 in
 		    let (rep' , st') as t2 = Hashtbl.find ec id2 in
@@ -861,7 +862,7 @@ let init_htbls (vars, atoms) =
 	fun n (rep, st) ->
 	  try
 	    let t = type_st st in
-	     (* Abstract type *)
+	    (* Abstract type *)
 	    if n = t then raise Exit
 	    else if (VVar n) = rep then
 	      let ty, ts = 
@@ -879,7 +880,7 @@ let init_htbls (vars, atoms) =
 	      incr cfc
 	  with Exit -> Hashtbl.replace ec n (Hstr n, st)
       ) ec;
-       (* Second look, differences *)
+      (* Second look, differences *)
       SAtom.iter (
 	fun atom ->
 	  match atom with
@@ -887,10 +888,10 @@ let init_htbls (vars, atoms) =
 	    | Comp (t1, Neq, t2) ->
 	      begin
 		match t1, t2 with
-		   (* Var or Tab[] <> Const or Const <> Var or Tab[] *)
+		  (* Var or Tab[] <> Const or Const <> Var or Tab[] *)
 		  | (Elem (id1, Glob) | Access (id1, _)), ((Elem (_, Constr) | Const _) as c) 
 		  | ((Elem (_, Constr) | Const _) as c), (Elem (id1, Glob) | Access (id1, _)) ->
-		     (* Delete the constr from the possible values of the variable representant *)
+		    (* Delete the constr from the possible values of the variable representant *)
 		    begin
 		      try
 			let h = rep_name id1 in
@@ -904,7 +905,7 @@ let init_htbls (vars, atoms) =
 			Hashtbl.replace dc h (ty, ts', ti, cfc)
 		      with ConstrRep -> () (* Strange but allowed *)
 		    end
-		   (* Var or Tab[] <> Var or Tab[] *)
+		  (* Var or Tab[] <> Var or Tab[] *)
 		  | (Elem (id1, Glob) | Access (id1, _)), (Elem (id2, Glob) | Access (id2, _)) ->
 		    begin
 		      (try let (rep, cfc) = Hashtbl.find htbl_abstypes id1 in
@@ -955,7 +956,7 @@ let upd_options () =
 let upd_init_list rep ts =
   let (_, st) = Hashtbl.find ec rep in
   Hashtbl.remove ec rep;
-   (* Possible values according to the .sched file *)
+  (* Possible values according to the .sched file *)
   let ts' = 
     if (init_proc && not (Hashtbl.mem var_ninit rep))
     then (
@@ -1083,10 +1084,10 @@ let initialization init =
   printf "Nb init states : %d@." (Syst.cardinal (!sinits))
 
 
- (* SUBSTITUTION METHODS *)
+(* SUBSTITUTION METHODS *)
 
 
- (* Here, optimization needed if constant values *)     
+(* Here, optimization needed if constant values *)     
 let subst_req sub req =
   let f = fun () ->
     match req with
@@ -1110,7 +1111,7 @@ let subst_req sub req =
 		  | Neq -> not (Hstring.equal h1 h2)
 		  | _ -> assert false
 	      end
-	     (* Problem with ref_count.cub, assertion failure *)
+	    (* Problem with ref_count.cub, assertion failure *)
 	    | Hstr h, Proc i1 -> let (p, _) = List.find (fun (_, i) -> i1 = i) sub in 
 				 printf "TODO %a, %a = %d@." Hstring.print h Hstring.print p i1; 
 				 exit 1
@@ -1119,23 +1120,23 @@ let subst_req sub req =
       | _ -> assert false
   in f
 
- (* Type : (unit -> bool) list list list
-    ____ (fun () -> bool) conj disj conj *)
+(* Type : (unit -> bool) list list list
+   ____ (fun () -> bool) conj disj conj *)
 let subst_ureq subst subsm ureq =
   List.fold_left (
-     (* Conjonction of forall_other z -> SAtom List *)
+    (* Conjonction of forall_other z -> SAtom List *)
     fun conj_acc (k, sa_lst_ureq) ->
       let subst_satom =
 	List.fold_left (
-	   (* Disjonction of SAtom *)
+	  (* Disjonction of SAtom *)
 	  fun disj_acc sa_ureq ->
 	    let subst_satom_list =
 	      SAtom.fold (
-		 (* Conjonction of Atom *)
+		(* Conjonction of Atom *)
 		fun ureq conj_acc' ->
 		  let subst_atom =
 		    List.fold_left (
-		       (* Conjonction of substitute Atom *)
+		      (* Conjonction of substitute Atom *)
 		      fun subst_atom s ->
 			let sub = (k, s) in
 			(subst_req (sub::subst) ureq)::subst_atom
@@ -1148,7 +1149,7 @@ let subst_ureq subst subsm ureq =
   ) [] ureq 
 
 let substitute_req sub reqs =
-   (* Existential requires management *)
+  (* Existential requires management *)
   SAtom.fold (
     fun req acc ->
       try
@@ -1192,14 +1193,14 @@ let substitute_updts sub assigns upds =
   (subst_assigns, subst_upds)
 
 
- (* SYSTEM INIT *)
+(* SYSTEM INIT *)
 
 let init_system se =
   init_types se.type_defs se.globals se.arrays;
-   (* This part may change, deterministic for now *)
+  (* This part may change, deterministic for now *)
   init_arrays se.arrays;
   init_globals se.globals;
-   (* --- After this, all the variables and arrays are initialized --- *)
+  (* --- After this, all the variables and arrays are initialized --- *)
   initialization se.init;
   Hashtbl.clear ec;
   Hashtbl.clear dc;
@@ -1208,16 +1209,17 @@ let init_system se =
 
 let init_transitions trans =
   let ub = List.length prio_list - 1 in
-  trans_list := List.fold_left (
-    fun acc tr ->
-       (* Associate the processes to numbers (unique) *)
+  let htrans = Hashtbl.create 17 in
+  List.iter (
+    fun tr ->
+      (* Associate the processes to numbers (unique) *)
       let subs = 
 	if List.length tr.tr_args > nb_threads 
 	then [] (* Should not occure *)
 	else Ast.all_permutations tr.tr_args list_threads
       in
-      List.fold_left (
-	fun acc' sub -> 
+      List.iter (
+	fun sub -> 
 	  try 
 	    let (_, pl) = List.split sub in
 	    let subsm = inter pl list_threads in
@@ -1230,7 +1232,7 @@ let init_transitions trans =
 		let p = Hstring.make ("#" ^ si) in
 		p :: pn
 	    ) sub [] in
-	    let grp = try Hashtbl.find trans_prio tr.tr_name 
+	    let grp = try Hashtbl.find Options.trans_prio tr.tr_name 
 	      with Not_found -> ub
 	    in
 	    let t = 
@@ -1240,16 +1242,28 @@ let init_transitions trans =
 		t_reqs = subst_req;
 		t_ureqs = subst_ureq;
 		t_assigns = s_assigns;
-		t_updates = s_updates
+		t_updates = s_updates;
+		t_path = [];
 	      } in
-	    t::acc'
-	  with EFalse -> acc'
-      ) acc subs
-  ) [] trans
+	    Hashtbl.add htrans tr.tr_name t
+	  with EFalse -> ()
+      ) subs
+  ) trans;
+  trans_list := Hashtbl.fold (
+    fun n t acc ->
+      try let path = Hashtbl.find Options.path n in
+	  let p = List.fold_right (
+	    fun n' acc ->
+	      let t' = Hashtbl.find htrans n' in
+	      t' :: acc
+	  ) path [] in
+	  {t with t_path = p} :: acc
+      with Not_found -> t :: acc
+  ) htrans []
+    
 
 
-
- (* SCHEDULING *)
+(* SCHEDULING *)
 
 
 let valid_req req =
@@ -1330,7 +1344,21 @@ let valid_trans_list () =
       else acc
   ) [] !trans_list
 
- (* SYSTEM UPDATE *)
+(* SYSTEM UPDATE *)
+
+let exec_trans_upd_syst t trl =
+  List.iter (fun a -> a ()) t.t_assigns;
+  let updts = valid_upd t.t_updates in 
+  List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
+  let s = Etat.copy !write_st in
+  let trl' = (t.t_name,t.t_args)::trl in
+  system := Syst.add s trl' !system;
+  if profiling then
+    (
+      let n = TMap.find t.t_name !execTrans in
+      execTrans := TMap.add t.t_name (n+1) !execTrans
+    );
+  (s, trl')
 
 let rec update_system_alea rs trl c =
   if c = nb_exec then ()
@@ -1340,61 +1368,68 @@ let rec update_system_alea rs trl c =
 	read_st := rs;
 	let rc = valid_trans_rc () in
 	let t = RandClasses.choose rc in
-	List.iter (fun a -> a ()) t.t_assigns;
-	let updts = valid_upd t.t_updates in 
-	List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-	let s = Etat.copy !write_st in
-	let trl' = (t.t_name,t.t_args)::trl in
-	system := Syst.add s trl' !system;
-	if profiling then
-	  (
-	    let n = TMap.find t.t_name !execTrans in
-	    execTrans := TMap.add t.t_name (n+1) !execTrans
-	  );
+	let (s, trl') = exec_trans_upd_syst t trl in
+	let (s, trl') = List.fold_left (
+	  fun (s, trl) t' ->
+	    (* printf "%a@." Hstring.print t'.t_name; *)
+	    (* print_state rs; *)
+	    (* printf "History@."; *)
+	    (* List.iter ( *)
+	    (*   fun (t, args) -> printf "\t%a(%a)@." Hstring.print t (Hstring.print_list " ") args) (List.rev trl); *)
+	    read_st := s;
+	    if valid_trans t'.t_reqs t'.t_ureqs
+	    then exec_trans_upd_syst t' trl
+	    else (s, trl)
+	      (* printf "Previous %a(%a)@." Hstring.print t.t_name (Hstring.print_list " ") t.t_args; *)
+	      (* printf "Next one %a(%a)@." Hstring.print t'.t_name (Hstring.print_list " ") t'.t_args; *)
+	      (* print_state s; *)
+	      (* printf "FAILURE %a@." Hstring.print t'.t_name;  *)
+	      (* exit 1) *)
+	) (s, trl') t.t_path in
 	update_system_alea s trl' (c+1)
       with Invalid_argument _ -> ()
     )
 
- (* let compare ((n1, pn1), _) ((n2, pn2), _) = *)
- (*   if TMap.mem n1 !execTrans && not (TMap.mem n2 !execTrans) then 1 *)
- (*   else if not (TMap.mem n1 !execTrans) && TMap.mem n2 !execTrans then -1 *)
- (*   (\* else if np1 > np2 then -1 *\) *)
- (*   (\* else if np1 < np2 then 1 *\) *)
- (*   else if Random.bool () then -1 else 1 *)
+(* let compare ((n1, pn1), _) ((n2, pn2), _) = *)
+(*   if TMap.mem n1 !execTrans && not (TMap.mem n2 !execTrans) then 1 *)
+(*   else if not (TMap.mem n1 !execTrans) && TMap.mem n2 !execTrans then -1 *)
+(*   (\* else if np1 > np2 then -1 *\) *)
+(*   (\* else if np1 < np2 then 1 *\) *)
+(*   else if Random.bool () then -1 else 1 *)
 
- (* let rec find_and_exec_gt = *)
- (*   function *)
- (*     | [] -> raise Exit *)
- (*     | t :: tl -> *)
- (*       List.iter (fun a -> a ()) t.t_assigns; *)
- (*       let updts = valid_upd t.t_updates in *)
- (*       List.iter (fun us -> List.iter (fun u -> u ()) us) updts; *)
- (*       if Syst.mem !write_st !system then *)
- (* 	find_and_exec_gt tl *)
- (*       else (t, tl) *)
+(* let rec find_and_exec_gt = *)
+(*   function *)
+(*     | [] -> raise Exit *)
+(*     | t :: tl -> *)
+(*       List.iter (fun a -> a ()) t.t_assigns; *)
+(*       let updts = valid_upd t.t_updates in *)
+(*       List.iter (fun us -> List.iter (fun u -> u ()) us) updts; *)
+(*       if Syst.mem !write_st !system then *)
+(* 	find_and_exec_gt tl *)
+(*       else (t, tl) *)
 
- (* let rec update_system_dfs c workst parents = *)
- (*   if c = nb_exec then () *)
- (*   else *)
- (*     try  *)
- (*       let (tlist, parents) = *)
- (* 	match workst with *)
- (* 	  | Some rs -> read_st := rs; *)
- (* 	    (valid_trans_list (), parents); *)
- (* 	  | None -> match parents with *)
- (* 	      | [] -> raise (TEnd c) *)
- (* 	      | (rs, tli) :: tl -> read_st := rs; *)
- (* 		(tli, tl) *)
- (*       in *)
- (*       write_st := Etat.copy (!read_st); *)
- (*       let (t, tlist') = find_and_exec_gt tlist in *)
- (*       let trl = Syst.find !read_st !system in *)
- (*       let s = Etat.copy !write_st in *)
- (*       system := Syst.add s ((t.t_name, t.t_args)::trl) !system; *)
- (*       let n = TMap.find t.t_name !execTrans in *)
- (*       execTrans := TMap.add t.t_name (n+1) !execTrans; *)
- (*       update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents) *)
- (*     with Exit -> update_system_dfs c None parents *)
+(* let rec update_system_dfs c workst parents = *)
+(*   if c = nb_exec then () *)
+(*   else *)
+(*     try  *)
+(*       let (tlist, parents) = *)
+(* 	match workst with *)
+(* 	  | Some rs -> read_st := rs; *)
+(* 	    (valid_trans_list (), parents); *)
+(* 	  | None -> match parents with *)
+(* 	      | [] -> raise (TEnd c) *)
+(* 	      | (rs, tli) :: tl -> read_st := rs; *)
+(* 		(tli, tl) *)
+(*       in *)
+(*       write_st := Etat.copy (!read_st); *)
+(*       let (t, tlist') = find_and_exec_gt tlist in *)
+(*       let trl = Syst.find !read_st !system in *)
+(*       let s = Etat.copy !write_st in *)
+(*       system := Syst.add s ((t.t_name, t.t_args)::trl) !system; *)
+(*       let n = TMap.find t.t_name !execTrans in *)
+(*       execTrans := TMap.add t.t_name (n+1) !execTrans; *)
+(*       update_system_dfs (c+1) (Some s) ((!read_st, tlist')::parents) *)
+(*     with Exit -> update_system_dfs c None parents *)
 
 let cpt_f = ref 0
 
@@ -1436,7 +1471,7 @@ let update_system_bfs c rs =
       )
   done
 
- (* INTERFACE WITH BRAB *)
+(* INTERFACE WITH BRAB *)
 
 let get_value_st sub st =
   function
@@ -1482,7 +1517,7 @@ let contains sub sa s =
 			| Neq -> not (Hstring.equal h1 h2)
 			| _ -> assert false
 		    end
-		   (* Problem with ref_count.cub, assertion failure *)
+		  (* Problem with ref_count.cub, assertion failure *)
 		  | _ -> assert false
 	      end
 	    | _ -> assert false
@@ -1503,51 +1538,49 @@ let filter t_syst_l =
   with Not_found -> None
 
 let hist_cand cand =
-  try
-    let (pl, sa) = cand.t_unsafe in
-    let subst = Ast.all_permutations pl list_threads in
-    let good = Syst.filter (
-      fun st _ -> 
-	List.exists (
-	  fun sub ->
-	    SAtom.for_all (
-	      fun a ->
-		match a with
-		  | True -> true
-		  | False -> false
-		  | Comp (t1, op, t2) -> 
-		    let t1_v = get_value_st sub st t1 in
-		    let t2_v = get_value_st sub st t2 in
-		    begin
-		      match t1_v, t2_v with
-			| Numb n1, Numb n2 ->
-			  let op' = find_nop op in
-			  op' n1 n2
-			| Proc p1, Proc p2 -> 
-			  let op' = find_op op in
-			  op' p1 p2
-			| Hstr h1, Hstr h2 ->
-			  begin
-			    match op with
-			      | Eq -> Hstring.equal h1 h2
-			      | Neq -> not (Hstring.equal h1 h2)
-			      | _ -> assert false
-			  end
-		      (* Problem with ref_count.cub, assertion failure *)
-			| _ -> assert false
-		    end
-		  | _ -> assert false
-	    ) sa
-	) subst
-    ) !system in
-    printf "Number of good states %d@." (Syst.cardinal good);
-    let gs = ref (Syst.choose good) in
-    Syst.iter (
-      fun st' trn' -> if List.length trn' < List.length (snd !gs) then gs := (st', trn')
-    ) good;
-    !gs
-  with Not_found -> printf "HIST CAND@."; exit 1
- (* MAIN *)
+  let (pl, sa) = cand.t_unsafe in
+  let subst = Ast.all_permutations pl list_threads in
+  let good = Syst.filter (
+    fun st _ -> 
+      List.exists (
+	fun sub ->
+	  SAtom.for_all (
+	    fun a ->
+	      match a with
+		| True -> true
+		| False -> false
+		| Comp (t1, op, t2) -> 
+		  let t1_v = get_value_st sub st t1 in
+		  let t2_v = get_value_st sub st t2 in
+		  begin
+		    match t1_v, t2_v with
+		      | Numb n1, Numb n2 ->
+			let op' = find_nop op in
+			op' n1 n2
+		      | Proc p1, Proc p2 -> 
+			let op' = find_op op in
+			op' p1 p2
+		      | Hstr h1, Hstr h2 ->
+			begin
+			  match op with
+			    | Eq -> Hstring.equal h1 h2
+			    | Neq -> not (Hstring.equal h1 h2)
+			    | _ -> assert false
+			end
+			(* Problem with ref_count.cub, assertion failure *)
+		      | _ -> assert false
+		  end
+		| _ -> assert false
+	  ) sa
+      ) subst
+  ) !system in
+  printf "Number of good states %d@." (Syst.cardinal good);
+  let gs = ref (Syst.choose good) in
+  Syst.iter (
+    fun st' trn' -> if List.length trn' < List.length (snd !gs) then gs := (st', trn')
+  ) good;
+  !gs
+(* MAIN *)
 
 
 let scheduler se =
@@ -1599,83 +1632,80 @@ let init_sched () =
     ) !trans_list
 
 let run () = 
-  try
-    assert (!current_system <> dummy_system);
-    read_st := Etat.init ();
-    write_st := Etat.init ();
-    init_sched ();
-    let runs = if upd = 2 then 1 else runs in
-    for i = 1 to runs do 
-      if i mod 100 = 0 
-      then printf "Execution #%d : nb_st : %d@." 
-	i (Syst.cardinal !system);
-      ignore (scheduler !current_system) 
-    done;
-    if profiling then
-      (
-	let inits = float_of_int (Syst.cardinal (!sinits)) in
-	let nb_ex = 
-	  if upd = 2 then float_of_int !cpt_f 
-	  else float_of_int runs *. inits *. float_of_int nb_exec in
-	printf "Nb exec : %.0f@." nb_ex;
-	let (etl, netl) = TMap.fold (
-	  fun t i (etl, netl) ->
-	    if i > 0 then
-	      let fi = float_of_int i in
-	      let p = TMap.find t !trans in
-	      let fp = float_of_int p in
-	      ((t, fp /. nb_ex *. 100., p, fi /. nb_ex *. 100., fi /. fp *. 100., i) :: etl, netl)
-	    else (etl, t::netl)
-	) !execTrans ([], []) in
-	let etl = List.fast_sort (
-	  fun (_, _, _, p, _, _) (_, _, _,p', _, _) -> - Pervasives.compare p p'
-	) etl in
-	let etl' = List.fast_sort (
-	  fun (_, _, _, _, p, _) (_, _, _, _, p', _) -> - Pervasives.compare p p'
-	) etl in
-	let etl'' = List.fast_sort (
-	  fun (_, p, _, _, _, _) (_, p', _, _, _, _) -> - Pervasives.compare p p'
-	) etl in
-      (* printf "Seen transitions :@."; *)
-      (* List.iter ( *)
-      (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
-      (* ) tl; *)
-	printf "Executed transitions :@.";
-	printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "EXEC/TOT" "exec/vues" "exec";
-	List.iter (
-	  fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-	) etl; 
-	printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "exec/tot" "EXEC/VUES" "exec";
-	List.iter (
-	  fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-	) etl';
-	printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "VUES/TOT" "vues" "exec/tot" "exec/vues" "exec";
-	List.iter (
-	  fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
-	) etl'';
-      (* if (TMap.cardinal !notExecTrans > 0) then *)
-      (* 	( *)
-      (* 	  printf "Not taken but seen transitions :@."; *)
-      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
-      (* 	) else (printf "All transitions that were seen were taken !@."); *)
-      (* if (TMap.cardinal !notSeenTrans > 0) then *)
-      (* 	( *)
-      (* 	  printf "Not seen transitions :@."; *)
-      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
-      (* 	) else (printf "All transitions were seen !@."); *)
-	printf "--------------------------@.";
-      );
-    printf "Total scheduled states : %d
+  assert (!current_system <> dummy_system);
+  read_st := Etat.init ();
+  write_st := Etat.init ();
+  init_sched ();
+  let runs = if upd = 2 then 1 else runs in
+  for i = 1 to runs do 
+    if i mod 100 = 0 
+    then printf "Execution #%d : nb_st : %d@." 
+      i (Syst.cardinal !system);
+    ignore (scheduler !current_system) 
+  done;
+  if profiling then
+    (
+      let inits = float_of_int (Syst.cardinal (!sinits)) in
+      let nb_ex = 
+	if upd = 2 then float_of_int !cpt_f 
+	else float_of_int runs *. inits *. float_of_int nb_exec in
+      printf "Nb exec : %.0f@." nb_ex;
+      let (etl, netl) = TMap.fold (
+	fun t i (etl, netl) ->
+	  if i > 0 then
+	    let fi = float_of_int i in
+	    let p = TMap.find t !trans in
+	    let fp = float_of_int p in
+	    ((t, fp /. nb_ex *. 100., p, fi /. nb_ex *. 100., fi /. fp *. 100., i) :: etl, netl)
+	  else (etl, t::netl)
+      ) !execTrans ([], []) in
+      let etl = List.fast_sort (
+	fun (_, _, _, p, _, _) (_, _, _,p', _, _) -> - Pervasives.compare p p'
+      ) etl in
+      let etl' = List.fast_sort (
+	fun (_, _, _, _, p, _) (_, _, _, _, p', _) -> - Pervasives.compare p p'
+      ) etl in
+      let etl'' = List.fast_sort (
+	fun (_, p, _, _, _, _) (_, p', _, _, _, _) -> - Pervasives.compare p p'
+      ) etl in
+	(* printf "Seen transitions :@."; *)
+	(* List.iter ( *)
+	(* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
+	(* ) tl; *)
+      printf "Executed transitions :@.";
+      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "EXEC/TOT" "exec/vues" "exec";
+      List.iter (
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl; 
+      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "exec/tot" "EXEC/VUES" "exec";
+      List.iter (
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl';
+      printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "VUES/TOT" "vues" "exec/tot" "exec/vues" "exec";
+      List.iter (
+	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
+      ) etl'';
+	(* if (TMap.cardinal !notExecTrans > 0) then *)
+	(* 	( *)
+	(* 	  printf "Not taken but seen transitions :@."; *)
+	(* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
+	(* 	) else (printf "All transitions that were seen were taken !@."); *)
+	(* if (TMap.cardinal !notSeenTrans > 0) then *)
+	(* 	( *)
+	(* 	  printf "Not seen transitions :@."; *)
+	(* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
+	(* 	) else (printf "All transitions were seen !@."); *)
+      printf "--------------------------@.";
+    );
+  printf "Total scheduled states : %d
  --------------------------------\n@." (Syst.cardinal !system);
-    if verbose > 1 && not quiet then
-      begin
-	let count = ref 1 in
-	Syst.iter (
-  	  fun st -> 
-	    printf "%d : " !count; 
-	    incr count; 
-	    print_system st
-	) (!system)
-      end
-  with Not_found -> printf "RUN@."; exit 1
-
+  if verbose > 1 && not quiet then
+    begin
+      let count = ref 1 in
+      Syst.iter (
+  	fun st -> 
+	  printf "%d : " !count; 
+	  incr count; 
+	  print_system st
+      ) (!system)
+    end

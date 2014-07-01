@@ -42,6 +42,7 @@
 	"opt", OPT;
 	"not", NOT;
 	"var_init", VARI;
+	"dmwtp", PATH;
       ]
 	       
   let newline lexbuf =

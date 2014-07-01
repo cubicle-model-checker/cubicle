@@ -76,7 +76,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB VARI OPT NOT PRIORITY
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL FPROC TAB VARI OPT NOT PRIORITY PATH
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
 %token OR AND COMMA PV DOT
@@ -437,13 +437,28 @@ operator:
 /* (* This part is reserved for the scheduler, it is NOT
    in the cubicle language. *) */
 
-assoc_list :
-  | LEFTSQ assocl RIGHTSQ { $2 }
+scheduler:
+  option
+  varinit_list
+  tabinit_list
+  priorities
+  pathes
+  EOF { Options.prio_list := $4 }
+
+option :
+  | OPT FPROC { Options.init_proc := true }
+  | OPT NOT FPROC { Options.init_proc := false }
+  | { () }
 ;
 
-assocl :
-  | LEFTPAR sident COMMA INT RIGHTPAR { [($2, Num.int_of_num $4)] }
-  | LEFTPAR sident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
+varinit_list :
+  | { () }
+  | varinit varinit_list { () }
+;
+
+varinit :
+  | VARI mident var_list { Hashtbl.replace Options.var_init $2 $3 }
+  | VARI NOT mident { Hashtbl.replace Options.var_ninit $3 () }
 ;
 
 var_list :
@@ -457,34 +472,29 @@ varl :
   | sident COMMA varl { $1 ::$3 }
 ;
 
-option :
-  | OPT FPROC { Options.init_proc := true }
-  | OPT NOT FPROC { Options.init_proc := false }
+tabinit_list :
   | { () }
-;
-
-varinit :
-  | VARI mident var_list { Hashtbl.replace Options.var_init $2 $3 }
-  | VARI NOT mident { Hashtbl.replace Options.var_ninit $3 () }
-;
-
-varinit_list :
-  | { () }
-  | varinit varinit_list { () }
+  | tabinit tabinit_list { () }
 ;
 
 tabinit :
   | TAB mident assoc_list { Hashtbl.replace Options.tab_init $2 $3 }
 ;
 
-tabinit_list :
-  | { () }
-  | tabinit tabinit_list { () }
+assoc_list :
+  | LEFTSQ assocl RIGHTSQ { $2 }
 ;
 
-transl :
-  | transition_name { [$1] }
-  | transition_name transl { $1 :: $2 }
+assocl :
+  | LEFTPAR sident COMMA INT RIGHTPAR { [($2, Num.int_of_num $4)] }
+  | LEFTPAR sident COMMA INT RIGHTPAR COMMA assocl { ($2, Num.int_of_num $4)::$7 }
+;
+
+priorities :
+  | { let p = 100 - !cptp in
+      if p <= 0 then raise (ProbError p) else
+	[p] }
+  | priority priorities { $1 :: $2 }
 ;
 
 priority :
@@ -499,16 +509,22 @@ priority :
       }
 ;
 
-priorities :
-  | { let p = 100 - !cptp in
-      if p <= 0 then raise (ProbError p) else
-	[p] }
-  | priority priorities { $1 :: $2 }
+transl :
+  | transition_name { [$1] }
+  | transition_name transl { $1 :: $2 }
 ;
 
-scheduler:
-  option
-  varinit_list
-  tabinit_list
-  priorities
-  EOF { Options.prio_list := $4 }
+pathes :
+  | {}
+  | path pathes { () }
+;
+
+path :
+  | PATH transl { let (hd, tl) = 
+		    match $2 with
+		      | hd::tl -> hd, tl
+		      | _ -> raise Parsing.Parse_error
+		  in
+		  Hashtbl.replace Options.path hd tl 
+		}
+;
