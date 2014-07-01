@@ -12,6 +12,7 @@ exception ETrue
 exception EFalse
 exception ConstrRep
 
+exception PathUncomplete of Hstring.t
 exception TEnd of int
 exception Error of error
 
@@ -1304,13 +1305,20 @@ module TMap = Map.Make (
   end
 )
 
+module TSet = Set.Make (
+  struct
+    type t = Hstring.t
+    let compare = Hstring.compare
+  end
+) 
+
 let trans = ref TMap.empty
 let execTrans = ref TMap.empty
 
-let valid_trans_rc () =
+let valid_trans_rc ft =
   let rc = List.fold_left (
     fun acc t -> 
-      if valid_trans t.t_reqs t.t_ureqs
+      if not (TSet.mem t.t_name ft) && valid_trans t.t_reqs t.t_ureqs
       then
 	(
 	  if profiling then
@@ -1346,48 +1354,39 @@ let valid_trans_list () =
 
 (* SYSTEM UPDATE *)
 
-let exec_trans_upd_syst t trl =
+let exec_trans t =
   List.iter (fun a -> a ()) t.t_assigns;
   let updts = valid_upd t.t_updates in 
   List.iter (fun us -> List.iter (fun u -> u ()) us ) updts;
-  let s = Etat.copy !write_st in
-  let trl' = (t.t_name,t.t_args)::trl in
-  system := Syst.add s trl' !system;
   if profiling then
     (
       let n = TMap.find t.t_name !execTrans in
       execTrans := TMap.add t.t_name (n+1) !execTrans
     );
-  (s, trl')
-
-let rec update_system_alea rs trl c =
+  Etat.copy !write_st
+      
+let rec update_system_alea rs trl c ft =
   if c = nb_exec then ()
   else
     (
       try
 	read_st := rs;
-	let rc = valid_trans_rc () in
+	write_st := Etat.copy rs;
+	let rc = valid_trans_rc ft in
 	let t = RandClasses.choose rc in
-	let (s, trl') = exec_trans_upd_syst t trl in
+	let s = exec_trans t in
 	let (s, trl') = List.fold_left (
 	  fun (s, trl) t' ->
-	    (* printf "%a@." Hstring.print t'.t_name; *)
-	    (* print_state rs; *)
-	    (* printf "History@."; *)
-	    (* List.iter ( *)
-	    (*   fun (t, args) -> printf "\t%a(%a)@." Hstring.print t (Hstring.print_list " ") args) (List.rev trl); *)
 	    read_st := s;
 	    if valid_trans t'.t_reqs t'.t_ureqs
-	    then exec_trans_upd_syst t' trl
-	    else (s, trl)
-	      (* printf "Previous %a(%a)@." Hstring.print t.t_name (Hstring.print_list " ") t.t_args; *)
-	      (* printf "Next one %a(%a)@." Hstring.print t'.t_name (Hstring.print_list " ") t'.t_args; *)
-	      (* print_state s; *)
-	      (* printf "FAILURE %a@." Hstring.print t'.t_name;  *)
-	      (* exit 1) *)
-	) (s, trl') t.t_path in
-	update_system_alea s trl' (c+1)
+	    then let s = exec_trans t' in
+		 (s, (t'.t_name,t'.t_args)::trl)
+	    else raise (PathUncomplete t.t_name)
+	) (s, (t.t_name,t.t_args)::trl) t.t_path in
+	 system := Syst.add s trl' !system;
+	 update_system_alea s trl' (c+1) TSet.empty
       with Invalid_argument _ -> ()
+	| PathUncomplete n -> update_system_alea rs trl c (TSet.add n ft)
     )
 
 (* let compare ((n1, pn1), _) ((n2, pn2), _) = *)
@@ -1597,7 +1596,7 @@ let scheduler se =
 	    update_system_bfs forward_depth st
 	  )
 	else
-	  update_system_alea st tri 0
+	  update_system_alea st tri 0 TSet.empty
       with TEnd i -> printf "Prematured end : %d" i
   ) !sinits;
   Search.TimerScheduler.pause ()
