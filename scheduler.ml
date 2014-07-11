@@ -12,6 +12,7 @@ exception ETrue
 exception EFalse
 exception ConstrRep
 
+exception ParamError of int * int
 exception PathUncomplete of Hstring.t
 exception TEnd of int
 exception Error of error
@@ -109,7 +110,7 @@ type transition =
       t_ureqs : (unit -> bool) list list list;
       t_assigns : (unit -> unit) list;
       t_updates : ((unit -> bool) list * (unit -> unit)) list list list;
-      t_path : transition list;
+      t_path : transition list list;
     }
 
 (* Module to manage multi-dimensional arrays *)
@@ -1123,7 +1124,7 @@ let subst_req sub req =
 
 (* Type : (unit -> bool) list list list
    ____ (fun () -> bool) conj disj conj *)
-let subst_ureq subst subsm ureq =
+let substitute_ureq subst subsm ureq =
   List.fold_left (
     (* Conjonction of forall_other z -> SAtom List *)
     fun conj_acc (k, sa_lst_ureq) ->
@@ -1208,60 +1209,87 @@ let init_system se =
   Hashtbl.clear inits;
   init_list := []
 
+module TMap = Map.Make (
+  struct
+    type t = Hstring.t
+    let compare = Hstring.compare
+  end
+)
+
 let init_transitions trans =
   let ub = List.length prio_list - 1 in
-  let htrans = Hashtbl.create 17 in
-  List.iter (
-    fun tr ->
+  let ttemp = List.fold_left (
+    fun acc tr ->
+      let name = tr.tr_name in
       (* Associate the processes to numbers (unique) *)
       let subs = 
 	if List.length tr.tr_args > nb_threads 
-	then [] (* Should not occure *)
+	then raise (ParamError (nb_threads, List.length tr.tr_args))
 	else Ast.all_permutations tr.tr_args list_threads
       in
-      List.iter (
-	fun sub -> 
-	  try 
-	    let (_, pl) = List.split sub in
-	    let subsm = inter pl list_threads in
-	    let subst_ureq = subst_ureq sub subsm tr.tr_ureq in
-	    let subst_req = substitute_req sub tr.tr_reqs in
-	    let (s_assigns, s_updates) = substitute_updts sub tr.tr_assigns tr.tr_upds in
-	    let pn = List.fold_right (
-	      fun (id, i) pn -> 
-		let si = string_of_int i in
-		let p = Hstring.make ("#" ^ si) in
-		p :: pn
-	    ) sub [] in
-	    let grp = try Hashtbl.find Options.trans_prio tr.tr_name 
-	      with Not_found -> ub
-	    in
-	    let t = 
-	      { t_grp = grp;
-		t_name = tr.tr_name;
-		t_args = pn;
-		t_reqs = subst_req;
-		t_ureqs = subst_ureq;
-		t_assigns = s_assigns;
-		t_updates = s_updates;
-		t_path = [];
-	      } in
-	    Hashtbl.add htrans tr.tr_name t
-	  with EFalse -> ()
-      ) subs
-  ) trans;
-  trans_list := Hashtbl.fold (
-    fun n t acc ->
+      let subt =
+	List.fold_left (
+	  fun acc sub -> 
+	    try 
+	      let (_, pl) = List.split sub in
+	      let subsm = inter pl list_threads in
+	      let subst_ureq = substitute_ureq sub subsm tr.tr_ureq in
+	      let subst_req = substitute_req sub tr.tr_reqs in
+	      let (s_assigns, s_updates) = substitute_updts sub tr.tr_assigns tr.tr_upds in
+	      let pn = List.fold_right (
+		fun (id, i) pn -> 
+		  let si = string_of_int i in
+		  let p = Hstring.make ("#" ^ si) in
+		  p :: pn
+	      ) sub [] in
+	      let grp = try Hashtbl.find Options.trans_prio name 
+		with Not_found -> ub
+	      in
+	      let t = 
+		{ t_grp = grp;
+		  t_name = name;
+		  t_args = pn;
+		  t_reqs = subst_req;
+		  t_ureqs = subst_ureq;
+		  t_assigns = s_assigns;
+		  t_updates = s_updates;
+		  t_path = [];
+		} in
+	      t::acc
+	    with EFalse -> acc
+	) [] subs in
+      TMap.add name subt acc
+  ) TMap.empty trans in
+  trans_list := TMap.fold (
+    fun n subt acc ->
       try let path = Hashtbl.find Options.path n in
-	  let p = List.fold_right (
-	    fun n' acc ->
-	      let t' = Hashtbl.find htrans n' in
+	  let p = List.fold_left (
+	    fun acc n' ->
+	      let t' = TMap.find n' ttemp in
 	      t' :: acc
-	  ) path [] in
-	  {t with t_path = p} :: acc
-      with Not_found -> t :: acc
-  ) htrans []
-    
+	  ) [] path in
+	  List.fold_left (
+	    fun acc t -> {t with t_path = p} :: acc
+	  ) acc subt
+      with 
+	  Not_found -> 
+	    List.fold_left (
+	      fun acc t -> t :: acc
+	    ) acc subt
+  ) ttemp [];
+  List.iter (
+    fun t ->
+      printf "%a(%a) : " Hstring.print t.t_name (Hstring.print_list " ") t.t_args;
+      List.iter (
+      	fun t ->
+	  printf "[ ";
+      	  List.iter (
+	    fun t -> printf "%a(%a) " Hstring.print t.t_name (Hstring.print_list " ") t.t_args
+	  ) t;
+	  printf "] ";
+      ) t.t_path;
+      printf "@."
+  ) !trans_list
 
 
 (* SCHEDULING *)
@@ -1297,13 +1325,6 @@ let valid_upd arrs_upd =
 	) [] arr_upds
       in arrs_u::arr_acc
   ) [] arrs_upd
-
-module TMap = Map.Make (
-  struct
-    type t = Hstring.t
-    let compare = Hstring.compare
-  end
-)
 
 module TSet = Set.Make (
   struct
@@ -1364,30 +1385,38 @@ let exec_trans t =
       execTrans := TMap.add t.t_name (n+1) !execTrans
     );
   Etat.copy !write_st
-      
+    
+let rec walk_path p good =
+  match p with
+    | [] -> if not good then raise Exit
+    | hd :: tl ->
+      match hd with
+	| [] -> raise Exit
+	| _ -> raise Exit
+	  
 let rec update_system_alea rs trl c ft =
   if c = nb_exec then ()
   else
-    (
-      try
-	read_st := rs;
-	write_st := Etat.copy rs;
-	let rc = valid_trans_rc ft in
-	let t = RandClasses.choose rc in
-	let s = exec_trans t in
-	let (s, trl') = List.fold_left (
-	  fun (s, trl) t' ->
-	    read_st := s;
-	    if valid_trans t'.t_reqs t'.t_ureqs
-	    then let s = exec_trans t' in
-		 (s, (t'.t_name,t'.t_args)::trl)
-	    else raise (PathUncomplete t.t_name)
-	) (s, (t.t_name,t.t_args)::trl) t.t_path in
-	 system := Syst.add s trl' !system;
-	 update_system_alea s trl' (c+1) TSet.empty
-      with Invalid_argument _ -> ()
-	| PathUncomplete n -> update_system_alea rs trl c (TSet.add n ft)
-    )
+    try
+      read_st := rs;
+      write_st := Etat.copy rs;
+      let rc = valid_trans_rc ft in
+      let t = RandClasses.choose rc in
+      let s = exec_trans t in
+      
+	(* let (s, trl') = List.fold_left ( *)
+	(*   fun (s, trl) t' -> *)
+	(*     read_st := s; *)
+	(*     if valid_trans t'.t_reqs t'.t_ureqs *)
+	(*     then let s = exec_trans t' in *)
+	(* 	 (s, (t'.t_name,t'.t_args)::trl) *)
+	(*     else raise (PathUncomplete t.t_name) *)
+	(* ) (s, (t.t_name,t.t_args)::trl) t.t_path in *)
+      let trl' = (t.t_name, t.t_args)::trl in
+      system := Syst.add s trl' !system;
+      update_system_alea s trl' (c+1) TSet.empty
+    with Invalid_argument _ -> ()
+      | PathUncomplete n -> update_system_alea rs trl c (TSet.add n ft)
 
 (* let compare ((n1, pn1), _) ((n2, pn2), _) = *)
 (*   if TMap.mem n1 !execTrans && not (TMap.mem n2 !execTrans) then 1 *)
@@ -1566,7 +1595,7 @@ let hist_cand cand =
 			    | Neq -> not (Hstring.equal h1 h2)
 			    | _ -> assert false
 			end
-			(* Problem with ref_count.cub, assertion failure *)
+		      (* Problem with ref_count.cub, assertion failure *)
 		      | _ -> assert false
 		  end
 		| _ -> assert false
@@ -1667,10 +1696,10 @@ let run () =
       let etl'' = List.fast_sort (
 	fun (_, p, _, _, _, _) (_, p', _, _, _, _) -> - Pervasives.compare p p'
       ) etl in
-	(* printf "Seen transitions :@."; *)
-	(* List.iter ( *)
-	(* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
-	(* ) tl; *)
+      (* printf "Seen transitions :@."; *)
+      (* List.iter ( *)
+      (* 	fun (t, p) -> printf "\t%-26s : %5.2f%%@." (Hstring.view t) p *)
+      (* ) tl; *)
       printf "Executed transitions :@.";
       printf "\n\t%-26s | %8s | %8s | %8s | %8s | %8s\n@." "Transitions" "vues/tot" "vues" "EXEC/TOT" "exec/vues" "exec";
       List.iter (
@@ -1684,16 +1713,16 @@ let run () =
       List.iter (
 	fun (t, p, i, p', p'', i') -> printf "\t%-26s | %7.2f%% | %8d | %7.2f%% | %8.2f%% | %8d@." (Hstring.view t) p i p' p'' i'
       ) etl'';
-	(* if (TMap.cardinal !notExecTrans > 0) then *)
-	(* 	( *)
-	(* 	  printf "Not taken but seen transitions :@."; *)
-	(* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
-	(* 	) else (printf "All transitions that were seen were taken !@."); *)
-	(* if (TMap.cardinal !notSeenTrans > 0) then *)
-	(* 	( *)
-	(* 	  printf "Not seen transitions :@."; *)
-	(* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
-	(* 	) else (printf "All transitions were seen !@."); *)
+      (* if (TMap.cardinal !notExecTrans > 0) then *)
+      (* 	( *)
+      (* 	  printf "Not taken but seen transitions :@."; *)
+      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notExecTrans *)
+      (* 	) else (printf "All transitions that were seen were taken !@."); *)
+      (* if (TMap.cardinal !notSeenTrans > 0) then *)
+      (* 	( *)
+      (* 	  printf "Not seen transitions :@."; *)
+      (* 	  TMap.iter (printf "\t%a : %d@." Hstring.print) !notSeenTrans *)
+      (* 	) else (printf "All transitions were seen !@."); *)
       printf "--------------------------@.";
     );
   printf "Total scheduled states : %d
