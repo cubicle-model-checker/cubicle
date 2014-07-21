@@ -1,36 +1,65 @@
++--------------------------------------------------------------------------+
+|                               Cubicle                                    |
+|                                                                          |
+|                        Copyright (C) 2011-2014                           |
+|                                                                          |
+|                   Sylvain Conchon and Alain Mebsout                      |
+|                        Universite Paris-Sud 11                           |
++--------------------------------------------------------------------------+
 
-Cubicle is a tool that combines model checking algorithms and
-automatic SMT theorem provers
+
+Cubicle is a tool that combines model checking algorithms and automatic SMT
+theorem provers with a powerful invariants inference mechanism.
 
 Various examples can be found in the subdirectory examples/.
 
 COPYRIGHT
 =========
 
-This program is distributed under the Apache Software License version
-2.0. See the enclosed file COPYING.
+This program is distributed under the Apache Software License version 2.0. See
+the enclosed file COPYING.
 
 
 INSTALLATION
 ============
 
-To compile Cubicle you will need OCaml version 3.11 (or newer) and
-issue:
+To compile Cubicle you will need OCaml version 3.12 (or newer) and issue:
 
-   ./configure
+    ./configure
     make
 
-then with superuser rigths:
+then with superuser rights:
 
     make install
 
-To run Cubicle with its classical bacward reachability algorithm on a
-file file.cub simply do:
+Cubicle comes with its own emacs major mode in doc/emacs/cubicle-mode.el. You
+should copy this file to your emacs.d directory (or anywhere in your load path)
+and add the following to your init file (.emacs or emacs.d/init.el):
+
+    (setq auto-mode-alist
+          (cons '("\\.cub$" . cubicle-mode) auto-mode-alist))
+    (autoload 'cubicle-mode "cubicle-mode" "Major mode for Cubicle." t)
+
+To add colors to the compilation buffer, also add this:
+
+     (require 'ansi-color)
+     (defun colorize-compilation-buffer ()
+       (toggle-read-only)
+       (ansi-color-apply-on-region (point-min) (point-max))
+       (toggle-read-only))
+     (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
+
+
+USAGE
+=====
+
+To run Cubicle with its classical backward reachability algorithm on a file
+file.cub simply do:
  
     cubicle file.cub
 
-To run Cubicle with the BRAB algorithm (with a preliminar forward
-exploration using 2 processes) on a file file.cub simply do:
+To run Cubicle with the BRAB algorithm (with a preliminary forward exploration
+using 2 processes) on a file file.cub simply do:
  
     cubicle -brab 2 file.cub
 
