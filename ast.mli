@@ -20,6 +20,9 @@ open Util
 (** Abstract syntax tree and transition systems *)
 
 
+(** {2 Untyped transition system} *)
+
+
 type dnf = SAtom.t list
 (** Disjunctive normal form: each element of the list is a disjunct *)
 
@@ -73,7 +76,8 @@ type system = {
 }
 (** type of untyped transition systems constructed by parsing *)
 
-(* Typed AST *)
+
+(** {2 Typed transition system} *)
 
 (** the kind of nodes *)
 type kind = 
