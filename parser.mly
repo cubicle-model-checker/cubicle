@@ -21,6 +21,14 @@
 
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
+
+  (* Helper functions for location info *)
+
+  let loc () = (symbol_start_pos (), symbol_end_pos ())
+  let loc_i i = (rhs_start_pos i, rhs_end_pos i)
+  let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
+
+
   type t = 
     | Assign of Hstring.t * Term.t
     | Nondet of Hstring.t
@@ -131,14 +139,14 @@ var_decl:
   | VAR mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Globals.add $2; 
-    $2, $4 }
+    loc (), $2, $4 }
 ;
 
 const_decl:
   | CONST mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Consts.add $2;
-    $2, $4 }
+    loc (), $2, $4 }
 ;
 
 array_decl:
@@ -147,7 +155,7 @@ array_decl:
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
-	$2, ($4, $7)}
+	loc (), $2, ($4, $7)}
 ;
 
 type_defs:
@@ -166,11 +174,11 @@ size_proc:
 ;
       
 type_def:
-  | TYPE lident { ($2, []) }
+  | TYPE lident { (loc (), ($2, [])) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; ($2, $4) }
+      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; ($2, $5) }
+      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
 ;
 
 constructors:
@@ -180,7 +188,7 @@ constructors:
 
 init:
   | INIT LEFTPAR lidents RIGHTPAR LEFTBR dnf RIGHTBR 
-      { $3, $6 }
+      { loc (), $3, $6 }
 ;
 
 invariants:
@@ -189,11 +197,11 @@ invariants:
 ;
 
 invariant:
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
 unsafe:
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
 unsafe_list:
@@ -228,7 +236,7 @@ transition:
 	  tr_assigns = assigns; 
 	  tr_nondets = nondets; 
 	  tr_upds = upds;
-          (* tr_tau = fun _ _ _ -> Atom.True; *)
+          tr_loc = loc ();
         } 
       }
 ;
@@ -278,7 +286,7 @@ update:
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
         ) $3;
-        Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
+        Upd { up_loc = loc (); up_arr = $1; up_arg = $3; up_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -287,7 +295,7 @@ update:
             SAtom.add c cube, j :: rjs) (SAtom.empty, []) $3 in
         let js = List.rev rjs in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
-	Upd { up_arr = $1; up_arg = js; up_swts = sw}  }
+	Upd { up_loc = loc (); up_arr = $1; up_arg = js; up_swts = sw}  }
 ;
 
 switchs:

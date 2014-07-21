@@ -21,13 +21,6 @@ open Ast
 (** Entry point of Cubicle *)
 
 
-let report (b,e) =
-  let l = b.pos_lnum in
-  let fc = b.pos_cnum - b.pos_bol + 1 in
-  let lc = e.pos_cnum - b.pos_bol + 1 in
-  printf "File \"%s\", line %d, characters %d-%d:" file l fc lc
-
-
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 
   Sys.set_signal Sys.sigint 
@@ -80,18 +73,19 @@ let _ =
     end
   with
   | Lexer.Lexical_error s -> 
-     report (lexeme_start_p lb, lexeme_end_p lb);
-     printf "lexical error: %s\n@." s;
+     Util.report_loc err_formatter (lexeme_start_p lb, lexeme_end_p lb);
+     eprintf "lexical error: %s@." s;
      exit 2
 
   | Parsing.Parse_error ->
-     let  loc = (lexeme_start_p lb, lexeme_end_p lb) in
-     report loc;
-     printf "\nsyntax error\n@.";
+     let loc = (lexeme_start_p lb, lexeme_end_p lb) in
+     Util.report_loc err_formatter loc;
+     eprintf "syntax error@.";
      exit 2
 
-  | Typing.Error e -> 
-     printf "typing error: %a\n@." Typing.report e;
+  | Typing.Error (e,loc) ->
+     Util.report_loc err_formatter loc;
+     eprintf "typing error: %a@." Typing.report e;
      exit 2
 
   | Stats.ReachedLimit ->

@@ -14,6 +14,8 @@
 (**************************************************************************)
 
 open Types
+open Util
+
 
 (** Abstract syntax tree and transition systems *)
 
@@ -27,6 +29,7 @@ type type_constructors = Hstring.t * (Hstring.t list)
     list of constructors is empty, the type [t] is defined abstract. *)
 
 type update = {
+  up_loc : loc; (** location information *)
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
   up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : (SAtom.t * Term.t) list;
@@ -45,6 +48,7 @@ type transition_info = {
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
+  tr_loc : loc; (** location information *)
 }
 (** type of parameterized transitions *)
 
@@ -58,13 +62,13 @@ type transition = {
 }
 
 type system = {
-  globals : (Hstring.t * Smt.Type.t) list;
-  consts : (Hstring.t * Smt.Type.t) list;
-  arrays : (Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  type_defs : type_constructors list;
-  init : Variable.t list * dnf;
-  invs : (Variable.t list * SAtom.t) list;
-  unsafe : (Variable.t list * SAtom.t) list;  
+  globals : (loc * Hstring.t * Smt.Type.t) list;
+  consts : (loc * Hstring.t * Smt.Type.t) list;
+  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  type_defs : (loc * type_constructors) list;
+  init : loc * Variable.t list * dnf;
+  invs : (loc * Variable.t list * SAtom.t) list;
+  unsafe : (loc * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
 }
 (** type of untyped transition systems constructed by parsing *)

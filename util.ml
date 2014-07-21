@@ -13,6 +13,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Format
+open Lexing
+
 (* Timers for profiling *)
 module TimerSubset = Timer.Make (Options)
 module TimerApply = Timer.Make (Options)
@@ -117,3 +120,12 @@ let chromatic start stop steps =
     };
     !now
     
+
+type loc = Lexing.position * Lexing.position
+
+let report_loc fmt (b,e) =
+  let l = b.pos_lnum in
+  let fc = b.pos_cnum - b.pos_bol + 1 in
+  let lc = e.pos_cnum - b.pos_bol + 1 in
+  fprintf fmt "File \"%s\", line %d, characters %d-%d:" 
+    Options.file l fc lc

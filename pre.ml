@@ -88,14 +88,14 @@ let fresh_nondet =
 
 let rec find_update a li = function
   | [] -> raise Not_found
-  | { up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
+  | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
       let ls = 
 	List.map 
 	  (fun (ci, ti) ->
             let sigma  = List.combine lj li in
             SAtom.subst sigma ci,
             Term.subst sigma ti) ls in
-      Branch { up_arr = a'; up_arg = li; up_swts = ls}
+      Branch { up_loc = loc; up_arr = a'; up_arg = li; up_swts = ls}
   | _ :: l -> find_update a li l
 
 

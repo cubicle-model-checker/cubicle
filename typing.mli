@@ -21,7 +21,7 @@ open Ast
 
 type error 
 
-exception Error of error 
+exception Error of error * Util.loc
 
 val report : Format.formatter -> error -> unit
 
