@@ -92,6 +92,8 @@ rule token = parse
       { RIGHTPAR }
   | "."
       { DOT }
+  | "?"
+      { QMARK }
   | "+"
       { PLUS }
   | "-"

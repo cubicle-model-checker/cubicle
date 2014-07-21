@@ -77,7 +77,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE
-%token OR AND COMMA PV DOT
+%token OR AND COMMA PV DOT QMARK
 %token <string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
@@ -263,7 +263,8 @@ assignment:
 ;
 
 nondet:
-  | mident AFFECT DOT    { Nondet $1 }
+  | mident AFFECT DOT { Nondet $1 }
+  | mident AFFECT QMARK { Nondet $1 }
 ;
 
 require:
