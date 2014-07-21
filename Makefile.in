@@ -276,16 +276,15 @@ FILES = approx.ml approx.mli ast.mli brab.ml brab.mli bwd.ml bwd.mli\
 	types.ml types.mli typing.ml typing.mli util.ml util.mli\
 	variable.ml variable.mli version.ml
 
-EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
-	   ricart_agrawala.cub szymanski_at.cub berkeley.cub flash_eager.cub\
-	   german.cub german_pfs.cub german_undip.cub illinois.cub mesi.cub\
+EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
+	   ricart_abdulla.cub szymanski_at.cub berkeley.cub flash_eager.cub\
+	   german_pfs.cub german_undip.cub illinois.cub mesi.cub\
 	   moesi.cub synapse.cub swimming_pool.cub xerox_dragon.cub\
-	   sense_barrier.cub\
-	   ../doc/papers/fmcad2013/benchs/flash.cub\
-	   ../doc/papers/fmcad2013/benchs/flash_nodata.cub\
-	   ../doc/papers/fmcad2013/benchs/flash_buggy.cub\
-	   ../doc/papers/fmcad2013/benchs/szymanski_na.cub\
-	   ../doc/papers/fmcad2013/benchs/chandra_toueg.cub
+	   sense_barrier.cub flash.cub flash_abstr.cub flash_nodata.cub\
+	   flash_buggy.cub szymanski_na.cub chandra_toueg.cub\
+	   german_baukus.cub german.ctc.cub bakery_lamport.cub\
+	   bakery_lamport_bogus.cub bakery_lamport_na.cub\
+	   bakery_lamport_na_wb.cub bakery_na.cub
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 

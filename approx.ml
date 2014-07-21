@@ -252,7 +252,7 @@ let approximations s =
             let nsa = SAtom.add a sa' in
             if Variable.Set.cardinal (SAtom.variables nsa) > enumerative then
               acc
-            else if SAtom.cardinal nsa > enumerative + 1 then acc
+            else if SAtom.cardinal nsa > max 2 (enumerative + 1) then acc
             else SSAtoms.add nsa acc
            ) acc acc
       ) sa init
