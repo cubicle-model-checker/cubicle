@@ -21,6 +21,7 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 BINDIR=$(DESTDIR)@bindir@
 LIBDIR=$(DESTDIR)@libdir@/cubicle
+DATADIR=$(DESTDIR)@datadir@
 
 # where to install the man page
 MANDIR=$(DESTDIR)@mandir@
@@ -110,7 +111,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.91b
+VERSION=1.0
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -176,6 +177,7 @@ tags:
 install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
+	@echo "Installation completed in $(BINDIR). You may want to copy doc/emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
 install-byte:
 	mkdir -p $(BINDIR)
