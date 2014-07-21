@@ -1,8 +1,12 @@
-(*
- German cache coherence protocol as modeled by Ching-Tsun Chou and used in the
- paper C.-T. Chou, P. K. Mannava, and S. Park, A simple method for parameterized
- verification of cache coherence protocols, FMCAD 2004.
-*)
+(*******************************************************************)
+(* German cache coherence protocol                                 *)
+(*******************************************************************)
+(*                                                                 *)
+(* As modeled by Ching-Tsun Chou and used in the paper C.-T. Chou, *)
+(* P. K. Mannava, and S. Park, A simple method for parameterized   *)
+(* verification of cache coherence protocols, FMCAD 2004.          *)
+(*******************************************************************)
+
 
 type state = Invalid | Shared | Exclusive
 type msg = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte

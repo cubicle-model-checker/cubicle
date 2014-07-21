@@ -1,231 +1,168 @@
 (*
- :comment      SOURCE: pfs distribution
- :comment      (difficult version)
 
- :smt (define-type locations (subrange 1 3))
- :smt (define-type messages1  (subrange 5 7))
- :smt (define-type messages2  (subrange 7 10))
- :comment   values 5, 11 for t[x] are mapped to false and  true, resp.
- :comment   value 5 for d[x] is mapped to  7
+SOURCE: pfs distribution
+ 
 *)
 
 type state = Invalid | Shared | Exclusive
-(*
-	 Invalid -> 1
-	 Shared -> 2
-	 Exclusive -> 3
-*)
 
 type msg1 = Empty1 | Reqs | Reqe 
-(*
-	Empty1 -> 5
-	Reqs -> 6
-	Reqe -> 7
-
-*)
 
 type msg2 = Empty2 | Inv | Gnts | Gnte
-(*
-	Empty2 -> 7
-	Gnts -> 8
-	Gnte -> 9
-	Inv -> 10
-
-*)
 
 type msg3 = Empty3 | Invack
-(*
-	Empty3 -> true
-	Invack -> false
-*)
 
 
-(*
-:local a locations
-:local u messages1
-:local d messages2
-:local t bool
-:local c bool
-:local s bool
-:local l bool
-:global g bool
-:global m messages1
-:global f bool
+var Exgntd : bool
+var Curcmd : msg1
+var Flag : bool
 
-*)
-
-
-var G : bool
-var M : msg1
-var F : bool
-
-array A[proc] : state
-array U[proc] : msg1
-array D[proc] : msg2
-array T[proc] : msg3
-array C[proc] : bool
-array S[proc] : bool
-array L[proc] : bool
+array Cache[proc] : state
+array Chan1[proc] : msg1
+array Chan2[proc] : msg2
+array Chan3[proc] : msg3
+array Curptr[proc] : bool
+array Shrset[proc] : bool
+array Invset[proc] : bool
 
 
 init (z) {
-     A[z] = Invalid && U[z] = Empty1 && D[z] = Empty2 &&
-     T[z] = Empty3 && C[z] = False && S[z] = False && L[z] = False &&
-     G = False && M = Empty1 && F = False }
+     Cache[z] = Invalid &&
+     Chan1[z] = Empty1 && 
+     Chan2[z] = Empty2 &&
+     Chan3[z] = Empty3 && 
+     Curptr[z] = False && 
+     Shrset[z] = False && 
+     Invset[z] = False &&
+     Exgntd = False && 
+     Curcmd = Empty1 && 
+     Flag = False }
 
 
-unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Shared }
-(*unsafe (z1 z2) { A[z1] = Exclusive && A[z2] = Exclusive }*)
-
-(*unsafe (z) { T[z] = Invack && S[z] = False }*)
-
-(*unsafe (z) { M = Empty1 && T[z] = Invack }*)
-
-(*unsafe (z) { C[z] = False && T[z] <> Empty3 }*)
-
-
-(*
-
-unsafe (z1) { G = True && A[z1] = Shared }
-
-unsafe (z1) { G = False && A[z1] = Exclusive }
-
-unsafe (z1) { A[z1] <> Invalid && S[z1] = False}
-
-*)
+(* unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared } *)
+(*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
 
 
 
-(*:comment h0    t1*)
 transition t1(x)
-requires { M = Reqs && G = False && D[x] = Empty2 && C[x] = True && F = False }
-{ M := Empty1 ;
-  D[j] := case | j = x : Gnts | _ : D[j] ;
-  S[j] := case | j = x : True | _ : S[j] ;
+requires { Curcmd = Reqs && Exgntd = False && Chan2[x] = Empty2 &&
+	   Curptr[x] = True && Flag = False }
+{ Curcmd := Empty1 ;
+  Chan2[j] := case | j = x : Gnts | _ : Chan2[j] ;
+  Shrset[j] := case | j = x : True | _ : Shrset[j] ;
 }
 
 
-(*:comment h1    t2*)
 transition t2(x)
-requires { S[x] = False && M = Reqe && D[x] = Empty2 && C[x] = True && F = False
-           && forall_other j. S[j] = False}
-{ M := Empty1 ; G := True ;
-  D[j] := case | j = x : Gnte | _ : D[j] ;
-  S[j] := case | j = x : True | _ : S[j] ;
+requires { Shrset[x] = False && Curcmd = Reqe && Chan2[x] = Empty2 &&
+	   Curptr[x] = True && Flag = False &&
+           forall_other j. Shrset[j] = False}
+{ Curcmd := Empty1 ; Exgntd := True ;
+  Chan2[j] := case | j = x : Gnte | _ : Chan2[j] ;
+  Shrset[j] := case | j = x : True | _ : Shrset[j] ;
 }
 
 
-(*:comment h2  t3*)
 transition t3(x)
-requires { M = Empty1 && U[x] = Reqs && F = False }
+requires { Curcmd = Empty1 && Chan1[x] = Reqs && Flag = False }
 { 
-  F := True ; 
-  (* L := S ;  *)
-  L[j] := case | _ : S[j];
-  M := Reqs;
-  U[j] := case | j = x : Empty1 | _ : U[j] ;
-  C[j] := case | j = x : True | _ : False 
+  Flag := True ; 
+  (* Invset := Shrset ;  *)
+  Invset[j] := case | _ : Shrset[j];
+  Curcmd := Reqs;
+  Chan1[j] := case | j = x : Empty1 | _ : Chan1[j] ;
+  Curptr[j] := case | j = x : True | _ : False 
 }
 
-(*:comment h2  t3*)
 transition t3bis(x)
-requires { M = Empty1 && U[x] = Reqe && F = False }
-{ F := True ; 
-  (* L := S ;  *)
-  L[j] := case | _ : S[j];
-  M := Reqe;
-  U[j] := case | j = x : Empty1 | _ : U[j] ;
-  C[j] := case | j = x : True | _ : False 
+requires { Curcmd = Empty1 && Chan1[x] = Reqe && Flag = False }
+{ Flag := True ; 
+  (* Invset := Shrset ;  *)
+  Invset[j] := case | _ : Shrset[j];
+  Curcmd := Reqe;
+  Chan1[j] := case | j = x : Empty1 | _ : Chan1[j] ;
+  Curptr[j] := case | j = x : True | _ : False 
 }
 
-(*:comment n1   t4*)
 transition t4(x)
-requires { F = True && S[x] = False }
-{ L[j] := case | j = x : False | _ : L[j] }
+requires { Flag = True && Shrset[x] = False }
+{ Invset[j] := case | j = x : False | _ : Invset[j] }
 
 
-(*:comment n2   t5*)
 transition t5(x)
-requires { F = True && S[x] = True }
-{ L[j] := case | j = x : True | _ : L[j] }
+requires { Flag = True && Shrset[x] = True }
+{ Invset[j] := case | j = x : True | _ : Invset[j] }
 
 
-(*:comment n3   t6*)
 transition t6(x)
-requires { F = True && L[x] = S[x] 
-           && forall_other j. L[j] = S[j] }
-{ F := False }
+requires { Flag = True && Invset[x] = Shrset[x] 
+           && forall_other j. Invset[j] = Shrset[j] }
+{ Flag := False }
 
 
-(*:comment h3    t7*)
 transition t7(x)
-requires { M = Reqs && G = True && L[x] = True && D[x] = Empty2 && F = False }
+requires { Curcmd = Reqs && Exgntd = True && Invset[x] = True &&
+	   Chan2[x] = Empty2 && Flag = False }
 {
-  D[j] := case | j = x : Inv | _ : D[j] ;
-  L[j] := case | j = x : False | _ : L[j] ;
+  Chan2[j] := case | j = x : Inv | _ : Chan2[j] ;
+  Invset[j] := case | j = x : False | _ : Invset[j] ;
 }
 
 
-(*:comment h4    t8*)
 transition t8(x)
-requires { M = Reqe && L[x] = True && D[x] = Empty2 && F = False }
+requires { Curcmd = Reqe && Invset[x] = True && Chan2[x] = Empty2 && Flag = False }
 { 
-  D[j] := case | j = x : Inv | _ : D[j] ;
-  L[j] := case | j = x : False | _ : L[j] ;
+  Chan2[j] := case | j = x : Inv | _ : Chan2[j] ;
+  Invset[j] := case | j = x : False | _ : Invset[j] ;
 }
 
 
-(*:comment h5   t9*)
 transition t9(x)
-requires { M <> Empty1 && T[x] = Invack && F = False }
-{ G := False;
-  T[j] := case | j = x : Empty3 | _ : T[j] ;
-  S[j] := case | j = x : False | _ : S[j] 
+requires { Curcmd <> Empty1 && Chan3[x] = Invack && Flag = False }
+{ Exgntd := False;
+  Chan3[j] := case | j = x : Empty3 | _ : Chan3[j] ;
+  Shrset[j] := case | j = x : False | _ : Shrset[j] 
 }
 
 
 
-(*:comment c1    t10*)
 transition t10(x)
-requires { A[x] = Invalid && U[x] = Empty1 && F = False }
+requires { Cache[x] = Invalid && Chan1[x] = Empty1 && Flag = False }
 {
-  A[j] := case | j = x : Invalid | _ : A[j] ;
-  U[j] := case | j = x : Reqs | _ : U[j] ;
+  Cache[j] := case | j = x : Invalid | _ : Cache[j] ;
+  Chan1[j] := case | j = x : Reqs | _ : Chan1[j] ;
 }
 
 
-(*:comment c2 - c3     t11*)
 transition t11(x)
-requires { A[x] <> Exclusive && U[x] = Empty1 && F = False }
-{ U[j] := case | j = x : Reqe | _ : U[j] }
+requires { Cache[x] <> Exclusive && Chan1[x] = Empty1 && Flag = False }
+{ Chan1[j] := case | j = x : Reqe | _ : Chan1[j] }
 
 
 
-(*:comment c4         t12*)
 transition t12(x)
-requires { D[x] = Inv && T[x] = Empty3 && F = False }
+requires { Chan2[x] = Inv && Chan3[x] = Empty3 && Flag = False }
 { 
-  A[j] := case | j = x : Invalid | _ : A[j] ;
-  D[j] := case | j = x : Empty2 | _ : D[j] ;
-  T[j] := case | j = x : Invack | _ : T[j] 
+  Cache[j] := case | j = x : Invalid | _ : Cache[j] ;
+  Chan2[j] := case | j = x : Empty2 | _ : Chan2[j] ;
+  Chan3[j] := case | j = x : Invack | _ : Chan3[j] 
 }
 
 
-(*:comment c5   t13*)
 transition t13(x)
-requires { D[x] = Gnts && F = False }
+requires { Chan2[x] = Gnts && Flag = False }
 { 
-  A[j] := case | j = x : Shared | _ : A[j] ;
-  D[j] := case | j = x : Empty2 | _ : D[j] 
+  Cache[j] := case | j = x : Shared | _ : Cache[j] ;
+  Chan2[j] := case | j = x : Empty2 | _ : Chan2[j] 
 }
 
 
-(*:comment c6    t14*)
 transition t14(x)
-requires { D[x] = Gnte && F = False }
+requires { Chan2[x] = Gnte && Flag = False }
 {
-  A[j] := case | j = x : Exclusive | _ : A[j] ;
-  D[j] := case | j = x : Empty2 | _ : D[j] 
+  Cache[j] := case | j = x : Exclusive | _ : Cache[j] ;
+  Chan2[j] := case | j = x : Empty2 | _ : Chan2[j] 
 }
 
 
