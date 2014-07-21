@@ -1,0 +1,184 @@
+##########################################################################
+#                                                                        #
+#                              Cubicle                                   #
+#                                                                        #
+#                       Copyright (C) 2011-2013                          #
+#                                                                        #
+#                  Sylvain Conchon and Alain Mebsout                     #
+#                       Universite Paris-Sud 11                          #
+#                                                                        #
+#                                                                        #
+#  This file is distributed under the terms of the Apache Software       #
+#  License version 2.0                                                   #
+#                                                                        #
+##########################################################################
+
+QUIET=""
+
+# where to install the binaries
+DESTDIR=
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+BINDIR=$(DESTDIR)@bindir@
+LIBDIR=$(DESTDIR)@libdir@/cubicle
+
+# where to install the man page
+MANDIR=$(DESTDIR)@mandir@
+
+# other variables set by ./configure
+OCAMLC   = @OCAMLC@
+OCAMLOPT = @OCAMLOPT@
+OCAMLDEP = @OCAMLDEP@
+OCAMLLEX = @OCAMLLEX@
+OCAMLYACC= @OCAMLYACC@
+OCAMLLIB = @OCAMLLIB@
+FUNCTORYLIB = @FUNCTORYLIB@
+OCAMLBEST= @OCAMLBEST@
+OCAMLVERSION = @OCAMLVERSION@
+OCAMLWIN32 = @OCAMLWIN32@
+EXE = @EXE@
+
+INCLUDES = $(FUNCTORYLIB) -thread -I ../../ -I ../../common/ -I ../../smt/ -I `ocamlfind query why3` -I `ocamlfind query ocamlgraph`
+
+BFLAGS = -dtypes -g $(INCLUDES) -annot
+OFLAGS = -dtypes $(INCLUDES) -annot
+
+BIBBYTE=str.cma nums.cma unix.cma dynlink.cma graph.cma why3.cma
+
+BIBOPT=$(BIBBYTE:.cma=.cmxa)
+
+# main target
+#############
+
+NAME = cubicle_why
+BYTE=$(NAME).byte
+OPT=$(NAME).opt
+
+all: make_functory $(OCAMLBEST) 
+
+# configuration of the fake functory library
+############################################
+
+
+make_functory:
+	@if [ -z "$(FUNCTORYLIB)" ]; then \
+	cp -f ../../fake_functory.mli functory.mli;\
+	cp -f ../../fake_functory.ml functory.ml;\
+	$(OCAMLC) -c functory.mli;\
+	$(OCAMLC) -o functory.cma -a functory.ml;\
+	$(OCAMLOPT) -c functory.ml;\
+	$(OCAMLOPT) -o functory.cmxa -a functory.cmx;\
+	fi
+
+# bytecode and native-code compilation
+######################################
+
+SMTCMO = ../../smt/exception.cmo ../../smt/symbols.cmo \
+	 ../../smt/ty.cmo ../../smt/term.cmo ../../smt/literal.cmo \
+         ../../smt/solver_types.cmo ../../smt/explanation.cmo \
+         ../../smt/polynome.cmo ../../smt/uf.cmo ../../smt/use.cmo \
+	 ../../smt/intervals.cmo ../../smt/fm.cmo ../../smt/arith.cmo ../../smt/sum.cmo \
+         ../../smt/combine.cmo ../../smt/cc.cmo ../../smt/solver.cmo \
+	 ../../smt/enumsolver_types.cmo ../../smt/enumsolver.cmo ../../smt/smt.cmo
+
+COMMONCMO = ../../common/timer.cmo ../../common/hashcons.cmo ../../common/hstring.cmo\
+	    ../../common/vec.cmo ../../common/heap.cmo ../../common/iheap.cmo\
+	    ../../common/bitv.cmo
+
+CUBICLECMO = \
+      version.cmo ../../options.cmo ../../ast.cmo ../../parser.cmo ../../lexer.cmo ../../pretty.cmo \
+      ../../cubetrie.cmo ../../prover.cmo \
+      ../../search.cmo ../../cube.cmo ../../bitsolver.cmo ../../forward.cmo \
+      ../../enumerative.cmo ../../brab.cmo ../../trace.cmo ../../bwreach.cmo \
+      ../../typing.cmo
+
+CMO = $(COMMONCMO) $(SMTCMO) $(CUBICLECMO) \
+	global.cmo set__Fset.cmo translation.cmo fol__FOL.cmo map__Map.cmo \
+	why3__Prelude.cmo \
+	abstract_queue__AbstractQueue.cmo reachability__Reachability.cmo \
+	cubicle_brab_map__Cubicle_BRAB.cmo main_extract.cmo
+
+CMX = $(CMO:.cmo=.cmx)
+
+MAINCMO = $(CMO) main_extract.cmo
+MAINCMX = $(MAINCMO:.cmo=.cmx)
+
+RUNCMO = $(CMO) run.cmo
+RUNCMX = $(RUNCMO:.cmo=.cmx)
+
+GENERATED = version.ml parser.ml parser.mli lexer.ml
+
+byte: $(NAME).byte
+opt: $(NAME).opt
+
+$(NAME).byte: $(MAINCMO)
+	$(if $(QUIET),@echo 'Linking $@' &&) \
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma $^
+
+$(NAME).opt: $(MAINCMX)
+	$(if $(QUIET),@echo 'Linking $@' &&) \
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
+
+VERSION=0.5
+
+version.ml: config.status
+	@echo "let version = \""$(VERSION)"\"" > version.ml
+	@echo "let date = \""`date`"\"" >> version.ml
+	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
+
+
+
+# generic rules
+###############
+
+.SUFFIXES: .mli .ml .cmi .cmo .cmx .mll .mly
+
+.mli.cmi:
+	@true compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+
+.ml.cmo:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+	@true compile -w a $(BFLAGS) $< 
+
+.ml.o:
+	@true compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+
+.ml.cmx:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+	@true compile -w a $(BFLAGS) $< 
+
+.mll.ml:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLLEX) $< > /dev/null
+
+.mly.ml:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+
+.mly.mli:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+
+
+# depend
+########
+
+.depend depend::
+	@$(OCAMLDEP) -slash -I ../../common/ ../../common/*.ml ../../common/*.mli > .depend
+	@$(OCAMLDEP) -I ../../common/ -I ../../smt/ ../../smt/*.ml ../../smt/*.mli >> .depend
+	@$(OCAMLDEP) -I ../../common/ -I ../../smt/ -I ../../ ../../*.ml ../../*.mli >> .depend
+	@$(OCAMLDEP) -I ../../common/ -I ../../smt/ -I ../../ -slash *.ml *.mli >> .depend
+
+
+include .depend
+
+# Makefile is rebuilt whenever Makefile.in or configure.in is modified
+######################################################################
+
+Makefile: Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./config.status --recheck
+
+configure: configure.in
+	autoconf 

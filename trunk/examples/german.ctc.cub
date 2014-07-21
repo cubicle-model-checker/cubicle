@@ -1,0 +1,182 @@
+(*******************************************************************)
+(* German cache coherence protocol                                 *)
+(*******************************************************************)
+(*                                                                 *)
+(* As modeled by Ching-Tsun Chou and used in the paper C.-T. Chou, *)
+(* P. K. Mannava, and S. Park, A simple method for parameterized   *)
+(* verification of cache coherence protocols, FMCAD 2004.          *)
+(*******************************************************************)
+
+
+type state = Invalid | Shared | Exclusive
+type msg = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
+type data
+
+var Exgntd : bool
+var Curcmd : msg
+var CurClient : proc
+
+var MemData : data
+var AuxData : data
+var Store_data : data
+
+array Chan1Cmd[proc] : msg
+array Chan1Data[proc] : data
+
+array Chan2Cmd[proc] : msg
+array Chan2Data[proc] : data
+
+array Chan3Cmd[proc] : msg
+array Chan3Data[proc] : data
+
+array CacheState[proc] : state
+array CacheData[proc] : data
+
+array Invset[proc] : bool
+array Shrset[proc] : bool
+
+init (z) { 		   
+     Chan1Cmd[z] = Empty &&
+     Chan2Cmd[z] = Empty &&
+     Chan3Cmd[z] = Empty &&
+     CacheState[z] = Invalid &&
+     Invset[z] = False &&
+     Shrset[z] = False &&
+     Curcmd = Empty &&
+     Exgntd = False &&
+     MemData = AuxData 
+     }
+
+
+(* Control *)
+unsafe (z1 z2) { CacheState[z1] = Exclusive && CacheState[z2] <> Invalid }
+
+
+(* Data *)
+unsafe () { Exgntd = False && MemData <> AuxData }
+unsafe (z) { CacheState[z] <> Invalid && CacheData[z] <> AuxData }
+
+
+
+transition store (n)
+requires { CacheState[n] = Exclusive }
+{
+  AuxData := Store_data;
+  CacheData[j] := case 
+    	       	  | j = n : Store_data
+	       	  | _  : CacheData[j];
+  Store_data := .;
+}
+
+
+
+transition sendReqs (i)
+requires { Chan1Cmd[i] = Empty && CacheState[i] = Invalid }
+{
+  Chan1Cmd[i] := Reqs;
+}
+
+transition sendReqe (i)
+requires { Chan1Cmd[i] = Empty && CacheState[i] <> Exclusive }
+{
+  Chan1Cmd[i] := Reqe;
+}
+
+
+transition recvReqs (i)
+requires { Curcmd = Empty && Chan1Cmd[i] = Reqs }
+{
+  Curcmd := Reqs;
+  CurClient := i;
+  Chan1Cmd[i] := Empty;
+  Invset[j] := case | _ : Shrset[j];
+}
+
+
+transition recvReqe (i)
+requires { Curcmd = Empty && Chan1Cmd[i] = Reqe }
+{
+  Curcmd := Reqe;
+  CurClient := i;
+  Chan1Cmd[i] := Empty;
+  Invset[j] := case | _ : Shrset[j];
+}
+
+transition sendInv1 (i)
+requires { Chan2Cmd[i] = Empty && Invset[i] = True && Curcmd = Reqe }
+{
+  Chan2Cmd[i] := Inv;
+  Invset[i] := False;
+}
+
+transition sendInv2 (i)
+requires { Chan2Cmd[i] = Empty && Invset[i] = True && Curcmd = Reqs &&
+           Exgntd = True }
+{
+  Chan2Cmd[i] := Inv;
+  Invset[i] := False;
+}
+
+
+transition sendInvack (i)
+requires { Chan2Cmd[i] = Inv && Chan3Cmd[i] = Empty }
+{
+  Chan2Cmd[i] := Empty;
+  Chan3Cmd[i] := Invack;
+  Chan3Data[j] := case
+                  | j = i && CacheState[i] = Exclusive : CacheData[i]
+                  | _ : Chan3Data[j];
+  CacheState[i] := Invalid;
+}
+
+transition recvInvack1 (i)
+requires { Chan3Cmd[i] = Invack && Curcmd <> Empty && Exgntd = False } 
+{
+  Chan3Cmd[i] := Empty;
+  Shrset[i] := False;
+}
+
+transition recvInvack2 (i)
+requires { Chan3Cmd[i] = Invack && Curcmd <> Empty && Exgntd = True } 
+{
+  Chan3Cmd[i] := Empty;
+  Shrset[i] := False;
+  Exgntd := False;
+  MemData := Chan3Data[i];
+}
+
+transition sendGnts (i)
+requires { Curcmd = Reqs && CurClient = i && Chan2Cmd[i] = Empty && Exgntd = False }
+{
+  Chan2Cmd[i] := Gnts;
+  Chan2Data[i] := MemData;
+  Shrset[i] := True;
+  Curcmd := Empty;
+}
+
+transition sendGnte (i)
+requires { Curcmd = Reqe && CurClient = i && Chan2Cmd[i] = Empty && Exgntd = False &&
+           Shrset[i] = False && forall_other j. Shrset[j] = False }
+{
+  Chan2Cmd[i] := Gnte;
+  Chan2Data[i] := MemData;
+  Shrset[i] := True;
+  Curcmd := Empty;
+  Exgntd := True;
+}
+
+transition recvGnts (i)
+requires { Chan2Cmd[i] = Gnts }
+{
+  CacheState[i] := Shared;
+  CacheData[i] := Chan2Data[i];
+  Chan2Cmd[i] := Empty;
+}
+
+transition recvGnte (i)
+requires { Chan2Cmd[i] = Gnte }
+{
+  CacheState[i] := Exclusive;
+  CacheData[i] := Chan2Data[i];
+  Chan2Cmd[i] := Empty;
+}

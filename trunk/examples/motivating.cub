@@ -1,0 +1,65 @@
+type msg = Epsilon | RS | RE
+type state = I | S | E
+
+var Exg : bool
+var Cmd : msg
+var Ptr : proc
+
+array Cache[proc] : state
+array Shr[proc] : bool
+
+init (z) { Cache[z] = I && Shr[z] = False &&
+           Exg = False && Cmd = Epsilon }
+
+
+unsafe (z1 z2) { Cache[z1] = E && Cache[z2] <> I  }
+
+
+transition t1 (n)
+requires { Cmd = Epsilon && Cache[n] = I }
+{ 
+  Cmd := RS; 
+  Ptr := n ;
+}
+    
+transition t2 (n)
+requires { Cmd = Epsilon && Cache[n] <> E }
+{ 
+  Cmd := RE; 
+  Ptr := n;
+}
+    
+transition t3 (n)
+requires { Shr[n]=True  &&  Cmd = RE }
+{ 
+  Exg := False;
+  Cache[n] := I;
+  Shr[n] :=False;
+}
+
+transition t4 (n)
+requires { Shr[n]=True  && Cmd = RS && Exg=True }
+{ 
+  Exg := False;
+  Cache[n] := S;
+  Shr[n] := True;
+}
+    
+transition t5 (n)
+requires { Ptr = n && Cmd = RS && Exg = False }
+{ 
+  Cmd := Epsilon;
+  Shr[n] := True;
+  Cache[n] := S;
+}
+
+transition t6 (n)
+requires { Shr[n] = False && Cmd = RE &&
+           Exg = False && Ptr = n &&
+	   forall_other l. Shr[l] = False }
+{ 
+  Cmd := Epsilon; 
+  Exg := True;
+  Shr[n] := True;
+  Cache[n] := E;
+}

@@ -1,0 +1,94 @@
+theory Reachability
+
+   use import fol.FOL
+
+   type trans_rel
+   
+   (* Just for instantiation *)
+   constant tau : trans_rel
+
+   function pre trans_rel t : t
+ 
+   axiom pre_false : forall tau:trans_rel. pre tau ffalse = ffalse
+   
+
+   function pre_star trans_rel t : t
+     
+   axiom pre_star_def1 : forall tau : trans_rel. forall f : t.
+                         valid (f => pre_star tau f)
+   (* axiom pre_star_def2 : forall tau : trans_rel. forall f : t. *)
+   (*                       pre tau (pre_star tau f) = pre_star tau f *)
+   axiom pre_star_def3 : forall tau : trans_rel. forall f : t.
+                         pre_star tau (pre_star tau f) = pre_star tau f
+   axiom pre_star_def4 : forall tau : trans_rel. forall f : t.
+                         ((pre_star tau (pre tau f)) ++ f) = pre_star tau f
+
+   (* axiom pre_and : *)
+   (* forall tau : trans_rel. *)
+   (*   forall f1 f2 : t. pre tau (f1 & f2) = (pre tau f1) & (pre tau f2) *)
+     
+   axiom pre_or :
+   forall tau : trans_rel.
+     forall f1 f2 : t. pre tau (f1 ++ f2) = (pre tau f1) ++ (pre tau f2)
+
+     
+   axiom pre_star_false : 
+   forall tau : trans_rel. pre_star tau ffalse = ffalse
+   
+   axiom pre_star_and :
+   forall tau : trans_rel.
+     forall f1 f2 : t.
+     pre_star tau (f1 & f2) |== (pre_star tau f1) & (pre_star tau f2)
+     
+   axiom pre_star_or :
+   forall tau : trans_rel.
+     forall f1 f2 : t. 
+     pre_star tau (f1 ++ f2) = (pre_star tau f1) ++ (pre_star tau f2)
+     
+   predicate reachable (* trans_rel t t *)
+   (tau:trans_rel) (init : t) (f : t) = sat ((pre_star tau f) & init)
+   
+   axiom reachable_def :
+   forall tau : trans_rel.
+     forall init f : t. sat ((pre_star tau f) & init) -> reachable tau init f 
+            
+   lemma directly_reachable :
+   forall tau : trans_rel.
+     forall init f : t. sat (f & init) -> reachable tau init f 
+   
+   lemma false_unreachable :
+   forall tau : trans_rel.
+     forall init : t. not (reachable tau init ffalse)
+
+   lemma reachable_or :
+   forall tau : trans_rel.
+     forall f1 f2 init :t.
+       reachable tau init (f1 ++ f2) <->
+         reachable tau init f1 \/ reachable tau init f2
+       
+   lemma reachable_and :
+   forall tau : trans_rel.
+     forall f1 f2 init :t.
+       reachable tau init (f1 & f2) ->
+         reachable tau init f1 /\ reachable tau init f2
+
+   lemma reachable_imply:
+   forall tau : trans_rel.
+     forall x f init : t.
+       valid (x => f) -> reachable tau init x -> reachable tau init f
+
+   lemma reachable_bigger:
+   forall tau : trans_rel.
+     forall f1 f2 init : t.
+       f1 |== f2 -> reachable tau init f1 -> reachable tau init f2
+
+   lemma pre_star_bigger:
+   forall tau : trans_rel.
+     forall f1 f2 : t.
+       f1 |== f2 -> pre_star tau f1 |== pre_star tau f2
+       
+   lemma reachable_by_pre:
+   forall tau : trans_rel.
+     forall f init : t. reachable tau init (pre tau f) -> reachable tau init f
+
+end

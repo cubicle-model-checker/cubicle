@@ -1,0 +1,994 @@
+\documentclass[a4paper, twoside]{scrartcl}
+
+\usepackage[T1]{fontenc}
+\usepackage{fullpage}
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{verbatim}
+\usepackage{alltt}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{lineno}
+\usepackage{stmaryrd}
+
+
+\usepackage{libertine}
+\renewcommand*\ttdefault{txtt}
+% \usepackage[libertine]{newtxmath}
+
+
+\theoremstyle{plain}% default
+\newtheorem{thm}{Théorème}[section]
+\newtheorem{lem}[thm]{Lemme}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem*{cor}{Corollaire}
+
+\theoremstyle{definition}
+\newtheorem{defn}{Définition}[section]
+\newtheorem{conj}{Conjecture}[section]
+\newtheorem{exmp}{Exemple}[section]
+
+\theoremstyle{remark}
+\newtheorem*{rem}{Remarque}
+\newtheorem*{note}{Note}
+
+\newcommand{\te}[1]{\texttt{#1}}
+\newcommand{\nt}[1]{$\langle$\textsl{#1}$\rangle$}
+\newcommand{\indexnt}[1]{\index{#1@\textsl{#1}, grammar entry}}
+\newcommand{\indextt}[1]{\index{#1@\texttt{#1}}}
+\newcommand{\etoile}{$^{\star}$}
+\newcommand{\etoilesep}[1]{$^{\star}_#1$}
+\newcommand{\plus}{$^+$}
+\newcommand{\plussep}[1]{$^+_#1$}
+
+\setlength{\marginparwidth}{50pt}
+
+\definecolor{lightred}{rgb}{1.0,0.3,0.3}
+\definecolor{darkred}{rgb}{0.4,0.0,0.0}
+\definecolor{lightgray}{gray}{0.95}
+% Command for inserting a todo item
+\newcommand{\todo}[1]{%
+  \marginpar{%
+      \fcolorbox{darkred}{lightred}{%
+        \parbox{\marginparwidth}{\scriptsize \textbf{[TODO]} \small #1}%
+      }%
+ }%
+}%
+
+
+\def\linenumberfont{\normalfont\footnotesize\sffamily}
+
+% Redéfinition du premier niveau
+\renewcommand{\theenumi}{(\roman{enumi})}
+\renewcommand{\labelenumi}{\theenumi}
+
+\title{Mémo Cubicle}
+
+\author{Alain Mebsout\\
+  \multicolumn{1}{p{.7\textwidth}}{\centering\emph{LRI, Université Paris Sud}}}
+
+
+
+\begin{document}
+
+\maketitle
+
+\section{Préliminaires}
+
+Dans ce qui suit on se place dans le contexte de la logique
+(classique) du premier ordre avec égalité (\emph{i.e.} le symbole
+d'égalité $=$ est inclus dans toutes les signatures qui seront
+considérées par la suite) dont on rappelle ici brièvement les notions
+usuelles.
+
+\subsection{Syntaxe}
+
+\begin{defn}
+  Une \emph{signature} $\Sigma$ est un ensemble de symboles de
+  relation et de symboles de fonction, chacun associé à une arité. On
+  appelle les symboles de fonction d'arité $0$ (zéro),
+  \emph{constantes}.
+\end{defn}
+
+\begin{defn} %[Signature relationnelle]
+  Une signature est dite \emph{relationnelle} si elle ne contient pas
+  de symboles de fonction.
+\end{defn}
+
+\begin{defn} %[Signature quasi-relationnelle]
+  Une signature est dite \emph{quasi-relationnelle} si les symboles de
+  fonction qu'elle contient sont tous des constantes.
+\end{defn}
+
+On définit les $\Sigma$-\emph{termes}, $\Sigma$-\emph{atomes} (ou
+$\Sigma$-\emph{formules atomiques}), $\Sigma$-\emph{littéraux},
+$\Sigma$-\emph{formules}, $\Sigma$-\emph{clauses} et
+$\Sigma$-\emph{formules CNF} comme les expressions du language défini par
+la grammaire suivante :
+
+\marginpar{quantificateurs ?}
+
+\begin{center}
+\begin{tabular}{llrll}
+  \bf{termes :}
+  & \nt{t} & $::=$ & $c$ & où $c$ est une constante de $\Sigma$ \\
+  &        &   $|$ & $f$(\nt{t}, \ldots, \nt{t}) & où $f$ est un
+  symbole de fonction de $\Sigma$ d'arité $> 0$\\\\
+
+  \bf{atomes :}
+  & \nt{a} & $::=$ & $\bot$ & \\
+  &        &   $|$ & $\top$ & \\
+  &        &   $|$ & $p$(\nt{t}, \ldots, \nt{t}) & où $p$ est un
+  symbole de relation de $\Sigma$\\
+  &        &   $|$ & \nt{t} $=$ \nt{t} & \\\\
+
+  \bf{littéraux :}
+  & \nt{l} & $::=$ & \nt{a} & \\
+  &        &   $|$ & $\neg$\nt{a} & \\\\
+
+  \bf{formules :}
+  & \nt{$\varphi$} & $::=$ & \nt{l} & \\
+  &              &   $|$ & \nt{$\varphi$} $\wedge$ \nt{$\varphi$} & \\
+  &              &   $|$ & \nt{$\varphi$} $\vee$ \nt{$\varphi$} & \\
+  &              &   $|$ & \nt{$\varphi$} $\implies$ \nt{$\varphi$} & \\
+  &              &   $|$ & \nt{$\varphi$} $\iff$ \nt{$\varphi$} & \\\\
+
+  \bf{clauses :}
+  & \nt{c} & $::=$ & \nt{l} & \\
+  &              &   $|$ & \nt{l} $\vee$ \nt{c} & \\\\
+
+  \bf{formules CNF :}
+  & \nt{cnf} & $::=$ & \nt{c} & \\
+  &              &   $|$ & \nt{c} $\wedge$ \nt{cnf} & \\\\
+
+\end{tabular}
+\end{center}
+
+On dénotera par \emph{termes}, \emph{atomes} (ou \emph{formules
+  atomiques}), \emph{littéraux}, \emph{formules}, \emph{clauses} et
+\emph{formules CNF}, respectivement les $\Sigma$-\emph{termes},
+$\Sigma$-\emph{atomes} (ou $\Sigma$-\emph{formules atomiques}),
+$\Sigma$-\emph{littéraux}, $\Sigma$-\emph{formules},
+$\Sigma$-\emph{clauses} et $\Sigma$-\emph{formules CNF} lorsque le
+contexte ne permet pas d'ambiguïté.
+
+\subsection{Sémantique}
+
+\begin{defn}
+  Une $\Sigma$-\emph{structure} $A$ est une paire $(D, \mathcal{I})$
+  où $D$ est un ensemble appelé le \emph{domaine} de $A$ (ou
+  l'\emph{univers} de $A$) et dénoté par $dom(A)$. Les élements de $D$
+  sont appelés les \emph{éléments} de la structure $A$. On notera
+  $|dom(A)|$ le cardinal du domaine de $A$ et on dira qu'une structure
+  $A$ est finie si $|dom(A)|$ est fini. $\mathcal{I}$ est
+  l'interprétation qui associe à chaque constante de $\Sigma$ un
+  élément du domaine de A, à chaque symbole de fonction d'arité $n$ >
+  0 de $\Sigma$ une fonction totale $\mathcal{I}(f) : dom(A)^n \to
+  dom(A)$, et à chaque symbole de relation d'arité $n$ > 0 de $\Sigma$
+  une fonction totale $\mathcal{I}(p) : dom(A)^n \to \{true,false\}$.
+  Cette interprétation peut être étendue de manière homomorphique aux
+  $\Sigma$-termes et $\Sigma$-formules (qui associe à chaque terme $t$
+  un $\mathcal{I}(t) \in dom(A)$ et à chaque formule $\varphi$ une
+  valeur $\mathcal{I}(\varphi) \in \{true,false\}$).
+\end{defn}
+
+\begin{defn}
+  On appelle une $\Sigma$-\emph{théorie} $\mathcal{T}$ un
+  ensemble (potentiellement infini) de $\Sigma$-structures appelées
+  les \emph{modèles} de $\mathcal{T}$.
+  \footnote{On peut aussi définir une théorie comme l'ensemble de ses
+    axiomes, ou l'ensemble des formules closes qui sont valides dans
+    cette théorie}
+\end{defn}
+ 
+
+\begin{defn}
+  On dit qu'un $\Sigma$-modèle $\mathcal{M} = (A, \mathcal{I})$
+  \emph{satisfait} une formule $\varphi$ ssi $\mathcal{I}(\varphi) =
+  true$, dénoté par $\mathcal{M} \vDash \varphi$.
+\end{defn}
+
+\begin{defn}
+  Une formule $\varphi$ est dite \emph{satisfiable} dans une théorie
+  $\mathcal{T}$ (ou $\mathcal{T}$-\emph{satisfiable}) ssi il existe un
+  modèle $\mathcal{M} \in \mathcal{T}$ qui satisfait $\varphi$.
+
+  Une formule $\varphi$ est dite \emph{conséquence logique} d'un
+  ensemble $\Gamma$ de formules dans une théorie $\mathcal{T}$ (et
+  noté par $\Gamma \vDash_{\mathcal{T}} \varphi$) ssi tous les modèles
+  de $\mathcal{T}$ qui satisfont $\Gamma$ satisfont aussi $\varphi$.
+  
+\end{defn}
+
+\begin{defn}
+  Une formule $\varphi$ est dite \emph{valide} dans une théorie
+  $\mathcal{T}$ (ou $\mathcal{T}$-\emph{valide}) ssi sa négation est
+  $\mathcal{T}$-\emph{insatisfiable}, dénoté par $\mathcal{T} \vDash
+  \varphi$ ou $\emptyset \vDash_{\mathcal{T}} \varphi$.
+\end{defn}
+
+
+\begin{defn}
+  Soient $A$ et $B$ deux $\Sigma$-structures. $A$ est une
+  \emph{sous-structure} de $B$, noté $A \subseteq B$ si $dom(A)
+  \subseteq dom(B)$.
+\end{defn}
+
+\begin{defn}
+  Soient $A$ une $\Sigma$-structure et $X \subseteq dom(A)$, alors il
+  existe une unique plus petite sous-structure $B$ de $A$ tel que
+  $dom(B) \subseteq X$. On dit que $B$ est la sous-structure de $A$
+  \emph{générée} par $X$ et on note $B = \langle X \rangle_A$.
+\end{defn}
+
+
+\begin{defn}
+  Une $\Sigma$-théorie $\mathcal{T}$ est \emph{localement finie} ssi $\Sigma$ est
+  finie, chaque sous ensemble fini d'un modèle de $\mathcal{T}$ génère une
+  sous-structure finie.
+  \footnote{En symboles, $\forall \mathcal{M} \in \mathcal{T}.~ \forall X
+  \subseteq dom(\mathcal{M}).~ |X| < \infty \implies
+  |dom(\langle X \rangle_{\mathcal{M}})| < \infty$.}
+\end{defn}
+
+\begin{rem}
+  Si $\Sigma$ est relationnelle ou quasi-relationnelle alors toute
+  $\Sigma$-théorie est localement finie.
+\end{rem}
+
+\begin{defn}
+  Une $\Sigma$-théorie $\mathcal{T}$ est \emph{close par
+    sous-structure} ssi chaque sous-structure d'un modèle de
+  $\mathcal{T}$ est aussi un modèle de $\mathcal{T}$.
+\end{defn}
+
+\begin{exmp}
+  La théorie ayant pour modèle la structure de domaine $\mathbb{N}$ et
+  signature $\{=, \leq\}$ où ces symboles sont interprétés de manière
+  usuelle (de la même manière que dans l'arithmétique de Presburger)
+  est localement finie et close par sous-structure. Si on étend cette
+  signature à $\{=, \leq, +\}$ alors elle n'est plus localement finie
+  mais reste close par sous-structure. Une théorie ayant pour modèle
+  une structure finie, avec une signature $\{=, R\}$ où $R$ est
+  interprétée comme une relation binaire qui caractériserait un anneau
+  est localement finie mais n'est pas close par sous-structure.
+\end{exmp}
+
+Le problème de la \emph{satisfiabilité modulo} une $\Sigma$-théorie
+$\mathcal{T}$ consiste à établir la satifiabilité de formules closes
+sur une extension arbitraire de $\Sigma$ (avec des constantes). 
+Une extension de ce problème, beaucoup plus utile en pratique, est
+d'établir la satisfiabilité \emph{modulo la combinaison de deux (ou
+  plus) théories}.
+
+
+\paragraph{Exemples de théories.}
+
+La théorie de l'égalité (aussi appelée théorie \emph{vide}, ou
+\emph{EUF}) est la théorie qui a comme modèles tous les modèles
+possibles pour une signature donnée. Elle n'impose aucune restriction
+sur l'interprétation faite de ses symboles (ses symboles sont dits
+non-interprétés). Les fonctions non-interprétées sont souvent
+utilisées comme technique d'abstraction pour s'affranchir d'une
+complexité ou de détails inutiles.
+
+La théorie de l'arithmétique est une autre théorie omniprésente en
+pratique. Elle est utilisée pour modéliser l'arithmétique des
+programmes, la manipulation de pointeurs et de la mémoire, les
+contraintes de temps réels, les propriétés physiques de certains
+systèmes, etc. Sa signature est $\{ 0, 1, ..., +, -, *, /, \leq\}$
+étendue à un nombre arbitraire de constantes, et ses symboles sont
+interprétés de manière usuelle sur les entiers et les réels.
+
+Une théorie de types énumérés est une théorie ayant une signature
+$\Sigma$ quasi-relationnelle contenant un nombre fini de constantes
+(constructeurs). L'ensemble de ses modèles consiste en une unique
+$\Sigma$-structure dont chaque symbole est interprété comme un des
+constructeurs de $\Sigma$. Dans ce qui va suivre on verra que ces
+théories seront utiles pour modéliser les \emph{locations} de
+processus et les messages échangés par ces processus dans les systèmes
+paramétrés.
+
+
+\section{Systèmes de tableaux}
+
+
+\subsection{Logique typée}\label{tht}
+
+On se place dans le contexte de la logique du premier ordre étendue
+avec des types. Dans ce qui suit on considérera les théories suivantes
+:
+\begin{itemize}
+\item une théorie \emph{des processus} $\mathcal{T}_I$ sur signature
+  $\Sigma_I$ localement finie dont le seul symbole de type est
+  \texttt{proc}, et dont la $\mathcal{T}_I$-satisfiabilité est
+  décidable sur le fragment sans quantificateurs
+\item des théories \emph{d'éléments} $\mathcal{T}_{E_a}$ sur
+  signature $\Sigma_{E_a}$ localement finies dont le seul symbole de
+  type est \texttt{elem$_a$}, et dont la
+  $\mathcal{T}_{E_a}$-satisfiabilité est décidable sur le fragment
+  sans quantificateurs
+\item des théories \emph{d'accès} $\mathcal{T}_{A_a}$ sur signature
+  $\Sigma_{A_a}$, obtenues en combinant la théorie $\mathcal{T}_I$ et
+  une théorie $\mathcal{T}_{E_a}$ de la manière suivante.
+  $\Sigma_{A_a} = \Sigma_I \cup \Sigma_{E_a} \cup \{a\}$ où $a$ est un
+  symbole de fonction de type $\mathtt{proc} \to \mathtt{elem}_a$. Ses
+  modèles sont les structures $S$ où $S_{|\mathtt{proc}}$ est un modèle
+  de $\mathcal{T}_I$ et $S_{|\mathtt{elem}_a}$ est un modèle de
+  $\mathcal{T}_{E_a}$ et $S_{|\mathtt{proc} \to \mathtt{elem}_a}$ est
+  l'ensemble des fonctions totales de $\mathtt{proc} \to \mathtt{elem}_a$.
+
+\end{itemize}
+
+\marginpar{Besoin de parler de théorie des tableaux ?}
+
+
+% \begin{defn}
+%   On définit la combinaision de deux théories $\mathcal{T}_1$ sur
+%   signature $\Sigma_1$ et $\mathcal{T}_2$ sur signature $\Sigma_2$
+%   comme la théorie notée par $\mathcal{T}_1 \oplus \mathcal{T}_2$ sur
+%   signature $\Sigma_1 \cup \Sigma_2$.
+% \end{defn}
+
+\subsection{Systèmes de transition}
+
+\begin{defn}
+  Un \emph{système (de transition) de tableaux} est un triplé
+  $\mathcal{S} = (X, I, \tau)$ avec $X$ partitionné en $X_G$ et $X_A$ où
+  \begin{itemize}
+  \item $X_A$ est un ensemble de tableaux d'état représentés par des
+    symboles de fonction. Chaque $a \in A$ a comme type
+    $\mathtt{proc} \to \mathtt{elem}_a$
+  \item $X_G$ est un ensemble de variables d'état
+    \emph{globales}. Chaque $g \in G$ a comme type
+    $\mathtt{elem}_g$.
+    % Sans perte de généralité, on verra maintenant
+    % les variables globales comme des fonctions constantes de 
+    % $\mathtt{proc} \to \mathtt{elem}_g$, donc on pourra voir $V$ comme
+    % l'ensemble des fonctions
+  \item $I$ est une formule qui caractérise les \emph{états initiaux}
+    du système (où les variables de $X$ peuvent apparaître libres)
+  \item $\tau$ est une relation de transition exprimée sous la forme
+    d'un ensemble de transitions gardées
+  \end{itemize}
+
+  Chaque élément de $\tau$ peut être exprimé sous la forme d'une
+  formule quantifiée existentiellement par zéro, un, ou plusieurs
+  variables de type \texttt{proc} et mettant en relation les variables
+  globales et tableaux d'états avant et après exécution de la
+  transition. Si $x \in X$ est un tableau (ou une variable globale),
+  on notera par $x'$ la valeur de $x$ après exécution de la
+  transition et par $X'$ l'ensemble des variables après exécution de
+  la transition. Cette transistion s'exprimera alors sous la forme:
+  %
+  \[ t_k(X,X') = \exists \bar{i}.~\phi(\bar{i}, X) \wedge 
+  \bigwedge_{g' \in X_G'} g' = F_g(\bar{i},X) \wedge
+  \bigwedge_{a' \in X_A'} a' = \lambda j. F_a(\bar{i},j,X))
+  \]
+  où les variables de $X$ peuvent apparaître libres dans $\phi$, $F_g$
+  et $F_a$ 
+  \[ t_k(X,X') = \exists \bar{i}.~\phi(\bar{i}, X) \wedge 
+  \bigwedge_{g' \in X_G'} g' = F_g(\bar{i},X) \wedge
+  \bigwedge_{a' \in X_A'} \forall j. a'(j) = F_a(\bar{i},j,X))
+  \]
+\end{defn}
+
+
+Soit un système $\mathcal{S} = (X, I, \tau)$ et une formule $U$ (où
+les variables de $X$ peuvent apparaître libres), le problème de
+la \emph{sûreté} (ou de l'\emph{atteignabilité}) est de déterminer s'il
+existe une séquence de transitions $t_1, ..., t_n$ dans $\tau$ telle
+que
+  \[ I(X_0) \wedge t_1(X_0,X_1)  \wedge ...  \wedge 
+  t_n(X_{n-1},X_n) \wedge U(X_n)
+  \]
+est satifiable modulo les théories mises en jeu. S'il n'existe pas de
+telle séquence, alors $\mathcal{S}$ est dit \emph{sûr} par rapport à
+$U$ (i.e. $\neg U$ est une propriété de sûreté du sytème).
+
+On dira qu'une transition $t_k$ est paramétrée par les variables
+$\bar{i}$ quantifiées existentiellement. Intuitivement, une transition
+$t_k$ met en jeu un ou plusieurs processus ($\bar{i}$, ses paramètres)
+qui peuvent modifier l'état du système. Ici $\phi$ représente la garde
+de la transition et $F_g$, $F_a$ sont les fonctions de mise à jour des
+variables d'état. La sémantique d'un tel système décrit par
+$\mathcal{S} = (X, I, \tau)$ est une boucle infinie qui, à chaque
+tour, éxécute une transition choisie arbitrairement dont la garde
+$\phi$ est vraie, et met à jour les valeur des variables de $X$ en
+conséquence.
+
+
+\begin{exmp}[Protocole de cohérence de cache de Berkeley]
+
+  Pour cet exemple, on prendra $\mathcal{T}_I$ la théorie de l'égalité
+  de signature $\Sigma_I = \{ = \} $ ayant pour symbole de type
+  \texttt{proc}. On considerera une seule théorie de types énumérés
+  $\mathcal{T}_E$ de signature $\Sigma_E = \{ =, \mathsf{UnOwned},
+  \mathsf{NonExclusive}, \mathsf{Exclusive}, \mathsf{Invalid} \} $ où
+  \textsf{UnOwned}, \textsf{NonExclusive}, \textsf{Exclusive} et
+  \textsf{Invalid} sont les constructeurs et on appellera son unique
+  symbole de type \texttt{state}. La théorie d'accès $\mathcal{T}_A$
+  définie comme la combinaison de $\mathcal{T}_I$ et $\mathcal{T}_E$
+  comme en section~\ref{tht} ayant pour signature $\Sigma_{A} =
+  \Sigma_I \cup \Sigma_{E} \cup \{ Cache \}$ où $Cache$ est un symbole
+  de fonction de type \texttt{proc $\to$ state}.
+
+  Le protocole de cohérence de cache de Berkeley spécifie les actions
+  de cohérence d'un nombre arbitraire de processeurs qui maintienent
+  chacun une ligne de cache. Dans notre formalisme, $Cache(p)$
+  représentera l'état du cache du processeur $p$, le protocole pourra
+  donc s'exprimer sous la forme d'un système de tableaux $\mathcal{S}
+  = (X, I, \tau)$ avec $X = X_A = { Cache }$ et la relation de
+  transition $\tau = \{t_1, t_2, t_3\}$. Dans l'état initial du
+  système, tous les processus ont leur cache dans l'état
+  \textsf{Invalid}, i.e.
+  \[
+  I = \forall p.~ Cache(p) = \mathsf{Invalid}
+  \]
+  dans le cas d'un défaut de cache en lecture (\textbf{read miss}), le
+  cache du possesseur est mis à jour et passe dans l'état
+  \textsf{UnOwned}, en même temps, tous les caches des autres processeurs ayant
+  un cache en état \textsf{Exclusive} passent dans l'état
+  \textsf{NonExclusive}
+  \[
+  \begin{array}{rl}
+    t_1 = & \exists p.~ Cache(p) = \mathsf{Invalid}\\
+    & \land~ Cache'(p) = \mathsf{UnOwned} \\
+    & \land~ \forall j. (~~
+    (j \neq p \wedge Cache(j) = \mathsf{Exclusive} \implies Cache'(j) =
+    \mathsf{NonExclusive})\\
+    &
+    ~~~~~~~~\land (j \neq p \wedge Cache(j) \neq \mathsf{Exclusive} \implies
+    Cache'(j) = Cache(j))) 
+  \end{array}
+  \]
+  dans le cas d'un défaut de cache en écriture (\textbf{write miss}), le
+  cache du possesseur est mis à jour et passe dans l'état
+  \textsf{Exclusive}, en même temps, tous les caches des autres processeurs sont
+  invalidés et passent dans l'état \textsf{Invalid}
+  \[
+    t_2 = \exists p.~ Cache(p) = \mathsf{Invalid}
+     \land~ Cache'(p) = \mathsf{Exclusive} 
+     \land~ \forall j.
+    (j \neq p \implies Cache'(j) = \mathsf{Invalid})
+  \]
+  dans le cas d'un \textbf{write hit}, si le cache du
+  possesseur est dans l'état \textsf{UnOwned} ou \textsf{NonExclusive}
+  alors il passe en état \textsf{Exclusive}, en même temps, tous les
+  caches des autres processeurs ayant un cache en état \textsf{UnOwned} ou
+  \textsf{NonExclusive} sont invalidés et passent dans l'état
+  \textsf{Invalid}
+  \[
+  \begin{array}{rl}
+    t_3 = & \exists p.~ (Cache(p) = \mathsf{UnOwned}  \vee Cache(p) =
+    \mathsf{NonExclusive})\\
+    & \land~ Cache'(p) = \mathsf{Exclusive} \\
+    & \land~ \forall j. (~~
+    (j \neq p \wedge (Cache(j) = \mathsf{UnOwned} \vee Cache(j) =
+    \mathsf{NonExclusive}) \implies Cache'(j) =
+    \mathsf{Invalid})\\
+    &
+    ~~~~~~~~\land (j \neq p \wedge (Cache(j) \neq \mathsf{UnOwned}
+    \land Cache(j) \neq
+    \mathsf{NonExclusive}) \implies
+    Cache'(j) = Cache(j))) 
+  \end{array}
+  \]
+  enfin, dans le cas d'un \textbf{read hit} aucune action de cohérence
+  n'est à faire.
+
+  La propriété de sûreté qu'on veut vérifier pour ce protocole est
+  qu'il ne peut pas y avoir deux processus avec leur cache dans un
+  état \textsf{Exclusive}. On pourra exprimer cette propriété par la
+  formule ``unsafe'' $U$ suivante
+  \[
+  U = \exists p_1, p_2.~ Cache(p_1) = \mathsf{Exclusive} \wedge
+  Cache(p_2) = \mathsf{Exclusive}
+  \]
+  
+
+
+
+\end{exmp}
+
+
+
+\subsection{Atteignabilité par chainage arrière}
+
+
+Plusieurs approches sont possibles pour résoudre les instances du
+problème de sûreté (ou d'atteignabilité). Une première approche
+consiste à construire l'ensemble des états atteignables (par chainage
+avant) à partir de $I$, une autre approche, celle qui sera adoptée
+dans la suite, consiste à construire l'ensemble des états qui peuvent
+atteindre $U$ (atteingnabilité par chainage arrière).
+
+\begin{defn}
+  La \emph{pré-image} d'une formule $\varphi(X')$ par une transition
+  $t$ est définie par 
+  \[pre_t(\varphi)(X) = \exists X'.~ t(X,X') \wedge
+  \varphi(X')\]
+  La pré-image d'une formule $\varphi(X')$ par la
+  relation de transition $\tau$ est définie de manière analogue par
+  \[pre_\tau(\varphi)(X) = \exists X'.~ \bigvee_{t \in \tau} t(X,X')
+  \wedge \varphi(X') = \bigvee_{t \in \tau} pre_t(\varphi)(X)\]
+\end{defn}
+
+
+La clôture de $U$ par $pre_\tau$ caractérise donc l'ensemble des états
+qui peuvent atteindre $U$. L'algorithme d'atteignabilité par chainage
+arrière présenté ci-après, essaye de calculer cette clôture tout en
+vérifiant que les états caractérisés par cette dernirère ne sont pas
+des états initiaux. Si un état initital (un modèle de $I$) est aussi
+un modèle de cette clôture, alors le système n'est \emph{pas sûr}
+vis-à-vis de $U$. Au contraire, si ce n'est pas le cas, alors le
+système est \emph{sûr} et l'algorithme peut décider une telle
+propriété ssi cette clôture est aussi un point-fixe.
+
+\begin{defn}
+  On appelle \emph{cube} une formule de la forme $\exists \bar
+  i. (\Delta \land F)$, où $\bar i$ sont des variables de la
+  théorie $\mathcal{T}_I$, $\Delta$ est une conjonction de
+  diséquations entre les variables de $\bar i$, et $F$ est une
+  conjonction de littéraux.
+\end{defn}
+
+\begin{prop} \label{pre_cube}
+  Si $\varphi$ est un cube, la formule $pre_\tau(\varphi)$ est
+  équivalente à une disjonction de cubes.
+  % (Par une simple mise
+  % en DNF et déplacement des quantificateurs existentiels).
+\end{prop}
+
+
+\begin{proof}
+  Soit $\varphi = \exists \bar p. (\Delta \land F)$ un cube,
+  $pre_\tau(\varphi)(X) = \exists X'.~ \bigvee_{t \in \tau} t(X,X')
+  \wedge \varphi(X') $, donc $pre_\tau(\varphi)(X) = \exists X'.~
+  \bigvee_{t \in \tau} t(X,X') \wedge \exists \bar p. (\Delta \land
+  F(X')) $ est équivalente à la formule
+  \[\exists X'.~ \bigvee_{t \in \tau} (\exists \bar{i}.~\phi(\bar{i}, X) \wedge 
+  \bigwedge_{g' \in X_G'} g' = F_g^t(\bar{i},X) \wedge
+  \bigwedge_{a' \in X_A'} \forall j. a'(j) = F_a^t(\bar{i},j,X))
+  \wedge \exists \bar p. (\Delta \land F(X')) \]
+
+  Soit $X_G'^t = \{ g' ~|~ g' = F_g^t(\bar{i},X) ~\text{et}~ g \in X_G \}$
+  et $X_A'^t = \{ a' ~|~ \forall p \in \bar p.~ a'(p) = F_a^t(\bar{i},p,X)
+  ~\text{et}~ a \in X_A \}$, et choisissons $X'_t = X_G'^t \cup
+  X_A'^t$. Notons $\bigvee_{\psi_t \in \text{DNF}}\psi_t(X)$ le résultat de la mise
+  en forme normale disjonctive (DNF) de $\phi(\bar{i}, X) \wedge F(X'_t)$,
+  alors la formule précédente est équivalente à
+
+  \[\bigvee_{t \in \tau} (\exists \bar{i}.~\phi(\bar{i}, X)
+  \wedge \exists \bar p. (\Delta \land F(X'_t)) \] i.e.
+
+  \[\bigvee_{t \in \tau} \bigvee_{\psi_t \in \text{DNF}} (\exists
+  \bar{i}.~\exists \bar p.~ (\Delta \land \psi_t(X))\]
+\end{proof}
+
+Dans ce qui suit on supposera que la formule ``unsafe'' $U$ est un
+cube. La clôture construite par l'algorithme sera donc une disjonction
+de cubes et pourra être vue comme un ensemble de cubes \texttt{V}.
+L'algorithme en figure \ref{br} maintient une file à priorité
+\texttt{Q} de cubes à traiter et un ensemble \texttt{V} de cubes
+``visités'' dont la disjonction des élements caractérise les états
+pouvant atteindre $U$.
+
+\begin{figure}[h]\centering
+\fbox{%
+\begin{minipage}{0.5\textwidth}
+\begin{alltt}{\internallinenumbers
+
+  V $\leftarrow \emptyset$ %\vspace{0.3em}
+
+  push\_queue(Q, \(U\)) %\vspace{0.3em}
+
+  while not\_empty(Q) %\vspace{0.3em}
+
+  ~~$\varphi \leftarrow$ pop\_queue(Q) %\vspace{0.3em}
+
+  ~~if \colorbox{lightgray}{$\neg(\varphi \wedge I \vdash \bot)$} then return(\textrm{\it
+    unsafe}) %\vspace{0.3em}
+
+  ~~if \colorbox{lightgray}{$\neg (\varphi \vdash \bigvee_{\psi\in\mathtt{V}} \psi)$} then
+
+  ~~~~V $\leftarrow$ $\mathtt{V} \cup \{\varphi\}$
+
+  ~~~~push\_queue(Q, $pre_\tau(\varphi)$) %\vspace{0.3em}
+
+  return(\textrm{\it safe})
+
+}
+\end{alltt}
+\end{minipage}
+}
+
+\caption{Algorithme d'atteignabilité par chainage arrière}
+\label{br}
+\end{figure}
+
+
+On peut voir que les tests qui sont effectués aux lignes \textsf{5} et
+\textsf{6} peuvent être déchargés par un solveur SMT. Cependant ces
+tests doivent rester décidables (autrement dit, la satisfiabilité des
+formules ``$\varphi \wedge I$'' et ``$\varphi \wedge \neg
+(\bigvee_{\psi\in\mathtt{V}} \psi)$'' doit être décidable).
+
+
+\begin{thm} \label{decidable_cube}
+  Soit $\mathcal{T}_A = \{\bigcup_{a \in X_A}\mathcal{T}_{A_a} \cup
+  \bigcup_{g \in X_g}\mathcal{T}_{E_g}\}$, la
+  $\mathcal{T}_A$-satisfiabilité de cubes est décidable si:
+  \begin{itemize}
+  \item le problème $SMT(\mathcal{T}_I)$ est décidable
+  \item les problème $SMT(\mathcal{T}_{E_g})$ et
+    $SMT(\mathcal{T}_{E_a})$ sont décidables pour tous $a \in X_A$ et $g \in X_g$
+  \item $SMT(\mathcal{T}_I)$ est localement finie et close par sous-structures
+  \end{itemize}
+\end{thm}
+
+\begin{prop}
+  Sous les hypothèses du Théorème \ref{decidable_cube}, un cube est
+  satisfiable ssi il est satisfiable dans un modèle d'indices fini (un
+  modèle $\mathcal{M}$ de $\mathcal{T}_A$ tel que restreint à
+  $\Sigma_I$, $\mathcal{M}_{|\Sigma_I}$ est fini).
+\end{prop}
+
+\begin{proof} TODO
+\end{proof}
+
+\section{Terminaison}
+
+La terminaison de l'algorithme en figure \ref{br} n'est pas garantie
+en général, mais on peut montrer que cette terminaison peut être
+obtenue sous certaines conditions.
+
+
+\subsection{Indécidabilité de l'atteignabilité}
+
+Il est bien connu que dans le cas général, le problème de
+l'atteignabilité (ou de la sûreté) est un problème indécidable.
+
+\begin{thm}
+  Soit $U$ un cube, le problème de la sûreté d'un système de tableaux
+  vis-à-vis de $U$ est \emph{indécidable}.
+\end{thm}
+
+\begin{proof}
+  Par encodage de l'arrêt d'une machine de Minsky (Turing-complète,
+  arrêt indécidable) comme un problème d'atteignabilité dans un
+  système de tableaux. (TODO)
+\end{proof}
+
+
+
+
+\subsection{Conditions pour la terminaison}
+
+Un système de tableaux $\mathcal{S}$ a un nombre potentiellement
+infini d'états, et chaque état est un modèle de $\mathcal{T}_A$. Comme
+il a été montré par [Abdulla] le problème de l'atteignabilité dans un
+système d'états infini est décidable si le système est bien formé en
+utilisant la notion de bel ordre.
+
+
+\begin{defn}
+  On appelle \emph{configuration} de $\mathcal{S}$ un modèle de
+  $\mathcal{T}_A$ (i.e. un état de $\mathcal{S}$) d'indices finis.
+\end{defn}
+
+Soit $s$ une configuration de $\mathcal{S}$, on associe une
+$\Sigma_I$-structure $s_I$ et des $\Sigma_{E_a}$-structures $s_{E_a}$
+à $s$ telles que:
+\begin{enumerate}
+\item $s_I$ est la structure finie $s_{|\Sigma_I}$ (i.e. le modèle des
+  indices)
+\item pour tout $a \in X$, $s_{E_a}$ est la plus petite sous-structure
+  de $s_{|\Sigma_{E_a}}$ qui contient l'image de $a$ (i.e. $\{a(i) ~|~
+  i \in s_I\}$)
+\end{enumerate}
+
+
+\begin{defn}
+  Un \emph{pré-ordre} $\preceq$ est une relation (binaire) réflexive
+  et transitive sur un ensemble $D$. On notera $a \prec b$ si $a
+  \preceq b$ et $b \not \preceq a$. On dit que $\preceq$ est \emph{bien
+  fondé} ssi il n'existe pas de séquence infinie décroissante $a_1
+  \succ a_2 \succ a_3 \succ \cdots$.
+\end{defn}
+
+
+\begin{defn}
+  Un ensemble $M$ est dit \emph{canonique} si $\forall a,b \in M
+  \implies a \not \preceq b$ (les éléments de $M$ sont
+  incomparables). On dira que $M \subseteq A$ est un \emph{ensemble
+    mineur} de $A$ si
+  \begin{enumerate}
+  \item pour tout élément $a$ de $A$ il existe un $b \in M$ tel que $b \preceq a$
+  \item $M$ est canonique
+  \end{enumerate}
+\end{defn}
+
+\begin{prop}
+  Si $\preceq$ est bien fondé, alors pour tout ensemble $A \subseteq D$,
+  il existe au moins un ensemble mineur de $A$. On peut donc supposer
+  l'existence d'une fonction $min$ qui, étant donné un ensemble $A$,
+  renvoie un ensemble mineur de $A$, $min(A)$
+\end{prop}
+
+\begin{proof}
+  Soit $\preceq$ un pré-ordre bien fondé, et $A \subseteq
+  D$. Partitionnons $A = A_1 \coprod \ldots \coprod A_n$ tels que pour
+  tout $i$, $\forall a,b \in A_i.~ a \preceq b \text{~ou~} b \preceq
+  a$ et pour tous $i \neq j$, $\forall a_i \in A_i, a_j \in A_j.~ a_i
+  \not \preceq a_j$, i.e. une partition des élements
+  comparables. Comme $\preceq$ est bien fondé, pour chaque $A_i$ il
+  existe un élément minimal noté $mini(A_i)$. L'ensemble $\{mini(A_i),
+  \ldots, mini(A_n)\}$ est bien un ensemble mineur de $A$.
+\end{proof}
+
+
+
+\begin{defn}
+  Un ensemble $I \subseteq D$ est un \emph{idéal} (dans $D$), si pour
+  tous $a \in I$, $b \in D$, $a \preceq b \implies b \in I$.
+  On défini la \emph{clôture supérieure} (ou \emph{section
+    finissante}) de $A$, et on note $\mathcal{C}(A)$, l'idéal $\{b \in
+  D ~|~ \exists a \in A.~ a \preceq b \}$ généré par $A$.
+
+  Soient deux ensembles $A$ et $B$, on notera $A \equiv B$ ssi
+  $\mathcal{C}(A) = \mathcal{C}(B)$.
+\end{defn}
+
+\begin{rem}
+  $A \equiv B$ ssi $\forall a \in A.~ \exists b \in B.~ b \preceq a$
+  et $\forall b \in B.~ \exists a \in A.~ a \preceq b$.
+\end{rem}
+
+
+\begin{defn}
+  Un pré-ordre $\preceq$ est un \emph{bel ordre}, si pour toute
+  séquence infinie $s_1, s_2, \ldots$, il existe $i < j$ tels que $s_i
+  \preceq s_j$.
+\end{defn}
+
+\begin{defn}
+  Un \emph{$\Sigma$-plongement} $\mu$ d'une $\Sigma$-structure $A$ vers une
+  $\Sigma$-structure $B$ est un homomorphisme $\mu : dom(A) \to
+  dom(B)$ injectif ayant les propriétés suivantes:
+  \begin{enumerate}
+  \item pour toute constante $c \in \Sigma$, $\mu(c) = c$
+  \item pour tout symbole de relation $R \in \Sigma$ d'arité $n$, et $a_1,
+    \ldots, a_n$, $R(a_1, \ldots, a_n) \iff R(\mu(a_1), \ldots, \mu(a_n))$
+  \item pour tout symbole de fonction $f \in \Sigma$ d'arité $n$, et $a_1,
+    \ldots, a_n$, $\mu(f(a_1, \ldots, a_n)) = f(\mu(a_1), \ldots, \mu(a_n))$
+  \end{enumerate}
+\end{defn}
+
+
+On peut maintenant définir un pré-ordre sur les configurations de la
+manière suivante.  Soient $s$ et $s'$ deux configurations, on défini
+un pré-ordre sur les configurations tel que $s \preceq s'$ ssi il
+existe un $\Sigma_I$-plongement $\mu$ de $s_I$ vers $s_I'$, et pour
+tout $a \in X$ il existe un $\Sigma_{E_a}$-plongment $\nu_a$ de
+$s_{E_a}$ vers $s_{E_a}'$ tels que pour tout $a$, $a \circ \mu = \nu_a
+\circ a$.
+
+% Un système de transition $\mathcal{S} = (X, I, \tau)$ est
+% \emph{monotone} (par rapport à $\preceq$) si pour toutes
+% configurations $s_1, s_2, s_3$,
+% \[
+% (s_1 \preceq s_2) ~\land~ (s_3(X') \vDash \tau(X,X') \land s_1(X))
+% \implies \exists s_4 .~ (s_3 \preceq s_4) ~\land~ (s_4(X') \vDash
+% \tau(X,X') \land s_2(X))
+% \]
+
+% \marginpar{bancal}
+
+% peut être ça plutôt ?
+% \[
+% (s_1 \preceq s_2) ~\land~ (s_3[X'],s_1[X] \vDash \tau(X,X')) \implies
+% \exists s_4 .~ (s_3 \preceq s_4) ~\land~ (s_4[X'],s_2[X] \vDash
+% \tau(X,X'))
+% \]
+
+% \begin{defn}
+%   Soit $\preceq$ un pré-ordre sur les configurations,
+%   un système de transition $\mathcal{S} = (X, I, \tau)$ est dit
+%   \emph{bien formé} si
+%   \begin{enumerate}
+%   \item $\mathcal{S}$ est monotone
+%   \item $\preceq$ est un bel ordre
+%   \item pour toute configuration $s$ de $\mathcal{S}$, l'ensemble
+%     $min(pre_\tau(\mathcal{C}(\{s\})))$ est calculable
+%   \end{enumerate}
+% \end{defn}
+
+
+\begin{thm} \label{cube_i}
+  Soit $\llbracket U \rrbracket = \{ s ~|~ s \vDash U \}$ l'ensemble
+  des modèles de $U$. Pour tout cube $U$, l'ensemble
+  $\llbracket U \rrbracket$ est un idéal.
+\end{thm}
+
+
+\begin{proof}
+  % Montrons que pour tout cube $U$, l'ensemble $\llbracket U
+  % \rrbracket$ est un idéal. 
+  Soient $s$ et $s'$ deux configurations telles que $s \preceq s'$ et
+  $s \vDash U$, on veut montrer que $s' \vDash U$ aussi. $U = \exists
+  \bar i.~ (\Delta(\bar i) \land F(\bar i,X))$ où $F$ est une
+  conjonction de $\Sigma_A$-littéraux.  $s \vDash \exists \bar i.~
+  (\Delta(\bar i) \land F(\bar i,X))$, par skolémisation, $s \vDash
+  \Delta(\bar i) \land F(\bar i,X)$, i.e. $s_I \vDash \Delta(\bar i)$
+  et pour tout $a \in X$, $s_{E_a} \vDash F_a(\bar i,a)$.
+
+  Comme $s \preceq s'$, il existe un $\Sigma_I$-plongement $\mu$ de
+  $s_I$ vers $s_I'$, et pour tout $a \in X$ il existe un
+  $\Sigma_{E_a}$-plongment $\nu_a$ de $s_{E_a}$ vers $s_{E_a}'$ tel
+  que $a \circ \mu = \nu_a \circ a$.  Comme la validité des formules
+  est préservée par superstructure, on a $s_I' \vDash \Delta(\mu(\bar
+  i))$ et pour tout $a$, $s'_{E_a} \vDash F_a(\bar i, \nu_a(a))$
+  (i.e. $s'_{E_a} \vDash F_a(\mu(\bar i), a)$ comme $a \circ \mu =
+  \nu_a \circ a$) et donc $s' \vDash \Delta(\mu(\bar i)) \land
+  F_a(\mu(\bar i), a)$, i.e. $s' \vDash U$.
+
+\end{proof}
+
+
+\begin{prop} \label{cube_incl} 
+
+  Pour tous cubes $U_1, U_2$, $\llbracket U_1 \rrbracket \subseteq
+  \llbracket U_2 \rrbracket$ ssi $\emptyset \vDash_{\mathcal{T}_A} U_1
+  \implies U_2$.
+
+\end{prop}
+
+
+\begin{proof}
+
+  Soient deux cubes $U_1$ et $U_2$. Triviallement, $\emptyset
+  \vDash_{\mathcal{T}_A} U_1 \implies U_2$ implique $\llbracket U_1
+  \rrbracket \subseteq \llbracket U_2 \rrbracket$. Supposons
+  maintenant par l'absurde que $\emptyset \not \vDash_{\mathcal{T}_A} U_1
+  \implies U_2$, ce qui veut dire que $U_1 \land \neg U_2$ est
+  $\mathcal{T}_A$-satisfiable. On peut alors trouver un modèle (ou
+  configuration) $s$ tel que $s \vDash U_1$ et $s \vDash \neg U_2$,
+  et donc $\llbracket U_1 \rrbracket \not \subseteq \llbracket U_2
+  \rrbracket$.
+
+\end{proof}
+
+
+\begin{lem} \label{pre_i}
+  Soit $\mathcal{S}$ un système de tableaux et $U$ un cube, alors
+  $\llbracket pre_\tau(U) \rrbracket$ est un idéal.
+\end{lem}
+
+\begin{proof}
+  Comme $U$ est un cube alors par la proposition~\ref{pre_cube},
+  $pre_\tau(U)$ est équivalente à une disjonction de cubes,
+  i.e. $pre_\tau(U) \iff U_1 \vee ... \vee U_n $. Donc $\llbracket
+  pre_\tau(U) \rrbracket = \llbracket U_1 \rrbracket \cup ... \cup
+  \llbracket U_n \rrbracket $, les $\llbracket U_1 \rrbracket$ sont
+  des idéaux par le théorème~\ref{cube_i} et comme une union
+  d'idéaux est un idéal alors $\llbracket pre_\tau(U) \rrbracket$ est
+  un idéal.
+\end{proof}
+
+
+% \begin{thm}
+%   Soit $U$ un cube et supposons que pour tout $a$, $\mathcal{T}_{E_a}$
+%   est localement finie. Si $U$ n'est pas atteignable (le système est
+%   sûr) alors, l'algorithme en figure \ref{br} termine ssi l'ensemble
+%   des configurations pouvant atteindre $U$, $\mathcal{B}(\tau, U)$ est
+%   un upset (ensemble fermé supérieurement ou section finissante)
+%   \textbf{généré finiment}.
+% \end{thm}
+
+
+% \begin{proof}
+%   Ce théorème est peut-être inutile si on peut utiliser la preuve de [Abdulla]
+% \end{proof}
+
+
+\begin{thm} \label{th_i}
+  Soit un bel ordre $\preceq$ et une séquence infinie d'idéaux $I_0
+  \subseteq I_1 \subseteq I_2 \subseteq ...$ alors il existe un $k$
+  tel que $I_k = I_{k+1}$.
+\end{thm}
+
+\begin{proof}
+  Supposons par l'absurde qu'il n'existe pas de tel $k$. Alors on peut
+  trouver une séquence infinie d'éléments $s_0, s_1, s_2, ...$ telle
+  que pout tout $i$, $s_i \in I_i$ et pour tout $j < i$, $s_i \not \in
+  I_j$. Et donc on a que $s_j \not \preceq s_i$ pour tous $j < i$
+  sinon $s_i \in I_j$ car $I_j$ est un idéal. Cette séquence qu'on a
+  construite viole l'hypothèse de bel ordre faite sur $\preceq$.
+\end{proof}
+
+
+
+\begin{cor}
+  L'algorithme en figure \ref{br} termine si le pré-ordre sur les
+  configuations est un \textbf{bel-ordre}.
+\end{cor}
+
+
+\begin{proof}
+
+  Notons $BR^n(\tau, U) = pre_\tau(U) \vee BR^{n-1}(\tau, U)$, en
+  termes d'idéaux $\llbracket BR^n(\tau, U) \rrbracket = \llbracket
+  pre_\tau(U) \rrbracket \cup \llbracket BR^{n-1}(\tau, U)
+  \rrbracket$. Et $BR^0(\tau, U) = U$, donc $BR^n(\tau, U) =
+  pre_\tau^n(U) \vee pre_\tau^{n-1}(U) \vee ... \vee U $. On défini
+  par $BR^*(\tau, U)$, la formule $\bigcup_{j\ge0} BR^j(\tau, U)$
+  représenté par l'ensemble calculé par l'algorithme. Comme
+  $\llbracket BR^0(\tau, U) \rrbracket \subseteq \llbracket BR^1(\tau,
+  U) \rrbracket \subseteq \llbracket BR^2(\tau, U) \rrbracket
+  \subseteq ...$ est une séquence d'idéaux (par la
+  proposition~\ref{pre_i}) alors le théorème~\ref{th_i} nous dit qu'il
+  existe un $k$ tel que $\llbracket BR^k(\tau, U) \rrbracket =
+  \llbracket BR^{k+1}(\tau, U) \rrbracket$
+  % et donc que $\llbracket BR^*(\tau, U) \rrbracket = \llbracket
+  % BR^k(\tau, U) \rrbracket$ 
+  ce qui veut dire par la proposition~\ref{cube_incl} que $\emptyset
+  \vDash_{\mathcal{T_A}} BR^k(\tau, U) \iff BR^{k+1}(\tau, U)$ et donc
+  que l'algorithme termine.
+
+  % Montrons tout d'abord que les systèmes de tableaux sont
+  % monotones. Soient $\mathcal{S} = (X, I, \tau)$ et trois
+  % configurations $s_1$, $s_2$ et $s_3$ telles que $ (s_1 \preceq s_2)
+  % ~\land~ (s_3(X') \vDash \tau(X,X') \land s_1(X))$. En décomposant,
+  % $s_{3_I}(X'), s_{3_{E_a}}(X'), \ldots \vDash \tau(X,X') \land
+  % s_{1_I}(X') \land s_{1_{E_a}}(X'), \ldots $. Comme $s_1 \preceq
+  % s_2$, il existe un $\Sigma_I$-plongement $\mu$ de $s_{1_I}$ vers
+  % $s_{2_I}$, et pour tout $a \in X$ il existe un
+  % $\Sigma_{E_a}$-plongment $\nu_a$ de $s_{1_{E_a}}$ vers $s_{2_{E_a}}$
+  % tel que $a \circ \mu = \nu_a \circ a$.  Comme
+
+
+  % TODO
+  \bigskip
+  \begin{itemize}
+  \item montrer que les systèmes de tableaux sont monotones : idée ,
+    cf. au dessus
+  \item montrer que lorsque $\mathcal{T}_{E_a}$ est localement finie
+    alors l'ensemble min(pre(s)) est calculable. idée : montrer que
+    l'ensemble est fini (générateur), i.e. montrer que pre(s) est un
+    idéal et que tous les idéaux dans un bel-ordre sont générés
+    finiment. Deuxième partie de la preuve : Soit $I$ un idéal,
+    supposons que $I$ n'est pas généré finiment. Alors il existe une
+    séquence infinie $s_1, s_2, \ldots$ telle que $I =
+    \mathcal{C}(\{s_1, s_2, \ldots\}) = \mathcal{C}(\{s_1\}) \coprod 
+    \mathcal{C}(\{s_2\}) \coprod \ldots$ et telle que $\forall i \neq
+    j.~ s_i \not \preceq s_j$ autrement $s_i \in
+    \mathcal{C}(\{s_j\})$. Ce qui conterdit l'hypothèse de bel-ordre
+    de $\preceq$.
+
+    % si $I$
+    % est vide alors il est généré finiment. Sinon, soit $s_1 \in I$. Si
+    % $\mathcal{C}(\{s_1\}) = I$ alors triviallement $s_1$ génère $I$ de
+    % manière finie. Sinon soit $s_2 \in I \setminus \mathcal{C}(\{s_1\})$
+  \item utiliser la preuve de [Abdulla] plutôt.
+  \end{itemize}
+
+\end{proof}
+
+
+\subsection{Exemples de classes de systèmes décidables}
+
+\begin{itemize}
+\item Protocoles de cohérence de cache
+\item ...
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,169 @@
+type state =  Idle | Choose | Wait | Use
+
+type msg = Empty
+  | Req1 | Ack1 | Ok1 
+  | Req2 | Ack2 | Ok2
+
+(* var Timer : real *)
+
+array State[proc] : state
+
+array Num[proc] : real
+array Aux[proc] : real
+
+array Channel_msg[proc,proc] : msg
+array Channel_v[proc,proc] : real
+
+const Tick : real
+
+
+init (z z1) { State[z] = Idle &&
+              Num[z] = 0.0 &&
+              Aux[z] = 0.0 && 
+              (* Timer = 1.0 &&  *)
+              Channel_msg[z,z1] = Empty && 
+              Channel_v[z,z1] = 1.0 && Channel_v[z,z1] = 0.0 }
+
+(* invariant () { Tick <= 0.0 } *)
+
+unsafe (z1 z2) {
+  State[z1] = Use && State[z2] = Use &&
+  Channel_msg[z1,z2] = Ok2 && Channel_msg[z2,z1] = Ok2
+}
+
+
+transition t1 (z)
+requires { State[z] = Idle && 0.0 < Tick }
+{
+  (* Timer := Timer + Tick; *)
+  State[z] := Choose;
+  Aux[z] := Num[z];
+  
+  Channel_msg[s,r] := case
+      | s = z && r <> z && Channel_msg[s,r] = Empty : Req1
+      | _ : Channel_msg[s,r];
+  Channel_v[s,r] :=  case
+      | s = z && r <> z && Channel_msg[s,r] = Empty : Num[z]
+      | _ : Channel_v[s,r];
+}
+
+
+transition t2 (z r)
+requires { State[z] = Choose &&
+           Channel_msg[z,r] = Ack1 &&
+           Aux[z] < Channel_v[z,r] }
+{
+  Channel_msg[z,r] := Ok1;
+  Aux[z] := Channel_v[z,r];
+}
+
+
+transition t3 (z r)
+requires { State[z] = Choose &&
+           Channel_msg[z,r] = Ack1 &&
+           Channel_v[z,r] <= Aux[z] }
+{
+  Channel_msg[z,r] := Ok1;
+}
+
+
+transition t4 (z)
+requires { State[z] = Choose && 0.0 < Tick &&
+           forall_other r. Channel_msg[z,r] = Ok1 }
+{
+  (* Timer := Timer + Tick; *)
+  State[z] := Wait;
+  Num[z] := Aux[z] + Tick;
+}
+
+
+
+transition t5 (z s)
+requires { Channel_msg[s,z] = Req1 }
+{
+  Channel_msg[s,z] := Ack1;
+  Channel_v[s,z] := Num[z];
+}
+
+
+transition t6 (z s)
+requires { Channel_msg[s,z] = Req2 }
+{
+  Channel_msg[s,z] := Ack2;
+  Channel_v[s,z] := Num[z];
+}
+
+
+transition t7 (z)
+requires { State[z] = Wait }
+{
+  Channel_msg[i,j] := case
+      | i = z && Channel_msg[z,j] = Ok1 : Req2
+      | _ : Channel_msg[i,j];
+}
+
+
+transition t8_1 (z r)
+requires { State[z] = Wait &&
+           Channel_msg[z,r] = Ack2 &&
+           0.0 < Channel_v[z,r] &&
+           Channel_v[z,r] < Num[z] }
+{
+  Channel_msg[z,r] := Req2;
+}
+
+
+transition t8_2 (z r)
+requires { State[z] = Wait &&
+           Channel_msg[z,r] = Ack2 &&
+           0.0 < Channel_v[z,r] &&
+           Channel_v[z,r] = Num[z] && r < z }
+{
+  Channel_msg[z,r] := Req2;
+}
+
+
+
+transition t9_1 (z r)
+requires { State[z] = Wait &&
+           Channel_msg[z,r] = Ack2 &&
+           Channel_v[z,r] = 0.0 }
+{
+  Channel_msg[z,r] := Ok2;
+}
+
+transition t9_2 (z r)
+requires { State[z] = Wait &&
+           Channel_msg[z,r] = Ack2 &&
+           Num[z] < Channel_v[z,r] }
+{
+  Channel_msg[z,r] := Ok2;
+}
+
+
+transition t9_3 (z r)
+requires { State[z] = Wait &&
+           Channel_msg[z,r] = Ack2 &&
+           Num[z] = Channel_v[z,r] && z < r }
+{
+  Channel_msg[z,r] := Ok2;
+}
+
+
+transition t10 (z)
+requires { State[z] = Wait &&
+           forall_other r. Channel_msg[z,r] = Ok2  }
+{
+  State[z] := Use;
+}
+
+
+transition t11 (z)
+requires { State[z] = Use }
+{
+  State[z] := Idle;
+  Num[z] := 0.0;
+  Channel_msg[i,j] := case
+      | i = z && j <> z && Channel_msg[i,j] = Ok2 : Empty
+      | _ : Channel_msg[i,j];
+}

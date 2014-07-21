@@ -1,0 +1,377 @@
+##########################################################################
+#                                                                        #
+#                              Cubicle                                   #
+#                                                                        #
+#                       Copyright (C) 2011-2014                          #
+#                                                                        #
+#                  Sylvain Conchon and Alain Mebsout                     #
+#                       Universite Paris-Sud 11                          #
+#                                                                        #
+#                                                                        #
+#  This file is distributed under the terms of the Apache Software       #
+#  License version 2.0                                                   #
+#                                                                        #
+##########################################################################
+
+QUIET=""
+
+# where to install the binaries
+DESTDIR=
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+BINDIR=$(DESTDIR)@bindir@
+LIBDIR=$(DESTDIR)@libdir@/cubicle
+DATADIR=$(DESTDIR)@datadir@
+
+# where to install the man page
+MANDIR=$(DESTDIR)@mandir@
+
+# other variables set by ./configure
+OCAMLC   = @OCAMLC@
+OCAMLOPT = @OCAMLOPT@
+OCAMLDEP = @OCAMLDEP@
+OCAMLLEX = @OCAMLLEX@
+OCAMLYACC= @OCAMLYACC@
+OCAMLLIB = @OCAMLLIB@
+FUNCTORYLIB = @FUNCTORYLIB@
+OCAMLBEST= @OCAMLBEST@
+OCAMLVERSION = @OCAMLVERSION@
+OCAMLWIN32 = @OCAMLWIN32@
+EXE = @EXE@
+
+INCLUDES = $(FUNCTORYLIB) -I common/ -I smt/
+
+BFLAGS = -dtypes -g -thread $(INCLUDES) -annot
+OFLAGS = -dtypes -thread $(INCLUDES) -annot
+
+BIBBYTE=nums.cma unix.cma
+
+BIBOPT=$(BIBBYTE:.cma=.cmxa)
+
+# main target
+#############
+
+NAME = cubicle
+BYTE=$(NAME).byte
+OPT=$(NAME).opt
+
+all: make_functory $(OCAMLBEST) 
+
+# configuration of the fake functory library
+############################################
+
+
+make_functory:
+	@if [ -z "$(FUNCTORYLIB)" ]; then \
+	cp -f fake_functory.mli functory.mli;\
+	cp -f fake_functory.ml functory.ml;\
+	$(OCAMLC) -c functory.mli;\
+	$(OCAMLC) -o functory.cma -a functory.ml;\
+	$(OCAMLOPT) -c functory.ml;\
+	$(OCAMLOPT) -o functory.cmxa -a functory.cmx;\
+	fi
+
+# bytecode and native-code compilation
+######################################
+
+SMTCMO = smt/exception.cmo smt/symbols.cmo \
+	 smt/ty.cmo smt/term.cmo smt/literal.cmo \
+         smt/solver_types.cmo smt/explanation.cmo \
+         smt/polynome.cmo smt/uf.cmo smt/use.cmo \
+	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
+         smt/combine.cmo smt/cc.cmo smt/solver.cmo \
+	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/smt.cmo
+
+COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
+	    common/vec.cmo common/heap.cmo common/iheap.cmo\
+	    common/bitv.cmo
+
+CMO = $(COMMONCMO) $(SMTCMO) \
+      version.cmo options.cmo util.cmo variable.cmo types.cmo\
+      cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
+      instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
+      pre.cmo forward.cmo enumerative.cmo approx.cmo  \
+      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
+
+CMX = $(CMO:.cmo=.cmx)
+
+MAINCMO = $(CMO) main.cmo
+MAINCMX = $(MAINCMO:.cmo=.cmx)
+
+GENERATED = version.ml parser.ml parser.mli lexer.ml
+
+byte: $(NAME).byte
+opt: $(NAME).opt
+
+$(NAME).byte: $(MAINCMO)
+	$(if $(QUIET),@echo 'Linking $@' &&) \
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma $^
+
+$(NAME).opt: $(MAINCMX)
+	$(if $(QUIET),@echo 'Linking $@' &&) \
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
+
+VERSION=1.0
+
+version.ml: config.status
+	@echo "let version = \""$(VERSION)"\"" > version.ml
+	@echo "let date = \""`date`"\"" >> version.ml
+	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
+
+
+
+# generic rules
+###############
+
+.SUFFIXES: .mli .ml .cmi .cmo .cmx .mll .mly
+
+.mli.cmi:
+	@true compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+
+.ml.cmo:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLC) -c $(BFLAGS) $<
+	@true compile -w a $(BFLAGS) $< 
+
+.ml.o:
+	@true compile -w a $(BFLAGS) $< 
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+
+.ml.cmx:
+	$(if $(QUIET),@echo 'Compiling $@' &&) $(OCAMLOPT) -c $(OFLAGS) $<
+	@true compile -w a $(BFLAGS) $< 
+
+.mll.ml:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLLEX) $< > /dev/null
+
+.mly.ml:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+
+.mly.mli:
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+
+
+# file headers
+##############
+headers:
+	headache -c doc/headache_config.txt -h doc/cubicle_header.txt \
+		Makefile.in configure.in *.ml *.ml[ily] \
+		common/*.ml common/*.mli smt/*.ml smt/*.mli
+
+# Emacs tags
+############
+
+tags:
+	find . -name "*.ml*" | sort -r | xargs \
+	etags "--regex=/let[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/let[ \t]+rec[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/and[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/type[ \t]+\([^ \t]+\)/\1/" \
+              "--regex=/exception[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/val[ \t]+\([^ \t]+\)/\1/" \
+	      "--regex=/module[ \t]+\([^ \t]+\)/\1/"
+
+# installation
+##############
+
+install:
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
+	@echo "Installation completed in $(BINDIR). You may want to copy (doc/)emacs/cubicle-mode.el in your emacs.d if you use Emacs."
+
+install-byte:
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).byte $(BINDIR)/$(NAME)$(EXE)
+
+install-opt:
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).opt $(BINDIR)/$(NAME)$(EXE)
+
+install-man:
+	mkdir -p $(MANDIR)/man1
+	cp -f doc/*.1 $(MANDIR)/man1
+
+
+
+
+# clean
+#######
+
+clean:: 
+	@rm -f *.cm[iox] *.o *~ *.annot
+	@rm -f common/*.cm[iox] common/*.o common/*~ common/*.annot
+	@rm -f smt/*.cm[iox] smt/*.o smt/*~ smt/*.annot
+	@rm -f $(GENERATED) *.output
+	@rm -f $(NAME).byte $(NAME).opt
+	@rm -f functory.*
+
+# depend
+########
+
+.depend depend:: $(GENERATED)
+	@rm -f .depend
+	@$(OCAMLDEP) -slash -I common/ common/*.ml common/*.mli > .depend
+	@$(OCAMLDEP) -I common/ -I smt/ smt/*.ml smt/*.mli >> .depend
+	@$(OCAMLDEP) -I common/ -I smt/ -slash *.ml *.mli >> .depend
+
+
+include .depend
+
+# Makefile is rebuilt whenever Makefile.in or configure.in is modified
+######################################################################
+
+Makefile: Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./config.status --recheck
+
+configure: configure.in
+	autoconf 
+
+
+# export
+########
+
+DATE=$(shell date +%d/%m/%Y)
+LONGDATE=$(shell date +%Y%m%d%H%M)
+
+EXPORTDIR=$(NAME)-$(VERSION)
+TAR=$(EXPORTDIR).tar
+
+EXPORTAE=alt-ergo-light
+TARAE=$(EXPORTAE).tar
+
+WEB = $$HOME/WWW/cubicle/
+
+SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
+	   smt/combine.mli smt/exception.ml smt/exception.mli\
+	   smt/explanation.ml smt/explanation.mli smt/fm.ml smt/fm.mli\
+	   smt/intervals.ml smt/intervals.mli smt/literal.ml\
+	   smt/literal.mli smt/polynome.ml smt/polynome.mli smt/sig.mli\
+	   smt/smt.ml smt/smt.mli smt/solver.ml smt/solver.mli\
+	   smt/solver_types.ml smt/solver_types.mli smt/enumsolver.ml\
+	   smt/enumsolver.mli smt/enumsolver_types.ml smt/enumsolver_types.mli\
+	   smt/sum.ml smt/sum.mli\
+	   smt/symbols.ml smt/symbols.mli smt/term.ml smt/term.mli\
+	   smt/ty.ml smt/ty.mli smt/uf.ml smt/uf.mli smt/use.ml smt/use.mli
+
+COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
+	      common/heap.mli common/hstring.ml common/hstring.mli\
+	      common/iheap.ml common/iheap.mli common/timer.ml\
+	      common/timer.mli common/vec.ml common/vec.mli\
+	      common/bitv.ml common/bitv.mli
+
+AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
+	       alt-ergo-light/configure.in alt-ergo-light/configure
+
+FILES = approx.ml approx.mli ast.mli brab.ml brab.mli bwd.ml bwd.mli\
+	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
+	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
+	fixpoint.ml fixpoint.mli forward.ml forward.mli\
+	instantiation.ml instantiation.mli lexer.mll main.ml\
+	node.ml node.mli options.ml options.mli oracle.mli\
+	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
+	safety.ml safety.mli stats.ml stats.mli trace.ml trace.mli\
+	types.ml types.mli typing.ml typing.mli util.ml util.mli\
+	variable.ml variable.mli version.ml
+
+EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
+	   ricart_abdulla.cub szymanski_at.cub berkeley.cub flash_eager.cub\
+	   german_pfs.cub german_undip.cub illinois.cub mesi.cub\
+	   moesi.cub synapse.cub swimming_pool.cub xerox_dragon.cub\
+	   sense_barrier.cub flash.cub flash_abstr.cub flash_nodata.cub\
+	   flash_buggy.cub szymanski_na.cub chandra_toueg.cub\
+	   german_baukus.cub german.ctc.cub bakery_lamport.cub\
+	   bakery_lamport_bogus.cub bakery_lamport_na.cub\
+	   bakery_lamport_na_wb.cub bakery_na.cub
+
+DOCFILES = cubicle.1 intro.txt ocamldoc.css
+
+OTHERFILES = .depend configure.in configure Makefile.in README COPYING
+
+ARCH = $(shell uname -m)
+OSNAME = $(shell uname -s)
+
+binary: $(OPT)
+	strip $(OPT)
+	cp $(OPT) export/$(NAME)-$(VERSION)-$(OSNAME)-$(ARCH)
+
+export-alt-ergo-light:
+	mkdir -p export/$(EXPORTAE)/
+	mkdir -p export/$(EXPORTAE)/smt
+	mkdir -p export/$(EXPORTAE)/common
+	cp $(SMTFILES) export/$(EXPORTAE)/smt
+	cp $(COMMONFILES) export/$(EXPORTAE)/common
+	cp $(AELIGHTFILES) export/$(EXPORTAE)/
+#	cp smt/smt.mli export/$(EXPORTAE)/altErgoLight.mli
+	mkdir -p export/$(EXPORTAE)/doc/
+	ocamldoc -html -colorize-code -d export/$(EXPORTAE)/doc/ -I smt -I common smt/smt.mli common/hstring.mli
+	cd export ; tar cf $(TARAE) $(EXPORTAE) ; gzip -f --best $(TARAE)
+
+
+export/$(EXPORTDIR).tar.gz:
+	mkdir -p export
+	mkdir -p export/$(EXPORTDIR)
+	mkdir -p export/$(EXPORTDIR)/smt
+	mkdir -p export/$(EXPORTDIR)/common
+	mkdir -p export/$(EXPORTDIR)/examples
+	mkdir -p export/$(EXPORTDIR)/emacs
+	mkdir -p export/$(EXPORTDIR)/doc
+	cp $(SMTFILES) export/$(EXPORTDIR)/smt
+	cp $(COMMONFILES) export/$(EXPORTDIR)/common
+	cp $(FILES) export/$(EXPORTDIR)/
+	cp $(OTHERFILES) export/$(EXPORTDIR)/
+	cd doc/; cp $(DOCFILES) ../export/$(EXPORTDIR)/doc/; cd ..
+	cd examples/; cp $(EXAMPLES) ../export/$(EXPORTDIR)/examples/; cd ..
+	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
+	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
+
+export: export/$(EXPORTDIR).tar.gz
+
+release: export/$(EXPORTDIR).tar.gz
+	mkdir -p export/release
+	mkdir -p export/release/examples/
+	cp export/$(TAR).gz export/release/
+	cp export/$(EXPORTDIR)/examples/* export/release/examples/
+	cp doc/website/* export/release/
+	cd export/release/; sed "s@#version#@$(VERSION)@g" index.html > index.html.tmp; sed  "s@#date#@$(DATE)@g" index.html.tmp > index.html; rm -f index.html.tmp
+	mkdir -p $(WEB)/backup/$(LONGDATE)
+	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
+	cp $(WEB)/backup/$(LONGDATE)/google*.html $(WEB)
+	cp -f -R export/release/* $(WEB)
+
+
+
+# ocamldoc
+##########
+doc:
+	mkdir -p doc/ocamldoc
+	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
+	ocamldoc -html -keep-code -d doc/ocamldoc \
+	-t "Cubicle $(VERSION) documentation and source" \
+	-intro doc/intro.txt $(INCLUDES) \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) $(SMTFILES)
+
+docpdf: 
+	mkdir -p doc/ocamldoc/latex
+	ocamldoc -latex -keep-code -d doc/ocamldoc -o doc/ocamldoc/latex/doc.tex \
+	-t "Cubicle $(VERSION) documentation and source" \
+	-intro doc/intro.txt $(INCLUDES) \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) $(SMTFILES)
+	cd doc/ocamldoc/latex/; rubber -d doc
+
+
+archi:
+	ocamldoc -dot -dot-reduce -o doc/archi.dot \
+	-t "Cubicle $(VERSION) architecture" \
+	$(INCLUDES) \
+	$(filter-out lexer.mll parser.mly fake_functory.ml fake_functory.mli, $(FILES)) \
+	$(COMMONFILES) smt/smt.mli
+	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf
+	rm -f doc/archi.dot
+
+
+.PHONY: doc docpdf archi export release
