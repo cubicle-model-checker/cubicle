@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,45 +13,38 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type env
+open Format
+open Options
+open Ast
 
-exception Unsat
+exception Unsafe of Node.t
 
-val init_env : Ast.t_system -> int -> unit
-(** returns an environnement with the bitvector size needed for the
-    representation of cubes of system [s] and the associated bounds
-    (see {!bitvbounds_from_pb}).*)
+(*************************************************)
+(* Safety check : n /\ init must be inconsistent *)
+(*************************************************)
 
-val cube_to_bitvs : dnf:bool -> Ast.SAtom.t -> Bitv.t list
-(** [cube_to_bitvs env c] returns the bit-vector representation of the
-    cube [c].*)
-
-
-val apply_subst : (Hstring.t * Hstring.t) list -> Bitv.t -> Bitv.t
-(** applies a process substitution on a bit-vector representation of a cube.*)
+let cdnf_asafe ua =
+  List.exists (
+    List.for_all (fun a ->
+      Cube.inconsistent_2arrays ua a))
 
 
-val is_unsat : Bitv.t list -> Bitv.t list -> bool
-
-val fixpoint : 
-  invariants : Ast.t_system list -> visited : Ast.t_system list ->
-  Ast.t_system -> int list option
-
-val safe : Ast.t_system -> bool
-
-val check_safety : Ast.t_system ->  unit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(* fast check for inconsistence *)
+let obviously_safe { t_init_instances = init_inst; } n =
+  let nb_procs = Node.dim n in
+  let _, cdnf_ai = Hashtbl.find init_inst nb_procs in
+  cdnf_asafe (Node.array n) cdnf_ai
+ 
+let check s n =
+  (*Debug.unsafe s;*)
+  try
+    if not (obviously_safe s n) then
+      begin
+	Prover.unsafe s n;
+	if not quiet then eprintf "\nUnsafe trace: @[%a@]@."
+	  Node.print_history n;
+        raise (Unsafe n)
+      end
+  with
+    | Smt.Unsat _ -> ()
 

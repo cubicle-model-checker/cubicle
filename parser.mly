@@ -2,7 +2,7 @@
 /*                                                                        */
 /*                              Cubicle                                   */
 /*                                                                        */
-/*                       Copyright (C) 2011-2013                          */
+/*                       Copyright (C) 2011-2014                          */
 /*                                                                        */
 /*                  Sylvain Conchon and Alain Mebsout                     */
 /*                       Universite Paris-Sud 11                          */
@@ -16,13 +16,21 @@
 %{
 
   open Ast
+  open Types
   open Parsing
-  open Atom
 
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
+
+  (* Helper functions for location info *)
+
+  let loc () = (symbol_start_pos (), symbol_end_pos ())
+  let loc_i i = (rhs_start_pos i, rhs_end_pos i)
+  let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
+
+
   type t = 
-    | Assign of Hstring.t * term
+    | Assign of Hstring.t * Term.t
     | Nondet of Hstring.t
     | Upd of update
 
@@ -56,14 +64,17 @@
   let sort s = 
     if Constructors.mem s then Constr 
     else if Globals.mem s then Glob
-    else if Arrays.mem s then Arr
-    else Var
+    else
+      begin
+        assert (not (Arrays.mem s));
+        Var
+      end
 
   let hproc = Hstring.make "proc"
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
 
-  let set_from_list = List.fold_left (fun sa a -> add a sa) SAtom.empty 
+  let set_from_list = List.fold_left (fun sa a -> SAtom.add a sa) SAtom.empty 
 
   let fresh_var = 
     let cpt = ref 0 in
@@ -71,10 +82,10 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CANDIDATE CASE FORALL
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
 %token SIZEPROC
-%token ASSIGN UGUARD REQUIRE NEQ UNSAFE FORWARD
-%token OR AND COMMA PV DOT
+%token ASSIGN UGUARD REQUIRE NEQ UNSAFE
+%token OR AND COMMA PV DOT QMARK
 %token <string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
@@ -101,9 +112,7 @@ type_defs
 declarations
 init
 invariants
-candidates
 unsafe_list
-forward_list
 transitions 
 { let consts, vars, arrays = $3 in
   { type_defs = $2; 
@@ -112,10 +121,8 @@ transitions
     arrays = arrays; 
     init = $4; 
     invs = $5;
-    cands = $6;
-    unsafe = $7; 
-    forward = $8;
-    trans = $9 } }
+    unsafe = $6; 
+    trans = $7 } }
 ;
 
 declarations :
@@ -132,14 +139,14 @@ var_decl:
   | VAR mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Globals.add $2; 
-    $2, $4 }
+    loc (), $2, $4 }
 ;
 
 const_decl:
   | CONST mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Consts.add $2;
-    $2, $4 }
+    loc (), $2, $4 }
 ;
 
 array_decl:
@@ -148,7 +155,7 @@ array_decl:
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
-	$2, ($4, $7)}
+	loc (), $2, ($4, $7)}
 ;
 
 type_defs:
@@ -167,11 +174,11 @@ size_proc:
 ;
       
 type_def:
-  | TYPE lident { ($2, []) }
+  | TYPE lident { (loc (), ($2, [])) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; ($2, $4) }
+      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; ($2, $5) }
+      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
 ;
 
 constructors:
@@ -181,7 +188,7 @@ constructors:
 
 init:
   | INIT LEFTPAR lidents RIGHTPAR LEFTBR dnf RIGHTBR 
-      { $3, $6 }
+      { loc (), $3, $6 }
 ;
 
 invariants:
@@ -190,35 +197,16 @@ invariants:
 ;
 
 invariant:
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
-;
-
-candidates:
-  | { [] }
-  | candidate candidates { $1 :: $2 }
-;
-
-candidate:
-  | CANDIDATE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
 unsafe:
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { $3, $6 }
+  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
 unsafe_list:
   | unsafe { [$1] }
   | unsafe unsafe_list { $1::$2 }
-;
-
-forward:
-  | FORWARD LEFTPAR lidents COMMA lidents RIGHTPAR LEFTBR cube RIGHTBR 
-      { $3, $5, $8 }
-;
-
-forward_list:
-  | { [] }
-  | forward forward_list { $1::$2 }
 ;
 
 transitions:
@@ -241,11 +229,15 @@ transition:
       LEFTBR assigns_nondets_updates RIGHTBR
       { let reqs, ureq = $6 in
 	let assigns, nondets, upds = $8 in
-	{ tr_name = $2; tr_args = $4; 
-	  tr_reqs = reqs; tr_ureq = ureq; 
+	{ tr_name = $2;
+          tr_args = $4; 
+	  tr_reqs = reqs;
+          tr_ureq = ureq; 
 	  tr_assigns = assigns; 
 	  tr_nondets = nondets; 
-	  tr_upds = upds } 
+	  tr_upds = upds;
+          tr_loc = loc ();
+        } 
       }
 ;
 
@@ -279,7 +271,8 @@ assignment:
 ;
 
 nondet:
-  | mident AFFECT DOT    { Nondet $1 }
+  | mident AFFECT DOT { Nondet $1 }
+  | mident AFFECT QMARK { Nondet $1 }
 ;
 
 require:
@@ -293,16 +286,16 @@ update:
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
         ) $3;
-        Upd { up_arr = $1; up_arg = $3; up_swts = $7} }
+        Upd { up_loc = loc (); up_arr = $1; up_arg = $3; up_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
-            let c = Comp(Elem (j, Var), Eq, Elem (i, Var)) in
+            let c = Atom.Comp(Elem (j, Var), Eq, Elem (i, Var)) in
             SAtom.add c cube, j :: rjs) (SAtom.empty, []) $3 in
         let js = List.rev rjs in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
-	Upd { up_arr = $1; up_arg = js; up_swts = sw}  }
+	Upd { up_loc = loc (); up_arr = $1; up_arg = js; up_swts = sw}  }
 ;
 
 switchs:
@@ -339,7 +332,7 @@ dnf:
 ;
 
 literal:
-  | term operator term { Comp($1, $2, $3) }
+  | term operator term { Atom.Comp($1, $2, $3) }
 ;
 
 constnum:

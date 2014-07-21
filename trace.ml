@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -15,15 +15,17 @@
 
 open Format
 open Ast
-open Atom
+open Types
 open Options
 
 module HSet = Hstring.HSet
 
 module type S = sig
-    val certificate : t_system list -> t_system list -> unit
+    val certificate : t_system -> Node.t list -> unit
 end
 
+
+(* TODO : Add user invariants as axioms *)
 
 let collect_types s =
   let add = List.fold_left (fun acc g ->
@@ -38,6 +40,7 @@ let need_bool s =
       acc || Hstring.equal Smt.Type.type_bool (snd (Smt.Symbol.type_of t))
     ) in
   f (f false s.t_globals) s.t_arrays
+
 
 module AltErgo = struct
 
@@ -91,7 +94,6 @@ module AltErgo = struct
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
-  let op_arith = function Plus -> "+" | Minus -> "-"
 
   let print_const fmt c = assert false
 
@@ -109,22 +111,22 @@ module AltErgo = struct
   let rec print_term ~prime fmt = function
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) when Hstring.equal s hfalse -> fprintf fmt "false"
-    | Elem (s, Constr) when Hstring.equal s htrue -> fprintf fmt "true"
+    | Elem (s, Constr) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
+    | Elem (s, Constr) when Hstring.equal s Term.htrue -> fprintf fmt "true"
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, (Glob | Arr)) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
+    | Elem (s, Glob) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
     | Access (a, li) ->
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
 
   let rec print_atom ~prime fmt = function
-    | True -> fprintf fmt "true"
-    | False -> fprintf fmt "false"
-    | Comp (x, op, y) -> 
+    | Atom.True -> fprintf fmt "true"
+    | Atom.False -> fprintf fmt "false"
+    | Atom.Comp (x, op, y) -> 
        fprintf fmt "%a %s %a" 
 	       (print_term ~prime) x (op_comp op) (print_term ~prime) y
-    | Ite (la, a1, a2) ->
+    | Atom.Ite (la, a1, a2) ->
        fprintf fmt "@[(if (%a) then@ %a@ else@ %a)@]" 
 	       (print_atoms ~prime "and") (SAtom.elements la) 
 	       (print_atom ~prime) a1 (print_atom ~prime) a2
@@ -135,7 +137,7 @@ module AltErgo = struct
     | a::l -> fprintf fmt "%a %s@\n%a" (print_atom ~prime) a sep
 		      (print_atoms ~prime sep) l
 
-  let print_cube ~prime fmt sa = 
+  let print_satom ~prime fmt sa = 
     fprintf fmt "%a" (print_atoms ~prime "and") (SAtom.elements sa)
 
   let print_array ~prime fmt a =
@@ -159,40 +161,40 @@ module AltErgo = struct
 		      fprintf fmt "%a <> %a and "  print_proc v1 print_proc v2)
 		     (prod vars)
 
-  let print_system ~prime fmt {t_unsafe = args, sa} = 
-    begin match args with
+  let print_node ~prime fmt n = 
+    begin match Node.variables n with
 	  | [] -> () 
-	  | _  -> fprintf fmt "exists %a:int. %a" 
+	  | args -> fprintf fmt "exists %a:int. %a" 
 			  print_args args print_distinct args
     end;
-    fprintf fmt "%a" (print_cube ~prime) sa
+    fprintf fmt "%a" (print_satom ~prime) (Node.litterals n)
 
-  let print_neg_system ~prime fmt {t_unsafe = args, sa} = 
-    begin match args with
+  let print_neg_node ~prime fmt n = 
+    begin match Node.variables n  with
 	  | [] -> fprintf fmt "not ("
-	  | _  -> fprintf fmt "forall %a:int. not (%a" 
+	  | args -> fprintf fmt "forall %a:int. not (%a" 
 			  print_args args print_distinct args
     end;
-    fprintf fmt "%a)" (print_cube ~prime) sa
+    fprintf fmt "%a)" (print_satom ~prime) (Node.litterals n)
 
   let rec print_invariant ~prime fmt visited = match visited with
     | [] -> assert false
-    | [s] -> fprintf fmt "not (%a)" (print_system ~prime) s
+    | [s] -> fprintf fmt "not (%a)" (print_node ~prime) s
     | s ::r -> fprintf fmt "not (%a) and\n%a"
-		       (print_system ~prime) s (print_invariant ~prime) r
+		       (print_node ~prime) s (print_invariant ~prime) r
 
 
   let rec print_invariant_split ~prime fmt =
     let cpt = ref 1 in
     List.iter (fun s ->
 	       fprintf fmt "goal invariant_preserved_%d:\nnot (%a)\n@."
-		       !cpt (print_system ~prime) s;
+		       !cpt (print_node ~prime) s;
 	       incr cpt)
 
   let rec print_disj ~prime fmt lsa = match lsa with
     | [] -> assert false
-    | [sa] -> fprintf fmt "(%a)" (print_cube ~prime) sa
-    | sa :: l -> fprintf fmt "(%a) or\n%a" (print_cube ~prime) sa
+    | [sa] -> fprintf fmt "(%a)" (print_satom ~prime) sa
+    | sa :: l -> fprintf fmt "(%a) or\n%a" (print_satom ~prime) sa
 			 (print_disj ~prime) l
 
   let print_init fmt (args, lsa) =
@@ -243,10 +245,10 @@ module AltErgo = struct
 	       Hstring.print a print_args args (print_term ~prime:false) default
     | (cond, t) :: r ->
        fprintf fmt "((%a) -> %a'(%a) = %a) and\n"
-	       (print_cube ~prime:false) cond
+	       (print_satom ~prime:false) cond
 	       Hstring.print a print_args args (print_term ~prime:false) t;
        fprintf fmt "(not (%a) -> %a)"
-	       (print_cube ~prime:false) cond
+	       (print_satom ~prime:false) cond
 	       print_ite (a, args, r, default)
 
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
@@ -322,7 +324,7 @@ module AltErgo = struct
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
-			 subst_atoms sigma cond, subst_term sigma t) swts in
+			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let rec sd acc = function
       | [] -> assert false
       | [d] -> acc, d
@@ -366,7 +368,7 @@ module AltErgo = struct
     if upds <> [] && remaining <> [] then fprintf fmt " and\n";
     print_norm_all_unchanged vars fmt remaining
 
-  let print_transtion s fmt t =
+  let print_transtion s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
     let args =  t.tr_args in
@@ -376,7 +378,7 @@ module AltErgo = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "( (* requires *)\n";
-    print_cube ~prime:false fmt t.tr_reqs;
+    print_satom ~prime:false fmt t.tr_reqs;
     List.iter (fun (j, disj) ->
       fprintf fmt "\nand (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
@@ -464,7 +466,7 @@ module AltErgo = struct
     List.iter (fun s ->
 	       incr cpt;
 	       fprintf fmt "axiom induction_hypothesis_%d:\n" !cpt;
-	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_node ~prime) s;
 	       (* fprintf fmt "    @[%a@]\n@." (print_neg_system ~prime) s; *)
 	      ) visited
 
@@ -473,7 +475,7 @@ module AltErgo = struct
     List.iter (fun s ->
 	       incr cpt;
 	       fprintf fmt "goal invariant_%d:\n" !cpt;
-	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_node ~prime) s;
 	       (* fprintf fmt "    @[%a@]\n@." (print_neg_system ~prime) s; *)
 	      ) visited    
 
@@ -487,14 +489,14 @@ module AltErgo = struct
     goal_invariant ~prime:false fmt visited;    
     flush cout; close_out cout
 
-  let create_property s uns visited =
+  let create_property s visited =
     let bench = base file in
     let init_file = !out_dir ^"/"^bench^"_property.why" in
     let cout = open_out init_file in
     let fmt = formatter_of_out_channel cout in
     add_definitions fmt s;
     assume_invariant ~prime:false fmt visited;
-    goal_invariant ~prime:false fmt uns;    
+    goal_invariant ~prime:false fmt s.t_unsafe;    
     flush cout; close_out cout
 
   let create_inductive s visited =
@@ -509,11 +511,10 @@ module AltErgo = struct
     goal_invariant ~prime:true fmt visited;
     flush cout; close_out cout
 
-  let certificate uns visited =
-    let s = List.hd uns in
+  let certificate s visited =
     create_dir ();
     create_init s visited;
-    create_property s uns visited;
+    create_property s visited;
     create_inductive s visited;
     printf "Alt-Ergo certificates created in %s@." !out_dir
 
@@ -571,11 +572,19 @@ module Why3 = struct
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
-  let op_arith = function Plus -> "+" | Minus -> "-"
 
-  let print_const fmt c = assert false
+  let print_const fmt = function
+    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstName n -> fprintf fmt "%a" Hstring.print n
 
-  let print_cs fmt cs = assert false
+  let print_cs fmt cs =
+    MConst.iter 
+      (fun c i ->
+       fprintf fmt " %s %a" 
+	       (if i = 1 then "+" else if i = -1 then "-" 
+	        else if i < 0 then "- "^(string_of_int (abs i)) 
+	        else "+ "^(string_of_int (abs i)))
+	       print_const c) cs
 
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
@@ -590,19 +599,19 @@ module Why3 = struct
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, (Glob | Arr)) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
     | Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
 
   let rec print_atom ~prime fmt = function
-    | True -> fprintf fmt "true"
-    | False -> fprintf fmt "false"
-    | Comp (x, op, y) -> 
+    | Atom.True -> fprintf fmt "true"
+    | Atom.False -> fprintf fmt "false"
+    | Atom.Comp (x, op, y) -> 
        fprintf fmt "%a %s %a" 
 	       (print_term ~prime) x (op_comp op) (print_term ~prime) y
-    | Ite (la, a1, a2) ->
+    | Atom.Ite (la, a1, a2) ->
        fprintf fmt "@[(if %a then@ %a@ else@ %a)@]" 
 	       (print_atoms ~prime "/\\") (SAtom.elements la) 
 	       (print_atom ~prime) a1 (print_atom ~prime) a2
@@ -613,7 +622,7 @@ module Why3 = struct
     | a::l -> fprintf fmt "%a %s@\n%a" (print_atom ~prime) a sep
 		      (print_atoms ~prime sep) l
 
-  let print_cube ~prime fmt sa = 
+  let print_satom ~prime fmt sa = 
     fprintf fmt "%a" (print_atoms ~prime "/\\") (SAtom.elements sa)
 
   let print_array ~prime fmt a =
@@ -637,32 +646,32 @@ module Why3 = struct
 		      fprintf fmt "%a <> %a /\\ "  print_proc v1 print_proc v2)
 		     (prod vars)
 
-  let print_system ~prime fmt {t_unsafe = args, sa} = 
-    begin match args with
+  let print_node ~prime fmt n = 
+    begin match Node.variables n with
 	  | [] -> () 
-	  | _  -> fprintf fmt "exists %a:int. %a" 
+	  | args -> fprintf fmt "exists %a:int. %a" 
 			  print_args args print_distinct args
     end;
-    fprintf fmt "%a" (print_cube ~prime) sa
+    fprintf fmt "%a" (print_satom ~prime) (Node.litterals n)
 
   let rec print_invariant ~prime fmt visited = match visited with
     | [] -> assert false
-    | [s] -> fprintf fmt "not (%a)" (print_system ~prime) s
+    | [s] -> fprintf fmt "not (%a)" (print_node ~prime) s
     | s ::r -> fprintf fmt "not (%a) /\\\n%a"
-		       (print_system ~prime) s (print_invariant ~prime) r
+		       (print_node ~prime) s (print_invariant ~prime) r
 
 
   let rec print_invariant_split ~prime fmt =
     let cpt = ref 1 in
     List.iter (fun s ->
 	       fprintf fmt "goal invariant_preserved_%d:\nnot (%a)\n@."
-		       !cpt (print_system ~prime) s;
+		       !cpt (print_node ~prime) s;
 	       incr cpt)
 
   let rec print_disj ~prime fmt lsa = match lsa with
     | [] -> assert false
-    | [sa] -> fprintf fmt "(%a)" (print_cube ~prime) sa
-    | sa :: l -> fprintf fmt "(%a) \\/\n%a" (print_cube ~prime) sa
+    | [sa] -> fprintf fmt "(%a)" (print_satom ~prime) sa
+    | sa :: l -> fprintf fmt "(%a) \\/\n%a" (print_satom ~prime) sa
 			 (print_disj ~prime) l
 
   let print_init fmt (args, lsa) =
@@ -712,7 +721,7 @@ module Why3 = struct
 	       print_name a print_args args (print_term ~prime:false) default
     | (cond, t) :: r ->
        fprintf fmt "if %a then\n %a' %a = %a\nelse %a"
-	       (print_cube ~prime:false) cond
+	       (print_satom ~prime:false) cond
 	       print_name a print_args args (print_term ~prime:false) t
 	       print_ite (a, args, r, default)
 
@@ -789,7 +798,7 @@ module Why3 = struct
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
-			 subst_atoms sigma cond, subst_term sigma t) swts in
+			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let rec sd acc = function
       | [] -> assert false
       | [d] -> acc, d
@@ -833,7 +842,7 @@ module Why3 = struct
     if upds <> [] && remaining <> [] then fprintf fmt " /\\\n";
     print_norm_all_unchanged vars fmt remaining
 
-  let print_transtion s fmt t =
+  let print_transtion s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
     let args =  t.tr_args in
@@ -843,7 +852,7 @@ module Why3 = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "( (* requires *)\n";
-    print_cube ~prime:false fmt t.tr_reqs;
+    print_satom ~prime:false fmt t.tr_reqs;
     List.iter (fun (j, disj) ->
       fprintf fmt "\n/\\ (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
@@ -912,7 +921,7 @@ module Why3 = struct
     List.iter (fun s ->
 	       incr cpt;
 	       fprintf fmt "axiom induction_hypothesis_%d:\n" !cpt;
-	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_node ~prime) s;
 	      ) visited
 
   let goal_invariant ~prime fmt visited =
@@ -920,11 +929,12 @@ module Why3 = struct
     List.iter (fun s ->
 	       incr cpt;
 	       fprintf fmt "goal invariant_%d:\n" !cpt;
-	       fprintf fmt "    @[not (%a)@]\n@." (print_system ~prime) s;
+	       fprintf fmt "    @[not (%a)@]\n@." (print_node ~prime) s;
 	      ) visited    
 
   let add_imports fmt s l =
     if need_bool s then fprintf fmt "use import bool.Bool\n";
+    fprintf fmt "use import int.Int\n";
     List.iter (fprintf fmt "use import %s\n") l;
     fprintf fmt "@."
 
@@ -950,12 +960,12 @@ module Why3 = struct
     goal_invariant ~prime:false fmt visited;
     fprintf fmt "\nend\n\n@."
     
-  let theory_property fmt s uns visited imports =
+  let theory_property fmt s visited imports =
     let name = (capital_base file)^"_property" in
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s imports;
     assume_invariant ~prime:false fmt visited;
-    goal_invariant ~prime:false fmt uns;
+    goal_invariant ~prime:false fmt s.t_unsafe;
     fprintf fmt "\nend\n\n@."
 
   let theory_preservation fmt s visited imports =
@@ -969,18 +979,64 @@ module Why3 = struct
     fprintf fmt "\nend\n\n@."
     
     
+  module SI = Set.Make(struct type t = int let compare = Pervasives.compare end)
+  module Fixpoint = Fixpoint.FixpointList
+  let replay s visited =
+    printf "REPLAY\n---------@.";
+    List.iter 
+      (fun phi ->
+       let ls, post = Pre.pre_image s.t_trans phi in
+       let used =
+         List.fold_left
+           (fun acc p ->
+            match Fixpoint.check p visited with
+            | None -> assert false
+            | Some db -> List.fold_left (fun acc i -> SI.add i acc) acc db
+           ) SI.empty (ls@post)
+       in
+       printf "Node : %d ======> " phi.tag ;
+       printf " [[ %d used ]] " (SI.cardinal used);
+       SI.iter (fun i -> printf ", %d" i) used;
+       printf "@.";
+       (* printf "\n      %a@." SAtom.print_inline (Node.litterals phi); *)
+      ) visited
 
-  let certificate uns visited =
+  let certificate s visited =
+    (* replay s visited; *)
+
     let bench = Filename.chop_extension (Filename.basename file) in
     let why_certif = out_trace^"/"^bench^"_certif.why" in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
-    let s = List.hd uns in
     let defs = theory_defs fmt s in
     theory_init fmt s visited [defs];
-    theory_property fmt s uns visited [defs];
+    theory_property fmt s visited [defs];
     theory_preservation fmt s visited [defs];
     flush cout; close_out cout;
     printf "Why3 certificate created in %s@." why_certif
 
+end
+
+
+
+module Empty : S = struct
+
+  let certificate _ _ = ()
+
+end
+
+
+let select_format =
+  match Options.trace with
+  | AltErgoTr -> (module AltErgo : S)
+  | WhyTr -> (module Why3 : S)
+  | NoTrace -> (module Empty)
+
+module Selected : S = struct 
+  include (val select_format)
+
+  (* Sort nodes first *)
+  let certificate s visited =
+    let visited = List.fast_sort Node.compare_by_breadth visited in
+    certificate s visited
 end

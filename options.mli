@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,12 +13,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = 
-  | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsDist | Bfsinvp 
-  | Induct
+(** Options given on the command line  *)
 
 type trace =  NoTrace | AltErgoTr | WhyTr
+
+type viz_prog = Dot | Sfdp
 
 val file : string
 val cin : in_channel
@@ -56,10 +55,13 @@ val refine_universal : bool
 
 val cores : int
 
-val mode : mode
+val mode : string
 
 val debug : bool
 val dot : bool
+val dot_level : int
+val dot_prog : viz_prog
+val dot_colors : int
 val quiet : bool
 val verbose : int
 val nocolor : bool
@@ -71,6 +73,7 @@ val profiling : bool
 val size_proc : int ref
 
 val subtyping : bool
+val notyping : bool
 
 val trace : trace
 val out_trace : string

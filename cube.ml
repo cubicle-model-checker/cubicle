@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -15,39 +15,13 @@
 
 open Format
 open Options
-open Ast
-open Atom
+open Util
+open Types
+
 
 module H = Hstring
 module S = H.HSet
 let hempty = H.empty
-
-
-module TimeRP = Search.TimeRP
-
-module TimeFix = Search.TimeFix
-module TimeEasyFix = Search.TimeEasyFix
-module TimeHardFix = Search.TimeHardFix
-
-module TimeSort = Search.TimeSort
-
-module Debug = struct
-
-  let fixpoint = 
-    if not debug then fun _ -> () else 
-      fun ls ->
-	eprintf "\nAfter simplification, subsumption and fixpoint check : @.";
-	match ls with
-	  | [] -> eprintf "No new branches@."
-	  | _ -> 
-	      List.iter (eprintf "@.New branch : %a@." Pretty.print_system) ls
-
-  let unsafe = 
-    if not debug then fun _ -> () else 
-      fun s ->
-	eprintf "    %a@." Pretty.print_unsafe s
-
-end
 
 module SS = Set.Make
   (struct 
@@ -57,45 +31,91 @@ module SS = Set.Make
       if c <> 0 then c
       else H.compare s2 t2
    end)
-  
-let rec m_number a s = 
-  match a with
-    | True | False -> s
-    | Comp (Elem (x, Glob), Eq, Elem (y, Constr)) 
-    | Comp (Elem (x, Constr), Eq, Elem (y, Glob)) -> SS.add (x,y) s
-    | Comp (Access (a, _), _, Elem (x, xs)) -> 
-	if xs = Glob || xs = Constr then
-	  SS.add (a, x) s 
-	else SS.add (a, hempty) s
-    | Comp (_, _, Access (a, _)) -> SS.add (a, hempty) s
-    | Comp _ ->  s
-    | Ite (sa, a1, a2) -> 
-	SAtom.fold m_number sa (m_number a1 (m_number a2 s))
 
-let magic_number sa = SAtom.fold m_number sa SS.empty
-
-let magic_number_arr aa = 
-  Array.fold_left 
-    (fun s a -> m_number a s) 
-    SS.empty aa
-
-let print_magic fmt ss = 
-  SS.iter (fun (a,b) -> 
-    fprintf fmt "(%s,%s) " (H.view a) (H.view b)) ss;
-  fprintf fmt "@."
+type t =
+ {
+   vars : Variable.t list;
+   litterals : SAtom.t;
+   array : ArrayAtom.t;
+ }
 
 
-let apply_subst p ss = subst_atoms ss p
+let create vars sa =
+  {
+    vars = vars;
+    litterals = sa;
+    array = ArrayAtom.of_satom sa;
+  }
 
-let memo_apply_subst =
-  let cache = Hashtbl.create 17 in
-  fun p ss ->
-    let k = p,ss in
-    try Hashtbl.find cache k
-    with Not_found ->
-      let v = apply_subst p ss in
-      Hashtbl.add cache k v;
-      v
+
+let create_array vars ar =
+  {
+    vars = vars;
+    litterals = ArrayAtom.to_satom ar;
+    array = ar;
+  }
+
+
+let cube_false =
+{
+  vars = [];
+  litterals = SAtom.singleton Atom.False;
+  array = Array.of_list [Atom.False];
+}
+
+let subst sigma { vars = vs; array = ar } =
+  let nar = ArrayAtom.apply_subst sigma ar in
+  {
+    vars = List.map (Variable.subst sigma) vs;
+    litterals = ArrayAtom.to_satom nar;
+    array = nar;
+  }
+
+(***************************************)
+(* Good renaming of a cube's variables *)
+(***************************************)
+
+
+
+let normal_form ({ litterals = sa; array = ar } as c) =
+  let vars = Variable.Set.elements (SAtom.variables_proc sa) in
+  if !size_proc <> 0 && List.length vars > !size_proc then
+    cube_false
+  else
+  let sigma = Variable.build_subst vars Variable.procs in
+  if Variable.is_subst_identity sigma then c
+  else
+    let new_vars = List.map snd sigma in
+    let new_ar = ArrayAtom.apply_subst sigma ar in
+    let new_sa = ArrayAtom.to_satom new_ar in
+    {
+      vars = new_vars;
+      litterals = new_sa;
+      array = new_ar;
+    }
+
+
+let create_norma_sa_ar sa ar =
+  let vars = Variable.Set.elements (SAtom.variables_proc sa) in
+  if !size_proc <> 0 && List.length vars > !size_proc then
+    cube_false
+  else
+  let sigma = Variable.build_subst vars Variable.procs in
+  let new_vars = List.map snd sigma in
+  let new_ar = ArrayAtom.apply_subst sigma ar in
+  let new_sa = ArrayAtom.to_satom new_ar in
+  {
+    vars = new_vars;
+    litterals = new_sa;
+    array = new_ar;
+  }
+
+let create_normal sa = create_norma_sa_ar sa (ArrayAtom.of_satom sa)
+
+let create_normal_array ar = create_norma_sa_ar (ArrayAtom.to_satom ar) ar
+
+let dim c = List.length c.vars
+let size c = Array.length c.array
 
 
 
@@ -108,101 +128,55 @@ let memo_apply_subst =
 (* variables are all disctincts					 *)
 (*****************************************************************)
 
-let num_of_const = function
-  | ConstInt n | ConstReal n -> n
-  | _ -> assert false
-
-let add_constnum c i num =
-  match c, num with
-    | ConstInt n, ConstInt m -> 
-	ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
-    | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
-	ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
-    | _ -> assert false
-
-let split_num_consts cs =
-  MConst.fold
-    (fun c i (cs, num) -> match c, num with
-       | ConstName _, _ -> MConst.add c i cs, num
-       | _ -> cs, add_constnum c i num)
-    cs (MConst.empty, ConstInt (Num.Int 0))
-
-let add_constant c i cs =
-  match c with
-    | ConstInt _ | ConstReal _ ->
-	let cs, num = split_num_consts cs in
-	let num = add_constnum c i num in
-	if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
-	else MConst.add num 1 cs
-    | _ ->
-	let i' = try MConst.find c cs with Not_found -> 0 in
-	let i = i + i' in
-	if i = 0 then MConst.remove c cs
-	else MConst.add c i cs
-
-let add_constants cs1 cs2 =
-  let m = MConst.fold add_constant cs2 cs1 in
-  if MConst.is_empty m then 
-    let c0 = 
-      if is_int_const (fst (MConst.choose cs1)) then 
-	ConstInt (Num.Int 0) 
-      else ConstReal (Num.Int 0)
-    in
-    MConst.add c0 1 m
-  else m
-
-let mult_const a =
-  MConst.map (fun i -> i * a)
-
 let redondant_or_false others a = match a with
-  | True -> True
-  | Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))
-  | Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->
+  | Atom.True -> Atom.True
+  | Atom.Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))
+  | Atom.Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->
       (try 
 	 (SAtom.iter (function 
-	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
-	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) ->
+	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) ->
 	     raise Exit
-	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
-	     when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0) ->
+	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0) ->
 	     raise Not_found
 	   | _ -> ()) others);
 	 a
-       with Not_found -> True | Exit -> False)
-  | Comp (t1, Eq, (Elem (x, (Var | Constr)) as t2))
-  | Comp ((Elem (x, (Var | Constr)) as t2), Eq, t1) ->
+       with Not_found -> Atom.True | Exit -> Atom.False)
+  | Atom.Comp (t1, Eq, (Elem (x, (Var | Constr)) as t2))
+  | Atom.Comp ((Elem (x, (Var | Constr)) as t2), Eq, t1) ->
       (try 
 	 (SAtom.iter (function
-	   | Comp (t1', Neq, (Elem (x', (Var | Constr)) as t2'))
-	   | Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1') 
-	     when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) ->
+	   | Atom.Comp (t1', Neq, (Elem (x', (Var | Constr)) as t2'))
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1') 
+	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) ->
 	     raise Exit
-	   | Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
-	     when (compare_term t1' t1 = 0 && compare_term t2' t2 <> 0) ->
+	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0) ->
 	     raise Exit
 	   | _ -> ()) others); a
-       with Not_found -> True | Exit -> False)
-  | Comp (t1, Neq, t2) ->
+       with Not_found -> Atom.True | Exit -> Atom.False)
+  | Atom.Comp (t1, Neq, t2) ->
       (try 
 	 (SAtom.iter (function 
-	   | Comp (t1', Eq, t2') 
-	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
-		 || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0) ->
+	   | Atom.Comp (t1', Eq, t2') 
+	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) 
+		 || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0) ->
 	     raise Exit
 	   | _ -> ()) others); a
-       with Exit -> False)
-  | Comp (t1, Eq, t2) ->
+       with Exit -> Atom.False)
+  | Atom.Comp (t1, Eq, t2) ->
       (try 
 	 (SAtom.iter (function 
-	   | Comp (t1', Neq, t2') 
-	       when (compare_term t1' t1 = 0 && compare_term t2' t2 = 0) 
-		 || (compare_term t1' t2 = 0 && compare_term t2' t1 = 0)  ->
+	   | Atom.Comp (t1', Neq, t2') 
+	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) 
+		 || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0)  ->
 	     raise Exit
 	   | _ -> ()) others); a
-       with Exit -> False)
+       with Exit -> Atom.False)
   | _ -> a
 
 	   
@@ -213,99 +187,103 @@ let rec simplify_term = function
 
 let simplify_comp i si op j sj =  
   match op, (si, sj) with
-    | Eq, _ when H.equal i j -> True
-    | Neq, _ when H.equal i j -> False
+    | Eq, _ when H.equal i j -> Atom.True
+    | Neq, _ when H.equal i j -> Atom.False
     | Eq, (Var, Var | Constr, Constr) -> 
-	if H.equal i j then True else False
+	if H.equal i j then Atom.True else Atom.False
     | Neq, (Var, Var | Constr, Constr) -> 
-	if not (H.equal i j) then True else False
-    | Le, _ when H.equal i j -> True
-    | Lt, _ when H.equal i j -> False
+	if not (H.equal i j) then Atom.True else Atom.False
+    | Le, _ when H.equal i j -> Atom.True
+    | Lt, _ when H.equal i j -> Atom.False
     | (Eq | Neq) , _ ->
-        if si = Glob && (Hstring.view i).[0] = '*' then True
+        if si = Glob && (H.view i).[0] = '*' then Atom.True
         else
           let ti = Elem (i, si) in
 	  let tj = Elem (j, sj) in 
-	  if compare_term ti tj < 0 then Comp (tj, op, ti)
-	  else Comp (ti, op, tj)
+	  if Term.compare ti tj < 0 then Atom.Comp (tj, op, ti)
+	  else Atom.Comp (ti, op, tj)
     | _ -> 
-        if si = Glob && (Hstring.view i).[0] = '*' then True
-        else Comp (Elem (i, si), op, Elem (j, sj))
+        if si = Glob && (H.view i).[0] = '*' then Atom.True
+        else Atom.Comp (Elem (i, si), op, Elem (j, sj))
 		  
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
-    | True | False -> a 
-    | Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
-    | Comp (Arith (i, csi), op, (Arith (j, csj)))
-      when compare_constants csi csj = 0 -> simplification np (Comp (i, op, j))
-    | Comp (Arith (i, csi), op, (Arith (j, csj))) ->
+    | Atom.True | Atom.False -> a 
+    | Atom.Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
+    | Atom.Comp (Arith (i, csi), op, (Arith (j, csj)))
+      when compare_constants csi csj = 0 -> simplification np (Atom.Comp (i, op, j))
+    | Atom.Comp (Arith (i, csi), op, (Arith (j, csj))) ->
         let cs = add_constants (mult_const (-1) csi) csj in
-	if MConst.is_empty cs then Comp (i, op, j)
-	else Comp (i, op, (Arith (j, cs)))
-    (* | Comp (Const cx, op, Arith (y, sy, cy)) -> *)
-    (* 	Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
+	if MConst.is_empty cs then Atom.Comp (i, op, j)
+	else Atom.Comp (i, op, (Arith (j, cs)))
+    (* | Atom.Comp (Const cx, op, Arith (y, sy, cy)) -> *)
+    (* 	Atom.Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
     (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
-    (* | Comp ( Arith (x, sx, cx), op, Const cy) -> *)
-    (* 	Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
+    (* | Atom.Comp ( Arith (x, sx, cx), op, Const cy) -> *)
+    (* 	Atom.Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
     (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
-    | Comp (Arith (x, cx), op, Const cy) ->
+    | Atom.Comp (Arith (x, cx), op, Const cy) ->
        let mcx = mult_const (-1) cx in
-       Comp (x, op, Const (add_constants cy mcx))
-    | Comp (Const cx, op, Arith (y, cy)) ->
+       Atom.Comp (x, op, Const (add_constants cy mcx))
+    | Atom.Comp (Const cx, op, Arith (y, cy)) ->
        let mcy = mult_const (-1) cy in
-       Comp (Const (add_constants cx mcy), op, y)
+       Atom.Comp (Const (add_constants cx mcy), op, y)
        
-    | Comp (x, op, Arith (y, cy)) when compare_term x y = 0 ->
+    | Atom.Comp (x, op, Arith (y, cy)) when Term.compare x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
 	let my = MConst.remove c cy in
 	let cy = 
 	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
-        Comp (Const cx, op, Const cy)
-    | Comp (Arith (y, cy), op, x) when compare_term x y = 0 ->
+        Atom.Comp (Const cx, op, Const cy)
+    | Atom.Comp (Arith (y, cy), op, x) when Term.compare x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
 	let my = MConst.remove c cy in
 	let cy = 
 	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
-        Comp (Const cy, op, Const cx)
-    | Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
-       True 
-    | Comp (Const c1, Le, Const c2) ->
+        Atom.Comp (Const cy, op, Const cx)
+    | Atom.Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
+       Atom.True 
+    | Atom.Comp (Const c1, Le, Const c2) ->
        begin
 	 match MConst.is_num c1, MConst.is_num c2 with
-	 | Some n1, Some n2 -> if Num.le_num n1 n2 then True else False
+	 | Some n1, Some n2 -> if Num.le_num n1 n2 then Atom.True else Atom.False
 	 | _ -> a
        end
-    | Comp (Const c1, Lt, Const c2) ->
+    | Atom.Comp (Const c1, Lt, Const c2) ->
        begin
 	 match MConst.is_num c1, MConst.is_num c2 with
-	 | Some n1, Some n2 -> if Num.lt_num n1 n2 then True else False
+	 | Some n1, Some n2 -> if Num.lt_num n1 n2 then Atom.True else Atom.False
 	 | _ -> a
        end
-    | Comp (Const _ as c, Eq, y) -> Comp (y, Eq, c)
-    | Comp (x, Eq, y) when compare_term x y = 0 -> True
-    | Comp (x, (Eq | Neq as op), y) when compare_term x y < 0 -> Comp (y, op, x)
-    | Comp _ -> a
-    | Ite (sa, a1, a2) -> 
+    | Atom.Comp (Const _ as c, Eq, y) -> Atom.Comp (y, Eq, c)
+    | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
+    | Atom.Comp (x, (Eq | Neq as op), y) when Term.compare x y < 0 -> Atom.Comp (y, op, x)
+    | Atom.Comp _ -> a
+    | Atom.Ite (sa, a1, a2) -> 
 	let sa = 
 	  SAtom.fold 
-	    (fun a -> add (simplification np a)) sa SAtom.empty
+	    (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
 	in
 	let a1 = simplification np a1 in
 	let a2 = simplification np a2 in
 	if SAtom.is_empty sa || SAtom.subset sa np then a1
-	else if SAtom.mem False sa then a2
-	else Ite(sa, a1, a2)
+	else if SAtom.mem Atom.False sa then a2
+	else Atom.Ite(sa, a1, a2)
 
 
 
 let rec simplification_terms a = match a with
-    | True | False -> a
-    | Comp (t1, op, t2) -> Comp (simplify_term t1, op, simplify_term t2)
-    | Ite (sa, a1, a2) ->
-       Ite (SAtom.fold (fun a -> SAtom.add (simplification_terms a)) sa SAtom.empty,
+    | Atom.True | Atom.False -> a
+    | Atom.Comp (t1, op, t2) ->
+       let nt1 = simplify_term t1 in
+       let nt2 = simplify_term t2 in
+       if nt1 == t1 && nt2 == t2 then a
+       else Atom.Comp (nt1, op, nt2)
+    | Atom.Ite (sa, a1, a2) ->
+       Atom.Ite (SAtom.fold (fun a -> SAtom.add (simplification_terms a)) sa SAtom.empty,
 	    simplification_terms a1, simplification_terms a2)
 
 
@@ -315,21 +293,21 @@ let rec simplification_terms a = match a with
 
 let rec list_assoc_term t = function
   | [] -> raise Not_found
-  | (u, v)::l -> if compare_term t u = 0 then v else list_assoc_term t l
+  | (u, v)::l -> if Term.compare t u = 0 then v else list_assoc_term t l
 
 let assoc_neq t1 l t2 =
-  try compare_term (list_assoc_term t1 l) t2 <> 0 with Not_found -> false
+  try Term.compare (list_assoc_term t1 l) t2 <> 0 with Not_found -> false
 
 let assoc_eq t1 l t2 =
-  try compare_term (list_assoc_term t1 l) t2 = 0 with Not_found -> false
+  try Term.compare (list_assoc_term t1 l) t2 = 0 with Not_found -> false
 
 let inconsistent_list l = 
   let rec check values eqs neqs les lts ges gts = function
     | [] -> ()
-    | True :: l -> check values eqs neqs les lts ges gts l
-    | False :: _ -> raise Exit
-    | Comp (t1, Eq, (Elem (x, s) as t2)) :: l 
-    | Comp ((Elem (x, s) as t2), Eq, t1) :: l ->
+    | Atom.True :: l -> check values eqs neqs les lts ges gts l
+    | Atom.False :: _ -> raise Exit
+    | Atom.Comp (t1, Eq, (Elem (x, s) as t2)) :: l 
+    | Atom.Comp ((Elem (x, s) as t2), Eq, t1) :: l ->
       (match s with
 	| Var | Constr ->
 	  if assoc_neq t1 values t2 
@@ -340,23 +318,23 @@ let inconsistent_list l =
 	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
 	  then raise Exit
 	  else check values ((t1, t2)::eqs) neqs les lts ges gts l)
-    | Comp (t1, Eq, t2) :: l ->
+    | Atom.Comp (t1, Eq, t2) :: l ->
       if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
       then raise Exit
       else check values ((t1, t2)::eqs) neqs les lts ges gts l
-    | Comp (t1, Neq, t2) :: l ->
+    | Atom.Comp (t1, Neq, t2) :: l ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
 	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
       then raise Exit
       else check values eqs ((t1, t2)::(t2, t1)::neqs) les lts ges gts l
-    | Comp (t1, Lt, t2) :: l ->
+    | Atom.Comp (t1, Lt, t2) :: l ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
 	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
 	|| assoc_eq t1 ges t2 || assoc_eq t2 les t1
 	|| assoc_eq t1 gts t2 || assoc_eq t2 lts t1
       then raise Exit
       else check values eqs neqs les ((t1, t2)::lts) ges ((t2, t1)::gts) l
-    | Comp (t1, Le, t2) :: l ->
+    | Atom.Comp (t1, Le, t2) :: l ->
       if assoc_eq t1 gts t2 || assoc_eq t2 lts t1
       then raise Exit
       else check values eqs neqs ((t1, t2)::les) lts ((t2, t1)::ges) gts l
@@ -364,12 +342,11 @@ let inconsistent_list l =
   in
   try check [] [] [] [] [] [] [] l; false with Exit -> true
 
-
 let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
-    | True  -> acc
-    | False -> raise Exit
-    | Comp (t1, Eq, (Elem (x, s) as t2)) 
-    | Comp ((Elem (x, s) as t2), Eq, t1) ->
+    | Atom.True  -> acc
+    | Atom.False -> raise Exit
+    | Atom.Comp (t1, Eq, (Elem (x, s) as t2)) 
+    | Atom.Comp ((Elem (x, s) as t2), Eq, t1) ->
       (match s with
 	| Var | Constr ->
 	  if assoc_neq t1 values t2 
@@ -380,27 +357,48 @@ let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
 	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
 	  then raise Exit
 	  else values, ((t1, t2)::eqs), neqs, les, lts, ges, gts)
-    | Comp (t1, Eq, t2) ->
+    | Atom.Comp (t1, Eq, t2) ->
       if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
       then raise Exit
       else values, ((t1, t2)::eqs), neqs, les, lts, ges, gts
-    | Comp (t1, Neq, t2) ->
+    | Atom.Comp (t1, Neq, t2) ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
 	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
       then raise Exit
       else values, eqs, ((t1, t2)::(t2, t1)::neqs), les, lts, ges, gts
-    | Comp (t1, Lt, t2) ->
+    | Atom.Comp (t1, Lt, t2) ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
 	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
 	|| assoc_eq t1 ges t2 || assoc_eq t2 les t1
 	|| assoc_eq t1 gts t2 || assoc_eq t2 lts t1
       then raise Exit
       else values, eqs, neqs, les, ((t1, t2)::lts), ges, ((t2, t1)::gts)
-    | Comp (t1, Le, t2) ->
+    | Atom.Comp (t1, Le, t2) ->
       if assoc_eq t1 gts t2 || assoc_eq t2 lts t1
       then raise Exit
       else values, eqs, neqs, ((t1, t2)::les), lts, ((t2, t1)::ges), gts
     | _  -> acc
+
+
+let inconsistent_list =
+  if not profiling then inconsistent_list
+  else fun l ->
+       TimeSimpl.start ();
+       let r = inconsistent_list l in
+       TimeSimpl.pause ();
+       r
+
+let inconsistent_aux =
+  if not profiling then inconsistent_aux
+  else fun acc a ->
+       try
+         TimeSimpl.start ();
+         let r = inconsistent_aux acc a in
+         TimeSimpl.pause ();
+         r
+       with Exit ->
+         TimeSimpl.pause ();
+         raise Exit
 
 let inconsistent sa = 
   let l = SAtom.elements sa in
@@ -411,7 +409,7 @@ let inconsistent_array a =
   inconsistent_list l
 
 
-let inconsistent sa =
+let inconsistent_set sa =
   try
     let _ = 
       SAtom.fold (fun a acc -> inconsistent_aux acc a) 
@@ -422,11 +420,11 @@ let inconsistent sa =
 
 let inconsistent_array ar =
   try
-    if profiling then Prover.TimeF.start ();
+    TimeFormula.start ();
     let _ = Array.fold_left inconsistent_aux ([], [], [], [], [], [], []) ar in
-    if profiling then Prover.TimeF.pause ();
+    TimeFormula.pause ();
     false
-  with Exit -> if profiling then Prover.TimeF.pause (); true
+  with Exit -> TimeFormula.pause (); true
 
 let inconsistent_2arrays ar1 ar2 =
   try
@@ -437,7 +435,7 @@ let inconsistent_2arrays ar1 ar2 =
   with Exit -> true
 
 
-let inconsistent_2cubes sa1 sa2 =
+let inconsistent_2sets sa1 sa2 =
   try
     let acc = SAtom.fold 
       (fun a acc -> inconsistent_aux acc a) 
@@ -448,68 +446,18 @@ let inconsistent_2cubes sa1 sa2 =
     false
   with Exit -> true
 
+let inconsistent ?(use_sets=false) { litterals = sa; array = ar } =
+  if use_sets then inconsistent_set sa
+  else inconsistent_array ar
 
-
-(*----------------------------------------------------------------*)
-
-let inconsistencies ap other =
-  if inconsistent_2arrays ap other then
-    Array.fold_left (fun acc a ->
-      let sa = SAtom.singleton a in
-      Array.fold_left (fun acc o -> 
-	let so = SAtom.singleton o in
-	if inconsistent_2cubes sa so then a :: acc
-	else acc) acc other
-    ) [] ap
-  else []
-
-let distrib_one l acc x =
-  List.fold_left (fun acc y ->
-    let n = SAtom.add y x in 
-    if List.mem n acc then acc else n :: acc) acc l
-
-let distrib_cand l1 l2 =
-  List.fold_left (distrib_one l1) [] l2
-
-
-let rec fold_candidates_rec acc ap = function
-  | [] -> List.sort SAtom.compare acc
-  | fp :: fs ->
-      (* XXX *)
-      let incs = inconsistencies ap fp in
-      (* eprintf "inconsistencies %a >>> %a === @." *)
-      (* 	Pretty.print_array ap Pretty.print_array fp; *)
-      (* List.iter (fun a -> eprintf "%a\n----@." *)
-      (* 	Pretty.print_atom a) incs; *)
-      if incs = [] then raise Exit;
-      (* let sfp = ArrayAtom.to_satom fp in *)
-      (* List.rev_append  *)
-      (* 	(List.rev_map (fun inc -> SAtom.add inc acc) incs) *)
-      (* 	(fold_candidates ap fs) *)
-      fold_candidates_rec (distrib_cand incs acc) ap fs
-
-let fold_candidates = fold_candidates_rec [SAtom.empty]
-
-let simple_extract_candidates ap forward_nodes =
-  List.fold_left (fun acc fs ->
-    try
-      let cs = 
-	List.fold_left (fun acc c ->
-	  (* eprintf "fold_cand %a @." Pretty.print_cube c; *)
-	  if SAtom.cardinal c > 1 then c :: acc else acc
-	) [] (fold_candidates ap fs) in
-      cs @ acc
-    with Exit -> acc)
-    [] forward_nodes
-
-(*----------------------------------------------------------------*)
+let inconsistent_2 ?(use_sets=false)
+    { litterals = sa1; array = ar1 } { litterals = sa2; array = ar2 } =
+  if use_sets then inconsistent_2sets sa1 sa2
+  else inconsistent_2arrays ar1 ar2
 
 
 
-let number_of s = 
-  if s.[0] = '#' then 
-    int_of_string (String.sub s 1 (String.length s - 1))
-  else 1
+(* ---------- TODO : doublon avec SAtom.variables -----------*)
 
 let rec add_arg args = function
   | Elem (s, _) ->
@@ -528,215 +476,21 @@ let args_of_atoms sa =
     SAtom.fold 
       (fun a args -> 
 	 match a with 
-	   | True | False -> args
-	   | Comp (x, _, y) -> add_arg (add_arg args x) y
-	   | Ite (sa, a1, a2) -> 
+	   | Atom.True | Atom.False -> args
+	   | Atom.Comp (x, _, y) -> add_arg (add_arg args x) y
+	   | Atom.Ite (sa, a1, a2) -> 
 	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args) 
       sa args
   in 
   S.elements (args_rec sa S.empty)
 
-(***************************************)
-(* Good renaming of a cube's variables *)
-(***************************************)
-
-let proper_cube sa =
-  let args = args_of_atoms sa in
-  if !size_proc <> 0 && List.length args > !size_proc then
-    SAtom.singleton (Atom.False), ([], List.hd proc_vars)
-  else
-    let cpt = ref 1 in
-    let sigma =
-      List.fold_left
-        (fun sigma arg ->
-	  let n = number_of (H.view arg) in
-	  if n = !cpt then (incr cpt; sigma)
-	  else
-	    let sigma =
-	      (arg, List.nth proc_vars (!cpt - 1)):: sigma in
-	    incr cpt; sigma)
-        [] args
-    in
-    let sa = subst_atoms (List.rev sigma) sa in
-    let l = ref [] in
-    for n = !cpt - 1 downto 1 do
-      l := (List.nth proc_vars (n - 1)) :: !l
-    done;
-    sa, (!l, List.nth proc_vars (!cpt - 1))
- 
-
-(*********************************************)
-(* all permutations excepted impossible ones *)
-(*********************************************)
-
-let filter_impos perms impos =
-  List.filter (fun sigma ->
-               not (List.exists (List.for_all 
-                    (fun (x,y) -> H.list_mem_couple (x,y) sigma))
-                    impos))
-              perms
-
-let rec all_permutations_impos l1 l2 impos =
-  filter_impos (all_permutations l1 l2) impos
-
-
-
-
-(****************************************************)
-(* Improved relevant permutations (still quadratic) *)
-(****************************************************)
-
-let list_rev_split =
-  List.fold_left (fun (l1, l2) (x, y) -> x::l1, y::l2) ([], [])
-
-let list_rev_combine =
-  List.fold_left2 (fun acc x1 x2 -> (x1, x2) :: acc) []
-
-
-exception NoPermutations
-
-let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
-  let i2 = ref i2 in
-  while !i2 < n2 do
-    let a2i = a2.(!i2) in
-    (match a2i, op with
-      | Comp (Access (a2, _), _, _), _ when not (H.equal a1 a2) ->
-	  i2 := n2
-
-      | Comp (Access (a2, lx2), Eq,
-	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), (Neq | Lt)
-	  when compare_term c1 c2 = 0 ->
-	  
-	  if List.for_all2 
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
-            raise NoPermutations;
-          impos := (list_rev_combine lx1 lx2) :: !impos
-	      
-      | Comp (Access (a2, lx2), (Neq | Lt),
-	      (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c2)), Eq
-	  when compare_term c1 c2 = 0 ->
-
-	  if List.for_all2
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
-            raise NoPermutations;
-          impos := (list_rev_combine lx1 lx2) :: !impos
-
-      | Comp (Access (a2, lx2), Eq, (Elem (_, Constr) as c2)), Eq 
-	  when compare_term c1 c2 <> 0 ->
-	  
-	  if List.for_all2
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
-            raise NoPermutations;
-          impos := (list_rev_combine lx1 lx2) :: !impos
-	    
-      | _ -> ());
-    incr i2
-  done
-
-let add_obv ((x,y) as p) obvs =
-  begin
-    try if not (H.equal (H.list_assoc x !obvs) y) then 
-	raise NoPermutations
-    with Not_found -> ()
-  end;
-  obvs := p :: !obvs
-
-let obvious_impossible a1 a2 =
-  let n1 = Array.length a1 in
-  let n2 = Array.length a2 in
-  let obvs = ref [] in
-  let impos = ref [] in
-  let i1 = ref 0 in
-  let i2 = ref 0 in
-  while !i1 < n1 && !i2 < n2 do
-    let a1i = a1.(!i1) in
-    let a2i = a2.(!i2) in
-    (match a1i, a2i with
-       | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
-	 Comp (Elem (x2, sx2), Eq, Elem (y2, sy2)) ->
-	   begin
-    	     match sx1, sy1, sx2, sy2 with
-    	       | Glob, Constr, Glob, Constr 
-		   when H.equal x1 x2 && not (H.equal y1 y2) ->
-    		   raise NoPermutations
-    	       | Glob, Var, Glob, Var when H.equal x1 x2 ->
-		   add_obv (y1,y2) obvs
-    	       | Glob, Var, Var, Glob when H.equal x1 y2 ->
-    		   add_obv (y1,x2) obvs
-    	       | Var, Glob, Glob, Var when H.equal y1 x2 ->
-    		   add_obv (x1,y2) obvs
-    	       | Var, Glob, Var, Glob when H.equal y1 y2 ->
-    		   add_obv (x1,x2) obvs
-    	       | _ -> ()
-    	   end
-       | Comp (Elem (x1, sx1), Eq, Elem (y1, sy1)), 
-	 Comp (Elem (x2, sx2), (Neq | Lt), Elem (y2, sy2)) ->
-    	   begin
-	     match sx1, sy1, sx2, sy2 with
-    	       | Glob, Constr, Glob, Constr 
-		   when H.equal x1 x2 && H.equal y1 y2 ->
-    		   raise NoPermutations
-    	       | _ -> ()
-	   end
-       | Comp (Access (a1, lx1), op, 
-	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
-	 Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
-    	   when H.equal a1 a ->
-	   find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
-       | _ -> ());
-    if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
-  done;
-  !obvs, !impos
-
-(*******************************************)
-(* Relevant permuations for fixpoint check *)
-(*******************************************)
-
-(****************************************************)
-(* Find relevant quantifier instantiation for 	    *)
-(* \exists z_1,...,z_n. np => \exists x_1,...,x_m p *)
-(****************************************************)
-
-let relevant_permutations np p l1 l2 =
-  if profiling then TimeRP.start ();
-  try
-    let obvs, impos = obvious_impossible p np in
-    let obvl1, obvl2 = list_rev_split obvs in
-    let l1 = List.filter (fun b -> not (H.list_mem b obvl1)) l1 in
-    let l2 = List.filter (fun b -> not (H.list_mem b obvl2)) l2 in
-    let perm = all_permutations_impos l1 l2 impos in
-    let r = List.map (List.rev_append obvs) perm in
-    if profiling then TimeRP.pause ();
-    r
-  with NoPermutations -> if profiling then TimeRP.pause (); []
-
-
-let possible_imply anp ap =
-  SS.subset (magic_number_arr ap) (magic_number_arr anp)  
-
-
-let closeness anp ap =
-  SS.cardinal (SS.diff (magic_number_arr anp) (magic_number_arr ap))
-
-
-let const_sign c =
-  try
-    let n = ref (Num.Int 0) in
-    MConst.iter (fun c i -> if i <> 0 then 
-		   match c with
-		     | ConstName _ -> raise Exit
-		     | ConstInt a | ConstReal a -> 
-			 n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
-    Some (Num.compare_num !n (Num.Int 0))
-  with Exit -> None
-
-let const_nul c = const_sign c = Some 0
+(* --------------------------------------------------------------*)
 
 let tick_pos sa = 
   let ticks = ref [] in 
   SAtom.iter
     (fun a -> match a with
-       | Comp(Const c,Lt, Const m) when const_nul c -> 
+       | Atom.Comp(Const c,Lt, Const m) when const_nul c -> 
 	  begin
 	    try
 	      let n = ref None in
@@ -769,9 +523,9 @@ let remove_tick tick e op x =
 		  MConst.add (ConstReal (Num.Int 0)) 1 m
 		else m
 	      in
-	      simplification SAtom.empty (Comp (Const m, Lt, x))
+	      simplification SAtom.empty (Atom.Comp (Const m, Lt, x))
 	    else raise Not_found
-	  with Not_found -> Comp (e, op, x)
+	  with Not_found -> Atom.Comp (e, op, x)
 	end
     | Arith (v, m) ->
 	begin
@@ -782,9 +536,9 @@ let remove_tick tick e op x =
 	      let e = 
 		if MConst.is_empty m then v else Arith(v, m)
 	      in
-	      simplification SAtom.empty (Comp (e, Lt, x))
+	      simplification SAtom.empty (Atom.Comp (e, Lt, x))
 	    else raise Not_found
-	  with Not_found -> Comp (e, op, x)
+	  with Not_found -> Atom.Comp (e, op, x)
 	end	
     | _ -> assert false
       
@@ -795,9 +549,9 @@ let contains_tick_term tick = function
   | _ -> false
 
 let rec contains_tick_atom tick = function
-  | Comp (t1, _, t2) -> 
+  | Atom.Comp (t1, _, t2) -> 
       contains_tick_term tick t1 || contains_tick_term tick t2
-  (* | Ite (sa, a1, a2) -> *)
+  (* | Atom.Ite (sa, a1, a2) -> *)
   (*     contains_tick_atom tick a1 || contains_tick_atom tick a2 || *)
   (*       SAtom.exists (contains_tick_atom tick) sa *)
   | _ -> false
@@ -807,8 +561,8 @@ let remove_tick_atom sa (tick, at) =
   (* let flag = ref false in *)
   let remove a sa = 
     let a = match a with
-      | Comp ((Const _ | Arith (_, _) as e), (Le|Lt|Eq as op), x)
-      | Comp (x, (Eq as op), (Const _ | Arith (_, _) as e))  ->
+      | Atom.Comp ((Const _ | Arith (_, _) as e), (Le|Lt|Eq as op), x)
+      | Atom.Comp (x, (Eq as op), (Const _ | Arith (_, _) as e))  ->
 	  remove_tick tick e op x
       | _ -> a 
     in
@@ -832,15 +586,15 @@ let simplification_atoms base sa =
        let a = simplification base a in
        let a = simplification sa a in
        match a with
-	 | True -> sa
-	 | False -> raise Exit
-	 | _ -> add a sa)
+	 | Atom.True -> sa
+	 | Atom.False -> raise Exit
+	 | _ -> SAtom.add a sa)
     sa SAtom.empty
 
 let rec break a =
   match a with
-    | True | False | Comp _ -> [SAtom.singleton a]
-    | Ite (sa, a1, a2) ->
+    | Atom.True | Atom.False | Atom.Comp _ -> [SAtom.singleton a]
+    | Atom.Ite (sa, a1, a2) ->
   	begin
   	  match SAtom.elements sa with
   	    | [] -> assert false
@@ -869,9 +623,9 @@ let add_without_redondancy sa l =
     in
     sa :: l
 
-let simplify_atoms np =
+let elim_ite_atoms np =
   try
-    let ites, base = SAtom.partition (function Ite _ -> true | _ -> false) np in
+    let ites, base = SAtom.partition (function Atom.Ite _ -> true | _ -> false) np in
     let base = simplification_atoms SAtom.empty base in
     let ites = simplification_atoms base ites in
     let lsa = 
@@ -884,7 +638,7 @@ let simplify_atoms np =
 		     try
 		       let sa = simplification_atoms cube sa in
 		       let sa = SAtom.union sa cube in
-		       if inconsistent sa then sa_cubes else 
+		       if inconsistent_set sa then sa_cubes else 
 			 add_without_redondancy sa sa_cubes
 		     with Exit -> sa_cubes
 		  )
@@ -900,509 +654,18 @@ let simplify_atoms np =
   with Exit -> []
 
 
+let simplify { litterals = sa; } =
+  create_normal (simplification_atoms SAtom.empty sa)
 
-(*************************************************)
-(* Safety check : s /\ init must be inconsistent *)
-(*************************************************)
-    
-let dnf_safe sa = List.for_all (inconsistent_2cubes sa)
+let elim_ite_simplify { litterals = sa; } =
+  List.map create_normal (elim_ite_atoms sa)
 
-let cdnf_asafe ua =
-  List.exists (
-    List.for_all (fun a ->
-      inconsistent_array (Array.append ua a)))
-
-let obviously_safe { t_unsafe = args,_ ; t_arru = ua } =
-  let _, cdnf_ai = Hashtbl.find init_instances (List.length args) in
-  cdnf_asafe ua cdnf_ai
- 
-let check_safety s =
-  (*Debug.unsafe s;*)
-  try
-    if not (obviously_safe s) then
-      begin
-	Prover.unsafe s;
-	if not quiet then eprintf "\nUnsafe trace: @[%a@]@." 
-	  Pretty.print_verbose_node s;
-        raise (Search.Unsafe s)
-      end
-  with
-    | Smt.Unsat _ -> ()
+let simplify_atoms_base = simplification_atoms
+let simplify_atoms sa = simplification_atoms SAtom.empty sa
+let elim_ite_simplify_atoms = elim_ite_atoms
 
 
-(**********************************************************************)
-(* Use unsat cores from fixpoints check to close nodes : experimental *)
-(**********************************************************************)
-
-module MArgs = Map.Make (struct 
-  type t = H.t list 
-  let compare = H.compare_list 
-end)
-
-let closed = H.H.create (if simpl_by_uc then 8191 else 0)
-
-let already_closed s tr args =
-  let sa = s.t_arru in
-  try
-    let tr_margs = H.H.find closed tr.tr_name in
-    let ls = MArgs.find args tr_margs in
-    let rec find = function
-      | [] -> None
-      | (na, fix) :: r -> 
-	if ArrayAtom.subset na sa then Some fix
-	else find r
-    in find ls
-  with Not_found -> None
-
-let has_alredy_closed_ancestor s =
-  let rec has acc = function
-    | [] -> false
-    | (tr, args, f) :: r ->
-      match already_closed f tr args with
-	| None -> has (f :: acc) r
-	| Some fix -> 
-	  not (List.exists (fun f -> ArrayAtom.equal f.t_arru fix.t_arru) acc)
-  in
-  has [] s.t_from
-
-(* let has_alredy_closed_father s = *)
-(*   match s.t_from with  *)
-(*     | [] -> false *)
-(*     | (tr, args, f)::_ -> already_closed f tr args *)
-
-let add_to_closed s fixa fix =
-  match s.t_from with
-    | [] -> ()
-    | (tr, args, f)::_ ->
-      let fa = f.t_arru in
-      let sa = s.t_arru in
-      let simpl = ArrayAtom.diff fa (ArrayAtom.diff sa fixa) in
-      let tr_margs = 
-	try H.H.find closed tr.tr_name with Not_found -> MArgs.empty in
-      let ls = try MArgs.find args tr_margs with Not_found -> [] in
-      H.H.add closed tr.tr_name (MArgs.add args ((simpl, fix) :: ls) tr_margs)
-
-(**********************************************************************)
-
-(********************************************************)
-(* Incremental fixpoint check : s => \/_{p \in nodes} p *)
-(********************************************************)
-
-
-let extra_args args nargs =
-  let rec aux dif args nargs = match args, nargs with
-    | [], [] -> dif
-    | _::_, [] -> args
-    | [], _::_ -> dif
-    | a::ra, b::rb -> aux dif ra rb
-  in
-  aux [] args nargs
-
-
-exception Fixpoint of int list
-
-let check_fixpoint ?(pure_smt=false) ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
-  Prover.assume_goal s;
-  (* let nb_nargs = List.length nargs in *)
-  let nodes = List.fold_left
-    (fun nodes ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) ->
-      let dif = extra_args real_args nargs in
-      (* if List.length args > List.length nargs then nodes *)
-      (* else *)
-      let nargs = if dif = [] then nargs else nargs@dif in
-      let d = relevant_permutations anp ap args nargs in
-      List.fold_left
-	(fun nodes ss ->
-	  let pp = ArrayAtom.apply_subst ss ap in
-	  if not pure_smt && ArrayAtom.subset pp anp then begin
-	    if simpl_by_uc then add_to_closed s pp sp ;
-	    raise (Fixpoint [sp.t_nb])
-	  end
-	  (* Heuristic : throw away nodes too much different *)
-	  (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-	  (* line below useful for arith : ricart *)
-	  else if not pure_smt &&
-                  inconsistent_array (ArrayAtom.union pp anp) then nodes
-	  else if ArrayAtom.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
-	  else (Prover.assume_node pp ~id:sp.t_nb; nodes)
-	) nodes d
-    ) [] visited
-  in
-  if profiling then TimeSort.start ();
-  let nodes = 
-    List.fast_sort 
-      (fun (a1, n1) (a2, n2) -> ArrayAtom.compare_nb_common anp a1 a2) 
-      nodes 
-  in
-  if profiling then TimeSort.pause ();
-  List.iter (fun (p, cnum) -> Prover.assume_node p ~id:cnum) nodes
-  
-
-let has_deleted_ancestor s =
-  let rec has acc = function
-    | [] -> false, acc
-    | (_, _, a) :: r ->
-      if a.t_deleted then true, acc
-      else has (a :: acc) r
-  in
-  let del, children = has [] s.t_from in
-  if del then List.iter (fun a -> a.t_deleted <- true) children;
-  del
-  
-let has_deleted_ancestor s =
-  List.exists (fun (_, _, a) -> a.t_deleted) s.t_from
-
-let easy_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  if (delete && (s.t_deleted || has_deleted_ancestor s))
-    ||
-    (simpl_by_uc && has_alredy_closed_ancestor s)
-  then Some []
-  else
-    let db = ref None in
-    ignore (List.exists 
-	      (fun ({ t_arru = pa } as sp) -> 
-		 if ArrayAtom.subset pa npa then
-		   (db := Some [sp.t_nb];
-		    if simpl_by_uc then add_to_closed s pa sp; true)
-		 else false) nodes);
-    !db
-
-let hard_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  try
-    check_fixpoint s nodes;
-    None
-  with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-  
-
-
-let pure_smt_fixpoint ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  try
-    check_fixpoint ~pure_smt:true s nodes;
-    None
-  with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-  
-
-
-let fixpoint ~invariants ~visited ({ t_unsafe = (_,np) } as s) =
-  Debug.unsafe s;
-  if profiling then TimeFix.start ();
-  let nodes = (List.rev_append invariants visited) in
-  let r = 
-    match easy_fixpoint s nodes with
-      | None -> hard_fixpoint s nodes
-      | r -> r
-  in
-  if profiling then TimeFix.pause ();
-  r
-
-
-let size_system s = List.length (fst s.t_unsafe)
-let card_system s = Array.length s.t_arru
-
-
-let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
-  let acc, gp = 
-    List.fold_left 
-      (fun (acc, gp) g -> 
-	STerm.add (Elem (g, Glob)) acc, gp
-      ) (STerm.empty, []) globals
-  in
-  List.fold_left (fun acc a ->
-    let indexes = all_arrangements (arity a) (procs@gp) in
-    List.fold_left (fun acc lp ->
-      STerm.add (Access (a, lp)) acc)
-      acc indexes)
-    acc arrays
-
-
-
-(*************** Operations with tries () *******************)
-
-let invert_subst = List.map (fun (x,y) -> y,x)
-
-let medium_fixpoint_trie {t_unsafe = (nargs,_); 
-                          t_alpha = args, ap; 
-                          t_arru = anp} visited learnt =
-  if profiling then TimeEasyFix.start ();
-  let substs = all_permutations args nargs in
-  let substs = List.tl substs in (* Drop 'identity' permutation. 
-                                    Already checked in easy_fixpoint. *)
-  try
-    List.iter (fun ss -> 
-      let u = ArrayAtom.apply_subst ss ap in
-      let lstu = Array.to_list u in
-      match Cubetrie.mem lstu !visited with
-        | Some uc -> raise (Fixpoint uc)
-        | None -> match Cubetrie.mem lstu !learnt with
-            | Some uc -> raise (Fixpoint uc)
-            | None -> ()
-    ) substs;
-    if profiling then TimeEasyFix.pause ();
-    None
-  with Fixpoint uc -> 
-    if profiling then TimeEasyFix.pause ();
-    Some uc
-
-let hard_fixpoint_trie s visited learnt =
-  if profiling then TimeHardFix.start (); 
-  let anp = s.t_arru in
-  let nargs = fst s.t_unsafe in
-  let substs = all_permutations nargs nargs in
-  let relevant ss =
-    let u = ArrayAtom.apply_subst ss anp in
-    let lstu = Array.to_list u in
-    let nodes = Cubetrie.consistent lstu !visited in
-    let nodes = List.filter (fun s -> not (s.t_deleted)) nodes in
-    let ss' = invert_subst ss in
-    List.map (fun n -> 
-      let p = ArrayAtom.apply_subst ss' n.t_arru in
-      (p, n.t_nb), ArrayAtom.nb_diff p u
-    ) nodes
-  in
-  let cubes = List.flatten (List.map relevant substs) in
-  let res = 
-    if cubes = [] then None
-    else begin
-      if profiling then TimeSort.start ();
-      let cubes =
-        List.fast_sort
-          (fun c1 c2 -> Pervasives.compare (snd c1) (snd c2))
-          cubes
-      in
-        if profiling then TimeSort.pause ();
-        try
-          Prover.assume_goal s;
-          List.iter (fun ((p, id), _) -> Prover.assume_node p ~id) cubes;
-          None
-        with
-          | Exit -> None
-          | Smt.Unsat uc -> 
-              learnt := Cubetrie.add (Array.to_list anp) s !learnt;
-              Some uc
-    end
-  in
-  if profiling then TimeHardFix.pause ();
-  res
-
-
-let delete_node s  = s.t_deleted <- true
-
-
-let fixpoint_trie s lstu visited learnt postponed =
-  if profiling then begin TimeFix.start (); TimeEasyFix.start () end;
-  let res = 
-    match Cubetrie.mem lstu !visited with
-      | (Some _) as r -> r
-      | None -> match Cubetrie.mem lstu !learnt with
-          | (Some _) as r -> r
-          | None ->
-              if delete then
-                if s.t_deleted then begin
-                  (* Node was postponed earlier, now visit it.*)
-                  s.t_deleted <- false;
-                  None
-                end
-                else if has_deleted_ancestor s then begin
-                  (* Postpone the node. *)
-                  delete_node s;
-                  postponed := s::!postponed;
-                  Some []
-                end
-                else None
-              else None
-  in
-  if profiling then TimeEasyFix.pause ();
-  let res = 
-    match res with 
-      | Some _ -> res
-      | None -> match medium_fixpoint_trie s visited learnt with
-          | (Some _) as r -> r
-          | None -> hard_fixpoint_trie s visited learnt
-  in
-  if profiling then TimeFix.pause ();
-  res
-
-
-
-
-
-(*************** Other version with tries *******************)
-
-let check_and_add nargs anp nodes
-    ({ t_alpha = args, ap; t_unsafe = real_args, _ } as sp) =
-  let dif = extra_args real_args nargs in
-  (* if List.length args > nb_nargs then nodes *)
-  (* else *)
-  let nargs = if dif = [] then nargs else nargs@dif in
-  let d = relevant_permutations anp ap args nargs in
-  List.fold_left
-    (fun nodes ss ->
-      let pp = ArrayAtom.apply_subst ss ap in
-      (* if ArrayAtom.subset pp anp then begin *)
-      (*   if simpl_by_uc then add_to_closed s pp sp ; *)
-      (*   raise (Fixpoint [sp.t_nb]) *)
-      (* end *)
-      (* Heuristic : throw away nodes too much different *)
-      (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-      (* line below useful for arith : ricart *)
-      if inconsistent_array (ArrayAtom.union pp anp) then nodes
-      else if ArrayAtom.nb_diff pp anp > 1 then (pp,sp.t_nb)::nodes
-      else (Prover.assume_node pp ~id:sp.t_nb; nodes)
-    ) nodes d
-  
-
-let check_fixpoint_trie2 ({t_unsafe = (nargs, _); t_arru = anp} as s) visited =
-  Prover.assume_goal s;
-  (* let nb_nargs = List.length nargs in *)
-  let unprioritize_cands = false (* lazyinv *) in
-  let nodes, cands = Cubetrie.fold
-    (fun (nodes, cands) sp ->
-      if unprioritize_cands && sp.t_nb < 0 then nodes, sp :: cands
-      else check_and_add nargs anp nodes sp, cands
-    ) ([], []) visited in
-  let nodes = List.fold_left (check_and_add nargs anp) nodes cands in
-  if profiling then TimeSort.start ();
-  let nodes = 
-    List.fast_sort 
-      (fun (a1, n1) (a2, n2) ->
-        if unprioritize_cands && n1 < 0 && n2 >= 0 then 1 
-        (* a1 is a candidate *)
-        else if unprioritize_cands && n2 < 0 && n1 >= 0 then -1
-        (* a2 is a candidate *)
-        else ArrayAtom.compare_nb_common anp a1 a2) 
-      nodes 
-  in
-  if profiling then TimeSort.pause ();
-  List.iter (fun (p, cnum) -> Prover.assume_node p ~id:cnum) nodes
-  
-let easy_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  if (delete && (s.t_deleted || has_deleted_ancestor s))
-    ||
-    (simpl_by_uc && has_alredy_closed_ancestor s)
-  then Some []
-  else Cubetrie.mem_array npa nodes
-
-let medium_fixpoint_trie2 {t_unsafe = (nargs,_); 
-                          t_alpha = args, ap; 
-                          t_arru = anp} visited  =
-  let substs = all_permutations args nargs in
-  let substs = List.tl substs in (* Drop 'identity' permutation. 
-                                    Already checked in easy_fixpoint. *)
-  try
-    List.iter (fun ss -> 
-      let u = ArrayAtom.apply_subst ss ap in
-      match Cubetrie.mem_array u visited with
-        | Some uc -> raise (Fixpoint uc)
-        | None -> ()
-    ) substs;
-    None
-  with Fixpoint uc -> Some uc
-
-let hard_fixpoint_trie2 ({t_unsafe = _, np; t_arru = npa } as s) nodes =
-  try
-    check_fixpoint_trie2 s nodes;
-    None
-  with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-  
-
-let fixpoint_trie2 nodes ({ t_unsafe = (_,np) } as s) =
-  Debug.unsafe s;
-  if profiling then TimeFix.start ();
-  let r =
-    match easy_fixpoint_trie2 s nodes with
-    | None ->
-       (match medium_fixpoint_trie2 s nodes with
-        | None -> hard_fixpoint_trie2 s nodes
-        | r -> r)
-    | r -> r
-  in
-  if profiling then TimeFix.pause ();
-  r
-
-
-
-(* Experimental expansion of cubes to dnf : depreciated *)
-
-let values_of_type ty =
-  let vals =
-    if Hstring.equal ty Smt.Type.type_proc then proc_vars
-    else Smt.Type.constructors ty in
-  List.fold_left (fun acc v -> S.add v acc) S.empty vals      
-
-let values_of_term = function
-  | Elem (x, Glob) | Access (x, _) ->
-      values_of_type (snd (Smt.Symbol.type_of x))
-  | Elem (x, (Var | Constr)) -> S.singleton x
-  | _ -> assert false
-
-let sort_of_term = function
-  | Elem (x, Glob) | Access (x, _) ->
-      let ty = (snd (Smt.Symbol.type_of x)) in
-      if Hstring.equal  ty Smt.Type.type_proc then Var
-      else if Smt.Symbol.has_abstract_type x then raise Not_found
-      else Constr
-  | Elem (x, (Var | Constr as s)) -> s
-  | _ -> assert false
-
-let expand_cube c =
-  SAtom.fold (fun a acc -> match a with
-    | True | False -> assert false
-    | Comp (x, Eq, Elem (y, (Constr|Var)))
-    | Comp (Elem (y, (Constr|Var)), Eq, x) ->
-        List.rev_map (SAtom.add a) acc
-    | Comp (x, Neq, Elem (y, (Constr|Var as s)))
-    | Comp (Elem (y, (Constr|Var as s)), Neq, x) ->
-        (try
-           let la = S.fold
-             (fun v acc ->
-               if Hstring.equal v y then acc
-               else (Comp (x, Eq, Elem (v, s)))::acc)
-             (values_of_term x) [] in
-           List.fold_left (fun acc' a1 -> List.rev_append
-             (List.rev_map
-                (fun sa -> SAtom.add a1 sa) acc) acc') [] la
-         with Not_found -> List.rev_map (SAtom.add a) acc)
-        (* List.rev_map (SAtom.add a) acc *)
-    | Comp(x, Eq, y) ->
-        (try
-           let s = sort_of_term x in
-           let la = S.fold
-             (fun v acc -> 
-               (Comp (x, Eq, Elem (v, s)), Comp (y, Eq, Elem (v, s)))::acc)
-             (values_of_term x) [] in
-           List.fold_left (fun acc' (a1, a2) -> List.rev_append
-             (List.rev_map
-                (fun sa -> SAtom.add a2 (SAtom.add a1 sa)) acc) acc') [] la
-         with Not_found -> List.rev_map (SAtom.add a) acc)
-    | Comp(x, Neq, y) ->
-        (try
-           let s = sort_of_term x in
-           let la = S.fold
-             (fun v acc -> 
-               (Comp (x, Neq, Elem (v, s)), Comp (y, Eq, Elem (v, s)))::acc)
-             (values_of_term y) [] in
-           List.fold_left (fun acc' (a1, a2) -> List.rev_append
-             (List.rev_map
-                (fun sa -> SAtom.add a2 (SAtom.add a1 sa)) acc) acc') [] la
-         with Not_found -> List.rev_map (SAtom.add a) acc)           
-    | _ ->  List.rev_map (SAtom.add a) acc
-  ) c [SAtom.empty]
-
-
-let expand_cube c = List.rev_map proper_cube (expand_cube c)
-
-
-
-let resolve_two ar1 ar2 =
+let resolve_two_arrays ar1 ar2 =
   let n1 = Array.length ar1 in
   let n2 = Array.length ar2 in
   if n1 <> n2 then None
@@ -1414,7 +677,8 @@ let resolve_two ar1 ar2 =
         let a1 = ar1.(i) in
         let a2 = ar2.(i) in
         if Atom.equal a1 a2 then incr nb_eq
-        else if inconsistent_list [Atom.neg a1;Atom.neg  a2] then match !unsat_i with
+        else if inconsistent_list [Atom.neg a1;Atom.neg  a2] then
+          match !unsat_i with
           | Some _ -> raise Exit
           | None -> unsat_i := Some i
         else raise Exit
@@ -1423,7 +687,7 @@ let resolve_two ar1 ar2 =
         | None -> None
         | Some i -> 
             if !nb_eq <> n1 - 1 then raise Exit;
-            let ar = Array.make !nb_eq True in
+            let ar = Array.make !nb_eq Atom.True in
             for j = 0 to !nb_eq - 1 do
               if j < i then ar.(j) <- ar1.(j)
               else ar.(j) <- ar1.(j+1)
@@ -1432,24 +696,24 @@ let resolve_two ar1 ar2 =
     with Exit -> None
 
 
-let new_cube_id =
-  let cpt = ref (-1) in
-  fun () -> incr cpt; !cpt
+let resolve_two c1 c2 =
+  match resolve_two_arrays c1.array c2.array with
+  | None -> None
+  | Some ar -> Some (create_normal_array ar)
 
-let rec add_and_resolve s visited =
-  let visited =
-    Cubetrie.fold (fun visited sv ->
-      match resolve_two s.t_arru sv.t_arru with
-        | None -> visited
-        | Some ar ->
-            let sa, (args, _) = proper_cube (ArrayAtom.to_satom ar) in
-            let ar = ArrayAtom.of_satom sa in
-            let aar = ArrayAtom.alpha ar args in
-            let s = { s with
-              t_unsafe = args, sa;
-              t_arru = ar;
-              t_alpha = aar;
-	      t_nb = new_cube_id () } in
-            add_and_resolve s visited
-    ) visited visited in
-  Cubetrie.add_array s.t_arru s visited
+
+let rec term_globs t acc = match t with
+  | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
+  | Arith (x, _) -> term_globs x acc
+  | _ -> acc
+
+let rec atom_globs a acc = match a with
+    | Atom.True | Atom.False -> acc
+    | Atom.Comp (t1, _, t2) -> term_globs t1 (term_globs t2 acc)
+    | Atom.Ite (sa, a1, a2) ->
+       Term.Set.union (satom_globs sa) (atom_globs a1 (atom_globs a2 acc))
+
+and satom_globs sa = SAtom.fold atom_globs sa Term.Set.empty
+
+
+let print fmt { litterals = sa } = SAtom.print fmt sa 

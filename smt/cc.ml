@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -35,7 +35,7 @@ end
 
 module Make (X : Sig.X) = struct    
 
-  module TimerCC = Timer.Make(struct end)
+  module TimerCC = Timer.Make(struct let profiling = false end)
 
   module Ex = Explanation
   module SetA = Use.SA

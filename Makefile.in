@@ -2,7 +2,7 @@
 #                                                                        #
 #                              Cubicle                                   #
 #                                                                        #
-#                       Copyright (C) 2011-2013                          #
+#                       Copyright (C) 2011-2014                          #
 #                                                                        #
 #                  Sylvain Conchon and Alain Mebsout                     #
 #                       Universite Paris-Sud 11                          #
@@ -86,19 +86,16 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/bitv.cmo
 
 CMO = $(COMMONCMO) $(SMTCMO) \
-      version.cmo options.cmo ast.cmo parser.cmo lexer.cmo pretty.cmo \
-      cubetrie.cmo prover.cmo \
-      search.cmo cube.cmo bitsolver.cmo forward.cmo \
-      enumerative.cmo brab.cmo trace.cmo bwreach.cmo \
-      typing.cmo main.cmo
+      version.cmo options.cmo util.cmo variable.cmo types.cmo\
+      cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
+      instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
+      pre.cmo forward.cmo enumerative.cmo approx.cmo  \
+      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
-
-RUNCMO = $(CMO) run.cmo
-RUNCMX = $(RUNCMO:.cmo=.cmx)
 
 GENERATED = version.ml parser.ml parser.mli lexer.ml
 
@@ -113,7 +110,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=0.6b
+VERSION=0.91b
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -266,20 +263,27 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
 
-FILES = ast.ml ast.mli cubetrie.ml cubetrie.mli cube.mli\
-	cube.ml forward.mli forward.ml\
-	enumerative.mli enumerative.ml\
-	brab.mli brab.ml bwreach.ml bwreach.mli\
-	fake_functory.ml fake_functory.mli\
-	lexer.mll main.ml options.ml options.mli parser.mly\
-	pretty.ml pretty.mli prover.ml prover.mli bitsolver.ml bitsolver.mli\
-	search.ml search.mli typing.ml typing.mli trace.ml trace.mli version.ml
+FILES = approx.ml approx.mli ast.mli brab.ml brab.mli bwd.ml bwd.mli\
+	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
+	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
+	fixpoint.ml fixpoint.mli forward.ml forward.mli\
+	instantiation.ml instantiation.mli lexer.mll main.ml\
+	node.ml node.mli options.ml options.mli oracle.mli\
+	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
+	safety.ml safety.mli stats.ml stats.mli trace.ml trace.mli\
+	types.ml types.mli typing.ml typing.mli util.ml util.mli\
+	variable.ml variable.mli version.ml
 
 EXAMPLES = bakery.cub dijkstra.cub distrib_lamport.cub jml.cub\
 	   ricart_agrawala.cub szymanski_at.cub berkeley.cub flash_eager.cub\
 	   german.cub german_pfs.cub german_undip.cub illinois.cub mesi.cub\
 	   moesi.cub synapse.cub swimming_pool.cub xerox_dragon.cub\
-	   sense_barrier.cub
+	   sense_barrier.cub\
+	   ../doc/papers/fmcad2013/benchs/flash.cub\
+	   ../doc/papers/fmcad2013/benchs/flash_nodata.cub\
+	   ../doc/papers/fmcad2013/benchs/flash_buggy.cub\
+	   ../doc/papers/fmcad2013/benchs/szymanski_na.cub\
+	   ../doc/papers/fmcad2013/benchs/chandra_toueg.cub
 
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 
@@ -331,3 +335,38 @@ release: export/$(EXPORTDIR).tar.gz
 	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
 	cp $(WEB)/backup/$(LONGDATE)/google*.html $(WEB)
 	cp -f -R export/release/* $(WEB)
+
+
+
+# ocamldoc
+##########
+doc:
+	mkdir -p doc/ocamldoc
+	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
+	ocamldoc -html -keep-code -d doc/ocamldoc \
+	-t "Cubicle $(VERSION) documentation and source" \
+	-intro doc/intro.txt -I smt -I common \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) $(SMTFILES)
+
+docpdf: 
+	mkdir -p doc/ocamldoc/latex
+	ocamldoc -latex -keep-code -d doc/ocamldoc -o doc/ocamldoc/latex/doc.tex \
+	-t "Cubicle $(VERSION) documentation and source" \
+	-intro doc/intro.txt -I smt -I common \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) $(SMTFILES)
+	cd doc/ocamldoc/latex/; rubber -d doc
+
+
+archi:
+	ocamldoc -dot -dot-reduce -o doc/archi.dot \
+	-t "Cubicle $(VERSION) architecture" \
+	-I smt -I common \
+	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(COMMONFILES) smt/smt.mli
+	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf
+	rm -f doc/archi.dot
+
+
+.PHONY: doc docpdf archi export release

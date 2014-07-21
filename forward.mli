@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -14,70 +14,62 @@
 (**************************************************************************)
 
 open Ast
+open Types
+
+(** Symbolic forward exploration *)
+
 
 module HSA : Hashtbl.S with type key = SAtom.t
 
 module MA : Map.S with type key = Atom.t
 
+(** the type of instantiated transitions *)
 type inst_trans =
     {
       i_reqs : SAtom.t;
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
-      i_touched_terms : STerm.t;
+      i_touched_terms : Term.Set.t;
     }
 
 type possible_result = 
-  | Reach of (transition * (Hstring.t * Hstring.t) list) list 
-  | Spurious of (transition * Hstring.t list * t_system) list
+  | Reach of (transition_info * Variable.subst) list 
+  | Spurious of trace
   | Unreach
 
 (* val search : Hstring.t list -> t_system -> SAtom.t list *)
 
-val procs_from_nb : int -> Hstring.t list
+val all_var_terms : Variable.t list -> t_system -> Term.Set.t
 
 val search : Hstring.t list -> t_system -> unit HSA.t
 
-val search_stateless : Hstring.t list -> t_system -> (SAtom.t * STerm.t) MA.t
-
-(* val search_only : t_system -> SAtom.t list *)
-
-val extract_candidates_from_trace : 
-  unit HSA.t -> STerm.t -> t_system -> t_system list
-
-val extract_candidates_from_compagnons : 
-  (SAtom.t * STerm.t) MA.t -> t_system -> t_system list
+val search_stateless : Hstring.t list -> t_system -> (SAtom.t * Term.Set.t) MA.t
 
 
-val select_relevant_candidates : t_system -> t_system list -> t_system list
-
-val post_system : t_system -> t_system list
-
-val instantiate_transitions : Hstring.t list -> Hstring.t list ->
+(** instantiate transitions with a list of possible parameters *)
+val instantiate_transitions : Variable.t list -> Variable.t list ->
   transition list -> inst_trans list
-
-val missing_args : Hstring.t list -> Hstring.t list ->
-  Hstring.t list * Hstring.t list
 
 val abstract_others : SAtom.t -> Hstring.t list -> SAtom.t
 
 val reachable_on_trace_from_init :
-  t_system -> (transition * Hstring.t list * t_system) list -> possible_result
+  t_system -> Node.t -> trace -> possible_result
 
-val spurious : t_system -> bool
-			     
-val spurious_error_trace : t_system -> bool
 
-val spurious_due_to_cfm : t_system -> bool
+(** check if the history of a node is spurious *)
+val spurious : Node.t -> bool
 
-val conflicting_from_trace :
-  t_system -> (transition * Hstring.t list * t_system) list -> SAtom.t list
+(** check if an error trace is spurious *)
+val spurious_error_trace : t_system -> Node.t -> bool
 
-val remove_subsumed_candidates : t_system list -> t_system list
+(** check if an error trace is spurious due to the {b Crash Failure Model } *)
+val spurious_due_to_cfm : t_system -> Node.t -> bool
 
-val useless_candidate : SAtom.t -> bool
+(** check if an error trace is spurious due to the {b Crash Failure Model } *)
+val conflicting_from_trace : t_system -> trace -> SAtom.t list
 
+(** put a universal guard in disjunctive normal form *)
 val uguard_dnf : 
-  (Hstring.t * Hstring.t) list ->
-  Hstring.t list -> Hstring.t list ->
-  (Hstring.t * SAtom.t list) list -> SAtom.t list list
+  Variable.subst ->
+  Variable.t list -> Variable.t list ->
+  (Variable.t * SAtom.t list) list -> SAtom.t list list

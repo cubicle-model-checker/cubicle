@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -14,8 +14,11 @@
 (**************************************************************************)
 
 open Format
+open Util
 open Ast
+open Types
 open Atom
+open Pervasives
 
 type error = 
   | UnknownConstr of Hstring.t
@@ -38,7 +41,7 @@ type error =
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
 
-exception Error of error
+exception Error of error * loc
 
 let print_htype fmt (args, ty) =
   fprintf fmt "%a%a" 
@@ -75,7 +78,7 @@ let report fmt = function
   | MustBeOfType (s, ty) ->
       fprintf fmt "%a must be of type %a" Hstring.print s Hstring.print ty
   | MustBeNum s ->
-      fprintf fmt "%a must be of type int or real" Pretty.print_term s
+      fprintf fmt "%a must be of type int or real" Term.print s
   | MustBeOfTypeProc s ->
       fprintf fmt "%a must be of proc" Hstring.print s
   | IncompatibleType (args1, ty1, args2, ty2) ->
@@ -92,15 +95,15 @@ let report fmt = function
   | Smt (Smt.UnknownSymb s) ->
       fprintf fmt "unknown symbol %a" Hstring.print s
 
-let error e = raise (Error e)
+let error e l = raise (Error (e,l))
 
 let rec unique error = function
   | [] -> ()
   | x :: l -> if Hstring.list_mem x l then error x; unique error l
 
-let unify (args_1, ty_1) (args_2, ty_2) =
+let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
-  then error (IncompatibleType (args_1, ty_1, args_2, ty_2))
+  then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
 
 let refinements = Hstring.H.create 17
 
@@ -120,33 +123,34 @@ let infer_type x1 x2 =
 
 let refinement_cycles () = (* TODO *) ()
 
-let rec term args = function
+let rec term loc args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
       (match c with
 	| ConstInt _ -> [], Smt.Type.type_int
 	| ConstReal _ -> [], Smt.Type.type_real
 	| ConstName x -> 
-	    try Smt.Symbol.type_of x with Not_found -> error (UnknownName x))
+	    try Smt.Symbol.type_of x
+            with Not_found -> error (UnknownName x) loc)
   | Elem (e, Var) ->
       if Hstring.list_mem e args then [], Smt.Type.type_proc
       else begin 
-	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e)
+	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e) loc
       end
   | Elem (e, _) -> Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
-	let args, tx = term args x in
+	let args, tx = term loc args x in
 	if not (Hstring.equal tx Smt.Type.type_int) 
 	  && not (Hstring.equal tx Smt.Type.type_real) then 
-	  error (MustBeNum x);
+	  error (MustBeNum x) loc;
 	args, tx
       end
   | Access(a, li) -> 
       let args_a, ty_a = 
-	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) in
+	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
-        error (WrongNbArgs (a, List.length args_a))
+        error (WrongNbArgs (a, List.length args_a)) loc
       else
         List.iter (fun i ->
           let ty_i =
@@ -154,13 +158,13 @@ let rec term args = function
 	    else 
 	      try 
 	        let ia, tyi = Smt.Symbol.type_of i in
-	        if ia <> [] then error (MustBeOfTypeProc i);
+	        if ia <> [] then error (MustBeOfTypeProc i) loc;
 	        tyi
-	      with Not_found -> error (UnknownName i) 
+	      with Not_found -> error (UnknownName i) loc
           in
-          if args_a = [] then error (MustBeAnArray a);
+          if args_a = [] then error (MustBeAnArray a) loc;
           if not (Hstring.equal ty_i Smt.Type.type_proc) then
-	    error (MustBeOfTypeProc i);
+	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
 
@@ -179,149 +183,225 @@ let assignment ?(init_variant=false) g x (_, ty) =
 	    Smt.Variant.assign_var n g
       | _ -> ()
 
-let atom init_variant args = function
+let atom loc init_variant args = function
   | True | False -> ()
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
   | Comp (y, Eq, (Access(g, _) as x))
   | Comp (Access(g, _) as x, Eq, y) -> 
-      let ty = term args y in
-      unify (term args x) ty;
+      let ty = term loc args y in
+      unify loc (term loc args x) ty;
       if init_variant then assignment ~init_variant g y ty
   | Comp (x, op, y) -> 
-      unify (term args x) (term args y)
+      unify loc (term loc args x) (term loc args y)
   | Ite _ -> assert false
 
-let atoms ?(init_variant=false) args = SAtom.iter (atom init_variant args)
+let atoms loc ?(init_variant=false) args =
+  SAtom.iter (atom loc init_variant args)
 
-let init (args, lsa) = List.iter (atoms ~init_variant:true args) lsa
+let init (loc, args, lsa) = List.iter (atoms loc ~init_variant:true args) lsa
 
-let unsafe (args, sa) = 
-  unique (fun x-> error (DuplicateName x)) args; 
-  atoms args sa
+let unsafe (loc, args, sa) = 
+  unique (fun x-> error (DuplicateName x) loc) args; 
+  atoms loc args sa
 
-let nondets l = 
-  unique (fun c -> error (DuplicateAssign c)) l;
+let nondets loc l = 
+  unique (fun c -> error (DuplicateAssign c) loc) l;
   List.iter 
     (fun g -> 
        try
 	 let args_g, ty_g = Smt.Symbol.type_of g in
-	 if args_g <> [] then error (NotATerm g);
+	 if args_g <> [] then error (NotATerm g) loc;
 	 (* if not (Hstring.equal ty_g Smt.Type.type_proc) then  *)
 	 (*   error (MustBeOfTypeProc g) *)
-       with Not_found -> error (UnknownGlobal g)) l
+       with Not_found -> error (UnknownGlobal g) loc) l
 
-let assigns args = 
+let assigns loc args = 
   let dv = ref [] in
   List.iter 
     (fun (g, x) ->
-       if Hstring.list_mem g !dv then error (DuplicateAssign g);
+       if Hstring.list_mem g !dv then error (DuplicateAssign g) loc;
        let ty_g = 
-	 try Smt.Symbol.type_of g with Not_found -> error (UnknownGlobal g) in
-       let ty_x = term args x in
-       unify ty_x ty_g;
+	 try Smt.Symbol.type_of g
+         with Not_found -> error (UnknownGlobal g) loc in
+       let ty_x = term loc args x in
+       unify loc ty_x ty_g;
        assignment g x ty_x;
        dv := g ::!dv)
     
-let switchs a args ty_e l = 
+let switchs loc a args ty_e l = 
   List.iter 
     (fun (sa, t) -> 
-       atoms args sa; 
-       let ty = term args t in
-       unify ty ty_e;
+       atoms loc args sa; 
+       let ty = term loc args t in
+       unify loc ty ty_e;
        assignment a t ty) l
 
 let updates args = 
   let dv = ref [] in
   List.iter 
-    (fun {up_arr=a; up_arg=lj; up_swts=swts} -> 
-       if Hstring.list_mem a !dv then error (DuplicateUpdate a);
+    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
+       if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
        List.iter (fun j -> 
-         if Hstring.list_mem j args then error (ClashParam j)) lj;
+         if Hstring.list_mem j args then error (ClashParam j) loc) lj;
        let args_a, ty_a = 
-	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a)
+	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
        in       
-       if args_a = [] then error (MustBeAnArray a);
+       if args_a = [] then error (MustBeAnArray a) loc;
        dv := a ::!dv;
-       switchs a (lj @ args) ([], ty_a) swts) 
+       switchs loc a (lj @ args) ([], ty_a) swts) 
 
 let transitions = 
   List.iter 
-    (fun ({tr_args = args} as t) -> 
-       unique (fun x-> error (DuplicateName x)) args; 
-       atoms args t.tr_reqs;
+    (fun ({tr_args = args; tr_loc = loc} as t) -> 
+       unique (fun x-> error (DuplicateName x) loc) args; 
+       atoms loc args t.tr_reqs;
        List.iter 
 	 (fun (x, cnf) -> 
-	    List.iter (atoms (x::args)) cnf)  t.tr_ureq;
+	    List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
        updates args t.tr_upds;
-       assigns args t.tr_assigns;
-       nondets t.tr_nondets)
+       assigns loc args t.tr_assigns;
+       nondets loc t.tr_nondets)
+
+let declare_type (loc, (x, y)) =
+  try Smt.Type.declare x y
+  with Smt.Error e -> error (Smt e) loc
+
+let declare_symbol loc n args ret =
+  try Smt.Symbol.declare n args ret
+  with Smt.Error e -> error (Smt e) loc
+
 
 let init_global_env s = 
-  List.iter (fun (x,y) -> Smt.Type.declare x y) s.type_defs;
+  List.iter declare_type s.type_defs;
   let l = ref [] in
   List.iter 
-    (fun (n, t) -> 
-       Smt.Symbol.declare n [] t;
+    (fun (loc, n, t) -> 
+       declare_symbol loc n [] t;
        l := (n, t)::!l) s.consts;
   List.iter 
-    (fun (n, t) -> 
-       Smt.Symbol.declare n [] t;
+    (fun (loc, n, t) -> 
+       declare_symbol loc n [] t;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (n, (args, ret)) -> 
-       Smt.Symbol.declare n args ret;
+    (fun (loc, n, (args, ret)) -> 
+       declare_symbol loc n args ret;
        l := (n, ret)::!l) s.arrays;
   !l
 
 
 let init_proc () = 
   List.iter 
-    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) proc_vars
+    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
+let create_init_instances (iargs, l_init) = 
+  let init_instances = Hashtbl.create 11 in
+  begin
+    match l_init with
+    | [init] ->
+      let sa, cst = SAtom.partition (fun a ->
+        List.exists (fun z -> has_var z a) iargs) init in
+      let ar0 = ArrayAtom.of_satom cst in
+      Hashtbl.add init_instances 0 ([[cst]], [[ar0]]);
+      let cpt = ref 1 in
+      ignore (List.fold_left (fun v_acc v ->
+        let v_acc = v :: v_acc in
+        let vars = List.rev v_acc in
+        let si = List.fold_left (fun si sigma ->
+          SAtom.union (SAtom.subst sigma sa) si)
+          cst (Variable.all_instantiations iargs vars) in
+        let ar = ArrayAtom.of_satom si in
+        Hashtbl.add init_instances !cpt ([[si]], [[ar]]);
+        incr cpt;
+        v_acc) [] Variable.procs)
+
+    | _ ->
+      let dnf_sa0, dnf_ar0 =
+        List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
+          let sa0 = SAtom.filter (fun a ->
+            not (List.exists (fun z -> has_var z a) iargs)) sa in
+          let ar0 = ArrayAtom.of_satom sa0 in
+          sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
+      Hashtbl.add init_instances 0  ([dnf_sa0], [dnf_ar0]);
+      let cpt = ref 1 in
+      ignore (List.fold_left (fun v_acc v ->
+        let v_acc = v :: v_acc in
+        let vars = List.rev v_acc in
+        let inst =
+          List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
+            let dnf_sa, dnf_ar = 
+              List.fold_left (fun (dnf_sa, dnf_ar) init ->
+              let sa = SAtom.subst sigma init in
+              let ar = ArrayAtom.of_satom sa in
+              sa :: dnf_sa, ar :: dnf_ar
+            ) ([],[]) l_init in
+            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
+          ) ([],[]) (Variable.all_instantiations iargs vars) in
+        Hashtbl.add init_instances !cpt inst;
+        incr cpt;
+        v_acc) [] Variable.procs)
+    end;
+  init_instances
+
+let create_node_rename kind vars sa =
+  let sigma = Variable.build_subst vars Variable.procs in
+  let c = Cube.subst sigma (Cube.create vars sa) in
+  let c = Cube.normal_form c in
+  Node.create ~kind c
+
+
+let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
+  if args = [] then tr
+  else
+    let sigma = Variable.build_subst args Variable.freshs in
+    { tr with 
+	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
+	tr_reqs = SAtom.subst sigma tr.tr_reqs;
+	tr_ureq = 
+	List.map 
+	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
+	tr_assigns = 
+	List.map (fun (x, t) -> x, Term.subst sigma t) 
+	  tr.tr_assigns;
+	tr_upds = 
+	List.map 
+	  (fun ({up_swts = swts} as up) -> 
+	     let swts = 
+	       List.map 
+		 (fun (sa, t) -> SAtom.subst sigma sa, Term.subst sigma t) swts
+	     in
+	     { up with up_swts = swts }) 
+	  upds}
+
+
+let add_tau tr =
+  (* (\* let tr = fresh_args tr in *\) *)
+  (* { tr with *)
+  (*   tr_tau = Pre.make_tau tr } *)
+  { tr_info = tr;
+    tr_tau = Pre.make_tau tr }
     
 let system s = 
-  try
-    let l = init_global_env s in
-    init s.init;
-    Smt.Variant.init l;
-    List.iter unsafe s.unsafe;
-    List.iter (fun (args, _, f) -> unsafe (args, f)) s.forward;
-    transitions s.trans;
-    if Options.subtyping then Smt.Variant.close ();
-    if Options.debug then Smt.Variant.print ();
-    
-    let glob_proc = 
-      List.fold_left 
-	(fun acc (n, t) -> 
-	   if Hstring.equal t Smt.Type.type_proc then n::acc else acc)
-	[] (*s.globals*) s.consts
-    in
+  let l = init_global_env s in
+  if not Options.notyping then init s.init;
+  if Options.subtyping    then Smt.Variant.init l;
+  if not Options.notyping then List.iter unsafe s.unsafe;
+  if not Options.notyping then transitions s.trans;
+  if Options.subtyping    then Smt.Variant.close ();
+  if Options.debug        then Smt.Variant.print ();
 
-    let t_globals = List.map fst s.globals in
-    let t_arrays = List.map fst s.arrays in
+  let init_woloc = let _,v,i = s.init in v,i in
+  let invs_woloc =
+    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
+  let unsafe_woloc =
+    List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
 
-    fill_init_instances s.init;
-
-    List.map (fun ((args, p) as un) ->
-      let arru = ArrayAtom.of_satom p in (* inutile ? *)
-      { 
-	t_globals = t_globals;
-	t_arrays = t_arrays;
-	t_from = [];
-	t_init = s.init;
-	t_invs = s.invs;
-	t_cands = s.cands;
-	t_unsafe = un;
-	t_forward = s.forward;
-	t_arru = arru;
-	t_alpha = ArrayAtom.alpha arru args; (* inutile? *)
-	t_trans = s.trans;
-	t_deleted = false;
-	t_nb = Cube.new_cube_id ();
-	t_nb_father = -1;
-	t_glob_proc = glob_proc;
-	t_from_forall = false;
-      }
-    ) s.unsafe
-  with Smt.Error e -> raise (Error (Smt e))
+  { 
+    t_globals = List.map (fun (_,g,_) -> g) s.globals;
+    t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
+    t_init = init_woloc;
+    t_init_instances = create_init_instances init_woloc;
+    t_invs = invs_woloc;
+    t_unsafe = unsafe_woloc;
+    t_trans = List.map add_tau s.trans;
+  }

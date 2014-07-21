@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -262,7 +262,7 @@ module Make
 
   let find_one_eq x u =
     match Intervals.is_point u with
-      | Some (v, ex) when X.type_info x <> Ty.Tint or is_integer_num v ->
+      | Some (v, ex) when X.type_info x <> Ty.Tint || is_integer_num v ->
           let eq = 
 	    L.Eq (x,(P.alien_of (P.create [] v (X.type_info x)))) in
 	  Some (eq, None, ex)

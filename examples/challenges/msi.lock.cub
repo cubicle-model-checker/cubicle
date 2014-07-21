@@ -14,7 +14,7 @@
 type state = M | S | I | SLocked | MLocked | SWait | MWait
 
 (* Possible messages. *)
-type cstate = Data | Empty | Done
+type cstate =| Data | Empty | Done
 
 (* Cache line. *)
 array L[proc] : state
@@ -55,17 +55,17 @@ init (z) { L[z] = I &&
 unsafe (x y) { L[x] = M && L[y] = M }
 
 (* One cache line is Modified and the other is Shared. *)
-unsafe (x y) { L[x] = M && L[y] = S }
+(* unsafe (x y) { L[x] = M && L[y] = S } *)
 
 (* A cache line cannot be in Modified state and locked elsewhere. *)
-unsafe (x y) { L[x] = M && L[y] = SLocked }
-unsafe (x y) { L[x] = M && L[y] = MLocked }
+(* unsafe (x y) { L[x] = M && L[y] = SLocked } *)
+(* unsafe (x y) { L[x] = M && L[y] = MLocked } *)
 
 (* A cache line cannot be in Shared state and locked-Modified elsewhere. *)
-unsafe (x y) { L[x] = S && L[y] = MLocked }
+(* unsafe (x y) { L[x] = S && L[y] = MLocked } *)
 
 (* Critical sections. *)
-unsafe (x y) { Crit[x] = True && Crit[y] = True }
+(* unsafe (x y) { Crit[x] = True && Crit[y] = True } *)
 
 (*
  * Transitions.

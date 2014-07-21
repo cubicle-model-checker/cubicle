@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,32 +13,35 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ast
+open Types
 
-module TimeF : Timer.S
+(** Interface with the SMT solver *)
 
 module SMT : Smt.Solver
-module ESMT : Smt.EnumSolver
+(** Instance of the SMT solver *)
 
-(* Checks if the system is unsafe *)
-val unsafe : t_system -> unit
+val unsafe : Ast.t_system -> Node.t -> unit
+(** Checks if the node is directly reachable on init of the system *)
 
 val reached : Hstring.t list -> SAtom.t -> SAtom.t -> unit
+(** [reached vars s1 s2] raises [Unsat] if s2 has not been reached *)
 
-(* Clears the context and assumes a goal formula *)
-val assume_goal : t_system -> unit
+val assume_goal : Node.t -> unit
+(** Clears the context and assumes a goal formula *)
 
-(* Assumes the negation of a node; raises Unsat if the context becomes
-   unsatisfiable *)
-val assume_node : ArrayAtom.t -> id:int -> unit
+val assume_node : Node.t -> ArrayAtom.t -> unit
+(** [assume_node n a] assumes the negation of a node [n] given in the form of a
+    renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
 
 val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
-
-(*val extract_candidates : 
-  Hstring.t list -> ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list*)
+(** [check_guard vars s g] checks if the guard g is feasible in state [s];
+    raises [Unsat] if it is not the case *)
 
 val make_literal : Atom.t -> Smt.Formula.t
 val make_formula : ArrayAtom.t -> Smt.Formula.t
 val make_formula_set : SAtom.t -> Smt.Formula.t
 
 val run : unit -> unit
+(** Runs the SMT solver on its current context *)
+
+val assume_goal_nodes : Node.t -> (Node.t * ArrayAtom.t) list -> unit

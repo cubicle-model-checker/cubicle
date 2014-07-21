@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,12 +13,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type mode = 
-  | Dfs | DfsL | DfsH | DfsHL 
-  | Bfs | BfsDist | Bfsinvp 
-  | Induct
-
 type trace =  NoTrace | AltErgoTr | WhyTr
+
+type viz_prog = Dot | Sfdp
 
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
@@ -29,6 +26,9 @@ let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
 let dot = ref false
+let dot_level = ref 0
+let dot_prog = ref Dot
+let dot_colors = ref 0
 let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
@@ -66,6 +66,7 @@ let cores = ref 0
 let refine_universal = ref false
 
 let subtyping = ref true
+let notyping = ref false
 
 let trace = ref NoTrace
 let set_trace = function
@@ -80,16 +81,19 @@ let set_out o =
     raise (Arg.Bad "-out takes a directory as argument");
   out := o
 
-let mode = ref Bfs
-let set_mode = function
-  | "dfs" -> mode := Dfs
-  | "dfsl" -> mode := DfsL
-  | "dfsh" -> mode := DfsH
-  | "dfshl" -> mode := DfsHL
-  | "bfs" -> mode := Bfs
-  | "bfsinvp" -> mode := Bfsinvp
-  | "induct" -> mode := Induct
-  | _ -> raise (Arg.Bad "search strategy not supported")
+let mode = ref "bfs"
+let set_mode m =
+  mode := m;
+  match m with
+  | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
+  | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
+
+let set_dot d =
+  dot := true;
+  dot_level := d
+
+let use_sfdp () =
+  dot_prog := Sfdp
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
@@ -105,9 +109,14 @@ let specs =
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-               "<bfs(default) | dfs | dfsl | dfsh | dfshl | induct> search strategies";
+               "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
-    "-dot", Arg.Set dot, " graphviz (dot) output";
+    "-dot", Arg.Int set_dot,
+              "<level> graphviz (dot) output with a level of details";
+    "-sfdp", Arg.Unit use_sfdp,
+              " use sfdp for drawing graph instead of dot (for big graphs)";
+    "-dot-colors", Arg.Set_int dot_colors,
+              "number of colors for dot output";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -169,6 +178,9 @@ let max_proc = !max_proc
 let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
+let dot_level = !dot_level
+let dot_colors = !dot_colors
+let dot_prog = !dot_prog
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling
@@ -194,19 +206,20 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
-let cores = 
-  if !cores > 0 && do_brab then begin
-    Format.eprintf "Error: parallel BRAB not implemented";
-    exit 1;
-  end
-  else !cores
-let mode = if cores > 0 && !mode = Bfs then BfsDist else !mode
+
+let cores = !cores
+
+let mode = !mode
+
 let verbose = !verbose
+
 let post_strategy =
   if !post_strategy <> -1 then !post_strategy
   else match mode with
-    | Bfs | BfsDist | Bfsinvp -> 1
-    | _ -> 2
+    | "bfs" | "bfsa" -> 1
+    | "bfsh" | "dfsh" -> 0
+    | "dfs" | "dfsa" -> 2
+    | _ -> 1
 
 let abstr_num = !abstr_num
 let num_range = (!num_range_low, !num_range_up)
@@ -219,7 +232,16 @@ let size_proc = ref 0
 
 let refine_universal = !refine_universal
 
-let subtyping = !subtyping
+let subtyping =
+  if !trace = NoTrace then !subtyping
+  else
+    begin
+      if not quiet then
+        Format.printf "Deactivating subtyping analysis for traces.@.";
+      false
+    end
+
+let notyping = !notyping
 
 let trace = !trace
 let out_trace = !out

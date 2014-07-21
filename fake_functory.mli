@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,6 +13,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
+
+(** Dummy replacement for Functory library
+  
+    This module is renamed to [Functory] if the library Functory was not
+    found by configure. This provides a way to compile cubicle even if 
+    Functory is missing.
+ *)
 
 module Cores : sig
 

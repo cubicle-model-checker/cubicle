@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -19,7 +19,7 @@ module type S = sig
   val get : unit -> float    
 end
 
-module Make (X : sig end) = struct
+module Make (X : sig val profiling : bool end) = struct
 
   open Unix
     
@@ -27,9 +27,13 @@ module Make (X : sig end) = struct
 
   let cpt = ref 0.0
     
-  let start () = u:=(times()).tms_utime
+  let start = 
+    if not (X.profiling) then fun () -> ()
+    else fun () -> u:=(times()).tms_utime
 
-  let pause () = cpt := !cpt +. ((times()).tms_utime -. !u)
+  let pause =
+    if not (X.profiling) then fun () -> ()
+    else fun () -> cpt := !cpt +. ((times()).tms_utime -. !u)
 
   let get () = 
     !cpt

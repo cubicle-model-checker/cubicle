@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -14,9 +14,15 @@
 (**************************************************************************)
 
 open Ast
+open Types
 
-val init_parameters : t_system -> t_system
+(** Pre-image computation *)
 
-val pre_system : t_system -> t_system list * t_system list
+val make_tau : transition_info -> transition_func
+(** functional form of transition *)
 
-val system : t_system list -> unit
+val pre_image : transition list -> Node.t -> Node.t list * Node.t list
+(** [pre-image tau n] returns the pre-image of [n] by the transition relation
+    [tau] as a disjunction of cubes in the form of two lists of new nodes. The
+    second list is used to store nodes to postpone depending on a predefined
+    strategy. *)

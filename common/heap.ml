@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -29,6 +29,7 @@ module type S = sig
   val pop : t -> elem * t
   val add : t -> elem list -> t
   val elements : t -> elem list
+  val length : t -> int
 end
 
 
@@ -60,5 +61,12 @@ module Make ( X : OrderType ) = struct
       | Node (m1 ,g1 ,d1) -> elements_aux (m1 :: acc) (fusion g1 d1)
     in
     elements_aux [] h
+
+  let length h =
+    let rec length_aux acc = function
+      | Empty -> acc
+      | Node (_ ,g ,d) -> length_aux (length_aux (acc + 1) g) d
+    in
+    length_aux 0 h
 
 end

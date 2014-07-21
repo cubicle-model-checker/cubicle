@@ -25,37 +25,41 @@
   id="5"
   name="Z3"
   version="4.3.2"/>
+ <prover
+  id="6"
+  name="iProver"
+  version="1.0"/>
  <file
   name="../cubicle_bwd.mlw"
-  verified="true"
+  verified="false"
   expanded="true">
   <theory
    name="Cubicle_Bwd"
    locfile="../cubicle_bwd.mlw"
    loclnum="1" loccnumb="7" loccnume="18"
-   verified="true"
+   verified="false"
    expanded="true">
    <goal
     name="WP_parameter bwd"
     locfile="../cubicle_bwd.mlw"
     loclnum="55" loccnumb="6" loccnume="9"
     expl="VC for bwd"
-    sum="61df2fcddbd7098619ccaba075146494"
-    proved="true"
+    sum="f691af5754557f114577ba6cb23fe09d"
+    proved="false"
     expanded="true"
-    shape="iiNareachableV0V1V2fIainfix =V11affalseAais_emptyV10Aainfix =V17affalseAais_emptyV16FAiiainfix =apre_starV0V2ainfix ++V12apre_starV0V19Aainfix =apre_starV0V12ainfix ++V12apre_starV0V19ANasatainfix &amp;V1V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V20V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V20V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V20apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V20apre_starV0aprefix ~V20ainfix =apre_starV0V2ainfix ++V21apre_starV0V24Aainfix =apre_starV0V21ainfix ++V21apre_starV0V24ANasatainfix &amp;V1V21Aainfix =ainfix ++V21apre_starV0V24ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V20V14Aainfix =ainfix ++V21apre_starV0V24ainfix ++ainfix ++V12apre_starV0V20apre_starV0ainfix &amp;aprefix ~V20V14Iainfix =V23aaddV22V18Aainfix =V24ainfix ++V22V19FLapreV0V20Iainfix =V21ainfix ++V20V12FNainfix |==V20V12areachableV0V1V2asatainfix &amp;V1V20Iainfix =V19ainfix &amp;aprefix ~V20V11Aavalidainfix =&gt;V20V11Aainfix =V18aremoveV20V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FNainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FAainfix =apre_starV0V2ainfix ++V6apre_starV0V9Aainfix =apre_starV0V6ainfix ++V6apre_starV0V9ANasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FareachableV0V1V2asatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+    shape="iiNareachableV0V1V2fIainfix =V11affalseAais_emptyV10Aainfix =V17affalseAais_emptyV16FAiiainfix =apre_starV0V2ainfix ++V12apre_starV0V19Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V19aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V19Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V19aprefix ~V12ANasatainfix &amp;V1V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V20V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V20V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V20apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V20apre_starV0aprefix ~V20ainfix =apre_starV0V2ainfix ++V21apre_starV0V24Oainfix =apre_starV0V2ainfix ++V21apre_starV0ainfix &amp;V24aprefix ~V21Aainfix =apre_starV0V21ainfix ++V21apre_starV0V24Oainfix =apre_starV0V21ainfix ++V21apre_starV0ainfix &amp;V24aprefix ~V21ANasatainfix &amp;V1V21Aainfix =ainfix ++V21apre_starV0V24ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V20V14Aainfix =ainfix ++V21apre_starV0V24ainfix ++ainfix ++V12apre_starV0V20apre_starV0ainfix &amp;aprefix ~V20V14Iainfix =V23aaddV22V18Aainfix =V24ainfix ++V22V19FLapreV0V20Iainfix =V21ainfix ++V20V12FNainfix |==V20V12areachableV0V1V2asatainfix &amp;V1V20Iainfix =V19ainfix &amp;aprefix ~V20V11Aavalidainfix =&gt;V20V11Aainfix =V18aremoveV20V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FNainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FAainfix =apre_starV0V2ainfix ++V6apre_starV0V9Oainfix =apre_starV0V2ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6Aainfix =apre_starV0V6ainfix ++V6apre_starV0V9Oainfix =apre_starV0V6ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6ANasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FareachableV0V1V2asatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
     <label
      name="expl:VC for bwd"/>
     <transf
      name="split_goal_wp"
-     proved="true"
+     proved="false"
      expanded="true">
      <goal
       name="WP_parameter bwd.1"
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="1. postcondition"
-      sum="9b382a961d3621cc072e736b64f5f335"
+      sum="913c65c6cb8698300fb733d871e36d16"
       proved="true"
       expanded="true"
       shape="postconditionareachableV0V1V2Iasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
@@ -107,10 +111,10 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="2. loop invariant init"
-      sum="8af64091daa6793ecd7717a4352ac6aa"
+      sum="3f1a56fba39890e1dd555da7bd9da7bf"
       proved="true"
       expanded="true"
-      shape="loop invariant initainfix =apre_starV0V2ainfix ++V6apre_starV0V9Aainfix =apre_starV0V6ainfix ++V6apre_starV0V9ANasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="loop invariant initainfix =apre_starV0V2ainfix ++V6apre_starV0V9Oainfix =apre_starV0V2ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6Aainfix =apre_starV0V6ainfix ++V6apre_starV0V9Oainfix =apre_starV0V6ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6ANasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <transf
@@ -122,7 +126,7 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="1."
-        sum="7f64c7026a35f0f0786e9df94c4fa45f"
+        sum="944d530ff7ff5d7fe068e1d051149ac9"
         proved="true"
         expanded="true"
         shape="Nasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
@@ -182,10 +186,10 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="2."
-        sum="991de9669bbfa3c02c487057bfd71ab4"
+        sum="427cc6b7bd91aa2dec741cff23bcc036"
         proved="true"
         expanded="true"
-        shape="ainfix =apre_starV0V6ainfix ++V6apre_starV0V9INasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="ainfix =apre_starV0V6ainfix ++V6apre_starV0V9Oainfix =apre_starV0V6ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6INasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -202,7 +206,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.02"/>
+         <result status="valid" time="0.03"/>
         </proof>
         <proof
          prover="2"
@@ -210,7 +214,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.02"/>
+         <result status="valid" time="0.03"/>
         </proof>
         <proof
          prover="3"
@@ -218,7 +222,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.02"/>
+         <result status="valid" time="0.01"/>
         </proof>
         <proof
          prover="4"
@@ -242,10 +246,10 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="3."
-        sum="6ce200ea17a0374599ac9e2ddc6aac38"
+        sum="3735af7c48de6784db73126a82cb213a"
         proved="true"
         expanded="true"
-        shape="ainfix =apre_starV0V2ainfix ++V6apre_starV0V9Iainfix =apre_starV0V6ainfix ++V6apre_starV0V9INasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="ainfix =apre_starV0V2ainfix ++V6apre_starV0V9Oainfix =apre_starV0V2ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6Iainfix =apre_starV0V6ainfix ++V6apre_starV0V9Oainfix =apre_starV0V6ainfix ++V6apre_starV0ainfix &amp;V9aprefix ~V6INasatainfix &amp;V1V6Iainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -304,35 +308,35 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="3. postcondition"
-      sum="4bbe28dbcb46aaf3ae9d8452c665c2d3"
-      proved="true"
+      sum="15a6381ac33ba71a5c4d5a7885e1c3a0"
+      proved="false"
       expanded="true"
-      shape="postconditionareachableV0V1V2Iasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="postconditionareachableV0V1V2Iasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <proof
        prover="0"
        timelimit="200"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="19.00"/>
+       <undone/>
       </proof>
       <proof
        prover="3"
        timelimit="20"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="1.64"/>
+       <result status="timeout" time="20.15"/>
       </proof>
       <proof
        prover="4"
        timelimit="20"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="1.09"/>
+       <result status="timeout" time="21.01"/>
       </proof>
      </goal>
      <goal
@@ -340,10 +344,10 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="4. assertion"
-      sum="5e2344aa2314ae38364c2818f9250803"
+      sum="2910a3472c626f6205b463c16a38093e"
       proved="true"
       expanded="true"
-      shape="assertionainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="assertionainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <proof
@@ -360,7 +364,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.09"/>
+       <result status="valid" time="0.24"/>
       </proof>
       <proof
        prover="4"
@@ -368,7 +372,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="13.06"/>
+       <result status="valid" time="10.54"/>
       </proof>
      </goal>
      <goal
@@ -376,25 +380,25 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="5. loop invariant preservation"
-      sum="0e6687a0de592a40a1fd9a757233ad34"
-      proved="true"
+      sum="7e73d513d39f1072b427a946ff60f84e"
+      proved="false"
       expanded="true"
-      shape="loop invariant preservationainfix =apre_starV0V2ainfix ++V19apre_starV0V22Aainfix =apre_starV0V19ainfix ++V19apre_starV0V22ANasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="loop invariant preservationainfix =apre_starV0V2ainfix ++V19apre_starV0V22Oainfix =apre_starV0V2ainfix ++V19apre_starV0ainfix &amp;V22aprefix ~V19Aainfix =apre_starV0V19ainfix ++V19apre_starV0V22Oainfix =apre_starV0V19ainfix ++V19apre_starV0ainfix &amp;V22aprefix ~V19ANasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <transf
        name="split_goal_wp"
-       proved="true"
+       proved="false"
        expanded="true">
        <goal
         name="WP_parameter bwd.5.1"
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="1."
-        sum="9745ee0041972fa6efeb61823e7cf3f3"
+        sum="efd2cd4d381492af731427e2715e7e28"
         proved="true"
         expanded="true"
-        shape="Nasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="Nasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -427,7 +431,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.98"/>
+         <result status="valid" time="0.66"/>
         </proof>
        </goal>
        <goal
@@ -435,10 +439,10 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="2."
-        sum="db526b5cf94674b3e9d30e529e743f4d"
-        proved="true"
+        sum="715eda32bb19c326725cb597055f749a"
+        proved="false"
         expanded="true"
-        shape="ainfix =apre_starV0V19ainfix ++V19apre_starV0V22INasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="ainfix =apre_starV0V19ainfix ++V19apre_starV0V22Oainfix =apre_starV0V19ainfix ++V19apre_starV0ainfix &amp;V22aprefix ~V19INasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -447,7 +451,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.08"/>
+         <result status="timeout" time="4.81"/>
         </proof>
         <proof
          prover="1"
@@ -455,7 +459,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="13.18"/>
+         <result status="timeout" time="20.03"/>
         </proof>
         <proof
          prover="2"
@@ -463,7 +467,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.04"/>
+         <result status="timeout" time="20.07"/>
         </proof>
         <proof
          prover="3"
@@ -471,7 +475,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="2.40"/>
+         <result status="timeout" time="20.12"/>
         </proof>
         <proof
          prover="5"
@@ -479,7 +483,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.02"/>
+         <result status="timeout" time="20.19"/>
         </proof>
        </goal>
        <goal
@@ -487,10 +491,10 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="3."
-        sum="15604cf5b3f1378d09cd7225a0f60a57"
-        proved="true"
+        sum="4f38b52bc05e31820c4fc0879dfc272c"
+        proved="false"
         expanded="true"
-        shape="ainfix =apre_starV0V2ainfix ++V19apre_starV0V22Iainfix =apre_starV0V19ainfix ++V19apre_starV0V22INasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="ainfix =apre_starV0V2ainfix ++V19apre_starV0V22Oainfix =apre_starV0V2ainfix ++V19apre_starV0ainfix &amp;V22aprefix ~V19Iainfix =apre_starV0V19ainfix ++V19apre_starV0V22Oainfix =apre_starV0V19ainfix ++V19apre_starV0ainfix &amp;V22aprefix ~V19INasatainfix &amp;V1V19Iainfix =ainfix ++V19apre_starV0V22ainfix ++V12apre_starV0ainfix &amp;attrueainfix ++V18V14Aainfix =ainfix ++V19apre_starV0V22ainfix ++ainfix ++V12apre_starV0V18apre_starV0ainfix &amp;aprefix ~V18V14Iainfix =V21aaddV20V16Aainfix =V22ainfix ++V20V17FLapreV0V18Iainfix =V19ainfix ++V18V12FINainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -499,7 +503,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.05"/>
+         <result status="timeout" time="4.87"/>
         </proof>
         <proof
          prover="1"
@@ -507,7 +511,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="1.83"/>
+         <result status="timeout" time="20.03"/>
         </proof>
         <proof
          prover="2"
@@ -515,15 +519,15 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.07"/>
+         <result status="timeout" time="20.08"/>
         </proof>
         <proof
          prover="3"
-         timelimit="20"
+         timelimit="5"
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.04"/>
+         <result status="timeout" time="5.02"/>
         </proof>
         <proof
          prover="4"
@@ -531,7 +535,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.06"/>
+         <result status="timeout" time="19.54"/>
         </proof>
        </goal>
       </transf>
@@ -541,25 +545,25 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="6. assertion"
-      sum="6c59e239d28c9ad6c09a99ac75e57baa"
-      proved="true"
+      sum="f8a3d86b96a2cda23849619077f98468"
+      proved="false"
       expanded="true"
-      shape="assertionainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="assertionainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <transf
        name="split_goal_wp"
-       proved="true"
+       proved="false"
        expanded="true">
        <goal
         name="WP_parameter bwd.6.1"
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="1."
-        sum="0307bf1d1f2d5edd3c3917e7414c798b"
+        sum="6592d40fdbedc445f440c89e8cf814b2"
         proved="true"
         expanded="true"
-        shape="avalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="avalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -616,10 +620,10 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="2."
-        sum="6bcf19b0388d869091e87ca1848f6ff7"
-        proved="true"
+        sum="33faa885a94ea99d030de02748465e30"
+        proved="false"
         expanded="true"
-        shape="ainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Iavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="ainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Iavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -628,7 +632,15 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.28"/>
+         <result status="timeout" time="5.01"/>
+        </proof>
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.00"/>
         </proof>
         <proof
          prover="2"
@@ -636,7 +648,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.08"/>
+         <result status="timeout" time="20.07"/>
         </proof>
        </goal>
        <goal
@@ -644,10 +656,10 @@
         locfile="../cubicle_bwd.mlw"
         loclnum="55" loccnumb="6" loccnume="9"
         expl="3."
-        sum="ddf95c6951d76e3743b2785aef8d73c1"
+        sum="23e5ee88d6316538a19eaabeba36eaa7"
         proved="true"
         expanded="true"
-        shape="ainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Iavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        shape="ainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Iavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
         <label
          name="expl:VC for bwd"/>
         <proof
@@ -656,7 +668,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.11"/>
+         <result status="valid" time="0.23"/>
         </proof>
         <proof
          prover="1"
@@ -664,7 +676,7 @@
          memlimit="1000"
          obsolete="false"
          archived="false">
-         <result status="valid" time="0.21"/>
+         <result status="valid" time="0.25"/>
         </proof>
         <proof
          prover="2"
@@ -706,70 +718,215 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="7. loop invariant preservation"
-      sum="6286beb1e25e7cacdc4c487493f7b74a"
-      proved="true"
+      sum="abfc3a8c853f388ea23ec624494e1558"
+      proved="false"
       expanded="true"
-      shape="loop invariant preservationainfix =apre_starV0V2ainfix ++V12apre_starV0V17Aainfix =apre_starV0V12ainfix ++V12apre_starV0V17ANasatainfix &amp;V1V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="loop invariant preservationainfix =apre_starV0V2ainfix ++V12apre_starV0V17Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V17aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V17Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V17aprefix ~V12ANasatainfix &amp;V1V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <proof
        prover="0"
        timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="0.03"/>
+       <result status="timeout" time="4.82"/>
       </proof>
       <proof
        prover="1"
        timelimit="20"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="0.11"/>
+       <result status="timeout" time="20.01"/>
       </proof>
       <proof
        prover="2"
        timelimit="20"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="0.04"/>
+       <result status="timeout" time="20.05"/>
       </proof>
       <proof
        prover="3"
-       timelimit="20"
+       timelimit="5"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="0.02"/>
+       <result status="timeout" time="20.14"/>
       </proof>
       <proof
        prover="4"
        timelimit="20"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="0.05"/>
+       <result status="timeout" time="19.72"/>
       </proof>
       <proof
        prover="5"
        timelimit="20"
        memlimit="1000"
-       obsolete="false"
+       obsolete="true"
        archived="false">
-       <result status="valid" time="17.04"/>
+       <result status="timeout" time="35.30"/>
       </proof>
+      <transf
+       name="split_goal_wp"
+       proved="false"
+       expanded="true">
+       <goal
+        name="WP_parameter bwd.7.1"
+        locfile="../cubicle_bwd.mlw"
+        loclnum="55" loccnumb="6" loccnume="9"
+        expl="1."
+        sum="44678f1ffefad9f185b02539119950fe"
+        proved="true"
+        expanded="true"
+        shape="Nasatainfix &amp;V1V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.04"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.03"/>
+        </proof>
+        <proof
+         prover="5"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.02"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.7.2"
+        locfile="../cubicle_bwd.mlw"
+        loclnum="55" loccnumb="6" loccnume="9"
+        expl="2."
+        sum="c5d2592dd28e324ce006ebb5a6aa37c9"
+        proved="true"
+        expanded="true"
+        shape="ainfix =apre_starV0V12ainfix ++V12apre_starV0V17Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V17aprefix ~V12INasatainfix &amp;V1V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.09"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.06"/>
+        </proof>
+        <proof
+         prover="5"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.02"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.7.3"
+        locfile="../cubicle_bwd.mlw"
+        loclnum="55" loccnumb="6" loccnume="9"
+        expl="3."
+        sum="90998afdf2a0e8d31f2e3cad86978ea0"
+        proved="false"
+        expanded="true"
+        shape="ainfix =apre_starV0V2ainfix ++V12apre_starV0V17Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V17aprefix ~V12Iainfix =apre_starV0V12ainfix ++V12apre_starV0V17Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V17aprefix ~V12INasatainfix &amp;V1V12Iainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;attrueapre_starV0V12Aainfix =ainfix ++V12apre_starV0ainfix &amp;aprefix ~V18V14ainfix &amp;ainfix ++V12ainfix ++attrueapre_starV0aprefix ~V18apre_starV0V12Aavalidainfix ++aprefix ~aprefix ~V18apre_starV0aprefix ~V18INNainfix |==V18V12INasatainfix &amp;V1V18Iainfix =V17ainfix &amp;aprefix ~V18V11Aavalidainfix =&gt;V18V11Aainfix =V16aremoveV18V10ANais_emptyV10LachooseV10FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="4.99"/>
+        </proof>
+        <proof
+         prover="1"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.00"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.01"/>
+        </proof>
+        <proof
+         prover="3"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.03"/>
+        </proof>
+        <proof
+         prover="4"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.30"/>
+        </proof>
+        <proof
+         prover="5"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.09"/>
+        </proof>
+        <proof
+         prover="6"
+         timelimit="5"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="timeout" time="5.16"/>
+        </proof>
+       </goal>
+      </transf>
      </goal>
      <goal
       name="WP_parameter bwd.8"
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="8. unreachable point"
-      sum="eed1ebf6afca4234ff54a6f15f51fc15"
+      sum="18362aa942eb72c2466b798e4c31e633"
       proved="true"
       expanded="true"
-      shape="unreachable pointfIainfix =V11affalseAais_emptyV10Aainfix =V17affalseAais_emptyV16FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="unreachable pointfIainfix =V11affalseAais_emptyV10Aainfix =V17affalseAais_emptyV16FIainfix =V15V10Aainfix =V14V11FINainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <proof
@@ -826,10 +983,10 @@
       locfile="../cubicle_bwd.mlw"
       loclnum="55" loccnumb="6" loccnume="9"
       expl="9. postcondition"
-      sum="a11fc6b04e603db001e2d6ba95ed2c3b"
+      sum="89c25b4bcbc014652724ba2c9e45547b"
       proved="true"
       expanded="true"
-      shape="postconditionNareachableV0V1V2INNainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
+      shape="postconditionNareachableV0V1V2INNainfix =V13aTrueIainfix =V11affalseAais_emptyV10qainfix =V13aTrueFIainfix =apre_starV0V2ainfix ++V12apre_starV0V11Oainfix =apre_starV0V2ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12Aainfix =apre_starV0V12ainfix ++V12apre_starV0V11Oainfix =apre_starV0V12ainfix ++V12apre_starV0ainfix &amp;V11aprefix ~V12ANasatainfix &amp;V1V12FIainfix =V8aaddV7V4Aainfix =V9ainfix ++V7V5FLapreV0V2Iainfix =V6ainfix ++V2V3FINasatainfix &amp;V1V2Iainfix =V4aemptyAainfix =V5affalseFIainfix =V3affalseFF">
       <label
        name="expl:VC for bwd"/>
       <proof
@@ -866,11 +1023,11 @@
       </proof>
       <proof
        prover="5"
-       timelimit="20"
+       timelimit="5"
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.02"/>
+       <result status="timeout" time="5.07"/>
       </proof>
      </goal>
     </transf>

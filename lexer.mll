@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -25,7 +25,6 @@
 	"init", INIT;
 	"transition", TRANSITION;
 	"invariant", INVARIANT;
-	"candidate", CANDIDATE;
 	"requires", REQUIRE;
 	"uguard", UGUARD;
 	"assign", ASSIGN;
@@ -33,7 +32,6 @@
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;
-        "forward", FORWARD;
 	"case", CASE;
 	"forall_other", FORALL;
 	"number_procs", SIZEPROC;
@@ -94,6 +92,8 @@ rule token = parse
       { RIGHTPAR }
   | "."
       { DOT }
+  | "?"
+      { QMARK }
   | "+"
       { PLUS }
   | "-"

@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -29,6 +29,7 @@ module type S = sig
   val pop : t -> elem * t
   val add : t -> elem list -> t
   val elements : t -> elem list
+  val length : t -> int
 end
 
 module Make ( X : OrderType ) : S with type elem = X.t

@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,16 +13,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Options
-open Format
-open Ast
+(** Backward reachability with Approximations and Backtracking *)
 
+val brab : Ast.t_system -> Bwd.result
+(** Backtracking procedure that uses approximated backward reachability
+    ({! Bwd}).
 
-val subsuming_candidate : t_system -> t_system list
-(** Candidate approximations *)
-
-val brab : Search.fsearch -> t_system list -> t_system list -> t_system list
-(** Backward reachability with Approximations and Backtracking :
-    [brab search invariants unsafes] calls the BRAB algorithm with a
-    backward reachability function [search] a list of invariants and
-    a list of unsafe formulas [unsafes]. *)
+    [brab system] calls BRAB on the given system. *)

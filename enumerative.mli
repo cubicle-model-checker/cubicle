@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -15,17 +15,26 @@
 
 open Ast
 
-(* module HI : Hashtbl.S with type key = int *)
+(** Enumerative forward search *)
 
-val search : Hstring.t list -> t_system -> unit
+val search : Variable.t list -> t_system -> unit
 (** [search procs init] performs enumerative forward search. States are
     stored in an internal hash-table. *)
 
-val resume_search_from : Hstring.t list -> t_system -> unit
+val resume_search_from : Variable.t list -> t_system -> unit
 
-val replay_trace_and_expand : Hstring.t list -> t_system -> unit
+val replay_trace_and_expand : Variable.t list -> t_system -> Node.t -> unit
 
-val smallest_to_resist_on_trace : int ref -> t_system list -> t_system list
+val smallest_to_resist_on_trace : Node.t list -> Node.t list
 (** Given a list of candidate approximations (and their permutations),
     checks if one is satisfiable on the finite model constructed by
     [search]. *)
+
+
+(** {2 Oracle interface } *)
+
+(** see {! Oracle.S} *)
+
+val init : t_system -> unit
+
+val first_good_candidate : Node.t list -> Node.t option 

@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,52 +13,86 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
-open Options
-open Ast
-open Atom
+open Types
 
-val new_cube_id : unit -> int
+(** Cubes and simplifications *)
 
-val has_deleted_ancestor : t_system -> bool
-val already_closed : t_system -> transition -> Hstring.t list -> t_system option
 
-val apply_subst : SAtom.t -> (Hstring.t * Hstring.t) list -> SAtom.t
+type t =
+ private {
+   vars : Variable.t list; (** existential variables, all distinct *)
+   litterals : SAtom.t; (** conjunction of litterals as a set *)
+   array : ArrayAtom.t; (** conjunction of litterals as an array *)
+ }
+(** the type of cubes, i.e. a conjunction of litterals existentially quanfified
+    by distinct variables. The invariant that the array and the set correspond
+    to the same conjunction is enforced. *)
 
-val add_constants : int MConst.t -> int MConst.t -> int MConst.t
-val const_sign : int MConst.t -> int option
-val mult_const : int -> int MConst.t -> int MConst.t
+val create : Variable.t list -> SAtom.t -> t
+(** create a cube given its existential variables and a conjunction *)
 
-val proper_cube : SAtom.t -> SAtom.t * (Hstring.t list * Hstring.t)
-val args_of_atoms : SAtom.t -> Hstring.t list
+val normal_form : t -> t
+(** puts a cube in normal form, so as to have the existential variables
+    contiguous ([#1], [#2], [#3], ...). Performs variable renaming if
+    necessary. *)
 
-val simplification_atoms : SAtom.t -> SAtom.t -> SAtom.t
-val simplify_atoms : SAtom.t -> SAtom.t list
+val create_normal : SAtom.t -> t
+(** create a cube in normal form by finding the quantified variables *)
 
-val inconsistent_2cubes : SAtom.t -> SAtom.t -> bool
-val inconsistent_list : Atom.t list -> bool
-val inconsistent : SAtom.t -> bool
+val subst : Variable.subst -> t -> t
+(** apply a substitution on a cube *)
 
-val all_var_terms : Hstring.t list -> t_system -> STerm.t
+val dim : t -> int
+(** returns the number of exitential distinct variables, i.e. the {e dimension}
+    of the cube *)
 
-val size_system : t_system -> int
-val card_system : t_system -> int
-  
-val check_safety : t_system -> unit
+val size: t -> int
+(** returns the number of atoms in the conjuction *)
 
-val easy_fixpoint : t_system -> t_system list -> int list option
-val hard_fixpoint : t_system -> t_system list -> int list option
-val pure_smt_fixpoint : t_system -> t_system list -> int list option
-val fixpoint : 
-  invariants: t_system list -> visited: t_system list ->
-  t_system -> int list option
 
-val fixpoint_trie : t_system -> Atom.t list -> t_system Cubetrie.t ref ->
-  t_system Cubetrie.t ref -> t_system list ref -> int list option
+(** {2 Inconsistencies detection } *)
 
-val fixpoint_trie2 : t_system Cubetrie.t -> t_system -> int list option
+(** The following five functions implements cheap checks for detecting
+    inconsistencies *)
 
-val add_and_resolve : t_system -> t_system Cubetrie.t -> t_system Cubetrie.t
-val simple_extract_candidates :
-  ArrayAtom.t -> ArrayAtom.t list list -> SAtom.t list
+val inconsistent : ?use_sets:bool -> t -> bool
 
+val inconsistent_2 : ?use_sets:bool -> t -> t -> bool
+(** is the conjunction of [c1] and [c2] inconsistent knowing that [c1] and [c2]
+    are consitent on their own. *)
+
+val inconsistent_set : SAtom.t -> bool
+(** returns [true] if the conjunction inconsistent *)
+
+val inconsistent_array : ArrayAtom.t -> bool
+(** same as {! inconsistent_set} but for arrays *)
+
+val inconsistent_2arrays : ArrayAtom.t -> ArrayAtom.t -> bool
+(** same as {! inconsistent_2} but for arrays *)
+
+
+(** {2 Simplifications of cubes } *)
+
+val simplify_atoms_base : SAtom.t -> SAtom.t -> SAtom.t
+(** [simplify_atoms_base b c] simplifies [c] in the context of [b].
+    Raises [Exit] if it becomes inconsistent *)
+
+val simplify_atoms : SAtom.t -> SAtom.t
+(** simplify a conjunction. Raises [Exit] if it becomes inconsistent. *)
+
+val simplify : t -> t
+(** simplify a cube. Raises [Exit] if it becomes inconsistent. *)
+
+val elim_ite_simplify_atoms : SAtom.t -> SAtom.t list
+(** lifts [if-then-else] constructs and simplify a conjunction *)
+
+val elim_ite_simplify : t -> t list
+(** lifts [if-then-else] constructs and simplify a cube *)
+
+
+(** {2 Misc } *)
+
+val resolve_two : t -> t -> t option
+val satom_globs : SAtom.t -> Term.Set.t
+
+val print :  Format.formatter -> t -> unit

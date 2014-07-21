@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -14,36 +14,17 @@
 (**************************************************************************)
 
 open Format
-open Ast
+
+(** Pretty printing functions *)
 
 val vt_width : int
+(** Width of the virtual terminal (80 if cannot be detected) *)
 
-val print_term : formatter -> term -> unit
+val print_line : formatter -> unit -> unit
+(** prints separating line *)
 
-val print_atom : formatter -> Atom.t -> unit
+val print_double_line : formatter -> unit -> unit
+(** prints separating double line *)
 
-val print_cube : formatter -> SAtom.t -> unit
-
-val print_array : formatter -> ArrayAtom.t -> unit
-
-val print_system : formatter -> t_system -> unit
-
-val print_args : formatter -> Hstring.t list -> unit
-
-val print_subst : formatter -> (Hstring.t * Hstring.t) list -> unit
-
-val print_unsafe : formatter -> t_system -> unit
-
-val print_node : formatter -> t_system -> unit
-
-val print_bad : formatter -> t_system -> unit
-
-val print_dead_node : formatter -> (t_system * int list) -> unit
-
-val print_dead_node_to_cand : formatter -> (t_system * int list) -> unit
-
-val dot_config : string -> int ref -> Format.formatter * (unit -> unit)
-
-val print_verbose_node : formatter -> t_system -> unit
-
-val syscall : string -> string
+val print_title : formatter -> string -> unit
+(** prints section title for stats *)

@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -16,10 +16,15 @@
 open Format
 open Ast
 
+(** Typing of parameterized systems *)
+
+
 type error 
 
-exception Error of error 
+exception Error of error * Util.loc
 
 val report : Format.formatter -> error -> unit
 
-val system : system -> t_system list
+val system : system -> t_system
+(** Types an untyped system and performs subtyping analysis is the flag
+    {! Options.subtyping} is [true]. *)

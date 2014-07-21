@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2013                          *)
+(*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** {b The Alt-Ergo light SMT library}
+(** The Alt-Ergo zero SMT library
 
     This SMT solver is derived from {{:http://alt-ergo.lri.fr} Alt-Ergo}. It
     uses an efficient SAT solver and supports the following quantifier free
@@ -38,13 +38,13 @@ exception Error of error
 
 (** {2 Typing } *)
 
-(** {3 Typing } *)
+(** Typing *)
 module Type : sig
 
   type t = Hstring.t
   (** The type of types in Alt-Ergo light *)
 
-  (** {4 Builtin types } *)
+  (** {3 Builtin types } *)
 
   val type_int : t
   (** The type of integers *)
@@ -58,7 +58,7 @@ module Type : sig
   val type_proc : t
   (** The type processes (identifiers) *)
 
-  (** {4 Declaring new types } *)
+  (** {3 Declaring new types } *)
 
   val declare : Hstring.t -> Hstring.t list -> unit
   (** {ul {- [declare n cstrs] declares a new enumerated data-type with
@@ -75,7 +75,7 @@ module Type : sig
 end
 
 
-(** {3 Function symbols} *)
+(** Function symbols *)
 module Symbol : sig
     
   type t = Hstring.t
@@ -103,7 +103,7 @@ module Symbol : sig
       
 end
 
-(** {3 Variants}
+(** {b Variants}
    
     The types of symbols (when they are enumerated data types) can be refined
     to substypes of their original type (i.e. a subset of their constructors).
@@ -282,23 +282,17 @@ module type Solver = sig
       raised {! Unsat} or if you want to restart the solver. *)
 
 
-  val assume : ?profiling:bool -> id:int -> Formula.t -> unit
-  (** [assume ~profiling:b f id] adds the formula [f] to the context of the
+  val assume : id:int -> Formula.t -> unit
+  (** [assume id f] adds the formula [f] to the context of the
       solver with idetifier [id].
       This function only performs unit propagation.
-      
-      @param profiling if set to [true] then profiling information (time) will
-      be computed (expensive because of system calls).
       
       {b Raises} {! Unsat} if the context becomes inconsistent after unit
       propagation. *)
 
-  val check : ?profiling:bool -> unit -> unit
+  val check : unit -> unit
   (** [check ()] runs Alt-Ergo light on its context. If [()] is
       returned then the context is satifiable.
-      
-      @param profiling if set to [true] then profiling information (time) will
-      be computed (expensive because of system calls).
       
       {b Raises} {! Unsat} [[id_1; ...; id_n]] if the context is unsatisfiable.
       [id_1, ..., id_n] is the unsat core (returned as the identifiers of the
@@ -310,7 +304,7 @@ module type Solver = sig
   val restore_state : state -> unit
   (** [restore_state s] restores a previously saved state [s].*)
 
-  val entails : ?profiling:bool -> id:int -> Formula.t -> bool
+  val entails : id:int -> Formula.t -> bool
   (** [entails ~id f] returns [true] if the context of the solver entails
       the formula [f]. It doesn't modify the context of the solver (the state
       is saved when this function is called and restored on exit).*)
@@ -318,18 +312,4 @@ module type Solver = sig
 end
 
 (** Functor to create several instances of the solver *)
-module Make (Dummy : sig end) : Solver
-
-
-module type EnumSolver = sig
-  val get_time : unit -> float
-  val get_calls : unit -> int
-
-  val clear : unit -> unit
-  val assume : ?profiling:bool -> id:int ->
-    (Hstring.t * int * int) list list -> unit
-  val check : ?profiling:bool -> unit -> unit
-end
-
-module MakeEnum (Dummy : sig end) : EnumSolver
-
+module Make (Options : sig val profiling : bool end) : Solver

@@ -23,7 +23,7 @@ type location = L1 | L2 | L3
 var C1 : location
 var C2 : location
 var A : int
-var D : int
+var B : int
 var T : int
 var S : int
 
