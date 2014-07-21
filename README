@@ -32,7 +32,7 @@ then with superuser rights:
 
     make install
 
-Cubicle comes with its own emacs major mode in doc/emacs/cubicle-mode.el. You
+Cubicle comes with its own emacs major mode in emacs/cubicle-mode.el. You
 should copy this file to your emacs.d directory (or anywhere in your load path)
 and add the following to your init file (.emacs or emacs.d/init.el):
 
@@ -66,3 +66,17 @@ using 2 processes) on a file file.cub simply do:
 You can see the list of Cubcile's options by doing:
 
     cubicle -h
+
+
+DEVELOPERS
+==========
+
+Documentation for developers is available as ocamldoc comments and can be
+generated in html format in the doc/ocamldoc directory with:
+
+    make doc
+
+A pdf file depicting dependency relations between modules can be generated
+with:
+
+    make archi

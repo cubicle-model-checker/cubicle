@@ -39,10 +39,10 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLUDES = $(FUNCTORYLIB) -thread -I common/ -I smt/
+INCLUDES = $(FUNCTORYLIB) -I common/ -I smt/
 
-BFLAGS = -dtypes -g $(INCLUDES) -annot
-OFLAGS = -dtypes $(INCLUDES) -annot
+BFLAGS = -dtypes -g -thread $(INCLUDES) -annot
+OFLAGS = -dtypes -thread $(INCLUDES) -annot
 
 BIBBYTE=nums.cma unix.cma
 
@@ -177,7 +177,7 @@ tags:
 install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
-	@echo "Installation completed in $(BINDIR). You may want to copy doc/emacs/cubicle-mode.el in your emacs.d if you use Emacs."
+	@echo "Installation completed in $(BINDIR). You may want to copy (doc/)emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
 install-byte:
 	mkdir -p $(BINDIR)
@@ -286,6 +286,8 @@ EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
 	   bakery_lamport_bogus.cub bakery_lamport_na.cub\
 	   bakery_lamport_na_wb.cub bakery_na.cub
 
+DOCFILES = cubicle.1 intro.txt ocamldoc.css
+
 OTHERFILES = .depend configure.in configure Makefile.in README COPYING
 
 ARCH = $(shell uname -m)
@@ -315,10 +317,12 @@ export/$(EXPORTDIR).tar.gz:
 	mkdir -p export/$(EXPORTDIR)/common
 	mkdir -p export/$(EXPORTDIR)/examples
 	mkdir -p export/$(EXPORTDIR)/emacs
+	mkdir -p export/$(EXPORTDIR)/doc
 	cp $(SMTFILES) export/$(EXPORTDIR)/smt
 	cp $(COMMONFILES) export/$(EXPORTDIR)/common
 	cp $(FILES) export/$(EXPORTDIR)/
 	cp $(OTHERFILES) export/$(EXPORTDIR)/
+	cd doc/; cp $(DOCFILES) ../export/$(EXPORTDIR)/doc/; cd ..
 	cd examples/; cp $(EXAMPLES) ../export/$(EXPORTDIR)/examples/; cd ..
 	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
@@ -346,7 +350,7 @@ doc:
 	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
 	ocamldoc -html -keep-code -d doc/ocamldoc \
 	-t "Cubicle $(VERSION) documentation and source" \
-	-intro doc/intro.txt -I smt -I common \
+	-intro doc/intro.txt $(INCLUDES) \
 	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
 	$(COMMONFILES) $(SMTFILES)
 
@@ -354,7 +358,7 @@ docpdf:
 	mkdir -p doc/ocamldoc/latex
 	ocamldoc -latex -keep-code -d doc/ocamldoc -o doc/ocamldoc/latex/doc.tex \
 	-t "Cubicle $(VERSION) documentation and source" \
-	-intro doc/intro.txt -I smt -I common \
+	-intro doc/intro.txt $(INCLUDES) \
 	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
 	$(COMMONFILES) $(SMTFILES)
 	cd doc/ocamldoc/latex/; rubber -d doc
@@ -363,8 +367,8 @@ docpdf:
 archi:
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \
 	-t "Cubicle $(VERSION) architecture" \
-	-I smt -I common \
-	$(filter-out lexer.mll parser.mly fake_functory.ml, $(FILES)) \
+	$(INCLUDES) \
+	$(filter-out lexer.mll parser.mly fake_functory.ml fake_functory.mli, $(FILES)) \
 	$(COMMONFILES) smt/smt.mli
 	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf
 	rm -f doc/archi.dot
