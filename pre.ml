@@ -284,21 +284,21 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
-let pre tr unsafe =
-  let tau = tr.tr_tau in
+let pre { tr_info = tri; tr_tau = tau } unsafe =
+  (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
-    SAtom.union tr.tr_reqs 
+    SAtom.union tri.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
-  if debug && verbose > 0 then Debug.pre tr pre_unsafe;
+  if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
   let args = pre_u.Cube.vars in
-  if tr.tr_args = [] then tr, pre_u, args
+  if tri.tr_args = [] then tri, pre_u, args
   else
-    let nargs = Variable.append_extra_procs args tr.tr_args in
+    let nargs = Variable.append_extra_procs args tri.tr_args in
     if !size_proc <> 0 && List.length nargs > !size_proc then
-      tr, pre_u, args
-    else tr, pre_u, nargs
+      tri, pre_u, args
+    else tri, pre_u, nargs
 
 
 (*********************************************************************)
@@ -313,8 +313,8 @@ let pre_image trs s =
   let ls, post = 
     List.fold_left
     (fun acc tr ->
-       let tr, pre_u, info_args = pre tr u in
-       make_cubes acc info_args s tr pre_u) 
+       let trinfo, pre_u, info_args = pre tr u in
+       make_cubes acc info_args s trinfo pre_u) 
     ([], []) 
     trs 
   in

@@ -228,7 +228,7 @@ transition:
 	  tr_assigns = assigns; 
 	  tr_nondets = nondets; 
 	  tr_upds = upds;
-          tr_tau = fun _ _ _ -> Atom.True;
+          (* tr_tau = fun _ _ _ -> Atom.True; *)
         } 
       }
 ;

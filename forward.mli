@@ -33,7 +33,7 @@ type inst_trans =
     }
 
 type possible_result = 
-  | Reach of (transition * Variable.subst) list 
+  | Reach of (transition_info * Variable.subst) list 
   | Spurious of trace
   | Unreach
 

@@ -703,13 +703,14 @@ let ordered_fst_subst = function
 (* Instantiate transitions and transform to closure *)
 (****************************************************)
         
-let transitions_to_func_aux procs env reduce acc { tr_args = tr_args; 
-		                                   tr_reqs = reqs; 
-		                                   tr_name = name;
-		                                   tr_ureq = ureqs;
-		                                   tr_assigns = assigns; 
-		                                   tr_upds = upds; 
-		                                   tr_nondets = nondets } =
+let transitions_to_func_aux procs env reduce acc 
+                            { tr_info = { tr_args = tr_args; 
+		                          tr_reqs = reqs; 
+		                          tr_name = name;
+		                          tr_ureq = ureqs;
+		                          tr_assigns = assigns; 
+		                          tr_upds = upds; 
+		                          tr_nondets = nondets }} =
   if List.length tr_args > List.length procs then acc
   else 
     let d = Variable.all_permutations tr_args procs in
@@ -1203,8 +1204,8 @@ let unsat_cand_core env state cand =
 
 let init system =
   set_liberal_gc ();
-  let low = if brab_up_to then 1 else enumerative in
-  for i = enumerative downto low do
+  let low = if brab_up_to then 0 else enumerative in
+  for i = low to enumerative do
     let procs = Variable.give_procs i in
     if not quiet then
       Pretty.print_title std_formatter

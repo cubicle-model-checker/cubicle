@@ -27,19 +27,19 @@
   version="4.3.2"/>
  <file
   name="../reachability.why"
-  verified="true"
+  verified="false"
   expanded="true">
   <theory
    name="Reachability"
    locfile="../reachability.why"
    loclnum="1" loccnumb="7" loccnume="19"
-   verified="true"
+   verified="false"
    expanded="true">
    <goal
     name="directly_reachable"
     locfile="../reachability.why"
     loclnum="55" loccnumb="9" loccnume="27"
-    sum="dbc0572cee41fa3794b197383bdf9e35"
+    sum="69370a9010a4dee33eeeaff04b670d07"
     proved="true"
     expanded="false"
     shape="areachableV0V1V2Iasatainfix &amp;V2V1FF">
@@ -73,14 +73,14 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="2.30"/>
+     <result status="valid" time="1.79"/>
     </proof>
    </goal>
    <goal
     name="false_unreachable"
     locfile="../reachability.why"
     loclnum="59" loccnumb="9" loccnume="26"
-    sum="8f0fe2eb71f631911e1026b27ce86fcb"
+    sum="31bb24f8153d3e4d47735d5107ea6721"
     proved="true"
     expanded="false"
     shape="NareachableV0V1affalseFF">
@@ -137,7 +137,7 @@
     name="reachable_or"
     locfile="../reachability.why"
     loclnum="63" loccnumb="9" loccnume="21"
-    sum="3aaaa0893a7248e4710fce45facecc65"
+    sum="b5e04c6f5f2a75985980380482bae757"
     proved="true"
     expanded="true"
     shape="areachableV0V3V2OareachableV0V3V1qareachableV0V3ainfix ++V1V2FF">
@@ -150,7 +150,7 @@
       locfile="../reachability.why"
       loclnum="63" loccnumb="9" loccnume="21"
       expl="1."
-      sum="dda0f24340cdfa8ff18be60a16bf9c5c"
+      sum="8838af95184098c1726f3234ec3a90ac"
       proved="true"
       expanded="false"
       shape="areachableV0V3V2OareachableV0V3V1IareachableV0V3ainfix ++V1V2FF">
@@ -160,7 +160,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="3.97"/>
+       <result status="valid" time="3.02"/>
       </proof>
       <proof
        prover="1"
@@ -184,7 +184,7 @@
       locfile="../reachability.why"
       loclnum="63" loccnumb="9" loccnume="21"
       expl="2."
-      sum="bba72dc0af02b7993c4929d112375fd6"
+      sum="45b4611811ae7412672c51350d7de2f7"
       proved="true"
       expanded="false"
       shape="areachableV0V3ainfix ++V1V2IareachableV0V3V2OareachableV0V3V1FF">
@@ -219,22 +219,22 @@
     name="reachable_and"
     locfile="../reachability.why"
     loclnum="69" loccnumb="9" loccnume="22"
-    sum="161effb3d1f04b46e3f179edaceb245e"
-    proved="true"
+    sum="4b958187e6bf8d03989b58e17fc788a5"
+    proved="false"
     expanded="true"
     shape="areachableV0V3V2AareachableV0V3V1IareachableV0V3ainfix &amp;V1V2FF">
     <transf
      name="split_goal_wp"
-     proved="true"
+     proved="false"
      expanded="true">
      <goal
       name="reachable_and.1"
       locfile="../reachability.why"
       loclnum="69" loccnumb="9" loccnume="22"
       expl="1."
-      sum="65fe9780e8f808144d400aa004785d34"
-      proved="true"
-      expanded="false"
+      sum="1fbe76eb27a2ad83d8b4fe89cd3e91ae"
+      proved="false"
+      expanded="true"
       shape="areachableV0V3V1IareachableV0V3ainfix &amp;V1V2FF">
       <proof
        prover="0"
@@ -242,7 +242,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="1.41"/>
+       <result status="timeout" time="4.99"/>
       </proof>
       <proof
        prover="1"
@@ -250,23 +250,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.66"/>
-      </proof>
-      <proof
-       prover="2"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="valid" time="0.04"/>
-      </proof>
-      <proof
-       prover="3"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="valid" time="2.72"/>
+       <result status="timeout" time="5.01"/>
       </proof>
       <proof
        prover="5"
@@ -274,7 +258,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.05"/>
+       <result status="timeout" time="5.01"/>
       </proof>
      </goal>
      <goal
@@ -282,9 +266,9 @@
       locfile="../reachability.why"
       loclnum="69" loccnumb="9" loccnume="22"
       expl="2."
-      sum="7c0a1a852391f8725d2ac94b84701320"
-      proved="true"
-      expanded="false"
+      sum="7c47f14a557e34d6e6f6dfff4c648e4e"
+      proved="false"
+      expanded="true"
       shape="areachableV0V3V2IareachableV0V3ainfix &amp;V1V2FF">
       <proof
        prover="0"
@@ -292,7 +276,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.97"/>
+       <result status="timeout" time="4.98"/>
       </proof>
       <proof
        prover="1"
@@ -300,15 +284,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.85"/>
-      </proof>
-      <proof
-       prover="2"
-       timelimit="5"
-       memlimit="1000"
-       obsolete="false"
-       archived="false">
-       <result status="valid" time="0.04"/>
+       <result status="timeout" time="5.00"/>
       </proof>
       <proof
        prover="5"
@@ -316,7 +292,7 @@
        memlimit="1000"
        obsolete="false"
        archived="false">
-       <result status="valid" time="0.03"/>
+       <result status="timeout" time="5.01"/>
       </proof>
      </goal>
     </transf>
@@ -325,7 +301,7 @@
     name="reachable_imply"
     locfile="../reachability.why"
     loclnum="75" loccnumb="9" loccnume="24"
-    sum="19aff4fee76af3e10f814cc561c19f1a"
+    sum="a4beaa2df15269162de19743185d6fc1"
     proved="true"
     expanded="false"
     shape="areachableV0V3V2IareachableV0V3V1Iavalidainfix =&gt;V1V2FF">
@@ -374,7 +350,7 @@
     name="reachable_bigger"
     locfile="../reachability.why"
     loclnum="80" loccnumb="9" loccnume="25"
-    sum="4ff6839f484cd4158cc98806b2999c6a"
+    sum="802c32afd892ec5c8edb6971b5d4d9b7"
     proved="true"
     expanded="false"
     shape="areachableV0V3V2IareachableV0V3V1Iainfix |==V1V2FF">
@@ -423,7 +399,7 @@
     name="pre_star_bigger"
     locfile="../reachability.why"
     loclnum="85" loccnumb="9" loccnume="24"
-    sum="809418c3fae6724c4362d7f4bed1ff8f"
+    sum="bdf5ec583af8da65a171176a8f3f4010"
     proved="true"
     expanded="false"
     shape="ainfix |==apre_starV0V1apre_starV0V2Iainfix |==V1V2FF">
@@ -456,7 +432,7 @@
     name="reachable_by_pre"
     locfile="../reachability.why"
     loclnum="90" loccnumb="9" loccnume="25"
-    sum="24ad9e2dc44259b22883dbfc864b688b"
+    sum="f7b528ddf897828f14f028e88dbb9c6c"
     proved="true"
     expanded="false"
     shape="areachableV0V2V1IareachableV0V2apreV0V1FF">
@@ -498,15 +474,15 @@
      memlimit="1000"
      obsolete="false"
      archived="false">
-     <result status="valid" time="1.25"/>
+     <result status="valid" time="0.87"/>
     </proof>
     <proof
      prover="5"
      timelimit="5"
      memlimit="1000"
-     obsolete="false"
+     obsolete="true"
      archived="false">
-     <result status="valid" time="0.02"/>
+     <result status="timeout" time="5.03"/>
     </proof>
    </goal>
   </theory>

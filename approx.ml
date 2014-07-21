@@ -193,9 +193,13 @@ let useless_candidate sa =
         (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
         (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_int) *)
 
-    | Comp ((Arith _), _, _) when not abstr_num -> true
-
     | _ -> false) sa
+
+
+let arith_atom = function
+  | Atom.Comp ((Arith _), _, _) | Atom.Comp (_, _, (Arith _)) 
+  | Atom.Comp ((Const _), _, _) | Atom.Comp (_, _, (Const _)) -> true
+  | _ -> false
 
 
 let cube_likely_bad c = (* heuristic *)
@@ -238,8 +242,9 @@ let approximations s =
   let parts =
     SAtom.fold
       (fun a acc ->
-       let a = approx_arith a in 
+       let a = approx_arith a in
        if useless_candidate (SAtom.singleton a) then acc
+       else if not abstr_num && arith_atom a then acc
        else if lit_non_cfm a then acc
        else
          SSAtoms.fold

@@ -41,6 +41,7 @@ let need_bool s =
     ) in
   f (f false s.t_globals) s.t_arrays
 
+
 module AltErgo = struct
 
   let rec print_constructors fmt = function
@@ -367,7 +368,7 @@ module AltErgo = struct
     if upds <> [] && remaining <> [] then fprintf fmt " and\n";
     print_norm_all_unchanged vars fmt remaining
 
-  let print_transtion s fmt t =
+  let print_transtion s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
     let args =  t.tr_args in
@@ -572,9 +573,18 @@ module Why3 = struct
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
-  let print_const fmt c = assert false
+  let print_const fmt = function
+    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstName n -> fprintf fmt "%a" Hstring.print n
 
-  let print_cs fmt cs = assert false
+  let print_cs fmt cs =
+    MConst.iter 
+      (fun c i ->
+       fprintf fmt " %s %a" 
+	       (if i = 1 then "+" else if i = -1 then "-" 
+	        else if i < 0 then "- "^(string_of_int (abs i)) 
+	        else "+ "^(string_of_int (abs i)))
+	       print_const c) cs
 
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
@@ -832,7 +842,7 @@ module Why3 = struct
     if upds <> [] && remaining <> [] then fprintf fmt " /\\\n";
     print_norm_all_unchanged vars fmt remaining
 
-  let print_transtion s fmt t =
+  let print_transtion s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
     let args =  t.tr_args in
@@ -969,8 +979,31 @@ module Why3 = struct
     fprintf fmt "\nend\n\n@."
     
     
+  module SI = Set.Make(struct type t = int let compare = Pervasives.compare end)
+  module Fixpoint = Fixpoint.FixpointList
+  let replay s visited =
+    printf "REPLAY\n---------@.";
+    List.iter 
+      (fun phi ->
+       let ls, post = Pre.pre_image s.t_trans phi in
+       let used =
+         List.fold_left
+           (fun acc p ->
+            match Fixpoint.check p visited with
+            | None -> assert false
+            | Some db -> List.fold_left (fun acc i -> SI.add i acc) acc db
+           ) SI.empty (ls@post)
+       in
+       printf "Node : %d ======> " phi.tag ;
+       printf " [[ %d used ]] " (SI.cardinal used);
+       SI.iter (fun i -> printf ", %d" i) used;
+       printf "@.";
+       (* printf "\n      %a@." SAtom.print_inline (Node.litterals phi); *)
+      ) visited
 
   let certificate s visited =
+    (* replay s visited; *)
+
     let bench = Filename.chop_extension (Filename.basename file) in
     let why_certif = out_trace^"/"^bench^"_certif.why" in
     let cout = open_out why_certif in

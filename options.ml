@@ -206,14 +206,13 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
-let cores = 
-  if !cores > 0 && do_brab then begin
-    Format.eprintf "Error: parallel BRAB not implemented";
-    exit 1;
-  end
-  else !cores
-let mode = if cores > 0 && !mode = "bfs" then "bfsdist" else !mode
+
+let cores = !cores
+
+let mode = !mode
+
 let verbose = !verbose
+
 let post_strategy =
   if !post_strategy <> -1 then !post_strategy
   else match mode with
@@ -233,7 +232,15 @@ let size_proc = ref 0
 
 let refine_universal = !refine_universal
 
-let subtyping = if !trace = NoTrace then !subtyping else false
+let subtyping =
+  if !trace = NoTrace then !subtyping
+  else
+    begin
+      if not quiet then
+        Format.printf "Deactivating subtyping analysis for traces.@.";
+      false
+    end
+
 let notyping = !notyping
 
 let trace = !trace

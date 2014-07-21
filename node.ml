@@ -88,7 +88,7 @@ let new_tag =
 let create ?(kind=Node) ?(from=None) cube =
   let hist =  match from with
     | None -> []
-    | Some ((tr, args, n) as f) -> f :: n.from in
+    | Some ((_, _, n) as f) -> f :: n.from in
   { 
     cube = cube;
     tag = new_tag ~kind ();
@@ -122,6 +122,79 @@ let subset n1 n2 = ArrayAtom.subset (array n1) (array n2)
        
 let print fmt n = Cube.print fmt n.cube
 
+module Latex = struct
+(* Latex printing of nodes, experimental - to rewrite *)
+
+
+  let print_const fmt = function
+    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstName n -> fprintf fmt "%a" Hstring.print n
+
+  let print_cs fmt cs =
+    MConst.iter 
+      (fun c i ->
+       fprintf fmt " %s %a" 
+	       (if i = 1 then "+" else if i = -1 then "-" 
+	        else if i < 0 then "- "^(string_of_int (abs i)) 
+	        else "+ "^(string_of_int (abs i)))
+	       print_const c) cs
+
+  let rec print_term fmt = function
+    | Const cs -> print_cs fmt cs
+    | Elem (s, Var) -> fprintf fmt "%a" Hstring.print s
+    | Elem (s, Glob) -> fprintf fmt "\\texttt{%a}" Hstring.print s
+    | Elem (s, Constr) -> fprintf fmt "\\textsf{%a}" Hstring.print s
+    | Access (a, li) ->
+       fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
+    | Arith (x, cs) -> 
+       fprintf fmt "@[%a%a@]" print_term x print_cs cs
+
+  let str_op_comp =
+    function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"
+
+  let rec print_atom fmt = function
+    | Atom.True -> fprintf fmt "true"
+    | Atom.False -> fprintf fmt "false"
+    | Atom.Comp (x, op, y) -> 
+       fprintf fmt "%a %s %a" print_term x (str_op_comp op) print_term y
+    | Atom.Ite (la, a1, a2) ->
+       fprintf fmt "@[ite(%a,@ %a,@ %a)@]"
+	       (print_atoms false "\\land") (SAtom.elements la)
+               print_atom a1 print_atom a2
+
+  and print_atoms inline sep fmt = function
+    | [] -> ()
+    | [a] -> print_atom fmt a
+    | a::l -> 
+       if inline then 
+         fprintf fmt "%a %s@ %a" print_atom a sep (print_atoms inline sep) l
+       else
+         fprintf fmt "%a %s@\n%a" print_atom a sep (print_atoms inline sep) l
+
+  let print fmt n = 
+    fprintf fmt "\\item $";
+    let l = variables n in
+    (match l with
+     | [] -> ()
+     | [_] -> fprintf fmt "\\forall %a.~ " Variable.print_vars l
+     | x::y::[] -> fprintf fmt "\\forall %a.~ %a \\neq %a \\implies "
+                           Variable.print_vars l Variable.print x Variable.print y
+     | _ -> fprintf fmt "\\forall %a.~ " Variable.print_vars l
+    );
+    let natoms = List.rev (SAtom.elements (litterals n)) in
+    (match natoms with
+     | [] -> ()
+     | [a] -> print_atom fmt (Atom.neg a)
+     | last :: r ->
+        let lr = List.rev r in
+        fprintf fmt "(%a) \\implies %a" (print_atoms true " \\land ") lr
+                print_atom (Atom.neg last)
+    );
+    fprintf fmt "$"
+
+end
+
+(* let print = Latex.print *)
 
 let print_history fmt n =
   let last = List.fold_left 

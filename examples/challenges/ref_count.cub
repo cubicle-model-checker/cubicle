@@ -8,10 +8,10 @@ array Handles[proc, proc] : bool
 
 var Null : proc
 
-init (p) { Valid[p] = False && Ptr[p] = Null (* && Count[p] = 0 *) }
+init (p) { Valid[p] = False && Ptr[p] = Null && Count[p] = 0 }
 
-(* unsafe (p r) { Sort[p] = Process && Sort[r] = Resource && *)
-(*                Ptr[p] <> Null && Ptr[p] = r && 0 < Count[r]  && Valid[r] = False } *)
+unsafe (p r) { Sort[p] = Process && Sort[r] = Resource &&
+               Ptr[p] <> Null && Ptr[p] = r && 0 < Count[r]  && Valid[r] = False }
 
 
 unsafe (p r) { Sort[p] = Process && Sort[r] = Resource &&
@@ -22,9 +22,9 @@ unsafe (r) { Sort[r] = Resource && Valid[r] = True && Count[r] < 0  }
 (* unsafe (p r) { Sort[p] = Process && Sort[r] = Resource && *)
 (*                Ptr[p] <> Null && Ptr[p] = r && 0 < Count[r]  } *)
 	       
-(* unsafe (p r) { Sort[p] = Process && Sort[r] = Resource && *)
-(*                r <> Null && Valid[r] = True && Handles[r,p] = True && *)
-(* 	       Ptr[p] <> r  } *)
+unsafe (p r) { Sort[p] = Process && Sort[r] = Resource &&
+               r <> Null && Valid[r] = True && Handles[r,p] = True &&
+	       Ptr[p] <> r  }
 	       
 (* unsafe (p r) { Sort[p] = Process && Sort[r] = Resource && *)
 (*                Ptr[p] <> Null && Ptr[p] = r && Handles[r,p] = True } *)

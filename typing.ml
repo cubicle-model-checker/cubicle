@@ -362,10 +362,11 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 
 
 let add_tau tr =
-  (* let tr = fresh_args tr in *)
-  { tr with
+  (* (\* let tr = fresh_args tr in *\) *)
+  (* { tr with *)
+  (*   tr_tau = Pre.make_tau tr } *)
+  { tr_info = tr;
     tr_tau = Pre.make_tau tr }
-
     
 let system s = 
   try

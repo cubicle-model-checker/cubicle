@@ -26,11 +26,11 @@ module Cubicle_Bwd
   meta remove_prop prop valid_neg
   meta remove_prop prop valid_and
   meta remove_prop prop valid_sat
-  meta remove_prop prop pre_star_def2
+  (* meta remove_prop prop pre_star_def2 *)
   meta remove_prop prop pre_star_def3
   meta remove_prop prop reachable_imply
   meta remove_prop prop reachable_and
-  meta remove_prop prop pre_and
+  (* meta remove_prop prop pre_and *)
   meta remove_prop prop pre_or
   meta remove_prop prop unsat_invalid
   meta remove_prop prop model_extensionality
@@ -65,8 +65,13 @@ module Cubicle_Bwd
        Q.push (pre tau theta) q;
        while not (Q.is_empty q) do
         invariant { not (sat (init & !visited)) &&
-                    pre_star tau !visited = !visited ++ (pre_star tau q.formula) &&
-                    pre_star tau theta = !visited ++ (pre_star tau q.formula) }
+                    (pre_star tau !visited = !visited ++ (pre_star tau (q.formula & ~ !visited)) \/
+                    pre_star tau !visited = !visited ++ (pre_star tau (q.formula))      
+                    
+                    ) &&
+                    (pre_star tau theta = !visited ++ (pre_star tau (q.formula & ~ !visited)) \/
+                    pre_star tau theta = !visited ++ (pre_star tau (q.formula))       
+                    ) }
         let ghost old_q = Q.copy q in
         let phi = Q.pop q in
         if sat (init & phi) then raise Unsafe_trace;
@@ -78,7 +83,7 @@ module Cubicle_Bwd
                    !visited ++ (pre_star tau q.formula) =
 	  	     old_v ++ pre_star tau phi ++ pre_star tau (~ phi & old_q.formula)
 
-		   &&
+	           &&
 	  
                    !visited ++ (pre_star tau q.formula) =
                      old_v ++ (pre_star tau (ttrue & (phi ++ old_q.formula))) }
@@ -97,7 +102,7 @@ module Cubicle_Bwd
                 !visited ++ (pre_star tau ((~ phi) & old_q.formula)) =
                 ttrue & (pre_star tau !visited)
           }
-        
+      
        done;
       Safe
     with

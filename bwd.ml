@@ -114,6 +114,213 @@ end
 
 
 
+module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
+
+  module Fixpoint = Fixpoint.FixpointTrie
+  module Approx = Approx.Selected
+
+  let nb_remaining q post () = Q.length q, List.length !post
+
+  type task = Task_node of Node.t * Node.t Cubetrie.t
+
+  type worker_return =
+    | WR_Fixpoint of int list
+    | WR_PreNormal of (Node.t list * Node.t list)
+    | WR_PreCandidate of (Node.t * (Node.t list * Node.t list))
+    | WR_Unsafe of Node.t
+    | WR_ReachLimit
+    | WR_NoFixpoint
+  
+  let () =
+    (* Functory.Control.set_debug true; *)
+    Functory.Cores.set_number_of_cores cores
+
+  let do_sync_barrier = true
+
+  let gentasks nodes visited =
+    let tasks, _ = 
+      List.fold_left
+        (fun (tasks, visited) n ->
+         (Task_node (n, visited), ()) :: tasks,
+         Cubetrie.add_node n visited
+        ) ([], visited) nodes
+    in
+    List.rev tasks
+
+  let gentasks_hard system nodes visited =
+    let tasks, _ = 
+      List.fold_left
+        (fun (tasks, visited) n ->
+         Safety.check system n;
+         if Fixpoint.peasy_fixpoint n visited <> None then tasks, visited
+         else
+           (Task_node (n, visited), ()) :: tasks,
+         Cubetrie.add_node n visited
+        ) ([], visited) nodes
+    in
+    (* List.rev *) tasks
+
+  let worker system = function
+    | Task_node (n, visited) ->
+       try
+         Safety.check system n;
+         match Fixpoint.check n visited with
+         | Some db -> WR_Fixpoint db
+         | None ->
+            Stats.check_limit n;
+            match Approx.good n with
+            | None ->
+               WR_PreNormal (Pre.pre_image system.t_trans n)
+            | Some c ->
+               try
+                 (* Replace node with its approximation *)
+                 Safety.check system c;
+                 WR_PreCandidate (c, (Pre.pre_image system.t_trans n))
+               with Safety.Unsafe _ ->
+                 WR_PreNormal (Pre.pre_image system.t_trans n)
+       with
+       | Safety.Unsafe faulty  ->
+          WR_Unsafe faulty
+       | Stats.ReachedLimit ->
+          WR_ReachLimit
+
+  let print_smt_error = function
+    | Smt.DuplicateTypeName h ->
+       eprintf "Duplicate type name %a@." Hstring.print h
+    | Smt.DuplicateSymb h ->
+       eprintf "Duplicate symbol %a@." Hstring.print h
+    | Smt.UnknownType h ->
+       eprintf "Unknown type %a@." Hstring.print h
+    | Smt.UnknownSymb h ->
+       eprintf "Unknown symbol %a@." Hstring.print h
+
+
+  let worker_fix system = function
+    | Task_node (n, visited) ->
+       try
+         match Fixpoint.hard_fixpoint n visited with
+         | Some db -> WR_Fixpoint db
+         | None -> WR_NoFixpoint
+       with
+       | Safety.Unsafe faulty  ->
+          WR_Unsafe faulty
+       | Stats.ReachedLimit ->
+          WR_ReachLimit
+       | Smt.Error e -> print_smt_error e; assert false
+
+
+  let populate_pre q postponed visited n ls post =
+    if delete then
+      visited :=
+        Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+    postponed := List.rev_append post !postponed;
+    visited := Cubetrie.add_node n !visited;
+    Q.push_list ls q;
+    Stats.remaining (nb_remaining q postponed)
+
+  let empty_queue q =
+    let rec qux acc =
+      if Q.is_empty q then List.rev acc 
+      else qux (Q.pop q :: acc)
+    in
+    qux []
+
+  let master_fetch system q postponed visited candidates task res =
+    begin
+      match res, task with
+      | WR_Unsafe faulty, _ ->
+         raise (Safety.Unsafe faulty)
+      | WR_ReachLimit, _ -> raise Stats.ReachedLimit
+      | WR_Fixpoint db, (Task_node (n, _), ()) ->
+         if not quiet && debug then eprintf "\nRECIEVED FIX\n@."; 
+         Stats.fixpoint n db
+      | WR_PreNormal (ls, post), (Task_node (n, _), ()) ->
+         Stats.new_node n;
+         populate_pre q postponed visited n ls post
+      | WR_PreCandidate (c, (ls, post)), (Task_node (n, _), ()) ->
+         Stats.new_node n;
+         candidates := c :: !candidates;
+         Stats.candidate n c;
+         populate_pre q postponed visited c ls post
+      | WR_NoFixpoint, (Task_node (n, _), ()) ->
+         begin
+         if not quiet && debug then eprintf "\nRECIEVED NO_FIX\n@."; 
+         Stats.check_limit n;
+         Stats.new_node n;
+         let n = begin
+             match Approx.good n with
+             | None -> n
+             | Some c ->
+                try
+                  (* Replace node with its approximation *)
+                  Safety.check system c;
+                  candidates := c :: !candidates;
+                  Stats.candidate n c;
+                  c
+                with Safety.Unsafe _ -> n 
+           (* If the candidate is directly reachable, no need to
+                            backtrack, just forget it. *)
+           end
+         in
+
+         let ls, post = Pre.pre_image system.t_trans n in
+         if delete then
+           visited :=
+             Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+	 postponed := List.rev_append post !postponed;
+         visited := Cubetrie.add_node n !visited;
+         Q.push_list ls q;
+         Stats.remaining (nb_remaining q postponed);
+         end
+         
+    end;
+    if do_sync_barrier then []
+    else gentasks_hard system (empty_queue q) !visited
+
+
+   
+  let search ?(invariants=[]) ?(candidates=[]) system =
+    
+    let visited = ref Cubetrie.empty in
+    let candidates = ref candidates in
+    let q = Q.create () in
+    let postponed = ref [] in
+
+    (* Initialization *)
+    Q.push_list !candidates q;
+    Q.push_list system.t_unsafe q;
+    List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
+              (invariants @ system.t_invs);
+
+    try
+      while not (Q.is_empty q) do
+        (* let compute = if Q.length q > 5000 then *)
+        (*     Functory.Cores.compute *)
+        (*   else Functory.Sequential.compute *)
+        (* in *)
+        let tasks = gentasks_hard system (empty_queue q) !visited in
+        Functory.Cores.compute
+          ~worker:(worker_fix system)
+          ~master:(master_fetch system q postponed visited candidates)
+          tasks;
+        
+        if Q.is_empty q then
+          (* When the queue is empty, pour back postponed nodes in it *)
+          begin
+            Q.push_list !postponed q;
+            postponed := []
+          end
+      done;
+      Safe (Cubetrie.all_vals !visited, !candidates)
+    with Safety.Unsafe faulty ->
+      if dot then Dot.error_trace faulty;
+      Unsafe (faulty, !candidates)
+
+end
+
+
+
+
 module BreadthOrder = struct
 
   type t = Node.t
@@ -210,15 +417,24 @@ module ApproxQ (Q : PriorityNodeQueue) = struct
 
 end
 
+module type Maker = functor (Q : PriorityNodeQueue) -> Strategy
 
-module BFS : Strategy = Make (NodeQ (Queue))
-module DFS : Strategy = Make (NodeQ (Stack))
+let make_functor =
+  if cores > 1 then 
+    (module MakeParall : Maker)
+  else
+    (module Make)
 
-module BFSH : Strategy = Make (NodeHeap (BreadthOrder))
-module DFSH : Strategy = Make (NodeHeap (DepthOrder))
+module Maker = (val make_functor)
 
-module BFSA : Strategy = Make (ApproxQ (NodeQ (Queue)))
-module DFSA : Strategy = Make (ApproxQ (NodeQ (Stack)))
+module BFS : Strategy = Maker (NodeQ (Queue))
+module DFS : Strategy = Maker (NodeQ (Stack))
+
+module BFSH : Strategy = Maker (NodeHeap (BreadthOrder))
+module DFSH : Strategy = Maker (NodeHeap (DepthOrder))
+
+module BFSA : Strategy = Maker (ApproxQ (NodeQ (Queue)))
+module DFSA : Strategy = Maker (ApproxQ (NodeQ (Stack)))
 
 let select_search =
   match mode with

@@ -794,7 +794,7 @@ let instance_of_transition { tr_args = tr_args;
 
 
 let instantiate_transitions all_procs procs trans = 
-  let aux acc tr =
+  let aux acc {tr_info = tr} =
     let tr_others,others = missing_args procs tr.tr_args in
     let d = Variable.all_permutations tr.tr_args procs in
     (* do it even if no arguments *)
@@ -842,7 +842,7 @@ let search_only s = assert false
 (* Check if formula is unreachable on trace *)
 (********************************************)
 
-exception Reachable of (transition * (Hstring.t * Hstring.t) list) list
+exception Reachable of (transition_info * Variable.subst) list
 
 let all_partitions s =
   List.fold_left (fun acc x ->
@@ -865,7 +865,7 @@ let above s trace =
 
 
 type possible_result = 
-  | Reach of (transition * (Hstring.t * Hstring.t) list) list 
+  | Reach of (transition_info * Variable.subst) list 
   | Spurious of trace
   | Unreach
 
@@ -916,7 +916,7 @@ let rec equal_trace_woargs tr1 tr2 =
 module HTrace = 
   Hashtbl.Make (
       struct
-	type t = (transition * Hstring.t list * t_system) list
+	type t = (transition_info * Hstring.t list * t_system) list
 	let equal = equal_trace_woargs
 	let hash = Hashtbl.hash_param 50 100
       end)

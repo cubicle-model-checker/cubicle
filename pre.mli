@@ -18,7 +18,7 @@ open Types
 
 (** Pre-image computation *)
 
-val make_tau : transition -> term -> op_comp -> term -> Atom.t
+val make_tau : transition_info -> transition_func
 (** functional form of transition *)
 
 val pre_image : transition list -> Node.t -> Node.t list * Node.t list

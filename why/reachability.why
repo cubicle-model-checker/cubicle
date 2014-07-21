@@ -16,16 +16,16 @@ theory Reachability
      
    axiom pre_star_def1 : forall tau : trans_rel. forall f : t.
                          valid (f => pre_star tau f)
-   axiom pre_star_def2 : forall tau : trans_rel. forall f : t.
-                         pre tau (pre_star tau f) = pre_star tau f
+   (* axiom pre_star_def2 : forall tau : trans_rel. forall f : t. *)
+   (*                       pre tau (pre_star tau f) = pre_star tau f *)
    axiom pre_star_def3 : forall tau : trans_rel. forall f : t.
                          pre_star tau (pre_star tau f) = pre_star tau f
    axiom pre_star_def4 : forall tau : trans_rel. forall f : t.
                          ((pre_star tau (pre tau f)) ++ f) = pre_star tau f
 
-   axiom pre_and :
-   forall tau : trans_rel.
-     forall f1 f2 : t. pre tau (f1 & f2) = (pre tau f1) & (pre tau f2)
+   (* axiom pre_and : *)
+   (* forall tau : trans_rel. *)
+   (*   forall f1 f2 : t. pre tau (f1 & f2) = (pre tau f1) & (pre tau f2) *)
      
    axiom pre_or :
    forall tau : trans_rel.
@@ -38,7 +38,7 @@ theory Reachability
    axiom pre_star_and :
    forall tau : trans_rel.
      forall f1 f2 : t.
-     pre_star tau (f1 & f2) = (pre_star tau f1) & (pre_star tau f2)
+     pre_star tau (f1 & f2) |== (pre_star tau f1) & (pre_star tau f2)
      
    axiom pre_star_or :
    forall tau : trans_rel.

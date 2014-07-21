@@ -34,7 +34,7 @@ type update = {
 }
 (** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
 
-type transition = {
+type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
@@ -45,10 +45,17 @@ type transition = {
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
-  tr_tau : Term.t -> op_comp -> Term.t -> Atom.t;
-  (** functionnal form, computed during typing phase *)
 }
 (** type of parameterized transitions *)
+
+type transition_func = Term.t -> op_comp -> Term.t -> Atom.t
+(** functionnal form, computed during typing phase *)
+
+(** type of parameterized transitions with function *)
+type transition = {
+  tr_info : transition_info;
+  tr_tau : transition_func;
+}
 
 type system = {
   globals : (Hstring.t * Smt.Type.t) list;
@@ -58,7 +65,7 @@ type system = {
   init : Variable.t list * dnf;
   invs : (Variable.t list * SAtom.t) list;
   unsafe : (Variable.t list * SAtom.t) list;  
-  trans : transition list
+  trans : transition_info list;
 }
 (** type of untyped transition systems constructed by parsing *)
 
@@ -85,7 +92,11 @@ type node_cube =
       from : trace;           (** history of the node *)
     }
 (** the type of nodes, i.e. cubes with extra information *)
-and trace = (transition * Variable.t list * node_cube) list
+
+and trace_step = transition_info * Variable.t list * node_cube
+(** type of elementary steps of error traces *)
+
+and trace = trace_step list
 (** type of error traces, also the type of history of nodes *)
 
 type t_system = {

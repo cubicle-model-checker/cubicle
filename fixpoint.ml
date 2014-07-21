@@ -146,6 +146,10 @@ end
 
 module FixpointTrie : sig
 
+  val easy_fixpoint : Node.t -> Node.t Cubetrie.t -> int list option
+  val peasy_fixpoint : Node.t -> Node.t Cubetrie.t -> int list option
+  val hard_fixpoint : Node.t -> Node.t Cubetrie.t -> int list option
+
   val check : Node.t -> Node.t Cubetrie.t -> int list option
 
 end = struct
@@ -228,6 +232,10 @@ end = struct
     | Exit -> None
     | Smt.Unsat db -> Some db
                            
+  let peasy_fixpoint s nodes = 
+    match easy_fixpoint s nodes with
+    | None -> medium_fixpoint s nodes
+    | r -> r
 
   let check s nodes =
     Debug.unsafe s;
