@@ -288,7 +288,7 @@ EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
 
 DOCFILES = cubicle.1 intro.txt ocamldoc.css
 
-OTHERFILES = .depend configure.in configure Makefile.in README COPYING
+OTHERFILES = .depend configure.in configure Makefile.in CHANGES README COPYING
 
 ARCH = $(shell uname -m)
 OSNAME = $(shell uname -s)
