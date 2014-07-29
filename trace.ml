@@ -842,7 +842,7 @@ module Why3 = struct
     if upds <> [] && remaining <> [] then fprintf fmt " /\\\n";
     print_norm_all_unchanged vars fmt remaining
 
-  let print_transtion s fmt {tr_info = t} =
+  let print_transition s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
     let args =  t.tr_args in
@@ -875,9 +875,9 @@ module Why3 = struct
 
   let rec print_transitions_disj s fmt = function
     | [] -> ()
-    | [t] -> print_transtion s fmt t
+    | [t] -> print_transition s fmt t
     | t :: r -> fprintf fmt "%a\n@.\\/\n\n%a"
-			(print_transtion s) t 
+			(print_transition s) t 
 			(print_transitions_disj s) r
 
   let transition_relation fmt s =
