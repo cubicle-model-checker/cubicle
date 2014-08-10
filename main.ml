@@ -39,10 +39,12 @@ let () =
         exit 1)) 
 
 (** intercepts SIGUSR1 to display progress *)
-let () = 
-  Sys.set_signal Sys.sigusr1 
-    (Sys.Signal_handle 
-       (fun _ -> Stats.print_report ~safe:false [] [])) 
+let () =
+  try
+    Sys.set_signal Sys.sigusr1 
+      (Sys.Signal_handle 
+         (fun _ -> Stats.print_report ~safe:false [] []))
+  with Invalid_argument _ -> () (* doesn't exist on windows *)
 
 let _ = 
   let lb = from_channel cin in 
