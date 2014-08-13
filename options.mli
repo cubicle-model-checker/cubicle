@@ -77,3 +77,9 @@ val notyping : bool
 
 val trace : trace
 val out_trace : string
+
+
+val js_mode : unit -> bool
+
+
+val set_js_mode : bool -> unit

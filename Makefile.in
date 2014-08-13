@@ -342,6 +342,22 @@ release: export/$(EXPORTDIR).tar.gz
 	cp -f -R export/release/* $(WEB)
 
 
+# Try Cubicle
+#############
+export CMO
+try: $(GENERATED)
+	mkdir -p try-cubicle/src
+	mkdir -p try-cubicle/src/smt
+	mkdir -p try-cubicle/src/common
+	cp $(SMTFILES) try-cubicle/src/smt
+	cp $(COMMONFILES) try-cubicle/src/common
+	cp $(filter-out main.ml,$(FILES)) try-cubicle/src/
+	cp $(GENERATED) try-cubicle/src/
+	cp -f fake_functory.mli try-cubicle/src/functory.mli
+	cp -f fake_functory.ml try-cubicle/src/functory.ml
+	cd try-cubicle; ./configure
+	$(MAKE) -C try-cubicle
+
 
 # ocamldoc
 ##########

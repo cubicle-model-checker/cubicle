@@ -21,12 +21,14 @@ open Util
 
 (* Set width of pretty printing boxes to number of columns *)
 let vt_width =
-  try
-    let scol = syscall "tput cols" in
-    let w = int_of_string (remove_trailing_whitespaces_end scol) in
-    set_margin w;
-    w
-  with Not_found | Failure _ -> 80
+  if js_mode () then 80
+  else
+    try
+      let scol = syscall "tput cols" in
+      let w = int_of_string (remove_trailing_whitespaces_end scol) in
+      set_margin w;
+      w
+    with Not_found | Failure _ -> 80
 
 let print_line = 
   let s = String.make vt_width '-' in

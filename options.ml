@@ -17,6 +17,8 @@ type trace =  NoTrace | AltErgoTr | WhyTr
 
 type viz_prog = Dot | Sfdp
 
+let js_mode = ref false
+
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
@@ -245,3 +247,11 @@ let notyping = !notyping
 
 let trace = !trace
 let out_trace = !out
+
+
+(* Setters *)
+let set_js_mode b = js_mode := b
+
+
+(* Getters *)
+let js_mode () = !js_mode
