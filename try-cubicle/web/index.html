@@ -90,5 +90,19 @@
     <script src="bootstrap/js/bootstrap.min.js"></script>
     <script src="input.js"></script>
     <script src="cubicle.js"></script>
+
+    <script type="text/javascript">
+     // default example
+     function handleFile(data) {
+       jQuery("textarea#input").val(data);
+     }
+
+     $(document).ready(function(){
+       jQuery.get('http://cubicle.lri.fr/examples/motivating.cub',
+                  handleFile,
+                  'text');
+     });
+    </script>
+
   </body>
 </html>
