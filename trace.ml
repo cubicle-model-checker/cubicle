@@ -522,6 +522,23 @@ end
 
 
 module Why3 = struct
+    
+
+  module CompInt = struct type t = int let compare = Pervasives.compare end
+
+  module NodeH = struct
+    type t = Node.t
+    let compare n1 n2 = Pervasives.compare n1.tag n2.tag
+    let equal n1 n2 = n1.tag == n2.tag
+    let hash n = n.tag
+  end
+
+  module SI = Set.Make(CompInt)
+  module MI = Map.Make(CompInt)
+  module NodeMap = Map.Make(NodeH)
+  module NH = Hashtbl.Make(NodeH)
+  module Fixpoint = Fixpoint.FixpointList
+
 
   let print_name fmt s = fprintf fmt "%s" (String.uncapitalize (Hstring.view s))
 
@@ -885,6 +902,7 @@ module Why3 = struct
     print_transitions_disj s fmt s.t_trans;
     fprintf fmt ")@."
 
+
   let goal_init fmt s visited =
     fprintf fmt "goal initialisation:@.";
     fprintf fmt "(* init *)\n(%a)\n\n->\n\n" print_init s.t_init;
@@ -916,12 +934,15 @@ module Why3 = struct
     fprintf fmt "\n->\n\n(* property *)\n(%a)@."
 	    (print_invariant ~prime:false) uns
 
+  let print_invnode ~prime fmt s =
+    fprintf fmt "not (%a)" (print_node ~prime) s
+
   let assume_invariant ~prime fmt visited =
     let cpt = ref 0 in
     List.iter (fun s ->
 	       incr cpt;
 	       fprintf fmt "axiom induction_hypothesis_%d:\n" !cpt;
-	       fprintf fmt "    @[not (%a)@]\n@." (print_node ~prime) s;
+	       fprintf fmt "    @[%a@]\n@." (print_invnode ~prime) s;
 	      ) visited
 
   let goal_invariant ~prime fmt visited =
@@ -929,8 +950,19 @@ module Why3 = struct
     List.iter (fun s ->
 	       incr cpt;
 	       fprintf fmt "goal invariant_%d:\n" !cpt;
-	       fprintf fmt "    @[not (%a)@]\n@." (print_node ~prime) s;
+	       fprintf fmt "    @[%a@]\n@." (print_invnode ~prime) s;
 	      ) visited    
+
+  let rec print_str_list_sep sep fmt = function
+    | [] -> ()
+    | [s] -> fprintf fmt "%s" s
+    | s :: r -> fprintf fmt "%s%s%a" s sep (print_str_list_sep sep) r
+
+  let lemma_hint fmt s used inv_names =
+    let usedn = List.map (fun n -> fst (NH.find inv_names n)) used in
+    let sn' = snd (NH.find inv_names s) in
+    fprintf fmt "    @[(%a /\\ tau)@]\n" (print_str_list_sep " /\\ ") usedn;
+    fprintf fmt "    -> %s\n@." sn'
 
   let add_imports fmt s l =
     if need_bool s then fprintf fmt "use import bool.Bool\n";
@@ -942,76 +974,202 @@ module Why3 = struct
   let capital_base f =
     String.capitalize (Filename.chop_extension (Filename.basename f))
 
-  let theory_defs fmt s =
+  let theory_decls fmt s =
     let name = (capital_base file)^"_defs" in
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s [];
     add_type_defs fmt s;
     fprintf fmt "@.";
-    add_decls fmt s;    
+    add_decls fmt s;
     fprintf fmt "\nend\n\n@.";
     name
 
-  let theory_init fmt s visited imports =
+  let theory_invariants_decls fmt s visited imports =
+    let hinv_names = NH.create (List.length visited) in
+    let name = (capital_base file)^"_invdecls" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    List.iter
+      (fun n ->
+       let invn = "invariant"^(if n.tag < 0 then "X" else "")^
+                    (string_of_int (abs n.tag)) in
+       let invn' = invn^"'" in
+       NH.add hinv_names n (invn, invn');
+       fprintf fmt "predicate %s\n" invn;
+       fprintf fmt "predicate %s\n" invn'; 
+      ) visited;
+    fprintf fmt "\nend\n\n@.";
+    name, hinv_names
+
+  let theory_invariants_defs fmt s hinv_names imports =
+    let name = (capital_base file)^"_invdefs" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    NH.iter (fun n (invn, invn') ->
+      fprintf fmt "axiom %s_def:\n\
+                   %s <-> %a\n@." invn invn (print_invnode ~prime:false) n;
+      fprintf fmt "axiom %s_def:\n\
+                   %s <-> %a\n@." invn' invn' (print_invnode ~prime:true) n;
+    ) hinv_names;
+    fprintf fmt "\nend\n\n@.";
+    name
+
+
+  let uniq_name n hn =
+    let ltr = Hashtbl.fold (fun _ trn acc -> trn :: acc) hn [] in
+    let rec uniq_aux n ltr =
+      if List.exists ((=) n) ltr then uniq_aux (n^"_") (n::ltr)
+      else n
+    in
+    uniq_aux n ltr
+
+
+  let theory_transition_decl fmt s imports =
+    let tr_names = Hashtbl.create (List.length s.t_trans) in
+    let name = (capital_base file)^"_trdecl" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    List.iter (fun tr ->
+      let trn = "transition__"^(Hstring.view tr.tr_info.tr_name) in
+      let trn = uniq_name trn tr_names in
+      Hashtbl.add tr_names tr trn;
+      fprintf fmt "predicate %s\n" trn
+    ) s.t_trans;
+    fprintf fmt "\npredicate tau\n";
+    fprintf fmt "\nend\n\n@.";
+    name, tr_names
+
+  let theory_transition_def fmt s tr_names imports =
+    let name = (capital_base file)^"_trdefs" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    Hashtbl.iter (fun tr trn ->
+      fprintf fmt "axiom %s_def:\n\
+                   %s <-> %a\n@." trn trn (print_transition s) tr;
+    ) tr_names;
+    let ltr = Hashtbl.fold (fun _ trn acc -> trn :: acc) tr_names [] in
+    fprintf fmt "axiom tau_def:\n\
+                 tau <-> (%a)\n@." (print_str_list_sep " \\/ ") ltr;
+    fprintf fmt "\nend\n\n@.";
+    name
+
+  let theory_init fmt s inv_names imports =
     let name = (capital_base file)^"_initialisation" in
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s imports;
-    fprintf fmt "axiom initial:\n%a\n@." print_init s.t_init;
-    goal_invariant ~prime:false fmt visited;
-    fprintf fmt "\nend\n\n@."
-    
-  let theory_property fmt s visited imports =
+    fprintf fmt "predicate init =\n    %a\n@." print_init s.t_init;
+    let invns = NH.fold (fun _ (invn, _) acc -> invn :: acc) inv_names [] in
+    fprintf fmt "goal initialisation:\n    \
+                 init -> (%a)\n@." (print_str_list_sep " /\\ ") invns;
+    fprintf fmt "\nend\n\n@.";
+    name
+
+  let theory_property fmt s inv_names imports =
     let name = (capital_base file)^"_property" in
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s imports;
-    assume_invariant ~prime:false fmt visited;
-    goal_invariant ~prime:false fmt s.t_unsafe;
-    fprintf fmt "\nend\n\n@."
+    let invns = NH.fold (fun _ (invn, _) acc -> invn :: acc) inv_names [] in
+    fprintf fmt "goal property:\n    \
+                 (%a) -> (%a)\n@."
+            (print_str_list_sep " /\\ ") invns
+            (print_invariant ~prime:false) s.t_unsafe;
+    fprintf fmt "\nend\n\n@.";
+    name
 
-  let theory_preservation fmt s visited imports =
+  let theory_preservation fmt s inv_names imports =
     let name = (capital_base file)^"_preservation" in
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s imports;
-    assume_invariant ~prime:false fmt visited;
-    fprintf fmt "\naxiom transition_relation:@.";
-    fprintf fmt "%a\n@." transition_relation s;
-    goal_invariant ~prime:true fmt visited;
-    fprintf fmt "\nend\n\n@."
-    
-    
-  module SI = Set.Make(struct type t = int let compare = Pervasives.compare end)
-  module Fixpoint = Fixpoint.FixpointList
-  let replay s visited =
-    printf "REPLAY\n---------@.";
-    List.iter 
-      (fun phi ->
+    let invns, invns' =
+      NH.fold (fun _ (invn, invn') (acc, acc') ->
+               invn :: acc, invn' :: acc') inv_names ([], []) in
+    fprintf fmt "goal preservation:\n    \
+                 (%a /\\ tau)\n    ->\n    (%a)\n@."
+            (print_str_list_sep " /\\ ") invns
+            (print_str_list_sep " /\\ ") invns';
+    fprintf fmt "\nend\n\n@.";
+    name
+
+  let add_lemma_hints fmt s hints inv_names imports =
+    let cpt = ref 0 in
+    NodeMap.fold (fun n used acc ->
+                  incr cpt;
+                  let name = (capital_base file)^"_hint_"^(string_of_int !cpt) in
+                  fprintf fmt "theory %s\n@." name;
+                  add_imports fmt s imports;
+                  fprintf fmt "lemma hint_%d:\n" !cpt;
+                  lemma_hint fmt n used inv_names;
+                  fprintf fmt "@.";
+                  fprintf fmt "\nend\n\n@.";
+                  name :: acc
+                 ) hints []
+
+  exception FoundNode of Node.t
+  let find_by_tag id visited =
+    try
+      List.iter (fun n ->
+                       (* eprintf "%d@." n.tag; *)
+                 if n.tag = id then raise (FoundNode n)) visited;
+      (* eprintf "Not found %d@." id; *)
+      raise Not_found
+    with FoundNode n -> n
+
+  let add_si = List.fold_left (fun acc i -> SI.add i acc)
+
+  let extract_hints s visited =
+    if not quiet then printf "Computing hints for certificate ... @?";
+    if not quiet && verbose >= 1 then printf "@.";
+    let hints = List.fold_left
+      (fun hints phi ->
        let ls, post = Pre.pre_image s.t_trans phi in
        let used =
          List.fold_left
-           (fun acc p ->
-            match Fixpoint.check p visited with
+           (fun used p ->
+            match Fixpoint.pure_smt_check p visited with
             | None -> assert false
-            | Some db -> List.fold_left (fun acc i -> SI.add i acc) acc db
+            | Some db -> 
+               let db = List.filter (fun id -> not (id = p.tag)) db in
+               add_si used db
            ) SI.empty (ls@post)
        in
-       printf "Node : %d ======> " phi.tag ;
-       printf " [[ %d used ]] " (SI.cardinal used);
-       SI.iter (fun i -> printf ", %d" i) used;
-       printf "@.";
+       if not quiet && verbose >= 1 then begin
+         printf "Node : %d\t======> " phi.tag ;
+         printf " [[ %d used ]] " (SI.cardinal used);
+         SI.iter (fun i -> printf ", %d" i) used;
+         printf "@.";
+       end;
        (* printf "\n      %a@." SAtom.print_inline (Node.litterals phi); *)
-      ) visited
+       let used_nodes = List.map (fun id -> find_by_tag id visited)
+                                 (SI.elements used) in
+       NodeMap.add phi used_nodes hints
+      ) NodeMap.empty visited
+    in
+    if not quiet then printf "done.@.";
+    hints
+
+
+  let theories_hints fmt s visited inv_names imports =
+    (* fprintf fmt "\naxiom transition_relation:@."; *)
+    (* fprintf fmt "%a\n@." transition_relation s; *)
+    let hints = extract_hints s visited in
+    add_lemma_hints fmt s hints inv_names imports
+
 
   let certificate s visited =
-    (* replay s visited; *)
-
     let bench = Filename.chop_extension (Filename.basename file) in
     let why_certif = out_trace^"/"^bench^"_certif.why" in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
-    let defs = theory_defs fmt s in
-    theory_init fmt s visited [defs];
-    theory_property fmt s visited [defs];
-    theory_preservation fmt s visited [defs];
+    let decls = theory_decls fmt s in
+    let thinv, inv_names = theory_invariants_decls fmt s visited [decls] in
+    let thinv_def = theory_invariants_defs fmt s inv_names [decls; thinv] in
+    let thtau, tr_names = theory_transition_decl fmt s [decls] in
+    let thtau_def = theory_transition_def fmt s tr_names [decls; thtau] in
+    ignore(theory_init fmt s inv_names [decls; thinv; thinv_def]);
+    ignore(theory_property fmt s inv_names [decls; thinv; thinv_def]);
+    let thhints = theories_hints fmt s visited inv_names
+                  [decls; thinv; thinv_def; thtau; thtau_def] in
+    ignore (theory_preservation fmt s inv_names ([decls; thinv; thtau] @ thhints));
     flush cout; close_out cout;
     printf "Why3 certificate created in %s@." why_certif
 
