@@ -1,3 +1,5 @@
+:max_transitions_number 94
+
 :smt (define-type cache_state  (subrange 1 3) )
 :smt (define-type node_cmd  (subrange 1 3) )
 :smt (define-type uni_cmd  (subrange 1 6) )
@@ -61,7 +63,7 @@
 :map_back Dir_InvSet
 :local w bool
 :map_back Dir_ShrSet_home
-:global z bool
+:global zz bool
 :map_back Dir_InvSet_home
 :global A bool
 :map_back MemData
@@ -106,7 +108,7 @@
 
 :initial
 :var x
-:cnj (not (=  a[x] x) ) (=  p[x]  false) (=  q[x]  false) (=  r[x]  false) (=  s[x]  false) (=  u[x]  false) (=  H[x]  1) (=  K[x]  1) (=  X[x]  1) (=  l[x]  1) (=  m[x]  false) (=  n[x]  1) (=  v[x]  false) (=  w[x]  false) (=  C[x]  1) (=  F[x]  1) (=  G[x]  1) (=  b[x]  1) (=  c[x]  false) (=  d[x]  1) (=  z[x]  false) (=  A[x]  false) (=  f[x]  1) (=  i[x]  1) (=  k[x]  1) (=  Y[x]  B[x]) (=  Z[x]  B[x]) (=  _[x]  false) 
+:cnj (not (=  a[x] x) ) (=  p[x]  false) (=  q[x]  false) (=  r[x]  false) (=  s[x]  false) (=  u[x]  false) (=  H[x]  1) (=  K[x]  1) (=  X[x]  1) (=  l[x]  1) (=  m[x]  false) (=  n[x]  1) (=  v[x]  false) (=  w[x]  false) (=  C[x]  1) (=  F[x]  1) (=  G[x]  1) (=  b[x]  1) (=  c[x]  false) (=  d[x]  1) (=  zz[x]  false) (=  A[x]  false) (=  f[x]  1) (=  i[x]  1) (=  k[x]  1) (=  Y[x]  B[x]) (=  Z[x]  B[x]) (=  _[x]  false) 
 
 
 :u_cnj (=  d[z1]  3) (=  n[z1]  3) 
@@ -160,7 +162,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -202,7 +204,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -254,7 +256,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -296,7 +298,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -347,7 +349,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  2
@@ -389,7 +391,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -440,7 +442,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -482,7 +484,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -533,7 +535,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -575,7 +577,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -626,7 +628,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -668,7 +670,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -719,7 +721,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  3
@@ -761,7 +763,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -812,7 +814,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -854,7 +856,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -1781,7 +1783,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -1823,7 +1825,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -1874,7 +1876,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -1916,7 +1918,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -1967,7 +1969,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  e[x]
  :val C[j]
@@ -2009,7 +2011,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  e[x]
  :val C[j]
@@ -2060,7 +2062,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  e[x]
  :val C[j]
@@ -2102,7 +2104,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  e[x]
  :val C[j]
@@ -2153,7 +2155,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2195,7 +2197,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2246,7 +2248,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2288,7 +2290,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2339,7 +2341,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  1
@@ -2381,7 +2383,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2432,7 +2434,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2474,7 +2476,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2525,7 +2527,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2567,7 +2569,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2618,7 +2620,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -2660,7 +2662,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2711,7 +2713,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -2753,7 +2755,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2804,7 +2806,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -2846,7 +2848,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2897,7 +2899,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  2
@@ -2939,7 +2941,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -2990,8 +2992,8 @@
  :val  true
  :val  true
  :val  true
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val B[j]
  :val  4
  :val  a[x]
@@ -3032,8 +3034,8 @@
  :val  true
  :val v[j]
  :val  true
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val B[j]
  :val C[j]
  :val D[j]
@@ -3074,8 +3076,8 @@
  :val  true
  :val v[j]
  :val  v[j]
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val B[j]
  :val C[j]
  :val D[j]
@@ -3125,7 +3127,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  4
@@ -3167,7 +3169,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3218,7 +3220,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  e[x]
  :val  4
@@ -3260,7 +3262,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  e[x]
  :val C[j]
@@ -3312,7 +3314,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -3354,7 +3356,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3406,7 +3408,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  4
@@ -3448,7 +3450,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3490,7 +3492,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3541,7 +3543,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3583,7 +3585,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3634,7 +3636,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -3676,7 +3678,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3727,7 +3729,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -3769,7 +3771,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3820,7 +3822,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -3862,7 +3864,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -3913,7 +3915,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  3
@@ -3955,7 +3957,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -4260,7 +4262,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  true) (=  b[x]  2) (=  z[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  true) (=  b[x]  2) (=  zz[x]  false) 
 :uguard (=  v[j]  false) 
 :numcases 2
 :case (= x j)
@@ -4354,7 +4356,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  true) (not (=  b[x]  2) ) (=  z[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  true) (not (=  b[x]  2) ) (=  zz[x]  false) 
 :uguard (=  v[j]  false) 
 :numcases 2
 :case (= x j)
@@ -4448,7 +4450,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  false) (=  z[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  t[x] x) (=  q[x]  false) (=  zz[x]  false) 
 :uguard (=  v[j]  false) 
 :numcases 2
 :case (= x j)
@@ -5710,7 +5712,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  true) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  true) 
 :numcases 4
 :case (= x j)
  :val a[j]
@@ -5887,7 +5889,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  true) (=  s[x]  false) 
 :numcases 3
 :case (= x j)
  :val a[j]
@@ -6022,7 +6024,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  true) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  true) 
 :numcases 3
 :case (= x j)
  :val a[j]
@@ -6157,7 +6159,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  true) (not (=  b[x]  2) ) (=  u[x]  false) (=  s[x]  false) 
 :numcases 3
 :case (= x j)
  :val a[j]
@@ -7460,7 +7462,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  true) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  true) 
 :numcases 4
 :case (= x j)
  :val a[j]
@@ -7637,7 +7639,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  false) (=  u[x]  true) (=  s[x]  false) 
 :numcases 3
 :case (= x j)
  :val a[j]
@@ -7772,7 +7774,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  true) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  true) 
 :numcases 3
 :case (= x j)
  :val a[j]
@@ -7907,7 +7909,7 @@
 :transition
 :var x
 :var j
-:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  z[x]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  false) 
+:guard (=  `[x]  2) (not (=  a[x] x) ) (=  C[x]  3) (=  D[x]  a[x]) (=  p[x]  false) (=  r[x]  false) (=  s[x]  true) (=  t[x] x) (=  zz[x]  true) (=  q[x]  false) (=  u[x]  false) (=  s[x]  false) 
 :numcases 3
 :case (= x j)
  :val a[j]
@@ -8161,7 +8163,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  6
@@ -8203,7 +8205,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8254,7 +8256,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8296,7 +8298,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8347,7 +8349,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8389,7 +8391,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8441,7 +8443,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  5
@@ -8483,7 +8485,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8525,7 +8527,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8576,7 +8578,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  h[x]
  :val C[j]
@@ -8618,7 +8620,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  h[x]
  :val C[j]
@@ -8669,7 +8671,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  h[x]
  :val C[j]
@@ -8711,7 +8713,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  h[x]
  :val C[j]
@@ -8762,7 +8764,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  1
@@ -8804,7 +8806,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8855,7 +8857,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  1
@@ -8897,7 +8899,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8948,7 +8950,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -8990,7 +8992,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9041,7 +9043,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val  1
@@ -9083,7 +9085,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9134,7 +9136,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9176,7 +9178,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9227,7 +9229,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9269,7 +9271,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9321,7 +9323,7 @@
  :val u[j]
  :val v[j]
  :val  false
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9363,7 +9365,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9414,7 +9416,7 @@
  :val u[j]
  :val v[j]
  :val  false
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9456,7 +9458,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9508,7 +9510,7 @@
  :val u[j]
  :val v[j]
  :val  false
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9550,7 +9552,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9602,7 +9604,7 @@
  :val u[j]
  :val v[j]
  :val  false
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9644,7 +9646,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9696,7 +9698,7 @@
  :val u[j]
  :val v[j]
  :val  false
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9738,7 +9740,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9789,7 +9791,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  J[x]
  :val C[j]
@@ -9831,7 +9833,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val  J[x]
  :val C[j]
@@ -9882,7 +9884,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9924,7 +9926,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -9975,7 +9977,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10017,7 +10019,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10161,8 +10163,8 @@
  :val  true
  :val  true
  :val  true
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val  W[x]
  :val C[j]
  :val D[j]
@@ -10203,8 +10205,8 @@
  :val  true
  :val  true
  :val  true
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val  W[x]
  :val C[j]
  :val D[j]
@@ -10245,8 +10247,8 @@
  :val  true
  :val  v[j]
  :val  v[j]
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val  W[x]
  :val C[j]
  :val D[j]
@@ -10296,8 +10298,8 @@
  :val  true
  :val  v[j]
  :val  v[j]
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val  W[x]
  :val C[j]
  :val D[j]
@@ -10338,8 +10340,8 @@
  :val  true
  :val  true
  :val  true
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val  W[x]
  :val C[j]
  :val D[j]
@@ -10380,8 +10382,8 @@
  :val  true
  :val  v[j]
  :val  v[j]
- :val z[j]
- :val  z[x]
+ :val zz[j]
+ :val  zz[x]
  :val  W[x]
  :val C[j]
  :val D[j]
@@ -10431,7 +10433,7 @@
  :val u[j]
  :val  false
  :val  false
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10473,7 +10475,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10617,7 +10619,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10659,7 +10661,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10710,7 +10712,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
@@ -10752,7 +10754,7 @@
  :val u[j]
  :val v[j]
  :val w[j]
- :val z[j]
+ :val zz[j]
  :val A[j]
  :val B[j]
  :val C[j]
