@@ -332,8 +332,12 @@ let create_init_instances (iargs, l_init) =
             let dnf_sa, dnf_ar = 
               List.fold_left (fun (dnf_sa, dnf_ar) init ->
               let sa = SAtom.subst sigma init in
-              let ar = ArrayAtom.of_satom sa in
-              sa :: dnf_sa, ar :: dnf_ar
+              try
+                let sa = Cube.simplify_atoms sa in
+                let ar = ArrayAtom.of_satom sa in
+                sa :: dnf_sa, ar :: dnf_ar
+              with Exit (* sa = False, don't add this conjunct*) ->
+                dnf_sa, dnf_ar
             ) ([],[]) l_init in
             dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
           ) ([],[]) (Variable.all_instantiations iargs vars) in
@@ -342,6 +346,23 @@ let create_init_instances (iargs, l_init) =
         v_acc) [] Variable.procs)
     end;
   init_instances
+
+
+let debug_init_instances insts =
+  Hashtbl.iter
+    (fun nbp (cdnf, _) ->
+     Pretty.print_double_line err_formatter ();
+     eprintf "%d PROCS :\n" nbp;
+     Pretty.print_line err_formatter ();
+     List.iter
+       (fun dnf ->
+        List.iter (eprintf "( %a ) ||@." SAtom.print_inline) dnf;
+        eprintf "@.";
+       ) cdnf;
+     Pretty.print_double_line err_formatter ();
+     eprintf "@.";
+    ) insts
+
 
 let create_node_rename kind vars sa =
   let sigma = Variable.build_subst vars Variable.procs in
@@ -395,12 +416,14 @@ let system s =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
-
+  let init_instances = create_init_instances init_woloc in
+  if Options.debug && Options.verbose > 0 then
+    debug_init_instances init_instances;
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
     t_init = init_woloc;
-    t_init_instances = create_init_instances init_woloc;
+    t_init_instances = init_instances;
     t_invs = invs_woloc;
     t_unsafe = unsafe_woloc;
     t_trans = List.map add_tau s.trans;
