@@ -254,7 +254,7 @@ module AltErgo = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let rec sd acc = function
       | [] -> assert false
-      | [d] -> acc, d
+      | [d] -> List.rev acc, d
       | s::r -> sd (s::acc) r in
     let swts, (_, default) = sd [] swts in
     fprintf fmt "forall %a:int.\n" print_args args;
@@ -737,7 +737,7 @@ module Why3 = struct
        fprintf fmt "%a' %a = %a"
 	       print_name a print_args args (print_term ~prime:false) default
     | (cond, t) :: r ->
-       fprintf fmt "if %a then\n %a' %a = %a\nelse %a"
+       fprintf fmt "if %a then\n %a' %a = %a\nelse@? %a"
 	       (print_satom ~prime:false) cond
 	       print_name a print_args args (print_term ~prime:false) t
 	       print_ite (a, args, r, default)
@@ -745,7 +745,7 @@ module Why3 = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let rec sd acc = function
       | [] -> assert false
-      | [d] -> acc, d
+      | [d] -> List.rev acc, d
       | s::r -> sd (s::acc) r in
     let swts, (_, default) = sd [] swts in
     fprintf fmt "forall %a:int.\n" print_args args;
@@ -1014,6 +1014,27 @@ module Why3 = struct
     fprintf fmt "\nend\n\n@.";
     name
 
+  let theory_invariants_preds fmt s visited imports =
+    let hinv_names = NH.create (List.length visited) in
+    let name = (capital_base file)^"_invpreds" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    List.iter
+      (fun n ->
+       let invn = "invariant"^(if n.tag < 0 then "X" else "")^
+                    (string_of_int (abs n.tag)) in
+       let invn' = invn^"'" in
+       NH.add hinv_names n (invn, invn');
+      ) visited;
+    NH.iter (fun n (invn, invn') ->
+      fprintf fmt "predicate %s =\n\
+                   %a\n@." invn (print_invnode ~prime:false) n;
+      fprintf fmt "predicate %s =\n\
+                   %a\n@." invn' (print_invnode ~prime:true) n;
+    ) hinv_names;
+    fprintf fmt "\nend\n\n@.";
+    name, hinv_names
+
 
   let uniq_name n hn =
     let ltr = Hashtbl.fold (fun _ trn acc -> trn :: acc) hn [] in
@@ -1053,6 +1074,26 @@ module Why3 = struct
     fprintf fmt "\nend\n\n@.";
     name
 
+  let theory_transition_preds fmt s imports =
+    let tr_names = Hashtbl.create (List.length s.t_trans) in
+    let name = (capital_base file)^"_trdefs" in
+    fprintf fmt "theory %s\n@." name;
+    add_imports fmt s imports;
+    List.iter (fun tr ->
+      let trn = "transition__"^(Hstring.view tr.tr_info.tr_name) in
+      let trn = uniq_name trn tr_names in
+      Hashtbl.add tr_names tr trn;
+    ) s.t_trans;
+    Hashtbl.iter (fun tr trn ->
+      fprintf fmt "predicate %s =\n\
+                   %a\n@." trn (print_transition s) tr;
+    ) tr_names;
+    let ltr = Hashtbl.fold (fun _ trn acc -> trn :: acc) tr_names [] in
+    fprintf fmt "predicate tau =\n\
+                 (%a)\n@." (print_str_list_sep " \\/ ") ltr;
+    fprintf fmt "\nend\n\n@.";
+    name, tr_names
+
   let theory_init fmt s inv_names imports =
     let name = (capital_base file)^"_initialisation" in
     fprintf fmt "theory %s\n@." name;
@@ -1063,6 +1104,18 @@ module Why3 = struct
                  init -> (%a)\n@." (print_str_list_sep " /\\ ") invns;
     fprintf fmt "\nend\n\n@.";
     name
+
+
+  let remove_definitions fmt inv_names tr_names =
+    NH.iter (fun _ (p, p') ->
+             fprintf fmt "meta remove_logic predicate %s\n" p;
+             fprintf fmt "meta remove_logic predicate %s\n" p';
+            ) inv_names;
+    Hashtbl.iter (fun _ trn ->
+                  fprintf fmt "meta remove_logic predicate %s\n" trn;
+                 ) tr_names;
+    fprintf fmt "meta remove_logic predicate tau\n@."
+
 
   let theory_property fmt s inv_names imports =
     let name = (capital_base file)^"_property" in
@@ -1076,10 +1129,11 @@ module Why3 = struct
     fprintf fmt "\nend\n\n@.";
     name
 
-  let theory_preservation fmt s inv_names imports =
+  let theory_preservation fmt s inv_names tr_names imports =
     let name = (capital_base file)^"_preservation" in
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s imports;
+    (* remove_definitions fmt inv_names tr_names; *)
     let invns, invns' =
       NH.fold (fun _ (invn, invn') (acc, acc') ->
                invn :: acc, invn' :: acc') inv_names ([], []) in
@@ -1090,13 +1144,29 @@ module Why3 = struct
     fprintf fmt "\nend\n\n@.";
     name
 
-  let add_lemma_hints fmt s hints inv_names imports =
+
+  let remove_unused fmt used s inv_names =
+    let usedn = List.map (fun n -> fst (NH.find inv_names n)) used in
+    let sn' = snd (NH.find inv_names s) in
+    let allu = sn'::usedn in
+    NH.iter (fun _ (p, p') ->
+             if not (List.mem p allu) then
+               fprintf fmt "meta remove_prop prop %s_def\n" p;
+             if not (List.mem p' allu) then
+               fprintf fmt "meta remove_prop prop %s_def\n" p';
+            ) inv_names;
+    fprintf fmt "@."
+            
+      
+
+  let add_lemma_hints fmt clean s hints inv_names imports =
     let cpt = ref 0 in
     NodeMap.fold (fun n used acc ->
                   incr cpt;
                   let name = (capital_base file)^"_hint_"^(string_of_int !cpt) in
                   fprintf fmt "theory %s\n@." name;
                   add_imports fmt s imports;
+                  if clean then remove_unused fmt used n inv_names;
                   fprintf fmt "lemma hint_%d:\n" !cpt;
                   lemma_hint fmt n used inv_names;
                   fprintf fmt "@.";
@@ -1125,7 +1195,8 @@ module Why3 = struct
        let used =
          List.fold_left
            (fun used p ->
-            match Fixpoint.pure_smt_check p visited with
+            (* match Fixpoint.pure_smt_check p visited with *)
+            match Fixpoint.check p visited with
             | None -> assert false
             | Some db -> 
                let db = List.filter (fun id -> not (id = p.tag)) db in
@@ -1148,14 +1219,14 @@ module Why3 = struct
     hints
 
 
-  let theories_hints fmt s visited inv_names imports =
+  let theories_hints fmt ?(clean=false) s visited inv_names imports =
     (* fprintf fmt "\naxiom transition_relation:@."; *)
     (* fprintf fmt "%a\n@." transition_relation s; *)
     let hints = extract_hints s visited in
-    add_lemma_hints fmt s hints inv_names imports
+    add_lemma_hints fmt clean s hints inv_names imports
 
 
-  let certificate s visited =
+  let certificate_w_axioms s visited =
     let bench = Filename.chop_extension (Filename.basename file) in
     let why_certif = out_trace^"/"^bench^"_certif.why" in
     let cout = open_out why_certif in
@@ -1167,11 +1238,30 @@ module Why3 = struct
     let thtau_def = theory_transition_def fmt s tr_names [decls; thtau] in
     ignore(theory_init fmt s inv_names [decls; thinv; thinv_def]);
     ignore(theory_property fmt s inv_names [decls; thinv; thinv_def]);
-    let thhints = theories_hints fmt s visited inv_names
+    let thhints = theories_hints fmt ~clean:true s visited inv_names
                   [decls; thinv; thinv_def; thtau; thtau_def] in
-    ignore (theory_preservation fmt s inv_names ([decls; thinv; thtau] @ thhints));
+    ignore (theory_preservation fmt s inv_names tr_names ([decls; thinv; thtau] @ thhints));
     flush cout; close_out cout;
     printf "Why3 certificate created in %s@." why_certif
+
+
+  let certificate_w_predicates s visited =
+    let bench = Filename.chop_extension (Filename.basename file) in
+    let why_certif = out_trace^"/"^bench^"_certif.why" in
+    let cout = open_out why_certif in
+    let fmt = formatter_of_out_channel cout in
+    let decls = theory_decls fmt s in
+    let thinv, inv_names = theory_invariants_preds fmt s visited [decls] in
+    let thtau, tr_names = theory_transition_preds fmt s [decls] in
+    ignore(theory_init fmt s inv_names [decls; thinv]);
+    ignore(theory_property fmt s inv_names [decls; thinv]);
+    let thhints = theories_hints fmt s visited inv_names
+                  [decls; thinv; thtau] in
+    ignore (theory_preservation fmt s inv_names tr_names ([decls; thinv; thtau] @ thhints));
+    flush cout; close_out cout;
+    printf "Why3 certificate created in %s@." why_certif
+
+  let certificate = certificate_w_predicates
 
 end
 

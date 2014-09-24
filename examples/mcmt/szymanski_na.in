@@ -1,7 +1,9 @@
 
-
 :smt (define-type locations (subrange 0 7))
 :smt (define N::nat)
+:comment :smt (define-type proc (subrange 0 N))
+
+:index nat
 
 :local a locations
 :local s bool
@@ -9,14 +11,48 @@
 :local b bool
 :local cpt nat
 
+:system_axiom
+:var x
+:cnj  (<  0  N)
+
+:system_axiom
+:var x
+:cnj  (<=  x N)
+
+:system_axiom
+:var x
+:cnj  (<=  cpt[x] N)
+
+:suggested_negated_invariants
+:var z1
+:var z2
+:cnj  (<  N cpt[z1])
+:cnj (= a[z1] 7) (s[z1] false)
+:cnj (= a[z1] 6) (s[z1] false)
+:cnj (= a[z1] 5) (= s[z1] false)
+:cnj (= a[z1] 3)  (= w[z1] false)
+:cnj (= a[z1] 4)  (= w[z1] false)
+:cnj (= a[z1] 2)  (= s[z1] true)
+:cnj (= a[z1] 2)  (= b[z1] true)
+:cnj (= a[z1] 2)  (= w[z1] true)
+:cnj (= a[z1] 7)  (= a[z2] 3)
+:cnj (= a[z1] 7)  (= a[z2] 4)
+:cnj (= a[z1] 6)  (= a[z2] 3)
+:cnj (= a[z1] 6)  (= a[z2] 4)
+:cnj (= a[z1] 6)  (= a[z2] 2)
+:cnj (= a[z1] 5)  (= a[z2] 2)
+:cnj (= a[z1] 2)  (not (= cpt[z1] 0))
+:cnj (= a[z1] 1)  (not (= cpt[z1] 0))
+
+:end_of_suggested_negated_invariants
+
 :initial 
 :var x
 :cnj (= a[x] 0) (= s[x] false) (= w[x] false) (= b[x] false) (= cpt[x] 0)
+
  
-:unsafe 
-:var x 
-:var y
-:cnj (= a[x] 7)  (= a[y] 7)
+:u_cnj  (<  N cpt[z1])
+:u_cnj (= a[z1] 7)  (= a[z2] 7)
 :comment (< x y)
  
 
@@ -81,7 +117,7 @@
  :val b[j]
  :val cpt[j] 
 
- 
+
 :comment t3_abort_for
 :transition
 :var x
@@ -302,8 +338,6 @@
  :val b[j]
  :val cpt[j]
 
-
-
 :comment t7
 :transition
 :var x
@@ -324,3 +358,5 @@
  :val cpt[j]
 
 
+:display_accelerated_transitions
+:determine_bounds

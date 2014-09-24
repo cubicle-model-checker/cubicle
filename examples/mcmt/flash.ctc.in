@@ -101,7 +101,7 @@
 :map_back Sort
 :local ` sort
 
-
+:eevar ! int
 
 
 
@@ -115,19 +115,19 @@
 
 :u_cnj (=  n[z1]  3) (=  n[z2]  3) 
 
-:u_cnj (=  r[z1]  false) (not (=  B[z1]  Y[z1]) ) 
+:comment :u_cnj (=  r[z1]  false) (not (=  B[z1]  Y[z1]) ) 
 
-:u_cnj (=  d[z1]  3) (not (=  e[z1]  Y[z1]) ) 
+:comment :u_cnj (=  d[z1]  3) (not (=  e[z1]  Y[z1]) ) 
 
-:u_cnj (=  n[z1]  3) (not (=  o[z1]  Y[z1]) ) 
+:comment :u_cnj (=  n[z1]  3) (not (=  o[z1]  Y[z1]) ) 
 
-:u_cnj (=  d[z1]  2) (=  _[z1]  true) (not (=  e[z1]  Z[z1]) ) 
+:comment :u_cnj (=  d[z1]  2) (=  _[z1]  true) (not (=  e[z1]  Z[z1]) ) 
 
-:u_cnj (=  n[z1]  2) (=  _[z1]  true) (not (=  o[z1]  Z[z1]) ) 
+:comment :u_cnj (=  n[z1]  2) (=  _[z1]  true) (not (=  o[z1]  Z[z1]) ) 
 
-:u_cnj (=  d[z1]  2) (=  _[z1]  false) (not (=  e[z1]  Y[z1]) ) 
+:comment :u_cnj (=  d[z1]  2) (=  _[z1]  false) (not (=  e[z1]  Y[z1]) ) 
 
-:u_cnj (=  n[z1]  2) (=  _[z1]  false) (not (=  o[z1]  Y[z1]) ) 
+:comment :u_cnj (=  n[z1]  2) (=  _[z1]  false) (not (=  o[z1]  Y[z1]) ) 
 
 
 

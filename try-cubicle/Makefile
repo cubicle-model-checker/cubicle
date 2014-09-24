@@ -1,7 +1,8 @@
 include ./Makefile.config 
 
+LWT_DIR=$(shell ocamlfind query lwt)
 INCLUDES= -I lib-num  -I src/common/ -I src/smt/ -I src/
-JS_INCLUDE=-I $(JS_DIR)/
+JS_INCLUDE= -I $(LWT_DIR) -I $(JS_DIR)/
 
 OCAMLC=ocamlc.opt -g -annot $(INCLUDES)  $(JS_INCLUDE) $(CAMLP4)
 OCAMLLEX=ocamllex.opt
@@ -26,17 +27,20 @@ NUM_CMOS=\
         lib-num/ratio.cmo \
 	lib-num/num.cmo
 
-CUBICLE_CMOS = gc.cmo $(addprefix src/,functory.cmo $(filter-out main.cmo common/bitv.cmo, $(CMO)))
+CUBICLE_CMOS = $(subst src/stats.cmo, stats.cmo,\
+	       gc.cmo $(addprefix src/,functory.cmo \
+	       $(filter-out main.cmo common/bitv.cmo, $(CMO))))
 
 # CUBGENERATED = $(addprefix src/, $(GENERATED))
 
 main_js.com:main_js.ml
 	$(OCAMLC) -c $(JS_INCLUDE) $(CAMLP4) main_js.ml
 
-ALL_CMOS= $(NUM_CMOS) $(CUBICLE_CMOS) main_js.cmo
+ALL_CMOS= $(NUM_CMOS) js_helper.cmo $(CUBICLE_CMOS) main_js.cmo
 
 cubicle_js.byte: $(ALL_CMOS)
-	$(OCAMLC) $(JS_INCLUDE) js_of_ocaml.cma unix.cma -o cubicle_js.byte $(ALL_CMOS) 
+	$(OCAMLC) $(JS_INCLUDE) lwt.cma js_of_ocaml.cma unix.cma \
+	-o cubicle_js.byte $(ALL_CMOS) 
 
 web/cubicle.js: cubicle_js.byte $(JS_RUNTIME)
 	$(JS_COMP) -o web/cubicle.js $(JS_FLAGS) $(JS_RUNTIME) cubicle_js.byte
