@@ -42,6 +42,7 @@ val limit_forward_depth : bool
 val forward_depth : int
 val max_forward : int
 val max_cands : int
+val candidate_heuristic : int
 
 val abstr_num : bool
 val num_range : int * int

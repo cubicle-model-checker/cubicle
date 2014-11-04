@@ -231,6 +231,10 @@ let approx_arith a = match a with
 let approximations s =
   let args, sa = Node.variables s, Node.litterals s in
   let sorts_sa, sa = isolate_sorts sa in
+  (* Heuristics for generating candidates *)
+  let max_procs = enumerative in
+  let max_literals = max 2 (candidate_heuristic + 1) in
+  let max_ratio_arrays_after = (3, candidate_heuristic - 1) in
   let init = 
     SAtom.fold 
       (fun a acc ->
@@ -250,9 +254,9 @@ let approximations s =
          SSAtoms.fold
            (fun sa' acc ->
             let nsa = SAtom.add a sa' in
-            if Variable.Set.cardinal (SAtom.variables nsa) > enumerative then
+            if Variable.Set.cardinal (SAtom.variables nsa) > max_procs then
               acc
-            else if SAtom.cardinal nsa > max 2 (enumerative + 1) then acc
+            else if SAtom.cardinal nsa > max_literals then acc
             else SSAtoms.add nsa acc
            ) acc acc
       ) sa init
@@ -263,8 +267,8 @@ let approximations s =
       (fun sa' acc ->
        if SAtom.equal sa' sa then acc
        (* Heuristic : usefull for flash *)
-       else if SAtom.cardinal sa' >= 3 &&
-                 nb_arrays_sa sa' > enumerative - 1 then acc
+       else if SAtom.cardinal sa' >= fst max_ratio_arrays_after &&
+                 nb_arrays_sa sa' > snd max_ratio_arrays_after then acc
        (* else if List.length (Cube.args_of_atoms sa') > SAtom.cardinal sa' then
                acc *)
        else

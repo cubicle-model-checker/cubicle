@@ -56,6 +56,7 @@ let refine = ref false
 let stateless = ref false
 let max_cands = ref (-1)
 let max_forward = ref (-1)
+let candidate_heuristic = ref (-1)
 
 let abstr_num = ref false
 let num_range_low = ref 0
@@ -139,6 +140,8 @@ let specs =
                 "<d> Limit the number of states of the forward exploration to at most d";
     "-max-cands", Arg.Set_int max_cands,
                 "<d> Limit the number of candidates considered for approximationsto at most d";
+    "-candheur", Arg.Set_int candidate_heuristic,
+                "<d> set the heuristic used for generating candidate invariants (size measure d)";
     "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
                 "<low> <up> abstract numerical values in [<low>; <up>] during forward exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
@@ -200,6 +203,8 @@ let brab_up_to =
 
 let max_cands = !max_cands
 let max_forward = !max_forward
+let candidate_heuristic =
+  if !candidate_heuristic <> -1 then !candidate_heuristic else enumerative
 let forward_depth = !forward_depth
 let limit_forward_depth = forward_depth <> -1
 let localized = !localized
