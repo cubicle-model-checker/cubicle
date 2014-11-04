@@ -219,16 +219,27 @@ let nondets loc l =
 let assigns loc args = 
   let dv = ref [] in
   List.iter 
-    (fun (g, x) ->
+    (fun (g, gu) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g) loc;
        let ty_g = 
 	 try Smt.Symbol.type_of g
          with Not_found -> error (UnknownGlobal g) loc in
-       let ty_x = term loc args x in
-       unify loc ty_x ty_g;
-       assignment g x ty_x;
+       begin
+         match gu with
+         | UTerm x ->
+            let ty_x = term loc args x in
+            unify loc ty_x ty_g;
+            assignment g x ty_x;
+         | UCase swts ->
+            List.iter (fun (sa, x) ->
+              atoms loc args sa;
+              let ty_x = term loc args x in
+              unify loc ty_x ty_g;
+              assignment g x ty_x;
+            ) swts
+       end;         
        dv := g ::!dv)
-    
+
 let switchs loc a args ty_e l = 
   List.iter 
     (fun (sa, t) -> 
@@ -382,8 +393,15 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	List.map 
 	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
 	tr_assigns = 
-	List.map (fun (x, t) -> x, Term.subst sigma t) 
-	  tr.tr_assigns;
+	  List.map (function
+                     | x, UTerm t -> x, UTerm (Term.subst sigma t)
+                     | x, UCase swts ->
+                        let swts = 
+	                  List.map 
+		            (fun (sa, t) ->
+                             SAtom.subst sigma sa, Term.subst sigma t) swts in
+                        x, UCase swts
+	           ) tr.tr_assigns;
 	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 

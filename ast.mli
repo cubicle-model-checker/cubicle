@@ -31,11 +31,17 @@ type type_constructors = Hstring.t * (Hstring.t list)
     declaration of type [t] with two constructors [A] and [B]. If the
     list of constructors is empty, the type [t] is defined abstract. *)
 
+type swts = (SAtom.t * Term.t) list
+(** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
+
+type glob_update = UTerm of Term.t | UCase of swts
+(** Updates of global variables, can be a term or a case construct. *)
+
 type update = {
   up_loc : loc; (** location information *)
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
   up_arg : Variable.t list; (** list of universally quantified variables *)
-  up_swts : (SAtom.t * Term.t) list;
+  up_swts : swts;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
 }
 (** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
@@ -47,7 +53,7 @@ type transition_info = {
   tr_reqs : SAtom.t; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
-  tr_assigns : (Hstring.t * Term.t) list; (** updates of global variables *)
+  tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)

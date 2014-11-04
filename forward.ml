@@ -440,32 +440,40 @@ let wrapper_elim_prime p_init sa =
   Cube.simplify_atoms sa
 
 
-let apply_assigns assigns sigma =
-  List.fold_left 
-    (fun (nsa, terms) (h, t) ->
-      let nt = Elem (h, Glob) in
-      let t = Term.subst sigma t in
-      SAtom.add (Comp (nt, Eq, prime_term t)) nsa,
-      Term.Set.add nt terms)
-    (SAtom.empty, Term.Set.empty) assigns
-
-
-let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
+let swts_to_ites at swts sigma =
   let rec sd acc = function
     | [] -> assert false
     | [d] -> acc, d
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
-  let at = Access (a, lj) in
   let t = Term.subst sigma (prime_term t) in
   let default = Comp (at, Eq, t) in
-  let ites = 
-    List.fold_left (fun ites (sa, t) ->
-      let sa = SAtom.subst sigma (prime_satom sa) in
-      let t = Term.subst sigma (prime_term t) in
-      Ite (sa, Comp (at, Eq, t), ites)) default swts
-  in
+  List.fold_left (fun ites (sa, t) ->
+    let sa = SAtom.subst sigma (prime_satom sa) in
+    let t = Term.subst sigma (prime_term t) in
+    Ite (sa, Comp (at, Eq, t), ites)
+  ) default swts
+
+
+let apply_assigns assigns sigma =
+  List.fold_left 
+    (fun (nsa, terms) (h, gu) ->
+      let nt = Elem (h, Glob) in
+      let sa = 
+        match gu with
+        | UTerm t -> 
+           let t = Term.subst sigma t in
+           Comp (nt, Eq, prime_term t)
+        | UCase swts -> swts_to_ites nt swts sigma
+      in
+      SAtom.add sa nsa, Term.Set.add nt terms)
+    (SAtom.empty, Term.Set.empty) assigns
+
+
+let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
+  let at = Access (a, lj) in
+  let ites = swts_to_ites at swts sigma in
   let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun (sa, st) li ->
     let sigma = List.combine lj li in

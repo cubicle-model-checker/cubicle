@@ -30,7 +30,7 @@
 
 
   type t = 
-    | Assign of Hstring.t * Term.t
+    | Assign of Hstring.t * glob_update
     | Nondet of Hstring.t
     | Upd of update
 
@@ -267,7 +267,8 @@ assign_nondet_update:
 ;
 
 assignment:
-  | mident AFFECT term    { Assign ($1, $3) }
+  | mident AFFECT term { Assign ($1, UTerm $3) }
+  | mident AFFECT CASE switchs { Assign ($1, UCase $4) }
 ;
 
 nondet:

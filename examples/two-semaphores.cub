@@ -28,19 +28,34 @@ requires { A[x] = L4 }
 { D := 1;
   A[j] := case | j = x : L1 | _ : A[j]; }
 
-transition t5 (x)
-requires { B = L1 }
-{ B := L2; }
+(* transition t5 (x) *)
+(* requires { B = L1 } *)
+(* { B := L2; } *)
 
 transition t6 (x)
 requires { B = L2 && 0 < D }
 { D := D - 1;
   A[j] := case | _ : L3; }
 
-transition t7 (x)
-requires { B = L3 }
-{ B := L4; }
+(* transition t7 (x) *)
+(* requires { B = L3 } *)
+(* { B := L4; } *)
 
-transition t8 (x)
-requires { B = L4 }
-{ B := L1; C := C + 1; }
+(* transition t8 (x) *)
+(* requires { B = L4 } *)
+(* { B := L1; C := C + 1; } *)
+
+
+transition t5_7_8 (x)
+requires { B <> L2 }
+{
+  B := case
+       | B = L1 : L2
+       | B = L3 : L4
+       | B = L4 : L1
+       | _ : B;
+
+  C := case
+       | B = L4 : C + 1
+       | _ : C;       
+}

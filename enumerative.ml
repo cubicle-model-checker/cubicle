@@ -495,20 +495,63 @@ let trivial_conds env l =
     with 
       | Exit -> Trivial false
 
-let assigns_to_actions env sigma acc =
-  List.fold_left 
-    (fun acc (h, t) ->
-      let nt = Elem (h, Glob) in
-      let t = Term.subst sigma t in
-      try 
-        let a = match t with
+let swts_to_stites env at sigma swts =
+  let rec sd acc = function
+    | [] -> assert false
+    | [d] -> acc, d
+    | s::r -> sd (s::acc) r in
+  let swts, (d, t) = sd [] swts in
+  (* assert (d = SAtom.singleton True); *)
+  let t = Term.subst sigma t in
+  let default =
+    try match t with
+        | Arith (t', cs) ->
+           St_arith (HT.find env.id_terms at,
+                     HT.find env.id_terms t', int_of_consts cs)            
+        | _ ->
+           St_assign (HT.find env.id_terms at, HT.find env.id_terms t)
+    with Not_found -> St_ignore
+  in
+  List.fold_left (fun ites (sa, t) ->
+    let sa = SAtom.subst sigma sa in
+    let t = Term.subst sigma t in
+    let sta = 
+      try match t with
           | Arith (t', cs) ->
-              St_arith (HT.find env.id_terms nt, HT.find env.id_terms t', int_of_consts cs)
+             St_arith (HT.find env.id_terms at, 
+                       HT.find env.id_terms t', int_of_consts cs)
           | _ ->
-              St_assign (HT.find env.id_terms nt, HT.find env.id_terms t)
-        in a :: acc
-      with Not_found -> acc
-    ) acc
+             St_assign (HT.find env.id_terms at, HT.find env.id_terms t)
+      with Not_found -> St_ignore
+    in
+    let conds = satom_to_st_req env sa in
+    match trivial_conds env conds with
+    | Trivial true -> sta
+    | Trivial false -> ites
+    | Not_trivial -> St_ite (satom_to_st_req env sa, sta, ites)
+  ) default swts
+
+
+let assigns_to_actions env sigma acc tr_assigns =
+  List.fold_left 
+    (fun acc (h, gu) ->
+      let nt = Elem (h, Glob) in
+      match gu with
+      | UTerm t ->
+         let t = Term.subst sigma t in
+         begin
+           try 
+             let a = match t with
+               | Arith (t', cs) ->
+                  St_arith (HT.find env.id_terms nt,
+                            HT.find env.id_terms t', int_of_consts cs)
+               | _ ->
+                  St_assign (HT.find env.id_terms nt, HT.find env.id_terms t)
+             in a :: acc
+           with Not_found -> acc
+         end
+      | UCase swts -> swts_to_stites env nt sigma swts :: acc
+    ) acc tr_assigns
 
 let nondets_to_actions env sigma acc =
   List.fold_left 
@@ -520,46 +563,11 @@ let nondets_to_actions env sigma acc =
 
 let update_to_actions procs sigma env acc
     {up_arr=a; up_arg=lj; up_swts=swts} =
-  let rec sd acc = function
-    | [] -> assert false
-    | [d] -> acc, d
-    | s::r -> sd (s::acc) r in
-  let swts, (d, t) = sd [] swts in
-  (* assert (d = SAtom.singleton True); *)
   let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun acc li ->
     let sigma = (List.combine lj li) @ sigma in
     let at = Access (a, li) in
-    let t = Term.subst sigma t in
-    let default =
-      try match t with
-        | Arith (t', cs) ->
-            St_arith (HT.find env.id_terms at,
-                      HT.find env.id_terms t', int_of_consts cs)            
-        | _ ->
-            St_assign (HT.find env.id_terms at, HT.find env.id_terms t)
-      with Not_found -> St_ignore
-    in
-    let ites = 
-      List.fold_left (fun ites (sa, t) ->
-	let sa = SAtom.subst sigma sa in
-	let t = Term.subst sigma t in
-	let sta = 
-          try match t with
-            | Arith (t', cs) ->
-                St_arith (HT.find env.id_terms at, 
-                          HT.find env.id_terms t', int_of_consts cs)
-            | _ ->
-                St_assign (HT.find env.id_terms at, HT.find env.id_terms t)
-	  with Not_found -> St_ignore
-	in
-	let conds = satom_to_st_req env sa in
-	match trivial_conds env conds with
-	  | Trivial true -> sta
-	  | Trivial false -> ites
-	  | Not_trivial -> St_ite (satom_to_st_req env sa, sta, ites)
-      ) default swts
-    in ites :: acc
+    swts_to_stites env at sigma swts :: acc
   ) acc indexes
 
 let missing_reqs_to_actions acct =
