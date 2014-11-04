@@ -25,7 +25,14 @@ module FixpointList : sig
   val pure_smt_check : Node.t -> Node.t list -> int list option
   (** Same as [check] but only uses the SMT solver. Only use for benchmarking
       purposes or for reference implementation. *)
+end
 
+module FixpointCertif : sig
+
+  val useful_instances : Node.t -> Node.t list -> (Node.t * Variable.subst) list
+  (** Returns the cube instances that were useful in proving the fixpoint.
+      Raises Assertion_failure if it is not a fixpoint.
+      (Useful for certificates) *)
 end
 
 (** Fixpoint tests on trie structures *)

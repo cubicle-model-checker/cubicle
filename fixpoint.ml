@@ -142,6 +142,145 @@ end = struct
 
 end
 
+
+(*************** Certificates from fixpoints  *******************)
+
+
+module FixpointCertif : sig
+
+  val useful_instances : Node.t -> Node.t list -> (Node.t * Variable.subst) list
+
+end = struct
+
+  type env = {
+      mutable hid_cubes : (int, (Node.t * Variable.subst)) Hashtbl.t;
+      mutable cur_id : int;
+    }
+               
+  let empty_env = {
+      hid_cubes = Hashtbl.create 17;
+      cur_id = 0
+    }
+                    
+  let fresh_id env =
+    env.cur_id <- env.cur_id + 1;
+    env.cur_id + 1
+
+  let assume_node env n sigma a =
+    let nid = fresh_id env in
+    Hashtbl.add env.hid_cubes nid (n, sigma);
+    Prover.assume_node { n with tag = nid } a
+
+  let check_fixpoint env ?(pure_smt=false) n visited =
+    Prover.assume_goal n;
+    let n_array = n.cube.Cube.array in
+    let nodes = 
+      List.fold_left
+        (fun nodes vis_n ->
+         let vis_cube = vis_n.cube in
+         let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
+         List.fold_left
+	   (fun nodes ss ->
+	    let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
+	    if not pure_smt && ArrayAtom.subset vis_renamed n_array then
+	        begin
+                  let nid = fresh_id env in
+                  Hashtbl.add env.hid_cubes nid (vis_n, ss);
+                  raise (Fixpoint [nid])
+                end
+	    (* Heuristic : throw away nodes too much different *)
+	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+	    (* line below useful for arith : ricart *)
+	    else if not pure_smt &&
+                      Cube.inconsistent_2arrays vis_renamed n_array then nodes
+	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
+              (vis_n, ss, vis_renamed)::nodes
+	    else (assume_node env vis_n ss vis_renamed; nodes)
+	   ) nodes d
+        ) [] visited
+    in
+    TimeSort.start ();
+    let nodes = 
+      List.fast_sort 
+        (fun (n1,_,a1) (n2,_,a2) -> ArrayAtom.compare_nb_common n_array a1 a2) 
+        nodes 
+    in
+    TimeSort.pause ();
+    List.iter (fun (vn, ss, ar_renamed) ->
+               assume_node env vn ss ar_renamed) nodes
+
+
+  let easy_fixpoint env s nodes =
+    if delete && (s.deleted || Node.has_deleted_ancestor s)
+    then Some []
+    else
+      let db = ref None in
+      let ars = Node.array s in
+      ignore (List.exists 
+	        (fun sp -> 
+		 if ArrayAtom.subset (Node.array sp) ars then
+	           begin
+                     let nid = fresh_id env in
+                     let vars = Node.variables sp in
+                     let ss = Variable.build_subst vars vars in
+                     Hashtbl.add env.hid_cubes nid (sp, ss);
+                     db := Some [nid]; true
+                   end
+		 else false
+                ) nodes);
+      !db
+
+  let hard_fixpoint env s nodes =
+    try
+      check_fixpoint env s nodes;
+      None
+    with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+
+
+  let pure_smt_check env s nodes =
+    try
+      check_fixpoint env ~pure_smt:true s nodes;
+      None
+    with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+                           
+
+  let check env s visited =
+    Debug.unsafe s;
+    TimeFix.start ();
+    let r = 
+      match easy_fixpoint env s visited with
+      | None -> hard_fixpoint env s visited
+      | r -> r
+    in
+    TimeFix.pause ();
+    r
+
+  let useful_instances s visited =
+    let env = {
+        hid_cubes = Hashtbl.create (3 * (List.length visited));
+        cur_id = s.tag
+      } in
+    match check env s visited with
+    | None -> assert false
+    | Some db ->
+       (* eprintf "\n> mon id %d \n" s.tag; *)
+       (* List.iter (eprintf "\n>%d ") db; eprintf "@."; *)
+       let db = List.filter (fun id -> not (id = s.tag)) db in
+       (* List.iter (eprintf "\n>>%d ") db; eprintf "@."; *)
+       (* Hashtbl.iter (fun id (n, sigma) ->  *)
+       (*               eprintf "id:%d == %d[%a]@." id n.tag *)
+       (*                       Variable.print_subst sigma) env.hid_cubes; *)
+       List.map (Hashtbl.find env.hid_cubes) db
+
+
+end
+
 (*************** Operations with tries () *******************)
 
 module FixpointTrie : sig
