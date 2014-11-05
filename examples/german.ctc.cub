@@ -102,16 +102,10 @@ requires { Curcmd = Empty && Chan1Cmd[i] = Reqe }
   Invset[j] := case | _ : Shrset[j];
 }
 
-transition sendInv1 (i)
-requires { Chan2Cmd[i] = Empty && Invset[i] = True && Curcmd = Reqe }
-{
-  Chan2Cmd[i] := Inv;
-  Invset[i] := False;
-}
-
-transition sendInv2 (i)
-requires { Chan2Cmd[i] = Empty && Invset[i] = True && Curcmd = Reqs &&
-           Exgntd = True }
+transition sendInv (i)
+requires {  Chan2Cmd[i] = Empty && Invset[i] = True && Curcmd = Reqe
+         || Chan2Cmd[i] = Empty && Invset[i] = True && Curcmd = Reqs &&
+            Exgntd = True }
 {
   Chan2Cmd[i] := Inv;
   Invset[i] := False;
@@ -129,20 +123,20 @@ requires { Chan2Cmd[i] = Inv && Chan3Cmd[i] = Empty }
   CacheState[i] := Invalid;
 }
 
-transition recvInvack1 (i)
-requires { Chan3Cmd[i] = Invack && Curcmd <> Empty && Exgntd = False } 
-{
-  Chan3Cmd[i] := Empty;
-  Shrset[i] := False;
-}
+(* transition recvInvack1 (i) *)
+(* requires { Chan3Cmd[i] = Invack && Curcmd <> Empty && Exgntd = False }  *)
+(* { *)
+(*   Chan3Cmd[i] := Empty; *)
+(*   Shrset[i] := False; *)
+(* } *)
 
-transition recvInvack2 (i)
-requires { Chan3Cmd[i] = Invack && Curcmd <> Empty && Exgntd = True } 
+transition recvInvack (i)
+requires { Chan3Cmd[i] = Invack && Curcmd <> Empty } 
 {
   Chan3Cmd[i] := Empty;
   Shrset[i] := False;
   Exgntd := False;
-  MemData := Chan3Data[i];
+  MemData := case | Exgntd = True : Chan3Data[i] | _ : MemData;
 }
 
 transition sendGnts (i)

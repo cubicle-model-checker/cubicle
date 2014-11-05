@@ -215,8 +215,8 @@ transitions:
 ;
 
 transitions_list:
-  | transition { [$1] }
-  | transition transitions_list { $1::$2 }
+  | transition { $1 }
+  | transition transitions_list { List.rev_append (List.rev $1) $2 }
 ;
 
 transition_name:
@@ -227,17 +227,18 @@ transition:
   | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
       require
       LEFTBR assigns_nondets_updates RIGHTBR
-      { let reqs, ureq = $6 in
-	let assigns, nondets, upds = $8 in
-	{ tr_name = $2;
-          tr_args = $4; 
-	  tr_reqs = reqs;
-          tr_ureq = ureq; 
-	  tr_assigns = assigns; 
-	  tr_nondets = nondets; 
-	  tr_upds = upds;
-          tr_loc = loc ();
-        } 
+      { List.map (fun (reqs, ureq) ->
+	  let assigns, nondets, upds = $8 in
+	  { tr_name = $2;
+            tr_args = $4; 
+	    tr_reqs = reqs;
+            tr_ureq = ureq; 
+	    tr_assigns = assigns; 
+	    tr_nondets = nondets; 
+	    tr_upds = upds;
+            tr_loc = loc ();
+          }
+        ) $6
       }
 ;
 
@@ -277,8 +278,8 @@ nondet:
 ;
 
 require:
-  | { SAtom.empty, [] }
-  | REQUIRE LEFTBR ucube RIGHTBR { $3 }
+  | { [SAtom.empty, []] }
+  | REQUIRE LEFTBR udnf RIGHTBR { $3 }
 ;
 
 update:
@@ -307,6 +308,12 @@ switchs:
 
 switch:
   | cube COLON term { $1, $3 }
+;
+
+
+udnf:
+  | ucube { [$1] }
+  | ucube OR udnf { $1 :: $3 }
 ;
 
 ucube:
