@@ -1,3 +1,17 @@
+1.0.1 2014-11-05
+    NEW FEATURES
+    * Certificates in Why3 format (Experimental)
+    * Case constructs for updating global variables
+    * Disjunctions in transitions' requirements (only dnf for now)
+    * Option -candheur to (partially) control heuristic for candidate
+      invarariants extraction
+
+    IMPROVEMENTS
+    * Simplifications in initial formula
+
+    BUG FIXES
+    * Ignore signal USR1 in Windows because it does not exist
+
 1.0   2014-07-21
     NEW FEATURES
     * New modular architecture with cleaner and more efficient operations
