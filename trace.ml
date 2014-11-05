@@ -547,8 +547,16 @@ module Why3 = struct
   module NH = Hashtbl.Make(NodeH)
   module Fixpoint = Fixpoint.FixpointList
 
+  let sanitize_string_for_why3 s =
+    String.map (function
+      | '-' | '.' -> '_'
+      | c -> c
+    ) s
 
-  let print_name fmt s = fprintf fmt "%s" (String.uncapitalize (Hstring.view s))
+  let print_name fmt s =
+    fprintf fmt "%s"
+            (String.uncapitalize 
+               (sanitize_string_for_why3 (Hstring.view s)))
 
   let rec print_constructors fmt = function
     | [] -> assert false
@@ -600,16 +608,31 @@ module Why3 = struct
 
   let print_const fmt = function
     | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstName n -> fprintf fmt "%a" Hstring.print n
+    | ConstName n -> fprintf fmt "%a" print_name n
 
-  let print_cs fmt cs =
-    MConst.iter 
-      (fun c i ->
-       fprintf fmt " %s %a" 
-	       (if i = 1 then "+" else if i = -1 then "-" 
-	        else if i < 0 then "- "^(string_of_int (abs i)) 
-	        else "+ "^(string_of_int (abs i)))
-	       print_const c) cs
+  let print_cs ?(arith=false) fmt cs =
+    let ls = MConst.fold (fun c i acc -> (c,i) :: acc) cs [] in
+    let rec prpr arith first ls = 
+      let put_sign = arith || not first in 
+      match ls, put_sign with
+      | (c, 1) :: rs, false ->
+         print_const fmt c;
+         prpr arith false rs
+      | (c, -1) :: rs, _ ->
+         fprintf fmt "-%a" print_const c;
+         prpr arith false rs
+      | (c, i) :: rs, false ->
+         fprintf fmt "%d * %a" i print_const c;
+         prpr arith false rs
+      | (c, 1) :: rs, true ->
+         fprintf fmt "+%a" print_const c;
+         prpr arith false rs
+      | (c, i) :: rs, true ->
+         fprintf fmt "%+d * %a" i print_const c;
+         prpr arith false rs
+      | [], _ -> ()
+    in
+    prpr arith true ls
 
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
@@ -628,7 +651,7 @@ module Why3 = struct
     | Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
-       fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+       fprintf fmt "@[(%a%a)@]" (print_term ~prime) x (print_cs ~arith:true) cs
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -986,7 +1009,9 @@ module Why3 = struct
 
 
   let capital_base f =
-    String.capitalize (Filename.chop_extension (Filename.basename f))
+    String.capitalize 
+      (sanitize_string_for_why3
+         (Filename.chop_extension (Filename.basename f)))
 
   let theory_decls fmt s =
     let name = (capital_base file)^"_defs" in
