@@ -123,13 +123,6 @@ requires { Chan2Cmd[i] = Inv && Chan3Cmd[i] = Empty }
   CacheState[i] := Invalid;
 }
 
-(* transition recvInvack1 (i) *)
-(* requires { Chan3Cmd[i] = Invack && Curcmd <> Empty && Exgntd = False }  *)
-(* { *)
-(*   Chan3Cmd[i] := Empty; *)
-(*   Shrset[i] := False; *)
-(* } *)
-
 transition recvInvack (i)
 requires { Chan3Cmd[i] = Invack && Curcmd <> Empty } 
 {
