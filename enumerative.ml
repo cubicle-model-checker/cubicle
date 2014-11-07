@@ -955,6 +955,10 @@ let forward_bfs_switches s procs env l =
 (* Forward enumerative search, states are insterted in the global hash- *)
 (* table explicit_states                                                *)
 (************************************************************************)
+let shuffle d =
+    let nd = List.rev_map (fun c -> (Random.bits (), c)) d in
+    let sond = List.sort compare nd in
+    List.rev_map snd sond
 
 let search procs init =
   TimeForward.start ();

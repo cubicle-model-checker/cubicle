@@ -185,7 +185,7 @@ let rec simplify_term = function
   | t -> t
 	   
 
-let simplify_comp i si op j sj =  
+let simplify_comp i si op j sj =
   match op, (si, sj) with
     | Eq, _ when H.equal i j -> Atom.True
     | Neq, _ when H.equal i j -> Atom.False
@@ -196,15 +196,12 @@ let simplify_comp i si op j sj =
     | Le, _ when H.equal i j -> Atom.True
     | Lt, _ when H.equal i j -> Atom.False
     | (Eq | Neq) , _ ->
-        if si = Glob && (H.view i).[0] = '*' then Atom.True
-        else
-          let ti = Elem (i, si) in
-	  let tj = Elem (j, sj) in 
-	  if Term.compare ti tj < 0 then Atom.Comp (tj, op, ti)
-	  else Atom.Comp (ti, op, tj)
+       let ti = Elem (i, si) in
+       let tj = Elem (j, sj) in 
+       if Term.compare ti tj < 0 then Atom.Comp (tj, op, ti)
+       else Atom.Comp (ti, op, tj)
     | _ -> 
-        if si = Glob && (H.view i).[0] = '*' then Atom.True
-        else Atom.Comp (Elem (i, si), op, Elem (j, sj))
+        Atom.Comp (Elem (i, si), op, Elem (j, sj))
 		  
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in

@@ -99,11 +99,14 @@ let rec find_update a li = function
   | _ :: l -> find_update a li l
 
 
+exception Remove_lit_var of Hstring.t
+
 let rec find_assign tr = function
   | Elem (x, sx) -> 
       let gu =
 	if H.list_mem x tr.tr_nondets then 
-	  UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx))
+          raise (Remove_lit_var x)
+	  (* UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) *)
 	else 
 	  try H.list_assoc x tr.tr_assigns
           with Not_found -> UTerm (Elem (x, sx))
@@ -133,16 +136,17 @@ let rec find_assign tr = function
 		               up_swts)
       end
   | Access (a, li) -> 
-      let nli =
-        List.map (fun i ->
-	  if H.list_mem i tr.tr_nondets then 
-	    fresh_nondet (Smt.Symbol.type_of i)
-	  else i
+      let nli = li in
+        (* List.map (fun i -> *)
+	(*   if H.list_mem i tr.tr_nondets then  *)
+        (*     (assert false; *)
+	(*     fresh_nondet (Smt.Symbol.type_of i)) *)
+	(*   else i *)
 	  (*   try (match H.list_assoc i tr.tr_assigns with *)
 	  (*     | Elem (ni, _) -> ni *)
 	  (*     | Const _ | Arith _ | Access _ -> assert false) *)
 	  (*   with Not_found -> i *)
-        ) li in
+        (* ) li in *)
       try find_update a nli tr.tr_upds
       with Not_found -> Single (Access (a, nli))
 	(* let na =  *)
@@ -154,23 +158,25 @@ let rec find_assign tr = function
 	(* Single (Access (na, nli)) *)
 
 let make_tau tr x op y =
-  match find_assign tr x, find_assign tr y with
+  try 
+    match find_assign tr x, find_assign tr y with
     | Single tx, Single ty -> Atom.Comp (tx, op, ty)
     | Single tx, Branch ls ->
-	List.fold_right
-	  (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(tx, op, ti), f))
-	  ls Atom.True
+       List.fold_right
+	 (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(tx, op, ti), f))
+	 ls Atom.True
     | Branch ls, Single tx ->
-	List.fold_right
-	  (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(ti, op, tx), f))
-	  ls Atom.True
+       List.fold_right
+	 (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(ti, op, tx), f))
+	 ls Atom.True
     | Branch ls1, Branch ls2 ->
-	List.fold_right
-	  (fun (ci, ti) f -> 
-	     List.fold_right 
-	       (fun (cj, tj) f ->
-		  Atom.Ite(SAtom.union ci cj, Atom.Comp(ti, op, tj), f)) ls2 f)
-	  ls1 Atom.True
+       List.fold_right
+	 (fun (ci, ti) f -> 
+	  List.fold_right 
+	    (fun (cj, tj) f ->
+	     Atom.Ite(SAtom.union ci cj, Atom.Comp(ti, op, tj), f)) ls2 f)
+	 ls1 Atom.True
+  with Remove_lit_var _ -> Atom.True
 
 (**********************)
 (* Postponed Formulas *)

@@ -1236,7 +1236,11 @@ module Why3 = struct
            (fun used p ->
             (* match Fixpoint.pure_smt_check p visited with *)
             match Fixpoint.check p visited with
-            | None -> assert false
+            | None ->
+               eprintf
+                 "Was not able to reverify partial inductiveness of:\n%a@."
+                 Node.print p;
+               assert false
             | Some db -> 
                let db = List.filter (fun id -> not (id = p.tag)) db in
                add_si used db

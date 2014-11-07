@@ -1,6 +1,6 @@
 (*HIERARCHICAL PVCOHERENCE PROTOCOL*)
 
-(* time ./cubicle.opt examples/challenges/hirr_pvcoherence_abstrdata.cub -brab 4 -upto -search bfsh -candheur 2 -forward-depth 31
+(* time ./cubicle.opt examples/challenges/hirr_pvcoherence_abstrdata.cub -brab 4 -search bfsh -candheur 2 -forward-depth 31
 -> safe in 4m42s *)
 
 type l1_cache_state = L1CACHE_I | L1CACHE_S | L1CACHE_O | 
