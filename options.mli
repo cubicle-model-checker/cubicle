@@ -15,7 +15,7 @@
 
 (** Options given on the command line  *)
 
-type trace =  NoTrace | AltErgoTr | WhyTr
+type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 

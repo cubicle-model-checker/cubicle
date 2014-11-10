@@ -2127,6 +2127,7 @@ let select_format =
   match Options.trace with
   | AltErgoTr -> (module AltErgo : S)
   | WhyTr -> (module Why3 : S)
+  | WhyInst -> (module Why3_INST : S)
   | NoTrace -> (module Empty)
 
 module Selected : S = struct 

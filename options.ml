@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type trace =  NoTrace | AltErgoTr | WhyTr
+type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
@@ -74,8 +74,9 @@ let notyping = ref false
 let trace = ref NoTrace
 let set_trace = function
   | "alt-ergo" -> trace := AltErgoTr
-  | "why" -> trace := WhyTr
-  | _ -> raise (Arg.Bad "Proof format = alt-ergo | why")
+  | "why" | "why3" -> trace := WhyTr
+  | "whyinst" | "why3inst" -> trace := WhyInst
+  | _ -> raise (Arg.Bad "Proof format = alt-ergo | why3 | why3inst")
 
 let out = ref "."
 let set_out o =
