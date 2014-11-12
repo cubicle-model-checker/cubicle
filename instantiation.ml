@@ -89,13 +89,16 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
     incr i2
   done
 
+let clash_binding (x,y) l =
+  try not (H.equal (H.list_assoc_inv y l) x)
+  with Not_found -> false
+    
 let add_obv ((x,y) as p) obvs =
   begin
-    try if not (H.equal (H.list_assoc x !obvs) y) then 
+    try if clash_binding p !obvs || not (H.equal (H.list_assoc x !obvs) y) then 
 	raise NoPermutations
-    with Not_found -> ()
-  end;
-  obvs := p :: !obvs
+    with Not_found -> obvs := p :: !obvs
+  end
 
 let obvious_impossible a1 a2 =
   let n1 = Array.length a1 in
@@ -135,8 +138,9 @@ let obvious_impossible a1 a2 =
     	       | _ -> ()
 	   end
        | Atom.Comp (Access (a1, lx1), op, 
-	       (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
-	 Atom.Comp (Access (a, _), _, (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
+	            (Elem (_, Constr) | Elem (_, Glob) | Arith _ as c1)), 
+	 Atom.Comp (Access (a, _), _,
+                    (Elem (_, Constr) | Elem (_, Glob) | Arith _ ))
     	   when H.equal a1 a ->
 	   find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
        | _ -> ());
@@ -162,6 +166,7 @@ let relevant_permutations np p l1 l2 =
     let l2 = List.filter (fun b -> not (H.list_mem b obvl2)) l2 in
     let perm = all_permutations_impos l1 l2 impos in
     let r = List.rev_map (List.rev_append obvs) perm in
+    (* assert (List.for_all Variable.well_formed_subst r); *)
     TimeRP.pause ();
     r
   with NoPermutations -> TimeRP.pause (); []

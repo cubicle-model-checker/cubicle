@@ -52,6 +52,11 @@ val subst : subst -> t -> t
 val is_subst_identity : subst -> bool
 (** returns [true] if the substitution is the identity function *)
 
+val well_formed_subst : subst -> bool
+(** returns [true] if the substitution is well formed, i.e. bindings are unique
+    and different elements of the domain are associated to different elements of
+    the codomain. *)
+
 
 (** {2 Variable instantiation } *)
 

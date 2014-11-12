@@ -53,6 +53,11 @@ val list_assoc : t -> (t * 'a) list -> 'a
     pairs [l].
     @raise Not_found if there is no value associated with [x] in the list [l].*)
 
+val list_assoc_inv : t -> ('a * t) list -> 'a
+(** [list_assoc_inv x l] returns the first element which is associated to [x]
+    in the list of pairs [l].
+    @raise Not_found if there is no value associated to [x] in the list [l].*)
+
 val list_mem_assoc : t -> (t * 'a) list -> bool
 (** Same as {! list_assoc}, but simply returns [true] if a binding exists, and
     [false] if no bindings exist for the given key.*)

@@ -71,6 +71,17 @@ let build_subst args a_args =
 let is_subst_identity sigma =
   List.for_all (fun (x,y) -> Hstring.equal x y) sigma
 
+let well_formed_subst sigma =
+  try
+    ignore (
+        List.fold_left (fun (acc_x, acc_y) (x, y) ->
+                        if Hstring.list_mem x acc_x || Hstring.list_mem y acc_y
+                        then raise Exit;
+                        x :: acc_x, y :: acc_y
+                       ) ([],[]) sigma);
+    true
+  with Exit -> false
+               
 let rec all_permutations_not_tail_recursive l1 l2 = 
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with

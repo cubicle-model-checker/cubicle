@@ -490,13 +490,13 @@ Unblock_Src:=dst;
 }
 
 transition L1_handle_data_reply_from_L1_in_IS (dst src)
-requires {  
-L1L1RpMsg_Cmd=DATA_REPLY && L1L1RpMsg_Dst=dst && 
+requires {
+L1L1RpMsg_Cmd=DATA_REPLY && L1L1RpMsg_Dst=dst &&
 L1L1RpMsg_Src=src && L1_State[dst]=L1CACHE_IS}
 {
 L1L1RpMsg_Cmd:=REPLY_NONE;
 L1_Data[dst]:=L1L1RpMsg_Data;
-L1_State[dst]:=L1CACHE_S;  
+L1_State[dst]:=L1CACHE_S;
 Unblock_Cmd:=UNBLOCK;
 Unblock_Src:=dst;
 }
