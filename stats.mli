@@ -44,6 +44,9 @@ val print_report : safe:bool -> Node.t list -> Node.t list -> unit
 (** prints a complete report. Additionally, if {! Options.profiling} is set
     then output timing information. *)
 
+val print_stats_certificate : Node.t list -> string -> unit
+
+                                                         
 val error_trace : Ast.t_system -> Node.t -> unit
 (** print an error trace given a faulty node *)
 

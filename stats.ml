@@ -215,5 +215,31 @@ let print_report ~safe visited candidates =
       print_time_forward ();
       print_time_ccheck ();
     end;
-    printf "%a" Pretty.print_double_line ()
+  printf "%a" Pretty.print_double_line ()
 
+
+let print_file_size fmt n =
+  let nf = ref (float_of_int n) in
+  if !nf < 1024. then fprintf fmt "%.1f B" !nf
+  else begin
+      nf := !nf /. 1024.;
+      if !nf < 1024. then fprintf fmt "%.1f kB" !nf
+      else begin
+          nf := !nf /. 1024.;
+          if !nf < 1024. then fprintf fmt "%.1f MB" !nf
+          else begin
+              nf := !nf /. 1024.;
+              fprintf fmt "%.1f GB" !nf
+            end
+        end
+    end
+         
+         
+let print_time_certificate () =
+  printf "Certificate generation : %a@." print_time (TimeCertificate.get ())
+
+let print_stats_certificate visited cname =
+  printf "Certificate generation : %a@." print_time (TimeCertificate.get ());
+  printf "Quantified clauses : %d@." (List.length visited);
+  printf "File size : %a@." print_file_size (Unix.stat cname).Unix.st_size
+  

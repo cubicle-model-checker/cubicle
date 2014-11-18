@@ -42,6 +42,10 @@ let need_bool s =
   f (f false s.t_globals) s.t_arrays
 
 
+let cert_file_name () =
+  let bench = Filename.chop_extension (Filename.basename file) in
+  out_trace^"/"^bench^"_certif.why"
+
 module AltErgo = struct
 
   let rec print_constructors fmt = function
@@ -998,7 +1002,8 @@ module Why3 = struct
   let lemma_hint fmt s used inv_names =
     let usedn = List.map (fun n -> fst (NH.find inv_names n)) used in
     let sn' = snd (NH.find inv_names s) in
-    fprintf fmt "    @[(%a /\\ tau)@]\n" (print_str_list_sep " /\\ ") usedn;
+    fprintf fmt "    @[(%a tau)@]\n"
+            (fun fmt l -> List.iter (fprintf fmt "%s /\\ ")l) usedn;
     fprintf fmt "    -> %s\n@." sn'
 
   let add_imports fmt s l =
@@ -1270,8 +1275,7 @@ module Why3 = struct
 
 
   let certificate_w_axioms s visited =
-    let bench = Filename.chop_extension (Filename.basename file) in
-    let why_certif = out_trace^"/"^bench^"_certif.why" in
+    let why_certif = cert_file_name () in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
     let decls = theory_decls fmt s in
@@ -1289,8 +1293,7 @@ module Why3 = struct
 
 
   let certificate_w_predicates s visited =
-    let bench = Filename.chop_extension (Filename.basename file) in
-    let why_certif = out_trace^"/"^bench^"_certif.why" in
+    let why_certif = cert_file_name () in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
     let decls = theory_decls fmt s in
@@ -2072,8 +2075,7 @@ module Why3_INST = struct
 
 
   let certificate_w_axioms s visited =
-    let bench = Filename.chop_extension (Filename.basename file) in
-    let why_certif = out_trace^"/"^bench^"_certif.why" in
+    let why_certif = cert_file_name () in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
     let decls = theory_decls fmt s in
@@ -2091,8 +2093,7 @@ module Why3_INST = struct
 
 
   let certificate_w_predicates s visited =
-    let bench = Filename.chop_extension (Filename.basename file) in
-    let why_certif = out_trace^"/"^bench^"_certif.why" in
+    let why_certif = cert_file_name () in
     let cout = open_out why_certif in
     let fmt = formatter_of_out_channel cout in
     let decls = theory_decls fmt s in
@@ -2135,6 +2136,13 @@ module Selected : S = struct
 
   (* Sort nodes first *)
   let certificate s visited =
-    let visited = List.fast_sort Node.compare_by_breadth visited in
-    certificate s visited
+    if Options.trace <> NoTrace then begin
+        Util.TimeCertificate.start ();
+        let visited = List.fast_sort Node.compare_by_breadth visited in
+        certificate s visited;
+        Util.TimeCertificate.pause ();
+        let f = cert_file_name () in
+        Stats.print_stats_certificate visited f
+      end
+
 end
