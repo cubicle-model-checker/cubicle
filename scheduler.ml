@@ -1276,20 +1276,20 @@ let init_transitions trans =
 	    List.fold_left (
 	      fun acc t -> t :: acc
 	    ) acc subt
-  ) ttemp [];
-  List.iter (
-    fun t ->
-      printf "%a(%a) : " Hstring.print t.t_name (Hstring.print_list " ") t.t_args;
-      List.iter (
-      	fun t ->
-	  printf "[ ";
-      	  List.iter (
-	    fun t -> printf "%a(%a) " Hstring.print t.t_name (Hstring.print_list " ") t.t_args
-	  ) t;
-	  printf "] ";
-      ) t.t_path;
-      printf "@."
-  ) !trans_list
+  ) ttemp []
+  (* List.iter ( *)
+  (*   fun t -> *)
+  (*     printf "%a(%a) : " Hstring.print t.t_name (Hstring.print_list " ") t.t_args; *)
+  (*     List.iter ( *)
+  (*     	fun t -> *)
+  (* 	  printf "[ "; *)
+  (*     	  List.iter ( *)
+  (* 	    fun t -> printf "%a(%a) " Hstring.print t.t_name (Hstring.print_list " ") t.t_args *)
+  (* 	  ) t; *)
+  (* 	  printf "] "; *)
+  (*     ) t.t_path; *)
+  (*     printf "@." *)
+  (* ) !trans_list *)
 
 
 (* SCHEDULING *)
@@ -1674,6 +1674,7 @@ let run () =
   if profiling then
     (
       let inits = float_of_int (Syst.cardinal (!sinits)) in
+      print_init ();
       let nb_ex = 
 	if upd = 2 then float_of_int !cpt_f 
 	else float_of_int runs *. inits *. float_of_int nb_exec in
