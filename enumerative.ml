@@ -86,6 +86,7 @@ type env = {
   model_cardinal : int;
   var_terms : Term.Set.t;
   nb_vars : int;
+  max_id_vars : int;
   perm_procs : (int * int) list list;
   perm_states : ((Hstring.t * Hstring.t) list *
                     (int * int) list * (int * int) list) list;
@@ -109,6 +110,7 @@ type env = {
 let empty_env = {
   model_cardinal = 0;
   var_terms = Term.Set.empty;
+  max_id_vars = 0;
   nb_vars = 0;
   perm_procs = [];
   perm_states = [];
@@ -229,7 +231,9 @@ let id_to_term env id =
     HT.iter (fun t i -> if id = i then raise (Found t)) env.id_terms;
     raise Not_found
   with Found t -> t
-      
+
+
+let is_variable env id = id <= env.max_id_vars
 
 let is_int_real = function
   | Elem (x,Glob) | Access (x, _) -> 
@@ -281,6 +285,7 @@ let init_tables procs s =
   let ht = HT.create (nb_vars + nb_consts) in
   let i = ref 0 in
   Term.Set.iter (fun t -> HT.add ht t !i; incr i) var_terms;
+  let max_id_vars = !i - 1in
   let proc_ids = ref [] in
   let first_proc = !i in
   List.iter (fun t -> HT.add ht t !i; proc_ids := !i :: !proc_ids; incr i)
@@ -317,6 +322,7 @@ let init_tables procs s =
   { model_cardinal = nb_procs;
     var_terms = var_terms;
     nb_vars = nb_vars;
+    max_id_vars = max_id_vars;
     perm_procs = perm_procs;
     perm_states = perm_states;
     first_proc = first_proc;
@@ -570,14 +576,18 @@ let update_to_actions procs sigma env acc
     swts_to_stites env at sigma swts :: acc
   ) acc indexes
 
-let missing_reqs_to_actions acct =
+let missing_reqs_to_actions env acct =
   List.fold_left (fun acc -> function
-    | (a, Eq, b) ->
+      | (a, Eq, b) ->
+        (* variable on lhs *)
+        let a, b =
+          if not (is_variable env a) && is_variable env b then b, a
+          else a, b in
         if List.exists
-          (function St_assign (a', _) -> a = a' | _ -> false) acct
+            (function St_assign (a', _) -> a = a' | _ -> false) acct
         then acc
         else (St_assign (a,b)) :: acc
-    | _ -> acc) acct
+      | _ -> acc) acct
 
 let value_in_state env st i =
   if i <> -1 && i < env.nb_vars then st.(i) else i
@@ -604,6 +614,24 @@ let neg_req env = function
   | a, Le, b -> b, Lt, a
   | a, Lt, b -> b, Le, a
 
+
+let rec print_action env fmt = function
+  | St_ignore -> ()
+  | St_arith (i, v, c) -> 
+      fprintf fmt "%a + %d" Atom.print 
+	(Atom.Comp (id_to_term env i, Eq, id_to_term env v)) c
+  | St_assign (i, -1) -> 
+      fprintf fmt "%a = ." Term.print (id_to_term env i)
+  | St_assign (i, v) -> 
+      fprintf fmt "%a" Atom.print 
+	(Atom.Comp (id_to_term env i, Eq, id_to_term env v))
+  | St_ite (l, a1, a2) ->
+      fprintf fmt "ITE (";
+      List.iter (fun (i, op, v) -> 
+	eprintf "%a && " Atom.print 
+	  (Atom.Comp (id_to_term env i, op, id_to_term env v))
+      ) l;
+      fprintf fmt ", %a , %a )" (print_action env) a1 (print_action env) a2
 
 let rec apply_action env st sts' = function
   | St_assign (i1, i2) ->
@@ -647,24 +675,6 @@ let apply_actions env st acts =
   let st' = Array.copy st in
   List.fold_left (apply_action env st) [st'] acts
 
-
-let rec print_action env fmt = function
-  | St_ignore -> ()
-  | St_arith (i, v, c) -> 
-      fprintf fmt "%a + %d" Atom.print 
-	(Atom.Comp (id_to_term env i, Eq, id_to_term env v)) c
-  | St_assign (i, -1) -> 
-      fprintf fmt "%a = ." Term.print (id_to_term env i)
-  | St_assign (i, v) -> 
-      fprintf fmt "%a" Atom.print 
-	(Atom.Comp (id_to_term env i, Eq, id_to_term env v))
-  | St_ite (l, a1, a2) ->
-      fprintf fmt "ITE (";
-      List.iter (fun (i, op, v) -> 
-	eprintf "%a && " Atom.print 
-	  (Atom.Comp (id_to_term env i, op, id_to_term env v))
-      ) l;
-      fprintf fmt ", %a , %a )" (print_action env) a1 (print_action env) a2
 
 
 let print_transition_fun env name sigma { st_reqs = st_reqs;
@@ -739,7 +749,7 @@ let transitions_to_func_aux procs env reduce acc
       let st_actions = List.fold_left 
 	(update_to_actions procs sigma env)
 	st_actions upds in
-      let st_actions = missing_reqs_to_actions st_actions st_reqs in
+      let st_actions = missing_reqs_to_actions env st_actions st_reqs in
       let f = fun st ->
 	if not (check_reqs env st st_reqs) then raise Not_applicable;
 	if not (List.for_all (List.exists (check_reqs env st)) st_udnfs)
@@ -787,7 +797,7 @@ let post st visited trs acc cpt_q depth =
 let post_bfs st visited trs q cpt_q depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
-      try 
+        try
         let sts = st_tr.st_f st in
         List.iter (fun s ->
           if not (HST.mem visited s) then begin
