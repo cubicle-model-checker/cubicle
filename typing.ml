@@ -211,7 +211,9 @@ let nondets loc l =
     (fun g -> 
        try
 	 let args_g, ty_g = Smt.Symbol.type_of g in
-	 if args_g <> [] then error (NotATerm g) loc;
+         if args_g <> [] then error (NotATerm g) loc;
+         (* Add all values to the subtype *)
+         List.iter (Smt.Variant.assign_constr g) (Smt.Type.constructors ty_g);
 	 (* if not (Hstring.equal ty_g Smt.Type.type_proc) then  *)
 	 (*   error (MustBeOfTypeProc g) *)
        with Not_found -> error (UnknownGlobal g) loc) l
