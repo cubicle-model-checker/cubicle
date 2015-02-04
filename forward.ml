@@ -793,11 +793,15 @@ let instance_of_transition { tr_args = tr_args;
   let upd, upd_terms = apply_updates upds all_procs sigma in
   let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
+  let nondet_terms =
+    List.fold_left (fun acc h -> Term.Set.add (Elem (h, Glob)) acc)
+      Term.Set.empty nondets in
   {
     i_reqs = reqs;
     i_udnfs = udnfs;
     i_actions = act;
-    i_touched_terms = Term.Set.union assi_terms upd_terms
+    i_touched_terms =
+      Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms
   }
 
 
@@ -882,7 +886,8 @@ let possible_trace ~starts ~finish ~procs ~trace =
   let usa = Node.litterals finish in
   let rec forward_rec ls rtrace = match ls, rtrace with
     | _, [] -> Unreach
-    | [], (_, _, s) ::_ -> Spurious (above s trace)
+    | [], (_, _, s) ::_ ->
+      Spurious (above s trace)
     | _, (tr, _, _) :: rest_trace ->
         let nls =
 	  if List.length tr.tr_args > List.length procs then []
@@ -976,8 +981,8 @@ let spurious_error_trace system s =
 
 let spurious_due_to_cfm system s =
   match reachable_on_trace_from_init system (Node.origin s) s.from with
-    | Unreach | Spurious _ -> true
-    | Reach hist -> false
+  | Unreach | Spurious _ -> true
+  | Reach hist -> false
 
 
 let conflicting_from_trace s trace =
