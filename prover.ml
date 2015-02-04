@@ -31,7 +31,7 @@ let proc_terms =
   List.map (fun x -> T.make_app x []) Variable.procs
 
 let distinct_vars = 
-  let t = Array.create max_proc F.f_true in
+  let t = Array.make max_proc F.f_true in
   let _ = 
     List.fold_left 
       (fun (acc,i) v -> 
@@ -42,7 +42,7 @@ let distinct_vars =
   function n -> if n = 0 then F.f_true else t.(n-1)
 
 let order_vars =
-  let t = Array.create max_proc F.f_true in
+  let t = Array.make max_proc F.f_true in
   let _ =
     List.fold_left
       (fun (acc, lf, i) v ->
