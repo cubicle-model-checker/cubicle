@@ -57,14 +57,14 @@
       <div>
 	<table>
 	  <tr>
-	    <td colspan="2">Last version: #version# (#date#)</td>
+	    <td colspan="2">Last version: 1.0.2 (09/02/2015)</td>
 	  </tr>
 	  <tr>
 	    <td>
-	      <a href="cubicle-#version#.tar.gz"><img src="down.svg"></a>
+	      <a href="cubicle-1.0.2.tar.gz"><img src="down.svg"></a>
 	    </td>
 	    <td>
-	      <a href="cubicle-#version#.tar.gz">Download v#version#</a>
+	      <a href="cubicle-1.0.2.tar.gz">Download v1.0.2</a>
 	    </td>
 	  </tr>
 	</table>
@@ -137,7 +137,7 @@
 	<br/>
 	
 	You can download the sources of the latest version of
-	Cubicle <a href="cubicle-#version#.tar.gz">here</a>.
+	Cubicle <a href="cubicle-1.0.2.tar.gz">here</a>.
 	
 	<br/>
 	<br/>
@@ -151,17 +151,34 @@
 
       <p>
 	<ul>
-	  <li><a href="cubicle-#version#-Darwin-x86_64">Mac OS X x86-64</a></li>
+	  <li><a href="cubicle-1.0.2-Darwin-x86_64">Mac OS X x86-64</a></li>
           
-	  <li><a href="cubicle-#version#-win32.exe">Windows (Win32 x86)</a></li>
+	  <li><a href="cubicle-1.0.2-win32.exe">Windows (Win32 x86)</a></li>
           <!-- 
-          <li><a href="cubicle-#version#-Linux-x86_64">Linux x86_64</a> (Glibc &ge; 2.13)</li>
-	  <li><a href="cubicle-#version#-Linux-i686">Linux x86</a> (Glibc &ge; 2.15)</li>
-	  <li><a href="cubicle-#version#-MINGW32-i686.exe">Win32 x86</a> (MinGW)</li>
-	  <li><a href="cubicle-#version#-Darwin-i386">Mac OS X x86</a> (&ge; 10.5.8)</li>
+          <li><a href="cubicle-1.0.2-Linux-x86_64">Linux x86_64</a> (Glibc &ge; 2.13)</li>
+	  <li><a href="cubicle-1.0.2-Linux-i686">Linux x86</a> (Glibc &ge; 2.15)</li>
+	  <li><a href="cubicle-1.0.2-MINGW32-i686.exe">Win32 x86</a> (MinGW)</li>
+	  <li><a href="cubicle-1.0.2-Darwin-i386">Mac OS X x86</a> (&ge; 10.5.8)</li>
           -->
 	</ul>
       </p>
+
+      <!--
+      <p class="note">
+	<b>Note:</b> The binaries for version 1.0.2 will be updated soon.
+      </p>
+
+      
+      <p>
+        The following are <em>obsolete</em> binaries of version 0.5 for other
+	architectures:<ul>
+	  <li><a href="cubicle-0.5-Linux-x86_64">Linux x86_64</a> (Glibc &ge; 2.13)</li>
+	  <li><a href="cubicle-0.5-Linux-i686">Linux x86</a> (Glibc &ge; 2.15)</li>
+	  <li><a href="cubicle-0.5-MINGW32-i686.exe">Win32 x86</a> (MinGW)</li>
+	  <li><a href="cubicle-0.5-Darwin-i386">Mac OS X x86</a> (&ge; 10.5.8)</li>
+	</ul>
+      </p>
+      -->
 
       <a name="install"></a>
       <h3>Installation instructions</h3> 
@@ -197,7 +214,7 @@
 	Uncompress the archive and do: <br/>
 
 	<span class="code">
-	  <span class="incode">$</span> cd cubicle-#version# <br/>
+	  <span class="incode">$</span> cd cubicle-1.0.2 <br/>
 	  <span class="incode">$</span> ./configure <br/>
 	  <span class="incode">$</span> make <br/>
 	</span>
@@ -986,8 +1003,117 @@
       <h3>Changelog</h3>
     
       <p>
-<pre>
-#CHANGELOG#          
+        <pre>
+1.0.2 2015-02-09
+    BUG FIXES
+    * Create correct actions for preservation of values in Enumerative
+    * Fix incorrect computation of subtypes in presence of non-deterministic
+      updates
+    * Fix replaying of error traces with non-deterministic updates
+
+
+1.0.1 2014-11-05
+    NEW FEATURES
+    * Certificates in Why3 format (Experimental)
+    * Case constructs for updating global variables
+    * Disjunctions in transitions' requirements (only dnf for now)
+    * Option -candheur to (partially) control heuristic for candidate
+      invarariants extraction
+
+    IMPROVEMENTS
+    * Simplifications in initial formula
+
+    BUG FIXES
+    * Ignore signal USR1 in Windows because it does not exist
+
+1.0   2014-07-21
+    NEW FEATURES
+    * New modular architecture with cleaner and more efficient operations
+    * Code documentation with ocamldoc
+    * Use of ? instead of . for non-deterministic assignments (conservative
+      extension: the old syntax is still possible)
+
+    IMPROVEMENTS
+    * More efficient forward (with GC parameters)
+    * Faster filter when a lot of candidates are not suitable
+    * New options for controlling candidates generation
+    * More options for dot search graphs and color by exploration time
+    * More efficient tries (less allocation)
+
+    BUG FIXES
+    * Report typing errors (at transition level)
+    * Relevant permutations for multi-dimensional arrays
+
+0.6   2014-01-27
+    NEW FEATURES
+    * Refine universal guards by symbolic forward replay to prevent spurious
+      traces when using BRAB (experimental)
+    * Certificates (of inductiveness) generation for Alt-Ergo and Why3
+    * Specify max number of processes with keyword : number_procs
+    * Show spurious error traces
+    
+    IMPROVEMENTS
+    * Use generic parameterized hash functions: faster with OCaml >= 4.00
+    * Do not add spurious nodes in visited
+    * More efficient computation of pre-images
+    * Use ocamlfind for configure
+
+    BUG FIXES
+    * Arithmetic simplifications
+
+
+0.5   2013-09-04
+    NEW FEATURES
+    * BRAB algorithm on top of classical backward reachability
+    * Generation of search graph in dot (graphviz) format thanks to unsat cores
+    * Allow non deterministic updates of variables of type other than proc
+    * Enumerative statefull forward exploration
+    * Multi-dimensionnal arrays
+
+    IMPROVEMENTS
+    * Copy of cyclic data-structures
+    * Only use features of the SMT solver that are necessary: congruence
+      closureand arith are deactivated when not needed
+    * SAT solver (alt-ergo zero): delay case split once a full propositional
+      model is found
+    * Tries for maintaining set of visited nodes (cubes)
+    * Memoization of (SMT) formula construction
+    * Check other candidates on faulty traces
+
+    BUG FIXES
+    * SAT solver (alt-ergo zero): Raise sat if full model to avoid vec assert
+    * Raise error on duplicate updates
+
+0.2.5 2012-04-12
+    NEW FEATURES
+    * Complete error traces
+    
+    BUG FIXES
+    * Fix bug in initial formula instantiation with global variables
+
+0.2.4 2012-04-11
+    NEW FEATURES
+    * Syntactic sugar for simple array updates (A[i] := v)
+    
+    BUG FIXES
+    * Pre with correct number of arguments
+
+0.2.3 2012-04-02
+    BUG FIXES
+    * Computation of pre for terms of the form A[G]
+
+0.2.2 2012-03-23
+    NEW FEATURES
+    * Multiple unsafe properties
+    * Allow terms of the form A[G] where A is an array and G is a global
+      variable
+
+0.2.1 2012-01-25
+    IMPROVEMENTS
+    * Approximations in arithmetic simplifications
+
+0.2   2012-01-23
+    * First public release of Cubicle          
 </pre>
       </p>
 
