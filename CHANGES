@@ -1,3 +1,10 @@
+1.0.2 2015-02-09
+    BUG FIXES
+    * Create correct actions for preservation of values in Enumerative
+    * Fix incorrect computation of subtypes in presence of non-deterministic
+      updates
+    * Fix replaying of error traces with non-deterministic updates
+
 1.0.1 2014-11-05
     NEW FEATURES
     * Certificates in Why3 format (Experimental)

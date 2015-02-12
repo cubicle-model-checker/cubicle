@@ -111,7 +111,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
 
-VERSION=1.0.1
+VERSION=1.0.2
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -329,17 +329,22 @@ export/$(EXPORTDIR).tar.gz:
 
 export: export/$(EXPORTDIR).tar.gz
 
-release: export/$(EXPORTDIR).tar.gz
+release: export/$(EXPORTDIR).tar.gz doc
 	mkdir -p export/release
 	mkdir -p export/release/examples/
 	cp export/$(TAR).gz export/release/
 	cp export/$(EXPORTDIR)/examples/* export/release/examples/
 	cp doc/website/* export/release/
-	cd export/release/; sed "s@#version#@$(VERSION)@g" index.html > index.html.tmp; sed  "s@#date#@$(DATE)@g" index.html.tmp > index.html; rm -f index.html.tmp
+	cd export/release/; \
+	  sed -i '' 's/#version#/$(VERSION)/g' index.html; \
+	  sed -i '' 's@#date#@$(DATE)@g' index.html; \
+	  sed -i '' -e '/#CHANGELOG#/{r ../../CHANGES' -e 'd' -e '}' index.html
 	mkdir -p $(WEB)/backup/$(LONGDATE)
 	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
 	cp $(WEB)/backup/$(LONGDATE)/google*.html $(WEB)
 	cp -f -R export/release/* $(WEB)
+	rm -rf $(WEB)/ocamldoc
+	cp -f -R doc/ocamldoc $(WEB)/
 
 
 # Try Cubicle

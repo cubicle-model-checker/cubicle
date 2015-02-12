@@ -3,8 +3,11 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html;
 					     charset=UTF-8">
+    <meta name="viewport"
+    content="initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,width=device-width,user-scalable=no"/>
     <link title="new" rel="stylesheet" href="cubicle.css"
 	  type="text/css">
+    <link rel="icon" href="favicon.ico" />
     <title>Cubicle</title>
   </head>
 
@@ -15,7 +18,7 @@
     </div>
    
     <div id="banner">
-      <h1>Cubicle</h1>
+      <h1 class="logo">Cubicle</h1>
     </div>
 
 
@@ -26,15 +29,18 @@
 	<li><a href="#download">Download</a>
 	  <ul>
 	    <li><a href="#sources">Sources</a>
+	    <li><a href="#binaries">Binaries</a>
 	    <li><a href="#install">Installation instructions </a>
 	  </ul>
 	</li>
 	<li><a href="#publications">Publications</a></li>
 	<li><a href="#experiments">Experiments</a></li>
-	<li><a href="#manual">Manual</a>
+	<li><a href="#doc">Documentation</a>
 	  <ul>
 	    <li><a href="#language">Description language</a>
 	    <li><a href="#options">Options</a>
+	    <li><a href="#changelog">Changelog</a>
+	    <li><a href="ocamldoc">Ocamldoc</a>
 	  </ul>
 	</li>
 	<li><a href="#examples">Examples</a></li>
@@ -133,19 +139,57 @@
 	You can download the sources of the latest version of
 	Cubicle <a href="cubicle-#version#.tar.gz">here</a>.
 	
+	<br/>
+	<br/>
+
+        Documentation and source code can be browsed <a href="ocamldoc">online</a>.
+
+      </p>
+
+      <a name="binaries"></a>
+      <h3>Binaries</h3>
+
+      <p>
+	<ul>
+	  <li><a href="cubicle-#version#-Darwin-x86_64">Mac OS X x86-64</a></li>
+          
+	  <li><a href="cubicle-#version#-win32.exe">Windows (Win32 x86)</a></li>
+          <!-- 
+          <li><a href="cubicle-#version#-Linux-x86_64">Linux x86_64</a> (Glibc &ge; 2.13)</li>
+	  <li><a href="cubicle-#version#-Linux-i686">Linux x86</a> (Glibc &ge; 2.15)</li>
+	  <li><a href="cubicle-#version#-MINGW32-i686.exe">Win32 x86</a> (MinGW)</li>
+	  <li><a href="cubicle-#version#-Darwin-i386">Mac OS X x86</a> (&ge; 10.5.8)</li>
+          -->
+	</ul>
       </p>
 
       <a name="install"></a>
-      <h3>Installation instructions</h3>
+      <h3>Installation instructions</h3> 
+
+      <h4>Opam</h4> 
       
       <p>
-	To compile Cubicle you will need OCaml version 3.11 (or
+        If you use the package manager <a href="http://opam.ocamlpro.com">opam</a>,
+        the easiest way to install Cubicle is to do:
+        
+	<span class="code">
+          <span class="incode">$</span> opam install cubicle
+        </span>
+
+        If you don't (want to) use opam, Cubicle can also be installed
+        manually.
+      </p>
+
+      <h4>Manual installation</h4> 
+      
+      <p>
+	To compile Cubicle you will need OCaml version 4.00.0 (or
 	newer) and the Ocaml Functory library version 0.5 (or newer)
 	which can be downloaded <a href="http://functory.lri.fr">here</a>.
       </p>
 
       <p class="note">
-	<b>Note:</b> You can still compile Cubile without Functory but
+	<b>Note:</b> You can still compile Cubicle without Functory but
 	you will not be able to use its parallel features.
       </p>
 
@@ -167,13 +211,19 @@
 	</span>
 	<br/>
 
-	to run Cubicle on a file <span class="tt">file.cub</span>
-	simply do:
-	<br/>
+	To run Cubicle with the BRAB algorithm on a
+	file <span class="tt">file.cub</span> simply do: <br/>
 	<span class="code">
-	  <span class="incode">$</span> cubicle file.cub <br/>
+	  <span class="incode">$</span> cubicle -brab <span style="font-family : serif;"><i>nb</i></span> file.cub <br/>
 	</span>
-	<br/>
+        where <span style="font-family : serif;"><i>nb</i></span> is the number of different processes that will be
+        considered for the enumerative forward exploration.
+        <br/>
+        For instance, doing <span class="inlinecode">cubicle -brab 2
+        german.cub</span> will first perform an enumeration of the
+        states of the German protocol for an instance of the system
+        with only two processes. The BRAB algorithm will then be
+        initialized and run with the finite model it just constructed.
 	
       </p>
 
@@ -181,177 +231,391 @@
       <a name="publications"></a>
       <h2>Publications</h2>
 
-      <table>
-	<tr valign="top">
-	  <td align="right" class="bibtexnumber">
-	    [<a name="conchon12cav">1</a>]
-	  </td>
-	  <td class="bibtexitem" align="left">
-	    Sylvain Conchon, Amit Goel, Sava Krsti&#x107;, Alain Mebsout, and Fatiha Za&iuml;di.
-	    <a href="publications/cubicle_tool_paper_cav2012.pdf">Cubicle: A Parallel SMT-based Model Checker for Parameterized
-	    Systems</a>. In Madhusudan Parthasarathy and Sanjit&nbsp;A. Seshia, editors, <em>CAV
-	    2012: Proceedings of the 24th International Conference on Computer Aided
-	    Verification</em>, Lecture Notes in Computer Science,
-	    pages 718-724, Berkeley, California, USA,
-	    July 2012. Springer Verlag.
-	  </td>
-	</tr>
+
+      <ol class="pub">
+
+	<li class="pub_item">
+
+	  <span class="pub_title"><a href="papers/thesis-mebsout.pdf">
+            Inf&eacute;rence d'invariants pour le model checking
+	    de syst&egrave;mes param&eacute;tr&eacute;s</a></span>
+	  <span class="french"></span> (in french)
+
+	  <div id="pud_details">
+	    <p>
+	      Alain Mebsout.<br/>
+	      <em>
+                Ph.D. thesis, Université Paris-Sud, September 2014.
+	      </em>
+	    </p>
+
+            <a href="papers/thesis-mebsout.pdf" class="icon">Thesis</a>
+            <a href="papers/slides-mebsout.pdf" class="icon">Slides</a>
+	    
+	  </div>
+
+	</li>
+
+	<li class="pub_item">
+
+	  <span class="pub_title"><a href="papers/jfla2014.pdf">
+	  V&eacute;rification de programmes C
+	  concurrents avec Cubicle : Enfoncer les barrières</a></span>
+	  <span class="french"></span> (in French)
+
+	  <div id="pud_details">
+	    <p>
+	      Sylvain Conchon, David Declerck, Luc Maranget and Alain
+	      Mebsout.<br/>
+	      <em>
+                In Vingt-Cinquièmes Journ&eacute;es
+                  Francophones des Langages Applicatifs, Fréjus,
+                  France, January 2014.
+	      </em>
+	    </p>
+
+	    <a href="papers/jfla2014.pdf" class="icon">PDF</a>
+	    <a href="papers/jfla2014.bib" class="icon">BibTeX</a>
+	    
+	  </div>
+
+	</li>
+
+	<li class="pub_item">
+
+	  <span class="pub_title"><a href="papers/fmcad2013.pdf">Invariants for Finite Instances and
+	      Beyond</a></span>
+
+	  <div class="pud_details">
+	    <p>
+	      Sylvain Conchon, Amit Goel, Sava Krsti&#x107;, Alain
+	      Mebsout, and Fatiha Za&iuml;di.<br/>
+	      <em>To appear in FMCAD 2013
+	      </em>
+	    </p>
+
+	    <a href="papers/fmcad2013.pdf" class="icon">PDF</a>
+	    <a href="papers/fmcad2013.bib" class="icon">BibTeX</a>
+	    
+	  </div>
+
+	</li>
+
 	
-      </table>
+	<li class="pub_item">
+
+	  <span class="pub_title"><a href="papers/jfla2013.pdf">V&eacute;rification de
+	  syst&egrave;mes param&eacute;tr&eacute;s avec
+	  Cubicle</a></span> (in French)
+
+	  <div id="pud_details">
+	    <p>
+	      Sylvain Conchon, Alain Mebsout, and Fatiha
+	      Za&iuml;di.<br/>
+	      <em>
+                In Vingt-quatri&egrave;mes Journ&eacute;es
+                  Francophones des Langages Applicatifs, Aussois,
+                  France, February 2013.
+	      </em>
+	    </p>
+
+	    <a href="papers/jfla2013.pdf" class="icon">PDF</a>
+	    <a href="papers/jfla2013.bib" class="icon">BibTeX</a>
+	    
+	  </div>
+
+	</li>
+
+
+	<li class="pub_item">
+
+	  <span class="pub_title"><a href="papers/cav2012.pdf">Cubicle: A Parallel SMT-based Model Checker for Parameterized 
+	    Systems</a></span>
+
+	  <div class="pud_details">
+	    <p>
+	      Sylvain Conchon, Amit Goel, Sava Krsti&#x107;, Alain
+	      Mebsout, and Fatiha Za&iuml;di.<br/>
+	      <em>In Madhusudan Parthasarathy and
+		Sanjit&nbsp;A. Seshia, editors, CAV
+		2012: Proceedings of the 24th International Conference on Computer Aided
+		Verification, Lecture Notes in Computer Science,
+		pages 718-724, Berkeley, California, USA,
+		July 2012. Springer Verlag.
+	      </em>
+	    </p>
+
+	    <a href="papers/cav2012.pdf" class="icon">PDF</a>
+	    <a href="papers/cav2012.bib" class="icon">BibTeX</a>
+	    
+	  </div>
+
+	</li>
+
+
+      </ol>
 
 
       <a name="experiments"></a>
       <h2>Experiments</h2>
 
       <p>
-	We have experimented Cubicle on classical and challenging
-	problems (mutual exclusion algorithms and cache coherence
-	protocols) from the literature.
-      </p>
-
-      <p>
 	All the following benchmarks have been executed on a 64 bits
 	machine with a quad-core 
 	Intel &reg; Xeon &reg; processor @ 3.2 GHz and 24 GB of
-	memory. These results were obtained whith version 0.2.5 and the default settings excepted for times followed by * that were obtained with the <span class="tt">-geninv</span> option to synthetize invariants. Note that the parallel version of Cubicle was run on 4
-	cores and that we only give its results for significantly time
-	consuming problems.
+	memory. <!-- The first column reports results obtained whith the -->
+	<!-- default settings. -->
+        The first four columns give details on the exploration of the
+	finite instance. The last colum reports the total time of
+	BRAB, <i>i.e.</i> the time needed for the forward exploration
+	plus the time used by backward reachability.
+        You can view more details about each result
+	such as inferred invariants and search graphs by clicking on the
+	name of the benchmark.
       </p>
 
+
+      <!-- TODO -->
       <table>
 	<tr>
-	  <th></th><th>sequential</th> <th>4 cores</th>
+	  <th></th><th colspan="4" class="colsep">Forward</th>
+          <th colspan="3" class="colsep">Backward</th>
+          <th rowspan="2" class="colsep">Total time</th>
+	</tr>
+	<tr>
+	  <th></th><th class="colsep"># procs</th><th>depth lim.</th>
+          <th># states</th><th>time</th>
+          <th class="colsep"># nodes</th><th># inv</th><th># restarts</th>
 	</tr>
 
-	<tr class="mex">
-	  <td class="bench"> <a href="examples/bakery_uguard.cub">bakery</a> </td>
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/motivating_results.html">German-<i>ish</i></a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>23</td> <td>0.01s</td>
+          <td class="colsep">4</td> <td>3</td> <td>0</td>
+          <td class="colsep"><b>0.03s</b></td>
+        </tr>
+
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/szymanski_at_results.html">Szymanski_at</a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>43</td> <td>0.02s</td>
+          <td class="colsep">31</td> <td>15</td> <td>0</td>
+          <td class="colsep"><b>0.14s</b></td>
+        </tr>
+
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/szymanski_na_results.html">Szymanski_na</a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>75</td> <td>0.02s</td>
+          <td class="colsep">38</td> <td>16</td> <td>0</td>
+          <td class="colsep"><b>0.20s</b></td>
+        </tr>
+
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/german_baukus_results.html">German_Baukus</a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>1497</td> <td>0.02s</td>
+          <td class="colsep">43</td> <td>35</td> <td>0</td>
+          <td class="colsep"><b>0.25s</b></td>
+        </tr>
+
+
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/german.ctc_results.html">German.CTC</a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>1497</td> <td>0.02s</td>
+          <td class="colsep">62</td> <td>27</td> <td>0</td>
+          <td class="colsep"><b>0.29s</b></td>
+        </tr>
+
+
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/german_pfs_results.html">German_pfs</a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>1737</td> <td>0.02s</td>
+          <td class="colsep">49</td> <td>35</td> <td>0</td>
+          <td class="colsep"><b>0.34s</b></td>
+        </tr>
+
+        
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/chandra_toueg_results.html">Chandra-Toueg</a> </td>
+          <td class="colsep">2</td> <td>&infin;</td> <td>148</td> <td>0.02s</td>
+          <td class="colsep">3828<br/>(770 + 1329 + 1729)</td> <td>5</td> <td>2</td>
+          <td class="colsep"><b>2m17s</b></td>
+        </tr>
+
+        
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/flash_nodata_results.html">Flash_nodata</a> </td>
+          <td class="colsep">2</td> <td>6</td> <td>439</td> <td>0.02s</td>
+          <td class="colsep">37</td> <td>30</td> <td>0</td>
+          <td class="colsep"><b>0.36s</b></td>
+        </tr>
+                
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/flash_buggy_results.html">Flash_buggy</a> </td>
+          <td class="colsep">2</td> <td>6</td> <td>445</td> <td>0.02s</td>
+          <td class="colsep">228</td> <td>/</td> <td>0</td>
+          <td class="colsep"><b>2.97s</b></td>
+        </tr>
+        
+        <tr class="zebra">
+          <td class="bench"> <a href="examples/flash_results.html">Flash</a> </td>
+          <td class="colsep">3</td> <td>14</td> <td>452,523</td> <td>8.54s</td>
+          <td class="colsep">1047</td> <td>131</td> <td>0</td>
+          <td class="colsep"><b>5m40s</b></td>
+        </tr>
+                
+      </table>
+
+      <!-- <a name="experiments"></a> -->
+      <!-- <h2>Experiments</h2> -->
+
+      <!-- <p> -->
+      <!-- 	We have experimented Cubicle on classical and challenging -->
+      <!-- 	problems (mutual exclusion algorithms and cache coherence -->
+      <!-- 	protocols) from the literature. -->
+      <!-- </p> -->
+
+      <!-- <p> -->
+      <!-- 	All the following benchmarks have been executed on a 64 bits -->
+      <!-- 	machine with a quad-core  -->
+      <!-- 	Intel &reg; Xeon &reg; processor @ 3.2 GHz and 24 GB of -->
+      <!-- 	memory. These results were obtained whith version 0.2.5 and the default settings excepted for times followed by * that were obtained with the <span class="tt">-geninv</span> option to synthetize invariants. Note that the parallel version of Cubicle was run on 4 -->
+      <!-- 	cores and that we only give its results for significantly time -->
+      <!-- 	consuming problems. -->
+      <!-- </p> -->
+
+      <!-- <table> -->
+      <!-- 	<tr> -->
+      <!-- 	  <th></th><th>sequential</th> <th>4 cores</th> -->
+      <!-- 	</tr> -->
+
+      <!-- 	<tr class="mex"> -->
+      <!-- 	  <td class="bench"> <a href="examples/bakery_uguard.cub">bakery</a> </td> -->
 	
-	  <td> 0.01s </td> <td> - </td>
+      <!-- 	  <td> 0.01s </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
-	<tr class="mex">
-	  <td class="bench"> <a href="examples/dijkstra.cub">Dijkstra</a> </td>
+      <!-- 	<tr class="mex"> -->
+      <!-- 	  <td class="bench"> <a href="examples/dijkstra.cub">Dijkstra</a> </td> -->
 	
-	  <td> 0.24s </td> <td> - </td>
+      <!-- 	  <td> 0.24s </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
 
-	<tr class="mex">
-	  <td class="bench"> <a href="examples/distrib_lamport.cub">Distributed Lamport</a> </td>
+      <!-- 	<tr class="mex"> -->
+      <!-- 	  <td class="bench"> <a href="examples/distrib_lamport.cub">Distributed Lamport</a> </td> -->
 
-	  <td> 3.53s* </td> <td> - </td>
+      <!-- 	  <td> 3.53s* </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
-	<tr class="mex">
-	  <td class="bench"> <a href="examples/jml.cub">Java-Mlock</a> </td>
+      <!-- 	<tr class="mex"> -->
+      <!-- 	  <td class="bench"> <a href="examples/jml.cub">Java-Mlock</a> </td> -->
 	
-	  <td> 0.04s </td> <td> - </td>
+      <!-- 	  <td> 0.04s </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
 
-	<tr class="mex">
-	  <td class="bench"> <a href="examples/ricart_agrawala.cub">Ricart Agrawala</a> </td>
+      <!-- 	<tr class="mex"> -->
+      <!-- 	  <td class="bench"> <a href="examples/ricart_agrawala.cub">Ricart Agrawala</a> </td> -->
 
-	  <td> 4.25s* </td> <td> - </td>
+      <!-- 	  <td> 4.25s* </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
-	<tr class="mex">
-	  <td class="bench"> <a href="examples/szymanski_at.cub">Szymanski_at</a> </td>
+      <!-- 	<tr class="mex"> -->
+      <!-- 	  <td class="bench"> <a href="examples/szymanski_at.cub">Szymanski_at</a> </td> -->
 
-	  <td> 0.12s* </td> <td> - </td>
+      <!-- 	  <td> 0.12s* </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/berkeley.cub">Berkeley</a> </td>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/berkeley.cub">Berkeley</a> </td> -->
 	
-	  <td> 0.01s </td> <td> - </td>
+      <!-- 	  <td> 0.01s </td> <td> - </td> -->
 
-	</tr>
+      <!-- 	</tr> -->
 
 
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/flash_eager.cub">flash_aggregated</a> </td>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/flash_eager.cub">flash_aggregated</a> </td> -->
 	
-	  <td> 0.01s </td> <td> - </td> 
+      <!-- 	  <td> 0.01s </td> <td> - </td>  -->
 
-	</tr>
+      <!-- 	</tr> -->
 
 
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/german.cub">German_Baukus</a> </td>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/german.cub">German_Baukus</a> </td> -->
 	
-	  <td> 25.0s </td> <td> 17.1s </td>
+      <!-- 	  <td> 25.0s </td> <td> 17.1s </td> -->
 
-	</tr>
-
-
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/german_pfs.cub">German_pfs</a> </td>
-	
-
-	  <td> 6m23s* </td> <td> 3m8s* </td>
-	</tr>
-
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/german_undip.cub">German_undip</a> </td>
-	
-	  <td> 0.17s </td> <td> - </td>
-
-	</tr>
+      <!-- 	</tr> -->
 
 
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/illinois.cub">Illinois</a> </td>
-	
-	  <td> 0.02s </td> <td> - </td>
-
-	</tr>
-
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/mesi.cub">Mesi</a> </td>
-	
-	  <td> 0.01s </td> <td> - </td>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/german_pfs.cub">German_pfs</a> </td> -->
 	
 
-	</tr>
+      <!-- 	  <td> 6m23s* </td> <td> 3m8s* </td> -->
+      <!-- 	</tr> -->
+
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/german_undip.cub">German_undip</a> </td> -->
+	
+      <!-- 	  <td> 0.17s </td> <td> - </td> -->
+
+      <!-- 	</tr> -->
 
 
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/moesi.cub">Moesi</a> </td>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/illinois.cub">Illinois</a> </td> -->
+	
+      <!-- 	  <td> 0.02s </td> <td> - </td> -->
 
-	  <td> 0.01s </td> <td> - </td> 
+      <!-- 	</tr> -->
+
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/mesi.cub">Mesi</a> </td> -->
+	
+      <!-- 	  <td> 0.01s </td> <td> - </td> -->
+	
+
+      <!-- 	</tr> -->
+
+
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/moesi.cub">Moesi</a> </td> -->
+
+      <!-- 	  <td> 0.01s </td> <td> - </td>  -->
 		
 
-	</tr>
+      <!-- 	</tr> -->
 
 
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/synapse.cub">synapse</a> </td>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/synapse.cub">synapse</a> </td> -->
 	
-	  <td> 0.01s </td> <td> - </td>
-	
-
-	</tr>
-
-	<tr class="ccp">
-	  <td class="bench"> <a href="examples/xerox_dragon.cub">Xerox Dragon</a> </td>
-	
-	  <td> 0.01s </td> <td> - </td>
+      <!-- 	  <td> 0.01s </td> <td> - </td> -->
 	
 
-	</tr>
+      <!-- 	</tr> -->
 
-      </table>
+      <!-- 	<tr class="ccp"> -->
+      <!-- 	  <td class="bench"> <a href="examples/xerox_dragon.cub">Xerox Dragon</a> </td> -->
+	
+      <!-- 	  <td> 0.01s </td> <td> - </td> -->
+	
+
+      <!-- 	</tr> -->
+
+      <!-- </table> -->
       
 
-      <a name="manual"></a>
-      <h2>Manual</h2>
+      <a name="doc"></a>
+      <h2>Documentation</h2>
 
       <a name="language"></a>
       <h3>Description language</h3>
@@ -582,21 +846,7 @@
 	  substitutions, in the solver, etc.
 	  </td>
 	</tr>
-
-	<tr>
-	  <td class="opt"> -geninv
-	  </td>
-	  
-	  <td class="opt-desc"> Activate invariant discovery during
-	    the search. If this flag is present, Cubicle will attempt to
-	    synthesize invariants with candidates being subsets of
-	    visited nodes that only contain predicates over a 
-	    unique process variable. Each of these subsets
-	    is checked for safety by starting a new resource limited
-	    backward reachability analysis.
-
-	  </td>
-	</tr>
+	
 
 	<tr>
 	  <td class="opt"> -postpone <em>n</em>
@@ -632,7 +882,7 @@
 	  
 	  <td class="opt-desc"> Run Cubicle in parallel on <em>n</em>
 	  cores. This option can only be used with the search strategy
-	  set to BFS.
+	  set to BFS. (Do not use in conjunction with <b>-brab</b>.)
 	  </td>
 	</tr>
 
@@ -648,6 +898,66 @@
 
       </table>
 
+      <h3>Options relevant to BRAB</h3>
+      
+        <table class="opts">
+	
+	<tr>
+	  <td class="opt"> -brab <em>n</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Runs BRAB with a forward exploration
+	  with <em>n</em> processes.
+	  </td>
+	</tr>
+	
+	<tr>
+	  <td class="opt"> -forward-depth <em>d<sub>max</sub></em>
+	  </td>
+	  
+	  <td class="opt-desc"> Limits the forward exploration to
+	  states at depth <em>d<sub>max</sub></em> at maximum.
+	  </td>
+	</tr>
+        
+	<tr>
+	  <td class="opt"> -only-forward
+	  </td>
+	  
+	  <td class="opt-desc"> Stops after forward exploration.
+	  </td>
+	</tr>
+
+	<tr>
+	  <td class="opt"> -candheur <em>nb</em>
+	  </td>
+	  
+	  <td class="opt-desc">
+            Select canditate invariants heuristic with <em>nb</em> (by default <em>nb</em> is
+	    the argument of -brab).
+	  </td>
+	</tr>
+        
+        
+	<tr>
+	  <td class="opt"> -v
+	  </td>
+	  
+	  <td class="opt-desc"> Increases verbosity of debugging information.
+	  </td>
+	</tr>
+        
+	<tr>
+	  <td class="opt"> -dot <em>level</em>
+	  </td>
+	  
+	  <td class="opt-desc"> Displays search graph (dot must be
+	  installed) with detail level <em>level</em> (between 0 and 5).
+	  </td>
+	</tr>
+
+
+	</table>
 
       <p>
 	When running, Cubicle will produce traces on stdout for each
@@ -659,7 +969,7 @@
 	</span>
 	
 	will represent states that can reach the unsafe state by
-	first applying transistion <span class="tt">inv_2</span> in
+	first applying transition <span class="tt">inv_2</span> in
 	process <span class="tt">#2</span> and then applying
 	transition <span class="tt">gnt_shared</span> in
 	process <span class="tt">#1</span>.	
@@ -671,7 +981,17 @@
 	in the same format.
       </p>
 
+
+      <a name="changelog"></a>
+      <h3>Changelog</h3>
     
+      <p>
+<pre>
+#CHANGELOG#          
+</pre>
+      </p>
+
+  
 
       <a name="examples"></a>
       <h2>Examples</h2>
