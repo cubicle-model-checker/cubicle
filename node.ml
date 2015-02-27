@@ -145,7 +145,8 @@ module Latex = struct
     | Elem (s, Glob) -> fprintf fmt "\\texttt{%a}" Hstring.print s
     | Elem (s, Constr) -> fprintf fmt "\\textsf{%a}" Hstring.print s
     | Access (a, li) ->
-       fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
+       fprintf fmt "\\texttt{%a}[%a]" 
+	 Hstring.print a (Index.print_list ", ") li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
 

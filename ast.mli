@@ -40,7 +40,7 @@ type glob_update = UTerm of Term.t | UCase of swts
 type update = {
   up_loc : loc; (** location information *)
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
-  up_arg : Variable.t list; (** list of universally quantified variables *)
+  up_arg : Index.t list; (** list of universally quantified variables *)
   up_swts : swts;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
 }

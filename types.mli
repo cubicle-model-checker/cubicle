@@ -42,13 +42,32 @@ val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
 
 
+
 (** the type of terms *)
+
+module Index : sig
+  type t = 
+    | C of Hstring.t 
+    | V of Variable.t
+
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val compare_list : t list -> t list -> int
+  val compare_couple : (t * t) -> (t * t) -> int
+  val list_mem_couple : (t * t) -> (t * t) list -> bool
+  val list_mem : t -> t list -> bool
+  val list_assoc : t -> (t * t) list -> t
+  val print : Format.formatter -> t -> unit
+  val print_list : string -> Format.formatter -> t list -> unit
+    
+end
+
 type term =
   | Const of int MConst.t
   (** constant given as a map. [1*2 + 3*c] is the map [[2 -> 1; c -> 3]] *)
   | Elem of Hstring.t * sort
   (** element, can be a variable or a process *)
-  | Access of Hstring.t * Variable.t list
+  | Access of Hstring.t * Index.t list
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)

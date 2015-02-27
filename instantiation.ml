@@ -64,7 +64,7 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
 	  when Term.compare c1 c2 = 0 ->
 	  
 	  if List.for_all2 
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
+            (fun x1 x2 -> Index.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
           impos := (list_rev_combine lx1 lx2) :: !impos
 	      
@@ -73,7 +73,7 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
 	  when Term.compare c1 c2 = 0 ->
 
 	  if List.for_all2
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
+            (fun x1 x2 -> Index.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
           impos := (list_rev_combine lx1 lx2) :: !impos
 
@@ -81,7 +81,7 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
 	  when Term.compare c1 c2 <> 0 ->
 	  
 	  if List.for_all2
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
+            (fun x1 x2 -> Index.list_mem_couple (x1, x2) obvs) lx1 lx2 then
             raise NoPermutations;
           impos := (list_rev_combine lx1 lx2) :: !impos
 	    
@@ -90,12 +90,13 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
   done
 
 let clash_binding (x,y) l =
-  try not (H.equal (H.list_assoc_inv y l) x)
+  try not (Index.equal (Index.list_assoc_inv y l) x)
   with Not_found -> false
     
 let add_obv ((x,y) as p) obvs =
   begin
-    try if clash_binding p !obvs || not (H.equal (H.list_assoc x !obvs) y) then 
+    try if clash_binding p !obvs || 
+	not (Index.equal (Index.list_assoc x !obvs) y) then 
 	raise NoPermutations
     with Not_found -> obvs := p :: !obvs
   end

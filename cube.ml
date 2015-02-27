@@ -462,8 +462,11 @@ let rec add_arg args = function
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
   | Access (_, ls) ->
       List.fold_left (fun args s ->
-        let s' = H.view s in
-        if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args)
+	match s with
+	  | Index.V s ->
+            let s' = H.view s in
+            if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
+	  | _ -> args)
         args ls        
   | Arith (t, _) -> add_arg args t
   | Const _ -> args

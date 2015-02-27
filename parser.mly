@@ -284,17 +284,21 @@ require:
 
 update:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
-      { List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then
-            raise Parsing.Parse_error;
-        ) $3;
-        Upd { up_loc = loc (); up_arr = $1; up_arg = $3; up_swts = $7} }
+      { 
+	let l = 
+	  List.map 
+	    (fun p ->
+              if (Hstring.view p).[0] = '#' then
+		raise Parsing.Parse_error;
+	      Index.V p) $3 
+	in
+        Upd { up_loc = loc (); up_arr = $1; up_arg = l; up_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
             let c = Atom.Comp(Elem (j, Var), Eq, Elem (i, Var)) in
-            SAtom.add c cube, j :: rjs) (SAtom.empty, []) $3 in
+            SAtom.add c cube, (Index.V j) :: rjs) (SAtom.empty, []) $3 in
         let js = List.rev rjs in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
 	Upd { up_loc = loc (); up_arr = $1; up_arg = js; up_swts = sw}  }
@@ -358,7 +362,8 @@ var_term:
 
 array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
-    Access ($1, $3)
+    let l = List.map (fun p -> Index.V p) $3 in
+    Access ($1, l)
   }
 ;
 

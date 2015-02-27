@@ -56,10 +56,60 @@ module MConst = struct
 	   
 end
 
+module Index = struct
+  type t = 
+    | C of Hstring.t 
+    | V of Variable.t
+
+  let compare i1 i2 = 
+    match i1, i2 with
+      | C c1, C c2 -> Hstring.compare c1 c2
+      | C _, _ -> -1
+      | V v1, V v2 -> Hstring.compare v1 v2
+      | V _, _ -> 1
+	
+  let rec compare_list l1 l2 =
+    match l1, l2 with
+      | [], [] -> 0
+      | [], _ -> -1
+      | _, [] -> 1
+      | x::r1, y::r2 ->
+	let c = compare x y in
+	if c <> 0 then c
+	else compare_list r1 r2
+
+  let equal i1 i2 = compare i1 i2 = 0
+
+  let list_mem x l = List.exists (equal x) l
+
+  let rec list_assoc x = function
+    | [] -> raise Not_found
+    | (y, v) :: l -> if equal x y then v else list_assoc x l
+
+  let compare_couple (x1,y1) (x2,y2) =
+    let c = compare x1 x2 in
+    if c <> 0 then c
+    else compare y1 y2
+
+  let rec list_mem_couple c = function
+    | [] -> false
+    | d :: l -> compare_couple c d  = 0 || list_mem_couple c l
+
+  let print fmt i = 
+    match i with
+      | C v | V v -> fprintf fmt "%a" Hstring.print v
+
+  let rec print_list sep fmt = function
+    | [] -> ()
+    | [s] -> print fmt s
+    | s::r -> Format.fprintf fmt "%a%s%a" print s sep (print_list sep) r
+
+end
+
 type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
-  | Access of Hstring.t * Variable.t list
+  | Access of Hstring.t * Index.t list
   | Arith of term * int MConst.t
 
 let is_int_const = function
@@ -150,7 +200,7 @@ module Term = struct
     | Elem _, _ -> -1 | _, Elem _ -> 1
     | Access (a1, l1), Access (a2, l2) ->
        let c = Hstring.compare a1 a2 in
-       if c<>0 then c else Hstring.compare_list l1 l2
+       if c<>0 then c else Index.compare_list l1 l2
     | Access _, _ -> -1 | _, Access _ -> 1 
     | Arith (t1, cs1), Arith (t2, cs2) ->
        let c = compare t1 t2 in
@@ -179,7 +229,12 @@ module Term = struct
     | Access (a, lz) -> 
        Access (a, List.map
                     (fun z ->
-                     try Variable.subst sigma z with Not_found -> z) lz)
+		      match z with 
+			| Index.V v -> 
+			  let v = 
+			    try Variable.subst sigma v with Not_found -> v in
+			  Index.V v
+			| _ -> z) lz)
     | Arith (x, c) -> Arith (subst sigma x, c)
     | _ -> t
 
@@ -187,8 +242,12 @@ module Term = struct
   let rec variables = function
     | Elem (x, Var) -> Variable.Set.singleton x
     | Access (_, lx) ->
-       List.fold_left (fun acc x -> Variable.Set.add x acc)
-                      Variable.Set.empty lx
+       List.fold_left 
+	 (fun acc x -> 
+	   match x with 
+	     | Index.V v -> Variable.Set.add v acc
+	     | _ -> acc)
+         Variable.Set.empty lx
     | Arith (t, _) -> variables t
     | _ -> Variable.Set.empty
 
@@ -227,7 +286,7 @@ module Term = struct
     | Const cs -> print_cs fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
-       fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
+       fprintf fmt "%a[%a]" Hstring.print a (Index.print_list ", ") li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print x print_cs cs
 
@@ -314,19 +373,20 @@ end = struct
   let rec subst sigma a =
     match a with
     | Ite (sa, a1, a2) ->
-       Ite(SAtom.subst sigma sa, 
-           subst sigma a1, 
-           subst sigma a2)
+      Ite(SAtom.subst sigma sa, 
+          subst sigma a1, 
+          subst sigma a2)
     | Comp (x, op, y) -> 
-       let sx = Term.subst sigma x in
-       let sy = Term.subst sigma y in
-       if x == sx && y == sy then a
-       else Comp(sx, op, sy)
+      let sx = Term.subst sigma x in
+      let sy = Term.subst sigma y in
+      if x == sx && y == sy then a
+      else Comp(sx, op, sy)
     | _ -> a
 
   let rec has_vars_term vs = function
     | Elem (x, Var) -> Hstring.list_mem x vs
-    | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs 
+    | Access (_, lx) -> 
+      List.exists (fun z -> Index.list_mem (Index.V z) lx) vs 
     | Arith (x, _) ->  has_vars_term vs x
     | _ -> false
 
