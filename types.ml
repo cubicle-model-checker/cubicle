@@ -80,11 +80,22 @@ module Index = struct
 
   let equal i1 i2 = compare i1 i2 = 0
 
+  let rec list_equal l1 l2 =
+    match l1, l2 with
+      | [], [] -> true
+      | [], _ -> false
+      | _, [] -> false
+      | x::r1, y::r2 -> equal x y && list_equal r1 r2
+
   let list_mem x l = List.exists (equal x) l
 
   let rec list_assoc x = function
     | [] -> raise Not_found
     | (y, v) :: l -> if equal x y then v else list_assoc x l
+
+  let rec list_assoc_inv x = function
+    | [] -> raise Not_found
+    | (y, v) :: l -> if equal x v then y else list_assoc_inv x l
 
   let compare_couple (x1,y1) (x2,y2) =
     let c = compare x1 x2 in
