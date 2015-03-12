@@ -1,0 +1,1762 @@
+type state = Invalid | Shared | Exclusive
+type msg = Empty | Get | GetX | Nak | Put | PutX
+type wait = None | WGet | WGetX
+type inv = Empty_inv | Inv | InvAck
+type wb_msg = Empty_wb | WB
+type shwb_msg = Empty_shwb | ShWB | FAck
+type data
+
+
+var Home : proc
+var Memory : data
+var Pending : bool
+var Local : bool
+var Dirty : bool
+var Head_valid : bool
+var Head_pointer : proc
+
+var Nakc :bool
+
+var WBnet_mtype : wb_msg
+var WBnet_data : data
+var WBnet_proc : proc
+
+var ShWBnet_mtype : shwb_msg
+var ShWBnet_data : data
+var ShWBnet_proc : proc
+
+array CacheState[proc] : state
+array CacheWait[proc] : wait
+array CacheData[proc] : data
+array CacheInvmarked[proc] : bool
+
+var CacheState_home : state
+var CacheWait_home : wait
+var CacheData_home : data
+var CacheInvmarked_home : bool
+
+array UnetProc[proc] : proc
+array UnetMtype[proc] : msg
+array UnetData[proc] : data
+
+var UnetProc_home : proc
+var UnetMtype_home : msg
+var UnetData_home : data
+
+array Invnet[proc] : inv
+array Shlist[proc] : bool
+array RP[proc] : bool
+array Real[proc] : bool
+
+var Invnet_home : inv
+var Shlist_home : bool
+var RP_home : bool
+var Real_home : bool
+
+
+
+init (p) {
+     Home <> p &&
+
+     Pending = False &&
+     Local = False &&
+     Dirty = False &&
+     Head_valid = False &&
+
+     Nakc = False &&
+
+     WBnet_mtype = Empty_wb &&
+
+     ShWBnet_mtype = Empty_shwb &&
+
+     CacheState[p] = Invalid &&
+     CacheWait[p] = None &&
+     CacheInvmarked[p] = False &&
+
+     CacheState_home = Invalid &&
+     CacheWait_home = None &&
+     CacheInvmarked_home = False &&
+
+     UnetMtype[p] = Empty &&
+     UnetMtype_home = Empty &&
+
+     Invnet[p] = Empty_inv &&
+     Shlist[p] = False &&
+     Real[p] = False &&
+     RP[p] = False &&
+
+     Invnet_home = Empty_inv &&
+     Shlist_home = False &&
+     Real_home = False &&
+     RP_home = False
+
+}
+
+
+(* invariant (z) { z = Home } *)
+
+
+
+(* (\* Lemma 1 *\) *)
+(* unsafe (i) { CacheState[i] = Exclusive && Dirty = False } *)
+(* unsafe (i) { CacheState[i] = Exclusive && WBnet_mtype = WB } *)
+(* unsafe (i) { CacheState[i] = Exclusive && ShWBnet_mtype = ShWB } *)
+(* unsafe (i) { CacheState[i] = Exclusive && UnetMtype_home = Put } *)
+(* unsafe (i j) { CacheState[i] = Exclusive && UnetMtype[j] = PutX } *)
+
+
+(* (\* Lemma 2 *\) *)
+(* unsafe (i) { UnetMtype[i] = Get && UnetProc[i] <> Home && Pending = False } *)
+(* unsafe (i) { UnetMtype[i] = Get && UnetProc[i] <> Home && Local = True } *)
+
+
+(* (\* Lemma 3 *\) *)
+(* unsafe (i) { UnetMtype[i] = GetX && UnetProc[i] <> Home && Pending = False } *)
+(* unsafe (i) { UnetMtype[i] = GetX && UnetProc[i] <> Home && Local = True } *)
+
+
+(* (\* Lemma 3 *\) *)
+(* unsafe (i) { Invnet[i] = InvAck && Pending = False } *)
+(* unsafe (i) { Invnet[i] = InvAck && Nakc = True } *)
+(* unsafe (i) { Invnet[i] = InvAck && ShWBnet_mtype <> Empty_shwb } *)
+(* unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = Get && UnetProc[j] <> Home } *)
+(* unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = GetX && UnetProc[j] <> Home } *)
+(* unsafe (i j) { Invnet[i] = InvAck && UnetMtype[j] = PutX && UnetProc[j] <> Home } *)
+
+
+(* invariant (j) { CacheState_home = Exclusive && UnetMtype[j] = PutX }  *)
+(* invariant (i j) { CacheState[i] = Exclusive && UnetMtype[j] = PutX }  *)
+
+
+candidate (z1) (*1*) { Real_home = True &&
+              Real[z1] = False}
+
+candidate (z1) (*2*) { RP_home = True &&
+              Real[z1] = False}
+
+candidate (z1) (*3*) { Shlist_home = True &&
+              Real[z1] = False}
+
+candidate (z1) (*4*) { Invnet_home <> Empty_inv &&
+              Real[z1] = False}
+
+candidate (z1) (*5*) { CacheInvmarked_home = True &&
+              Real[z1] = False}
+
+candidate (z1) (*6*) { Real_home = True &&
+              Real[z1] = True}
+
+candidate (z1) (*7*) { RP_home = True &&
+              Real[z1] = True}
+
+candidate (z1) (*8*) { Shlist_home = True &&
+              Real[z1] = True}
+
+candidate (z1) (*9*) { Invnet_home <> Empty_inv &&
+              Real[z1] = True}
+
+candidate (z1) (*10*) { CacheInvmarked_home = True &&
+               Real[z1] = True}
+
+candidate (z1) (*11*) { Real_home = True &&
+               RP[z1] = False}
+
+candidate (z1) (*12*) { RP_home = True &&
+               RP[z1] = False}
+
+candidate (z1) (*13*) { Shlist_home = True &&
+               RP[z1] = False}
+
+candidate (z1) (*14*) { Invnet_home <> Empty_inv &&
+               RP[z1] = False}
+
+candidate (z1) (*15*) { CacheInvmarked_home = True &&
+               RP[z1] = False}
+
+candidate (z1) (*16*) { Real_home = True &&
+               RP[z1] = True}
+
+candidate (z1) (*17*) { RP_home = True &&
+               RP[z1] = True}
+
+candidate (z1) (*18*) { Shlist_home = True &&
+               RP[z1] = True}
+
+candidate (z1) (*19*) { Invnet_home <> Empty_inv &&
+               RP[z1] = True}
+
+candidate (z1) (*20*) { CacheInvmarked_home = True &&
+               RP[z1] = True}
+
+candidate (z1) (*21*) { Real_home = True &&
+               Shlist[z1] = False}
+
+candidate (z1) (*22*) { RP_home = True &&
+               Shlist[z1] = False}
+
+candidate (z1) (*23*) { Shlist_home = True &&
+               Shlist[z1] = False}
+
+candidate (z1) (*24*) { Invnet_home <> Empty_inv &&
+               Shlist[z1] = False}
+
+candidate (z1) (*25*) { CacheInvmarked_home = True &&
+               Shlist[z1] = False}
+
+candidate (z1) (*26*) { Shlist[z1] = True &&
+               Real[z1] = False}
+
+candidate (z1) (*27*) { Real_home = True &&
+               Shlist[z1] = True}
+
+candidate (z1) (*28*) { RP_home = True &&
+               Shlist[z1] = True}
+
+candidate (z1) (*29*) { Shlist_home = True &&
+               Shlist[z1] = True}
+
+candidate (z1) (*30*) { Invnet_home <> Empty_inv &&
+               Shlist[z1] = True}
+
+candidate (z1) (*31*) { CacheInvmarked_home = True &&
+               Shlist[z1] = True}
+
+candidate (z1) (*32*) { Real_home = True &&
+               Invnet[z1] = InvAck}
+
+candidate (z1) (*33*) { RP_home = True &&
+               Invnet[z1] = InvAck}
+
+candidate (z1) (*34*) { Shlist_home = True &&
+               Invnet[z1] = InvAck}
+
+candidate (z1) (*35*) { Invnet_home <> Empty_inv &&
+               Invnet[z1] = InvAck}
+
+candidate (z1) (*36*) { CacheInvmarked_home = True &&
+               Invnet[z1] = InvAck}
+
+candidate (z1) (*37*) { Real_home = True &&
+               Invnet[z1] = Inv}
+
+candidate (z1) (*38*) { RP_home = True &&
+               Invnet[z1] = Inv}
+
+candidate (z1) (*39*) { Shlist_home = True &&
+               Invnet[z1] = Inv}
+
+candidate (z1) (*40*) { Invnet_home <> Empty_inv &&
+               Invnet[z1] = Inv}
+
+candidate (z1) (*41*) { CacheInvmarked_home = True &&
+               Invnet[z1] = Inv}
+
+candidate (z1) (*42*) { Real_home = True &&
+               Invnet[z1] = Empty_inv}
+
+candidate (z1) (*43*) { RP_home = True &&
+               Invnet[z1] = Empty_inv}
+
+candidate (z1) (*44*) { Shlist_home = True &&
+               Invnet[z1] = Empty_inv}
+
+candidate (z1) (*45*) { Invnet_home <> Empty_inv &&
+               Invnet[z1] = Empty_inv}
+
+candidate (z1) (*46*) { CacheInvmarked_home = True &&
+               Invnet[z1] = Empty_inv}
+
+candidate (z1) (*47*) { CacheInvmarked[z1] = True &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*48*) { CacheWait[z1] <> WGetX &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*49*) { CacheState[z1] <> Invalid &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*50*) { Real_home = True &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*51*) { RP_home = True &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*52*) { Shlist_home = True &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*53*) { Invnet_home <> Empty_inv &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*54*) { CacheInvmarked_home = True &&
+               UnetMtype[z1] = PutX}
+
+candidate (z1) (*55*) { CacheWait[z1] <> WGet &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*56*) { CacheState[z1] <> Invalid &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*57*) { Real_home = True &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*58*) { RP_home = True &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*59*) { Shlist_home = True &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*60*) { Invnet_home <> Empty_inv &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*61*) { CacheInvmarked_home = True &&
+               UnetMtype[z1] = Put}
+
+candidate (z1) (*62*) { CacheWait[z1] = None &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*63*) { CacheState[z1] <> Invalid &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*64*) { Real_home = True &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*65*) { RP_home = True &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*66*) { Shlist_home = True &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*67*) { Invnet_home <> Empty_inv &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*68*) { CacheInvmarked_home = True &&
+               UnetMtype[z1] = Nak}
+
+candidate (z1) (*69*) { CacheInvmarked[z1] = True &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*70*) { CacheWait[z1] <> WGetX &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*71*) { CacheState[z1] <> Invalid &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*72*) { Real_home = True &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*73*) { RP_home = True &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*74*) { Shlist_home = True &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*75*) { Invnet_home <> Empty_inv &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*76*) { CacheInvmarked_home = True &&
+               UnetMtype[z1] = GetX}
+
+candidate (z1) (*77*) { CacheWait[z1] <> WGet &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*78*) { CacheState[z1] <> Invalid &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*79*) { Real_home = True &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*80*) { RP_home = True &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*81*) { Shlist_home = True &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*82*) { Invnet_home <> Empty_inv &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*83*) { CacheInvmarked_home = True &&
+               UnetMtype[z1] = Get}
+
+candidate (z1) (*84*) { CacheInvmarked[z1] = True &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*85*) { CacheWait[z1] <> None &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*86*) { Real_home = True &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*87*) { RP_home = True &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*88*) { Shlist_home = True &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*89*) { Invnet_home <> Empty_inv &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*90*) { CacheInvmarked_home = True &&
+               UnetMtype[z1] = Empty}
+
+candidate (z1) (*91*) { Real_home = True &&
+               CacheInvmarked[z1] = False}
+
+candidate (z1) (*92*) { RP_home = True &&
+               CacheInvmarked[z1] = False}
+
+candidate (z1) (*93*) { Shlist_home = True &&
+               CacheInvmarked[z1] = False}
+
+candidate (z1) (*94*) { Invnet_home <> Empty_inv &&
+               CacheInvmarked[z1] = False}
+
+candidate (z1) (*95*) { CacheInvmarked_home = True &&
+               CacheInvmarked[z1] = False}
+
+candidate (z1) (*96*) { CacheInvmarked[z1] = True &&
+               UnetMtype[z1] <> Get &&
+               UnetMtype[z1] <> Nak &&
+               UnetMtype[z1] <> Put}
+
+candidate (z1) (*97*) { CacheWait[z1] <> WGet &&
+               CacheInvmarked[z1] = True}
+
+candidate (z1) (*98*) { CacheState[z1] <> Invalid &&
+               CacheInvmarked[z1] = True}
+
+candidate (z1) (*99*) { Real_home = True &&
+               CacheInvmarked[z1] = True}
+
+candidate (z1) (*100*) { RP_home = True &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*101*) { Shlist_home = True &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*102*) { Invnet_home <> Empty_inv &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*103*) { CacheInvmarked_home = True &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*104*) { CacheWait[z1] = WGetX &&
+                UnetMtype[z1] <> GetX &&
+                UnetMtype[z1] <> Nak &&
+                UnetMtype[z1] <> PutX}
+
+candidate (z1) (*105*) { CacheWait[z1] = WGetX &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*106*) { CacheState[z1] <> Invalid &&
+                CacheWait[z1] = WGetX}
+
+candidate (z1) (*107*) { Real_home = True &&
+                CacheWait[z1] = WGetX}
+
+candidate (z1) (*108*) { RP_home = True &&
+                CacheWait[z1] = WGetX}
+
+candidate (z1) (*109*) { Shlist_home = True &&
+                CacheWait[z1] = WGetX}
+
+candidate (z1) (*110*) { Invnet_home <> Empty_inv &&
+                CacheWait[z1] = WGetX}
+
+candidate (z1) (*111*) { CacheInvmarked_home = True &&
+                CacheWait[z1] = WGetX}
+
+candidate (z1) (*112*) { CacheWait[z1] = WGet &&
+                UnetMtype[z1] <> Get &&
+                UnetMtype[z1] <> Nak &&
+                UnetMtype[z1] <> Put}
+
+candidate (z1) (*113*) { CacheState[z1] <> Invalid &&
+                CacheWait[z1] = WGet}
+
+candidate (z1) (*114*) { Real_home = True &&
+                CacheWait[z1] = WGet}
+
+candidate (z1) (*115*) { RP_home = True &&
+                CacheWait[z1] = WGet}
+
+candidate (z1) (*116*) { Shlist_home = True &&
+                CacheWait[z1] = WGet}
+
+candidate (z1) (*117*) { Invnet_home <> Empty_inv &&
+                CacheWait[z1] = WGet}
+
+candidate (z1) (*118*) { CacheInvmarked_home = True &&
+                CacheWait[z1] = WGet}
+
+candidate (z1) (*119*) { CacheWait[z1] = None &&
+                UnetMtype[z1] <> Empty}
+
+candidate (z1) (*120*) { CacheWait[z1] = None &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*121*) { Real_home = True &&
+                CacheWait[z1] = None}
+
+candidate (z1) (*122*) { RP_home = True &&
+                CacheWait[z1] = None}
+
+candidate (z1) (*123*) { Shlist_home = True &&
+                CacheWait[z1] = None}
+
+candidate (z1) (*124*) { Invnet_home <> Empty_inv &&
+                CacheWait[z1] = None}
+
+candidate (z1) (*125*) { CacheInvmarked_home = True &&
+                CacheWait[z1] = None}
+
+candidate (z1) (*126*) { CacheState[z1] = Exclusive &&
+                UnetMtype[z1] <> Empty}
+
+candidate (z1) (*127*) { CacheState[z1] = Exclusive &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*128*) { CacheState[z1] = Exclusive &&
+                CacheWait[z1] <> None}
+
+candidate (z1) (*129*) { Real_home = True &&
+                CacheState[z1] = Exclusive}
+
+candidate (z1) (*130*) { RP_home = True &&
+                CacheState[z1] = Exclusive}
+
+candidate (z1) (*131*) { Shlist_home = True &&
+                CacheState[z1] = Exclusive}
+
+candidate (z1) (*132*) { Invnet_home <> Empty_inv &&
+                CacheState[z1] = Exclusive}
+
+candidate (z1) (*133*) { CacheInvmarked_home = True &&
+                CacheState[z1] = Exclusive}
+
+candidate (z1) (*134*) { CacheState[z1] = Shared &&
+                UnetMtype[z1] <> Empty}
+
+candidate (z1) (*135*) { CacheState[z1] = Shared &&
+                CacheInvmarked[z1] = True}
+
+candidate (z1) (*136*) { CacheState[z1] = Shared &&
+                CacheWait[z1] <> None}
+
+candidate (z1) (*137*) { Real_home = True &&
+                CacheState[z1] = Shared}
+
+candidate (z1) (*138*) { RP_home = True &&
+                CacheState[z1] = Shared}
+
+candidate (z1) (*139*) { Shlist_home = True &&
+                CacheState[z1] = Shared}
+
+candidate (z1) (*140*) { Invnet_home <> Empty_inv &&
+                CacheState[z1] = Shared}
+
+candidate (z1) (*141*) { CacheInvmarked_home = True &&
+                CacheState[z1] = Shared}
+
+candidate (z1) (*142*) { Real_home = True &&
+                CacheState[z1] = Invalid}
+
+candidate (z1) (*143*) { RP_home = True &&
+                CacheState[z1] = Invalid}
+
+candidate (z1) (*144*) { Shlist_home = True &&
+                CacheState[z1] = Invalid}
+
+candidate (z1) (*145*) { Invnet_home <> Empty_inv &&
+                CacheState[z1] = Invalid}
+
+candidate (z1) (*146*) { CacheInvmarked_home = True &&
+                CacheState[z1] = Invalid}
+
+candidate () (*147*) { RP_home = True &&
+                Real_home = False}
+
+candidate () (*148*) { Shlist_home = True &&
+                Real_home = False}
+
+candidate () (*149*) { Invnet_home <> Empty_inv &&
+                Real_home = False}
+
+candidate () (*150*) { CacheInvmarked_home = True &&
+                Real_home = False}
+
+candidate () (*151*) { RP_home = False &&
+                Real_home = True}
+
+candidate () (*152*) { Shlist_home = True &&
+                RP_home = False}
+
+candidate () (*153*) { Invnet_home <> Empty_inv &&
+                RP_home = False}
+
+candidate () (*154*) { CacheInvmarked_home = True &&
+                RP_home = False}
+
+candidate () (*155*) { Shlist_home = False &&
+                Real_home = True}
+
+candidate () (*156*) { Shlist_home = False &&
+                RP_home = True}
+
+candidate () (*157*) { Invnet_home <> Empty_inv &&
+                Shlist_home = False}
+
+candidate () (*158*) { CacheInvmarked_home = True &&
+                Shlist_home = False}
+
+candidate () (*159*) { Invnet_home = Empty_inv &&
+                Real_home = True}
+
+candidate () (*160*) { Invnet_home = Empty_inv &&
+                RP_home = True}
+
+candidate () (*161*) { Invnet_home = Empty_inv &&
+                Shlist_home = True}
+
+candidate () (*162*) { CacheInvmarked_home = True &&
+                Invnet_home = Empty_inv}
+
+candidate () (*163*) { UnetMtype_home = PutX &&
+                Real_home = True}
+
+candidate () (*164*) { UnetMtype_home = PutX &&
+                RP_home = True}
+
+candidate () (*165*) { UnetMtype_home = PutX &&
+                Shlist_home = True}
+
+candidate () (*166*) { UnetMtype_home = PutX &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*167*) { CacheInvmarked_home = True &&
+                UnetMtype_home = PutX}
+
+candidate () (*168*) { CacheWait_home <> WGetX &&
+                UnetMtype_home = PutX}
+
+candidate () (*169*) { CacheState_home = Exclusive &&
+                UnetMtype_home = PutX}
+
+candidate () (*170*) { Local = True &&
+                UnetMtype_home = PutX}
+
+candidate () (*171*) { UnetMtype_home = Put &&
+                Real_home = True}
+
+candidate () (*172*) { UnetMtype_home = Put &&
+                RP_home = True}
+
+candidate () (*173*) { UnetMtype_home = Put &&
+                Shlist_home = True}
+
+candidate () (*174*) { UnetMtype_home = Put &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*175*) { CacheInvmarked_home = True &&
+                UnetMtype_home = Put}
+
+candidate () (*176*) { CacheWait_home <> WGet &&
+                UnetMtype_home = Put}
+
+candidate () (*177*) { CacheState_home <> Invalid &&
+                UnetMtype_home = Put}
+
+candidate () (*178*) { Local = True &&
+                UnetMtype_home = Put}
+
+candidate () (*179*) { UnetMtype_home = GetX &&
+                Real_home = True}
+
+candidate () (*180*) { UnetMtype_home = GetX &&
+                RP_home = True}
+
+candidate () (*181*) { UnetMtype_home = GetX &&
+                Shlist_home = True}
+
+candidate () (*182*) { UnetMtype_home = GetX &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*183*) { CacheInvmarked_home = True &&
+                UnetMtype_home = GetX}
+
+candidate () (*184*) { CacheWait_home <> WGetX &&
+                UnetMtype_home = GetX}
+
+candidate () (*185*) { CacheState_home = Exclusive &&
+                UnetMtype_home = GetX}
+
+candidate () (*186*) { Local = True &&
+                UnetMtype_home = GetX}
+
+candidate () (*187*) { UnetMtype_home = Get &&
+                Real_home = True}
+
+candidate () (*188*) { UnetMtype_home = Get &&
+                RP_home = True}
+
+candidate () (*189*) { UnetMtype_home = Get &&
+                Shlist_home = True}
+
+candidate () (*190*) { UnetMtype_home = Get &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*191*) { CacheInvmarked_home = True &&
+                UnetMtype_home = Get}
+
+candidate () (*192*) { CacheWait_home <> WGet &&
+                UnetMtype_home = Get}
+
+candidate () (*193*) { CacheState_home <> Invalid &&
+                UnetMtype_home = Get}
+
+candidate () (*194*) { Local = True &&
+                UnetMtype_home = Get}
+
+candidate () (*195*) { UnetMtype_home = Empty &&
+                Real_home = True}
+
+candidate () (*196*) { UnetMtype_home = Empty &&
+                RP_home = True}
+
+candidate () (*197*) { UnetMtype_home = Empty &&
+                Shlist_home = True}
+
+candidate () (*198*) { UnetMtype_home = Empty &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*199*) { CacheInvmarked_home = True &&
+                UnetMtype_home = Empty}
+
+candidate () (*200*) { CacheWait_home <> None &&
+                UnetMtype_home = Empty}
+
+candidate () (*201*) { CacheInvmarked_home = False &&
+                Real_home = True}
+
+candidate () (*202*) { CacheInvmarked_home = False &&
+                RP_home = True}
+
+candidate () (*203*) { CacheInvmarked_home = False &&
+                Shlist_home = True}
+
+candidate () (*204*) { CacheInvmarked_home = False &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*205*) { CacheWait_home = WGetX &&
+                Real_home = True}
+
+candidate () (*206*) { CacheWait_home = WGetX &&
+                RP_home = True}
+
+candidate () (*207*) { CacheWait_home = WGetX &&
+                Shlist_home = True}
+
+candidate () (*208*) { CacheWait_home = WGetX &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*209*) { CacheWait_home = WGetX &&
+                UnetMtype_home <> GetX &&
+                UnetMtype_home <> PutX}
+
+candidate () (*210*) { CacheWait_home = WGetX &&
+                CacheInvmarked_home = True}
+
+candidate () (*211*) { CacheState_home = Exclusive &&
+                CacheWait_home = WGetX}
+
+candidate () (*212*) { Local = True &&
+                CacheWait_home = WGetX}
+
+candidate () (*213*) { CacheWait_home = WGet &&
+                Real_home = True}
+
+candidate () (*214*) { CacheWait_home = WGet &&
+                RP_home = True}
+
+candidate () (*215*) { CacheWait_home = WGet &&
+                Shlist_home = True}
+
+candidate () (*216*) { CacheWait_home = WGet &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*217*) { CacheWait_home = WGet &&
+                UnetMtype_home <> Get &&
+                UnetMtype_home <> Put}
+
+candidate () (*218*) { CacheWait_home = WGet &&
+                CacheInvmarked_home = True}
+
+candidate () (*219*) { CacheState_home <> Invalid &&
+                CacheWait_home = WGet}
+
+candidate () (*220*) { Local = True &&
+                CacheWait_home = WGet}
+
+candidate () (*221*) { CacheWait_home = None &&
+                Real_home = True}
+
+candidate () (*222*) { CacheWait_home = None &&
+                RP_home = True}
+
+candidate () (*223*) { CacheWait_home = None &&
+                Shlist_home = True}
+
+candidate () (*224*) { CacheWait_home = None &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*225*) { CacheWait_home = None &&
+                UnetMtype_home <> Empty}
+
+candidate () (*226*) { CacheWait_home = None &&
+                CacheInvmarked_home = True}
+
+candidate () (*227*) { CacheState_home = Exclusive &&
+                Real_home = True}
+
+candidate () (*228*) { CacheState_home = Exclusive &&
+                RP_home = True}
+
+candidate () (*229*) { CacheState_home = Exclusive &&
+                Shlist_home = True}
+
+candidate () (*230*) { CacheState_home = Exclusive &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*231*) { CacheState_home = Exclusive &&
+                UnetMtype_home <> Empty}
+
+candidate () (*232*) { CacheState_home = Exclusive &&
+                CacheInvmarked_home = True}
+
+candidate () (*233*) { CacheState_home = Exclusive &&
+                CacheWait_home <> None}
+
+candidate () (*234*) { CacheState_home = Shared &&
+                Real_home = True}
+
+candidate () (*235*) { CacheState_home = Shared &&
+                RP_home = True}
+
+candidate () (*236*) { CacheState_home = Shared &&
+                Shlist_home = True}
+
+candidate () (*237*) { CacheState_home = Shared &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*238*) { CacheState_home = Shared &&
+                UnetMtype_home <> Empty &&
+                UnetMtype_home <> GetX &&
+                UnetMtype_home <> PutX}
+
+candidate () (*239*) { CacheState_home = Shared &&
+                CacheInvmarked_home = True}
+
+candidate () (*240*) { CacheState_home = Shared &&
+                CacheWait_home = WGet}
+
+candidate () (*241*) { CacheState_home = Invalid &&
+                Real_home = True}
+
+candidate () (*242*) { CacheState_home = Invalid &&
+                RP_home = True}
+
+candidate () (*243*) { CacheState_home = Invalid &&
+                Shlist_home = True}
+
+candidate () (*244*) { CacheState_home = Invalid &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*245*) { CacheState_home = Invalid &&
+                CacheInvmarked_home = True}
+
+candidate () (*246*) { ShWBnet_mtype = FAck &&
+                Real_home = True}
+
+candidate () (*247*) { ShWBnet_mtype = FAck &&
+                RP_home = True}
+
+candidate () (*248*) { ShWBnet_mtype = FAck &&
+                Shlist_home = True}
+
+candidate () (*249*) { ShWBnet_mtype = FAck &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*250*) { ShWBnet_mtype = FAck &&
+                CacheInvmarked_home = True}
+
+candidate () (*251*) { ShWBnet_mtype = ShWB &&
+                Real_home = True}
+
+candidate () (*252*) { ShWBnet_mtype = ShWB &&
+                RP_home = True}
+
+candidate () (*253*) { ShWBnet_mtype = ShWB &&
+                Shlist_home = True}
+
+candidate () (*254*) { ShWBnet_mtype = ShWB &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*255*) { ShWBnet_mtype = ShWB &&
+                CacheInvmarked_home = True}
+
+candidate () (*256*) { ShWBnet_mtype = Empty_shwb &&
+                Real_home = True}
+
+candidate () (*257*) { ShWBnet_mtype = Empty_shwb &&
+                RP_home = True}
+
+candidate () (*258*) { ShWBnet_mtype = Empty_shwb &&
+                Shlist_home = True}
+
+candidate () (*259*) { ShWBnet_mtype = Empty_shwb &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*260*) { ShWBnet_mtype = Empty_shwb &&
+                CacheInvmarked_home = True}
+
+candidate () (*261*) { WBnet_mtype = WB &&
+                Real_home = True}
+
+candidate () (*262*) { WBnet_mtype = WB &&
+                RP_home = True}
+
+candidate () (*263*) { WBnet_mtype = WB &&
+                Shlist_home = True}
+
+candidate () (*264*) { WBnet_mtype = WB &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*265*) { WBnet_mtype = WB &&
+                CacheInvmarked_home = True}
+
+candidate () (*266*) { WBnet_mtype = Empty_wb &&
+                Real_home = True}
+
+candidate () (*267*) { WBnet_mtype = Empty_wb &&
+                RP_home = True}
+
+candidate () (*268*) { WBnet_mtype = Empty_wb &&
+                Shlist_home = True}
+
+candidate () (*269*) { WBnet_mtype = Empty_wb &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*270*) { WBnet_mtype = Empty_wb &&
+                CacheInvmarked_home = True}
+
+candidate () (*271*) { Nakc = False &&
+                Real_home = True}
+
+candidate () (*272*) { Nakc = False &&
+                RP_home = True}
+
+candidate () (*273*) { Nakc = False &&
+                Shlist_home = True}
+
+candidate () (*274*) { Nakc = False &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*275*) { Nakc = False &&
+                CacheInvmarked_home = True}
+
+candidate () (*276*) { Nakc = True &&
+                Real_home = True}
+
+candidate () (*277*) { Nakc = True &&
+                RP_home = True}
+
+candidate () (*278*) { Nakc = True &&
+                Shlist_home = True}
+
+candidate () (*279*) { Nakc = True &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*280*) { Nakc = True &&
+                CacheInvmarked_home = True}
+
+candidate () (*281*) { Head_valid = False &&
+                Real_home = True}
+
+candidate () (*282*) { Head_valid = False &&
+                RP_home = True}
+
+candidate () (*283*) { Head_valid = False &&
+                Shlist_home = True}
+
+candidate () (*284*) { Head_valid = False &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*285*) { Head_valid = False &&
+                CacheInvmarked_home = True}
+
+candidate () (*286*) { Head_valid = True &&
+                Real_home = True}
+
+candidate () (*287*) { Head_valid = True &&
+                RP_home = True}
+
+candidate () (*288*) { Head_valid = True &&
+                Shlist_home = True}
+
+candidate () (*289*) { Head_valid = True &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*290*) { Head_valid = True &&
+                CacheInvmarked_home = True}
+
+candidate () (*291*) { Dirty = False &&
+                Real_home = True}
+
+candidate () (*292*) { Dirty = False &&
+                RP_home = True}
+
+candidate () (*293*) { Dirty = False &&
+                Shlist_home = True}
+
+candidate () (*294*) { Dirty = False &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*295*) { Dirty = False &&
+                CacheInvmarked_home = True}
+
+candidate () (*296*) { Dirty = True &&
+                Real_home = True}
+
+candidate () (*297*) { Dirty = True &&
+                RP_home = True}
+
+candidate () (*298*) { Dirty = True &&
+                Shlist_home = True}
+
+candidate () (*299*) { Dirty = True &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*300*) { Dirty = True &&
+                CacheInvmarked_home = True}
+
+candidate () (*301*) { Local = False &&
+                Real_home = True}
+
+candidate () (*302*) { Local = False &&
+                RP_home = True}
+
+candidate () (*303*) { Local = False &&
+                Shlist_home = True}
+
+candidate () (*304*) { Local = False &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*305*) { Local = False &&
+                CacheInvmarked_home = True}
+
+candidate () (*306*) { Local = True &&
+                Real_home = True}
+
+candidate () (*307*) { Local = True &&
+                RP_home = True}
+
+candidate () (*308*) { Local = True &&
+                Shlist_home = True}
+
+candidate () (*309*) { Local = True &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*310*) { Local = True &&
+                UnetMtype_home <> Empty}
+
+candidate () (*311*) { Local = True &&
+                CacheInvmarked_home = True}
+
+candidate () (*312*) { Local = True &&
+                CacheWait_home <> None}
+
+candidate () (*313*) { Pending = False &&
+                Real_home = True}
+
+candidate () (*314*) { Pending = False &&
+                RP_home = True}
+
+candidate () (*315*) { Pending = False &&
+                Shlist_home = True}
+
+candidate () (*316*) { Pending = False &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*317*) { Pending = False &&
+                CacheInvmarked_home = True}
+
+candidate (z1) (*318*) { Pending = True &&
+                Shlist[z1] = True}
+
+candidate () (*319*) { Pending = True &&
+                Real_home = True}
+
+candidate () (*320*) { Pending = True &&
+                RP_home = True}
+
+candidate () (*321*) { Pending = True &&
+                Shlist_home = True}
+
+candidate () (*322*) { Pending = True &&
+                Invnet_home <> Empty_inv}
+
+candidate () (*323*) { Pending = True &&
+                CacheInvmarked_home = True}
+
+
+
+
+unsafe (p) { CacheState_home = Exclusive && CacheState[p] = Exclusive }
+unsafe (i j) { CacheState[i] = Exclusive && CacheState[j] = Exclusive }
+
+
+
+transition pi_Local_Get_Dirty ()
+requires { CacheState_home = Invalid && CacheWait_home = None && 
+	  Pending = False && Dirty = True }
+{ Pending := True;
+	 CacheWait_home := WGet;
+	 UnetProc_home := Head_pointer;
+	 UnetMtype_home := Get }
+
+transition pi_Local_Get_Other1 ()
+requires { CacheState_home = Invalid && CacheWait_home = None && 
+	  Pending = False && Dirty = False && CacheInvmarked_home = True }
+{ Local := True;
+	 CacheWait_home := None;
+	 CacheInvmarked_home := False;
+	 CacheState_home := Invalid }
+
+transition pi_Local_Get_Other2 ()
+requires { CacheState_home = Invalid && CacheWait_home = None && 
+	  Pending = False && Dirty = False && CacheInvmarked_home = False }
+{ Local := True;
+	 CacheWait_home := None;
+	 CacheData_home := Memory;
+	 CacheState_home := Shared }
+
+
+
+
+transition pi_Remote_Get (src)
+requires { CacheState[src] = Invalid && CacheWait[src] = None }
+{
+  CacheWait[j] := case | j = src : WGet | _ : CacheWait[j] ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Get | _ : UnetMtype[j] 
+}
+
+
+
+transition pi_Local_GetX_Dirty ()
+requires { CacheState_home <> Exclusive && CacheWait_home = None &&
+	  Pending = False && Dirty = True }
+{ Pending := True;
+	 CacheWait_home := WGetX;
+	 UnetProc_home := Head_pointer;
+	 UnetMtype_home := GetX }
+
+transition pi_Local_GetX_Other ()
+requires { Head_valid = False &&
+	  CacheState_home <> Exclusive && CacheWait_home = None && 
+	  Pending = False && Dirty = False }
+{ Local := True; Dirty := True;
+	 CacheData_home := Memory;
+	 CacheWait_home := None;
+	 CacheInvmarked_home := False;
+	 CacheState_home := Exclusive }
+
+transition pi_Local_GetX_Other_head ()
+requires { Head_valid = True &&
+	  CacheState_home <> Exclusive && CacheWait_home = None && 
+	  Pending = False && Dirty = False }
+{ Local := True; Dirty := True;
+	 Pending := True;
+	 Head_valid := False;
+	 CacheData_home := Memory;
+	 CacheWait_home := None;
+	 CacheInvmarked_home := False;
+	 CacheState_home := Exclusive;
+	 Shlist_home := False;
+	 Invnet_home := Empty_inv;
+	 Real_home := False ;
+	 Shlist[j] := case | _ : False ;
+	 Invnet[j] := case 
+                       | j = Head_pointer : Inv
+		       | Shlist[j] = True : Inv
+		       | _ : Empty_inv ;
+	 Real[j] := case | j = Head_pointer : True 
+		         | Shlist[j] = True : True
+		         | _ : False }
+
+
+
+
+transition pi_Remote_GetX (src)
+requires { CacheState[src] = Invalid && CacheWait[src] = None }
+{
+  CacheWait[j] := case | j = src : WGetX | _ : CacheWait[j] ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : GetX | _ : UnetMtype[j] 
+}
+
+
+
+
+transition pi_Local_PutX_Pending ()
+requires { CacheState_home = Exclusive && CacheWait_home = None &&
+	  Pending = True}
+{ Dirty := False; Memory := CacheData_home;
+	 CacheState_home := Invalid }
+
+transition pi_Local_PutX_Other ()
+requires { CacheState_home = Exclusive && CacheWait_home = None &&
+	  Pending = True}
+{ Local := False; Dirty := False; Memory := CacheData_home;
+	 CacheState_home := Invalid }
+
+
+
+
+transition pi_Remote_PutX (dst)
+requires { CacheState[dst] = Exclusive }
+{ WBnet_proc := dst; WBnet_mtype := WB; WBnet_data := CacheData[dst];
+CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] }
+
+
+
+transition pi_Local_Replace ()
+requires { CacheState_home = Shared && CacheWait_home = None }
+{ Local := False; CacheState_home := Invalid }
+
+
+
+
+transition pi_Remote_Replace (src)
+requires { CacheState[src] = Shared && CacheWait[src] = None }
+{
+  CacheState[j] := case | j = src : Invalid | _ : CacheState[j] ;
+  RP[j] := case | j = src : True | _ : RP[j] }
+
+
+
+transition ni_NAK (dst)
+requires { UnetMtype[dst] = Nak }
+{
+  UnetMtype[j] := case | j = dst : Empty | _ : UnetMtype[j] ;
+  CacheWait[j] := case | j = dst : None | _ : CacheWait[j] ;
+  CacheInvmarked[j] := case | j = dst : False | _ : CacheInvmarked[j] 
+}
+
+
+
+transition ni_NAK_Clear ()
+requires { Nakc = True }
+{ Pending := False; Nakc := False }
+
+
+
+transition ni_Local_Get_Pending (src)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = Home && RP[src] = False &&
+	  Pending = True }
+{
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Nak | _ : UnetMtype[j] 
+}
+
+transition ni_Local_Get_Dirty_NotLocal (src)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = Home && RP[src] = False &&
+	  Pending = False && Dirty = True && Local = False }
+{ Pending := True ;
+  UnetProc[j] := case | j = src : Head_pointer | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Get | _ : UnetMtype[j] }
+
+transition ni_Local_Get_Dirty_Local (src)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = Home && RP[src] = False &&
+	  Pending = False && Dirty = True && Local = True }
+{ Dirty := False; Head_valid := True; Head_pointer := src;
+         Memory := CacheData_home;
+	 CacheState_home := Shared;
+	 UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+	 UnetMtype[j] := case | j = src : Put | _ : UnetMtype[j] ;
+	 UnetData[j] := case | j = src : CacheData_home | _ : UnetData[j] 
+}
+
+transition ni_Local_Get_NotDirty_Head (src)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = Home && RP[src] = False &&
+	  Pending = False && Dirty = False && Head_valid = True }
+{
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Put | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | j = src : True | _ : Shlist[j] ;
+  Real[j] := case | j = src : True | _ : Shlist[j] 
+}
+
+transition ni_Local_Get_NotDirty (src)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = Home && RP[src] = False &&
+	  Pending = False && Dirty = False && Head_valid = False }
+{ 
+  Head_valid := True; Head_pointer := src;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Put | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] 
+}
+
+
+
+transition ni_Remote_Get1 (src dst)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = dst && 
+	  CacheState[dst] <> Exclusive }
+{ Nakc := True ;
+  UnetProc[j] := case | j = src : dst | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Nak | _ : UnetMtype[j] }
+
+transition ni_Remote_Get2 (dst)
+requires { UnetMtype_home = Get &&
+	  UnetProc_home = dst &&
+	  CacheState[dst] = Exclusive && CacheInvmarked_home = False }
+{
+  UnetProc_home := dst;
+  UnetMtype_home := Put;
+  UnetData_home := CacheData[dst];
+  CacheState[j] := case | j = dst : Shared | _ : CacheState[j] 
+}
+
+transition ni_Remote_Get3 (src dst)
+requires { UnetMtype[src] = Get &&
+	  UnetProc[src] = dst &&
+	  CacheState[dst] = Exclusive && CacheInvmarked[src] = False }
+{
+  ShWBnet_proc := src;
+  ShWBnet_mtype := ShWB;
+  ShWBnet_data := CacheData[dst];
+  CacheState[j] := case | j = dst : Shared | _ : CacheState[j] ;
+  UnetProc[j] := case | j = src : dst | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Put | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : CacheData[dst] | _ : UnetData[j] 
+}
+
+
+
+
+
+transition ni_Local_GetX_Pending (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = True }
+{
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Nak | _ : UnetMtype[j] 
+}
+
+transition ni_Local_GetX_Dirty_NotLocal (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = True && Local = False }
+{ Pending := True;
+  UnetProc[j] := case | j = src : Head_pointer | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : GetX | _ : UnetMtype[j] 
+}
+
+transition ni_Local_GetX_Dirty_Local (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = True && Local = True }
+{ 
+  Local := False; 
+  Dirty := True; 
+  Head_valid := True; 
+  Head_pointer := src;
+  CacheState_home := Invalid;
+  Shlist_home := False; 
+  Real_home := False ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : CacheData_home | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case | _ : False 
+}
+
+transition ni_Local_GetX_NotDirty_NotLocal (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False && Local = False &&
+	  Head_valid = False }
+{ 
+  Local := False;
+  Dirty := True; 
+  Head_valid := True; 
+  Head_pointer := src;
+  CacheState_home := Invalid;
+  Shlist_home := False; 
+  Real_home := False ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case | _ : False 
+}
+
+transition ni_Local_GetX_NotDirty_Local1 (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False && Local = True &&
+	  Head_valid = False && CacheWait_home = WGet }
+{ 
+  Local := False;
+  Dirty := True; 
+  Head_valid := True; 
+  Head_pointer := src;
+  CacheState_home := Invalid;
+  CacheInvmarked_home := True;
+  Shlist_home := False; 
+  Real_home := False ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case | _ : False 
+}
+
+transition ni_Local_GetX_NotDirty_Local2 (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False && Local = True &&
+	  Head_valid = False && CacheWait_home <> WGet }
+{ 
+  Local := False; 
+  Dirty := True; 
+  Head_valid := True; 
+  Head_pointer := src;
+  CacheState_home := Invalid;
+  Shlist_home := False; 
+  Real_home := False ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case | _ : False 
+}
+
+transition ni_Local_GetX_NotDirty_Head (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False &&
+	  Head_valid = True }
+{ 
+  Local := False;
+  Dirty := True;
+  Head_valid := True; 
+  Head_pointer := src; Pending := True;
+  Shlist_home := False; 
+  Real_home := False;
+  Invnet_home := Empty_inv;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case 
+               | j = src : False
+	       | j = Head_pointer : True 
+	       | Shlist[j] = True : True
+	       | _ : False;
+  Invnet[j] := case 
+	       | j = src : Empty_inv
+	       | j = Head_pointer : Inv
+	       | Shlist[j] = True : Inv
+	       | _ : Empty_inv 
+}
+
+transition ni_Local_GetX_NotDirty_Head_Local1 (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False &&
+	  Head_valid = True && Local = True && CacheWait_home = WGet}
+{ 
+  Local := False; 
+  Dirty := True; 
+  Head_valid := True; 
+  Head_pointer := src;
+  Pending := True;
+  Shlist_home := False; 
+  Real_home := False;
+  Invnet_home := Empty_inv;
+  CacheInvmarked_home := True;
+  CacheState_home := Invalid ;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case
+               | j = src : False
+	       | j = Head_pointer : True 
+	       | Shlist[j] = True : True
+	       | _ : False;
+  Invnet[j] := case 
+	       | j = src : Empty_inv
+	       | j = Head_pointer : Inv
+	       | Shlist[j] = True : Inv
+	       | _ : Empty_inv 
+}
+
+transition ni_Local_GetX_NotDirty_Head_Local2 (src)
+requires { UnetMtype[src] = GetX && UnetProc[src] = Home &&
+	  Pending = False && Dirty = False &&
+	  Head_valid = True && Local = True && CacheWait_home <> WGet}
+{ 
+  Local := False; 
+  Dirty := True; 
+  Head_valid := True; 
+  Head_pointer := src; Pending := True;
+  Shlist_home := False; 
+  Real_home := False;
+  Invnet_home := Empty_inv;
+  CacheState_home := Invalid;
+  UnetProc[j] := case | j = src : Home | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : Memory | _ : UnetData[j] ;
+  Shlist[j] := case | _ : False ;
+  Real[j] := case 
+               | j = src : False
+	       | j = Head_pointer : True 
+	       | Shlist[j] = True : True
+	       | _ : False;
+  Invnet[j] := case 
+	       | j = src : Empty_inv
+	       | j = Head_pointer : Inv
+	       | Shlist[j] = True : Inv
+	       | _ : Empty_inv 
+}
+
+
+
+
+
+transition ni_Remote_GetX1 (src dst)
+requires { UnetMtype[src] = GetX &&
+	  UnetProc[src] = dst && 
+	  CacheState[dst] <> Exclusive }
+{ 
+  Nakc := True;
+  UnetProc[j] := case | j = src : dst | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : Nak | _ : UnetMtype[j] 
+}
+
+transition ni_Remote_GetX2 (dst)
+requires { UnetMtype_home = GetX &&
+	  UnetProc_home = dst &&
+	  CacheState[dst] = Exclusive }
+{ 
+  UnetProc_home := dst;
+  UnetMtype_home := PutX;
+  UnetData_home := CacheData[dst];
+  CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] 
+}
+
+transition ni_Remote_GetX3 (src dst)
+requires { UnetMtype[src] = GetX &&
+	  UnetProc[src] = dst &&
+	  CacheState[dst] = Exclusive}
+{ 
+  ShWBnet_proc := src;
+  ShWBnet_mtype := FAck;
+  CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] ;
+  UnetProc[j] := case | j = src : dst | _ : UnetProc[j] ;
+  UnetMtype[j] := case | j = src : PutX | _ : UnetMtype[j] ;
+  UnetData[j] := case | j = src : CacheData[dst] | _ : UnetData[j]
+}
+
+
+
+
+
+transition ni_Local_Put1 ()
+requires { UnetMtype_home = Put &&
+	  CacheInvmarked_home = True }
+{ 
+  Pending := False;
+  Dirty := False;
+  Local := True;
+  Memory := UnetData_home;
+  UnetMtype_home := Empty;
+  CacheWait_home := None;
+  CacheInvmarked_home := False;
+  CacheState_home := Invalid 
+}
+
+transition ni_Local_Put2 ()
+requires { UnetMtype_home = Put &&
+	  CacheInvmarked_home = False }
+{ 
+  Pending := False; 
+  Dirty := False;
+  Local := True;
+  Memory := UnetData_home;
+  UnetMtype_home := Empty;
+  CacheWait_home := None;
+  CacheData_home := UnetData_home;
+  CacheState_home := Shared 
+}
+
+
+
+
+transition ni_Remote_Put1 (dst)
+requires { UnetMtype[dst] = Put &&
+	  CacheInvmarked[dst] = True }
+{
+  UnetMtype[j] := case | j = dst : Empty | _ : UnetMtype[j] ;
+  CacheWait[j] := case | j = dst : None | _ : CacheWait[j] ;
+  CacheInvmarked[j] := case | j = dst : False | _ : CacheInvmarked[j] ;
+  CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] 
+}
+
+transition ni_Remote_Put2 (dst)
+requires { UnetMtype[dst] = Put &&
+	  CacheInvmarked[dst] = False }
+{
+  UnetMtype[j] := case | j = dst : Empty | _ : UnetMtype[j] ;
+  CacheWait[j] := case | j = dst : None | _ : CacheWait[j] ;
+  CacheData[j] := case | j = dst : UnetData[dst] | _ : CacheData[j] ;
+  CacheState[j] := case | j = dst : Shared | _ : CacheState[j] 
+}
+
+
+
+
+
+transition ni_Local_PutXAcksDone ()
+requires { UnetMtype_home = PutX }
+{ 
+  Pending := False;
+  Head_valid := False;
+  Local := True;
+  UnetMtype_home := Empty;
+  CacheData_home := UnetData_home;
+  CacheWait_home := None;
+  CacheInvmarked_home := False;
+  CacheState_home := Exclusive 
+}
+
+
+
+
+transition ni_Remote_PutX (dst)
+requires { UnetMtype[dst] = PutX &&
+	  CacheWait[dst] = WGetX }
+{
+  UnetMtype[j] := case | j = dst : Empty | _ : UnetMtype[j] ;
+  CacheData[j] := case | j = dst : UnetData[dst] | _ : CacheData[j] ;
+  CacheWait[j] := case | j = dst : None | _ : CacheWait[j] ;
+  CacheInvmarked[j] := case | j = dst : False | _ : CacheInvmarked[j] ;
+  CacheState[j] := case | j = dst : Exclusive | _ : CacheState[j] 
+}
+
+
+
+
+
+transition ni_Inv1 (dst)
+requires { Invnet[dst] = Inv &&
+	  CacheWait[dst] = WGet }
+{
+  Invnet[j] := case | j = dst : InvAck | _ : Invnet[j] ;
+  CacheInvmarked[j] := case | j = dst : True | _ : CacheInvmarked[j] ;
+  CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] 
+}
+
+transition ni_Inv2 (dst)
+requires { Invnet[dst] = Inv &&
+	  CacheWait[dst] <> WGet }
+{
+  Invnet[j] := case | j = dst : InvAck | _ : Invnet[j] ;
+  CacheState[j] := case | j = dst : Invalid | _ : CacheState[j] 
+}
+
+
+
+
+
+transition ni_InvAck1 (src other)
+requires { Pending = True && 
+	   Invnet[src] = InvAck && Real[src] = True &&
+           Real[other] = True }
+{
+  Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j];
+  Real[j] := case | j = src : False | _ : Real[j] 
+}
+
+transition ni_InvAck2 (src)
+requires { Pending = True && 
+	   Invnet[src] = InvAck && Real[src] = True &&           
+	   Dirty = False && 
+           forall_other j. Real[j] = False }
+{ 
+  Pending := False; Local := False;
+  Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j] ;
+  Real[j] := case | j = src : False | _ : Real[j] 
+}
+
+transition ni_InvAck3 (src)
+requires { Pending = True && 
+	   Invnet[src] = InvAck && Real[src] = True &&
+	   Dirty = True &&
+           forall_other j. Real[j] = False }
+{ Pending := False ;
+  Invnet[j] := case | j = src : Empty_inv | _ : Invnet[j] ;
+  Real[j] := case | j = src : False | _ : Real[j] }
+
+
+
+
+
+transition ni_WB ()
+requires { WBnet_mtype = WB }
+{
+  Dirty := False; 
+  Head_valid := False; 
+  Memory := WBnet_data;
+  WBnet_mtype := Empty_wb 
+}
+
+
+
+
+
+transition ni_FAck1 ()
+requires { ShWBnet_mtype = FAck && Dirty = False }
+{ ShWBnet_mtype := Empty_shwb; Pending := False }
+
+transition ni_FAck2 ()
+requires { ShWBnet_mtype = FAck && Dirty = True }
+{ ShWBnet_mtype := Empty_shwb; Pending := False; 
+         Head_pointer := ShWBnet_proc }
+
+
+
+
+
+
+transition ni_ShWB ()
+requires { ShWBnet_mtype = ShWB }
+{ 
+  ShWBnet_mtype := Empty_shwb; Pending := False;
+  Dirty := False; Memory := ShWBnet_data;
+  Shlist[j] := case | j = ShWBnet_proc : True | _ : Shlist[j] ;
+  Real[j] := case | j = ShWBnet_proc : True | _ : Shlist[j];
+  Real_home := Shlist_home;
+}
+
+
+
+
+
+transition ni_Replace (src)
+requires { RP[src] = True }
+{
+  Shlist[j] := case | j = src : False | _ : Shlist[j] ;
+  Real[j] := case | j = src : False | _ : Real[j] 
+}

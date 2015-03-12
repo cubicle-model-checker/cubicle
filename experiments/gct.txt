@@ -1,0 +1,186 @@
+In the following, we will use examples from a run of the distribution version of
+Cubicle on the germanish protocol. Initially, we will restrict ourselves to a
+2-process version of germanish, before generalizing for the parametric case.
+
+In Germanish, we have the following state:
+
+Exgntd: {True, False} (abbrev. {T,F})
+Curcmd: {Empty, Reqs, Reqe} ({E, RS, RE})
+Curptr: {1,2} (2-processes)
+Cache: proc. --> {Invalid, Shared, Exclusive} ({I, S, X})
+Shrset: proc. --> {T,F}
+
+
+A generalized cube is a fixed-size string of sets. E.g., for 2-germanish, a cube
+would be a string of 7 sets, 1 each for Exgntd, Curcmd, Curptr, and 2 each for
+Cache and Shrset. The set of states visited on node 7 during the run of cubicle:
+Curcmd = RE, Curptr = #1, Cache#2 = S, Shrset#1 = T, Shrset#2 = F
+
+would be represented by:
+{T,F}.{RE}.{1}.{I,S,X}.{T}.{S}.{F}
+
+with the ordering Exgntd.CurCmd.Curptr.Cache#1.Shrset#1.Cache#2.Shrset#2
+
+The interpretation of a cube is as a set of points in the cross-products of the
+sets in the cube. The above cube represents 6 states/points.
+
+
+Cubes can be permuted in a straightforward manner. E.g. applying the permutation
+{(1,2), (2,1)} to the above cube gives us:
+{T,F}.{RE}.{2}.{S}.{F}.{I,S,X}.{T}
+
+The interesting operation for us is to determine when a cube is covered by
+another set of cubes (the fixpoint check). Let's assume that no single cube in
+visited covers the new cube (the subset check can be handled efficiently, using
+a trie representation for cubes).
+
+This check could be done in one of two ways:
+1. Compute the union of the visited set and check for subset. Unfortunately, the
+union of cubes is not necessarily a cube.
+2. Iteratively compute the difference of the new cube with the visited
+cubes. If the result is empty, then we have coverage. For now, let's go with
+this approach.
+
+Let cube C1 = s1.C1' and cube C2 = s2.C2'. Then, 
+C1 - C2 = (s1-s2).C1' + (s1 /\ s2).(C1' - C2')
+where (-) represent set-difference, (+) union, and (/\) set union.
+
+Note that, in general, the difference of two cubes is not a cube. However, if s1 is a subset of s2, then we have:
+C1 - C2 = (s1 /\ s2).(C1' - C2')
+So, if all the 'letters' in C1 except for 1 are subsets of the corresponding
+letters in C2, then C1-C2 will also be a cube. (If all the letters in C1 are
+subsets of corresponding letters in C2, then C1 is covered by C2). This explains
+why it is a good idea to sort the relevant visited cubes by number of
+differences with the new cube -- it helps avoid partitioning.
+
+As an example, consider the following cube seen after node 10 in Germanish:
+{F}.{E}.{1,2}.{I}.{T,F}.{S}.{F}
+
+ie. Exgntd = False, Curcmd = Empty, Cache#1= Invalid, Cach#2 = Shared, Shrset#2
+= False
+
+Claim: C1-C2 = C1 if for some i C1[i] /\ C2[i] = empty. To be shown. In this
+case we say that C2 is irrelevant for C1.
+
+Most of the nodes 1-10 are  irrelevant. E.g., node 1 (Cache#1=X, Cache#2=S) --
+{T,F}.{E,RS,RE}.{1,2}.{X}.{T,F}.{S}.{T,F} 
+is irrelevant in either permutation. With the id permutation, we have a conflict
+on Cache#1. With the swap on processes 1 and 2 we have a conflict on Cache#2.
+
+In some cases, we can identify a conflict using only the global variables, which
+makes it unnecessary to try permutations. E.g. node 5 is has exgntd=True, which
+conflicts with our new cube. In others, we can reduce to 'obvious' permutations,
+much like in current cubicle.
+
+The only two relevant nodes are node 6 and node 9.
+new cube: {F}.  {E}.{1,2}.{I}.  {T,F}.{S}.{F}
+node 6:   {F}.  {E}.{1,2}.{I,S}.{F}.  {S}.{F}
+node 9:   {T,F}.{E}.{1,2}.{I,S}.{T}.  {S}.{F}
+
+new - 6:  {F}.  {E}.{1,2}.{I}.  {T}.  {S}.{F}
+    - 9:  Empty
+
+
+
+
+
+
+
+
+Union of cubes.
+---------------
+While in general, the union of two cubes is not a cube. In some cases it
+is possible to 'merge' cubes to get larger cubes.
+
+Consider C1 + C2. If all the letters in C1 execpt one are a subset of the
+corresponding letters in C2, then we can represent the union by enlarging C1.
+Let:
+C1 = s1.s2...si...sn
+C2 = t1.t2...ti...tn
+
+If sj is a subset of tj for all j<>i, then C1+C2 = C1'+C2 where 
+C1' = s1.s2...(si+ti)...sn
+This is useful because it helps increase the coverage by the simple subset test.
+In the above example, with C1=node 6 and C2=node 9, we can replace node 6 by
+node 6': {F}.{E}.{1,2}.{I,S}.{T,F}.{S}.{F}
+which covers our new cube directly.
+
+In addition, if we have sj=tj for all j<>i, then C1+C2=C1'.
+
+
+Learnt Cubes
+------------
+
+Let:
+C1 = s1.s2...si...sn
+C2 = t1.t2...ti...tn
+C3 = v1.v2...vi...vn
+where vi = si+t1, and for all j<>i, vj = sj/\tj. Then, C3 is covered by
+C1+C2. Hence, we can learn 'C3' from visited cubes C1 and C2. The question, of
+course, is what is a good learning strategy. One strategy (similar to what we
+have implemented already in our extension to Cubicle) is to learn every seen cube
+that is covered by (more than 1) visited cubes. Another possible strategy is to
+periodically (perhaps with every new visited cube) try and discover such learnt
+cubes, and periodically clean up the ones not seen to be useful (similar to
+restarts in SAT solvers).
+
+
+
+
+
+Bit-level cube representation
+-----------------------------
+We can represent cubes using a bit-level representation. For each variable, we
+can represent the letter with k bits where k is the cardinality of the domain
+for that variable. These bits could be packed together if we want a compact
+representation. On the other hand, we could use a byte or a machine-word for
+each variable, since we want to represent sets of cubes in a prefix-factorized
+representation with tries.
+
+For 2-process Germanish, we need the following # of bits:
+Exgntd: 2
+Curcmd: 3
+Curptr: 2
+Cache1: 3
+Shrst1: 2
+Cache2: 3
+Shrst2: 2
+---------
+Total : 17 bits
+
+Alternately, 7 bytes or 7 words.
+
+
+Parametric Protocols
+---------------------
+The description of cubes so far presents two problems:
+
+1. In the dynamic setting of Cubicle/MCMT, we don't know a-priori how many
+processes we need. So, howe do we interpret a 2-process cube for 3-processes?
+
+2. How do we represent sets, potentially infinite, for process-variables
+(indices)?
+
+
+For 1, we can choose an implicit representation. So, the following cube for
+2-processes: 
+{T,F}.{RE}.{1}.{I,S,X}.{T}.{S}.{F}
+when interepreted for 3-processes represents: 
+{T,F}.{RE}.{1}.{I,S,X}.{T}.{S}.{F}.{I,S,X}.{T,F}
+
+Note that the state of the third process is unconstrained by the 2-process cube
+-- it's a don't care.
+
+The second problem is a little more interesting. We could choose to represent
+infinite states. The sets occuring in practice are all finitely
+representable, using empty, universal, set addition and deletion.
+
+However, we can also use a hack -- assume that there are at most 32
+processes (or 8, or 5 -- pick some number).  In Germanish, the state:
+Exgntd=F, Curcmd=E, Cache1<>X, Shrset1=F, Cache2=S, Shrset2=F
+would be represented by (assuming we pick 8 for max processes):
+{F}.{E}.{1,2,...,8}.{I,S}.{F}.{S}.{F}
+
+This representation is sound for the model checking, as long as we never have to
+explore more than 7 processes.
+

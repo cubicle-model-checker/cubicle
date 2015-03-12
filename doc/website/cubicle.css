@@ -1,0 +1,480 @@
+/* Roboto fonts */
+@import url(http://fonts.googleapis.com/css?family=Roboto:700,400);
+
+/*---------------------------------------------------------------------------*/
+
+body{
+    color: black;
+    background: #DDDDDD; /* #DDDAEC; */
+    font-family: 'Roboto', sans-serif, Verdana, Arial, Helvetica; 
+    font-size: 0.86em;
+    height: 100%; 
+}
+html {
+    height: 100%; 
+}
+
+*{ margin:0; padding:0 }
+
+#menu a:link, #menu-right a:link  { color: #7a5adb; text-decoration: none; }
+#menu a:visited, #menu-right a:visited { color: #5a3abb; text-decoration: none; }
+#menu a:hover, #menu-right a:hover { text-decoration: underline; }
+#menu a:active, #menu-right a:active {  text-decoration: underline; }
+
+
+th a:link { color: #EEEEFF; text-decoration: none; }
+th a:visited { color: #EEEEFF; text-decoration: none; }
+th a:hover { text-decoration: underline; }
+th a:active { text-decoration: underline; }
+
+td a:link { text-decoration: none; }
+td a:visited { text-decoration: none; }
+td a:hover { text-decoration: underline; }
+td a:active { text-decoration: underline; }
+
+
+a img {border:none; text-decoration:none; vertical-align:text-bottom;}
+
+li {margin-bottom: 5px;}
+ol,ul {margin-top: 5px;}
+ul ul li {
+    font-size: 0.9em;
+    margin-left:2.3em;
+    line-height:1.0em;
+}
+
+#menu-banner, #banner, #menu-banner-right {
+    background-color: #45347C;
+    color: white;
+    height: 4em;
+    border-bottom-style:solid;
+    border-bottom-width:2px;
+    border-bottom-color:#9886D1;
+    
+   -moz-box-sizing:    border-box;
+   -webkit-box-sizing: border-box;
+    box-sizing:        border-box;
+}
+
+#menu-banner {
+    display: block;
+    position: fixed;
+    width: 10em;
+    left: 0px;  
+}
+
+#menu-banner-right {
+    display: block;
+    position: fixed;
+    width: 12em;
+    right: 0px;
+    top: 0;
+}
+
+
+
+#banner {
+    margin-left:10em;
+}
+
+#banner h1 {
+    vertical-align: middle;
+    display:inline-block;
+    padding: 0.3em;
+    padding-left: 0;
+}
+
+#menu-banner img {
+    float: right;
+    vertical-align: middle;
+    display:inline-block;
+    padding: 0.3em;
+    height: 3.4em;
+    padding-right: 1em;
+}
+
+#menu, #menu-right {	
+    font-size: 1.0em;
+    font-weight: bold;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin-bottom: 0;
+    line-height:1.6em;
+    top: 4em;
+}
+
+#menu {
+    display: block;
+    position: fixed;
+    padding-left: 2.0em;
+    width: 10em;
+    left: 0px;
+}
+
+
+#menu-right {
+    position: fixed;
+    padding-left: 2.0em;
+    width: 9em;
+    right: 0px;
+}
+
+
+#menu-right h {
+    display: inline-block;
+    margin-left: -1.5em;
+}
+
+#menu-right img {
+    height: 3em;
+    width: 3em;
+}
+
+#menu-right table {
+    text-align: left;
+    margin-left: -1.5em;
+    line-height: 1.1em;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+#menu-right td {
+    padding-left:0;
+    padding-right:2px;
+}
+
+#content {
+    background-color: white;
+    display: block;
+    margin-left:10em;
+    margin-right:12em;
+    padding-bottom:2em;
+    min-height: calc(100% - 4em); /* 94.5%; */
+    height:     auto !important;
+    height:     100%;
+    margin-bottom: -4em;
+    
+    border-style:solid;
+    border-width:1px;
+    border-color:#CCC;
+    border-bottom-style:none;
+    border-top-style:none;
+    
+   -moz-box-sizing:    border-box;
+   -webkit-box-sizing: border-box;
+    box-sizing:        border-box;
+}
+
+
+
+#push { heigh: 4em }
+
+#content  p, #content h2, #content h3 {
+    padding-left: 15px;
+    padding-right: 1.0em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+}
+
+#content h1 {
+    padding-top: 4px;
+    color: #45347C;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+    font-weight: bold;
+    padding-left: 15px;
+}
+
+#content h2 {
+    padding-top: 30px;
+    color: #1AB222;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+    font-weight: bold;
+}
+
+#content h3 {
+    padding-top: 15px;
+    font-size: 1.1em;
+    color: #04cc10; /* #5a3acb; */
+    font-weight: bold;
+}
+
+#content p.note {
+    padding: 0.5em;
+    padding-left: 0.8em;
+    margin: 15px;
+    background-color: lightblue;
+    border-style:solid;
+    border-width:1px;
+    border-color:#9DC4D1;
+}
+
+#content ul li {
+    margin-left:3em;
+}
+
+
+.inlinecode {
+    font-family: monospace, "Courier New";
+    color: #541FFF;
+    font-size: 1.0em;
+}
+
+.code {
+    padding: 0.8em;
+    padding-top: 0.6em;
+    padding-bottom: 0.6em;
+    display: block;
+    background-color: #EEEEFF;
+    border-style:solid;
+    border-width:1px;
+    border-color:#DDDDED;
+    font-family: monospace, "Courier New";
+    color: #0000c8;
+    font-size: 1.0em;
+}
+
+pre {
+    margin-left: 15px;
+    margin-right: 1.0em;
+}
+
+.incode {
+    color: black;
+}
+
+
+.tt {
+    font-family: monospace, "Courier New";
+}
+
+
+.bench {
+    font-family: monospace, "Courier New";
+    font-size: 1.0em;
+    text-align: left;
+}
+
+td, th {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+
+th {
+    background-color: #7A5ADA;
+    color: #EEEEFF;
+    vertical-align: top;
+}
+
+
+
+
+.mex {
+    background-color: #EEEEFF;
+}
+
+.ccp {
+    background-color: #DDDAEC;
+}
+
+tr.zebra {
+    background-color: #DDDAEC;
+}
+
+tr.zebra:nth-of-type(odd) {
+    background-color: #EEEEFF;
+}
+
+#content table {
+    empty-cells: hide;
+    text-align: center;
+    margin: auto;
+    min-width: 400px;
+}
+
+#content th {
+    vertical-align: middle;
+}
+
+th.colsep,td.colsep
+{
+    border-left:4px solid white;
+}
+
+#content td.opt-desc {
+    vertical-align: top;
+    padding: 10px;
+}
+
+#content td.opt {
+    vertical-align: top;
+    font-weight: bold;
+    padding: 10px;
+    padding-bottom: 15px;
+    white-space: nowrap;
+}
+
+#content table.opts {
+    text-align: left;
+    margin-left: 2em;
+    margin-right: 2em;
+
+}
+
+
+/* menu on top on tiny screens and mobile phones */
+@media all  and (max-width: 40em) {
+    #menu-banner {
+        display:inline-block;
+        position:relative;
+        width:6em;
+    }
+    
+    #banner {
+        display:inline-block;
+        position:absolute;
+        /* left:0; */
+        top:0;
+        width:calc(100% - 6em);
+        margin-left:0em;
+    }
+    
+    #menu-banner-right {
+        display:none;
+    }
+
+    #menu-right {
+        position:relative;
+        background-color:#ccc;
+        width:100%;
+        left:0;
+        top:0;
+        padding-left:0;
+    }
+    
+    #menu-right table, #menu-right h {
+        margin-left:0;
+        padding-left:1.5em;
+    }
+
+    #menu-right h {
+        width: calc(100% - 1.5em);
+        border-top-style:solid;
+        border-top-width:2px;
+        border-top-color:#ddd;
+    }
+    
+    #menu-right h.release {
+        border-top-style:none;
+    }
+    
+    #content {
+        width:100%;
+        margin-right:0;
+        margin-left:0;
+    }
+    
+    #content table {
+        min-width:0;
+    }
+        
+    #menu {
+        width:calc(100% - 2em);
+        position:relative;
+        top:0;
+        left:0;
+        padding-left:2em;
+    }
+
+    
+    #menu ul {
+        overflow:hidden;
+        /* list-style: none; */
+        padding-left:1.5em;
+    }
+    
+    #menu ul li {
+        float: left;
+        width: 50%;
+        /* display:inline; */
+        /* height:10em; */
+    }
+    
+    #menu ul li ul {
+        display:none;
+    }
+
+    #menu-right ul {
+        margin-left:0;
+        overflow:hidden;
+        list-style: none;
+        padding-left:2em;
+    }
+    
+    #menu-right ul li {
+        float: left;
+        width: 50%;
+        /* display:inline; */
+        /* height:10em; */
+    }
+    
+}
+
+
+/* remove right margin on small screens */
+@media all  and (min-width: 40em) and (max-width: 64em){
+    #menu-banner-right {
+        display:none;
+    }    
+
+    #menu-right {
+        background-color:#ccc;
+        width:8em;
+        left:0;
+        top:26em;
+    }
+
+    #content {
+        margin-right:0;
+    }
+}
+
+
+/* keep content at 80em on huge screens */
+@media all and (min-width: 100em) {
+    #menu-banner, #menu-banner-right, #menu, #menu-right {
+        width: calc((100% - 80em)/2);
+    }
+
+    /* #banner { */
+    /*     width:  calc((100% - 80em)/2 + 100%); */
+    /* } */
+
+
+    #content{
+        width: 80em;
+        margin-left:calc((100% - 80em)/2);
+    }
+
+    #banner {
+        margin-left:calc((100% - 80em)/2);
+    }
+
+    #menu {
+        margin-left:calc((100% - 80em)/2 - 15em);
+    }
+
+    #menu-right {
+        margin-right:-3em;
+    }
+
+}
+
+
+/* increase size on high ppi devices */
+@media only screen and (-webkit-min-device-pixel-ratio : 2),
+       only screen and (min-device-pixel-ratio : 2) {
+    body{
+        font-size: 1.5em;
+    }
+}

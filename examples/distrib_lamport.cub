@@ -1,0 +1,221 @@
+type location = 
+    EmptyIdle | Choose | Wait | Use 
+  | Req1 | Ack1 | Ok1 
+  | Req2 | Ack2 | Ok2
+
+
+var Timer : real
+
+array State[proc] : location
+
+array Sender[proc] : proc
+array Receiver[proc] : proc
+array Aux[proc] : real
+array Num[proc] : real
+
+const Tick : real
+
+
+init (z) { State[z] = EmptyIdle && Aux[z] = 0.0 && Num[z] = 0.0 && Timer = 1.0 }
+
+unsafe (z1 z2 z3 z4) { 
+  State[z1] = Use && State[z2] = Use &&
+  State[z3] = Ok2 && State[z4] = Ok2 && 
+  Sender[z1] = Receiver[z1] && Sender[z2] = Receiver[z2] &&
+  Sender[z3] <> Receiver[z3] && Sender[z4] <> Receiver[z4] &&
+  Sender[z3] = z1 && Sender[z4] = z2 &&
+  Receiver[z3] = z2 && Receiver[z4] = z1
+}
+
+
+transition t1 (z)
+requires { State[z] = EmptyIdle && Sender[z] = Receiver[z] && 0.0 < Tick }
+{
+  Timer := Timer + Tick;
+  State[j] := case
+                | j = z : Choose
+		| Sender[j] <> Receiver[j] && 
+		    State[j] = EmptyIdle && Sender[j] = z : Req1
+		| _ : State[j] ;
+  Aux[j] := case
+		| j = z : Timer
+		| Sender[j] <> Receiver[j] && 
+		    State[j] = EmptyIdle && Sender[j] = z : Timer
+		| _ : Aux[j] ;
+  Num[j]  := case
+		| j = z : Timer
+		| _ : Num[j]
+
+}
+
+transition t2 (z other)
+requires { State[z] = Choose && 
+           Sender[z] = Receiver[z] &&
+           Sender[other] <> Receiver[other] &&
+	   State[other] = Ack1 && Sender[other] = z &&
+           Aux[z] < Aux[other] }
+{
+  State[j] := case
+                | j = z : Choose
+                | j = other : Ok1
+		| _ : State[j] ;
+}
+
+transition t3 (z other)
+requires { State[z] = Choose && 
+           Sender[z] = Receiver[z] &&
+           Sender[other] <> Receiver[other] &&
+	   State[other] = Ack1 && Sender[other] = z &&
+           Aux[other] <= Aux[z] }
+{
+  State[j] := case
+                | j = z : Choose
+                | j = other : Ok1
+		| _ : State[j] ;
+}
+
+
+
+
+
+
+transition t4 (z)
+requires { State[z] = Choose && Sender[z] = Receiver[z] && 0.0 < Tick &&
+           forall_other j. 
+	     (Sender[j] = Receiver[j] || Sender[j] <> z || State[j] = Ok1) }
+{
+  Timer := Timer + Tick;
+  State[j] := case
+                | j = z : Wait
+		| _ : State[j];
+  Num[j]  := case
+		| j = z : Timer
+		| _ : Num[j]
+}
+
+
+
+
+transition t5 (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+	   Receiver[other] = z && State[other] = Req1 }
+{
+  State[j] := case
+                | j = other : Ack1
+		| _ : State[j] ;
+  Aux[j]  := case
+		| j = other : Num[z]
+		| _ : Aux[j]
+}
+
+
+transition t6 (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+	   Receiver[other] = z && State[other] = Req2 }
+{
+  State[j] := case
+                | j = other : Ack2
+		| _ : State[j] ;
+  Aux[j]  := case
+		| j = other : Num[z]
+		| _ : Aux[j]
+}
+
+
+transition t7 (z)
+requires { Sender[z] = Receiver[z] && State[z] = Wait }
+{
+  State[j] := case
+                | j = z : Wait
+		| Sender[j] <> Receiver[j] && 
+		    State[j] = Ok1 && Sender[j] = z : Req2
+		| _ : State[j] 
+}
+
+
+transition t8 (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+           State[z] = Wait && State[other] = Ack2 &&
+	   Sender[other] = z &&
+	   0.0 < Aux[other] && Num[other] < Num[z] }
+{
+  State[j] := case
+                | j = z : Wait
+		| j = other : Req2
+		| _ : State[j] 
+}
+
+transition t8bis (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+           State[z] = Wait && State[other] = Ack2 &&
+	   Sender[other] = z && Receiver[other] < z &&
+	   0.0 < Aux[other] && Num[z] = Num[other] }
+{
+  State[j] := case
+                | j = z : Wait
+		| j = other : Req2
+		| _ : State[j] 
+}
+
+
+transition t9 (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+           State[z] = Wait && State[other] = Ack2 &&
+	   Sender[other] = z && Aux[other] = 0.0 }
+{
+  State[j] := case
+                | j = z : Wait
+		| j = other : Ok2
+		| _ : State[j] 
+}
+
+
+transition t9bis (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+           State[z] = Wait && State[other] = Ack2 &&
+	   Sender[other] = z && Num[z] < Aux[other] }
+{
+  State[j] := case
+                | j = z : Wait
+		| j = other : Ok2
+		| _ : State[j] 
+}
+
+transition t9tris (z other)
+requires { Sender[z] = Receiver[z] && Sender[other] <> Receiver[other] &&
+           State[z] = Wait && State[other] = Ack2 &&
+	   Sender[other] = z && Num[z] = Aux[other] &&
+	   z < Receiver[other] }
+{
+  State[j] := case
+                | j = z : Wait
+		| j = other : Ok2
+		| _ : State[j] 
+}
+
+
+
+transition t10 (z)
+requires { State[z] = Wait && Sender[z] = Receiver[z] &&
+           forall_other j. 
+	     (Sender[j] = Receiver[j] || Sender[j] <> z || State[j] = Ok2) }
+{
+  State[j] := case
+                | j = z : Use
+		| _ : State[j] 
+}
+
+
+transition t11 (z)
+requires { State[z] = Use && Sender[z] = Receiver[z] }
+{
+  State[j] := case
+                | j = z : EmptyIdle
+		| Sender[j] <> Receiver[j] && 
+		    State[j] = Ok2 && Sender[j] = z : EmptyIdle
+		| _ : State[j];
+  Num[j] := case
+                | j = z : 0.0
+		| _ : Num[j]
+
+}
