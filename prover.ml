@@ -101,7 +101,8 @@ let make_cs cs =
 let rec make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
-  | Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
+  | Access (a, li) -> 
+    T.make_app a (List.map (fun i -> T.make_app i []) li)
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
