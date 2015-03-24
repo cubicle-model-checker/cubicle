@@ -22,6 +22,8 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
+let ic3 = ref false
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -112,6 +114,8 @@ let specs =
               "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
+    "-ic3", Arg.Set ic3,
+              " enable the forward search instead of backward";
     "-search", Arg.String set_mode, 
                "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
@@ -176,6 +180,8 @@ let cin =
   match !ofile with 
   | Some f -> file := f ; open_in f 
   | None -> stdin
+
+let ic3 = !ic3
 
 let type_only = !type_only
 let maxrounds = !maxrounds

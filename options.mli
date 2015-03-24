@@ -22,6 +22,8 @@ type viz_prog = Dot | Sfdp
 val file : string
 val cin : in_channel
 
+val ic3 : bool
+
 val max_proc : int
 val type_only : bool
 val maxrounds : int

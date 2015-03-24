@@ -1,3 +1,16 @@
+open Ast
+
+type result =
+  | RSafe
+  | RUnsafe
+
+module type SigRG = sig
+  val search : t_system -> result
+end
+
+module RG : SigRG
+
+
 (* (\* Rushby graph *\) *)
 
 (* (\* Vertices *\) *)

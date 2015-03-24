@@ -178,6 +178,9 @@ and SAtom : sig
   val print : Format.formatter -> t -> unit
   (** prints a conjunction *)
 
+  val print_sep : string -> Format.formatter -> t -> unit
+  (** prints a list of atom separated by sep **)
+
   val print_inline : Format.formatter -> t -> unit
   (** prints a conjunction on a signle line *)
 
@@ -211,7 +214,7 @@ module ArrayAtom : sig
 
   val union : t -> t -> t
   (** in fact concatenation, equivalent to taking the conjunctions of two
-      conjunctinos*)
+      conjunctions*)
 
   val apply_subst : Variable.subst -> t -> t
   (** Efficient application of substitution *)

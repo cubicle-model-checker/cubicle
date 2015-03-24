@@ -220,6 +220,27 @@ let assume_node { tag = id } ap =
   SMT.assume ~id f;
   SMT.check  ()
 
+let assume_formula_cube id ap =
+  let f = make_formula ap in
+  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check  ()
+
+let assume_formula_satom id sa =
+  let f = make_formula_set sa in
+  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check  ()
+
+let assume_neg_formula_satom id sa =
+  let f = F.make F.Not [make_formula_set sa] in
+  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check  ()
+
+let clear_system () =
+  SMT.clear ()
+
 let run () = SMT.check ()
 
 let check_guard args sa reqs =
@@ -235,7 +256,6 @@ let unsat_core_wrt_node uc ap =
       | F.Lit la when List.mem [la] uc -> SAtom.add a acc
       | _ -> acc) 
     SAtom.empty ap
-
 
 let assume_node_wo_check ({ tag = id }, ap) =
   let f = F.make F.Not [make_formula ap] in
