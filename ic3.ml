@@ -13,7 +13,6 @@ type result =
 module type SigV = sig
 
   type t
-
   (* conjonction of universally quantified clauses, good*)
   type ucnf
   (* disjunction of exisentially quantified conjunctions, bad *)
@@ -425,7 +424,7 @@ module Vertice : SigV = struct
   let update_good good upd =
     failwith "TODO UPDATE GOOD"
     
-  let implies_by_trans v1 v2 ({tr_info = tr} as t) = 
+  let implies_by_trans v1 v2 ({tr_info = ti} as tr) = 
     (* We want to check v1 and tr and not v2
        if it is unsat, then v1 and tr imply v2
        else, v1 and tr can not lead to v2 *)
@@ -433,7 +432,7 @@ module Vertice : SigV = struct
     let g2 = v2.good in
     let n_g1 = max_args g1 in
     let n_g2 = max_args g2 in
-    let n_tr = List.length tr.tr_args in
+    let n_tr = List.length ti.tr_args in
     let n_args = 
       if n_g1 - n_g2 - n_tr > 0 then n_g1 - n_g2
       else n_tr 
@@ -441,11 +440,11 @@ module Vertice : SigV = struct
     let args = get_procs n_args n_g2 in
     let inst_g1 = instantiate_good args g1 in
     let inst_g2 = instantiate_good args g2 in
-    let inst_upd = Forward.instantiate_transitions args args [t] in
+    let inst_upd = Forward.instantiate_transitions args args [tr] in
 
     Format.eprintf "IG1 : %a@." print_igood inst_g1;
     Format.eprintf "IG2 : %a@." print_igood inst_g2;
-    Format.eprintf "%a :@." Hstring.print tr.tr_name;
+    Format.eprintf "%a :@." Hstring.print ti.tr_name;
     List.iter (
       fun i -> 
 	Format.eprintf "\tReqs : %a\n\tActions : %a@." 
