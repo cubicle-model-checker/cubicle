@@ -331,27 +331,28 @@ module Vertice : SigV = struct
   let max_args = List.fold_left (fun acc c -> max acc (Cube.dim c)) 0
 
   let assume_good gl = 
-    Prover.clear_system ();
-    (* The case Smt.Unsat should never occure but we never know *)
-    (try
-       List.iter (
-	 fun g -> Prover.assume_clause 0 g.Cube.array
-       ) gl
-     with 
-	 Smt.Unsat _ -> 
-	   Format.eprintf "Good is not good@."; assert false
-    );
-    Solver.save_state ()
+    fun () ->
+      Prover.clear_system ();
+      (* The case Smt.Unsat should never occure but we never know *)
+      (try
+	 List.iter (
+	   fun g -> Prover.assume_clause 0 g.Cube.array
+	 ) gl
+       with 
+	   Smt.Unsat _ -> 
+	     Format.eprintf "Good is not good@."; assert false
+      )
+  (* Solver.save_state () *)
 
   let assume_guard f = Prover.assume_formula_satom 0 f
 
-  let restore s = Solver.restore_state s
+  (* let restore s = Solver.restore_state s *)
 
   let assume_and_restore s f =
     (* Format.eprintf "[A&R] Assuming@."; *)
     Prover.assume_formula_satom 0 f;
     (* Format.eprintf "[A&R] Restoring@."; *)
-    Solver.restore_state s
+    s ()
 
   let assume_neg_and_restore s f =
     Prover.assume_neg_formula_satom 0 f;
@@ -373,6 +374,7 @@ module Vertice : SigV = struct
     
     (* Format.eprintf "[Pickable] Assuming good@."; *)
     let s = assume_good inst_goods in
+    s ();
     let a_r_s = assume_and_restore s in
     
     (* Format.eprintf "[Pickable] Assuming and restoring@."; *)
@@ -412,6 +414,7 @@ module Vertice : SigV = struct
     
     
     let s = assume_good inst_g1 in
+    s ();
     let a_r_s = assume_and_restore s in
 
     List.exists (
@@ -534,6 +537,7 @@ module Vertice : SigV = struct
     let res =
       (* Good not updated *)
       let s = assume_good inst_g1 in
+      s ();
       List.for_all (
 	fun iupd -> 
 	  try
@@ -545,6 +549,7 @@ module Vertice : SigV = struct
 	    Format.eprintf "UIG1 : %a@." print_igood uig1;
 	    (* Good updated assumed *)
 	    let s' = assume_good uig1 in
+	    s' ();
 	    (* Every time we try a new good 2, we restore
 	       the system to the updated good 1 *)
 	    let a_r_s = assume_and_restore s' in
@@ -552,15 +557,17 @@ module Vertice : SigV = struct
 	    let res = List.for_all (
 	      fun ig2 ->
 		try
+		  Format.eprintf "Assume %a@." SAtom.print ig2.Cube.litterals;
 		  a_r_s ig2.Cube.litterals;
+		  Format.eprintf "Res : SAT@.";
 		  false
-		with Smt.Unsat _ -> true
+		with Smt.Unsat _ -> Format.eprintf "Res : UNSAT@."; true
 	    ) inst_neg_g2 in
 	    (* We return to good not updated for the next
 	       transition *)
-	    restore s;
+	    s ();
 	    res
-	  with Smt.Unsat _ -> restore s; true
+	  with Smt.Unsat _ -> s (); true
       ) inst_upd
     in res	
 
