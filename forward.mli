@@ -73,3 +73,9 @@ val uguard_dnf :
   Variable.subst ->
   Variable.t list -> Variable.t list ->
   (Variable.t * SAtom.t list) list -> SAtom.t list list
+
+(* Signatures used for ic3 *)
+
+val prime_satom : SAtom.t -> SAtom.t
+val preserve_terms : Term.Set.t -> SAtom.t -> SAtom.t
+val wrapper_elim_prime : SAtom.t -> SAtom.t -> SAtom.t

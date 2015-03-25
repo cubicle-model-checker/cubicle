@@ -75,9 +75,9 @@ module type SigQ = sig
   val iter : ('a -> unit) -> 'a t -> unit
 
 end
-      
-module Make ( Q : SigQ ) ( V : SigV ) = struct
   
+module Make ( Q : SigQ ) ( V : SigV ) = struct
+    
   type v = V.t
   type q = V.t Q.t
 
@@ -118,13 +118,18 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     (* Print top *)
     Format.eprintf "%a@." V.print_vertice top;    
     (* root = (init, false) *)
-    let (initv, initfl) = system.t_init in
+    let (_, initfl) = system.t_init in
     let initf = match initfl with
       | [e] -> e
       | _ -> assert false
     in
     let initl = SAtom.fold (
-      fun a acc -> (initv, SAtom.singleton a)::acc) initf [] in
+      fun a acc -> 
+	(
+	  Variable.Set.elements (Atom.variables a), 
+	  SAtom.singleton a
+	)::acc
+    ) initf [] in
     (* Create the good formula of root, init *)
     let groot = V.create_good initl in
     (* Create the bad formula of root, false *)
@@ -236,14 +241,14 @@ module Vertice : SigV = struct
 
   let print_good fmt g =
     List.iter (
-      fun c -> Format.eprintf "\n\t\tForall %a, %a@. AND" 
+      fun c -> Format.eprintf "\t\tForall %a, %a@." 
 	Variable.print_vars c.Cube.vars 
 	(SAtom.print_sep "||") c.Cube.litterals
     ) g
 
   let print_igood fmt g =
     List.iter (
-      fun c -> Format.eprintf "\n\t\t%a@. AND" 
+      fun c -> Format.eprintf "\t\t%a\nAND@." 
 	(SAtom.print_sep "||") c.Cube.litterals
     ) g
 
@@ -264,7 +269,7 @@ module Vertice : SigV = struct
     Format.eprintf "Vertice %a\n\tGood : %a\n\tBad : %a\n\tParents : "
       print_id v print_good v.good print_bad v.bad;
     List.iter (fun (vp, tr) -> Format.eprintf "(%d, %a)\n" vp.id Hstring.print tr.tr_info.tr_name) v.parents
-    
+      
   let create =
     let cpt = ref 0 in
     fun g b p ->
@@ -329,14 +334,18 @@ module Vertice : SigV = struct
     Prover.clear_system ();
     (* The case Smt.Unsat should never occure but we never know *)
     (try
-      List.iter (
-	fun g -> Prover.assume_formula_cube 0 g.Cube.array
-      ) gl
-    with 
-	Smt.Unsat _ -> 
-	  Format.eprintf "Good is not good@."; exit 1
+       List.iter (
+	 fun g -> Prover.assume_formula_cube 0 g.Cube.array
+       ) gl
+     with 
+	 Smt.Unsat _ -> 
+	   Format.eprintf "Good is not good@."; assert false
     );
     Solver.save_state ()
+
+  let assume_guard f = Prover.assume_formula_satom 0 f
+
+  let restore s = Solver.restore_state s
 
   let assume_and_restore s f =
     (* Format.eprintf "[A&R] Assuming@."; *)
@@ -347,7 +356,7 @@ module Vertice : SigV = struct
   let assume_neg_and_restore s f =
     Prover.assume_neg_formula_satom 0 f;
     Solver.restore_state s
-    
+      
   let pickable v tr = 
     if debug && verbose > 1 then
       Format.eprintf "\ncheck the transition : %a\n@." Hstring.print tr.tr_info.tr_name;
@@ -417,13 +426,69 @@ module Vertice : SigV = struct
 	      (* Format.eprintf "[Cover] Bad End@."; *)
 	      false
     ) inst_g2
+      
+  let update_good good { Forward.i_reqs = reqs;
+			 i_udnfs = udnfs;
+			 i_actions = actions;
+			 i_touched_terms = touched_terms } =
+    Format.eprintf "Actions : %a\n@." (SAtom.print_sep "&&") actions;
+	
+    List.fold_left (
+      fun acc g ->
+	let gsa = g.Cube.litterals in
+	if debug && verbose > 1 then
+	  Format.eprintf "GSA : %a@." (SAtom.print_sep "&&") gsa;
+	(* gsa is a clause of good *)
+	(* We only keep the actions feasible on this clause *)
+	let pgsa = Forward.prime_satom gsa in
+	let action = 
+	  SAtom.filter (
+	    fun act ->
+	      SAtom.exists (
+		fun at ->
+		  match act, at with
+		    | Atom.Comp (t1, _, _), Atom.Comp (t2, _, _) 
+		      (* -> if Term.is_prime_term t1 then *) when Term.equal t1 t2 -> true
+		    | _ -> false
+	      ) gsa ||
+		SAtom.exists (
+		  fun at ->
+		    match act, at with
+		      | Atom.Comp (t1, _, _), Atom.Comp (t2, _, _) when Term.equal t1 t2 -> true
+		      | _ -> false
+		) pgsa
+	  ) actions in
+	let untouched = 
+	  SAtom.filter (
+	    fun at ->
+	      match at with
+		| Atom.Comp (t, _, _) -> not (Term.Set.mem t touched_terms)
+		| _ -> true
+	  ) gsa in
+	(* Format.eprintf "Unt : %a@." (SAtom.print_sep "&&") untouched; *)
+	(* Format.eprintf "Action : %a@." (SAtom.print_sep "&&") action; *)
 
-  let instantiate_update args tr =
-    failwith "TODO UPDATE TRANS"
+	(* Format.eprintf "PGSA : %a@." (SAtom.print_sep "&&") pgsa; *)
+	(* Format.eprintf "Touch : "; *)
+	(* Term.Set.iter ( *)
+	(*   fun t -> Format.eprintf "%a " Term.print t) touched_terms; *)
+	(* Format.eprintf "@."; *)
+	(* let unchanged = Forward.preserve_terms touched_terms gsa in *)
+	(* Format.eprintf "Unch : %a@." (SAtom.print_sep "&&") unchanged; *)
 
-  let update_good good upd =
-    failwith "TODO UPDATE GOOD"
-    
+	let sa = Cube.simplify_atoms_base pgsa action in
+      	let sa = Forward.wrapper_elim_prime pgsa sa in
+	let sa = SAtom.union sa untouched in
+      	if debug && verbose > 1 then (
+	  Format.eprintf "NSA : %a@." (SAtom.print_sep "&&") sa;
+	  Format.eprintf "-------------------\n@."
+	);
+	let csa = Cube.create 
+	  (Variable.Set.elements (SAtom.variables sa)) sa in
+	csa::acc
+    ) [] good	
+      
+      
   let implies_by_trans v1 v2 ({tr_info = ti} as tr) = 
     (* We want to check v1 and tr and not v2
        if it is unsat, then v1 and tr imply v2
@@ -453,24 +518,38 @@ module Vertice : SigV = struct
     ) inst_upd;
     
     
-    List.exists (
-      fun ig1 ->
-	List.exists (
-	  fun iupd -> 
-	    let uig1 = update_good ig1 iupd in
-	    let s = assume_good uig1 in
-	    let a_n_r_s = assume_neg_and_restore s in
-	    List.exists (
+    let sat =
+      (* Good not updated *)
+      let s = assume_good inst_g1 in
+      List.exists (
+	fun iupd -> 
+	  try
+	    (* We check if we can execute this transition *)
+	    assume_guard iupd.Forward.i_reqs;
+	    
+	    (* We update the good formula w.r.t the transition *)
+	    let uig1 = update_good inst_g1 iupd in
+	    Format.eprintf "UIG1 : %a@." print_igood uig1;
+	    (* Good updated assumed *)
+	    let s' = assume_good uig1 in
+	    (* Every time we try a new good 2, we restore
+	       the system to the updated good 1 *)
+	    let a_n_r_s = assume_neg_and_restore s' in
+	    (* If it is sat, we stop, else, we continue *)
+	    let res = List.exists (
 	      fun ig2 ->
 		try
 		  a_n_r_s ig2.Cube.litterals;
 		  true
-		with
-		    Smt.Unsat _ -> false
-	    ) inst_g2
-	) inst_upd
-    ) inst_g1
-    
+		with Smt.Unsat _ -> false
+	    ) inst_g2 in
+	    (* We return to good not updated for the next
+	       transition *)
+	    restore s;
+	    res
+	  with Smt.Unsat _ -> restore s; false
+      ) inst_upd
+    in sat	
 
   let find_subsuming_vertice v1 v2 tr g =
     Format.eprintf "[Subsume] %a %a (%d)@." print_id v1 print_id v2 (List.length g);
@@ -480,7 +559,7 @@ module Vertice : SigV = struct
 	  print_id v1 print_id vs Hstring.print tr.tr_info.tr_name;
 	(is_true v2 || implies vs v2) && implies_by_trans v1 vs tr
     ) g
-	  
+      
 
   let refine v1 v2 tr g = 
     try
@@ -493,7 +572,7 @@ module Vertice : SigV = struct
     with Not_found -> 
       Format.eprintf "[Extrapolation]";
       failwith "TODO"
-      
+	
   let is_bad v = List.exists (fun c -> not (SAtom.is_empty c.Cube.litterals)) v.bad
 
 end
@@ -501,19 +580,19 @@ end
 module RG = Make(Queue)(Vertice)
 
 (* List.iter (Format.eprintf "%a@." SAtom.print) inst_tr; *)
-    (* List.exists ( *)
-    (*   fun i_guard -> *)
-    (* 	(\* Format.eprintf "\n\nTest :@."; *\) *)
-    (* 	List.for_all ( *)
-    (* 	  fun i_good ->  *)
-    (* 	    try *)
-    (* 	      (\* Format.eprintf "Good : %a@." print_good [i_good]; *\) *)
-    (* 	      (\* Format.eprintf "Trans : %a@." SAtom.print guard; *\) *)
-    (* 	      Prover.check_guard args i_good.Cube.litterals i_guard; *)
-    (* 	      (\* Format.eprintf "SAT@."; *\) *)
-    (* 	      true *)
-    (* 	    with Smt.Unsat _ ->  *)
-    (* 	      (\* Format.eprintf "UNSAT@.";*\) *)
-    (* 	      false *)
-    (* 	) inst_goods *)
-    (*   ) inst_guards *)
+(* List.exists ( *)
+(*   fun i_guard -> *)
+(* 	(\* Format.eprintf "\n\nTest :@."; *\) *)
+(* 	List.for_all ( *)
+(* 	  fun i_good ->  *)
+(* 	    try *)
+(* 	      (\* Format.eprintf "Good : %a@." print_good [i_good]; *\) *)
+(* 	      (\* Format.eprintf "Trans : %a@." SAtom.print guard; *\) *)
+(* 	      Prover.check_guard args i_good.Cube.litterals i_guard; *)
+(* 	      (\* Format.eprintf "SAT@."; *\) *)
+(* 	      true *)
+(* 	    with Smt.Unsat _ ->  *)
+(* 	      (\* Format.eprintf "UNSAT@.";*\) *)
+(* 	      false *)
+(* 	) inst_goods *)
+(*   ) inst_guards *)
