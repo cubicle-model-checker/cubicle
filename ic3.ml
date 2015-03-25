@@ -335,7 +335,7 @@ module Vertice : SigV = struct
     (* The case Smt.Unsat should never occure but we never know *)
     (try
        List.iter (
-	 fun g -> Prover.assume_formula_cube 0 g.Cube.array
+	 fun g -> Prover.assume_clause 0 g.Cube.array
        ) gl
      with 
 	 Smt.Unsat _ -> 

@@ -220,8 +220,11 @@ let assume_node { tag = id } ap =
   SMT.assume ~id f;
   SMT.check  ()
 
-let assume_formula_cube id ap =
-  let f = make_formula ap in
+let make_clause atoms =
+  F.make F.Or (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
+
+let assume_clause id ap =
+  let f = make_clause ap in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
   SMT.check  ()
