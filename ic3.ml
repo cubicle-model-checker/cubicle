@@ -559,6 +559,7 @@ module Vertice : SigV = struct
 		try
 		  Format.eprintf "Assume %a@." SAtom.print ig2.Cube.litterals;
 		  a_r_s ig2.Cube.litterals;
+		  s' ();
 		  Format.eprintf "Res : SAT@.";
 		  false
 		with Smt.Unsat _ -> Format.eprintf "Res : UNSAT@."; true
