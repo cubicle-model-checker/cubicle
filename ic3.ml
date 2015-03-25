@@ -436,8 +436,8 @@ module Vertice : SigV = struct
     List.fold_left (
       fun acc g ->
 	let gsa = g.Cube.litterals in
-	if debug && verbose > 1 then
-	  Format.eprintf "GSA : %a@." (SAtom.print_sep "&&") gsa;
+	(* if debug && verbose > 1 then *)
+	Format.eprintf "GSA : %a@." (SAtom.print_sep "&&") gsa;
 	(* gsa is a clause of good *)
 	(* We only keep the actions feasible on this clause *)
 	let pgsa = Forward.prime_satom gsa in
@@ -465,24 +465,25 @@ module Vertice : SigV = struct
 		| Atom.Comp (t, _, _) -> not (Term.Set.mem t touched_terms)
 		| _ -> true
 	  ) gsa in
-	(* Format.eprintf "Unt : %a@." (SAtom.print_sep "&&") untouched; *)
-	(* Format.eprintf "Action : %a@." (SAtom.print_sep "&&") action; *)
+	Format.eprintf "Unt : %a@." (SAtom.print_sep "&&") untouched;
+	Format.eprintf "Action : %a@." (SAtom.print_sep "&&") action;
 
-	(* Format.eprintf "PGSA : %a@." (SAtom.print_sep "&&") pgsa; *)
-	(* Format.eprintf "Touch : "; *)
-	(* Term.Set.iter ( *)
-	(*   fun t -> Format.eprintf "%a " Term.print t) touched_terms; *)
-	(* Format.eprintf "@."; *)
+	Format.eprintf "PGSA : %a@." (SAtom.print_sep "&&") pgsa;
+	Format.eprintf "Touch : ";
+	Term.Set.iter (
+	  fun t -> Format.eprintf "%a " Term.print t) touched_terms;
+	Format.eprintf "@.";
 	(* let unchanged = Forward.preserve_terms touched_terms gsa in *)
 	(* Format.eprintf "Unch : %a@." (SAtom.print_sep "&&") unchanged; *)
 
 	let sa = Cube.simplify_atoms_base pgsa action in
       	let sa = Forward.wrapper_elim_prime pgsa sa in
 	let sa = SAtom.union sa untouched in
-      	if debug && verbose > 1 then (
+      	(* if debug && verbose > 1 then ( *)
 	  Format.eprintf "NSA : %a@." (SAtom.print_sep "&&") sa;
-	  Format.eprintf "-------------------\n@."
-	);
+	  Format.eprintf "-------------------\n@.";
+
+	(* ); *)
 	let csa = Cube.create 
 	  (Variable.Set.elements (SAtom.variables sa)) sa in
 	csa::acc
@@ -495,6 +496,7 @@ module Vertice : SigV = struct
        else, v1 and tr can not lead to v2 *)
     let g1 = v1.good in
     let g2 = v2.good in
+    Format.eprintf "Good1 : %a@." print_good v1.good;
     let n_g1 = max_args g1 in
     let n_g2 = max_args g2 in
     let n_tr = List.length ti.tr_args in
@@ -503,12 +505,23 @@ module Vertice : SigV = struct
       else n_tr 
     in
     let args = get_procs n_args n_g2 in
+    Format.printf "Card : %d@." (List.length args);
     let inst_g1 = instantiate_good args g1 in
     let inst_g2 = instantiate_good args g2 in
+    let inst_neg_g2 = 
+      List.map (
+	fun c ->
+	  let l = c.Cube.litterals in
+	  let l = SAtom.fold (fun a l -> SAtom.add (Atom.neg a) l) l SAtom.empty in
+	  Cube.create c.Cube.vars l
+      ) inst_g2 in
+	  
     let inst_upd = Forward.instantiate_transitions args args [tr] in
 
     Format.eprintf "IG1 : %a@." print_igood inst_g1;
-    Format.eprintf "IG2 : %a@." print_igood inst_g2;
+    Format.eprintf "Good2 : %a@." print_good v2.good;
+    
+    Format.eprintf "IG2 : %a@." print_igood inst_neg_g2;
     Format.eprintf "%a :@." Hstring.print ti.tr_name;
     List.iter (
       fun i -> 
@@ -518,10 +531,10 @@ module Vertice : SigV = struct
     ) inst_upd;
     
     
-    let sat =
+    let res =
       (* Good not updated *)
       let s = assume_good inst_g1 in
-      List.exists (
+      List.for_all (
 	fun iupd -> 
 	  try
 	    (* We check if we can execute this transition *)
@@ -534,22 +547,22 @@ module Vertice : SigV = struct
 	    let s' = assume_good uig1 in
 	    (* Every time we try a new good 2, we restore
 	       the system to the updated good 1 *)
-	    let a_n_r_s = assume_neg_and_restore s' in
+	    let a_r_s = assume_and_restore s' in
 	    (* If it is sat, we stop, else, we continue *)
-	    let res = List.exists (
+	    let res = List.for_all (
 	      fun ig2 ->
 		try
-		  a_n_r_s ig2.Cube.litterals;
-		  true
-		with Smt.Unsat _ -> false
-	    ) inst_g2 in
+		  a_r_s ig2.Cube.litterals;
+		  false
+		with Smt.Unsat _ -> true
+	    ) inst_neg_g2 in
 	    (* We return to good not updated for the next
 	       transition *)
 	    restore s;
 	    res
-	  with Smt.Unsat _ -> restore s; false
+	  with Smt.Unsat _ -> restore s; true
       ) inst_upd
-    in sat	
+    in res	
 
   let find_subsuming_vertice v1 v2 tr g =
     Format.eprintf "[Subsume] %a %a (%d)@." print_id v1 print_id v2 (List.length g);

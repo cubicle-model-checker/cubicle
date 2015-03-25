@@ -9,7 +9,7 @@ unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
 
 transition t1 (i)
 requires {Want[i] = False && Crit[i] = False}
-{ Want[i] := True;
+{ Want[i] := False;
 }
 
 transition t2 (i)
