@@ -298,7 +298,7 @@ let satisfied c =
   with Exit -> true
 
 (* annule tout jusqu'a lvl *exclu*  *)
-let cancel_until lvl = 
+let cancel_until lvl =
   if decision_level () > lvl then begin
     env.qhead <- Vec.get env.trail_lim lvl;
     for c = Vec.size env.trail - 1 downto env.qhead do
@@ -960,7 +960,6 @@ let assume cnf ~cnumber =
   init_solver cnf ~cnumber
 
 let clear () =
-  let empty_theory = Th.empty () in
   env.is_unsat <- false;
   env.unsat_core <- [];
   env.clauses <- Vec.make 0 dummy_clause; 
@@ -984,11 +983,11 @@ let clear () =
   env.tot_literals <- 0;
   env.nb_init_vars <- 0;
   env.nb_init_clauses <- 0;
-  env.tenv <- empty_theory;
+  env.tenv <- Th.empty ();
   env.model <- Vec.make 0 dummy_var;
   env.trail <- Vec.make 601 dummy_atom;
   env.trail_lim <- Vec.make 601 (-105);
-  env.tenv_queue <- Vec.make 100 (empty_theory);
+  env.tenv_queue <- Vec.make 100 (Th.empty ());
   env.tatoms_queue <- Queue.create ();
   Solver_types.clear ()
 

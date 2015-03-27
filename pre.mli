@@ -26,3 +26,7 @@ val pre_image : transition list -> Node.t -> Node.t list * Node.t list
     [tau] as a disjunction of cubes in the form of two lists of new nodes. The
     second list is used to store nodes to postpone depending on a predefined
     strategy. *)
+
+val pre : transition -> SAtom.t -> transition_info * Cube.t * Variable.t list
+
+val make_cubes : Node.t list * Node.t list -> Variable.t list -> Node.t -> Ast.transition_info -> Cube.t -> Node.t list * Node.t list

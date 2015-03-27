@@ -5,12 +5,11 @@ array Crit[proc] : bool
 
 init (z) { Want[z] = False && Crit[z] = False }
 
-unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+unsafe (z1) { Crit[z1] = True}
 
 transition t1 (i)
-requires {Want[i] = False && Crit[i] = False}
-{ Want[i] := True;
-}
+requires {Want[i] = False && Crit[i] = False }
+{ Want[i] := True;}
 
 transition t2 (i)
 requires {Want[i] = True && Crit[i] = False}

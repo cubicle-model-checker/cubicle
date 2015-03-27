@@ -19,15 +19,15 @@ module type SigV = sig
   type ednf
 
   type res_ref =
-    | Bad_Parent
+    | Bad_Parent of t
     | Covered of t
     | Extrapolated of t
 
   val create_good : (Variable.t list * Types.SAtom.t) list -> ucnf
   val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
 
-  (* val print_good : Format.formatter -> t -> unit *)
-  (* val print_bad : Format.formatter -> t-> unit *)
+  (* val print_ucnf : Format.formatter -> t -> unit *)
+  (* val print_ednf : Format.formatter -> t-> unit *)
   val print_vertice : Format.formatter -> t -> unit
 
   val create : ucnf -> ednf -> (t * transition) list -> t
@@ -83,6 +83,15 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 
   module G = Map.Make(V)
 
+  let print_graph g =
+    G.iter (
+      fun k e -> Format.eprintf "%a@." V.print_vertice k;
+	(* List.iter ( *)
+	(*   fun p -> Format.eprintf "\t(%a) @." V.print_id p; *)
+	(* ) e *)
+    ) g
+	    
+
   let find_graph g v = 
     try G.find v g
     with Not_found -> []
@@ -110,7 +119,6 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     in
     let (unsv, unsf) = 
       let c = cuns.cube in (c.Cube.vars, c.Cube.litterals) in
-    (* Format.eprintf "Cube Uns : %a@." Cube.print cuns.cube; *)
     let btop = V.create_bad [unsv, unsf] in
     (* Create top with gtop, btop and no parents *)
     let top = V.create gtop btop [] in
@@ -141,7 +149,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     (* rushby graph *)
     let rgraph = G.add root [root] (G.singleton top [root]) in
     let rec refine v1 v2 tr rg =
-      Format.eprintf "\n*******[Refine]*******\n \nrefining %a --%a--> %a@." 
+      Format.eprintf "\n*******[Refine]*******\n \nrefining (%a) --%a--> (%a)@." 
 	V.print_id v1 Hstring.print tr.tr_info.tr_name 
 	V.print_id v2;
       (* In this case we are trying to execute a new transition
@@ -152,29 +160,40 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	  "We discard the treatment of this edge since (%d) is now bad@." (V.hash v1);
 	rg
       )
-      else if V.is_bad v2 then
+      else if V.is_bad v2 then (
+	print_graph rg;
+	let lrg = G.fold (
+	  fun e _ acc -> e::acc) rg [] in
+	List.iter (
+	  fun e -> Format.eprintf "Visited : %a@." V.print_vertice e) lrg;
 	let pr = find_graph rg v2 in
-	match V.refine v1 v2 tr pr with  
+	match V.refine v1 v2 tr lrg with  
 	  (* v1 and tr imply bad *)
-	  | V.Bad_Parent -> 
+	  | V.Bad_Parent vupd-> 
 	    (* If v1 is root, we can not refine *)
 	    if V.equal v1 root then raise (Unsafe system);
 	    (* Else, we recursively call refine on all the parents *)
+	    let v1 = vupd in
+	    let rg = replace_graph v1 rg in
 	    List.fold_left (
-	      fun acc (vp, tr) -> refine vp v1 tr acc
+	      fun acc (vp, tr) -> 
+		Format.eprintf "[BPR] (%a) --%a--> ?@."
+		  V.print_id vp Hstring.print tr.tr_info.tr_name;
+		refine vp v1 tr acc
 	    ) rg (V.get_parents v1)
 	  (* The node vc covers v2 by tr *)
 	  | V.Covered vc -> 
-	    let v2 = V.delete_parent v2 v1 tr in
+	    (* let v2 = V.delete_parent v2 v1 tr in *)
 	    let vc = V.add_parent vc v1 tr in
 	    let rg = replace_graph v2 (replace_graph vc rg) in
 	    refine v1 vc tr rg
 	  | V.Extrapolated vn -> 
-	    let v2 = V.delete_parent v2 v1 tr in
+	    (* let v2 = V.delete_parent v2 v1 tr in *)
 	    let vn = V.add_parent vn v1 tr in
 	    let rg = add_extra_graph v2 vn (replace_graph vn rg) in
 	    Q.push vn todo;
 	    rg
+      )
       else (
 	Format.eprintf "(%a) is safe, no backward refinement@." V.print_id v2;
 	rg
@@ -194,10 +213,10 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	fun acc tr -> refine v1 top tr acc ) rg trans
       in expand rg
     in
-    let _ = 
-      try expand rgraph
-      with Q.Empty -> Format.eprintf "Empty queue, Safe system@."
-    in RSafe
+    try expand rgraph
+    with 
+      | Q.Empty -> Format.eprintf "Empty queue, Safe system@."; RSafe
+      | Unsafe _ -> RUnsafe
 end
 
 module type SigRG = sig
@@ -226,7 +245,7 @@ module Vertice : SigV = struct
   let compare v1 v2 = Pervasives.compare v1.id v2.id
 
   type res_ref =
-    | Bad_Parent
+    | Bad_Parent of t
     | Covered of t
     | Extrapolated of t
 
@@ -239,25 +258,35 @@ module Vertice : SigV = struct
 
   let create_bad = create_good
 
-  let print_good fmt g =
+  let update_bad v nb = List.fold_left
+    (fun acc b -> b@acc) v.bad nb
+
+  let print_ucnf fmt g =
     List.iter (
-      fun c -> Format.eprintf "\t\tForall %a, %a@." 
+      fun c -> Format.eprintf "\t\tForall %a, %a AND@." 
 	Variable.print_vars c.Cube.vars 
 	(SAtom.print_sep "||") c.Cube.litterals
     ) g
 
-  let print_igood fmt g =
+  let print_iucnf fmt g =
     List.iter (
       fun c -> Format.eprintf "\t\t%a\nAND@." 
 	(SAtom.print_sep "||") c.Cube.litterals
     ) g
 
-  let print_bad fmt b = 
+  let print_ednf fmt b = 
     List.iter (
       fun c -> Format.eprintf "\n\t\tExists %a, %a@. OR" 
 	Variable.print_vars c.Cube.vars 
 	(SAtom.print_sep "&&") c.Cube.litterals
     ) b
+
+  let print_iednf fmt b = 
+    List.iter (
+      fun c -> Format.eprintf "\t\t%a\nOR@." 
+	(SAtom.print_sep "&&") c.Cube.litterals
+    ) b
+      
 
   let print_id fmt v = 
     match v.id with
@@ -266,9 +295,11 @@ module Vertice : SigV = struct
       | i -> Format.eprintf "%d" i
 
   let print_vertice fmt v = 
-    Format.eprintf "Vertice %a\n\tGood : %a\n\tBad : %a\n\tParents : "
-      print_id v print_good v.good print_bad v.bad;
-    List.iter (fun (vp, tr) -> Format.eprintf "(%d, %a)\n" vp.id Hstring.print tr.tr_info.tr_name) v.parents
+    Format.eprintf "Vertice (%a)\n\tGood : %a\n\tBad : %a\n\tParents : "
+      print_id v print_ucnf v.good print_ednf v.bad;
+    List.iter (fun (vp, tr) -> Format.eprintf "(%d, %a) " vp.id Hstring.print tr.tr_info.tr_name) v.parents;
+    Format.eprintf "\n-----------------@."
+      
       
   let create =
     let cpt = ref 0 in
@@ -296,7 +327,10 @@ module Vertice : SigV = struct
     {v with parents = nl}
 
   let add_parent v p tr =
-    {v with parents = (p, tr)::v.parents}
+    if List.exists (
+      fun (p', tr') -> equal p p' && Hstring.equal tr'.tr_info.tr_name tr.tr_info.tr_name) v.parents 
+    then v 
+    else {v with parents = (p, tr)::v.parents}
 
   let get_parents v = v.parents
 
@@ -310,15 +344,15 @@ module Vertice : SigV = struct
 	| n, [] -> assert false
     in get tot Variable.procs
 
-  let instantiate_good args good = 
-    List.fold_left
-      (fun i_good cube ->
+  let instantiate_cube_list args good = 
+    List.fold_left (
+      fun i_good cube ->
 	let substs = Variable.all_permutations cube.Cube.vars args in
 	List.fold_left (
 	  fun i_good sub ->
 	    let sc = Cube.subst sub cube in
 	    sc :: i_good) i_good substs
-      ) [] good
+    ) [] good
 
   let instantiate_guard args tr = 
     let ti = tr.tr_info in
@@ -326,17 +360,21 @@ module Vertice : SigV = struct
     List.fold_left (
       fun i_tr sub ->
 	let st = SAtom.subst sub ti.tr_reqs in
-	st :: i_tr) [] substs
+	st :: i_tr
+    ) [] substs
 
   let max_args = List.fold_left (fun acc c -> max acc (Cube.dim c)) 0
 
-  let assume_good gl = 
+  let assume_cnf gl n = 
     fun () ->
       Prover.clear_system ();
       (* The case Smt.Unsat should never occure but we never know *)
       (try
 	 List.iter (
-	   fun g -> Prover.assume_clause 0 g.Cube.array
+	   fun g -> 
+	     if not (SAtom.is_empty g.Cube.litterals)
+	     then
+	       Prover.assume_clause  n g.Cube.array
 	 ) gl
        with 
 	   Smt.Unsat _ -> 
@@ -344,51 +382,61 @@ module Vertice : SigV = struct
       )
   (* Solver.save_state () *)
 
-  let assume_guard f = Prover.assume_formula_satom 0 f
+  let assume_guard f n = Prover.assume_formula_satom  n f
 
   (* let restore s = Solver.restore_state s *)
-
-  let assume_and_restore s f =
+    
+  let assume_cube_and_restore s n f =
     (* Format.eprintf "[A&R] Assuming@."; *)
-    Prover.assume_formula_satom 0 f;
-    (* Format.eprintf "[A&R] Restoring@."; *)
-    s ()
+    try
+      Prover.assume_formula_satom n f;
+      s ();
+    with Smt.Unsat n -> s (); raise (Smt.Unsat n)
+  (* Format.eprintf "[A&R] Restoring@."; *)
 
-  let assume_neg_and_restore s f =
-    Prover.assume_neg_formula_satom 0 f;
-    Solver.restore_state s
+  (* let assume_neg_and_restore s f = *)
+  (*   Prover.assume_neg_formula_satom 0 f; *)
+  (*   Solver.restore_state s *)
       
   let pickable v tr = 
-    if debug && verbose > 1 then
+    if debug && verbose > 0 then
       Format.eprintf "\ncheck the transition : %a\n@." Hstring.print tr.tr_info.tr_name;
-    
+
     let good = v.good in
     let tr_args = tr.tr_info.tr_args in
+
+    let n = v.id in
 
     let n_arg_go = max_args good in
     let n_arg_tr = List.length tr_args in
     let args = get_procs n_arg_go n_arg_tr in
 
-    let inst_goods = instantiate_good args good in
+    let inst_goods = instantiate_cube_list args good in
     let inst_guards = instantiate_guard args tr in
     
-    (* Format.eprintf "[Pickable] Assuming good@."; *)
-    let s = assume_good inst_goods in
+    if debug && verbose > 1 then
+      Format.eprintf "[Pickable] Assuming good@.";
+    let s = assume_cnf inst_goods n in
     s ();
-    let a_r_s = assume_and_restore s in
+    let a_c_r_s = assume_cube_and_restore s n in
     
-    (* Format.eprintf "[Pickable] Assuming and restoring@."; *)
+    if debug && verbose > 1 then
+      Format.eprintf "[Pickable] Assuming and restoring@.";
     List.exists (
       fun e -> 
 	try 
-	  (* Format.eprintf "[Pickable] Begin@."; *)
-	  a_r_s e; 
-	  (* Format.eprintf "[Pickable] Good End@."; *)
+	  if debug && verbose > 1 then
+	    Format.eprintf "[Pickable] Begin@.";
+	  a_c_r_s e; 
+	  if debug && verbose > 1 then
+	    Format.eprintf "[Pickable] Good End@.";
 	  true 
 	with 
-	    Smt.Unsat _ ->    
-	      (* Format.eprintf "[Pickable] Bad End@."; *)
-	      false
+	  | Smt.Unsat _ ->    
+	    if debug && verbose > 1 then
+	      Format.eprintf "[Pickable] Bad End@.";
+	    false
+    (* | Not_found -> false *)
     ) inst_guards
 
   let expand v trl = List.filter (pickable v) trl
@@ -405,23 +453,25 @@ module Vertice : SigV = struct
   let implies v1 v2 = 
     let g1 = v1.good in
     let g2 = v2.good in
+    let n1 = v1.id in
+    let n2 = v2.id in
     let n_g1 = max_args g1 in
     let n_g2 = max_args g2 in
     let n_args = max n_g1 n_g2 in
     let args = get_procs n_args 0 in
-    let inst_g1 = instantiate_good args g1 in
-    let inst_g2 = instantiate_good args g2 in
+    let inst_g1 = instantiate_cube_list args g1 in
+    let inst_g2 = instantiate_cube_list args g2 in
     
     
-    let s = assume_good inst_g1 in
+    let s = assume_cnf inst_g1 n1 in
     s ();
-    let a_r_s = assume_and_restore s in
+    let a_c_r_s = assume_cube_and_restore s n2 in
 
     List.exists (
       fun e -> 
 	try 
 	  (* Format.eprintf "[Cover] Begin@."; *)
-	  a_r_s e.Cube.litterals; 
+	  a_c_r_s e.Cube.litterals; 
 	  (* Format.eprintf "[Cover] Good End@."; *)
 	  true 
 	with 
@@ -434,13 +484,15 @@ module Vertice : SigV = struct
 			 i_udnfs = udnfs;
 			 i_actions = actions;
 			 i_touched_terms = touched_terms } =
-    Format.eprintf "Actions : %a\n@." (SAtom.print_sep "&&") actions;
-	
+    if debug && verbose > 1 then 
+      Format.eprintf "Actions : %a\n@." (SAtom.print_sep "&&") actions;
+    
     List.fold_left (
       fun acc g ->
 	let gsa = g.Cube.litterals in
 	(* if debug && verbose > 1 then *)
-	Format.eprintf "GSA : %a@." (SAtom.print_sep "&&") gsa;
+	if debug && verbose > 1 then 
+	  Format.eprintf "GSA : %a@." (SAtom.print_sep "&&") gsa;
 	(* gsa is a clause of good *)
 	(* We only keep the actions feasible on this clause *)
 	let pgsa = Forward.prime_satom gsa in
@@ -468,152 +520,207 @@ module Vertice : SigV = struct
 		| Atom.Comp (t, _, _) -> not (Term.Set.mem t touched_terms)
 		| _ -> true
 	  ) gsa in
-	Format.eprintf "Unt : %a@." (SAtom.print_sep "&&") untouched;
-	Format.eprintf "Action : %a@." (SAtom.print_sep "&&") action;
+	if debug && verbose > 1 then (
+	  Format.eprintf "Unt : %a@." (SAtom.print_sep "&&") untouched;
+	  Format.eprintf "Action : %a@." (SAtom.print_sep "&&") action;
 
-	Format.eprintf "PGSA : %a@." (SAtom.print_sep "&&") pgsa;
-	Format.eprintf "Touch : ";
-	Term.Set.iter (
-	  fun t -> Format.eprintf "%a " Term.print t) touched_terms;
-	Format.eprintf "@.";
+	  Format.eprintf "PGSA : %a@." (SAtom.print_sep "&&") pgsa;
+	  Format.eprintf "Touch : ";
+	  Term.Set.iter (
+	    fun t -> Format.eprintf "%a " Term.print t) touched_terms;
+	  Format.eprintf "@.";
+	);
 	(* let unchanged = Forward.preserve_terms touched_terms gsa in *)
 	(* Format.eprintf "Unch : %a@." (SAtom.print_sep "&&") unchanged; *)
 
 	let sa = Cube.simplify_atoms_base pgsa action in
       	let sa = Forward.wrapper_elim_prime pgsa sa in
 	let sa = SAtom.union sa untouched in
-      	(* if debug && verbose > 1 then ( *)
+      	if debug && verbose > 1 then (
 	  Format.eprintf "NSA : %a@." (SAtom.print_sep "&&") sa;
 	  Format.eprintf "-------------------\n@.";
-
-	(* ); *)
+	);
 	let csa = Cube.create 
 	  (Variable.Set.elements (SAtom.variables sa)) sa in
 	csa::acc
     ) [] good	
       
-      
-  let implies_by_trans v1 v2 ({tr_info = ti} as tr) = 
+  (* If the result is TRUE then f1 and tr imply f2.
+     When we want to know if good1 and tr imply good2,
+     FALSE means YES.
+     When we want to know if good1 and tr imply bad2,
+     TRUE means YES.*)
+  let imply_by_trans (f1, n1) (f2, n2) ({tr_info = ti} as tr) = 
     (* We want to check v1 and tr and not v2
        if it is unsat, then v1 and tr imply v2
        else, v1 and tr can not lead to v2 *)
-    let g1 = v1.good in
-    let g2 = v2.good in
-    Format.eprintf "Good1 : %a@." print_good v1.good;
-    let n_g1 = max_args g1 in
-    let n_g2 = max_args g2 in
+    if debug && verbose > 1 then 
+      Format.eprintf "Good1 : %a@." print_ucnf f1;
+    let n_f1 = max_args f1 in
+    let n_f2 = max_args f2 in
     let n_tr = List.length ti.tr_args in
     let n_args = 
-      if n_g1 - n_g2 - n_tr > 0 then n_g1 - n_g2
+      if n_f1 - n_f2 - n_tr > 0 then n_f1 - n_f2
       else n_tr 
     in
-    let args = get_procs n_args n_g2 in
-    Format.printf "Card : %d@." (List.length args);
-    let inst_g1 = instantiate_good args g1 in
-    let inst_g2 = instantiate_good args g2 in
-    let inst_neg_g2 = 
-      List.map (
-	fun c ->
-	  let l = c.Cube.litterals in
-	  let l = SAtom.fold (fun a l -> SAtom.add (Atom.neg a) l) l SAtom.empty in
-	  Cube.create c.Cube.vars l
-      ) inst_g2 in
-	  
+    let args = get_procs n_args n_f2 in
+    if debug && verbose > 1 then 
+      Format.printf "Card : %d@." (List.length args);
+    let inst_f1 = instantiate_cube_list args f1 in
+    let inst_f2 = instantiate_cube_list args f2 in  
+    
     let inst_upd = Forward.instantiate_transitions args args [tr] in
 
-    Format.eprintf "IG1 : %a@." print_igood inst_g1;
-    Format.eprintf "Good2 : %a@." print_good v2.good;
-    
-    Format.eprintf "IG2 : %a@." print_igood inst_neg_g2;
-    Format.eprintf "%a :@." Hstring.print ti.tr_name;
-    List.iter (
-      fun i -> 
-	Format.eprintf "\tReqs : %a\n\tActions : %a@." 
-	  SAtom.print i.Forward.i_reqs
-	  SAtom.print i.Forward.i_actions 
-    ) inst_upd;
-    
+    if debug && verbose > 1 then (
+      Format.eprintf "IF1 : %a@." print_iucnf inst_f1;
+      Format.eprintf "Good2 : %a@." print_ucnf f2;
+      
+      Format.eprintf "IF2 : %a@." print_iednf inst_f2;
+      Format.eprintf "%a :@." Hstring.print ti.tr_name;
+      
+      List.iter (
+	fun i -> 
+	  Format.eprintf "\tReqs : %a\n\tActions : %a@." 
+	    SAtom.print i.Forward.i_reqs
+	    SAtom.print i.Forward.i_actions 
+      ) inst_upd;
+    );  
     
     let res =
       (* Good not updated *)
-      let s = assume_good inst_g1 in
+      let s = assume_cnf inst_f1 n1 in
       s ();
       List.for_all (
 	fun iupd -> 
 	  try
 	    (* We check if we can execute this transition *)
-	    assume_guard iupd.Forward.i_reqs;
+	    assume_guard iupd.Forward.i_reqs n1;
 	    
 	    (* We update the good formula w.r.t the transition *)
-	    let uig1 = update_good inst_g1 iupd in
-	    Format.eprintf "UIG1 : %a@." print_igood uig1;
+	    let uif1 = update_good inst_f1 iupd in
+	    if debug && verbose > 1 then 
+	      Format.eprintf "UIF1 : %a@." print_iucnf uif1;
 	    (* Good updated assumed *)
-	    let s' = assume_good uig1 in
-	    s' ();
+	    let s' = assume_cnf uif1 n1 in
+	    (* s' (); *)
 	    (* Every time we try a new good 2, we restore
 	       the system to the updated good 1 *)
-	    let a_r_s = assume_and_restore s' in
+	    let a_c_r_s = assume_cube_and_restore s' n2 in
 	    (* If it is sat, we stop, else, we continue *)
 	    let res = List.for_all (
-	      fun ig2 ->
+	      fun if2 ->
 		try
-		  Format.eprintf "Assume %a@." SAtom.print ig2.Cube.litterals;
-		  a_r_s ig2.Cube.litterals;
-		  s' ();
-		  Format.eprintf "Res : SAT@.";
+		  (* Format.eprintf "Assume %a@." SAtom.print if2.Cube.litterals; *)
+		  a_c_r_s if2.Cube.litterals;
+		  (* Format.eprintf "Res : SAT@."; *)
 		  false
-		with Smt.Unsat _ -> Format.eprintf "Res : UNSAT@."; true
-	    ) inst_neg_g2 in
+		with Smt.Unsat _ -> (* Format.eprintf "Res : UNSAT@.";  *)true
+	    ) inst_f2 in
 	    (* We return to good not updated for the next
 	       transition *)
 	    s ();
 	    res
 	  with Smt.Unsat _ -> s (); true
       ) inst_upd
-    in res	
+    in not res, args
+
+  let negate_litterals f =
+    List.map (
+      fun c ->
+	let l = c.Cube.litterals in
+	let l = SAtom.fold (fun a l -> SAtom.add (Atom.neg a) l) l SAtom.empty in
+	Cube.create c.Cube.vars l
+    ) f
 
   let find_subsuming_vertice v1 v2 tr g =
-    Format.eprintf "[Subsume] %a %a (%d)@." print_id v1 print_id v2 (List.length g);
+    Format.eprintf "[Subsume] %a %a [%d]@." print_id v1 print_id v2 (List.length g);
     List.find (
       fun vs ->
-	Format.eprintf "Is (%a) subsumed by (%a) by (%a)?@."
+	Format.eprintf "Is (%a) subsumed by (%a) by (%a) ? "
 	  print_id v1 print_id vs Hstring.print tr.tr_info.tr_name;
-	(is_true v2 || implies vs v2) && implies_by_trans v1 vs tr
+	let res =
+	  (is_true v2 || implies vs v2) 
+	  && (
+	    let nvs = negate_litterals vs.good in
+	    let res, _ = imply_by_trans (v1.good, v1.id) (nvs, vs.id) tr in not res
+	  )
+	in 
+	Format.eprintf 
+	  (if res
+	  then "Yes@."
+	  else "No@.");
+	res
     ) g
-      
+
+  let negate_and_extrapolate f =
+    let nf = negate_litterals f in
+    nf
 
   let refine v1 v2 tr g = 
     try
-      Format.eprintf "[Subsumption] Is %a covered by %a ?@." 
+      Format.eprintf "[Subsumption] Is (%a) covered by transition %a ?@." 
 	print_id v2 Hstring.print tr.tr_info.tr_name;
+      Format.eprintf "[Resume] %a\n%a@."
+	print_vertice v1 print_vertice v2;
       let vs = find_subsuming_vertice v1 v2 tr g in
       Format.eprintf "[Covered] (%a) is covered by (%a) by %a@."
-	print_id v2 print_id vs Hstring.print tr.tr_info.tr_name;
+	print_id v1 print_id vs Hstring.print tr.tr_info.tr_name;
       Covered vs
     with Not_found -> 
-      Format.eprintf "[Extrapolation]";
-      failwith "TODO"
+      Format.eprintf "[Implication] (%a.good) and %a to (%a.bad) ?@."
+	print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
+      let res, args = imply_by_trans (v1.good, v1.id) (v2.bad, v2.id) tr in
+      
+      (* RES = TRUE means good1 and tr imply bad2,
+	 we then need to find a pre formula which leads to bad2 *)
+      if res then (
+	Format.eprintf "[BadToParents] (%a.good) and %a imply (%a.bad)@." 
+	  print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
+	Format.eprintf "[BadToParents] We update (%a.bad) and refine to the parents of (%a)@."
+	  print_id v1 print_id v1;
+	Format.eprintf "[Bad] %a@." print_ednf v2.bad;
+	Format.eprintf "[Transition] %a@." Hstring.print tr.tr_info.tr_name;
+      	let cl = List.fold_left (
+	  fun acc cube ->
+	    let (ti, c, args) = Pre.pre tr cube.Cube.litterals in
+	    let ncube = Node.create cube in
+	    let (nl, nl') = Pre.make_cubes ([], []) args ncube ti c in
+	    (* List.iter ( *)
+	    (*   fun n -> Format.eprintf "[Node] %a@." Node.print n) nl; *)
+	    (* List.iter ( *)
+	    (*   fun n -> Format.eprintf "[Node'] %a@." Node.print n) nl'; *)
+	    let cl = List.fold_left (fun acc n -> n.cube :: acc) [] nl in
+	    cl :: acc
+	) [] v2.bad in
+	(* Format.eprintf "LL : %d@." (List.length cl); *)
+	(* List.iter ( *)
+	(*   fun c ->  *)
+	(*     Format.eprintf "Cube : %a@." print_ucnf c; *)
+	(* ) cl; *)
+	(* Format.eprintf "ArgsR : %a@." Variable.print_vars args; *)
+	(* Format.eprintf "\nTV : %a@." Variable.print_vars tr.tr_info.tr_args; *)
 	
+	Bad_Parent {v1 with bad = update_bad v1 cl}
+	(* (\* failwith *\) "TODO V1 IMPLY BAD2" *)
+      (* RES = FALSE means good1 and tr don't imply bad2,
+	 we can now extrapolate good1 by adding not bad2. *)
+      )
+      else (
+	Format.eprintf "[Extrapolation] (%a.good) and %a do not imply (%a.bad)@." 
+	  print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
+	Format.eprintf "[Extrapolation] We extrapolate (%a.bad) = eb and create a new node with (%a.good) && eb@."
+	  print_id v2 print_id v2;
+	Format.eprintf "[Bad] %a@." print_ednf v2.bad;
+	let extra_bad2 = negate_and_extrapolate v2.bad in
+	let ng = if v2.id = 1 then extra_bad2 else v2.good @ extra_bad2 in
+	let nv = create ng [] v2.parents in
+	Format.eprintf "NV : %a@." print_vertice nv;
+	Extrapolated nv
+	(* failwith "T" *)
+      )
+
   let is_bad v = List.exists (fun c -> not (SAtom.is_empty c.Cube.litterals)) v.bad
 
 end
 
 module RG = Make(Queue)(Vertice)
-
-(* List.iter (Format.eprintf "%a@." SAtom.print) inst_tr; *)
-(* List.exists ( *)
-(*   fun i_guard -> *)
-(* 	(\* Format.eprintf "\n\nTest :@."; *\) *)
-(* 	List.for_all ( *)
-(* 	  fun i_good ->  *)
-(* 	    try *)
-(* 	      (\* Format.eprintf "Good : %a@." print_good [i_good]; *\) *)
-(* 	      (\* Format.eprintf "Trans : %a@." SAtom.print guard; *\) *)
-(* 	      Prover.check_guard args i_good.Cube.litterals i_guard; *)
-(* 	      (\* Format.eprintf "SAT@."; *\) *)
-(* 	      true *)
-(* 	    with Smt.Unsat _ ->  *)
-(* 	      (\* Format.eprintf "UNSAT@.";*\) *)
-(* 	      false *)
-(* 	) inst_goods *)
-(*   ) inst_guards *)
