@@ -290,16 +290,22 @@ let init_global_env s =
   let l = ref [] in
   List.iter 
     (fun (loc, n, t) -> 
-       declare_symbol loc n [] t;
-       l := (n, t)::!l) s.consts;
+      declare_symbol loc n [] t;
+      let n' = Hstring.make ((Hstring.view n)^"@0") in
+      declare_symbol loc n' [] t;
+      l := (n, t)::!l) s.consts;
   List.iter 
     (fun (loc, n, t) -> 
-       declare_symbol loc n [] t;
-       l := (n, t)::!l) s.globals;
+      declare_symbol loc n [] t;
+      let n' = Hstring.make ((Hstring.view n)^"@0") in
+      declare_symbol loc n' [] t;
+      l := (n, t)::!l) s.globals;
   List.iter 
     (fun (loc, n, (args, ret)) -> 
-       declare_symbol loc n args ret;
-       l := (n, ret)::!l) s.arrays;
+      declare_symbol loc n args ret;
+      let n' = Hstring.make ((Hstring.view n)^"@0") in
+      declare_symbol loc n' args ret;
+      l := (n, ret)::!l) s.arrays;
   !l
 
 

@@ -192,6 +192,13 @@ module Term = struct
     | Arith (t, _) -> variables t
     | _ -> Variable.Set.empty
 
+  let rec list_variables = function
+    | Elem (x, Var) -> [x]
+    | Access (_, lx) ->
+       List.fold_left (fun acc x -> x::acc)
+                      [] lx
+    | Arith (t, _) -> list_variables t
+    | _ -> []
 
   let variables_proc t = Variable.Set.filter Variable.is_proc (variables t)
 
@@ -254,6 +261,7 @@ module rec Atom : sig
   val has_var : Variable.t -> t -> bool
   val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
+  val list_variables : t -> Variable.t list
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_atoms : bool -> string -> Format.formatter -> t list -> unit
@@ -347,6 +355,13 @@ end = struct
        let acc = Variable.Set.union (variables a1) (variables a2) in
        Variable.Set.union acc (SAtom.variables sa)
 
+  let rec list_variables = function
+    | True | False -> []
+    | Comp (t1, _, t2) -> 
+      (Term.list_variables t1) @ (Term.list_variables t2)
+    | Ite (sa, a1, a2) -> 
+       let acc = (list_variables a1) @ (list_variables a2) in
+       acc @ (SAtom.list_variables sa)
 
   let variables_proc a = Variable.Set.filter Variable.is_proc (variables a)
 
@@ -381,6 +396,7 @@ and SAtom : sig
   val hash : t -> int
   val subst : Variable.subst -> t -> t
   val variables : t -> Variable.Set.t
+  val list_variables : t -> Variable.t list
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_sep : string -> Format.formatter -> t -> unit
@@ -414,6 +430,9 @@ end = struct
 
   let variables sa =
     fold (fun a -> Variable.Set.union (Atom.variables a)) sa Variable.Set.empty
+
+  let list_variables sa = 
+    fold (fun a acc -> (Atom.list_variables a)@acc) sa []
 
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
 

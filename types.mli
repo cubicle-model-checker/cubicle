@@ -140,6 +140,8 @@ module rec Atom : sig
   val variables : t -> Variable.Set.t
   (** returns the existential variables of the given atom *)
 
+  val list_variables : t -> Variable.t list
+
   val variables_proc : t -> Variable.Set.t
   (** same as [variables] but only return skolemized variables of the form
       [#i] *)
@@ -170,6 +172,8 @@ and SAtom : sig
 
   val variables : t -> Variable.Set.t
   (** returns the existential variables of the given conjunction *)
+
+  val list_variables : t -> Variable.t list
 
   val variables_proc : t -> Variable.Set.t
   (** same as [variables] but only return skolemized variables of the form

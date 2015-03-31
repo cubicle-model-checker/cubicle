@@ -77,5 +77,8 @@ val uguard_dnf :
 (* Signatures used for ic3 *)
 
 val prime_satom : SAtom.t -> SAtom.t
+val prime_head_satom : SAtom.t -> SAtom.t
+val prime_head_match_satom : SAtom.t -> Term.Set.t -> SAtom.t
 val preserve_terms : Term.Set.t -> SAtom.t -> SAtom.t
 val wrapper_elim_prime : SAtom.t -> SAtom.t -> SAtom.t
+val is_prime_atom : SAtom.elt -> bool
