@@ -224,18 +224,23 @@ let make_clause atoms =
   F.make F.Or (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
 let assume_clause id ap =
+  SMT.assume id (distinct_vars (Array.length ap));
   let f = make_clause ap in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
   SMT.check  ()
 
 let assume_formula_satom id sa =
+  SMT.assume id (distinct_vars (SAtom.cardinal sa));
   let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.check  ()
+  if debug_smt then eprintf "[smt] node assume : %a@." F.print f;
+  SMT.check  ();
+  if debug_smt then eprintf "[smt] checked@."
 
 let assume_neg_formula_satom id sa =
+  SMT.assume id (distinct_vars (SAtom.cardinal sa));
   let f = F.make F.Not [make_formula_set sa] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;

@@ -560,7 +560,7 @@ module Vertice : SigV = struct
 	    SAtom.print i.Forward.i_reqs
 	    SAtom.print i.Forward.i_actions;
 	  Term.Set.iter (Format.eprintf "%a " Term.print) i.Forward.i_touched_terms;
-	  Format.eprintf "@.";
+	  Format.eprintf "\n@.";
       ) inst_upd;
     );  
     

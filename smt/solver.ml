@@ -936,6 +936,7 @@ let add_clauses cnf ~cnumber =
       None -> () | Some dep -> report_t_unsat dep
   
 let init_solver cnf ~cnumber =
+  (* eprintf "[solver] in init_solver@."; *)
   let nbv, _ = made_vars_info () in
   let nbc = env.nb_init_clauses + List.length cnf in
   Vec.grow_to_by_double env.vars nbv;
@@ -952,6 +953,7 @@ let init_solver cnf ~cnumber =
   Vec.grow_to_by_double env.clauses nbc;
   Vec.grow_to_by_double env.learnts nbc;
   env.nb_init_clauses <- nbc;
+  (* eprintf "[solver] assume clauses@."; *)
   add_clauses cnf ~cnumber
 
 
