@@ -401,103 +401,109 @@ module Formula = struct
     | a :: r -> a::(flatten_and r)
       
   let rec cnf f = 
-    eprintf "[cnf] %a@." print_ast f;
+    (* eprintf "[cnf] %a@." print_ast f; *)
     match f with
-      | Comb (Or, l) ->
+      | Comb (Or, hd::tl) ->
 	begin
-	  eprintf "[OR]@.";
-	  List.iter (eprintf "%a@." print_ast) l;
-	  let l = List.map cnf l in
-	  (* eprintf "CNF OR@."; *)
+	  (* eprintf "[OR]@."; *)
 	  (* List.iter (eprintf "%a@." print_ast) l; *)
-	  (* eprintf "END CNF OR@."; *)
-	  let l_and, l_or = 
-	    List.partition (
-	      function 
-		| Comb(And,_) -> true 
-		| _ -> false
-	    ) l in
-	  eprintf "[land]@.";
-	  List.iter (eprintf "%a@." print_ast) l_and;
-	  eprintf "[lor]@.";
-	  List.iter (eprintf "%a@." print_ast) l_or;
-	  let u = flatten_or l_or in
-	  let res =  match l_and with
-	    | [ Comb(And, l_conj) ] -> distrib l_conj u
+	  (* let l = List.map cnf l in *)
+	  (* (\* eprintf "CNF OR@."; *\) *)
+	  (* (\* List.iter (eprintf "%a@." print_ast) l; *\) *)
+	  (* (\* eprintf "END CNF OR@."; *\) *)
+	  (* let l_and, l_or =  *)
+	  (*   List.partition ( *)
+	  (*     function  *)
+	  (* 	| Comb(And,_) -> true  *)
+	  (* 	| _ -> false *)
+	  (*   ) l in *)
+	  (* eprintf "[land]@."; *)
+	  (* List.iter (eprintf "%a@." print_ast) l_and; *)
+	  (* eprintf "[lor]@."; *)
+	  (* List.iter (eprintf "%a@." print_ast) l_or; *)
+	  (* let u = flatten_or l_or in *)
+	  (* let res =  match l_and with *)
+	  (*   | [ Comb(And, l_conj) ] -> distrib l_conj u *)
 
-	    | Comb(And, l_conj) :: r ->
-	      eprintf "[u]@.";
-	      List.iter (eprintf "%a@." print_ast) u;
-	      let d = distrib l_conj u in
-	      eprintf "[d] %a\n[r]@." print_ast d;
-	      List.iter (eprintf "%a@." print_ast) r;
-	      let d' = distrib_cnf l_conj r in
-	      eprintf "[d'] %a\n@." print_ast d';
-	      d'
-	    | _ ->  
-	      begin
-		match u with
-		  | [] -> assert false
-		  | [r] -> r
-		  | v -> Comb (Or, v)
-	      end
-	  in
-	  eprintf "[RO] RES %a@." print_ast res;
-	  res
-	    
+	  (*   | Comb(And, l_conj) :: r -> *)
+	  (*     eprintf "[u]@."; *)
+	  (*     List.iter (eprintf "%a@." print_ast) u; *)
+	  (*     let d = distrib l_conj u in *)
+	  (*     eprintf "[d] %a\n[r]@." print_ast d; *)
+	  (*     List.iter (eprintf "%a@." print_ast) r; *)
+	  (*     let d' = distrib_cnf l_conj r in *)
+	  (*     eprintf "[d'] %a\n@." print_ast d'; *)
+	  (*     d' *)
+	  (*   | _ ->   *)
+	  (*     begin *)
+	  (* 	match u with *)
+	  (* 	  | [] -> assert false *)
+	  (* 	  | [r] -> r *)
+	  (* 	  | v -> Comb (Or, v) *)
+	  (*     end *)
+	  (* in *)
+	  (* eprintf "[RO] RES %a@." print_ast res; *)
+	  (* res *)
+	  let hd' = cnf hd in
+	  let tl' = cnf (Comb (Or, tl)) in
+	  match hd', tl' with
+	  | hd', Comb (And, tl') ->
+	    Comb (And, List.map (fun x -> cnf (Comb (Or, [hd'; x]))) tl')
+	  | Comb (And, hd'), tl' ->
+	    Comb (And, List.map (fun x -> cnf (Comb (Or, [x; tl']))) hd')
+	  | _, _ -> f 
 	end
       | Comb (And, l) -> 
-	eprintf "[AND]\n[l]@.";
-	List.iter (eprintf "%a@." print_ast) l;
+	(* eprintf "[AND]\n[l]@."; *)
+	(* List.iter (eprintf "%a@." print_ast) l; *)
 	let nl = List.map cnf l in
-	eprintf "[nl]@.";
-	List.iter (eprintf "%a@." print_ast) nl;
-	eprintf "[DNA]@.";
+	(* eprintf "[nl]@."; *)
+	(* List.iter (eprintf "%a@." print_ast) nl; *)
+	(* eprintf "[DNA]@."; *)
 	Comb (And, nl)
-      | f -> f
+      | _ -> f
 
-  let make_my_lit s =
-    Lit (Literal.LT.mk_pred (Term.make (Symbols.Var (Hstring.make s)) [] Ty.Tbool))
+  (* let make_my_lit s = *)
+  (*   Lit (Literal.LT.mk_pred (Term.make (Symbols.Var (Hstring.make s)) [] Ty.Tbool)) *)
 
-  let my_int s = Term.make (Symbols.var s) [] Ty.Tint
-  let make_bool s = Lit (Literal.LT.mk_pred (Term.make (Symbols.var s) [] Ty.Tbool))
+  (* let my_int s = Term.make (Symbols.var s) [] Ty.Tint *)
+  (* let make_bool s = Lit (Literal.LT.mk_pred (Term.make (Symbols.var s) [] Ty.Tbool)) *)
 
-  let s' = my_int "S'"
-  let i = my_int "I"
-  let s = my_int "S"
-  let m = my_int "M"
-  let e = my_int "E"
+  (* let s' = my_int "S'" *)
+  (* let i = my_int "I" *)
+  (* let s = my_int "S" *)
+  (* let m = my_int "M" *)
+  (* let e = my_int "E" *)
 
-  let a = make_lit Eq [s'; m]
-  let b = make_lit Neq [s'; i]
-  let c = make_lit Eq [s; i]
-  let d = make_lit Eq [s'; i] 
-  let e = make_lit Eq [s; e]
+  (* let a = make_lit Eq [s'; m] *)
+  (* let b = make_lit Neq [s'; i] *)
+  (* let c = make_lit Eq [s; i] *)
+  (* let d = make_lit Eq [s'; i]  *)
+  (* let e = make_lit Eq [s; e] *)
 
-  let a = make_bool "a"
-  let b = make_bool "b"
-  let c = make_bool "c"
-  let d = make_bool "d"
-  let e = make_bool "e"
-  let f = make_bool "f"
-  let g = make_bool "g"
-  let h = make_bool "h"
-  let i = make_bool "i"
-  let j = make_bool "j"
+  (* let a = make_bool "a" *)
+  (* let b = make_bool "b" *)
+  (* let c = make_bool "c" *)
+  (* let d = make_bool "d" *)
+  (* let e = make_bool "e" *)
+  (* let f = make_bool "f" *)
+  (* let g = make_bool "g" *)
+  (* let h = make_bool "h" *)
+  (* let i = make_bool "i" *)
+  (* let j = make_bool "j" *)
 
 
 
-  let form = Comb (Or, [
-    Comb(And, [Comb(Or, [a;b]); Comb(Or, [c;d])]); 
-    Comb(And, [Comb(Or, [e;f]); Comb(Or, [g;h])]);
-    Comb(Or, [i; j])
-  ])
+  (* let form = Comb (Or, [ *)
+  (*   Comb(And, [Comb(Or, [a]); Comb(Or, [c])]);  *)
+  (*   Comb(And, [Comb(Or, [e]); Comb(Or, [g])]); *)
+  (* ]) *)
 
-  (* let f = Comb (Or, [Comb(And, [a]); Comb(Or, [b;c])]) *)
+  (* (\* let f = Comb (Or, [Comb(And, [a]); Comb(Or, [b;c])]) *\) *)
 
-  let form' = cnf form
+  (* let form' = cnf form *)
 
-  let () = eprintf "(f) %a\n(f') %a@." print_ast form print_ast form'; exit 1
+  (* let () = eprintf "(f) %a\n(f') %a@." print form print form'; exit 1 *)
 
   let ( @@ ) l1 l2 = List.rev_append l1 l2
 
