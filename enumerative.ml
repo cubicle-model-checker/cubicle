@@ -1233,6 +1233,7 @@ let init system =
       Pretty.print_title std_formatter
         ("STATEFULL ENUMERATIVE FORWARD ["^(string_of_int i)^" procs]");
     search procs system;
+
     if not quiet then printf "%a@." Pretty.print_double_line ();
   done;
   reset_gc_params ()
