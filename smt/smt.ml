@@ -370,28 +370,17 @@ module Formula = struct
     
   let rec cnf f = 
     match f with
-      | Comb (Or, l) -> 
-	  begin
-	    let l = List.map cnf l in
-	    let l_and, l_or = 
-	      List.partition (function Comb(And,_) -> true | _ -> false) l in
-	    match l_and with
-	      | [ Comb(And, l_conj) ] -> 
-		  let u = flatten_or l_or in
-		  distrib l_conj u
-
-	      | Comb(And, l_conj) :: r ->
-		  let u = flatten_or l_or in
-		  cnf (Comb(Or, (distrib l_conj u)::r))
-
-	      | _ ->  
-		  begin
-		    match flatten_or l_or with
-		      | [] -> assert false
-		      | [r] -> r
-		      | v -> Comb (Or, v)
-		  end
-	  end
+      | Comb (Or, hd::tl) ->
+	begin
+	  let hd' = cnf hd in
+	  let tl' = cnf (Comb (Or, tl)) in
+	  match hd', tl' with
+	    | hd', Comb (And, tl') ->
+	      Comb (And, List.map (fun x -> cnf (Comb (Or, [hd'; x]))) tl')
+	    | Comb (And, hd'), tl' ->
+	      Comb (And, List.map (fun x -> cnf (Comb (Or, [x; tl']))) hd')
+	    | _, _ -> f 
+	end
       | Comb (And, l) -> 
 	  Comb (And, List.map cnf l)
       | f -> f
