@@ -1,5 +1,4 @@
 type location = M | E | S | I
-
 array State[proc] : location
 
 init (z) { State[z] = I }
@@ -29,5 +28,3 @@ requires { State[x] = S }
 transition t4 (x)
 requires { State[x] = I }
 { State[j] := case | j = x : E | _ : I; }
-
-

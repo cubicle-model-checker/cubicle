@@ -373,22 +373,6 @@ module Formula = struct
     in
     Comb (And, l)
 
-  let distrib_cnf cnf cnflist =
-    let l =
-      if cnflist = [] then cnf 
-      else
-	List.fold_left (
-	  fun acc cl ->
-	    match cl with
-	      | Comb(And, cl) -> 
-		List.fold_left (
-		  fun acc cnf' -> (distrib cnf' cl)::acc) acc cnflist 
-	      | _ -> assert false
-	) [] cnf
-    in 
-    Comb (And, l)
-	
-
   let rec flatten_or = function
     | [] -> []
     | Comb (Or, l)::r -> l@(flatten_or r)
@@ -401,66 +385,19 @@ module Formula = struct
     | a :: r -> a::(flatten_and r)
       
   let rec cnf f = 
-    (* eprintf "[cnf] %a@." print_ast f; *)
     match f with
       | Comb (Or, hd::tl) ->
 	begin
-	  (* eprintf "[OR]@."; *)
-	  (* List.iter (eprintf "%a@." print_ast) l; *)
-	  (* let l = List.map cnf l in *)
-	  (* (\* eprintf "CNF OR@."; *\) *)
-	  (* (\* List.iter (eprintf "%a@." print_ast) l; *\) *)
-	  (* (\* eprintf "END CNF OR@."; *\) *)
-	  (* let l_and, l_or =  *)
-	  (*   List.partition ( *)
-	  (*     function  *)
-	  (* 	| Comb(And,_) -> true  *)
-	  (* 	| _ -> false *)
-	  (*   ) l in *)
-	  (* eprintf "[land]@."; *)
-	  (* List.iter (eprintf "%a@." print_ast) l_and; *)
-	  (* eprintf "[lor]@."; *)
-	  (* List.iter (eprintf "%a@." print_ast) l_or; *)
-	  (* let u = flatten_or l_or in *)
-	  (* let res =  match l_and with *)
-	  (*   | [ Comb(And, l_conj) ] -> distrib l_conj u *)
-
-	  (*   | Comb(And, l_conj) :: r -> *)
-	  (*     eprintf "[u]@."; *)
-	  (*     List.iter (eprintf "%a@." print_ast) u; *)
-	  (*     let d = distrib l_conj u in *)
-	  (*     eprintf "[d] %a\n[r]@." print_ast d; *)
-	  (*     List.iter (eprintf "%a@." print_ast) r; *)
-	  (*     let d' = distrib_cnf l_conj r in *)
-	  (*     eprintf "[d'] %a\n@." print_ast d'; *)
-	  (*     d' *)
-	  (*   | _ ->   *)
-	  (*     begin *)
-	  (* 	match u with *)
-	  (* 	  | [] -> assert false *)
-	  (* 	  | [r] -> r *)
-	  (* 	  | v -> Comb (Or, v) *)
-	  (*     end *)
-	  (* in *)
-	  (* eprintf "[RO] RES %a@." print_ast res; *)
-	  (* res *)
 	  let hd' = cnf hd in
 	  let tl' = cnf (Comb (Or, tl)) in
 	  match hd', tl' with
-	  | hd', Comb (And, tl') ->
-	    Comb (And, List.map (fun x -> cnf (Comb (Or, [hd'; x]))) tl')
-	  | Comb (And, hd'), tl' ->
-	    Comb (And, List.map (fun x -> cnf (Comb (Or, [x; tl']))) hd')
-	  | _, _ -> f 
+	    | hd', Comb (And, tl') ->
+	      Comb (And, List.map (fun x -> cnf (Comb (Or, [hd'; x]))) tl')
+	    | Comb (And, hd'), tl' ->
+	      Comb (And, List.map (fun x -> cnf (Comb (Or, [x; tl']))) hd')
+	    | _, _ -> f 
 	end
-      | Comb (And, l) -> 
-	(* eprintf "[AND]\n[l]@."; *)
-	(* List.iter (eprintf "%a@." print_ast) l; *)
-	let nl = List.map cnf l in
-	(* eprintf "[nl]@."; *)
-	(* List.iter (eprintf "%a@." print_ast) nl; *)
-	(* eprintf "[DNA]@."; *)
-	Comb (And, nl)
+      | Comb (And, l) -> Comb (And, List.map cnf l)
       | _ -> f
 
   (* let make_my_lit s = *)
