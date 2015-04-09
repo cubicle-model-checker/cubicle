@@ -75,7 +75,8 @@ type system = {
   globals : (loc * Hstring.t * Smt.Type.t) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
   arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  buffered : (loc * Hstring.t * Smt.Type.t) list;
+(*  buffered : (loc * Hstring.t * Smt.Type.t) list;*)
+  buffered : Hstring.t list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
@@ -94,9 +95,12 @@ type kind =
   | Node   (** reguar node *)
   | Inv    (** or user supplied invariant*)
 
+type cmpop = | Ceq | Cneq | Clt | Cle | Cgt | Cge
+
 type memop =
-  | Read of Hstring.t * Types.term * bool (* Var, Term, Eq/Neq *)
-  | Write of Hstring.t * Types.term
+  | Read of Hstring.t * (Hstring.t list) * Types.term * cmpop
+            (* Var/Array, Params (if array), Term, Eq/Neq *)
+  | Write of Hstring.t * (Hstring.t list) * Types.term
   | Fence
 
 type node_cube =

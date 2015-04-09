@@ -421,10 +421,11 @@ let add_tau tr =
     tr_tau = Pre.make_tau tr }
 
 let is_buffered bv var = (* TSO *)
-  List.exists (fun (_, v, _) -> Hstring.equal var v) bv
+  List.exists (fun v -> Hstring.equal var v) bv
 
 let rec check_buffered_term bv = function (* TSO *)
-  | Elem (v, Glob) -> if is_buffered bv v then failwith "Buffered var in Unsafe"
+  | Elem (v, Glob) | Access (v, _) -> if is_buffered bv v then
+      failwith "Buffered Var/Array in Unsafe or Invariant"
   | Arith (t, _) -> check_buffered_term bv t
   | _ -> ()
 
@@ -460,7 +461,8 @@ let system s =
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
-    t_buffered = List.map (fun (_,v,_) -> v) s.buffered;
+    (* t_buffered = List.map (fun (_,v,_) -> v) s.buffered; *)
+    t_buffered = s.buffered;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

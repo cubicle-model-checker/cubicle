@@ -387,7 +387,31 @@ end = struct
           | r -> r)
       | r -> r
     in
-    TimeFix.pause ();
+    TimeFix.pause (); (*
+    begin match r with
+    | None -> ();
+    | Some db ->
+        Format.fprintf Format.std_formatter "---- Node %d (from " s.tag;
+        List.iter (fun (_, _, next_node) ->
+          Format.fprintf Format.std_formatter "%d " next_node.tag) s.from;
+        Format.fprintf Format.std_formatter ") ----\nFP : ";
+        List.iter (fun i -> Format.fprintf Format.std_formatter "%d " i) db;
+        Format.fprintf Format.std_formatter ".\n";
+    end; *) (*
+    let r = begin match r with
+    | None -> None
+    | Some [] -> Some []
+    | Some db ->
+        begin try
+          let _, _, nd = List.find (fun (t_info, vars, next_node) ->
+            List.exists (fun tag -> next_node.tag = tag) db
+          ) s.from in (*
+          Format.fprintf Format.std_formatter "Node %d matches\n" nd.tag; *)
+          Some db
+          with Not_found -> None
+        end
+    end in *)
+
     r ; None (* TSO : Turn off fixpoint for now *)
 end
 

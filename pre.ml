@@ -315,7 +315,7 @@ let is_buffered bv var = (* TSO *)
   List.exists (fun v -> Hstring.equal var v) bv
 
 let rec is_buffered_term bv = function (* TSO *)
-  | Elem (v, Glob) -> is_buffered bv v
+  | Elem (v, Glob) | Access (v, _) -> is_buffered bv v
   | Arith (t, _) -> is_buffered_term bv t
   | _ -> false
 
@@ -325,40 +325,85 @@ let is_buffered_atom bv = function (* TSO *)
   | _ -> true
 
 let tso_pre_image bv ls post = (* TSO *)
+  let compop_to_memop op reverse = match op with
+    | Eq -> Ceq | Neq -> Cneq
+    | Lt -> if reverse then Cge else Clt
+    | Le -> if reverse then Cgt else Cle
+  in
+  let add_read_op p v procs t op ops = match t with
+    | Const _ | Elem (_, Constr) -> (p, Read (v, procs, t, op)) :: ops
+    | Elem (v, Var) when (Hstring.view v).[0] = '#' ->
+        (p, Read (v, procs, t, op)) :: ops
+    | _ -> failwith "Can only read constants from TSO variables"
+  in
   let make_tso_node n =
-    let tri, p, ops = match n.from with
-      | (tri, var :: _, nc) :: _ -> (tri, var, nc.ops)
-      | (tri, [], nc) :: _ -> (tri, Hstring.make "#0", nc.ops)
+    let tri, p, procs, ops = match n.from with (* takes the first proc param *)
+      | (tri, ((var :: _) as vars), nc) :: _ -> (tri, var, vars, nc.ops)
+      | (tri, [], nc) :: _ -> (tri, Hstring.make "#0", [], nc.ops)
       | _ -> assert false
     in
+    let arg_procs = List.fold_left2 (fun ap a p -> (a, p) :: ap)
+      [] tri.tr_args procs in
     (* Format.fprintf std_formatter "Transition %s(%s)\n" *)
     (*   (Hstring.view tri.tr_name) (Hstring.view p); *)
     let lits, ops = SAtom.fold (fun a (lits, ops) -> (* Reads from TSO vars *)
-      match a with
-      | Atom.Comp (Elem (v, Glob), op, t)
-      | Atom.Comp (t, op, Elem (v, Glob)) when is_buffered bv v ->
-          let eq = begin match op with
-            | Eq -> true | Neq -> false
-            | _ -> failwith "Can only compare TSO vars with = and <>"
-          end in
-          begin match t with
-          | Const _ | Elem (_, Constr) ->
-              (* Format.fprintf std_formatter "Read %a\n" Atom.print a; *)
-              (lits, (p, Read (v, t, eq)) :: ops)
-          | _ -> failwith "Can only read constants from TSO variables"
-          end
+      (* Format.fprintf Format.std_formatter "%a\n" Atom.print a; *)
+      match a, [] with
+      | Atom.Comp (Elem (v, Glob), op, t), procs
+      | Atom.Comp (Access (v, procs), op, t), _ when is_buffered bv v ->
+          (lits, add_read_op p v procs t (compop_to_memop op false) ops)
+      | Atom.Comp (t, op, Elem (v, Glob)), procs
+      | Atom.Comp (t, op, Access (v, procs)), _ when is_buffered bv v ->
+          (lits, add_read_op p v procs t (compop_to_memop op true) ops)
       | _ -> (SAtom.add a lits, ops)
     ) n.cube.Cube.litterals (SAtom.empty, ops) in
     let ops = List.fold_left (fun ops (var, gupd) -> (* Writes to TSO vars *)
-      if (is_buffered bv var) then begin
-          match gupd with
-          | UTerm (Const _ as t) | UTerm (Elem (_, Constr) as t) ->
+      if (is_buffered bv var) then
+        let t = match gupd with
+          | UTerm (Const _ as t) | UTerm (Elem (_, Constr) as t) -> t
               (* Format.fprintf std_formatter "Write %s = %a\n" *)
               (*   (Hstring.view var) Term.print  t; *)
-              (p, Write (var, t)) :: ops
+          | UTerm (Elem (v, Var)) ->
+              let pv = List.assoc v arg_procs in
+              Elem (pv, Var)
           | _ -> failwith "Can only write constants to TSO variables"
-      end else ops
+        in
+        (p, Write (var, [], t)) :: ops
+      else ops
     ) ops tri.tr_assigns in
+    let ops = List.fold_left (fun ops upd -> (* Writes to TSO arrays *)
+      if (is_buffered bv upd.up_arr) then begin
+        let up = match upd.up_arg with [p] -> p
+          | _ -> failwith "Can only manage buffered arrays of dimension 1" in
+        let ops = List.fold_left (fun ops (sa, t) ->
+          if not (SAtom.is_empty sa) then begin
+            let t = match t with
+              | Const _ | Elem (_, Constr) -> t
+              | (Elem (v, Var)) ->
+                  let pv = List.assoc v arg_procs in
+                  Elem (pv, Var)
+              | _ -> failwith "Can only write constants to TSO arrays"
+            in
+            (p, Write (upd.up_arr, [p], t)) :: ops (* dirty *)
+          end else ops) ops upd.up_swts
+        in ops
+      end else ops
+(*        SAtom.fold (fun a ops ->
+            ops
+            let pv = List.assoc v arg_procs in
+            (p, Write (var, [], Elem (pv, Var))) :: ops
+          ) sa ops *)
+(*      let fmt = std_formatter in
+        Format.fprintf fmt "%s [" (Hstring.view upd.up_arr);
+        List.iter (fun v ->
+          Format.fprintf fmt "%s " (Hstring.view v)
+        ) upd.up_arg;
+        Format.fprintf fmt  "] = ";
+        List.iter (fun (sa, t) ->
+          Format.fprintf fmt "%a, %a /" SAtom.print sa Term.print t
+        ) upd.up_swts;
+        Format.fprintf fmt "\n" *)
+    ) ops tri.tr_upds in
     let ops = if tri.tr_fence then (p, Fence) :: ops else ops in
     { n with cube = Cube.create n.cube.Cube.vars lits; ops = ops }
   in

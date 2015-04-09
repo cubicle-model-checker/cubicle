@@ -82,9 +82,10 @@
 
 %}
 
-%token VAR VARB ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
+%token VARB ARRAYB FENCE
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
 %token SIZEPROC
-%token ASSIGN UGUARD REQUIRE NEQ UNSAFE FENCE
+%token ASSIGN UGUARD REQUIRE NEQ UNSAFE
 %token OR AND COMMA PV DOT QMARK
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -133,9 +134,13 @@ declarations :
   | var_decl declarations 
       { let consts, vars, varbs, arrays = $2 in consts, ($1::vars), varbs, arrays }
   | varb_decl declarations /* TSO */
-      { let consts, vars, varbs, arrays = $2 in consts, ($1::vars), ($1::varbs), arrays }
+      { let _, vname , _ = $1 in
+        let consts, vars, varbs, arrays = $2 in consts, ($1::vars), (vname::varbs), arrays }
   | array_decl declarations 
       { let consts, vars, varbs, arrays = $2 in consts, vars, varbs, ($1::arrays) }
+  | arrayb_decl declarations /* TSO */
+      { let _, vname , _ = $1 in
+        let consts, vars, varbs, arrays = $2 in consts, vars, (vname::varbs), ($1::arrays) }
 ;
 
 var_decl:
@@ -161,6 +166,15 @@ const_decl:
 
 array_decl:
   | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+          raise Parsing.Parse_error;
+        if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
+	Arrays.add $2;
+	loc (), $2, ($4, $7)}
+;
+
+arrayb_decl: /* TSO */
+  | ARRAYB mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
         if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;

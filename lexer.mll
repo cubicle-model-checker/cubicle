@@ -29,8 +29,9 @@
 	"uguard", UGUARD;
 	"assign", ASSIGN;
         "array", ARRAY;
+        "arrayb", ARRAYB; (* TSO *)
         "var", VAR;
-        "varb", VARB;
+        "varb", VARB; (* TSO *)
         "const", CONST;
         "unsafe", UNSAFE;
 	"case", CASE;
