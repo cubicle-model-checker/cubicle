@@ -219,6 +219,7 @@ let display_graph dot_file =
 let open_dot () =
   if not dot then fun () -> ()
   else
+    let rdir = if ic3 then "TB" else "BT" in
     let bfile = Filename.basename file in
     let dot_file, dot_channel =
       Filename.open_temp_file bfile ".dot" in
@@ -226,18 +227,40 @@ let open_dot () =
     fprintf !dot_fmt "digraph \"%s\" {@." bfile;
     fprintf !dot_fmt "orientation = portrait;\n\
                       fontsize = 10;\n\
-                      rankdir = BT;\n\
+                      rankdir = %s;\n\
                       node [fontname=helvetica];\n\
                       edge [fontname=helvetica];\n\
                       graph [fontname=helvetica];\n\
                       ratio=\"fill\";\n\
                       size=\"11.7,8.3!\";\n\
                       margin=0;\n\
-                      splines=false;\n\
-                      concentrate=false;\n@.";
+                      splines=true;\n\
+                      concentrate=false;\n@." rdir;
     dot_header !dot_fmt;
     fun () ->
       dot_footer !dot_fmt;
       dot_footer !dot_fmt;
       close_out dot_channel;
       display_graph dot_file
+
+(* IC3 function *)
+
+let new_node_ic3 id =
+  current_color := next_shade ();
+  fprintf !dot_fmt "@[%s@]@." id
+  
+let new_relation_step_ic3 ?style:(s="solid") ?color:(c="black") id id' tr step =
+  fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
+    id' id (sprintf "%s(%d)" (Hstring.view tr.tr_info.tr_name) step) c s
+
+let new_relation_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
+  fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
+    id' id (Hstring.view tr.tr_info.tr_name) c s
+    
+  
+    
+let new_relations_ic3 ?style:(s="solid") ?color:(c="black") id pl =
+  List.iter (
+    fun (id', tr) -> new_relation_ic3 ~style:s ~color:c id id' tr
+  ) pl
+

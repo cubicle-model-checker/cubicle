@@ -235,9 +235,7 @@ let assume_formula_satom id sa =
   let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
-  if debug_smt then eprintf "[smt] node assume : %a@." F.print f;
-  SMT.check  ();
-  if debug_smt then eprintf "[smt] checked@."
+  SMT.check  ()
 
 let assume_neg_formula_satom id sa =
   SMT.assume id (distinct_vars (SAtom.cardinal sa));

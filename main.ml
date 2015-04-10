@@ -20,23 +20,26 @@ open Ast
 
 (** Entry point of Cubicle *)
 
+let close_dot = Dot.open_dot ()
+    
 
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
-        Stats.print_report ~safe:false [] [];
-        eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
-        exit 1)) 
+         Stats.print_report ~safe:false [] [];
+	 close_dot ();
+         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+         exit 1)) 
 
 let () = 
   Sys.set_signal Sys.sigterm
     (Sys.Signal_handle 
        (fun _ ->
-        Stats.print_report ~safe:false [] [];
-        eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
-        exit 1)) 
+         Stats.print_report ~safe:false [] [];
+         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
+         exit 1)) 
 
 (** intercepts SIGUSR1 to display progress *)
 let () =
@@ -55,10 +58,9 @@ let _ =
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
-    let close_dot = Dot.open_dot () in 
     begin 
       if ic3 then
-	match Ic3.RG.search system with
+	match Ic3.RG.search close_dot system with
 	  | Ic3.RSafe -> 
 	    printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
 	    close_dot ();

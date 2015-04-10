@@ -27,6 +27,6 @@ val pre_image : transition list -> Node.t -> Node.t list * Node.t list
     second list is used to store nodes to postpone depending on a predefined
     strategy. *)
 
-val pre : transition -> SAtom.t -> transition_info * Cube.t * Variable.t list
+(* val pre : transition -> SAtom.t -> transition_info * Cube.t * Variable.t list *)
 
-val make_cubes : Node.t list * Node.t list -> Variable.t list -> Node.t -> Ast.transition_info -> Cube.t -> Node.t list * Node.t list
+(* val make_cubes : Node.t list * Node.t list -> Variable.t list -> Node.t -> Ast.transition_info -> Cube.t -> Node.t list * Node.t list *)

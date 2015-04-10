@@ -5,7 +5,7 @@ type result =
   | RUnsafe
 
 module type SigRG = sig
-  val search : t_system -> result
+  val search : (unit -> unit) -> t_system -> result
 end
 
 module RG : SigRG
