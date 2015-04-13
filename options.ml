@@ -33,6 +33,7 @@ let dot = ref false
 let dot_level = ref 0
 let dot_prog = ref Dot
 let dot_colors = ref 0
+let dot_step = ref false
 let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
@@ -121,10 +122,12 @@ let specs =
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
               "<level> graphviz (dot) output with a level of details";
+    "-steps", Arg.Set dot_step,
+              " enables the multiple dot files to see the evolution of ic3";
     "-sfdp", Arg.Unit use_sfdp,
               " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
-              "number of colors for dot output";
+              " number of colors for dot output";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -178,7 +181,17 @@ let cin =
   in
   Arg.parse alspecs set_file usage;
   match !ofile with 
-  | Some f -> file := f ; open_in f 
+  | Some f -> 
+    file := f; 
+    let cf = Filename.chop_suffix (Filename.basename f) ".cub" in
+    let dir = "dot"^Filename.dir_sep^cf in
+    (try ignore (Sys.is_directory dir)
+     with Sys_error _ -> 
+       match Sys.command ("mkdir "^dir) with
+	 | 0 -> ()
+	 | _ -> Format.eprintf "There was an error while executing %s" ("mkdir "^dir));
+    Filename.set_temp_dir_name dir;
+    open_in f 
   | None -> stdin
 
 let ic3 = !ic3
@@ -193,6 +206,7 @@ let dot = !dot
 let dot_level = !dot_level
 let dot_colors = !dot_colors
 let dot_prog = !dot_prog
+let dot_step = !dot_step
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling

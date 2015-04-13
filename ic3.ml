@@ -29,11 +29,9 @@ module type SigV = sig
   (* val print_ucnf : Format.formatter -> t -> unit *)
   (* val print_ednf : Format.formatter -> t-> unit *)
   val print_vertice : Format.formatter -> t -> unit
-  val print_dot_node : t -> unit
-  val print_dot_parents : t -> unit
 
   val create : ucnf -> ednf -> (t * transition) list -> t
-  val delete_parent : t -> t * transition -> unit
+  val delete_parent : t -> t * transition -> bool
   val add_parent : t -> t * transition -> unit
   val get_parents : t -> (t * transition) list
 
@@ -44,7 +42,17 @@ module type SigV = sig
   (* orderedtype signature *)
   val compare : t -> t -> int
 
+  (* display functions *)
   val print_id : Format.formatter -> t -> unit
+  val print_vednf : Format.formatter -> t -> unit
+
+  (* Interface with dot *)
+  val add_node_dot : t -> unit
+  val add_node_step : t -> string -> unit
+  val add_parents_dot : t -> unit
+  val add_parents_step : t -> unit
+    
+  val add_relation_step : ?color:string -> ?style:string -> t -> t -> transition -> unit
 
   (* ic3 base functions *)
     
@@ -113,11 +121,49 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     G.iter (
       fun e _ -> 
 	(* V.print_dot_node e; *)
-	V.print_dot_parents e;
+	V.add_parents_dot e;
     ) rg
-      
+
+  let update_step rg =
+    G.iter (
+      fun v _ -> 
+	let c = if V.is_bad v then "red" else "chartreuse" in
+	  V.add_node_step v c;
+	(* V.print_step_parents e; *)
+    ) rg
 
   type transitions = transition list
+
+  type r = Bad | Expand | Cover | Extra
+
+  type step = 
+      { v : V.t;
+	v' : V.t;
+	tr : transition;
+	delete : bool;
+	from : r;
+      }
+
+  let update_steps s =
+    List.iter (
+      fun {v=v;
+	   v'=v';
+	   tr=tr;
+	   delete=delete;
+	   from=from;
+	  } ->
+	let c = match from with
+	  | Bad -> "red"
+	  | Expand -> "gray"
+	  | Extra -> "green"
+	  | Cover -> "blue"
+	in 
+	let s = match from with 
+	  | Expand -> "bold"
+	  | _ -> if delete then "dashed" else "solid"
+	in
+	V.add_relation_step ~color:c ~style:s v v' tr;
+    ) s
 
   let search close_dot system = 
     (* top = (true, unsafe) *)
@@ -127,9 +173,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     let cunsl = system.t_unsafe in
     let cuns =
       match cunsl with
-	| [f] -> 
-	  Format.eprintf "[Uns] %a@." Cube.print f.cube;
-	  f
+	| [f] -> f
 	| _ -> assert false
     in
     let (unsv, unsf) = 
@@ -143,9 +187,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     (* root = (init, false) *)
     let (_, initfl) = system.t_init in
     let initf = match initfl with
-      | [e] -> 
-	Format.eprintf "[Init]%a@." (SAtom.print_sep "&&") e;
-	e
+      | [e] -> e
       | _ -> assert false
     in
     let initl = SAtom.fold (
@@ -165,6 +207,18 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     (* Working queue of nodes to expand and refine *)
     let todo = Q.create () in
     
+    (* List of nodes for dot *)
+    let steps = ref [] in
+    let add_steps v v' from tr del =
+      let s = {v = v;
+	       v' = v';
+	       tr = tr;
+	       from = from;
+	       delete = del;
+	      } in
+      steps := s::(!steps)
+    in
+    
     (* rushby graph *)
     let rgraph = G.add root [root] (G.singleton top [root]) in
     let rec refine v1 v2 tr rg =
@@ -177,7 +231,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	 a parent node. *)
       if V.is_bad v1 then (
 	Format.eprintf 
-	  "We discard the treatment of this edge since (%d) is now bad@." (V.hash v1);
+	  "We discard the treatment of this edge since (%a) is now bad@." V.print_id v1;
 	rg
       )
       else if V.is_bad v2 then (
@@ -189,26 +243,38 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	    (* If v1 is root, we can not refine *)
 	    if V.equal v1 root then raise (Unsafe rg);
 	    (* Else, we recursively call refine on all the parents *)
+	    Format.eprintf "[BadParent] (%a).bad = %a@."
+	      V.print_id v1 V.print_vednf v1;
 	    List.fold_left (
 	      fun acc (vp, tr) -> 
-		Format.eprintf "[BPR] (%a) --%a--> ?@."
-		  V.print_id vp Hstring.print tr.tr_info.tr_name;
+		Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
+		  V.print_id vp Hstring.print tr.tr_info.tr_name 
+		  V.print_id v1;
+		if dot_step then add_steps vp v1 Bad tr true;
 		refine vp v1 tr acc
 	    ) rg (V.get_parents v1)
 	  (* The node vc covers v2 by tr *)
 	  | V.Covered vc -> 
-	    V.delete_parent v2 (v1, tr);
+	    let del = V.delete_parent v2 (v1, tr) in
 	    V.add_parent vc (v1, tr);
+	    if dot_step then (
+	      if del then add_steps v1 v2 Cover tr true;
+	      add_steps v1 vc Cover tr false;
+	    );
 	    if debug && verbose > 1 then (
 	      Format.eprintf "[Covered by] %a@." V.print_vertice vc;
 	      Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
 	    );
 	    refine v1 vc tr rg
 	  | V.Extrapolated vn -> 
-	    V.delete_parent v2 (v1, tr);
+	    let del = V.delete_parent v2 (v1, tr) in
 	    if debug && verbose > 1 then (
 	      Format.eprintf "[Extrapolated by] %a@." V.print_vertice vn;
 	      Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
+	    );
+	    if dot_step then (
+	      if del then add_steps v1 v2 Extra tr true;
+	      add_steps v1 vn Extra tr false;
 	    );
 	    let rg' = add_extra_graph v2 vn (G.add vn [] rg) in
 	    Q.push vn todo;
@@ -227,13 +293,19 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	with Q.Empty -> raise (Safe rg)
       in
       Format.eprintf "\n*******[Induct]*******\n \n%a\n\nTransitions :@." V.print_vertice v1;
+      let close_step = 
+	if dot_step then Dot.open_step ()
+	else fun () -> () in
       let trans = V.expand v1 transitions in
       List.iter (
 	fun tr -> 
 	  Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
       ) trans;
       let rg = List.fold_left (
-	fun acc tr -> refine v1 top tr acc ) rg trans
+	fun acc tr -> 
+	  if dot_step then
+	  add_steps v1 top Expand tr false;
+	  refine v1 top tr acc ) rg trans
       in 
       let () = if Options.dot_level = 0 then
 	Sys.set_signal Sys.sigint 
@@ -243,21 +315,33 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	       print_graph rg;
 	       update_dot rg;
 	       Format.eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+	       if dot_step then (
+		 update_step rg;
+		 update_steps (List.rev !steps);
+		 close_step ();
+	       );
 	       close_dot ();
 	       exit 1
              )) 
-	  
-      in	
+      in
+      if dot_step then (
+	update_step rg;
+	update_steps (List.rev !steps);
+	steps := [];
+	close_step ();
+      );
       expand rg
     in
     try expand rgraph
     with 
       | Safe rg -> 
 	if dot then update_dot rg;
+	print_graph rg;
 	Format.eprintf "Empty queue, Safe system@."; 
 	RSafe
       | Unsafe rg -> 
 	if dot then update_dot rg;
+	print_graph rg;
 	RUnsafe
 end
 
@@ -321,6 +405,13 @@ module Vertice : SigV = struct
 	(SAtom.print_sep "&&") c.Cube.litterals
     ) b
 
+  let print_vednf fmt v =
+    List.iter (
+      fun c -> Format.eprintf "\n\t\t%a@. OR" 
+	(* Variable.print_vars c.Cube.vars  *)
+	(SAtom.print_sep "&&") c.Cube.litterals
+    ) v.bad
+
   let print_iednf fmt b = 
     List.iter (
       fun c -> Format.eprintf "\t\t%a\nOR@." 
@@ -344,18 +435,31 @@ module Vertice : SigV = struct
 	Format.eprintf "\t\t(%a, %a)@." 
 	  print_id vp Hstring.print tr.tr_info.tr_name) v.parents 
 
-  let print_dot_node v = Dot.new_node_ic3 (get_id v)
 
-  let print_dot_parents v =
+
+  (* Interface with dot *)
+
+      
+  let add_node_dot v = Dot.new_node_ic3 (get_id v)
+
+  let add_node_step v c = Dot.new_node_step_ic3 ~color:c (get_id v)
+
+  let add_parents_dot v =
     let parents = List.map (fun (v, t) -> (get_id v, t)) v.parents in
     Dot.new_relations_ic3 (get_id v) parents ~color:"blue"
 
-  let print_dot_relation_step v v' tr =
-    Dot.new_relation_step_ic3 ~style:"dotted" (get_id v) (get_id v') tr !step
+  let add_parents_step v =
+    let parents = List.map (fun (v, t) -> (get_id v, t)) v.parents in
+    Dot.new_relations_step_ic3 (get_id v) parents ~color:"blue"
+      
+  let add_relation_dot ?color:(c="black") v v' tr =
+    Dot.new_relation_ic3 ~color:c ~style:"dashed" (get_id v) (get_id v') tr
 
-  let print_dot_relation ?color:(c="black") v v' tr =
-    Dot.new_relation_ic3 ~color:c ~style:"dotted" (get_id v) (get_id v') tr
+  let add_relation_step ?color:(c="black") ?style:(s="solid") v v' tr =
+    Dot.new_relation_step_ic3 ~color:c ~style:s (get_id v) (get_id v') tr
 
+  let add_relation_dot_count v v' tr =
+    Dot.new_relation_ic3_count ~style:"dotted" (get_id v) (get_id v') tr !step
 
 
   (* CREATION FUNCTIONS *)
@@ -381,7 +485,7 @@ module Vertice : SigV = struct
 	  parents = p;
 	  id = !cpt;
 	} in
-      if dot then print_dot_node v;
+      if dot then add_node_dot v;
       v
 
 	
@@ -395,16 +499,17 @@ module Vertice : SigV = struct
   let delete_parent v (vp, tr) =
     let l = v.parents in
     let trn = tr.tr_info.tr_name in
-    let rec delete acc = function
-      | [] -> acc
+    let rec delete (acc, del) = function
+      | [] -> (acc, false)
       | (vp', tr')::l when 
 	  equal vp vp' 
 	  && Hstring.equal tr'.tr_info.tr_name trn
-	  -> List.rev_append acc l
-      | c :: l -> delete (c::acc) l
+	  -> (List.rev_append acc l, true)
+      | c :: l -> delete ((c::acc), del) l
     in 
-    let nl = delete [] l in
-    v.parents <- nl
+    let (nl, del) = delete ([], false) l in
+    v.parents <- nl;
+    del
 
   let add_parent v (vp, tr) =
     if List.exists (
@@ -418,7 +523,7 @@ module Vertice : SigV = struct
       if Options.dot_level >= 1 then
 	(
 	  incr step;
-	  print_dot_relation_step v vp tr
+	  add_relation_dot_count v vp tr
 	)
     )
       
@@ -834,7 +939,7 @@ module Vertice : SigV = struct
     nf
 
   (* Main function of IC3 *)
-  let refine v1 v2 tr cand = 
+  let refine v1 v2 tr cand =
     try
       Format.eprintf "Candidates %a :@." print_id v2;
       List.iter (
@@ -859,7 +964,7 @@ module Vertice : SigV = struct
 	| Some bad ->
 	  Format.eprintf "[BadToParents] (%a.good) and %a imply (%a.bad)@." 
 	    print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-	  print_dot_relation ~color:"red" v2 v1 tr;
+	  add_relation_dot ~color:"red" v2 v1 tr;
 	  Format.eprintf "[BadToParents] We update (%a.bad) and refine to the parents of (%a)@."
 	    print_id v1 print_id v1;
 	  
@@ -890,8 +995,6 @@ module Vertice : SigV = struct
 	| None ->
 	  Format.eprintf "[Extrapolation] (%a.good) and %a do not imply (%a.bad)@." 
 	    print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-	  Format.eprintf "[Extrapolation] We extrapolate (%a.bad) = eb and create a new node with (%a.good) && eb@."
-	    print_id v2 print_id v2;
 	  let extra_bad2 = negate_generalize_and_extrapolate v2.bad in
 	  if debug && verbose > 1 then (
 	    Format.eprintf "[Bad] %a@." print_ednf v2.bad;
@@ -903,8 +1006,10 @@ module Vertice : SigV = struct
 	    else v2.good @ extra_bad2 
 	  in
 	  let nv = create ng [] [v1, tr] in
+	  Format.eprintf "[Extrapolation] We extrapolate (%a.bad) = eb and create a new node with (%a.good) && eb -> (%a)@."
+	    print_id v2 print_id v2 print_id nv;
 	  (* Format.eprintf "NV : %a@." print_vertice nv; *)
-	  print_dot_relation ~color:"green" nv v2 tr;
+	  if dot then add_relation_dot ~color:"green" v2 nv tr;
 	  Extrapolated nv
 
 end

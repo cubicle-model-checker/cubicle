@@ -22,6 +22,8 @@ open Ast
 
 let close_dot = Dot.open_dot ()
     
+let () =
+  Format.eprintf "[Dir] : %s@." (Filename.get_temp_dir_name ())
 
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 

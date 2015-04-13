@@ -137,6 +137,7 @@ let print_pre cedge fmt n =
 (* Exported functions *)
 
 let dot_fmt = ref std_formatter
+let step_fmt = ref std_formatter
 
 let new_node n =
   current_color := next_shade ();
@@ -202,19 +203,68 @@ let restart () =
   dot_header !dot_fmt
 
 
-let display_graph dot_file =
-  let pdf = dot_file^".pdf" in
-  let com = match Util.syscall "uname" with
-    | "Darwin\n" -> "open"
-    | "Linux\n" -> "xdg-open"
-    | _ -> (* Windows *) "cmd /c start"
-  in
-  match Sys.command ((graphviz_prog !nb_nodes)^" -Tpdf "^dot_file^
-                       " > "^pdf^" && "^com^" "^pdf) with
-  | 0 -> ()
-  | _ ->
-     eprintf "There was an error with dot. Make sure graphviz is installed."
+let convert =
+  let count = ref 0 in
+  let r = Str.regexp "\\(\\..+.dot\\)" in
+  fun dot_file ->
+    incr count;
+    let reg_file = Str.replace_first r "" dot_file in
+    let svg = reg_file^(string_of_int !count)^".svg" in
+    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
+			  " > "^svg^" && rm "^dot_file) with
+      | 0 -> ()
+      | _ ->
+	eprintf "There was an error with dot. Make sure graphviz is installed."
 
+
+let display_graph =
+  let r = Str.regexp "\\(\\..+.dot\\)" in
+  fun dot_file ->
+    let reg_file = Str.replace_first r "" dot_file in
+    let svg = reg_file^".svg" in
+    let com = match Util.syscall "uname" with
+      | "Darwin\n" -> "open"
+      | "Linux\n" -> "xdg-open"
+      | _ -> (* Windows *) "cmd /c start"
+    in
+    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^" > "^svg^ "&& rm "^dot_file^" && "^com^" "^svg) with
+      | 0 -> ()
+      | _ ->
+	eprintf "There was an error with dot. Make sure graphviz is installed."
+
+
+let stc = ref 0
+
+let open_step =
+  let rdir = if ic3 then "TB" else "BT" in
+  let bfile = Filename.basename file in
+  fun () ->
+    if not dot_step then fun () -> ()
+    else
+      (
+	stc := 0;
+	let dot_file, dot_channel =
+	  Filename.open_temp_file bfile ".dot" in
+	step_fmt := formatter_of_out_channel dot_channel;
+	fprintf !step_fmt "digraph \"%s\" {@." bfile;
+	fprintf !step_fmt "orientation = portrait;\n\
+                      fontsize = 10;\n\
+                      rankdir = %s;\n\
+                      node [fontname=helvetica];\n\
+                      edge [fontname=helvetica];\n\
+                      graph [fontname=helvetica];\n\
+                      ratio=\"fill\";\n\
+                      size=\"11.7,8.3!\";\n\
+                      margin=0;\n\
+                      splines=true;\n\
+                      concentrate=false;\n@." rdir;
+	dot_header !step_fmt;
+	fun () ->
+	  dot_footer !step_fmt;
+	  dot_footer !step_fmt;
+	  close_out dot_channel;
+	  convert dot_file
+      )
 
 let open_dot () =
   if not dot then fun () -> ()
@@ -248,19 +298,36 @@ let open_dot () =
 let new_node_ic3 id =
   current_color := next_shade ();
   fprintf !dot_fmt "@[%s@]@." id
-  
-let new_relation_step_ic3 ?style:(s="solid") ?color:(c="black") id id' tr step =
-  fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
-    id' id (sprintf "%s(%d)" (Hstring.view tr.tr_info.tr_name) step) c s
 
+let new_node_step_ic3 ?color:(c="gray") id =
+  (* current_color := next_shade (); *)
+  fprintf !step_fmt "@[%s [style=filled color=%s]@]@." id c
+  
 let new_relation_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
   fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
-    id' id (Hstring.view tr.tr_info.tr_name) c s
-    
+    id id' (Hstring.view tr.tr_info.tr_name) c s
+
+let new_relation_step_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
+  incr stc;
+  let ah = match c, s with
+    | "blue", "dashed" | "green", "dashed" -> "invempty"
+    | _ -> "normal" in
   
-    
+  fprintf !step_fmt "%s -> %s [label=\"%s\" color=%s style=%s arrowhead=%s];@." 
+    id id'
+    (sprintf "%s(%d)" (Hstring.view tr.tr_info.tr_name) !stc) c s ah
+
+let new_relation_ic3_count ?style:(s="solid") ?color:(c="black") id id' tr count =
+  fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
+    id id' 
+    (sprintf "%s(%d)" (Hstring.view tr.tr_info.tr_name) count) c s
+
 let new_relations_ic3 ?style:(s="solid") ?color:(c="black") id pl =
   List.iter (
-    fun (id', tr) -> new_relation_ic3 ~style:s ~color:c id id' tr
+    fun (id', tr) -> new_relation_ic3 ~style:s ~color:c id' id tr
   ) pl
-
+ 
+let new_relations_step_ic3 ?style:(s="solid") ?color:(c="black") id pl =
+  List.iter (
+    fun (id', tr) -> new_relation_step_ic3 ~style:s ~color:c id' id tr
+  ) pl

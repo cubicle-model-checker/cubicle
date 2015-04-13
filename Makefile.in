@@ -105,11 +105,11 @@ opt: $(NAME).opt
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma str.cma $^
 
 $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa str.cmxa $^
 
 VERSION=1.0.2
 
