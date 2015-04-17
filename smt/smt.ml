@@ -481,9 +481,12 @@ module Formula = struct
       | f -> (unfold [] f)::monos
 	
   let make_cnf f =
+    (* eprintf "[CNF] In@."; *)
     let f = sform f in
     let sfnc = cnf f in
-    init [] sfnc
+    let res = init [] sfnc in
+    (* eprintf "[CNF] Out@."; *)
+    res
 
 (* let make_cnf f = mk_cnf (sform f) *)
 

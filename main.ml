@@ -22,9 +22,6 @@ open Ast
 
 let close_dot = Dot.open_dot ()
     
-let () =
-  Format.eprintf "[Dir] : %s@." (Filename.get_temp_dir_name ())
-
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 
   Sys.set_signal Sys.sigint 
@@ -65,9 +62,13 @@ let _ =
 	match Ic3.RG.search close_dot system with
 	  | Ic3.RSafe -> 
 	    printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
-	    close_dot ();
+	    if (not quiet || profiling) then
+              Stats.print_report ~safe:true [] [];
+            close_dot ();
           | Ic3.RUnsafe -> 
 	    printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+            if (not quiet || profiling) then
+              Stats.print_report ~safe:false [] [];
             close_dot ();
 	    exit 1
       else 

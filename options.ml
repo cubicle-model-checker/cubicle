@@ -23,6 +23,7 @@ let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
 let ic3 = ref false
+let ic3_level = ref 0
 
 let max_proc = ref 10
 let type_only = ref false
@@ -99,6 +100,10 @@ let set_dot d =
   dot := true;
   dot_level := d
 
+let set_ic3 i =
+  ic3 := true;
+  ic3_level := i
+
 let use_sfdp () =
   dot_prog := Sfdp
 
@@ -115,8 +120,8 @@ let specs =
               "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
-    "-ic3", Arg.Set ic3,
-              " enable the forward search instead of backward";
+    "-ic3", Arg.Int set_ic3,
+              "<n> enable the forward search with a level of extrapolation";
     "-search", Arg.String set_mode, 
                "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
@@ -195,6 +200,7 @@ let cin =
   | None -> stdin
 
 let ic3 = !ic3
+let ic3_level = !ic3_level
 
 let type_only = !type_only
 let maxrounds = !maxrounds

@@ -209,7 +209,8 @@ let convert =
   fun dot_file ->
     incr count;
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = reg_file^(string_of_int !count)^".svg" in
+    let svg = Format.sprintf "%s%d-%d.%s" 
+      reg_file dot_level !count "svg" in
     match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
 			  " > "^svg^" && rm "^dot_file) with
       | 0 -> ()
@@ -221,7 +222,7 @@ let display_graph =
   let r = Str.regexp "\\(\\..+.dot\\)" in
   fun dot_file ->
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = reg_file^".svg" in
+    let svg = Format.sprintf "%s%d.%s" reg_file dot_level "svg" in
     let com = match Util.syscall "uname" with
       | "Darwin\n" -> "open"
       | "Linux\n" -> "xdg-open"
@@ -295,13 +296,14 @@ let open_dot () =
 
 (* IC3 function *)
 
-let new_node_ic3 id =
+let new_node_ic3 id lbl =
   current_color := next_shade ();
-  fprintf !dot_fmt "@[%s@]@." id
+  fprintf !dot_fmt "@[%s[label = \"%s\"]@]@." id lbl
 
-let new_node_step_ic3 ?color:(c="gray") id =
+let new_node_step_ic3 ?color:(c="gray") id lbl =
   (* current_color := next_shade (); *)
-  fprintf !step_fmt "@[%s [style=filled color=%s]@]@." id c
+  fprintf !step_fmt "@[%s [label = \"%s\" style=filled color=%s]@]@." 
+    id lbl c
   
 let new_relation_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
   fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
@@ -310,7 +312,7 @@ let new_relation_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
 let new_relation_step_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
   incr stc;
   let ah = match c, s with
-    | "blue", "dashed" | "green", "dashed" -> "invempty"
+    | ("blue" | "green"), "dashed" -> "invempty"
     | _ -> "normal" in
   
   fprintf !step_fmt "%s -> %s [label=\"%s\" color=%s style=%s arrowhead=%s];@." 

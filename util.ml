@@ -29,6 +29,8 @@ module TimeForward = Timer.Make (Options)
 module TimeCheckCand = Timer.Make (Options)
 module TimeFormula = Timer.Make (Options)
 module TimeSimpl = Timer.Make (Options)
+module TimerIc3 = Timer.Make (Options)
+module TimerITIc3 = Timer.Make (Options)
 module TimeCertificate = Timer.Make (struct let profiling = true end)
 
 

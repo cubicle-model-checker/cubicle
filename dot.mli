@@ -33,9 +33,9 @@ val open_dot : unit -> (unit -> unit)
 
 val delete_node_by : Node.t -> Node.t -> unit
 
-val new_node_ic3 : string -> unit
+val new_node_ic3 : string -> string -> unit
 
-val new_node_step_ic3 : ?color:string -> string -> unit
+val new_node_step_ic3 : ?color:string -> string -> string -> unit
 
 val new_relation_ic3 : ?style:string -> ?color:string -> string -> string -> Ast.transition  -> unit
 

@@ -23,6 +23,7 @@ val file : string
 val cin : in_channel
 
 val ic3 : bool
+val ic3_level : int
 
 val max_proc : int
 val type_only : bool

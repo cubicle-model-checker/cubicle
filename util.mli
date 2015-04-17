@@ -29,6 +29,8 @@ module TimeForward : Timer.S
 module TimeCheckCand : Timer.S
 module TimeFormula : Timer.S
 module TimeSimpl : Timer.S
+module TimerIc3 : Timer.S
+module TimerITIc3 : Timer.S
 module TimeCertificate : Timer.S
 
 

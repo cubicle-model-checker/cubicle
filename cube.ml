@@ -714,3 +714,5 @@ and satom_globs sa = SAtom.fold atom_globs sa Term.Set.empty
 
 
 let print fmt { litterals = sa } = SAtom.print fmt sa 
+
+
