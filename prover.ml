@@ -35,8 +35,8 @@ let distinct_vars =
   let _ = 
     List.fold_left 
       (fun (acc,i) v -> 
-	 if i<>0 then t.(i) <- F.make_lit F.Neq (v::acc);
-	 v::acc, i+1) 
+	if i<>0 then t.(i) <- F.make_lit F.Neq (v::acc);
+	v::acc, i+1) 
       ([],0) proc_terms 
   in
   function n -> if n = 0 then F.f_true else t.(n-1)
@@ -223,22 +223,24 @@ let assume_node { tag = id } ap =
 let make_clause atoms =
   F.make F.Or (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
+let assume_distinct nvars =
+  let dv = distinct_vars nvars in
+  SMT.assume 0 dv
+  
+
 let assume_clause id ap =
-  SMT.assume id (distinct_vars (Array.length ap));
   let f = make_clause ap in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
   SMT.check  ()
 
 let assume_formula_satom id sa =
-  SMT.assume id (distinct_vars (SAtom.cardinal sa));
   let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
   SMT.check  ()
 
 let assume_neg_formula_satom id sa =
-  SMT.assume id (distinct_vars (SAtom.cardinal sa));
   let f = F.make F.Not [make_formula_set sa] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;

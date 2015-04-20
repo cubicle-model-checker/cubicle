@@ -568,11 +568,16 @@ module Make (Options : sig val profiling : bool end) = struct
   let assume ~id f = 
     Time.start ();
     try 
-      CSolver.assume (Formula.make_cnf f) id;
+      let cnf = Formula.make_cnf f in
+      CSolver.assume cnf id;
       Time.pause ()
-    with Solver.Unsat ex ->
-      Time.pause ();
-      raise (Unsat (export_unsatcore2 ex))
+    with 
+      | Solver.Unsat ex ->
+        Time.pause ();
+        raise (Unsat (export_unsatcore2 ex))
+      | Invalid_argument _ -> 
+        Format.eprintf "[Error] Invalid arguments@.";
+        exit 1
 
   let check () =
     incr calls;

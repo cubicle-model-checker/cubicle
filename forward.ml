@@ -872,7 +872,7 @@ let instance_of_transition { tr_args = tr_args;
     i_touched_terms =
       Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms
   }
-
+  
 
 let instantiate_transitions all_procs procs trans = 
   let aux acc {tr_info = tr} =
@@ -885,8 +885,6 @@ let instantiate_transitions all_procs procs trans =
     ) acc d
   in
   List.fold_left aux [] trans
-
-
 
 
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
