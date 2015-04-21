@@ -311,6 +311,8 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
 (* systems							     *)
 (*********************************************************************)
 
+module MH = Map.Make(Hstring)
+
 let is_buffered bv var = (* TSO *)
   List.exists (fun v -> Hstring.equal var v) bv
 
@@ -330,64 +332,116 @@ let tso_pre_image bv ls post = (* TSO *)
     | Lt -> if reverse then Cge else Clt
     | Le -> if reverse then Cgt else Cle
   in
+  let extract_vpto_from_atom a = match a, [] with
+    | Atom.Comp (Elem (v, Glob), op, t), procs
+    | Atom.Comp (Access (v, procs), op, t), _ when is_buffered bv v ->
+	Some (v, procs, t, (compop_to_memop op false))
+    | Atom.Comp (t, op, Elem (v, Glob)), procs
+    | Atom.Comp (t, op, Access (v, procs)), _ when is_buffered bv v ->
+	Some (v, procs, t, (compop_to_memop op true))
+    | _ -> None
+  in
   let add_read_op p v procs t op ops = match t with
     | Const _ | Elem (_, Constr) -> (p, Read (v, procs, t, op)) :: ops
     | Elem (v, Var) when (Hstring.view v).[0] = '#' ->
         (p, Read (v, procs, t, op)) :: ops
     | _ -> failwith "Can only read constants from TSO variables"
   in
+  let add_read_opn p v procs t op ops = match t with
+    | Const _ | Elem (_, Constr) -> (p, Read (v, procs, t, op), []) :: ops
+    | Elem (v, Var) when (Hstring.view v).[0] = '#' ->
+        (p, Read (v, procs, t, op), []) :: ops
+    | _ -> failwith "Can only read constants from TSO variables"
+  in
+  let extract_term_from_gupd gupd arg_procs = match gupd with
+    | UTerm (Const _ as t) | UTerm (Elem (_, Constr) as t) -> t
+        (* Format.fprintf std_formatter "Write %s = %a\n" *)
+        (*   (Hstring.view var) Term.print  t; *)
+    | UTerm (Elem (v, Var)) ->
+        let pv = List.assoc v arg_procs in
+        Elem (pv, Var)
+    | _ -> failwith "Can only write constants to TSO variables"
+  in
+  let get_tso_writable_term t arg_procs = match t with
+    | Const _ | Elem (_, Constr) -> t
+    | (Elem (v, Var)) ->
+        let pv = List.assoc v arg_procs in
+        Elem (pv, Var)
+    | _ -> failwith "Can only write constants to TSO arrays"
+  in
+  let print_procs fmt procs =
+    Format.fprintf fmt "[";
+    List.iter (fun p ->
+      Format.fprintf fmt "%s " (Hstring.view p);
+    ) procs;
+    Format.fprintf fmt "]";
+  in
+  let add_write_opn p v procs t ops =
+    let rec aux = function
+      | [] -> []
+      | op :: ops -> begin match op, (Hstring.make ""), [] with
+	  | (rp, (Read (rv, rprocs, _, _) as rop), wops), _, _
+	  | (rp, (Fence as rop), wops), rv, rprocs ->
+	     (* Format.fprintf std_formatter "Check %s%a %s%a " *)
+	       (* (Hstring.view v) print_procs procs *)
+	       (* (Hstring.view rv) print_procs rprocs; *)
+  	     let pwops = try List.assoc p wops with Not_found -> [] in
+  	       if not (pwops = []) || (v = rv && procs = rprocs)
+		                   || rop = Fence then begin
+                 (* Format.fprintf std_formatter "match\n"; *)
+  	         let wops = (p, Write (v, procs, t) :: pwops) ::
+		   (List.remove_assoc p wops) in
+		 (rp, rop, wops) :: ops
+  	       end else begin
+                 (* Format.fprintf std_formatter "no match\n"; *)
+	         op :: aux ops
+	       end
+  	  | _ -> failwith "Should only have Reads or Fence"
+        end
+    in
+    aux ops
+  in
   let make_tso_node n =
-    let tri, p, procs, ops = match n.from with (* takes the first proc param *)
-      | (tri, ((var :: _) as vars), nc) :: _ -> (tri, var, vars, nc.ops)
-      | (tri, [], nc) :: _ -> (tri, Hstring.make "#0", [], nc.ops)
+    let tri, p, procs, ops, nops = match n.from with (* takes the first proc param *)
+      | (tri, ((var :: _) as vars), nc) :: _ -> (tri, var, vars, nc.ops,nc.nops)
+      | (tri, [], nc) :: _ -> (tri, Hstring.make "#0", [], nc.ops, nc.nops)
       | _ -> assert false
     in
     let arg_procs = List.fold_left2 (fun ap a p -> (a, p) :: ap)
       [] tri.tr_args procs in
     (* Format.fprintf std_formatter "Transition %s(%s)\n" *)
     (*   (Hstring.view tri.tr_name) (Hstring.view p); *)
-    let lits, ops = SAtom.fold (fun a (lits, ops) -> (* Reads from TSO vars *)
+    (* Reads from TSO vars *)
+    let lits, ops, nops = SAtom.fold (fun a (lits, ops, nops) ->
       (* Format.fprintf Format.std_formatter "%a\n" Atom.print a; *)
-      match a, [] with
-      | Atom.Comp (Elem (v, Glob), op, t), procs
-      | Atom.Comp (Access (v, procs), op, t), _ when is_buffered bv v ->
-          (lits, add_read_op p v procs t (compop_to_memop op false) ops)
-      | Atom.Comp (t, op, Elem (v, Glob)), procs
-      | Atom.Comp (t, op, Access (v, procs)), _ when is_buffered bv v ->
-          (lits, add_read_op p v procs t (compop_to_memop op true) ops)
-      | _ -> (SAtom.add a lits, ops)
-    ) n.cube.Cube.litterals (SAtom.empty, ops) in
-    let ops = List.fold_left (fun ops (var, gupd) -> (* Writes to TSO vars *)
+      match extract_vpto_from_atom a with
+      | Some (v, procs, t, op) -> (lits, add_read_op p v procs t op ops,
+				         add_read_opn p v procs t op nops)
+      | None -> (SAtom.add a lits, ops, nops)
+    ) n.cube.Cube.litterals (SAtom.empty, ops, nops) in
+    (* Writes to TSO vars *)
+    let ops, nops = List.fold_left (fun (ops, nops) (var, gupd) ->
       if (is_buffered bv var) then
-        let t = match gupd with
-          | UTerm (Const _ as t) | UTerm (Elem (_, Constr) as t) -> t
-              (* Format.fprintf std_formatter "Write %s = %a\n" *)
-              (*   (Hstring.view var) Term.print  t; *)
-          | UTerm (Elem (v, Var)) ->
-              let pv = List.assoc v arg_procs in
-              Elem (pv, Var)
-          | _ -> failwith "Can only write constants to TSO variables"
-        in
-        (p, Write (var, [], t)) :: ops
-      else ops
-    ) ops tri.tr_assigns in
-    let ops = List.fold_left (fun ops upd -> (* Writes to TSO arrays *)
-      if (is_buffered bv upd.up_arr) then begin
+        let t = extract_term_from_gupd gupd arg_procs in
+	let ops = (p, Write (var, [], t)) :: ops in
+	let nops = add_write_opn p var [] t nops in
+        (ops, nops)
+      else (ops, nops)
+    ) (ops, nops) tri.tr_assigns in
+    (* Writes to TSO arrays *)
+    let ops, nops = List.fold_left (fun (ops, nops) upd ->
+      if (is_buffered bv upd.up_arr) then
         let up = match upd.up_arg with [p] -> p
           | _ -> failwith "Can only manage buffered arrays of dimension 1" in
-        let ops = List.fold_left (fun ops (sa, t) ->
-          if not (SAtom.is_empty sa) then begin
-            let t = match t with
-              | Const _ | Elem (_, Constr) -> t
-              | (Elem (v, Var)) ->
-                  let pv = List.assoc v arg_procs in
-                  Elem (pv, Var)
-              | _ -> failwith "Can only write constants to TSO arrays"
-            in
-            (p, Write (upd.up_arr, [p], t)) :: ops (* dirty *)
-          end else ops) ops upd.up_swts
-        in ops
-      end else ops
+        List.fold_left (fun (ops, nops) (sa, t) ->
+          if not (SAtom.is_empty sa) then
+            let t = get_tso_writable_term t arg_procs in
+            let ops = (p, Write (upd.up_arr, [p], t)) :: ops in (* dirty *)
+            let nops = add_write_opn p upd.up_arr [p] t nops in (* dirty *)
+	    (ops, nops)
+          else (ops, nops)
+	) (ops, nops) upd.up_swts
+      else (ops, nops)
 (*        SAtom.fold (fun a ops ->
             ops
             let pv = List.assoc v arg_procs in
@@ -403,9 +457,11 @@ let tso_pre_image bv ls post = (* TSO *)
           Format.fprintf fmt "%a, %a /" SAtom.print sa Term.print t
         ) upd.up_swts;
         Format.fprintf fmt "\n" *)
-    ) ops tri.tr_upds in
-    let ops = if tri.tr_fence then (p, Fence) :: ops else ops in
-    { n with cube = Cube.create n.cube.Cube.vars lits; ops = ops }
+    ) (ops, nops) tri.tr_upds in
+    let ops, nops = if tri.tr_fence then
+      ((p, Fence) :: ops, (p, Fence, []) :: nops)
+    else ops, nops in
+    { n with cube = Cube.create n.cube.Cube.vars lits; ops = ops; nops = nops }
   in
   let ls = List.fold_left (fun ns n -> make_tso_node n :: ns) [] ls in
   let post = List.fold_left (fun ns n -> make_tso_node n :: ns) [] post in

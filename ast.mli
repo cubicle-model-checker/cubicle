@@ -103,6 +103,9 @@ type memop =
   | Write of Hstring.t * (Hstring.t list) * Types.term
   | Fence
 
+(* module MH = Map.Make (Hstring) *)
+(* module MH : Map.S with type key = Hstring.t *)
+      
 type node_cube =
     { 
       cube : Cube.t;          (** the associated cube *)
@@ -115,8 +118,10 @@ type node_cube =
                                   (see {! Cubetrie.delete_subsumed}) *)
       from : trace;           (** history of the node *)
       ops : (Hstring.t * memop) list; (* TSO : memory operations *)
+      (* nops : (Hstring.t * memop * (memop list) MH.t) list; *)
+      nops : (Hstring.t * memop * (Hstring.t * (memop list)) list) list;
     }
-(** the type of nodes, i.e. cubes with extra information *)
+(** The type of nodes, i.e. cubes with extra information *)
 
 and trace_step = transition_info * Variable.t list * node_cube
 (** type of elementary steps of error traces *)

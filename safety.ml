@@ -219,6 +219,32 @@ let print_tso_trace n =
         Format.fprintf std_formatter "%s:* . "
         (Hstring.view p)
   ) n.ops;
+  Format.fprintf std_formatter "\n\n";
+  Format.fprintf std_formatter "Normalized memory trace :\n";
+  (* nops : (Hstring.t * memop * (Hstring.t * (memop list)) list) list; *)
+  let print_pwops (p, wops) =
+    Format.fprintf std_formatter "%s:(" (Hstring.view p);
+    List.iter (fun wop -> match wop with
+      | Write (var, procs, t) ->
+          Format.fprintf std_formatter "%s%s <- %a . "
+            (Hstring.view var) (string_of_procs procs) Types.Term.print t
+      | _ -> failwith "Should not have reads or fence in write part of trace"
+    ) wops;
+    Format.fprintf std_formatter ") . "
+  in
+  List.iter (fun (p, rop, wops) -> match rop with
+    | Read (var, procs, t, op) ->
+        List.iter print_pwops wops;
+        Format.fprintf std_formatter "%s:%s%s %s %a . "
+        (Hstring.view p) (Hstring.view var)
+        (string_of_procs procs) (string_of_cmpop op)
+        Types.Term.print t
+    | Fence ->
+        List.iter print_pwops wops;
+        Format.fprintf std_formatter "%s:* . "
+        (Hstring.view p)
+    | _ -> failwith "Should not have writes as base in noramalized trace"
+  ) n.nops;
   Format.fprintf std_formatter "\n\n"
 
 

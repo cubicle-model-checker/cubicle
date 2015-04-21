@@ -97,6 +97,7 @@ let create ?(kind=Node) ?(from=None) cube =
     deleted = false;
     from = hist;
     ops = [];
+    nops = [];
   }
 
 let has_deleted_ancestor n =

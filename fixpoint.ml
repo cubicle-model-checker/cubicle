@@ -387,7 +387,7 @@ end = struct
           | r -> r)
       | r -> r
     in
-    TimeFix.pause (); (*
+    TimeFix.pause ();
     begin match r with
     | None -> ();
     | Some db ->
@@ -397,22 +397,40 @@ end = struct
         Format.fprintf Format.std_formatter ") ----\nFP : ";
         List.iter (fun i -> Format.fprintf Format.std_formatter "%d " i) db;
         Format.fprintf Format.std_formatter ".\n";
-    end; *) (*
+    end;
+    let nops_match nops1 nops2 =
+      try List.for_all2 (fun (p1, op1, wops2) (p2, op2, wops2) ->
+	 p1 = p2 && op1 = op2 (* ALSO CHECK WOPS *)
+      ) nops1 nops2
+      with Invalid_argument _ -> false		
+    in
     let r = begin match r with
     | None -> None
     | Some [] -> Some []
     | Some db ->
-        begin try
+        let r = begin try
           let _, _, nd = List.find (fun (t_info, vars, next_node) ->
             List.exists (fun tag -> next_node.tag = tag) db
           ) s.from in (*
           Format.fprintf Format.std_formatter "Node %d matches\n" nd.tag; *)
           Some db
           with Not_found -> None
-        end
-    end in *)
+        end in
+	if r <> None then r else begin (* if it loops, fixpoint *)
+        let nds = Cubetrie.fold (fun nds n ->
+          if List.exists (fun tag -> n.tag = tag) db then n :: nds else nds
+        ) [] nodes in
+        let new_db = List.fold_left (fun db n ->
+          (* if n.ops = s.ops then n.tag :: db else db *)
+          if nops_match n.nops s.nops then n.tag :: db else db
+        ) [] nds in
+        if new_db <> [] then begin
+          Format.fprintf Format.std_formatter "%d subsumed\n" s.tag;
+          Some new_db end
+	else None end
+    end in
 
-    r ; None (* TSO : Turn off fixpoint for now *)
+    r (*; None*)  (* TSO : Turn off fixpoint for now *)
 end
 
 
