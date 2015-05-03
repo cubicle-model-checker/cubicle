@@ -1,0 +1,35 @@
+#!/bin/bash
+
+shopt -s nullglob
+
+to=$1
+cubicle=$2
+opt=$3
+pathcub=$4
+score=0
+max=0
+
+
+FILES="bakery.cub bakery_lamport.cub bakery_uguard.cub bakery_uguard2.cub berkeley.cub burns.cub crash.cub dekker.cub dekker_limbo.cub  dekker_loc.cub dekker_n.cub dijkstra.cub illinois.cub jml.cub mesi.cub moesi.cub motivating.cub mutex.cub mux_sem.cub peterson_two_proc.cub sense_barrier.cub synapse.cub two-semaphores.cub xerox_dragon.cub"
+
+for f in $pathcub*.cub; do
+    echo $f;
+    max=`expr $max + 1`;
+    timeout $to $cubicle -ic3 $opt $f > /dev/null 2>&1;
+    res=$?
+    case $res in
+	"1") 
+	    # echo $res;
+	    echo "    ECHEC";;
+	"0") 
+	    echo "    OK";
+            score=`expr $score + 1`;;
+	*) 	
+	# echo
+	echo "ECHEC sur "$f;;
+    esac
+done
+
+percent=`expr 100 \* $score / $max`; 
+echo "Results : $score/$max = $percent%"; 
+
