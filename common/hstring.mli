@@ -34,6 +34,9 @@ val make : string -> t
 val view : t -> string
 (** [view hs] returns the string corresponding to [hs].*)
 
+val view_tex : t -> bool -> string
+(** [view_tex hs] returns the string corresponding to [hs] for latex.*)
+
 val equal : t -> t -> bool
 (** [equal x y] returns [true] if [x] and [y] are the same hash-consed string
     (constant time).*)
@@ -78,8 +81,14 @@ val list_equal : t list -> t list -> bool
 val print : Format.formatter -> t -> unit
 (** Prints a hash-consed strings on a formatter. *)
 
+val print_tex : bool -> Format.formatter -> t -> unit
+(** Prints a hash-consed strings on a formatter for latex. *)
+
 val print_list : string -> Format.formatter -> t list -> unit
 (** Prints a list of hash-consed strings on a formatter. *)
+
+val print_list_tex : string -> Format.formatter -> t list -> unit
+(** Prints a list of hash-consed strings on a formatter for latex. *)
 
 module H : Hashtbl.S with type key = t
 (** Hash-tables indexed by hash-consed strings *)

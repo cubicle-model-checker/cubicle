@@ -78,38 +78,41 @@ let rec is_prime_atom = function
   | Ite (sa, a1, a2) ->
     is_prime_atom a1 || is_prime_atom a2 || SAtom.exists is_prime_atom sa
 
-let rec prime_head_atom a = match a with
-  | True | False -> a
-  | Comp (t1, op, t2) -> Comp (prime_term t1, op, t2)
-  | Ite (sa, a1, a2) -> 
-    Ite (prime_head_satom sa, prime_head_atom a1, prime_head_atom a2)
+(* let rec prime_head_atom a = match a with *)
+(*   | True | False -> a *)
+(*   | Comp (t1, op, t2) -> Comp (prime_term t1, op, t2) *)
+(*   | Ite (sa, a1, a2) ->  *)
+(*     Ite (prime_head_satom sa, prime_head_atom a1, prime_head_atom a2) *)
 
-and prime_head_satom sa =
-  SAtom.fold (
-    fun a acc -> 
-      let pa = 
-	if is_prime_atom a then a
-	else prime_head_atom a
-      in
-      SAtom.add pa acc
-  ) sa SAtom.empty
+(* and prime_head_satom sa = *)
+(*   SAtom.fold ( *)
+(*     fun a acc ->  *)
+(*       let pa =  *)
+(* 	if is_prime_atom a then a *)
+(* 	else prime_head_atom a *)
+(*       in *)
+(*       SAtom.add pa acc *)
+(*   ) sa SAtom.empty *)
 
-let rec prime_head_match_satom sa st =
-  let rec prime_head_match_atom a = match a with
+let rec prime_match_satom sa st =
+  let rec prime_match_atom a = match a with
     | True | False -> a
-    | Comp (t1, op, t2) when Term.Set.mem t1 st -> 
-      Comp (prime_term t1, op, t2)
-    | Comp (_, _, _) -> a
+    | Comp (t1, op, t2) -> 
+      let t1 = if Term.Set.mem t1 st then prime_term t1
+        else t1 in
+      let t2 = if Term.Set.mem t2 st then prime_term t2
+        else t2 in
+      Comp (t1, op, t2)
     | Ite (sa, a1, a2) -> 
       Ite (sa,
-	   prime_head_match_atom a1,
-	   prime_head_match_atom a2)
+	   prime_match_atom a1,
+	   prime_match_atom a2)
   in
   SAtom.fold (
     fun a acc -> 
       let pa = 
 	if is_prime_atom a then a
-	else prime_head_match_atom a
+	else prime_match_atom a
       in
       SAtom.add pa acc
   ) sa SAtom.empty

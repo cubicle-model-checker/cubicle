@@ -188,7 +188,7 @@ let cin =
   match !ofile with 
   | Some f -> 
     file := f; 
-    let cf = Filename.chop_suffix (Filename.basename f) ".cub" in
+    let cf = Filename.chop_extension (Filename.basename f) in
     let dir = "dot"^Filename.dir_sep^cf in
     (try ignore (Sys.is_directory dir)
      with Sys_error _ -> 

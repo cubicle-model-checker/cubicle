@@ -78,6 +78,6 @@ val uguard_dnf :
 
 (* Prime the head term of a SAtom iff this term is in the set 
    given in parameter *)
-val prime_head_match_satom : SAtom.t -> Term.Set.t -> SAtom.t
+val prime_match_satom : SAtom.t -> Term.Set.t -> SAtom.t
 val elim_prime : SAtom.t -> SAtom.t -> SAtom.t
 (* val unprime_term : Term.t -> Term.t *)

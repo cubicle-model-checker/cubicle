@@ -276,3 +276,16 @@ let rec print_subst fmt = function
 let subst sigma v =
   try Hstring.list_assoc v sigma
   with Not_found -> v
+
+
+(* Print for latex *)
+
+let rec print_vars_tex fmt = function
+  | [] -> ()
+  | [a] ->
+    let s = Hstring.view_tex a true in
+    fprintf fmt "%s" s
+  | a::r -> 
+    let s = Hstring.view_tex a true in
+    fprintf fmt "%s, %a" s print_vars_tex r
+      

@@ -1,87 +1,87 @@
-open Ast
+type result = RSafe | RUnsafe
 
-type result =
-  | RSafe
-  | RUnsafe
+module type SigV =
+  sig
+    type t
+    type ucnf
+    type ednf
+    type res_ref = 
+      | Bad_Parent 
+      | Covered of t 
+      | Extrapolated of t
 
-module type SigRG = sig
-  val search : (unit -> unit) -> t_system -> result
+    val create_good : (Variable.t list * Types.SAtom.t) list -> ucnf
+    val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
+    val create : ?c:(t * Ast.transition * t) ->ucnf -> ednf -> t
+    
+    val delete_parent : t -> t * Ast.transition -> bool
+    val add_parent : t -> t * Ast.transition -> unit
+    val get_parents : t -> (t * Ast.transition) list
+    
+    (* Signature in case we want to make a Hashtbl *)
+    val hash : t -> int
+    val equal : t -> t -> bool
+
+    (* Signature in case we want to make a Map or a Set *)
+    val compare : t -> t -> int
+    
+    val print_vertice : Format.formatter -> t -> unit
+    val save_vertice : Format.formatter -> t -> unit
+
+    val print_id : Format.formatter -> t -> unit
+    val save_id : Format.formatter -> t -> unit
+
+    val print_vednf : Format.formatter -> t -> unit
+    
+    val add_node_dot : t -> unit
+    val add_node_step : t -> string -> unit
+    val add_parents_dot : t -> unit
+    val add_parents_step : t -> unit
+    val add_relation_step :
+      ?color:string -> ?style:string -> t -> t -> Ast.transition -> unit
+
+    val expand : t -> Ast.transition list -> Ast.transition list
+    val refine : t -> t -> Ast.transition -> t list -> res_ref
+    val is_bad : t -> bool
+  end
+
+module type SigQ =
+  sig
+    type 'a t
+    exception Empty
+    val create : unit -> 'a t
+    val push : 'a -> 'a t -> unit
+    val pop : 'a t -> 'a
+  end
+
+module Make :
+  functor (Q : SigQ) ->
+    functor (V : SigV) ->
+      sig
+        type v = V.t
+        type q = V.t Q.t
+        module G : Map.S
+        
+        exception Unsafe of V.t list G.t * V.t
+        exception Safe of V.t list G.t
+        
+        val search : (unit -> 'a) -> Ast.t_system -> result
+      end
+
+module type SigRG = sig 
+  val search : (unit -> unit) -> Ast.t_system -> result
 end
 
-module RG : SigRG
+module Vertice : SigV
 
-
-(* (\* Rushby graph *\) *)
-
-(* (\* Vertices *\) *)
-(* type vertice *)
-
-(* module type SigVerticesSet = sig *)
-(*   type elt = vertice *)
-(*   type t *)
-
-(*   val empty : t *)
-(* end *)
-
-(* module VerticesSet : SigVerticesSet *)
-
-
-(* (\* Transitions *\) *)
-(* type transition *)
-
-(* (\* Edges *\) *)
-(* type edge = { pred : vertice; *)
-(* 	      trans : transition; *)
-(* 	      succ : vertice} *)
-
-(* module type SigEdgesSet = sig *)
-(*   type elt = edge *)
-(*   type t *)
-
-(*   val empty : t *)
-(*   val add : elt -> t -> t *)
-(* end *)
-
-(* module EdgesSet : SigEdgesSet *)
-
-(* module type SigWorkingQueue = sig *)
-
-(*   (\* The type of working queues containing elements of type 'a. *\) *)
-(*   type 'a t  *)
-
-(*   (\* Raised when pop or top is applied to an empty working queue. *\) *)
-(*   exception Empty *)
-
-(*   (\* Return a new working queue, initially empty. *\) *)
-(*   val create : unit -> 'a t *)
-
-(*   (\* push x s adds the element x in the working queue s. *\) *)
-(*   val push : 'a -> 'a t -> unit *)
-
-(*   (\* pop s removes and returns the first (according *)
-(*      to the queue policy) element in working queue s,  *)
-(*      or raises Empty if the working queue is empty. *\) *)
-(*   val pop : 'a t -> 'a *)
-
-(*   (\* Discard all elements from a working queue. *\) *)
-(*   val clear : 'a t -> unit *)
-
-(*   (\* Return a copy of the given working queue. *\) *)
-(*   val copy : 'a t -> 'a t *)
-
-(*   (\* Return true if the given working queue is empty,  *)
-(*      false otherwise. *\) *)
-(*   val is_empty : 'a t -> bool *)
-
-(*   (\* Return the number of elements in a working queue. *\) *)
-(*   val length : 'a t -> int *)
-
-(*   val iter : ('a -> unit) -> 'a t -> unit *)
-
-(* end *)
-
-(* module WorkingQueue : SigWorkingQueue *)
-
-(* type rushby_graph = { vertices : VerticesSet.t; *)
-(* 		      edges : EdgesSet.t; *)
-(* 		      root : vertice} *)
+module RG :
+  sig
+    type v = Vertice.t
+    type q = Vertice.t Queue.t
+    module G : Map.S
+    
+    exception Unsafe of Vertice.t list G.t * Vertice.t
+    exception Safe of Vertice.t list G.t
+    
+    val search : (unit -> 'a) -> Ast.t_system -> result
+  end

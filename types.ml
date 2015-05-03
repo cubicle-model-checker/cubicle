@@ -238,6 +238,33 @@ module Term = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print x print_cs cs
 
+  let rec print_strings_tex fmt = function
+    | [] -> ()
+    | [s] -> fprintf fmt "%s" s
+    | s :: l -> fprintf fmt "%s %a" s print_strings_tex l
+
+  let print_const_tex fmt = function
+    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstName n -> fprintf fmt "%a" (Hstring.print_tex true) n
+
+  let print_cs_tex fmt cs =
+    MConst.iter 
+      (fun c i ->
+        fprintf fmt " %s %a" 
+	  (if i = 1 then "+" else if i = -1 then "-" 
+	    else if i < 0 then "- "^(string_of_int (abs i)) 
+	    else "+ "^(string_of_int (abs i)))
+	  print_const_tex c) cs
+
+  let rec print_tex fmt = function
+    | Const cs -> print_cs_tex fmt cs
+    | Elem (s, _) -> fprintf fmt "%a" (Hstring.print_tex true) s
+    | Access (a, li) ->
+       fprintf fmt "%a[%a]" 
+         (Hstring.print_tex true) a (Hstring.print_list_tex ", ") li
+    | Arith (x, cs) -> 
+       fprintf fmt "%a%a" print_tex x print_cs_tex cs
+
 end
 
 
@@ -265,6 +292,10 @@ module rec Atom : sig
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_atoms : bool -> string -> Format.formatter -> t list -> unit
+
+  val print_tex : Format.formatter -> t -> unit
+  val print_atoms_tex : string -> Format.formatter -> t list -> unit
+
 
 end = struct
 
@@ -386,6 +417,34 @@ end = struct
        else
          fprintf fmt "%a %s@\n%a" print a sep (print_atoms inline sep) l
 
+  let str_op_comp_tex = function
+    | Eq -> "="
+    | Lt -> "<"
+    | Le -> "\\leq"
+    | Neq -> "\\neq"
+
+  let rec print_tex fmt = function
+    | True -> fprintf fmt "\\top"
+    | False -> fprintf fmt "\\bot"
+    | Comp (x, Eq, Elem(y, _)) when Hstring.equal y Term.htrue ->
+      fprintf fmt "%a" Term.print_tex x
+    | Comp (x, Eq, Elem(y, _)) when Hstring.equal y Term.hfalse ->
+      fprintf fmt "\\neg %a" Term.print_tex x
+    | Comp (x, op, y) -> 
+       fprintf fmt "%a %s %a" 
+         Term.print_tex x (str_op_comp_tex op) Term.print_tex y
+    | Ite (la, a1, a2) ->
+      fprintf fmt "ite(%a,@ %a,@ %a)" 
+	(print_atoms_tex "\\(\\wedge\\)") (SAtom.elements la) 
+        print_tex a1 print_tex a2
+
+  and print_atoms_tex sep fmt = function
+    | [] -> ()
+    | [a] -> print_tex fmt a
+    | a::l -> 
+      fprintf fmt "%a %s %a" 
+        print_tex a sep (print_atoms_tex sep) l
+        
 end
 
 and SAtom : sig
@@ -400,6 +459,7 @@ and SAtom : sig
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_sep : string -> Format.formatter -> t -> unit
+  val print_sep_tex : string -> Format.formatter -> t -> unit
   val print_inline : Format.formatter -> t -> unit
 
 end = struct 
@@ -441,6 +501,9 @@ end = struct
 
   let print_sep sep fmt sa =
     fprintf fmt "@[%a@]" (Atom.print_atoms false sep) (elements sa)
+
+  let print_sep_tex sep fmt sa =
+    fprintf fmt "%a" (Atom.print_atoms_tex sep) (elements sa)
 
   let print_inline fmt sa =
     fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)

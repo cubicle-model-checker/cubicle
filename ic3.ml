@@ -26,11 +26,7 @@ module type SigV = sig
   val create_good : (Variable.t list * Types.SAtom.t) list -> ucnf
   val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
 
-  (* val print_ucnf : Format.formatter -> t -> unit *)
-  (* val print_ednf : Format.formatter -> t-> unit *)
-  val print_vertice : Format.formatter -> t -> unit
-
-  val create : ucnf -> ednf -> (t * transition) list -> t
+  val create :  ?c:(t * transition * t) -> ucnf -> ednf -> t
   val delete_parent : t -> t * transition -> bool
   val add_parent : t -> t * transition -> unit
   val get_parents : t -> (t * transition) list
@@ -43,7 +39,10 @@ module type SigV = sig
   val compare : t -> t -> int
 
   (* display functions *)
+  val print_vertice : Format.formatter -> t -> unit
+  val save_vertice : Format.formatter -> t -> unit
   val print_id : Format.formatter -> t -> unit
+  val save_id : Format.formatter -> t -> unit
   val print_vednf : Format.formatter -> t -> unit
 
   (* Interface with dot *)
@@ -78,13 +77,6 @@ module type SigQ = sig
   val create : unit -> 'a t
   val push : 'a -> 'a t -> unit
   val pop : 'a t -> 'a
-  val clear : 'a t -> unit
-  val copy : 'a t -> 'a t
-  val is_empty : 'a t -> bool
-  val length : 'a t -> int
-
-  val iter : ('a -> unit) -> 'a t -> unit
-
 end
   
 module Make ( Q : SigQ ) ( V : SigV ) = struct
@@ -115,7 +107,39 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	) e;
 	Format.eprintf "\n--------------@."
     ) g;
-    Format.eprintf "[ENDGRAPH]@."    
+    Format.eprintf "[ENDGRAPH]@."   
+
+  let save_graph rg =
+    let bfile = Filename.chop_extension (Filename.basename file) in
+    let file = bfile ^ ".latex" in
+    let oc = open_out ("graphs/" ^ file) in
+    let oc_fmt = Format.formatter_of_out_channel oc in
+    Format.fprintf oc_fmt 
+      "\\documentclass{article}\n\
+       \\usepackage[utf8]{inputenc}\n\
+       \\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}\n\
+       \\usepackage{amsmath}\n\
+       \\usepackage{setspace}\n\
+       \\onehalfspacing\n\
+       \\begin{document}\n@.";
+    G.iter (
+      fun k e -> 
+        Format.fprintf oc_fmt "%a\t\t\\\\[0.2cm]Extrapolation candidates:@." 
+	  V.save_vertice k;
+	(* List.iter ( *)
+	(*   fun p ->  *)
+        (*     Format.fprintf oc_fmt "\t\t(%a) @." V.save_id p; *)
+	(* ) e; *)
+	(* Format.fprintf oc_fmt "\n--------------@." *)
+    ) rg;
+    Format.fprintf oc_fmt "\\end{document}@.";
+    close_out oc;
+    (* match Sys.command ("pdflatex graphs/"^file) with *)
+    (*   | 0 -> () *)
+    (*   | _ -> *)
+    (*     Format.eprintf  *)
+    (*       "There was an error with dot. Make sure graphviz is installed." *)()
+
 
   let find_graph v g = 
     try G.find v g
@@ -190,7 +214,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
       ) [] cunsl in
     let btop = V.create_bad unsl in
     (* Create top with gtop, btop and no parents *)
-    let top = V.create gtop btop [] in
+    let top = V.create gtop btop in
     (* Print top *)
     Format.eprintf "%a@." V.print_vertice top;    
     
@@ -212,7 +236,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     (* Create the bad formula of root, false *)
     let broot = V.create_bad [] in
     (* Create root with groot, broot and no parents *)
-    let root = V.create groot broot [] in
+    let root = V.create groot broot in
     
     (* Working queue of nodes to expand and refine *)
     let todo = Q.create () in
@@ -230,9 +254,14 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     in
     
     (* rushby graph *)
-    let rgraph = G.add root [root] (G.singleton top [root]) in
+    let rgraph = G.add root [] (G.singleton top []) in
 
-    let rec refine v1 v2 tr rg =
+    let trans_cover = List.fold_left (
+      fun acc tr ->
+        C.add tr top acc
+    ) C.empty system.t_trans in
+    
+    let rec refine v1 v2 tr rg tc =
       Format.eprintf 
 	"\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
 	V.print_id v1 Hstring.print tr.tr_info.tr_name 
@@ -244,11 +273,11 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	Format.eprintf 
 	  "We discard the treatment of this edge since (%a) is now bad@." 
           V.print_id v1;
-	rg
+	(rg, tc)
       )
       else if V.is_bad v2 then (
-	if debug && verbose > 1 then print_graph rg;
-	let pr = find_graph v2 rg in
+	if debug && verbose > 0 then print_graph rg;
+	let pr = List.rev (find_graph v2 rg) in
 	match V.refine v1 v2 tr pr with  
 
 	  (* v1 and tr imply bad *)
@@ -260,13 +289,13 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	      V.print_id v1 V.print_vednf v1;
 	    if dot_step then add_steps v2 v1 Bad tr false;
 	    List.fold_left (
-	      fun rg (vp, tr) -> 
+	      fun (rg, tc) (vp, tr) -> 
 		Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
 		  V.print_id vp Hstring.print tr.tr_info.tr_name 
 		  V.print_id v1;
 		if dot_step then add_steps vp v1 Bad tr true;
-		refine vp v1 tr rg
-	    ) rg (V.get_parents v1)
+		refine vp v1 tr rg tc
+	    ) (rg, tc) (V.get_parents v1)
 
 	  (* The node vc covers v2 by tr *)
 	  | V.Covered vc -> 
@@ -280,7 +309,11 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	      Format.eprintf "[Covered by] %a@." V.print_vertice vc;
 	      Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
 	    );
-	    refine v1 vc tr rg
+            let tc = 
+              if ic3_level = 0 then C.add tr vc tc
+              else tc
+            in
+	    refine v1 vc tr rg tc
 
 	  (* We created and extrapolant vn *)
 	  | V.Extrapolated vn -> 
@@ -297,17 +330,17 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	    );
 	    let rg' = add_extra_graph v2 vn (G.add vn [] rg) in
 	    Q.push vn todo;
-	    rg'
+	    (rg', tc)
       )
       else (
 	Format.eprintf "(%a) is safe, no backward refinement@." 
           V.print_id v2;
-	rg
+	(rg, tc)
       )
     in
     Q.push root todo;
     let transitions = system.t_trans in
-    let rec expand rg =
+    let rec expand rg tc =
       let v1 = 
 	try Q.pop todo
 	with Q.Empty -> raise (Safe rg)
@@ -320,28 +353,31 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	fun tr -> 
 	  Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
       ) trans;
-      let rg = List.fold_left (
-	fun rg tr -> 
-          if dot_step then add_steps v1 top Expand tr false;
-	  refine v1 top tr rg
-      ) rg trans
+      let rg, tc = List.fold_left (
+	fun (rg, tc) tr ->
+          let v2 = C.find tr tc in
+          if dot_step then add_steps v1 v2 Expand tr false;
+	  refine v1 top tr rg tc
+      ) (rg, tc) trans
       in 
-      let () = if dot && dot_level = 0 then
-	Sys.set_signal Sys.sigint 
+      let () = Sys.set_signal Sys.sigint 
 	  (Sys.Signal_handle 
 	     (fun _ ->
+               print_graph rg;
+               save_graph rg;
                Stats.print_report ~safe:false [] [];
-	       print_graph rg;
-	       if dot then update_dot rg;
-	       Format.eprintf 
-                 "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
-	       if dot_step then (
-		 let close_step = Dot.open_step () in
-		 update_step rg v1;
-		 update_steps (List.rev !steps);
-		 close_step ();
-	       );
-	       close_dot ();
+	       if dot then (
+                 update_dot rg;
+	         Format.eprintf 
+                   "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+	         if dot_step then (
+		   let close_step = Dot.open_step () in
+		   update_step rg v1;
+		   update_steps (List.rev !steps);
+		   close_step ();
+	         )
+               );
+               close_dot ();
 	       exit 1
              )) 
       in
@@ -352,13 +388,14 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	steps := [];
 	close_step ();
       );
-      expand rg
+      expand rg tc
     in
-    try expand rgraph
+    try expand rgraph trans_cover
     with 
       | Safe rg -> 
 	if dot then update_dot rg;
 	print_graph rg;
+        save_graph rg;
 	Format.eprintf "Empty queue, Safe system@."; 
 	RSafe
       | Unsafe (rg, v1) -> 
@@ -370,6 +407,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	  close_step ();
 	);
 	print_graph rg;
+        save_graph rg;
 	RUnsafe
 end
 
@@ -390,6 +428,7 @@ module Vertice : SigV = struct
 	mutable good : ucnf;
 	mutable bad  : ednf;
 	mutable parents : (t * transition) list;
+        creation : (t * transition * t) option;
 	id : int;
       }
 	
@@ -415,34 +454,34 @@ module Vertice : SigV = struct
 
   let print_ucnf fmt g =
     List.iter (
-      fun c -> Format.eprintf "\t\tForall %a, %a AND@." 
+      fun c -> Format.eprintf "\t\tForall %a, %a AND\n@." 
 	Variable.print_vars c.Cube.vars 
 	(SAtom.print_sep "||") c.Cube.litterals
     ) g
 
   let print_iucnf fmt g =
     List.iter (
-      fun c -> Format.eprintf "\t\t%a\nAND@." 
+      fun c -> Format.eprintf "\t\t%a AND\n@." 
 	(SAtom.print_sep "||") c.Cube.litterals
     ) g
 
   let print_ednf fmt b = 
     List.iter (
-      fun c -> Format.eprintf "\n\t\t%a@. OR" 
+      fun c -> Format.eprintf "\n\t\t%a OR\n@." 
 	(* Variable.print_vars c.Cube.vars  *)
 	(SAtom.print_sep "&&") c.Cube.litterals
     ) b
 
   let print_vednf fmt v =
     List.iter (
-      fun c -> Format.eprintf "\n\t\t%a@. OR" 
+      fun c -> Format.eprintf "\n\t\t%a@. OR\n@." 
 	(* Variable.print_vars c.Cube.vars  *)
 	(SAtom.print_sep "&&") c.Cube.litterals
     ) v.bad
 
   let print_iednf fmt b = 
     List.iter (
-      fun c -> Format.eprintf "\t\t%a\nOR@." 
+      fun c -> Format.eprintf "\t\t%a OR\n@." 
 	(SAtom.print_sep "&&") c.Cube.litterals
     ) b
       
@@ -454,16 +493,93 @@ module Vertice : SigV = struct
 
 
   let print_id fmt v = Format.eprintf "%s" (get_id v)
+  let save_id fmt v = Format.fprintf fmt "%s" (get_id v)
 
   let print_vertice fmt v = 
     Format.eprintf 
-      "Vertice (%a)\n\tGood : \n%a\n\tBad : \n%a\n\tParents :\n"
+      "Vertice (%a)\n\tGood : \n%a\n\tBad : \n%a\n\tParents :"
       print_id v print_ucnf v.good print_ednf v.bad;
     List.iter (
       fun (vp, tr) -> 
-	Format.eprintf "\t\t(%a, %a)@." 
+	Format.eprintf "\n\t\t(%a, %a)@." 
 	  print_id vp Hstring.print tr.tr_info.tr_name
     ) v.parents 
+
+  let rec save_ucnf_tex fmt g =
+    match g with 
+      | [] -> Format.fprintf fmt "\n"
+      | [c] -> 
+        (match c.Cube.vars with
+          | [] ->
+            Format.fprintf fmt "\t\t\t\t\t\\bullet & & $\\parbox[t]{0.7\\textwidth}{$%a$}$ &\n" 
+	      (SAtom.print_sep_tex "\\vee") c.Cube.litterals
+          | l -> 
+            Format.fprintf fmt 
+              "\t\t\t\t\t\\bullet & \\forall %a & $\\parbox[t]{0.7\\textwidth}{$%a$}$ &\n" 
+	      Variable.print_vars_tex l 
+	      (SAtom.print_sep_tex "\\vee") c.Cube.litterals
+        )
+      | c::g -> 
+        (match c.Cube.vars with
+          | [] ->
+            Format.fprintf fmt 
+              "\t\t\t\t\t\\bullet &  & $\\parbox[t]{0.7\\textwidth}{$%a$}$ & \\bigwedge \\\\\n" 
+	      (SAtom.print_sep_tex "\\vee") c.Cube.litterals
+          | l -> 
+            Format.fprintf fmt 
+              "\t\t\t\t\t\\bullet & \\forall %a & $\\parbox[t]{0.7\\textwidth}{$%a$}$ & \\bigwedge \\\\\n" 
+	      Variable.print_vars_tex l 
+	      (SAtom.print_sep_tex "\\vee") c.Cube.litterals
+        );
+        save_ucnf_tex fmt g
+
+  let rec save_ednf_tex fmt b = 
+    match b with
+      | [] -> Format.fprintf fmt "\n"
+      | [c] -> 
+        Format.fprintf fmt "\t\t\t\t\t\\bullet & $\\parbox[t]{0.7\\textwidth}{$%a$}$ & \n" 
+	  (SAtom.print_sep_tex "\\wedge") c.Cube.litterals
+      | c::b -> 
+        Format.fprintf fmt 
+          "\t\t\t\t\t\\bullet & $\\parbox[t]{0.7\\textwidth}{$%a$}$ & \\bigvee\\\\" 
+	  (SAtom.print_sep_tex "\\wedge") c.Cube.litterals;
+        save_ednf_tex fmt b
+
+  let save_vertice fmt v =
+    Format.fprintf fmt
+      "\n\t\\paragraph{}\\textbf{Vertice (%a)}\n\
+          \t\t\\\\[0.2cm]\\textcolor{green}{Good} : \n\
+               \t\t\t\\(\\left\\{\n\
+                    \t\t\t\t\\begin{array}{l l l r} \n\
+                      %a\
+                    \t\t\t\t\\end{array}\n\
+                  \t\t\t\\right.\\)\n\
+          \t\t\\\\[0.2cm]\\textcolor{red}{Bad} : \n\
+               \t\t\t\\(\\left\\{\n\
+                    \t\t\t\t\\begin{array}{l l r} \n\
+                      %a\
+                    \t\t\t\t\\end{array}\n\
+                  \t\t\t\t\\right.\\)" 
+      save_id v save_ucnf_tex v.good save_ednf_tex v.bad;
+    (match v.creation with
+      | None -> ()
+      | Some (v1, t, v2) -> 
+        Format.fprintf fmt 
+          "\n\t\t\\\\[0.2cm]Creation : \\(%a \\xrightarrow{%a} %a\\)"
+          save_id v1 (Hstring.print_tex false) t.tr_info.tr_name
+          save_id v2
+    );
+    Format.fprintf fmt "\n\t\t\\\\[0.2cm]Parents :\n\
+                        \t\t\t\\(\\left\\{\n\
+                        \t\t\t\t\\begin{array}{l l}";
+    List.iter (
+      fun (vp, tr) -> 
+	Format.fprintf fmt "\n\t\t\t\t\t%a & \\xrightarrow{%a}\\\\"
+	  save_id vp (Hstring.print_tex false) tr.tr_info.tr_name
+    ) v.parents;
+    Format.fprintf fmt "\n\t\t\t\t\\end{array}\n\
+                        \t\t\t\\right.\\)\n"
+
 
 
 
@@ -516,13 +632,19 @@ module Vertice : SigV = struct
     
   let create =
     let cpt = ref 0 in
-    fun g b p ->
+    fun ?c g b ->
       incr cpt;
+      let p = 
+        match c with
+          | None -> []
+          | Some (v1, t, _) -> [v1, t]
+      in
       let v =
 	{
 	  good = g;
 	  bad = b;
 	  parents = p;
+          creation = c;
 	  id = !cpt;
 	} in
       v
@@ -621,13 +743,11 @@ module Vertice : SigV = struct
   let assume_distinct nvars = 
     fun () -> Prover.assume_distinct nvars
 
-  let assume_conjunction id f = 
-    fun () -> Prover.assume_formula_satom id f
-     
   let assume_cube n f =
-    if debug && verbose > 1 then
-      Format.eprintf "[A&R] Assuming@.";
-    Prover.assume_formula_satom n f
+    fun () ->
+      if debug && verbose > 1 then
+        Format.eprintf "[A&R] Assuming@.";
+      Prover.assume_formula_satom n f
  
   let assume_cnf n gl =
     fun () -> 
@@ -637,6 +757,13 @@ module Vertice : SigV = struct
 	  then
 	    Prover.assume_clause n g.Cube.array
       ) gl
+
+  let assume_udnfs n udnfs = 
+    fun () ->
+      List.iter (
+        fun udnf ->
+          Prover.assume_dnf n udnf
+      ) udnfs
 
   let clear_and_restore fl =
     fun () ->
@@ -691,17 +818,23 @@ module Vertice : SigV = struct
 	  try 
 	    if debug && verbose > 1 then
 	      Format.eprintf "[Pickable] Begin@.";
+            (* Format.eprintf "[%a]%a@." Hstring.print tr.tr_info.tr_name *)
+            (*   (SAtom.print_sep "&&") reqs; *)
             (* List.iter ( *)
-            (*   fun lsa ->  *)
-            (*     Format.eprintf "[LSA]@."; *)
+            (*   fun lsa -> *)
+            (*     Format.eprintf "[udnf]@."; *)
             (*     List.iter ( *)
-            (*       fun sa -> Format.eprintf "\t%a@." (SAtom.print_sep "&&") sa) lsa *)
+            (*       fun sa -> Format.eprintf "\t%a@." (SAtom.print_sep "&&") sa; *)
+            (*     Format.eprintf "@.";) lsa *)
             (* ) udnfs; *)
             fun_cr ();
-    	    assume_cube n reqs; 
-	    if debug && verbose > 1 then
+            assume_cube n reqs ();
+            if debug && verbose > 1 then
 	      Format.eprintf "[Pickable] guard SAT@.";
-	    true 
+            assume_udnfs (n+1) udnfs ();
+            if debug && verbose > 1 then
+              Format.eprintf "[Pickable] uguard SAT@.";
+            true
 	  with 
 	    | Smt.Unsat _ ->    
 	      if debug && verbose > 1 then
@@ -733,17 +866,16 @@ module Vertice : SigV = struct
 	not (SAtom.is_empty c.Cube.litterals)
     ) v.bad
 
+  let negate_cube c = 
+    let l = c.Cube.litterals in
+    let l = SAtom.fold (
+      fun a l -> SAtom.add (Atom.neg a) l
+    ) l SAtom.empty in
+    Cube.create c.Cube.vars l
+      
   (* Given a formula, returns the formula with all the
      litterals negated *)
-  let negate_litterals =
-    List.map (
-      fun c ->
-	let l = c.Cube.litterals in
-	let l = SAtom.fold (
-          fun a l -> SAtom.add (Atom.neg a) l
-        ) l SAtom.empty in
-	Cube.create c.Cube.vars l
-    )
+  let negate_litterals = List.map negate_cube
 
   (* Given v1 and v2 returns true if v1 => v2
      returns false otherwise *)
@@ -776,7 +908,7 @@ module Vertice : SigV = struct
 	  if debug && verbose > 1 then
 	    Format.eprintf "[Implies] Begin@.";
           fun_cr ();
-    	  assume_cube n2 e.Cube.litterals; 
+    	  assume_cube n2 e.Cube.litterals ();
 	  if debug && verbose > 1 then
 	    Format.eprintf "[Implies] SAT@.";
 	  true 
@@ -795,16 +927,19 @@ module Vertice : SigV = struct
     let rec find_inst = function 
       | [] -> None
       | { Forward.i_reqs = reqs;
+          i_udnfs = udnfs;
     	  i_actions = actions;
     	  i_touched_terms = terms; }::tl ->
 	try
+          let n1 = n1 + 1 in
 	  (* Format.eprintf "[find_inst] fun_go@."; *)
           (* We check if we can execute this transition *)
     	  if debug && verbose > 1 then
     	    Format.eprintf "[ImplyTrans] Check guard@.";
-    	  let fun_gu = assume_conjunction n1 reqs in
+    	  let fun_gu = assume_cube n1 reqs in
 	  (* Format.eprintf "[find_inst] fun_gu@."; *)
-          
+          let fun_ugu = assume_udnfs n1 udnfs in
+
 	  if debug && verbose > 1 then
     	    (
 	      Format.eprintf 
@@ -812,17 +947,17 @@ module Vertice : SigV = struct
     	      Format.eprintf 
                 "[ACTIONS] %a@." (SAtom.print_sep "&&") actions;
 	    );
-	  let fun_ac = assume_conjunction n1 actions in
+	  let fun_ac = assume_cube n1 actions in
 	  (* Format.eprintf "[find_inst] fun_ac@."; *)
 	  
-	  let fun_cr = clear_and_restore [fun_dist; fun_go; fun_gu; fun_ac] in
+	  let fun_cr = clear_and_restore [fun_dist; fun_go; fun_gu; fun_ugu; fun_ac] in
 	  
           let pinst_f2 =
 	    List.map (
 	      fun c ->
     		let vars = c.Cube.vars in
     		let litt = c.Cube.litterals in
-		let plitt = Forward.prime_head_match_satom litt terms in
+		let plitt = Forward.prime_match_satom litt terms in
 		Cube.create vars plitt
 	    ) inst_f2 in
     
@@ -835,14 +970,11 @@ module Vertice : SigV = struct
     	  
 	  let res = ref None in
 
-          let time2 = T.get () in
           let rec f =
 	    function
 	      | [], [] -> raise Not_found
 	      | (pif2::tl, pif2'::tl') ->
 	        (
-                  let time = T.get () in
-                  if profiling then T.start ();
 		  try
     		    if debug && verbose > 1 then
     	    	      Format.eprintf "[ImplyTrans] Assume %a@."
@@ -851,26 +983,13 @@ module Vertice : SigV = struct
     		    (* Format.eprintf "[find_inst] begin acrs@."; *)
                     fun_cr ();
                     
-                    assume_cube n2 pif2.Cube.litterals;
-                    if profiling then (
-                      T.pause ();
-                      Format.eprintf 
-                        "[Timer acrs] %f@." (T.get () -. time);
-                    );
+                    assume_cube n2 pif2.Cube.litterals ();
 
     		    if debug && verbose > 1 then
     	    	      Format.eprintf "[ImplyTrans] Res : SAT@.";
     		    res := Some pif2';
 		    raise Exit
     		  with Smt.Unsat _ ->
-                    if profiling then (
-                      T.pause ();
-                      Format.eprintf 
-                        "[Timer acrs] %f@." (T.get () -. time);
-                      Format.eprintf 
-                        "[Timer acrs cumule] %f@." (T.get () -. time2);
-                    );
-                    
     		    if debug && verbose > 1 then
     	    	      Format.eprintf "[ImplyTrans] Res : UNSAT@.";
     		    f (tl, tl')
@@ -887,7 +1006,6 @@ module Vertice : SigV = struct
     	   transition *)
 	with
 	  | Smt.Unsat _ | Not_found -> 
-            Prover.clear_system ();
             find_inst tl
     in 
     let r = find_inst l in
@@ -895,7 +1013,7 @@ module Vertice : SigV = struct
     
   type res = 
     | Yes of Cube.t 
-    | No of ((unit -> unit) * (unit -> unit) * int * int * Forward.inst_trans list) 
+    | No of ((unit -> unit) * (unit -> unit) * Forward.inst_trans list) 
 
   (* If the result is TRUE then f1 and tr imply f2.
      When we want to know if good1 and tr imply good2,
@@ -959,7 +1077,7 @@ module Vertice : SigV = struct
     );
     match res with
       | Some b -> Yes b
-      | None -> No (fun_dist, fun_good, n1, n2, inst_upd)
+      | None -> No (fun_dist, fun_good, inst_upd)
 
 
   (* Tries to find a node in the graph which subsume
@@ -1021,13 +1139,30 @@ module Vertice : SigV = struct
         (SAtom.cardinal l1) (SAtom.cardinal l2)
     ) l
 
+
+  let contains g b n2 =
+    try
+      Prover.clear_system ();
+      Format.eprintf "\n[Test contains]Good:@.";
+      let n_g = max_args g in
+      let args = get_procs n_g 0 in
+      let inst_g = instantiate_cube_list args g in
+      assume_cnf n2 inst_g ();
+      Format.eprintf "[Test contains]%a@." print_ednf [b];
+      assume_cube (n2+1) b.Cube.litterals ();
+      Format.eprintf "[New extrapolant]\n%a@." print_ednf [b];
+      false
+    with Smt.Unsat _ -> true
+
+
   (* Given a formula, extrapolate it and then
      generalize and negate it *)
-  let extrapolate f fun_dist fun_go n1 n2 inst_upd =
-    Format.eprintf "[f] %a@." print_ednf f;
-    let ef = 
+  let extrapolate v2 fun_dist fun_go n1 n2 inst_upd =
+    let b2 = v2.bad in
+    Format.eprintf "[b2] %a@." print_ednf b2;
+    let eb2 = 
       if ic3_level = 1 then
-        match f with
+        match b2 with
           | [c] -> 
             let subs = all_subsatom c in
             let rec find_extra = function
@@ -1035,24 +1170,27 @@ module Vertice : SigV = struct
               | [_] -> 
                 Format.eprintf 
                   "[Extrapolation] We found no better bad@.";
-                f
+                b2
               | sub::tl ->
                 begin
                   let csub = Cube.create_normal sub in
                   let res = find_inst fun_dist fun_go 
                     n1 n2 [csub] inst_upd in
                   match res with 
-                    | None -> [csub]
+                    | None -> 
+                      let g2 = v2.good in
+                      if contains g2 csub n2 then
+                        find_extra tl
+                      else [csub]
                     | Some _ -> find_extra tl
                 end
             in
             find_extra subs
-          | _ -> f
-      else f
-    in Format.eprintf "[New extrapolant]\n%a@." print_ednf ef;
-    let nf = negate_litterals ef in
-    let nf = generalize_litterals nf in
-    nf
+          | _ -> b2
+      else b2 in
+    let nb2 = negate_litterals eb2 in
+    let nb2 = generalize_litterals nb2 in
+    nb2
 
   (* Main function of IC3 *)
   let refine v1 v2 tr cand =
@@ -1082,8 +1220,8 @@ module Vertice : SigV = struct
 	    print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
 	  if dot then add_relation_dot ~color:"red" v2 v1 tr;
 	  Format.eprintf 
-            "[BadToParents] We update (%a.bad) and refine to the parents of (%a)@."
-	    print_id v1 print_id v1;
+            "[BadToParents] We update (%a.bad) with bad = %a\n\t\tand refine to his parents@."
+	    print_id v1 Cube.print bad;
       	  let ncube = Node.create bad in
 	  let (nl, nl') = Pre.pre_image [tr] ncube in
 	  let cl = 
@@ -1108,10 +1246,11 @@ module Vertice : SigV = struct
 
 	(* RES = No _ means good1 and tr don't imply bad2,
 	   we can now extrapolate good1 by adding not bad2. *)
-	| No (fun_dist, fun_go, n1, n2, inst_upd) ->
+	| No (fun_dist, fun_go, inst_upd) ->
 	  Format.eprintf "[Extrapolation] (%a.good) and %a do not imply (%a.bad)@." 
 	    print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-	  let extra_bad2 = extrapolate v2.bad fun_dist fun_go n1 n2 inst_upd in
+	  let extra_bad2 = 
+            extrapolate v2 fun_dist fun_go v1.id v2.id inst_upd in
 	  if debug && verbose > 1 then (
 	    Format.eprintf "[Bad] %a@." print_ednf v2.bad;
 	    Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
@@ -1121,7 +1260,7 @@ module Vertice : SigV = struct
 	    then extra_bad2 
 	    else v2.good @ extra_bad2 
 	  in
-	  let nv = create ng [] [v1, tr] in
+	  let nv = create ~c:(v1, tr, v2) ng [] in
 	  Format.eprintf "[Extrapolation] We extrapolate (%a.bad) = eb and create a new node with (%a.good) && eb -> (%a)@."
 	    print_id v2 print_id v2 print_id nv;
 	  Format.eprintf "NV : %a@." print_vertice nv;

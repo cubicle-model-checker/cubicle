@@ -10,7 +10,8 @@ init (z) { Want[z] = False && Crit[z] = False }
 unsafe (z1) { Crit[z1] = True}
 
 transition t1 (i)
-requires {Want[i] = False && Crit[i] = False }
+requires {Want[i] = False && Crit[i] = False 
+         && forall_other j. (Want[j] = True && Crit[j] = False  || Want[j] = False && Crit[j] = False)}
 { Want[i] := True;
   W := case
        | W = R : S

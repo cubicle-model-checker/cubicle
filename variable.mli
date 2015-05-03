@@ -85,3 +85,6 @@ val give_procs : int -> t list
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit
 val print_subst : formatter -> subst -> unit
+
+(** {2 Printing to latex } *)
+val print_vars_tex : formatter -> t list -> unit

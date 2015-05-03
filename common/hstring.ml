@@ -27,7 +27,7 @@ module HS = struct
   let make s = S.hashcons s
 
   let view s = s.node
-
+  
   let equal s1 s2 = s1.tag = s2.tag
 
   let compare s1 s2 = compare s1.tag s2.tag
@@ -81,10 +81,32 @@ module HS = struct
   let print fmt s = 
     Format.fprintf fmt "%s" (view s)
 
+  let view_tex s var = 
+    let s = s.node in
+    let re = Str.regexp "\\(#\\|_\\)" in
+    let s = Str.global_replace re "\\\\\\1" s in
+    if var then
+      let re = Str.regexp "\\([^#]\\)\\([0-9]+\\)" in
+      Str.global_replace re "\\1_{\\2}" s
+    else s
+    
+    
+
+  let print_tex var fmt s =
+    let s = view_tex s var in
+    Format.fprintf fmt "%s" s
+
   let rec print_list sep fmt = function
     | [] -> ()
     | [s] -> print fmt s
     | s::r -> Format.fprintf fmt "%a%s%a" print s sep (print_list sep) r
+
+  let rec print_list_tex sep fmt = function
+    | [] -> ()
+    | [s] -> print_tex true fmt s
+    | s::r -> Format.fprintf fmt "%a%s%a" 
+      (print_tex true) s sep (print_list_tex sep) r
+
 
 end
 
