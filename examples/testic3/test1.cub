@@ -7,7 +7,7 @@ var W : msg
 
 init (z) { Want[z] = False && Crit[z] = False }
 
-unsafe (z1) { Crit[z1] = True}
+unsafe (z1) { Crit[z1] = False}
 
 transition t1 (i)
 requires {Want[i] = False && Crit[i] = False 

@@ -110,35 +110,36 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
     Format.eprintf "[ENDGRAPH]@."   
 
   let save_graph rg =
-    let bfile = Filename.chop_extension (Filename.basename file) in
-    let file = bfile ^ ".latex" in
-    let oc = open_out ("graphs/" ^ file) in
-    let oc_fmt = Format.formatter_of_out_channel oc in
-    Format.fprintf oc_fmt 
-      "\\documentclass{article}\n\
-       \\usepackage[utf8]{inputenc}\n\
-       \\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}\n\
-       \\usepackage{amsmath}\n\
-       \\usepackage{setspace}\n\
-       \\onehalfspacing\n\
-       \\begin{document}\n@.";
-    G.iter (
-      fun k e -> 
-        Format.fprintf oc_fmt "%a\t\t\\\\[0.2cm]Extrapolation candidates:@." 
-	  V.save_vertice k;
-	(* List.iter ( *)
-	(*   fun p ->  *)
-        (*     Format.fprintf oc_fmt "\t\t(%a) @." V.save_id p; *)
-	(* ) e; *)
-	(* Format.fprintf oc_fmt "\n--------------@." *)
-    ) rg;
-    Format.fprintf oc_fmt "\\end{document}@.";
-    close_out oc;
-    (* match Sys.command ("pdflatex graphs/"^file) with *)
-    (*   | 0 -> () *)
-    (*   | _ -> *)
-    (*     Format.eprintf  *)
-    (*       "There was an error with dot. Make sure graphviz is installed." *)()
+    if ic3_pdf then
+      let bfile = Filename.chop_extension (Filename.basename file) in
+      let file = bfile ^ "-" ^ (string_of_int ic3_level) ^ ".latex" in
+      let oc = open_out ("graphs/" ^ file) in
+      let oc_fmt = Format.formatter_of_out_channel oc in
+      Format.fprintf oc_fmt 
+        "\\documentclass{article}\n\
+         \\usepackage[utf8]{inputenc}\n\
+         \\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}\n\
+         \\usepackage{amsmath}\n\
+         \\usepackage{setspace}\n\
+         \\onehalfspacing\n\
+         \\begin{document}\n@.";
+      G.iter (
+        fun k e -> 
+          Format.fprintf oc_fmt "%a\t\t\\\\[0.2cm]@." 
+	    V.save_vertice k;
+      (* List.iter ( *)
+      (*   fun p -> *)
+      (*     Format.fprintf oc_fmt "\t\t(%a) @." V.save_id p; *)
+      (* ) e; *)
+      (* Format.fprintf oc_fmt "\n--------------@." *)
+      ) rg;
+      Format.fprintf oc_fmt "\\end{document}@.";
+      close_out oc;
+      match Sys.command ("pdflatex -output-directory graph"^file) with
+        | 0 -> ()
+        | _ ->
+          Format.eprintf
+            "There was an error with dot. Make sure graphviz is installed."
 
 
   let find_graph v g = 
@@ -926,10 +927,10 @@ module Vertice : SigV = struct
   let find_inst fun_dist fun_go n1 n2 inst_f2 l =
     let rec find_inst = function 
       | [] -> None
-      | { Forward.i_reqs = reqs;
+      | ({ Forward.i_reqs = reqs;
           i_udnfs = udnfs;
     	  i_actions = actions;
-    	  i_touched_terms = terms; }::tl ->
+    	  i_touched_terms = terms; } as it)::tl ->
 	try
           let n1 = n1 + 1 in
 	  (* Format.eprintf "[find_inst] fun_go@."; *)
@@ -987,7 +988,7 @@ module Vertice : SigV = struct
 
     		    if debug && verbose > 1 then
     	    	      Format.eprintf "[ImplyTrans] Res : SAT@.";
-    		    res := Some pif2';
+    		    res := Some (pif2', it);
 		    raise Exit
     		  with Smt.Unsat _ ->
     		    if debug && verbose > 1 then
@@ -1012,7 +1013,7 @@ module Vertice : SigV = struct
     r
     
   type res = 
-    | Yes of Cube.t 
+    | Yes of (Cube.t * Forward.inst_trans * (unit -> unit) * (unit -> unit)) 
     | No of ((unit -> unit) * (unit -> unit) * Forward.inst_trans list) 
 
   (* If the result is TRUE then f1 and tr imply f2.
@@ -1076,7 +1077,7 @@ module Vertice : SigV = struct
       Format.eprintf "[ITimer] %f@." (IT.get () -. time);
     );
     match res with
-      | Some b -> Yes b
+      | Some (b, it) -> Yes (b, it, fun_dist, fun_good)
       | None -> No (fun_dist, fun_good, inst_upd)
 
 
@@ -1143,12 +1144,12 @@ module Vertice : SigV = struct
   let contains g b n2 =
     try
       Prover.clear_system ();
-      Format.eprintf "\n[Test contains]Good:@.";
+      (* Format.eprintf "\n[Test contains]Good:@."; *)
       let n_g = max_args g in
       let args = get_procs n_g 0 in
       let inst_g = instantiate_cube_list args g in
       assume_cnf n2 inst_g ();
-      Format.eprintf "[Test contains]%a@." print_ednf [b];
+      (* Format.eprintf "[Test contains]%a@." print_ednf [b]; *)
       assume_cube (n2+1) b.Cube.litterals ();
       Format.eprintf "[New extrapolant]\n%a@." print_ednf [b];
       false
@@ -1215,13 +1216,20 @@ module Vertice : SigV = struct
       (* RES = Yes b means good1 and tr imply bad2,
 	 we then need to find a pre formula which leads to bad2 *)
       match res with
-	| Yes bad ->
+	| Yes (bad, it, fun_dist, fun_good) ->
 	  Format.eprintf "[BadToParents] (%a.good) and %a imply (%a.bad)@." 
 	    print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
 	  if dot then add_relation_dot ~color:"red" v2 v1 tr;
 	  Format.eprintf 
-            "[BadToParents] We update (%a.bad) with bad = %a\n\t\tand refine to his parents@."
-	    print_id v1 Cube.print bad;
+            "[BadToParents] We update (%a.bad) because (%a.good)\n\
+             and Guard = \n%a,\n\
+             and Update = \n%a\n\
+             imply bad = %a\n\
+             \t\tand refine to his parents@."
+	    print_id v1 print_id v1 
+            (SAtom.print_sep "&&") it.Forward.i_reqs
+            (SAtom.print_sep "&&") it.Forward.i_actions
+            Cube.print bad;
       	  let ncube = Node.create bad in
 	  let (nl, nl') = Pre.pre_image [tr] ncube in
 	  let cl = 
@@ -1239,9 +1247,7 @@ module Vertice : SigV = struct
 	      );
 	      (List.hd nl').cube
 	  in
-
-	      (* let cl' = (List.hd nl').cube in *)
-	  v1.bad <- [cl];
+          v1.bad <- [cl];
 	  Bad_Parent
 
 	(* RES = No _ means good1 and tr don't imply bad2,

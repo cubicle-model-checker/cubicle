@@ -236,7 +236,7 @@ module Term = struct
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print x print_cs cs
+       fprintf fmt "%a%a" print x print_cs cs
 
   let rec print_strings_tex fmt = function
     | [] -> ()
@@ -405,7 +405,7 @@ end = struct
     | Comp (x, op, y) -> 
        fprintf fmt "%a %s %a" Term.print x (str_op_comp op) Term.print y
     | Ite (la, a1, a2) ->
-       fprintf fmt "@[ite(%a,@ %a,@ %a)@]" 
+       fprintf fmt "ite(%a,@ %a,@ %a)" 
 	       (print_atoms false "&&") (SAtom.elements la) print a1 print a2
 
   and print_atoms inline sep fmt = function
@@ -497,16 +497,16 @@ end = struct
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
 
   let print fmt sa =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (elements sa)
+    fprintf fmt "%a" (Atom.print_atoms false "&&") (elements sa)
 
   let print_sep sep fmt sa =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false sep) (elements sa)
+    fprintf fmt "%a" (Atom.print_atoms false sep) (elements sa)
 
   let print_sep_tex sep fmt sa =
     fprintf fmt "%a" (Atom.print_atoms_tex sep) (elements sa)
 
   let print_inline fmt sa =
-    fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)
+    fprintf fmt "%a" (Atom.print_atoms true "&&") (elements sa)
 
 end
 
@@ -663,6 +663,6 @@ module ArrayAtom = struct
     Array.sub d 0 !cpt
 
   let print fmt a =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (Array.to_list a)
+    fprintf fmt "%a" (Atom.print_atoms false "&&") (Array.to_list a)
 
 end
