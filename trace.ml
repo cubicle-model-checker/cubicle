@@ -120,7 +120,9 @@ module AltErgo = struct
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
     | Elem (s, Glob) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
     | Access (a, li) ->
-       fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
+      (* XXX *)
+      assert false
+(*       fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li*)
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
 
@@ -271,7 +273,8 @@ module AltErgo = struct
 
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
-    fprintf fmt "forall %a:int.\n" print_args args;
+    (* XXX *)
+    (*fprintf fmt "forall %a:int.\n" print_args args;*)
     print_ite fmt (Access (a, args), swts, default)
 
 
@@ -335,12 +338,13 @@ module AltErgo = struct
     zify [] nb
 
   let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
-    let sigma = make_norm_subst [] (args, vars) in
+    assert false
+  (*let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Access (a, args), swts, default)*)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -653,7 +657,8 @@ module Why3 = struct
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
     | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
     | Access (a, li) ->
-       fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
+      assert false
+	(*fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li*)
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x (print_cs ~arith:true) cs
 
@@ -793,7 +798,8 @@ module Why3 = struct
 
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
-    fprintf fmt "forall %a:int.\n" print_args args;
+    (* XXX *)
+    (*fprintf fmt "forall %a:int.\n" print_args args;*)
     print_ite fmt (Access (a, args), swts, default)
 
 
@@ -857,12 +863,13 @@ module Why3 = struct
     zify [] nb
 
   let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
-    let sigma = make_norm_subst [] (args, vars) in
+    assert false
+  (*let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Access (a, args), swts, default)*)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -1421,7 +1428,9 @@ module Why3_INST = struct
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
     | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
     | Access (a, li) ->
-       fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
+      (* XXX *)
+      (*fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li*)
+      assert false
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
 
@@ -1566,7 +1575,8 @@ module Why3_INST = struct
 
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
-    fprintf fmt "forall %a:int.\n" print_args args;
+    (* XXX *)
+    (*fprintf fmt "forall %a:int.\n" print_args args;*)
     print_ite fmt (Access (a, args), swts, default)
 
 
@@ -1630,12 +1640,14 @@ module Why3_INST = struct
     zify [] nb
 
   let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
-    let sigma = make_norm_subst [] (args, vars) in
+    (* XXX *)
+    assert false
+      (*    let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
-			 SAtom.subst sigma cond, Term.subst sigma t) swts in
+      SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Access (a, args), swts, default)*)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays

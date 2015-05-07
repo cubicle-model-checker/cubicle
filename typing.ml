@@ -152,7 +152,9 @@ let rec term loc args = function
       if List.length args_a <> List.length li then
         error (WrongNbArgs (a, List.length args_a)) loc
       else
-        List.iter (fun i ->
+	(* PPP *)
+	()
+          (*List.iter (fun i ->
           let ty_i =
 	    if Hstring.list_mem i args then Smt.Type.type_proc
 	    else 
@@ -165,7 +167,7 @@ let rec term loc args = function
           if args_a = [] then error (MustBeAnArray a) loc;
           if not (Hstring.equal ty_i Smt.Type.type_proc) then
 	    error (MustBeOfTypeProc i) loc;
-	) li;
+	) li*);
       [], ty_a
 
 let assignment ?(init_variant=false) g x (_, ty) = 
@@ -254,24 +256,36 @@ let updates args =
   let dv = ref [] in
   List.iter 
     (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
-       if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
-       List.iter (fun j -> 
-         if Hstring.list_mem j args then error (ClashParam j) loc) lj;
-       let args_a, ty_a = 
-	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
-       in       
-       if args_a = [] then error (MustBeAnArray a) loc;
-       dv := a ::!dv;
-       switchs loc a (lj @ args) ([], ty_a) swts) 
+      if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
+      (* PPP *)
+      List.iter (fun j -> 
+	match j with
+	  | Index.C _ -> ()
+	  | Index.V j ->
+            if Hstring.list_mem j args then error (ClashParam j) loc) lj;
+      let args_a, ty_a = 
+	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
+      in       
+      if args_a = [] then error (MustBeAnArray a) loc;
+      dv := a ::!dv;
+      (* PPP *)
+      let lj = 
+	List.fold_left (fun lj j -> 
+	  match j with
+	    | Index.C _ -> lj
+	    | Index.V j -> j :: lj
+	) [] lj 
+      in
+      switchs loc a (lj @ args) ([], ty_a) swts)
 
 let transitions = 
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) -> 
-       unique (fun x-> error (DuplicateName x) loc) args; 
-       atoms loc args t.tr_reqs;
-       List.iter 
-	 (fun (x, cnf) -> 
-	    List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+      unique (fun x-> error (DuplicateName x) loc) args; 
+      atoms loc args t.tr_reqs;
+      List.iter 
+	(fun (x, cnf) -> 
+	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
        updates args t.tr_upds;
        assigns loc args t.tr_assigns;
        nondets loc t.tr_nondets)

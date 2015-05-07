@@ -80,6 +80,10 @@
     let cpt = ref 0 in
     fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
 
+  let is_constr v = 
+    let c = Char.code v.[0] in
+    c >= Char.code 'A' && c <= Char.code 'Z'
+
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
@@ -151,8 +155,9 @@ const_decl:
 
 array_decl:
   | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
-        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
-          raise Parsing.Parse_error;
+    (* PPP *)
+    (*if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+          raise Parsing.Parse_error;*)
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
 	loc (), $2, ($4, $7)}
@@ -288,17 +293,22 @@ update:
 	let l = 
 	  List.map 
 	    (fun p ->
-              if (Hstring.view p).[0] = '#' then
+	      let vp = Hstring.view p in
+              if vp.[0] = '#' then
 		raise Parsing.Parse_error;
-	      Index.V p) $3 
+	      if is_constr vp then Index.C p else Index.V p) $3 
 	in
         Upd { up_loc = loc (); up_arr = $1; up_arg = l; up_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
-            let j = fresh_var () in
-            let c = Atom.Comp(Elem (j, Var), Eq, Elem (i, Var)) in
-            SAtom.add c cube, (Index.V j) :: rjs) (SAtom.empty, []) $3 in
+	    let vi = Hstring.view i in
+	    if is_constr vi then 
+	      cube, (Index.C i) :: rjs
+	    else
+              let j = fresh_var () in
+              let c = Atom.Comp(Elem (j, Var), Eq, Elem (i, Var)) in
+              SAtom.add c cube, (Index.V j) :: rjs) (SAtom.empty, []) $3 in
         let js = List.rev rjs in
 	let sw = [(cube, $6); (SAtom.empty, Access($1, js))] in
 	Upd { up_loc = loc (); up_arr = $1; up_arg = js; up_swts = sw}  }
@@ -362,7 +372,12 @@ var_term:
 
 array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
-    let l = List.map (fun p -> Index.V p) $3 in
+    let l = 
+      List.map 
+	(fun p -> 
+	  let vp = Hstring.view p in
+	  if is_constr vp then Index.C p else Index.V p) $3 
+    in
     Access ($1, l)
   }
 ;
@@ -404,6 +419,7 @@ proc_name:
 
 proc_name_list_plus:
   | proc_name { [$1] }
+  | mident { [$1] }
   | proc_name COMMA proc_name_list_plus { $1::$3 }
 ;
 

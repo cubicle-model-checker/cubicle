@@ -140,13 +140,16 @@ let respect_finite_order =
 let hsort = Hstring.make "Sort"
 let hhome = Hstring.make "Home"
 
+(* PPP *)
+(*
 let sorted_variables sa =
   let procs = SAtom.variables sa in
   Variable.Set.for_all (fun p ->
     SAtom.exists (function 
       | Atom.Comp (Access (s, [x]), _, _) 
-        when Hstring.equal s hsort && Hstring.equal x p -> true
+          (*when Hstring.equal s hsort && Hstring.equal x p*) -> true
       | _ -> false) sa) procs
+*)
 
 let isolate_sorts =
   SAtom.partition (function 
@@ -158,7 +161,8 @@ let isolate_sorts =
 let reattach_sorts sorts sa =
   let procs = Variable.Set.elements (SAtom.variables sa) in
   SAtom.fold (fun a sa -> match a with
-    | Atom.Comp (Access (s, [x]), _, _) 
+      (* PPP *)
+    | Atom.Comp (Access (s, [Index.V x]), _, _) 
         when Hstring.equal s hsort && Hstring.list_mem x procs ->
         SAtom.add a sa
     | Atom.Comp (Elem (h, Glob), _, Elem (x, Var))
@@ -182,9 +186,11 @@ let useless_candidate sa =
     | (Comp (Elem (p, Var), _, _) as a)
     | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
 
-    | (Comp (Access (s, [p]), _, _) as a)
-    | (Comp (_, _, Access (s, [p])) as a) when Hstring.equal s hsort ->
-       not (proc_present p a sa)
+      (* PPP *)
+    | (Comp (Access (s, [Index.V p]), _, _) as a)
+    | (Comp (_, _, Access (s, [Index.V p])) as a) 
+	when Hstring.equal s hsort ->
+      not (proc_present p a sa)
 
     | Comp ((Elem (x, _) | Access (x,_)), _, _)
     | Comp (_, _, (Elem (x, _) | Access (x,_))) ->

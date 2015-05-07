@@ -566,13 +566,25 @@ let nondets_to_actions env sigma acc =
       try (St_assign (HT.find env.id_terms nt, -1)) :: acc
       with Not_found -> acc
     ) acc
+    
 
 let update_to_actions procs sigma env acc
     {up_arr=a; up_arg=lj; up_swts=swts} =
   let indexes = Variable.all_arrangements_arity a procs in
+  (* PPP *)
+  let ljv = 
+    List.fold_right
+      (fun j ljv -> 
+	match j with
+	  | Index.V x -> x :: ljv
+	  | Index.C _ -> ljv
+      ) lj []
+  in
   List.fold_left (fun acc li ->
-    let sigma = (List.combine lj li) @ sigma in
-    let at = Access (a, li) in
+    let sigma = (List.combine ljv li) @ sigma in
+    (* PPP *)
+    let lic = Index.upd li lj in
+    let at = Access (a, lic) in
     swts_to_stites env at sigma swts :: acc
   ) acc indexes
 

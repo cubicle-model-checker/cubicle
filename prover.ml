@@ -102,7 +102,11 @@ let rec make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li) -> 
-    T.make_app a (List.map (fun i -> T.make_app i []) li)
+    (* PPP *)
+    T.make_app a 
+      (List.map (fun i -> 
+	let n = match i with Index.C c -> c | Index.V x -> x in
+	T.make_app n []) li)
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx

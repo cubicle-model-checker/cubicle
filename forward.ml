@@ -472,13 +472,24 @@ let apply_assigns assigns sigma =
 
 
 let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
+  (* PPP *)
   let at = Access (a, lj) in
   let ites = swts_to_ites at swts sigma in
   let indexes = Variable.all_arrangements_arity a procs in
+  let ljv = 
+    List.fold_right
+      (fun j ljv -> 
+	match j with
+	  | Index.V x -> x :: ljv
+	  | Index.C _ -> ljv
+      ) lj []
+  in
   List.fold_left (fun (sa, st) li ->
-    let sigma = List.combine lj li in
+    let sigma = List.combine ljv li in
+    let lic = Index.upd li lj in
+    let at = Access (a, lic) in
     SAtom.add (Atom.subst sigma ites) sa,
-    Term.Set.add (Access (a, li)) st
+    Term.Set.add at st
   ) (sa, st) indexes
 
 let apply_updates upds procs sigma =
@@ -538,7 +549,7 @@ let missing_args procs tr_args =
 
 let rec term_contains_arg z = function
   | Elem (x, Var) -> Hstring.equal x z
-  | Access (_, lx) -> Hstring.list_mem z lx
+  | Access (_, lx) -> Index.list_mem (Index.V z) lx
   | Arith (x, _) -> term_contains_arg z x
   | _ -> false
 
@@ -821,6 +832,7 @@ let instantiate_transitions all_procs procs trans =
 
 
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
+  (* PPP *)
   let acc, gp = 
     List.fold_left 
       (fun (acc, gp) g -> 
@@ -830,8 +842,8 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
   List.fold_left (fun acc a ->
     let indexes = Variable.all_arrangements_arity a (procs@gp) in
     List.fold_left (fun acc lp ->
-      Term.Set.add (Access (a, lp)) acc)
-      acc indexes)
+      let lp = List.map (fun x -> Index.V x) lp in
+      Term.Set.add (Access (a, lp)) acc) acc indexes)
     acc arrays
 
 let search procs init =

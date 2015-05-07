@@ -89,6 +89,13 @@ module Index = struct
 
   let list_mem x l = List.exists (equal x) l
 
+  let list_combine l1 l2 = 
+    List.fold_left2 (fun s i1 i2 -> 
+      match i1, i2 with
+	| C c1, C c2 when Hstring.equal c1 c2 -> s
+	| V v1, V v2 -> (v1, v2) :: s
+	| _ -> assert false) [] l1 l2
+
   let rec list_assoc x = function
     | [] -> raise Not_found
     | (y, v) :: l -> if equal x y then v else list_assoc x l
@@ -115,6 +122,12 @@ module Index = struct
     | [s] -> print fmt s
     | s::r -> Format.fprintf fmt "%a%s%a" print s sep (print_list sep) r
 
+  let rec upd lv li = 
+    match lv, li with
+      | [], _ -> li
+      | _, (C _ as c) :: l -> c :: (upd lv l)
+      | v :: lv', V _ :: l -> (V v) :: (upd lv' l)
+      | _ -> assert false
 end
 
 type term =
