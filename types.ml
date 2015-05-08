@@ -96,6 +96,14 @@ module Index = struct
 	| V v1, V v2 -> (v1, v2) :: s
 	| _ -> assert false) [] l1 l2
 
+  let list_compatible l1 l2 = 
+    List.for_all2 (fun i1 i2 -> 
+      match i1, i2 with
+	| C c1, C c2 -> Hstring.equal c1 c2
+	| V _, V _ -> true
+	| _ -> false) l1 l2
+
+
   let rec list_assoc x = function
     | [] -> raise Not_found
     | (y, v) :: l -> if equal x y then v else list_assoc x l

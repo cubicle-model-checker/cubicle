@@ -54,6 +54,7 @@ module Index : sig
   val equal : t -> t -> bool
   val list_equal : t list -> t list -> bool
   val list_combine : t list -> t list -> (Variable.t * Variable.t) list
+  val list_compatible : t list -> t list -> bool
   val compare_list : t list -> t list -> int
   val compare_couple : (t * t) -> (t * t) -> int
   val list_mem_couple : (t * t) -> (t * t) list -> bool

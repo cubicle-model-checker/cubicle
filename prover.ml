@@ -99,7 +99,9 @@ let make_cs cs =
   else make_arith_cs r (mult_const t_c c i)
 	 
 let rec make_term = function
-  | Elem (e, _) -> T.make_app e []
+  | Elem (e, _) -> 
+    eprintf "Elem : %s@." (Hstring.view e);
+    T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li) -> 
     (* PPP *)

@@ -89,7 +89,7 @@ let fresh_nondet =
 let rec find_update a li = function
   | [] -> raise Not_found
   | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = ls} :: _ when 
-      Hstring.equal a a' ->
+      Hstring.equal a a' && Index.list_compatible li lj ->
       let ls = 
 	List.map 
 	  (fun (ci, ti) ->

@@ -314,7 +314,7 @@ module Formula = struct
 	    Literal.Builtin (true, Hstring.make "<", [t1; t2])
 	| _ -> assert false
     in
-    Lit (Literal.LT.make lit)
+    Lit (Literal.LT.make lit) 
 
   let rec sform = function
     | Comb (Not, [Lit a]) -> Lit (Literal.LT.neg a)
