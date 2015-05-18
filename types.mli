@@ -146,6 +146,8 @@ module rec Atom : sig
   (** same as [variables] but only return skolemized variables of the form
       [#i] *)
 
+  val str_op_comp : op_comp -> string
+
   val print : Format.formatter -> t -> unit
   (** prints an atom *)
 

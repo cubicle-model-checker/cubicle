@@ -27,6 +27,15 @@ module FixpointList : sig
       purposes or for reference implementation. *)
 end
 
+module FixpointCubeList : sig
+
+  val check : Cube.t -> (Cube.t * int) list -> int list option
+  (** [check s v] returns the tags of cubes in v that were used if [s] implies
+      the disjunction of the cubes in [v]. Otherwise, it returns [None]. *)
+    
+end
+
+
 module FixpointCertif : sig
 
   val useful_instances : Node.t -> Node.t list -> (Node.t * Variable.subst) list

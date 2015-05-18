@@ -425,8 +425,9 @@ let add_tau tr =
   (* (\* let tr = fresh_args tr in *\) *)
   (* { tr with *)
   (*   tr_tau = Pre.make_tau tr } *)
+  let tau = Pre.make_tau tr in
   { tr_info = tr;
-    tr_tau = Pre.make_tau tr }
+    tr_tau = tau }
     
 let system s = 
   let l = init_global_env s in

@@ -6,18 +6,20 @@ module type SigV =
     type ucnf
     type ednf
     type res_ref = 
-      | Bad_Parent 
+      | Bad_Parent
       | Covered of t 
       | Extrapolated of t
 
     val create_good : (Variable.t list * Types.SAtom.t) list -> ucnf
     val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
-    val create : ?c:(t * Ast.transition * t) ->ucnf -> ednf -> t
+    val create : ?creation:(t * Ast.transition * t) ->ucnf -> ednf -> t
     
     val delete_parent : t -> t * Ast.transition -> bool
     val add_parent : t -> t * Ast.transition -> unit
     val get_parents : t -> (t * Ast.transition) list
-    
+    val update_bad_from : t -> Ast.transition -> t -> unit
+    val update_good_from : t -> t -> unit
+   
     (* Signature in case we want to make a Hashtbl *)
     val hash : t -> int
     val equal : t -> t -> bool

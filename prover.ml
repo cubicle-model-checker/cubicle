@@ -214,7 +214,15 @@ let assume_goal { tag = id; cube = cube } =
   let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.check  ()
+  SMT.check ()
+
+let assume_goal_cube id cube =
+  SMT.clear ();
+  SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
+  let f = make_formula cube.Cube.array in
+  if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check ()
 
 let assume_node { tag = id } ap =
   let f = F.make F.Not [make_formula ap] in
@@ -222,6 +230,12 @@ let assume_node { tag = id } ap =
   SMT.assume ~id f;
   SMT.check  ()
 
+let assume_neg id ap =
+  let f = F.make F.Not [make_formula ap] in
+  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check  ()
+    
 let make_clause atoms =
   F.make F.Or (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 

@@ -716,3 +716,43 @@ and satom_globs sa = SAtom.fold atom_globs sa Term.Set.empty
 let print fmt { litterals = sa } = SAtom.print fmt sa 
 
 
+(********** IC3 **********)
+
+let equivalent c1 c2 =
+  if dim c1 <> dim c2 then false
+  else 
+    if size c1 <> size c2 then false
+    else 
+      begin
+        let v1 = c1.vars in
+        let v2 = c2.vars in
+        let sigmas = Variable.all_permutations v2 v1 in
+        let sa1 = c1.litterals in
+        let sa2 = c2.litterals in
+        List.exists (
+          fun sigma ->
+            let sa2 = SAtom.subst sigma sa2 in
+            SAtom.equal sa1 sa2
+        ) sigmas
+      end
+
+let is_subformula c1 c2 =
+  if dim c1 > dim c2 then false
+  else if size c1 > size c2 then false
+  else 
+    begin
+      let v1 = c1.vars in
+      let v2 = c2.vars in
+      let sigmas = Variable.all_permutations v1 v2 in
+      let sa1 = c1.litterals in
+      let sa2 = c2.litterals in
+      (* Format.eprintf "[SubFormula SA2] %a@." *)
+      (*   (SAtom.print_sep "&&") sa2; *)
+      List.exists (
+        fun sigma ->
+          let sa1 = SAtom.subst sigma sa1 in
+          (* Format.eprintf "[SubFormula SA1] %a@." *)
+          (*   (SAtom.print_sep "&&") sa1; *)
+          SAtom.subset sa1 sa2
+      ) sigmas
+    end        

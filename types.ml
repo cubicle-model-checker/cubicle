@@ -290,6 +290,7 @@ module rec Atom : sig
   val variables : t -> Variable.Set.t
   val list_variables : t -> Variable.t list
   val variables_proc : t -> Variable.Set.t
+  val str_op_comp : op_comp -> string
   val print : Format.formatter -> t -> unit
   val print_atoms : bool -> string -> Format.formatter -> t list -> unit
 
@@ -397,7 +398,12 @@ end = struct
   let variables_proc a = Variable.Set.filter Variable.is_proc (variables a)
 
 
-  let str_op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
+  let str_op_comp = 
+    function 
+      | Eq -> "=" 
+      | Lt -> "<" 
+      | Le -> "<=" 
+      | Neq -> "<>"
 
   let rec print fmt = function
     | True -> fprintf fmt "true"

@@ -29,9 +29,17 @@ val reached : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 val assume_goal : Node.t -> unit
 (** Clears the context and assumes a goal formula *)
 
+val assume_goal_cube : int -> Cube.t -> unit
+(** Clears the context and assumes a goal formula *)
+
 val assume_node : Node.t -> ArrayAtom.t -> unit
 (** [assume_node n a] assumes the negation of a node [n] given in the form of a
     renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
+
+val assume_neg : int -> ArrayAtom.t -> unit
+(** [assume_id id a] assumes the negation of a cube [id] given in the form of a
+    renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
+
 
 val assume_distinct : int -> unit
 val assume_clause : int -> ArrayAtom.t -> unit

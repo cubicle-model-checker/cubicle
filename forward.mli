@@ -30,6 +30,7 @@ type inst_trans =
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
       i_touched_terms : Term.Set.t;
+      i_args : Variable.t list;
     }
 
 type possible_result = 

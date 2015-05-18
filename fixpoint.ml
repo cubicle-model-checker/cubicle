@@ -35,6 +35,21 @@ module Debug = struct
       fun s ->
 	eprintf "FIX:    %a@." Node.print s
 
+  let c_fixpoint = 
+    if not debug then fun _ -> () else 
+      fun ls ->
+	eprintf "\nAfter simplification, subsumption and fixpoint check : @.";
+	match ls with
+	  | [] -> eprintf "No new branches@."
+	  | _ -> 
+	      List.iter (eprintf "@.New branch : %a@." Cube.print) ls
+
+
+  let c_unsafe =
+    if not debug then fun _ -> () else 
+      fun s ->
+	eprintf "FIX:    %a@." Cube.print s
+
 end
 
 
@@ -141,6 +156,95 @@ end = struct
     r
 
 end
+
+(********************************************************)
+(* Incremental fixpoint check : s => \/_{p \in nodes} p *)
+(********************************************************)
+
+
+
+exception Fixpoint of int list
+
+
+module FixpointCubeList : sig
+
+  val check : Cube.t -> (Cube.t * int) list -> int list option
+
+end = struct
+
+  let check_fixpoint ?(pure_smt=false) cube visited =
+    Prover.assume_goal_cube 0 cube;
+    let c_array = cube.Cube.array in
+    let cubes = 
+      List.fold_left
+        (fun cubes (vis_cube, id) ->
+         let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:cube in
+         List.fold_left
+	   (fun cubes ss ->
+	    let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
+	    if not pure_smt && ArrayAtom.subset vis_renamed c_array then
+	        raise (Fixpoint [id])
+	    (* Heuristic : throw away nodes too much different *)
+	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+	    (* line below useful for arith : ricart *)
+	    else if not pure_smt &&
+                      Cube.inconsistent_2arrays vis_renamed c_array then cubes
+	    else if ArrayAtom.nb_diff vis_renamed c_array > 1 then
+              ((vis_cube, id), vis_renamed)::cubes
+	    else (
+              Prover.assume_neg id vis_renamed; 
+              cubes)
+	   ) cubes d
+        ) [] visited
+    in
+    TimeSort.start ();
+    let cubes = 
+      List.fast_sort 
+        (fun (c1, a1) (c2, a2) -> ArrayAtom.compare_nb_common c_array a1 a2) 
+        cubes 
+    in
+    TimeSort.pause ();
+    List.iter (fun ((vn, id), ar_renamed) -> 
+      Prover.assume_neg id ar_renamed
+    ) cubes
+
+
+  let easy_fixpoint s cubes =
+    let db = ref None in
+    let ars = s.Cube.array in
+    let temp = ref 0 in
+    ignore (List.exists 
+	      (fun (sp, id) ->
+                incr temp;
+		if ArrayAtom.subset sp.Cube.array ars then
+		  begin db := Some [id]; true end
+		else false
+              ) cubes);
+    !db
+
+  let hard_fixpoint s cubes =
+    try
+      check_fixpoint s cubes;
+      None
+    with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+
+  let check s visited =
+    Debug.c_unsafe s;
+    TimeFix.start ();
+    let r = 
+      match easy_fixpoint s visited with
+      | None -> hard_fixpoint s visited
+      | r -> r
+    in
+    TimeFix.pause ();
+    r
+
+end
+
+
 
 
 (*************** Certificates from fixpoints  *******************)

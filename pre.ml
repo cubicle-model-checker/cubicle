@@ -63,14 +63,25 @@ end
 let rec pre_atom tau a = 
   match a with
     | Atom.True | Atom.False -> a
-    | Atom.Comp (x, op, y) -> tau x op y
+    | Atom.Comp (x, op, y) -> 
+      let a = tau x op y in
+      (* let s = Atom.str_op_comp op in *)
+      (* Format.eprintf "[Pre_atom] %a %s %a -> %a@." *)
+      (*   Term.print x s Term.print y Atom.print a; *)
+      a
     | Atom.Ite (sa, a1, a2) -> 
-	let pre_sa = 
-	  SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) sa SAtom.empty 
-	in
-	let pre_a1 = pre_atom tau a1 in 
-	let pre_a2 = pre_atom tau a2 in 
-	Atom.Ite(pre_sa, pre_a1, pre_a2)
+      let pre_sa = 
+	SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) sa SAtom.empty 
+      in
+      (* Format.eprintf  *)
+      (*   "[If] if @[%a@]\n\ *)
+      (*         then @[%a@]\n\ *)
+      (*         else @[%a@]@." *)
+      (*   (SAtom.print_sep "&&") sa *)
+      (*   Atom.print a1 Atom.print a2; *)
+      let pre_a1 = pre_atom tau a1 in 
+      let pre_a2 = pre_atom tau a2 in 
+      Atom.Ite(pre_sa, pre_a1, pre_a2)
 
 (****************************************)
 (* Convert a transition into a function *)
@@ -298,6 +309,7 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
     SAtom.union tri.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
+  (* Format.eprintf "[Pre_unsafe] @[%a@]@." (SAtom.print_sep "&&") pre_unsafe; *)
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
   let args = pre_u.Cube.vars in

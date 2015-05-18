@@ -209,8 +209,8 @@ let convert =
   fun dot_file ->
     incr count;
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s%d-%d.%s" 
-      reg_file dot_level !count "svg" in
+    let svg = Format.sprintf "%s_%d_%d-%d.%s" 
+      reg_file dot_level ic3_level !count "svg" in
     match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
 			  " > "^svg^" && rm "^dot_file) with
       | 0 -> ()
@@ -222,7 +222,8 @@ let display_graph =
   let r = Str.regexp "\\(\\..+.dot\\)" in
   fun dot_file ->
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s%d.%s" reg_file dot_level "svg" in
+    let svg = Format.sprintf "%s_%d_%d.%s" 
+      reg_file dot_level ic3_level "svg" in
     let com = match Util.syscall "uname" with
       | "Darwin\n" -> "open"
       | "Linux\n" -> "xdg-open"

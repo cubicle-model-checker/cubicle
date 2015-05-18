@@ -28,6 +28,7 @@ type inst_trans =
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
       i_touched_terms : Term.Set.t;
+      i_args : Variable.t list;
     }
 
 let prime_h h =
@@ -847,6 +848,9 @@ let instance_of_transition { tr_args = tr_args;
     List.fold_left (fun acc p -> 
       try (Variable.subst sigma p) :: acc
       with Not_found -> p :: acc) [] tr_args in
+  (* Format.eprintf "[Instance of trans] %a -> %a : %a @." *)
+  (*   Variable.print_subst sigma Variable.print_vars tr_args *)
+  (*   Variable.print_vars t_args_ef; *)
   let udnfs = uguard_dnf sigma all_procs t_args_ef ureqs in
   (* List.iter ( *)
   (*   fun (h, gu) -> *)
@@ -873,7 +877,8 @@ let instance_of_transition { tr_args = tr_args;
     i_udnfs = udnfs;
     i_actions = act;
     i_touched_terms =
-      Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms
+      Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms;
+    i_args = t_args_ef;
   }
   
 

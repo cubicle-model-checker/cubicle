@@ -72,29 +72,31 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Stats.fixpoint n db
           | None ->
              Stats.check_limit n;
-             Stats.new_node n;
-             let n = begin
-                 match Approx.good n with
-                 | None -> n
-                 | Some c ->
-                    try
+            eprintf "Debut@.";
+            Stats.new_node n;
+            eprintf "Fin@.";
+            let n = begin
+              match Approx.good n with
+                | None -> n
+                | Some c ->
+                  try
                       (* Replace node with its approximation *)
-                      Safety.check system c;
+                    Safety.check system c;
                       candidates := c :: !candidates;
                       Stats.candidate n c;
                       c
-                    with Safety.Unsafe _ -> n 
-                         (* If the candidate is directly reachable, no need to
-                            backtrack, just forget it. *)
-               end
-             in
-             let ls, post = Pre.pre_image system.t_trans n in
-             if delete then
-               visited :=
-                 Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-	     postponed := List.rev_append post !postponed;
-             visited := Cubetrie.add_node n !visited;
-             Q.push_list ls q;
+                  with Safety.Unsafe _ -> n 
+                  (* If the candidate is directly reachable, no need to
+                     backtrack, just forget it. *)
+            end
+            in
+            let ls, post = Pre.pre_image system.t_trans n in
+            if delete then
+              visited :=
+                Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+	    postponed := List.rev_append post !postponed;
+            visited := Cubetrie.add_node n !visited;
+            Q.push_list ls q;
              Stats.remaining (nb_remaining q postponed);
         end;
         

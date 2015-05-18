@@ -96,3 +96,8 @@ val resolve_two : t -> t -> t option
 val satom_globs : SAtom.t -> Term.Set.t
 
 val print :  Format.formatter -> t -> unit
+
+(** {IC3 } *)
+
+val equivalent : t -> t -> bool
+val is_subformula : t -> t -> bool
