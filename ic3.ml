@@ -10,6 +10,22 @@ type result =
 
 let step = ref 0
 
+module B = struct
+  type t = List
+      
+  let add e t = e::t
+    
+  let filter_and_split id l =
+    let l = List.filter (
+      fun (id', cl) -> id' > id) l in
+    let _, l = List.split l in
+    l
+
+  let iter = List.iter
+
+end
+
+
 module type SigV = sig
 
   type t
@@ -19,7 +35,7 @@ module type SigV = sig
   type ednf
 
   type res_ref =
-    | Bad_Parent
+    | Bad_Parent of (int * Cube.t list)
     | Covered of t
     | Extrapolated of t
 
@@ -63,7 +79,8 @@ module type SigV = sig
      w.r.t the transitions *)
   val expand : t -> transition list -> transition list 
     
-  val refine : t -> t -> transition -> t list -> res_ref
+  val refine : t -> t -> transition -> t list -> 
+    (int * Cube.t list) list -> res_ref
 
   (* If bad is empty, our node is safe,
      else, our node is unsafe *)
@@ -81,7 +98,7 @@ module type SigQ = sig
   val push : 'a -> 'a t -> unit
   val pop : 'a t -> 'a
 end
-  
+ 
 module Make ( Q : SigQ ) ( V : SigV ) = struct
     
   type v = V.t
@@ -95,10 +112,10 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	t1.tr_info.tr_name
 	t2.tr_info.tr_name
     end
-  )
+  )   
     
   exception Unsafe of V.t list G.t * V.t
-  exception Safe of V.t list G.t
+  exception Safe of V.t list G.t * (int * Cube.t list) list
 
   let print_graph g =
     Format.eprintf "[GRAPH]@.";
@@ -115,7 +132,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
   let save_graph rg =
     if ic3_pdf then
       let bfile = Filename.chop_extension (Filename.basename file) in
-      let file = bfile ^ "-" ^ (string_of_int ic3_level) ^ ".latex" in
+      let file = bfile ^ "-" ^ (string_of_int ic3_level) ^ "fp.latex" in
       let oc = open_out ("graphs/" ^ file) in
       let oc_fmt = Format.formatter_of_out_channel oc in
       Format.fprintf oc_fmt 
@@ -265,7 +282,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
         C.add tr top acc
     ) C.empty system.t_trans in
     
-    let rec refine v1 v2 tr rg tc =
+    let rec refine v1 v2 tr rg tc bads =
       Format.eprintf 
 	"\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
 	V.print_id v1 Hstring.print tr.tr_info.tr_name 
@@ -277,15 +294,16 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	Format.eprintf 
 	  "We discard the treatment of this edge since (%a) is now bad@." 
           V.print_id v1;
-	(rg, tc)
+	(rg, tc, bads)
       )
       else if V.is_bad v2 then (
 	if debug && verbose > 0 then print_graph rg;
 	let pr = List.rev (find_graph v2 rg) in
-	match V.refine v1 v2 tr pr with  
+	match V.refine v1 v2 tr pr bads with  
 
 	  (* v1 and tr imply bad *)
-	  | V.Bad_Parent -> 
+	  | V.Bad_Parent bad ->
+            let bads = B.add bad bads in
 	    (* If v1 is root, we can not refine *)
 	    if V.equal v1 root then raise (Unsafe (rg, v1));
 	    (* Else, we recursively call refine on all the parents *)
@@ -294,13 +312,13 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	    if dot_step then add_steps v2 v1 Bad tr false;
             V.update_bad_from v1 tr v2;
 	    List.fold_left (
-	      fun (rg, tc) (vp, tr) -> 
+	      fun (rg, tc, bads) (vp, tr) -> 
 		Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
 		  V.print_id vp Hstring.print tr.tr_info.tr_name 
 		  V.print_id v1;
 		if dot_step then add_steps vp v1 Bad tr true;
-                refine vp v1 tr rg tc
-	    ) (rg, tc) (V.get_parents v1)
+                refine vp v1 tr rg tc bads
+	    ) (rg, tc, bads) (V.get_parents v1)
 
 	  (* The node vc covers v2 by tr *)
 	  | V.Covered vc -> 
@@ -318,7 +336,7 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
               if ic3_level = 0 then C.add tr vc tc
               else tc
             in
-	    refine v1 vc tr rg tc
+	    refine v1 vc tr rg tc bads
 
 	  (* We created and extrapolant vn *)
 	  | V.Extrapolated vn -> 
@@ -336,20 +354,20 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	    let rg' = add_extra_graph v2 vn (G.add vn [] rg) in
             V.update_good_from vn v2;
 	    Q.push vn todo;
-	    (rg', tc)
+	    (rg', tc, bads)
       )
       else (
 	Format.eprintf "(%a) is safe, no backward refinement@." 
           V.print_id v2;
-	(rg, tc)
+	(rg, tc, bads)
       )
     in
     Q.push root todo;
     let transitions = system.t_trans in
-    let rec expand rg tc =
+    let rec expand rg tc bads =
       let v1 = 
 	try Q.pop todo
-	with Q.Empty -> raise (Safe rg)
+	with Q.Empty -> raise (Safe (rg, bads))
       in
       Format.eprintf 
         "\n*******[Induct]*******\n \n%a\n\nTransitions :@." 
@@ -359,12 +377,12 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	fun tr -> 
 	  Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
       ) trans;
-      let rg, tc = List.fold_left (
-	fun (rg, tc) tr ->
+      let rg, tc, bads = List.fold_left (
+	fun (rg, tc, bads) tr ->
           let v2 = C.find tr tc in
           if dot_step then add_steps v1 v2 Expand tr false;
-	  refine v1 top tr rg tc
-      ) (rg, tc) trans
+	  refine v1 top tr rg tc bads
+      ) (rg, tc, bads) trans
       in 
       let () = Sys.set_signal Sys.sigint 
 	  (Sys.Signal_handle 
@@ -394,16 +412,30 @@ module Make ( Q : SigQ ) ( V : SigV ) = struct
 	steps := [];
 	close_step ();
       );
-      expand rg tc
+      expand rg tc bads
     in
-    try expand rgraph trans_cover
+    try expand rgraph trans_cover []
     with 
-      | Safe rg -> 
+      | Safe (rg, bads) -> 
 	if dot then update_dot rg;
 	print_graph rg;
+        (* let bads = List.fast_sort (Cube.compare_cubes) !bads in *)
+        (* let bads =  *)
+        (*   List.map (fun c -> (c.Cube.vars, c.Cube.litterals)) bads in *)
+        (* let bads = V.create_bad bads in *)
+        (* let new_node = V.create (V.create_good []) bads in *)
+        (* let rg = G.add new_node [] rg in *)
+        let print_cl fmt =
+          List.iter (
+            fun c -> Format.eprintf "\t\t@[%a@] OR\n@." 
+	      (SAtom.print_sep "&&") c.Cube.litterals
+          )
+        in
+        List.iter (fun (id, cl) ->
+          Format.eprintf "[%d]\n%a@." id print_cl cl) bads;
         save_graph rg;
 	Format.eprintf "Empty queue, Safe system@."; 
-	RSafe
+        RSafe
       | Unsafe (rg, v1) -> 
 	if dot then update_dot rg;
 	if dot_step then (
@@ -441,7 +473,7 @@ module Vertice : SigV = struct
       }
 	
   type res_ref =
-    | Bad_Parent
+    | Bad_Parent of (int * Cube.t list)
     | Covered of t
     | Extrapolated of t
 	
@@ -658,12 +690,13 @@ module Vertice : SigV = struct
   (* CREATION FUNCTIONS *)
 
       
-  let create_good = 
-    List.fold_left (
+  let create_good l = 
+    let b = List.fold_left (
       fun acc (vl, sa) -> 
 	let c = Cube.create vl sa in
 	c::acc
-    ) []
+    ) [] l in
+    List.rev b
 
   let create_bad = create_good
     
@@ -1062,7 +1095,7 @@ module Vertice : SigV = struct
     r
     
   type res = 
-    | Yes of (Cube.t * Forward.inst_trans * (unit -> unit) * (unit -> unit)) 
+    | Yes of Cube.t
     | No of ((unit -> unit) * (unit -> unit) * Forward.inst_trans list) 
 
   (* If the result is TRUE then f1 and tr imply f2.
@@ -1124,7 +1157,7 @@ module Vertice : SigV = struct
       Format.eprintf "[ITimer] %f@." (IT.get () -. time);
     );
     match res with
-      | Some (b, it) -> Yes (b, it, fun_dist, fun_good)
+      | Some (b, it) -> Yes b
       | None -> No (fun_dist, fun_good, inst_upd)
 
 
@@ -1219,18 +1252,18 @@ module Vertice : SigV = struct
             find_extra tl
           else
             begin
-              let res = find_inst fun_dist fun_go
-                n1 n2 [csub] inst_upd in
-              match res with
-                | None ->
-                  let ncsub = negate_cube csub in
-                  if contains g2 ncsub then find_extra tl
-                  else (
+              let ncsub = negate_cube csub in
+              if contains g2 ncsub then find_extra tl
+              else
+                let res = find_inst fun_dist fun_go
+                  n1 n2 [csub] inst_upd in
+                match res with
+                  | None ->
                     Format.eprintf
-                      "[Extrapolation] We found a better bad@.";
+                      "[Extrapolation] We found a better bad\n%a@."
+                      Cube.print csub;
                     csub
-                  )
-                | Some _ -> find_extra tl
+                  | Some _ -> find_extra tl
             end
         end
     in 
@@ -1254,12 +1287,8 @@ module Vertice : SigV = struct
     ) ([], []) b2 in
     nb2
 
-  let compare_cubes c1 c2 =
-    let s = Cube.dim c1 - Cube.dim c2 in
-    if s = 0 then
-      Cube.size c1 - Cube.size c2
-    else s
-
+  let compare_cubes = Cube.compare_cubes
+    
   let cube_implies c cl =
     (* Format.eprintf "[Cube_implies]\n%a@." Cube.print c; *)
     try 
@@ -1277,59 +1306,101 @@ module Vertice : SigV = struct
     with Not_found -> None
 
   let simplify_dnf g1 b2 dnf =
-    let rec simplify cube dnf =
-      match dnf with 
-        | [] -> None
-        | (e, id)::_ when Cube.is_subformula e cube -> 
-          Format.eprintf "[Simp simp]\n %a \n is implied by \n%a@."
-            Cube.print cube Cube.print e;
-          Some e
-        | (e, id)::_ when Cube.is_subformula cube e -> assert false
-        | _::tl -> simplify cube tl
-    in
+    (* let rec simplify cube dnf = *)
+    (*   match dnf with  *)
+    (*     | [] -> None *)
+    (*     | (e, id)::_ when Cube.is_subformula e cube ->  *)
+    (*       Format.eprintf "[Simp simp]\n %a \n is implied by \n%a@." *)
+    (*         Cube.print cube Cube.print e; *)
+    (*       Some e *)
+    (*     | (e, id)::_ when Cube.is_subformula cube e -> assert false *)
+    (*     | _::tl -> simplify cube tl *)
+    (* in *)
     let sdnf, _ = List.fold_left (
       fun (acc, count) cube ->
         let cig = cube_implies (negate_cube cube) g1 in
         match cig with 
           | Some c ->
             Format.eprintf 
-              "[Simp negation] \n%a\n is negated by \n %a@."
+              "[Simp negation] \n%a\n [is negated by] \n%a@."
               Cube.print cube Cube.print c;
             (acc, count)
           | None ->
             let cib = cube_implies cube b2 in
             match cib with
               | Some c ->
-                Format.eprintf 
-                  "[Simp already bad]\n%a\n was already in \n%a@."
+                Format.eprintf
+                  "[Simp already bad]\n%a\n [was already in] \n%a@."
                   Cube.print cube Cube.print c;
-                (acc, count)
-              | None ->
-                match simplify cube acc with
-                  | None -> ((cube, count)::acc, count + 1)
-                  | Some b ->
-                    Format.eprintf
-                      "[Simp Fixpoint] The cube \n%a\n is already \
-                       implied by the cube\n%a@."
-                      Cube.print cube Cube.print b;
-                    (acc, count)
-                (* simplify count cube acc [] *)
-                (* match Fixpoint.FixpointCubeList.check cube acc with *)
+                ((c, count)::acc, count + 1)
+                (* (acc, count) *)
+              | None -> 
+                (* match simplify cube acc with *)
                 (*   | None -> ((cube, count)::acc, count + 1) *)
-                (*   | Some l -> *)
+                (*   | Some b -> *)
                 (*     Format.eprintf *)
                 (*       "[Simp Fixpoint] The cube \n%a\n is already \ *)
-                (*        implied by the cubes ( " *)
-                (*       Cube.print cube; *)
-                (*     List.iter (Format.eprintf "%d ") l; *)
-                (*     Format.eprintf ") \n%a@." *)
-                (*       print_ednf (fst (List.split acc)); *)
+                (*        implied by the cube\n%a@." *)
+                (*       Cube.print cube Cube.print b; *)
                 (*     (acc, count) *)
+                (* simplify count cube acc [] *)
+                (* ( *)
+                (*   let b2 = let c = ref 0 in *)
+                (*            List.map (fun e -> incr c; (e, !c)) b2 in *)
+                (*   match Fixpoint.FixpointCubeList.check cube b2 with *)
+                (*     | Some l -> *)
+                (*       Format.eprintf *)
+                (*         "[Simp fixpoint bad]\n%a\n [is already bad in\ *)
+                (*        the cubes (" *)
+                (*         Cube.print cube; *)
+                (*       List.iter (Format.eprintf "%d ") l; *)
+                (*       Format.eprintf ") ]\n%a@." *)
+                (*         print_ednf (fst (List.split b2)); *)
+                (*   (\* (acc, count) *\) *)
+                (*     | None -> () *)
+                (* ); *)
+                match Fixpoint.FixpointCubeList.check cube acc with
+                  | None -> ((cube, count)::acc, count + 1)
+                  | Some l ->
+                    Format.eprintf
+                      "[Simp Fixpoint]\n%a\n [is already \
+                       implied by the cubes ( "
+                      Cube.print cube;
+                    List.iter (Format.eprintf "%d ") l;
+                    Format.eprintf ")] \n%a@."
+                      print_ednf (fst (List.split acc));
+                    (acc, count)
     ) ([], 1) dnf in
     fst (List.split sdnf)
-  
+
+  let partition_l dim l =
+    let rec f acc ll =
+      match ll with 
+        | hd::tl when (Cube.dim hd) = dim -> f (hd::acc) tl
+        | _ -> acc, ll
+    in f [] l
+
+  let select_procs l v1 v2 =
+    (* Format.eprintf "[Select procs]\n%a@." print_ednf l; *)
+    let rec s l =
+      let dim = Cube.dim (List.hd l) in
+      let less_proc, others = partition_l dim l in
+      let nl = simplify_dnf v1.good v2.bad less_proc in
+      (* v1.bad <- List.rev (pre_image); *)
+      match nl with
+        | [] -> s others
+        | _ -> nl
+    in s l
+
+  let find_pre tr acc bad =
+    let ncube = Node.create bad in
+    let (nl, nl') = Pre.pre_image [tr] ncube in
+    let nc = List.map (fun n -> n.cube) nl in
+    let nc' = List.map (fun n -> n.cube) nl' in
+    nc@nc'@acc
+    
   (* Main function of IC3 *)
-  let refine v1 v2 tr cand =
+  let refine v1 v2 tr cand bads =
     try
       Format.eprintf "[Subsumption] Is (%a) covered by transition %a ?@." 
 	print_id v2 Hstring.print tr.tr_info.tr_name;
@@ -1388,22 +1459,29 @@ module Vertice : SigV = struct
       	  let pre_image = List.fold_left (
             fun acc e ->
               match e with 
-                | (Yes (bad, it, fun_dist, fun_good)) ->
+                | Yes bad ->
                   (* Format.eprintf "[Pre] %a (%a) -> \n%a@." *)
                   (*   Hstring.print tr.tr_info.tr_name *)
                   (*   Variable.print_vars it.Forward.i_args *)
                   (*   (SAtom.print_sep "&&") bad.Cube.litterals; *)
-                  let ncube = Node.create bad in
-	          let (nl, nl') = Pre.pre_image [tr] ncube in
-                  let nc = List.map (fun n -> n.cube) nl in
-                  let nc' = List.map (fun n -> n.cube) nl' in
-                  nc@nc'@acc
+                  find_pre tr acc bad
                 | _ -> assert false
           ) [] res in
-          let pre_image = List.fast_sort compare_cubes pre_image in  
-          let pre_image = simplify_dnf v1.good v2.bad pre_image in
-          v1.bad <- List.rev (pre_image);
-	  Bad_Parent
+          let bads = B.filter_and_split v2.id bads in
+          let pre_image = 
+            if ic3_level = 0 then 
+              List.fold_left (
+                fun acc cl -> 
+                  List.fold_left (find_pre tr) acc cl
+              ) pre_image bads 
+            else pre_image 
+          in
+          let pre_image = List.fast_sort compare_cubes pre_image in
+          Format.eprintf "[Pre images]\n%a@." print_ednf pre_image;
+          let pre_image = select_procs pre_image v1 v2 in
+          v1.bad <- pre_image;
+          (* bads := (v1.id, pre_image)::(!bads); *)
+          Bad_Parent (v1.id, pre_image)
 
 
 end

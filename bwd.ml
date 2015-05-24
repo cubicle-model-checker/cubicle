@@ -72,9 +72,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Stats.fixpoint n db
           | None ->
              Stats.check_limit n;
-            eprintf "Debut@.";
             Stats.new_node n;
-            eprintf "Fin@.";
             let n = begin
               match Approx.good n with
                 | None -> n

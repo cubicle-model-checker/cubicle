@@ -6,13 +6,13 @@ module type SigV =
     type ucnf
     type ednf
     type res_ref = 
-      | Bad_Parent
+      | Bad_Parent of (int * Cube.t list)
       | Covered of t 
       | Extrapolated of t
 
     val create_good : (Variable.t list * Types.SAtom.t) list -> ucnf
     val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
-    val create : ?creation:(t * Ast.transition * t) ->ucnf -> ednf -> t
+    val create : ?creation:(t * Ast.transition * t) -> ucnf -> ednf -> t
     
     val delete_parent : t -> t * Ast.transition -> bool
     val add_parent : t -> t * Ast.transition -> unit
@@ -43,7 +43,8 @@ module type SigV =
       ?color:string -> ?style:string -> t -> t -> Ast.transition -> unit
 
     val expand : t -> Ast.transition list -> Ast.transition list
-    val refine : t -> t -> Ast.transition -> t list -> res_ref
+    val refine : t -> t -> Ast.transition -> t list -> 
+      (int * Cube.t list) list -> res_ref
     val is_bad : t -> bool
   end
 
@@ -65,7 +66,7 @@ module Make :
         module G : Map.S
         
         exception Unsafe of V.t list G.t * V.t
-        exception Safe of V.t list G.t
+        exception Safe of V.t list G.t * (int * Cube.t list) list
         
         val search : (unit -> 'a) -> Ast.t_system -> result
       end
@@ -83,7 +84,7 @@ module RG :
     module G : Map.S
     
     exception Unsafe of Vertice.t list G.t * Vertice.t
-    exception Safe of Vertice.t list G.t
+    exception Safe of Vertice.t list G.t * (int * Cube.t list) list
     
     val search : (unit -> 'a) -> Ast.t_system -> result
   end

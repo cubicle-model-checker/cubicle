@@ -117,7 +117,11 @@ let create_normal_array ar = create_norma_sa_ar (ArrayAtom.to_satom ar) ar
 let dim c = List.length c.vars
 let size c = Array.length c.array
 
-
+let compare_cubes c1 c2 =
+  let s = dim c1 - dim c2 in
+    if s = 0 then
+      size c1 - size c2
+    else s
 
 (*****************************************************************)
 (* Simplifcation of atoms in a cube based on the hypothesis that *)

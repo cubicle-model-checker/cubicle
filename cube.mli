@@ -49,6 +49,9 @@ val dim : t -> int
 val size: t -> int
 (** returns the number of atoms in the conjuction *)
 
+val compare_cubes : t -> t -> int
+(** compare two cubes [c1] and [c2]
+    [c1] > [c2] if [c1] has less variables or less litterals *)
 
 (** {2 Inconsistencies detection } *)
 
