@@ -249,32 +249,32 @@ let assume_distinct nvars =
 let assume_clause id ap =
   let f = make_clause ap in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check  ()
+  SMT.assume ~id f
+  (* SMT.check  () *)
 
-let assume_clause_sa id sa =
-  let f = make_clause_sa sa in
-  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check  ()
+(* let assume_clause_sa id sa = *)
+(*   let f = make_clause_sa sa in *)
+(*   if debug_smt then eprintf "[smt] assume node: %a@." F.print f; *)
+(*   SMT.assume ~id f; *)
+(*   SMT.check  () *)
 
 let assume_formula_satom id sa =
   let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check  ()
+  SMT.assume ~id f(* ; *)
+  (* SMT.check  () *)
 
 let assume_dnf id dnf =
   let f = make_disjunction_set dnf in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check ()
+  SMT.assume ~id f(* ; *)
+  (* SMT.check () *)
 
-let assume_neg_formula_satom id sa =
-  let f = F.make F.Not [make_formula_set sa] in
-  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check  ()
+(* let assume_neg_formula_satom id sa = *)
+(*   let f = F.make F.Not [make_formula_set sa] in *)
+(*   if debug_smt then eprintf "[smt] assume node: %a@." F.print f; *)
+(*   SMT.assume ~id f; *)
+(*   SMT.check  () *)
 
 let clear_system () =
   SMT.clear ()

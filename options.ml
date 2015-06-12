@@ -33,6 +33,8 @@ let maxnodes = ref 100_000
 let debug = ref false
 let dot = ref false
 let dot_level = ref 0
+let extra_level = ref 0
+let dot_extra = ref false
 let dot_prog = ref Dot
 let dot_colors = ref 0
 let dot_step = ref false
@@ -101,6 +103,10 @@ let set_dot d =
   dot := true;
   dot_level := d
 
+let set_extra d =
+  dot_extra := true;
+  extra_level := d
+
 let set_ic3 i =
   ic3 := true;
   ic3_level := i
@@ -132,6 +138,8 @@ let specs =
               "<level> graphviz (dot) output with a level of details";
     "-steps", Arg.Set dot_step,
               " enables the multiple dot files to see the evolution of ic3";
+    "-extra", Arg.Int set_extra,
+              " create the graph of refinement with a detail level";
     "-sfdp", Arg.Unit use_sfdp,
               " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
@@ -214,9 +222,11 @@ let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level
+let extra_level = !extra_level
 let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let dot_step = !dot_step
+let dot_extra = !dot_extra
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling

@@ -16,6 +16,7 @@
 open Format
 open Ast
 open Types
+open Vertice
 open Options
 open Util
 

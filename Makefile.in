@@ -91,7 +91,7 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo approx.cmo  \
-      stats.cmo bwd.cmo brab.cmo ic3.cmo typing.cmo trace.cmo main.cmo
+      stats.cmo bwd.cmo brab.cmo vertice.cmo ic3.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -275,7 +275,7 @@ FILES = approx.ml approx.mli ast.mli brab.ml brab.mli bwd.ml bwd.mli\
 	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
 	safety.ml safety.mli stats.ml stats.mli trace.ml trace.mli\
 	types.ml types.mli typing.ml typing.mli util.ml util.mli\
-	variable.ml variable.mli version.ml
+	variable.ml variable.mli vertice.ml vertice.mli version.ml
 
 EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
 	   ricart_abdulla.cub szymanski_at.cub berkeley.cub flash_eager.cub\

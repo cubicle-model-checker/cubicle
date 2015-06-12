@@ -138,6 +138,7 @@ let print_pre cedge fmt n =
 
 let dot_fmt = ref std_formatter
 let step_fmt = ref std_formatter
+let ext_fmt = ref std_formatter
 
 let new_node n =
   current_color := next_shade ();
@@ -209,7 +210,7 @@ let convert =
   fun dot_file ->
     incr count;
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s_%d_%d-%d.%s" 
+    let svg = Format.sprintf "%s_extra_%d_%d-%d.%s" 
       reg_file dot_level ic3_level !count "svg" in
     match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
 			  " > "^svg^" && rm "^dot_file) with
@@ -222,14 +223,28 @@ let display_graph =
   let r = Str.regexp "\\(\\..+.dot\\)" in
   fun dot_file ->
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s_%d_%d.%s" 
+    let svg = Format.sprintf "%s_graph_%d_%d.%s" 
       reg_file dot_level ic3_level "svg" in
     let com = match Util.syscall "uname" with
       | "Darwin\n" -> "open"
       | "Linux\n" -> "xdg-open"
       | _ -> (* Windows *) "cmd /c start"
     in
-    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^" > "^svg^ "&& rm "^dot_file^" && "^com^" "^svg) with
+    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
+                          " > "^svg^ "&& rm "^dot_file^" && "^com^" "^svg) with
+      | 0 -> ()
+      | _ ->
+	eprintf "There was an error with dot. Make sure graphviz is installed."
+
+let display_extra =
+  let r = Str.regexp "\\(\\..+.dot\\)" in
+  fun dot_file ->
+    
+    let reg_file = Str.replace_first r "" dot_file in
+    let svg = Format.sprintf "%s_extra_%d_%d.%s" 
+      reg_file dot_level ic3_level "svg" in
+    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
+                          " > "^svg^" && rm "^dot_file) with
       | 0 -> ()
       | _ ->
 	eprintf "There was an error with dot. Make sure graphviz is installed."
@@ -268,6 +283,33 @@ let open_step =
 	  convert dot_file
       )
 
+let open_extra () =
+  if not dot_extra then fun () -> ()
+  else
+    let rdir = if ic3 then "TB" else "BT" in
+    let bfile = Filename.basename file in
+    let dot_file, dot_channel =
+      Filename.open_temp_file bfile ".dot" in
+    ext_fmt := formatter_of_out_channel dot_channel;
+    fprintf !ext_fmt "digraph \"%s\" {@." bfile;
+    fprintf !ext_fmt "orientation = portrait;\n\
+                      fontsize = 10;\n\
+                      rankdir = %s;\n\
+                      node [fontname=helvetica];\n\
+                      edge [fontname=helvetica];\n\
+                      graph [fontname=helvetica];\n\
+                      ratio=\"fill\";\n\
+                      size=\"11.7,8.3!\";\n\
+                      margin=0;\n\
+                      splines=true;\n\
+                      concentrate=false;\n@." rdir;
+    dot_header !ext_fmt;
+    fun () ->
+      dot_footer !ext_fmt;
+      dot_footer !ext_fmt;
+      close_out dot_channel;
+      display_extra dot_file
+
 let open_dot () =
   if not dot then fun () -> ()
   else
@@ -299,7 +341,11 @@ let open_dot () =
 
 let new_node_ic3 id lbl =
   current_color := next_shade ();
-  fprintf !dot_fmt "@[%s[label = \"%s\"]@]@." id lbl
+  fprintf !dot_fmt "@[%s [label = \"%s\"]@]@." id lbl
+
+let new_node_ext_ic3 id lbl =
+  current_color := next_shade ();
+  fprintf !ext_fmt "@[%s [label = \"%s\"]@]@." id lbl
 
 let new_node_step_ic3 ?color:(c="gray") id lbl =
   (* current_color := next_shade (); *)
@@ -309,6 +355,8 @@ let new_node_step_ic3 ?color:(c="gray") id lbl =
 let new_relation_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
   fprintf !dot_fmt "%s -> %s [label=\"%s\" color=%s style=%s];@." 
     id id' (Hstring.view tr.tr_info.tr_name) c s
+
+let new_relation_ext_ic3 id id' = fprintf !ext_fmt "%s -> %s @." id' id
 
 let new_relation_step_ic3 ?style:(s="solid") ?color:(c="black") id id' tr =
   incr stc;

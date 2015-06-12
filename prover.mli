@@ -43,10 +43,10 @@ val assume_neg : int -> ArrayAtom.t -> unit
 
 val assume_distinct : int -> unit
 val assume_clause : int -> ArrayAtom.t -> unit
-val assume_clause_sa : int -> SAtom.t -> unit
+(* val assume_clause_sa : int -> SAtom.t -> unit *)
 val assume_formula_satom : int -> SAtom.t -> unit
 val assume_dnf : int -> SAtom.t list -> unit
-val assume_neg_formula_satom : int -> SAtom.t -> unit
+(* val assume_neg_formula_satom : int -> SAtom.t -> unit *)
 val clear_system : unit -> unit
 
 val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit

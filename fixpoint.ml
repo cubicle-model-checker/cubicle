@@ -480,16 +480,22 @@ end = struct
     | None -> medium_fixpoint s nodes
     | r -> r
 
+  let easy = ref 0
+
   let check s nodes =
+    
     Debug.unsafe s;
     TimeFix.start ();
     let r =
       match easy_fixpoint s nodes with
-      | None ->
-         (match medium_fixpoint s nodes with
-          | None -> hard_fixpoint s nodes
-          | r -> r)
-      | r -> r
+        | None ->
+          (match medium_fixpoint s nodes with
+            | None -> hard_fixpoint s nodes
+            | r -> r)
+        | r -> 
+          incr easy;
+          Format.eprintf "[Easy] %d@." !easy;
+          r
     in
     TimeFix.pause ();
     r

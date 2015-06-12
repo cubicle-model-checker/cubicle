@@ -69,9 +69,9 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         begin
           match Fixpoint.check n !visited with
           | Some db ->
-             Stats.fixpoint n db
+            Stats.fixpoint n db
           | None ->
-             Stats.check_limit n;
+            Stats.check_limit n;
             Stats.new_node n;
             let n = begin
               match Approx.good n with

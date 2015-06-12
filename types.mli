@@ -193,6 +193,7 @@ and SAtom : sig
   val print_inline : Format.formatter -> t -> unit
   (** prints a conjunction on a signle line *)
 
+    
 end
 
 (** Interface for the conjunctions of atoms seen as arrays of atoms. This
@@ -250,3 +251,6 @@ module ArrayAtom : sig
   val print : Format.formatter -> t -> unit
   (** prints the conjunction corresponding to the array of atoms *)
 end
+
+(** Types for IC3 *)
+

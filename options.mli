@@ -65,9 +65,11 @@ val mode : string
 val debug : bool
 val dot : bool
 val dot_level : int
+val extra_level : int
 val dot_prog : viz_prog
 val dot_colors : int
 val dot_step : bool
+val dot_extra : bool
 val quiet : bool
 val verbose : int
 val nocolor : bool
