@@ -36,6 +36,10 @@ let cpt_restart = ref 0
 
 let cpt_delete = ref 0
 
+let cpt_easy_false = ref 0
+
+let cpt_easy_true = ref 0
+
 let nodes_pre_run = ref []
 
 let new_node s =
@@ -166,7 +170,14 @@ let print_time_formulas () =
 
 let print_time_prover () =
   let sec = Prover.SMT.get_time () in
-  printf "└─Time in solver                 : %a@." print_time sec
+  printf "├─Time in solver                 : %a@." print_time sec
+
+let print_time_subsum () =
+  printf "├─Time in subsumption            : %a@." print_time (TimerIc3.get ())
+
+let print_time_bad () =
+  printf "└─Time in bad checking           : %a@." print_time (TimerITIc3.get ())
+
          
 let print_time_pre () =
   printf "Time for pre-image computation   : %a@." print_time (TimePre.get ())
@@ -200,6 +211,8 @@ let print_report ~safe visited candidates =
            (if safe then "invariants" else "candidates") (List.length candidates);
   printf "Restarts                         : @[%d%a@]@." !cpt_restart
          print_rounds_nb ();
+  printf "SMT calls avoided                : %d@." !cpt_easy_true;
+  printf "SMT calls not avoided            : %d@." !cpt_easy_false;
   if profiling then
     begin
       printf "%a" Pretty.print_line ();
@@ -212,6 +225,8 @@ let print_report ~safe visited candidates =
       print_time_sort ();
       print_time_formulas ();
       print_time_prover ();
+      print_time_subsum ();
+      print_time_bad ();
       print_time_forward ();
       print_time_ccheck ();
     end;

@@ -114,6 +114,21 @@ and cross l pr x st =
 	  else List.rev_map (fun ds -> (x, y)::ds) acc in
 	List.rev_append acc (cross l (y::pr) x p)
 
+let rec all_permutations_ordered l1 l2 = 
+  (*assert (List.length l1 <= List.length l2);*)
+  match l1 with
+    | [] -> [[]]
+    | x::l -> cross_ordered l [] x l2
+and cross_ordered l pr x st =
+  match st with
+    | [] -> []
+    | y::p -> 
+	let acc = all_permutations_ordered l (List.rev_append pr p) in
+	let acc = 
+	  if acc = [] then []
+	  else List.rev_map (fun ds -> (x, y)::ds) acc in
+	List.rev_append acc (cross_ordered l pr x p)
+
 let rec all_parts l = match l with
   | [] -> []
   | [x] -> [[x]]

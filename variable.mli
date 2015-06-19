@@ -66,6 +66,12 @@ val all_permutations : 'a list -> 'a list -> ('a * 'a) list list
     [l1] to [l2] assuming that the variables of both lists are distinct.
     [l2] must be longer than (or the same size as) [l1] *)
 
+val all_permutations_ordered : 'a list -> 'a list -> ('a * 'a) list list
+(** [all_permutations l1 l2] returns all possible substitutions from 
+    [l1] to [l2] assuming that the variables of both lists are distinct.
+    [l2] must be longer than (or the same size as) [l1] and with no symetry
+    (if ((1, a), (2, b)) then we can not have ((1, b), (2, a)) *)
+  
 val all_instantiations : t list -> t list -> subst list
 (** same as {! all_permutations} but does not assume elements of [l1] to be
     distinct. [l1] can be longer than [l2]. *)

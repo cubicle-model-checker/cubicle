@@ -12,10 +12,11 @@ type res_ref =
 val create_world : (Variable.t list * Types.SAtom.t) list -> ucnf
 val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
 
-val create :  ?creation:(t * Ast.transition * t) -> ucnf -> ednf -> t
+val create :  ?creation:(t * Ast.transition * t) -> ucnf -> ucnf -> 
+  ednf -> t
 val delete_parent : t -> t * Ast.transition -> bool
 val add_parent : t -> t * Ast.transition -> unit
-val get_parents : t -> (t * Ast.transition) list
+val get_subsume : t -> (t * Ast.transition) list
 
 val update_bad_from : t -> Ast.transition -> t -> unit
 val update_world_from : t -> t -> unit
@@ -38,8 +39,8 @@ val print_vednf : Format.formatter -> t -> unit
 val add_node_dot : t -> unit
 val add_node_extra : t -> unit
 val add_node_step : t -> string -> unit
-val add_parents_dot : t -> unit
-val add_parents_step : t -> unit
+val add_subsume_dot : t -> unit
+val add_subsume_step : t -> unit
   
 val add_relation_step : ?color:string -> ?style:string -> 
   t -> t -> Ast.transition -> unit

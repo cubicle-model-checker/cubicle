@@ -97,7 +97,7 @@ let update_dot rg =
   G.iter (
     fun v _ -> 
       V.add_node_dot v;
-      V.add_parents_dot v;
+      V.add_subsume_dot v;
   ) rg
     
 let update_extra rg =
@@ -116,7 +116,7 @@ let update_step rg v1 =
 	then if V.equal v1 v then "orange" else "red" 
 	else "chartreuse" in
       V.add_node_step v c;
-    (* V.print_step_parents e; *)
+    (* V.print_step_subsume e; *)
   ) rg
 
 type transitions = transition list
@@ -165,10 +165,11 @@ let search dots system =
 	(c.Cube.vars, c.Cube.litterals)::acc
     ) [] cunsl in
   let btop = V.create_bad unsl in
-    (* Create top with gtop, btop and no parents *)
-  let top = V.create wtop btop in
+    (* Create top with gtop, btop and no subsume *)
+  let top = V.create wtop wtop btop in
     (* Print top *)
-  Format.eprintf "%a@." V.print_vertice top;    
+  if verbose > 0 then
+    Format.eprintf "%a@." V.print_vertice top;    
   
     (* root = (init, false) *)
   let (_, initfl) = system.t_init in
@@ -187,8 +188,8 @@ let search dots system =
   let wroot = V.create_world initl in
     (* Create the bad formula of root, false *)
   let broot = V.create_bad [] in
-    (* Create root with groot, broot and no parents *)
-  let root = V.create wroot broot in
+    (* Create root with groot, broot and no subsume *)
+  let root = V.create wroot wroot broot in
   
     (* Working queue of nodes to expand and refine *)
   let todo = Q.create () in
@@ -236,7 +237,7 @@ let search dots system =
 	| V.Bad_Parent bad ->
 	    (* If v1 is root, we can not refine *)
 	  if V.equal v1 root then raise (Unsafe (rg, v1));
-	    (* Else, we recursively call refine on all the parents *)
+	    (* Else, we recursively call refine on all the subsume *)
 	  Format.eprintf "[New Bad] (%a).bad = %a@."
 	    V.print_id v1 V.print_vednf v1;
 	  if dot_step then add_steps v2 v1 Bad tr false;
@@ -248,7 +249,7 @@ let search dots system =
 		V.print_id v1;
 	      if dot_step then add_steps vp v1 Bad tr true;
               refine vp v1 tr rg tc
-	  ) (rg, tc) (V.get_parents v1)
+	  ) (rg, tc) (V.get_subsume v1)
 
 	  (* The node vc covers v2 by tr *)
 	| V.Covered vc -> 
@@ -287,8 +288,9 @@ let search dots system =
 	  (rg', tc)
     )
     else (
-      Format.eprintf "(%a) is safe, no backward refinement@." 
-        V.print_id v2;
+      (* if verbose > 0 then *)
+        Format.eprintf "(%a) is safe, no backward refinement@." 
+          V.print_id v2;
       (rg, tc)
     )
   in
@@ -311,7 +313,7 @@ let search dots system =
       fun (rg, tc) tr ->
         let v2 = C.find tr tc in
         if dot_step then add_steps v1 v2 Expand tr false;
-	refine v1 top tr rg tc
+	refine v1 v2 tr rg tc
     ) (rg, tc) trans
     in 
     let () = Sys.set_signal Sys.sigint 
