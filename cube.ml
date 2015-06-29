@@ -288,9 +288,9 @@ let rec simplification_terms a = match a with
 	    simplification_terms a1, simplification_terms a2)
 
 
-(***********************************)
-(* Cheap check of inconsitent cube *)
-(***********************************)
+(************************************)
+(* Cheap check of inconsistent cube *)
+(************************************)
 
 let rec list_assoc_term t = function
   | [] -> raise Not_found
@@ -741,8 +741,7 @@ let equivalent c1 c2 =
       end
 
 let is_subformula c1 c2 =
-  if dim c1 > dim c2 then false
-  else if size c1 > size c2 then false
+  if compare_cubes c1 c2 > 0 then false
   else 
     begin
       let v1 = c1.vars in

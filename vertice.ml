@@ -12,7 +12,7 @@ type ednf = Cube.t list
 type t = 
     { 
       world : ucnf;
-      added_clauses : ucnf;
+      added_clause : ucnf;
       mutable bad  : ednf;
       mutable subsume : (t * transition) list;
       predecessor : t option;
@@ -27,6 +27,8 @@ type res_ref =
   | Bad_Parent of (int * Cube.t list)
   | Covered of t
   | Extrapolated of t
+
+type res_easy = ESat | EUnsat
 
 
 let hash v = v.id
@@ -334,7 +336,7 @@ let create =
     let v =
       {
 	world = w;
-        added_clauses = ac;
+        added_clause = ac;
 	bad = b;
 	subsume = subs;
         predecessor = pred;
@@ -460,27 +462,26 @@ let assume_cube n f =
   fun () ->
     if debug_smt && verbose > 1 then
       Format.eprintf "[A&R] Assuming@.";
+    if debug_smt then Format.eprintf "[smt] Cube@.";
     Prover.assume_formula_satom n f
       
 let assume_cnf n gl =
   fun () -> 
+    if debug_smt then Format.eprintf "[smt] cnf@.";
     List.iter (
       fun g -> 
 	if not (SAtom.is_empty g.Cube.litterals)
 	then
 	  Prover.assume_clause n g.Cube.array
-    ) gl(* ; *)
-(* Prover.run (); *)
+    ) gl
 
 let assume_udnfs n udnfs = 
   fun () ->
-    if debug_smt then Format.eprintf "[UDNFS]@.";
+    if debug_smt then Format.eprintf "[smt] Udnf@.";
     List.iter (
       fun udnf ->
         Prover.assume_dnf n udnf
-    ) udnfs;
-    (* Prover.run (); *)
-    if debug_smt then Format.eprintf "[End UDNFS]@."
+    ) udnfs
       
 let clear_and_restore fl =
   fun () ->
@@ -503,42 +504,43 @@ let clear_and_restore fl =
    Answers SAT if we can take the transition,
    Answers UNSAT otherwise *)
 let pickable v tr = 
-  if verbose > 0 then
-    Format.eprintf "\ncheck the transition : %a\n@." 
-      Hstring.print tr.tr_info.tr_name;
+  (* Is it useful to test wether or not a transition can be taken ?*)
+  (* if verbose > 0 then *)
+  (*   Format.eprintf "\ncheck the transition : %a\n@." *)
+  (*     Hstring.print tr.tr_info.tr_name; *)
+  if v.id > 2 then true
+  else
+    let world = v.world in
+    
+    let n = v.id in
 
-  let world = v.world in
-  
-  let n = v.id in
+    let n_arg_wo = max_args world in
+    let n_arg_tr = nb_args tr in
+    let args = get_procs n_arg_wo n_arg_tr in
 
-  let n_arg_wo = max_args world in
-  let n_arg_tr = nb_args tr in
-  let args = get_procs n_arg_wo n_arg_tr in
-
-  let inst_worlds = instantiate_cube_list args world in
-  let inst_tr = Forward.instantiate_transitions args args [tr] in
-  
-  let fun_dist = assume_distinct (List.length args) in
-  let fun_world = assume_cnf n inst_worlds in
-  let fun_cr = clear_and_restore [fun_dist; fun_world] in
-  
-  List.exists (
-    fun 
-      {
-        Forward.i_reqs = reqs;
-        i_udnfs = udnfs;
-      } -> 
-	try 
-          if debug_smt && verbose > 0 then 
-            Format.eprintf "[smt] Clear@.";
-          fun_cr ();
-          assume_cube n reqs ();
-          assume_udnfs (n+1) udnfs ();
-          Prover.run ();
-          true
-	with 
-	  | Smt.Unsat _ -> false
-  ) inst_tr
+    let inst_worlds = instantiate_cube_list args world in
+    let inst_tr = Forward.instantiate_transitions args args [tr] in
+    
+    let fun_dist = assume_distinct (List.length args) in
+    let fun_world = assume_cnf n inst_worlds in
+    let fun_cr = clear_and_restore [fun_dist; fun_world] in
+    
+    List.exists (
+      fun
+        {
+          Forward.i_reqs = reqs;
+          i_udnfs = udnfs;
+        } ->
+          try
+            fun_cr ();
+            assume_cube n reqs ();
+            assume_udnfs (n+1) udnfs ();
+            Prover.run ();
+            true
+          with
+            | Smt.Unsat _ ->
+              false
+    ) inst_tr
 
 (* Given a list of transitions and a node,
    returns the list of the pickable transitions *)
@@ -684,24 +686,25 @@ let find_inst fun_dist fun_wo n1 n2 inst_f2 l =
 	    | (pif2::tl, pif2'::tl') ->
 	      (
 		try
-    		  if debug_smt && verbose > 1 then
+    		  if debug_smt && verbose > 0 then
     	    	    Format.eprintf "[Find_Inst] Clear@.";
                   (*   Format.eprintf "[ImplyTrans] Assume %a@." *)
 	    	  (*     SAtom.print pif2.Cube.litterals; *)
 
     		  (* Format.eprintf "[find_inst] begin acrs@."; *)
                   fun_cr ();
-                  
+                  if debug_smt && verbose > 0 then
+    	    	    Format.eprintf "[Find_Inst] Cube@.";
                   assume_cube n2 pif2.Cube.litterals ();
                   Prover.run ();
 
-    		  if debug_smt && verbose > 1 then
-    	    	    Format.eprintf "[ImplyTrans] Res : SAT@.";
+    		  if debug_smt && verbose > 0 then
+    	    	    Format.eprintf "[Find_Inst] Res : SSAT\n@.";
     		  res := Some (pif2', it);
 		  raise Exit
     		with Smt.Unsat _ ->
-    		  if debug_smt && verbose > 1 then
-    	    	    Format.eprintf "[ImplyTrans] Res : UNSAT@.";
+    		  if debug_smt && verbose > 0 then
+    	    	    Format.eprintf "[Find_Inst] Res : SUNS*AT\n@.";
     		  f (tl, tl')
 	      );
               
@@ -722,8 +725,8 @@ let find_inst fun_dist fun_wo n1 n2 inst_f2 l =
   r
 
 type res = 
-  | Yes of Cube.t
-  | No
+  | HSat of Cube.t
+  | HUnsat
 
 let find_pre tr acc bad =
   let ncube = Node.create bad in
@@ -732,32 +735,53 @@ let find_pre tr acc bad =
   let nc' = List.map (fun n -> n.cube) nl' in
   nc@nc'@acc
 
-let easy_counterexample cnf dnf =
+let easy_imply_by_trans cnf dnf ({tr_info = ti} as tr)=
+  let n_cnf = max_args cnf in
+  let n_dnf = max_args dnf in
+  let n_tr = List.length ti.tr_args in
+  let n_args = 
+    if n_cnf - n_dnf - n_tr > 0 then n_cnf - n_dnf
+    else n_tr 
+  in
+  let args = get_procs n_args n_dnf in
+  if debug && verbose > 2 then 
+    Format.printf "Card : %d@." (List.length args);
+  
+  let inst_dnf = instantiate_cube_list args dnf in
+  
+  let ndnf = List.fold_left (find_pre tr) [] inst_dnf in
+  
   let ncnf = negate_litterals cnf in
-  if verbose > 2 then
-    (
-      Format.eprintf "[CNF] %a@." print_ucnf cnf;
-      Format.eprintf "[NCNF] %a@." print_ucnf ncnf;
-      Format.eprintf "[DNF] %a@." print_ednf dnf;
-    );
+  (* if verbose > 2 then *)
+  (*   ( *)
+  (* Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
+  (* Format.eprintf "[NCNF] %a@." print_ednf ncnf; *)
+  (* Format.eprintf "[DNF] %a@." print_ednf dnf; *)
+  (* Format.eprintf "[NDNF] %a@." print_ednf ndnf; *)
+  (* ); *)
   let res =
     (* A transformer avec un List.filter *)
     List.exists (
       fun clause ->
         List.for_all (
           fun cube -> Cube.is_subformula clause cube
-        ) dnf
+        ) ndnf
     ) ncnf in
-  let parts =
-    List.partition (
-      fun clause ->
-        List.for_all (
-          fun cube -> Cube.is_subformula clause cube
-        ) dnf
-    ) ncnf in
-  if res then incr Stats.cpt_easy_true
-  else incr Stats.cpt_easy_false;
-  res, parts
+  (* let parts = *)
+  (*   List.partition ( *)
+  (*     fun clause -> *)
+  (*       List.for_all ( *)
+  (*         fun cube -> Cube.is_subformula clause cube *)
+  (*       ) dnf *)
+  (*   ) ncnf in *)
+  if res then (
+    incr Stats.cpt_easy_true;
+    EUnsat
+  )
+  else (
+    incr Stats.cpt_easy_false;
+    ESat)
+
 
 
 
@@ -766,7 +790,8 @@ let easy_counterexample cnf dnf =
    FALSE means YES.
    When we want to know if world1 and tr imply bad2,
    TRUE means YES.*)
-let imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) = 
+let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) = 
+  Format.eprintf "[HIT] Smt call@.";
   (* We want to check v1 and tr and not v2
      if it is unsat, then v1 and tr imply v2
      else, v1 and tr can not lead to v2 *)
@@ -789,89 +814,89 @@ let imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
   
   let inst_dnf = instantiate_cube_list args dnf in
   
-  let ndnf = List.fold_left (find_pre tr) [] inst_dnf in
+  (* let ndnf = List.fold_left (find_pre tr) [] inst_dnf in *)
   
-  let res, (imp, pos) = easy_counterexample cnf ndnf in
-  Format.eprintf "[CNF] %a@." print_ucnf cnf;
-  Format.eprintf "[DNF] %a@." print_ednf dnf;
-  Format.eprintf "[Partition Impossible]\n%a@." print_ednf imp;
-  Format.eprintf "[Partition Possible]\n%a@." print_ednf pos;
-  Format.eprintf "[Result] %s@." (if res then "true" else "false");
+  (* let res, (imp, pos) = easy_counterexample cnf ndnf in *)
+  (* Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
+  (* Format.eprintf "[DNF] %a@." print_ednf dnf; *)
+  (* Format.eprintf "[Partition Impossible]\n%a@." print_ednf imp; *)
+  (* Format.eprintf "[Partition Possible]\n%a@." print_ednf pos; *)
+  (* Format.eprintf "[Result] %s@." (if res then "true" else "false"); *)
   
-  if res then No
-  else 
-    begin
-      let inst_cnf = instantiate_cube_list args cnf in 
-      let inst_upd = Forward.instantiate_transitions args args [tr] in
-      let fun_dist = assume_distinct (List.length args) in
-      let fun_world = assume_cnf n1 inst_cnf in
-      let res = find_inst fun_dist fun_world n1 n2 inst_dnf inst_upd in
-      match res with
-        | Some (b, it) -> Yes b
-        | None -> No
-    end
+  (* if res then No *)
+  (* else  *)
+    (* begin *)
+  let inst_cnf = instantiate_cube_list args cnf in 
+  let inst_upd = Forward.instantiate_transitions args args [tr] in
+  let fun_dist = assume_distinct (List.length args) in
+  let fun_world = assume_cnf n1 inst_cnf in
+  let res = find_inst fun_dist fun_world n1 n2 inst_dnf inst_upd in
+  match res with
+    | Some (b, it) -> HSat b
+    | None -> HUnsat
+(* end *)
 
-let find_sub v1 tr vs =
-  let nvs = negate_litterals vs.added_clauses in 
+let imply_by_trans v1 tr vs v2 =
+  let nvs = negate_litterals vs.added_clause in 
   let rec f v =
-    Format.eprintf "[TestingFS] %a --%a--> %a "
-      print_id v Hstring.print tr.tr_info.tr_name print_id vs;
+    (* Format.eprintf "[TestingFS] %a --%a--> %a " *)
+    (*   print_id v Hstring.print tr.tr_info.tr_name print_id vs; *)
     (* Format.eprintf  *)
-    (*   "[TestingFS] With (%a).added_clauses = %a\nand (%a).nvs = %a@." *)
-    (*   print_id v print_ucnf v.added_clauses *)
+    (*   "[TestingFS] With (%a).added_clause = %a\nand (%a).nvs = %a@." *)
+    (*   print_id v print_ucnf v.added_clause *)
     (*   print_id vs print_ednf nvs; *)
     if profiling then T.start ();
-    let res = imply_by_trans (v.added_clauses, v.id)
-      (nvs, vs.id) tr in
+    let res = easy_imply_by_trans v.added_clause nvs tr in
     if profiling then T.pause ();
     match res with
-      | No ->
-        Format.eprintf " SAT @.";
+      | EUnsat ->
+        (* Format.eprintf " EUNSAT @."; *)
         true
-      | Yes _ ->
-        Format.eprintf " UNSAT @.";
+      | ESat ->
+        (* Format.eprintf " ESAT @."; *)
+        (* false *)
         match v.predecessor with
           | None ->
-            Format.eprintf "[TestingFS] Back to (%a).world " print_id v1;
-            let res = imply_by_trans (v1.world, v1.id) (nvs, vs.id) tr in
-            (
-              match res with 
-                | No -> Format.eprintf " SAT @.";true
-                | Yes _ -> Format.eprintf " UNSAT @.";false
-            )
-          | Some vp -> 
-            (
-              if debug then
+            (* Format.eprintf "[TestingFS] Back to (%a).world@." print_id v1; *)
+            
+            (* let res = hard_imply_by_trans (v1.world, v1.id) (nvs, vs.id) tr *)
+            (* in ( *)
+            (*   match res with *)
+            (*     | HUnsat -> Format.eprintf " HUNSAT @.";true *)
+            (*     | HSat _ -> Format.eprintf " HSAT @.";false *)
+            (* ) *)
+          false
+          | Some vp ->
+            (if debug then
+              try
+                let map = HI.find hic vp.id in
                 try
-                  let map = HI.find hic vp.id in
-                  try
-                    let bind = MA.find (tr, vs.id) map in
-                    let bind = if bind then "true" else "false" in
-                    Format.eprintf
-                      "[Predecessor] Predecessor %a --%a--> %a %s@."
-                      print_id vp Hstring.print tr.tr_info.tr_name print_id vs bind
-                  with Not_found -> Format.eprintf
-                    "[Predecessor] No bind from %a with (%a, %a)@."
-                    print_id vp Hstring.print tr.tr_info.tr_name print_id vs
+                  let bind = MA.find (tr, vs.id) map in
+                  let bind = if bind then "true" else "false" in
+                  Format.eprintf
+                    "[Predecessor] Predecessor %a --%a--> %a %s@."
+                    print_id vp Hstring.print tr.tr_info.tr_name print_id vs bind
                 with Not_found -> Format.eprintf
-                  "[Predecessor] No map found for %a@." print_id vp
-            );
+                  "[Predecessor] No bind from %a with (%a, %a)@."
+                  print_id vp Hstring.print tr.tr_info.tr_name print_id vs
+              with Not_found -> Format.eprintf
+                "[Predecessor] No map found for %a@." print_id vp);
             f vp
   in f v1
 
 let find_sub_base v1 tr vs = 
-  let nvs = negate_litterals vs.added_clauses in 
+  let nvs = negate_litterals vs.added_clause in 
   Format.eprintf "[TestingFSB] %a --%a--> %a ?@."
     print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
   Format.eprintf "[TestingFSB] With (%a).world = %a\n and (%a).nvs = %a@."
     print_id v1 print_ucnf v1.world
     print_id vs print_ednf nvs;
-  let res = imply_by_trans (v1.world, v1.id) (nvs, vs.id) tr in
+  let res = hard_imply_by_trans (v1.world, v1.id) (nvs, vs.id) tr in
   match res with
-    | No -> Format.eprintf "[TestingFSB] %a --%a--> %a SAT @."
+    | HUnsat -> Format.eprintf "[TestingFSB] %a --%a--> %a HUNSAT @."
       print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
       true
-    | Yes _ -> Format.eprintf "[TestingFSB] %a --%a--> %a UNSAT @."
+    | HSat _ -> Format.eprintf "[TestingFSB] %a --%a--> %a HSAT @."
       print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
       false
                 
@@ -897,17 +922,17 @@ let find_subsuming_vertice v1 v2 tr candidates =
 	(is_true v2 || implies vs v2) 
 	&& (
           (* if debug then *)
-            HI.iter (
-              fun id1 map ->
-                Format.eprintf "[HV] %d" id1;
-                MA.iter (
-                  fun (t, id2) b ->
-                    let res = if b then "true" else "false" in
-                    Format.eprintf "\t--%a--> %d (%s)@." Hstring.print t.tr_info.tr_name id2 res
-                ) map
-            ) hic;
+            (* HI.iter ( *)
+            (*   fun id1 map -> *)
+            (*     Format.eprintf "[HV] %d" id1; *)
+            (*     MA.iter ( *)
+            (*       fun (t, id2) b -> *)
+            (*         let res = if b then "true" else "false" in *)
+            (*         Format.eprintf "\t--%a--> %d (%s)@." Hstring.print t.tr_info.tr_name id2 res *)
+            (*     ) map *)
+            (* ) hic; *)
 	  (* May need an adaptation when ic3_level = 1 *)
-          find_sub v1 tr vs
+          imply_by_trans v1 tr vs v2
           (* find_sub_base v1 tr vs *)
         )    
       in 
@@ -917,12 +942,12 @@ let find_subsuming_vertice v1 v2 tr candidates =
       then (
         Format.eprintf
           "[Subsumed] (%a) is subsumed by (%a) by (%a)@." 
-          print_id v1 print_id vs Hstring.print tr.tr_info.tr_name
+          print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
       )
       else (
         Format.eprintf 
           "[Not subsumed] (%a) is not subsumed by (%a) by (%a)@."
-          print_id v1 print_id vs Hstring.print tr.tr_info.tr_name
+          print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
       );
       res
   ) candidates
@@ -1030,34 +1055,64 @@ let cube_implies c cl =
     Some res
   with Not_found -> None
 
-let simplify_dnf g1 b2 dnf =
+let filter_consistent_bad_in_world w1 b2 =
+  let nw1 = negate_litterals w1 in
+  List.filter (
+    fun cube ->
+      let v1 = cube.Cube.vars in
+      List.for_all (
+        fun nclause -> 
+          let v2 = nclause.Cube.vars in
+          let sigmas = Variable.all_permutations v2 v1 in
+          not (List.exists (
+            fun sigma ->
+              let nclause = Cube.subst sigma nclause in
+              let res = Cube.inconsistent_2 nclause cube in
+              (* Format.eprintf "[CI] C1 : %a\n C2: %a\n\t%s@." *)
+              (*   Cube.print nclause Cube.print cube *)
+              (*   (if res then "true" else "false"); *)
+              not res
+          ) sigmas)
+      ) nw1
+  ) b2     
+
+let simplify_dnf w1 b2 dnf =
+  (* Format.eprintf "[Simp DNF] CNF : %a\nDNF : %a@." *)
+  (*   print_ucnf w1 print_ednf dnf; *)
+  
+  (* let tempdnf = filter_consistent_bad_in_world w1 dnf in *)
+  (* Format.eprintf "[Simp DNF] NDNF : %a@." *)
+  (*   print_ednf tempdnf; *)
+  (* match tempdnf with *)
+  (*   | [] -> [] *)
+  (*   | _ -> *)
   let sdnf, _ = List.fold_left (
-    fun (acc, count) cube ->
-      let cig = cube_implies (negate_cube cube) g1 in
-      match cig with 
-        | Some c ->
-          if debug && verbose > 0 then
-            Format.eprintf 
-              "[Simp negation] \n%a\n [is negated by] \n%a@."
-              Cube.print cube Cube.print c;
-          (acc, count)
-        | None ->
-          let cib = cube_implies cube b2 in
-          match cib with
+        fun (acc, count) cube ->
+          let cig = cube_implies (negate_cube cube) w1 in
+          match cig with 
             | Some c ->
               if debug && verbose > 0 then
-                Format.eprintf
-                  "[Simp already bad]\n%a\n [was already in] \n%a@."
+                Format.eprintf 
+                  "[Simp negation] \n%a\n [is negated by] \n%a@."
                   Cube.print cube Cube.print c;
-              ((c, count)::acc, count + 1)
-            (* (acc, count) *)
-            | None -> 
-              match Fixpoint.FixpointCubeList.check cube acc with
-                | None -> ((cube, count)::acc, count + 1)
-                | Some l -> (acc, count)
-  ) ([], 1) dnf in
-  fst (List.split sdnf)
-
+              (acc, count)
+            | None ->
+              let cib = cube_implies cube b2 in
+              match cib with
+                | Some c ->
+                  if debug && verbose > 0 then
+                    Format.eprintf
+                      "[Simp already bad]\n%a\n [was already in] \n%a@."
+                      Cube.print cube Cube.print c;
+                  ((c, count)::acc, count + 1)
+                (* (acc, count) *)
+                | None -> 
+                  match Fixpoint.FixpointCubeList.check cube acc with
+                    | None -> ((cube, count)::acc, count + 1)
+                    | Some l -> (acc, count)
+      ) ([], 1) dnf in
+      fst (List.split sdnf)
+    
 let partition_l dim l =
   let rec f acc ll =
     match ll with 
@@ -1068,13 +1123,15 @@ let partition_l dim l =
 let select_procs l v1 v2 =
   (* Format.eprintf "[Select procs]\n%a@." print_ednf l; *)
   let rec s l =
-    let dim = Cube.dim (List.hd l) in
-    let less_proc, others = partition_l dim l in
-    let nl = simplify_dnf v1.world v2.bad less_proc in
-    (* v1.bad <- List.rev (pre_image); *)
-    match nl with
-      | [] -> s others
-      | _ -> nl
+    match l with
+      | [] -> []
+      | hd::tl ->
+        let dim = Cube.dim hd in
+        let less_proc, others = partition_l dim l in
+        let nl = simplify_dnf v1.world v2.bad less_proc in
+        match nl with
+          | [] -> s others
+          | _ -> nl
   in s l
 
 let find_all_bads v1 v2 =
@@ -1113,36 +1170,103 @@ let refine v1 v2 tr candidates =
       (* if verbose > 0 then *)
     Format.eprintf "[Implication] (%a.world) and %a to (%a.bad) ?@."
       print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-    if profiling then IT.start ();
-    let res = 
-      List.fold_left (
-        fun (acc, _) cube -> 
-          let res = 
-            imply_by_trans (v1.world, v1.id) ([cube], v2.id) tr in
-          match res with 
-            | Yes _ -> (res :: acc, None)
-            | No -> (acc, Some res)
-      ) ([], None) v2.bad
+    (* if profiling then IT.start (); *)
+    let res =
+      if v1.id = 2 then
+        List.fold_left (
+          fun acc cube ->
+            let res = easy_imply_by_trans v1.world [cube] tr in
+            match res with
+              | EUnsat ->
+                (* Format.eprintf " EUNSAT@."; *)
+                acc
+              | ESat ->
+                (* Format.eprintf " ESAT@."; *)
+                let res = hard_imply_by_trans
+                  (v1.world, v1.id) ([cube], v2.id) tr in
+                match res with
+                  | HSat _ -> cube :: acc
+                  | HUnsat -> acc
+        ) [] v2.bad
+      else v2.bad
     in
-    if profiling then IT.pause ();
+    (* if profiling then IT.pause (); *)
     match res with
         
       (* RES = No means world1 and tr don't imply bad2,
          we can now extrapolate world1 by adding not bad2. *)
-      | [], Some No ->
+      | [] ->
           (* if verbose > 0 then *)
-        Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@." 
+        Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@."
+          print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
+        let extra_bad2 =
+          extrapolate v1 v2 tr in
+        if debug && verbose > 1 then (
+          Format.eprintf "[Bad] %a@." print_ednf v2.bad;
+          Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
+        );
+        let nw =
+          if v2.id = 1
+          then extra_bad2
+          else v2.world @ extra_bad2
+        in
+        let nv = create ~creation:(v1, tr, v2) nw extra_bad2 [] in
+        v2.successor <- Some nv;
+          (* if verbose > 0 then *)
+        (
+          Format.eprintf "[Extrapolation] We extrapolate (%a.bad) = eb and create a new node with (%a.world) && eb -> (%a)@."
+            print_id v2 print_id v2 print_id nv;
+          Format.eprintf "NV : %a@." print_vertice nv
+        );
+        if dot then add_relation_dot ~color:"green" v2 nv tr;
+        Extrapolated nv
+
+      (* RES = Yes b means world1 and tr imply bad2,
+	 we then need to find a pre formula which leads to bad2 *)
+          
+        | bads ->
+        if verbose > 0 then
+        Format.eprintf
+          "[BadToSubsumed] (%a.world) and %a imply (%a.bad) ?@."
+	  print_id v1 Hstring.print tr.tr_info.tr_name
+          print_id v2;
+	if dot then add_relation_dot ~color:"red" v2 v1 tr;
+    let pre_image = List.fold_left (
+      fun acc bad -> find_pre tr acc bad
+    ) [] v2.bad in
+    let bads = find_all_bads v1 v2 in
+        (* Format.eprintf "[Bads] "; *)
+        (* List.iter ( *)
+        (*   fun v -> Format.eprintf "%s " (get_id v) *)
+        (* ) bads; *)
+        (* Format.eprintf "@."; *)
+    
+    let pre_image =
+      List.fold_left (
+        fun acc cl ->
+          List.fold_left (find_pre tr) acc cl.bad
+      ) pre_image bads
+    in
+    let pre_image = List.fast_sort compare_cubes pre_image in
+    if debug && verbose > 0 then
+      Format.eprintf "[Pre images]\n%a@." print_ednf pre_image;
+    let pre_image = select_procs pre_image v1 v2 in
+    match pre_image with
+      | [] -> 
+        Format.eprintf "[Pre_Image] Empty@.";
+        if v1.id = 2 then (
+          Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@."
 	  print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-	let extra_bad2 = 
+	let extra_bad2 =
           extrapolate v1 v2 tr in
 	if debug && verbose > 1 then (
 	  Format.eprintf "[Bad] %a@." print_ednf v2.bad;
 	  Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
 	);
-	let nw = 
-	  if v2.id = 1 
-	  then extra_bad2 
-	  else v2.world @ extra_bad2 
+	let nw =
+	  if v2.id = 1
+	  then extra_bad2
+	  else v2.world @ extra_bad2
 	in
 	let nv = create ~creation:(v1, tr, v2) nw extra_bad2 [] in
         v2.successor <- Some nv;
@@ -1153,45 +1277,10 @@ let refine v1 v2 tr candidates =
 	  Format.eprintf "NV : %a@." print_vertice nv
         );
 	if dot then add_relation_dot ~color:"green" v2 nv tr;
-	Extrapolated nv
-
-      (* RES = Yes b means world1 and tr imply bad2,
-	 we then need to find a pre formula which leads to bad2 *)
-          
-      | bads, _ ->
-          (* if verbose > 0 then *)
-        Format.eprintf 
-          "[BadToSubsumed] (%a.world) and %a imply (%a.bad)@." 
-	  print_id v1 Hstring.print tr.tr_info.tr_name
-          print_id v2;
-	if dot then add_relation_dot ~color:"red" v2 v1 tr;
-      	let pre_image = List.fold_left (
-          fun acc e ->
-            match e with 
-              | Yes bad ->
-                (* Format.eprintf "[Pre] %a (%a) -> \n%a@." *)
-                (*   Hstring.print tr.tr_info.tr_name *)
-                (*   Variable.print_vars it.Forward.i_args *)
-                (*   (SAtom.print_sep "&&") bad.Cube.litterals; *)
-                find_pre tr acc bad
-              | _ -> assert false
-        ) [] bads in
-        let bads = find_all_bads v1 v2 in
-        (* Format.eprintf "[Bads] "; *)
-        (* List.iter ( *)
-        (*   fun v -> Format.eprintf "%s " (get_id v) *)
-        (* ) bads; *)
-        (* Format.eprintf "@."; *)
-        
-        let pre_image =
-          List.fold_left (
-            fun acc cl ->
-              List.fold_left (find_pre tr) acc cl.bad
-          ) pre_image bads
-        in
-        let pre_image = List.fast_sort compare_cubes pre_image in
-        if debug && verbose > 0 then
-          Format.eprintf "[Pre images]\n%a@." print_ednf pre_image;
-        let pre_image = select_procs pre_image v1 v2 in
-        v1.bad <- pre_image;
-        Bad_Parent (v1.id, pre_image)
+	Extrapolated nv)
+        else
+          Covered v1
+    | _ ->    
+      Format.eprintf "[Pre_image] Not empty@.";
+      v1.bad <- pre_image;
+      Bad_Parent (v1.id, pre_image)

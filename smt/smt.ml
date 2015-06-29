@@ -581,6 +581,7 @@ module Make (Options : sig val profiling : bool end) = struct
 
   let check () =
     incr calls;
+    (* Format.eprintf "SMT CHECK@."; *)
     Time.start ();
     try 
       CSolver.solve ();
