@@ -8,7 +8,6 @@ type result =
   | RSafe
   | RUnsafe
 
-
 module type SigQ = sig
 
   type 'a t
@@ -70,11 +69,11 @@ let save_graph rg =
       fun k e -> 
         Format.fprintf oc_fmt "%a\t\t\\\\[0.2cm]@." 
 	  V.save_vertice k;
-      (* List.iter ( *)
-      (*   fun p -> *)
-      (*     Format.fprintf oc_fmt "\t\t(%a) @." V.save_id p; *)
-      (* ) e; *)
-      (* Format.fprintf oc_fmt "\n--------------@." *)
+    (* List.iter ( *)
+    (*   fun p -> *)
+    (*     Format.fprintf oc_fmt "\t\t(%a) @." V.save_id p; *)
+    (* ) e; *)
+    (* Format.fprintf oc_fmt "\n--------------@." *)
     ) rg;
     Format.fprintf oc_fmt "\\end{document}@.";
     close_out oc;
@@ -116,7 +115,7 @@ let update_step rg v1 =
 	then if V.equal v1 v then "orange" else "red" 
 	else "chartreuse" in
       V.add_node_step v c;
-    (* V.print_step_subsume e; *)
+  (* V.print_step_subsume e; *)
   ) rg
 
 type transitions = transition list
@@ -153,10 +152,10 @@ let update_steps s =
   ) s
 
 let search dots system = 
-    (* top = (true, unsafe) *)
-    (* Create the world formula of top, true *)
+  (* top = (true, unsafe) *)
+  (* Create the world formula of top, true *)
   let wtop = V.create_world [] in
-    (* Create the bad formula of top, unsafe *)
+  (* Create the bad formula of top, unsafe *)
   let cunsl = system.t_unsafe in
   let unsl = 
     List.fold_left (
@@ -165,13 +164,13 @@ let search dots system =
 	(c.Cube.vars, c.Cube.litterals)::acc
     ) [] cunsl in
   let btop = V.create_bad unsl in
-    (* Create top with gtop, btop and no subsume *)
+  (* Create top with gtop, btop and no subsume *)
   let top = V.create wtop wtop btop in
-    (* Print top *)
-  if verbose > 0 then
+  (* Print top *)
+  (* if verbose > 0 then *)
     Format.eprintf "%a@." V.print_vertice top;    
   
-    (* root = (init, false) *)
+  (* root = (init, false) *)
   let (_, initfl) = system.t_init in
   let initf = match initfl with
     | [e] -> e
@@ -184,17 +183,17 @@ let search dots system =
 	SAtom.singleton a
       )::acc
   ) initf [] in
-    (* Create the world formula of root, init *)
+  (* Create the world formula of root, init *)
   let wroot = V.create_world initl in
-    (* Create the bad formula of root, false *)
+  (* Create the bad formula of root, false *)
   let broot = V.create_bad [] in
-    (* Create root with groot, broot and no subsume *)
+  (* Create root with groot, broot and no subsume *)
   let root = V.create wroot wroot broot in
   
-    (* Working queue of nodes to expand and refine *)
+  (* Working queue of nodes to expand and refine *)
   let todo = Q.create () in
   
-    (* List of nodes for dot *)
+  (* List of nodes for dot *)
   let steps = ref [] in
   let add_steps v v' from tr del =
     let s = {v = v;
@@ -206,7 +205,7 @@ let search dots system =
     steps := s::(!steps)
   in
   
-    (* rushby graph *)
+  (* rushby graph *)
   let rgraph = G.add root [] (G.singleton top []) in
 
   let trans_cover = List.fold_left (
@@ -219,9 +218,9 @@ let search dots system =
       "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
       V.print_id v1 Hstring.print tr.tr_info.tr_name 
       V.print_id v2;
-      (* In this case we are trying to execute a new transition
-	 from v1 but v1 is already bad so must not be considered as
-	 a parent node. *)
+    (* In this case we are trying to execute a new transition
+       from v1 but v1 is already bad so must not be considered as
+       a parent node. *)
     if V.is_bad v1 then (
       Format.eprintf 
 	"We discard the treatment of this edge since (%a) is now bad@." 
@@ -233,13 +232,16 @@ let search dots system =
       let pr = List.rev (find_graph v2 rg) in
       match V.refine v1 v2 tr pr with  
 
-	  (* v1 and tr imply bad *)
+	(* v1 and tr imply bad *)
 	| V.Bad_Parent bad ->
-	    (* If v1 is root, we can not refine *)
+	  (* If v1 is root, we can not refine *)
 	  if V.equal v1 root then raise (Unsafe (rg, v1));
-	    (* Else, we recursively call refine on all the subsume *)
-	  Format.eprintf "[New Bad] (%a).bad = %a@."
-	    V.print_id v1 V.print_vednf v1;
+	  (* Else, we recursively call refine on all the subsume *)
+	  Format.eprintf "[Bad] (%a).world and %a imply (%a).bad@."
+            V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2;
+          if debug && verbose > 0 then
+            Format.eprintf "[New Bad] (%a).bad = %a@."
+	      V.print_id v1 V.print_vednf v1;
 	  if dot_step then add_steps v2 v1 Bad tr false;
           V.update_bad_from v1 tr v2;
 	  List.fold_left (
@@ -251,7 +253,7 @@ let search dots system =
               refine vp v1 tr rg tc
 	  ) (rg, tc) (V.get_subsume v1)
 
-	  (* The node vc covers v2 by tr *)
+	(* The node vc covers v2 by tr *)
 	| V.Covered vc -> 
 	  let del = V.delete_parent v2 (v1, tr) in
 	  V.add_parent vc (v1, tr);
@@ -269,7 +271,7 @@ let search dots system =
           in
 	  refine v1 vc tr rg tc
 
-	  (* We created and extrapolant vn *)
+	(* We created and extrapolant vn *)
 	| V.Extrapolated vn -> 
 	  let del = V.delete_parent v2 (v1, tr) in
 	  if debug && verbose > 1 then (
@@ -289,8 +291,8 @@ let search dots system =
     )
     else (
       (* if verbose > 0 then *)
-        Format.eprintf "(%a) is safe, no backward refinement@." 
-          V.print_id v2;
+      Format.eprintf "(%a) is safe, no backward refinement@." 
+        V.print_id v2;
       (rg, tc)
     )
   in
@@ -303,7 +305,9 @@ let search dots system =
     in
     Format.eprintf 
       "\n*******[Induct]*******\n \n%a\n\nTransitions :@." 
-      V.print_vertice v1;
+      (if debug && verbose > 0 
+       then V.print_vertice 
+       else V.print_id) v1;
     let trans = V.expand v1 transitions in
     List.iter (
       fun tr -> 
@@ -319,7 +323,7 @@ let search dots system =
     let () = Sys.set_signal Sys.sigint 
       (Sys.Signal_handle 
 	 (fun _ ->
-           print_graph rg;
+           if debug && verbose > 0 then print_graph rg;
            save_graph rg;
            Stats.print_report ~safe:false [] [];
 	   if dot then (
@@ -352,7 +356,7 @@ let search dots system =
     | Safe rg -> 
       if dot then update_dot rg;
       if dot_extra then update_extra rg;
-      print_graph rg;
+      if debug && verbose > 0 then print_graph rg;
       save_graph rg;
       Format.eprintf "Empty queue, Safe system@."; 
       RSafe
@@ -365,6 +369,6 @@ let search dots system =
 	update_steps (List.rev !steps);
 	close_step ();
       );
-      print_graph rg;
+      if debug && verbose > 0 then print_graph rg;
       save_graph rg;
       RUnsafe

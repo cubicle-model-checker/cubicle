@@ -343,7 +343,8 @@ let inconsistent_list l =
   in
   try check [] [] [] [] [] [] [] l; false with Exit -> true
 
-let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
+let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = 
+  function
     | Atom.True  -> acc
     | Atom.False -> raise Exit
     | Atom.Comp (t1, Eq, (Elem (x, s) as t2)) 
@@ -740,7 +741,7 @@ let equivalent c1 c2 =
         ) sigmas
       end
 
-let is_subformula c1 c2 =
+let test_is_subformula c1 c2 =
   if compare_cubes c1 c2 > 0 then false
   else 
     begin
@@ -749,13 +750,11 @@ let is_subformula c1 c2 =
       let sigmas = Variable.all_permutations v1 v2 in
       let sa1 = c1.litterals in
       let sa2 = c2.litterals in
-      (* Format.eprintf "[SubFormula SA2] %a@." *)
-      (*   (SAtom.print_sep "&&") sa2; *)
       List.exists (
         fun sigma ->
           let sa1 = SAtom.subst sigma sa1 in
-          (* Format.eprintf "[SubFormula SA1] %a@." *)
-          (*   (SAtom.print_sep "&&") sa1; *)
-          SAtom.subset sa1 sa2
+          SAtom.for_all (
+            fun a -> inconsistent_set (SAtom.add a sa2) 
+          ) sa1
       ) sigmas
     end        

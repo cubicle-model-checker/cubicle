@@ -62,7 +62,7 @@ val inconsistent : ?use_sets:bool -> t -> bool
 
 val inconsistent_2 : ?use_sets:bool -> t -> t -> bool
 (** is the conjunction of [c1] and [c2] inconsistent knowing that [c1] and [c2]
-    are consitent on their own. *)
+    are consistent on their own. *)
 
 val inconsistent_set : SAtom.t -> bool
 (** returns [true] if the conjunction inconsistent *)
@@ -103,4 +103,5 @@ val print :  Format.formatter -> t -> unit
 (** {IC3 } *)
 
 val equivalent : t -> t -> bool
-val is_subformula : t -> t -> bool
+(* val is_subformula : t -> t -> bool *)
+val test_is_subformula : t -> t -> bool
