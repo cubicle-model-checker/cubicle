@@ -24,6 +24,7 @@ val cin : in_channel
 
 val ic3 : bool
 val ic3_level : int
+val ic3_smt : bool
 val ic3_pdf : bool
 
 val max_proc : int

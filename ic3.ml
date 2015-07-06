@@ -239,7 +239,7 @@ let search dots system =
 	  (* Else, we recursively call refine on all the subsume *)
 	  Format.eprintf "[Bad] (%a).world and %a imply (%a).bad@."
             V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2;
-          if debug && verbose > 0 then
+          if verbose > 0 then
             Format.eprintf "[New Bad] (%a).bad = %a@."
 	      V.print_id v1 V.print_vednf v1;
 	  if dot_step then add_steps v2 v1 Bad tr false;
@@ -305,7 +305,7 @@ let search dots system =
     in
     Format.eprintf 
       "\n*******[Induct]*******\n \n%a\n\nTransitions :@." 
-      (if debug && verbose > 0 
+      (if verbose > 0 
        then V.print_vertice 
        else V.print_id) v1;
     let trans = V.expand v1 transitions in

@@ -4,32 +4,52 @@ shopt -s nullglob
 
 to=$1
 cubicle=$2
-opt=$3
-pathcub=$4
+pathcub=$3
 score=0
+score_s=0
+score_u=0
+score_t=0
 max=0
 
-
-FILES="bakery.cub bakery_lamport.cub bakery_uguard.cub bakery_uguard2.cub berkeley.cub burns.cub crash.cub dekker.cub dekker_limbo.cub  dekker_loc.cub dekker_n.cub dijkstra.cub illinois.cub jml.cub mesi.cub moesi.cub motivating.cub mutex.cub mux_sem.cub peterson_two_proc.cub sense_barrier.cub synapse.cub two-semaphores.cub xerox_dragon.cub"
-
-for f in $pathcub*.cub; do
+for f in $3*.cub; do
     echo $f;
     max=`expr $max + 1`;
-    timeout $to $cubicle -ic3 $opt $f > /dev/null 2>&1;
-    res=$?
+    T="$(date +%s%N)"
+
+    # Do some work here
+    timeout $to $cubicle $f > /dev/null 2>&1;
+    res=$?;
+    
+    # Time interval in nanoseconds
+    T="$(($(date +%s%N)-T))"
+    # Seconds
+    S="$((T/1000000000))"
+    # Milliseconds
+    M="$((T/1000000))"
+
+    # printf "    Time : %02d:%02d.%03d\n" "$((S/60%60))" "$((S%60))" "${M}"
+
     case $res in
 	"1") 
-	    # echo $res;
-	    echo "    ECHEC";;
-	"0") 
-	    echo "    OK";
+	    echo "    UNSAFE";
+            score_u=`expr $score_u + 1`;
             score=`expr $score + 1`;;
-	*) 	
-	# echo
-	echo "ECHEC sur "$f;;
+        "0") 
+	    echo "    SAFE";
+            score_s=`expr $score_s + 1`;
+            score=`expr $score + 1`;;
+	*)
+ 	score_t=`expr $score_t + 1`;
+	echo "    Timeout";;
     esac
 done
 
 percent=`expr 100 \* $score / $max`; 
-echo "Results : $score/$max = $percent%"; 
+percent_s=`expr 100 \* $score_s / $max`; 
+percent_u=`expr 100 \* $score_u / $max`; 
+percent_t=`expr 100 \* $score_t / $max`; 
 
+echo "Results  : $score/$max = $percent%"; 
+echo "Safe     : $score_s/$max = $percent_s%";
+echo "Unsafe   : $score_u/$max = $percent_u%";
+echo "Timeouts : $score_t/$max = $percent_t%";

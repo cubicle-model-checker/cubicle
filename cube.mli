@@ -104,4 +104,4 @@ val print :  Format.formatter -> t -> unit
 
 val equivalent : t -> t -> bool
 (* val is_subformula : t -> t -> bool *)
-val test_is_subformula : t -> t -> bool
+val inconsistent_clause_cube : t -> t -> bool

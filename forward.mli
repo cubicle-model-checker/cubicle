@@ -30,7 +30,6 @@ type inst_trans =
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
       i_touched_terms : Term.Set.t;
-      i_args : Variable.t list;
     }
 
 type possible_result = 
@@ -74,11 +73,3 @@ val uguard_dnf :
   Variable.subst ->
   Variable.t list -> Variable.t list ->
   (Variable.t * SAtom.t list) list -> SAtom.t list list
-
-(* Signatures used for ic3 *)
-
-(* Prime the head term of a SAtom iff this term is in the set 
-   given in parameter *)
-val prime_match_satom : SAtom.t -> Term.Set.t -> SAtom.t
-val elim_prime : SAtom.t -> SAtom.t -> SAtom.t
-(* val unprime_term : Term.t -> Term.t *)

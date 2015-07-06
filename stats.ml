@@ -127,10 +127,9 @@ let error_trace sys faulty =
   if not quiet then
     if Forward.spurious_due_to_cfm sys faulty then
       printf "@\n@{<fg_red>Spurious trace@}: "
-    else 
+    else
       printf "@\n@{<fg_red>Error trace@}: ";
   printf "@[%a@]@." Node.print_history faulty
-
 
 
 let print_visited = 

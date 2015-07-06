@@ -741,20 +741,28 @@ let equivalent c1 c2 =
         ) sigmas
       end
 
-let test_is_subformula c1 c2 =
-  if compare_cubes c1 c2 > 0 then false
+let inconsistent_clause_cube cl1 cu2 =
+  if compare_cubes cl1 cu2 > 0 then false
   else 
     begin
-      let v1 = c1.vars in
-      let v2 = c2.vars in
+      let v1 = cl1.vars in
+      let v2 = cu2.vars in
       let sigmas = Variable.all_permutations v1 v2 in
-      let sa1 = c1.litterals in
-      let sa2 = c2.litterals in
+      let sa1 = cl1.litterals in
+      let sa2 = cu2.litterals in
       List.exists (
         fun sigma ->
           let sa1 = SAtom.subst sigma sa1 in
+          let isa2 = SAtom.fold 
+            (
+              fun a acc -> inconsistent_aux acc a
+            ) sa2 ([], [], [], [], [], [], []) in
           SAtom.for_all (
-            fun a -> inconsistent_set (SAtom.add a sa2) 
+            fun a -> 
+              try 
+                let _ = inconsistent_aux isa2 a in
+                false
+              with Exit -> true
           ) sa1
       ) sigmas
     end        

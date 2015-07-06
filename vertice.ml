@@ -503,48 +503,100 @@ let clear_and_restore fl =
 (*   Solver.restore_state s *)
 
 (* IC3 BASE FUNCTIONS *)
+
+let is_subformula c1 c2 =
+  if Cube.compare_cubes c1 c2 > 0 then false
+  else 
+    begin
+      let sigmas = Instantiation.relevant ~of_cube:c1 ~to_cube:c2 in
+      let sa1 = c1.Cube.litterals in
+      let sa2 = c2.Cube.litterals in
+      List.exists (
+        fun sigma ->
+          let sa1 = SAtom.subst sigma sa1 in
+          SAtom.subset sa1 sa2
+      ) sigmas
+    end        
+
+
+
+let negate_cube c = 
+  let l = c.Cube.litterals in
+  let l = SAtom.fold (
+    fun a l -> SAtom.add (Atom.neg a) l
+  ) l SAtom.empty in
+  let v = c.Cube.vars in
+  let c = Cube.create v l in
+  let subst = Variable.build_subst v Variable.procs in
+  Cube.subst subst c
+
+    
+(* Given a formula, returns the formula with all the
+   litterals negated *)
+let negate_litterals = List.map negate_cube
+
+
+let find_pre tr acc bad =
+  let ncube = Node.create bad in
+  let (nl, nl') = Pre.pre_image [tr] ncube in
+  let nc = List.map (fun n -> n.cube) nl in
+  let nc' = List.map (fun n -> n.cube) nl' in
+  nc@nc'@acc
+
+
+let easy_imply_by_trans cnf dnf ({tr_info = ti} as tr)=
+  let n_cnf = max_args cnf in
+  let n_dnf = max_args dnf in
+  let n_tr = List.length ti.tr_args in
+  let n_args = 
+    if n_cnf - n_dnf - n_tr > 0 then n_cnf - n_dnf
+    else n_tr 
+  in
+  let args = get_procs n_args n_dnf in
+  if debug && verbose > 2 then 
+    Format.printf "Card : %d@." (List.length args);
+  
+  let ndnf = List.fold_left (find_pre tr) [] dnf in
+
+  
+  let ncnf = negate_litterals cnf in
+  (* if verbose > 2 then *)
+  (*   ( *)
+  (* Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
+  (* Format.eprintf "[NCNF] %a@." print_ednf ncnf; *)
+  (* Format.eprintf "[DNF] %a@." print_ednf dnf; *)
+  (* Format.eprintf "[NDNF] %a@." print_ednf ndnf; *)
+  (* ); *)
+  let res =
+    List.for_all (
+      fun cube ->
+        List.exists2 (
+          fun nclause clause -> 
+            is_subformula nclause cube
+            || Cube.inconsistent_clause_cube clause cube
+        ) ncnf cnf
+    ) ndnf in
+  if res then (
+    incr Stats.cpt_easy_true;
+    EUnsat
+  )
+  else (
+    incr Stats.cpt_easy_false;
+    EDontKnow)
+
       
+
 (* Given a transition and a node, 
    Answers SAT if we can take the transition,
    Answers UNSAT otherwise *)
-let pickable v tr = 
-  (* Is it useful to test wether or not a transition can be taken ?*)
-  (* if verbose > 0 then *)
-  (*   Format.eprintf "\ncheck the transition : %a\n@." *)
-  (*     Hstring.print tr.tr_info.tr_name; *)
-  if v.id > 2 then true
-  else
-    let world = v.world in
-    
-    let n = v.id in
-
-    let n_arg_wo = max_args world in
-    let n_arg_tr = nb_args tr in
-    let args = get_procs n_arg_wo n_arg_tr in
-
-    let inst_worlds = instantiate_cube_list args world in
-    let inst_tr = Forward.instantiate_transitions args args [tr] in
-    
-    let fun_dist = assume_distinct (List.length args) in
-    let fun_world = assume_cnf n inst_worlds in
-    let fun_cr = clear_and_restore [fun_dist; fun_world] in
-    
-    List.exists (
-      fun
-        {
-          Forward.i_reqs = reqs;
-          i_udnfs = udnfs;
-        } ->
-          try
-            fun_cr ();
-            assume_cube n reqs ();
-            assume_udnfs (n+1) udnfs ();
-            Prover.run ();
-            true
-          with
-            | Smt.Unsat _ ->
-              false
-    ) inst_tr
+let pickable =
+  let empty = Cube.create [] SAtom.empty in
+  fun v tr -> 
+    match easy_imply_by_trans v.world [empty] tr with
+      | EDontKnow -> true
+      | EUnsat -> false
+          
+      
 
 (* Given a list of transitions and a node,
    returns the list of the pickable transitions *)
@@ -569,21 +621,6 @@ let is_bad v =
     fun c -> 
       not (SAtom.is_empty c.Cube.litterals)
   ) v.bad
-
-let negate_cube c = 
-  let l = c.Cube.litterals in
-  let l = SAtom.fold (
-    fun a l -> SAtom.add (Atom.neg a) l
-  ) l SAtom.empty in
-  let v = c.Cube.vars in
-  let c = Cube.create v l in
-  let subst = Variable.build_subst v Variable.procs in
-  Cube.subst subst c
-
-    
-(* Given a formula, returns the formula with all the
-   litterals negated *)
-let negate_litterals = List.map negate_cube
 
 (* Given v1 and v2 returns true if v1 => v2
    returns false otherwise *)
@@ -642,7 +679,7 @@ module IT = Util.TimerITIc3
 let find_inst fun_dist fun_wo n1 n2 inst_f2 l =
   let rec find_inst = function 
     | [] -> None
-    | ({ Forward.i_reqs = reqs;
+    | ({ Ic3_forward.i_reqs = reqs;
          i_udnfs = udnfs;
     	 i_actions = actions;
     	 i_touched_terms = terms;
@@ -675,7 +712,7 @@ let find_inst fun_dist fun_wo n1 n2 inst_f2 l =
 	    fun c ->
     	      let vars = c.Cube.vars in
     	      let litt = c.Cube.litterals in
-	      let plitt = Forward.prime_match_satom litt terms in
+	      let plitt = Ic3_forward.prime_match_satom litt terms in
 	      Cube.create vars plitt
 	  ) inst_f2 in
         
@@ -736,67 +773,6 @@ type res =
   | HSat of Cube.t
   | HUnsat
 
-let find_pre tr acc bad =
-  let ncube = Node.create bad in
-  let (nl, nl') = Pre.pre_image [tr] ncube in
-  let nc = List.map (fun n -> n.cube) nl in
-  let nc' = List.map (fun n -> n.cube) nl' in
-  nc@nc'@acc
-
-let is_subformula c1 c2 =
-  if Cube.compare_cubes c1 c2 > 0 then false
-  else 
-    begin
-      let sigmas = Instantiation.relevant ~of_cube:c1 ~to_cube:c2 in
-      let sa1 = c1.Cube.litterals in
-      let sa2 = c2.Cube.litterals in
-      List.exists (
-        fun sigma ->
-          let sa1 = SAtom.subst sigma sa1 in
-          SAtom.subset sa1 sa2
-      ) sigmas
-    end        
-
-let easy_imply_by_trans cnf dnf ({tr_info = ti} as tr)=
-  let n_cnf = max_args cnf in
-  let n_dnf = max_args dnf in
-  let n_tr = List.length ti.tr_args in
-  let n_args = 
-    if n_cnf - n_dnf - n_tr > 0 then n_cnf - n_dnf
-    else n_tr 
-  in
-  let args = get_procs n_args n_dnf in
-  if debug && verbose > 2 then 
-    Format.printf "Card : %d@." (List.length args);
-  
-  let ndnf = List.fold_left (find_pre tr) [] dnf in
-  
-  let ncnf = negate_litterals cnf in
-  (* if verbose > 2 then *)
-  (*   ( *)
-  (* Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
-  (* Format.eprintf "[NCNF] %a@." print_ednf ncnf; *)
-  (* Format.eprintf "[DNF] %a@." print_ednf dnf; *)
-  (* Format.eprintf "[NDNF] %a@." print_ednf ndnf; *)
-  (* ); *)
-  let res =
-    List.for_all (
-      fun cube ->
-        List.exists2 (
-          fun nclause clause -> 
-            is_subformula nclause cube
-            || Cube.test_is_subformula clause cube
-        ) ncnf cnf
-    ) ndnf in
-  if res then (
-    incr Stats.cpt_easy_true;
-    EUnsat
-  )
-  else (
-    incr Stats.cpt_easy_false;
-    EDontKnow)
-
-
 
 
 (* If the result is TRUE then f1 and tr imply f2.
@@ -841,7 +817,7 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
   (* else  *)
   (* begin *)
   let inst_cnf = instantiate_cube_list args cnf in 
-  let inst_upd = Forward.instantiate_transitions args args [tr] in
+  let inst_upd = Ic3_forward.instantiate_transitions args args [tr] in
   let fun_dist = assume_distinct (List.length args) in
   let fun_world = assume_cnf n1 inst_cnf in
   let res = find_inst fun_dist fun_world n1 n2 inst_dnf inst_upd in
@@ -1062,9 +1038,8 @@ let cube_implies c cl =
   try 
     let res = List.find (
       fun b -> 
-        let res = is_subformula b c in
-        (* let res2 = Cube.test_is_subformula b c in *)
-        res (* || res2 *)
+        is_subformula b c
+        || Cube.inconsistent_clause_cube (negate_cube b) c
     ) cl in
     (* Format.eprintf "[Cube_Implies] Yes : \n\t%a@." Cube.print res; *)
     Some res
@@ -1174,6 +1149,7 @@ let find_all_bads v1 v2 =
         find (v::acc) r
   in find [] v2
   
+exception No_bad
 
 (* Main function of IC3 *)
 let refine v1 v2 tr candidates =
@@ -1200,54 +1176,25 @@ let refine v1 v2 tr candidates =
               (* Format.eprintf " EUnsat@."; *)
               acc
             | EDontKnow ->
-            (*   Format.eprintf " EDontKnow@."; *)
-            (*   let res = hard_imply_by_trans *)
-            (*     (v1.world, v1.id) ([cube], v2.id) tr in *)
-            (*   match res with *)
-            (* | HSat _ -> *)
-              cube :: acc
-            (* | HUnsat -> acc *)
+              Format.eprintf " EDontKnow@.";
+              if ic3_smt then
+                let res = hard_imply_by_trans
+                  (v1.world, v1.id) ([cube], v2.id) tr in
+                match res with
+                  | HSat _ ->
+                    cube :: acc
+                  | HUnsat -> acc
+              else cube::acc
       ) [] v2.bad
     (* else v2.bad *)
     in
     if profiling then IT.pause ();
-    match res with
+    try
+      match res with
         
       (* RES = No means world1 and tr don't imply bad2,
          we can now extrapolate world1 by adding not bad2. *)
-      | [] ->
-        (
-          match v2.successor with 
-            | Some v -> 
-              Format.eprintf
-                "[Subsumed no bad] (%a) is already subsumed by (%a) by (%a)@." 
-                print_id v2 print_id v Hstring.print tr.tr_info.tr_name;
-              Covered v
-            | None ->
-              Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@."
-                print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-              let extra_bad2 =
-                extrapolate v1 v2 tr in
-              if debug && verbose > 1 then (
-                Format.eprintf "[Bad] %a@." print_ednf v2.bad;
-                Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
-              );
-              let nw =
-                if v2.id = 1
-                then extra_bad2
-                else v2.world @ extra_bad2
-              in
-              let nv = create ~creation:(v1, tr, v2) nw extra_bad2 [] in
-              v2.successor <- Some nv;
-              Format.eprintf 
-                "[Extrapolation] We extrapolate (%a.bad) = eb and \
-                 create a new node with (%a.world) && eb -> (%a)@."
-                print_id v2 print_id v2 print_id nv;
-              if debug && verbose > 0 
-              then Format.eprintf "NV : %a@." print_vertice nv;
-              if dot then add_relation_dot ~color:"green" v2 nv tr;
-              Extrapolated nv
-        )
+      | [] -> raise No_bad
 
       (* RES = Yes b means world1 and tr imply bad2,
 	 we then need to find a pre formula which leads to bad2 *)
@@ -1281,38 +1228,71 @@ let refine v1 v2 tr candidates =
         let pre_image = select_procs pre_image v1 v2 in
         match pre_image with
           | None -> 
-            (* Format.eprintf "[Pre_Image] Empty@."; *)
-            if v1.id = 2 then (
-              Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@."
-	        print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-	      let extra_bad2 =
-                extrapolate v1 v2 tr in
-	      if debug && verbose > 1 then (
-	        Format.eprintf "[Bad] %a@." print_ednf v2.bad;
-	        Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
-	      );
-	      let nw =
-	        if v2.id = 1
-	        then extra_bad2
-	        else v2.world @ extra_bad2
-	      in
+            (* (\* Format.eprintf "[Pre_Image] Empty@."; *\) *)
+            (* if v1.id = 2 then ( *)
+            (*   Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@." *)
+	    (*     print_id v1 Hstring.print tr.tr_info.tr_name print_id v2; *)
+	    (*   let extra_bad2 = *)
+            (*     extrapolate v1 v2 tr in *)
+	    (*   if debug && verbose > 1 then ( *)
+	    (*     Format.eprintf "[Bad] %a@." print_ednf v2.bad; *)
+	    (*     Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2; *)
+	    (*   ); *)
+	    (*   let nw = *)
+	    (*     if v2.id = 1 *)
+	    (*     then extra_bad2 *)
+	    (*     else v2.world @ extra_bad2 *)
+	    (*   in *)
               
-	      let nv = create ~creation:(v1, tr, v2) nw extra_bad2 [] in
-              v2.successor <- Some nv;
-              (* if verbose > 0 then *)
-              (
-                Format.eprintf
-                  "[Extrapolation] We extrapolate (%a.bad) = eb and\
-                   create a new node with (%a.world) && eb -> (%a)@."
-	          print_id v2 print_id v2 print_id nv;
-                if debug && verbose > 0 
-                then Format.eprintf "NV : %a@." print_vertice nv
-              );
-	      if dot then add_relation_dot ~color:"green" v2 nv tr;
-	      Extrapolated nv)
-            else
-              Covered v1
+	    (*   let nv = create ~creation:(v1, tr, v2) nw extra_bad2 [] in *)
+            (*   v2.successor <- Some nv; *)
+            (*   (\* if verbose > 0 then *\) *)
+            (*   ( *)
+            (*     Format.eprintf *)
+            (*       "[Extrapolation] We extrapolate (%a.bad) = eb and\ *)
+            (*        create a new node with (%a.world) && eb -> (%a)@." *)
+	    (*       print_id v2 print_id v2 print_id nv; *)
+            (*     if debug && verbose > 0  *)
+            (*     then Format.eprintf "NV : %a@." print_vertice nv *)
+            (*   ); *)
+	    (*   if dot then add_relation_dot ~color:"green" v2 nv tr; *)
+	    (*   Extrapolated nv) *)
+            (* else *)
+            (*   Covered v1 *)
+            (* assert false; *)
+            raise No_bad
           | Some p ->    
             (* Format.eprintf "[Pre_image] %a@." Cube.print p; *)
             v1.bad <- [p];
             Bad_Parent (v1.id, [p])
+    with No_bad ->
+      match v2.successor with 
+        | Some v -> 
+          Format.eprintf
+            "[Subsumed no bad] (%a) is already subsumed by (%a) by (%a)@." 
+            print_id v2 print_id v Hstring.print tr.tr_info.tr_name;
+          Covered v
+        | None ->
+          Format.eprintf "[Extrapolation] (%a.world) and %a do not imply (%a.bad)@."
+            print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
+          let extra_bad2 =
+            extrapolate v1 v2 tr in
+          if debug && verbose > 1 then (
+            Format.eprintf "[Bad] %a@." print_ednf v2.bad;
+            Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
+          );
+          let nw =
+            if is_true v2
+            then extra_bad2
+            else v2.world @ extra_bad2
+          in
+          let nv = create ~creation:(v1, tr, v2) nw extra_bad2 [] in
+          v2.successor <- Some nv;
+          Format.eprintf 
+            "[Extrapolation] We extrapolate (%a.bad) = eb and \
+                 create a new node with (%a.world) && eb -> (%a)@."
+            print_id v2 print_id v2 print_id nv;
+          if debug && verbose > 0 
+          then Format.eprintf "NV : %a@." print_vertice nv;
+          if dot then add_relation_dot ~color:"green" v2 nv tr;
+          Extrapolated nv

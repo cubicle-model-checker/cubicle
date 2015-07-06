@@ -28,7 +28,6 @@ type inst_trans =
       i_udnfs : SAtom.t list list;
       i_actions : SAtom.t;
       i_touched_terms : Term.Set.t;
-      i_args : Variable.t list;
     }
 
 let prime_h h =
@@ -51,10 +50,8 @@ and prime_satom sa =
   SAtom.fold (fun a acc -> SAtom.add (prime_atom a) acc) sa SAtom.empty
 
 let unprime_h h =
-  try 
-    let s = Hstring.view h in
-    Hstring.make (String.sub s 0 (String.index s '@'))
-  with Not_found -> h
+  let s = Hstring.view h in
+  Hstring.make (String.sub s 0 (String.index s '@'))
 
 let rec unprime_term t = match t with
   | Elem (e, Glob) -> Elem (unprime_h e, Glob)
@@ -78,45 +75,6 @@ let rec is_prime_atom = function
     is_prime_term t1 || is_prime_term t2
   | Ite (sa, a1, a2) ->
     is_prime_atom a1 || is_prime_atom a2 || SAtom.exists is_prime_atom sa
-
-(* let rec prime_head_atom a = match a with *)
-(*   | True | False -> a *)
-(*   | Comp (t1, op, t2) -> Comp (prime_term t1, op, t2) *)
-(*   | Ite (sa, a1, a2) ->  *)
-(*     Ite (prime_head_satom sa, prime_head_atom a1, prime_head_atom a2) *)
-
-(* and prime_head_satom sa = *)
-(*   SAtom.fold ( *)
-(*     fun a acc ->  *)
-(*       let pa =  *)
-(* 	if is_prime_atom a then a *)
-(* 	else prime_head_atom a *)
-(*       in *)
-(*       SAtom.add pa acc *)
-(*   ) sa SAtom.empty *)
-
-let rec prime_match_satom sa st =
-  let rec prime_match_atom a = match a with
-    | True | False -> a
-    | Comp (t1, op, t2) -> 
-      let t1 = if Term.Set.mem t1 st then prime_term t1
-        else t1 in
-      let t2 = if Term.Set.mem t2 st then prime_term t2
-        else t2 in
-      Comp (t1, op, t2)
-    | Ite (sa, a1, a2) -> 
-      Ite (sa,
-	   prime_match_atom a1,
-	   prime_match_atom a2)
-  in
-  SAtom.fold (
-    fun a acc -> 
-      let pa = 
-	if is_prime_atom a then a
-	else prime_match_atom a
-      in
-      SAtom.add pa acc
-  ) sa SAtom.empty
 
 
 let rec is_const = function
@@ -482,21 +440,6 @@ let wrapper_elim_prime p_init sa =
   Cube.simplify_atoms sa
 
 
-(* let swts_to_ites at swts sigma = *)
-(*   let rec sd acc = function *)
-(*     | [] -> assert false *)
-(*     | [d] -> acc, d *)
-(*     | s::r -> sd (s::acc) r in *)
-(*   let swts, (d, t) = sd [] swts in *)
-(*   (\* assert (d = SAtom.singleton True); *\) *)
-(*   let t = Term.subst sigma (prime_term t) in *)
-(*   let default = Comp (at, Eq, t) in *)
-(*   List.fold_left (fun ites (sa, t) -> *)
-(*     let sa = SAtom.subst sigma (prime_satom sa) in *)
-(*     let t = Term.subst sigma (prime_term t) in *)
-(*     Ite (sa, Comp (at, Eq, t), ites) *)
-(*   ) default swts *)
-
 let swts_to_ites at swts sigma =
   let rec sd acc = function
     | [] -> assert false
@@ -504,12 +447,11 @@ let swts_to_ites at swts sigma =
     | s::r -> sd (s::acc) r in
   let swts, (d, t) = sd [] swts in
   (* assert (d = SAtom.singleton True); *)
-  let t = Term.subst sigma t in
-  let at = prime_term at in
+  let t = Term.subst sigma (prime_term t) in
   let default = Comp (at, Eq, t) in
   List.fold_left (fun ites (sa, t) ->
-    let sa = SAtom.subst sigma sa in
-    let t = Term.subst sigma t in
+    let sa = SAtom.subst sigma (prime_satom sa) in
+    let t = Term.subst sigma (prime_term t) in
     Ite (sa, Comp (at, Eq, t), ites)
   ) default swts
 
@@ -522,10 +464,8 @@ let apply_assigns assigns sigma =
         match gu with
         | UTerm t -> 
            let t = Term.subst sigma t in
-	   let nt = Elem (prime_h h, Glob) in
-	   Comp (nt, Eq, t)
-        | UCase swts -> 
-	  swts_to_ites nt swts sigma
+           Comp (nt, Eq, prime_term t)
+        | UCase swts -> swts_to_ites nt swts sigma
       in
       SAtom.add sa nsa, Term.Set.add nt terms)
     (SAtom.empty, Term.Set.empty) assigns
@@ -549,7 +489,7 @@ let apply_updates upds procs sigma =
 let preserve_terms upd_terms sa =
   let unc = Term.Set.diff (Cube.satom_globs sa) upd_terms in
   Term.Set.fold (fun t acc ->
-    SAtom.add (Comp (prime_term t, Eq, t)) acc)
+    SAtom.add (Comp (t, Eq, prime_term t)) acc)
     unc SAtom.empty
 
 let uguard_dnf sigma args tr_args = function
@@ -848,27 +788,11 @@ let instance_of_transition { tr_args = tr_args;
     List.fold_left (fun acc p -> 
       try (Variable.subst sigma p) :: acc
       with Not_found -> p :: acc) [] tr_args in
-  (* Format.eprintf "[Instance of trans] %a -> %a : %a @." *)
-  (*   Variable.print_subst sigma Variable.print_vars tr_args *)
-  (*   Variable.print_vars t_args_ef; *)
   let udnfs = uguard_dnf sigma all_procs t_args_ef ureqs in
-  (* List.iter ( *)
-  (*   fun (h, gu) -> *)
-  (*     Format.eprintf "h : %a@." Hstring.print h; *)
-  (*     match gu with  *)
-  (* 	| UTerm t -> Format.eprintf "gu : %a@." Term.print t *)
-  (* 	| UCase swts -> List.iter *)
-  (* 	  ( *)
-  (* 	    fun (sa, t) -> *)
-  (* 	      Format.eprintf "| %a : %a@." (SAtom.print_sep "&&") sa Term.print t *)
-  (* 	  ) swts *)
-  (* ) assigns; *)
   let assi, assi_terms = apply_assigns assigns sigma in
-  (* Format.eprintf "[Assi]%a@." (SAtom.print_sep "&&") assi; *)
   let upd, upd_terms = apply_updates upds all_procs sigma in
   let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
-  (* Format.eprintf "[Act]%a@." (SAtom.print_sep "&&") act; *)
   let nondet_terms =
     List.fold_left (fun acc h -> Term.Set.add (Elem (h, Glob)) acc)
       Term.Set.empty nondets in
@@ -877,10 +801,9 @@ let instance_of_transition { tr_args = tr_args;
     i_udnfs = udnfs;
     i_actions = act;
     i_touched_terms =
-      Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms;
-    i_args = t_args_ef;
+      Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms
   }
-  
+
 
 let instantiate_transitions all_procs procs trans = 
   let aux acc {tr_info = tr} =
@@ -893,6 +816,8 @@ let instantiate_transitions all_procs procs trans =
     ) acc d
   in
   List.fold_left aux [] trans
+
+
 
 
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
