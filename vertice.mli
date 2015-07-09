@@ -4,6 +4,8 @@ type ucnf
 (* disjunction of exisentially quantified conjunctions, bad *)
 type ednf
 
+type t_kind
+
 type res_ref =
   | Bad_Parent of (int * Cube.t list)
   | Covered of t
@@ -12,8 +14,8 @@ type res_ref =
 val create_world : (Variable.t list * Types.SAtom.t) list -> ucnf
 val create_bad : (Variable.t list * Types.SAtom.t) list -> ednf
 
-val create :  ?creation:(t * Ast.transition * t) -> ucnf -> ucnf -> 
-  ednf -> t
+val create : ?is_root:bool -> ?creation:(t * Ast.transition * t) -> ucnf -> 
+  Cube.t -> t_kind -> Types.SAtom.t ->  Cube.t option -> t
 val delete_parent : t -> t * Ast.transition -> bool
 val add_parent : t -> t * Ast.transition -> unit
 val get_subsume : t -> (t * Ast.transition) list
@@ -33,7 +35,7 @@ val print_vertice : Format.formatter -> t -> unit
 val save_vertice : Format.formatter -> t -> unit
 val print_id : Format.formatter -> t -> unit
 val save_id : Format.formatter -> t -> unit
-val print_vednf : Format.formatter -> t -> unit
+val print_bad : Format.formatter -> t -> unit
 
 (* Interface with dot *)
 val add_node_dot : t -> unit

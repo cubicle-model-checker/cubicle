@@ -102,6 +102,6 @@ val print :  Format.formatter -> t -> unit
 
 (** {IC3 } *)
 
-val equivalent : t -> t -> bool
+(* val equivalent : t -> t -> bool *)
 (* val is_subformula : t -> t -> bool *)
 val inconsistent_clause_cube : t -> t -> bool
