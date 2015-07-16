@@ -168,34 +168,34 @@ exception Fixpoint of int list
 
 module FixpointCubeList : sig
 
-  val check : Cube.t -> (Cube.t * int) list -> int list option
+  val check : Cube.t -> Cube.t list -> int list option
 
 end = struct
 
   let check_fixpoint ?(pure_smt=false) cube visited =
     Prover.assume_goal_cube 0 cube;
     let c_array = cube.Cube.array in
-    let cubes = 
+    let cubes, _ = 
       List.fold_left
-        (fun cubes (vis_cube, id) ->
+        (fun (cubes, count) vis_cube ->
          let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:cube in
          List.fold_left
-	   (fun cubes ss ->
+	   (fun (cubes, count) ss ->
 	    let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
 	    if not pure_smt && ArrayAtom.subset vis_renamed c_array then
-	        raise (Fixpoint [id])
+	        raise (Fixpoint [count])
 	    (* Heuristic : throw away nodes too much different *)
 	    (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
 	    (* line below useful for arith : ricart *)
 	    else if not pure_smt &&
-                      Cube.inconsistent_2arrays vis_renamed c_array then cubes
+                Cube.inconsistent_2arrays vis_renamed c_array then (cubes, count+1)
 	    else if ArrayAtom.nb_diff vis_renamed c_array > 1 then
-              ((vis_cube, id), vis_renamed)::cubes
+              ((vis_cube, vis_renamed)::cubes, count+1)
 	    else (
-              Prover.assume_neg id vis_renamed; 
-              cubes)
-	   ) cubes d
-        ) [] visited
+              Prover.assume_neg count vis_renamed; 
+              (cubes, count+1))
+	   ) (cubes, count) d
+        ) ([], 1) visited
     in
     TimeSort.start ();
     let cubes = 
@@ -204,7 +204,7 @@ end = struct
         cubes 
     in
     TimeSort.pause ();
-    List.iter (fun ((vn, id), ar_renamed) -> 
+    List.iteri (fun id (vn, ar_renamed) -> 
       Prover.assume_neg id ar_renamed
     ) cubes
 
@@ -214,10 +214,10 @@ end = struct
     let ars = s.Cube.array in
     let temp = ref 0 in
     ignore (List.exists 
-	      (fun (sp, id) ->
+	      (fun sp ->
                 incr temp;
 		if ArrayAtom.subset sp.Cube.array ars then
-		  begin db := Some [id]; true end
+		  begin db := Some [!temp]; true end
 		else false
               ) cubes);
     !db

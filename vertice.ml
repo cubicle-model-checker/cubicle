@@ -700,6 +700,15 @@ type res =
   | HUnsat
 
 
+let delete_subsumed f =
+  (* f is supposedly sorted *)
+  List.fold_left (
+    fun acc c ->
+      match Fixpoint.FixpointCubeList.check c acc with
+        | None -> c::acc
+        | Some l -> acc
+  ) [] f
+
 
 (* If the result is TRUE then f1 and tr imply f2.
    When we want to know if world1 and tr imply world2,
@@ -716,7 +725,6 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
   (*     Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
   (*     Format.eprintf "[DNF] %a@." print_ednf dnf; *)
   (*   ); *)
-  (* let ndnf = List.fold_left (find_pre tr) [] dnf in *)
   
   (* try *)
   (*   let res =  *)
@@ -747,10 +755,13 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
   let fun_dist = assume_distinct (List.length args) in
   let fun_world = assume_cnf n1 inst_cnf in
   let res = find_inst fun_dist fun_world n1 n2 inst_dnf inst_upd in
-  match res with
+  let resFirst = match res with
     | Some (b, it) -> HSat b
     | None -> HUnsat
-
+  in
+  let ndnf = List.fold_left (find_pre tr) [] dnf in
+  let ndnf' = delete_subsumed ndnf in
+  resFirst
 
 (* Given a transition and a node, 
    Answers SAT if we can take the transition,
@@ -1198,8 +1209,8 @@ let cube_implies c cl =
 
 let simplify_dnf w1 b2 dnf =
   let nw1 = negate_litterals w1 in
-  let sdnf, _ = List.fold_left (
-    fun (acc, count) cube ->
+  let sdnf = List.fold_left (
+    fun acc cube ->
       let cig = cube_implies cube nw1 in
       match cig with 
         | Some c ->
@@ -1207,7 +1218,7 @@ let simplify_dnf w1 b2 dnf =
             Format.eprintf 
               "[Simp negation] \n%a\n [is negated by] \n%a@."
               Cube.print cube Cube.print c;
-          (acc, count)
+          acc
         | None ->
           let cib = cube_implies cube b2 in
           match cib with
@@ -1216,15 +1227,14 @@ let simplify_dnf w1 b2 dnf =
                 Format.eprintf
                   "[Simp already bad]\n%a\n [was already in] \n%a@."
                   Cube.print cube Cube.print c;
-              ((c, count)::acc, count + 1)
+              c::acc
             (* (acc, count) *)
             | None -> 
-              
-              match Fixpoint.FixpointCubeList.check cube acc with
-                | None -> ((cube, count)::acc, count + 1)
-                | Some l -> (acc, count)
-  ) ([], 1) dnf in
-  fst (List.split sdnf)
+               match Fixpoint.FixpointCubeList.check cube acc with
+                | None -> cube::acc
+                | Some l -> acc
+  ) [] dnf in
+  sdnf
     
 let partition_l dim l =
   let rec f acc ll =

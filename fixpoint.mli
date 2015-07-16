@@ -29,7 +29,7 @@ end
 
 module FixpointCubeList : sig
 
-  val check : Cube.t -> (Cube.t * int) list -> int list option
+  val check : Cube.t -> Cube.t list -> int list option
   (** [check s v] returns the tags of cubes in v that were used if [s] implies
       the disjunction of the cubes in [v]. Otherwise, it returns [None]. *)
     
