@@ -165,7 +165,7 @@ let search dots system =
     ) [] cunsl in
   let btop = V.create_bad unsl in
   (* Create top with gtop, btop and no subsume *)
-  let top = V.create wtop wtop btop in
+  let top = V.create wtop wtop V.KOriginal btop in
   (* Print top *)
   (* if verbose > 0 then *)
     Format.eprintf "%a@." V.print_vertice top;    
@@ -188,7 +188,7 @@ let search dots system =
   (* Create the bad formula of root, false *)
   let broot = V.create_bad [] in
   (* Create root with groot, broot and no subsume *)
-  let root = V.create wroot wroot broot in
+  let root = V.create ~is_root:true wroot wroot V.KOriginal broot in
   
   (* Working queue of nodes to expand and refine *)
   let todo = Q.create () in
@@ -223,7 +223,7 @@ let search dots system =
        a parent node. *)
     if V.is_bad v1 then (
       Format.eprintf 
-	"We discard the treatment of this edge since (%a) is now bad@." 
+	"We discard the treatment of this edge since (%a) is now bad\n@." 
         V.print_id v1;
       (rg, tc)
     )

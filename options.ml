@@ -26,6 +26,7 @@ let ic3 = ref false
 let ic3_level = ref 0
 let ic3_smt = ref false
 let ic3_pdf = ref false 
+let ic3_switch = ref false
 
 let max_proc = ref 10
 let type_only = ref false
@@ -132,6 +133,8 @@ let specs =
               "<n> enable the forward search with a level of extrapolation";
     "-ic3_smt", Arg.Set ic3_smt,
               " allow use of smt solver to check if bad is reached";
+    "-switch", Arg.Set ic3_switch,
+              " other version of subsumption finding";
     "-pdf", Arg.Set ic3_pdf,
               " output the graph in a pdf file";
     "-search", Arg.String set_mode, 
@@ -217,6 +220,7 @@ let ic3 = !ic3
 let ic3_level = !ic3_level
 let ic3_smt = !ic3_smt
 let ic3_pdf = !ic3_pdf
+let ic3_switch = !ic3_switch
 
 let type_only = !type_only
 let maxrounds = !maxrounds

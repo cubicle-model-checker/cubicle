@@ -339,9 +339,10 @@ let open_dot () =
 
 (* IC3 function *)
 
-let new_node_ic3 id lbl =
+let new_node_ic3 ?color:(c="white") id lbl =
   current_color := next_shade ();
-  fprintf !dot_fmt "@[%s [label = \"%s\"]@]@." id lbl
+  fprintf !dot_fmt "@[%s [label = \"%s\" style=filled color=%s]@]@." 
+    id lbl c
 
 let new_node_ext_ic3 id lbl =
   current_color := next_shade ();

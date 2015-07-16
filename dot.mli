@@ -35,7 +35,7 @@ val open_extra : unit -> (unit -> unit)
 
 val delete_node_by : Node.t -> Node.t -> unit
 
-val new_node_ic3 : string -> string -> unit
+val new_node_ic3 : ?color:string -> string -> string -> unit
 
 val new_node_ext_ic3 : string -> string -> unit
 

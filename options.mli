@@ -26,6 +26,7 @@ val ic3 : bool
 val ic3_level : int
 val ic3_smt : bool
 val ic3_pdf : bool
+val ic3_switch : bool
 
 val max_proc : int
 val type_only : bool
