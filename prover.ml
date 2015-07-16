@@ -113,16 +113,17 @@ and make_literal = function
   | Atom.True -> F.f_true 
   | Atom.False -> F.f_false
   | Atom.Comp (x, op, y) ->
-      let tx = make_term x in
-      let ty = make_term y in
-      F.make_lit (make_op_comp op) [tx; ty]
+     let tx = make_term x in
+     let ty = make_term y in
+     F.make_lit (make_op_comp op) [tx; ty]
   | Atom.Ite (la, a1, a2) -> 
-      let f = make_formula_set la in
-      let a1 = make_literal a1 in
-      let a2 = make_literal a2 in
-      let ff1 = F.make F.Imp [f; a1] in
-      let ff2 = F.make F.Imp [F.make F.Not [f]; a2] in
-      F.make F.And [ff1; ff2]
+     let f = make_formula_set la in
+     let a1 = make_literal a1 in
+     let a2 = make_literal a2 in
+     let ff1 = F.make F.Imp [f; a1] in
+     let ff2 = F.make F.Imp [F.make F.Not [f]; a2] in
+     F.make F.And [ff1; ff2]
+       
 
 
 let make_formula atoms =
@@ -232,7 +233,7 @@ let assume_node { tag = id } ap =
 
 let assume_neg id ap =
   let f = F.make F.Not [make_formula ap] in
-  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  if debug_smt then eprintf "[smt] assume neg: %a@." F.print f;
   SMT.assume ~id f;
   SMT.check  ()
     
@@ -240,7 +241,8 @@ let make_clause atoms =
   F.make F.Or (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
 let make_clause_sa sa =
-  F.make F.Or (SAtom.fold (fun a l -> make_literal a::l) sa [])
+  F.make F.Or (SAtom.fold (
+    fun a l -> make_literal a::l) sa [])
 
 let assume_distinct nvars =
   let dv = distinct_vars nvars in
@@ -248,7 +250,7 @@ let assume_distinct nvars =
 
 let assume_clause id ap =
   let f = make_clause ap in
-  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  if debug_smt then eprintf "[smt] assume clause: %a@." F.print f;
   SMT.assume ~id f
   (* SMT.check  () *)
 

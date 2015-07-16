@@ -246,8 +246,10 @@ module Term = struct
   let make_app s l =
     try
       let (sb, _, nty) = H.find decl_symbs s in
-      let ty = H.find decl_types nty in
-      Term.make sb l ty
+      try
+        let ty = H.find decl_types nty in
+        Term.make sb l ty
+      with Not_found -> raise (Error (UnknownType nty))
     with Not_found -> raise (Error (UnknownSymb s))
 
   let t_true = Term.vrai

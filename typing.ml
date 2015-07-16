@@ -308,10 +308,11 @@ let init_global_env s =
       l := (n, ret)::!l) s.arrays;
   !l
 
-
-let init_proc () = 
+(* ----------/!\----------- *)
+(* Not a beautiful way to do*)
+let () =
   List.iter 
-    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
+    (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.generals
 
 let create_init_instances (iargs, l_init) = 
   let init_instances = Hashtbl.create 11 in

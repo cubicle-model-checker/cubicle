@@ -696,7 +696,7 @@ let find_inst fun_dist fun_wo n1 n2 inst_f2 l =
   r
 
 type res = 
-  | HSat of Cube.t
+  | HSat (* of Cube.t *)
   | HUnsat
 
 
@@ -709,7 +709,46 @@ let delete_subsumed f =
         | Some l -> acc
   ) [] f
 
+exception Fixpoint
 
+let check_fixpoint cube visited =
+  Prover.assume_goal_cube 0 cube;
+  let c_array = cube.Cube.array in
+  let cubes, _ = 
+    List.fold_left
+      (fun (cubes, count) vis_cube ->
+        let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:cube in
+        List.fold_left
+	  (fun (cubes, count) ss ->
+            let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
+	    if ArrayAtom.subset vis_renamed c_array then (
+              Format.eprintf "[Check] vr : %a \nca : %a@." 
+                ArrayAtom.print vis_renamed ArrayAtom.print c_array;
+              raise Fixpoint
+            )
+	        (* Heuristic : throw away nodes too much different *)
+	        (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
+	        (* line below useful for arith : ricart *)
+	    else if Cube.inconsistent_2arrays vis_renamed c_array then 
+              (cubes, count+1)
+	    else if ArrayAtom.nb_diff vis_renamed c_array > 1 then
+              ((vis_cube, vis_renamed)::cubes, count+1)
+	    else (
+              Prover.assume_clause count vis_renamed; 
+              (cubes, count+1)
+            )
+	  ) (cubes, count) d
+      ) ([], 1) visited
+  in
+  let cubes = 
+    List.fast_sort 
+      (fun (c1, a1) (c2, a2) -> ArrayAtom.compare_nb_common c_array a1 a2) 
+      cubes 
+  in
+  List.iteri (fun id (vn, ar_renamed) -> 
+      Prover.assume_clause id ar_renamed
+  ) cubes
+        
 (* If the result is TRUE then f1 and tr imply f2.
    When we want to know if world1 and tr imply world2,
    FALSE means YES.
@@ -722,8 +761,8 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
      else, v1 and tr can not lead to v2 *)
   (* if verbose > 0 then *)
   (*   ( *)
-  (*     Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
-  (*     Format.eprintf "[DNF] %a@." print_ednf dnf; *)
+      Format.eprintf "[CNF] %a@." print_ucnf cnf;
+      Format.eprintf "[DNF] %a@." print_ednf dnf;
   (*   ); *)
   
   (* try *)
@@ -756,12 +795,36 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
   let fun_world = assume_cnf n1 inst_cnf in
   let res = find_inst fun_dist fun_world n1 n2 inst_dnf inst_upd in
   let resFirst = match res with
-    | Some (b, it) -> HSat b
+    | Some (b, it) -> HSat
     | None -> HUnsat
   in
   let ndnf = List.fold_left (find_pre tr) [] dnf in
   let ndnf' = delete_subsumed ndnf in
-  resFirst
+
+  Format.eprintf "[NewHard] cnf : %a \n dnf : %a \n@." print_ucnf cnf print_ednf ndnf';
+
+  Prover.clear_system ();
+
+  let res =
+    List.exists (
+      fun cube ->
+        try 
+          check_fixpoint cube cnf;
+          Format.eprintf "[ResSec]Nothing@.";
+          true
+        with
+          | Exit -> Format.eprintf "[ResSec]Exit@.";false
+          | Fixpoint -> Format.eprintf "[ResSec]Fixpoint@.";true
+          | Smt.Unsat _ -> Format.eprintf "[ResSec]Smt.Unsat";false
+    ) ndnf' in
+  let resSec = if res then HSat else HUnsat in
+  (match resFirst, resSec with
+    | HSat, HUnsat -> Format.eprintf "[Incoherence] HSat, HUnsat@."
+    | HUnsat, HSat ->  Format.eprintf "[Incoherence] HUnsat, HSat@."
+    | _ -> ()
+  );
+  assert (resSec = resFirst);
+  resSec
 
 (* Given a transition and a node, 
    Answers SAT if we can take the transition,
@@ -774,7 +837,7 @@ let pickable =
       | EDontKnow -> match hard_imply_by_trans
           (v.world, v.id) (empty, v.id + 1) tr with
           | HUnsat -> false
-          | HSat _ -> true
+          | HSat -> true
           
       
 
@@ -877,7 +940,7 @@ let imply_by_trans v1 tr vs v2 =
             in (
               match res with
                 | HUnsat -> Format.eprintf " HUNSAT @.";true
-                | HSat _ -> Format.eprintf " HSAT @.";false
+                | HSat -> Format.eprintf " HSAT @.";false
             )
           | Some vp ->
             (if debug then
@@ -995,7 +1058,7 @@ let imply_by_trans_hard v1 tr vs v2 =
   in 
   match res with
     | HUnsat -> true
-    | HSat _ -> false
+    | HSat -> false
 
 (* Tries to find a node in the graph which subsume
    the current node.
@@ -1314,7 +1377,7 @@ let refine v1 v2 tr candidates =
                 let res = hard_imply_by_trans
                   (v1.world, v1.id) ([cube], v2.id) tr in
                 match res with
-                  | HSat _ ->
+                  | HSat ->
                     cube :: acc
                   | HUnsat -> acc
               else cube::acc
