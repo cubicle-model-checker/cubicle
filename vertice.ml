@@ -551,22 +551,34 @@ let is_subformula c1 c2 =
       ) sigmas
     end        
 
-
-
-let negate_cube c = 
+let negate_cube_same_vars c =
   let l = c.Cube.litterals in
   let l = SAtom.fold (
     fun a l -> SAtom.add (Atom.neg a) l
   ) l SAtom.empty in
   let v = c.Cube.vars in
-  let c = Cube.create v l in
+  Cube.create v l
+    
+let negate_cube_procs c = 
+  let c = negate_cube_same_vars c in
+  let v = c.Cube.vars in
+  let subst = Variable.build_subst v Variable.procs in
+  Cube.subst subst c
+
+let generalize_cube c =
+  let v = c.Cube.vars in
+  let subst = Variable.build_subst v Variable.generals in
+  Cube.subst subst c
+
+let general_to_procs c =
+  let v = c.Cube.vars in
   let subst = Variable.build_subst v Variable.procs in
   Cube.subst subst c
 
     
 (* Given a formula, returns the formula with all the
    litterals negated *)
-let negate_litterals = List.map negate_cube
+let negate_litterals = List.map negate_cube_procs
 
 
 let find_pre tr acc bad =
@@ -675,7 +687,7 @@ let find_inst fun_dist fun_wo n1 n2 inst_f2 l =
 		  raise Exit
     		with Smt.Unsat _ ->
     		  if debug_smt && verbose > 0 then
-    	    	    Format.eprintf "[Find_Inst] Res : SUNS*AT\n@.";
+    	    	    Format.eprintf "[Find_Inst] Res : UNSAT\n@.";
     		  f (tl, tl')
 	      );
               
@@ -711,84 +723,107 @@ let delete_subsumed f =
 
 exception Fixpoint
 
-let check_fixpoint cube visited =
-  Prover.assume_goal_cube 0 cube;
+let check_fixpoint cube visited nvars =
+  Prover.assume_goal_cube_ic3 0 nvars cube;
   let c_array = cube.Cube.array in
   let cubes, _ = 
     List.fold_left
       (fun (cubes, count) vis_cube ->
-        let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:cube in
+        let vis_cube = general_to_procs vis_cube in
+        (* Format.eprintf "[Vis_Cube]%a@." Cube.print vis_cube; *)
+        (* let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:cube in *)
+        let nvis_cube = negate_cube_same_vars vis_cube in
+        let d' = Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
+        (* (\* List.iter ( *\) *)
+        (* (\*   fun ss -> *\) *)
+        (* (\*     Format.eprintf "[RelevantD']%a@." Variable.print_subst ss; *\) *)
+        (* (\* ) d'; *\) *)
+        
         List.fold_left
 	  (fun (cubes, count) ss ->
-            let vis_renamed = ArrayAtom.apply_subst ss vis_cube.Cube.array in
-	    if ArrayAtom.subset vis_renamed c_array then (
-              Format.eprintf "[Check] vr : %a \nca : %a@." 
-                ArrayAtom.print vis_renamed ArrayAtom.print c_array;
-              raise Fixpoint
-            )
-	        (* Heuristic : throw away nodes too much different *)
-	        (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
-	        (* line below useful for arith : ricart *)
-	    else if Cube.inconsistent_2arrays vis_renamed c_array then 
-              (cubes, count+1)
-	    else if ArrayAtom.nb_diff vis_renamed c_array > 1 then
-              ((vis_cube, vis_renamed)::cubes, count+1)
-	    else (
-              Prover.assume_clause count vis_renamed; 
-              (cubes, count+1)
-            )
-	  ) (cubes, count) d
+        (*     (\* Format.eprintf "[Relevant]%a@." Variable.print_subst ss; *\) *)
+            let vis_renamed =
+              ArrayAtom.apply_subst ss vis_cube.Cube.array in
+        (*     let nvis_renamed = *)
+        (*       ArrayAtom.apply_subst ss nvis_cube.Cube.array in *)
+
+        (*     (\* Format.eprintf "\n[Check] vr : \n%a \n\nca : \n%a\n@." *\) *)
+        (*     (\*   ArrayAtom.print nvis_renamed ArrayAtom.print c_array; *\) *)
+            
+	(*     if ArrayAtom.subset vis_renamed c_array then ( *)
+        (*       (\* Format.eprintf "[Check] Subset@."; *\) *)
+        (*       (\* Format.eprintf "[Check] Subset\n%a\n\n%a@." *\) *)
+        (*       (\*   ArrayAtom.print nvis_renamed ArrayAtom.print c_array; *\) *)
+        (*       raise Fixpoint *)
+        (*     ) *)
+	(*     (\* Heuristic : throw away nodes too much different *\) *)
+	(*     (\* else if ArrayAtom.nb_diff pp anp > 2 then nodes *\) *)
+	(*     (\* line below useful for arith : ricart *\) *)
+	(*     else *)
+        (*       if Cube.inconsistent_2arrays nvis_renamed c_array then ( *)
+        (*         (\* Format.eprintf "[Check] Inconsistent\n%a\n\n%a@." *\) *)
+        (*         (\*   ArrayAtom.print nvis_renamed ArrayAtom.print c_array; *\) *)
+        (*         (cubes, count+1) *)
+        (*       ) *)
+	(*     else *)
+        (*         if ArrayAtom.nb_diff nvis_renamed c_array > 1 then ( *)
+        (*           (\* Format.eprintf "[Check] Nb_diff > 1@."; *\) *)
+        (*           ((vis_cube, vis_renamed)::cubes, count+1) *)
+        (*         ) *)
+        (*         else ( *)
+        (*           (\* Format.eprintf "[Check] Prover@."; *\) *)
+        (*           Prover.assume_clause count vis_renamed; *)
+        (*           (\* Format.eprintf "[Check] Prover Ok@."; *\) *)
+        (*           (cubes, count+1) *)
+        (*         ) *)
+        ((vis_cube, vis_renamed)::cubes, count+1)
+	  ) (cubes, count) d'
       ) ([], 1) visited
   in
-  let cubes = 
-    List.fast_sort 
-      (fun (c1, a1) (c2, a2) -> ArrayAtom.compare_nb_common c_array a1 a2) 
-      cubes 
+  let cubes =
+    List.fast_sort
+      (fun (c1, a1) (c2, a2) -> ArrayAtom.compare_nb_common c_array a1 a2)
+      cubes
   in
   List.iteri (fun id (vn, ar_renamed) -> 
-      Prover.assume_clause id ar_renamed
+    Prover.assume_clause id ar_renamed
   ) cubes
-        
+
+let compare_cubes = Cube.compare_cubes
+  
 (* If the result is TRUE then f1 and tr imply f2.
    When we want to know if world1 and tr imply world2,
    FALSE means YES.
    When we want to know if world1 and tr imply bad2,
    TRUE means YES.*)
 let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) = 
-  Format.eprintf "[HIT] Smt call@.";
-  (* We want to check v1 and tr and not v2
-     if it is unsat, then v1 and tr imply v2
-     else, v1 and tr can not lead to v2 *)
-  (* if verbose > 0 then *)
-  (*   ( *)
-      Format.eprintf "[CNF] %a@." print_ucnf cnf;
-      Format.eprintf "[DNF] %a@." print_ednf dnf;
-  (*   ); *)
+  (* Format.eprintf "[HIT] Smt call@."; *)
+  (* (\* We want to check v1 and tr and not v2 *)
+  (*    if it is unsat, then v1 and tr imply v2 *)
+  (*    else, v1 and tr can not lead to v2 *\) *)
+  (* (\* if verbose > 0 then *\) *)
+  (* (\*   ( *\) *)
+  (*     Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
+  (*     Format.eprintf "[DNF] %a@." print_ednf dnf; *)
+  (* (\*   ); *\) *)
   
-  (* try *)
-  (*   let res =  *)
-  (*     List.find ( *)
-  (*       fun cube -> *)
+  (* (\* try *\) *)
+  (* (\*   let res =  *\) *)
+  (* (\*     List.find ( *\) *)
+  (* (\*       fun cube -> *\) *)
           
   let n_cnf = max_args cnf in
   let n_dnf = max_args dnf in
   let n_tr = List.length ti.tr_args in
   let n_args =
-    if n_cnf - n_dnf - n_tr > 0 then n_cnf - n_dnf
-    else n_tr
+    if n_cnf - n_dnf - n_tr > 0 then n_cnf
+    else n_tr + n_dnf
   in
   let args = get_procs n_args n_dnf in
   (* if debug && verbose > 2 then  *)
   (*   Format.printf "Card : %d@." (List.length args); *)
   
   let inst_dnf = instantiate_cube_list args dnf in
-  
-  (* Format.eprintf "[CNF] %a@." print_ucnf cnf; *)
-  (* Format.eprintf "[DNF] %a@." print_ednf dnf; *)
-  (* Format.eprintf "[Partition Impossible]\n%a@." print_ednf imp; *)
-  (* Format.eprintf "[Partition Possible]\n%a@." print_ednf pos; *)
-  (* Format.eprintf "[Result] %s@." (if res then "true" else "false"); *)
-  
   let inst_cnf = instantiate_cube_list args cnf in
   let inst_upd = Ic3_forward.instantiate_transitions args args [tr] in
   let fun_dist = assume_distinct (List.length args) in
@@ -798,25 +833,39 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
     | Some (b, it) -> HSat
     | None -> HUnsat
   in
+
+  (* Format.eprintf "[NewHard]@."; *)
+
   let ndnf = List.fold_left (find_pre tr) [] dnf in
-  let ndnf' = delete_subsumed ndnf in
+  let ndnf = List.fast_sort compare_cubes ndnf in
+        
+  (* let ndnf' = delete_subsumed ndnf in *)
 
-  Format.eprintf "[NewHard] cnf : %a \n dnf : %a \n@." print_ucnf cnf print_ednf ndnf';
-
-  Prover.clear_system ();
+  (* Format.eprintf "[NewHard]@."; *)
+  
+  (* Format.eprintf "[NewHard(%d)] cnf(%d) : %a \n dnf(%d) : %a \n@." *)
+  (*   n_tr n_cnf print_ucnf cnf n_dnf print_ednf ndnf; *)
+  
+  (* Prover.clear_system (); *)
 
   let res =
     List.exists (
       fun cube ->
         try 
-          check_fixpoint cube cnf;
-          Format.eprintf "[ResSec]Nothing@.";
+          check_fixpoint cube cnf n_args;
+          (* Format.eprintf "[ResSec]Nothing@."; *)
           true
         with
-          | Exit -> Format.eprintf "[ResSec]Exit@.";false
-          | Fixpoint -> Format.eprintf "[ResSec]Fixpoint@.";true
-          | Smt.Unsat _ -> Format.eprintf "[ResSec]Smt.Unsat";false
-    ) ndnf' in
+          | Exit -> 
+            (* Format.eprintf "[ResSec]Exit@."; *)
+            false
+          | Fixpoint -> 
+            (* Format.eprintf "[ResSec]Fixpoint@."; *)
+            true
+          | Smt.Unsat _ -> 
+            (* Format.eprintf "[ResSec]Smt.Unsat"; *)
+            false
+    ) ndnf in
   let resSec = if res then HSat else HUnsat in
   (match resFirst, resSec with
     | HSat, HUnsat -> Format.eprintf "[Incoherence] HSat, HUnsat@."
@@ -939,8 +988,8 @@ let imply_by_trans v1 tr vs v2 =
             let res = hard_imply_by_trans (v1.world, v1.id) (nvs, vs.id) tr
             in (
               match res with
-                | HUnsat -> Format.eprintf " HUNSAT @.";true
-                | HSat -> Format.eprintf " HSAT @.";false
+                | HUnsat -> (* Format.eprintf " HUNSAT @."; *)true
+                | HSat -> (* Format.eprintf " HSAT @."; *)false
             )
           | Some vp ->
             (if debug then
@@ -1123,12 +1172,6 @@ let find_subsuming_vertice_switch v1 v2 tr candidates =
         res
     ) candidates
 
-
-let generalize_cube c =
-  let v = c.Cube.vars in
-  let subst = Variable.build_subst v Variable.generals in
-  Cube.subst subst c
-
 let all_subsatom c =
   let litt = c.Cube.litterals in
   let rec all_rec acc = function
@@ -1178,7 +1221,7 @@ let find_extra v1 v2 tr cube lextra =
       if (* debug &&  *)verbose > 0 then
         Format.eprintf
           "[Extrapolation] We found no better bad@.";
-      let gncube = generalize_cube (negate_cube cube) in
+      let gncube = generalize_cube (negate_cube_same_vars cube) in
       (cube, (gncube, KOriginal))
     | (sub, l)::tl ->
       let csub = Cube.create_normal sub in
@@ -1186,7 +1229,7 @@ let find_extra v1 v2 tr cube lextra =
         find_extra tl
       else
         begin
-          let ncsub = negate_cube csub in
+          let ncsub = negate_cube_procs csub in
           if contains v2.world ncsub then find_extra tl
           else
             let res1 = easy_imply_by_trans v1.world [csub] tr in
@@ -1227,21 +1270,19 @@ let extrapolate v1 v2 tr =
       let res, lextra' =
         if ic3_level = 1 then find_extra v1 v2 tr cube lextra
         else 
-          let ncube = negate_cube cube in
+          let ncube = negate_cube_same_vars cube in
           let gncube = generalize_cube ncube in
           (gncube, KOriginal), [] in
       (res::nb2, lextra')
   ) ([], []) b2 in
   nb2
-    
-let compare_cubes = Cube.compare_cubes
-  
+      
 let cube_implies c cl =
   try 
     let res = List.find (
       fun b -> 
         is_subformula b c
-        || Cube.inconsistent_clause_cube (negate_cube b) c
+        || Cube.inconsistent_clause_cube (negate_cube_procs b) c
     ) cl in
     (* Format.eprintf "[Cube_Implies] Yes : \n\t%a@." Cube.print res; *)
     Some res

@@ -225,6 +225,14 @@ let assume_goal_cube id cube =
   SMT.assume ~id f;
   SMT.check ()
 
+let assume_goal_cube_ic3 id nvars cube =
+  SMT.clear ();
+  SMT.assume ~id (distinct_vars nvars);
+  let f = make_formula cube.Cube.array in
+  if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check ()
+    
 let assume_node { tag = id } ap =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;

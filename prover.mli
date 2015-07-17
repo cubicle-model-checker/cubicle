@@ -32,6 +32,9 @@ val assume_goal : Node.t -> unit
 val assume_goal_cube : int -> Cube.t -> unit
 (** Clears the context and assumes a goal formula *)
 
+val assume_goal_cube_ic3 : int -> int -> Cube.t -> unit
+(** Clears the context and assumes a goal formula *)
+
 val assume_node : Node.t -> ArrayAtom.t -> unit
 (** [assume_node n a] assumes the negation of a node [n] given in the form of a
     renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
