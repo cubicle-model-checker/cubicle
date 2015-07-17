@@ -29,11 +29,67 @@
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
 
-  type t = 
+  type macro_body =
+    | Predicate of dnf
+    | Procedure of (Hstring.t * glob_update) list * Hstring.t list * update list
+    | Function of glob_update
+
+  type macro = {
+    m_name : HString.t;
+    m_args : Hstring.t list;
+    m_body : macro_body;
+  }
+
+  let ex_term =
+    | RTerm of Term.t
+    | FCall of HString.t * Hstring.t list
+
+  type ex_atom =
+    | RAtom of Atom.t
+    | PCall of HString.t * Hstring.t list
+
+  type ex_action = 
     | Assign of Hstring.t * glob_update
     | Nondet of Hstring.t
     | Upd of update
+    | PrCall of HString.t * Hstring.t list
 
+
+  let inline_fcall_term = function
+    | RTerm t -> [Atom.True, t]
+    | FCall (f, args) ->
+      match find_fun f args with
+      | UTerm t -> [Atom.True, t]
+      | UCase swts -> swts
+
+  let inline_fcall_mk_lit t1 op t2 =
+    match (inline_fcall_term t1, inline_fcall_term t2) with
+    | RTerm rt1, Rterm rt2 -> Atom.Comp (rt1, op, rt2)
+    | RTerm rt1, UCase swts ->
+      let (_, d) :: sw = List.rev swts in
+      List.fold_left (fun acc (c, t) ->
+          Atom.Ite (c, Atom.Comp (rt1, op, t), acc))
+        d sw
+    | UCase swts, RTerm rt2 ->
+      let (_, d) :: sw = List.rev swts in
+      List.fold_left (fun acc (c, t) ->
+          Atom.Ite (c, Atom.Comp (t, op, rt2), acc))
+        d sw
+    | UCase swts1, UCase swts2 ->
+      let (_, d1) :: sw1 = List.rev swts1 in
+      let sw2 = List.rev swts2 in
+      List.fold_left (fun acc (c1, t1) ->
+          List.fold_left (fun acc (c2, t2) ->
+              Atom.Ite (SAtom.union c1 c2, Atom.Comp (t1, op, t2), acc))
+            acc sw2)
+        d1 sw1
+
+
+      
+  let inline_pcall = function
+    | RAtom a -> [SAtom.singleton a]
+    | PCall 
+      
   module S = Set.Make(Hstring)
 
   module Constructors = struct
@@ -82,7 +138,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
+%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL DEFINE
 %token SIZEPROC
 %token ASSIGN UGUARD REQUIRE NEQ UNSAFE
 %token OR AND COMMA PV DOT QMARK
@@ -185,6 +241,18 @@ constructors:
   | mident { [$1] }
   | mident BAR constructors { $1::$3 }
 ;
+
+macro_definition:
+  | DEFINE lident LEFTPAR lidents RIGHTPAR EQUALS dnf
+    {{ m_name = $2; n_args = $4, m_body = Predicate $7 }}
+  | DEFINE lident LEFTPAR lidents RIGHTPAR EQUALS assigns_nondets_updates
+    {{ m_name = $2; n_args = $4, m_body = Procedure $7 }}
+  | DEFINE lident LEFTPAR lidents RIGHTPAR EQUALS CASE switchs
+    {{ m_name = $2; n_args = $4, m_body = Function (UCase $7) }}
+  | DEFINE lident LEFTPAR lidents RIGHTPAR EQUALS term
+    {{ m_name = $2; n_args = $4, m_body = Function (UTerm $7) }}
+
+
 
 init:
   | INIT LEFTPAR lidents RIGHTPAR LEFTBR dnf RIGHTBR 
