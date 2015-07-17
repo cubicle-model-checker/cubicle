@@ -44,7 +44,7 @@ type result =
   | Safe of Node.t list * Node.t list
   (** The system is safe and we return the set of visited nodes and the
       inferred invariants *)
-  | Unsafe of Node.t * Node.t list
+  | Unsafe of Node.t * Node.t list * Node.t list
   (** The system is unsafe and we return the faulty node and the full list of
       candidate invariants that were considered *)
 

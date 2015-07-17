@@ -66,7 +66,7 @@ let _ =
          close_dot ();
 	 exit 0
 
-      | Bwd.Unsafe (faulty, candidates) ->
+      | Bwd.Unsafe (faulty, candidates, _) ->
          if (not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
          if not quiet then Stats.error_trace system faulty;

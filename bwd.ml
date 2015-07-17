@@ -31,7 +31,7 @@ module type PriorityNodeQueue = sig
 end
 
 
-type result = Safe of Node.t list * Node.t list | Unsafe of Node.t * Node.t list
+type result = Safe of Node.t list * Node.t list | Unsafe of Node.t * Node.t list * Node.t list
 
 
 module type Strategy = sig
@@ -46,6 +46,13 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
   module Fixpoint = Fixpoint.FixpointTrie
   module Approx = Approx.Selected
+
+  let empty_queue q =
+    let rec qux acc =
+      if Q.is_empty q then List.rev acc 
+      else qux (Q.pop q :: acc)
+    in
+    qux []
 
   let nb_remaining q post () = Q.length q, List.length !post
 
@@ -108,7 +115,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
       Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
       if dot then Dot.error_trace faulty;
-      Unsafe (faulty, !candidates)
+      Unsafe (faulty, (empty_queue q) @ !candidates, Cubetrie.all_vals !visited)
 
 end
 
@@ -158,13 +165,13 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
          Cubetrie.add_node n visited
         ) ([], visited) nodes
     in
-    (* List.rev *) tasks
+    List.rev tasks
 
   let worker system = function
     | Task_node (n, visited) ->
        try
          Safety.check system n;
-         match Fixpoint.check n visited with
+         match Fixpoint.hard_fixpoint n visited with
          | Some db -> WR_Fixpoint db
          | None ->
             Stats.check_limit n;
@@ -300,7 +307,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
         (* in *)
         let tasks = gentasks_hard system (empty_queue q) !visited in
         Functory.Cores.compute
-          ~worker:(worker_fix system)
+          ~worker:(worker system)
           ~master:(master_fetch system q postponed visited candidates)
           tasks;
         
@@ -314,7 +321,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
       Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
       if dot then Dot.error_trace faulty;
-      Unsafe (faulty, !candidates)
+      Unsafe (faulty, !candidates, Cubetrie.all_vals !visited)
 
 end
 

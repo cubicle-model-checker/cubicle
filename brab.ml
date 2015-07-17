@@ -23,11 +23,20 @@ module Oracle = Approx.SelectedOracle
 
 
 (* FIXME Bug when search is parallel *)
-let rec search_and_backtrack candidates system =
-  let res = BWD.search ~candidates system in
+let rec search_and_backtrack tainted invariants candidates saved_candidates system mod_system =
+  let res = BWD.search ~invariants ~candidates mod_system in
   match res with
-  | Bwd.Safe _ -> res
-  | Bwd.Unsafe (faulty, candidates) ->
+  | Bwd.Safe (_, candidates) ->
+    if tainted then (
+      Stats.restart ();
+      eprintf "ICICICICI!!!!!!@.";
+      (* Restarting *)
+      search_and_backtrack false [] saved_candidates [] system system
+    )
+    else
+      res
+  | Bwd.Unsafe (faulty, candidates, visited) ->
+    let candidates, queued = List.partition (fun n -> n.kind = Approx) candidates in
      let o = Node.origin faulty in
      if o.kind = Orig then res
      else
@@ -40,8 +49,14 @@ let rec search_and_backtrack candidates system =
          let candidates =
            Approx.remove_bad_candidates system faulty candidates
          in
-         (* Restarting *)
-         search_and_backtrack candidates system
+
+         (* Continue anyway *)
+         search_and_backtrack true (faulty :: visited) [] candidates
+           system { system with t_unsafe = queued }
+
+         (* (\* Restarting *\) *)
+         (* search_and_backtrack invariants candidates system *)
+
        end
 
 (**************************************************************)
@@ -51,4 +66,4 @@ let rec search_and_backtrack candidates system =
 let brab system =
   Oracle.init system;
   if only_forward then exit 0;
-  search_and_backtrack [] system
+  search_and_backtrack false [] [] [] system system
