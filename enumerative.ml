@@ -52,12 +52,44 @@ let equal_state a1 a2 =
 let hash_state st = Hashtbl.hash_param 100 500 st
 
 
-module HST = Hashtbl.Make 
+
+module HSTT = Hashtbl.Make 
   (struct 
     type t = state
     let equal = (=)
     let hash = hash_state
    end)
+
+
+module Bounded_Hashtbl = struct
+
+  let max_entries = 2000000
+
+  type 'a t = int array array
+
+  let index x = hash_state x mod max_entries
+  
+  let create _ = Array.make max_entries [||]
+
+  let mem h x = h.(index x) <> [||]
+
+  let add h x () =
+    if h.(index x) = [||] || Random.bool () then h.(index x) <- x
+
+  let iter f h = Array.iter (fun x -> f x ()) h
+
+  let fold f h acc =
+    Array.fold_left (fun acc x ->
+        if x <> [||] then f x () acc
+        else acc)
+      acc h
+  
+  let remove h x = h.(index x) <- [||]
+  
+end
+
+
+module HST = Bounded_Hashtbl
 
   
 type st_req = int * op_comp * int
@@ -130,6 +162,11 @@ let empty_env = {
   explicit_states = HST.create 0;
   states = [];
 }
+
+
+let size_state s = Sys.word_size * (Obj.size (Obj.repr s)) 
+
+let size_state_from_env e = Sys.word_size * e.nb_vars 
 
 
 let build_state_procs_map id_terms procs var_terms proc_terms =
@@ -927,10 +964,11 @@ let forward_bfs s procs env l =
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
       HST.add h_visited st ();
-      env.states <- st :: env.states;
+      (* env.states <- st :: env.states; *)
       (* add_all_syms env explicit_states st *)
     end
   done;
+  Queue.iter (fun (_, st) -> HST.add h_visited st ()) to_do;
   if not quiet then eprintf "Total forward nodes : %d@." !cpt_r
 
 let forward_bfs_switches s procs env l =
@@ -982,18 +1020,19 @@ let search procs init =
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
   forward_bfs init procs env st_inits;
-  let st = HST.stats env.explicit_states in
-  if verbose > 0 || profiling then begin
-    printf "\nStatistics@.";
-    printf   "----------@.";
-    printf "num_bindings : %d@." st.Hashtbl.num_bindings;
-    printf "num_buckets : %d@." st.Hashtbl.num_buckets;
-    printf "max_bucket_length : %d@." st.Hashtbl.max_bucket_length;
-    printf "Bucket histogram : @?";
-    Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v )
-		st.Hashtbl.bucket_histogram;
-    printf "@.";
-  end;
+  (* let st = HST.stats env.explicit_states in *)
+  (* if verbose > 0 || profiling then begin *)
+  (*   printf "\nStatistics@."; *)
+  (*   printf   "----------@."; *)
+  (*   printf "num_bindings : %d@." st.Hashtbl.num_bindings; *)
+  (*   printf "num_buckets : %d@." st.Hashtbl.num_buckets; *)
+  (*   printf "max_bucket_length : %d@." st.Hashtbl.max_bucket_length; *)
+  (*   printf "Bucket histogram : @?"; *)
+  (*   Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v ) *)
+  (*       	st.Hashtbl.bucket_histogram; *)
+  (*   printf "@."; *)
+  (* end; *)
+  env.states <- HST.fold (fun s _ acc -> s :: acc) env.explicit_states [];
   List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states;
   (* Prevent the GC from scanning the list env.states as it is going to be
      kept in memory all the time. *)
