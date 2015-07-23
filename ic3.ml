@@ -190,6 +190,8 @@ let search dots system =
   (* Create root with groot, broot and no subsume *)
   let root = V.create ~is_root:true wroot wroot V.KOriginal broot in
   
+  Format.eprintf "%a@." V.print_vertice root;    
+  
   (* Working queue of nodes to expand and refine *)
   let todo = Q.create () in
   

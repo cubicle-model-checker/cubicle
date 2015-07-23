@@ -27,7 +27,7 @@ for f in $3*.cub; do
     # Milliseconds
     M="$((T/1000000))"
 
-    # printf "    Time : %02d:%02d.%03d\n" "$((S/60%60))" "$((S%60))" "${M}"
+    printf "    Time : %02d:%02d.%03d\n" "$((S/60%60))" "$((S%60))" "${M}"
 
     case $res in
 	"1") 
