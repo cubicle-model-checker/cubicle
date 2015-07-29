@@ -1,0 +1,34 @@
+var FC : bool
+var Turn : proc
+array Want[proc] : bool
+array Crit[proc] : bool
+
+init (z) { Want[z] = False && Crit[z] = False && FC = False}
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+transition fc (i) 
+requires {FC = False}
+{
+ Crit[i] := True;
+ FC := True;
+}        
+
+transition req (i)
+requires { Want[i] = False }
+{ Want[i] := True }
+
+transition enter (i)
+requires { Want[i]=True && Crit[i] = False && Turn = i
+           && forall_other j. Crit[j] = True}
+{ Crit[i] := True; 
+  Turn := .;
+}
+
+(* transition exit (i) *)
+(* requires { Crit[i] = True } *)
+(* {  *)
+(*   Turn := . ; *)
+(*   Crit[i] := False;  *)
+(*   Want[i] := False *)
+(* } *)

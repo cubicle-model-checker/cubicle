@@ -1,0 +1,58 @@
+type t = L | L1 | L2 | CS
+
+const C : int
+
+var Id : proc
+var Id_set : bool
+
+array X[proc] : int
+array PC[proc] : t
+
+init (z) {PC[z] = L && Id_set = False && C = 3}
+
+unsafe (z1 z2) {PC[z1] = CS && PC[z2] = CS}
+
+transition t1 (i)
+requires {PC[i] = L && Id_set = False}
+{
+	PC[i] := L1;
+	X[i] := 0;
+}
+
+transition t2 (i)
+requires {PC[i] = L1 && X[i] <= C }
+{
+	Id_set := True;
+	Id := i;
+	X[i] := 0;
+	PC[i] := L2;
+}
+
+transition t2_bis (i)
+requires {PC[i] = L1 && C < X[i]}
+{
+	PC[i] := L;
+}
+
+transition t3 (i)
+requires {PC[i] = L2 && Id <> i && C < X[i]}
+{
+	PC[i] := L;
+}
+
+transition t4 (i)
+requires {PC[i] = L2 && Id = i && C < X[i]}
+{
+	PC[i] := CS;
+}
+
+transition t5 (i)
+requires {PC[i] = CS}
+{
+	Id_set := False;
+}
+
+transition tic ()
+{
+	X[j] := case | _ : X[j] + 1;
+}

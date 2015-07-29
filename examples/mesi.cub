@@ -1,0 +1,30 @@
+type location = M | E | S | I
+array State[proc] : location
+
+init (z) { State[z] = I }
+ 
+unsafe (z1 z2) { State[z1] = M && State[z2] = M }
+ 
+transition t1 (x)
+requires { State[x] = E }
+{ State[j] := case | j = x : M | _ : State[j]; }
+
+transition t2 (x)
+requires { State[x] = I }
+{ State[j] := case
+  | j = x : S
+  | State[j] = E : S
+  | State[j] = M : S 
+  | State[j] = I : I
+  | _ : S;
+}
+
+transition t3 (x)
+requires { State[x] = S }
+{ State[j] := case
+   | j = x : E 
+   | _ : I; }
+
+transition t4 (x)
+requires { State[x] = I }
+{ State[j] := case | j = x : E | _ : I; }

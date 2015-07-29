@@ -1,0 +1,9 @@
+var X : bool
+
+init () {X = True}
+
+unsafe (z) {X = True}
+
+transition t ()
+requires {True = True}
+{X := False}      

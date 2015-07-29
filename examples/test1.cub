@@ -1,0 +1,22 @@
+type msg = R | S | E
+
+array Want[proc] : bool
+array Crit[proc] : bool
+
+var W : msg
+
+init (z) { Crit[z] = False }
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True}
+
+transition t1 (i j)
+requires { Crit[j] = False}
+{
+        Crit[i] := False;
+}
+
+transition t2 (i)
+requires {True = True }
+{
+        Crit[i] := False
+}
