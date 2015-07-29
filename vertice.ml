@@ -949,12 +949,34 @@ let all_subsatom_recterm c =
       (SAtom.cardinal sa1) (SAtom.cardinal sa2)
   ) l
 
+let all_subsatom c =
+  let litt = c.Cube.litterals in
+  let rec all_rec acc = function
+    | [] -> acc
+    | x :: l -> 
+      let r = all_rec acc l in
+      (SAtom.singleton x)::(
+        (List.map (
+          fun s ->
+            let s = SAtom.add x s in
+            (* let s' = SAtom.remove x s' in *)
+            s
+         ) r)@r)
+  in
+  let l = all_rec [] (SAtom.elements litt) in
+  List.fast_sort (
+    fun sa1 sa2 -> Pervasives.compare 
+      (SAtom.cardinal sa1) (SAtom.cardinal sa2)
+  ) l
+
 let contains g b =
   List.exists (equivalent b) g 
     
 
 let find_extra v1 v2 tr cube lextra =
+  let subs' = all_subsatom cube in
   let subs = all_subsatom_recterm cube in
+  assert (List.length subs = List.length subs');
   if (* debug && *) ic3_verbose > 0 then
     Format.eprintf "[Extrapolation] Original cube : %a@."
       (SAtom.print_sep "&&") cube.Cube.litterals;
@@ -1126,6 +1148,10 @@ let find_subsuming_vertice =
                 eb'
             ) extra_bad2 in
             eb, !kind in
+          if ic3_verbose > 1 then (
+	    Format.eprintf "[Bad] %a@." print_ednf v2.bad;
+	    Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
+	  );
           let nw =
             if is_true v2
             then extra_bad2
