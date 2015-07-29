@@ -18,8 +18,16 @@ module type SigQ = sig
   val push : 'a -> 'a t -> unit
   val pop : 'a t -> 'a
 end
+  
+let select_strat =
+  (match Options.ic3_mode with
+    | "bfs" -> (module Queue : SigQ)
+    | "dfs" -> (module Stack)
+    | _ -> assert false
+  )
 
-module Q = Queue
+module Q : SigQ = (val (select_strat))
+
 module V = Vertice  
 
 
@@ -167,7 +175,7 @@ let search dots system =
   (* Create top with gtop, btop and no subsume *)
   let top = V.create wtop wtop V.KOriginal btop in
   (* Print top *)
-  (* if verbose > 0 then *)
+  if ic3_verbose > 0 then
     Format.eprintf "%a@." V.print_vertice top;    
   
   (* root = (init, false) *)
@@ -189,8 +197,8 @@ let search dots system =
   let broot = V.create_bad [] in
   (* Create root with groot, broot and no subsume *)
   let root = V.create ~is_root:true wroot wroot V.KOriginal broot in
-  
-  Format.eprintf "%a@." V.print_vertice root;    
+  if ic3_verbose > 0 then
+    Format.eprintf "%a@." V.print_vertice root;    
   
   (* Working queue of nodes to expand and refine *)
   let todo = Q.create () in
@@ -216,17 +224,19 @@ let search dots system =
   ) C.empty system.t_trans in
   
   let rec refine v1 v2 tr rg tc =
-    Format.eprintf 
-      "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
-      V.print_id v1 Hstring.print tr.tr_info.tr_name 
-      V.print_id v2;
+    if ic3_verbose > 0 then
+      Format.eprintf 
+        "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
+        V.print_id v1 Hstring.print tr.tr_info.tr_name 
+        V.print_id v2;
     (* In this case we are trying to execute a new transition
        from v1 but v1 is already bad so must not be considered as
        a parent node. *)
     if V.is_bad v1 then (
-      Format.eprintf 
-	"We discard the treatment of this edge since (%a) is now bad\n@." 
-        V.print_id v1;
+      if ic3_verbose > 0 then
+        Format.eprintf 
+	  "We discard the treatment of this edge since (%a) is now bad\n@." 
+          V.print_id v1;
       (rg, tc)
     )
     else if V.is_bad v2 then (
@@ -239,22 +249,24 @@ let search dots system =
 	  (* If v1 is root, we can not refine *)
 	  if V.equal v1 root then raise (Unsafe (rg, v1));
 	  (* Else, we recursively call refine on all the subsume *)
+          
 	  Format.eprintf "[Bad] (%a).world and %a imply (%a).bad@."
             V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2;
-          if verbose > 0 then
+          if ic3_verbose > 1 then
             Format.eprintf "[New Bad] (%a).bad = %a@."
 	      V.print_id v1 V.print_vednf v1;
 	  if dot_step then add_steps v2 v1 Bad tr false;
           V.update_bad_from v1 tr v2;
 	  List.fold_left (
 	    fun (rg, tc) (vp, tr) -> 
-	      Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
-		V.print_id vp Hstring.print tr.tr_info.tr_name 
-		V.print_id v1;
+              if ic3_verbose > 0 then
+                Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
+		  V.print_id vp Hstring.print tr.tr_info.tr_name 
+		  V.print_id v1;
 	      if dot_step then add_steps vp v1 Bad tr true;
               refine vp v1 tr rg tc
 	  ) (rg, tc) (V.get_subsume v1)
-
+            
 	(* The node vc covers v2 by tr *)
 	| V.Covered vc -> 
 	  let del = V.delete_parent v2 (v1, tr) in
@@ -263,7 +275,7 @@ let search dots system =
 	    add_steps v1 vc Cover tr false;
 	    if del then add_steps v1 v2 Cover tr true;
 	  );
-	  if debug && verbose > 1 then (
+	  if debug && ic3_verbose > 1 then (
 	    Format.eprintf "[Covered by] %a@." V.print_vertice vc;
 	    Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
 	  );
@@ -276,7 +288,7 @@ let search dots system =
 	(* We created and extrapolant vn *)
 	| V.Extrapolated vn -> 
 	  let del = V.delete_parent v2 (v1, tr) in
-	  if debug && verbose > 1 then (
+	  if debug && ic3_verbose > 1 then (
 	    Format.eprintf 
               "[Extrapolated by] %a@." V.print_vertice vn;
 	    Format.eprintf 
@@ -293,8 +305,9 @@ let search dots system =
     )
     else (
       (* if verbose > 0 then *)
-      Format.eprintf "(%a) is safe, no backward refinement@." 
-        V.print_id v2;
+      if ic3_verbose > 0 then
+        Format.eprintf "(%a) is safe, no backward refinement@." 
+          V.print_id v2;
       (rg, tc)
     )
   in
@@ -311,10 +324,11 @@ let search dots system =
        then V.print_vertice 
        else V.print_id) v1;
     let trans = V.expand v1 transitions in
-    List.iter (
-      fun tr -> 
-	Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
-    ) trans;
+    if ic3_verbose > 0 then
+      List.iter (
+        fun tr -> 
+	  Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
+      ) trans;
     let rg, tc = List.fold_left (
       fun (rg, tc) tr ->
         let v2 = C.find tr tc in
