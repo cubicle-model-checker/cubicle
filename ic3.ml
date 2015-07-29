@@ -85,11 +85,13 @@ let save_graph rg =
     ) rg;
     Format.fprintf oc_fmt "\\end{document}@.";
     close_out oc;
-    match Sys.command ("pdflatex -output-directory graphs graphs/"^file) with
+    match Sys.command ("latexmk -pdf -quiet -outdir=graphs graphs/"^file^
+                          " && cd graphs/ && latexmk -c "^file^"&& cd ..") 
+    with
       | 0 -> ()
       | _ ->
         Format.eprintf
-          "There was an error with dot. Make sure graphviz is installed."
+          "There was an error with latexmk, make sure it is installed."
 
 
 let find_graph v g = 
@@ -319,7 +321,7 @@ let search dots system =
       with Q.Empty -> raise (Safe rg)
     in
     Format.eprintf 
-      "\n*******[Induct]*******\n \n%a\n\nTransitions :@." 
+      "\n*******[Induct]*******\n \n%a\n@." 
       (if verbose > 0 
        then V.print_vertice 
        else V.print_id) v1;
@@ -339,7 +341,7 @@ let search dots system =
     let () = Sys.set_signal Sys.sigint 
       (Sys.Signal_handle 
 	 (fun _ ->
-           if debug && verbose > 0 then print_graph rg;
+           if debug && ic3_verbose > 0 then print_graph rg;
            save_graph rg;
            Stats.print_report ~safe:false [] [];
 	   if dot then (

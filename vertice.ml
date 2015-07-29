@@ -781,11 +781,12 @@ let imply_by_trans v1 tr vs v2 =
    Raise Not_found *)
 let find_subsuming_vertice v1 v2 tr candidates =
   (* if ic3_verbose > 0 then *)
-  let n = List.length candidates in
-  if n = 0 then
-    if ic3_verbose > 0 then
-      Format.eprintf "[Subsume] %a %a No subsumption@." 
-        print_id v1 print_id v2;
+  if ic3_verbose > 0 then (
+    let n = List.length candidates in
+     if n = 0 then
+       Format.eprintf "[Subsume] %a %a No subsumption@." 
+         print_id v1 print_id v2
+    );
   (* else Format.eprintf "[Subsume] %a %a [%d]@."  *)
   (* print_id v1 print_id v2 n; *)
   List.find (
@@ -872,64 +873,65 @@ let imply_by_trans_hard v1 tr vs v2 =
    Raise Not_found *)
 let find_subsuming_vertice_switch v1 v2 tr candidates =
   (* if ic3_verbose > 0 then *)
-  ( let n = List.length candidates in
+  if ic3_verbose > 0 then (
+    let n = List.length candidates in
     if n = 0 then
       Format.eprintf "[Subsume] %a %a No subsumption@." 
         print_id v1 print_id v2
-  );
+    );
   (* else Format.eprintf "[Subsume] %a %a [%d]@."  *)
   (* print_id v1 print_id v2 n; *)
   try 
     List.find (
       fun vs ->
-      (* if ic3_verbose > 0 then *)
-        Format.eprintf "[Subsumption Easy] (%a) and (%a) to (%a) ?@." 
-	  print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
+        if ic3_verbose > 0 then
+          Format.eprintf "[Subsumption Easy] (%a) and (%a) to (%a) ?@." 
+	    print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
         let res =
 	  (is_true v2 || implies vs v2) 
 	  && (imply_by_trans_easy v1 tr vs v2)    
         in 
-      (* if not res then *)
         hic_add v1.id tr vs.id res;
-        if res
-        then (
-          Format.eprintf
-            "[Subsumed] (%a) is subsumed by (%a) by (%a)@." 
-            print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
-        )
-        else (
-          Format.eprintf 
-            "[Not subsumed] (%a) is not subsumed by (%a) by (%a)@."
-            print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
-        );
+        if ic3_verbose > 0 then
+          if res
+          then (
+            Format.eprintf
+              "[Subsumed] (%a) is subsumed by (%a) by (%a)@." 
+              print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
+          )
+          else (
+            Format.eprintf 
+              "[Not subsumed] (%a) is not subsumed by (%a) by (%a)@."
+              print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
+          );
         res
     ) candidates
   with Not_found ->
     List.find (
       fun vs ->
-      (* if ic3_verbose > 0 then *)
-        Format.eprintf "[Subsumption Easy] (%a) and (%a) to (%a) ?@." 
-	  print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
+        if ic3_verbose > 0 then
+          Format.eprintf "[Subsumption Easy] (%a) and (%a) to (%a) ?@." 
+	    print_id v1 Hstring.print tr.tr_info.tr_name print_id vs;
         let res =
 	  (is_true v2 || implies vs v2) 
 	  && (imply_by_trans_hard v1 tr vs v2)    
         in 
-      (* if not res then *)
         hic_add v1.id tr vs.id res;
-        if res
-        then (
-          Format.eprintf
-            "[Subsumed] (%a) is subsumed by (%a) by (%a)@." 
-            print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
-        )
-        else (
-          Format.eprintf 
-            "[Not subsumed] (%a) is not subsumed by (%a) by (%a)@."
-            print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
-        );
+        if ic3_verbose > 0 then
+          if res
+          then (
+            Format.eprintf
+              "[Subsumed] (%a) is subsumed by (%a) by (%a)@." 
+              print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
+          )
+          else (
+            Format.eprintf 
+              "[Not subsumed] (%a) is not subsumed by (%a) by (%a)@."
+              print_id v2 print_id vs Hstring.print tr.tr_info.tr_name
+          );
         res
     ) candidates
-
+      
 let all_subsatom_recterm c =
   let litt = c.Cube.litterals in
   let rec all_rec acc = function
@@ -943,40 +945,18 @@ let all_subsatom_recterm c =
   in
   let elts = SAtom.elements litt in
   let l = all_rec [SAtom.empty] elts in
-  let l = List.tl l in
-  List.fast_sort (
+  List.tl (List.fast_sort (
     fun sa1 sa2 -> Pervasives.compare 
       (SAtom.cardinal sa1) (SAtom.cardinal sa2)
-  ) l
-
-let all_subsatom c =
-  let litt = c.Cube.litterals in
-  let rec all_rec acc = function
-    | [] -> acc
-    | x :: l -> 
-      let r = all_rec acc l in
-      (SAtom.singleton x)::(
-        (List.map (
-          fun s ->
-            let s = SAtom.add x s in
-            (* let s' = SAtom.remove x s' in *)
-            s
-         ) r)@r)
-  in
-  let l = all_rec [] (SAtom.elements litt) in
-  List.fast_sort (
-    fun sa1 sa2 -> Pervasives.compare 
-      (SAtom.cardinal sa1) (SAtom.cardinal sa2)
-  ) l
+  ) l)
+    
 
 let contains g b =
   List.exists (equivalent b) g 
     
 
 let find_extra v1 v2 tr cube lextra =
-  let subs' = all_subsatom cube in
   let subs = all_subsatom_recterm cube in
-  assert (List.length subs = List.length subs');
   if (* debug && *) ic3_verbose > 0 then
     Format.eprintf "[Extrapolation] Original cube : %a@."
       (SAtom.print_sep "&&") cube.Cube.litterals;
@@ -1075,11 +1055,16 @@ let partition_l dim l =
       | _ -> acc, ll
   in f [] l
 
-let select_procs l v1 v2 =
+let select_procs lb v1 v2 =
+  
   (* Format.eprintf "[Select procs]\n%a@." print_ednf l; *)
   let rec s l =
     match l with
-      | [] -> assert false
+      | [] -> 
+        Format.eprintf "V1 :\n %a\n\nV2 :\n %a\n\nl :\n %a@."
+          print_ucnf v1.world print_ednf v2.bad 
+          print_ednf lb;
+        assert false
       | hd::tl ->
         let dim = Cube.dim hd in
         let less_proc, others = partition_l dim l in
@@ -1087,7 +1072,7 @@ let select_procs l v1 v2 =
         match nl with
           | [] -> s others
           | _ -> nl
-  in s l
+  in s lb
 
 let find_all_bads v1 v2 =
   let rec find acc v =

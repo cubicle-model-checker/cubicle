@@ -5,13 +5,14 @@ shopt -s nullglob
 to=$1
 cubicle=$2
 pathcub=$3
+btime=$4
 score=0
 score_s=0
 score_u=0
 score_t=0
 max=0
 
-for f in $3*.cub; do
+for f in $3/*.cub; do
     echo $f;
     max=`expr $max + 1`;
     T="$(date +%s%N)"
@@ -27,7 +28,7 @@ for f in $3*.cub; do
     # Milliseconds
     M="$((T/1000000))"
 
-    printf "    Time : %02d:%02d.%03d\n" "$((S/60%60))" "$((S%60))" "${M}"
+    if [ $btime = "time" ]; then printf "    Time : %02d:%02d.%01d\n" "$((S/60%60))" "$((S%60))" "${M}"; fi
 
     case $res in
 	"1") 
