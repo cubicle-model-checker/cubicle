@@ -167,11 +167,15 @@ exception Fixpoint of int list
 
 
 module FixpointCubeList : sig
+    
+  val fix_hard : int ref
 
   val check : Cube.t -> Cube.t list -> int list option
 
 end = struct
 
+  let fix_hard = ref 0
+    
   let check_fixpoint ?(pure_smt=false) cube visited =
     Prover.assume_goal_cube 0 cube;
     let c_array = cube.Cube.array in
@@ -236,7 +240,9 @@ end = struct
     TimeFix.start ();
     let r = 
       match easy_fixpoint s visited with
-      | None -> hard_fixpoint s visited
+      | None -> 
+        incr fix_hard;
+        hard_fixpoint s visited
       | r -> r
     in
     TimeFix.pause ();

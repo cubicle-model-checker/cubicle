@@ -376,7 +376,10 @@ let search dots system =
       if dot_extra then update_extra rg;
       if debug && verbose > 0 then print_graph rg;
       save_graph rg;
-      Format.eprintf "Empty queue, Safe system@."; 
+      Format.eprintf "Empty queue, Safe system@.";
+      Format.eprintf "All hard   Calls : %d@." !(Vertice.hit_calls);
+      Format.eprintf "Extra hard Calls : %d@." !(Vertice.extra_hit_calls);
+      Format.eprintf "Fix hard   Calls : %d@." !(Fixpoint.FixpointCubeList.fix_hard);
       RSafe
     | Unsafe (rg, v1) -> 
       if dot then update_dot rg;

@@ -29,6 +29,8 @@ type t =
       is_root : bool;
     }
       
+let tmp_vis = ref []
+
 type res_ref =
   | Bad_Parent of (int * Cube.t list)
   | Covered of t
@@ -637,8 +639,8 @@ let check_fixpoint cube visited nvars =
       (fun (cubes, count) vis_cube ->
         let vis_cube = general_to_procs vis_cube in
         let nvis_cube = negate_cube_same_vars vis_cube in
-        let d' = 
-          Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
+        let d = Variable.all_permutations nvis_cube.Cube.vars cube.Cube.vars in
+        let d' = Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
         List.fold_left
 	  (fun (cubes, count) ss ->
             let vis_renamed =
@@ -659,12 +661,16 @@ let check_fixpoint cube visited nvars =
 
 let compare_cubes = Cube.compare_cubes
   
+let hit_calls = ref 0
+let extra_hit_calls = ref 0
+
 (* If the result is TRUE then f1 and tr imply f2.
    When we want to know if world1 and tr imply world2,
    FALSE means YES.
    When we want to know if world1 and tr imply bad2,
    TRUE means YES.*)
 let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) = 
+  incr hit_calls;
   (* Format.eprintf "[HIT] Smt call@."; *)
   (* We want to check v1 and tr and not v2
      if it is unsat, then v1 and tr imply v2
@@ -986,7 +992,8 @@ let find_extra v1 v2 tr cube lextra =
                     Cube.print csub;
                 let gnecsub = generalize_cube ncsub in
                 (csub, (gnecsub, KExtrapolated))
-              | EDontKnow ->
+              | EDontKnow -> 
+                 incr extra_hit_calls;
                 let res2 = hard_imply_by_trans
                   (v1.world, v1.id) ([csub], v2.id) tr in
                 match res2 with
@@ -997,7 +1004,7 @@ let find_extra v1 v2 tr cube lextra =
                         Cube.print csub;
                     let gnecsub = generalize_cube ncsub in
                     (csub, (gnecsub, KExtrapolated))
-                  | HSat -> find_extra tl
+                  | HSat ->find_extra tl
         end
   in 
   let (c, extra) = find_extra subs in
@@ -1143,6 +1150,20 @@ let find_subsuming_vertice =
             else v2.world @ extra_bad2
           in
 	  let nv = create ~creation:(v1, tr, v2) nw extra_bad2 kind [] in
+          (try 
+             let v = List.find (
+               fun v -> 
+                 let w1 = v.world in
+                 if List.length w1 <> List.length nw then false else
+                   List.for_all2 (
+                     fun c1 c2 -> SAtom.equal c1.Cube.litterals c2.Cube.litterals
+                   ) w1 nw
+             ) (!tmp_vis) in
+             Format.eprintf "nv(%a) equals previous v(%a) @." print_id nv print_id v;
+             Format.eprintf "\n%a\n\n%a\n@." print_vertice nv print_vertice v;
+             exit 1
+           with Not_found -> tmp_vis := nv::(!tmp_vis)
+          );
 	  if ic3_verbose > 0 then (
             Format.eprintf "[Extrapolation] We extrapolate \
                      (%a.bad) = eb and create a new node with \

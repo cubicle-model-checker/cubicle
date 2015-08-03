@@ -6,6 +6,9 @@ type ednf
 
 type t_kind = KOriginal | KExtrapolated
 
+val hit_calls : int ref
+val extra_hit_calls : int ref
+
 type res_ref =
   | Bad_Parent of (int * Cube.t list)
   | Covered of t
