@@ -73,6 +73,8 @@ val dot_prog : viz_prog
 val dot_colors : int
 val dot_step : bool
 val dot_extra : bool
+val dot_out : string
+val dot_ext : string
 val quiet : bool
 val verbose : int
 val nocolor : bool

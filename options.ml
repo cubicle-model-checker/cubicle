@@ -42,6 +42,8 @@ let dot_extra = ref false
 let dot_prog = ref Dot
 let dot_colors = ref 0
 let dot_step = ref false
+let dot_out = ref "-Tsvg"
+let dot_ext = ref "svg"
 let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
@@ -107,6 +109,12 @@ let set_dot d =
   dot := true;
   dot_level := d
 
+let set_dot_out s = match s with
+  | "-Tps" -> dot_out := s; dot_ext := "ps"
+  | "-Tsvg" -> dot_out := s; dot_ext := "svg"
+  | _ -> raise (Arg.Bad "I don't want to handle this format")
+
+
 let set_extra d =
   dot_extra := true;
   extra_level := d
@@ -161,6 +169,8 @@ let specs =
               " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
               " number of colors for dot output";
+    "-dot-out", Arg.String set_dot_out,
+              " -Tsvg | other output formats for dot";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -247,6 +257,8 @@ let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let dot_step = !dot_step
 let dot_extra = !dot_extra
+let dot_out = !dot_out
+let dot_ext = !dot_ext
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling

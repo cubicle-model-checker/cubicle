@@ -210,10 +210,10 @@ let convert =
   fun dot_file ->
     incr count;
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s_extra_%d_%d-%d.%s" 
-      reg_file dot_level ic3_level !count "svg" in
-    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
-			  " > "^svg^" && rm "^dot_file) with
+    let output = Format.sprintf "%s_extra_%d_%d-%d.%s" 
+      reg_file dot_level ic3_level !count dot_ext in
+    match Sys.command ((graphviz_prog !nb_nodes)^" "^dot_out^" "^dot_file^
+			  " > "^output^" && rm "^dot_file) with
       | 0 -> ()
       | _ ->
 	eprintf "There was an error with dot. Make sure graphviz is installed."
@@ -223,15 +223,18 @@ let display_graph =
   let r = Str.regexp "\\(\\..+.dot\\)" in
   fun dot_file ->
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s_graph_%d_%d.%s" 
-      reg_file dot_level ic3_level "svg" in
+    let output = Format.sprintf "%s_graph_%d_%d.%s" 
+      reg_file dot_level ic3_level dot_ext in
     let com = match Util.syscall "uname" with
       | "Darwin\n" -> "open"
       | "Linux\n" -> "xdg-open"
       | _ -> (* Windows *) "cmd /c start"
     in
-    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
-                          " > "^svg^ "&& rm "^dot_file^" && "^com^" "^svg) with
+    let command = ((graphviz_prog !nb_nodes)^" "^dot_out^" "^dot_file^
+                          " > "^output^ " && rm "^dot_file^" && "^
+                          com^" "^output) in
+    Format.eprintf "%s@." command;
+    match Sys.command command with
       | 0 -> ()
       | _ ->
 	eprintf "There was an error with dot. Make sure graphviz is installed."
@@ -241,10 +244,10 @@ let display_extra =
   fun dot_file ->
     
     let reg_file = Str.replace_first r "" dot_file in
-    let svg = Format.sprintf "%s_extra_%d_%d.%s" 
-      reg_file dot_level ic3_level "svg" in
-    match Sys.command ((graphviz_prog !nb_nodes)^" -Tsvg "^dot_file^
-                          " > "^svg^" && rm "^dot_file) with
+    let output = Format.sprintf "%s_extra_%d_%d.%s" 
+      reg_file dot_level ic3_level dot_ext in
+    match Sys.command ((graphviz_prog !nb_nodes)^" "^dot_out^" "^dot_file^
+			  " > "^output^" && rm "^dot_file) with
       | 0 -> ()
       | _ ->
 	eprintf "There was an error with dot. Make sure graphviz is installed."

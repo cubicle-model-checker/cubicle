@@ -1,8 +1,9 @@
 var X : bool
+var Y : bool
 
 init () {X = True}
 
-unsafe (z) {X = True}
+unsafe (z) {X = True && Y = True} 
 
 transition t ()
 requires {True = True}
