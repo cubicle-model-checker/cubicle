@@ -386,6 +386,9 @@ let update_bad_from v1 tr v2 =
 let update_world_from v1 v2 =
   v1.world_from <- v2::v2.world_from
 
+let add_successor v vs =
+  v.successor <- Some vs
+
 let delete_parent v (vp, tr) =
   let l = v.subsume in
   let trn = tr.tr_info.tr_name in
@@ -1198,9 +1201,10 @@ let find_subsuming_vertice =
                 ) pre_image bads 
           in
           let pre_image = List.fast_sort compare_cubes pre_image in
+          (* Format.eprintf "[Pre images]\n%a@." print_ednf pre_image; *)
           let pre_image = select_procs pre_image v1 v2 in
           if ic3_verbose > 0 then
-            Format.eprintf
-              "[BadCube] %a@." print_ednf pre_image;
+          Format.eprintf
+            "[BadCube] %a@." print_ednf pre_image;
           v1.bad <- pre_image;
           Bad_Parent (v1.id, pre_image)

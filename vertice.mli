@@ -25,6 +25,7 @@ val get_subsume : t -> (t * Ast.transition) list
 
 val update_bad_from : t -> Ast.transition -> t -> unit
 val update_world_from : t -> t -> unit
+val add_successor : t -> t -> unit
 
 (* hashtype signature *)
 val hash : t -> int

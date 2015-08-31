@@ -302,6 +302,7 @@ let search dots system =
 	  );
 	  let rg' = add_extra_graph v2 vn (G.add vn [] rg) in
           V.update_world_from vn v2;
+          V.add_successor v2 vn;
 	  Q.push vn todo;
 	  (rg', tc)
     )
