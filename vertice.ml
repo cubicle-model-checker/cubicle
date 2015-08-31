@@ -639,13 +639,13 @@ let check_fixpoint cube visited nvars =
       (fun (cubes, count) vis_cube ->
         let vis_cube = general_to_procs vis_cube in
         let nvis_cube = negate_cube_same_vars vis_cube in
-        let d' = Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
+        let d = Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
         List.fold_left
 	  (fun (cubes, count) ss ->
             let vis_renamed =
               ArrayAtom.apply_subst ss vis_cube.Cube.array in
             ((vis_cube, vis_renamed)::cubes, count+1)
-	  ) (cubes, count) d'
+	  ) (cubes, count) d
       ) ([], 1) visited
   in
   let cubes =
@@ -1077,7 +1077,7 @@ let select_procs lb v1 v2 =
         let nl = simplify_dnf v1.world v2.bad less_proc in
         match nl with
           | [] -> s others
-          | _ -> nl
+          | _ -> Stats.cpt_process := max Stats.(!cpt_process) dim; nl
   in s lb
 
 let find_all_bads v1 v2 =
