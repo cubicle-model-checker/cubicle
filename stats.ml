@@ -171,12 +171,11 @@ let print_time_prover () =
   let sec = Prover.SMT.get_time () in
   printf "├─Time in solver                 : %a@." print_time sec
 
-let print_time_subsum () =
-  printf "├─Time in subsumption            : %a@." print_time (TimerIc3.get ())
+let print_time_hardc () =
+  printf "Time in hard check               : %a@." print_time (TimerHardIc3.get ())
 
-let print_time_bad () =
-  printf "└─Time in bad checking           : %a@." print_time (TimerITIc3.get ())
-
+let print_time_easyc () =
+  printf "Time in easy check               : %a@." print_time (TimerEasyIc3.get ())
          
 let print_time_pre () =
   printf "Time for pre-image computation   : %a@." print_time (TimePre.get ())
@@ -224,10 +223,10 @@ let print_report ~safe visited candidates =
       print_time_sort ();
       print_time_formulas ();
       print_time_prover ();
-      print_time_subsum ();
-      print_time_bad ();
       print_time_forward ();
-      print_time_ccheck ();
+      print_time_ccheck (); 
+      print_time_easyc ();
+      print_time_hardc ();
     end;
   printf "%a" Pretty.print_double_line ()
 

@@ -590,9 +590,11 @@ let find_pre tr acc bad =
   let nc' = List.map (fun n -> n.cube) nl' in
   nc@nc'@acc
 
+module ET = Util.TimerEasyIc3
+
 
 let easy_imply_by_trans cnf dnf ({tr_info = ti} as tr)=
-  
+  ET.start ();
   let ndnf = List.fold_left (find_pre tr) [] dnf in
   
   let ncnf = negate_litterals cnf in
@@ -607,6 +609,7 @@ let easy_imply_by_trans cnf dnf ({tr_info = ti} as tr)=
             || Cube.inconsistent_clause_cube clause cube
         ) ncnf cnf
     ) ndnf in
+  ET.pause ();
   if res then (
     incr Stats.cpt_easy_true;
     EUnsat
@@ -663,12 +666,15 @@ let compare_cubes = Cube.compare_cubes
 let hit_calls = ref 0
 let extra_hit_calls = ref 0
 
+module HT = Util.TimerHardIc3
+
 (* If the result is TRUE then f1 and tr imply f2.
    When we want to know if world1 and tr imply world2,
    FALSE means YES.
    When we want to know if world1 and tr imply bad2,
    TRUE means YES.*)
 let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) = 
+  if profiling then HT.start ();
   incr hit_calls;
   (* Format.eprintf "[HIT] Smt call@."; *)
   (* We want to check v1 and tr and not v2
@@ -705,6 +711,7 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
           | Fixpoint -> true
           | Smt.Unsat _ -> false
     ) ndnf in
+  HT.pause ();
   if res then HSat else HUnsat
   
 (* Given a transition and a node, 
@@ -743,8 +750,6 @@ let is_true v =
    returns false otherwise *)
 let implies v1 v2 = true
       
-module T = Util.TimerIc3
-module IT = Util.TimerITIc3
 
 let imply_by_trans v1 tr vs v2 =
   let nvs = negate_litterals vs.added_clause in 
@@ -755,9 +760,7 @@ let imply_by_trans v1 tr vs v2 =
     (*   "[TestingFS] With (%a).added_clause = %a\nand (%a).nvs = %a@." *)
     (*   print_id v print_ucnf v.added_clause *)
     (*   print_id vs print_ednf nvs; *)
-    if profiling then T.start ();
     let res = easy_imply_by_trans v.added_clause nvs tr in
-    if profiling then T.pause ();
     match res with
       | EUnsat ->
         (* Format.eprintf " EUnsat @."; *)
@@ -835,9 +838,7 @@ let find_subsuming_vertice v1 v2 tr candidates =
 let imply_by_trans_easy v1 tr vs v2 =
   let nvs = negate_litterals vs.added_clause in 
   let rec f v =
-    if profiling then T.start ();
     let res = easy_imply_by_trans v.added_clause nvs tr in
-    if profiling then T.pause ();
     match res with
       | EUnsat ->
         (* Format.eprintf " EUnsat @."; *)
