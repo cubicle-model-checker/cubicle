@@ -639,7 +639,6 @@ let check_fixpoint cube visited nvars =
       (fun (cubes, count) vis_cube ->
         let vis_cube = general_to_procs vis_cube in
         let nvis_cube = negate_cube_same_vars vis_cube in
-        let d = Variable.all_permutations nvis_cube.Cube.vars cube.Cube.vars in
         let d' = Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
         List.fold_left
 	  (fun (cubes, count) ss ->
@@ -1199,5 +1198,8 @@ let find_subsuming_vertice =
           in
           let pre_image = List.fast_sort compare_cubes pre_image in
           let pre_image = select_procs pre_image v1 v2 in
+          if ic3_verbose > 0 then
+            Format.eprintf
+              "[BadCube] %a@." print_ednf pre_image;
           v1.bad <- pre_image;
           Bad_Parent (v1.id, pre_image)
