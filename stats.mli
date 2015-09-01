@@ -27,6 +27,8 @@ val cpt_easy_true : int ref
 
 val cpt_process : int ref
 
+val cpt_nodes : int ref
+
 val new_node : Node.t -> unit
 (** register the treatment of a new node *)
 

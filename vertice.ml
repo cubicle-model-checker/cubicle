@@ -343,6 +343,7 @@ let create_bad = create_world
 let create =
   let cpt = ref 0 in
   fun ?is_root:(ir=false) ?creation w ac k b ->
+    incr Stats.cpt_nodes;
     incr cpt;
     let subs, pred = 
       match creation with
@@ -1153,20 +1154,20 @@ let find_subsuming_vertice =
             else v2.world @ extra_bad2
           in
 	  let nv = create ~creation:(v1, tr, v2) nw extra_bad2 kind [] in
-          (try 
-             let v = List.find (
-               fun v -> 
-                 let w1 = v.world in
-                 if List.length w1 <> List.length nw then false else
-                   List.for_all2 (
-                     fun c1 c2 -> SAtom.equal c1.Cube.litterals c2.Cube.litterals
-                   ) w1 nw
-             ) (!tmp_vis) in
-             Format.eprintf "nv(%a) equals previous v(%a) @." print_id nv print_id v;
-             Format.eprintf "\n%a\n\n%a\n@." print_vertice nv print_vertice v;
-             exit 1
-           with Not_found -> tmp_vis := nv::(!tmp_vis)
-          );
+          (* (try  *)
+          (*    let v = List.find ( *)
+          (*      fun v ->  *)
+          (*        let w1 = v.world in *)
+          (*        if List.length w1 <> List.length nw then false else *)
+          (*          List.for_all2 ( *)
+          (*            fun c1 c2 -> SAtom.equal c1.Cube.litterals c2.Cube.litterals *)
+          (*          ) w1 nw *)
+          (*    ) (!tmp_vis) in *)
+          (*    Format.eprintf "nv(%a) equals previous v(%a) @." print_id nv print_id v; *)
+          (*    Format.eprintf "\n%a\n\n%a\n@." print_vertice nv print_vertice v; *)
+          (*    exit 1 *)
+          (*  with Not_found -> tmp_vis := nv::(!tmp_vis) *)
+          (* ); *)
 	  if ic3_verbose > 0 then (
             Format.eprintf "[Extrapolation] We extrapolate \
                      (%a.bad) = eb and create a new node with \
