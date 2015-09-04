@@ -113,12 +113,20 @@ let print_ucnf fmt g =
       (SAtom.print_sep "||") c.Cube.litterals
   ) g
 
-let print_lbl_ucnf fmt g =
+let print_lbl_ednf fmt g =
   List.iter (
     fun c -> Format.fprintf fmt "%a \\n" 
       (* Variable.print_vars c.Cube.vars  *)
       (SAtom.print_sep "||") c.Cube.litterals
   ) g
+
+let print_lbl_ucnf fmt g =
+  List.iter (
+    fun c -> Format.fprintf fmt "%a \\n" 
+      (* Variable.print_vars c.Cube.vars  *)
+      (SAtom.print_sep "&&") c.Cube.litterals
+  ) g
+
 
 let print_iucnf fmt g =
   List.iter (
@@ -281,7 +289,9 @@ let lbl_node v =
     | 0 -> get_id v
     | 1 -> Format.asprintf "%s(%d)" (get_id v) 
       (List.length v.world)
-    | _ -> Format.asprintf "%s\\n%a" (get_id v) print_lbl_ucnf v.world
+    | _ -> Format.asprintf "%s\\n%a" (get_id v) 
+      (* (if is_bad v then (print_lbl_ednf Format.str_formatter v.bad) *)
+      (*  else ( *)print_lbl_ucnf v.world
 
 let lbl_node_ext v =
   match Options.extra_level with
@@ -533,6 +543,7 @@ let equivalent c1 c2 =
   else 
     begin
       let sigmas = Instantiation.relevant ~of_cube:c1 ~to_cube:c2 in
+      (* let sigmas = Variable.all_permutations c1.Cube.vars c2.Cube.vars in *)
       let sa1 = c1.Cube.litterals in
       let sa2 = c2.Cube.litterals in
       List.exists (
@@ -548,6 +559,7 @@ let is_subformula c1 c2 =
   else 
     begin
       let sigmas = Instantiation.relevant ~of_cube:c1 ~to_cube:c2 in
+      (* let sigmas = Variable.all_permutations c1.Cube.vars c2.Cube.vars in *)
       let sa1 = c1.Cube.litterals in
       let sa2 = c2.Cube.litterals in
       List.exists (
@@ -647,6 +659,7 @@ let check_fixpoint cube visited nvars =
         let vis_cube = general_to_procs vis_cube in
         let nvis_cube = negate_cube_same_vars vis_cube in
         let d = Instantiation.relevant ~of_cube:nvis_cube ~to_cube:cube in
+        (* let d = Variable.all_permutations vis_cube.Cube.vars cube.Cube.vars in *)
         List.fold_left
 	  (fun (cubes, count) ss ->
             let vis_renamed =
