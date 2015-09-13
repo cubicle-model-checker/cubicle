@@ -24,7 +24,7 @@
  '(custom-enabled-themes (quote (tsdh-dark)))
  '(delete-selection-mode nil)
  '(inhibit-startup-screen t)
- '(line-number-mode 1)
+ ;; '(line-number-mode 1)
  '(nil nil t)
  '(safe-local-variable-values (quote ((TeX-master . "rapportM2R") (encoding . utf-8) (encoding . utf8) (TeX-master . "paper"))))
  '(scroll-bar-mode (quote right))
@@ -36,6 +36,13 @@
  '(tuareg-with-indent 2)
  '(user-mail-address "roux@lri.fr")
  '(vm-delete-after-saving t))
+
+;; Preset width nlinum
+(add-hook 'nlinum-mode-hook
+          (lambda ()
+            (setq nlinum--width
+                  (length (number-to-string
+                           (count-lines (point-min) (point-max)))))))
 
 ;; (autoload 'iso-latin-1-mode "iso-latin-1" "Mode for editing accented text" t) (add-hook 'mail-mode-hook '(lambda () (iso-latin-1-mode 1)))
 ;; (set-language-environment 'latin-1)
@@ -69,7 +76,7 @@
 ;; (require 'merlin)
 
 
-(global-linum-mode 1)
+(global-nlinum-mode 1)
 
 ;; Demande y/n au lieu de yes/no (plus rapide)
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -218,19 +225,19 @@
 ;;             nil nil "*anything math symbols*"))
 
 ;; predictive install location
-(add-to-list 'load-path "~/.emacs.d/predictive/")
-;; dictionary locations
-(add-to-list 'load-path "~/.emacs.d/predictive/latex/")
-(add-to-list 'load-path "~/.emacs.d/predictive/texinfo/")
-(add-to-list 'load-path "~/.emacs.d/predictive/html/")
+;; (add-to-list 'load-path "~/.emacs.d/predictive/")
+;; ;; dictionary locations
+;; (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+;; (add-to-list 'load-path "~/.emacs.d/predictive/texinfo/")
+;; (add-to-list 'load-path "~/.emacs.d/predictive/html/")
 ;; (add-to-list 'load-path "~/.emacs.d/predictive/dictionnaires/")
 
 ;; load predictive package
-(autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
-  "Turn on Predictive Completion Mode." t)
+;; (autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
+;;   "Turn on Predictive Completion Mode." t)
 
-(add-hook 'LaTeX-mode-hook 'predictive-mode)
-(setq predictive-main-dict 'dict-latex)
+;; (add-hook 'LaTeX-mode-hook 'predictive-mode)
+;; (setq predictive-main-dict 'dict-latex)
  
 ;; (set-default 'predictive-auto-add-to-dict t)
 ;; (setq predictive-auto-learn t
@@ -311,6 +318,9 @@
  ;; ========== Shortcuts ================
 (global-set-key "\M-;" 'comment-dwim-line)
 ;; (global-undo-tree-mode)
+
+(global-set-key (kbd "C-<tab>") 'dabbrev-expand)
+(define-key minibuffer-local-map (kbd "C-<tab>") 'dabbrev-expand)
 
 ;; (global-set-key [f1] 'ocaml-navigator-locate)
 
