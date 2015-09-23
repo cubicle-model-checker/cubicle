@@ -238,7 +238,6 @@ let cin =
   | None -> stdin
 
 let ic3 = !ic3
-let ic3_level = !ic3_level
 let ic3_pdf = !ic3_pdf
 let ic3_switch = !ic3_switch
 let ic3_mode = !ic3_mode
@@ -269,6 +268,12 @@ let forward_inv = !forward_inv
 let brab = !brab
 let enumerative = if brab <> -1 then brab else !enumerative
 let do_brab = brab <> -1
+
+let ic3_level = !ic3_level
+  
+let () = if ic3_level = 2 && not do_brab then
+    raise (Arg.Bad "use -ic3 2 in combination with brab")
+
 let brab_up_to =
   if !brab_up_to && not do_brab then
     raise (Arg.Bad "use -upto in combination with brab")

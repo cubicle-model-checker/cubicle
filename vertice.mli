@@ -8,6 +8,7 @@ type t_kind = KOriginal | KExtrapolated
 
 val hit_calls : int ref
 val extra_hit_calls : int ref
+val l_fextra : Cube.t list ref
 
 type res_ref =
   | Bad_Parent of (int * Cube.t list)
@@ -58,7 +59,8 @@ val add_relation_extra : t -> unit
    w.r.t the Ast.transitions *)
 val expand : t -> Ast.transition list -> Ast.transition list 
   
-val refine : t -> t -> Ast.transition -> t list -> res_ref
+val refine : t -> t -> Ast.transition -> t list -> Ast.transition list ->
+  res_ref
 
 (* If bad is empty, our node is safe,
    else, our node is unsafe *)

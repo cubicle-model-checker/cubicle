@@ -78,11 +78,11 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                 | None -> n
                 | Some c ->
                   try
-                      (* Replace node with its approximation *)
+                    (* Replace node with its approximation *)
                     Safety.check system c;
-                      candidates := c :: !candidates;
-                      Stats.candidate n c;
-                      c
+                    candidates := c :: !candidates;
+                    Stats.candidate n c;
+                    c
                   with Safety.Unsafe _ -> n 
                   (* If the candidate is directly reachable, no need to
                      backtrack, just forget it. *)

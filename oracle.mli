@@ -32,4 +32,7 @@ module type S = sig
     (** Given a list of candidate invariants, returns the first one that seems
         to be indeed an invariant. *)
 
+    (* val good_candidates : Node.t list -> Node.t list  *)
+        
+
 end

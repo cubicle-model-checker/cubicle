@@ -3,6 +3,8 @@ open Options
 open Types
 open Ast
 
+module ApproxS = Approx.Selected
+
 let step = ref 0
 
 type ucnf = Cube.t list
@@ -715,7 +717,7 @@ let hard_imply_by_trans (cnf, n1) (dnf, n2) ({tr_info = ti} as tr) =
   let ndnf = List.fold_left (find_pre tr) [] dnf in
   let ndnf = List.fast_sort compare_cubes ndnf in
         
-  (* let ndnf = delete_subsumed ndnf in *)
+  let ndnf = delete_subsumed ndnf in
 
   let res =
     List.exists (
@@ -972,13 +974,14 @@ let all_subsatom_recterm c =
     fun sa1 sa2 -> Pervasives.compare 
       (SAtom.cardinal sa1) (SAtom.cardinal sa2)
   ) l)
-    
+
 
 let contains g b =
   List.exists (equivalent b) g 
-    
 
-let find_extra v1 v2 tr cube lextra =
+let l_fextra = ref []
+
+let find_extra_1 v1 v2 tr cube lextra =
   let subs = all_subsatom_recterm cube in
   if (* debug && *) ic3_verbose > 0 then
     Format.eprintf "[Extrapolation] Original cube : %a@."
@@ -986,9 +989,9 @@ let find_extra v1 v2 tr cube lextra =
   let rec find_extra = function
     | [] -> assert false
     | [_] ->
-      if (* debug &&  *)ic3_verbose > 0 then
+      (* if (\* debug &&  *\)ic3_verbose > 0 then *)
         Format.eprintf
-          "[Extrapolation] We found no better bad@.";
+          "[Extrapolation] We found no extrapolant@.";
       let gncube = generalize_cube (negate_cube_same_vars cube) in
       (cube, (gncube, KOriginal))
     | sub::tl ->
@@ -997,35 +1000,99 @@ let find_extra v1 v2 tr cube lextra =
         find_extra tl
       else
         begin
-          let ncsub = negate_cube_procs csub in
-          if  contains v2.world ncsub then find_extra tl
+          let necsub = negate_cube_procs csub in
+          if  contains v2.world necsub then find_extra tl
           else
             let res1 = easy_imply_by_trans v1.world [csub] tr in
-            match res1 with
-              | EUnsat ->
-                if (* debug  && *) ic3_verbose > 0 then
-                  Format.eprintf
-                    "[ExtrapolationE] We found a better bad\n%a@."
-                    Cube.print csub;
-                let gnecsub = generalize_cube ncsub in
-                (csub, (gnecsub, KExtrapolated))
-              | EDontKnow -> 
-                 incr extra_hit_calls;
-                let res2 = hard_imply_by_trans
-                  (v1.world, v1.id) ([csub], v2.id) tr in
-                match res2 with
-                  | HUnsat ->
-                    if (* debug  && *) ic3_verbose > 0 then
-                      Format.eprintf
-                        "[ExtrapolationE] We found a better bad\n%a@."
-                        Cube.print csub;
-                    let gnecsub = generalize_cube ncsub in
-                    (csub, (gnecsub, KExtrapolated))
-                  | HSat ->find_extra tl
+            try
+              match res1 with
+                | EUnsat -> raise Exit
+                | EDontKnow ->
+                  incr extra_hit_calls;
+                  let res2 = hard_imply_by_trans
+                    (v1.world, v1.id) ([csub], v2.id) tr in
+                  match res2 with
+                    | HUnsat -> raise Exit
+                    | HSat -> find_extra tl
+            with Exit ->
+              let gnecsub = generalize_cube necsub in
+              if (* debug  && *) ic3_verbose > 0 then
+                Format.eprintf
+                  "[ExtrapolationE] We found an extrapolant\n%a@."
+                  print_ucnf [gnecsub];
+              l_fextra := (generalize_cube csub) :: !l_fextra;
+              (csub, (gnecsub, KExtrapolated))
         end
-  in 
+  in
   let (c, extra) = find_extra subs in
   (extra, c::lextra)
+
+
+let all_subsnode_recterm c =
+  let l = all_subsatom_recterm c in
+  List.map (fun sa -> Node.create (Cube.create_normal sa)) l
+    
+
+let find_extra_2 v1 v2 tr cube lextra =
+  
+  let subs =   
+    if true then
+      all_subsatom_recterm cube
+    else  let subs' = Approx.approximations (
+      Node.create (Cube.create_normal cube.Cube.litterals)
+    ) in List.map (fun n -> n.cube.Cube.litterals) subs' 
+  in
+    
+  if (* debug && *) ic3_verbose > 0 then
+    Format.eprintf "[Extrapolation] Original cube : %a@."
+      (SAtom.print_sep "&&") cube.Cube.litterals;
+  let rec find_extra = function
+    | [] -> assert false
+    | [_] ->
+      if (* debug &&  *)ic3_verbose > 0 then
+        Format.eprintf
+          "[Extrapolation] We found no extrapolant@.";
+      let gncube = generalize_cube (negate_cube_same_vars cube) in
+      (cube, (gncube, KOriginal))
+    | sub::tl ->
+      let csub = Cube.create_normal sub in
+      if contains lextra csub then
+        find_extra tl
+      else
+        begin
+          let necsub = negate_cube_procs csub in
+          let nodesub = Node.create csub in
+          if (* debug &&  *)ic3_verbose > 0 then
+            Format.eprintf "[Node] %a\n@." Node.print nodesub;
+          match Approx.SelectedOracle.first_good_candidate [nodesub] with
+            | None -> find_extra tl
+            | Some _ ->
+              if  contains v2.world necsub then find_extra tl
+              else
+                let res1 = easy_imply_by_trans v1.world [csub] tr in
+                try
+                  match res1 with
+                    | EUnsat -> raise Exit
+                    | EDontKnow ->
+                      incr extra_hit_calls;
+                      let res2 = hard_imply_by_trans
+                        (v1.world, v1.id) ([csub], v2.id) tr in
+                      match res2 with
+                        | HUnsat -> raise Exit
+                        | HSat -> find_extra tl
+                with Exit ->
+                  let gnecsub = generalize_cube necsub in
+                  if (* debug  && *) ic3_verbose > 0 then
+                    Format.eprintf
+                      "[ExtrapolationE] We found an extrapolant\n%a@."
+                      print_ucnf [gnecsub];
+                  l_fextra := (generalize_cube csub) :: !l_fextra;
+                  (csub, (gnecsub, KExtrapolated))
+        end
+  in
+  let (c, extra) = find_extra subs in
+  (extra, c::lextra)
+
 
 (* Given a formula, extrapolate it and then
    generalize and negate it *)
@@ -1035,7 +1102,8 @@ let extrapolate v1 v2 tr =
   let nb2, _ = List.fold_left (
     fun (nb2, lextra) cube ->
       let res, lextra' =
-        if ic3_level = 1 then find_extra v1 v2 tr cube lextra
+        if ic3_level = 2 then find_extra_2 v1 v2 tr cube lextra
+        else if ic3_level = 1 then find_extra_1 v1 v2 tr cube lextra
         else 
           let ncube = negate_cube_same_vars cube in
           let gncube = generalize_cube ncube in
@@ -1112,113 +1180,110 @@ let find_subsuming_vertice =
   else find_subsuming_vertice
 
 (* Main function of IC3 *)
-  let refine v1 v2 tr cand =
-    try
-      if ic3_verbose > 0 then
-        Format.eprintf "[Subsumption] Is (%a) covered by transition %a ?@." 
-	  print_id v2 Hstring.print tr.tr_info.tr_name;
-      let vs = find_subsuming_vertice v1 v2 tr cand in
-      Covered vs
-    with Not_found -> 
-      if ic3_verbose > 0 then
-        Format.eprintf "[Implication] (%a.good) and %a to (%a.bad) ?@."
-	  print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-      let res = 
-        List.fold_left (
-          fun acc cube -> 
-            let res = easy_imply_by_trans v1.world [cube] tr in
-            match res with
-              | EUnsat -> acc
-              | EDontKnow ->
-                let res = hard_imply_by_trans
-                  (v1.world, v1.id) ([cube], v2.id) tr in
-                match res with
-                  | HSat ->
-                    cube :: acc
-                  | HUnsat -> acc
-        ) [] v2.bad
-      in
-      match res with
-          
-	(* RES = [] means good1 and tr don't imply bad2,
-           we can now extrapolate good1 by adding not bad2. *)
-        | [] ->
-          if ic3_verbose > 0 then
-	    Format.eprintf "[Extrapolation] (%a.good) and %a do not imply (%a.bad)@." 
-	      print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
-	  let extra_bad2 = extrapolate v1 v2 tr in
-	  let (extra_bad2, kind) = 
-            let kind = ref KOriginal in
-            let eb = List.map (
-              fun (eb', k) ->
-                (match k with
-                  | KExtrapolated -> kind := k
-                  | _ -> ());
-                eb'
-            ) extra_bad2 in
-            eb, !kind in
-          if ic3_verbose > 1 then (
-	    Format.eprintf "[Bad] %a@." print_ednf v2.bad;
-	    Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
-	  );
-          let nw =
-            if is_true v2
-            then extra_bad2
-            else v2.world @ extra_bad2
-          in
-	  let nv = create ~creation:(v1, tr, v2) nw extra_bad2 kind [] in
-          (* (try  *)
-          (*    let v = List.find ( *)
-          (*      fun v ->  *)
-          (*        let w1 = v.world in *)
-          (*        if List.length w1 <> List.length nw then false else *)
-          (*          List.for_all2 ( *)
-          (*            fun c1 c2 -> SAtom.equal c1.Cube.litterals c2.Cube.litterals *)
-          (*          ) w1 nw *)
-          (*    ) (!tmp_vis) in *)
-          (*    Format.eprintf "nv(%a) equals previous v(%a) @." print_id nv print_id v; *)
-          (*    Format.eprintf "\n%a\n\n%a\n@." print_vertice nv print_vertice v; *)
-          (*    exit 1 *)
-          (*  with Not_found -> tmp_vis := nv::(!tmp_vis) *)
-          (* ); *)
-	  if ic3_verbose > 0 then (
-            Format.eprintf "[Extrapolation] We extrapolate \
+let refine v1 v2 tr cand trans =
+  try
+    if ic3_verbose > 0 then
+      Format.eprintf "[Subsumption] Is (%a) covered by transition %a ?@." 
+	print_id v2 Hstring.print tr.tr_info.tr_name;
+    let vs = find_subsuming_vertice v1 v2 tr cand in
+    Covered vs
+  with Not_found -> 
+    if ic3_verbose > 0 then
+      Format.eprintf "[Implication] (%a.good) and %a to (%a.bad) ?@."
+	print_id v1 Hstring.print tr.tr_info.tr_name print_id v2;
+    let res = 
+      List.fold_left (
+        fun acc cube -> 
+          let res = easy_imply_by_trans v1.world [cube] tr in
+          match res with
+            | EUnsat -> acc
+            | EDontKnow ->
+              let res = hard_imply_by_trans
+                (v1.world, v1.id) ([cube], v2.id) tr in
+              match res with
+                | HSat ->
+                  cube :: acc
+                | HUnsat -> acc
+      ) [] v2.bad
+    in
+    match res with
+        
+      (* RES = [] means good1 and tr don't imply bad2,
+         we can now extrapolate good1 by adding not bad2. *)
+      | [] ->
+	let extra_bad2 = extrapolate v1 v2 tr in
+	let (extra_bad2, kind) = 
+          let kind = ref KOriginal in
+          let eb = List.map (
+            fun (eb', k) ->
+              (match k with
+                | KExtrapolated -> kind := k
+                | _ -> ());
+              eb'
+          ) extra_bad2 in
+          eb, !kind in
+        if ic3_verbose > 1 then (
+	  Format.eprintf "[Bad] %a@." print_ednf v2.bad;
+	  Format.eprintf "[EBAD2] %a@." print_ucnf extra_bad2;
+	);
+        let nw =
+          if is_true v2
+          then extra_bad2
+          else v2.world @ extra_bad2
+        in
+	let nv = create ~creation:(v1, tr, v2) nw extra_bad2 kind [] in
+        (* (try *)
+        (*    let v = List.find ( *)
+        (*      fun v -> *)
+        (*        let w1 = v.world in *)
+        (*        if List.length w1 <> List.length nw then false else *)
+        (*          List.for_all2 ( *)
+        (*            fun c1 c2 -> SAtom.equal c1.Cube.litterals c2.Cube.litterals *)
+        (*          ) w1 nw *)
+        (*    ) (!tmp_vis) in *)
+        (*    Format.eprintf "nv(%a) equals previous v(%a) @." print_id nv print_id v; *)
+        (*    Format.eprintf "\n%a\n\n%a\n@." print_vertice nv print_vertice v; *)
+        (*    exit 1 *)
+        (*  with Not_found -> tmp_vis := nv::(!tmp_vis) *)
+        (* ); *)
+	if ic3_verbose > 0 then (
+          Format.eprintf "[Extrapolation] We extrapolate \
                      (%a.bad) = eb and create a new node with \
                      (%a.good) && eb -> (%a)@."
-	            print_id v2 print_id v2 print_id nv;
-            Format.eprintf "NV : %a@." print_vertice nv;
-          );
-	  if dot then add_relation_dot ~color:"green" v2 nv tr;
-	  Extrapolated nv
+	    print_id v2 print_id v2 print_id nv;
+          Format.eprintf "NV : %a@." print_vertice nv;
+        );
+	if dot then add_relation_dot ~color:"green" v2 nv tr;
+	Extrapolated nv
 
-        (* RES = Yes b means good1 and tr imply bad2,
-	   we then need to find a pre formula which leads to bad2 *)
-            
-        | bads ->
-          if ic3_verbose > 0 then
-            Format.eprintf 
-              "[BadToParents] (%a.good) and %a imply (%a.bad)@." 
-	      print_id v1 Hstring.print tr.tr_info.tr_name
-              print_id v2;
-	  if dot then add_relation_dot ~color:"red" v2 v1 tr;
-      	  let pre_image = List.fold_left (
-            fun acc bad -> find_pre tr acc bad
-          ) [] bads in
-          let pre_image = 
-            match v2.successor with
-              | None -> pre_image
-              | Some vs ->
-                let bads = find_all_bads v1 vs in
-                List.fold_left (
-                  fun acc cl -> 
-                    List.fold_left (find_pre tr) acc cl.bad
-                ) pre_image bads 
-          in
-          let pre_image = List.fast_sort compare_cubes pre_image in
-          (* Format.eprintf "[Pre images]\n%a@." print_ednf pre_image; *)
-          let pre_image = select_procs pre_image v1 v2 in
-          if ic3_verbose > 0 then
+      (* RES = Yes b means good1 and tr imply bad2,
+	 we then need to find a pre formula which leads to bad2 *)
+          
+      | bads ->
+        if ic3_verbose > 0 then
+          Format.eprintf 
+            "[BadToParents] (%a.good) and %a imply (%a.bad)@." 
+	    print_id v1 Hstring.print tr.tr_info.tr_name
+            print_id v2;
+	if dot then add_relation_dot ~color:"red" v2 v1 tr;
+      	let pre_image = List.fold_left (
+          fun acc bad -> find_pre tr acc bad
+        ) [] bads in
+        let pre_image = 
+          match v2.successor with
+            | None -> pre_image
+            | Some vs ->
+              let bads = find_all_bads v1 vs in
+              List.fold_left (
+                fun acc cl -> 
+                  List.fold_left (find_pre tr) acc cl.bad
+              ) pre_image bads 
+        in
+        let pre_image = List.fast_sort compare_cubes pre_image in
+        (* Format.eprintf "[Pre images]\n%a@." print_ednf pre_image; *)
+        let pre_image = select_procs pre_image v1 v2 in
+        if ic3_verbose > 0 then
           Format.eprintf
             "[BadCube] %a@." print_ednf pre_image;
-          v1.bad <- pre_image;
-          Bad_Parent (v1.id, pre_image)
+        v1.bad <- pre_image;
+        Bad_Parent (v1.id, pre_image)

@@ -310,6 +310,7 @@ let keep n l =
 
 module type S = sig
     val good : Node.t -> Node.t option
+    (* val goods : Node.t list -> Node.t list *)
 end
 
 module Make ( O : Oracle.S ) : S = struct
@@ -327,7 +328,11 @@ module Make ( O : Oracle.S ) : S = struct
        (* It's useless to look for approximations of an approximation *)
        None
     | _ ->
-       subsuming_candidate n
+      Format.eprintf "Subs@.";
+      subsuming_candidate n
+
+  (* let goods nl =  *)
+    (* O.good_candidates nl *)
 
 end
 
@@ -337,12 +342,16 @@ module GrumpyOracle : Oracle.S = struct
   let init _ = ()
   let first_good_candidate _ =
     failwith "You should not call Grumpy Oracle."
+  let good_candidates _ =
+    failwith "You should not call Grumpy Oracle."
+
 
 end
 
 module GrumpyApprox : S = struct
 
   let good _ = None
+  (* let goods _ = [] *)
 
 end
 

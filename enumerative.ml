@@ -1242,3 +1242,5 @@ let first_good_candidate candidates =
   match fast_resist_on_trace candidates with
   | c :: _ -> Some c
   | [] -> None
+
+let good_candidates = fast_resist_on_trace

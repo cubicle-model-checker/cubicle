@@ -3,6 +3,7 @@ open Types
 open Ast
 
 module Solver = Smt.Make(Options)
+module Oracle = Approx.SelectedOracle
 
 type result =
   | RSafe
@@ -162,6 +163,10 @@ let update_steps s =
   ) s
 
 let search dots system = 
+  
+  if ic3_level = 2 then Oracle.init system;
+  if only_forward then exit 0;
+  
   (* top = (true, unsafe) *)
   (* Create the world formula of top, true *)
   let wtop = V.create_world [] in
@@ -179,6 +184,7 @@ let search dots system =
   (* Print top *)
   if ic3_verbose > 0 then
     Format.eprintf "%a@." V.print_vertice top;    
+  
   
   (* root = (init, false) *)
   let (_, initfl) = system.t_init in
@@ -225,7 +231,7 @@ let search dots system =
       C.add tr top acc
   ) C.empty system.t_trans in
   
-  let rec refine v1 v2 tr rg tc =
+  let rec refine v1 v2 tr rg tc trans =
     if ic3_verbose > 0 then
       Format.eprintf 
         "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
@@ -244,7 +250,7 @@ let search dots system =
     else if V.is_bad v2 then (
       if debug && verbose > 0 then print_graph rg;
       let pr = List.rev (find_graph v2 rg) in
-      match V.refine v1 v2 tr pr with  
+      match V.refine v1 v2 tr pr trans with  
 
 	(* v1 and tr imply bad *)
 	| V.Bad_Parent bad ->
@@ -252,7 +258,7 @@ let search dots system =
 	  if V.equal v1 root then raise (Unsafe (rg, v1));
 	  (* Else, we recursively call refine on all the subsume *)
           
-	  Format.eprintf "[Bad] (%a).world and %a imply (%a).bad@."
+	  Format.eprintf "\n[Bad] (%a).world and %a imply (%a).bad\n@."
             V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2;
           if ic3_verbose > 1 then
             Format.eprintf "[New Bad] (%a).bad = %a@."
@@ -266,7 +272,7 @@ let search dots system =
 		  V.print_id vp Hstring.print tr.tr_info.tr_name 
 		  V.print_id v1;
 	      if dot_step then add_steps vp v1 Bad tr true;
-              refine vp v1 tr rg tc
+              refine vp v1 tr rg tc trans
 	  ) (rg, tc) (V.get_subsume v1)
             
 	(* The node vc covers v2 by tr *)
@@ -277,6 +283,9 @@ let search dots system =
 	    add_steps v1 vc Cover tr false;
 	    if del then add_steps v1 v2 Cover tr true;
 	  );
+          Format.eprintf "[Covered] (%a).world and %a imply (%a).world@."
+            V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id vc;
+          
 	  if debug && ic3_verbose > 1 then (
 	    Format.eprintf "[Covered by] %a@." V.print_vertice vc;
 	    Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
@@ -285,11 +294,13 @@ let search dots system =
             if ic3_level = 0 then C.add tr vc tc
             else tc
           in
-	  refine v1 vc tr rg tc
+	  refine v1 vc tr rg tc trans
 
 	(* We created and extrapolant vn *)
 	| V.Extrapolated vn -> 
-	  let del = V.delete_parent v2 (v1, tr) in
+          Format.eprintf "\n[Extrapolation] (%a.good) and %a do not imply (%a.bad) -> %a\n@." 
+	    V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2 V.print_id vn;
+          let del = V.delete_parent v2 (v1, tr) in
 	  if debug && ic3_verbose > 1 then (
 	    Format.eprintf 
               "[Extrapolated by] %a@." V.print_vertice vn;
@@ -336,7 +347,8 @@ let search dots system =
       fun (rg, tc) tr ->
         let v2 = C.find tr tc in
         if dot_step then add_steps v1 v2 Expand tr false;
-	refine v1 v2 tr rg tc
+        Format.eprintf "@,";
+	refine v1 v2 tr rg tc trans
     ) (rg, tc) trans
     in 
     let () = Sys.set_signal Sys.sigint 
@@ -381,6 +393,21 @@ let search dots system =
       Format.eprintf "All hard   Calls : %d@." !(Vertice.hit_calls);
       Format.eprintf "Extra hard Calls : %d@." !(Vertice.extra_hit_calls);
       Format.eprintf "Fix hard   Calls : %d@." !(Fixpoint.FixpointCubeList.fix_hard);
+      if ic3_verbose > 0 then (
+        Format.eprintf "\nExtrapolants\n@.";
+        let l = List.sort (fun e1 e2 ->
+          let cmp = Pervasives.compare (Cube.dim e1) (Cube.dim e2) in
+          if cmp = 0 then
+            Pervasives.compare (Cube.size e1) (Cube.size e2)
+          else cmp
+        ) !Vertice.l_fextra in
+        List.iter (fun e -> 
+          Format.eprintf "unsafe (";
+          List.iter (fun v -> Format.eprintf "%a " Variable.print v) 
+            e.Cube.vars;
+          Format.eprintf ") {%a}\n@." SAtom.print_inline e.Cube.litterals;
+        ) l
+      );
       RSafe
     | Unsafe (rg, v1) -> 
       if dot then update_dot rg;

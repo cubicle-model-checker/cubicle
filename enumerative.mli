@@ -38,3 +38,5 @@ val smallest_to_resist_on_trace : Node.t list -> Node.t list
 val init : t_system -> unit
 
 val first_good_candidate : Node.t list -> Node.t option 
+
+val good_candidates : Node.t list -> Node.t list 

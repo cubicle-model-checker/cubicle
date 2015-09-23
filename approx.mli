@@ -22,8 +22,10 @@ open Ast
 (** Approximations and candidates generation *)
 
 val remove_bad_candidates : t_system -> Node.t -> Node.t list -> Node.t list
-(** Register bad candidates and try to infer as much inforamtion as possible
+(** Register bad candidates and try to infer as much information as possible
     from the error trace before the restart.*)
+
+val approximations : Node.t -> Node.t list
 
 (** {3 Interface } *)
 
@@ -32,6 +34,7 @@ module type S = sig
     val good : Node.t -> Node.t option
     (** Returns a good approximation in the form of a candidate invariant if
         the oracle was able to find one. *)
+
 end
 
 module Make ( O : Oracle.S ) : S
