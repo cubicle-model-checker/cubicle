@@ -26,6 +26,7 @@ val remove_bad_candidates : t_system -> Node.t -> Node.t list -> Node.t list
     from the error trace before the restart.*)
 
 val approximations : Node.t -> Node.t list
+val approximations_ic3 : Node.t -> Node.t list
 
 (** {3 Interface } *)
 

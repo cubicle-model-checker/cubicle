@@ -240,7 +240,7 @@ let search dots system =
     (* In this case we are trying to execute a new transition
        from v1 but v1 is already bad so must not be considered as
        a parent node. *)
-    if V.is_bad v1 then (
+    if V.is_bad v1 (* && V.get_id v1 <> 8 *) then (
       if ic3_verbose > 0 then
         Format.eprintf 
 	  "We discard the treatment of this edge since (%a) is now bad\n@." 
@@ -283,8 +283,8 @@ let search dots system =
 	    add_steps v1 vc Cover tr false;
 	    if del then add_steps v1 v2 Cover tr true;
 	  );
-          Format.eprintf "[Covered] (%a).world and %a imply (%a).world@."
-            V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id vc;
+          (* Format.eprintf "[Covered] (%a).world and %a imply (%a).world@." *)
+          (*   V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id vc; *)
           
 	  if debug && ic3_verbose > 1 then (
 	    Format.eprintf "[Covered by] %a@." V.print_vertice vc;
@@ -298,8 +298,8 @@ let search dots system =
 
 	(* We created and extrapolant vn *)
 	| V.Extrapolated vn -> 
-          Format.eprintf "\n[Extrapolation] (%a.good) and %a do not imply (%a.bad) -> %a\n@." 
-	    V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2 V.print_id vn;
+          (* Format.eprintf "\n[Extrapolation] (%a.good) and %a do not imply (%a.bad) -> %a\n@."  *)
+	  (*   V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2 V.print_id vn; *)
           let del = V.delete_parent v2 (v1, tr) in
 	  if debug && ic3_verbose > 1 then (
 	    Format.eprintf 

@@ -150,7 +150,7 @@ let specs =
     "-ic3", Arg.Int set_ic3,
               "<n> enable the forward search with a level of extrapolation";
     "-ic3_mode", Arg.String set_ic3_mode,
-              " <bfs(default) | dfs>";
+              "<bfs(default) | dfs>";
     "-ic3_v", Arg.Unit incr_ic3_verbose, " more detailed informations";
     "-switch", Arg.Set ic3_switch,
               " other version of subsumption finding";

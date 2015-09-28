@@ -385,7 +385,7 @@ let create =
       } in
     v
 
-      
+let get_id v = v.id
 
 (* MODIFICATION FUNCTIONS *)
 
@@ -1035,10 +1035,10 @@ let all_subsnode_recterm c =
 
 let find_extra_2 v1 v2 tr cube lextra =
   
-  let subs =   
-    if true then
+  let subs =
+    if false then
       all_subsatom_recterm cube
-    else  let subs' = Approx.approximations (
+    else  let subs' = Approx.approximations_ic3 (
       Node.create (Cube.create_normal cube.Cube.litterals)
     ) in List.map (fun n -> n.cube.Cube.litterals) subs' 
   in
@@ -1064,6 +1064,9 @@ let find_extra_2 v1 v2 tr cube lextra =
           let nodesub = Node.create csub in
           if (* debug &&  *)ic3_verbose > 0 then
             Format.eprintf "[Node] %a\n@." Node.print nodesub;
+          (* If first_good_candidate answers none it means that this cube has
+             been seen by the oracle. So his negation does not contain it and we
+             are cuting a reachable set of states *)
           match Approx.SelectedOracle.first_good_candidate [nodesub] with
             | None -> find_extra tl
             | Some _ ->

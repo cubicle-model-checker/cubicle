@@ -65,3 +65,7 @@ val refine : t -> t -> Ast.transition -> t list -> Ast.transition list ->
 (* If bad is empty, our node is safe,
    else, our node is unsafe *)
 val is_bad : t -> bool
+
+(* PAS BEAU *)
+
+val get_id : t -> int

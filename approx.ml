@@ -300,6 +300,66 @@ let approximations s =
     
 (* TODO : approx trees or bdds *)
 
+let approximations_ic3 s =
+  let args, sa = Node.variables s, Node.litterals s in
+  let sorts_sa, sa = isolate_sorts sa in
+  (* Heuristics for generating candidates *)
+  let max_procs = enumerative in
+  let max_literals = max 2 (candidate_heuristic + 1) in
+  let init = 
+    SAtom.fold 
+      (fun a acc ->
+        if useless_candidate (SAtom.singleton a) || lit_non_cfm a 
+        then acc
+        else SSAtoms.add (SAtom.singleton a) acc)
+      sa SSAtoms.empty in
+  (* All subsets of sa of relevant size *)
+  let parts =
+    SAtom.fold
+      (fun a acc ->
+        let a = approx_arith a in
+        if useless_candidate (SAtom.singleton a) then acc
+        else if not abstr_num && arith_atom a then acc
+        else if lit_non_cfm a then acc
+        else
+          SSAtoms.fold
+            (fun sa' acc ->
+              let nsa = SAtom.add a sa' in
+              if Variable.Set.cardinal (SAtom.variables nsa) > max_procs then
+                acc
+              else if SAtom.cardinal nsa > max_literals then acc
+              else SSAtoms.add nsa acc
+            ) acc acc
+      ) sa init in
+  let parts =
+    SSAtoms.fold
+      (fun sa' acc ->
+        if SAtom.equal sa' sa then acc
+           (* Heuristic : usefull for flash *)
+           (* else if SAtom.cardinal sa' >= fst max_ratio_arrays_after && *)
+           (*     nb_arrays_sa sa' > snd max_ratio_arrays_after then acc *)
+        else
+          let sa' = reattach_sorts sorts_sa sa' in
+          if SAtom.equal sa' sa then acc
+          else
+            let c = Cube.create_normal sa' in
+            if cube_known_bad c || cube_likely_bad c then acc
+            else (Node.create ~kind:Approx c) :: acc
+      ) parts []
+  in  List.fast_sort
+  (fun s1 s2 ->
+    let c = Pervasives.compare (Node.dim s1) (Node.dim s2) in
+    if c <> 0 then c
+    else 
+      let c = Pervasives.compare (Node.size s1) (Node.size s2) in
+      if c <> 0 then c
+      else 
+        let c = Pervasives.compare (nb_neq s2) (nb_neq s1) in
+        if c <> 0 then c
+        else
+          Pervasives.compare (nb_arrays s1) (nb_arrays s2)
+  ) parts
+
 let keep n l =
   let rec aux acc n l = match l,n with
     | [], _ | _, 0 -> List.rev acc
