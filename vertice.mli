@@ -11,7 +11,7 @@ val extra_hit_calls : int ref
 val l_fextra : Cube.t list ref
 
 type res_ref =
-  | Bad_Parent of (int * Cube.t list)
+  | Bad_Parent of (int * Cube.t list * Node.t list)
   | Covered of t
   | Extrapolated of t
 
@@ -59,8 +59,8 @@ val add_relation_extra : t -> unit
    w.r.t the Ast.transitions *)
 val expand : t -> Ast.transition list -> Ast.transition list 
   
-val refine : t -> t -> Ast.transition -> t list -> Ast.transition list ->
-  res_ref
+val refine : t -> t -> Ast.transition -> t list -> Ast.transition list -> 
+  Node.t list -> Ast.t_system -> res_ref
 
 (* If bad is empty, our node is safe,
    else, our node is unsafe *)
@@ -69,3 +69,5 @@ val is_bad : t -> bool
 (* PAS BEAU *)
 
 val get_id : t -> int
+val get_kind : t -> Ast.kind
+(* val get_bad : t -> Cube.t *)

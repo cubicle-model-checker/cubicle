@@ -24,6 +24,7 @@ let file = ref "_stdin"
 
 let ic3 = ref false
 let ic3_level = ref 0
+let ic3_brab = ref 0
 let ic3_pdf = ref false 
 let ic3_switch = ref false
 let ic3_verbose = ref 0
@@ -148,10 +149,12 @@ let specs =
     "-nodes", Arg.Set_int maxnodes, 
               "<nb> max number nodes to explore (default 100000)";
     "-ic3", Arg.Int set_ic3,
-              "<n> enable the forward search with a level of extrapolation";
+              "<n> enable the pdr search with a level of extrapolation";
     "-ic3_mode", Arg.String set_ic3_mode,
               "<bfs(default) | dfs>";
     "-ic3_v", Arg.Unit incr_ic3_verbose, " more detailed informations";
+    "-ic3_brab", Arg.Set_int ic3_brab,
+              "<n> Allow the approximation of bad formulas with brab algorithm";
     "-switch", Arg.Set ic3_switch,
               " other version of subsumption finding";
     "-pdf", Arg.Set ic3_pdf,
@@ -164,7 +167,7 @@ let specs =
     "-steps", Arg.Set dot_step,
               " enables the multiple dot files to see the evolution of ic3";
     "-extra", Arg.Int set_extra,
-              " create the graph of refinement with a detail level";
+              " create the graph of refinement with a level of details";
     "-sfdp", Arg.Unit use_sfdp,
               " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
@@ -239,6 +242,7 @@ let cin =
 
 let ic3 = !ic3
 let ic3_pdf = !ic3_pdf
+let ic3_brab = !ic3_brab
 let ic3_switch = !ic3_switch
 let ic3_mode = !ic3_mode
 let ic3_verbose = !ic3_verbose

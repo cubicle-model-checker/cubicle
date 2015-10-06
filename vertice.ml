@@ -27,14 +27,15 @@ type t =
       mutable bad_from : (transition * t) list;
       mutable world_from : t list;
       id : int;
-      kind : t_kind;
+      extra_kind : t_kind;
+      mutable bad_kind : Ast.kind;
       is_root : bool;
     }
       
 let tmp_vis = ref []
 
 type res_ref =
-  | Bad_Parent of (int * Cube.t list)
+  | Bad_Parent of (int * Cube.t list * Node.t list)
   | Covered of t
   | Extrapolated of t
 
@@ -107,6 +108,12 @@ let get_id v =
     | 1 -> "top"
     | 2 -> "root"
     | i -> string_of_int i
+
+let get_kind v = v.bad_kind
+
+(* let get_bad v = v.bad *)
+
+(* let origin v = match  *)
 
 let print_ucnf fmt g =
   List.iter (
@@ -380,7 +387,8 @@ let create =
         bad_from = [];
         world_from = [];
 	id = !cpt;
-        kind = k;
+        extra_kind = k;
+        bad_kind = Ast.Orig;
         is_root = ir;
       } in
     v
@@ -601,12 +609,15 @@ let general_to_procs c =
 let negate_litterals = List.map negate_cube_procs
 
 
-let find_pre tr acc bad =
-  let ncube = Node.create bad in
+let find_pre_node tr acc ncube =
   let (nl, nl') = Pre.pre_image [tr] ncube in
   let nc = List.map (fun n -> n.cube) nl in
   let nc' = List.map (fun n -> n.cube) nl' in
   nc@nc'@acc
+
+let find_pre tr acc bad =
+  let ncube = Node.create bad in
+  find_pre_node tr acc ncube
 
 module ET = Util.TimerEasyIc3
 
@@ -1036,9 +1047,7 @@ let all_subsnode_recterm c =
 let find_extra_2 v1 v2 tr cube lextra =
   
   let subs =
-    if false then
-      all_subsatom_recterm cube
-    else  let subs' = Approx.approximations_ic3 (
+    let subs' = Approx.approximations_ic3 (
       Node.create (Cube.create_normal cube.Cube.litterals)
     ) in List.map (fun n -> n.cube.Cube.litterals) subs' 
   in
@@ -1047,8 +1056,8 @@ let find_extra_2 v1 v2 tr cube lextra =
     Format.eprintf "[Extrapolation] Original cube : %a@."
       (SAtom.print_sep "&&") cube.Cube.litterals;
   let rec find_extra = function
-    | [] -> assert false
-    | [_] ->
+    (* | [] -> assert false *)
+    | [] ->
       if (* debug &&  *)ic3_verbose > 0 then
         Format.eprintf
           "[Extrapolation] We found no extrapolant@.";
@@ -1169,12 +1178,12 @@ let select_procs lb v1 v2 =
           | _ -> Stats.cpt_process := max Stats.(!cpt_process) dim; nl
   in s lb
 
-let find_all_bads v1 v2 =
+let find_all_bads v =
   let rec find acc v =
     match v.successor with
       | None -> acc
-      | Some r -> find (v::acc) r
-  in find [] v2
+      | Some r -> find ((r.bad, r)::acc) r
+  in find [] v
   
 exception No_bad
 
@@ -1183,7 +1192,7 @@ let find_subsuming_vertice =
   else find_subsuming_vertice
 
 (* Main function of IC3 *)
-let refine v1 v2 tr cand trans =
+let refine v1 v2 tr cand trans candidates system =
   try
     if ic3_verbose > 0 then
       Format.eprintf "[Subsumption] Is (%a) covered by transition %a ?@." 
@@ -1269,24 +1278,66 @@ let refine v1 v2 tr cand trans =
 	    print_id v1 Hstring.print tr.tr_info.tr_name
             print_id v2;
 	if dot then add_relation_dot ~color:"red" v2 v1 tr;
-      	let pre_image = List.fold_left (
-          fun acc bad -> find_pre tr acc bad
-        ) [] bads in
+        
+        let candidates = ref candidates in
         let pre_image = 
-          match v2.successor with
-            | None -> pre_image
-            | Some vs ->
-              let bads = find_all_bads v1 vs in
-              List.fold_left (
-                fun acc cl -> 
-                  List.fold_left (find_pre tr) acc cl.bad
-              ) pre_image bads 
+          let bads = List.map (fun c -> (c, v2)) bads in
+          let obads = find_all_bads v2 in
+          let obads = List.fold_left (fun acc (el, v) -> 
+            List.fold_left (
+              fun acc x -> (x, v)::acc
+            ) acc el
+          ) [] obads in
+          List.fold_left (
+            fun acc (b, v) -> 
+              let nb = Node.create b in
+              let nappb = 
+                if ic3_brab = 1 then
+                  match ApproxS.good nb with
+                    | None -> nb
+                    | Some c ->
+                      try
+                        (* Replace node with its approximation *)
+                        Safety.check system c;
+                        candidates := c :: !candidates;
+                        Stats.candidate nb c;
+                        (* Format.eprintf 
+                           "Approximation : \n%a ->  \n%a@." Node.print nb Node.print c; *)
+                        c
+                      with Safety.Unsafe _ -> nb
+                      (* If the candidate is directly reachable, no need to
+                         backtrack, just forget it. *)
+                else nb
+              in
+              find_pre_node tr acc nappb
+          ) [] (List.rev_append bads obads)
         in
+        update_bad_from v1 tr v2;
         let pre_image = List.fast_sort compare_cubes pre_image in
         (* Format.eprintf "[Pre images]\n%a@." print_ednf pre_image; *)
         let pre_image = select_procs pre_image v1 v2 in
-        if ic3_verbose > 0 then
-          Format.eprintf
-            "[BadCube] %a@." print_ednf pre_image;
+        let pre_image = 
+          if ic3_brab = 2 then
+            List.map (fun cb ->
+              let nb = Node.create cb in
+              match ApproxS.good nb with
+                | None -> cb
+                | Some c ->
+                  try
+                    (* Replace node with its approximation *)
+                    Safety.check system c;
+                    candidates := c :: !candidates;
+                    Stats.candidate nb c;
+                    (* Format.eprintf 
+                       "Approximation : \n%a ->  \n%a@." Node.print nb Node.print c; *)
+                    c.cube
+                  with Safety.Unsafe _ -> cb
+                  (* If the candidate is directly reachable, no need to
+                     backtrack, just forget it. *)
+                    (* if ic3_verbose > 0 then *)
+            ) pre_image
+          else pre_image in
+        (* Format.eprintf "[BadCube] %a@." print_ednf pre_image; *)
         v1.bad <- pre_image;
-        Bad_Parent (v1.id, pre_image)
+        (* v1.bad_kind <- kind; *)
+        Bad_Parent (v1.id, pre_image, !candidates)

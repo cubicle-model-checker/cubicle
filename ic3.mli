@@ -1,4 +1,5 @@
-type result = RSafe | RUnsafe
+type result = 
+  RSafe  | RUnsafe
 
 module type SigQ =
   sig

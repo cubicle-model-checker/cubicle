@@ -6,8 +6,8 @@ module Solver = Smt.Make(Options)
 module Oracle = Approx.SelectedOracle
 
 type result =
-  | RSafe
-  | RUnsafe
+| RSafe
+| RUnsafe
 
 module type SigQ = sig
 
@@ -134,12 +134,12 @@ type transitions = transition list
 type r = Bad | Expand | Cover | Extra
 
 type step = 
-    { v : V.t;
-      v' : V.t;
-      tr : transition;
-      delete : bool;
-      from : r;
-    }
+  { v : V.t;
+    v' : V.t;
+    tr : transition;
+    delete : bool;
+    from : r;
+  }
 
 let update_steps s =
   List.iter (
@@ -162,8 +162,7 @@ let update_steps s =
       V.add_relation_step ~color:c ~style:s v v' tr;
   ) s
 
-let search dots system = 
-  
+let search dots system =
   if ic3_level = 2 then Oracle.init system;
   if only_forward then exit 0;
   
@@ -207,217 +206,233 @@ let search dots system =
   let root = V.create ~is_root:true wroot wroot V.KOriginal broot in
   if ic3_verbose > 0 then
     Format.eprintf "%a@." V.print_vertice root;    
-  
-  (* Working queue of nodes to expand and refine *)
-  let todo = Q.create () in
-  
-  (* List of nodes for dot *)
-  let steps = ref [] in
-  let add_steps v v' from tr del =
-    let s = {v = v;
-	     v' = v';
-	     tr = tr;
-	     from = from;
-	     delete = del;
-	    } in
-    steps := s::(!steps)
-  in
-  
-  (* rushby graph *)
-  let rgraph = G.add root [] (G.singleton top []) in
+  let rec search_and_backtrack candidates = 
+    
+    (* Working queue of nodes to expand and refine *)
+    let todo = Q.create () in
+    
+    (* List of nodes for dot *)
+    let steps = ref [] in
+    let add_steps v v' from tr del =
+      let s = {v = v;
+	       v' = v';
+	       tr = tr;
+	       from = from;
+	       delete = del;
+	      } in
+      steps := s::(!steps)
+    in
+    
+    (* rushby graph *)
+    let rgraph = G.add root [] (G.singleton top []) in
 
-  let trans_cover = List.fold_left (
-    fun acc tr ->
-      C.add tr top acc
-  ) C.empty system.t_trans in
-  
-  let rec refine v1 v2 tr rg tc trans =
-    if ic3_verbose > 0 then
-      Format.eprintf 
-        "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
-        V.print_id v1 Hstring.print tr.tr_info.tr_name 
-        V.print_id v2;
-    (* In this case we are trying to execute a new transition
-       from v1 but v1 is already bad so must not be considered as
-       a parent node. *)
-    if V.is_bad v1 (* && V.get_id v1 <> 8 *) then (
+    let trans_cover = List.fold_left (
+      fun acc tr ->
+        C.add tr top acc
+    ) C.empty system.t_trans in
+    
+    let rec refine v1 v2 tr rg tc trans =
       if ic3_verbose > 0 then
         Format.eprintf 
-	  "We discard the treatment of this edge since (%a) is now bad\n@." 
-          V.print_id v1;
-      (rg, tc)
-    )
-    else if V.is_bad v2 then (
-      if debug && verbose > 0 then print_graph rg;
-      let pr = List.rev (find_graph v2 rg) in
-      match V.refine v1 v2 tr pr trans with  
-
-	(* v1 and tr imply bad *)
-	| V.Bad_Parent bad ->
-	  (* If v1 is root, we can not refine *)
-	  if V.equal v1 root then raise (Unsafe (rg, v1));
-	  (* Else, we recursively call refine on all the subsume *)
-          
-	  Format.eprintf "\n[Bad] (%a).world and %a imply (%a).bad\n@."
-            V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2;
-          if ic3_verbose > 1 then
-            Format.eprintf "[New Bad] (%a).bad = %a@."
-	      V.print_id v1 V.print_vednf v1;
-	  if dot_step then add_steps v2 v1 Bad tr false;
-          V.update_bad_from v1 tr v2;
-	  List.fold_left (
-	    fun (rg, tc) (vp, tr) -> 
-              if ic3_verbose > 0 then
-                Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
-		  V.print_id vp Hstring.print tr.tr_info.tr_name 
-		  V.print_id v1;
-	      if dot_step then add_steps vp v1 Bad tr true;
-              refine vp v1 tr rg tc trans
-	  ) (rg, tc) (V.get_subsume v1)
-            
-	(* The node vc covers v2 by tr *)
-	| V.Covered vc -> 
-	  let del = V.delete_parent v2 (v1, tr) in
-	  V.add_parent vc (v1, tr);
-	  if dot_step then (
-	    add_steps v1 vc Cover tr false;
-	    if del then add_steps v1 v2 Cover tr true;
-	  );
-          (* Format.eprintf "[Covered] (%a).world and %a imply (%a).world@." *)
-          (*   V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id vc; *)
-          
-	  if debug && ic3_verbose > 1 then (
-	    Format.eprintf "[Covered by] %a@." V.print_vertice vc;
-	    Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
-	  );
-          let tc = 
-            if ic3_level = 0 then C.add tr vc tc
-            else tc
-          in
-	  refine v1 vc tr rg tc trans
-
-	(* We created and extrapolant vn *)
-	| V.Extrapolated vn -> 
-          (* Format.eprintf "\n[Extrapolation] (%a.good) and %a do not imply (%a.bad) -> %a\n@."  *)
-	  (*   V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2 V.print_id vn; *)
-          let del = V.delete_parent v2 (v1, tr) in
-	  if debug && ic3_verbose > 1 then (
-	    Format.eprintf 
-              "[Extrapolated by] %a@." V.print_vertice vn;
-	    Format.eprintf 
-              "[Forgotten] %a@." V.print_vertice v2;
-	  );
-	  if dot_step then (
-	    add_steps v1 vn Extra tr false;
-	    if del then add_steps v1 v2 Extra tr true;
-	  );
-	  let rg' = add_extra_graph v2 vn (G.add vn [] rg) in
-          V.update_world_from vn v2;
-          V.add_successor v2 vn;
-	  Q.push vn todo;
-	  (rg', tc)
-    )
-    else (
-      (* if verbose > 0 then *)
-      if ic3_verbose > 0 then
-        Format.eprintf "(%a) is safe, no backward refinement@." 
+          "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
+          V.print_id v1 Hstring.print tr.tr_info.tr_name 
           V.print_id v2;
-      (rg, tc)
-    )
-  in
-  Q.push root todo;
-  let transitions = system.t_trans in
-  let rec expand rg tc =
-    let v1 = 
-      try Q.pop todo
-      with Q.Empty -> raise (Safe rg)
+      (* In this case we are trying to execute a new transition
+         from v1 but v1 is already bad so must not be considered as
+         a parent node. *)
+      if V.is_bad v1 (* && V.get_id v1 <> 8 *) then (
+        if ic3_verbose > 0 then
+          Format.eprintf 
+	    "We discard the treatment of this edge since (%a) is now bad\n@." 
+            V.print_id v1;
+        (rg, tc)
+      )
+      else if V.is_bad v2 then (
+        if debug && verbose > 0 then print_graph rg;
+        let pr = List.rev (find_graph v2 rg) in
+        match V.refine v1 v2 tr pr trans candidates system with
+
+	  (* v1 and tr imply bad *)
+	  | V.Bad_Parent bad ->
+	    (* If v1 is root, we can not refine *)
+	    if V.equal v1 root then raise (Unsafe (rg, v1));
+	    (* Else, we recursively call refine on all the subsume *)
+            
+	    Format.eprintf "\n[Bad] (%a).world and %a imply (%a).bad\n@."
+              V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2;
+            if ic3_verbose > 1 then
+              Format.eprintf "[New Bad] (%a).bad = %a@."
+	        V.print_id v1 V.print_vednf v1;
+	    if dot_step then add_steps v2 v1 Bad tr false;
+	    List.fold_left (
+	      fun (rg, tc) (vp, tr) -> 
+                if ic3_verbose > 0 then
+                  Format.eprintf "[BadParent] (%a) --%a--> (%a).bad@."
+		    V.print_id vp Hstring.print tr.tr_info.tr_name 
+		    V.print_id v1;
+	        if dot_step then add_steps vp v1 Bad tr true;
+                refine vp v1 tr rg tc trans
+	    ) (rg, tc) (V.get_subsume v1)
+              
+	  (* The node vc covers v2 by tr *)
+	  | V.Covered vc -> 
+	    let del = V.delete_parent v2 (v1, tr) in
+	    V.add_parent vc (v1, tr);
+	    if dot_step then (
+	      add_steps v1 vc Cover tr false;
+	      if del then add_steps v1 v2 Cover tr true;
+	    );
+            (* Format.eprintf "[Covered] (%a).world and %a imply (%a).world@." *)
+            (*   V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id vc; *)
+            
+	    if debug && ic3_verbose > 1 then (
+	      Format.eprintf "[Covered by] %a@." V.print_vertice vc;
+	      Format.eprintf "[Forgotten] %a@." V.print_vertice v2;
+	    );
+            let tc = 
+              if ic3_level = 0 then C.add tr vc tc
+              else tc
+            in
+	    refine v1 vc tr rg tc trans
+
+	  (* We created and extrapolant vn *)
+	  | V.Extrapolated vn -> 
+            (* Format.eprintf "\n[Extrapolation] (%a.good) and %a do not imply (%a.bad) -> %a\n@."  *)
+	    (*   V.print_id v1 Hstring.print tr.tr_info.tr_name V.print_id v2 V.print_id vn; *)
+            let del = V.delete_parent v2 (v1, tr) in
+	    if debug && ic3_verbose > 1 then (
+	      Format.eprintf 
+                "[Extrapolated by] %a@." V.print_vertice vn;
+	      Format.eprintf 
+                "[Forgotten] %a@." V.print_vertice v2;
+	    );
+	    if dot_step then (
+	      add_steps v1 vn Extra tr false;
+	      if del then add_steps v1 v2 Extra tr true;
+	    );
+	    let rg' = add_extra_graph v2 vn (G.add vn [] rg) in
+            V.update_world_from vn v2;
+            V.add_successor v2 vn;
+	    Q.push vn todo;
+	    (rg', tc)
+      )
+      else (
+        (* if verbose > 0 then *)
+        if ic3_verbose > 0 then
+          Format.eprintf "(%a) is safe, no backward refinement@." 
+            V.print_id v2;
+        (rg, tc)
+      )
     in
-    Format.eprintf 
-      "\n*******[Induct]*******\n \n%a\n@." 
-      (if verbose > 0 
-       then V.print_vertice 
-       else V.print_id) v1;
-    let trans = V.expand v1 transitions in
-    if ic3_verbose > 0 then
-      List.iter (
-        fun tr -> 
-	  Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
-      ) trans;
-    let rg, tc = List.fold_left (
-      fun (rg, tc) tr ->
-        let v2 = C.find tr tc in
-        if dot_step then add_steps v1 v2 Expand tr false;
-        Format.eprintf "@,";
-	refine v1 v2 tr rg tc trans
-    ) (rg, tc) trans
-    in 
-    let () = Sys.set_signal Sys.sigint 
-      (Sys.Signal_handle 
-	 (fun _ ->
-           if debug && ic3_verbose > 0 then print_graph rg;
-           save_graph rg;
-           Stats.print_report ~safe:false [] [];
-	   if dot then (
-             update_dot rg;
-	     Format.eprintf 
-               "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
-             if dot_extra then update_extra rg;
-	     if dot_step then (
-	       let close_step = Dot.open_step () in
-	       update_step rg v1;
-	       update_steps (List.rev !steps);
-	       close_step ();
-	     )
-           );
-           dots ();
-	   exit 1
-         )) 
-    in
-    if dot_step then (
-      let close_step = Dot.open_step () in
-      update_step rg v1;
-      update_steps (List.rev !steps);
-      steps := [];
-      close_step ();
-    );
-    expand rg tc
-  in
-  try expand rgraph trans_cover
-  with 
-    | Safe rg -> 
-      if dot then update_dot rg;
-      if dot_extra then update_extra rg;
-      if debug && verbose > 0 then print_graph rg;
-      save_graph rg;
-      Format.eprintf "Empty queue, Safe system@.";
-      Format.eprintf "All hard   Calls : %d@." !(Vertice.hit_calls);
-      Format.eprintf "Extra hard Calls : %d@." !(Vertice.extra_hit_calls);
-      Format.eprintf "Fix hard   Calls : %d@." !(Fixpoint.FixpointCubeList.fix_hard);
-      if ic3_verbose > 0 then (
-        Format.eprintf "\nExtrapolants\n@.";
-        let l = List.sort (fun e1 e2 ->
-          let cmp = Pervasives.compare (Cube.dim e1) (Cube.dim e2) in
-          if cmp = 0 then
-            Pervasives.compare (Cube.size e1) (Cube.size e2)
-          else cmp
-        ) !Vertice.l_fextra in
-        List.iter (fun e -> 
-          Format.eprintf "unsafe (";
-          List.iter (fun v -> Format.eprintf "%a " Variable.print v) 
-            e.Cube.vars;
-          Format.eprintf ") {%a}\n@." SAtom.print_inline e.Cube.litterals;
-        ) l
-      );
-      RSafe
-    | Unsafe (rg, v1) -> 
-      if dot then update_dot rg;
-      if dot_extra then update_extra rg;
+    Q.push root todo;
+    let transitions = system.t_trans in
+    let rec expand rg tc =
+      let v1 = 
+        try Q.pop todo
+        with Q.Empty -> raise (Safe rg)
+      in
+      Format.eprintf 
+        "\n*******[Induct]*******\n \n%a\n@." 
+        (if verbose > 0 
+         then V.print_vertice 
+         else V.print_id) v1;
+      let trans = V.expand v1 transitions in
+      if ic3_verbose > 0 then
+        List.iter (
+          fun tr -> 
+	    Format.eprintf "\t%a@." Hstring.print tr.tr_info.tr_name
+        ) trans;
+      let rg, tc = List.fold_left (
+        fun (rg, tc) tr ->
+          let v2 = C.find tr tc in
+          if dot_step then add_steps v1 v2 Expand tr false;
+          Format.eprintf "@,";
+	  refine v1 v2 tr rg tc trans
+      ) (rg, tc) trans
+      in 
+      let () = Sys.set_signal Sys.sigint 
+        (Sys.Signal_handle 
+	   (fun _ ->
+             if debug && ic3_verbose > 0 then print_graph rg;
+             save_graph rg;
+             Stats.print_report ~safe:false [] [];
+	     if dot then (
+               update_dot rg;
+	       Format.eprintf 
+                 "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+               if dot_extra then update_extra rg;
+	       if dot_step then (
+	         let close_step = Dot.open_step () in
+	         update_step rg v1;
+	         update_steps (List.rev !steps);
+	         close_step ();
+	       )
+             );
+             dots ();
+	     exit 1
+           )) 
+      in
       if dot_step then (
-	let close_step = Dot.open_step () in
-	update_step rg v1;
-	update_steps (List.rev !steps);
-	close_step ();
+        let close_step = Dot.open_step () in
+        update_step rg v1;
+        update_steps (List.rev !steps);
+        steps := [];
+        close_step ();
       );
-      if debug && verbose > 0 then print_graph rg;
-      save_graph rg;
-      RUnsafe
+      expand rg tc
+    in
+    try expand rgraph trans_cover
+    with 
+      | Safe rg -> 
+        if dot then update_dot rg;
+        if dot_extra then update_extra rg;
+        if debug && verbose > 0 then print_graph rg;
+        save_graph rg;
+        Format.eprintf "Empty queue, Safe system@.";
+        Format.eprintf "All hard   Calls : %d@." !(Vertice.hit_calls);
+        Format.eprintf "Extra hard Calls : %d@." !(Vertice.extra_hit_calls);
+        Format.eprintf "Fix hard   Calls : %d@." !(Fixpoint.FixpointCubeList.fix_hard);
+        if ic3_verbose > 0 then (
+          Format.eprintf "\nExtrapolants\n@.";
+          let l = List.sort (fun e1 e2 ->
+            let cmp = Pervasives.compare (Cube.dim e1) (Cube.dim e2) in
+            if cmp = 0 then
+              Pervasives.compare (Cube.size e1) (Cube.size e2)
+            else cmp
+          ) !Vertice.l_fextra in
+          List.iter (fun e -> 
+            Format.eprintf "unsafe (";
+            List.iter (fun v -> Format.eprintf "%a " Variable.print v) 
+              e.Cube.vars;
+            Format.eprintf ") {%a}\n@." SAtom.print_inline e.Cube.litterals;
+          ) l
+        );
+        RSafe
+      | Unsafe (rg, faulty) -> 
+        (* let o = V.origin faulty in *)
+        (* match o.kind with *)
+        (*   | Faulty -> *)
+        if dot then update_dot rg;
+        if dot_extra then update_extra rg;
+        if dot_step then (
+	  let close_step = Dot.open_step () in
+	  update_step rg faulty;
+	  update_steps (List.rev !steps);
+	  close_step ();
+        );
+        if debug && verbose > 0 then print_graph rg;
+        save_graph rg;
+        RUnsafe
+  (* | _ -> *)
+  (*   begin *)
+  (*     assert (o.kind = Approx); *)
+  (*     if not quiet then eprintf "The candidate %d = %a is BAD\n@." *)
+  (*                          o.tag Node.print o; *)
+  (*     Stats.restart (); *)
+  (*     let candidates = *)
+  (*       Approx.remove_bad_candidates system faulty candidates *)
+  (*     in *)
+  (*     (\* Restarting *\) *)
+  (*     search_and_backtrack candidates *)
+  (*   end *)
+  in search_and_backtrack []

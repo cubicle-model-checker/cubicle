@@ -387,9 +387,7 @@ module Make ( O : Oracle.S ) : S = struct
     | Approx ->
        (* It's useless to look for approximations of an approximation *)
        None
-    | _ ->
-      Format.eprintf "Subs@.";
-      subsuming_candidate n
+    | _ -> subsuming_candidate n
 
   (* let goods nl =  *)
     (* O.good_candidates nl *)
