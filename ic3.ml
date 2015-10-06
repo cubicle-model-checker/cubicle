@@ -163,7 +163,7 @@ let update_steps s =
   ) s
 
 let search dots system =
-  if ic3_level = 2 then Oracle.init system;
+  if ic3_level = 2 || do_brab then Oracle.init system;
   if only_forward then exit 0;
   
   (* top = (true, unsafe) *)

@@ -1052,12 +1052,16 @@ let find_extra_2 v1 v2 tr cube lextra =
     ) in List.map (fun n -> n.cube.Cube.litterals) subs' 
   in
     
-  if (* debug && *) ic3_verbose > 0 then
-    Format.eprintf "[Extrapolation] Original cube : %a@."
-      (SAtom.print_sep "&&") cube.Cube.litterals;
+  (* if (\* debug && *\) ic3_verbose > 0 then *)
+    (* Format.eprintf "[Extrapolation] Original cube : %a@." *)
+    (*   (SAtom.print_sep "&&") cube.Cube.litterals; *)
+  
+  
+  (* List.iter (fun sa -> Format.eprintf "\n%a@." SAtom.print_inline sa) subs; *)
+
   let rec find_extra = function
-    (* | [] -> assert false *)
-    | [] ->
+    | [] (* -> assert false *)
+    (* | [_] *) ->
       if (* debug &&  *)ic3_verbose > 0 then
         Format.eprintf
           "[Extrapolation] We found no extrapolant@.";
@@ -1116,7 +1120,7 @@ let extrapolate v1 v2 tr =
       let res, lextra' =
         if ic3_level = 2 then find_extra_2 v1 v2 tr cube lextra
         else if ic3_level = 1 then find_extra_1 v1 v2 tr cube lextra
-        else 
+        else
           let ncube = negate_cube_same_vars cube in
           let gncube = generalize_cube ncube in
           (gncube, KOriginal), [] in
@@ -1316,7 +1320,7 @@ let refine v1 v2 tr cand trans candidates system =
         let pre_image = List.fast_sort compare_cubes pre_image in
         (* Format.eprintf "[Pre images]\n%a@." print_ednf pre_image; *)
         let pre_image = select_procs pre_image v1 v2 in
-        let pre_image = 
+        let pre_image =
           if ic3_brab = 2 then
             List.map (fun cb ->
               let nb = Node.create cb in
@@ -1328,7 +1332,7 @@ let refine v1 v2 tr cand trans candidates system =
                     Safety.check system c;
                     candidates := c :: !candidates;
                     Stats.candidate nb c;
-                    (* Format.eprintf 
+                    (* Format.eprintf
                        "Approximation : \n%a ->  \n%a@." Node.print nb Node.print c; *)
                     c.cube
                   with Safety.Unsafe _ -> cb
