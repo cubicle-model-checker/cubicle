@@ -13,7 +13,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A module corresponding to the SMT solver selected by the command line
-    options *)
+(** The Alt-Ergo zero SMT library
+
+    This SMT solver is derived from {{:http://alt-ergo.lri.fr} Alt-Ergo}. It
+    uses an efficient SAT solver and supports the following quantifier free
+    theories:
+    - Equality and uninterpreted functions
+    - Arithmetic (linear, non-linear, integer, reals)
+    - Enumerated data-types
+
+    This API makes heavy use of hash-consed strings. Please take a moment to
+    look at {! Hstring}.
+*)
 
 include Smt_sig.S

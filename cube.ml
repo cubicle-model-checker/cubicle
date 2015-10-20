@@ -24,9 +24,9 @@ module S = H.HSet
 let hempty = H.empty
 
 module SS = Set.Make
-  (struct 
+  (struct
      type t = H.t * H.t
-    let compare (s1, s2) (t1, t2) = 
+    let compare (s1, s2) (t1, t2) =
       let c = H.compare s1 t1 in
       if c <> 0 then c
       else H.compare s2 t2
@@ -132,14 +132,14 @@ let redondant_or_false others a = match a with
   | Atom.True -> Atom.True
   | Atom.Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))
   | Atom.Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->
-      (try 
-	 (SAtom.iter (function 
+      (try
+	 (SAtom.iter (function
 	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1')
 	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) ->
 	     raise Exit
 	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1')
 	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0) ->
 	     raise Not_found
 	   | _ -> ()) others);
@@ -147,66 +147,66 @@ let redondant_or_false others a = match a with
        with Not_found -> Atom.True | Exit -> Atom.False)
   | Atom.Comp (t1, Eq, (Elem (x, (Var | Constr)) as t2))
   | Atom.Comp ((Elem (x, (Var | Constr)) as t2), Eq, t1) ->
-      (try 
+      (try
 	 (SAtom.iter (function
 	   | Atom.Comp (t1', Neq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1') 
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1')
 	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) ->
 	     raise Exit
 	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') 
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1')
 	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0) ->
 	     raise Exit
 	   | _ -> ()) others); a
        with Not_found -> Atom.True | Exit -> Atom.False)
   | Atom.Comp (t1, Neq, t2) ->
-      (try 
-	 (SAtom.iter (function 
-	   | Atom.Comp (t1', Eq, t2') 
-	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) 
+      (try
+	 (SAtom.iter (function
+	   | Atom.Comp (t1', Eq, t2')
+	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0)
 		 || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0) ->
 	     raise Exit
 	   | _ -> ()) others); a
        with Exit -> Atom.False)
   | Atom.Comp (t1, Eq, t2) ->
-      (try 
-	 (SAtom.iter (function 
-	   | Atom.Comp (t1', Neq, t2') 
-	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) 
+      (try
+	 (SAtom.iter (function
+	   | Atom.Comp (t1', Neq, t2')
+	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0)
 		 || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0)  ->
 	     raise Exit
 	   | _ -> ()) others); a
        with Exit -> Atom.False)
   | _ -> a
 
-	   
+
 let rec simplify_term = function
   | Arith (Arith (x, c1), c2) -> simplify_term (Arith (x, add_constants c1 c2))
   | t -> t
-	   
+
 
 let simplify_comp i si op j sj =
   match op, (si, sj) with
     | Eq, _ when H.equal i j -> Atom.True
     | Neq, _ when H.equal i j -> Atom.False
-    | Eq, (Var, Var | Constr, Constr) -> 
+    | Eq, (Var, Var | Constr, Constr) ->
 	if H.equal i j then Atom.True else Atom.False
-    | Neq, (Var, Var | Constr, Constr) -> 
+    | Neq, (Var, Var | Constr, Constr) ->
 	if not (H.equal i j) then Atom.True else Atom.False
     | Le, _ when H.equal i j -> Atom.True
     | Lt, _ when H.equal i j -> Atom.False
     | (Eq | Neq) , _ ->
        let ti = Elem (i, si) in
-       let tj = Elem (j, sj) in 
+       let tj = Elem (j, sj) in
        if Term.compare ti tj < 0 then Atom.Comp (tj, op, ti)
        else Atom.Comp (ti, op, tj)
-    | _ -> 
+    | _ ->
         Atom.Comp (Elem (i, si), op, Elem (j, sj))
-		  
+
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
-    | Atom.True | Atom.False -> a 
+    | Atom.True | Atom.False -> a
     | Atom.Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
     | Atom.Comp (Arith (i, csi), op, (Arith (j, csj)))
       when compare_constants csi csj = 0 -> simplification np (Atom.Comp (i, op, j))
@@ -226,23 +226,23 @@ let rec simplification np a =
     | Atom.Comp (Const cx, op, Arith (y, cy)) ->
        let mcy = mult_const (-1) cy in
        Atom.Comp (Const (add_constants cx mcy), op, y)
-       
+
     | Atom.Comp (x, op, Arith (y, cy)) when Term.compare x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
 	let my = MConst.remove c cy in
-	let cy = 
-	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
+	let cy =
+	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
         Atom.Comp (Const cx, op, Const cy)
     | Atom.Comp (Arith (y, cy), op, x) when Term.compare x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
 	let c, i = MConst.choose cy in
 	let my = MConst.remove c cy in
-	let cy = 
-	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in 
+	let cy =
+	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
         Atom.Comp (Const cy, op, Const cx)
     | Atom.Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
-       Atom.True 
+       Atom.True
     | Atom.Comp (Const c1, Le, Const c2) ->
        begin
 	 match MConst.is_num c1, MConst.is_num c2 with
@@ -259,9 +259,9 @@ let rec simplification np a =
     | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
     | Atom.Comp (x, (Eq | Neq as op), y) when Term.compare x y < 0 -> Atom.Comp (y, op, x)
     | Atom.Comp _ -> a
-    | Atom.Ite (sa, a1, a2) -> 
-	let sa = 
-	  SAtom.fold 
+    | Atom.Ite (sa, a1, a2) ->
+	let sa =
+	  SAtom.fold
 	    (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
 	in
 	let a1 = simplification np a1 in
@@ -298,25 +298,25 @@ let assoc_neq t1 l t2 =
 let assoc_eq t1 l t2 =
   try Term.compare (list_assoc_term t1 l) t2 = 0 with Not_found -> false
 
-let inconsistent_list l = 
+let inconsistent_list l =
   let rec check values eqs neqs les lts ges gts = function
     | [] -> ()
     | Atom.True :: l -> check values eqs neqs les lts ges gts l
     | Atom.False :: _ -> raise Exit
-    | Atom.Comp (t1, Eq, (Elem (x, s) as t2)) :: l 
+    | Atom.Comp (t1, Eq, (Elem (x, s) as t2)) :: l
     | Atom.Comp ((Elem (x, s) as t2), Eq, t1) :: l ->
       (match s with
 	| Var | Constr ->
-	  if assoc_neq t1 values t2 
-	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  if assoc_neq t1 values t2
+	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
 	  then raise Exit
 	  else check ((t1, t2)::values) eqs neqs les lts ges gts l
 	| _ ->
-	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
 	  then raise Exit
 	  else check values ((t1, t2)::eqs) neqs les lts ges gts l)
     | Atom.Comp (t1, Eq, t2) :: l ->
-      if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+      if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
       then raise Exit
       else check values ((t1, t2)::eqs) neqs les lts ges gts l
     | Atom.Comp (t1, Neq, t2) :: l ->
@@ -342,20 +342,20 @@ let inconsistent_list l =
 let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
     | Atom.True  -> acc
     | Atom.False -> raise Exit
-    | Atom.Comp (t1, Eq, (Elem (x, s) as t2)) 
+    | Atom.Comp (t1, Eq, (Elem (x, s) as t2))
     | Atom.Comp ((Elem (x, s) as t2), Eq, t1) ->
       (match s with
 	| Var | Constr ->
-	  if assoc_neq t1 values t2 
-	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  if assoc_neq t1 values t2
+	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
 	  then raise Exit
 	  else ((t1, t2)::values), eqs, neqs, les, lts, ges, gts
 	| _ ->
-	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
 	  then raise Exit
 	  else values, ((t1, t2)::eqs), neqs, les, lts, ges, gts)
     | Atom.Comp (t1, Eq, t2) ->
-      if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1 
+      if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
       then raise Exit
       else values, ((t1, t2)::eqs), neqs, les, lts, ges, gts
     | Atom.Comp (t1, Neq, t2) ->
@@ -397,7 +397,7 @@ let inconsistent_aux =
          TimeSimpl.pause ();
          raise Exit
 
-let inconsistent sa = 
+let inconsistent sa =
   let l = SAtom.elements sa in
   inconsistent_list l
 
@@ -408,8 +408,8 @@ let inconsistent_array a =
 
 let inconsistent_set sa =
   try
-    let _ = 
-      SAtom.fold (fun a acc -> inconsistent_aux acc a) 
+    let _ =
+      SAtom.fold (fun a acc -> inconsistent_aux acc a)
 	sa ([], [], [], [], [], [], []) in
     false
   with Exit -> true
@@ -425,7 +425,7 @@ let inconsistent_array ar =
 
 let inconsistent_2arrays ar1 ar2 =
   try
-    let acc = 
+    let acc =
       Array.fold_left inconsistent_aux ([], [], [], [], [], [], []) ar1 in
     let _ = Array.fold_left inconsistent_aux acc ar2 in
     false
@@ -434,11 +434,11 @@ let inconsistent_2arrays ar1 ar2 =
 
 let inconsistent_2sets sa1 sa2 =
   try
-    let acc = SAtom.fold 
-      (fun a acc -> inconsistent_aux acc a) 
+    let acc = SAtom.fold
+      (fun a acc -> inconsistent_aux acc a)
       sa1 ([], [], [], [], [], [], []) in
-    let _ = SAtom.fold 
-      (fun a acc -> inconsistent_aux acc a) 
+    let _ = SAtom.fold
+      (fun a acc -> inconsistent_aux acc a)
       sa2 acc in
     false
   with Exit -> true
@@ -464,38 +464,38 @@ let rec add_arg args = function
       List.fold_left (fun args s ->
         let s' = H.view s in
         if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args)
-        args ls        
+        args ls
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
 
-let args_of_atoms sa = 
-  let rec args_rec sa args = 
-    SAtom.fold 
-      (fun a args -> 
-	 match a with 
+let args_of_atoms sa =
+  let rec args_rec sa args =
+    SAtom.fold
+      (fun a args ->
+	 match a with
 	   | Atom.True | Atom.False -> args
 	   | Atom.Comp (x, _, y) -> add_arg (add_arg args x) y
-	   | Atom.Ite (sa, a1, a2) -> 
-	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args) 
+	   | Atom.Ite (sa, a1, a2) ->
+	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args)
       sa args
-  in 
+  in
   S.elements (args_rec sa S.empty)
 
 (* --------------------------------------------------------------*)
 
-let tick_pos sa = 
-  let ticks = ref [] in 
+let tick_pos sa =
+  let ticks = ref [] in
   SAtom.iter
     (fun a -> match a with
-       | Atom.Comp(Const c,Lt, Const m) when const_nul c -> 
+       | Atom.Comp(Const c,Lt, Const m) when const_nul c ->
 	  begin
 	    try
 	      let n = ref None in
-	      MConst.iter 
-		(fun c i -> 
-		   if i > 0 then 
+	      MConst.iter
+		(fun c i ->
+		   if i > 0 then
 		     match c with
-		       | ConstName t -> 
+		       | ConstName t ->
 			   if !n = None then n := Some c else raise Not_found
 		       | _ -> raise Not_found )
 		m;
@@ -503,20 +503,20 @@ let tick_pos sa =
 	    with Not_found -> ()
 	  end
        | _-> ()
-    ) 
+    )
     sa;
   !ticks
- 
-let remove_tick tick e op x = 
+
+let remove_tick tick e op x =
   match e with
     | Const m ->
 	begin
 	  try
 	    let c = MConst.find tick m in
-	    if c > 0 then 
+	    if c > 0 then
 	      let m = MConst.remove tick m in
-	      let m = 
-		if MConst.is_empty m then 
+	      let m =
+		if MConst.is_empty m then
 		  MConst.add (ConstReal (Num.Int 0)) 1 m
 		else m
 	      in
@@ -528,17 +528,17 @@ let remove_tick tick e op x =
 	begin
 	  try
 	    let c = MConst.find tick m in
-	    if c > 0 then 
+	    if c > 0 then
 	      let m = MConst.remove tick m in
-	      let e = 
+	      let e =
 		if MConst.is_empty m then v else Arith(v, m)
 	      in
 	      simplification SAtom.empty (Atom.Comp (e, Lt, x))
 	    else raise Not_found
 	  with Not_found -> Atom.Comp (e, op, x)
-	end	
+	end
     | _ -> assert false
-      
+
 
 let contains_tick_term tick = function
   | Const m | Arith (_, m) ->
@@ -546,22 +546,22 @@ let contains_tick_term tick = function
   | _ -> false
 
 let rec contains_tick_atom tick = function
-  | Atom.Comp (t1, _, t2) -> 
+  | Atom.Comp (t1, _, t2) ->
       contains_tick_term tick t1 || contains_tick_term tick t2
   (* | Atom.Ite (sa, a1, a2) -> *)
   (*     contains_tick_atom tick a1 || contains_tick_atom tick a2 || *)
   (*       SAtom.exists (contains_tick_atom tick) sa *)
   | _ -> false
 
-let remove_tick_atom sa (tick, at) = 
+let remove_tick_atom sa (tick, at) =
   let sa = SAtom.remove at sa in
   (* let flag = ref false in *)
-  let remove a sa = 
+  let remove a sa =
     let a = match a with
       | Atom.Comp ((Const _ | Arith (_, _) as e), (Le|Lt|Eq as op), x)
       | Atom.Comp (x, (Eq as op), (Const _ | Arith (_, _) as e))  ->
 	  remove_tick tick e op x
-      | _ -> a 
+      | _ -> a
     in
     (* flag := !flag || contains_tick_atom tick a; *)
     if contains_tick_atom tick a then sa else
@@ -570,14 +570,14 @@ let remove_tick_atom sa (tick, at) =
   SAtom.fold remove sa SAtom.empty
   (* if !flag then SAtom.add at sa else sa *)
 
-let const_simplification sa = 
+let const_simplification sa =
   try
     let ticks = tick_pos sa in
     List.fold_left remove_tick_atom sa ticks
   with Not_found -> sa
 
 let simplification_atoms base sa =
-  SAtom.fold 
+  SAtom.fold
     (fun a sa ->
        let a = simplification_terms a in
        let a = simplification base a in
@@ -600,12 +600,12 @@ let rec break a =
   		let l = break a2 in
   		let a1_and_c = SAtom.add a1 sa in
   		let a1_and_a2 = List.map (SAtom.add a1) l in
-  		let a2_and_nc_r = 
-		  List.fold_left 
+  		let a2_and_nc_r =
+		  List.fold_left
 		    (fun acc c' ->
-  		       List.fold_left 
+  		       List.fold_left
 			 (fun acc li -> SAtom.add c' li :: acc) acc l)
-  		    a1_and_a2 nc 
+  		    a1_and_a2 nc
 		in
   		a1_and_c :: a2_and_nc_r
   	end
@@ -614,7 +614,7 @@ let add_without_redondancy sa l =
   if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
   else
     let l =
-      if true || delete then 
+      if true || delete then
 	List.filter (fun sa' -> not (SAtom.subset sa sa')) l
       else l
     in
@@ -625,17 +625,17 @@ let elim_ite_atoms np =
     let ites, base = SAtom.partition (function Atom.Ite _ -> true | _ -> false) np in
     let base = simplification_atoms SAtom.empty base in
     let ites = simplification_atoms base ites in
-    let lsa = 
-      SAtom.fold 
+    let lsa =
+      SAtom.fold
 	(fun ite cubes ->
 	   List.fold_left
 	     (fun acc sa ->
-		List.fold_left 
+		List.fold_left
 		  (fun sa_cubes cube ->
 		     try
 		       let sa = simplification_atoms cube sa in
 		       let sa = SAtom.union sa cube in
-		       if inconsistent_set sa then sa_cubes else 
+		       if inconsistent_set sa then sa_cubes else
 			 add_without_redondancy sa sa_cubes
 		     with Exit -> sa_cubes
 		  )
@@ -643,7 +643,7 @@ let elim_ite_atoms np =
 	     )
 	     []
 	     (break ite)
-	) 
+	)
 	ites
 	[base]
     in
@@ -682,7 +682,7 @@ let resolve_two_arrays ar1 ar2 =
       done;
       match !unsat_i with
         | None -> None
-        | Some i -> 
+        | Some i ->
             if !nb_eq <> n1 - 1 then raise Exit;
             let ar = Array.make !nb_eq Atom.True in
             for j = 0 to !nb_eq - 1 do
@@ -713,4 +713,4 @@ let rec atom_globs a acc = match a with
 and satom_globs sa = SAtom.fold atom_globs sa Term.Set.empty
 
 
-let print fmt { litterals = sa } = SAtom.print fmt sa 
+let print fmt { litterals = sa } = SAtom.print fmt sa

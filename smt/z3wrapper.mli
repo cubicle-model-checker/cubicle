@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A module corresponding to the SMT solver selected by the command line
-    options *)
+(** A solver using the Z3 OCaml API
+*)
 
 include Smt_sig.S

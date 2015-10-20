@@ -92,6 +92,13 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
+let smt_solver = ref "alt-ergo"
+let set_smt_solver s =
+  smt_solver := s;
+  match s with
+  | "alt-ergo" | "z3" -> ()
+  | _ -> raise (Arg.Bad ("SMT solver "^s^" not supported"))
+
 let set_dot d =
   dot := true;
   dot_level := d
@@ -156,6 +163,7 @@ let specs =
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
     "-refine-universal", Arg.Set refine_universal, " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
+    "-solver", Arg.String set_smt_solver, "<alt-ergo(default) | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
@@ -218,6 +226,7 @@ let simpl_by_uc = !simpl_by_uc
 let cores = !cores
 
 let mode = !mode
+let smt_solver = !smt_solver
 
 let verbose = !verbose
 

@@ -46,6 +46,12 @@ let () =
          (fun _ -> Stats.print_report ~safe:false [] []))
   with Invalid_argument _ -> () (* doesn't exist on windows *)
 
+
+(** Print backtrace even in native mode *)
+let () =
+  if verbose > 0 then Printexc.record_backtrace true
+
+
 let _ = 
   let lb = from_channel cin in 
   try
@@ -101,3 +107,10 @@ let _ =
   | Failure str ->
      eprintf "\n@{<u>Internal failure:@}%s@." str;
      exit 1
+
+  | e ->
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "Fatal error: %s@." (Printexc.to_string e);
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace
+

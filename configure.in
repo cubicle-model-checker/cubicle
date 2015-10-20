@@ -84,6 +84,37 @@ else
 fi
 
 
+#looking for Z3 ocaml bindings
+
+AC_ARG_WITH([z3],
+    AS_HELP_STRING([--without-z3], [disable support for Z3 backend SMT solver] ),
+    [],
+    [with_z3=yes])
+
+Z3LIB=""
+Z3CCFLAGS=""
+AS_IF([test "x$with_z3" != xno],
+if test "$USEOCAMLFIND" = yes; then
+  Z3LIB=$(ocamlfind query -i-format Z3)
+  Z3CCFLAGS="-cclib \"-L$(ocamlfind query Z3) -lz3\""
+fi
+
+if test -n "$Z3LIB";then
+  echo "ocamlfind found Z3 bindings in $Z3LIB"
+  Z3LD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/Z3/z3.cma,Z3LD=yes,Z3LD=no)
+  if test "$Z3LD" = no ; then
+      AC_MSG_RESULT(Cannot find Z3 OCaml bindings.)
+  else
+     Z3LIB="-I +z3"
+     Z3CCFLAGS="-cclib \"-L$OCAMLLIB/Z3 -lz3\""
+  fi
+fi
+,
+AC_MSG_RESULT(Compiling without support for Z3.)
+)
+
 AC_MSG_CHECKING(platform)
 if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then
     echo "Windows platform"
@@ -106,6 +137,8 @@ AC_SUBST(OCAMLVERSION)
 AC_SUBST(OCAMLLIB)
 AC_SUBST(ALTERGOLIB)
 AC_SUBST(FUNCTORYLIB)
+AC_SUBST(Z3LIB)
+AC_SUBST(Z3CCFLAGS)
 AC_SUBST(OCAMLWIN32)
 AC_SUBST(EXE)
 

@@ -34,17 +34,25 @@ OCAMLLEX = @OCAMLLEX@
 OCAMLYACC= @OCAMLYACC@
 OCAMLLIB = @OCAMLLIB@
 FUNCTORYLIB = @FUNCTORYLIB@
+Z3LIB = @Z3LIB@
+Z3CCFLAGS = @Z3CCFLAGS@
 OCAMLBEST= @OCAMLBEST@
 OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLUDES = $(FUNCTORYLIB) -I common/ -I smt/
+INCLUDES = $(FUNCTORYLIB) $(Z3CCFLAGS) $(Z3LIB) -I common/ -I smt/
 
-BFLAGS = -dtypes -g -thread $(INCLUDES) -annot
-OFLAGS = -dtypes -thread $(INCLUDES) -annot
+BFLAGS = -dtypes -g $(INCLUDES) -annot
+OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-BIBBYTE=nums.cma unix.cma
+REQBIB=nums.cma unix.cma functory.cma
+
+ifeq ($(Z3LIB),)
+  BIBBYTE=$(REQBIB)
+else
+  BIBBYTE=$(REQBIB) z3ml.cma
+endif
 
 BIBOPT=$(BIBBYTE:.cma=.cmxa)
 
@@ -71,6 +79,21 @@ make_functory:
 	$(OCAMLOPT) -o functory.cmxa -a functory.cmx;\
 	fi
 
+# configuration of the Z3 wrapper
+#################################
+
+
+smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
+	@rm -f smt/z3wrapper.ml
+	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+	@if [ -z "$(Z3LIB)" ]; then \
+	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
+	else \
+	cat smt/z3wrapper_actual.ml >> smt/z3wrapper.ml;\
+	fi;\
+	chmod -w smt/z3wrapper.ml
+
+
 # bytecode and native-code compilation
 ######################################
 
@@ -80,17 +103,19 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
          smt/polynome.cmo smt/uf.cmo smt/use.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo \
-	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/smt.cmo
+	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/alt_ergo.cmo \
+	 smt/z3wrapper.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo\
 	    common/bitv.cmo
 
-CMO = $(COMMONCMO) $(SMTCMO) \
-      version.cmo options.cmo util.cmo variable.cmo types.cmo\
+CMO = version.cmo options.cmo \
+      $(COMMONCMO) $(SMTCMO) \
+      util.cmo variable.cmo types.cmo\
       cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
-      pre.cmo forward.cmo enumerative.cmo approx.cmo  \
+      pre.cmo forward.cmo trie.cmo enumerative.cmo approx.cmo  \
       stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
@@ -98,20 +123,21 @@ CMX = $(CMO:.cmo=.cmx)
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
 
-GENERATED = version.ml parser.ml parser.mli lexer.ml
+GENERATED = version.ml parser.ml parser.mli lexer.ml smt/z3wrapper.ml
 
 byte: $(NAME).byte
 opt: $(NAME).opt
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) functory.cma threads.cma $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
 
 $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) functory.cmxa threads.cmxa $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.0.2
+VERSION=1.0.3b
+VERSION_SUFFIX=""
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION)"\"" > version.ml
@@ -249,7 +275,9 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 	   smt/explanation.ml smt/explanation.mli smt/fm.ml smt/fm.mli\
 	   smt/intervals.ml smt/intervals.mli smt/literal.ml\
 	   smt/literal.mli smt/polynome.ml smt/polynome.mli smt/sig.mli\
-	   smt/smt.ml smt/smt.mli smt/solver.ml smt/solver.mli\
+	   smt/smt.ml smt/smt.mli smt/smt_sig.mli smt/alt_ergo.ml smt/alt_ergo.mli\
+	   smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml smt/z3wrapper.mli\
+	   smt/solver.ml smt/solver.mli\
 	   smt/solver_types.ml smt/solver_types.mli smt/enumsolver.ml\
 	   smt/enumsolver.mli smt/enumsolver_types.ml smt/enumsolver_types.mli\
 	   smt/sum.ml smt/sum.mli\

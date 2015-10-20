@@ -229,14 +229,6 @@ let check_guard args sa reqs =
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let unsat_core_wrt_node uc ap =
-  Array.fold_left (fun acc a ->
-    match make_literal a with
-      | F.Lit la when List.mem [la] uc -> SAtom.add a acc
-      | _ -> acc) 
-    SAtom.empty ap
-
-
 let assume_node_wo_check ({ tag = id }, ap) =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;

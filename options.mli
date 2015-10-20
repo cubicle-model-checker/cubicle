@@ -67,6 +67,7 @@ val quiet : bool
 val verbose : int
 val nocolor : bool
 
+val smt_solver : string
 val debug_smt : bool
 val dmcmt : bool
 val profiling : bool
