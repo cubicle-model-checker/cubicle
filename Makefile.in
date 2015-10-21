@@ -137,10 +137,13 @@ $(NAME).opt: $(MAINCMX)
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
 VERSION=1.0.3b
-VERSION_SUFFIX=""
+# comment the following line for release
+SVNREV=-$(shell svnversion -n)
+
+VERSION_STR=$(VERSION)$(SVNREV)
 
 version.ml: config.status
-	@echo "let version = \""$(VERSION)"\"" > version.ml
+	@echo "let version = \""$(VERSION_STR)"\"" > version.ml
 	@echo "let date = \""`date`"\"" >> version.ml
 	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
 

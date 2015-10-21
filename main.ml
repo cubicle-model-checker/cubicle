@@ -105,8 +105,12 @@ let _ =
      exit 1
 
   | Failure str ->
-     eprintf "\n@{<u>Internal failure:@}%s@." str;
-     exit 1
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "\n@{<u>Internal failure:@}%s@." str;
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+
+    exit 1
 
   | e ->
 
