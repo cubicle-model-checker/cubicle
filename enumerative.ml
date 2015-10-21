@@ -52,41 +52,12 @@ let equal_state a1 a2 =
 let hash_state st = Hashtbl.hash_param 100 500 st
 
 
-module HashHST = Hashtbl.Make 
+module HST = Hashtbl.Make 
   (struct 
     type t = state
     let equal = (=)
     let hash = hash_state
    end)
-
-
-
-(* module ILM = Map.Make(struct type t = int list let compare = Pervasives.compare end) *)
-module ILM = Trie.Make(Map.Make (struct type t = int let compare = Pervasives.compare end))
-  
-(* State hash-table implemented with Patricia trees *)
-module PatriciaHST = struct
-
-  type 'a t = 'a ILM.t ref
-  
-  let create _ = ref ILM.empty
-
-  let add h x v = h := ILM.add (Array.to_list x) v !h
-
-  let remove h x = h := ILM.remove (Array.to_list x) !h
-    
-  let mem h x = ILM.mem (Array.to_list x) !h
-
-  let iter f h = ILM.iter (fun l -> f (Array.of_list l)) !h
-
-  let stats h = assert false
-
-end
-
-
-module HST =
-  PatriciaHST
-  (* HashHST *)
 
   
 type st_req = int * op_comp * int
@@ -1011,8 +982,8 @@ let search procs init =
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
   forward_bfs init procs env st_inits;
+  let st = HST.stats env.explicit_states in
   if verbose > 0 || profiling then begin
-    let st = HST.stats env.explicit_states in
     printf "\nStatistics@.";
     printf   "----------@.";
     printf "num_bindings : %d@." st.Hashtbl.num_bindings;
@@ -1028,7 +999,6 @@ let search procs init =
      kept in memory all the time. *)
   env.explicit_states <- HST.create 1;
   Gc.compact ();
-  Gc.full_major ();
   TimeForward.pause ()
 
 
