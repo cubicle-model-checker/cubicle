@@ -170,7 +170,7 @@ end = struct
     let nid = fresh_id env in
     Hashtbl.add env.hid_cubes nid (n, sigma);
     Prover.assume_node { n with tag = nid } a
-
+ 
   let check_fixpoint env ?(pure_smt=false) n visited =
     Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
@@ -207,7 +207,7 @@ end = struct
     in
     TimeSort.pause ();
     List.iter (fun (vn, ss, ar_renamed) ->
-               assume_node env vn ss ar_renamed) nodes
+        assume_node env vn ss ar_renamed) nodes
 
 
   let easy_fixpoint env s nodes =
@@ -293,6 +293,22 @@ module FixpointTrie : sig
 
 end = struct
 
+  let first_action =
+    match Prover.SMT.check_strategy with
+    | Smt.Eager -> Prover.assume_goal
+    | Smt.Lazy -> Prover.assume_goal_no_check
+
+  let assume =
+    match Prover.SMT.check_strategy with
+    | Smt.Eager -> Prover.assume_node
+    | Smt.Lazy -> Prover.assume_node_no_check
+    
+  let last_action =
+    match Prover.SMT.check_strategy with
+    | Smt.Eager -> fun () -> ()
+    | Smt.Lazy -> Prover.run
+
+  
   let check_and_add n nodes vis_n=
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
@@ -307,14 +323,17 @@ end = struct
        (* else if ArrayAtom.nb_diff pp anp > 2 then nodes *)
        (* line below useful for arith : ricart *)
        if Cube.inconsistent_2arrays vis_renamed n_array then nodes
-       else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
+       else if true || ArrayAtom.nb_diff vis_renamed n_array > 1 then
          (vis_n, vis_renamed)::nodes
-       else (Prover.assume_node vis_n vis_renamed; nodes)
+       else
+         (* These are worth assuming and checking right away because they might
+            yield unsatifisability sooner *)
+         (Prover.assume_node vis_n vis_renamed; nodes)
       ) nodes d
       
 
   let check_fixpoint s visited =
-    Prover.assume_goal s;
+    first_action s;
     let s_array = Node.array s in
     let unprioritize_cands = false in
     let nodes, cands =
@@ -326,22 +345,26 @@ end = struct
         ) ([], []) visited in
     let nodes = List.fold_left (check_and_add s) nodes cands in
     TimeSort.start ();
-    let nodes = 
-      List.fast_sort 
-        (fun (n1, a1) (n2, a2) ->
-         if unprioritize_cands &&
-              n1.kind = Approx && n2.kind <> Approx then 1 
-         (* a1 is a candidate *)
-         else
-         if unprioritize_cands &&
-              n2.kind = Approx && n1.kind <> Approx then 1
-         (* a2 is a candidate *)
-         else ArrayAtom.compare_nb_common s_array a1 a2) 
-        nodes 
+    let nodes = match Prover.SMT.check_strategy with
+      | Smt.Lazy -> nodes
+      | Smt.Eager ->
+        List.fast_sort 
+          (fun (n1, a1) (n2, a2) ->
+             if unprioritize_cands &&
+                n1.kind = Approx && n2.kind <> Approx then 1 
+             (* a1 is a candidate *)
+             else
+             if unprioritize_cands &&
+                n2.kind = Approx && n1.kind <> Approx then 1
+             (* a2 is a candidate *)
+             else ArrayAtom.compare_nb_common s_array a1 a2) 
+          nodes 
     in
     TimeSort.pause ();
-    List.iter (fun (vn, ar_renamed) -> Prover.assume_node vn ar_renamed) nodes
-              
+    List.iter (fun (vn, ar_renamed) -> assume vn ar_renamed) nodes;
+    last_action ()
+
+  
   let easy_fixpoint s nodes =
     if delete && (s.deleted || Node.has_deleted_ancestor s)
     then Some []

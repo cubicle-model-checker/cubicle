@@ -23,6 +23,8 @@ type error =
 
 exception Error of error
 
+type check_strategy = Lazy | Eager
+                      
 module H = Hstring.H
 module HSet = Hstring.HSet
 
@@ -442,7 +444,7 @@ let set_arith = Combine.CX.set_arith_active
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
-  type state
+  val check_strategy : check_strategy
 
   val get_time : unit -> float
   val get_calls : unit -> int
@@ -451,13 +453,17 @@ module type Solver = sig
   val assume : id:int -> Formula.t -> unit
   val check : unit -> unit
 
-  val save_state : unit -> state
-  val restore_state : state -> unit
-  val entails : id:int -> Formula.t -> bool
+  val entails : Formula.t -> bool
+  val push : unit -> unit
+  val pop : unit -> unit
 end
 
 module Make (Options : sig val profiling : bool end) = struct
 
+  let check_strategy = Eager
+
+  let push_stack = Stack.create ()
+  
   let calls = ref 0
   module Time = Timer.Make (Options)
 
@@ -466,7 +472,9 @@ module Make (Options : sig val profiling : bool end) = struct
 
   module CSolver = Solver.Make (Options)
 
-  let clear () = CSolver.clear ()
+  let clear () =
+    Stack.clear push_stack;
+    CSolver.clear ()
 
   let check_unsatcore uc =
     eprintf "Unsat Core : @.";
@@ -529,17 +537,15 @@ module Make (Options : sig val profiling : bool end) = struct
 	  Time.pause ();
 	  raise (Unsat (export_unsatcore2 ex))
 
-  type state = CSolver.state
-
   let save_state = CSolver.save
 
   let restore_state = CSolver.restore
 
-  let entails ~id f =
+  let entails f =
     let st = save_state () in
     let ans = 
       try
-        assume ~id (Formula.make Formula.Not [f]) ;
+        assume ~id:0 (Formula.make Formula.Not [f]) ;
         check ();
         false
       with Unsat _ -> true
@@ -547,4 +553,8 @@ module Make (Options : sig val profiling : bool end) = struct
     restore_state st;
     ans
 
+  let push () = Stack.push (save_state ()) push_stack
+
+  let pop () = Stack.pop push_stack |> restore_state
+  
 end

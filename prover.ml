@@ -41,6 +41,8 @@ let distinct_vars =
   in
   function n -> if n = 0 then F.f_true else t.(n-1)
 
+(* let _ = SMT.assume ~id:0 (distinct_vars max_proc) *)
+
 let order_vars =
   let t = Array.make max_proc F.f_true in
   let _ =
@@ -55,7 +57,6 @@ let order_vars =
       ([], [], 0) proc_terms
   in
   function n -> if n = 0 then F.f_true else t.(n-1)
-
 
 let make_op_comp = function
   | Eq -> F.Eq
@@ -194,31 +195,36 @@ let unsafe_cdnf s n =
   List.iter (unsafe_dnf n nb_procs) cdnf_init
 
 let unsafe s n = unsafe_cdnf s n
-  
-
 
 
 let reached args s sa =
   SMT.clear ();
-  SMT.assume  ~id:0 (distinct_vars (List.length args));
+  SMT.assume ~id:0 (distinct_vars (List.length args));
   let f = make_formula_set (SAtom.union sa s) in
   SMT.assume ~id:0 f;
   SMT.check ()
 
 
-let assume_goal { tag = id; cube = cube } =
+let assume_goal_no_check { tag = id; cube = cube } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check  ()
+  SMT.assume ~id f
 
-let assume_node { tag = id } ap =
+let assume_node_no_check { tag = id } ap =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
+  SMT.assume ~id f
+
+let assume_goal n =
+  assume_goal_no_check n;
   SMT.check  ()
+
+let assume_node n ap =
+  assume_node_no_check n ap;
+  SMT.check  ()
+
 
 let run () = SMT.check ()
 
@@ -229,16 +235,11 @@ let check_guard args sa reqs =
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let assume_node_wo_check ({ tag = id }, ap) =
-  let f = F.make F.Not [make_formula ap] in
-  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f
-
 let assume_goal_nodes { tag = id; cube = cube } nodes =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  List.iter assume_node_wo_check nodes;
+  List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
   SMT.check  ()

@@ -17,6 +17,8 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
+type solver = AltErgo | Z3
+
 let js_mode = ref false
 
 let usage = "usage: cubicle file.cub"
@@ -92,12 +94,12 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
-let smt_solver = ref "alt-ergo"
+let smt_solver = ref AltErgo
 let set_smt_solver s =
-  smt_solver := s;
-  match s with
-  | "alt-ergo" | "z3" -> ()
-  | _ -> raise (Arg.Bad ("SMT solver "^s^" not supported"))
+  smt_solver := match s with
+    | "alt-ergo" -> AltErgo
+    | "z3" -> Z3
+    | _ -> raise (Arg.Bad ("SMT solver "^s^" not supported"))
 
 let set_dot d =
   dot := true;

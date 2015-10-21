@@ -21,6 +21,8 @@ type error =
 
 exception Error of error
 
+type check_strategy = Lazy | Eager
+
 let unsupported _ =
   failwith "Cubicle was not compile with the Z3 library."
 
@@ -92,7 +94,7 @@ let set_arith _ = unsupported ()
 let set_sum _ = unsupported ()
 
 module type Solver = sig
-  type state
+  val check_strategy : check_strategy
 
   val get_time : unit -> float
   val get_calls : unit -> int
@@ -101,19 +103,19 @@ module type Solver = sig
   val assume : id:int -> Formula.t -> unit
   val check : unit -> unit
 
-  val save_state : unit -> state
-  val restore_state : state -> unit
-  val entails : id:int -> Formula.t -> bool
+  val entails : Formula.t -> bool
+  val push : unit -> unit
+  val pop : unit -> unit
 end
 
 module Make (Options : sig val profiling : bool end) = struct
+  let check_strategy = Lazy
   let get_time _ = unsupported ()
   let get_calls _ = unsupported ()
   let clear _ = unsupported ()
   let assume ~id f = unsupported ()
   let check () = unsupported ()
-  type state = unit
-  let save_state _ = unsupported ()
-  let restore_state _ = unsupported ()
-  let entails ~id f = unsupported ()
+  let entails _ = unsupported ()
+  let push _ =  unsupported ()
+  let pop _ =  unsupported ()
 end

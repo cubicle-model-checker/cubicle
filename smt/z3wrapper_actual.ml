@@ -34,6 +34,8 @@ type error =
 
 exception Error of error
 
+type check_strategy = Lazy | Eager
+
 module H = Hstring.H
 module HSet = Hstring.HSet
 
@@ -367,8 +369,8 @@ let set_arith _ = ()
 let set_sum _ = ()
 
 module type Solver = sig
-  type state
-
+  val check_strategy : check_strategy
+    
   val get_time : unit -> float
   val get_calls : unit -> int
 
@@ -376,12 +378,14 @@ module type Solver = sig
   val assume : id:int -> Formula.t -> unit
   val check : unit -> unit
 
-  val save_state : unit -> state
-  val restore_state : state -> unit
-  val entails : id:int -> Formula.t -> bool
+  val entails : Formula.t -> bool
+  val push : unit -> unit
+  val pop : unit -> unit
 end
 
 module Make (Options : sig val profiling : bool end) = struct
+
+  let check_strategy = Lazy
 
   let calls = ref 0
   module Time = Timer.Make (Options)
@@ -395,6 +399,10 @@ module Make (Options : sig val profiling : bool end) = struct
   let solver = 
     (* eprintf "mk_solver@."; *)
     mk_simple_solver global_context
+
+  
+  (* let _ = *)
+  (*   eprintf "Z3 help:\n%s@." (Solver.get_help solver) *)
 
   let clear () =
     (* eprintf "clear@."; *)
@@ -412,7 +420,7 @@ module Make (Options : sig val profiling : bool end) = struct
     (* eprintf "check@."; *)
     incr calls;
     Time.start ();
-    let st = check solver [] in
+    let st = Solver.check solver [] in
     Time.pause ();
     match st with
     | SATISFIABLE -> ()
@@ -421,9 +429,23 @@ module Make (Options : sig val profiling : bool end) = struct
       let uc = get_unsat_core solver |> List.map (Hashtbl.find assertions) in
       raise (Unsat uc)
 
-  type state = unit
-  let save_state _ = failwith "save_state not implemented"
-  let restore_state _ = failwith "restore_state not implemented"
-  let entails ~id f = failwith "entails not implemented"
+  let entails f =
+    incr calls;
+    Time.start ();
+    let nf = Formula.make Formula.Not [f] in
+    let tracker = Expr.mk_fresh_const global_context "tracker"
+        (Boolean.mk_sort global_context) in
+    let tracker_imp_nf = Formula.make Formula.Imp [tracker; nf] in
+    Solver.add solver [tracker_imp_nf];
+    let st = Solver.check solver [tracker] in
+    Time.pause ();
+    match st with
+    | SATISFIABLE -> false
+    | UNKNOWN -> failwith "Z3 returned unknown"
+    | UNSATISFIABLE -> true
 
+  let push () = Solver.push solver
+
+  let pop () = Solver.pop solver 1
+  
 end

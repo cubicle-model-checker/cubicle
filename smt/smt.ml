@@ -17,9 +17,8 @@ open Options
 
 let select_solver =
   match smt_solver with
-  | "alt-ergo" -> (module Alt_ergo : Smt_sig.S)
-  | "z3" -> (module Z3wrapper : Smt_sig.S)
-  | _ -> failwith ("The solver "^ smt_solver ^" is not available.")
+  | AltErgo -> (module Alt_ergo : Smt_sig.S)
+  | Z3 -> (module Z3wrapper : Smt_sig.S)
 
 module Selected_Smt : Smt_sig.S = (val (select_solver)) 
 

@@ -28,6 +28,9 @@ module type S = sig
 
   exception Error of error
 
+  (** {2 Check sat strategy } *)
+  type check_strategy = Lazy | Eager
+  
   (** {2 Typing } *)
 
   (** Typing *)
@@ -255,11 +258,11 @@ module type S = sig
           check ();]}
     *)
 
-    type state
-    (** The type of the internal state of the solver (see {!save_state} and
-        {!restore_state}).*)
-
-
+    val check_strategy : check_strategy
+    (** The stragey used for preforming check-sat. Lazy means that we chech the
+        context only when needed, whereas Eager means the context should be
+        checked after each assertion. *)
+    
     (** {2 Profiling functions} *)
 
     val get_time : unit -> float
@@ -273,7 +276,6 @@ module type S = sig
     val clear : unit -> unit
     (** [clear ()] clears the context of the solver. Use this after {! check}
         raised {! Unsat} or if you want to restart the solver. *)
-
 
     val assume : id:int -> Formula.t -> unit
     (** [assume id f] adds the formula [f] to the context of the
@@ -291,17 +293,19 @@ module type S = sig
         [id_1, ..., id_n] is the unsat core (returned as the identifiers of the
         formulas given to the solver). *)
 
-    val save_state : unit -> state
-    (** [save_state ()] returns a {b copy} of the current state of the solver.*)
+    val entails : Formula.t -> bool
+    (** [entails f] returns [true] if the context of the solver entails the
+        formula [f]. It doesn't modify the context of the solver (the effect is
+        as if the state is saved when this function is called and restored on
+        exit).*)
 
-    val restore_state : state -> unit
-    (** [restore_state s] restores a previously saved state [s].*)
+    val push : unit -> unit
+    (** Push the current context on a stack. *)
 
-    val entails : id:int -> Formula.t -> bool
-    (** [entails ~id f] returns [true] if the context of the solver entails
-        the formula [f]. It doesn't modify the context of the solver (the state
-        is saved when this function is called and restored on exit).*)
-
+    val pop : unit -> unit
+    (** Pop the last context from the stack and forget what was done since the
+        last push. *)
+    
   end
 
   (** Functor to create several instances of the solver *)
