@@ -22,6 +22,7 @@ exec_prefix=@exec_prefix@
 BINDIR=$(DESTDIR)@bindir@
 LIBDIR=$(DESTDIR)@libdir@/cubicle
 DATADIR=$(DESTDIR)@datadir@
+DATAROOTDIR=$(DESTDIR)@datarootdir@
 
 # where to install the man page
 MANDIR=$(DESTDIR)@mandir@
