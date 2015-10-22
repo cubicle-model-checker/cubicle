@@ -982,8 +982,8 @@ let search procs init =
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
   forward_bfs init procs env st_inits;
-  let st = HST.stats env.explicit_states in
   if verbose > 0 || profiling then begin
+    let st = HST.stats env.explicit_states in
     printf "\nStatistics@.";
     printf   "----------@.";
     printf "num_bindings : %d@." st.Hashtbl.num_bindings;
@@ -999,6 +999,7 @@ let search procs init =
      kept in memory all the time. *)
   env.explicit_states <- HST.create 1;
   Gc.compact ();
+  Gc.full_major ();
   TimeForward.pause ()
 
 
