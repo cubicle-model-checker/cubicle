@@ -114,7 +114,7 @@ module Type = struct
     ) decl_symbs [htrue; hfalse]
 
   let constructors ty =
-    (* eprintf "constructors@."; *)
+    (* eprintf "constructors of %a@." Hstring.print ty; *)
     if Hstring.equal ty type_bool then [htrue; hfalse]
     else
       let z3_ty = H.find decl_types ty in
@@ -264,7 +264,7 @@ module Variant = struct
 	 if not (H.mem constructors x) then
            let ty = H.find decl_types nty in
            if Sort.get_sort_kind ty = Z3enums.DATATYPE_SORT then
-	     H.add constructors x (set_of_list (Type.constructors x))
+	     H.add constructors x (set_of_list (Type.constructors nty))
       ) l;
     H.clear assignments
 
