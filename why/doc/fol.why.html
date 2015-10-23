@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title>fol.why</title>
+</head>
+<body>
+<p>Cubicle BRAB in Why3 <a href="index.html">index</a></p>
+<hr>
+<div class="why3doc">
+<pre>
+<span class="keyword1">theory</span> <a name="FOL_1">FOL</a>
+
+   <span class="keyword1">type</span> <a name="t_3">t</a>
+   <span class="keyword1">type</span> <a name="structure_4">structure</a>
+
+   <span class="keyword1">predicate</span> (<a name="infix.20.7C.3D_6">|=</a>) <a href="#structure_4">structure</a> <a href="#t_3">t</a>
+
+   <span class="keyword1">constant</span> <a name="ffalse_8">ffalse</a> : <a href="#t_3">t</a>
+   
+   <span class="keyword1">constant</span> <a name="ttrue_10">ttrue</a> : <a href="#t_3">t</a>
+
+   <span class="keyword1">function</span> (<a name="prefix.20.7E_12">~_</a>) <a href="#t_3">t</a> : <a href="#t_3">t</a>
+   <span class="keyword1">function</span> (<a name="infix.20.26_13">&amp;</a>) <a href="#t_3">t</a> <a href="#t_3">t</a> : <a href="#t_3">t</a>
+   <span class="keyword1">function</span> (<a name="infix.20.2B.2B_14">++</a>) <a href="#t_3">t</a> <a href="#t_3">t</a> : <a href="#t_3">t</a>
+   <span class="keyword1">function</span> (<a name="infix.20.3D.3E_15">=&gt;</a>) <a href="#t_3">t</a> <a href="#t_3">t</a> : <a href="#t_3">t</a>
+   
+   <span class="keyword1">predicate</span> (<a name="infix.20.7C.3D.3D_17">|==</a>) <a href="#t_3">t</a> <a href="#t_3">t</a>
+
+   <span class="keyword1">axiom</span> <a name="model_extensionality_19">model_extensionality</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+       f1 <a href="#infix.20.7C.3D.3D_17">|==</a> f2 &lt;-&gt; (<span class="keyword1">forall</span> m : <a href="#structure_4">structure</a> [m]. m <a href="#infix.20.7C.3D_6">|=</a> f1 -&gt; m <a href="#infix.20.7C.3D_6">|=</a> f2)
+
+   <span class="keyword1">axiom</span> <a name="extensionality_23">extensionality</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+       (<span class="keyword1">forall</span> m : <a href="#structure_4">structure</a> [m]. m <a href="#infix.20.7C.3D_6">|=</a> f1 &lt;-&gt; m <a href="#infix.20.7C.3D_6">|=</a> f2) -&gt; f1 = f2
+   
+   <span class="comment">(* Just for instantiation *)</span>
+   <span class="keyword1">axiom</span> <a name="structure_exists_28">structure_exists</a> :
+     <span class="keyword1">exists</span> m : <a href="#structure_4">structure</a> [m]. <span class="keyword1">exists</span> f: <a href="#t_3">t</a> [f]. m <a href="#infix.20.7C.3D_6">|=</a> f
+     
+   <span class="keyword1">axiom</span> <a name="true_false_31">true_false</a> : <a href="#ttrue_10">ttrue</a> &lt;&gt; <a href="#ffalse_8">ffalse</a>
+   
+   <span class="keyword1">axiom</span> <a name="model_true_33">model_true</a> :
+     <span class="keyword1">forall</span> m : <a href="#structure_4">structure</a>. m <a href="#infix.20.7C.3D_6">|=</a> <a href="#ttrue_10">ttrue</a>
+     
+   <span class="keyword1">axiom</span> <a name="model_false_36">model_false</a> :
+     <span class="keyword1">forall</span> m : <a href="#structure_4">structure</a>. <span class="keyword1">not</span> (m <a href="#infix.20.7C.3D_6">|=</a> <a href="#ffalse_8">ffalse</a>)
+          
+   <span class="keyword1">axiom</span> <a name="model_neg_39">model_neg</a> :
+     <span class="keyword1">forall</span> m : <a href="#structure_4">structure</a>. <span class="keyword1">forall</span> f : <a href="#t_3">t</a>.
+       m <a href="#infix.20.7C.3D_6">|=</a> (<a href="#prefix.20.7E_12">~</a> f) &lt;-&gt; <span class="keyword1">not</span> (m <a href="#infix.20.7C.3D_6">|=</a> f)
+       
+   <span class="keyword1">axiom</span> <a name="model_and_43">model_and</a> :
+      <span class="keyword1">forall</span> m : <a href="#structure_4">structure</a>. <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+        m <a href="#infix.20.7C.3D_6">|=</a> (f1 <a href="#infix.20.26_13">&amp;</a> f2) &lt;-&gt; m <a href="#infix.20.7C.3D_6">|=</a> f1 /\ m <a href="#infix.20.7C.3D_6">|=</a> f2
+        
+   <span class="keyword1">axiom</span> <a name="model_or_47">model_or</a> :
+      <span class="keyword1">forall</span> m : <a href="#structure_4">structure</a>. <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+        m <a href="#infix.20.7C.3D_6">|=</a> (f1 <a href="#infix.20.2B.2B_14">++</a> f2) &lt;-&gt; m <a href="#infix.20.7C.3D_6">|=</a> f1 \/ m <a href="#infix.20.7C.3D_6">|=</a> f2
+       
+   <span class="keyword1">predicate</span> <a name="sat_51">sat</a> (f : <a href="#t_3">t</a>) = <span class="keyword1">exists</span> m: <a href="#structure_4">structure</a>. m <a href="#infix.20.7C.3D_6">|=</a> f
+   
+   <span class="keyword1">predicate</span> <a name="valid_53">valid</a> (f : <a href="#t_3">t</a>) = <span class="keyword1">not</span> (<a href="#sat_51">sat</a> (<a href="#prefix.20.7E_12">~</a> f))
+
+   <span class="keyword1">lemma</span> <a name="valid_def_55">valid_def</a> :
+     <span class="keyword1">forall</span> f : <a href="#t_3">t</a> [<a href="#valid_53">valid</a> (f)]. <a href="#valid_53">valid</a> (f) &lt;-&gt; <span class="keyword1">forall</span> m: <a href="#structure_4">structure</a> [m]. (m <a href="#infix.20.7C.3D_6">|=</a> f)
+   
+   <span class="keyword1">axiom</span> <a name="imply_def_58">imply_def</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>. f1 <a href="#infix.20.3D.3E_15">=&gt;</a> f2 = (<a href="#prefix.20.7E_12">~</a> f1) <a href="#infix.20.2B.2B_14">++</a> f2
+
+   <span class="keyword1">lemma</span> <a name="imply_models_61">imply_models</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>. <a href="#valid_53">valid</a> (f1 <a href="#infix.20.3D.3E_15">=&gt;</a> f2) &lt;-&gt; f1 <a href="#infix.20.7C.3D.3D_17">|==</a> f2
+     
+   <span class="keyword1">lemma</span> <a name="negneg_64">negneg</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a> [<a href="#prefix.20.7E_12">~</a> <a href="#prefix.20.7E_12">~</a> f]. <a href="#prefix.20.7E_12">~</a> <a href="#prefix.20.7E_12">~</a> f = f
+
+   <span class="keyword1">lemma</span> <a name="and_a_66">and_a</a> : <span class="keyword1">forall</span> f1 f2 f3 : <a href="#t_3">t</a>. (f1 <a href="#infix.20.26_13">&amp;</a> f2) <a href="#infix.20.26_13">&amp;</a> f3 = f1 <a href="#infix.20.26_13">&amp;</a> (f2 <a href="#infix.20.26_13">&amp;</a> f3)
+   
+   <span class="keyword1">lemma</span> <a name="and_c_68">and_c</a> : <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>. f1 <a href="#infix.20.26_13">&amp;</a> f2 = f2 <a href="#infix.20.26_13">&amp;</a> f1
+   
+   <span class="keyword1">lemma</span> <a name="or_a_70">or_a</a> : <span class="keyword1">forall</span> f1 f2 f3 : <a href="#t_3">t</a>. (f1 <a href="#infix.20.2B.2B_14">++</a> f2) <a href="#infix.20.2B.2B_14">++</a> f3 = f1 <a href="#infix.20.2B.2B_14">++</a> (f2 <a href="#infix.20.2B.2B_14">++</a> f3)
+   
+   <span class="keyword1">lemma</span> <a name="or_c_72">or_c</a> : <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>. f1 <a href="#infix.20.2B.2B_14">++</a> f2 = f2 <a href="#infix.20.2B.2B_14">++</a> f1
+
+   <span class="keyword1">lemma</span> <a name="distr_and_74">distr_and</a>:
+     <span class="keyword1">forall</span> f1 f2 f3 : <a href="#t_3">t</a>. f1 <a href="#infix.20.26_13">&amp;</a> (f2 <a href="#infix.20.2B.2B_14">++</a> f3) = (f1 <a href="#infix.20.26_13">&amp;</a> f2) <a href="#infix.20.2B.2B_14">++</a> (f1 <a href="#infix.20.26_13">&amp;</a> f3)
+     
+   <span class="keyword1">lemma</span> <a name="distr_or_77">distr_or</a> :
+     <span class="keyword1">forall</span> f1 f2 f3 : <a href="#t_3">t</a>. f1 <a href="#infix.20.2B.2B_14">++</a> (f2 <a href="#infix.20.26_13">&amp;</a> f3) = (f1 <a href="#infix.20.2B.2B_14">++</a> f2) <a href="#infix.20.26_13">&amp;</a> (f1 <a href="#infix.20.2B.2B_14">++</a> f3)
+     
+   <span class="keyword1">lemma</span> <a name="neutral_and_80">neutral_and</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. f <a href="#infix.20.26_13">&amp;</a> <a href="#ttrue_10">ttrue</a> = f
+   
+   <span class="keyword1">lemma</span> <a name="neutral_or_82">neutral_or</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. f <a href="#infix.20.2B.2B_14">++</a> <a href="#ffalse_8">ffalse</a> = f
+   
+   <span class="keyword1">lemma</span> <a name="absorb_and_84">absorb_and</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. f <a href="#infix.20.26_13">&amp;</a> <a href="#ffalse_8">ffalse</a> = <a href="#ffalse_8">ffalse</a>
+   
+   <span class="keyword1">lemma</span> <a name="absorb_or_86">absorb_or</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. f <a href="#infix.20.2B.2B_14">++</a> <a href="#ttrue_10">ttrue</a> = <a href="#ttrue_10">ttrue</a>
+
+   
+   <span class="keyword1">lemma</span> <a name="sat_def_89">sat_def</a>: <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. <a href="#sat_51">sat</a> f &lt;-&gt; <span class="keyword1">not</span> (<a href="#valid_53">valid</a> (<a href="#prefix.20.7E_12">~</a> f))
+   
+   <span class="keyword1">lemma</span> <a name="unsat_invalid_91">unsat_invalid</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. <span class="keyword1">not</span> (<a href="#valid_53">valid</a> f) -&gt; <a href="#sat_51">sat</a> (<a href="#prefix.20.7E_12">~</a> f)
+
+   <span class="keyword1">lemma</span> <a name="valid_sat_93">valid_sat</a> : <span class="keyword1">forall</span> f: <a href="#t_3">t</a>. <a href="#valid_53">valid</a> f -&gt; <a href="#sat_51">sat</a> f
+   
+   <span class="keyword1">lemma</span> <a name="ttrue_valid_95">ttrue_valid</a> : <a href="#valid_53">valid</a> <a href="#ttrue_10">ttrue</a>
+   <span class="keyword1">lemma</span> <a name="ffaslse_invalid_96">ffaslse_invalid</a> : <span class="keyword1">not</span> (<a href="#valid_53">valid</a> <a href="#ffalse_8">ffalse</a>)
+   <span class="keyword1">lemma</span> <a name="ttrue_sat_97">ttrue_sat</a> : <a href="#sat_51">sat</a> <a href="#ttrue_10">ttrue</a>
+   <span class="keyword1">lemma</span> <a name="ffalse_unsat_98">ffalse_unsat</a> : <span class="keyword1">not</span> (<a href="#sat_51">sat</a> <a href="#ffalse_8">ffalse</a>)
+
+
+   <span class="keyword1">lemma</span> <a name="sat_neg_101">sat_neg</a> :
+     <span class="keyword1">forall</span> f : <a href="#t_3">t</a>.  <span class="keyword1">not</span> (<a href="#sat_51">sat</a> f) -&gt; <a href="#sat_51">sat</a> (<a href="#prefix.20.7E_12">~</a> f)
+   
+   <span class="keyword1">lemma</span> <a name="valid_neg_104">valid_neg</a> :
+     <span class="keyword1">forall</span> f : <a href="#t_3">t</a>. <a href="#valid_53">valid</a> (<a href="#prefix.20.7E_12">~</a> f) -&gt; <span class="keyword1">not</span> (<a href="#valid_53">valid</a> f)
+   
+   <span class="keyword1">lemma</span> <a name="sat_or_107">sat_or</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+       <a href="#sat_51">sat</a> (f1 <a href="#infix.20.2B.2B_14">++</a> f2) &lt;-&gt; (<a href="#sat_51">sat</a> f1) \/ (<a href="#sat_51">sat</a> f2)
+   
+   <span class="keyword1">lemma</span> <a name="valid_and_111">valid_and</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+       <a href="#valid_53">valid</a> (f1 <a href="#infix.20.26_13">&amp;</a> f2) &lt;-&gt; (<a href="#valid_53">valid</a> f1) /\ (<a href="#valid_53">valid</a> f2)
+   
+   <span class="keyword1">lemma</span> <a name="valid_or_115">valid_or</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+       (<a href="#valid_53">valid</a> f1) \/ (<a href="#valid_53">valid</a> f2) -&gt; <a href="#valid_53">valid</a> (f1 <a href="#infix.20.2B.2B_14">++</a> f2)
+   
+   <span class="keyword1">lemma</span> <a name="sat_and_119">sat_and</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>.
+       <a href="#sat_51">sat</a> (f1 <a href="#infix.20.26_13">&amp;</a> f2) -&gt; (<a href="#sat_51">sat</a> f1) /\ (<a href="#sat_51">sat</a> f2)
+
+
+   <span class="keyword1">lemma</span> <a name="forget_subsumed_124">forget_subsumed</a> :
+     <span class="keyword1">forall</span> f v : <a href="#t_3">t</a>.
+       f <a href="#infix.20.7C.3D.3D_17">|==</a> v -&gt; f <a href="#infix.20.2B.2B_14">++</a> v = v
+
+   <span class="keyword1">lemma</span> <a name="forget_subsumed_imply_128">forget_subsumed_imply</a> :
+     <span class="keyword1">forall</span> f v : <a href="#t_3">t</a>.
+       <a href="#valid_53">valid</a> (f <a href="#infix.20.3D.3E_15">=&gt;</a> v) -&gt; f <a href="#infix.20.2B.2B_14">++</a> v = v
+       
+   <span class="keyword1">lemma</span> <a name="forget_subsumed_or_132">forget_subsumed_or</a> :
+     <span class="keyword1">forall</span> f v : <a href="#t_3">t</a>.
+       <a href="#valid_53">valid</a> ((<a href="#prefix.20.7E_12">~</a> f) <a href="#infix.20.2B.2B_14">++</a> v) -&gt; f <a href="#infix.20.2B.2B_14">++</a> v = v
+
+   <span class="keyword1">lemma</span> <a name="classic_neg_136">classic_neg</a> : <span class="keyword1">forall</span> f : <a href="#t_3">t</a>. (<a href="#prefix.20.7E_12">~</a> f) <a href="#infix.20.2B.2B_14">++</a> f = <a href="#ttrue_10">ttrue</a>
+
+
+   <span class="keyword1">lemma</span> <a name="imply_transitive_139">imply_transitive</a> :
+     <span class="keyword1">forall</span> f1 f2 f3 : <a href="#t_3">t</a>. f1 <a href="#infix.20.7C.3D.3D_17">|==</a> f2 /\ f2 <a href="#infix.20.7C.3D.3D_17">|==</a> f3 -&gt; f1 <a href="#infix.20.7C.3D.3D_17">|==</a> f3
+     
+   <span class="keyword1">lemma</span> <a name="imply_bigger_142">imply_bigger</a> :
+     <span class="keyword1">forall</span> f1 f2 : <a href="#t_3">t</a>. f1 <a href="#infix.20.7C.3D.3D_17">|==</a> f1 <a href="#infix.20.2B.2B_14">++</a> f2
+
+
+   <span class="keyword1">lemma</span> <a name="imply_or_146">imply_or</a>:
+      <span class="keyword1">forall</span> f1 f2 f3 : <a href="#t_3">t</a>. f1 <a href="#infix.20.7C.3D.3D_17">|==</a> f2 -&gt; f1 <a href="#infix.20.2B.2B_14">++</a> f3 <a href="#infix.20.7C.3D.3D_17">|==</a> f2 <a href="#infix.20.2B.2B_14">++</a> f3
+
+
+   <span class="keyword1">lemma</span> <a name="or_same_150">or_same</a> : <span class="keyword1">forall</span> f : <a href="#t_3">t</a>. f <a href="#infix.20.2B.2B_14">++</a> f = f
+   
+  <span class="comment">(* Use AC builtin facility of Alt-Ergo but add AC axioms to others *)</span>
+  <span class="comment">(* meta AC function (&amp;) *)</span>
+  <span class="comment">(* meta AC function (++) *)</span>
+
+<span class="keyword1">end</span>
+</pre>
+</div>
+<hr>
+<p>Generated by why3doc 0.82+git</p>
+</body>
+</html>

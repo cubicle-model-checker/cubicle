@@ -1,0 +1,65 @@
+(* unsafe : t8 -> t1 -> unsafe *)
+
+var A : int 
+var B : int
+var C : int
+var D : int
+var E : int
+var F : int
+var G : int
+
+init () { A = 0 && B = 0 && C = 0 && D = 0 && E = 0 &&
+          1 <= F && 1 <= G } 
+
+unsafe (z) { A = 0 && B = 0 && D = 0 && E = 0 && F = 0 }
+unsafe (z) { B = 0 && D = 0 && E = 0 && F = 0 && G = 0 }
+
+transition t1 ()
+requires { 1 <= F}
+ { A := A + 1; F := F - 1; } 
+
+transition t2 ()
+requires { A = 1 && 1 <= G }
+ { A := A-1; B := B + 1; G := G - 1; }
+
+transition t3 ()
+requires { 1 <= B}
+ { B := B - 1; C := C + 1; F := F + 1; }
+
+transition t4 ()
+requires { 1 <= C && 1 <= F } 
+ { C := C - 1; D := D + 1; F := F - 1; }
+
+transition t5 ()
+requires { 1 <= D }
+ { D := D - 1; E := E + 1; G := G + 1; }
+
+transition t6 ()
+requires { 1 <= E }
+ { E := E - 1; F := F + 1; }
+
+transition t7 ()
+requires { 1 <= A && 1 <= G }
+ { A := A - 1; C := C + 1; F := F + 1; G := G - 1; }
+
+transition t8 ()
+requires { 1 <= G && 1 <= F }
+ { C := C + 1; G := G - 1; }
+
+transition t9 ()
+requires { 1 <= C && 1 <= E }
+ { C := C - 1; D := D + 1; E := E -1; }
+
+transition t10 ()
+requires { 1 <= C && 1 <= F }
+ { C := C - 1; E := E + 1; F := F - 1; G := G + 1 ; }
+
+transition t11 ()
+requires { 1 <= C && 1 <= E }
+ { C := C - 1; G := G + 1; }
+
+transition t12 ()
+requires { 1 <= F && 1 <= G }
+ { E := E +1; F := F - 1; }
+
+

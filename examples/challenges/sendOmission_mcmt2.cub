@@ -1,0 +1,485 @@
+(* \begin{AppVerb}  *)
+(* variables definition *)
+
+type round = R1 | R2 | R3 | R4 | R5 | R6 | R7
+
+type prep = M2 | M1 | MValid
+
+(* Round of the execution *)
+var Round : round
+(* estimate of the processes (true = m; false = undefined) *)
+array Estimate[proc] : bool
+(* state of the processes (true = decided; false = undecided) *)
+array State[proc] : bool
+(* who's the coordinator *)
+array Coord[proc] : bool
+(* who has already been coordinator *)
+array ACoord [proc] : bool
+(* processes that has done the operations of the round *)
+array Done[proc] : bool
+(* someone sent a request? *)
+var Request : bool
+(* decision value of the processes (as estimate)*)
+array DecisionValue[proc] : bool
+(* the process is faulty (as defined in send omission failure model) *)
+array Faulty[proc] : bool
+(* the process has received the estimate from the coordinator *)
+array Received[proc] : bool
+(* if nack[x] = true, process x received a negative ack *)
+array Nack[proc] : bool
+(* id of the coordinator who sent me an estimate *)
+array Id[proc] : proc
+array Id_valid[proc] : prep
+(* id of the coordinator who sent the estimate saved in tmpEstimate *)
+var MaxId : proc
+var MaxId_valid : prep
+(* temp. var used to send the estimate to the coordinator *)
+var TmpEstimate : bool
+(* used for the Lemma 2.2 of the paper *)
+array ProcessReceivedEstimate[proc] : bool
+    
+
+(* initial configuration *)
+init (x) {
+  Round = R1 && State[x] = False && Coord[x] = False && 
+  ACoord[x] = False && Done[x] = False && Received[x] = False &&
+  Nack[x] = False &&
+  (* Id[x] = -1 && MaxId = -2 &&  *)
+  Id_valid[x] = M1 && MaxId_valid = M2 &&
+  ProcessReceivedEstimate[x] = False
+}
+
+(*---------------- suggested invariants from mcmt --------------------*)
+
+(* Exists only one Coordinator in the system *)
+unsafe (x y) {
+  Coord[x] = True && Coord[y] = True
+}
+
+(* If 'c' is Coordinator, all other process with Id < c have
+   already been Coordinator *)
+unsafe (x y) {
+  Coord[x] = True && ACoord[y] = False && y < x
+}
+
+(* A Coordinator can't have Id[] greater than his Identificator *)
+unsafe(x) {
+  Coord[x] = True && Id_valid[x] = MValid && x < Id[x]
+}
+
+(* A process can't have Id[] greater than Coordinator's Identificator *)
+unsafe (x y) {
+  Coord[x] = True && Id_valid[y] = MValid && x < Id[y]
+}
+
+(* In the first Round a process can't have Id[] equals to the
+   Coordinator's Identificator *)
+unsafe (x y) {
+  Round = R1 && Coord[x] = True && Id_valid[y] = MValid && Id[y] = x
+}
+
+(* A correct process can't receive any Nack *)
+unsafe (x) {
+  Faulty[x] = False && Nack[x] = True
+}
+
+(* Coordinators are elected in order by Identificator *)
+unsafe (x y) {
+  Coord[x] = True && ACoord[y] = True && x < y
+}
+
+
+(*--------------------------------------------------------------------*)
+
+(* LEMMA 2.1 *)
+unsafe (x y z) {
+  State[x] = True && Received[x] = True && Coord[y] = True &&
+  State[z] = False && Faulty[z]= False && Estimate[y] <> Estimate[z]
+}
+
+(* LEMMA 2.2 *)
+unsafe (x y) {
+  Round <> R1 && State[x] = False && Faulty[x] = False &&
+  ProcessReceivedEstimate[x] = True && Coord[y] = True &&
+  Estimate[x] <> Estimate[y]
+}
+
+(* LEMMA 2.3 *)
+unsafe (x y) {
+  Coord[x] = True && Faulty[x] = False && Round = R6 &&
+  State[y] = False && Faulty[y] = False
+}
+
+(* AGREEMENT - complete *)
+unsafe (x y) {
+  State[x] = True && Faulty[x] = False && 
+  State[y] = True && Faulty[y] = False && 
+  DecisionValue[x] <> DecisionValue[y]
+}
+
+
+
+
+(* 1) DecIded processes send Request to Coordinator if
+      their Id are greather than MaxId *)
+transition t1_v (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = MValid && MaxId_valid = MValid && MaxId < Id[x] }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t1_nv (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t1_nv2 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t1_nv3 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M1 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+(* 2) UndecIded processes want to send a Request, but their Id
+      is less or equal than MaxId *)
+transition t2_v (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = MValid && MaxId_valid = MValid && Id[x] <= MaxId }
+{
+    Done[x] := True;
+}
+
+transition t2_nv (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = M1 && MaxId_valid = MValid }
+{
+    Done[x] := True;
+}
+
+transition t2_nv2 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M1 }
+{
+    Done[x] := True;
+}
+
+(* 3) An undecIded Faulty process fails sending a Request *)
+transition t3 (x y)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[y] = True && Faulty[x] = True }
+{
+    Done[x] := True;
+}
+
+(* 4) An undecIded Coordinator (with Id > MaxId) sends
+      a Request (to himself) *)
+transition t4 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[x] = True &&
+           Id_valid[x] = MValid && MaxId_valid = MValid &&  MaxId < Id[x] }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t4_nv (x)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[x] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t4_nv2 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[x] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M2 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+transition t4_nv3 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False && 
+           Coord[x] = True &&
+           Id_valid[x] = MValid && MaxId_valid = M1 }
+{
+    Done[x] := True;
+    MaxId := Id[x];
+    MaxId_valid := Id_valid[x];
+    TmpEstimate := Estimate[x];
+}
+
+(* 5) An undecIded Coordinator (with Id <= MaxId) doesn't
+      send a Request to himself *)
+transition t5 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False &&
+           Coord[x] = True && 
+           Id_valid[x] = MValid && MaxId_valid = MValid && Id[x] <= MaxId }
+{
+    Done[x] := True;
+}
+
+transition t5_nv (x)
+requires { Round = R1 && Done[x] = False && State[x] = False &&
+           Coord[x] = True &&
+           Id_valid[x] = M1 && MaxId_valid = MValid }
+{
+    Done[x] := True;
+}
+
+transition t5_nv2 (x)
+requires { Round = R1 && Done[x] = False && State[x] = False &&
+           Coord[x] = True &&
+           Id_valid[x] = M1 && MaxId_valid = M1 }
+{
+    Done[x] := True;
+}
+
+(* 6) DecIded processes do nothing *)
+transition t6 (x)
+requires { Round = R1 && Done[x] = False && State[x] = True }
+{
+    Done[x] := True;
+}
+
+(* 7) If all processes have completed the 1st Round and the Coordinator
+      Received a Request (i.e. MaxId > -2), the Coordinator set his Estimate
+      to TmpEstimate value and all the processes go to 2nd Round *)
+transition t7 (x)
+requires { Round = R1 && MaxId_valid <> M2 &&
+           Done[x] = True && Coord[x] = True &&
+           forall_other j. Done[j] = True }
+{
+    Round := R2;
+    Done[j] := case | _ : False;
+    Estimate[x] := TmpEstimate;
+}
+
+(* 8) ... otherwise (no Request have been Received by the Coordinator)
+      the Coordinator is dismissed. *)
+transition t8 (x)
+requires { Round = R1 && MaxId_valid = M2 &&
+           Done[x] = True && Coord[x] = True &&
+           forall_other j. Done[j] = True }
+{
+    Coord[x] := False;
+    ACoord[x] := True;
+}
+
+(* 9) An undecIded process receives the Estimate from the Coordinator. *)
+transition t9 (x y)
+requires { Round = R2 && Done[x] = False &&
+           State[x] = False && Coord[y] = True }
+{
+    Estimate[x] := Estimate[y];
+    Done[x] := True;
+    Received[x] := True;
+    Id[x] := y;
+    Id_valid[x] := MValid;
+    ProcessReceivedEstimate[x] := True;
+}
+
+(* 10) A Faulty Coordinator fails sending an Estimate *)
+transition t10 (x y)
+requires { Round = R2 && Done[x] = False && State[x] = False &&
+           Coord[y] = True && Faulty[y] = True }
+{
+    Done[x] := True;
+}
+
+(* 11) If the Coordinator is undecIded sends an Estimate to himself *)
+transition t11 (x)
+requires { Round = R2 && Done[x] = False && 
+           State[x] = False && Coord[x] = True }
+{
+    Done[x] := True;
+    Received[x] := True;
+    Id[x] := x;
+    Id_valid[x] := MValid;
+    ProcessReceivedEstimate[x] := True;
+}
+
+(* 12) DecIded processes do nothing *)
+transition t12 (x)
+requires { Round = R2 && Done[x] = False && State[x] = True }
+{
+    Done[x] := True;
+}
+
+(* 13) Round 2 completed. System goes to Round 3. *)
+transition t13 (x)
+requires { Round = R2 && Done[x] = True && Coord[x] = True &&
+           forall_other j. Done[j] = True }
+{ 
+    Round := R3;
+    Done[j] := case | _ : False;
+}
+
+(* 14) If an undecIded process dIdn't Received the Estimate sends a Nack to Coord *)
+transition t14 (x y)
+requires { Round = R3 && State[x] = False && Done[x] = False &&
+           Received[x] = False && Coord[y] = True }
+{
+    Done[x] := True;
+    Nack[y] := True;
+}
+
+(* 15) An undecIded Faulty process that dIdn't Received the Estimate
+       fails sending the Nack to the Coordinator *)
+transition t15 (x y)
+requires { Round = R3 && State[x] = False && Done[x] = False &&
+           Received[x] = False && Coord[y] = True && Faulty[x] = True }
+{
+    Done[x] := True;
+}
+
+(* 16) Af an undecIded process has Received the Estimate does nothing *)
+transition t16 (x y)
+requires { Round = R3 && State[x] = False && Done[x] = False &&
+           Received[x] = True && Coord[y] = True }
+{
+    Done[x] := True;
+}
+
+(* 17) the Coordinator does nothing in this Round *)
+transition t17 (x)
+requires { Round = R3 && Done[x] = False && Coord[x] = True }
+{
+    Done[x] := True;
+}
+
+(* 18) decIded processes do nothing in this Round *)
+transition t18 (x y)
+requires { Round = R3 && State[x] = True &&
+           Done[x] = False && Coord[y] = True }
+{
+    Done[x] := True;
+}
+
+(* 19) When all the processes have Done, system goes to the 4th Round. *)
+transition t19 (x)
+requires { Round = R3 && Done[x] = True && Coord[x] = True &&
+           forall_other j. Done[j] = True }
+{ 
+    Round := R4;
+}
+
+(* 20) If no Nacks have been Received, system goes to the 5th Round (if the Coordinator
+       Received one (or more) Nack, he is killed by the system) *)
+transition t20 (x)
+requires { Round = R4 && Coord[x] = False &&
+           forall_other j. Nack[j] = False }
+{ 
+    Round := R5;
+    Done[j] := case | _ : False;
+}
+
+(* 21) Coordinator sends a decIde to an undecIded process *)
+transition t21 (x y)
+requires { Round = R5 && Done[x] = False &&
+           State[x] = False && Coord[y] = True }
+{ 
+    State[x] := True;
+    Done[x] := True;
+    DecisionValue[x] := Estimate[x];
+}
+
+(* 22) A Faulty Coordinator fails sending the message *)
+transition t22 (x y)
+requires { Round = R5 && Done[x] = False && State[x] = False &&
+           Coord[y] = True && Faulty[y] = True }
+{ 
+    Done[x] := True;
+}
+
+(* 23) A Faulty Coordinator sends a decIde to himself *)
+transition t23 (x)
+requires { Round = R5 && Done[x] = False &&
+           State[x] = False && Coord[x] = True }
+{ 
+    State[x] := True;
+    Done[x] := True;
+    DecisionValue[x] := Estimate[x];
+}
+
+(* 24) Coordinator sends a decIde to decIded processes
+       (but they ignore this message) *)
+transition t24 (x)
+requires { Round = R5 && Done[x] = False && State[x] = True }
+{
+    Done[x] := True;
+}
+
+(* 25) Round n. 5 completed. System goes to Round 6. *)
+transition t25 (x)
+requires { Round = R5 && Done[x] = True && Coord[x] = True &&
+           forall_other j. Done[j] = True }
+{ 
+    Round := R6;
+    Done[j] := case | _ : False;
+}
+
+(* 26) Coordinator in office is dismissed. *)
+transition t26 (x)
+requires { Round = R6 && Coord[x] = True }
+{ 
+    Round := R7;
+    Coord[x] := False;
+    ACoord[x] := True;
+}
+
+(* 27) There's no Coordinator! (maybe the Coordinator crashed) *)
+transition t27 (x)
+requires { Coord[x] = False && forall_other y. Coord[y] = False }
+{ 
+    Round := R7;
+}
+
+(* 28) In this Round a new process is elected as Coordinator of the system.
+       Then the system goes to 1st Round. *)
+transition t28 (x)
+requires { Coord[x] = False && ACoord[x] = False && Round = R7 &&
+           forall_other y. (x <= y || y < x && ACoord[y] = True) }
+{ 
+    Round := R1;
+    Coord[x] := True;
+    Received[j] := case | _ : False;
+    Done[j] := case | _ : False;
+    Nack[j] := case | _ : False;
+    MaxId_valid := M2;
+}

@@ -1,0 +1,114 @@
+type msg = Empty | Reqs | Reqe
+type state = Invalid | Shared | Exclusive
+type data
+
+var Exgntd : bool
+var Curcmd : msg
+var Curptr : proc
+
+var MemData : data
+var AuxData : data
+var Store_data : data
+
+array CacheState[proc] : state
+array CacheData[proc] : data
+array Shrset[proc] : bool
+
+init (z) { CacheState[z] = Invalid &&
+           Shrset[z] = False &&
+           Exgntd = False && 
+	   Curcmd = Empty &&
+	   MemData = AuxData
+	 }
+
+
+
+(* Control *)
+unsafe (z1 z2) { CacheState[z1] = Exclusive && CacheState[z2] = Shared }
+
+(* Data *)
+unsafe () { Exgntd = False && MemData <> AuxData }
+unsafe (z) { CacheState[z] <> Invalid && CacheData[z] <> AuxData }
+
+
+transition req_shared (n)
+requires { Curcmd = Empty && CacheState[n] = Invalid }
+{ 
+  Curcmd := Reqs; 
+  Curptr := n ;
+}
+    
+transition req_exclusive (n)
+requires { Curcmd = Empty && CacheState[n] <> Exclusive }
+{ 
+  Curcmd := Reqe; 
+  Curptr := n;
+}
+    
+transition inv_1_noex (n)
+requires { Shrset[n]=True  &&  Curcmd = Reqe &&
+	   CacheState[n] <> Exclusive}
+{ 
+  Exgntd := False;
+  CacheState[n] := Invalid;
+  Shrset[n] :=False;
+}
+
+transition inv_1_ex (n)
+requires { Shrset[n]=True  &&  Curcmd = Reqe &&
+	   CacheState[n] = Exclusive }
+{ 
+  Exgntd := False;
+  CacheState[n] := Invalid;
+  Shrset[n] :=False;
+  MemData := CacheData[n];
+}
+
+transition inv_2_noex (n)
+requires { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True &&
+	   CacheState[n] <> Exclusive}
+{ 
+  Exgntd := False;
+  CacheState[n] := Invalid;
+  Shrset[n] := False;
+}
+
+transition inv_2_ex (n)
+requires { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True &&
+	   CacheState[n] = Exclusive }
+{ 
+  Exgntd := False;
+  CacheState[n] := Invalid;
+  Shrset[n] := False;
+  MemData := CacheData[n];
+}
+    
+transition gnt_shared (n)
+requires { Curptr = n && Curcmd = Reqs && Exgntd = False }
+{ 
+  Curcmd := Empty;
+  Shrset[n] := True;
+  CacheState[n] := Shared;
+  CacheData[n] := MemData;
+}
+
+transition gnt_exclusive (n)
+requires { Shrset[n] = False && Curcmd = Reqe &&
+           Exgntd = False && Curptr = n &&
+	   forall_other l. Shrset[l] = False }
+{ 
+  Curcmd := Empty; 
+  Exgntd := True;
+  Shrset[n] := True;
+  CacheState[n] := Exclusive;
+  CacheData[n] := MemData;
+}
+
+transition store (n)
+requires { CacheState[n] = Exclusive }
+{
+  AuxData := Store_data;
+  CacheData[j] := case 
+    	       	  | j = n : Store_data
+	       	  | _  : CacheData[j];
+}

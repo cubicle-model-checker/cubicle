@@ -1,0 +1,102 @@
+type req = Empty | Reqs | Reqe
+type cstate = Invalid | Shared | Exclusive
+
+
+var Exgntd : bool
+var Curcmd : req
+var Curptr : proc
+
+array Cache[proc] : cstate
+array Shrset[proc] : bool
+array Chan[proc] : req
+
+init (z) { Cache[z] = Invalid && Shrset[z] = False &&
+           Exgntd = False && Curcmd = Empty && Chan[z]=Empty }
+
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+
+transition send_shared (n)
+requires { Chan[n] = Empty && Cache[n] = Invalid }
+{ 
+  Chan[j] := case 
+  	      | j = n : Reqs 
+	      | _ : Chan[j] 
+}
+
+transition recv_shared (n)
+requires { Curcmd = Empty && Chan[n] = Reqs }
+{ 	 
+  Curcmd := Reqs; 
+  Curptr := n ;
+  Chan[j] := case 
+  	      | j = n : Empty 
+	      | _ : Chan[j] 
+}
+    
+transition send_exclusive (n)
+requires { Chan[n] = Empty && Cache[n] <> Exclusive }
+{ 
+  Chan[j] := case 
+  	      | j = n : Reqe 
+	      | _ : Chan[j] 
+}
+
+transition recv_exclusive (n)
+requires { Curcmd = Empty && Chan[n] = Reqe }
+{ 
+  Curcmd := Reqe; 
+  Curptr := n ;
+  Chan[j] := case 
+  	      | j = n : Empty 
+	      | _ : Chan[j] 
+}
+    
+transition inv_1 (n)
+requires { Shrset[n]=True  &&  Curcmd = Reqe }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	       | j = n : Invalid 
+	       | _ : Cache[j] ;
+  Shrset[j] := case
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
+
+transition inv_2 (n)
+requires { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
+{ 
+  Exgntd := False;
+  Cache[j] := case
+	       | j = n : Invalid 
+	       | _ : Cache[j] ;
+  Shrset[j] := case
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
+    
+transition gnt_shared (n)
+requires { Curptr = n && Curcmd = Reqs && Exgntd = False }
+{ 
+  Curcmd := Empty;
+  Shrset[j] := case 
+  	       	| j = n : True 
+		| _ : Shrset[j] ;
+  Cache[j] := case 
+  	       | j = n : Shared 
+	       | _ : Cache[j] 
+}
+
+transition gnt_exclusive (n)
+requires { Shrset[n] = False && Curcmd = Reqe && Exgntd = False && 
+	  Curptr = n && forall_other l. Shrset[l] = False }
+{ 
+  Curcmd := Empty; 
+  Exgntd := True;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j] ;
+  Cache[j] := case 
+  	       | j = n : Exclusive 
+	       | _ : Cache[j] 
+}
