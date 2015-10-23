@@ -29,6 +29,17 @@ module HI = Hashtbl.Make (struct
   let hash x = x
 end)
 
+module HLI = Hashtbl.Make (struct 
+  type t = int list 
+  let equal = (=) 
+  let hash = Hashtbl.hash
+end)
+
+
+module SLI = Set.Make (struct
+    type t = int list
+    let compare = Pervasives.compare
+  end)
 
 type state = int array
 
@@ -102,6 +113,8 @@ type env = {
   up_int_abstr : int;
   pinf_int_abstr : int;
   minf_int_abstr : int;
+  proc_substates : int list HLI.t;
+  reverse_proc_substates : int list HI.t;
 
   mutable explicit_states : unit HST.t;
   mutable states : state list;
@@ -126,6 +139,8 @@ let empty_env = {
   up_int_abstr = 0;
   pinf_int_abstr = 0;
   minf_int_abstr = 0;
+  proc_substates = HLI.create 0;
+  reverse_proc_substates = HI.create 0;
 
   explicit_states = HST.create 0;
   states = [];
@@ -149,51 +164,153 @@ let build_state_procs_map id_terms procs var_terms proc_terms =
   ) d
 
 
-let swap a (i,j) =
+exception Found of term
+
+
+(* inefficient but only used for debug *)
+let id_to_term env id =
+  try
+    HT.iter (fun t i -> if id = i then raise (Found t)) env.id_terms;
+    raise Not_found
+  with Found t -> t
+
+(* inefficient but only used for debug *)
+let state_to_cube env st =
+  let i = ref 0 in
+  Array.fold_left (fun sa sti ->
+    let sa = 
+      if sti <> -1 then
+	let t1 = id_to_term env !i in
+	let t2 =
+          if sti = env.minf_int_abstr then Elem (Hstring.make "-oo", Constr)
+          else if  sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
+          else id_to_term env sti in
+	SAtom.add (Atom.Comp (t1, Eq, t2)) sa
+      else sa
+    in
+    incr i; sa)
+    SAtom.empty st
+
+let print_state env fmt st = SAtom.print fmt (state_to_cube env st)
+
+
+let swap a i j =
   if i <> j then
     let tmp = a.(i) in
     a.(i) <- a.(j);
     a.(j) <- tmp
     
+let swap_c a (i,j) = swap a i j
+
 let apply_perm_state env st (_, p_vars, p_procs) =
   let st' = Array.copy st in
-  List.iter (swap st') p_vars;
+  List.iter (swap_c st') p_vars;
   for i = 0 to env.nb_vars - 1 do
     try let v = List.assoc st'.(i) p_procs in st'.(i) <- v
     with Not_found -> ()
   done;
   st'
-  
+
+(* Applying substitutions in place is tricky because some idexes of the array
+   encode terms like A[#1,#2]. We proceed by swapping here, and remember the
+   shifting introduced thanks to the mapping rho. *)
+let apply_subst_in_place env st sigma =
+  if not (HI.length sigma = 0) then begin
+
+    let proc_subs = ref SLI.empty in
+    let rho = HLI.create env.nb_vars in
+
+    (* First apply substitutions in the values of the state variables *)
+    for i = 0 to env.nb_vars - 1 do
+      (try st.(i) <- HI.find sigma st.(i) 
+       with Not_found -> ());
+
+      try
+        (* collect process domains (like (#1, #2) ) *)
+        let proc_domain = HI.find env.reverse_proc_substates i in
+        proc_subs := SLI.add proc_domain !proc_subs;
+      with Not_found -> ()
+
+    done;
+
+    SLI.iter (fun proc_domain ->
+        try
+          (* sigma(proc_domain) *)
+          let sigma_proc_domain = List.fold_left (fun acc j ->
+              try HI.find sigma j :: acc
+              with Not_found -> acc
+            ) [] proc_domain |> List.rev in
+          (* rho(proc_domain) *)
+          let rho_proc_domain =
+            try HLI.find rho proc_domain with Not_found -> proc_domain in
+          (* encoding in terms of indexes *)
+          let sigma_proc_sub = HLI.find env.proc_substates sigma_proc_domain in
+          let rho_proc_sub = HLI.find env.proc_substates rho_proc_domain in
+
+          (* eprintf "sigma ("; *)
+          (* List.iter (eprintf "%d,") proc_domain; *)
+          (* eprintf ") = "; *)
+          (* List.iter (eprintf "%d,") sigma_proc_domain; *)
+          (* eprintf "@."; *)
+
+          (* eprintf "rho ("; *)
+          (* List.iter (eprintf "%d,") proc_domain; *)
+          (* eprintf ") = "; *)
+          (* List.iter (eprintf "%d,") rho_proc_domain; *)
+          (* eprintf "@."; *)
+
+          (* Perform actual swaps on the encoded versions *)
+          List.iter2 (fun i j ->
+              (* eprintf "   exchanging %a <---> %a@."
+                 Term.print (id_to_term env i) Term.print (id_to_term env j); *)
+              swap st i j) sigma_proc_sub rho_proc_sub;
+
+          (* rho += sigma(proc_domain) |--> rho(proc_domain) *)
+          HLI.replace rho sigma_proc_domain rho_proc_domain;
+        with Not_found ->()
+      ) !proc_subs
+
+  end
+
 let apply_subst env st sigma =
   let st' = Array.copy st in
-  for i = 0 to env.nb_vars - 1 do
-    try let v = List.assoc st'.(i) sigma in st'.(i) <- v
-    with Not_found -> ()
-  done;
+  apply_subst_in_place env st' sigma;
   st'
 
+let is_proc env v = env.first_proc <= v && v < env.extra_proc
+
 let normalize_state env st =
+  (* let old = Array.copy st in *)
   let met = ref [] in
   let remaining = ref env.proc_ids in
-  let sigma = ref [] in
+  let sigma = HI.create env.model_cardinal in
   for i = 0 to Array.length st - 1 do
     let v = st.(i) in
-    if !remaining <> [] then
-      let r = List.hd !remaining in
-      if env.first_proc <= v && v < env.extra_proc && 
-        not (List.mem v !met) && v <> r then begin
-          met := v :: !met;
-          remaining := List.tl !remaining;
-          sigma := (v,r) :: (r,v) :: !sigma
-        end;
+    match !remaining with
+    | r :: tail ->
+      if is_proc env v && v <> env.extra_proc && (* r <> env.extra_proc && *)
+         not (List.mem v !met) then begin
+        met := v :: !met;
+        remaining := tail;
+        if v <> r then HI.add sigma v r;
+      end
+    | _ -> ()
   done;
-  apply_subst env st !sigma
+  let not_met = List.filter (fun v -> not (List.mem v !met)) env.proc_ids in
+  List.iter2 (fun v r -> if v <> r then HI.add sigma v r) not_met !remaining;
+  apply_subst_in_place env st sigma
+  (* ; *)
+  (* let same = ref true in *)
+  (* for i = 0 to Array.length st - 1 do *)
+  (*   same := !same && st.(i) = old.(i) *)
+  (* done; *)
+  (* if not !same then eprintf "\nNormalize :@.%a@.->@.%a@." *)
+  (*     (print_state env) old *)
+  (*     (print_state env) st *)
 
 
 let global_envs = ref []
 
-
-exception Found of term
 
 
 let make_range (low, up) =
@@ -225,13 +342,6 @@ let abstr_add env x y =
   if r = env.minf_int_abstr || r = env.pinf_int_abstr then raise Not_applicable;
   r
 
-(* inefficient but only used for debug *)
-let id_to_term env id =
-  try
-    HT.iter (fun t i -> if id = i then raise (Found t)) env.id_terms;
-    raise Not_found
-  with Found t -> t
-
 
 let is_variable env id = id <= env.max_id_vars
 
@@ -240,25 +350,6 @@ let is_int_real = function
       snd (Smt.Symbol.type_of x) = Smt.Type.type_int ||
       snd (Smt.Symbol.type_of x) = Smt.Type.type_real
   | _ -> false
-
-(* inefficient but only used for debug *)
-let state_to_cube env st =
-  let i = ref 0 in
-  Array.fold_left (fun sa sti ->
-    let sa = 
-      if sti <> -1 then
-	let t1 = id_to_term env !i in
-	let t2 =
-          if sti = env.minf_int_abstr then Elem (Hstring.make "-oo", Constr)
-          else if  sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
-          else id_to_term env sti in
-	SAtom.add (Atom.Comp (t1, Eq, t2)) sa
-      else sa
-    in
-    incr i; sa)
-    SAtom.empty st
-
-    
 
 let all_constr_terms () =
   List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
@@ -274,6 +365,19 @@ let table_size nb_procs nb_vars =
   if not quiet then eprintf "table size : %d@." r;
   r
 
+let add_pos_to_proc_substate ht
+    proc_substates reverse_proc_substates =
+  Term.Set.iter (function
+      | Access (_, ps) as t ->
+        let i = HT.find ht t in
+        let ids_ps = List.map (fun hp -> HT.find ht (Elem (hp, Var))) ps in
+        let sub_ps = try HLI.find proc_substates ids_ps with Not_found -> [] in
+        (* List.iter (fun p -> eprintf "%d (%a), " p Term.print t) ids_ps; *)
+        (* eprintf "at %d@." i; *)
+        HLI.replace proc_substates ids_ps (i :: sub_ps);
+        HI.add reverse_proc_substates i ids_ps
+      | _ -> ()
+    )
 
 let init_tables procs s =
   let var_terms = Forward.all_var_terms procs s in
@@ -285,7 +389,7 @@ let init_tables procs s =
   let ht = HT.create (nb_vars + nb_consts) in
   let i = ref 0 in
   Term.Set.iter (fun t -> HT.add ht t !i; incr i) var_terms;
-  let max_id_vars = !i - 1in
+  let max_id_vars = !i - 1 in
   let proc_ids = ref [] in
   let first_proc = !i in
   List.iter (fun t -> HT.add ht t !i; proc_ids := !i :: !proc_ids; incr i)
@@ -319,6 +423,11 @@ let init_tables procs s =
     incr i) abstr_range;
   let a_up = !i - 1 in
 
+  (* This is some bookeeping to allow in place substitutions *)
+  let proc_substates = HLI.create nb_procs in
+  let reverse_proc_substates = HI.create nb_procs in
+  add_pos_to_proc_substate ht proc_substates reverse_proc_substates var_terms; 
+
   { model_cardinal = nb_procs;
     var_terms = var_terms;
     nb_vars = nb_vars;
@@ -339,6 +448,9 @@ let init_tables procs s =
     pinf_int_abstr = a_up + 1;
     minf_int_abstr = -3;
 
+    proc_substates = proc_substates;
+    reverse_proc_substates = reverse_proc_substates;
+    
     explicit_states = HST.create (table_size nb_procs nb_vars);
     states = [];
   }
@@ -794,12 +906,13 @@ let post st visited trs acc cpt_q depth =
       with Not_applicable -> acc) acc trs
 
 
-let post_bfs st visited trs q cpt_q depth =
+let post_bfs env st visited trs q cpt_q depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
         try
         let sts = st_tr.st_f st in
         List.iter (fun s ->
+          if forward_sym then normalize_state env s;
           if not (HST.mem visited s) then begin
             incr cpt_q;
             Queue.add (depth + 1, s) q
@@ -916,8 +1029,9 @@ let forward_bfs s procs env l =
     let depth, st = Queue.take to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
-    (* if not (already_visited env explicit_states st) then begin *)
-      post_bfs st h_visited trs to_do cpt_q depth;
+      (* if not (already_visited env explicit_states st) then begin *)
+      HST.add h_visited st ();
+      post_bfs env st h_visited trs to_do cpt_q depth;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
@@ -926,7 +1040,7 @@ let forward_bfs s procs env l =
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
-      HST.add h_visited st ();
+      (* HST.add h_visited st (); *)
       env.states <- st :: env.states;
       (* add_all_syms env explicit_states st *)
     end

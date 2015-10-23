@@ -59,6 +59,7 @@ let stateless = ref false
 let max_cands = ref (-1)
 let max_forward = ref (-1)
 let candidate_heuristic = ref (-1)
+let forward_sym = ref true
 
 let abstr_num = ref false
 let num_range_low = ref 0
@@ -155,6 +156,7 @@ let specs =
     "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
                 "<low> <up> abstract numerical values in [<low>; <up>] during forward exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
+    "-forward-nosym", Arg.Clear forward_sym, " disable symmetry reduction in forward exploration";
     "-postpone", Arg.Set_int post_strategy, 
                  "<0|1|2> 
                           0: do not postpone nodes
@@ -218,6 +220,7 @@ let candidate_heuristic =
   if !candidate_heuristic <> -1 then !candidate_heuristic else enumerative
 let forward_depth = !forward_depth
 let limit_forward_depth = forward_depth <> -1
+let forward_sym = !forward_sym
 let localized = !localized
 let refine = !refine && not !stateless
 let lazyinv = !lazyinv
