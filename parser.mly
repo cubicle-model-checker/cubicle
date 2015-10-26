@@ -84,9 +84,9 @@
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
-%token FORALL EXISTS FORALL_OTHER 
+%token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE FUNCTION
+%token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -151,7 +151,7 @@ symbold_decls :
 ;
 
 function_decl :
-  | FUNCTION lident LEFTPAR lident_comma_list RIGHTPAR LEFTBR expr RIGHTBR {
+  | PREDICATE lident LEFTPAR lident_comma_list RIGHTPAR LEFTBR expr RIGHTBR {
     add_fun_def $2 $4 $7
   }
 ;
@@ -403,6 +403,12 @@ lident_comma_list:
   | lident_list_plus { $1 }
 ;
 
+lidents_plus_distinct:
+  | lident { [$1] }
+  | lident NEQ lidents_plus_distinct { $1 :: $3 }
+;
+
+
 /*
 operator:
   | EQ { Eq }
@@ -432,9 +438,10 @@ expr:
   | expr IMP expr { PImp ($1, $3) }
   | expr EQUIV expr { PEquiv ($1, $3) }
   | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6) }
-  | FORALL lidents_plus DOT expr %prec prec_forall { PForall ($2, $4) }
-  | EXISTS lidents_plus DOT expr %prec prec_exists { PExists ($2, $4) }
+  | FORALL lidents_plus_distinct DOT expr %prec prec_forall { PForall ($2, $4) }
+  | EXISTS lidents_plus_distinct DOT expr %prec prec_exists { PExists ($2, $4) }
   | FORALL_OTHER lident DOT expr %prec prec_forall { PForall_other ([$2], $4) }
+  | EXISTS_OTHER lident DOT expr %prec prec_exists { PExists_other ([$2], $4) }
 ;
 
 simple_expr:

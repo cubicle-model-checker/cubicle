@@ -47,13 +47,13 @@ init (z) {
      MemData = AuxData 
      }
 
-
-function uns1 (a, b, i, e) {
-  CacheState[a] = e && CacheState[b] <> i
+predicate inv1 (i, e) {
+  forall x <> y.
+    CacheState[x] = e => CacheState[y] = i
 }
 
 (* Control *)
-unsafe { exists z1 z2. uns1 (z1, z2, Invalid, Exclusive) }
+unsafe { not inv1 (Invalid, Exclusive) }
 
 
 (* Data *)
@@ -61,7 +61,7 @@ unsafe { Exgntd = False && MemData <> AuxData }
 unsafe (z) { CacheState[z] <> Invalid && CacheData[z] <> AuxData }
 
 
-function invalid(z) { CacheState[z] = Invalid }
+predicate invalid(z) { CacheState[z] = Invalid }
 
 transition store (n)
 requires { CacheState[n] = Exclusive }

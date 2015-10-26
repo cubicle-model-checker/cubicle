@@ -34,6 +34,7 @@ type error =
 
 exception Error of error
 
+type symbol_kind = TAbstract | TConstructor
 type check_strategy = Lazy | Eager
 
 module H = Hstring.H
@@ -50,8 +51,6 @@ let global_context =
               ("proof", "false");
               ("unsat_core", "true");
               ("auto_config","true")]
-
-type symbol_kind = TAbstract | TConstructor
 
 module Type = struct
 
@@ -90,7 +89,7 @@ module Type = struct
   let declare_constructor ty c f =
     (* eprintf "declare_constructor@."; *)
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
-    H.add decl_symbs c (f, 1, [], ty)
+    H.add decl_symbs c (f, TConstructor, [], ty)
 
   let declare t constrs =
     (* eprintf "declare@."; *)
@@ -109,7 +108,7 @@ module Type = struct
     (* eprintf "all_constructors@."; *)
     H.fold (fun h c acc ->
         match c with
-        | _, 1, _, _ -> h :: acc
+        | _, TConstructor, _, _ -> h :: acc
         | _ -> acc
     ) decl_symbs [htrue; hfalse]
 
@@ -145,7 +144,7 @@ module Symbol = struct
       with Not_found -> raise (Error (UnknownType ret)) in
     let z3_f =
       FuncDecl.mk_func_decl_s global_context (Hstring.view f) z3_args z3_ret in
-    H.add decl_symbs f (z3_f, 0, args, ret)
+    H.add decl_symbs f (z3_f, TAbstract, args, ret)
 
   let type_of s =
     (* eprintf "type_of@."; *)
@@ -196,8 +195,8 @@ module Symbol = struct
   
   let _ =
     (* eprintf "_@."; *)
-    H.add decl_symbs htrue (fd_true, 1, [], Type.type_bool);
-    H.add decl_symbs hfalse (fd_false, 1, [], Type.type_bool);
+    H.add decl_symbs htrue (fd_true, TConstructor, [], Type.type_bool);
+    H.add decl_symbs hfalse (fd_false, TConstructor, [], Type.type_bool);
     
 end
 
@@ -288,7 +287,7 @@ module Variant = struct
     H.iter (fun x s -> 
 	let nty = update_decl_types s in
         let sy, _, args, _ = H.find decl_symbs x in
-	H.replace decl_symbs x (sy, 1, args, nty))
+	H.replace decl_symbs x (sy, TConstructor, args, nty))
       constructors
       
 end

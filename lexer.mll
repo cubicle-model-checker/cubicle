@@ -32,9 +32,10 @@
         "unsafe", UNSAFE;
 	"case", CASE;
 	"forall_other", FORALL_OTHER;
+	"exists_other", EXISTS_OTHER;
 	"forall", FORALL;
         "exists", EXISTS;
-        "function", FUNCTION;
+        "predicate", PREDICATE;
         "if", IF;
         "then", THEN;
         "else", ELSE;
