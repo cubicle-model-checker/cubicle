@@ -579,13 +579,20 @@ let encode_psystem
         List.fold_left
           (fun acc sa -> (unsafe_loc, unsafe_vars, sa) :: acc) acc dnf
       ) [] punsafe
-    |> List.rev
   in
   let trans =
     List.fold_left (fun acc ptr ->
         List.fold_left (fun acc tr -> tr :: acc) acc (encode_ptransition ptr)
       ) [] ptrans
-    |> List.rev
+    |> List.sort (fun t1 t2  ->
+        let c = compare (List.length t1.tr_args) (List.length t2.tr_args) in
+        if c <> 0 then c else
+        let c = compare (List.length t1.tr_upds) (List.length t2.tr_upds) in
+        if c <> 0 then c else
+        let c = compare (List.length t1.tr_ureq) (List.length t2.tr_ureq) in
+        if c <> 0 then c else
+        compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
+      )
   in
   {
     globals = pglobals;

@@ -1,7 +1,7 @@
 ;;; cubicle-mode.el --- Cubicle major mode for emacs
 
 ;; Author: Alain Mebsout
-;; Version: 0.1
+;; Version: 0.2
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

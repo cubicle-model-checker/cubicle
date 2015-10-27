@@ -70,7 +70,7 @@ module HST = Hashtbl.Make
     let hash = hash_state
    end)
 
-  
+
 type st_req = int * op_comp * int
 
 type st_action = 
