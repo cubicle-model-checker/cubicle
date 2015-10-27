@@ -24,7 +24,7 @@ exception Error of error
 type check_strategy = Lazy | Eager
 
 let unsupported _ =
-  failwith "Cubicle was not compile with the Z3 library."
+  failwith "Cubicle was not compiled with the Z3 library."
 
 let hfake = Hstring.make "fake_Z3"
 
@@ -70,7 +70,7 @@ module Term = struct
   let t_false = ()
   let make_arith _ _ _ = unsupported ()
   let is_int _ = unsupported ()
-  let is_real = unsupported ()
+  let is_real _ = unsupported ()
 end
 
 module Formula = struct
