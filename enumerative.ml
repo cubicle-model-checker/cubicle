@@ -71,6 +71,36 @@ module HST = Hashtbl.Make
    end)
 
 
+(* This is a queue with a hash table on the side to avoid storing useless
+   states, the overhead of the hashtable is negligible and allows to reduce the
+   memory occupied by the queue (which is generally a lot larger than the state
+   table for BFS) *)
+module HQueue = struct
+
+  type t = (int * state) Queue.t * unit HST.t
+
+  let create size = Queue.create (), HST.create size
+
+  let add ?(cpt_q=ref 0) x (q, h) =
+    let s = snd x in
+    if not (HST.mem h s) then begin
+      incr cpt_q;
+      HST.add h s ();
+      Queue.add x q;
+    end
+
+  let is_empty (q, _) = Queue.is_empty q
+
+  let take (q, h) =
+    let x = Queue.take q in
+    HST.remove h (snd x);
+    x
+  
+end
+
+
+
+
 type st_req = int * op_comp * int
 
 type st_action = 
@@ -116,6 +146,7 @@ type env = {
   proc_substates : int list HLI.t;
   reverse_proc_substates : int list HI.t;
 
+  table_size : int;
   mutable explicit_states : unit HST.t;
   mutable states : state list;
 }
@@ -142,6 +173,7 @@ let empty_env = {
   proc_substates = HLI.create 0;
   reverse_proc_substates = HI.create 0;
 
+  table_size = 0;
   explicit_states = HST.create 0;
   states = [];
 }
@@ -428,6 +460,8 @@ let init_tables procs s =
   let reverse_proc_substates = HI.create nb_procs in
   add_pos_to_proc_substate ht proc_substates reverse_proc_substates var_terms; 
 
+  let tsize = table_size nb_procs nb_vars in
+  
   { model_cardinal = nb_procs;
     var_terms = var_terms;
     nb_vars = nb_vars;
@@ -450,8 +484,9 @@ let init_tables procs s =
 
     proc_substates = proc_substates;
     reverse_proc_substates = reverse_proc_substates;
-    
-    explicit_states = HST.create (table_size nb_procs nb_vars);
+
+    table_size = tsize;
+    explicit_states = HST.create tsize;
     states = [];
   }
 
@@ -914,8 +949,8 @@ let post_bfs env st visited trs q cpt_q depth =
         List.iter (fun s ->
           if forward_sym then normalize_state env s;
           if not (HST.mem visited s) then begin
-            incr cpt_q;
-            Queue.add (depth + 1, s) q
+            (* incr cpt_q; *)
+            HQueue.add ~cpt_q (depth + 1, s) q
           end
         ) sts
       with Not_applicable -> ()) trs
@@ -1013,8 +1048,8 @@ let forward_dfs s procs env l =
       env.states <- st :: env.states;
       (* add_all_syms env explicit_states st *)
     end
-  done;
-  if not quiet then eprintf "Total forward nodes : %d@." !cpt_r
+  done
+
 
 let forward_bfs s procs env l =
   let h_visited = env.explicit_states in
@@ -1022,11 +1057,11 @@ let forward_bfs s procs env l =
   let cpt_r = ref 0 in
   let cpt_q = ref 1 in
   let trs = env.st_trs in
-  let to_do = Queue.create () in
-  List.iter (fun td -> Queue.add td to_do) l;
-  while not (Queue.is_empty to_do) &&
+  let to_do = HQueue.create env.table_size in
+  List.iter (fun td -> HQueue.add td to_do) l;
+  while not (HQueue.is_empty to_do) &&
           (max_forward = -1 || !cpt_f < max_forward) do
-    let depth, st = Queue.take to_do in
+    let depth, st = HQueue.take to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
       (* if not (already_visited env explicit_states st) then begin *)
@@ -1044,8 +1079,7 @@ let forward_bfs s procs env l =
       env.states <- st :: env.states;
       (* add_all_syms env explicit_states st *)
     end
-  done;
-  if not quiet then eprintf "Total forward nodes : %d@." !cpt_r
+  done
 
 let forward_bfs_switches s procs env l =
   let explicit_states = env.explicit_states in
@@ -1071,9 +1105,7 @@ let forward_bfs_switches s procs env l =
       HST.add explicit_states st ();
       env.states <- st :: env.states;
     end
-  done;
-  if not quiet then eprintf "Total forward nodes : %d@." !cpt_f
-
+  done
     
 (************************************************************************)
 (* Forward enumerative search, states are insterted in the global hash- *)
@@ -1083,6 +1115,41 @@ let shuffle d =
     let nd = List.rev_map (fun c -> (Random.bits (), c)) d in
     let sond = List.sort compare nd in
     List.rev_map snd sond
+
+
+let finalize_search env =
+  let st = HST.stats env.explicit_states in
+  if not quiet then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
+  if verbose > 0 || profiling then begin
+    printf "\n%a" Pretty.print_line ();
+    printf "@{<b>Statistics@}\n";
+    printf "----------\n";
+    printf "Bindings         : %d@." st.Hashtbl.num_bindings;
+    printf "Buckets          : %d@." st.Hashtbl.num_buckets;
+    printf "Max bucket size  : %d@." st.Hashtbl.max_bucket_length;
+    printf "Bucket histogram : @?";
+    Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v )
+      st.Hashtbl.bucket_histogram;
+    printf "@.";
+  end;
+  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states;
+  (* Prevent the GC from scanning the list env.states as it is going to be
+     kept in memory all the time. *)
+  env.explicit_states <- HST.create 1;
+  Gc.compact ();
+  Gc.full_major ();
+  TimeForward.pause ()
+
+
+let install_sigint env =
+  Sys.set_signal Sys.sigint 
+    (Sys.Signal_handle 
+       (fun _ ->
+          printf "\n\n@{<b>@{<fg_red>ABORTING ENUMERATIVE!@}@} \
+                  Received SIGINT@.";
+          printf "Finalizing search.@.";
+          raise Exit
+       ))
 
 let search procs init =
   TimeForward.start ();
@@ -1095,27 +1162,13 @@ let search procs init =
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
-  forward_bfs init procs env st_inits;
-  if verbose > 0 || profiling then begin
-    let st = HST.stats env.explicit_states in
-    printf "\nStatistics@.";
-    printf   "----------@.";
-    printf "num_bindings : %d@." st.Hashtbl.num_bindings;
-    printf "num_buckets : %d@." st.Hashtbl.num_buckets;
-    printf "max_bucket_length : %d@." st.Hashtbl.max_bucket_length;
-    printf "Bucket histogram : @?";
-    Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v )
-		st.Hashtbl.bucket_histogram;
-    printf "@.";
-  end;
-  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states;
-  (* Prevent the GC from scanning the list env.states as it is going to be
-     kept in memory all the time. *)
-  env.explicit_states <- HST.create 1;
-  Gc.compact ();
-  Gc.full_major ();
-  TimeForward.pause ()
-
+  install_sigint env;
+  begin try
+    forward_bfs init procs env st_inits;
+    with Exit -> ()
+  end ;
+  finalize_search env
+                        
 
 let resume_search_from procs init = assert false
 

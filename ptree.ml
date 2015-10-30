@@ -465,7 +465,7 @@ let conv_atom aa = match aa with
 let satom_of_atom_list =
   List.fold_left (fun acc -> function
       | PAtom a -> SAtom.add (conv_atom a) acc
-      | _ -> assert false
+      | x -> eprintf "%a@." print x;  assert false
     ) SAtom.empty
   
 let satom_of_cube = function

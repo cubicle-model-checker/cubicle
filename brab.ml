@@ -44,11 +44,22 @@ let rec search_and_backtrack candidates system =
          search_and_backtrack candidates system
        end
 
+(** intercepts SIGINT [Ctrl-C] to display progress before exit *)
+let reinstall_sigint () = 
+  Sys.set_signal Sys.sigint 
+    (Sys.Signal_handle 
+       (fun _ ->
+          eprintf "@{<n>@}@."; (* Remove colors *)
+          Stats.print_report ~safe:false [] [];
+          eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+          exit 1)) 
+
 (**************************************************************)
 (* Backward reachability with approximations and backtracking *)
 (**************************************************************)
-    
+
 let brab system =
   Oracle.init system;
   if only_forward then exit 0;
+  reinstall_sigint ();
   search_and_backtrack [] system

@@ -21,11 +21,13 @@ open Ast
 (** Entry point of Cubicle *)
 
 
+
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
+        eprintf "@{<n>@}@."; (* Remove colors *)
         Stats.print_report ~safe:false [] [];
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
         exit 1)) 
@@ -34,6 +36,7 @@ let () =
   Sys.set_signal Sys.sigterm
     (Sys.Signal_handle 
        (fun _ ->
+        eprintf "@{<n>@}@."; (* Remove colors *)
         Stats.print_report ~safe:false [] [];
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
         exit 1)) 
@@ -43,7 +46,9 @@ let () =
   try
     Sys.set_signal Sys.sigusr1 
       (Sys.Signal_handle 
-         (fun _ -> Stats.print_report ~safe:false [] []))
+         (fun _ ->
+            eprintf "@{<n>@}@."; (* Remove colors *)
+            Stats.print_report ~safe:false [] []))
   with Invalid_argument _ -> () (* doesn't exist on windows *)
 
 
