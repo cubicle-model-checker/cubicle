@@ -126,6 +126,9 @@ module Type = struct
             |> Hstring.make)
       else []
 
+  let declared_types () =
+    H.fold (fun ty _ acc -> ty :: acc) decl_types []
+
 end
 
 module Symbol = struct

@@ -67,6 +67,8 @@ module type S = sig
     (** [constructors ty] returns the list of constructors of [ty] when type is
         an enumerated data-type, otherwise returns [[]].*)
 
+    val declared_types : unit -> t list
+
   end
 
 
