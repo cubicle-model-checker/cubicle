@@ -275,15 +275,15 @@ let print_swts ot fmt swts =
   if swts = [] then
     fprintf fmt "%a := %a" print_term ot print_term default
   else begin
-    fprintf fmt "@[<hov>if ";
+    fprintf fmt "@[<hov 2>if ";
     let first = ref true in
     List.iter (fun (cond, t) ->
-        if not !first then fprintf fmt "elsif ";
-        fprintf fmt "%a then@ %a := %a@ "
+        if not !first then fprintf fmt "@[<hov 2>elsif ";
+        fprintf fmt "%a then@ %a := %a@]@ "
           print_satom cond print_term ot print_term t;
         first := false
       ) swts;
-    fprintf fmt "else@ %a := %a@]@ " print_term ot print_term default;
+    fprintf fmt "@[<hov 2>else@ %a := %a@]@ " print_term ot print_term default;
     fprintf fmt "endif;"
   end
 
@@ -394,7 +394,7 @@ let print_transitions fmt =
 
 let print_invariant fmt name =
   fprintf fmt "@[<v 2>invariant \"%s\"@ " name;
-  fun () -> fprintf fmt "@]@."
+  fun () -> fprintf fmt "@];@."
 
 
 let rec distinct acc seen procs = match procs with
@@ -447,11 +447,41 @@ let print_unsafes fmt =
 (* Murphi version of cubicle transition system *)
 (***********************************************)
 
+(* Removing uderscores which Murphi does not support *)
+
+let remove_underscores_update u =
+  let sigma = List.fold_left (fun sigma j ->
+      let sj = Hstring.view j in
+      if sj.[0] = '_' then
+        let j' = Hstring.make (String.sub sj 1 (String.length sj - 1)) in
+        (j, j') :: sigma
+      else sigma
+    ) [] u.up_arg
+  in
+  if sigma = [] then u
+  else
+    let arg = List.map (Variable.subst sigma) u.up_arg in
+    let swts =
+      List.map (fun (c, t) -> SAtom.subst sigma c, Term.subst sigma t) u.up_swts
+    in
+    { u with up_arg = arg; up_swts = swts }
+
+
+let remove_underscores_trans t =
+  { t with
+    tr_info =
+      { t.tr_info with
+        tr_upds = List.map remove_underscores_update t.tr_info.tr_upds }}
+
+let remove_underscores sys =
+  { sys with t_trans = List.map remove_underscores_trans sys.t_trans }
+
 let print_system nbprocs abstr fmt sys =
+  let sys = remove_underscores sys in
   print_constants fmt nbprocs abstr; pp_print_newline fmt ();
   print_types fmt (); pp_print_newline fmt ();
   print_vars_defs fmt (sys.t_globals @ sys.t_arrays); pp_print_newline fmt ();
   print_inits fmt sys; pp_print_newline fmt ();
   print_transitions fmt sys.t_trans;
   print_unsafes fmt sys.t_unsafe
-  
+
