@@ -113,7 +113,8 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
-      util.cmo variable.cmo types.cmo\
+      util.cmo variable.cmo types.cmo \
+      muparser.cmo mulexer.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo murphi.cmo enumerative.cmo approx.cmo  \
@@ -124,7 +125,7 @@ CMX = $(CMO:.cmo=.cmx)
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
 
-GENERATED = version.ml parser.ml parser.mli lexer.ml smt/z3wrapper.ml
+GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
 
 byte: $(NAME).byte
 opt: $(NAME).opt
