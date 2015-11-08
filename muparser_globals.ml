@@ -13,10 +13,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val print_system : int -> int -> Format.formatter -> Ast.t_system -> unit
+let encoding = Hashtbl.create 47
 
-(** {2 Oracle interface } *)
+let st = ref [||]
 
-(** see {! Oracle.S} *)
+let env = ref Enumerative.empty_env
 
-include Oracle.S
+let new_state () =
+  st := Enumerative.new_empty_state !env

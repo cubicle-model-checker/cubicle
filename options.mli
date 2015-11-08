@@ -39,6 +39,12 @@ val refine : bool
 val stateless : bool
 val do_brab : bool
 val brab_up_to : bool
+val murphi : bool
+val murphi_uopts : string
+val mu_cmd : string
+val mu_opts : string
+val cpp_cmd : string
+
 
 val limit_forward_depth : bool
 val forward_depth : int

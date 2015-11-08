@@ -30,11 +30,30 @@ val smallest_to_resist_on_trace : Node.t list -> Node.t list
     checks if one is satisfiable on the finite model constructed by
     [search]. *)
 
+(** {2 Exported functions to construct enumeration based oracles } *)
+
+type env
+
+type state = int array
+
+val empty_env : env
+
+val mk_env : int -> t_system -> env
+
+val int_of_term : env -> Types.term -> int
+
+val next_id : env -> int
+
+val new_empty_state : env -> state
+
+val register_state : env -> state -> unit
+
+val size_of_env : env -> int
+
+val print_last : env -> unit
 
 (** {2 Oracle interface } *)
 
 (** see {! Oracle.S} *)
 
-val init : t_system -> unit
-
-val first_good_candidate : Node.t list -> Node.t option 
+include Oracle.S

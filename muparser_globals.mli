@@ -13,10 +13,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val print_system : int -> int -> Format.formatter -> Ast.t_system -> unit
+(* Don't edit this file, but muparser_prefix.mli instead! *)
 
-(** {2 Oracle interface } *)
+(** State being currently constructed *)
+val st : int array ref
 
-(** see {! Oracle.S} *)
+val env : Enumerative.env ref
 
-include Oracle.S
+(** Called by {!Mulexer} *)
+val new_state : unit -> unit
+
+(** Filled by {!Murphi.mk_encoding_table} *)
+val encoding : (string, int) Hashtbl.t

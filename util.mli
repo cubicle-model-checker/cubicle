@@ -45,7 +45,11 @@ val reset_gc_params : unit -> unit
     {!set_liberal_gc}. *)
 
 val syscall : string -> string
-(** Captures the output and exit status of a unix command *)
+(** Captures the output of a unix command *)
+
+val syscall_full : string -> string * string * Unix.process_status
+(** Captures the standard and error output of a unix command with its exit
+    status *)
 
 val remove_trailing_whitespaces_end : string -> string
 

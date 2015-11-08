@@ -35,11 +35,17 @@ module HLI = Hashtbl.Make (struct
   let hash = Hashtbl.hash
 end)
 
+module SI = Set.Make (struct
+    type t = int
+    let compare = Pervasives.compare
+  end)
 
 module SLI = Set.Make (struct
     type t = int list
     let compare = Pervasives.compare
   end)
+
+module TMap = Map.Make (Term)
 
 type state = int array
 
@@ -145,6 +151,7 @@ type env = {
   minf_int_abstr : int;
   proc_substates : int list HLI.t;
   reverse_proc_substates : int list HI.t;
+  partial_order : int list list;
 
   table_size : int;
   mutable explicit_states : unit HST.t;
@@ -172,6 +179,7 @@ let empty_env = {
   minf_int_abstr = 0;
   proc_substates = HLI.create 0;
   reverse_proc_substates = HI.create 0;
+  partial_order = [];
 
   table_size = 0;
   explicit_states = HST.create 0;
@@ -210,6 +218,7 @@ let id_to_term env id =
 let state_to_cube env st =
   let i = ref 0 in
   Array.fold_left (fun sa sti ->
+      eprintf "%d -> %d@." !i sti;
     let sa = 
       if sti <> -1 then
 	let t1 = id_to_term env !i in
@@ -311,8 +320,10 @@ let apply_subst env st sigma =
 
 let is_proc env v = env.first_proc <= v && v < env.extra_proc
 
-let normalize_state env st =
-  (* let old = Array.copy st in *)
+
+
+
+let find_subst_for_norm env st =
   let met = ref [] in
   let remaining = ref env.proc_ids in
   let sigma = HI.create env.model_cardinal in
@@ -330,7 +341,35 @@ let normalize_state env st =
   done;
   let not_met = List.filter (fun v -> not (List.mem v !met)) env.proc_ids in
   List.iter2 (fun v r -> if v <> r then HI.add sigma v r) not_met !remaining;
-  apply_subst_in_place env st sigma
+  sigma
+
+let rec map_with_procs acc procs ord = match procs, ord with
+  | p :: rp, (_,_,o) :: ro -> map_with_procs ((p, o) :: acc) rp ro
+  | _, [] -> List.rev acc
+  | [], _ -> assert false
+
+let find_subst_for_norm2 sigma env st =
+  (* let sigma = HI.create env.model_cardinal in *)
+  List.iter (fun order ->
+      HI.clear sigma;
+      List.map (fun i ->
+          let lpi = List.hd (List.rev (HI.find env.reverse_proc_substates i)) in
+          (i, st.(i), lpi)
+        ) order
+      |> List.stable_sort (fun (_, v1, _) (_, v2, _) -> compare v1 v2)
+      |> map_with_procs [] env.proc_ids
+      |> List.iter (fun (x, y) ->
+          (* let y = try HI.find sigma y with Not_found -> y in *)
+          if x <> y then HI.replace sigma x y);
+      apply_subst_in_place env st sigma;
+    ) [List.hd env.partial_order]
+  
+
+let normalize_state env st =
+  (* let old = Array.copy st in *)
+  let sigma = find_subst_for_norm env st in
+  apply_subst_in_place env st sigma (* ; *)
+  (* find_subst_for_norm2 sigma env st *)
   (* ; *)
   (* let same = ref true in *)
   (* for i = 0 to Array.length st - 1 do *)
@@ -411,7 +450,31 @@ let add_pos_to_proc_substate ht
       | _ -> ()
     )
 
-let init_tables procs s =
+let partial_order ht var_terms nb_vars =
+  (* let orders = HI.create nb_vars in *)
+  let map_orders =
+    Term.Set.fold (fun t acc -> match t with
+        | Access (a, ps) ->
+          let i = HT.find ht t in
+          let ups = List.rev (List.tl (List.rev ps)) in
+          let t_par = Access (a, ups) in
+          let others = try TMap.find t_par acc with Not_found -> SI.empty in
+          let pord = SI.add i others in
+          TMap.add t_par pord acc
+        | _ -> acc
+      ) var_terms TMap.empty 
+  in
+  (* let rec populate_orders = function *)
+  (*   | [] -> () *)
+  (*   | i :: after -> HI.add i after; populate_orders after *)
+  (* in *)
+  let orders = TMap.fold (fun _ one_order acc ->
+      (SI.elements one_order) :: acc
+    ) map_orders [] in
+  List.sort (fun l1 l2 -> compare (List.hd l1) (List.hd l2)) orders
+
+
+let init_tables ?(alloc=true) procs s =
   let var_terms = Forward.all_var_terms procs s in
   let proc_terms = terms_of_procs procs in (* constantes *)
   let constr_terms = all_constr_terms () in (* constantes *)
@@ -484,9 +547,10 @@ let init_tables procs s =
 
     proc_substates = proc_substates;
     reverse_proc_substates = reverse_proc_substates;
+    partial_order = partial_order ht var_terms nb_vars;
 
     table_size = tsize;
-    explicit_states = HST.create tsize;
+    explicit_states = HST.create (if alloc then tsize else 0);
     states = [];
   }
 
@@ -1141,7 +1205,7 @@ let finalize_search env =
   TimeForward.pause ()
 
 
-let install_sigint env =
+let install_sigint () =
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
@@ -1162,7 +1226,7 @@ let search procs init =
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
-  install_sigint env;
+  install_sigint ();
   begin try
     forward_bfs init procs env st_inits;
     with Exit -> ()
@@ -1411,3 +1475,31 @@ let first_good_candidate candidates =
   match fast_resist_on_trace candidates with
   | c :: _ -> Some c
   | [] -> None
+
+let mk_env nbprocs sys =
+  (* create mappings but don't allocate hashtable *)
+  let procs = Variable.give_procs nbprocs in
+  let env = init_tables ~alloc:false procs sys in
+  global_envs := env :: !global_envs;
+  env
+
+let int_of_term env t =
+  (* if Term.type_of t == Smt.Type.type_int then *)
+  HT.find env.id_terms t
+
+let next_id env = env.pinf_int_abstr + 1
+
+let new_empty_state env =
+  Array.make env.nb_vars (-1)
+  (* env.states <- st :: env.states; *)
+  (* eprintf "nb states : %d@." (List.length env.states); *)
+  (* st *)
+
+let register_state env st = env.states <- st :: env.states
+
+let size_of_env env = env.table_size
+
+let print_last env =
+  match env.states with
+  | st :: _ -> eprintf "--- @[<hov>%a@]@." SAtom.print (state_to_cube env st)
+  | _ -> ()

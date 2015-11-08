@@ -42,18 +42,16 @@ let print_constants fmt nbprocs abstr =
 let print_scalarset fmt num =
   fprintf fmt "scalarset(%s)" num
 
-let print_subrange fmt num =
-  fprintf fmt "0 .. %s" num
+let print_subrange l fmt num =
+  fprintf fmt "%d .. %s" l num
 
 let print_enum fmt constructors =
   fprintf fmt "enum {@[<hov>%a@]}" (print_list Hstring.print ",@ ") constructors
 
-
-let print_type fmt t =
-  if t == Smt.Type.type_proc then
-    fprintf fmt "%a : %a;" Hstring.print t print_scalarset "PROC_NUM"
+let print_type_def fmt t =
+  if t == Smt.Type.type_proc then ()
   else if t == Smt.Type.type_int then
-    fprintf fmt "%a : %a;" Hstring.print t print_subrange "ABSTR_NUM"
+    fprintf fmt "%a : %a;" Hstring.print t (print_subrange 0) "ABSTR_NUM"
   else if t == Smt.Type.type_bool then
     fprintf fmt "%a : boolean;" Hstring.print t
   else if t == Smt.Type.type_real then ()
@@ -63,25 +61,48 @@ let print_type fmt t =
   | constructors -> (* sum type *)
     fprintf fmt "%a : %a;" Hstring.print t print_enum constructors
 
+let proc_prefix = ref "proc_"
+let proc_elem = ref "proc"
 
-let print_types fmt () =
+let print_type fmt ty =
+  if ty == Smt.Type.type_proc then
+    fprintf fmt "%s" !proc_elem
+  else Hstring.print fmt ty
+
+let print_type_proc ~proc_ord fmt extra_procs =
+  if extra_procs <> [] then begin
+    fprintf fmt "p : %a;@ " print_scalarset "PROC_NUM";
+    (* proc_prefix := "p_"; *)
+    fprintf fmt "proc : union {p, %a};" print_enum extra_procs;
+    (* proc_elem := "proc_plus"; *)
+  end
+  else if proc_ord then begin
+    proc_prefix := "";
+    fprintf fmt "proc : %a;" (print_subrange 1) "PROC_NUM"
+  end
+  else
+    fprintf fmt "proc : %a;" print_scalarset "PROC_NUM"
+
+let print_types ~proc_ord fmt extra_procs =
   fprintf fmt "@[<v 2>type@ ";
-  print_list print_type "@ " fmt (Smt.Type.declared_types ());
+  fprintf fmt "%a@ " (print_type_proc ~proc_ord) extra_procs;
+  print_list print_type_def "@ " fmt (Smt.Type.declared_types ());
   fprintf fmt "@]@."
 
 
 let rec print_var_type fmt = function
-  | [], ty -> fprintf fmt "%a" Hstring.print ty
+  | [], ty -> print_type fmt ty
   | a :: args, ty ->
     fprintf fmt "array [ %a ] of %a"
-      Hstring.print a print_var_type (args, ty)
+      print_type a print_var_type (args, ty)
 
 let print_var_def fmt v =
   let ty = Smt.Symbol.type_of v in
   fprintf fmt "%a : %a;" Hstring.print v print_var_type ty
 
 
-let print_vars_defs fmt l =
+let print_vars_defs extra_procs fmt l =
+  let l = List.filter (fun v -> not (Hstring.list_mem v extra_procs)) l in 
   fprintf fmt "@[<v 2>var@ ";
   print_list print_var_def "@ " fmt l;
   fprintf fmt "@]@."
@@ -128,6 +149,18 @@ let rec print_dnf fmt = print_list print_satom "@ | " fmt
 (* Printing initial states *)
 (***************************)
 
+let extra_procs acc sa =
+  SAtom.fold (fun a acc -> match a with
+      | Atom.Comp (Elem(extra, Glob), Neq, Elem(_, Var)) ->
+        (* Assume an extra process if a disequality is mentioned on
+           type proc in init formula : change this to something more robust *)
+        Hstring.HSet.add extra acc
+      | _ -> acc) sa acc
+
+let extra_procs_of_sys sys =
+  List.fold_left extra_procs Hstring.HSet.empty (snd sys.t_init)
+  |> Hstring.HSet.elements
+
 let rec is_const = function
   | Const _ -> true
   | Elem (_, (Var | Constr)) -> true
@@ -151,19 +184,32 @@ let mk_defined_values sa =
             else rels, related
           ) related (T.Set.add x1 (T.Set.singleton x2), related) in
         defined, to_print, STS.add rels related
+
+      (* | Atom.Comp (Elem(extra, Glob), Neq, Elem(_, Var)) -> *)
+      (*   (\* Assume an extra process if a disequality is mentioned on *)
+      (*      type proc in init formula : change this to something more robust *\) *)
+      (*   eprintf "\n\nDEFINED: %a\n@." Hstring.print extra; *)
+      (*   extra :: defined, to_print, related *)
+
       | A.True -> defined, to_print, related
       | A.False -> raise Exit
       | A.Ite _ -> assert false
       | _ -> defined, to_print, related
     ) sa ([], [], STS.empty)
 
+module SM = Map.Make(String)
 
 let mk_fresh =
   let i = ref 0 in
+  let p_proc = "p_proc" in
   fun ty ->
-    incr i;
-    "d" ^ string_of_int !i ^ "_" ^ Hstring.view ty
-
+    (* create only one proc fresh variable for init *)
+    if ty == Smt.Type.type_proc then p_proc
+    else begin
+      incr i;
+      "d" ^ string_of_int !i ^ "_" ^ Hstring.view ty
+    end
+    
 
 let mk_related_init_values =
   STS.fold (fun rel (defined, to_print, freshs) ->
@@ -178,7 +224,7 @@ let mk_related_init_values =
             | _ -> assert false
           ) rel (defined, to_print) in
 
-      defined, to_print, (f, ty) :: freshs
+      defined, to_print, SM.add f ty freshs
     )
 
 
@@ -192,25 +238,26 @@ let mk_undefinied_init_values qvars defined =
           | [] -> Elem (v, Glob)
           | _ -> Access (v, qvars) in
         asprintf "%a := %s;" print_term t f :: to_print,
-        (f, ty) :: freshs
+        SM.add f ty freshs
     )
 
 
 let rec print_init_freshs fmt = function
   | [] -> assert false
-  | [f, ty] -> fprintf fmt "%s : %a" f Hstring.print ty
+  | [f, ty] ->
+      fprintf fmt "%s : %a" f print_type ty
   | (f, ty) :: rf ->
-    fprintf fmt "%s : %a;@ %a" f Hstring.print ty print_init_freshs rf
+    fprintf fmt "%s : %a;@ %a" f print_type ty print_init_freshs rf
 
 
 let print_init_startstate fmt freshs init_name =
-  if freshs = [] then begin
+  if SM.is_empty freshs then begin
     fprintf fmt "@[<v 2>startstate \"%s\"@ " init_name;
     fun () -> fprintf fmt "@]@ end;@."
   end
   else begin
     fprintf fmt "@[<v 2>ruleset @[<hov>%a@] do startstate \"%s\"@ "
-      print_init_freshs freshs init_name;
+      print_init_freshs (SM.bindings freshs) init_name;
     fun () -> fprintf fmt "@]@ end end;@."
   end
 
@@ -236,17 +283,21 @@ let print_init globals arrays qvars fmt sa =
 
   (* initial values for quantified part *)
   let defined_q, to_print_q, related_q = mk_defined_values qsa in
-  let defined_q, to_print_q, freshs =
-    mk_related_init_values related_q (defined_q, to_print_q, []) in
-  let to_print_q, freshs =
-    mk_undefinied_init_values qvars defined_q (to_print_q, freshs) arrays in
-
   (* initial values for unquantified part *)
   let defined_g, to_print_g, related_g = mk_defined_values gsa in
-  let defined_g, to_print_g, freshs =
-    mk_related_init_values related_g (defined_g, to_print_g, freshs) in
+  let defined = List.rev_append defined_q defined_g in
+  
+  (* initial values for quantified part *)
+  let defined, to_print_q, freshs =
+    mk_related_init_values related_q (defined, to_print_q, SM.empty) in
+  let to_print_q, freshs =
+    mk_undefinied_init_values qvars defined (to_print_q, freshs) arrays in
+
+  (* initial values for unquantified part *)
+  let defined, to_print_g, freshs =
+    mk_related_init_values related_g (defined, to_print_g, freshs) in
   let to_print_g, freshs =
-    mk_undefinied_init_values qvars defined_g (to_print_g, freshs) globals in
+    mk_undefinied_init_values qvars defined (to_print_g, freshs) globals in
 
   let close_startstate = print_init_startstate fmt freshs "Init" in
   let close_fors = print_fors fmt qvars in
@@ -305,10 +356,18 @@ let print_update fmt { up_arr; up_arg; up_swts } =
 
 let print_updates fmt = List.iter (fprintf fmt "%a@ " print_update)
 
-let print_nondet fmt v =
-  fprintf fmt "undefine %a;" Hstring.print v
+let print_nondet cpt fmt v =
+  fprintf fmt "%a := d%d;" Hstring.print v cpt
 
-let print_nondets = print_list print_nondet "@ "
+let print_nondets ndts =
+  let cpt = ref 0 in
+  print_list (fun n -> incr cpt; print_nondet !cpt n) "@ " ndts
+
+let print_nondet_undef fmt v =
+  fprintf fmt "undefine %a;" Hstring.print v
+  (* fprintf fmt "clear %a;" Hstring.print v *)
+
+let print_nondets = print_list print_nondet_undef "@ "
 
 
 let print_forall fmt qv =
@@ -353,28 +412,46 @@ let print_guard fmt { tr_args; tr_reqs; tr_ureq } =
   (* fprintf fmt "@]\n" *)
 
 
+let make_mu_trans_args args nondets =
+  let acc =
+    List.fold_left (fun acc v ->
+      (v, !proc_elem) :: acc
+      ) [] args
+  in
+  let _, acc =
+    List.fold_left (fun (cpt, acc) v ->
+      let d = Hstring.view (snd (Smt.Symbol.type_of v)) in
+      let dv = Hstring.make ("d" ^ string_of_int cpt) in
+      cpt + 1, (dv, d) :: acc
+      ) (1, acc) nondets
+  in
+  List.rev acc
+      
+
 let rec print_trans_args fmt = function
   | [] -> assert false
-  | [v] -> fprintf fmt "%a : proc" Variable.print v
-  | v :: args ->
-    fprintf fmt "%a : proc;@ %a" Variable.print v print_trans_args args
+  | [v, d] -> fprintf fmt "%a : %s" Variable.print v d
+  | (v, d) :: args ->
+    fprintf fmt "%a : %s;@ %a" Variable.print v d print_trans_args args
 
 
-let print_ruleset fmt args trans_name =
+let print_ruleset fmt args nondets trans_name =
   if args = [] then begin
     fprintf fmt "@[<v 2>rule \"%s\"@ " trans_name;
     fun () -> fprintf fmt "@]@ end;@."
   end
   else begin
+    let all_args_ty = make_mu_trans_args args [] in
     fprintf fmt "@[<v 2>ruleset @[<hov>%a@] do rule \"%s\"@ "
-      print_trans_args args trans_name;
+      print_trans_args all_args_ty trans_name;
     fun () -> fprintf fmt "@]@ end end;@."
   end
 
 
 let print_transition fmt t =
   let args = t.tr_args in
-  let close_ruleset = print_ruleset fmt args (Hstring.view t.tr_name) in
+  let close_ruleset =
+    print_ruleset fmt args t.tr_nondets (Hstring.view t.tr_name) in
   print_guard fmt t;
   fprintf fmt "@]@.@[<v 2>==>@ ";
   fprintf fmt "%a%a%a"
@@ -415,7 +492,32 @@ let print_if_distinct fmt procs =
         Variable.print x Variable.print y print_pairs r
   in
   print_pairs fmt pairs
-  
+
+
+let state_vars_of_unsafe sa =
+  SAtom.fold (fun a acc -> match a with
+      | A.Comp ((Elem(_, Glob) | Access _ as t1), _,
+                (Elem(_, Glob) | Access _ as t2)) ->
+        T.Set.add t1 @@ T.Set.add t2 acc
+      | A.Comp ((Elem(_, Glob) | Access _ as t), _, _)
+      | A.Comp (_, _, (Elem(_, Glob) | Access _ as t)) ->
+        T.Set.add t acc
+      | _ -> acc
+    ) sa T.Set.empty
+
+let print_not_undefined args fmt sa =
+  let tvs = state_vars_of_unsafe sa in
+  if not (T.Set.is_empty tvs) then
+    let rec print_notundef fmt = function
+      | [] -> ()
+      | [t] ->
+        fprintf fmt "!isundefined(%a) %s " print_term t
+          (match args with _::_::_ -> "&" | _ -> "->")
+      | t :: r ->
+        fprintf fmt "!isundefined(%a) &@ %a" print_term t print_notundef r
+    in
+    print_notundef fmt (T.Set.elements tvs)
+
 
 let print_unsafe =
   let cpt = ref 0 in
@@ -431,6 +533,7 @@ let print_unsafe =
       print_invariant fmt ("not unsafe[" ^ string_of_int !cpt ^ "]") in
     incr cpt;
     let close_foralls = print_foralls fmt rprocs in
+    print_not_undefined rprocs fmt renamed_sa;
     print_if_distinct fmt rprocs;
     fprintf fmt "!(@[<hov>%a@])" print_satom renamed_sa;
     close_foralls ();
@@ -476,12 +579,277 @@ let remove_underscores_trans t =
 let remove_underscores sys =
   { sys with t_trans = List.map remove_underscores_trans sys.t_trans }
 
+
+(* Checking if the system uses the fact that processes are ordered *)
+
+let ordered_procs_atom = function
+  | A.Comp (Elem(_, Var), (Le | Lt), _)
+  | A.Comp (_, (Le | Lt), Elem(_, Var)) -> true
+  | A.Comp (x, (Le | Lt), y) when
+      Term.type_of x == Smt.Type.type_proc ||
+      Term.type_of y == Smt.Type.type_proc -> true
+  | _ -> false
+
+let ordered_procs_satom = SAtom.exists ordered_procs_atom
+let ordered_procs_node_cube n = ordered_procs_satom n.cube.Cube.litterals
+let ordered_procs_dnf = List.exists ordered_procs_satom
+let ordered_procs_swts = List.exists (fun (c, _) -> ordered_procs_satom c)
+let ordered_procs_globu = function
+  | UTerm _ -> false
+  | UCase swts -> ordered_procs_swts swts
+let ordered_procs_up u = ordered_procs_swts u.up_swts
+
+let ordered_procs_trans { tr_info = t } =
+  ordered_procs_satom t.tr_reqs
+  || List.exists (fun (_, dnf) -> ordered_procs_dnf dnf) t.tr_ureq
+  || List.exists (fun (_, gu) -> ordered_procs_globu gu) t.tr_assigns
+  || List.exists ordered_procs_up t.tr_upds
+
+let ordered_procs_sys s =
+  ordered_procs_dnf (snd s.t_init)
+  || List.exists ordered_procs_node_cube s.t_invs
+  || List.exists ordered_procs_node_cube s.t_unsafe
+  || List.exists ordered_procs_trans s.t_trans
+
+
+(* Pretty printing system in Murphi syntax *)
+
 let print_system nbprocs abstr fmt sys =
   let sys = remove_underscores sys in
+  let proc_ord = ordered_procs_sys sys in
   print_constants fmt nbprocs abstr; pp_print_newline fmt ();
-  print_types fmt (); pp_print_newline fmt ();
-  print_vars_defs fmt (sys.t_globals @ sys.t_arrays); pp_print_newline fmt ();
+  print_types ~proc_ord fmt []; pp_print_newline fmt ();
+  print_vars_defs [] fmt (sys.t_globals @ sys.t_arrays);
+  pp_print_newline fmt ();
   print_inits fmt sys; pp_print_newline fmt ();
   print_transitions fmt sys.t_trans;
   print_unsafes fmt sys.t_unsafe
 
+
+
+(*****************)
+(* Murphi oracle *)
+(*****************)
+
+
+let mk_encoding_table eenv nbprocs abstr sys =
+  let table = Muparser_globals.encoding in
+  let procs = Variable.give_procs nbprocs in
+  let var_terms = Forward.all_var_terms procs sys |> Term.Set.elements in
+  let constr_terms =
+    List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ()) in
+  let proc_terms = List.map (fun x -> Elem (x, Var)) procs in
+
+  let imp = ref 1 in
+  let mu_procs =
+    List.map (fun _ ->
+        let mup = Hstring.make (!proc_prefix ^ string_of_int !imp) in
+        incr imp;
+        mup
+      ) procs in
+
+  let mu_sigma = List.combine procs mu_procs in
+  let mu_var_terms = List.map (Term.subst mu_sigma) var_terms in
+  let mu_constr_terms = constr_terms in (* no need to apply mu_sigma *)
+  let mu_proc_terms = List.map (Term.subst mu_sigma) proc_terms in
+  let mu_cub_terms =
+    List.combine
+      (mu_var_terms @ mu_constr_terms @ mu_proc_terms)
+      (var_terms @ constr_terms @ proc_terms) in
+  
+  (* let nbterms = *)
+  (*   List.(length var_terms + length constr_terms + length proc_terms) in *)
+  List.iter (fun (mu, t) ->
+      let s = asprintf "%a" print_term mu in
+      let id = Enumerative.int_of_term eenv t in
+      (* eprintf "adding %s -> %d@." s id; *)
+      Hashtbl.add table s id
+    ) mu_cub_terms;
+  let eid = ref (Enumerative.next_id eenv) in
+  List.iter (fun ty ->
+      if ty != Smt.Type.type_bool &&
+         ty != Smt.Type.type_int &&
+         ty != Smt.Type.type_real &&
+         ty != Smt.Type.type_proc &&
+         Smt.Type.constructors ty = [] then
+        for i = 1 to abstr do
+          let s = Hstring.view ty ^ "_" ^ string_of_int i in
+          (* eprintf "adding %s -> %d@." s !eid; *)
+          Hashtbl.add table s !eid;
+          incr eid
+        done
+    ) (Smt.Type.declared_types ());
+  (* adding undefined value *)
+  Hashtbl.add table "Undefined" (-1)
+  
+
+
+let init_parser nbprocs abstr sys =
+  let eenv = Enumerative.mk_env nbprocs sys in
+  Muparser_globals.env := eenv;
+  mk_encoding_table eenv nbprocs abstr sys
+
+(*****************************)
+(* Interruptions with Ctrl-C *)
+(*****************************)
+
+let install_sigint pid =
+  Sys.set_signal Sys.sigint 
+    (Sys.Signal_handle 
+       (fun _ ->
+          printf "\nKilling Murphi process pid %d@." pid;
+          Unix.kill pid Sys.sigterm;
+          printf "@{<b>@{<fg_red>ABORTING MURPHI!@}@} \
+                  Received SIGINT@.";
+          printf "Finalizing search.\n@.";
+          raise Exit;
+       ))
+
+
+let report_cmd_status name st out err =
+  match st with
+  | Unix.WEXITED 0 ->
+    if not quiet then printf "@{<b>[@{<fg_green>OK@}]@}@.";
+    if debug then printf "@{<fg_green>%s exited correctly@}@." name
+  | Unix.WEXITED c ->
+    eprintf "@{<fg_red>%s failure@} murphi exited with status %d@." name c;
+    eprintf "@{<b>%s standard output:@}\n%s\n\
+             @{<b>%s error output:@}\n%s@."
+      name out name err;
+    exit c
+  | Unix.WSIGNALED s ->
+    if debug then printf "@{<fg_red>%s killed@} by signal %d@." name s;
+    exit 1
+  | Unix.WSTOPPED s -> (* Stopped by signal *)
+    if debug then printf "@{<fg_red>%s stopped@} by signal %d@." name s;
+    exit 1
+
+
+(****************************************)
+(* Oracle interface (see {!Oracle.Sig}) *)
+(****************************************)
+
+let split_string s =
+  let i = ref 0 in
+  let n = String.length s in
+  let l = ref [] in
+  while !i < n do
+    let j = try String.index_from s !i ' ' with Not_found -> n in
+    let x, y = !i, j - !i in
+    if y <> 0 then l := String.sub s x y :: !l;
+    i := j + 1
+  done;
+  Array.of_list (List.rev !l)
+
+
+(* Print states and don't check for deadlock by default *)
+let muexe_opts = Array.append [| "-ta"; "-ndl" |] (split_string murphi_uopts)
+
+
+let init sys =
+
+  let extra_procs = extra_procs_of_sys sys in
+  let nbprocs = enumerative + List.length extra_procs in
+  let abstr = 2 in
+
+  let bname = Filename.basename file in
+  let name =
+    try Filename.chop_extension bname
+    with Invalid_argument _ -> bname in
+  (* Temporary file for writing murphi system *)
+  let mu_tmp = Filename.temp_file name ".m" in
+  (* let tmp_dir = Filename.dirname mu_tmp in *)
+  (* let mu_base = Filename.basename mu_tmp in *)
+  let mu_chop = Filename.chop_extension mu_tmp in
+  let mu_cpp = mu_chop  ^ ".cpp" in
+  let mu_exe = mu_chop in
+
+  let mu_ch = open_out mu_tmp in
+  let mu_fmt = formatter_of_out_channel mu_ch in
+
+  print_system nbprocs abstr mu_fmt sys;
+  
+  (* Close murphi file *)
+  close_out mu_ch;
+
+  if debug then printf "Murphi system generated in %s@." mu_tmp;
+
+  init_parser nbprocs abstr sys;
+
+  (* Running murphi compiler *)
+  if not quiet then printf "Running murphi compiler @?";
+  let mu_to_cpp_out, mu_to_cpp_err, mu_to_cpp_status  =
+    syscall_full (String.concat " " [mu_cmd; mu_opts; mu_tmp]) in
+
+  report_cmd_status (sprintf "Murphi (%s)" mu_cmd)
+    mu_to_cpp_status mu_to_cpp_out mu_to_cpp_err;
+  
+  (* Running C compiler *)
+  if not quiet then printf "Running C++ compiler @?";
+  let cpp_out, cpp_err, cpp_status =
+    syscall_full (String.concat " " [cpp_cmd; "-o"; mu_exe; mu_cpp]) in
+
+  report_cmd_status (sprintf "C++ compiler (%s)" cpp_cmd)
+    cpp_status cpp_out cpp_err;
+
+  
+  (* Create pipes for input, output and error output *)
+  let muexe_stdin_in, muexe_stdin_out = Unix.pipe () in
+  let muexe_stdout_in, muexe_stdout_out = Unix.pipe () in 
+  let muexe_stderr_in, muexe_stderr_out = Unix.pipe () in 
+
+  let muexe_cmd = Array.append [| mu_exe |] muexe_opts in
+
+  if not quiet then
+    printf "Model checking murphi model @{<b>%s@}@." (Filename.basename mu_exe);
+  
+  (* Create muexe process that will run in parallel *)
+  let muexe_pid = 
+    Unix.create_process mu_exe muexe_cmd
+      muexe_stdin_in muexe_stdout_out muexe_stderr_out in
+
+  (* Close Cubicle's end of the pipe which has been duplicated by the Muprhi
+     process *)
+  Unix.close muexe_stdin_in;
+  Unix.close muexe_stdout_out; 
+  Unix.close muexe_stderr_out; 
+
+  install_sigint muexe_pid;
+
+  (try
+     (* Get an output channel to read from murphi's stdout *)
+     let muexe_stdout_ch = Unix.in_channel_of_descr muexe_stdout_in in
+
+     (* Create a lexing buffer on murphi's stdout *)
+     let muexe_lexbuf = Lexing.from_channel muexe_stdout_ch in
+
+     (* Parse the ouptut of the executable created by murphi.
+        This populates automatically the states in {!Enumerative}. *)
+     Muparser.states Mulexer.token muexe_lexbuf;
+
+     (* Wait for the murphi process to terminate *)
+     let _, muexe_status = Unix.waitpid [] muexe_pid in
+
+     (* Check termination status of muexe *)
+     begin match muexe_status with
+       | Unix.WEXITED c -> (* Exit with code *)
+         if debug then
+           if c = 0 then printf "@{<fg_green>Murphi exited correctly@}@."
+           else printf "@{<fg_red>Murphi exited with code %d@}@." c
+       | Unix.WSIGNALED s -> (* Killed by signal *)
+         if debug then printf "@{<fg_red>Murphi killed@} by signal %d@." s
+       | Unix.WSTOPPED s -> (* Stopped by signal *)
+         if debug then printf "@{<fg_yellow>Murphi stopped@} by signal %d@." s
+     end;
+   with
+     Exit -> (* We killed murphi ourselves *) ());
+  
+  (* Close file descriptors of murphi *)
+  Unix.close muexe_stdin_out;
+  Unix.close muexe_stdout_in;
+  Unix.close muexe_stderr_in
+
+
+(* Use the checking of candidates implemented by Enumerative *)
+
+let first_good_candidate = Enumerative.first_good_candidate

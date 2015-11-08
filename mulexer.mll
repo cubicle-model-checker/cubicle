@@ -14,8 +14,11 @@
 (**************************************************************************)
 
 {
+  open Options
   open Lexing
   open Muparser
+
+  let print_mu = ref debug
 
   let string_buf = Buffer.create 1024
 
@@ -31,23 +34,27 @@ let ident = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 rule token = parse
   | "State" space* (integer as n) ":" newline
-      { Format.printf "lexing state %s@." n;
+      { Muparser_globals.new_state ();
         Muparser.state state lexbuf;
         STATE (int_of_string n) }
+  | "Progress Report:" newline 
+      { print_mu := !print_mu || not quiet; token lexbuf }
   | eof 
       { EOF }
+  | newline
+      { if !print_mu then print_newline (); token lexbuf }
   | _ as c
-      { print_char c; token lexbuf }
+      { if !print_mu then print_char c; token lexbuf }
 
 and state = parse
   | newline space* newline
-      { Format.printf "ENDSTATE@."; ENDSTATE }
+      { ENDSTATE }
   | space+ | newline
       { state lexbuf }
   | ident as id
       { (* Format.printf "lexing %s@." id; *) IDENT id }
   | integer as n 
-      { (* Format.printf "lexing %s@." n; *) INT (int_of_string n) }
+      { (* Format.printf "lexing %s@." n; *) INT n }
   | '[' { LEFTSQ }
   | ']' { RIGHTSQ }
   | ':' { COLON }

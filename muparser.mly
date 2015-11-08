@@ -14,21 +14,16 @@
 /**************************************************************************/
 
 %{
-
+  open Options
   open Parsing
   open Format
-
-  let st = ref 0
-
-  let new_state () = incr st
-
-  let register_state () = printf "  finished %d@." !st
+  open Muparser_globals
 
 %}
 
 %token ENDSTATE LEFTSQ RIGHTSQ COLON EOF
 %token <string> IDENT
-%token <int> INT
+%token <string> INT
 %token <int> STATE
 
 %type <unit> states
@@ -51,11 +46,14 @@ state_list:
 ;
 
 statenb:
-  | STATE { printf ">> %d@." $1 }
+  | STATE { if max_forward <> -1 && $1 > max_forward then
+              Unix.kill (Unix.getpid ()) Sys.sigint
+    (* printf "%d@." $1 *) }
 ;
   
 state:
-  | affectations ENDSTATE { register_state () }
+  | affectations ENDSTATE { Enumerative.register_state !env !st
+    (* Enumerative.print_last !Muparser_globals.env *) }
 ;
 
 /*
@@ -71,16 +69,23 @@ affectations:
 
 value:
   | IDENT { $1 }
-  | INT { string_of_int $1 }
+  | INT { $1 }
 ;
 
 var:
   | IDENT { $1 }
-  | IDENT LEFTSQ IDENT RIGHTSQ { $1 ^ "[" ^ $3 ^ "]" }
+  | var LEFTSQ INT RIGHTSQ { $1 ^ "[" ^ $3 ^ "]" }
+  | var LEFTSQ IDENT RIGHTSQ { $1 ^ "[" ^ $3 ^ "]" }
 ;
 
 affectation:
-  | var COLON value { (* printf "%s -> %s\n" $1 $3 *) () }
+  | var COLON value
+    { try
+        let id_var = Hashtbl.find encoding $1 in
+        let id_value = Hashtbl.find encoding $3 in
+        !st.(id_var) <- id_value
+      with Not_found -> ()
+    }
 ;
 
 

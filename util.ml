@@ -67,8 +67,30 @@ let syscall cmd =
        Buffer.add_channel buf ic 1
      done
    with End_of_file -> ());
-  let _ = Unix.close_process (ic, oc) in
-  (Buffer.contents buf)
+  ignore(Unix.close_process (ic, oc));
+  Buffer.contents buf
+
+
+let syscall_full cmd =
+  let inc, outc, errc = Unix.open_process_full cmd (Unix.environment ()) in  
+  let buf = Buffer.create 16 in
+  let buferr = Buffer.create 16 in
+  (try
+     while true do
+       Buffer.add_channel buf inc 1
+     done
+   with End_of_file -> ());
+  (try
+     while true do
+       Buffer.add_channel buferr errc 1
+     done
+   with End_of_file -> ());
+  let status = Unix.close_process_full (inc, outc, errc) in
+  let s =  Buffer.contents buferr in
+  let l = String.length s in
+  let serr = if l > 0 then String.sub s 0 ((String.length s) - 1) else s in
+  (Buffer.contents buf, serr, status)
+
 
 let rec remove_trailing_whitespaces_end str =
   if String.length str > 0 && 
