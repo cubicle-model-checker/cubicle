@@ -50,6 +50,8 @@ val register_state : env -> state -> unit
 
 val size_of_env : env -> int
 
+val no_scan_states : env -> unit
+
 val print_last : env -> unit
 
 (** {2 Oracle interface } *)

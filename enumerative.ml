@@ -1180,6 +1180,10 @@ let shuffle d =
     let sond = List.sort compare nd in
     List.rev_map snd sond
 
+let no_scan_states env =
+  (* Prevent the GC from scanning the list env.states as it is going to be
+     kept in memory all the time. *)
+  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states
 
 let finalize_search env =
   let st = HST.stats env.explicit_states in
@@ -1196,9 +1200,7 @@ let finalize_search env =
       st.Hashtbl.bucket_histogram;
     printf "@.";
   end;
-  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states;
-  (* Prevent the GC from scanning the list env.states as it is going to be
-     kept in memory all the time. *)
+  no_scan_states env;
   env.explicit_states <- HST.create 1;
   Gc.compact ();
   Gc.full_major ();

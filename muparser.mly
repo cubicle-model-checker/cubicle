@@ -21,10 +21,14 @@
 
 %}
 
-%token ENDSTATE LEFTSQ RIGHTSQ COLON EOF
+%token ENDSTATE EOF
+%token <string * string> AFFECTATION
+%token <int> STATE                         
+/*
+%token LEFTSQ RIGHTSQ COLON
 %token <string> IDENT
 %token <string> INT
-%token <int> STATE
+*/
 
 %type <unit> states
 %start states
@@ -67,6 +71,7 @@ affectations:
   | affectation affectations { () }
 ;
 
+/*
 value:
   | IDENT { $1 }
   | INT { $1 }
@@ -77,8 +82,20 @@ var:
   | var LEFTSQ INT RIGHTSQ { $1 ^ "[" ^ $3 ^ "]" }
   | var LEFTSQ IDENT RIGHTSQ { $1 ^ "[" ^ $3 ^ "]" }
 ;
+*/
 
 affectation:
+  | AFFECTATION
+    { try
+        let v, x = $1 in
+        (* eprintf "%s -> %s@." v x; *)
+        let id_var = Hashtbl.find encoding v in
+        let id_value = Hashtbl.find encoding x in
+        !st.(id_var) <- id_value
+      with Not_found -> ()
+    }
+  /* less efficient to parse these tokens */
+  /*                     
   | var COLON value
     { try
         let id_var = Hashtbl.find encoding $1 in
@@ -86,6 +103,7 @@ affectation:
         !st.(id_var) <- id_value
       with Not_found -> ()
     }
+  */
 ;
 
 

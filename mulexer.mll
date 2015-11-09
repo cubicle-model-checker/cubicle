@@ -31,7 +31,8 @@ let space = [' ' '\t' '\r']
 let integer = ['0' - '9'] ['0' - '9']*
 let ident = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_' '.']*
 
-
+let var = ident ('[' (ident | integer) ']')*
+          
 rule token = parse
   | "State" space* (integer as n) ":" newline
       { Muparser_globals.new_state ();
@@ -51,13 +52,16 @@ and state = parse
       { ENDSTATE }
   | space+ | newline
       { state lexbuf }
-  | ident as id
-      { (* Format.printf "lexing %s@." id; *) IDENT id }
-  | integer as n 
-      { (* Format.printf "lexing %s@." n; *) INT n }
-  | '[' { LEFTSQ }
-  | ']' { RIGHTSQ }
-  | ':' { COLON }
+  | (var as v) ':' (ident | integer as x)
+      { AFFECTATION (v, x) }
+  (* Less efficient to generate tokens *)
+  (* | ident as id *)
+  (*     { (\* Format.printf "lexing %s@." id; *\) IDENT id } *)
+  (* | integer as n  *)
+  (*     { (\* Format.printf "lexing %s@." n; *\) INT n } *)
+  (* | '[' { LEFTSQ } *)
+  (* | ']' { RIGHTSQ } *)
+  (* | ':' { COLON } *)
   | _ as c
       { raise (Lexical_error ("illegal character: " ^ String.make 1 c)) }
 

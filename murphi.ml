@@ -21,8 +21,83 @@ open Util
 
 module A = Atom
 module T = Term
+module H = Hstring.H
+
+let use_short_names = true
+let use_even_shorter_names = true
+let use_undefined = true
+let use_undef_nondets = false
+
+let proc_type_name = if use_short_names then "N" else "proc"
+let state_prefix = if use_short_names then "S" else "state_"
+let prev_prefix = if use_short_names then "P" else "prev"
+let sprefix prev = if prev then prev_prefix else state_prefix
+
+let array_prefix = "A"
+let var_prefix = "V"
+let constr_prefix = "C"
+
+let short_names = H.create 47
+    
+let mk_short_names sys =
+  let constrs =
+    List.filter (fun c -> c != T.htrue && c != T.hfalse)
+      (Smt.Type.all_constructors ()) |> List.rev in
+  let cpt = ref 1 in
+  List.iter (fun c ->
+      let c' = Hstring.make (constr_prefix ^ string_of_int !cpt) in
+      incr cpt;
+      H.add short_names c c'
+    ) constrs;
+  cpt := 1;
+  List.iter (fun v ->
+      let v' = Hstring.make (var_prefix ^ string_of_int !cpt) in
+      incr cpt;
+      H.add short_names v v'
+    ) sys.t_globals;
+  cpt := 1;
+  List.iter (fun a ->
+      let a' = Hstring.make (array_prefix ^ string_of_int !cpt) in
+      incr cpt;
+      H.add short_names a a'
+    ) sys.t_arrays
 
 
+let letters = [| 'A'; 'B'; 'C'; 'D'; 'E'; 'F'; 'G'; 'H'; 'I'; 'J'; 'K'; 'L';
+                 'M'; 'O'; 'Q'; 'R'; 'T'; 'U'; 'V'; 'W'; 'X'; 'Y'; 'Z'|]
+
+let nb_letters = Array.length letters
+
+let next_name =
+  let cpt = ref 0 in
+  fun () ->
+    let d, r = !cpt / nb_letters, !cpt mod nb_letters in
+    incr cpt;
+    if d = 0 then sprintf "%c" letters.(r)
+    else  sprintf "%c%d" letters.(r) d
+
+let mk_shorter_names sys =
+  let constrs =
+    List.filter (fun c -> c != T.htrue && c != T.hfalse)
+      (Smt.Type.all_constructors ()) |> List.rev in
+  List.iter (fun n ->
+    let f = Hstring.make (next_name ()) in
+    H.add short_names n f
+  ) (sys.t_globals @ sys.t_arrays @ constrs)
+
+
+let mk_short_names =
+  if use_even_shorter_names then mk_shorter_names else mk_short_names
+
+
+let rec get_short_term t =
+  try match t with
+    | Elem(c, Constr) -> Elem(H.find short_names c, Constr) 
+    | Elem(v, Glob) -> Elem(H.find short_names v, Glob) 
+    | Access(x, xs) -> Access(H.find short_names x, xs)
+    | Arith (t', cs) -> Arith (get_short_term t', cs)
+    | _ -> t
+  with Not_found -> t
 
 let rec print_list print sep fmt = function
   | [] -> ()
@@ -46,6 +121,11 @@ let print_subrange l fmt num =
   fprintf fmt "%d .. %s" l num
 
 let print_enum fmt constructors =
+  let constructors =
+    if not use_short_names then constructors
+    else
+      List.map (fun c -> try H.find short_names c with Not_found -> c)
+        constructors in
   fprintf fmt "enum {@[<hov>%a@]}" (print_list Hstring.print ",@ ") constructors
 
 let print_type_def fmt t =
@@ -61,8 +141,8 @@ let print_type_def fmt t =
   | constructors -> (* sum type *)
     fprintf fmt "%a : %a;" Hstring.print t print_enum constructors
 
-let proc_prefix = ref "proc_"
-let proc_elem = ref "proc"
+let proc_prefix = ref (proc_type_name ^ "_")
+let proc_elem = ref proc_type_name
 
 let print_type fmt ty =
   if ty == Smt.Type.type_proc then
@@ -73,15 +153,15 @@ let print_type_proc ~proc_ord fmt extra_procs =
   if extra_procs <> [] then begin
     fprintf fmt "p : %a;@ " print_scalarset "PROC_NUM";
     (* proc_prefix := "p_"; *)
-    fprintf fmt "proc : union {p, %a};" print_enum extra_procs;
+    fprintf fmt "%s : union {p, %a};" proc_type_name print_enum extra_procs;
     (* proc_elem := "proc_plus"; *)
   end
   else if proc_ord then begin
     proc_prefix := "";
-    fprintf fmt "proc : %a;" (print_subrange 1) "PROC_NUM"
+    fprintf fmt "%s : %a;" proc_type_name (print_subrange 1) "PROC_NUM"
   end
   else
-    fprintf fmt "proc : %a;" print_scalarset "PROC_NUM"
+    fprintf fmt "%s : %a;" proc_type_name print_scalarset "PROC_NUM"
 
 let print_types ~proc_ord fmt extra_procs =
   fprintf fmt "@[<v 2>type@ ";
@@ -98,6 +178,10 @@ let rec print_var_type fmt = function
 
 let print_var_def fmt v =
   let ty = Smt.Symbol.type_of v in
+  let v =
+    if use_short_names then try H.find short_names v with Not_found -> v
+    else v
+  in
   fprintf fmt "%a : %a;" Hstring.print v print_var_type ty
 
 
@@ -107,13 +191,13 @@ let print_vars_defs extra_procs fmt l =
   print_list print_var_def "@ " fmt l;
   fprintf fmt "@]\n  end;@ @.";
   fprintf fmt "@[<v 2>var@ ";
-  fprintf fmt "state : STATE;@ ";
+  fprintf fmt "%s : STATE;@ " state_prefix;
   (* fprintf fmt "prev : STATE;@ "; *)
   fprintf fmt "@]@."
 
 
 let print_access ?(prev=false) fmt (a, args) =
-  fprintf fmt "%s%a" (if prev then "prev." else "state.") Hstring.print a;
+  fprintf fmt "%s.%a" (sprefix prev) Hstring.print a;
   List.iter (fprintf fmt "[%a]" Variable.print) args 
   
 let rec print_term' prev fmt = function
@@ -122,10 +206,14 @@ let rec print_term' prev fmt = function
   | Elem (b, Constr) when Hstring.equal b T.hfalse ->
     fprintf fmt "false"
   | Elem (v, Glob) ->
-    fprintf fmt "%s%a" (if prev then "prev." else "state.") Hstring.print v
+    fprintf fmt "%s.%a" (sprefix prev) Hstring.print v
   | Access (a, vars) -> print_access ~prev fmt (a, vars)
   | Arith (x, cs) -> fprintf fmt "%a%a" (print_term' prev) x T.print (Const cs)
   | t -> T.print fmt t
+
+let print_term' =
+  if not use_short_names then print_term'
+  else fun prev fmt t -> print_term' prev fmt (get_short_term t)
 
 let print_term_prev = print_term' true
 let print_term = print_term' false
@@ -137,11 +225,26 @@ let print_op fmt = function
   | Le -> fprintf fmt "<="
   | Lt -> fprintf fmt "<"
 
+let state_vars_of_atom = function
+  | A.Comp ((Elem(_, Glob) | Access _ as t1), _,
+            (Elem(_, Glob) | Access _ as t2)) ->
+    T.Set.add t1 @@ T.Set.singleton t2
+  | A.Comp ((Elem(_, Glob) | Access _ as t), _, _)
+  | A.Comp (_, _, (Elem(_, Glob) | Access _ as t)) ->
+    T.Set.singleton t
+  | _ -> T.Set.empty
 
 let print_atom prev fmt = function
   | A.True -> fprintf fmt "true"
   | A.False -> fprintf fmt "false"
-  | A.Comp (x, op, y) ->
+  | A.Comp (x, op, y) (* as a *) ->
+    (* let vars = state_vars_of_atom a |> T.Set.elements in *)
+    (* if vars <> [] then *)
+    (*   fprintf fmt "(%a | %a %a %a)" *)
+    (*     (print_list *)
+    (*        (fun fmt -> fprintf fmt "isundefined(%a)" (print_term' prev)) " | ") vars *)
+    (*     (print_term' prev) x print_op op (print_term' prev) y *)
+    (*   else *)
     fprintf fmt "%a %a %a" (print_term' prev) x print_op op (print_term' prev) y
   | _ -> assert false
 
@@ -220,7 +323,7 @@ let mk_fresh =
     if ty == Smt.Type.type_proc then p_proc
     else begin
       incr i;
-      "d" ^ string_of_int !i ^ "_" ^ Hstring.view ty
+      "d" ^ string_of_int !i ^ "_" ^ asprintf "%a" print_type ty
     end
     
 
@@ -240,9 +343,6 @@ let mk_related_init_values =
       defined, to_print, SM.add f ty freshs
     )
 
-
-let use_undefined = true
-
 let mk_undefinied_init_values qvars defined =
   List.fold_left (fun (to_print, freshs) v ->
       if Hstring.list_mem v defined then to_print, freshs
@@ -251,8 +351,14 @@ let mk_undefinied_init_values qvars defined =
         let t = match args with
           | [] -> Elem (v, Glob)
           | _ -> Access (v, qvars) in
+        if ty != Smt.Type.type_proc && Smt.Type.constructors ty <> [] then
+            asprintf "clear %a;" print_term t :: to_print, freshs
+        else
         if use_undefined then
-          asprintf "undefine %a;" print_term t :: to_print, freshs
+          if ty == Smt.Type.type_proc || Smt.Type.constructors ty = [] then
+            asprintf "undefine %a;" print_term t :: to_print, freshs
+          else
+            asprintf "clear %a;" print_term t :: to_print, freshs
         else
           let f = mk_fresh ty in
           asprintf "%a := %s;" print_term t f :: to_print,
@@ -281,7 +387,7 @@ let print_init_startstate fmt freshs init_name =
 
 
 let print_for fmt qv =
-  fprintf fmt "@[<v 2>for %a : proc do@ " Variable.print qv;
+  fprintf fmt "@[<v 2>for %a : %s do@ " Variable.print qv proc_type_name;
   fun () -> fprintf fmt "@]@ end;"
 
 
@@ -361,7 +467,8 @@ let print_swts ot fmt swts =
 let print_assign fmt (v, up) =
   let tv = Elem (v, Glob) in
   match up with
-  | UTerm t -> fprintf fmt "state.%a := %a;" Hstring.print v print_term_prev t
+  | UTerm t ->
+    fprintf fmt "%a := %a;" print_term (Elem(v,Glob)) print_term_prev t
   | UCase swts -> print_swts tv fmt swts
 
 let print_assigns fmt = List.iter (fprintf fmt "%a@ " print_assign)
@@ -376,21 +483,26 @@ let print_update fmt { up_arr; up_arg; up_swts } =
 let print_updates fmt = List.iter (fprintf fmt "%a@ " print_update)
 
 let print_nondet cpt fmt v =
-  fprintf fmt "%a := d%d;" Hstring.print v cpt
+  fprintf fmt "%a := d%d;" print_term (Elem(v,Glob)) cpt
 
 let print_nondets ndts =
   let cpt = ref 0 in
   print_list (fun n -> incr cpt; print_nondet !cpt n) "@ " ndts
 
 let print_nondet_undef fmt v =
-  fprintf fmt "undefine state.%a;" Hstring.print v
-  (* fprintf fmt "clear %a;" Hstring.print v *)
+  let _, ty = Smt.Symbol.type_of v in
+  if ty == Smt.Type.type_proc || Smt.Type.constructors ty = [] then
+    fprintf fmt "undefine %a;" print_term (Elem(v,Glob))
+  else
+    fprintf fmt "clear %a;" print_term (Elem(v,Glob))
 
-let print_nondets = print_list print_nondet_undef "@ "
+let print_nondets_undef = print_list print_nondet_undef "@ "
 
+let print_nondets =
+  if use_undef_nondets then print_nondets_undef else print_nondets
 
 let print_forall fmt qv =
-  fprintf fmt "@[<v 2>forall %a : proc do@ " Variable.print qv;
+  fprintf fmt "@[<v 2>forall %a : %s do@ " Variable.print qv proc_type_name;
   fun () -> fprintf fmt "@]@ end"
 
 
@@ -455,12 +567,13 @@ let rec print_trans_args fmt = function
 
 
 let print_ruleset fmt args nondets trans_name =
-  if args = [] then begin
+  let all_args_ty =
+    make_mu_trans_args args (if use_undef_nondets then [] else nondets) in
+  if all_args_ty = [] then begin
     fprintf fmt "@[<v 2>rule \"%s\"@ " trans_name;
     fun () -> fprintf fmt "@]@ end;@."
   end
   else begin
-    let all_args_ty = make_mu_trans_args args [] in
     fprintf fmt "@[<v 2>ruleset @[<hov>%a@] do rule \"%s\"@ "
       print_trans_args all_args_ty trans_name;
     fun () -> fprintf fmt "@]@ end end;@."
@@ -468,8 +581,8 @@ let print_ruleset fmt args nondets trans_name =
 
 
 let print_actions fmt t =
-  fprintf fmt "@[<v 2>var@ prev : STATE;@]@ ";
-  fprintf fmt "@[<v 2>begin@ prev := state;@ --@ ";
+  fprintf fmt "@[<v 2>var@ %s : STATE;@]@ " prev_prefix;
+  fprintf fmt "@[<v 2>begin@ %s := %s;@ --@ " prev_prefix state_prefix;
   fprintf fmt "%a%a%a"
     print_assigns t.tr_assigns
     print_updates t.tr_upds
@@ -534,16 +647,9 @@ let print_if_distinct fmt procs =
   in
   print_pairs fmt pairs
 
-
 let state_vars_of_unsafe sa =
-  SAtom.fold (fun a acc -> match a with
-      | A.Comp ((Elem(_, Glob) | Access _ as t1), _,
-                (Elem(_, Glob) | Access _ as t2)) ->
-        T.Set.add t1 @@ T.Set.add t2 acc
-      | A.Comp ((Elem(_, Glob) | Access _ as t), _, _)
-      | A.Comp (_, _, (Elem(_, Glob) | Access _ as t)) ->
-        T.Set.add t acc
-      | _ -> acc
+  SAtom.fold (fun a acc ->
+      T.Set.union acc (state_vars_of_atom a)
     ) sa T.Set.empty
 
 let print_not_undefined args fmt sa =
@@ -656,6 +762,7 @@ let ordered_procs_sys s =
 (* Pretty printing system in Murphi syntax *)
 
 let print_system nbprocs abstr fmt sys =
+  if use_short_names then mk_short_names sys;
   let sys = remove_underscores sys in
   let proc_ord = ordered_procs_sys sys in
   print_constants fmt nbprocs abstr; pp_print_newline fmt ();
@@ -680,7 +787,7 @@ let mk_encoding_table eenv nbprocs abstr sys =
   let constr_terms =
     List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ()) in
   let proc_terms = List.map (fun x -> Elem (x, Var)) procs in
-
+  
   let imp = ref 1 in
   let mu_procs =
     List.map (fun _ ->
@@ -728,8 +835,9 @@ let mk_encoding_table eenv nbprocs abstr sys =
 let init_parser nbprocs abstr sys =
   let eenv = Enumerative.mk_env nbprocs sys in
   Muparser_globals.env := eenv;
-  mk_encoding_table eenv nbprocs abstr sys
-
+  mk_encoding_table eenv nbprocs abstr sys;
+  eenv
+  
 (*****************************)
 (* Interruptions with Ctrl-C *)
 (*****************************)
@@ -751,7 +859,8 @@ let report_cmd_status name st out err =
   match st with
   | Unix.WEXITED 0 ->
     if not quiet then printf "@{<b>[@{<fg_green>OK@}]@}@.";
-    if debug then printf "@{<fg_green>%s exited correctly@}@." name
+    if debug || verbose > 0 then
+      printf "@{<fg_green>%s exited correctly@}@." name
   | Unix.WEXITED c ->
     eprintf "@{<fg_red>%s failure@} murphi exited with status %d@." name c;
     eprintf "@{<b>%s standard output:@}\n%s\n\
@@ -759,10 +868,12 @@ let report_cmd_status name st out err =
       name out name err;
     exit c
   | Unix.WSIGNALED s ->
-    if debug then printf "@{<fg_red>%s killed@} by signal %d@." name s;
+    if debug || verbose > 0 then
+      printf "@{<fg_red>%s killed@} by signal %d@." name s;
     exit 1
   | Unix.WSTOPPED s -> (* Stopped by signal *)
-    if debug then printf "@{<fg_red>%s stopped@} by signal %d@." name s;
+    if debug || verbose > 0 then
+      printf "@{<fg_red>%s stopped@} by signal %d@." name s;
     exit 1
 
 
@@ -808,14 +919,16 @@ let init sys =
   let mu_ch = open_out mu_tmp in
   let mu_fmt = formatter_of_out_channel mu_ch in
 
+  (* print_system nbprocs abstr std_formatter sys; exit 1; *)
+  
   print_system nbprocs abstr mu_fmt sys;
   
   (* Close murphi file *)
   close_out mu_ch;
 
-  if debug then printf "Murphi system generated in %s@." mu_tmp;
+  if debug || verbose > 0 then printf "Murphi system generated in %s@." mu_tmp;
 
-  init_parser nbprocs abstr sys;
+  let enum_env = init_parser nbprocs abstr sys in
 
   (* Running murphi compiler *)
   if not quiet then printf "Running murphi compiler @?";
@@ -873,22 +986,34 @@ let init sys =
 
      (* Check termination status of muexe *)
      begin match muexe_status with
+       | Unix.WEXITED 0 -> (* Exit with code *)
+         if debug then printf "@{<fg_green>Murphi exited correctly@}@."
        | Unix.WEXITED c -> (* Exit with code *)
-         if debug then
-           if c = 0 then printf "@{<fg_green>Murphi exited correctly@}@."
-           else printf "@{<fg_red>Murphi exited with code %d@}@." c
+         if not quiet then printf "@{<fg_red>Murphi exited with code %d@}@." c
        | Unix.WSIGNALED s -> (* Killed by signal *)
-         if debug then printf "@{<fg_red>Murphi killed@} by signal %d@." s
+         if not quiet then printf "@{<fg_red>Murphi killed@} by signal %d@." s
        | Unix.WSTOPPED s -> (* Stopped by signal *)
-         if debug then printf "@{<fg_yellow>Murphi stopped@} by signal %d@." s
+         if not quiet then
+           printf "@{<fg_yellow>Murphi stopped@} by signal %d@." s
      end;
    with
      Exit -> (* We killed murphi ourselves *) ());
+
+  Enumerative.no_scan_states enum_env;
   
   (* Close file descriptors of murphi *)
   Unix.close muexe_stdin_out;
   Unix.close muexe_stdout_in;
-  Unix.close muexe_stderr_in
+  Unix.close muexe_stderr_in;
+
+  (* Do subtyping at the end of the run of murphi as it does not support
+     redefinitions of subtypes or intersecting subtypes *)
+  if subtyping then begin
+    Smt.Variant.close ();
+    if debug then Smt.Variant.print ()
+  end
+  
+
 
 
 (* Use the checking of candidates implemented by Enumerative *)

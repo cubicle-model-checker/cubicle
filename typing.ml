@@ -428,8 +428,10 @@ let system s =
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then transitions s.trans;
-  if Options.subtyping    then Smt.Variant.close ();
-  if Options.debug        then Smt.Variant.print ();
+  if Options.(subtyping && not murphi) then begin
+    Smt.Variant.close ();
+    if Options.debug then Smt.Variant.print ();
+  end;
 
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =

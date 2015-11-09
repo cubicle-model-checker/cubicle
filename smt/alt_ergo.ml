@@ -191,12 +191,15 @@ module Variant = struct
   let hset_print fmt s = 
     HSet.iter (fun c -> Format.eprintf "%a, " Hstring.print c) s
       
-  let print () = 
-      H.iter 
-	(fun x c -> 
-	  Format.eprintf "%a = {%a}@." Hstring.print x hset_print c) 
-	constructors
-	
+  let print () =
+    H.iter 
+      (fun x c -> 
+         Format.eprintf "%a : %a = {%a}@."
+           Hstring.print x
+           Hstring.print (snd (Symbol.type_of x))
+           hset_print c) 
+      constructors
+
 	
   let get_variants = H.find constructors
     
@@ -214,25 +217,19 @@ module Variant = struct
 	    | _ -> ()) l;
     H.clear assignments
 
-  let update_decl_types s = 
-    let nty = ref "" in
-    let l = ref [] in
-    HSet.iter 
-      (fun x -> 
-	l := x :: !l; 
-	let vx = Hstring.view x in 
-	nty := if !nty = "" then vx else !nty ^ "|" ^ vx) s;
-    let nty = Hstring.make !nty in
-    let ty = Ty.Tsum (nty, List.rev !l) in
-    H.replace decl_types nty ty;
-    nty
+  let update_decl_types s old_ty x =
+    let new_ty = Hstring.(view old_ty ^ "_" ^ view x |> make) in
+    let l = HSet.elements s in
+    let ty = Ty.Tsum (new_ty, (* List.rev *) l) in
+    H.replace decl_types new_ty ty;
+    new_ty
 
   let close () = 
     compute ();
     H.iter 
       (fun x s -> 
-	let nty = update_decl_types s in
-	let sy, args, _ = H.find decl_symbs x in
+	let sy, args, old_ty = H.find decl_symbs x in
+	let nty = update_decl_types s old_ty x in
 	H.replace decl_symbs x (sy, args, nty))
       constructors
       

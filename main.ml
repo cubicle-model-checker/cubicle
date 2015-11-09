@@ -62,7 +62,6 @@ let _ =
   try
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
-    (* Murphi.print_system 2 1 std_formatter system; *)
     if type_only then exit 0;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
