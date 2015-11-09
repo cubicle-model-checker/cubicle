@@ -52,8 +52,8 @@ let enumerative = ref (-1)
 let murphi = ref false
 let murphi_uopts = ref ""
 let mu_cmd = ref "mu"
-let mu_opts = ref "-b"
-let cpp_cmd = ref "g++"
+let mu_opts = ref ""
+let cpp_cmd = ref "g++ -O4"
 
 let brab = ref (-1)
 let brab_up_to = ref false
@@ -151,15 +151,15 @@ let specs =
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
-    "in combination with -brab <n>, finite models up to size <n>";
+    " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
-    "use Murphi for enumerative forward instead of the naive implementation";
+    " use Murphi for enumerative forward instead of the naive implementation";
     "-murphi-opt", Arg.Set_string murphi_uopts,
-    "options passed to Murphi (as is)";
+    " options passed to Murphi (as is)";
     "-mu", Arg.Set_string mu_cmd, "Murphi compiler command line (default: mu)";
     "-mu-opt", Arg.Set_string mu_opts,
-    "Murphi compiler options (passed as is, default: -b)";
-    "-cpp", Arg.Set_string cpp_cmd, "C++ compiler command line (default: g++)";
+    " Murphi compiler options (passed as is, no options by default)";
+    "-cpp", Arg.Set_string cpp_cmd, " C++ compiler command line (default: g++ -O4)";
     "-forward-depth", Arg.Set_int forward_depth,
     "<d> Limit the depth of the forward exploration to at most d";
     "-max-forward", Arg.Set_int max_forward,

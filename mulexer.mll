@@ -29,7 +29,7 @@
 let newline = '\n'
 let space = [' ' '\t' '\r']
 let integer = ['0' - '9'] ['0' - '9']*
-let ident = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let ident = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_' '.']*
 
 
 rule token = parse

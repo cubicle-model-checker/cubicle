@@ -103,22 +103,32 @@ let print_var_def fmt v =
 
 let print_vars_defs extra_procs fmt l =
   let l = List.filter (fun v -> not (Hstring.list_mem v extra_procs)) l in 
-  fprintf fmt "@[<v 2>var@ ";
+  fprintf fmt "  @[<v 2>STATE : record@ ";
   print_list print_var_def "@ " fmt l;
+  fprintf fmt "@]\n  end;@ @.";
+  fprintf fmt "@[<v 2>var@ ";
+  fprintf fmt "state : STATE;@ ";
+  (* fprintf fmt "prev : STATE;@ "; *)
   fprintf fmt "@]@."
 
 
-let print_access fmt (a, args) =
-  fprintf fmt "%a" Hstring.print a;
+let print_access ?(prev=false) fmt (a, args) =
+  fprintf fmt "%s%a" (if prev then "prev." else "state.") Hstring.print a;
   List.iter (fprintf fmt "[%a]" Variable.print) args 
   
-let print_term fmt = function
+let rec print_term' prev fmt = function
   | Elem (b, Constr) when Hstring.equal b T.htrue ->
     fprintf fmt "true"
   | Elem (b, Constr) when Hstring.equal b T.hfalse ->
     fprintf fmt "false"
-  | Access (a, vars) -> print_access fmt (a, vars)
+  | Elem (v, Glob) ->
+    fprintf fmt "%s%a" (if prev then "prev." else "state.") Hstring.print v
+  | Access (a, vars) -> print_access ~prev fmt (a, vars)
+  | Arith (x, cs) -> fprintf fmt "%a%a" (print_term' prev) x T.print (Const cs)
   | t -> T.print fmt t
+
+let print_term_prev = print_term' true
+let print_term = print_term' false
 
 
 let print_op fmt = function
@@ -128,19 +138,22 @@ let print_op fmt = function
   | Lt -> fprintf fmt "<"
 
 
-let print_atom fmt = function
+let print_atom prev fmt = function
   | A.True -> fprintf fmt "true"
   | A.False -> fprintf fmt "false"
   | A.Comp (x, op, y) ->
-    fprintf fmt "%a %a %a" print_term x print_op op print_term y
+    fprintf fmt "%a %a %a" (print_term' prev) x print_op op (print_term' prev) y
   | _ -> assert false
 
 
-let rec print_atoms fmt = print_list print_atom " &@ " fmt
+let rec print_atoms prev fmt = print_list (print_atom prev) " &@ " fmt
 
 
-let print_satom fmt sa =
-  fprintf fmt "@[<hov>%a@]" print_atoms (SAtom.elements sa)
+let print_satom prev fmt sa =
+  fprintf fmt "@[<hov>%a@]" (print_atoms prev) (SAtom.elements sa)
+
+let print_satom_prev = print_satom true
+let print_satom = print_satom false
 
 let rec print_dnf fmt = print_list print_satom "@ | " fmt
 
@@ -228,17 +241,22 @@ let mk_related_init_values =
     )
 
 
+let use_undefined = true
+
 let mk_undefinied_init_values qvars defined =
   List.fold_left (fun (to_print, freshs) v ->
       if Hstring.list_mem v defined then to_print, freshs
       else
         let args, ty = Smt.Symbol.type_of v in
-        let f = mk_fresh ty in
         let t = match args with
           | [] -> Elem (v, Glob)
           | _ -> Access (v, qvars) in
-        asprintf "%a := %s;" print_term t f :: to_print,
-        SM.add f ty freshs
+        if use_undefined then
+          asprintf "undefine %a;" print_term t :: to_print, freshs
+        else
+          let f = mk_fresh ty in
+          asprintf "%a := %s;" print_term t f :: to_print,
+          SM.add f ty freshs
     )
 
 
@@ -324,17 +342,18 @@ let print_swts ot fmt swts =
     | s::r -> sd (s::acc) r in
   let swts, (_, default) = sd [] swts in
   if swts = [] then
-    fprintf fmt "%a := %a" print_term ot print_term default
+    fprintf fmt "%a := %a" print_term ot print_term_prev default
   else begin
     fprintf fmt "@[<hov 2>if ";
     let first = ref true in
     List.iter (fun (cond, t) ->
         if not !first then fprintf fmt "@[<hov 2>elsif ";
         fprintf fmt "%a then@ %a := %a@]@ "
-          print_satom cond print_term ot print_term t;
+          print_satom_prev cond print_term ot print_term_prev t;
         first := false
       ) swts;
-    fprintf fmt "@[<hov 2>else@ %a := %a@]@ " print_term ot print_term default;
+    fprintf fmt "@[<hov 2>else@ %a := %a@]@ "
+      print_term ot print_term_prev default;
     fprintf fmt "endif;"
   end
 
@@ -342,7 +361,7 @@ let print_swts ot fmt swts =
 let print_assign fmt (v, up) =
   let tv = Elem (v, Glob) in
   match up with
-  | UTerm t -> fprintf fmt "%a := %a;" Hstring.print v print_term t
+  | UTerm t -> fprintf fmt "state.%a := %a;" Hstring.print v print_term_prev t
   | UCase swts -> print_swts tv fmt swts
 
 let print_assigns fmt = List.iter (fprintf fmt "%a@ " print_assign)
@@ -364,7 +383,7 @@ let print_nondets ndts =
   print_list (fun n -> incr cpt; print_nondet !cpt n) "@ " ndts
 
 let print_nondet_undef fmt v =
-  fprintf fmt "undefine %a;" Hstring.print v
+  fprintf fmt "undefine state.%a;" Hstring.print v
   (* fprintf fmt "clear %a;" Hstring.print v *)
 
 let print_nondets = print_list print_nondet_undef "@ "
@@ -448,22 +467,44 @@ let print_ruleset fmt args nondets trans_name =
   end
 
 
+let print_actions fmt t =
+  fprintf fmt "@[<v 2>var@ prev : STATE;@]@ ";
+  fprintf fmt "@[<v 2>begin@ prev := state;@ --@ ";
+  fprintf fmt "%a%a%a"
+    print_assigns t.tr_assigns
+    print_updates t.tr_upds
+    print_nondets t.tr_nondets;
+  fprintf fmt "@]"
+
+
 let print_transition fmt t =
   let args = t.tr_args in
   let close_ruleset =
     print_ruleset fmt args t.tr_nondets (Hstring.view t.tr_name) in
   print_guard fmt t;
   fprintf fmt "@]@.@[<v 2>==>@ ";
-  fprintf fmt "%a%a%a"
-    print_assigns t.tr_assigns
-    print_updates t.tr_upds
-    print_nondets t.tr_nondets;
+  print_actions fmt t;
   close_ruleset ()
 
 
-let print_transitions fmt =
-  List.iter (fun t -> fprintf fmt "%a\n" print_transition t.tr_info)
+let rec print_alias fmt v =
+  fprintf fmt "prev_%a : %a" Hstring.print v  Hstring.print v
 
+let print_aliases fmt variables =
+  if variables = [] then begin
+    fun () -> ()
+  end
+  else begin
+    fprintf fmt "@[<v 2>alias @[<hov>%a@] do@ "
+      (print_list print_alias ";@ ") variables;
+    fun () -> fprintf fmt "@]@ endalias;@."
+  end
+
+let print_transitions globals arrays fmt trans =
+  (* let close_aliases = print_aliases fmt (globals @ arrays) in  *)
+  List.iter (fun t -> fprintf fmt "%a\n" print_transition t.tr_info) trans
+  (* close_aliases () *)
+    
 
 (********************************************)
 (* Printing unsafe properties as invariants *)
@@ -622,7 +663,7 @@ let print_system nbprocs abstr fmt sys =
   print_vars_defs [] fmt (sys.t_globals @ sys.t_arrays);
   pp_print_newline fmt ();
   print_inits fmt sys; pp_print_newline fmt ();
-  print_transitions fmt sys.t_trans;
+  print_transitions sys.t_globals sys.t_arrays fmt sys.t_trans;
   print_unsafes fmt sys.t_unsafe
 
 
@@ -748,9 +789,9 @@ let muexe_opts = Array.append [| "-ta"; "-ndl" |] (split_string murphi_uopts)
 
 let init sys =
 
-  let extra_procs = extra_procs_of_sys sys in
-  let nbprocs = enumerative + List.length extra_procs in
-  let abstr = 2 in
+  (* let extra_procs = extra_procs_of_sys sys in *)
+  let nbprocs = enumerative (* + List.length extra_procs *) in
+  let abstr = 1 in
 
   let bname = Filename.basename file in
   let name =
