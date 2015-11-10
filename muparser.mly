@@ -14,16 +14,42 @@
 /**************************************************************************/
 
 %{
-  open Options
-  open Parsing
-  open Format
-  open Muparser_globals
+open Options
+open Parsing
+open Format
+open Muparser_globals
+
+let get_args_of s =
+  if String.length s = 0 then []
+  else
+    let l = ref [] in
+    let i = ref 1 in
+    let j = ref (String.length s) in
+    try
+      while true do
+        i := String.index_from s !i ':' + 1;
+        j := (try String.index_from s !i ' ' with Not_found -> String.length s);
+        l := String.sub s !i (!j - !i) :: !l;
+        i := !j;
+      done;
+      assert false
+    with Not_found -> List.rev !l
+
+let rename_proc s =
+  Scanf.sscanf s "%s@_%d" (fun _ d -> "#" ^ string_of_int d)
+
+let rename_procs l =
+  List.fold_left
+    (fun acc s -> try rename_proc s :: acc with _ -> acc)
+    [] l |> List.rev 
 
 %}
 
 %token ENDSTATE EOF
 %token <string * string> AFFECTATION
-%token <int> STATE                         
+%token <int> STATE                  
+%token <string * string> STEP                  
+%token <string> ENDTRACE
 /*
 %token LEFTSQ RIGHTSQ COLON
 %token <string> IDENT
@@ -35,6 +61,9 @@
 
 %type <unit> state
 %start state
+
+%type <unit> error_trace
+%start error_trace
 
 %%
 
@@ -106,4 +135,27 @@ affectation:
   */
 ;
 
+trace_step:
+  | STEP affectations ENDSTATE
+    { let name, sargs = $1 in
+      let args = get_args_of sargs |> rename_procs in
+      let ra = String.concat ", " args in
+      printf "@[<hov4>%s(%s) ->" name ra;
+      if verbose > 0 then
+        printf "@ %a" (Enumerative.print_state !env) !st;
+      printf "@ @]@,";
+      for i = 0 to Array.length !st - 1 do !st.(i) <- -1 done
+    }
+;
 
+trace:
+  | trace_step { () }
+  | trace trace_step { () }
+;
+
+error_trace:
+  | trace ENDTRACE
+    { printf "@,@{<fg_magenta>%s@}@]@." $2;
+      printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+      exit 1 }
+;

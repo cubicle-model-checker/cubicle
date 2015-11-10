@@ -36,6 +36,8 @@ type env
 
 type state = int array
 
+val print_state : env -> Format.formatter -> state -> unit
+
 val empty_env : env
 
 val mk_env : int -> t_system -> env

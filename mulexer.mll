@@ -24,13 +24,16 @@
 
   exception Lexical_error of string
 
+  let rule_trace = ref ""
+
 }
 
 let newline = '\n'
 let space = [' ' '\t' '\r']
 let integer = ['0' - '9'] ['0' - '9']*
 let ident = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_' '.']*
-
+let str = [^ '"']*
+            
 let var = ident ('[' (ident | integer) ']')*
           
 rule token = parse
@@ -40,6 +43,12 @@ rule token = parse
         STATE (int_of_string n) }
   | "Progress Report:" newline 
       { print_mu := !print_mu || not quiet; token lexbuf }
+  | "Invariant \"" (str as s) "\" failed." newline
+      { Muparser_globals.new_state ();
+        Format.printf "\n@{<fg_red>Error trace@}:@[<hov> ";
+        rule_trace := s;
+        Muparser.error_trace error lexbuf;
+        token lexbuf }
   | eof 
       { EOF }
   | newline
@@ -63,6 +72,20 @@ and state = parse
   (* | ']' { RIGHTSQ } *)
   (* | ':' { COLON } *)
   | _ as c
-      { raise (Lexical_error ("illegal character: " ^ String.make 1 c)) }
+      { raise (Lexical_error
+                 ("illegal character in murphi state: " ^ String.make 1 c)) }
 
-
+and error = parse
+  | "----------"
+      { ENDSTATE }
+  | "End of the error trace."
+      { ENDTRACE !rule_trace }
+  | ident space+ (ident as t)
+    ((',' space* ident ':' ident)* as v) space+ "fired." newline
+      { STEP (t, v) }
+  | (var as v) ':' (ident | integer as x)
+      { AFFECTATION (v, x) }
+  (* | space+ | newline *)
+  (*     { error lexbuf } *)
+  | _ (* as c *)
+      { error lexbuf }

@@ -343,6 +343,14 @@ let mk_related_init_values =
       defined, to_print, SM.add f ty freshs
     )
 
+let shrink_to x y =
+  let rec aux acc x y = match x, y with
+    | _, [] -> List.rev acc
+    | a::r, _::u -> aux (a :: acc) r u
+    | [], _ -> assert false
+  in
+  aux [] x y
+
 let mk_undefinied_init_values qvars defined =
   List.fold_left (fun (to_print, freshs) v ->
       if Hstring.list_mem v defined then to_print, freshs
@@ -350,10 +358,10 @@ let mk_undefinied_init_values qvars defined =
         let args, ty = Smt.Symbol.type_of v in
         let t = match args with
           | [] -> Elem (v, Glob)
-          | _ -> Access (v, qvars) in
-        if ty != Smt.Type.type_proc && Smt.Type.constructors ty <> [] then
-            asprintf "clear %a;" print_term t :: to_print, freshs
-        else
+          | _ -> Access (v, shrink_to qvars args) in
+        (* if ty != Smt.Type.type_proc && Smt.Type.constructors ty <> [] then *)
+        (*     asprintf "clear %a;" print_term t :: to_print, freshs *)
+        (* else *)
         if use_undefined then
           if ty == Smt.Type.type_proc || Smt.Type.constructors ty = [] then
             asprintf "undefine %a;" print_term t :: to_print, freshs
@@ -565,6 +573,28 @@ let rec print_trans_args fmt = function
   | (v, d) :: args ->
     fprintf fmt "%a : %s;@ %a" Variable.print v d print_trans_args args
 
+  
+let rec distinct acc seen procs = match procs with
+  | [] -> acc
+  | p :: r ->
+    let acc = List.fold_left (fun acc p' ->
+        (p', p) :: acc
+      ) acc seen in
+    distinct acc (p :: seen) r
+
+
+let print_distinct_args fmt args =
+  let pairs = distinct [] [] args in
+  if pairs <> [] then
+    let rec print_pairs fmt = function
+      | [] -> ()
+      | [x, y] -> fprintf fmt "%a != %a" Variable.print x Variable.print y
+      | (x, y) :: r ->
+        fprintf fmt "%a != %a &@ %a"
+          Variable.print x Variable.print y print_pairs r
+    in
+    fprintf fmt "@[<hov>%a@] &@ " print_pairs pairs
+
 
 let print_ruleset fmt args nondets trans_name =
   let all_args_ty =
@@ -576,6 +606,7 @@ let print_ruleset fmt args nondets trans_name =
   else begin
     fprintf fmt "@[<v 2>ruleset @[<hov>%a@] do rule \"%s\"@ "
       print_trans_args all_args_ty trans_name;
+    print_distinct_args fmt args;
     fun () -> fprintf fmt "@]@ end end;@."
   end
 
@@ -628,13 +659,6 @@ let print_invariant fmt name =
   fun () -> fprintf fmt "@];@."
 
 
-let rec distinct acc seen procs = match procs with
-  | [] -> acc
-  | p :: r ->
-    let acc = List.fold_left (fun acc p' ->
-        (p', p) :: acc
-      ) acc seen in
-    distinct acc (p :: seen) r
   
 let print_if_distinct fmt procs =
   let pairs = distinct [] [] procs in
@@ -667,7 +691,7 @@ let print_not_undefined args fmt sa =
 
 
 let print_unsafe =
-  let cpt = ref 0 in
+  let cpt = ref 1 in
   fun fmt (procs, sa) ->
     let rprocs = List.map (fun p ->
         let p' = Bytes.of_string (Hstring.view p) in
@@ -677,7 +701,7 @@ let print_unsafe =
     let sigma = List.combine procs rprocs in
     let renamed_sa = SAtom.subst sigma sa in
     let close_invariant =
-      print_invariant fmt ("not unsafe[" ^ string_of_int !cpt ^ "]") in
+      print_invariant fmt ("unsafe[" ^ string_of_int !cpt ^ "]") in
     incr cpt;
     let close_foralls = print_foralls fmt rprocs in
     print_not_undefined rprocs fmt renamed_sa;
@@ -837,7 +861,50 @@ let init_parser nbprocs abstr sys =
   Muparser_globals.env := eenv;
   mk_encoding_table eenv nbprocs abstr sys;
   eenv
-  
+
+
+let simple_parser ic =
+  let open Scanf in
+  let open Muparser_globals in
+  let print_mu = ref debug in
+  try
+    while true do
+      let l = input_line ic in
+      (* eprintf ">>%s@." l; *)
+      (if String.length l <> 0 then
+        try  (* eprintf "st?."; *)
+          sscanf l "State %d:" (fun d ->
+              (* eprintf "state %d@." d; *)
+              if max_forward <> -1 && d > max_forward then
+                Unix.kill (Unix.getpid ()) Sys.sigint
+              else
+                begin
+                  Muparser_globals.new_state ();
+                  try while true do
+                      let l = input_line ic in
+                      (* eprintf ">>>>%s@." l; *)
+                      if String.length l = 0 then
+                        ((* eprintf "<< !!!@."; *) raise Exit)
+                      else
+                      sscanf l "%s@:%s"
+                        (fun v x -> try
+                            (* eprintf "  %s -> %s@." v x; *)
+                            let id_var = Hashtbl.find encoding v in
+                            let id_value = Hashtbl.find encoding x in
+                            !st.(id_var) <- id_value
+                          with Not_found -> ())
+                    done;
+                  with Exit -> Enumerative.register_state !env !st
+                end)
+        with End_of_file -> raise End_of_file
+           | _ ->
+             try (* eprintf "pr?."; *)
+               sscanf l "Progress Report:" (print_mu := true)
+             with _ -> if !print_mu then printf "%s\n" l)
+      (* ; eprintf "fin@."; *)
+    done
+  with Exit | End_of_file -> ()
+
 (*****************************)
 (* Interruptions with Ctrl-C *)
 (*****************************)
@@ -895,8 +962,12 @@ let split_string s =
 
 
 (* Print states and don't check for deadlock by default *)
-let muexe_opts = Array.append [| "-ta"; "-ndl" |] (split_string murphi_uopts)
-
+let muexe_opts = Array.concat [
+    [| "-ta"; "-ndl" |];
+    if verbose > 0 then [|"-tf"|] else [||];
+    split_string murphi_uopts
+  ]
+    
 
 let init sys =
 
@@ -980,6 +1051,7 @@ let init sys =
      (* Parse the ouptut of the executable created by murphi.
         This populates automatically the states in {!Enumerative}. *)
      Muparser.states Mulexer.token muexe_lexbuf;
+     (* simple_parser muexe_stdout_ch; *)
 
      (* Wait for the murphi process to terminate *)
      let _, muexe_status = Unix.waitpid [] muexe_pid in

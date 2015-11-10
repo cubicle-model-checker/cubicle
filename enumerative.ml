@@ -218,7 +218,6 @@ let id_to_term env id =
 let state_to_cube env st =
   let i = ref 0 in
   Array.fold_left (fun sa sti ->
-      eprintf "%d -> %d@." !i sti;
     let sa = 
       if sti <> -1 then
 	let t1 = id_to_term env !i in
