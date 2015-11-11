@@ -70,6 +70,7 @@ val inconsistent_array : ArrayAtom.t -> bool
 val inconsistent_2arrays : ArrayAtom.t -> ArrayAtom.t -> bool
 (** same as {! inconsistent_2} but for arrays *)
 
+val inconsistent_far : SAtom.t -> SAtom.t -> bool
 
 (** {2 Simplifications of cubes } *)
 

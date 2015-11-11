@@ -22,6 +22,10 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
+let far = ref false
+let far_level = ref 0
+let far_priority = ref "bfs"
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -176,6 +180,11 @@ let cin =
   match !ofile with 
   | Some f -> file := f ; open_in f 
   | None -> stdin
+
+let far = !far
+let far_level = !far_level
+let far_priority = !far_priority
+
 
 let type_only = !type_only
 let maxrounds = !maxrounds

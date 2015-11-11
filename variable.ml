@@ -36,6 +36,8 @@ let procs = gen_vars "#" max_proc
 
 let freshs = gen_vars "?" max_proc
 
+let generals = gen_vars "z" max_proc
+
 
 let proc_vars_int = 
   let l = ref [] in

@@ -1,7 +1,8 @@
-let negate_cube_to_clause cube = 
-  let l = cube.Cube.litterals in
-  let l = SAtom.fold (
-    fun a l -> SAtom.add (Atom.neg a) l
-  ) l SAtom.empty in
-  let v = cube.Cube.vars in
-  Cube.create v l
+open Ast
+open Types
+
+let find_pre_node t acc ncube =
+  let (nl, nl') = Pre.pre_image [t] ncube in
+  List.rev_append nl (List.rev_append nl' acc)
+    
+let compute_pre t ednf = List.fold_left (find_pre_node t) [] ednf

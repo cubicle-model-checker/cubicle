@@ -30,6 +30,8 @@ let cpt_fix = ref 0
 
 let cpt_nodes = ref 0
 
+let cpt_vertices = ref 0
+
 let cpt_process = ref 0
 
 let cpt_restart = ref 0
@@ -48,6 +50,8 @@ let new_node s =
       else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
     end;
   if dot then Dot.new_node s
+
+let new_vertex v = incr cpt_vertices
 
 let check_limit s =
   if !cpt_nodes > maxnodes || s.depth > maxrounds then raise ReachedLimit

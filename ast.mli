@@ -113,6 +113,20 @@ and trace_step = transition_info * Variable.t list * node_cube
 and trace = trace_step list
 (** type of error traces, also the type of history of nodes *)
 
+type far_cube = node_cube
+
+type ucnf = far_cube list
+type ednf = far_cube list
+  
+type vertex_far = 
+  { 
+    id : int;
+    world : ucnf;
+    added_clauses : ucnf;
+    mutable bad : ednf;
+    is_root : bool;
+  }
+
 type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
   t_arrays : Hstring.t list; (** Array names *)

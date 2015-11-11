@@ -87,11 +87,13 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/bitv.cmo
 
 CMO = $(COMMONCMO) $(SMTCMO) \
-      version.cmo options.cmo util.cmo variable.cmo types.cmo\
+      version.cmo options.cmo util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
-      instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
-      pre.cmo forward.cmo enumerative.cmo approx.cmo  \
-      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
+      instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo \
+      pre.cmo forward.cmo enumerative.cmo approx.cmo stats.cmo \
+      far_util.cmo far_cube.cmo far_modules.cmo far_graph.cmo \
+      far_refine.cmo far_bads.cmo far_close.cmo far_unwind.cmo far.cmo \
+      bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -268,6 +270,8 @@ AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 FILES = approx.ml approx.mli ast.mli brab.ml brab.mli bwd.ml bwd.mli\
 	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
 	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
+	far_util.ml far_cube.ml far_modules.ml far_refine.ml far_graph.ml \
+        far_unwind.ml far_bads.ml far_close.ml far.ml \
 	fixpoint.ml fixpoint.mli forward.ml forward.mli\
 	instantiation.ml instantiation.mli lexer.mll main.ml\
 	node.ml node.mli options.ml options.mli oracle.mli\

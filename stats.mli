@@ -24,6 +24,9 @@ val cpt_delete : int ref
 val new_node : Node.t -> unit
 (** register the treatment of a new node *)
 
+val new_vertex : Far_modules.Vertex.t -> unit
+(** register the treatment of a new vertex *)
+
 val fixpoint : Node.t -> int list -> unit
 (** register the result of a successful fixpoint check *)
 

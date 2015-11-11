@@ -35,6 +35,7 @@ val procs : t list
 val proc_vars_int : int list
 val alphas : t list
 val freshs : t list
+val generals : t list
 val number : t -> int
 
 

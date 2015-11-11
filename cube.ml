@@ -452,6 +452,19 @@ let inconsistent_2 ?(use_sets=false)
   if use_sets then inconsistent_2sets sa1 sa2
   else inconsistent_2arrays ar1 ar2
 
+let inconsistent_far sa1 sa2 = 
+  let isa2 = SAtom.fold 
+    (
+      fun a acc -> inconsistent_aux acc a
+    ) sa2 ([], [], [], [], [], [], []) in
+  SAtom.for_all (
+    fun a -> 
+      try 
+        let _ = inconsistent_aux isa2 a in
+        false
+      with Exit -> true
+  ) sa1
+    
 
 
 (* ---------- TODO : doublon avec SAtom.variables -----------*)

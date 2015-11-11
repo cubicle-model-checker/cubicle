@@ -55,7 +55,7 @@ let compare_by_breadth s1 s2 =
         if c <> 0 then c else
           Pervasives.compare (abs s1.tag) (abs s2.tag)
 
-let compare_by_depth  s1 s2 =
+let compare_by_depth s1 s2 =
   let v1 = dim s1 in
   let v2 = dim s2 in
   let c = Pervasives.compare v1 v2 in
