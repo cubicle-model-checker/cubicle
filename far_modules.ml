@@ -4,9 +4,6 @@ open Types
 module Solver = Smt.Make(Options)
 module Oracle = Approx.SelectedOracle
   
-exception FUnsafe
-exception FSafe
-
 module type SigQ = sig
 
   type 'a t
@@ -33,7 +30,7 @@ module Vertex = struct
 
   let create =
     let cpt = ref 0 in
-    fun ?is_root:(ir=false) w ac b ->
+    fun ?is_root:(ir=false) ?is_top:(it=false) w ac b ->
       incr cpt;
       let v =
         {
@@ -42,6 +39,7 @@ module Vertex = struct
           added_clauses = ac;
 	  bad = b;
 	  is_root = ir;
+          is_top = it;
         } in
       (* Stats.new_vertex v; *)
       v
@@ -59,6 +57,9 @@ module Vertex = struct
     let w = if v2.is_root then r
       else List.rev_append r v2.world in
     create w r []
+
+  let string_of t = if t.is_root then "root" else 
+      if t.is_top then "top" else (string_of_int t.id) 
 
   let equal t1 t2 = t1.id = t2.id
 
@@ -79,8 +80,13 @@ module Vertex = struct
   let update_bad v1 b t v2 = v1.bad <- b
     
   let find_all_sf2_implying_f1 f1 f2 =
+    Format.printf "F1 : @.";
+    List.iter (fun n -> Format.printf "( %a )@." Node.print n) f1;
+    Format.printf "F2 : @.";
+    List.iter (fun n -> Format.printf "( %a )@." Node.print n) f2;
     List.filter (
-      fun sf -> match Fixpoint.FixpointList.check sf f1 with
+      fun sf -> 
+        match Fixpoint.FixpointList.check sf f1 with
         | Some _ -> true
         | None -> false
     ) f2
@@ -101,10 +107,18 @@ end
 
 let init_trans_from trans =
   let empty = [Node.create (Cube.create [] SAtom.empty)] in
-  let twl = List.map (fun t -> (t, Far_util.compute_pre t empty)) trans in
+  let twl = List.map (fun t -> 
+    let w = Far_util.compute_pre t empty in
+    Format.printf "Transition : %a@." Hstring.print t.tr_info.tr_name;
+    List.iter (fun n -> Format.printf "( %a )@." Node.print n) w;
+    (t, w)
+  ) trans in
   fun v1 ->
+    Format.printf "\nNode %s\n@." (Vertex.string_of v1);
+    List.iter (fun n -> Format.printf "( %a )@." Node.print n) v1.world;
     List.fold_left (
       fun acc (t, w) -> 
+        Format.printf "Transition : %a@." Hstring.print t.tr_info.tr_name;
         match Vertex.find_all_sf2_implying_f1 v1.world w with
           | [] -> acc
           | _ -> t::acc

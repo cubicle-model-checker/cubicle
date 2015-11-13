@@ -96,6 +96,10 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
+let set_far n =
+  far := true;
+  far_level := n
+
 let set_dot d =
   dot := true;
   dot_level := d
@@ -135,6 +139,8 @@ let specs =
                     "<n> enumerative forward invariant generation with n processes";
     "-local", Arg.Set localized, 
                     " localized invariant candidates";
+    "-far", Arg.Int set_far, 
+                "<n> use far with level n of abstracion";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,

@@ -57,22 +57,34 @@ let _ =
               is an experimental feature. Use at your own risks.\n@.";
     let close_dot = Dot.open_dot () in 
     begin 
-      match Brab.brab system with
-      | Bwd.Safe (visited, candidates) ->
-         if (not quiet || profiling) then
-           Stats.print_report ~safe:true visited candidates;
-         printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
-         Trace.Selected.certificate system visited;
-         close_dot ();
-	 exit 0
+      if far then
+	match Far.search system with
+	  | Far.FSafe -> 
+	    printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+	    if (not quiet || profiling) then
+              Stats.print_report ~safe:true [] [];
+          | Far.FUnsafe -> 
+	    printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+            if (not quiet || profiling) then
+              Stats.print_report ~safe:false [] [];
+            exit 1
+      else 
+        match Brab.brab system with
+          | Bwd.Safe (visited, candidates) ->
+            if (not quiet || profiling) then
+              Stats.print_report ~safe:true visited candidates;
+            printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+            Trace.Selected.certificate system visited;
+            close_dot ();
+	    exit 0
 
-      | Bwd.Unsafe (faulty, candidates) ->
-         if (not quiet || profiling) then
-           Stats.print_report ~safe:false [] candidates;
-         if not quiet then Stats.error_trace system faulty;
-         printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
-         close_dot ();
-         exit 1
+          | Bwd.Unsafe (faulty, candidates) ->
+            if (not quiet || profiling) then
+              Stats.print_report ~safe:false [] candidates;
+            if not quiet then Stats.error_trace system faulty;
+            printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+            close_dot ();
+            exit 1
     end
   with
   | Lexer.Lexical_error s -> 

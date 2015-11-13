@@ -3,6 +3,8 @@ open Types
 open Ast
 open Far_modules
 
+type result = FUnsafe | FSafe
+
 let graph = Far_graph.create 17
 
 let init_nodes system = 
@@ -39,12 +41,18 @@ let search system =
     try
       let v1 = Q.pop queue in
       let trans = trans_from v1 in
+      
+      Format.printf "******* Search %s *********\n@." (Vertex.string_of v1);
+      List.iter (fun t -> Format.printf "%a@." Hstring.print t.tr_info.tr_name) trans;
+      
       List.iter (
         fun t ->
           Far_graph.add_edge v1 t top graph;
           Far_unwind.unwind v1 t top graph
       ) trans;
       rsearch ()
-    with Q.Empty -> raise FSafe
+    with 
+      | Q.Empty -> FSafe
+      | Exit -> FUnsafe
   in
   rsearch ()

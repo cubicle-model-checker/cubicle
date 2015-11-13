@@ -9,7 +9,7 @@ let rec unwind v1 t v2 graph =
     match Far_close.close v1 t v2 graph with
       | Far_close.Bad_part bp ->
         (* If the source vertex, now bad, is the root vertex, the system is bad *)
-        if Vertex.is_root v1 then raise FUnsafe
+        if Vertex.is_root v1 then raise Exit
         else 
           begin
             Vertex.update_bad v1 bp t v2;

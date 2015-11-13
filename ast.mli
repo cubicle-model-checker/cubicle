@@ -125,6 +125,7 @@ type vertex_far =
     added_clauses : ucnf;
     mutable bad : ednf;
     is_root : bool;
+    is_top : bool;
   }
 
 type t_system = {
