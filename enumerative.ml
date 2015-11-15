@@ -282,7 +282,7 @@ let apply_subst_in_place env st sigma =
             ) [] proc_domain |> List.rev in
           (* rho(proc_domain) *)
           let rho_proc_domain =
-            try HLI.find rho proc_domain with Not_found -> proc_domain in
+            try HLI.find rho proc_domain with Not_found -> sigma_proc_domain in
           (* encoding in terms of indexes *)
           let sigma_proc_sub = HLI.find env.proc_substates sigma_proc_domain in
           let rho_proc_sub = HLI.find env.proc_substates rho_proc_domain in
