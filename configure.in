@@ -87,9 +87,9 @@ fi
 #looking for Z3 ocaml bindings
 
 AC_ARG_WITH([z3],
-    AS_HELP_STRING([--without-z3], [disable support for Z3 backend SMT solver] ),
+    AS_HELP_STRING([--with-z3], [enable support for Z3 backend SMT solver] ),
     [],
-    [with_z3=yes])
+    [with_z3=no])
 
 Z3LIB=""
 Z3CCFLAGS=""
