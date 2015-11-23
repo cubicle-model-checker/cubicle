@@ -1490,7 +1490,9 @@ let int_of_term env t =
 
 let next_id env = env.pinf_int_abstr + 1
 
-let new_empty_state env =
+let empty_state = [||]
+
+let new_undef_state env =
   Array.make env.nb_vars (-1)
   (* env.states <- st :: env.states; *)
   (* eprintf "nb states : %d@." (List.length env.states); *)

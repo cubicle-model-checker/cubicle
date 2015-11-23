@@ -38,6 +38,7 @@ Fixpoint
 Oracle
 Enumerative
 Forward
+Murphi
 }
 
 
@@ -85,13 +86,15 @@ Bitv
 {2 The Alt-Ergo SMT solver }
 
 {!modules:
-Smt	
+Smt_sig
+Smt
+Alt_ergo
 Solver	
 Solver_types	
 }
 
 
 
-{C Copyright (C) 2011-2014, Sylvain Conchon and Alain Mebsout, Universite Paris-Sud 11 }
+{C Copyright (C) 2011-2015, Sylvain Conchon and Alain Mebsout, Universite Paris-Sud 11 }
 
 

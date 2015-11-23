@@ -13,7 +13,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** Oracle for BRAB that calls the explicit state model checker
+    {{:http://formalverification.cs.utah.edu/Murphi/}Murphi}.
+
+    We recommend the distribution
+    {{:http://mclab.di.uniroma1.it/site/index.php/software/18-cmurphi}CMurphi}
+    which works with most recent compilers.
+*)
+
 val print_system : int -> int -> Format.formatter -> Ast.t_system -> unit
+(** [print_system p a fmt sys] prints the system [sys] in Murphi's syntax with
+    [p] processes and infinite types abstracted with the subrange \[1;[a]\]. *)
 
 (** {2 Oracle interface } *)
 

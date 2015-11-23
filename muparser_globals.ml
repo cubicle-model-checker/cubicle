@@ -15,9 +15,9 @@
 
 let encoding = Hashtbl.create 47
 
-let st = ref [||]
+let st = ref Enumerative.empty_state
 
 let env = ref Enumerative.empty_env
 
 let new_state () =
-  st := Enumerative.new_empty_state !env
+  st := Enumerative.new_undef_state !env

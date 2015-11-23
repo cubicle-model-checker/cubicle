@@ -16,7 +16,7 @@
 (* Don't edit this file, but muparser_prefix.mli instead! *)
 
 (** State being currently constructed *)
-val st : int array ref
+val st : Enumerative.state ref
 
 val env : Enumerative.env ref
 

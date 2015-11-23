@@ -862,7 +862,7 @@ let init_parser nbprocs abstr sys =
   mk_encoding_table eenv nbprocs abstr sys;
   eenv
 
-
+(* failed attempt at a simpler parser for murphi's output *)
 let simple_parser ic =
   let open Scanf in
   let open Muparser_globals in
@@ -891,7 +891,8 @@ let simple_parser ic =
                             (* eprintf "  %s -> %s@." v x; *)
                             let id_var = Hashtbl.find encoding v in
                             let id_value = Hashtbl.find encoding x in
-                            !st.(id_var) <- id_value
+                            let si = (!st :> int array) in
+                            si.(id_var) <- id_value
                           with Not_found -> ())
                     done;
                   with Exit -> Enumerative.register_state !env !st

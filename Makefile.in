@@ -42,7 +42,8 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLUDES = $(FUNCTORYLIB) $(Z3CCFLAGS) $(Z3LIB) -I common/ -I smt/
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
+INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
@@ -406,24 +407,26 @@ doc:
 	cp -f doc/ocamldoc.css doc/ocamldoc/style.css
 	ocamldoc -html -keep-code -d doc/ocamldoc \
 	-t "Cubicle $(VERSION) documentation and source" \
-	-intro doc/intro.txt $(INCLUDES) \
-	$(filter-out *.mll *.mly fake_functory.ml, $(FILES)) \
-	$(COMMONFILES) $(SMTFILES)
+	-intro doc/intro.txt $(INCLPATHS) \
+	$(filter-out %.mll %.mly fake_functory.ml, $(FILES)) \
+        $(filter-out smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml, $(SMTFILES)) \
+	$(COMMONFILES) 
 
 docpdf: 
 	mkdir -p doc/ocamldoc/latex
 	ocamldoc -latex -keep-code -d doc/ocamldoc -o doc/ocamldoc/latex/doc.tex \
 	-t "Cubicle $(VERSION) documentation and source" \
-	-intro doc/intro.txt $(INCLUDES) \
-	$(filter-out *.mll *.mly fake_functory.ml, $(FILES)) \
-	$(COMMONFILES) $(SMTFILES)
+	-intro doc/intro.txt $(INCLPATHS) \
+	$(filter-out %.mll %.mly fake_functory.ml, $(FILES)) \
+        $(filter-out smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml, $(SMTFILES)) \
+	$(COMMONFILES) 
 	cd doc/ocamldoc/latex/; rubber -d doc
 
 
 archi:
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \
 	-t "Cubicle $(VERSION) architecture" \
-	$(INCLUDES) \
+	$(INCLPATHS) \
 	$(filter-out *.mll *.mly fake_functory.ml fake_functory.mli, $(FILES)) \
 	$(COMMONFILES) smt/smt_sig.mli
 	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf

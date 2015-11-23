@@ -120,7 +120,8 @@ affectation:
         (* eprintf "%s -> %s@." v x; *)
         let id_var = Hashtbl.find encoding v in
         let id_value = Hashtbl.find encoding x in
-        !st.(id_var) <- id_value
+        let si = (!st :> int array) in
+        si.(id_var) <- id_value
       with Not_found -> ()
     }
   /* less efficient to parse these tokens */
@@ -129,7 +130,8 @@ affectation:
     { try
         let id_var = Hashtbl.find encoding $1 in
         let id_value = Hashtbl.find encoding $3 in
-        !st.(id_var) <- id_value
+        let si = (!st :> int array) in
+        si..(id_var) <- id_value
       with Not_found -> ()
     }
   */
@@ -144,7 +146,8 @@ trace_step:
       if verbose > 0 then
         printf "@ %a" (Enumerative.print_state !env) !st;
       printf "@ @]@,";
-      for i = 0 to Array.length !st - 1 do !st.(i) <- -1 done
+      let si = (!st :> int array) in
+      for i = 0 to Array.length si - 1 do si.(i) <- -1 done
     }
 ;
 
