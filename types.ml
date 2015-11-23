@@ -383,6 +383,7 @@ and SAtom : sig
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
+  val print_sep : string -> Format.formatter -> t -> unit
   val print_inline : Format.formatter -> t -> unit
 
 end = struct 
@@ -418,6 +419,9 @@ end = struct
 
   let print fmt sa =
     fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (elements sa)
+
+  let print_sep sep fmt sa =
+    fprintf fmt "@[%a@]" (Atom.print_atoms false sep) (elements sa)
 
   let print_inline fmt sa =
     fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)

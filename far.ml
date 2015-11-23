@@ -11,16 +11,16 @@ let init_nodes system =
   let top = Vertex.create [] [] system.t_unsafe in
   let (_, initfl) = system.t_init in
   let initf = match initfl with
-    | [e] -> e
-    | _ -> assert false
+      | [e] -> e
+      | _ -> assert false
   in
-  let initl = SAtom.fold (
-    fun a acc -> 
-      (
-	Variable.Set.elements (Atom.variables a), 
-	SAtom.singleton a
-      )::acc
-  ) initf [] in
+  let initl = 
+    SAtom.fold (
+        fun a acc -> (
+	  Variable.Set.elements (Atom.variables a), 
+	  SAtom.singleton a
+        )::acc
+      ) initf [] in
   let wroot = Vertex.create_world initl in
   let broot = Vertex.create_bad [] in
   (* Create root with groot, broot and no subsume *)
@@ -42,14 +42,14 @@ let search system =
       let v1 = Q.pop queue in
       let trans = trans_from v1 in
       
-      Format.printf "******* Search %s *********\n@." (Vertex.string_of v1);
-      List.iter (fun t -> Format.printf "%a@." Hstring.print t.tr_info.tr_name) trans;
+      Format.printf "******* Search %a *********\n@." Vertex.print_id v1;
+      (* Format.printf "\n%a@." Vertex.print_world v1; *)
       
       List.iter (
-        fun t ->
+          fun t ->
           Far_graph.add_edge v1 t top graph;
           Far_unwind.unwind v1 t top graph
-      ) trans;
+        ) trans;
       rsearch ()
     with 
       | Q.Empty -> FSafe

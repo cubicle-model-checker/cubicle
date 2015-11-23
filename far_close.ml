@@ -10,10 +10,7 @@ type cresult =
 
 let find_covering v1 t v2 graph =
   let cands = Far_graph.find_refiners v2 graph in
-  List.filter (
-    fun vs -> Vertex.(vs =!> v2) && 
-      Vertex.imply_by_trans_ww v1 t vs
-  ) cands
+  List.filter (Vertex.imply_by_trans_ww v1 t) cands
         
 
 let close v1 t v2 graph =
@@ -34,8 +31,7 @@ let close v1 t v2 graph =
            bad parts of the successive bad refinements of v2, we select
            the most generals bad parts *)
         | _ -> let other_bads = Far_bads.find_included_bads v2 graph in
-               let all_bads = Far_bads.regroup other_bads bp in
-               let bad_parts = Far_util.compute_pre t all_bads in
-               let bad_parts = Far_bads.select_parts bad_parts v1 v2 in
+               let pre_other_bads = Far_util.compute_pre t other_bads in
+               let all_bads = Far_bads.regroup pre_other_bads bp in
+               let bad_parts = Far_bads.select_parts all_bads v1 v2 in
                Bad_part bad_parts
-        

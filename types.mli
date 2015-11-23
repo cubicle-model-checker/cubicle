@@ -178,6 +178,9 @@ and SAtom : sig
   val print : Format.formatter -> t -> unit
   (** prints a conjunction *)
 
+  val print_sep : string -> Format.formatter -> t -> unit
+  (** prints a list of atom separated by sep **)
+    
   val print_inline : Format.formatter -> t -> unit
   (** prints a conjunction on a signle line *)
 

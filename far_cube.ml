@@ -31,7 +31,6 @@ let compare_fcubes fc1 fc2 =
 
 let compare_decr_fcubes fc1 fc2 = (~-) (compare_fcubes fc1 fc2)
 
-
 let inconsistent_clause_cube fcl fcu =
   if compare_fcubes fcl fcu > 0 then false
   else 
@@ -47,27 +46,12 @@ let inconsistent_clause_cube fcl fcu =
           Cube.inconsistent_far sal sau
       ) sigmas
     end        
-      
-
-let is_subformula fc1 fc2 =
-  if compare_fcubes fc1 fc2 > 0 then false
-  else 
-    begin
-      let sigmas = Instantiation.relevant ~of_cube:fc1.cube ~to_cube:fc2.cube in
-      let sa1 = litterals fc1 in
-      let sa2 = litterals fc2 in
-      List.exists (
-        fun sigma ->
-          let sa1 = SAtom.subst sigma sa1 in
-          SAtom.subset sa1 sa2
-      ) sigmas
-    end        
 
 let cube_implies c cl =
   try 
     let res = List.find (
       fun b -> 
-        is_subformula b c
+        subset b c
         || inconsistent_clause_cube (negate_formula_to_ecube b) c
     ) cl in
     Some res
@@ -84,3 +68,4 @@ let negate_pre_and_filter t ucnf =
   let nf = negate_litterals_to_ecubes ucnf in
   pre_and_filter t nf
     
+let equal fc1 fc2 = ArrayAtom.equal (array fc1) (array fc2)

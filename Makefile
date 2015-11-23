@@ -32,10 +32,10 @@ OCAMLOPT = ocamlopt.opt
 OCAMLDEP = ocamldep
 OCAMLLEX = ocamllex
 OCAMLYACC= ocamlyacc
-OCAMLLIB = /users/vals/roux/.opam/4.01.0/lib/ocaml
-FUNCTORYLIB = -I /users/vals/roux/.opam/4.01.0/lib/functory
+OCAMLLIB = /home/mattias/.opam/4.02.1/lib/ocaml
+FUNCTORYLIB = 
 OCAMLBEST= opt
-OCAMLVERSION = 4.01.0
+OCAMLVERSION = 4.02.1
 OCAMLWIN32 = no
 EXE = 
 

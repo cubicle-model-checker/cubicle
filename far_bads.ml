@@ -1,13 +1,24 @@
 open Ast
 open Far_modules.Vertex
 
+let print_bads bl =
+  List.iter (
+    fun n -> Format.printf "\t\tExists %a, @[%a@] AND\n@." 
+      Variable.print_vars (Far_cube.variables n)
+      (Types.SAtom.print_sep "&&") (Far_cube.litterals n)
+  ) bl    
+
 let find_included_bads v graph = 
   let rec frec acc v =
     match Far_graph.find_refiners v graph with
       | [] -> acc
-      | rs -> List.fold_left (fun acc r -> List.rev_append (frec acc r) acc) acc rs
+      | rs -> 
+        List.fold_left (
+          fun acc r -> let acc = List.rev_append r.bad acc in
+                       frec acc r
+        ) acc rs
   in frec [] v
-        
+  
 
 let regroup = List.rev_append 
 
@@ -34,21 +45,21 @@ let simplify_dnf w1 b2 dnf =
 let select_procs slb v1 v2 =
   let gbd =
     let slb = List.fast_sort Far_cube.compare_decr_fcubes slb in
-    let rec group (cacc, acc, dim) = function
+    let rec group (actual_group, done_group, dim) = function
       | [] -> (
-        match cacc with 
-          | [] -> acc
-          | _ -> (dim, cacc) :: acc
+        match actual_group with 
+          | [] -> done_group
+          | _ -> (dim, actual_group) :: done_group
       )
       | hd :: tl ->
         let d = Far_cube.dim hd in
-        if d = dim then group (hd::cacc, acc, dim) tl
+        if d = dim then group (hd::actual_group, done_group, dim) tl
         else 
-          let acc =
-            match cacc with 
-              | [] -> acc
-              | _ -> (dim, cacc) :: acc
-          in group ([], acc, d) tl
+          let done_group =
+            match actual_group with 
+              | [] -> done_group
+              | _ -> (dim, actual_group) :: done_group
+          in group ([hd], done_group, d) tl
     in group ([], [], 0) slb in
   let rec s l =
     match l with

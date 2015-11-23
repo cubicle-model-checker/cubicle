@@ -51,7 +51,7 @@ let new_node s =
     end;
   if dot then Dot.new_node s
 
-let new_vertex v = incr cpt_vertices
+let new_vertex v = incr cpt_nodes
 
 let check_limit s =
   if !cpt_nodes > maxnodes || s.depth > maxrounds then raise ReachedLimit
