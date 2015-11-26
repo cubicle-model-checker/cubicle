@@ -1243,3 +1243,8 @@ let first_good_candidate candidates =
   match fast_resist_on_trace candidates with
   | c :: _ -> Some c
   | [] -> None
+
+(*----------------- For FAR ----------------*)
+
+let all_good_candidates candidates = fast_resist_on_trace candidates
+  

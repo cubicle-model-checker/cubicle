@@ -3,7 +3,7 @@ open Far_modules.Vertex
 
 let print_bads bl =
   List.iter (
-    fun n -> Format.printf "\t\tExists %a, @[%a@] AND\n@." 
+    fun n -> Format.eprintf "\t\tExists %a, @[%a@] AND\n@." 
       Variable.print_vars (Far_cube.variables n)
       (Types.SAtom.print_sep "&&") (Far_cube.litterals n)
   ) bl    

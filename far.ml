@@ -42,8 +42,8 @@ let search system =
       let v1 = Q.pop queue in
       let trans = trans_from v1 in
       
-      Format.printf "******* Search %a *********\n@." Vertex.print_id v1;
-      (* Format.printf "\n%a@." Vertex.print_world v1; *)
+      Format.eprintf "******* Search %a *********\n@." Vertex.print_id v1;
+      Format.eprintf "\n%a@." Vertex.print_world v1;
       
       List.iter (
           fun t ->

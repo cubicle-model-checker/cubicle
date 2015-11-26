@@ -65,7 +65,7 @@ module Vertex = struct
       | i -> string_of_int i
 
 
-  let print_id fmt v = Format.printf "%s" (string_of_id v)
+  let print_id fmt v = Format.eprintf "%s" (string_of_id v)
     
   let print_world fmt t =
     List.iter (
@@ -112,6 +112,17 @@ module Vertex = struct
     let pnw2 = Far_cube.negate_pre_and_filter t v2.added_clauses in
     let nw1 = Far_cube.negate_litterals_to_ecubes v1.world in
     base_implication nw1 pnw2
+
+  let world_to_cube v1 t fc =
+    let nw1 = Far_cube.negate_litterals_to_ecubes v1.world in
+    let pfc = Far_cube.pre_and_filter t [fc] in
+    List.exists (
+      fun c ->
+        match Fixpoint.FixpointList.check c nw1 with
+          | Some _ -> false
+          | None -> true
+    ) pfc
+
 
   let find_bads_from_w v1 t v2 =
     let nb2 = Far_cube.pre_and_filter t v2.bad in

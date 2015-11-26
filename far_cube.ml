@@ -57,6 +57,23 @@ let cube_implies c cl =
     Some res
   with Not_found -> None
 
+let equivalent fc1 fc2 =
+  if compare_fcubes fc1 fc2 <> 0 then false
+  else 
+    begin
+      let c1 = fc1.cube in
+      let c2 = fc2.cube in
+      let sigmas = Instantiation.relevant ~of_cube:c1 ~to_cube:c2 in
+      (* let sigmas = Variable.all_permutations c1.Cube.vars c2.Cube.vars in *)
+      let sa1 = c1.Cube.litterals in
+      let sa2 = c2.Cube.litterals in
+      List.exists (
+        fun sigma ->
+          let sa1 = SAtom.subst sigma sa1 in
+          SAtom.equal sa1 sa2
+      ) sigmas
+    end
+
 let pre_and_filter t nf =
   let pnf = Far_util.compute_pre t nf in
   let tnf = List.fast_sort (fun n1 n2 -> compare_fcubes n1 n2) pnf in

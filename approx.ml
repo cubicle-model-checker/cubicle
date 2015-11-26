@@ -310,6 +310,7 @@ let keep n l =
 
 module type S = sig
     val good : Node.t -> Node.t option
+    val all_goods : Node.t -> Node.t list
 end
 
 module Make ( O : Oracle.S ) : S = struct
@@ -329,6 +330,13 @@ module Make ( O : Oracle.S ) : S = struct
     | _ ->
        subsuming_candidate n
 
+  let all_goods s =
+    let approx = approximations s in
+    let approx = if max_cands = -1 then approx else keep max_cands approx in
+    if verbose > 0 && not quiet then 
+      eprintf "Checking %d approximations:@." (List.length approx);
+    O.all_good_candidates approx
+
 end
 
 
@@ -337,12 +345,15 @@ module GrumpyOracle : Oracle.S = struct
   let init _ = ()
   let first_good_candidate _ =
     failwith "You should not call Grumpy Oracle."
+  let all_good_candidates _ =
+    failwith "You should not call Grumpy Oracle."
 
 end
 
 module GrumpyApprox : S = struct
 
   let good _ = None
+  let all_goods _ = []
 
 end
 
