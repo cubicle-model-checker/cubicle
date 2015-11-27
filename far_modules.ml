@@ -1,5 +1,6 @@
 open Ast
 open Types
+open Util
 
 module Solver = Smt.Make(Options)
 module Oracle = Approx.SelectedOracle
@@ -41,7 +42,6 @@ module Vertex = struct
 	  is_root = ir;
           is_top = it;
         } in
-      (* Stats.new_vertex v; *)
       v
 
   let create_world l = 
@@ -109,30 +109,39 @@ module Vertex = struct
 
       
   let imply_by_trans_ww v1 t v2 =
+    TimeSubsuming.start ();
     let pnw2 = Far_cube.negate_pre_and_filter t v2.added_clauses in
     let nw1 = Far_cube.negate_litterals_to_ecubes v1.world in
-    base_implication nw1 pnw2
+    let b = base_implication nw1 pnw2 in
+    TimeSubsuming.pause ();
+    b
 
   let world_to_cube v1 t fc =
+    TimeCheckBad.start ();
     let nw1 = Far_cube.negate_litterals_to_ecubes v1.world in
     let pfc = Far_cube.pre_and_filter t [fc] in
-    List.exists (
+    let b = List.exists (
       fun c ->
         match Fixpoint.FixpointList.check c nw1 with
           | Some _ -> false
           | None -> true
-    ) pfc
+    ) pfc in
+    TimeCheckBad.pause ();
+    b
 
 
   let find_bads_from_w v1 t v2 =
+    TimeFindBads.start ();
     let nb2 = Far_cube.pre_and_filter t v2.bad in
     let nw1 = Far_cube.negate_litterals_to_ecubes v1.world in
-    List.filter (
+    let b = List.filter (
       fun c ->
         match Fixpoint.FixpointList.check c nw1 with
           | Some _ -> false
           | None -> true
-    ) nb2
+    ) nb2 in
+    TimeFindBads.pause ();
+    b 
 
 end
 

@@ -90,10 +90,10 @@ CMO = $(COMMONCMO) $(SMTCMO) \
       version.cmo options.cmo util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo \
-      pre.cmo forward.cmo enumerative.cmo approx.cmo stats.cmo \
+      pre.cmo forward.cmo enumerative.cmo approx.cmo  \
       far_util.cmo far_cube.cmo far_modules.cmo far_graph.cmo \
-      far_refine.cmo far_bads.cmo far_close.cmo far_unwind.cmo far.cmo \
-      bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
+      stats.cmo far_refine.cmo far_bads.cmo far_close.cmo far_unwind.cmo \
+      far.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 

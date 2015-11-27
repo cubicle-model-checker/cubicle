@@ -68,10 +68,34 @@ let select_procs slb v1 v2 =
         let nl = simplify_dnf v1.world v2.bad lcubes in
         match nl with
           | [] -> s st
-          | _ -> List.iter Stats.new_node nl; nl
+          | _ -> nl
   in s gbd
 
 
-let select_parts bad_parts v1 v2 =
-  select_procs bad_parts v1 v2
-       
+let select_parts v1 t v2 bp graph system  =
+  let ob = find_included_bads v2 graph in
+  let pob = Far_util.compute_pre t ob in
+  let allb = regroup bp pob in
+  let selb = select_procs allb v1 v2 in
+  let bp =
+    if Options.far_brab then
+      List.map (fun nb ->
+        match Approx.Selected.good nb with
+          | None -> nb
+          | Some c ->
+            try
+              (* Replace node with its approximation *)
+              Safety.check system c;
+              (* candidates := c :: !candidates; *)
+              Stats.candidate nb c;
+              (* Format.eprintf
+                 "Approximation : \n%a ->  \n%a@." Node.print nb Node.print c; *)
+              c
+            with Safety.Unsafe _ -> nb
+            (* If the candidate is directly reachable, no need to
+               backtrack, just forget it. *)
+            (* if ic3_verbose > 0 then *)
+      ) selb
+    else selb in
+  List.iter Stats.new_node bp;
+  bp

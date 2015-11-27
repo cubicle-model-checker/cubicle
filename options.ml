@@ -25,6 +25,7 @@ let file = ref "_stdin"
 let far = ref false
 let far_level = ref 0
 let far_priority = ref "bfs"
+let far_brab = ref false
 
 let max_proc = ref 10
 let type_only = ref false
@@ -100,6 +101,10 @@ let set_far n =
   far := true;
   far_level := n
 
+let set_far_brab n =
+  far_brab := true;
+  brab := n
+
 let set_dot d =
   dot := true;
   dot_level := d
@@ -143,6 +148,8 @@ let specs =
                 "<n> use far with level n of abstracion";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
+    "-far_brab", Arg.Int set_far_brab,
+                "<n> use far but approximate bad parts with brab";
     "-upto", Arg.Set brab_up_to,
                 "in combination with -brab <n>, finite models up to size <n>";
     "-forward-depth", Arg.Set_int forward_depth,
@@ -190,7 +197,7 @@ let cin =
 let far = !far
 let far_level = !far_level
 let far_priority = !far_priority
-
+let far_brab = !far_brab
 
 let type_only = !type_only
 let maxrounds = !maxrounds

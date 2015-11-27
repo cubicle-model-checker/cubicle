@@ -20,8 +20,6 @@ open Lexing
 module TimerSubset = Timer.Make (Options)
 module TimerApply = Timer.Make (Options)
 module TimeFix = Timer.Make (Options)
-module TimeEasyFix = Timer.Make (Options)
-module TimeHardFix = Timer.Make (Options)
 module TimeRP = Timer.Make (Options)
 module TimePre = Timer.Make (Options)
 module TimeSort = Timer.Make (Options)
@@ -30,7 +28,9 @@ module TimeCheckCand = Timer.Make (Options)
 module TimeFormula = Timer.Make (Options)
 module TimeSimpl = Timer.Make (Options)
 module TimeCertificate = Timer.Make (struct let profiling = true end)
-
+module TimeSubsuming = Timer.Make (Options)
+module TimeFindBads = Timer.Make (Options)
+module TimeCheckBad = Timer.Make (Options)
 
 let nb_digits n =
   if n < 10 then 1

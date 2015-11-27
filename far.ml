@@ -43,12 +43,12 @@ let search system =
       let trans = trans_from v1 in
       
       Format.eprintf "******* Search %a *********\n@." Vertex.print_id v1;
-      Format.eprintf "\n%a@." Vertex.print_world v1;
+      if verbose > 0 then Format.eprintf "\n%a@." Vertex.print_world v1;
       
       List.iter (
           fun t ->
           Far_graph.add_edge v1 t top graph;
-          Far_unwind.unwind v1 t top graph
+          Far_unwind.unwind v1 t top graph system
         ) trans;
       rsearch ()
     with 

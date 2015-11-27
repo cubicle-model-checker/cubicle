@@ -13,7 +13,7 @@ let find_covering v1 t v2 graph =
   List.filter (Vertex.imply_by_trans_ww v1 t) cands
         
 
-let close v1 t v2 graph =
+let close v1 t v2 graph system =
   let vcl = find_covering v1 t v2 graph in
   match vcl with
     | vc :: _ -> Covered vc
@@ -30,8 +30,5 @@ let close v1 t v2 graph =
            In that case, there exists some parts in v1 which go to the 
            bad parts of the successive bad refinements of v2, we select
            the most generals bad parts *)
-        | _ -> let other_bads = Far_bads.find_included_bads v2 graph in
-               let pre_other_bads = Far_util.compute_pre t other_bads in
-               let all_bads = Far_bads.regroup pre_other_bads bp in
-               let bad_parts = Far_bads.select_parts all_bads v1 v2 in
+        | _ -> let bad_parts = Far_bads.select_parts v1 t v2 bp graph system in
                Bad_part bad_parts

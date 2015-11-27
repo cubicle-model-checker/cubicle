@@ -20,8 +20,6 @@
 module TimerSubset : Timer.S
 module TimerApply  : Timer.S
 module TimeFix : Timer.S
-module TimeEasyFix : Timer.S
-module TimeHardFix : Timer.S
 module TimeRP : Timer.S
 module TimePre : Timer.S
 module TimeSort : Timer.S
@@ -30,6 +28,9 @@ module TimeCheckCand : Timer.S
 module TimeFormula : Timer.S
 module TimeSimpl : Timer.S
 module TimeCertificate : Timer.S
+module TimeSubsuming : Timer.S
+module TimeFindBads : Timer.S
+module TimeCheckBad : Timer.S
 
 
 (** {2 Misc } *)

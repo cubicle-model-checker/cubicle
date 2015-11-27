@@ -30,7 +30,7 @@ let cpt_fix = ref 0
 
 let cpt_nodes = ref 0
 
-let cpt_vertices = ref 0
+let cpt_vertices = ref 2 (* Init and top will always be created *)
 
 let cpt_process = ref 0
 
@@ -51,7 +51,7 @@ let new_node s =
     end;
   if dot then Dot.new_node s
 
-let new_vertex v = incr cpt_nodes
+let new_vertex v = incr cpt_vertices
 
 let check_limit s =
   if !cpt_nodes > maxnodes || s.depth > maxrounds then raise ReachedLimit
@@ -135,7 +135,13 @@ let error_trace sys faulty =
 
 let print_visited = 
   if not (profiling && verbose > 0) then fun _ -> ()
-  else fun nb -> eprintf "Number of visited nodes : %d@." nb
+  else fun nb -> eprintf (
+    if far then "Number of generated bads : %d@."
+    else "Number of visited nodes : %d@.") nb
+
+let print_vertices = 
+  if not (profiling && verbose > 0 && far) then fun _ -> ()
+  else fun nb -> eprintf  "Number of created vertices : %d@." nb
 
 let print_states st pr = 
   if not profiling then ()
@@ -190,16 +196,35 @@ let print_time_ccheck () =
 let print_time_forward () =
   printf "Forward exploration              : %a@." print_time (TimeForward.get ())
 
+let print_time_far () =
+  printf "Time in far parts@."
+
+let print_time_subsuming () =
+  printf "├─Time in vertices subsuming     : %a@." print_time (TimeSubsuming.get ())
+
+let print_time_find_bads () =
+  printf "├─Time to find bads              : %a@." print_time (TimeFindBads.get ())
+
+let print_time_check_bads () =
+  printf "└─Time to check bads             : %a@." print_time (TimeCheckBad.get ())
+  
+
 let print_report ~safe visited candidates =
   print_candidates ~safe candidates;
   Pretty.print_title std_formatter "STATS";
-  printf "Number of visited nodes          : %d@." !cpt_nodes;
-  printf "Fixpoints                        : %d@." !cpt_fix;
+  if far then
+    printf "Number of visited vertices       : %d@." !cpt_vertices;
+  printf (
+    if far 
+    then "Number of bads generated         : %d@."
+    else "Number of visited nodes          : %d@.") !cpt_nodes;
+  if not far then 
+    printf "Fixpoints                        : %d@." !cpt_fix;
   printf "Number of solver calls           : %d@." (Prover.SMT.get_calls ());
   printf "Max Number of processes          : %d@." !cpt_process;
-  if Options.delete then 
+  if Options.delete && not far then 
     printf "Number of deleted nodes          : %d@." !cpt_delete;
-  if do_brab then
+  if do_brab && not far then
     printf "Number of %s             : %d@."
            (if safe then "invariants" else "candidates") (List.length candidates);
   printf "Restarts                         : @[%d%a@]@." !cpt_restart
@@ -218,6 +243,10 @@ let print_report ~safe visited candidates =
       print_time_prover ();
       print_time_forward ();
       print_time_ccheck ();
+      print_time_far ();
+      print_time_subsuming ();
+      print_time_find_bads ();
+      print_time_check_bads ();
     end;
   printf "%a" Pretty.print_double_line ()
 
