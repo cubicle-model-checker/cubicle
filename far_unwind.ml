@@ -2,6 +2,8 @@ open Ast
 open Far_modules
 open Options
 
+exception Bad of Far_cube.t list
+
 let rec unwind v1 t v2 graph system =
   if not quiet then
     Format.eprintf 
@@ -18,19 +20,11 @@ let rec unwind v1 t v2 graph system =
     match Far_close.close v1 t v2 graph system with
       | Far_close.Bad_part bp ->
         (* let bp = [List.hd bp] in *)
-        (* if not quiet then *) (Format.eprintf "\t[Bad part]"; Far_bads.print_bads bp);
+        if not quiet then (Format.eprintf "\t[Bad part]"; Far_bads.print_bads bp);
         
         (* If the source vertex, now bad, is the root vertex, the system is bad *)
         if Vertex.is_root v1 then raise Exit
-        else 
-          begin
-            Vertex.update_bad v1 bp t v2;
-            let parents = Far_graph.get_parents v1 graph in
-            List.iter (
-              fun (vp, t') ->
-                unwind vp t' v1 graph system
-            ) parents
-          end
+        else raise (Bad bp)
       | Far_close.Covered vc ->
         if not quiet then Format.eprintf "\t[Covered by] %a@." Vertex.print_id vc;
         Far_graph.update_edge v1 t v2 vc graph;
@@ -43,4 +37,12 @@ let rec unwind v1 t v2 graph system =
         if not quiet then Format.eprintf "\t[New node] %a@." Vertex.print_id nv;
         Q.push nv queue
           
-          
+
+let propagate v bads graph system =
+  let bp = Far_bads.select_parts v1 bads graph system in
+  Vertex.update_bad v1 bp t v2;
+  let parents = Far_graph.get_parents v1 graph in
+  List.iter (
+    fun (vp, t') ->
+      unwind vp t' v1 graph system
+  ) parents

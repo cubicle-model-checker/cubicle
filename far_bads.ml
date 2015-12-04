@@ -100,8 +100,9 @@ let select_procs slb v1 v2 =
 (*   in s lb *)
 
 
-let select_parts v1 t v2 bp graph system  =
-  let ob = find_included_bads v2 graph in
+let select_parts v1  graph system  =
+  let ob = List.fold_left (
+    fun (t, v2 find_included_bads v2 graph in
   let pob = Far_util.compute_pre t ob in
   let fpob = Far_cube.filter pob in
   let allb = regroup bp fpob in

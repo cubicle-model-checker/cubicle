@@ -29,5 +29,5 @@ let close v1 t v2 graph system =
            In that case, there exists some parts in v1 which go to the 
            bad parts of the successive bad refinements of v2, we select
            the most generals bad parts *)
-        | _ -> let bad_parts = Far_bads.select_parts v1 t v2 bp graph system in
+        | _ -> let bad_parts =  in
                Bad_part bad_parts
