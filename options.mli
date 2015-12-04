@@ -24,7 +24,7 @@ val cin : in_channel
 
 
 val far : bool
-val far_level : int
+val far_extra : string
 val far_priority : string
 val far_brab : bool
 

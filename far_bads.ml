@@ -9,15 +9,19 @@ let print_bads bl =
   ) bl    
 
 let find_included_bads v graph = 
+  Format.eprintf "Find_incl @.";
   let rec frec acc v =
     match Far_graph.find_refiners v graph with
       | [] -> acc
-      | rs -> 
+      | rs -> List.iter (Format.eprintf "%a " print_id) rs;
         List.fold_left (
           fun acc r -> let acc = List.rev_append r.bad acc in
                        frec acc r
         ) acc rs
-  in frec [] v
+  in 
+  let l = frec [] v in
+  Format.eprintf "\nEnd Find_incl @.";
+  l
   
 
 let regroup = List.rev_append 
@@ -45,6 +49,7 @@ let simplify_dnf w1 b2 dnf =
 let select_procs slb v1 v2 =
   let gbd =
     let slb = List.fast_sort Far_cube.compare_decr_fcubes slb in
+    let slb = Far_cube.filter slb in
     let rec group (actual_group, done_group, dim) = function
       | [] -> (
         match actual_group with 
@@ -71,14 +76,45 @@ let select_procs slb v1 v2 =
           | _ -> nl
   in s gbd
 
+(* let partition_l dim l = *)
+(*   let rec f acc ll = *)
+(*     match ll with  *)
+(*       | hd::tl when (Far_cube.dim hd) = dim -> f (hd::acc) tl *)
+(*       | _ -> acc, ll *)
+(*   in f [] l *)
+
+
+(* let select_procs lb v1 v2 = *)
+  
+(*   (\* Format.eprintf "[Select procs]\n%a@." print_ednf l; *\) *)
+(*   let rec s l = *)
+(*     match l with *)
+(*       | [] -> assert false *)
+(*       | hd::tl -> *)
+(*         let dim = Far_cube.dim hd in *)
+(*         let less_proc, others = partition_l dim l in *)
+(*         let nl = simplify_dnf v1.world v2.bad less_proc in *)
+(*         match nl with *)
+(*           | [] -> s others *)
+(*           | _ -> nl *)
+(*   in s lb *)
+
 
 let select_parts v1 t v2 bp graph system  =
   let ob = find_included_bads v2 graph in
   let pob = Far_util.compute_pre t ob in
-  let allb = regroup bp pob in
+  let fpob = Far_cube.filter pob in
+  let allb = regroup bp fpob in
+  (* Format.eprintf "Allb@."; *)
+  (* print_bads allb; *)
+  (* Format.eprintf "End Allb@."; *)
   let selb = select_procs allb v1 v2 in
+  (* Format.eprintf "Selb@."; *)
+  (* print_bads selb; *)
+  (* Format.eprintf "End Selb@."; *)
   let bp =
     if Options.far_brab then
+      let slb = List.fast_sort Far_cube.compare_decr_fcubes allb in
       List.map (fun nb ->
         match Approx.Selected.good nb with
           | None -> nb
@@ -95,7 +131,7 @@ let select_parts v1 t v2 bp graph system  =
             (* If the candidate is directly reachable, no need to
                backtrack, just forget it. *)
             (* if ic3_verbose > 0 then *)
-      ) selb
+      ) slb
     else selb in
   List.iter Stats.new_node bp;
   bp

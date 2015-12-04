@@ -126,6 +126,7 @@ type vertex_far =
     mutable bad : ednf;
     is_root : bool;
     is_top : bool;
+    parent : vertex_far option;
   }
 
 type t_system = {

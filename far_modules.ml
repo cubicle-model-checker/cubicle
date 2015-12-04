@@ -31,7 +31,7 @@ module Vertex = struct
 
   let create =
     let cpt = ref 0 in
-    fun ?is_root:(ir=false) ?is_top:(it=false) w ac b ->
+    fun ?is_root:(ir=false) ?is_top:(it=false) ?parent w ac b ->
       incr cpt;
       let v =
         {
@@ -41,6 +41,7 @@ module Vertex = struct
 	  bad = b;
 	  is_root = ir;
           is_top = it;
+          parent = parent;
         } in
       v
 
@@ -56,7 +57,7 @@ module Vertex = struct
   let create_from_refinement v2 r =
     let w = if v2.is_root then r
       else List.rev_append r v2.world in
-    create w r []
+    create ~parent:v2 w r []
 
   let string_of_id v =
     match v.id with
@@ -67,12 +68,24 @@ module Vertex = struct
 
   let print_id fmt v = Format.eprintf "%s" (string_of_id v)
     
+  let print_idp fmt v = Format.eprintf "%s" (
+    match v.parent with
+      | None -> "none"
+      | Some v -> string_of_id v)
+
   let print_world fmt t =
     List.iter (
       fun n -> Format.eprintf "\t\tForall %a, @[%a@] AND\n@." 
         Variable.print_vars (Far_cube.variables n)
         (SAtom.print_sep "||") (Far_cube.litterals n)
     ) t.world
+
+  let print_ac fmt t =
+    List.iter (
+      fun n -> Format.eprintf "\t\tForall %a, @[%a@] AND\n@." 
+        Variable.print_vars (Far_cube.variables n)
+        (SAtom.print_sep "||") (Far_cube.litterals n)
+    ) t.added_clauses
 
   let print_bad fmt t =
     List.iter (

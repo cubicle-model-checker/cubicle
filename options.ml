@@ -23,7 +23,7 @@ let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
 let far = ref false
-let far_level = ref 0
+let far_extra = ref "no"
 let far_priority = ref "bfs"
 let far_brab = ref false
 
@@ -99,11 +99,10 @@ let set_mode m =
 
 let set_far n =
   far := true;
-  far_level := n
-
-let set_far_brab n =
-  far_brab := true;
-  brab := n
+  match n with
+    | "no" | "basic" | "fwd" -> far_extra := n
+    | "fwd-brab" -> far_extra := n; far_brab := true
+    | _ -> raise (Arg.Bad ("extrapolation strategy "^n^" not supported"))
 
 let set_dot d =
   dot := true;
@@ -144,12 +143,10 @@ let specs =
                     "<n> enumerative forward invariant generation with n processes";
     "-local", Arg.Set localized, 
                     " localized invariant candidates";
-    "-far", Arg.Int set_far, 
-                "<n> use far with level n of abstracion";
+    "-far-extra", Arg.String set_far, 
+                "<no(default) | basic | fwd | fwd-brab> use far with strategy <n> of abstraction";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
-    "-far_brab", Arg.Int set_far_brab,
-                "<n> use far but approximate bad parts with brab";
     "-upto", Arg.Set brab_up_to,
                 "in combination with -brab <n>, finite models up to size <n>";
     "-forward-depth", Arg.Set_int forward_depth,
@@ -195,8 +192,15 @@ let cin =
   | None -> stdin
 
 let far = !far
-let far_level = !far_level
+let far_extra = 
+  match !far_extra with
+    | "oracle" | "fwd" | "fwd-brab" as f -> 
+      if !brab = -1 then raise (Arg.Bad "You should give a number of processes to brab")
+      else f
+    | f -> f
+
 let far_priority = !far_priority
+  
 let far_brab = !far_brab
 
 let type_only = !type_only

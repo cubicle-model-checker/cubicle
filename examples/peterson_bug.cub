@@ -1,0 +1,104 @@
+(*
+ Process i:
+
+ while (true) {
+ L1:
+   Want[i] := true;
+ L2:
+   Turn := Other[i];
+ L3:
+   while ( Want[Other[i]] && Turn <> i) { ; }
+ L4_crit:
+   // section critique
+ L5:
+   Want[i] := false;
+ L6:
+   // section restante
+ }
+
+*)
+
+number_procs 2
+
+type loc =  L1 | L2 | L3 | L4_crit | L5 | L6 | Stop
+
+array PC[proc] : loc
+var Turn : proc
+array Want[proc] : bool
+array Other[proc] : proc
+
+
+(* ----------------------*)
+(* Initialization        *)
+(* ----------------------*)
+
+init ()
+{ Turn = #1 && PC[#1] = L1 && PC[#2] = L1 &&
+  Want[#1] = False && Want[#2] = False &&
+  Other[#1] = #2   && Other[#2] = #1 }
+
+
+(* ----------------------*)
+(* Properties            *)
+(* ----------------------*)
+
+unsafe () { Turn <> #1 && Turn <> #2 }
+
+(* ----------------------*)
+(* Transitions           *)
+(* ----------------------*)
+
+transition t_L1_L2 ( i )
+requires { PC[i] = L1 }
+{ Want[i] := True;
+  PC[i] := L2; }
+
+transition t_L2_L3 ( i )
+requires { PC[i] = L2 }
+{ Turn := Other[i];
+  PC[i] := L3; }
+
+transition t_L3_L4_1 ( i j )
+requires { PC[i] = L3 && j = Other[i] && Want[j] = False  }
+{ PC[i] := L4_crit; }
+
+transition t_L3_L4_2 ( i )
+requires { PC[i] = L3 && Turn = i }
+{ PC[i] := L4_crit; }
+
+transition t_L4_L5 ( i )
+requires { PC[i] =  L4_crit }
+{ PC[i] := L5; }
+
+transition t_L5_L6 ( i )
+requires { PC[i] = L5 }
+{ Want[i] := False;
+  PC[i] := L6; }
+
+transition t_L6_L1 ( i )
+requires { PC[i] = L6 }
+{ PC[i] := L1; }
+
+transition t_Stop1 ( i )
+requires { PC[i] = L1 }
+{ PC[i] := Stop; }
+
+transition t_Stop1 ( i )
+requires { PC[i] = L1 }
+{ PC[i] := Stop; }
+(*
+transition t_Stop2 ( i )
+requires { PC[i] = L2 }
+{ PC[i] := Stop; }
+
+transition t_Stop3 ( i )
+requires { PC[i] = L3 }
+{ PC[i] := Stop; }
+
+transition t_Stop5 ( i )
+requires { PC[i] = L5 }
+{ PC[i] := Stop; }
+*)
+transition t_Stop6 ( i )
+requires { PC[i] = L6 }
+{ PC[i] := Stop; }

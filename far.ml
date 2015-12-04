@@ -28,7 +28,7 @@ let init_nodes system =
   root, top
 
 let search system =
-  if far_level = 2 || do_brab then Oracle.init system;
+  if far_extra = "oracle" || do_brab then Oracle.init system;
   if only_forward then exit 0;
 
   let root, top = init_nodes system in
@@ -40,15 +40,26 @@ let search system =
   let rec rsearch () =
     try
       let v1 = Q.pop queue in
-      let trans = trans_from v1 in
-      
-      Format.eprintf "******* Search %a *********\n@." Vertex.print_id v1;
+      (* Format.eprintf "Trans from@."; *)
+      (* Format.eprintf "End Trans from@."; *)
+      Format.eprintf "***************************@.";
+      Format.eprintf "******* Search %a *********@." Vertex.print_id v1;
+      Format.eprintf "***************************\n@.";
+      (* Format.eprintf "Parent : %a@." Vertex.print_idp v1; *)
+      (* Far_graph.list_trans_to v1 graph; *)
+      let tm = Far_graph.trans_map v1 graph in
+      let trans = Far_graph.get_trans tm trans_from v1 in
       if verbose > 0 then Format.eprintf "\n%a@." Vertex.print_world v1;
       
       List.iter (
           fun t ->
-          Far_graph.add_edge v1 t top graph;
-          Far_unwind.unwind v1 t top graph system
+            let v2 =
+              match Far_graph.get_node t tm with
+                | Some v -> v
+                | None -> top
+            in
+            Far_graph.add_edge v1 t v2 graph;
+            Far_unwind.unwind v1 t v2 graph system
         ) trans;
       rsearch ()
     with 

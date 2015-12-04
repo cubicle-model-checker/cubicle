@@ -74,11 +74,20 @@ let equivalent fc1 fc2 =
       ) sigmas
     end
 
+let filter cl =
+  let rec fr cl acc =
+    match cl with
+      | [] -> acc
+      | c :: tl -> match cube_implies c acc with
+          | Some _ -> fr tl acc
+          | None -> fr tl (c::acc)
+  in List.rev (fr cl [])
+
 let pre_and_filter t nf =
   let pnf = Far_util.compute_pre t nf in
   let tnf = List.fast_sort (fun n1 n2 -> compare_fcubes n1 n2) pnf in
-  (* Todo : filter *)
-  tnf
+  let ftnf = filter tnf in
+  ftnf
 
 
 let negate_pre_and_filter t ucnf =

@@ -11,7 +11,6 @@ type cresult =
 let find_covering v1 t v2 graph =
   let cands = Far_graph.find_refiners v2 graph in
   List.filter (Vertex.imply_by_trans_ww v1 t) cands
-        
 
 let close v1 t v2 graph system =
   let vcl = find_covering v1 t v2 graph in

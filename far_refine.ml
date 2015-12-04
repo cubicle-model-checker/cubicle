@@ -23,9 +23,6 @@ let all_subs fc =
       (SAtom.cardinal sa1) (SAtom.cardinal sa2)
   ) l
 
-
-
-
 let find_extra ?(oracle=false) v1 t v2 used_sub fc =
   let subs = if oracle then 
       let nsub = Approx.Selected.all_goods fc in
@@ -48,11 +45,11 @@ let find_extra ?(oracle=false) v1 t v2 used_sub fc =
   in fe subs
 
 let approximate_negation v1 t v2 us fc = 
-  if Options.far_level = 0 then 
-    Some (Far_cube.litterals fc, Far_cube.negate_formula_to_uclause fc)
-  else if Options.far_level = 1 then find_extra v1 t v2 us fc
-  else if Options.far_level = 2 then find_extra ~oracle:true v1 t v2 us fc
-  else assert false
+  match Options.far_extra with
+    | "no" -> Some (Far_cube.litterals fc, Far_cube.negate_formula_to_uclause fc)
+    | "basic" -> find_extra v1 t v2 us fc
+    | "fwd" | "fwd-brab" -> find_extra ~oracle:true v1 t v2 us fc
+    | _ -> assert false
       
 let refine v1 t v2 =
   let (_, nl) = List.fold_left (
