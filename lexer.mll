@@ -106,6 +106,8 @@ rule token = parse
       { PLUS }
   | "-"
       { MINUS }
+  | "*"
+      { TIMES }
   | ":"
       { COLON }
   | "="

@@ -95,7 +95,7 @@
 %token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR 
 %token <Num.num> REAL
 %token <Num.num> INT
-%token PLUS MINUS
+%token PLUS MINUS TIMES
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
@@ -349,8 +349,20 @@ arith_term:
       { Arith($1, MConst.add $3 (-1) MConst.empty) }
   | var_or_array_term PLUS mident 
       { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+  | var_or_array_term PLUS INT TIMES mident
+      { Arith($1, MConst.add (ConstName $5) (Num.int_of_num $3) MConst.empty) }
+  | var_or_array_term PLUS mident TIMES INT
+      { Arith($1, MConst.add (ConstName $3) (Num.int_of_num $5) MConst.empty) }
   | var_or_array_term MINUS mident 
       { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
+  | var_or_array_term MINUS INT TIMES mident 
+      { Arith($1, MConst.add (ConstName $5) (- (Num.int_of_num $3)) MConst.empty) }
+  | var_or_array_term MINUS mident TIMES INT 
+      { Arith($1, MConst.add (ConstName $3) (- (Num.int_of_num $5)) MConst.empty) }
+  | INT TIMES mident 
+      { Const(MConst.add (ConstName $3) (Num.int_of_num $1) MConst.empty) }
+  | MINUS INT TIMES mident 
+      { Const(MConst.add (ConstName $4) (- (Num.int_of_num $2)) MConst.empty) }
   | constnum { Const (MConst.add $1 1 MConst.empty) }
 ;
 
