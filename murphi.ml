@@ -99,13 +99,7 @@ let rec get_short_term t =
     | _ -> t
   with Not_found -> t
 
-let rec print_list print sep fmt = function
-  | [] -> ()
-  | [e] -> print fmt e
-  | e :: l ->
-    print fmt e;
-    fprintf fmt sep;
-    print_list print sep fmt l
+let print_list = Pretty.print_list
 
 let print_constants fmt nbprocs abstr =
   fprintf fmt "@[<v 2>const@ ";

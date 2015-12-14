@@ -28,3 +28,9 @@ val print_double_line : formatter -> unit -> unit
 
 val print_title : formatter -> string -> unit
 (** prints section title for stats *)
+
+val print_list :
+  (formatter -> 'a -> unit) ->
+  ('b, formatter, unit) format -> formatter -> 'a list -> unit
+(** [print_list f sep fmt l] prints list [l] whose elements are printed with
+    [f], each of them being separated by the separator [sep]. *)
