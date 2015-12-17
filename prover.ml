@@ -161,8 +161,8 @@ let make_conjuct atoms1 atoms2 =
   F.make F.And l
 
 
-let make_init_dnfs s nb_procs =
-  let cdnf_sa, _ = Hashtbl.find s.t_init_instances nb_procs in
+let make_inst_dnfs inst nb_procs =
+  let cdnf_sa, _ = Hashtbl.find inst nb_procs in
   List.rev_map (List.rev_map make_formula_set) cdnf_sa
 
 
@@ -188,15 +188,14 @@ let unsafe_dnf node nb_procs dnf =
     raise (Smt.Unsat uc)
   with Exit -> ()
 
-let unsafe_cdnf s n =
+let unsafe_cdnf inst n =
   let nb_procs = List.length (Node.variables n) in
-  let cdnf_init = make_init_dnfs s nb_procs in
+  let cdnf_init = make_inst_dnfs inst nb_procs in
   List.iter (unsafe_dnf n nb_procs) cdnf_init
 
-let unsafe s n = unsafe_cdnf s n
-  
+let unsafe s n = unsafe_cdnf s.t_init_instances n
 
-
+let unsafe_good s n = unsafe_cdnf s.t_good_instances n
 
 let reached args s sa =
   SMT.clear ();

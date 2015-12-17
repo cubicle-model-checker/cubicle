@@ -31,6 +31,7 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 (* unsafe (z1 z2) { Cache[z1] = Exclusive && Chan3[z2] = Invack } *)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
+good (z) { Cache[z] = Invalid || Shrset[z] = False }
 
 transition send_shared (n)
 requires { Chan1[n] = Empty && Cache[n] = Invalid }

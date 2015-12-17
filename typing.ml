@@ -307,7 +307,7 @@ let init_proc () =
   List.iter 
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
-let create_init_instances (iargs, l_init) = 
+let create_instances (iargs, l_init) = 
   let init_instances = Hashtbl.create 11 in
   begin
     match l_init with
@@ -432,11 +432,16 @@ let system s =
   if Options.debug        then Smt.Variant.print ();
 
   let init_woloc = let _,v,i = s.init in v,i in
+
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
-  let init_instances = create_init_instances init_woloc in
+  let good_woloc = let _,v,i = s.good in v,i in
+
+  let init_instances = create_instances init_woloc in
+  let good_instances = create_instances good_woloc in
+
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
   { 
@@ -446,5 +451,7 @@ let system s =
     t_init_instances = init_instances;
     t_invs = invs_woloc;
     t_unsafe = unsafe_woloc;
+    t_good = good_woloc;
+    t_good_instances = good_instances;
     t_trans = List.map add_tau s.trans;
   }

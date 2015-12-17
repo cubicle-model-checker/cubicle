@@ -54,10 +54,13 @@ let config = function
      " , color = orange, shape=rectangle, \
       fontcolor=white, fontsize=20, style=filled"
   | Node -> 
-     match display_node_contents with
-     | Empty | Empty_C -> 
-         sprintf " , shape=point, color=\"%s\"" (hex_color !current_color)
-     | _ -> sprintf "color=\"%s\"" (hex_color !current_color)
+    begin
+      match display_node_contents with
+	| Empty | Empty_C -> 
+          sprintf " , shape=point, color=\"%s\"" (hex_color !current_color)
+	| _ -> sprintf "color=\"%s\"" (hex_color !current_color)
+    end
+  | Good -> ""
 
 let info_sfdp s = match dot_prog with
   | Sfdp -> "label=\" \", "^s

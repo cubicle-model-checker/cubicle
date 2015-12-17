@@ -30,7 +30,9 @@ let find_extra ?(oracle=false) v1 t v2 used_sub fc =
     else all_subs fc 
   in
   let rec fe = function
-    | [] -> Some (Far_cube.litterals fc, Far_cube.negate_formula_to_uclause fc)
+    | [] -> 
+      Format.eprintf ".@.";
+      Some (Far_cube.litterals fc, Far_cube.negate_formula_to_uclause fc)
     | sub::tl -> 
       let fc = Far_cube.create (Cube.create_normal sub) in
       let ucl = Far_cube.negate_formula_to_uclause fc in
@@ -40,7 +42,9 @@ let find_extra ?(oracle=false) v1 t v2 used_sub fc =
           fe tl
         else (
           if contains_sa used_sub sub then None
-          else Some (sub, ucl)
+          else (
+	    Format.eprintf "!@.";
+	    Some (sub, ucl))
         )
   in fe subs
 

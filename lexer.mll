@@ -35,6 +35,7 @@
 	"case", CASE;
 	"forall_other", FORALL;
 	"number_procs", SIZEPROC;
+	"good", GOOD
       ]
 	       
   let newline lexbuf =

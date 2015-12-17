@@ -84,7 +84,7 @@
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE FORALL
 %token SIZEPROC
-%token ASSIGN UGUARD REQUIRE NEQ UNSAFE
+%token ASSIGN UGUARD REQUIRE NEQ UNSAFE GOOD
 %token OR AND COMMA PV DOT QMARK
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -113,6 +113,7 @@ declarations
 init
 invariants
 unsafe_list
+good
 transitions 
 { let consts, vars, arrays = $3 in
   { type_defs = $2; 
@@ -122,7 +123,8 @@ transitions
     init = $4; 
     invs = $5;
     unsafe = $6; 
-    trans = $7 } }
+    good = $7;
+    trans = $8 } }
 ;
 
 declarations :
@@ -202,6 +204,11 @@ invariant:
 
 unsafe:
   | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
+;
+
+good:
+  | GOOD LEFTPAR lidents RIGHTPAR LEFTBR dnf RIGHTBR 
+      { loc (), $3, $6 }
 ;
 
 unsafe_list:

@@ -48,3 +48,22 @@ let check s n =
   with
     | Smt.Unsat _ -> ()
 
+
+let obviously_safe_good { t_good_instances = good_inst; } n =
+  let nb_procs = Node.dim n in
+  let _, cdnf_ai = Hashtbl.find good_inst nb_procs in
+  cdnf_asafe (Node.array n) cdnf_ai
+ 
+let check_good s n =
+  (*Debug.unsafe s;*)
+  try
+    if not (obviously_safe_good s n) then
+      begin
+	Prover.unsafe_good s n;
+	if not quiet then eprintf "\nGood trace: @[%a@]@."
+	  Node.print_history n;
+        raise (Unsafe n)
+      end
+  with
+    | Smt.Unsat _ -> ()
+

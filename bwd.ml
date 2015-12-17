@@ -80,6 +80,9 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                     try
                       (* Replace node with its approximation *)
                       Safety.check system c;
+                      Format.eprintf "Candidate : %a@." Node.print c;
+		      Safety.check_good system c;
+		      
                       candidates := c :: !candidates;
                       Stats.candidate n c;
                       c

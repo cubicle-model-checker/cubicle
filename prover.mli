@@ -23,6 +23,9 @@ module SMT : Smt.Solver
 val unsafe : Ast.t_system -> Node.t -> unit
 (** Checks if the node is directly reachable on init of the system *)
 
+val unsafe_good : Ast.t_system -> Node.t -> unit
+(** Checks if the node is directly reachable on init of the system *)
+
 val reached : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 (** [reached vars s1 s2] raises [Unsat] if s2 has not been reached *)
 
