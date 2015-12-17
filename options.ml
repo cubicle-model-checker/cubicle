@@ -26,6 +26,8 @@ let far = ref false
 let far_extra = ref "no"
 let far_priority = ref "bfs"
 let far_brab = ref false
+let far_dbg = ref false
+let far_verb = ref false
 
 let max_proc = ref 10
 let type_only = ref false
@@ -34,6 +36,7 @@ let maxnodes = ref 100_000
 let debug = ref false
 let dot = ref false
 let dot_level = ref 0
+let dot_prof = ref 0
 let dot_prog = ref Dot
 let dot_colors = ref 0
 let verbose = ref 0
@@ -116,6 +119,7 @@ let show_version () = Format.printf "%s@." Version.version; exit 0
 let specs = 
   [ "-version", Arg.Unit show_version, " prints the version number";
     "-quiet", Arg.Set quiet, " do not output search trace";
+    "-fverb", Arg.Set far_verb, " output search trace for far";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-max-procs", Arg.Set_int max_proc, 
@@ -129,6 +133,8 @@ let specs =
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
               "<level> graphviz (dot) output with a level of details";
+    "-dot-prof", Arg.Set_int dot_prof,
+              "<prof> set the maximum depth of a displayable node";
     "-sfdp", Arg.Unit use_sfdp,
               " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
@@ -145,6 +151,7 @@ let specs =
                     " localized invariant candidates";
     "-far-extra", Arg.String set_far, 
                 "<no(default) | basic | fwd | fwd-brab> use far with strategy <n> of abstraction";
+    "-far-dbg", Arg.Set far_dbg, " Provisoire";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
@@ -202,6 +209,8 @@ let far_extra =
 let far_priority = !far_priority
   
 let far_brab = !far_brab
+let far_dbg = !far_dbg
+let far_verb = !far_verb
 
 let type_only = !type_only
 let maxrounds = !maxrounds
@@ -211,6 +220,8 @@ let debug = !debug
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level
+let dot_prof = !dot_prof
+let bdot_prof = dot_prof > 0
 let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let debug_smt = !debug_smt

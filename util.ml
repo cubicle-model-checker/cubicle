@@ -31,6 +31,7 @@ module TimeCertificate = Timer.Make (struct let profiling = true end)
 module TimeSubsuming = Timer.Make (Options)
 module TimeFindBads = Timer.Make (Options)
 module TimeCheckBad = Timer.Make (Options)
+module TimeSelect = Timer.Make (Options)
 
 let nb_digits n =
   if n < 10 then 1

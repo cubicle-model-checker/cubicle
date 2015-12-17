@@ -21,6 +21,9 @@ exception ReachedLimit
 val cpt_delete : int ref
 (** number of delted nodes *)
 
+val cpt_process : int ref
+(** number of processes needed *)
+
 val new_node : Node.t -> unit
 (** register the treatment of a new node *)
 

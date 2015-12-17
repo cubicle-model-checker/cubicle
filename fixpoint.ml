@@ -58,6 +58,8 @@ module FixpointList : sig
 
   val check : Node.t -> Node.t list -> int list option
 
+  val check_list : Node.t list -> Node.t list -> bool
+
 end = struct
 
   let check_fixpoint ?(pure_smt=false) n visited =
@@ -136,6 +138,30 @@ end = struct
       match easy_fixpoint s visited with
       | None -> hard_fixpoint s visited
       | r -> r
+    in
+    TimeFix.pause ();
+    r
+
+  let check_list sl visited =
+    TimeFix.start ();
+    let r =
+      List.filter (
+        fun s ->
+          Debug.unsafe s;
+          match easy_fixpoint s visited with
+            | None -> true
+            | Some _ -> false
+      ) sl in
+    let r =
+      match r with 
+        | [] -> true
+        | f ->
+          List.for_all (
+            fun s ->
+              match hard_fixpoint s visited with
+                | None -> false
+                | Some _ -> true
+          ) f
     in
     TimeFix.pause ();
     r

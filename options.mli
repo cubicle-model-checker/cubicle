@@ -27,6 +27,8 @@ val far : bool
 val far_extra : string
 val far_priority : string
 val far_brab : bool
+val far_dbg : bool
+val far_verb : bool
 
 val max_proc : int
 val type_only : bool
@@ -67,6 +69,8 @@ val mode : string
 val debug : bool
 val dot : bool
 val dot_level : int
+val dot_prof : int
+val bdot_prof : bool
 val dot_prog : viz_prog
 val dot_colors : int
 val quiet : bool

@@ -23,16 +23,8 @@ let negate_formula_to_uclause cube =
 
 let negate_litterals_to_ecubes = List.map negate_formula_to_ecube
 
-let compare_fcubes fc1 fc2 =
-  let s = dim fc1 - dim fc2 in
-    if s = 0 then
-      size fc1 - size fc2
-    else s
-
-let compare_decr_fcubes fc1 fc2 = (~-) (compare_fcubes fc1 fc2)
-
 let inconsistent_clause_cube fcl fcu =
-  if compare_fcubes fcl fcu > 0 then false
+  if compare_by_breadth fcl fcu > 0 then false
   else 
     begin
       let vl = variables fcl in
@@ -58,7 +50,7 @@ let cube_implies c cl =
   with Not_found -> None
 
 let equivalent fc1 fc2 =
-  if compare_fcubes fc1 fc2 <> 0 then false
+  if compare_by_breadth fc1 fc2 <> 0 then false
   else 
     begin
       let c1 = fc1.cube in
@@ -83,12 +75,14 @@ let filter cl =
           | None -> fr tl (c::acc)
   in List.rev (fr cl [])
 
-let pre_and_filter t nf =
+let pre_and_filter ?b t nf =
   let pnf = Far_util.compute_pre t nf in
-  let tnf = List.fast_sort (fun n1 n2 -> compare_fcubes n1 n2) pnf in
+  let tnf = List.fast_sort compare_by_breadth 
+    (match b with
+      | None -> pnf
+      | Some b -> List.rev_append b pnf) in
   let ftnf = filter tnf in
   ftnf
-
 
 let negate_pre_and_filter t ucnf =
   let nf = negate_litterals_to_ecubes ucnf in

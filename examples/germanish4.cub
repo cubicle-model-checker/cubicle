@@ -14,13 +14,23 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
            Exgntd = False && Curcmd = Empty && 
 	   Chan1[z]=Empty && Chan3[z]=Empty }
 
-(*
-invariant (z) { Cache[z] = Exclusive && Exgntd  = False }
-invariant (z) { Cache[z] = Shared && Shrset[z] = False }
-*)
 
+(* invariant (z) { Cache[z] = Exclusive && Exgntd  = False } *)
+(* invariant (z) { Cache[z] = Shared && Shrset[z] = False } *)
 
+(* invariant (z) { Cache[z] = Shared && Chan3[z] = Invack} *)
+(* invariant (z) { Cache[z] = Invalid && Shrset[z] = True} *)
+(* invariant (z) {  *)
+(* unsafe (z) { Exgntd = False && Curcmd = Reqs && Chan3[z] = Invack } *)
+
+(* unsafe (z) { Chan3[z] = Invack && Shrset[z] = False } *)
+(* unsafe (z) { Cache[z] <> Invalid && Shrset[z] = False } *)
+(* unsafe (z) { Cache[z] = Exclusive && Exgntd = False } *)
+(* unsafe (z) { Cache[z] <> Invalid && Chan3[z] = Invack } *)
+(* unsafe (z) { Curcmd = Empty && Chan3[z] = Invack } *)
+(* unsafe (z1 z2) { Cache[z1] = Exclusive && Chan3[z2] = Invack } *)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+
 
 transition send_shared (n)
 requires { Chan1[n] = Empty && Cache[n] = Invalid }

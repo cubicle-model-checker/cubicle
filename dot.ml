@@ -139,10 +139,11 @@ let print_pre cedge fmt n =
 let dot_fmt = ref std_formatter
 
 let new_node n =
-  current_color := next_shade ();
-  fprintf !dot_fmt "%a@." print_node n;
-  print_pre (cedge_pre ()) !dot_fmt n
-
+  if not bdot_prof || (List.length n.from < dot_prof) then (
+    current_color := next_shade ();
+    fprintf !dot_fmt "%a@." print_node n;
+    print_pre (cedge_pre ()) !dot_fmt n
+  )
 
 let fixpoint s db =
   if display_fixpoints then
@@ -173,7 +174,7 @@ let error_trace faulty =
 
 
 let delete_node_by n s =
-  if n.deleted then
+  if not bdot_prof || (n.deleted && List.length n.from < dot_prof) then
     begin
       fprintf !dot_fmt "%d [color=\"blue\"]@." n.tag;
               (* (hex_color !current_color); *)

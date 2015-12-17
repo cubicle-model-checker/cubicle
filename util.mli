@@ -31,6 +31,7 @@ module TimeCertificate : Timer.S
 module TimeSubsuming : Timer.S
 module TimeFindBads : Timer.S
 module TimeCheckBad : Timer.S
+module TimeSelect : Timer.S
 
 
 (** {2 Misc } *)

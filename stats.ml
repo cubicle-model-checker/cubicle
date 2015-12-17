@@ -43,7 +43,7 @@ let nodes_pre_run = ref []
 let new_node s =
   incr cpt_nodes;
   cpt_process := max !cpt_process (List.length (Node.variables s));
-  if not quiet then
+  if not quiet || far_dbg then
     begin
       printf "node @{<b>%d@}: " !cpt_nodes;
       if verbose < 1 then printf "@[%a@]@." Node.print_history s
@@ -206,7 +206,10 @@ let print_time_find_bads () =
   printf "├─Time to find bads              : %a@." print_time (TimeFindBads.get ())
 
 let print_time_check_bads () =
-  printf "└─Time to check bads             : %a@." print_time (TimeCheckBad.get ())
+  printf "├─Time to check bads             : %a@." print_time (TimeCheckBad.get ())
+
+let print_time_select_bads () =
+  printf "└─Time to select bads            : %a@." print_time (TimeSelect.get ())
   
 
 let print_report ~safe visited candidates =
@@ -247,6 +250,7 @@ let print_report ~safe visited candidates =
       print_time_subsuming ();
       print_time_find_bads ();
       print_time_check_bads ();
+      print_time_select_bads ();
     end;
   printf "%a" Pretty.print_double_line ()
 

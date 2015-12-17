@@ -27,9 +27,6 @@ let trans_map v g =
       | None -> empty_content
   in e
 
-let get_trans m tf v =
-  if TMap.is_empty m then tf v else List.rev (TMap.fold (fun key _ l -> key::l) m [])
-
 let get_node t e =
   try
     Some (TMap.find t e)

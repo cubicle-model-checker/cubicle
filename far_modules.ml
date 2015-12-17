@@ -110,15 +110,9 @@ module Vertex = struct
 
   let (=!>) v1 v2 = v1.id >= v2.id
 
-  let update_bad v1 b t v2 = v1.bad <- b
+  let update_bad v1 b = v1.bad <- b
 
-  let base_implication dnf1 dnf2 =
-    List.for_all (
-      fun c ->
-        match Fixpoint.FixpointList.check c dnf1 with
-          | Some _ -> true
-          | None -> false
-    ) dnf2
+  let base_implication dnf1 dnf2 = Fixpoint.FixpointList.check_list dnf2 dnf1
 
       
   let imply_by_trans_ww v1 t v2 =
@@ -186,4 +180,36 @@ end
 
 module TVSet = Set.Make (OrdCpl)
 module TMap = Map.Make (OrdTrans)
+module SMap = Map.Make (Vertex)
 module VSet = Set.Make (Vertex)
+
+module FCSet = struct
+
+  include Set.Make (
+    struct
+      type t = int * Far_cube.t
+      let compare = 
+        fun (o1, fc1) (o2, fc2) ->
+          match Options.mode with
+            | "bfs" -> o1 - o2
+            | "dfs" -> o2 - o1
+            | "bfsh" -> Far_cube.compare_by_breadth fc1 fc2
+            | "dfsh" -> Far_cube.compare_by_depth fc1 fc2
+            | _ -> assert false
+    end
+  )
+
+  let o = ref 0
+
+  let add fc t =
+      incr o;
+      add (!o, fc) t
+
+  let iter f t = iter (fun (_, fc) -> f fc) t
+
+  let min_elt t = let _, fc = min_elt t in fc
+
+  let empty = o := 0; empty
+
+  let elements t = let l = elements t in snd (List.split l)
+end

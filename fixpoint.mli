@@ -22,6 +22,10 @@ module FixpointList : sig
   (** [check s v] returns the tags of nodes in v that were used if [s] implies
       the disjunction of the nodes in [v]. Otherwise, it returns [None]. *)
 
+  val check_list : Node.t list -> Node.t list -> bool
+  (** [check sl v] returns true if all cubes in [sl] imply the disjunction of 
+      the nodes in [v]. Otherwise, it returns false. *)
+
   val pure_smt_check : Node.t -> Node.t list -> int list option
   (** Same as [check] but only uses the SMT solver. Only use for benchmarking
       purposes or for reference implementation. *)

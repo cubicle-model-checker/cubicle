@@ -11,7 +11,7 @@ type cresult =
 let find_covering v1 t v2 graph =
   let cands = Far_graph.find_refiners v2 graph in
   List.filter (Vertex.imply_by_trans_ww v1 t) cands
-
+    
 let close v1 t v2 graph system =
   let vcl = find_covering v1 t v2 graph in
   match vcl with
@@ -29,5 +29,4 @@ let close v1 t v2 graph system =
            In that case, there exists some parts in v1 which go to the 
            bad parts of the successive bad refinements of v2, we select
            the most generals bad parts *)
-        | _ -> let bad_parts =  in
-               Bad_part bad_parts
+        | _ -> Bad_part bp
