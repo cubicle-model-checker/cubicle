@@ -51,6 +51,15 @@ let _ =
   try
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
+    let (v, d) = system.t_init in
+    Format.eprintf "T_init : forall %a :@."
+      Variable.print_vars v;
+    List.iter (Format.eprintf "%a@." Types.SAtom.print) d;
+    let (v, d) = system.t_good in
+    Format.eprintf "T_good : forall %a :@."
+      Variable.print_vars v;
+    List.iter (Format.eprintf "%a@." Types.SAtom.print) d;
+    
     if type_only then exit 0;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \

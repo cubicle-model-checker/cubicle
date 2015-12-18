@@ -73,16 +73,25 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
           | None ->
              Stats.check_limit n;
              Stats.new_node n;
+             Format.eprintf "Node : %a@." Node.print n;
              let n = begin
                  match Approx.good n with
                  | None -> n
                  | Some c ->
                     try
                       (* Replace node with its approximation *)
-                      Safety.check system c;
-                      Format.eprintf "Candidate : %a@." Node.print c;
+                      let (v, d) = system.t_init in
+                      Format.eprintf "T_init : forall %a :@."
+                        Variable.print_vars v;
+                      List.iter (Format.eprintf "%a@." Types.SAtom.print) d;
+                      let (v, d) = system.t_good in
+                      Format.eprintf "\nT_good : forall %a :@."
+                        Variable.print_vars v;
+                      List.iter (Format.eprintf "%a@." Types.SAtom.print) d;
+		      Safety.check system c;
+                      Format.eprintf "\nCandidate : %a@." Node.print c;
 		      Safety.check_good system c;
-		      
+                      Format.eprintf "\n----------Accepted----------@.";
                       candidates := c :: !candidates;
                       Stats.candidate n c;
                       c

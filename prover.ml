@@ -182,6 +182,7 @@ let unsafe_dnf node nb_procs dnf =
       List.fold_left (fun accuc init ->
         try 
           unsafe_conj node nb_procs init;
+          Format.eprintf "%a@." F.print init;
           raise Exit
         with Smt.Unsat uc -> List.rev_append uc accuc)
         [] dnf in
@@ -191,6 +192,7 @@ let unsafe_dnf node nb_procs dnf =
 let unsafe_cdnf inst n =
   let nb_procs = List.length (Node.variables n) in
   let cdnf_init = make_inst_dnfs inst nb_procs in
+  List.iter (List.iter (Format.eprintf "%a@." F.print)) cdnf_init;
   List.iter (unsafe_dnf n nb_procs) cdnf_init
 
 let unsafe s n = unsafe_cdnf s.t_init_instances n
