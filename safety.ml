@@ -57,7 +57,7 @@ let obviously_safe_good { t_good_instances = good_inst; } n =
   let _, cdnf_ai = Hashtbl.find good_inst nb_procs in
   cdnf_asafe (Node.array n) cdnf_ai
  
-
+(*
 let rec compare_terms_naive t1 t2 =
   match t1, t2 with
     | Const c1, Const c2 -> 0
@@ -100,21 +100,18 @@ let litt_in_list n sal =
           ) sa2
       ) sal
   ) sa1
-
+*)
 
 let check_good s n =
   (*Debug.unsafe s;*)
   try
     if not (obviously_safe_good s n) then
       begin
-        if litt_in_list n (snd s.t_good) then 
-          begin
-	    Prover.unsafe_good s n;
-	    if not quiet then eprintf "\nGood trace: @[%a@]@."
-	      Node.print_history n;
-            Format.eprintf "\n----------Refused----------@.";
-            raise (Unsafe n)
-          end
+	Prover.unsafe_good s n;
+	if not quiet then eprintf "\nGood trace: @[%a@]@."
+	  Node.print_history n;
+        Format.eprintf "\n----------Refused----------@.";
+        raise (Unsafe n)
       end
   with
     | Smt.Unsat _ -> ()

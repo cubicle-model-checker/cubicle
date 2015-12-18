@@ -29,6 +29,8 @@ let far_brab = ref false
 let far_dbg = ref false
 let far_verb = ref false
 
+let goods = ref false
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -152,6 +154,7 @@ let specs =
     "-far-extra", Arg.String set_far, 
                 "<no(default) | basic | fwd | fwd-brab> use far with strategy <n> of abstraction";
     "-far-dbg", Arg.Set far_dbg, " Provisoire";
+    "-goods", Arg.Set goods, " Goods";
     "-brab", Arg.Set_int brab,
                 "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
@@ -211,6 +214,8 @@ let far_priority = !far_priority
 let far_brab = !far_brab
 let far_dbg = !far_dbg
 let far_verb = !far_verb
+
+let goods = !goods
 
 let type_only = !type_only
 let maxrounds = !maxrounds

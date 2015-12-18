@@ -33,9 +33,16 @@ unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
 (* good (z) { Cache[z] = Invalid && Shrset[z] = False } *)
 
-good (z) { Cache[z] = Invalid && Shrset[z] = False || 
+(*good (z) { Cache[z] = Invalid && Shrset[z] = False || 
            Cache[z] <> Invalid && Shrset[z] = True || 
            Cache[z] = Exclusive && Exgntd = True }
+*)
+
+
+good (z1 z2) { 
+     Chan3[z1] = Invack && Shrset[z1] = True || 
+     Chan3[z1] = Inv && Chan3[z2] = Inv && Exgntd = False
+     }
 
 (* good (z) { True = False } *)
 
