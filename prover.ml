@@ -197,8 +197,6 @@ let unsafe_cdnf inst n =
 
 let unsafe s n = unsafe_cdnf s.t_init_instances n
 
-let unsafe_good s n = unsafe_cdnf s.t_good_instances n
-
 let reached args s sa =
   SMT.clear ();
   SMT.assume  ~id:0 (distinct_vars (List.length args));
@@ -218,6 +216,12 @@ let assume_goal { tag = id; cube = cube } =
 let assume_node { tag = id } ap =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
+  SMT.assume ~id f;
+  SMT.check  ()
+
+let assume_good { tag = id } ap =
+  let f = make_formula ap in
+  if debug_smt then eprintf "[smt] assume good: %a@." F.print f;
   SMT.assume ~id f;
   SMT.check  ()
 

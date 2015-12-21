@@ -437,10 +437,10 @@ let system s =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
-  let good_woloc = let _,v,i = s.good in v,i in
+  let good_woloc =
+    List.map (fun (_,v,u) -> create_node_rename Good v u) s.good in
 
   let init_instances = create_instances init_woloc in
-  let good_instances = create_instances good_woloc in
 
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
@@ -452,6 +452,5 @@ let system s =
     t_invs = invs_woloc;
     t_unsafe = unsafe_woloc;
     t_good = good_woloc;
-    t_good_instances = good_instances;
     t_trans = List.map add_tau s.trans;
   }

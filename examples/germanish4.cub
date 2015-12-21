@@ -34,19 +34,9 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
-good (z1 z2) { 
-    Cache[z1] = Shared &&
-     Cache[z2] = Invalid &&
-     Shrset[z1] = True &&
-     Shrset[z2] = False &&
-     Chan1[z1] = Empty &&
-     Chan1[z2] = Empty &&
-     Exgntd = False &&
-     Curptr = z2 &&
-     Curcmd = Reqe &&
-     Chan3[z1] = Inv &&
-     Chan3[z2] = Inv
-}
+
+good (z) { Cache[z] = Invalid && Shrset[z] = False }
+good (z) { Cache[z] <> Invalid && Shrset[z] = True }
      
 
 (*good (z) { Cache[z] = Invalid && Shrset[z] = False || 

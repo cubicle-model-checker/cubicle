@@ -18,6 +18,8 @@
 (** Fixpoint tests on list structures *)
 module FixpointList : sig
 
+  val hard_fixpoint_good : Node.t -> Node.t list -> int list option
+
   val check : Node.t -> Node.t list -> int list option
   (** [check s v] returns the tags of nodes in v that were used if [s] implies
       the disjunction of the nodes in [v]. Otherwise, it returns [None]. *)

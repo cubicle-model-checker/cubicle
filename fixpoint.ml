@@ -60,9 +60,14 @@ module FixpointList : sig
 
   val check_list : Node.t list -> Node.t list -> bool
 
-end = struct
+  val hard_fixpoint_good : Node.t -> Node.t list -> int list option
 
-  let check_fixpoint ?(pure_smt=false) n visited =
+end = struct
+ 
+  let check_fixpoint ?(pure_smt=false) ?(check_good=false) n visited =
+    let prover_assume = 
+      if check_good then Prover.assume_good else Prover.assume_node
+    in
     Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
     let nodes = 
@@ -82,7 +87,7 @@ end = struct
                       Cube.inconsistent_2arrays vis_renamed n_array then nodes
 	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
               (vis_n, vis_renamed)::nodes
-	    else (Prover.assume_node vis_n vis_renamed; nodes)
+	    else (prover_assume vis_n vis_renamed; nodes)
 	   ) nodes d
         ) [] visited
     in
@@ -93,7 +98,7 @@ end = struct
         nodes 
     in
     TimeSort.pause ();
-    List.iter (fun (vn, ar_renamed) -> Prover.assume_node vn ar_renamed) nodes
+    List.iter (fun (vn, ar_renamed) -> prover_assume vn ar_renamed) nodes
 
 
   let easy_fixpoint s nodes =
@@ -113,6 +118,15 @@ end = struct
   let hard_fixpoint s nodes =
     try
       check_fixpoint s nodes;
+      None
+    with 
+    | Fixpoint db -> Some db
+    | Exit -> None
+    | Smt.Unsat db -> Some db
+
+  let hard_fixpoint_good s nodes =
+    try
+      check_fixpoint ~check_good:true s nodes;
       None
     with 
     | Fixpoint db -> Some db

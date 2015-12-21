@@ -78,7 +78,7 @@ type system = {
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  
-  good : loc * Variable.t list * dnf;
+  good : (loc * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
 }
 (** type of untyped transition systems constructed by parsing *)
@@ -144,10 +144,8 @@ type t_system = {
   t_unsafe : node_cube list;
   (** unsafe formulas (in the form of cubes *)
 
-  t_good : Variable.t list * dnf;
-  (** Formula describing the good states of the system, universally
-      quantified DNF : \forall i. c1 \/ c2 \/ ... *)
-  t_good_instances : (int, (dnf list * ArrayAtom.t list list)) Hashtbl.t;
+  t_good : node_cube list;
+  (** good formulas (in the form of cubes *)
 
   t_trans : transition list;
   (** transition relation in the form of a list of transitions *)

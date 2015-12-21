@@ -113,7 +113,7 @@ declarations
 init
 invariants
 unsafe_list
-good
+good_list
 transitions 
 { let consts, vars, arrays = $3 in
   { type_defs = $2; 
@@ -207,14 +207,19 @@ unsafe:
 ;
 
 good:
-  | GOOD LEFTPAR lidents RIGHTPAR LEFTBR dnf RIGHTBR 
-      { loc (), $3, $6 }
+  | GOOD LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
 unsafe_list:
   | unsafe { [$1] }
   | unsafe unsafe_list { $1::$2 }
 ;
+
+good_list:
+  | good { [$1] }
+  | good good_list { $1::$2 }
+;
+
 
 transitions:
   | { [] }
