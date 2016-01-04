@@ -60,7 +60,7 @@ module FixpointList : sig
 
   val check_list : Node.t list -> Node.t list -> bool
 
-  val hard_fixpoint_good : Node.t -> Node.t list -> int list option
+  val good_reject : Node.t -> Node.t list -> bool
 
 end = struct
  
@@ -100,6 +100,27 @@ end = struct
     TimeSort.pause ();
     List.iter (fun (vn, ar_renamed) -> prover_assume vn ar_renamed) nodes
 
+  let good_reject n goods =
+    try
+      List.iter
+	(fun good ->
+	  eprintf "Good : %a@." Node.print good;
+	  Prover.assume_goal n;
+          let good_cube = good.cube in
+          let d = Instantiation.relevant ~of_cube:good_cube ~to_cube:n.cube in
+	  if d <> [] then 
+	    try
+              List.iter
+		(fun ss ->
+		  let good_renamed = 
+		    ArrayAtom.apply_subst ss good_cube.Cube.array in
+		  Prover.assume_good good good_renamed
+		) d;
+	      raise Exit
+	    with Smt.Unsat _ -> ()
+	) goods;
+      false
+    with Exit -> true
 
   let easy_fixpoint s nodes =
     if delete && (s.deleted || Node.has_deleted_ancestor s)
@@ -123,16 +144,6 @@ end = struct
     | Fixpoint db -> Some db
     | Exit -> None
     | Smt.Unsat db -> Some db
-
-  let hard_fixpoint_good s nodes =
-    try
-      check_fixpoint ~check_good:true s nodes;
-      None
-    with 
-    | Fixpoint db -> Some db
-    | Exit -> None
-    | Smt.Unsat db -> Some db
-
 
   let pure_smt_check s nodes =
     try

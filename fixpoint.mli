@@ -18,7 +18,8 @@
 (** Fixpoint tests on list structures *)
 module FixpointList : sig
 
-  val hard_fixpoint_good : Node.t -> Node.t list -> int list option
+  (* returns true if goods intersect with a candidate *)
+  val good_reject : Node.t -> Node.t list -> bool
 
   val check : Node.t -> Node.t list -> int list option
   (** [check s v] returns the tags of nodes in v that were used if [s] implies
