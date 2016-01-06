@@ -161,6 +161,8 @@ let specs =
                 "in combination with -brab <n>, finite models up to size <n>";
     "-forward-depth", Arg.Set_int forward_depth,
                 "<d> Limit the depth of the forward exploration to at most d";
+    "-fd", Arg.Set_int forward_depth,
+                "<d> Limit the depth of the forward exploration to at most d";
     "-max-forward", Arg.Set_int max_forward,
                 "<d> Limit the number of states of the forward exploration to at most d";
     "-max-cands", Arg.Set_int max_cands,

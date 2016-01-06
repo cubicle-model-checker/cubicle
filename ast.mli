@@ -142,10 +142,10 @@ type t_system = {
   t_invs : node_cube list;
   (** user supplied invariants in negated form *)
   t_unsafe : node_cube list;
-  (** unsafe formulas (in the form of cubes *)
+  (** unsafe formulas (in the form of cubes) *)
 
   t_good : node_cube list;
-  (** good formulas (in the form of cubes *)
+  (** good formulas (in the form of cubes) *)
 
   t_trans : transition list;
   (** transition relation in the form of a list of transitions *)

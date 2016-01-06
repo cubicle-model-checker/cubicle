@@ -74,7 +74,6 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
           | None ->
              Stats.check_limit n;
              Stats.new_node n;
-             Format.eprintf "Node : %a@." Node.print n;
              let n = begin
                  match Approx.good n with
                  | None -> n

@@ -206,20 +206,19 @@ unsafe:
   | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
-good:
-  | GOOD LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
-;
-
 unsafe_list:
   | unsafe { [$1] }
   | unsafe unsafe_list { $1::$2 }
 ;
 
-good_list:
-  | good { [$1] }
-  | good good_list { $1::$2 }
+good:
+  | GOOD LEFTPAR lidents RIGHTPAR LEFTBR cube RIGHTBR { loc (), $3, $6 }
 ;
 
+good_list:
+  | { [] }
+  | good good_list { $1::$2 }
+;
 
 transitions:
   | { [] }
