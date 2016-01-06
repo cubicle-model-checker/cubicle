@@ -88,7 +88,9 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                      backtrack, just forget it. *)
             end
             in
+            Format.eprintf "Pre@.";
             let ls, post = Pre.pre_image system.t_trans n in
+            Format.eprintf "EndPre@.";
             if delete then
               visited :=
                 Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;

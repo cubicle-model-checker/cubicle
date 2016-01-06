@@ -232,7 +232,7 @@ let search dots system =
     ) C.empty system.t_trans in
     
     let rec refine v1 v2 tr rg tc trans =
-      if ic3_verbose > 0 then
+      (* if ic3_verbose > 0 then *)
         Format.eprintf 
           "\n*******[Refine]*******\t(%a) --%a--> (%a)\n@." 
           V.print_id v1 Hstring.print tr.tr_info.tr_name 
@@ -333,7 +333,7 @@ let search dots system =
       in
       Format.eprintf 
         "\n*******[Induct]*******\n \n%a\n@." 
-        (if verbose > 0 
+        (if verbose > 0
          then V.print_vertice 
          else V.print_id) v1;
       let trans = V.expand v1 transitions in

@@ -164,6 +164,7 @@ let print_iednf fmt b =
   ) b
 
 let print_id fmt v = Format.eprintf "%s" (get_id v)
+
 let save_id fmt v = Format.fprintf fmt "%s" (get_id v)
 
 let print_vertice fmt v = 
@@ -1318,7 +1319,6 @@ let refine v1 v2 tr cand trans candidates system =
         in
         update_bad_from v1 tr v2;
         let pre_image = List.fast_sort compare_cubes pre_image in
-        (* Format.eprintf "[Pre images]\n%a@." print_ednf pre_image; *)
         let pre_image = select_procs pre_image v1 v2 in
         let pre_image =
           if ic3_brab = 2 then
@@ -1341,7 +1341,6 @@ let refine v1 v2 tr cand trans candidates system =
                     (* if ic3_verbose > 0 then *)
             ) pre_image
           else pre_image in
-        (* Format.eprintf "[BadCube] %a@." print_ednf pre_image; *)
         v1.bad <- pre_image;
         (* v1.bad_kind <- kind; *)
         Bad_Parent (v1.id, pre_image, !candidates)

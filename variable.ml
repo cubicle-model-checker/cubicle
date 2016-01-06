@@ -22,21 +22,22 @@ type subst = (t * t) list
 
 module Set = Hstring.HSet
 
-let gen_vars s n = 
+let gen_vars s =
+  let n = if !size_proc <> 0 then !size_proc - 1 else max_proc in
   let l = ref [] in
-  for i = 1 to max_proc do
+  for i = 1 to n do
     l := Hstring.make (s^(string_of_int i)) :: !l
   done;
   List.rev !l
 
 
-let alphas = gen_vars "$" max_proc
+let alphas = gen_vars "$"
 
-let procs = gen_vars "#" max_proc
+let procs = gen_vars "#"
 
-let freshs = gen_vars "?" max_proc
+let freshs = gen_vars "?"
 
-let generals = gen_vars "z" max_proc
+let generals = gen_vars "z"
 
 
 let proc_vars_int = 
