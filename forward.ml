@@ -891,7 +891,12 @@ type possible_result =
 let possible_trace ~starts ~finish ~procs ~trace =
   let usa = Node.litterals finish in
   let rec forward_rec ls rtrace = match ls, rtrace with
-    | _, [] -> Unreach
+    | _, [] ->
+      List.iter (fun (sa, args, hist) ->
+          try Prover.reached procs usa sa; raise (Reachable hist)
+          with Smt.Unsat _ -> ()
+        ) ls;
+      Unreach
     | [], (_, _, s) ::_ ->
       Spurious (above s trace)
     | _, (tr, _, _) :: rest_trace ->
