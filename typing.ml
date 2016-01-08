@@ -485,6 +485,7 @@ let system s =
     debug_init_instances init_instances;
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
+    t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
     t_init = init_woloc;
     t_init_instances = init_instances;

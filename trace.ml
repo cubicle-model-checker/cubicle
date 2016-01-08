@@ -41,6 +41,12 @@ let need_bool s =
     ) in
   f (f false s.t_globals) s.t_arrays
 
+let need_real s =
+  let f = List.fold_left (fun acc t ->
+      acc || Hstring.equal Smt.Type.type_real (snd (Smt.Symbol.type_of t))
+    ) in
+  f (f false s.t_globals) s.t_arrays
+
 
 let cert_file_name () =
   let bench = Filename.chop_extension (Filename.basename file) in
@@ -579,7 +585,7 @@ module Why3 = struct
       if not (Hstring.list_mem t [Smt.Type.type_proc;
 				  Smt.Type.type_bool;
 				  Smt.Type.type_int;
-				  Smt.Type.type_bool]) then 
+                                  Smt.Type.type_real]) then 
 	       fprintf fmt "%a@." print_type_def t) (collect_types s)
 
 
@@ -595,23 +601,31 @@ module Why3 = struct
 
   let spr prime = if prime then "'" else ""
 
-  let print_decl ?(prime=false) fmt s =
+  let print_decl ?(prime=false) ?(const=false) fmt s =
     let t_args, t_ret = Smt.Symbol.type_of s in
-    fprintf fmt "function %a%s " print_name s (spr prime);
+    fprintf fmt "%s %a%s "
+      (if const then "constant" else "function")
+      print_name s (spr prime);
     List.iter (fprintf fmt "%a " print_type) t_args;
     fprintf fmt ": %a" print_type t_ret
 
   let add_decls fmt s =
-    let d = List.iter (fprintf fmt "%a@." (print_decl ~prime:false)) in
-    let d_prime = List.iter (fprintf fmt "%a@." (print_decl ~prime:true)) in
+    let d = List.iter
+        (fprintf fmt "%a@." (print_decl ~prime:false ~const:false)) in
+    let c = List.iter
+        (fprintf fmt "%a@." (print_decl ~prime:false ~const:true)) in
+    let d_prime = List.iter
+        (fprintf fmt "%a@." (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
-    d s.t_arrays; d_prime s.t_arrays
+    d s.t_arrays; d_prime s.t_arrays;
+    c s.t_consts
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
   let print_const fmt = function
-    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstReal n -> fprintf fmt "%f" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
 
   let print_cs ?(arith=false) fmt cs =
@@ -1009,8 +1023,19 @@ module Why3 = struct
   let add_imports fmt s l =
     if need_bool s then fprintf fmt "use import bool.Bool\n";
     fprintf fmt "use import int.Int\n";
+    if need_real s then fprintf fmt "use import real.Real\n";
     List.iter (fprintf fmt "use import %s\n") l;
     fprintf fmt "@."
+
+  let add_supplied_invs fmt s =
+    let cpt = ref 0 in
+    List.iter (fun n ->
+        incr cpt;
+        fprintf fmt
+          "\naxiom user_invariant_%d: %a@."
+          !cpt
+          (print_invnode ~prime:false) n;
+      ) s.t_invs
 
 
   let capital_base f =
@@ -1025,6 +1050,7 @@ module Why3 = struct
     add_type_defs fmt s;
     fprintf fmt "@.";
     add_decls fmt s;
+    add_supplied_invs fmt s;
     fprintf fmt "\nend\n\n@.";
     name
 
@@ -1378,24 +1404,32 @@ module Why3_INST = struct
 
   let spr prime = if prime then "'" else ""
 
-  let print_decl ?(prime=false) fmt s =
+  let print_decl ?(prime=false) ?(const=false) fmt s =
     let t_args, t_ret = Smt.Symbol.type_of s in
-    fprintf fmt "function %a%s " print_name s (spr prime);
+    fprintf fmt "%s %a%s "
+      (if const then "constant" else "function")
+      print_name s (spr prime);
     List.iter (fprintf fmt "%a " print_type) t_args;
     fprintf fmt ": %a" print_type t_ret
 
   let add_decls fmt s =
-    let d = List.iter (fprintf fmt "%a@." (print_decl ~prime:false)) in
-    let d_prime = List.iter (fprintf fmt "%a@." (print_decl ~prime:true)) in
+    let d = List.iter
+        (fprintf fmt "%a@." (print_decl ~prime:false ~const:false)) in
+    let c = List.iter
+        (fprintf fmt "%a@." (print_decl ~prime:false ~const:true)) in
+    let d_prime = List.iter
+        (fprintf fmt "%a@." (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
-    d s.t_arrays; d_prime s.t_arrays
+    d s.t_arrays; d_prime s.t_arrays;
+    c s.t_consts
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
   let print_const fmt = function
-    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstName n -> fprintf fmt "%a" Hstring.print n
+    | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstReal n -> fprintf fmt "%f" (Num.float_of_num n)
+    | ConstName n -> fprintf fmt "%a" print_name n
 
   let print_cs fmt cs =
     MConst.iter 
@@ -1800,10 +1834,22 @@ module Why3_INST = struct
   let add_imports fmt s l =
     if need_bool s then fprintf fmt "use import bool.Bool\n";
     fprintf fmt "use import int.Int\n";
+    if need_real s then fprintf fmt "use import real.Real\n";
     List.iter (fprintf fmt "use import %s\n") l;
     fprintf fmt "@."
 
+  
+  let add_supplied_invs fmt s =
+    let cpt = ref 0 in
+    List.iter (fun n ->
+        incr cpt;
+        fprintf fmt
+          "\naxiom user_invariant_%d: %a@."
+          !cpt
+          (print_invnode ~prime:false) n
+      ) s.t_invs
 
+  
   let capital_base f =
     String.capitalize (Filename.chop_extension (Filename.basename f))
 
@@ -1814,6 +1860,7 @@ module Why3_INST = struct
     add_type_defs fmt s;
     fprintf fmt "@.";
     add_decls fmt s;
+    add_supplied_invs fmt s;
     fprintf fmt "\nend\n\n@.";
     name
 
