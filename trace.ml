@@ -586,7 +586,7 @@ module Why3 = struct
 				  Smt.Type.type_bool;
 				  Smt.Type.type_int;
                                   Smt.Type.type_real]) then 
-	       fprintf fmt "%a@." print_type_def t) (collect_types s)
+	       fprintf fmt "%a@ " print_type_def t) (collect_types s)
 
 
   let print_type fmt t = 
@@ -611,13 +611,15 @@ module Why3 = struct
 
   let add_decls fmt s =
     let d = List.iter
-        (fprintf fmt "%a@." (print_decl ~prime:false ~const:false)) in
+        (fprintf fmt "%a@ " (print_decl ~prime:false ~const:false)) in
     let c = List.iter
-        (fprintf fmt "%a@." (print_decl ~prime:false ~const:true)) in
+        (fprintf fmt "%a@ " (print_decl ~prime:false ~const:true)) in
     let d_prime = List.iter
-        (fprintf fmt "%a@." (print_decl ~prime:true ~const:false)) in
+        (fprintf fmt "%a@ " (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
+    fprintf fmt "@\n";
     d s.t_arrays; d_prime s.t_arrays;
+    fprintf fmt "@\n";
     c s.t_consts
 
   
@@ -637,13 +639,13 @@ module Why3 = struct
          print_const fmt c;
          prpr arith false rs
       | (c, -1) :: rs, _ ->
-         fprintf fmt "-%a" print_const c;
+         fprintf fmt " - %a" print_const c;
          prpr arith false rs
       | (c, i) :: rs, false ->
          fprintf fmt "%d * %a" i print_const c;
          prpr arith false rs
       | (c, 1) :: rs, true ->
-         fprintf fmt "+%a" print_const c;
+         fprintf fmt " + %a" print_const c;
          prpr arith false rs
       | (c, i) :: rs, true ->
          fprintf fmt "%+d * %a" i print_const c;
@@ -669,7 +671,7 @@ module Why3 = struct
     | Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
-       fprintf fmt "@[(%a%a)@]" (print_term ~prime) x (print_cs ~arith:true) cs
+       fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -678,14 +680,14 @@ module Why3 = struct
        fprintf fmt "%a %s %a" 
 	       (print_term ~prime) x (op_comp op) (print_term ~prime) y
     | Atom.Ite (la, a1, a2) ->
-       fprintf fmt "@[(if %a then@ %a@ else@ %a)@]" 
+       fprintf fmt "if %a then@ %a@ else@ %a" 
 	       (print_atoms ~prime "/\\") (SAtom.elements la) 
 	       (print_atom ~prime) a1 (print_atom ~prime) a2
 
   and print_atoms ~prime sep fmt = function
     | [] -> ()
     | [a] -> print_atom ~prime fmt a
-    | a::l -> fprintf fmt "%a %s@\n%a" (print_atom ~prime) a sep
+    | a::l -> fprintf fmt "%a %s@ %a" (print_atom ~prime) a sep
 		      (print_atoms ~prime sep) l
 
   let print_satom ~prime fmt sa = 
@@ -723,7 +725,7 @@ module Why3 = struct
   let rec print_invariant ~prime fmt visited = match visited with
     | [] -> assert false
     | [s] -> fprintf fmt "not (%a)" (print_node ~prime) s
-    | s ::r -> fprintf fmt "not (%a) /\\\n%a"
+    | s ::r -> fprintf fmt "not (%a) /\\@ %a"
 		       (print_node ~prime) s (print_invariant ~prime) r
 
 
@@ -769,7 +771,8 @@ module Why3 = struct
                (print_term ~prime:true) nt
 	       (print_term ~prime:false) default
     | (cond, t) :: r ->
-       fprintf fmt "(if %a then\n %a = %a\nelse@? %a)"
+       fprintf fmt "@[<hov 0>@[<hov 2>if %a then@ %a = %a@]@ \
+                    @[<hov 2>else %a@]@]"
 	       (print_satom ~prime:false) cond
 	       (print_term ~prime:true) nt
 	       (print_term ~prime:false) t
@@ -787,13 +790,13 @@ module Why3 = struct
     | [g,t] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
     | (g,t) :: r ->
-       fprintf fmt "%a /\\\n" print_assign (g,t);
+       fprintf fmt "%a /\\@ " print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
   let rec print_assigns_unchanged fmt = function
     | [] -> ()
     | [g] -> fprintf fmt "%a' = %a" print_name g print_name g
-    | g::r -> fprintf fmt "%a' = %a /\\\n%a" print_name g print_name g
+    | g::r -> fprintf fmt "%a' = %a /\\@ %a" print_name g print_name g
 		      print_assigns_unchanged r
 
 
@@ -802,13 +805,14 @@ module Why3 = struct
 				 HSet.empty globals in
     let remaining = add_assign_list globals fmt ass in
     let remaining = HSet.elements remaining in
-    if ass <> [] && remaining <> [] then fprintf fmt " /\\\n";
+    if ass <> [] && remaining <> [] then fprintf fmt " /\\@ ";
     print_assigns_unchanged fmt remaining
 
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
-    fprintf fmt "forall %a:int.\n" print_args args;
-    print_ite fmt (Access (a, args), swts, default)
+    fprintf fmt "@[<hov 2>forall %a:int.@ " print_args args;
+    print_ite fmt (Access (a, args), swts, default);
+    fprintf fmt "@]"
 
 
   let rec add_updates_list arrays fmt = function
@@ -817,7 +821,7 @@ module Why3 = struct
        fprintf fmt "(%a)" print_update u;
        HSet.remove a arrays
     | ({up_arr=a} as u) :: r ->
-       fprintf fmt "(%a) /\\\n" print_update u;
+       fprintf fmt "(%a) /\\@ " print_update u;
        add_updates_list (HSet.remove a arrays) fmt r
 
 
@@ -828,15 +832,16 @@ module Why3 = struct
 	Hstring.make ("z"^(string_of_int n)) :: acc, n + 1)
 	 ([], 1) targs in
     let args = List.rev args in
-    fprintf fmt "forall %a:int. " print_args args;
+    fprintf fmt "@[<hov 2>forall %a:int.@ " print_args args;
     fprintf fmt "%a' %a = %a %a"
 	    print_name a print_args args 
-	    print_name a print_args args
+	    print_name a print_args args;
+    fprintf fmt "@]"
 
   let rec print_all_unchanged fmt = function
     | [] -> ()
     | [a] -> fprintf fmt "(%a) " print_unchanged a
-    | a::r -> fprintf fmt "(%a) /\\\n%a"
+    | a::r -> fprintf fmt "(%a) /\\@ %a"
 		      print_unchanged a
 		      print_all_unchanged r
 
@@ -844,14 +849,14 @@ module Why3 = struct
     let arrays = List.fold_left (fun acc a -> Hstring.HSet.add a acc)
 				Hstring.HSet.empty arrays in
     let remaining = add_updates_list arrays fmt upds in
-    HSet.iter (fprintf fmt "/\\ (%a)\n" print_unchanged) remaining
+    HSet.iter (fprintf fmt "/\\ (%a)@ " print_unchanged) remaining
 
   let print_updates arrays fmt upds =
     let arrays = List.fold_left (fun acc a -> HSet.add a acc)
 				HSet.empty arrays in
     let remaining = add_updates_list arrays fmt upds in
     let remaining = HSet.elements remaining in
-    if upds <> [] && remaining <> [] then fprintf fmt " /\\\n";
+    if upds <> [] && remaining <> [] then fprintf fmt " /\\@ ";
     print_all_unchanged fmt remaining
 
 
@@ -884,7 +889,7 @@ module Why3 = struct
        fprintf fmt "(%a)" (print_norm_update vars) u;
        HSet.remove a arrays
     | ({up_arr=a} as u) :: r ->
-       fprintf fmt "(%a) /\\\n" (print_norm_update vars) u;
+       fprintf fmt "(%a) /\\@ " (print_norm_update vars) u;
        add_norm_updates vars (HSet.remove a arrays) fmt r
 
   let print_norm_unchanged vars fmt a =
@@ -900,7 +905,7 @@ module Why3 = struct
   let rec print_norm_all_unchanged vars fmt = function
     | [] -> ()
     | [a] -> fprintf fmt "(%a) " (print_norm_unchanged vars) a
-    | a::r -> fprintf fmt "(%a) /\\\n%a"
+    | a::r -> fprintf fmt "(%a) /\\@ %a"
 		      (print_norm_unchanged vars) a
 		      (print_norm_all_unchanged vars) r
 
@@ -908,22 +913,22 @@ module Why3 = struct
     let vars = max_quant arrays in
     let arrays = List.fold_left (fun acc a -> HSet.add a acc)
 				HSet.empty arrays in
-    fprintf fmt "forall %a:int.\n" print_args vars;
+    fprintf fmt "forall %a:int.@ " print_args vars;
     let remaining = add_norm_updates vars arrays fmt upds in
     let remaining = HSet.elements remaining in
-    if upds <> [] && remaining <> [] then fprintf fmt " /\\\n";
+    if upds <> [] && remaining <> [] then fprintf fmt " /\\@ ";
     print_norm_all_unchanged vars fmt remaining
 
   let print_transition s fmt {tr_info = t} =
-    fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
+    fprintf fmt "(* transition %a *)@\n" Hstring.print t.tr_name;
     fprintf fmt "(";
     let args =  t.tr_args in
     begin match args with
-	  | [] -> ()
-	  | _  -> fprintf fmt "exists %a:int. %a\n" 
+	  | [] -> fprintf fmt "@,"
+	  | _  -> fprintf fmt "exists %a:int. %a@\n" 
 			  print_args args print_distinct args
     end;
-    fprintf fmt "( (* requires *)\n";
+    fprintf fmt "@[<hov 2>( (* requires *)@\n";
     print_satom ~prime:false fmt t.tr_reqs;
     List.iter (fun (j, disj) ->
       fprintf fmt "\n/\\ (forall %a:int." print_proc j;
@@ -931,18 +936,18 @@ module Why3 = struct
       fprintf fmt "\n%a" (print_disj ~prime:false) disj;
       fprintf fmt ")\n";
     ) t.tr_ureq;
-    fprintf fmt ")";
+    fprintf fmt " )@]";
     if s.t_globals <> [] || s.t_arrays <> [] then
       begin
-	fprintf fmt " /\\\n";
-	fprintf fmt "( (* actions *)\n";
+	fprintf fmt " /\\@ ";
+	fprintf fmt "@[<v 2>( (* actions *)@\n";
 	print_assigns s.t_globals fmt t.tr_assigns;
-	if s.t_globals <> [] && s.t_arrays <> [] then fprintf fmt " /\\\n";
+	if s.t_globals <> [] && s.t_arrays <> [] then fprintf fmt " /\\@ ";
 	(* print_norm_updates s.t_arrays fmt t.tr_upds; *)
 	print_updates s.t_arrays fmt t.tr_upds;
-	fprintf fmt ")";
+	fprintf fmt ")@]";
       end;
-    fprintf fmt ")@."
+    fprintf fmt ")@\n"
 
 
   let rec print_transitions_disj s fmt = function
@@ -1011,30 +1016,33 @@ module Why3 = struct
   let rec print_str_list_sep sep fmt = function
     | [] -> ()
     | [s] -> fprintf fmt "%s" s
-    | s :: r -> fprintf fmt "%s%s%a" s sep (print_str_list_sep sep) r
+    | s :: r ->
+      fprintf fmt "%s" s;
+      fprintf fmt sep;
+      print_str_list_sep sep fmt r
 
   let lemma_hint fmt s used inv_names =
     let usedn = List.map (fun n -> fst (NH.find inv_names n)) used in
     let sn' = snd (NH.find inv_names s) in
-    fprintf fmt "    @[(%a tau)@]\n"
-            (fun fmt l -> List.iter (fprintf fmt "%s /\\ ")l) usedn;
-    fprintf fmt "    -> %s\n@." sn'
+    fprintf fmt "@[<hov 1>(%a)@]@ /\\@ tau@ ->@ "
+      (print_str_list_sep " /\\@ ") usedn;
+    fprintf fmt "%s@\n" sn'
 
   let add_imports fmt s l =
-    if need_bool s then fprintf fmt "use import bool.Bool\n";
-    fprintf fmt "use import int.Int\n";
-    if need_real s then fprintf fmt "use import real.Real\n";
-    List.iter (fprintf fmt "use import %s\n") l;
-    fprintf fmt "@."
+    if need_bool s then fprintf fmt "use import bool.Bool@ ";
+    fprintf fmt "use import int.Int@ ";
+    if need_real s then fprintf fmt "use import real.Real@ ";
+    List.iter (fprintf fmt "use import %s@ ") l;
+    fprintf fmt "@\n"
 
   let add_supplied_invs fmt s =
     let cpt = ref 0 in
     List.iter (fun n ->
         incr cpt;
         fprintf fmt
-          "\naxiom user_invariant_%d: %a@."
+          "@\n@[<hov 1>axiom user_invariant_%d:@ %a@]@\n"
           !cpt
-          (print_invnode ~prime:false) n;
+          (print_invnode ~prime:false) n
       ) s.t_invs
 
 
@@ -1045,19 +1053,19 @@ module Why3 = struct
 
   let theory_decls fmt s =
     let name = (capital_base file)^"_defs" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@\n@\n" name;
     add_imports fmt s [];
     add_type_defs fmt s;
-    fprintf fmt "@.";
+    fprintf fmt "@\n";
     add_decls fmt s;
     add_supplied_invs fmt s;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@\nend@]\n\n@.";
     name
 
   let theory_invariants_decls fmt s visited imports =
     let hinv_names = NH.create (List.length visited) in
     let name = (capital_base file)^"_invdecls" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@\n@\n" name;
     add_imports fmt s imports;
     List.iter
       (fun n ->
@@ -1065,10 +1073,10 @@ module Why3 = struct
                     (string_of_int (abs n.tag)) in
        let invn' = invn^"'" in
        NH.add hinv_names n (invn, invn');
-       fprintf fmt "predicate %s\n" invn;
-       fprintf fmt "predicate %s\n" invn'; 
+       fprintf fmt "predicate %s@ " invn;
+       fprintf fmt "predicate %s@ " invn'; 
       ) visited;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@]\nend\n\n@.";
     name, hinv_names
 
   let theory_invariants_defs fmt s hinv_names imports =
@@ -1087,7 +1095,7 @@ module Why3 = struct
   let theory_invariants_preds fmt s visited imports =
     let hinv_names = NH.create (List.length visited) in
     let name = (capital_base file)^"_invpreds" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@ @ " name;
     add_imports fmt s imports;
     List.iter
       (fun n ->
@@ -1096,13 +1104,17 @@ module Why3 = struct
        let invn' = invn^"'" in
        NH.add hinv_names n (invn, invn');
       ) visited;
+    fprintf fmt "(* Inductive invariant *)@\n@\n";
     NH.iter (fun n (invn, invn') ->
-      fprintf fmt "predicate %s =\n\
-                   %a\n@." invn (print_invnode ~prime:false) n;
-      fprintf fmt "predicate %s =\n\
-                   %a\n@." invn' (print_invnode ~prime:true) n;
+      fprintf fmt "@[<hov 1>predicate %s =@\n\
+                   %a@]@ @ " invn (print_invnode ~prime:false) n;
     ) hinv_names;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "(* Inductive invariant (primed) *)@\n@\n";
+    NH.iter (fun n (invn, invn') ->
+      fprintf fmt "@[<hov 1>predicate %s =@\n\
+                   %a@]@ @ " invn' (print_invnode ~prime:true) n;
+    ) hinv_names;
+    fprintf fmt "@]\nend\n\n@.";
     name, hinv_names
 
 
@@ -1118,16 +1130,16 @@ module Why3 = struct
   let theory_transition_decl fmt s imports =
     let tr_names = Hashtbl.create (List.length s.t_trans) in
     let name = (capital_base file)^"_trdecl" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@ @ " name;
     add_imports fmt s imports;
     List.iter (fun tr ->
       let trn = "transition__"^(Hstring.view tr.tr_info.tr_name) in
       let trn = uniq_name trn tr_names in
       Hashtbl.add tr_names tr trn;
-      fprintf fmt "predicate %s\n" trn
+      fprintf fmt "predicate %s@ " trn
     ) s.t_trans;
-    fprintf fmt "\npredicate tau\n";
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@\npredicate tau@ ";
+    fprintf fmt "@]\nend\n\n@.";
     name, tr_names
 
   let theory_transition_def fmt s tr_names imports =
@@ -1140,14 +1152,14 @@ module Why3 = struct
     ) tr_names;
     let ltr = Hashtbl.fold (fun _ trn acc -> trn :: acc) tr_names [] in
     fprintf fmt "axiom tau_def:\n\
-                 tau <-> (%a)\n@." (print_str_list_sep " \\/ ") ltr;
+                 tau <-> (%a)\n@." (print_str_list_sep " \\/@ ") ltr;
     fprintf fmt "\nend\n\n@.";
     name
 
   let theory_transition_preds fmt s imports =
     let tr_names = Hashtbl.create (List.length s.t_trans) in
     let name = (capital_base file)^"_trdefs" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@ @ " name;
     add_imports fmt s imports;
     List.iter (fun tr ->
       let trn = "transition__"^(Hstring.view tr.tr_info.tr_name) in
@@ -1155,24 +1167,25 @@ module Why3 = struct
       Hashtbl.add tr_names tr trn;
     ) s.t_trans;
     Hashtbl.iter (fun tr trn ->
-      fprintf fmt "predicate %s =\n\
-                   %a\n@." trn (print_transition s) tr;
+      fprintf fmt "@[<hov 1>predicate %s =@\n\
+                   %a@]@ @ " trn (print_transition s) tr;
     ) tr_names;
     let ltr = Hashtbl.fold (fun _ trn acc -> trn :: acc) tr_names [] in
-    fprintf fmt "predicate tau =\n\
-                 (%a)\n@." (print_str_list_sep " \\/ ") ltr;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@[<hov 1>predicate tau =@\n\
+                 %a@]@ @ " (print_str_list_sep " \\/@ ") ltr;
+    fprintf fmt "@]\nend\n\n@.";
     name, tr_names
 
   let theory_init fmt s inv_names imports =
     let name = (capital_base file)^"_initialisation" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@ @ " name;
     add_imports fmt s imports;
-    fprintf fmt "predicate init =\n    %a\n@." print_init s.t_init;
+    fprintf fmt "@[<hov 1>predicate init =@\n%a@]@ @ " print_init s.t_init;
     let invns = NH.fold (fun _ (invn, _) acc -> invn :: acc) inv_names [] in
-    fprintf fmt "goal initialisation:\n    \
-                 init -> (%a)\n@." (print_str_list_sep " /\\ ") invns;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@[<hov 1>goal initialisation:@\n\
+                 init -> @[<hov 1>(%a)@]@]@ @ "
+      (print_str_list_sep " /\\@ ") invns;
+    fprintf fmt "@]\nend\n\n@.";
     name
 
 
@@ -1192,26 +1205,26 @@ module Why3 = struct
     fprintf fmt "theory %s\n@." name;
     add_imports fmt s imports;
     let invns = NH.fold (fun _ (invn, _) acc -> invn :: acc) inv_names [] in
-    fprintf fmt "goal property:\n    \
-                 (%a) -> (%a)\n@."
-            (print_str_list_sep " /\\ ") invns
+    fprintf fmt "@[<hov 1>goal property:@\n\
+                 @[<hov 1>(%a)@] ->@ @[<hov 1>(%a)@]@]\n@."
+            (print_str_list_sep " /\\@ ") invns
             (print_invariant ~prime:false) s.t_unsafe;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "end\n\n@.";
     name
 
   let theory_preservation fmt s inv_names tr_names imports =
     let name = (capital_base file)^"_preservation" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@ @ " name;
     add_imports fmt s imports;
     (* remove_definitions fmt inv_names tr_names; *)
     let invns, invns' =
       NH.fold (fun _ (invn, invn') (acc, acc') ->
                invn :: acc, invn' :: acc') inv_names ([], []) in
-    fprintf fmt "goal preservation:\n    \
-                 (%a /\\ tau)\n    ->\n    (%a)\n@."
-            (print_str_list_sep " /\\ ") invns
-            (print_str_list_sep " /\\ ") invns';
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@[<hov 1>goal preservation:@\n\
+                 @[<hov 1>(%a)@]@\n/\\@ tau@ ->@ @[<hov 1>(%a)@]@]@ @ "
+            (print_str_list_sep " /\\@ ") invns
+            (print_str_list_sep " /\\@ ") invns';
+    fprintf fmt "@]\nend\n\n@.";
     name
 
 
@@ -1232,17 +1245,16 @@ module Why3 = struct
   let add_lemma_hints fmt clean s hints inv_names imports =
     let cpt = ref 0 in
     NodeMap.fold (fun n used acc ->
-                  incr cpt;
-                  let name = (capital_base file)^"_hint_"^(string_of_int !cpt) in
-                  fprintf fmt "theory %s\n@." name;
-                  add_imports fmt s imports;
-                  if clean then remove_unused fmt used n inv_names;
-                  fprintf fmt "lemma hint_%d:\n" !cpt;
-                  lemma_hint fmt n used inv_names;
-                  fprintf fmt "@.";
-                  fprintf fmt "\nend\n\n@.";
-                  name :: acc
-                 ) hints []
+        incr cpt;
+        let name = (capital_base file)^"_hint_"^(string_of_int !cpt) in
+        fprintf fmt "@[<v 1>theory %s@ @ " name;
+        add_imports fmt s imports;
+        if clean then remove_unused fmt used n inv_names;
+        fprintf fmt "@[<hov 1>lemma hint_%d:@\n" !cpt;
+        lemma_hint fmt n used inv_names;
+        fprintf fmt "@]@]\nend\n\n@.";
+        name :: acc
+      ) hints []
 
   exception FoundNode of Node.t
   let find_by_tag id visited =
@@ -1832,11 +1844,11 @@ module Why3_INST = struct
     fprintf fmt "    -> (%s %a)\n@." sn' print_args (Node.variables s)
 
   let add_imports fmt s l =
-    if need_bool s then fprintf fmt "use import bool.Bool\n";
-    fprintf fmt "use import int.Int\n";
-    if need_real s then fprintf fmt "use import real.Real\n";
-    List.iter (fprintf fmt "use import %s\n") l;
-    fprintf fmt "@."
+    if need_bool s then fprintf fmt "use import bool.Bool@ ";
+    fprintf fmt "use import int.Int@ ";
+    if need_real s then fprintf fmt "use import real.Real@ ";
+    List.iter (fprintf fmt "use import %s@ ") l;
+    fprintf fmt "@\n"
 
   
   let add_supplied_invs fmt s =
@@ -1844,7 +1856,7 @@ module Why3_INST = struct
     List.iter (fun n ->
         incr cpt;
         fprintf fmt
-          "\naxiom user_invariant_%d: %a@."
+          "@\n@[<hov 1>axiom user_invariant_%d:@ %a@]@\n"
           !cpt
           (print_invnode ~prime:false) n
       ) s.t_invs
@@ -1855,13 +1867,13 @@ module Why3_INST = struct
 
   let theory_decls fmt s =
     let name = (capital_base file)^"_defs" in
-    fprintf fmt "theory %s\n@." name;
+    fprintf fmt "@[<v 1>theory %s@\n@\n" name;
     add_imports fmt s [];
     add_type_defs fmt s;
-    fprintf fmt "@.";
+    fprintf fmt "@\n";
     add_decls fmt s;
     add_supplied_invs fmt s;
-    fprintf fmt "\nend\n\n@.";
+    fprintf fmt "@\nend@]\n\n@.";
     name
 
   let theory_invariants_decls fmt s visited imports =
