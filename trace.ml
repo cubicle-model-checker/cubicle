@@ -625,7 +625,7 @@ module Why3 = struct
 
   let print_const fmt = function
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstReal n -> fprintf fmt "%f" (Num.float_of_num n)
+    | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
 
   let print_cs ?(arith=false) fmt cs =
@@ -1428,7 +1428,7 @@ module Why3_INST = struct
 
   let print_const fmt = function
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstReal n -> fprintf fmt "%f" (Num.float_of_num n)
+    | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
 
   let print_cs fmt cs =
