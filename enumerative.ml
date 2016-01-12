@@ -1201,6 +1201,8 @@ let no_scan_states env =
 let finalize_search env =
   let st = HST.stats env.explicit_states in
   if not quiet then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
+  printf "All : %d@." (List.length env.states);
+  printf "Frange : %d@." (List.length env.frange);
   if print_forward_all then (
     printf "All : %d@." (List.length env.states);
     print_all env;
