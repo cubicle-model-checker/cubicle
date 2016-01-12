@@ -32,8 +32,8 @@ type inst_trans =
       i_touched_terms : Term.Set.t;
     }
 
-type possible_result = 
-  | Reach of (transition_info * Variable.subst) list 
+type possible_result =
+  | Reach of (SAtom.t * transition_info * Variable.subst * SAtom.t) list 
   | Spurious of trace
   | Unreach
 
@@ -64,6 +64,12 @@ val spurious_error_trace : t_system -> Node.t -> bool
 
 (** check if an error trace is spurious due to the {b Crash Failure Model } *)
 val spurious_due_to_cfm : t_system -> Node.t -> bool
+
+(** Replays the history of a faulty node and returns (possibly) an error
+    trace *)
+val replay_history :
+  t_system -> Node.t ->
+  (SAtom.t * transition_info * Variable.subst * SAtom.t) list option
 
 (** check if an error trace is spurious due to the {b Crash Failure Model } *)
 val conflicting_from_trace : t_system -> trace -> SAtom.t list

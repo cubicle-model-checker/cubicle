@@ -307,7 +307,39 @@ let init_proc () =
   List.iter 
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
-let create_instances (iargs, l_init) = 
+
+let inv_in_init ivars {cube = {Cube.vars; litterals=lits}} =
+  List.fold_left (fun acc sigma ->
+      SAtom.fold (fun a dnsf ->
+          let na = Atom.neg (Atom.subst sigma a) in
+          SAtom.singleton na :: dnsf
+        ) lits acc
+    ) [] (Variable.all_permutations vars ivars)
+
+
+let add_invs hinit invs =
+  Hashtbl.iter (fun nb_procs (cdnsf, cdnaf) ->
+      let pvars = Variable.give_procs nb_procs in
+      let iinstp =
+        List.fold_left (fun (cdnsf, cdnaf) inv ->
+            let dnsf = inv_in_init pvars inv in
+            if dnsf = [] then cdnsf, cdnaf
+            else 
+              let cdnsf =
+                List.map (fun dnf ->
+                  List.fold_left (fun acc sa ->
+                      List.fold_left (fun acc invsa ->
+                          SAtom.union sa invsa :: acc
+                        ) acc dnsf
+                    ) [] dnf
+                  ) cdnsf in
+              cdnsf, List.map (List.map ArrayAtom.of_satom) cdnsf
+          ) (cdnsf, cdnaf) invs
+      in
+      Hashtbl.replace hinit nb_procs iinstp
+    ) hinit
+
+let create_init_instances (iargs, l_init) invs = 
   let init_instances = Hashtbl.create 11 in
   begin
     match l_init with
@@ -358,6 +390,16 @@ let create_instances (iargs, l_init) =
         incr cpt;
         v_acc) [] Variable.procs)
     end;
+
+  (* add user supplied invariants to init *)
+  add_invs init_instances invs;
+  (* Hashtbl.iter (fun nb (cdnf, _) -> *)
+  (*   eprintf "> %d --->@." nb; *)
+  (*   List.iter (fun dnf -> *)
+  (*       eprintf "[[ %a ]]@." (Pretty.print_list SAtom.print " ||@ ") dnf *)
+  (*     ) cdnf; *)
+  (*   eprintf "@." *)
+  (* ) init_instances; *)
   init_instances
 
 
@@ -428,8 +470,10 @@ let system s =
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then transitions s.trans;
-  if Options.subtyping    then Smt.Variant.close ();
-  if Options.debug        then Smt.Variant.print ();
+  if Options.(subtyping && not murphi) then begin
+    Smt.Variant.close ();
+    if Options.debug then Smt.Variant.print ();
+  end;
 
   let init_woloc = let _,v,i = s.init in v,i in
 
@@ -440,12 +484,13 @@ let system s =
   let good_woloc =
     List.map (fun (_,v,u) -> create_node_rename Good v u) s.good in
 
-  let init_instances = create_instances init_woloc in
+  let init_instances = create_init_instances init_woloc invs_woloc in
 
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
+    t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
     t_init = init_woloc;
     t_init_instances = init_instances;

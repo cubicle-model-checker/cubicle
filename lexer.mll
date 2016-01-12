@@ -26,14 +26,22 @@
 	"transition", TRANSITION;
 	"invariant", INVARIANT;
 	"requires", REQUIRE;
-	"uguard", UGUARD;
-	"assign", ASSIGN;
         "array", ARRAY;
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;
 	"case", CASE;
-	"forall_other", FORALL;
+	"forall_other", FORALL_OTHER;
+	"exists_other", EXISTS_OTHER;
+	"forall", FORALL;
+        "exists", EXISTS;
+        "predicate", PREDICATE;
+        "if", IF;
+        "then", THEN;
+        "else", ELSE;
+        "not", NOT;
+        "true", TRUE;
+        "false", FALSE;
 	"number_procs", SIZEPROC;
 	"good", GOOD
       ]
@@ -99,10 +107,16 @@ rule token = parse
       { PLUS }
   | "-"
       { MINUS }
+  | "*"
+      { TIMES }
   | ":"
       { COLON }
   | "="
       { EQ }
+  | "=>"
+      { IMP }
+  | "<=>"
+      { EQUIV }
   | ":="
       { AFFECT }
   | "<>"
@@ -111,6 +125,10 @@ rule token = parse
       { LT }
   | "<="
       { LE }
+  | ">"
+      { GT }
+  | ">="
+      { GE }
   | "["
       { LEFTSQ }
   | "]"

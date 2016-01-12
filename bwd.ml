@@ -45,7 +45,6 @@ end
 module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
   let good_reject = Fixpoint.FixpointList.good_reject
-  let check_list = Fixpoint.FixpointList.check_list
   module Fixpoint = Fixpoint.FixpointTrie
   module Approx = Approx.Selected
 
@@ -82,15 +81,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                     try
                       (* Replace node with its approximation *)
 		      Safety.check system c;
-		      if goods then
-                        (
-                          if good_reject c system.t_good 
-                            && not (check_list system.t_good [c]) then 
-			    eprintf "On rejette good_reject %a@." Node.print c
-                          else
-                            eprintf "ERREUR@.";
-		          raise (Safety.Unsafe c)
-                        );
+		      if goods && good_reject c system.t_good then raise (Safety.Unsafe c);
                       candidates := c :: !candidates;
                       Stats.candidate n c;
                       c

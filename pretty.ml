@@ -45,6 +45,15 @@ let print_title fmt s =
   printf "%a" print_line ()
 
 
+let rec print_list print sep fmt = function
+  | [] -> ()
+  | [e] -> print fmt e
+  | e :: l ->
+    print fmt e;
+    fprintf fmt sep;
+    print_list print sep fmt l
+
+
 type style =
   | User of int
   | Normal

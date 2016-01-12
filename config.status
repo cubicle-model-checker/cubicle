@@ -427,7 +427,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/Users/sylvainconchon/devel/cubicle/branches/far'
+ac_pwd='/home/mattias/cubicle/branches/far'
 srcdir='.'
 test -n "$AWK" || AWK=awk
 # The default lists apply if the user does not specify any file.
@@ -587,8 +587,8 @@ S["EXE"]=""
 S["OCAMLWIN32"]="no"
 S["FUNCTORYLIB"]=""
 S["ALTERGOLIB"]=""
-S["OCAMLLIB"]="/opt/local/lib/ocaml"
-S["OCAMLVERSION"]="4.00.1"
+S["OCAMLLIB"]="/home/mattias/.opam/4.02.0/lib/ocaml"
+S["OCAMLVERSION"]="4.02.0"
 S["OCAMLBEST"]="opt"
 S["OCAMLYACC"]="ocamlyacc"
 S["OCAMLLEX"]="ocamllex"

@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2014                          *)
+(*                       Copyright (C) 2011-2015                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,24 +13,20 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
+(** Oracle for BRAB that calls the explicit state model checker
+    {{:http://formalverification.cs.utah.edu/Murphi/}Murphi}.
 
-(** Pretty printing functions *)
+    We recommend the distribution
+    {{:http://mclab.di.uniroma1.it/site/index.php/software/18-cmurphi}CMurphi}
+    which works with most recent compilers.
+*)
 
-val vt_width : int
-(** Width of the virtual terminal (80 if cannot be detected) *)
+val print_system : int -> int -> Format.formatter -> Ast.t_system -> unit
+(** [print_system p a fmt sys] prints the system [sys] in Murphi's syntax with
+    [p] processes and infinite types abstracted with the subrange \[1;[a]\]. *)
 
-val print_line : formatter -> unit -> unit
-(** prints separating line *)
+(** {2 Oracle interface } *)
 
-val print_double_line : formatter -> unit -> unit
-(** prints separating double line *)
+(** see {! Oracle.S} *)
 
-val print_title : formatter -> string -> unit
-(** prints section title for stats *)
-
-val print_list :
-  (formatter -> 'a -> unit) ->
-  ('b, formatter, unit) format -> formatter -> 'a list -> unit
-(** [print_list f sep fmt l] prints list [l] whose elements are printed with
-    [f], each of them being separated by the separator [sep]. *)
+include Oracle.S

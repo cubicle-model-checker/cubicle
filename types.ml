@@ -214,22 +214,29 @@ module Term = struct
     | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstName n -> fprintf fmt "%a" Hstring.print n
 
-  let print_cs fmt cs =
+  let print_cs alone fmt cs =
+    let first = ref true in
     MConst.iter 
       (fun c i ->
-       fprintf fmt " %s %a" 
-	       (if i = 1 then "+" else if i = -1 then "-" 
-	        else if i < 0 then "- "^(string_of_int (abs i)) 
-	        else "+ "^(string_of_int (abs i)))
-	       print_const c) cs
+         if !first && alone && i >= 0 then
+           if i = 1 then print_const fmt c
+           else fprintf fmt "%s %a" (string_of_int (abs i)) print_const c
+         else
+           fprintf fmt " %s %a" 
+	     (if i = 1 then "+" else if i = -1 then "-" 
+	      else if i < 0 then "- "^(string_of_int (abs i)) 
+	      else "+ "^(string_of_int (abs i)))
+	     print_const c;
+         first := false;
+      ) cs
 
   let rec print fmt = function
-    | Const cs -> print_cs fmt cs
+    | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print x print_cs cs
+       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
 
 end
 

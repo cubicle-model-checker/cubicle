@@ -104,7 +104,6 @@ end = struct
     try
       List.iter
 	(fun good ->
-	  eprintf "Good : %a@." Node.print good;
 	  Prover.assume_goal n;
           let good_cube = good.cube in
           let d = Instantiation.relevant ~of_cube:good_cube ~to_cube:n.cube in

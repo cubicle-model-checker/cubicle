@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2014                          *)
+(*                       Copyright (C) 2011-2015                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,24 +13,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
+(* Don't edit this file, but muparser_prefix.mli instead! *)
 
-(** Pretty printing functions *)
+(** State being currently constructed *)
+val st : Enumerative.state ref
 
-val vt_width : int
-(** Width of the virtual terminal (80 if cannot be detected) *)
+val env : Enumerative.env ref
 
-val print_line : formatter -> unit -> unit
-(** prints separating line *)
+(** Called by {!Mulexer} *)
+val new_state : unit -> unit
 
-val print_double_line : formatter -> unit -> unit
-(** prints separating double line *)
-
-val print_title : formatter -> string -> unit
-(** prints section title for stats *)
-
-val print_list :
-  (formatter -> 'a -> unit) ->
-  ('b, formatter, unit) format -> formatter -> 'a list -> unit
-(** [print_list f sep fmt l] prints list [l] whose elements are printed with
-    [f], each of them being separated by the separator [sep]. *)
+(** Filled by {!Murphi.mk_encoding_table} *)
+val encoding : (string, int) Hashtbl.t

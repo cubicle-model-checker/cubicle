@@ -38,6 +38,8 @@ val maxrounds : int
 val maxnodes : int
 
 val only_forward : bool
+val print_forward_all : bool
+val print_forward_frg : bool
 val gen_inv : bool
 val forward_inv : int
 val enumerative : int
@@ -47,12 +49,19 @@ val refine : bool
 val stateless : bool
 val do_brab : bool
 val brab_up_to : bool
+val murphi : bool
+val murphi_uopts : string
+val mu_cmd : string
+val mu_opts : string
+val cpp_cmd : string
+
 
 val limit_forward_depth : bool
 val forward_depth : int
 val max_forward : int
 val max_cands : int
 val candidate_heuristic : int
+val forward_sym : bool
 
 val abstr_num : bool
 val num_range : int * int

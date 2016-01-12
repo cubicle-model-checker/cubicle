@@ -2,7 +2,7 @@
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
-(*                       Copyright (C) 2011-2014                          *)
+(*                       Copyright (C) 2011-2015                          *)
 (*                                                                        *)
 (*                  Sylvain Conchon and Alain Mebsout                     *)
 (*                       Universite Paris-Sud 11                          *)
@@ -13,24 +13,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
+let encoding = Hashtbl.create 47
 
-(** Pretty printing functions *)
+let st = ref Enumerative.empty_state
 
-val vt_width : int
-(** Width of the virtual terminal (80 if cannot be detected) *)
+let env = ref Enumerative.empty_env
 
-val print_line : formatter -> unit -> unit
-(** prints separating line *)
-
-val print_double_line : formatter -> unit -> unit
-(** prints separating double line *)
-
-val print_title : formatter -> string -> unit
-(** prints section title for stats *)
-
-val print_list :
-  (formatter -> 'a -> unit) ->
-  ('b, formatter, unit) format -> formatter -> 'a list -> unit
-(** [print_list f sep fmt l] prints list [l] whose elements are printed with
-    [f], each of them being separated by the separator [sep]. *)
+let new_state () =
+  st := Enumerative.new_undef_state !env
