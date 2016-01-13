@@ -32,8 +32,8 @@ let cdnf_asafe ua =
 (* fast check for inconsistence *)
 let obviously_safe { t_init_instances = init_inst; } n =
   let nb_procs = Node.dim n in
-  let _, cdnf_ai = Hashtbl.find init_inst nb_procs in
-  cdnf_asafe (Node.array n) cdnf_ai
+  let { init_cdnf_a } = Hashtbl.find init_inst nb_procs in
+  cdnf_asafe (Node.array n) init_cdnf_a
  
 let check s n =
   (*Debug.unsafe s;*)

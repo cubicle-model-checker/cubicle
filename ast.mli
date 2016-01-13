@@ -115,15 +115,25 @@ and trace_step = transition_info * Variable.t list * node_cube
 and trace = trace_step list
 (** type of error traces, also the type of history of nodes *)
 
+type init_instance = {
+  init_cdnf : dnf list; (** DNFs for initial states *)
+  init_cdnf_a : ArrayAtom.t list list;
+  (** DNFs for initial states in array form *)
+  init_invs : ArrayAtom.t list;
+  (** Instantiated negated user supplied invariants *)
+}
+(** Type of instantiated initial formulas *)
+
 type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
+  t_consts : Hstring.t list; (** Existential constants *)
   t_arrays : Hstring.t list; (** Array names *)
   t_bvars : Hstring.t list;
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)
-  t_init_instances : (int, (dnf list * ArrayAtom.t list list)) Hashtbl.t;
-  (** pre-computed instances of the initial formula *)
+  t_init_instances : (int, init_instance) Hashtbl.t;
+  (** pre-computed instances of the initial formula with invariants *)
   t_invs : node_cube list;
   (** user supplied invariants in negated form *)
   t_unsafe : node_cube list;

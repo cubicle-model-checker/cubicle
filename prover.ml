@@ -165,27 +165,32 @@ let make_conjuct atoms1 atoms2 =
 
 
 let make_init_dnfs s nb_procs =
-  let cdnf_sa, _ = Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (List.rev_map make_formula_set) cdnf_sa
+  let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
+  List.rev_map (List.rev_map make_formula_set) init_cdnf
+
+let get_user_invs s nb_procs =
+  let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
+  List.rev_map (fun a -> F.make F.Not [make_formula a]) init_invs
 
 
-let unsafe_conj { tag = id; cube = cube; events = events; } nb_procs init =
+let unsafe_conj { tag = id; cube = cube; events = events; } nb_procs invs init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
 (**)if debug_smt then eprintf "[smt] distinct: %a@." F.print (distinct_vars nb_procs);
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
+  List.iter (SMT.assume ~id) invs;
   let f = make_formula_set cube.Cube.litterals in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
   SMT.assume ~events ~id f;
   SMT.check ()
 
-let unsafe_dnf node nb_procs dnf =
+let unsafe_dnf node nb_procs invs dnf =
   try
     let uc =
       List.fold_left (fun accuc init ->
         try 
-          unsafe_conj node nb_procs init;
+          unsafe_conj node nb_procs invs init;
           raise Exit
         with Smt.Unsat uc -> List.rev_append uc accuc)
         [] dnf in
@@ -195,7 +200,8 @@ let unsafe_dnf node nb_procs dnf =
 let unsafe_cdnf s n =
   let nb_procs = List.length (Node.variables n) in
   let cdnf_init = make_init_dnfs s nb_procs in
-  List.iter (unsafe_dnf n nb_procs) cdnf_init
+  let invs = get_user_invs s nb_procs in
+  List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 
 let unsafe s n = unsafe_cdnf s n
 
