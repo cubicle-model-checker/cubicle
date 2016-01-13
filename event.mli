@@ -33,4 +33,4 @@ val print_acyclic_relations : Format.formatter -> t list -> unit
 
 val unique_events : structure list -> t list
 
-val axiom : string
+val axiom : bool -> string

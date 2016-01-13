@@ -381,7 +381,7 @@ module type Solver = sig
 
   val clear : unit -> unit
   val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
-  val check : unit -> unit
+  val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
   val push : unit -> unit
@@ -421,7 +421,7 @@ module Make (Options : sig val profiling : bool end) = struct
     Hashtbl.add assertions f id;
     Time.pause ()
 
-  let check () =
+  let check ?(fp=false) () =
     (* eprintf "check@."; *)
     incr calls;
     Time.start ();

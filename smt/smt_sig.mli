@@ -289,7 +289,7 @@ module type S = sig
         {b Raises} {! Unsat} if the context becomes inconsistent after unit
         propagation. *)
 
-    val check : unit -> unit
+    val check : ?fp:bool -> unit -> unit
     (** [check ()] runs the solver on its context. If [()] is
         returned then the context is satifiable.
 

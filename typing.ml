@@ -395,16 +395,30 @@ let add_invs hinit invs =
       Hashtbl.replace hinit nb_procs { init_inst with init_invs }
     ) hinit
 
-let mk_init_inst_single sa ar = {
+let mk_init_inst_single sa ar evts = {
   init_cdnf = [[sa]];
   init_cdnf_a = [[ar]];
   init_invs = [];
+  events = evts
   }
 
-let mk_init_inst init_cdnf init_cdnf_a =
+let mk_init_inst init_cdnf init_cdnf_a evts =
   { init_cdnf;
     init_cdnf_a;
-    init_invs = [] }
+    init_invs = [];
+    events = List.flatten (List.flatten evts) }
+
+let events_of_sa sa =
+  SAtom.fold (fun a (sa, evts) -> let a, e = match a with
+    | Comp ((Read(p1, v1, vi1) as t1), op, (Read(p2, v2, vi2) as t2)) ->
+       a, [] (*Comp (EventVal), []*)
+    | Comp (t1, op, (Read (p, v, vi) as t2)) ->
+       a, []
+    | Comp ((Read (p, v, vi) as t1), op, t2) ->
+       a, []
+    | _ ->
+       a, []
+  in SAtom.add a sa, e @ evts) sa (SAtom.empty, [])
 
 let create_init_instances (iargs, l_init) invs = 
   let init_instances = Hashtbl.create 11 in
@@ -412,9 +426,10 @@ let create_init_instances (iargs, l_init) invs =
     match l_init with
     | [init] ->
       let sa, cst = SAtom.partition (fun a ->
-        List.exists (fun z -> has_var z a) iargs) init in
+      List.exists (fun z -> has_var z a) iargs) init in
+      let cst, evts = events_of_sa cst in
       let ar0 = ArrayAtom.of_satom cst in
-      Hashtbl.add init_instances 0 (mk_init_inst_single cst ar0);
+      Hashtbl.add init_instances 0 (mk_init_inst_single cst ar0 evts);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
@@ -422,38 +437,41 @@ let create_init_instances (iargs, l_init) invs =
         let si = List.fold_left (fun si sigma ->
           SAtom.union (SAtom.subst sigma sa) si)
           cst (Variable.all_instantiations iargs vars) in
+	let si, evts = events_of_sa si in
         let ar = ArrayAtom.of_satom si in
-        Hashtbl.add init_instances !cpt (mk_init_inst_single si ar);
+        Hashtbl.add init_instances !cpt (mk_init_inst_single si ar evts);
         incr cpt;
         v_acc) [] Variable.procs)
 
     | _ ->
-      let dnf_sa0, dnf_ar0 =
-        List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
+      let dnf_sa0, dnf_ar0, dnf_evts0 =
+        List.fold_left (fun (dnf_sa0, dnf_ar0, dnf_evts0) sa ->
           let sa0 = SAtom.filter (fun a ->
             not (List.exists (fun z -> has_var z a) iargs)) sa in
+	  let sa0, evts0 = events_of_sa sa0 in
           let ar0 = ArrayAtom.of_satom sa0 in
-          sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
-      Hashtbl.add init_instances 0  (mk_init_inst [dnf_sa0] [dnf_ar0]);
+          sa0 :: dnf_sa0, ar0 :: dnf_ar0, evts0 :: dnf_evts0) ([],[],[]) l_init in
+      Hashtbl.add init_instances 0  (mk_init_inst [dnf_sa0] [dnf_ar0] [dnf_evts0]);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
         let vars = List.rev v_acc in
-        let inst_sa, inst_ar =
-          List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
-            let dnf_sa, dnf_ar = 
-              List.fold_left (fun (dnf_sa, dnf_ar) init ->
+        let inst_sa, inst_ar, inst_evts =
+          List.fold_left (fun (cdnf_sa, cdnf_ar, cdnf_evts) sigma ->
+            let dnf_sa, dnf_ar, dnf_evts = 
+              List.fold_left (fun (dnf_sa, dnf_ar, dnf_evts) init ->
               let sa = SAtom.subst sigma init in
               try
                 let sa = Cube.simplify_atoms sa in
+		let sa, evts = events_of_sa sa in
                 let ar = ArrayAtom.of_satom sa in
-                sa :: dnf_sa, ar :: dnf_ar
+                sa :: dnf_sa, ar :: dnf_ar, evts :: dnf_evts
               with Exit (* sa = False, don't add this conjunct*) ->
-                dnf_sa, dnf_ar
-            ) ([],[]) l_init in
-            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
-          ) ([],[]) (Variable.all_instantiations iargs vars) in
-        let inst = mk_init_inst inst_sa inst_ar in
+                dnf_sa, dnf_ar, dnf_evts
+            ) ([],[],[]) l_init in
+            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar, dnf_evts :: cdnf_evts
+          ) ([],[],[]) (Variable.all_instantiations iargs vars) in
+        let inst = mk_init_inst inst_sa inst_ar inst_evts in
         Hashtbl.add init_instances !cpt inst;
         incr cpt;
         v_acc) [] Variable.procs)
@@ -538,7 +556,7 @@ let add_tau tr =
   (*   tr_tau = Pre.make_tau tr } *)
   { tr_info = tr;
     tr_tau = Pre.make_tau tr }
-    
+
 let system s = 
   let l, bvars = init_global_env s in
   if not Options.notyping then init s.init;

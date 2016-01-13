@@ -103,7 +103,7 @@ module type Solver = sig
 
   val clear : unit -> unit
   val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
-  val check : unit -> unit
+  val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
   val push : unit -> unit
@@ -116,7 +116,7 @@ module Make (Options : sig val profiling : bool end) = struct
   let get_calls _ = unsupported ()
   let clear _ = unsupported ()
   let assume ?(events=Event.empty_struct) ~id f = unsupported ()
-  let check () = unsupported ()
+  let check ?(fp=false) () = unsupported ()
   let entails _ = unsupported ()
   let push _ =  unsupported ()
   let pop _ =  unsupported ()

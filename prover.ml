@@ -235,7 +235,7 @@ let assume_node n ap =
   SMT.check () *) (*TSO*) (*skip call to simplify*)
 
 
-let run () = SMT.check ()
+let run ?(fp=false) () = SMT.check ~fp ()
 
 let check_guard args sa reqs =
   SMT.clear ();

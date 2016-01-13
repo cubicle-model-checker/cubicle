@@ -364,7 +364,7 @@ end = struct
     TimeSort.pause ();
     List.iter (fun (vn, ar_renamed) -> assume vn ar_renamed) nodes;
     last_action ()
-    ; Prover.run () (* Added (previous assumes did not check) *)
+    ; Prover.run ~fp:true () (* Added (previous assumes did not check) *)
 
   
   let easy_fixpoint s nodes =

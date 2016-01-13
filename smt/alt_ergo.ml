@@ -285,7 +285,8 @@ module Term = struct
     try
       let (_, _, nty) = H.find decl_symbs s in
       let ty = H.find decl_types nty in
-      let sb = Symbols.name (Hstring.make (Event.event_name e ^ ".val")) in 
+      let sb = Symbols.name (Hstring.make
+			       ("e(" ^ Event.event_name e ^ ").val")) in 
       Term.make sb [] ty
     with Not_found -> raise (Error (UnknownSymb s))
 
@@ -470,7 +471,7 @@ module type Solver = sig
 
   val clear : unit -> unit
   val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
-  val check : unit -> unit
+  val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
   val push : unit -> unit
@@ -584,7 +585,7 @@ module Make (Options : sig val profiling : bool end) = struct
       cnt := !cnt + 1;
       name ^ (string_of_int !cnt) ^ ext
     
-  let check () =
+  let check ?(fp=false) () =
     incr calls;
     Time.start ();
     try
@@ -616,12 +617,13 @@ module Make (Options : sig val profiling : bool end) = struct
           fprintf fmt "%s" (Event.smt_var_name f))) tso_vars;
 
       (* Axiomatization *)
-      fprintf filefmt "%s" Event.axiom;
+      fprintf filefmt "%s" (Event.axiom fp);
 
       (* Definition of events *)
       Event.print_event_decls filefmt event_list;
 
       (* Print known po, rf, co and fence pairs *)
+      fprintf filefmt "axiom po_pairs : true\n";
       List.iter (fun events ->
         Event.print_events_po filefmt events) !all_events
 
@@ -630,14 +632,15 @@ module Make (Options : sig val profiling : bool end) = struct
       (* Print formula *)
       fprintf filefmt "goal g: true\n";
       List.iter (fun cnf ->
-	fprintf str_formatter " and %a" print_cnf cnf;
+	fprintf str_formatter " and %a\n" print_cnf cnf;
 	let t = flush_str_formatter () in
 	let t = replace t "#" "p" in
 	let t = replace t "True" "true" in
 	let t = replace t "False" "false" in
 	fprintf filefmt "%s" t;
-      ) !formula;
-      if do_tso then Event.print_acyclic_relations filefmt event_list;
+      ) (List.rev !formula);
+      if do_tso && not fp then
+	Event.print_acyclic_relations filefmt (List.rev event_list);
 
       (* Output file *)
       flush file;

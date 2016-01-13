@@ -121,6 +121,7 @@ type init_instance = {
   (** DNFs for initial states in array form *)
   init_invs : ArrayAtom.t list;
   (** Instantiated negated user supplied invariants *)
+  events : Event.t list  
 }
 (** Type of instantiated initial formulas *)
 
