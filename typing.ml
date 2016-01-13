@@ -308,36 +308,65 @@ let init_proc () =
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
 
-let inv_in_init ivars {cube = {Cube.vars; litterals=lits}} =
-  List.fold_left (fun acc sigma ->
-      SAtom.fold (fun a dnsf ->
-          let na = Atom.neg (Atom.subst sigma a) in
-          SAtom.singleton na :: dnsf
-        ) lits acc
-    ) [] (Variable.all_permutations vars ivars)
+(* let inv_in_init ivars {cube = {Cube.vars; litterals=lits}} = *)
+(*   List.fold_left (fun acc sigma -> *)
+(*       SAtom.fold (fun a dnsf -> *)
+(*           let na = Atom.neg (Atom.subst sigma a) in *)
+(*           SAtom.singleton na :: dnsf *)
+(*         ) lits acc *)
+(*     ) [] (Variable.all_permutations vars ivars) *)
+
+
+(* let add_invs hinit invs = *)
+(*   Hashtbl.iter (fun nb_procs (cdnsf, cdnaf) -> *)
+(*       let pvars = Variable.give_procs nb_procs in *)
+(*       let iinstp = *)
+(*         List.fold_left (fun (cdnsf, cdnaf) inv -> *)
+(*             let dnsf = inv_in_init pvars inv in *)
+(*             if dnsf = [] then cdnsf, cdnaf *)
+(*             else  *)
+(*               let cdnsf = *)
+(*                 List.map (fun dnf -> *)
+(*                   List.fold_left (fun acc sa -> *)
+(*                       List.fold_left (fun acc invsa -> *)
+(*                           SAtom.union sa invsa :: acc *)
+(*                         ) acc dnsf *)
+(*                     ) [] dnf *)
+(*                   ) cdnsf in *)
+(*               cdnsf, List.rev_map (List.rev_map ArrayAtom.of_satom) cdnsf *)
+(*           ) (cdnsf, cdnaf) invs *)
+(*       in *)
+(*       Hashtbl.replace hinit nb_procs iinstp *)
+(*     ) hinit *)
 
 
 let add_invs hinit invs =
-  Hashtbl.iter (fun nb_procs (cdnsf, cdnaf) ->
+  Hashtbl.iter (fun nb_procs init_inst ->
       let pvars = Variable.give_procs nb_procs in
-      let iinstp =
-        List.fold_left (fun (cdnsf, cdnaf) inv ->
-            let dnsf = inv_in_init pvars inv in
-            if dnsf = [] then cdnsf, cdnaf
-            else 
-              let cdnsf =
-                List.map (fun dnf ->
-                  List.fold_left (fun acc sa ->
-                      List.fold_left (fun acc invsa ->
-                          SAtom.union sa invsa :: acc
-                        ) acc dnsf
-                    ) [] dnf
-                  ) cdnsf in
-              cdnsf, List.map (List.map ArrayAtom.of_satom) cdnsf
-          ) (cdnsf, cdnaf) invs
+      let init_invs =
+        List.fold_left (fun acc inv ->
+            let ainv = Node.array inv in
+            let vars_inv = Node.variables inv in
+            let d = Variable.all_permutations vars_inv pvars in
+            List.fold_left (fun acc sigma ->
+                let ai = ArrayAtom.apply_subst sigma ainv in
+                ai :: acc
+              ) acc d
+          ) [] invs
       in
-      Hashtbl.replace hinit nb_procs iinstp
+      Hashtbl.replace hinit nb_procs { init_inst with init_invs }
     ) hinit
+
+let mk_init_inst_single sa ar = {
+  init_cdnf = [[sa]];
+  init_cdnf_a = [[ar]];
+  init_invs = [];
+  }
+
+let mk_init_inst init_cdnf init_cdnf_a =
+  { init_cdnf;
+    init_cdnf_a;
+    init_invs = [] }
 
 let create_init_instances (iargs, l_init) invs = 
   let init_instances = Hashtbl.create 11 in
@@ -347,7 +376,7 @@ let create_init_instances (iargs, l_init) invs =
       let sa, cst = SAtom.partition (fun a ->
         List.exists (fun z -> has_var z a) iargs) init in
       let ar0 = ArrayAtom.of_satom cst in
-      Hashtbl.add init_instances 0 ([[cst]], [[ar0]]);
+      Hashtbl.add init_instances 0 (mk_init_inst_single cst ar0);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
@@ -356,7 +385,7 @@ let create_init_instances (iargs, l_init) invs =
           SAtom.union (SAtom.subst sigma sa) si)
           cst (Variable.all_instantiations iargs vars) in
         let ar = ArrayAtom.of_satom si in
-        Hashtbl.add init_instances !cpt ([[si]], [[ar]]);
+        Hashtbl.add init_instances !cpt (mk_init_inst_single si ar);
         incr cpt;
         v_acc) [] Variable.procs)
 
@@ -367,12 +396,12 @@ let create_init_instances (iargs, l_init) invs =
             not (List.exists (fun z -> has_var z a) iargs)) sa in
           let ar0 = ArrayAtom.of_satom sa0 in
           sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
-      Hashtbl.add init_instances 0  ([dnf_sa0], [dnf_ar0]);
+      Hashtbl.add init_instances 0  (mk_init_inst [dnf_sa0] [dnf_ar0]);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
         let vars = List.rev v_acc in
-        let inst =
+        let inst_sa, inst_ar =
           List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
             let dnf_sa, dnf_ar = 
               List.fold_left (fun (dnf_sa, dnf_ar) init ->
@@ -386,6 +415,7 @@ let create_init_instances (iargs, l_init) invs =
             ) ([],[]) l_init in
             dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
           ) ([],[]) (Variable.all_instantiations iargs vars) in
+        let inst = mk_init_inst inst_sa inst_ar in
         Hashtbl.add init_instances !cpt inst;
         incr cpt;
         v_acc) [] Variable.procs)
@@ -405,7 +435,7 @@ let create_init_instances (iargs, l_init) invs =
 
 let debug_init_instances insts =
   Hashtbl.iter
-    (fun nbp (cdnf, _) ->
+    (fun nbp init_inst ->
      Pretty.print_double_line err_formatter ();
      eprintf "%d PROCS :\n" nbp;
      Pretty.print_line err_formatter ();
@@ -413,7 +443,7 @@ let debug_init_instances insts =
        (fun dnf ->
         List.iter (eprintf "( %a ) ||@." SAtom.print_inline) dnf;
         eprintf "@.";
-       ) cdnf;
+       ) init_inst.init_cdnf;
      Pretty.print_double_line err_formatter ();
      eprintf "@.";
     ) insts
