@@ -17,6 +17,7 @@ open Format
 open Ast
 open Types
 open Options
+open Event
 
 module HSet = Hstring.HSet
 
@@ -112,7 +113,11 @@ module AltErgo = struct
     | [p] -> print_proc fmt p
     | p :: r -> fprintf fmt "%a,%a" print_proc p print_args r
 
-  let rec print_term ~prime fmt = function
+  let rec print_term ~prime fmt t =
+    let print_var fmt (v, vi) =
+      if vi = [] then fprintf fmt "%a%s" Hstring.print v (spr prime)
+      else fprintf fmt "%a%s[%a]" Hstring.print v (spr prime) (Hstring.print_list ", ") vi in
+    match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
     | Elem (s, Constr) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
@@ -123,6 +128,12 @@ module AltErgo = struct
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
+    | Read (p, v, vi) ->
+       fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
+    | EventValue e ->
+       let dir = if e.dir = ERead then "R" else "W" in
+       fprintf fmt "event(%d, %a, %s, %a)"
+	       e.uid print_proc e.tid dir print_var e.var
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -647,7 +658,11 @@ module Why3 = struct
     | [p] -> print_proc fmt p
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
-  let rec print_term ~prime fmt = function
+  let rec print_term ~prime fmt t =
+    let print_var fmt (v, vi) =
+      if vi = [] then fprintf fmt "%a%s" Hstring.print v (spr prime)
+      else fprintf fmt "%a%s[%a]" Hstring.print v (spr prime) (Hstring.print_list ", ") vi in
+    match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
@@ -656,6 +671,12 @@ module Why3 = struct
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x (print_cs ~arith:true) cs
+    | Read (p, v, vi) ->
+       fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
+    | EventValue e ->
+       let dir = if e.dir = ERead then "R" else "W" in
+       fprintf fmt "event(%d, %a, %s, %a)"
+	       e.uid print_proc e.tid dir print_var e.var
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1235,7 +1256,7 @@ module Why3 = struct
     if not quiet && verbose >= 1 then printf "@.";
     let hints = List.fold_left
       (fun hints phi ->
-       let ls, post = Pre.pre_image s (*s.t_trans*) phi in (*TSO*)
+       let ls, post = Pre.pre_image s.t_trans phi in
        let used =
          List.fold_left
            (fun used p ->
@@ -1415,7 +1436,11 @@ module Why3_INST = struct
     | [p] -> print_proc fmt p
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
-  let rec print_term ~prime fmt = function
+  let rec print_term ~prime fmt t =
+    let print_var fmt (v, vi) =
+      if vi = [] then fprintf fmt "%a%s" Hstring.print v (spr prime)
+      else fprintf fmt "%a%s[%a]" Hstring.print v (spr prime) (Hstring.print_list ", ") vi in
+    match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
     | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
@@ -1424,6 +1449,12 @@ module Why3_INST = struct
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+    | Read (p, v, vi) ->
+       fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
+    | EventValue e ->
+       let dir = if e.dir = ERead then "R" else "W" in
+       fprintf fmt "event(%d, %a, %s, %a)"
+	       e.uid print_proc e.tid dir print_var e.var
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -2046,7 +2077,7 @@ module Why3_INST = struct
     if not quiet && verbose >= 1 then printf "@.";
     let hints = List.fold_left
       (fun hints phi ->
-       let ls, post = Pre.pre_image s (*s.t_trans*) phi in (* TSO *)
+       let ls, post = Pre.pre_image s.t_trans phi in
        let used =
          List.fold_left
            (fun used p ->

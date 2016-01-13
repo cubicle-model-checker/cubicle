@@ -349,7 +349,9 @@ end
 
 let select_oracle =
   if do_brab then
-    (module Enumerative : Oracle.S)
+    if murphi then
+      (module Murphi : Oracle.S)
+    else (module Enumerative : Oracle.S)
   else
     (module GrumpyOracle : Oracle.S)
 

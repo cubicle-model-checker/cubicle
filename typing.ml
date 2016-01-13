@@ -112,6 +112,8 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
+      | Read _ -> failwith "Typing.infer_type Read TODO"
+      | EventValue _ -> failwith "Typing.infer_type EventValue TODO"
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -167,6 +169,23 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
+  | Read (p, v, vi) ->
+      let ty_p =
+	if Hstring.list_mem p args then Smt.Type.type_proc
+	else (* probably no else here, we want p to be an argument *)
+	  try 
+	    let pa, typ = Smt.Symbol.type_of p in
+	    if pa <> [] then error (MustBeOfTypeProc p) loc;
+	    typ
+	  with Not_found -> error (UnknownName p) loc
+      in
+      if not (Hstring.equal ty_p Smt.Type.type_proc) then
+	error (MustBeOfTypeProc p) loc;
+      begin match vi with
+	| [] -> term loc args (Elem (v, Glob))
+	| _ -> term loc args (Access (v, vi))
+      end
+  | EventValue _ -> failwith "Typing.term EventValue should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -211,7 +230,9 @@ let nondets loc l =
     (fun g -> 
        try
 	 let args_g, ty_g = Smt.Symbol.type_of g in
-	 if args_g <> [] then error (NotATerm g) loc;
+         if args_g <> [] then error (NotATerm g) loc;
+         (* Add all values to the subtype *)
+         List.iter (Smt.Variant.assign_constr g) (Smt.Type.constructors ty_g);
 	 (* if not (Hstring.equal ty_g Smt.Type.type_proc) then  *)
 	 (*   error (MustBeOfTypeProc g) *)
        with Not_found -> error (UnknownGlobal g) loc) l
@@ -239,6 +260,21 @@ let assigns loc args =
             ) swts
        end;         
        dv := g ::!dv)
+
+let writes loc args = 
+  let dv = ref [] in
+  List.iter 
+    (fun (p, v, vi, t) ->
+       if Hstring.list_mem v !dv then error (DuplicateAssign v) loc;
+       let ty_v = 
+	 try Smt.Symbol.type_of v
+         with Not_found -> error (UnknownGlobal v) loc in
+       begin
+         let ty_t = term loc args t in
+         unify loc ty_t ty_v;
+         assignment v t ty_t;
+       end;         
+       dv := v ::!dv)
 
 let switchs loc a args ty_e l = 
   List.iter 
@@ -272,40 +308,76 @@ let transitions =
 	    List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
        updates args t.tr_upds;
        assigns loc args t.tr_assigns;
+       writes loc args t.tr_writes;
        nondets loc t.tr_nondets)
 
 let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y
   with Smt.Error e -> error (Smt e) loc
 
-let declare_symbol loc n args ret =
-  try Smt.Symbol.declare n args ret
+let declare_symbol ?(tso=false) loc n args ret =
+  try Smt.Symbol.declare ~tso n args ret
   with Smt.Error e -> error (Smt e) loc
 
 
 let init_global_env s = 
   List.iter declare_type s.type_defs;
   let l = ref [] in
+  let bvars = ref [] in
   List.iter 
     (fun (loc, n, t) -> 
        declare_symbol loc n [] t;
        l := (n, t)::!l) s.consts;
   List.iter 
-    (fun (loc, n, t) -> 
-       declare_symbol loc n [] t;
+    (fun (loc, n, t, tso) -> 
+       declare_symbol ~tso loc n [] t;
+       bvars := n :: !bvars;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (loc, n, (args, ret)) -> 
-       declare_symbol loc n args ret;
+    (fun (loc, n, (args, ret), tso) -> 
+       declare_symbol ~tso loc n args ret;
+       bvars := n :: !bvars;
        l := (n, ret)::!l) s.arrays;
-  !l
+  !l, !bvars
 
 
 let init_proc () = 
   List.iter 
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
-let create_init_instances (iargs, l_init) = 
+
+let inv_in_init ivars {cube = {Cube.vars; litterals=lits}} =
+  List.fold_left (fun acc sigma ->
+      SAtom.fold (fun a dnsf ->
+          let na = Atom.neg (Atom.subst sigma a) in
+          SAtom.singleton na :: dnsf
+        ) lits acc
+    ) [] (Variable.all_permutations vars ivars)
+
+
+let add_invs hinit invs =
+  Hashtbl.iter (fun nb_procs (cdnsf, cdnaf) ->
+      let pvars = Variable.give_procs nb_procs in
+      let iinstp =
+        List.fold_left (fun (cdnsf, cdnaf) inv ->
+            let dnsf = inv_in_init pvars inv in
+            if dnsf = [] then cdnsf, cdnaf
+            else 
+              let cdnsf =
+                List.map (fun dnf ->
+                  List.fold_left (fun acc sa ->
+                      List.fold_left (fun acc invsa ->
+                          SAtom.union sa invsa :: acc
+                        ) acc dnsf
+                    ) [] dnf
+                  ) cdnsf in
+              cdnsf, List.map (List.map ArrayAtom.of_satom) cdnsf
+          ) (cdnsf, cdnaf) invs
+      in
+      Hashtbl.replace hinit nb_procs iinstp
+    ) hinit
+
+let create_init_instances (iargs, l_init) invs = 
   let init_instances = Hashtbl.create 11 in
   begin
     match l_init with
@@ -356,6 +428,16 @@ let create_init_instances (iargs, l_init) =
         incr cpt;
         v_acc) [] Variable.procs)
     end;
+
+  (* add user supplied invariants to init *)
+  add_invs init_instances invs;
+  (* Hashtbl.iter (fun nb (cdnf, _) -> *)
+  (*   eprintf "> %d --->@." nb; *)
+  (*   List.iter (fun dnf -> *)
+  (*       eprintf "[[ %a ]]@." (Pretty.print_list SAtom.print " ||@ ") dnf *)
+  (*     ) cdnf; *)
+  (*   eprintf "@." *)
+  (* ) init_instances; *)
   init_instances
 
 
@@ -402,6 +484,13 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
                              SAtom.subst sigma sa, Term.subst sigma t) swts in
                         x, UCase swts
 	           ) tr.tr_assigns;
+	tr_writes = 
+	  List.map (fun (p, v, vi, t) ->
+		      let sp = Variable.subst sigma p in
+		      let svi = List.map (Variable.subst sigma) vi in
+		      let st = Term.subst sigma t in
+		      sp, v, svi, st
+	           ) tr.tr_writes;
 	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 
@@ -419,50 +508,30 @@ let add_tau tr =
   (*   tr_tau = Pre.make_tau tr } *)
   { tr_info = tr;
     tr_tau = Pre.make_tau tr }
-
-let is_buffered bv var = (* TSO *)
-  List.exists (fun v -> Hstring.equal var v) bv
-
-let rec check_buffered_term bv = function (* TSO *)
-  | Elem (v, Glob) | Access (v, _) -> if is_buffered bv v then
-      failwith "Buffered Var/Array in Unsafe or Invariant"
-  | Arith (t, _) -> check_buffered_term bv t
-  | _ -> ()
-
-let check_buffered_atom bv = function (* TSO *)
-  | Comp (t1, _, t2) ->
-    check_buffered_term bv t1;
-    check_buffered_term bv t2
-  | _ -> ()
-
+    
 let system s = 
-  let l = init_global_env s in
+  let l, bvars = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then transitions s.trans;
-  if Options.subtyping    then Smt.Variant.close ();
-  if Options.debug        then Smt.Variant.print ();
+  if Options.(subtyping && not murphi) then begin
+    Smt.Variant.close ();
+    if Options.debug then Smt.Variant.print ();
+  end;
 
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
-    List.map (fun (_,v,i) ->
-      (* TSO : Check that no TSO variable is in invariant formula *)
-      SAtom.iter (check_buffered_atom s.buffered) i;
-      create_node_rename Inv v i) s.invs in
+    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
-    List.map (fun (_,v,u) ->
-      (* TSO : Check that no TSO variable is in unsafe formula *)
-      SAtom.iter (check_buffered_atom s.buffered) u;
-      create_node_rename Orig v u) s.unsafe in
-  let init_instances = create_init_instances init_woloc in
+    List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
+  let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
   { 
-    t_globals = List.map (fun (_,g,_) -> g) s.globals;
-    t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
-    (* t_buffered = List.map (fun (_,v,_) -> v) s.buffered; *)
-    t_buffered = s.buffered;
+    t_globals = List.map (fun (_,g,_,_) -> g) s.globals;
+    t_arrays = List.map (fun (_,a,_,_) -> a) s.arrays;
+    t_bvars = bvars; (*List.map (fun (_,bv) -> bv) s.bvars;*)
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

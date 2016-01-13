@@ -119,14 +119,68 @@ let print_candidates ~safe candidates =
     end
 
 
+let print_trace faulty fmt trace =
+  let o = Node.origin faulty in
+  let first = ref true in
+  List.iter 
+    (fun (before, tr, sigma, after) ->
+       if !first then begin
+         fprintf fmt "@[<hov4>(Init) ->";
+         if verbose > 0 then fprintf fmt "@ %a" SAtom.print before;
+         fprintf fmt "@ @]@,";
+       end;
+       first := false;
+       fprintf fmt "@[<hov4>%a(%a) ->"
+         Hstring.print tr.tr_name Variable.print_vars (List.map snd sigma);
+       if verbose > 0 then fprintf fmt "@ %a" SAtom.print after;
+       fprintf fmt "@ @]@,";
+    ) trace;
+  if o.kind = Approx then fprintf fmt "@{<fg_blue>approx[%d]@}" o.tag
+  else fprintf fmt "@{<fg_magenta>unsafe[%d]@}" o.tag
+
+let print_trace faulty fmt trace =
+  let o = Node.origin faulty in
+  let first = ref true in
+  List.iter 
+    (fun (before, tr, sigma, after) ->
+       if !first then begin
+         fprintf fmt "@[<hov4>Init ->";
+         if verbose > 0 then fprintf fmt "@ %a" SAtom.print before;
+         fprintf fmt "@ @]@,";
+       end;
+       first := false;
+       fprintf fmt "@[<hov4>%a(%a) ->"
+         Hstring.print tr.tr_name Variable.print_vars (List.map snd sigma);
+       if verbose > 0 then fprintf fmt "@ %a" SAtom.print after;
+       fprintf fmt "@ @]@,";
+    ) trace;
+  if o.kind = Approx then fprintf fmt "@{<fg_blue>approx[%d]@}" o.tag
+  else fprintf fmt "@{<fg_magenta>unsafe[%d]@}" o.tag
+
+let print_history fmt n =
+  fprintf fmt "@[<hov4>Init ->";
+  if verbose > 0 then fprintf fmt "@ %a" Node.print n;
+  fprintf fmt "@ @]@,";
+  let last = List.fold_left 
+      (fun last (tr, args, a) ->
+         fprintf fmt "@[<hov4>%a(%a) ->"
+           Hstring.print tr.tr_name Variable.print_vars args;
+         if verbose > 0 then fprintf fmt "@ %a" Node.print a;
+         fprintf fmt "@ @]@,";
+      a
+    ) n n.from in
+  if last.kind = Approx then fprintf fmt "@{<fg_blue>approx[%d]@}" last.tag
+  else fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.tag 
+
+
 let error_trace sys faulty =
   if not quiet then
-    if Forward.spurious_due_to_cfm sys faulty then
-      printf "@\n@{<fg_red>Spurious trace@}: "
-    else 
+    match Forward.replay_history sys faulty with
+    | None -> printf "@\n@{<fg_red>Spurious trace@}: "
+    | Some trace ->
       printf "@\n@{<fg_red>Error trace@}: ";
-  printf "@[%a@]@." Node.print_history faulty
-
+      (* printf "@[%a@]@." (print_trace faulty) trace *)
+      printf "@[%a@]@." print_history faulty
 
 
 let print_visited = 

@@ -68,6 +68,8 @@ let rec is_prime_term = function
   | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
+  | Read _ -> failwith "Forward.is_prime_term Read TODO"
+  | EventValue _ -> failwith "Forward.is_prime_term EventValue TODO"
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -372,6 +374,8 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
+  | Read _ -> failwith "Forward.type_of_term Read TODO"
+  | EventValue _ -> failwith "Forward.type_of_term EventValue TODO"
 
 let rec type_of_atom = function
   | True | False -> None
@@ -463,8 +467,13 @@ let apply_assigns assigns sigma =
       let sa = 
         match gu with
         | UTerm t -> 
-           let t = Term.subst sigma t in
-           Comp (nt, Eq, prime_term t)
+          let t = Term.subst sigma t in
+          begin match t with
+            | Arith (t, c) ->
+              let nt = Arith(nt, mult_const (-1) c) in
+              Comp (nt, Eq, prime_term t)
+            | _ -> Comp (nt, Eq, prime_term t)
+          end
         | UCase swts -> swts_to_ites nt swts sigma
       in
       SAtom.add sa nsa, Term.Set.add nt terms)
@@ -793,11 +802,15 @@ let instance_of_transition { tr_args = tr_args;
   let upd, upd_terms = apply_updates upds all_procs sigma in
   let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
+  let nondet_terms =
+    List.fold_left (fun acc h -> Term.Set.add (Elem (h, Glob)) acc)
+      Term.Set.empty nondets in
   {
     i_reqs = reqs;
     i_udnfs = udnfs;
     i_actions = act;
-    i_touched_terms = Term.Set.union assi_terms upd_terms
+    i_touched_terms =
+      Term.Set.union (Term.Set.union assi_terms nondet_terms) upd_terms
   }
 
 
@@ -850,7 +863,8 @@ let search_only s = assert false
 (* Check if formula is unreachable on trace *)
 (********************************************)
 
-exception Reachable of (transition_info * Variable.subst) list
+exception Reachable of
+    (SAtom.t * transition_info * Variable.subst * SAtom.t) list 
 
 let all_partitions s =
   List.fold_left (fun acc x ->
@@ -873,7 +887,7 @@ let above s trace =
 
 
 type possible_result = 
-  | Reach of (transition_info * Variable.subst) list 
+  | Reach of (SAtom.t * transition_info * Variable.subst * SAtom.t) list 
   | Spurious of trace
   | Unreach
 
@@ -882,7 +896,8 @@ let possible_trace ~starts ~finish ~procs ~trace =
   let usa = Node.litterals finish in
   let rec forward_rec ls rtrace = match ls, rtrace with
     | _, [] -> Unreach
-    | [], (_, _, s) ::_ -> Spurious (above s trace)
+    | [], (_, _, s) ::_ ->
+      Spurious (above s trace)
     | _, (tr, _, _) :: rest_trace ->
         let nls =
 	  if List.length tr.tr_args > List.length procs then []
@@ -891,7 +906,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
             let itr = instance_of_transition tr procs [] sigma in
             List.fold_left (fun acc (sa, args, hist) ->
               List.fold_left (fun acc (nsa, nargs) ->
-                let new_hist = (tr, sigma) :: hist in
+                let new_hist = (sa, tr, sigma, nsa) :: hist in
                 try Prover.reached procs usa nsa; raise (Reachable new_hist)
                 with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
               ) acc (post_inst sa args procs itr)
@@ -976,8 +991,13 @@ let spurious_error_trace system s =
 
 let spurious_due_to_cfm system s =
   match reachable_on_trace_from_init system (Node.origin s) s.from with
-    | Unreach | Spurious _ -> true
-    | Reach hist -> false
+  | Unreach | Spurious _ -> true
+  | Reach hist -> false
+
+let replay_history system s =
+  match reachable_on_trace_from_init system (Node.origin s) s.from with
+  | Unreach | Spurious _ -> None
+  | Reach hist -> Some hist
 
 
 let conflicting_from_trace s trace =

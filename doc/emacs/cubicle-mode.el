@@ -1,7 +1,7 @@
 ;;; cubicle-mode.el --- Cubicle major mode for emacs
 
 ;; Author: Alain Mebsout
-;; Version: 0.1
+;; Version: 0.2
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -58,6 +58,7 @@
     ("(\\*\\([^*]\\|\\*[^)]\\)*\\*)" . font-lock-comment-face)
     ; transitions need not have a return type
     ("\\(transition\\)\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-function-name-face))
+    ("\\(predicate\\)\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-function-name-face))
     ("\\(type\\)\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-type-face))
     ("\\(var\\)\\s-+\\sw+\\s-+:\\s-+\\(\\sw+\\)" (1 font-lock-keyword-face) (2 font-lock-type-face))
     ("\\(array\\)\\s-+\\sw+\\[\\(\\sw+\\s-*,?\\s-*\\)*\\]\\s-*:\\s-*\\(\\sw+\\)"
@@ -75,9 +76,18 @@
     ;; ("\\(requires\\)" (1 font-lock-variable-name-face))
     ("\\b\\(requires\\)\\b" (1 font-lock-builtin-face))
     ("\\b\\(forall_other\\)\\b" (1 font-lock-builtin-face))
+    ("\\b\\(exists_other\\)\\b" (1 font-lock-builtin-face))
+    ("\\b\\(forall\\)\\b" (1 font-lock-builtin-face))
+    ("\\b\\(exists\\)\\b" (1 font-lock-builtin-face))
     ("\\b\\(case\\)\\b" (1 font-lock-keyword-face))
+    ("\\(if\\)" (1 font-lock-keyword-face))
+    ("\\(then\\)" (1 font-lock-keyword-face))
+    ("\\(else\\)" (1 font-lock-keyword-face))
     ("\\(&&\\)" (1 font-lock-variable-name-face))
     ("\\(||\\)" (1 font-lock-variable-name-face))
+    ("\\(=>\\)" (1 font-lock-variable-name-face))
+    ("\\(<=>\\)" (1 font-lock-variable-name-face))
+    ("\\(not\\)" (1 font-lock-variable-name-face))
     ;("\\(|\\)" (1 font-lock-keyword-face))
     ("\\<[a-z][a-zA-Z0-9_]*" . font-lock-constant-face)
     ("\\#[0-9]*" . font-lock-constant-face)

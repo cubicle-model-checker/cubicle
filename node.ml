@@ -96,8 +96,7 @@ let create ?(kind=Node) ?(from=None) cube =
     depth = List.length hist;
     deleted = false;
     from = hist;
-    ops = [];
-    nops = [];
+    events = Event.empty_struct
   }
 
 let has_deleted_ancestor n =
@@ -150,6 +149,8 @@ module Latex = struct
        fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
+    | Read (p, v, vi) -> Event.print_rd fmt (p, v, vi)
+    | EventValue e -> Event.print_evtval fmt e
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

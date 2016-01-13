@@ -21,11 +21,13 @@ open Ast
 (** Entry point of Cubicle *)
 
 
+
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
 let () = 
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
+        eprintf "@{<n>@}@."; (* Remove colors *)
         Stats.print_report ~safe:false [] [];
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
         exit 1)) 
@@ -34,6 +36,7 @@ let () =
   Sys.set_signal Sys.sigterm
     (Sys.Signal_handle 
        (fun _ ->
+        eprintf "@{<n>@}@."; (* Remove colors *)
         Stats.print_report ~safe:false [] [];
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
         exit 1)) 
@@ -43,8 +46,16 @@ let () =
   try
     Sys.set_signal Sys.sigusr1 
       (Sys.Signal_handle 
-         (fun _ -> Stats.print_report ~safe:false [] []))
+         (fun _ ->
+            eprintf "@{<n>@}@."; (* Remove colors *)
+            Stats.print_report ~safe:false [] []))
   with Invalid_argument _ -> () (* doesn't exist on windows *)
+
+
+(** Print backtrace even in native mode *)
+let () =
+  if verbose > 0 then Printexc.record_backtrace true
+
 
 let _ = 
   let lb = from_channel cin in 
@@ -64,6 +75,7 @@ let _ =
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
          Trace.Selected.certificate system visited;
          close_dot ();
+	 exit 0
 
       | Bwd.Unsafe (faulty, candidates) ->
          if (not quiet || profiling) then
@@ -98,5 +110,16 @@ let _ =
      exit 1
 
   | Failure str ->
-     eprintf "\n@{<u>Internal failure:@}%s@." str;
-     exit 1
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "\n@{<u>Internal failure:@}%s@." str;
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+
+    exit 1
+
+  | e ->
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "Fatal error: %s@." (Printexc.to_string e);
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace
+

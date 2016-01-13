@@ -26,18 +26,27 @@
 	"transition", TRANSITION;
 	"invariant", INVARIANT;
 	"requires", REQUIRE;
-	"uguard", UGUARD;
-	"assign", ASSIGN;
         "array", ARRAY;
-        "arrayb", ARRAYB; (* TSO *)
         "var", VAR;
-        "varb", VARB; (* TSO *)
         "const", CONST;
         "unsafe", UNSAFE;
 	"case", CASE;
-	"forall_other", FORALL;
+	"forall_other", FORALL_OTHER;
+	"exists_other", EXISTS_OTHER;
+	"forall", FORALL;
+        "exists", EXISTS;
+        "predicate", PREDICATE;
+        "if", IF;
+        "then", THEN;
+        "else", ELSE;
+        "not", NOT;
+        "true", TRUE;
+        "false", FALSE;
+	"write", WRITE;
+	"read", READ;
+	"varb", VARB;
+	"arrayb", ARRAYB;
 	"number_procs", SIZEPROC;
-	"fence", FENCE;
       ]
 	       
   let newline lexbuf =
@@ -101,10 +110,16 @@ rule token = parse
       { PLUS }
   | "-"
       { MINUS }
+  | "*"
+      { TIMES }
   | ":"
       { COLON }
   | "="
       { EQ }
+  | "=>"
+      { IMP }
+  | "<=>"
+      { EQUIV }
   | ":="
       { AFFECT }
   | "<>"
@@ -113,6 +128,10 @@ rule token = parse
       { LT }
   | "<="
       { LE }
+  | ">"
+      { GT }
+  | ">="
+      { GE }
   | "["
       { LEFTSQ }
   | "]"

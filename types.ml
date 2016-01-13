@@ -17,6 +17,7 @@
 open Format
 open Options
 open Util
+open Event
 
 module HSet = Hstring.HSet
 
@@ -53,7 +54,7 @@ module MConst = struct
       | (ConstInt n | ConstReal n), i -> Some (Num.mult_num (Num.Int i) n)
       | _ -> None
     else None
-
+	   
 end
 
 type term =
@@ -61,6 +62,8 @@ type term =
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
+  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *)
+  | EventValue of Event.t (* for event instances *)
 
 let is_int_const = function
   | ConstInt _ -> true
@@ -155,6 +158,21 @@ module Term = struct
     | Arith (t1, cs1), Arith (t2, cs2) ->
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
+    | Arith (_, _), _ -> -1 | _, Arith (_, _) -> 1
+    | Read (p1, v1, vi1), Read (p2, v2, vi2) ->
+       let c = Hstring.compare v1 v2 in if c<>0 then c else
+       let c = Hstring.compare p1 p2 in if c<>0 then c else
+       Hstring.compare_list vi1 vi2       
+    | Read (_, _, _), _ -> -1 | _, Read (_, _, _) -> 1
+    | EventValue e1, EventValue e2 ->
+       if e1.uid < e2.uid then -1 else
+       if e1.uid > e2.uid then 1 else
+       let c = Hstring.compare e1.tid e2.tid in if c<>0 then c else
+       if e1.dir = ERead && e2.dir = EWrite then -1 else
+       if e1.dir = EWrite && e2.dir = ERead then 1 else
+       let c = Hstring.compare (fst e1.var) (fst e2.var) in if c<>0 then c else
+       Hstring.compare_list (snd e1.var) (snd e2.var)       
+    (* | EventValue _, _ -> -1 | _, EventValue _ -> 1 *)
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -171,6 +189,10 @@ module Term = struct
   module Set = STerm
 
   let rec subst sigma t =
+    let safe_subst v =
+      try Variable.subst sigma v with Not_found -> v in
+    let list_subst l =
+      List.map (fun i -> try Variable.subst sigma i with Not_found -> i) l in
     match t with
     | Elem (x, s) ->
        let nx = Variable.subst sigma x in
@@ -181,6 +203,9 @@ module Term = struct
                     (fun z ->
                      try Variable.subst sigma z with Not_found -> z) lz)
     | Arith (x, c) -> Arith (subst sigma x, c)
+    | Read (p, v, vi) -> Read (safe_subst p, v, list_subst vi)
+    | EventValue e -> EventValue { e with tid = (safe_subst e.tid);
+				   var = (fst e.var, list_subst (snd e.var)) }
     | _ -> t
 
 
@@ -190,6 +215,12 @@ module Term = struct
        List.fold_left (fun acc x -> Variable.Set.add x acc)
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t
+    | Read (p, _, vi) ->
+       List.fold_left (fun acc x -> Variable.Set.add x acc)
+		      (Variable.Set.singleton p) vi
+    | EventValue e -> 
+       List.fold_left (fun acc x -> Variable.Set.add x acc)
+		      (Variable.Set.singleton e.tid) (snd e.var)
     | _ -> Variable.Set.empty
 
 
@@ -203,7 +234,8 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
-
+    | Read (_, v, _) -> snd (Smt.Symbol.type_of v)
+    | EventValue e -> snd (Smt.Symbol.type_of (fst e.var))
 
   let rec print_strings fmt = function
     | [] -> ()
@@ -214,23 +246,39 @@ module Term = struct
     | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstName n -> fprintf fmt "%a" Hstring.print n
 
-  let print_cs fmt cs =
+  let print_cs alone fmt cs =
+    let first = ref true in
     MConst.iter 
       (fun c i ->
-       fprintf fmt " %s %a" 
-	       (if i = 1 then "+" else if i = -1 then "-" 
-	        else if i < 0 then "- "^(string_of_int (abs i)) 
-	        else "+ "^(string_of_int (abs i)))
-	       print_const c) cs
+         if !first && alone && i >= 0 then
+           if i = 1 then print_const fmt c
+           else fprintf fmt "%s %a" (string_of_int (abs i)) print_const c
+         else
+           fprintf fmt " %s %a" 
+	     (if i = 1 then "+" else if i = -1 then "-" 
+	      else if i < 0 then "- "^(string_of_int (abs i)) 
+	      else "+ "^(string_of_int (abs i)))
+	     print_const c;
+         first := false;
+      ) cs
 
-  let rec print fmt = function
-    | Const cs -> print_cs fmt cs
+  let rec print fmt t =
+    let print_var fmt (v, vi) =
+      if vi = [] then fprintf fmt "%a" Hstring.print v
+      else fprintf fmt "%a[%a]" Hstring.print v (Hstring.print_list ", ") vi in
+    match t with
+    | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print x print_cs cs
-
+       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+    | Read (p, v, vi) ->
+       fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
+    | EventValue e ->
+       let dir = if e.dir = ERead then "R" else "W" in
+       fprintf fmt "event(%d, %a, %s, %a)"
+	       e.uid Hstring.print e.tid dir print_var e.var
 end
 
 
@@ -328,6 +376,12 @@ end = struct
     | Elem (x, Var) -> Hstring.list_mem x vs
     | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs 
     | Arith (x, _) ->  has_vars_term vs x
+    | Read (p, _, vi) ->
+       List.exists (fun z ->
+         Hstring.compare z p = 0 || Hstring.list_mem z vi) vs 
+    | EventValue e ->
+       List.exists (fun z ->
+         Hstring.compare z e.tid = 0 || Hstring.list_mem z (snd e.var)) vs 
     | _ -> false
 
   let rec has_vars vs = function

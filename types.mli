@@ -41,7 +41,6 @@ val const_sign : int MConst.t -> int option
 val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
 
-
 (** the type of terms *)
 type term =
   | Const of int MConst.t
@@ -52,7 +51,8 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-
+  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *)
+  | EventValue of Event.t (* for event instances *)
 
 (** Module interface for terms *)
 module Term : sig

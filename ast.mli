@@ -54,11 +54,11 @@ type transition_info = {
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
+  tr_writes : (Variable.t * Hstring.t * (Variable.t list) * Term.t) list;
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
   tr_loc : loc; (** location information *)
-  tr_fence : bool;
 }
 (** type of parameterized transitions *)
 
@@ -72,11 +72,9 @@ type transition = {
 }
 
 type system = {
-  globals : (loc * Hstring.t * Smt.Type.t) list;
+  globals : (loc * Hstring.t * Smt.Type.t * bool) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
-  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-(*  buffered : (loc * Hstring.t * Smt.Type.t) list;*)
-  buffered : Hstring.t list;
+  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
@@ -95,17 +93,7 @@ type kind =
   | Node   (** reguar node *)
   | Inv    (** or user supplied invariant*)
 
-type cmpop = | Ceq | Cneq | Clt | Cle | Cgt | Cge
 
-type memop =
-  | Read of Hstring.t * (Hstring.t list) * Types.term * cmpop
-            (* Var/Array, Params (if array), Term, Eq/Neq *)
-  | Write of Hstring.t * (Hstring.t list) * Types.term
-  | Fence
-
-(* module MH = Map.Make (Hstring) *)
-(* module MH : Map.S with type key = Hstring.t *)
-      
 type node_cube =
     { 
       cube : Cube.t;          (** the associated cube *)
@@ -117,11 +105,9 @@ type node_cube =
                                   simplification detects subsumption
                                   (see {! Cubetrie.delete_subsumed}) *)
       from : trace;           (** history of the node *)
-      ops : (Hstring.t * memop) list; (* TSO : memory operations *)
-      (* nops : (Hstring.t * memop * (memop list) MH.t) list; *)
-      nops : (Hstring.t * memop * (Hstring.t * (memop list)) list) list;
+      events : Event.structure;
     }
-(** The type of nodes, i.e. cubes with extra information *)
+(** the type of nodes, i.e. cubes with extra information *)
 
 and trace_step = transition_info * Variable.t list * node_cube
 (** type of elementary steps of error traces *)
@@ -132,7 +118,7 @@ and trace = trace_step list
 type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
   t_arrays : Hstring.t list; (** Array names *)
-  t_buffered : Hstring.t list;
+  t_bvars : Hstring.t list;
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)

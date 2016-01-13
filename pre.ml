@@ -18,6 +18,7 @@ open Format
 open Ast
 open Util
 open Types
+open Event
 
 module H = Hstring
 
@@ -54,6 +55,9 @@ module Debug = struct
 
 end
 
+
+let new_events = ref []
+let event_struct = ref Event.empty_struct
 
 (***********************************************************************)
 (* Pre-image of an atom w.r.t a transition, simply represented here by *)
@@ -101,7 +105,8 @@ let rec find_update a li = function
 
 exception Remove_lit_var of Hstring.t
 
-let rec find_assign tr = function
+let rec find_assign tr a =
+  let aux = function
   | Elem (x, sx) -> 
       let gu =
 	if H.list_mem x tr.tr_nondets then 
@@ -136,7 +141,7 @@ let rec find_assign tr = function
 		               up_swts)
       end
   | Access (a, li) -> 
-      let nli = li in
+      let nli = li in begin
         (* List.map (fun i -> *)
 	(*   if H.list_mem i tr.tr_nondets then  *)
         (*     (assert false; *)
@@ -144,7 +149,9 @@ let rec find_assign tr = function
 	(*   else i *)
 	  (*   try (match H.list_assoc i tr.tr_assigns with *)
 	  (*     | Elem (ni, _) -> ni *)
-	  (*     | Const _ | Arith _ | Access _ -> assert false) *)
+          (*     | Const _ | Arith _ | Access _ -> assert false) *)
+          (*     | Read _ -> assert false *)
+          (*     | EventValue _ -> assert false *)
 	  (*   with Not_found -> i *)
         (* ) li in *)
       try find_update a nli tr.tr_upds
@@ -153,9 +160,20 @@ let rec find_assign tr = function
 	(*   try (match H.list_assoc a tr.tr_assigns with *)
 	(* 	 | Elem (na, _) -> na *)
 	(* 	 | Const _ | Arith _ | Access _ -> assert false) *)
+        (*       | Read _ -> assert false *)
+        (*       | EventValue _ -> assert false *)
 	(*   with Not_found -> a *)
 	(* in *)
-	(* Single (Access (na, nli)) *)
+	(* Single (Access (na, nli)) *) end
+  | Read _ -> failwith "Pre.find_assign: Read should not be in atom"
+  | EventValue _ as t -> Single t
+  in
+  match aux a with
+  | Single Read (p, v, vi) ->
+     let e = Event.make p (v, vi) ERead in
+     new_events := e :: !new_events;
+     Single (EventValue e)
+  | _ as a -> a
 
 let make_tau tr x op y =
   try 
@@ -251,6 +269,7 @@ let make_cubes (ls, post) rargs s tr cnp =
 	    else
               let new_cube = Cube.create nargs np in
               let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
+	      let new_s = { new_s with events = !event_struct } in
 	      match post_strategy with
 	      | 0 -> add_list new_s ls, post
 	      | 1 -> 
@@ -270,12 +289,12 @@ let make_cubes (ls, post) rargs s tr cnp =
       if !size_proc = 0 then assert false;
       (ls, post)
     end
-  else begin
+  else
     (* let d_old = Variable.all_permutations tr.tr_args rargs in *)
     (* TODO: Benchmark this *)
     let d = Variable.permutations_missing tr.tr_args args in
     (* assert (List.length d_old >= List.length d); *)
-    List.fold_left cube (ls, post) d end
+    List.fold_left cube (ls, post) d
 
 
 (* The following version computes the pre-image once for each transition and
@@ -286,15 +305,33 @@ let make_cubes (ls, post) rargs s tr cnp =
 let make_cubes_new (ls, post) rargs s tr cnp =
   failwith "To implement"
 
+
+
 (*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
 let pre { tr_info = tri; tr_tau = tau } unsafe =
   (* let tau = tr.tr_tau in *)
-  let pre_unsafe = 
+  let pre_unsafe = (*
     SAtom.union tri.tr_reqs 
-      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
+      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)*)
+    let us = SAtom.fold (fun a ->
+      SAtom.add (pre_atom tau a)) unsafe SAtom.empty in
+    let us = SAtom.union tri.tr_reqs us in (* should make events of reads *)
+    let us = List.fold_left (fun us (p, v, vi, t) ->
+      let e = Event.make p (v, vi) EWrite in
+      new_events := e :: !new_events;
+      let t = match t with
+	| Read (p, v, vi) ->
+	   let e = Event.make p (v, vi) ERead in
+	   new_events := e :: !new_events;
+	   EventValue e
+	| _ -> t
+      in
+      let a = Atom.Comp (EventValue e, Eq, t) in
+      SAtom.add a us) us tri.tr_writes
+    in us
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
@@ -306,181 +343,35 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
       tri, pre_u, args
     else tri, pre_u, nargs
 
+
 (*********************************************************************)
 (* Pre-image of a system s : computing the cubes gives a list of new *)
 (* systems							     *)
 (*********************************************************************)
 
-module MH = Map.Make(Hstring)
 
-let is_buffered bv var = (* TSO *)
-  List.exists (fun v -> Hstring.equal var v) bv
-
-let rec is_buffered_term bv = function (* TSO *)
-  | Elem (v, Glob) | Access (v, _) -> is_buffered bv v
-  | Arith (t, _) -> is_buffered_term bv t
-  | _ -> false
-
-let is_buffered_atom bv = function (* TSO *)
-  | Atom.Comp (t1, _, t2) ->
-      not (is_buffered_term bv t1) && not (is_buffered_term bv t2)
-  | _ -> true
-
-let tso_pre_image bv ls post = (* TSO *)
-  let compop_to_memop op reverse = match op with
-    | Eq -> Ceq | Neq -> Cneq
-    | Lt -> if reverse then Cge else Clt
-    | Le -> if reverse then Cgt else Cle
-  in
-  let extract_vpto_from_atom a = match a, [] with
-    | Atom.Comp (Elem (v, Glob), op, t), procs
-    | Atom.Comp (Access (v, procs), op, t), _ when is_buffered bv v ->
-	Some (v, procs, t, (compop_to_memop op false))
-    | Atom.Comp (t, op, Elem (v, Glob)), procs
-    | Atom.Comp (t, op, Access (v, procs)), _ when is_buffered bv v ->
-	Some (v, procs, t, (compop_to_memop op true))
-    | _ -> None
-  in
-  let add_read_op p v procs t op ops = match t with
-    | Const _ | Elem (_, Constr) -> (p, Read (v, procs, t, op)) :: ops
-    | Elem (v, Var) when (Hstring.view v).[0] = '#' ->
-        (p, Read (v, procs, t, op)) :: ops
-    | _ -> failwith "Can only read constants from TSO variables"
-  in
-  let add_read_opn p v procs t op ops = match t with
-    | Const _ | Elem (_, Constr) -> (p, Read (v, procs, t, op), []) :: ops
-    | Elem (v, Var) when (Hstring.view v).[0] = '#' ->
-        (p, Read (v, procs, t, op), []) :: ops
-    | _ -> failwith "Can only read constants from TSO variables"
-  in
-  let extract_term_from_gupd gupd arg_procs = match gupd with
-    | UTerm (Const _ as t) | UTerm (Elem (_, Constr) as t) -> t
-        (* Format.fprintf std_formatter "Write %s = %a\n" *)
-        (*   (Hstring.view var) Term.print  t; *)
-    | UTerm (Elem (v, Var)) ->
-        let pv = List.assoc v arg_procs in
-        Elem (pv, Var)
-    | _ -> failwith "Can only write constants to TSO variables"
-  in
-  let get_tso_writable_term t arg_procs = match t with
-    | Const _ | Elem (_, Constr) -> t
-    | (Elem (v, Var)) ->
-        let pv = List.assoc v arg_procs in
-        Elem (pv, Var)
-    | _ -> failwith "Can only write constants to TSO arrays"
-  in
-  let print_procs fmt procs =
-    Format.fprintf fmt "[";
-    List.iter (fun p ->
-      Format.fprintf fmt "%s " (Hstring.view p);
-    ) procs;
-    Format.fprintf fmt "]";
-  in
-  let add_write_opn p v procs t ops =
-    let rec aux = function
-      | [] -> []
-      | op :: ops -> begin match op, (Hstring.make ""), [] with
-	  | (rp, (Read (rv, rprocs, _, _) as rop), wops), _, _
-	  | (rp, (Fence as rop), wops), rv, rprocs ->
-	     (* Format.fprintf std_formatter "Check %s%a %s%a " *)
-	       (* (Hstring.view v) print_procs procs *)
-	       (* (Hstring.view rv) print_procs rprocs; *)
-  	     let pwops = try List.assoc p wops with Not_found -> [] in
-  	       if not (pwops = []) || (v = rv && procs = rprocs)
-		                   || rop = Fence then begin
-                 (* Format.fprintf std_formatter "match\n"; *)
-  	         let wops = (p, Write (v, procs, t) :: pwops) ::
-		   (List.remove_assoc p wops) in
-		 (rp, rop, wops) :: ops
-  	       end else begin
-                 (* Format.fprintf std_formatter "no match\n"; *)
-	         op :: aux ops
-	       end
-  	  | _ -> failwith "Should only have Reads or Fence"
-        end
-    in
-    aux ops
-  in
-  let make_tso_node n =
-    let tri, p, procs, ops, nops = match n.from with (* takes the first proc param *)
-      | (tri, ((var :: _) as vars), nc) :: _ -> (tri, var, vars, nc.ops,nc.nops)
-      | (tri, [], nc) :: _ -> (tri, Hstring.make "#0", [], nc.ops, nc.nops)
-      | _ -> assert false
-    in
-    let arg_procs = List.fold_left2 (fun ap a p -> (a, p) :: ap)
-      [] tri.tr_args procs in
-    (* Format.fprintf std_formatter "Transition %s(%s)\n" *)
-    (*   (Hstring.view tri.tr_name) (Hstring.view p); *)
-    (* Reads from TSO vars *)
-    let lits, ops, nops = SAtom.fold (fun a (lits, ops, nops) ->
-      (* Format.fprintf Format.std_formatter "%a\n" Atom.print a; *)
-      match extract_vpto_from_atom a with
-      | Some (v, procs, t, op) -> (lits, add_read_op p v procs t op ops,
-				         add_read_opn p v procs t op nops)
-      | None -> (SAtom.add a lits, ops, nops)
-    ) n.cube.Cube.litterals (SAtom.empty, ops, nops) in
-    (* Writes to TSO vars *)
-    let ops, nops = List.fold_left (fun (ops, nops) (var, gupd) ->
-      if (is_buffered bv var) then
-        let t = extract_term_from_gupd gupd arg_procs in
-	let ops = (p, Write (var, [], t)) :: ops in
-	let nops = add_write_opn p var [] t nops in
-        (ops, nops)
-      else (ops, nops)
-    ) (ops, nops) tri.tr_assigns in
-    (* Writes to TSO arrays *)
-    let ops, nops = List.fold_left (fun (ops, nops) upd ->
-      if (is_buffered bv upd.up_arr) then
-        let up = match upd.up_arg with [p] -> p
-          | _ -> failwith "Can only manage buffered arrays of dimension 1" in
-        List.fold_left (fun (ops, nops) (sa, t) ->
-          if not (SAtom.is_empty sa) then
-            let t = get_tso_writable_term t arg_procs in
-            let ops = (p, Write (upd.up_arr, [p], t)) :: ops in (* dirty *)
-            let nops = add_write_opn p upd.up_arr [p] t nops in (* dirty *)
-	    (ops, nops)
-          else (ops, nops)
-	) (ops, nops) upd.up_swts
-      else (ops, nops)
-(*        SAtom.fold (fun a ops ->
-            ops
-            let pv = List.assoc v arg_procs in
-            (p, Write (var, [], Elem (pv, Var))) :: ops
-          ) sa ops *)
-(*      let fmt = std_formatter in
-        Format.fprintf fmt "%s [" (Hstring.view upd.up_arr);
-        List.iter (fun v ->
-          Format.fprintf fmt "%s " (Hstring.view v)
-        ) upd.up_arg;
-        Format.fprintf fmt  "] = ";
-        List.iter (fun (sa, t) ->
-          Format.fprintf fmt "%a, %a /" SAtom.print sa Term.print t
-        ) upd.up_swts;
-        Format.fprintf fmt "\n" *)
-    ) (ops, nops) tri.tr_upds in
-    let ops, nops = if tri.tr_fence then
-      ((p, Fence) :: ops, (p, Fence, []) :: nops)
-    else ops, nops in
-    { n with cube = Cube.create n.cube.Cube.vars lits; ops = ops; nops = nops }
-  in
-  let ls = List.fold_left (fun ns n -> make_tso_node n :: ns) [] ls in
-  let post = List.fold_left (fun ns n -> make_tso_node n :: ns) [] post in
-  (ls, post)
-
-let pre_image { t_trans = trs; t_buffered = bv } s = (* TSO *)
+let pre_image trs s =
   TimePre.start (); 
   Debug.unsafe s;
   let u = Node.litterals s in
   let ls, post = 
     List.fold_left
     (fun acc tr ->
+       new_events := [];
        let trinfo, pre_u, info_args = pre tr u in
-       make_cubes acc info_args s trinfo pre_u) 
+       event_struct := List.fold_left (fun events e ->
+         let tid = Hstring.view e.tid in
+	 let tid = String.sub tid 1 ((String.length tid)-1) in
+	 let en = int_of_string tid in
+	 let tevents = try IntMap.find en events with Not_found -> [] in
+	 IntMap.add en (e :: tevents) events
+       ) s.events !new_events;
+       make_cubes acc info_args s trinfo pre_u
+    )
     ([], []) 
     trs 
   in
   TimePre.pause ();
-(*List.rev ls, List.rev post*)
+  List.rev ls, List.rev post
 
-  (* Refine pre-image for TSO *)
-  tso_pre_image bv ls post
+

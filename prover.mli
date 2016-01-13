@@ -33,6 +33,12 @@ val assume_node : Node.t -> ArrayAtom.t -> unit
 (** [assume_node n a] assumes the negation of a node [n] given in the form of a
     renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
 
+val assume_goal_no_check : Node.t -> unit
+(** Same as {!assume_goal but without the solver check} *)
+
+val assume_node_no_check : Node.t -> ArrayAtom.t -> unit
+(** Same as {!assume_node but without the solver check} *)
+  
 val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 (** [check_guard vars s g] checks if the guard g is feasible in state [s];
     raises [Unsat] if it is not the case *)

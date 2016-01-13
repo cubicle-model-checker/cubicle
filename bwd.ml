@@ -65,6 +65,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
+	(**)if debug then eprintf ">>> [pick node %d]\n" (n.tag);
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
@@ -88,7 +89,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                             backtrack, just forget it. *)
                end
              in
-             let ls, post = Pre.pre_image system(*.t_trans*) n in (* TSO *)
+             let ls, post = Pre.pre_image system.t_trans n in
              if delete then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
@@ -170,14 +171,14 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
             Stats.check_limit n;
             match Approx.good n with
             | None ->
-               WR_PreNormal (Pre.pre_image system (*system.t_trans*) n) (*TSO*)
+               WR_PreNormal (Pre.pre_image system.t_trans n)
             | Some c ->
                try
                  (* Replace node with its approximation *)
                  Safety.check system c;
-                WR_PreCandidate (c, (Pre.pre_image system (*system.t_trans*) n))
+                 WR_PreCandidate (c, (Pre.pre_image system.t_trans n))
                with Safety.Unsafe _ ->
-                 WR_PreNormal (Pre.pre_image system (*system.t_trans*) n)
+                 WR_PreNormal (Pre.pre_image system.t_trans n)
        with
        | Safety.Unsafe faulty  ->
           WR_Unsafe faulty
@@ -263,7 +264,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
            end
          in
 
-         let ls, post = Pre.pre_image system (*system.t_trans*) n in (* TSO *)
+         let ls, post = Pre.pre_image system.t_trans n in
          if delete then
            visited :=
              Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;

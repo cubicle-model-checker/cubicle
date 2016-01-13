@@ -17,6 +17,8 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
+type solver = AltErgo | Z3
+
 let js_mode = ref false
 
 let usage = "usage: cubicle file.cub"
@@ -47,6 +49,12 @@ let only_forward = ref false
 let gen_inv = ref false
 let forward_inv = ref (-1)
 let enumerative = ref (-1)
+let murphi = ref false
+let murphi_uopts = ref ""
+let mu_cmd = ref "mu"
+let mu_opts = ref ""
+let cpp_cmd = ref "g++ -O4"
+
 let brab = ref (-1)
 let brab_up_to = ref false
 let forward_depth = ref (-1)
@@ -57,6 +65,7 @@ let stateless = ref false
 let max_cands = ref (-1)
 let max_forward = ref (-1)
 let candidate_heuristic = ref (-1)
+let forward_sym = ref true
 
 let abstr_num = ref false
 let num_range_low = ref 0
@@ -92,6 +101,13 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
+let smt_solver = ref AltErgo
+let set_smt_solver s =
+  smt_solver := match s with
+    | "alt-ergo" -> AltErgo
+    | "z3" -> Z3
+    | _ -> raise (Arg.Bad ("SMT solver "^s^" not supported"))
+
 let set_dot d =
   dot := true;
   dot_level := d
@@ -107,61 +123,82 @@ let specs =
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-max-procs", Arg.Set_int max_proc, 
-              "<nb> max number of processes to introduce (default 10)";
+    "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds, 
-              "<nb> max depth of the search tree (default 100)";
+    "<nb> max depth of the search tree (default 100)";
     "-nodes", Arg.Set_int maxnodes, 
-              "<nb> max number nodes to explore (default 100000)";
+    "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-               "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
+    "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
-              "<level> graphviz (dot) output with a level of details";
+    "<level> graphviz (dot) output with a level of details";
     "-sfdp", Arg.Unit use_sfdp,
-              " use sfdp for drawing graph instead of dot (for big graphs)";
+    " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
-              "number of colors for dot output";
+    "number of colors for dot output";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-symbolic", Arg.Set_int forward_inv, 
-                    "<n> symbolic forward invariant generation with n processes";
+    "<n> symbolic forward invariant generation with n processes";
     "-enumerative", Arg.Set_int enumerative, 
-                    "<n> enumerative forward invariant generation with n processes";
+    "<n> enumerative forward invariant generation with n processes";
     "-local", Arg.Set localized, 
-                    " localized invariant candidates";
+    " localized invariant candidates";
     "-brab", Arg.Set_int brab,
-                "<nb> Backward reachability with approximations and backtrack helped with a finite model of size <nb>";
+    "<nb> Backward reachability with approximations and backtrack helped \
+     with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
-                "in combination with -brab <n>, finite models up to size <n>";
+    " in combination with -brab <n>, finite models up to size <n>";
+    "-murphi", Arg.Set murphi,
+    " use Murphi for enumerative forward instead of the naive implementation";
+    "-murphi-opt", Arg.Set_string murphi_uopts,
+    " options passed to Murphi (as is)";
+    "-mu", Arg.Set_string mu_cmd, "Murphi compiler command line (default: mu)";
+    "-mu-opt", Arg.Set_string mu_opts,
+    " Murphi compiler options (passed as is, no options by default)";
+    "-cpp", Arg.Set_string cpp_cmd, " C++ compiler command line (default: g++ -O4)";
     "-forward-depth", Arg.Set_int forward_depth,
-                "<d> Limit the depth of the forward exploration to at most d";
+    "<d> Limit the depth of the forward exploration to at most d";
     "-max-forward", Arg.Set_int max_forward,
-                "<d> Limit the number of states of the forward exploration to at most d";
+    "<d> Limit the number of states of the forward exploration to at most d";
     "-max-cands", Arg.Set_int max_cands,
-                "<d> Limit the number of candidates considered for approximationsto at most d";
+    "<d> Limit the number of candidates considered for approximations to \
+     at most d";
     "-candheur", Arg.Set_int candidate_heuristic,
-                "<d> set the heuristic used for generating candidate invariants (size measure d)";
-    "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low; Arg.Set_int num_range_up; Arg.Set abstr_num],
-                "<low> <up> abstract numerical values in [<low>; <up>] during forward exploration";
+    "<d> set the heuristic used for generating candidate invariants \
+     (size measure d)";
+    "-abstr-num", Arg.Tuple [Arg.Set_int num_range_low;
+                             Arg.Set_int num_range_up;
+                             Arg.Set abstr_num],
+    "<low> <up> abstract numerical values in [<low>; <up>] during forward \
+     exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
+    "-forward-nosym", Arg.Clear forward_sym,
+    " disable symmetry reduction in forward exploration";
     "-postpone", Arg.Set_int post_strategy, 
-                 "<0|1|2> 
+    "<0|1|2> 
                           0: do not postpone nodes
                           1: postpone nodes with n+1 processes
                           2: postpone nodes that don't add information";
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
     "-nosubtyping", Arg.Clear subtyping, " no static subtyping analysis";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
-    "-refine-universal", Arg.Set refine_universal, " refine universal guards by symbolic forward";
+    "-refine-universal", Arg.Set refine_universal,
+    " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
+    "-solver", Arg.String set_smt_solver,
+    "<alt-ergo(default) | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
-    "-enumsolver", Arg.Set enumsolver, " use Enumerated data types solver for finite types";
+    "-enumsolver", Arg.Set enumsolver,
+    " use Enumerated data types solver for finite types";
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
-    "-out", Arg.String set_out, "<dir> set output directory for certificate traces to <dir>";
+    "-out", Arg.String set_out,
+    "<dir> set output directory for certificate traces to <dir>";
   ]
 
 let alspecs = Arg.align specs
@@ -201,6 +238,11 @@ let brab_up_to =
   if !brab_up_to && not do_brab then
     raise (Arg.Bad "use -upto in combination with brab")
   else !brab_up_to
+let murphi = !murphi
+let murphi_uopts = !murphi_uopts
+let mu_cmd = !mu_cmd
+let mu_opts = !mu_opts
+let cpp_cmd = !cpp_cmd
 
 let max_cands = !max_cands
 let max_forward = !max_forward
@@ -208,6 +250,7 @@ let candidate_heuristic =
   if !candidate_heuristic <> -1 then !candidate_heuristic else enumerative
 let forward_depth = !forward_depth
 let limit_forward_depth = forward_depth <> -1
+let forward_sym = !forward_sym
 let localized = !localized
 let refine = !refine && not !stateless
 let lazyinv = !lazyinv
@@ -218,6 +261,7 @@ let simpl_by_uc = !simpl_by_uc
 let cores = !cores
 
 let mode = !mode
+let smt_solver = !smt_solver
 
 let verbose = !verbose
 
