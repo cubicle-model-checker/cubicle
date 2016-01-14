@@ -331,12 +331,12 @@ let init_global_env s =
   List.iter 
     (fun (loc, n, t, tso) -> 
        declare_symbol ~tso loc n [] t;
-       bvars := n :: !bvars;
+       if tso then bvars := n :: !bvars;
        l := (n, t)::!l) s.globals;
   List.iter 
     (fun (loc, n, (args, ret), tso) -> 
        declare_symbol ~tso loc n args ret;
-       bvars := n :: !bvars;
+       if tso then bvars := n :: !bvars;
        l := (n, ret)::!l) s.arrays;
   !l, !bvars
 
@@ -395,30 +395,16 @@ let add_invs hinit invs =
       Hashtbl.replace hinit nb_procs { init_inst with init_invs }
     ) hinit
 
-let mk_init_inst_single sa ar evts = {
+let mk_init_inst_single sa ar = {
   init_cdnf = [[sa]];
   init_cdnf_a = [[ar]];
   init_invs = [];
-  events = evts
   }
 
-let mk_init_inst init_cdnf init_cdnf_a evts =
+let mk_init_inst init_cdnf init_cdnf_a =
   { init_cdnf;
     init_cdnf_a;
-    init_invs = [];
-    events = List.flatten (List.flatten evts) }
-
-let events_of_sa sa =
-  SAtom.fold (fun a (sa, evts) -> let a, e = match a with
-    | Comp ((Read(p1, v1, vi1) as t1), op, (Read(p2, v2, vi2) as t2)) ->
-       a, [] (*Comp (EventVal), []*)
-    | Comp (t1, op, (Read (p, v, vi) as t2)) ->
-       a, []
-    | Comp ((Read (p, v, vi) as t1), op, t2) ->
-       a, []
-    | _ ->
-       a, []
-  in SAtom.add a sa, e @ evts) sa (SAtom.empty, [])
+    init_invs = [] }
 
 let create_init_instances (iargs, l_init) invs = 
   let init_instances = Hashtbl.create 11 in
@@ -426,10 +412,9 @@ let create_init_instances (iargs, l_init) invs =
     match l_init with
     | [init] ->
       let sa, cst = SAtom.partition (fun a ->
-      List.exists (fun z -> has_var z a) iargs) init in
-      let cst, evts = events_of_sa cst in
+        List.exists (fun z -> has_var z a) iargs) init in
       let ar0 = ArrayAtom.of_satom cst in
-      Hashtbl.add init_instances 0 (mk_init_inst_single cst ar0 evts);
+      Hashtbl.add init_instances 0 (mk_init_inst_single cst ar0);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
@@ -437,41 +422,38 @@ let create_init_instances (iargs, l_init) invs =
         let si = List.fold_left (fun si sigma ->
           SAtom.union (SAtom.subst sigma sa) si)
           cst (Variable.all_instantiations iargs vars) in
-	let si, evts = events_of_sa si in
         let ar = ArrayAtom.of_satom si in
-        Hashtbl.add init_instances !cpt (mk_init_inst_single si ar evts);
+        Hashtbl.add init_instances !cpt (mk_init_inst_single si ar);
         incr cpt;
         v_acc) [] Variable.procs)
 
     | _ ->
-      let dnf_sa0, dnf_ar0, dnf_evts0 =
-        List.fold_left (fun (dnf_sa0, dnf_ar0, dnf_evts0) sa ->
+      let dnf_sa0, dnf_ar0 =
+        List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
           let sa0 = SAtom.filter (fun a ->
             not (List.exists (fun z -> has_var z a) iargs)) sa in
-	  let sa0, evts0 = events_of_sa sa0 in
           let ar0 = ArrayAtom.of_satom sa0 in
-          sa0 :: dnf_sa0, ar0 :: dnf_ar0, evts0 :: dnf_evts0) ([],[],[]) l_init in
-      Hashtbl.add init_instances 0  (mk_init_inst [dnf_sa0] [dnf_ar0] [dnf_evts0]);
+          sa0 :: dnf_sa0, ar0 :: dnf_ar0) ([],[]) l_init in
+      Hashtbl.add init_instances 0  (mk_init_inst [dnf_sa0] [dnf_ar0]);
       let cpt = ref 1 in
       ignore (List.fold_left (fun v_acc v ->
         let v_acc = v :: v_acc in
         let vars = List.rev v_acc in
-        let inst_sa, inst_ar, inst_evts =
-          List.fold_left (fun (cdnf_sa, cdnf_ar, cdnf_evts) sigma ->
-            let dnf_sa, dnf_ar, dnf_evts = 
-              List.fold_left (fun (dnf_sa, dnf_ar, dnf_evts) init ->
+        let inst_sa, inst_ar =
+          List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
+            let dnf_sa, dnf_ar = 
+              List.fold_left (fun (dnf_sa, dnf_ar) init ->
               let sa = SAtom.subst sigma init in
               try
                 let sa = Cube.simplify_atoms sa in
-		let sa, evts = events_of_sa sa in
                 let ar = ArrayAtom.of_satom sa in
-                sa :: dnf_sa, ar :: dnf_ar, evts :: dnf_evts
+                sa :: dnf_sa, ar :: dnf_ar
               with Exit (* sa = False, don't add this conjunct*) ->
-                dnf_sa, dnf_ar, dnf_evts
-            ) ([],[],[]) l_init in
-            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar, dnf_evts :: cdnf_evts
-          ) ([],[],[]) (Variable.all_instantiations iargs vars) in
-        let inst = mk_init_inst inst_sa inst_ar inst_evts in
+                dnf_sa, dnf_ar
+            ) ([],[]) l_init in
+            dnf_sa :: cdnf_sa, dnf_ar :: cdnf_ar
+          ) ([],[]) (Variable.all_instantiations iargs vars) in
+        let inst = mk_init_inst inst_sa inst_ar in
         Hashtbl.add init_instances !cpt inst;
         incr cpt;
         v_acc) [] Variable.procs)
@@ -557,6 +539,37 @@ let add_tau tr =
   { tr_info = tr;
     tr_tau = Pre.make_tau tr }
 
+let event_of_term bvars t = match t, [] with
+  | Elem (v, Glob), vi | Access (v, vi), _ ->
+    if List.exists (fun bv -> v = bv) bvars then
+      let p = Hstring.make "#0" in
+      let e = Event.make p (v, vi) Event.EWrite in
+      EventValue e
+    else t
+  | _ -> t
+
+let events_of_a bvars a =
+  match a with
+  | Comp (t1, op, t2) ->
+     let t1' = event_of_term bvars t1 in
+     let t2' = event_of_term bvars t2 in
+     begin match t1', t2' with
+     | EventValue e1, EventValue e2 -> Comp (t1', op, t2'), e1 :: e2 :: []
+     | EventValue e1, _ -> Comp (t1', op, t2), e1 :: []
+     | _, EventValue e2 -> Comp (t1, op, t2'), e2 :: []
+     | _ -> a, []
+     end
+  | _ -> a, []
+    
+let events_of_dnf bvars dnf =
+  List.fold_left (fun (dnf, el) sa ->
+    let sa, el = SAtom.fold (fun a (sa, el) ->
+      let a, e = events_of_a bvars a in
+      SAtom.add a sa, e @ el 
+    ) sa (SAtom.empty, el) in
+    sa :: dnf, el
+  ) ([],[]) dnf
+
 let system s = 
   let l, bvars = init_global_env s in
   if not Options.notyping then init s.init;
@@ -567,8 +580,11 @@ let system s =
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
   end;
-
-  let init_woloc = let _,v,i = s.init in v,i in
+  let init_woloc, ievents =
+    let _,v,i = s.init in
+    let dnf,evts = events_of_dnf bvars i in
+    (v,dnf),evts
+  in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
@@ -580,7 +596,8 @@ let system s =
     t_globals = List.map (fun (_,g,_,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_,_) -> a) s.arrays;
-    t_bvars = bvars; (*List.map (fun (_,bv) -> bv) s.bvars;*)
+    t_bvars = bvars;
+    t_ievents = ievents;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

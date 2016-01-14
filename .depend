@@ -229,9 +229,9 @@ pre.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
 pretty.cmo : util.cmi types.cmi options.cmi ast.cmi pretty.cmi
 pretty.cmx : util.cmx types.cmx options.cmx ast.cmi pretty.cmi
 prover.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi options.cmi \
-    node.cmi cube.cmi ast.cmi prover.cmi
+    node.cmi event.cmi cube.cmi ast.cmi prover.cmi
 prover.cmx : variable.cmx util.cmx types.cmx smt/smt.cmx options.cmx \
-    node.cmx cube.cmx ast.cmi prover.cmi
+    node.cmx event.cmx cube.cmx ast.cmi prover.cmi
 ptree.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi ast.cmi ptree.cmi
 ptree.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
@@ -259,11 +259,11 @@ types.cmo : variable.cmi util.cmi smt/smt.cmi options.cmi common/hstring.cmi \
 types.cmx : variable.cmx util.cmx smt/smt.cmx options.cmx common/hstring.cmx \
     event.cmx types.cmi
 typing.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
-    pretty.cmi pre.cmi options.cmi node.cmi common/hstring.cmi cube.cmi \
-    ast.cmi typing.cmi
+    pretty.cmi pre.cmi options.cmi node.cmi common/hstring.cmi event.cmi \
+    cube.cmi ast.cmi typing.cmi
 typing.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
-    pretty.cmx pre.cmx options.cmx node.cmx common/hstring.cmx cube.cmx \
-    ast.cmi typing.cmi
+    pretty.cmx pre.cmx options.cmx node.cmx common/hstring.cmx event.cmx \
+    cube.cmx ast.cmi typing.cmi
 util.cmo : common/timer.cmi options.cmi util.cmi
 util.cmx : common/timer.cmx options.cmx util.cmi
 variable.cmo : smt/smt.cmi options.cmi common/hstring.cmi variable.cmi
@@ -279,7 +279,7 @@ cube.cmi : variable.cmi types.cmi smt/term.cmi
 cubetrie.cmi : types.cmi node.cmi
 dot.cmi : types.cmi node.cmi
 enumerative.cmi : variable.cmi types.cmi oracle.cmi node.cmi ast.cmi
-event.cmi : common/hstring.cmi
+event.cmi : variable.cmi common/hstring.cmi
 fake_functory.cmi :
 fixpoint.cmi : variable.cmi node.cmi cubetrie.cmi
 forward.cmi : variable.cmi types.cmi smt/term.cmi node.cmi \

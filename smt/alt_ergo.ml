@@ -279,14 +279,12 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  open Event
   let make_event_val e =
-    let s = (fst e.var) in
+    let s = (fst e.Event.var) in
     try
       let (_, _, nty) = H.find decl_symbs s in
       let ty = H.find decl_types nty in
-      let sb = Symbols.name (Hstring.make
-			       ("e(" ^ Event.event_name e ^ ").val")) in 
+      let sb = Symbols.name (Hstring.make ("e(" ^ Event.name e ^ ").val")) in 
       Term.make sb [] ty
     with Not_found -> raise (Error (UnknownSymb s))
 
@@ -555,29 +553,22 @@ module Make (Options : sig val profiling : bool end) = struct
     let t = (Hstring.view t) in
     if String.compare t "proc" = 0 then "int" else t
 
-
   let print_type fmt t =
     fprintf fmt "%s" (typeof t)
-
-  let replace str s1 s2 =
-    Str.global_replace (Str.regexp_string s1) s2 str
 
   let print_list_sep sep pfun fmt = function
     | [] -> ()
     | e :: l -> pfun fmt e;
 		List.iter (fun e -> fprintf fmt " %s %a" sep pfun e) l
 
-  let print_hset_sep sep pfun fmt set =
-    let first = ref true in
-    H.iter (fun k v ->
-      if !first then begin pfun fmt (k, v); first := false end
-      else fprintf fmt " %s %a" sep pfun (k, v)) set
-
   let print_clause fmt c =
     fprintf fmt "(%a)" (print_list_sep "or" Literal.LT.print) c
 
   let print_cnf fmt cnf =
     print_list_sep "and" print_clause fmt cnf
+
+  let replace str s1 s2 =
+    Str.global_replace (Str.regexp_string s1) s2 str
 
   let gen_filename =
     let cnt = ref 0 in
@@ -593,42 +584,23 @@ module Make (Options : sig val profiling : bool end) = struct
       let file = open_out filename in
       let filefmt = formatter_of_out_channel file in
 
-      (* All types *)
+      (* Print all types *)
       H.iter (fun t cl -> match cl with
         | [] -> fprintf filefmt "type %a\n" Hstring.print t
         | _ -> fprintf filefmt "type %a = %a\n" Hstring.print t
 		       (print_list_sep "|" Hstring.print) cl
       ) all_types;
 
-      (* All variables *) (* should not print TSO variables *)
+      (* Print all variables *) (* should not print TSO variables *)
       H.iter (fun f (fx, args, ret) ->
         fprintf filefmt "logic %s :%a %s\n" (replace (Hstring.view f) "#" "p")
           (fun fmt -> List.iter (fun a -> fprintf fmt " %s ->" (typeof a))) args
 	  (typeof ret)
       ) all_vars;
 
-      let event_list = Event.unique_events !all_events in
-      let do_tso = H.length tso_vars > 0 in
-      if do_tso then begin
+      (* Print TSO declarations *)
+      Event.print_decls filefmt fp tso_vars !all_events;
 
-      (* List of TSO variables *) (* could use their original names *)
-      fprintf filefmt "type tso_var = %a" (print_hset_sep "|"
-        (fun fmt (f, (fx, args, ret)) ->
-          fprintf fmt "%s" (Event.smt_var_name f))) tso_vars;
-
-      (* Axiomatization *)
-      fprintf filefmt "%s" (Event.axiom fp);
-
-      (* Definition of events *)
-      Event.print_event_decls filefmt event_list;
-
-      (* Print known po, rf, co and fence pairs *)
-      fprintf filefmt "axiom po_pairs : true\n";
-      List.iter (fun events ->
-        Event.print_events_po filefmt events) !all_events
-
-      end;
-		       
       (* Print formula *)
       fprintf filefmt "goal g: true\n";
       List.iter (fun cnf ->
@@ -639,8 +611,10 @@ module Make (Options : sig val profiling : bool end) = struct
 	let t = replace t "False" "false" in
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
-      if do_tso && not fp then
-	Event.print_acyclic_relations filefmt (List.rev event_list);
+
+      (* Print TSO relations *)
+      if not fp then
+	Event.print_rels filefmt !all_events;
 
       (* Output file *)
       flush file;

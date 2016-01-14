@@ -14,8 +14,6 @@ module IntMap = Map.Make(struct type t = int let compare = compare end)
 
 type structure = t list IntMap.t
 
-type str = t list Map.Make(String).t
-
 let empty_struct = IntMap.empty
 
 let make =
@@ -23,84 +21,34 @@ let make =
   fun p (v, vi) d ->
   cpt := !cpt + 1;
   { uid = !cpt; tid = p; dir = d; var = (v, vi) }
-		     
+
+let name e = "e" ^ (string_of_int e.uid)
+
 let print_var fmt (v, vi) =
   if vi = [] then fprintf fmt "\\texttt{%a}" Hstring.print v
   else fprintf fmt "\\texttt{%a}[%a]"
  	       Hstring.print v (Hstring.print_list ", ") vi
 
+let print fmt { uid; tid; dir; var } =
+  let dir = if dir = ERead then "R" else "W" in
+  fprintf fmt "event(%d, %a, %s, %a)" uid Hstring.print tid dir print_var var
+
 let print_rd fmt (p, v, vi) =
   fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
 
-let print_evtval fmt e =
-  let dir = if e.dir = ERead then "R" else "W" in
-  fprintf fmt "event(%d, %a, %s, %a)"
-    e.uid Hstring.print e.tid dir print_var e.var
 
-let replace str s1 s2 =
-  Str.global_replace (Str.regexp_string s1) s2 str
 
-let event_name e = "e" ^ (string_of_int e.uid)
-
-let smt_var_name v = "_V" ^ (replace (Hstring.view v) "#" "p")
-
-let print_event_decl fmt e =
-  let en = event_name e in
-  let tid = replace (Hstring.view e.tid) "#" "p" in	   
-  let dir = if e.dir = ERead then "R" else "W" in
-  let var = smt_var_name (fst e.var) in
-(*fprintf fmt "logic %s : event\n" en;
-  fprintf fmt "axiom %s : %s.uid = %d and %s.tid = %s" en en e.uid en tid;
-  fprintf fmt " and %s.dir = %s and %s.loc = %s\n" en dir en var*)
-  fprintf fmt "logic %s : int\n" en;
-  fprintf fmt "axiom %s : e(%s).tid = %s" en en tid;
-  fprintf fmt " and e(%s).dir = %s and e(%s).loc = %s\n" en dir en var	   
-
-let print_event_decls fmt el =
-  List.iter (print_event_decl fmt) el
-
-let rec print_po_pairs fmt = function
-  |  e1 :: ((e2 :: _ :: _) as el) ->
-      fprintf fmt " and po(%s, %s)" (event_name e1) (event_name e2);
-      fprintf fmt " and not po(%s, %s)" (event_name e2) (event_name e1);
-      print_po_pairs fmt el
-  |  e1 :: e2 :: [] ->
-      fprintf fmt " and po(%s, %s)" (event_name e1) (event_name e2);
-      fprintf fmt " and not po(%s, %s)" (event_name e2) (event_name e1)
-  | _ -> ()
-
-let print_events_po fmt events =
-  IntMap.iter (fun _ el -> print_po_pairs fmt el) events;
-  fprintf fmt "\n"
-
-let print_acyclic_rel fmt e =
-  let en = event_name e in
-  fprintf fmt
-      " and not po_loc_U_com(%s, %s) and not co_U_prop(%s, %s)\n"
-      en en en en
-
-let print_acyclic_relations fmt esl =
-  List.iter (print_acyclic_rel fmt) esl
-
-let unique_events esl =
-  let uel = ref [] in
-  List.iter (IntMap.iter (fun _ -> List.iter (fun e ->
-    if not (List.exists (fun ex -> ex.uid = e.uid) !uel) then uel := e :: !uel
-  ))) esl;
-  !uel
-
-let axiom fp =
-  let ax1 = "
-type direction = R | W
+let axiom_base = "
+type direction = _R | _W
 type event = { tid : int; dir : direction; loc : tso_var; val : int }
 logic e : int -> event
 logic po : int, int -> prop
 logic rf : int, int -> prop
 logic co : int, int -> prop
 logic fences : int, int -> prop
-" in
-  let ax2 =
 "
+
+let axiom_rels = "
 logic po_loc : int, int -> prop
 axiom po_loc :
   forall e1, e2 : int.
@@ -122,7 +70,7 @@ axiom com :
 logic ppo : int, int -> prop
 axiom ppo_tso :
   forall e1, e2 : int.
-  po(e1, e2) and not (e(e1).dir = W and e(e2).dir = R)
+  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
   <-> ppo(e1, e2)
 logic propg : int, int -> prop
 axiom propg_tso :
@@ -143,9 +91,90 @@ axiom co_U_prop :
 axiom co_U_prop_t :
   forall e1, e2, e3 : int.
   co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
-" in
-  if fp then ax1 else ax1 ^ ax2
-	      
+"
+
+let replace str s1 s2 =
+  Str.global_replace (Str.regexp_string s1) s2 str
+
+let unique_events esl =
+  let uel = ref [] in
+  List.iter (IntMap.iter (fun _ -> List.iter (fun e ->
+    if not (List.exists (fun ex -> ex.uid = e.uid) !uel) then uel := e :: !uel
+  ))) esl;
+  !uel
+
+let print_var_name fmt v =
+  fprintf fmt "_V%s" (replace (Hstring.view v) "#" "p")
+
+let print_event_decl fmt e =
+  let en = name e in
+  let tid = replace (Hstring.view e.tid) "#" "p" in
+  let dir = if e.dir = ERead then "_R" else "_W" in
+(*fprintf fmt "logic %s : event\n" en;
+  fprintf fmt "axiom %s : %s.uid = %d and %s.tid = %s" en en e.uid en tid;
+  fprintf fmt " and %s.dir = %s and %s.loc = %s\n" en dir en var*)
+  fprintf fmt "logic %s : int\n" en;
+  fprintf fmt "axiom %s : e(%s).tid = %s and e(%s).dir = %s " en en tid en dir;
+  fprintf fmt " and e(%s).loc = %a\n" en print_var_name (fst e.var)
+
+let rec print_po_pairs fmt = function (* + co pairs *)
+  |  e1 :: ((e2 :: _) as el) ->
+      let en1, en2 = name e1, name e2 in
+      fprintf fmt " and po(%s, %s) and not po(%s, %s)" en1 en2 en2 en1;
+      print_po_pairs fmt el
+  | _ -> ()
+
+let print_events_po fmt events =
+  IntMap.iter (fun _ el -> print_po_pairs fmt el) events;
+  fprintf fmt "\n"
+
+let print_hset_sep sep pfun fmt set =
+  let first = ref true in
+  Hstring.H.iter (fun k v ->
+    if !first then begin pfun fmt (k, v); first := false end
+    else fprintf fmt " %s %a" sep pfun (k, v)) set
+
+let print_decls fmt fp tso_vars events =
+  if Hstring.H.length tso_vars > 0 then begin
+
+    (* Additional proc #0 for initial events *)
+    fprintf fmt "\nlogic p0 : int\n\n";
+
+    (* List of TSO variables *) (* could use their original names *)
+    fprintf fmt "type tso_var = %a\n" (print_hset_sep "|"
+      (fun fmt (f, (fx, args, ret)) -> print_var_name fmt f)) tso_vars;
+
+    (* Axiomatization *)
+    fprintf fmt "%s" axiom_base;
+    if not fp then fprintf fmt "%s" axiom_rels;
+    fprintf fmt "\n";
+
+    (* Definition of events *)
+    List.iter (print_event_decl fmt) (unique_events events);
+
+    (* Print known po, rf, co and fence pairs *)
+    fprintf fmt "\naxiom po_pairs : true\n";
+    List.iter (print_events_po fmt) events
+
+  end
+
+
+
+let print_acyclic_rel fmt e =
+  let en = name e in
+  fprintf fmt  " and not po_loc_U_com(%s, %s)" en en;
+  fprintf fmt  " and not co_U_prop(%s, %s)\n" en en
+
+let print_rels fmt events =
+  List.iter (print_acyclic_rel fmt) (List.rev (unique_events events))
+
+
+
+
+
+
+
+
 (*
 let axiom fp =
   let ax1 = "

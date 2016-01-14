@@ -3,10 +3,9 @@ type dir = ERead | EWrite
 
 type t = {
     uid : int;
-    tid : Hstring.t; (* Variablt.t *)
+    tid : Variable.t;
     dir : dir;
-    var : Hstring.t * Hstring.t list; (* Variablt.t *)
-  }
+    var : Hstring.t * Variable.t list; }
 
 module IntMap : Map.S with type key = int
 
@@ -14,23 +13,16 @@ type structure = t list IntMap.t
 
 val empty_struct : structure
 
-val make : Hstring.t -> (Hstring.t * Hstring.t list) -> dir -> t
+val make : Hstring.t -> (Hstring.t * Variable.t list) -> dir -> t
 
-val print_rd : Format.formatter -> (Hstring.t * Hstring.t
-	       * Hstring.t list) -> unit
+val name : t -> string
 
-val print_evtval : Format.formatter -> t -> unit
+val print : Format.formatter -> t -> unit
 
-val event_name : t -> string
+val print_rd : Format.formatter ->
+	       (Hstring.t * Hstring.t * Variable.t list) -> unit
 
-val smt_var_name : Hstring.t -> string
+val print_decls : Format.formatter -> bool ->
+		  ('a * 'b * 'c) Hstring.H.t -> structure list -> unit
 
-val print_event_decls : Format.formatter -> t list -> unit
-
-val print_events_po : Format.formatter -> structure -> unit
-
-val print_acyclic_relations : Format.formatter -> t list -> unit
-
-val unique_events : structure list -> t list
-
-val axiom : bool -> string
+val print_rels : Format.formatter -> structure list -> unit

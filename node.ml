@@ -150,7 +150,7 @@ module Latex = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
     | Read (p, v, vi) -> Event.print_rd fmt (p, v, vi)
-    | EventValue e -> Event.print_evtval fmt e
+    | EventValue e -> Event.print fmt e
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"
