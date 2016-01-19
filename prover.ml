@@ -226,8 +226,14 @@ let unsafe_conj { tag = id; cube = cube; events = es; }
   ) es.Event.events ievents in
   let es = { es with Event.events = new_events } in
 
+  let po = Event.gen_po es in
+  let co = Event.gen_co es in
+  let fence = Event.gen_fence es in
+  let ifrm = List.fold_left (fun f p -> (F.make_po p) @ f) [] po in
+  let ifrm = List.fold_left (fun f p -> (F.make_co p) @ f) ifrm co in
+  let ifrm = List.fold_left (fun f p -> (F.make_fence p) @ f) ifrm fence in
   let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
-  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
+  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) ifrm el in
   let ifrm = List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) ifrm el in
 
   let f = make_formula_set cube.Cube.litterals ifrm in

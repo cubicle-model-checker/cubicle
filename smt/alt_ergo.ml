@@ -496,6 +496,22 @@ let rec mk_cnf = function
     [ Lit (Literal.LT.make (Literal.Eq (t_po, TTerm.vrai))) ;
       Lit (Literal.LT.make (Literal.Eq (t_bpo, TTerm.faux))) ]
 
+  let make_co (e1, e2) =
+    let en1 = "e" ^ (string_of_int e1)  in
+    let en2 = "e" ^ (string_of_int e2)  in
+    let co = "co(" ^ en1 ^ "," ^ en2 ^ ")" in
+    let t_co = TTerm.make (Symbols.name (Hstring.make co)) [] Ty.Tbool in
+    let bco = "co(" ^ en2 ^ "," ^ en1 ^ ")" in
+    let t_bco = TTerm.make (Symbols.name (Hstring.make bco)) [] Ty.Tbool in
+    [ Lit (Literal.LT.make (Literal.Eq (t_co, TTerm.vrai))) ;
+      Lit (Literal.LT.make (Literal.Eq (t_bco, TTerm.faux))) ]
+
+  let make_fence (e1, e2) =
+    let en1 = "e" ^ (string_of_int e1)  in
+    let en2 = "e" ^ (string_of_int e2)  in
+    let fence = "fence(" ^ en1 ^ "," ^ en2 ^ ")" in
+    let t_fence = TTerm.make (Symbols.name (Hstring.make fence)) [] Ty.Tbool in
+    [ Lit (Literal.LT.make (Literal.Eq (t_fence, TTerm.vrai))) ]
 end
 
 exception Unsat of int list
@@ -593,7 +609,7 @@ module Make (Options : sig val profiling : bool end) = struct
       Time.pause ();
       raise (Unsat [] (*(export_unsatcore2 ex)*))
 
- 	      let typeof t =
+  let typeof t =
     let t = (Hstring.view t) in
     if String.compare t "proc" = 0 then "int" else t
 
@@ -637,6 +653,7 @@ module Make (Options : sig val profiling : bool end) = struct
 
       (* Print all variables *) (* should not print TSO variables *)
       H.iter (fun f (fx, args, ret) ->
+	if not (H.mem tso_vars f) then
         fprintf filefmt "logic %s :%a %s\n" (replace (Hstring.view f) "#" "p")
           (fun fmt -> List.iter (fun a -> fprintf fmt " %s ->" (typeof a))) args
 	  (typeof ret)
@@ -655,9 +672,6 @@ module Make (Options : sig val profiling : bool end) = struct
 	let t = replace t "False" "false" in
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
-
-      (* Print TSO goal *) (*
-      Event.print_goal filefmt fp !all_events;*)
 
       (* Output file *)
       flush file;

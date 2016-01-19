@@ -48,7 +48,7 @@ logic e : int -> event
 logic po : int, int -> prop
 logic rf : int, int -> prop
 logic co : int, int -> prop
-logic fences : int, int -> prop
+logic fence : int, int -> prop
 "
 let axiom_rels = "
 logic po_loc : int, int -> prop
@@ -77,7 +77,7 @@ axiom ppo_tso :
 logic propg : int, int -> prop
 axiom propg_tso :
   forall e1, e2 : int.
-  ppo(e1, e2) or fences(e1, e2) or rfe(e1, e2) (*or fr(e1, e2)*)
+  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) (*or fr(e1, e2)*)
   <-> propg(e1, e2)
 logic po_loc_U_com : int, int -> prop
 axiom po_loc_U_com :
@@ -102,76 +102,12 @@ let replace str s1 s2 =
 let print_var_name fmt v =
   fprintf fmt "_V%s" (replace (Hstring.view v) "#" "p")
 
-let print_event_formula fmt e =
-  let en = name e in
-  let tid = replace (Hstring.view e.tid) "#" "p" in
-  let dir = if e.dir = ERead then "_R" else "_W" in
-  fprintf fmt "e(%s).tid = %s and e(%s).dir = %s " en tid en dir;
-  fprintf fmt " and e(%s).loc = %a" en print_var_name (fst e.var)
-
 let unique_events esl =
   let uel = ref [] in
   List.iter (fun es -> IntMap.iter (fun _ e ->
     if not (List.exists (fun ex -> ex.uid = e.uid) !uel) then uel := e :: !uel
   ) es.events) esl;
   !uel
-
-
-let gen_po es =
-  let rec aux po = function
-    | e1 :: ((e2 :: _) as el) -> aux ((e1, e2) :: po) el
-    | _ -> po
-  in
-  IntMap.fold (fun _ tpof po ->
-    aux po (List.filter (fun e -> e <> 0) tpof)
-  ) es.po_f []
-
- 
-let rec print_po_pairs fmt = function
-  |  e1 :: ((e2 :: _) as el) ->
-      fprintf fmt " and po(e%d, e%d) and not po(e%d, e%d)\n" e1 e2 e2 e1;
-      print_po_pairs fmt el
-  | _ -> ()
-
-let rec split_at_first_fence ll = function
-  | 0 :: rl | ([] as rl) -> ll, rl
-  | e :: rl -> split_at_first_fence (e :: ll) rl
-
-let rec first_event es dir = function
-  | [] -> None
-  | e :: el ->
-     try
-       let e' = IntMap.find e es.events in
-       if e'.dir = dir then Some e else first_event es dir el
-     with Not_found -> first_event es dir el
-  
-let rec gen_fences es fl ll rl = match rl with
-  | [] -> fl
-  | _ ->
-     let ll, rl = split_at_first_fence ll rl in
-     let w = first_event es EWrite ll in
-     let r = first_event es ERead rl in
-     match w, r with
-     | Some w, Some r -> gen_fences es ((w, r) :: fl) ll rl
-     | _, _ -> gen_fences es fl ll rl
-
-let print_event_pairs fmt es =
-  IntMap.iter (fun _ tpof ->
-    let tpof = List.filter (fun e -> e <> 0) tpof in
-    print_po_pairs fmt tpof
-  ) es.po_f;
-  IntMap.iter (fun _ tpof ->
-    let fences = gen_fences es [] [] tpof in
-    List.iter (fun (w, r) -> fprintf fmt " and fences(e%d, e%d)\n" w r) fences
-  ) es.po_f;
-  let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
-  let iwrites, writes = IntMap.partition (fun _ e ->
-    Hstring.view e.tid = "#0") writes in
-  IntMap.iter (fun iw _ ->
-    IntMap.iter (fun w _ ->
-      fprintf fmt " and co(e%d, e%d) and not co(e%d, e%d)\n" iw w w iw
-    ) writes
-  ) iwrites
 
 let print_hset_sep sep pfun fmt set =
   let first = ref true in
@@ -199,48 +135,49 @@ let print_decls fmt fp tso_vars esl =
     (* Declaration of events *)
     List.iter (fun e ->
       fprintf fmt "logic %s : int\n" (name e)
-    ) (unique_events esl);
-
-    (* Definition of events *)(*
-    if not fp then
-      List.iter (fun es ->
-        IntMap.iter (fun _ e ->
-	  fprintf fmt "axiom %s : %a\n" (name e) print_event_formula e
-        ) es.events
-      ) esl; (* safety : esl should contain 1 element only *)*)
-
-    (* Print known po, co and fence pairs *)
-    fprintf fmt "\naxiom event_pairs : true\n";
-    List.iter (fun es -> print_event_pairs fmt es) esl;
-    fprintf fmt "\n"
+    ) (List.rev (unique_events esl));
+    fprintf fmt "\n";
 
   end
 
+let gen_po es =
+  let rec aux po = function
+    | e1 :: ((e2 :: _) as el) -> aux ((e1, e2) :: po) el
+    | _ -> po
+  in
+  IntMap.fold (fun _ tpof po ->
+    aux po (List.filter (fun e -> e <> 0) tpof)
+  ) es.po_f []
 
-(*
-let rec print_events_fp fmt = function
-  | [] -> ()
-  | (es, neg) :: esl ->
-     IntMap.iter (fun _ e ->
-       fprintf fmt " and %s(%a)\n"
-         (if neg then "not " else "")
-	 print_event_formula e
-     ) es.events;
-     print_events_fp fmt esl
- *)(*
-let print_acyclic_rels fmt esl =
-  List.iter (fun e ->
-    let en = name e in
-    fprintf fmt  " and not po_loc_U_com(%s, %s)" en en;
-    fprintf fmt  " and not co_U_prop(%s, %s)\n" en en
-  ) (List.rev (unique_events esl))
-*)
-let print_goal fmt fp esl = () (*
+let gen_co es =
+  let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
+  let iwrites, writes = IntMap.partition (fun _ e ->
+    Hstring.view e.tid = "#0") writes in
+  IntMap.fold (fun iw _ co ->
+    IntMap.fold (fun w _ co -> (iw, w) :: co) writes co
+  ) iwrites []
 
-  (* Fixpoint : Print events *)
-  if fp then ()(*print_events_fp fmt (List.rev esl)*)
-
-  (* Safety : Print TSO relations *)
-  else print_acyclic_rels fmt esl (*sfty : esl should contain 1 element only*)
-				*)
-
+let gen_fence es =
+  let rec split_at_first_fence ll = function
+    | 0 :: rl | ([] as rl) -> ll, rl
+    | e :: rl -> split_at_first_fence (e :: ll) rl
+  in
+  let rec first_event dir = function
+    | [] -> None
+    | e :: el ->
+       try
+	 let e' = IntMap.find e es.events in
+	 if e'.dir = dir then Some e else first_event dir el
+       with Not_found -> failwith "Event.gen_fence : unknown event id"
+  in
+  let rec aux fence ll rl = match rl with
+    | [] -> fence
+    | _ ->
+       let ll, rl = split_at_first_fence ll rl in
+       match first_event EWrite ll, first_event ERead rl with
+       | Some w, Some r -> aux ((w, r) :: fence) ll rl
+       | _, _ -> aux fence ll rl
+  in
+  IntMap.fold (fun _ tpof fence ->
+    aux fence [] tpof
+  ) es.po_f []

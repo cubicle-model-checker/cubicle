@@ -371,6 +371,15 @@ module Formula = struct
   let make_acyclic_rel e =
     failwith "Z3Wrapper_actual.Formula.make_acyclic_rel TODO"
 
+  let make_po (e1, e2) =
+    failwith "Z3Wrapper_actual.Formula.make_po TODO"
+
+  let make_co (e1, e2) =
+    failwith "Z3Wrapper_actual.Formula.make_co TODO"
+
+  let make_fence (e1, e2) =
+    failwith "Z3Wrapper_actual.Formula.make_fence TODO"
+
 end
 
 exception Unsat of int list

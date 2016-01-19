@@ -26,9 +26,11 @@ val print : Format.formatter -> t -> unit
 val print_rd : Format.formatter ->
 	       (Hstring.t * Hstring.t * Variable.t list) -> unit
 
-val gen_po : structure -> (int * int) list
-
 val print_decls : Format.formatter -> bool ->
 		  ('a * 'b * 'c) Hstring.H.t -> structure list -> unit
 
-val print_goal : Format.formatter -> bool -> structure list -> unit
+val gen_po : structure -> (int * int) list
+
+val gen_co : structure -> (int * int) list
+
+val gen_fence : structure -> (int * int) list
