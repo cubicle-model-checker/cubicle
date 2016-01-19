@@ -228,6 +228,9 @@ module type S = sig
     val print : Format.formatter -> t -> unit
     (** [print fmt f] prints the formula on the formatter [fmt].*)
 
+    val make_event_desc : Event.t -> t list
+    val make_acyclic_rel : Event.t -> t list
+
   end
 
   (** {2 The SMT solver} *)

@@ -84,6 +84,7 @@ type ptransition = {
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_writes : (Variable.t * Hstring.t * (Variable.t list) * term) list;
+  ptr_fences : Variable.t list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
   ptr_loc : loc;

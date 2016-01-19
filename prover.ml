@@ -1,3 +1,4 @@
+
 (**************************************************************************)
 (*                                                                        *)
 (*                              Cubicle                                   *)
@@ -109,8 +110,8 @@ let rec make_term = function
   | Read (_, _, _) -> failwith "Prover.make_term : Read should not be in atom"
   | EventValue e -> T.make_event_val e
 			       
-let rec make_formula_set sa = 
-  F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
+let rec make_formula_set sa ifrm =
+  F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa ifrm)
 
 and make_literal = function
   | Atom.True -> F.f_true 
@@ -120,7 +121,7 @@ and make_literal = function
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
   | Atom.Ite (la, a1, a2) -> 
-      let f = make_formula_set la in
+      let f = make_formula_set la [] in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in
       let ff1 = F.make F.Imp [f; a1] in
@@ -128,34 +129,35 @@ and make_literal = function
       F.make F.And [ff1; ff2]
 
 
-let make_formula atoms =
-  F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
+let make_formula atoms ifrm =
+  F.make F.And (Array.fold_left (fun l a -> make_literal a::l) ifrm atoms)
 
 module HAA = Hashtbl.Make (ArrayAtom)
 
 let make_formula =
   let cache = HAA.create 200001 in
-  fun atoms ->
+  fun atoms ifrm ->
     try HAA.find cache atoms
     with Not_found ->
-      let f = make_formula atoms in
+      let f = make_formula atoms ifrm in
       HAA.add cache atoms f;
       f
 
-let make_formula array =
+let make_formula array ifrm =
   TimeFormula.start ();
-  let f = make_formula array in
+  let f = make_formula array ifrm in
   TimeFormula.pause ();
   f
 
-let make_formula_set satom =
+let make_formula_set satom ifrm =
   TimeFormula.start ();
-  let f = make_formula_set satom in
+  let f = make_formula_set satom ifrm in
   TimeFormula.pause ();
   f
 
 
-let make_disjunction nodes = F.make F.Or (List.map make_formula nodes)
+let make_disjunction nodes =
+  F.make F.Or (List.map (fun a -> make_formula a []) nodes)
 
 
 let make_conjuct atoms1 atoms2 =
@@ -166,25 +168,72 @@ let make_conjuct atoms1 atoms2 =
 
 let make_init_dnfs s nb_procs =
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (List.rev_map make_formula_set) init_cdnf
+  List.rev_map (List.rev_map (fun a -> make_formula_set a [])) init_cdnf
 
 let get_user_invs s nb_procs =
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (fun a -> F.make F.Not [make_formula a]) init_invs
+  List.rev_map (fun a -> F.make F.Not [make_formula a []]) init_invs
 
+(*
+open Event
 
-let unsafe_conj { tag = id; cube = cube; events = events; }
+let event_of_term t c =
+  match t with
+  | Read (p, v, vi) ->
+     let e = Event.make c p Event.ERead (v, vi) in
+     EventValue e, c + 1
+  | _ -> t, c
+
+let events_of_a a c =
+  match a with
+  | Comp (t1, op, t2) ->
+     let t1', c = event_of_term t1 c in
+     let t2', c = event_of_term t2 c in
+     begin match t1', t2' with
+     | EventValue e1, EventValue e2 -> Comp (t1', op, t2'), e1 :: e2 :: [], c
+     | EventValue e1, _ -> Comp (t1', op, t2), e1 :: [], c
+     | _, EventValue e2 -> Comp (t1, op, t2'), e2 :: [], c
+     | _ -> a, [], c
+     end
+  | _ -> a, [], c
+
+let events_of_satom sa =
+  let sa, es, c = SAtom.fold (fun a (sa, es, c) ->
+    let a, el, c = events_of_a a c in
+    let es = List.fold_left (fun es e ->
+      let tid = Event.num_tid e in
+      let tpo_f = try IntMap.find tid es.po_f with Not_found -> [] in
+      let po_f = IntMap.add tid (e.uid :: tpo_f) es.po_f in
+      let events = IntMap.add e.uid e es.events in
+      { events; po_f }
+    ) es el in
+    SAtom.add a sa, es, c
+  ) sa (SAtom.empty, Event.empty_struct, 1) in
+  sa, es
+ *)
+
+	       
+let unsafe_conj { tag = id; cube = cube; events = es; }
 		nb_procs invs ievents init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
 (**)if debug_smt then eprintf "[smt] distinct: %a@." F.print (distinct_vars nb_procs);
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
-  let f = make_formula_set cube.Cube.litterals in
+
+  let new_events = List.fold_left (fun events e ->
+    Event.IntMap.add e.Event.uid e events
+  ) es.Event.events ievents in
+  let es = { es with Event.events = new_events } in
+
+  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
+  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
+  let ifrm = List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) ifrm el in
+
+  let f = make_formula_set cube.Cube.litterals ifrm in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
-  let events = Event.IntMap.add 0 ievents events in
   SMT.assume ~id init;
-  SMT.assume ~events ~id f;
+  SMT.assume ~events:es ~id f;
   SMT.check ()
 
 let unsafe_dnf node nb_procs invs ievents dnf =
@@ -212,22 +261,26 @@ let unsafe s n = unsafe_cdnf s n
 let reached args s sa =
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
-  let f = make_formula_set (SAtom.union sa s) in
+  let f = make_formula_set (SAtom.union sa s) [] in
   SMT.assume ~id:0 f;
   SMT.check ()
 
 
-let assume_goal_no_check { tag = id; cube = cube; events = events } =
+let assume_goal_no_check { tag = id; cube = cube; events = es } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let f = make_formula cube.Cube.array in
+  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
+  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
+  let f = make_formula cube.Cube.array ifrm in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  SMT.assume ~events ~id f
+  SMT.assume ~events:es ~id f
 
-let assume_node_no_check { tag = id; events = events } ap =
-  let f = F.make F.Not [make_formula ap] in
+let assume_node_no_check { tag = id; events = es } ap =
+  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
+  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
+  let f = F.make F.Not [make_formula ap ifrm] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~events ~id f
+  SMT.assume ~events:es ~id f
 
 let assume_goal n =
   assume_goal_no_check n(*;
@@ -243,15 +296,17 @@ let run ?(fp=false) () = SMT.check ~fp ()
 let check_guard args sa reqs =
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
-  let f = make_formula_set (SAtom.union sa reqs) in
+  let f = make_formula_set (SAtom.union sa reqs) [] in
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let assume_goal_nodes { tag = id; cube = cube; events } nodes =
+let assume_goal_nodes { tag = id; cube = cube; events = es } nodes =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let f = make_formula cube.Cube.array in
+  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
+  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
+  let f = make_formula cube.Cube.array ifrm in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  SMT.assume ~events ~id f;
+  SMT.assume ~events:es ~id f;
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes(*;
   SMT.check  ()*) (*TSO*) (*skip call to simplify*)

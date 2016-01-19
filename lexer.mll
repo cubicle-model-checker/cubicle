@@ -44,6 +44,7 @@
         "false", FALSE;
 	"write", WRITE;
 	"read", READ;
+	"fences", FENCES;
 	"varb", VARB;
 	"arrayb", ARRAYB;
 	"number_procs", SIZEPROC;

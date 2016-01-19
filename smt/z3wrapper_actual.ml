@@ -365,6 +365,12 @@ module Formula = struct
   let make_cnf f =
     failwith "CNF unimplemented"
 
+  let make_event_desc e =
+    failwith "Z3Wrapper_actual.Formula.make_event_desc TODO"
+
+  let make_acyclic_rel e =
+    failwith "Z3Wrapper_actual.Formula.make_acyclic_rel TODO"
+
 end
 
 exception Unsat of int list

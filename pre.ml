@@ -56,6 +56,7 @@ module Debug = struct
 end
 
 
+let evt_cnt = ref 0
 let new_events = ref []
 let event_struct = ref Event.empty_struct
 
@@ -170,7 +171,8 @@ let rec find_assign tr a =
   in
   match aux a with
   | Single Read (p, v, vi) ->
-     let e = Event.make p (v, vi) ERead in
+     evt_cnt := !evt_cnt + 1;
+     let e = Event.make !evt_cnt p ERead (v, vi) in
      new_events := e :: !new_events;
      Single (EventValue e)
   | _ as a -> a
@@ -320,11 +322,13 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
       SAtom.add (pre_atom tau a)) unsafe SAtom.empty in
     let us = SAtom.union tri.tr_reqs us in (* should make events of reads *)
     let us = List.fold_left (fun us (p, v, vi, t) ->
-      let e = Event.make p (v, vi) EWrite in
+      evt_cnt := !evt_cnt + 1;		     
+      let e = Event.make !evt_cnt p EWrite (v, vi) in
       new_events := e :: !new_events;
       let t = match t with
 	| Read (p, v, vi) ->
-	   let e = Event.make p (v, vi) ERead in
+	   evt_cnt := !evt_cnt + 1;
+	   let e = Event.make !evt_cnt p ERead (v, vi) in
 	   new_events := e :: !new_events;
 	   EventValue e
 	| _ -> t
@@ -357,15 +361,22 @@ let pre_image trs s =
   let ls, post = 
     List.fold_left
     (fun acc tr ->
+       evt_cnt := IntMap.cardinal s.events.events;
        new_events := [];
        let trinfo, pre_u, info_args = pre tr u in
-       event_struct := List.fold_left (fun events e ->
-         let tid = Hstring.view e.tid in
-	 let tid = String.sub tid 1 ((String.length tid)-1) in
-	 let en = int_of_string tid in
-	 let tevents = try IntMap.find en events with Not_found -> [] in
-	 IntMap.add en (e :: tevents) events
+       event_struct := List.fold_left (fun { events; po_f } e ->
+	 let tid = Event.int_of_tid e in
+	 let tpof = try IntMap.find tid po_f with Not_found -> [] in
+	 { events = IntMap.add e.uid e events;
+	   po_f = IntMap.add tid (e.uid :: tpof) po_f }
        ) s.events !new_events;
+       event_struct := List.fold_left (fun { events; po_f } tid ->
+         let tid = Hstring.view tid in
+	 let tid = String.sub tid 1 ((String.length tid)-1) in
+	 let tid = int_of_string tid in
+	 let tpof = try IntMap.find tid po_f with Not_found -> [] in
+	 { events; po_f = IntMap.add tid (0 :: tpof) po_f }
+       ) !event_struct trinfo.tr_fences;
        make_cubes acc info_args s trinfo pre_u
     )
     ([], []) 

@@ -539,11 +539,16 @@ let add_tau tr =
   { tr_info = tr;
     tr_tau = Pre.make_tau tr }
 
+
+
+let evt_cnt = ref 1000
+
 let event_of_term bvars t = match t, [] with
   | Elem (v, Glob), vi | Access (v, vi), _ ->
     if List.exists (fun bv -> v = bv) bvars then
       let p = Hstring.make "#0" in
-      let e = Event.make p (v, vi) Event.EWrite in
+      evt_cnt := !evt_cnt + 1;
+      let e = Event.make !evt_cnt p Event.EWrite (v, vi) in
       EventValue e
     else t
   | _ -> t
@@ -570,6 +575,44 @@ let events_of_dnf bvars dnf =
     sa :: dnf, el
   ) ([],[]) dnf
 
+open Event
+
+let event_of_term t c =
+  match t with
+  | Read (p, v, vi) ->
+     let e = Event.make c p Event.ERead (v, vi) in
+     EventValue e, c + 1
+  | _ -> t, c
+
+let events_of_a a c =
+  match a with
+  | Comp (t1, op, t2) ->
+     let t1', c = event_of_term t1 c in
+     let t2', c = event_of_term t2 c in
+     begin match t1', t2' with
+     | EventValue e1, EventValue e2 -> Comp (t1', op, t2'), e1 :: e2 :: [], c
+     | EventValue e1, _ -> Comp (t1', op, t2), e1 :: [], c
+     | _, EventValue e2 -> Comp (t1, op, t2'), e2 :: [], c
+     | _ -> a, [], c
+     end
+  | _ -> a, [], c
+
+let events_of_satom sa =
+  let sa, es, c = SAtom.fold (fun a (sa, es, c) ->
+    let a, el, c = events_of_a a c in
+    let es = List.fold_left (fun es e ->
+      let tid = Event.int_of_tid e in
+      let tpo_f = try IntMap.find tid es.po_f with Not_found -> [] in
+      let po_f = IntMap.add tid (e.uid :: tpo_f) es.po_f in
+      let events = IntMap.add e.uid e es.events in
+      { events; po_f }
+    ) es el in
+    SAtom.add a sa, es, c
+  ) sa (SAtom.empty, Event.empty_struct, 1) in
+  sa, es
+
+
+
 let system s = 
   let l, bvars = init_global_env s in
   if not Options.notyping then init s.init;
@@ -588,7 +631,11 @@ let system s =
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
-    List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
+    List.map (fun (_,v,u) ->
+      let sa, events = events_of_satom u in
+      let n = create_node_rename Orig v sa in
+      { n with events }
+    ) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;

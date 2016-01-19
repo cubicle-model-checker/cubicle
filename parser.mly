@@ -87,7 +87,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE PREDICATE WRITE READ VARB ARRAYB
+%token REQUIRE UNSAFE PREDICATE WRITE READ FENCES VARB ARRAYB
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -248,18 +248,20 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR
+      fences
       require
       LEFTBR assigns_nondets_updates RIGHTBR
-      { let assigns, nondets, upds, writes = $8 in
+      { let assigns, nondets, upds, writes = $9 in
 	  { ptr_name = $2;
             ptr_args = $4; 
-	    ptr_reqs = $6;
+	    ptr_reqs = $7;
 	    ptr_assigns = assigns; 
 	    ptr_nondets = nondets; 
 	    ptr_upds = upds;
             ptr_loc = loc ();
 	    ptr_writes = writes;
+	    ptr_fences = $6;
           }
       }
 ;
@@ -300,6 +302,11 @@ assignment:
 nondet:
   | mident AFFECT DOT { Nondet $1 }
   | mident AFFECT QMARK { Nondet $1 }
+;
+
+fences:
+  | { [] }
+  | FENCES LEFTPAR proc_name_list_plus RIGHTPAR { $3 }
 ;
 
 require:

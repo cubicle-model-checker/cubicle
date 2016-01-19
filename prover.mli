@@ -44,8 +44,8 @@ val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
     raises [Unsat] if it is not the case *)
 
 val make_literal : Atom.t -> Smt.Formula.t
-val make_formula : ArrayAtom.t -> Smt.Formula.t
-val make_formula_set : SAtom.t -> Smt.Formula.t
+val make_formula : ArrayAtom.t -> Smt.Formula.t list -> Smt.Formula.t
+val make_formula_set : SAtom.t -> Smt.Formula.t list -> Smt.Formula.t
 
 val run : ?fp:bool -> unit -> unit
 (** Runs the SMT solver on its current context *)

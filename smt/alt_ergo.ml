@@ -28,6 +28,8 @@ type check_strategy = Lazy | Eager
 module H = Hstring.H
 module HSet = Hstring.HSet
 
+module TTerm = Term
+
 let all_types = H.create 17 (**)
 let all_vars = H.create 17 (**)
 let tso_vars = H.create 17 (**)
@@ -243,7 +245,7 @@ module Variant = struct
       constructors
       
 end
-  
+
 module Term = struct
 
   type t = Term.t
@@ -287,7 +289,7 @@ module Term = struct
       let sb = Symbols.name (Hstring.make ("e(" ^ Event.name e ^ ").val")) in 
       Term.make sb [] ty
     with Not_found -> raise (Error (UnknownSymb s))
-
+			    
   let is_int = Term.is_int
 
   let is_real = Term.is_real
@@ -452,6 +454,47 @@ let rec mk_cnf = function
 
   (* let make_cnf f = mk_cnf (sform f) *)
 
+  let make_event_desc e =
+    let en = "e(" ^ Event.name e ^ ")" in
+    let ty_dir = Ty.Tabstract (Hstring.make "dir") in
+    let ty_loc = Ty.Tabstract (Hstring.make "tso_var") in
+    let sb_uid = Symbols.name (Hstring.make (en ^ ".uid")) in 
+    let sb_tid = Symbols.name (Hstring.make (en ^ ".tid")) in 
+    let sb_dir = Symbols.name (Hstring.make (en ^ ".dir")) in 
+    let sb_loc = Symbols.name (Hstring.make (en ^ ".loc")) in 
+    let t_uid = TTerm.make sb_uid [] Ty.Tint in
+    let t_tid = TTerm.make sb_tid [] Ty.Tint in
+    let t_dir = TTerm.make sb_dir [] ty_dir in
+    let t_loc = TTerm.make sb_loc [] ty_loc in
+    let dir = if e.Event.dir = Event.ERead then "_R" else "_W" in
+    let var = "_V" ^ (Hstring.view (fst e.Event.var)) in
+    let uid = TTerm.int (string_of_int e.Event.uid) in
+    let tid = TTerm.make (Symbols.name e.Event.tid) [] Ty.Tint in
+    let dir = TTerm.make (Symbols.name (Hstring.make dir)) [] ty_dir in
+    let loc = TTerm.make (Symbols.name (Hstring.make var)) [] ty_loc in
+    [ (*Lit (Literal.LT.make (Literal.Eq (t_uid, uid))) ;*)
+      Lit (Literal.LT.make (Literal.Eq (t_tid, tid))) ;
+      Lit (Literal.LT.make (Literal.Eq (t_dir, dir))) ;
+      Lit (Literal.LT.make (Literal.Eq (t_loc, loc))) ]
+
+  let make_acyclic_rel e =
+    let en = Event.name e in
+    let acpo = "po_loc_U_com(" ^ en ^ "," ^ en ^ ")" in
+    let t_acpo = TTerm.make (Symbols.name (Hstring.make acpo)) [] Ty.Tbool in
+    let acco = "co_U_prop(" ^ en ^ "," ^ en ^ ")" in
+    let t_acco = TTerm.make (Symbols.name (Hstring.make acco)) [] Ty.Tbool in
+    [ Lit (Literal.LT.make (Literal.Eq (t_acpo, TTerm.faux))) ;
+      Lit (Literal.LT.make (Literal.Eq (t_acco, TTerm.faux))) ]
+
+  let make_po (e1, e2) =
+    let en1 = "e" ^ (string_of_int e1)  in
+    let en2 = "e" ^ (string_of_int e2)  in
+    let po = "po(" ^ en1 ^ "," ^ en2 ^ ")" in
+    let t_po = TTerm.make (Symbols.name (Hstring.make po)) [] Ty.Tbool in
+    let bpo = "po(" ^ en2 ^ "," ^ en1 ^ ")" in
+    let t_bpo = TTerm.make (Symbols.name (Hstring.make bpo)) [] Ty.Tbool in
+    [ Lit (Literal.LT.make (Literal.Eq (t_po, TTerm.vrai))) ;
+      Lit (Literal.LT.make (Literal.Eq (t_bpo, TTerm.faux))) ]
 
 end
 
@@ -541,7 +584,8 @@ module Make (Options : sig val profiling : bool end) = struct
   let assume ?(events=Event.empty_struct) ~id f =
     Time.start ();
     try
-      all_events := events :: !all_events;
+      if events <> Event.empty_struct then
+	all_events := events :: !all_events;
       formula := (Formula.make_cnf f) :: !formula;
       (*CSolver.assume (Formula.make_cnf f) id;*)
       Time.pause ()
@@ -612,9 +656,8 @@ module Make (Options : sig val profiling : bool end) = struct
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
 
-      (* Print TSO relations *)
-      if not fp then
-	Event.print_rels filefmt !all_events;
+      (* Print TSO goal *) (*
+      Event.print_goal filefmt fp !all_events;*)
 
       (* Output file *)
       flush file;
@@ -624,6 +667,8 @@ module Make (Options : sig val profiling : bool end) = struct
       eprintf "-------------> Calling Alt-Ergo on %s <-------------\n" filename;
       let output = Util.syscall ("alt-ergo -sat-mode " ^ filename) in
       if String.compare output "unsat\n" = 0 then
+        raise (Solver.Unsat [])
+      else if String.compare (String.sub output 0 5) "unsat" = 0 then
         raise (Solver.Unsat [])
       else if String.compare output "unknown (sat)\n" <> 0 then
 	failwith "Error calling SMT solver";

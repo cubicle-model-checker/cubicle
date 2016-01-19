@@ -87,6 +87,8 @@ module Formula = struct
   let make_lit _ _ = unsupported ()
   let make _ _ = unsupported ()
   let make_cnf _ = unsupported ()
+  let make_event_desc _ = unsupported ()
+  let make_acyclic_rel _ = unsupported ()
 end
 
 exception Unsat of int list
