@@ -54,7 +54,7 @@ type result =
 module type Strategy = sig
   
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
-               t_system -> result
+    ?forward:bool -> t_system -> result
   (** Backward reachability search on a system. The user can also provide
       invariants that are true of the system to help the search.  Candidate
       invariants can also be provided, they will be proven as real invariants

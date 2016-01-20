@@ -30,6 +30,8 @@ val far_brab : bool
 val far_dbg : bool
 val far_verb : bool
 
+val bwd_fwd : int
+
 val goods : bool
 
 val max_proc : int

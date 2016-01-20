@@ -30,3 +30,7 @@ val error_trace : Node.t -> unit
 val open_dot : unit -> (unit -> unit)
 
 val delete_node_by : Node.t -> Node.t -> unit
+
+val new_bfwd_node : Node.t -> unit
+
+val open_bfwd_dot : unit -> (unit -> unit)

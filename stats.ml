@@ -51,6 +51,8 @@ let new_node s =
     end;
   if dot then Dot.new_node s
 
+let new_bfwd_node s = if dot then Dot.new_bfwd_node s
+
 let new_vertex v = incr cpt_vertices
 
 let check_limit s =

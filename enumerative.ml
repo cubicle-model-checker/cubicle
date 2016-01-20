@@ -394,17 +394,6 @@ let normalize_state2 env st =
   find_subst_for_norm2 sigma env st';
   st'
 
-(* find_subst_for_norm2 sigma env st *)
-(* ; *)
-(* let same = ref true in *)
-(* for i = 0 to Array.length st - 1 do *)
-(*   same := !same && st.(i) = old.(i) *)
-(* done; *)
-(* if not !same then eprintf "\nNormalize :@.%a@.->@.%a@." *)
-(*     (print_state env) old *)
-(*     (print_state env) st *)
-
-
 let global_envs = ref []
 
 
@@ -1239,6 +1228,17 @@ let study_frange env =
   let f = env.frange in
   let f' = List.map (normalize_state2 env) f in
   (match f' with
+    | [] -> eprintf "Nothing to study@."
+    | hd::tl -> 
+      let st = Array.copy hd in
+      List.iter (
+        fun st' -> Array.iteri (
+          fun i v ->
+            if st.(i) <> v then st.(i) <- -1
+        ) st'
+      ) tl;
+      eprintf "State : %a@." (print_state env) st);
+  (match f with
     | [] -> eprintf "Nothing to study@."
     | hd::tl -> 
       let st = Array.copy hd in

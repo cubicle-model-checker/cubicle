@@ -219,7 +219,6 @@ let display_graph dot_file =
   | _ ->
      eprintf "There was an error with dot. Make sure graphviz is installed."
 
-
 let open_dot () =
   if not dot then fun () -> ()
   else
@@ -243,5 +242,72 @@ let open_dot () =
     fun () ->
       dot_footer !dot_fmt;
       dot_footer !dot_fmt;
+      close_out dot_channel;
+      display_graph dot_file
+
+(* Dot for bwd_dot *)
+
+let bfwd_dot_fmt = ref std_formatter
+
+let new_bfwd_node n =
+  if not bdot_prof || (List.length n.from < dot_prof) then (
+    current_color := next_shade ();
+    fprintf !bfwd_dot_fmt "%a@." print_node n;
+    print_pre (cedge_pre ()) !bfwd_dot_fmt n
+  )
+
+let dot_header = 
+  let run = ref 0 in
+  let name = Filename.basename file in
+  fun fmt ->
+  incr run;
+  fprintf fmt "subgraph cluster_%d {@." !run;
+          fprintf fmt "	label=\"run %d of %s\";@." !run name
+
+let dot_footer fmt = fprintf fmt "}@."
+
+
+let restart () =
+  dot_footer !bfwd_dot_fmt;
+  fprintf !bfwd_dot_fmt "\n@.";
+  dot_header !bfwd_dot_fmt
+
+
+let display_graph dot_file =
+  let pdf = dot_file^".pdf" in
+  let com = match Util.syscall "uname" with
+    | "Darwin\n" -> "open"
+    | "Linux\n" -> "xdg-open"
+    | _ -> (* Windows *) "cmd /c start"
+  in
+  match Sys.command ((graphviz_prog !nb_nodes)^" -Tpdf "^dot_file^
+                       " > "^pdf^" && "^com^" "^pdf) with
+  | 0 -> ()
+  | _ ->
+     eprintf "There was an error with dot. Make sure graphviz is installed."
+
+let open_bfwd_dot () =
+  if not dot then fun () -> ()
+  else
+    let bfile = Filename.basename file in
+    let dot_file, dot_channel =
+      Filename.open_temp_file bfile "bfwd.dot" in
+    bfwd_dot_fmt := formatter_of_out_channel dot_channel;
+    fprintf !bfwd_dot_fmt "digraph \"%s\" {@." bfile;
+    fprintf !bfwd_dot_fmt "orientation = portrait;\n\
+                      fontsize = 10;\n\
+                      rankdir = BT;\n\
+                      node [fontname=helvetica];\n\
+                      edge [fontname=helvetica];\n\
+                      graph [fontname=helvetica];\n\
+                      ratio=\"fill\";\n\
+                      size=\"11.7,8.3!\";\n\
+                      margin=0;\n\
+                      splines=false;\n\
+                      concentrate=false;\n@.";
+    dot_header !bfwd_dot_fmt;
+    fun () ->
+      dot_footer !bfwd_dot_fmt;
+      dot_footer !bfwd_dot_fmt;
       close_out dot_channel;
       display_graph dot_file

@@ -37,7 +37,7 @@ type result = Safe of Node.t list * Node.t list | Unsafe of Node.t * Node.t list
 module type Strategy = sig
   
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
-               t_system -> result
+    ?forward:bool -> t_system -> result
 
 end
 
@@ -50,7 +50,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
   let nb_remaining q post () = Q.length q, List.length !post
 
-  let search ?(invariants=[]) ?(candidates=[]) system =
+  let search ?(invariants=[]) ?(candidates=[]) ?(forward=false) system =
     
     let visited = ref Cubetrie.empty in
     let candidates = ref candidates in
@@ -74,23 +74,28 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
           | None ->
              Stats.check_limit n;
              Stats.new_node n;
-             let n = begin
-                 match Approx.good n with
-                 | None -> n
-                 | Some c ->
-                    try
+             let n = 
+               if not forward then
+                 begin
+                   match Approx.good n with
+                     | None -> n
+                     | Some c ->
+                       try
                       (* Replace node with its approximation *)
-		      Safety.check system c;
+		         Safety.check system c;
 		      if goods && good_reject c system.t_good then raise (Safety.Unsafe c);
                       candidates := c :: !candidates;
                       Stats.candidate n c;
                       c
-                    with Safety.Unsafe _ -> n 
-                         (* If the candidate is directly reachable, no need to
-                            backtrack, just forget it. *)
-               end
+                       with Safety.Unsafe _ -> n 
+                 (* If the candidate is directly reachable, no need to
+                    backtrack, just forget it. *)
+                 end
+               else n
              in
-             let ls, post = Pre.pre_image system.t_trans n in
+             let ls, post = 
+               if not forward || n.depth < bwd_fwd then Pre.pre_image system.t_trans n
+               else [], [] in
              if delete then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
@@ -281,7 +286,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
 
 
    
-  let search ?(invariants=[]) ?(candidates=[]) system =
+  let search ?(invariants=[]) ?(candidates=[]) ?(forward=false) system =
     
     let visited = ref Cubetrie.empty in
     let candidates = ref candidates in

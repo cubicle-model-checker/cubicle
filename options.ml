@@ -31,6 +31,8 @@ let far_brab = ref false
 let far_dbg = ref false
 let far_verb = ref false
 
+let bwd_fwd = ref (-1)
+
 let goods = ref false
 
 let max_proc = ref 10
@@ -163,8 +165,11 @@ let specs =
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
-    "-p-fwd-all", Arg.Set print_forward_all, " print forwarded states";
-    "-p-fwd-frg", Arg.Set print_forward_frg, " print forwarded states";
+    "-of", Arg.Set only_forward, " only do one forward search";
+    "-p-all", Arg.Set print_forward_all, " print forwarded states";
+    "-p-frg", Arg.Set print_forward_frg, " print forwarded states";
+    "-bwd", Arg.Set_int bwd_fwd, 
+    "<n> do a non approximate backward to prof <n> to help the oracle";
     "-geninv", Arg.Set gen_inv, " invariant generation";
     "-symbolic", Arg.Set_int forward_inv, 
     "<n> symbolic forward invariant generation with n processes";
@@ -259,6 +264,8 @@ let far_priority = !far_priority
 let far_brab = !far_brab
 let far_dbg = !far_dbg
 let far_verb = !far_verb
+
+let bwd_fwd = !bwd_fwd
 
 let goods = !goods
 
