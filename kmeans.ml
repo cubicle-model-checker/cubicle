@@ -207,7 +207,9 @@ let adjust_means c =
       change := true;
     (try
        assert (not (AMap.mem m acc))
-     with Assert_failure _ -> FloatArray.print "" m; exit 1
+     with Assert_failure _ -> 
+       List.iter (FloatArray.print "l: ") l;
+       FloatArray.print "\tm:" m; exit 1
     );
     AMap.add m l acc
   ) c AMap.empty in
@@ -219,9 +221,9 @@ let split_map c =
   ) c (AMap.empty, [])
 
 let clusterize set =
-  (* let clusters = select_kmeans set in *)
-  let set' = Array.of_list set in
-  let clusters = AMap.add set'.(0) [] (AMap.add set'.(3) [] (AMap.singleton set'.(6) [])) in
+  let clusters = select_kmeans set in
+  (* let set' = Array.of_list set in *)
+  (* let clusters = AMap.add set'.(0) [] (AMap.add set'.(3) [] (AMap.singleton set'.(6) [])) in *)
   Printf.printf "Initial Cluster :\n";
   print_cluster clusters;
   Printf.printf "End\n";
