@@ -44,7 +44,7 @@ let () = Printf.printf "seed : %b\n" int_seed
 module type FA = sig
   type t
 
-  val empty : int -> t
+  val empty : t -> t
 
   val length : t -> int
     
@@ -66,10 +66,14 @@ end
 module FloatArray : FA = struct
   type t = (float * int) array
 
-  let empty k =
-    Array.make k (-1., 0)
-
   let length = Array.length
+
+  let empty k =
+    match dist_type with
+      | "h" -> Array.copy k
+      | "e" -> Array.make (length k) (-1., 0)
+      | _ -> raise (Arg.Bad "no distance with this name")
+
     
   (* It's tricky here. The arrays have values above 0. When it's -1 it means it can
      be any positive value.
@@ -112,10 +116,12 @@ module FloatArray : FA = struct
     Array.mapi (
       fun i (e1, _) -> 
         let (e2, _) = t2.(i) in
-        match e1, e2 with
+        let (d, _) = match e1, e2 with
           | -1., e | e, -1. -> (-1., 1)
           | _ when e1 = e2 -> (e1, 1)
-          | _ -> (-1., 1)
+          | _ -> (-1., 1) in
+        if d = -1. then Printf.printf "%.1f %.1f\n" e1 e2;
+        (d, 1)
     ) t1
 
   let add_arrays = 
@@ -199,7 +205,7 @@ let add_to_cluster c e =
 let adjust_means c =
   let change = ref false in
   let c = AMap.fold (fun k l acc ->
-    let z = FloatArray.empty (FloatArray.length k) in
+    let z = FloatArray.empty k in
     let m = List.fold_left (FloatArray.add_arrays) z l in
     let m = FloatArray.normalize m in
     FloatArray.print "m : " m;
