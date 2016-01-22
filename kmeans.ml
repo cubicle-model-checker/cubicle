@@ -84,6 +84,8 @@ let () =
 
 let clu_file = !clu_file
 
+let () = Printf.printf "%s" clu_file
+
 let () = Printf.printf "seed : %b\n" int_seed
 
 module type FA = sig
@@ -289,25 +291,22 @@ let add_to_cluster c e =
 let adjust_means c =
   let change = ref false in
   let c = AMap.fold (fun k l acc ->
-    let m = 
+    let m, l' = 
       match l with
-        | [] -> k
+        | [] -> k, []
         | k' :: l ->
           let z = FloatArray.empty_from_fa k' in
           let m = List.fold_left (FloatArray.add_arrays) z l in
           let m = FloatArray.normalize m in
           if not (FloatArray.equal k m) then
             change := true;
-          (try
-             assert (not (AMap.mem m acc))
-           with Assert_failure _ -> 
-             print_cluster c;
-             List.iter (FloatArray.print "l: ") l;
-             FloatArray.print "\tm:" m; exit 1
-          );
-          m
+          let l' = 
+            try AMap.find m acc
+            with Not_found -> [] 
+          in
+          m, l'
     in
-    AMap.add m l acc
+    AMap.add m (List.rev_append l' l) acc
   ) c AMap.empty in
   !change, c
 

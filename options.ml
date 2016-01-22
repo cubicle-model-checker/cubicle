@@ -124,11 +124,6 @@ let set_far n =
     | "fwd-brab" -> far_extra := n; far_brab := true
     | _ -> raise (Arg.Bad ("extrapolation strategy "^n^" not supported"))
 
-let set_frgfile s =
-  save_frg := true;
-  if Filename.check_suffix s ".frg" then frg_file := s
-  else raise (Arg.Bad "no .frg extension")
-
 let add_cluster = ref false
 let clu_file = ref ""
 
@@ -183,7 +178,7 @@ let specs =
     "-of", Arg.Set only_forward, " only do one forward search";
     "-p-all", Arg.Set print_forward_all, " print forwarded states";
     "-p-frg", Arg.Set print_forward_frg, " print forwarded states";
-    "-s-frg", Arg.String set_frgfile, " save the frange in a *.frg file";
+    "-s-frg", Arg.Set save_frg, " save the frange in a *.frg file";
     "-r-clu", Arg.String set_clufile, " read the clusters in a *.clu file";
     "-bwd", Arg.Set_int bwd_fwd, 
     "<n> do a non approximate backward to prof <n> to help the oracle";
@@ -282,7 +277,6 @@ let far_brab = !far_brab
 let far_dbg = !far_dbg
 let far_verb = !far_verb
 let save_frg = !save_frg
-let frg_file = !frg_file
 
 let add_cluster = !add_cluster
 let clu_file = !clu_file
@@ -338,6 +332,13 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
+
+let () =
+  if save_frg then
+    let s = Filename.chop_suffix (Filename.basename file) ".cub" in
+    frg_file := Printf.sprintf "franges/%s-%d.frg" s forward_depth
+
+let frg_file = !frg_file
 
 let cores = !cores
 

@@ -120,11 +120,16 @@ CMX = $(CMO:.cmo=.cmx)
 
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
+KMEANSCMO = kmeans.cmo
+KMEANSCMX = $(KMEANSCMO:.cmo=.cmx)
 
 GENERATED = version.ml parser.ml parser.mli lexer.ml 
 
 byte: $(NAME).byte
 opt: $(NAME).opt
+
+kmeans: $(KMEANSCMX)
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \

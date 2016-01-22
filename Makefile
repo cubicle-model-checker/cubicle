@@ -33,10 +33,10 @@ OCAMLOPT = ocamlopt.opt
 OCAMLDEP = ocamldep
 OCAMLLEX = ocamllex
 OCAMLYACC= ocamlyacc
-OCAMLLIB = /home/mattias/.opam/4.02.0/lib/ocaml
-FUNCTORYLIB = 
+OCAMLLIB = /home/mattias/.opam/4.02.3/lib/ocaml
+FUNCTORYLIB = -I /home/mattias/.opam/4.02.3/lib/functory
 OCAMLBEST= opt
-OCAMLVERSION = 4.02.0
+OCAMLVERSION = 4.02.3
 OCAMLWIN32 = no
 EXE = 
 
@@ -120,11 +120,16 @@ CMX = $(CMO:.cmo=.cmx)
 
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
+KMEANSCMO = kmeans.cmo
+KMEANSCMX = $(KMEANSCMO:.cmo=.cmx)
 
 GENERATED = version.ml parser.ml parser.mli lexer.ml 
 
 byte: $(NAME).byte
 opt: $(NAME).opt
+
+kmeans: $(KMEANSCMX)
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
