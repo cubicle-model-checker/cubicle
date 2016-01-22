@@ -33,4 +33,6 @@ val gen_po : structure -> (int * int) list
 
 val gen_co : structure -> (int * int) list
 
+val gen_rf : structure -> (int * int) list list
+
 val gen_fence : structure -> (int * int) list

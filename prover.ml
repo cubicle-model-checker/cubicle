@@ -174,80 +174,45 @@ let get_user_invs s nb_procs =
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (fun a -> F.make F.Not [make_formula a []]) init_invs
 
-(*
-open Event
-
-let event_of_term t c =
-  match t with
-  | Read (p, v, vi) ->
-     let e = Event.make c p Event.ERead (v, vi) in
-     EventValue e, c + 1
-  | _ -> t, c
-
-let events_of_a a c =
-  match a with
-  | Comp (t1, op, t2) ->
-     let t1', c = event_of_term t1 c in
-     let t2', c = event_of_term t2 c in
-     begin match t1', t2' with
-     | EventValue e1, EventValue e2 -> Comp (t1', op, t2'), e1 :: e2 :: [], c
-     | EventValue e1, _ -> Comp (t1', op, t2), e1 :: [], c
-     | _, EventValue e2 -> Comp (t1, op, t2'), e2 :: [], c
-     | _ -> a, [], c
-     end
-  | _ -> a, [], c
-
-let events_of_satom sa =
-  let sa, es, c = SAtom.fold (fun a (sa, es, c) ->
-    let a, el, c = events_of_a a c in
-    let es = List.fold_left (fun es e ->
-      let tid = Event.num_tid e in
-      let tpo_f = try IntMap.find tid es.po_f with Not_found -> [] in
-      let po_f = IntMap.add tid (e.uid :: tpo_f) es.po_f in
-      let events = IntMap.add e.uid e es.events in
-      { events; po_f }
-    ) es el in
-    SAtom.add a sa, es, c
-  ) sa (SAtom.empty, Event.empty_struct, 1) in
-  sa, es
- *)
-
+let event_formula fp es =
+  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
+  let po = Event.gen_po es in
+  let rfl = Event.gen_rf es in
+  let co = Event.gen_co es in
+  let fence = Event.gen_fence es in
+  let f = List.fold_left (fun f p -> (F.make_po p) @ f) [] po in
+  let f = List.fold_left (fun f p -> (F.make_co p) @ f) f co in
+  let f = (F.make_rf_cands rfl) @ f in
+  let f = List.fold_left (fun f p -> (F.make_fence p) @ f) f fence in
+  let f = List.fold_left (fun f e -> (F.make_event_desc e) @ f) f el in
+  if fp then f else
+  List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) f el
 	       
-let unsafe_conj { tag = id; cube = cube; events = es; }
-		nb_procs invs ievents init =
+let unsafe_conj { tag = id; cube = cube; events = es; } nb_procs invs iel init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
 (**)if debug_smt then eprintf "[smt] distinct: %a@." F.print (distinct_vars nb_procs);
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
 
-  let new_events = List.fold_left (fun events e ->
+  let events = List.fold_left (fun events e ->
     Event.IntMap.add e.Event.uid e events
-  ) es.Event.events ievents in
-  let es = { es with Event.events = new_events } in
+  ) es.Event.events iel in
+  let es = { es with Event.events = events } in
+  let ef = event_formula false es in
 
-  let po = Event.gen_po es in
-  let co = Event.gen_co es in
-  let fence = Event.gen_fence es in
-  let ifrm = List.fold_left (fun f p -> (F.make_po p) @ f) [] po in
-  let ifrm = List.fold_left (fun f p -> (F.make_co p) @ f) ifrm co in
-  let ifrm = List.fold_left (fun f p -> (F.make_fence p) @ f) ifrm fence in
-  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
-  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) ifrm el in
-  let ifrm = List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) ifrm el in
-
-  let f = make_formula_set cube.Cube.litterals ifrm in
+  let f = make_formula_set cube.Cube.litterals ef in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
   SMT.assume ~events:es ~id f;
   SMT.check ()
 
-let unsafe_dnf node nb_procs invs ievents dnf =
+let unsafe_dnf node nb_procs invs iel dnf =
   try
     let uc =
       List.fold_left (fun accuc init ->
         try 
-          unsafe_conj node nb_procs invs ievents init;
+          unsafe_conj node nb_procs invs iel init;
           raise Exit
         with Smt.Unsat uc -> List.rev_append uc accuc)
         [] dnf in
@@ -258,8 +223,7 @@ let unsafe_cdnf s n =
   let nb_procs = List.length (Node.variables n) in
   let cdnf_init = make_init_dnfs s nb_procs in
   let invs = get_user_invs s nb_procs in
-  let ievents = s.t_ievents in
-  List.iter (unsafe_dnf n nb_procs invs ievents) cdnf_init
+  List.iter (unsafe_dnf n nb_procs invs s.t_ievents) cdnf_init
 
 let unsafe s n = unsafe_cdnf s n
 
@@ -275,16 +239,14 @@ let reached args s sa =
 let assume_goal_no_check { tag = id; cube = cube; events = es } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
-  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
-  let f = make_formula cube.Cube.array ifrm in
+  let ef = event_formula true es in
+  let f = make_formula cube.Cube.array ef in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~events:es ~id f
 
 let assume_node_no_check { tag = id; events = es } ap =
-  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
-  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
-  let f = F.make F.Not [make_formula ap ifrm] in
+  let ef = event_formula true es in
+  let f = F.make F.Not [make_formula ap ef] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~events:es ~id f
 
@@ -309,9 +271,8 @@ let check_guard args sa reqs =
 let assume_goal_nodes { tag = id; cube = cube; events = es } nodes =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
-  let ifrm = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
-  let f = make_formula cube.Cube.array ifrm in
+  let ef = event_formula true es in
+  let f = make_formula cube.Cube.array ef in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~events:es ~id f;
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes(*;

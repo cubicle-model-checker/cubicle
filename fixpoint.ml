@@ -313,6 +313,8 @@ end = struct
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
+    if Cube.inconsistent_2arrays vis_array n_array then nodes
+    else (vis_n,vis_array)::nodes (*
     let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
     List.fold_left
       (fun nodes ss ->
@@ -329,7 +331,7 @@ end = struct
          (* These are worth assuming and checking right away because they might
             yield unsatifisability sooner *)
          (Prover.assume_node vis_n vis_renamed; nodes)
-      ) nodes d
+      ) nodes d*)
       
 
   let check_fixpoint s visited =
@@ -372,7 +374,7 @@ end = struct
     then Some []
     else Cubetrie.mem_array (Node.array s) nodes
 
-  let medium_fixpoint s visited  =
+  let medium_fixpoint s visited  = None (*
     let vars, s_array = Node.variables s, Node.array s in
     let substs = Variable.all_permutations vars vars in
     let substs = List.tl substs in (* Drop 'identity' permutation. 
@@ -385,7 +387,7 @@ end = struct
                  | None -> ()
                 ) substs;
       None
-    with Fixpoint uc -> Some uc
+    with Fixpoint uc -> Some uc *)
 
   let hard_fixpoint s nodes =
     try

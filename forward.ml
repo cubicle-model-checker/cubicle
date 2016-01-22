@@ -375,7 +375,8 @@ let rec type_of_term = function
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
   | Read _ -> failwith "Forward.type_of_term Read TODO"
-  | EventValue _ -> failwith "Forward.type_of_term EventValue TODO"
+  | EventValue _ -> Smt.Type.type_int
+                    (*failwith "Forward.type_of_term EventValue TODO"*)
 
 let rec type_of_atom = function
   | True | False -> None

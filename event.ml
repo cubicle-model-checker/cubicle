@@ -51,47 +51,52 @@ logic co : int, int -> prop
 logic fence : int, int -> prop
 "
 let axiom_rels = "
+axiom rf :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) -> e(e1).val = e(e2).val
 logic po_loc : int, int -> prop
 axiom po_loc :
-  forall e1, e2 : int.
+  forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and e(e1).loc = e(e2).loc
   <-> po_loc(e1, e2)
 logic rfe : int, int -> prop
 axiom rfe :
-  forall e1, e2 : int.
+  forall e1, e2 : int [rf(e1,e2)].
   rf(e1, e2) and e(e1).tid <> e(e2).tid
   <-> rfe(e1, e2)
 logic fr : int, int -> prop
 axiom fr :
-  forall e1, e2 : int. not fr(e1, e2)
+  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
+  rf(w1, r) and co(w1, w2)
+  -> fr(r, w2)
 logic com : int, int -> prop
 axiom com :
-  forall e1, e2 : int.
+  forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
   co(e1, e2) or rf(e1, e2) or fr(e1, e2)
   <-> com(e1, e2)
 logic ppo : int, int -> prop
 axiom ppo_tso :
-  forall e1, e2 : int.
+  forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
   <-> ppo(e1, e2)
 logic propg : int, int -> prop
 axiom propg_tso :
-  forall e1, e2 : int.
-  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) (*or fr(e1, e2)*)
+  forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
+  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
   <-> propg(e1, e2)
 logic po_loc_U_com : int, int -> prop
 axiom po_loc_U_com :
-  forall e1, e2 : int.
+  forall e1, e2 : int [po_loc(e1,e2)|com(e1,e2)|po_loc_U_com(e1,e2)].
   po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)
 axiom po_loc_U_com_t :
-  forall e1, e2, e3 : int.
+  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
   po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
 logic co_U_prop : int, int -> prop
 axiom co_U_prop :
-  forall e1, e2 : int.
+  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)|co_U_prop(e1,e2)].
   co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)
 axiom co_U_prop_t :
-  forall e1, e2, e3 : int.
+  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
   co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
 "
 
@@ -149,13 +154,27 @@ let gen_po es =
     aux po (List.filter (fun e -> e <> 0) tpof)
   ) es.po_f []
 
-let gen_co es =
+let gen_co es = (* also add : writes from same thread are co *)(* add cands *)
   let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
   let iwrites, writes = IntMap.partition (fun _ e ->
     Hstring.view e.tid = "#0") writes in
-  IntMap.fold (fun iw _ co ->
-    IntMap.fold (fun w _ co -> (iw, w) :: co) writes co
+  IntMap.fold (fun iw iwe co ->
+    IntMap.fold (fun w we co ->
+      if iwe.var <> we.var then co
+      else (iw, w) :: co
+    ) writes co
   ) iwrites []
+
+let gen_rf es =
+  let reads, writes = IntMap.partition (fun _ e -> e.dir = ERead) es.events in
+  IntMap.fold (fun r re rfl ->
+    let rf = IntMap.fold (fun w we rf ->
+      if re.var <> we.var then rf
+      else (w, r) :: rf
+    ) writes [] in
+    if rf = [] then rfl
+    else rf :: rfl
+  ) reads []
 
 let gen_fence es =
   let rec split_at_first_fence ll = function

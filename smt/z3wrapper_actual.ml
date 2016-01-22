@@ -377,6 +377,9 @@ module Formula = struct
   let make_co (e1, e2) =
     failwith "Z3Wrapper_actual.Formula.make_co TODO"
 
+  let make_rf_cands rfl =
+    failwith "Z3Wrapper_actual.Formula.make_rf_cands TODO"
+
   let make_fence (e1, e2) =
     failwith "Z3Wrapper_actual.Formula.make_fence TODO"
 

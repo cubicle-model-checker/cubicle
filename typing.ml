@@ -613,7 +613,7 @@ let events_of_satom sa =
 
 
 
-let system s = 
+let system s =
   let l, bvars = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
