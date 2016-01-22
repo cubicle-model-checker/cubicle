@@ -29,6 +29,11 @@ val far_priority : string
 val far_brab : bool
 val far_dbg : bool
 val far_verb : bool
+val save_frg : bool
+val frg_file : string
+
+val add_cluster : bool
+val clu_file : string
 
 val bwd_fwd : int
 

@@ -239,6 +239,15 @@ let state_to_cube env st =
 
 let print_state env fmt st = SAtom.print fmt (state_to_cube env st)
 
+let print_state_ia fmt st =
+  Array.iter (Format.fprintf fmt "%d;") st
+
+let save_frg_file env =
+  let oc = open_out frg_file in
+  let foc = Format.formatter_of_out_channel oc in
+  List.iter (Format.fprintf foc "@[<hov>%a@]@." print_state_ia) env.frange;
+  close_out oc
+
 let print_all env =
   List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.states
 
@@ -1251,7 +1260,23 @@ let study_frange env =
       eprintf "State : %a@." (print_state env) st)
 
         
-  
+let parse_clufile () =
+  let ci = open_in clu_file in
+  let re = Str.regexp ";" in
+  let clu = ref [] in
+  (try
+    while true do
+      let l = input_line ci in
+      let sl = Str.split re l in
+      List.iter (Printf.printf "s:%s ") sl;
+      print_newline ();
+      let fl = List.map (int_of_string) sl in
+      let fa = Array.of_list fl in
+      clu := fa :: !clu
+    done
+  with End_of_file -> ());
+  !clu
+
 
 let finalize_search env =
   let st = HST.stats env.explicit_states in
@@ -1262,6 +1287,9 @@ let finalize_search env =
   if print_forward_frg then (
     print_frange env;
     study_frange env
+  );
+  if save_frg then (
+    save_frg_file env
   );
   if verbose > 0 || profiling then begin
     printf "\n%a" Pretty.print_line ();
@@ -1302,6 +1330,11 @@ let search procs init =
       eprintf "init : %a\n@." SAtom.print (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
+  if add_cluster then (
+    let clu = parse_clufile () in
+    List.iter (eprintf "State : %a@." (print_state env)) clu;
+    env.states <- List.rev_append clu env.states
+  );
   global_envs := env :: !global_envs;
   install_sigint ();
   begin try

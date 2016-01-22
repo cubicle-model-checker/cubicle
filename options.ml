@@ -30,6 +30,8 @@ let far_priority = ref "bfs"
 let far_brab = ref false
 let far_dbg = ref false
 let far_verb = ref false
+let save_frg = ref false
+let frg_file = ref ""
 
 let bwd_fwd = ref (-1)
 
@@ -122,6 +124,19 @@ let set_far n =
     | "fwd-brab" -> far_extra := n; far_brab := true
     | _ -> raise (Arg.Bad ("extrapolation strategy "^n^" not supported"))
 
+let set_frgfile s =
+  save_frg := true;
+  if Filename.check_suffix s ".frg" then frg_file := s
+  else raise (Arg.Bad "no .frg extension")
+
+let add_cluster = ref false
+let clu_file = ref ""
+
+let set_clufile s =
+  add_cluster := true;
+  if Filename.check_suffix s ".clu" then clu_file := s
+  else raise (Arg.Bad "no .clu extension")
+  
 let smt_solver = ref AltErgo
 let set_smt_solver s =
   smt_solver := match s with
@@ -168,6 +183,8 @@ let specs =
     "-of", Arg.Set only_forward, " only do one forward search";
     "-p-all", Arg.Set print_forward_all, " print forwarded states";
     "-p-frg", Arg.Set print_forward_frg, " print forwarded states";
+    "-s-frg", Arg.String set_frgfile, " save the frange in a *.frg file";
+    "-r-clu", Arg.String set_clufile, " read the clusters in a *.clu file";
     "-bwd", Arg.Set_int bwd_fwd, 
     "<n> do a non approximate backward to prof <n> to help the oracle";
     "-geninv", Arg.Set gen_inv, " invariant generation";
@@ -264,6 +281,11 @@ let far_priority = !far_priority
 let far_brab = !far_brab
 let far_dbg = !far_dbg
 let far_verb = !far_verb
+let save_frg = !save_frg
+let frg_file = !frg_file
+
+let add_cluster = !add_cluster
+let clu_file = !clu_file
 
 let bwd_fwd = !bwd_fwd
 

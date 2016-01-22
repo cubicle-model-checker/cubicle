@@ -46,7 +46,7 @@ INCLUDES = $(INCLPATHS)
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma
+REQBIB=str.cma nums.cma unix.cma functory.cma
 
 BIBBYTE=$(REQBIB)
 
