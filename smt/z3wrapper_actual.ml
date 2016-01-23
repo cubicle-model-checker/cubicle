@@ -371,17 +371,14 @@ module Formula = struct
   let make_acyclic_rel e =
     failwith "Z3Wrapper_actual.Formula.make_acyclic_rel TODO"
 
-  let make_po (e1, e2) =
-    failwith "Z3Wrapper_actual.Formula.make_po TODO"
+  let make_pair rel (e1, e2) =
+    failwith "Z3Wrapper_actual.Formula.make_pair TODO"
 
-  let make_co (e1, e2) =
-    failwith "Z3Wrapper_actual.Formula.make_co TODO"
+  let make_rel rel pl =
+    failwith "Z3Wrapper_actual.Formula.make_rel TODO"
 
-  let make_rf_cands rfl =
-    failwith "Z3Wrapper_actual.Formula.make_rf_cands TODO"
-
-  let make_fence (e1, e2) =
-    failwith "Z3Wrapper_actual.Formula.make_fence TODO"
+  let make_cands rel cands =
+    failwith "Z3Wrapper_actual.Formula.make_cands TODO"
 
 end
 

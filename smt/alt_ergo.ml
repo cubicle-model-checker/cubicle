@@ -486,45 +486,21 @@ let rec mk_cnf = function
     [ Lit (Literal.LT.make (Literal.Eq (t_acpo, TTerm.faux))) ;
       Lit (Literal.LT.make (Literal.Eq (t_acco, TTerm.faux))) ]
 
-  let make_po (e1, e2) =
-    let en1 = "e" ^ (string_of_int e1)  in
-    let en2 = "e" ^ (string_of_int e2)  in
-    let po = "po(" ^ en1 ^ "," ^ en2 ^ ")" in
-    let t_po = TTerm.make (Symbols.name (Hstring.make po)) [] Ty.Tbool in
-    (*let bpo = "po(" ^ en2 ^ "," ^ en1 ^ ")" in
-    let t_bpo = TTerm.make (Symbols.name (Hstring.make bpo)) [] Ty.Tbool in*)
-    [ Lit (Literal.LT.make (Literal.Eq (t_po, TTerm.vrai))) (*;
-      Lit (Literal.LT.make (Literal.Eq (t_bpo, TTerm.faux)))*) ]
+  let make_pair rel (eid1, eid2) =
+    let en1 = "e" ^ (string_of_int eid1)  in
+    let en2 = "e" ^ (string_of_int eid2)  in
+    let pair = rel ^ "(" ^ en1 ^ "," ^ en2 ^ ")" in
+    let t_rel = TTerm.make (Symbols.name (Hstring.make pair)) [] Ty.Tbool in
+    Lit (Literal.LT.make (Literal.Eq (t_rel, TTerm.vrai)))
 
-  let make_co (e1, e2) =
-    let en1 = "e" ^ (string_of_int e1)  in
-    let en2 = "e" ^ (string_of_int e2)  in
-    let co = "co(" ^ en1 ^ "," ^ en2 ^ ")" in
-    let t_co = TTerm.make (Symbols.name (Hstring.make co)) [] Ty.Tbool in
-    (*let bco = "co(" ^ en2 ^ "," ^ en1 ^ ")" in
-    let t_bco = TTerm.make (Symbols.name (Hstring.make bco)) [] Ty.Tbool in*)
-    [ Lit (Literal.LT.make (Literal.Eq (t_co, TTerm.vrai))) (*;
-      Lit (Literal.LT.make (Literal.Eq (t_bco, TTerm.faux)))*) ]
+  let make_rel rel pl =
+    List.fold_left (fun f p -> make_pair rel p :: f) [] pl
 
-  let make_rf (e1, e2) =
-    let en1 = "e" ^ (string_of_int e1)  in
-    let en2 = "e" ^ (string_of_int e2)  in
-    let rf = "rf(" ^ en1 ^ "," ^ en2 ^ ")" in eprintf "%s\n "rf;
-    let t_rf = TTerm.make (Symbols.name (Hstring.make rf)) [] Ty.Tbool in
-    [ Lit (Literal.LT.make (Literal.Eq (t_rf, TTerm.vrai))) ]
+  let make_cands rel cands =
+    List.fold_left (fun ff pl ->
+      Comb (Or, (make_rel rel pl)) :: ff
+    ) [] cands
 
-  let make_rf_cands rfl =
-    List.fold_left (fun ff rf ->
-      let f = List.fold_left (fun f p -> (make_rf p) @ f) [] rf in
-      Comb (Or, f) :: ff
-    ) [] rfl
-
-  let make_fence (e1, e2) =
-    let en1 = "e" ^ (string_of_int e1)  in
-    let en2 = "e" ^ (string_of_int e2)  in
-    let fence = "fence(" ^ en1 ^ "," ^ en2 ^ ")" in
-    let t_fence = TTerm.make (Symbols.name (Hstring.make fence)) [] Ty.Tbool in
-    [ Lit (Literal.LT.make (Literal.Eq (t_fence, TTerm.vrai))) ]
 end
 
 exception Unsat of int list

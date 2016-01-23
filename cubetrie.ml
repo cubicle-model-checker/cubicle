@@ -23,7 +23,7 @@ module H = Hstring
 (* Trie, mapping cubes to value of type 'a *)
 type 'a t = 
   | Empty
-  | Full of 'a
+  | Full of 'a list
   | Node of (Atom.t * 'a t) list
 
 let empty = Empty
@@ -35,10 +35,12 @@ let is_empty = function
 
 (* Add a mapping cube->v to trie *)
 let rec add cube v trie = match trie with
-  | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full v)
-  | Full _ -> trie
+  | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full [v])
+  (* | Full _ -> trie *)
+  | Full vl -> if List.exists (fun w -> v = w) vl then trie
+	       else Full (v :: vl)
   | Node l -> match cube with
-      | [] -> Full v
+      | [] -> Full [v]
       | atom::cube -> Node (add_to_list atom cube v l)
 and add_to_list atom cube v l = match l with
   | [] -> [atom, add cube v Empty]
@@ -50,10 +52,11 @@ and add_to_list atom cube v l = match l with
 
 (* Add a mapping cube->v to trie without checking for subsomption *)
 let rec add_force cube v trie = match trie with
-  | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full v)
-  | Full _ -> trie
+  | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full [v])
+  (* | Full _ -> trie *)
+  | Full vl -> Full (v :: vl)
   | Node l -> match cube with
-      | [] -> Full v
+      | [] -> Full [v]
       | atom::cube -> Node (add_force_to_list atom cube v l)
 and add_force_to_list atom cube v l = match l with
   | [] -> [atom, add_force cube v Empty]
@@ -103,7 +106,8 @@ let add_array_force cube v trie = add_force (Array.to_list cube) v trie
 (* Is cube subsumed by some cube in the trie? *)
 let rec mem cube trie = match trie with 
   | Empty -> None
-  | Full { tag = id } -> Some [id]
+  (* | Full { tag = id } -> Some [id] *)
+  | Full vl -> Some (List.map (fun v -> v.tag) vl) (* Should also check events*)
   | Node l -> match cube with
       | [] -> None
       | atom::cube -> 
@@ -125,7 +129,7 @@ and mem_list atom cube l = match l with
 
 let rec mem_poly cube trie = match trie with 
   | Empty -> false
-  | Full _ -> true
+  | Full _ -> true (* should check events *)
   | Node l -> match cube with
       | [] -> false
       | atom::cube -> 
@@ -210,7 +214,8 @@ let mem c t =
 (* Apply f to all values mapped to in the trie. *)
 let rec iter f trie = match trie with
   | Empty -> ()
-  | Full v -> f v
+  (* | Full v -> f v *)
+  | Full vl -> List.iter f vl
   | Node l -> List.iter (fun (_,t) -> iter f t) l
 
 let mem_array c t =
@@ -224,14 +229,15 @@ let mem_array c t =
 (* Fold f to all values mapped to in the trie. *)
 let rec fold f acc trie = match trie with
   | Empty -> acc
-  | Full v -> f acc v
+  (* | Full v -> f acc v *)
+  | Full vl -> List.fold_left f acc vl
   | Node l -> List.fold_left (fun acc (_,t) -> fold f acc t) acc l
 
 (* Apply f to all values whose keys (cubes) are subsumed by the given cube. *)
 let rec iter_subsumed f cube trie = match cube, trie with
   | [], _ -> iter f trie
   | _, Empty 
-  | _, Full _ -> () 
+  | _, Full _ -> () (* should check events *)
   | _, Node l -> iter_subsumed_list f cube l
 and iter_subsumed_list f cube l = match l with
   | [] -> ()
@@ -248,7 +254,10 @@ and iter_subsumed_list f cube l = match l with
 (* Delete all values which satisfy the predicate p *)
 let rec delete p trie = match trie with 
   | Empty -> Empty
-  | Full v -> if p v then Empty else trie
+  (* | Full v -> if p v then Empty else trie *)
+  | Full vl ->
+      let vl = List.filter p vl in
+      begin if vl = [] then Empty else Full vl end
   | Node l -> 
       let l' = delete_list p l in
       if l == l' then trie else Node l'
@@ -263,7 +272,8 @@ and delete_list p l = match l with
 (* List of all values mapped by the trie *)
 let rec all_vals = function
   | Empty -> []
-  | Full v -> [v]
+  (* | Full v -> [v] *)
+  | Full vl -> vl
   | Node l -> 
       List.flatten (List.fold_left (fun acc (_,t) -> (all_vals t)::acc) [] l)
 
@@ -271,7 +281,8 @@ let rec all_vals = function
 let rec consistent cube trie = match cube, trie with
   | [], _ -> all_vals trie
   | _, Empty -> []
-  | _, Full v -> [v]
+  (* | _, Full v -> [v] *)
+  | _, Full vl -> vl (* Should check events *)
   | (atom::cube), Node l -> List.flatten (List.map (consistent_list atom cube) l)
 and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
   | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Constr)),

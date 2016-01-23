@@ -230,10 +230,9 @@ module type S = sig
 
     val make_event_desc : Event.t -> t list
     val make_acyclic_rel : Event.t -> t list
-    val make_po : (int * int) -> t list
-    val make_co : (int * int) -> t list
-    val make_rf_cands : (int * int) list list -> t list
-    val make_fence : (int * int) -> t list
+    val make_pair : string -> (int * int) -> t
+    val make_rel : string -> (int * int) list -> t list
+    val make_cands : string -> (int * int) list list -> t list
 
   end
 

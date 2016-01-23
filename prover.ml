@@ -176,18 +176,15 @@ let get_user_invs s nb_procs =
 
 let event_formula fp es =
   let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
-  let po = Event.gen_po es in
-  let rfl = Event.gen_rf es in
-  let co = Event.gen_co es in
-  let fence = Event.gen_fence es in
-  let f = List.fold_left (fun f p -> (F.make_po p) @ f) [] po in
-  let f = List.fold_left (fun f p -> (F.make_co p) @ f) f co in
-  let f = (F.make_rf_cands rfl) @ f in
-  let f = List.fold_left (fun f p -> (F.make_fence p) @ f) f fence in
-  let f = List.fold_left (fun f e -> (F.make_event_desc e) @ f) f el in
+  let f = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
+  let f = (F.make_rel "po" (Event.gen_po es)) @ f in
+  let f = (F.make_rel "fence" (Event.gen_fence es)) @ f in
+  let f = (F.make_rel "co" (Event.gen_co es)) @ f in
+  let f = (F.make_cands "rf" (Event.gen_rf_cands es)) @ f in
+  let f = (F.make_cands "co" (Event.gen_co_cands es)) @ f in
   if fp then f else
   List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) f el
-	       
+
 let unsafe_conj { tag = id; cube = cube; events = es; } nb_procs invs iel init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
 (**)if debug_smt then eprintf "[smt] distinct: %a@." F.print (distinct_vars nb_procs);

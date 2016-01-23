@@ -145,58 +145,103 @@ let print_decls fmt fp tso_vars esl =
 
   end
 
+let event_from_id es eid =
+  try IntMap.find eid es.events
+  with Not_found -> failwith "Event.event_from_id : unknown event id"
+
+let write_from_id es eid =
+  if eid = 0 then None
+  else
+    let e = event_from_id es eid in
+    if e.dir = EWrite then Some e
+    else None
+
 let gen_po es =
   let rec aux po = function
-    | e1 :: ((e2 :: _) as el) -> aux ((e1, e2) :: po) el
-    | _ -> po
+    | [] | [_] -> po
+    | 0 :: tpof -> aux po tpof
+    | eid :: 0 :: tpof -> aux po (eid :: tpof)
+    | eid1 :: ((eid2 :: _) as tpof) -> aux ((eid1, eid2) :: po) tpof
   in
-  IntMap.fold (fun _ tpof po ->
-    aux po (List.filter (fun e -> e <> 0) tpof)
-  ) es.po_f []
-
-let gen_co es = (* also add : writes from same thread are co *)(* add cands *)
-  let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
-  let iwrites, writes = IntMap.partition (fun _ e ->
-    Hstring.view e.tid = "#0") writes in
-  IntMap.fold (fun iw iwe co ->
-    IntMap.fold (fun w we co ->
-      if iwe.var <> we.var then co
-      else (iw, w) :: co
-    ) writes co
-  ) iwrites []
-
-let gen_rf es =
-  let reads, writes = IntMap.partition (fun _ e -> e.dir = ERead) es.events in
-  IntMap.fold (fun r re rfl ->
-    let rf = IntMap.fold (fun w we rf ->
-      if re.var <> we.var then rf
-      else (w, r) :: rf
-    ) writes [] in
-    if rf = [] then rfl
-    else rf :: rfl
-  ) reads []
+  IntMap.fold (fun _ tpof po -> aux po tpof) es.po_f []
 
 let gen_fence es =
-  let rec split_at_first_fence ll = function
-    | 0 :: rl | ([] as rl) -> ll, rl
-    | e :: rl -> split_at_first_fence (e :: ll) rl
+  let rec split_at_first_fence ltpof = function
+    | 0 :: rtpof | ([] as rtpof) -> ltpof, rtpof
+    | eid :: rtpof -> split_at_first_fence (eid :: ltpof) rtpof
   in
   let rec first_event dir = function
     | [] -> None
-    | e :: el ->
-       try
-	 let e' = IntMap.find e es.events in
-	 if e'.dir = dir then Some e else first_event dir el
-       with Not_found -> failwith "Event.gen_fence : unknown event id"
+    | eid :: tpof ->
+       let e = event_from_id es eid in
+       if e.dir = dir then Some eid else first_event dir tpof
   in
-  let rec aux fence ll rl = match rl with
+  let rec aux fence ltpof rtpof = match rtpof with
     | [] -> fence
     | _ ->
-       let ll, rl = split_at_first_fence ll rl in
-       match first_event EWrite ll, first_event ERead rl with
-       | Some w, Some r -> aux ((w, r) :: fence) ll rl
-       | _, _ -> aux fence ll rl
+       let ltpof, rtpof = split_at_first_fence ltpof rtpof in
+       match first_event EWrite ltpof, first_event ERead rtpof with
+       | Some w, Some r -> aux ((w, r) :: fence) ltpof rtpof (*should make lst*)
+       | _, _ -> aux fence ltpof rtpof
   in
-  IntMap.fold (fun _ tpof fence ->
-    aux fence [] tpof
-  ) es.po_f []
+  IntMap.fold (fun _ tpof fence -> aux fence [] tpof) es.po_f []
+
+let rec co_from_tpof es co = function
+  | [] -> co
+  | eid1 :: tpof ->
+     match write_from_id es eid1 with
+     | None -> co_from_tpof es co tpof
+     | Some e1 ->
+	let co = List.fold_left (fun co eid2 ->
+	  match write_from_id es eid2 with
+	  | None -> co
+	  | Some e2 -> if e1.var = e2.var then (eid1, eid2) :: co else co
+	) co tpof in
+	co_from_tpof es co tpof
+
+let gen_co es =
+  let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
+  let iwrites, writes = IntMap.partition (fun _ e ->
+    Hstring.view e.tid = "#0") writes in
+  let co = IntMap.fold (fun eid1 e1 co -> (* Initial writes *)
+    IntMap.fold (fun eid2 e2 co ->
+      if e1.var = e2.var then (eid1, eid2) :: co else co
+    ) writes co
+  ) iwrites [] in
+  IntMap.fold (fun tid tpof co -> (* Writes from same thread *)
+    co_from_tpof es co tpof
+  ) es.po_f co
+			
+let gen_co_cands es =
+  let rec aux cco tpof1 pof =
+    try
+      let (tid2, tpof2) = IntMap.choose pof in
+      let cco = List.fold_left (fun cco eid1 ->
+        match write_from_id es eid1 with
+        | None -> cco
+        | Some e1 ->
+           List.fold_left (fun cco eid2 ->
+             match write_from_id es eid2 with
+	     | None -> cco
+	     | Some e2 ->
+		if e1.var <> e2.var then cco
+		else [ (eid1, eid2) ; (eid2, eid1) ] :: cco
+	   ) cco tpof2
+      ) cco tpof1 in
+      aux cco tpof2 (IntMap.remove tid2 pof)
+    with Not_found -> cco
+  in
+  try
+    let (tid1, tpof1) = IntMap.choose es.po_f in
+    aux [] tpof1 (IntMap.remove tid1 es.po_f)
+  with Not_found -> []
+
+let gen_rf_cands es =
+  let reads, writes = IntMap.partition (fun _ e -> e.dir = ERead) es.events in
+  IntMap.fold (fun eid1 e1 crf ->
+    let ecrf = IntMap.fold (fun eid2 e2 ecrf ->
+      if e1.var <> e2.var then ecrf
+      else (eid2, eid1) :: ecrf
+    ) writes [] in
+    if ecrf = [] then crf else ecrf :: crf
+  ) reads []
