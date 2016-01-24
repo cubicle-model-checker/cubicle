@@ -309,33 +309,51 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 
 
 
+
+let event_of_term = function
+  | Read (p, v, vi) ->
+     evt_cnt := !evt_cnt + 1;
+     let e = Event.make !evt_cnt p Event.ERead (v, vi) in
+     new_events := e :: !new_events;
+     EventValue e
+  | t -> t
+
+let events_of_a = function
+  | (Atom.Comp (t1, op, t2)) as a ->
+     let t1' = event_of_term t1 in
+     let t2' = event_of_term t2 in
+     begin match t1', t2' with
+     | EventValue e1, EventValue e2 -> Atom.Comp (t1', op, t2')
+     | EventValue e1, _ -> Atom.Comp (t1', op, t2)
+     | _, EventValue e2 -> Atom.Comp (t1, op, t2')
+     | _ -> a
+     end
+  | a -> a
+
+let events_of_write (p, v, vi, t) =
+  evt_cnt := !evt_cnt + 1;		     
+  let e = Event.make !evt_cnt p EWrite (v, vi) in
+  new_events := e :: !new_events;
+  let t' = event_of_term t in
+  Atom.Comp (EventValue e, Eq, t')
+
 (*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
 let pre { tr_info = tri; tr_tau = tau } unsafe =
   (* let tau = tr.tr_tau in *)
-  let pre_unsafe = (*
-    SAtom.union tri.tr_reqs 
+  let pre_unsafe =
+    (*SAtom.union tri.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)*)
     let us = SAtom.fold (fun a ->
-      SAtom.add (pre_atom tau a)) unsafe SAtom.empty in
-    let us = SAtom.union tri.tr_reqs us in (* should make events of reads *)
-    let us = List.fold_left (fun us (p, v, vi, t) ->
-      evt_cnt := !evt_cnt + 1;		     
-      let e = Event.make !evt_cnt p EWrite (v, vi) in
-      new_events := e :: !new_events;
-      let t = match t with
-	| Read (p, v, vi) ->
-	   evt_cnt := !evt_cnt + 1;
-	   let e = Event.make !evt_cnt p ERead (v, vi) in
-	   new_events := e :: !new_events;
-	   EventValue e
-	| _ -> t
-      in
-      let a = Atom.Comp (EventValue e, Eq, t) in
-      SAtom.add a us) us tri.tr_writes
-    in us
+      SAtom.add (pre_atom tau a)) unsafe SAtom.empty in 
+    let us = List.fold_left (fun us write ->
+      SAtom.add (events_of_write write) us) us tri.tr_writes in
+    (*let us = SAtom.union tri.tr_reqs us in *)
+    let us = SAtom.fold (fun a us ->
+      SAtom.add (events_of_a a) us) tri.tr_reqs us in
+    us
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
@@ -384,5 +402,3 @@ let pre_image trs s =
   in
   TimePre.pause ();
   List.rev ls, List.rev post
-
-

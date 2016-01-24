@@ -541,65 +541,61 @@ let add_tau tr =
 
 
 
-let evt_cnt = ref 1000
-
-let event_of_term bvars t = match t, [] with
-  | Elem (v, Glob), vi | Access (v, vi), _ ->
-    if List.exists (fun bv -> v = bv) bvars then
-      let p = Hstring.make "#0" in
-      evt_cnt := !evt_cnt + 1;
-      let e = Event.make !evt_cnt p Event.EWrite (v, vi) in
-      EventValue e
-    else t
-  | _ -> t
-
-let events_of_a bvars a =
-  match a with
-  | Comp (t1, op, t2) ->
-     let t1' = event_of_term bvars t1 in
-     let t2' = event_of_term bvars t2 in
-     begin match t1', t2' with
-     | EventValue e1, EventValue e2 -> Comp (t1', op, t2'), e1 :: e2 :: []
-     | EventValue e1, _ -> Comp (t1', op, t2), e1 :: []
-     | _, EventValue e2 -> Comp (t1, op, t2'), e2 :: []
-     | _ -> a, []
-     end
-  | _ -> a, []
-    
-let events_of_dnf bvars dnf =
-  List.fold_left (fun (dnf, el) sa ->
-    let sa, el = SAtom.fold (fun a (sa, el) ->
-      let a, e = events_of_a bvars a in
-      SAtom.add a sa, e @ el 
-    ) sa (SAtom.empty, el) in
-    sa :: dnf, el
-  ) ([],[]) dnf
-
 open Event
 
-let event_of_term t c =
-  match t with
+let evt_cnt = ref 1000
+
+let event_of_term bvars c t = match t, [] with
+  | Elem (v, Glob), vi | Access (v, vi), _ ->
+     if List.exists (fun bv -> v = bv) bvars then
+       let e = Event.make c (Hstring.make "#0") Event.EWrite (v, vi) in
+       c + 1, EventValue e
+     else c, t
+  | _ -> c, t
+
+let events_of_a bvars c = function
+  | (Comp (t1, op, t2)) as a ->
+     let c, t1' = event_of_term bvars c t1 in
+     let c, t2' = event_of_term bvars c t2 in
+     begin match t1', t2' with
+     | EventValue e1, EventValue e2 -> c, Comp (t1', op, t2'), e1 :: e2 :: []
+     | EventValue e1, _ -> c, Comp (t1', op, t2), e1 :: []
+     | _, EventValue e2 -> c, Comp (t1, op, t2'), e2 :: []
+     | _ -> c, a, []
+     end
+  | a -> c, a, []
+    
+let events_of_dnf bvars dnf =
+  let dnf, el, _ = List.fold_left (fun (dnf, el, c) sa ->
+    let sa, el, c = SAtom.fold (fun a (sa, el, c) ->
+      let c, a, e = events_of_a bvars c a in
+      SAtom.add a sa, e @ el, c 
+    ) sa (SAtom.empty, el, c) in
+    sa :: dnf, el, c
+  ) ([], [], 1001) dnf in
+  dnf, el
+
+let event_of_term c = function
   | Read (p, v, vi) ->
      let e = Event.make c p Event.ERead (v, vi) in
-     EventValue e, c + 1
-  | _ -> t, c
+     c + 1, EventValue e
+  | t -> c, t
 
-let events_of_a a c =
-  match a with
-  | Comp (t1, op, t2) ->
-     let t1', c = event_of_term t1 c in
-     let t2', c = event_of_term t2 c in
+let events_of_a c = function
+  | (Comp (t1, op, t2)) as a ->
+     let c, t1' = event_of_term c t1 in
+     let c, t2' = event_of_term c t2 in
      begin match t1', t2' with
-     | EventValue e1, EventValue e2 -> Comp (t1', op, t2'), e1 :: e2 :: [], c
-     | EventValue e1, _ -> Comp (t1', op, t2), e1 :: [], c
-     | _, EventValue e2 -> Comp (t1, op, t2'), e2 :: [], c
-     | _ -> a, [], c
+     | EventValue e1, EventValue e2 -> c, Comp (t1', op, t2'), e1 :: e2 :: []
+     | EventValue e1, _ -> c, Comp (t1', op, t2), e1 :: []
+     | _, EventValue e2 -> c, Comp (t1, op, t2'), e2 :: []
+     | _ -> c, a, []
      end
-  | _ -> a, [], c
+  | a -> c, a, []
 
 let events_of_satom sa =
-  let sa, es, c = SAtom.fold (fun a (sa, es, c) ->
-    let a, el, c = events_of_a a c in
+  let sa, es, _ = SAtom.fold (fun a (sa, es, c) ->
+    let c, a, el = events_of_a c a in
     let es = List.fold_left (fun es e ->
       let tid = Event.int_of_tid e in
       let tpo_f = try IntMap.find tid es.po_f with Not_found -> [] in

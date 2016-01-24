@@ -40,7 +40,7 @@ let rec add cube v trie = match trie with
   | Full vl -> if List.exists (fun w -> v = w) vl then trie
 	       else Full (v :: vl)
   | Node l -> match cube with
-      | [] -> Full [v]
+      | [] -> Full [v] (* might loose cubes in TSO *)
       | atom::cube -> Node (add_to_list atom cube v l)
 and add_to_list atom cube v l = match l with
   | [] -> [atom, add cube v Empty]
@@ -54,9 +54,10 @@ and add_to_list atom cube v l = match l with
 let rec add_force cube v trie = match trie with
   | Empty -> List.fold_right (fun a t -> Node [a,t]) cube (Full [v])
   (* | Full _ -> trie *)
-  | Full vl -> Full (v :: vl)
+  | Full vl -> if List.exists (fun w -> v = w) vl then trie
+	       else Full (v :: vl)
   | Node l -> match cube with
-      | [] -> Full [v]
+      | [] -> Full [v] (* might loose cubes in TSO *)
       | atom::cube -> Node (add_force_to_list atom cube v l)
 and add_force_to_list atom cube v l = match l with
   | [] -> [atom, add_force cube v Empty]

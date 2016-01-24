@@ -26,6 +26,8 @@ val print : Format.formatter -> t -> unit
 val print_rd : Format.formatter ->
 	       (Hstring.t * Hstring.t * Variable.t list) -> unit
 
+val es_apply_subst : (int * int) list -> structure -> structure
+
 val print_decls : Format.formatter -> bool ->
 		  ('a * 'b * 'c) Hstring.H.t -> structure list -> unit
 

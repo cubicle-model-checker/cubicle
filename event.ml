@@ -39,7 +39,21 @@ let print fmt { uid; tid; dir; var } =
 let print_rd fmt (p, v, vi) =
   fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
 
+let es_permutations s_es d_es =
+  ()
 
+let es_apply_subst s es =
+  let events = IntMap.fold (fun uid e events ->
+    let uid = try List.assoc uid s with Not_found -> uid in
+    IntMap.add uid { e with uid } events			    
+  ) es.events IntMap.empty in
+  let po_f = IntMap.fold (fun tid tpof pof ->
+    let tpof = List.map (fun uid ->
+      try List.assoc uid s with Not_found -> uid
+    ) tpof in
+    IntMap.add tid tpof pof		  
+  ) es.po_f IntMap.empty in
+  { events; po_f }
 
 let axiom_base = "
 type direction = _R | _W
