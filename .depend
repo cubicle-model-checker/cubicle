@@ -177,11 +177,11 @@ event.cmx : variable.cmx common/hstring.cmx event.cmi
 fake_functory.cmo : fake_functory.cmi
 fake_functory.cmx : fake_functory.cmi
 fixpoint.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi prover.cmi \
-    options.cmi node.cmi instantiation.cmi cubetrie.cmi cube.cmi ast.cmi \
-    fixpoint.cmi
+    options.cmi node.cmi instantiation.cmi event.cmi cubetrie.cmi cube.cmi \
+    ast.cmi fixpoint.cmi
 fixpoint.cmx : variable.cmx util.cmx types.cmx smt/smt.cmx prover.cmx \
-    options.cmx node.cmx instantiation.cmx cubetrie.cmx cube.cmx ast.cmi \
-    fixpoint.cmi
+    options.cmx node.cmx instantiation.cmx event.cmx cubetrie.cmx cube.cmx \
+    ast.cmi fixpoint.cmi
 forward.cmo : variable.cmi types.cmi smt/term.cmi smt/smt.cmi prover.cmi \
     options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi forward.cmi
 forward.cmx : variable.cmx types.cmx smt/term.cmx smt/smt.cmx prover.cmx \

@@ -39,9 +39,53 @@ let print fmt { uid; tid; dir; var } =
 let print_rd fmt (p, v, vi) =
   fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
 
-let es_permutations s_es d_es =
-  ()
+let rec perm_all sevents devents spof dpof cnt perms cp =
+  if IntMap.is_empty spof then cp :: perms else begin
+    let tid, stpof = IntMap.choose spof in
+    let dtpof = try IntMap.find tid dpof with Not_found -> [] in
+    let spof = IntMap.remove tid spof in
+    let dpof = IntMap.remove tid dpof in
+    perm_thread sevents devents spof dpof stpof dtpof cnt perms cp
+  end  
 
+and perm_thread sevents devents spof dpof stpof dtpof cnt perms cp =
+  match stpof, dtpof with
+  | 0 :: stpof, dtpof ->
+     perm_thread sevents devents spof dpof stpof dtpof cnt perms cp
+  | seid :: stpof, dtpof ->
+     let se = IntMap.find seid sevents in
+     let perms = perm_list sevents devents spof dpof stpof dtpof
+			   seid se cnt perms cp in
+     perms
+     (* Allow extra event ids *)
+     (*perm_thread sevents devents spof dpof stpof []
+		 (cnt+1) perms ((seid, cnt) :: cp)*)
+  | [], ((_ :: _) as dtpof) ->
+     if List.exists (fun deid -> deid <> 0) dtpof then [] else perms
+  | [], [] ->
+     perm_all sevents devents spof dpof cnt perms cp
+
+and perm_list sevents devents spof dpof stpof dtpof seid se cnt perms cp =
+  match dtpof with
+  | [] -> perms
+  | deid :: dtpof ->
+     let perms =
+       if deid = 0 then perms else
+       let de = IntMap.find deid devents in
+       if se.dir = de.dir && se.var = de.var then
+         perm_thread sevents devents spof dpof stpof dtpof
+        	     cnt perms ((seid, deid) :: cp)
+       else perms in
+     perm_list sevents devents spof dpof stpof dtpof seid se cnt perms cp
+
+                                 (* source will be subst *)
+let es_permutations s_es d_es = (* source = visited, dest = current node *)
+  let sc = IntMap.cardinal s_es.events in
+  let dc = IntMap.cardinal d_es.events in
+  if sc < dc then [] else begin
+    perm_all s_es.events d_es.events s_es.po_f d_es.po_f (dc+1) [] []
+  end
+    
 let es_apply_subst s es =
   let events = IntMap.fold (fun uid e events ->
     let uid = try List.assoc uid s with Not_found -> uid in

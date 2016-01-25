@@ -26,6 +26,8 @@ val print : Format.formatter -> t -> unit
 val print_rd : Format.formatter ->
 	       (Hstring.t * Hstring.t * Variable.t list) -> unit
 
+val es_permutations : structure -> structure -> (int * int) list list
+
 val es_apply_subst : (int * int) list -> structure -> structure
 
 val es_add_events : structure -> t list -> structure

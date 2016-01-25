@@ -226,14 +226,11 @@ let event_formula fp es =
 
 let unsafe_conj { tag = id; cube = cube; es } nb_procs invs (init, iel) =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
-(**)if debug_smt then eprintf "[smt] distinct: %a@." F.print (distinct_vars nb_procs);
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
-
   let es = Event.es_add_events es iel in
   let ef = event_formula false es in
-
   let f = make_formula_set cube.Cube.litterals ef in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
