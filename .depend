@@ -229,9 +229,9 @@ pre.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
 pretty.cmo : util.cmi types.cmi options.cmi ast.cmi pretty.cmi
 pretty.cmx : util.cmx types.cmx options.cmx ast.cmi pretty.cmi
 prover.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi options.cmi \
-    node.cmi event.cmi cube.cmi ast.cmi prover.cmi
+    node.cmi common/hstring.cmi event.cmi cube.cmi ast.cmi prover.cmi
 prover.cmx : variable.cmx util.cmx types.cmx smt/smt.cmx options.cmx \
-    node.cmx event.cmx cube.cmx ast.cmi prover.cmi
+    node.cmx common/hstring.cmx event.cmx cube.cmx ast.cmi prover.cmi
 ptree.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi ast.cmi ptree.cmi
 ptree.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \

@@ -541,72 +541,31 @@ let add_tau tr =
 
 
 
-open Event
-
-let evt_cnt = ref 1000
-
-let event_of_term bvars c t = match t, [] with
-  | Elem (v, Glob), vi | Access (v, vi), _ ->
-     if List.exists (fun bv -> v = bv) bvars then
-       let e = Event.make c (Hstring.make "#0") Event.EWrite (v, vi) in
-       c + 1, EventValue e
-     else c, t
-  | _ -> c, t
-
-let events_of_a bvars c = function
-  | (Comp (t1, op, t2)) as a ->
-     let c, t1' = event_of_term bvars c t1 in
-     let c, t2' = event_of_term bvars c t2 in
-     begin match t1', t2' with
-     | EventValue e1, EventValue e2 -> c, Comp (t1', op, t2'), e1 :: e2 :: []
-     | EventValue e1, _ -> c, Comp (t1', op, t2), e1 :: []
-     | _, EventValue e2 -> c, Comp (t1, op, t2'), e2 :: []
-     | _ -> c, a, []
-     end
-  | a -> c, a, []
-    
-let events_of_dnf bvars dnf =
-  let dnf, el, _ = List.fold_left (fun (dnf, el, c) sa ->
-    let sa, el, c = SAtom.fold (fun a (sa, el, c) ->
-      let c, a, e = events_of_a bvars c a in
-      SAtom.add a sa, e @ el, c 
-    ) sa (SAtom.empty, el, c) in
-    sa :: dnf, el, c
-  ) ([], [], 1001) dnf in
-  dnf, el
-
-let event_of_term c = function
+let event_of_term c el = function
   | Read (p, v, vi) ->
      let e = Event.make c p Event.ERead (v, vi) in
-     c + 1, EventValue e
-  | t -> c, t
+     c + 1, e :: el, EventValue e
+  | t -> c, el, t
 
-let events_of_a c = function
+let events_of_a c el = function
   | (Comp (t1, op, t2)) as a ->
-     let c, t1' = event_of_term c t1 in
-     let c, t2' = event_of_term c t2 in
+     let c, el, t1' = event_of_term c el t1 in
+     let c, el, t2' = event_of_term c el t2 in
      begin match t1', t2' with
-     | EventValue e1, EventValue e2 -> c, Comp (t1', op, t2'), e1 :: e2 :: []
-     | EventValue e1, _ -> c, Comp (t1', op, t2), e1 :: []
-     | _, EventValue e2 -> c, Comp (t1, op, t2'), e2 :: []
-     | _ -> c, a, []
+     | EventValue e1, EventValue e2 -> c, el, Comp (t1', op, t2')
+     | EventValue e1, _ -> c, el, Comp (t1', op, t2)
+     | _, EventValue e2 -> c, el, Comp (t1, op, t2')
+     | _ -> c, el, a
      end
-  | a -> c, a, []
+  | a -> c, el, a
 
 let events_of_satom sa =
-  let sa, es, _ = SAtom.fold (fun a (sa, es, c) ->
-    let c, a, el = events_of_a c a in
-    let es = List.fold_left (fun es e ->
-      let tid = Event.int_of_tid e in
-      let tpo_f = try IntMap.find tid es.po_f with Not_found -> [] in
-      let po_f = IntMap.add tid (e.uid :: tpo_f) es.po_f in
-      let events = IntMap.add e.uid e es.events in
-      { events; po_f }
-    ) es el in
-    SAtom.add a sa, es, c
-  ) sa (SAtom.empty, Event.empty_struct, 1) in
+  let _, es, sa = SAtom.fold (fun a (c, es, sa) ->
+    let c, el, a = events_of_a c [] a in
+    let es = Event.es_add_events es el in
+    c, es, SAtom.add a sa
+  ) sa (1, Event.empty_struct, SAtom.empty) in
   sa, es
-
 
 
 let system s =
@@ -618,19 +577,15 @@ let system s =
   if Options.(subtyping && not murphi) then begin
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
-  end;
-  let init_woloc, ievents =
-    let _,v,i = s.init in
-    let dnf,evts = events_of_dnf bvars i in
-    (v,dnf),evts
-  in
+    end;
+  let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) ->
-      let sa, events = events_of_satom u in
+      let sa, es = events_of_satom u in
       let n = create_node_rename Orig v sa in
-      { n with events }
+      { n with es }
     ) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
@@ -640,7 +595,6 @@ let system s =
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_,_) -> a) s.arrays;
     t_bvars = bvars;
-    t_ievents = ievents;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

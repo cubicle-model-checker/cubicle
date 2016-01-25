@@ -18,7 +18,12 @@ open Format
 open Ast
 open Util
 open Types
+
 open Event
+
+let evt_cnt = ref 0
+let new_events = ref []
+let event_struct = ref Event.empty_struct
 
 module H = Hstring
 
@@ -55,10 +60,6 @@ module Debug = struct
 
 end
 
-
-let evt_cnt = ref 0
-let new_events = ref []
-let event_struct = ref Event.empty_struct
 
 (***********************************************************************)
 (* Pre-image of an atom w.r.t a transition, simply represented here by *)
@@ -171,8 +172,8 @@ let rec find_assign tr a =
   in
   match aux a with
   | Single Read (p, v, vi) ->
-     evt_cnt := !evt_cnt + 1;
      let e = Event.make !evt_cnt p ERead (v, vi) in
+     evt_cnt := !evt_cnt + 1;
      new_events := e :: !new_events;
      Single (EventValue e)
   | _ as a -> a
@@ -271,7 +272,7 @@ let make_cubes (ls, post) rargs s tr cnp =
 	    else
               let new_cube = Cube.create nargs np in
               let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
-	      let new_s = { new_s with events = !event_struct } in
+	      let new_s = { new_s with es = !event_struct } in
 	      match post_strategy with
 	      | 0 -> add_list new_s ls, post
 	      | 1 -> 
@@ -309,19 +310,18 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 
 
 
-
-let event_of_term = function
+let event_of_term c el = function
   | Read (p, v, vi) ->
-     evt_cnt := !evt_cnt + 1;
-     let e = Event.make !evt_cnt p Event.ERead (v, vi) in
-     new_events := e :: !new_events;
-     EventValue e
-  | t -> t
+     let e = Event.make c p Event.ERead (v, vi) in
+     c + 1, e :: el, EventValue e
+  | t -> c, el, t
 
 let events_of_a = function
   | (Atom.Comp (t1, op, t2)) as a ->
-     let t1' = event_of_term t1 in
-     let t2' = event_of_term t2 in
+     let c, el = !evt_cnt, !new_events in
+     let c, el, t1' = event_of_term c el t1 in
+     let c, el, t2' = event_of_term c el t2 in
+     evt_cnt := c; new_events := el;
      begin match t1', t2' with
      | EventValue e1, EventValue e2 -> Atom.Comp (t1', op, t2')
      | EventValue e1, _ -> Atom.Comp (t1', op, t2)
@@ -331,10 +331,11 @@ let events_of_a = function
   | a -> a
 
 let events_of_write (p, v, vi, t) =
-  evt_cnt := !evt_cnt + 1;		     
   let e = Event.make !evt_cnt p EWrite (v, vi) in
+  evt_cnt := !evt_cnt + 1;		     
   new_events := e :: !new_events;
-  let t' = event_of_term t in
+  let _, el, t' = event_of_term !evt_cnt !new_events t in
+  new_events := el;
   Atom.Comp (EventValue e, Eq, t')
 
 (*****************************************************)
@@ -350,7 +351,6 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
       SAtom.add (pre_atom tau a)) unsafe SAtom.empty in 
     let us = List.fold_left (fun us write ->
       SAtom.add (events_of_write write) us) us tri.tr_writes in
-    (*let us = SAtom.union tri.tr_reqs us in *)
     let us = SAtom.fold (fun a us ->
       SAtom.add (events_of_a a) us) tri.tr_reqs us in
     us
@@ -371,7 +371,6 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
 (* systems							     *)
 (*********************************************************************)
 
-
 let pre_image trs s =
   TimePre.start (); 
   Debug.unsafe s;
@@ -379,22 +378,11 @@ let pre_image trs s =
   let ls, post = 
     List.fold_left
     (fun acc tr ->
-       evt_cnt := IntMap.cardinal s.events.events;
+       evt_cnt := (IntMap.cardinal s.es.events) + 1;
        new_events := [];
        let trinfo, pre_u, info_args = pre tr u in
-       event_struct := List.fold_left (fun { events; po_f } e ->
-	 let tid = Event.int_of_tid e in
-	 let tpof = try IntMap.find tid po_f with Not_found -> [] in
-	 { events = IntMap.add e.uid e events;
-	   po_f = IntMap.add tid (e.uid :: tpof) po_f }
-       ) s.events !new_events;
-       event_struct := List.fold_left (fun { events; po_f } tid ->
-         let tid = Hstring.view tid in
-	 let tid = String.sub tid 1 ((String.length tid)-1) in
-	 let tid = int_of_string tid in
-	 let tpof = try IntMap.find tid po_f with Not_found -> [] in
-	 { events; po_f = IntMap.add tid (0 :: tpof) po_f }
-       ) !event_struct trinfo.tr_fences;
+       event_struct := es_add_events_full s.es !new_events;
+       event_struct := es_add_fences !event_struct trinfo.tr_fences;
        make_cubes acc info_args s trinfo pre_u
     )
     ([], []) 

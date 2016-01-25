@@ -20,6 +20,7 @@ open Util
 open Ast
 open Types
 
+open Event
 
 module T = Smt.Term
 module F = Smt.Formula
@@ -166,16 +167,54 @@ let make_conjuct atoms1 atoms2 =
   F.make F.And l
 
 
-let make_init_dnfs s nb_procs =
+
+let event_of_term bvars c el t = match t, [] with
+  | Elem (v, Glob), vi | Access (v, vi), _ ->
+     if List.exists (fun bv -> v = bv) bvars then
+       let e = Event.make c (Hstring.make "#0") EWrite (v, vi) in
+       c + 1, e :: el, EventValue e
+     else c, el, t
+  | _ -> c, el, t
+
+let events_of_a bvars c el = function
+  | (Atom.Comp (t1, op, t2)) as a ->
+     let c, el, t1' = event_of_term bvars c el t1 in
+     let c, el, t2' = event_of_term bvars c el t2 in
+     begin match t1', t2' with
+     | EventValue e1, EventValue e2 -> c, el, Atom.Comp (t1', op, t2')
+     | EventValue e1, _ -> c, el, Atom.Comp (t1', op, t2)
+     | _, EventValue e2 -> c, el, Atom.Comp (t1, op, t2')
+     | _ -> c, el, a
+     end
+  | a -> c, el, a
+
+let events_of_dnf bvars c dnf =
+  List.fold_left (fun dnf_el sa ->
+    let _, el, sa = SAtom.fold (fun a (c, el, sa) ->
+      let c, el, a = events_of_a bvars c el a in
+      c, el, SAtom.add a sa
+    ) sa (c, [], SAtom.empty) in
+    (sa, el) :: dnf_el
+  ) [] dnf
+
+let make_init_dnfs s n nb_procs =
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (List.rev_map (fun a -> make_formula_set a [])) init_cdnf
+  let base_id = (IntMap.cardinal n.es.events) + 1 in
+  List.rev_map (fun dnf ->
+    let dnf = events_of_dnf s.t_bvars base_id dnf in
+    List.rev_map (fun (sa, el) -> make_formula_set sa [], el) dnf
+  ) init_cdnf
+
+(*let make_init_dnfs s nb_procs =
+  let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
+  List.rev_map (List.rev_map (fun a -> make_formula_set a [])) init_cdnf*)
 
 let get_user_invs s nb_procs =
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (fun a -> F.make F.Not [make_formula a []]) init_invs
 
 let event_formula fp es =
-  let el = Event.IntMap.fold (fun _ e el -> e :: el) es.Event.events [] in
+  let el = IntMap.fold (fun _ e el -> e :: el) es.events [] in
   let f = List.fold_left (fun f e -> (F.make_event_desc e) @ f) [] el in
   let f = (F.make_rel "po" (Event.gen_po es)) @ f in
   let f = (F.make_rel "fence" (Event.gen_fence es)) @ f in
@@ -185,17 +224,14 @@ let event_formula fp es =
   if fp then f else
   List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) f el
 
-let unsafe_conj { tag = id; cube = cube; events = es; } nb_procs invs iel init =
+let unsafe_conj { tag = id; cube = cube; es } nb_procs invs (init, iel) =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
 (**)if debug_smt then eprintf "[smt] distinct: %a@." F.print (distinct_vars nb_procs);
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
 
-  let events = List.fold_left (fun events e ->
-    Event.IntMap.add e.Event.uid e events
-  ) es.Event.events iel in
-  let es = { es with Event.events = events } in
+  let es = Event.es_add_events es iel in
   let ef = event_formula false es in
 
   let f = make_formula_set cube.Cube.litterals ef in
@@ -204,12 +240,12 @@ let unsafe_conj { tag = id; cube = cube; events = es; } nb_procs invs iel init =
   SMT.assume ~events:es ~id f;
   SMT.check ()
 
-let unsafe_dnf node nb_procs invs iel dnf =
+let unsafe_dnf node nb_procs invs dnf =
   try
     let uc =
       List.fold_left (fun accuc init ->
         try 
-          unsafe_conj node nb_procs invs iel init;
+          unsafe_conj node nb_procs invs init;
           raise Exit
         with Smt.Unsat uc -> List.rev_append uc accuc)
         [] dnf in
@@ -218,9 +254,9 @@ let unsafe_dnf node nb_procs invs iel dnf =
 
 let unsafe_cdnf s n =
   let nb_procs = List.length (Node.variables n) in
-  let cdnf_init = make_init_dnfs s nb_procs in
+  let cdnf_init = make_init_dnfs s n nb_procs in
   let invs = get_user_invs s nb_procs in
-  List.iter (unsafe_dnf n nb_procs invs s.t_ievents) cdnf_init
+  List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 
 let unsafe s n = unsafe_cdnf s n
 
@@ -233,7 +269,7 @@ let reached args s sa =
   SMT.check ()
 
 
-let assume_goal_no_check { tag = id; cube = cube; events = es } =
+let assume_goal_no_check { tag = id; cube = cube; es } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let ef = event_formula true es in
@@ -241,7 +277,7 @@ let assume_goal_no_check { tag = id; cube = cube; events = es } =
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~events:es ~id f
 
-let assume_node_no_check { tag = id; events = es } ap =
+let assume_node_no_check { tag = id; es } ap =
   let ef = event_formula true es in
   let f = F.make F.Not [make_formula ap ef] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
@@ -265,7 +301,7 @@ let check_guard args sa reqs =
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let assume_goal_nodes { tag = id; cube = cube; events = es } nodes =
+let assume_goal_nodes { tag = id; cube = cube; es } nodes =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let ef = event_formula true es in

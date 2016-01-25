@@ -22,8 +22,8 @@ let make uid tid dir var =
 
 let name e = "e" ^ (string_of_int e.uid)
 
-let int_of_tid e =
-  let tid = Hstring.view e.tid in
+let int_of_tid tid =
+  let tid = Hstring.view tid in
   let tid = String.sub tid 1 ((String.length tid)-1) in
   int_of_string tid
 
@@ -54,6 +54,30 @@ let es_apply_subst s es =
     IntMap.add tid tpof pof		  
   ) es.po_f IntMap.empty in
   { events; po_f }
+
+let es_add_events es el =
+  let events = List.fold_left (fun events e ->
+    IntMap.add e.uid e events
+  ) es.events el in
+  { es with events }
+
+let es_add_events_full es el =
+  let events, po_f = List.fold_left (fun (events, po_f) e ->
+    let tid = int_of_tid e.tid in
+    let tpo_f = try IntMap.find tid po_f with Not_found -> [] in
+    let po_f = IntMap.add tid (e.uid :: tpo_f) po_f in
+    let events = IntMap.add e.uid e events in
+    (events, po_f)
+  ) (es.events, es.po_f) el in
+  { events; po_f }
+
+let es_add_fences es tidl =
+  let po_f = List.fold_left (fun po_f tid ->
+    let tid = int_of_tid tid in
+    let tpo_f = try IntMap.find tid po_f with Not_found -> [] in
+    IntMap.add tid (0 :: tpo_f) po_f
+  ) es.po_f tidl in
+  { es with po_f }
 
 let axiom_base = "
 type direction = _R | _W

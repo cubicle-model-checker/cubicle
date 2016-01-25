@@ -96,7 +96,7 @@ let create ?(kind=Node) ?(from=None) cube =
     depth = List.length hist;
     deleted = false;
     from = hist;
-    events = Event.empty_struct
+    es = Event.empty_struct
   }
 
 let has_deleted_ancestor n =
