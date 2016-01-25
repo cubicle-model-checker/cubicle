@@ -32,6 +32,16 @@ val far_verb : bool
 val save_frg : bool
 val frg_file : string
 
+val clusterize : bool
+val int_seed : bool
+val seed : int
+
+val nb_clusters : int
+
+val deterministic : bool
+val md : int
+
+
 val add_cluster : bool
 val clu_file : string
 

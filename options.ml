@@ -24,6 +24,8 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
+(* FAR *)
+
 let far = ref false
 let far_extra = ref "no"
 let far_priority = ref "bfs"
@@ -32,6 +34,20 @@ let far_dbg = ref false
 let far_verb = ref false
 let save_frg = ref false
 let frg_file = ref ""
+
+(* CLUSTERING *)
+
+let clusterize = ref false
+
+let nb_clusters = ref 4
+
+let deterministic = ref false
+let md = ref 0
+
+let int_seed = ref false
+let seed = ref 0
+
+(* BWD *)
 
 let bwd_fwd = ref (-1)
 
@@ -124,6 +140,15 @@ let set_far n =
     | "fwd-brab" -> far_extra := n; far_brab := true
     | _ -> raise (Arg.Bad ("extrapolation strategy "^n^" not supported"))
 
+let set_seed n =
+  int_seed := true;
+  seed := n
+
+let set_deterministic n =
+  deterministic := true;
+  md := n
+
+
 let add_cluster = ref false
 let clu_file = ref ""
 
@@ -178,8 +203,11 @@ let specs =
     "-of", Arg.Set only_forward, " only do one forward search";
     "-p-all", Arg.Set print_forward_all, " print forwarded states";
     "-p-frg", Arg.Set print_forward_frg, " print forwarded states";
-    "-s-frg", Arg.Set save_frg, " save the frange in a *.frg file";
-    "-r-clu", Arg.String set_clufile, " read the clusters in a *.clu file";
+    "-cluster", Arg.Set clusterize, " clusterize the last visited nodes";
+    "-seed", Arg.Int set_seed , "<n> seed for rng";
+    "-k", Arg.Set_int nb_clusters, "<n> number of clusters (if random initialization)";
+    "-det", Arg.Int set_deterministic, 
+    "<n> deterministic method to find k with a <n> being the max distance";
     "-bwd", Arg.Set_int bwd_fwd, 
     "<n> do a non approximate backward to prof <n> to help the oracle";
     "-geninv", Arg.Set gen_inv, " invariant generation";
@@ -277,6 +305,16 @@ let far_brab = !far_brab
 let far_dbg = !far_dbg
 let far_verb = !far_verb
 let save_frg = !save_frg
+
+let clusterize = !clusterize
+
+let int_seed = !int_seed
+let seed = !seed
+
+let nb_clusters = !nb_clusters
+
+let deterministic = !deterministic
+let md = !md
 
 let add_cluster = !add_cluster
 let clu_file = !clu_file
