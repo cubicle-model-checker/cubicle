@@ -333,12 +333,14 @@ let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
 
+
 let () =
   if save_frg then
     let s = Filename.chop_suffix (Filename.basename file) ".cub" in
     frg_file := Printf.sprintf "franges/%s-%d.frg" s forward_depth
-
+      
 let frg_file = !frg_file
+
 
 let cores = !cores
 

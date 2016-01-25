@@ -24,6 +24,8 @@ let frg_file = ref ""
 let save_cluster = ref false
 let clu_file = ref ""
 
+let verbose = ref false
+
 let set_frgfile s =
   provided := true;
   if Filename.check_suffix s ".frg" then frg_file := s
@@ -43,6 +45,7 @@ let specs =
     "-det", Arg.Int set_deterministic, "<n> deterministic method to find k with a max distance";
     "-file", Arg.String set_frgfile, " provides an array of states";
     "-save", Arg.Set save_cluster, " save the clusters in a *.clu file";
+    "-v", Arg.Set verbose, " display informations";
   ]
 
 let alspecs = Arg.align specs
@@ -66,6 +69,8 @@ let md = float !md
 let provided = !provided
 let frg_file = !frg_file
 
+let verbose = !verbose
+
 let save_cluster = !save_cluster
 
 let () =
@@ -79,7 +84,7 @@ let () =
     then let s = Filename.chop_suffix frg_file ".frg" in
          clu_file := Printf.sprintf "%s-%s.clu" s 
            (if deterministic then Printf.sprintf "det_%.0f" md 
-            else Printf.sprintf "rand_%d" (Random.int 1000))
+            else Printf.sprintf "rand_%d" (if int_seed then seed else Random.int 1000))
     else raise (Arg.Bad "no .clu extension")
 
 let clu_file = !clu_file
@@ -101,6 +106,8 @@ module type FA = sig
     
   val distance : t -> t -> float
 
+  val count_mones : t -> int
+  
   val add_arrays : t -> t -> t
 
   val normalize : t -> t
@@ -161,6 +168,9 @@ module FloatArray : FA = struct
       | "h" -> hamming_distance
       | "e" -> euclid_distance
       | _ -> raise (Arg.Bad "no distance with this name")
+
+  let count_mones t =
+    Array.fold_left (fun c (e, _) -> if e = -1. then c+1 else c) 0 t
 
   let add_arrays_euclid t1 t2 = 
     Array.mapi (
@@ -301,10 +311,10 @@ let adjust_means c =
           if not (FloatArray.equal k m) then
             change := true;
           let l' = 
-            try AMap.find m acc
-            with Not_found -> [] 
-          in
-          m, l'
+            try
+              AMap.find m acc
+           with Not_found -> []
+          in m, l'
     in
     AMap.add m (List.rev_append l' l) acc
   ) c AMap.empty in
@@ -356,16 +366,36 @@ let parse_file () =
   with End_of_file -> ());
   !set
 
+let filter_clusters c =
+  AMap.fold (fun r l acc ->
+    match l with 
+      | [] | [_] -> acc
+      | _ -> AMap.add r l acc
+  ) c AMap.empty
+  
 let save_clu c =
   let oc = open_out clu_file in
   AMap.iter (fun r l ->
     match l with 
-      | [] | [_] -> ()
+      | [] | [_] -> assert false
       | _ ->
         Printf.fprintf oc "%a" FloatArray.print_fmt r;
         Printf.fprintf oc "\n"
   ) c;
   close_out oc
+
+let print_infos c =
+  let min_dist, max_dist = 
+    AMap.fold (fun k _ (mi, ma) ->
+      let d = FloatArray.count_mones k in
+      let mi = if d < mi then d else mi in
+      let ma = if d > ma then d else ma in
+      (mi, ma)
+    ) c (max_int, 0) in
+  Printf.printf "Number of clusters : %d\n" (AMap.cardinal c);
+  Printf.printf "Minimum distance   : %d\n" min_dist;
+  Printf.printf "Maximum distance   : %d\n" max_dist
+
 
 let () = 
   (* let a1 = [|2.; 2.; 2.|] in *)
@@ -378,8 +408,12 @@ let () =
   (* let l = List.map (FloatArray.array_to_fa) [a1; a2; a3; a4; a5; a6; a7] in *)
   let l = if provided then parse_file () else init_arrays () in
   let c = clusterize l in
-  Printf.printf "Résultat \n";
-  print_cluster c;
+  let c = filter_clusters c in
+  if verbose then (
+    Printf.printf "Résultat \n";
+    print_cluster c
+  );
+  print_infos c;
   if save_cluster then save_clu c
   (* List.iter (FloatArray.print "") l' *)
     
