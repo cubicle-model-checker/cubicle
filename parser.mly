@@ -87,7 +87,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE PREDICATE WRITE READ FENCES VARB ARRAYB
+%token REQUIRE UNSAFE PREDICATE WRITE READ FENCES WEAK
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -149,10 +149,6 @@ symbold_decls :
       { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
   | array_decl symbold_decls
       { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
-  | varb_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
-  | arrayb_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
 ;
 
 function_decl :
@@ -161,18 +157,15 @@ function_decl :
   }
 ;
 
+weak_opt:
+  | /*epsilon*/ { false }
+  | WEAK { true }
+  
 var_decl:
-  | VAR mident COLON lident { 
-    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Globals.add $2; 
-    loc (), $2, $4, false }
-;
-
-varb_decl:
-  | VARB mident COLON lident { 
-    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Globals.add $2; 
-    loc (), $2, $4, true }
+  | weak_opt VAR mident COLON lident { 
+    if Hstring.equal $5 hint || Hstring.equal $5 hreal then Smt.set_arith true;
+    Globals.add $3; 
+    loc (), $3, $5, $1 }
 ;
 
 const_decl:
@@ -183,21 +176,12 @@ const_decl:
 ;
 
 array_decl:
-  | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
-        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
-          raise Parsing.Parse_error;
-        if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
-	Arrays.add $2;
-	loc (), $2, ($4, $7), false }
-;
-
-arrayb_decl:
-  | ARRAYB mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
-        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
-          raise Parsing.Parse_error;
-        if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
-	Arrays.add $2;
-	loc (), $2, ($4, $7), true }
+  | weak_opt ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+    if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
+      raise Parsing.Parse_error;
+    if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
+    Arrays.add $3;
+    loc (), $3, ($5, $8), $1 }
 ;
 
 type_defs:

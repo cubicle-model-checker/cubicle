@@ -323,7 +323,7 @@ let declare_symbol ?(tso=false) loc n args ret =
 let init_global_env s = 
   List.iter declare_type s.type_defs;
   let l = ref [] in
-  let bvars = ref [] in
+  let weak = ref [] in
   List.iter 
     (fun (loc, n, t) -> 
        declare_symbol loc n [] t;
@@ -331,14 +331,14 @@ let init_global_env s =
   List.iter 
     (fun (loc, n, t, tso) -> 
        declare_symbol ~tso loc n [] t;
-       if tso then bvars := n :: !bvars;
+       if tso then weak := n :: !weak;
        l := (n, t)::!l) s.globals;
   List.iter 
     (fun (loc, n, (args, ret), tso) -> 
        declare_symbol ~tso loc n args ret;
-       if tso then bvars := n :: !bvars;
+       if tso then weak := n :: !weak;
        l := (n, ret)::!l) s.arrays;
-  !l, !bvars
+  !l, !weak
 
 
 let init_proc () = 
@@ -569,7 +569,7 @@ let events_of_satom sa =
 
 
 let system s =
-  let l, bvars = init_global_env s in
+  let l, weak = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
@@ -594,7 +594,7 @@ let system s =
     t_globals = List.map (fun (_,g,_,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_,_) -> a) s.arrays;
-    t_bvars = bvars;
+    t_weak = weak;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

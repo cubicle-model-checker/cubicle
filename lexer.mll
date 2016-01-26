@@ -45,8 +45,7 @@
 	"write", WRITE;
 	"read", READ;
 	"fences", FENCES;
-	"varb", VARB;
-	"arrayb", ARRAYB;
+	"weak", WEAK;
 	"number_procs", SIZEPROC;
       ]
 	       

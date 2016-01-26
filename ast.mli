@@ -129,7 +129,7 @@ type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
   t_consts : Hstring.t list; (** Existential constants *)
   t_arrays : Hstring.t list; (** Array names *)
-  t_bvars : Hstring.t list;
+  t_weak : Hstring.t list;
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)

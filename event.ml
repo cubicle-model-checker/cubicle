@@ -168,14 +168,14 @@ axiom propg_tso :
   <-> propg(e1, e2)
 logic po_loc_U_com : int, int -> prop
 axiom po_loc_U_com :
-  forall e1, e2 : int [po_loc(e1,e2)|com(e1,e2)|po_loc_U_com(e1,e2)].
+  forall e1, e2 : int [(*po_loc(e1,e2)|com(e1,e2)|*)po_loc_U_com(e1,e2)].
   po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)
 axiom po_loc_U_com_t :
   forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
   po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
 logic co_U_prop : int, int -> prop
 axiom co_U_prop :
-  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)|co_U_prop(e1,e2)].
+  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)(*|co_U_prop(e1,e2)*)].
   co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)
 axiom co_U_prop_t :
   forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].

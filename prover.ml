@@ -168,18 +168,18 @@ let make_conjuct atoms1 atoms2 =
 
 
 
-let event_of_term bvars c el t = match t, [] with
+let event_of_term weak c el t = match t, [] with
   | Elem (v, Glob), vi | Access (v, vi), _ ->
-     if List.exists (fun bv -> v = bv) bvars then
+     if List.exists (fun bv -> v = bv) weak then
        let e = Event.make c (Hstring.make "#0") EWrite (v, vi) in
        c + 1, e :: el, EventValue e
      else c, el, t
   | _ -> c, el, t
 
-let events_of_a bvars c el = function
+let events_of_a weak c el = function
   | (Atom.Comp (t1, op, t2)) as a ->
-     let c, el, t1' = event_of_term bvars c el t1 in
-     let c, el, t2' = event_of_term bvars c el t2 in
+     let c, el, t1' = event_of_term weak c el t1 in
+     let c, el, t2' = event_of_term weak c el t2 in
      begin match t1', t2' with
      | EventValue e1, EventValue e2 -> c, el, Atom.Comp (t1', op, t2')
      | EventValue e1, _ -> c, el, Atom.Comp (t1', op, t2)
@@ -188,10 +188,10 @@ let events_of_a bvars c el = function
      end
   | a -> c, el, a
 
-let events_of_dnf bvars c dnf =
+let events_of_dnf weak c dnf =
   List.fold_left (fun dnf_el sa ->
     let _, el, sa = SAtom.fold (fun a (c, el, sa) ->
-      let c, el, a = events_of_a bvars c el a in
+      let c, el, a = events_of_a weak c el a in
       c, el, SAtom.add a sa
     ) sa (c, [], SAtom.empty) in
     (sa, el) :: dnf_el
@@ -201,7 +201,7 @@ let make_init_dnfs s n nb_procs =
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
   let base_id = (IntMap.cardinal n.es.events) + 1 in
   List.rev_map (fun dnf ->
-    let dnf = events_of_dnf s.t_bvars base_id dnf in
+    let dnf = events_of_dnf s.t_weak base_id dnf in
     List.rev_map (fun (sa, el) -> make_formula_set sa [], el) dnf
   ) init_cdnf
 
