@@ -32,20 +32,25 @@ let far_priority = ref "bfs"
 let far_brab = ref false
 let far_dbg = ref false
 let far_verb = ref false
-let save_frg = ref false
-let frg_file = ref ""
 
 (* CLUSTERING *)
 
 let clusterize = ref false
 
-let nb_clusters = ref 4
+let nb_clusters = ref (-1)
 
 let deterministic = ref false
 let md = ref 0
 
 let int_seed = ref false
 let seed = ref 0
+
+(* INCREMENTAL ENUMERATIVE WITH CLUSTERING *)
+
+let incremental_enum = ref false
+
+let frg = ref (-1)
+let enum_steps = ref []
 
 (* BWD *)
 
@@ -148,14 +153,11 @@ let set_deterministic n =
   deterministic := true;
   md := n
 
+let set_ienum () =
+  deterministic := true;
+  incremental_enum := true
 
-let add_cluster = ref false
-let clu_file = ref ""
-
-let set_clufile s =
-  add_cluster := true;
-  if Filename.check_suffix s ".clu" then clu_file := s
-  else raise (Arg.Bad "no .clu extension")
+let set_partial_frg k = enum_steps := (!frg, k) :: !enum_steps
   
 let smt_solver = ref AltErgo
 let set_smt_solver s =
@@ -201,13 +203,16 @@ let specs =
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-of", Arg.Set only_forward, " only do one forward search";
-    "-p-all", Arg.Set print_forward_all, " print forwarded states";
-    "-p-frg", Arg.Set print_forward_frg, " print forwarded states";
+    "-pall", Arg.Set print_forward_all, " print forwarded states";
+    "-pfrg", Arg.Set print_forward_frg, " print forwarded states";
     "-cluster", Arg.Set clusterize, " clusterize the last visited nodes";
     "-seed", Arg.Int set_seed , "<n> seed for rng";
     "-k", Arg.Set_int nb_clusters, "<n> number of clusters (if random initialization)";
     "-det", Arg.Int set_deterministic, 
     "<n> deterministic method to find k with a <n> being the max distance";
+    "-ie", Arg.Unit set_ienum, " incremental enumerative with fringes clustering";
+    "-cfd", Arg.Tuple ([Arg.Set_int frg; Arg.Int set_partial_frg]), 
+    "<n> clusterize this fringe before going on with enumerative";
     "-bwd", Arg.Set_int bwd_fwd, 
     "<n> do a non approximate backward to prof <n> to help the oracle";
     "-geninv", Arg.Set gen_inv, " invariant generation";
@@ -304,20 +309,33 @@ let far_priority = !far_priority
 let far_brab = !far_brab
 let far_dbg = !far_dbg
 let far_verb = !far_verb
-let save_frg = !save_frg
 
 let clusterize = !clusterize
+
+
+let nb_clusters = !nb_clusters
 
 let int_seed = !int_seed
 let seed = !seed
 
-let nb_clusters = !nb_clusters
-
 let deterministic = !deterministic
+
+let () =
+  if clusterize && not deterministic && nb_clusters = -1 then
+    raise (Arg.Bad "You should give a number of clusters when randomly initializing")
+
 let md = !md
 
-let add_cluster = !add_cluster
-let clu_file = !clu_file
+let enum_steps =  
+  List.sort (fun (f, _) (f', _) -> Pervasives.compare f f') !enum_steps
+    
+let incremental_enum = 
+  let ie = !incremental_enum in
+  if ie && enum_steps = [] then
+    raise (Arg.Bad "You should determine steps to clusterize when using\
+                    incremental enumerative");
+  ie
+
 
 let bwd_fwd = !bwd_fwd
 
@@ -370,14 +388,6 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
-
-
-let () =
-  if save_frg then
-    let s = Filename.chop_suffix (Filename.basename file) ".cub" in
-    frg_file := Printf.sprintf "franges/%s-%d.frg" s forward_depth
-      
-let frg_file = !frg_file
 
 
 let cores = !cores

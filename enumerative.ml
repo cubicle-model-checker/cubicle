@@ -157,7 +157,7 @@ type env = {
   table_size : int;
   mutable explicit_states : unit HST.t;
   mutable states : State.t list;
-  mutable frange : State.t list;
+  mutable fringe : State.t list;
 }
 
 let empty_env = {
@@ -187,7 +187,7 @@ let empty_env = {
   table_size = 0;
   explicit_states = HST.create 0;
   states = [];
-  frange = [];
+  fringe = [];
 }
 
 
@@ -243,8 +243,8 @@ let print_state_ia fmt st =
 let print_all env =
   List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.states
 
-let print_frange env =
-  List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.frange
+let print_fringe env frg =
+  List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) frg
 
 let swap a i j =
   if i <> j then
@@ -585,7 +585,7 @@ let init_tables ?(alloc=true) procs s =
     table_size = tsize;
     explicit_states = HST.create (if alloc then tsize else 0);
     states = [];
-    frange = [];
+    fringe = [];
   }
 
 
@@ -1022,24 +1022,7 @@ let transitions_to_func procs env =
   List.fold_left 
     (transitions_to_func_aux procs env (fun acc st_tr -> st_tr :: acc)) []
 
-
-
-
-
-let post st visited trs acc cpt_q depth =
-  if limit_forward_depth && depth >= forward_depth then acc
-  else
-    List.fold_left (fun acc st_tr ->
-      try 
-        let sts = st_tr.st_f st in
-        List.fold_left (fun acc s ->
-          if HST.mem visited s then acc else
-            (incr cpt_q; (depth + 1, s) :: acc)
-        ) acc sts
-      with Not_applicable -> acc) acc trs
-
-
-let post_bfs env st visited trs q cpt_q depth =
+let post_bfs env st visited trs q cpt_q frg fd depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try
@@ -1048,7 +1031,10 @@ let post_bfs env st visited trs q cpt_q depth =
           if forward_sym then normalize_state env s;
           if not (HST.mem visited s) then begin
             (* incr cpt_q; *)
-            HQueue.add ~cpt_q (depth + 1, s) q
+            if incremental_enum && depth = fd - 1 then
+              frg := s :: !frg
+            else
+              HQueue.add ~cpt_q (depth + 1, s) q
           end
         ) sts
       with Not_applicable -> ()) trs
@@ -1144,12 +1130,21 @@ let forward_dfs s procs env l =
       incr cpt_r;
       HST.add h_visited st ();
       env.states <- st :: env.states;
-      if limit_forward_depth && depth = forward_depth - 1 then
-        env.frange <- st :: env.frange;
+      if limit_forward_depth && depth = forward_depth then
+        env.fringe <- st :: env.fringe;
     (* add_all_syms env explicit_states st *)
     end
   done
 
+let set_fd_md fd md l =
+  match !l with
+    | [] -> 
+      fd := -1;
+      md := -1
+    | (fd', md') :: tl -> 
+      l := tl;
+      fd := fd';
+      md := md'
 
 let forward_bfs s procs env l =
   let h_visited = env.explicit_states in
@@ -1158,29 +1153,44 @@ let forward_bfs s procs env l =
   let cpt_q = ref 1 in
   let trs = env.st_trs in
   let to_do = HQueue.create env.table_size in
+  let ref_es = ref enum_steps in
+  let fd = ref (-1) in
+  let md = ref (-1) in
+  set_fd_md fd md ref_es;
+  let fringe = ref [] in
   List.iter (fun td -> HQueue.add td to_do) l;
-  while not (HQueue.is_empty to_do) &&
+  while not (HQueue.is_empty to_do && !fringe = []) &&
     (max_forward = -1 || !cpt_f < max_forward) do
-    let depth, st = HQueue.take to_do in
-    decr cpt_q;
-    if not (HST.mem h_visited st) then begin
-      (* if not (already_visited env explicit_states st) then begin *)
-      HST.add h_visited st ();
-      post_bfs env st h_visited trs to_do cpt_q depth;
-      incr cpt_f;
-      if debug && verbose > 1 then
-        eprintf "%d : %a\n@." !cpt_f
-          SAtom.print (state_to_cube env st);
-      if not quiet && !cpt_f mod 1000 = 0 then
-        eprintf "%d (%d)@." !cpt_f !cpt_q;
-      (* if !cpt_f mod 3 = 1 then *)
-      incr cpt_r;
-      (* HST.add h_visited st (); *)
-      env.states <- st :: env.states;
-      if limit_forward_depth && depth = forward_depth - 1 then
-        env.frange <- st :: env.frange;
-    (* add_all_syms env explicit_states st *)
+    if incremental_enum && HQueue.is_empty to_do then begin
+      let cf = Kmeans.kmeans ~md:(!md) !fringe in
+      eprintf "FRINGE : @.";
+      print_fringe env !fringe;
+      eprintf "CLUSTERED : @.";
+      List.iter (Format.eprintf "Cluster %a@." (print_state env)) cf;
+      ignore (read_line ());
+      let cf = List.map (fun st -> (!fd, st)) cf in
+      List.iter (fun st -> HQueue.add st to_do) cf;
+      List.iter (fun st -> env.states <- st :: env.states) !fringe;
+      fringe := [];
+      set_fd_md fd md ref_es
     end
+    else
+      let depth, st = HQueue.take to_do in
+      decr cpt_q;
+      if not (HST.mem h_visited st) then begin
+        HST.add h_visited st ();
+        post_bfs env st h_visited trs to_do cpt_q fringe !fd depth;
+        incr cpt_f;
+        if debug && verbose > 1 then
+          eprintf "%d : %a\n@." !cpt_f
+            SAtom.print (state_to_cube env st);
+        if not quiet && !cpt_f mod 1000 = 0 then
+          eprintf "%d (%d)@." !cpt_f !cpt_q;
+        incr cpt_r;
+        env.states <- st :: env.states;
+        if limit_forward_depth && depth = forward_depth then
+          env.fringe <- st :: env.fringe;
+      end
   done
 
 let forward_bfs_switches s procs env l =
@@ -1207,7 +1217,7 @@ let forward_bfs_switches s procs env l =
       HST.add explicit_states st ();
       env.states <- st :: env.states;
       if limit_forward_depth && depth = forward_depth - 1 then
-        env.frange <- st :: env.frange;
+        env.fringe <- st :: env.fringe;
     end
   done
     
@@ -1225,8 +1235,8 @@ let no_scan_states env =
      kept in memory all the time. *)
   List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states
 
-let study_frange env =
-  let f = env.frange in
+let study_fringe env =
+  let f = env.fringe in
   let f' = List.map (normalize_state2 env) f in
   (match f' with
     | [] -> eprintf "Nothing to study@."
@@ -1251,34 +1261,16 @@ let study_frange env =
       ) tl;
       eprintf "State : %a@." (print_state env) st)
 
-        
-let parse_clufile () =
-  let ci = open_in clu_file in
-  let re = Str.regexp ";" in
-  let clu = ref [] in
-  (try
-    while true do
-      let l = input_line ci in
-      let sl = Str.split re l in
-      List.iter (Printf.printf "s:%s ") sl;
-      print_newline ();
-      let fl = List.map (int_of_string) sl in
-      let fa = Array.of_list fl in
-      clu := fa :: !clu
-    done
-  with End_of_file -> ());
-  !clu
-
 
 let finalize_search env =
   let st = HST.stats env.explicit_states in
   if not quiet then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
   printf "All : %d@." (List.length env.states);
   if print_forward_all then print_all env;
-  printf "Frange : %d@." (List.length env.frange);
+  printf "Fringe : %d@." (List.length env.fringe);
   if print_forward_frg then (
-    print_frange env;
-    study_frange env
+    print_fringe env env.fringe;
+    study_fringe env
   );
   if verbose > 0 || profiling then begin
     printf "\n%a" Pretty.print_line ();
@@ -1326,7 +1318,9 @@ let search procs init =
     with Exit -> ()
   end ;
   if clusterize then (
-    let clu = Kmeans.kmeans env.frange in
+    let clu = Kmeans.kmeans ~md:md env.fringe in
+    if verbose > 0 then 
+      List.iter (Format.eprintf "Cluster %a@." (print_state env)) clu;
     env.states <- List.rev_append clu env.states
   );
   finalize_search env

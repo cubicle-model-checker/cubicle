@@ -22,6 +22,8 @@ let print_cluster =
 
 let select_kmeans_random arrays =
   let a = Array.of_list arrays in
+  let l = List.length arrays in
+  let nb_clusters = if nb_clusters > l then l else nb_clusters in
   let rec skm i max acc =
     if i < nb_clusters then
       let r = Random.int max in
@@ -35,8 +37,7 @@ let select_kmeans_random arrays =
     else acc
   in skm 0 (Array.length a) Clusters.empty
 
-
-let select_kmeans_deterministic arrays = 
+let select_kmeans_deterministic md arrays = 
   let min_distance a acc =
     Clusters.fold (fun k _ d ->
       let d' = State.distance a k in
@@ -49,8 +50,8 @@ let select_kmeans_deterministic arrays =
     else acc
   ) Clusters.empty arrays
 
-let select_kmeans = 
-  if deterministic then select_kmeans_deterministic 
+let select_kmeans ?(md=0) = 
+  if deterministic then select_kmeans_deterministic md
   else select_kmeans_random
 
 let add_to_cluster c e =
@@ -89,8 +90,8 @@ let split_map c =
     Clusters.add k [] c, List.rev_append l set
   ) c (Clusters.empty, [])
 
-let clusterize set =
-  let clusters = select_kmeans set in
+let clusterize ?(md=0) set =
+  let clusters = select_kmeans ~md:md set in
   let rec crec c set =
     let c = List.fold_left add_to_cluster c set in
     let change, c = adjust_means c in
@@ -114,10 +115,6 @@ let to_list c =
     
 
 let print_infos c =
-  if verbose > 0 then (
-    Printf.printf "Résultat \n";
-    print_cluster c
-  );
   let min_dist, max_dist = 
     Clusters.fold (fun k _ (mi, ma) ->
       let d = State.count_mones k in
@@ -125,11 +122,15 @@ let print_infos c =
       if d > ma then d else ma
     ) c (max_int, 0) in
   Printf.printf "Number of clusters : %d\n" (Clusters.cardinal c);
-  Printf.printf "Minimum distance   : %d\n" min_dist;
-  Printf.printf "Maximum distance   : %d\n" max_dist
 
-let kmeans frg =
-  let l = clusterize frg in
+  if Clusters.cardinal c > 0 then (
+    Printf.printf "Minimum distance   : %d\n" min_dist;
+    Printf.printf "Maximum distance   : %d\n" max_dist
+  )
+
+let kmeans ?(md=0) frg =
+  let l = clusterize ~md:md frg in
+  (* print_infos l; *)
   let c = filter_clusters l in
   print_infos c;
   to_list c
