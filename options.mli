@@ -45,6 +45,8 @@ val bwd_fwd : int
 val incremental_enum : bool
 
 val enum_steps : (int * int) list
+val enum_pause : bool
+val enum_verbose : bool
 
 val goods : bool
 

@@ -1163,11 +1163,16 @@ let forward_bfs s procs env l =
     (max_forward = -1 || !cpt_f < max_forward) do
     if incremental_enum && HQueue.is_empty to_do then begin
       let cf = Kmeans.kmeans ~md:(!md) !fringe in
-      eprintf "FRINGE : @.";
-      print_fringe env !fringe;
-      eprintf "CLUSTERED : @.";
-      List.iter (Format.eprintf "Cluster %a@." (print_state env)) cf;
-      ignore (read_line ());
+      if enum_verbose then begin
+        eprintf "FRINGE(depth : %d, length : %d) : @." !fd (List.length !fringe);
+        print_fringe env !fringe;
+        eprintf "CLUSTERED : @.";
+        List.iter (fun st -> 
+          let l = Array.length st in
+          let s = l - State.count_mones st in
+          Format.eprintf "Cluster(%d/%d) %a@." s l (print_state env) st) cf;
+        if enum_pause then ignore (read_line ())
+      end;
       let cf = List.map (fun st -> (!fd, st)) cf in
       List.iter (fun st -> HQueue.add st to_do) cf;
       List.iter (fun st -> env.states <- st :: env.states) !fringe;

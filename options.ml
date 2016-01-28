@@ -51,6 +51,8 @@ let incremental_enum = ref false
 
 let frg = ref (-1)
 let enum_steps = ref []
+let enum_pause = ref false
+let enum_verbose = ref false
 
 (* BWD *)
 
@@ -211,6 +213,8 @@ let specs =
     "-det", Arg.Int set_deterministic, 
     "<n> deterministic method to find k with a <n> being the max distance";
     "-ie", Arg.Unit set_ienum, " incremental enumerative with fringes clustering";
+    "-iep", Arg.Set enum_pause, " pause between clusterings (for debug, only)";
+    "-iev", Arg.Set enum_verbose, " debugging informations";
     "-cfd", Arg.Tuple ([Arg.Set_int frg; Arg.Int set_partial_frg]), 
     "<n> clusterize this fringe before going on with enumerative";
     "-bwd", Arg.Set_int bwd_fwd, 
@@ -336,6 +340,8 @@ let incremental_enum =
                     incremental enumerative");
   ie
 
+let enum_pause = !enum_pause
+let enum_verbose = !enum_verbose
 
 let bwd_fwd = !bwd_fwd
 
