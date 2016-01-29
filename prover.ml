@@ -223,7 +223,7 @@ let event_formula fp es =
   let f = (F.make_cands "co" (Event.gen_co_cands es)) @ f in
   if fp then f else
   List.fold_left (fun f e -> (F.make_acyclic_rel e) @ f) f el
-
+		 
 let unsafe_conj { tag = id; cube = cube; es } nb_procs invs (init, iel) =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();

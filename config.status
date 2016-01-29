@@ -583,7 +583,8 @@ echo 'BEGIN {' >"$ac_tmp/subs1.awk" &&
 cat >>"$ac_tmp/subs1.awk" <<\_ACAWK &&
 S["LTLIBOBJS"]=""
 S["LIBOBJS"]=""
-S["ZARITHLIB"]=""
+S["ZARITHLIB"]="-I /Users/david/.opam/4.02.1/lib/zarith"
+S["OCAMLGRAPHLIB"]="-I /Users/david/.opam/4.02.1/lib/ocamlgraph"
 S["EXE"]=""
 S["OCAMLWIN32"]="no"
 S["Z3CCFLAGS"]=""

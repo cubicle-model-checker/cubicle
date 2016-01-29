@@ -41,15 +41,17 @@ OCAMLBEST= opt
 OCAMLVERSION = 4.02.1
 OCAMLWIN32 = no
 EXE = 
+ZARITHLIB = -I /Users/david/.opam/4.02.1/lib/zarith
+OCAMLGRAPHLIB = -I /Users/david/.opam/4.02.1/lib/ocamlgraph
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
+INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) -I common/ -I smt/
 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma str.cma
+REQBIB=nums.cma unix.cma functory.cma str.cma zarith.cma graph.cma dynlink.cma
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -135,11 +137,11 @@ opt: $(NAME).opt
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) alt-ergo/altErgo.cmo $^
 
 $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) alt-ergo/altErgo.cmx $^
 
 VERSION=1.1c
 # comment the following line for release

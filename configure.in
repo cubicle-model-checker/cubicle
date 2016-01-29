@@ -64,6 +64,54 @@ if test "$OCAMLYACC" = no ; then
 fi
 
 
+#looking for ocamlgraph library
+
+if test "$USEOCAMLFIND" = yes; then
+  OCAMLGRAPHLIB=$(ocamlfind query -i-format ocamlgraph)
+fi
+
+if test -n "$OCAMLGRAPHLIB";then
+  echo "ocamlfind found ocamlgraph in $OCAMLGRAPHLIB"
+  OCAMLGRAPH=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/ocamlgraph/graph.cmi,OCAMLGRAPH=yes,OCAMLGRAPH=no)
+  if test "$OCAMLGRAPH" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/graph.cmi,OCAMLGRAPH=yes,OCAMLGRAPH=no)
+    if test "$OCAMLGRAPH" = no ; then
+      AC_MSG_ERROR(Cannot find ocamlgraph library. Please install the *libocamlgraph-ocaml-dev* Debian package - or use the GODI caml package system *http://godi.ocaml-programming.de/* - or compile from sources *http://ocamlgraph.lri.fr/*)
+    else
+  	OCAMLGRAPHLIB=""
+     fi
+  else
+     OCAMLGRAPHLIB="-I +ocamlgraph"
+  fi
+fi
+
+
+#looking for zarith library
+
+if test "$USEOCAMLFIND" = yes; then
+  ZARITHLIB=$(ocamlfind query -i-format zarith)
+fi
+
+if test -n "$ZARITHLIB";then
+  echo "ocamlfind found zarith in $ZARITHLIB"
+  ZARITH=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/zarith/zarith.cma,ZARITH=yes,ZARITH=no)
+  if test "$ZARITH" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/zarith.cma,ZARITH=yes,ZARITH=no)
+    if test "$ZARITH" = no ; then
+      AC_MSG_ERROR(Cannot find zarith library.)
+    else
+  	ZARITHLIB=""
+     fi
+  else
+     ZARITHLIB="-I +zarith"
+  fi
+fi
+
+
 #looking for functory library
 
 if test "$USEOCAMLFIND" = yes; then
@@ -141,6 +189,7 @@ AC_SUBST(Z3LIB)
 AC_SUBST(Z3CCFLAGS)
 AC_SUBST(OCAMLWIN32)
 AC_SUBST(EXE)
+AC_SUBST(OCAMLGRAPHLIB)
 AC_SUBST(ZARITHLIB)
 
 AC_OUTPUT(Makefile)
