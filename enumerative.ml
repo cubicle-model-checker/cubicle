@@ -1146,6 +1146,8 @@ let set_fd_md fd md l =
       fd := fd';
       md := md'
 
+let maxd = ref 0
+
 let forward_bfs s procs env l =
   let h_visited = env.explicit_states in
   let cpt_f = ref 0 in
@@ -1164,18 +1166,21 @@ let forward_bfs s procs env l =
     if incremental_enum && HQueue.is_empty to_do then begin
       let cf = Kmeans.kmeans ~md:(!md) !fringe in
       if enum_verbose then begin
-        eprintf "FRINGE(depth : %d, length : %d) : @." !fd (List.length !fringe);
         print_fringe env !fringe;
         eprintf "CLUSTERED : @.";
+        let omax = ref 0 in
         List.iter (fun st -> 
           let l = Array.length st in
           let s = l - State.count_mones st in
+          if s > !omax then omax := s;
           Format.eprintf "Cluster(%d/%d) %a@." s l (print_state env) st) cf;
+        eprintf "FRINGE\n\tdepth : \t%d\n\ttotal : \t%d@." !fd (List.length !fringe);
+        eprintf "CLUSTERS : \n\tdistance : \t%d\n\ttotal : \t%d@." !omax (List.length cf);
         if enum_pause then ignore (read_line ())
       end;
       let cf = List.map (fun st -> (!fd, st)) cf in
       List.iter (fun st -> HQueue.add st to_do) cf;
-      List.iter (fun st -> env.states <- st :: env.states) !fringe;
+      (* List.iter (fun st -> env.states <- st :: env.states) !fringe; *)
       fringe := [];
       set_fd_md fd md ref_es
     end
@@ -1193,6 +1198,7 @@ let forward_bfs s procs env l =
           eprintf "%d (%d)@." !cpt_f !cpt_q;
         incr cpt_r;
         env.states <- st :: env.states;
+        if depth > !maxd then maxd := depth;
         if limit_forward_depth && depth = forward_depth then
           env.fringe <- st :: env.fringe;
       end
@@ -1270,7 +1276,7 @@ let study_fringe env =
 let finalize_search env =
   let st = HST.stats env.explicit_states in
   if not quiet then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
-  printf "All : %d@." (List.length env.states);
+  printf "All (depth max : %d) : %d@." !maxd (List.length env.states);
   if print_forward_all then print_all env;
   printf "Fringe : %d@." (List.length env.fringe);
   if print_forward_frg then (
