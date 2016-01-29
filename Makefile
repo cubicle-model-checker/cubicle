@@ -33,16 +33,17 @@ OCAMLOPT = ocamlopt.opt
 OCAMLDEP = ocamldep
 OCAMLLEX = ocamllex
 OCAMLYACC= ocamlyacc
-OCAMLLIB = /usr/local/lib/ocaml
+OCAMLLIB = /Users/david/.opam/4.02.1/lib/ocaml
 FUNCTORYLIB = 
 Z3LIB = 
 Z3CCFLAGS = 
 OCAMLBEST= opt
-OCAMLVERSION = 4.02.3
+OCAMLVERSION = 4.02.1
 OCAMLWIN32 = no
 EXE = 
 
 INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
+
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot

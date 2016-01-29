@@ -108,7 +108,12 @@ let add_array_force cube v trie = add_force (Array.to_list cube) v trie
 let rec mem cube trie = match trie with 
   | Empty -> None
   (* | Full { tag = id } -> Some [id] *)
-  | Full vl -> Some (List.map (fun v -> v.tag) vl) (* Should also check events*)
+  | Full vl -> Some (List.map (fun v -> v.tag) vl)(*Should also check events*)
+  (*| Full vl -> begin try
+       let n = List.find (fun n -> n.es = ) vl in
+       Some n.tag
+       with | Not_found -> None
+     end*)
   | Node l -> match cube with
       | [] -> None
       | atom::cube -> 

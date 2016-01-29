@@ -347,7 +347,7 @@ end = struct
         let vis_renamed = aa_esubst subst vis_array in
         if Cube.inconsistent_2arrays vis_renamed n_array then nodes
         else (vis_n, (vis_renamed, vis_events_r))::nodes
-      ) nodes subst
+      ) ((vis_n, (vis_array, vis_n.es)) :: nodes) subst
 
     (*let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
     List.fold_left

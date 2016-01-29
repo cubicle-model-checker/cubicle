@@ -151,32 +151,40 @@ axiom fr :
   forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
   rf(w1, r) and co(w1, w2)
   -> fr(r, w2)
-logic com : int, int -> prop
+(*logic com : int, int -> prop
 axiom com :
   forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
   co(e1, e2) or rf(e1, e2) or fr(e1, e2)
-  <-> com(e1, e2)
+  <-> com(e1, e2)*)
 logic ppo : int, int -> prop
 axiom ppo_tso :
   forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
   <-> ppo(e1, e2)
-logic propg : int, int -> prop
+(*logic propg : int, int -> prop
 axiom propg_tso :
   forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
   ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
-  <-> propg(e1, e2)
+  <-> propg(e1, e2)*)
 logic po_loc_U_com : int, int -> prop
-axiom po_loc_U_com :
+(*axiom po_loc_U_com :
   forall e1, e2 : int [(*po_loc(e1,e2)|com(e1,e2)|*)po_loc_U_com(e1,e2)].
-  po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)
+  po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)*)
+axiom po_loc_U_com :
+  forall e1, e2 : int [(*po_loc(e1,e2)|co(e1,e2)|rf(e1,e2)|fr(e1,e2)|*)po_loc_U_com(e1,e2)].
+  po_loc(e1, e2) or co(e1, e2) or rf(e1, e2) or fr(e1, e2)
+   -> po_loc_U_com(e1, e2)
 axiom po_loc_U_com_t :
   forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
   po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
 logic co_U_prop : int, int -> prop
-axiom co_U_prop :
+(*axiom co_U_prop :
   forall e1, e2 : int [co(e1,e2)|propg(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)
+  co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)*)
+axiom co_U_prop :
+  forall e1, e2 : int [co(e1,e2)|ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)(*|co_U_prop(e1,e2)*)].
+  co(e1, e2) or ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
+  -> co_U_prop(e1, e2)
 axiom co_U_prop_t :
   forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
   co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
@@ -207,11 +215,17 @@ let print_decls fmt fp tso_vars esl =
 
     (* Additional proc #0 for initial events *)
     fprintf fmt "\nlogic p0 : int\n";
-    fprintf fmt "axiom p0 : p0 <> p1 <> p2 <> p3 <> p4 <> p5";
-    fprintf fmt " <> p6 <> p7 <> p8 <> p9 <> p10\n\n";
+    (* fprintf fmt "axiom p0 : p0 <> p1 <> p2 <> p3 <> p4 <> p5"; *)
+    (* fprintf fmt " <> p6 <> p7 <> p8 <> p9 <> p10\n\n"; *)
+    fprintf fmt "axiom procs : true ";
+    begin for i = 0 to Options.max_proc do
+      for j = (i + 1) to Options.max_proc do
+	fprintf fmt "and (p%d <> p%d)" i j
+      done
+    done end;
 
     (* List of TSO variables *) (* could use their original names *)
-    fprintf fmt "type tso_var = %a\n" (print_hset_sep "|"
+    fprintf fmt "\ntype tso_var = %a\n" (print_hset_sep "|"
       (fun fmt (f, (fx, args, ret)) -> print_var_name fmt f)) tso_vars;
 
     (* Axiomatization *)

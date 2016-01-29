@@ -584,6 +584,7 @@ PACKAGE_URL=
 ac_unique_file="main.ml"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+ZARITHLIB
 EXE
 OCAMLWIN32
 Z3CCFLAGS
@@ -2071,6 +2072,7 @@ else
     OCAMLWIN32=no
     EXE=
 fi
+
 
 
 

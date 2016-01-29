@@ -172,8 +172,8 @@ enumerative.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
 enumerative.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
     pretty.cmx options.cmx node.cmx common/hstring.cmx forward.cmx cube.cmx \
     ast.cmi enumerative.cmi
-event.cmo : variable.cmi common/hstring.cmi event.cmi
-event.cmx : variable.cmx common/hstring.cmx event.cmi
+event.cmo : variable.cmi options.cmi common/hstring.cmi event.cmi
+event.cmx : variable.cmx options.cmx common/hstring.cmx event.cmi
 fake_functory.cmo : fake_functory.cmi
 fake_functory.cmx : fake_functory.cmi
 fixpoint.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi prover.cmi \
