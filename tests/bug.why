@@ -1,0 +1,138 @@
+type pc = L1 | L2 | End
+logic p10 : int
+logic PC : int -> pc
+logic R1 : int
+logic R2 : int
+logic R3 : int
+logic p1 : int
+logic R4 : int
+logic p2 : int
+logic p3 : int
+logic p4 : int
+logic p5 : int
+logic p6 : int
+logic p7 : int
+logic p8 : int
+logic p9 : int
+
+logic p0 : int
+(*axiom p0 : p0 <> p1 <> p2 <> p3 <> p4 <> p5 <> p6 <> p7 <> p8 <> p9 <> p10*)
+
+type tso_var = _VX | _VY
+
+type direction = _R | _W
+type event = { tid : int; dir : direction; loc : tso_var; val : int }
+logic e : int -> event
+logic po : int, int -> prop
+logic rf : int, int -> prop
+logic co : int, int -> prop
+logic fence : int, int -> prop
+
+(*axiom rf :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) -> e(e1).val = e(e2).val*)
+logic po_loc : int, int -> prop
+axiom po_loc :
+  forall e1, e2 : int [po(e1,e2)].
+  po(e1, e2) and e(e1).loc = e(e2).loc
+  <-> po_loc(e1, e2)
+logic rfe : int, int -> prop
+axiom rfe :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) and e(e1).tid <> e(e2).tid
+  <-> rfe(e1, e2)
+logic fr : int, int -> prop
+axiom fr :
+  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
+  rf(w1, r) and co(w1, w2)
+  -> fr(r, w2)
+logic com : int, int -> prop
+axiom com :
+  forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
+  co(e1, e2) or rf(e1, e2) or fr(e1, e2)
+  <-> com(e1, e2)
+logic ppo : int, int -> prop
+axiom ppo_tso :
+  forall e1, e2 : int [po(e1,e2)].
+  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
+  <-> ppo(e1, e2)
+logic propg : int, int -> prop
+axiom propg_tso :
+  forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
+  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
+  <-> propg(e1, e2)
+logic po_loc_U_com : int, int -> prop
+axiom po_loc_U_com :
+  forall e1, e2 : int [po_loc(e1,e2)|com(e1,e2)|po_loc_U_com(e1,e2)].
+  po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)
+axiom po_loc_U_com_t :
+  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
+  po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
+logic co_U_prop : int, int -> prop
+axiom co_U_prop :
+  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)(*|co_U_prop(e1,e2)*)].
+  co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)
+axiom co_U_prop_t :
+  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
+  co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
+
+logic e1 : int
+logic e2 : int
+logic e3 : int
+logic e4 : int
+logic e5 : int
+logic e6 : int
+logic e7 : int
+logic e8 : int
+
+goal gc:
+ (p3<>p2<>p1<>p0)
+->
+ (p3<>p1)
+
+goal g:
+
+ (e1<>e2<>e3<>e4<>e5<>e6<>e7<>e8)
+
+(*and (p3<>p2<>p1<>p0) *)
+
+ and (p0 <> p1) and (p0 <> p2) and (p0 <> p3)
+ and (p1 <> p2) and (p1 <> p3)
+ and (p2 <> p3)
+ 
+ and (PC(p1)=L1) and (PC(p2)=L1) and (PC(p3)=L1)
+
+ and (e(e7).val=0) and (e(e8).val=0)
+ and (e(e1).val=0) and (e(e2).val=2) and (e(e3).val=1)
+ and (e(e4).val=0) and (e(e5).val=1) and (e(e6).val=2)
+
+ and (e(e8).loc=_VY) and (e(e8).dir=_W) and (e(e8).tid=p0)
+ and (e(e7).loc=_VX) and (e(e7).dir=_W) and (e(e7).tid=p0)
+ and (e(e3).loc=_VX) and (e(e3).dir=_W) and (e(e3).tid=p1)
+ and (e(e2).loc=_VY) and (e(e2).dir=_W) and (e(e2).tid=p1)
+ and (e(e5).loc=_VX) and (e(e5).dir=_R) and (e(e5).tid=p2)
+ and (e(e4).loc=_VY) and (e(e4).dir=_R) and (e(e4).tid=p2)
+ and (e(e6).loc=_VY) and (e(e6).dir=_R) and (e(e6).tid=p3)
+ and (e(e1).loc=_VX) and (e(e1).dir=_R) and (e(e1).tid=p3)
+
+ and (po(e6,e1)=true) and (po(e5,e4)=true) and (po(e3,e2)=true)
+ and (co(e8,e2)=true) and (co(e7,e3)=true)
+ and ((*rf(e8,e6)=true or*) rf(e2,e6)=true)
+ and ((*rf(e7,e5)=true or*) rf(e3,e5)=true)
+ and (rf(e8,e4)=true (*or rf(e2,e4)=true*))
+ and (rf(e7,e1)=true (*or rf(e3,e1)=true*))
+    
+  (*po(e3, e2) and rf(e2, e6) and po(e6, e1) and
+    fr(e1,e3) and rfe(e2, e6)*) (*co_U_prop(e3,e3)*)
+
+ and (co_U_prop(e8,e8)=false) and (po_loc_U_com(e8,e8)=false)
+ and (co_U_prop(e7,e7)=false) and (po_loc_U_com(e7,e7)=false)
+ and (co_U_prop(e6,e6)=false) and (po_loc_U_com(e6,e6)=false)
+ and (co_U_prop(e5,e5)=false) and (po_loc_U_com(e5,e5)=false)
+ and (co_U_prop(e4,e4)=false) and (po_loc_U_com(e4,e4)=false)
+ and (co_U_prop(e3,e3)=false) and (po_loc_U_com(e3,e3)=false)
+ and (co_U_prop(e2,e2)=false) and (po_loc_U_com(e2,e2)=false)
+ and (co_U_prop(e1,e1)=false) and (po_loc_U_com(e1,e1)=false)
+
+ and (PC(p1)=L1) and (PC(p2)=L1) and (PC(p3)=L1)
+ 
