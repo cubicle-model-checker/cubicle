@@ -17,10 +17,10 @@ logic p8 : int
 logic p9 : int
 logic p10 : int
 
-type tso_var = _VX | _VY
+type weak_var = _VX | _VY
 
 type direction = _R | _W
-type event = { tid : int; dir : direction; loc : tso_var; val : int }
+type event = { tid : int; dir : direction; loc : weak_var; val : int }
 logic e : int -> event
 logic po : int, int -> prop
 logic rf : int, int -> prop
