@@ -52,7 +52,7 @@ let select_kmeans_deterministic md arrays =
 
 let select_kmeans ?(md=0) = 
   if deterministic then select_kmeans_deterministic md
-  else select_kmeans_random
+  else assert false
 
 let add_to_cluster c e =
   let r, d = Clusters.fold (
@@ -103,16 +103,33 @@ let clusterize ?(md=0) set =
     else c
   in crec clusters set
 
-let filter_clusters c =
-  Clusters.fold (fun r l acc ->
-    match l with 
-      | [] | [_] -> acc
-      | _ -> Clusters.add r l acc
-  ) c Clusters.empty
+let rec filter_clusters md c = 
+  match filter_lvl with
+    | 0 -> c
+    | 1 -> 
+      Clusters.fold (fun r l acc ->
+        match l with
+          | [] | [_] -> acc
+          | _ -> Clusters.add r l acc
+      ) c Clusters.empty
+    | _ -> 
+      Clusters.fold (fun r l acc ->
+        (* Printf.printf "\n------------------\nReprésentant Provisoire : ";  *)
+        (* State.print "" r; *)
+        (* Printf.printf "\tEnsemble Provisoire :\n"; *)
+        (* List.iter (State.print "\t\t") l; *)
+        let d = State.count_mones r in
+        if d <= filter_md then Clusters.add r l acc
+        else (
+          (* Printf.printf "High distance : %d\n" d; *)
+          let l = clusterize ~md:md l in
+          (* print_cluster l; *)
+          filter_clusters (md-1) l
+        )
+      ) c Clusters.empty
 
 let to_list c =
   Clusters.fold (fun r _ acc -> r :: acc) c []
-    
 
 let print_infos c =
   let min_dist, max_dist = 
@@ -122,7 +139,6 @@ let print_infos c =
       if d > ma then d else ma
     ) c (max_int, 0) in
   Printf.printf "Number of clusters : %d\n" (Clusters.cardinal c);
-
   if Clusters.cardinal c > 0 then (
     Printf.printf "Minimum distance   : %d\n" min_dist;
     Printf.printf "Maximum distance   : %d\n" max_dist
@@ -131,7 +147,7 @@ let print_infos c =
 let kmeans ?(md=0) frg =
   let l = clusterize ~md:md frg in
   (* print_infos l; *)
-  let c = filter_clusters l in
+  let c = filter_clusters md l in
   print_infos c;
   to_list c
     

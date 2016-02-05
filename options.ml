@@ -42,6 +42,9 @@ let nb_clusters = ref (-1)
 let deterministic = ref false
 let md = ref 0
 
+let filter_lvl = ref 0
+let filter_md = ref 0
+
 let int_seed = ref false
 let seed = ref 0
 
@@ -216,7 +219,11 @@ let specs =
     "-iep", Arg.Set enum_pause, " pause between clusterings (for debug, only)";
     "-iev", Arg.Set enum_verbose, " debugging informations";
     "-cfd", Arg.Tuple ([Arg.Set_int frg; Arg.Int set_partial_frg]), 
-    "<n> clusterize this fringe before going on with enumerative";
+    "<n m> clusterize fringe at prof <n> with <m> being the max distance\
+       before going on with enumerative";
+    "-flvl", Arg.Set_int filter_lvl, "<n> set a filtering level to clusters";
+    "-md", Arg.Set_int filter_md, 
+    "<n> set a minimum distance inside a cluster for filtering";
     "-bwd", Arg.Set_int bwd_fwd, 
     "<n> do a non approximate backward to prof <n> to help the oracle";
     "-geninv", Arg.Set gen_inv, " invariant generation";
@@ -340,6 +347,8 @@ let incremental_enum =
                     incremental enumerative");
   ie
 
+let filter_lvl = !filter_lvl
+let filter_md = !filter_md
 let enum_pause = !enum_pause
 let enum_verbose = !enum_verbose
 
