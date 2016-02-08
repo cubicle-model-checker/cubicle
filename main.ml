@@ -117,6 +117,14 @@ let _ =
 
     exit 1
 
+  | Smt.Error e ->
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "\n@{<u>Solver error:@}%a@." Smt.report e;
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+
+    exit 1
+
   | e ->
 
     let backtrace = Printexc.get_backtrace () in
