@@ -36,9 +36,6 @@ val es_add_events_full : structure -> t list -> structure
 
 val es_add_fences : structure -> Variable.t list -> structure
 
-val print_decls : Format.formatter -> bool ->
-		  ('a * 'b * 'c) Hstring.H.t -> structure list -> unit
-
 val gen_po : structure -> (int * int) list
 
 val gen_fence : structure -> (int * int) list

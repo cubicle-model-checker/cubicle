@@ -287,8 +287,8 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let make_event_field ?(qv=false) e f =
-    failwith "Alt_ergo.Term.make_event_field TODO"
+  let mk_evt_field ?(qv=false) e f =
+    failwith "Alt_ergo.Term.mk_evt_field TODO"
 
   let is_int = Term.is_int
 
@@ -478,6 +478,8 @@ let set_arith = Combine.CX.set_arith_active
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
+  val init_axioms : unit -> unit
+
   val check_strategy : check_strategy
 
   val get_time : unit -> float
@@ -494,6 +496,8 @@ end
 
 module Make (Options : sig val profiling : bool end) = struct
 
+  let init_axioms () = ()
+    
   let check_strategy = Eager
 
   let push_stack = Stack.create ()

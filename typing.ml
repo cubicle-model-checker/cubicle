@@ -376,7 +376,7 @@ let init_global_env s =
   !l, !weak_vars
 
 
-let init_proc () = 
+let init_proc () =
   List.iter 
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 

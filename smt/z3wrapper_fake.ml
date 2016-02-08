@@ -75,7 +75,7 @@ module Term = struct
   let t_true = ()
   let t_false = ()
   let make_arith _ _ _ = unsupported ()
-  let make_event_field ?(qv=false) _ _ = unsupported ()
+  let mk_evt_field ?(qv=false) _ _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
 end
@@ -106,6 +106,8 @@ let set_arith _ = unsupported ()
 let set_sum _ = unsupported ()
 
 module type Solver = sig
+  val init_axioms : unit -> unit
+
   val check_strategy : check_strategy
 
   val get_time : unit -> float
@@ -121,6 +123,7 @@ module type Solver = sig
 end
 
 module Make (Options : sig val profiling : bool end) = struct
+  let init_axioms () = ()
   let check_strategy = Lazy
   let get_time _ = unsupported ()
   let get_calls _ = unsupported ()

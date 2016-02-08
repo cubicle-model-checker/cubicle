@@ -51,3 +51,5 @@ val run : ?fp:bool -> unit -> unit
 (** Runs the SMT solver on its current context *)
 
 val assume_goal_nodes : ?fp:bool -> Node.t -> (Node.t * ArrayAtom.t) list -> unit
+
+val init : unit -> unit

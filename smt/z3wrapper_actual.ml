@@ -335,8 +335,8 @@ module Term = struct
     | Div -> mk_div global_context t1 t2
     | Modulo -> failwith "modulo not supported by Z3 for now"
 
-  let make_event_field ?(qv=false) e f =
-    failwith "Z3Wrapper_actual.Term.make_event_field TODO"
+  let mk_evt_field ?(qv=false) e f =
+    failwith "Z3Wrapper_actual.Term.mk_evt_field TODO"
 
   let is_int = is_int
 
@@ -404,6 +404,8 @@ let set_arith _ = ()
 let set_sum _ = ()
 
 module type Solver = sig
+  val init_axioms : unit -> unit
+    
   val check_strategy : check_strategy
     
   val get_time : unit -> float
@@ -419,6 +421,8 @@ module type Solver = sig
 end
 
 module Make (Options : sig val profiling : bool end) = struct
+
+  let init_axioms () = ()
 
   let check_strategy = Lazy
 

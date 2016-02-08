@@ -67,7 +67,7 @@ let _ =
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
     let close_dot = Dot.open_dot () in 
-    begin 
+    begin
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
          if (not quiet || profiling) then

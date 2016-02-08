@@ -53,10 +53,6 @@ module type S = sig
     val type_proc : t
     (** The type processes (identifiers) *)
 
-    val type_weak : t
-
-    val type_event : t
-
     (** {3 Declaring new types } *)
 
     val declare : Hstring.t -> Hstring.t list -> unit
@@ -73,8 +69,9 @@ module type S = sig
 
     val declared_types : unit -> t list
 
-    val type_direction : t
-				   
+    val type_weak : t
+    val type_event : t
+    val type_direction : t		   
     val declare_event_type : Hstring.t list -> unit
 
   end
@@ -176,8 +173,6 @@ module type S = sig
     val make_arith : operator -> t -> t -> t
     (** [make_arith op t1 t2] creates the term [t1 <op> t2]. *)
 
-    val make_event_field : ?qv:bool -> Event.t -> string -> t
-
     val is_int : t -> bool
     (** [is_int x] is [true] if the term [x] has type int *)
 
@@ -189,6 +184,8 @@ module type S = sig
 
     val t_false : t
     (** [t_false] is the boolean term [false] *)
+
+    val mk_evt_field : ?qv:bool -> Event.t -> string -> t
 
   end
 
@@ -277,6 +274,8 @@ module type S = sig
             assume f_n;
           check ();]}
     *)
+
+    val init_axioms : unit -> unit
 
     val check_strategy : check_strategy
     (** The stragey used for preforming check-sat. Lazy means that we chech the

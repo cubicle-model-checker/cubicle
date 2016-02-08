@@ -28,8 +28,9 @@ module F = Smt.Formula
 module SMT = Smt.Make (Options)
 
 let proc_terms =
+  let procs = (Hstring.make "#0") :: Variable.procs in
   List.iter 
-    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) Variable.procs;
+    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) procs;
   List.map (fun x -> T.make_app x []) Variable.procs
 
 let distinct_vars = 
@@ -109,7 +110,7 @@ let rec make_term = function
       let tx = make_term x in
       make_arith_cs cs tx
   | Read (_, _, _) -> failwith "Prover.make_term : Read should not be in atom"
-  | EventValue e -> T.make_event_field e "val"
+  | EventValue e -> T.mk_evt_field e "val"
 			       
 let rec make_formula_set sa ifrm =
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa ifrm)
@@ -307,3 +308,6 @@ let assume_goal_nodes ?(fp=false) { tag = id; cube = cube; es } nodes =
   SMT.assume ~events:es ~id f;
   List.iter (fun (n, a) -> assume_node_no_check ~fp n a) nodes;
   SMT.check ()
+
+let init () =
+  SMT.init_axioms ()
