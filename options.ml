@@ -1,3 +1,4 @@
+
 (**************************************************************************)
 (*                                                                        *)
 (*                              Cubicle                                   *)
@@ -17,7 +18,16 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
-type solver = AltErgo | Z3
+type solver = AltErgo | AltErgoFile | AltErgoLib | Z3
+
+type model = SC | TSO
+
+let model = ref SC
+let set_model m =
+  model := match m with
+    | "SC" -> SC
+    | "TSO" -> TSO
+    | _ -> raise (Arg.Bad (m^" memory model not supported"))
 
 let js_mode = ref false
 
@@ -101,10 +111,12 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
-let smt_solver = ref AltErgo
+let smt_solver = ref AltErgoFile
 let set_smt_solver s =
   smt_solver := match s with
     | "alt-ergo" -> AltErgo
+    | "alt-ergo-file" -> AltErgoFile
+    | "alt-ergo-lib" -> AltErgoLib
     | "z3" -> Z3
     | _ -> raise (Arg.Bad ("SMT solver "^s^" not supported"))
 
@@ -190,7 +202,7 @@ let specs =
     " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-solver", Arg.String set_smt_solver,
-    "<alt-ergo(default) | z3> SMT solver to use";
+    "<alt-ergo | alt-ergo-file(default) | alt-ergo-lib | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
@@ -199,6 +211,8 @@ let specs =
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
     "-out", Arg.String set_out,
     "<dir> set output directory for certificate traces to <dir>";
+    "-model", Arg.String set_model,
+    "<SC(default) | TSO> Memory model to use";
   ]
 
 let alspecs = Arg.align specs
@@ -214,6 +228,7 @@ let cin =
   | Some f -> file := f ; open_in f 
   | None -> stdin
 
+let model = !model
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes

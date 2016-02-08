@@ -53,6 +53,10 @@ module type S = sig
     val type_proc : t
     (** The type processes (identifiers) *)
 
+    val type_weak : t
+
+    val type_event : t
+
     (** {3 Declaring new types } *)
 
     val declare : Hstring.t -> Hstring.t list -> unit
@@ -69,6 +73,10 @@ module type S = sig
 
     val declared_types : unit -> t list
 
+    val type_direction : t
+				   
+    val declare_event_type : Hstring.t list -> unit
+
   end
 
 
@@ -78,13 +86,15 @@ module type S = sig
     type t = Hstring.t
     (** The type of function symbols *)
 
-    val declare : ?tso:bool -> Hstring.t -> Type.t list -> Type.t -> unit
+    val declare : ?weak:bool -> Hstring.t -> Type.t list -> Type.t -> unit
     (** [declare s [arg_1; ... ; arg_n] out] declares a new function
         symbol with type [ (arg_1, ... , arg_n) -> out] *)
 
     val type_of : t -> Type.t list * Type.t
     (** [type_of x] returns the type of x. *)
 
+    val is_weak : t -> bool
+				       
     val has_abstract_type : t -> bool
     (** [has_abstract_type x] is [true] if the type of x is abstract. *)
 
@@ -166,7 +176,7 @@ module type S = sig
     val make_arith : operator -> t -> t -> t
     (** [make_arith op t1 t2] creates the term [t1 <op> t2]. *)
 
-    val make_event_val : Event.t -> t
+    val make_event_field : ?qv:bool -> Event.t -> string -> t
 
     val is_int : t -> bool
     (** [is_int x] is [true] if the term [x] has type int *)

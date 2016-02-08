@@ -1,0 +1,22 @@
+
+(*
+logic rf : int, int -> prop
+logic rfe : int, int -> prop
+
+axiom rf :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) -> not rfe(e1, e2)
+
+logic e4 : int
+logic e5 : int
+
+goal g:
+ rf(e4, e5) -> not rfe(e4, e5)
+*)
+
+logic f : int -> int
+axiom ax :
+  forall x : int . f(x) = x
+
+goal g : f(42) = 43
+  

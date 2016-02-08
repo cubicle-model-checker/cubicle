@@ -35,16 +35,21 @@ module Type = struct
   let type_real = hfake
   let type_bool = hfake
   let type_proc = hfake
+  let type_weak = hfake
+  let type_event = hfake
   let declare _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
+  let type_direction = hfake
+  let declare_event_type _ = unsupported ()
 end
 
 module Symbol = struct
   type t = Hstring.t
-  let declare ?(tso=false) _ _ _ = unsupported ()
+  let declare ?(weak=false) _ _ _ = unsupported ()
   let type_of _ = unsupported ()
+  let is_weak _ = unsupported ()
   let declared _ = unsupported ()
   let has_abstract_type s = unsupported ()
   let has_infinite_type s = unsupported ()
@@ -70,7 +75,7 @@ module Term = struct
   let t_true = ()
   let t_false = ()
   let make_arith _ _ _ = unsupported ()
-  let make_event_val _ = unsupported ()
+  let make_event_field ?(qv=false) _ _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
 end

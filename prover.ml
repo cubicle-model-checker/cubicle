@@ -109,7 +109,7 @@ let rec make_term = function
       let tx = make_term x in
       make_arith_cs cs tx
   | Read (_, _, _) -> failwith "Prover.make_term : Read should not be in atom"
-  | EventValue e -> T.make_event_val e
+  | EventValue e -> T.make_event_field e "val"
 			       
 let rec make_formula_set sa ifrm =
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa ifrm)
@@ -266,7 +266,7 @@ let reached args s sa =
   SMT.check ()
 
 
-let assume_goal_no_check { tag = id; cube = cube; es } =
+let assume_goal_no_check ?(fp=false) { tag = id; cube = cube; es } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let ef = event_formula true es in
@@ -274,19 +274,19 @@ let assume_goal_no_check { tag = id; cube = cube; es } =
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~events:es ~id f
 
-let assume_node_no_check { tag = id; es } ap =
+let assume_node_no_check ?(fp=false) { tag = id; es } ap =
   let ef = event_formula true es in
   let f = F.make F.Not [make_formula ap ef] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~events:es ~id f
 
-let assume_goal n =
-  assume_goal_no_check n(*;
-  SMT.check  ()*) (*TSO*) (*skip call to simplify*)
+let assume_goal ?(fp=false) n =
+  assume_goal_no_check ~fp n;
+  SMT.check ()
 
-let assume_node n ap =
-  assume_node_no_check n ap (*;
-  SMT.check () *) (*TSO*) (*skip call to simplify*)
+let assume_node ?(fp=false) n ap =
+  assume_node_no_check ~fp n ap;
+  SMT.check ()
 
 
 let run ?(fp=false) () = SMT.check ~fp ()
@@ -298,12 +298,12 @@ let check_guard args sa reqs =
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let assume_goal_nodes { tag = id; cube = cube; es } nodes =
+let assume_goal_nodes ?(fp=false) { tag = id; cube = cube; es } nodes =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let ef = event_formula true es in
   let f = make_formula cube.Cube.array ef in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~events:es ~id f;
-  List.iter (fun (n, a) -> assume_node_no_check n a) nodes(*;
-  SMT.check  ()*) (*TSO*) (*skip call to simplify*)
+  List.iter (fun (n, a) -> assume_node_no_check ~fp n a) nodes;
+  SMT.check ()

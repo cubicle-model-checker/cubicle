@@ -19,7 +19,11 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
-type solver = AltErgo | Z3
+type solver = AltErgo | AltErgoFile | AltErgoLib | Z3
+
+type model = SC | TSO
+
+val model : model
 
 val file : string
 val cin : in_channel

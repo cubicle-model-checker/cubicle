@@ -3,10 +3,10 @@
 
 number_procs 2
 
-type loc = L1 | L2 | L3 | L4 | End
+type locs = L1 | L2 | L3 | L4 | End
 
 (* Program counters *)
-array PC[proc] : loc
+array PC[proc] : locs
 
 (* Global variables *)
 var Want_1 : int

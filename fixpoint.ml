@@ -61,7 +61,7 @@ module FixpointList : sig
 end = struct
 
   let check_fixpoint ?(pure_smt=false) n visited =
-    Prover.assume_goal n;
+    Prover.assume_goal ~fp:true n;
     let n_array = n.cube.Cube.array in
     let nodes = 
       List.fold_left
@@ -80,7 +80,7 @@ end = struct
                       Cube.inconsistent_2arrays vis_renamed n_array then nodes
 	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
               (vis_n, vis_renamed)::nodes
-	    else (Prover.assume_node vis_n vis_renamed; nodes)
+	    else (Prover.assume_node ~fp:true vis_n vis_renamed; nodes)
 	   ) nodes d
         ) [] visited
     in
@@ -91,7 +91,8 @@ end = struct
         nodes 
     in
     TimeSort.pause ();
-    List.iter (fun (vn, ar_renamed) -> Prover.assume_node vn ar_renamed) nodes
+    List.iter (fun (vn, ar_renamed) ->
+      Prover.assume_node ~fp:true vn ar_renamed) nodes
 
 
   let easy_fixpoint s nodes =
@@ -169,10 +170,10 @@ end = struct
   let assume_node env n sigma a =
     let nid = fresh_id env in
     Hashtbl.add env.hid_cubes nid (n, sigma);
-    Prover.assume_node { n with tag = nid } a
+    Prover.assume_node ~fp:true { n with tag = nid } a
  
   let check_fixpoint env ?(pure_smt=false) n visited =
-    Prover.assume_goal n;
+    Prover.assume_goal ~fp:true n;
     let n_array = n.cube.Cube.array in
     let nodes = 
       List.fold_left
@@ -295,18 +296,18 @@ end = struct
 
   let first_action =
     match Prover.SMT.check_strategy with
-    | Smt.Eager -> Prover.assume_goal
-    | Smt.Lazy -> Prover.assume_goal_no_check
+    | Smt.Eager -> Prover.assume_goal ~fp:true
+    | Smt.Lazy -> Prover.assume_goal_no_check ~fp:true
 
   let assume =
     match Prover.SMT.check_strategy with
-    | Smt.Eager -> Prover.assume_node
-    | Smt.Lazy -> Prover.assume_node_no_check
+    | Smt.Eager -> Prover.assume_node ~fp:true
+    | Smt.Lazy -> Prover.assume_node_no_check ~fp:true
     
   let last_action =
     match Prover.SMT.check_strategy with
     | Smt.Eager -> fun () -> ()
-    | Smt.Lazy -> fun () -> ()(*Prover.run*)(*TSO*)(*we force run later*)
+    | Smt.Lazy -> fun () -> Prover.run ~fp:true ()
 
   open Event
   open Types.Atom
@@ -364,7 +365,7 @@ end = struct
        else
          (* These are worth assuming and checking right away because they might
             yield unsatifisability sooner *)
-         (Prover.assume_node vis_n vis_renamed; nodes)
+         (Prover.assume_node ~fp:true vis_n vis_renamed; nodes)
       ) nodes d*)
       
 
@@ -380,7 +381,6 @@ end = struct
          else check_and_add s nodes vis_p, cands
         ) ([], []) visited in
     let nodes = List.fold_left (check_and_add s) nodes cands in
-    (*Prover.run (); (* Added *)*)
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes
@@ -395,13 +395,12 @@ end = struct
                 n2.kind = Approx && n1.kind <> Approx then 1
              (* a2 is a candidate *)
              else ArrayAtom.compare_nb_common s_array (fst a1) (fst a2)) 
-          nodes 
+          nodes
     in
     TimeSort.pause ();
     List.iter (fun (vn, (ar_renamed, events_r)) ->
 	       assume { vn with es = events_r } ar_renamed) nodes;
     last_action ()
-    ; Prover.run ~fp:true () (* Added (previous assumes did not check) *)
 
   
   let easy_fixpoint s nodes =
@@ -484,7 +483,7 @@ end = struct
       Cubetrie.fold
         (fun nodes vis_p ->
          check_and_add s nodes vis_p) [] visited in
-    Prover.assume_goal_nodes s nodes
+    Prover.assume_goal_nodes ~fp:true s nodes
 
               
   let easy_fixpoint s nodes =

@@ -35,13 +35,13 @@ logic po_loc : int, int -> prop
 axiom po_loc :
   forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and e(e1).loc = e(e2).loc
-  <-> po_loc(e1, e2)
+  -> po_loc(e1, e2)
 
 logic rfe : int, int -> prop
 axiom rfe :
   forall e1, e2 : int [rf(e1,e2)].
   rf(e1, e2) and e(e1).tid <> e(e2).tid
-  <-> rfe(e1, e2)
+  -> rfe(e1, e2)
 
 logic fr : int, int -> prop
 axiom fr :
@@ -53,19 +53,19 @@ logic com : int, int -> prop
 axiom com :
   forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
   co(e1, e2) or rf(e1, e2) or fr(e1, e2)
-  <-> com(e1, e2)
+  -> com(e1, e2)
 
 logic ppo : int, int -> prop
 axiom ppo_tso :
   forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
-  <-> ppo(e1, e2)
+  -> ppo(e1, e2)
 
 logic propg : int, int -> prop
 axiom propg_tso :
   forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
   ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
-  <-> propg(e1, e2)
+  -> propg(e1, e2)
 
 logic po_loc_U_com : int, int -> prop
 axiom po_loc_U_com :
@@ -91,7 +91,7 @@ logic e5 : int
 logic e6 : int
 
 
-goal g:
+goal g: true
  and (p2<>p1)
  and (PC(p1)=L1) and (PC(p2)=L1)
 

@@ -125,66 +125,69 @@ let es_add_fences es tidl =
 
 let axiom_base = "
 type direction = _R | _W
-type event = { tid : int; dir : direction; loc : tso_var; val : int }
+type event = { tid : int; dir : direction; loc : weak_var; val : int }
 logic e : int -> event
 logic po : int, int -> prop
 logic rf : int, int -> prop
 logic co : int, int -> prop
 logic fence : int, int -> prop
+logic co_U_prop : int, int -> prop
+logic po_loc_U_com : int, int -> prop
 "
 let axiom_rels = "
 axiom rf :
   forall e1, e2 : int [rf(e1,e2)].
   rf(e1, e2) -> e(e1).val = e(e2).val
-logic po_loc : int, int -> prop
+
 axiom po_loc :
   forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and e(e1).loc = e(e2).loc
-  <-> po_loc(e1, e2)
-logic rfe : int, int -> prop
+  -> po_loc_U_com(e1, e2)
+
 axiom rfe :
   forall e1, e2 : int [rf(e1,e2)].
   rf(e1, e2) and e(e1).tid <> e(e2).tid
-  <-> rfe(e1, e2)
-logic fr : int, int -> prop
+  -> co_U_prop(e1, e2)
+
 axiom fr :
   forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
   rf(w1, r) and co(w1, w2)
-  -> fr(r, w2)
-(*logic com : int, int -> prop
-axiom com :
-  forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
-  co(e1, e2) or rf(e1, e2) or fr(e1, e2)
-  <-> com(e1, e2)*)
-logic ppo : int, int -> prop
+  -> po_loc_U_com(r, w2) and co_U_prop(r, w2)
+
 axiom ppo_tso :
   forall e1, e2 : int [po(e1,e2)].
   po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
-  <-> ppo(e1, e2)
-(*logic propg : int, int -> prop
-axiom propg_tso :
-  forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
-  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
-  <-> propg(e1, e2)*)
-logic po_loc_U_com : int, int -> prop
+  -> co_U_prop(e1, e2)
+
 (*axiom po_loc_U_com :
-  forall e1, e2 : int [(*po_loc(e1,e2)|com(e1,e2)|*)po_loc_U_com(e1,e2)].
-  po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)*)
-axiom po_loc_U_com :
-  forall e1, e2 : int [(*po_loc(e1,e2)|co(e1,e2)|rf(e1,e2)|fr(e1,e2)|*)po_loc_U_com(e1,e2)].
-  po_loc(e1, e2) or co(e1, e2) or rf(e1, e2) or fr(e1, e2)
+  forall e1, e2 : int [(*co(e1,e2)|rf(e1,e2)|*)po_loc_U_com(e1,e2)].
+  co(e1, e2) or rf(e1, e2)
+   -> po_loc_U_com(e1, e2)*)
+
+axiom po_loc_U_com_1 :
+  forall e1, e2 : int [(*co(e1,e2)|*)po_loc_U_com(e1,e2)].
+  co(e1, e2)
    -> po_loc_U_com(e1, e2)
+
+axiom po_loc_U_com_2 :
+  forall e1, e2 : int [(*rf(e1,e2)|*)po_loc_U_com(e1,e2)].
+  rf(e1, e2)
+   -> po_loc_U_com(e1, e2)
+
 axiom po_loc_U_com_t :
   forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
   po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
-logic co_U_prop : int, int -> prop
-(*axiom co_U_prop :
-  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)*)
-axiom co_U_prop :
-  forall e1, e2 : int [co(e1,e2)|ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2) or ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
+
+axiom co_U_prop_1 :
+  forall e1, e2 : int [co(e1,e2)(*|co_U_prop(e1,e2)*)].
+  co(e1, e2)
   -> co_U_prop(e1, e2)
+
+axiom co_U_prop_2 :
+  forall e1, e2 : int [fence(e1,e2)(*|co_U_prop(e1,e2)*)].
+  fence(e1, e2)
+  -> co_U_prop(e1, e2)
+
 axiom co_U_prop_t :
   forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
   co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
@@ -210,8 +213,8 @@ let print_hset_sep sep pfun fmt set =
     if !first then begin pfun fmt (k, v); first := false end
     else fprintf fmt " %s %a" sep pfun (k, v)) set
 
-let print_decls fmt fp tso_vars esl =
-  if Hstring.H.length tso_vars > 0 then begin
+let print_decls fmt fp weak_vars esl =
+  if Hstring.H.length weak_vars > 0 then begin
 
     (* Additional proc #0 for initial events *)
     fprintf fmt "\nlogic p0 : int\n";
@@ -225,8 +228,8 @@ let print_decls fmt fp tso_vars esl =
     done end;
 
     (* List of TSO variables *) (* could use their original names *)
-    fprintf fmt "\ntype tso_var = %a\n" (print_hset_sep "|"
-      (fun fmt (f, (fx, args, ret)) -> print_var_name fmt f)) tso_vars;
+    fprintf fmt "\ntype weak_var = %a\n" (print_hset_sep "|"
+      (fun fmt (f, (fx, args, ret)) -> print_var_name fmt f)) weak_vars;
 
     (* Axiomatization *)
     fprintf fmt "%s" axiom_base;
@@ -341,3 +344,72 @@ let gen_rf_cands es =
     ) writes [] in
     if ecrf = [] then crf else ecrf :: crf
   ) reads []
+
+
+
+
+
+
+
+
+
+(*
+let axiom_rels = "
+axiom rf :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) -> e(e1).val = e(e2).val
+logic po_loc : int, int -> prop
+axiom po_loc :
+  forall e1, e2 : int [po(e1,e2)].
+  po(e1, e2) and e(e1).loc = e(e2).loc
+  <-> po_loc(e1, e2)
+logic rfe : int, int -> prop
+axiom rfe :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) and e(e1).tid <> e(e2).tid
+  <-> rfe(e1, e2)
+logic fr : int, int -> prop
+axiom fr :
+  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
+  rf(w1, r) and co(w1, w2)
+  -> fr(r, w2)
+(*logic com : int, int -> prop
+axiom com :
+  forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
+  co(e1, e2) or rf(e1, e2) or fr(e1, e2)
+  <-> com(e1, e2)*)
+logic ppo : int, int -> prop
+axiom ppo_tso :
+  forall e1, e2 : int [po(e1,e2)].
+  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
+  <-> ppo(e1, e2)
+(*logic propg : int, int -> prop
+axiom propg_tso :
+  forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
+  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
+  <-> propg(e1, e2)*)
+logic po_loc_U_com : int, int -> prop
+(*axiom po_loc_U_com :
+  forall e1, e2 : int [(*po_loc(e1,e2)|com(e1,e2)|*)po_loc_U_com(e1,e2)].
+  po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)*)
+axiom po_loc_U_com :
+  forall e1, e2 : int [(*po_loc(e1,e2)|co(e1,e2)|rf(e1,e2)|fr(e1,e2)|*)po_loc_U_com(e1,e2)].
+  po_loc(e1, e2) or co(e1, e2) or rf(e1, e2) or fr(e1, e2)
+   -> po_loc_U_com(e1, e2)
+axiom po_loc_U_com_t :
+  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
+  po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
+logic co_U_prop : int, int -> prop
+(*axiom co_U_prop :
+  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)(*|co_U_prop(e1,e2)*)].
+  co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)*)
+axiom co_U_prop :
+  forall e1, e2 : int [co(e1,e2)|ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)(*|co_U_prop(e1,e2)*)].
+  co(e1, e2) or ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
+  -> co_U_prop(e1, e2)
+axiom co_U_prop_t :
+  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
+  co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
+"
+ *)
+	      

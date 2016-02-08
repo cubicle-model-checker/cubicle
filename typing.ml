@@ -40,6 +40,12 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
+  | WeakInvalidInSC
+  | OpInvalidInSC
+  | CantUseReadInInit
+  | MustReadWeakVar of Hstring.t
+  | MustWriteWeakVar of Hstring.t
+  | MustBeWeakVar of Hstring.t
 
 exception Error of error * loc
 
@@ -94,6 +100,18 @@ let report fmt = function
       fprintf fmt "unknown type %a" Hstring.print s
   | Smt (Smt.UnknownSymb s) ->
       fprintf fmt "unknown symbol %a" Hstring.print s
+  | WeakInvalidInSC ->
+      fprintf fmt "weak is invalid in SC"
+  | OpInvalidInSC ->
+      fprintf fmt "operation is invalid in SC"
+  | CantUseReadInInit ->
+      fprintf fmt "can't use Read in init"
+  | MustReadWeakVar s ->
+      fprintf fmt "must use Read to access weak variable %a" Hstring.print s
+  | MustWriteWeakVar s ->
+      fprintf fmt "must use Write to assign to weak variable %a" Hstring.print s
+  | MustBeWeakVar s ->
+      fprintf fmt "%a must be a weak variable" Hstring.print s
 
 let error e l = raise (Error (e,l))
 
@@ -125,7 +143,7 @@ let infer_type x1 x2 =
 
 let refinement_cycles () = (* TODO *) ()
 
-let rec term loc args = function
+let rec term loc ?(init=false) args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
       (match c with
@@ -139,16 +157,18 @@ let rec term loc args = function
       else begin 
 	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e) loc
       end
-  | Elem (e, _) -> Smt.Symbol.type_of e
+  | Elem (e, _) ->
+      if Smt.Symbol.is_weak e && not init then error (MustReadWeakVar e) loc;
+      Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
-	let args, tx = term loc args x in
+	let args, tx = term loc ~init args x in
 	if not (Hstring.equal tx Smt.Type.type_int) 
 	  && not (Hstring.equal tx Smt.Type.type_real) then 
 	  error (MustBeNum x) loc;
 	args, tx
       end
-  | Access(a, li) -> 
+  | Access(a, li) -> (* check if it should be a weak access *)
       let args_a, ty_a = 
 	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
@@ -170,6 +190,8 @@ let rec term loc args = function
 	) li;
       [], ty_a
   | Read (p, v, vi) ->
+      if Options.model = Options.SC then error (OpInvalidInSC) loc;
+      if init then error (CantUseReadInInit) loc;
       let ty_p =
 	if Hstring.list_mem p args then Smt.Type.type_proc
 	else (* probably no else here, we want p to be an argument *)
@@ -181,10 +203,12 @@ let rec term loc args = function
       in
       if not (Hstring.equal ty_p Smt.Type.type_proc) then
 	error (MustBeOfTypeProc p) loc;
-      begin match vi with
-	| [] -> term loc args (Elem (v, Glob))
-	| _ -> term loc args (Access (v, vi))
-      end
+      let args, ret = begin match vi with
+	| [] -> Smt.Symbol.type_of v
+	| _ -> term loc ~init args (Access (v, vi))
+      end in
+      if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
+      args, ret
   | EventValue _ -> failwith "Typing.term EventValue should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
@@ -202,23 +226,24 @@ let assignment ?(init_variant=false) g x (_, ty) =
 	    Smt.Variant.assign_var n g
       | _ -> ()
 
-let atom loc init_variant args = function
+let atom loc init_variant ?(init=false) args = function
   | True | False -> ()
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
   | Comp (y, Eq, (Access(g, _) as x))
   | Comp (Access(g, _) as x, Eq, y) -> 
-      let ty = term loc args y in
-      unify loc (term loc args x) ty;
+      let ty = term loc ~init args y in
+      unify loc (term loc ~init args x) ty;
       if init_variant then assignment ~init_variant g y ty
   | Comp (x, op, y) -> 
-      unify loc (term loc args x) (term loc args y)
+      unify loc (term loc ~init args x) (term loc ~init args y)
   | Ite _ -> assert false
 
-let atoms loc ?(init_variant=false) args =
-  SAtom.iter (atom loc init_variant args)
+let atoms loc ?(init_variant=false) ?(init=false) args =
+  SAtom.iter (atom loc init_variant ~init args)
 
-let init (loc, args, lsa) = List.iter (atoms loc ~init_variant:true args) lsa
+let init (loc, args, lsa) =
+  List.iter (atoms loc ~init_variant:true ~init:true args) lsa
 
 let unsafe (loc, args, sa) = 
   unique (fun x-> error (DuplicateName x) loc) args; 
@@ -246,6 +271,7 @@ let assigns loc args =
 	 try Smt.Symbol.type_of g
          with Not_found -> error (UnknownGlobal g) loc in
        begin
+	 if Smt.Symbol.is_weak g then error (MustWriteWeakVar g) loc;
          match gu with
          | UTerm x ->
             let ty_x = term loc args x in
@@ -261,7 +287,9 @@ let assigns loc args =
        end;         
        dv := g ::!dv)
 
-let writes loc args = 
+let writes loc args wl =
+  if Options.model = Options.SC && wl <> []
+    then error (OpInvalidInSC) loc;
   let dv = ref [] in
   List.iter 
     (fun (p, v, vi, t) ->
@@ -270,11 +298,12 @@ let writes loc args =
 	 try Smt.Symbol.type_of v
          with Not_found -> error (UnknownGlobal v) loc in
        begin
+         if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
          let ty_t = term loc args t in
          unify loc ty_t ty_v;
          assignment v t ty_t;
        end;         
-       dv := v ::!dv)
+       dv := v ::!dv) wl
 
 let switchs loc a args ty_e l = 
   List.iter 
@@ -295,12 +324,15 @@ let updates args =
 	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
        in       
        if args_a = [] then error (MustBeAnArray a) loc;
+       if Smt.Symbol.is_weak a then error (MustWriteWeakVar a) loc;
        dv := a ::!dv;
        switchs loc a (lj @ args) ([], ty_a) swts) 
 
 let transitions = 
   List.iter 
-    (fun ({tr_args = args; tr_loc = loc} as t) -> 
+    (fun ({tr_args = args; tr_loc = loc} as t) ->
+       if Options.model = Options.SC && t.tr_fences <> []
+         then error (OpInvalidInSC) loc;
        unique (fun x-> error (DuplicateName x) loc) args; 
        atoms loc args t.tr_reqs;
        List.iter 
@@ -315,30 +347,33 @@ let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y
   with Smt.Error e -> error (Smt e) loc
 
-let declare_symbol ?(tso=false) loc n args ret =
-  try Smt.Symbol.declare ~tso n args ret
+let declare_symbol ?(weak=false) loc n args ret =
+  if weak && Options.model = Options.SC then error (WeakInvalidInSC) loc;
+  try Smt.Symbol.declare ~weak n args ret
   with Smt.Error e -> error (Smt e) loc
 
 
 let init_global_env s = 
   List.iter declare_type s.type_defs;
   let l = ref [] in
-  let weak = ref [] in
+  let weak_vars = ref [] in
   List.iter 
     (fun (loc, n, t) -> 
        declare_symbol loc n [] t;
        l := (n, t)::!l) s.consts;
   List.iter 
-    (fun (loc, n, t, tso) -> 
-       declare_symbol ~tso loc n [] t;
-       if tso then weak := n :: !weak;
+    (fun (loc, n, t, weak) -> 
+       declare_symbol ~weak loc n [] t;
+       if weak then weak_vars := n :: !weak_vars;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (loc, n, (args, ret), tso) -> 
-       declare_symbol ~tso loc n args ret;
-       if tso then weak := n :: !weak;
+    (fun (loc, n, (args, ret), weak) -> 
+       declare_symbol ~weak loc n args ret;
+       if weak then weak_vars := n :: !weak_vars;
        l := (n, ret)::!l) s.arrays;
-  !l, !weak
+  (*if Options.model <> Options.SC
+    then*) Smt.Type.declare_event_type !weak_vars;
+  !l, !weak_vars
 
 
 let init_proc () = 

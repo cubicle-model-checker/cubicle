@@ -80,7 +80,7 @@ let _ =
       | Bwd.Unsafe (faulty, candidates) ->
          if (not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
-         if not quiet then Stats.error_trace system faulty;
+         (*if not quiet then Stats.error_trace system faulty;*)
          printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
          close_dot ();
          exit 1
@@ -116,10 +116,10 @@ let _ =
     if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
 
     exit 1
-
+(*
   | e ->
 
     let backtrace = Printexc.get_backtrace () in
     eprintf "Fatal error: %s@." (Printexc.to_string e);
     if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace
-
+ *)

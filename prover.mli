@@ -26,17 +26,17 @@ val unsafe : Ast.t_system -> Node.t -> unit
 val reached : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 (** [reached vars s1 s2] raises [Unsat] if s2 has not been reached *)
 
-val assume_goal : Node.t -> unit
+val assume_goal : ?fp:bool -> Node.t -> unit
 (** Clears the context and assumes a goal formula *)
 
-val assume_node : Node.t -> ArrayAtom.t -> unit
+val assume_node : ?fp:bool -> Node.t -> ArrayAtom.t -> unit
 (** [assume_node n a] assumes the negation of a node [n] given in the form of a
     renaming [a]; raises [Unsat] if the context becomes unsatisfiable *)
 
-val assume_goal_no_check : Node.t -> unit
+val assume_goal_no_check : ?fp:bool -> Node.t -> unit
 (** Same as {!assume_goal but without the solver check} *)
 
-val assume_node_no_check : Node.t -> ArrayAtom.t -> unit
+val assume_node_no_check : ?fp:bool -> Node.t -> ArrayAtom.t -> unit
 (** Same as {!assume_node but without the solver check} *)
   
 val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
@@ -50,4 +50,4 @@ val make_formula_set : SAtom.t -> Smt.Formula.t list -> Smt.Formula.t
 val run : ?fp:bool -> unit -> unit
 (** Runs the SMT solver on its current context *)
 
-val assume_goal_nodes : Node.t -> (Node.t * ArrayAtom.t) list -> unit
+val assume_goal_nodes : ?fp:bool -> Node.t -> (Node.t * ArrayAtom.t) list -> unit

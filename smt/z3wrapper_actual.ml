@@ -86,6 +86,12 @@ module Type = struct
     H.add decl_types tproc z3int;
     tproc
 
+  let type_weak =
+    Hstring.make "_weak_var"
+
+  let type_event =
+    Hstring.make "_event"
+
   let declare_constructor ty c f =
     (* eprintf "declare_constructor@."; *)
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
@@ -129,13 +135,22 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
+  let type_direction =
+    let tdir = Hstring.make "_direction" in
+    let cdir = [ Hstring.make "_R" ; Hstring.make "_W" ] in
+    declare tdir cdir;
+    tdir
+
+  let declare_event_type _ =
+    failwith "Z3Wrapper_actual.Type.declare_event_type TODO"
+
 end
 
 module Symbol = struct
     
   type t = Hstring.t
 
-  let declare ?(tso=false) f args ret =
+  let declare ?(weak=false) f args ret =
     (* eprintf "declare@."; *)
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     let z3_args = List.map (fun t ->
@@ -320,8 +335,8 @@ module Term = struct
     | Div -> mk_div global_context t1 t2
     | Modulo -> failwith "modulo not supported by Z3 for now"
 
-  let make_event_val e =
-    failwith "Z3Wrapper_actual.Term.make_event_val TODO"
+  let make_event_field ?(qv=false) e f =
+    failwith "Z3Wrapper_actual.Term.make_event_field TODO"
 
   let is_int = is_int
 

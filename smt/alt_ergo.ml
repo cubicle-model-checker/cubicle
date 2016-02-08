@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 open Format
-       
+
 type error = 
   | DuplicateTypeName of Hstring.t
   | DuplicateSymb of Hstring.t
@@ -27,14 +27,6 @@ type check_strategy = Lazy | Eager
                       
 module H = Hstring.H
 module HSet = Hstring.HSet
-
-module TTerm = Term
-
-let all_types = H.create 17 (**)
-let all_vars = H.create 17 (**)
-let tso_vars = H.create 17 (**)
-let all_events = ref []
-let formula = ref []
 
 let decl_types = H.create 17
 let decl_symbs = H.create 17
@@ -68,13 +60,18 @@ module Type = struct
     H.add decl_types tproc Ty.Tint;
     tproc
 
+  let type_weak =
+    Hstring.make "_weak_var"
+
+  let type_event =
+    Hstring.make "_event"
+
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
 
-  let declare t constrs =
-    H.add all_types t constrs; (* Added *)
+  let declare t constrs = 
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     match constrs with
       | [] -> 
@@ -98,17 +95,24 @@ module Type = struct
 
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
-    
+
+  let type_direction =
+    let tdir = Hstring.make "_direction" in
+    let cdir = [ Hstring.make "_R" ; Hstring.make "_W" ] in
+    declare tdir cdir;
+    tdir
+
+  let declare_event_type _ = () (*
+    failwith "Alt_ergo.Type.declare_event_type TODO"*)
+
 end
 
 module Symbol = struct
     
   type t = Hstring.t
 
-  let declare ?(tso=false) f args ret =
+  let declare ?(weak=false) f args ret =
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
-    H.add all_vars f (Symbols.name f, args, ret); (* Added *) (* Needed ?*)
-    if tso then H.add tso_vars f (Symbols.name f, args, ret); (* Added *)
     List.iter 
       (fun t -> 
 	if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
@@ -116,6 +120,8 @@ module Symbol = struct
     H.add decl_symbs f (Symbols.name f, args, ret)
 
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
+
+  let is_weak s = false
 
   let declared s = 
     let res = H.mem decl_symbs s in
@@ -245,7 +251,7 @@ module Variant = struct
       constructors
       
 end
-
+  
 module Term = struct
 
   type t = Term.t
@@ -281,15 +287,9 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let make_event_val e =
-    let s = (fst e.Event.var) in
-    try
-      let (_, _, nty) = H.find decl_symbs s in
-      let ty = H.find decl_types nty in
-      let sb = Symbols.name (Hstring.make ("e(" ^ Event.name e ^ ").val")) in 
-      Term.make sb [] ty
-    with Not_found -> raise (Error (UnknownSymb s))
-			    
+  let make_event_field ?(qv=false) e f =
+    failwith "Alt_ergo.Term.make_event_field TODO"
+
   let is_int = Term.is_int
 
   let is_real = Term.is_real
@@ -454,52 +454,20 @@ let rec mk_cnf = function
 
   (* let make_cnf f = mk_cnf (sform f) *)
 
-  let make_event_desc e =
-    let en = "e(" ^ Event.name e ^ ")" in
-    let ty_dir = Ty.Tabstract (Hstring.make "dir") in
-    let ty_loc = Ty.Tabstract (Hstring.make "tso_var") in
-    let sb_uid = Symbols.name (Hstring.make (en ^ ".uid")) in 
-    let sb_tid = Symbols.name (Hstring.make (en ^ ".tid")) in 
-    let sb_dir = Symbols.name (Hstring.make (en ^ ".dir")) in 
-    let sb_loc = Symbols.name (Hstring.make (en ^ ".loc")) in 
-    let t_uid = TTerm.make sb_uid [] Ty.Tint in
-    let t_tid = TTerm.make sb_tid [] Ty.Tint in
-    let t_dir = TTerm.make sb_dir [] ty_dir in
-    let t_loc = TTerm.make sb_loc [] ty_loc in
-    let dir = if e.Event.dir = Event.ERead then "_R" else "_W" in
-    let var = "_V" ^ (Hstring.view (fst e.Event.var)) in
-    let uid = TTerm.int (string_of_int e.Event.uid) in
-    let tid = TTerm.make (Symbols.name e.Event.tid) [] Ty.Tint in
-    let dir = TTerm.make (Symbols.name (Hstring.make dir)) [] ty_dir in
-    let loc = TTerm.make (Symbols.name (Hstring.make var)) [] ty_loc in
-    [ (*Lit (Literal.LT.make (Literal.Eq (t_uid, uid))) ;*)
-      Lit (Literal.LT.make (Literal.Eq (t_tid, tid))) ;
-      Lit (Literal.LT.make (Literal.Eq (t_dir, dir))) ;
-      Lit (Literal.LT.make (Literal.Eq (t_loc, loc))) ]
+  let make_event_desc e = [] (*
+    failwith "Alt_ergo.Formula.make_event_desc TODO" *)
 
-  let make_acyclic_rel e =
-    let en = Event.name e in
-    let acpo = "po_loc_U_com(" ^ en ^ "," ^ en ^ ")" in
-    let t_acpo = TTerm.make (Symbols.name (Hstring.make acpo)) [] Ty.Tbool in
-    let acco = "co_U_prop(" ^ en ^ "," ^ en ^ ")" in
-    let t_acco = TTerm.make (Symbols.name (Hstring.make acco)) [] Ty.Tbool in
-    [ Lit (Literal.LT.make (Literal.Eq (t_acpo, TTerm.faux))) ;
-      Lit (Literal.LT.make (Literal.Eq (t_acco, TTerm.faux))) ]
+  let make_acyclic_rel e = [] (*
+    failwith "Alt_ergo.Formula.make_acyclic_rel TODO" *)
 
-  let make_pair rel (eid1, eid2) =
-    let en1 = "e" ^ (string_of_int eid1)  in
-    let en2 = "e" ^ (string_of_int eid2)  in
-    let pair = rel ^ "(" ^ en1 ^ "," ^ en2 ^ ")" in
-    let t_rel = TTerm.make (Symbols.name (Hstring.make pair)) [] Ty.Tbool in
-    Lit (Literal.LT.make (Literal.Eq (t_rel, TTerm.vrai)))
+  let make_pair rel (e1, e2) = f_true (*
+    failwith "Alt_ergo.Formula.make_pair TODO" *)
 
-  let make_rel rel pl =
-    List.fold_left (fun f p -> make_pair rel p :: f) [] pl
+  let make_rel rel pl = [] (*
+    failwith "Alt_ergo.Formula.make_rel TODO" *)
 
-  let make_cands rel cands =
-    List.fold_left (fun ff pl ->
-      Comb (Or, (make_rel rel pl)) :: ff
-    ) [] cands
+  let make_cands rel cands = [] (*
+    failwith "Alt_ergo.Formula.make_cands TODO" *)
 
 end
 
@@ -538,15 +506,11 @@ module Make (Options : sig val profiling : bool end) = struct
 
   module CSolver = Solver.Make (Options)
 
-  (***********************************************)
-
   let clear () =
-    all_events := [];
-    formula := [](*;
     Stack.clear push_stack;
-    CSolver.clear ()*)
+    CSolver.clear ()
 
-(*let check_unsatcore uc =
+  let check_unsatcore uc =
     eprintf "Unsat Core : @.";
     List.iter 
       (fun c -> 
@@ -584,112 +548,35 @@ module Make (Options : sig val profiling : bool end) = struct
         (fun s {Solver_types.name = n} ->
 	  try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
     in 
-    SInt.elements s *)
+    SInt.elements s
 
   let assume ?(events=Event.empty_struct) ~id f =
     Time.start ();
-    try
-      if events <> Event.empty_struct then
-	all_events := events :: !all_events;
-      formula := (Formula.make_cnf f) :: !formula;
-      (*CSolver.assume (Formula.make_cnf f) id;*)
+    try 
+      CSolver.assume (Formula.make_cnf f) id;
       Time.pause ()
     with Solver.Unsat ex ->
       Time.pause ();
-      raise (Unsat [] (*(export_unsatcore2 ex)*))
+      raise (Unsat (export_unsatcore2 ex))
 
-  let typeof t =
-    let t = (Hstring.view t) in
-    if String.compare t "proc" = 0 then "int" else t
-
-  let print_type fmt t =
-    fprintf fmt "%s" (typeof t)
-
-  let print_list_sep sep pfun fmt = function
-    | [] -> ()
-    | e :: l -> pfun fmt e;
-		List.iter (fun e -> fprintf fmt " %s %a" sep pfun e) l
-
-  let print_clause fmt c =
-    fprintf fmt "(%a)" (print_list_sep "or" Literal.LT.print) c
-
-  let print_cnf fmt cnf =
-    print_list_sep "and" print_clause fmt cnf
-
-  let replace str s1 s2 =
-    Str.global_replace (Str.regexp_string s1) s2 str
-
-  let gen_filename =
-    let cnt = ref 0 in
-    fun name ext ->
-      cnt := !cnt + 1;
-      name ^ (string_of_int !cnt) ^ ext
-    
   let check ?(fp=false) () =
     incr calls;
     Time.start ();
-    try
-      let filename = gen_filename "formula_" ".why" in
-      let file = open_out filename in
-      let filefmt = formatter_of_out_channel file in
-
-      (* Print all types *)
-      H.iter (fun t cl -> match cl with
-        | [] -> fprintf filefmt "type %a\n" Hstring.print t
-        | _ -> fprintf filefmt "type %a = %a\n" Hstring.print t
-		       (print_list_sep "|" Hstring.print) cl
-      ) all_types;
-
-      (* Print all variables *) (* should not print TSO variables *)
-      H.iter (fun f (fx, args, ret) ->
-	if not (H.mem tso_vars f) then
-        fprintf filefmt "logic %s :%a %s\n" (replace (Hstring.view f) "#" "p")
-          (fun fmt -> List.iter (fun a -> fprintf fmt " %s ->" (typeof a))) args
-	  (typeof ret)
-      ) all_vars;
-
-      (* Print TSO declarations *)
-      Event.print_decls filefmt fp tso_vars !all_events;
-
-      (* Print formula *)
-      fprintf filefmt "goal g: true\n";
-      List.iter (fun cnf ->
-	fprintf str_formatter " and %a\n" print_cnf cnf;
-	let t = flush_str_formatter () in
-	let t = replace t "#" "p" in
-	let t = replace t "True" "true" in
-	let t = replace t "False" "false" in
-	fprintf filefmt "%s" t;
-      ) (List.rev !formula);
-
-      (* Output file *)
-      flush file;
-      close_out file;
-
-      (* Call solver and check result *)
-      eprintf "-------------> Calling Alt-Ergo on %s <-------------\n" filename;
-      let output = Util.syscall ("alt-ergo -sat-mode " ^ filename) in
-      if String.compare output "unsat\n" = 0 then
-        raise (Solver.Unsat [])
-      else if String.compare (String.sub output 0 5) "unsat" = 0 then
-        raise (Solver.Unsat [])
-      else if String.compare output "unknown (sat)\n" <> 0 then
-	failwith "Error calling SMT solver";
-      (*if String.compare output "unsat\n" = 0 then exit 0;*)
-      (*CSolver.solve ();*)
+    try 
+      CSolver.solve ();
       Time.pause ()
     with
       | Solver.Sat -> Time.pause ()
-      | Solver.Unsat ex ->
+      | Solver.Unsat ex -> 
 	  Time.pause ();
-	  raise (Unsat [] (*(export_unsatcore2 ex)*))
+	  raise (Unsat (export_unsatcore2 ex))
 
-  (*let save_state = CSolver.save
+  let save_state = CSolver.save
 
-  let restore_state = CSolver.restore*)
+  let restore_state = CSolver.restore
 
-  let entails f = failwith "Alt_ergo.entails unsupported"
-    (*let st = save_state () in
+  let entails f =
+    let st = save_state () in
     let ans = 
       try
         assume ~id:0 (Formula.make Formula.Not [f]) ;
@@ -698,12 +585,10 @@ module Make (Options : sig val profiling : bool end) = struct
       with Unsat _ -> true
     in
     restore_state st;
-    ans*)
+    ans
 
-  let push () = (*Stack.push (save_state ()) push_stack*)
-    failwith "Alt_ergo.push unsupported"
+  let push () = Stack.push (save_state ()) push_stack
 
-  let pop () = (*Stack.pop push_stack |> restore_state*)
-    failwith "Alt_ergo.pop unsupported"
-
+  let pop () = Stack.pop push_stack |> restore_state
+  
 end

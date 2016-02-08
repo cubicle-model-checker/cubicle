@@ -44,7 +44,7 @@ EXE = @EXE@
 ZARITHLIB = @ZARITHLIB@
 OCAMLGRAPHLIB = @OCAMLGRAPHLIB@
 
-INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) -I common/ -I smt/
+INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) -I common/ -I smt/ -I alt-ergo
 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
@@ -109,6 +109,8 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo \
 	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/alt_ergo.cmo \
+	 alt-ergo/altErgo.cmo \
+	 smt/alt_ergo_file.cmo smt/alt_ergo_lib.cmo \
 	 smt/z3wrapper.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
@@ -137,11 +139,11 @@ opt: $(NAME).opt
 
 $(NAME).byte: $(MAINCMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) alt-ergo/altErgo.cmo $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
 
 $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) alt-ergo/altErgo.cmx $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
 VERSION=1.1c
 # comment the following line for release
