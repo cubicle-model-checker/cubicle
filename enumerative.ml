@@ -223,7 +223,7 @@ let state_to_cube env st =
 	let t1 = id_to_term env !i in
 	let t2 =
           if sti = env.minf_int_abstr then Elem (Hstring.make "-oo", Constr)
-          else if  sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
+          else if sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
           else id_to_term env sti in
 	SAtom.add (Atom.Comp (t1, Eq, t2)) sa
       else sa
