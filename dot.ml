@@ -87,10 +87,10 @@ let cedge_pre () =
     info_sfdp (sprintf "penwidth=2, color=\"%s\""
                        (hex_color !current_color))
 
-let cedge_error =
+let cedge_error ?(to_init=false) () =
   info_sfdp ("color=red, dir=back, pencolor=red, \
               fontcolor=red, penwidth=4"^
-               (if dot_level = 1 then "" else ", label=\" \""))
+               (if dot_level = 1 || to_init then "" else ", label=\" \""))
 
 
 let rec print_atoms fmt = function
@@ -162,26 +162,27 @@ let candidate n cand =
 
 let error_trace faulty =
   fprintf !dot_fmt "%a@." print_init_node faulty;
-  print_pre cedge_error !dot_fmt faulty;
+  print_pre (cedge_error ~to_init:true ()) !dot_fmt faulty;
   (* let prev = ref faulty.tag in *)
   List.iter
     (fun (_, _, s) ->
-     print_pre cedge_error !dot_fmt s;
+     print_pre (cedge_error ())!dot_fmt s;
      if s.kind = Node then
        fprintf !dot_fmt "%a@." (print_node_c config_error) s
     ) faulty.from
 
 
-let delete_node_by n s =
+let delete_node_by n p =
   if n.deleted then
     begin
       fprintf !dot_fmt "%d [color=\"blue\"]@." n.tag;
               (* (hex_color !current_color); *)
-      if Node.has_deleted_ancestor n then match n.from with
-      | (_,_,p)::_ ->
-         fprintf !dot_fmt "%d -> %d [arrowhead=none, penwidth=2, color=blue]"
-                 p.tag n.tag 
-      | _ -> ()
+      (* if Node.has_deleted_ancestor n then match n.from with *)
+      (* | (_,_,p)::_ -> *)
+         fprintf !dot_fmt "%d -> %d [penwidth=2, color=blue, style=dashed, \
+                           constraint=false, arrowhead=onormal]"
+           n.tag p.tag 
+      (* | _ -> () *)
       (* fprintf !dot_fmt "%d -> %d [style=dashed, constraint=false]" s.tag n.tag *)
     end
 
