@@ -1,0 +1,234 @@
+Cache[#1] = Exclusive &&
+Cache[#2] = Shared
+
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Chan3[#1] = Invack &&
+Chan3[#2] = Invack
+
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Shrset[#2] = False &&
+Chan3[#1] = Invack
+
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Shrset[#2] = False &&
+Chan3[#1] = Inv
+
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Chan3[#2] = Invack
+
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False &&
+Chan3[#3] = Invack
+
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False &&
+Chan3[#3] = Inv
+
+Curcmd = Reqs &&
+Curptr = #2 &&
+Cache[#1] = Exclusive &&
+Chan3[#3] = Invack
+
+Curcmd = Reqs &&
+Curptr = #2 &&
+Cache[#1] = Exclusive &&
+Chan3[#3] = Inv
+
+Curcmd = Reqs &&
+Curptr = #2 &&
+Cache[#1] = Exclusive &&
+Chan3[#2] = Invack
+
+Curcmd = Reqs &&
+Curptr = #2 &&
+Cache[#1] = Exclusive &&
+Chan3[#2] = Inv
+
+Curcmd = Reqs &&
+Curptr = #2 &&
+Cache[#1] = Exclusive &&
+Chan3[#1] = Invack
+
+Curcmd = Empty &&
+Cache[#2] = Shared &&
+Shrset[#2] = False &&
+Chan1[#1] = Reqe &&
+Chan3[#1] = Invack
+
+Curcmd = Empty &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Chan1[#1] = Reqe &&
+Chan3[#2] = Invack
+
+Curcmd = Empty &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False &&
+Chan1[#1] = Reqe &&
+Chan3[#3] = Invack
+
+Curcmd = Empty &&
+Cache[#1] = Exclusive &&
+Chan1[#2] = Reqs &&
+Chan3[#3] = Invack
+
+Curcmd = Empty &&
+Cache[#1] = Exclusive &&
+Chan1[#2] = Reqs &&
+Chan3[#2] = Invack
+
+Curcmd = Empty &&
+Cache[#1] = Exclusive &&
+Chan1[#2] = Reqs &&
+Chan3[#1] = Invack
+
+Exgntd = False &&
+Curcmd = Reqe &&
+Curptr = #1 &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False
+
+Exgntd = False &&
+Curcmd = Reqs &&
+Curptr = #3 &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False &&
+Chan1[#1] = Reqe
+
+Exgntd = False &&
+Curcmd = Reqs &&
+Curptr = #2 &&
+Cache[#1] = Exclusive
+
+Exgntd = False &&
+Curcmd = Empty &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False &&
+Chan1[#1] = Reqe
+
+Exgntd = False &&
+Curcmd = Empty &&
+Cache[#1] <> Exclusive &&
+Cache[#2] = Shared &&
+Shrset[#1] = False &&
+Shrset[#2] = False &&
+Chan1[#1] = Empty
+
+Exgntd = False &&
+Curcmd = Empty &&
+Cache[#1] = Exclusive &&
+Chan1[#2] = Reqs
+
+Exgntd = False &&
+Curcmd = Empty &&
+Cache[#1] = Exclusive &&
+Cache[#2] = Invalid &&
+Chan1[#2] = Empty
+
+Cluster(10/11) Exgntd = True &&
+               Curcmd = Reqs &&
+               Curptr = #1 &&
+               Cache[#1] = Invalid &&
+               Cache[#2] = Invalid &&
+               Shrset[#1] = False &&
+               Shrset[#2] = True &&
+               Chan1[#1] = Empty &&
+               Chan3[#1] = Empty &&
+               Chan3[#2] = Invack
+Cluster(8/11) Exgntd = True &&
+              Curptr = #1 &&
+              Cache[#1] = Invalid &&
+              Cache[#2] = Invalid &&
+              Shrset[#1] = True &&
+              Shrset[#2] = False &&
+              Chan3[#1] = Invack &&
+              Chan3[#2] = Empty
+Cluster(8/11) Exgntd = True &&
+              Curptr = #1 &&
+              Cache[#1] = Invalid &&
+              Cache[#2] = Exclusive &&
+              Shrset[#1] = False &&
+              Shrset[#2] = True &&
+              Chan3[#1] = Empty &&
+              Chan3[#2] = Inv
+Cluster(10/11) Exgntd = False &&
+               Curcmd = Reqe &&
+               Curptr = #1 &&
+               Cache[#1] = Shared &&
+               Cache[#2] = Invalid &&
+               Shrset[#1] = True &&
+               Shrset[#2] = False &&
+               Chan1[#1] = Reqe &&
+               Chan3[#1] = Inv &&
+               Chan3[#2] = Empty
+Cluster(9/11) Exgntd = False &&
+              Curcmd = Reqe &&
+              Curptr = #1 &&
+              Cache[#1] = Invalid &&
+              Cache[#2] = Shared &&
+              Shrset[#1] = False &&
+              Shrset[#2] = True &&
+              Chan3[#1] = Empty &&
+              Chan3[#2] = Inv
+Cluster(9/11) Exgntd = False &&
+              Curcmd = Empty &&
+              Curptr = #1 &&
+              Cache[#1] = Shared &&
+              Cache[#2] = Shared &&
+              Shrset[#1] = True &&
+              Shrset[#2] = True &&
+              Chan3[#1] = Empty &&
+              Chan3[#2] = Empty
+Cluster(10/11) Exgntd = False &&
+               Curptr = #1 &&
+               Cache[#1] = Shared &&
+               Cache[#2] = Shared &&
+               Shrset[#1] = True &&
+               Shrset[#2] = True &&
+               Chan1[#1] = Empty &&
+               Chan1[#2] = Empty &&
+               Chan3[#1] = Empty &&
+               Chan3[#2] = Empty
+Cluster(9/11) Curcmd = Reqe &&
+              Curptr = #1 &&
+              Cache[#1] = Invalid &&
+              Cache[#2] = Invalid &&
+              Shrset[#1] = False &&
+              Shrset[#2] = True &&
+              Chan1[#1] = Empty &&
+              Chan3[#1] = Empty &&
+              Chan3[#2] = Invack
+Cluster(7/11) Curptr = #1 &&
+              Cache[#1] = Invalid &&
+              Cache[#2] = Invalid &&
+              Shrset[#1] = True &&
+              Shrset[#2] = False &&
+              Chan3[#1] = Invack &&
+              Chan3[#2] = Empty
+Cluster(8/11) Curptr = #1 &&
+              Cache[#1] = Invalid &&
+              Cache[#2] = Invalid &&
+              Shrset[#1] = False &&
+              Shrset[#2] = True &&
+              Chan1[#2] = Empty &&
+              Chan3[#1] = Empty &&
+              Chan3[#2] = Invack

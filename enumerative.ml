@@ -190,7 +190,6 @@ let empty_env = {
   fringe = [];
 }
 
-
 let build_state_procs_map id_terms procs var_terms proc_terms =
   let build_int_perms sigma lt =
     List.fold_left (fun acc_s t ->
@@ -207,9 +206,7 @@ let build_state_procs_map id_terms procs var_terms proc_terms =
     sigma, p_vars, p_procs
   ) d
 
-
 exception Found of term
-
 
 (* inefficient but only used for debug *)
 let id_to_term env id =
