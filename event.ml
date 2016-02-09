@@ -139,7 +139,10 @@ let gen_po es =
     | [] | [_] -> po
     | 0 :: tpof -> aux po tpof
     | eid :: 0 :: tpof -> aux po (eid :: tpof)
-    | eid1 :: ((eid2 :: _) as tpof) -> aux ((eid1, eid2) :: po) tpof
+    | eid1 :: ((eid2 :: _) as tpof) ->
+       let e1 = event_from_id es eid1 in
+       let e2 = event_from_id es eid2 in
+       aux ((e1, e2) :: po) tpof
   in
   IntMap.fold (fun _ tpof po -> aux po tpof) es.po_f []
 
@@ -159,7 +162,10 @@ let gen_fence es =
     | _ ->
        let ltpof, rtpof = split_at_first_fence ltpof rtpof in
        match first_event EWrite ltpof, first_event ERead rtpof with
-       | Some w, Some r -> aux ((w, r) :: fence) ltpof rtpof (*should make lst*)
+       | Some w, Some r ->
+	  let we = event_from_id es w in
+	  let re = event_from_id es r in
+	  aux ((we, re) :: fence) ltpof rtpof (*should make lst*)
        | _, _ -> aux fence ltpof rtpof
   in
   IntMap.fold (fun _ tpof fence -> aux fence [] tpof) es.po_f []
@@ -173,7 +179,7 @@ let rec co_from_tpof es co = function
 	let co = List.fold_left (fun co eid2 ->
 	  match write_from_id es eid2 with
 	  | None -> co
-	  | Some e2 -> if e1.var = e2.var then (eid1, eid2) :: co else co
+	  | Some e2 -> if e1.var = e2.var then (e1, e2) :: co else co
 	) co tpof in
 	co_from_tpof es co tpof
 
@@ -183,7 +189,7 @@ let gen_co es =
     Hstring.view e.tid = "#0") writes in
   let co = IntMap.fold (fun eid1 e1 co -> (* Initial writes *)
     IntMap.fold (fun eid2 e2 co ->
-      if e1.var = e2.var then (eid1, eid2) :: co else co
+      if e1.var = e2.var then (e1, e2) :: co else co
     ) writes co
   ) iwrites [] in
   IntMap.fold (fun tid tpof co -> (* Writes from same thread *)
@@ -203,7 +209,7 @@ let gen_co_cands es =
 	     | None -> cco
 	     | Some e2 ->
 		if e1.var <> e2.var then cco
-		else [ (eid1, eid2) ; (eid2, eid1) ] :: cco
+		else [ (e1, e2) ; (e2, e1) ] :: cco
 	   ) cco tpof2
       ) cco tpof1 in
       aux cco tpof2 (IntMap.remove tid2 pof)
@@ -219,7 +225,7 @@ let gen_rf_cands es =
   IntMap.fold (fun eid1 e1 crf ->
     let ecrf = IntMap.fold (fun eid2 e2 ecrf ->
       if e1.var <> e2.var then ecrf
-      else (eid2, eid1) :: ecrf
+      else (e2, e1) :: ecrf
     ) writes [] in
     if ecrf = [] then crf else ecrf :: crf
   ) reads []

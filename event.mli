@@ -36,12 +36,12 @@ val es_add_events_full : structure -> t list -> structure
 
 val es_add_fences : structure -> Variable.t list -> structure
 
-val gen_po : structure -> (int * int) list
+val gen_po : structure -> (t * t) list
 
-val gen_fence : structure -> (int * int) list
+val gen_fence : structure -> (t * t) list
 
-val gen_co : structure -> (int * int) list
+val gen_co : structure -> (t * t) list
 
-val gen_co_cands : structure -> (int * int) list list
+val gen_co_cands : structure -> (t * t) list list
 
-val gen_rf_cands : structure -> (int * int) list list
+val gen_rf_cands : structure -> (t * t) list list

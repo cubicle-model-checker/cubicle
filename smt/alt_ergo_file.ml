@@ -30,10 +30,8 @@ module HSet = Hstring.HSet
 
 module TTerm = Term
 
-let all_types = H.create 17 (**)
-let all_vars = H.create 17 (**)
-let all_events = ref []
-let formula = ref []
+let all_types = H.create 17
+let all_vars = H.create 17
 
 let decl_types = H.create 17
 let decl_symbs = H.create 17
@@ -317,7 +315,7 @@ module Term = struct
     try
       let (_, _, nty) = H.find decl_symbs s in
       let ty = H.find decl_types nty in
-      let sb = Symbols.name (Hstring.make ("e(" ^ Event.name e ^ ")." ^ f)) in 
+      let sb = Symbols.name (Hstring.make ("e(" ^ Event.name e ^ ")." ^ f)) in
       Term.make sb [] ty
     with Not_found -> raise (Error (UnknownSymb s))
       (* --> to improve base on lib  *)
@@ -506,7 +504,7 @@ let rec mk_cnf = function
     let en = "e(" ^ Event.name e ^ ")" in
     let ty_dir = Ty.Tabstract (Hstring.make "dir") in
     let ty_loc = Ty.Tabstract (Hstring.make "weak_var") in
-    let sb_tid = Symbols.name (Hstring.make (en ^ ".tid")) in 
+    let sb_tid = Symbols.name (Hstring.make (en ^ ".tid")) in
     let sb_dir = Symbols.name (Hstring.make (en ^ ".dir")) in 
     let sb_loc = Symbols.name (Hstring.make (en ^ ".loc")) in 
     let t_tid = TTerm.make sb_tid [] Ty.Tint in
@@ -530,9 +528,12 @@ let rec mk_cnf = function
     [ Lit (Literal.LT.make (Literal.Eq (t_acpo, TTerm.faux))) ;
       Lit (Literal.LT.make (Literal.Eq (t_acco, TTerm.faux))) ]
 
-  let make_pair rel (eid1, eid2) =
-    let en1 = "e" ^ (string_of_int eid1)  in
-    let en2 = "e" ^ (string_of_int eid2)  in
+  (* let make_pair rel (eid1, eid2) = *)
+  (*   let en1 = "e" ^ (string_of_int eid1)  in *)
+  (*   let en2 = "e" ^ (string_of_int eid2)  in *)
+  let make_pair rel (e1, e2) =
+    let en1 = Event.name e1 in
+    let en2 = Event.name e2 in
     let pair = rel ^ "(" ^ en1 ^ "," ^ en2 ^ ")" in
     let t_rel = TTerm.make (Symbols.name (Hstring.make pair)) [] Ty.Tbool in
     Lit (Literal.LT.make (Literal.Eq (t_rel, TTerm.vrai)))
@@ -690,6 +691,9 @@ axiom co_U_prop_t :
       cnt := !cnt + 1;
       name ^ (string_of_int !cnt) ^ ext
 
+  let all_events = ref []
+  let formula = ref []
+
   (***********************************************)
 
   let check_strategy = Lazy
@@ -770,7 +774,8 @@ axiom co_U_prop_t :
     try
 
       (* Create .why file *)
-      let filename = gen_filename "formula_" ".why" in
+      let prefix = if fp then "formula_fp_" else "formula_sat_" in
+      let filename = gen_filename prefix ".why" in
       let file = open_out filename in
       let filefmt = formatter_of_out_channel file in
 
