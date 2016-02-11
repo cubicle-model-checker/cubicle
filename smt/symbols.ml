@@ -16,7 +16,7 @@
 open Hashcons
 
 type operator = 
-  | Plus | Minus | Mult | Div | Modulo 
+  | Plus | Minus | Mult | Div | Modulo | Access of Hstring.t
 
 type name_kind = Ac | Constructor | Other
 
@@ -80,6 +80,7 @@ let to_string =  function
   | Op Mult -> "*"
   | Op Div -> "/"
   | Op Modulo -> "%"
+  | Op (Access f) -> "." ^ (Hstring.view f)
   | True -> "true"
   | False -> "false"
 

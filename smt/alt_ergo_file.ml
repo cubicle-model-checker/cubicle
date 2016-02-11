@@ -30,7 +30,8 @@ module HSet = Hstring.HSet
 
 module TTerm = Term
 
-let all_types = H.create 17
+type ttype = TAbs | TSum of Hstring.t list | TRec of (Hstring.t * Hstring.t) list
+let all_types = ref []
 let all_vars = H.create 17
 
 let decl_types = H.create 17
@@ -71,15 +72,28 @@ module Type = struct
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
 
   let declare t constrs =
-    H.add all_types t constrs; (* Added *)
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     match constrs with
-      | [] -> 
+      | [] ->
+          all_types := (t, TAbs) :: !all_types;
 	  H.add decl_types t (Ty.Tabstract t)
       | _ -> 
+          all_types := (t, TSum constrs) :: !all_types;
 	  let ty = Ty.Tsum (t, constrs) in
 	  H.add decl_types t ty;
 	  List.iter (fun c -> declare_constructor t c) constrs
+
+  let declare_field ty f =
+    if H.mem decl_symbs f then raise (Error (DuplicateSymb f));
+    H.add decl_symbs f (Symbols.Op (Symbols.Access f), [], ty)
+
+  let declare_record t fields =
+    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
+    let tfields = List.map (fun (f, ty) -> (f, H.find decl_types ty)) fields in
+    all_types := (t, TRec fields) :: !all_types;
+    let ty = Ty.Trecord (t, tfields) in
+    H.add decl_types t ty;
+    List.iter (fun (f, ty) -> declare_field ty f) fields
 
   let all_constructors () =
     H.fold (fun _ c acc -> match c with
@@ -112,15 +126,10 @@ module Type = struct
     let cwv = List.map (fun wv ->
       Hstring.make ("_V" ^ (Hstring.view wv))) wvl in
     declare type_weak cwv;
-
-(*  let fevent = [ (AE.Hstring.make "tid", AE.Ty.Tint) ;
-		   (AE.Hstring.make "dir", H.find decl_types type_direction) ;
-		   (AE.Hstring.make "loc", H.find decl_types type_weak) ;
-		   (AE.Hstring.make "val", AE.Ty.Tint) ] in
-    let tyevent = AE.Ty.Trecord { AE.Ty.args = [];
-				  AE.Ty.name = hsca type_event;
-				  AE.Ty.lbs = fevent } in
-    H.add decl_types type_event tyevent*)
+    let fields = [ (Hstring.make "_dir", Hstring.make "_direction") ;
+		   (Hstring.make "_var", Hstring.make "_weak_var") ;
+		   (Hstring.make "_val", Hstring.make "int") ] in
+    declare_record type_event fields
 
 end
 
@@ -130,7 +139,7 @@ module Symbol = struct
 
   let declare ?(weak=false) f args ret =
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
-    H.add all_vars f (Symbols.name f, args, ret); (* Added *) (* Needed ?*)
+    H.add all_vars f (Symbols.name f, args, ret);
     List.iter 
       (fun t -> 
 	if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
@@ -287,6 +296,13 @@ module Term = struct
       Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
 
+  let make_access t f = (* redundant with make_app *)
+    try
+      let (sb, _, nty) = H.find decl_symbs f in
+      let ty = H.find decl_types nty in
+      Term.make sb [t] ty
+    with Not_found -> raise (Error (UnknownSymb f))
+
   let t_true = Term.vrai
   let t_false = Term.faux
 
@@ -310,15 +326,8 @@ module Term = struct
 
   let is_real = Term.is_real
 
-  let mk_evt_field ?(qv=false) e f =
-    let s = (fst e.Event.var) in
-    try
-      let (_, _, nty) = H.find decl_symbs s in
-      let ty = H.find decl_types nty in
-      let sb = Symbols.name (Hstring.make ("e(" ^ Event.name e ^ ")." ^ f)) in
-      Term.make sb [] ty
-    with Not_found -> raise (Error (UnknownSymb s))
-      (* --> to improve base on lib  *)
+  let mk_evt_field ?(qv=false) e f = failwith "TODO"
+
 end
 
 module Formula = struct
@@ -500,40 +509,20 @@ let rec mk_cnf = function
 
   (* let make_cnf f = mk_cnf (sform f) *)
 
-  let make_event_desc e =
-    let en = "e(" ^ Event.name e ^ ")" in
-    let ty_dir = Ty.Tabstract (Hstring.make "dir") in
-    let ty_loc = Ty.Tabstract (Hstring.make "weak_var") in
-    let sb_tid = Symbols.name (Hstring.make (en ^ ".tid")) in
-    let sb_dir = Symbols.name (Hstring.make (en ^ ".dir")) in 
-    let sb_loc = Symbols.name (Hstring.make (en ^ ".loc")) in 
-    let t_tid = TTerm.make sb_tid [] Ty.Tint in
-    let t_dir = TTerm.make sb_dir [] ty_dir in
-    let t_loc = TTerm.make sb_loc [] ty_loc in
-    let dir = if e.Event.dir = Event.ERead then "_R" else "_W" in
-    let var = "_V" ^ (Hstring.view (fst e.Event.var)) in
-    let tid = TTerm.make (Symbols.name e.Event.tid) [] Ty.Tint in
-    let dir = TTerm.make (Symbols.name (Hstring.make dir)) [] ty_dir in
-    let loc = TTerm.make (Symbols.name (Hstring.make var)) [] ty_loc in
-    [ Lit (Literal.LT.make (Literal.Eq (t_tid, tid))) ;
-      Lit (Literal.LT.make (Literal.Eq (t_dir, dir))) ;
-      Lit (Literal.LT.make (Literal.Eq (t_loc, loc))) ]
-  (* --> improve based on lib *)
-  let make_acyclic_rel e =
-    let en = Event.name e in
-    let acpo = "po_loc_U_com(" ^ en ^ "," ^ en ^ ")" in
+  let make_event_desc e = failwith "TODO"
+
+  let make_acyclic_rel (p, e) =
+    let en = (Hstring.view p) ^ "," ^ (Hstring.view e) in 
+    let acpo = "_po_loc_U_com(" ^ en ^ "," ^ en ^ ")" in
     let t_acpo = TTerm.make (Symbols.name (Hstring.make acpo)) [] Ty.Tbool in
-    let acco = "co_U_prop(" ^ en ^ "," ^ en ^ ")" in
+    let acco = "_co_U_prop(" ^ en ^ "," ^ en ^ ")" in
     let t_acco = TTerm.make (Symbols.name (Hstring.make acco)) [] Ty.Tbool in
     [ Lit (Literal.LT.make (Literal.Eq (t_acpo, TTerm.faux))) ;
       Lit (Literal.LT.make (Literal.Eq (t_acco, TTerm.faux))) ]
 
-  (* let make_pair rel (eid1, eid2) = *)
-  (*   let en1 = "e" ^ (string_of_int eid1)  in *)
-  (*   let en2 = "e" ^ (string_of_int eid2)  in *)
-  let make_pair rel (e1, e2) =
-    let en1 = Event.name e1 in
-    let en2 = Event.name e2 in
+  let make_pair rel (p1, e1, p2, e2) =
+    let en1 = (Hstring.view p1) ^ "," ^ (Hstring.view e1) in
+    let en2 = (Hstring.view p2) ^ "," ^ (Hstring.view e2) in
     let pair = rel ^ "(" ^ en1 ^ "," ^ en2 ^ ")" in
     let t_rel = TTerm.make (Symbols.name (Hstring.make pair)) [] Ty.Tbool in
     Lit (Literal.LT.make (Literal.Eq (t_rel, TTerm.vrai)))
@@ -563,7 +552,7 @@ module type Solver = sig
   val get_calls : unit -> int
 
   val clear : unit -> unit
-  val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
+  val assume : id:int -> Formula.t -> unit
   val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
@@ -574,74 +563,75 @@ end
 module Make (Options_ : sig val profiling : bool end) = struct
 
   (********** weak memory stuff **********)
+
   let decls = "
-type _event = { tid : int; dir : _direction; loc : _weak_var; val : int }
-logic e : int -> _event
-logic po : int, int -> prop
-logic rf : int, int -> prop
-logic co : int, int -> prop
-logic fence : int, int -> prop
-logic co_U_prop : int, int -> prop
-logic po_loc_U_com : int, int -> prop
+logic _po : int, int, int, int -> prop
+logic _rf : int, int, int, int -> prop
+logic _co : int, int, int, int -> prop
+logic _fence : int, int, int, int -> prop
+logic _co_U_prop : int, int, int, int -> prop
+logic _po_loc_U_com : int, int, int, int -> prop
 "
 	   
   let axioms = "
 axiom rf :
-  forall e1, e2 : int [rf(e1,e2)].
-  rf(e1, e2) -> e(e1).val = e(e2).val
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
 
 axiom po_loc :
-  forall e1, e2 : int [po(e1,e2)].
-  po(e1, e2) and e(e1).loc = e(e2).loc
-  -> po_loc_U_com(e1, e2)
+  forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)].
+  _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var
+  -> _po_loc_U_com(p1, e1, p2, e2)
 
 axiom rfe :
-  forall e1, e2 : int [rf(e1,e2)].
-  rf(e1, e2) and e(e1).tid <> e(e2).tid
-  -> co_U_prop(e1, e2)
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) and p1 <> p2
+  -> _co_U_prop(p1, e1, p2, e2)
 
 axiom fr :
-  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
-  rf(w1, r) and co(w1, w2)
-  -> po_loc_U_com(r, w2) and co_U_prop(r, w2)
+  forall pr, pw1, pw2, r, w1, w2 : int [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
+  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
+  -> _po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)
 
 axiom ppo_tso :
-  forall e1, e2 : int [po(e1,e2)].
-  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
-  -> co_U_prop(e1, e2)
+  forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)].
+  _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R)
+  -> _co_U_prop(p1, e1, p2, e2)
 
 (*axiom po_loc_U_com :
-  forall e1, e2 : int [(*co(e1,e2)|rf(e1,e2)|*)po_loc_U_com(e1,e2)].
-  co(e1, e2) or rf(e1, e2)
-   -> po_loc_U_com(e1, e2)*)
+  forall p1, e1, p2, e2 : int [(*_co(p1,e1,p2,e2)|_rf(p1,e1,p2,e2)|*)_po_loc_U_com(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2) or _rf(p1, e1, p2, e2)
+   -> _po_loc_U_com(p1, e1, p2, e2)*)
 
 axiom po_loc_U_com_1 :
-  forall e1, e2 : int [(*co(e1,e2)|*)po_loc_U_com(e1,e2)].
-  co(e1, e2)
-   -> po_loc_U_com(e1, e2)
+  forall p1, p2, e1, e2 : int [(*_co(p1,e1,p2,e2)|*)_po_loc_U_com(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
+   -> _po_loc_U_com(p1, e1, p2, e2)
 
 axiom po_loc_U_com_2 :
-  forall e1, e2 : int [(*rf(e1,e2)|*)po_loc_U_com(e1,e2)].
-  rf(e1, e2)
-   -> po_loc_U_com(e1, e2)
+  forall p1, e1, p2, e2 : int [(*_rf(p1,e1,p2,e2)|*)_po_loc_U_com(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2)
+   -> _po_loc_U_com(p1, e1, p2, e2)
 
 axiom po_loc_U_com_t :
-  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
-  po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
+  forall p1, p2, p3, e1, e2, e3 : int [_po_loc_U_com(p1,e1,p2,e2),_po_loc_U_com(p2,e2,p3,e3)].
+  _po_loc_U_com(p1, e1, p2, e2) and _po_loc_U_com(p2, e2, p3, e3)
+   -> _po_loc_U_com(p1, e1, p3, e3)
 
 axiom co_U_prop_1 :
-  forall e1, e2 : int [co(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2)
-  -> co_U_prop(e1, e2)
+  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)(*|_co_U_prop(p1,e1,p2,e2)*)].
+  _co(p1, e1, p2, e2)
+  -> _co_U_prop(p1, e1, p2, e2)
 
 axiom co_U_prop_2 :
-  forall e1, e2 : int [fence(e1,e2)(*|co_U_prop(e1,e2)*)].
-  fence(e1, e2)
-  -> co_U_prop(e1, e2)
+  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)(*|_co_U_prop(p1,e1,p2,e2)*)].
+  _fence(p1, e1, p2, e2)
+  -> _co_U_prop(p1, e1, p2, e2)
 
 axiom co_U_prop_t :
-  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
-  co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
+  forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)].
+  _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3)
+   -> _co_U_prop(p1, e1, p3, e3)
 "
 
   let init_axioms () = ()			   
@@ -677,13 +667,13 @@ axiom co_U_prop_t :
   let print_var_name fmt v =
     fprintf fmt "_V%s" (replace (Hstring.view v) "#" "p")
 
-  let unique_events esl =
+  let unique_events esl = failwith "TODO" (*
     let uel = ref [] in
     List.iter (fun es -> Event.IntMap.iter (fun _ e ->
       if not (List.exists (fun ex -> ex.Event.uid = e.Event.uid) !uel) then
         uel := e :: !uel
       ) es.Event.events) esl;
-    !uel
+    !uel *)
 
   let gen_filename =
     let cnt = ref 0 in
@@ -756,11 +746,11 @@ axiom co_U_prop_t :
     in 
     SInt.elements s *)
 
-  let assume ?(events=Event.empty_struct) ~id f =
+  let assume ~id f =
     Time.start ();
-    try
+    try (*
       if events <> Event.empty_struct then
-	all_events := events :: !all_events;
+	all_events := events :: !all_events; *)
       formula := (Formula.make_cnf f) :: !formula;
       (*CSolver.assume (Formula.make_cnf f) id;*)
       Time.pause ()
@@ -780,11 +770,15 @@ axiom co_U_prop_t :
       let filefmt = formatter_of_out_channel file in
 
       (* Print all types *)
-      H.iter (fun t cl -> match cl with
-        | [] -> fprintf filefmt "type %a\n" Hstring.print t
-        | _ -> fprintf filefmt "type %a = %a\n" Hstring.print t
+      let print_field fmt (f, t) =
+	fprintf fmt "%a : %a" Hstring.print f Hstring.print t in
+      List.iter (fun (t, td) -> match td with
+        | TAbs -> fprintf filefmt "type %a\n" Hstring.print t
+        | TSum cl -> fprintf filefmt "type %a = %a\n" Hstring.print t
 		       (print_list_sep "|" Hstring.print) cl
-      ) all_types;
+        | TRec fl -> fprintf filefmt "type %a = { %a }\n" Hstring.print t
+		       (print_list_sep ";" print_field) fl
+      ) (List.rev !all_types);
       (*H.iter (fun t ty -> match ty with
         | Ty.Tabstract _ -> fprintf filefmt "type %a\n" Hstring.print t
         | Ty.Tsum (_, cl) -> fprintf filefmt "type %a = %a\n" Hstring.print t
@@ -795,9 +789,9 @@ axiom co_U_prop_t :
       (* Print all variables *)
       H.iter (fun f (fx, args, ret) ->
 	if not (Symbol.is_weak f) then
-        fprintf filefmt "logic %s :%a %s\n" (replace (Hstring.view f) "#" "p")
-          (fun fmt -> List.iter (fun a -> fprintf fmt " %s ->" (typeof a))) args
-	  (typeof ret)
+          fprintf filefmt "logic %s : %a%s\n" (replace (Hstring.view f) "#" "p")
+	  (print_list_sep "," print_type) args
+	  ((if args = [] then " " else " -> ") ^ (typeof ret))
       ) all_vars;
 
       (* Print Weak declarations *)
@@ -810,11 +804,11 @@ axiom co_U_prop_t :
 	if not fp then fprintf filefmt "%s" axioms;
 	fprintf filefmt "\n";
 
-	(* Declaration of Events *)
+	(* Declaration of Events *) (*
 	List.iter (fun e ->
 	  fprintf filefmt "logic %s : int\n" (Event.name e)
 	) (List.rev (unique_events !all_events));
-	fprintf filefmt "\n"
+	fprintf filefmt "\n" *)
 
       end;
       
@@ -829,12 +823,15 @@ axiom co_U_prop_t :
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
 
+      (* fprintf filefmt "goal g:\n%a\n" *)
+      (*   (print_list_sep "and" print_field) fl *)
+	      
       (* Output file *)
       flush file;
       close_out file;
 
       (* Call solver and check result *)
-      eprintf "-------------> Calling Alt-Ergo on %s <-------------\n" filename;
+      (* eprintf "-------------> Calling Alt-Ergo on %s <-------------\n" filename; *)
       let output = Util.syscall ("alt-ergo -sat-mode " ^ filename) in
       if String.compare output "unsat\n" = 0 then
         raise (Solver.Unsat [])
@@ -876,6 +873,89 @@ axiom co_U_prop_t :
 end
 
 
+
+
+
+
+
+(*
+
+  let decls = "
+logic e : int -> _event
+logic po : int, int -> prop
+logic rf : int, int -> prop
+logic co : int, int -> prop
+logic fence : int, int -> prop
+logic co_U_prop : int, int -> prop
+logic po_loc_U_com : int, int -> prop
+"
+	   
+  let axioms = "
+axiom rf :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) -> e(e1).val = e(e2).val
+
+axiom po_loc :
+  forall e1, e2 : int [po(e1,e2)].
+  po(e1, e2) and e(e1).loc = e(e2).loc
+  -> po_loc_U_com(e1, e2)
+
+axiom rfe :
+  forall e1, e2 : int [rf(e1,e2)].
+  rf(e1, e2) and e(e1).tid <> e(e2).tid
+  -> co_U_prop(e1, e2)
+
+axiom fr :
+  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
+  rf(w1, r) and co(w1, w2)
+  -> po_loc_U_com(r, w2) and co_U_prop(r, w2)
+
+axiom ppo_tso :
+  forall e1, e2 : int [po(e1,e2)].
+  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
+  -> co_U_prop(e1, e2)
+
+(*axiom po_loc_U_com :
+  forall e1, e2 : int [(*co(e1,e2)|rf(e1,e2)|*)po_loc_U_com(e1,e2)].
+  co(e1, e2) or rf(e1, e2)
+   -> po_loc_U_com(e1, e2)*)
+
+axiom po_loc_U_com_1 :
+  forall e1, e2 : int [(*co(e1,e2)|*)po_loc_U_com(e1,e2)].
+  co(e1, e2)
+   -> po_loc_U_com(e1, e2)
+
+axiom po_loc_U_com_2 :
+  forall e1, e2 : int [(*rf(e1,e2)|*)po_loc_U_com(e1,e2)].
+  rf(e1, e2)
+   -> po_loc_U_com(e1, e2)
+
+axiom po_loc_U_com_t :
+  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
+  po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
+
+axiom co_U_prop_1 :
+  forall e1, e2 : int [co(e1,e2)(*|co_U_prop(e1,e2)*)].
+  co(e1, e2)
+  -> co_U_prop(e1, e2)
+
+axiom co_U_prop_2 :
+  forall e1, e2 : int [fence(e1,e2)(*|co_U_prop(e1,e2)*)].
+  fence(e1, e2)
+  -> co_U_prop(e1, e2)
+
+axiom co_U_prop_t :
+  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
+  co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
+"
+
+
+ *)
+
+
+
+
+							  
 
 (*
 let axiom_rels = "

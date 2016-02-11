@@ -38,6 +38,7 @@ module Type = struct
   let type_weak = hfake
   let type_event = hfake
   let declare _ _ = unsupported ()
+  let declare_record _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
@@ -72,6 +73,7 @@ module Term = struct
   let make_int _ = unsupported ()
   let make_real _ = unsupported ()
   let make_app _ _ = unsupported ()
+  let make_access _ _ = unsupported ()
   let t_true = ()
   let t_false = ()
   let make_arith _ _ _ = unsupported ()
@@ -114,7 +116,7 @@ module type Solver = sig
   val get_calls : unit -> int
 
   val clear : unit -> unit
-  val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
+  val assume : id:int -> Formula.t -> unit
   val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
@@ -128,7 +130,7 @@ module Make (Options : sig val profiling : bool end) = struct
   let get_time _ = unsupported ()
   let get_calls _ = unsupported ()
   let clear _ = unsupported ()
-  let assume ?(events=Event.empty_struct) ~id f = unsupported ()
+  let assume ~id f = unsupported ()
   let check ?(fp=false) () = unsupported ()
   let entails _ = unsupported ()
   let push _ =  unsupported ()

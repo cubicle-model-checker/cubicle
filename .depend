@@ -21,24 +21,20 @@ common/timer.cmi :
 common/vec.cmi :
 smt/alt_ergo.cmo : common/vec.cmi smt/ty.cmi common/timer.cmi smt/term.cmi \
     smt/symbols.cmi smt/solver_types.cmi smt/solver.cmi smt/literal.cmi \
-    common/hstring.cmi event.cmi smt/combine.cmi smt/cc.cmi smt/alt_ergo.cmi
+    common/hstring.cmi smt/combine.cmi smt/cc.cmi smt/alt_ergo.cmi
 smt/alt_ergo.cmx : common/vec.cmx smt/ty.cmx common/timer.cmx smt/term.cmx \
     smt/symbols.cmx smt/solver_types.cmx smt/solver.cmx smt/literal.cmx \
-    common/hstring.cmx event.cmx smt/combine.cmx smt/cc.cmx smt/alt_ergo.cmi
+    common/hstring.cmx smt/combine.cmx smt/cc.cmx smt/alt_ergo.cmi
 smt/alt_ergo_file.cmo : util.cmi smt/ty.cmi common/timer.cmi smt/term.cmi \
     smt/symbols.cmi smt/solver.cmi options.cmi smt/literal.cmi \
-    common/hstring.cmi event.cmi smt/combine.cmi smt/cc.cmi \
-    smt/alt_ergo_file.cmi
+    common/hstring.cmi smt/combine.cmi smt/cc.cmi smt/alt_ergo_file.cmi
 smt/alt_ergo_file.cmx : util.cmx smt/ty.cmx common/timer.cmx smt/term.cmx \
     smt/symbols.cmx smt/solver.cmx options.cmx smt/literal.cmx \
-    common/hstring.cmx event.cmx smt/combine.cmx smt/cc.cmx \
-    smt/alt_ergo_file.cmi
+    common/hstring.cmx smt/combine.cmx smt/cc.cmx smt/alt_ergo_file.cmi
 smt/alt_ergo_lib.cmo : common/timer.cmi smt/solver.cmi options.cmi \
-    common/hstring.cmi event.cmi smt/combine.cmi smt/cc.cmi \
-    smt/alt_ergo_lib.cmi
+    common/hstring.cmi smt/combine.cmi smt/cc.cmi smt/alt_ergo_lib.cmi
 smt/alt_ergo_lib.cmx : common/timer.cmx smt/solver.cmx options.cmx \
-    common/hstring.cmx event.cmx smt/combine.cmx smt/cc.cmx \
-    smt/alt_ergo_lib.cmi
+    common/hstring.cmx smt/combine.cmx smt/cc.cmx smt/alt_ergo_lib.cmi
 smt/arith.cmo : smt/ty.cmi smt/term.cmi smt/symbols.cmi smt/sig.cmi \
     smt/polynome.cmi smt/literal.cmi common/hstring.cmi smt/fm.cmi \
     smt/exception.cmi smt/arith.cmi
@@ -117,14 +113,14 @@ smt/use.cmo : smt/ty.cmi smt/term.cmi smt/symbols.cmi smt/sig.cmi \
     smt/literal.cmi common/hstring.cmi smt/explanation.cmi smt/use.cmi
 smt/use.cmx : smt/ty.cmx smt/term.cmx smt/symbols.cmx smt/sig.cmi \
     smt/literal.cmx common/hstring.cmx smt/explanation.cmx smt/use.cmi
-smt/z3wrapper.cmo : common/hstring.cmi event.cmi smt/z3wrapper.cmi
-smt/z3wrapper.cmx : common/hstring.cmx event.cmx smt/z3wrapper.cmi
+smt/z3wrapper.cmo : common/hstring.cmi smt/z3wrapper.cmi
+smt/z3wrapper.cmx : common/hstring.cmx smt/z3wrapper.cmi
 smt/z3wrapper_actual.cmo : common/timer.cmi smt/solver.cmi \
-    common/hstring.cmi event.cmi
+    common/hstring.cmi
 smt/z3wrapper_actual.cmx : common/timer.cmx smt/solver.cmx \
-    common/hstring.cmx event.cmx
-smt/z3wrapper_fake.cmo : common/hstring.cmi event.cmi
-smt/z3wrapper_fake.cmx : common/hstring.cmx event.cmx
+    common/hstring.cmx
+smt/z3wrapper_fake.cmo : common/hstring.cmi
+smt/z3wrapper_fake.cmx : common/hstring.cmx
 smt/alt_ergo.cmi : smt/smt_sig.cmi
 smt/alt_ergo_file.cmi : smt/smt_sig.cmi
 smt/alt_ergo_lib.cmi : smt/smt_sig.cmi
@@ -143,7 +139,7 @@ smt/polynome.cmi : smt/ty.cmi smt/term.cmi
 smt/sig.cmi : smt/ty.cmi smt/term.cmi smt/symbols.cmi smt/literal.cmi \
     smt/explanation.cmi
 smt/smt.cmi : smt/smt_sig.cmi
-smt/smt_sig.cmi : common/hstring.cmi event.cmi
+smt/smt_sig.cmi : common/hstring.cmi
 smt/solver.cmi : smt/solver_types.cmi smt/literal.cmi
 smt/solver_types.cmi : common/vec.cmi smt/literal.cmi
 smt/sum.cmi : smt/sig.cmi
@@ -227,9 +223,9 @@ murphi.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
     common/hstring.cmx forward.cmx enumerative.cmx cube.cmx ast.cmi \
     murphi.cmi
 node.cmo : variable.cmi util.cmi types.cmi options.cmi common/hstring.cmi \
-    event.cmi cube.cmi ast.cmi node.cmi
+    cube.cmi ast.cmi node.cmi
 node.cmx : variable.cmx util.cmx types.cmx options.cmx common/hstring.cmx \
-    event.cmx cube.cmx ast.cmi node.cmi
+    cube.cmx ast.cmi node.cmi
 options.cmo : version.cmo options.cmi
 options.cmx : version.cmx options.cmi
 parser.cmo : variable.cmi types.cmi smt/smt.cmi ptree.cmi options.cmi \
@@ -237,11 +233,9 @@ parser.cmo : variable.cmi types.cmi smt/smt.cmi ptree.cmi options.cmi \
 parser.cmx : variable.cmx types.cmx smt/smt.cmx ptree.cmx options.cmx \
     common/hstring.cmx ast.cmi parser.cmi
 pre.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
-    options.cmi node.cmi common/hstring.cmi event.cmi cube.cmi ast.cmi \
-    pre.cmi
+    options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi pre.cmi
 pre.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
-    options.cmx node.cmx common/hstring.cmx event.cmx cube.cmx ast.cmi \
-    pre.cmi
+    options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi pre.cmi
 pretty.cmo : util.cmi types.cmi options.cmi ast.cmi pretty.cmi
 pretty.cmx : util.cmx types.cmx options.cmx ast.cmi pretty.cmi
 prover.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi options.cmi \
@@ -275,11 +269,11 @@ types.cmo : variable.cmi util.cmi smt/smt.cmi options.cmi common/hstring.cmi \
 types.cmx : variable.cmx util.cmx smt/smt.cmx options.cmx common/hstring.cmx \
     event.cmx types.cmi
 typing.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
-    pretty.cmi pre.cmi options.cmi node.cmi common/hstring.cmi event.cmi \
-    cube.cmi ast.cmi typing.cmi
+    pretty.cmi pre.cmi options.cmi node.cmi common/hstring.cmi cube.cmi \
+    ast.cmi typing.cmi
 typing.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
-    pretty.cmx pre.cmx options.cmx node.cmx common/hstring.cmx event.cmx \
-    cube.cmx ast.cmi typing.cmi
+    pretty.cmx pre.cmx options.cmx node.cmx common/hstring.cmx cube.cmx \
+    ast.cmi typing.cmi
 util.cmo : common/timer.cmi options.cmi util.cmi
 util.cmx : common/timer.cmx options.cmx util.cmi
 variable.cmo : smt/smt.cmi options.cmi common/hstring.cmi variable.cmi
@@ -288,14 +282,14 @@ version.cmo :
 version.cmx :
 approx.cmi : oracle.cmi options.cmi node.cmi ast.cmi
 ast.cmi : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
-    common/hstring.cmi event.cmi cube.cmi
+    common/hstring.cmi cube.cmi
 brab.cmi : bwd.cmi ast.cmi
 bwd.cmi : options.cmi node.cmi ast.cmi
 cube.cmi : variable.cmi types.cmi smt/term.cmi
 cubetrie.cmi : types.cmi node.cmi
 dot.cmi : types.cmi node.cmi
 enumerative.cmi : variable.cmi types.cmi oracle.cmi node.cmi ast.cmi
-event.cmi : variable.cmi common/hstring.cmi
+event.cmi : variable.cmi
 fake_functory.cmi :
 fixpoint.cmi : variable.cmi node.cmi cubetrie.cmi
 forward.cmi : variable.cmi types.cmi smt/term.cmi node.cmi \
@@ -317,7 +311,7 @@ safety.cmi : node.cmi ast.cmi
 stats.cmi : node.cmi ast.cmi
 trace.cmi : node.cmi ast.cmi
 trie.cmi :
-types.cmi : variable.cmi smt/smt.cmi common/hstring.cmi event.cmi
+types.cmi : variable.cmi smt/smt.cmi common/hstring.cmi
 typing.cmi : util.cmi ast.cmi
 util.cmi : common/timer.cmi
 variable.cmi : common/hstring.cmi

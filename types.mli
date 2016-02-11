@@ -51,8 +51,11 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *)
-  | EventValue of Event.t (* for event instances *)
+
+  | Field of term * Hstring.t (* term is Elem/Access *)
+  | List of term list (* term is Elem *)
+  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *) (*
+  | EventValue of Event.t (* for event instances *)*)
 
 (** Module interface for terms *)
 module Term : sig

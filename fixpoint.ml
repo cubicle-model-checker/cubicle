@@ -311,7 +311,7 @@ end = struct
 
   open Event
   open Types.Atom
-
+(*
   let t_esubst subst = function
     | Read (p, v, vi) -> failwith "Fixpoint.t_esubst Read should not be in term"
     | EventValue e -> EventValue { e with uid = List.assoc e.uid subst }
@@ -334,21 +334,21 @@ end = struct
     let a' = Array.init (Array.length a) (fun i -> a_esubst subst a.(i)) in
     Array.fast_sort Atom.compare a';
     a'
-
+ *)
   let check_and_add n nodes vis_n=
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
     if Cube.inconsistent_2arrays vis_array n_array then nodes
     else
-      let subst = Event.es_permutations vis_n.es n.es in
-      (*(vis_n, (vis_array, vis_n.es))::nodes*)
+      (*let subst = Event.es_permutations vis_n.es n.es in*)
+      (vis_n, vis_array)::nodes (*
       List.fold_left (fun nodes subst ->
 	let vis_events_r = Event.es_apply_subst subst vis_n.es in
         let vis_renamed = aa_esubst subst vis_array in
         if Cube.inconsistent_2arrays vis_renamed n_array then nodes
         else (vis_n, (vis_renamed, vis_events_r))::nodes
-      ) ((vis_n, (vis_array, vis_n.es)) :: nodes) subst
+      ) ((vis_n, (vis_array, vis_n.es)) :: nodes) subst*)
 
     (*let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
     List.fold_left
@@ -394,12 +394,11 @@ end = struct
              if unprioritize_cands &&
                 n2.kind = Approx && n1.kind <> Approx then 1
              (* a2 is a candidate *)
-             else ArrayAtom.compare_nb_common s_array (fst a1) (fst a2)) 
+             else ArrayAtom.compare_nb_common s_array a1 a2) 
           nodes
     in
     TimeSort.pause ();
-    List.iter (fun (vn, (ar_renamed, events_r)) ->
-	       assume { vn with es = events_r } ar_renamed) nodes;
+    List.iter (fun (vn, ar_renamed) -> assume vn ar_renamed) nodes;
     last_action ()
 
   

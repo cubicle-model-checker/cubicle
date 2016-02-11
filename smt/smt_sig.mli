@@ -60,6 +60,8 @@ module type S = sig
         name [n] and constructors [cstrs].}
         {- [declare n []] declares a new abstract type with name [n].}}*)
 
+    val declare_record : Hstring.t -> (Hstring.t * Hstring.t) list -> unit
+
     val all_constructors : unit -> Hstring.t list
     (** [all_constructors ()] returns a list of all the defined constructors. *)
 
@@ -170,6 +172,8 @@ module type S = sig
     (** [make_app f l] creates the application of function symbol [f] to a list
         of terms [l]. *)
 
+    val make_access : t -> Hstring.t -> t
+
     val make_arith : operator -> t -> t -> t
     (** [make_arith op t1 t2] creates the term [t1 <op> t2]. *)
 
@@ -185,7 +189,7 @@ module type S = sig
     val t_false : t
     (** [t_false] is the boolean term [false] *)
 
-    val mk_evt_field : ?qv:bool -> Event.t -> string -> t
+    (* val mk_evt_field : ?qv:bool -> Event.t -> string -> t *)
 
   end
 
@@ -234,12 +238,18 @@ module type S = sig
 
     val print : Format.formatter -> t -> unit
     (** [print fmt f] prints the formula on the formatter [fmt].*)
-
+(*
     val make_event_desc : Event.t -> t list
     val make_acyclic_rel : Event.t -> t list
     val make_pair : string -> (Event.t * Event.t) -> t
     val make_rel : string -> (Event.t * Event.t) list -> t list
     val make_cands : string -> (Event.t * Event.t) list list -> t list
+ *)
+    val make_acyclic_rel : (Hstring.t * Hstring.t) -> t list
+    val make_rel : string ->
+          (Hstring.t * Hstring.t * Hstring.t * Hstring.t) list -> t list
+    val make_cands : string ->
+	  (Hstring.t * Hstring.t * Hstring.t * Hstring.t) list list -> t list
 
   end
 
@@ -296,7 +306,7 @@ module type S = sig
     (** [clear ()] clears the context of the solver. Use this after {! check}
         raised {! Unsat} or if you want to restart the solver. *)
 
-    val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
+    val assume : id:int -> Formula.t -> unit
     (** [assume id f] adds the formula [f] to the context of the
         solver with idetifier [id].
         This function only performs unit propagation.

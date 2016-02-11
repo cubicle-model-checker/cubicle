@@ -130,8 +130,9 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
+      | Field _ -> failwith "Typing.infer_type Field TODO"
+      | List _ -> failwith "Typing.infer_type List TODO"
       | Read _ -> failwith "Typing.infer_type Read TODO"
-      | EventValue _ -> failwith "Typing.infer_type EventValue TODO"
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -189,6 +190,8 @@ let rec term loc ?(init=false) args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
+  | Field _ -> failwith "Typing.term Field should not be typed"
+  | List _ -> failwith "Typing.term List should not be typed"
   | Read (p, v, vi) ->
       if Options.model = Options.SC then error (OpInvalidInSC) loc;
       if init then error (CantUseReadInInit) loc;
@@ -209,7 +212,6 @@ let rec term loc ?(init=false) args = function
       end in
       if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
       args, ret
-  | EventValue _ -> failwith "Typing.term EventValue should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -373,7 +375,14 @@ let init_global_env s =
        l := (n, ret)::!l) s.arrays;
   (*if Options.model <> Options.SC
     then*) Smt.Type.declare_event_type !weak_vars;
-  !l, !weak_vars
+  let dl = (Lexing.dummy_pos, Lexing.dummy_pos) in
+  declare_symbol dl (Hstring.make ("_e"))
+    [ Smt.Type.type_proc ; Smt.Type.type_int ] (Hstring.make "_event");
+  for i = 1 to 20 do
+    declare_symbol dl
+      (Hstring.make ("_e" ^ (string_of_int i))) [] Smt.Type.type_int
+  done;
+  !l
 
 
 let init_proc () =
@@ -575,36 +584,49 @@ let add_tau tr =
     tr_tau = Pre.make_tau tr }
 
 
+module HMap = Hstring.HMap
 
-let event_of_term c el = function
-  | Read (p, v, vi) ->
-     let e = Event.make c p Event.ERead (v, vi) in
-     c + 1, e :: el, EventValue e
-  | t -> c, el, t
+let evt_cnt = ref HMap.empty
+let evt_ord = ref HMap.empty
+let new_atoms = ref []
 
-let events_of_a c el = function
-  | (Comp (t1, op, t2)) as a ->
-     let c, el, t1' = event_of_term c el t1 in
-     let c, el, t2' = event_of_term c el t2 in
-     begin match t1', t2' with
-     | EventValue e1, EventValue e2 -> c, el, Comp (t1', op, t2')
-     | EventValue e1, _ -> c, el, Comp (t1', op, t2)
-     | _, EventValue e2 -> c, el, Comp (t1, op, t2')
-     | _ -> c, el, a
-     end
-  | a -> c, el, a
+let make_event d p v vi = 
+  let eid = (try HMap.find p !evt_cnt with Not_found -> 0) + 1 in
+  evt_cnt := HMap.add p eid !evt_cnt;
+  let eid = Hstring.make ("_e" ^ (string_of_int eid)) in
+  let ord = try HMap.find p !evt_ord with Not_found -> [] in
+  evt_ord := HMap.add p (Elem (eid, Glob) :: ord) !evt_ord;
+  let tevt = Access (Hstring.make "_e", [p ; eid]) in
+  let tdir = Field (tevt, Hstring.make "_dir") in
+  let tvar = Field (tevt, Hstring.make "_var") in
+  let tval = Field (tevt, Hstring.make "_val") in
+  let adir = Atom.Comp (tdir, Eq, Elem (Hstring.make d, Constr)) in
+  let avar = Atom.Comp (tvar, Eq,
+                      Elem (Hstring.make ("_V" ^ (Hstring.view v)), Constr)) in
+  new_atoms := adir :: avar :: !new_atoms;
+  tval
+
+let event_of_term = function
+  | Read (p, v, vi) -> make_event "_R" p v vi
+  | t -> t
+
+let events_of_a = function
+  | Atom.Comp (t1, op, t2) ->
+     let t1' = event_of_term t1 in
+     let t2' = event_of_term t2 in
+     Atom.Comp (t1', op, t2')
+  | a -> a
 
 let events_of_satom sa =
-  let _, es, sa = SAtom.fold (fun a (c, es, sa) ->
-    let c, el, a = events_of_a c [] a in
-    let es = Event.es_add_events es el in
-    c, es, SAtom.add a sa
-  ) sa (1, Event.empty_struct, SAtom.empty) in
-  sa, es
+  let sa = SAtom.fold (fun a -> SAtom.add (events_of_a a)) sa SAtom.empty in
+  let sa = List.fold_left (fun sa a -> SAtom.add a sa) sa !new_atoms in
+  HMap.fold (fun p tl sa ->
+    let a = Atom.Comp (Access ((Hstring.make "_o"), [p]), Eq, List tl) in
+    SAtom.add a sa) !evt_ord sa
 
 
 let system s =
-  let l, weak = init_global_env s in
+  let l = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
@@ -618,9 +640,7 @@ let system s =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) ->
-      let sa, es = events_of_satom u in
-      let n = create_node_rename Orig v sa in
-      { n with es }
+      create_node_rename Orig v (events_of_satom u)
     ) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
@@ -629,7 +649,6 @@ let system s =
     t_globals = List.map (fun (_,g,_,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_,_) -> a) s.arrays;
-    t_weak = weak;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

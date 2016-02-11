@@ -96,7 +96,6 @@ let create ?(kind=Node) ?(from=None) cube =
     depth = List.length hist;
     deleted = false;
     from = hist;
-    es = Event.empty_struct
   }
 
 let has_deleted_ancestor n =
@@ -140,7 +139,13 @@ module Latex = struct
 	        else "+ "^(string_of_int (abs i)))
 	       print_const c) cs
 
-  let rec print_term fmt = function
+  let rec print_term fmt t =
+    let print_list fmt = function
+      | [] -> ()
+      | [t] -> print_term fmt t
+      | t :: tl -> print_term fmt t;
+		   List.iter (fprintf fmt ",%a" print_term) tl in
+    match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> fprintf fmt "%a" Hstring.print s
     | Elem (s, Glob) -> fprintf fmt "\\texttt{%a}" Hstring.print s
@@ -149,8 +154,12 @@ module Latex = struct
        fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
-    | Read (p, v, vi) -> Event.print_rd fmt (p, v, vi)
-    | EventValue e -> Event.print fmt e
+
+    | Field (t, f) -> 
+       fprintf fmt "%a.%a" print_term t Hstring.print f
+    | List tl -> 
+       fprintf fmt "(%a)" print_list tl
+    | Read (p, v, vi) -> failwith "TODO" (*Event.print_rd fmt (p, v, vi)*)
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

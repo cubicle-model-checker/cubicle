@@ -110,6 +110,9 @@ module Type = struct
       H.add decl_types t ty;
       List.iter2 (declare_constructor t) constrs (Enumeration.get_const_decls ty)
 
+  let declare_record t field = 
+    failwith "Z3Wrapper_actual.Type.declare_record TODO"
+
   let all_constructors () =
     (* eprintf "all_constructors@."; *)
     H.fold (fun h c acc ->
@@ -325,6 +328,8 @@ module Term = struct
       Expr.mk_app global_context sb l
     with Not_found -> raise (Error (UnknownSymb s))
 
+  let make_access t f = failwith "Z3Wrapper_actual.Term.make_access TODO"
+
   let t_true = Boolean.mk_true global_context
   let t_false = Boolean.mk_false global_context
 
@@ -412,7 +417,7 @@ module type Solver = sig
   val get_calls : unit -> int
 
   val clear : unit -> unit
-  val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
+  val assume : id:int -> Formula.t -> unit
   val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
@@ -448,7 +453,7 @@ module Make (Options : sig val profiling : bool end) = struct
     Hashtbl.clear assertions;
     reset solver
 
-  let assume ?(events=Event.empty_struct) ~id f =
+  let assume ~id f =
     (* eprintf "assume@."; *)
     Time.start ();
     Solver.add solver [f];

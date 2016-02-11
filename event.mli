@@ -1,14 +1,14 @@
 
 type dir = ERead | EWrite
-
+(*
 type t = {
     uid : int;
     tid : Variable.t;
     dir : dir;
     var : Hstring.t * Variable.t list; }
-
+ *)
 module IntMap : Map.S with type key = int
-
+(*
 type structure = {
     events : t IntMap.t;
     po_f : int list IntMap.t; }
@@ -18,9 +18,9 @@ val empty_struct : structure
 val make : int -> Hstring.t -> dir -> (Hstring.t * Variable.t list) -> t
 
 val name : t -> string
-
+ *) 
 val int_of_tid : Variable.t -> int
-
+(*
 val print : Format.formatter -> t -> unit
 
 val print_rd : Format.formatter ->
@@ -45,3 +45,5 @@ val gen_co : structure -> (t * t) list
 val gen_co_cands : structure -> (t * t) list list
 
 val gen_rf_cands : structure -> (t * t) list list
+
+ *)

@@ -472,8 +472,10 @@ let rec add_arg args t =
         args ls
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
+		 
+  | Field (t, _) -> add_arg args t
+  | List tl -> List.fold_left add_arg args tl
   | Read (p, _, vi) -> add_arg_list (S.add p args) vi
-  | EventValue e -> add_arg_list (S.add e.tid args) (snd e.var)
 
 let args_of_atoms sa =
   let rec args_rec sa args =
@@ -709,8 +711,10 @@ let resolve_two c1 c2 =
 let rec term_globs t acc = match t with
   | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
   | Arith (x, _) -> term_globs x acc
-  | Read (_, v, _) -> Term.Set.add t acc (* t or v ? *)
-  | EventValue e -> Term.Set.add t acc (* t or fst e.var ? *)
+
+  | Field (t, _) -> term_globs t acc
+  | List tl -> List.fold_left (fun acc t -> term_globs t acc) acc tl
+  | Read (_, v, _) -> Term.Set.add t acc (* t or Elem (v, Glob) ? *)
   | _ -> acc
 
 let rec atom_globs a acc = match a with

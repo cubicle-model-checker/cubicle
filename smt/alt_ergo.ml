@@ -81,6 +81,17 @@ module Type = struct
 	  H.add decl_types t ty;
 	  List.iter (fun c -> declare_constructor t c) constrs
 
+  let declare_field ty f =
+    if H.mem decl_symbs f then raise (Error (DuplicateSymb f));
+    H.add decl_symbs f (Symbols.Op (Symbols.Access f), [], ty)
+
+  let declare_record t fields =
+    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
+    let tfields = List.map (fun (f, ty) -> (f, H.find decl_types ty)) fields in
+    let ty = Ty.Trecord (t, tfields) in
+    H.add decl_types t ty;
+    List.iter (fun (f, ty) -> declare_field ty f) fields
+
   let all_constructors () =
     H.fold (fun _ c acc -> match c with
       | Symbols.Name (h, Symbols.Constructor), _, _ -> h :: acc
@@ -267,6 +278,13 @@ module Term = struct
       let ty = H.find decl_types nty in
       Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
+
+  let make_access t f =
+    try
+      let (sb, _, nty) = H.find decl_symbs f in
+      let ty = H.find decl_types nty in
+      Term.make sb [t] ty
+    with Not_found -> raise (Error (UnknownSymb f))
 
   let t_true = Term.vrai
   let t_false = Term.faux
@@ -486,7 +504,7 @@ module type Solver = sig
   val get_calls : unit -> int
 
   val clear : unit -> unit
-  val assume : ?events:Event.structure -> id:int -> Formula.t -> unit
+  val assume : id:int -> Formula.t -> unit
   val check : ?fp:bool -> unit -> unit
 
   val entails : Formula.t -> bool
@@ -554,7 +572,7 @@ module Make (Options : sig val profiling : bool end) = struct
     in 
     SInt.elements s
 
-  let assume ?(events=Event.empty_struct) ~id f =
+  let assume ~id f =
     Time.start ();
     try 
       CSolver.assume (Formula.make_cnf f) id;
