@@ -349,9 +349,8 @@ let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y
   with Smt.Error e -> error (Smt e) loc
 
-let declare_symbol ?(weak=false) loc n args ret =
-  if weak && Options.model = Options.SC then error (WeakInvalidInSC) loc;
-  try Smt.Symbol.declare ~weak n args ret
+let declare_symbol loc n args ret =
+  try Smt.Symbol.declare n args ret
   with Smt.Error e -> error (Smt e) loc
 
 
@@ -365,23 +364,21 @@ let init_global_env s =
        l := (n, t)::!l) s.consts;
   List.iter 
     (fun (loc, n, t, weak) -> 
-       declare_symbol ~weak loc n [] t;
-       if weak then weak_vars := n :: !weak_vars;
+       declare_symbol loc n [] t;
+       if weak then begin
+         if Options.model = Options.SC then error (WeakInvalidInSC) loc;
+	 weak_vars := n :: !weak_vars;
+       end;
        l := (n, t)::!l) s.globals;
   List.iter 
     (fun (loc, n, (args, ret), weak) -> 
-       declare_symbol ~weak loc n args ret;
-       if weak then weak_vars := n :: !weak_vars;
+       declare_symbol loc n args ret;
+       if weak then begin
+         if Options.model = Options.SC then error (WeakInvalidInSC) loc;
+	 weak_vars := n :: !weak_vars;
+       end;
        l := (n, ret)::!l) s.arrays;
-  (*if Options.model <> Options.SC
-    then*) Smt.Type.declare_event_type !weak_vars;
-  let dl = (Lexing.dummy_pos, Lexing.dummy_pos) in
-  declare_symbol dl (Hstring.make ("_e"))
-    [ Smt.Type.type_proc ; Smt.Type.type_int ] (Hstring.make "_event");
-  for i = 1 to 20 do
-    declare_symbol dl
-      (Hstring.make ("_e" ^ (string_of_int i))) [] Smt.Type.type_int
-  done;
+  Weakmem.init_weak_env !weak_vars;
   !l
 
 
@@ -560,11 +557,11 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	           ) tr.tr_assigns;
 	tr_writes = 
 	  List.map (fun (p, v, vi, t) ->
-		      let sp = Variable.subst sigma p in
-		      let svi = List.map (Variable.subst sigma) vi in
-		      let st = Term.subst sigma t in
-		      sp, v, svi, st
-	           ) tr.tr_writes;
+	    let sp = Variable.subst sigma p in
+	    let svi = List.map (Variable.subst sigma) vi in
+	    let st = Term.subst sigma t in
+	    sp, v, svi, st
+	  ) tr.tr_writes;
 	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 
@@ -583,48 +580,6 @@ let add_tau tr =
   { tr_info = tr;
     tr_tau = Pre.make_tau tr }
 
-
-module HMap = Hstring.HMap
-
-let evt_cnt = ref HMap.empty
-let evt_ord = ref HMap.empty
-let new_atoms = ref []
-
-let make_event d p v vi = 
-  let eid = (try HMap.find p !evt_cnt with Not_found -> 0) + 1 in
-  evt_cnt := HMap.add p eid !evt_cnt;
-  let eid = Hstring.make ("_e" ^ (string_of_int eid)) in
-  let ord = try HMap.find p !evt_ord with Not_found -> [] in
-  evt_ord := HMap.add p (Elem (eid, Glob) :: ord) !evt_ord;
-  let tevt = Access (Hstring.make "_e", [p ; eid]) in
-  let tdir = Field (tevt, Hstring.make "_dir") in
-  let tvar = Field (tevt, Hstring.make "_var") in
-  let tval = Field (tevt, Hstring.make "_val") in
-  let adir = Atom.Comp (tdir, Eq, Elem (Hstring.make d, Constr)) in
-  let avar = Atom.Comp (tvar, Eq,
-                      Elem (Hstring.make ("_V" ^ (Hstring.view v)), Constr)) in
-  new_atoms := adir :: avar :: !new_atoms;
-  tval
-
-let event_of_term = function
-  | Read (p, v, vi) -> make_event "_R" p v vi
-  | t -> t
-
-let events_of_a = function
-  | Atom.Comp (t1, op, t2) ->
-     let t1' = event_of_term t1 in
-     let t2' = event_of_term t2 in
-     Atom.Comp (t1', op, t2')
-  | a -> a
-
-let events_of_satom sa =
-  let sa = SAtom.fold (fun a -> SAtom.add (events_of_a a)) sa SAtom.empty in
-  let sa = List.fold_left (fun sa a -> SAtom.add a sa) sa !new_atoms in
-  HMap.fold (fun p tl sa ->
-    let a = Atom.Comp (Access ((Hstring.make "_o"), [p]), Eq, List tl) in
-    SAtom.add a sa) !evt_ord sa
-
-
 let system s =
   let l = init_global_env s in
   if not Options.notyping then init s.init;
@@ -634,13 +589,14 @@ let system s =
   if Options.(subtyping && not murphi) then begin
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
-    end;
+  end;
+
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) ->
-      create_node_rename Orig v (events_of_satom u)
+      create_node_rename Orig v (Weakmem.events_of_satom u)
     ) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then

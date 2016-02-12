@@ -35,20 +35,16 @@ module Type = struct
   let type_real = hfake
   let type_bool = hfake
   let type_proc = hfake
-  let type_weak = hfake
-  let type_event = hfake
   let declare _ _ = unsupported ()
   let declare_record _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
-  let type_direction = hfake
-  let declare_event_type _ = unsupported ()
 end
 
 module Symbol = struct
   type t = Hstring.t
-  let declare ?(weak=false) _ _ _ = unsupported ()
+  let declare _ _ _ = unsupported ()
   let type_of _ = unsupported ()
   let is_weak _ = unsupported ()
   let declared _ = unsupported ()
@@ -73,13 +69,12 @@ module Term = struct
   let make_int _ = unsupported ()
   let make_real _ = unsupported ()
   let make_app _ _ = unsupported ()
-  let make_access _ _ = unsupported ()
   let t_true = ()
   let t_false = ()
   let make_arith _ _ _ = unsupported ()
-  let mk_evt_field ?(qv=false) _ _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
+  let mk_pred ?(qv=false) p al = unsupported ()
 end
 
 module Formula = struct
@@ -94,11 +89,6 @@ module Formula = struct
   let make_lit _ _ = unsupported ()
   let make _ _ = unsupported ()
   let make_cnf _ = unsupported ()
-  let make_event_desc _ = unsupported ()
-  let make_acyclic_rel _ = unsupported ()
-  let make_pair _ _ = unsupported ()
-  let make_rel _ _ = unsupported ()
-  let make_cands _ _ = unsupported ()
 end
 
 exception Unsat of int list

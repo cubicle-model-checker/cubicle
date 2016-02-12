@@ -71,11 +71,6 @@ module type S = sig
 
     val declared_types : unit -> t list
 
-    val type_weak : t
-    val type_event : t
-    val type_direction : t		   
-    val declare_event_type : Hstring.t list -> unit
-
   end
 
 
@@ -85,7 +80,7 @@ module type S = sig
     type t = Hstring.t
     (** The type of function symbols *)
 
-    val declare : ?weak:bool -> Hstring.t -> Type.t list -> Type.t -> unit
+    val declare : Hstring.t -> Type.t list -> Type.t -> unit
     (** [declare s [arg_1; ... ; arg_n] out] declares a new function
         symbol with type [ (arg_1, ... , arg_n) -> out] *)
 
@@ -172,8 +167,6 @@ module type S = sig
     (** [make_app f l] creates the application of function symbol [f] to a list
         of terms [l]. *)
 
-    val make_access : t -> Hstring.t -> t
-
     val make_arith : operator -> t -> t -> t
     (** [make_arith op t1 t2] creates the term [t1 <op> t2]. *)
 
@@ -189,7 +182,7 @@ module type S = sig
     val t_false : t
     (** [t_false] is the boolean term [false] *)
 
-    (* val mk_evt_field : ?qv:bool -> Event.t -> string -> t *)
+    val mk_pred : ?qv:bool -> string -> string list -> t
 
   end
 
@@ -238,18 +231,6 @@ module type S = sig
 
     val print : Format.formatter -> t -> unit
     (** [print fmt f] prints the formula on the formatter [fmt].*)
-(*
-    val make_event_desc : Event.t -> t list
-    val make_acyclic_rel : Event.t -> t list
-    val make_pair : string -> (Event.t * Event.t) -> t
-    val make_rel : string -> (Event.t * Event.t) list -> t list
-    val make_cands : string -> (Event.t * Event.t) list list -> t list
- *)
-    val make_acyclic_rel : (Hstring.t * Hstring.t) -> t list
-    val make_rel : string ->
-          (Hstring.t * Hstring.t * Hstring.t * Hstring.t) list -> t list
-    val make_cands : string ->
-	  (Hstring.t * Hstring.t * Hstring.t * Hstring.t) list list -> t list
 
   end
 

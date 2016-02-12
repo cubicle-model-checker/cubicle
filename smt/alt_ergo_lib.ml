@@ -108,41 +108,13 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
-  let type_weak =
-    Hstring.make "_weak_var"
-      
-  let type_event =
-    Hstring.make "_event"
-
-  let type_direction =
-    let tdir = Hstring.make "_direction" in
-    let cdir = [ Hstring.make "_R" ; Hstring.make "_W" ] in
-    declare tdir cdir;
-    tdir
-
-  let declare_event_type wvl =
-    let cwv = List.map (fun wv ->
-      Hstring.make ("_V" ^ (Hstring.view wv))) wvl in
-    declare type_weak cwv;
-    let fields = [ (Hstring.make "_dir", Hstring.make "_direction") ;
-		   (Hstring.make "_var", Hstring.make "_weak_var") ;
-		   (Hstring.make "_val", Hstring.make "int") ] in
-    declare_record type_event fields
-(*    let fevent = [ (AE.Hstring.make "_dir", H.find decl_types type_direction) ;
-		   (AE.Hstring.make "_var", H.find decl_types type_weak) ;
-		   (AE.Hstring.make "_val", AE.Ty.Tint) ] in
-    let tyevent = AE.Ty.Trecord { AE.Ty.args = [];
-				  AE.Ty.name = hsca type_event;
-				  AE.Ty.lbs = fevent } in
-    H.add decl_types type_event tyevent*)
-
 end
 
 module Symbol = struct
     
   type t = Hstring.t
 
-  let declare ?(weak=false) f args ret =
+  let declare f args ret =
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
       (fun t -> 
@@ -153,7 +125,7 @@ module Symbol = struct
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
   let is_weak s =
-    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) = Type.type_weak
+    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) =(Hstring.make "_weak_var")
     with Not_found -> false
 
   let declared s = 
@@ -250,6 +222,7 @@ module Variant = struct
            hset_print c) 
       constructors
 
+
   let get_variants = H.find constructors
     
   let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
@@ -262,7 +235,7 @@ module Variant = struct
 	  let ty = H.find decl_types nty in
 	  match ty with
 	    | AE.Ty.Tsum (_, l) ->
-	        H.add constructors x (set_of_list (lhsac l))
+	      H.add constructors x (set_of_list (lhsac l))
 	    | _ -> ()) l;
     H.clear assignments
 
@@ -300,13 +273,6 @@ module Term = struct
       AE.Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
 
-  let make_access t f =
-    try
-      let (sb, _, nty) = H.find decl_symbs f in
-      let ty = H.find decl_types nty in
-      AE.Term.make sb [t] ty
-    with Not_found -> raise (Error (UnknownSymb f))
-
   let t_true = AE.Term.vrai
   let t_false = AE.Term.faux
 
@@ -332,45 +298,11 @@ module Term = struct
 
   let mk_symb ?(qv=false) s =
     if qv then AE.Symbols.var s else AE.Symbols.name s
-								     
-  let mk_eid_field ?(qv=false) p eid f =
-    let ty = match f with
-      | "_dir" -> H.find decl_types Type.type_direction
-      | "_var" -> H.find decl_types Type.type_weak
-      | "_val" -> AE.Ty.Tint (*
-	 let ev = (fst e.Event.var) in
-	 let (_, _, nty) = H.find decl_symbs ev in
-	 try H.find decl_types nty
-	 with Not_found -> raise (Error (UnknownSymb ev)) *)
-      | _ -> failwith "Alt_ergo_lib.Term.make_eventid_field : bad field name"
-    in
-    let tyevent = H.find decl_types Type.type_event in
-    let tp = AE.Term.make (mk_symb ~qv p) [] AE.Ty.Tint in
-    let te = AE.Term.make (mk_symb ~qv eid) [] AE.Ty.Tint in
-    let tem = AE.Term.make (AE.Symbols.name "_e") [tp ; te] tyevent in
-    let sav = AE.Symbols.Op (AE.Symbols.Access (AE.Hstring.make f)) in
-    AE.Term.make sav [tem] ty
-
-  let mk_evt_field ?(qv=false) e f = failwith "TODO" (*
-    mk_eid_field ~qv (Hstring.view e.Event.tid) (Event.name e) f*)
 
   let mk_pred ?(qv=false) p al =
     let al = List.map (fun a ->
       AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
     AE.Term.make (AE.Symbols.name p) al AE.Ty.Tbool
-
-  let mk_proc p = (*
-    let sp = AE.Symbols.name (Hstring.view p) in
-    AE.Term.make sp [] AE.Ty.Tint *)
-    make_app p []
-
-  let mk_dir d = failwith "TODO" (*
-    let dir = if d = Event.ERead then "_R" else "_W" in
-    make_app (Hstring.make dir) []*)
-
-  let mk_loc l =
-    let loc = "_V" ^ (Hstring.view (fst l)) in
-    make_app (Hstring.make loc) []
 
 end
 
@@ -408,8 +340,7 @@ module Formula = struct
       match cmp, l with
         | Eq, [t1; t2] ->
 	    AE.Literal.LT.mkv_eq t1 t2
-	| Neq, ts -> 
-	  (*AE.Literal.LT.mkv_distinct false ts*)
+	| Neq, ts -> (*AE.Literal.LT.mkv_distinct false ts*)
 	    AE.Literal.LT.mkv_builtin true (AE.Hstring.make "distinct") ts
 	| Le, [t1; t2] ->
 	    AE.Literal.LT.mkv_builtin true (AE.Hstring.make "<=") [t1; t2]
@@ -533,32 +464,6 @@ let rec mk_cnf = function
 
   (* let make_cnf f = mk_cnf (sform f) *)
 
-  let make_event_desc e = failwith "TODO" (*
-    [ (*make_lit Eq [ Term.mk_evt_field e "tid" ; Term.mk_proc e.Event.tid ] ;*)
-      make_lit Eq [ Term.mk_evt_field e "dir" ; Term.mk_dir e.Event.dir ] ;
-      make_lit Eq [ Term.mk_evt_field e "loc" ; Term.mk_loc e.Event.var ] ] *)
-
-  let make_acyclic_rel (p, e) =
-    let p = Hstring.view p in
-    let e = Hstring.view e in
-    [ make_lit Eq [ Term.mk_pred "_po_loc_U_com" [p;e;p;e] ; Term.t_false ] ;
-      make_lit Eq [ Term.mk_pred "_co_U_prop" [p;e;p;e] ; Term.t_false ] ]
-
-  let make_pair p (p1, e1, p2, e2) =
-    let p1 = Hstring.view p1 in
-    let p2 = Hstring.view p2 in
-    let e1 = Hstring.view e1 in
-    let e2 = Hstring.view e2 in
-    make_lit Eq [ Term.mk_pred p [p1;e1;p2;e2] ; Term.t_true ]
-
-  let make_rel rel pl =
-    List.fold_left (fun f p -> make_pair rel p :: f) [] pl
-
-  let make_cands rel cands =
-    List.fold_left (fun ff pl ->
-      Comb (Or, (make_rel rel pl)) :: ff
-    ) [] cands
-
 end
 
 module WPT = AE.Why_ptree
@@ -593,12 +498,30 @@ module Make (Options_ : sig val profiling : bool end) = struct
   (********** weak memory stuff **********)
 
   let axioms = Queue.create ()
-			      
+								     
+  let mk_evt_f ?(qv=false) (p, e) f =
+    let ty = match f with
+      | "_dir" -> H.find decl_types (Hstring.make "_direction")
+      | "_var" -> H.find decl_types (Hstring.make "_weak_var")
+      | "_val" -> AE.Ty.Tint (*
+	 let ev = (fst e.Event.var) in
+	 let (_, _, nty) = H.find decl_symbs ev in
+	 try H.find decl_types nty
+	 with Not_found -> raise (Error (UnknownSymb ev)) *)
+      | _ -> failwith "Alt_ergo_lib.Term.make_eventid_field : bad field name"
+    in
+    let tyevent = H.find decl_types (Hstring.make "_event") in
+    let tp = AE.Term.make (Term.mk_symb ~qv p) [] AE.Ty.Tint in
+    let te = AE.Term.make (Term.mk_symb ~qv e) [] AE.Ty.Tint in
+    let tem = AE.Term.make (AE.Symbols.name "_e") [tp ; te] tyevent in
+    let sav = AE.Symbols.Op (AE.Symbols.Access (AE.Hstring.make f)) in
+    AE.Term.make sav [tem] ty
+
+  let mk_pred = Term.mk_pred
+		 
   let dl = (Lexing.dummy_pos, Lexing.dummy_pos)
   let id = let c = ref 0 in fun () -> c := !c + 1; !c
   let mk_ety e = (e, AE.Ty.Tint)
-  let mk_evt_f ?(qv=false) (p, e) f = Term.mk_eid_field ~qv p e f
-  let mk_pred ?(qv=false) p al = Term.mk_pred ~qv p al
   let mk_true () = AE.Formula.mk_lit AE.Literal.LT.vrai (id ())
   let mk_eq t1 t2 = AE.Formula.mk_lit (AE.Literal.LT.mk_eq t1 t2) (id ())
   let mk_neq t1 t2 = AE.Formula.mk_not (mk_eq t1 t2)

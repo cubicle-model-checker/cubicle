@@ -309,7 +309,6 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> fun () -> Prover.run ~fp:true ()
 
-  open Event
   open Types.Atom
 (*
   let t_esubst subst = function

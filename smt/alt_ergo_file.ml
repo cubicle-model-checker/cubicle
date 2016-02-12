@@ -110,34 +110,13 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
-  let type_weak =
-    Hstring.make "_weak_var"
-
-  let type_event =
-    Hstring.make "_event"
-
-  let type_direction =
-    let tdir = Hstring.make "_direction" in
-    let cdir = [ Hstring.make "_R" ; Hstring.make "_W" ] in
-    declare tdir cdir;
-    tdir
-
-  let declare_event_type wvl =
-    let cwv = List.map (fun wv ->
-      Hstring.make ("_V" ^ (Hstring.view wv))) wvl in
-    declare type_weak cwv;
-    let fields = [ (Hstring.make "_dir", Hstring.make "_direction") ;
-		   (Hstring.make "_var", Hstring.make "_weak_var") ;
-		   (Hstring.make "_val", Hstring.make "int") ] in
-    declare_record type_event fields
-
 end
 
 module Symbol = struct
     
   type t = Hstring.t
 
-  let declare ?(weak=false) f args ret =
+  let declare f args ret =
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     H.add all_vars f (Symbols.name f, args, ret);
     List.iter 
@@ -149,7 +128,7 @@ module Symbol = struct
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
   let is_weak s =
-    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) = Type.type_weak
+    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) =(Hstring.make "_weak_var")
     with Not_found -> false
 
   let declared s = 
@@ -246,6 +225,7 @@ module Variant = struct
            hset_print c) 
       constructors
 
+
   let get_variants = H.find constructors
     
   let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
@@ -296,13 +276,6 @@ module Term = struct
       Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
 
-  let make_access t f = (* redundant with make_app *)
-    try
-      let (sb, _, nty) = H.find decl_symbs f in
-      let ty = H.find decl_types nty in
-      Term.make sb [t] ty
-    with Not_found -> raise (Error (UnknownSymb f))
-
   let t_true = Term.vrai
   let t_false = Term.faux
 
@@ -326,7 +299,13 @@ module Term = struct
 
   let is_real = Term.is_real
 
-  let mk_evt_field ?(qv=false) e f = failwith "TODO"
+  let mk_symb ?(qv=false) s =
+    if qv then Symbols.var s else Symbols.name (Hstring.make s)
+
+  let mk_pred ?(qv=false) p al =
+    let al = List.map (fun a ->
+      Term.make (mk_symb ~qv a) [] Ty.Tint) al in
+    Term.make (Symbols.name (Hstring.make p)) al Ty.Tbool
 
 end
 
@@ -508,32 +487,6 @@ let rec mk_cnf = function
     init [] sfnc
 
   (* let make_cnf f = mk_cnf (sform f) *)
-
-  let make_event_desc e = failwith "TODO"
-
-  let make_acyclic_rel (p, e) =
-    let en = (Hstring.view p) ^ "," ^ (Hstring.view e) in 
-    let acpo = "_po_loc_U_com(" ^ en ^ "," ^ en ^ ")" in
-    let t_acpo = TTerm.make (Symbols.name (Hstring.make acpo)) [] Ty.Tbool in
-    let acco = "_co_U_prop(" ^ en ^ "," ^ en ^ ")" in
-    let t_acco = TTerm.make (Symbols.name (Hstring.make acco)) [] Ty.Tbool in
-    [ Lit (Literal.LT.make (Literal.Eq (t_acpo, TTerm.faux))) ;
-      Lit (Literal.LT.make (Literal.Eq (t_acco, TTerm.faux))) ]
-
-  let make_pair rel (p1, e1, p2, e2) =
-    let en1 = (Hstring.view p1) ^ "," ^ (Hstring.view e1) in
-    let en2 = (Hstring.view p2) ^ "," ^ (Hstring.view e2) in
-    let pair = rel ^ "(" ^ en1 ^ "," ^ en2 ^ ")" in
-    let t_rel = TTerm.make (Symbols.name (Hstring.make pair)) [] Ty.Tbool in
-    Lit (Literal.LT.make (Literal.Eq (t_rel, TTerm.vrai)))
-
-  let make_rel rel pl =
-    List.fold_left (fun f p -> make_pair rel p :: f) [] pl
-
-  let make_cands rel cands =
-    List.fold_left (fun ff pl ->
-      Comb (Or, (make_rel rel pl)) :: ff
-    ) [] cands
 
 end
 

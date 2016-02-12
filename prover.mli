@@ -16,7 +16,7 @@
 open Types
 
 module HMap = Hstring.HMap
-
+       
 (** Interface with the SMT solver *)
 
 module SMT : Smt.Solver

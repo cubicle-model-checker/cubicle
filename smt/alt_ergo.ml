@@ -60,12 +60,6 @@ module Type = struct
     H.add decl_types tproc Ty.Tint;
     tproc
 
-  let type_weak =
-    Hstring.make "_weak_var"
-
-  let type_event =
-    Hstring.make "_event"
-
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
@@ -107,22 +101,13 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
-  let type_direction =
-    let tdir = Hstring.make "_direction" in
-    let cdir = [ Hstring.make "_R" ; Hstring.make "_W" ] in
-    declare tdir cdir;
-    tdir
-
-  let declare_event_type _ = () (*
-    failwith "Alt_ergo.Type.declare_event_type TODO"*)
-
 end
 
 module Symbol = struct
     
   type t = Hstring.t
 
-  let declare ?(weak=false) f args ret =
+  let declare f args ret =
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
       (fun t -> 
@@ -279,13 +264,6 @@ module Term = struct
       Term.make sb l ty
     with Not_found -> raise (Error (UnknownSymb s))
 
-  let make_access t f =
-    try
-      let (sb, _, nty) = H.find decl_symbs f in
-      let ty = H.find decl_types nty in
-      Term.make sb [t] ty
-    with Not_found -> raise (Error (UnknownSymb f))
-
   let t_true = Term.vrai
   let t_false = Term.faux
 
@@ -305,12 +283,12 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let mk_evt_field ?(qv=false) e f =
-    failwith "Alt_ergo.Term.mk_evt_field TODO"
-
   let is_int = Term.is_int
 
   let is_real = Term.is_real
+
+  let mk_pred ?(qv=false) p al = 
+    failwith "Alt_ergo.Term.mk_pred TODO"
 
 end
 
@@ -471,21 +449,6 @@ let rec mk_cnf = function
     init [] sfnc
 
   (* let make_cnf f = mk_cnf (sform f) *)
-
-  let make_event_desc e = [] (*
-    failwith "Alt_ergo.Formula.make_event_desc TODO" *)
-
-  let make_acyclic_rel e = [] (*
-    failwith "Alt_ergo.Formula.make_acyclic_rel TODO" *)
-
-  let make_pair rel (e1, e2) = f_true (*
-    failwith "Alt_ergo.Formula.make_pair TODO" *)
-
-  let make_rel rel pl = [] (*
-    failwith "Alt_ergo.Formula.make_rel TODO" *)
-
-  let make_cands rel cands = [] (*
-    failwith "Alt_ergo.Formula.make_cands TODO" *)
 
 end
 

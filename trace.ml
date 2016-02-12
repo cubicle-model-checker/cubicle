@@ -17,7 +17,6 @@ open Format
 open Ast
 open Types
 open Options
-open Event
 
 module HSet = Hstring.HSet
 

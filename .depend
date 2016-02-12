@@ -167,9 +167,9 @@ bwd.cmx : stats.cmx smt/smt.cmx safety.cmx pre.cmx options.cmx node.cmx \
     common/hstring.cmx common/heap.cmx fixpoint.cmx dot.cmx cubetrie.cmx \
     ast.cmi approx.cmx bwd.cmi
 cube.cmo : variable.cmi util.cmi types.cmi smt/term.cmi options.cmi \
-    common/hstring.cmi event.cmi cube.cmi
+    common/hstring.cmi cube.cmi
 cube.cmx : variable.cmx util.cmx types.cmx smt/term.cmx options.cmx \
-    common/hstring.cmx event.cmx cube.cmi
+    common/hstring.cmx cube.cmi
 cubetrie.cmo : variable.cmi util.cmi types.cmi smt/term.cmi options.cmi \
     node.cmi common/hstring.cmi dot.cmi cube.cmi ast.cmi cubetrie.cmi
 cubetrie.cmx : variable.cmx util.cmx types.cmx smt/term.cmx options.cmx \
@@ -184,16 +184,14 @@ enumerative.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
 enumerative.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
     pretty.cmx options.cmx node.cmx common/hstring.cmx forward.cmx cube.cmx \
     ast.cmi enumerative.cmi
-event.cmo : variable.cmi common/hstring.cmi event.cmi
-event.cmx : variable.cmx common/hstring.cmx event.cmi
 fake_functory.cmo : fake_functory.cmi
 fake_functory.cmx : fake_functory.cmi
 fixpoint.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi prover.cmi \
-    options.cmi node.cmi instantiation.cmi event.cmi cubetrie.cmi cube.cmi \
-    ast.cmi fixpoint.cmi
+    options.cmi node.cmi instantiation.cmi cubetrie.cmi cube.cmi ast.cmi \
+    fixpoint.cmi
 fixpoint.cmx : variable.cmx util.cmx types.cmx smt/smt.cmx prover.cmx \
-    options.cmx node.cmx instantiation.cmx event.cmx cubetrie.cmx cube.cmx \
-    ast.cmi fixpoint.cmi
+    options.cmx node.cmx instantiation.cmx cubetrie.cmx cube.cmx ast.cmi \
+    fixpoint.cmi
 forward.cmo : variable.cmi types.cmi smt/term.cmi smt/smt.cmi prover.cmi \
     options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi forward.cmi
 forward.cmx : variable.cmx types.cmx smt/term.cmx smt/smt.cmx prover.cmx \
@@ -238,10 +236,10 @@ pre.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
     options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi pre.cmi
 pretty.cmo : util.cmi types.cmi options.cmi ast.cmi pretty.cmi
 pretty.cmx : util.cmx types.cmx options.cmx ast.cmi pretty.cmi
-prover.cmo : variable.cmi util.cmi types.cmi smt/smt.cmi options.cmi \
-    node.cmi common/hstring.cmi event.cmi cube.cmi ast.cmi prover.cmi
-prover.cmx : variable.cmx util.cmx types.cmx smt/smt.cmx options.cmx \
-    node.cmx common/hstring.cmx event.cmx cube.cmx ast.cmi prover.cmi
+prover.cmo : weakmem.cmi variable.cmi util.cmi types.cmi smt/smt.cmi \
+    options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi prover.cmi
+prover.cmx : weakmem.cmx variable.cmx util.cmx types.cmx smt/smt.cmx \
+    options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi prover.cmi
 ptree.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi ast.cmi ptree.cmi
 ptree.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
@@ -258,28 +256,32 @@ stats.cmx : variable.cmx util.cmx types.cmx prover.cmx pretty.cmx \
     stats.cmi
 trace.cmo : variable.cmi util.cmi types.cmi smt/term.cmi stats.cmi \
     smt/smt.cmi pre.cmi options.cmi node.cmi common/hstring.cmi fixpoint.cmi \
-    event.cmi ast.cmi trace.cmi
+    ast.cmi trace.cmi
 trace.cmx : variable.cmx util.cmx types.cmx smt/term.cmx stats.cmx \
     smt/smt.cmx pre.cmx options.cmx node.cmx common/hstring.cmx fixpoint.cmx \
-    event.cmx ast.cmi trace.cmi
+    ast.cmi trace.cmi
 trie.cmo : trie.cmi
 trie.cmx : trie.cmi
 types.cmo : variable.cmi util.cmi smt/smt.cmi options.cmi common/hstring.cmi \
-    event.cmi types.cmi
+    types.cmi
 types.cmx : variable.cmx util.cmx smt/smt.cmx options.cmx common/hstring.cmx \
-    event.cmx types.cmi
-typing.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
-    pretty.cmi pre.cmi options.cmi node.cmi common/hstring.cmi cube.cmi \
-    ast.cmi typing.cmi
-typing.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
-    pretty.cmx pre.cmx options.cmx node.cmx common/hstring.cmx cube.cmx \
-    ast.cmi typing.cmi
+    types.cmi
+typing.cmo : weakmem.cmi variable.cmi util.cmi types.cmi smt/term.cmi \
+    smt/smt.cmi pretty.cmi pre.cmi options.cmi node.cmi common/hstring.cmi \
+    cube.cmi ast.cmi typing.cmi
+typing.cmx : weakmem.cmx variable.cmx util.cmx types.cmx smt/term.cmx \
+    smt/smt.cmx pretty.cmx pre.cmx options.cmx node.cmx common/hstring.cmx \
+    cube.cmx ast.cmi typing.cmi
 util.cmo : common/timer.cmi options.cmi util.cmi
 util.cmx : common/timer.cmx options.cmx util.cmi
 variable.cmo : smt/smt.cmi options.cmi common/hstring.cmi variable.cmi
 variable.cmx : smt/smt.cmx options.cmx common/hstring.cmx variable.cmi
 version.cmo :
 version.cmx :
+weakmem.cmo : types.cmi smt/smt.cmi options.cmi common/hstring.cmi \
+    weakmem.cmi
+weakmem.cmx : types.cmx smt/smt.cmx options.cmx common/hstring.cmx \
+    weakmem.cmi
 approx.cmi : oracle.cmi options.cmi node.cmi ast.cmi
 ast.cmi : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi cube.cmi
@@ -289,7 +291,6 @@ cube.cmi : variable.cmi types.cmi smt/term.cmi
 cubetrie.cmi : types.cmi node.cmi
 dot.cmi : types.cmi node.cmi
 enumerative.cmi : variable.cmi types.cmi oracle.cmi node.cmi ast.cmi
-event.cmi : variable.cmi
 fake_functory.cmi :
 fixpoint.cmi : variable.cmi node.cmi cubetrie.cmi
 forward.cmi : variable.cmi types.cmi smt/term.cmi node.cmi \
@@ -315,3 +316,4 @@ types.cmi : variable.cmi smt/smt.cmi common/hstring.cmi
 typing.cmi : util.cmi ast.cmi
 util.cmi : common/timer.cmi
 variable.cmi : common/hstring.cmi
+weakmem.cmi : types.cmi smt/smt.cmi common/hstring.cmi

@@ -118,8 +118,8 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/bitv.cmo
 
 CMO = version.cmo options.cmo \
-      $(COMMONCMO) event.cmo util.cmo $(SMTCMO) \
-      variable.cmo types.cmo \
+      $(COMMONCMO) util.cmo $(SMTCMO) \
+      variable.cmo types.cmo weakmem.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo \

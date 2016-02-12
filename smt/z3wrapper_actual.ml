@@ -86,12 +86,6 @@ module Type = struct
     H.add decl_types tproc z3int;
     tproc
 
-  let type_weak =
-    Hstring.make "_weak_var"
-
-  let type_event =
-    Hstring.make "_event"
-
   let declare_constructor ty c f =
     (* eprintf "declare_constructor@."; *)
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
@@ -138,22 +132,13 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
-  let type_direction =
-    let tdir = Hstring.make "_direction" in
-    let cdir = [ Hstring.make "_R" ; Hstring.make "_W" ] in
-    declare tdir cdir;
-    tdir
-
-  let declare_event_type _ =
-    failwith "Z3Wrapper_actual.Type.declare_event_type TODO"
-
 end
 
 module Symbol = struct
     
   type t = Hstring.t
 
-  let declare ?(weak=false) f args ret =
+  let declare f args ret =
     (* eprintf "declare@."; *)
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     let z3_args = List.map (fun t ->
@@ -328,8 +313,6 @@ module Term = struct
       Expr.mk_app global_context sb l
     with Not_found -> raise (Error (UnknownSymb s))
 
-  let make_access t f = failwith "Z3Wrapper_actual.Term.make_access TODO"
-
   let t_true = Boolean.mk_true global_context
   let t_false = Boolean.mk_false global_context
 
@@ -340,12 +323,12 @@ module Term = struct
     | Div -> mk_div global_context t1 t2
     | Modulo -> failwith "modulo not supported by Z3 for now"
 
-  let mk_evt_field ?(qv=false) e f =
-    failwith "Z3Wrapper_actual.Term.mk_evt_field TODO"
-
   let is_int = is_int
 
   let is_real = is_real
+
+  let mk_pred ?(qv=false) p al = 
+    failwith "Z3Wrapper_actual.Term.mk_pred TODO"
 
 end
 
@@ -384,21 +367,6 @@ module Formula = struct
 
   let make_cnf f =
     failwith "CNF unimplemented"
-
-  let make_event_desc e =
-    failwith "Z3Wrapper_actual.Formula.make_event_desc TODO"
-
-  let make_acyclic_rel e =
-    failwith "Z3Wrapper_actual.Formula.make_acyclic_rel TODO"
-
-  let make_pair rel (e1, e2) =
-    failwith "Z3Wrapper_actual.Formula.make_pair TODO"
-
-  let make_rel rel pl =
-    failwith "Z3Wrapper_actual.Formula.make_rel TODO"
-
-  let make_cands rel cands =
-    failwith "Z3Wrapper_actual.Formula.make_cands TODO"
 
 end
 

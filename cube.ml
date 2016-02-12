@@ -17,7 +17,6 @@ open Format
 open Options
 open Util
 open Types
-open Event
 
 module H = Hstring
 module S = H.HSet
