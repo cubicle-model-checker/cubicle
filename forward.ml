@@ -366,7 +366,7 @@ let rec type_of_term = function
       MConst.fold (fun c _ _ -> match c with
 	| ConstReal _ -> Smt.Type.type_real
 	| ConstInt _ -> Smt.Type.type_int
-	| ConstName x -> snd (Smt.Symbol.type_of x)
+	| ConstName x -> snd (Smt.Symbol.type_of (unprime_h x))
       ) m Smt.Type.type_int
   | Elem (x, _) | Access (x, _) -> 
       let x = if is_prime (Hstring.view x) then unprime_h x else x in

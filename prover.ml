@@ -170,7 +170,6 @@ let get_user_invs s nb_procs =
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (fun a -> F.make F.Not [make_formula a]) init_invs
 
-
 let unsafe_conj { tag = id; cube = cube } nb_procs invs init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
