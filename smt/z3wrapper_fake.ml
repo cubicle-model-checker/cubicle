@@ -26,6 +26,8 @@ type check_strategy = Lazy | Eager
 let unsupported _ =
   failwith "Cubicle was not compiled with the Z3 library."
 
+let report _ = unsupported ()
+
 let hfake = Hstring.make "fake_Z3"
 
 module Type = struct

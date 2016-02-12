@@ -58,7 +58,6 @@ let () =
 
 
 let _ = 
-  let close_dot = Dot.open_dot () in (* temp hack *)
   let lb = from_channel cin in 
   try
     let s = Parser.system Lexer.token lb in
@@ -67,7 +66,7 @@ let _ =
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
-    (* let close_dot = Dot.open_dot () in  *)
+    let close_dot = Dot.open_dot () in
     begin
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
@@ -104,7 +103,6 @@ let _ =
      exit 2
 
   | Stats.ReachedLimit ->
-     close_dot (); (* temp hack *)
      if (not quiet || profiling) then Stats.print_report ~safe:false [] [];
      eprintf "\n@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
      eprintf "It is likely that the search diverges, increase \
@@ -118,10 +116,18 @@ let _ =
     if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
 
     exit 1
-(*
+
+  | Smt.Error e ->
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "\n@{<u>Solver error:@}%a@." Smt.report e;
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+
+    exit 1
+
   | e ->
 
     let backtrace = Printexc.get_backtrace () in
     eprintf "Fatal error: %s@." (Printexc.to_string e);
     if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace
- *)
+

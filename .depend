@@ -174,10 +174,10 @@ cubetrie.cmo : variable.cmi util.cmi types.cmi smt/term.cmi options.cmi \
     node.cmi common/hstring.cmi dot.cmi cube.cmi ast.cmi cubetrie.cmi
 cubetrie.cmx : variable.cmx util.cmx types.cmx smt/term.cmx options.cmx \
     node.cmx common/hstring.cmx dot.cmx cube.cmx ast.cmi cubetrie.cmi
-dot.cmo : variable.cmi util.cmi types.cmi options.cmi node.cmi \
-    common/hstring.cmi cube.cmi ast.cmi dot.cmi
-dot.cmx : variable.cmx util.cmx types.cmx options.cmx node.cmx \
-    common/hstring.cmx cube.cmx ast.cmi dot.cmi
+dot.cmo : variable.cmi util.cmi types.cmi options.cmi common/hstring.cmi \
+    cube.cmi ast.cmi dot.cmi
+dot.cmx : variable.cmx util.cmx types.cmx options.cmx common/hstring.cmx \
+    cube.cmx ast.cmi dot.cmi
 enumerative.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     pretty.cmi options.cmi node.cmi common/hstring.cmi forward.cmi cube.cmi \
     ast.cmi enumerative.cmi
@@ -202,10 +202,10 @@ instantiation.cmx : variable.cmx util.cmx types.cmx smt/term.cmx options.cmx \
     common/hstring.cmx cube.cmx ast.cmi instantiation.cmi
 lexer.cmo : parser.cmi options.cmi
 lexer.cmx : parser.cmx options.cmx
-main.cmo : util.cmi typing.cmi trace.cmi stats.cmi parser.cmi options.cmi \
-    lexer.cmo dot.cmi bwd.cmi brab.cmi ast.cmi
-main.cmx : util.cmx typing.cmx trace.cmx stats.cmx parser.cmx options.cmx \
-    lexer.cmx dot.cmx bwd.cmx brab.cmx ast.cmi
+main.cmo : util.cmi typing.cmi trace.cmi stats.cmi smt/smt.cmi parser.cmi \
+    options.cmi lexer.cmo dot.cmi bwd.cmi brab.cmi ast.cmi
+main.cmx : util.cmx typing.cmx trace.cmx stats.cmx smt/smt.cmx parser.cmx \
+    options.cmx lexer.cmx dot.cmx bwd.cmx brab.cmx ast.cmi
 mulexer.cmo : options.cmi muparser_globals.cmi muparser.cmi
 mulexer.cmx : options.cmx muparser_globals.cmx muparser.cmx
 muparser.cmo : options.cmi muparser_globals.cmi enumerative.cmi muparser.cmi

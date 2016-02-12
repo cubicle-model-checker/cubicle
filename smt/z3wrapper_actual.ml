@@ -34,6 +34,16 @@ type error =
 
 exception Error of error
 
+let report fmt = function
+  | DuplicateTypeName s ->
+      fprintf fmt "duplicate type name for %a" Hstring.print s
+  | DuplicateSymb e ->
+      fprintf fmt "duplicate name for %a" Hstring.print e
+  | UnknownType s ->
+      fprintf fmt "unknown type %a" Hstring.print s
+  | UnknownSymb s ->
+      fprintf fmt "unknown symbol %a" Hstring.print s
+
 type symbol_kind = TAbstract | TConstructor
 type check_strategy = Lazy | Eager
 

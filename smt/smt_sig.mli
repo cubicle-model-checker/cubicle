@@ -28,6 +28,8 @@ module type S = sig
 
   exception Error of error
 
+  val report : Format.formatter -> error -> unit
+
   (** {2 Check sat strategy } *)
   type check_strategy = Lazy | Eager
   
