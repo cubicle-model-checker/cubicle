@@ -54,8 +54,9 @@ type term =
 
   | Field of term * Hstring.t (* term is Elem/Access *)
   | List of term list (* term is Elem *)
-  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *) (*
-  | EventValue of Event.t (* for event instances *)*)
+  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *)
+  | Write of Variable.t * Hstring.t * Variable.t list (* experiment *)
+  | Fence of Variable.t (* experiment *)
 
 (** Module interface for terms *)
 module Term : sig

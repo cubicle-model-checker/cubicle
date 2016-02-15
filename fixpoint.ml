@@ -61,7 +61,7 @@ module FixpointList : sig
 end = struct
 
   let check_fixpoint ?(pure_smt=false) n visited =
-    Prover.assume_goal ~fp:true n;
+    Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
     let nodes = 
       List.fold_left
@@ -80,7 +80,7 @@ end = struct
                       Cube.inconsistent_2arrays vis_renamed n_array then nodes
 	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
               (vis_n, vis_renamed)::nodes
-	    else (Prover.assume_node ~fp:true vis_n vis_renamed; nodes)
+	    else (Prover.assume_node vis_n vis_renamed; nodes)
 	   ) nodes d
         ) [] visited
     in
@@ -92,7 +92,7 @@ end = struct
     in
     TimeSort.pause ();
     List.iter (fun (vn, ar_renamed) ->
-      Prover.assume_node ~fp:true vn ar_renamed) nodes
+      Prover.assume_node vn ar_renamed) nodes
 
 
   let easy_fixpoint s nodes =
@@ -170,10 +170,10 @@ end = struct
   let assume_node env n sigma a =
     let nid = fresh_id env in
     Hashtbl.add env.hid_cubes nid (n, sigma);
-    Prover.assume_node ~fp:true { n with tag = nid } a
+    Prover.assume_node { n with tag = nid } a
  
   let check_fixpoint env ?(pure_smt=false) n visited =
-    Prover.assume_goal ~fp:true n;
+    Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
     let nodes = 
       List.fold_left
@@ -296,21 +296,22 @@ end = struct
 
   let first_action =
     match Prover.SMT.check_strategy with
-    | Smt.Eager -> Prover.assume_goal ~fp:true
-    | Smt.Lazy -> Prover.assume_goal_no_check ~fp:true
+    | Smt.Eager -> Prover.assume_goal
+    | Smt.Lazy -> Prover.assume_goal_no_check
 
   let assume =
     match Prover.SMT.check_strategy with
-    | Smt.Eager -> Prover.assume_node ~fp:true
-    | Smt.Lazy -> Prover.assume_node_no_check ~fp:true
+    | Smt.Eager -> Prover.assume_node
+    | Smt.Lazy -> Prover.assume_node_no_check
     
   let last_action =
     match Prover.SMT.check_strategy with
     | Smt.Eager -> fun () -> ()
-    | Smt.Lazy -> fun () -> Prover.run ~fp:true ()
+    | Smt.Lazy -> fun () -> Prover.run ()
 
-  open Types.Atom
 (*
+  open Types.Atom
+
   let t_esubst subst = function
     | Read (p, v, vi) -> failwith "Fixpoint.t_esubst Read should not be in term"
     | EventValue e -> EventValue { e with uid = List.assoc e.uid subst }
@@ -364,7 +365,7 @@ end = struct
        else
          (* These are worth assuming and checking right away because they might
             yield unsatifisability sooner *)
-         (Prover.assume_node ~fp:true vis_n vis_renamed; nodes)
+         (Prover.assume_node vis_n vis_renamed; nodes)
       ) nodes d*)
       
 
@@ -481,7 +482,7 @@ end = struct
       Cubetrie.fold
         (fun nodes vis_p ->
          check_and_add s nodes vis_p) [] visited in
-    Prover.assume_goal_nodes ~fp:true s nodes
+    Prover.assume_goal_nodes s nodes
 
               
   let easy_fixpoint s nodes =

@@ -133,6 +133,8 @@ let infer_type x1 x2 =
       | Field _ -> failwith "Typing.infer_type Field TODO"
       | List _ -> failwith "Typing.infer_type List TODO"
       | Read _ -> failwith "Typing.infer_type Read TODO"
+      | Write _ -> failwith "Typing.infer_type Write TODO"
+      | Fence _ -> failwith "Typing.infer_type Fence TODO"
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -169,7 +171,8 @@ let rec term loc ?(init=false) args = function
 	  error (MustBeNum x) loc;
 	args, tx
       end
-  | Access(a, li) -> (* check if it should be a weak access *)
+  | Access(a, li) ->
+      if Smt.Symbol.is_weak a && not init then error (MustReadWeakVar a) loc;
       let args_a, ty_a = 
 	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
@@ -190,11 +193,12 @@ let rec term loc ?(init=false) args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
-  | Field _ -> failwith "Typing.term Field should not be typed"
-  | List _ -> failwith "Typing.term List should not be typed"
+  | Field _ -> failwith "Typing.term : Field should not be typed"
+  | List _ -> failwith "Typing.term : List should not be typed"
   | Read (p, v, vi) ->
       if Options.model = Options.SC then error (OpInvalidInSC) loc;
       if init then error (CantUseReadInInit) loc;
+      if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
       let ty_p =
 	if Hstring.list_mem p args then Smt.Type.type_proc
 	else (* probably no else here, we want p to be an argument *)
@@ -208,10 +212,11 @@ let rec term loc ?(init=false) args = function
 	error (MustBeOfTypeProc p) loc;
       let args, ret = begin match vi with
 	| [] -> Smt.Symbol.type_of v
-	| _ -> term loc ~init args (Access (v, vi))
+	| _ -> term loc ~init args (Access (v, vi)) (* to improve *)
       end in
-      if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
       args, ret
+  | Write (p, v, vi) -> failwith "Typing.term : Write should not be typed"
+  | Fence p -> failwith "Typing.term : Fence should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -378,7 +383,7 @@ let init_global_env s =
 	 weak_vars := n :: !weak_vars;
        end;
        l := (n, ret)::!l) s.arrays;
-  Weakmem.init_weak_env !weak_vars;
+  if Options.model <> Options.SC then Weakmem.init_weak_env !weak_vars;
   !l
 
 
@@ -591,7 +596,7 @@ let system s =
     if Options.debug then Smt.Variant.print ();
   end;
 
-  let init_woloc = let _,v,i = s.init in v,i in
+  let init_woloc = let _,v,i = s.init in v,(Weakmem.writes_of_init i) in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =

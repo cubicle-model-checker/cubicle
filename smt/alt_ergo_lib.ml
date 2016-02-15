@@ -77,6 +77,11 @@ module Type = struct
     H.add decl_types tproc AE.Ty.Tint;
     tproc
 
+  let type_prop = 
+    let tprop = Hstring.make "prop" in
+    H.add decl_types tprop AE.Ty.Tbool;
+    tprop
+
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
@@ -306,14 +311,6 @@ module Term = struct
 
   let is_real = AE.Term.is_real
 
-  let mk_symb ?(qv=false) s =
-    if qv then AE.Symbols.var s else AE.Symbols.name s
-
-  let mk_pred ?(qv=false) p al =
-    let al = List.map (fun a ->
-      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
-    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tbool
-
 end
 
 module Formula = struct
@@ -508,27 +505,20 @@ module Make (Options_ : sig val profiling : bool end) = struct
   (********** weak memory stuff **********)
 
   let axioms = Queue.create ()
-								     
-  let mk_evt_f ?(qv=false) (p, e) f =
-    let ty = match f with
-      | "_dir" -> H.find decl_types (Hstring.make "_direction")
-      | "_var" -> H.find decl_types (Hstring.make "_weak_var")
-      | "_val" -> AE.Ty.Tint (*
-	 let ev = (fst e.Event.var) in
-	 let (_, _, nty) = H.find decl_symbs ev in
-	 try H.find decl_types nty
-	 with Not_found -> raise (Error (UnknownSymb ev)) *)
-      | _ -> failwith "Alt_ergo_lib.Term.make_eventid_field : bad field name"
-    in
-    let tyevent = H.find decl_types (Hstring.make "_event") in
-    let tp = AE.Term.make (Term.mk_symb ~qv p) [] AE.Ty.Tint in
-    let te = AE.Term.make (Term.mk_symb ~qv e) [] AE.Ty.Tint in
-    let tem = AE.Term.make (AE.Symbols.name "_e") [tp ; te] tyevent in
-    let sav = AE.Symbols.Op (AE.Symbols.Access (AE.Hstring.make f)) in
-    AE.Term.make sav [tem] ty
 
-  let mk_pred = Term.mk_pred
-		 
+  let mk_symb ?(qv=false) s =
+    if qv then AE.Symbols.var s else AE.Symbols.name s
+
+  let mk_pred ?(qv=false) p al =
+    let al = List.map (fun a -> AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
+    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tbool
+
+  let mk_evt_f ?(qv=false) (p, e) f =
+    let tp = AE.Term.make (mk_symb ~qv p) [] AE.Ty.Tint in
+    let te = AE.Term.make (mk_symb ~qv e) [] AE.Ty.Tint in
+    let tem = Term.make_app (Hstring.make "_e") [tp ; te] in
+    Term.make_app (Hstring.make f) [tem]
+
   let dl = (Lexing.dummy_pos, Lexing.dummy_pos)
   let id = let c = ref 0 in fun () -> c := !c + 1; !c
   let mk_ety e = (e, AE.Ty.Tint)
@@ -580,125 +570,119 @@ module Make (Options_ : sig val profiling : bool end) = struct
     WPT.{ st_decl = Query("g", f, [], Thm) ; st_loc = dl }
 
   let init_axioms () =
+    let qv = true in
+    let ety2 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "_e1" ; mk_ety "_e2" ] in
+    let ety3 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "p3" ;
+		 mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ] in
+    let e1e2 = ["p1";"_e1";"p2";"_e2"] in
+    let e2e3 = ["p2";"_e2";"p3";"_e3"] in
+    let e1e3 = ["p1";"_e1";"p3";"_e3"] in
+    let e1 = ("p1", "_e1") in
+    let e2 = ("p2", "_e2") in
+    let tp1 = AE.Term.make (mk_symb ~qv "p1") [] AE.Ty.Tint in
+    let tp2 = AE.Term.make (mk_symb ~qv "p2") [] AE.Ty.Tint in
+    let tw = Term.make_app (Hstring.make "_W") [] in
+    let tr = Term.make_app (Hstring.make "_R") [] in
+
+    let axiom_rf = mk_axiom "axiom_rf" [] ety2
+      [ [ mk_pred ~qv "_rf" e1e2 ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_rf" e1e2))
+	(mk_eq (mk_evt_f ~qv e1 "_val") (mk_evt_f ~qv e2 "_val"))) in
+    Queue.push axiom_rf axioms;
+
+    let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2
+      [ [ mk_pred ~qv "_po" e1e2 ], None ]
+      (mk_imp
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_po" e1e2))
+	  (mk_eq (mk_evt_f ~qv e1 "_var") (mk_evt_f ~qv e2 "_var")))
+	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
+    Queue.push axiom_po_loc axioms;
+
+    let axiom_rfe = mk_axiom "axiom_rfe" [] ety2
+      [ [ mk_pred ~qv "_rf" e1e2 ], None ]
+      (mk_imp
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
+	  (mk_neq tp1 tp2))
+	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+    Queue.push axiom_rfe axioms;
+
+    let axiom_fr = mk_axiom "axiom_fr" [] ety3
+      [ [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ], None ]
+      (mk_imp
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
+	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3))
+	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))) in
+    Queue.push axiom_fr axioms;
+
+    let axiom_ppo_tso = mk_axiom "axiom_ppo_tso" [] ety2
+      [ [ mk_pred ~qv "_po" e1e2 ], None ]
+      (mk_imp
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_po" e1e2))
+	  (mk_or
+	    (mk_neq (mk_evt_f ~qv e1 "_dir") tw)
+	    (mk_neq (mk_evt_f ~qv e2 "_dir") tr)))
+	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+    Queue.push axiom_ppo_tso axioms;
+
+    let axiom_po_U_com_1 = mk_axiom "axiom_po_U_com_1" [] ety2
+      [ [ mk_pred ~qv "_co" e1e2 ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_co" e1e2))
+	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
+    Queue.push axiom_po_U_com_1 axioms;
+
+    let axiom_po_U_com_2 = mk_axiom "axiom_po_U_com_2" [] ety2
+      [ [ mk_pred ~qv "_rf" e1e2 ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_rf" e1e2))
+	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
+    Queue.push axiom_po_U_com_2 axioms;
+
+    let axiom_po_U_com_t = mk_axiom "axiom_po_U_com_t" [] ety3
+      [ [ mk_pred ~qv "_po_loc_U_com" e1e2 ;
+	  mk_pred ~qv "_po_loc_U_com" e2e3 ], None ]
+      (mk_imp
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))
+	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3)))
+	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e3))) in
+    Queue.push axiom_po_U_com_t axioms;
+
+    let axiom_co_U_prop_1 = mk_axiom "axiom_co_U_prop_1" [] ety2
+      [ [ mk_pred ~qv "_co" e1e2 ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_co" e1e2))
+	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+    Queue.push axiom_co_U_prop_1 axioms;
+
+    let axiom_co_U_prop_2 = mk_axiom "axiom_co_U_prop_2" [] ety2
+      [ [ mk_pred ~qv "_fence" e1e2 ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
+	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+    Queue.push axiom_co_U_prop_2 axioms;
+
+    let axiom_co_U_prop_t = mk_axiom "axiom_co_U_prop_t" [] ety3
+      [ [ mk_pred ~qv "_co_U_prop" e1e2 ;
+	  mk_pred ~qv "_co_U_prop" e2e3 ], None ]
+      (mk_imp
+	(mk_and
+	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))
+	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))
+	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e3))) in
+    Queue.push axiom_co_U_prop_t axioms
+
+  let init_axioms () =
     if Options.model = Options.SC then ()
-    else begin
-        let qv = true in
-        let ety2 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "_e1" ; mk_ety "_e2" ] in
-        let ety3 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "p3" ;
-		     mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ] in
-	let e1e2 = ["p1";"_e1";"p2";"_e2"] in
-	let e2e3 = ["p2";"_e2";"p3";"_e3"] in
-	let e1e3 = ["p1";"_e1";"p3";"_e3"] in
-	let e1 = ("p1", "_e1") in
-	let e2 = ("p2", "_e2") in
-	let tp1 = AE.Term.make (Term.mk_symb ~qv "p1") [] AE.Ty.Tint in
-	let tp2 = AE.Term.make (Term.mk_symb ~qv "p2") [] AE.Ty.Tint in
-	let tw = Term.make_app (Hstring.make "_W") [] in
-	let tr = Term.make_app (Hstring.make "_R") [] in
+    else init_axioms ()
 
-        let axiom_rf = mk_axiom "axiom_rf" [] ety2
-	  [ [ mk_pred ~qv "_rf" e1e2 ], None ]
-	  (mk_imp
-	    (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	    (mk_eq (mk_evt_f ~qv e1 "_val") (mk_evt_f ~qv e2 "_val"))) in
-	Queue.push axiom_rf axioms;
-
-        let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2
-	  [ [ mk_pred ~qv "_po" e1e2 ], None ]
-	  (mk_imp
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_po" e1e2))
-	      (mk_eq (mk_evt_f ~qv e1 "_var") (mk_evt_f ~qv e2 "_var")))
-	    (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
-	Queue.push axiom_po_loc axioms;
-
-        let axiom_rfe = mk_axiom "axiom_rfe" [] ety2
-	  [ [ mk_pred ~qv "_rf" e1e2 ], None ]
-	  (mk_imp
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	      (mk_neq tp1 tp2))
-	    (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
-	Queue.push axiom_rfe axioms;
-
-        let axiom_fr = mk_axiom "axiom_fr" [] ety3
-	  [ [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ], None ]
-	  (mk_imp
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	      (mk_eq_true (mk_pred ~qv "_co" e1e3)))
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3))
-	      (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))) in
-	Queue.push axiom_fr axioms;
-
-        let axiom_ppo_tso = mk_axiom "axiom_ppo_tso" [] ety2
-	  [ [ mk_pred ~qv "_po" e1e2 ], None ]
-	  (mk_imp
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_po" e1e2))
-	      (mk_or
-	        (mk_neq (mk_evt_f ~qv e1 "_dir") tw)
-		(mk_neq (mk_evt_f ~qv e2 "_dir") tr)))
-	    (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
-	Queue.push axiom_ppo_tso axioms;
-
-        let axiom_po_U_com_1 = mk_axiom "axiom_po_U_com_1" [] ety2
-	  [ [ mk_pred ~qv "_co" e1e2 ], None (*;
-	    [ mk_pred ~qv "_po_loc_U_com" e1e2 ], None*) ]
-	  (mk_imp
-	    (mk_eq_true (mk_pred ~qv "_co" e1e2))
-	    (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
-	Queue.push axiom_po_U_com_1 axioms;
-
-        let axiom_po_U_com_2 = mk_axiom "axiom_po_U_com_2" [] ety2
-	  [ [ mk_pred ~qv "_rf" e1e2 ], None (*;
-	    [ mk_pred ~qv "_po_loc_U_com" e1e2 ], None*) ]
-	  (mk_imp
-	    (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	    (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
-	Queue.push axiom_po_U_com_2 axioms;
-
-        let axiom_po_U_com_t = mk_axiom "axiom_po_U_com_t" [] ety3
-	  [ [ mk_pred ~qv "_po_loc_U_com" e1e2 ;
-	      mk_pred ~qv "_po_loc_U_com" e2e3 ], None ]
-	  (mk_imp
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))
-	      (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3)))
-	    (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e3))) in
-	Queue.push axiom_po_U_com_t axioms;
-
-        let axiom_co_U_prop_1 = mk_axiom "axiom_co_U_prop_1" [] ety2
-	  [ [ mk_pred ~qv "_co" e1e2 ], None (*;
-	    [ mk_pred ~qv "_co_U_prop" e1e2 ], None*) ]
-	  (mk_imp
-	    (mk_eq_true (mk_pred ~qv "_co" e1e2))
-	    (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
-	Queue.push axiom_co_U_prop_1 axioms;
-
-        let axiom_co_U_prop_2 = mk_axiom "axiom_co_U_prop_2" [] ety2
-	  [ [ mk_pred ~qv "_fence" e1e2 ], None (*;
-	    [ mk_pred ~qv "_co_U_prop" e1e2 ], None*) ]
-	  (mk_imp
-	    (mk_eq_true (mk_pred ~qv "_fence" e1e2))
-	    (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
-	Queue.push axiom_co_U_prop_2 axioms;
-
-        let axiom_co_U_prop_t = mk_axiom "axiom_co_U_prop_t" [] ety3
-	  [ [ mk_pred ~qv "_co_U_prop" e1e2 ;
-	      mk_pred ~qv "_co_U_prop" e2e3 ], None ]
-	  (mk_imp
-	    (mk_and
-	      (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))
-	      (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))
-	    (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e3)))
-        in
-	Queue.push axiom_co_U_prop_t axioms
-
-      end
-
-  let all_events = ref []
   let formula = ref []
 
   (***********************************************)
@@ -718,7 +702,6 @@ module Make (Options_ : sig val profiling : bool end) = struct
   (***********************************************)
 
   let clear () =
-    all_events := [];
     formula := [](*;
     Stack.clear push_stack;
     CSolver.clear ()*)
@@ -765,9 +748,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
 		 
   let assume ~id f =
     Time.start ();
-    try (*
-      if events <> Event.empty_struct then
-	all_events := events :: !all_events; *)
+    try
       formula := (Formula.make_cnf f) :: !formula;
       (*CSolver.assume (Formula.make_cnf f) id;*)
       Time.pause ()
@@ -828,211 +809,3 @@ module Make (Options_ : sig val profiling : bool end) = struct
     failwith "Alt_ergo.pop unsupported"
 
 end
-
-
-
-(*
-      let axiom_rf = mk_axiom 0 "axiom_rf" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "rf" "e1" "e2" ], None ]
-	(mk_imp 0
-	   (mk_eq_true 0 (mk_pair ~qv "rf" "e1" "e2"))
-	   (mk_eq 0 (mk_evt_f ~qv "e1" "val") (mk_evt_f ~qv "e2" "val")))
-      in
-
-      let axiom_po_loc = mk_axiom 0 "axiom_po_loc" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "po" "e1" "e2" ], None ]
-	(mk_imp 0
-	   (mk_and 0
-	     (mk_eq_true 0 (mk_pair ~qv "po" "e1" "e2"))
-	     (mk_eq 0 (mk_evt_f ~qv "e1" "loc") (mk_evt_f ~qv "e2" "loc")))
-	   (mk_eq_true 0 (mk_pair ~qv "po_loc" "e1" "e2")))
-      in
-
-      let axiom_rfe = mk_axiom 0 "axiom_rfe" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "rf" "e1" "e2" ], None ]
-	(mk_imp 0
-	   (mk_and 0
-	     (mk_eq_true 0 (mk_pair ~qv "rf" "e1" "e2"))
-	     (mk_neq 0 (mk_evt_f ~qv "e1" "tid") (mk_evt_f ~qv "e2" "tid")))
-	   (mk_eq_true 0 (mk_pair ~qv "rfe" "e1" "e2")))
-      in
-
-      let axiom_fr = mk_axiom 0 "axiom_fr" []
-        [ mk_ety "e1" ; mk_ety "e2" ; mk_ety "e3" ]
-	[ [ mk_pair ~qv "rf" "e1" "e2" ; mk_pair ~qv "co" "e1" "e3" ], None ]
-	(mk_imp 0
-	   (mk_and 0
-	     (mk_eq_true 0 (mk_pair ~qv "rf" "e1" "e2"))
-	     (mk_eq_true 0 (mk_pair ~qv "co" "e1" "e3")))
-	   (mk_eq_true 0 (mk_pair ~qv "fr" "e2" "e3")))
-      in
-
-      let axiom_ppo_tso = mk_axiom 0 "axiom_ppo_tso" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "po" "e1" "e2" ], None ]
-	(mk_imp 0
-	   (mk_and 0
-	     (mk_eq_true 0 (mk_pair ~qv "po" "e1" "e2"))
-	     (mk_or 0
-	       (mk_neq 0 (mk_evt_f ~qv "e1" "dir") (mk_dir Event.EWrite))
-	       (mk_neq 0 (mk_evt_f ~qv "e2" "dir") (mk_dir Event.ERead))))
-	   (mk_eq_true 0 (mk_pair ~qv "ppo" "e1" "e2")))
-      in
-
-      let axiom_po_U_com = mk_axiom 0 "axiom_po_U_com" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "po_loc" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "co" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "rf" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "fr" "e1" "e2" ], None ]
-	(mk_imp 0
-	   (mk_or 0
-	     (mk_eq_true 0 (mk_pair ~qv "po_loc" "e1" "e2"))
-	     (mk_or 0
-	       (mk_eq_true 0 (mk_pair ~qv "co" "e1" "e2"))
-	       (mk_or 0
-	         (mk_eq_true 0 (mk_pair ~qv "rf" "e1" "e2"))
-	         (mk_eq_true 0 (mk_pair ~qv "fr" "e1" "e2")))))
-	   (mk_eq_true 0 (mk_pair ~qv "po_loc_U_com" "e1" "e2")))
-      in
-
-      let axiom_po_U_com_t = mk_axiom 0 "axiom_po_U_com_t" []
-        [ mk_ety "e1" ; mk_ety "e2" ; mk_ety "e3" ]
-	[ [ mk_pair ~qv "po_loc_U_com" "e1" "e2" ;
-	    mk_pair ~qv "po_loc_U_com" "e2" "e3" ], None ]
-	(mk_imp 0
-	   (mk_and 0
-	     (mk_eq_true 0 (mk_pair ~qv "po_loc_U_com" "e1" "e2"))
-	     (mk_eq_true 0 (mk_pair ~qv "po_loc_U_com" "e2" "e3")))
-	   (mk_eq_true 0 (mk_pair ~qv "po_loc_U_com" "e1" "e3")))
-      in
-
-      let axiom_co_U_prop = mk_axiom 0 "axiom_co_U_prop" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "co" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "ppo" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "fence" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "rfe" "e1" "e2" ], None ;
-	  [ mk_pair ~qv "fr" "e1" "e2" ], None ]
-	(mk_imp 0
-	   (mk_or 0
-	     (mk_eq_true 0 (mk_pair ~qv "co" "e1" "e2"))
-	     (mk_or 0
-	       (mk_eq_true 0 (mk_pair ~qv "ppo" "e1" "e2"))
-	       (mk_or 0
-	         (mk_eq_true 0 (mk_pair ~qv "fence" "e1" "e2"))
-	         (mk_or 0
-	           (mk_eq_true 0 (mk_pair ~qv "rfe" "e1" "e2"))
-	           (mk_eq_true 0 (mk_pair ~qv "fr" "e1" "e2"))))))
-	   (mk_eq_true 0 (mk_pair ~qv "co_U_prop" "e1" "e2")))
-      in
-
-      let axiom_co_U_prop_t = mk_axiom 0 "axiom_co_U_prop_t" []
-        [ mk_ety "e1" ; mk_ety "e2" ; mk_ety "e3" ]
-	[ [ mk_pair ~qv "co_U_prop" "e1" "e2" ;
-	    mk_pair ~qv "co_U_prop" "e2" "e3" ], None ]
-	(mk_imp 0
-	   (mk_and 0
-	     (mk_eq_true 0 (mk_pair ~qv "co_U_prop" "e1" "e2"))
-	     (mk_eq_true 0 (mk_pair ~qv "co_U_prop" "e2" "e3")))
-	   (mk_eq_true 0 (mk_pair ~qv "co_U_prop" "e1" "e3")))
-      in
- *)
-
-
-
-(*
-      let make_event_desc e =
-	let tetid = Term.make_event_field e "tid" in
-	let tedir = Term.make_event_field e "dir" in
-	let teloc = Term.make_event_field e "loc" in    
-	let stid = AE.Symbols.name (Hstring.view e.Event.tid) in
-	let ttid = AE.Term.make stid [] AE.Ty.Tint in
-	let dir = if e.Event.dir = Event.ERead then "_R" else "_W" in
-	let tdir = Term.make_app (Hstring.make dir) [] in
-	let loc = "_V" ^ (Hstring.view (fst e.Event.var)) in
-	let tloc = Term.make_app (Hstring.make loc) [] in
-	(mk_and 10
-	  (mk_eq 11 tetid ttid)
-	  (mk_and 12
-	    (mk_eq 13 tedir tdir)
-	    (mk_eq 14 teloc tloc))) in
-
-      AE.Options.set_verbose true;
-      let qv = true in
-
-      let axiom_rf = mk_axiom 0 "axiom_rf" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "rf" "e1" "e2" ], None ]
-	(mk_imp 1
-	   (mk_eq_true 2 (mk_pair ~qv "rf" "e1" "e2"))
-	   (mk_eq 3 (mk_evt_f ~qv "e1" "loc") (mk_evt_f ~qv "e2" "loc")))
-      in
-
-      let e1 =  Event.{ uid = 4; tid = Hstring.make "#1";
-			dir = Event.EWrite; var = Hstring.make "X", [] } in
-      let e2 =  Event.{ uid = 5; tid = Hstring.make "#1";
-			dir = Event.ERead; var = Hstring.make "X", [] } in
-      let e1d = make_event_desc e1 in
-      let e2d = make_event_desc e2 in
-
-      let f = (mk_imp 4
-	        (mk_and 5
-	          (mk_and 6 e1d e2d)
-		  (mk_eq_true 7 (mk_pair "rf" "e4" "e5")))
-		(mk_eq 8 (mk_evt_f "e4" "loc") (mk_evt_f "e5" "loc"))) in
-      let goal = WPT.{ st_decl = Query("g", f, [], Thm) ; st_loc = dl } in
-
-      let q = Queue.create () in
-      Queue.push axiom_rf q;
-      Queue.push goal q;
- *)
-(*
-
-
-      let axiom_rf = mk_axiom 1 "axiom_rf" []
-        [ mk_ety "e1" ; mk_ety "e2" ]
-	[ [ mk_pair ~qv "rf" "e1" "e2" ], None ]
-	(mk_imp 2
-	   (mk_eq_true 3 (mk_pair ~qv "rf" "e1" "e2"))
-	   (mk_eq_true 4 (mk_pair ~qv "rfe" "e1" "e2"))) in
-
-      let f = (mk_and 5
-	        (mk_eq_true 6 (mk_pair "rf" "e4" "e5"))
-		(mk_eq_false 7 (mk_pair "rfe" "e4" "e5"))) in
-      let goal = WPT.{ st_decl = Query("g", f, [], Thm) ; st_loc = dl } in
-
-      let q = Queue.create () in
-      Queue.push axiom_rf q;
-      Queue.push goal q;
- *)
-      
-(*
-      let x = AE.Term.make (AE.Symbols.var "x") [] AE.Ty.Tint in
-      let fx = AE.Term.make (AE.Symbols.name "f") [x] AE.Ty.Tint in
-      let n42 = AE.Term.int "42" in
-      let n43 = AE.Term.int "43" in
-      let fn42 = AE.Term.make (AE.Symbols.name "f") [n42] AE.Ty.Tint in
-      let fn43 = AE.Term.make (AE.Symbols.name "f") [n43] AE.Ty.Tint in
-
-      let axiom_x = mk_axiom 1 "axiom_x" [ ]
-	[ mk_ety "x" ]
-	[ [ fx ], None ]
-	(AE.Formula.mk_lit (AE.Literal.LT.mk_eq fx x) 2) in
-      let f = match axiom_x.WPT.st_decl with Assume(fa, b) -> fa in
-      AE.Formula.print std_formatter f;
-      Format.fprintf std_formatter "\n";
-
-      let l = AE.Literal.LT.mk_eq fn42 n43 in
-      let f = AE.Formula.mk_lit (l) 3 in
-      AE.Formula.print std_formatter f;
-      Format.fprintf std_formatter "\n";
-      let goal = WPT.{ st_decl = Query("g", f, [], Thm) ; st_loc = dl } in
-
-      let q = Queue.create () in
-      Queue.push axiom_x q;
-      Queue.push goal q;
- *)

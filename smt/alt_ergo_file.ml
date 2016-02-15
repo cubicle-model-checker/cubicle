@@ -77,6 +77,11 @@ module Type = struct
     H.add decl_types tproc Ty.Tint;
     tproc
 
+  let type_prop = 
+    let tprop = Hstring.make "prop" in
+    H.add decl_types tprop Ty.Tbool;
+    tprop
+
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
@@ -310,14 +315,6 @@ module Term = struct
 
   let is_real = Term.is_real
 
-  let mk_symb ?(qv=false) s =
-    if qv then Symbols.var s else Symbols.name (Hstring.make s)
-
-  let mk_pred ?(qv=false) p al =
-    let al = List.map (fun a ->
-      Term.make (mk_symb ~qv a) [] Ty.Tint) al in
-    Term.make (Symbols.name (Hstring.make p)) al Ty.Tbool
-
 end
 
 module Formula = struct
@@ -528,17 +525,12 @@ module Make (Options_ : sig val profiling : bool end) = struct
 
   (********** weak memory stuff **********)
 
-  let decls = "
-logic _po : int, int, int, int -> prop
-logic _rf : int, int, int, int -> prop
-logic _co : int, int, int, int -> prop
-logic _fence : int, int, int, int -> prop
-logic _co_U_prop : int, int, int, int -> prop
-logic _po_loc_U_com : int, int, int, int -> prop
-"
-	   
-  let axioms = "
-axiom rf :
+  let axioms = ref ""
+
+  let init_axioms () =
+    if Options.model = Options.SC then ()
+    else axioms :=
+"axiom rf :
   forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
   _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
 
@@ -568,12 +560,12 @@ axiom ppo_tso :
    -> _po_loc_U_com(p1, e1, p2, e2)*)
 
 axiom po_loc_U_com_1 :
-  forall p1, p2, e1, e2 : int [(*_co(p1,e1,p2,e2)|*)_po_loc_U_com(p1,e1,p2,e2)].
+  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)(*|_po_loc_U_com(p1,e1,p2,e2)*)].
   _co(p1, e1, p2, e2)
    -> _po_loc_U_com(p1, e1, p2, e2)
 
 axiom po_loc_U_com_2 :
-  forall p1, e1, p2, e2 : int [(*_rf(p1,e1,p2,e2)|*)_po_loc_U_com(p1,e1,p2,e2)].
+  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)(*|_po_loc_U_com(p1,e1,p2,e2)*)].
   _rf(p1, e1, p2, e2)
    -> _po_loc_U_com(p1, e1, p2, e2)
 
@@ -595,10 +587,7 @@ axiom co_U_prop_2 :
 axiom co_U_prop_t :
   forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)].
   _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3)
-   -> _co_U_prop(p1, e1, p3, e3)
-"
-
-  let init_axioms () = ()			   
+   -> _co_U_prop(p1, e1, p3, e3)"
 
   let typeof t =
     let t = (Hstring.view t) in
@@ -631,21 +620,12 @@ axiom co_U_prop_t :
   let print_var_name fmt v =
     fprintf fmt "_V%s" (replace (Hstring.view v) "#" "p")
 
-  let unique_events esl = failwith "TODO" (*
-    let uel = ref [] in
-    List.iter (fun es -> Event.IntMap.iter (fun _ e ->
-      if not (List.exists (fun ex -> ex.Event.uid = e.Event.uid) !uel) then
-        uel := e :: !uel
-      ) es.Event.events) esl;
-    !uel *)
-
   let gen_filename =
     let cnt = ref 0 in
     fun name ext ->
       cnt := !cnt + 1;
       name ^ (string_of_int !cnt) ^ ext
 
-  let all_events = ref []
   let formula = ref []
 
   (***********************************************)
@@ -665,7 +645,6 @@ axiom co_U_prop_t :
   (***********************************************)
 
   let clear () =
-    all_events := [];
     formula := [](*;
     Stack.clear push_stack;
     CSolver.clear ()*)
@@ -712,9 +691,7 @@ axiom co_U_prop_t :
 
   let assume ~id f =
     Time.start ();
-    try (*
-      if events <> Event.empty_struct then
-	all_events := events :: !all_events; *)
+    try
       formula := (Formula.make_cnf f) :: !formula;
       (*CSolver.assume (Formula.make_cnf f) id;*)
       Time.pause ()
@@ -742,13 +719,8 @@ axiom co_U_prop_t :
 		       (print_list_sep "|" Hstring.print) cl
         | TRec fl -> fprintf filefmt "type %a = { %a }\n" Hstring.print t
 		       (print_list_sep ";" print_field) fl
-      ) (List.rev !all_types);
-      (*H.iter (fun t ty -> match ty with
-        | Ty.Tabstract _ -> fprintf filefmt "type %a\n" Hstring.print t
-        | Ty.Tsum (_, cl) -> fprintf filefmt "type %a = %a\n" Hstring.print t
-				     (print_list_sep "|" Hstring.print) cl
-	| _ -> ()
-      ) decl_types;*) (* this also prints variants *)
+      ) (List.rev !all_types); (* allows to skip variants *)
+      fprintf filefmt "\n";
 
       (* Print all variables *)
       H.iter (fun f (fx, args, ret) ->
@@ -757,24 +729,10 @@ axiom co_U_prop_t :
 	  (print_list_sep "," print_type) args
 	  ((if args = [] then " " else " -> ") ^ (typeof ret))
       ) all_vars;
+      fprintf filefmt "\n";
 
-      (* Print Weak declarations *)
-      if Options.model <> Options.SC then begin
-
-	(* Declaration of Event type and Relations *)
-	fprintf filefmt "%s" decls;
-
-	(* Axiomatization of Relations *)
-	if not fp then fprintf filefmt "%s" axioms;
-	fprintf filefmt "\n";
-
-	(* Declaration of Events *) (*
-	List.iter (fun e ->
-	  fprintf filefmt "logic %s : int\n" (Event.name e)
-	) (List.rev (unique_events !all_events));
-	fprintf filefmt "\n" *)
-
-      end;
+      (* Print Weak Memory Axomatization *)
+      if not fp then fprintf filefmt "%s\n" !axioms;
       
       (* Print formula *)
       fprintf filefmt "goal g: true\n";
@@ -786,9 +744,6 @@ axiom co_U_prop_t :
 	let t = replace t "False" "false" in
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
-
-      (* fprintf filefmt "goal g:\n%a\n" *)
-      (*   (print_list_sep "and" print_field) fl *)
 	      
       (* Output file *)
       flush file;
@@ -804,6 +759,7 @@ axiom co_U_prop_t :
       else if String.compare output "unknown (sat)\n" <> 0 then
 	failwith "Error calling SMT solver";
       (*if String.compare output "unsat\n" = 0 then exit 0;*)
+
       (*CSolver.solve ();*)
       Time.pause ()
     with
@@ -835,149 +791,3 @@ axiom co_U_prop_t :
     failwith "Alt_ergo.pop unsupported"
 
 end
-
-
-
-
-
-
-
-(*
-
-  let decls = "
-logic e : int -> _event
-logic po : int, int -> prop
-logic rf : int, int -> prop
-logic co : int, int -> prop
-logic fence : int, int -> prop
-logic co_U_prop : int, int -> prop
-logic po_loc_U_com : int, int -> prop
-"
-	   
-  let axioms = "
-axiom rf :
-  forall e1, e2 : int [rf(e1,e2)].
-  rf(e1, e2) -> e(e1).val = e(e2).val
-
-axiom po_loc :
-  forall e1, e2 : int [po(e1,e2)].
-  po(e1, e2) and e(e1).loc = e(e2).loc
-  -> po_loc_U_com(e1, e2)
-
-axiom rfe :
-  forall e1, e2 : int [rf(e1,e2)].
-  rf(e1, e2) and e(e1).tid <> e(e2).tid
-  -> co_U_prop(e1, e2)
-
-axiom fr :
-  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
-  rf(w1, r) and co(w1, w2)
-  -> po_loc_U_com(r, w2) and co_U_prop(r, w2)
-
-axiom ppo_tso :
-  forall e1, e2 : int [po(e1,e2)].
-  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
-  -> co_U_prop(e1, e2)
-
-(*axiom po_loc_U_com :
-  forall e1, e2 : int [(*co(e1,e2)|rf(e1,e2)|*)po_loc_U_com(e1,e2)].
-  co(e1, e2) or rf(e1, e2)
-   -> po_loc_U_com(e1, e2)*)
-
-axiom po_loc_U_com_1 :
-  forall e1, e2 : int [(*co(e1,e2)|*)po_loc_U_com(e1,e2)].
-  co(e1, e2)
-   -> po_loc_U_com(e1, e2)
-
-axiom po_loc_U_com_2 :
-  forall e1, e2 : int [(*rf(e1,e2)|*)po_loc_U_com(e1,e2)].
-  rf(e1, e2)
-   -> po_loc_U_com(e1, e2)
-
-axiom po_loc_U_com_t :
-  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
-  po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
-
-axiom co_U_prop_1 :
-  forall e1, e2 : int [co(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2)
-  -> co_U_prop(e1, e2)
-
-axiom co_U_prop_2 :
-  forall e1, e2 : int [fence(e1,e2)(*|co_U_prop(e1,e2)*)].
-  fence(e1, e2)
-  -> co_U_prop(e1, e2)
-
-axiom co_U_prop_t :
-  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
-  co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
-"
-
-
- *)
-
-
-
-
-							  
-
-(*
-let axiom_rels = "
-axiom rf :
-  forall e1, e2 : int [rf(e1,e2)].
-  rf(e1, e2) -> e(e1).val = e(e2).val
-logic po_loc : int, int -> prop
-axiom po_loc :
-  forall e1, e2 : int [po(e1,e2)].
-  po(e1, e2) and e(e1).loc = e(e2).loc
-  <-> po_loc(e1, e2)
-logic rfe : int, int -> prop
-axiom rfe :
-  forall e1, e2 : int [rf(e1,e2)].
-  rf(e1, e2) and e(e1).tid <> e(e2).tid
-  <-> rfe(e1, e2)
-logic fr : int, int -> prop
-axiom fr :
-  forall r, w1, w2 : int [rf(w1,r),co(w1,w2)].
-  rf(w1, r) and co(w1, w2)
-  -> fr(r, w2)
-(*logic com : int, int -> prop
-axiom com :
-  forall e1, e2 : int [co(e1,e2)|rf(e1,e2)|fr(e1,e2)].
-  co(e1, e2) or rf(e1, e2) or fr(e1, e2)
-  <-> com(e1, e2)*)
-logic ppo : int, int -> prop
-axiom ppo_tso :
-  forall e1, e2 : int [po(e1,e2)].
-  po(e1, e2) and not (e(e1).dir = _W and e(e2).dir = _R)
-  <-> ppo(e1, e2)
-(*logic propg : int, int -> prop
-axiom propg_tso :
-  forall e1, e2 : int [ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)].
-  ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
-  <-> propg(e1, e2)*)
-logic po_loc_U_com : int, int -> prop
-(*axiom po_loc_U_com :
-  forall e1, e2 : int [(*po_loc(e1,e2)|com(e1,e2)|*)po_loc_U_com(e1,e2)].
-  po_loc(e1, e2) or com(e1, e2) -> po_loc_U_com(e1, e2)*)
-axiom po_loc_U_com :
-  forall e1, e2 : int [(*po_loc(e1,e2)|co(e1,e2)|rf(e1,e2)|fr(e1,e2)|*)po_loc_U_com(e1,e2)].
-  po_loc(e1, e2) or co(e1, e2) or rf(e1, e2) or fr(e1, e2)
-   -> po_loc_U_com(e1, e2)
-axiom po_loc_U_com_t :
-  forall e1, e2, e3 : int [po_loc_U_com(e1,e2),po_loc_U_com(e2,e3)].
-  po_loc_U_com(e1, e2) and po_loc_U_com(e2, e3) -> po_loc_U_com(e1, e3)
-logic co_U_prop : int, int -> prop
-(*axiom co_U_prop :
-  forall e1, e2 : int [co(e1,e2)|propg(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2) or propg(e1, e2) -> co_U_prop(e1, e2)*)
-axiom co_U_prop :
-  forall e1, e2 : int [co(e1,e2)|ppo(e1,e2)|fence(e1,e2)|rfe(e1,e2)|fr(e1,e2)(*|co_U_prop(e1,e2)*)].
-  co(e1, e2) or ppo(e1, e2) or fence(e1, e2) or rfe(e1, e2) or fr(e1, e2)
-  -> co_U_prop(e1, e2)
-axiom co_U_prop_t :
-  forall e1, e2, e3 : int [co_U_prop(e1,e2),co_U_prop(e2,e3)].
-  co_U_prop(e1, e2) and co_U_prop(e2, e3) -> co_U_prop(e1, e3)
-"
- *)
-	      

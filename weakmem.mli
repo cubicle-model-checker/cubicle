@@ -10,28 +10,22 @@ val init_weak_env : H.t list -> unit
 
 
 
-val make_event : int HMap.t * Types.term list HMap.t * Types.Atom.t list ->
-		 string -> HMap.key -> Hstring.t -> 'a ->
-		 (int HMap.t * Types.term list HMap.t * Types.Atom.t list) * Types.term
-val event_of_term : int HMap.t * Types.term list HMap.t * Types.Atom.t list ->
-		    Types.term ->
-		  (int HMap.t * Types.term list HMap.t * Types.Atom.t list) * Types.term
-val events_of_a : int HMap.t * Types.term list HMap.t * Types.Atom.t list ->
-		  Types.Atom.t ->
-		(int HMap.t * Types.term list HMap.t * Types.Atom.t list) * Types.Atom.t
+val writes_of_init : Types.SAtom.t list -> Types.SAtom.t list
 val events_of_satom : Types.SAtom.t -> Types.SAtom.t
+
+
+
+val split_events_orders_array : Types.SAtom.elt array ->
+				Types.SAtom.t * (Hstring.t * Hstring.t) HMap.t HMap.t *
+				  Hstring.t list HMap.t
+val split_events_orders_set : Types.SAtom.t ->
+			      Types.SAtom.t * (Hstring.t * Hstring.t) HMap.t HMap.t *
+			        Hstring.t list HMap.t
 
 
 
 val merge_ord : 'a list HMap.t -> 'a list HMap.t -> 'a list HMap.t
 val merge_evts : 'a HMap.t HMap.t -> 'a HMap.t HMap.t -> 'a HMap.t HMap.t
-
-
-
-val split_order : Types.Atom.t -> Types.Atom.t option * (H.t * H.t list) option
-val split_order_array : Types.SAtom.elt array -> Types.SAtom.t * H.t list HMap.t
-val split_order_set : Types.SAtom.t -> Types.SAtom.t * H.t list HMap.t
-val get_events : Types.SAtom.t -> (H.t * H.t) HMap.t HMap.t
 
 
 
@@ -46,7 +40,6 @@ val gen_rf_cands : (H.t * H.t) HMap.t HMap.t -> (H.t * H.t * H.t * H.t) list lis
 
 
 val make_pred : string -> H.t * H.t * H.t * H.t -> bool -> F.t
-val make_acyclic_rel : H.t * H.t -> F.t list
 val make_rel : string -> (H.t * H.t * H.t * H.t) list -> F.t list
 val make_cands : string -> (H.t * H.t * H.t * H.t) list list -> F.t list
 val make_orders : ?fp:bool -> (H.t * H.t) HMap.t HMap.t -> H.t list HMap.t -> F.t

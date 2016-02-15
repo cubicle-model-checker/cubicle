@@ -55,6 +55,8 @@ module type S = sig
     val type_proc : t
     (** The type processes (identifiers) *)
 
+    val type_prop : t
+
     (** {3 Declaring new types } *)
 
     val declare : Hstring.t -> Hstring.t list -> unit
@@ -183,8 +185,6 @@ module type S = sig
 
     val t_false : t
     (** [t_false] is the boolean term [false] *)
-
-    val mk_pred : ?qv:bool -> string -> string list -> t
 
   end
 

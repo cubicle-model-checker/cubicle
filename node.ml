@@ -159,7 +159,9 @@ module Latex = struct
        fprintf fmt "%a.%a" print_term t Hstring.print f
     | List tl -> 
        fprintf fmt "(%a)" print_list tl
-    | Read (p, v, vi) -> failwith "TODO" (*Event.print_rd fmt (p, v, vi)*)
+    | Read (p, v, vi) -> failwith "Print Read TODO" (*Event.print_rd fmt (p, v, vi)*)
+    | Write (p, v, vi) -> failwith "Print Write TODO"
+    | Fence p -> failwith "Print Fence TODO"
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

@@ -71,6 +71,8 @@ let rec is_prime_term = function
   | Field (_, _) -> failwith "Forward.is_prime_term Field TODO"
   | List _ -> failwith "Forward.is_prime_term List TODO"
   | Read _ -> failwith "Forward.is_prime_term Read TODO"
+  | Write _ -> failwith "Forward.is_prime_term Write TODO"
+  | Fence _ -> failwith "Forward.is_prime_term Fence TODO"
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -378,6 +380,8 @@ let rec type_of_term = function
   | Field (_, _) -> failwith "Forward.type_of_term Field TODO"
   | List _ -> failwith "Forward.type_of_term List TODO"
   | Read _ -> failwith "Forward.type_of_term Read TODO"
+  | Write _ -> failwith "Forward.type_of_term Write TODO"
+  | Fence _ -> failwith "Forward.type_of_term Fence TODO"
 
 let rec type_of_atom = function
   | True | False -> None

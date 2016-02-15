@@ -230,10 +230,12 @@ parser.cmo : variable.cmi types.cmi smt/smt.cmi ptree.cmi options.cmi \
     common/hstring.cmi ast.cmi parser.cmi
 parser.cmx : variable.cmx types.cmx smt/smt.cmx ptree.cmx options.cmx \
     common/hstring.cmx ast.cmi parser.cmi
-pre.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
-    options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi pre.cmi
-pre.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
-    options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi pre.cmi
+pre.cmo : weakmem.cmi variable.cmi util.cmi types.cmi smt/term.cmi \
+    smt/smt.cmi options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi \
+    pre.cmi
+pre.cmx : weakmem.cmx variable.cmx util.cmx types.cmx smt/term.cmx \
+    smt/smt.cmx options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi \
+    pre.cmi
 pretty.cmo : util.cmi types.cmi options.cmi ast.cmi pretty.cmi
 pretty.cmx : util.cmx types.cmx options.cmx ast.cmi pretty.cmi
 prover.cmo : weakmem.cmi variable.cmi util.cmi types.cmi smt/smt.cmi \
@@ -278,10 +280,8 @@ variable.cmo : smt/smt.cmi options.cmi common/hstring.cmi variable.cmi
 variable.cmx : smt/smt.cmx options.cmx common/hstring.cmx variable.cmi
 version.cmo :
 version.cmx :
-weakmem.cmo : types.cmi smt/smt.cmi options.cmi common/hstring.cmi \
-    weakmem.cmi
-weakmem.cmx : types.cmx smt/smt.cmx options.cmx common/hstring.cmx \
-    weakmem.cmi
+weakmem.cmo : types.cmi smt/smt.cmi common/hstring.cmi weakmem.cmi
+weakmem.cmx : types.cmx smt/smt.cmx common/hstring.cmx weakmem.cmi
 approx.cmi : oracle.cmi options.cmi node.cmi ast.cmi
 ast.cmi : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi cube.cmi

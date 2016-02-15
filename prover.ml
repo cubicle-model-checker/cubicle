@@ -108,14 +108,15 @@ let rec make_term = function
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
-  | Read (_, _, _) -> failwith "Prover.make_term : Read should not be in atom"
   | Field (t, f) -> T.make_app f [make_term t]
-  | List tl -> failwith "Prover.make_term Field TODO"
+  | List tl -> failwith "Prover.make_term List TODO"
+  | Read _ -> failwith "Prover.make_term : Read should not be in atom"
+  | Write _ -> failwith "Prover.make_term : Write should not be in atom"
+  | Fence _ -> failwith "Prover.make_term : Fence should not be in atom"
 
 let rec make_formula_set sa =
-  let sa, ord = Weakmem.split_order_set sa in
-  let evts = Weakmem.get_events sa in
-  (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), ord, evts)
+  let sa, evts, ord = Weakmem.split_events_orders_set sa in
+  (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), evts, ord)
 
 and make_literal = function
   | Atom.True -> F.f_true
@@ -134,9 +135,8 @@ and make_literal = function
 
 
 let make_formula atoms =
-  let sa, ord = Weakmem.split_order_array atoms in
-  let evts = Weakmem.get_events sa in
-  (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), ord, evts)
+  let sa, evts, ord = Weakmem.split_events_orders_array atoms in
+  (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), evts, ord)
 
 module HAA = Hashtbl.Make (ArrayAtom)
 
@@ -171,32 +171,32 @@ let make_conjuct atoms1 atoms2 =
   F.make F.And l
  *)
 
-let make_init_dnfs s nb_procs =
+let make_init_dnfs s nb_procs = (* S only *)
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (fun dnf ->
     List.rev_map (make_formula_set) (List.map Weakmem.events_of_satom dnf)
   ) init_cdnf
 
-let get_user_invs s nb_procs =
+let get_user_invs s nb_procs = (* S only *)
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (fun a ->
     let (f, _, _) = make_formula a in F.make F.Not [f]) init_invs
 
-let unsafe_conj { tag = id; cube = cube } nb_procs invs (init, iord, ievts) =
+let unsafe_conj { tag = id; cube = cube } nb_procs invs (init, ievts, iord) = (*S only*)
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
-  let (f, ord, evts) = make_formula_set cube.Cube.litterals in
+  let (f, evts, ord) = make_formula_set cube.Cube.litterals in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
   SMT.assume ~id f;
-  let ord = Weakmem.merge_ord iord ord in
   let evts = Weakmem.merge_evts ievts evts in
-  SMT.assume ~id (Weakmem.make_orders ~fp:false evts ord);
-  SMT.check ~fp:false ()
+  let ord = Weakmem.merge_ord iord ord in
+  SMT.assume ~id (Weakmem.make_orders evts ord);
+  SMT.check ()
 
-let unsafe_dnf node nb_procs invs dnf =
+let unsafe_dnf node nb_procs invs dnf = (* S only *)
   try
     let uc =
       List.fold_left (fun accuc init ->
@@ -208,16 +208,16 @@ let unsafe_dnf node nb_procs invs dnf =
     raise (Smt.Unsat uc)
   with Exit -> ()
 
-let unsafe_cdnf s n =
+let unsafe_cdnf s n = (* S only *)
   let nb_procs = List.length (Node.variables n) in
   let cdnf_init = make_init_dnfs s nb_procs in
   let invs = get_user_invs s nb_procs in
   List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 
-let unsafe s n = unsafe_cdnf s n
+let unsafe s n = unsafe_cdnf s n (* S only *)
 
 
-let reached args s sa =
+let reached args s sa = (* FW only *)
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
   let (f, _, _) = make_formula_set (SAtom.union sa s) in
@@ -225,48 +225,48 @@ let reached args s sa =
   SMT.check ()
 
 
-let assume_goal_no_check ?(fp=false) { tag = id; cube = cube } =
+let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let (f, ord, evts) = make_formula cube.Cube.array in
+  let (f, evts, ord) = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.assume ~id (Weakmem.make_orders ~fp evts ord)
+  SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord)
 
-let assume_node_no_check ?(fp=false) { tag = id } ap =
-  let (f, ord, evts) = make_formula ap in
+let assume_node_no_check { tag = id } ap = (* FP only *)
+  let (f, evts, ord) = make_formula ap in
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.assume ~id (F.make F.Not [(Weakmem.make_orders ~fp evts ord)])
+  SMT.assume ~id (F.make F.Not [(Weakmem.make_orders ~fp:true evts ord)])
 
-let assume_goal ?(fp=false) n =
-  assume_goal_no_check ~fp n;
-  SMT.check ~fp ()
+let assume_goal n = (* FP only *)
+  assume_goal_no_check n;
+  SMT.check ~fp:true ()
 
-let assume_node ?(fp=false) n ap =
-  assume_node_no_check ~fp n ap;
-  SMT.check ~fp ()
+let assume_node n ap = (* FP only *)
+  assume_node_no_check n ap;
+  SMT.check ~fp:true ()
 
 
-let run ?(fp=false) () = SMT.check ~fp ()
+let run () = SMT.check ~fp:true () (* FP only *)
 
-let check_guard args sa reqs =
+let check_guard args sa reqs = (* FW only *)
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
   let (f, _, _) = make_formula_set (SAtom.union sa reqs) in
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let assume_goal_nodes ?(fp=false) { tag = id; cube = cube } nodes =
+let assume_goal_nodes { tag = id; cube = cube } nodes = (* FP only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let (f, ord, evts) = make_formula cube.Cube.array in
+  let (f, evts, ord) = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.assume ~id (Weakmem.make_orders ~fp evts ord);
-  List.iter (fun (n, a) -> assume_node_no_check ~fp n a) nodes;
-  SMT.check ~fp ()
+  SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord);
+  List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
+  SMT.check ~fp:true ()
 
 let init () =
   SMT.init_axioms ()

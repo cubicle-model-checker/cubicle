@@ -145,10 +145,10 @@ module AltErgo = struct
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
-    (* | EventValue e -> *)
-    (*    let dir = if e.dir = ERead then "R" else "W" in *)
-    (*    fprintf fmt "event(%d, %a, %s, %a)" *)
-    (* 	       e.uid print_proc e.tid dir print_var e.var *)
+    | Write (p, v, vi) ->
+       fprintf fmt "write(%a, %a)" print_proc p print_var (v, vi)
+    | Fence p ->
+       fprintf fmt "fence(%a)" print_proc p
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -708,10 +708,10 @@ module Why3 = struct
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
-    (* | EventValue e -> *)
-    (*    let dir = if e.dir = ERead then "R" else "W" in *)
-    (*    fprintf fmt "event(%d, %a, %s, %a)" *)
-    (* 	       e.uid print_proc e.tid dir print_var e.var *)
+    | Write (p, v, vi) ->
+       fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
+    | Fence p ->
+       fprintf fmt "fence(%a)" print_proc p
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1526,10 +1526,10 @@ module Why3_INST = struct
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
-    (* | EventValue e -> *)
-    (*    let dir = if e.dir = ERead then "R" else "W" in *)
-    (*    fprintf fmt "event(%d, %a, %s, %a)" *)
-    (* 	       e.uid print_proc e.tid dir print_var e.var *)
+    | Write (p, v, vi) ->
+       fprintf fmt "write(%a, %a)" print_proc p print_var (v, vi)
+    | Fence p ->
+       fprintf fmt "fence(%a)" print_proc p
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"

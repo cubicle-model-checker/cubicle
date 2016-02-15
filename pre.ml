@@ -19,43 +19,6 @@ open Ast
 open Util
 open Types
 
-module HMap = Hstring.HMap
-
-let evt_cnt = ref HMap.empty
-let evt_ord = ref HMap.empty
-let new_atoms = ref []
-
-let make_event d p v vi = 
-  let eid = (try HMap.find p !evt_cnt with Not_found -> 0) + 1 in
-  evt_cnt := HMap.add p eid !evt_cnt;
-  let eid = Hstring.make ("_e" ^ (string_of_int eid)) in
-  let ord = try HMap.find p !evt_ord with Not_found -> [] in
-  evt_ord := HMap.add p (Elem (eid, Glob) :: ord) !evt_ord;
-  let tevt = Access (Hstring.make "_e", [p ; eid]) in
-  let tdir = Field (tevt, Hstring.make "_dir") in
-  let tvar = Field (tevt, Hstring.make "_var") in
-  let tval = Field (tevt, Hstring.make "_val") in
-  let adir = Atom.Comp (tdir, Eq, Elem (Hstring.make d, Constr)) in
-  let avar = Atom.Comp (tvar, Eq,
-                      Elem (Hstring.make ("_V" ^ (Hstring.view v)), Constr)) in
-  new_atoms := adir :: avar :: !new_atoms;
-  tval
-		
-let event_of_term = function
-  | Read (p, v, vi) -> make_event "_R" p v vi
-  | t -> t
-
-let events_of_a = function
-  | Atom.Comp (t1, op, t2) ->
-     let t1' = event_of_term t1 in
-     let t2' = event_of_term t2 in
-     Atom.Comp (t1', op, t2')
-  | a -> a
-
-let events_of_write (p, v, vi, t) =
-  let tval = make_event "_W" p v vi in
-  Atom.Comp (tval, Eq, event_of_term t)
-
 module H = Hstring
 
 module Debug = struct
@@ -138,8 +101,7 @@ let rec find_update a li = function
 
 exception Remove_lit_var of Hstring.t
 
-let rec find_assign tr a =
-  let aux = function
+let rec find_assign tr = function
   | Elem (x, sx) -> 
       let gu =
 	if H.list_mem x tr.tr_nondets then 
@@ -182,9 +144,7 @@ let rec find_assign tr a =
 	(*   else i *)
 	  (*   try (match H.list_assoc i tr.tr_assigns with *)
 	  (*     | Elem (ni, _) -> ni *)
-          (*     | Const _ | Arith _ | Access _ -> assert false) *)
-          (*     | Read _ -> assert false *)
-          (*     | EventValue _ -> assert false *)
+	  (*     | Const _ | Arith _ | Access _ -> assert false) *)
 	  (*   with Not_found -> i *)
         (* ) li in *)
       try find_update a nli tr.tr_upds
@@ -193,19 +153,14 @@ let rec find_assign tr a =
 	(*   try (match H.list_assoc a tr.tr_assigns with *)
 	(* 	 | Elem (na, _) -> na *)
 	(* 	 | Const _ | Arith _ | Access _ -> assert false) *)
-        (*       | Read _ -> assert false *)
-        (*       | EventValue _ -> assert false *)
 	(*   with Not_found -> a *)
 	(* in *)
 	(* Single (Access (na, nli)) *) end
   | Field (t, f) -> Single (Field (t, f)) (* no writes to records (internal) *)
   | List tl -> Single (List tl) (* no writes to array (internal type) *)
   | Read _ -> failwith "Pre.find_assign: Read should not be in atom"
-  (* | EventValue _ as t -> Single t *)
-  in
-  match aux a with
-  | Single Read (p, v, vi) -> Single (make_event "_R" p v vi)
-  | _ as a -> a
+  | Write _ -> failwith "Pre.find_assign: Write should not be in atom"
+  | Fence _ -> failwith "Pre.find_assign: Fence should not be in atom"
 
 let make_tau tr x op y =
   try 
@@ -299,6 +254,7 @@ let make_cubes (ls, post) rargs s tr cnp =
 		(ls, post)
 	      end
 	    else
+	      let np = Weakmem.events_of_satom np in
               let new_cube = Cube.create nargs np in
               let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
 	      match post_strategy with
@@ -345,23 +301,14 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 let pre { tr_info = tri; tr_tau = tau } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe =
-    (*SAtom.union tri.tr_reqs 
-      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)*)
-    let us = List.fold_left (fun us w ->
-      SAtom.add (events_of_write w) us) SAtom.empty tri.tr_writes in
-    let us = SAtom.fold (fun a ->
-      SAtom.add (pre_atom tau a)) unsafe us in 
-    let us = SAtom.fold (fun a us ->
-      SAtom.add (events_of_a a) us) tri.tr_reqs us in
-    let us = List.fold_left (fun us a ->
-      SAtom.add a us) us !new_atoms in
-    List.iter (fun p ->
-      let ord = try HMap.find p !evt_ord with Not_found -> [] in
-      evt_ord := HMap.add p (Elem (Hstring.make "_f", Glob) :: ord) !evt_ord
-    ) tri.tr_fences;
-    HMap.fold (fun p tl us ->
-      let a = Atom.Comp (Access ((Hstring.make "_o"), [p]), Eq, List tl) in
-      SAtom.add a us) !evt_ord us
+    let us = SAtom.union tri.tr_reqs 
+      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty) in
+    let us = List.fold_left (fun us (p, v, vi, t) ->
+      SAtom.add (Atom.Comp (Write (p, v, vi), Eq, t)) us) us tri.tr_writes in
+    let us = List.fold_left (fun us p ->
+      SAtom.add (Atom.Comp (Fence p, Eq, Elem (Term.htrue, Constr))) us
+    ) us tri.tr_fences in
+    us
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
@@ -383,23 +330,11 @@ let pre_image trs s =
   TimePre.start (); 
   Debug.unsafe s;
   let u = Node.litterals s in
-  let u, ord, cnt = SAtom.fold (fun a (us, ord, cnt) -> match a with
-    | Atom.Comp (List tl, Eq, Access (a, [p]))
-    | Atom.Comp (Access (a, [p]), Eq, List tl) when a = Hstring.make "_o" ->
-       let c = List.fold_left (fun c t -> match t with
-         | Elem (e, Glob) -> if e = Hstring.make "f" then c else c + 1
-	 | _ -> failwith "Pre.pre_image Order error"
-       ) 0 tl in
-       (us, HMap.add p tl ord, HMap.add p c cnt)
-    | _ -> (SAtom.add a us, ord, cnt)
-  ) u (SAtom.empty, HMap.empty, HMap.empty) in
   let ls, post = 
     List.fold_left
     (fun acc tr ->
-      evt_cnt := cnt; evt_ord := ord; new_atoms := [];
-      let trinfo, pre_u, info_args = pre tr u in
-      make_cubes acc info_args s trinfo pre_u
-    )
+       let trinfo, pre_u, info_args = pre tr u in
+       make_cubes acc info_args s trinfo pre_u) 
     ([], []) 
     trs 
   in

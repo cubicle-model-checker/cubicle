@@ -96,6 +96,13 @@ module Type = struct
     H.add decl_types tproc z3int;
     tproc
 
+  let type_prop =
+    (* eprintf "type_prop@."; *)
+    let tprop = Hstring.make "prop" in
+    let z3bool = Boolean.mk_sort global_context in
+    H.add decl_types tprop z3bool;
+    tprop
+
   let declare_constructor ty c f =
     (* eprintf "declare_constructor@."; *)
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
