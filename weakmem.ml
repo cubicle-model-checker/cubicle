@@ -217,10 +217,7 @@ let gen_fence evts ord =
   in
   HMap.fold (fun p pord fence -> aux p fence [] pord) ord []
 
-let rec co_from_pord evts p pord co =
-  let pevts = try HMap.find p evts with Not_found -> HMap.empty in
-  let pwrites = HMap.filter (fun e (d, _) -> d = hW) pevts in
-  let rec aux co = function
+let rec co_from_pord co p pwrites = function
   | [] -> co
   | e1 :: pord -> begin try
       let (_, v1) = HMap.find e1 pwrites in
@@ -229,10 +226,8 @@ let rec co_from_pord evts p pord co =
 	  if v1 = v2 then (p, e1, p, e2) :: co else co		   
 	with Not_found -> co
       ) co pord in
-      aux co pord
-    with Not_found -> aux co pord end
-  in
-  aux co pord
+      co_from_pord co p pwrites pord
+    with Not_found -> co_from_pord co p pwrites pord end
 
 let gen_co evts ord =
   let writes = HMap.map (HMap.filter (fun e (d, _) -> d = hW)) evts in
@@ -245,7 +240,8 @@ let gen_co evts ord =
   )) iwrites [] in
   (* Writes from same thread *)
   HMap.fold (fun p pord co ->
-    co_from_pord evts p pord co
+    try co_from_pord co p (HMap.find p writes) pord
+    with Not_found -> co
   ) ord co
 
 let gen_co_cands evts =
@@ -283,33 +279,27 @@ let gen_rf_cands evts =
 
 
 let make_pred p (p1, e1, p2, e2) b =
-  let p = Hstring.make p in
-  let p1 = T.make_app p1 [] in
-  let p2 = T.make_app p2 [] in
-  let e1 = T.make_app e1 [] in
-  let e2 = T.make_app e2 [] in
+  let p1, p2 = T.make_app p1 [], T.make_app p2 [] in
+  let e1, e2 = T.make_app e1 [], T.make_app e2 [] in
   let tb = if b then T.t_true else T.t_false in
   F.make_lit F.Eq [ T.make_app p [p1; e1; p2; e2] ; tb ]
 
-let make_rel rel pl =
-  List.fold_left (fun f p -> make_pred rel p true :: f) [] pl
+let make_predl p el f =
+  List.fold_left (fun f e -> make_pred p e true :: f) f el
 
-let make_cands rel cands =
-  List.fold_left (fun f pl -> (F.make F.Or (make_rel rel pl)) :: f) [] cands
+let make_predl_dl p ell f =
+  List.fold_left (fun f el -> (F.make F.Or (make_predl p el [])) :: f) f ell
 
 let make_orders ?(fp=false) evts ord =
-  let f = [ F.f_true ] in
-  let f = (make_rel "_po" (gen_po ord)) @ f in
-  let f = (make_rel "_fence" (gen_fence evts ord)) @ f in
-  let f = (make_rel "_co" (gen_co evts ord)) @ f in
-  let f = (make_cands "_rf" (gen_rf_cands evts)) @ f in
-  let f = (make_cands "_co" (gen_co_cands evts)) @ f in
-  if fp then F.make F.And f else
-  let el = HMap.fold (fun p -> HMap.fold (fun e _ el -> (p, e) :: el)) evts [] in
-  let f = List.fold_left (fun f (p, e) ->
-    make_pred "_po_loc_U_com" (p, e, p, e) false ::
-    make_pred "_co_U_prop" (p, e, p, e) false :: f
-  ) f el in
+  let f = make_predl hPo (gen_po ord) [ F.f_true ] in
+  let f = make_predl hFence (gen_fence evts ord) f in
+  let f = make_predl hCo (gen_co evts ord) f in
+  let f = make_predl_dl hRf (gen_rf_cands evts) f in
+  let f = make_predl_dl hCo (gen_co_cands evts) f in
+  let f = if fp then f else HMap.fold (fun p -> HMap.fold (fun e _ f ->
+    make_pred hPoLocUCom (p, e, p, e) false ::
+    make_pred hCoUProp (p, e, p, e) false :: f
+  )) evts f in
   F.make F.And f
 
 
