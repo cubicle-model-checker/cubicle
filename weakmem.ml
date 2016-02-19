@@ -3,6 +3,7 @@ open Types
 
 module H = Hstring
 module HMap = Hstring.HMap
+module HSet = Hstring.HSet
 module T = Smt.Term
 module S = Smt.Symbol
 module F = Smt.Formula
@@ -11,34 +12,87 @@ module F = Smt.Formula
 
 let hNone = Hstring.make ""
 let hP0 = Hstring.make "#0"
-let hDirection = Hstring.make "_direction"
 let hR = Hstring.make "_R"
 let hW = Hstring.make "_W"
-let hEvent = Hstring.make "_event"
-let hDir = Hstring.make "_dir"
-let hVal = Hstring.make "_val"
-let hVar = Hstring.make "_var"
+let hDirection = Hstring.make "_direction"
 let hWeakVar = Hstring.make "_weak_var"
+let hV = Hstring.make "_v"
+let hParam = Hstring.make "_param"
+let hVarParam = Hstring.make "_varparam"
+let hValType = Hstring.make "_val_type"
+let hDir = Hstring.make "_dir"
+let hVar = Hstring.make "_var"
+let hPar = Hstring.make "_par"
+let hVal = Hstring.make "_val"
+let hEvent = Hstring.make "_event"
+let hInt = Hstring.make "int"
+let hProp = Hstring.make "prop"
 let hO = Hstring.make "_o"
 let hF = Hstring.make "_f"
 let hE = Hstring.make "_e"
-let hInt = Hstring.make "int"
-let hProp = Hstring.make "prop"
 let hPo = Hstring.make "_po"
 let hRf = Hstring.make "_rf"
 let hCo = Hstring.make "_co"
 let hFence = Hstring.make "_fence"
 let hCoUProp = Hstring.make "_co_U_prop"
 let hPoLocUCom = Hstring.make "_po_loc_U_com"
-let mk_hE i = Hstring.make ("_e" ^ (string_of_int i))
+let mk_hE e = Hstring.make ("_e" ^ (string_of_int e))
 let mk_hV hv = Hstring.make ("_V" ^ (Hstring.view hv))
+let mk_hP p = Hstring.make ("_p" ^ (string_of_int p))
+let mk_hT ht = Hstring.make ("_t" ^ (Hstring.view ht))
+
+
+
+let max_params = ref 0
 
 
 
 let init_weak_env wvl =
+
   Smt.Type.declare hDirection [ hR ; hW ];
   Smt.Type.declare hWeakVar (List.map (mk_hV) wvl);
-  Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); (hVal, hInt)];
+
+  let wts, maxp = List.fold_left (fun (wts, maxp) wv ->
+    let (args, ret) = Smt.Symbol.type_of wv in
+    let nbp = List.length args in
+    HSet.add ret wts, if nbp > maxp then nbp else maxp
+  ) (HSet.empty, 1) wvl in
+
+  max_params := maxp;
+  
+  let wtl = HSet.fold (fun wt wtl -> (mk_hT wt, wt) :: wtl) wts [] in
+  Smt.Type.declare_record hValType wtl;
+
+
+  (* Var and Params in single record *)
+  (* let pl = ref [ (hV, hWeakVar) ] in *)
+  (* for i = 1 to maxp do pl := (mk_hP i, hInt) :: !pl done; *)
+  (* Smt.Type.declare_record hVarParam (List.rev !pl);   *)
+  (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hVarParam); *)
+  (* 				  (hVal, hValType)]; *)
+
+
+  (* Var inlined in event, Params in record *)
+  (* let pl = ref [] in *)
+  (* for i = 1 to maxp do pl := (mk_hP i, hInt) :: !pl done; *)
+  (* Smt.Type.declare_record hParam (List.rev !pl); *)
+  (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); *)
+  (* 				  (hPar, hParam); (hVal, hValType)]; *)
+
+
+  (* Var and Params inlined in event *)
+  let pl = ref [ (hDir, hDirection); (hVar, hWeakVar); (hVal, hInt(*hValType*)) ] in
+  for i = 1 to maxp do pl := (mk_hP i, hInt) :: !pl done;
+  Smt.Type.declare_record hEvent !pl;
+
+  (* No Params *)
+  (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); *)
+  (* 				  (hVal, hValType)]; *)
+
+  (* No Params and no Type *)
+  (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); *)
+  (* 				  (hVal, hInt)]; *)
+
   Smt.Symbol.declare hE [ Smt.Type.type_proc ; Smt.Type.type_int ] hEvent;
   for i = 1 to 20 do
     Smt.Symbol.declare (mk_hE i) [] Smt.Type.type_int
@@ -93,15 +147,58 @@ let split_events_orders sa =
 
 
 let make_event (cnt, ord, na) d p v vi = 
+  let (_, ret) = Smt.Symbol.type_of v in
   let eid = (try HMap.find p cnt with Not_found -> 0) + 1 in
   let pord = try HMap.find p ord with Not_found -> [] in
   let e = mk_hE eid in
   let tevt = Access (hE, [p ; e]) in
   let adir = Atom.Comp (Field (tevt, hDir), Eq, Elem (d, Constr)) in
+
+
+  (* Var and Params in single record *) (* P : 12.8, PX : 5.4 / 34K-27K *)
+  (* let tvar = Field (tevt, hVar) in *)
+  (* let avar = Atom.Comp (Field (tvar, hV), Eq, Elem (mk_hV v, Constr)) in *)
+  (* let na, i = List.fold_left (fun (na, i) v -> *)
+  (*   let apar = Atom.Comp (Field (tvar, mk_hP i), Eq, Elem (v, Var)) in *)
+  (*   SAtom.add apar na, i + 1 *)
+  (* ) (SAtom.add avar (SAtom.add adir na), 1) vi in *)
+
+
+  (* Var inlined in event, Params in record *) (* P : 3.3, PX : 4.0 / 2.9-2.8K*)
+  (* let tpar = Field (tevt, hPar) in *)
+  (* let avar = Atom.Comp (Field (tevt, hVar), Eq, Elem (mk_hV v, Constr)) in *)
+  (* let na, i = List.fold_left (fun (na, i) v -> *)
+  (*   let apar = Atom.Comp (Field (tpar, mk_hP i), Eq, Elem (v, Var)) in *)
+  (*   SAtom.add apar na, i + 1 *)
+  (* ) (SAtom.add avar (SAtom.add adir na), 1) vi in *)
+
+
+  (* Var and Params inlined in event *) (* P : 3.3, PX : 3.7 2.9-2.8K *)
   let avar = Atom.Comp (Field (tevt, hVar), Eq, Elem (mk_hV v, Constr)) in
+  let na, i = List.fold_left (fun (na, i) v ->
+    let apar = Atom.Comp (Field (tevt, mk_hP i), Eq, Elem (v, Var)) in
+    SAtom.add apar na, i + 1
+  ) (SAtom.add avar (SAtom.add adir na), 1) vi in
+
+
+  (* No Params *) (* P : 2.6, PX : 2.9* / 561-540 *)
+  (* let avar = Atom.Comp (Field (tevt, hVar), Eq, Elem (mk_hV v, Constr)) in *)
+  (* let na = SAtom.add avar (SAtom.add adir na) in *)
+
+  
+  let rna = ref na in (* add dummy procs for unsued params *)
+  for i = i to !max_params do
+    let apar = Atom.Comp (Field (tevt, mk_hP i), Eq, Elem (hP0, Glob)) in
+    rna := SAtom.add apar !rna
+  done;
+  let na = !rna in
+
+  
   let cnt = HMap.add p eid cnt in
   let ord = HMap.add p (Elem (e, Glob) :: pord) ord in
-  let na = SAtom.add adir (SAtom.add avar na) in
+  (* (cnt, ord, na), Field (Field (tevt, hVal), mk_hT ret) *)
+
+  (* & no Type P : 2.5, PX : 2.7* / 561-540 *)
   (cnt, ord, na), Field (tevt, hVal)
 
 let write_of_term acc = function
@@ -263,7 +360,7 @@ let gen_co_cands evts =
   in
   aux (HMap.remove hP0 evts) []
   
-let gen_rf_cands evts =
+let gen_rf_cands evts = (* exclude trivially false rf (use value/const) *)
   let reads, writes = HMap.fold (fun p pe (r, w) ->
     let pr, pw = HMap.partition (fun e (d, v) -> d = hR) pe in
     (HMap.add p pr r, HMap.add p pw w)
@@ -289,12 +386,31 @@ let make_predl p el f =
 
 let make_predl_dl p ell f =
   List.fold_left (fun f el -> (F.make F.Or (make_predl p el [])) :: f) f ell
-
+(*
+let make_predrfl_dl ell f =
+  List.fold_left (fun f el ->
+    (F.make F.Or (
+      List.fold_left (fun f e ->
+	(F.make F.And [ make_pred hRf e true ;
+	  let (p1, e1, p2, e2) = e in
+	  let p1, p2 = T.make_app p1 [], T.make_app p2 [] in
+	  let e1, e2 = T.make_app e1 [], T.make_app e2 [] in
+	  let a1 = T.make_app hE [ p1; e1 ] in
+	  let a2 = T.make_app hE [ p2; e2 ] in
+	  let t1 = T.make_app hVal [ a1 ] in
+	  let t2 = T.make_app hVal [ a2 ] in
+	  F.make_lit F.Eq [ t1 ; t2 ]
+	]) :: f
+      ) [] el
+    )) :: f
+  ) f ell
+ *)
 let make_orders ?(fp=false) evts ord =
   let f = make_predl hPo (gen_po ord) [ F.f_true ] in
   let f = make_predl hFence (gen_fence evts ord) f in
   let f = make_predl hCo (gen_co evts ord) f in
   let f = make_predl_dl hRf (gen_rf_cands evts) f in
+  (* let f = make_predrfl_dl (gen_rf_cands evts) f in *)
   let f = make_predl_dl hCo (gen_co_cands evts) f in
   let f = if fp then f else HMap.fold (fun p -> HMap.fold (fun e _ f ->
     make_pred hPoLocUCom (p, e, p, e) false ::

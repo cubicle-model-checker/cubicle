@@ -32,14 +32,14 @@ let proc_terms =
     (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) procs;
   List.map (fun x -> T.make_app x []) Variable.procs
 
-let distinct_vars = 
+let distinct_vars =
   let t = Array.make max_proc F.f_true in
   let _ = 
     List.fold_left 
       (fun (acc,i) v -> 
-	 if i<>0 then t.(i) <- F.make_lit F.Neq (v::acc);
+       (*if i<>0 then*) t.(i) <- F.make_lit F.Neq (v::acc);
 	 v::acc, i+1) 
-      ([],0) proc_terms 
+      ([T.make_app (Hstring.make "#0") []],0) proc_terms 
   in
   function n -> if n = 0 then F.f_true else t.(n-1)
 

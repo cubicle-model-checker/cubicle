@@ -210,11 +210,12 @@ let rec term loc ?(init=false) args = function
       in
       if not (Hstring.equal ty_p Smt.Type.type_proc) then
 	error (MustBeOfTypeProc p) loc;
-      let args, ret = begin match vi with
-	| [] -> Smt.Symbol.type_of v
-	| _ -> term loc ~init args (Access (v, vi)) (* to improve *)
-      end in
-      args, ret
+      let args, ret = Smt.Symbol.type_of v in (* to improve *)
+      (* let args, ret = begin match vi with *)
+      (* 	| [] -> Smt.Symbol.type_of v *)
+      (* 	| _ -> term loc ~init args (Access (v, vi)) (\* to improve *\) *)
+      (* end in *)
+      [], ret
   | Write (p, v, vi) -> failwith "Typing.term : Write should not be typed"
   | Fence p -> failwith "Typing.term : Fence should not be typed"
 
@@ -307,7 +308,7 @@ let writes loc args wl =
        begin
          if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
          let ty_t = term loc args t in
-         unify loc ty_t ty_v;
+         unify loc ty_t ([], snd ty_v);
          assignment v t ty_t;
        end;         
        dv := v ::!dv) wl

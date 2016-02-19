@@ -537,6 +537,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
 axiom po_loc :
   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)].
   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var
+                      (* and _e(p1, e1)._par = _e(p2, e2)._par *)
+                      and _e(p1, e1)._p1 = _e(p2, e2)._p1
   -> _po_loc_U_com(p1, e1, p2, e2)
 
 axiom rfe :
@@ -553,11 +555,6 @@ axiom ppo_tso :
   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)].
   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R)
   -> _co_U_prop(p1, e1, p2, e2)
-
-(*axiom po_loc_U_com :
-  forall p1, e1, p2, e2 : int [(*_co(p1,e1,p2,e2)|_rf(p1,e1,p2,e2)|*)_po_loc_U_com(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2) or _rf(p1, e1, p2, e2)
-   -> _po_loc_U_com(p1, e1, p2, e2)*)
 
 axiom po_loc_U_com_1 :
   forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)(*|_po_loc_U_com(p1,e1,p2,e2)*)].

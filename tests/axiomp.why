@@ -17,9 +17,11 @@ logic p8 : int
 logic p9 : int
 logic p10 : int
 
-type weak_var = _VX | _VY
+type weak_var = _VX | _VY (* try single var with 2 threads *)
 type direction = _R | _W
-type event = { dir : direction; loc : weak_var; val : int }
+type params = { _p1 : int }
+type valtype = { _int : int; _bool : bool }
+type event = { dir : direction; loc : weak_var; par : params; val : valtype }
 
 logic e : int, int -> event
 logic po : int, int, int, int -> prop
@@ -29,7 +31,8 @@ logic fence : int, int, int, int -> prop
 
 axiom rf :
   forall p1, p2, e1, e2 : int [rf(p1,e1,p2,e2)].
-  rf(p1, e1, p2, e2) -> e(p1, e1).val = e(p2, e2).val
+  rf(p1, e1, p2, e2)
+  -> e(p1, e1).val = e(p2, e2).val and e(p1, e1).par = e(p2, e2).par
 
 logic po_loc : int, int, int, int -> prop
 axiom po_loc :
@@ -101,12 +104,12 @@ goal g: true
  and (PC(p1)=L1) and (PC(p2)=L1)
 
  (* Events *)
- and (e(p1,e1).loc=_VY) and (e(p1,e1).dir=_R) and (e(p1,e1).val=0)
- and (e(p2,e2).loc=_VX) and (e(p2,e2).dir=_R) and (e(p2,e2).val=0)
- and (e(p2,e3).loc=_VY) and (e(p2,e3).dir=_W) and (e(p2,e3).val=1)
- and (e(p1,e4).loc=_VX) and (e(p1,e4).dir=_W) and (e(p1,e4).val=1)
- and (e(p0,e5).loc=_VX) and (e(p0,e5).dir=_W) and (e(p0,e5).val=0)
- and (e(p0,e6).loc=_VY) and (e(p0,e6).dir=_W) and (e(p0,e6).val=0)
+ and (e(p1,e1).loc=_VY) and (e(p1,e1).dir=_R) and (e(p1,e1).val._bool=false)
+ and (e(p2,e2).loc=_VX) and (e(p2,e2).dir=_R) and (e(p2,e2).val._int=0)
+ and (e(p2,e3).loc=_VY) and (e(p2,e3).dir=_W) and (e(p2,e3).val._bool=true)
+ and (e(p1,e4).loc=_VX) and (e(p1,e4).dir=_W) and (e(p1,e4).val._int=1)
+ and (e(p0,e5).loc=_VX) and (e(p0,e5).dir=_W) and (e(p0,e5).val._int=0)
+ and (e(p0,e6).loc=_VY) and (e(p0,e6).dir=_W) and (e(p0,e6).val._bool=false)
 
  (* Relations *)
  and (po(p2,e3,p2,e2)=true) and (po(p1,e4,p1,e1)=true)
