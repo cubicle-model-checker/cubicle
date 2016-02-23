@@ -1,0 +1,34 @@
+
+number_procs 2
+
+type pc = L1 | L2 | End
+
+array PC[proc] : pc
+weak var X : int
+weak var Y : int
+var R1 : int
+var R2 : int
+
+init (p) { PC[p] = L1 &&
+          X = 0 && Y = 0 }
+
+unsafe (p1 p2) { PC[p1] = End && PC[p2] = End &&
+       	    R1 = 0 && R2 = 0 }
+
+transition t1_1 (p)
+requires { p = #1 && PC[p] = L1 }
+{ PC[p] := L2; write(#1, X, 1) }
+
+transition t1_2 (p)
+fences (#1)
+requires { p = #1 && PC[p] = L2 }
+{ PC[p] := End; R1 := read(p, Y) } (* replacing #1 by p causes pb *)
+
+transition t2_1 (p)
+requires { p = #2 && PC[p] = L1 }
+{ PC[p] := L2; write(#2, Y, 1) }
+
+transition t2_2 (p)
+fences (#2)
+requires { p = #2 && PC[p] = L2 }
+{ PC[p] := End; R2 := read(#2, X) }
