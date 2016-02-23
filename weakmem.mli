@@ -15,12 +15,12 @@ val events_of_satom : Types.SAtom.t -> Types.SAtom.t
 
 
 
-val split_events_orders_array : Types.SAtom.elt array ->
-				Types.SAtom.t * (Hstring.t * Hstring.t) HMap.t HMap.t *
-				  Hstring.t list HMap.t
-val split_events_orders_set : Types.SAtom.t ->
-			      Types.SAtom.t * (Hstring.t * Hstring.t) HMap.t HMap.t *
-			        Hstring.t list HMap.t
+val split_events_orders_array :
+  Types.SAtom.elt array ->
+  Types.SAtom.t * (H.t * H.t * (H.t * H.t) list) HMap.t HMap.t * H.t list HMap.t
+val split_events_orders_set :
+  Types.SAtom.t ->
+  Types.SAtom.t * (H.t * H.t * (H.t * H.t) list) HMap.t HMap.t * H.t list HMap.t
 
 
 
@@ -29,7 +29,11 @@ val merge_evts : 'a HMap.t HMap.t -> 'a HMap.t HMap.t -> 'a HMap.t HMap.t
 
 
 
-val make_orders : ?fp:bool -> (H.t * H.t) HMap.t HMap.t -> H.t list HMap.t -> F.t
+val make_orders :
+  ?fp:bool ->
+  (H.t * H.t * (H.t * H.t) list) HMap.t HMap.t ->
+  H.t list HMap.t ->
+  F.t
 
 
 

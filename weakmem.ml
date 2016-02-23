@@ -10,46 +10,46 @@ module F = Smt.Formula
 
 
 
-let hNone = Hstring.make ""
-let hP0 = Hstring.make "#0"
-let hR = Hstring.make "_R"
-let hW = Hstring.make "_W"
-let hDirection = Hstring.make "_direction"
-let hWeakVar = Hstring.make "_weak_var"
-let hV = Hstring.make "_v"
-let hParam = Hstring.make "_param"
-let hVarParam = Hstring.make "_varparam"
-let hValType = Hstring.make "_val_type"
-let hDir = Hstring.make "_dir"
-let hVar = Hstring.make "_var"
-let hPar = Hstring.make "_par"
-let hVal = Hstring.make "_val"
-let hEvent = Hstring.make "_event"
-let hInt = Hstring.make "int"
-let hProp = Hstring.make "prop"
-let hO = Hstring.make "_o"
-let hF = Hstring.make "_f"
-let hE = Hstring.make "_e"
-let hPo = Hstring.make "_po"
-let hRf = Hstring.make "_rf"
-let hCo = Hstring.make "_co"
-let hFence = Hstring.make "_fence"
-let hCoUProp = Hstring.make "_co_U_prop"
-let hPoLocUCom = Hstring.make "_po_loc_U_com"
-let mk_hE e = Hstring.make ("_e" ^ (string_of_int e))
-let mk_hV hv = Hstring.make ("_V" ^ (Hstring.view hv))
-let mk_hP p = Hstring.make ("_p" ^ (string_of_int p))
-let mk_hT ht = Hstring.make ("_t" ^ (Hstring.view ht))
+let hNone = H.make ""
+let hP0 = H.make "#0"
+let hR = H.make "_R"
+let hW = H.make "_W"
+let hDirection = H.make "_direction"
+let hWeakVar = H.make "_weak_var"
+let hV = H.make "_v"
+let hParam = H.make "_param"
+let hVarParam = H.make "_varparam"
+let hValType = H.make "_val_type"
+let hDir = H.make "_dir"
+let hVar = H.make "_var"
+let hPar = H.make "_par"
+let hVal = H.make "_val"
+let hEvent = H.make "_event"
+let hInt = H.make "int"
+let hProp = H.make "prop"
+let hO = H.make "_o"
+let hF = H.make "_f"
+let hE = H.make "_e"
+let hPo = H.make "_po"
+let hRf = H.make "_rf"
+let hCo = H.make "_co"
+let hFence = H.make "_fence"
+let hCoUProp = H.make "_co_U_prop"
+let hPoLocUCom = H.make "_po_loc_U_com"
+let mk_hE e = H.make ("_e" ^ (string_of_int e))
+let mk_hV hv = H.make ("_V" ^ (H.view hv))
+let mk_hP p = H.make ("_p" ^ (string_of_int p))
+let mk_hT ht = H.make ("_t" ^ (H.view ht))
 
 
 
 let max_params = ref 0
-
+let pl = ref []
 
 
 let init_weak_env wvl =
 
-  Smt.Type.declare hDirection [ hR ; hW ];
+  Smt.Type.declare hDirection [hR; hW];
   Smt.Type.declare hWeakVar (List.map (mk_hV) wvl);
 
   let wts, maxp = List.fold_left (fun (wts, maxp) wv ->
@@ -65,15 +65,14 @@ let init_weak_env wvl =
 
 
   (* Var and Params in single record *)
-  (* let pl = ref [ (hV, hWeakVar) ] in *)
   (* for i = 1 to maxp do pl := (mk_hP i, hInt) :: !pl done; *)
-  (* Smt.Type.declare_record hVarParam (List.rev !pl);   *)
+  (* let pl = (hV, hWeakVar) :: (List.rev !pl) in *)
+  (* Smt.Type.declare_record hVarParam pl; *)
   (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hVarParam); *)
   (* 				  (hVal, hValType)]; *)
 
 
   (* Var inlined in event, Params in record *)
-  (* let pl = ref [] in *)
   (* for i = 1 to maxp do pl := (mk_hP i, hInt) :: !pl done; *)
   (* Smt.Type.declare_record hParam (List.rev !pl); *)
   (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); *)
@@ -81,24 +80,20 @@ let init_weak_env wvl =
 
 
   (* Var and Params inlined in event *)
-  let pl = ref [ (hDir, hDirection); (hVar, hWeakVar); (hVal, hInt(*hValType*)) ] in
   for i = 1 to maxp do pl := (mk_hP i, hInt) :: !pl done;
-  Smt.Type.declare_record hEvent !pl;
+  let pl = (hDir, hDirection) :: (hVar, hWeakVar) ::
+	     (hVal, (*hInt*)hValType) :: (List.rev !pl) in
+  Smt.Type.declare_record hEvent pl;
 
   (* No Params *)
   (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); *)
-  (* 				  (hVal, hValType)]; *)
+  (* 				  (hVal, (*hInt*)hValType)]; *)
 
-  (* No Params and no Type *)
-  (* Smt.Type.declare_record hEvent [(hDir, hDirection); (hVar, hWeakVar); *)
-  (* 				  (hVal, hInt)]; *)
 
-  Smt.Symbol.declare hE [ Smt.Type.type_proc ; Smt.Type.type_int ] hEvent;
-  for i = 1 to 20 do
-    Smt.Symbol.declare (mk_hE i) [] Smt.Type.type_int
-  done;
-  let int4 = [ Smt.Type.type_int; Smt.Type.type_int;
-	       Smt.Type.type_int; Smt.Type.type_int ] in
+  Smt.Symbol.declare hE [Smt.Type.type_proc; Smt.Type.type_int] hEvent;
+  for i = 1 to 20 do Smt.Symbol.declare (mk_hE i) [] Smt.Type.type_int done;
+  let int4 = [Smt.Type.type_int; Smt.Type.type_int;
+	      Smt.Type.type_int; Smt.Type.type_int] in
   Smt.Symbol.declare hPo int4 Smt.Type.type_prop;
   Smt.Symbol.declare hRf int4 Smt.Type.type_prop;
   Smt.Symbol.declare hCo int4 Smt.Type.type_prop;
@@ -126,20 +121,17 @@ let split_events_orders sa =
   SAtom.fold (fun a (sa_pure, sa_evts, fce, ord, cnt) ->
     match a with
     | Atom.Comp (Access (a, [p]), Eq, List tl)
-    | Atom.Comp (List tl, Eq, Access (a, [p])) when a = hO ->
+    | Atom.Comp (List tl, Eq, Access (a, [p])) when H.equal a hO ->
        let c = List.fold_left (fun c t -> match t with
-         | Elem (e, Glob) -> if e = hF then c else c + 1
+         | Elem (e, Glob) -> if H.equal e hF then c else c + 1
 	 | _ -> failwith "Weakmem.split_events_order error"
        ) 0 tl in
        (sa_pure, sa_evts, fce, HMap.add p tl ord, HMap.add p c cnt)
-    | Atom.Comp (Write (p, v, vi), Eq, tv)
-    | Atom.Comp (tv, Eq, Write (p, v, vi)) ->
+    | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
        (sa_pure, SAtom.add a sa_evts, fce, ord, cnt)
-    | Atom.Comp (Read (p, v, vi), Eq, tv)
-    | Atom.Comp (tv, Eq, Read (p, v, vi)) ->
+    | Atom.Comp (Read _, _, _) | Atom.Comp (_, _, Read _) ->
        (sa_pure, SAtom.add a sa_evts, fce, ord, cnt)
-    | Atom.Comp (Fence p, Eq, tb)
-    | Atom.Comp (tb, Eq, Fence p) ->
+    | Atom.Comp (Fence p, Eq, _) | Atom.Comp (_, Eq, Fence p) ->
        (sa_pure, sa_evts, p :: fce, ord, cnt)
     | _ -> (SAtom.add a sa_pure, sa_evts, fce, ord, cnt)
 ) sa (SAtom.empty, SAtom.empty, [], HMap.empty, HMap.empty)
@@ -151,7 +143,7 @@ let make_event (cnt, ord, na) d p v vi =
   let eid = (try HMap.find p cnt with Not_found -> 0) + 1 in
   let pord = try HMap.find p ord with Not_found -> [] in
   let e = mk_hE eid in
-  let tevt = Access (hE, [p ; e]) in
+  let tevt = Access (hE, [p; e]) in
   let adir = Atom.Comp (Field (tevt, hDir), Eq, Elem (d, Constr)) in
 
 
@@ -186,20 +178,20 @@ let make_event (cnt, ord, na) d p v vi =
   (* let na = SAtom.add avar (SAtom.add adir na) in *)
 
   
-  let rna = ref na in (* add dummy procs for unsued params *)
-  for i = i to !max_params do
-    let apar = Atom.Comp (Field (tevt, mk_hP i), Eq, Elem (hP0, Glob)) in
-    rna := SAtom.add apar !rna
-  done;
-  let na = !rna in
+  (* let rna = ref na in (\* add dummy procs for unsued params *\) *)
+  (* for i = i to !max_params do *)
+  (*   let apar = Atom.Comp (Field (tevt, mk_hP i), Eq, Elem (hP0, Glob)) in *)
+  (*   rna := SAtom.add apar !rna *)
+  (* done; *)
+  (* let na = !rna in *)
 
-  
+
   let cnt = HMap.add p eid cnt in
   let ord = HMap.add p (Elem (e, Glob) :: pord) ord in
-  (* (cnt, ord, na), Field (Field (tevt, hVal), mk_hT ret) *)
+  (cnt, ord, na), Field (Field (tevt, hVal), mk_hT ret)
 
   (* & no Type P : 2.5, PX : 2.7* / 561-540 *)
-  (cnt, ord, na), Field (tevt, hVal)
+  (* (cnt, ord, na), Field (tevt, hVal) *)
 
 let write_of_term acc = function
   | Write (p, v, vi) -> make_event acc hW p v vi
@@ -243,28 +235,38 @@ let events_of_satom sa =
 
 let split_event_order (sa, evts, ord) at = match at with
   | Atom.Comp (Access (a, [p]), Eq, List tl)
-  | Atom.Comp (List tl, Eq, Access (a, [p])) when a = hO ->
+  | Atom.Comp (List tl, Eq, Access (a, [p])) when H.equal a hO ->
      let pord = List.map (fun t -> match t with
        | Elem (e, Glob) -> e
        | _ -> failwith "Weakmem.split_event_order error"
      ) tl in
      (sa, evts, HMap.add p pord ord)
-  | Atom.Comp (Field (Access (a, [p ; e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [p ; e]), f)) when a = hE ->
+  | Atom.Comp (Field (Access (a,[p;e]),f), Eq, Elem (c,t))
+  | Atom.Comp (Elem (c,t), Eq, Field (Access (a,[p;e]),f)) when H.equal a hE ->
      let pevts = try HMap.find p evts with Not_found -> HMap.empty in
-     let (d, v) = try HMap.find e pevts with Not_found -> (hNone, hNone) in
+     let (d, v, vi) = try HMap.find e pevts
+		      with Not_found -> (hNone, hNone, []) in
      let d = if f = hDir then c else d in
      let v = if f = hVar then c else v in
-     (SAtom.add at sa, HMap.add p (HMap.add e (d, v) pevts) evts, ord)
+     let vi = if List.exists (fun (p, _) -> H.equal f p) !pl
+	      then (f, c) :: vi else vi in 
+     (SAtom.add at sa, HMap.add p (HMap.add e (d, v, vi) pevts) evts, ord)
   | _ -> (SAtom.add at sa, evts, ord)
 
+let sort_event_params =
+  HMap.map (HMap.map (fun (d, v, vi) ->
+    (d, v, List.sort (fun (p1, _) (p2, _) -> H.compare p1 p2) vi)
+  ))
+
 let split_events_orders_array ar =
-  Array.fold_left (fun acc a ->
-    split_event_order acc a) (SAtom.empty, HMap.empty, HMap.empty) ar
+  let sa, evts, ord = Array.fold_left (fun acc a ->
+    split_event_order acc a) (SAtom.empty, HMap.empty, HMap.empty) ar in
+  sa, sort_event_params evts, ord
 
 let split_events_orders_set sa =
-  SAtom.fold (fun a acc ->
-    split_event_order acc a) sa (SAtom.empty, HMap.empty, HMap.empty)
+  let sa, evts, ord = SAtom.fold (fun a acc ->
+    split_event_order acc a) sa (SAtom.empty, HMap.empty, HMap.empty) in
+  sa, sort_event_params evts, ord
 
 
 
@@ -282,27 +284,75 @@ let merge_evts sevts devts =
 
 
 		
+let rec hpl_equal hpl1 hpl2 = match hpl1, hpl2 with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | (hl1, hr1) :: hpl1, (hl2, hr2) :: hpl2 ->
+     if H.equal hl1 hl2 && H.equal hr1 hr2 then hpl_equal hpl1 hpl2
+     else false
+
+
+  
 let gen_po ord =
   let rec aux p po = function
     | [] | [_] -> po
-    | f :: pord when f = hF -> aux p po pord
-    | e :: f :: pord when f = hF -> aux p po (e :: pord)
-    | e1 :: ((e2 :: _) as pord) -> aux p ((p, e1, p, e2) :: po) pord
+    | f :: pord when H.equal f hF -> aux p po pord
+    | e :: f :: pord when H.equal f hF -> aux p po (e :: pord)
+    | e1 :: pord ->
+       let po = List.fold_left (fun po e2 ->
+         if H.equal e2 hF then po else
+	 (p, e1, p, e2) :: po
+       ) po pord in
+       aux p po pord
   in
   HMap.fold (fun p pord po -> aux p po pord) ord []
+
+let gen_po_loc evts ord =
+  let rec aux p po pevts = function
+    | [] | [_] -> po
+    | f :: pord when H.equal f hF -> aux p po pevts pord
+    | e :: f :: pord when H.equal f hF -> aux p po pevts (e :: pord)
+    | e1 :: pord ->
+       let (_, v1, pl1) = HMap.find e1 pevts in
+       let po = List.fold_left (fun po e2 ->
+         if H.equal e2 hF then po else
+	   let (_, v2, pl2) = HMap.find e2 pevts in
+	   if not (H.equal v1 v2 && hpl_equal pl1 pl2) then po else
+	     (p, e1, p, e2) :: po
+       ) po pord in
+       aux p po pevts pord
+  in
+  HMap.fold (fun p pord po -> aux p po (HMap.find p evts) pord) ord []
+
+let gen_ppo_tso evts ord =
+  let rec aux p po pevts = function
+    | [] | [_] -> po
+    | f :: pord when H.equal f hF -> aux p po pevts pord
+    | e :: f :: pord when H.equal f hF -> aux p po pevts (e :: pord)
+    | e1 :: pord ->
+       let (d1, _, _) = HMap.find e1 pevts in
+       let po = List.fold_left (fun po e2 ->
+         if H.equal e2 hF then po else
+	   let (d2, _, _) = HMap.find e2 pevts in
+	   if H.equal d1 hW && H.equal d2 hR then po else
+	     (p, e1, p, e2) :: po
+       ) po pord in
+       aux p po pevts pord
+  in
+  HMap.fold (fun p pord po -> aux p po (HMap.find p evts) pord) ord []
 
 let gen_fence evts ord =
   let rec split_at_first_fence lpord = function
     | [] -> lpord, []
-    | f :: rpord when f = hF -> lpord, rpord
+    | f :: rpord when H.equal f hF -> lpord, rpord
     | e :: rpord -> split_at_first_fence (e :: lpord) rpord
   in
   let rec first_event dir p = function
     | [] -> None
     | e :: pord ->
        let pevts = HMap.find p evts in
-       let (d, _) = HMap.find e pevts in
-       if d = dir then Some e else first_event dir p pord
+       let (d, _, _) = HMap.find e pevts in
+       if H.equal d dir then Some e else first_event dir p pord
   in
   let rec aux p fence lpord rpord = match rpord with
     | [] -> fence
@@ -317,22 +367,24 @@ let gen_fence evts ord =
 let rec co_from_pord co p pwrites = function
   | [] -> co
   | e1 :: pord -> begin try
-      let (_, v1) = HMap.find e1 pwrites in
+      let (_, v1, pl1) = HMap.find e1 pwrites in
       let co = List.fold_left (fun co e2 ->
-	try let (_, v2) = HMap.find e2 pwrites in
-	  if v1 = v2 then (p, e1, p, e2) :: co else co		   
+	try let (_, v2, pl2) = HMap.find e2 pwrites in
+	  if H.equal v1 v2 && hpl_equal pl1 pl2
+	  then (p, e1, p, e2) :: co else co
 	with Not_found -> co
       ) co pord in
       co_from_pord co p pwrites pord
     with Not_found -> co_from_pord co p pwrites pord end
 
 let gen_co evts ord =
-  let writes = HMap.map (HMap.filter (fun e (d, _) -> d = hW)) evts in
-  let iwrites, writes = HMap.partition (fun p _ -> p = hP0) writes in
+  let writes = HMap.map (HMap.filter (fun e (d, _, _) -> H.equal d hW)) evts in
+  let iwrites, writes = HMap.partition (fun p _ -> H.equal p hP0) writes in
   (* Initial writes *)
-  let co = HMap.fold (fun p1 -> HMap.fold (fun e1 (_, v1) co ->
-    HMap.fold (fun p2 -> HMap.fold (fun e2 (_, v2) co ->
-      if v1 = v2 then (p1, e1, p2, e2) :: co else co
+  let co = HMap.fold (fun p1 -> HMap.fold (fun e1 (_, v1, pl1) co ->
+    HMap.fold (fun p2 -> HMap.fold (fun e2 (_, v2, pl2) co ->
+      if H.equal v1 v2 && hpl_equal pl1 pl2
+      then (p1, e1, p2, e2) :: co else co
     )) writes co
   )) iwrites [] in
   (* Writes from same thread *)
@@ -346,10 +398,11 @@ let gen_co_cands evts =
     try
       let (p1, p1evts) = HMap.choose evts in
       let evts = HMap.remove p1 evts in
-      let cco = HMap.fold (fun e1 (d1, v1) cco ->
+      let cco = HMap.fold (fun e1 (d1, v1, pl1) cco ->
         HMap.fold (fun p2 p2evts cco ->
-          HMap.fold (fun e2 (d2, v2) cco ->
-	    if d1 = hW && d2 = hW && v1 = v2 then
+          HMap.fold (fun e2 (d2, v2, pl2) cco ->
+	    if H.equal d1 hW && H.equal d2 hW &&
+		 H.equal v1 v2 && hpl_equal pl1 pl2 then
 	      [ (p1, e1, p2, e2) ; (p2, e2, p1, e1) ] :: cco     
 	    else cco
 	  ) p2evts cco
@@ -362,12 +415,12 @@ let gen_co_cands evts =
   
 let gen_rf_cands evts = (* exclude trivially false rf (use value/const) *)
   let reads, writes = HMap.fold (fun p pe (r, w) ->
-    let pr, pw = HMap.partition (fun e (d, v) -> d = hR) pe in
+    let pr, pw = HMap.partition (fun e (d, v, pl) -> H.equal d hR) pe in
     (HMap.add p pr r, HMap.add p pw w)
   ) evts (HMap.empty, HMap.empty) in
-  HMap.fold (fun p1 -> HMap.fold (fun e1 (d1, v1) crf ->
-    let ecrf = HMap.fold (fun p2 -> HMap.fold (fun e2 (d2, v2) ecrf ->
-      if v1 <> v2 then ecrf
+  HMap.fold (fun p1 -> HMap.fold (fun e1 (d1, v1, pl1) crf ->
+    let ecrf = HMap.fold (fun p2 -> HMap.fold (fun e2 (d2, v2, pl2) ecrf ->
+      if not (H.equal v1 v2 && hpl_equal pl1 pl2) then ecrf
       else (p2, e2, p1, e1) :: ecrf
     )) writes [] in
     if ecrf = [] then crf else ecrf :: crf
@@ -386,7 +439,8 @@ let make_predl p el f =
 
 let make_predl_dl p ell f =
   List.fold_left (fun f el -> (F.make F.Or (make_predl p el [])) :: f) f ell
-(*
+
+
 let make_predrfl_dl ell f =
   List.fold_left (fun f el ->
     (F.make F.Or (
@@ -404,19 +458,45 @@ let make_predrfl_dl ell f =
       ) [] el
     )) :: f
   ) f ell
- *)
-let make_orders ?(fp=false) evts ord =
-  let f = make_predl hPo (gen_po ord) [ F.f_true ] in
+
+let make_orders_fp evts ord =
+  let f = [ F.f_true ] in
+  let f = make_predl hPo (gen_po ord) f in
   let f = make_predl hFence (gen_fence evts ord) f in
+  (* let f = make_predl hCo (gen_co evts ord) f in *)
+  (* let f = make_predl_dl hRf (gen_rf_cands evts) f in *)
+  (* let f = make_predl_dl hCo (gen_co_cands evts) f in   *)
+  f
+
+let make_orders_sat evts ord =
+  let f = [ F.f_true ] in
+
+  (* let f = make_predl hPo (gen_po ord) f in *)
+    let f = make_predl hPoLocUCom (gen_po_loc evts ord) f in
+    let f = make_predl hCoUProp (gen_ppo_tso evts ord) f in
+
+  let f = make_predl hFence (gen_fence evts ord) f in
+    (* let f = make_predl hCoUProp (gen_fence evts ord) f in *)
+
   let f = make_predl hCo (gen_co evts ord) f in
-  let f = make_predl_dl hRf (gen_rf_cands evts) f in
-  (* let f = make_predrfl_dl (gen_rf_cands evts) f in *)
+  (* let f = make_predl hPoLocUCom (gen_co evts ord) f in *)
+  (* let f = make_predl hCoUProp (gen_co evts ord) f in *)
+  
+  (* let f = make_predl_dl hRf (gen_rf_cands evts) f in (\*no value test*\) *)
+    let f = make_predrfl_dl (gen_rf_cands evts) f in (* with value test *)
+
   let f = make_predl_dl hCo (gen_co_cands evts) f in
-  let f = if fp then f else HMap.fold (fun p -> HMap.fold (fun e _ f ->
+
+  let f = HMap.fold (fun p -> HMap.fold (fun e _ f ->
     make_pred hPoLocUCom (p, e, p, e) false ::
     make_pred hCoUProp (p, e, p, e) false :: f
   )) evts f in
-  F.make F.And f
+
+  f
+
+let make_orders ?(fp=false) evts ord =
+  F.make F.And (if fp then make_orders_fp evts ord
+		else make_orders_sat evts ord)
 
 
 
@@ -424,21 +504,21 @@ let make_orders ?(fp=false) evts ord =
 let name e = "e" ^ (string_of_int e.uid)
 
 let int_of_tid tid =
-  let tid = Hstring.view tid in
+  let tid = H.view tid in
   let tid = String.sub tid 1 ((String.length tid)-1) in
   int_of_string tid
 
 let print_var fmt (v, vi) =
-  if vi = [] then fprintf fmt "\\texttt{%a}" Hstring.print v
+  if vi = [] then fprintf fmt "\\texttt{%a}" H.print v
   else fprintf fmt "\\texttt{%a}[%a]"
- 	       Hstring.print v (Hstring.print_list ", ") vi
+ 	       H.print v (H.print_list ", ") vi
 
 let print fmt { uid; tid; dir; var } =
   let dir = if dir = ERead then "R" else "W" in
-  fprintf fmt "event(%d, %a, %s, %a)" uid Hstring.print tid dir print_var var
+  fprintf fmt "event(%d, %a, %s, %a)" uid H.print tid dir print_var var
 
 let print_rd fmt (p, v, vi) =
-  fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
+  fprintf fmt "read(%a, %a)" H.print p print_var (v, vi)
 
 let rec perm_all sevents devents spof dpof cnt perms cp =
   if IntMap.is_empty spof then cp :: perms else begin
@@ -587,7 +667,7 @@ let rec co_from_tpof es co = function
 let gen_co es =
   let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
   let iwrites, writes = IntMap.partition (fun _ e ->
-    Hstring.view e.tid = "#0") writes in
+    H.view e.tid = "#0") writes in
   let co = IntMap.fold (fun eid1 e1 co -> (* Initial writes *)
     IntMap.fold (fun eid2 e2 co ->
       if e1.var = e2.var then (e1, e2) :: co else co

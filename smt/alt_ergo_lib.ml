@@ -587,18 +587,18 @@ module Make (Options_ : sig val profiling : bool end) = struct
     let axiom_rf = mk_axiom "axiom_rf" [] ety2
       [ [ mk_pred ~qv "_rf" e1e2 ], None ]
       (mk_imp
-	(mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	(mk_eq (mk_evt_f ~qv e1 "_val") (mk_evt_f ~qv e2 "_val"))) in
+    	(mk_eq_true (mk_pred ~qv "_rf" e1e2))
+    	(mk_eq (mk_evt_f ~qv e1 "_val") (mk_evt_f ~qv e2 "_val"))) in
     Queue.push axiom_rf axioms;
 
-    let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2
-      [ [ mk_pred ~qv "_po" e1e2 ], None ]
-      (mk_imp
-	(mk_and
-	  (mk_eq_true (mk_pred ~qv "_po" e1e2))
-	  (mk_eq (mk_evt_f ~qv e1 "_var") (mk_evt_f ~qv e2 "_var")))
-	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
-    Queue.push axiom_po_loc axioms;
+    (* let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2 *)
+    (*   [ [ mk_pred ~qv "_po" e1e2 ], None ] *)
+    (*   (mk_imp *)
+    (* 	(mk_and *)
+    (* 	  (mk_eq_true (mk_pred ~qv "_po" e1e2)) *)
+    (* 	  (mk_eq (mk_evt_f ~qv e1 "_var") (mk_evt_f ~qv e2 "_var"))) *)
+    (* 	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in *)
+    (* Queue.push axiom_po_loc axioms; *)
 
     let axiom_rfe = mk_axiom "axiom_rfe" [] ety2
       [ [ mk_pred ~qv "_rf" e1e2 ], None ]
@@ -620,16 +620,16 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))) in
     Queue.push axiom_fr axioms;
 
-    let axiom_ppo_tso = mk_axiom "axiom_ppo_tso" [] ety2
-      [ [ mk_pred ~qv "_po" e1e2 ], None ]
-      (mk_imp
-	(mk_and
-	  (mk_eq_true (mk_pred ~qv "_po" e1e2))
-	  (mk_or
-	    (mk_neq (mk_evt_f ~qv e1 "_dir") tw)
-	    (mk_neq (mk_evt_f ~qv e2 "_dir") tr)))
-	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
-    Queue.push axiom_ppo_tso axioms;
+    (* let axiom_ppo_tso = mk_axiom "axiom_ppo_tso" [] ety2 *)
+    (*   [ [ mk_pred ~qv "_po" e1e2 ], None ] *)
+    (*   (mk_imp *)
+    (* 	(mk_and *)
+    (* 	  (mk_eq_true (mk_pred ~qv "_po" e1e2)) *)
+    (* 	  (mk_or *)
+    (* 	    (mk_neq (mk_evt_f ~qv e1 "_dir") tw) *)
+    (* 	    (mk_neq (mk_evt_f ~qv e2 "_dir") tr))) *)
+    (* 	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in *)
+    (* Queue.push axiom_ppo_tso axioms; *)
 
     let axiom_po_U_com_1 = mk_axiom "axiom_po_U_com_1" [] ety2
       [ [ mk_pred ~qv "_co" e1e2 ], None ]
@@ -665,8 +665,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
     let axiom_co_U_prop_2 = mk_axiom "axiom_co_U_prop_2" [] ety2
       [ [ mk_pred ~qv "_fence" e1e2 ], None ]
       (mk_imp
-	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
-	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+    	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
+    	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
     Queue.push axiom_co_U_prop_2 axioms;
 
     let axiom_co_U_prop_t = mk_axiom "axiom_co_U_prop_t" [] ety3

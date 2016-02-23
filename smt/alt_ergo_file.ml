@@ -41,7 +41,6 @@ module HSet = Hstring.HSet
 
 module TTerm = Term
 
-type ttype = TAbs | TSum of Hstring.t list | TRec of (Hstring.t * Hstring.t) list
 let all_types = ref []
 let all_vars = H.create 17
 
@@ -91,11 +90,12 @@ module Type = struct
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     match constrs with
       | [] ->
-          all_types := (t, TAbs) :: !all_types;
-	  H.add decl_types t (Ty.Tabstract t)
-      | _ -> 
-          all_types := (t, TSum constrs) :: !all_types;
+	  let ty = Ty.Tabstract t in
+          all_types := ty :: !all_types;
+	  H.add decl_types t ty
+      | _ ->
 	  let ty = Ty.Tsum (t, constrs) in
+          all_types := ty :: !all_types;
 	  H.add decl_types t ty;
 	  List.iter (fun c -> declare_constructor t c) constrs
 
@@ -106,8 +106,8 @@ module Type = struct
   let declare_record t fields =
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     let tfields = List.map (fun (f, ty) -> (f, H.find decl_types ty)) fields in
-    all_types := (t, TRec fields) :: !all_types;
     let ty = Ty.Trecord (t, tfields) in
+    all_types := ty :: !all_types;
     H.add decl_types t ty;
     List.iter (fun (f, ty) -> declare_field ty f) fields
 
@@ -534,12 +534,12 @@ module Make (Options_ : sig val profiling : bool end) = struct
   forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
   _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
 
-axiom po_loc :
-  forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)].
-  _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var
-                      (* and _e(p1, e1)._par = _e(p2, e2)._par *)
-                      and _e(p1, e1)._p1 = _e(p2, e2)._p1
-  -> _po_loc_U_com(p1, e1, p2, e2)
+(* axiom po_loc : *)
+(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
+(*   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var *)
+(*                       (\* and _e(p1, e1)._par = _e(p2, e2)._par *\) *)
+(*                       (\* and _e(p1, e1)._p1 = _e(p2, e2)._p1 *\) *)
+(*   -> _po_loc_U_com(p1, e1, p2, e2) *)
 
 axiom rfe :
   forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
@@ -551,18 +551,18 @@ axiom fr :
   _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
   -> _po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)
 
-axiom ppo_tso :
-  forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)].
-  _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R)
-  -> _co_U_prop(p1, e1, p2, e2)
+(* axiom ppo_tso : *)
+(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
+(*   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R) *)
+(*   -> _co_U_prop(p1, e1, p2, e2) *)
 
 axiom po_loc_U_com_1 :
-  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)(*|_po_loc_U_com(p1,e1,p2,e2)*)].
+  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
   _co(p1, e1, p2, e2)
    -> _po_loc_U_com(p1, e1, p2, e2)
 
 axiom po_loc_U_com_2 :
-  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)(*|_po_loc_U_com(p1,e1,p2,e2)*)].
+  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
   _rf(p1, e1, p2, e2)
    -> _po_loc_U_com(p1, e1, p2, e2)
 
@@ -572,12 +572,12 @@ axiom po_loc_U_com_t :
    -> _po_loc_U_com(p1, e1, p3, e3)
 
 axiom co_U_prop_1 :
-  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)(*|_co_U_prop(p1,e1,p2,e2)*)].
+  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
   _co(p1, e1, p2, e2)
   -> _co_U_prop(p1, e1, p2, e2)
 
 axiom co_U_prop_2 :
-  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)(*|_co_U_prop(p1,e1,p2,e2)*)].
+  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
   _fence(p1, e1, p2, e2)
   -> _co_U_prop(p1, e1, p2, e2)
 
@@ -709,13 +709,16 @@ axiom co_U_prop_t :
 
       (* Print all types *)
       let print_field fmt (f, t) =
-	fprintf fmt "%a : %a" Hstring.print f Hstring.print t in
-      List.iter (fun (t, td) -> match td with
-        | TAbs -> fprintf filefmt "type %a\n" Hstring.print t
-        | TSum cl -> fprintf filefmt "type %a = %a\n" Hstring.print t
-		       (print_list_sep "|" Hstring.print) cl
-        | TRec fl -> fprintf filefmt "type %a = { %a }\n" Hstring.print t
-		       (print_list_sep ";" print_field) fl
+      	fprintf fmt "%a : %a" Hstring.print f Ty.print t in
+      List.iter (fun ty -> match ty with
+        | Ty.Tabstract t -> fprintf filefmt "type %a\n" Hstring.print t
+        | Ty.Tsum (t, cl) ->
+	   fprintf filefmt "type %a = %a\n" Hstring.print t
+      		   (print_list_sep "|" Hstring.print) cl
+        | Ty.Trecord (t, fl) ->
+	   fprintf filefmt "type %a = { %a }\n" Hstring.print t
+      		   (print_list_sep ";" print_field) fl
+	| _ -> failwith "AltErgoFile.check : invalid type"
       ) (List.rev !all_types); (* allows to skip variants *)
       fprintf filefmt "\n";
 
@@ -729,7 +732,7 @@ axiom co_U_prop_t :
       fprintf filefmt "\n";
 
       (* Print Weak Memory Axomatization *)
-      if not fp then fprintf filefmt "%s\n" !axioms;
+      if not fp then fprintf filefmt "%s\n\n" !axioms;
       
       (* Print formula *)
       fprintf filefmt "goal g: true\n";
