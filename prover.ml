@@ -182,7 +182,7 @@ let get_user_invs s nb_procs = (* S only *)
   List.rev_map (fun a ->
     let (f, _, _) = make_formula a in F.make F.Not [f]) init_invs
 
-let unsafe_conj { tag = id; cube = cube } nb_procs invs (init, ievts, iord) = (*S only*)
+let unsafe_conj { tag = id; cube = cube } nb_procs invs (init, ievts, _) = (*S only*)
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
@@ -192,7 +192,6 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs (init, ievts, iord) = (*
   SMT.assume ~id init;
   SMT.assume ~id f;
   let evts = Weakmem.merge_evts ievts evts in
-  let ord = Weakmem.merge_ord iord ord in
   SMT.assume ~id (Weakmem.make_orders evts ord);
   SMT.check ()
 

@@ -146,6 +146,28 @@ let infer_type x1 x2 =
 
 let refinement_cycles () = (* TODO *) ()
 
+let ty_access loc args a li =
+  let args_a, ty_a = 
+    try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
+  if List.length args_a <> List.length li then
+    error (WrongNbArgs (a, List.length args_a)) loc
+  else
+    List.iter (fun i ->
+      let ty_i =
+	if Hstring.list_mem i args then Smt.Type.type_proc
+	else 
+	  try 
+	    let ia, tyi = Smt.Symbol.type_of i in
+	    if ia <> [] then error (MustBeOfTypeProc i) loc;
+	    tyi
+	  with Not_found -> error (UnknownName i) loc
+      in
+      if args_a = [] then error (MustBeAnArray a) loc;
+      if not (Hstring.equal ty_i Smt.Type.type_proc) then
+	error (MustBeOfTypeProc i) loc;
+    ) li;
+  [], ty_a
+			
 let rec term loc ?(init=false) args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
@@ -173,49 +195,24 @@ let rec term loc ?(init=false) args = function
       end
   | Access(a, li) ->
       if Smt.Symbol.is_weak a && not init then error (MustReadWeakVar a) loc;
-      let args_a, ty_a = 
-	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
-      if List.length args_a <> List.length li then
-        error (WrongNbArgs (a, List.length args_a)) loc
-      else
-        List.iter (fun i ->
-          let ty_i =
-	    if Hstring.list_mem i args then Smt.Type.type_proc
-	    else 
-	      try 
-	        let ia, tyi = Smt.Symbol.type_of i in
-	        if ia <> [] then error (MustBeOfTypeProc i) loc;
-	        tyi
-	      with Not_found -> error (UnknownName i) loc
-          in
-          if args_a = [] then error (MustBeAnArray a) loc;
-          if not (Hstring.equal ty_i Smt.Type.type_proc) then
-	    error (MustBeOfTypeProc i) loc;
-	) li;
-      [], ty_a
+      ty_access loc args a li
   | Field _ -> failwith "Typing.term : Field should not be typed"
   | List _ -> failwith "Typing.term : List should not be typed"
   | Read (p, v, vi) ->
       if Options.model = Options.SC then error (OpInvalidInSC) loc;
       if init then error (CantUseReadInInit) loc;
       if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
-      let ty_p =
-	if Hstring.list_mem p args then Smt.Type.type_proc
-	else (* probably no else here, we want p to be an argument *)
-	  try 
-	    let pa, typ = Smt.Symbol.type_of p in
-	    if pa <> [] then error (MustBeOfTypeProc p) loc;
-	    typ
+      if not (Hstring.list_mem p args) then
+	begin try
+	  let pa, typ = Smt.Symbol.type_of p in
+	  if pa <> [] || not (Hstring.equal typ Smt.Type.type_proc) then
+	    error (MustBeOfTypeProc p) loc
 	  with Not_found -> error (UnknownName p) loc
-      in
-      if not (Hstring.equal ty_p Smt.Type.type_proc) then
-	error (MustBeOfTypeProc p) loc;
-      let args, ret = Smt.Symbol.type_of v in (* to improve *)
-      (* let args, ret = begin match vi with *)
-      (* 	| [] -> Smt.Symbol.type_of v *)
-      (* 	| _ -> term loc ~init args (Access (v, vi)) (\* to improve *\) *)
-      (* end in *)
-      [], ret
+	end;
+      begin match vi with
+      	| [] -> Smt.Symbol.type_of v
+      	| _ -> ty_access loc args v vi
+      end
   | Write (p, v, vi) -> failwith "Typing.term : Write should not be typed"
   | Fence p -> failwith "Typing.term : Fence should not be typed"
 
@@ -373,7 +370,7 @@ let init_global_env s =
        declare_symbol loc n [] t;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := n :: !weak_vars;
+	 weak_vars := (n, [], t) :: !weak_vars;
        end;
        l := (n, t)::!l) s.globals;
   List.iter 
@@ -381,11 +378,11 @@ let init_global_env s =
        declare_symbol loc n args ret;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := n :: !weak_vars;
+	 weak_vars := (n, args, ret) :: !weak_vars;
        end;
        l := (n, ret)::!l) s.arrays;
   if Options.model <> Options.SC then Weakmem.init_weak_env !weak_vars;
-  !l
+  !l, !weak_vars
 
 
 let init_proc () =
@@ -587,7 +584,7 @@ let add_tau tr =
     tr_tau = Pre.make_tau tr }
 
 let system s =
-  let l = init_global_env s in
+  let l, wvl = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
@@ -597,7 +594,7 @@ let system s =
     if Options.debug then Smt.Variant.print ();
   end;
 
-  let init_woloc = let _,v,i = s.init in v,(Weakmem.writes_of_init i) in
+  let init_woloc = let _,v,i = s.init in v,(Weakmem.writes_of_init wvl i) in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =

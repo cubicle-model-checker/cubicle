@@ -7,6 +7,7 @@ module HSet = Hstring.HSet
 module T = Smt.Term
 module S = Smt.Symbol
 module F = Smt.Formula
+module STerm = Term.Set
 
 
 
@@ -47,13 +48,14 @@ let max_params = ref 0
 let pl = ref []
 
 
+
 let init_weak_env wvl =
 
   Smt.Type.declare hDirection [hR; hW];
-  Smt.Type.declare hWeakVar (List.map (mk_hV) wvl);
+  Smt.Type.declare hWeakVar (List.map (fun (v, _, _) -> mk_hV v) wvl);
 
-  let wts, maxp = List.fold_left (fun (wts, maxp) wv ->
-    let (args, ret) = Smt.Symbol.type_of wv in
+  let wts, maxp = List.fold_left (fun (wts, maxp) (wv, args, ret) ->
+    (* let (args, ret) = Smt.Symbol.type_of wv in *)
     let nbp = List.length args in
     HSet.add ret wts, if nbp > maxp then nbp else maxp
   ) (HSet.empty, 1) wvl in
@@ -103,17 +105,30 @@ let init_weak_env wvl =
 
 
 
-let writes_of_init init =
-  let aux = function
-  | Elem (v, Glob) when Smt.Symbol.is_weak v -> Write (hP0, v, [])
-  | Access (v, vi) when Smt.Symbol.is_weak v -> Write (hP0, v, vi)
-  | t -> t in
-  List.map (fun sa -> SAtom.fold (fun a sa ->
-    let a = match a with
-    | Atom.Comp (t1, op, t2) -> Atom.Comp (aux t1, op, aux t2)
-    | _ -> a in
-    SAtom.add a sa
-  ) sa SAtom.empty) init
+let writes_of_init wvl init =
+  let wvs = List.fold_left (fun wvs (v, vi, _) ->
+			    HMap.add v vi wvs) HMap.empty wvl in
+  let aux wvs = function
+  | Elem (v, Glob) when Smt.Symbol.is_weak v ->
+     Write (hP0, v, []), HMap.remove v wvs
+  | Access (v, vi) when Smt.Symbol.is_weak v ->
+     Write (hP0, v, vi), HMap.remove v wvs
+  | t -> t, wvs in
+  List.map (fun sa ->
+    let sa, wvs = SAtom.fold (fun a (sa, wvs) ->
+      let a, wvs = match a with
+      | Atom.Comp (t1, op, t2) ->
+         let t1, wvs = aux wvs t1 in
+         let t2, wvs = aux wvs t2 in
+         Atom.Comp (t1, op, t2), wvs
+      | _ -> a, wvs in
+      SAtom.add a sa, wvs
+    ) sa (SAtom.empty, wvs) in
+    HMap.fold (fun v vi sa ->
+      let a = Atom.Comp (Write (hP0, v, vi), Eq, Elem (hNone, Glob)) in
+      SAtom.add a sa
+    ) wvs sa
+  ) init
 
 
 
@@ -127,8 +142,7 @@ let split_events_orders sa =
 	 | _ -> failwith "Weakmem.split_events_order error"
        ) 0 tl in
        (sa_pure, sa_evts, fce, HMap.add p tl ord, HMap.add p c cnt)
-    | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
-       (sa_pure, SAtom.add a sa_evts, fce, ord, cnt)
+    | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _)
     | Atom.Comp (Read _, _, _) | Atom.Comp (_, _, Read _) ->
        (sa_pure, SAtom.add a sa_evts, fce, ord, cnt)
     | Atom.Comp (Fence p, Eq, _) | Atom.Comp (_, Eq, Fence p) ->
@@ -193,6 +207,9 @@ let make_event (cnt, ord, na) d p v vi =
   (* & no Type P : 2.5, PX : 2.7* / 561-540 *)
   (* (cnt, ord, na), Field (tevt, hVal) *)
 
+
+
+(*
 let write_of_term acc = function
   | Write (p, v, vi) -> make_event acc hW p v vi
   | t -> acc, t
@@ -223,6 +240,67 @@ let events_of_satom sa =
 
   let sa = SAtom.union sa_pure (SAtom.union sa_evts sa_new) in
   
+  let ord = List.fold_left (fun ord p ->
+    let pord = try HMap.find p ord with Not_found -> [] in
+    HMap.add p (Elem (hF, Glob) :: pord) ord
+  ) ord fce in
+
+  HMap.fold (fun p tl ->
+    SAtom.add (Atom.Comp (Access (hO, [p]), Eq, List tl))) ord sa
+ *)
+
+
+
+let all_events sa =
+  let is_write = function Write _ -> true | _ -> false in
+  let is_read = function Read _ -> true | _ -> false in
+  SAtom.fold (fun a (srt, swt) -> match a with
+    | Atom.Comp (t1, _, t2) ->
+       let srt = if is_read t1 then STerm.add t1 srt else srt in
+       let srt = if is_read t2 then STerm.add t2 srt else srt in
+       let swt = if is_write t1 then STerm.add t1 swt else swt in
+       let swt = if is_write t2 then STerm.add t2 swt else swt in
+       srt, swt
+    | _ -> srt, swt
+  ) sa (STerm.empty, STerm.empty)
+
+let remove_none = SAtom.filter (function
+  | Atom.Comp (Elem (n, Glob), _, _) | Atom.Comp (_, _, Elem (n, Glob))
+       when Hstring.equal n hNone -> false
+  | _ -> true)
+
+let event_subst t te sa =
+  SAtom.fold (fun a sa -> match a with
+    | Atom.Comp (t1, op, t2) ->
+       let t1 = if Term.compare t1 t = 0 then te else t1 in
+       let t2 = if Term.compare t2 t = 0 then te else t2 in
+       SAtom.add (Atom.Comp (t1, op, t2)) sa
+    | _ -> SAtom.add a sa
+  ) sa SAtom.empty
+
+let events_of_satom sa =
+  let sa_pure, sa_evts, fce, ord, cnt = split_events_orders sa in
+  let srt, swt = all_events sa_evts in
+  let sa_evts = remove_none sa_evts in
+  
+  let (acc, sa_evts) = STerm.fold (fun t (acc, sa) -> match t with
+    | Write (p, v, vi) ->
+       let acc, te = make_event acc hW p v vi in
+       let sa = event_subst t te sa in
+       (acc, sa)
+    | _ -> assert false
+  ) swt ((cnt, ord, SAtom.empty), sa_evts) in
+
+  let ((_, ord, sa_new), sa_evts) = STerm.fold (fun t (acc, sa) -> match t with
+    | Read (p, v, vi) ->
+       let acc, te = make_event acc hR p v vi in
+       let sa = event_subst t te sa in
+       (acc, sa)
+    | _ -> assert false
+  ) srt (acc, sa_evts) in
+
+  let sa = SAtom.union sa_pure (SAtom.union sa_evts sa_new) in
+
   let ord = List.fold_left (fun ord p ->
     let pord = try HMap.find p ord with Not_found -> [] in
     HMap.add p (Elem (hF, Glob) :: pord) ord

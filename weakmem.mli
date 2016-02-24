@@ -6,11 +6,12 @@ module F = Smt.Formula
 
 
 
-val init_weak_env : H.t list -> unit
+val init_weak_env : (H.t * H.t list * H.t) list -> unit
 
 
 
-val writes_of_init : Types.SAtom.t list -> Types.SAtom.t list
+val writes_of_init : (H.t * H.t list * H.t) list ->
+		     Types.SAtom.t list -> Types.SAtom.t list
 val events_of_satom : Types.SAtom.t -> Types.SAtom.t
 
 
