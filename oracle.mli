@@ -24,7 +24,7 @@ module type S = sig
 
      *)
 
-    val init : Ast.t_system -> unit
+    val init : ?bwd:Node.t list -> Ast.t_system -> unit
     (** Initialize the oracle on a given system *)
 
 

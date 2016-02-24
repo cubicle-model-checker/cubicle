@@ -114,10 +114,6 @@ let rec filter_clusters md c =
       ) c Clusters.empty
     | _ -> 
       Clusters.fold (fun r l acc ->
-        (* Printf.printf "\n------------------\nReprésentant Provisoire : ";  *)
-        (* State.print "" r; *)
-        (* Printf.printf "\tEnsemble Provisoire :\n"; *)
-        (* List.iter (State.print "\t\t") l; *)
         let d = State.count_mones r in
         if d <= filter_md then Clusters.add r l acc
         else (
@@ -129,7 +125,7 @@ let rec filter_clusters md c =
       ) c Clusters.empty
 
 let to_list c =
-  Clusters.fold (fun r _ acc -> r :: acc) c []
+  Clusters.fold (fun r c acc -> (r, c) :: acc) c []
 
 let print_infos c =
   let min_dist, max_dist = 

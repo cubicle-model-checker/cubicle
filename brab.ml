@@ -64,8 +64,8 @@ let brab system =
       | Bwd.Safe (cubes, _) -> cubes
       | uns -> assert false
   in
-  List.iter (Format.eprintf "%a\n@." Node.print) cubes;
-  Oracle.init system;
+  (* List.iter (Format.eprintf "%a\n@." Node.print) cubes; *)
+  Oracle.init ~bwd:cubes system;
   if only_forward then
     (* if print_forward then *)
     (*   Oracle.print_last  *)

@@ -342,7 +342,7 @@ end
 
 module GrumpyOracle : Oracle.S = struct
 
-  let init _ = ()
+  let init ?(bwd=[]) _ = ()
   let first_good_candidate _ =
     failwith "You should not call Grumpy Oracle."
   let all_good_candidates _ =

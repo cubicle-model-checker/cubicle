@@ -73,7 +73,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Stats.fixpoint n db
           | None ->
              Stats.check_limit n;
-             Stats.new_node n;
+             if not forward then Stats.new_node n;
              let n = 
                if not forward then
                  begin
@@ -94,7 +94,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                else n
              in
              let ls, post = 
-               if not forward || n.depth < bwd_fwd then Pre.pre_image system.t_trans n
+               if not forward || n.depth < bwd_fwd then
+                 Pre.pre_image system.t_trans n
                else [], [] in
              if delete then
                visited :=
@@ -102,7 +103,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 	     postponed := List.rev_append post !postponed;
              visited := Cubetrie.add_node n !visited;
              Q.push_list ls q;
-             Stats.remaining (nb_remaining q postponed);
+             if not forward then Stats.remaining (nb_remaining q postponed);
         end;
         
         if Q.is_empty q then

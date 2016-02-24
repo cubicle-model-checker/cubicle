@@ -17,13 +17,11 @@ open Ast
 
 (** Enumerative forward search *)
 
-val search : Variable.t list -> t_system -> unit
+val search : Node.t list -> Variable.t list -> t_system -> unit
 (** [search procs init] performs enumerative forward search. States are
     stored in an internal hash-table. *)
 
 val resume_search_from : Variable.t list -> t_system -> unit
-
-val replay_trace_and_expand : Variable.t list -> t_system -> Node.t -> unit
 
 val smallest_to_resist_on_trace : Node.t list -> Node.t list
 (** Given a list of candidate approximations (and their permutations),
@@ -77,7 +75,7 @@ val print_last : env -> unit
 (** see {! Oracle.S} *)
 
 include Oracle.S
-val init : t_system -> unit
+val init : ?bwd:Node.t list -> t_system -> unit
 
 val first_good_candidate : Node.t list -> Node.t option 
 
