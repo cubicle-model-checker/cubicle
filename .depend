@@ -280,8 +280,10 @@ variable.cmo : smt/smt.cmi options.cmi common/hstring.cmi variable.cmi
 variable.cmx : smt/smt.cmx options.cmx common/hstring.cmx variable.cmi
 version.cmo :
 version.cmx :
-weakmem.cmo : types.cmi smt/smt.cmi common/hstring.cmi weakmem.cmi
-weakmem.cmx : types.cmx smt/smt.cmx common/hstring.cmx weakmem.cmi
+weakmem.cmo : types.cmi smt/term.cmi smt/smt.cmi common/hstring.cmi \
+    weakmem.cmi
+weakmem.cmx : types.cmx smt/term.cmx smt/smt.cmx common/hstring.cmx \
+    weakmem.cmi
 approx.cmi : oracle.cmi options.cmi node.cmi ast.cmi
 ast.cmi : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi cube.cmi

@@ -341,16 +341,17 @@ end = struct
     let vis_array = vis_cube.Cube.array in
     if Cube.inconsistent_2arrays vis_array n_array then nodes
     else
-      (*let subst = Event.es_permutations vis_n.es n.es in*)
-      (vis_n, vis_array)::nodes (*
-      List.fold_left (fun nodes subst ->
-	let vis_events_r = Event.es_apply_subst subst vis_n.es in
-        let vis_renamed = aa_esubst subst vis_array in
-        if Cube.inconsistent_2arrays vis_renamed n_array then nodes
-        else (vis_n, (vis_renamed, vis_events_r))::nodes
-      ) ((vis_n, (vis_array, vis_n.es)) :: nodes) subst*)
-
-    (*let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
+      if !Options.size_proc <> 0 then
+        (*let subst = Event.es_permutations vis_n.es n.es in*)
+        (vis_n, vis_array)::nodes (*
+        List.fold_left (fun nodes subst ->
+      	  let vis_events_r = Event.es_apply_subst subst vis_n.es in
+          let vis_renamed = aa_esubst subst vis_array in
+          if Cube.inconsistent_2arrays vis_renamed n_array then nodes
+          else (vis_n, (vis_renamed, vis_events_r))::nodes
+        ) ((vis_n, (vis_array, vis_n.es)) :: nodes) subst*)
+      else
+    let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
     List.fold_left
       (fun nodes ss ->
        let vis_renamed = ArrayAtom.apply_subst ss vis_array in
@@ -366,7 +367,7 @@ end = struct
          (* These are worth assuming and checking right away because they might
             yield unsatifisability sooner *)
          (Prover.assume_node vis_n vis_renamed; nodes)
-      ) nodes d*)
+      ) nodes d
       
 
   let check_fixpoint s visited =
@@ -407,7 +408,8 @@ end = struct
     then Some []
     else Cubetrie.mem_array (Node.array s) nodes
 
-  let medium_fixpoint s visited  = None (*
+  let medium_fixpoint s visited  =
+    if !Options.size_proc <> 0 then None else
     let vars, s_array = Node.variables s, Node.array s in
     let substs = Variable.all_permutations vars vars in
     let substs = List.tl substs in (* Drop 'identity' permutation. 
@@ -420,7 +422,7 @@ end = struct
                  | None -> ()
                 ) substs;
       None
-    with Fixpoint uc -> Some uc *)
+    with Fixpoint uc -> Some uc
 
   let hard_fixpoint s nodes =
     try

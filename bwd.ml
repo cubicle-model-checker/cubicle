@@ -90,7 +90,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
-             if delete then
+             if delete && !Options.size_proc = 0 then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
 	     postponed := List.rev_append post !postponed;
