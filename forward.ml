@@ -826,14 +826,14 @@ let instantiate_transitions all_procs procs trans =
 
 
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
-  let acc, gp = 
+  let acc = 
     List.fold_left 
-      (fun (acc, gp) g -> 
-	Term.Set.add (Elem (g, Glob)) acc, gp
-      ) (Term.Set.empty, []) globals
+      (fun acc g -> 
+	Term.Set.add (Elem (g, Glob)) acc
+      ) Term.Set.empty globals
   in
   List.fold_left (fun acc a ->
-    let indexes = Variable.all_arrangements_arity a (procs@gp) in
+    let indexes = Variable.all_arrangements_arity a procs in
     List.fold_left (fun acc lp ->
       Term.Set.add (Access (a, lp)) acc)
       acc indexes)

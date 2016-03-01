@@ -57,6 +57,9 @@ let enum_steps = ref []
 let enum_pause = ref false
 let enum_verbose = ref false
 
+(* STATE COPY *)
+let copy_state = ref false
+
 (* BWD *)
 
 let bwd_fwd = ref (-1)
@@ -221,6 +224,7 @@ let specs =
     "-cfd", Arg.Tuple ([Arg.Set_int frg; Arg.Int set_partial_frg]), 
     "<n m> clusterize fringe at prof <n> with <m> being the max distance\
        before going on with enumerative";
+    "-copy", Arg.Set copy_state, " copy states that look general enough";
     "-flvl", Arg.Set_int filter_lvl, "<n> set a filtering level to clusters";
     "-md", Arg.Set_int filter_md, 
     "<n> set a minimum distance inside a cluster for filtering";
@@ -351,6 +355,8 @@ let filter_lvl = !filter_lvl
 let filter_md = !filter_md
 let enum_pause = !enum_pause
 let enum_verbose = !enum_verbose
+
+let copy_state = !copy_state
 
 let bwd_fwd = !bwd_fwd
 

@@ -70,6 +70,8 @@ val all_instantiations : t list -> t list -> subst list
 (** same as {! all_permutations} but does not assume elements of [l1] to be
     distinct. [l1] can be longer than [l2]. *)
 
+val arity : Hstring.t -> int
+
 val all_arrangements : int -> t list -> t list list
 val all_arrangements_arity : Hstring.t -> t list -> t list list
 val permutations_missing : t list -> t list -> subst list

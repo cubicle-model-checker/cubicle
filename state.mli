@@ -3,6 +3,8 @@ type t = int array
     calling the function [new_undef_state]. *)
 
 (* Functions for clustering *)
+val diff : t -> t -> (int * (int * int)) list
+
 val compare : t -> t -> int
 val equal : t -> t -> bool
 

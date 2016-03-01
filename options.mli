@@ -51,6 +51,8 @@ val enum_verbose : bool
 val filter_lvl : int
 val filter_md : int
 
+val copy_state : bool
+
 val goods : bool
 
 val max_proc : int

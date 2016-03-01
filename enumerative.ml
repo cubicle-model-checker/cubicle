@@ -23,7 +23,7 @@ module H = Hstring
 
 module HT = Hashtbl.Make (Term)
 
-(* module HH = Hashtbl.Make (H) *)
+module HH = Hashtbl.Make (H)
 
 module HI = Hashtbl.Make (struct 
   type t = int 
@@ -65,9 +65,7 @@ let equal_state a1 a2 =
     done;
     !res
 
-
 let hash_state st = Hashtbl.hash_param 100 500 st
-
 
 module HST = Hashtbl.Make 
   (struct 
@@ -118,7 +116,7 @@ type st_action =
 
 exception Not_applicable
 
-type state_transistion = {
+type state_transition = {
   st_name : Hstring.t;
   st_reqs : st_req list;
   st_udnfs : st_req list list list;
@@ -142,10 +140,11 @@ type env = {
   all_procs : Hstring.t list;
   proc_ids : int list;
   id_terms : int HT.t;
-  (* intervals : (int * int) HH.t; *)
+  terms_id : Term.t HI.t;
+  intervals : (int * int) HH.t;
   id_true : int;
   id_false : int;
-  st_trs : state_transistion list;
+  st_trs : state_transition list;
   low_int_abstr : int;
   up_int_abstr : int;
   pinf_int_abstr : int;
@@ -173,7 +172,8 @@ let empty_env = {
   all_procs = [];
   proc_ids = [];
   id_terms = HT.create 0;
-  (* intervals = HH.create 0; *)
+  terms_id = HI.create 0;
+  intervals = HH.create 0;
   id_true = 0;
   id_false = 0;
   st_trs = [];
@@ -374,16 +374,6 @@ let find_subst_for_norm2 sigma env st =
     apply_subst_in_place env st sigma;
   ) [List.hd env.partial_order]
     
-(* let modify_state {intervals=i} st = *)
-(*   HH.iter ( *)
-(*     fun _ (i, l) -> *)
-(*       let st' = Array.sub st i l in *)
-(*       Array.fast_sort Pervasives.compare st'; *)
-(*       for k = 0 to l - 1 do *)
-(*         st.(k + i) <- st'.(k) *)
-(*       done *)
-(*   ) i *)
-
 let normalize_state env st =
   let sigma = find_subst_for_norm env st in
   apply_subst_in_place env st sigma
@@ -497,24 +487,20 @@ let init_tables ?(alloc=true) procs s =
   let ht = HT.create (nb_vars + nb_consts) in
   let i = ref 0 in
 
-  (* let intervals = HH.create nb_vars in *)
+  let intervals = HH.create nb_vars in
   
-  (* 2 ^ n *)
-  (* let pow2 n = 2 lsl (n-1) in *)
+  let pow2 n = 2 lsl (n-1) in
   
-  Term.Set.iter (fun t -> 
-    (* (match t with *)
-    (*   | Access (h, vl) -> *)
-    (*     if not (HH.mem intervals h) then *)
-    (*       let it = pow2 (List.length vl) in *)
-    (*       HH.add intervals h (!i, it) *)
-    (*   | Elem (h, _) ->  *)
-    (*     if not (HH.mem intervals h) then *)
-    (*       HH.add intervals h (!i, 1) *)
-    (*   | _ -> assert false *)
-    (* ); *)
-    HT.add ht t !i; incr i
-  ) var_terms;
+  Term.Set.iter (fun t ->
+    (match t with
+      | Access (h, vl) ->
+        if not (HH.mem intervals h) then
+          let it = pow2 (List.length vl) in
+          HH.add intervals h (!i, !i + it - 1)
+      | _ -> ()
+    );
+    HT.add ht t !i; incr i) var_terms;
+
   let max_id_vars = !i - 1 in
   let proc_ids = ref [] in
   let first_proc = !i in
@@ -548,7 +534,8 @@ let init_tables ?(alloc=true) procs s =
     HT.add ht (Const (MConst.add (ConstReal (Num.Int c)) 1 MConst.empty)) !i;
     incr i) abstr_range;
   let a_up = !i - 1 in
-
+  let hi = HI.create (nb_vars + nb_consts) in
+  HT.iter (fun t i -> HI.add hi i t) ht;
   (* This is some bookeeping to allow in place substitutions *)
   let proc_substates = HLI.create nb_procs in
   let reverse_proc_substates = HI.create nb_procs in
@@ -567,7 +554,8 @@ let init_tables ?(alloc=true) procs s =
     all_procs = all_procs;
     proc_ids = proc_ids;
     id_terms = ht;
-    (* intervals = intervals; *)
+    terms_id = hi;
+    intervals = intervals;
     id_true = id_true;
     id_false = id_false;
     st_trs = [];
@@ -1022,15 +1010,53 @@ let transitions_to_func procs env =
   List.fold_left 
     (transitions_to_func_aux procs env (fun acc st_tr -> st_tr :: acc)) []
 
+let is_general env l = 
+  let seen = HH.create 0 in
+  List.for_all (fun (i, _) ->
+    let ti = HI.find env.terms_id i in
+    match ti with
+      | Access (h, _) -> if HH.mem seen h then false else
+          (HH.add seen h (); true)
+      | _ -> false
+  ) l
+
+let create_new_state env s l =
+  let s' = State.copy s in
+  List.iter (fun (i, (_, e2)) ->
+    let ti = HI.find env.terms_id i in
+    match ti with
+      | Access (h, _) ->
+        let (bi, bs) = HH.find env.intervals h in
+        for j = bi to bs do
+          s'.(j) <- e2
+        done
+      | _ -> assert false
+  ) l; s'
+
 let post_bfs env st visited trs q cpt_q frg fd depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try
         let sts = st_tr.st_f st in
         List.iter (fun s ->
+          
           if forward_sym then normalize_state env s;
           if not (HST.mem visited s) then begin
-            (* incr cpt_q; *)
+            if copy_state then begin
+              let l = State.diff st s in
+              List.iter (fun (i, (e1, e2)) ->
+                let ti = HI.find env.terms_id i in
+                let t1 = HI.find env.terms_id e1 in
+                let t2 = HI.find env.terms_id e2 in
+                Format.eprintf "%a = %a, %a = %a@."
+                  Term.print ti Term.print t1 Term.print ti Term.print t2) l;
+              let b = is_general env l in
+              Format.eprintf "%b\n@." b;
+              (* incr cpt_q; *)
+                if b then 
+                  let s' = create_new_state env s l in
+                  HQueue.add ~cpt_q (depth + 1, s') q
+            end;
             if incremental_enum && depth = fd - 1 then
               frg := s :: !frg
             else
@@ -1053,6 +1079,8 @@ let post_dfs st visited trs q cpt_q depth =
       with Not_applicable -> ()) trs
 
 let hset_none = Hstring.HSet.singleton (Hstring.make "none")
+
+(* let  *)
 
 let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
   let temp_table = HST.create 2009 in
@@ -1254,7 +1282,7 @@ let install_sigint () =
 let resume_search_from procs init = assert false
 
 
-exception Found_f of state_transistion
+exception Found_f of state_transition
 
 let find_tr_funs env name =
   List.filter (fun tr -> Hstring.equal tr.st_name name) env.st_trs

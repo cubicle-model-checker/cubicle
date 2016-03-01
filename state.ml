@@ -2,6 +2,8 @@ type t = int array
 
 (* useful functions for clustering *)
 
+let length = Array.length
+
 let hamming_distance t1 t2 =
     let d = ref 0 in
     let star = ref 0 in
@@ -31,8 +33,17 @@ let add_states_hamming t1 t2 =
 
 let add_states = add_states_hamming
 
+let diff s1 s2 =
+  let l = ref [] in
+  for i = 0 to length s1 - 1 do
+    let e1 = s1.(i) in
+    let e2 = s2.(i) in
+    if e1 != -1 && e2 != -1 && e1 <> e2 then l := (i, (e1, e2)) :: !l
+  done;
+  !l
+
 let compare t1 t2 = 
-  let m = Array.length t1 in
+  let m = length t1 in
   let rec rc i =
     if i = m then 0
     else let e1 = t1.(i) in
