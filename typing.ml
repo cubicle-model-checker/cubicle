@@ -499,6 +499,7 @@ let system s =
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
+  if not Options.notyping then List.iter unsafe (List.rev s.invs);
   if not Options.notyping then transitions s.trans;
   if Options.(subtyping && not murphi) then begin
     Smt.Variant.close ();

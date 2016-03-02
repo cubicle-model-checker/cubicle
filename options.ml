@@ -199,6 +199,8 @@ let specs =
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
     "-out", Arg.String set_out,
     "<dir> set output directory for certificate traces to <dir>";
+    (* Hidden options *)
+    "-notyping", Arg.Set notyping, ""; (* Disable typing *)
   ]
 
 let alspecs = Arg.align specs
