@@ -1,0 +1,103 @@
+#
+# MCS lock, as presented in
+#
+# Maurice Herlihy and Nir Shavit. The art of multiprocessor programming.
+# Morgan Kaufmann, 2008. Page 155.
+#
+# IS robust.
+#
+#   public void lock() {
+# q1: QNode qnode = myNode.get();
+# q2: QNode pred = tail.getAndSet(qnode);
+# q3: if (pred != null) {
+# q4:   qnode.locked = true;
+# q5:   pred.next = qnode;
+# q6:   while (qnode.locked) {}
+#     }
+#   }
+#
+#   public void unlock() {
+# q1: QNode qnode = myNode.get();
+# q2: if (qnode.next == null) {
+# q3:   if (tail.compareAndSet(qnode, null))
+# q4:     return;
+#     }
+# q5: qnode.next.locked = false;
+# q6: qnode.next = null;
+# }
+#
+# Memory layout:
+# tail pointer              : 0
+# myNode pointer of thread 1: 1
+# myNode pointer of thread 2: 2
+
+
+thread lock1
+initial q0
+final end
+transition	q0	q1	local	tail	0
+transition	q1	q2	local	qnode	1
+transition	q2	q2_1	lock
+transition	q2_1	q2_2	read	pred	tail
+transition	q2_2	q2_3	write	qnode	tail
+transition	q2_3	q3	unlock
+transition	q3	q4	check	!= pred 0
+transition	q4	q5	write	1	+ 0 * 2 qnode
+transition	q5	q6	write	qnode	+ 1 * 2 pred
+transition	q6	q6_1	read	locked	+ 0 * 2 qnode
+transition	q6_1	q6	check	locked
+transition	q6_1	end	check	== locked 0
+end
+
+thread unlock1
+initial q1
+final q7
+transition	q1	q2	local	qnode	1
+transition	q2	q2_1	read	next	+ 1 * 2 qnode
+transition	q2_1	q3	check	== next	0
+transition	q3	q3_1	lock
+transition	q3_1	q3_2	read	tmp	tail
+transition	q3_2	q3_3	check	== tmp	qnode
+transition	q3_3	q3_4	write	0	qnode
+transition	q3_4	q4	unlock
+transition	q3_2	q3_6	check	!= tmp qnode
+transition	q3_6	q5	unlock
+transition	q5	q5_1	read	next	+ 1 * 2 qnode
+transition	q5_1	q6	write	0	+ 0 * 2 next
+transition	q6	q7	write	0	+ 1 * 2 qnode
+end
+
+thread lock2
+initial q0
+final end
+transition	q0	q1	local	tail	0
+transition	q1	q2	local	qnode	2
+transition	q2	q2_1	lock
+transition	q2_1	q2_2	read	pred	tail
+transition	q2_2	q2_3	write	qnode	tail
+transition	q2_3	q3	unlock
+transition	q3	q4	check	!= pred 0
+transition	q4	q5	write	1	+ 0 * 2 qnode
+transition	q5	q6	write	qnode	+ 1 * 2 pred
+transition	q6	q6_1	read	locked	+ 0 * 2 qnode
+transition	q6_1	q6	check	locked
+transition	q6_1	end	check	== locked 0
+end
+
+thread unlock2
+initial q1
+final q7
+transition	q1	q2	local	qnode	2
+transition	q2	q2_1	read	next	+ 1 * 2 qnode
+transition	q2_1	q3	check	== next	0
+transition	q3	q3_1	lock
+transition	q3_1	q3_2	read	tmp	tail
+transition	q3_2	q3_3	check	== tmp	qnode
+transition	q3_3	q3_4	write	0	qnode
+transition	q3_4	q4	unlock
+transition	q3_2	q3_6	check	!= tmp qnode
+transition	q3_6	q5	unlock
+transition	q5	q5_1	read	next	+ 1 * 2 qnode
+transition	q5_1	q6	write	0	+ 0 * 2 next
+transition	q6	q7	write	0	+ 1 * 2 qnode
+end

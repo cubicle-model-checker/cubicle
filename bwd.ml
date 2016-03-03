@@ -66,12 +66,14 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
       while not (Q.is_empty q) do
         let n = Q.pop q in
 	(**)if debug then eprintf ">>> [pick node %d]\n" (n.tag);
+	(* eprintf "SAFETY START\n"; *)
         Safety.check system n;
+	(* eprintf "SAFETY END / FIXPOINT START\n"; *)
         begin
           match Fixpoint.check n !visited with
-          | Some db ->
+          | Some db -> (* eprintf "FIXPOINT END\n"; *)
              Stats.fixpoint n db
-          | None ->
+          | None -> (* eprintf "FIXPOINT END\n"; *)
              Stats.check_limit n;
              Stats.new_node n;
              let n = begin
@@ -98,7 +100,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Q.push_list ls q;
              Stats.remaining (nb_remaining q postponed);
         end;
-        
+
         if Q.is_empty q then
           (* When the queue is empty, pour back postponed nodes in it *)
           begin

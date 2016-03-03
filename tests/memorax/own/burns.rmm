@@ -1,0 +1,31 @@
+/* Burn's algorithm for two processes */
+
+forbidden
+  CS CS
+
+process(1)
+data
+  flag = 0 : [0:1]
+text
+  L0: write: flag[my] := 1;
+      /* Fence */
+      read: flag[0] = 0;
+  CS: write: flag[my] := 0;
+      goto L0
+
+process(1)
+data
+  flag = 0 : [0:1]
+text
+  L0: read: flag[0] = 0;
+      write: flag[my] := 1;
+      /* Fence */
+      either{
+        read: flag[0] = 0;
+  CS:   write: flag[my] := 0
+      or
+        read: flag[0] = 1;
+        write: flag[my] := 0
+      };
+      goto L0
+

@@ -538,7 +538,7 @@ let make_predrfl_dl ell f =
   ) f ell
 
 let make_orders_fp evts ord =
-  let f = [ F.f_true ] in
+  let f = [] in
   let f = make_predl hPo (gen_po ord) f in
   let f = make_predl hFence (gen_fence evts ord) f in
   (* let f = make_predl hCo (gen_co evts ord) f in *)
@@ -547,7 +547,7 @@ let make_orders_fp evts ord =
   f
 
 let make_orders_sat evts ord =
-  let f = [ F.f_true ] in
+  let f = [] in
 
   (* let f = make_predl hPo (gen_po ord) f in *)
     let f = make_predl hPoLocUCom (gen_po_loc evts ord) f in
@@ -560,8 +560,8 @@ let make_orders_sat evts ord =
   (* let f = make_predl hPoLocUCom (gen_co evts ord) f in *)
   (* let f = make_predl hCoUProp (gen_co evts ord) f in *)
   
-  (* let f = make_predl_dl hRf (gen_rf_cands evts) f in (\*no value test*\) *)
-    let f = make_predrfl_dl (gen_rf_cands evts) f in (* with value test *)
+  let f = make_predl_dl hRf (gen_rf_cands evts) f in (*no value test*)
+    (* let f = make_predrfl_dl (gen_rf_cands evts) f in (\* with value test *\) *)
 
   let f = make_predl_dl hCo (gen_co_cands evts) f in
 
@@ -573,8 +573,10 @@ let make_orders_sat evts ord =
   f
 
 let make_orders ?(fp=false) evts ord =
-  F.make F.And (if fp then make_orders_fp evts ord
-		else make_orders_sat evts ord)
+  let f = if fp then make_orders_fp evts ord
+	  else make_orders_sat evts ord in
+  if f = [] then F.f_true else
+  F.make F.And f
 
 
 

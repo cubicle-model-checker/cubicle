@@ -237,7 +237,9 @@ let assume_node_no_check { tag = id } ap = (* FP only *)
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.assume ~id (F.make F.Not [(Weakmem.make_orders ~fp:true evts ord)])
+  let fo = Weakmem.make_orders ~fp:true evts ord in
+  if fo <> F.f_true then
+    SMT.assume ~id (F.make F.Not [fo])
 
 let assume_goal n = (* FP only *)
   assume_goal_no_check n;

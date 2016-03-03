@@ -549,14 +549,18 @@ module Make (Options_ : sig val profiling : bool end) = struct
     | [] -> mk_true ()
     | [c] -> mk_clause c
     | c :: cl -> mk_and (mk_clause c) (mk_cnf cl)
+  (* let rec mk_formula = function *)
+  (*   | [] -> mk_true () *)
+  (*   | [c] -> mk_cnf c *)
+  (*   | c :: cl -> mk_and (mk_cnf c) (mk_formula cl) *)
   let rec mk_formula = function
     | [] -> mk_true ()
     | [c] -> mk_cnf c
-    | c :: cl -> mk_and (mk_cnf c) (mk_formula cl)
+    | cl -> mk_cnf (List.flatten cl)
   let mk_forall n up bv tr f =
     let mk_vterm = List.map (fun (v, t) ->
-      AE.Term.make (AE.Symbols.name v) [] t) in (* OR VAR ?*)
-    let up = mk_vterm up in
+      AE.Term.make (AE.Symbols.var v) [] t) in
+    let up = mk_vterm up in (* should be empty *)
     let bv = mk_vterm bv in
     AE.Formula.mk_forall
       (AE.Term.Set.of_list up) (* upvars = vars bound before *)
@@ -567,8 +571,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
     WPT.{ st_decl = Assume(f, true) ; st_loc = dl }
   let mk_goal f =
     let f = mk_formula f in
-    WPT.{ st_decl = Query("g", f, [], Thm) ; st_loc = dl }
-
+    WPT.{ st_decl = Query("g", f, [], Check(*Thm*)) ; st_loc = dl }
+       
   let init_axioms () =
     let qv = true in
     let ety2 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "_e1" ; mk_ety "_e2" ] in
@@ -619,6 +623,13 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3))
 	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))) in
     Queue.push axiom_fr axioms;
+
+    (* Forall ([p1; e1; p2; e2; p3; e3], AE.Ty.Tint, *)
+    (*  [[ Pred ("_rf", [p1; e1; p2; e2]); Pred ("_co", [p1; e1; p3; e3]) ]], *)
+    (*  Imp (And (Eq (Pred ("_rf", [p1; e1; p2; e2]), True), *)
+    (* 	       Eq (Pred ("_co", [p1; e1; p3; e3]), True)), *)
+    (*       And (Eq (Pred ("_po_loc_U_com", [p2; e2; p3; e3]), True), *)
+    (* 	       Eq (Pred ("_co_U_prop", [p2; e2; p3; e3]), True))) *)
 
     (* let axiom_ppo_tso = mk_axiom "axiom_ppo_tso" [] ety2 *)
     (*   [ [ mk_pred ~qv "_po" e1e2 ], None ] *)
@@ -775,6 +786,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	| FE.Unknown t -> raise (Solver.Sat)
 	| FE.Sat t -> raise (Solver.Sat)
       in
+      SAT.start ();
       ignore (Queue.fold (FE.process_decl report)
         (SAT.empty (), true, AE.Explanation.empty) q);
 

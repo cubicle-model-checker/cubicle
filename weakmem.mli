@@ -6,6 +6,35 @@ module F = Smt.Formula
 
 
 
+val hNone : H.t
+val hP0 : H.t
+val hR : H.t
+val hW : H.t
+val hDirection : H.t
+val hWeakVar : H.t
+val hV : H.t
+val hParam : H.t
+val hVarParam : H.t
+val hValType : H.t
+val hDir : H.t
+val hVar : H.t
+val hPar : H.t
+val hVal : H.t
+val hEvent : H.t
+val hInt : H.t
+val hProp : H.t
+val hO : H.t
+val hF : H.t
+val hE : H.t
+val hPo : H.t
+val hRf : H.t
+val hCo : H.t
+val hFence : H.t
+val hCoUProp : H.t
+val hPoLocUCom : H.t
+
+
+
 val init_weak_env : (H.t * H.t list * H.t) list -> unit
 
 

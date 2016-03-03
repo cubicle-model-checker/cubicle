@@ -1,0 +1,80 @@
+/* Dekker's lock with deadlock protection */
+
+forbidden
+  CS CS CS
+data
+  turn = * : [0:2]
+
+process
+data
+  flag = 0 : [0:1]
+text
+  L0: locked write: flag[my] := 1;
+  L1:
+  either{
+    either{read: flag[0] = 1 or read: flag[1] = 1};
+    either{
+      either{read: turn = 1 or read: turn = 2};
+      write: flag[my] := 0;
+      read: turn = 0; /* spin wait */
+      goto L0
+    or
+      read: turn = 0;
+      goto L1
+    }
+  or
+    locked {read: flag[0] = 0; read: flag[1] = 0};
+  CS: either{write: turn := 1 or write: turn := 2};
+    write: flag[my] := 0;
+    goto L0
+  }
+
+process
+data
+  flag = 0 : [0:1]
+text
+  L0: locked write: flag[my] := 1;
+  L1:
+  either{
+    either{read: flag[0] = 1 or read: flag[1] = 1};
+    either{
+      either{read: turn = 0 or read: turn = 2};
+      write: flag[my] := 0;
+      read: turn = 1; /* spin wait */
+      goto L0
+    or
+      read: turn = 1;
+      goto L1
+    }
+  or
+    locked {read: flag[0] = 0; read: flag[1] = 0};
+  CS: either{write: turn := 0 or write: turn := 2};
+    write: flag[my] := 0;
+    goto L0
+  }
+
+process
+data
+  flag = 0 : [0:1]
+text
+  L0: locked write: flag[my] := 1;
+  L1:
+  either{
+    either{read: flag[0] = 1 or read: flag[1] = 1};
+    either{
+      either{read: turn = 0 or read: turn = 1};
+      write: flag[my] := 0;
+      read: turn = 2; /* spin wait */
+      goto L0
+    or
+      read: turn = 2;
+      goto L1
+    }
+  or
+    locked {read: flag[0] = 0; read: flag[1] = 0};
+  CS: either{write: turn := 1 or write: turn := 2};
+    write: flag[my] := 0;
+    goto L0
+  }
+
+

@@ -733,7 +733,7 @@ axiom co_U_prop_t :
 
       (* Print Weak Memory Axomatization *)
       if not fp then fprintf filefmt "%s\n\n" !axioms;
-      
+
       (* Print formula *)
       fprintf filefmt "goal g: true\n";
       List.iter (fun cnf ->

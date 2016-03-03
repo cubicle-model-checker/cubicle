@@ -1,0 +1,51 @@
+# Peterson's mutex algorithm:
+# http://en.wikipedia.org/wiki/Peterson's_algorithm
+#
+# IS NOT robust.
+#
+# flag[0] = true;
+#    turn = 1;
+#    while (flag[1] == true && turn == 1)
+#    {
+#        // busy wait
+#    }
+#    // critical section
+#    ...
+#    // end of critical section
+#    flag[0] = false;
+#
+#
+# Memory layout:
+# 0 — flag[0]
+# 1 — flag[1]
+# 2 — turn
+
+thread t0
+initial q0
+final enter
+transition	q0	q1	write	1	0
+transition	q1	q2	write	1	2
+transition	q2	q3	read	flag1	1
+transition	q3	enter	check	== flag1 0
+transition	q3	q4	check	== flag1 1
+transition	q4	q5	read	turn	2
+transition	q5	enter	check	!= turn 1
+transition	q5	q2	check	== turn 1
+transition	enter	q0 write	0	0
+end
+
+# Thread t1 is symmetric.
+
+thread t1
+initial q0
+final enter
+transition	q0	q1	write	1	1
+transition	q1	q2	write	0	2
+transition	q2	q3	read	flag0	0
+transition	q3	enter	check	== flag0 0
+transition	q3	q4	check	== flag0 1
+transition	q4	q5	read	turn	2
+transition	q5	enter	check	!= turn 0
+transition	q5	q2	check	== turn 0
+transition	enter	q0	write	0	1
+end
