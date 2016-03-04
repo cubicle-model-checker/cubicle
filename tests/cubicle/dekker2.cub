@@ -25,7 +25,7 @@ requires { PC[#1] = L1 }
 transition t1_L2_L3_R_Want2_True ()
 fences (#1)
 requires { PC[#1] = L2 && read(#1, Want2) = 1 }
-{ PC[#1] := L3) }
+{ PC[#1] := L3 }
 
 transition t1_L2_L7_R_Want2_False ()
 fences (#1)

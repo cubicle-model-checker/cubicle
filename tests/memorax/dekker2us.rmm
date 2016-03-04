@@ -11,7 +11,7 @@ registers
   $flag = * : [0:1]
   $turn = * : [0:1]
 text
-  L0: locked write: flag0 := 1;
+  L0: write: flag0 := 1;
   L1: read: $flag := flag1;
       if $flag = 1 then {
         read: $turn := turn;
@@ -20,7 +20,7 @@ text
           while $turn != 0 do { 
             nop
           };
-          locked write: flag0 := 1
+          write: flag0 := 1
         };
 	goto L1
       };
@@ -34,7 +34,7 @@ registers
   $flag = * : [0:1]
   $turn = * : [0:1]
 text
-  L0: locked write: flag1 := 1;
+  L0: write: flag1 := 1;
   L1: read: $flag := flag0;
       if $flag = 1 then {
         read: $turn := turn;
@@ -43,7 +43,7 @@ text
           while $turn != 1 do { 
             nop
           };
-          locked write: flag1 := 1
+          write: flag1 := 1
         };
 	goto L1
       };

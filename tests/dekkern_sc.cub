@@ -27,8 +27,8 @@ type location = PRE | DONE | NCS | LOOP | AWAIT | TURN | TURN2 | CS | CS2
 
 array P[proc] : location
 
-weak array X[proc] : bool
-weak var T : proc
+array X[proc] : bool
+var T : proc
 
 var NullProc : proc
 var NullProcInit : bool
@@ -36,12 +36,11 @@ var NullProcInit : bool
 init (i) { NullProcInit = False && X[i] = False && P[i] = PRE }
 
 unsafe (i j) { P[i] = CS && P[j] = CS }
-(* unsafe (i j k) { P[i] = CS && P[j] = CS && P[k] = CS } *)
 
 
 transition pre_init (i)
 requires { P[i] = PRE && NullProcInit = False }
-{ P[i] := DONE; NullProcInit := True; NullProc := i; write(i, T, i) }
+{ P[i] := DONE; NullProcInit := True; NullProc := i; T := i }
 
 transition pre_start (i)
 requires { P[i] = PRE && NullProcInit = True }
@@ -52,33 +51,33 @@ transition start (i)
 requires { P[i] = NCS }
 {
   P[i] := LOOP;
-  write(i, X[i], True);
+  X[i] := True;
 }
 
 
 transition wait (i j)
-requires { P[i] = LOOP && read(i, X[j]) = True }
+requires { P[i] = LOOP && X[j] = True }
 {
   P[i] := AWAIT;
-  write(i, X[i], False);
+  X[i] := False;
 }
 
 
 transition enter (i)
-requires { P[i] = LOOP && forall_other j. read(i, X[j]) = False }
+requires { P[i] = LOOP && forall_other j. X[j] = False }
 {
   P[i] := CS;
 }
 
 
 transition awaited_1 (i)
-requires { P[i] = AWAIT && read(i, T) = NullProc }
+requires { P[i] = AWAIT && T = NullProc }
 {
   P[i] := TURN;
 }
 
 transition awaited_2 (i)
-requires { P[i] = AWAIT && read(i, T) = i }
+requires { P[i] = AWAIT && T = i }
 {
   P[i] := TURN;
 }
@@ -88,26 +87,26 @@ transition turn_1 (i)
 requires { P[i] = TURN }
 {
   P[i] := TURN2;
-  write(i, T, i);
+  T := i;
 }
 
 transition turn_2 (i)
 requires { P[i] = TURN2 }
 {
   P[i] := LOOP;
-  write(i, X[i], True);
+  X[i] := True;
 }
 
 transition loop_1 (i)
 requires { P[i] = CS }
 {
   P[i] := CS2;
-  write(i, X[i], False);
+  X[i] := False;
 }
 
 transition loop (i)
 requires { P[i] = CS2 }
 {
   P[i] := NCS;
-  write(i, T, NullProc);
+  T := NullProc;
 }
