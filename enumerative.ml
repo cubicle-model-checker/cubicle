@@ -286,37 +286,37 @@ let apply_subst_in_place env st sigma =
 
     SLI.iter (fun proc_domain ->
       try
-          (* sigma(proc_domain) *)
+        (* sigma(proc_domain) *)
         let sigma_proc_domain = List.fold_left (fun acc j ->
           try HI.find sigma j :: acc
           with Not_found -> acc
         ) [] proc_domain |> List.rev in
-          (* rho(proc_domain) *)
+        (* rho(proc_domain) *)
         let rho_proc_domain =
           try HLI.find rho proc_domain with Not_found -> sigma_proc_domain in
-          (* encoding in terms of indexes *)
+        (* encoding in terms of indexes *)
         let sigma_proc_sub = HLI.find env.proc_substates sigma_proc_domain in
         let rho_proc_sub = HLI.find env.proc_substates rho_proc_domain in
 
-          (* eprintf "sigma ("; *)
-          (* List.iter (eprintf "%d,") proc_domain; *)
-          (* eprintf ") = "; *)
-          (* List.iter (eprintf "%d,") sigma_proc_domain; *)
-          (* eprintf "@."; *)
+        (* eprintf "sigma ("; *)
+        (* List.iter (eprintf "%d,") proc_domain; *)
+        (* eprintf ") = "; *)
+        (* List.iter (eprintf "%d,") sigma_proc_domain; *)
+        (* eprintf "@."; *)
 
-          (* eprintf "rho ("; *)
-          (* List.iter (eprintf "%d,") proc_domain; *)
-          (* eprintf ") = "; *)
-          (* List.iter (eprintf "%d,") rho_proc_domain; *)
-          (* eprintf "@."; *)
+        (* eprintf "rho ("; *)
+        (* List.iter (eprintf "%d,") proc_domain; *)
+        (* eprintf ") = "; *)
+        (* List.iter (eprintf "%d,") rho_proc_domain; *)
+        (* eprintf "@."; *)
 
-          (* Perform actual swaps on the encoded versions *)
+        (* Perform actual swaps on the encoded versions *)
         List.iter2 (fun i j ->
-              (* eprintf "   exchanging %a <---> %a@."
-                 Term.print (id_to_term env i) Term.print (id_to_term env j); *)
+          (* eprintf "   exchanging %a <---> %a@."
+             Term.print (id_to_term env i) Term.print (id_to_term env j); *)
           swap st i j) sigma_proc_sub rho_proc_sub;
 
-          (* rho += sigma(proc_domain) |--> rho(proc_domain) *)
+        (* rho += sigma(proc_domain) |--> rho(proc_domain) *)
         HLI.replace rho sigma_proc_domain rho_proc_domain;
       with Not_found ->()
     ) !proc_subs
@@ -369,7 +369,7 @@ let find_subst_for_norm2 sigma env st =
                 |> List.stable_sort (fun (_, v1, _) (_, v2, _) -> compare v1 v2)
                 |> map_with_procs [] env.proc_ids
                 |> List.iter (fun (x, y) ->
-          (* let y = try HI.find sigma y with Not_found -> y in *)
+                  (* let y = try HI.find sigma y with Not_found -> y in *)
                   if x <> y then HI.replace sigma x y);
     apply_subst_in_place env st sigma;
   ) [List.hd env.partial_order]
@@ -447,8 +447,8 @@ let add_pos_to_proc_substate ht
       let i = HT.find ht t in
       let ids_ps = List.map (fun hp -> HT.find ht (Elem (hp, Var))) ps in
       let sub_ps = try HLI.find proc_substates ids_ps with Not_found -> [] in
-        (* List.iter (fun p -> eprintf "%d (%a), " p Term.print t) ids_ps; *)
-        (* eprintf "at %d@." i; *)
+      (* List.iter (fun p -> eprintf "%d (%a), " p Term.print t) ids_ps; *)
+      (* eprintf "at %d@." i; *)
       HLI.replace proc_substates ids_ps (i :: sub_ps);
       HI.add reverse_proc_substates i ids_ps
     | _ -> ()
@@ -677,8 +677,8 @@ let write_atom_to_states env sts = function
       st.(HT.find env.id_terms t1) <- HT.find env.id_terms t2) sts;
     sts
   | Atom.Comp (t1, Neq, Elem(_, Var)) ->
-      (* Assume an extra process if a disequality is mentioned on
-         type proc in init formula : change this to something more robust *)
+    (* Assume an extra process if a disequality is mentioned on
+       type proc in init formula : change this to something more robust *)
     List.iter (fun st -> st.(HT.find env.id_terms t1) <- env.extra_proc) sts;
     sts
   | _ -> sts
@@ -812,7 +812,7 @@ let update_to_actions procs sigma env acc
 let missing_reqs_to_actions env acct =
   List.fold_left (fun acc -> function
     | (a, Eq, b) ->
-        (* variable on lhs *)
+      (* variable on lhs *)
       let a, b =
         if not (is_variable env a) && is_variable env b then b, a
         else a, b in
@@ -1032,38 +1032,6 @@ let create_new_state env s l =
         done
       | _ -> assert false
   ) l; s'
-
-let post_bfs env st visited trs q cpt_q frg fd depth =
-  if not limit_forward_depth || depth < forward_depth then
-    List.iter (fun st_tr ->
-      try
-        let sts = st_tr.st_f st in
-        List.iter (fun s ->
-          
-          if forward_sym then normalize_state env s;
-          if not (HST.mem visited s) then begin
-            if copy_state then begin
-              let l = State.diff st s in
-              List.iter (fun (i, (e1, e2)) ->
-                let ti = HI.find env.terms_id i in
-                let t1 = HI.find env.terms_id e1 in
-                let t2 = HI.find env.terms_id e2 in
-                Format.eprintf "%a = %a, %a = %a@."
-                  Term.print ti Term.print t1 Term.print ti Term.print t2) l;
-              let b = is_general env l in
-              Format.eprintf "%b\n@." b;
-              (* incr cpt_q; *)
-                if b then 
-                  let s' = create_new_state env s l in
-                  HQueue.add ~cpt_q (depth + 1, s') q
-            end;
-            if incremental_enum && depth = fd - 1 then
-              frg := s :: !frg
-            else
-              HQueue.add ~cpt_q (depth + 1, s) q
-          end
-        ) sts
-      with Not_applicable -> ()) trs
 
 let post_dfs st visited trs q cpt_q depth =
   if not limit_forward_depth || depth < forward_depth then
@@ -1423,11 +1391,48 @@ let print_iopi_list =
       Node.print n
   )
 
+let post_bfs env st visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
+  if not limit_forward_depth || depth < forward_depth then
+    List.iter (fun st_tr ->
+      try
+        let sts = st_tr.st_f st in
+        List.iter (fun s ->
+          if forward_sym then normalize_state env s;
+          if not (HST.mem visited s) then begin
+            if copy_state then begin
+              let l = State.diff st s in
+              if debug then
+                List.iter (fun (i, (e1, e2)) ->
+                  let ti = HI.find env.terms_id i in
+                  let t1 = HI.find env.terms_id e1 in
+                  let t2 = HI.find env.terms_id e2 in
+                  Format.eprintf "%a = %a, %a = %a@."
+                    Term.print ti Term.print t1 Term.print ti Term.print t2) l;
+              if is_general env l then
+                let s' = create_new_state env s l in
+                if not (List.exists (fun (b, n) -> 
+                  not (check_cand env st b)
+                ) env.bad_states) then (
+                  incr cpt_c;
+                  HQueue.add ~cpt_q (depth + 1, s') q
+                )
+                else (
+                  incr cpt_rc)
+            end;
+            if incremental_enum && depth = fd - 1 then
+              frg := s :: !frg
+            else
+              HQueue.add ~cpt_q (depth + 1, s) q
+          end
+        ) sts
+      with Not_applicable -> ()) trs
+
 let forward_bfs init procs env l =
   let h_visited = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
   let cpt_q = ref 1 in
+  let cpt_c, cpt_rc = ref 0, ref 0 in
   let trs = env.st_trs in
   let to_do = HQueue.create env.table_size in
   let ref_es = ref enum_steps in
@@ -1435,6 +1440,7 @@ let forward_bfs init procs env l =
   let md = ref (-1) in
   set_fd_md fd md ref_es;
   let fringe = ref [] in
+  Format.printf "BWD : %d@." (List.length env.bad_states);
   List.iter (fun td -> HQueue.add td to_do) l;
   while not (HQueue.is_empty to_do && !fringe = []) &&
     (max_forward = -1 || !cpt_f < max_forward) do
@@ -1487,7 +1493,7 @@ let forward_bfs init procs env l =
       decr cpt_q;
       if not (HST.mem h_visited st) then begin
         HST.add h_visited st ();
-        post_bfs env st h_visited trs to_do cpt_q fringe !fd depth;
+        post_bfs env st h_visited trs to_do cpt_q (cpt_c, cpt_rc) fringe !fd depth;
         incr cpt_f;
         if debug && verbose > 1 then
           eprintf "%d : %a\n@." !cpt_f
@@ -1500,7 +1506,8 @@ let forward_bfs init procs env l =
         if limit_forward_depth && depth = forward_depth then
           env.fringe <- st :: env.fringe;
       end
-  done
+  done;
+  Format.eprintf "Copies : %d\nRejected : %d@." !cpt_c !cpt_rc
 
 let nodes_to_iopi_list env bwd =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
@@ -1521,9 +1528,6 @@ let search bwd procs init =
       eprintf "init : %a\n@." SAtom.print (state_to_cube env st))
       st_inits;
   let bwd = nodes_to_iopi_list env bwd in
-  eprintf "BWDS : @.";
-  print_iopi_list bwd;
-
   let env = {env with 
     st_trs = transitions_to_func procs env init.t_trans;
     bad_states = bwd;

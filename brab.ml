@@ -60,9 +60,11 @@ let reinstall_sigint () =
 
 let brab system =
   let cubes = 
-    match BWD.search ~forward:true system with
-      | Bwd.Safe (cubes, _) -> cubes
-      | uns -> assert false
+    if bwd_fwd > -1 then
+      match BWD.search ~forward:true system with
+        | Bwd.Safe (cubes, _) -> cubes
+        | uns -> assert false
+    else []
   in
   (* List.iter (Format.eprintf "%a\n@." Node.print) cubes; *)
   Oracle.init ~bwd:cubes system;
