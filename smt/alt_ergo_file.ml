@@ -544,6 +544,78 @@ module Make (Options_ : sig val profiling : bool end) = struct
 axiom rfe :
   forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
   _rf(p1, e1, p2, e2) and p1 <> p2
+  -> (*_co_U_prop(p1, e1, p2, e2)*)
+    _propi(p1, e1) < _propi(p2, e2)
+
+axiom fr :
+  forall pr, pw1, pw2, r, w1, w2 : int [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
+  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
+  -> (*_po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)*)
+    _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)
+
+(* axiom ppo_tso : *)
+(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
+(*   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R) *)
+(*   -> _co_U_prop(p1, e1, p2, e2) *)
+
+axiom po_loc_U_com_1 :
+  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
+   -> (*_po_loc_U_com(p1, e1, p2, e2)*)
+    _sci(p1, e1) < _sci(p2, e2)
+
+axiom po_loc_U_com_2 :
+  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2)
+   -> (*_po_loc_U_com(p1, e1, p2, e2)*)
+    _propi(p1, e1) < _propi(p2, e2)
+
+(* axiom po_loc_U_com_t : *)
+(*   forall p1, p2, p3, e1, e2, e3 : int [_po_loc_U_com(p1,e1,p2,e2),_po_loc_U_com(p2,e2,p3,e3)]. *)
+(*   _po_loc_U_com(p1, e1, p2, e2) and _po_loc_U_com(p2, e2, p3, e3) *)
+(*    -> _po_loc_U_com(p1, e1, p3, e3) *)
+
+axiom co_U_prop_1 :
+  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
+  -> (*_co_U_prop(p1, e1, p2, e2)*)
+    _propi(p1, e1) < _propi(p2, e2)
+
+axiom co_U_prop_2 :
+  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
+  _fence(p1, e1, p2, e2)
+  -> (*_co_U_prop(p1, e1, p2, e2)*)
+    _propi(p1, e1) < _propi(p2, e2)
+
+(* axiom co_U_prop_t : *)
+(*   forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)]. *)
+(*   _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3) *)
+(*    -> _co_U_prop(p1, e1, p3, e3)*)
+
+axiom po_loc_U_com :
+  forall p1, p2, e1, e2 : int [_po_loc_U_com(p1,e1,p2,e2)].
+  _po_loc_U_com(p1, e1, p2, e2)
+   -> _sci(p1,e1) < _sci(p2,e2)
+
+axiom co_U_prop :
+  forall p1, p2, e1, e2 : int [_co_U_prop(p1,e1,p2,e2)].
+  _co_U_prop(p1, e1, p2, e2)
+   -> _propi(p1,e1) < _propi(p2,e2)"
+
+(*"axiom rf :
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
+
+(* axiom po_loc : *)
+(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
+(*   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var *)
+(*                       (* and _e(p1, e1)._par = _e(p2, e2)._par *) *)
+(*                       (* and _e(p1, e1)._p1 = _e(p2, e2)._p1 *) *)
+(*   -> _po_loc_U_com(p1, e1, p2, e2) *)
+
+axiom rfe :
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) and p1 <> p2
   -> _co_U_prop(p1, e1, p2, e2)
 
 axiom fr :
@@ -584,7 +656,7 @@ axiom co_U_prop_2 :
 axiom co_U_prop_t :
   forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)].
   _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3)
-   -> _co_U_prop(p1, e1, p3, e3)"
+   -> _co_U_prop(p1, e1, p3, e3)"*)
 
   let typeof t =
     let t = (Hstring.view t) in

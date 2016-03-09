@@ -510,8 +510,15 @@ module Make (Options_ : sig val profiling : bool end) = struct
     if qv then AE.Symbols.var s else AE.Symbols.name s
 
   let mk_pred ?(qv=false) p al =
-    let al = List.map (fun a -> AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
+    let al = List.map (fun a ->
+      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
     AE.Term.make (AE.Symbols.name p) al AE.Ty.Tbool
+
+  let mk_fun ?(qv=false) p al =
+    let al = [ fst al ; snd al ] in
+    let al = List.map (fun a ->
+      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
+    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tint
 
   let mk_evt_f ?(qv=false) (p, e) f =
     let tp = AE.Term.make (mk_symb ~qv p) [] AE.Ty.Tint in
@@ -521,6 +528,9 @@ module Make (Options_ : sig val profiling : bool end) = struct
 
   let dl = (Lexing.dummy_pos, Lexing.dummy_pos)
   let id = let c = ref 0 in fun () -> c := !c + 1; !c
+  let mk_lt t1 t2 =
+    AE.Formula.mk_lit
+      (AE.Literal.LT.mk_builtin true (AE.Hstring.make "<") [t1;t2]) (id ())
   let mk_ety e = (e, AE.Ty.Tint)
   let mk_true () = AE.Formula.mk_lit AE.Literal.LT.vrai (id ())
   let mk_eq t1 t2 = AE.Formula.mk_lit (AE.Literal.LT.mk_eq t1 t2) (id ())
@@ -583,6 +593,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
     let e1e3 = ["p1";"_e1";"p3";"_e3"] in
     let e1 = ("p1", "_e1") in
     let e2 = ("p2", "_e2") in
+    let e3 = ("p3", "_e3") in
     let tp1 = AE.Term.make (mk_symb ~qv "p1") [] AE.Ty.Tint in
     let tp2 = AE.Term.make (mk_symb ~qv "p2") [] AE.Ty.Tint in
     let tw = Term.make_app (Hstring.make "_W") [] in
@@ -607,10 +618,11 @@ module Make (Options_ : sig val profiling : bool end) = struct
     let axiom_rfe = mk_axiom "axiom_rfe" [] ety2
       [ [ mk_pred ~qv "_rf" e1e2 ], None ]
       (mk_imp
-	(mk_and
-	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	  (mk_neq tp1 tp2))
-	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+    	(mk_and
+    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
+    	  (mk_neq tp1 tp2))
+    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    	(* (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in *)
     Queue.push axiom_rfe axioms;
 
     let axiom_fr = mk_axiom "axiom_fr" [] ety3
@@ -620,8 +632,10 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
 	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
 	(mk_and
-	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3))
-	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))) in
+	  (mk_lt (mk_fun ~qv "_sci" e2) (mk_fun ~qv "_sci" e3))
+	  (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3)))) in
+	  (* (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3)) *)
+	  (* (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))) in *)
     Queue.push axiom_fr axioms;
 
     (* Forall ([p1; e1; p2; e2; p3; e3], AE.Ty.Tint, *)
@@ -646,49 +660,67 @@ module Make (Options_ : sig val profiling : bool end) = struct
       [ [ mk_pred ~qv "_co" e1e2 ], None ]
       (mk_imp
 	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
+	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
+	(* (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in *)
     Queue.push axiom_po_U_com_1 axioms;
 
     let axiom_po_U_com_2 = mk_axiom "axiom_po_U_com_2" [] ety2
       [ [ mk_pred ~qv "_rf" e1e2 ], None ]
       (mk_imp
 	(mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in
+	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+	(* (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))) in *)
     Queue.push axiom_po_U_com_2 axioms;
 
-    let axiom_po_U_com_t = mk_axiom "axiom_po_U_com_t" [] ety3
-      [ [ mk_pred ~qv "_po_loc_U_com" e1e2 ;
-	  mk_pred ~qv "_po_loc_U_com" e2e3 ], None ]
-      (mk_imp
-	(mk_and
-	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))
-	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3)))
-	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e3))) in
-    Queue.push axiom_po_U_com_t axioms;
+    (* let axiom_po_U_com_t = mk_axiom "axiom_po_U_com_t" [] ety3 *)
+    (*   [ [ mk_pred ~qv "_po_loc_U_com" e1e2 ; *)
+    (* 	  mk_pred ~qv "_po_loc_U_com" e2e3 ], None ] *)
+    (*   (mk_imp *)
+    (* 	(mk_and *)
+    (* 	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2)) *)
+    (* 	  (mk_eq_true (mk_pred ~qv "_po_loc_U_com" e2e3))) *)
+    (* 	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e3))) in *)
+    (* Queue.push axiom_po_U_com_t axioms; *)
 
     let axiom_co_U_prop_1 = mk_axiom "axiom_co_U_prop_1" [] ety2
       [ [ mk_pred ~qv "_co" e1e2 ], None ]
       (mk_imp
 	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+	(* (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in *)
     Queue.push axiom_co_U_prop_1 axioms;
 
     let axiom_co_U_prop_2 = mk_axiom "axiom_co_U_prop_2" [] ety2
       [ [ mk_pred ~qv "_fence" e1e2 ], None ]
       (mk_imp
     	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
-    	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in
+	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    	(* (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))) in *)
     Queue.push axiom_co_U_prop_2 axioms;
 
-    let axiom_co_U_prop_t = mk_axiom "axiom_co_U_prop_t" [] ety3
-      [ [ mk_pred ~qv "_co_U_prop" e1e2 ;
-	  mk_pred ~qv "_co_U_prop" e2e3 ], None ]
+    (* let axiom_co_U_prop_t = mk_axiom "axiom_co_U_prop_t" [] ety3 *)
+    (*   [ [ mk_pred ~qv "_co_U_prop" e1e2 ; *)
+    (* 	  mk_pred ~qv "_co_U_prop" e2e3 ], None ] *)
+    (*   (mk_imp *)
+    (* 	(mk_and *)
+    (* 	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2)) *)
+    (* 	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3))) *)
+    (* 	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e3))) in *)
+    (* Queue.push axiom_co_U_prop_t axioms *)
+
+    let axiom_po_loc_U_com = mk_axiom "axiom_po_loc_U_com" [] ety2
+      [ [ mk_pred ~qv "_po_loc_U_com" e1e2 ], None ]
       (mk_imp
-	(mk_and
-	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))
-	  (mk_eq_true (mk_pred ~qv "_co_U_prop" e2e3)))
-	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e3))) in
-    Queue.push axiom_co_U_prop_t axioms
+	(mk_eq_true (mk_pred ~qv "_po_loc_U_com" e1e2))
+	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
+    Queue.push axiom_po_loc_U_com axioms;
+
+    let axiom_co_U_prop = mk_axiom "axiom_co_U_prop" [] ety2
+      [ [ mk_pred ~qv "_co_U_prop" e1e2 ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))
+	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    Queue.push axiom_co_U_prop axioms
 
   let init_axioms () =
     if Options.model = Options.SC then ()

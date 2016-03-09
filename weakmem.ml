@@ -101,7 +101,11 @@ let init_weak_env wvl =
   Smt.Symbol.declare hCo int4 Smt.Type.type_prop;
   Smt.Symbol.declare hFence int4 Smt.Type.type_prop;
   Smt.Symbol.declare hCoUProp int4 Smt.Type.type_prop;
-  Smt.Symbol.declare hPoLocUCom int4 Smt.Type.type_prop
+  Smt.Symbol.declare hPoLocUCom int4 Smt.Type.type_prop;
+
+  let int2 = [Smt.Type.type_int; Smt.Type.type_int] in
+  Smt.Symbol.declare (Hstring.make "_sci") int2 Smt.Type.type_int;
+  Smt.Symbol.declare (Hstring.make "_propi") int2 Smt.Type.type_int
 
 
 
@@ -394,10 +398,16 @@ let gen_po_loc evts ord =
        let (_, v1, pl1) = HMap.find e1 pevts in
        let po = List.fold_left (fun po e2 ->
          if H.equal e2 hF then po else
-	   let (_, v2, pl2) = HMap.find e2 pevts in
-	   if not (H.equal v1 v2 && hpl_equal pl1 pl2) then po else
-	     (p, e1, p, e2) :: po
+       	   let (_, v2, pl2) = HMap.find e2 pevts in
+       	   if not (H.equal v1 v2 && hpl_equal pl1 pl2) then po else
+       	     (p, e1, p, e2) :: po
        ) po pord in
+       (* let po = try let e2 = List.find (fun e2 -> *)
+       (*     if H.equal e2 hF then false else *)
+       (* 	     let (_, v2, pl2) = HMap.find e2 pevts in *)
+       (* 	     H.equal v1 v2 && hpl_equal pl1 pl2 *)
+       (* 	   ) pord in (p, e1, p, e2) :: po *)
+       (*   with Not_found -> po in *)
        aux p po pevts pord
   in
   HMap.fold (fun p pord po -> aux p po (HMap.find p evts) pord) ord []
@@ -411,10 +421,16 @@ let gen_ppo_tso evts ord =
        let (d1, _, _) = HMap.find e1 pevts in
        let po = List.fold_left (fun po e2 ->
          if H.equal e2 hF then po else
-	   let (d2, _, _) = HMap.find e2 pevts in
-	   if H.equal d1 hW && H.equal d2 hR then po else
-	     (p, e1, p, e2) :: po
+       	   let (d2, _, _) = HMap.find e2 pevts in
+       	   if H.equal d1 hW && H.equal d2 hR then po else
+       	     (p, e1, p, e2) :: po
        ) po pord in
+       (* let po = try let e2 = List.find (fun e2 -> *)
+       (*     if H.equal e2 hF then false else *)
+       (* 	     let (d2, _, _) = HMap.find e2 pevts in *)
+       (* 	     not (H.equal d1 hW && H.equal d2 hR) *)
+       (* 	   ) pord in (p, e1, p, e2) :: po *)
+       (* 	 with Not_found -> po in *)
        aux p po pevts pord
   in
   HMap.fold (fun p pord po -> aux p po (HMap.find p evts) pord) ord []
@@ -506,6 +522,14 @@ let gen_rf_cands evts = (* exclude trivially false rf (use value/const) *)
 
 
 
+let make_rel r (p1, e1, p2, e2) =
+  let p1, p2 = T.make_app p1 [], T.make_app p2 [] in
+  let e1, e2 = T.make_app e1 [], T.make_app e2 [] in
+  F.make_lit F.Le [ T.make_app r [p1; e1] ; T.make_app r [p2; e2] ]
+
+let make_rell r el f =
+  List.fold_left (fun f e -> make_rel r e :: f) f el
+
 let make_pred p (p1, e1, p2, e2) b =
   let p1, p2 = T.make_app p1 [], T.make_app p2 [] in
   let e1, e2 = T.make_app e1 [], T.make_app e2 [] in
@@ -541,9 +565,6 @@ let make_orders_fp evts ord =
   let f = [] in
   let f = make_predl hPo (gen_po ord) f in
   let f = make_predl hFence (gen_fence evts ord) f in
-  (* let f = make_predl hCo (gen_co evts ord) f in *)
-  (* let f = make_predl_dl hRf (gen_rf_cands evts) f in *)
-  (* let f = make_predl_dl hCo (gen_co_cands evts) f in   *)
   f
 
 let make_orders_sat evts ord =
@@ -552,23 +573,28 @@ let make_orders_sat evts ord =
   (* let f = make_predl hPo (gen_po ord) f in *)
     let f = make_predl hPoLocUCom (gen_po_loc evts ord) f in
     let f = make_predl hCoUProp (gen_ppo_tso evts ord) f in
+    (* let f = make_rell (Hstring.make "_sci") (gen_po_loc evts ord) f in *)
+    (* let f = make_rell (Hstring.make "_propi") (gen_ppo_tso evts ord) f in *)
 
   let f = make_predl hFence (gen_fence evts ord) f in
     (* let f = make_predl hCoUProp (gen_fence evts ord) f in *)
+    (* let f = make_rell (Hstring.make "_propi") (gen_fence evts ord) f in *)
 
   let f = make_predl hCo (gen_co evts ord) f in
   (* let f = make_predl hPoLocUCom (gen_co evts ord) f in *)
   (* let f = make_predl hCoUProp (gen_co evts ord) f in *)
+  (* let f = make_rell (Hstring.make "_sci") (gen_co evts ord) f in *)
+  (* let f = make_rell (Hstring.make "_propi") (gen_co evts ord) f in *)
   
   let f = make_predl_dl hRf (gen_rf_cands evts) f in (*no value test*)
     (* let f = make_predrfl_dl (gen_rf_cands evts) f in (\* with value test *\) *)
 
   let f = make_predl_dl hCo (gen_co_cands evts) f in
 
-  let f = HMap.fold (fun p -> HMap.fold (fun e _ f ->
-    make_pred hPoLocUCom (p, e, p, e) false ::
-    make_pred hCoUProp (p, e, p, e) false :: f
-  )) evts f in
+  (* let f = HMap.fold (fun p -> HMap.fold (fun e _ f -> *)
+  (*   make_pred hPoLocUCom (p, e, p, e) false :: *)
+  (*   make_pred hCoUProp (p, e, p, e) false :: f *)
+  (* )) evts f in *)
 
   f
 
@@ -581,13 +607,6 @@ let make_orders ?(fp=false) evts ord =
 
 
 (*
-let name e = "e" ^ (string_of_int e.uid)
-
-let int_of_tid tid =
-  let tid = H.view tid in
-  let tid = String.sub tid 1 ((String.length tid)-1) in
-  int_of_string tid
-
 let print_var fmt (v, vi) =
   if vi = [] then fprintf fmt "\\texttt{%a}" H.print v
   else fprintf fmt "\\texttt{%a}[%a]"
@@ -660,134 +679,4 @@ let es_apply_subst s es =
   ) es.po_f IntMap.empty in
   { events; po_f }
 
-let es_add_events es el =
-  let events = List.fold_left (fun events e ->
-    IntMap.add e.uid e events
-  ) es.events el in
-  { es with events }
-
-let es_add_events_full es el =
-  let events, po_f = List.fold_left (fun (events, po_f) e ->
-    let tid = int_of_tid e.tid in
-    let tpo_f = try IntMap.find tid po_f with Not_found -> [] in
-    let po_f = IntMap.add tid (e.uid :: tpo_f) po_f in
-    let events = IntMap.add e.uid e events in
-    (events, po_f)
-  ) (es.events, es.po_f) el in
-  { events; po_f }
-
-let es_add_fences es tidl =
-  let po_f = List.fold_left (fun po_f tid ->
-    let tid = int_of_tid tid in
-    let tpo_f = try IntMap.find tid po_f with Not_found -> [] in
-    IntMap.add tid (0 :: tpo_f) po_f
-  ) es.po_f tidl in
-  { es with po_f }
-
-let event_from_id es eid =
-  try IntMap.find eid es.events
-  with Not_found -> failwith "Event.event_from_id : unknown event id"
-
-let write_from_id es eid =
-  if eid = 0 then None
-  else
-    let e = event_from_id es eid in
-    if e.dir = EWrite then Some e
-    else None
-
-let gen_po es =
-  let rec aux po = function
-    | [] | [_] -> po
-    | 0 :: tpof -> aux po tpof
-    | eid :: 0 :: tpof -> aux po (eid :: tpof)
-    | eid1 :: ((eid2 :: _) as tpof) ->
-       let e1 = event_from_id es eid1 in
-       let e2 = event_from_id es eid2 in
-       aux ((e1, e2) :: po) tpof
-  in
-  IntMap.fold (fun _ tpof po -> aux po tpof) es.po_f []
-
-let gen_fence es =
-  let rec split_at_first_fence ltpof = function
-    | 0 :: rtpof | ([] as rtpof) -> ltpof, rtpof
-    | eid :: rtpof -> split_at_first_fence (eid :: ltpof) rtpof
-  in
-  let rec first_event dir = function
-    | [] -> None
-    | eid :: tpof ->
-       let e = event_from_id es eid in
-       if e.dir = dir then Some eid else first_event dir tpof
-  in
-  let rec aux fence ltpof rtpof = match rtpof with
-    | [] -> fence
-    | _ ->
-       let ltpof, rtpof = split_at_first_fence ltpof rtpof in
-       match first_event EWrite ltpof, first_event ERead rtpof with
-       | Some w, Some r ->
-	  let we = event_from_id es w in
-	  let re = event_from_id es r in
-	  aux ((we, re) :: fence) ltpof rtpof (*should make lst*)
-       | _, _ -> aux fence ltpof rtpof
-  in
-  IntMap.fold (fun _ tpof fence -> aux fence [] tpof) es.po_f []
-
-let rec co_from_tpof es co = function
-  | [] -> co
-  | eid1 :: tpof ->
-     match write_from_id es eid1 with
-     | None -> co_from_tpof es co tpof
-     | Some e1 ->
-	let co = List.fold_left (fun co eid2 ->
-	  match write_from_id es eid2 with
-	  | None -> co
-	  | Some e2 -> if e1.var = e2.var then (e1, e2) :: co else co
-	) co tpof in
-	co_from_tpof es co tpof
-
-let gen_co es =
-  let writes = IntMap.filter (fun _ e -> e.dir = EWrite) es.events in
-  let iwrites, writes = IntMap.partition (fun _ e ->
-    H.view e.tid = "#0") writes in
-  let co = IntMap.fold (fun eid1 e1 co -> (* Initial writes *)
-    IntMap.fold (fun eid2 e2 co ->
-      if e1.var = e2.var then (e1, e2) :: co else co
-    ) writes co
-  ) iwrites [] in
-  IntMap.fold (fun tid tpof co -> (* Writes from same thread *)
-    co_from_tpof es co tpof
-  ) es.po_f co
-			
-let gen_co_cands es =
-  let rec aux cco tpof1 pof =
-    try
-      let (tid2, tpof2) = IntMap.choose pof in
-      let cco = List.fold_left (fun cco eid1 ->
-        match write_from_id es eid1 with
-        | None -> cco
-        | Some e1 ->
-           List.fold_left (fun cco eid2 ->
-             match write_from_id es eid2 with
-	     | None -> cco
-	     | Some e2 ->
-		if e1.var <> e2.var then cco
-		else [ (e1, e2) ; (e2, e1) ] :: cco
-	   ) cco tpof2
-      ) cco tpof1 in
-      aux cco tpof2 (IntMap.remove tid2 pof)
-    with Not_found -> cco
-  in
-  try
-    let (tid1, tpof1) = IntMap.choose es.po_f in
-    aux [] tpof1 (IntMap.remove tid1 es.po_f)
-  with Not_found -> []
-
-let gen_rf_cands es =
-  let reads, writes = IntMap.partition (fun _ e -> e.dir = ERead) es.events in
-  IntMap.fold (fun eid1 e1 crf ->
-    let ecrf = IntMap.fold (fun eid2 e2 ecrf ->
-      if e1.var <> e2.var then ecrf
-      else (e2, e1) :: ecrf
-    ) writes [] in
-    if ecrf = [] then crf else ecrf :: crf
-  ) reads []
  *)
