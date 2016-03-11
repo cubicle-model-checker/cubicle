@@ -85,7 +85,7 @@
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
-%token SIZEPROC
+%token SIZEPROC TREGEXP
 %token REQUIRE UNSAFE GOOD PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
@@ -139,6 +139,7 @@ decl :
   | good { PGood $1 }
   | transition { PTrans $1 }
   | function_decl { PFun  }
+  | copy_regexp { PCopy $1 }
 
 symbold_decls :
   | { [], [], [] }
@@ -149,6 +150,17 @@ symbold_decls :
   | array_decl symbold_decls
       { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
 ;
+
+trans_list :
+  | t = transition_name { [t] }
+  | t = transition_name tl = trans_list { t :: tl }
+
+block_regexp :
+  | transition_name { [$1] }
+  | LEFTPAR trans_list RIGHTPAR { $2 }
+
+copy_regexp :
+  | 
 
 function_decl :
   | PREDICATE lident LEFTPAR lident_comma_list RIGHTPAR LEFTBR expr RIGHTBR {

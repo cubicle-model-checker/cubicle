@@ -63,6 +63,11 @@ if test "$OCAMLYACC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlyacc.)
 fi
 
+AC_CHECK_PROG(MENHIR,menhir,menhir,no)
+if test "$MENHIR" = no ; then
+	AC_MSG_ERROR(Cannot find menhir.)
+fi
+
 
 #looking for functory library
 

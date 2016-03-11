@@ -33,6 +33,7 @@ OCAMLOPT = ocamlopt.opt
 OCAMLDEP = ocamldep
 OCAMLLEX = ocamllex
 OCAMLYACC= ocamlyacc
+MENHIR   = menhir
 OCAMLLIB = /home/mattias/.opam/4.02.0/lib/ocaml
 FUNCTORYLIB = -I /home/mattias/.opam/4.02.0/lib/functory
 OCAMLBEST= opt
@@ -175,10 +176,10 @@ version.ml: config.status
 	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLLEX) $< > /dev/null
 
 .mly.ml:
-	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(MENHIR) -v $< 
 
 .mly.mli:
-	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(MENHIR) -v $< 
 
 
 # file headers

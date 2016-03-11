@@ -1,4 +1,4 @@
-(**************************************************************************)
+3(**************************************************************************)
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
@@ -74,6 +74,8 @@ module HST = Hashtbl.Make
     let hash = hash_state
    end)
 
+type tkind = Orig | Copy
+
 
 (* This is a queue with a hash table on the side to avoid storing useless
    states, the overhead of the hashtable is negligible and allows to reduce the
@@ -81,7 +83,7 @@ module HST = Hashtbl.Make
    table for BFS) *)
 module HQueue = struct
 
-  type t = (int * State.t) Queue.t * unit HST.t
+  type t = (int * State.t) Queue.t * tkind HST.t
 
   let create size = Queue.create (), HST.create size
 
@@ -521,7 +523,7 @@ let init_tables ?(alloc=true) procs s =
       List.exists (fun (x,y) -> x <> y) sigma
     ) (Variable.all_permutations proc_ids proc_ids) in
   let perm_states = build_state_procs_map ht procs var_terms proc_terms in
-  if debug then
+  if debug && verbose > 2 then
     HT.iter (fun t i -> eprintf "%a -> %d@." Term.print t i ) ht;
   let id_true =
     try HT.find ht (Elem (Term.htrue, Constr)) with Not_found -> -2 in
@@ -1401,7 +1403,7 @@ let post_bfs env st visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
           if not (HST.mem visited s) then begin
             if copy_state then begin
               let l = State.diff st s in
-              if debug then
+              if debug && verbose > 1 then
                 List.iter (fun (i, (e1, e2)) ->
                   let ti = HI.find env.terms_id i in
                   let t1 = HI.find env.terms_id e1 in

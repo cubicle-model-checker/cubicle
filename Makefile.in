@@ -33,6 +33,7 @@ OCAMLOPT = @OCAMLOPT@
 OCAMLDEP = @OCAMLDEP@
 OCAMLLEX = @OCAMLLEX@
 OCAMLYACC= @OCAMLYACC@
+MENHIR   = @MENHIR@
 OCAMLLIB = @OCAMLLIB@
 FUNCTORYLIB = @FUNCTORYLIB@
 OCAMLBEST= @OCAMLBEST@
@@ -175,10 +176,10 @@ version.ml: config.status
 	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLLEX) $< > /dev/null
 
 .mly.ml:
-	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(MENHIR) -v $< 
 
 .mly.mli:
-	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(MENHIR) -v $< 
 
 
 # file headers

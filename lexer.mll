@@ -21,29 +21,30 @@
   let () = 
     List.iter 
       (fun (x,y) -> Hashtbl.add keywords x y)
-      [ "type", TYPE;
-	"init", INIT;
-	"transition", TRANSITION;
-	"invariant", INVARIANT;
-	"requires", REQUIRE;
-        "array", ARRAY;
-        "var", VAR;
-        "const", CONST;
-        "unsafe", UNSAFE;
-	"case", CASE;
-	"forall_other", FORALL_OTHER;
-	"exists_other", EXISTS_OTHER;
-	"forall", FORALL;
-        "exists", EXISTS;
-        "predicate", PREDICATE;
-        "if", IF;
-        "then", THEN;
+      [ "array", ARRAY;
+        "case", CASE;
+	"const", CONST;
         "else", ELSE;
-        "not", NOT;
-        "true", TRUE;
-        "false", FALSE;
-	"number_procs", SIZEPROC;
-	"good", GOOD
+        "exists", EXISTS;
+        "exists_other", EXISTS_OTHER;
+	"false", FALSE;
+	"forall", FORALL;
+        "forall_other", FORALL_OTHER;
+        "good", GOOD;
+	"if", IF;
+        "init", INIT;
+	"invariant", INVARIANT;
+	"not", NOT;
+        "number_procs", SIZEPROC;
+	"predicate", PREDICATE;
+        "requires", REQUIRE;
+        "then", THEN;
+        "trans_regexp", TREGEXP; 
+        "transition", TRANSITION;
+	"true", TRUE;
+        "type", TYPE;
+	"unsafe", UNSAFE;
+	"var", VAR;
       ]
 	       
   let newline lexbuf =
