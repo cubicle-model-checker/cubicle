@@ -42,7 +42,6 @@ type formula =
   | PForall_other of Variable.t list * formula
   | PExists_other of Variable.t list * formula
 
-
 type term_or_formula = PF of formula | PT of term
 
 
@@ -98,6 +97,7 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
+  pregexps : regexp list;
 }
 
 
@@ -108,6 +108,7 @@ type pdecl =
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
+  | PRegExp of regexp
 
 
 val add_fun_def : Hstring.t -> Variable.t list -> formula -> unit

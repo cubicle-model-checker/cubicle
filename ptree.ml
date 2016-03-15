@@ -51,7 +51,6 @@ type term_or_formula = PF of formula | PT of term
 
 type cformula = formula
 
-
 let function_defs = Hstring.H.create 17
 
 
@@ -174,6 +173,7 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
+  pregexps : regexp list;
 }
 
 
@@ -184,6 +184,8 @@ type pdecl =
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
+  | PRegExp of regexp
+
 
 
 let add_fun_def name args f =
@@ -562,7 +564,7 @@ let encode_ptransition
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
-     pinvs; punsafe; pgood; ptrans} =
+     pinvs; punsafe; pgood; ptrans; pregexps} =
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
@@ -615,25 +617,27 @@ let encode_psystem
     unsafe;
     good;
     trans;
+    regexp = pregexps;
   }
       
 
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
-  let inits, pinvs, punsafe, pgood, ptrans =
-    List.fold_left (fun (inits, invs, unsafes, goods, trans) -> function
-        | PInit i -> i :: inits, invs, unsafes, goods, trans
-        | PInv i -> inits, i :: invs, unsafes, goods, trans
-        | PGood g -> inits, invs, unsafes, g :: goods, trans
-        | PUnsafe u -> inits, invs, u :: unsafes, goods, trans
-        | PTrans t -> inits, invs, unsafes, goods, t :: trans
-        | PFun -> inits, invs, unsafes, goods, trans
-      ) ([],[],[],[], []) pdecls
+  let inits, pinvs, punsafe, pgood, ptrans, pregexps =
+    List.fold_left (fun (inits, invs, unsafes, goods, trans, regexp) -> function
+      | PInit i -> i :: inits, invs, unsafes, goods, trans, regexp
+      | PInv i -> inits, i :: invs, unsafes, goods, trans, regexp
+      | PGood g -> inits, invs, unsafes, g :: goods, trans, regexp
+      | PUnsafe u -> inits, invs, u :: unsafes, goods, trans, regexp
+      | PTrans t -> inits, invs, unsafes, goods, t :: trans, regexp
+      | PFun -> inits, invs, unsafes, goods, trans, regexp
+      | PRegExp re -> inits, invs, unsafes, goods, trans, re::regexp
+    ) ([], [], [], [], [], []) pdecls
   in
   let pinit = match inits with
     | [i] -> i
     | [] -> failwith "No inititial formula."
-    | _::_ -> failwith "Only one initital formula alowed."
+    | _::_ -> failwith "Only one initital formula allowed."
   in
   { pglobals;
     pconsts;
@@ -643,7 +647,9 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     pinvs;
     punsafe;
     pgood;
-    ptrans }
+    ptrans;
+    pregexps;
+  }
   
   
 

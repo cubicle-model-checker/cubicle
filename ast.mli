@@ -80,6 +80,7 @@ type system = {
   unsafe : (loc * Variable.t list * SAtom.t) list;  
   good : (loc * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
+  regexp : regexp list;
 }
 (** type of untyped transition systems constructed by parsing *)
 

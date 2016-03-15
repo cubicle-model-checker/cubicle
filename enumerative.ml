@@ -1,4 +1,4 @@
-3(**************************************************************************)
+(**************************************************************************)
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
@@ -49,21 +49,7 @@ end)
 
 module TMap = Map.Make (Term)
 
-
 type state_info = int HT.t
-
-let equal_state a1 a2 =
-  let n = Array.length a1 in
-  let n2 = Array.length a2 in
-  if n <> n2 then false
-  else
-    let res = ref true in
-    let i = ref 0 in 
-    while !res && !i < n  do
-      res := a1.(!i) = a2.(!i);
-      incr i
-    done;
-    !res
 
 let hash_state st = Hashtbl.hash_param 100 500 st
 
@@ -81,14 +67,25 @@ type tkind = Orig | Copy
    states, the overhead of the hashtable is negligible and allows to reduce the
    memory occupied by the queue (which is generally a lot larger than the state
    table for BFS) *)
-module HQueue = struct
+module HQueue : sig
+  
+  type elt = int * (Hstring.t * Hstring.HSet.t) list * State.t
+  type t = elt Queue.t * unit HST.t
+      
+  val create : int -> t
+  val add : ?cpt_q : int ref -> elt -> t -> unit
+  val is_empty : t -> bool
+  val take : t -> elt
 
-  type t = (int * State.t) Queue.t * tkind HST.t
+end = struct
+
+  type elt = int * (Hstring.t * Hstring.HSet.t) list * State.t
+  type t = elt Queue.t * unit HST.t
 
   let create size = Queue.create (), HST.create size
 
   let add ?(cpt_q=ref 0) x (q, h) =
-    let s = snd x in
+    let (_, _, s) = x in
     if not (HST.mem h s) then begin
       incr cpt_q;
       HST.add h s ();
@@ -99,7 +96,8 @@ module HQueue = struct
 
   let take (q, h) =
     let x = Queue.take q in
-    HST.remove h (snd x);
+    let _, _, s = x in
+    HST.remove h s;
     x
       
 end
@@ -697,7 +695,7 @@ let init_to_states env procs s =
       let sts = write_cube_to_states env st_init init in
       List.rev_append sts acc
     ) [] l_inits in
-  List.map (fun st -> 0, st) sts
+  List.map (fun st -> 0, [], st) sts
     
 
 let atom_to_st_req env = function
@@ -1393,7 +1391,7 @@ let print_iopi_list =
       Node.print n
   )
 
-let post_bfs env st visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
+let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try
@@ -1416,15 +1414,16 @@ let post_bfs env st visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
                   not (check_cand env st b)
                 ) env.bad_states) then (
                   incr cpt_c;
-                  HQueue.add ~cpt_q (depth + 1, s') q
+                  HQueue.add ~cpt_q (
+                    depth + 1, (st_tr.st_name, st_tr.st_vars) :: from, s') q
                 )
                 else (
                   incr cpt_rc)
             end;
             if incremental_enum && depth = fd - 1 then
-              frg := s :: !frg
+              frg := (s, st_tr.st_name) :: !frg
             else
-              HQueue.add ~cpt_q (depth + 1, s) q
+              HQueue.add ~cpt_q (depth + 1, (st_tr.st_name, st_tr.st_vars) :: from, s) q
           end
         ) sts
       with Not_applicable -> ()) trs
@@ -1446,71 +1445,92 @@ let forward_bfs init procs env l =
   List.iter (fun td -> HQueue.add td to_do) l;
   while not (HQueue.is_empty to_do && !fringe = []) &&
     (max_forward = -1 || !cpt_f < max_forward) do
-    if incremental_enum && HQueue.is_empty to_do then begin
-      let cf = Kmeans.kmeans ~md:(!md) !fringe in
-      let bad, good = List.partition (fun (st, _) ->
-        try
-          List.exists (fun (b, n) -> 
-            not (check_cand env st b)
-          ) env.bad_states
-        with ECantSay -> true
-      ) cf in
-      if enum_verbose then begin
-        (* print_fringe env !fringe; *)
-        (* eprintf "CLUSTERED : @."; *)
-        (* let omax = ref 0 in *)
-        (* List.iter (fun st -> *)
-        (*   let l = Array.length st in *)
-        (*   let s = l - State.count_mones st in *)
-        (*   if s > !omax then omax := s; *)
-        (*   Format.eprintf "Cluster(%d/%d) %a@." s l (print_state env) st *)
-        (* ) cf; *)
-        (* eprintf "FRINGE\n\tdepth : \t%d\n\ttotal : \t%d@."  *)
-        (*   !fd (List.length !fringe); *)
-        (* eprintf "CLUSTERS : \n\tdistance : \t%d\n\ttotal : \t%d@."  *)
-        (*   !omax (List.length cf); *)
-        eprintf "GOODS(%d/%d) : @." (List.length good) (List.length cf);
-        List.iter (fun (st, _) ->
-          Format.eprintf "Cluster %a@." (print_state env) st) good;
+    (* if incremental_enum && HQueue.is_empty to_do then begin *)
+    (*   let cf = Kmeans.kmeans ~md:(!md) !fringe in *)
+    (*   let bad, good = List.partition (fun (st, _) -> *)
+    (*     try *)
+    (*       List.exists (fun (b, n) ->  *)
+    (*         not (check_cand env st b) *)
+    (*       ) env.bad_states *)
+    (*     with ECantSay -> true *)
+    (*   ) cf in *)
+    (*   if enum_verbose then begin *)
+    (*     (\* print_fringe env !fringe; *\) *)
+    (*     (\* eprintf "CLUSTERED : @."; *\) *)
+    (*     (\* let omax = ref 0 in *\) *)
+    (*     (\* List.iter (fun st -> *\) *)
+    (*     (\*   let l = Array.length st in *\) *)
+    (*     (\*   let s = l - State.count_mones st in *\) *)
+    (*     (\*   if s > !omax then omax := s; *\) *)
+    (*     (\*   Format.eprintf "Cluster(%d/%d) %a@." s l (print_state env) st *\) *)
+    (*     (\* ) cf; *\) *)
+    (*     (\* eprintf "FRINGE\n\tdepth : \t%d\n\ttotal : \t%d@."  *\) *)
+    (*     (\*   !fd (List.length !fringe); *\) *)
+    (*     (\* eprintf "CLUSTERS : \n\tdistance : \t%d\n\ttotal : \t%d@."  *\) *)
+    (*     (\*   !omax (List.length cf); *\) *)
+    (*     eprintf "GOODS(%d/%d) : @." (List.length good) (List.length cf); *)
+    (*     List.iter (fun (st, _) -> *)
+    (*       Format.eprintf "Cluster %a@." (print_state env) st) good; *)
         
-        eprintf "BADS(%d/%d) : @." (List.length bad) (List.length cf);
-        List.iter (fun (st, _) ->
-          Format.eprintf "Cluster %a@." (print_state env) st) bad;
-        eprintf "GOODS(%d/%d)@." (List.length good) (List.length cf);
-        eprintf "BADS(%d/%d)@." (List.length bad) (List.length cf);
-        if enum_pause then ignore (read_line ())
-      end;
-      let cf = List.map (fun (st, _) -> st) good in
-      let cf = List.fold_left (fun acc (_, stl) -> 
-        List.fold_left (fun acc st -> st :: acc) acc stl
-      ) cf bad in
-      let cf = List.map (fun st -> (!fd, st)) cf in
-      List.iter (fun st -> HQueue.add st to_do) cf;
-      (* List.iter (fun st -> env.states <- st :: env.states) !fringe; *)
-      fringe := [];
-      set_fd_md fd md ref_es
+    (*     eprintf "BADS(%d/%d) : @." (List.length bad) (List.length cf); *)
+    (*     List.iter (fun (st, _) -> *)
+    (*       Format.eprintf "Cluster %a@." (print_state env) st) bad; *)
+    (*     eprintf "GOODS(%d/%d)@." (List.length good) (List.length cf); *)
+    (*     eprintf "BADS(%d/%d)@." (List.length bad) (List.length cf); *)
+    (*     if enum_pause then ignore (read_line ()) *)
+    (*   end; *)
+    (*   let cf = List.map (fun (st, _) -> st) good in *)
+    (*   let cf = List.fold_left (fun acc (_, stl) ->  *)
+    (*     List.fold_left (fun acc st -> st :: acc) acc stl *)
+    (*   ) cf bad in *)
+    (*   let cf = List.map (fun st -> (!fd, st)) cf in *)
+    (*   List.iter (fun st -> HQueue.add st to_do) cf; *)
+    (*   (\* List.iter (fun st -> env.states <- st :: env.states) !fringe; *\) *)
+    (*   fringe := []; *)
+    (*   set_fd_md fd md ref_es *)
+    (* end *)
+    (* else *)
+    let depth, from, st = HQueue.take to_do in
+    let rec pvars vs = 
+      let open Hstring.HSet in
+      if is_empty vs then () 
+      else if cardinal vs = 1 then
+        Format.eprintf "%a" Hstring.print (min_elt vs)
+      else 
+        let v = min_elt vs in 
+        Format.eprintf "%a, " Hstring.print v; 
+        pvars (remove v vs)
+    in
+    let rec pfrom = function
+      | [] -> ()
+      | [e, v] -> Format.eprintf "%a(" Hstring.print e;
+        pvars v;
+        Format.eprintf ")"
+      | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
+        pvars v;
+        Format.eprintf ") -> ";
+        pfrom tl
+    in pfrom from;
+    Format.eprintf "@." (* (print_state env) st*); 
+    decr cpt_q;
+    if not (HST.mem h_visited st) then begin
+      HST.add h_visited st ();
+      post_bfs env (from, st) h_visited trs to_do cpt_q (cpt_c, cpt_rc) fringe !fd depth;
+      incr cpt_f;
+      if debug && verbose > 1 then
+        eprintf "%d : %a\n@." !cpt_f
+          SAtom.print (state_to_cube env st);
+      if not quiet && !cpt_f mod 1000 = 0 then
+        eprintf "%d (%d)@." !cpt_f !cpt_q;
+      incr cpt_r;
+      env.states <- st :: env.states;
+      if depth > !maxd then maxd := depth;
+      if limit_forward_depth && depth = forward_depth then
+        env.fringe <- st :: env.fringe;
     end
-    else
-      let depth, st = HQueue.take to_do in
-      decr cpt_q;
-      if not (HST.mem h_visited st) then begin
-        HST.add h_visited st ();
-        post_bfs env st h_visited trs to_do cpt_q (cpt_c, cpt_rc) fringe !fd depth;
-        incr cpt_f;
-        if debug && verbose > 1 then
-          eprintf "%d : %a\n@." !cpt_f
-            SAtom.print (state_to_cube env st);
-        if not quiet && !cpt_f mod 1000 = 0 then
-          eprintf "%d (%d)@." !cpt_f !cpt_q;
-        incr cpt_r;
-        env.states <- st :: env.states;
-        if depth > !maxd then maxd := depth;
-        if limit_forward_depth && depth = forward_depth then
-          env.fringe <- st :: env.fringe;
-      end
   done;
   Format.eprintf "Copies : %d\nRejected : %d@." !cpt_c !cpt_rc
-
+    
 let nodes_to_iopi_list env bwd =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
   List.fold_left (
@@ -1526,7 +1546,7 @@ let search bwd procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun (_, st) ->
+    List.iter (fun (_, _, st) ->
       eprintf "init : %a\n@." SAtom.print (state_to_cube env st))
       st_inits;
   let bwd = nodes_to_iopi_list env bwd in

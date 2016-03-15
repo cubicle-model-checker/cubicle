@@ -110,7 +110,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
       util.cmo variable.cmo types.cmo \
-      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
+      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo regexp.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo state.cmo kmeans.cmo enumerative.cmo approx.cmo \
       far_util.cmo far_cube.cmo far_modules.cmo far_graph.cmo \
@@ -307,6 +307,7 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	instantiation.ml instantiation.mli kmeans.mli kmeans.ml lexer.mll main.ml\
 	node.ml node.mli options.ml options.mli oracle.mli\
 	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
+	regexp.ml \
 	safety.ml safety.mli state.ml state.mli stats.ml stats.mli trace.ml trace.mli\
 	types.ml types.mli typing.ml typing.mli util.ml util.mli\
 	variable.ml variable.mli version.ml

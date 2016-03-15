@@ -19,6 +19,7 @@
   open Types
   open Parsing
   open Ptree
+  open Util
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -139,7 +140,7 @@ decl :
   | good { PGood $1 }
   | transition { PTrans $1 }
   | function_decl { PFun  }
-  | copy_regexp { PCopy $1 }
+  | decl_regexp { PRegExp $1 }
 
 symbold_decls :
   | { [], [], [] }
@@ -155,12 +156,13 @@ trans_list :
   | t = transition_name { [t] }
   | t = transition_name tl = trans_list { t :: tl }
 
-block_regexp :
-  | transition_name { [$1] }
-  | LEFTPAR trans_list RIGHTPAR { $2 }
+regexp :
+  | tl = trans_list { RSequence tl }
+  | LEFTPAR re = regexp RIGHTPAR { re }
 
-copy_regexp :
-  | 
+decl_regexp :
+  | TREGEXP COLON re = regexp { re } 
+;
 
 function_decl :
   | PREDICATE lident LEFTPAR lident_comma_list RIGHTPAR LEFTBR expr RIGHTBR {

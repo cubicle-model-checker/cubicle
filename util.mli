@@ -79,3 +79,7 @@ type loc = Lexing.position * Lexing.position
 
 val report_loc : Format.formatter -> loc -> unit
 (** Report location on formatter *)
+
+type regexp =
+  | RSequence of Hstring.t list
+(** Regular expressions on transition names *)
