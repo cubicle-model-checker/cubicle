@@ -235,7 +235,8 @@ module type AS = sig
 
   val make_automaton : regexp -> t
 
-  val recognize : t -> char list -> bool
+  val recognize_start : t -> char list -> bool
+  val recognize_anywhere : t -> char list -> bool
 
   val save_automaton : string -> t -> unit
 end
@@ -282,7 +283,8 @@ module Make_Automaton (R : RES) : AS
 
   let terminal st = R.ICSet.mem IC.end_char st
 
-  let recognize t cl =
+
+  let recognize_start t cl =
     let rec rl st = function
       | [] -> terminal st
       | hd :: tl -> let tr = SMap.find st t.trans in
@@ -290,6 +292,18 @@ module Make_Automaton (R : RES) : AS
                     rl st' tl
     in
     try rl t.init cl with Not_found -> false
+      
+  let recognize_anywhere t cl =
+    let rec rl st = function
+      | [] -> terminal st
+      | hd :: tl -> 
+        try
+          let tr = SMap.find st t.trans in
+          let st' = CMap.find hd tr in
+          rl st' tl
+        with Not_found -> rl t.init tl
+    in
+    rl t.init cl
     
 
   let fprint_state_dot fmt q = R.fprint_set_dot fmt q
