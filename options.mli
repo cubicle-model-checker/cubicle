@@ -59,6 +59,7 @@ val num_range : int * int
 val post_strategy : int
 val delete : bool
 val simpl_by_uc : bool
+val noqe : bool
 val bitsolver : bool
 val enumsolver : bool
 val refine_universal : bool

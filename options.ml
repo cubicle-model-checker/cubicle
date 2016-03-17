@@ -79,6 +79,7 @@ let refine_universal = ref false
 
 let subtyping = ref true
 let notyping = ref false
+let noqe = ref false
 
 let trace = ref NoTrace
 let set_trace = function
@@ -186,6 +187,7 @@ let specs =
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
     "-nosubtyping", Arg.Clear subtyping, " no static subtyping analysis";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
+    "-noqe", Arg.Set noqe, " disable elimination of postivie constants";
     "-refine-universal", Arg.Set refine_universal,
     " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
@@ -259,6 +261,7 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
+let noqe = !noqe
 
 let cores = !cores
 
