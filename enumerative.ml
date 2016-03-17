@@ -1030,7 +1030,7 @@ let create_new_state env s l =
         for j = bi to bs do
           s'.(j) <- e2
         done
-      | _ -> assert false
+      | _ -> (* assert false *) ()
   ) l; s'
 
 let post_dfs st visited trs q cpt_q depth =
@@ -1391,7 +1391,27 @@ let print_iopi_list =
       Node.print n
   )
 
-let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
+let rec pvars vs = 
+  let open Hstring.HSet in
+  if is_empty vs then () 
+  else if cardinal vs = 1 then
+    Format.eprintf "%a" Hstring.print (min_elt vs)
+  else 
+    let v = min_elt vs in 
+    Format.eprintf "%a, " Hstring.print v; 
+    pvars (remove v vs)
+
+let rec pfrom = function
+  | [] -> ()
+  | [e, v] -> Format.eprintf "%a(" Hstring.print e;
+    pvars v;
+    Format.eprintf ")"
+  | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
+    pvars v;
+    Format.eprintf ") -> ";
+    pfrom tl
+
+let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth autom =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try
@@ -1423,12 +1443,22 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth =
             if incremental_enum && depth = fd - 1 then
               frg := (s, st_tr.st_name) :: !frg
             else
-              HQueue.add ~cpt_q (depth + 1, (st_tr.st_name, st_tr.st_vars) :: from, s) q
+              let from = (st_tr.st_name, st_tr.st_vars) :: from in
+              let morf = List.rev from in
+              if copy_regexp && Regexp.Automaton.recognize autom morf then begin
+                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
+                let l = State.diff st s in
+                let s' = create_new_state env s l in
+                if debug then 
+                  Format.eprintf "New state : %a@." (print_state env) s';
+                HQueue.add ~cpt_q (depth + 1, from, s') q
+              end; 
+              HQueue.add ~cpt_q (depth + 1, from, s) q
           end
         ) sts
       with Not_applicable -> ()) trs
 
-let forward_bfs init procs env l =
+let forward_bfs init procs env l autom =
   let h_visited = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
@@ -1491,31 +1521,10 @@ let forward_bfs init procs env l =
     (* end *)
     (* else *)
     let depth, from, st = HQueue.take to_do in
-    let rec pvars vs = 
-      let open Hstring.HSet in
-      if is_empty vs then () 
-      else if cardinal vs = 1 then
-        Format.eprintf "%a" Hstring.print (min_elt vs)
-      else 
-        let v = min_elt vs in 
-        Format.eprintf "%a, " Hstring.print v; 
-        pvars (remove v vs)
-    in
-    let rec pfrom = function
-      | [] -> ()
-      | [e, v] -> Format.eprintf "%a(" Hstring.print e;
-        pvars v;
-        Format.eprintf ")"
-      | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
-        pvars v;
-        Format.eprintf ") -> ";
-        pfrom tl
-    in pfrom from;
-    Format.eprintf "@." (* (print_state env) st*); 
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
       HST.add h_visited st ();
-      post_bfs env (from, st) h_visited trs to_do cpt_q (cpt_c, cpt_rc) fringe !fd depth;
+      post_bfs env (from, st) h_visited trs to_do cpt_q (cpt_c, cpt_rc) fringe !fd depth autom;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
@@ -1558,7 +1567,7 @@ let search bwd procs init =
   install_sigint ();
   begin 
     try
-      forward_bfs init procs env st_inits;
+      forward_bfs init procs env st_inits init.t_automaton;
     with Exit -> ()
   end ;
   (* if clusterize then ( *)

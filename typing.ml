@@ -498,4 +498,5 @@ let system s =
     t_unsafe = unsafe_woloc;
     t_good = good_woloc;
     t_trans = List.map add_tau s.trans;
+    t_automaton = s.automaton
   }

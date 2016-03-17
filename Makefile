@@ -110,7 +110,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
       util.cmo variable.cmo types.cmo \
-      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo regexp.cmo pretty.cmo \
+      cube.cmo node.cmo regexp.cmo ptree.cmo parser.cmo lexer.cmo  pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo state.cmo kmeans.cmo enumerative.cmo approx.cmo \
       far_util.cmo far_cube.cmo far_modules.cmo far_graph.cmo \
@@ -176,10 +176,10 @@ version.ml: config.status
 	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLLEX) $< > /dev/null
 
 .mly.ml:
-	$(if $(QUIET),@echo 'Compiling $<' &&) $(MENHIR) -v $< 
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
 
 .mly.mli:
-	$(if $(QUIET),@echo 'Compiling $<' &&) $(MENHIR) -v $< 
+	$(if $(QUIET),@echo 'Compiling $<' &&) $(OCAMLYACC) -v $< 
 
 
 # file headers

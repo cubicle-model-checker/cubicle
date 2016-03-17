@@ -52,6 +52,7 @@ val filter_lvl : int
 val filter_md : int
 
 val copy_state : bool
+val copy_regexp : bool
 
 val goods : bool
 

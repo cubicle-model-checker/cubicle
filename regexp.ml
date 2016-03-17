@@ -1,85 +1,347 @@
-module Value = struct
-  type t = string * int
-  let compare (s1, i1) (s2, i2) =
-    let c = compare s1 s2 in
-    if c = 0 then compare i1 i2 else c
+module type OrderedChar = sig
+  type t
+  val compare : t -> t -> int
+  val end_char : t
+  val fprint : Format.formatter -> t -> unit
+  val fprint_dot : Format.formatter -> t -> unit
 end
 
-module type SMS = sig
+module type ICS = sig
+    
+  type c
+  type t =  c * int
+      
+  val from_char : c -> t
+  val end_char : t
+  val compare : t -> t -> int
+  val fprint : Format.formatter -> t -> unit
+  val fprint_dot : Format.formatter -> t -> unit
+
+end
+
+module Make_IC (C : OrderedChar) : ICS with type c = C.t = struct
+
+  type c = C.t
+
+  type t = c * int
+
+  let from_char =
+    let ht = Hashtbl.create 17 in
+    fun v -> 
+      let c = 
+        try
+          let c = (Hashtbl.find ht v) + 1 in
+          Hashtbl.replace ht v c;
+          c
+        with Not_found -> 
+          Hashtbl.add ht v 1;
+          1
+      in (v, c)
+
+  let end_char = C.end_char, -1
+
+  let compare (v1, i1) (v2, i2) = 
+    let c = C.compare v1 v2 in
+    if c = 0 then compare i1 i2 else c
+
+  let fprint fmt (v, i) = Format.fprintf fmt "%a[%d]" C.fprint v i
+
+  let fprint_dot fmt ((c, i) as ic) =
+    if ic = end_char then Format.fprintf fmt "# "
+    else Format.fprintf fmt "%a%d " C.fprint_dot c i
+
+end
+
+(* module type ICSetS = sig *)
+(*   type t *)
+(*   val compare : t -> t -> int *)
+(* end *)
+
+module type RES = sig
+
+  module C : OrderedChar
+  module ICSet : Set.S with type elt = C.t * int
+
+  type simple_r = 
+    | SEpsilon 
+    | SChar of C.t 
+    | SUnion of simple_r list
+    | SConcat of simple_r list
+    | SStar of simple_r
+
+  type ichar
+
+  type t =
+    | Epsilon
+    | IChar of ichar
+    | Union of t list
+    | Concat of t list
+    | Star of t
+
+  val new_t : simple_r -> t
+  val from_list : simple_r list -> t
+
+  val null : t -> bool
+
+  val first : t -> ICSet.t
+  val last : t -> ICSet.t
+  val follow : ichar -> t -> ICSet.t
+
+  val next_state : t -> ICSet.t -> C.t -> ICSet.t
+
+  val add_eof : t -> t
+
+  val print_set : ICSet.t -> unit
+  val fprint_set_dot : Format.formatter -> ICSet.t -> unit
+
+  val fprint : Format.formatter -> t -> unit
+end
+
+module Make_Regexp (C : OrderedChar) : RES with module C = C = struct
+    
+  module C = C
+  module IC = Make_IC(C)
+
+  module ICSet = Set.Make (IC)
+
+  type char = C.t
+
+  type simple_r = 
+    | SEpsilon 
+    | SChar of char 
+    | SUnion of simple_r list
+    | SConcat of simple_r list
+    | SStar of simple_r
+
+  type ichar = IC.t
+
+  (* let from_char = IC.from_char *)
+
+  type t = 
+    | Epsilon
+    | IChar of ichar
+    | Union of t list
+    | Concat of t list
+    | Star of t
+
+  let rec new_t = function
+    | SEpsilon -> Epsilon
+    | SChar c -> IChar (IC.from_char c)
+    | SUnion tl -> Union (List.map new_t tl)
+    | SConcat tl -> Concat (List.map new_t tl)
+    | SStar t -> Star (new_t t)
+
+  let from_list t = match t with
+    | [e] -> new_t e
+    | _ -> Union (List.map new_t t)
+
+  let fprint_set fmt s =
+    ICSet.iter (fun v -> Format.fprintf fmt "%a " IC.fprint v) s
+
+  let pp_sep_un fmt () = Format.fprintf fmt "|"
+  let pp_sep_not _ () = ()
+
+  let rec fprint fmt = function
+    | Epsilon -> ()
+    | IChar (c, i) -> Format.fprintf fmt "%a" C.fprint c
+    | Union tl -> Format.fprintf fmt "(%a)" 
+      (Format.pp_print_list ~pp_sep:pp_sep_un fprint) tl
+    | Concat tl -> Format.fprintf fmt "(%a)" 
+      (Format.pp_print_list ~pp_sep:pp_sep_not fprint) tl
+    | Star t -> Format.fprintf fmt "%a*" fprint t
+
+  let rec null = function
+    | Epsilon | Star _ -> true
+    | IChar _ -> false
+    | Union tl -> List.exists null tl
+    | Concat tl -> List.for_all null tl
+
+
+  let first t =
+    let rec fconcat acc = function
+      | [] -> acc
+      | t :: tl -> let ft = fr acc t in
+                   if null t then fconcat ft tl
+                   else ft
+                     
+    and fr acc = function
+      | Epsilon -> acc
+      | IChar iv -> ICSet.add iv acc
+      | Union tl -> List.fold_left fr acc tl
+      | Concat tl -> fconcat acc tl
+      | Star t -> fr acc t
+    in
+    fr ICSet.empty t
+                          
+  let last t =
+    let rec lconcat acc = function
+      | [] -> acc
+      | t :: tl -> let lt = lr acc t in
+                   if null t then lconcat lt tl
+                   else lt
+    and lr acc = function
+      | Epsilon -> acc
+      | IChar iv -> ICSet.add iv acc
+      | Union tl -> List.fold_left lr acc tl
+      | Concat tl -> lconcat acc (List.rev tl)
+      | Star t -> lr acc t
+    in
+    lr ICSet.empty t
+
+  let follow c t =
+    let rec fconcat acc = function
+      | r1 :: ((r2 :: _) as rtl) ->
+        let s = fr acc r2  in
+        let acc = if ICSet.mem c (last r1) 
+          then ICSet.union s (first (Concat rtl)) else s in
+        fconcat acc rtl
+      | [] | [_] -> acc
+    and fr acc = function
+      | Epsilon | IChar _ -> acc
+      | Union tl -> List.fold_left fr acc tl
+      | Concat tl -> fconcat (fr acc (List.hd tl)) tl
+      | Star t -> 
+        let s = fr acc t in
+        if ICSet.mem c (last t) then ICSet.union s (first t) else s
+    in
+    fr ICSet.empty t
+
+  let next_state r st c =
+    ICSet.fold (
+      fun ((c', _) as ic) st' ->
+        if c' = c then 
+          ICSet.union st' (follow ic r) else st'
+    ) st ICSet.empty
+
+  let add_eof r = Concat [r; IChar IC.end_char]
+
+  let print_set s =
+    ICSet.iter (fun v -> Format.printf "%a\n" IC.fprint v) s
+
+  let fprint_set_dot fmt s =
+    ICSet.iter (fun v -> Format.fprintf fmt "%a\n" IC.fprint_dot v) s
+
+      
+end
+
+module type AS = sig
+
+  type regexp
+  type state
+
+  type char
     
   type t
 
-  type state
-  type value
+  val make_automaton : regexp -> t
 
-  val new_state_machine : value list -> t
+  val recognize : t -> char list -> bool
 
-  val check : value list -> t -> bool
-  val print : t -> unit
-
+  val save_automaton : string -> t -> unit
 end
 
-module SM : SMS with type value = Value.t = struct
-    
-  module State = struct
-    type t = int 
-    let compare = compare
-  end
-    
-  type state = State.t
-  type value = Value.t
 
-  module SMap = Map.Make (State)
-  module VMap = Map.Make (Value)
+module Make_Automaton (R : RES) : AS 
+  with type regexp = R.t and type char = R.C.t = struct
+    
+  module SMap = Map.Make (R.ICSet)
+  module CMap = Map.Make (R.C)
+
+  module IC = Make_IC(R.C)
+
+  type regexp = R.t
+  type state = R.ICSet.t
+
+  type char = R.C.t
 
   type t = {
     init : state;
-    final : state -> bool;
-    smap : state VMap.t SMap.t;
+    trans : state CMap.t SMap.t;
   }
 
-  let new_state_machine vl =
-    let init = 0 in
-    let gterm = List.length vl in
-    let final s = s = gterm in
-    let smap = 
-      let c = ref 0 in
-      List.fold_left (
-        fun sm (s, i) ->
-          let vm = VMap.singleton (s, i) (!c + 1) in
-          let sm = SMap.add !c vm sm in
-          incr c;
-          sm
-      ) SMap.empty vl in
-    {init; final; smap}
+  let make_automaton r =
+    let r = R.add_eof r in
+    let init = R.first r in
+    let trans = ref SMap.empty in
+    let rec transitions q =
+      if not (SMap.mem q !trans) then begin
+        trans := SMap.add q CMap.empty !trans;
+        R.ICSet.iter
+          (fun (c,_) ->
+            let t = SMap.find q !trans in
+            if not (CMap.mem c t) then begin
+              let q' = R.next_state r q c in
+              trans := SMap.add q (CMap.add c q' t) !trans;
+              transitions q'
+            end)
+          q
+      end
+    in
+    transitions init;
+    {init; trans = !trans}
 
-  let rec check vl t =
-    let rec cr st = function
-      | [] -> t.final st
-      | ((s, i) as v) :: vl -> 
-        try
-          let vm = SMap.find st t.smap in
-          try let st' = VMap.find v vm in
-              cr st' vl
-          with Not_found -> false
-        with Not_found -> false
-    in cr t.init vl
-      
-  let print t = SMap.iter (
-    fun st vm -> 
-      Printf.printf "%d\n" st;
-      VMap.iter (fun (s, i) st' ->
-        Printf.printf "\t--%s, %d--> %d\n" s i st'
-      ) vm
-  ) t.smap
-(* let transition = *)
+  let terminal st = R.ICSet.mem IC.end_char st
+
+  let recognize t cl =
+    let rec rl st = function
+      | [] -> terminal st
+      | hd :: tl -> let tr = SMap.find st t.trans in
+                    let st' = CMap.find hd tr in
+                    rl st' tl
+    in
+    try rl t.init cl with Not_found -> false
+    
+
+  let fprint_state_dot fmt q = R.fprint_set_dot fmt q
+
+  let fprint_transition_dot fmt q c q' =
+    Format.fprintf fmt "\"%a\" -> \"%a\" [label=\"%a\"];@\n"
+      fprint_state_dot q
+      fprint_state_dot q'
+      R.C.fprint_dot c
+
+  let fprint_automaton_dot fmt a =
+    Format.fprintf fmt "digraph A {@\n";
+    Format.fprintf fmt "  @[\"%a\" [ shape = \"rect\"];@\n" 
+      fprint_state_dot a.init;
+    SMap.iter
+      (fun q t -> CMap.iter (fun c q' -> fprint_transition_dot fmt q c q') t)
+      a.trans;
+    Format.fprintf fmt "@]@\n}@."
+
+  let save_automaton file a =
+    let ch = open_out file in
+    Format.fprintf (Format.formatter_of_out_channel ch) 
+      "%a" fprint_automaton_dot a;
+    close_out ch;
+    match Sys.command ("dot -Tpdf "^file^".dot > "^file^".pdf") with
+      | 0 -> ()
+      | _ -> Format.eprintf 
+        "There was an error with dot. Make sure graphviz is installed."
+
 end
 
+type tr = Hstring.t * Hstring.HSet.t
 
-let () =
-  let r1 = ["t1", 1; "t2", 2] in
-  let e1 = SM.new_state_machine r1 in
-  Printf.printf "%b\n" (SM.check ["t1", 1; "t2", 2] e1);
-  Printf.printf "%b\n" (SM.check ["t2", 1; "t1", 2] e1);
-  SM.print e1
+module Trans : OrderedChar with type t = tr = struct 
+
+  type t = tr
+  let end_char = Hstring.make "dummy_trans", 
+    Hstring.HSet.singleton (Hstring.make "#-1")
+  
+  let compare = compare
+
+  let pp_sep_un fmt () = Format.fprintf fmt ", "
+
+  let fprint fmt (name, vars) = Format.fprintf fmt "%a(%a)" Hstring.print name
+    (Format.pp_print_list ~pp_sep:pp_sep_un Hstring.print) 
+    (Hstring.HSet.elements vars)
+    
+  let fprint_dot = fprint
+
+end
+
+module RTrans : RES with type C.t = tr = Make_Regexp(Trans)
+module Automaton : AS
+  with type regexp = RTrans.t and type char = RTrans.C.t = Make_Automaton(RTrans)
 

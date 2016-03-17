@@ -34,7 +34,7 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
-trans_regexp : send_shared recv_shared gnt_shared
+trans_regexp : send_shared(z) recv_shared(z) gnt_shared(z)
 
 transition send_shared (n)
 requires { Chan1[n] = Empty && Cache[n] = Invalid }

@@ -59,6 +59,7 @@ let enum_verbose = ref false
 
 (* STATE COPY *)
 let copy_state = ref false
+let copy_regexp = ref false
 
 (* BWD *)
 
@@ -225,6 +226,7 @@ let specs =
     "<n m> clusterize fringe at prof <n> with <m> being the max distance\
        before going on with enumerative";
     "-copy", Arg.Set copy_state, " copy states that look general enough";
+    "-creg", Arg.Set copy_regexp, " copy states that have a recognized history";
     "-flvl", Arg.Set_int filter_lvl, "<n> set a filtering level to clusters";
     "-md", Arg.Set_int filter_md, 
     "<n> set a minimum distance inside a cluster for filtering";
@@ -273,6 +275,8 @@ let specs =
      exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
     "-forward-nosym", Arg.Clear forward_sym,
+    " disable symmetry reduction in forward exploration";
+    "-fnos", Arg.Clear forward_sym,
     " disable symmetry reduction in forward exploration";
     "-postpone", Arg.Set_int post_strategy, 
     "<0|1|2> 
@@ -357,6 +361,7 @@ let enum_pause = !enum_pause
 let enum_verbose = !enum_verbose
 
 let copy_state = !copy_state
+let copy_regexp = !copy_regexp
 
 let bwd_fwd = !bwd_fwd
 

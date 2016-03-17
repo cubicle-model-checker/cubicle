@@ -97,7 +97,7 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
-  pregexps : regexp list;
+  pregexps : Regexp.RTrans.simple_r list;
 }
 
 
@@ -108,7 +108,7 @@ type pdecl =
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
-  | PRegExp of regexp
+  | PRegExp of Regexp.RTrans.simple_r
 
 
 val add_fun_def : Hstring.t -> Variable.t list -> formula -> unit

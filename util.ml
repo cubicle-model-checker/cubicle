@@ -153,6 +153,3 @@ let report_loc fmt (b,e) =
   let lc = e.pos_cnum - b.pos_bol + 1 in
   fprintf fmt "File \"%s\", line %d, characters %d-%d:" 
     Options.file l fc lc
-
-type regexp =
-  | RSequence of Hstring.t list

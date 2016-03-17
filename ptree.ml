@@ -173,7 +173,7 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
-  pregexps : regexp list;
+  pregexps : Regexp.RTrans.simple_r list;
 }
 
 
@@ -184,7 +184,7 @@ type pdecl =
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
-  | PRegExp of regexp
+  | PRegExp of Regexp.RTrans.simple_r
 
 
 
@@ -607,6 +607,10 @@ let encode_psystem
         compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
       )
   in
+  let regexp = Regexp.RTrans.from_list pregexps in
+  Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
+  let automaton = Regexp.Automaton.make_automaton regexp in
+  
   {
     globals = pglobals;
     consts = pconsts;
@@ -617,7 +621,7 @@ let encode_psystem
     unsafe;
     good;
     trans;
-    regexp = pregexps;
+    automaton;
   }
       
 

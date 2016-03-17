@@ -20,6 +20,7 @@
   open Parsing
   open Ptree
   open Util
+  open Regexp.RTrans
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -30,6 +31,7 @@
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
+  let vars_to_hsset vl = Hstring.HSet.singleton (Hstring.make "#1")
 
   type t = 
     | Assign of Hstring.t * pglob_update
@@ -153,15 +155,17 @@ symbold_decls :
 ;
 
 trans_list :
-  | t = transition_name { [t] }
-  | t = transition_name tl = trans_list { t :: tl }
+  | transition_name LEFTPAR lidents RIGHTPAR
+      { [SChar ($1, vars_to_hsset $3)] }
+  | transition_name LEFTPAR lidents RIGHTPAR trans_list
+      { (SChar ($1, vars_to_hsset $3)) :: $5 }
 
 regexp :
-  | tl = trans_list { RSequence tl }
-  | LEFTPAR re = regexp RIGHTPAR { re }
+  | trans_list { SConcat $1 }
+  | LEFTPAR regexp RIGHTPAR { $2 }
 
 decl_regexp :
-  | TREGEXP COLON re = regexp { re } 
+  | TREGEXP COLON regexp { $3 } 
 ;
 
 function_decl :
