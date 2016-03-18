@@ -163,6 +163,16 @@ type ptransition = {
   ptr_loc : loc;
 }
 
+type pregexp = 
+    | PEpsilon 
+    | PChar of Hstring.t * Hstring.t list
+    | PUnion of pregexp list
+    | PConcat of pregexp list
+    | PStar of pregexp
+    | PPlus of pregexp
+    | POption of pregexp
+
+
 type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
@@ -173,7 +183,7 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
-  pregexps : Regexp.RTrans.simple_r list;
+  pregexps : pregexp list;
 }
 
 
@@ -184,7 +194,7 @@ type pdecl =
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
-  | PRegExp of Regexp.RTrans.simple_r
+  | PRegExp of pregexp
 
 
 
@@ -560,6 +570,32 @@ let encode_ptransition
          tr_loc = ptr_loc }
     ) dguards
 
+let pregexp_to_simplerl p =
+  let rec pr acc = function
+    | PEpsilon -> acc
+    | PChar (_, vl) -> Hstring.HSet.union (Hstring.HSet.of_list vl) acc
+    | PUnion pl | PConcat pl -> List.fold_left pr acc pl
+    | PStar p | PPlus p | POption p -> pr acc p in
+  let vs = Hstring.HSet.elements (pr Hstring.HSet.empty p) in
+  let subst = Variable.all_permutations vs 
+    (Variable.give_procs Options.enumerative) in
+  let apply_subst s p = 
+    let open Regexp.RTrans in
+    let rec ar = function
+      | PEpsilon -> SEpsilon
+      | PChar (n, vl) -> 
+        let vl = List.map (Variable.subst s) vl in
+        SChar (n, Hstring.HSet.of_list vl)
+      | PUnion pl -> SUnion (List.map ar pl)
+      | PConcat pl -> SConcat (List.map ar pl)
+      | PStar p -> SStar (ar p)
+      | PPlus p -> SPlus (ar p)
+      | POption p -> SOption (ar p)
+    in ar p
+  in
+  List.map (fun sigma -> apply_subst sigma p) subst
+    
+
 
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
@@ -607,10 +643,11 @@ let encode_psystem
         compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
       )
   in
-  let regexp = Regexp.RTrans.from_list pregexps in
-  Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
+  let sregexpl = List.fold_left (fun acc p ->
+    let pl = pregexp_to_simplerl p in
+    List.rev_append pl acc) [] pregexps in
+  let regexp = Regexp.RTrans.from_list sregexpl in
   let automaton = Regexp.Automaton.make_automaton regexp in
-  
   {
     globals = pglobals;
     consts = pconsts;

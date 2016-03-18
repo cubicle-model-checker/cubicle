@@ -87,6 +87,15 @@ type ptransition = {
   ptr_loc : loc;
 }
 
+type pregexp = 
+    | PEpsilon 
+    | PChar of Hstring.t * Hstring.t list
+    | PUnion of pregexp list
+    | PConcat of pregexp list
+    | PStar of pregexp
+    | PPlus of pregexp
+    | POption of pregexp
+
 type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
@@ -97,7 +106,7 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
-  pregexps : Regexp.RTrans.simple_r list;
+  pregexps : pregexp list;
 }
 
 
@@ -108,7 +117,7 @@ type pdecl =
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
-  | PRegExp of Regexp.RTrans.simple_r
+  | PRegExp of pregexp
 
 
 val add_fun_def : Hstring.t -> Variable.t list -> formula -> unit

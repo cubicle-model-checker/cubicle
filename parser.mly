@@ -154,18 +154,46 @@ symbold_decls :
       { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
 ;
 
-trans_list :
+trans_reg :
   | transition_name LEFTPAR lidents RIGHTPAR
-      { [SChar ($1, vars_to_hsset $3)] }
-  | transition_name LEFTPAR lidents RIGHTPAR trans_list
-      { (SChar ($1, vars_to_hsset $3)) :: $5 }
+      { PChar ($1, $3) }
+
+trans_list :
+  | trans_reg trans_reg
+      { [$1; $2] }
+  | trans_reg trans_list
+      { $1 :: $2 }
+;
+
+trans_union_list:
+  | trans_reg BAR trans_reg
+      { [$1; $3] }
+  | trans_reg BAR trans_union_list
+      { $1 :: $3 }
+  | LEFTSQ trans_list RIGHTSQ 
+      { $2 }
+;
 
 regexp :
-  | trans_list { SConcat $1 }
-  | LEFTPAR regexp RIGHTPAR { $2 }
+  | trans_reg 
+      { $1 }
+  | LEFTPAR regexp RIGHTPAR 
+      { $2 }
+  | trans_list
+      { PConcat $1 }
+  | trans_union_list
+      { PUnion $1 }
+  | regexp TIMES
+      { PStar $1 }
+  | regexp QMARK
+      { POption $1 }
+  | regexp PLUS
+      { PPlus $1 }
+;
 
 decl_regexp :
-  | TREGEXP COLON regexp { $3 } 
+  | TREGEXP COLON regexp
+      { $3 } 
 ;
 
 function_decl :

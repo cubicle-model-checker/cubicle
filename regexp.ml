@@ -52,11 +52,6 @@ module Make_IC (C : OrderedChar) : ICS with type c = C.t = struct
 
 end
 
-(* module type ICSetS = sig *)
-(*   type t *)
-(*   val compare : t -> t -> int *)
-(* end *)
-
 module type RES = sig
 
   module C : OrderedChar
@@ -68,6 +63,8 @@ module type RES = sig
     | SUnion of simple_r list
     | SConcat of simple_r list
     | SStar of simple_r
+    | SPlus of simple_r
+    | SOption of simple_r
 
   type ichar
 
@@ -77,6 +74,8 @@ module type RES = sig
     | Union of t list
     | Concat of t list
     | Star of t
+    | Plus of t
+    | Option of t
 
   val new_t : simple_r -> t
   val from_list : simple_r list -> t
@@ -98,132 +97,142 @@ module type RES = sig
 end
 
 module Make_Regexp (C : OrderedChar) : RES with module C = C = struct
-    
-  module C = C
-  module IC = Make_IC(C)
-
-  module ICSet = Set.Make (IC)
-
-  type char = C.t
-
-  type simple_r = 
-    | SEpsilon 
-    | SChar of char 
-    | SUnion of simple_r list
-    | SConcat of simple_r list
-    | SStar of simple_r
-
-  type ichar = IC.t
-
-  (* let from_char = IC.from_char *)
-
-  type t = 
-    | Epsilon
-    | IChar of ichar
-    | Union of t list
-    | Concat of t list
-    | Star of t
-
-  let rec new_t = function
-    | SEpsilon -> Epsilon
-    | SChar c -> IChar (IC.from_char c)
-    | SUnion tl -> Union (List.map new_t tl)
-    | SConcat tl -> Concat (List.map new_t tl)
-    | SStar t -> Star (new_t t)
-
-  let from_list t = match t with
-    | [e] -> new_t e
-    | _ -> Union (List.map new_t t)
-
-  let fprint_set fmt s =
-    ICSet.iter (fun v -> Format.fprintf fmt "%a " IC.fprint v) s
-
-  let pp_sep_un fmt () = Format.fprintf fmt "|"
-  let pp_sep_not _ () = ()
-
-  let rec fprint fmt = function
-    | Epsilon -> ()
-    | IChar (c, i) -> Format.fprintf fmt "%a" C.fprint c
-    | Union tl -> Format.fprintf fmt "(%a)" 
-      (Format.pp_print_list ~pp_sep:pp_sep_un fprint) tl
-    | Concat tl -> Format.fprintf fmt "(%a)" 
-      (Format.pp_print_list ~pp_sep:pp_sep_not fprint) tl
-    | Star t -> Format.fprintf fmt "%a*" fprint t
-
-  let rec null = function
-    | Epsilon | Star _ -> true
-    | IChar _ -> false
-    | Union tl -> List.exists null tl
-    | Concat tl -> List.for_all null tl
-
-
-  let first t =
-    let rec fconcat acc = function
-      | [] -> acc
-      | t :: tl -> let ft = fr acc t in
-                   if null t then fconcat ft tl
-                   else ft
-                     
-    and fr acc = function
-      | Epsilon -> acc
-      | IChar iv -> ICSet.add iv acc
-      | Union tl -> List.fold_left fr acc tl
-      | Concat tl -> fconcat acc tl
-      | Star t -> fr acc t
-    in
-    fr ICSet.empty t
-                          
-  let last t =
-    let rec lconcat acc = function
-      | [] -> acc
-      | t :: tl -> let lt = lr acc t in
-                   if null t then lconcat lt tl
-                   else lt
-    and lr acc = function
-      | Epsilon -> acc
-      | IChar iv -> ICSet.add iv acc
-      | Union tl -> List.fold_left lr acc tl
-      | Concat tl -> lconcat acc (List.rev tl)
-      | Star t -> lr acc t
-    in
-    lr ICSet.empty t
-
-  let follow c t =
-    let rec fconcat acc = function
-      | r1 :: ((r2 :: _) as rtl) ->
-        let s = fr acc r2  in
-        let acc = if ICSet.mem c (last r1) 
-          then ICSet.union s (first (Concat rtl)) else s in
-        fconcat acc rtl
-      | [] | [_] -> acc
-    and fr acc = function
-      | Epsilon | IChar _ -> acc
-      | Union tl -> List.fold_left fr acc tl
-      | Concat tl -> fconcat (fr acc (List.hd tl)) tl
-      | Star t -> 
-        let s = fr acc t in
-        if ICSet.mem c (last t) then ICSet.union s (first t) else s
-    in
-    fr ICSet.empty t
-
-  let next_state r st c =
-    ICSet.fold (
-      fun ((c', _) as ic) st' ->
-        if c' = c then 
-          ICSet.union st' (follow ic r) else st'
-    ) st ICSet.empty
-
-  let add_eof r = Concat [r; IChar IC.end_char]
-
-  let print_set s =
-    ICSet.iter (fun v -> Format.printf "%a\n" IC.fprint v) s
-
-  let fprint_set_dot fmt s =
-    ICSet.iter (fun v -> Format.fprintf fmt "%a\n" IC.fprint_dot v) s
-
       
-end
+    module C = C
+    module IC = Make_IC(C)
 
+    module ICSet = Set.Make (IC)
+
+    type char = C.t
+
+    type simple_r = 
+      | SEpsilon 
+      | SChar of char 
+      | SUnion of simple_r list
+      | SConcat of simple_r list
+      | SStar of simple_r
+      | SPlus of simple_r
+      | SOption of simple_r
+
+    type ichar = IC.t
+
+    let from_char = IC.from_char
+
+    type t = 
+      | Epsilon
+      | IChar of ichar
+      | Union of t list
+      | Concat of t list
+      | Star of t
+      | Plus of t
+      | Option of t
+
+    let rec new_t = function
+      | SEpsilon -> Epsilon
+      | SChar c -> IChar (IC.from_char c)
+      | SUnion tl -> Union (List.map new_t tl)
+      | SConcat tl -> Concat (List.map new_t tl)
+      | SStar t -> Star (new_t t)
+      | SPlus t -> Plus (new_t t)
+      | SOption t -> Option (new_t t)
+
+    let from_list t = match t with
+      | [e] -> new_t e
+      | _ -> Union (List.map new_t t)
+
+    let fprint_set fmt s =
+      ICSet.iter (fun v -> Format.fprintf fmt "%a " IC.fprint v) s
+
+    let pp_sep_un fmt () = Format.fprintf fmt "|"
+    let pp_sep_not _ () = ()
+
+    let rec fprint fmt = function
+      | Epsilon -> ()
+      | IChar (c, i) -> Format.fprintf fmt "%a" C.fprint c
+      | Union tl -> Format.fprintf fmt "(%a)" 
+        (Format.pp_print_list ~pp_sep:pp_sep_un fprint) tl
+      | Concat tl -> Format.fprintf fmt "(%a)" 
+        (Format.pp_print_list ~pp_sep:pp_sep_not fprint) tl
+      | Star t -> Format.fprintf fmt "%a*" fprint t
+      | Plus t -> Format.fprintf fmt "%a+" fprint t
+      | Option t -> Format.fprintf fmt "%a?" fprint t
+
+    let rec null = function
+      | Epsilon | Star _ | Option _ -> true
+      | IChar _ -> false
+      | Union tl -> List.exists null tl
+      | Concat tl -> List.for_all null tl
+      | Plus t -> null t
+
+
+    let first t =
+      let rec fconcat acc = function
+        | [] -> acc
+        | t :: tl -> let ft = fr acc t in
+                     if null t then fconcat ft tl
+                     else ft
+                       
+      and fr acc = function
+        | Epsilon -> acc
+        | IChar iv -> ICSet.add iv acc
+        | Union tl -> List.fold_left fr acc tl
+        | Concat tl -> fconcat acc tl
+        | Star t | Option t | Plus t -> fr acc t
+      in
+      fr ICSet.empty t
+        
+    let last t =
+      let rec lconcat acc = function
+        | [] -> acc
+        | t :: tl -> let lt = lr acc t in
+                     if null t then lconcat lt tl
+                     else lt
+      and lr acc = function
+        | Epsilon -> acc
+        | IChar iv -> ICSet.add iv acc
+        | Union tl -> List.fold_left lr acc tl
+        | Concat tl -> lconcat acc (List.rev tl)
+        | Star t | Option t | Plus t -> lr acc t
+      in
+      lr ICSet.empty t
+
+    let follow c t =
+      let rec fconcat acc = function
+        | r1 :: ((r2 :: _) as rtl) ->
+          let s = fr acc r2  in
+          let acc = if ICSet.mem c (last r1) 
+            then ICSet.union s (first (Concat rtl)) else s in
+          fconcat acc rtl
+        | [] | [_] -> acc
+      and fr acc = function
+        | Epsilon | IChar _ -> acc
+        | Union tl -> List.fold_left fr acc tl
+        | Concat tl -> fconcat (fr acc (List.hd tl)) tl
+        | Star t | Plus t -> 
+          let s = fr acc t in
+          if ICSet.mem c (last t) then ICSet.union s (first t) else s
+        | Option t -> fr acc t
+      in
+      fr ICSet.empty t
+
+    let next_state r st c =
+      ICSet.fold (
+        fun ((c', _) as ic) st' ->
+          if c' = c then 
+            ICSet.union st' (follow ic r) else st'
+      ) st ICSet.empty
+
+    let add_eof r = Concat [r; IChar IC.end_char]
+
+    let print_set s =
+      ICSet.iter (fun v -> Format.printf "%a\n" IC.fprint v) s
+
+    let fprint_set_dot fmt s =
+      ICSet.iter (fun v -> Format.fprintf fmt "%a\n" IC.fprint_dot v) s
+
+        
+  end
+         
 module type AS = sig
 
   type regexp

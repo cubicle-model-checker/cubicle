@@ -319,7 +319,8 @@ let far = !far
 let far_extra = 
   match !far_extra with
     | "oracle" | "fwd" | "fwd-brab" as f -> 
-      if !brab = -1 then raise (Arg.Bad "You should give a number of processes to brab")
+      if !brab = -1 then raise 
+        (Arg.Bad "You should give a number of processes to brab")
       else f
     | f -> f
 
