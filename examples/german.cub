@@ -40,6 +40,9 @@ init (z) {
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
 
+trans_regexp : send_req_shared(z) recv_req_shared(z) send_gnt_shared(z) recg_gnt_shared(z) ?
+
+
 good (z) { Cache[z] = Invalid && Shrset[z] = False }
 good (z) { Cache[z] <> Invalid && Shrset[z] = True }
 (* good (z) { Cache[z] = Exclusive && Exgntd = True } *)

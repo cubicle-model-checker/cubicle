@@ -579,6 +579,7 @@ let pregexp_to_simplerl p =
   let vs = Hstring.HSet.elements (pr Hstring.HSet.empty p) in
   let subst = Variable.all_permutations vs 
     (Variable.give_procs Options.enumerative) in
+
   let apply_subst s p = 
     let open Regexp.RTrans in
     let rec ar = function
@@ -646,8 +647,11 @@ let encode_psystem
   let sregexpl = List.fold_left (fun acc p ->
     let pl = pregexp_to_simplerl p in
     List.rev_append pl acc) [] pregexps in
+  
   let regexp = Regexp.RTrans.from_list sregexpl in
+  Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
   let automaton = Regexp.Automaton.make_automaton regexp in
+  
   {
     globals = pglobals;
     consts = pconsts;

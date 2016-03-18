@@ -112,7 +112,9 @@
 /* %left prec_relation EQ NEQ LT LE GT GE */
 /* %left PLUS MINUS */
 %nonassoc NOT
+%right QMARK
 /* %left BAR */
+
 
 %type <Ast.system> system
 %start system
@@ -154,39 +156,35 @@ symbold_decls :
       { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
 ;
 
-trans_reg :
-  | transition_name LEFTPAR lidents RIGHTPAR
-      { PChar ($1, $3) }
-
-trans_list :
-  | trans_reg trans_reg
+regexp_list :
+  | regexp regexp
       { [$1; $2] }
-  | trans_reg trans_list
+  | regexp regexp_list
       { $1 :: $2 }
 ;
 
-trans_union_list:
-  | trans_reg BAR trans_reg
+regexp_union_list:
+  | regexp BAR regexp
       { [$1; $3] }
-  | trans_reg BAR trans_union_list
+  | regexp BAR regexp_union_list
       { $1 :: $3 }
-  | LEFTSQ trans_list RIGHTSQ 
+  | LEFTSQ regexp_list RIGHTSQ 
       { $2 }
 ;
 
 regexp :
-  | trans_reg 
-      { $1 }
+  | transition_name LEFTPAR lidents RIGHTPAR
+      { PChar ($1, $3) }
+  | regexp QMARK
+      { POption $1 }
   | LEFTPAR regexp RIGHTPAR 
       { $2 }
-  | trans_list
+  | regexp_list
       { PConcat $1 }
-  | trans_union_list
+  | regexp_union_list
       { PUnion $1 }
   | regexp TIMES
       { PStar $1 }
-  | regexp QMARK
-      { POption $1 }
   | regexp PLUS
       { PPlus $1 }
 ;

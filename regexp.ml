@@ -149,13 +149,13 @@ module Make_Regexp (C : OrderedChar) : RES with module C = C = struct
     let rec fprint fmt = function
       | Epsilon -> ()
       | IChar (c, i) -> Format.fprintf fmt "%a" C.fprint c
-      | Union tl -> Format.fprintf fmt "(%a)" 
+      | Union tl -> Format.fprintf fmt "[%a]" 
         (Format.pp_print_list ~pp_sep:pp_sep_un fprint) tl
       | Concat tl -> Format.fprintf fmt "(%a)" 
         (Format.pp_print_list ~pp_sep:pp_sep_not fprint) tl
-      | Star t -> Format.fprintf fmt "%a*" fprint t
-      | Plus t -> Format.fprintf fmt "%a+" fprint t
-      | Option t -> Format.fprintf fmt "%a?" fprint t
+      | Star t -> Format.fprintf fmt "\\%a/*" fprint t
+      | Plus t -> Format.fprintf fmt "\\%a/+" fprint t
+      | Option t -> Format.fprintf fmt "{%a}?" fprint t
 
     let rec null = function
       | Epsilon | Star _ | Option _ -> true
