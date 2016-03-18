@@ -112,9 +112,6 @@
 /* %left prec_relation EQ NEQ LT LE GT GE */
 /* %left PLUS MINUS */
 %nonassoc NOT
-%right QMARK
-/* %left BAR */
-
 
 %type <Ast.system> system
 %start system
@@ -156,41 +153,53 @@ symbold_decls :
       { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
 ;
 
-regexp_list :
-  | regexp regexp
+elementary_regexp:
+  | LEFTPAR regexp RIGHTPAR 
+      { $2 }
+  | transition_name LEFTPAR lidents RIGHTPAR
+      { PChar ($1, $3) }
+
+basic_regexp :
+  | elementary_regexp
+      { $1 }
+  | elementary_regexp TIMES
+      { PStar $1 }
+  | elementary_regexp PLUS
+      { PPlus $1 }
+  | elementary_regexp QMARK
+      { POption $1 }
+;
+
+union :
+  | basic_regexp BAR basic_regexp
+      { [$1; $3] }
+  | basic_regexp BAR union
+      { $1 :: $3 }
+;
+
+simple_regexp :
+  | union
+      { PUnion $1 }
+  | basic_regexp
+      { $1 }
+;
+
+concatenation :
+  | simple_regexp simple_regexp
       { [$1; $2] }
-  | regexp regexp_list
+  | simple_regexp concatenation
       { $1 :: $2 }
 ;
 
-regexp_union_list:
-  | regexp BAR regexp
-      { [$1; $3] }
-  | regexp BAR regexp_union_list
-      { $1 :: $3 }
-  | LEFTSQ regexp_list RIGHTSQ 
-      { $2 }
-;
-
 regexp :
-  | transition_name LEFTPAR lidents RIGHTPAR
-      { PChar ($1, $3) }
-  | regexp QMARK
-      { POption $1 }
-  | LEFTPAR regexp RIGHTPAR 
-      { $2 }
-  | regexp_list
+  | concatenation 
       { PConcat $1 }
-  | regexp_union_list
-      { PUnion $1 }
-  | regexp TIMES
-      { PStar $1 }
-  | regexp PLUS
-      { PPlus $1 }
+  | simple_regexp
+      { $1 }
 ;
 
 decl_regexp :
-  | TREGEXP COLON regexp
+  | TREGEXP COLON regexp PV
       { $3 } 
 ;
 

@@ -1447,6 +1447,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth aut
               let morf = List.rev from in
               if copy_regexp && Regexp.Automaton.recognize_anywhere autom morf
               then begin
+                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                 let l = State.diff st s in
                 let s' = create_new_state env s l in
                 if debug then 
