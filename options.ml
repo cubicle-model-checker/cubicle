@@ -61,6 +61,13 @@ let enum_verbose = ref false
 let copy_state = ref false
 let copy_regexp = ref false
 
+let res_output = ref false
+let res_file = ref ""
+
+let set_res_output s =
+  res_output := true;
+  res_file := s
+
 (* BWD *)
 
 let bwd_fwd = ref (-1)
@@ -210,6 +217,7 @@ let specs =
     "number of colors for dot output";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
+    "-res", Arg.String set_res_output, " output forward and bwd informations in file";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-of", Arg.Set only_forward, " only do one forward search";
     "-pall", Arg.Set print_forward_all, " print forwarded states";
@@ -363,6 +371,9 @@ let enum_verbose = !enum_verbose
 
 let copy_state = !copy_state
 let copy_regexp = !copy_regexp
+
+let res_output = !res_output
+let res_file = !res_file
 
 let bwd_fwd = !bwd_fwd
 

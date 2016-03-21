@@ -61,6 +61,10 @@ let _ =
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
     let close_dot = Dot.open_dot () in 
+    let oc = 
+      if res_output 
+      then open_out_gen [Open_wronly; Open_append; Open_creat] 0o644 res_file
+      else stdout in
     begin 
       if far then
 	match Far.search system with
@@ -78,6 +82,9 @@ let _ =
           | Bwd.Safe (visited, candidates) ->
             if (not quiet || profiling) then
               Stats.print_report ~safe:true visited candidates;
+            if res_output then
+              Stats.output_report oc ~safe:true visited candidates;
+            
             printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
             Trace.Selected.certificate system visited;
             close_dot ();
@@ -86,6 +93,8 @@ let _ =
           | Bwd.Unsafe (faulty, candidates) ->
             if (not quiet || profiling) then
               Stats.print_report ~safe:false [] candidates;
+            if res_output then
+              Stats.output_report oc ~safe:false [] candidates;
             if not quiet then Stats.error_trace system faulty;
             printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
             close_dot ();

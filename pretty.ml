@@ -40,9 +40,9 @@ let print_double_line =
 
 
 let print_title fmt s =
-  printf "%a" print_double_line ();
-  printf "* @{<b>%s@}\n" s;
-  printf "%a" print_line ()
+  fprintf fmt "%a" print_double_line ();
+  fprintf fmt "* @{<b>%s@}\n" s;
+  fprintf fmt "%a" print_line ()
 
 
 let rec print_list print sep fmt = function

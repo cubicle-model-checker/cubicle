@@ -80,3 +80,5 @@ val init : ?bwd:Node.t list -> t_system -> unit
 val first_good_candidate : Node.t list -> Node.t option 
 
 val all_good_candidates : Node.t list -> Node.t list 
+
+val get_stats : unit -> int

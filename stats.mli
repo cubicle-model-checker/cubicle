@@ -59,3 +59,7 @@ val error_trace : Ast.t_system -> Node.t -> unit
 val check_limit : Node.t -> unit
 (** Raises [ReachedLimit] if the limits given in {! Options} have been
     exceeded *)
+
+val output_report : safe:bool -> out_channel -> Node.t list -> Node.t list -> unit
+(** prints a complete report. Additionally, if {! Options.profiling} is set
+    then output timing information. *)

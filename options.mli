@@ -54,6 +54,9 @@ val filter_md : int
 val copy_state : bool
 val copy_regexp : bool
 
+val res_output : bool
+val res_file : string
+
 val goods : bool
 
 val max_proc : int

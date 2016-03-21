@@ -649,7 +649,8 @@ let encode_psystem
     List.rev_append pl acc) [] pregexps in
   
   let regexp = Regexp.RTrans.from_list sregexpl in
-  Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
+  if Options.verbose > 0 && Options.debug then
+    Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
   let automaton = Regexp.Automaton.make_automaton regexp in
   
   {

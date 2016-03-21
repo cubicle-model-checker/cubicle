@@ -386,8 +386,6 @@ let normalize_state2 env st =
 
 let global_envs = ref []
 
-
-
 let make_range (low, up) =
   let l = ref [] in
   for i = up downto low do
@@ -1036,7 +1034,6 @@ let create_new_state env s l =
 let generalize_state env s hs system =
   let s' = State.copy s in
   let vars = Hstring.HSet.elements hs in
-  List.iter (fun h -> Format.eprintf "v : %a@." Hstring.print h) vars;
   List.iter (fun arr ->
     let ta = Access(arr, vars) in
     let i = HT.find env.id_terms ta in
@@ -1220,16 +1217,27 @@ let study_fringe env =
       ) tl;
       eprintf "State : %a@." (print_state env) st)
 
+let nums = ref 0
+
+let save_stats () =
+  let st = HST.stats (List.hd (!global_envs)).explicit_states in
+  nums := st.Hashtbl.num_bindings;
+  Format.eprintf "Nums : %d@." !nums
+
+let get_stats () = !nums
 
 let finalize_search env =
+  save_stats ();
   let st = HST.stats env.explicit_states in
-  if not quiet then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
-  printf "All (depth max : %d) : %d@." !maxd (List.length env.states);
-  if print_forward_all then print_all env;
-  printf "Fringe : %d@." (List.length env.fringe);
-  if print_forward_frg then (
-    print_fringe env env.fringe;
-    study_fringe env
+  if not quiet then (
+    printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
+    printf "All (depth max : %d) : %d@." !maxd (List.length env.states);
+    if print_forward_all then print_all env;
+    printf "Fringe : %d@." (List.length env.fringe);
+    if print_forward_frg then (
+      print_fringe env env.fringe;
+      study_fringe env
+    )
   );
   if verbose > 0 || profiling then begin
     printf "\n%a" Pretty.print_line ();
@@ -1461,9 +1469,9 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               let morf = List.rev from in
               if copy_regexp && Regexp.Automaton.recognize_anywhere autom morf
               then begin
-                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                 let s' = generalize_state env s st_tr.st_vars init in
                 if debug then (
+                  Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                   Format.eprintf "Pre state : %a@." (print_state env) st;
                   Format.eprintf "New state : %a@." (print_state env) s;
                   Format.eprintf "Cop state : %a@." (print_state env) s'
@@ -1488,7 +1496,6 @@ let forward_bfs init procs env l autom =
   let md = ref (-1) in
   set_fd_md fd md ref_es;
   let fringe = ref [] in
-  Format.printf "BWD : %d@." (List.length env.bad_states);
   List.iter (fun td -> HQueue.add td to_do) l;
   while not (HQueue.is_empty to_do && !fringe = []) &&
     (max_forward = -1 || !cpt_f < max_forward) do
@@ -1555,8 +1562,8 @@ let forward_bfs init procs env l autom =
       if limit_forward_depth && depth = forward_depth then
         env.fringe <- st :: env.fringe;
     end
-  done;
-  Format.eprintf "Copies : %d\nRejected : %d@." !cpt_c !cpt_rc
+  done
+  (* Format.eprintf "Copies : %d\nRejected : %d@." !cpt_c !cpt_rc *)
     
 let nodes_to_iopi_list env bwd =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
