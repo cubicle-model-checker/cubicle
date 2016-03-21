@@ -596,7 +596,7 @@ let pregexp_to_simplerl p =
   in
   List.map (fun sigma -> apply_subst sigma p) subst
     
-
+let rnumber = ref 0
 
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
@@ -647,7 +647,7 @@ let encode_psystem
   let sregexpl = List.fold_left (fun acc p ->
     let pl = pregexp_to_simplerl p in
     List.rev_append pl acc) [] pregexps in
-  
+  rnumber := (List.length sregexpl / Options.enumerative);
   let regexp = Regexp.RTrans.from_list sregexpl in
   if Options.verbose > 0 && Options.debug then
     Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
@@ -697,7 +697,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     pregexps;
   }
   
-  
+let get_rnumber () = !rnumber  
 
 
 

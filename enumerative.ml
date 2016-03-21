@@ -1036,10 +1036,12 @@ let generalize_state env s hs system =
   let vars = Hstring.HSet.elements hs in
   List.iter (fun arr ->
     let ta = Access(arr, vars) in
-    let i = HT.find env.id_terms ta in
-    let (bi, bs) = HH.find env.intervals arr in
-    let def = s.(i) in
-    for i = bi to bs do s'.(i) <- def done;
+    try
+      let i = HT.find env.id_terms ta in
+      let (bi, bs) = HH.find env.intervals arr in
+      let def = s.(i) in
+      for i = bi to bs do s'.(i) <- def done;
+    with Not_found -> ()
   ) system.t_arrays;
   s'
       

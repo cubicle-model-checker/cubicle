@@ -340,7 +340,11 @@ let output_report ~safe oc visited candidates =
   let fmt = formatter_of_out_channel oc in
   Array.iter (fun a -> Format.fprintf fmt "%s " a) Sys.argv;
   Format.fprintf fmt "@.";
-  fprintf fmt "Total forward nodes :            : %d@." (Enumerative.get_stats ());
+  if copy_regexp then
+    Format.fprintf fmt "Number of regexps :              : %d@." 
+      (Ptree.get_rnumber ());
+  Format.fprintf fmt "Total forward nodes :            : %d@." 
+    (Enumerative.get_stats ());
   Format.fprintf fmt "Number of visited nodes          : %d@." !cpt_nodes;
   Format.fprintf fmt "Max Number of processes          : %d@." !cpt_process;
   if do_brab && not far then
@@ -349,4 +353,3 @@ let output_report ~safe oc visited candidates =
   Format.fprintf fmt "Restarts                         : @[%d%a@]@." !cpt_restart
     print_rounds_nb ();
   Format.fprintf fmt "%a" Pretty.print_double_line ()
-
