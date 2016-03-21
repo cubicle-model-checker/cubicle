@@ -1,6 +1,7 @@
 type t = int array
 (** The type of states, we allow states to be constructed from the outside by
     calling the function [new_undef_state]. *)
+val length : t -> int
 
 (* Functions for clustering *)
 val diff : t -> t -> (int * (int * int)) list

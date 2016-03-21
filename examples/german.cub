@@ -39,9 +39,10 @@ init (z) {
 
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
-
-trans_regexp : send_req_shared(z) recv_req_shared(z) send_gnt_shared(z) 
-               recv_gnt_shared(z)?;
+(* unsafe (z) { Chan3[z] = Invack && Shrset[z] = False } *)
+trans_regexp : send_req_shared(z) recv_req_shared(z) send_gnt_shared(z) ;
+               (* recv_gnt_shared(z)?; *)
+trans_regexp : send_inv_1(z) send_invack(z);
 
 
 good (z) { Cache[z] = Invalid && Shrset[z] = False }

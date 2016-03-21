@@ -1033,6 +1033,19 @@ let create_new_state env s l =
       | _ -> (* assert false *) ()
   ) l; s'
 
+let generalize_state env s hs system =
+  let s' = State.copy s in
+  let vars = Hstring.HSet.elements hs in
+  List.iter (fun h -> Format.eprintf "v : %a@." Hstring.print h) vars;
+  List.iter (fun arr ->
+    let ta = Access(arr, vars) in
+    let i = HT.find env.id_terms ta in
+    let (bi, bs) = HH.find env.intervals arr in
+    let def = s.(i) in
+    for i = bi to bs do s'.(i) <- def done;
+  ) system.t_arrays;
+  s'
+      
 let post_dfs st visited trs q cpt_q depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
@@ -1411,7 +1424,8 @@ let rec pfrom = function
     Format.eprintf ") -> ";
     pfrom tl
 
-let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth autom =
+let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) 
+    frg fd depth autom init =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
       try
@@ -1448,10 +1462,12 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) frg fd depth aut
               if copy_regexp && Regexp.Automaton.recognize_anywhere autom morf
               then begin
                 Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
-                let l = State.diff st s in
-                let s' = create_new_state env s l in
-                if debug then 
-                  Format.eprintf "New state : %a@." (print_state env) s';
+                let s' = generalize_state env s st_tr.st_vars init in
+                if debug then (
+                  Format.eprintf "Pre state : %a@." (print_state env) st;
+                  Format.eprintf "New state : %a@." (print_state env) s;
+                  Format.eprintf "Cop state : %a@." (print_state env) s'
+                );
                 HQueue.add ~cpt_q (depth + 1, from, s') q
               end;
               HQueue.add ~cpt_q (depth + 1, from, s) q
@@ -1525,7 +1541,8 @@ let forward_bfs init procs env l autom =
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
       HST.add h_visited st ();
-      post_bfs env (from, st) h_visited trs to_do cpt_q (cpt_c, cpt_rc) fringe !fd depth autom;
+      post_bfs env (from, st) h_visited trs to_do cpt_q
+        (cpt_c, cpt_rc) fringe !fd depth autom init;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
