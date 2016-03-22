@@ -1,0 +1,5038 @@
+***************************
+******* Search root *********
+***************************
+
+
+********[Unwind]********	(root) --send_shared--> (top)
+
+	[New node] 3
+
+********[Unwind]********	(root) --send_exclusive--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(root) --send_exclusive--> (3)
+
+***************************
+******* Search 3 *********
+***************************
+
+
+********[Unwind]********	(3) --send_shared--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --send_shared--> (3)
+
+
+********[Unwind]********	(3) --recv_shared--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --recv_shared--> (3)
+
+
+********[Unwind]********	(3) --send_exclusive--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --send_exclusive--> (3)
+
+
+********[Unwind]********	(3) --recv_exclusive--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --recv_exclusive--> (3)
+
+
+********[Unwind]********	(3) --sendinv_1--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --sendinv_1--> (3)
+
+
+********[Unwind]********	(3) --sendinv_2--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --sendinv_2--> (3)
+
+
+********[Unwind]********	(3) --recv_inv--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --recv_inv--> (3)
+
+
+********[Unwind]********	(3) --recv_invack--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(3) --recv_invack--> (3)
+
+
+********[Unwind]********	(3) --gnt_shared--> (top)
+
+
+********[Unwind]********	(3) --gnt_exclusive--> (top)
+
+node [1m1[22m: gnt_shared(#2) -> [35munsafe[1][39m
+node [1m2[22m: gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (3)
+
+	[New node] 4
+
+********[Unwind]********	(root) --send_exclusive--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(root) --send_exclusive--> (4)
+
+
+********[Unwind]********	(3) --send_shared--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --recv_shared--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --send_exclusive--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --recv_exclusive--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --sendinv_1--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --sendinv_2--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --recv_inv--> (3)
+
+[Already Bad] 3
+
+
+********[Unwind]********	(3) --recv_invack--> (3)
+
+[Already Bad] 3
+
+***************************
+******* Search 4 *********
+***************************
+
+
+********[Unwind]********	(4) --send_shared--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --send_shared--> (4)
+
+
+********[Unwind]********	(4) --recv_shared--> (3)
+
+
+********[Unwind]********	(4) --send_exclusive--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --send_exclusive--> (4)
+
+
+********[Unwind]********	(4) --recv_exclusive--> (3)
+
+
+********[Unwind]********	(4) --sendinv_1--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --sendinv_1--> (4)
+
+
+********[Unwind]********	(4) --sendinv_2--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --sendinv_2--> (4)
+
+
+********[Unwind]********	(4) --recv_inv--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --recv_inv--> (4)
+
+
+********[Unwind]********	(4) --recv_invack--> (3)
+
+
+********[Unwind]********	(4) --gnt_shared--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(4) --gnt_shared--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --gnt_shared--> (4)
+
+
+********[Unwind]********	(4) --gnt_exclusive--> (top)
+
+	[Covered by] 3
+
+********[Unwind]********	(4) --gnt_exclusive--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(4) --gnt_exclusive--> (4)
+
+node [1m3[22m: recv_shared(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m4[22m: recv_exclusive(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m5[22m: recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m6[22m: recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m7[22m: recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m8[22m: recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (4)
+
+	[New node] 5
+
+********[Unwind]********	(root) --send_exclusive--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(root) --send_exclusive--> (5)
+
+
+********[Unwind]********	(4) --send_shared--> (4)
+
+[Already Bad] 4
+
+
+********[Unwind]********	(4) --send_exclusive--> (4)
+
+[Already Bad] 4
+
+
+********[Unwind]********	(4) --sendinv_1--> (4)
+
+[Already Bad] 4
+
+
+********[Unwind]********	(4) --sendinv_2--> (4)
+
+[Already Bad] 4
+
+
+********[Unwind]********	(4) --recv_inv--> (4)
+
+[Already Bad] 4
+
+
+********[Unwind]********	(4) --gnt_shared--> (4)
+
+[Already Bad] 4
+
+
+********[Unwind]********	(4) --gnt_exclusive--> (4)
+
+[Already Bad] 4
+
+***************************
+******* Search 5 *********
+***************************
+
+
+********[Unwind]********	(5) --send_shared--> (4)
+
+
+********[Unwind]********	(5) --recv_shared--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(5) --recv_shared--> (4)
+
+
+********[Unwind]********	(5) --send_exclusive--> (4)
+
+
+********[Unwind]********	(5) --recv_exclusive--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(5) --recv_exclusive--> (4)
+
+
+********[Unwind]********	(5) --sendinv_1--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(5) --sendinv_1--> (5)
+
+
+********[Unwind]********	(5) --sendinv_2--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(5) --sendinv_2--> (5)
+
+
+********[Unwind]********	(5) --recv_inv--> (4)
+
+
+********[Unwind]********	(5) --recv_invack--> (3)
+
+
+********[Unwind]********	(5) --gnt_shared--> (4)
+
+
+********[Unwind]********	(5) --gnt_exclusive--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(5) --gnt_exclusive--> (5)
+
+node [1m9[22m: send_shared(#2) -> recv_shared(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m10[22m: recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m11[22m: send_exclusive(#1) -> recv_exclusive(#1) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m12[22m: recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m13[22m: recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m14[22m: recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m15[22m: recv_invack(#1) -> recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (5)
+
+	[New node] 6
+
+********[Unwind]********	(root) --send_exclusive--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(root) --send_exclusive--> (6)
+
+
+********[Unwind]********	(5) --sendinv_1--> (5)
+
+[Already Bad] 5
+
+
+********[Unwind]********	(5) --sendinv_2--> (5)
+
+[Already Bad] 5
+
+
+********[Unwind]********	(5) --gnt_exclusive--> (5)
+
+[Already Bad] 5
+
+***************************
+******* Search 6 *********
+***************************
+
+
+********[Unwind]********	(6) --send_shared--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(6) --send_shared--> (5)
+
+
+********[Unwind]********	(6) --recv_shared--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(6) --recv_shared--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(6) --recv_shared--> (6)
+
+
+********[Unwind]********	(6) --send_exclusive--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(6) --send_exclusive--> (5)
+
+
+********[Unwind]********	(6) --recv_exclusive--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(6) --recv_exclusive--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(6) --recv_exclusive--> (6)
+
+
+********[Unwind]********	(6) --sendinv_1--> (5)
+
+
+********[Unwind]********	(6) --sendinv_2--> (5)
+
+
+********[Unwind]********	(6) --recv_inv--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(6) --recv_inv--> (5)
+
+
+********[Unwind]********	(6) --recv_invack--> (3)
+
+
+********[Unwind]********	(6) --gnt_shared--> (4)
+
+
+********[Unwind]********	(6) --gnt_exclusive--> (5)
+
+node [1m16[22m: send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m17[22m: send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m18[22m: sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m19[22m: sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+node [1m20[22m: recv_invack(#2) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m21[22m: gnt_shared(#2) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m22[22m: gnt_exclusive(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m23[22m: gnt_exclusive(#1) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (6)
+
+	[New node] 7
+
+********[Unwind]********	(root) --send_exclusive--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(root) --send_exclusive--> (7)
+
+
+********[Unwind]********	(6) --recv_shared--> (6)
+
+[Already Bad] 6
+
+
+********[Unwind]********	(6) --recv_exclusive--> (6)
+
+[Already Bad] 6
+
+***************************
+******* Search 7 *********
+***************************
+
+
+********[Unwind]********	(7) --send_shared--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(7) --send_shared--> (6)
+
+
+********[Unwind]********	(7) --recv_shared--> (6)
+
+
+********[Unwind]********	(7) --send_exclusive--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(7) --send_exclusive--> (6)
+
+
+********[Unwind]********	(7) --recv_exclusive--> (6)
+
+
+********[Unwind]********	(7) --sendinv_1--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(7) --sendinv_1--> (6)
+
+
+********[Unwind]********	(7) --sendinv_2--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(7) --sendinv_2--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(7) --sendinv_2--> (7)
+
+
+********[Unwind]********	(7) --recv_inv--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(7) --recv_inv--> (6)
+
+
+********[Unwind]********	(7) --recv_invack--> (3)
+
+
+********[Unwind]********	(7) --gnt_shared--> (4)
+
+
+********[Unwind]********	(7) --gnt_exclusive--> (5)
+
+node [1m24[22m: send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+         recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m25[22m: recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m26[22m: recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+         recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m27[22m: recv_inv(#2) -> gnt_shared(#2) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m28[22m: recv_inv(#1) -> gnt_exclusive(#1) -> recv_shared(#2) ->
+         recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m29[22m: recv_invack(#2) -> sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m30[22m: gnt_shared(#2) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m31[22m: gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+         recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (7)
+
+	[New node] 8
+
+********[Unwind]********	(root) --send_exclusive--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(root) --send_exclusive--> (8)
+
+
+********[Unwind]********	(7) --sendinv_2--> (7)
+
+[Already Bad] 7
+
+***************************
+******* Search 8 *********
+***************************
+
+
+********[Unwind]********	(8) --send_shared--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(8) --send_shared--> (7)
+
+
+********[Unwind]********	(8) --recv_shared--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(8) --recv_shared--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(8) --recv_shared--> (8)
+
+
+********[Unwind]********	(8) --send_exclusive--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(8) --send_exclusive--> (7)
+
+
+********[Unwind]********	(8) --recv_exclusive--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(8) --recv_exclusive--> (7)
+
+
+********[Unwind]********	(8) --sendinv_1--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(8) --sendinv_1--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(8) --sendinv_1--> (8)
+
+
+********[Unwind]********	(8) --sendinv_2--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(8) --sendinv_2--> (8)
+
+
+********[Unwind]********	(8) --recv_inv--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(8) --recv_inv--> (7)
+
+
+********[Unwind]********	(8) --recv_invack--> (3)
+
+
+********[Unwind]********	(8) --gnt_shared--> (4)
+
+
+********[Unwind]********	(8) --gnt_exclusive--> (5)
+
+node [1m32[22m: send_shared(#2) -> recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+         recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m33[22m: send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m34[22m: recv_exclusive(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m35[22m: recv_exclusive(#1) -> recv_invack(#2) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m36[22m: recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m37[22m: recv_inv(#1) -> gnt_exclusive(#1) -> send_shared(#2) ->
+         recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m38[22m: recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m39[22m: recv_invack(#1) -> gnt_shared(#2) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m40[22m: recv_invack(#2) -> gnt_exclusive(#1) -> send_shared(#2) ->
+         recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m41[22m: gnt_shared(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m42[22m: gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (8)
+
+	[New node] 9
+
+********[Unwind]********	(root) --send_exclusive--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(root) --send_exclusive--> (9)
+
+
+********[Unwind]********	(8) --recv_shared--> (8)
+
+[Already Bad] 8
+
+
+********[Unwind]********	(8) --sendinv_1--> (8)
+
+[Already Bad] 8
+
+
+********[Unwind]********	(8) --sendinv_2--> (8)
+
+[Already Bad] 8
+
+***************************
+******* Search 9 *********
+***************************
+
+
+********[Unwind]********	(9) --send_shared--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(9) --send_shared--> (8)
+
+
+********[Unwind]********	(9) --recv_shared--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(9) --recv_shared--> (9)
+
+
+********[Unwind]********	(9) --send_exclusive--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(9) --send_exclusive--> (8)
+
+
+********[Unwind]********	(9) --recv_exclusive--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(9) --recv_exclusive--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(9) --recv_exclusive--> (9)
+
+
+********[Unwind]********	(9) --sendinv_1--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(9) --sendinv_1--> (9)
+
+
+********[Unwind]********	(9) --sendinv_2--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(9) --sendinv_2--> (9)
+
+
+********[Unwind]********	(9) --recv_inv--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(9) --recv_inv--> (8)
+
+
+********[Unwind]********	(9) --recv_invack--> (3)
+
+
+********[Unwind]********	(9) --gnt_shared--> (4)
+
+
+********[Unwind]********	(9) --gnt_exclusive--> (5)
+
+node [1m43[22m: send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+         sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+node [1m44[22m: send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m45[22m: send_exclusive(#1) -> gnt_shared(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m46[22m: recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m47[22m: recv_inv(#1) -> recv_invack(#1) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m48[22m: recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+         send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m49[22m: recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m50[22m: recv_invack(#2) -> recv_inv(#1) -> gnt_exclusive(#1) ->
+         send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m51[22m: recv_invack(#2) -> gnt_shared(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m52[22m: recv_invack(#1) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+         sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+node [1m53[22m: gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m54[22m: gnt_shared(#2) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m55[22m: gnt_shared(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (9)
+
+	[New node] 10
+
+********[Unwind]********	(root) --send_exclusive--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(root) --send_exclusive--> (10)
+
+
+********[Unwind]********	(9) --recv_shared--> (9)
+
+[Already Bad] 9
+
+
+********[Unwind]********	(9) --recv_exclusive--> (9)
+
+[Already Bad] 9
+
+
+********[Unwind]********	(9) --sendinv_1--> (9)
+
+[Already Bad] 9
+
+
+********[Unwind]********	(9) --sendinv_2--> (9)
+
+[Already Bad] 9
+
+***************************
+******* Search 10 *********
+***************************
+
+
+********[Unwind]********	(10) --send_shared--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(10) --send_shared--> (9)
+
+
+********[Unwind]********	(10) --recv_shared--> (9)
+
+
+********[Unwind]********	(10) --send_exclusive--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(10) --send_exclusive--> (9)
+
+
+********[Unwind]********	(10) --recv_exclusive--> (9)
+
+
+********[Unwind]********	(10) --sendinv_1--> (9)
+
+
+********[Unwind]********	(10) --sendinv_2--> (9)
+
+
+********[Unwind]********	(10) --recv_inv--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(10) --recv_inv--> (9)
+
+
+********[Unwind]********	(10) --recv_invack--> (3)
+
+
+********[Unwind]********	(10) --gnt_shared--> (4)
+
+
+********[Unwind]********	(10) --gnt_exclusive--> (5)
+
+node [1m56[22m: recv_shared(#1) -> gnt_shared(#1) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+         recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m57[22m: send_exclusive(#1) -> recv_invack(#2) -> gnt_shared(#1) ->
+         recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+         recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m58[22m: recv_exclusive(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m59[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m60[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+         recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m61[22m: sendinv_2(#1) -> recv_inv(#1) -> recv_invack(#1) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m62[22m: sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m63[22m: recv_inv(#1) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m64[22m: recv_inv(#2) -> recv_invack(#2) -> recv_inv(#1) ->
+         gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+         recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m65[22m: recv_inv(#2) -> gnt_shared(#2) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m66[22m: recv_invack(#1) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m67[22m: recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m68[22m: recv_invack(#2) -> gnt_shared(#1) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+         recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m69[22m: recv_invack(#1) -> gnt_shared(#1) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+         recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m70[22m: gnt_shared(#2) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m71[22m: gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (10)
+
+	[New node] 11
+
+********[Unwind]********	(root) --send_exclusive--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(root) --send_exclusive--> (11)
+
+***************************
+******* Search 11 *********
+***************************
+
+
+********[Unwind]********	(11) --send_shared--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --send_shared--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(11) --send_shared--> (11)
+
+
+********[Unwind]********	(11) --recv_shared--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --recv_shared--> (10)
+
+
+********[Unwind]********	(11) --send_exclusive--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --send_exclusive--> (10)
+
+
+********[Unwind]********	(11) --recv_exclusive--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --recv_exclusive--> (10)
+
+
+********[Unwind]********	(11) --sendinv_1--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --sendinv_1--> (10)
+
+
+********[Unwind]********	(11) --sendinv_2--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --sendinv_2--> (10)
+
+
+********[Unwind]********	(11) --recv_inv--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(11) --recv_inv--> (10)
+
+
+********[Unwind]********	(11) --recv_invack--> (3)
+
+
+********[Unwind]********	(11) --gnt_shared--> (4)
+
+
+********[Unwind]********	(11) --gnt_exclusive--> (5)
+
+node [1m72[22m: recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) ->
+         gnt_shared(#2) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m73[22m: recv_shared(#1) -> recv_invack(#2) -> gnt_shared(#1) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m74[22m: recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+         recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m75[22m: recv_exclusive(#2) -> recv_invack(#1) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m76[22m: recv_inv(#1) -> sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+         recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m77[22m: recv_inv(#2) -> sendinv_2(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_shared(#2) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m78[22m: recv_inv(#1) -> sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) ->
+         gnt_shared(#2) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m79[22m: recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m80[22m: recv_inv(#1) -> recv_invack(#1) -> gnt_shared(#1) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m81[22m: recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> recv_invack(#2) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m82[22m: recv_invack(#2) -> recv_invack(#1) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m83[22m: gnt_shared(#1) -> recv_shared(#1) -> gnt_shared(#1) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (11)
+
+	[New node] 12
+
+********[Unwind]********	(root) --send_exclusive--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(root) --send_exclusive--> (12)
+
+
+********[Unwind]********	(11) --send_shared--> (11)
+
+[Already Bad] 11
+
+***************************
+******* Search 12 *********
+***************************
+
+
+********[Unwind]********	(12) --send_shared--> (11)
+
+
+********[Unwind]********	(12) --recv_shared--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(12) --recv_shared--> (11)
+
+
+********[Unwind]********	(12) --send_exclusive--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(12) --send_exclusive--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(12) --send_exclusive--> (12)
+
+
+********[Unwind]********	(12) --recv_exclusive--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(12) --recv_exclusive--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(12) --recv_exclusive--> (12)
+
+
+********[Unwind]********	(12) --sendinv_1--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(12) --sendinv_1--> (11)
+
+
+********[Unwind]********	(12) --sendinv_2--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(12) --sendinv_2--> (11)
+
+
+********[Unwind]********	(12) --recv_inv--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(12) --recv_inv--> (11)
+
+
+********[Unwind]********	(12) --recv_invack--> (3)
+
+
+********[Unwind]********	(12) --gnt_shared--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(12) --gnt_shared--> (5)
+
+
+********[Unwind]********	(12) --gnt_exclusive--> (5)
+
+node [1m84[22m: send_shared(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m85[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m86[22m: sendinv_2(#1) -> recv_inv(#1) -> sendinv_2(#2) -> recv_invack(#1) ->
+         recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m87[22m: sendinv_2(#1) -> recv_inv(#1) -> recv_invack(#1) -> gnt_shared(#1) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+         recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m88[22m: recv_inv(#1) -> recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+         recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+         recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m89[22m: recv_invack(#1) -> recv_inv(#2) -> recv_invack(#2) ->
+         send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+         sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+node [1m90[22m: recv_invack(#2) -> gnt_shared(#1) -> recv_shared(#1) ->
+         gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m91[22m: gnt_shared(#1) -> recv_shared(#1) -> recv_invack(#2) ->
+         gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m92[22m: gnt_shared(#2) -> recv_shared(#1) -> recv_invack(#2) ->
+         gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m93[22m: gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+         recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m94[22m: gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+         recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+         gnt_exclusive(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m95[22m: gnt_exclusive(#1) -> recv_exclusive(#2) -> recv_invack(#1) ->
+         send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+         sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (12)
+
+	[New node] 13
+
+********[Unwind]********	(root) --send_exclusive--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(root) --send_exclusive--> (13)
+
+
+********[Unwind]********	(12) --send_exclusive--> (12)
+
+[Already Bad] 12
+
+
+********[Unwind]********	(12) --recv_exclusive--> (12)
+
+[Already Bad] 12
+
+***************************
+******* Search 13 *********
+***************************
+
+
+********[Unwind]********	(13) --send_shared--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(13) --send_shared--> (12)
+
+
+********[Unwind]********	(13) --recv_shared--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(13) --recv_shared--> (12)
+
+
+********[Unwind]********	(13) --send_exclusive--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(13) --send_exclusive--> (13)
+
+
+********[Unwind]********	(13) --recv_exclusive--> (12)
+
+
+********[Unwind]********	(13) --sendinv_1--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(13) --sendinv_1--> (12)
+
+
+********[Unwind]********	(13) --sendinv_2--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(13) --sendinv_2--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(13) --sendinv_2--> (13)
+
+
+********[Unwind]********	(13) --recv_inv--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(13) --recv_inv--> (12)
+
+
+********[Unwind]********	(13) --recv_invack--> (3)
+
+
+********[Unwind]********	(13) --gnt_shared--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(13) --gnt_shared--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(13) --gnt_shared--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(13) --gnt_shared--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(13) --gnt_shared--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(13) --gnt_shared--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(13) --gnt_shared--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(13) --gnt_shared--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(13) --gnt_shared--> (13)
+
+
+********[Unwind]********	(13) --gnt_exclusive--> (5)
+
+node [1m96[22m: send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+         sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m97[22m: recv_shared(#2) -> sendinv_2(#1) -> recv_inv(#1) -> sendinv_2(#2) ->
+         recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+         send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m98[22m: recv_shared(#1) -> sendinv_2(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+         sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+         gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m99[22m: recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+         recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+         recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+node [1m100[22m: recv_inv(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m101[22m: recv_inv(#2) -> gnt_shared(#2) -> recv_shared(#1) ->
+          recv_invack(#2) -> gnt_shared(#1) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m102[22m: recv_inv(#1) -> gnt_exclusive(#1) -> recv_exclusive(#2) ->
+          recv_invack(#1) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m103[22m: recv_invack(#1) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m104[22m: gnt_exclusive(#2) -> recv_inv(#1) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (13)
+
+	[New node] 14
+
+********[Unwind]********	(root) --send_exclusive--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(root) --send_exclusive--> (14)
+
+
+********[Unwind]********	(13) --send_exclusive--> (13)
+
+[Already Bad] 13
+
+
+********[Unwind]********	(13) --sendinv_2--> (13)
+
+[Already Bad] 13
+
+
+********[Unwind]********	(13) --gnt_shared--> (13)
+
+[Already Bad] 13
+
+***************************
+******* Search 14 *********
+***************************
+
+
+********[Unwind]********	(14) --send_shared--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(14) --send_shared--> (13)
+
+
+********[Unwind]********	(14) --recv_shared--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(14) --recv_shared--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(14) --recv_shared--> (14)
+
+
+********[Unwind]********	(14) --send_exclusive--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(14) --send_exclusive--> (14)
+
+
+********[Unwind]********	(14) --recv_exclusive--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(14) --recv_exclusive--> (13)
+
+
+********[Unwind]********	(14) --sendinv_1--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(14) --sendinv_1--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(14) --sendinv_1--> (14)
+
+
+********[Unwind]********	(14) --sendinv_2--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(14) --sendinv_2--> (14)
+
+
+********[Unwind]********	(14) --recv_inv--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(14) --recv_inv--> (13)
+
+
+********[Unwind]********	(14) --recv_invack--> (3)
+
+
+********[Unwind]********	(14) --gnt_shared--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(14) --gnt_shared--> (14)
+
+
+********[Unwind]********	(14) --gnt_exclusive--> (5)
+
+node [1m105[22m: send_shared(#2) -> recv_shared(#2) -> sendinv_2(#1) ->
+          recv_inv(#1) -> sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) ->
+          gnt_shared(#2) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+          recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m106[22m: recv_exclusive(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m107[22m: recv_exclusive(#2) -> recv_invack(#1) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m108[22m: recv_inv(#1) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m109[22m: recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m110[22m: gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (14)
+
+	[New node] 15
+
+********[Unwind]********	(root) --send_exclusive--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(root) --send_exclusive--> (15)
+
+
+********[Unwind]********	(14) --recv_shared--> (14)
+
+[Already Bad] 14
+
+
+********[Unwind]********	(14) --send_exclusive--> (14)
+
+[Already Bad] 14
+
+
+********[Unwind]********	(14) --sendinv_1--> (14)
+
+[Already Bad] 14
+
+
+********[Unwind]********	(14) --sendinv_2--> (14)
+
+[Already Bad] 14
+
+
+********[Unwind]********	(14) --gnt_shared--> (14)
+
+[Already Bad] 14
+
+***************************
+******* Search 15 *********
+***************************
+
+
+********[Unwind]********	(15) --send_shared--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(15) --send_shared--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(15) --send_shared--> (15)
+
+
+********[Unwind]********	(15) --recv_shared--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(15) --recv_shared--> (15)
+
+
+********[Unwind]********	(15) --send_exclusive--> (14)
+
+
+********[Unwind]********	(15) --recv_exclusive--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(15) --recv_exclusive--> (14)
+
+
+********[Unwind]********	(15) --sendinv_1--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(15) --sendinv_1--> (15)
+
+
+********[Unwind]********	(15) --sendinv_2--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(15) --sendinv_2--> (15)
+
+
+********[Unwind]********	(15) --recv_inv--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(15) --recv_inv--> (14)
+
+
+********[Unwind]********	(15) --recv_invack--> (3)
+
+
+********[Unwind]********	(15) --gnt_shared--> (14)
+
+
+********[Unwind]********	(15) --gnt_exclusive--> (5)
+
+node [1m111[22m: send_exclusive(#2) -> recv_exclusive(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m112[22m: recv_inv(#1) -> recv_exclusive(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m113[22m: recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m114[22m: recv_invack(#2) -> recv_inv(#1) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m115[22m: recv_invack(#1) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (15)
+
+	[New node] 16
+
+********[Unwind]********	(root) --send_exclusive--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(root) --send_exclusive--> (16)
+
+
+********[Unwind]********	(15) --send_shared--> (15)
+
+[Already Bad] 15
+
+
+********[Unwind]********	(15) --recv_shared--> (15)
+
+[Already Bad] 15
+
+
+********[Unwind]********	(15) --sendinv_1--> (15)
+
+[Already Bad] 15
+
+
+********[Unwind]********	(15) --sendinv_2--> (15)
+
+[Already Bad] 15
+
+***************************
+******* Search 16 *********
+***************************
+
+
+********[Unwind]********	(16) --send_shared--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(16) --send_shared--> (16)
+
+
+********[Unwind]********	(16) --recv_shared--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(16) --recv_shared--> (16)
+
+
+********[Unwind]********	(16) --send_exclusive--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(16) --send_exclusive--> (15)
+
+
+********[Unwind]********	(16) --recv_exclusive--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(16) --recv_exclusive--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(16) --recv_exclusive--> (16)
+
+
+********[Unwind]********	(16) --sendinv_1--> (15)
+
+
+********[Unwind]********	(16) --sendinv_2--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(16) --sendinv_2--> (16)
+
+
+********[Unwind]********	(16) --recv_inv--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(16) --recv_inv--> (15)
+
+
+********[Unwind]********	(16) --recv_invack--> (3)
+
+
+********[Unwind]********	(16) --gnt_shared--> (14)
+
+
+********[Unwind]********	(16) --gnt_exclusive--> (5)
+
+node [1m116[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m117[22m: recv_inv(#1) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m118[22m: recv_inv(#2) -> recv_invack(#2) -> recv_inv(#1) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (16)
+
+	[New node] 17
+
+********[Unwind]********	(root) --send_exclusive--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(root) --send_exclusive--> (17)
+
+
+********[Unwind]********	(16) --send_shared--> (16)
+
+[Already Bad] 16
+
+
+********[Unwind]********	(16) --recv_shared--> (16)
+
+[Already Bad] 16
+
+
+********[Unwind]********	(16) --recv_exclusive--> (16)
+
+[Already Bad] 16
+
+
+********[Unwind]********	(16) --sendinv_2--> (16)
+
+[Already Bad] 16
+
+***************************
+******* Search 17 *********
+***************************
+
+
+********[Unwind]********	(17) --send_shared--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(17) --send_shared--> (17)
+
+
+********[Unwind]********	(17) --recv_shared--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(17) --recv_shared--> (17)
+
+
+********[Unwind]********	(17) --send_exclusive--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(17) --send_exclusive--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(17) --send_exclusive--> (17)
+
+
+********[Unwind]********	(17) --recv_exclusive--> (16)
+
+
+********[Unwind]********	(17) --sendinv_1--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(17) --sendinv_1--> (16)
+
+
+********[Unwind]********	(17) --sendinv_2--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(17) --sendinv_2--> (17)
+
+
+********[Unwind]********	(17) --recv_inv--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(17) --recv_inv--> (16)
+
+
+********[Unwind]********	(17) --recv_invack--> (3)
+
+
+********[Unwind]********	(17) --gnt_shared--> (14)
+
+
+********[Unwind]********	(17) --gnt_exclusive--> (5)
+
+node [1m119[22m: recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m120[22m: recv_inv(#1) -> sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (17)
+
+	[New node] 18
+
+********[Unwind]********	(root) --send_exclusive--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(root) --send_exclusive--> (18)
+
+
+********[Unwind]********	(17) --send_shared--> (17)
+
+[Already Bad] 17
+
+
+********[Unwind]********	(17) --recv_shared--> (17)
+
+[Already Bad] 17
+
+
+********[Unwind]********	(17) --send_exclusive--> (17)
+
+[Already Bad] 17
+
+
+********[Unwind]********	(17) --sendinv_2--> (17)
+
+[Already Bad] 17
+
+***************************
+******* Search 18 *********
+***************************
+
+
+********[Unwind]********	(18) --send_shared--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(18) --send_shared--> (18)
+
+
+********[Unwind]********	(18) --recv_shared--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(18) --recv_shared--> (18)
+
+
+********[Unwind]********	(18) --send_exclusive--> (17)
+
+
+********[Unwind]********	(18) --recv_exclusive--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(18) --recv_exclusive--> (17)
+
+
+********[Unwind]********	(18) --sendinv_1--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(18) --sendinv_1--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(18) --sendinv_1--> (18)
+
+
+********[Unwind]********	(18) --sendinv_2--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(18) --sendinv_2--> (18)
+
+
+********[Unwind]********	(18) --recv_inv--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(18) --recv_inv--> (17)
+
+
+********[Unwind]********	(18) --recv_invack--> (3)
+
+
+********[Unwind]********	(18) --gnt_shared--> (14)
+
+
+********[Unwind]********	(18) --gnt_exclusive--> (5)
+
+node [1m121[22m: send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m122[22m: recv_inv(#1) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m123[22m: gnt_shared(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m124[22m: gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (18)
+
+	[New node] 19
+
+********[Unwind]********	(root) --send_exclusive--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(root) --send_exclusive--> (19)
+
+
+********[Unwind]********	(18) --send_shared--> (18)
+
+[Already Bad] 18
+
+
+********[Unwind]********	(18) --recv_shared--> (18)
+
+[Already Bad] 18
+
+
+********[Unwind]********	(18) --sendinv_1--> (18)
+
+[Already Bad] 18
+
+
+********[Unwind]********	(18) --sendinv_2--> (18)
+
+[Already Bad] 18
+
+***************************
+******* Search 19 *********
+***************************
+
+
+********[Unwind]********	(19) --send_shared--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(19) --send_shared--> (19)
+
+
+********[Unwind]********	(19) --recv_shared--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(19) --recv_shared--> (19)
+
+
+********[Unwind]********	(19) --send_exclusive--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(19) --send_exclusive--> (18)
+
+
+********[Unwind]********	(19) --recv_exclusive--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(19) --recv_exclusive--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(19) --recv_exclusive--> (19)
+
+
+********[Unwind]********	(19) --sendinv_1--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(19) --sendinv_1--> (19)
+
+
+********[Unwind]********	(19) --sendinv_2--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(19) --sendinv_2--> (19)
+
+
+********[Unwind]********	(19) --recv_inv--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(19) --recv_inv--> (18)
+
+
+********[Unwind]********	(19) --recv_invack--> (3)
+
+
+********[Unwind]********	(19) --gnt_shared--> (14)
+
+
+********[Unwind]********	(19) --gnt_exclusive--> (5)
+
+node [1m125[22m: send_exclusive(#2) -> gnt_shared(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m126[22m: send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m127[22m: recv_inv(#1) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m128[22m: gnt_shared(#2) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m129[22m: gnt_shared(#2) -> recv_inv(#1) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m130[22m: gnt_exclusive(#2) -> recv_inv(#1) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (19)
+
+	[New node] 20
+
+********[Unwind]********	(root) --send_exclusive--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(root) --send_exclusive--> (20)
+
+
+********[Unwind]********	(19) --send_shared--> (19)
+
+[Already Bad] 19
+
+
+********[Unwind]********	(19) --recv_shared--> (19)
+
+[Already Bad] 19
+
+
+********[Unwind]********	(19) --recv_exclusive--> (19)
+
+[Already Bad] 19
+
+
+********[Unwind]********	(19) --sendinv_1--> (19)
+
+[Already Bad] 19
+
+
+********[Unwind]********	(19) --sendinv_2--> (19)
+
+[Already Bad] 19
+
+***************************
+******* Search 20 *********
+***************************
+
+
+********[Unwind]********	(20) --send_shared--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(20) --send_shared--> (20)
+
+
+********[Unwind]********	(20) --recv_shared--> (19)
+
+
+********[Unwind]********	(20) --send_exclusive--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(20) --send_exclusive--> (19)
+
+
+********[Unwind]********	(20) --recv_exclusive--> (19)
+
+
+********[Unwind]********	(20) --sendinv_1--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(20) --sendinv_1--> (20)
+
+
+********[Unwind]********	(20) --sendinv_2--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(20) --sendinv_2--> (20)
+
+
+********[Unwind]********	(20) --recv_inv--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(20) --recv_inv--> (19)
+
+
+********[Unwind]********	(20) --recv_invack--> (3)
+
+
+********[Unwind]********	(20) --gnt_shared--> (14)
+
+
+********[Unwind]********	(20) --gnt_exclusive--> (5)
+
+node [1m131[22m: recv_shared(#2) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m132[22m: send_exclusive(#2) -> gnt_shared(#2) -> recv_inv(#1) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m133[22m: recv_exclusive(#2) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m134[22m: recv_inv(#1) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m135[22m: recv_invack(#2) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m136[22m: gnt_shared(#2) -> recv_inv(#1) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (20)
+
+	[New node] 21
+
+********[Unwind]********	(root) --send_exclusive--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(root) --send_exclusive--> (21)
+
+
+********[Unwind]********	(20) --send_shared--> (20)
+
+[Already Bad] 20
+
+
+********[Unwind]********	(20) --sendinv_1--> (20)
+
+[Already Bad] 20
+
+
+********[Unwind]********	(20) --sendinv_2--> (20)
+
+[Already Bad] 20
+
+***************************
+******* Search 21 *********
+***************************
+
+
+********[Unwind]********	(21) --send_shared--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(21) --send_shared--> (21)
+
+
+********[Unwind]********	(21) --recv_shared--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(21) --recv_shared--> (20)
+
+
+********[Unwind]********	(21) --send_exclusive--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(21) --send_exclusive--> (20)
+
+
+********[Unwind]********	(21) --recv_exclusive--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(21) --recv_exclusive--> (20)
+
+
+********[Unwind]********	(21) --sendinv_1--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(21) --sendinv_1--> (21)
+
+
+********[Unwind]********	(21) --sendinv_2--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(21) --sendinv_2--> (21)
+
+
+********[Unwind]********	(21) --recv_inv--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(21) --recv_inv--> (20)
+
+
+********[Unwind]********	(21) --recv_invack--> (3)
+
+
+********[Unwind]********	(21) --gnt_shared--> (14)
+
+
+********[Unwind]********	(21) --gnt_exclusive--> (5)
+
+node [1m137[22m: send_exclusive(#2) -> recv_exclusive(#2) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m138[22m: recv_inv(#1) -> recv_shared(#2) -> gnt_shared(#2) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m139[22m: recv_inv(#1) -> recv_exclusive(#2) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m140[22m: recv_invack(#2) -> recv_inv(#1) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m141[22m: gnt_shared(#2) -> recv_shared(#2) -> gnt_shared(#2) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (21)
+
+	[New node] 22
+
+********[Unwind]********	(root) --send_exclusive--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(root) --send_exclusive--> (22)
+
+
+********[Unwind]********	(21) --send_shared--> (21)
+
+[Already Bad] 21
+
+
+********[Unwind]********	(21) --sendinv_1--> (21)
+
+[Already Bad] 21
+
+
+********[Unwind]********	(21) --sendinv_2--> (21)
+
+[Already Bad] 21
+
+***************************
+******* Search 22 *********
+***************************
+
+
+********[Unwind]********	(22) --send_shared--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(22) --send_shared--> (22)
+
+
+********[Unwind]********	(22) --recv_shared--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(22) --recv_shared--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(22) --recv_shared--> (22)
+
+
+********[Unwind]********	(22) --send_exclusive--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(22) --send_exclusive--> (21)
+
+
+********[Unwind]********	(22) --recv_exclusive--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(22) --recv_exclusive--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(22) --recv_exclusive--> (22)
+
+
+********[Unwind]********	(22) --sendinv_1--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(22) --sendinv_1--> (22)
+
+
+********[Unwind]********	(22) --sendinv_2--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(22) --sendinv_2--> (22)
+
+
+********[Unwind]********	(22) --recv_inv--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(22) --recv_inv--> (21)
+
+
+********[Unwind]********	(22) --recv_invack--> (3)
+
+
+********[Unwind]********	(22) --gnt_shared--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(22) --gnt_shared--> (15)
+
+
+********[Unwind]********	(22) --gnt_exclusive--> (5)
+
+node [1m142[22m: recv_inv(#1) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m143[22m: gnt_shared(#2) -> recv_inv(#1) -> recv_shared(#2) ->
+          gnt_shared(#2) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (22)
+
+	[New node] 23
+
+********[Unwind]********	(root) --send_exclusive--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(root) --send_exclusive--> (23)
+
+
+********[Unwind]********	(22) --send_shared--> (22)
+
+[Already Bad] 22
+
+
+********[Unwind]********	(22) --recv_shared--> (22)
+
+[Already Bad] 22
+
+
+********[Unwind]********	(22) --recv_exclusive--> (22)
+
+[Already Bad] 22
+
+
+********[Unwind]********	(22) --sendinv_1--> (22)
+
+[Already Bad] 22
+
+
+********[Unwind]********	(22) --sendinv_2--> (22)
+
+[Already Bad] 22
+
+***************************
+******* Search 23 *********
+***************************
+
+
+********[Unwind]********	(23) --send_shared--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --send_shared--> (23)
+
+
+********[Unwind]********	(23) --recv_shared--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --recv_shared--> (23)
+
+
+********[Unwind]********	(23) --send_exclusive--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(23) --send_exclusive--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --send_exclusive--> (23)
+
+
+********[Unwind]********	(23) --recv_exclusive--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --recv_exclusive--> (23)
+
+
+********[Unwind]********	(23) --sendinv_1--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --sendinv_1--> (23)
+
+
+********[Unwind]********	(23) --sendinv_2--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --sendinv_2--> (23)
+
+
+********[Unwind]********	(23) --recv_inv--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(23) --recv_inv--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --recv_inv--> (23)
+
+
+********[Unwind]********	(23) --recv_invack--> (3)
+
+
+********[Unwind]********	(23) --gnt_shared--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(23) --gnt_shared--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(23) --gnt_shared--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(23) --gnt_shared--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(23) --gnt_shared--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(23) --gnt_shared--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(23) --gnt_shared--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(23) --gnt_shared--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(23) --gnt_shared--> (23)
+
+
+********[Unwind]********	(23) --gnt_exclusive--> (5)
+
+node [1m144[22m: recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m145[22m: recv_invack(#3) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m146[22m: recv_invack(#3) -> recv_inv(#1) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m147[22m: recv_invack(#3) -> recv_inv(#2) -> gnt_shared(#2) ->
+          recv_shared(#1) -> recv_invack(#2) -> gnt_shared(#1) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+          recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m148[22m: recv_invack(#3) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m149[22m: recv_invack(#3) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m150[22m: recv_invack(#3) -> recv_inv(#2) -> gnt_shared(#2) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> sendinv_1(#1) ->
+          recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m151[22m: recv_invack(#3) -> recv_inv(#2) -> gnt_shared(#2) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m152[22m: recv_invack(#3) -> recv_inv(#1) -> gnt_exclusive(#1) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m153[22m: recv_invack(#3) -> recv_inv(#1) -> gnt_exclusive(#1) ->
+          recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m154[22m: recv_invack(#3) -> recv_inv(#1) -> gnt_exclusive(#1) ->
+          recv_exclusive(#2) -> recv_invack(#1) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m155[22m: recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m156[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_shared(#1) ->
+          recv_invack(#2) -> gnt_shared(#1) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m157[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_shared(#2) ->
+          gnt_shared(#2) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m158[22m: recv_invack(#3) -> gnt_shared(#1) -> recv_shared(#1) ->
+          gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+          sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m159[22m: recv_invack(#3) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m160[22m: recv_invack(#3) -> gnt_shared(#1) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m161[22m: recv_invack(#3) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> sendinv_1(#1) ->
+          recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m162[22m: recv_invack(#3) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m163[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m164[22m: recv_invack(#3) -> gnt_shared(#1) -> recv_exclusive(#1) ->
+          sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m165[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_exclusive(#1) ->
+          recv_invack(#2) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m166[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_exclusive(#1) ->
+          recv_invack(#2) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m167[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          recv_shared(#2) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m168[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m169[22m: recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m170[22m: recv_invack(#3) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m171[22m: recv_invack(#3) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m172[22m: recv_invack(#3) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m173[22m: recv_invack(#3) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m174[22m: recv_invack(#3) -> gnt_exclusive(#1) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m175[22m: recv_invack(#3) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m176[22m: recv_invack(#3) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m177[22m: recv_invack(#3) -> gnt_exclusive(#1) -> recv_exclusive(#2) ->
+          recv_invack(#1) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m178[22m: recv_invack(#3) -> gnt_exclusive(#2) -> recv_inv(#1) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m179[22m: recv_invack(#3) -> gnt_exclusive(#2) -> recv_inv(#1) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m180[22m: gnt_exclusive(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m181[22m: gnt_exclusive(#3) -> recv_shared(#2) -> recv_invack(#1) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m182[22m: gnt_exclusive(#3) -> recv_exclusive(#2) -> recv_invack(#1) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (23)
+
+	[New node] 24
+
+********[Unwind]********	(root) --send_exclusive--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(root) --send_exclusive--> (24)
+
+
+********[Unwind]********	(23) --send_shared--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --recv_shared--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --send_exclusive--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --recv_exclusive--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --sendinv_1--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --sendinv_2--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --recv_inv--> (23)
+
+[Already Bad] 23
+
+
+********[Unwind]********	(23) --gnt_shared--> (23)
+
+[Already Bad] 23
+
+***************************
+******* Search 24 *********
+***************************
+
+
+********[Unwind]********	(24) --send_shared--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(24) --send_shared--> (24)
+
+
+********[Unwind]********	(24) --recv_shared--> (23)
+
+
+********[Unwind]********	(24) --send_exclusive--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(24) --send_exclusive--> (24)
+
+
+********[Unwind]********	(24) --recv_exclusive--> (23)
+
+
+********[Unwind]********	(24) --sendinv_1--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(24) --sendinv_1--> (24)
+
+
+********[Unwind]********	(24) --sendinv_2--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(24) --sendinv_2--> (24)
+
+
+********[Unwind]********	(24) --recv_inv--> (23)
+
+
+********[Unwind]********	(24) --recv_invack--> (3)
+
+	[Covered by] 4
+
+********[Unwind]********	(24) --recv_invack--> (4)
+
+	[Covered by] 5
+
+********[Unwind]********	(24) --recv_invack--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(24) --recv_invack--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(24) --recv_invack--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(24) --recv_invack--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(24) --recv_invack--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(24) --recv_invack--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(24) --recv_invack--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(24) --recv_invack--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(24) --recv_invack--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(24) --recv_invack--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(24) --recv_invack--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(24) --recv_invack--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(24) --recv_invack--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(24) --recv_invack--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(24) --recv_invack--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(24) --recv_invack--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(24) --recv_invack--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(24) --recv_invack--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(24) --recv_invack--> (23)
+
+
+********[Unwind]********	(24) --gnt_shared--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(24) --gnt_shared--> (24)
+
+
+********[Unwind]********	(24) --gnt_exclusive--> (5)
+
+	[Covered by] 6
+
+********[Unwind]********	(24) --gnt_exclusive--> (6)
+
+	[Covered by] 7
+
+********[Unwind]********	(24) --gnt_exclusive--> (7)
+
+	[Covered by] 8
+
+********[Unwind]********	(24) --gnt_exclusive--> (8)
+
+	[Covered by] 9
+
+********[Unwind]********	(24) --gnt_exclusive--> (9)
+
+	[Covered by] 10
+
+********[Unwind]********	(24) --gnt_exclusive--> (10)
+
+	[Covered by] 11
+
+********[Unwind]********	(24) --gnt_exclusive--> (11)
+
+	[Covered by] 12
+
+********[Unwind]********	(24) --gnt_exclusive--> (12)
+
+	[Covered by] 13
+
+********[Unwind]********	(24) --gnt_exclusive--> (13)
+
+	[Covered by] 14
+
+********[Unwind]********	(24) --gnt_exclusive--> (14)
+
+	[Covered by] 15
+
+********[Unwind]********	(24) --gnt_exclusive--> (15)
+
+	[Covered by] 16
+
+********[Unwind]********	(24) --gnt_exclusive--> (16)
+
+	[Covered by] 17
+
+********[Unwind]********	(24) --gnt_exclusive--> (17)
+
+	[Covered by] 18
+
+********[Unwind]********	(24) --gnt_exclusive--> (18)
+
+	[Covered by] 19
+
+********[Unwind]********	(24) --gnt_exclusive--> (19)
+
+	[Covered by] 20
+
+********[Unwind]********	(24) --gnt_exclusive--> (20)
+
+	[Covered by] 21
+
+********[Unwind]********	(24) --gnt_exclusive--> (21)
+
+	[Covered by] 22
+
+********[Unwind]********	(24) --gnt_exclusive--> (22)
+
+	[Covered by] 23
+
+********[Unwind]********	(24) --gnt_exclusive--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(24) --gnt_exclusive--> (24)
+
+node [1m183[22m: recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m184[22m: recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m185[22m: recv_shared(#1) -> recv_invack(#3) -> gnt_shared(#1) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+          recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m186[22m: recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_inv(#1) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m187[22m: recv_exclusive(#2) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m188[22m: recv_exclusive(#2) -> recv_invack(#3) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m189[22m: recv_exclusive(#2) -> recv_invack(#3) -> recv_inv(#1) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m190[22m: recv_exclusive(#1) -> recv_invack(#3) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m191[22m: recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m192[22m: recv_inv(#3) -> recv_invack(#3) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m193[22m: recv_inv(#3) -> recv_invack(#3) -> recv_inv(#1) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m194[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m195[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_shared(#2) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m196[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#1) ->
+          recv_shared(#1) -> gnt_shared(#1) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m197[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m198[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#1) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+          recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m199[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m200[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m201[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          recv_shared(#2) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m202[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m203[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m204[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m205[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m206[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m207[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m208[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m209[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#2) ->
+          recv_inv(#1) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m210[22m: recv_inv(#3) -> recv_invack(#3) -> gnt_exclusive(#2) ->
+          recv_inv(#1) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m211[22m: recv_invack(#3) -> gnt_exclusive(#3) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m212[22m: recv_invack(#2) -> gnt_exclusive(#3) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m213[22m: recv_invack(#3) -> gnt_exclusive(#3) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m214[22m: recv_invack(#3) -> gnt_exclusive(#3) -> recv_exclusive(#2) ->
+          recv_invack(#1) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (24)
+
+	[New node] 25
+
+********[Unwind]********	(root) --send_exclusive--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(root) --send_exclusive--> (25)
+
+
+********[Unwind]********	(24) --send_shared--> (24)
+
+[Already Bad] 24
+
+
+********[Unwind]********	(24) --send_exclusive--> (24)
+
+[Already Bad] 24
+
+
+********[Unwind]********	(24) --sendinv_1--> (24)
+
+[Already Bad] 24
+
+
+********[Unwind]********	(24) --sendinv_2--> (24)
+
+[Already Bad] 24
+
+
+********[Unwind]********	(24) --gnt_shared--> (24)
+
+[Already Bad] 24
+
+
+********[Unwind]********	(24) --gnt_exclusive--> (24)
+
+[Already Bad] 24
+
+***************************
+******* Search 25 *********
+***************************
+
+
+********[Unwind]********	(25) --send_shared--> (24)
+
+
+********[Unwind]********	(25) --recv_shared--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(25) --recv_shared--> (24)
+
+
+********[Unwind]********	(25) --send_exclusive--> (24)
+
+
+********[Unwind]********	(25) --recv_exclusive--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(25) --recv_exclusive--> (24)
+
+
+********[Unwind]********	(25) --sendinv_1--> (24)
+
+
+********[Unwind]********	(25) --sendinv_2--> (24)
+
+
+********[Unwind]********	(25) --recv_inv--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(25) --recv_inv--> (24)
+
+
+********[Unwind]********	(25) --recv_invack--> (23)
+
+
+********[Unwind]********	(25) --gnt_shared--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(25) --gnt_shared--> (25)
+
+
+********[Unwind]********	(25) --gnt_exclusive--> (24)
+
+node [1m215[22m: send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m216[22m: send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m217[22m: send_shared(#1) -> recv_shared(#1) -> recv_invack(#3) ->
+          gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+          sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m218[22m: send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> recv_inv(#1) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m219[22m: send_exclusive(#2) -> recv_exclusive(#2) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m220[22m: send_exclusive(#2) -> recv_exclusive(#2) -> recv_invack(#3) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m221[22m: send_exclusive(#2) -> recv_exclusive(#2) -> recv_invack(#3) ->
+          recv_inv(#1) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m222[22m: send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#3) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m223[22m: recv_exclusive(#3) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m224[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m225[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m226[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) -> recv_inv(#1) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m227[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m228[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m229[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m230[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m231[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m232[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#2) -> recv_inv(#1) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m233[22m: sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          gnt_exclusive(#2) -> recv_inv(#1) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m234[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m235[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_shared(#2) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m236[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#1) ->
+          recv_shared(#1) -> gnt_shared(#1) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m237[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m238[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#1) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> sendinv_1(#1) ->
+          recv_inv(#1) -> recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m239[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m240[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m241[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_inv(#1) -> recv_shared(#2) -> gnt_shared(#2) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m242[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_inv(#1) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m243[22m: sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          recv_inv(#1) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m244[22m: recv_inv(#3) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m245[22m: recv_inv(#3) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m246[22m: recv_inv(#3) -> recv_shared(#1) -> recv_invack(#3) ->
+          gnt_shared(#1) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+          sendinv_1(#1) -> recv_inv(#1) -> recv_invack(#1) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m247[22m: recv_inv(#3) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> recv_inv(#1) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m248[22m: recv_inv(#3) -> recv_exclusive(#2) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m249[22m: recv_inv(#3) -> recv_exclusive(#2) -> recv_invack(#3) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m250[22m: recv_inv(#3) -> recv_exclusive(#2) -> recv_invack(#3) ->
+          recv_inv(#1) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m251[22m: recv_inv(#3) -> recv_exclusive(#1) -> recv_invack(#3) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m252[22m: recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m253[22m: recv_invack(#2) -> recv_invack(#3) -> gnt_exclusive(#3) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m254[22m: gnt_exclusive(#1) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (25)
+
+	[New node] 26
+
+********[Unwind]********	(root) --send_exclusive--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(root) --send_exclusive--> (26)
+
+
+********[Unwind]********	(25) --gnt_shared--> (25)
+
+[Already Bad] 25
+
+***************************
+******* Search 26 *********
+***************************
+
+
+********[Unwind]********	(26) --send_shared--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --send_shared--> (25)
+
+
+********[Unwind]********	(26) --recv_shared--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --recv_shared--> (25)
+
+
+********[Unwind]********	(26) --send_exclusive--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --send_exclusive--> (25)
+
+
+********[Unwind]********	(26) --recv_exclusive--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --recv_exclusive--> (25)
+
+
+********[Unwind]********	(26) --sendinv_1--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --sendinv_1--> (25)
+
+
+********[Unwind]********	(26) --sendinv_2--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --sendinv_2--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(26) --sendinv_2--> (26)
+
+
+********[Unwind]********	(26) --recv_inv--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(26) --recv_inv--> (25)
+
+
+********[Unwind]********	(26) --recv_invack--> (23)
+
+
+********[Unwind]********	(26) --gnt_shared--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(26) --gnt_shared--> (26)
+
+
+********[Unwind]********	(26) --gnt_exclusive--> (24)
+
+node [1m255[22m: recv_shared(#2) -> sendinv_2(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m256[22m: send_exclusive(#2) -> recv_inv(#3) -> recv_exclusive(#2) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m257[22m: recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m258[22m: recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m259[22m: recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> recv_inv(#1) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m260[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m261[22m: recv_inv(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m262[22m: recv_inv(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m263[22m: recv_inv(#3) -> send_shared(#1) -> recv_shared(#1) ->
+          recv_invack(#3) -> gnt_shared(#1) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> sendinv_1(#1) -> recv_inv(#1) ->
+          recv_invack(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m264[22m: recv_inv(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> recv_inv(#1) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m265[22m: recv_inv(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          recv_invack(#3) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m266[22m: recv_inv(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          recv_invack(#3) -> recv_inv(#1) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m267[22m: recv_inv(#3) -> send_exclusive(#1) -> recv_exclusive(#1) ->
+          recv_invack(#3) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m268[22m: recv_inv(#2) -> recv_exclusive(#3) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m269[22m: recv_invack(#3) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m270[22m: recv_invack(#1) -> gnt_exclusive(#1) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m271[22m: gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m272[22m: gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          recv_invack(#3) -> send_exclusive(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_invack(#1) ->
+          recv_inv(#2) -> gnt_shared(#2) -> send_exclusive(#1) ->
+          recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          [35munsafe[1][39m
+node [1m273[22m: gnt_exclusive(#1) -> recv_inv(#3) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (26)
+
+	[New node] 27
+
+********[Unwind]********	(root) --send_exclusive--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(root) --send_exclusive--> (27)
+
+
+********[Unwind]********	(26) --sendinv_2--> (26)
+
+[Already Bad] 26
+
+
+********[Unwind]********	(26) --gnt_shared--> (26)
+
+[Already Bad] 26
+
+***************************
+******* Search 27 *********
+***************************
+
+
+********[Unwind]********	(27) --send_shared--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(27) --send_shared--> (26)
+
+
+********[Unwind]********	(27) --recv_shared--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(27) --recv_shared--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(27) --recv_shared--> (27)
+
+
+********[Unwind]********	(27) --send_exclusive--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(27) --send_exclusive--> (26)
+
+
+********[Unwind]********	(27) --recv_exclusive--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(27) --recv_exclusive--> (26)
+
+
+********[Unwind]********	(27) --sendinv_1--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(27) --sendinv_1--> (26)
+
+
+********[Unwind]********	(27) --sendinv_2--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(27) --sendinv_2--> (27)
+
+
+********[Unwind]********	(27) --recv_inv--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(27) --recv_inv--> (26)
+
+
+********[Unwind]********	(27) --recv_invack--> (23)
+
+
+********[Unwind]********	(27) --gnt_shared--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(27) --gnt_shared--> (27)
+
+
+********[Unwind]********	(27) --gnt_exclusive--> (24)
+
+node [1m274[22m: send_shared(#2) -> recv_shared(#2) -> sendinv_2(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m275[22m: send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m276[22m: recv_exclusive(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m277[22m: recv_invack(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m278[22m: recv_invack(#1) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m279[22m: recv_invack(#2) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m280[22m: recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> recv_invack(#3) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m281[22m: recv_invack(#1) -> gnt_exclusive(#1) -> recv_inv(#3) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m282[22m: gnt_exclusive(#3) -> recv_shared(#2) -> sendinv_2(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m283[22m: gnt_exclusive(#3) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m284[22m: gnt_exclusive(#3) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_exclusive(#2) ->
+          gnt_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m285[22m: gnt_exclusive(#3) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> recv_inv(#1) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m286[22m: gnt_exclusive(#1) -> recv_inv(#3) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (27)
+
+	[New node] 28
+
+********[Unwind]********	(root) --send_exclusive--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(root) --send_exclusive--> (28)
+
+
+********[Unwind]********	(27) --recv_shared--> (27)
+
+[Already Bad] 27
+
+
+********[Unwind]********	(27) --sendinv_2--> (27)
+
+[Already Bad] 27
+
+
+********[Unwind]********	(27) --gnt_shared--> (27)
+
+[Already Bad] 27
+
+***************************
+******* Search 28 *********
+***************************
+
+
+********[Unwind]********	(28) --send_shared--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(28) --send_shared--> (27)
+
+
+********[Unwind]********	(28) --recv_shared--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(28) --recv_shared--> (28)
+
+
+********[Unwind]********	(28) --send_exclusive--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(28) --send_exclusive--> (27)
+
+
+********[Unwind]********	(28) --recv_exclusive--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(28) --recv_exclusive--> (27)
+
+
+********[Unwind]********	(28) --sendinv_1--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(28) --sendinv_1--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(28) --sendinv_1--> (28)
+
+
+********[Unwind]********	(28) --sendinv_2--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(28) --sendinv_2--> (28)
+
+
+********[Unwind]********	(28) --recv_inv--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(28) --recv_inv--> (27)
+
+
+********[Unwind]********	(28) --recv_invack--> (23)
+
+
+********[Unwind]********	(28) --gnt_shared--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(28) --gnt_shared--> (28)
+
+
+********[Unwind]********	(28) --gnt_exclusive--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(28) --gnt_exclusive--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(28) --gnt_exclusive--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(28) --gnt_exclusive--> (27)
+
+node [1m287[22m: recv_exclusive(#1) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m288[22m: recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m289[22m: recv_invack(#2) -> recv_invack(#1) -> gnt_exclusive(#1) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m290[22m: recv_invack(#1) -> gnt_exclusive(#3) -> recv_shared(#2) ->
+          sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m291[22m: recv_invack(#3) -> gnt_exclusive(#3) -> recv_shared(#2) ->
+          sendinv_2(#3) -> recv_inv(#3) -> recv_invack(#3) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m292[22m: recv_invack(#1) -> gnt_exclusive(#3) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m293[22m: recv_invack(#3) -> gnt_exclusive(#3) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m294[22m: recv_invack(#3) -> gnt_exclusive(#3) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m295[22m: recv_invack(#3) -> gnt_exclusive(#3) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) -> recv_inv(#1) ->
+          send_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_invack(#1) -> recv_inv(#2) -> gnt_shared(#2) ->
+          send_exclusive(#1) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m296[22m: recv_invack(#1) -> gnt_exclusive(#1) -> recv_inv(#3) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m297[22m: recv_invack(#2) -> gnt_exclusive(#1) -> recv_inv(#3) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m298[22m: gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m299[22m: gnt_exclusive(#2) -> recv_exclusive(#3) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#1) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (28)
+
+	[New node] 29
+
+********[Unwind]********	(root) --send_exclusive--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(root) --send_exclusive--> (29)
+
+
+********[Unwind]********	(28) --recv_shared--> (28)
+
+[Already Bad] 28
+
+
+********[Unwind]********	(28) --sendinv_1--> (28)
+
+[Already Bad] 28
+
+
+********[Unwind]********	(28) --sendinv_2--> (28)
+
+[Already Bad] 28
+
+
+********[Unwind]********	(28) --gnt_shared--> (28)
+
+[Already Bad] 28
+
+***************************
+******* Search 29 *********
+***************************
+
+
+********[Unwind]********	(29) --send_shared--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(29) --send_shared--> (28)
+
+
+********[Unwind]********	(29) --recv_shared--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(29) --recv_shared--> (29)
+
+
+********[Unwind]********	(29) --send_exclusive--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(29) --send_exclusive--> (28)
+
+
+********[Unwind]********	(29) --recv_exclusive--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(29) --recv_exclusive--> (28)
+
+
+********[Unwind]********	(29) --sendinv_1--> (28)
+
+
+********[Unwind]********	(29) --sendinv_2--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(29) --sendinv_2--> (29)
+
+
+********[Unwind]********	(29) --recv_inv--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(29) --recv_inv--> (28)
+
+
+********[Unwind]********	(29) --recv_invack--> (23)
+
+
+********[Unwind]********	(29) --gnt_shared--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(29) --gnt_shared--> (29)
+
+
+********[Unwind]********	(29) --gnt_exclusive--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(29) --gnt_exclusive--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(29) --gnt_exclusive--> (29)
+
+node [1m300[22m: recv_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#3) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m301[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m302[22m: recv_inv(#3) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m303[22m: recv_inv(#2) -> recv_exclusive(#1) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m304[22m: recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          recv_inv(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m305[22m: recv_invack(#1) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m306[22m: recv_invack(#3) -> recv_invack(#1) -> gnt_exclusive(#3) ->
+          recv_shared(#2) -> sendinv_2(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m307[22m: recv_invack(#3) -> recv_invack(#1) -> gnt_exclusive(#3) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m308[22m: recv_invack(#2) -> recv_invack(#1) -> gnt_exclusive(#1) ->
+          recv_inv(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m309[22m: recv_invack(#1) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m310[22m: recv_invack(#3) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m311[22m: recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m312[22m: recv_invack(#2) -> gnt_exclusive(#2) -> recv_exclusive(#3) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#1) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (29)
+
+	[New node] 30
+
+********[Unwind]********	(root) --send_exclusive--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(root) --send_exclusive--> (30)
+
+
+********[Unwind]********	(29) --recv_shared--> (29)
+
+[Already Bad] 29
+
+
+********[Unwind]********	(29) --sendinv_2--> (29)
+
+[Already Bad] 29
+
+
+********[Unwind]********	(29) --gnt_shared--> (29)
+
+[Already Bad] 29
+
+
+********[Unwind]********	(29) --gnt_exclusive--> (29)
+
+[Already Bad] 29
+
+***************************
+******* Search 30 *********
+***************************
+
+
+********[Unwind]********	(30) --send_shared--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(30) --send_shared--> (29)
+
+
+********[Unwind]********	(30) --recv_shared--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(30) --recv_shared--> (30)
+
+
+********[Unwind]********	(30) --send_exclusive--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(30) --send_exclusive--> (29)
+
+
+********[Unwind]********	(30) --recv_exclusive--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(30) --recv_exclusive--> (29)
+
+
+********[Unwind]********	(30) --sendinv_1--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(30) --sendinv_1--> (29)
+
+
+********[Unwind]********	(30) --sendinv_2--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(30) --sendinv_2--> (30)
+
+
+********[Unwind]********	(30) --recv_inv--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(30) --recv_inv--> (29)
+
+
+********[Unwind]********	(30) --recv_invack--> (23)
+
+	[Covered by] 24
+
+********[Unwind]********	(30) --recv_invack--> (24)
+
+	[Covered by] 25
+
+********[Unwind]********	(30) --recv_invack--> (25)
+
+	[Covered by] 26
+
+********[Unwind]********	(30) --recv_invack--> (26)
+
+	[Covered by] 27
+
+********[Unwind]********	(30) --recv_invack--> (27)
+
+	[Covered by] 28
+
+********[Unwind]********	(30) --recv_invack--> (28)
+
+
+********[Unwind]********	(30) --gnt_shared--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(30) --gnt_shared--> (30)
+
+
+********[Unwind]********	(30) --gnt_exclusive--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(30) --gnt_exclusive--> (30)
+
+node [1m313[22m: recv_exclusive(#1) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m314[22m: recv_exclusive(#3) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m315[22m: recv_inv(#3) -> sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> send_shared(#2) -> recv_shared(#2) ->
+          recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m316[22m: recv_inv(#3) -> recv_inv(#2) -> recv_exclusive(#1) ->
+          recv_invack(#2) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m317[22m: recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m318[22m: recv_invack(#1) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m319[22m: recv_invack(#1) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#1) -> recv_inv(#3) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m320[22m: recv_invack(#3) -> recv_invack(#1) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m321[22m: recv_invack(#2) -> recv_invack(#1) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m322[22m: recv_invack(#2) -> recv_invack(#3) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (30)
+
+	[New node] 31
+
+********[Unwind]********	(root) --send_exclusive--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(root) --send_exclusive--> (31)
+
+
+********[Unwind]********	(30) --recv_shared--> (30)
+
+[Already Bad] 30
+
+
+********[Unwind]********	(30) --sendinv_2--> (30)
+
+[Already Bad] 30
+
+
+********[Unwind]********	(30) --gnt_shared--> (30)
+
+[Already Bad] 30
+
+
+********[Unwind]********	(30) --gnt_exclusive--> (30)
+
+[Already Bad] 30
+
+***************************
+******* Search 31 *********
+***************************
+
+
+********[Unwind]********	(31) --send_shared--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(31) --send_shared--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(31) --send_shared--> (31)
+
+
+********[Unwind]********	(31) --recv_shared--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(31) --recv_shared--> (31)
+
+
+********[Unwind]********	(31) --send_exclusive--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(31) --send_exclusive--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(31) --send_exclusive--> (31)
+
+
+********[Unwind]********	(31) --recv_exclusive--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(31) --recv_exclusive--> (30)
+
+
+********[Unwind]********	(31) --sendinv_1--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(31) --sendinv_1--> (30)
+
+
+********[Unwind]********	(31) --sendinv_2--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(31) --sendinv_2--> (31)
+
+
+********[Unwind]********	(31) --recv_inv--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(31) --recv_inv--> (30)
+
+
+********[Unwind]********	(31) --recv_invack--> (28)
+
+
+********[Unwind]********	(31) --gnt_shared--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(31) --gnt_shared--> (31)
+
+
+********[Unwind]********	(31) --gnt_exclusive--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(31) --gnt_exclusive--> (31)
+
+node [1m323[22m: recv_exclusive(#3) -> recv_invack(#2) -> recv_invack(#1) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m324[22m: sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m325[22m: recv_inv(#3) -> recv_exclusive(#1) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#1) ->
+          send_shared(#2) -> recv_shared(#2) -> recv_invack(#3) ->
+          gnt_shared(#2) -> [35munsafe[1][39m
+node [1m326[22m: recv_inv(#2) -> recv_exclusive(#3) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m327[22m: recv_invack(#1) -> recv_inv(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#1) -> send_shared(#2) ->
+          recv_shared(#2) -> recv_invack(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m328[22m: recv_invack(#1) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m329[22m: recv_invack(#3) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m330[22m: recv_invack(#2) -> recv_invack(#3) -> recv_invack(#1) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (31)
+
+	[New node] 32
+
+********[Unwind]********	(root) --send_exclusive--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(root) --send_exclusive--> (32)
+
+
+********[Unwind]********	(31) --send_shared--> (31)
+
+[Already Bad] 31
+
+
+********[Unwind]********	(31) --recv_shared--> (31)
+
+[Already Bad] 31
+
+
+********[Unwind]********	(31) --send_exclusive--> (31)
+
+[Already Bad] 31
+
+
+********[Unwind]********	(31) --sendinv_2--> (31)
+
+[Already Bad] 31
+
+
+********[Unwind]********	(31) --gnt_shared--> (31)
+
+[Already Bad] 31
+
+
+********[Unwind]********	(31) --gnt_exclusive--> (31)
+
+[Already Bad] 31
+
+***************************
+******* Search 32 *********
+***************************
+
+
+********[Unwind]********	(32) --send_shared--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(32) --send_shared--> (32)
+
+
+********[Unwind]********	(32) --recv_shared--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(32) --recv_shared--> (32)
+
+
+********[Unwind]********	(32) --send_exclusive--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(32) --send_exclusive--> (32)
+
+
+********[Unwind]********	(32) --recv_exclusive--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(32) --recv_exclusive--> (31)
+
+
+********[Unwind]********	(32) --sendinv_1--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(32) --sendinv_1--> (31)
+
+
+********[Unwind]********	(32) --sendinv_2--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(32) --sendinv_2--> (32)
+
+
+********[Unwind]********	(32) --recv_inv--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(32) --recv_inv--> (31)
+
+
+********[Unwind]********	(32) --recv_invack--> (28)
+
+
+********[Unwind]********	(32) --gnt_shared--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(32) --gnt_shared--> (32)
+
+
+********[Unwind]********	(32) --gnt_exclusive--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(32) --gnt_exclusive--> (32)
+
+node [1m331[22m: recv_exclusive(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m332[22m: recv_inv(#2) -> recv_exclusive(#3) -> recv_invack(#2) ->
+          recv_invack(#1) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m333[22m: recv_invack(#1) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m334[22m: recv_invack(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m335[22m: recv_invack(#3) -> recv_invack(#1) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (32)
+
+	[New node] 33
+
+********[Unwind]********	(root) --send_exclusive--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(root) --send_exclusive--> (33)
+
+
+********[Unwind]********	(32) --send_shared--> (32)
+
+[Already Bad] 32
+
+
+********[Unwind]********	(32) --recv_shared--> (32)
+
+[Already Bad] 32
+
+
+********[Unwind]********	(32) --send_exclusive--> (32)
+
+[Already Bad] 32
+
+
+********[Unwind]********	(32) --sendinv_2--> (32)
+
+[Already Bad] 32
+
+
+********[Unwind]********	(32) --gnt_shared--> (32)
+
+[Already Bad] 32
+
+
+********[Unwind]********	(32) --gnt_exclusive--> (32)
+
+[Already Bad] 32
+
+***************************
+******* Search 33 *********
+***************************
+
+
+********[Unwind]********	(33) --send_shared--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(33) --send_shared--> (33)
+
+
+********[Unwind]********	(33) --recv_shared--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(33) --recv_shared--> (33)
+
+
+********[Unwind]********	(33) --send_exclusive--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(33) --send_exclusive--> (33)
+
+
+********[Unwind]********	(33) --recv_exclusive--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(33) --recv_exclusive--> (32)
+
+
+********[Unwind]********	(33) --sendinv_1--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(33) --sendinv_1--> (32)
+
+
+********[Unwind]********	(33) --sendinv_2--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(33) --sendinv_2--> (33)
+
+
+********[Unwind]********	(33) --recv_inv--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(33) --recv_inv--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(33) --recv_inv--> (33)
+
+
+********[Unwind]********	(33) --recv_invack--> (28)
+
+
+********[Unwind]********	(33) --gnt_shared--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(33) --gnt_shared--> (33)
+
+
+********[Unwind]********	(33) --gnt_exclusive--> (32)
+
+node [1m336[22m: recv_exclusive(#3) -> recv_invack(#1) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m337[22m: recv_invack(#3) -> recv_invack(#1) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m338[22m: gnt_exclusive(#2) -> recv_exclusive(#3) -> sendinv_1(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_exclusive(#3) ->
+          send_exclusive(#2) -> recv_exclusive(#2) -> sendinv_1(#3) ->
+          recv_inv(#3) -> recv_invack(#3) -> send_shared(#2) ->
+          gnt_exclusive(#2) -> recv_shared(#2) -> sendinv_2(#2) ->
+          recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (33)
+
+	[New node] 34
+
+********[Unwind]********	(root) --send_exclusive--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(root) --send_exclusive--> (34)
+
+
+********[Unwind]********	(33) --send_shared--> (33)
+
+[Already Bad] 33
+
+
+********[Unwind]********	(33) --recv_shared--> (33)
+
+[Already Bad] 33
+
+
+********[Unwind]********	(33) --send_exclusive--> (33)
+
+[Already Bad] 33
+
+
+********[Unwind]********	(33) --sendinv_2--> (33)
+
+[Already Bad] 33
+
+
+********[Unwind]********	(33) --recv_inv--> (33)
+
+[Already Bad] 33
+
+
+********[Unwind]********	(33) --gnt_shared--> (33)
+
+[Already Bad] 33
+
+***************************
+******* Search 34 *********
+***************************
+
+
+********[Unwind]********	(34) --send_shared--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --send_shared--> (34)
+
+
+********[Unwind]********	(34) --recv_shared--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --recv_shared--> (34)
+
+
+********[Unwind]********	(34) --send_exclusive--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --send_exclusive--> (34)
+
+
+********[Unwind]********	(34) --recv_exclusive--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(34) --recv_exclusive--> (33)
+
+
+********[Unwind]********	(34) --sendinv_1--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(34) --sendinv_1--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --sendinv_1--> (34)
+
+
+********[Unwind]********	(34) --sendinv_2--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --sendinv_2--> (34)
+
+
+********[Unwind]********	(34) --recv_inv--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --recv_inv--> (34)
+
+
+********[Unwind]********	(34) --recv_invack--> (28)
+
+
+********[Unwind]********	(34) --gnt_shared--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --gnt_shared--> (34)
+
+
+********[Unwind]********	(34) --gnt_exclusive--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(34) --gnt_exclusive--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(34) --gnt_exclusive--> (34)
+
+node [1m339[22m: recv_exclusive(#2) -> gnt_exclusive(#2) -> recv_exclusive(#3) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m340[22m: recv_invack(#1) -> gnt_exclusive(#2) -> recv_exclusive(#3) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+node [1m341[22m: recv_invack(#2) -> gnt_exclusive(#2) -> recv_exclusive(#3) ->
+          sendinv_1(#2) -> recv_inv(#2) -> recv_invack(#2) ->
+          gnt_exclusive(#3) -> send_exclusive(#2) -> recv_exclusive(#2) ->
+          sendinv_1(#3) -> recv_inv(#3) -> recv_invack(#3) ->
+          send_shared(#2) -> gnt_exclusive(#2) -> recv_shared(#2) ->
+          sendinv_2(#2) -> recv_inv(#2) -> recv_invack(#2) -> gnt_shared(#2) ->
+          [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (34)
+
+	[New node] 35
+
+********[Unwind]********	(root) --send_exclusive--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(root) --send_exclusive--> (35)
+
+
+********[Unwind]********	(34) --send_shared--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --recv_shared--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --send_exclusive--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --sendinv_1--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --sendinv_2--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --recv_inv--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --gnt_shared--> (34)
+
+[Already Bad] 34
+
+
+********[Unwind]********	(34) --gnt_exclusive--> (34)
+
+[Already Bad] 34
+
+***************************
+******* Search 35 *********
+***************************
+
+
+********[Unwind]********	(35) --send_shared--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --send_shared--> (35)
+
+
+********[Unwind]********	(35) --recv_shared--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --recv_shared--> (35)
+
+
+********[Unwind]********	(35) --send_exclusive--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --send_exclusive--> (35)
+
+
+********[Unwind]********	(35) --recv_exclusive--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(35) --recv_exclusive--> (34)
+
+
+********[Unwind]********	(35) --sendinv_1--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --sendinv_1--> (35)
+
+
+********[Unwind]********	(35) --sendinv_2--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --sendinv_2--> (35)
+
+
+********[Unwind]********	(35) --recv_inv--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --recv_inv--> (35)
+
+
+********[Unwind]********	(35) --recv_invack--> (28)
+
+	[Covered by] 29
+
+********[Unwind]********	(35) --recv_invack--> (29)
+
+	[Covered by] 30
+
+********[Unwind]********	(35) --recv_invack--> (30)
+
+	[Covered by] 31
+
+********[Unwind]********	(35) --recv_invack--> (31)
+
+	[Covered by] 32
+
+********[Unwind]********	(35) --recv_invack--> (32)
+
+	[Covered by] 33
+
+********[Unwind]********	(35) --recv_invack--> (33)
+
+	[Covered by] 34
+
+********[Unwind]********	(35) --recv_invack--> (34)
+
+
+********[Unwind]********	(35) --gnt_shared--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --gnt_shared--> (35)
+
+
+********[Unwind]********	(35) --gnt_exclusive--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(35) --gnt_exclusive--> (35)
+
+node [1m342[22m: recv_exclusive(#2) -> recv_invack(#1) -> gnt_exclusive(#2) ->
+          recv_exclusive(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m343[22m: recv_invack(#1) -> recv_invack(#2) -> gnt_exclusive(#2) ->
+          recv_exclusive(#3) -> sendinv_1(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_exclusive(#3) -> send_exclusive(#2) ->
+          recv_exclusive(#2) -> sendinv_1(#3) -> recv_inv(#3) ->
+          recv_invack(#3) -> send_shared(#2) -> gnt_exclusive(#2) ->
+          recv_shared(#2) -> sendinv_2(#2) -> recv_inv(#2) ->
+          recv_invack(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+
+********[Unwind]********	(root) --send_shared--> (35)
+
+	[New node] 36
+
+********[Unwind]********	(root) --send_exclusive--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(root) --send_exclusive--> (36)
+
+
+********[Unwind]********	(35) --send_shared--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --recv_shared--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --send_exclusive--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --sendinv_1--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --sendinv_2--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --recv_inv--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --gnt_shared--> (35)
+
+[Already Bad] 35
+
+
+********[Unwind]********	(35) --gnt_exclusive--> (35)
+
+[Already Bad] 35
+
+***************************
+******* Search 36 *********
+***************************
+
+
+********[Unwind]********	(36) --send_shared--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --send_shared--> (36)
+
+
+********[Unwind]********	(36) --recv_shared--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --recv_shared--> (36)
+
+
+********[Unwind]********	(36) --send_exclusive--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --send_exclusive--> (36)
+
+
+********[Unwind]********	(36) --recv_exclusive--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(36) --recv_exclusive--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --recv_exclusive--> (36)
+
+
+********[Unwind]********	(36) --sendinv_1--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --sendinv_1--> (36)
+
+
+********[Unwind]********	(36) --sendinv_2--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --sendinv_2--> (36)
+
+
+********[Unwind]********	(36) --recv_inv--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --recv_inv--> (36)
+
+
+********[Unwind]********	(36) --recv_invack--> (34)
+
+	[Covered by] 35
+
+********[Unwind]********	(36) --recv_invack--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --recv_invack--> (36)
+
+
+********[Unwind]********	(36) --gnt_shared--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --gnt_shared--> (36)
+
+
+********[Unwind]********	(36) --gnt_exclusive--> (35)
+
+	[Covered by] 36
+
+********[Unwind]********	(36) --gnt_exclusive--> (36)
+
+
+
+The system is [1m[32mSAFE[39m[22m
+
+================================================================================
+* [1mSTATS[22m
+--------------------------------------------------------------------------------
+Number of visited vertices       : 36
+Number of bads generated         : 343
+Number of solver calls           : 15909
+Max Number of processes          : 3
+Restarts                         : 0
+--------------------------------------------------------------------------------
+Time for pre-image computation   : 0m0.436s
+Time for fixpoint                : 0m0.822s
+├─Time for relevant permutations : 0m0.100s
+├─Time for simplifications       : 0m6.167s
+├─Subset tests                   : 0m0.132s
+├─Apply substitutions            : 0m3.415s
+├─Nodes sorting                  : 0m0.028s
+├─Time in formulas               : 0m0.033s
+└─Time in solver                 : 0m0.349s
+Forward exploration              : 0m0.000s
+Filter candidates                : 0m0.000s
+Time in far parts
+├─Time in vertices subsuming     : 0m5.528s
+├─Time to find bads              : 0m3.184s
+└─Time to check bads             : 0m0.000s
+================================================================================

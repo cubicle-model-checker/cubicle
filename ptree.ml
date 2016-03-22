@@ -183,6 +183,8 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
+  pmetatrans : ptransition list;
+  punivtrans : ptransition list;
   pregexps : pregexp list;
 }
 
@@ -193,6 +195,8 @@ type pdecl =
   | PUnsafe of (loc * Variable.t list * cformula)
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
+  | PMetaTrans of ptransition
+  | PUnivTrans of ptransition
   | PFun
   | PRegExp of pregexp
 
@@ -601,7 +605,7 @@ let rnumber = ref 0
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
-     pinvs; punsafe; pgood; ptrans; pregexps} =
+     pinvs; punsafe; pgood; ptrans; pmetatrans; punivtrans; pregexps} =
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
@@ -644,6 +648,39 @@ let encode_psystem
         compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
       )
   in
+  let mtrans = if Options.meta_trans then begin
+    List.fold_left (fun acc ptr ->
+      List.fold_left (fun acc tr -> tr :: acc) acc (encode_ptransition ptr)
+    ) [] pmetatrans
+    |> List.sort (fun t1 t2  ->
+      let c = compare (List.length t1.tr_args) (List.length t2.tr_args) in
+      if c <> 0 then c else
+        let c = compare (List.length t1.tr_upds) (List.length t2.tr_upds) in
+        if c <> 0 then c else
+          let c = compare (List.length t1.tr_ureq) (List.length t2.tr_ureq) in
+          if c <> 0 then c else
+            compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
+    )
+  end
+    else []
+  in
+  let utrans = if Options.univ_trans then begin
+    List.fold_left (fun acc ptr ->
+      List.fold_left (fun acc tr -> tr :: acc) acc (encode_ptransition ptr)
+    ) [] punivtrans
+    |> List.sort (fun t1 t2  ->
+      let c = compare (List.length t1.tr_args) (List.length t2.tr_args) in
+      if c <> 0 then c else
+        let c = compare (List.length t1.tr_upds) (List.length t2.tr_upds) in
+        if c <> 0 then c else
+          let c = compare (List.length t1.tr_ureq) (List.length t2.tr_ureq) in
+          if c <> 0 then c else
+            compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
+    )
+  end
+    else []
+  in
+  let trans = List.rev_append mtrans (List.rev_append utrans trans) in
   let sregexpl = List.fold_left (fun acc p ->
     let pl = pregexp_to_simplerl p in
     List.rev_append pl acc) [] pregexps in
@@ -669,16 +706,29 @@ let encode_psystem
 
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
-  let inits, pinvs, punsafe, pgood, ptrans, pregexps =
-    List.fold_left (fun (inits, invs, unsafes, goods, trans, regexp) -> function
-      | PInit i -> i :: inits, invs, unsafes, goods, trans, regexp
-      | PInv i -> inits, i :: invs, unsafes, goods, trans, regexp
-      | PGood g -> inits, invs, unsafes, g :: goods, trans, regexp
-      | PUnsafe u -> inits, invs, u :: unsafes, goods, trans, regexp
-      | PTrans t -> inits, invs, unsafes, goods, t :: trans, regexp
-      | PFun -> inits, invs, unsafes, goods, trans, regexp
-      | PRegExp re -> inits, invs, unsafes, goods, trans, re::regexp
-    ) ([], [], [], [], [], []) pdecls
+  let inits, pinvs, punsafe, pgood, ptrans, pmetatrans, punivtrans, pregexps =
+    List.fold_left (
+      fun (inits, invs, unsafes, goods, trans, mtrans, utrans, regexp) -> 
+        function
+          | PInit i -> 
+            i :: inits, invs, unsafes, goods, trans, mtrans, utrans, regexp
+          | PInv i -> 
+            inits, i :: invs, unsafes, goods, trans, mtrans, utrans, regexp
+          | PGood g -> 
+            inits, invs, unsafes, g :: goods, trans, mtrans, utrans, regexp
+          | PUnsafe u -> 
+            inits, invs, u :: unsafes, goods, trans, mtrans, utrans, regexp
+          | PTrans t -> 
+            inits, invs, unsafes, goods, t :: trans, mtrans, utrans, regexp
+          | PMetaTrans t -> 
+            inits, invs, unsafes, goods, trans, t:: mtrans, utrans, regexp
+          | PUnivTrans t -> 
+            inits, invs, unsafes, goods, trans, mtrans, t :: utrans, regexp
+          | PFun ->
+            inits, invs, unsafes, goods, trans, mtrans, utrans, regexp
+          | PRegExp re -> 
+            inits, invs, unsafes, goods, trans, mtrans, utrans, re::regexp
+    ) ([], [], [], [], [], [], [], []) pdecls
   in
   let pinit = match inits with
     | [i] -> i
@@ -694,6 +744,8 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     punsafe;
     pgood;
     ptrans;
+    pmetatrans;
+    punivtrans;
     pregexps;
   }
   

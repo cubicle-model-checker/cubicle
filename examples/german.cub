@@ -49,6 +49,63 @@ good (z) { Cache[z] = Invalid && Shrset[z] = False }
 good (z) { Cache[z] <> Invalid && Shrset[z] = True }
 (* good (z) { Cache[z] = Exclusive && Exgntd = True } *)
 
+meta_transition meta_shared(n)
+requires { Cache[n] = Invalid && Chan1[n] = Empty && 
+           Curcmd = Empty && Exgntd = False && Chan2[n] = Empty }
+{ 
+  Curcmd := Reqs; 
+  CurClient := n; 
+  Invset[j] := case | _ : Shrset[j];
+  Chan1[j] := case 
+  	        | j = n: Empty 
+	        | _ : Chan1[j];
+  Chan2[j] := case 
+  	        | j = n : Gnts 
+	        | _ : Chan2[j] ;
+  Shrset[j] := case 
+	        | j = n : True 
+		| _ : Shrset[j] ;
+}
+
+meta_transition meta_inv_1(n)
+requires { Chan2[n] = Empty && Invset[n] = True && Curcmd = Reqe && Chan3[n] = Empty }
+{
+  Chan2[j] := case
+  	       | j = n : Empty 
+	       | _ : Chan2[j] ;
+  Chan3[j] := case
+  	       | j = n : Invack 
+	       | _ : Chan3[j] ;
+  Cache[j] := case 
+  	       | j = n : Invalid 
+	       | _ : Cache[j] ;
+  Invset[j] := case
+  	       | j = n : False 
+	       | _ : Invset[j];
+}
+
+universal_transition univ_shared(n)
+requires { Cache[n] = Invalid && Chan1[n] = Empty && 
+           Curcmd = Empty && Exgntd = False && Chan2[n] = Empty }
+{ 
+  Curcmd := Reqs;
+  CurClient := n; 
+  Invset[j] := case | _ : Shrset[j] ;
+  Chan1[j] := case | _ : Empty ;
+  Chan2[j] := case | _ : Gnts ;
+  Shrset[j] := case | _ : True ;
+}
+
+(* universal_transition univ_inv_1(n) *)
+(* requires { Chan2[n] = Empty && Invset[n] = True && Curcmd = Reqe && Chan3[n] = Empty } *)
+(* { *)
+(*   Chan2[j] := case | _ : Empty ; *)
+(*   Chan3[j] := case | _ : Invack ; *)
+(*   Cache[j] := case | _ : Invalid ; *)
+(*   Invset[j] := case | _ : False ; *)
+(* } *)
+
+
 transition send_req_shared(n)
 requires { Cache[n] = Invalid && Chan1[n] = Empty }
 {

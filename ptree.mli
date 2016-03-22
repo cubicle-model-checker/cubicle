@@ -106,6 +106,8 @@ type psystem = {
   punsafe : (loc * Variable.t list * cformula) list;
   pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
+  pmetatrans : ptransition list;
+  punivtrans : ptransition list;
   pregexps : pregexp list;
 }
 
@@ -116,6 +118,8 @@ type pdecl =
   | PUnsafe of (loc * Variable.t list * cformula)
   | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
+  | PMetaTrans of ptransition
+  | PUnivTrans of ptransition
   | PFun
   | PRegExp of pregexp
 

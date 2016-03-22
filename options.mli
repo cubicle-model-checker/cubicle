@@ -57,6 +57,9 @@ val copy_regexp : bool
 val res_output : bool
 val res_file : string
 
+val meta_trans : bool
+val univ_trans : bool
+
 val goods : bool
 
 val max_proc : int

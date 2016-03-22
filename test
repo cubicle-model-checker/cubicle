@@ -1,0 +1,52 @@
+node [1m1[22m: gnt_shared(#2) -> [35munsafe[1][39m
+node [1m2[22m: gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m3[22m: req_shared(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m4[22m: inv_2(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m5[22m: inv_1(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m6[22m: req_exclusive(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m7[22m: req_exclusive(#1) -> inv_1(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m8[22m: req_shared(#2) -> inv_2(#2) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m9[22m: gnt_shared(#1) -> req_exclusive(#1) -> inv_1(#1) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m10[22m: inv_2(#1) -> gnt_shared(#1) -> req_exclusive(#1) -> inv_1(#1) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m11[22m: inv_2(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m12[22m: inv_2(#3) -> gnt_shared(#1) -> req_exclusive(#1) -> inv_1(#1) -> gnt_exclusive(#1) ->
+         [35munsafe[1][39m
+node [1m13[22m: inv_1(#3) -> gnt_exclusive(#1) -> [35munsafe[1][39m
+node [1m14[22m: req_shared(#2) -> inv_2(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m15[22m: gnt_exclusive(#3) -> req_shared(#2) -> inv_2(#3) -> gnt_shared(#2) -> [35munsafe[1][39m
+node [1m16[22m: inv_1(#2) -> gnt_exclusive(#3) -> req_shared(#2) -> inv_2(#3) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+node [1m17[22m: inv_1(#3) -> gnt_exclusive(#3) -> req_shared(#2) -> inv_2(#3) -> gnt_shared(#2) ->
+         [35munsafe[1][39m
+node [1m18[22m: inv_1(#2) -> inv_1(#3) -> gnt_exclusive(#3) -> req_shared(#2) -> inv_2(#3) ->
+         gnt_shared(#2) -> [35munsafe[1][39m
+
+
+The system is [1m[32mSAFE[39m[22m
+
+==================================================================================================
+* [1mSTATS[22m
+--------------------------------------------------------------------------------------------------
+Number of visited vertices       : 13
+Number of bads generated         : 18
+Number of solver calls           : 249
+Max Number of processes          : 3
+Restarts                         : 0
+--------------------------------------------------------------------------------------------------
+Time for pre-image computation   : 0m0.006s
+Time for fixpoint                : 0m0.010s
+├─Time for relevant permutations : 0m0.002s
+├─Time for simplifications       : 0m0.003s
+├─Subset tests                   : 0m0.000s
+├─Apply substitutions            : 0m0.005s
+├─Nodes sorting                  : 0m0.000s
+├─Time in formulas               : 0m0.000s
+└─Time in solver                 : 0m0.006s
+Forward exploration              : 0m0.000s
+Filter candidates                : 0m0.000s
+Time in far parts
+├─Time in vertices subsuming     : 0m0.011s
+├─Time to find bads              : 0m0.007s
+└─Time to check bads             : 0m0.000s
+==================================================================================================

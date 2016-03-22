@@ -34,6 +34,7 @@
 	"if", IF;
         "init", INIT;
 	"invariant", INVARIANT;
+        "meta_transition", METATRANSITION;
 	"not", NOT;
         "number_procs", SIZEPROC;
 	"predicate", PREDICATE;
@@ -44,6 +45,7 @@
 	"true", TRUE;
         "type", TYPE;
 	"unsafe", UNSAFE;
+        "universal_transition", UNIVTRANSITION;
 	"var", VAR;
       ]
 	       

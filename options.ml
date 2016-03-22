@@ -64,6 +64,9 @@ let copy_regexp = ref false
 let res_output = ref false
 let res_file = ref ""
 
+let meta_trans = ref false
+let univ_trans = ref false
+
 let set_res_output s =
   res_output := true;
   res_file := s
@@ -235,6 +238,9 @@ let specs =
        before going on with enumerative";
     "-copy", Arg.Set copy_state, " copy states that look general enough";
     "-creg", Arg.Set copy_regexp, " copy states that have a recognized history";
+    "-meta", Arg.Set meta_trans, " use meta transitions for forward and backward";
+    "-univ", Arg.Set univ_trans, 
+    " use universal transitions for forward and backward";
     "-flvl", Arg.Set_int filter_lvl, "<n> set a filtering level to clusters";
     "-md", Arg.Set_int filter_md, 
     "<n> set a minimum distance inside a cluster for filtering";
@@ -374,6 +380,9 @@ let copy_regexp = !copy_regexp
 
 let res_output = !res_output
 let res_file = !res_file
+
+let meta_trans = !meta_trans
+let univ_trans = !univ_trans
 
 let bwd_fwd = !bwd_fwd
 

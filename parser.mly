@@ -86,7 +86,8 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
+%token VAR ARRAY CONST TYPE INIT INVARIANT CASE
+%token METATRANSITION UNIVTRANSITION TRANSITION
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC TREGEXP
 %token REQUIRE UNSAFE GOOD PREDICATE
@@ -140,6 +141,8 @@ decl :
   | unsafe { PUnsafe $1 }
   | good { PGood $1 }
   | transition { PTrans $1 }
+  | meta_transition { PMetaTrans $1 }
+  | univ_transition { PUnivTrans $1 }
   | function_decl { PFun  }
   | decl_regexp { PRegExp $1 }
 
@@ -285,6 +288,38 @@ transition_name:
 
 transition:
   | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+      require
+      LEFTBR assigns_nondets_updates RIGHTBR
+      { let assigns, nondets, upds = $8 in
+	  { ptr_name = $2;
+            ptr_args = $4; 
+	    ptr_reqs = $6;
+	    ptr_assigns = assigns; 
+	    ptr_nondets = nondets; 
+	    ptr_upds = upds;
+            ptr_loc = loc ();
+          }
+      }
+;
+
+meta_transition:
+  | METATRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+      require
+      LEFTBR assigns_nondets_updates RIGHTBR
+      { let assigns, nondets, upds = $8 in
+	  { ptr_name = $2;
+            ptr_args = $4; 
+	    ptr_reqs = $6;
+	    ptr_assigns = assigns; 
+	    ptr_nondets = nondets; 
+	    ptr_upds = upds;
+            ptr_loc = loc ();
+          }
+      }
+;
+
+univ_transition:
+  | UNIVTRANSITION transition_name LEFTPAR lidents RIGHTPAR 
       require
       LEFTBR assigns_nondets_updates RIGHTBR
       { let assigns, nondets, upds = $8 in

@@ -1428,7 +1428,7 @@ let rec pfrom = function
   | [] -> ()
   | [e, v] -> Format.eprintf "%a(" Hstring.print e;
     pvars v;
-    Format.eprintf ")"
+    Format.eprintf ")@."
   | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
     pvars v;
     Format.eprintf ") -> ";
@@ -1469,6 +1469,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
             else
               let from = (st_tr.st_name, st_tr.st_vars) :: from in
               let morf = List.rev from in
+              (* pfrom morf; *)
               if copy_regexp && Regexp.Automaton.recognize_anywhere autom morf
               then begin
                 let s' = generalize_state env s st_tr.st_vars init in
