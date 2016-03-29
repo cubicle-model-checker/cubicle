@@ -181,7 +181,6 @@ type psystem = {
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
-  pgood : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
   pmetatrans : ptransition list;
   punivtrans : ptransition list;
@@ -193,7 +192,6 @@ type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
-  | PGood of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PMetaTrans of ptransition
   | PUnivTrans of ptransition
@@ -605,7 +603,7 @@ let rnumber = ref 0
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
-     pinvs; punsafe; pgood; ptrans; pmetatrans; punivtrans; pregexps} =
+     pinvs; punsafe; ptrans; pmetatrans; punivtrans; pregexps} =
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
@@ -624,15 +622,6 @@ let encode_psystem
         List.fold_left
           (fun acc sa -> (unsafe_loc, unsafe_vars, sa) :: acc) acc dnf
       ) [] punsafe
-  in
-  let good =
-    List.fold_left (fun acc (good_loc, good_vars, good_f) ->
-        let other_vars, dnf = unsafes_of_formula good_f in
-        (* List.iter (fun sa -> eprintf "good : %a@." SAtom.print sa) dnf; *)
-        let good_vars = good_vars @ other_vars in
-        List.fold_left
-          (fun acc sa -> (good_loc, good_vars, sa) :: acc) acc dnf
-      ) [] pgood
   in
   let trans =
     List.fold_left (fun acc ptr ->
@@ -698,7 +687,6 @@ let encode_psystem
     init;
     invs;
     unsafe;
-    good;
     trans;
     automaton;
   }
@@ -706,29 +694,27 @@ let encode_psystem
 
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
-  let inits, pinvs, punsafe, pgood, ptrans, pmetatrans, punivtrans, pregexps =
+  let inits, pinvs, punsafe, ptrans, pmetatrans, punivtrans, pregexps =
     List.fold_left (
-      fun (inits, invs, unsafes, goods, trans, mtrans, utrans, regexp) -> 
+      fun (inits, invs, unsafes, trans, mtrans, utrans, regexp) -> 
         function
           | PInit i -> 
-            i :: inits, invs, unsafes, goods, trans, mtrans, utrans, regexp
+            i :: inits, invs, unsafes, trans, mtrans, utrans, regexp
           | PInv i -> 
-            inits, i :: invs, unsafes, goods, trans, mtrans, utrans, regexp
-          | PGood g -> 
-            inits, invs, unsafes, g :: goods, trans, mtrans, utrans, regexp
+            inits, i :: invs, unsafes, trans, mtrans, utrans, regexp
           | PUnsafe u -> 
-            inits, invs, u :: unsafes, goods, trans, mtrans, utrans, regexp
+            inits, invs, u :: unsafes, trans, mtrans, utrans, regexp
           | PTrans t -> 
-            inits, invs, unsafes, goods, t :: trans, mtrans, utrans, regexp
+            inits, invs, unsafes, t :: trans, mtrans, utrans, regexp
           | PMetaTrans t -> 
-            inits, invs, unsafes, goods, trans, t:: mtrans, utrans, regexp
+            inits, invs, unsafes, trans, t:: mtrans, utrans, regexp
           | PUnivTrans t -> 
-            inits, invs, unsafes, goods, trans, mtrans, t :: utrans, regexp
+            inits, invs, unsafes, trans, mtrans, t :: utrans, regexp
           | PFun ->
-            inits, invs, unsafes, goods, trans, mtrans, utrans, regexp
+            inits, invs, unsafes, trans, mtrans, utrans, regexp
           | PRegExp re -> 
-            inits, invs, unsafes, goods, trans, mtrans, utrans, re::regexp
-    ) ([], [], [], [], [], [], [], []) pdecls
+            inits, invs, unsafes, trans, mtrans, utrans, re::regexp
+    ) ([], [], [], [], [], [], []) pdecls
   in
   let pinit = match inits with
     | [i] -> i
@@ -742,7 +728,6 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     pinit;
     pinvs;
     punsafe;
-    pgood;
     ptrans;
     pmetatrans;
     punivtrans;

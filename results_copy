@@ -120,21 +120,6 @@ Max Number of processes          : 3
 Number of invariants             : 29
 Restarts                         : 0
 =========================================================================================================================
-./cubicle.opt -brab 2 examples/german_meta.cub -fd 12 -res results_copy 
-Total forward nodes :            : 793
-Number of visited nodes          : 45
-Max Number of processes          : 3
-Number of invariants             : 29
-Restarts                         : 0
-=========================================================================================================================
-./cubicle.opt -brab 2 examples/german.cub -fd 12 -res results_copy -creg 
-Number of regexps :              : 2
-Total forward nodes :            : 717
-Number of visited nodes          : 45
-Max Number of processes          : 3
-Number of invariants             : 29
-Restarts                         : 0
-=========================================================================================================================
 ./cubicle.opt -brab 2 examples/german.cub -fd 10 -creg -meta -res results_copy 
 Number of regexps :              : 2
 Total forward nodes :            : 795
@@ -157,3 +142,10 @@ Max Number of processes          : 3
 Number of invariants             : 28
 Restarts                         : 0
 =========================================================================================================================
+./cubicle.opt -brab 2 examples/german.cub -fd 12 -meta -res results_copy 
+Total forward nodes :            : 793
+Number of visited nodes          : 45
+Max Number of processes          : 3
+Number of invariants             : 28
+Restarts                         : 0
+===============================================================================================================================

@@ -60,8 +60,6 @@ module HST = Hashtbl.Make
     let hash = hash_state
    end)
 
-type tkind = Orig | Copy
-
 
 (* This is a queue with a hash table on the side to avoid storing useless
    states, the overhead of the hashtable is negligible and allows to reduce the
@@ -226,7 +224,7 @@ let state_to_cube env st =
 	let t1 = id_to_term env !i in
 	let t2 =
           if sti = env.minf_int_abstr then Elem (Hstring.make "-oo", Constr)
-          else if  sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
+          else if sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
           else id_to_term env sti in
 	SAtom.add (Atom.Comp (t1, Eq, t2)) sa
       else sa
@@ -1580,7 +1578,9 @@ let nodes_to_iopi_list env bwd =
 let search bwd procs init =
   TimeForward.start ();
   let procs = procs (*@ init.t_glob_proc*) in
+  eprintf "Init table@.";
   let env = init_tables procs init in
+  eprintf "Init to states@.";
   let st_inits = init_to_states env procs init in
   if debug then 
     List.iter (fun (_, _, st) ->

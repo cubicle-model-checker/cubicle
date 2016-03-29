@@ -828,7 +828,7 @@ let instantiate_transitions all_procs procs trans =
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
   let acc = 
     List.fold_left 
-      (fun acc g -> 
+      (fun acc g ->
 	Term.Set.add (Elem (g, Glob)) acc
       ) Term.Set.empty globals
   in
@@ -868,8 +868,9 @@ let all_partitions s =
 
 
 let mkinits_up_to procs_sets s =
-  if procs_sets = [] then mkinits [] s
-  else
+  match procs_sets with
+  | [] | [[]] -> mkinits [] s
+  | _ ->
     List.fold_left
       (fun acc procs -> List.rev_append (mkinits procs s) acc) [] procs_sets
 
@@ -889,6 +890,7 @@ type possible_result =
 
 
 let possible_trace ~starts ~finish ~procs ~trace =
+  (* eprintf "Possible with %d procs?@." (List.length procs); *)
   let usa = Node.litterals finish in
   let rec forward_rec ls rtrace = match ls, rtrace with
     | _, [] ->
@@ -908,6 +910,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
             List.fold_left (fun acc (sa, args, hist) ->
               List.fold_left (fun acc (nsa, nargs) ->
                 let new_hist = (sa, tr, sigma, nsa) :: hist in
+                (* eprintf "%a\n@." SAtom.print nsa;     *)
                 try Prover.reached procs usa nsa; raise (Reachable new_hist)
                 with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
               ) acc (post_inst sa args procs itr)
@@ -950,8 +953,10 @@ let procs_on_trace trace =
   let all_procs_set = 
     List.fold_left (fun acc (_, procs_t, n) ->
       List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
-		     (List.rev_append procs_t (Node.variables n))
-    ) Hstring.HSet.empty trace
+	(List.rev_append procs_t
+    (Variable.Set.elements (SAtom.variables (Node.litterals n))))
+    (* (Node.variables n)) *)
+      ) Hstring.HSet.empty trace
   in
   Hstring.HSet.elements all_procs_set
 

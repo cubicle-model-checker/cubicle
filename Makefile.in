@@ -36,18 +36,26 @@ OCAMLYACC= @OCAMLYACC@
 MENHIR   = @MENHIR@
 OCAMLLIB = @OCAMLLIB@
 FUNCTORYLIB = @FUNCTORYLIB@
+Z3LIB = @Z3LIB@
+Z3CCFLAGS = @Z3CCFLAGS@
 OCAMLBEST= @OCAMLBEST@
 OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLPATHS = $(FUNCTORYLIB)  -I common/ -I smt/
-INCLUDES = $(INCLPATHS)
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIBS) -I common/ -I smt/
+INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
 REQBIB= nums.cma unix.cma functory.cma
+
+ifeq ($(Z3LIB),)
+  BIBBYTE=$(REQBIB)
+else
+  BIBBYTE=$(REQBIB) z3ml.cma
+endif
 
 BIBBYTE=$(REQBIB)
 
@@ -80,15 +88,15 @@ make_functory:
 #################################
 
 
-# smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
-# 	@rm -f smt/z3wrapper.ml
-# 	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
-# 	@if [ -z "$(Z3LIB)" ]; then \
-# 	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
-# 	else \
-# 	cat smt/z3wrapper_actual.ml >> smt/z3wrapper.ml;\
-# 	fi;\
-# 	chmod -w smt/z3wrapper.ml
+smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
+	@rm -f smt/z3wrapper.ml
+	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+	@if [ -z "$(Z3LIB)" ]; then \
+	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
+	else \
+	cat smt/z3wrapper_actual.ml >> smt/z3wrapper.ml;\
+	fi;\
+	chmod -w smt/z3wrapper.ml
 
 
 # bytecode and native-code compilation
@@ -101,7 +109,7 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo \
 	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/alt_ergo.cmo \
-	 smt/smt.cmo
+	 smt/z3wrapper.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo\
@@ -124,7 +132,7 @@ MAINCMX = $(MAINCMO:.cmo=.cmx)
 KMEANSCMO = kmeans.cmo
 KMEANSCMX = $(KMEANSCMO:.cmo=.cmx)
 
-GENERATED = version.ml parser.ml parser.mli lexer.ml 
+GENERATED = version.ml parser.ml parser.mli lexer.ml smt/z3wrapper.ml
 
 byte: $(NAME).byte
 opt: $(NAME).opt
@@ -140,7 +148,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1c
+VERSION=1.1.1a
 # comment the following line for release
 SVNREV=-$(shell svnversion -n)
 
@@ -281,6 +289,7 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 	   smt/intervals.ml smt/intervals.mli smt/literal.ml\
 	   smt/literal.mli smt/polynome.ml smt/polynome.mli smt/sig.mli\
 	   smt/smt.ml smt/smt.mli smt/smt_sig.mli smt/alt_ergo.ml smt/alt_ergo.mli\
+	   smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml smt/z3wrapper.mli\
 	   smt/solver.ml smt/solver.mli\
 	   smt/solver_types.ml smt/solver_types.mli smt/enumsolver.ml\
 	   smt/enumsolver.mli smt/enumsolver_types.ml smt/enumsolver_types.mli\
@@ -409,6 +418,7 @@ doc:
 	-t "Cubicle $(VERSION) documentation and source" \
 	-intro doc/intro.txt $(INCLPATHS) \
 	$(filter-out %.mll %.mly fake_functory.ml, $(FILES)) \
+        $(filter-out smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml, $(SMTFILES)) \
 	$(COMMONFILES) 
 
 docpdf: 
@@ -417,6 +427,7 @@ docpdf:
 	-t "Cubicle $(VERSION) documentation and source" \
 	-intro doc/intro.txt $(INCLPATHS) \
 	$(filter-out %.mll %.mly fake_functory.ml, $(FILES)) \
+        $(filter-out smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml, $(SMTFILES)) \
 	$(COMMONFILES) 
 	cd doc/ocamldoc/latex/; rubber -d doc
 

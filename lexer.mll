@@ -30,7 +30,6 @@
 	"false", FALSE;
 	"forall", FORALL;
         "forall_other", FORALL_OTHER;
-        "good", GOOD;
 	"if", IF;
         "init", INIT;
 	"invariant", INVARIANT;

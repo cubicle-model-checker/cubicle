@@ -54,7 +54,9 @@ let () =
 let _ = 
   let lb = from_channel cin in 
   try
+    eprintf "Parsing@.";
     let s = Parser.system Lexer.token lb in
+    eprintf "Typing@.";
     let system = Typing.system s in
     if type_only then exit 0;
     if refine_universal then
@@ -125,5 +127,23 @@ let _ =
      exit 1
 
   | Failure str ->
-     eprintf "\n@{<u>Internal failure:@}%s@." str;
-     exit 1
+    
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "\n@{<u>Internal failure:@}%s@." str;
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+
+    exit 1
+
+  | Smt.Error e ->
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "\n@{<u>Solver error:@}%a@." Smt.report e;
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+
+    exit 1
+
+  | e ->
+
+    let backtrace = Printexc.get_backtrace () in
+    eprintf "Fatal error: %s@." (Printexc.to_string e);
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace

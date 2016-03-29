@@ -60,14 +60,9 @@ module FixpointList : sig
 
   val check_list : Node.t list -> Node.t list -> bool
 
-  val good_reject : Node.t -> Node.t list -> bool
-
 end = struct
  
-  let check_fixpoint ?(pure_smt=false) ?(check_good=false) n visited =
-    let prover_assume = 
-      if check_good then Prover.assume_good else Prover.assume_node
-    in
+  let check_fixpoint ?(pure_smt=false) n visited =
     Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
     let nodes = 
@@ -87,7 +82,7 @@ end = struct
                       Cube.inconsistent_2arrays vis_renamed n_array then nodes
 	    else if ArrayAtom.nb_diff vis_renamed n_array > 1 then
               (vis_n, vis_renamed)::nodes
-	    else (prover_assume vis_n vis_renamed; nodes)
+	    else (Prover.assume_node vis_n vis_renamed; nodes)
 	   ) nodes d
         ) [] visited
     in
@@ -98,28 +93,7 @@ end = struct
         nodes 
     in
     TimeSort.pause ();
-    List.iter (fun (vn, ar_renamed) -> prover_assume vn ar_renamed) nodes
-
-  let good_reject n goods =
-    try
-      List.iter
-	(fun good ->
-	  Prover.assume_goal n;
-          let good_cube = good.cube in
-          let d = Instantiation.relevant ~of_cube:good_cube ~to_cube:n.cube in
-	  if d <> [] then 
-	    try
-              List.iter
-		(fun ss ->
-		  let good_renamed = 
-		    ArrayAtom.apply_subst ss good_cube.Cube.array in
-		  Prover.assume_good good good_renamed
-		) d;
-	      raise Exit
-	    with Smt.Unsat _ -> ()
-	) goods;
-      false
-    with Exit -> true
+    List.iter (fun (vn, ar_renamed) -> Prover.assume_node vn ar_renamed) nodes
 
   let easy_fixpoint s nodes =
     if delete && (s.deleted || Node.has_deleted_ancestor s)

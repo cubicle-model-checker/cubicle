@@ -19,6 +19,8 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
+type solver = AltErgo | Z3
+
 val file : string
 val cin : in_channel
 
@@ -99,6 +101,7 @@ val num_range : int * int
 val post_strategy : int
 val delete : bool
 val simpl_by_uc : bool
+val noqe : bool
 val bitsolver : bool
 val enumsolver : bool
 val refine_universal : bool
@@ -118,6 +121,7 @@ val quiet : bool
 val verbose : int
 val nocolor : bool
 
+val smt_solver : solver
 val debug_smt : bool
 val dmcmt : bool
 val profiling : bool

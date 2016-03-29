@@ -161,12 +161,15 @@ let make_conjuct atoms1 atoms2 =
   F.make F.And l
 
 
-let make_inst_dnfs inst nb_procs =
-  let cdnf_sa, _ = Hashtbl.find inst nb_procs in
-  List.rev_map (List.rev_map make_formula_set) cdnf_sa
+let make_init_dnfs s nb_procs =
+  let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
+  List.rev_map (List.rev_map make_formula_set) init_cdnf
 
+let get_user_invs s nb_procs =
+  let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
+  List.rev_map (fun a -> F.make F.Not [make_formula a]) init_invs
 
-let unsafe_conj { tag = id; cube = cube } nb_procs init =
+let unsafe_conj { tag = id; cube = cube } nb_procs invs init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
@@ -176,12 +179,12 @@ let unsafe_conj { tag = id; cube = cube } nb_procs init =
   SMT.assume ~id f;
   SMT.check ()
 
-let unsafe_dnf node nb_procs dnf =
+let unsafe_dnf node nb_procs invs dnf =
   try
     let uc =
       List.fold_left (fun accuc init ->
         try 
-          unsafe_conj node nb_procs init;
+          unsafe_conj node nb_procs invs init;
           Format.eprintf "%a@." F.print init;
           raise Exit
         with Smt.Unsat uc -> List.rev_append uc accuc)
@@ -189,13 +192,13 @@ let unsafe_dnf node nb_procs dnf =
     raise (Smt.Unsat uc)
   with Exit -> ()
 
-let unsafe_cdnf inst n =
+let unsafe_cdnf s n =
   let nb_procs = List.length (Node.variables n) in
-  let cdnf_init = make_inst_dnfs inst nb_procs in
-  List.iter (List.iter (Format.eprintf "%a@." F.print)) cdnf_init;
-  List.iter (unsafe_dnf n nb_procs) cdnf_init
+  let cdnf_init = make_init_dnfs s nb_procs in
+  let invs = get_user_invs s nb_procs in
+  List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 
-let unsafe s n = unsafe_cdnf s.t_init_instances n
+let unsafe s n = unsafe_cdnf s n
 
 let reached args s sa =
   SMT.clear ();
@@ -204,25 +207,24 @@ let reached args s sa =
   SMT.assume ~id:0 f;
   SMT.check ()
 
-
-let assume_goal { tag = id; cube = cube } =
+let assume_goal_no_check { tag = id; cube = cube } =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
-  SMT.assume ~id f;
-  SMT.check  ()
+  SMT.assume ~id f
 
-let assume_node { tag = id } ap =
+let assume_node_no_check { tag = id } ap =
   let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
+  SMT.assume ~id f
+
+let assume_goal n =
+  assume_goal_no_check n;
   SMT.check  ()
 
-let assume_good { tag = id } ap =
-  let f = make_formula ap in
-  if debug_smt then eprintf "[smt] assume good: %a@." F.print f;
-  SMT.assume ~id f;
+let assume_node n ap =
+  assume_node_no_check n ap;
   SMT.check  ()
 
 let run () = SMT.check ()
@@ -234,24 +236,11 @@ let check_guard args sa reqs =
   SMT.assume ~id:0 f;
   SMT.check ()
 
-let unsat_core_wrt_node uc ap =
-  Array.fold_left (fun acc a ->
-    match make_literal a with
-      | F.Lit la when List.mem [la] uc -> SAtom.add a acc
-      | _ -> acc) 
-    SAtom.empty ap
-
-
-let assume_node_wo_check ({ tag = id }, ap) =
-  let f = F.make F.Not [make_formula ap] in
-  if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f
-
 let assume_goal_nodes { tag = id; cube = cube } nodes =
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  List.iter assume_node_wo_check nodes;
+  List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
   SMT.check  ()

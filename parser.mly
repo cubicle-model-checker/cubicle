@@ -90,7 +90,7 @@
 %token METATRANSITION UNIVTRANSITION TRANSITION
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC TREGEXP
-%token REQUIRE UNSAFE GOOD PREDICATE
+%token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -139,7 +139,6 @@ decl :
   | init { PInit $1 }
   | invariant { PInv $1 }
   | unsafe { PUnsafe $1 }
-  | good { PGood $1 }
   | transition { PTrans $1 }
   | meta_transition { PMetaTrans $1 }
   | univ_transition { PUnivTrans $1 }
@@ -276,10 +275,6 @@ invariant:
 unsafe:
   | UNSAFE LEFTBR expr RIGHTBR { loc (), [], $3 }
   | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
-;
-
-good:
-  | GOOD LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
 ;
 
 transition_name:

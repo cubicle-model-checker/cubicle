@@ -78,7 +78,6 @@ type system = {
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  
-  good : (loc * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
   automaton : Regexp.Automaton.t;
 }
@@ -93,7 +92,6 @@ type kind =
   | Orig   (** original unsafe formula *)
   | Node   (** reguar node *)
   | Inv    (** or user supplied invariant*)
-  | Good   (** or user supplied goods *)
 
 
 type node_cube =
@@ -115,6 +113,15 @@ and trace_step = transition_info * Variable.t list * node_cube
 
 and trace = trace_step list
 (** type of error traces, also the type of history of nodes *)
+
+type init_instance = {
+  init_cdnf : dnf list; (** DNFs for initial states *)
+  init_cdnf_a : ArrayAtom.t list list;
+  (** DNFs for initial states in array form *)
+  init_invs : ArrayAtom.t list;
+  (** Instantiated negated user supplied invariants *)
+}
+(** Type of instantiated initial formulas *)
 
 type far_cube = node_cube
 
@@ -139,15 +146,12 @@ type t_system = {
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)
-  t_init_instances : (int, (dnf list * ArrayAtom.t list list)) Hashtbl.t;
+  t_init_instances : (int, init_instance) Hashtbl.t;
   (** pre-computed instances of the initial formula *)
   t_invs : node_cube list;
   (** user supplied invariants in negated form *)
   t_unsafe : node_cube list;
   (** unsafe formulas (in the form of cubes) *)
-
-  t_good : node_cube list;
-  (** good formulas (in the form of cubes) *)
 
   t_trans : transition list;
   (** transition relation in the form of a list of transitions *)

@@ -584,10 +584,12 @@ let remove_tick_atom sa (tick, at) =
   (* if !flag then SAtom.add at sa else sa *)
 
 let const_simplification sa = 
-  try
-    let ticks = tick_pos sa in
-    List.fold_left remove_tick_atom sa ticks
-  with Not_found -> sa
+  if noqe then sa
+  else
+    try
+      let ticks = tick_pos sa in
+      List.fold_left remove_tick_atom sa ticks
+    with Not_found -> sa
 
 let simplification_atoms base sa =
   SAtom.fold 
@@ -660,7 +662,8 @@ let elim_ite_atoms np =
 	ites
 	[base]
     in
-    List.rev (List.rev_map const_simplification lsa)
+    if noqe then lsa
+    else List.rev (List.rev_map const_simplification lsa)
   with Exit -> []
 
 
