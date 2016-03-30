@@ -67,7 +67,6 @@ let brab system =
     else []
   in
   (* List.iter (Format.eprintf "%a\n@." Node.print) cubes; *)
-  eprintf "Init Orcale@.";
   Oracle.init ~bwd:cubes system;
   if only_forward then
     (* if print_forward then *)

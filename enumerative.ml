@@ -1471,8 +1471,8 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               if copy_regexp && Regexp.Automaton.recognize_anywhere autom morf
               then begin
                 let s' = generalize_state env s st_tr.st_vars init in
+                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                 if debug then (
-                  Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                   Format.eprintf "Pre state : %a@." (print_state env) st;
                   Format.eprintf "New state : %a@." (print_state env) s;
                   Format.eprintf "Cop state : %a@." (print_state env) s'

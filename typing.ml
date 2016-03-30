@@ -464,18 +464,13 @@ let system s =
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
   end;
-  eprintf "Init@.";
   let init_woloc = let _,v,i = s.init in v,i in
-  eprintf "Invs@.";
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
-  eprintf "Uns@.";
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
-  eprintf "Inst@.";
   
   let init_instances = create_init_instances init_woloc invs_woloc in
-  eprintf "Debug@.";
   
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
