@@ -55,7 +55,6 @@ val filter_md : int
 
 val copy_state : bool
 val copy_regexp : bool
-val debug_regexp : bool
 
 val res_output : bool
 val res_file : string

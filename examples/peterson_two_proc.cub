@@ -1,0 +1,85 @@
+number_procs 2
+
+type loc = L1 | L2 | Wait | Crit | L3
+
+array PC[proc] : loc
+array Want[proc] : bool
+
+var Turn : proc
+
+init () { PC[#1] = L1 && PC[#2] = L1 && 
+          Want[#1] = False &&  Want[#2] = False }
+
+unsafe (z) { PC[#1] = Crit && PC[#2] = Crit } 
+
+(* proc 1 *)
+
+transition req_P1 ()
+requires { PC[#1] = L1 }
+{ 
+  Want[j] := case | j = #1 : True | _ : Want[j];
+  PC[j] := case | j = #1 : L2 | _ : PC[j] }
+
+
+transition myturn_P1 ()
+requires { PC[#1] = L2 }
+{ 
+  Turn := #1;
+  PC[j] := case | j = #1 : Wait | _ : PC[j] }
+
+transition enter1_P1 ()
+requires { PC[#1] = Wait && Want[#2] = False }
+{ PC[j] := case | j = #1 : Crit | _ : PC[j] }  
+
+
+transition enter2_P1 ()
+requires { PC[#1] = Wait && Turn = #2  }
+{ PC[j] := case | j = #1 : Crit | _ : PC[j] }  
+
+
+transition exit_P1 ()
+requires { PC[#1] = Crit }
+{ 
+  PC[j] := case | j = #1 : L3 | _ : PC[j] }  
+
+transition not_want_P1 ()
+requires { PC[#1] = L3 }
+{ 
+  Want[j] := case | j = #1 : False | _ : Want[j];
+  PC[j] := case | j = #1 : L1 | _ : PC[j]
+}
+
+
+(* proc 2 *)
+
+transition req_P2 ()
+requires { PC[#2] = L1 }
+{ 
+  Want[j] := case | j = #2 : True | _ : Want[j];
+  PC[j] := case | j = #2 : L2 | _ : PC[j] }
+
+transition myturn_P2 ()
+requires { PC[#2] = L2 }
+{ 
+  Turn := #2;
+  PC[j] := case | j = #2 : Wait | _ : PC[j] }
+
+transition enter1_P2 ()
+requires { PC[#2] = Wait && Want[#1] = False }
+{ PC[j] := case | j = #2 : Crit | _ : PC[j] }  
+
+transition enter2_P2 ()
+requires { PC[#2] = Wait && Turn = #1 }
+{ PC[j] := case | j = #2 : Crit | _ : PC[j] }  
+
+transition exit_P2 ()
+requires { PC[#2] = Crit }
+{ 
+  PC[j] := case | j = #2 : L3 | _ : PC[j] }  
+
+transition not_want_P2 ()
+requires { PC[#2] = L3 }
+{ 
+  Want[j] := case | j = #2 : False | _ : Want[j];
+  PC[j] := case | j = #2 : L1 | _ : PC[j]
+}

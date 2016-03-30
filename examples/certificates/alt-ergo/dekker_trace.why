@@ -1,0 +1,126 @@
+
+logic Turn : int
+logic Turn' : int
+logic Want : int -> bool
+logic Crit : int -> bool
+logic Want' : int -> bool
+logic Crit' : int -> bool
+
+goal initialisation:
+(* init *)
+(forall z:int. (Want(z) = false and
+Crit(z) = false))
+
+->
+
+(* invariant *)
+(not (exists z1,z2:int. z1 <> z2 and Turn = z2 and
+Want(z2) = false and
+Crit(z1) = true and
+Crit(z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and Turn = z2 and
+Want(z2) = true and
+Crit(z1) = true and
+Crit(z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and Crit(z1) = true and
+Crit(z2) = true))
+
+
+goal property:
+(* invariant *)
+(not (exists z1,z2:int. z1 <> z2 and Turn = z2 and
+Want(z2) = false and
+Crit(z1) = true and
+Crit(z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and Turn = z2 and
+Want(z2) = true and
+Crit(z1) = true and
+Crit(z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and Crit(z1) = true and
+Crit(z2) = true))
+
+->
+
+(* property *)
+(not (exists z1,z2:int. z1 <> z2 and Crit(z1) = true and
+Crit(z2) = true))
+
+
+axiom induction_hypothesis:
+(* invariant before *)
+(not (exists z1,z2:int. z1 <> z2 and Turn = z2 and
+Want(z2) = false and
+Crit(z1) = true and
+Crit(z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and Turn = z2 and
+Want(z2) = true and
+Crit(z1) = true and
+Crit(z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and Crit(z1) = true and
+Crit(z2) = true))
+
+
+axiom transition_realtion:
+( (* Transition Relation *)
+(* transition req *)
+(exists i:int. 
+( (* requires *)
+Want(i) = false) and
+( (* actions *)
+Turn' = Turn and
+(forall _j1:int.
+((_j1 = i) -> Want'(_j1) = true) and
+(not (_j1 = i) -> Want'(_j1) = Want(_j1))) and
+(forall z1:int. Crit'(z1) = Crit(z1)) ))
+
+
+or
+
+(* transition enter *)
+(exists i:int. 
+( (* requires *)
+Turn = i and
+Want(i) = true and
+Crit(i) = false) and
+( (* actions *)
+Turn' = Turn and
+(forall _j2:int.
+((_j2 = i) -> Crit'(_j2) = true) and
+(not (_j2 = i) -> Crit'(_j2) = Crit(_j2))) and
+(forall z1:int. Want'(z1) = Want(z1)) ))
+
+
+or
+
+(* transition exit *)
+(exists i:int. 
+( (* requires *)
+Crit(i) = true) and
+( (* actions *)
+Turn' = Turn and
+(forall _j3:int.
+((_j3 = i) -> Crit'(_j3) = false) and
+(not (_j3 = i) -> Crit'(_j3) = Crit(_j3))) and
+(forall _j4:int.
+((_j4 = i) -> Want'(_j4) = false) and
+(not (_j4 = i) -> Want'(_j4) = Want(_j4)))))
+)
+
+
+(* invariant after *)
+goal invariant_preserved_1:
+not (exists z1,z2:int. z1 <> z2 and Turn' = z2 and
+Want'(z2) = false and
+Crit'(z1) = true and
+Crit'(z2) = false)
+
+goal invariant_preserved_2:
+not (exists z1,z2:int. z1 <> z2 and Turn' = z2 and
+Want'(z2) = true and
+Crit'(z1) = true and
+Crit'(z2) = false)
+
+goal invariant_preserved_3:
+not (exists z1,z2:int. z1 <> z2 and Crit'(z1) = true and
+Crit'(z2) = true)
+

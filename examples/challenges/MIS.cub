@@ -1,0 +1,202 @@
+(*
+      Luby’s MIS Protocol translated from MCMT distribution
+
+ Properties from Balaban, I., Pnueli, A., & Zuck, L. (2006). Invisible safety of
+distributed protocols. Automata, Languages and Programming, 528-539.
+
+locations are introduced to translate the program into transitions
+location Viol_max is added to encode a state where the negation 
+of the maximality property (see below) is violated.  This is so
+because the property is of the form \forall\exists and its 
+negation becomes \exists\forall which can be expressed as
+a guard of a transition (although the resulting system is 
+only approximated by the stopping-failure model!)
+*)
+
+type location = L1 | L2 | L3 | L4 | L5 | L6 | L7 | Viol_max
+
+type state = Playing | Won | Lost
+
+type prob = H | L
+
+type phase = P0 | P1 | P2
+
+array Adjacent[proc, proc] : bool
+
+
+array PC[proc] : location
+array State[proc] : state
+array Val[proc] : prob
+array Phase[proc] : phase
+
+(* w and l below are history variables used only *)
+(* to be able to express the properties of stability *)
+(* for won and lost (see below) *)
+(* w is a boolean flag that becomes true only when *)
+(* the corresponding process goes to state won. *)
+array Won_once[proc] : bool
+
+(* l is similar to the w flag, but it is set to true *)
+(* when the process goes to state lost. *)
+array Lost_once[proc] : bool
+
+
+init (x) { PC[x] = L1 && State[x] = Playing && Phase[x] = P0 && 
+           Won_once[x] = False && Lost_once[x] = False }
+
+
+
+(* Adjacent is the adjacency matrix and it is symmetric *)
+invariant (x y) { Adjacent[x, y] <> Adjacent[y, x] }
+invariant (x) { Adjacent[x, x] = True }
+
+
+(* Independence prop. (negated) *)
+unsafe (z1 z2) { Adjacent[z1, z2] = True && State[z1] = Won && State[z2] = Won }
+
+(* Maximality prop. (negated) *)
+unsafe (z1) { PC[z1] = Viol_max }
+
+(* Non-drift (negated) *)
+unsafe (z1 z2) { State[z1] = Playing && State[z2] = Playing && Adjacent[z1, z2] = True &&
+                 Phase[z1] = P0 && Phase[z2] = P2 (* Phase[z1] + 1 < Phase[z2] *) }
+
+(*
+ The stability property for won and lost is expressed as follows:
+    \Box (state[i]=won \rightarrow \Box (state[i] = won))
+    \Box (state[i]=lost \rightarrow \Box (state[i] = lost))
+ Since we can only verify properties without nesting \Box'es,
+ we introduce two history variables which become true (and
+ remain so) so as to eliminate the inner \Box.
+*)
+
+(* Stability for won (negated) *)
+(* unsafe (z1) { State[z1] = Won && Won_once[z1] = False } *)
+unsafe (z1) { State[z1] <> Won && Won_once[z1] = True }
+
+(* Stability for lost (negated) *)
+(* unsafe (x) { State[x] = Lost && Lost_once[x] = False } *)
+unsafe (x) { State[x] <> Lost && Lost_once[x] = True }
+
+
+
+
+transition enter_while (x)
+requires { PC[x] = L1 && State[x] = Playing }
+{
+  PC[x] := L2;
+}
+
+
+transition exit_while (x)
+requires { PC[x] = L1 && State[x] <> Playing }
+{
+  PC[x] := L7;
+}
+
+
+transition await (x)
+requires { PC[x] = L2 &&
+           forall_other j. (
+             Adjacent[x, j] = False ||
+             State[j] <> Playing ||
+             Phase[x] = P0 && Phase[j] = P1 ||
+             Phase[x] = P1 && Phase[j] = P2 ||
+             Phase[x] = P2 && Phase[j] = P0 ) }
+{
+  PC[x] := L3;
+}
+
+
+transition first_if_then_H (x)
+requires { PC[x] = L3 && Phase[x] = P0 }
+{
+  PC[x] := L6;
+  Val[x] := H;
+}
+
+
+transition first_if_then_L (x)
+requires { PC[x] = L3 && Phase[x] = P0 }
+{
+  PC[x] := L6;
+  Val[x] := L;
+}
+
+
+transition first_if_else (x)
+requires { PC[x] = L3 && Phase[x] <> P0 }
+{
+  PC[x] := L4;
+}
+
+
+transition second_if_then (x)
+requires { PC[x] = L4 && Phase[x] = P1 && Val[x] = H &&
+           forall_other j. (Adjacent[x, j] = False || Adjacent[x, j] = True && Val[j] = L) }
+{
+  PC[x] := L6;
+  State[x] := Won;
+  Won_once[x] := True;
+}
+
+transition second_if_else_a (x)
+requires { PC[x] = L4 && Phase[x] <> P1 }
+{
+  PC[x] := L5;
+}
+
+transition second_if_else_b (x)
+requires { PC[x] = L4 && Val[x] = L }
+{
+  PC[x] := L5;
+}
+
+transition second_if_else_c (x y)
+requires { PC[x] = L4 && Adjacent[x, y] = True && Val[y] = H }
+{
+  PC[x] := L5;
+}
+
+
+
+transition third_if_then (x y)
+requires { PC[x] = L5 && Phase[x] = P2 && Adjacent[x, y] = True && State[y] = Won }
+{
+  PC[x] := L6;
+  State[x] := Lost;
+  Lost_once[x] := True;
+}
+
+
+transition last_assignment_a (x)
+requires { PC[x] = L6 && Phase[x] = P0 }
+{
+  PC[x] := L1;
+  Phase[x] := P1;
+}
+
+
+transition last_assignment_b (x)
+requires { PC[x] = L6 && Phase[x] = P1 }
+{
+  PC[x] := L1;
+  Phase[x] := P2;
+}
+
+
+transition last_assignment_c (x)
+requires { PC[x] = L6 && Phase[x] = P2 }
+{
+  PC[x] := L1;
+  Phase[x] := P0;
+}
+
+
+(* additional transition to prove Maximality *)
+transition violate_max (x)
+requires { State[x] = Lost &&
+           forall_other j. (Adjacent[x, j] = False || State[j] <> Won) }
+{
+  PC[x] := Viol_max;
+}

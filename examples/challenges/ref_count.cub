@@ -1,0 +1,66 @@
+type sort = Process | Resource
+
+array Sort[proc] : sort
+array Count[proc] : int
+array Valid[proc] : bool
+array Ptr[proc] : proc
+array Handles[proc, proc] : bool
+
+var Null : proc
+
+init (p) { Valid[p] = False && Ptr[p] = Null && Count[p] = 0 }
+
+unsafe (p r) { Sort[p] = Process && Sort[r] = Resource &&
+               Ptr[p] <> Null && Ptr[p] = r && 0 < Count[r]  && Valid[r] = False }
+
+
+unsafe (p r) { Sort[p] = Process && Sort[r] = Resource &&
+               Ptr[p] <> Null && Ptr[p] = r && Valid[r] = False }
+	       
+unsafe (r) { Sort[r] = Resource && Valid[r] = True && Count[r] < 0  }
+	       
+(* unsafe (p r) { Sort[p] = Process && Sort[r] = Resource && *)
+(*                Ptr[p] <> Null && Ptr[p] = r && 0 < Count[r]  } *)
+	       
+unsafe (p r) { Sort[p] = Process && Sort[r] = Resource &&
+               r <> Null && Valid[r] = True && Handles[r,p] = True &&
+	       Ptr[p] <> r  }
+	       
+(* unsafe (p r) { Sort[p] = Process && Sort[r] = Resource && *)
+(*                Ptr[p] <> Null && Ptr[p] = r && Handles[r,p] = True } *)
+
+transition alloc (r)
+requires { Sort[r] = Resource && r <> Null && Valid[r] = False }
+{
+    Valid[r] := True;
+    Count[r] := 0;
+    Handles[s,q] := case | r=s && Sort[q] = Process : False
+    		    	 | _ : Handles[s,q];
+}
+
+
+transition ref (p r)
+requires { Sort[p] = Process && Sort[r] = Resource &&
+	   Valid[r] = True && Ptr[p] = Null }
+{
+    Ptr[p] := r;
+    Count[r] := Count[r] + 1;
+    Handles[r,p] := True;
+}
+
+
+transition deref (p r)
+requires { Sort[p] = Process && Ptr[p] <> Null &&
+	   Sort[r] = Resource && Ptr[p] = r }
+{
+    Ptr[p] := Null;
+    Count[r] := Count[r] - 1;
+    Handles[r,p] := False;
+}
+
+
+transition free (r)
+requires { Sort[r] = Resource && Valid[r] = True && Count[r] = 0 }
+{
+    Valid[r] := False;
+}

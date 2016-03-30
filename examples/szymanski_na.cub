@@ -1,0 +1,171 @@
+(*****************************************************************************)
+(* Szymanski's mutual exclusion algorithm - Non atomic version               *)
+(* Universal quantifications are replaced by iterative checks inside for     *)
+(* loops                                                                     *)
+(*****************************************************************************)
+(*                                                                           *)
+(* 0 : Bx := true                                                            *)
+(* 1 : await forall y. x <> y => not Sy then Bx := false                     *)
+(* 2 : Wx := true ; Sx := true ;                                             *)
+(* 3 : if exists y. x <> y not By /\ not Wy                                  *)
+(*        then Sx := false ; goto 4                                          *)
+(*        else Wx := false ; goto 5                                          *)
+(* 4 : await exists y. x <> y => Sy /\ not Wy then Wx := false ; Sx := true; *)
+(* 5 : await forall y. x <> y => not Wy                                      *)
+(* 6 : await forall y. y < x => not Sy                                       *)
+(* 7 : {Critical section}                                                    *)
+(*     Sx := false ; goto 0                                                  *)
+(*                                                                           *)
+(* A simple solution to Lamport's concurrent programming problem with        *)
+(* linear wait.  Boleslaw K. Szymanski. ICS, page 621-626. (1988)            *)
+(*****************************************************************************)
+
+
+type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
+
+array A[proc] : location
+array B[proc] : bool
+array S[proc] : bool
+array W[proc] : bool 
+array Cpt[proc, proc] : bool (* counters for non atomic loops *)
+
+init (x y) { A[x] = L0 && S[x] = False && W[x] = False && B[x] = False &&
+             Cpt[x, y] = False }
+ 
+unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
+
+trans_regexp : t0(z) t1(z);
+
+meta_transition meta_t01(x) 
+requires { A[x] = L0 && forall_other y. S[y] = False }
+{ A[x] := L2; 
+  B[x] := False }
+
+meta_transition meta_t012(x) 
+requires { A[x] = L0 && forall_other y. S[y] = False }
+{ A[x] := L3; 
+  B[x] := False;
+  S[x] := True;
+  W[x] := True; }
+
+transition t0 (x)
+requires { A[x] = L0 }
+{ A[x] := L1; B[x] := True }
+
+
+
+transition t1 (x)
+requires { A[x] = L1 && forall_other y. S[y] = False }
+{ A[x] := L2; B[x] := False }
+
+
+
+transition t2 (x)
+requires { A[x] = L2 }
+{ A[x] := L3; S[x] := True; W[x] := True }
+
+
+
+transition t3_abort_for (x y)
+requires { A[x] = L3 &&
+           Cpt[x,y] = False && B[y] = False && W[y] = False (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ 
+  A[x] := L4;
+  S[x] := False;
+  (* Reset counter *)
+  Cpt[i,j] := case | i = x : False | _ : Cpt[i,j];
+}
+
+transition t3_incr_for1 (x y)
+requires { A[x] = L3 &&
+           Cpt[x,y] = False && B[y] = True (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ Cpt[x,y] := True }
+
+transition t3_incr_for2 (x y)
+requires { A[x] = L3 &&
+           Cpt[x,y] = False && W[y] = True (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ Cpt[x,y] := True }
+
+
+transition t3_exit_for (x)
+requires { A[x] = L3 && forall_other y. Cpt[x,y] = True }
+{ 
+  A[x] := L5;
+  W[x] := False;
+  (* Reset counter *)
+  Cpt[i,j] := case | i = x : False | _ : Cpt[i,j];
+}
+
+
+
+transition t4_incr_for1 (x y)
+requires { A[x] = L4 &&
+           Cpt[x,y] = False && S[y] = False (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{  Cpt[x,y] := True }
+
+transition t4_incr_for2 (x y)
+requires { A[x] = L4 &&
+           Cpt[x,y] = False && W[y] = True (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ Cpt[x,y] := True }
+
+transition t4_exit_for (x y)
+requires { A[x] = L4 &&
+           Cpt[x,y] = False && S[y] = True && W[y] = False (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ 
+  A[x] := L5;
+  S[x] := True;
+  W[x] := False;
+  (* Reset counter *)
+  Cpt[i,j] := case | i = x : False | _ : Cpt[i,j];
+}
+
+transition t4_restart_for (x)
+requires { A[x] = L4 && forall_other y. Cpt[x,y] = True }
+{ 
+  (* Reset counter *)
+  Cpt[i,j] := case | i = x : False | _ : Cpt[i,j];
+}
+
+
+
+transition t5_enter_for (x y)
+requires { A[x] = L5 &&
+           Cpt[x,y] = False && W[y] = False (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ Cpt[x,y] := True }
+
+transition t5_exit_for (x)
+requires { A[x] = L5 && forall_other y. Cpt[x,y] = True }
+{ 
+  A[x] := L6;
+  (* Reset counter *)
+  Cpt[i,j] := case | i = x : False | _ : Cpt[i,j];
+}
+
+
+
+transition t6_enter_for (x y)
+requires { A[x] = L6 && y < x && 
+           Cpt[x,y] = False && S[y] = False (* && *)
+           (* forall_other z. (y < z || Cpt[x,z] = True ) *) }
+{ Cpt[x,y] := True }
+
+transition t6_exit_for (x)
+requires { A[x] = L6 && forall_other y. (x < y || Cpt[x,y] = True) }
+{ 
+  A[x] := L7;
+  (* Reset counter *)
+  Cpt[i,j] := case | i = x : False | _ : Cpt[i,j];
+}
+
+
+
+transition t7 (x)
+requires { A[x] = L7 }
+{ A[x] := L0; S[x] := False }

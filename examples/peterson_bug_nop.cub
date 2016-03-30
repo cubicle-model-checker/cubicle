@@ -1,0 +1,132 @@
+(*
+ Process i:
+
+ while (true) {
+ L1:
+   Want[i] := true;
+ L2:
+   Turn := Other[i];
+ L3:
+   while ( Want[Other[i]] && Turn <> i) { ; }
+ L4_crit:
+   // section critique
+ L5:
+   Want[i] := false;
+ L6:
+   // section restante
+ }
+
+*)
+
+number_procs 2
+
+type loc =  L1 | L2 | L3 | L4_crit | L5 | L6 | Stop
+
+array PC[proc] : loc
+var Turn : proc
+array Want[proc] : bool
+array Other[proc] : proc
+
+
+(* ----------------------*)
+(* Initialization        *)
+(* ----------------------*)
+
+init ()
+{ Turn = #1 && PC[#1] = L1 && PC[#2] = L1 &&
+  Want[#1] = False && Want[#2] = False &&
+  Other[#1] = #2   && Other[#2] = #1 }
+
+
+(* ----------------------*)
+(* Properties            *)
+(* ----------------------*)
+
+unsafe () { Turn <> #1 && Turn <> #2 }
+
+(* ----------------------*)
+(* Transitions #1        *)
+(* ----------------------*)
+
+transition t_L1_L2 ()
+requires { PC[#1] = L1 }
+{ Want[#1] := True;
+  PC[#1] := L2; }
+
+transition t_L2_L3 ()
+requires { PC[#1] = L2 }
+{ Turn := Other[#1];
+  PC[#1] := L3; }
+
+transition t_L3_L4_1 ()
+requires { PC[#1] = L3 && #2 = Other[#1] && Want[#2] = False  }
+{ PC[#1] := L4_crit; }
+
+transition t_L3_L4_2 ()
+requires { PC[#1] = L3 && Turn = #1 }
+{ PC[#1] := L4_crit; }
+
+transition t_L4_L5 ()
+requires { PC[#1] =  L4_crit }
+{ PC[#1] := L5; }
+
+transition t_L5_L6 ()
+requires { PC[#1] = L5 }
+{ Want[#1] := False;
+  PC[#1] := L6; }
+
+transition t_L6_L1 ()
+requires { PC[#1] = L6 }
+{ PC[#1] := L1; }
+
+transition t_Stop1 ()
+requires { PC[#1] = L1 }
+{ PC[#1] := Stop; }
+
+transition t_Stop6 ()
+requires { PC[#1] = L6 }
+{ PC[#1] := Stop; }
+
+(* ----------------------*)
+(* Transitions #2        *)
+(* ----------------------*)
+
+transition t_L1_L2 ()
+requires { PC[#2] = L1 }
+{ Want[#2] := True;
+  PC[#2] := L2; }
+
+transition t_L2_L3 ()
+requires { PC[#2] = L2 }
+{ Turn := Other[#2];
+  PC[#2] := L3; }
+
+transition t_L3_L4_1 ()
+requires { PC[#2] = L3 && #1 = Other[#2] && Want[#1] = False  }
+{ PC[#2] := L4_crit; }
+
+transition t_L3_L4_2 ()
+requires { PC[#2] = L3 && Turn = #2 }
+{ PC[#2] := L4_crit; }
+
+transition t_L4_L5 ()
+requires { PC[#2] =  L4_crit }
+{ PC[#2] := L5; }
+
+transition t_L5_L6 ()
+requires { PC[#2] = L5 }
+{ Want[#2] := False;
+  PC[#2] := L6; }
+
+transition t_L6_L1 ()
+requires { PC[#2] = L6 }
+{ PC[#2] := L1; }
+
+transition t_Stop1 ()
+requires { PC[#2] = L1 }
+{ PC[#2] := Stop; }
+
+transition t_Stop6 ()
+requires { PC[#2] = L6 }
+{ PC[#2] := Stop; }
+

@@ -2,7 +2,6 @@ module type OrderedChar = sig
   type t
   val compare : t -> t -> int
   val end_char : t
-  (* val start_char : t *)
   val fprint : Format.formatter -> t -> unit
   val fprint_dot : Format.formatter -> t -> unit
 end
@@ -14,7 +13,6 @@ module type ICS = sig
       
   val from_char : c -> t
   val end_char : t
-  (* val start_char : t *)
   val compare : t -> t -> int
   val fprint : Format.formatter -> t -> unit
   val fprint_dot : Format.formatter -> t -> unit
@@ -41,7 +39,6 @@ module Make_IC (C : OrderedChar) : ICS with type c = C.t = struct
       in (v, c)
 
   let end_char = C.end_char, -1
-  (* let start_char = C.start_char, -1 *)
 
   let compare (v1, i1) (v2, i2) = 
     let c = C.compare v1 v2 in
@@ -247,7 +244,8 @@ module type AS = sig
 
   val make_automaton : regexp -> t
 
-  val recognize : t -> char list -> bool
+  val recognize_start : t -> char list -> bool
+  val recognize_anywhere : t -> char list -> bool
 
   val save_automaton : string -> t -> unit
 end
@@ -294,6 +292,7 @@ module Make_Automaton (R : RES) : AS
 
   let terminal st = R.ICSet.mem IC.end_char st
 
+
   let recognize_start t cl =
     let rec rl st = function
       | [] -> terminal st
@@ -314,10 +313,7 @@ module Make_Automaton (R : RES) : AS
         with Not_found -> rl t.init tl
     in
     rl t.init cl
-
-  let recognize t cl = 
-    (* if R.ICSet.mem IC.start_char t.init then recognize_start t cl *)
-    (* else *) recognize_anywhere t cl
+    
 
   let fprint_state_dot fmt q = R.fprint_set_dot fmt q
 
@@ -354,9 +350,6 @@ module Trans : OrderedChar with type t = tr = struct
 
   type t = tr
   let end_char = Hstring.make "dummy_trans", 
-    Hstring.HSet.singleton (Hstring.make "#-1")
-
-  let start_char = Hstring.make "$", 
     Hstring.HSet.singleton (Hstring.make "#-1")
   
   let compare = compare
