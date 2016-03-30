@@ -66,19 +66,23 @@ module type RES = sig
     | SPlus of simple_r
     | SOption of simple_r
 
+  type ts = simple_r (* {from_start : bool; simple_r : simple_r} *)
+
   type ichar
 
-  type t =
+  type r = 
     | Epsilon
     | IChar of ichar
-    | Union of t list
-    | Concat of t list
-    | Star of t
-    | Plus of t
-    | Option of t
+    | Union of r list
+    | Concat of r list
+    | Star of r
+    | Plus of r
+    | Option of r
 
-  val new_t : simple_r -> t
-  val from_list : simple_r list -> t
+  type t = r (* {from_start : bool; r : r} *)
+
+  val new_t : ts -> t
+  val from_list : ts list -> t
 
   val null : t -> bool
 
@@ -114,27 +118,32 @@ module Make_Regexp (C : OrderedChar) : RES with module C = C = struct
       | SPlus of simple_r
       | SOption of simple_r
 
+    type ts = simple_r (* {sfrom_start : bool; simple_r : simple_r} *)
+
     type ichar = IC.t
 
     let from_char = IC.from_char
 
-    type t = 
+    type r = 
       | Epsilon
       | IChar of ichar
-      | Union of t list
-      | Concat of t list
-      | Star of t
-      | Plus of t
-      | Option of t
+      | Union of r list
+      | Concat of r list
+      | Star of r
+      | Plus of r
+      | Option of r
 
-    let rec new_t = function
-      | SEpsilon -> Epsilon
-      | SChar c -> IChar (IC.from_char c)
-      | SUnion tl -> Union (List.map new_t tl)
-      | SConcat tl -> Concat (List.map new_t tl)
-      | SStar t -> Star (new_t t)
-      | SPlus t -> Plus (new_t t)
-      | SOption t -> Option (new_t t)
+    type t = r
+    let new_t s = 
+      let rec nr = function
+        | SEpsilon -> Epsilon
+        | SChar c -> IChar (IC.from_char c)
+        | SUnion tl -> Union (List.map nr tl)
+        | SConcat tl -> Concat (List.map nr tl)
+        | SStar t -> Star (nr t)
+        | SPlus t -> Plus (nr t)
+        | SOption t -> Option (nr t)
+      in (* {from_start = s.sfrom_start; r =  *)nr s
 
     let from_list t = match t with
       | [e] -> new_t e
@@ -244,8 +253,7 @@ module type AS = sig
 
   val make_automaton : regexp -> t
 
-  val recognize_start : t -> char list -> bool
-  val recognize_anywhere : t -> char list -> bool
+  val recognize : t -> char list -> bool
 
   val save_automaton : string -> t -> unit
 end
@@ -314,6 +322,9 @@ module Make_Automaton (R : RES) : AS
     in
     rl t.init cl
     
+  let recognize t cl = 
+    (* if t.from_start then recognize_start t cl *)
+    (* else *) recognize_anywhere t cl
 
   let fprint_state_dot fmt q = R.fprint_set_dot fmt q
 

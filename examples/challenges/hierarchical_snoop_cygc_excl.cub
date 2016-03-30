@@ -110,33 +110,33 @@ init (c i) {
     GDir_ShrSet[c] = False
 }
 
-trans_regexp : t4(z1 z2) t5_x(z1 z2) t4(z1 z2) t13(z1) 
-               t15(z1) t33_then(z1) t5_x(z1 z2);
+trans_regexp : t4(z1 z2)? t5_x(z1 z2)? t4(z1 z2)? t13(z1)?
+               t15(z1)? t33_then(z1)? t5_x(z1 z2)?;
 
-invariant (c) { GUniMsg_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c1] <> CId }
-invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c2] <> CId }
-invariant (c) { GInvMsg_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { GInvMsg_Cluster_defined[c] = True && Sort[c] <> CId }
-invariant (c) { Clusters_RAC_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c1 c2) { Clusters_RAC_Inved[c1,c2] = True && Sort[c1] <> CId }
-invariant (c1 c2) { Clusters_RAC_Inved[c1,c2] = True && Sort[c2] <> CId }
-invariant (c i) { Clusters_L1s_State[c,i] <> Invld && Sort[c] <> CId }
-invariant (c i) { Clusters_L1s_State[c,i] <> Invld && Sort[i] <> L1Id }
-invariant (c i) { Clusters_L1s_Req[c,i] <> None && Sort[c] <> CId }
-invariant (c i) { Clusters_L1s_Req[c,i] <> None && Sort[i] <> L1Id }
-invariant (c) { Clusters_L2_State[c] <> Invld && Sort[c] <> CId }
-invariant (c) { Clusters_L2_pending[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_OnlyCopy[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_ifInReq[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_ReqCmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_ifOutRpy[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_outRpy_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_ifOutReq[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_outReq_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_ifInRpy[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_inRpy_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_WbReq_Cmd[c] <> None && Sort[c] <> CId }
+(* invariant (c) { GUniMsg_Cmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c1] <> CId } *)
+(* invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c2] <> CId } *)
+(* invariant (c) { GInvMsg_Cmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c) { GInvMsg_Cluster_defined[c] = True && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_RAC_Cmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c1 c2) { Clusters_RAC_Inved[c1,c2] = True && Sort[c1] <> CId } *)
+(* invariant (c1 c2) { Clusters_RAC_Inved[c1,c2] = True && Sort[c2] <> CId } *)
+(* invariant (c i) { Clusters_L1s_State[c,i] <> Invld && Sort[c] <> CId } *)
+(* invariant (c i) { Clusters_L1s_State[c,i] <> Invld && Sort[i] <> L1Id } *)
+(* invariant (c i) { Clusters_L1s_Req[c,i] <> None && Sort[c] <> CId } *)
+(* invariant (c i) { Clusters_L1s_Req[c,i] <> None && Sort[i] <> L1Id } *)
+(* invariant (c) { Clusters_L2_State[c] <> Invld && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_L2_pending[c] <> False && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_OnlyCopy[c] <> False && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_ifInReq[c] <> False && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_ReqCmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_ifOutRpy[c] <> False && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_outRpy_Cmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_ifOutReq[c] <> False && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_outReq_Cmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_ifInRpy[c] <> False && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_inRpy_Cmd[c] <> None && Sort[c] <> CId } *)
+(* invariant (c) { Clusters_WbReq_Cmd[c] <> None && Sort[c] <> CId } *)
 
 (* invariant "I1" *)
 unsafe (c i j) {
