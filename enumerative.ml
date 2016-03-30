@@ -1468,16 +1468,20 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               let from = (st_tr.st_name, st_tr.st_vars) :: from in
               let morf = List.rev from in
               (* pfrom morf; *)
-              if copy_regexp && Regexp.Automaton.recognize_anywhere autom morf
+              if copy_regexp && Regexp.Automaton.recognize autom morf
               then begin
                 let s' = generalize_state env s st_tr.st_vars init in
-                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                 if debug then (
+                  Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                   Format.eprintf "Pre state : %a@." (print_state env) st;
                   Format.eprintf "New state : %a@." (print_state env) s;
                   Format.eprintf "Cop state : %a@." (print_state env) s'
                 );
                 HQueue.add ~cpt_q (depth + 1, from, s') q
+              end;
+              if debug_regexp && Regexp.Automaton.recognize autom morf
+              then begin
+                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
               end;
               HQueue.add ~cpt_q (depth + 1, from, s) q
           end

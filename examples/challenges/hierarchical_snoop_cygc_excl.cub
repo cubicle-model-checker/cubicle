@@ -110,8 +110,8 @@ init (c i) {
     GDir_ShrSet[c] = False
 }
 
-trans_regexp : t4(z1 z2) t5_x(z1 z2) t4(z1 z2) t13(z1) 
-               t15(z1) t33_then(z1) t5_x(z1 z2);
+trans_regexp : t4(z1 z2) t5_x(z1 z2) t4(z1 z2) t13(z1)
+               t15(z1)? t33_then(z1)? t5_x(z1 z2)?;
 
 invariant (c) { GUniMsg_Cmd[c] <> None && Sort[c] <> CId }
 invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c1] <> CId }
