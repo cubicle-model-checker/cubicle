@@ -67,7 +67,7 @@ module HST = Hashtbl.Make
    table for BFS) *)
 module HQueue : sig
   
-  type elt = int * (Hstring.t * Hstring.HSet.t) list * State.t
+  type elt = int * (Hstring.t * Hstring.t list) list * State.t
   type t = elt Queue.t * unit HST.t
       
   val create : int -> t
@@ -77,7 +77,7 @@ module HQueue : sig
 
 end = struct
 
-  type elt = int * (Hstring.t * Hstring.HSet.t) list * State.t
+  type elt = int * (Hstring.t * Hstring.t list) list * State.t
   type t = elt Queue.t * unit HST.t
 
   let create size = Queue.create (), HST.create size
@@ -120,7 +120,7 @@ type state_transition = {
   st_udnfs : st_req list list list;
   st_actions : st_action list;
   st_f : State.t -> State.t list;
-  st_vars : Hstring.HSet.t;
+  st_vars : Hstring.t list;
   st_args : Hstring.t list;
 }
 
@@ -986,8 +986,7 @@ let transitions_to_func_aux procs env reduce acc
 	apply_actions env st st_actions
       in
       let st_vars = 
-        List.fold_left (fun acc (_, x) ->
-          Hstring.HSet.add x acc) Hstring.HSet.empty sigma in
+        List.map (fun (_, x) -> x) sigma in
       let st_tr = {
         st_name = name;
         st_reqs = st_reqs;
@@ -1031,7 +1030,7 @@ let create_new_state env s l =
 
 let generalize_state env s hs system =
   let s' = State.copy s in
-  let vars = Hstring.HSet.elements hs in
+  let vars = hs in
   List.iter (fun arr ->
     let ta = Access(arr, vars) in
     try
@@ -1070,8 +1069,8 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
           try 
             let sts = st_tr.st_f st in
             let vars = st_tr.st_vars in
-            let switching = Hstring.HSet.equal vars last_vars ||
-              Hstring.HSet.equal last_vars hset_none in
+            let switching = assert false(* Hstring.HSet.equal vars last_vars || *)
+              (* Hstring.HSet.equal last_vars hset_none  *)in
             List.fold_left (fun to_do s ->
               if not (HST.mem visited s || HST.mem temp_table s) then
                 if switching then begin
@@ -1149,33 +1148,33 @@ let set_fd_md fd md l =
 
 let maxd = ref 0
 
-let forward_bfs_switches s procs env l =
-  let explicit_states = env.explicit_states in
-  let cpt_f = ref 0 in
-  let cpt_q = ref 1 in
-  let trs = env.st_trs in
-  let to_do = Queue.create () in
-  List.iter (fun (idp, ist)  -> 
-    Queue.add (idp, hset_none, ist) to_do) l;
-  while not (Queue.is_empty to_do) do
-    let depth, last_vars, st = Queue.take to_do in
-    decr cpt_q;
-    if not (HST.mem explicit_states st) then begin
-      post_bfs_switches 
-        st explicit_states trs to_do cpt_q cpt_f depth last_vars;
-      incr cpt_f;
-      if debug && verbose > 1 then
-        eprintf "%d : %a\n@." !cpt_f
-          SAtom.print (state_to_cube env st);
-      if not quiet (* && !cpt_f mod 1000 = 0 *) then
-        eprintf "%d (%d)@." !cpt_f !cpt_q;
-      (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
-      HST.add explicit_states st ();
-      env.states <- st :: env.states;
-      if limit_forward_depth && depth = forward_depth - 1 then
-        env.fringe <- st :: env.fringe;
-    end
-  done
+let forward_bfs_switches s procs env l = assert false
+  (* let explicit_states = env.explicit_states in *)
+  (* let cpt_f = ref 0 in *)
+  (* let cpt_q = ref 1 in *)
+  (* let trs = env.st_trs in *)
+  (* let to_do = Queue.create () in *)
+  (* List.iter (fun (idp, ist)  ->  *)
+  (*   Queue.add (idp, hset_none, ist) to_do) l; *)
+  (* while not (Queue.is_empty to_do) do *)
+  (*   let depth, last_vars, st = Queue.take to_do in *)
+  (*   decr cpt_q; *)
+  (*   if not (HST.mem explicit_states st) then begin *)
+  (*     post_bfs_switches  *)
+  (*       st explicit_states trs to_do cpt_q cpt_f depth last_vars; *)
+  (*     incr cpt_f; *)
+  (*     if debug && verbose > 1 then *)
+  (*       eprintf "%d : %a\n@." !cpt_f *)
+  (*         SAtom.print (state_to_cube env st); *)
+  (*     if not quiet (\* && !cpt_f mod 1000 = 0 *\) then *)
+  (*       eprintf "%d (%d)@." !cpt_f !cpt_q; *)
+  (*     (\* if !cpt_f > 3_000_000 then remove_first explicit_states; *\) *)
+  (*     HST.add explicit_states st (); *)
+  (*     env.states <- st :: env.states; *)
+  (*     if limit_forward_depth && depth = forward_depth - 1 then *)
+  (*       env.fringe <- st :: env.fringe; *)
+  (*   end *)
+  (* done *)
     
 (***********************************************************************)
 (* Forward enumerative search, states are inserted in the global hash- *)
@@ -1412,15 +1411,11 @@ let print_iopi_list =
       Node.print n
   )
 
-let rec pvars vs = 
-  let open Hstring.HSet in
-  if is_empty vs then () 
-  else if cardinal vs = 1 then
-    Format.eprintf "%a" Hstring.print (min_elt vs)
-  else 
-    let v = min_elt vs in 
-    Format.eprintf "%a, " Hstring.print v; 
-    pvars (remove v vs)
+let rec pvars = function 
+  | [v] -> Format.eprintf "%a" Hstring.print v
+  | v :: tl -> Format.eprintf "%a, " Hstring.print v; 
+    pvars tl
+  | _ -> ()
 
 let rec pfrom = function
   | [] -> ()
@@ -1457,7 +1452,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
                 ) env.bad_states) then (
                   incr cpt_c;
                   HQueue.add ~cpt_q (
-                    depth + 1, (st_tr.st_name, st_tr.st_vars) :: from, s') q
+                    depth + 1, (st_tr.st_name, List.rev st_tr.st_args) :: from, s') q
                 )
                 else (
                   incr cpt_rc)
@@ -1465,7 +1460,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
             if incremental_enum && depth = fd - 1 then
               frg := (s, st_tr.st_name) :: !frg
             else
-              let from = (st_tr.st_name, st_tr.st_vars) :: from in
+              let from = (st_tr.st_name, List.rev st_tr.st_args) :: from in
               let morf = List.rev from in
               (* pfrom morf; *)
               if copy_regexp && Regexp.Automaton.recognize autom morf
@@ -1482,7 +1477,14 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               if debug_regexp && Regexp.Automaton.recognize autom morf
               then begin
                 Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
-                Format.eprintf "%a@." (print_state env) st;
+                (* let le = HT.fold (fun t i acc -> (t, i) :: acc) env.id_terms [] in *)
+                (* let ls = List.sort (fun (_, i1) (_, i2) -> compare i1 i2) le in *)
+                (* List.iter ( *)
+                (*   fun (t, i) -> Format.eprintf "%a : %d@." Term.print t i) ls; *)
+                Format.eprintf "%a@." (print_state env) s;
+                (* State.print "" s; *)
+                (* Format.eprintf "%d -> %d@." 68 s.(68); *)
+                (* Format.eprintf "%d -> %d@." 69 s.(69); *)
               end;
               HQueue.add ~cpt_q (depth + 1, from, s) q
           end

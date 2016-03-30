@@ -355,21 +355,19 @@ module Make_Automaton (R : RES) : AS
 
 end
 
-type tr = Hstring.t * Hstring.HSet.t
+type tr = Hstring.t * Hstring.t list
 
 module Trans : OrderedChar with type t = tr = struct 
 
   type t = tr
-  let end_char = Hstring.make "dummy_trans", 
-    Hstring.HSet.singleton (Hstring.make "#-1")
+  let end_char = Hstring.make "dummy_trans", [Hstring.make "#-1"]
   
   let compare = compare
 
   let pp_sep_un fmt () = Format.fprintf fmt ", "
 
   let fprint fmt (name, vars) = Format.fprintf fmt "%a(%a)" Hstring.print name
-    (Format.pp_print_list ~pp_sep:pp_sep_un Hstring.print) 
-    (Hstring.HSet.elements vars)
+    (Format.pp_print_list ~pp_sep:pp_sep_un Hstring.print) vars
     
   let fprint_dot = fprint
 

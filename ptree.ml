@@ -588,7 +588,7 @@ let pregexp_to_simplerl p =
       | PEpsilon -> SEpsilon
       | PChar (n, vl) -> 
         let vl = List.map (Variable.subst s) vl in
-        SChar (n, Hstring.HSet.of_list vl)
+        SChar (n, vl)
       | PUnion pl -> SUnion (List.map ar pl)
       | PConcat pl -> SConcat (List.map ar pl)
       | PStar p -> SStar (ar p)

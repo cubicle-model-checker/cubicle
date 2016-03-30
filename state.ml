@@ -57,6 +57,6 @@ let equal t1 t2 = compare t1 t2 = 0
 let copy = Array.copy
 
 let print sep t1 =
-  Printf.printf "%s[|" sep;
-  Array.iter (Printf.printf "%d ") t1;
-  Printf.printf "|]\n"
+  Format.eprintf "%s[|" sep;
+  Array.iter (Format.eprintf "%d ") t1;
+  Format.eprintf "|]@."
