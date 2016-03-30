@@ -34,19 +34,7 @@ init (x y) { A[x] = L0 && S[x] = False && W[x] = False && B[x] = False &&
  
 unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
 
-trans_regexp : t0(z) t1(z);
 
-meta_transition meta_t01(x) 
-requires { A[x] = L0 && forall_other y. S[y] = False }
-{ A[x] := L2; 
-  B[x] := False }
-
-meta_transition meta_t012(x) 
-requires { A[x] = L0 && forall_other y. S[y] = False }
-{ A[x] := L3; 
-  B[x] := False;
-  S[x] := True;
-  W[x] := True; }
 
 transition t0 (x)
 requires { A[x] = L0 }

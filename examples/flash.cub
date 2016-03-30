@@ -103,37 +103,8 @@ var Collecting : bool
 array Sort[proc] : sort
 
 (*-----------------------------------------------------------------------*)
-pi_Remote_GetX(#2) -> ni_Local_GetX_PutX_3(#2) ->
-               ni_Remote_PutX(#2) -> pi_Remote_PutX(#2) ->
-               pi_Remote_Get(#2) -> pi_Local_GetX_GetX() ->
-               ni_Remote_GetX_Nak_home(#2) -> ni_Wb() -> ni_Nak_Clear() ->
-               ni_Local_Get_Put1(#2) -> pi_Remote_GetX(#1) ->
-               ni_Local_GetX_PutX_9(#1) -> ni_Remote_PutX(#1) ->
-               ni_Inv_get(#2) 
 
-pi_Remote_Get(#1) -> ni_Local_Get_Put1(#1) ->
-               ni_Remote_Put(#1) -> pi_Remote_Replace(#1) ->
-               pi_Remote_GetX(#1) -> ni_Local_GetX_PutX_6(#1) ->
-               ni_Remote_PutX(#1) -> pi_Remote_GetX(#2) ->
-               ni_Local_GetX_GetX(#2) -> ni_Remote_GetX_PutX(#2, #1) ->
-               ni_Remote_PutX(#2) -> pi_Remote_PutX(#2) ->
-               pi_Remote_GetX(#2) -> ni_Wb() 
 
-pi_Remote_Get(#2) -> ni_Local_Get_Put1(#2) ->
-               ni_Remote_Put(#2) -> pi_Remote_Replace(#2) ->
-               pi_Remote_GetX(#2) -> ni_Local_GetX_PutX_6(#2) ->
-               ni_Remote_PutX(#2) -> pi_Remote_GetX(#1) ->
-               ni_Local_GetX_GetX(#1) -> ni_Remote_GetX_PutX(#1, #2) ->
-               ni_Remote_PutX(#1) -> pi_Remote_PutX(#1) ->
-               pi_Remote_GetX(#1) -> ni_Local_GetX_Nak1(#1) ->
-
-pi_Remote_Get(#1) -> ni_Local_Get_Put1(#1) ->
-               ni_Remote_Put(#1) -> pi_Remote_Replace(#1) ->
-               pi_Remote_GetX(#1) -> ni_Local_GetX_PutX_6(#1) ->
-               ni_Remote_PutX(#1) -> pi_Remote_GetX(#2) ->
-               ni_Local_GetX_GetX(#2) -> ni_Remote_GetX_PutX(#2, #1) ->
-               ni_Remote_PutX(#2) -> pi_Remote_PutX(#2) ->
-               pi_Remote_Get(#2) -> ni_Wb()
 
 (*---------------------------- Initial states ---------------------------*)
 

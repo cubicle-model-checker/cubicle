@@ -33,29 +33,20 @@ OCAMLOPT = ocamlopt.opt
 OCAMLDEP = ocamldep
 OCAMLLEX = ocamllex
 OCAMLYACC= ocamlyacc
-MENHIR   = menhir
 OCAMLLIB = /home/mattias/.opam/4.02.0/lib/ocaml
 FUNCTORYLIB = -I /home/mattias/.opam/4.02.0/lib/functory
-Z3LIB = 
-Z3CCFLAGS = 
 OCAMLBEST= opt
 OCAMLVERSION = 4.02.0
 OCAMLWIN32 = no
 EXE = 
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIBS) -I common/ -I smt/
-INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
+INCLPATHS = $(FUNCTORYLIB)  -I common/ -I smt/
+INCLUDES = $(INCLPATHS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
 REQBIB= nums.cma unix.cma functory.cma
-
-ifeq ($(Z3LIB),)
-  BIBBYTE=$(REQBIB)
-else
-  BIBBYTE=$(REQBIB) z3ml.cma
-endif
 
 BIBBYTE=$(REQBIB)
 
@@ -88,15 +79,15 @@ make_functory:
 #################################
 
 
-smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
-	@rm -f smt/z3wrapper.ml
-	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
-	@if [ -z "$(Z3LIB)" ]; then \
-	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
-	else \
-	cat smt/z3wrapper_actual.ml >> smt/z3wrapper.ml;\
-	fi;\
-	chmod -w smt/z3wrapper.ml
+# smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
+# 	@rm -f smt/z3wrapper.ml
+# 	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+# 	@if [ -z "$(Z3LIB)" ]; then \
+# 	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
+# 	else \
+# 	cat smt/z3wrapper_actual.ml >> smt/z3wrapper.ml;\
+# 	fi;\
+# 	chmod -w smt/z3wrapper.ml
 
 
 # bytecode and native-code compilation
@@ -109,7 +100,7 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo \
 	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/alt_ergo.cmo \
-	 smt/z3wrapper.cmo smt/smt.cmo
+	 smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo\
@@ -118,7 +109,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
       util.cmo variable.cmo types.cmo \
-      cube.cmo node.cmo regexp.cmo ptree.cmo parser.cmo lexer.cmo  pretty.cmo \
+      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo state.cmo kmeans.cmo enumerative.cmo approx.cmo \
       far_util.cmo far_cube.cmo far_modules.cmo far_graph.cmo \
@@ -132,7 +123,7 @@ MAINCMX = $(MAINCMO:.cmo=.cmx)
 KMEANSCMO = kmeans.cmo
 KMEANSCMX = $(KMEANSCMO:.cmo=.cmx)
 
-GENERATED = version.ml parser.ml parser.mli lexer.ml smt/z3wrapper.ml
+GENERATED = version.ml parser.ml parser.mli lexer.ml 
 
 byte: $(NAME).byte
 opt: $(NAME).opt
@@ -148,7 +139,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.1a
+VERSION=1.1c
 # comment the following line for release
 SVNREV=-$(shell svnversion -n)
 
@@ -289,7 +280,6 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 	   smt/intervals.ml smt/intervals.mli smt/literal.ml\
 	   smt/literal.mli smt/polynome.ml smt/polynome.mli smt/sig.mli\
 	   smt/smt.ml smt/smt.mli smt/smt_sig.mli smt/alt_ergo.ml smt/alt_ergo.mli\
-	   smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml smt/z3wrapper.mli\
 	   smt/solver.ml smt/solver.mli\
 	   smt/solver_types.ml smt/solver_types.mli smt/enumsolver.ml\
 	   smt/enumsolver.mli smt/enumsolver_types.ml smt/enumsolver_types.mli\
@@ -316,7 +306,6 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	instantiation.ml instantiation.mli kmeans.mli kmeans.ml lexer.mll main.ml\
 	node.ml node.mli options.ml options.mli oracle.mli\
 	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
-	regexp.ml \
 	safety.ml safety.mli state.ml state.mli stats.ml stats.mli trace.ml trace.mli\
 	types.ml types.mli typing.ml typing.mli util.ml util.mli\
 	variable.ml variable.mli version.ml
@@ -418,7 +407,6 @@ doc:
 	-t "Cubicle $(VERSION) documentation and source" \
 	-intro doc/intro.txt $(INCLPATHS) \
 	$(filter-out %.mll %.mly fake_functory.ml, $(FILES)) \
-        $(filter-out smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml, $(SMTFILES)) \
 	$(COMMONFILES) 
 
 docpdf: 
@@ -427,7 +415,6 @@ docpdf:
 	-t "Cubicle $(VERSION) documentation and source" \
 	-intro doc/intro.txt $(INCLPATHS) \
 	$(filter-out %.mll %.mly fake_functory.ml, $(FILES)) \
-        $(filter-out smt/z3wrapper_fake.ml smt/z3wrapper_actual.ml, $(SMTFILES)) \
 	$(COMMONFILES) 
 	cd doc/ocamldoc/latex/; rubber -d doc
 

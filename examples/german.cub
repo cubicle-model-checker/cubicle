@@ -39,112 +39,10 @@ init (z) {
 
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
-(* unsafe (z) { Chan3[z] = Invack && Shrset[z] = False } *)
-trans_regexp : send_req_shared(z) recv_req_shared(z) send_gnt_shared(z) ;
-               (* recv_gnt_shared(z)?; *)
-trans_regexp : send_inv_1(z) send_invack(z);
 
-meta_transition meta_shared_3(n)
-requires { Cache[n] = Invalid && Chan1[n] = Empty && 
-           Curcmd = Empty && Exgntd = False && Chan2[n] = Empty }
-{ 
-  Curcmd := Reqs; 
-  CurClient := n; 
-  Invset[j] := case | _ : Shrset[j];
-  Chan2[j] := case 
-  	        | j = n : Gnts 
-	        | _ : Chan2[j] ;
-  Shrset[j] := case 
-	        | j = n : True 
-		| _ : Shrset[j] ;
-}
-
-meta_transition meta_shared_4(n)
-requires { Cache[n] = Invalid && Chan1[n] = Empty &&
-           Curcmd = Empty && Exgntd = False && Chan2[n] = Empty }
-{
-  Curcmd := Reqs;
-  CurClient := n;
-  Invset[j] := case | _ : Shrset[j];
-  Shrset[j] := case
-	        | j = n : True
-		| _ : Shrset[j] ;
-  Cache[j] := case
-               | j = n : Shared
-	       | _ : Cache[j] ;
-}
-
-meta_transition meta_inv_1(n)
-requires { Chan2[n] = Empty && Invset[n] = True && Curcmd = Reqe && Chan3[n] = Empty }
-{
-  Chan2[j] := case
-  	       | j = n : Empty 
-	       | _ : Chan2[j] ;
-  Chan3[j] := case
-  	       | j = n : Invack 
-	       | _ : Chan3[j] ;
-  Cache[j] := case 
-  	       | j = n : Invalid 
-	       | _ : Cache[j] ;
-  Invset[j] := case
-  	       | j = n : False 
-	       | _ : Invset[j];
-}
-
-
-(* meta_transition meta_exclusive_3(n) *)
-(* requires { Cache[n] <> Exclusive && Chan1[n] = Empty && Curcmd = Empty && *)
-(*            Chan2[n] = Empty && Shrset[n] = False &&  *)
-(*            forall_other j. Shrset[j] = False } *)
-(* {  *)
-(*   CurClient := n;  *)
-(*   Invset[j] := case | _ : Shrset[j]; *)
-(*   Exgntd := True ; *)
-(*   Chan2[j] := case *)
-(*                | j = n : Gnte  *)
-(* 	       | _ : Chan2[j] ; *)
-(*   Shrset[j] := case  *)
-(* 	       | j = n : True  *)
-(* 	       | _ : Shrset[j] ; *)
-(* } *)
-
-
-meta_transition meta_exclusive_4(n)
-requires { Cache[n] <> Exclusive && Chan1[n] = Empty && Curcmd = Empty &&
-           Chan2[n] = Empty && Shrset[n] = False &&
-           forall_other j. Shrset[j] = False }
-{
-  CurClient := n;
-  Invset[j] := case | _ : Shrset[j];
-  Exgntd := True ;
-  Shrset[j] := case
-	       | j = n : True
-	       | _ : Shrset[j] ;
-  Cache[j] := case 
-               | j = n : Exclusive 
-	       | _ : Cache[j] ;
-}
-
-universal_transition univ_shared(n)
-requires { Cache[n] = Invalid && Chan1[n] = Empty && 
-           Curcmd = Empty && Exgntd = False && Chan2[n] = Empty }
-{ 
-  Curcmd := Reqs;
-  CurClient := n; 
-  Invset[j] := case | _ : Shrset[j] ;
-  Chan1[j] := case | _ : Empty ;
-  Chan2[j] := case | _ : Gnts ;
-  Shrset[j] := case | _ : True ;
-}
-
-(* universal_transition univ_inv_1(n) *)
-(* requires { Chan2[n] = Empty && Invset[n] = True && Curcmd = Reqe && Chan3[n] = Empty } *)
-(* { *)
-(*   Chan2[j] := case | _ : Empty ; *)
-(*   Chan3[j] := case | _ : Invack ; *)
-(*   Cache[j] := case | _ : Invalid ; *)
-(*   Invset[j] := case | _ : False ; *)
-(* } *)
+good (z) { Cache[z] = Invalid && Shrset[z] = False }
+good (z) { Cache[z] <> Invalid && Shrset[z] = True }
+(* good (z) { Cache[z] = Exclusive && Exgntd = True } *)
 
 transition send_req_shared(n)
 requires { Cache[n] = Invalid && Chan1[n] = Empty }
@@ -172,7 +70,7 @@ requires { Cache[n] = Shared && Chan1[n] = Empty }
 
 transition recv_req_shared(n)
 requires { Curcmd = Empty && Chan1[n] = Reqs }
-{
+{ 
   Curcmd := Reqs; 
   CurClient := n; 
   Invset[j] := case | _ : Shrset[j];

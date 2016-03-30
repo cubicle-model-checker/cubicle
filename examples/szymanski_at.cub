@@ -30,8 +30,6 @@ init (x) { A[x] = L0 && S[x] = False && W[x] = False && B[x] = False }
  
 unsafe (z1 z2) { A[z1] = L7 && A[z2] = L7 }
 
-trans_regexp : t0(z) t1(z) t2(z);
-
 transition t0 (x)
 requires { A[x] = L0 }
 { A[x] := L1; B[x] := True }
