@@ -91,8 +91,8 @@ val mu_opts : string
 val cpp_cmd : string
 
 
-val limit_forward_depth : bool
-val forward_depth : int
+(* val limit_forward_depth : bool *)
+val brab_fwd_depth  : (int * int) list
 val max_forward : int
 val max_cands : int
 val candidate_heuristic : int

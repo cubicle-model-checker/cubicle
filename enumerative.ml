@@ -1042,8 +1042,11 @@ let generalize_state env s hs system =
   ) system.t_arrays;
   s'
       
+let forward_depth = ref (-1)
+let limit_forward_depth = ref false
+
 let post_dfs st visited trs q cpt_q depth =
-  if not limit_forward_depth || depth < forward_depth then
+  if not !limit_forward_depth || depth < !forward_depth then
     List.iter (fun st_tr ->
       try 
         let sts = st_tr.st_f st in
@@ -1090,7 +1093,7 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
       in
       aux to_do
   in
-  if not limit_forward_depth || depth < forward_depth then aux [st, prev_vars]
+  if not !limit_forward_depth || depth < !forward_depth then aux [st, prev_vars]
 
 
 let check_cand env state cand = 
@@ -1135,7 +1138,7 @@ let forward_dfs s procs env l =
       incr cpt_r;
       HST.add h_visited st ();
       env.states <- st :: env.states;
-      if limit_forward_depth && depth = forward_depth then
+      if !limit_forward_depth && depth = !forward_depth then
         env.fringe <- st :: env.fringe;
     (* add_all_syms env explicit_states st *)
     end
@@ -1428,8 +1431,8 @@ let rec pfrom = function
     pfrom tl
 
 let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) 
-    frg fd depth autom init i =
-  if not limit_forward_depth || i < enumerative || depth < forward_depth then
+    frg fd depth autom init =
+  if not !limit_forward_depth || depth < !forward_depth then
     List.iter (fun st_tr ->
       try
         let sts = st_tr.st_f st in
@@ -1491,7 +1494,8 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
         ) sts
       with Not_applicable -> ()) trs
 
-let forward_bfs init i env l autom =
+let forward_bfs init env l autom =
+  maxd := !forward_depth;
   let h_visited = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
@@ -1557,7 +1561,7 @@ let forward_bfs init i env l autom =
     if not (HST.mem h_visited st) then begin
       HST.add h_visited st ();
       post_bfs env (from, st) h_visited trs to_do cpt_q
-        (cpt_c, cpt_rc) fringe !fd depth autom init i;
+        (cpt_c, cpt_rc) fringe !fd depth autom init;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
@@ -1567,7 +1571,7 @@ let forward_bfs init i env l autom =
       incr cpt_r;
       env.states <- st :: env.states;
       if depth > !maxd then maxd := depth;
-      if limit_forward_depth && depth = forward_depth then
+      if !limit_forward_depth && depth = !forward_depth then
         env.fringe <- st :: env.fringe;
     end
   done
@@ -1602,7 +1606,7 @@ let search bwd procs init =
   install_sigint ();
   begin 
     try
-      forward_bfs init (List.length procs) env st_inits init.t_automaton;
+      forward_bfs init env st_inits init.t_automaton;
     with Exit -> ()
   end ;
   (* if clusterize then ( *)
@@ -1680,16 +1684,17 @@ let unsat_cand_core env state cand =
 
 let init ?(bwd=[]) system =
   set_liberal_gc ();
-  let low = if brab_up_to then 0 else if bmin > 0 then bmin else enumerative in
-  for i = low to enumerative do
-    let procs = Variable.give_procs i in
+  List.iter (fun (b, f) ->
+    let procs = Variable.give_procs b in
     if not quiet then
       Pretty.print_title std_formatter
-        ("STATEFULL ENUMERATIVE FORWARD ["^(string_of_int i)^" procs]");
+        ("STATEFULL ENUMERATIVE FORWARD ["^(string_of_int b)^" procs]\
+          [fwd depth : "^(string_of_int f)^"]");
+    forward_depth := f;
+    limit_forward_depth := !forward_depth <> -1;
     search bwd procs system;
-
     if not quiet then printf "%a@." Pretty.print_double_line ();
-  done;
+  ) brab_fwd_depth;
   reset_gc_params ()
     
 

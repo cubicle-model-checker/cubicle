@@ -112,11 +112,11 @@ let mu_cmd = ref "mu"
 let mu_opts = ref ""
 let cpp_cmd = ref "g++ -O4"
 
-let brab = ref (-1)
+let brab = ref []
 let stop_restart = ref false
 let bmin = ref (-1)
 let brab_up_to = ref false
-let forward_depth = ref (-1)
+let forward_depth = ref []
 let localized = ref false 
 let lazyinv = ref false
 let refine = ref false
@@ -181,7 +181,16 @@ let set_ienum () =
   incremental_enum := true
 
 let set_partial_frg k = enum_steps := (!frg, k) :: !enum_steps
-  
+
+let set_brab_nol b = brab := (b, -1) :: !brab
+let tmp_brab = ref (-1)
+let set_brab_lim f = brab := (!tmp_brab, f) :: !brab
+
+let set_fwd_depth f = match !brab with
+  | (b, _) :: tl -> brab := (b, f) :: tl
+  | [] -> raise (Arg.Bad ("You should set a brab value before giving it a\
+                           max depth"))
+
 let smt_solver = ref AltErgo
 let set_smt_solver s =
   smt_solver := match s with
@@ -263,11 +272,13 @@ let specs =
                 "<no(default) | basic | fwd | fwd-brab> use far with strategy <n> of abstraction";
     "-far-dbg", Arg.Set far_dbg, " Provisoire";
     "-goods", Arg.Set goods, " Goods";
-    "-brab", Arg.Set_int brab,
+    "-brab", Arg.Int set_brab_nol,
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
-    "-bmin", Arg.Set_int bmin,
-    "<nb> Min number of processes";
+    "-brabfd", Arg.Tuple [Arg.Set_int tmp_brab;
+                          Arg.Int set_brab_lim],
+    "<nb> Backward reachability with fd with approximations and backtrack helped \
+     with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
@@ -278,9 +289,9 @@ let specs =
     "-mu-opt", Arg.Set_string mu_opts,
     " Murphi compiler options (passed as is, no options by default)";
     "-cpp", Arg.Set_string cpp_cmd, " C++ compiler command line (default: g++ -O4)";
-    "-forward-depth", Arg.Set_int forward_depth,
+    "-forward-depth", Arg.Int set_fwd_depth,
     "<d> Limit the depth of the forward exploration to at most d";
-    "-fd", Arg.Set_int forward_depth,
+    "-fd", Arg.Int set_fwd_depth,
                 "<d> Limit the depth of the forward exploration to at most d";
     "-max-forward", Arg.Set_int max_forward,
     "<d> Limit the number of states of the forward exploration to at most d";
@@ -344,7 +355,7 @@ let far = !far
 let far_extra = 
   match !far_extra with
     | "oracle" | "fwd" | "fwd-brab" as f -> 
-      if !brab = -1 then raise 
+      if !brab = [] then raise 
         (Arg.Bad "You should give a number of processes to brab")
       else f
     | f -> f
@@ -421,11 +432,12 @@ let print_forward_all = !print_forward_all
 let print_forward_frg = !print_forward_frg
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
-let brab = !brab
+let brab = List.rev !brab
 let stop_restart = !stop_restart
 let bmin = !bmin
-let enumerative = if brab <> -1 then brab else !enumerative
-let do_brab = brab <> -1
+let max_brab = List.fold_left (fun m (e, _) -> max e m) (-1) brab
+let enumerative = if brab <> [] then max_brab else !enumerative
+let do_brab = brab <> []
 let brab_up_to =
   if !brab_up_to && not do_brab then
     raise (Arg.Bad "use -upto in combination with brab")
@@ -440,8 +452,18 @@ let max_cands = !max_cands
 let max_forward = !max_forward
 let candidate_heuristic =
   if !candidate_heuristic <> -1 then !candidate_heuristic else enumerative
-let forward_depth = !forward_depth
-let limit_forward_depth = forward_depth <> -1
+
+let forward_depth = List.rev !forward_depth
+
+let () = List.iter (fun (b, f) -> Format.eprintf "(%d, %d) " b f) brab
+let () = Format.eprintf "@."
+let () = List.iter (Format.eprintf "%d ") forward_depth
+let () = Format.eprintf "@."
+let brab_fwd_depth = brab
+let () = List.iter (fun (b, f) -> Format.eprintf "(%d, %d) " b f) brab_fwd_depth
+let () = Format.eprintf "@."
+
+let limit_forward_depth = forward_depth <> []
 let forward_sym = !forward_sym
 let localized = !localized
 let refine = !refine && not !stateless
