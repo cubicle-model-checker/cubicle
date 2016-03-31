@@ -1680,7 +1680,7 @@ let unsat_cand_core env state cand =
 
 let init ?(bwd=[]) system =
   set_liberal_gc ();
-  let low = if brab_up_to then 0 else enumerative in
+  let low = if brab_up_to then 0 else if bmin > 0 then bmin else enumerative in
   for i = low to enumerative do
     let procs = Variable.give_procs i in
     if not quiet then

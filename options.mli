@@ -76,6 +76,7 @@ val print_forward_frg : bool
 val gen_inv : bool
 val forward_inv : int
 val enumerative : int
+val bmin : int
 val localized : bool
 val lazyinv : bool
 val refine : bool

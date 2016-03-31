@@ -113,6 +113,7 @@ let mu_opts = ref ""
 let cpp_cmd = ref "g++ -O4"
 
 let brab = ref (-1)
+let bmin = ref (-1)
 let brab_up_to = ref false
 let forward_depth = ref (-1)
 let localized = ref false 
@@ -263,6 +264,8 @@ let specs =
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
+    "-bmin", Arg.Set_int bmin,
+    "<nb> Min number of processes";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
@@ -417,6 +420,7 @@ let print_forward_frg = !print_forward_frg
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
 let brab = !brab
+let bmin = !bmin
 let enumerative = if brab <> -1 then brab else !enumerative
 let do_brab = brab <> -1
 let brab_up_to =
