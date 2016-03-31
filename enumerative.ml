@@ -1428,8 +1428,8 @@ let rec pfrom = function
     pfrom tl
 
 let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) 
-    frg fd depth autom init =
-  if not limit_forward_depth || depth < forward_depth then
+    frg fd depth autom init i =
+  if not limit_forward_depth || i < enumerative || depth < forward_depth then
     List.iter (fun st_tr ->
       try
         let sts = st_tr.st_f st in
@@ -1491,7 +1491,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
         ) sts
       with Not_applicable -> ()) trs
 
-let forward_bfs init procs env l autom =
+let forward_bfs init i env l autom =
   let h_visited = env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
@@ -1557,7 +1557,7 @@ let forward_bfs init procs env l autom =
     if not (HST.mem h_visited st) then begin
       HST.add h_visited st ();
       post_bfs env (from, st) h_visited trs to_do cpt_q
-        (cpt_c, cpt_rc) fringe !fd depth autom init;
+        (cpt_c, cpt_rc) fringe !fd depth autom init i;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
@@ -1602,7 +1602,7 @@ let search bwd procs init =
   install_sigint ();
   begin 
     try
-      forward_bfs init procs env st_inits init.t_automaton;
+      forward_bfs init (List.length procs) env st_inits init.t_automaton;
     with Exit -> ()
   end ;
   (* if clusterize then ( *)
