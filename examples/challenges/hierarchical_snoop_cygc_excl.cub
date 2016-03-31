@@ -168,7 +168,39 @@ unsafe (c1 c2) {
 
 
 
+meta_transition excl_trans_2 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] <> Excl &&
+           Clusters_L1s_Req[c,i] = None &&
+           forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False
+}
+{
+      Clusters_L2_pending[c] := True;
+      Clusters_ifInReq[c] := True;
+      Clusters_ReqCmd[c] := GetX;
+}
 
+meta_transition excl_trans_3 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] <> Excl &&
+           Clusters_L1s_Req[c,i] = None &&
+           Clusters_RAC_Cmd[c] = None &&
+           Clusters_WbReq_Cmd[c] = None &&
+           forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False
+}
+{
+      Clusters_L2_pending[c] := True;
+      Clusters_ReqCmd[c] := GetX;
+      Clusters_RAC_Cmd[c] := GetX;
+      GUniMsg_Cmd[c] := GetX;
+      GUniMsg_Cluster[c] := c;
+      Clusters_ifInReq[c] := False;
+}
+  
 (*------------ Murphi rule "2 L1 cache write back cache" ------*)
 transition t2 (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&

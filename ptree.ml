@@ -675,7 +675,7 @@ let encode_psystem
     List.rev_append pl acc) [] pregexps in
   rnumber := (List.length sregexpl / Options.enumerative);
   let regexp = Regexp.RTrans.from_list sregexpl in
-  (* if Options.verbose > 0 && Options.debug then *)
+  if Options.debug_regexp then
     Format.printf "Regexp : %a@." Regexp.RTrans.fprint regexp;
   let automaton = Regexp.Automaton.make_automaton regexp in
   

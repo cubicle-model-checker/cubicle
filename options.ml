@@ -113,6 +113,7 @@ let mu_opts = ref ""
 let cpp_cmd = ref "g++ -O4"
 
 let brab = ref (-1)
+let stop_restart = ref false
 let bmin = ref (-1)
 let brab_up_to = ref false
 let forward_depth = ref (-1)
@@ -245,6 +246,7 @@ let specs =
     "-meta", Arg.Set meta_trans, " use meta transitions for forward and backward";
     "-univ", Arg.Set univ_trans, 
     " use universal transitions for forward and backward";
+    "-bstop", Arg.Set stop_restart, " exit the program at first restart";
     "-flvl", Arg.Set_int filter_lvl, "<n> set a filtering level to clusters";
     "-md", Arg.Set_int filter_md, 
     "<n> set a minimum distance inside a cluster for filtering";
@@ -420,6 +422,7 @@ let print_forward_frg = !print_forward_frg
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
 let brab = !brab
+let stop_restart = !stop_restart
 let bmin = !bmin
 let enumerative = if brab <> -1 then brab else !enumerative
 let do_brab = brab <> -1

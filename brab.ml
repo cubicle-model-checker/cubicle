@@ -35,13 +35,15 @@ let rec search_and_backtrack candidates system =
        begin
          assert (o.kind = Approx);
          if not quiet then eprintf "The candidate %d = %a is BAD\n@."
-                                   o.tag Node.print o;
-         Stats.restart ();
-         let candidates =
-           Approx.remove_bad_candidates system faulty candidates
-         in
-         (* Restarting *)
-         search_and_backtrack candidates system
+           o.tag Node.print o;
+         if stop_restart then exit 1 else begin
+           Stats.restart ();
+           let candidates =
+             Approx.remove_bad_candidates system faulty candidates
+           in
+           (* Restarting *)
+           search_and_backtrack candidates system
+         end
        end
 
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)

@@ -82,6 +82,7 @@ val lazyinv : bool
 val refine : bool
 val stateless : bool
 val do_brab : bool
+val stop_restart : bool
 val brab_up_to : bool
 val murphi : bool
 val murphi_uopts : string
