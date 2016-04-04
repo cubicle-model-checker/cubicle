@@ -319,7 +319,9 @@ module Make ( O : Oracle.S ) : S = struct
     let approx = approximations s in
     let approx = if max_cands = -1 then approx else keep max_cands approx in
     if verbose > 0 && not quiet then 
-      eprintf "Checking %d approximations:@." (List.length approx);
+      begin
+	eprintf "Checking %d approximations:@." (List.length approx);
+      end;
     O.first_good_candidate approx
 
 

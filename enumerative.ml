@@ -1465,7 +1465,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
             else
               let from = (st_tr.st_name, List.rev st_tr.st_args) :: from in
               let morf = List.rev from in
-              pfrom morf;
+              (*pfrom morf;*)
               if copy_regexp && Regexp.Automaton.recognize autom morf
               then begin
                 let s' = generalize_state env s st_tr.st_vars init in
@@ -1479,7 +1479,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               end;
               if debug_regexp && Regexp.Automaton.recognize autom morf
               then begin
-                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
+                  Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
                 if verbose > 2 then Format.eprintf "%a@." (print_state env) s;
               end;
               HQueue.add ~cpt_q (depth + 1, from, s) q
@@ -1616,7 +1616,8 @@ let search bwd procs init =
 let check_first_and_filter_rest = function
   | [] -> []
   | s :: rs ->
-    try
+     try
+       eprintf "Cube : %a@." Node.print s;
       List.iter (one_resist_on_trace_size s) !global_envs;
       raise (Sustainable [s])
     with

@@ -110,38 +110,20 @@ init (c i) {
   GDir_ShrSet[c] = False
 }
 
+unsafe (z) {
+Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX
+}
 
-invariant (c) { GUniMsg_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c1] <> CId }
-invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c2] <> CId }
-invariant (c) { GInvMsg_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { GInvMsg_Cluster_defined[c] = True && Sort[c] <> CId }
-invariant (c) { Clusters_RAC_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c1 c2) { Clusters_RAC_Inved[c1,c2] = True && Sort[c1] <> CId }
-invariant (c1 c2) { Clusters_RAC_Inved[c1,c2] = True && Sort[c2] <> CId }
-invariant (c i) { Clusters_L1s_State[c,i] <> Invld && Sort[c] <> CId }
-invariant (c i) { Clusters_L1s_State[c,i] <> Invld && Sort[i] <> L1Id }
-invariant (c i) { Clusters_L1s_Req[c,i] <> None && Sort[c] <> CId }
-invariant (c i) { Clusters_L1s_Req[c,i] <> None && Sort[i] <> L1Id }
-invariant (c) { Clusters_L2_State[c] <> Invld && Sort[c] <> CId }
-invariant (c) { Clusters_L2_pending[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_OnlyCopy[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_ifInReq[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_ReqCmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_ifOutRpy[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_outRpy_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_ifOutReq[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_outReq_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_ifInRpy[c] <> False && Sort[c] <> CId }
-invariant (c) { Clusters_inRpy_Cmd[c] <> None && Sort[c] <> CId }
-invariant (c) { Clusters_WbReq_Cmd[c] <> None && Sort[c] <> CId }
+(*trans_regexp : t14(z) t32(z) t35(z);*)
 
 (* invariant "I1" *)
+
 unsafe (c i j) {
        Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
        Clusters_L1s_State[c,i] = Excl && Clusters_L1s_State[c,j] = Excl
 }
 
+(*
 unsafe (c i) {
        Sort[c] = CId && Sort[i] = L1Id &&
        Clusters_L2_State[c] = Excl && Clusters_L1s_State[c,i] = Excl
@@ -164,10 +146,12 @@ unsafe (c1 c2) {
        Clusters_L2_State[c1] = Excl && Clusters_L2_State[c2] = Excl
 }
 
+*)
+
 (* trans_regexp : t13(z) t15(z) t33_then(z) t36(z) t41(z); *)
 (* trans_regexp : mt1_5(c); *)
 
-meta_transition mt1_2 (c) (* t13 t15 (t33_then t36 t41) *)
+(*meta_transition mt1_2 (c) (* t13 t15 (t33_then t36 t41) *)
 requires { Sort[c] = CId &&
            (* from t13 *)
            Clusters_ifInReq[c] = True &&
@@ -369,7 +353,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
       Clusters_ifInReq[c] := False;
 }
 
-
+*)
 (*------------ Murphi rule "2 L1 cache write back cache" ------*)
 transition t2 (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&
@@ -419,6 +403,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 
   Clusters_L1s_Req[c,i] := None;
 }
+
 
 transition t5_x (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&
@@ -493,6 +478,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   Clusters_L2_State[c] := Invld;
 }
 
+(*
 
 
 (*------- Murphi rule "10 L1 req excl copy, another L1 reply" ------*)
@@ -530,9 +516,11 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   Clusters_L2_State[c] := Invld;
 }
 
+*)
 
 
 (*------- Murphi rule "12 L1 req excl copy, cluster fwd outside" ----*)
+
 transition t12 (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&
            Clusters_L1s_Req[c,i] = GetX &&
@@ -583,7 +571,7 @@ requires { Sort[c] = CId &&
 
 
 (*------- Murphi rule "15 global dir reply cluster excl req" ------*)
-transition t15 (c)
+(*transition t15 (c)
 requires { Sort[c] = CId &&
            GUniMsg_Cmd[c] = GetX &&
            GUniMsg_Cluster[c] = c &&
@@ -595,7 +583,7 @@ requires { Sort[c] = CId &&
   GDir_Owner := c;
   GDir_State := Excl;
 }
-
+*)
 
 
 (*------- Murphi rule "16 global dir fwd req to owner cluster" -----------*)
@@ -760,9 +748,9 @@ requires { Sort[c] = CId &&
 }
 
 
-
+(*
 (*------- Murphi rule "22 Cluster reply fwd req by PutX1" ----------*)
-transition t21 (c)
+transition t22 (c)
 requires { Sort[c] = CId &&
            Clusters_outReq_Cmd[c] = GetX &&
            Clusters_L2_pending[c] = False &&
@@ -778,7 +766,6 @@ requires { Sort[c] = CId &&
   Clusters_outReq_Cmd[c] := None;
   (* undefine Clusters_outReq_Cluster[c]; *)
 }
-
 
 
 (*------- Murphi rule "23 Cluster reply fwd req by PutX2"------*)
@@ -800,13 +787,13 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   (* undefine Clusters_outReq_Cluster[c]; *)
 }
 
-
+*)
 
 (*------- Murphi rule "24 Cluster reply fwd req by PutX3" ----------*)
 transition t24 (c)
 requires { Sort[c] = CId &&
            Clusters_outReq_Cmd[c] = GetX &&
-           Clusters_L2_pending[c] = False &&
+	              Clusters_L2_pending[c] = False &&
            Clusters_L2_State[c] = Shrd }
 {
   Clusters_inRpy_Cmd[c] := PutX;
@@ -863,6 +850,8 @@ requires { Sort[c] = CId && Sort[dest] = CId &&
 
 
 (*------- Murphi rule "27 Cluster reply fwded excl req" -----*)
+
+
 transition t27 (c dest)
 requires { Sort[c] = CId && Sort[dest] = CId &&
            Clusters_inRpy_Cmd[c] = PutX &&
@@ -1002,9 +991,11 @@ requires { Sort[c] = CId &&
 (*------- Murphi rule "33 Cluster receive PutX reply" -----*)
 transition t33_then (c)
 requires { Sort[c] = CId &&
-           GUniMsg_Cmd[c] = PutX &&
+           GUniMsg_Cmd[c] = PutX (*&&
            forall_other i. (Sort[i] <> CId || GUniMsg_ToInv[c,i] = False || 
-                                              Clusters_RAC_Inved[c,i] = True) }
+                                              Clusters_RAC_Inved[c,i] = True)
+*)
+}
 {
   (* assert Clusters_RAC_Cmd[c] <> None; *)
   Clusters_RAC_Cmd[c] := None;
@@ -1015,6 +1006,7 @@ requires { Sort[c] = CId &&
   Clusters_ReqCmd[c] := None;
 }
 
+(*
 transition t33_else (c c2)
 requires { Sort[c] = CId && Sort[c2] = CId &&
            GUniMsg_Cmd[c] = PutX &&
@@ -1040,7 +1032,7 @@ requires { Sort[c] = CId && Sort[c2] = CId &&
   GUniMsg_Cmd[c] := None;
   Clusters_ReqCmd[c] := None;
 }
-
+*)
 
 
 (*------- Murphi rule "34 Cluster receive NAck, reset pending" -----*)
@@ -1090,7 +1082,8 @@ requires { Sort[c] = CId &&
 
 
 (*------- Murphi rule "37 Cluster req excl copy, global dir shrd" -----*)
-transition t37 (c i)
+
+(*transition t37 (c i)
 requires { Sort[c] = CId && Sort[i] = CId &&
            GUniMsg_Cmd[c] = GetX &&
            GDir_pending = False &&
@@ -1115,8 +1108,7 @@ requires { Sort[c] = CId && Sort[i] = CId &&
      | oc = c : False
      | _ : GUniMsg_ToInv[oc,y];
 }
-
-
+*)
 
 (*------- Murphi rule "38 Cluster receive Inv" -----*)
 transition t38 (c)
