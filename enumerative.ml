@@ -1497,8 +1497,9 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               end;
               if debug_regexp && Regexp.Automaton.recognize autom morf
               then begin
-                  Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
-                if verbose > 2 then Format.eprintf "%a@." (print_state env) s;
+                Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
+                (* if verbose > 2 then *) 
+                Format.eprintf "%a@." (print_state env) s;
               end;
               HQueue.add ~cpt_q (depth + 1, from, s) q
           end

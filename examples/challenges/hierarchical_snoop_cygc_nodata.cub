@@ -115,7 +115,7 @@ Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX
 }
 
 (*trans_regexp : t14(z) t32(z) t35(z);*)
-
+trans_regexp : t4(c i) t12(c i) t3(cc i) t5(cc i) t13(c) t19_x(cc i) t13(i);
 (* invariant "I1" *)
 
 unsafe (c i j) {
