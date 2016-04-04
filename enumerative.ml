@@ -19,6 +19,8 @@ open Ast
 open Types
 open Util
 
+type state = {st : int array; from : string}
+
 module H = Hstring
 
 module HT = Hashtbl.Make (Term)
@@ -153,7 +155,8 @@ type env = {
 
   table_size : int;
   mutable explicit_states : unit HST.t;
-  mutable states : State.t list;
+  (* mutable states : State.t list; *)
+  mutable states : state list;
   mutable fringe : State.t list;
   mutable bad_states : ((int * op_comp * int) list * Node.t) list
 }
@@ -238,7 +241,10 @@ let print_state_ia fmt st =
   Array.iter (Format.fprintf fmt "%d;") st
 
 let print_all env =
-  List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.states
+  List.iter (fun s -> eprintf "--- @[<hov>%a@]@." (print_state env) s.st) env.states
+
+(* let print_all env = *)
+(*   List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.states *)
 
 let print_fringe env frg =
   List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) frg
@@ -1137,7 +1143,8 @@ let forward_dfs s procs env l =
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
       HST.add h_visited st ();
-      env.states <- st :: env.states;
+      env.states <- {st; from=""} :: env.states;
+      (* env.states <- st :: env.states; *)
       if !limit_forward_depth && depth = !forward_depth then
         env.fringe <- st :: env.fringe;
     (* add_all_syms env explicit_states st *)
@@ -1191,7 +1198,11 @@ let shuffle d =
 let no_scan_states env =
   (* Prevent the GC from scanning the list env.states as it is going to be
      kept in memory all the time. *)
-  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states
+  List.iter (fun {st;from} -> 
+    Obj.set_tag (Obj.repr st) (Obj.no_scan_tag);
+    Obj.set_tag (Obj.repr from) (Obj.no_scan_tag);
+  ) env.states
+
 
 let study_fringe env =
   let f = env.fringe in
@@ -1329,7 +1340,8 @@ let resist_on_trace_size progress_inc ls env =
       if not quiet then eprintf "@{<fg_black_b>@{<i>";
       (* will be forgotten by flushs *)
       let cpt = ref 0 in
-      List.iter (fun st ->
+      List.iter (fun {st} ->
+      (* List.iter (fun st -> *)
         incr cpt;
         if not quiet && !cpt mod progress_inc = 0 then one_step ();
         cands := List.filter (fun p -> 
@@ -1377,6 +1389,22 @@ exception EBad of State.t * env
 exception ECantSay
 
 
+let rec pvars = function 
+  | [v] -> Format.eprintf "%a" Hstring.print v
+  | v :: tl -> Format.eprintf "%a, " Hstring.print v; 
+    pvars tl
+  | _ -> ()
+
+let rec pfrom = function
+  | [] -> ()
+  | [e, v] -> Format.eprintf "%a(" Hstring.print e;
+    pvars v;
+    Format.eprintf ")!@."
+  | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
+    pvars v;
+    Format.eprintf ") -> ";
+    pfrom tl
+
 let state_impossible env st s =
   if Node.dim s > env.model_cardinal then true
   else
@@ -1390,9 +1418,15 @@ let one_resist_on_trace_size s env =
     try
       let procs = List.rev (List.tl (List.rev env.all_procs)) in
       let ls = alpha_renamings env procs s in
-      List.iter (fun st ->
+      List.iter (fun {st; from} ->
+        (* List.iter fun st -> *)
         if not (List.for_all (fun (c, _) -> check_cand env st c) ls) then
-          raise (EBad (st, env));
+          begin
+            (* eprintf "NST : %a@." (print_state env) st; *)
+            Format.eprintf "@{<fg_default>@{<bg_default>Bad approx: %s@}@}@." from;
+            (* Format.eprintf "Bad approx: %s@." from; *)
+            raise (EBad (st, env));
+          end
       ) env.states;
     with 
       | Not_found -> raise ECantSay
@@ -1413,22 +1447,6 @@ let print_iopi_list =
     Format.eprintf "@[<v 3>@[---%a@,@]@]@."
       Node.print n
   )
-
-let rec pvars = function 
-  | [v] -> Format.eprintf "%a" Hstring.print v
-  | v :: tl -> Format.eprintf "%a, " Hstring.print v; 
-    pvars tl
-  | _ -> ()
-
-let rec pfrom = function
-  | [] -> ()
-  | [e, v] -> Format.eprintf "%a(" Hstring.print e;
-    pvars v;
-    Format.eprintf ")!@."
-  | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
-    pvars v;
-    Format.eprintf ") -> ";
-    pfrom tl
 
 let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc) 
     frg fd depth autom init =
@@ -1486,6 +1504,17 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
           end
         ) sts
       with Not_applicable -> ()) trs
+
+let hstl_to_string hl =
+  let hl = List.rev hl in
+  let b = Buffer.create 32 in
+  List.iter (fun (tn, vars) ->
+    Buffer.add_string b (Hstring.view tn);
+    Buffer.add_string b "(";
+    List.iter (fun v -> Buffer.add_string b (Hstring.view v)) vars;
+    Buffer.add_string b ")"
+  ) hl;
+  Buffer.contents b
 
 let forward_bfs init env l autom =
   maxd := !forward_depth;
@@ -1562,7 +1591,8 @@ let forward_bfs init env l autom =
       if not quiet && !cpt_f mod 1000 = 0 then
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       incr cpt_r;
-      env.states <- st :: env.states;
+      env.states <- {st; from=hstl_to_string from} :: env.states;
+      (* env.states <- st :: env.states; *)
       if depth > !maxd then maxd := depth;
       if !limit_forward_depth && depth = !forward_depth then
         env.fringe <- st :: env.fringe;
@@ -1616,14 +1646,17 @@ let search bwd procs init =
 let check_first_and_filter_rest = function
   | [] -> []
   | s :: rs ->
-     try
-       eprintf "Cube : %a@." Node.print s;
+    try
+      eprintf "-------------------@,Cube : %a@." Node.print s;
       List.iter (one_resist_on_trace_size s) !global_envs;
       raise (Sustainable [s])
     with
       | ECantSay -> rs
       | EBad (st, env) ->
-        List.filter (state_impossible env st) rs
+        (* List.iter (eprintf "PF : %a@." Node.print) rs; *)
+        let rsf = List.filter (state_impossible env st) rs in
+        (* List.iter (eprintf "AF : %a@." Node.print) rsf; *)
+        rsf
           
 
 
@@ -1637,7 +1670,7 @@ let check_remaining progress_inc ls = check_remaining_aux 0 progress_inc ls
 
 let fast_resist_on_trace ls =
   let progress_inc = (List.length ls) / Pretty.vt_width + 1 in
-  if not quiet then eprintf "@{<fg_black_b>@{<i>";
+  (* if not quiet then eprintf "@{<fg_black_b>@{<i>"; *)
   (* will be forgotten by flushs *)
   TimeCheckCand.start ();
   try
@@ -1718,14 +1751,20 @@ let new_undef_state env =
 (* eprintf "nb states : %d@." (List.length env.states); *)
 (* st *)
 
-let register_state env st = env.states <- st :: env.states
+(* let register_state env st = env.states <- {st; from=[]} :: env.states *)
+(* let register_state env st = env.states <- st :: env.states *)
 
 let size_of_env env = env.table_size
 
 let print_last env =
   match env.states with
-    | st :: _ -> eprintf "--- @[<hov>%a@]@." SAtom.print (state_to_cube env st)
+    | {st} :: _ -> eprintf "--- @[<hov>%a@]@." SAtom.print (state_to_cube env st)
     | _ -> ()
+
+(* let print_last env = *)
+(*   match env.states with *)
+(*     | st :: _ -> eprintf "--- @[<hov>%a@]@." SAtom.print (state_to_cube env st) *)
+(*     | _ -> () *)
 
 (*----------------- For FAR ----------------*)
 

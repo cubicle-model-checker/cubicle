@@ -56,7 +56,7 @@ val new_undef_state : env -> State.t
 val empty_state : State.t
 (** A dummy empty state. *)
 
-val register_state : env -> State.t -> unit
+(* val register_state : env -> State.t -> unit *)
 (** Register the given state as an explored state in the environment. *)
 
 val size_of_env : env -> int
