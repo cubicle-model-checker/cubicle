@@ -1465,7 +1465,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
             else
               let from = (st_tr.st_name, List.rev st_tr.st_args) :: from in
               let morf = List.rev from in
-              (* pfrom morf; *)
+              pfrom morf;
               if copy_regexp && Regexp.Automaton.recognize autom morf
               then begin
                 let s' = generalize_state env s st_tr.st_vars init in
@@ -1480,14 +1480,7 @@ let post_bfs env (from, st) visited trs q cpt_q (cpt_c, cpt_rc)
               if debug_regexp && Regexp.Automaton.recognize autom morf
               then begin
                 Format.eprintf "YES ! "; pfrom morf; Format.eprintf "@.";
-                (* let le = HT.fold (fun t i acc -> (t, i) :: acc) env.id_terms [] in *)
-                (* let ls = List.sort (fun (_, i1) (_, i2) -> compare i1 i2) le in *)
-                (* List.iter ( *)
-                (*   fun (t, i) -> Format.eprintf "%a : %d@." Term.print t i) ls; *)
-                Format.eprintf "%a@." (print_state env) s;
-                (* State.print "" s; *)
-                (* Format.eprintf "%d -> %d@." 68 s.(68); *)
-                (* Format.eprintf "%d -> %d@." 69 s.(69); *)
+                if verbose > 2 then Format.eprintf "%a@." (print_state env) s;
               end;
               HQueue.add ~cpt_q (depth + 1, from, s) q
           end

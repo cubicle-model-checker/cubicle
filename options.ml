@@ -455,13 +455,7 @@ let candidate_heuristic =
 
 let forward_depth = List.rev !forward_depth
 
-let () = List.iter (fun (b, f) -> Format.eprintf "(%d, %d) " b f) brab
-let () = Format.eprintf "@."
-let () = List.iter (Format.eprintf "%d ") forward_depth
-let () = Format.eprintf "@."
 let brab_fwd_depth = brab
-let () = List.iter (fun (b, f) -> Format.eprintf "(%d, %d) " b f) brab_fwd_depth
-let () = Format.eprintf "@."
 
 let limit_forward_depth = forward_depth <> []
 let forward_sym = !forward_sym

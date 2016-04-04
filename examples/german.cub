@@ -35,6 +35,37 @@ init (z) {
      Curcmd=Empty &&
      Exgntd = False }
 
+invariant (z1) {Exgntd = False && Cache[z1] = Exclusive}
+invariant (z1) {Cache[z1] = Exclusive && Shrset[z1] = False}
+invariant (z1) {Cache[z1] <> Invalid && Shrset[z1] = False}
+invariant (z1) {Exgntd = False && Chan2[z1] = Gnte}
+invariant (z1) {Chan2[z1] = Gnts && Shrset[z1] = False}
+invariant (z1) {Chan3[z1] = Invack && Cache[z1] = Exclusive}
+invariant (z1) {Chan2[z1] = Gnte && Shrset[z1] = False}
+invariant (z1) {Chan3[z1] = Invack && Cache[z1] <> Invalid}
+invariant (z1) {Chan2[z1] = Gnte && Chan3[z1] = Invack}
+invariant (z1) {Chan2[z1] = Gnts && Chan3[z1] = Invack}
+invariant (z1) {Chan3[z1] = Invack && Shrset[z1] = False}
+invariant (z1) {Chan2[z1] = Inv && Shrset[z1] = False}
+invariant (z1) {Curcmd = Empty && Chan3[z1] = Invack}
+invariant (z1) {Chan2[z1] = Inv && Chan3[z1] = Invack}
+invariant (z1) {Invset[z1] = True && Shrset[z1] = False}
+invariant (z1) {Curcmd = Empty && Chan2[z1] = Inv}
+invariant (z1) {Chan3[z1] = Invack && Invset[z1] = True}
+invariant (z1) {Chan2[z1] = Inv && Invset[z1] = True}
+invariant (z1) {Exgntd = True && Chan2[z1] = Gnts}
+invariant (z1) {Exgntd = False && Curcmd = Reqs && Chan3[z1] = Invack}
+invariant (z1) {Exgntd = False && Curcmd = Reqs && Chan2[z1] = Inv}
+invariant (z1 z2) {Chan2[z1] = Gnte && Chan3[z2] = Invack}
+invariant (z1 z2) {Chan3[z2] = Invack && Cache[z1] = Exclusive}
+invariant (z1 z2) {Chan2[z1] = Gnte && Chan2[z2] = Inv}
+invariant (z1 z2) {Chan2[z2] = Inv && Cache[z1] = Exclusive}
+invariant (z1 z2) {Chan2[z1] = Gnte && Invset[z2] = True}
+invariant (z1 z2) {Cache[z1] = Exclusive && Invset[z2] = True}
+invariant (z1 z2) {Chan2[z1] = Gnte && Shrset[z2] = True}
+invariant (z1 z2) {Cache[z1] = Exclusive && Shrset[z2] = True}
+
+
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared  }*)
 
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
