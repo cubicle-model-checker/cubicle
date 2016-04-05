@@ -98,25 +98,25 @@ init (c i) {
     GInvMsg_Cmd[c] = None &&
     GInvMsg_Cluster_defined[c] = False &&
 
-  GShWbMsg_Cmd = None &&
-  GWbMsg_Cmd = None &&
+    GShWbMsg_Cmd = None &&
+    GWbMsg_Cmd = None &&
 
-  (* GDir_Mem = d && *)
-  (* undefine GDir.Owner; *)
-  GDir_Owner_defined = False &&
+    (* GDir_Mem = d && *)
+    (* undefine GDir.Owner; *)
+    GDir_Owner_defined = False &&
 
-  GDir_State = Invld &&
-  GDir_pending = False &&
-  GDir_ShrSet[c] = False
+    GDir_State = Invld &&
+    GDir_pending = False &&
+    GDir_ShrSet[c] = False
 }
 
 (* unsafe (z) { *)
 (* Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX *)
 (* } *)
 
-(* trans_regexp : t5_x(c i) t13(cc); *)
+trans_regexp : t5_x(c i) t13(cc);
 (* trans_regexp : t4(c i) t12(c i) t3(cc i) t5(cc i) t13(c) t19_x(cc i) t13(i); *)
-trans_regexp: t23(c i) | t15(c);
+(* trans_regexp: t23(c i) | t15(c); *)
 
 hide_transition: t37 ;
 
