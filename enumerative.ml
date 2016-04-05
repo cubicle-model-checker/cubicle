@@ -80,7 +80,7 @@ module HQueue : sig
   type t = elt Queue.t * unit HST.t
       
   val create : int -> t
-  val add : ?cpt_q : int ref -> elt -> t -> unit
+  val add : ?cpt_q : int ref -> ?debug : bool -> elt -> t -> unit
   val is_empty : t -> bool
   val take : t -> elt
 
@@ -91,13 +91,13 @@ end = struct
 
   let create size = Queue.create (), HST.create size
 
-  let add ?(cpt_q=ref 0) x (q, h) =
+  let add ?(cpt_q=ref 0) ?(debug=false) x (q, h) =
     let (_, _, s) = x in
     if not (HST.mem h s) then begin
       incr cpt_q;
       HST.add h s ();
       Queue.add x q;
-    end
+    end else if debug then Format.eprintf "NO ADD@."
 
   let is_empty (q, _) = Queue.is_empty q
 
@@ -1440,7 +1440,17 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
               Format.eprintf "%a@." (print_state env) s;
           end;
           if not (HST.mem visited s) then begin
-            if der then Format.eprintf " @{<fg_green>New@}@.";
+            if der then begin
+              Format.eprintf " @{<fg_green>New@}@.";
+              (* Format.eprintf "Possible trans@."; *)
+              (* List.iter ( *)
+              (*   fun st_tr ->  *)
+              (*     try let _ = st_tr.st_f s in *)
+              (*         Format.eprintf "@{<fg_green>%a@}@." Hstring.print st_tr.st_name *)
+              (*     with Not_applicable -> *)
+              (*       Format.eprintf "@{<fg_red>%a@}@." Hstring.print st_tr.st_name *)
+              (* ) trs *)
+            end;
             if copy_regexp && Regexp.Automaton.recognize autom morf
             then begin
               let s' = generalize_state env s st_tr.st_args init in
@@ -1452,7 +1462,13 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
               );
               HQueue.add ~cpt_q (depth + 1, from, s') q
             end;
-            HQueue.add ~cpt_q (depth + 1, from, s) q
+            if der then begin
+              Format.eprintf "add :";
+              pfrom from;
+              Format.eprintf "@.";
+              HQueue.add ~cpt_q ~debug:true (depth + 1, from, s) q
+            end else
+              HQueue.add ~cpt_q (depth + 1, from, s) q
           end
           else if der then Format.eprintf " @{<fg_red>Already Visited@}@."
         ) sts

@@ -114,7 +114,7 @@ init (c i) {
 (* Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX *)
 (* } *)
 
-trans_regexp : t5_x(c i) t13(cc);
+trans_regexp : t5_x(c i) t13(c)?;
 (* trans_regexp : t4(c i) t12(c i) t3(cc i) t5(cc i) t13(c) t19_x(cc i) t13(i); *)
 (* trans_regexp: t23(c i) | t15(c); *)
 
