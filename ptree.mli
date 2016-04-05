@@ -107,6 +107,7 @@ type psystem = {
   ptrans : ptransition list;
   pmetatrans : ptransition list;
   punivtrans : ptransition list;
+  phidetrans : Hstring.t list;
   pregexps : pregexp list;
 }
 
@@ -118,6 +119,7 @@ type pdecl =
   | PTrans of ptransition
   | PMetaTrans of ptransition
   | PUnivTrans of ptransition
+  | PHideTrans of Hstring.t list
   | PFun
   | PRegExp of pregexp
 

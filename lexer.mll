@@ -30,6 +30,7 @@
 	"false", FALSE;
 	"forall", FORALL;
         "forall_other", FORALL_OTHER;
+        "hide_transition", HIDETRANSITION;
 	"if", IF;
         "init", INIT;
 	"invariant", INVARIANT;

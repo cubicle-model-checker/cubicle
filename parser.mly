@@ -87,7 +87,7 @@
 %}
 
 %token VAR ARRAY CONST TYPE INIT INVARIANT CASE
-%token METATRANSITION UNIVTRANSITION TRANSITION
+%token METATRANSITION UNIVTRANSITION HIDETRANSITION TRANSITION
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC TREGEXP
 %token REQUIRE UNSAFE PREDICATE
@@ -142,6 +142,7 @@ decl :
   | transition { PTrans $1 }
   | meta_transition { PMetaTrans $1 }
   | univ_transition { PUnivTrans $1 }
+  | hide_transition { PHideTrans $1 }
   | function_decl { PFun  }
   | decl_regexp { PRegExp $1 }
 
@@ -327,6 +328,14 @@ univ_transition:
             ptr_loc = loc ();
           }
       }
+;
+
+transition_name_list:
+  | transition_name { [$1] }
+  | transition_name transition_name_list { $1 :: $2 }
+
+hide_transition:
+  | HIDETRANSITION COLON transition_name_list PV { $3 }
 ;
 
 assigns_nondets_updates:
