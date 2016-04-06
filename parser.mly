@@ -331,7 +331,7 @@ univ_transition:
 ;
 
 transition_name_list:
-  | transition_name { [$1] }
+  |  { [] }
   | transition_name transition_name_list { $1 :: $2 }
 
 hide_transition:

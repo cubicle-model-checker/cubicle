@@ -110,16 +110,18 @@ init (c i) {
     GDir_ShrSet[c] = False
 }
 
-(* unsafe (z) { *)
-(* Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX *)
-(* } *)
 
-trans_regexp : t4(c ii) t12(c ii) t3(c i) t13(c) t15(c) t33_then(c) t36(c) t41(c)
-               t42(c) t43();
+trans_regexp : t0(c);
+(* trans_regexp : t4(c i) t12(c i) t13(c) t15(c); *)
 (* trans_regexp : t4(c i) t12(c i) t3(cc i) t5(cc i) t13(c) t19_x(cc i) t13(i); *)
 (* trans_regexp: t23(c i) | t15(c); *)
 
-(* hide_transition: t37 ; *)
+hide_transition: t0;
+
+(*unsafe (z) {
+Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX
+}*)
+
 
 (* invariant "I1" *)
 
@@ -128,27 +130,32 @@ unsafe (c i j) {
        Clusters_L1s_State[c,i] = Excl && Clusters_L1s_State[c,j] = Excl
 }
 
-(* unsafe (c i) { *)
-(*        Sort[c] = CId && Sort[i] = L1Id && *)
-(*        Clusters_L2_State[c] = Excl && Clusters_L1s_State[c,i] = Excl *)
-(* } *)
+unsafe (c1 c2) {
+Sort[c1] = CId && Sort[c2] = L1Id &&
+Clusters_L1s_State[c1, c2] = Excl && Clusters_L2_State[c1] = Excl}
 
+(*
+unsafe (c i) {
+       Sort[c] = CId && Sort[i] = L1Id &&
+       Clusters_L2_State[c] = Excl && Clusters_L1s_State[c,i] = Excl
+}
+*)
 
-(* (\* invariant "I2" *\) *)
-(* unsafe (c1 c2 i j) { *)
-(*        Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id && Sort[j] = L1Id && *)
-(*        Clusters_L1s_State[c1,i] = Excl && Clusters_L1s_State[c2,j] = Excl *)
-(* } *)
+(* invariant "I2" *)
+(*unsafe (c1 c2 i j) {
+       Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
+       Clusters_L1s_State[c1,i] = Excl && Clusters_L1s_State[c2,j] = Excl
+}*)
+(*
+unsafe (c1 c2 i) {
+       Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id &&
+       Clusters_L2_State[c1] = Excl && Clusters_L1s_State[c2,i] = Excl
+}
 
-(* unsafe (c1 c2 i) { *)
-(*        Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id && *)
-(*        Clusters_L2_State[c1] = Excl && Clusters_L1s_State[c2,i] = Excl *)
-(* } *)
-
-(* unsafe (c1 c2) { *)
-(*        Sort[c1] = CId && Sort[c2] = CId && *)
-(*        Clusters_L2_State[c1] = Excl && Clusters_L2_State[c2] = Excl *)
-(* } *)
+unsafe (c1 c2) {
+       Sort[c1] = CId && Sort[c2] = CId &&
+       Clusters_L2_State[c1] = Excl && Clusters_L2_State[c2] = Excl
+}*)
 
 (* trans_regexp : t13(z) t15(z) t33_then(z) t36(z) t41(z); *)
 (* trans_regexp : mt1_5(c); *)
@@ -355,6 +362,21 @@ unsafe (c i j) {
 (*       Clusters_ifInReq[c] := False; *)
 (* } *)
 
+transition t0(c1)
+requires { Sort[c1] = CId &&  Clusters_L2_State[c1] = Invld &&
+	   Clusters_ReqCmd[c1] = GetX &&
+	   forall_other c2.
+	   ( (Sort[c2] = CId && Clusters_L2_State[c2] = Invld) ||
+	     (Sort[c2] = L1Id && Clusters_L1s_State[c1,c2] = Invld) ||
+	     (Clusters_L2_State[c2] = Invld && Clusters_L1s_State[c1,c2] = Invld) )	
+	     
+}
+{ Clusters_L2_State[c1] := Excl;
+  Clusters_ReqCmd[c1] := None;
+  Clusters_L1s_Req[c,i] := case | c=c1 : None | _ : Clusters_L1s_Req[c,i];
+  Clusters_L2_pending[c1] := False;	
+}
+
 
 (*------------ Murphi rule "2 L1 cache write back cache" ------*)
 transition t2 (c i)
@@ -403,7 +425,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   Clusters_ifInReq[c] := True;
   Clusters_ReqCmd[c] := Clusters_L1s_Req[c,i];
 
-  Clusters_L1s_Req[c,i] := None;
+(*  Clusters_L1s_Req[c,i] := None;*)
 }
 
 
@@ -471,7 +493,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
 transition t9 (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&
            Clusters_L1s_Req[c,i] = GetX &&
-           Clusters_L2_State[c] = Excl &&
+           Clusters_L2_State[c] = Excl  &&
            Clusters_L2_pending[c] = False }  
 {
   Clusters_L1s_State[c,i] := Excl;
@@ -479,6 +501,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 
   Clusters_L2_State[c] := Invld;
 }
+
 
 (*------- Murphi rule "10 L1 req excl copy, another L1 reply" ------*)
 transition t10 (c i j)
@@ -515,6 +538,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   Clusters_L2_State[c] := Invld;
 }
 
+
 (*------- Murphi rule "12 L1 req excl copy, cluster fwd outside" ----*)
 
 transition t12 (c i)
@@ -532,7 +556,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   Clusters_L2_pending[c] := True;
   Clusters_ifInReq[c] := True;
   Clusters_ReqCmd[c] := Clusters_L1s_Req[c,i];
-  Clusters_L1s_Req[c,i] := None;
+  (* Clusters_L1s_Req[c,i] := None;  *)
 }
 
 
@@ -780,11 +804,12 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
   (* undefine Clusters_outReq_Cluster[c]; *)
 }
 
+
 (*------- Murphi rule "24 Cluster reply fwd req by PutX3" ----------*)
 transition t24 (c)
 requires { Sort[c] = CId &&
            Clusters_outReq_Cmd[c] = GetX &&
-	              Clusters_L2_pending[c] = False &&
+	   Clusters_L2_pending[c] = False &&
            Clusters_L2_State[c] = Shrd }
 {
   Clusters_inRpy_Cmd[c] := PutX;
