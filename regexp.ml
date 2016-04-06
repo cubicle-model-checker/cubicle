@@ -259,7 +259,10 @@ module type AS = sig
 end
 
 
-module Make_Automaton (R : RES) : AS 
+module Make_Automaton (R : RES) (O : sig 
+  type rm = Start | End | Any
+  val regexp_mode : rm end
+) : AS 
   with type regexp = R.t and type char = R.C.t = struct
     
   module SMap = Map.Make (R.ICSet)
@@ -304,9 +307,10 @@ module Make_Automaton (R : RES) : AS
   let recognize_start t cl =
     let rec rl st = function
       | [] -> terminal st
-      | hd :: tl -> let tr = SMap.find st t.trans in
-                    let st' = CMap.find hd tr in
-                    rl st' tl
+      | hd :: tl -> terminal st ||
+        let tr = SMap.find st t.trans in
+        let st' = CMap.find hd tr in
+        rl st' tl
     in
     try rl t.init cl with Not_found -> false
       
@@ -322,10 +326,24 @@ module Make_Automaton (R : RES) : AS
           with Not_found -> rl t.init tl
     in
     rl t.init cl
+
+  let recognize_end t cl =
+    let rec rl st = function
+      | [] -> terminal st
+      | hd :: tl -> 
+        try
+          let tr = SMap.find st t.trans in
+          let st' = CMap.find hd tr in
+          rl st' tl
+        with Not_found -> rl t.init tl
+    in
+    rl t.init cl
     
-  let recognize t cl = 
-    (* if t.from_start then recognize_start t cl *)
-    (* else *) recognize_anywhere t cl
+  let recognize = 
+    match O.regexp_mode with
+      | O.Start -> recognize_start
+      | O.Any -> recognize_anywhere 
+      | O.End -> recognize_end
 
   let fprint_state_dot fmt q = R.fprint_set_dot fmt q
 
@@ -376,5 +394,6 @@ end
 
 module RTrans : RES with type C.t = tr = Make_Regexp(Trans)
 module Automaton : AS
-  with type regexp = RTrans.t and type char = RTrans.C.t = Make_Automaton(RTrans)
+  with type regexp = RTrans.t and type char = RTrans.C.t = 
+         Make_Automaton(RTrans)(Options)
 

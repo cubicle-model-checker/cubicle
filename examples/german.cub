@@ -94,8 +94,6 @@ meta_transition meta_shared_4(n)
 requires { Cache[n] = Invalid && Chan1[n] = Empty &&
            Curcmd = Empty && Exgntd = False && Chan2[n] = Empty }
 {
-  Curcmd := Reqs;
-  CurClient := n;
   Invset[j] := case | _ : Shrset[j];
   Shrset[j] := case
 	        | j = n : True

@@ -62,6 +62,18 @@ let copy_state = ref false
 let copy_regexp = ref false
 let debug_regexp = ref false
 
+type rm = Start | End | Any
+
+let regexp_mode = ref Start
+
+let set_debug_regexp s = 
+  (match s with 
+    | "start" -> regexp_mode := Start
+    | "end" -> regexp_mode := End
+    | "any" -> regexp_mode := Any
+    | _ -> raise (Arg.Bad "Regexp mode = start | end | any"));
+  debug_regexp := true
+
 let res_output = ref false
 let res_file = ref ""
 
@@ -251,7 +263,8 @@ let specs =
        before going on with enumerative";
     "-copy", Arg.Set copy_state, " copy states that look general enough";
     "-creg", Arg.Set copy_regexp, " copy states that have a recognized history";
-    "-dreg", Arg.Set debug_regexp, " debugging regexps to know if a path has been taken";
+    "-dreg", Arg.String set_debug_regexp, 
+    "<start(default) | end | any> debugging regexps to know if a path has been taken";
     "-meta", Arg.Set meta_trans, " use meta transitions for forward and backward";
     "-univ", Arg.Set univ_trans, 
     " use universal transitions for forward and backward";
@@ -399,6 +412,7 @@ let enum_verbose = !enum_verbose
 
 let copy_state = !copy_state
 let copy_regexp = !copy_regexp
+let regexp_mode = !regexp_mode
 let debug_regexp = !debug_regexp
 
 let res_output = !res_output

@@ -53,9 +53,12 @@ val enum_verbose : bool
 val filter_lvl : int
 val filter_md : int
 
+type rm = Start | End | Any
+
 val copy_state : bool
 val copy_regexp : bool
 val debug_regexp : bool
+val regexp_mode : rm
 
 val res_output : bool
 val res_file : string

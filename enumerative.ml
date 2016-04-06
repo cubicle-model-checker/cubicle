@@ -1442,8 +1442,8 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
             if copy_regexp && Regexp.Automaton.recognize autom morf
             then begin
               let s' = generalize_state env s st_tr.st_args init in
-              Format.eprintf "@{<fg_green>YES !@} %a@." pfrom morf;
               if debug then (
+                Format.eprintf "@{<fg_green>YES !@} %a@." pfrom morf;
                 Format.eprintf "Pre state : %a@." (print_state env) st;
                 Format.eprintf "New state : %a@." (print_state env) s;
                 Format.eprintf "Cop state : %a@." (print_state env) s'
@@ -1454,7 +1454,9 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
               HQueue.add ~cpt_q ~debug:true (depth + 1, from, s) q
             end else
               HQueue.add ~cpt_q (depth + 1, from, s) q
-          end
+          end 
+          else if der then
+            Format.eprintf " @{<fg_red>Already Visited@}@."
         ) sts
       with Not_applicable -> ()) trs
 
