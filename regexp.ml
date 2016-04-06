@@ -314,11 +314,12 @@ module Make_Automaton (R : RES) : AS
     let rec rl st = function
       | [] -> terminal st
       | hd :: tl -> 
-        try
-          let tr = SMap.find st t.trans in
-          let st' = CMap.find hd tr in
-          rl st' tl
-        with Not_found -> rl t.init tl
+        terminal st || 
+          try
+            let tr = SMap.find st t.trans in
+            let st' = CMap.find hd tr in
+            rl st' tl
+          with Not_found -> rl t.init tl
     in
     rl t.init cl
     

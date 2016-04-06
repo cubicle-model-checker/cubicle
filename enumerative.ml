@@ -70,6 +70,18 @@ module HST = Hashtbl.Make
    end)
 
 
+let rec pvars fmt = function 
+  | [v] -> Format.fprintf fmt "%a" Hstring.print v
+  | v :: tl -> Format.fprintf fmt "%a, %a" Hstring.print v pvars tl
+  | _ -> ()
+
+let rec pfrom fmt = function
+  | [] -> ()
+  | [e, v] -> Format.fprintf fmt "%a(%a)!" Hstring.print e pvars v;
+  | (a, v) :: tl -> Format.fprintf fmt "%a(%a) -> %a" Hstring.print a 
+    pvars v pfrom tl
+
+
 (* This is a queue with a hash table on the side to avoid storing useless
    states, the overhead of the hashtable is negligible and allows to reduce the
    memory occupied by the queue (which is generally a lot larger than the state
@@ -77,7 +89,7 @@ module HST = Hashtbl.Make
 module HQueue : sig
     
   type elt = int * (Hstring.t * Hstring.t list) list * State.t
-  type t = elt Queue.t * unit HST.t
+  type t = elt Queue.t * (Hstring.t * Hstring.t list) list HST.t
       
   val create : int -> t
   val add : ?cpt_q : int ref -> ?debug : bool -> elt -> t -> unit
@@ -87,17 +99,20 @@ module HQueue : sig
 end = struct
 
   type elt = int * (Hstring.t * Hstring.t list) list * State.t
-  type t = elt Queue.t * unit HST.t
+  type t = elt Queue.t * (Hstring.t * Hstring.t list) list HST.t
 
   let create size = Queue.create (), HST.create size
 
   let add ?(cpt_q=ref 0) ?(debug=false) x (q, h) =
-    let (_, _, s) = x in
-    if not (HST.mem h s) then begin
+    let (_, f, s) = x in
+    try let f = HST.find h s in
+        if debug then 
+          Format.eprintf " @{<fg_red>Already Visited@}@.\t%a@." pfrom (List.rev f)
+    with Not_found ->
+      if debug then Format.eprintf " @{<fg_green>New@}@.";
       incr cpt_q;
-      HST.add h s ();
-      Queue.add x q;
-    end else if debug then Format.eprintf "NO ADD@."
+      HST.add h s f;
+      Queue.add x q
 
   let is_empty (q, _) = Queue.is_empty q
 
@@ -1371,22 +1386,6 @@ exception EBad of State.t * env
 exception ECantSay
 
 
-let rec pvars = function 
-  | [v] -> Format.eprintf "%a" Hstring.print v
-  | v :: tl -> Format.eprintf "%a, " Hstring.print v; 
-    pvars tl
-  | _ -> ()
-
-let rec pfrom = function
-  | [] -> ()
-  | [e, v] -> Format.eprintf "%a(" Hstring.print e;
-    pvars v;
-    Format.eprintf ")!"
-  | (a, v) :: tl -> Format.eprintf "%a(" Hstring.print a; 
-    pvars v;
-    Format.eprintf ") -> ";
-    pfrom tl
-
 let state_impossible env st s =
   if Node.dim s > env.model_cardinal then true
   else
@@ -1435,26 +1434,15 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
           let morf = List.rev from in
           let der = debug_regexp && Regexp.Automaton.recognize autom morf in
           if der then begin
-            Format.eprintf "@{<fg_green>YES !@} "; pfrom morf;
-            if verbose > 2 then 
+            Format.eprintf "@{<fg_green>YES !@} %a" pfrom morf;
+            if verbose > 2 then
               Format.eprintf "%a@." (print_state env) s;
           end;
           if not (HST.mem visited s) then begin
-            if der then begin
-              Format.eprintf " @{<fg_green>New@}@.";
-              (* Format.eprintf "Possible trans@."; *)
-              (* List.iter ( *)
-              (*   fun st_tr ->  *)
-              (*     try let _ = st_tr.st_f s in *)
-              (*         Format.eprintf "@{<fg_green>%a@}@." Hstring.print st_tr.st_name *)
-              (*     with Not_applicable -> *)
-              (*       Format.eprintf "@{<fg_red>%a@}@." Hstring.print st_tr.st_name *)
-              (* ) trs *)
-            end;
             if copy_regexp && Regexp.Automaton.recognize autom morf
             then begin
               let s' = generalize_state env s st_tr.st_args init in
-              Format.eprintf "@{<fg_green>YES !@} "; pfrom morf; Format.eprintf "@.";
+              Format.eprintf "@{<fg_green>YES !@} %a@." pfrom morf;
               if debug then (
                 Format.eprintf "Pre state : %a@." (print_state env) st;
                 Format.eprintf "New state : %a@." (print_state env) s;
@@ -1463,14 +1451,10 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
               HQueue.add ~cpt_q (depth + 1, from, s') q
             end;
             if der then begin
-              Format.eprintf "add :";
-              pfrom from;
-              Format.eprintf "@.";
               HQueue.add ~cpt_q ~debug:true (depth + 1, from, s) q
             end else
               HQueue.add ~cpt_q (depth + 1, from, s) q
           end
-          else if der then Format.eprintf " @{<fg_red>Already Visited@}@."
         ) sts
       with Not_applicable -> ()) trs
 
