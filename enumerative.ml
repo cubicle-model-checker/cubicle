@@ -19,7 +19,9 @@ open Ast
 open Types
 open Util
 
-type state = {st : int array; from : string}
+type trans_history = (Hstring.t * Hstring.t list) list
+
+type richstate = {st : int array; mutable from : trans_history list}
 
 module H = Hstring
 
@@ -64,6 +66,7 @@ let hash_state st = Hashtbl.hash_param 100 500 st
 
 module HST = Hashtbl.Make 
   (struct 
+    (* type t = State.t *)
     type t = State.t
     let equal = (=)
     let hash = hash_state
@@ -75,11 +78,16 @@ let rec pvars fmt = function
   | v :: tl -> Format.fprintf fmt "%a, %a" Hstring.print v pvars tl
   | _ -> ()
 
+let rec phistory fmt = function
+  | [] -> ()
+  | [e, v] -> Format.fprintf fmt "%a(%a)\\" Hstring.print e pvars v;
+  | (a, v) :: tl -> Format.fprintf fmt "%a(%a) -> %a" Hstring.print a 
+    pvars v phistory tl
+
 let rec pfrom fmt = function
   | [] -> ()
-  | [e, v] -> Format.fprintf fmt "%a(%a)!" Hstring.print e pvars v;
-  | (a, v) :: tl -> Format.fprintf fmt "%a(%a) -> %a" Hstring.print a 
-    pvars v pfrom tl
+  | [h] -> Format.fprintf fmt "%a!" phistory h;
+  | h :: hl -> Format.fprintf fmt "%a@,%a" phistory h pfrom hl
 
 
 (* This is a queue with a hash table on the side to avoid storing useless
@@ -88,8 +96,8 @@ let rec pfrom fmt = function
    table for BFS) *)
 module HQueue : sig
     
-  type elt = int * (Hstring.t * Hstring.t list) list * State.t
-  type t = elt Queue.t * (Hstring.t * Hstring.t list) list HST.t
+  type elt = int * richstate * State.t
+  type t = elt Queue.t * richstate HST.t
       
   val create : int -> t
   val add : ?cpt_q : int ref -> ?debug : bool -> elt -> t -> unit
@@ -98,20 +106,22 @@ module HQueue : sig
 
 end = struct
 
-  type elt = int * (Hstring.t * Hstring.t list) list * State.t
-  type t = elt Queue.t * (Hstring.t * Hstring.t list) list HST.t
+  type elt = int * richstate * State.t
+  type t = elt Queue.t * richstate HST.t
 
   let create size = Queue.create (), HST.create size
 
   let add ?(cpt_q=ref 0) ?(debug=false) x (q, h) =
-    let (_, f, s) = x in
-    try let f = HST.find h s in
-        if debug then 
-          Format.eprintf " @{<fg_red>Already Visited@}@.\t%a@." pfrom (List.rev f)
+    let (_, rs, s) = x in
+    try 
+      let {from} = HST.find h s in
+      if debug then 
+        Format.eprintf " @{<fg_red>Already Visited@}@.\t%a@." 
+          pfrom (List.rev from)
     with Not_found ->
       if debug then Format.eprintf " @{<fg_green>New@}@.";
       incr cpt_q;
-      HST.add h s f;
+      HST.add h s rs;
       Queue.add x q
 
   let is_empty (q, _) = Queue.is_empty q
@@ -177,7 +187,8 @@ type env = {
 
   table_size : int;
   mutable explicit_states : unit HST.t;
-  mutable states : State.t list;
+  (* mutable states : State.t list; *)
+  mutable states : richstate list;
   mutable fringe : State.t list;
   mutable bad_states : ((int * op_comp * int) list * Node.t) list
 }
@@ -261,8 +272,12 @@ let print_state env fmt st = SAtom.print fmt (state_to_cube env st)
 let print_state_ia fmt st =
   Array.iter (Format.fprintf fmt "%d;") st
 
+(* let print_all env = *)
+(*   List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.states *)
+
 let print_all env =
-  List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) env.states
+  List.iter (fun {st} -> 
+    eprintf "--- @[<hov>%a@]@." (print_state env) st) env.states
 
 let print_fringe env frg =
   List.iter (eprintf "--- @[<hov>%a@]@." (print_state env)) frg
@@ -703,7 +718,7 @@ let init_to_states env procs s =
       let sts = write_cube_to_states env st_init init in
       List.rev_append sts acc
     ) [] l_inits in
-  List.map (fun st -> 0, [], st) sts
+  List.map (fun st -> 0, {st; from = [[]]}, st) sts
     
 
 let atom_to_st_req env = function
@@ -1057,10 +1072,10 @@ let generalize_state env s hs system =
 let forward_depth = ref (-1)
 let limit_forward_depth = ref false
 
-let post_dfs st visited trs q cpt_q depth =
+let post_dfs st visited trs q cpt_q depth = 
   if not !limit_forward_depth || depth < !forward_depth then
     List.iter (fun st_tr ->
-      try 
+      try
         let sts = st_tr.st_f st in
         List.iter (fun s ->
           if not (HST.mem visited s) then begin
@@ -1081,7 +1096,7 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
     | (st, last_vars) :: r ->
       let to_do =
         List.fold_left (fun to_do st_tr ->
-          try 
+          try
             let sts = st_tr.st_f st in
             let vars = st_tr.st_vars in
             let switching = assert false(* Hstring.HSet.equal vars last_vars || *)
@@ -1094,8 +1109,8 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
                   incr cpt_f;
                   HST.add visited st ();
                   to_do
-                end 
-                else begin 
+                end
+                else begin
                   HST.add temp_table st ();
                   (s, vars) :: to_do
                 end
@@ -1149,7 +1164,7 @@ let forward_dfs s procs env l =
       (* if !cpt_f mod 3 = 1 then *)
       incr cpt_r;
       HST.add h_visited st ();
-      env.states <- st :: env.states;
+      env.states <- {st; from = [[]]} :: env.states;
       if !limit_forward_depth && depth = !forward_depth then
         env.fringe <- st :: env.fringe;
     (* add_all_syms env explicit_states st *)
@@ -1181,7 +1196,7 @@ let forward_bfs_switches s procs env l =
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
       HST.add explicit_states st ();
-      env.states <- st :: env.states;
+      env.states <- {st; from = [[]] } :: env.states;
       if !limit_forward_depth && depth = !forward_depth - 1 then
         env.fringe <- st :: env.fringe;
     end
@@ -1199,7 +1214,14 @@ let shuffle d =
 let no_scan_states env =
   (* Prevent the GC from scanning the list env.states as it is going to be
      kept in memory all the time. *)
-  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states
+  List.iter (fun {st; from} -> Obj.set_tag (Obj.repr st) (Obj.no_scan_tag);
+    List.iter (fun th -> 
+      List.iter (fun (s, sl) ->
+        Obj.set_tag (Obj.repr st) (Obj.no_scan_tag);
+        List.iter (fun s -> Obj.set_tag (Obj.repr st) (Obj.no_scan_tag)) sl
+      ) th
+    ) from
+  ) env.states
 
 
 let study_fringe env =
@@ -1338,7 +1360,7 @@ let resist_on_trace_size progress_inc ls env =
       if not quiet then eprintf "@{<fg_black_b>@{<i>";
       (* will be forgotten by flushs *)
       let cpt = ref 0 in
-      List.iter (fun st ->
+      List.iter (fun {st} ->
         incr cpt;
         if not quiet && !cpt mod progress_inc = 0 then one_step ();
         cands := List.filter (fun p -> 
@@ -1399,7 +1421,7 @@ let one_resist_on_trace_size s env =
     try
       let procs = List.rev (List.tl (List.rev env.all_procs)) in
       let ls = alpha_renamings env procs s in
-      List.iter (fun st ->
+      List.iter (fun {st} ->
         if not (List.for_all (fun (c, _) -> check_cand env st c) ls) then
           raise (EBad (st, env));
       ) env.states;
@@ -1423,6 +1445,14 @@ let print_iopi_list =
       Node.print n
   )
 
+let rec is_sublist l1 l2 =
+  match l1, l2 with
+    | [], _ -> true
+    | _, [] -> false
+    | (t1, _) :: tl1, (t2, _) :: tl2 when Hstring.equal t1 t2 -> 
+      is_sublist tl1 tl2
+    | _, _ :: tl -> is_sublist l1 tl
+
 let post_bfs env (from, st) visited trs q cpt_q depth autom init =
   if not !limit_forward_depth || depth < !forward_depth then
     List.iter (fun st_tr ->
@@ -1430,16 +1460,24 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
         let sts = st_tr.st_f st in
         List.iter (fun s ->
           if forward_sym then normalize_state env s;
-          let from = (st_tr.st_name, List.rev st_tr.st_args) :: from in
+          let from = List.map (fun hl -> 
+            (st_tr.st_name, List.rev st_tr.st_args) :: hl)
+            from in
           let morf = List.rev from in
-          let der = debug_regexp && Regexp.Automaton.recognize autom morf in
+          let der = debug_regexp && 
+            List.exists (Regexp.Automaton.recognize autom) morf in
           if der then begin
             Format.eprintf "@{<fg_green>YES !@} %a" pfrom morf;
             if verbose > 2 then
               Format.eprintf "%a@." (print_state env) s;
           end;
-          if not (HST.mem visited s) then begin
-            if copy_regexp && Regexp.Automaton.recognize autom morf
+          try 
+            let rs = HST.find visited s in
+            rs.from <- List.rev_append from rs.from;
+            if der then
+              Format.eprintf " @{<fg_red>Already Visited@}@."
+          with Not_found ->
+            if copy_regexp && List.exists (Regexp.Automaton.recognize autom) morf
             then begin
               let s' = generalize_state env s st_tr.st_args init in
               if debug then (
@@ -1448,15 +1486,11 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
                 Format.eprintf "New state : %a@." (print_state env) s;
                 Format.eprintf "Cop state : %a@." (print_state env) s'
               );
-              HQueue.add ~cpt_q (depth + 1, from, s') q
+              HQueue.add ~cpt_q (depth + 1, {st = s'; from}, s') q
             end;
             if der then begin
-              HQueue.add ~cpt_q ~debug:true (depth + 1, from, s) q
-            end else
-              HQueue.add ~cpt_q (depth + 1, from, s) q
-          end 
-          else if der then
-            Format.eprintf " @{<fg_red>Already Visited@}@."
+              HQueue.add ~cpt_q ~debug:true (depth + 1, {st = s; from}, s) q
+            end else HQueue.add ~cpt_q (depth + 1, {st = s; from}, s) q
         ) sts
       with Not_applicable -> ()) trs
 
@@ -1470,10 +1504,10 @@ let hstl_to_string hl =
     Buffer.add_string b ")"
   ) hl;
   Buffer.contents b
-
+ 
 let forward_bfs init env l autom =
   maxd := !forward_depth;
-  let h_visited = env.explicit_states in
+  let h_visited = HST.create 17 (* env.explicit_states *) in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
   let cpt_q = ref 1 in
@@ -1482,11 +1516,11 @@ let forward_bfs init env l autom =
   List.iter (fun td -> HQueue.add td to_do) l;
   while not (HQueue.is_empty to_do) && 
     (max_forward = -1 || !cpt_f < max_forward) do
-    let depth, from, st = HQueue.take to_do in
+    let depth, rs, st = HQueue.take to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
-      HST.add h_visited st ();
-      post_bfs env (from, st) h_visited trs to_do cpt_q depth autom init ;
+      HST.add h_visited st rs;
+      post_bfs env (rs.from, st) h_visited trs to_do cpt_q depth autom init ;
       incr cpt_f;
       if debug && verbose > 1 then
         eprintf "%d : %a\n@." !cpt_f
@@ -1494,12 +1528,17 @@ let forward_bfs init env l autom =
       if not quiet && !cpt_f mod 1000 = 0 then
         eprintf "%d (%d)@." !cpt_f !cpt_q;
       incr cpt_r;
-      env.states <- st :: env.states;
+      env.states <- rs :: env.states;
       if depth > !maxd then maxd := depth;
       if !limit_forward_depth && depth = !forward_depth then
         env.fringe <- st :: env.fringe;
     end
-  done
+  done;
+  if debug && verbose > 3 then
+    let _, h = to_do in
+    HST.iter (fun s rs ->
+      Format.eprintf "%a : %d\n%a\n------------@." (print_state env) s 
+        (List.length rs.from) pfrom (List.map List.rev rs.from)) h
     
 let nodes_to_iopi_list env bwd =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
@@ -1624,7 +1663,10 @@ let init ?(bwd=[]) system =
 
 let first_good_candidate candidates =
   match fast_resist_on_trace candidates with
-    | c :: _ -> Some c
+    | c :: _ -> 
+      let h = List.map (fun (ti, vl, _) -> ti.tr_name, vl) c.from in
+      Format.eprintf "HISTORY %a@." phistory h;
+      Some c
     | [] -> None
 
 let mk_env nbprocs sys =
@@ -1655,7 +1697,7 @@ let size_of_env env = env.table_size
 
 let print_last env =
   match env.states with
-    | st :: _ -> eprintf "--- @[<hov>%a@]@." SAtom.print (state_to_cube env st)
+    | {st} :: _ -> eprintf "--- @[<hov>%a@]@." SAtom.print (state_to_cube env st)
     | _ -> ()
 
 

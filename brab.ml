@@ -73,6 +73,6 @@ let brab system =
   if only_forward then
     (* if print_forward then *)
     (*   Oracle.print_last  *)
-      exit 0;
+    exit 0;
   reinstall_sigint ();
   search_and_backtrack [] system

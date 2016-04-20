@@ -80,6 +80,8 @@ let res_file = ref ""
 let meta_trans = ref false
 let univ_trans = ref false
 
+let approx_history = ref false
+
 let set_res_output s =
   res_output := true;
   res_file := s
@@ -294,6 +296,7 @@ let specs =
      with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
+    "-hist", Arg.Set approx_history, " to know where the history comes from";
     "-murphi", Arg.Set murphi,
     " use Murphi for enumerative forward instead of the naive implementation";
     "-murphi-opt", Arg.Set_string murphi_uopts,
@@ -420,6 +423,8 @@ let res_file = !res_file
 
 let meta_trans = !meta_trans
 let univ_trans = !univ_trans
+
+let approx_history = !approx_history
 
 let bwd_fwd = !bwd_fwd
 

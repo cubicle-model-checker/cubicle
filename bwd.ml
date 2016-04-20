@@ -59,8 +59,15 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     (* Initialization *)
     Q.push_list !candidates q;
     Q.push_list system.t_unsafe q;
+    List.iter (fun u -> 
+      try Safety.check system u 
+      with Safety.Unsafe _ -> 
+        Format.eprintf "THIS UNSAFE WAS SEEN BY FORWARD@.%a@." Node.print u;
+        
+        exit 1
+    ) system.t_unsafe;
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-              (invariants @ system.t_invs);
+      (invariants @ system.t_invs);
 
     try
       while not (Q.is_empty q) do

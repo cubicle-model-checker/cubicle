@@ -66,6 +66,8 @@ val res_file : string
 val meta_trans : bool
 val univ_trans : bool
 
+val approx_history : bool
+
 val goods : bool
 
 val max_proc : int

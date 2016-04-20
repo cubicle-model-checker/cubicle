@@ -37,7 +37,7 @@ val size : t -> int
 (** returns the size of the associated cube (see {! Cube.size}) *)
 
 val create :
-  ?kind:kind -> ?from:trace_step option -> Cube.t -> t
+  ?kind:kind -> ?from:trace_step option -> ?hist:trace -> Cube.t -> t
 (** given a cube creates a node with a given kind, and a history *)
 
 val compare_by_breadth : t -> t -> int

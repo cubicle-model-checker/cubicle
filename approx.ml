@@ -277,7 +277,11 @@ let approximations s =
          else
            let c = Cube.create_normal sa' in
            if cube_known_bad c || cube_likely_bad c then acc
-           else (Node.create ~kind:Approx c) :: acc
+           else 
+             let n = if approx_history then
+                 Node.create ~kind:Approx ~hist:s.from c
+               else Node.create ~kind:Approx c in
+             n :: acc
       ) parts []
   in
   (* Sorting heuristic of approximations with most general ones first *)

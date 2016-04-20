@@ -85,10 +85,13 @@ let new_tag =
   | _ -> incr cpt_pos; !cpt_pos
 
 
-let create ?(kind=Node) ?(from=None) cube =
-  let hist =  match from with
-    | None -> []
-    | Some ((_, _, n) as f) -> f :: n.from in
+let create ?(kind=Node) ?(from=None) ?(hist=[]) cube =
+  let hist = match from, hist with
+    | None, [] -> []
+    | None, _ -> hist
+    | Some ((_, _, n) as f), [] -> f :: n.from 
+    | _ -> assert false
+  in
   { 
     cube = cube;
     tag = new_tag ~kind ();
