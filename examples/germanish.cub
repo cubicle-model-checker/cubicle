@@ -37,7 +37,7 @@ requires { Shrset[n]=True  &&  Curcmd = Reqe }
 }
 
 transition inv_2 (n)
-requires { Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
+requires { Shrset[n]=True && Curcmd = Reqs && Exgntd=True }
 { 
   Exgntd := False;
   Cache[n] := Invalid;

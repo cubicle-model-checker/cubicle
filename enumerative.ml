@@ -87,7 +87,7 @@ let rec phistory fmt = function
 let rec pfrom fmt = function
   | [] -> ()
   | [h] -> Format.fprintf fmt "%a!" phistory h;
-  | h :: hl -> Format.fprintf fmt "%a@,%a" phistory h pfrom hl
+  | h :: hl -> Format.fprintf fmt "%a\n%a" phistory h pfrom hl
 
 
 (* This is a queue with a hash table on the side to avoid storing useless
@@ -189,6 +189,7 @@ type env = {
   mutable explicit_states : unit HST.t;
   (* mutable states : State.t list; *)
   mutable states : richstate list;
+  mutable histories : trans_history list;
   mutable fringe : State.t list;
   mutable bad_states : ((int * op_comp * int) list * Node.t) list
 }
@@ -221,6 +222,7 @@ let empty_env = {
   table_size = 0;
   explicit_states = HST.create 0;
   states = [];
+  histories = [];
   fringe = [];
   bad_states = [];
 }
@@ -595,6 +597,7 @@ let init_tables ?(alloc=true) procs s =
     table_size = tsize;
     explicit_states = HST.create (if alloc then tsize else 0);
     states = [];
+    histories = [];
     fringe = [];
     bad_states = [];
   }
@@ -1534,11 +1537,16 @@ let forward_bfs init env l autom =
         env.fringe <- st :: env.fringe;
     end
   done;
-  if debug && verbose > 3 then
-    let _, h = to_do in
-    HST.iter (fun s rs ->
-      Format.eprintf "%a : %d\n%a\n------------@." (print_state env) s 
-        (List.length rs.from) pfrom (List.map List.rev rs.from)) h
+  (* if debug && verbose > 3 then *)
+  
+  HST.iter (fun s rs ->
+    let f = List.map List.rev rs.from in
+    rs.from <- f;
+    env.histories <- List.rev_append f env.histories;
+  ) h_visited;
+  env.histories <- List.fast_sort (
+    fun l1 l2 -> compare (List.length l1) (List.length l2)) env.histories
+  (* Format.eprintf "%a\n------------@." pfrom env.histories *)
     
 let nodes_to_iopi_list env bwd =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
@@ -1666,6 +1674,16 @@ let first_good_candidate candidates =
     | c :: _ -> 
       let h = List.map (fun (ti, vl, _) -> ti.tr_name, vl) c.from in
       Format.eprintf "HISTORY %a@." phistory h;
+      let y = ref [] in
+      if List.exists (fun env -> 
+        List.exists (
+          fun f -> 
+            let b = is_sublist h f in
+            if b then y := f;
+            b
+        ) env.histories)
+        !global_envs then
+        Format.eprintf "YES\n%a@." phistory !y;
       Some c
     | [] -> None
 
