@@ -196,7 +196,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 transition t5_x (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&
            Clusters_L1s_Req[c,i] = GetX &&
-           forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           (forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld)) &&
            Clusters_L2_State[c] = Invld &&
            Clusters_L2_pending[c] = False }
 {
