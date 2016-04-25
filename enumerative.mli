@@ -29,6 +29,7 @@ val smallest_to_resist_on_trace : Node.t list -> Node.t list
     [search]. *)
 
 (** {2 Exported functions to construct enumeration based oracles } *)
+type trans_history = (Hstring.t * Hstring.t list) list
 
 type env
 (** The type of environments for enumerative explorations *)
@@ -82,3 +83,7 @@ val first_good_candidate : Node.t list -> Node.t option
 val all_good_candidates : Node.t list -> Node.t list 
 
 val get_stats : unit -> int
+
+val is_sublist : (Hstring.t * 'a) list -> (Hstring.t * 'a) list -> bool
+
+val get_histories : unit -> trans_history list list

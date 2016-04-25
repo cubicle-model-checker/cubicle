@@ -55,6 +55,23 @@ let compare_by_breadth s1 s2 =
         if c <> 0 then c else
           Pervasives.compare (abs s1.tag) (abs s2.tag)
 
+let compare_by_history s1 s2 =
+  (* let c = Pervasives.compare s1.heuristic s2.heuristic in *)
+  (* if c <> 0 then c else *)
+    let v1 = dim s1 in
+    let v2 = dim s2 in
+    let c = Pervasives.compare v1 v2 in
+    if c <> 0 then c else
+      let c1 = size s1 in
+      let c2 = size s2 in
+      let c = Pervasives.compare c1 c2 in
+      if c <> 0 then c else
+        let c =  compare_kind s1 s2 in
+        if c <> 0 then c else
+          let c = Pervasives.compare s1.depth s2.depth in 
+          if c <> 0 then c else
+            Pervasives.compare (abs s1.tag) (abs s2.tag)
+
 let compare_by_depth s1 s2 =
   let v1 = dim s1 in
   let v2 = dim s2 in
@@ -84,21 +101,20 @@ let new_tag =
   | Approx -> decr cpt_neg; !cpt_neg
   | _ -> incr cpt_pos; !cpt_pos
 
-
-let create ?(kind=Node) ?(from=None) ?(hist=[]) cube =
-  let hist = match from, hist with
-    | None, [] -> []
-    | None, _ -> hist
-    | Some ((_, _, n) as f), [] -> f :: n.from 
-    | _ -> assert false
+let create ?(kind=Node) ?(from=None) ?(hist=None) cube =
+  let from, heuristic = match from, hist with
+    | None, None -> [], -1
+    | None, Some s -> s.from, s.heuristic
+    | Some ((_, _, n) as f), _ -> f :: n.from , n.heuristic
   in
   { 
     cube = cube;
     tag = new_tag ~kind ();
     kind = kind;
-    depth = List.length hist;
+    depth = List.length from;
     deleted = false;
-    from = hist;
+    from;
+    heuristic;
   }
 
 let has_deleted_ancestor n =
@@ -123,7 +139,9 @@ let ancestor_of n s =
 
 let subset n1 n2 = ArrayAtom.subset (array n1) (array n2)
        
-let print fmt n = Cube.print fmt n.cube
+let print fmt n = 
+  fprintf fmt "%a%s" Cube.print n.cube
+    (if approx_history then sprintf " heur = %d%%" n.heuristic else "")
 
 module Latex = struct
 (* Latex printing of nodes, experimental - to rewrite *)

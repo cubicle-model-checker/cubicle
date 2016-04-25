@@ -37,12 +37,16 @@ val size : t -> int
 (** returns the size of the associated cube (see {! Cube.size}) *)
 
 val create :
-  ?kind:kind -> ?from:trace_step option -> ?hist:trace -> Cube.t -> t
+  ?kind:kind -> ?from:trace_step option -> ?hist:t option -> Cube.t -> t
 (** given a cube creates a node with a given kind, and a history *)
 
 val compare_by_breadth : t -> t -> int
 (** compare two nodes with a heuristic to find the most general one. Gives
     priority to nodes that have smaller depth in the search graph *)
+
+val compare_by_history : t -> t -> int
+(** compare two nodes with a heuristic to find the most general one. Gives
+    priority to nodes that have most coherent trace in the search graph *)
 
 val compare_by_depth : t -> t -> int
 (** compare two nodes with a heuristic to find the most general one. Gives

@@ -1458,43 +1458,6 @@ let rec is_sublist l1 l2 =
 
 let longest xs ys = if List.length xs > List.length ys then xs else ys
  
-let lcs xs' ys' =
-  let xs = Array.of_list xs'
-  and ys = Array.of_list ys' in
-  let n = Array.length xs
-  and m = Array.length ys in
-  let a = Array.make_matrix (n+1) (m+1) [] in
-  for i = n-1 downto 0 do
-    for j = m-1 downto 0 do
-      a.(i).(j) <- if xs.(i) = ys.(j) then
-          xs.(i) :: a.(i+1).(j+1)
-        else
-          longest a.(i).(j+1) a.(i+1).(j)
-    done
-  done;
-  a.(0).(0)
-
-let lcs xs ys =
-  let cache = Hashtbl.create 16 in
-  let rec lcs xs ys =
-    try Hashtbl.find cache (xs, ys) with
-    | Not_found ->
-        let result =
-          match xs, ys with
-          | [], _ -> []
-          | _, [] -> []
-          | x :: xs, y :: ys when x = y ->
-              x :: lcs xs ys
-          | _ :: xs_rest, _ :: ys_rest ->
-              let a = lcs xs_rest ys in
-              let b = lcs xs      ys_rest in
-              if (List.length a) > (List.length b) then a else b
-        in
-        Hashtbl.add cache (xs, ys) result;
-        result
-  in
-  lcs xs ys
-
 let post_bfs env (from, st) visited trs q cpt_q depth autom init =
   if not !limit_forward_depth || depth < !forward_depth then
     List.iter (fun st_tr ->
@@ -1587,6 +1550,8 @@ let forward_bfs init env l autom =
     fun l1 l2 -> compare (List.length l1) (List.length l2)) env.histories;
   if verbose > 0 then Format.eprintf "%a\n------------@." pfrom env.histories
     
+let get_histories () = List.map (fun env -> env.histories) !global_envs 
+
 let nodes_to_iopi_list env bwd =
   let procs = List.rev (List.tl (List.rev env.all_procs)) in
   List.fold_left (
@@ -1710,31 +1675,7 @@ let init ?(bwd=[]) system =
 
 let first_good_candidate candidates =
   match fast_resist_on_trace candidates with
-    | c :: _ -> 
-      let h = List.map (fun (ti, vl, _) -> ti.tr_name, vl) c.from in
-      Format.eprintf "HISTORY %a@." phistory h;
-      let y = ref [] in
-      (if List.exists (fun env -> 
-        List.exists (
-          fun f -> 
-            let b = is_sublist h f in
-            if b then y := f;
-            b
-        ) env.histories)
-        !global_envs then
-        Format.eprintf "YES\n%a@." phistory !y
-      else 
-        let lth, hist = 
-          List.fold_left (fun acc env ->
-            List.fold_left (
-              fun (lth, hist) hist' -> 
-                let sub = lcs h hist' in
-                let lth' = List.length sub in
-                if lth' > lth then (lth', hist') else (lth, hist)
-            ) acc env.histories)
-            (0, []) !global_envs in
-        Format.eprintf "LCS\n(%d) %a@." lth phistory hist);
-      Some c
+    | c :: _ -> Some c
     | [] -> None
 
 let mk_env nbprocs sys =

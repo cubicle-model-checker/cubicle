@@ -81,7 +81,12 @@ let meta_trans = ref false
 let univ_trans = ref false
 
 let approx_history = ref false
+let hist_threshhold = ref (-1)
 
+let set_approx_history n = 
+  approx_history := true;
+  hist_threshhold := n
+  
 let set_res_output s =
   res_output := true;
   res_file := s
@@ -172,7 +177,7 @@ let mode = ref "bfs"
 let set_mode m =
   mode := m;
   match m with
-  | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
+  | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" | "bfshh" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
 let set_far n =
@@ -235,7 +240,7 @@ let specs =
     "-nodes", Arg.Set_int maxnodes, 
     "<nb> max number nodes to explore (default 100000)";
     "-search", Arg.String set_mode, 
-    "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
+    "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa | bfshh > search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
     "<level> graphviz (dot) output with a level of details";
@@ -297,6 +302,7 @@ let specs =
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-hist", Arg.Set approx_history, " to know where the history comes from";
+    "-histt", Arg.Int set_approx_history, " to know where the history comes from";
     "-murphi", Arg.Set murphi,
     " use Murphi for enumerative forward instead of the naive implementation";
     "-murphi-opt", Arg.Set_string murphi_uopts,
@@ -424,7 +430,7 @@ let res_file = !res_file
 let meta_trans = !meta_trans
 let univ_trans = !univ_trans
 
-let approx_history = !approx_history
+let hist_threshhold = !hist_threshhold
 
 let bwd_fwd = !bwd_fwd
 
@@ -486,12 +492,17 @@ let delete = !delete
 let simpl_by_uc = !simpl_by_uc
 let noqe = !noqe
 
-
 let cores = !cores
 
 let mode = !mode
 
 let verbose = !verbose
+
+let approx_history = 
+  if !approx_history then !approx_history
+  else match mode with
+    | "bfshh" -> true
+    | _ -> false
 
 let post_strategy =
   if !post_strategy <> -1 then !post_strategy

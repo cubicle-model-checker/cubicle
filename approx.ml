@@ -279,7 +279,7 @@ let approximations s =
            if cube_known_bad c || cube_likely_bad c then acc
            else 
              let n = if approx_history then
-                 Node.create ~kind:Approx ~hist:s.from c
+                 Node.create ~kind:Approx ~hist:(Some s) c
                else Node.create ~kind:Approx c in
              n :: acc
       ) parts []
@@ -334,7 +334,9 @@ module Make ( O : Oracle.S ) : S = struct
        (* It's useless to look for approximations of an approximation *)
        None
     | _ ->
-       subsuming_candidate n
+      if approx_history && n.heuristic < hist_threshhold
+      then None else
+        subsuming_candidate n
 
   let all_goods s =
     let approx = approximations s in

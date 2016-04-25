@@ -67,6 +67,7 @@ val meta_trans : bool
 val univ_trans : bool
 
 val approx_history : bool
+val hist_threshhold : int
 
 val goods : bool
 

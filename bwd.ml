@@ -41,6 +41,46 @@ module type Strategy = sig
 
 end
 
+let longest xs ys = if List.length xs > List.length ys then xs else ys
+
+let lcs xs' ys' =
+  let xs = Array.of_list xs'
+  and ys = Array.of_list ys' in
+  let n = Array.length xs
+  and m = Array.length ys in
+  let a = Array.make_matrix (n+1) (m+1) [] in
+  for i = n-1 downto 0 do
+    for j = m-1 downto 0 do
+      a.(i).(j) <- 
+        let (t1, _), (t2, _) = xs.(i), ys.(j) in
+        if Hstring.equal t1 t2 then
+          t1 :: a.(i+1).(j+1)
+        else
+          longest a.(i).(j+1) a.(i+1).(j)
+    done
+  done;
+  a.(0).(0)
+
+let update_heur n = 
+  (* if n.heuristic = -1 then *)
+    let h = List.map (fun (ti, vl, _) -> ti.tr_name, vl) n.from in
+    let histories = Enumerative.get_histories () in
+    let heur = 
+      if List.exists (List.exists (Enumerative.is_sublist h))
+        histories then 100
+      else 
+        let lth, sub, hist = 
+          List.fold_left (
+            List.fold_left (
+              fun ((lth, sub, hist) as acc) hist' -> 
+                let sub' = lcs h hist' in
+                let lth' = List.length sub' in
+                if lth' > lth then (lth', sub', hist') else acc
+            ))
+            (0, [], []) histories in
+        lth * 100 / (List.length h)
+    in
+    n.heuristic <- heur
 
 module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
@@ -105,6 +145,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                 Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
 	    postponed := List.rev_append post !postponed;
             visited := Cubetrie.add_node n !visited;
+
             Q.push_list ls q;
             if not forward then Stats.remaining (nb_remaining q postponed);
         end;
@@ -349,6 +390,13 @@ module DepthOrder = struct
 
 end
 
+module HistoryOrder = struct
+
+  type t = Node.t
+ 
+  let compare = Node.compare_by_history
+
+end
 
 module NodeHeap (X : Set.OrderedType with type t = Node.t) : PriorityNodeQueue =
 struct
@@ -364,7 +412,37 @@ struct
     h := nh;
     e
 
-  let push_list l h = h:= H.add !h l
+  let push_list l h = 
+    if approx_history then List.iter update_heur l;
+    h:= H.add !h l
+
+  let push e h = push_list [e] h
+
+  let clear h = h := H.empty
+
+  let length h = H.length !h
+                          
+  let is_empty h = !h = H.empty
+
+end
+
+module NodeHeur (X : Set.OrderedType with type t = Node.t) : PriorityNodeQueue =
+struct
+
+  module H = Heap.Make(X)
+   
+  type t = H.t ref
+
+  let create () = ref H.empty
+
+  let pop h =
+    let e, nh = H.pop !h in
+    h := nh;
+    e
+
+  let push_list l h = 
+    List.iter update_heur l;
+    h:= H.add !h l
 
   let push e h = push_list [e] h
 
@@ -394,7 +472,9 @@ module NodeQ (Q : StdQ) : PriorityNodeQueue = struct
 
   let create () = Q.create ()
   let pop q = Q.pop q
-  let push e q = Q.push e q
+  let push e q = 
+    if approx_history then update_heur e;
+    Q.push e q
   let clear q = Q.clear q
   let length q = Q.length q
   let is_empty q = Q.is_empty q
@@ -414,6 +494,7 @@ module ApproxQ (Q : PriorityNodeQueue) = struct
     else Q.pop nq
 
   let push n (aq, nq) =
+    if approx_history then update_heur n;
     match n.kind with
     | Approx -> Q.push n aq
     | _ -> Q.push n nq
@@ -444,6 +525,8 @@ module DFS : Strategy = Maker (NodeQ (Stack))
 module BFSH : Strategy = Maker (NodeHeap (BreadthOrder))
 module DFSH : Strategy = Maker (NodeHeap (DepthOrder))
 
+module BFSHH : Strategy = Maker (NodeHeur (HistoryOrder))
+
 module BFSA : Strategy = Maker (ApproxQ (NodeQ (Queue)))
 module DFSA : Strategy = Maker (ApproxQ (NodeQ (Stack)))
 
@@ -452,6 +535,7 @@ let select_search =
   | "bfs" -> (module BFS : Strategy)
   | "dfs" -> (module DFS)
   | "bfsh" -> (module BFSH)
+  | "bfshh" -> (module BFSHH)
   | "dfsh" -> (module DFSH)
   | "bfsa" -> (module BFSA)
   | "dfsa" -> (module DFSA)

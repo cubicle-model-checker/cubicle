@@ -46,8 +46,10 @@ let new_node s =
   if not quiet || far_dbg then
     begin
       printf "node @{<b>%d@}: " !cpt_nodes;
-      if verbose < 1 then printf "@[%a@]@." Node.print_history s
-      else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
+      if verbose < 1 then printf "@[%a@]" Node.print_history s
+      else printf "@[%a@] =@\n     @[%a@]" Node.print_history s Node.print s;
+      if approx_history then printf "@[ heur = @{<b>%d%%@} @]@." s.heuristic 
+      else printf "@."
     end;
   if dot then Dot.new_node s
 

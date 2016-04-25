@@ -105,6 +105,7 @@ type node_cube =
                                   simplification detects subsumption
                                   (see {! Cubetrie.delete_subsumed}) *)
       from : trace;           (** history of the node *)
+      mutable heuristic : int;
     }
 (** the type of nodes, i.e. cubes with extra information *)
 
