@@ -105,7 +105,7 @@ let rec make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
-  | Arith (x, cs) -> 
+  | Arith (x, cs) ->
       let tx = make_term x in
       make_arith_cs cs tx
   | Field (t, f) -> T.make_app f [make_term t]
@@ -125,7 +125,7 @@ and make_literal = function
       let tx = make_term x in
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
-  | Atom.Ite (la, a1, a2) -> 
+  | Atom.Ite (la, a1, a2) ->
       let (f, _, _) = make_formula_set la in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in
@@ -231,23 +231,29 @@ let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
   SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord)
+  (* SMT.assume ~id (Weakmem.make_orders ~fp:false evts ord) *)
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
   let (f, evts, ord) = make_formula ap in
+  let fo = Weakmem.make_orders ~fp:true evts ord in
+  (* let fo = Weakmem.make_orders ~fp:false evts ord in *)
+  let f = if fo = F.f_true then f else F.make F.And [f;fo] in
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
-  SMT.assume ~id f;
-  let fo = Weakmem.make_orders ~fp:true evts ord in
-  if fo <> F.f_true then
-    SMT.assume ~id (F.make F.Not [fo])
+  SMT.assume ~id f
+  (* ; let fo = Weakmem.make_orders ~fp:true evts ord in *)
+  (* if fo <> F.f_true then *)
+  (*   SMT.assume ~id (F.make F.Not [fo]) *)
 
 let assume_goal n = (* FP only *)
   assume_goal_no_check n;
   SMT.check ~fp:true ()
+  (* SMT.check ~fp:false () *)
 
 let assume_node n ap = (* FP only *)
   assume_node_no_check n ap;
   SMT.check ~fp:true ()
+  (* SMT.check ~fp:false () *)
 
 
 let run () = SMT.check ~fp:true () (* FP only *)

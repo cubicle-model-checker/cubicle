@@ -53,10 +53,10 @@ type term =
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 
   | Field of term * Hstring.t (* term is Elem/Access *)
-  | List of term list (* term is Elem *)
-  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *)
-  | Write of Variable.t * Hstring.t * Variable.t list (* experiment *)
-  | Fence of Variable.t (* experiment *)
+  | List of term list (* term is Elem / Elem list *)
+  | Read of Variable.t * Hstring.t * Variable.t list
+  | Write of Variable.t * Hstring.t * Variable.t list
+  | Fence of Variable.t
 
 (** Module interface for terms *)
 module Term : sig

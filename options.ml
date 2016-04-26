@@ -229,6 +229,7 @@ let cin =
   | None -> stdin
 
 let model = !model
+let solver = !smt_solver
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes

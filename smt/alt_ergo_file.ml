@@ -530,133 +530,51 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let init_axioms () =
     if Options.model = Options.SC then ()
     else axioms :=
-"axiom rf :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
+"axiom rf_val :
+  forall p1, p2, e1, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
+  _rf(p1, e1, s1, p2, e2, s2)
+   -> _e(p1, e1, s1)._val = _e(p2, e2, s2)._val
 
-(* axiom po_loc : *)
-(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
-(*   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var *)
-(*                       (\* and _e(p1, e1)._par = _e(p2, e2)._par *\) *)
-(*                       (\* and _e(p1, e1)._p1 = _e(p2, e2)._p1 *\) *)
-(*   -> _po_loc_U_com(p1, e1, p2, e2) *)
+axiom po_loc :
+  forall p1, p2, e1, e2, s1, s2 : int [_po_loc(p1,e1,s1,p2,e2,s2)].
+  _po_loc(p1, e1, s1, p2, e2, s2)
+   -> _sci(p1, e1) < _sci(p2, e2)
 
-axiom rfe :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) and p1 <> p2
-  -> (*_co_U_prop(p1, e1, p2, e2)*)
-    _propi(p1, e1) < _propi(p2, e2)
+axiom co_1 :
+  forall p1, p2, e1, e2, s1, s2 : int [_co(p1,e1,s1,p2,e2,s2)].
+  _co(p1, e1, s1, p2, e2, s2)
+   -> _sci(p1, e1) < _sci(p2, e2)
 
-axiom fr :
-  forall pr, pw1, pw2, r, w1, w2 : int [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
-  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
-  -> (*_po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)*)
-    _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)
+axiom rf :
+  forall p1, e1, p2, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
+  _rf(p1, e1, s1, p2, e2, s2)
+   -> _sci(p1, e1) < _sci(p2, e2)
 
-(* axiom ppo_tso : *)
-(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
-(*   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R) *)
-(*   -> _co_U_prop(p1, e1, p2, e2) *)
+axiom ppo :
+  forall p1, p2, e1, e2, s1, s2 : int [_ppo(p1,e1,s1,p2,e2,s2)].
+  _ppo(p1, e1, s1, p2, e2, s2)
+   -> _propi(p1, e1) < _propi(p2, e2)
 
-axiom po_loc_U_com_1 :
-  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-   -> (*_po_loc_U_com(p1, e1, p2, e2)*)
-    _sci(p1, e1) < _sci(p2, e2)
-
-axiom po_loc_U_com_2 :
-  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2)
-   -> (*_po_loc_U_com(p1, e1, p2, e2)*)
-    _propi(p1, e1) < _propi(p2, e2)
-
-(* axiom po_loc_U_com_t : *)
-(*   forall p1, p2, p3, e1, e2, e3 : int [_po_loc_U_com(p1,e1,p2,e2),_po_loc_U_com(p2,e2,p3,e3)]. *)
-(*   _po_loc_U_com(p1, e1, p2, e2) and _po_loc_U_com(p2, e2, p3, e3) *)
-(*    -> _po_loc_U_com(p1, e1, p3, e3) *)
-
-axiom co_U_prop_1 :
-  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-  -> (*_co_U_prop(p1, e1, p2, e2)*)
-    _propi(p1, e1) < _propi(p2, e2)
-
-axiom co_U_prop_2 :
+axiom fence :
   forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
   _fence(p1, e1, p2, e2)
-  -> (*_co_U_prop(p1, e1, p2, e2)*)
-    _propi(p1, e1) < _propi(p2, e2)
+   -> _propi(p1, e1) < _propi(p2, e2)
 
-(* axiom co_U_prop_t : *)
-(*   forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)]. *)
-(*   _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3) *)
-(*    -> _co_U_prop(p1, e1, p3, e3)*)
-
-axiom po_loc_U_com :
-  forall p1, p2, e1, e2 : int [_po_loc_U_com(p1,e1,p2,e2)].
-  _po_loc_U_com(p1, e1, p2, e2)
-   -> _sci(p1,e1) < _sci(p2,e2)
-
-axiom co_U_prop :
-  forall p1, p2, e1, e2 : int [_co_U_prop(p1,e1,p2,e2)].
-  _co_U_prop(p1, e1, p2, e2)
-   -> _propi(p1,e1) < _propi(p2,e2)"
-
-(*"axiom rf :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
-
-(* axiom po_loc : *)
-(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
-(*   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var *)
-(*                       (* and _e(p1, e1)._par = _e(p2, e2)._par *) *)
-(*                       (* and _e(p1, e1)._p1 = _e(p2, e2)._p1 *) *)
-(*   -> _po_loc_U_com(p1, e1, p2, e2) *)
+axiom co_2 :
+  forall p1, e1, p2, e2, s1, s2 : int [_co(p1,e1,s1,p2,e2,s2)].
+  _co(p1, e1, s1, p2, e2, s2)
+  -> _propi(p1, e1) < _propi(p2, e2)
 
 axiom rfe :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) and p1 <> p2
-  -> _co_U_prop(p1, e1, p2, e2)
+  forall p1, p2, e1, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
+  _rf(p1, e1, s1, p2, e2, s2) and p1 <> p2
+  -> _propi(p1, e1) < _propi(p2, e2)
 
 axiom fr :
-  forall pr, pw1, pw2, r, w1, w2 : int [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
-  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
-  -> _po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)
-
-(* axiom ppo_tso : *)
-(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
-(*   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R) *)
-(*   -> _co_U_prop(p1, e1, p2, e2) *)
-
-axiom po_loc_U_com_1 :
-  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-   -> _po_loc_U_com(p1, e1, p2, e2)
-
-axiom po_loc_U_com_2 :
-  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2)
-   -> _po_loc_U_com(p1, e1, p2, e2)
-
-axiom po_loc_U_com_t :
-  forall p1, p2, p3, e1, e2, e3 : int [_po_loc_U_com(p1,e1,p2,e2),_po_loc_U_com(p2,e2,p3,e3)].
-  _po_loc_U_com(p1, e1, p2, e2) and _po_loc_U_com(p2, e2, p3, e3)
-   -> _po_loc_U_com(p1, e1, p3, e3)
-
-axiom co_U_prop_1 :
-  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-  -> _co_U_prop(p1, e1, p2, e2)
-
-axiom co_U_prop_2 :
-  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
-  _fence(p1, e1, p2, e2)
-  -> _co_U_prop(p1, e1, p2, e2)
-
-axiom co_U_prop_t :
-  forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)].
-  _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3)
-   -> _co_U_prop(p1, e1, p3, e3)"*)
+  forall pr, pw1, pw2, r, w1, w2, sr, sw1, sw2 : int
+    [_rf(pw1,w1,sw1,pr,r,sr),_co(pw1,w1,sw1,pw2,w2,sw2)].
+  _rf(pw1, w1, sw1, pr, r, sr) and _co(pw1, w1, sw1, pw2, w2, sw2)
+  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)"
 
   let typeof t =
     let t = (Hstring.view t) in
@@ -696,6 +614,12 @@ axiom co_U_prop_t :
       name ^ (string_of_int !cnt) ^ ext
 
   let formula = ref []
+
+  let contains s1 s2 =
+    let re = Str.regexp_string s2
+    in
+        try ignore (Str.search_forward re s1 0); true
+        with Not_found -> false
 
   (***********************************************)
 
@@ -805,9 +729,10 @@ axiom co_U_prop_t :
 
       (* Print Weak Memory Axomatization *)
       if not fp then fprintf filefmt "%s\n\n" !axioms;
+      (* fprintf filefmt "%s\n\n" !axioms; *)
 
       (* Print formula *)
-      fprintf filefmt "goal g: true\n";
+      fprintf filefmt "goal g: not (true\n";
       List.iter (fun cnf ->
 	fprintf str_formatter " and %a\n" print_cnf cnf;
 	let t = flush_str_formatter () in
@@ -816,6 +741,7 @@ axiom co_U_prop_t :
 	let t = replace t "False" "false" in
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
+      fprintf filefmt ")\n";
 	      
       (* Output file *)
       flush file;
@@ -823,13 +749,15 @@ axiom co_U_prop_t :
 
       (* Call solver and check result *)
       (* eprintf "-------------> Calling Alt-Ergo on %s <-------------\n" filename; *)
-      let output = Util.syscall ("alt-ergo -sat-mode " ^ filename) in
-      if String.compare output "unsat\n" = 0 then
-        raise (Solver.Unsat [])
-      else if String.compare (String.sub output 0 5) "unsat" = 0 then
-        raise (Solver.Unsat [])
-      else if String.compare output "unknown (sat)\n" <> 0 then
-	failwith "Error calling SMT solver";
+      let output = Util.syscall ("alt-ergo " ^ filename) in
+      if (contains output "Valid") then raise (Solver.Unsat []);
+      (* let output = Util.syscall ("alt-ergo -sat-mode " ^ filename) in *)
+      (* if String.compare output "unsat\n" = 0 then *)
+      (*   raise (Solver.Unsat []) *)
+      (* else if String.compare (String.sub output 0 5) "unsat" = 0 then *)
+      (*   raise (Solver.Unsat []) *)
+      (* else if String.compare output "unknown (sat)\n" <> 0 then *)
+      (* 	failwith "Error calling SMT solver"; *)
       (*if String.compare output "unsat\n" = 0 then exit 0;*)
 
       (*CSolver.solve ();*)
@@ -863,3 +791,62 @@ axiom co_U_prop_t :
     failwith "Alt_ergo.pop unsupported"
 
 end
+
+
+
+
+(*"axiom rf :
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
+
+(* axiom po_loc : *)
+(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
+(*   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var *)
+(*                       (* and _e(p1, e1)._par = _e(p2, e2)._par *) *)
+(*                       (* and _e(p1, e1)._p1 = _e(p2, e2)._p1 *) *)
+(*   -> _po_loc_U_com(p1, e1, p2, e2) *)
+
+axiom rfe :
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) and p1 <> p2
+  -> _co_U_prop(p1, e1, p2, e2)
+
+axiom fr :
+  forall pr, pw1, pw2, r, w1, w2 : int [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
+  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
+  -> _po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)
+
+(* axiom ppo_tso : *)
+(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
+(*   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R) *)
+(*   -> _co_U_prop(p1, e1, p2, e2) *)
+
+axiom po_loc_U_com_1 :
+  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
+   -> _po_loc_U_com(p1, e1, p2, e2)
+
+axiom po_loc_U_com_2 :
+  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2)
+   -> _po_loc_U_com(p1, e1, p2, e2)
+
+axiom po_loc_U_com_t :
+  forall p1, p2, p3, e1, e2, e3 : int [_po_loc_U_com(p1,e1,p2,e2),_po_loc_U_com(p2,e2,p3,e3)].
+  _po_loc_U_com(p1, e1, p2, e2) and _po_loc_U_com(p2, e2, p3, e3)
+   -> _po_loc_U_com(p1, e1, p3, e3)
+
+axiom co_U_prop_1 :
+  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
+  -> _co_U_prop(p1, e1, p2, e2)
+
+axiom co_U_prop_2 :
+  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
+  _fence(p1, e1, p2, e2)
+  -> _co_U_prop(p1, e1, p2, e2)
+
+axiom co_U_prop_t :
+  forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)].
+  _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3)
+   -> _co_U_prop(p1, e1, p3, e3)"*)

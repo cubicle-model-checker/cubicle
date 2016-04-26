@@ -347,8 +347,15 @@ module Formula = struct
       match cmp, l with
         | Eq, [t1; t2] ->
 	    AE.Literal.LT.mkv_eq t1 t2
-	| Neq, ts -> (*AE.Literal.LT.mkv_distinct false ts*)
-	    AE.Literal.LT.mkv_builtin true (AE.Hstring.make "distinct") ts
+	| Neq, ts ->
+	   (* begin match ts with *)
+	   (*   | t1 :: t2 :: [] -> *)
+		AE.Literal.LT.mkv_distinct false ts
+	     	(* AE.Literal.LT.view (AE.Literal.LT.neg *)
+	     	(* 		      (AE.Literal.LT.mk_eq t1 t2)) *)
+	   (*   | _ -> AE.Literal.LT.mkv_builtin false *)
+	   (*   			   (AE.Hstring.make "distinct") ts *)
+	   (* end *)
 	| Le, [t1; t2] ->
 	    AE.Literal.LT.mkv_builtin true (AE.Hstring.make "<=") [t1; t2]
 	| Lt, [t1; t2] ->
@@ -473,7 +480,8 @@ let rec mk_cnf = function
 
 end
 
-module WPT = AE.Why_ptree
+(* module WPT = AE.Why_ptree *)
+module WPT = AE.Commands
 module SAT = (val (AE.Sat_solvers.get_current ()) : AE.Sat_solvers.S)
 module FE = AE.Frontend.Make(SAT)
 
@@ -520,10 +528,11 @@ module Make (Options_ : sig val profiling : bool end) = struct
       AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
     AE.Term.make (AE.Symbols.name p) al AE.Ty.Tint
 
-  let mk_evt_f ?(qv=false) (p, e) f =
+  let mk_evt_f ?(qv=false) (p, e, s) f =
     let tp = AE.Term.make (mk_symb ~qv p) [] AE.Ty.Tint in
     let te = AE.Term.make (mk_symb ~qv e) [] AE.Ty.Tint in
-    let tem = Term.make_app (Hstring.make "_e") [tp ; te] in
+    let ts = AE.Term.make (mk_symb ~qv s) [] AE.Ty.Tint in
+    let tem = Term.make_app (Hstring.make "_e") [tp;te;ts] in
     Term.make_app (Hstring.make f) [tem]
 
   let dl = (Lexing.dummy_pos, Lexing.dummy_pos)
@@ -567,38 +576,265 @@ module Make (Options_ : sig val profiling : bool end) = struct
     | [] -> mk_true ()
     | [c] -> mk_cnf c
     | cl -> mk_cnf (List.flatten cl)
+  (* let mk_forall n up bv tr f = *)
+  (*   let mk_vterm = List.map (fun (v, t) -> *)
+  (*     AE.Term.make (AE.Symbols.var v) [] t) in *)
+  (*   let up = mk_vterm up in (\* should be empty *\) *)
+  (*   let bv = mk_vterm bv in *)
+  (*   AE.Formula.mk_forall *)
+  (*     (AE.Term.Set.of_list up) (\* upvars = vars bound before *\) *)
+  (*     (AE.Term.Set.of_list bv) (\* bvars = qtf vars in formula *\) *)
+  (*     tr f n (id ()) *)
   let mk_forall n up bv tr f =
     let mk_vterm = List.map (fun (v, t) ->
       AE.Term.make (AE.Symbols.var v) [] t) in
-    let up = mk_vterm up in (* should be empty *)
-    let bv = mk_vterm bv in
-    AE.Formula.mk_forall
-      (AE.Term.Set.of_list up) (* upvars = vars bound before *)
-      (AE.Term.Set.of_list bv) (* bvars = qtf vars in formula *)
-      tr f n (id ())
+    let qvars = AE.Term.Set.of_list (mk_vterm bv) in (* bvars = qtf vars in f *)
+    let binders = AE.Formula.mk_binders qvars in
+    AE.Formula.mk_forall n dl binders tr f (id ()) None
   let mk_axiom n up bv tr f =
     let f = mk_forall n up bv tr f in
     WPT.{ st_decl = Assume(f, true) ; st_loc = dl }
+  (* let mk_goal f = *)
+  (*   let f = mk_formula f in *)
+  (*   WPT.{ st_decl = Query("g", f, [], (\*Check*\)Thm) ; st_loc = dl } *)
   let mk_goal f =
     let f = mk_formula f in
-    WPT.{ st_decl = Query("g", f, [], Check(*Thm*)) ; st_loc = dl }
+    WPT.{ st_decl = Query("g", f, [], (*Check*)AE.Typed.Thm) ; st_loc = dl }
        
   let init_axioms () =
     let qv = true in
     let ety2 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "_e1" ; mk_ety "_e2" ] in
+    let ety2s = [ mk_ety "p1" ; mk_ety "p2" ;
+		  mk_ety "_e1" ; mk_ety "_e2" ;
+		  mk_ety "_s1" ; mk_ety "_s2" ] in
     let ety3 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "p3" ;
 		 mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ] in
+    let ety3s = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "p3" ;
+		  mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ;
+		  mk_ety "_s1" ; mk_ety "_s2" ; mk_ety "_s3" ] in
     let e1e2 = ["p1";"_e1";"p2";"_e2"] in
+    let e1e2s = ["p1";"_e1";"_s1";"p2";"_e2";"_s2"] in
     let e2e3 = ["p2";"_e2";"p3";"_e3"] in
+    let e2e3s = ["p2";"_e2";"_s2";"p3";"_e3";"_s3"] in
     let e1e3 = ["p1";"_e1";"p3";"_e3"] in
+    let e1e3s = ["p1";"_e1";"_s1";"p3";"_e3";"_s3"] in
     let e1 = ("p1", "_e1") in
     let e2 = ("p2", "_e2") in
     let e3 = ("p3", "_e3") in
+    let e1s = ("p1", "_e1", "_s1") in
+    let e2s = ("p2", "_e2", "_s2") in
+    let e3s = ("p3", "_e3", "_s3") in
     let tp1 = AE.Term.make (mk_symb ~qv "p1") [] AE.Ty.Tint in
     let tp2 = AE.Term.make (mk_symb ~qv "p2") [] AE.Ty.Tint in
     let tw = Term.make_app (Hstring.make "_W") [] in
     let tr = Term.make_app (Hstring.make "_R") [] in
 
+    let axiom_rf_val = mk_axiom "axiom_rf_val" [] ety2s
+      [ [ mk_pred ~qv "_rf" e1e2s ], None ]
+      (mk_imp
+    	(mk_eq_true (mk_pred ~qv "_rf" e1e2s))
+    	(mk_eq (mk_evt_f ~qv e1s "_val") (mk_evt_f ~qv e2s "_val"))) in
+    Queue.push axiom_rf_val axioms;
+
+    let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2s
+      [ [ mk_pred ~qv "_po_loc" e1e2s ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_po_loc" e1e2s))
+	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
+    Queue.push axiom_po_loc axioms;
+
+    let axiom_co_1 = mk_axiom "axiom_co_1" [] ety2s
+      [ [ mk_pred ~qv "_co" e1e2s ], None ]
+      (mk_imp
+    	(mk_eq_true (mk_pred ~qv "_co" e1e2s))
+    	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
+    Queue.push axiom_co_1 axioms;
+
+    let axiom_rf = mk_axiom "axiom_rf" [] ety2s
+      [ [ mk_pred ~qv "_rf" e1e2s ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_rf" e1e2s))
+	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
+    Queue.push axiom_rf axioms;
+
+    let axiom_ppo = mk_axiom "axiom_ppo" [] ety2s
+      [ [ mk_pred ~qv "_ppo" e1e2s ], None ]
+      (mk_imp
+	(mk_eq_true (mk_pred ~qv "_ppo" e1e2s))
+	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    Queue.push axiom_ppo axioms;
+
+    let axiom_fence = mk_axiom "axiom_fence" [] ety2
+      [ [ mk_pred ~qv "_fence" e1e2 ], None ]
+      (mk_imp
+    	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
+	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    Queue.push axiom_fence axioms;
+
+    let axiom_co_2 = mk_axiom "axiom_co_2" [] ety2s
+      [ [ mk_pred ~qv "_co" e1e2s ], None ]
+      (mk_imp
+    	(mk_eq_true (mk_pred ~qv "_co" e1e2s))
+    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    Queue.push axiom_co_2 axioms;
+
+    let axiom_rfe = mk_axiom "axiom_rfe" [] ety2s
+      [ [ mk_pred ~qv "_rf" e1e2s ], None ]
+      (mk_imp
+    	(mk_and
+    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2s))
+    	  (mk_neq tp1 tp2))
+    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    Queue.push axiom_rfe axioms;
+
+    let axiom_fr = mk_axiom "axiom_fr" [] ety3s
+      [ [ mk_pred ~qv "_rf" e1e2s ; mk_pred ~qv "_co" e1e3s ], None ]
+      (mk_imp
+    	(mk_and
+    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2s))
+    	  (mk_eq_true (mk_pred ~qv "_co" e1e3s)))
+    	(mk_and
+    	  (mk_lt (mk_fun ~qv "_sci" e2) (mk_fun ~qv "_sci" e3))
+    	  (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3)))) in
+    Queue.push axiom_fr axioms
+
+  let init_axioms () =
+    if Options.model = Options.SC then ()
+    else init_axioms ()
+
+  let formula = ref []
+
+  (***********************************************)
+
+  let check_strategy = Lazy
+
+  let push_stack = Stack.create ()
+  
+  let calls = ref 0
+  module Time = Timer.Make (Options_)
+
+  let get_time = Time.get
+  let get_calls () = !calls
+
+  (*module CSolver = Solver.Make (Options_)*)
+
+  (***********************************************)
+
+  let clear () =
+    formula := [](*;
+    Stack.clear push_stack;
+    CSolver.clear ()*)
+
+(*let check_unsatcore uc =
+    eprintf "Unsat Core : @.";
+    List.iter 
+      (fun c -> 
+        eprintf "%a@." (Formula.print_list "or") 
+          (List.map (fun x -> Formula.Lit x) c)) uc;
+    eprintf "@.";
+    try 
+      clear ();
+      CSolver.assume uc 0;
+      CSolver.solve ();
+      eprintf "Not an unsat core !!!@.";
+      assert false
+    with 
+      | Solver.Unsat _ -> ();
+      | Solver.Sat  -> 
+          eprintf "Sat: Not an unsat core !!!@.";
+          assert false
+
+  let export_unsatcore cl = 
+    let uc = List.map (fun {Solver_types.atoms=atoms} ->
+      let l = ref [] in
+      for i = 0 to Vec.size atoms - 1 do
+        l := (Vec.get atoms i).Solver_types.lit :: !l
+      done; 
+      !l) cl
+    in (* check_unsatcore uc; *)
+    uc
+
+  module SInt = 
+    Set.Make (struct type t = int let compare = Pervasives.compare end)
+
+  let export_unsatcore2 cl =
+    let s = 
+      List.fold_left 
+        (fun s {Solver_types.name = n} ->
+	  try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
+    in 
+    SInt.elements s *)
+		 
+  let assume ~id f =
+    Time.start ();
+    try
+      formula := (Formula.make_cnf f) :: !formula;
+      (*CSolver.assume (Formula.make_cnf f) id;*)
+      Time.pause ()
+    with Solver.Unsat ex ->
+      Time.pause ();
+      raise (Unsat [] (*(export_unsatcore2 ex)*))
+
+  let check ?(fp=false) () =
+    incr calls;
+    Time.start ();
+    try
+
+      (* Initial queue *)
+      let q = if fp then Queue.create () else Queue.copy axioms in
+
+      (* Generate goal formula *)
+      let goal = mk_goal (List.rev !formula) in
+      Queue.push goal q;
+      
+      (* Call solver and check result *)
+      let report d s steps = match s with
+	| FE.Unsat dep -> raise (Solver.Unsat [])
+	| FE.Inconsistent -> raise (Solver.Unsat [])
+	| FE.Unknown t -> raise (Solver.Sat)
+	| FE.Sat t -> raise (Solver.Sat)
+      in
+      (* SAT.start (); *)
+      SAT.reset_steps ();
+      ignore (Queue.fold (FE.process_decl report)
+        (SAT.empty (), true, AE.Explanation.empty) q);
+
+      (*CSolver.solve ();*)
+      Time.pause ()
+    with
+      | Solver.Sat -> Time.pause ()
+      | Solver.Unsat ex ->
+	  Time.pause ();
+	  raise (Unsat [] (*(export_unsatcore2 ex)*))
+
+  (*let save_state = CSolver.save
+
+  let restore_state = CSolver.restore*)
+
+  let entails f = failwith "Alt_ergo.entails unsupported"
+    (*let st = save_state () in
+    let ans = 
+      try
+        assume ~id:0 (Formula.make Formula.Not [f]) ;
+        check ();
+        false
+      with Unsat _ -> true
+    in
+    restore_state st;
+    ans*)
+
+  let push () = (*Stack.push (save_state ()) push_stack*)
+    failwith "Alt_ergo.push unsupported"
+
+  let pop () = (*Stack.pop push_stack |> restore_state*)
+    failwith "Alt_ergo.pop unsupported"
+
+end
+
+
+
+
+(*
     let axiom_rf = mk_axiom "axiom_rf" [] ety2
       [ [ mk_pred ~qv "_rf" e1e2 ], None ]
       (mk_imp
@@ -721,135 +957,4 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	(mk_eq_true (mk_pred ~qv "_co_U_prop" e1e2))
 	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
     Queue.push axiom_co_U_prop axioms
-
-  let init_axioms () =
-    if Options.model = Options.SC then ()
-    else init_axioms ()
-
-  let formula = ref []
-
-  (***********************************************)
-
-  let check_strategy = Lazy
-
-  let push_stack = Stack.create ()
-  
-  let calls = ref 0
-  module Time = Timer.Make (Options_)
-
-  let get_time = Time.get
-  let get_calls () = !calls
-
-  (*module CSolver = Solver.Make (Options_)*)
-
-  (***********************************************)
-
-  let clear () =
-    formula := [](*;
-    Stack.clear push_stack;
-    CSolver.clear ()*)
-
-(*let check_unsatcore uc =
-    eprintf "Unsat Core : @.";
-    List.iter 
-      (fun c -> 
-        eprintf "%a@." (Formula.print_list "or") 
-          (List.map (fun x -> Formula.Lit x) c)) uc;
-    eprintf "@.";
-    try 
-      clear ();
-      CSolver.assume uc 0;
-      CSolver.solve ();
-      eprintf "Not an unsat core !!!@.";
-      assert false
-    with 
-      | Solver.Unsat _ -> ();
-      | Solver.Sat  -> 
-          eprintf "Sat: Not an unsat core !!!@.";
-          assert false
-
-  let export_unsatcore cl = 
-    let uc = List.map (fun {Solver_types.atoms=atoms} ->
-      let l = ref [] in
-      for i = 0 to Vec.size atoms - 1 do
-        l := (Vec.get atoms i).Solver_types.lit :: !l
-      done; 
-      !l) cl
-    in (* check_unsatcore uc; *)
-    uc
-
-  module SInt = 
-    Set.Make (struct type t = int let compare = Pervasives.compare end)
-
-  let export_unsatcore2 cl =
-    let s = 
-      List.fold_left 
-        (fun s {Solver_types.name = n} ->
-	  try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
-    in 
-    SInt.elements s *)
-		 
-  let assume ~id f =
-    Time.start ();
-    try
-      formula := (Formula.make_cnf f) :: !formula;
-      (*CSolver.assume (Formula.make_cnf f) id;*)
-      Time.pause ()
-    with Solver.Unsat ex ->
-      Time.pause ();
-      raise (Unsat [] (*(export_unsatcore2 ex)*))
-
-  let check ?(fp=false) () =
-    incr calls;
-    Time.start ();
-    try
-
-      (* Initial queue *)
-      let q = if fp then Queue.create () else Queue.copy axioms in
-
-      (* Generate goal formula *)
-      let goal = mk_goal (List.rev !formula) in
-      Queue.push goal q;
-      
-      (* Call solver and check result *)
-      let report d s steps = match s with
-	| FE.Unsat dep -> raise (Solver.Unsat [])
-	| FE.Inconsistent -> raise (Solver.Unsat [])
-	| FE.Unknown t -> raise (Solver.Sat)
-	| FE.Sat t -> raise (Solver.Sat)
-      in
-      SAT.start ();
-      ignore (Queue.fold (FE.process_decl report)
-        (SAT.empty (), true, AE.Explanation.empty) q);
-
-      (*CSolver.solve ();*)
-      Time.pause ()
-    with
-      | Solver.Sat -> Time.pause ()
-      | Solver.Unsat ex ->
-	  Time.pause ();
-	  raise (Unsat [] (*(export_unsatcore2 ex)*))
-
-  (*let save_state = CSolver.save
-
-  let restore_state = CSolver.restore*)
-
-  let entails f = failwith "Alt_ergo.entails unsupported"
-    (*let st = save_state () in
-    let ans = 
-      try
-        assume ~id:0 (Formula.make Formula.Not [f]) ;
-        check ();
-        false
-      with Unsat _ -> true
-    in
-    restore_state st;
-    ans*)
-
-  let push () = (*Stack.push (save_state ()) push_stack*)
-    failwith "Alt_ergo.push unsupported"
-
-  let pop () = (*Stack.pop push_stack |> restore_state*)
-    failwith "Alt_ergo.pop unsupported"
-
-end
+ *)

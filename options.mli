@@ -23,6 +23,7 @@ type solver = AltErgo | AltErgoFile | AltErgoLib | Z3
 
 type model = SC | TSO
 
+val solver : solver
 val model : model
 
 val file : string

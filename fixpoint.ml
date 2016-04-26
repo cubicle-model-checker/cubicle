@@ -339,9 +339,9 @@ end = struct
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
-    if Cube.inconsistent_2arrays vis_array n_array then nodes
-    else
-      if !Options.size_proc <> 0 then
+    if !Options.size_proc <> 0 then
+      if Cube.inconsistent_2arrays vis_array n_array then nodes
+      else
         (*let subst = Event.es_permutations vis_n.es n.es in*)
         (vis_n, vis_array)::nodes (*
         List.fold_left (fun nodes subst ->

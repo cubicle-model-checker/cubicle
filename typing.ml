@@ -589,7 +589,8 @@ let system s =
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then transitions s.trans;
-  if Options.(subtyping && not murphi) then begin
+  if Options.(subtyping && not murphi &&
+	      solver <> AltErgoFile && solver <> AltErgoLib) then begin
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
   end;

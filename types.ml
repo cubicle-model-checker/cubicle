@@ -62,10 +62,10 @@ type term =
   | Arith of term * int MConst.t
 
   | Field of term * Hstring.t (* term is Elem/Access *)
-  | List of term list (* term is Elem *)
-  | Read of Variable.t * Hstring.t * Variable.t list (* only for typing *)
-  | Write of Variable.t * Hstring.t * Variable.t list (* experiment *)
-  | Fence of Variable.t (* experiment *)
+  | List of term list (* term is Elem / Elem list *)
+  | Read of Variable.t * Hstring.t * Variable.t list
+  | Write of Variable.t * Hstring.t * Variable.t list
+  | Fence of Variable.t
 
 let is_int_const = function
   | ConstInt _ -> true
