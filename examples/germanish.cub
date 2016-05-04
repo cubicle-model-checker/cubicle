@@ -13,6 +13,7 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
+trans_regexp : req_shared(z) ;
 
 transition req_shared (n)
 requires { Curcmd = Empty && Cache[n] = Invalid }

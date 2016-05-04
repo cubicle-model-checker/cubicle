@@ -143,7 +143,7 @@ let stateless = ref false
 let max_cands = ref (-1)
 let max_forward = ref (-1)
 let candidate_heuristic = ref (-1)
-let forward_sym = ref true
+let forward_sym = ref false
 
 let abstr_num = ref false
 let num_range_low = ref 0
@@ -329,7 +329,7 @@ let specs =
     "<low> <up> abstract numerical values in [<low>; <up>] during forward \
      exploration";
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
-    "-forward-nosym", Arg.Clear forward_sym,
+    "-forward-sym", Arg.Set forward_sym,
     " disable symmetry reduction in forward exploration";
     "-fnos", Arg.Clear forward_sym,
     " disable symmetry reduction in forward exploration";

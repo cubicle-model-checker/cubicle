@@ -278,9 +278,7 @@ let approximations s =
            let c = Cube.create_normal sa' in
            if cube_known_bad c || cube_likely_bad c then acc
            else 
-             let n = if approx_history then
-                 Node.create ~kind:Approx ~hist:(Some s) c
-               else Node.create ~kind:Approx c in
+             let n = Node.create ~kind:Approx ~hist:(Some s) c in
              n :: acc
       ) parts []
   in

@@ -1468,7 +1468,9 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
           let from = List.map (fun hl -> 
             (st_tr.st_name, List.rev st_tr.st_args) :: hl)
             from in
-          let morf = List.rev from in
+          let morf = if debug_regexp || copy_regexp 
+            then List.map List.rev from
+            else [] in
           let der = debug_regexp && 
             List.exists (Regexp.Automaton.recognize autom) morf in
           if der then begin
