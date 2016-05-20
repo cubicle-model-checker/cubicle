@@ -42,13 +42,13 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I +../lablgtk2 -I common/ -I smt/ 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma
+REQBIB=nums.cma unix.cma functory.cma lablgtk.cma lablgtksourceview2.cma 
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -61,7 +61,7 @@ BIBOPT=$(BIBBYTE:.cma=.cmxa)
 # main target
 #############
 
-NAME = cubicle
+NAME = cubicle-gui
 BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
@@ -120,23 +120,23 @@ CMO = version.cmo options.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \
-      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
+      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo astparser.cmo astprinter.cmo guiwindow.cmo gui.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 
-MAINCMO = $(CMO) main.cmo
-MAINCMX = $(MAINCMO:.cmo=.cmx)
+GUICMO = $(CMO) gui.cmo
+GUICMX = $(GUICMO:.cmo=.cmx)
 
 GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
 
 byte: $(NAME).byte
 opt: $(NAME).opt
 
-$(NAME).byte: $(MAINCMO)
+$(NAME).byte: $(GUICMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
 
-$(NAME).opt: $(MAINCMX)
+$(NAME).opt: $(GUICMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
@@ -303,7 +303,7 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
 	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
 	fixpoint.ml fixpoint.mli forward.ml forward.mli\
-	instantiation.ml instantiation.mli lexer.mll main.ml\
+	instantiation.ml instantiation.mli lexer.mll astparser.ml astprinter.ml guiwindow.ml gui.ml\
 	murphi.ml murphi.mli\
 	mulexer.mll muparser.mly muparser_globals.mli muparser_globals.ml\
 	node.ml node.mli options.ml options.mli oracle.mli\
@@ -392,7 +392,7 @@ try: $(GENERATED)
 	mkdir -p try-cubicle/src/common
 	cp $(SMTFILES) try-cubicle/src/smt
 	cp $(COMMONFILES) try-cubicle/src/common
-	cp $(filter-out main.ml,$(FILES)) try-cubicle/src/
+	cp $(filter-out gui.ml,$(FILES)) try-cubicle/src/
 	cp $(GENERATED) try-cubicle/src/
 	cp -f fake_functory.mli try-cubicle/src/functory.mli
 	cp -f fake_functory.ml try-cubicle/src/functory.ml

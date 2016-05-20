@@ -214,9 +214,10 @@ let cin =
     else raise (Arg.Bad "no .cub extension");
   in
   Arg.parse alspecs set_file usage;
-  match !ofile with 
-  | Some f -> file := f ; open_in f 
+  match !ofile with
+  | Some f -> file := f ; open_in f
   | None -> stdin
+
 
 let type_only = !type_only
 let maxrounds = !maxrounds
