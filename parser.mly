@@ -19,6 +19,7 @@
   open Types
   open Parsing
   open Ptree
+  open Util
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -160,14 +161,14 @@ var_decl:
   | VAR mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Globals.add $2; 
-    loc (), $2, $4 }
+    { loc = loc () ; active = true}, $2, $4 }
 ;
 
 const_decl:
   | CONST mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Consts.add $2;
-    loc (), $2, $4 }
+    { loc = loc () ; active = true }, $2, $4 }
 ;
 
 array_decl:
@@ -176,7 +177,7 @@ array_decl:
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
-	loc (), $2, ($4, $7)}
+	{ loc = loc () ; active = true}, $2, ($4, $7)}
 ;
 
 type_defs:
@@ -195,11 +196,11 @@ size_proc:
 ;
       
 type_def:
-  | TYPE lident { (loc (), ($2, [])) }
+  | TYPE lident { ( {loc = loc () ; active = true}, ($2, [])) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
+      { Smt.set_sum true; List.iter Constructors.add $4; ({ loc = loc () ; active = true}, ($2, $4)) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
+      { Smt.set_sum true; List.iter Constructors.add $5; ({ loc = loc () ; active = true}, ($2, $5)) }
 ;
 
 constructors:
@@ -208,18 +209,19 @@ constructors:
 ;
 
 init:
-  | INIT LEFTBR expr RIGHTBR { loc (), [], $3 } 
-  | INIT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | INIT LEFTBR expr RIGHTBR { { loc = loc () ; active = true } , [], $3 } 
+  | INIT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { {loc = loc () ; active = true}
+, $3, $6 }
 ;
 
 invariant:
-  | INVARIANT LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | INVARIANT LEFTBR expr RIGHTBR { {loc = loc () ; active = true }, [], $3 }
+  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { {loc = loc () ; active = true}, $3, $6 }
 ;
 
 unsafe:
-  | UNSAFE LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | UNSAFE LEFTBR expr RIGHTBR { { loc = loc () ; active = true}, [], $3 }
+  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { {loc = loc () ; active = true}, $3, $6 }
 ;
 
 transition_name:
@@ -237,7 +239,7 @@ transition:
 	    ptr_assigns = assigns; 
 	    ptr_nondets = nondets; 
 	    ptr_upds = upds;
-            ptr_loc = loc ();
+            ptr_loc = {loc = loc (); active = true};
           }
       }
 ;
@@ -288,7 +290,7 @@ update:
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
         ) $3;
-        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7} }
+        Upd { pup_loc = { loc = loc (); active = true}; pup_arr = $1; pup_arg = $3; pup_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -298,7 +300,7 @@ update:
         let a = PAnd cube in
         let js = List.rev rjs in
 	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+	Upd { pup_loc = { loc = loc () ; active = true }; pup_arr = $1; pup_arg = js; pup_swts = sw}  }
 ;
 
 switchs:

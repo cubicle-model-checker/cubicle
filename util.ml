@@ -146,6 +146,10 @@ let chromatic start stop steps =
 
 type loc = Lexing.position * Lexing.position
 
+type info = { loc : loc ; mutable active : bool }
+
+(* type info = { location : loc } *)
+
 let report_loc fmt (b,e) =
   let l = b.pos_lnum in
   let fc = b.pos_cnum - b.pos_bol + 1 in

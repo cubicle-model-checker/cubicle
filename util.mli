@@ -54,7 +54,6 @@ val syscall_full : string -> string * string * Unix.process_status
 val remove_trailing_whitespaces_end : string -> string
 
 
-
 type color =
     { c_red : float;
       c_green : float;
@@ -71,9 +70,11 @@ val hex_color : color -> string
 
 val chromatic : color -> color -> int -> unit -> color 
 
-
 type loc = Lexing.position * Lexing.position
 (** Location in file *)
+
+type info = { loc : loc ; mutable active : bool }
+
 
 val report_loc : Format.formatter -> loc -> unit
 (** Report location on formatter *)

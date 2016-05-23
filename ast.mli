@@ -57,7 +57,7 @@ type transition_info = {
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
-  tr_loc : loc; (** location information *)
+  tr_loc : info; (** location information *)
 }
 (** type of parameterized transitions *)
 
@@ -71,19 +71,24 @@ type transition = {
 }
 
 type system = {
-  globals : (loc * Hstring.t * Smt.Type.t) list;
-  consts : (loc * Hstring.t * Smt.Type.t) list;
-  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  type_defs : (loc * type_constructors) list;
-  init : loc * Variable.t list * dnf;
-  invs : (loc * Variable.t list * SAtom.t) list;
-  unsafe : (loc * Variable.t list * SAtom.t) list;  
+  globals : (info * Hstring.t * Smt.Type.t ) list;
+  consts : (info * Hstring.t * Smt.Type.t) list;
+  arrays : (info * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  type_defs : (info * type_constructors) list;
+  init : info * Variable.t list * dnf;
+  invs : (info * Variable.t list * SAtom.t) list;
+  unsafe : (info * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
 }
+
+
 (** type of untyped transition systems constructed by parsing *)
 
 
 (** {2 Typed transition system} *)
+
+
+
 
 (** the kind of nodes *)
 type kind = 

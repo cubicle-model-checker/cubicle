@@ -13,7 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 open Types
 open Util
 open Ast
@@ -148,7 +147,7 @@ type pswts = (cformula * term) list
 type pglob_update = PUTerm of term | PUCase of pswts
 
 type pupdate = {
-  pup_loc : loc;
+  pup_loc : info;
   pup_arr : Hstring.t;
   pup_arg : Variable.t list;
   pup_swts : pswts;
@@ -161,25 +160,25 @@ type ptransition = {
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
-  ptr_loc : loc;
+  ptr_loc : info;
 }
 
 type psystem = {
-  pglobals : (loc * Hstring.t * Smt.Type.t) list;
-  pconsts : (loc * Hstring.t * Smt.Type.t) list;
-  parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  ptype_defs : (loc * Ast.type_constructors) list;
-  pinit : loc * Variable.t list * cformula;
-  pinvs : (loc * Variable.t list * cformula) list;
-  punsafe : (loc * Variable.t list * cformula) list;
+  pglobals : (info * Hstring.t * Smt.Type.t) list;
+  pconsts : (info * Hstring.t * Smt.Type.t) list;
+  parrays : (info * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  ptype_defs : (info * Ast.type_constructors) list;
+  pinit : info * Variable.t list * cformula;
+  pinvs : (info * Variable.t list * cformula) list;
+  punsafe : (info * Variable.t list * cformula) list;
   ptrans : ptransition list;
 }
 
 
 type pdecl =
-  | PInit of (loc * Variable.t list * cformula)
-  | PInv of (loc * Variable.t list * cformula)
-  | PUnsafe of (loc * Variable.t list * cformula)
+  | PInit of (info * Variable.t list * cformula)
+  | PInv of (info * Variable.t list * cformula)
+  | PUnsafe of (info * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
 
@@ -532,7 +531,7 @@ let encode_pglob_update = function
   | PUCase pswts -> UCase (encode_pswts pswts)
 
 let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
-  {  up_loc = pup_loc;
+  {  up_loc = pup_loc.loc;
      up_arr = pup_arr;
      up_arg = pup_arg;
      up_swts = encode_pswts pup_swts;

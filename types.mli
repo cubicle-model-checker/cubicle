@@ -143,7 +143,7 @@ module rec Atom : sig
   val variables_proc : t -> Variable.Set.t
   (** same as [variables] but only return skolemized variables of the form
       [#i] *)
-
+ 
   val print : Format.formatter -> t -> unit
   (** prints an atom *)
 

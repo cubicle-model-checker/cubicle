@@ -103,9 +103,7 @@ let rec unique error = function
 
 let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
-  then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
-
-let refinements = Hstring.H.create 17
+  then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc let refinements = Hstring.H.create 17
 
 let infer_type x1 x2 =
   try
@@ -199,11 +197,11 @@ let atom loc init_variant args = function
 let atoms loc ?(init_variant=false) args =
   SAtom.iter (atom loc init_variant args)
 
-let init (loc, args, lsa) = List.iter (atoms loc ~init_variant:true args) lsa
+let init (info, args, lsa) = List.iter (atoms info.loc ~init_variant:true args) lsa
 
-let unsafe (loc, args, sa) = 
-  unique (fun x-> error (DuplicateName x) loc) args; 
-  atoms loc args sa
+let unsafe (info, args, sa) = 
+  unique (fun x-> error (DuplicateName x) info.loc) args; 
+  atoms info.loc args sa
 
 let nondets loc l = 
   unique (fun c -> error (DuplicateAssign c) loc) l;
@@ -266,19 +264,19 @@ let updates args =
 
 let transitions = 
   List.iter 
-    (fun ({tr_args = args; tr_loc = loc} as t) -> 
-       unique (fun x-> error (DuplicateName x) loc) args; 
-       atoms loc args t.tr_reqs;
+    (fun ({tr_args = args; tr_loc = info} as t) -> 
+       unique (fun x-> error (DuplicateName x) info.loc) args; 
+       atoms info.loc args t.tr_reqs;
        List.iter 
 	 (fun (x, cnf) -> 
-	    List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+	    List.iter (atoms info.loc (x::args)) cnf)  t.tr_ureq;
        updates args t.tr_upds;
-       assigns loc args t.tr_assigns;
-       nondets loc t.tr_nondets)
+       assigns info.loc args t.tr_assigns;
+       nondets info.loc t.tr_nondets)
 
-let declare_type (loc, (x, y)) =
+let declare_type (info, (x, y)) =
   try Smt.Type.declare x y
-  with Smt.Error e -> error (Smt e) loc
+  with Smt.Error e -> error (Smt e) info.loc
 
 let declare_symbol loc n args ret =
   try Smt.Symbol.declare n args ret
@@ -289,16 +287,16 @@ let init_global_env s =
   List.iter declare_type s.type_defs;
   let l = ref [] in
   List.iter 
-    (fun (loc, n, t) -> 
-       declare_symbol loc n [] t;
+    (fun (info, n, t) -> 
+       declare_symbol info.loc n [] t;
        l := (n, t)::!l) s.consts;
   List.iter 
-    (fun (loc, n, t) -> 
-       declare_symbol loc n [] t;
+    (fun (info, n, t) -> 
+       declare_symbol info.loc n [] t;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (loc, n, (args, ret)) -> 
-       declare_symbol loc n args ret;
+    (fun (info, n, (args, ret)) -> 
+       declare_symbol info.loc n args ret;
        l := (n, ret)::!l) s.arrays;
   !l
 
