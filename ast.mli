@@ -1,4 +1,4 @@
- (**************************************************************************)
+(**************************************************************************)
 (*                                                                        *)
 (*                              Cubicle                                   *)
 (*                                                                        *)
@@ -23,7 +23,7 @@ open Util
 (** {2 Untyped transition system} *)
 
 
-type dnf = SAtom.t list
+type dnf = SAtom.t list 
 (** Disjunctive normal form: each element of the list is a disjunct *)
 
 type type_constructors = Hstring.t * (Hstring.t list)
@@ -31,31 +31,40 @@ type type_constructors = Hstring.t * (Hstring.t list)
     declaration of type [t] with two constructors [A] and [B]. If the
     list of constructors is empty, the type [t] is defined abstract. *)
 
-type swts = (SAtom.t * Term.t) list
+type swts = (SAtom.t * Term.t) list 
+
 (** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
 
-type glob_update = UTerm of Term.t | UCase of swts
-(** Updates of global variables, can be a term or a case construct. *)
+type glob_update =  UTerm of (Term.t)  | UCase of (swts)
 
+(** Updates of global variables, can be a term or a case construct. *)
+    
 type update = {
-  up_loc : loc; (** location information *)
+  up_loc : info; (** location information *)
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
   up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : swts;
-  (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
+  up_info : (Hstring.t * Variable.t list * Term.t)  option;
+(** condition (conjunction)(ex. [C]) and term (ex. [t] *)
 }
 (** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
+              
+type transition_reqs = { tr_r : SAtom.t ; tr_info : info }
+       
+type transition_assign = { ta_n : Hstring.t ; ta_p : glob_update ; ta_i : info }
+
+type transition_nondet = { tn_n : Hstring.t ; tn_i : info }
 
 type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
-  tr_reqs : SAtom.t; (** guard *)
+  tr_reqs : transition_reqs; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
-  tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
+  tr_assigns : transition_assign list; (** updates of global variables *)
   tr_upds : update list; (** updates of arrays *)
-  tr_nondets : Hstring.t list;
+  tr_nondets : transition_nondet list ;
   (** non deterministic updates (only for global variables) *)
   tr_loc : info; (** location information *)
 }

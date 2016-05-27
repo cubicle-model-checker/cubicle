@@ -466,12 +466,12 @@ let print_swts ot fmt swts =
   end
 
 
-let print_assign fmt (v, up) =
+let print_assign fmt (v, up,_) =
   let tv = Elem (v, Glob) in
   match up with
   | UTerm t ->
     fprintf fmt "%a := %a;" print_term (Elem(v,Glob)) print_term_prev t
-  | UCase swts -> print_swts tv fmt swts
+  | UCase (swts) -> print_swts tv fmt swts
 
 let print_assigns fmt = List.iter (fprintf fmt "%a@ " print_assign)
 
@@ -479,19 +479,20 @@ let print_assigns fmt = List.iter (fprintf fmt "%a@ " print_assign)
 let print_update fmt { up_arr; up_arg; up_swts } =
   let ta = Access(up_arr, up_arg) in
   let close_fors = print_fors fmt up_arg in
-  print_swts ta fmt up_swts;
+  let (up_swt) = up_swts in
+  print_swts ta fmt up_swt;
   close_fors ()
 
 let print_updates fmt = List.iter (fprintf fmt "%a@ " print_update)
 
-let print_nondet cpt fmt v =
+let print_nondet cpt fmt (v,_) =
   fprintf fmt "%a := d%d;" print_term (Elem(v,Glob)) cpt
 
 let print_nondets ndts =
   let cpt = ref 0 in
   print_list (fun n -> incr cpt; print_nondet !cpt n) "@ " ndts
 
-let print_nondet_undef fmt v =
+let print_nondet_undef fmt (v,_) =
   let _, ty = Smt.Symbol.type_of v in
   if ty == Smt.Type.type_proc || Smt.Type.constructors ty = [] then
     fprintf fmt "undefine %a;" print_term (Elem(v,Glob))
@@ -537,10 +538,10 @@ let rec print_ureqs args fmt = function
     fprintf fmt "%a@ &@ %a" (print_forall_other args) u (print_ureqs args) ru
 
 
-let print_guard fmt { tr_args; tr_reqs; tr_ureq } =
+let print_guard fmt { tr_args; tr_reqs = reqs; tr_ureq } =
   (* fprintf fmt "  @[<v>"; *)
-  print_satom fmt tr_reqs;
-  if tr_ureq <> [] && not(SAtom.is_empty tr_reqs) then fprintf fmt " &@ ";
+  print_satom fmt reqs.r;
+  if tr_ureq <> [] && not(SAtom.is_empty reqs.r) then fprintf fmt " &@ ";
   print_ureqs tr_args fmt tr_ureq
   (* fprintf fmt "@]\n" *)
 
@@ -552,7 +553,7 @@ let make_mu_trans_args args nondets =
       ) [] args
   in
   let _, acc =
-    List.fold_left (fun (cpt, acc) v ->
+    List.fold_left (fun (cpt, acc) (v,_) ->
       let d = Hstring.view (snd (Smt.Symbol.type_of v)) in
       let dv = Hstring.make ("d" ^ string_of_int cpt) in
       cpt + 1, (dv, d) :: acc
@@ -729,10 +730,11 @@ let remove_underscores_update u =
   if sigma = [] then u
   else
     let arg = List.map (Variable.subst sigma) u.up_arg in
+    let (up_swt) = u.up_swts in 
     let swts =
-      List.map (fun (c, t) -> SAtom.subst sigma c, Term.subst sigma t) u.up_swts
+      List.map (fun (c, t) -> SAtom.subst sigma c, Term.subst sigma t) up_swt
     in
-    { u with up_arg = arg; up_swts = swts }
+    { u with up_arg = arg; up_swts = (swts) }
 
 
 let remove_underscores_trans t =
@@ -761,13 +763,15 @@ let ordered_procs_dnf = List.exists ordered_procs_satom
 let ordered_procs_swts = List.exists (fun (c, _) -> ordered_procs_satom c)
 let ordered_procs_globu = function
   | UTerm _ -> false
-  | UCase swts -> ordered_procs_swts swts
-let ordered_procs_up u = ordered_procs_swts u.up_swts
+  | UCase (swts) -> ordered_procs_swts swts
+let ordered_procs_up u = 
+  let (up_swt) = u.up_swts in 
+  ordered_procs_swts up_swt
 
 let ordered_procs_trans { tr_info = t } =
-  ordered_procs_satom t.tr_reqs
+  ordered_procs_satom t.tr_reqs.r
   || List.exists (fun (_, dnf) -> ordered_procs_dnf dnf) t.tr_ureq
-  || List.exists (fun (_, gu) -> ordered_procs_globu gu) t.tr_assigns
+  || List.exists (fun (_, gu,_) -> ordered_procs_globu gu) t.tr_assigns
   || List.exists ordered_procs_up t.tr_upds
 
 let ordered_procs_sys s =

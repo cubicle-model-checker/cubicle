@@ -13,7 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 (** Terms, atoms and conjunctions *)
 
 
@@ -57,7 +56,7 @@ type term =
 (** Module interface for terms *)
 module Term : sig
 
-  type t = term
+  type t = term 
 
   val compare : t -> t -> int
   val equal : t -> t -> bool

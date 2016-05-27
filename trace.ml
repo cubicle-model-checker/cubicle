@@ -248,22 +248,22 @@ module AltErgo = struct
   let print_assign fmt (g, gu) =
     match gu with
     | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
-    | UCase swts ->
+    | UCase (swts) ->
        let swts, default = split_swts_default swts in
        print_ite fmt (Elem(g, Glob), swts, default)
     
   let rec add_assign_list globals fmt = function
     | [] -> globals
-    | [g,t] -> fprintf fmt "%a" print_assign (g,t);
+    | [g,t,_] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
-    | (g,t) :: r ->
+    | (g,t,_) :: r ->
        fprintf fmt "%a and\n" print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
   let rec print_assigns_unchanged fmt = function
     | [] -> ()
     | [g] -> fprintf fmt "%a' = %a" Hstring.print g Hstring.print g
-    | g::r -> fprintf fmt "%a' = %a and\n%a" Hstring.print g Hstring.print g
+    | (g)::r -> fprintf fmt "%a' = %a and\n%a" Hstring.print g Hstring.print g
 		      print_assigns_unchanged r
 
 
@@ -275,7 +275,7 @@ module AltErgo = struct
     if ass <> [] && remaining <> [] then fprintf fmt " and\n";
     print_assigns_unchanged fmt remaining
 
-  let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
+  let print_update fmt {up_arr=a; up_arg=args; up_swts=(swts)} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
     print_ite fmt (Access (a, args), swts, default)
@@ -340,7 +340,7 @@ module AltErgo = struct
 	 zify (z :: acc) (n - 1) in
     zify [] nb
 
-  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
+  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=(swts)} =
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
@@ -394,7 +394,7 @@ module AltErgo = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "( (* requires *)\n";
-    print_satom ~prime:false fmt t.tr_reqs;
+    print_satom ~prime:false fmt t.tr_reqs.r;
     List.iter (fun (j, disj) ->
       fprintf fmt "\nand (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
@@ -781,15 +781,15 @@ module Why3 = struct
   let print_assign fmt (g, gu) =
     match gu with
     | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
-    | UCase swts ->
+    | UCase (swts) ->
        let swts, default = split_swts_default swts in
        print_ite fmt (Elem(g, Glob), swts, default)
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
-    | [g,t] -> fprintf fmt "%a" print_assign (g,t);
+    | [g,t,_] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
-    | (g,t) :: r ->
+    | (g,t,_) :: r ->
        fprintf fmt "%a /\\@ " print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
@@ -808,7 +808,7 @@ module Why3 = struct
     if ass <> [] && remaining <> [] then fprintf fmt " /\\@ ";
     print_assigns_unchanged fmt remaining
 
-  let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
+  let print_update fmt {up_arr=a; up_arg=args; up_swts=(swts)} =
     let swts, default = split_swts_default swts in
     fprintf fmt "@[<hov 2>forall %a:int.@ " print_args args;
     print_ite fmt (Access (a, args), swts, default);
@@ -875,7 +875,7 @@ module Why3 = struct
 	 zify (z :: acc) (n - 1) in
     zify [] nb
 
-  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
+  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=(swts)} =
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
@@ -929,7 +929,7 @@ module Why3 = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "@[<hov 2>( (* requires *)@\n";
-    print_satom ~prime:false fmt t.tr_reqs;
+    print_satom ~prime:false fmt t.tr_reqs.r;
     List.iter (fun (j, disj) ->
       fprintf fmt "\n/\\ (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
@@ -1583,7 +1583,7 @@ module Why3_INST = struct
   let print_assign fmt (g, gu) =
     match gu with
     | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
-    | UCase swts ->
+    | UCase (swts) ->
        let swts, default = split_swts_default swts in
        print_ite fmt (Elem(g, Glob), swts, default)
 
@@ -1610,7 +1610,7 @@ module Why3_INST = struct
     if ass <> [] && remaining <> [] then fprintf fmt " /\\\n";
     print_assigns_unchanged fmt remaining
 
-  let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
+  let print_update fmt {up_arr=a; up_arg=args; up_swts=(swts)} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
     print_ite fmt (Access (a, args), swts, default)
@@ -1675,7 +1675,7 @@ module Why3_INST = struct
 	 zify (z :: acc) (n - 1) in
     zify [] nb
 
-  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
+  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=(swts)} =
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
@@ -1729,7 +1729,7 @@ module Why3_INST = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "( (* requires *)\n";
-    print_satom ~prime:false fmt t.tr_reqs;
+    print_satom ~prime:false fmt t.tr_reqs.r;
     List.iter (fun (j, disj) ->
       fprintf fmt "\n/\\ (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
@@ -1741,7 +1741,8 @@ module Why3_INST = struct
       begin
 	fprintf fmt " /\\\n";
 	fprintf fmt "( (* actions *)\n";
-	print_assigns s.t_globals fmt t.tr_assigns;
+        let new_tr_assigns = List.map (fun (x,y,_) -> (x,y)) t.tr_assigns in
+	print_assigns s.t_globals fmt new_tr_assigns;
 	if s.t_globals <> [] && s.t_arrays <> [] then fprintf fmt " /\\\n";
 	(* print_norm_updates s.t_arrays fmt t.tr_upds; *)
 	print_updates s.t_arrays fmt t.tr_upds;

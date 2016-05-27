@@ -219,7 +219,7 @@ let nondets loc l =
 let assigns loc args = 
   let dv = ref [] in
   List.iter 
-    (fun (g, gu) ->
+    (fun (g, gu,_) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g) loc;
        let ty_g = 
 	 try Smt.Symbol.type_of g
@@ -230,7 +230,7 @@ let assigns loc args =
             let ty_x = term loc args x in
             unify loc ty_x ty_g;
             assignment g x ty_x;
-         | UCase swts ->
+         | UCase (swts) ->
             List.iter (fun (sa, x) ->
               atoms loc args sa;
               let ty_x = term loc args x in
@@ -251,28 +251,28 @@ let switchs loc a args ty_e l =
 let updates args = 
   let dv = ref [] in
   List.iter 
-    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
-       if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
+    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=(swts)} -> 
+       if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc.loc;
        List.iter (fun j -> 
-         if Hstring.list_mem j args then error (ClashParam j) loc) lj;
+         if Hstring.list_mem j args then error (ClashParam j) loc.loc) lj;
        let args_a, ty_a = 
-	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
+	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc.loc
        in       
-       if args_a = [] then error (MustBeAnArray a) loc;
+       if args_a = [] then error (MustBeAnArray a) loc.loc;
        dv := a ::!dv;
-       switchs loc a (lj @ args) ([], ty_a) swts) 
+       switchs loc.loc a (lj @ args) ([], ty_a) swts) 
 
 let transitions = 
   List.iter 
     (fun ({tr_args = args; tr_loc = info} as t) -> 
        unique (fun x-> error (DuplicateName x) info.loc) args; 
-       atoms info.loc args t.tr_reqs;
+       atoms info.loc args t.tr_reqs.r;
        List.iter 
 	 (fun (x, cnf) -> 
 	    List.iter (atoms info.loc (x::args)) cnf)  t.tr_ureq;
        updates args t.tr_upds;
        assigns info.loc args t.tr_assigns;
-       nondets info.loc t.tr_nondets)
+       nondets info.loc (List.map (fun (x,_) -> x) t.tr_nondets))
 
 let declare_type (info, (x, y)) =
   try Smt.Type.declare x y
@@ -460,28 +460,28 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
     let sigma = Variable.build_subst args Variable.freshs in
     { tr with 
 	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
-	tr_reqs = SAtom.subst sigma tr.tr_reqs;
+	tr_reqs = {tr.tr_reqs with r = SAtom.subst sigma tr.tr_reqs.r };
 	tr_ureq = 
 	List.map 
 	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
 	tr_assigns = 
 	  List.map (function
-                     | x, UTerm t -> x, UTerm (Term.subst sigma t)
-                     | x, UCase swts ->
+                     | x, UTerm t, i -> x, UTerm (Term.subst sigma t), i
+                     | x, UCase (swts), i ->
                         let swts = 
 	                  List.map 
 		            (fun (sa, t) ->
                              SAtom.subst sigma sa, Term.subst sigma t) swts in
-                        x, UCase swts
+                        x, (UCase (swts)), i
 	           ) tr.tr_assigns;
 	tr_upds = 
 	List.map 
-	  (fun ({up_swts = swts} as up) -> 
+	  (fun ({up_swts = (swts)} as up) -> 
 	     let swts = 
 	       List.map 
 		 (fun (sa, t) -> SAtom.subst sigma sa, Term.subst sigma t) swts
 	     in
-	     { up with up_swts = swts }) 
+	     { up with up_swts = (swts) }) 
 	  upds}
 
 

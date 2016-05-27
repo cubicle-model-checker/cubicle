@@ -13,7 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 open Format
 open Options
 open Util
@@ -138,7 +137,7 @@ let const_nul c = const_sign c = Some 0
 
 module Term = struct
 
-  type t = term
+  type t = term 
 
   let rec compare t1 t2 = 
     match t1, t2 with
@@ -211,7 +210,8 @@ module Term = struct
     | s :: l -> fprintf fmt "%s %a" s print_strings l
 
   let print_const fmt = function
-    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstInt n(*| ConstReal n*) -> fprintf fmt "%s" (Num.string_of_num n)
+    | ConstReal n -> fprintf fmt "%f" (Num.float_of_num n) 
     | ConstName n -> fprintf fmt "%a" Hstring.print n
 
   let print_cs alone fmt cs =
@@ -296,8 +296,8 @@ end = struct
 
   let trivial_is_implied a1 a2 =
     match a1, a2 with
-      | Comp (x1, Neq, Elem (v1, (Constr|Var))),
-        Comp (x2, Eq, Elem (v2, (Constr|Var))) 
+      | Comp (x1, Neq, (Elem (v1, (Constr|Var)))),
+        Comp (x2, Eq, (Elem (v2, (Constr|Var))))
           when not (Hstring.equal v1 v2) && Term.compare x1 x2 = 0 -> 0
       | _ -> compare a1 a2
 
@@ -306,12 +306,11 @@ end = struct
     | False -> True
     | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.hfalse -> 
 	Comp (c, Eq, (Elem (Term.htrue, Constr)))
-    | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.htrue -> 
-	Comp (c, Eq, (Elem (Term.hfalse, Constr)))
+    | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.htrue -> 	Comp (c, Eq, (Elem (Term.hfalse, Constr)))
     | Comp (x, Eq, y) -> Comp (x, Neq, y)
     | Comp (x, Lt, y) -> Comp (y, Le, x)
     | Comp (x, Le, y) -> Comp (y, Lt, x)
-    | Comp (x, Neq, y) -> Comp (x, Eq, y)
+    | Comp (x, Neq,y) -> Comp (x, Eq, y)
     | _ -> assert false
 
   let hash (sa: Atom.t) = Hashtbl.hash_param 50 100 sa
@@ -339,7 +338,7 @@ end = struct
 
   let rec has_vars vs = function
     | True | False -> false
-    | Comp (x, _, y) -> has_vars_term vs x || has_vars_term vs y
+    | Comp (x,_,y) -> has_vars_term vs x || has_vars_term vs y
     | Ite (sa, a1, a2) ->
        SAtom.exists (has_vars vs) sa || has_vars vs a1 || has_vars vs a2
 

@@ -1,1 +1,1 @@
-val open_window : Ast.system -> unit
+val open_window : Ptree.psystem -> unit

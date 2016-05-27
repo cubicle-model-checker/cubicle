@@ -30,13 +30,14 @@
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
+  module S = Set.Make(Hstring)
+
 
   type t = 
-    | Assign of Hstring.t * pglob_update
-    | Nondet of Hstring.t
-    | Upd of pupdate
+    | Assign of (Hstring.t * pglob_update * info)
+    | Nondet of (Hstring.t * info)
+    | Upd of (pupdate)
 
-  module S = Set.Make(Hstring)
 
   module Constructors = struct
     let s = ref (S.add (Hstring.make "True") 
@@ -82,6 +83,13 @@
     let cpt = ref 0 in
     fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
 
+  let get_id = 
+    let cpt = ref 0 in 
+    fun () -> incr cpt; !cpt 
+
+  let get_info () = 
+    { loc = loc (); active = true; id = get_id ()} 
+
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
@@ -103,7 +111,7 @@
 %token EOF
 
 %nonassoc prec_forall prec_exists
-%right IMP EQUIV  
+ %right IMP EQUIV  
 %right OR
 %right AND
 %nonassoc prec_ite
@@ -112,7 +120,7 @@
 %nonassoc NOT
 /* %left BAR */
 
-%type <Ast.system> system
+%type <Ptree.psystem> system
 %start system
 %%
 
@@ -125,7 +133,6 @@ EOF
 { let ptype_defs = $2 in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
-   |> encode_psystem 
 }
 ;
 
@@ -161,14 +168,14 @@ var_decl:
   | VAR mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Globals.add $2; 
-    { loc = loc () ; active = true}, $2, $4 }
+    get_info (), $2, $4 }
 ;
 
 const_decl:
   | CONST mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Consts.add $2;
-    { loc = loc () ; active = true }, $2, $4 }
+    get_info (), $2, $4 }
 ;
 
 array_decl:
@@ -177,7 +184,7 @@ array_decl:
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
-	{ loc = loc () ; active = true}, $2, ($4, $7)}
+	get_info (), $2, ($4, $7)}
 ;
 
 type_defs:
@@ -196,11 +203,11 @@ size_proc:
 ;
       
 type_def:
-  | TYPE lident { ( {loc = loc () ; active = true}, ($2, [])) }
+  | TYPE lident { ( get_info (), ($2, [])) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; ({ loc = loc () ; active = true}, ($2, $4)) }
+      { Smt.set_sum true; List.iter Constructors.add $4; (get_info (), ($2, $4)) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; ({ loc = loc () ; active = true}, ($2, $5)) }
+      { Smt.set_sum true; List.iter Constructors.add $5; (get_info (), ($2, $5)) }
 ;
 
 constructors:
@@ -209,19 +216,19 @@ constructors:
 ;
 
 init:
-  | INIT LEFTBR expr RIGHTBR { { loc = loc () ; active = true } , [], $3 } 
-  | INIT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { {loc = loc () ; active = true}
+  | INIT LEFTBR expr RIGHTBR { get_info (), [], $3} 
+  | INIT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { get_info ()
 , $3, $6 }
 ;
 
 invariant:
-  | INVARIANT LEFTBR expr RIGHTBR { {loc = loc () ; active = true }, [], $3 }
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { {loc = loc () ; active = true}, $3, $6 }
+  | INVARIANT LEFTBR expr RIGHTBR { get_info (), [], $3 }
+  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR {get_info (), $3, $6 }
 ;
 
 unsafe:
-  | UNSAFE LEFTBR expr RIGHTBR { { loc = loc () ; active = true}, [], $3 }
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { {loc = loc () ; active = true}, $3, $6 }
+  | UNSAFE LEFTBR expr RIGHTBR { get_info () , [], $3 }
+  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { get_info (), $3, $6 }
 ;
 
 transition_name:
@@ -239,7 +246,7 @@ transition:
 	    ptr_assigns = assigns; 
 	    ptr_nondets = nondets; 
 	    ptr_upds = upds;
-            ptr_loc = {loc = loc (); active = true};
+            ptr_loc = get_info ();
           }
       }
 ;
@@ -249,17 +256,17 @@ assigns_nondets_updates:
   | assign_nondet_update 
       {  
 	match $1 with
-	  | Assign (x, y) -> [x, y], [], []
-	  | Nondet x -> [], [x], []
-	  | Upd x -> [], [], [x]
+	  | Assign (x, y, inf) -> [{ a_n = x; a_p = y; a_i = inf}], [] , []
+	  | Nondet (x, inf) -> [], [{n_n = x; n_i = inf}], []
+	  | Upd (x) -> [], [], [x]
       }
   | assign_nondet_update PV assigns_nondets_updates 
       { 
 	let assigns, nondets, upds = $3 in
 	match $1 with
-	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds
-	  | Nondet x -> assigns, x :: nondets, upds
-	  | Upd x -> assigns, nondets, x :: upds
+	  | Assign (x, y, inf) -> ({a_n = x; a_p = y; a_i = inf}) :: assigns, nondets, upds
+	  | Nondet (x, inf) -> assigns, ({n_n = x; n_i = inf}) :: nondets, upds
+	  | Upd (x) -> assigns, nondets, x :: upds
       }
 ;
 
@@ -270,18 +277,18 @@ assign_nondet_update:
 ;
 
 assignment:
-  | mident AFFECT term { Assign ($1, PUTerm $3) }
-  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+  | mident AFFECT term { Assign ($1, PUTerm $3, get_info ()) }
+  | mident AFFECT CASE switchs { Assign ($1, PUCase ($4), get_info ()) }
 ;
 
 nondet:
-  | mident AFFECT DOT { Nondet $1 }
-  | mident AFFECT QMARK { Nondet $1 }
+  | mident AFFECT DOT { Nondet ($1 , get_info ()) }
+  | mident AFFECT QMARK { Nondet ($1, get_info ()) }
 ;
 
 require:
-  | { PAtom (AAtom (Atom.True)) }
-  | REQUIRE LEFTBR expr RIGHTBR { $3 }
+  | { {r_f = PAtom (AAtom (Atom.True, get_info ())); r_i =  get_info ()} }
+  | REQUIRE LEFTBR expr RIGHTBR { { r_f = $3 ; r_i = get_info ()} }
 ;
 
 update:
@@ -290,21 +297,22 @@ update:
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
         ) $3;
-        Upd { pup_loc = { loc = loc (); active = true}; pup_arr = $1; pup_arg = $3; pup_swts = $7} }
+        Upd 
+          ({ pup_loc = get_info () ; pup_arr = $1; pup_arg = $3; pup_swts = $7; pup_info = None})}
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
-            let c = PAtom (AEq (TVar j, TVar i)) in
+            let c = PAtom (AEq (TVar (j, get_info()), TVar (i, get_info()),get_info())) in
             c :: cube, j :: rjs) ([], []) $3 in
-        let a = PAnd cube in
+        let a = PAnd (cube, get_info()) in
         let js = List.rev rjs in
-	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = { loc = loc () ; active = true }; pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+	let sw = [(a, $6); (PAtom (AAtom (Atom.True, get_info())), TTerm ((Access($1, js)), get_info()))] in
+	Upd ({ pup_loc = get_info (); pup_arr = $1; pup_arg = js; pup_swts = sw; pup_info = Some ($1,$3,$6)})}
 ;
 
 switchs:
-  | BAR UNDERSCORE COLON term { [(PAtom (AAtom (Atom.True)), $4)] }
+  | BAR UNDERSCORE COLON term { [(PAtom (AAtom (Atom.True, get_info())), $4)] }
   | BAR switch { [$2] }
   | BAR switch switchs { $2::$3 }
 ;
@@ -328,8 +336,8 @@ var_term:
 
 top_id_term:
   | var_term { match $1 with
-      | Elem (v, Var) -> TVar v
-      | _ -> TTerm $1 }
+      | Elem (v, Var) -> TVar (v, get_info())
+      | _ -> TTerm ($1, get_info()) }
 ;
 
 
@@ -370,8 +378,8 @@ arith_term:
 
 term:
   | top_id_term { $1 } 
-  | array_term { TTerm $1 }
-  | arith_term { Smt.set_arith true; TTerm $1 }
+  | array_term { TTerm ($1, get_info()) }
+  | arith_term { Smt.set_arith true; TTerm ($1, get_info()) }
 ;
 
 lident:
@@ -433,29 +441,29 @@ operator:
 */
 
 literal:
-  | TRUE { AAtom Atom.True }
-  | FALSE { AAtom Atom.False }
+  | TRUE { AAtom (Atom.True, get_info()) }
+  | FALSE { AAtom (Atom.False, get_info()) }
   /* | lident { AVar $1 } RR conflict with proc_name */
-  | term EQ term { AEq ($1, $3) }
-  | term NEQ term { ANeq ($1, $3) }
-  | term LT term { Smt.set_arith true; ALt ($1, $3) }
-  | term LE term { Smt.set_arith true; ALe ($1, $3) }
-  | term GT term { Smt.set_arith true; ALt ($3, $1) }
-  | term GE term { Smt.set_arith true; ALe ($3, $1) }
+  | term EQ term { AEq ($1, $3, get_info()) }
+  | term NEQ term { ANeq ($1, $3, get_info()) }
+  | term LT term { Smt.set_arith true; ALt ($1, $3, get_info()) }
+  | term LE term { Smt.set_arith true; ALe ($1, $3, get_info()) }
+  | term GT term { Smt.set_arith true; ALt ($3, $1, get_info()) }
+  | term GE term { Smt.set_arith true; ALe ($3, $1, get_info()) }
 ;
 
 expr:
   | simple_expr { $1 }
-  | NOT expr { PNot $2 }
-  | expr AND expr { PAnd [$1; $3] }
-  | expr OR expr  { POr [$1; $3] }
-  | expr IMP expr { PImp ($1, $3) }
-  | expr EQUIV expr { PEquiv ($1, $3) }
-  | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6) }
-  | FORALL lidents_plus_distinct DOT expr %prec prec_forall { PForall ($2, $4) }
-  | EXISTS lidents_plus_distinct DOT expr %prec prec_exists { PExists ($2, $4) }
-  | FORALL_OTHER lident DOT expr %prec prec_forall { PForall_other ([$2], $4) }
-  | EXISTS_OTHER lident DOT expr %prec prec_exists { PExists_other ([$2], $4) }
+  | NOT expr { PNot ($2, get_info()) }
+  | expr AND expr { PAnd ([$1; $3], get_info()) }
+  | expr OR expr  { POr ([$1 ; $3], get_info()) }
+  | expr IMP expr { PImp ($1, $3, get_info()) }
+  | expr EQUIV expr { PEquiv ($1, $3, get_info()) }
+  | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6, get_info()) }
+  | FORALL lidents_plus_distinct DOT expr %prec prec_forall { PForall ($2, $4, get_info())  }
+  | EXISTS lidents_plus_distinct DOT expr %prec prec_exists { PExists ($2, $4, get_info()) }
+  | FORALL_OTHER lident DOT expr %prec prec_forall { PForall_other ([$2], $4, get_info()) }
+  | EXISTS_OTHER lident DOT expr %prec prec_exists { PExists_other ([$2], $4, get_info()) }
 ;
 
 simple_expr:

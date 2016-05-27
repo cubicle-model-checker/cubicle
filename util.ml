@@ -146,7 +146,7 @@ let chromatic start stop steps =
 
 type loc = Lexing.position * Lexing.position
 
-type info = { loc : loc ; mutable active : bool }
+type info = { loc : loc ; mutable active : bool ; id : int}
 
 (* type info = { location : loc } *)
 

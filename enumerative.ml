@@ -750,7 +750,7 @@ let swts_to_stites env at sigma swts =
 
 let assigns_to_actions env sigma acc tr_assigns =
   List.fold_left 
-    (fun acc (h, gu) ->
+    (fun acc (h, gu,_) ->
       let nt = Elem (h, Glob) in
       match gu with
       | UTerm t ->
@@ -766,12 +766,12 @@ let assigns_to_actions env sigma acc tr_assigns =
              in a :: acc
            with Not_found -> acc
          end
-      | UCase swts -> swts_to_stites env nt sigma swts :: acc
+      | UCase (swts) -> swts_to_stites env nt sigma swts :: acc
     ) acc tr_assigns
 
 let nondets_to_actions env sigma acc =
   List.fold_left 
-    (fun acc (h) ->
+    (fun acc (h,_) ->
       let nt = Elem (h, Glob) in
       try (St_assign (HT.find env.id_terms nt, -1)) :: acc
       with Not_found -> acc
@@ -783,7 +783,8 @@ let update_to_actions procs sigma env acc
   List.fold_left (fun acc li ->
     let sigma = (List.combine lj li) @ sigma in
     let at = Access (a, li) in
-    swts_to_stites env at sigma swts :: acc
+    let (swt) = swts in
+    swts_to_stites env at sigma swt :: acc
   ) acc indexes
 
 let missing_reqs_to_actions env acct =
@@ -946,7 +947,7 @@ let transitions_to_func_aux procs env reduce acc
     let d = if d = [] then [[]] else d in
     (* let d = List.filter ordered_subst d in *)
     List.fold_left (fun acc sigma ->
-      let reqs = SAtom.subst sigma reqs in
+      let reqs = SAtom.subst sigma reqs.r in
       let t_args_ef = 
 	List.fold_left (fun acc p -> 
 	  try (Variable.subst sigma p) :: acc

@@ -88,7 +88,7 @@ let fresh_nondet =
 
 let rec find_update a li = function
   | [] -> raise Not_found
-  | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
+  | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = (ls)} :: _ when a=a' ->
       let ls = 
 	List.map 
 	  (fun (ci, ti) ->
@@ -103,18 +103,20 @@ exception Remove_lit_var of Hstring.t
 
 let rec find_assign tr = function
   | Elem (x, sx) -> 
+    let new_tr_nondets = List.map  (fun (x,_) -> x) tr.tr_nondets in 
       let gu =
-	if H.list_mem x tr.tr_nondets then 
+	if H.list_mem x new_tr_nondets then 
           raise (Remove_lit_var x)
 	  (* UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) *)
 	else 
-	  try H.list_assoc x tr.tr_assigns
+          let new_tr_assigns = List.map (fun (x,y,_) -> (x,y)) tr.tr_assigns in 
+          try H.list_assoc x new_tr_assigns(*tr.tr_assigns*)
           with Not_found -> UTerm (Elem (x, sx))
       in
       begin
         match gu with
         | UTerm t -> Single t
-        | UCase swts -> Branch swts
+        | UCase (swts) -> Branch swts
       end
 
   | Const i as a -> Single a
@@ -295,7 +297,7 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 let pre { tr_info = tri; tr_tau = tau } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
-    SAtom.union tri.tr_reqs 
+    SAtom.union tri.tr_reqs.r
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;

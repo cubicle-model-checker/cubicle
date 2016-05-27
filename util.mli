@@ -73,7 +73,7 @@ val chromatic : color -> color -> int -> unit -> color
 type loc = Lexing.position * Lexing.position
 (** Location in file *)
 
-type info = { loc : loc ; mutable active : bool }
+type info = { loc : loc ; mutable active : bool; id : int }
 
 
 val report_loc : Format.formatter -> loc -> unit

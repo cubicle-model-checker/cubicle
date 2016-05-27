@@ -460,7 +460,7 @@ let swts_to_ites at swts sigma =
 
 let apply_assigns assigns sigma =
   List.fold_left 
-    (fun (nsa, terms) (h, gu) ->
+    (fun (nsa, terms) (h, gu,_) ->
       let nt = Elem (h, Glob) in
       let sa = 
         match gu with
@@ -472,7 +472,7 @@ let apply_assigns assigns sigma =
               Comp (nt, Eq, prime_term t)
             | _ -> Comp (nt, Eq, prime_term t)
           end
-        | UCase swts -> swts_to_ites nt swts sigma
+        | UCase (swts) -> swts_to_ites nt swts sigma
       in
       SAtom.add sa nsa, Term.Set.add nt terms)
     (SAtom.empty, Term.Set.empty) assigns
@@ -580,7 +580,7 @@ let post init all_procs procs { tr_args = tr_args;
   let d = if d = [] then [[]] else d in
   let p_init = prime_satom init in
   List.fold_left (fun acc sigma ->
-    if possible_guard procs all_procs tr_args sigma init reqs ureqs then
+    if possible_guard procs all_procs tr_args sigma init reqs.r ureqs then
       let assi, assi_terms = apply_assigns assigns sigma in
       let upd, upd_terms = apply_updates upds all_procs sigma in
       let unchanged = preserve_terms (Term.Set.union assi_terms upd_terms) init in
@@ -790,7 +790,7 @@ let instance_of_transition { tr_args = tr_args;
 		             tr_assigns = assigns; 
 		             tr_upds = upds; 
 		             tr_nondets = nondets } all_procs tr_others sigma =
-  let reqs = SAtom.subst sigma reqs in
+  let reqs = SAtom.subst sigma reqs.r in
   let t_args_ef = 
     List.fold_left (fun acc p -> 
       try (Variable.subst sigma p) :: acc
@@ -801,7 +801,7 @@ let instance_of_transition { tr_args = tr_args;
   let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
   let nondet_terms =
-    List.fold_left (fun acc h -> Term.Set.add (Elem (h, Glob)) acc)
+    List.fold_left (fun acc (h,_) -> Term.Set.add (Elem (h, Glob)) acc)
       Term.Set.empty nondets in
   {
     i_reqs = reqs;

@@ -130,7 +130,7 @@ rule token = parse
       { LE }
   | ">"
       { GT }
-  | ">="
+ | ">="
       { GE }
   | "["
       { LEFTSQ }
