@@ -54,8 +54,7 @@ requires { Curptr = n && Curcmd = Reqs && Exgntd = False }
 
 transition gnt_exclusive (n)
 requires { Shrset[n] = False && Curcmd = Reqe &&
-           Exgntd = False && Curptr = n &&
-	   forall_other l. Shrset[l] = False }
+           Exgntd = False && Curptr = n && forall_other l. Shrset[l] = False }
 { 
   Curcmd := Empty; 
   Exgntd := True;

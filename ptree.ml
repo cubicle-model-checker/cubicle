@@ -18,6 +18,9 @@ open Util
 open Ast
 open Format
 
+type var =Variable.t 
+
+type term_info = Term.t * info
 
 
 type term =
@@ -48,6 +51,7 @@ type formula =
 
 type term_or_formula = PF of formula | PT of term
 
+
 type cformula = formula
 
 
@@ -69,11 +73,11 @@ let function_defs = Hstring.H.create 17
 (* ] *)
 
 let print_term fmt = function
-  | TVar (v,_) -> fprintf fmt "'%a" Hstring.print v
+  | TVar (x,_) -> fprintf fmt "'%a" Hstring.print x
   | TTerm (t,_) -> Term.print fmt t
 
 let print_atom fmt = function
-  | AVar (v,_) -> fprintf fmt "?%a" Hstring.print v
+  | AVar (x,_) -> fprintf fmt "?%a" Hstring.print x
   | AAtom (a,_) -> Atom.print fmt a
   | AEq (t1, t2, _) -> fprintf fmt "(= %a %a)" print_term t1 print_term t2
   | ANeq (t1, t2, _) -> fprintf fmt "(<> %a %a)" print_term t1 print_term t2
@@ -97,19 +101,19 @@ let rec print fmt = function
     fprintf fmt "(if %a then %a else %a)" print c print t print e
   | PForall (vs, f,_) ->
     fprintf fmt "(forall";
-    List.iter ( fprintf fmt " %a" Variable.print) vs;
+    List.iter ( fun (v) -> fprintf fmt " %a" Variable.print v) vs;
     fprintf fmt ". %a)" print f
   | PExists (vs,f,_) ->
     fprintf fmt "(exists";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
+    List.iter (fun (v) -> fprintf fmt " %a" Variable.print v) vs;
     fprintf fmt ". %a)" print f
   | PForall_other (vs,f,_) ->
     fprintf fmt "(forall_other";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
+    List.iter (fun (v) -> fprintf fmt " %a" Variable.print v) vs;
     fprintf fmt ". %a)" print f
   | PExists_other (vs,f,_) ->
     fprintf fmt "(exists_other";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
+    List.iter (fun (v) -> fprintf fmt " %a" Variable.print v) vs;
     fprintf fmt ". %a)" print f
 
 let print_tof fmt = function
@@ -141,7 +145,7 @@ let print_subst fmt =
 (* type cube = [conj | PExists of Variable.t list * conj] *)
 
 
-type pswts = (cformula * term) list
+type pswts  =  (cformula * term * info) list
 
 type pglob_update = PUTerm of (term) | PUCase of (pswts)
 
@@ -149,10 +153,12 @@ type pglob_update = PUTerm of (term) | PUCase of (pswts)
 type pupdate = {
   pup_loc : info;
   pup_arr : Hstring.t;
-  pup_arg : Variable.t list;
-  pup_swts : pswts ;
-  pup_info : (Hstring.t * Variable.t list * term)  option;
+  pup_arg : var list;
+  pup_swts : pswts;
+  pup_info : (Hstring.t * var list * term)  option;
 }
+
+type ptrans_pupdate = { p : pupdate list ; i : info}
 
 type ptrans_req = { r_f : cformula ; r_i : info }
 
@@ -160,32 +166,35 @@ type ptrans_assign = { a_n : Hstring.t ; a_p : pglob_update ; a_i : info }
 
 type ptrans_nondet = { n_n : Hstring.t ; n_i : info}
 
+type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ; 
+                  ptr_nondets : ptrans_nondet list; i : info}
+
 type ptransition = {
-  ptr_name : Hstring.t;
-  ptr_args : Variable.t list;
+  ptr_name : Hstring.t ;
+  ptr_args : var list;
   ptr_reqs : ptrans_req ;
-  ptr_assigns : ptrans_assign list;
-  ptr_upds : pupdate list;
-  ptr_nondets : ptrans_nondet list;
+  ptr_s : ptrans_s;
   ptr_loc : info;
 }
+
+type unsafe = { i : info; vl : var list ; cf : cformula }
 
 type psystem = {
   pglobals : (info * Hstring.t * Smt.Type.t) list;
   pconsts : (info * Hstring.t * Smt.Type.t) list;
-  parrays : (info * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  parrays : (info * Hstring.t  * (Smt.Type.t  list * Smt.Type.t)) list;
   ptype_defs : (info * Ast.type_constructors) list;
-  pinit : info * Variable.t list * cformula;
-  pinvs : (info * Variable.t list * cformula) list;
-  punsafe : (info * Variable.t list * cformula) list;
+  pinit : info * var list * cformula;
+  pinvs : (info * var list * cformula) list;
+  punsafe : (info * var list * cformula) list;
   ptrans : ptransition list;
 }
 
 
 type pdecl =
-  | PInit of (info * Variable.t list * cformula)
-  | PInv of (info * Variable.t list * cformula)
-  | PUnsafe of (info * Variable.t list * cformula)
+  | PInit of (info * var list * cformula)
+  | PInv of (info * var list * cformula)
+  | PUnsafe of (info * var list * cformula)
   | PTrans of ptransition
   | PFun
 
@@ -200,7 +209,7 @@ let add_fun_def name args f =
 
 let restr_subst_to sigma vars =
   List.fold_left (fun acc -> function
-      | v, PF (PAtom (AVar (v',i)))
+      | v, PF (PAtom ((AVar (v',i))))
       | v, PT (TVar (v',i))
       | v, PT (TTerm (Elem(v', Var),i)) ->
         if Variable.Set.mem v vars then
@@ -240,13 +249,13 @@ let subst_atom sigma aa = match aa with
     let t2' = subst_term sigma t2 in
     if t1 == t1' && t2 == t2' then PAtom (aa)
     else
-      PAtom ((match aa with
+      PAtom (match aa with
           | AEq _ -> AEq (t1', t2', i)
           | ANeq _ -> ANeq (t1', t2', i)
           | ALe _ -> ALe (t1', t2', i)
           | ALt _ -> ALt (t1', t2', i)
           | _ -> assert false
-      ))
+      )
   | AAtom (a, i) ->
     let sigma' = restr_subst_to sigma (Atom.variables a) in
     let a' = Atom.subst sigma' a in

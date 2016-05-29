@@ -36,7 +36,7 @@
   type t = 
     | Assign of (Hstring.t * pglob_update * info)
     | Nondet of (Hstring.t * info)
-    | Upd of (pupdate)
+    | Upd of (pupdate * info)
 
 
   module Constructors = struct
@@ -163,28 +163,27 @@ function_decl :
     add_fun_def $2 $4 $7
   }
 ;
-
 var_decl:
   | VAR mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Globals.add $2; 
-    get_info (), $2, $4 }
+    get_info (),  $2 , $4 }
 ;
 
 const_decl:
   | CONST mident COLON lident { 
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Consts.add $2;
-    get_info (), $2, $4 }
+    get_info (),  $2,  $4 }
 ;
 
 array_decl:
   | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
-        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+        if not (List.for_all (fun (p) -> Hstring.equal p hproc) $4) then
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
-	get_info (), $2, ($4, $7)}
+	get_info (),  $2 , ($4, $7)}
 ;
 
 type_defs:
@@ -232,41 +231,43 @@ unsafe:
 ;
 
 transition_name:
-  | lident {$1}
-  | mident {$1}
+  | lident { $1 }
+  | mident { $1 }
 
 transition:
   | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
       require
       LEFTBR assigns_nondets_updates RIGHTBR
-      { let assigns, nondets, upds = $8 in
+      { let assigns, nondets, upds, inf = $8 in
 	  { ptr_name = $2;
             ptr_args = $4; 
 	    ptr_reqs = $6;
-	    ptr_assigns = assigns; 
-	    ptr_nondets = nondets; 
-	    ptr_upds = upds;
+	    ptr_s = { 
+              ptr_assigns = assigns; 
+	      ptr_nondets = nondets; 
+	      ptr_upds = upds;
+              i = inf };
             ptr_loc = get_info ();
           }
       }
 ;
 
 assigns_nondets_updates:
-  |  { [], [], [] }
+  |  { [], [], {p = [] ; i = get_info() } , get_info()}
   | assign_nondet_update 
       {  
 	match $1 with
-	  | Assign (x, y, inf) -> [{ a_n = x; a_p = y; a_i = inf}], [] , []
-	  | Nondet (x, inf) -> [], [{n_n = x; n_i = inf}], []
-	  | Upd (x) -> [], [], [x]
+	  | Assign (x, y, inf) -> [{ a_n = x; a_p = y; a_i = inf}], [] , {p = [] ; i = get_info()}, get_info()
+	  | Nondet (x, inf) -> [], [{n_n = x; n_i = inf}], {p = [] ; i = get_info()}, get_info()
+	  | Upd (x, inf) -> [], [], {p = [x] ; i = inf}, get_info()
       }
   | assign_nondet_update PV assigns_nondets_updates 
       { 
-	let assigns, nondets, upds = $3 in
+	let assigns, nondets, upds, inf = $3 in
 	match $1 with
-	  | Assign (x, y, inf) -> ({a_n = x; a_p = y; a_i = inf}) :: assigns, nondets, upds
-	  | Nondet (x, inf) -> assigns, ({n_n = x; n_i = inf}) :: nondets, upds
-	  | Upd (x) -> assigns, nondets, x :: upds
+	  | Assign (x, y, inf) -> ({a_n = x; a_p = y; a_i = inf}) :: assigns, nondets, upds, get_info()
+	  | Nondet (x, inf) -> assigns, ({n_n = x; n_i = inf}) :: nondets, upds, get_info ()
+	  | Upd (x, inf) -> assigns, nondets, { p = x :: upds.p ; i = inf}, get_info ()
       }
 ;
 
@@ -277,13 +278,13 @@ assign_nondet_update:
 ;
 
 assignment:
-  | mident AFFECT term { Assign ($1, PUTerm $3, get_info ()) }
-  | mident AFFECT CASE switchs { Assign ($1, PUCase ($4), get_info ()) }
+  | mident AFFECT term { Assign ( $1 , PUTerm $3, get_info ()) }
+  | mident AFFECT CASE switchs { Assign ( $1 , PUCase ($4), get_info ()) }
 ;
 
 nondet:
-  | mident AFFECT DOT { Nondet ($1 , get_info ()) }
-  | mident AFFECT QMARK { Nondet ($1, get_info ()) }
+  | mident AFFECT DOT { Nondet ( $1 , get_info ()) }
+  | mident AFFECT QMARK { Nondet ( $1 , get_info ()) }
 ;
 
 require:
@@ -291,34 +292,14 @@ require:
   | REQUIRE LEFTBR expr RIGHTBR { { r_f = $3 ; r_i = get_info ()} }
 ;
 
-update:
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
-      { List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then
-            raise Parsing.Parse_error;
-        ) $3;
-        Upd 
-          ({ pup_loc = get_info () ; pup_arr = $1; pup_arg = $3; pup_swts = $7; pup_info = None})}
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
-      { let cube, rjs =
-          List.fold_left (fun (cube, rjs) i ->
-            let j = fresh_var () in
-            let c = PAtom (AEq (TVar (j, get_info()), TVar (i, get_info()),get_info())) in
-            c :: cube, j :: rjs) ([], []) $3 in
-        let a = PAnd (cube, get_info()) in
-        let js = List.rev rjs in
-	let sw = [(a, $6); (PAtom (AAtom (Atom.True, get_info())), TTerm ((Access($1, js)), get_info()))] in
-	Upd ({ pup_loc = get_info (); pup_arr = $1; pup_arg = js; pup_swts = sw; pup_info = Some ($1,$3,$6)})}
-;
-
 switchs:
-  | BAR UNDERSCORE COLON term { [(PAtom (AAtom (Atom.True, get_info())), $4)] }
+  | BAR UNDERSCORE COLON term { ([(PAtom (AAtom (Atom.True, get_info())), $4, get_info())]) }
   | BAR switch { [$2] }
-  | BAR switch switchs { $2::$3 }
+  | BAR switch switchs { ($2::$3) }
 ;
 
 switch:
-  | expr COLON term { $1, $3 }
+  | expr COLON term { ($1, $3, get_info()) }
 ;
 
 
@@ -387,7 +368,7 @@ lident:
 ;
 
 const_proc:
-  | CONSTPROC { Hstring.make $1 }
+  | CONSTPROC { Hstring.make $1}
 ;
 
 proc_name:
@@ -396,8 +377,8 @@ proc_name:
 ;
 
 proc_name_list_plus:
-  | proc_name { [$1] }
-  | proc_name COMMA proc_name_list_plus { $1::$3 }
+  | proc_name { [ $1 ] }
+  | proc_name COMMA proc_name_list_plus { ( $1 )::$3 }
 ;
 
 mident:
@@ -405,8 +386,8 @@ mident:
 ;
 
 lidents_plus:
-  | lident { [$1] }
-  | lident lidents_plus { $1::$2 }
+  | lident { [ $1 ] }
+  | lident lidents_plus { ( $1 )::$2 }
 ;
 
 lidents:
@@ -415,10 +396,9 @@ lidents:
 ;
 
 lident_list_plus:
-  | lident { [$1] }
-  | lident COMMA lident_list_plus { $1::$3 }
+  | lident { [ $1 ] }
+  | lident COMMA lident_list_plus { ( $1 )::$3 }
 ;
-
 
 lident_comma_list:
   | { [] }
@@ -426,8 +406,8 @@ lident_comma_list:
 ;
 
 lidents_plus_distinct:
-  | lident { [$1] }
-  | lident NEQ lidents_plus_distinct { $1 :: $3 }
+  | lident { [ $1 ] }
+  | lident NEQ lidents_plus_distinct { ( $1 ) :: $3 }
 ;
 
 
@@ -467,7 +447,7 @@ expr:
 ;
 
 simple_expr:
-  | literal { PAtom $1 }
+  | literal { PAtom ($1) }
   | LEFTPAR expr RIGHTPAR { $2 }
   | lident LEFTPAR expr_or_term_comma_list RIGHTPAR { app_fun $1 $3 }
 ;
@@ -480,4 +460,25 @@ expr_or_term_comma_list:
   | expr  { [PF $1] }
   | term COMMA expr_or_term_comma_list { PT $1 :: $3 }
   | expr COMMA expr_or_term_comma_list { PF $1 :: $3 }
+;
+
+
+update:
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
+      { List.iter (fun p ->
+          if (Hstring.view p).[0] = '#' then
+            raise Parsing.Parse_error;
+        ) $3;
+        Upd 
+          ({ pup_loc = get_info () ; pup_arr = $1  ; pup_arg = $3; pup_swts = $7; pup_info = None}, get_info())}
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
+      { let cube, rjs =
+          List.fold_left (fun (cube, rjs) i ->
+            let j = fresh_var () in
+            let c = PAtom (AEq (TVar (j, get_info()), TVar (i, get_info()),get_info())) in
+            c :: cube, j :: rjs) ([], []) $3 in
+        let a = PAnd (cube, get_info()) in
+        let js = List.rev rjs in
+	let sw = [(a, $6, get_info()); (PAtom ((AAtom (Atom.True, get_info()))), TTerm ((Access($1, js)), get_info()), get_info())] in
+	Upd ({ pup_loc = get_info (); pup_arr = $1; pup_arg = js; pup_swts =  sw; pup_info = Some ($1,$3,$6)}, get_info())}
 ;

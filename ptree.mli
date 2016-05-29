@@ -17,6 +17,10 @@
 open Types
 open Util
 
+type var = Variable.t 
+
+type term_info = Term.t * info
+
 
 type term =
   | TVar of Variable.t * info
@@ -68,17 +72,22 @@ type cformula = formula
 (* type cube = [conj | PExists of Variable.t list * conj] *)
 
 
-type pswts = (cformula * term) list 
+
+type pswts  =  (cformula * term * info) list
 
 type pglob_update = PUTerm of (term) | PUCase of (pswts)
+
 
 type pupdate = {
   pup_loc : info;
   pup_arr : Hstring.t;
-  pup_arg : Variable.t list;
+  pup_arg : var list;
   pup_swts : pswts ;
-  pup_info : (Hstring.t * Variable.t list * term)  option;
+  pup_info : (Hstring.t * var list * term)  option;
 }
+
+
+type ptrans_pupdate = { p : pupdate list; i : info}
 
 
 type ptrans_req = { r_f : cformula ; r_i : info }
@@ -87,37 +96,38 @@ type ptrans_assign = { a_n : Hstring.t ; a_p : pglob_update ; a_i : info }
 
 type ptrans_nondet = { n_n : Hstring.t ; n_i : info}
 
+type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ; 
+                  ptr_nondets : ptrans_nondet list; i : info}
 type ptransition = {
-  ptr_name : Hstring.t;
-  ptr_args : Variable.t list;
+  ptr_name : Hstring.t ;
+  ptr_args : var list;
   ptr_reqs : ptrans_req ;
-  ptr_assigns : ptrans_assign list;
-  ptr_upds : pupdate list;
-  ptr_nondets : ptrans_nondet list;
+  ptr_s : ptrans_s;
   ptr_loc : info;
 }
 
+type unsafe = { i : info; vl : var list ; cf : cformula }
 
 type psystem = {
   pglobals : (info * Hstring.t * Smt.Type.t) list;
   pconsts : (info * Hstring.t * Smt.Type.t) list;
-  parrays : (info * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  parrays : (info * Hstring.t  * (Smt.Type.t list * Smt.Type.t)) list;
   ptype_defs : (info * Ast.type_constructors) list;
   pinit : info * Variable.t list * cformula;
-  pinvs : (info * Variable.t list * cformula) list;
-  punsafe : (info * Variable.t list * cformula) list;
+  pinvs : (info * var list * cformula) list;
+  punsafe : (info * var list * cformula) list;
   ptrans : ptransition list;
 }
 
 
 type pdecl =
-  | PInit of (info * Variable.t list * cformula)
-  | PInv of (info * Variable.t list * cformula)
-  | PUnsafe of (info * Variable.t list * cformula)
+  | PInit of (info * var list * cformula)
+  | PInv of (info * var list * cformula)
+  | PUnsafe of (info * var list * cformula)
   | PTrans of ptransition
   | PFun
 
-val add_fun_def : Hstring.t -> Variable.t list -> formula -> unit
+val add_fun_def : Hstring.t-> Smt.Type.t list -> formula -> unit
 
 val app_fun : Hstring.t -> term_or_formula list -> formula
 
@@ -126,6 +136,6 @@ val app_fun : Hstring.t -> term_or_formula list -> formula
 val psystem_of_decls:
   pglobals : (info * Hstring.t * Smt.Type.t) list ->
   pconsts : (info * Hstring.t * Smt.Type.t) list ->
-  parrays : (info * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list ->
+  parrays : (info * Hstring.t  * (Smt.Type.t  list * Smt.Type.t)) list ->
   ptype_defs : (info * Ast.type_constructors) list ->
   pdecl list -> psystem

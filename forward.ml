@@ -580,7 +580,7 @@ let post init all_procs procs { tr_args = tr_args;
   let d = if d = [] then [[]] else d in
   let p_init = prime_satom init in
   List.fold_left (fun acc sigma ->
-    if possible_guard procs all_procs tr_args sigma init reqs.r ureqs then
+    if possible_guard procs all_procs tr_args sigma init reqs ureqs then
       let assi, assi_terms = apply_assigns assigns sigma in
       let upd, upd_terms = apply_updates upds all_procs sigma in
       let unchanged = preserve_terms (Term.Set.union assi_terms upd_terms) init in
@@ -790,7 +790,7 @@ let instance_of_transition { tr_args = tr_args;
 		             tr_assigns = assigns; 
 		             tr_upds = upds; 
 		             tr_nondets = nondets } all_procs tr_others sigma =
-  let reqs = SAtom.subst sigma reqs.r in
+  let reqs = SAtom.subst sigma reqs in
   let t_args_ef = 
     List.fold_left (fun acc p -> 
       try (Variable.subst sigma p) :: acc

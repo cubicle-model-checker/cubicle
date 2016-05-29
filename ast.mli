@@ -59,12 +59,12 @@ type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
-  tr_reqs : transition_reqs; (** guard *)
+  tr_reqs : SAtom.t ; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
-  tr_assigns : transition_assign list; (** updates of global variables *)
+  tr_assigns : (Hstring.t * glob_update * info) list; (** updates of global variables *)
   tr_upds : update list; (** updates of arrays *)
-  tr_nondets : transition_nondet list ;
+  tr_nondets : (Hstring.t * info )  list ;
   (** non deterministic updates (only for global variables) *)
   tr_loc : info; (** location information *)
 }
