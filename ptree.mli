@@ -17,17 +17,18 @@
 open Types
 open Util
 
-type var = Variable.t 
-
 type term_info = Term.t * info
 
+type hstr_info = { hstr : Hstring.t ; hstr_i : info }
+
+type var = hstr_info
 
 type term =
-  | TVar of Variable.t * info
+  | TVar of var * info
   | TTerm of Term.t * info
     
 type atom =
-  | AVar of Variable.t * info
+  | AVar of var * info
   | AAtom of Atom.t * info 
   | AEq of term * term * info 
   | ANeq of term * term * info 
@@ -36,16 +37,16 @@ type atom =
     
 type formula =
   | PAtom of atom 
-  | PNot of formula * info
+  | PNot of info * formula * info
   | PAnd of formula list * info
   | POr of formula list * info 
   | PImp of formula * formula * info 
   | PEquiv of formula * formula * info 
   | PIte of formula * formula * formula * info
-  | PForall of Variable.t list * formula * info  
-  | PExists of Variable.t list * formula * info  
-  | PForall_other of Variable.t list * formula * info 
-  | PExists_other of Variable.t list * formula * info
+  | PForall of var list * formula * info  
+  | PExists of var list * formula * info  
+  | PForall_other of var list * formula * info 
+  | PExists_other of var list * formula * info
 
 
 type term_or_formula = PF of formula | PT of term
@@ -73,57 +74,65 @@ type cformula = formula
 
 
 
-type pswts  =  (cformula * term * info) list
 
-type pglob_update = PUTerm of (term) | PUCase of (pswts)
 
+type pup_psw = {pup_form : cformula ; pup_t : term ; pup_i : info}
+
+type pswts  =  (pup_psw list * info)
+
+type pglob_update = PUTerm of (term * info) | PUCase of (pswts)
+
+type pup_arg = { arg_v : var list ; arg_i : info }
 
 type pupdate = {
   pup_loc : info;
-  pup_arr : Hstring.t;
+  pup_arr : hstr_info;
   pup_arg : var list;
   pup_swts : pswts ;
   pup_info : (Hstring.t * var list * term)  option;
 }
 
-
-type ptrans_pupdate = { p : pupdate list; i : info}
-
+type ptrans_pupdate = { t_pup_l : pupdate list ; t_pup_i : info}
 
 type ptrans_req = { r_f : cformula ; r_i : info }
 
-type ptrans_assign = { a_n : Hstring.t ; a_p : pglob_update ; a_i : info } 
+type ptrans_assign = { a_n : hstr_info; a_p : pglob_update ; a_i : info } 
 
-type ptrans_nondet = { n_n : Hstring.t ; n_i : info}
+type ptrans_nondet = { n_n : hstr_info ; n_i : info}
 
 type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ; 
-                  ptr_nondets : ptrans_nondet list; i : info}
+                  ptr_nondets : ptrans_nondet list; ptr_i : info}
+
 type ptransition = {
-  ptr_name : Hstring.t ;
-  ptr_args : var list;
+  ptr_name : hstr_info ;
+  ptr_args : hstr_info list;
   ptr_reqs : ptrans_req ;
   ptr_s : ptrans_s;
   ptr_loc : info;
 }
 
-type unsafe = { i : info; vl : var list ; cf : cformula }
+
+type ptr_type_constructors =  hstr_info * hstr_info list 
+  
+(* type smt_info = { smt : Smt.Type.t ; smt_i : info} *)
 
 type psystem = {
-  pglobals : (info * Hstring.t * Smt.Type.t) list;
-  pconsts : (info * Hstring.t * Smt.Type.t) list;
-  parrays : (info * Hstring.t  * (Smt.Type.t list * Smt.Type.t)) list;
-  ptype_defs : (info * Ast.type_constructors) list;
-  pinit : info * Variable.t list * cformula;
-  pinvs : (info * var list * cformula) list;
-  punsafe : (info * var list * cformula) list;
+  pglobals : (info * hstr_info * hstr_info) list;
+  pconsts : (info * hstr_info * hstr_info) list;
+  parrays : (info * hstr_info  * (hstr_info  list * hstr_info)) list;
+  ptype_defs : (info * ptr_type_constructors) list;
+  pinit : info *  hstr_info list * cformula;
+  pinvs : (info * hstr_info list * cformula) list;
+  punsafe : (info * hstr_info list * cformula) list;
   ptrans : ptransition list;
 }
 
 
+
 type pdecl =
-  | PInit of (info * var list * cformula)
-  | PInv of (info * var list * cformula)
-  | PUnsafe of (info * var list * cformula)
+  | PInit of (info * hstr_info list * cformula)
+  | PInv of (info * hstr_info list * cformula)
+  | PUnsafe of (info * hstr_info list * cformula)
   | PTrans of ptransition
   | PFun
 
@@ -134,8 +143,8 @@ val app_fun : Hstring.t -> term_or_formula list -> formula
 (* val encode_psystem : psystem -> Ast.system *)
 
 val psystem_of_decls:
-  pglobals : (info * Hstring.t * Smt.Type.t) list ->
-  pconsts : (info * Hstring.t * Smt.Type.t) list ->
-  parrays : (info * Hstring.t  * (Smt.Type.t  list * Smt.Type.t)) list ->
-  ptype_defs : (info * Ast.type_constructors) list ->
+  pglobals : (info * hstr_info * hstr_info) list ->
+  pconsts : (info * hstr_info * hstr_info) list ->
+  parrays : (info * hstr_info  * (hstr_info list * hstr_info)) list ->
+  ptype_defs : (info * ptr_type_constructors) list ->
   pdecl list -> psystem
