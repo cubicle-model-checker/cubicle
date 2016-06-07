@@ -87,7 +87,7 @@
     fun () -> incr cpt; !cpt 
 
   let get_info () = 
-    { loc = loc (); active = true; id = get_id ()} 
+  { loc = loc (); active = true; id = get_id()} 
 
 %}
 
@@ -330,21 +330,22 @@ var_term:
 top_id_term:
   | var_term { match $1 with
       | Elem (v, Var) -> TVar ({ hstr = v; hstr_i = get_info()}, get_info())
-      | _ -> TTerm ($1, get_info()) }
+      | _ -> TTerm (($1, get_info()), None) }
 ;
 
 
 array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
     let l = $1 in 
-    let new_l = List.map (fun x -> x.hstr) $3
-    in  (Access (l.hstr, new_l))
+    let (proc_l,_) = $3 in 
+    let new_l = List.map (fun x -> x.hstr) proc_l
+    in  (Access (l.hstr, new_l), $1, proc_l)
   }
 ;
 
 var_or_array_term:
   | var_term { $1 }
-  | array_term { $1 }
+  | array_term { let (a,_,_) = $1 in a }
 ;
 
 arith_term:
@@ -373,8 +374,8 @@ arith_term:
 
 term:
   | top_id_term { ($1, get_info()) } 
-  | array_term { (TTerm ($1, get_info()), get_info()) }
-  | arith_term { Smt.set_arith true; (TTerm ($1, get_info()), get_info()) }
+  | array_term { let (a, n, v) = $1 in ((TTerm ((a, get_info()), Some {arr_n = n; arr_arg = v})), get_info()) }
+  | arith_term { Smt.set_arith true; (TTerm (($1, get_info()), None), get_info()) }
 ;
 
 lident:
@@ -391,8 +392,8 @@ proc_name:
 ;
 
 proc_name_list_plus:
-  | proc_name { let p = $1 in [ p ]  }
-  | proc_name COMMA proc_name_list_plus { let p = $1 in ( p )::$3 }
+  | proc_name { let p = $1 in ([ p ], get_info())  }
+  | proc_name COMMA proc_name_list_plus { let p = $1 in let (l,_) = $3 in  (( p )::l,get_info()) }
 ;
 
 mident:
@@ -458,6 +459,7 @@ expr:
   | neg expr { PNot ($1, $2, get_info()) }
   | expr AND expr { PAnd ([$1; $3], get_info()) }
   | expr OR expr  { POr ([$1 ; $3], get_info()) }
+
   | expr IMP expr { PImp ($1, $3, get_info()) }
   | expr EQUIV expr { PEquiv ($1, $3, get_info()) }
   | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6, get_info()) }
@@ -488,26 +490,28 @@ expr_or_term_comma_list:
 
 update:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
-      { List.iter (fun (p) ->
+       {let (l,_) = $3 in List.iter (fun (p) ->
           if (Hstring.view p.hstr).[0] = '#' then
             raise Parsing.Parse_error;
-        ) $3;
+        ) l;
         Upd 
           ({ pup_loc = get_info () ; pup_arr = $1 ; pup_arg = $3; pup_swts = $7; pup_info = None}, get_info())}
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let l = $1 in 
         let (t,i) = $6 in 
+        let (pl,pl_i) = $3 in 
         let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = { hstr = fresh_var (); hstr_i = i.hstr_i} in
             let c = PAtom (AEq (TVar (j, get_info()), TVar (i, get_info()),get_info())) in
-            c :: cube, j :: rjs) ([], []) $3 in
+            c :: cube, j :: rjs) ([], []) pl in
         let a = PAnd (cube, get_info()) in
         let js = List.rev rjs in
         let new_l = List.map (fun x -> x.hstr) js in 
 	let sw = [
           { pup_form = a; pup_t =  t; pup_i =  get_info()};
-          { pup_form = PAtom ((AAtom (Atom.True, get_info()))); pup_t =  TTerm ((Access(l.hstr, new_l)), i);
+          { pup_form = PAtom ((AAtom (Atom.True, get_info()))); 
+            pup_t =  TTerm (((Access(l.hstr, new_l)), i),None);
  pup_i =  get_info()}] in
-	Upd ({ pup_loc = get_info (); pup_arr = $1; pup_arg = js; pup_swts = (sw, i); pup_info = Some (l.hstr,$3,t)}, get_info())}
+	Upd ({ pup_loc = get_info (); pup_arr = $1; pup_arg = (js,pl_i); pup_swts = (sw, i); pup_info = Some (l.hstr,pl,t)}, get_info())}
 ;

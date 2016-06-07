@@ -17,15 +17,20 @@
 open Types
 open Util
 
-type term_info = Term.t * info
 
 type hstr_info = { hstr : Hstring.t ; hstr_i : info }
 
 type var = hstr_info
 
+type arr = { arr_n : hstr_info; arr_arg : var list}
+
+type array = arr option
+
+type term_info = Term.t * info 
+
 type term =
   | TVar of var * info
-  | TTerm of Term.t * info
+  | TTerm of term_info * array 
     
 type atom =
   | AVar of var * info
@@ -87,7 +92,7 @@ type pup_arg = { arg_v : var list ; arg_i : info }
 type pupdate = {
   pup_loc : info;
   pup_arr : hstr_info;
-  pup_arg : var list;
+  pup_arg : var list * info;
   pup_swts : pswts ;
   pup_info : (Hstring.t * var list * term)  option;
 }
@@ -104,7 +109,7 @@ type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ;
                   ptr_nondets : ptrans_nondet list; ptr_i : info}
 
 type ptransition = {
-  ptr_name : hstr_info ;
+  mutable ptr_name : hstr_info ;
   ptr_args : hstr_info list;
   ptr_reqs : ptrans_req ;
   ptr_s : ptrans_s;

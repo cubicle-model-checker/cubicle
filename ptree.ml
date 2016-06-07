@@ -23,12 +23,16 @@ type hstr_info = { hstr : Hstring.t ; hstr_i : info }
 
 type var = hstr_info
 
-type term_info = Term.t * info
+type arr = { arr_n : hstr_info; arr_arg : var list }
+
+type array = arr option
+
+type term_info = Term.t * info 
 
 type term =
   | TVar of var * info
-  | TTerm of Term.t * info
-    
+  | TTerm of term_info * array 
+     
 type atom =
   | AVar of var * info
   | AAtom of Atom.t * info 
@@ -55,92 +59,6 @@ type term_or_formula = PF of formula | PT of term
 type cformula = formula
 
 let function_defs = Hstring.H.create 17
-(* type cformula = [ *)
-(*   | PAtom of Atom.t *)
-(*   | PNot of cformula *)
-(*   | PAnd of cformula list *)
-(*   | POr of cformula list *)
-(*   | PImp of cformula * cformula *)
-(*   | PEquiv of cformula * cformula *)
-(*   | PIte of cformula * cformula * cformula *)
-(*   | PForall of Variable.t list * cformula *)
-(*   | PExists of Variable.t list * cformula *)
-(*   | PForall_other of Variable.t list * cformula *)
-(*   | PExists_other of Variable.t list * cformula *)
-(* ] *)
-
-let print_term fmt = function
-  | TVar (x,_) -> fprintf fmt "'%a" Hstring.print x.hstr
-  | TTerm (t,_) -> Term.print fmt t
-
-let print_atom fmt = function
-  | AVar (x,_) -> fprintf fmt "?%a" Hstring.print x.hstr
-  | AAtom (a,_) -> Atom.print fmt a
-  | AEq (t1, t2, _) -> fprintf fmt "(= %a %a)" print_term t1 print_term t2
-  | ANeq (t1, t2, _) -> fprintf fmt "(<> %a %a)" print_term t1 print_term t2
-  | ALe (t1, t2, _) -> fprintf fmt "(<= %a %a)" print_term t1 print_term t2
-  | ALt (t1, t2, _) -> fprintf fmt "(< %a %a)" print_term t1 print_term t2
-
-let rec print fmt = function
-  | PAtom (a) -> print_atom fmt a
-  | PNot (_,f,_) -> fprintf fmt "~ %a" print f
-  | PAnd (l,_) ->
-    fprintf fmt "(and";
-    List.iter (fprintf fmt " %a" print ) l;
-    fprintf fmt ")";
-  | POr (l,_) ->
-    fprintf fmt "(or";
-    List.iter (fprintf fmt " %a" print ) l;
-    fprintf fmt ")";
-  | PImp (a,b,_) -> fprintf fmt "(%a => %a)" print a print b
-  | PEquiv (a,b,_) -> fprintf fmt "(%a <=> %a)" print a print b
-  | PIte (c,t,e,_) ->
-    fprintf fmt "(if %a then %a else %a)" print c print t print e
-  | PForall (vs, f,_) ->
-    fprintf fmt "(forall";
-    List.iter ( fun (v) -> fprintf fmt " %a" Variable.print v.hstr) vs;
-    fprintf fmt ". %a)" print f
-  | PExists (vs,f,_) ->
-    fprintf fmt "(exists";
-    List.iter (fun (v) -> fprintf fmt " %a" Variable.print v.hstr) vs;
-    fprintf fmt ". %a)" print f
-  | PForall_other (vs,f,_) ->
-    fprintf fmt "(forall_other";
-    List.iter (fun (v) -> fprintf fmt " %a" Variable.print v.hstr) vs;
-    fprintf fmt ". %a)" print f
-  | PExists_other (vs,f,_) ->
-    fprintf fmt "(exists_other";
-    List.iter (fun (v) -> fprintf fmt " %a" Variable.print v.hstr) vs;
-    fprintf fmt ". %a)" print f
-
-let print_tof fmt = function
-  | PF f -> fprintf fmt "F<%a>" print f
-  | PT t -> fprintf fmt "T<%a>" print_term t
-
-let print_subst fmt =
-  List.iter (fun (v, tof) ->
-      fprintf fmt " %a -> %a, " Hstring.print v print_tof tof
-    )
-
-(* type atom = [ PAtom of Atom.t ] *)
-
-(* type clause = [atom | POr of atom list] *)
-
-(* type conj = [atom | PAnd of atom list] *)
-
-(* type cnf = [clause | PAnd of clause list] *)
-
-(* type dnf = [conj | POr of conj list] *)
-
-(* type uguard = [PForall_other of Variable.t list * dnf] *)
-
-(* type guard = [dnf | uguard] *)
-
-(* type prenex_forall_dnf = [dnf | PForall of Variable.t list * dnf] *)
-
-(* type cube = [conj | PExists of Variable.t list * conj] *)
-
-
 
 type pup_psw = {pup_form : cformula ; pup_t : term ; pup_i : info}
 
@@ -153,7 +71,7 @@ type pup_arg = { arg_v : var list ; arg_i : info }
 type pupdate = {
   pup_loc : info;
   pup_arr : hstr_info;
-  pup_arg : var list;
+  pup_arg : var list * info;
   pup_swts : pswts ;
   pup_info : (Hstring.t * var list * term)  option;
 }
@@ -170,7 +88,7 @@ type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ;
                   ptr_nondets : ptrans_nondet list; ptr_i : info}
 
 type ptransition = {
-  ptr_name : hstr_info ;
+  mutable ptr_name : hstr_info ;
   ptr_args : hstr_info list;
   ptr_reqs : ptrans_req ;
   ptr_s : ptrans_s;
@@ -220,7 +138,7 @@ let restr_subst_to sigma vars =
         if Variable.Set.mem v vars then
           (v, v'.hstr)::acc
         else acc
-      | v, PT (TTerm (Elem(v', Var),i)) ->
+      | v, PT (TTerm ((Elem(v', Var),i),_)) ->
          if Variable.Set.mem v vars then
           (v, v')::acc
         else acc
@@ -237,14 +155,14 @@ let subst_term sigma tt = match tt with
      | PT t -> t
      | PF _ -> failwith "Cannot apply formula substitution in term."
      | exception Not_found -> tt)
-  | TTerm (t,i) ->
+  | TTerm ((t,it),i) ->
     (* eprintf "susbst in term %a (%a)@." Term.print t *)
     (*   Variable.print_vars (Term.variables t |> Variable.Set.elements); *)
     let sigma' = restr_subst_to sigma (Term.variables t) in
     (* eprintf "subst in %a ::: %a@." print_term tt Variable.print_subst sigma'; *)
     let t' = Term.subst sigma' t in
     (* eprintf "   result %a@." Term.print t'; *)
-    if t == t' then tt else TTerm (t',i)
+    if t == t' then tt else TTerm ((t', it),i)
 
 let subst_atom sigma aa = match aa with
   | AVar (v,i) ->
