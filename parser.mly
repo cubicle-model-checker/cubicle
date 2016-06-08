@@ -108,6 +108,7 @@
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
 %token EOF
+%token COMMENT
 
 %nonassoc prec_forall prec_exists
  %right IMP EQUIV  
@@ -207,13 +208,15 @@ size_proc:
   | SIZEPROC INT { Options.size_proc := Num.int_of_num $2 }
 ;
       
+comment:
+  |COMMENT type_def COMMENT {$2}
+
 type_def:
   | TYPE lident {( get_info (), ($2, [])) }
   | TYPE lident EQ constructors 
       { Smt.set_sum true; List.iter (fun x -> Constructors.add x.hstr) $4; (get_info (), ($2, $4)) }
   | TYPE lident EQ BAR constructors 
-      {  Smt.set_sum true; List.iter (fun x -> Constructors.add x.hstr) $5; (get_info (), ($2, $5)) }
-;
+      {  Smt.set_sum true; List.iter (fun x -> Constructors.add x.hstr) $5; (get_info (), ($2, $5)) };
 
 constructors:
   | mident { [$1] }

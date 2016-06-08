@@ -48,7 +48,7 @@ INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma lablgtk.cma lablgtksourceview2.cma 
+REQBIB=nums.cma unix.cma functory.cma lablgtk.cma str.cma lablgtksourceview2.cma 
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)

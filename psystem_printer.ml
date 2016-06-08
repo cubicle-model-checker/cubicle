@@ -5,12 +5,15 @@ open Ptree
 open Format
 
 let comments = ref true 
+let open_c = ref "(*"
+let close_c = ref "*)"
+    
 
 let print_hstr fmt  h =
   if h.hstr_i.active || not !comments then
     fprintf fmt "%s" (Hstring.view h.hstr)
   else 
-    fprintf fmt "(*%s*)" (Hstring.view h.hstr)
+    fprintf fmt "%s%s%s" !open_c  (Hstring.view h.hstr) !close_c
       
 let rec print_list_seph fmt (l, sep) = 
   match l with
@@ -21,41 +24,41 @@ let rec print_list_seph fmt (l, sep) =
 let print_term fmt  = function
   | TVar (v, l) -> 
     if l.active || not !comments then Hstring.print fmt v.hstr 
-    else fprintf fmt "(* %a *)" Hstring.print v.hstr
+    else fprintf fmt "%s %a %s" !open_c Hstring.print v.hstr !close_c
   | TTerm ((t, l),None) -> 
     if l.active || not !comments then Term.print fmt t 
-    else fprintf fmt "(* %a *)" Term.print t
+    else fprintf fmt "%s %a %s" !open_c Term.print t !close_c
   | TTerm ((t, l), Some x) -> 
     if l.active || not !comments then
       fprintf fmt "%a [%a]" 
         print_hstr x.arr_n print_list_seph (x.arr_arg, ",")
     else
-      fprintf fmt "(*%a [%a]*)" 
-        print_hstr x.arr_n print_list_seph (x.arr_arg, ",")
+      fprintf fmt "%s %a [%a] %s" 
+        !open_c print_hstr x.arr_n print_list_seph (x.arr_arg, ",") !close_c
 
 let print_atom fmt  = function
   | AVar (v, l) -> 
     if l.active || not !comments then Hstring.print fmt v.hstr
-    else (fprintf fmt "(* %a *)" Hstring.print v.hstr)
+    else (fprintf fmt "%s %a %s" !open_c Hstring.print v.hstr !close_c)
   | AAtom (a, l) -> 
     if l.active || not !comments then Atom.print fmt a 
-    else fprintf fmt "(* %a *)" Atom.print a
+    else fprintf fmt "%s %a %s" !open_c Atom.print a !close_c
   | AEq (t1, t2, l) -> 
     if l.active || not !comments then 
       fprintf fmt "(%a = %a)" print_term t1 print_term t2
-    else (fprintf fmt "(* %a = %a *)" print_term t1 print_term t2)
+    else (fprintf fmt "%s %a = %a %s" !open_c print_term t1 print_term t2 !close_c)
   | ANeq (t1, t2, l) -> 
     if l.active || not !comments then
       fprintf fmt "(%a <> %a)" print_term t1 print_term t2
-    else (fprintf fmt "(* %a <> %a *)" print_term t1 print_term t2)
+    else (fprintf fmt "%s %a <> %a %s" !open_c print_term t1 print_term t2 !close_c)
   | ALe (t1, t2, l) -> 
     if l.active || not !comments then 
       fprintf fmt "(%a <= %a)" print_term t1 print_term t2
-    else (fprintf fmt "(* %a <= %a *)" print_term t1 print_term t2 )
+    else (fprintf fmt "%s %a <= %a %s" !open_c print_term t1 print_term t2 !close_c)
   | ALt (t1, t2, l) ->
     if l.active || not !comments then 
       fprintf fmt "(%a < %a)" print_term t1 print_term t2
-    else (fprintf fmt "(* %a < %a *)" print_term t1 print_term t2 )
+    else (fprintf fmt "%s %a < %a %s" !open_c print_term t1 print_term t2 !close_c)
 
       
 let get_active_atom = function
@@ -93,7 +96,7 @@ let rec print_list_sep_form fmt (f, l, sep) =
       else if get_active_formula x then
         fprintf fmt "%a%a" f x f y
       else
-        fprintf fmt "(*%a%s*)%a" f x sep f y
+        fprintf fmt "%s%a%s%s%a" !open_c f x sep !close_c f y
     |x::y::m ->
       let s = y::m  in
       if (get_active_formula x && get_active_formula y) || not !comments then
@@ -102,15 +105,15 @@ let rec print_list_sep_form fmt (f, l, sep) =
         fprintf fmt "%a%a" f x print_list_sep_form (f, s, sep)
       else
         if get_active_formula y then
-          fprintf fmt "(*%a%s*)%s%a" f x sep sep print_list_sep_form (f, s, sep)
+          fprintf fmt "%s%a%s%s%s%a" !open_c f x sep sep !close_c print_list_sep_form (f, s, sep)
         else
-          fprintf fmt "(*%a%s*)%a" f x sep print_list_sep_form (f, s, sep)       
+          fprintf fmt "%s%a%s%s%a" !open_c f x sep !close_c print_list_sep_form (f, s, sep)       
 
 let rec print_formula fmt f = 
   if get_active_formula f || not !comments then 
     print_f fmt f 
   else
-    fprintf fmt "(* %a *)" print_f f
+    fprintf fmt "%s %a %s" !open_c print_f f !close_c
 and
     print_f fmt  = function 
       | PAtom (a) -> print_atom fmt a 
@@ -118,7 +121,7 @@ and
         if not_i.active || not !comments  then 
           fprintf fmt "( not (%a) )" print_formula f
         else 
-          fprintf fmt "( (*not*) %a )" print_formula f
+          fprintf fmt "( %snot%s %a )" !open_c !close_c print_formula f
       | PAnd (l,loc) -> 
         fprintf fmt " %a " print_list_sep_form (print_formula, l, " && ")
       | POr (l,loc) ->
@@ -158,7 +161,7 @@ let rec print_list_sep fmt  (l, sep) =
       if x.hstr_i.active || not !comments  then
         fprintf fmt "%s%s%a" (Hstring.view x.hstr) sep print_list_sep (s,sep)
       else
-        fprintf fmt "(*%s%s*)%a" (Hstring.view x.hstr) sep print_list_sep (s,sep)
+        fprintf fmt "%s%s%s%s%a" !open_c (Hstring.view x.hstr) sep !close_c print_list_sep (s,sep)
           
 let not_active l = 
   List.fold_left (fun acc x -> acc && (not x.hstr_i.active)) true l
@@ -169,14 +172,14 @@ let print_list_sep_type fmt  (l, sep) =
     |x::[] -> if x.hstr_i.active || not !comments then
         fprintf fmt "%s" (Hstring.view x.hstr) 
       else
-        fprintf fmt "(*%s *)" (Hstring.view x.hstr) 
+        fprintf fmt "%s%s%s" !open_c (Hstring.view x.hstr) !close_c
     |x::s ->
       if (x.hstr_i.active  && not_active s ) && !comments then
         fprintf fmt "%s%a" (Hstring.view x.hstr)  print s
       else if x.hstr_i.active || not !comments then
         fprintf fmt "%s%s%a"  (Hstring.view x.hstr) sep  print s
       else 
-        fprintf fmt "(*%s%s*)%a" (Hstring.view x.hstr) sep  print s in
+        fprintf fmt "%s%s%s%s%a" !open_c (Hstring.view x.hstr) sep !close_c print s in
   print fmt l
     
     
@@ -188,8 +191,8 @@ let print_type_defs fmt l =
       fprintf fmt "type %s%s%a@." (Hstring.view name.hstr)
         str_eq print_list_sep_type (t_l, " | " ) 
     else
-      fprintf fmt "(* type %s%s%a*)@." (Hstring.view name.hstr)
-        str_eq print_list_sep_type (t_l, " | " )) l
+      fprintf fmt "%s type %s%s%a%s@." !open_c (Hstring.view name.hstr)
+        str_eq print_list_sep_type (t_l, " | " ) !close_c) l 
     
 
 let print_consts_or_globals fmt (str, l) = 
@@ -197,8 +200,8 @@ let print_consts_or_globals fmt (str, l) =
     if loc.active || not !comments then
       fprintf fmt "%s %s : %s@." str (Hstring.view name.hstr) (Hstring.view t.hstr)  
     else
-      fprintf fmt "(* %s %s : %s*)@." str (Hstring.view name.hstr)
-        (Hstring.view t.hstr)) l 
+      fprintf fmt "%s %s %s : %s %s@." !open_c str (Hstring.view name.hstr)
+        (Hstring.view t.hstr) !close_c) l 
     
 
 let print_arrays fmt  l = 
@@ -207,8 +210,8 @@ let print_arrays fmt  l =
       fprintf fmt "array %a [%a] : %a@." 
         print_hstr name print_list_seph (t_l, ",")  print_hstr t
     else
-      fprintf fmt "(* array %a [%a] : %a*)@." 
-        print_hstr name print_list_seph (t_l, ",") print_hstr t) l
+      fprintf fmt "%s array %a [%a] : %a%s@." 
+        !open_c print_hstr name print_list_seph (t_l, ",") print_hstr t !close_c) l
 
     
 let print_init fmt  i =
@@ -216,7 +219,8 @@ let print_init fmt  i =
   if loc.active || not !comments then
     fprintf fmt "@[init (%a) { %a }@.@.@]" print_list_sep (vl, " ") print_formula f
   else
-    fprintf fmt "(*@[init (%a) { %a }*)@.@.@]" print_list_sep (vl, " ") print_formula f
+    fprintf fmt "%s@[init (%a) { %a }%s@.@.@]" 
+      !open_c print_list_sep (vl, " ") print_formula f !close_c
 
 
 let print_invs_or_unsafe str fmt l = 
@@ -225,8 +229,8 @@ let print_invs_or_unsafe str fmt l =
       fprintf fmt "@[%s (%a) { %a }@.@.@]"
         str print_list_sep (vl, " ") print_formula f
     else 
-      fprintf fmt "(* @[%s (%a) { %a }*)@.@.@]"
-        str print_list_sep (vl, " ") print_formula f) l
+      fprintf fmt "%s @[%s (%a) { %a }%s@.@.@]"
+        !open_c str print_list_sep (vl, " ") print_formula f !close_c) l
 
 
 let print_nondets fmt  l = 
@@ -234,7 +238,7 @@ let print_nondets fmt  l =
     if x.n_i.active || not !comments then 
       fprintf fmt "%s := . ;@;" (Hstring.view x.n_n.hstr)
     else
-      fprintf fmt "(*%s := . ;*).@;" (Hstring.view x.n_n.hstr)
+      fprintf fmt "%s%s := . ;%s.@;" !open_c (Hstring.view x.n_n.hstr) !close_c
   ) l  
 
 let print_swts fmt  l = 
@@ -244,13 +248,14 @@ let print_swts fmt  l =
       if x.pup_i.active || not !comments then 
         fprintf fmt "| %a : %a@]" print_formula x.pup_form print_term x.pup_t
       else
-        fprintf fmt " (* %a : %a*)@]" print_formula x.pup_form print_term x.pup_t
+        fprintf fmt " %s %a : %a%s@]" 
+          !open_c print_formula x.pup_form print_term x.pup_t !close_c
     |(x::s) -> 
       if x.pup_i.active || not !comments then 
         fprintf fmt "| %a : %a @;%a" print_formula x.pup_form print_term x.pup_t print s
       else 
-        fprintf fmt "(* %a : %a *)@;%a" print_formula x.pup_form print_term 
-          x.pup_t print s     in 
+        fprintf fmt "%s %a : %a %s@;%a" !open_c print_formula x.pup_form print_term 
+          x.pup_t !close_c print s     in 
   if l <> [] then (
     fprintf fmt "@[<v 2>case @;";
     print fmt l)
@@ -265,8 +270,8 @@ let print_assigns fmt l =
     if x.a_i.active || not !comments then
       fprintf fmt "%s := %a;@;" (Hstring.view x.a_n.hstr) print_glob_update x.a_p
     else
-      fprintf fmt "(* %s := %a; *)@;" (Hstring.view x.a_n.hstr) 
-        print_glob_update x.a_p)l
+      fprintf fmt "%s %s := %a; %s@;" !open_c (Hstring.view x.a_n.hstr) 
+        print_glob_update x.a_p !close_c)l
     
 let print_upds fmt upds =
   List.iter (fun u -> 
@@ -284,10 +289,11 @@ let print_upds fmt upds =
         |None -> 
           let (x,_) = u.pup_swts in 
           let (p_arg,_) = u.pup_arg in 
-          fprintf fmt "(* %s[%a] := %a; *)@,"
-            (Hstring.view u.pup_arr.hstr) print_list_seph (p_arg,", ") print_swts x  
-        |Some (name, var, t) -> fprintf fmt "(* %s[%a] := %a; *)@,"
-          (Hstring.view name) print_list_seph (var,", ") print_term t)) upds.t_pup_l
+          fprintf fmt "%s %s[%a] := %a; %s@,"
+           !open_c (Hstring.view u.pup_arr.hstr) print_list_seph (p_arg,", ") 
+            print_swts x !close_c 
+        |Some (name, var, t) -> fprintf fmt "%s %s[%a] := %a; %s@,"
+          !open_c (Hstring.view name) print_list_seph (var,", ") print_term t !close_c)) upds.t_pup_l
     
 
 let print_ptrs fmt ptrs =
@@ -297,10 +303,12 @@ let print_ptrs fmt ptrs =
       print_assigns ptrs.ptr_assigns
       print_upds ptrs.ptr_upds
   else
-    fprintf fmt "@[<v>@,(*%a%a%a*)@]"
+    fprintf fmt "@[<v>@,%s%a%a%a%s@]"
+      !open_c
       print_nondets ptrs.ptr_nondets 
       print_assigns ptrs.ptr_assigns
       print_upds ptrs.ptr_upds
+      !close_c
       
 let print_transitions fmt  l = 
   List.iter (fun t ->
@@ -308,9 +316,11 @@ let print_transitions fmt  l =
       fprintf fmt "@[transition %a (%a)@.requires { @[%a@] }@.{%a@]@;}@.@."
         print_hstr t.ptr_name  print_list_sep (t.ptr_args, " ") 
         print_formula t.ptr_reqs.r_f print_ptrs t.ptr_s else 
-      fprintf fmt "@[(* transition %a (%a)@.requires { @[%a@] }@.{%a} *)@.@.@]"
+      fprintf fmt "@[%s transition %a (%a)@.requires { @[%a@] }@.{%a} %s@.@.@]"
+        !open_c
         print_hstr t.ptr_name  print_list_sep (t.ptr_args, " ")
         print_formula t.ptr_reqs.r_f print_ptrs t.ptr_s
+        !close_c
   ) l
     
 let print_psystem psys  fmt = 
@@ -328,5 +338,10 @@ let psystem_to_string psys   =
   print_psystem psys fmt;
   flush_str_formatter ()
     
-
+let psystem_to_string_nocomments psys =
+  comments := false;
+  let str = psystem_to_string psys in 
+  comments := true;
+  str
+  
     

@@ -3,7 +3,6 @@ open Util
 open Types
 open Ptree
 
-
 exception Found
 
 exception ParseRev
@@ -16,6 +15,13 @@ let buffer_c = ref (-1)
 let last_visited = ref None
 let test = ref None 
 let inact_l = ref []
+
+let compare_inact l =  
+  let start_loc, stop_loc = l.loc in
+  try 
+    List.find (fun (start, stop) -> start = start_loc.pos_cnum && stop = stop_loc.pos_cnum) !inact_l;
+    l.active <- not (l.active)
+  with Not_found -> ()
 
 let compare_motion l   =
   let start_loc, stop_loc = l.loc in
@@ -339,11 +345,11 @@ let compare_button_press2 p   =
 
 let parse f p  = 
   try 
-    List.iter (parse_glob_const f  ) p.pglobals;
-    List.iter (parse_glob_const f  ) p.pconsts;
-    List.iter (fun (x, _, _) -> f x ) p.pconsts;
-    List.iter (parse_array f  ) p.parrays;
-    List.iter (parse_type_defs f  ) p.ptype_defs;
+    List.iter (parse_glob_const f) p.pglobals;
+    List.iter (parse_glob_const f) p.pconsts;
+    List.iter (fun (x, _, _) -> f x) p.pconsts;
+    List.iter (parse_array f) p.parrays;
+    List.iter (parse_type_defs f) p.ptype_defs;
     parse_pform f  p.pinit;
     List.iter (parse_pform f  ) p.pinvs;
     List.iter (parse_pform f  ) p.punsafe;
@@ -367,3 +373,5 @@ let parse_psystem_m p =
   with ParseRev -> ( tag_list := [];
                      parse_rev compare_button_press p; !tag_list )
     
+let parse_init p = 
+  parse compare_inact p

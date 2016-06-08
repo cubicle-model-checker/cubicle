@@ -29,6 +29,7 @@ let type_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
+let gui_debug = ref false
 let dot = ref false
 let dot_level = ref 0
 let dot_prog = ref Dot
@@ -132,6 +133,7 @@ let specs =
     "-search", Arg.String set_mode, 
     "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
+    "-gui_debug", Arg.Set gui_debug, "cubicle debug mode";
     "-dot", Arg.Int set_dot,
     "<level> graphviz (dot) output with a level of details";
     "-sfdp", Arg.Unit use_sfdp,
@@ -224,6 +226,7 @@ let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let max_proc = !max_proc
 let debug = !debug
+let gui_debug = !gui_debug
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level

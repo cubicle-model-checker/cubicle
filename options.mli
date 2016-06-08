@@ -69,6 +69,7 @@ val cores : int
 val mode : string
 
 val debug : bool
+val gui_debug : bool
 val dot : bool
 val dot_level : int
 val dot_prog : viz_prog

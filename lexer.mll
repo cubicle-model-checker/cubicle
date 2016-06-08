@@ -152,6 +152,8 @@ rule token = parse
       { UNDERSCORE }
   | "&&"
       { AND }
+  | "##"
+      { COMMENT }
   | "(*"
       { comment lexbuf; token lexbuf }
   | eof 
