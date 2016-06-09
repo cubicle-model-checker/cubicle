@@ -88,7 +88,7 @@ type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ;
                   ptr_nondets : ptrans_nondet list; ptr_i : info}
 
 type ptransition = {
-  mutable ptr_name : hstr_info ;
+  ptr_name : hstr_info ;
   ptr_args : hstr_info list;
   ptr_reqs : ptrans_req ;
   ptr_s : ptrans_s;

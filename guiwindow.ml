@@ -3,6 +3,7 @@ open Gdk.Color
 open GdkEvent.Button
 open Lexing
 open Options
+open Format
 
 
 exception NotBuffer
@@ -18,10 +19,10 @@ let window =
     ~position:`CENTER 
     ~resizable:true 
     ~width:wd ~height:800 () in 
-  let _ = wnd#connect#destroy GMain.quit in
+  let _ = wnd#connect#destroy (GMain.quit) in
   wnd 
-    
-    
+
+
 let ocaml = 
   let manager = GSourceView2.source_language_manager ~default:true in 
   match manager#language "cubicle" with 
@@ -31,7 +32,6 @@ let ocaml =
 let box = GPack.vbox ~packing:window#add ()
 
 let button_box = GPack.hbox ~spacing:5 ~packing:(box#pack ~expand:false ~fill:false) ()
-
 
 let execute_button = GButton.button ~label:"Run" ~stock:`EXECUTE ~packing:(button_box#pack ~expand:false ~fill:false)()
 
@@ -57,7 +57,7 @@ let b1 = GPack.vbox ~packing:b#add ()
 
 let b2 = GPack.vbox ~packing:b#add ~show:(gui_debug)() 
 
-let e_box = GBin.event_box ~height:550 ~packing:(b1#pack ~expand:false ~fill:false ) ()
+let e_box = GBin.event_box ~height:600 ~packing:(b1#pack ~expand:false ~fill:false ) ()
 
 let t_scroll = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
@@ -66,7 +66,7 @@ let t_scroll = GBin.scrolled_window
 
 let text1 =  GSourceView2.source_view ~packing:t_scroll#add ()
 
-let e_box2 = GBin.event_box ~height:550 ~packing:(b2#pack ~expand:false ~fill:false) ()
+let e_box2 = GBin.event_box ~height:600 ~packing:(b2#pack ~expand:false ~fill:false) ()
 
 let t_scroll2 = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
@@ -181,7 +181,7 @@ let find_in_ast s edit m  =
       false
     with NotBuffer -> (apply_tag (cancel_last_visited ()); false)
 
-let modify_ast ast file edit b = 
+let modify_ast ast edit b = 
   if !edit then false
   else 
     (* if GdkEvent.get_type b = `TWO_BUTTON_PRESS then *)
@@ -199,67 +199,89 @@ let save_ex_file s file b =
   close_out oc;
   true
 
-let save_file s file b = 
+let save_file s file newfile b = 
   parse_linact !s;
   let l = !inact_l in
   let oc = open_out file in 
   if l == [] then Printf.fprintf oc "vide" else
   List.iter (fun (s, e) -> Printf.fprintf oc "%d %d " s e) l;
   close_out oc;
+  save_ex_file s newfile b ;
   true
 
-let show_file s new_name b = 
-  let _ = save_file s new_name b in
+
+
+let confirm s file newfile e =
+  let dlg = GWindow.message_dialog
+    ~message:"<big> Save current session </big>"
+    ~parent:window
+    ~destroy_with_parent:true
+    ~use_markup:true
+    ~message_type:`QUESTION
+    ~position:`CENTER_ON_PARENT
+    ~buttons:GWindow.Buttons.yes_no () in
+  let res = dlg#run () = `YES  in
+  let _ = if res then save_file s file newfile e else true in
+  dlg#destroy ();
+  false
+
+    
+
+let show_file s new_name save_name b = 
+  let _ = save_file s save_name new_name in
   source2#source_buffer#set_text (read_file new_name);
   true
 
+let open_show_file ast new_file edit = 
+  let ic = open_in new_file in
+  let lb = from_channel ic in
+  (try 
+    ast := Parser.system Lexer.token lb;
+    source#source_buffer#set_text (read_file new_file);
+    edit := false;
+  with 
+    |Parsing.Parse_error -> 
+      let (start, stop) = (lexeme_start lb, lexeme_end lb) in
+      let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
+      let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
+      source#source_buffer#apply_tag_by_name "error" 
+        ~start:start_iter ~stop:stop_iter;
+      text1#buffer#set_text "syntax error"
+    |Lexer.Lexical_error s ->
+      let (start, stop) = (lexeme_start lb, lexeme_end lb) in
+      let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
+      let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
+      source#source_buffer#apply_tag_by_name "error" 
+        ~start:start_iter ~stop:stop_iter;
+      text1#buffer#set_text ("lexical error : "^s)
+    |Typing.Error (e,loc) ->
+      let (start, stop) = (lexeme_start lb, lexeme_end lb) in
+      let start_iter = source#source_buffer#get_iter (`OFFSET start) in
+      let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in
+      source#source_buffer#apply_tag_by_name "error"
+        ~start:start_iter ~stop:stop_iter;
+      text1#buffer#set_text ("typing error : "));
+      close_in ic
+      
 
 let edit_mode ast new_file button edit m =
   if button#active then 
-    (
-      (* Psystem_printer.open_c := "##"; *)
-      (* Psystem_printer.close_c := "##"; *)
-      (* let str = Psystem_printer.psystem_to_string !ast in *)
-      (* Psystem_printer.open_c := "(\*"; *)
-      (* Psystem_printer.close_c := "*\)"; *)
-      (* source#source_buffer#set_text str; *)
+    ( 
       edit := true;
       source#set_editable true;
       source#set_cursor_visible true; 
     )
   else 
     ( let oc = open_out new_file in
-      let str =  source#source_buffer#get_text () in 
+      let str =  source#source_buffer#get_text  () in 
       Printf.fprintf oc "%s" str;
       close_out oc;
-      let ic = open_in new_file in
-      let lb = from_channel ic in
-      (try 
-        (* let mark_l = int_to_mark !inact_l in *)
-         ast := Parser.system Lexer.token lb;
-        (* let l = mark_to_tag mark_l in *)
-      (*   Psystem_printer.open_c := "  "; *)
-      (* Psystem_printer.close_c := "  "; *)
-      (*   source#source_buffer#set_text (Psystem_printer.psystem_to_string!ast); *)
-      (*   Psystem_printer.open_c := "(\*"; *)
-      (* Psystem_printer.close_c := "*\)"; *)
-        source#source_buffer#set_text (read_file new_file);
-        (* apply_tag_mark l; *)
-        edit := false;
-       with Parsing.Parse_error -> 
-         (let (start, stop) = (lexeme_start lb, lexeme_end lb) in
-          let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
-          let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
-          source#source_buffer#apply_tag_by_name "error" 
-            ~start:start_iter ~stop:stop_iter
-         ););
-      
-      (* source#set_editable false;  *)
-    (* source#set_cursor_visible false; *)
+      open_show_file ast new_file edit
+
     )
 
-let execute buffer file  b  =
-  (let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
+let execute buffer file  b  =    
+     (let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
    let str = ref "" in
    try
      while true do
@@ -338,45 +360,44 @@ let open_window s  =
   let edit = ref false in 
   let file_name = Options.file in 
   let new_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"mod.cub" in
-  let save_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"save.cub" in
+  let save_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"save" in
   let inter_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"inter.cub" in
   source#source_buffer#set_text (read_file file_name); 
   let map = Gdk.Color.get_system_colormap () in 
   let light_gray = Gdk.Color.alloc ~colormap:map (`NAME "light gray") in
   let gray = Gdk.Color.alloc ~colormap:map (`NAME "gray") in 
-  let t1 = (source#source_buffer#create_tag 
-              ~name:"gray_background" [`BACKGROUND_GDK light_gray]) in
-  let t2 = (source#source_buffer#create_tag 
-              ~name:"delete" [`BACKGROUND_GDK light_gray]) in
-  let t3 = (source#source_buffer#create_tag 
-              ~name:"dark" [`FOREGROUND_GDK gray]) in
-  let t3 = (source#source_buffer#create_tag 
-              ~name:"error" [`BACKGROUND "red"]) in
-  let t4 = (source#source_buffer#create_tag 
-              ~name:"search" [`BACKGROUND "yellow"]) in
-  let t4 = (source#source_buffer#create_tag 
-              ~name:"search_next" [`BACKGROUND "orange"]) in
-  t1#set_priority 0;
-  t2#set_priority 1;
+  source#source_buffer#create_tag ~name:"gray_background" [`BACKGROUND_GDK light_gray];
+  source#source_buffer#create_tag ~name:"delete" [`BACKGROUND_GDK light_gray];
+  source#source_buffer#create_tag ~name:"dark" [`FOREGROUND_GDK gray];
+  source#source_buffer#create_tag ~name:"error" [`BACKGROUND "red"];
+  source#source_buffer#create_tag ~name:"search" [`BACKGROUND "yellow"];
+  source#source_buffer#create_tag ~name:"search_next" [`BACKGROUND "orange"];
+  (* t1#set_priority 0; *)
+  (* t2#set_priority 1; *)
   source#event#add [`BUTTON_PRESS;`KEY_PRESS];   
   source#set_editable false;
-  (try
-    let str = read_file save_file_name in 
-    let fl = Str.split (Str.regexp "[ \t]+") str in
-    let pos_l = list_position fl in
-    inact_l := pos_l;
-    parse_init !ast;
-    apply_tag (parse_psystem !ast);
-  with Sys_error(_) -> ());
 
+  (try
+     let ic = open_in inter_file_name in
+     let lb = from_channel ic in
+     ast := Parser.system Lexer.token lb;
+     close_in ic;
+     let str = read_file save_file_name in 
+     let fl = Str.split (Str.regexp "[ \t]+") str in
+     let pos_l = list_position fl in
+     inact_l := pos_l;
+     parse_init !ast;
+     source#source_buffer#set_text (read_file inter_file_name);
+     apply_tag (parse_psystem !ast);
+  with Sys_error(_) -> () );
 
   source#event#connect#motion_notify
-    ~callback:(find_in_ast ast  edit);
+    ~callback:(find_in_ast ast edit);
   source#event#connect#button_press
-    ~callback:(modify_ast ast inter_file_name edit);
+    ~callback:(modify_ast ast edit);
 
   save_button#event#connect#button_press 
-    ~callback:(save_file ast save_file_name);
+    ~callback:(save_file ast save_file_name  new_file_name);
 
   execute_button#event#connect#button_press 
     ~callback:(fun b -> save_ex_file ast new_file_name b; 
@@ -398,8 +419,10 @@ let open_window s  =
     ~callback:(search_previous);
 
   show_file_button#event#connect#button_press 
-    ~callback: (show_file ast new_file_name);
-  window#show (); 
+    ~callback: (show_file ast new_file_name save_file_name);
+    window#event#connect#delete (confirm ast save_file_name new_file_name);
+  window#show ();
   GMain.main ()
+
 
 

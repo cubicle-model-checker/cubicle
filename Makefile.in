@@ -115,7 +115,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
       util.cmo variable.cmo types.cmo \
-      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
+      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo typing.cmo pretty.cmo \
       psystem_parser.cmo psystem_printer.cmo guiwindow.cmo gui.cmo
 
 CMX = $(CMO:.cmo=.cmx)
