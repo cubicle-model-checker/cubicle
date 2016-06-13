@@ -452,23 +452,26 @@ literal:
 ;
 
 neg: 
-  |NOT { get_info()}
+  |NOT {get_info()}
 ;
 
 expr:
-  | simple_expr { $1 }
-  | neg expr { PNot ($1, $2, get_info()) }
-  | expr AND expr { PAnd ([$1; $3], get_info()) }
-  | expr OR expr  { POr ([$1 ; $3], get_info()) }
+  |neg exp { PNot ($1, $2, get_info())}
+  |exp { $1 }
+;   
 
-  | expr IMP expr { PImp ($1, $3, get_info()) }
-  | expr EQUIV expr { PEquiv ($1, $3, get_info()) }
-  | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6, get_info()) }
-  | FORALL lidents_plus_distinct DOT expr %prec prec_forall { PForall ($2, $4, get_info())  }
-  | EXISTS lidents_plus_distinct DOT expr %prec prec_exists { PExists ($2, $4, get_info()) }
-  | FORALL_OTHER lident DOT expr %prec prec_forall {
+exp:
+  | simple_expr { $1 }
+  | exp AND exp { PAnd ([$1; $3], get_info()) }
+  | exp OR exp  { POr ([$1 ; $3], get_info()) }
+  | exp IMP exp { PImp ($1, $3, get_info()) }
+  | exp EQUIV exp { PEquiv ($1, $3, get_info()) }
+  | IF exp THEN exp ELSE exp %prec prec_ite { PIte ($2, $4, $6, get_info()) }
+  | FORALL lidents_plus_distinct DOT exp %prec prec_forall { PForall ($2, $4, get_info())  }
+  | EXISTS lidents_plus_distinct DOT exp %prec prec_exists { PExists ($2, $4, get_info()) }
+  | FORALL_OTHER lident DOT exp %prec prec_forall {
     PForall_other ([$2], $4, get_info()) }
-  | EXISTS_OTHER lident DOT expr %prec prec_exists {
+  | EXISTS_OTHER lident DOT exp %prec prec_exists {
     PExists_other ([$2], $4, get_info()) }
 ;
 

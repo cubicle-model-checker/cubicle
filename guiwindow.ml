@@ -199,19 +199,19 @@ let save_ex_file s file b =
   close_out oc;
   true
 
-let save_file s file newfile b = 
+let save_file s file b = 
   parse_linact !s;
   let l = !inact_l in
   let oc = open_out file in 
   if l == [] then Printf.fprintf oc "vide" else
   List.iter (fun (s, e) -> Printf.fprintf oc "%d %d " s e) l;
   close_out oc;
-  save_ex_file s newfile b ;
+  (* let _ = save_ex_file s newfile b in *)
   true
 
 
 
-let confirm s file newfile e =
+let confirm s file  e =
   let dlg = GWindow.message_dialog
     ~message:"<big> Save current session </big>"
     ~parent:window
@@ -221,7 +221,7 @@ let confirm s file newfile e =
     ~position:`CENTER_ON_PARENT
     ~buttons:GWindow.Buttons.yes_no () in
   let res = dlg#run () = `YES  in
-  let _ = if res then save_file s file newfile e else true in
+  let _ = if res then save_file s file e else true in
   dlg#destroy ();
   false
 
@@ -325,7 +325,7 @@ let search_next b =
     |None -> last_search_iter := None
     |Some (start, stop) ->
       last_search_iter := Some (start, stop);
-      source#scroll_to_iter ~use_align:true ~yalign:0.5 start;
+      ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 start);
       source#source_buffer#apply_tag_by_name "search_next"
         ~start:start ~stop:stop);
   true
@@ -344,7 +344,7 @@ let search_previous b =
     |None -> last_search_iter := None
     |Some (start, stop) -> 
       last_search_iter := Some (start, stop);
-      source#scroll_to_iter ~use_align:true ~yalign:0.5 stop;
+      ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 stop);
       source#source_buffer#apply_tag_by_name "search_next"
         ~start:start ~stop:stop);
   true
@@ -359,70 +359,66 @@ let open_window s  =
   let ast = ref s in
   let edit = ref false in 
   let file_name = Options.file in 
-  let new_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"mod.cub" in
-  let save_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"save" in
-  let inter_file_name = (String.sub file_name 0 ((String.length file_name) - 4))^"inter.cub" in
+  let new_path = (String.sub file_name 0 ((String.length file_name) - 4))^"mod.cub" in
+  let save_path = (String.sub file_name 0 ((String.length file_name) - 4))^"save" in
+  let inter_path = (String.sub file_name 0 ((String.length file_name) - 4))^"inter.cub" in
   source#source_buffer#set_text (read_file file_name); 
   let map = Gdk.Color.get_system_colormap () in 
   let light_gray = Gdk.Color.alloc ~colormap:map (`NAME "light gray") in
   let gray = Gdk.Color.alloc ~colormap:map (`NAME "gray") in 
-  source#source_buffer#create_tag ~name:"gray_background" [`BACKGROUND_GDK light_gray];
-  source#source_buffer#create_tag ~name:"delete" [`BACKGROUND_GDK light_gray];
-  source#source_buffer#create_tag ~name:"dark" [`FOREGROUND_GDK gray];
-  source#source_buffer#create_tag ~name:"error" [`BACKGROUND "red"];
-  source#source_buffer#create_tag ~name:"search" [`BACKGROUND "yellow"];
-  source#source_buffer#create_tag ~name:"search_next" [`BACKGROUND "orange"];
+  ignore (source#source_buffer#create_tag ~name:"gray_background" [`BACKGROUND_GDK light_gray]);
+  ignore (source#source_buffer#create_tag ~name:"delete" [`BACKGROUND_GDK light_gray]);
+  ignore (source#source_buffer#create_tag ~name:"dark" [`FOREGROUND_GDK gray]);
+  ignore (source#source_buffer#create_tag ~name:"error" [`BACKGROUND "red"]);
+  ignore (source#source_buffer#create_tag ~name:"search" [`BACKGROUND "yellow"]);
+  ignore (source#source_buffer#create_tag ~name:"search_next" [`BACKGROUND "orange"]);
   (* t1#set_priority 0; *)
   (* t2#set_priority 1; *)
   source#event#add [`BUTTON_PRESS;`KEY_PRESS];   
   source#set_editable false;
 
   (try
-     let ic = open_in inter_file_name in
+     let ic = open_in inter_path in
      let lb = from_channel ic in
      ast := Parser.system Lexer.token lb;
      close_in ic;
-     let str = read_file save_file_name in 
+     let str = read_file save_path in 
      let fl = Str.split (Str.regexp "[ \t]+") str in
      let pos_l = list_position fl in
      inact_l := pos_l;
      parse_init !ast;
-     source#source_buffer#set_text (read_file inter_file_name);
+     source#source_buffer#set_text (read_file inter_path);
      apply_tag (parse_psystem !ast);
-  with Sys_error(_) -> () );
+  with Sys_error(_) -> Printf.printf "pas de fichier %s" inter_path);
 
-  source#event#connect#motion_notify
-    ~callback:(find_in_ast ast edit);
-  source#event#connect#button_press
-    ~callback:(modify_ast ast edit);
+  ignore (source#event#connect#motion_notify ~callback:(find_in_ast ast edit));
+  ignore (source#event#connect#button_press ~callback:(modify_ast ast edit));
+  ignore (save_button#event#connect#button_press 
+    ~callback:(save_file ast save_path));
+  ignore (execute_button#event#connect#button_press 
+    ~callback:(fun b -> 
+      let _ = save_ex_file ast new_path b in 
+      execute text1#buffer new_path b));
 
-  save_button#event#connect#button_press 
-    ~callback:(save_file ast save_file_name  new_file_name);
+  ignore (execute_button2#event#connect#button_press
+    ~callback:(execute text2#buffer file_name ));
 
-  execute_button#event#connect#button_press 
-    ~callback:(fun b -> save_ex_file ast new_file_name b; 
-      execute text1#buffer new_file_name b);
+  ignore (edit_button#connect#toggled
+    ~callback:(edit_mode ast inter_path edit_button edit));
 
-  execute_button2#event#connect#button_press
-    ~callback:(execute text2#buffer file_name );
+  ignore (search_bar#connect#changed
+    ~callback:(search));
 
-  edit_button#connect#toggled
-    ~callback:(edit_mode ast inter_file_name edit_button edit);
+  ignore (next_button#event#connect#button_press
+    ~callback:(search_next));
 
-  search_bar#connect#changed
-    ~callback:(search);
+  ignore (previous_button#event#connect#button_press
+    ~callback:(search_previous));
 
-  next_button#event#connect#button_press
-    ~callback:(search_next);
-
-  previous_button#event#connect#button_press
-    ~callback:(search_previous);
-
-  show_file_button#event#connect#button_press 
-    ~callback: (show_file ast new_file_name save_file_name);
-    window#event#connect#delete (confirm ast save_file_name new_file_name);
+  ignore (show_file_button#event#connect#button_press 
+            ~callback: (fun b -> source2#source_buffer#set_text (Psystem_printer.psystem_to_string !ast); true));
+  ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
   GMain.main ()
-
 
 

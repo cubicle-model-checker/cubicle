@@ -19,7 +19,7 @@ let inact_l = ref []
 let compare_inact l =  
   let start_loc, stop_loc = l.loc in
   try 
-    List.find (fun (start, stop) -> start = start_loc.pos_cnum && stop = stop_loc.pos_cnum) !inact_l;
+    let _ = List.find (fun (start, stop) -> start = start_loc.pos_cnum && stop = stop_loc.pos_cnum) !inact_l in
     l.active <- not (l.active)
   with Not_found -> ()
 
