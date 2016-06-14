@@ -42,13 +42,13 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I +../lablgtk2 -I common/ -I smt/ 
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I +../lablgtk2 -I common/ -I smt/ -I +ocamlgraph
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma lablgtk.cma str.cma lablgtksourceview2.cma 
+REQBIB=nums.cma unix.cma functory.cma lablgtk.cma str.cma graph.cma lablgnomecanvas.cma lablgtksourceview2.cma 
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -113,10 +113,11 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/bitv.cmo
 
 CMO = version.cmo options.cmo \
-      $(COMMONCMO) $(SMTCMO) \
+      $(COMMONCMO) $(SMTCMO)  \
       util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo typing.cmo pretty.cmo \
-      psystem_parser.cmo psystem_printer.cmo guiwindow.cmo gui.cmo
+	ed_hyper.cmo ed_graph.cmo ed_draw.cmo ed_display.cmo ed_tracegraph.cmo ed_main.cmo \
+	psystem_parser.cmo psystem_printer.cmo guiwindow.cmo test.cmo gui.cmo \
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -291,6 +292,9 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 	      common/timer.mli common/vec.ml common/vec.mli\
 	      common/bitv.ml common/bitv.mli
 
+TREEVIEWFILES = tree_view/ed_hyper.ml tree_view/ed_graph.ml tree_view/ed_display.ml\
+	    tree_view/ed_tracegraph.ml tree_view/ed_main.ml
+
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
 
@@ -299,6 +303,7 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
 	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
 	fixpoint.ml fixpoint.mli forward.ml forward.mli\
+	ed_hyper.ml ed_graph.ml ed_draw.ml ed_display.ml ed_test.ml ed_main.ml ed_main.mli \
 	instantiation.ml instantiation.mli lexer.mll psystem_parser.ml psystem_printer.ml guiwindow.ml gui.ml\
 	murphi.ml murphi.mli\
 	mulexer.mll muparser.mly muparser_globals.mli muparser_globals.ml\

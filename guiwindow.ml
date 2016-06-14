@@ -50,6 +50,8 @@ let search_bar = GEdit.entry ~packing:(button_box#pack  ~expand:false) ~width:15
 let next_button = GButton.button  ~stock:`GO_DOWN ~packing:(button_box#pack ~expand:false ~fill:false)()
 
 let previous_button = GButton.button  ~stock:`GO_UP ~packing:(button_box#pack ~expand:false ~fill:false)()
+
+let trace_button = GButton.button ~label:"trace" ~packing:(button_box#pack ~expand:false ~fill:false)()
   
 let b = GPack.hbox ~packing:box#add ()
 
@@ -280,7 +282,7 @@ let edit_mode ast new_file button edit m =
 
     )
 
-let execute buffer file  b  =    
+let execute buffer file  b  =
      (let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
    let str = ref "" in
    try
@@ -291,6 +293,20 @@ let execute buffer file  b  =
    with
        End_of_file ->
          close_in ic); true
+
+let show_tree b = 
+    (let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
+     let str = ref "" in
+     try
+       while true do
+       str := !str^"\n"^input_line ic;
+       done
+     with
+         End_of_file ->
+           close_in ic;  Ed_main.open_graph !str );
+  true
+          
+
 
 let search b = 
   let start_iter = source#source_buffer#start_iter in 
@@ -417,6 +433,9 @@ let open_window s  =
 
   ignore (show_file_button#event#connect#button_press 
             ~callback: (fun b -> source2#source_buffer#set_text (Psystem_printer.psystem_to_string !ast); true));
+
+  ignore (trace_button#event#connect#button_press ~callback: (show_tree));
+
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
   GMain.main ()
