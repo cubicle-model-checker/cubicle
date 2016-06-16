@@ -329,7 +329,7 @@ let print_psystem psys  fmt =
   print_consts_or_globals fmt ("const", psys.pconsts);
   print_arrays fmt psys.parrays;
   print_init fmt psys.pinit;
-  print_invs_or_unsafe "invs" fmt  psys.pinvs;
+  print_invs_or_unsafe "invariant" fmt  psys.pinvs;
   print_invs_or_unsafe "unsafe" fmt  psys.punsafe;
   print_transitions fmt  (List.rev psys.ptrans)
 

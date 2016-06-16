@@ -23,6 +23,26 @@ open Ed_hyper
 open Ed_graph
 open Ed_display
 
+let graph_trace = Queue.create ()
+
+let m = Mutex.create ()
+
+exception End_trace
+
+let end_trace = ref false
+
+module HT  = 
+  Hashtbl.Make
+    (struct 
+      type t = string
+      let equal x y = (String.trim x) = (String.trim y) 
+      let hash x  = Hashtbl.hash x 
+    end)
+
+let g = B.empty ()
+
+let ht = HT.create 100 
+
 let debug = ref false
 let trace f x = 
   try f x with e -> eprintf "TRACE: %s@." (Printexc.to_string e); raise e
@@ -108,16 +128,14 @@ module Model = struct
 
 end
 
-
-
 let () = Model.reset ()
+
+let model_reset ()  = Model.reset () 
 
 let ed_name = "Ocamlgraph's Editor"
 
-
 (* Main GTK window *)
 let window = GWindow.window ~border_width: 10 ~position: `CENTER () 
-
 
 (* usual function to change window title *)
 let set_window_title () =
@@ -125,7 +143,6 @@ let set_window_title () =
     (match !graph_name with
      | None -> ed_name
      | Some name -> ed_name^" : "^(Filename.chop_extension (Filename.basename name)))
-
 
 (* menu bar *)
 let v_box = GPack.vbox ~homogeneous:false ~spacing:30  ~packing:window#add ()
@@ -161,23 +178,20 @@ let canvas_root =
   set_window_title ();
   graph_root
 
-
 (* current root used for drawing *)
 let root = ref (choose_root ())
 
-
-let load_graph str =
-  Ed_graph.graph := Ed_tracegraph.load_graph str;
-  Model.reset ();
-  set_window_title ();
-  root := choose_root ()
-
+let load_graphm ()  = 
+   Ed_graph.graph := g;
+   (* root := Some r;  *)
+   Model.reset ();
+   set_window_title ()
 
 (* refresh rate *)
 let refresh = ref 0
+
 let do_refresh () =
   !refresh mod !refresh_rate = 0 
-
 
 
 (* graph drawing *)
@@ -186,10 +200,9 @@ let draw tortue canvas =
   | None -> ()
   | Some root -> 
     Ed_draw.draw_graph root tortue;
-    Ed_display.draw_graph root canvas;
+    Ed_display.draw_graph root canvas; 
     if do_refresh () then
       canvas_root#canvas#update_now ()
-
 
 let refresh_draw () =
   refresh := 0;    
@@ -199,25 +212,16 @@ let refresh_draw () =
 let refresh_display () =
   Ed_display.draw_graph !root canvas_root
 
-
-
 let root_change vertex ()= 
   root := vertex; 
   origine := start_point;
   let turtle = make_turtle_origine () in
   draw turtle canvas_root
 
-
-
-
 let node_selection ~(model : GTree.tree_store) path =
   let row = model#get_iter path in
   let vertex = model#get ~row ~column: Model.vertex in
   root_change (Some vertex) ()
-
-
-
-
 
 (* usual function ref, for vertex event *)
 let set_vertex_event_fun = ref (fun _ -> ())
@@ -276,11 +280,6 @@ let add_node () =
                 let  tor = make_turtle !origine 0.0 in
                 draw tor canvas_root))
 
-
-
-
-
-
 (* add an edge between n1 and n2 , add link in column and re-draw *)
 let add_edge n1 n2 ()= 
   if not (edge n1 n2)
@@ -290,7 +289,6 @@ let add_edge n1 n2 ()=
     let tor = make_turtle !origine 0.0 in
     draw tor canvas_root;
   end
-
 
 let add_edge_no_refresh n1 n2 ()= 
   if not (edge n1 n2)
@@ -307,28 +305,28 @@ let remove_edge n1 n2 ()=
     Model.remove_edge n1 n2;
     begin
       try
-        let _,n = H2.find intern_edges (n1,n2) in
+        let _,n,_ = H2.find intern_edges (n1,n2) in
         n#destroy ();
         H2.remove intern_edges (n1,n2) 
       with Not_found -> ()
     end;
     begin
       try
-        let _,n = H2.find intern_edges (n2,n1) in
+        let _,n,_ = H2.find intern_edges (n2,n1) in
         n#destroy ();
         H2.remove intern_edges (n2,n1) 
       with Not_found -> ()
     end;
     begin
       try
-        let n = H2.find successor_edges (n1,n2) in
+        let n,_,_= H2.find successor_edges (n1,n2) in
         n#destroy ();
         H2.remove successor_edges (n1,n2) 
       with Not_found -> ()
     end;
     begin
       try
-        let n = H2.find successor_edges (n2,n1) in
+        let n,_,_ = H2.find successor_edges (n2,n1) in
         n#destroy ();
         H2.remove successor_edges (n2,n1) 
       with Not_found -> ()
@@ -337,15 +335,12 @@ let remove_edge n1 n2 ()=
     draw tor canvas_root;
   end
 
-
 let remove_edge_no_refresh n1 n2 ()= 
   if (edge n1 n2)
   then begin
     G.remove_edge !graph n1 n2;
     Model.remove_edge n1 n2
   end
-
-
 
 (* add successor node to selected node *)
 let add_successor node () =
@@ -391,28 +386,28 @@ let remove_vertex vertex () =
     (fun w ->
        begin 
          try
-           let _,n = H2.find intern_edges (vertex,w) in
+           let _, n, texte = H2.find intern_edges (vertex,w) in
            n#destroy ();
            H2.remove intern_edges (vertex,w) 
          with Not_found -> ()
        end;
        begin
          try
-           let _,n = H2.find intern_edges (w,vertex) in
+           let _, n, texte = H2.find intern_edges (w,vertex) in
            n#destroy ();      
            H2.remove intern_edges (w,vertex) 
          with Not_found -> ()
        end;
        begin       
          try
-           let n = H2.find successor_edges (vertex,w) in
+           let n, texte, texte2 = H2.find successor_edges (vertex,w) in
            n#destroy ();
            H2.remove successor_edges (vertex,w) 
          with Not_found -> ()
        end;
        begin       
          try
-           let n = H2.find successor_edges (w,vertex) in
+           let n, texte, texte2 = H2.find successor_edges (w,vertex) in
            n#destroy ();
            H2.remove successor_edges (w,vertex) 
          with Not_found -> ()
@@ -594,10 +589,9 @@ let circle_event ev =
 
 (* event for each vertex of canvas *)
 let vertex_event vertex item ellispe ev =
-
   (* let vertex_info = G.V.label vertex in*)
   begin match ev with
-    | `ENTER_NOTIFY _ ->
+    | `ENTER_NOTIFY _ -> 
       item#grab_focus ();
       update_vertex vertex Focus;
       refresh_display ()
@@ -605,6 +599,7 @@ let vertex_event vertex item ellispe ev =
     | `LEAVE_NOTIFY ev ->
       if not (Gdk.Convert.test_modifier `BUTTON1 (GdkEvent.Crossing.state ev))
       then begin
+
         update_vertex vertex Unfocus;
         refresh_display ()
       end
@@ -612,20 +607,21 @@ let vertex_event vertex item ellispe ev =
     | `BUTTON_RELEASE ev ->
       ellispe#parent#ungrab (GdkEvent.Button.time ev);
 
-    | `MOTION_NOTIFY ev ->
+    | `MOTION_NOTIFY ev -> 
       incr refresh;
       let state = GdkEvent.Motion.state ev in
-      if Gdk.Convert.test_modifier `BUTTON1 state  then 
+      if Gdk.Convert.test_modifier `BUTTON1 state  then
         begin
           let curs = Gdk.Cursor.create `FLEUR in
-          ellispe#parent#grab [`POINTER_MOTION; `BUTTON_RELEASE] 
+          ellispe#parent#grab [`POINTER_MOTION; `BUTTON_RELEASE]
             curs (GdkEvent.Button.time ev);
           if do_refresh ()
           then begin
             let old_origin = !origine in
             let turtle = motion_turtle ellispe ev in
-            if hspace_dist_sqr turtle <= rlimit_sqr then begin
-              draw turtle canvas_root
+            let hspace = hspace_dist_sqr turtle in 
+            if hspace <=  rlimit_sqr then begin
+              draw turtle canvas_root;
             end else begin
               origine := old_origin;
               let turtle = { turtle with pos = old_origin } in
@@ -643,24 +639,29 @@ let vertex_event vertex item ellispe ev =
 
     | `TWO_BUTTON_PRESS ev->
       if (GdkEvent.Button.button ev) = 1
-      then begin
-        if (Gdk.Convert.test_modifier `CONTROL (GdkEvent.Button.state ev))
-        then begin
-          if ( !nb_selected =0)
-          then begin
-            select_all ();
-            update_vertex vertex Focus
-          end
-          else begin
-            unselect_all ();
-            update_vertex vertex Focus
-          end
-        end
-        else begin
-          if (is_selected vertex)
-          then update_vertex vertex Unselect
-          else update_vertex vertex Select;
-        end;
+      then begin 
+        match !root with
+        | None -> ()
+        | Some root -> 
+          let v = G.V.label root in 
+          v.successors_visible <- not v.successors_visible;
+        (* if (Gdk.Convert.test_modifier `CONTROL (GdkEvent.Button.state ev)) *)
+        (* then begin *)
+        (*   if ( !nb_selected = 0) *)
+        (*   then begin *)
+        (*     select_all (); *)
+        (*     update_vertex vertex Focus *)
+        (*   end *)
+        (*   else begin *)
+        (*     unselect_all (); *)
+        (*     update_vertex vertex Focus *)
+        (*   end *)
+        (* end *)
+        (* else begin *)
+        (*   if (is_selected vertex) *)
+        (*   then update_vertex vertex Unselect *)
+        (*   else update_vertex vertex Select; *)
+        (* end; *)
         refresh_draw ();
       end;  
 
@@ -701,7 +702,7 @@ let add_columns ~(view : GTree.view) ~model =
     end
 
 
-let _ = window#connect#destroy~callback:GMain.Main.quit 
+let _ = window#connect#destroy~callback:GMain.quit 
 
 
 let treeview = GTree.view ~model:Model.model ~packing:sw#add ()
@@ -817,17 +818,17 @@ let new_graph () =
 
 
 (* menu action open graph *)      
-let open_graph ()  =
-  let file = ask_for_file `OPEN  in
-  if file <> "<none>"
-  then 
-    begin 
-      load_graph file;
-      reset_table_and_canvas ();
-      let turtle = make_turtle_origine () in
-      draw turtle canvas_root;
-      set_canvas_event ()
-    end
+(* let open_graph ()  = *)
+(*   let file = ask_for_file `OPEN  in *)
+(*   if file <> "<none>" *)
+(*   then  *)
+(*     begin  *)
+(*       load_graph file; *)
+(*       reset_table_and_canvas (); *)
+(*       let turtle = make_turtle_origine () in *)
+(*       draw turtle canvas_root; *)
+(*       set_canvas_event () *)
+(*     end *)
 
 (* menu action save graph as *)      
 let save_graph_as () =
@@ -1016,7 +1017,7 @@ let activ_action ac =
   let name = ac#name in
   match name with
   | "New graph" -> new_graph ()
-  | "Open graph"-> open_graph ()
+  (* | "Open graph"-> open_graph () *)
   | "Save graph" -> save_graph ()
   | "Save graph as..." -> save_graph_as ()
   | "Quit" -> quit ()
@@ -1055,14 +1056,154 @@ let setup_ui window =
   menu_bar_box#pack (ui_m#get_widget "/MenuBar") 
 
 
+let rec node_name  = function
+  |[] -> ""
+  |x::[] -> 
+    (match Str.split (Str.regexp "\n") (String.trim x) with
+      |[] -> failwith "pb format trace 2"
+      |y::_ ->  y)
+  |x::s -> (String.trim x)^"\n"^(node_name s)
+        
+(* let make_from_queue () =  *)
+(*   let str = ref "" in  *)
+(*   while not (Queue.is_empty graph_trace) do *)
+(*     let s = Queue.pop graph_trace in *)
+(*     str := !str^s  *)
+(*   done; *)
+(*     !str *)
 
-let open_graph str = 
-  load_graph str;
+  
+(* let load_grapht () =  *)
+(*   (\* let str = make_from_queue () in *\) *)
+(*   (\* let root = ref (G.V.create (make_node_info "")) in *\) *)
+(*   while true do *)
+(*     if not (Queue.is_empty graph_trace) then *)
+(*       let str = Queue.pop graph_trace in *)
+(*       Printf.printf "POP : %s\n" str ; *)
+(*       let l = Str.split (Str.regexp "==") str in *)
+(*       let first = ref true in *)
+(*       match l with *)
+(*         |[] ->  failwith "pb format trace 1"  *)
+(*         |s::t -> *)
+(*         let str_l = Str.split (Str.regexp "node [0-9]+:") (String.trim s) in *)
+(*         List.iter (fun x -> *)
+(*           let pos = Str.search_forward (Str.regexp "=") x 0 in *)
+(*           let before = Str.global_replace (Str.regexp "[\n| ]+") "" ( String.trim (Str.string_before x pos)) in *)
+(*           let after = node_name (Str.split (Str.regexp "&&") (Str.string_after x (pos + 1))) in *)
+(*           let v = G.V.create (make_node_info after ) in *)
+(*           B.G.add_vertex g v; *)
+(*           HT.add ht before v; *)
+(*           (try *)
+(*              let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in *)
+(*            let transition = Str.string_before before arrow_pos in *)
+(*            let node = Str.global_replace (Str.regexp "[\n| ]+") ""  (Str.string_after before (arrow_pos + 2)) in *)
+(*            let n = HT.find ht node in *)
+(*            let e = G.E.create n (make_edge_info_label transition) v in *)
+(*            B.G.add_edge_e g e; *)
+(*            with Not_found -> Printf.printf "not found"); *)
+(*           if !first then *)
+(*           root := Some v; *)
+(*           first := false *)
+(*         ) str_l *)
+(*   done *)
+
+(* let f () =  *)
+(*   if Str.string_match (Str.regexp "==") x  0 then *)
+(*     raise End_trace *)
+(*   else *)
+(*     begin *)
+(*       let str = !node ^ x in *)
+(*       node := ""; *)
+(*       Format.printf "node : %s\n" str; *)
+(*       let pos = Str.search_forward (Str.regexp "=") str 0 in *)
+(*       let before = Str.global_replace (Str.regexp "[\n| ]+") "" *)
+(*         ( String.trim (Str.string_before str pos)) in *)
+(*       let after = node_name (Str.split (Str.regexp "&&") *)
+(*                                (Str.string_after x (pos + 1))) in *)
+(*       let v = G.V.create (make_node_info after ) in *)
+(*       B.G.add_vertex g v; *)
+(*       HT.add ht before v; *)
+(*       (try *)
+(*          let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in *)
+(*          let transition = Str.string_before before arrow_pos in *)
+(*          let node = Str.global_replace (Str.regexp "[\n| ]+") ""  (Str.string_after before (arrow_pos + 2)) in *)
+(*          let n = HT.find ht node in *)
+(*          let e = G.E.create n (make_edge_info_label transition) v in *)
+(*          B.G.add_edge_e g e; *)
+(*        with Not_found -> Printf.printf "not found\n"); *)
+
+(* let rec build_node node =  *)
+(* function *)
+(*   |[] -> Format.printf "liste vide\n" *)
+(*   |x::[] -> node := x; f () (\* Format.printf "NODE : %s" !node; *\) *)
+(*   |x::s -> () *)
+
+      (* if !first then *)
+      (*   root := Some v; *)
+      (* first := false *)
+    (* end; *)
+
+let rec build_node curr_node str = ()
+    (* try  *)
+    (*   let pos = Str.search_forward (Str.regexp "node [0-9]+:") str 0 in *)
+    (*   let before = Str.string_before str pos *)
+    (* with Not_found *)
+    (* curr_node := "" *)
+  (* else  *)
+  (*   curr_node := str ^ !curr_node *)
+  
+let load_grapht () =
+  try
+    let curr_node = ref "" in
+    while true do
+      try
+        Mutex.lock m;
+        let str = Queue.pop graph_trace in
+        Mutex.unlock m;
+        build_node curr_node str;
+        Printf.printf "Node: %s\n" !curr_node
+      with Queue.Empty -> Printf.printf " "; Mutex.unlock m;
+    done
+  with End_trace -> Printf.printf "FIN"; ()
+
+
+(* let load_grapht () = *)
+(*  while true do *)
+(*     (try *)
+(*        Mutex.lock m; *)
+(*        let x = Queue.pop graph_trace in *)
+(*        Mutex.unlock m; *)
+(*        Format.printf "%s" x *)
+(*      with Queue.Empty -> Mutex.unlock m; Format.printf "Empty@."); *)
+(*   done *)
+
+
+let show_tree file = 
+    let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
+     (try
+       while true do
+         let s = input_line ic in
+         Mutex.lock m;
+         Queue.push (s^"\n") graph_trace;
+         Mutex.unlock m
+       done
+     with
+         End_of_file ->
+           close_in ic)
+
+let open_graph file  =
+  Queue.clear graph_trace;
+  let t1 = Thread.create show_tree file in
+  let t2 = Thread.create load_grapht () in
+  Thread.join t2; 
+  Thread.join t2;
   reset_table_and_canvas ();
   draw (make_turtle_origine ()) canvas_root;
   set_canvas_event ();
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   setup_ui window;
   ignore (window#show ());
-  GMain.Main.main ()
+  GMain.Main.main ();
+ 
+
 

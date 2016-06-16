@@ -1,10 +1,10 @@
 open Psystem_parser
 open Gdk.Color
 open GdkEvent.Button
+open Ed_tracegraph
 open Lexing
 open Options
 open Format
-
 
 exception NotBuffer
 
@@ -22,7 +22,6 @@ let window =
   let _ = wnd#connect#destroy (GMain.quit) in
   wnd 
 
-
 let ocaml = 
   let manager = GSourceView2.source_language_manager ~default:true in 
   match manager#language "cubicle" with 
@@ -33,25 +32,31 @@ let box = GPack.vbox ~packing:window#add ()
 
 let button_box = GPack.hbox ~spacing:5 ~packing:(box#pack ~expand:false ~fill:false) ()
 
-let execute_button = GButton.button ~label:"Run" ~stock:`EXECUTE ~packing:(button_box#pack ~expand:false ~fill:false)()
+let execute_button = GButton.button ~label:"Run" ~stock:`EXECUTE 
+  ~packing:(button_box#pack ~expand:false ~fill:false)()
 
-let show_file_button = GButton.button ~label:"Show new file" ~packing:(button_box#pack ~expand:false ~fill:false) ~show:(gui_debug)()
+let show_file_button = GButton.button ~label:"Show new file"
+  ~packing:(button_box#pack ~expand:false ~fill:false) ~show:(gui_debug)()
 
-let execute_button2 = GButton.button ~label:"Run new file" ~packing:(button_box#pack ~expand:false ~fill:false) ~show:(gui_debug)()
+let execute_button2 = GButton.button ~label:"Run new file" 
+  ~packing:(button_box#pack ~expand:false ~fill:false) ~show:(gui_debug)()
 
-let save_button = GButton.button ~label:"Save new file" ~stock:`SAVE ~packing:(button_box#pack ~expand:false ~fill:false)() 
+let save_button = GButton.button ~label:"Save new file" ~stock:`SAVE 
+  ~packing:(button_box#pack ~expand:false ~fill:false)() 
 
-let edit_button = GButton.toggle_button  ~stock:`EDIT ~packing:(button_box#pack ~expand:false ~fill:false)()
+let edit_button = GButton.toggle_button  ~stock:`EDIT
+  ~packing:(button_box#pack ~expand:false ~fill:false)()
 
-let search_bar = GEdit.entry ~packing:(button_box#pack  ~expand:false) ~width:150()
+let search_bar = GEdit.entry ~packing:(button_box#pack ~expand:false) ~width:150()
 
-(* let search_button = GButton.button ~stock:`FIND ~packing:(button_box#pack) () *)
+let next_button = GButton.button ~stock:`GO_DOWN 
+  ~packing:(button_box#pack ~expand:false ~fill:false)()
 
-let next_button = GButton.button  ~stock:`GO_DOWN ~packing:(button_box#pack ~expand:false ~fill:false)()
+let previous_button = GButton.button  ~stock:`GO_UP
+  ~packing:(button_box#pack ~expand:false ~fill:false)()
 
-let previous_button = GButton.button  ~stock:`GO_UP ~packing:(button_box#pack ~expand:false ~fill:false)()
-
-let trace_button = GButton.button ~label:"trace" ~packing:(button_box#pack ~expand:false ~fill:false)()
+let trace_button = GButton.button ~label:"trace"
+  ~packing:(button_box#pack ~expand:false ~fill:false)()
   
 let b = GPack.hbox ~packing:box#add ()
 
@@ -101,6 +106,7 @@ let source =
   buf#set_language ocaml; 
   buf#set_highlight_syntax true; 
   src 
+
 let source2 = 
   let src = GSourceView2.source_view 
     ~auto_indent:true 
@@ -137,7 +143,6 @@ let get_buffer_coordinates m =
   buffer_l := 1 + iter#line; 
   buffer_c := iter#offset
 
-
 let get_buffer_coordinates m = 
   let mouse_x, mouse_y = get_mouse_coordinates m in 
   let buffer_x, buffer_y = source#window_to_buffer_coords `TEXT mouse_x mouse_y in 
@@ -148,7 +153,6 @@ let get_buffer_coordinates m =
      raise NotBuffer);
   buffer_l := 1 + iter#line; 
   buffer_c := iter#offset
-
 
 let rec apply_tag = function 
   |[] -> ()
@@ -169,7 +173,8 @@ let rec apply_tag = function
           ~start:start_iter ~stop:stop_iter;
         source#source_buffer#remove_tag_by_name "dark"
           ~start:start_iter ~stop:stop_iter
-      |UndoHover -> source#source_buffer#remove_tag_by_name "gray_background" 
+      |UndoHover -> 
+        source#source_buffer#remove_tag_by_name "gray_background" 
         ~start:start_iter ~stop:stop_iter);
     apply_tag s
 
@@ -211,11 +216,9 @@ let save_file s file b =
   (* let _ = save_ex_file s newfile b in *)
   true
 
-
-
 let confirm s file  e =
   let dlg = GWindow.message_dialog
-    ~message:"<big> Save current session </big>"
+    ~message:" Save current session "
     ~parent:window
     ~destroy_with_parent:true
     ~use_markup:true
@@ -268,19 +271,15 @@ let open_show_file ast new_file edit =
 
 let edit_mode ast new_file button edit m =
   if button#active then 
-    ( 
-      edit := true;
+    ( edit := true;
       source#set_editable true;
-      source#set_cursor_visible true; 
-    )
+      source#set_cursor_visible true; )
   else 
     ( let oc = open_out new_file in
       let str =  source#source_buffer#get_text  () in 
       Printf.fprintf oc "%s" str;
       close_out oc;
-      open_show_file ast new_file edit
-
-    )
+      open_show_file ast new_file edit )
 
 let execute buffer file  b  =
      (let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
@@ -294,20 +293,25 @@ let execute buffer file  b  =
        End_of_file ->
          close_in ic); true
 
-let show_tree b = 
-    (let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
-     let str = ref "" in
-     try
-       while true do
-       str := !str^"\n"^input_line ic;
-       done
-     with
-         End_of_file ->
-           close_in ic;  Ed_main.open_graph !str );
-  true
+let show_tree file  = 
+  Ed_main.open_graph file; true
+(*   Queue.clear graph_trace; *)
+(*     (let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in *)
+(*      try *)
+(*        while true do *)
+(*          let s = input_line ic in *)
+(*          Printf.printf "%s\n" s; *)
+(*          Queue.push ("\n"^s) graph_trace; *)
+(*          (\* str := !str^"\n"^s; *\) *)
+(*        done *)
+(*      with *)
+(*          End_of_file -> *)
+(*            close_in ic; *)
+(*            (\* Ed_main.open_graph (); *\) *)
+(*            Ed_tracegraph.load_graph ()); *)
+(* (\* Ed_main.open_graph (\\* !str *\\)() ); *\) *)
+(*   true *)
           
-
-
 let search b = 
   let start_iter = source#source_buffer#start_iter in 
   let stop_iter = source#source_buffer#end_iter in
@@ -392,7 +396,6 @@ let open_window s  =
   (* t2#set_priority 1; *)
   source#event#add [`BUTTON_PRESS;`KEY_PRESS];   
   source#set_editable false;
-
   (try
      let ic = open_in inter_path in
      let lb = from_channel ic in
@@ -406,7 +409,6 @@ let open_window s  =
      source#source_buffer#set_text (read_file inter_path);
      apply_tag (parse_psystem !ast);
   with Sys_error(_) -> Printf.printf "pas de fichier %s" inter_path);
-
   ignore (source#event#connect#motion_notify ~callback:(find_in_ast ast edit));
   ignore (source#event#connect#button_press ~callback:(modify_ast ast edit));
   ignore (save_button#event#connect#button_press 
@@ -425,7 +427,7 @@ let open_window s  =
   ignore (search_bar#connect#changed
     ~callback:(search));
 
-  ignore (next_button#event#connect#button_press
+ ignore (next_button#event#connect#button_press
     ~callback:(search_next));
 
   ignore (previous_button#event#connect#button_press
@@ -434,7 +436,8 @@ let open_window s  =
   ignore (show_file_button#event#connect#button_press 
             ~callback: (fun b -> source2#source_buffer#set_text (Psystem_printer.psystem_to_string !ast); true));
 
-  ignore (trace_button#event#connect#button_press ~callback: (show_tree));
+  ignore (trace_button#event#connect#button_press ~callback: (fun b -> let _ = save_ex_file ast new_path b in 
+      show_tree new_path));
 
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();

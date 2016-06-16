@@ -169,8 +169,6 @@ let turn_right turtle angle =
 let dummy_turtle = { pos = (0., 0.); dir = (0., 0.) }
 
 
-
-
 (* [step_from n] computes the best `distance' for solving the
    dictator's problem in the complex hyperbolic plane for [n]
    dictators.  In a half-plane, we have to use the distance
@@ -186,14 +184,14 @@ let hspace_dist_sqr turtle  =
   let (ax, ay) = turtle.pos
   and (dx, dy) = turtle.dir in
   if ax*.dx +. ay*.dy < 0.0
-  then begin 
-    0.0 
+  then begin
+    0.0
   end else begin
     let ux = dy and uy = -.dx in
     let alpha = ax*.ax +. ay*.ay
     and beta = 2.0*.(ax*.ux +. ay*.uy) in
     if beta = 0.0 then
-      alpha
+       alpha 
     else
       begin
         let gamma = (1.0 +. alpha)/.beta in
@@ -212,6 +210,8 @@ let hspace_dist_sqr turtle  =
 
 (* Limit of visibility for nodes *)
 let rlimit =  0.98
-let rlimit_sqr = rlimit *. rlimit
+let rlimit_sqr = (* rlimit *. rlimit *) 0.999
+(* let rlimit_sqr = 1.
+ *)
 
 

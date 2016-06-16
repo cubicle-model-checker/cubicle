@@ -28,6 +28,7 @@ type node_info =
   { 
     label : string;
     mutable visible : visibility;
+    mutable successors_visible : bool;
     mutable depth : int;
     mutable vertex_mode : mode;
     mutable turtle : turtle;
@@ -38,7 +39,8 @@ let make_node_info s =
     label = s; 
     visible = Visible; 
     depth = 0; 
-    vertex_mode = Normal; 
+    vertex_mode = Normal;
+    successors_visible = true;
     turtle = dummy_turtle 
   }
 
@@ -186,7 +188,7 @@ let choose_root () =
 (* Parsing of the command line *)
 let load_graph f =
   graph := parse_file f;
-  graph_name := Some  f
+  graph_name := Some f
 
 let load_graph2 g =
   graph := g;
@@ -197,32 +199,6 @@ let dfs = ref false
 let refresh_rate = ref 10
 
 let aa = ref true
-
-let make_graph () =
-  let g = B.empty() in
-  let v = G.V.create (make_node_info "Noeud 1") in
-  let v2 = G.V.create (make_node_info "Noeud 2") in
-  let label = make_edge_info_label "test" in
-  let e = G.E.create v label v2 in
-  let e2 = G.E.create v2 label v in
-  B.G.add_vertex g v;
-  B.G.add_vertex g v2;
-  B.G.add_edge_e g e;
-  B.G.add_edge_e g e2;
-  g
- 
-(* let () =  *)
-(*   (\* Arg.parse *\) *)
-(*   (\*   ["-dfs", Arg.Set dfs, "DFS drawing strategy"; *\) *)
-(*   (\*    "-bfs", Arg.Clear dfs, "BFS drawing strategy"; *\) *)
-(*   (\*    "-rr", Arg.Set_int refresh_rate, "set the refresh rate, must be greater than 0"; *\) *)
-(*   (\*    "-aa", Arg.Clear aa, "turn off anti-aliased mode"; *\) *)
-(*   (\*   ] *\) *)
-(*   (\*   load_graph *\) *)
-(*   (\*   "editor [options] <graph file>" *\) *)
-(*   graph := make_graph() *)
-    
-(* (\* successor edges *\) *)
 
 module H2 = 
   Hashtbl.Make

@@ -24,60 +24,59 @@ let debug = ref false
 
 
 (* Original window size *)
-let (w,h)= (800.,800.)
+let (w,h)= (1200.,800.)
 
-(* light mode 
+(* light mode *)
    (* differents definitions *)
-   let color_circle = "grey99"
+   (* let color_circle = "grey99" *)
 
-   let color_intern_edge = "grey69"
-   let color_successor_edge = "black" (*"grey38"*)
-   let color_vertex = "grey75"
+   (* let color_intern_edge = "grey69" *)
+   (* let color_successor_edge = "black" (\*"grey38"*\) *)
+   (* let color_vertex = "grey75" *)
 
-   let color_selected_intern_edge = "#9f1a1a" (* "#74885e"*) 
-   let color_selected_successor_edge = "#9f1a1a" 
-   let color_selected_vertex = "#9f1a1a"
+   (* let color_selected_intern_edge = "#9f1a1a" (\* "#74885e"*\)  *)
+   (* let color_selected_successor_edge = "#9f1a1a"  *)
+   (* let color_selected_vertex = "#9f1a1a" *)
 
-   let color_focused_intern_edge = "#4d51a9"
-   let color_focused_successor_edge = "#4d51a9" 
-   let color_focused_vertex =  "#4d51a9" 
+   (* let color_focused_intern_edge = "#4d51a9" *)
+   (* let color_focused_successor_edge = "#4d51a9"  *)
+   (* let color_focused_vertex =  "#4d51a9"  *)
 
-   let color_selected_focused_intern_edge = "LightCoral" 
-   let color_selected_focused_vertex ="LightCoral"
-   let color_selected_focused_successor_edge =  "LightCoral" 
+   (* let color_selected_focused_intern_edge = "LightCoral"  *)
+   (* let color_selected_focused_vertex ="LightCoral" *)
+   (* let color_selected_focused_successor_edge =  "LightCoral"  *)
 
-   let color_text = "black"
+   (* let color_text = "black" *)
 
-   let width_successor_edge = 2
-   let width_intern_edge = 2
-   let point_size_text = 12.*)
+   (* let width_successor_edge = 2 *)
+   (* let width_intern_edge = 2 *)
+   (* let point_size_text = 12. *)
 
-(* dark mode 
+(* dark mode  *)
    (* differents definitions *)
-   let color_circle = "grey99"
+   (* let color_circle = "grey99" *)
 
-   let color_intern_edge = "black"
-   let color_successor_edge ="black"
-   let color_vertex = "grey58"
+   (* let color_intern_edge = "black" *)
+   (* let color_successor_edge ="black" *)
+   (* let color_vertex = "grey58" *)
 
-   let color_selected_intern_edge = "OrangeRed4" 
-   let color_selected_successor_edge =  "OrangeRed4"
-   let color_selected_vertex =  "OrangeRed4"
+   (* let color_selected_intern_edge = "OrangeRed4"  *)
+   (* let color_selected_successor_edge =  "OrangeRed4" *)
+   (* let color_selected_vertex =  "OrangeRed4" *)
 
-   let color_focused_intern_edge = "blue" 
-   let color_focused_successor_edge =  "blue" 
-   let color_focused_vertex =  "blue" 
+   (* let color_focused_intern_edge = "blue"  *)
+   (* let color_focused_successor_edge =  "blue"  *)
+   (* let color_focused_vertex =  "blue"  *)
 
-   let color_selected_focused_intern_edge =  "dark magenta" 
-   let color_selected_focused_vertex ="dark magenta"
-   let color_selected_focused_successor_edge =  "dark magenta" 
+   (* let color_selected_focused_intern_edge =  "dark magenta"  *)
+   (* let color_selected_focused_vertex ="dark magenta" *)
+   (* let color_selected_focused_successor_edge =  "dark magenta"  *)
 
-   let color_text = "white"
+   (* let color_text = "white" *)
 
-   let width_successor_edge = 2
-   let width_intern_edge = 2
-   let point_size_text = 12.
-*)
+   (* let width_successor_edge = 2 *)
+   (* let width_intern_edge = 2 *)
+   (* let point_size_text = 12. *)
 
 
 
@@ -89,13 +88,13 @@ let color_intern_edge = "grey69"
 let color_successor_edge = "black" (*"grey38"*)
 let color_vertex = "grey75"
 
-let color_selected_intern_edge = "#9f1a1a" (* "#74885e"*) 
-let color_selected_successor_edge = "#9f1a1a" 
+let color_selected_intern_edge = "#9f1a1a" (* "#74885e"*)
+let color_selected_successor_edge = "#9f1a1a"
 let color_selected_vertex = "#9f1a1a"
 
 let color_focused_intern_edge = "#4d51a9"
-let color_focused_successor_edge = "#4d51a9" 
-let color_focused_vertex =  "#4d51a9" 
+let color_focused_successor_edge = "#4d51a9"
+let color_focused_vertex =  "#4d51a9"
 
 let color_selected_focused_intern_edge = "#e80000"
 let color_selected_focused_vertex ="#e80000"
@@ -165,12 +164,19 @@ let tlineto_gtk turtle line =
   let (x,y) = !current_point in 
    List.append line [(float x); (float y) ]
 
-
+let half_list l =
+  let length = (List.length l)/2 in  
+  let rec f cpt = function
+    |[] -> []
+    |x::s when cpt >= length && cpt mod 2 = 0 -> []
+    |x::s -> x::(f (cpt+1) s)
+  in
+  f 0 l
 
 (* Set line points for a distance with a number of steps, 
    set current point to last line's point, by side-effect of tlineto_gtk,
    and return the final turtle *)
-let set_successor_edge turtle distance steps line =
+let set_successor_edge turtle distance steps line line2 texte canvas =
   let d = distance /. (float steps) in
   let rec list_points turtle liste = function
     | 0 -> (turtle,liste)
@@ -178,15 +184,22 @@ let set_successor_edge turtle distance steps line =
       list_points turt (tlineto_gtk turt liste) (n-1)
   in
   let start = 
-    let (x,y) = from_turtle turtle.pos in [(float (x)); (float (y))] in 
+    let (x,y) = from_turtle turtle.pos in 
+    [(float (x)); (float (y))] in 
   let _,lpoints = list_points turtle start steps in
   let points = Array.of_list lpoints in
-  line#set [`POINTS points;  
-            `FIRST_ARROWHEAD true;
-	    `LAST_ARROWHEAD true;
-	    `ARROW_SHAPE_A 10.;
-	    `ARROW_SHAPE_B 10.;
-	    `ARROW_SHAPE_C 5.;]
+  let new_l = half_list lpoints in
+  let new_points = Array.of_list new_l in 
+  line2#set [`POINTS new_points];
+  line#set [`POINTS points;];
+  let l = (Array.length points) / 2 in 
+  (* let l2 = (Array.length points) in  *)
+  let (x, y) = 
+    if l mod 2 = 0 then (l, l+1) else (l+1, l) in
+  (* let off_x =  ((points.(x) -. points.(l2 - 2))) in *)
+  (* let off_y = ( (points.(y) -. points.(l2 - 1))) in *)
+  texte#set [`X (points.(x) (* +. 20. *)); `Y (points.(y) -. 50.);  (* -. 60.  *)
+            (* ; `X_OFFSET off_x; `Y_OFFSET off_y *)]
     
 type polaire = { radius : float; angle : float}
 type cartesien = { x : float; y: float}
@@ -204,20 +217,17 @@ let cart_to_pol p =
     angle = 2. *. ath ((p.y /. radius) /. (1. +. p.x /. radius))
   }
 
-
 (* Set Bpath between turtles tv and tw where line is a gtk widget *) 
-let set_intern_edge tv tw bpath line =
-  let (x,y) = let (x ,y ) = from_turtle tv.pos in ((float_of_int x),(float_of_int y)) in
-  let (x',y') = let (x',y') = from_turtle tw.pos in ((float_of_int x'),(float_of_int y')) in
-  let rate = 1.95 in
+let set_intern_edge tv tw bpath line = 
+  let (x, y) = let (x, y) = from_turtle tv.pos in ((float_of_int x),(float_of_int y)) in
+  let (x', y') = let (x', y') = from_turtle tw.pos in ((float_of_int x'),(float_of_int y')) in
+  let rate = 1. in
   GnomeCanvas.PathDef.reset bpath;
   GnomeCanvas.PathDef.moveto bpath x y ;
-  GnomeCanvas.PathDef.curveto bpath ((x+. x')/.rate) ((y +. y')/.rate) 
-    ((x  +.x')/.rate) ((y +. y')/.rate)
+  GnomeCanvas.PathDef.curveto bpath ((x +. x')/.rate) ((y +. y')/.rate)
+    ((x  +. x')/.rate) ((y +. y')/.rate)
     x' y';
   line#set [`BPATH bpath]
-
-
 
 (* Set ellipse coordinate to turtle's and set current point too *)
 let tdraw_string_gtk v turtle  =
@@ -225,7 +235,7 @@ let tdraw_string_gtk v turtle  =
   tmoveto_gtk turtle;  
   let factor = (shrink_factor ((G.V.label v).turtle.pos)) in
   let factor = if factor < 0.5 then 0.5 else factor in
-  let w = factor*. point_size_text in
+  let w = factor*. point_size_text *. 0.8 in
   texte#set [`SIZE_POINTS w ];
   let w = texte#text_width in 
   let h = texte#text_height in
@@ -240,8 +250,8 @@ let add_node canvas v =
   let s = string_of_label v in
   let node_group = GnoCanvas.group ~x:0.0 ~y:0.0 canvas in
   let ellipse = GnoCanvas.ellipse 
-      ~props:[ `FILL_COLOR color_vertex ; `OUTLINE_COLOR "black" ; 
-               `WIDTH_PIXELS 0 ] node_group  
+      ~props:[`FILL_COLOR color_vertex ; `OUTLINE_COLOR "black" ; 
+               `WIDTH_PIXELS 0] node_group  
   in
   let texte = GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT s;  
                                      `FILL_COLOR color_text] node_group
@@ -267,57 +277,62 @@ let color_change_intern_edge (line:GnoCanvas.bpath) color =
 let color_change_successor_edge (line:GnoCanvas.line) color = 
   line#set [`FILL_COLOR color]
 
-
-
-
-
 (* draws but don't show intern edges, and return a couple bpath (gtk_object), and line (gtw_widget)*)
 let draw_intern_edge vw edge tv tw canvas =
-  let bpath,line = 
+  let bpath,line,texte = 
     try
-      let _,_ as pl = H2.find intern_edges vw in
+      let _,_,_ as pl = H2.find intern_edges vw in
       pl
     with Not_found ->
       let bpath = GnomeCanvas.PathDef.new_path () in
       let line = GnoCanvas.bpath canvas
-          ~props:[ `BPATH bpath ;  `WIDTH_PIXELS width_intern_edge ] 
+          ~props:[ `BPATH bpath ; `WIDTH_PIXELS width_intern_edge] 
       in
+      let texte = GnoCanvas.text canvas  ~props:[`X 0.0; `Y 0.0 ; `TEXT  edge.label;
+                                         `FILL_COLOR color_text]    in
       line#lower_to_bottom ();
-      H2.add intern_edges vw (bpath,line);
+      H2.add intern_edges vw (bpath,line,texte);
       let v,w  =  vw in
       if (is_selected w) || (is_selected v)  
-      then edge.edge_mode <-  Selected;
-      bpath,line
+      then edge.edge_mode  <-  Selected;
+      bpath,line,texte
   in
   set_intern_edge tv tw bpath line;
-  bpath, line
-
-
-
+  bpath, line, texte
 
 let draw_successor_edge vw edge canvas =
-  let line =
+  let line, line2, texte =
     try
       H2.find successor_edges vw
     with Not_found ->      
+     
+      (* let node_group = GnoCanvas.group ~x:300.0 ~y:300.0 canvas in *)
       let line = GnoCanvas.line canvas ~props:[  
         `FILL_COLOR color_successor_edge ;
         `WIDTH_PIXELS width_successor_edge ;
-	`FIRST_ARROWHEAD true;
+        `SMOOTH true]
+      in 
+      let line2 = GnoCanvas.line canvas ~props:[  
+        `FILL_COLOR color_successor_edge ;
+        `WIDTH_PIXELS 0 ;
+	`LAST_ARROWHEAD true;
         `ARROW_SHAPE_A 10.;
 	`ARROW_SHAPE_B 10.;
 	`ARROW_SHAPE_C 5.;
         `SMOOTH true]
       in 
+      let texte = GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT  edge.label;  
+                                         `FILL_COLOR color_text] canvas      in
       line#lower_to_bottom ();
-      H2.add successor_edges vw line;   
+      line2#lower_to_bottom ();
+      H2.add successor_edges vw (line, line2, texte);   
       let v,w  =  vw in
       if (is_selected w) || (is_selected v)  
       then edge.edge_mode <-  Selected;
-      line
+      line, line2,  texte
   in
-  set_successor_edge edge.edge_turtle edge.edge_distance edge.edge_steps  line;
-  line
+  set_successor_edge edge.edge_turtle edge.edge_distance edge.edge_steps line line2 texte canvas;
+  line, line2, texte
 
 (* set origine to new mouse position and return associated turtle *)
 let motion_turtle item ev =
@@ -327,23 +342,18 @@ let motion_turtle item ev =
   let z2 = to_turtle (truncate (GdkEvent.Motion.x ev),
                       truncate (GdkEvent.Motion.y ev)) in
   let (x,y) = drag_origin !origine z1 z2 in
-  origine := (x,y);
+  origine := (x,y); 
   make_turtle !origine 0.0
 
-
 let hide_intern_edge vw =
-  try let _,line = H2.find intern_edges vw in line#hide () with Not_found -> ()
+  try let _,line, texte = H2.find intern_edges vw in line#hide (); texte#hide () with Not_found -> ()
 
 let hide_succesor_edge vw =
-  try let line = H2.find successor_edges vw in line#hide () with Not_found -> ()
-
-
+  try let line, line2,  texte = H2.find successor_edges vw in line#hide (); line2#hide();
+ texte#hide ()  with Not_found -> ()
 
 (* graph drawing *)
 let draw_graph _root canvas  =
-  (* vertexes *)
-
-
   (*  edges *)           
   G.iter_edges_e
     (fun e ->
@@ -355,7 +365,7 @@ let draw_graph _root canvas  =
        then 
          (* successor edge *)
          begin
-           let line = draw_successor_edge vw edge canvas
+           let line, texte, line2 = draw_successor_edge vw edge canvas
            in
            begin
              match edge.edge_mode with
@@ -365,6 +375,8 @@ let draw_graph _root canvas  =
              | Selected_Focused -> color_change_successor_edge line color_selected_focused_successor_edge;
            end;
            line#show ();
+           line2#show ();
+           texte#show();
            hide_intern_edge vw
          end 
        else 
@@ -379,7 +391,7 @@ let draw_graph _root canvas  =
            && labw.visible = Visible 
            && v!=w
            then begin
-             let _,line = draw_intern_edge vw edge turv turw canvas in
+             let _,line, texte = draw_intern_edge vw edge turv turw canvas in
              begin
                match edge.edge_mode with
                | Normal -> color_change_intern_edge line color_intern_edge;
@@ -387,12 +399,14 @@ let draw_graph _root canvas  =
                | Focused ->  color_change_intern_edge line color_focused_intern_edge;
                | Selected_Focused -> color_change_intern_edge line color_selected_focused_intern_edge;
              end;
-             line#show()
+             line#show();
+             texte#show()
            end else
              hide_intern_edge vw
          end) 
     !graph;
 
+  (* vertexes *)
   G.iter_vertex
     (fun v -> 
        let ( l : node_info) = G.V.label v in
@@ -409,11 +423,10 @@ let draw_graph _root canvas  =
            | Selected_Focused -> color_change_vertex item color_selected_focused_vertex 3;
          end
        else
-         let node,_,_= H.find nodes v in
-         node#hide()
+         let node, _, _= H.find nodes v in
+         node#hide();
     )
     !graph
-
 
 let reset_display canvas =
   init_nodes canvas
