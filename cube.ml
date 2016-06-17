@@ -474,7 +474,10 @@ let rec add_arg args t =
 		 
   | Field (t, _) -> add_arg args t
   | List tl -> List.fold_left add_arg args tl
-  | Read (p, _, vi) | Write (p, _, vi) -> add_arg_list args (p :: vi)
+  | Read (p, _, vi) -> add_arg_list args (p :: vi)
+  | Write (p, _, vi, rr) ->
+     let vl = List.fold_left (fun acc (v, _, _) -> v :: acc) (p :: vi) rr in
+     add_arg_list args vl
   | Fence p -> add_arg_list args [p]
 
 let args_of_atoms sa =
@@ -714,7 +717,7 @@ let rec term_globs t acc = match t with
 
   | Field (t, _) -> term_globs t acc
   | List tl -> List.fold_left (fun acc t -> term_globs t acc) acc tl
-  | Read (_, v, _) | Write (_, v, _) -> Term.Set.add t acc (* t or Elem (v, Glob) ? *)
+  | Read (_, v, _) | Write (_, v, _, _) -> Term.Set.add t acc (* t or Elem (v, Glob) ? *)
   | _ -> acc
 
 let rec atom_globs a acc = match a with

@@ -160,7 +160,7 @@ module Latex = struct
     | List tl -> 
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) -> failwith "Print Read TODO" (*Event.print_rd fmt (p, v, vi)*)
-    | Write (p, v, vi) -> failwith "Print Write TODO"
+    | Write (p, v, vi, rr) -> failwith "Print Write TODO"
     | Fence p -> failwith "Print Fence TODO"
 
   let str_op_comp =

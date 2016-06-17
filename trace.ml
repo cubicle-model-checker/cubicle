@@ -145,7 +145,7 @@ module AltErgo = struct
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
-    | Write (p, v, vi) ->
+    | Write (p, v, vi, rr) ->
        fprintf fmt "write(%a, %a)" print_proc p print_var (v, vi)
     | Fence p ->
        fprintf fmt "fence(%a)" print_proc p
@@ -708,7 +708,7 @@ module Why3 = struct
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
-    | Write (p, v, vi) ->
+    | Write (p, v, vi, rr) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
     | Fence p ->
        fprintf fmt "fence(%a)" print_proc p
@@ -1526,7 +1526,7 @@ module Why3_INST = struct
        fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
-    | Write (p, v, vi) ->
+    | Write (p, v, vi, rr) ->
        fprintf fmt "write(%a, %a)" print_proc p print_var (v, vi)
     | Fence p ->
        fprintf fmt "fence(%a)" print_proc p

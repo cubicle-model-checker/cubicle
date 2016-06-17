@@ -238,10 +238,12 @@ pre.cmx : weakmem.cmx variable.cmx util.cmx types.cmx smt/term.cmx \
     pre.cmi
 pretty.cmo : util.cmi types.cmi options.cmi ast.cmi pretty.cmi
 pretty.cmx : util.cmx types.cmx options.cmx ast.cmi pretty.cmi
-prover.cmo : weakmem.cmi variable.cmi util.cmi types.cmi smt/smt.cmi \
-    options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi prover.cmi
-prover.cmx : weakmem.cmx variable.cmx util.cmx types.cmx smt/smt.cmx \
-    options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi prover.cmi
+prover.cmo : weakmem.cmi variable.cmi util.cmi types.cmi smt/term.cmi \
+    smt/smt.cmi options.cmi node.cmi common/hstring.cmi cube.cmi ast.cmi \
+    prover.cmi
+prover.cmx : weakmem.cmx variable.cmx util.cmx types.cmx smt/term.cmx \
+    smt/smt.cmx options.cmx node.cmx common/hstring.cmx cube.cmx ast.cmi \
+    prover.cmi
 ptree.cmo : variable.cmi util.cmi types.cmi smt/term.cmi smt/smt.cmi \
     common/hstring.cmi ast.cmi ptree.cmi
 ptree.cmx : variable.cmx util.cmx types.cmx smt/term.cmx smt/smt.cmx \
@@ -318,4 +320,4 @@ types.cmi : variable.cmi smt/smt.cmi common/hstring.cmi
 typing.cmi : util.cmi ast.cmi
 util.cmi : common/timer.cmi
 variable.cmi : common/hstring.cmi
-weakmem.cmi : types.cmi smt/smt.cmi common/hstring.cmi
+weakmem.cmi : variable.cmi types.cmi smt/smt.cmi common/hstring.cmi

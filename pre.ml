@@ -159,7 +159,8 @@ let rec find_assign tr = function
   | Field (t, f) -> Single (Field (t, f)) (* no writes to records (internal) *)
   | List tl -> Single (List tl) (* no writes to array (internal type) *)
   | Read _ -> failwith "Pre.find_assign: Read should not be in atom"
-  | Write _ -> failwith "Pre.find_assign: Write should not be in atom"
+  (* | Write _ -> failwith "Pre.find_assign: Write should not be in atom" *)
+  | Write _ as a -> Single a (* writes will be present now *)
   | Fence _ -> failwith "Pre.find_assign: Fence should not be in atom"
 
 let make_tau tr x op y =
@@ -231,7 +232,7 @@ let add_array_to_list n l =
       n :: l
 
 let make_cubes (ls, post) rargs s tr cnp =
-  let { cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in
+  let { cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in 
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
   let cube acc sigma =
@@ -297,14 +298,15 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
-
+	    
 let pre { tr_info = tri; tr_tau = tau } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe =
     let us = SAtom.union tri.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty) in
-    let us = List.fold_left (fun us (p, v, vi, t) ->
-      SAtom.add (Atom.Comp (Write (p, v, vi), Eq, t)) us) us tri.tr_writes in
+(*  let us = List.fold_left (fun us (p, v, vi, t) ->
+      SAtom.add (Atom.Comp (Write (p, v, vi, []), Eq, t)) us
+    ) us tri.tr_writes in*)
     let us = List.fold_left (fun us p ->
       SAtom.add (Atom.Comp (Fence p, Eq, Elem (Term.htrue, Constr))) us
     ) us tri.tr_fences in
@@ -320,6 +322,40 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
       tri, pre_u, args
     else tri, pre_u, nargs
 
+let pre ({ tr_info = tri; tr_tau = tau } as tr) unsafe =
+  let hE = H.make "_e" in
+  let hVal = H.make "_val" in
+  let eTrue = Elem (Term.htrue, Constr) in
+
+  let rr = Weakmem.relevant_reads tri.tr_writes unsafe in
+  let wr = Weakmem.relevant_reads_by_write tri.tr_writes rr in
+  let wrc = Weakmem.read_combinations_by_write wr in
+  let wrcp = Weakmem.all_permutations wrc in
+  
+  List.fold_left (fun pres wrcl ->
+    let unsafe = List.fold_left (fun unsafe ((wp, wv, wvi, wt), rcl) ->
+      let unsafe = List.fold_left (
+       fun unsafe ((rp, re, rs), (_, _, rvi, _, _, _)) ->
+        SAtom.fold (fun at unsafe -> match at, false, true with
+	  | Atom.Comp (Field (Field (Access (a, [p;e;s]), f),_), op, rt), rev,_
+	  | Atom.Comp (rt, op, Field (Field (Access (a, [p;e;s]), f),_)), _,rev
+	     when H.equal a hE &&  H.equal f hVal &&
+		  H.equal p rp && H.equal e re && H.equal s rs ->
+               let arw = if rev then Atom.Comp (wt, op, rt)
+		         else Atom.Comp (rt, op, wt) in
+	       let avi = List.fold_left2 (fun avi ri (_, wi) ->
+	         SAtom.add (Atom.Comp (Elem (ri, Var), Eq, Elem (wi, Var))) avi
+	       ) SAtom.empty wvi rvi in
+	     SAtom.add arw (SAtom.union avi unsafe)
+	  | _ -> SAtom.add at unsafe (* also add wvi = rvi *)
+        ) unsafe SAtom.empty
+      ) unsafe rcl in
+      let srl = List.fold_left (fun srl (reid, _) -> reid :: srl) [] rcl in
+      SAtom.add (Atom.Comp (Write (wp, wv, wvi, srl), Eq, eTrue)) unsafe
+    ) unsafe wrcl in
+    (pre tr unsafe) :: pres (* should have generic function : satisfy rd by wr*)
+  ) [] wrcp
+
 
 (*********************************************************************)
 (* Pre-image of a system s : computing the cubes gives a list of new *)
@@ -333,8 +369,11 @@ let pre_image trs s =
   let ls, post = 
     List.fold_left
     (fun acc tr ->
-       let trinfo, pre_u, info_args = pre tr u in
-       make_cubes acc info_args s trinfo pre_u) 
+       (* let trinfo, pre_u, info_args = pre tr u in *)
+       (* make_cubes acc info_args s trinfo pre_u) *)
+       List.fold_left (fun acc (trinfo, pre_u, info_args) ->
+         make_cubes acc info_args s trinfo pre_u
+       ) acc (pre tr u))
     ([], []) 
     trs 
   in

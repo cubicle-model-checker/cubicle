@@ -173,26 +173,53 @@ let make_conjuct atoms1 atoms2 =
 
 let make_init_dnfs s nb_procs = (* S only *)
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (fun dnf ->
-    List.rev_map (make_formula_set) (List.map Weakmem.events_of_satom dnf)
-  ) init_cdnf
+  List.rev_map (List.rev_map (fun sa ->
+    let f, _, _ = make_formula_set sa in f)) init_cdnf
 
 let get_user_invs s nb_procs = (* S only *)
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
   List.rev_map (fun a ->
     let (f, _, _) = make_formula a in F.make F.Not [f]) init_invs
 
-let unsafe_conj { tag = id; cube = cube } nb_procs invs (init, ievts, _) = (*S only*)
+module H3Map = Weakmem.H3Map
+module H = Hstring
+
+let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (*S only*)
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
-  let (f, evts, ord) = make_formula_set cube.Cube.litterals in
+
+  let hE = H.make "_e" in
+  let hRf = H.make "_rf" in
+  let hVal = H.make "_val" in
+  let eTrue = Elem (Term.htrue, Constr) in
+  let ur = Weakmem.unsatisfied_reads cube.Cube.litterals in
+  (* could detect trivially unsatisfiable reads *)
+  let sa = SAtom.fold (fun at sa -> match at, false, true with
+    (* WARNING : handle the case where both sides are events ! *)
+    | Atom.Comp (Field (Field (Access (a, [p; e; s]), f), _), op, rt), rev, _
+    | Atom.Comp (rt, op, Field (Field (Access (a, [p; e; s]), f), _)), _, rev
+       when H.equal a hE &&  H.equal f hVal ->
+         let (v, vi) = H3Map.find (p, e, s) ur in
+         let ((wp, we, ws), wt, nsa) = Weakmem.make_init_write (v, vi) in
+         let arw = if rev then Atom.Comp (wt, op, rt)
+		   else Atom.Comp (rt, op, wt) in
+	 let arf = Atom.Comp (Access (hRf, [wp;we;ws;p;e;s]), Eq, eTrue) in
+	 SAtom.add arf (SAtom.add arw (SAtom.union nsa sa))
+    | _ -> SAtom.add at sa
+  ) cube.Cube.litterals SAtom.empty in
+
+  let (f, evts, ord) = make_formula_set sa in
+  (* let (f, evts, ord) = make_formula_set cube.Cube.litterals in *)
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
   SMT.assume ~id f;
-  let evts = Weakmem.merge_evts ievts evts in
-  SMT.assume ~id (Weakmem.make_orders evts ord);
+  let evts = Weakmem.merge_evts evts evts in
+  let f = Weakmem.make_orders evts ord in
+  if debug_smt then eprintf ">> rels: %a and %a@." F.print f F.print init;
+  SMT.assume ~id f;
+  (* SMT.assume ~id (Weakmem.make_orders evts ord); *)
   SMT.check ()
 
 let unsafe_dnf node nb_procs invs dnf = (* S only *)

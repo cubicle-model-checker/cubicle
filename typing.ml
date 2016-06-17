@@ -213,7 +213,7 @@ let rec term loc ?(init=false) args = function
       	| [] -> Smt.Symbol.type_of v
       	| _ -> ty_access loc args v vi
       end
-  | Write (p, v, vi) -> failwith "Typing.term : Write should not be typed"
+  | Write (p, v, vi, srl) -> failwith "Typing.term : Write should not be typed"
   | Fence p -> failwith "Typing.term : Fence should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
@@ -296,7 +296,7 @@ let writes loc args wl =
   if Options.model = Options.SC && wl <> []
     then error (OpInvalidInSC) loc;
   let dv = ref [] in
-  List.iter 
+  List.iter (* could also prevent write by different threads *)
     (fun (p, v, vi, t) ->
        if Hstring.list_mem v !dv then error (DuplicateAssign v) loc;
        let ty_v = 
@@ -595,14 +595,14 @@ let system s =
     if Options.debug then Smt.Variant.print ();
   end;
 
-  let init_woloc = let _,v,i = s.init in v,(Weakmem.writes_of_init wvl i) in
+  let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) ->
       create_node_rename Orig v (Weakmem.events_of_satom u)
     ) s.unsafe in
-  let init_instances = create_init_instances init_woloc invs_woloc in
+  let init_instances = create_init_instances init_woloc invs_woloc in  
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
   { 

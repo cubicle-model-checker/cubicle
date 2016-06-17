@@ -17,7 +17,7 @@ logic p8 : int
 logic p9 : int
 logic p10 : int
 
-type weak_var = _VX | _VY (* try single var with 2 threads *)
+type weak_var = _VX | _VY
 type direction = _R | _W
 type params = { _p1 : int }
 type valtype = { _int : int; _bool : bool }
@@ -95,11 +95,11 @@ logic e6 : int
 
 
 goal g: true
- (*and (e1 <> e2) and (e1 <> e3) and (e1 <> e4) and (e1 <> e5) and (e1 <> e6) 
+ and (e1 <> e2) and (e1 <> e3) and (e1 <> e4) and (e1 <> e5) and (e1 <> e6) 
  and (e2 <> e3) and (e2 <> e4) and (e2 <> e5) and (e2 <> e6) 
  and (e3 <> e4) and (e3 <> e5) and (e3 <> e6) 
  and (e4 <> e5) and (e4 <> e6) 
- and (e5 <> e6)*)
+ and (e5 <> e6)
  and (p0<>p1) and (p0<>p2) and (p1<>p2)
  and (PC(p1)=L1) and (PC(p2)=L1)
 

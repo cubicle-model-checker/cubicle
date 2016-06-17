@@ -6,6 +6,20 @@ module F = Smt.Formula
 
 
 
+module HS3 : sig
+  type t = (H.t * H.t * H.t)
+end
+
+module H3Map : Map.S with type key = HS3.t
+
+(*module VI : sig
+  type t = (H.t * (H.t list))
+end
+
+module VIMap : Map.S with type key = VI.t*)
+
+
+
 val hNone : H.t
 val hP0 : H.t
 val hR : H.t
@@ -39,9 +53,12 @@ val init_weak_env : (H.t * H.t list * H.t) list -> unit
 
 
 
-val writes_of_init : (H.t * H.t list * H.t) list ->
-		     Types.SAtom.t list -> Types.SAtom.t list
+val make_init_write :
+  H.t * Variable.t list ->
+  (H.t * H.t * H.t) * Types.term * Types.SAtom.t
+
 val events_of_satom : Types.SAtom.t -> Types.SAtom.t
+
 
 
 
@@ -50,11 +67,36 @@ val split_events_orders_array :
   Types.SAtom.t *
     (H.t * H.t * (H.t * H.t) list) HMap.t HMap.t HMap.t *
     H.t list HMap.t
+
 val split_events_orders_set :
   Types.SAtom.t ->
   Types.SAtom.t *
     (H.t * H.t * (H.t * H.t) list) HMap.t HMap.t HMap.t *
     H.t list HMap.t
+
+
+
+val relevant_reads :
+  ('a * H.t * H.t list * Types.term) list ->
+  Types.SAtom.t ->
+  (H.t * H.t * (H.t * H.t) list * bool * Types.op_comp * Types.Term.t) H3Map.t
+    
+val relevant_reads_by_write :
+  ('a * Hstring.t * H.t list * Types.term) list ->
+  ('b * H.t * ('c * H.t) list * bool * Types.op_comp * Types.term) H3Map.t ->
+  (('a * Hstring.t * H.t list * Types.term) *
+     (H3Map.key * ('b * H.t * ('c * H.t) list *
+		   bool * Types.op_comp * Types.term)) list) list
+
+(*  ('a * H.t * H.t list * Types.term) list ->
+  ('c * H.t * ('d * H.t) list * 'e * 'f * 'g) H3Map.t ->
+  (('a * H.t * H.t list * 'b) *
+     (H3Map.key * ('c * H.t * ('d * H.t) list * 'e * 'f * 'g)) list) list*)
+
+val read_combinations_by_write : ('a * 'b list) list -> ('a * 'b list list) list
+val all_permutations : ('a * 'b list) list -> ('a * 'b) list list
+		       
+val unsatisfied_reads : Types.SAtom.t -> (H.t * Hstring.t list) H3Map.t
 
 
 
