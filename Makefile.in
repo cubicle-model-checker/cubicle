@@ -42,7 +42,7 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -thread -I +../lablgtk2 -I common/ -I smt/ -I +ocamlgraph
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -thread -I +../lablgtk2 -I common/ -I smt/ -I +ocamlgraph 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
@@ -131,11 +131,11 @@ opt: $(NAME).opt
 
 $(NAME).byte: $(GUICMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) gtkThread.cmo $^
 
 $(NAME).opt: $(GUICMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) gtkThread.cmx $^
 
 VERSION=1.1.1b
 # comment the following line for release
