@@ -48,7 +48,7 @@ INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma threads.cma functory.cma lablgtk.cma str.cma graph.cma lablgnomecanvas.cma lablgtksourceview2.cma 
+REQBIB = nums.cma unix.cma threads.cma functory.cma lablgtk.cma str.cma graph.cma lablgnomecanvas.cma lablgtksourceview2.cma gtkThread.cmo
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -56,7 +56,8 @@ else
   BIBBYTE=$(REQBIB) z3ml.cma
 endif
 
-BIBOPT=$(BIBBYTE:.cma=.cmxa)
+BIBTMP=$(BIBBYTE:.cma=.cmxa)
+BIBOPT=$(BIBTMP:.cmo=.cmx)
 
 # main target
 #############
@@ -69,7 +70,6 @@ all: make_functory $(OCAMLBEST)
 
 # configuration of the fake functory library
 ############################################
-
 
 make_functory:
 	@if [ -z "$(FUNCTORYLIB)" ]; then \
@@ -117,7 +117,7 @@ CMO = version.cmo options.cmo \
       util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo typing.cmo pretty.cmo \
 	ed_hyper.cmo ed_graph.cmo ed_draw.cmo ed_display.cmo ed_main.cmo ed_tracegraph.cmo  \
-	psystem_parser.cmo psystem_printer.cmo guiwindow.cmo test.cmo gui.cmo \
+	psystem_parser.cmo psystem_printer.cmo guiwindow.cmo test.cmo gui.cmo 
 
 CMX = $(CMO:.cmo=.cmx)
 
@@ -131,11 +131,11 @@ opt: $(NAME).opt
 
 $(NAME).byte: $(GUICMO)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) gtkThread.cmo $^
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
 
 $(NAME).opt: $(GUICMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
-	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) gtkThread.cmx $^
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
 VERSION=1.1.1b
 # comment the following line for release

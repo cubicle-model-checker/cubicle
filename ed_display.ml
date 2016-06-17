@@ -22,9 +22,8 @@ open Ed_graph
 
 let debug = ref false
 
-
 (* Original window size *)
-let (w,h)= (1200.,800.)
+let (w,h) = (1200.,800.)
 
 (* light mode *)
    (* differents definitions *)
@@ -78,8 +77,6 @@ let (w,h)= (1200.,800.)
    (* let width_intern_edge = 2 *)
    (* let point_size_text = 12. *)
 
-
-
 (* guizmode *)
 (* differents definitions *)
 let color_circle = "grey99"
@@ -106,18 +103,14 @@ let width_successor_edge = 2
 let width_intern_edge = 2
 let point_size_text = 12.
 
-
 (* two tables for two types of edge :
    successor_edges = edges with successor of root
    intern_edges = edges between  successors of root *)
 let successor_edges = H2.create 97
 let intern_edges = H2.create 97
 
-
 (* table of all nodes *)
 let nodes = H.create 97
-
-
 
 (* GTK to hyperbolic coordinates *)
 let to_turtle(x,y)=
@@ -176,7 +169,7 @@ let half_list l =
 (* Set line points for a distance with a number of steps, 
    set current point to last line's point, by side-effect of tlineto_gtk,
    and return the final turtle *)
-let set_successor_edge turtle distance steps line line2 texte canvas =
+let set_successor_edge edge turtle distance steps line line2 texte canvas =
   let d = distance /. (float steps) in
   let rec list_points turtle liste = function
     | 0 -> (turtle,liste)
@@ -196,10 +189,10 @@ let set_successor_edge turtle distance steps line line2 texte canvas =
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
     if l mod 2 = 0 then (l, l+1) else (l+1, l) in
-  (* let off_x =  ((points.(x) -. points.(l2 - 2))) in *)
-  (* let off_y = ( (points.(y) -. points.(l2 - 1))) in *)
-  texte#set [`X (points.(x) (* +. 20. *)); `Y (points.(y) -. 50.);  (* -. 60.  *)
-            (* ; `X_OFFSET off_x; `Y_OFFSET off_y *)]
+  if edge.visible_label then 
+    texte#set [`TEXT edge.label; `X (points.(x) (* +. 20. *)); `Y (points.(y) -. 50.)]
+  else 
+    texte#set [`TEXT ""; `X (points.(x) (* +. 20. *)); `Y (points.(y) -. 50.)]
     
 type polaire = { radius : float; angle : float}
 type cartesien = { x : float; y: float}
@@ -236,12 +229,16 @@ let tdraw_string_gtk v turtle  =
   let vertex = G.V.label v in 
   let factor = (shrink_factor ((G.V.label v).turtle.pos)) in
   let factor = if factor < 0.5 then 0.5 else factor in
-  let w = factor*. point_size_text *. 0.8 in
-  texte#set [`TEXT vertex.label; `SIZE_POINTS w ];
-  let w = texte#text_width in 
+  let w = factor *. point_size_text *. 0.8 in
+  if vertex.changed then 
+    (texte#set [`TEXT vertex.label; `SIZE_POINTS w ];
+     vertex.changed <- false)
+  else
+    texte#set [`SIZE_POINTS w ];
+    let w = texte#text_width in 
   let h = texte#text_height in
-  ellipse#set [ `X1  (-.( w +. 8.)/.2.); `X2 ((w +. 8.)/.2.);
-                `Y1  (-.( h +. 6.)/.2.); `Y2 ((h +. 6.)/.2.)];
+  ellipse#set [ `X1  (-.( w +. 15.)/.2.); `X2 ((w +. 15.)/.2.);
+                `Y1  (-.( h +. 15.)/.2.); `Y2 ((h +. 15.)/.2.)];
   let (x,y) = !current_point in
   node#move ~x:(float x) ~y:(float y);
   node#set  [`X (float x); `Y (float y)];
@@ -263,8 +260,6 @@ let add_node canvas v =
 let init_nodes canvas =
   H.clear nodes;
   G.iter_vertex (add_node canvas) !graph
-
-
 
 (* change color for a vertex *)
 let color_change_vertex item color n =
@@ -321,18 +316,20 @@ let draw_successor_edge vw edge canvas =
 	`ARROW_SHAPE_B 10.;
 	`ARROW_SHAPE_C 5.;
         `SMOOTH true]
-      in 
-      let texte = GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT  edge.label;  
-                                         `FILL_COLOR color_text] canvas      in
+      in
+      let v,w = vw in 
+      let texte =  
+           GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT edge.label;  
+                                  `FILL_COLOR color_text] canvas
+                             in
       line#lower_to_bottom ();
       line2#lower_to_bottom ();
       H2.add successor_edges vw (line, line2, texte);   
-      let v,w  =  vw in
       if (is_selected w) || (is_selected v)  
       then edge.edge_mode <-  Selected;
       line, line2,  texte
   in
-  set_successor_edge edge.edge_turtle edge.edge_distance edge.edge_steps line line2 texte canvas;
+  set_successor_edge edge edge.edge_turtle edge.edge_distance edge.edge_steps line line2 texte canvas;
   line, line2, texte
 
 (* set origine to new mouse position and return associated turtle *)

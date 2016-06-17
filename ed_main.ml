@@ -28,9 +28,7 @@ let m = Mutex.create ()
 
 exception End_trace
 
-let end_trace = ref false
-
-let cpt = ref 0 
+let cpt = ref 1
 
 module HT  = 
   Hashtbl.Make
@@ -40,9 +38,7 @@ module HT  =
       let hash x  = Hashtbl.hash x 
     end)
 
-(* let g = B.empty () *)
-
-let ht = HT.create 100 
+let ht = HT.create 500
 
 let debug = ref false
 let trace f x = 
@@ -72,7 +68,7 @@ module Model = struct
 
   let add_vertex v =
     let row = model#append () in
-    model#set ~row ~column:name (string_of_label v);
+    model#set ~row ~column:name (get_str_label v);
     model#set ~row ~column:vertex v;
     H.add rows v row;
     row
@@ -168,10 +164,11 @@ let canvas_root =
   let circle_group = GnoCanvas.group ~x:(w/.2.) ~y:(h/.2.) canvas#root in
   circle_group#lower_to_bottom ();
   let w2 = 2. in
-  let circle = GnoCanvas.ellipse  ~props:[ `X1 (-.w/.2. +.w2); `Y1 (-.h/.2. +.w2); 
-                                           `X2  (w/.2. -.w2) ; `Y2 ( h/.2. -.w2) ;
-                                           `FILL_COLOR color_circle ; `OUTLINE_COLOR "black" ; 
-                                           `WIDTH_PIXELS (truncate w2) ] circle_group 
+  let circle = GnoCanvas.ellipse 
+ ~props:[ `X1 (-.w/.2. +.w2); `Y1 (-.h/.2. +.w2); 
+          `X2  (w/.2. -.w2) ; `Y2 ( h/.2. -.w2) ;
+          `FILL_COLOR color_circle ; `OUTLINE_COLOR "black" ; 
+          `WIDTH_PIXELS (truncate w2) ] circle_group 
   in
   circle_group#lower_to_bottom ();
   circle#show();
@@ -183,18 +180,11 @@ let canvas_root =
 (* current root used for drawing *)
 let root = ref (choose_root ())
 
-let load_graphm ()  = 
-   (* Ed_graph.graph := g; *)
-   (* root := Some r;  *)
-   Model.reset ();
-   set_window_title ()
-
 (* refresh rate *)
 let refresh = ref 0
 
 let do_refresh () =
   !refresh mod !refresh_rate = 0 
-
 
 (* graph drawing *)
 let draw tortue canvas =
@@ -273,7 +263,7 @@ let vertex_event vertex item ellispe ev =
           end
         end
 
-    | `BUTTON_PRESS ev ->  ()
+   | `BUTTON_PRESS ev ->  ()
     | `TWO_BUTTON_PRESS ev->
       if (GdkEvent.Button.button ev) = 1
       then 
@@ -282,6 +272,9 @@ let vertex_event vertex item ellispe ev =
             | None -> ()
             | Some root -> 
               let v = G.V.label vertex in 
+              v.changed <- true ;
+              G.iter_succ_e (fun x -> let e = G.E.label x in
+              e.visible_label <- not e.visible_label) !graph vertex ;
               if v.label_mode = Num_Label then 
                 (v.label <- v.str_label;
                  v.label_mode <- Str_Label)
@@ -296,7 +289,6 @@ let vertex_event vertex item ellispe ev =
   end;
   true
 
-
 let set_vertex_event vertex =
   let item,ell,_ = H.find nodes vertex in
   ignore (item#connect#event ~callback:(vertex_event vertex item ell))
@@ -306,7 +298,6 @@ let () = set_vertex_event_fun := set_vertex_event
 let set_canvas_event () =
   G.iter_vertex set_vertex_event !graph
 
-
 (* treeview *)
 let add_columns ~(view : GTree.view) ~model =
   let renderer = GTree.cell_renderer_text [`XALIGN 0.] in
@@ -315,7 +306,6 @@ let add_columns ~(view : GTree.view) ~model =
   ignore (view#append_column vc);
   vc#set_sizing `FIXED;
   vc#set_fixed_width 100;
-  (*  vc#set_resizable true;*)
   vc#set_sizing `AUTOSIZE;
   view#selection#connect#after#changed ~callback:
     begin fun () ->
@@ -324,15 +314,12 @@ let add_columns ~(view : GTree.view) ~model =
         view#selection#get_selected_rows;
     end
 
-
 let _ = window#connect#destroy~callback:GMain.quit 
-
 
 let treeview = GTree.view ~model:Model.model ~packing:sw#add ()
 let () = treeview#set_rules_hint true
 let () = treeview#selection#set_mode `MULTIPLE
 let _ = add_columns ~view:treeview ~model:Model.model
-
 
 (* reset *)
 
@@ -345,7 +332,6 @@ let reset_table_and_canvas () =
   origine := start_point;
   nb_selected:=0
   
-   
 let rec node_name  = function
   |[] -> ""
   |x::[] -> 
@@ -354,7 +340,6 @@ let rec node_name  = function
       |y::_ ->  y)
   |x::s -> (String.trim x)^"\n"^(node_name s)
         
-
 let create_node s first = 
   (* Printf.printf "node\n"; *)
   let pos = Str.search_forward (Str.regexp "=") s 0 in
@@ -383,8 +368,7 @@ let create_node s first =
      ignore (Model.add_edge n v);
    with Not_found -> ());
   incr cpt;
-  Thread.delay 0.01
-
+  Thread.delay 0.1
   
 let rec list_to_node curr_node first = function
   |[] -> ()
@@ -411,9 +395,8 @@ let rec build_node curr_node str first =
      curr_node := x)
   |x::s ->
     list_to_node curr_node first str_l
-
   
-let load_grapht () =
+let load_graph () =
   try
     let curr_node = ref "" in
     let first = ref true in 
@@ -433,7 +416,6 @@ let load_grapht () =
     done
   with End_trace -> ()
 
-
 let show_tree file () = 
   let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
      (try
@@ -450,13 +432,8 @@ let show_tree file () =
 
 let tree file  = 
   Queue.clear graph_trace;
-  let _ = Thread.create (show_tree file) () in
-  let _ = Thread.create load_grapht () in ()
-  (* let tor = make_turtle !origine 0.0 in *)
-  (* draw tor canvas_root *)
-  (* Thread.join t1; *)
-  (* Thread.join t2; *)
-  (*reset_table_and_canvas ();*)
+  ignore (Thread.create (show_tree file) ());
+  ignore (Thread.create load_graph ()) 
 
 let open_graph file  =
   reset_table_and_canvas ();
@@ -465,11 +442,8 @@ let open_graph file  =
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (window#show ());
   tree file ;
-  (* ignore (button#event#connect#button_press *)
-  (*           ~callback:(tree file)); *)
-  (* ignore (window#event#connect#activate ~callback:(tree file)); *)
   GtkThread.main ()
-
+    
 
          
  

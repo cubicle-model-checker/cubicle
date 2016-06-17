@@ -30,6 +30,7 @@ type node_info =
   { 
     mutable label : string;
     mutable label_mode : label_t;
+    mutable changed : bool;
     str_label : string;
     num_label : string;
     mutable visible : visibility;
@@ -43,6 +44,7 @@ let make_node_info n s =
   { 
     str_label = s;
     num_label = n;
+    changed = false;
     label_mode = Num_Label;
     label = n; 
     visible = Visible; 
@@ -55,6 +57,7 @@ let make_node_info n s =
 type edge_info = 
   {
     label : string;
+    mutable visible_label : bool;
     mutable visited : bool;
     mutable edge_mode : mode;
     mutable edge_turtle : turtle;
@@ -65,6 +68,7 @@ type edge_info =
 let make_edge_info () =
   { 
     label = "";
+    visible_label = false;
     visited = false; 
     edge_mode = Normal;
     edge_turtle = dummy_turtle; 
@@ -74,7 +78,8 @@ let make_edge_info () =
 
 let make_edge_info_label s =
   { 
-    label = "";
+    visible_label = false;
+    label = s;
     visited = false; 
     edge_mode = Normal;
     edge_turtle = dummy_turtle; 
@@ -103,83 +108,10 @@ let graph_name = ref (None: name)
 
 (* useful functions for vertex and edge *)
 let string_of_label x = (G.V.label x).label
+let get_str_label x = (G.V.label x).str_label 
+
 let edge v w = G.mem_edge !graph v w || G.mem_edge !graph w v 
 
-(* two Parser modules *)
-(* module GmlParser =  *)
-(*   Gml.Parse *)
-(*     (B) *)
-(*     (struct  *)
-(*       let node l =  *)
-(*         make_node_info *)
-(*           (try  *)
-(*              match List.assoc "id" l  *)
-(*              with Gml.Int n -> string_of_int n | _ -> "<no id>" *)
-(*            with Not_found -> "<no id>") *)
-(*       let edge _ = make_edge_info () *)
-(*     end) *)
-
-(* module DotParser =  *)
-(*   Dot.Parse *)
-(*     (B) *)
-(*     (struct  *)
-(*       let node (id,_) _ = match id with *)
-(*         | Dot_ast.Ident s *)
-(*         | Dot_ast.Number s *)
-(*         | Dot_ast.String s *)
-(*         | Dot_ast.Html s -> make_node_info s *)
-(*       let edge _ = make_edge_info () *)
-(*     end) *)
-
-(* a parsing file function *)
-(* let parse_file f =  *)
-(*   if Filename.check_suffix f ".gml" then *)
-(*     GmlParser.parse f *)
-(*   else *)
-(*     DotParser.parse f *)
-
-(* (\* two Printer Modules *\) *)
-(* module GmlPrinter = *)
-(*   Gml.Print *)
-(*     (G) *)
-(*     (struct *)
-(*       let node (v: G.V.label) = ["label", Gml.Int (int_of_string v.label)] *)
-(*       let edge (_: G.E.label) = [] *)
-(*     end) *)
-
-(* module DotPrinter = *)
-(*   Graphviz.Dot *)
-(*     ( struct *)
-(*       include G *)
-(*       let vertex_name vertex = string_of_label vertex *)
-(*       let graph_attributes _ = [] *)
-(*       let default_vertex_attributes _ = [] *)
-(*       let vertex_attributes _ = [] *)
-(*       let default_edge_attributes _ = [] *)
-(*       let edge_attributes _ = [] *)
-(*       let get_subgraph _ = None *)
-(*     end ) *)
-
-(* two outputs functions, and a save graph function *)
-(* let gml_output g f = *)
-(*   let c = open_out f in *)
-(*   let fmt = Format.formatter_of_out_channel c in *)
-(*   Format.fprintf fmt "%a@." GmlPrinter.print g; *)
-(*   close_out c *)
-
-(* let dot_output g f =  *)
-(*   let oc = open_out f in *)
-(*   DotPrinter.output_graph oc g; *)
-(*   close_out oc *)
-
-(* let save_graph name = *)
-(*   if Filename.check_suffix name "gml" *)
-(*   then ( gml_output !graph name;  graph_name := Some name) *)
-(*   else if Filename.check_suffix name "dot" *)
-(*   then ( dot_output !graph name;  graph_name := Some name) *)
-(*   else ( let name = name^".dot" in  *)
-(*          dot_output !graph name; *)
-(*          graph_name := Some name ) *)
 
 module Components = Components.Make(G)
 module Dfs = Traverse.Dfs(G)
@@ -193,14 +125,6 @@ let choose_root () =
   with Choose v ->
     Some v
 
-(* Parsing of the command line *)
-(* let load_graph f = *)
-(*   graph := parse_file f; *)
-(*   graph_name := Some f *)
-
-(* let load_graph2 g = *)
-(*   graph := g; *)
-(*   graph_name := None *)
 
 let dfs = ref false
 
