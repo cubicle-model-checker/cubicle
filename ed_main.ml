@@ -26,7 +26,13 @@ let graph_trace = Queue.create ()
 
 let m = Mutex.create ()
 
+let c = Condition.create ()
+
 exception End_trace
+
+exception KillThread
+
+let kill_thread = ref false
 
 let cpt = ref 1
 
@@ -143,6 +149,19 @@ let set_window_title () =
 
 (* menu bar *)
 let v_box = GPack.vbox ~homogeneous:false ~spacing:30  ~packing:window#add ()
+
+let toolbox_frame = GBin.frame ~border_width:8  ~packing:(v_box#pack ~expand:false ~fill:false ) ()
+
+let toolbox = GPack.hbox  ~packing:(toolbox_frame#add) ()
+
+let toolbar =
+  let t = GButton.toolbar ~tooltips:true ~packing:toolbox#add ()
+  in t#set_icon_size `DIALOG; t
+
+let stop_button =
+  toolbar#insert_button
+    ~text:" Abort"
+    ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce ()
 
 let menu_bar_box = GPack.vbox ~packing:v_box#pack () 
 
@@ -273,14 +292,16 @@ let vertex_event vertex item ellispe ev =
             | Some root -> 
               let v = G.V.label vertex in 
               v.changed <- true ;
-              G.iter_succ_e (fun x -> let e = G.E.label x in
-              e.visible_label <- not e.visible_label) !graph vertex ;
               if v.label_mode = Num_Label then 
                 (v.label <- v.str_label;
-                 v.label_mode <- Str_Label)
+                 v.label_mode <- Str_Label;
+                 G.iter_succ_e (fun x -> let e = G.E.label x in
+                                         e.visible_label <- true) !graph vertex )
               else
             (v.label <- v.num_label;
-             v.label_mode <- Num_Label);
+             v.label_mode <- Num_Label;
+            G.iter_succ_e (fun x -> let e = G.E.label x in
+                                    e.visible_label <- false) !graph vertex );
               refresh_draw ()
         end
 
@@ -368,7 +389,7 @@ let create_node s first =
      ignore (Model.add_edge n v);
    with Not_found -> ());
   incr cpt;
-  Thread.delay 0.1
+  Thread.delay 0.01
   
 let rec list_to_node curr_node first = function
   |[] -> ()
@@ -402,7 +423,11 @@ let load_graph () =
     let first = ref true in 
     while true do
       try
+        if !kill_thread then raise KillThread;
         Mutex.lock m;
+        while Queue.length graph_trace = 0 do 
+          Condition.wait c m 
+        done; 
         let str = Queue.pop graph_trace in
         Mutex.unlock m;
         if Str.string_match (Str.regexp "==") str 0 then
@@ -412,34 +437,42 @@ let load_graph () =
             build_node curr_node str first
         else
           curr_node := !curr_node ^ str
-      with Queue.Empty -> Printf.printf " "; Mutex.unlock m;
+      with Queue.Empty -> (* Printf.printf " "; *) Mutex.unlock m;
     done
-  with End_trace -> ()
+  with
+  |End_trace -> ()
+  |KillThread -> ()
 
 let show_tree file () = 
   let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
-     (try
+  try
        while true do
+         if !kill_thread then raise KillThread;
          let s = input_line ic in
          Mutex.lock m;
          Queue.push (s^"\n") graph_trace;
+         Condition.signal c;
          Mutex.unlock m;
-         Thread.yield ();
+         (* Thread.yield (); *)
        done
      with
-         End_of_file ->
-           close_in ic)
+     |End_of_file ->
+       close_in ic
+     |KillThread -> close_in ic
 
 let tree file  = 
   Queue.clear graph_trace;
   ignore (Thread.create (show_tree file) ());
   ignore (Thread.create load_graph ()) 
 
+
 let open_graph file  =
   reset_table_and_canvas ();
   draw (make_turtle_origine ()) canvas_root;
   set_canvas_event ();
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
+  ignore (stop_button#event#connect#button_press
+            ~callback: (fun b -> kill_thread:= true; true));
   ignore (window#show ());
   tree file ;
   GtkThread.main ()

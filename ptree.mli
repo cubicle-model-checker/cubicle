@@ -78,10 +78,9 @@ type cformula = formula
 (* type cube = [conj | PExists of Variable.t list * conj] *)
 
 
-
-
-
 type pup_psw = {pup_form : cformula ; pup_t : term ; pup_i : info}
+
+
 
 type pswts  =  (pup_psw list * info)
 
@@ -93,7 +92,7 @@ type pupdate = {
   pup_loc : info;
   pup_arr : hstr_info;
   pup_arg : var list * info;
-  pup_swts : pswts ;
+  pup_swts : pswts;
   pup_info : (Hstring.t * var list * term)  option;
 }
 
