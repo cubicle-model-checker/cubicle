@@ -59,6 +59,7 @@ let () =
 
 let _ = 
   let lb = from_channel cin in 
+let close_dot = Dot.open_dot () in (* debug *)
   try
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
@@ -66,7 +67,7 @@ let _ =
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
-    let close_dot = Dot.open_dot () in
+    (* let close_dot = Dot.open_dot () in *)
     begin
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
@@ -107,6 +108,7 @@ let _ =
      eprintf "\n@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
      eprintf "It is likely that the search diverges, increase \
               the limit to explore further.@.";
+close_dot (); (* print dot anyways *)
      exit 1
 
   | Failure str ->

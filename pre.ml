@@ -341,8 +341,8 @@ let pre ({ tr_info = tri; tr_tau = tau } as tr) unsafe =
 	  | Atom.Comp (rt, op, Field (Field (Access (a, [p;e;s]), f),_)), _,rev
 	     when H.equal a hE &&  H.equal f hVal &&
 		  H.equal p rp && H.equal e re && H.equal s rs ->
-               let arw = if rev then Atom.Comp (wt, op, rt)
-		         else Atom.Comp (rt, op, wt) in
+               let arw = if rev then Atom.Comp (rt, op, wt)
+		         else Atom.Comp (wt, op, rt) in
 	       let avi = List.fold_left2 (fun avi ri (_, wi) ->
 	         SAtom.add (Atom.Comp (Elem (ri, Var), Eq, Elem (wi, Var))) avi
 	       ) SAtom.empty wvi rvi in

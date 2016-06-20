@@ -203,8 +203,8 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (*S only*)
        when H.equal a hE &&  H.equal f hVal ->
          let (v, vi) = H3Map.find (p, e, s) ur in
          let ((wp, we, ws), wt, nsa) = Weakmem.make_init_write (v, vi) in
-         let arw = if rev then Atom.Comp (wt, op, rt)
-		   else Atom.Comp (rt, op, wt) in
+         let arw = if rev then Atom.Comp (rt, op, wt)
+		   else Atom.Comp (wt, op, rt) in
 	 let arf = Atom.Comp (Access (hRf, [wp;we;ws;p;e;s]), Eq, eTrue) in
 	 SAtom.add arf (SAtom.add arw (SAtom.union nsa sa))
     | _ -> SAtom.add at sa
