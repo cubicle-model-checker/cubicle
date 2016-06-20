@@ -28,6 +28,8 @@ let m = Mutex.create ()
 
 let c = Condition.create ()
 
+let first = ref true 
+
 exception End_trace
 
 exception KillThread
@@ -36,13 +38,14 @@ let kill_thread = ref false
 
 let cpt = ref 1
 
-module HT  = 
-  Hashtbl.Make
+module HTString  = 
     (struct 
       type t = string
       let equal x y = (String.trim x) = (String.trim y) 
       let hash x  = Hashtbl.hash x 
     end)
+
+module HT = Hashtbl.Make(HTString)
 
 let ht = HT.create 500
 
@@ -137,46 +140,49 @@ let model_reset ()  = Model.reset ()
 
 let ed_name = "Ocamlgraph's Editor"
 
-(* Main GTK window *)
-let window = GWindow.window ~border_width: 10 ~position: `CENTER () 
-
-(* usual function to change window title *)
-let set_window_title () =
-  window#set_title
-    (match !graph_name with
-     | None -> ed_name
-     | Some name -> ed_name^" : "^(Filename.chop_extension (Filename.basename name)))
+let window =
+  let wnd = 
+    GWindow.window ~border_width:10 ~position: `CENTER () in
+let _ = wnd#destroy_with_parent in
+let _ = wnd#event#connect#delete ~callback:(fun b -> 
+  kill_thread := true;
+  wnd#misc#hide ();
+  true(* GMain.quit *))in wnd
 
 (* menu bar *)
-let v_box = GPack.vbox ~homogeneous:false ~spacing:30  ~packing:window#add ()
+let v_box = GPack.vbox ~homogeneous:false ~spacing:30  ~packing:window#add () 
 
-let toolbox_frame = GBin.frame ~border_width:8  ~packing:(v_box#pack ~expand:false ~fill:false ) ()
+let toolbox_frame = GBin.frame ~border_width:8  ~packing:(v_box#pack ~expand:false ~fill:false ) () 
 
-let toolbox = GPack.hbox  ~packing:(toolbox_frame#add) ()
+let toolbox = GPack.hbox  ~packing:(toolbox_frame#add) () 
 
 let toolbar =
-  let t = GButton.toolbar ~tooltips:true ~packing:toolbox#add ()
-  in t#set_icon_size `DIALOG; t
+  let t = GButton.toolbar ~tooltips:true ~packing:toolbox#add () 
+  in t#set_icon_size `DIALOG; t 
 
 let stop_button =
   toolbar#insert_button
     ~text:" Abort"
-    ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce ()
+    ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce () 
 
 let menu_bar_box = GPack.vbox ~packing:v_box#pack () 
 
 (* treeview on the left, canvas on the right *)
-let h_box = GPack.hbox ~homogeneous:false ~spacing:30  ~packing:v_box#add ()
+let h_box = GPack.hbox ~homogeneous:false ~spacing:30  ~packing:v_box#add () 
 
 let sw = GBin.scrolled_window ~shadow_type:`ETCHED_IN ~hpolicy:`NEVER
     ~vpolicy:`AUTOMATIC ~packing:h_box#add () 
 
-let canvas =  
-  GnoCanvas.canvas 
+let canvas = 
+  (GnoCanvas.canvas 
     ~aa:!aa 
     ~width:(truncate w) 
     ~height:(truncate h) 
-    ~packing:h_box#add () 
+    ~packing:h_box#add ()) 
+
+
+
+
 
 (* unit circle as root of graph drawing *)
 let canvas_root =
@@ -193,7 +199,6 @@ let canvas_root =
   circle#show();
   let graph_root = GnoCanvas.group ~x:(-.(w/.2.)) ~y:(-.(h/.2.)) circle_group in
   graph_root#raise_to_top ();
-  set_window_title ();
   graph_root
 
 (* current root used for drawing *)
@@ -335,7 +340,6 @@ let add_columns ~(view : GTree.view) ~model =
         view#selection#get_selected_rows;
     end
 
-let _ = window#connect#destroy~callback:GMain.quit 
 
 let treeview = GTree.view ~model:Model.model ~packing:sw#add ()
 let () = treeview#set_rules_hint true
@@ -351,7 +355,7 @@ let reset_table_and_canvas () =
   H2.clear successor_edges;
   reset_display canvas_root;
   origine := start_point;
-  nb_selected:=0
+  nb_selected := 0
   
 let rec node_name  = function
   |[] -> ""
@@ -362,22 +366,23 @@ let rec node_name  = function
   |x::s -> (String.trim x)^"\n"^(node_name s)
         
 let create_node s first = 
-  (* Printf.printf "node\n"; *)
   let pos = Str.search_forward (Str.regexp "=") s 0 in
   let before = Str.global_replace (Str.regexp "[\n| ]+") "" 
         ( String.trim (Str.string_before s pos)) in 
   let after = node_name (Str.split (Str.regexp "&&") (Str.string_after s (pos + 1))) in
-  let v = G.V.create (make_node_info (string_of_int !cpt) after) in
-  if !first then
-    root := Some v;
+  let v = 
+    if !first then
+      (let vertex = G.V.create (make_node_info_color (string_of_int !cpt) after) in
+      root := Some vertex;
+      vertex)
+    else
+      G.V.create (make_node_info (string_of_int !cpt) after) in
   first := false;
   HT.add ht before v;
   G.add_vertex !graph v;
   ignore (Model.add_vertex v);
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
-  let tor = make_turtle !origine 0.0 in
-  draw tor canvas_root;
   (try
      let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in
      let transition = Str.string_before before arrow_pos in
@@ -388,6 +393,8 @@ let create_node s first =
      G.add_edge_e !graph e;
      ignore (Model.add_edge n v);
    with Not_found -> ());
+  let tor = make_turtle !origine 0.0 in
+  draw tor canvas_root;
   incr cpt;
   Thread.delay 0.01
   
@@ -420,7 +427,6 @@ let rec build_node curr_node str first =
 let load_graph () =
   try
     let curr_node = ref "" in
-    let first = ref true in 
     while true do
       try
         if !kill_thread then raise KillThread;
@@ -437,7 +443,7 @@ let load_graph () =
             build_node curr_node str first
         else
           curr_node := !curr_node ^ str
-      with Queue.Empty -> (* Printf.printf " "; *) Mutex.unlock m;
+      with Queue.Empty ->  Mutex.unlock m;
     done
   with
   |End_trace -> ()
@@ -456,29 +462,41 @@ let show_tree file () =
          (* Thread.yield (); *)
        done
      with
-     |End_of_file ->
-       close_in ic
-     |KillThread -> close_in ic
+     |End_of_file -> 
+       ignore (Unix.close_process_in ic)
+     |KillThread ->
+       ignore (Unix.close_process_in ic)
+
+(* let quit () = window#destroy() *)
 
 let tree file  = 
   Queue.clear graph_trace;
   ignore (Thread.create (show_tree file) ());
-  ignore (Thread.create load_graph ()) 
-
+  ignore (Thread.create load_graph ()) ;
+  kill_thread := false
 
 let open_graph file  =
+  ignore (window#show ());
   reset_table_and_canvas ();
-  draw (make_turtle_origine ()) canvas_root;
   set_canvas_event ();
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (stop_button#event#connect#button_press
-            ~callback: (fun b -> kill_thread:= true; true));
-  ignore (window#show ());
+            ~callback: (fun b -> kill_thread:= true; false));
   tree file ;
+  draw (make_turtle_origine ()) canvas_root;
   GtkThread.main ()
     
 
-         
- 
+let init file = 
+  first := true;
+  kill_thread := false;
+  root := None;
+  Ed_graph.new_graph ();
+  cpt := 1;
+  HT.reset ht;
+  Model.reset();
+  reset_table_and_canvas ();
+  open_graph file
+
 
 

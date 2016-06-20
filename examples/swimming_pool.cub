@@ -20,7 +20,7 @@ requires { 1 <= F}
 
 transition t2 ()
 requires { A = 1 && 1 <= G }
- { A := A-1; B := B + 1; G := G - 1; }
+ { A := A - 1; B := B + 1; G := G - 1; }
 
 transition t3 ()
 requires { 1 <= B}
@@ -48,7 +48,7 @@ requires { 1 <= G && 1 <= F }
 
 transition t9 ()
 requires { 1 <= C && 1 <= E }
- { C := C - 1; D := D + 1; E := E -1; }
+ { C := C - 1; D := D + 1; E := E - 1; }
 
 transition t10 ()
 requires { 1 <= C && 1 <= F }

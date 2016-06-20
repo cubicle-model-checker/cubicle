@@ -84,6 +84,8 @@ let color_circle = "grey99"
 let color_intern_edge = "grey69"
 let color_successor_edge = "black" (*"grey38"*)
 let color_vertex = "grey75"
+(* let color_vertex = "red" *)
+let color_init = "red"
 
 let color_selected_intern_edge = "#9f1a1a" (* "#74885e"*)
 let color_selected_successor_edge = "#9f1a1a"
@@ -248,7 +250,7 @@ let add_node canvas v =
   let s = string_of_label v in
   let node_group = GnoCanvas.group ~x:0.0 ~y:0.0 canvas in
   let ellipse = GnoCanvas.ellipse 
-      ~props:[`FILL_COLOR color_vertex ; `OUTLINE_COLOR "black" ; 
+      ~props:[`FILL_COLOR color_vertex; `OUTLINE_COLOR "black" ; 
                `WIDTH_PIXELS 0] node_group  
   in
   let texte = GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT s;  
@@ -415,7 +417,9 @@ let draw_graph _root canvas  =
            node#show();
            let _,item,_=H.find nodes v in
            match l.vertex_mode with
-           | Normal -> color_change_vertex item color_vertex 0;
+           | Normal ->  
+             let color = if (G.V.label v).color then color_init else color_vertex in
+             color_change_vertex item color 0;
            | Selected -> color_change_vertex item color_selected_vertex 0;
            | Focused ->  color_change_vertex item color_focused_vertex 3;
            | Selected_Focused -> color_change_vertex item color_selected_focused_vertex 3;

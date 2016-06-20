@@ -31,6 +31,7 @@ type node_info =
     mutable label : string;
     mutable label_mode : label_t;
     mutable changed : bool;
+    color : bool;
     str_label : string;
     num_label : string;
     mutable visible : visibility;
@@ -44,6 +45,7 @@ let make_node_info n s =
   { 
     str_label = s;
     num_label = n;
+    color = false;
     changed = false;
     label_mode = Num_Label;
     label = n; 
@@ -54,6 +56,20 @@ let make_node_info n s =
     turtle = dummy_turtle 
   }
 
+let make_node_info_color n s = 
+  { 
+    str_label = s;
+    num_label = n;
+    color = true;
+    changed = false;
+    label_mode = Num_Label;
+    label = n; 
+    visible = Visible; 
+    depth = 0; 
+    vertex_mode = Normal;
+    successors_visible = true;
+    turtle = dummy_turtle 
+  }
 type edge_info = 
   {
     label : string;
@@ -101,6 +117,9 @@ module B = Builder.I(G)
 
 (* current graph *) 
 let graph = ref (G.create ())
+
+let new_graph () = 
+  graph := (G.create ())
 
 type name = string option
 

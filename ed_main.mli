@@ -1,5 +1,7 @@
 val root : Ed_graph.G.vertex option ref
 
+(* val quit : unit -> unit *)
+
 val reset_table_and_canvas : unit -> unit
 
 val open_graph : string -> unit
@@ -10,4 +12,8 @@ val refresh_display : unit -> unit
 
 val refresh_draw : unit -> unit
 
+val init : string -> unit
+
 val model_reset : unit -> unit 
+
+val cpt : int ref

@@ -13,8 +13,6 @@ exception KillThread
 
 let last_search_iter = ref None 
 
-let run_thread = ref None
-
 let kill_thread = ref false
 
 let wd = if gui_debug then 1600 else 1000
@@ -26,7 +24,7 @@ let window =
     ~position:`CENTER 
     ~resizable:true 
     ~width:wd ~height:800 () in 
-  let _ = wnd#connect#destroy (GMain.quit) in
+  let _ = wnd#connect#destroy ~callback:(GMain.quit) in
   wnd 
 
 let cubicle  = 
@@ -35,11 +33,11 @@ let cubicle  =
   | None -> failwith "La coloration syntaxique pour cubicle n'est pas disponible" 
   | some -> some
 
-let box = GPack.vbox  ~packing:window#add  ()
+let box = GPack.vbox ~packing:window#add ()
 
-let toolbox_frame = GBin.frame ~border_width:8  ~packing:(box#pack ~expand:false ~fill:false ) ()
+let toolbox_frame = GBin.frame ~border_width:8 ~packing:(box#pack ~expand:false ~fill:false) ()
 
-let toolbox = GPack.hbox  ~packing:(toolbox_frame#add) ()
+let toolbox = GPack.hbox ~packing:(toolbox_frame#add) ()
 
 let toolbar =
   let t = GButton.toolbar ~tooltips:true ~packing:toolbox#add ()
@@ -90,9 +88,9 @@ let next_button = toolsearch#insert_button
 let previous_button = toolsearch#insert_button
   ~text:" Previous"
   ~icon:(GMisc.image ~stock:`GO_UP ~icon_size:`SMALL_TOOLBAR())#coerce ()
-
-let trace_button = toolsearch#insert_button
-  ~text:" Trace" ()
+                                              
+let trace_button = GButton.button ~label:"Trace" 
+  ~packing:(toolbox#add) ()
 
 (** Debug mode *)
 let show_file_button = GButton.button ~label:"Show new file"
@@ -338,8 +336,7 @@ let edit_mode ast new_file button edit m =
       try
         (open_show_file ast new_file edit;
          result_text1#buffer#set_text "")
-      with FileError -> button#set_active true
-    )
+      with FileError -> button#set_active true)
 
 let safe_or_unsafe () = 
   let str = result_text1#buffer#get_text () in 
@@ -357,7 +354,6 @@ let get_trace buffer file =
     while true do
       if !kill_thread then
         (kill_thread := false;
-         close_in ic;
          raise KillThread);
       let s = (input_line ic)^"\n" in
       result_text1#buffer#insert s;
@@ -365,12 +361,13 @@ let get_trace buffer file =
     done
   with
   |End_of_file ->
-    (close_in ic;
-      safe_or_unsafe ())
-  |KillThread -> ()
+    (ignore (Unix.close_process_in ic);
+     safe_or_unsafe ())
+  |KillThread -> ignore (Unix.close_process_in ic) 
+
   
 let execute buffer file b  =
-  run_thread := Some (Thread.create (fun () -> (get_trace buffer file)) ())
+  ignore (Thread.create (fun () -> (get_trace buffer file)) ())
 
 let search b = 
   let start_iter = source#source_buffer#start_iter in 
@@ -495,7 +492,8 @@ let open_window s  =
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
-    let _ = save_execute_file ast new_path b in Ed_main.open_graph file; true));
+    let _ = save_execute_file ast new_path b in 
+    Ed_main.init file; true));
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
   GtkThread.main ()
