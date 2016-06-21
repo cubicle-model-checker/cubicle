@@ -84,6 +84,45 @@ else
 fi
 
 
+# Looking for ocamlgraph
+if test "$USEOCAMLFIND" = yes; then
+  OCAMLGRAPHLIB=$(ocamlfind query -i-format ocamlgraph)
+fi
+
+if test -n "$OCAMLGRAPHLIB";then
+  echo "ocamlfind found ocamlgraph in $OCAMLGRAPHLIB"
+  OCAMLGRAPHLD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/ocamlgraph/graph.cma,OCAMLGRAPHLD=yes,OCAMLGRAPHLD=no)
+  if test "$OCAMLGRAPHLD" = no ; then
+      AC_MSG_RESULT(Cannot find ocamlgraph library.)
+      OCAMLGRAPHLIB=""
+  else
+     OCAMLGRAPHLIB="-I +ocamlgraph"
+  fi
+fi
+
+
+# Looking for Lablgtk
+if test "$USEOCAMLFIND" = yes; then
+  LABLGTK2LIB=$(ocamlfind query -i-format lablgtk2)
+fi
+
+if test -n "$LABLGTK2LIB";then
+  echo "ocamlfind found lablgtk2 in $LABLGTK2LIB"
+  LABLGTK2LD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/lablgtk2/lablgtk.cma,LABLGTK2LD=yes,LABLGTK2LD=no)
+  if test "$LABLGTK2LD" = no ; then
+      AC_MSG_RESULT(Cannot find lablgtk2 library.)
+      LABLGTK2LIB=""
+  else
+     LABLGTK2LIB="-I +lablgtk2"
+  fi
+fi
+
+
+
 #looking for Z3 ocaml bindings
 
 AC_ARG_WITH([z3],
@@ -137,6 +176,8 @@ AC_SUBST(OCAMLVERSION)
 AC_SUBST(OCAMLLIB)
 AC_SUBST(ALTERGOLIB)
 AC_SUBST(FUNCTORYLIB)
+AC_SUBST(OCAMLGRAPHLIB)
+AC_SUBST(LABLGTK2LIB)
 AC_SUBST(Z3LIB)
 AC_SUBST(Z3CCFLAGS)
 AC_SUBST(OCAMLWIN32)
