@@ -10,4 +10,4 @@ val parse_psystem : Ptree.psystem -> (tag * int * int) list
 val parse_init : Ptree.psystem -> unit
 val parse_linact: Ptree.psystem -> unit
 val parse_psystem_m : Ptree.psystem -> (tag * int * int) list
-
+val punsafe_length : Ptree.psystem -> int

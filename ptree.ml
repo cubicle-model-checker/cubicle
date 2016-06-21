@@ -164,6 +164,7 @@ let subst_term sigma tt = match tt with
     (* eprintf "   result %a@." Term.print t'; *)
     if t == t' then tt else TTerm ((t', it),i)
 
+  
 let subst_atom sigma aa = match aa with
   | AVar (v,i) ->
     (match Hstring.list_assoc v.hstr sigma with

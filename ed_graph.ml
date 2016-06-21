@@ -26,12 +26,16 @@ type label_t = Num_Label | Str_Label
 
 type mode = Normal | Selected | Focused | Selected_Focused
 
+module Var_Map = Map.Make(String)
+
 type node_info = 
   { 
     mutable label : string;
     mutable label_mode : label_t;
     mutable changed : bool;
-    color : bool;
+    mutable var_map : string Var_Map.t;
+    draw : bool;
+    mutable color : bool;
     str_label : string;
     num_label : string;
     mutable visible : visibility;
@@ -41,11 +45,30 @@ type node_info =
     mutable turtle : turtle;
   }
 
-let make_node_info n s = 
+let make_node_info n s d = 
   { 
     str_label = s;
     num_label = n;
     color = false;
+    changed = false;
+    var_map = Var_Map.empty;
+    draw = d;
+    label_mode = Num_Label;
+    label = n; 
+    visible = Visible; 
+    depth = 0; 
+    vertex_mode = Normal;
+    successors_visible = true;
+    turtle = dummy_turtle 
+  }
+
+let make_node_info_color n s  = 
+  { 
+    str_label = s;
+    num_label = n;
+    color = true;
+    draw = true;
+    var_map = Var_Map.empty;
     changed = false;
     label_mode = Num_Label;
     label = n; 
@@ -56,11 +79,13 @@ let make_node_info n s =
     turtle = dummy_turtle 
   }
 
-let make_node_info_color n s = 
+let make_node_info_color_map n s  = 
   { 
     str_label = s;
     num_label = n;
     color = true;
+    draw = true;
+    var_map = Var_Map.empty;
     changed = false;
     label_mode = Num_Label;
     label = n; 
@@ -70,9 +95,11 @@ let make_node_info_color n s =
     successors_visible = true;
     turtle = dummy_turtle 
   }
+
 type edge_info = 
   {
     label : string;
+    draw : bool;
     mutable visible_label : bool;
     mutable visited : bool;
     mutable edge_mode : mode;
@@ -84,6 +111,7 @@ type edge_info =
 let make_edge_info () =
   { 
     label = "";
+    draw = true;
     visible_label = false;
     visited = false; 
     edge_mode = Normal;
@@ -92,16 +120,19 @@ let make_edge_info () =
     edge_steps = 0; 
   }
 
-let make_edge_info_label s =
+let make_edge_info_label s d =
   { 
     visible_label = false;
     label = s;
+    draw = d;
     visited = false; 
     edge_mode = Normal;
     edge_turtle = dummy_turtle; 
     edge_distance = 0.; 
     edge_steps = 0; 
   }
+
+
 
 
 module EDGE = struct

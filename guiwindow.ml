@@ -390,10 +390,11 @@ let search b =
 
 let search_next b = 
   let start_iter = source#source_buffer#start_iter in
-  let s_iter = match !last_search_iter with 
-    |None -> start_iter
-    |Some (_, x) -> x in 
   let stop_iter = source#source_buffer#end_iter in
+  let s_iter =  
+  match !last_search_iter with
+    |None -> start_iter
+    |Some (_, x) -> x in
   let str = search_bar#text in
   source#source_buffer#remove_tag_by_name "search_next"
     ~start:start_iter ~stop:stop_iter;
@@ -493,7 +494,7 @@ let open_window s  =
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
     let _ = save_execute_file ast new_path b in 
-    Ed_main.init file; true));
+    (Ed_main.init new_path (punsafe_length (!ast)); true)));
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
   GtkThread.main ()

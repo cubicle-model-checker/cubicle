@@ -375,3 +375,6 @@ let parse_psystem_m p =
     
 let parse_init p = 
   parse compare_inact p
+
+let punsafe_length p = 
+  List.length (p.punsafe)

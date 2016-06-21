@@ -82,6 +82,13 @@ module Model = struct
     H.add rows v row;
     row
 
+  let add_vertex_unsafe v = 
+    let row = model#append () in
+    model#set ~row ~column:name ("UNSAFE :\n"^get_str_label v);
+    model#set ~row ~column:vertex v;
+    H.add rows v row;
+    row
+
   let add_edge_1 row_v w =
     let row = model#append ~parent:row_v () in
     model#set ~row ~column:name (string_of_label w);
@@ -179,10 +186,6 @@ let canvas =
     ~width:(truncate w) 
     ~height:(truncate h) 
     ~packing:h_box#add ()) 
-
-
-
-
 
 (* unit circle as root of graph drawing *)
 let canvas_root =
@@ -356,7 +359,41 @@ let reset_table_and_canvas () =
   reset_display canvas_root;
   origine := start_point;
   nb_selected := 0
-  
+ 
+ 
+let rec build_map m v = function 
+  |[] -> m
+  |y::[] -> 
+    (match Str.split (Str.regexp "\n") (String.trim y) with
+      |[] -> failwith "pb format trace 2"
+      |x::_ ->    
+        try 
+          (let pos = Str.search_forward (Str.regexp "[=|<>]") x 0 in
+           let before = Str.global_replace (Str.regexp "[\n| ]+") "" (Str.string_before x pos) in
+           let after =  Str.global_replace (Str.regexp "[\n| ]+") "" (Str.string_after x (pos + 1)) in
+             try 
+               (let a = Var_Map.find before m in 
+                if a <> after && before = "Curptr" then  (G.V.label v).color <- true
+                  (* (Printf.printf "%s : %s <> %s\n" before a after; failwith "Different") *))
+           with Not_found ->())
+        with Not_found -> failwith "erreur build map" ); m
+  |x::s -> 
+    try 
+      (let pos = Str.search_forward (Str.regexp "[=|<>]") x 0 in
+      let before = Str.global_replace (Str.regexp "[\n| ]+") "" 
+        (Str.string_before x pos) in
+      let after =  Str.global_replace (Str.regexp "[\n| ]+") ""
+        (Str.string_after x (pos + 1)) in
+      let m = 
+        try 
+          (let a = Var_Map.find before m in 
+          if a <> after && before = "Curptr" then  ((G.V.label v).color <- true; m)
+          else
+            m)
+      with Not_found -> m in
+        build_map (Var_Map.add before after m) v s)
+    with Not_found -> failwith "erreur build map"
+
 let rec node_name  = function
   |[] -> ""
   |x::[] -> 
@@ -364,67 +401,85 @@ let rec node_name  = function
       |[] -> failwith "pb format trace 2"
       |y::_ ->  y)
   |x::s -> (String.trim x)^"\n"^(node_name s)
-        
-let create_node s first = 
+    
+let link_node before v after = 
+  try
+    (let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in
+      let transition = Str.string_before before arrow_pos in
+      let node = Str.global_replace (Str.regexp "[\n| ]+") "" 
+        (Str.string_after before (arrow_pos + 2)) in 
+      let n = HT.find ht node in 
+      let e = G.E.create n (make_edge_info_label transition true) v in 
+      (G.V.label v).var_map <- build_map (G.V.label n).var_map v after ;
+      G.add_edge_e !graph e;
+      ignore (Model.add_edge n v))
+  with Not_found ->
+    match !root with
+      |None -> failwith "pb None"
+      |Some x ->
+        let e = G.E.create x (make_edge_info_label "" true) v in
+        (G.V.label v).var_map <- build_map (Var_Map.empty) v after ;
+        G.add_edge_e !graph e;
+         ignore (Model.add_edge x v)
+          
+let create_node s unsafe_l  = 
   let pos = Str.search_forward (Str.regexp "=") s 0 in
   let before = Str.global_replace (Str.regexp "[\n| ]+") "" 
-        ( String.trim (Str.string_before s pos)) in 
-  let after = node_name (Str.split (Str.regexp "&&") (Str.string_after s (pos + 1))) in
+    (String.trim (Str.string_before s pos)) in 
+  let after = Str.split (Str.regexp "&&") (Str.string_after s (pos + 1)) in
+  let name = node_name after in 
   let v = 
-    if !first then
-      (let vertex = G.V.create (make_node_info_color (string_of_int !cpt) after) in
-      root := Some vertex;
-      vertex)
+    if !cpt = 1 && unsafe_l = 1  then
+      (let vertex = G.V.create (make_node_info_color (string_of_int !cpt) name) in
+       root := Some vertex;
+       ignore (Model.add_vertex_unsafe vertex);
+       vertex)
+    else if !cpt <= unsafe_l then 
+      (let vertex = G.V.create (make_node_info_color (string_of_int !cpt) name) in
+       ignore (Model.add_vertex_unsafe vertex);
+       vertex)
     else
-      G.V.create (make_node_info (string_of_int !cpt) after) in
+      (let vertex = G.V.create (make_node_info (string_of_int !cpt) name true) in 
+      ignore (Model.add_vertex vertex);
+       vertex) in
   first := false;
   HT.add ht before v;
   G.add_vertex !graph v;
-  ignore (Model.add_vertex v);
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
-  (try
-     let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in
-     let transition = Str.string_before before arrow_pos in
-     let node = Str.global_replace (Str.regexp "[\n| ]+") "" 
-       (Str.string_after before (arrow_pos + 2)) in 
-     let n = HT.find ht node in 
-     let e = G.E.create n (make_edge_info_label transition) v in 
-     G.add_edge_e !graph e;
-     ignore (Model.add_edge n v);
-   with Not_found -> ());
+  link_node before v after;  
   let tor = make_turtle !origine 0.0 in
   draw tor canvas_root;
-  incr cpt;
-  Thread.delay 0.01
+  incr cpt; 
+  Thread.delay 0.001
   
-let rec list_to_node curr_node first = function
+let rec list_to_node curr_node unsafe_l = function
   |[] -> ()
   |[x] -> 
     (try
        let pos = Str.search_forward (Str.regexp "==") x 0 in 
        let before = Str.string_before x pos in 
-       create_node before first;
+       create_node before unsafe_l;
        raise End_trace
      with Not_found -> (curr_node := !curr_node ^ x))
   |x::s -> 
     curr_node := !curr_node ^ x;
-    create_node !curr_node first;
+    create_node !curr_node unsafe_l ;
     curr_node := "";
-    list_to_node curr_node first s 
+    list_to_node curr_node unsafe_l s 
       
-let rec build_node curr_node str first = 
+let rec build_node curr_node str unsafe_l = 
   let str_l = Str.split (Str.regexp "node [0-9]+:") str in
   match str_l with
   |[] -> ()
   |[x] -> 
     (if !curr_node <> "" then
-        create_node !curr_node first;
+        create_node !curr_node unsafe_l;
      curr_node := x)
   |x::s ->
-    list_to_node curr_node first str_l
+    list_to_node curr_node unsafe_l str_l 
   
-let load_graph () =
+let load_graph unsafe_l =
   try
     let curr_node = ref "" in
     while true do
@@ -437,10 +492,10 @@ let load_graph () =
         let str = Queue.pop graph_trace in
         Mutex.unlock m;
         if Str.string_match (Str.regexp "==") str 0 then
-          (build_node curr_node str first;
+          (build_node curr_node str unsafe_l;
            raise End_trace)
         else if Str.string_match (Str.regexp "node [0-9]+:") str 0 then 
-            build_node curr_node str first
+            build_node curr_node str unsafe_l
         else
           curr_node := !curr_node ^ str
       with Queue.Empty ->  Mutex.unlock m;
@@ -469,34 +524,40 @@ let show_tree file () =
 
 (* let quit () = window#destroy() *)
 
-let tree file  = 
+let tree file  unsafe_l = 
   Queue.clear graph_trace;
   ignore (Thread.create (show_tree file) ());
-  ignore (Thread.create load_graph ()) ;
+  ignore (Thread.create load_graph unsafe_l) ;
   kill_thread := false
 
-let open_graph file  =
+let open_graph file unsafe_l =
   ignore (window#show ());
   reset_table_and_canvas ();
   set_canvas_event ();
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; false));
-  tree file ;
+  tree file unsafe_l;
   draw (make_turtle_origine ()) canvas_root;
   GtkThread.main ()
     
 
-let init file = 
+let init file nb_unsafe = 
   first := true;
   kill_thread := false;
-  root := None;
   Ed_graph.new_graph ();
   cpt := 1;
   HT.reset ht;
   Model.reset();
+  if nb_unsafe > 1 then
+    (let v = (G.V.create (make_node_info "    " "   " true )) in
+     root := Some v;
+     G.add_vertex !graph v;
+     ignore (Model.add_vertex v))
+  else
+      root := None;
   reset_table_and_canvas ();
-  open_graph file
+  open_graph file nb_unsafe
 
 
 

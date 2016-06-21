@@ -187,6 +187,8 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   let new_points = Array.of_list new_l in 
   line2#set [`POINTS new_points];
   line#set [`POINTS points;];
+  line#hide;
+  line2#hide;
   let l = (Array.length points) / 2 in 
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
@@ -244,7 +246,7 @@ let tdraw_string_gtk v turtle  =
   let (x,y) = !current_point in
   node#move ~x:(float x) ~y:(float y);
   node#set  [`X (float x); `Y (float y)];
-  node
+  node, vertex.draw
 
 let add_node canvas v =
   let s = string_of_label v in
@@ -332,7 +334,7 @@ let draw_successor_edge vw edge canvas =
       line, line2,  texte
   in
   set_successor_edge edge edge.edge_turtle edge.edge_distance edge.edge_steps line line2 texte canvas;
-  line, line2, texte
+  line, edge.draw, line2, texte
 
 (* set origine to new mouse position and return associated turtle *)
 let motion_turtle item ev =
@@ -365,7 +367,7 @@ let draw_graph _root canvas  =
        then 
          (* successor edge *)
          begin
-           let line, texte, line2 = draw_successor_edge vw edge canvas
+           let line, show, texte, line2 = draw_successor_edge vw edge canvas
            in
            begin
              match edge.edge_mode with
@@ -374,9 +376,15 @@ let draw_graph _root canvas  =
              | Focused ->  color_change_successor_edge line color_focused_successor_edge;
              | Selected_Focused -> color_change_successor_edge line color_selected_focused_successor_edge;
            end;
-           line#show ();
-           line2#show ();
-           texte#show();
+           if show then
+             (line#show ();
+              line2#show ();
+              texte#show())
+           else
+             (line#hide ();
+              line2#hide ();
+              texte#hide())
+           ;
            hide_intern_edge vw
          end 
        else 
@@ -399,7 +407,7 @@ let draw_graph _root canvas  =
                | Focused ->  color_change_intern_edge line color_focused_intern_edge;
                | Selected_Focused -> color_change_intern_edge line color_selected_focused_intern_edge;
              end;
-             line#show();
+             (* line#show(); *)
              texte#show()
            end else
              hide_intern_edge vw
@@ -412,9 +420,10 @@ let draw_graph _root canvas  =
        let ( l : node_info) = G.V.label v in
        if l.visible = Visible then 
          begin
-           let node = tdraw_string_gtk v l.turtle in 
+           let node, show = tdraw_string_gtk v l.turtle in 
            node#raise_to_top();
-           node#show();
+           if show then 
+             node#show();
            let _,item,_=H.find nodes v in
            match l.vertex_mode with
            | Normal ->  
