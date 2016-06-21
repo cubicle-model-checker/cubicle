@@ -300,7 +300,7 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
 	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
 	fixpoint.ml fixpoint.mli forward.ml forward.mli\
-	ed_hyper.ml ed_graph.ml ed_draw.ml ed_display.ml ed_test.ml ed_main.mli ed_main.ml ed_tracegraph.mli ed_tracegraph.ml   \
+	ed_hyper.ml ed_graph.ml ed_draw.ml ed_display.ml ed_test.ml ed_main.mli ed_main.ml  \
 	instantiation.ml instantiation.mli lexer.mll psystem_parser.ml psystem_printer.ml guiwindow.ml gui.ml\
 	murphi.ml murphi.mli\
 	mulexer.mll muparser.mly muparser_globals.mli muparser_globals.ml\
