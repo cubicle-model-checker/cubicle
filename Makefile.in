@@ -116,7 +116,7 @@ CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO)  \
       util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo typing.cmo pretty.cmo \
-	ed_hyper.cmo ed_graph.cmo ed_draw.cmo ed_display.cmo ed_main.cmo ed_tracegraph.cmo  \
+	ed_hyper.cmo ed_graph.cmo ed_draw.cmo ed_display.cmo ed_main.cmo  \
 	psystem_parser.cmo psystem_printer.cmo guiwindow.cmo gui.cmo 
 
 CMX = $(CMO:.cmo=.cmx)
