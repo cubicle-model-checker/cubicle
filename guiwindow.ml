@@ -17,6 +17,10 @@ let kill_thread = ref false
 
 let wd = if gui_debug then 1600 else 1000
 
+module M = Map.Make (String)
+
+let var_l = ref M.empty 
+
 let window =
   let _ = GMain.init () in
   let wnd = GWindow.window 
@@ -30,7 +34,7 @@ let window =
 let cubicle  = 
   let manager = GSourceView2.source_language_manager ~default:true in 
   match manager#language "cubicle" with 
-  | None -> failwith "La coloration syntaxique pour cubicle n'est pas disponible" 
+  | None -> None
   | some -> some
 
 let box = GPack.vbox ~packing:window#add ()
@@ -167,7 +171,8 @@ let source =
     ~packing:scroll#add () in 
   src#misc#modify_font_by_name "Monospace"; 
   let buf = src#source_buffer in 
-  buf#set_language cubicle; 
+  if cubicle <> None then 
+    buf#set_language cubicle; 
   buf#set_highlight_syntax true; 
   src 
 
@@ -188,6 +193,18 @@ let confirm s file e =
       let _ = save_session s file e in ());
   false
  
+let list_to_string l  =  
+  List.fold_right (fun x acc -> acc ^ x ^ "\n") l ""
+
+let select_var l new_path ast = 
+  if GToolbox.question_box
+    ~title:"List" ~buttons:["Add"; "Show trace"]
+    ~default:2 
+    ~icon:(GMisc.image ~stock:`DIALOG_QUESTION  ~icon_size:`DIALOG ())
+    ("Variables : \n\n"^list_to_string l) = 2 then 
+    Ed_main.init new_path (punsafe_length (!ast))
+
+  
 (* Debug mode*)
 let source2 = 
   let src = GSourceView2.source_view 
@@ -249,7 +266,25 @@ let rec apply_tag = function
         ~start:start_iter ~stop:stop_iter
     |UndoHover -> 
       source#source_buffer#remove_tag_by_name "gray_background" 
-        ~start:start_iter ~stop:stop_iter);
+        ~start:start_iter ~stop:stop_iter
+    |Var -> 
+      begin
+        source#source_buffer#apply_tag_by_name "var"
+          ~start:start_iter ~stop:stop_iter;
+        let str =  (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) in
+        if M.mem str !var_l then 
+          (let (be, en) = M.find str !var_l in
+            if be = start && en = stop then
+              var_l := M.remove str !var_l ;
+            source#source_buffer#remove_tag_by_name "var"
+              ~start:start_iter ~stop:stop_iter)
+        else 
+          var_l := M.add str (start, stop) !var_l
+            
+      (* let m =  Ed_main.Var_L.add (Ed_main.var_l) in () *)
+        (* Ed_main.var_l := (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) :: !Ed_main.var_l *)
+      end
+);
     apply_tag s
 
 (** Parcourt l'AST pour trouver dans les bornes de quelle loc se trouve le curseur *)
@@ -265,11 +300,14 @@ let find_in_ast s edit m  =
 
 (** Appelé après un clic de souris pour commenter *)
 let modify_ast ast edit b = 
-  if !edit then false
-  else 
-    (if !buffer_l <> -1 && !buffer_l <> -1 then
-        apply_tag (parse_psystem_m !ast );
-     true)
+    if !edit then false
+    else 
+      if (GdkEvent.Button.button b) = 3 && !buffer_l <> -1 && !buffer_c <> -1 then 
+        (apply_tag (parse_var !ast); true)
+      else 
+        (if !buffer_l <> -1 && !buffer_c <> -1 then
+            apply_tag (parse_psystem_m !ast );
+         true)
 
 (** Sauvegarde du fichier envoyé à Cubicle *)      
 let save_execute_file s file b =
@@ -348,8 +386,9 @@ let safe_or_unsafe () =
     (result_image#set_stock `APPLY;
      result_label#set_text "Safe")
       
-let get_trace buffer file = 
+let get_trace (buffer, file) = 
   let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
+  result_text1#buffer#set_text "";
   try
     while true do
       if !kill_thread then
@@ -367,7 +406,7 @@ let get_trace buffer file =
 
   
 let execute buffer file b  =
-  ignore (Thread.create (fun () -> (get_trace buffer file)) ())
+  ignore (Thread.create get_trace (buffer, file))
 
 let search b = 
   let start_iter = source#source_buffer#start_iter in 
@@ -400,7 +439,7 @@ let search_next b =
     ~start:start_iter ~stop:stop_iter;
   let search_res = s_iter#forward_search str in
   (match search_res with 
-  |None -> last_search_iter := None
+  |None -> last_search_iter := None 
   |Some (start, stop) ->
     last_search_iter := Some (start, stop);
     ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 start);
@@ -419,7 +458,7 @@ let search_previous b =
     ~start:start_iter ~stop:stop_iter;
   let search_res = s_iter#backward_search str in
   (match search_res with 
-  |None -> last_search_iter := None
+  |None -> last_search_iter := None 
   |Some (start, stop) -> 
     last_search_iter := Some (start, stop);
     ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 stop);
@@ -430,9 +469,8 @@ let search_previous b =
 (** Coordonées fichier sauvegarde session *)
 let rec list_position l = 
   match l with 
-  |[] -> []
-  |x::[] -> []
-  |x::y::s -> (int_of_string x, int_of_string y)::list_position s
+    |[] |_::[] -> []
+    |x::y::s -> (int_of_string x, int_of_string y)::list_position s
 
 let open_file inter_path save_path ast = 
   (try
@@ -467,6 +505,7 @@ let open_window s  =
   ignore (source#source_buffer#create_tag ~name:"error" [`BACKGROUND "red"]);
   ignore (source#source_buffer#create_tag ~name:"search" [`BACKGROUND "yellow"]);
   ignore (source#source_buffer#create_tag ~name:"search_next" [`BACKGROUND "orange"]);
+  ignore (source#source_buffer#create_tag ~name:"var" [`BACKGROUND "pink"]);
   source#event#add [`BUTTON_PRESS;`KEY_PRESS];   
   source#set_editable false;
   open_file inter_path save_path ast;
@@ -485,6 +524,7 @@ let open_window s  =
   ignore (search_bar#connect#changed
             ~callback:(search));
   ignore (next_button#event#connect#button_press
+
             ~callback:(search_next));
   ignore (previous_button#event#connect#button_press
             ~callback:(search_previous));
@@ -493,8 +533,10 @@ let open_window s  =
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
-    let _ = save_execute_file ast new_path b in 
-    (Ed_main.init new_path (punsafe_length (!ast)); true)));
+    let _ = save_execute_file ast new_path b in  
+      Ed_main.var_l := [];
+      M.iter (fun x y-> Ed_main.var_l := x::!Ed_main.var_l) !var_l;
+      select_var !Ed_main.var_l new_path ast; true)); 
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
   GtkThread.main ()

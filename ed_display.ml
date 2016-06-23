@@ -33,17 +33,22 @@ let (w,h) = (1200.,800.)
    (* let color_successor_edge = "black" (\*"grey38"*\) *)
    (* let color_vertex = "grey75" *)
 
-   (* let color_selected_intern_edge = "#9f1a1a" (\* "#74885e"*\)  *)
-   (* let color_selected_successor_edge = "#9f1a1a"  *)
+   (* let color_selected_intern_edge = "#9f1a1a" (\* "#74885e"*\) *)
+   (* let color_selected_successor_edge = "#9f1a1a" *)
    (* let color_selected_vertex = "#9f1a1a" *)
 
    (* let color_focused_intern_edge = "#4d51a9" *)
-   (* let color_focused_successor_edge = "#4d51a9"  *)
-   (* let color_focused_vertex =  "#4d51a9"  *)
+   (* let color_focused_successor_edge = "#4d51a9" *)
+   (* let color_focused_vertex =  "#4d51a9" *)
 
-   (* let color_selected_focused_intern_edge = "LightCoral"  *)
+   (* let color_selected_focused_intern_edge = "LightCoral" *)
    (* let color_selected_focused_vertex ="LightCoral" *)
-   (* let color_selected_focused_successor_edge =  "LightCoral"  *)
+   (* let color_selected_focused_successor_edge =  "LightCoral" *)
+
+   (* let color_varchange = "#df3367" *)
+   (* let color_varchange_focused = "#bd2855" *)
+   (* let color_unsafe = "LightCoral" *)
+   (* let color_unsafe_focused = "DarkCoral" *)
 
    (* let color_text = "black" *)
 
@@ -84,8 +89,12 @@ let color_circle = "grey99"
 let color_intern_edge = "grey69"
 let color_successor_edge = "black" (*"grey38"*)
 let color_vertex = "grey75"
-(* let color_vertex = "red" *)
-let color_init = "red"
+
+
+let color_varchange = "LightCoral"
+let color_varchange_focused = "LightCoral"
+let color_unsafe = "#e93b3b"
+let color_unsafe_focused = "#e93b3b"
 
 let color_selected_intern_edge = "#9f1a1a" (* "#74885e"*)
 let color_selected_successor_edge = "#9f1a1a"
@@ -108,11 +117,11 @@ let point_size_text = 12.
 (* two tables for two types of edge :
    successor_edges = edges with successor of root
    intern_edges = edges between  successors of root *)
-let successor_edges = H2.create 97
-let intern_edges = H2.create 97
+let successor_edges = H2.create 500
+let intern_edges = H2.create 500
 
 (* table of all nodes *)
-let nodes = H.create 97
+let nodes = H.create 500
 
 (* GTK to hyperbolic coordinates *)
 let to_turtle(x,y)=
@@ -247,7 +256,6 @@ let tdraw_string_gtk v turtle  =
   node#move ~x:(float x) ~y:(float y);
   node#set  [`X (float x); `Y (float y)];
   node, vertex.draw
-
 let add_node canvas v =
   let s = string_of_label v in
   let node_group = GnoCanvas.group ~x:0.0 ~y:0.0 canvas in
@@ -375,6 +383,7 @@ let draw_graph _root canvas  =
              | Selected -> color_change_successor_edge line color_selected_successor_edge;
              | Focused ->  color_change_successor_edge line color_focused_successor_edge;
              | Selected_Focused -> color_change_successor_edge line color_selected_focused_successor_edge;
+             |_ ->  color_change_successor_edge line color_successor_edge;
            end;
            if show then
              (line#show ();
@@ -406,6 +415,7 @@ let draw_graph _root canvas  =
                | Selected -> color_change_intern_edge line color_selected_intern_edge;
                | Focused ->  color_change_intern_edge line color_focused_intern_edge;
                | Selected_Focused -> color_change_intern_edge line color_selected_focused_intern_edge;
+               |_ -> color_change_intern_edge line color_intern_edge;
              end;
              (* line#show(); *)
              texte#show()
@@ -427,11 +437,15 @@ let draw_graph _root canvas  =
            let _,item,_=H.find nodes v in
            match l.vertex_mode with
            | Normal ->  
-             let color = if (G.V.label v).color then color_init else color_vertex in
-             color_change_vertex item color 0;
+             (* let color = if (G.V.label v).vertex_mode = Unsafe then color_init else color_vertex in *)
+             color_change_vertex item color_vertex 0;
            | Selected -> color_change_vertex item color_selected_vertex 0;
            | Focused ->  color_change_vertex item color_focused_vertex 3;
            | Selected_Focused -> color_change_vertex item color_selected_focused_vertex 3;
+           | Unsafe -> color_change_vertex item color_unsafe 0;
+           | Unsafe_Focused -> color_change_vertex item color_unsafe_focused 3;
+           | VarChange -> color_change_vertex item color_varchange 0;
+           | VarChange_Focused -> color_change_vertex item color_varchange_focused 3
          end
        else
          let node, _, _= H.find nodes v in

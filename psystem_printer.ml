@@ -188,20 +188,20 @@ let print_type_defs fmt l =
     let str_eq = 
       if List.length t_l = 0 then "" else " = " in 
     if loc.active || not !comments then
-      fprintf fmt "type %s%s%a@.@." (Hstring.view name.hstr)
+      fprintf fmt "type %a%s%a@.@." print_hstr name
         str_eq print_list_sep_type (t_l, " | " ) 
     else
-      fprintf fmt "%s type %s%s%a%s@.@." !open_c (Hstring.view name.hstr)
+      fprintf fmt "%s type %a%s%a%s@.@." !open_c print_hstr name
         str_eq print_list_sep_type (t_l, " | " ) !close_c) l 
     
 
 let print_consts_or_globals fmt (str, l) = 
   List.iter (fun (loc, name, t) -> 
     if loc.active || not !comments then
-      fprintf fmt "%s %s : %s@.@." str (Hstring.view name.hstr) (Hstring.view t.hstr)  
+      fprintf fmt "%s %a : %a@.@." str print_hstr name print_hstr t  
     else
-      fprintf fmt "%s %s %s : %s %s@.@." !open_c str (Hstring.view name.hstr)
-        (Hstring.view t.hstr) !close_c) l 
+      fprintf fmt "%s %s %a : %a %s@.@." !open_c str print_hstr name
+        print_hstr t !close_c) l 
     
 
 let print_arrays fmt  l = 
@@ -268,9 +268,9 @@ let print_glob_update fmt = function
 let print_assigns fmt l =
   List.iter (fun x ->
     if x.a_i.active || not !comments then
-      fprintf fmt "  %s := %a;@." (Hstring.view x.a_n.hstr) print_glob_update x.a_p
+      fprintf fmt "  %a := %a;@." print_hstr x.a_n print_glob_update x.a_p
     else
-      fprintf fmt "  %s %s := %a; %s@." !open_c (Hstring.view x.a_n.hstr) 
+      fprintf fmt "  %s %a := %a; %s@." !open_c print_hstr x.a_n 
         print_glob_update x.a_p !close_c)l
     
 let print_upds fmt upds =

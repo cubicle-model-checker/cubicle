@@ -24,7 +24,8 @@ type visibility = Visible | BorderNode | Hidden
 
 type label_t = Num_Label | Str_Label 
 
-type mode = Normal | Selected | Focused | Selected_Focused
+type mode = Normal | Selected | Focused | Selected_Focused | Unsafe | VarChange |
+    Unsafe_Focused | VarChange_Focused
 
 module Var_Map = Map.Make(String)
 
@@ -35,9 +36,8 @@ type node_info =
     mutable changed : bool;
     mutable var_map : string Var_Map.t;
     draw : bool;
-    mutable color : bool;
-    str_label : string;
-    num_label : string;
+    mutable str_label : string;
+    mutable num_label : string;
     mutable visible : visibility;
     mutable successors_visible : bool;
     mutable depth : int;
@@ -49,7 +49,6 @@ let make_node_info n s d =
   { 
     str_label = s;
     num_label = n;
-    color = false;
     changed = false;
     var_map = Var_Map.empty;
     draw = d;
@@ -62,39 +61,39 @@ let make_node_info n s d =
     turtle = dummy_turtle 
   }
 
-let make_node_info_color n s  = 
-  { 
-    str_label = s;
-    num_label = n;
-    color = true;
-    draw = true;
-    var_map = Var_Map.empty;
-    changed = false;
-    label_mode = Num_Label;
-    label = n; 
-    visible = Visible; 
-    depth = 0; 
-    vertex_mode = Normal;
-    successors_visible = true;
-    turtle = dummy_turtle 
-  }
+(* let make_node_info_color n s  =  *)
+(*   {  *)
+(*     str_label = s; *)
+(*     num_label = n; *)
+(*     color = true; *)
+(*     draw = true; *)
+(*     var_map = Var_Map.empty; *)
+(*     changed = false; *)
+(*     label_mode = Num_Label; *)
+(*     label = n;  *)
+(*     visible = Visible;  *)
+(*     depth = 0;  *)
+(*     vertex_mode = Normal; *)
+(*     successors_visible = true; *)
+(*     turtle = dummy_turtle  *)
+(*   } *)
 
-let make_node_info_color_map n s  = 
-  { 
-    str_label = s;
-    num_label = n;
-    color = true;
-    draw = true;
-    var_map = Var_Map.empty;
-    changed = false;
-    label_mode = Num_Label;
-    label = n; 
-    visible = Visible; 
-    depth = 0; 
-    vertex_mode = Normal;
-    successors_visible = true;
-    turtle = dummy_turtle 
-  }
+(* let make_node_info_color_map n s  =  *)
+(*   {  *)
+(*     str_label = s; *)
+(*     num_label = n; *)
+(*     color = true; *)
+(*     draw = true; *)
+(*     var_map = Var_Map.empty; *)
+(*     changed = false; *)
+(*     label_mode = Num_Label; *)
+(*     label = n;  *)
+(*     visible = Visible;  *)
+(*     depth = 0;  *)
+(*     vertex_mode = Normal; *)
+(*     successors_visible = true; *)
+(*     turtle = dummy_turtle  *)
+(*   } *)
 
 type edge_info = 
   {
@@ -239,6 +238,16 @@ let update_vertex vertex event =
     | Selected_Focused, Unselect -> vertex_info.vertex_mode <- Focused; decr nb_selected
     | Selected_Focused, Unfocus -> vertex_info.vertex_mode <- Selected
     | Selected_Focused, _ -> ()
+    | Unsafe, Focus -> vertex_info.vertex_mode <- Unsafe_Focused 
+    | Unsafe, _ -> () 
+    | Unsafe_Focused, Unfocus -> vertex_info.vertex_mode <- Unsafe
+    | Unsafe_Focused, _ -> ()
+    | VarChange, Focus -> vertex_info.vertex_mode <- VarChange_Focused
+    | VarChange, _ -> ()
+    | VarChange_Focused, Unfocus -> vertex_info.vertex_mode <- VarChange
+    | VarChange_Focused, _ -> ()
+      
+
   end;
   G.iter_succ_e
     ( fun edge ->
@@ -257,6 +266,7 @@ let update_vertex vertex event =
           | Selected_Focused, Unselect -> if not(is_selected dest_vertex) then edge_info.edge_mode <- Focused; decr nb_selected
           | Selected_Focused, Unfocus -> edge_info.edge_mode <- Selected
           | Selected_Focused, _ -> ()
+          | _ , _ -> () 
         end;       
     ) !graph vertex
 

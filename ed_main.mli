@@ -3,6 +3,10 @@ val root : Ed_graph.G.vertex option ref
 (* val quit : unit -> unit *)
 
 val reset_table_and_canvas : unit -> unit
+ 
+val var_l : (* (GText.iter * GText.iter) Var_L.t *) string list ref
+
+(* list ref (\* Var_L.t *\) *)
 
 (* val open_graph : string -> int ->  unit *)
 

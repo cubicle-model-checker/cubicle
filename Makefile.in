@@ -126,7 +126,7 @@ CMX = $(CMO:.cmo=.cmx)
 GUICMO = $(CMO) gui.cmo
 GUICMX = $(GUICMO:.cmo=.cmx)
 
-GENERATED = version.ml  parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
+GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
 
 byte: $(NAME).byte
 opt: $(NAME).opt

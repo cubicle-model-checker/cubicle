@@ -7,7 +7,7 @@ exception Found
 
 exception ParseRev
 
-type tag = Comment | Hover | UndoComment | UndoHover
+type tag = Comment | Hover | UndoComment | UndoHover | Var
 
 let tag_list = ref []
 let buffer_l = ref (-1)
@@ -38,10 +38,10 @@ let compare_motion l   =
      last_visited := Some(l, start_loc.pos_cnum, stop_loc.pos_cnum);
      raise Found)
 
-let compare_button_press l  =
+let compare_button_press_left l  =
   let start_loc, stop_loc = l.loc in
   if !buffer_c >= start_loc.pos_cnum && !buffer_c < stop_loc.pos_cnum  then
-    if not l.active then  
+    if not l.active then
       (tag_list := (UndoComment, start_loc.pos_cnum, stop_loc.pos_cnum)::!tag_list;
        l.active <- not (l.active);
        last_visited := None;
@@ -311,27 +311,22 @@ let parse_linact p  =
   inact_l := [];
   let f = build_inact in 
   try 
-    List.iter (parse_glob_const f ) p.pglobals;
-    List.iter (parse_glob_const f ) p.pconsts;
-    List.iter (parse_array f ) p.parrays;
-    List.iter (parse_type_defs f ) p.ptype_defs;
+    List.iter (parse_glob_const f) p.pglobals;
+    List.iter (parse_glob_const f) p.pconsts;
+    List.iter (parse_array f) p.parrays;
+    List.iter (parse_type_defs f) p.ptype_defs;
     parse_pform f  p.pinit;
-    List.iter (parse_pform f ) p.pinvs;
-    List.iter (parse_pform f ) p.punsafe;
-    List.iter (parse_ptrans f ) p.ptrans;
+    List.iter (parse_pform f) p.pinvs;
+    List.iter (parse_pform f) p.punsafe;
+    List.iter (parse_ptrans f) p.ptrans;
   with Found -> ()
 
 
-let compare_button_press2 p   =
+let compare_button_press_left2 p   =
   match !last_visited with
     |None -> ()
     |Some (inf, _, _)->
       let start_loc, stop_loc = inf.loc in
-      (* if not inf.active then      *)
-      (*   (tag_list := (UndoComment, start_loc.pos_cnum, stop_loc.pos_cnum)::!tag_list; *)
-      (*    inf.active <- not (inf.active); *)
-      (*    last_visited := None) *)
-      (* else  *)
         (parse_linact p ;
          if 
            (List.exists (fun (x,y) -> 
@@ -343,6 +338,14 @@ let compare_button_press2 p   =
          inact_l := (start_loc.pos_cnum, stop_loc.pos_cnum)::(!inact_l);
          last_visited := None)
 
+let compare_button_press_right p = 
+  match !last_visited with
+    |None -> ()
+    |Some (inf, _, _)->
+      let start_loc, stop_loc = inf.loc in
+      (tag_list := (Var, start_loc.pos_cnum, stop_loc.pos_cnum)::!tag_list;
+       last_visited := None)
+        
 let parse f p  = 
   try 
     List.iter (parse_glob_const f) p.pglobals;
@@ -368,11 +371,15 @@ let parse_psystem p =
 let parse_psystem_m p = 
   tag_list := [];
   try
-    compare_button_press2 p ;
+    compare_button_press_left2 p ;
     !tag_list
-  with ParseRev -> ( tag_list := [];
-                     parse_rev compare_button_press p; !tag_list )
-    
+  with ParseRev -> (tag_list := [];
+                     parse_rev compare_button_press_left p; !tag_list )
+
+let parse_var p = 
+  compare_button_press_right p;
+  !tag_list
+
 let parse_init p = 
   parse compare_inact p
 
