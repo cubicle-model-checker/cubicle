@@ -190,6 +190,8 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (*S only*)
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
 
+  (* Format.eprintf "%a\n" SAtom.print cube.Cube.litterals; *)
+  
   let hE = H.make "_e" in
   let hRf = H.make "_rf" in
   let hVal = H.make "_val" in

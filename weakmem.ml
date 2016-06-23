@@ -81,6 +81,13 @@ let pl = ref []
 
 
 
+let int_of_e e =
+  let e = H.view e in
+  let e = String.sub e 2 (String.length e - 2) in
+  int_of_string e
+
+
+
 let init_weak_env wvl =
 
   Smt.Type.declare hDirection [hR; hW];
@@ -212,7 +219,7 @@ let make_event (cnt, na) d p v vi =
 
 
 
-let split_events_orders sa =
+(*let split_events_orders sa =
   let rec has_read = function
     | Arith (t, _) -> has_read t
     | Read _ -> true
@@ -235,7 +242,37 @@ let split_events_orders sa =
     | Atom.Comp (t1, _, t2) when has_read t1 || has_read t2 ->
        (sa_pure, SAtom.add a sa_evts, sa_rds, fce, ord, cnt)
     | _ -> (SAtom.add a sa_pure, sa_evts, sa_rds, fce, ord, cnt)
-) sa (SAtom.empty, SAtom.empty, SAtom.empty, [], HMap.empty, HMap.empty)
+) sa (SAtom.empty, SAtom.empty, SAtom.empty, [], HMap.empty, HMap.empty)*)
+
+let split_events_orders sa =
+  let rec has_read = function
+    | Arith (t, _) -> has_read t
+    | Read _ -> true
+    | Write _ -> assert false
+    | _ -> false
+  in  
+  let rec update_cnt_t cnt = function
+    | Arith (t, _) -> update_cnt_t cnt t
+    | Field (Access (a, [p;e;_]), _) when H.equal a hE ->
+       let (c, _) = try HMap.find p cnt with Not_found -> (1, 1) in
+       let e = int_of_e e in
+       if e >= c then HMap.add p (e+1, 1) cnt else cnt
+    | _ -> cnt
+  in
+  let rec update_cnt cnt = function
+    | Atom.Comp (t1, _, t2) -> update_cnt_t (update_cnt_t cnt t1) t2
+    | Atom.Ite (sa, a1, a2) -> update_cnt (update_cnt cnt a1) a2
+    | _ -> cnt
+  in
+  SAtom.fold (fun a (sa_pure, sa_evts, sa_wts, fce, cnt) -> match a with
+    | Atom.Comp (Fence p, _, _) | Atom.Comp (_, _, Fence p) ->
+       (sa_pure, sa_evts, sa_wts, p :: fce, cnt)
+    | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
+       (sa_pure, sa_evts, SAtom.add a sa_wts, fce, cnt) (* has no read *)
+    | Atom.Comp (t1, _, t2) when has_read t1 || has_read t2 ->
+       (sa_pure, SAtom.add a sa_evts, sa_wts, fce, update_cnt cnt a)
+    | _ -> (SAtom.add a sa_pure, sa_evts, sa_wts, fce, update_cnt cnt a)
+) sa (SAtom.empty, SAtom.empty, SAtom.empty, [], HMap.empty)
 
 
 
@@ -277,7 +314,13 @@ let update_cnt_ord cnt ord =
     cnt, ord
   ) cnt (HMap.empty, ord)
 
-let events_of_satom sa =
+let update_cnt cnt =
+  HMap.fold (fun p (eid, seid) cnt ->
+    if seid <= 1 then HMap.add p (eid, seid) cnt
+    else HMap.add p (eid + 1, 1) cnt
+  ) cnt HMap.empty
+
+(*let events_of_satom sa =
   let sa_pure, sa_evts, sa_rds, fce, ord, cnt = split_events_orders sa in
   let srt = all_reads sa_evts in
 
@@ -326,12 +369,71 @@ let events_of_satom sa =
 
   (* Add event orders *)
   HMap.fold (fun p tl ->
-    SAtom.add (Atom.Comp (Access (hO, [p]), Eq, List tl))) ord sa
+    SAtom.add (Atom.Comp (Access (hO, [p]), Eq, List tl))) ord sa*)
+
+let events_of_satom sa =
+  (* Format.eprintf "----------------------------------------------------\n"; *)
+
+  (* Format.eprintf "sa : %a\n" SAtom.print sa; *)
+  
+  let sa_pure, sa_evts, sa_wts, fce, cnt = split_events_orders sa in
+  let srt = all_reads sa_evts in
+
+  (* Format.eprintf "sa_pure : %a\n" SAtom.print sa_pure; *)
+  (* Format.eprintf "sa_evts : %a\n" SAtom.print sa_evts; *)
+  (* Format.eprintf "sa_wts : %a\n" SAtom.print sa_wts; *)
+
+  (* HMap.iter (fun p (e, s) -> *)
+  (* 	     Format.eprintf "Count %a : %d %d\n" Hstring.print p e s) cnt; *)
+  (* Format.eprintf "----------------------------------------------------\n"; *)
+  
+  (* First, generate Write events *)
+  let (cnt, sa_new) = SAtom.fold (fun a acc -> match a with
+    | Atom.Comp (Write (p, v, vi, srl), _, _)
+    | Atom.Comp (_, _, Write (p, v, vi, srl)) ->
+       let (cnt, sa), te = make_event acc hW p v vi in
+       let (wp, we, ws) = match te with
+         | Field (Field (Access (_, [p; e; s]), _), _) -> (p, e, s)
+	 | _ -> assert false in
+       let sa = List.fold_left (fun sa (rp, re, rs) ->
+	 let rfa = Atom.Comp (Access (hRf, [wp;we;ws;rp;re;rs]), Eq, eTrue) in
+	 SAtom.add rfa sa
+       ) sa srl in
+       (cnt, sa)
+    | _ -> assert false
+  ) sa_wts (cnt, SAtom.empty) in
+
+  (* Update event count *)
+  let cnt = update_cnt cnt in
+
+  (* Then, generate Read events *)
+  let ((cnt, sa_new), sa_evts) = STerm.fold (fun t (acc, sa) -> match t with
+    | Read (p, v, vi) ->
+       let acc, te = make_event acc hR p v vi in
+       let sa = event_subst t te sa in
+       (acc, sa)
+    | _ -> assert false
+  ) srt ((cnt, sa_new), sa_evts) in
+
+  (* Update event count *)
+  let cnt = update_cnt cnt in
+
+  (* Generate proper event order *)
+  let sa_fence = List.fold_left (fun sa p ->
+    let (eid, _) = try HMap.find p cnt with Not_found -> (1, 1) in
+    if eid <= 1 then sa else (* no fence if no event after *)
+      let e = mk_hE (eid - 1) in
+      let fa = Atom.Comp (Access (hFence, [p; e]), Eq, eTrue) in
+      SAtom.add fa sa
+  ) SAtom.empty fce in
+
+  (* Merge all atom sets *)
+  SAtom.union sa_pure (SAtom.union sa_fence (SAtom.union sa_evts sa_new))
 
 
 
 (* use H3Map !!! *)
-let split_event_order (sa, evts, ord) at = match at with
+(*let split_event_order (sa, evts, ord) at = match at with
   | Atom.Comp (Access (a, [p]), Eq, List tl)
   | Atom.Comp (List tl, Eq, Access (a, [p])) when H.equal a hO ->
      let pord = List.map (fun t -> match t with
@@ -351,22 +453,81 @@ let split_event_order (sa, evts, ord) at = match at with
 	      then (f, c) :: vi else vi in 
      (SAtom.add at sa,
       HMap.add p (HMap.add e (HMap.add s (d, v, vi) spe) pevts) evts, ord)
-  | _ -> (SAtom.add at sa, evts, ord)
+  | _ -> (SAtom.add at sa, evts, ord)*)
+
+let split_event_order (sa, evts, cnt, fce) at =
+  let rec update_cnt_t cnt = function
+    | Arith (t, _) -> update_cnt_t cnt t
+    | Field (Access (a, [p;e;_]), _) when H.equal a hE ->
+       let c = try HMap.find p cnt with Not_found -> 1 in
+       let e = int_of_e e in
+       if e > c then HMap.add p e cnt else cnt
+    | _ -> cnt
+  in
+  let rec update_cnt cnt = function
+    | Atom.Comp (t1, _, t2) -> update_cnt_t (update_cnt_t cnt t1) t2
+    | Atom.Ite (sa, a1, a2) -> update_cnt (update_cnt cnt a1) a2
+    | _ -> cnt
+  in
+  match at with
+  | Atom.Comp (Access (a,[p;e]), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a,[p;e])) when H.equal a hFence ->
+     let pfce = try HMap.find p fce with Not_found -> [] in
+     let fce = HMap.add p (e :: pfce) fce in
+     (sa, evts, cnt, fce)
+  | Atom.Comp (Field (Access (a,[p;e;s]),f), Eq, Elem (c,t))
+  | Atom.Comp (Elem (c,t), Eq, Field (Access (a,[p;e;s]),f)) when H.equal a hE->
+     let pevts = try HMap.find p evts with Not_found -> HMap.empty in
+     let spe = try HMap.find e pevts with Not_found -> HMap.empty in
+     let (d, v, vi) = try HMap.find s spe
+		      with Not_found -> (hNone, hNone, []) in
+     let d = if f = hDir then c else d in
+     let v = if f = hVar then c else v in
+     let vi = if List.exists (fun (p, _) -> H.equal f p) !pl
+	      then (f, c) :: vi else vi in 
+     (SAtom.add at sa,
+      HMap.add p (HMap.add e (HMap.add s (d, v, vi) spe) pevts) evts,
+      update_cnt cnt at, fce)
+  | _ -> (SAtom.add at sa, evts, cnt, fce)
 
 let sort_event_params =
   HMap.map (HMap.map (HMap.map (fun (d, v, vi) ->
     (d, v, List.sort (fun (p1, _) (p2, _) -> H.compare p1 p2) vi)
   )))
 
-let split_events_orders_array ar =
+let make_ord cnt fce =
+  HMap.fold (fun p c ord ->
+    let pfce = try HMap.find p fce with Not_found -> [] in
+    let pord = ref [] in
+    for i = 1 to c do
+      let e = mk_hE i in
+      if List.exists (fun f -> H.equal f e) pfce then pord := hF :: e :: !pord
+      else pord := e :: !pord
+    done;
+    HMap.add p !pord ord
+  ) cnt HMap.empty
+
+(*let split_events_orders_array ar =
   let sa, evts, ord = Array.fold_left (fun acc a ->
     split_event_order acc a) (SAtom.empty, HMap.empty, HMap.empty) ar in
-  sa, sort_event_params evts, ord
+  sa, sort_event_params evts, ord*)
 
-let split_events_orders_set sa =
+(*let split_events_orders_set sa =
   let sa, evts, ord = SAtom.fold (fun a acc ->
     split_event_order acc a) sa (SAtom.empty, HMap.empty, HMap.empty) in
-  sa, sort_event_params evts, ord
+  sa, sort_event_params evts, ord*)
+
+let split_events_orders_array ar =
+  let sa, evts, cnt, fce = Array.fold_left (fun acc a ->
+    split_event_order acc a
+  ) (SAtom.empty, HMap.empty, HMap.empty, HMap.empty) ar in
+  sa, sort_event_params evts, make_ord cnt fce
+
+let split_events_orders_set sa =
+  let sa, evts, cnt, fce = SAtom.fold (fun a acc ->
+    split_event_order acc a
+  ) sa (SAtom.empty, HMap.empty, HMap.empty, HMap.empty) in
+  sa, sort_event_params evts, make_ord cnt fce
 
 
 
@@ -474,11 +635,11 @@ let unsatisfied_reads sa =
 
 
 
-let merge_ord sord dord =
+(*let merge_ord sord dord =
   HMap.fold (fun p spord dord ->
     let dpord = try HMap.find p dord with Not_found -> [] in
     HMap.add p (spord @ dpord) dord
-  ) sord dord
+  ) sord dord*)
 
 let merge_evts sevts devts = (* improve for sub-events *)
   HMap.fold (fun p spe devts ->

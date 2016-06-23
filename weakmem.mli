@@ -100,7 +100,7 @@ val unsatisfied_reads : Types.SAtom.t -> (H.t * Hstring.t list) H3Map.t
 
 
 
-val merge_ord : 'a list HMap.t -> 'a list HMap.t -> 'a list HMap.t
+(*val merge_ord : 'a list HMap.t -> 'a list HMap.t -> 'a list HMap.t*)
 val merge_evts : 'a HMap.t HMap.t -> 'a HMap.t HMap.t -> 'a HMap.t HMap.t
 
 
