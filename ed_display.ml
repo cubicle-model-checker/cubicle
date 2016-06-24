@@ -250,8 +250,8 @@ let tdraw_string_gtk v turtle  =
     texte#set [`SIZE_POINTS w ];
     let w = texte#text_width in 
   let h = texte#text_height in
-  ellipse#set [ `X1  (-.( w +. 15.)/.2.); `X2 ((w +. 15.)/.2.);
-                `Y1  (-.( h +. 15.)/.2.); `Y2 ((h +. 15.)/.2.)];
+  ellipse#set [ `X1  (-.( w +. 25.)/.2.); `X2 ((w +. 25.)/.2.);
+                `Y1  (-.( h +. 25.)/.2.); `Y2 ((h +. 25.)/.2.)];
   let (x,y) = !current_point in
   node#move ~x:(float x) ~y:(float y);
   node#set  [`X (float x); `Y (float y)];

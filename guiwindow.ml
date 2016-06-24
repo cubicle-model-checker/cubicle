@@ -19,6 +19,7 @@ let wd = if gui_debug then 1600 else 1000
 
 module M = Map.Make (String)
 
+
 let var_l = ref M.empty 
 
 let window =
@@ -196,12 +197,66 @@ let confirm s file e =
 let list_to_string l  =  
   List.fold_right (fun x acc -> acc ^ x ^ "\n") l ""
 
-let select_var l new_path ast = 
+let add_value_var l = 
+  List.iter (fun (x, e) -> 
+    if e#text = "" then 
+      Ed_main.var_l := (x, None)::!Ed_main.var_l
+    else
+      let str_l = Str.split (Str.regexp ";") e#text in 
+      Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l
+
+let select_var l new_path ast =
+  let t_edit_l = ref [] in
+  let wnd = GWindow.window
+    ~title:"Watch variables"
+    ~position:`CENTER
+    ~resizable:false ()  in
+  let v_box = GPack.vbox
+    ~border_width:5
+    ~packing:(wnd#add) () in
+  let table_fr = GBin.frame
+    ~border_width:10
+    ~packing:(v_box#pack ~expand:true ~fill:true) () in
+  let table = GPack.table
+    ~columns:2
+    ~rows:(List.length !Ed_main.var_l)
+    ~row_spacings:5
+    ~col_spacings:10
+    ~packing:(table_fr#add) () in
+  let cpt = ref 0 in
+  M.iter (fun x y ->
+    let label = GMisc.label ~text:x () in
+    let text_entry = GEdit.entry () in
+    t_edit_l := (x, text_entry) :: !t_edit_l;
+    table#attach 0 !cpt (label#coerce);
+    table#attach 1 !cpt (text_entry#coerce);
+    incr cpt) !var_l ;
+  let button_box = GPack.button_box
+    ~packing:(v_box#pack) `HORIZONTAL () in
+  let button_cancel = GButton.button
+    ~label:"Cancel"
+    ~stock:`CANCEL
+    ~packing:(button_box#add)() in
+  let button_show = GButton.button
+    ~label:"Show Graph"
+    ~stock:`APPLY
+    ~packing:(button_box#add)() in
+  ignore (button_show#event#connect#button_press 
+            ~callback:(fun b -> 
+              add_value_var !t_edit_l;
+              wnd#destroy ();
+              Ed_main.init new_path (punsafe_length (!ast)); true));
+  ignore (button_cancel#event#connect#button_press
+            ~callback:(fun b -> wnd#destroy (); true));
+  wnd#show ()
+
+
+let select_var_none new_path ast =
   if GToolbox.question_box
     ~title:"List" ~buttons:["Add"; "Show trace"]
-    ~default:2 
+    ~default:2
     ~icon:(GMisc.image ~stock:`DIALOG_QUESTION  ~icon_size:`DIALOG ())
-    ("Variables : \n\n"^list_to_string l) = 2 then 
+     "No variables.\n(Add with right click)" = 2 then
     Ed_main.init new_path (punsafe_length (!ast))
 
   
@@ -279,8 +334,7 @@ let rec apply_tag = function
             source#source_buffer#remove_tag_by_name "var"
               ~start:start_iter ~stop:stop_iter)
         else 
-          var_l := M.add str (start, stop) !var_l
-            
+          var_l := M.add str (start, stop) !var_l          
       (* let m =  Ed_main.Var_L.add (Ed_main.var_l) in () *)
         (* Ed_main.var_l := (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) :: !Ed_main.var_l *)
       end
@@ -363,7 +417,7 @@ let open_show_file ast new_file edit =
 let edit_mode ast new_file button edit m =
   if button#active then 
     ( edit := true;
-      (* source#source_buffer#set_text (Psystem_printer.psystem_to_string !ast); *)
+      (*source#source_buffer#set_text (Psystem_printer.psystem_to_string !ast);*)
       source#set_editable true;
       source#set_cursor_visible true; )
   else 
@@ -499,14 +553,15 @@ let open_window s  =
   let map = Gdk.Color.get_system_colormap () in 
   let light_gray = Gdk.Color.alloc ~colormap:map (`NAME "light gray") in
   let gray = Gdk.Color.alloc ~colormap:map (`NAME "gray") in 
-  ignore (source#source_buffer#create_tag ~name:"gray_background" [`BACKGROUND_GDK light_gray]);
+  ignore (source#source_buffer#create_tag 
+            ~name:"gray_background" [`BACKGROUND_GDK light_gray]);
   ignore (source#source_buffer#create_tag ~name:"delete" [`BACKGROUND_GDK light_gray]);
   ignore (source#source_buffer#create_tag ~name:"dark" [`FOREGROUND_GDK gray]);
   ignore (source#source_buffer#create_tag ~name:"error" [`BACKGROUND "red"]);
   ignore (source#source_buffer#create_tag ~name:"search" [`BACKGROUND "yellow"]);
   ignore (source#source_buffer#create_tag ~name:"search_next" [`BACKGROUND "orange"]);
   ignore (source#source_buffer#create_tag ~name:"var" [`BACKGROUND "pink"]);
-  source#event#add [`BUTTON_PRESS;`KEY_PRESS];   
+  source#event#add [`BUTTON_PRESS; `KEY_PRESS];   
   source#set_editable false;
   open_file inter_path save_path ast;
   ignore (source#event#connect#motion_notify ~callback:(find_in_ast ast edit));
@@ -534,8 +589,10 @@ let open_window s  =
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
     let _ = save_execute_file ast new_path b in  
-      Ed_main.var_l := [];
-      M.iter (fun x y-> Ed_main.var_l := x::!Ed_main.var_l) !var_l;
+    Ed_main.var_l := [];
+    if M.cardinal !var_l = 0 then 
+      select_var_none new_path ast
+    else  
       select_var !Ed_main.var_l new_path ast; true)); 
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
