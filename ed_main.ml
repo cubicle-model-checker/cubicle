@@ -104,15 +104,16 @@ module Model = struct
 
   let add_vertex_unsafe v = 
     let row = model#append () in
-    model#set ~row ~column:name ("UNSAFE :\n"^get_str_label v);
+    model#set ~row ~column:name ("Unsafe :\n"^get_str_label v);
     model#set ~row ~column:vertex v;
     H.add rows v row;
     row
 
   let add_edge_1 row_v w =
     let row = model#append ~parent:row_v () in
-    model#set ~row ~column:name (string_of_label w);
+    model#set ~row ~column:name (get_str_label w);
     model#set ~row ~column:vertex w
+      
   let add_edge v w =
     let row_v = find_row v in
     add_edge_1 row_v w;
@@ -164,10 +165,9 @@ end
 let background_cell_data renderer (model:GTree.model) iter =
   let ver = Model.model#get ~row:iter ~column:Model.name in
   if ver = !center_row then
-    renderer#set_properties [`BACKGROUND "White"; `FOREGROUND "black"]
+    renderer#set_properties [`BACKGROUND "white"; `FOREGROUND "black"]
   else
     renderer#set_properties [`BACKGROUND "light grey"; `FOREGROUND "grey"]
-
 
 let () = Model.reset ()
 
@@ -297,7 +297,7 @@ let node_selection ~(model : GTree.tree_store) path vc renderer =
 let add_columns ~(view : GTree.view) ~model =
   let renderer = GTree.cell_renderer_text [`XALIGN 0.] in
   let vc = GTree.view_column ~title:"Nodes" ~renderer:(renderer, ["text", Model.name]) ()
-in
+  in
   ignore (view#append_column vc);
   vc#set_sizing `AUTOSIZE;
   ignore (view#selection#connect#after#changed ~callback:
@@ -406,49 +406,46 @@ let () = set_vertex_event_fun := set_vertex_event
 let set_canvas_event () =
   G.iter_vertex set_vertex_event !graph
 
-
-
-
 (* reset *)
 
 let reset_table_and_canvas () =
- let l =  canvas_root#get_items in
+  let l =  canvas_root#get_items in
   List.iter (fun v -> trace v#destroy ()) l;
   H2.clear intern_edges;
   H2.clear successor_edges;
   reset_display canvas_root;
   origine := start_point;
-  nb_selected:=0
+  nb_selected := 0
 
 
 let split_node_info x m v changed_l  =
-  let var_find before after s =
+  let var_find before after  =
     List.fold_left (fun acc (x, var_i) ->
       match var_i with 
         |None -> 
-          (if x = s  then
-            true
-          else
-            try
-              let pos = Str.search_forward (Str.regexp "\\[") s 0 in
-              let array_name = Str.global_replace (Str.regexp "[\n| ]+") ""
-                (Str.string_before s pos) in
-              if array_name = x then
-                true
-              else acc
-            with Not_found -> acc)
+          (if x = before  then
+              true
+           else
+              try
+                let pos = Str.search_forward (Str.regexp "\\[") before 0 in
+                let array_name = Str.global_replace (Str.regexp "[\n| ]+") ""
+                  (Str.string_before before pos) in
+                if array_name = x then
+                  true
+                else acc
+              with Not_found -> acc)
         |Some l ->  
-          if x = s then
-             List.mem after l
+          if x = before then
+            List.mem after l
           else
             try
-              let pos = Str.search_forward (Str.regexp "\\[") s 0 in
+              let pos = Str.search_forward (Str.regexp "\\[") before 0 in
               let array_name = Str.global_replace (Str.regexp "[\n| ]+") ""
-                (Str.string_before s pos) in
+                (Str.string_before before pos) in
               if array_name = x then
                 List.mem after l
               else acc
-        with Not_found -> acc) false !var_l
+            with Not_found -> acc) false !var_l
   in
   (let pos, eq = 
      try (Str.search_forward (Str.regexp "[=]") x 0, true)
@@ -464,9 +461,9 @@ let split_node_info x m v changed_l  =
    let m =
      try
        (let a = Var_Map.find before m in
-        if a <> after && var_find before after before then
+        if a <> after && var_find before after  then
           ((G.V.label v).vertex_mode <- VarChange;
-            (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
+           (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
            ^ a ^ " -> " ^ after;
            m)
         else
@@ -475,6 +472,19 @@ let split_node_info x m v changed_l  =
    (before, after, m))
     
 let rec build_map m v l  =
+  let var_init before after m = 
+    if not (Var_Map.mem before m) && 
+      List.fold_left (fun acc (x, vars) ->
+        match vars with 
+          |None -> 
+            if x = before then true else acc
+          |Some var_l -> 
+            if x = before && List.mem after var_l then true else acc
+      ) false !var_l then 
+      ((G.V.label v).vertex_mode <- VarInit;
+       (G.V.label v).num_label <- 
+         (G.V.label v).num_label ^ "\n" ^ before ^ " <- " ^ after);
+  in 
   let changed_l = ref "" in
   match l with
     |[] -> m
@@ -484,16 +494,18 @@ let rec build_map m v l  =
         |x::_ ->
           (try
              let before, after, m = split_node_info x m v changed_l  in
+             var_init before after m;
              Var_Map.add before after m
            with Not_found -> failwith "erreur build map"))
     |x::s ->
       try
         let before, after, m = split_node_info x m v changed_l in
+        var_init before after m;
         build_map (Var_Map.add before after m) v s
       with Not_found -> failwith "erreur build map"
         
         
-let rec node_name  = function
+let rec node_name = function
   |[] -> ""
   |x::[] ->
     (match Str.split (Str.regexp "\n") (String.trim x) with
@@ -529,36 +541,40 @@ let rec color_edges v =
     |Some r -> 
       if r <> v then 
         begin
-          G.iter_pred_e (fun edge -> (G.E.label edge).edge_mode <- HighlightPath) !graph v;
+          G.iter_pred_e (fun edge ->
+            (G.E.label edge).edge_mode <- HighlightPath) !graph v;
           G.iter_pred (fun vertex -> color_edges vertex) !graph v;
         end
-  
+          
 let create_node s unsafe_l  =
   let pos = Str.search_forward (Str.regexp "=") s 0 in
-  let before = Str.global_replace (Str.regexp "[\n| ]+") ""
+  let transition_list = Str.global_replace (Str.regexp "[\n| ]+") ""
     (String.trim (Str.string_before s pos)) in
-  let after = Str.split (Str.regexp "&&") (Str.string_after s (pos + 1)) in
-  let name = node_name after in
+  let var_values = Str.split (Str.regexp "&&") (Str.string_after s (pos + 1)) in
+  let name = node_name var_values in
   let v =
+    (** Si un seul etat unsafe et node courant = unsafe *)
     if !cpt = 1 && unsafe_l = 1  then
       (let vertex = G.V.create (make_node_info  (string_of_int !cpt)  name true) in
        root := Some vertex;
        ignore (Model.add_vertex_unsafe vertex);
        vertex)
+    (** Si plusieurs etats unsafe et node courant = unsafe *)
     else if !cpt <= unsafe_l then
       (let vertex = G.V.create (make_node_info  (string_of_int !cpt)  name true) in
        ignore (Model.add_vertex_unsafe vertex);
        vertex)
     else
+      (** Si node courant <> unsafe *)
       (let vertex = G.V.create (make_node_info  (string_of_int !cpt)  name true) in
        ignore (Model.add_vertex vertex);
        vertex) in
-  link_node before v after;
+  link_node transition_list v var_values;
   (G.V.label v).label <- (G.V.label v).num_label;
-  HT.add ht before v;
+  HT.add ht transition_list v;
   G.add_vertex !graph v;
   if (G.V.label v).vertex_mode = VarChange then
-  color_edges v;
+    color_edges v;
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
   let tor = make_turtle !origine 0.0 in
@@ -570,29 +586,36 @@ let create_node s unsafe_l  =
 let rec list_to_node curr_node unsafe_l = function
   |[] -> ()
   |[x] ->
+    (** Si == alors fin de la description des nodes *)
     (try
        let pos = Str.search_forward (Str.regexp "==") x 0 in
-       let before = Str.string_before x pos in
-       create_node before unsafe_l;
+       let node_list = Str.string_before x pos in
+       create_node node_list unsafe_l;
        raise End_trace
      with Not_found -> (curr_node := !curr_node ^ x))
   |x::s ->
+    (** On complète curr_node et on crée un noeud *)
     curr_node := !curr_node ^ x;
     create_node !curr_node unsafe_l;
+    (** Reinit curr_node *)
     curr_node := "";
     list_to_node curr_node unsafe_l s
-      
+   
+   
 let rec build_node curr_node str unsafe_l  =
   let str_l = Str.split (Str.regexp "node [0-9]+:") str in
   match str_l with
     |[] -> ()
     |[x] ->
-      (if !curr_node <> "" then
-          create_node !curr_node unsafe_l;
-       curr_node := x)
+      if !curr_node <> "" then
+        create_node !curr_node unsafe_l;
+      curr_node := x
     |x::s ->
       list_to_node curr_node unsafe_l str_l
-        
+       
+
+(** Crée arbre à partir de la file *) 
+
 let load_graph unsafe_l =
   try
     let curr_node = ref "" in
@@ -621,9 +644,10 @@ let load_graph unsafe_l =
     |KillThread -> ()
 
 
+(** Met sortie cubicle dans la file *)
 
 let show_tree file  =
-    let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
+  let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
   try
     while true do
       if !kill_thread then raise KillThread;
@@ -635,7 +659,8 @@ let show_tree file  =
     done
   with
     |End_of_file ->
-      (ignore (Unix.close_process_in ic); end_show_tree := true)
+      (ignore (Unix.close_process_in ic); 
+       end_show_tree := true)
     |KillThread ->
       ignore (Unix.close_process_in ic)
 
@@ -675,15 +700,15 @@ let safe_or_unsafe () =
     str := !str ^ (Queue.pop graph_trace)
   done;
   (try
-    (let _ = Str.search_forward (Str.regexp "UNSAFE") !str 0 in
-     result_image#set_stock `DIALOG_ERROR;
-     result_label#set_text "Unsafe")
-  with Not_found ->
-    (result_image#set_stock `APPLY;
-     result_label#set_text "Safe"));
+     (let _ = Str.search_forward (Str.regexp "UNSAFE") !str 0 in
+      result_image#set_stock `DIALOG_ERROR;
+      result_label#set_text "Unsafe")
+   with Not_found ->
+     (result_image#set_stock `APPLY;
+      result_label#set_text "Safe"));
   end_load_graph := false;
   end_show_tree := false
-        
+    
 
 
 
@@ -692,7 +717,7 @@ let tree (file, unsafe_l) =
   ignore (Thread.create show_tree file);
   ignore (Thread.create load_graph unsafe_l) ;
   ignore (Thread.create safe_or_unsafe ())
-  (* ignore (Thread.create update_model()) *)
+(* ignore (Thread.create update_model()) *)
 
 let open_graph file unsafe_l =
   ignore (window#show ());

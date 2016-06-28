@@ -25,64 +25,6 @@ let debug = ref false
 (* Original window size *)
 let (w,h) = (1200.,800.)
 
-(* light mode *)
-(* differents definitions *)
-(* let color_circle = "grey99" *)
-
-(* let color_intern_edge = "grey69" *)
-(* let color_successor_edge = "black" (\*"grey38"*\) *)
-(* let color_vertex = "grey75" *)
-
-(* let color_selected_intern_edge = "#9f1a1a" (\* "#74885e"*\) *)
-(* let color_selected_successor_edge = "#9f1a1a" *)
-(* let color_selected_vertex = "#9f1a1a" *)
-
-(* let color_focused_intern_edge = "#4d51a9" *)
-(* let color_focused_successor_edge = "#4d51a9" *)
-(* let color_focused_vertex =  "#4d51a9" *)
-
-(* let color_selected_focused_intern_edge = "LightCoral" *)
-(* let color_selected_focused_vertex ="LightCoral" *)
-(* let color_selected_focused_successor_edge =  "LightCoral" *)
-
-(* let color_varchange = "#df3367" *)
-(* let color_varchange_focused = "#bd2855" *)
-(* let color_unsafe = "LightCoral" *)
-(* let color_unsafe_focused = "DarkCoral" *)
-
-(* let color_text = "black" *)
-
-(* let width_successor_edge = 2 *)
-(* let width_intern_edge = 2 *)
-(* let point_size_text = 12. *)
-
-(* dark mode  *)
-(* differents definitions *)
-(* let color_circle = "grey99" *)
-
-(* let color_intern_edge = "black" *)
-(* let color_successor_edge ="black" *)
-(* let color_vertex = "grey58" *)
-
-(* let color_selected_intern_edge = "OrangeRed4"  *)
-(* let color_selected_successor_edge =  "OrangeRed4" *)
-(* let color_selected_vertex =  "OrangeRed4" *)
-
-(* let color_focused_intern_edge = "blue"  *)
-(* let color_focused_successor_edge =  "blue"  *)
-(* let color_focused_vertex =  "blue"  *)
-
-(* let color_selected_focused_intern_edge =  "dark magenta"  *)
-(* let color_selected_focused_vertex ="dark magenta" *)
-(* let color_selected_focused_successor_edge =  "dark magenta"  *)
-
-(* let color_text = "white" *)
-
-(* let width_successor_edge = 2 *)
-(* let width_intern_edge = 2 *)
-(* let point_size_text = 12. *)
-
-(* guizmode *)
 (* differents definitions *)
 let color_circle = "grey99"
 
@@ -91,8 +33,14 @@ let color_successor_edge = "black" (*"grey38"*)
 let color_vertex = "grey75"
 
 
-let color_varchange = "light blue"
-let color_varchange_focused = "light blue"
+let color_varchange = "#98cfd6"
+let color_varchange_focused = "#98cfd6"
+
+let color_line_varchange = "#79a3a8"
+
+let color_initvar = "#9c98b1"
+let color_initvar_focused = "#9c98b1"
+
 let color_unsafe = "#e93b3b"
 let color_unsafe_focused = "#e93b3b"
 
@@ -203,9 +151,9 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   let (x, y) = 
     if l mod 2 = 0 then (l, l+1) else (l+1, l) in
   if edge.visible_label then 
-    texte#set [`TEXT edge.label; `X (points.(x) (* +. 20. *)); `Y (points.(y) -. 50.)]
+    texte#set [`TEXT edge.label; `X points.(x); `Y (points.(y) -. 50.)]
   else 
-    texte#set [`TEXT ""; `X (points.(x) (* +. 20. *)); `Y (points.(y) -. 50.)]
+    texte#set [`TEXT ""; `X points.(x) ; `Y (points.(y) -. 50.)]
       
 type polaire = { radius : float; angle : float}
 type cartesien = { x : float; y: float}
@@ -283,8 +231,9 @@ let color_change_intern_edge (line:GnoCanvas.bpath) color =
   line#set [`OUTLINE_COLOR color]
 
 (* change color for an intern edge *)
-let color_change_successor_edge (line:GnoCanvas.line) color = 
-  line#set [`FILL_COLOR color]
+let color_change_successor_edge (line:GnoCanvas.line) (line2:GnoCanvas.line) color = 
+  line#set [`FILL_COLOR color];
+  line2#set [`FILL_COLOR color]
 
 (* draws but don't show intern edges, and return a couple bpath (gtk_object), and line (gtw_widget)*)
 let draw_intern_edge vw edge tv tw canvas =
@@ -295,12 +244,12 @@ let draw_intern_edge vw edge tv tw canvas =
     with Not_found ->
       let bpath = GnomeCanvas.PathDef.new_path () in
       let line = GnoCanvas.bpath canvas
-        ~props:[ `BPATH bpath ; `WIDTH_PIXELS width_intern_edge] 
+        ~props:[`BPATH bpath ; `WIDTH_PIXELS width_intern_edge] 
       in
       let texte = GnoCanvas.text canvas  ~props:[`X 0.0; `Y 0.0 ; `TEXT  edge.label;
                                                  `FILL_COLOR color_text]    in
       line#lower_to_bottom ();
-      H2.add intern_edges vw (bpath,line,texte);
+      H2.add intern_edges vw (bpath, line, texte);
       let v,w  =  vw in
       if (is_selected w) || (is_selected v)  
       then edge.edge_mode  <-  Selected;
@@ -314,9 +263,7 @@ let draw_successor_edge vw edge canvas =
     try
       H2.find successor_edges vw
     with Not_found ->      
-      
-      (* let node_group = GnoCanvas.group ~x:300.0 ~y:300.0 canvas in *)
-      let line = GnoCanvas.line canvas ~props:[  
+            let line = GnoCanvas.line canvas ~props:[  
         `FILL_COLOR color_successor_edge ;
         `WIDTH_PIXELS width_successor_edge ;
         `SMOOTH true]
@@ -357,12 +304,16 @@ let motion_turtle item ev =
   make_turtle !origine 0.0
 
 let hide_intern_edge vw =
-  try let _,line, texte = H2.find intern_edges vw in line#hide (); texte#hide () with Not_found -> ()
+  try
+    let _,line, texte = H2.find intern_edges vw in line#hide (); texte#hide () 
+  with Not_found -> ()
 
 let hide_succesor_edge vw =
-  try let line, line2,  texte = H2.find successor_edges vw in line#hide (); line2#hide();
-      texte#hide ()  with Not_found -> (
-      )
+  try 
+    let line, line2,  texte = H2.find successor_edges vw in line#hide ();
+    line2#hide(); texte#hide ()
+  with Not_found -> ()
+        
 (* graph drawing *)
 let draw_graph _root canvas  =
   let center_node = ref None in 
@@ -377,17 +328,17 @@ let draw_graph _root canvas  =
       then 
          (* successor edge *)
         begin
-          let line, show, texte, line2 = draw_successor_edge vw edge canvas
+          let line, show, line2, texte = draw_successor_edge vw edge canvas
           in
           begin
             match edge.edge_mode with
-              | Normal -> color_change_successor_edge line color_successor_edge;
-              | Selected -> color_change_successor_edge line color_selected_successor_edge;
-              | Focused ->  color_change_successor_edge line color_focused_successor_edge;
-              | Selected_Focused -> color_change_successor_edge line color_selected_focused_successor_edge;
-              |HighlightPath -> color_change_successor_edge line "light blue";
-              |HighlightPath_Focused -> color_change_successor_edge line "cyan";
-              |_ ->  color_change_successor_edge line color_successor_edge;
+              | Normal -> color_change_successor_edge line line2 color_successor_edge;
+              | Selected -> color_change_successor_edge line line2 color_selected_successor_edge;
+              | Focused ->  color_change_successor_edge line line2 color_focused_successor_edge;
+              | Selected_Focused -> color_change_successor_edge line line2 color_selected_focused_successor_edge;
+              | HighlightPath -> color_change_successor_edge line line2 color_line_varchange;
+              | HighlightPath_Focused -> color_change_successor_edge line line2 color_line_varchange;
+              |_ ->  color_change_successor_edge line line2 color_successor_edge;
           end;
           if show then
             (line#show ();
@@ -423,8 +374,8 @@ let draw_graph _root canvas  =
                 |HighlightPath_Focused -> color_change_intern_edge line "dark red"
                 |_ -> color_change_intern_edge line color_intern_edge;
             end;
-             (* line#show(); *)
-            texte#show()
+            line#show();
+             texte#show()
           end else
             hide_intern_edge vw
         end) 
@@ -460,7 +411,9 @@ let draw_graph _root canvas  =
             | Unsafe -> color_change_vertex item color_unsafe 0;
             | Unsafe_Focused -> color_change_vertex item color_unsafe_focused 3;
             | VarChange -> color_change_vertex item color_varchange 0;
-            | VarChange_Focused -> color_change_vertex item color_varchange_focused 3
+            | VarChange_Focused -> color_change_vertex item color_varchange_focused 3;
+            | VarInit -> color_change_vertex item color_initvar 0;
+            | VarInit_Focused -> color_change_vertex item color_initvar_focused 3;
             | _ -> ()
         end
       else

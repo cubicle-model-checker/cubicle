@@ -25,7 +25,7 @@ type visibility = Visible | BorderNode | Hidden
 type label_t = Num_Label | Str_Label 
 
 type mode = Normal | Selected | Focused | Selected_Focused | Unsafe | VarChange |
-    Unsafe_Focused | VarChange_Focused | HighlightPath | HighlightPath_Focused
+    Unsafe_Focused | VarChange_Focused | VarInit | VarInit_Focused | HighlightPath | HighlightPath_Focused
 
 module Var_Map = Map.Make(String)
 

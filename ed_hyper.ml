@@ -210,7 +210,8 @@ let hspace_dist_sqr turtle  =
 
 (* Limit of visibility for nodes *)
 let rlimit =  0.98
-let rlimit_sqr = (* 0.99999 *)rlimit *. rlimit(* 0.999999 *)
+let rlimit_sqr = rlimit *. rlimit
+
 (* let rlimit_sqr = 1.
  *)
 
