@@ -12,9 +12,9 @@ val var_l : (* (GText.iter * GText.iter) Var_L.t *) (string * string list option
 
 (* val graph_trace : string Queue.t *)
 
-val refresh_display : unit -> unit
+(* val refresh_display : unit -> unit *)
 
-val refresh_draw : unit -> unit
+(* val refresh_draw : unit -> unit *)
 
 val init : string -> int -> unit
 

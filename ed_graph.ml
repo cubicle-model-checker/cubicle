@@ -25,7 +25,7 @@ type visibility = Visible | BorderNode | Hidden
 type label_t = Num_Label | Str_Label 
 
 type mode = Normal | Selected | Focused | Selected_Focused | Unsafe | VarChange |
-    Unsafe_Focused | VarChange_Focused
+    Unsafe_Focused | VarChange_Focused | HighlightPath | HighlightPath_Focused
 
 module Var_Map = Map.Make(String)
 
@@ -35,7 +35,7 @@ type node_info =
     mutable label_mode : label_t;
     mutable changed : bool;
     mutable var_map : string Var_Map.t;
-    draw : bool;
+    mutable draw : bool;
     mutable str_label : string;
     mutable num_label : string;
     mutable visible : visibility;
@@ -51,54 +51,20 @@ let make_node_info n s d =
     num_label = n;
     changed = false;
     var_map = Var_Map.empty;
-    draw = d;
+    draw = true;
     label_mode = Num_Label;
     label = n; 
-    visible = Visible; 
+    visible = Hidden; 
     depth = 0; 
     vertex_mode = Normal;
     successors_visible = true;
     turtle = dummy_turtle 
   }
 
-(* let make_node_info_color n s  =  *)
-(*   {  *)
-(*     str_label = s; *)
-(*     num_label = n; *)
-(*     color = true; *)
-(*     draw = true; *)
-(*     var_map = Var_Map.empty; *)
-(*     changed = false; *)
-(*     label_mode = Num_Label; *)
-(*     label = n;  *)
-(*     visible = Visible;  *)
-(*     depth = 0;  *)
-(*     vertex_mode = Normal; *)
-(*     successors_visible = true; *)
-(*     turtle = dummy_turtle  *)
-(*   } *)
-
-(* let make_node_info_color_map n s  =  *)
-(*   {  *)
-(*     str_label = s; *)
-(*     num_label = n; *)
-(*     color = true; *)
-(*     draw = true; *)
-(*     var_map = Var_Map.empty; *)
-(*     changed = false; *)
-(*     label_mode = Num_Label; *)
-(*     label = n;  *)
-(*     visible = Visible;  *)
-(*     depth = 0;  *)
-(*     vertex_mode = Normal; *)
-(*     successors_visible = true; *)
-(*     turtle = dummy_turtle  *)
-(*   } *)
-
 type edge_info = 
   {
     label : string;
-    draw : bool;
+    mutable draw : bool;
     mutable visible_label : bool;
     mutable visited : bool;
     mutable edge_mode : mode;
@@ -246,6 +212,7 @@ let update_vertex vertex event =
     | VarChange, _ -> ()
     | VarChange_Focused, Unfocus -> vertex_info.vertex_mode <- VarChange
     | VarChange_Focused, _ -> ()
+    | _ -> ()
       
 
   end;
@@ -266,6 +233,10 @@ let update_vertex vertex event =
           | Selected_Focused, Unselect -> if not(is_selected dest_vertex) then edge_info.edge_mode <- Focused; decr nb_selected
           | Selected_Focused, Unfocus -> edge_info.edge_mode <- Selected
           | Selected_Focused, _ -> ()
+          | HighlightPath, Focus -> edge_info.edge_mode <- HighlightPath_Focused
+          | HighlightPath, _ -> ()
+          | HighlightPath_Focused, Unfocus -> edge_info.edge_mode <- HighlightPath
+          | HighlightPath_Focused, _  -> ()
           | _ , _ -> () 
         end;       
     ) !graph vertex

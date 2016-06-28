@@ -128,7 +128,7 @@ let draw_node_and_edges root turtle =
     let depth = lab.depth in
     let tv = lab.turtle in
     let dist = hspace_dist_sqr tv in
-    if dist <= rlimit_sqr then begin
+    if dist <=   rlimit_sqr then begin
       lab.visible <- Visible;
       let l = try G.succ !graph v with Invalid_argument _ -> []  in
       let l = List.filter (fun x -> (G.V.label x).visible = Hidden) l in
@@ -173,7 +173,7 @@ let draw_bfs root turtle =
     let depth = lab.depth in
     let tv = lab.turtle in
     let dist = hspace_dist_sqr tv in
-    if dist <= rlimit_sqr then begin
+    if dist <=  rlimit_sqr   then begin
       lab.visible <- Visible;
       let l = try G.succ !graph v with Invalid_argument _ -> []  in
       let l = List.filter (fun x -> (G.V.label x).visible = Hidden) l in

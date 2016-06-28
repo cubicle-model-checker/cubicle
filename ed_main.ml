@@ -21,17 +21,24 @@ open Format
 open Ed_hyper
 open Ed_graph
 open Ed_display
-open Ed_tracegraph
 
 let graph_trace = Queue.create ()
+
+type model_t = Edge of (G.V.t * G.V.t) | Node of G.V.t | UnsafeNode of G.V.t 
+
+(* let model = Queue.create () *)
 
 let m = Mutex.create ()
 
 let m_end = Mutex.create ()
 
+(* let m_model = Mutex.create ()  *)
+
 let c = Condition.create ()
 
 let c_end = Condition.create ()
+
+(* let c_model = Condition.create () *)
 
 module Var_L = Map.Make (String)
 
@@ -39,9 +46,9 @@ let var_l = ref []
 
 let end_show_tree = ref false
 
-let end_load_graph = ref false
+let center_row = ref ""
 
-(* (\* let var_l = ref (Var_L.empty) *\) *)
+let end_load_graph = ref false
 
 exception End_trace
 
@@ -154,6 +161,14 @@ module Model = struct
 
 end
 
+let background_cell_data renderer (model:GTree.model) iter =
+  let ver = Model.model#get ~row:iter ~column:Model.name in
+  if ver = !center_row then
+    renderer#set_properties [`BACKGROUND "White"; `FOREGROUND "black"]
+  else
+    renderer#set_properties [`BACKGROUND "light grey"; `FOREGROUND "grey"]
+
+
 let () = Model.reset ()
 
 let model_reset ()  = Model.reset () 
@@ -239,47 +254,79 @@ let refresh = ref 0
 let do_refresh () =
   !refresh mod !refresh_rate = 0 
 
+let treeview = GTree.view ~model:Model.model ~packing:sw#add ()
+
 (* graph drawing *)
-let draw tortue canvas =
+let draw tortue canvas (vc : GTree.view_column) renderer =
   match !root with
     | None -> ()
     | Some root -> 
       try 
         Ed_draw.draw_graph root tortue;
-        Ed_display.draw_graph root canvas; 
         if do_refresh () then
-          canvas_root#canvas#update_now ()
+          canvas_root#canvas#update_now ();
+        let center_node = Ed_display.draw_graph root canvas in
+        match center_node with 
+          |None -> ()
+          |Some v -> 
+            let row = Model.find_row v in
+            center_row := Model.model#get ~row:row ~column:Model.name;
+            let path = Model.model#get_path row in 
+            treeview#scroll_to_cell ~align:(0.5, 0.5) path vc;
+            vc#set_cell_data_func renderer (background_cell_data renderer);
       with Not_found  -> ()
+
         
-let refresh_draw () =
+let refresh_draw vc renderer () =
   refresh := 0;    
   let tor = make_turtle !origine 0.0 in
-  draw tor canvas_root
+  draw tor canvas_root vc renderer
 
-let refresh_display () =
-  Ed_display.draw_graph !root canvas_root
-
-let root_change vertex ()= 
+let root_change vertex vc renderer () = 
   root := vertex; 
   origine := start_point;
   let turtle = make_turtle_origine () in
-  draw turtle canvas_root
+  draw turtle canvas_root vc renderer
 
-let node_selection ~(model : GTree.tree_store) path =
+let node_selection ~(model : GTree.tree_store) path vc renderer =
   let row = model#get_iter path in
   let vertex = model#get ~row ~column: Model.vertex in
-  root_change (Some vertex) ()
+  root_change (Some vertex) vc renderer ()
+
+(* treeview *)
+let add_columns ~(view : GTree.view) ~model =
+  let renderer = GTree.cell_renderer_text [`XALIGN 0.] in
+  let vc = GTree.view_column ~title:"Nodes" ~renderer:(renderer, ["text", Model.name]) ()
+in
+  ignore (view#append_column vc);
+  vc#set_sizing `AUTOSIZE;
+  ignore (view#selection#connect#after#changed ~callback:
+            begin
+              fun () ->
+                List.iter
+                  (fun p -> node_selection ~model p vc renderer)
+                  view#selection#get_selected_rows;
+            end);
+  vc, renderer
+
+let () = treeview#set_rules_hint true
+let () = treeview#selection#set_mode `MULTIPLE
+let (vc, renderer) = add_columns ~view:treeview ~model:Model.model
+
+let refresh_display () =
+  ignore (Ed_display.draw_graph !root canvas_root)
 
 (* usual function ref, for vertex event *)
 let set_vertex_event_fun = ref (fun _ -> ())
 
+
 let contextual_menu vertex ev =
   let menu = new GMenu.factory (GMenu.menu ()) in
-  ignore (menu#add_item "As root" ~callback:(root_change (Some vertex)));
+  ignore (menu#add_item "As root" ~callback:(root_change (Some vertex) vc renderer));
   menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
 
 (* event for each vertex of canvas *)
-let vertex_event vertex item ellispe ev =
+let vertex_event vertex item ellipse ev =
   (* let vertex_info = G.V.label vertex in*)
   begin match ev with
     | `ENTER_NOTIFY _ -> 
@@ -290,13 +337,12 @@ let vertex_event vertex item ellispe ev =
     | `LEAVE_NOTIFY ev ->
       if not (Gdk.Convert.test_modifier `BUTTON1 (GdkEvent.Crossing.state ev))
       then begin
-
         update_vertex vertex Unfocus;
         refresh_display ()
       end
 
     | `BUTTON_RELEASE ev ->
-      ellispe#parent#ungrab (GdkEvent.Button.time ev);
+      ellipse#parent#ungrab (GdkEvent.Button.time ev);
 
     | `MOTION_NOTIFY ev -> 
       incr refresh;
@@ -304,23 +350,22 @@ let vertex_event vertex item ellispe ev =
       if Gdk.Convert.test_modifier `BUTTON1 state  then
         begin
           let curs = Gdk.Cursor.create `FLEUR in
-          ellispe#parent#grab [`POINTER_MOTION; `BUTTON_RELEASE]
+          ellipse#parent#grab [`POINTER_MOTION; `BUTTON_RELEASE]
             curs (GdkEvent.Button.time ev);
           if do_refresh ()
           then begin
             let old_origin = !origine in
-            let turtle = motion_turtle ellispe ev in
-            let hspace = hspace_dist_sqr turtle in 
-            if hspace <=  rlimit_sqr then begin
-              draw turtle canvas_root;
+            let turtle = motion_turtle ellipse ev in
+            let hspace = hspace_dist_sqr turtle in
+            if hspace <= rlimit_sqr then begin
+              draw turtle canvas_root vc renderer;
             end else begin
               origine := old_origin;
               let turtle = { turtle with pos = old_origin } in
-              draw turtle canvas_root
+              draw turtle canvas_root vc renderer
             end
           end
         end
-
     | `BUTTON_PRESS ev ->  
       if (GdkEvent.Button.button ev) = 3
       then 
@@ -344,7 +389,7 @@ let vertex_event vertex item ellispe ev =
                  v.label_mode <- Num_Label;
                  G.iter_succ_e (fun x -> let e = G.E.label x in
                                          e.visible_label <- false) !graph vertex );
-              refresh_draw ()
+              refresh_draw vc renderer ()
         end
 
     | _ ->
@@ -361,28 +406,9 @@ let () = set_vertex_event_fun := set_vertex_event
 let set_canvas_event () =
   G.iter_vertex set_vertex_event !graph
 
-(* treeview *)
-let add_columns ~(view : GTree.view) ~model =
-  let renderer = GTree.cell_renderer_text [`XALIGN 0.] in
-  let vc = GTree.view_column ~title:"Nodes" ~renderer:(renderer, ["text", Model.name]) ()
-  in
-  ignore (view#append_column vc);
-  (* vc#set_sizing `FIXED; *)
-  (* vc#set_fixed_width 100; *)
-  vc#set_sizing `AUTOSIZE;
-  view#selection#connect#after#changed ~callback:
-    begin fun () ->
-      List.iter
-        (fun p -> node_selection ~model p)
-        view#selection#get_selected_rows;
-    end
 
 
-let treeview = GTree.view ~model:Model.model ~packing:sw#add ()
-let () = treeview#set_rules_hint true
-let () = treeview#selection#set_mode `MULTIPLE
-let _ = add_columns ~view:treeview ~model:Model.model
- 
+
 (* reset *)
 
 let reset_table_and_canvas () =
@@ -422,7 +448,7 @@ let split_node_info x m v changed_l  =
               if array_name = x then
                 List.mem after l
               else acc
-        with Not_found -> acc ) false !var_l
+        with Not_found -> acc) false !var_l
   in
   (let pos, eq = 
      try (Str.search_forward (Str.regexp "[=]") x 0, true)
@@ -440,7 +466,7 @@ let split_node_info x m v changed_l  =
        (let a = Var_Map.find before m in
         if a <> after && var_find before after before then
           ((G.V.label v).vertex_mode <- VarChange;
-           (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
+            (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
            ^ a ^ " -> " ^ after;
            m)
         else
@@ -485,7 +511,7 @@ let link_node before v after =
      let e = G.E.create n (make_edge_info_label transition true) v in
      (G.V.label v).var_map <- build_map (G.V.label n).var_map v after;
      G.add_edge_e !graph e;
-     ignore (Model.add_edge n v))
+     ignore (Model.add_edge n v) )
   with Not_found ->
     match !root with
       |None -> failwith "pb None"
@@ -496,6 +522,17 @@ let link_node before v after =
         G.add_edge_e !graph e;
         ignore (Model.add_edge x v)
           
+
+let rec color_edges v = 
+  match !root with 
+    |None -> ()
+    |Some r -> 
+      if r <> v then 
+        begin
+          G.iter_pred_e (fun edge -> (G.E.label edge).edge_mode <- HighlightPath) !graph v;
+          G.iter_pred (fun vertex -> color_edges vertex) !graph v;
+        end
+  
 let create_node s unsafe_l  =
   let pos = Str.search_forward (Str.regexp "=") s 0 in
   let before = Str.global_replace (Str.regexp "[\n| ]+") ""
@@ -520,65 +557,14 @@ let create_node s unsafe_l  =
   (G.V.label v).label <- (G.V.label v).num_label;
   HT.add ht before v;
   G.add_vertex !graph v;
+  if (G.V.label v).vertex_mode = VarChange then
+  color_edges v;
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
   let tor = make_turtle !origine 0.0 in
-  draw tor canvas_root;
+  draw tor canvas_root vc renderer;
   incr cpt;
   Thread.delay 0.001
-
-(* let rec list_to_node curr_node unsafe_l = function *)
-(*   |[] -> () *)
-(*   |[x] -> *)
-(*     (try *)
-(*        let pos = Str.search_forward (Str.regexp "==") x 0 in *)
-(*        let before = Str.string_before x pos in *)
-(*        create_node before unsafe_l; *)
-(*        raise End_trace *)
-(*      with Not_found -> (curr_node := !curr_node ^ x)) *)
-(*   |x::s -> *)
-(*     curr_node := !curr_node ^ x; *)
-(*     create_node !curr_node unsafe_l; *)
-(*     curr_node := ""; *)
-(*     list_to_node curr_node unsafe_l s *)
-      
-(* let rec build_node curr_node str unsafe_l  = *)
-(*   let str_l = Str.split (Str.regexp "node [0-9]+:") str in *)
-(*   match str_l with *)
-(*     |[] -> () *)
-(*     |[x] -> *)
-(*       (if !curr_node <> "" then *)
-(*           create_node !curr_node unsafe_l; *)
-(*        curr_node := x) *)
-(*     |x::s -> *)
-(*       list_to_node curr_node unsafe_l str_l *)
-
-(* let load_graph unsafe_l = *)
-(*   try *)
-(*     let curr_node = ref "" in *)
-(*     while true do *)
-(*       try *)
-(*         if !kill_thread then raise KillThread; *)
-(*         Mutex.lock m; *)
-(*         while Queue.length graph_trace = 0 do *)
-(*           Condition.wait c m *)
-(*         done; *)
-(*         let str = Queue.pop graph_trace in *)
-(*         Mutex.unlock m; *)
-(*         if Str.string_match (Str.regexp "==") str 0 then *)
-(*           (build_node curr_node str unsafe_l ; *)
-(*            raise End_trace) *)
-(*         else if Str.string_match (Str.regexp "node [0-9]+:") str 0 then *)
-(*           build_node curr_node str unsafe_l *)
-(*         else *)
-(*           curr_node := !curr_node ^ str *)
-(*       with Queue.Empty ->  Mutex.unlock m; *)
-(*     done *)
-(*   with *)
-(*     |End_trace -> (Mutex.lock m_end; end_load_graph := true; Condition.signal c_end; Mutex.unlock m_end) *)
-(*     |KillThread -> () *)
-
-
 
 
 let rec list_to_node curr_node unsafe_l = function
@@ -653,6 +639,33 @@ let show_tree file  =
     |KillThread ->
       ignore (Unix.close_process_in ic)
 
+(* let update_model () =  *)
+(*   try *)
+(*     while true do *)
+(*       if !kill_thread || !end_show_tree || !end_load_graph then  *)
+(*         raise KillThread; *)
+(*       (\* Mutex.lock m_model; *\) *)
+(*       (\* while Queue.length model = 0 do *\) *)
+(*       (\*   Condition.wait c_model m *\) *)
+(*         (\* done; *\) *)
+(*         try *)
+(*           Mutex.lock m_model;  *)
+(*           let m = Queue.pop model in *)
+(*           Mutex.unlock m_model;  *)
+(*           (match m with *)
+(*             |Node n -> (Model.add_vertex n; *)
+(*                         Ed_display.add_node canvas_root n; *)
+(*                         !set_vertex_event_fun n) *)
+(*             |UnsafeNode n-> (Model.add_vertex_unsafe n; *)
+(*                          Ed_display.add_node canvas_root n; *)
+(*                          !set_vertex_event_fun n) *)
+(*             |Edge (n1, n2) -> Model.add_edge n1 n2) *)
+(*         with Queue.Empty -> (Printf.printf " " ; Mutex.unlock m_model); *)
+(*     done  *)
+(*   with  *)
+(*     |KillThread -> (end_show_tree := false; end_load_graph := false; Mutex.unlock m_model) *)
+
+
 let safe_or_unsafe () =
   while not (!end_load_graph && !end_show_tree) do
     Condition.wait c_end m
@@ -661,39 +674,17 @@ let safe_or_unsafe () =
   while Queue.length graph_trace <> 0 do
     str := !str ^ (Queue.pop graph_trace)
   done;
-    try
-      (let _ = Str.search_forward (Str.regexp "UNSAFE") !str 0 in
-       result_image#set_stock `DIALOG_ERROR;
-       result_label#set_text "Unsafe")
-    with Not_found ->
-      (result_image#set_stock `APPLY;
-       result_label#set_text "Safe");
+  (try
+    (let _ = Str.search_forward (Str.regexp "UNSAFE") !str 0 in
+     result_image#set_stock `DIALOG_ERROR;
+     result_label#set_text "Unsafe")
+  with Not_found ->
+    (result_image#set_stock `APPLY;
+     result_label#set_text "Safe"));
   end_load_graph := false;
   end_show_tree := false
+        
 
-(* let update_model () =  *)
-(*   try *)
-(*     while true do *)
-(*       if !kill_thread then raise KillThread; *)
-(*       Mutex.lock m_model; *)
-(*       while Queue.length model = 0 do *)
-(*         Condition.wait c_model m *)
-(*       done; *)
-(*       let m = Queue.pop model in *)
-(*       Mutex.unlock m_model; *)
-(*       (match m with *)
-(*         |Node n -> (Model.add_vertex n; *)
-(*                     Ed_display.add_node canvas_root n; *)
-(*                     !set_vertex_event_fun n) *)
-(*         |UnsafeNode n-> (Model.add_vertex_unsafe n; *)
-(*                          Ed_display.add_node canvas_root n; *)
-(*                          !set_vertex_event_fun n) *)
-(*         |Edge (n1, n2) -> Model.add_edge n1 n2); *)
-(*       let tor = make_turtle !origine 0.0 in *)
-(*       draw tor canvas_root; *)
-(*       Thread.delay 0.001 *)
-(*     done *)
-(*   with KillThread -> () *)
 
 
 let tree (file, unsafe_l) =
@@ -711,7 +702,7 @@ let open_graph file unsafe_l =
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; false));
   GtkThread.async (fun () -> tree (file, unsafe_l)) ();
-  draw (make_turtle_origine ()) canvas_root;
+  draw (make_turtle_origine ()) canvas_root vc renderer;
   GtkThread.main ()
     
 

@@ -206,6 +206,7 @@ let add_value_var l =
       Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l
 
 let select_var l new_path ast =
+  Printf.printf "length : %d " (List.length !Ed_main.var_l);
   let t_edit_l = ref [] in
   let wnd = GWindow.window
     ~title:"Watch variables"
@@ -219,7 +220,7 @@ let select_var l new_path ast =
     ~packing:(v_box#pack ~expand:true ~fill:true) () in
   let table = GPack.table
     ~columns:2
-    ~rows:(List.length !Ed_main.var_l)
+    ~rows:(M.cardinal !var_l) 
     ~row_spacings:5
     ~col_spacings:10
     ~packing:(table_fr#add) () in
@@ -236,11 +237,11 @@ let select_var l new_path ast =
   let button_cancel = GButton.button
     ~label:"Cancel"
     ~stock:`CANCEL
-    ~packing:(button_box#add)() in
+    ~packing:(button_box#add) () in
   let button_show = GButton.button
     ~label:"Show Graph"
     ~stock:`APPLY
-    ~packing:(button_box#add)() in
+    ~packing:(button_box#add) () in
   ignore (button_show#event#connect#button_press 
             ~callback:(fun b -> 
               add_value_var !t_edit_l;
