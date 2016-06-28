@@ -418,7 +418,7 @@ let reset_table_and_canvas () =
   nb_selected := 0
 
 
-let split_node_info x m v changed_l  =
+let split_node_info x m v changed_l mode=
   let var_find before after  =
     List.fold_left (fun acc (x, var_i) ->
       match var_i with 
@@ -432,8 +432,8 @@ let split_node_info x m v changed_l  =
                   (Str.string_before before pos) in
                 if array_name = x then
                   true
-                else acc
-              with Not_found -> acc)
+                else (mode := false; acc)
+              with Not_found -> (mode := false; acc))
         |Some l ->  
           if x = before then
             List.mem after l
@@ -442,10 +442,10 @@ let split_node_info x m v changed_l  =
               let pos = Str.search_forward (Str.regexp "\\[") before 0 in
               let array_name = Str.global_replace (Str.regexp "[\n| ]+") ""
                 (Str.string_before before pos) in
-              if array_name = x then
-                List.mem after l
-              else acc
-            with Not_found -> acc) false !var_l
+              if array_name = x && List.mem after l then
+                true
+              else (mode := false; acc)
+            with Not_found -> (mode := false; acc)) false !var_l
   in
   (let pos, eq = 
      try (Str.search_forward (Str.regexp "[=]") x 0, true)
@@ -471,7 +471,7 @@ let split_node_info x m v changed_l  =
      with Not_found -> m in
    (before, after, m))
     
-let rec build_map m v l  =
+let rec build_map m v l mode  =
   let var_init before after m = 
     if not (Var_Map.mem before m) && 
       List.fold_left (fun acc (x, vars) ->
@@ -493,15 +493,15 @@ let rec build_map m v l  =
         |[] -> failwith "pb format trace 2"
         |x::_ ->
           (try
-             let before, after, m = split_node_info x m v changed_l  in
+             let before, after, m = split_node_info x m v changed_l mode  in
              var_init before after m;
              Var_Map.add before after m
            with Not_found -> failwith "erreur build map"))
     |x::s ->
       try
-        let before, after, m = split_node_info x m v changed_l in
+        let before, after, m = split_node_info x m v changed_l mode in
         var_init before after m;
-        build_map (Var_Map.add before after m) v s
+        build_map (Var_Map.add before after m) v s mode
       with Not_found -> failwith "erreur build map"
         
         
@@ -514,6 +514,7 @@ let rec node_name = function
   |x::s -> (String.trim x)^"\n"^(node_name s)
     
 let link_node before v after =
+  let mode = ref true in 
   try
     (let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in
      let transition = Str.string_before before arrow_pos in
@@ -521,15 +522,16 @@ let link_node before v after =
        (Str.string_after before (arrow_pos + 2)) in
      let n = HT.find ht node in
      let e = G.E.create n (make_edge_info_label transition true) v in
-     (G.V.label v).var_map <- build_map (G.V.label n).var_map v after;
-     G.add_edge_e !graph e;
-     ignore (Model.add_edge n v) )
+     (G.V.label v).var_map <- build_map (G.V.label n).var_map v after mode;
+       G.add_edge_e !graph e;
+       ignore (Model.add_edge n v))
   with Not_found ->
     match !root with
       |None -> failwith "pb None"
       |Some x ->
         let e = G.E.create x (make_edge_info_label "" true) v in
-        (G.V.label v).var_map <- build_map (Var_Map.empty) v after;
+        (G.V.label v).var_map <- build_map (Var_Map.empty) v after mode;
+        if not !mode then failwith "false";
         (G.V.label v).vertex_mode <- Unsafe;
         G.add_edge_e !graph e;
         ignore (Model.add_edge x v)
