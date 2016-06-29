@@ -338,6 +338,7 @@ let draw_graph _root canvas  =
               | Selected_Focused -> color_change_successor_edge line line2 color_selected_focused_successor_edge;
               | HighlightPath -> color_change_successor_edge line line2 color_line_varchange;
               | HighlightPath_Focused -> color_change_successor_edge line line2 color_line_varchange;
+              | Path -> color_change_successor_edge line line2  "green";
               |_ ->  color_change_successor_edge line line2 color_successor_edge;
           end;
           if show then

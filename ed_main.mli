@@ -15,6 +15,11 @@ val var_l : (* (GText.iter * GText.iter) Var_L.t *) (string * string list option
 (* val refresh_display : unit -> unit *)
 
 (* val refresh_draw : unit -> unit *)
+(* val mode_equals : bool ref *)
+
+val mode_change : bool ref
+
+val mode_and : bool ref
 
 val init : string -> int -> unit
 

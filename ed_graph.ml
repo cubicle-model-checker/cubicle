@@ -20,14 +20,23 @@
 open Graph
 open Ed_hyper
 
+exception Diff_Node
+
 type visibility = Visible | BorderNode | Hidden
 
 type label_t = Num_Label | Str_Label 
 
-type mode = Normal | Selected | Focused | Selected_Focused | Unsafe | VarChange |
-    Unsafe_Focused | VarChange_Focused | VarInit | VarInit_Focused | HighlightPath | HighlightPath_Focused
+type mode = 
+  | Normal | Focused
+  | Selected | Selected_Focused 
+  | Unsafe | Unsafe_Focused 
+  | VarChange | VarChange_Focused
+  | VarInit | VarInit_Focused 
+  | HighlightPath | HighlightPath_Focused 
+  | Path
 
 module Var_Map = Map.Make(String)
+
 
 type node_info = 
   { 
@@ -110,6 +119,8 @@ module G =
   Imperative.Digraph.AbstractLabeled(struct type t = node_info end)(EDGE)
 
 module B = Builder.I(G)
+ 
+
 
 (* current graph *) 
 let graph = ref (G.create ())
@@ -256,7 +267,6 @@ let select_all () =
     ) !graph;
   G.iter_edges_e (fun e -> let e = G.E.label e in e.edge_mode <- Selected) !graph
 
-
 let unselect_all () =  
   G.iter_vertex (fun v -> 
       if (is_selected v)
@@ -266,5 +276,100 @@ let unselect_all () =
         decr nb_selected 
       end
     ) !graph;
-  G.iter_edges_e (fun e -> let e = G.E.label e in e.edge_mode <- Normal) !graph
 
+  G.iter_edges_e (fun e -> let e = G.E.label e in e.edge_mode <- Normal) !graph
+  
+let find_nodes l  =
+  G.fold_vertex (fun v acc ->
+    try 
+      List.iter (fun (x, var_i) ->
+        try
+          let var_val = Var_Map.find x (G.V.label v).var_map in
+            if not (List.mem var_val var_i) then 
+              raise Diff_Node
+        with Not_found -> raise Diff_Node) l;
+      v::acc
+    with Diff_Node -> acc) !graph []
+
+let mode_node v m =
+  try 
+    List.iter (fun (x, var_i) ->
+      try
+        let var_val = Var_Map.find x (G.V.label v).var_map in
+        if not (List.mem var_val var_i) then 
+          raise Diff_Node
+      with Not_found -> raise Diff_Node) m;
+    true
+  with Diff_Node -> false
+
+(* let path_between m1 m2 = *)
+(*   let module PWeight = struct *)
+(*   type edge = G.E.t *)
+(*   type t = int *)
+(*   let weight x = 0 *)
+(*   let compare e1 e2 = 0 *)
+(*   let add e1 e2 = 0 *)
+(*   let zero = 0 *)
+(*   end in *)
+(*   let module D = Path.Dijkstra(G)(PWeight) in *)
+(*   let nodes_m1 = find_nodes m1 in *)
+(*   let nodes_m2 = find_nodes m2 in *)
+(*   List.iter (fun v1 -> *)
+(*     (List.iter (fun v2 -> *)
+(*       try *)
+(*         let (path, _ ) = D.shortest_path !graph v1 v2  in *)
+(*         List.iter (fun e -> (G.E.label e).edge_mode <- Path) path *)
+(*       with Not_found -> ()) nodes_m2 )) nodes_m1 *)
+
+
+(* let rec test mode acc edge paths = *)
+(*   (\** Recupérer noeud destination de edge **\) *)
+(*   let dst = G.E.dst edge in *)
+(*   (\** Si le noeud de destination correspond au mode alors on renvoie edge **\) *)
+(*   if mode_node dst mode then *)
+(*     paths := (edge::acc) :: !paths *)
+(*   else *)
+(*     let succ_e = G.succ_e !graph dst in *)
+(*     List.iter (fun edge -> *)
+(*        test mode (edge::acc) edge paths) succ_e *)
+
+let rec get_path mode_dst mode_src acc edge paths =
+  Printf.printf "test\n";
+  let src = G.E.src edge in
+  if mode_node src mode_dst then
+    paths := (edge::acc) :: !paths
+  else
+    let pred_e = G.pred_e !graph src in
+    (* if src = !root then () else *)
+    if (G.V.label src).num_label = "1" then () else
+      (Printf.printf "%s\n" (G.V.label src).num_label; 
+    Printf.printf "%d" (List.length pred_e);
+    List.iter (fun e ->
+      Printf.printf "%s\n" (G.E.label e).label;
+        print_newline ();
+      if mode_node src mode_src then
+        get_path mode_dst mode_src [] e paths 
+      else
+        get_path mode_dst mode_src (edge::acc) e paths) pred_e)
+
+let path_between m1 m2  =
+  let node_m2 = find_nodes m2 in
+  List.iter (fun n ->
+    Printf.printf "Destination : %s" (G.V.label n).num_label;
+    print_newline ();
+    let edge_list = G.pred_e !graph n in
+    List.iter (fun e ->
+      let paths = ref [] in
+      get_path m1 m2 [] e paths;
+      List.iter ( fun p ->
+        List.iter (fun e -> 
+          let src = G.E.src e in 
+          let dest = G.E.dst e in 
+          Printf.printf " Src : %s, Dest : %s\n" (G.V.label src).num_label (G.V.label dest).num_label;
+          (G.E.label e).edge_mode <- Path) p) !paths
+    ) edge_list
+  ) node_m2
+
+
+  
+  

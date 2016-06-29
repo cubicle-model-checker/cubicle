@@ -19,7 +19,6 @@ let wd = if gui_debug then 1600 else 1000
 
 module M = Map.Make (String)
 
-
 let var_l = ref M.empty 
 
 let window =
@@ -232,23 +231,52 @@ let select_var l new_path ast =
     table#attach 0 !cpt (label#coerce);
     table#attach 1 !cpt (text_entry#coerce);
     incr cpt) !var_l ;
+  let h_box = GPack.hbox ~packing:(v_box#pack) () in 
+  let radio_button_box =  GPack.button_box
+    ~packing:(h_box#pack) `VERTICAL () in
+  let radio_button_box2 =  GPack.button_box
+    ~packing:(h_box#pack) `VERTICAL () in
   let button_box = GPack.button_box
     ~packing:(v_box#pack) `HORIZONTAL () in
   let button_cancel = GButton.button
     ~label:"Cancel"
     ~stock:`CANCEL
     ~packing:(button_box#add) () in
+  let button_value = GButton.radio_button 
+    ~label:"Valeur"
+    ~packing:(radio_button_box#add) () in
+  let button_change = GButton.radio_button 
+    ~group:button_value#group ~label:"Change" 
+    ~packing:(radio_button_box#add)() in
+  let button_or = GButton.radio_button
+    ~label:"||"
+    ~packing:(radio_button_box2#add) () in 
+  let button_and = GButton.radio_button
+    ~label:"&&"
+    ~group:button_or#group
+    ~packing:(radio_button_box2#add) () in 
+  (* let button_var_watch_mode = GButton.check_button *)
+  (*   ~label:"Suivi egal" *)
+  (*   ~active:false *)
+  (*   ~packing:(radio_button_box#add) () in *)
   let button_show = GButton.button
     ~label:"Show Graph"
     ~stock:`APPLY
     ~packing:(button_box#add) () in
+  (* ignore (button_var_watch_mode#connect#toggled ~callback:(fun b -> *)
+  (*   if button_var_watch_mode#active then Ed_main.mode_equals := true *)
+  (*   (\* else Ed_main.mode_equals := false *\))); *)
   ignore (button_show#event#connect#button_press 
             ~callback:(fun b -> 
+              if button_change#active then Ed_main.mode_change := true;
+              if button_and#active then Ed_main.mode_and := true;
               add_value_var !t_edit_l;
               wnd#destroy ();
               Ed_main.init new_path (punsafe_length (!ast)); true));
   ignore (button_cancel#event#connect#button_press
             ~callback:(fun b -> wnd#destroy (); true));
+  Ed_main.mode_change := false;
+  Ed_main.mode_and := false; 
   wnd#show ()
 
 

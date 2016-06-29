@@ -26,21 +26,19 @@ let graph_trace = Queue.create ()
 
 type model_t = Edge of (G.V.t * G.V.t) | Node of G.V.t | UnsafeNode of G.V.t 
 
-(* let model = Queue.create () *)
+(* let mode_equals = ref false  *)
+
+let mode_change = ref false
+
+let mode_and = ref false 
 
 let m = Mutex.create ()
 
 let m_end = Mutex.create ()
 
-(* let m_model = Mutex.create ()  *)
-
 let c = Condition.create ()
 
 let c_end = Condition.create ()
-
-(* let c_model = Condition.create () *)
-
-module Var_L = Map.Make (String)
 
 let var_l = ref []
 
@@ -57,6 +55,11 @@ exception KillThread
 let kill_thread = ref false
 
 let cpt = ref 1
+
+(* let model = Queue.create () *)
+(* let m_model = Mutex.create ()  *)
+(* let c_model = Condition.create () *)
+(* module Var_L = Map.Make (String) *)
 
 module HTString  =
   (struct
@@ -204,6 +207,10 @@ let stop_button =
   toolbar#insert_button
     ~text:" Abort"
     ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce () 
+let test_button = 
+  toolbar#insert_button 
+    ~text:" TEST" 
+    ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce () 
 
 let resultbox, result_image, result_label =
   toolbar#insert_space ();
@@ -212,6 +219,9 @@ let resultbox, result_image, result_label =
     ~packing:hbox#add () in
   let result_label = GMisc.label ~text:" " ~packing:hbox#add () in
   ignore(toolbar#insert_widget hbox#coerce); hbox, result_image, result_label
+
+
+
 
 let menu_bar_box = GPack.vbox ~packing:v_box#pack () 
 
@@ -409,7 +419,7 @@ let set_canvas_event () =
 (* reset *)
 
 let reset_table_and_canvas () =
-  let l =  canvas_root#get_items in
+  let l = canvas_root#get_items in
   List.iter (fun v -> trace v#destroy ()) l;
   H2.clear intern_edges;
   H2.clear successor_edges;
@@ -418,8 +428,8 @@ let reset_table_and_canvas () =
   nb_selected := 0
 
 
-let split_node_info x m v changed_l mode=
-  let var_find before after  =
+let split_node_info x m v changed_l mode new_name =
+  let var_find_or before after  =
     List.fold_left (fun acc (x, var_i) ->
       match var_i with 
         |None -> 
@@ -432,8 +442,8 @@ let split_node_info x m v changed_l mode=
                   (Str.string_before before pos) in
                 if array_name = x then
                   true
-                else (mode := false; acc)
-              with Not_found -> (mode := false; acc))
+                else acc
+              with Not_found -> acc)
         |Some l ->  
           if x = before then
             List.mem after l
@@ -444,8 +454,8 @@ let split_node_info x m v changed_l mode=
                 (Str.string_before before pos) in
               if array_name = x && List.mem after l then
                 true
-              else (mode := false; acc)
-            with Not_found -> (mode := false; acc)) false !var_l
+              else  acc
+            with Not_found ->  acc) false !var_l
   in
   (let pos, eq = 
      try (Str.search_forward (Str.regexp "[=]") x 0, true)
@@ -460,18 +470,25 @@ let split_node_info x m v changed_l mode=
      (Str.string_after x (pos + 1)) in
    let m =
      try
-       (let a = Var_Map.find before m in
-        if a <> after && var_find before after  then
-          ((G.V.label v).vertex_mode <- VarChange;
-           (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
-           ^ a ^ " -> " ^ after;
-           m)
-        else
-          m)
+       if !mode_change then 
+         (let a = Var_Map.find before m in
+          let var_find = 
+            (* if !mode_and then var_find_and before after *)
+            (* else  *)var_find_or before after in
+          if a <> after && var_find then
+            ((G.V.label v).vertex_mode <- VarChange;
+             if a <> after then 
+             (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
+             ^ a ^ " -> " ^ after
+             else
+               (G.V.label v).num_label <- (G.V.label v).num_label ^ "\n" ^ before ^ " :\n"
+               ^ a 
+););
+       m
      with Not_found -> m in
    (before, after, m))
     
-let rec build_map m v l mode  =
+let rec build_map m v l mode new_name=
   let var_init before after m = 
     if not (Var_Map.mem before m) && 
       List.fold_left (fun acc (x, vars) ->
@@ -493,15 +510,15 @@ let rec build_map m v l mode  =
         |[] -> failwith "pb format trace 2"
         |x::_ ->
           (try
-             let before, after, m = split_node_info x m v changed_l mode  in
+             let before, after, m = split_node_info x m v changed_l mode new_name in
              var_init before after m;
              Var_Map.add before after m
            with Not_found -> failwith "erreur build map"))
     |x::s ->
       try
-        let before, after, m = split_node_info x m v changed_l mode in
+        let before, after, m = split_node_info x m v changed_l mode new_name in
         var_init before after m;
-        build_map (Var_Map.add before after m) v s mode
+        build_map (Var_Map.add before after m) v s mode new_name
       with Not_found -> failwith "erreur build map"
         
         
@@ -515,6 +532,7 @@ let rec node_name = function
     
 let link_node before v after =
   let mode = ref true in 
+  let new_name = ref "" in
   try
     (let arrow_pos = Str.search_forward (Str.regexp "->") before 0 in
      let transition = Str.string_before before arrow_pos in
@@ -522,7 +540,27 @@ let link_node before v after =
        (Str.string_after before (arrow_pos + 2)) in
      let n = HT.find ht node in
      let e = G.E.create n (make_edge_info_label transition true) v in
-     (G.V.label v).var_map <- build_map (G.V.label n).var_map v after mode;
+     let map = build_map (G.V.label n).var_map v after mode new_name in 
+     (G.V.label v).var_map <- map;
+     if not !mode_change then 
+       (let label = ref "" in 
+        let b = List.fold_left (fun acc (x, var_i) -> 
+       match var_i with 
+         |None -> false
+         |Some l -> 
+           try
+             let var_val = Var_Map.find x map in
+             if List.mem var_val l then 
+               (label := !label ^ "\n" ^ x ^ ":\n" ^ var_val;
+                acc)
+             else false
+           with Not_found -> false) true !var_l in
+       if b then 
+         begin
+           (G.V.label v).vertex_mode <- VarChange;
+           (G.V.label v).num_label <- (G.V.label v).num_label  ^ !label
+         end
+     );
        G.add_edge_e !graph e;
        ignore (Model.add_edge n v))
   with Not_found ->
@@ -530,7 +568,7 @@ let link_node before v after =
       |None -> failwith "pb None"
       |Some x ->
         let e = G.E.create x (make_edge_info_label "" true) v in
-        (G.V.label v).var_map <- build_map (Var_Map.empty) v after mode;
+        (G.V.label v).var_map <- build_map (Var_Map.empty) v after mode new_name;
         if not !mode then failwith "false";
         (G.V.label v).vertex_mode <- Unsafe;
         G.add_edge_e !graph e;
@@ -728,6 +766,9 @@ let open_graph file unsafe_l =
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; false));
+  ignore (test_button#event#connect#button_press 
+            ~callback: (fun b -> path_between ["Curcmd", ["Empty"]]  
+              [("Curcmd", ["Reqe"])]; (* path_between ["Exgntd", ["True"]] ["Exgntd", ["False"]]; *) true));
   GtkThread.async (fun () -> tree (file, unsafe_l)) ();
   draw (make_turtle_origine ()) canvas_root vc renderer;
   GtkThread.main ()
