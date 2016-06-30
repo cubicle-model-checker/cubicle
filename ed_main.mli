@@ -19,7 +19,9 @@ val var_l : (* (GText.iter * GText.iter) Var_L.t *) (string * string list option
 
 val mode_change : bool ref
 
-val mode_and : bool ref
+val mode_value : bool ref
+
+(* val mode_and : bool ref *)
 
 val init : string -> int -> unit
 

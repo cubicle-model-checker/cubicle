@@ -253,7 +253,6 @@ let update_vertex vertex event =
     ) !graph vertex
 
 
-
 (* to select and unselect all vertices *)
 
 let select_all () =  
@@ -333,42 +332,24 @@ let mode_node v m =
 (*     List.iter (fun edge -> *)
 (*        test mode (edge::acc) edge paths) succ_e *)
 
-let rec get_path mode_dst mode_src acc edge paths =
-  Printf.printf "test\n";
+let rec get_path dst_mode src_mode acc edge paths =
   let src = G.E.src edge in
-  if mode_node src mode_dst then
+  (** Si on trouve un noeud dans l'état scr, on ajoute le chemin à la liste *)
+  if mode_node src dst_mode then
     paths := (edge::acc) :: !paths
   else
+    (** Sinon on continue jusqu'à trouver la racine ou
+        un noeud dans l'état src *)
     let pred_e = G.pred_e !graph src in
-    (* if src = !root then () else *)
-    if (G.V.label src).num_label = "1" then () else
-      (Printf.printf "%s\n" (G.V.label src).num_label; 
-    Printf.printf "%d" (List.length pred_e);
-    List.iter (fun e ->
-      Printf.printf "%s\n" (G.E.label e).label;
-        print_newline ();
-      if mode_node src mode_src then
-        get_path mode_dst mode_src [] e paths 
-      else
-        get_path mode_dst mode_src (edge::acc) e paths) pred_e)
+    if (G.V.label src).num_label <> "1" then 
+      (List.iter (fun e ->
+        if mode_node src src_mode then
+          get_path dst_mode src_mode [] e paths 
+        else
+          get_path dst_mode src_mode (edge::acc) e paths) pred_e)
 
-let path_between m1 m2  =
-  let node_m2 = find_nodes m2 in
-  List.iter (fun n ->
-    Printf.printf "Destination : %s" (G.V.label n).num_label;
-    print_newline ();
-    let edge_list = G.pred_e !graph n in
-    List.iter (fun e ->
-      let paths = ref [] in
-      get_path m1 m2 [] e paths;
-      List.iter ( fun p ->
-        List.iter (fun e -> 
-          let src = G.E.src e in 
-          let dest = G.E.dst e in 
-          Printf.printf " Src : %s, Dest : %s\n" (G.V.label src).num_label (G.V.label dest).num_label;
-          (G.E.label e).edge_mode <- Path) p) !paths
-    ) edge_list
-  ) node_m2
+
+
 
 
   

@@ -22,8 +22,9 @@ open Ed_graph
 
 let debug = ref false
 
+
 (* Original window size *)
-let (w,h) = (1200.,800.)
+let (w,h) = (1000., 800.)
 
 (* differents definitions *)
 let color_circle = "grey99"
@@ -36,7 +37,7 @@ let color_vertex = "grey75"
 let color_varchange = "#98cfd6"
 let color_varchange_focused = "#98cfd6"
 
-let color_line_varchange = "#79a3a8"
+let color_line_varchange = (* "#79a3a8" *) "red"
 
 let color_initvar = "#9c98b1"
 let color_initvar_focused = "#9c98b1"
@@ -141,19 +142,20 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   let _,lpoints = list_points turtle start steps in
   let points = Array.of_list lpoints in
   let new_l = half_list lpoints in
-  let new_points = Array.of_list new_l in 
-  line2#set [`POINTS new_points];
+  let new_points = Array.of_list new_l in
+  line2#set [`POINTS new_points ];
   line#set [`POINTS points;];
-  line#hide;
-  line2#hide;
-  let l = (Array.length points) / 2 in 
+  line#hide ();
+  line2#hide ();
+  let l = truncate (float (Array.length points) /. 2. ) in 
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
-    if l mod 2 = 0 then (l, l+1) else (l+1, l) in
-  if edge.visible_label then 
-    texte#set [`TEXT edge.label; `X points.(x); `Y (points.(y) -. 50.)]
-  else 
-    texte#set [`TEXT ""; `X points.(x) ; `Y (points.(y) -. 50.)]
+    if l mod 2 = 0 then (l, l+1) else (l+1, l) in 
+  (* if edge.visible_label then  *)
+    (texte#set [`TEXT edge.label; `X points.(x); `Y (points.(y) -. 50.)];
+     texte#hide ())
+  (* else  *)
+  (*   texte#set [`TEXT ""; `X points.(x) ; `Y (points.(y) -. 50.)] *)
       
 type polaire = { radius : float; angle : float}
 type cartesien = { x : float; y: float}
@@ -180,7 +182,7 @@ let set_intern_edge tv tw bpath line =
   GnomeCanvas.PathDef.moveto bpath x y ;
   GnomeCanvas.PathDef.curveto bpath ((x +. x')/.rate) ((y +. y')/.rate)
     ((x  +. x')/.rate) ((y +. y')/.rate)
-    x' y';
+    x' y' ; 
   line#set [`BPATH bpath]
 
 (* Set ellipse coordinate to turtle's and set current point too *)
@@ -216,7 +218,7 @@ let add_node canvas v =
                                      `FILL_COLOR color_text] node_group
   in
   node_group#hide();
-  H.add nodes v (node_group,ellipse,texte)
+  H.add nodes v (node_group, ellipse, texte)
 
 let init_nodes canvas =
   H.clear nodes;
@@ -270,10 +272,10 @@ let draw_successor_edge vw edge canvas =
       in 
       let line2 = GnoCanvas.line canvas ~props:[  
         `FILL_COLOR color_successor_edge ;
-        `WIDTH_PIXELS 0 ;
+        `WIDTH_PIXELS width_successor_edge ;
 	`LAST_ARROWHEAD true;
-        `ARROW_SHAPE_A 10.;
-	`ARROW_SHAPE_B 10.;
+        `ARROW_SHAPE_A 5.;
+	`ARROW_SHAPE_B 5.;
 	`ARROW_SHAPE_C 5.;
         `SMOOTH true]
       in
@@ -310,8 +312,10 @@ let hide_intern_edge vw =
 
 let hide_succesor_edge vw =
   try 
-    let line, line2,  texte = H2.find successor_edges vw in line#hide ();
-    line2#hide(); texte#hide ()
+    let line, line2,  texte = H2.find successor_edges vw in 
+    line#hide ();
+    line2#hide();
+    texte#hide ()
   with Not_found -> ()
         
 (* graph drawing *)
@@ -336,20 +340,23 @@ let draw_graph _root canvas  =
               | Selected -> color_change_successor_edge line line2 color_selected_successor_edge;
               | Focused ->  color_change_successor_edge line line2 color_focused_successor_edge;
               | Selected_Focused -> color_change_successor_edge line line2 color_selected_focused_successor_edge;
-              | HighlightPath -> color_change_successor_edge line line2 color_line_varchange;
-              | HighlightPath_Focused -> color_change_successor_edge line line2 color_line_varchange;
-              | Path -> color_change_successor_edge line line2  "green";
+              | HighlightPath -> 
+                (color_change_successor_edge line line2 color_line_varchange;
+                 line2#show ())
+              | HighlightPath_Focused -> 
+                (color_change_successor_edge line line2 color_line_varchange;
+                 line2#show ())
+              | Path -> 
+                color_change_successor_edge line line2  "#79a3a8";
+                
               |_ ->  color_change_successor_edge line line2 color_successor_edge;
           end;
-          if show then
-            (line#show ();
-             line2#show ();
-             texte#show())
-          else
-            (line#hide ();
-             line2#hide ();
-             texte#hide())
-          ;
+          if (G.E.label e).visible_label then 
+            texte#show () 
+          else 
+            texte#hide ();
+          (* line2#hide (); *)
+          line#show ();
           hide_intern_edge vw
         end 
       else 
@@ -396,10 +403,12 @@ let draw_graph _root canvas  =
           (match !center_node with 
             |None -> 
               let bounds = node#get_bounds in
-              if (bounds.(0) +. bounds.(2))/.2. > 500.
-                && (bounds.(0) +. bounds.(2))/.2. < 700.
-                && (bounds.(1) +. bounds.(3))/.2. > 300.
-                && (bounds.(1) +. bounds.(3))/.2. < 500.
+              let w_m = w /. 2. in 
+              let h_m = h /. 2. in
+              if (bounds.(0) +. bounds.(2))/.2. > w_m -. 50.
+                && (bounds.(0) +. bounds.(2))/.2. < w_m +. 50.
+                && (bounds.(1) +. bounds.(3))/.2. > h_m -. 40.
+                && (bounds.(1) +. bounds.(3))/.2. < h_m +. 40.
               then 
                 center_node := Some v
             |Some _ -> ());
@@ -422,6 +431,43 @@ let draw_graph _root canvas  =
         node#hide();)
     !graph;
   !center_node
+
+let rec color_edges v root = 
+  match root with 
+    |None -> ()
+    |Some r -> 
+      if r <> v then 
+        begin
+          G.iter_pred_e (fun edge ->
+            (G.E.label edge).edge_mode <- HighlightPath) !graph v;
+          G.iter_pred (fun vertex -> color_edges vertex root) !graph v;
+        end
+
+let set_path paths root = 
+  List.iter ( fun p -> 
+    List.iter (fun e -> (G.E.label e).edge_mode <- Path) p;
+    try 
+      let src_e = List.hd p in 
+      let src_node = G.E.src src_e in 
+      color_edges src_node root
+    with Failure(_) -> ()
+  ) paths
+
+
+let path_between src_mode dst_mode  root =
+  (** Pour tous les noeuds dans l'etat mode dst *)
+  let dst_nodes  = find_nodes dst_mode in
+  (** Pour tous les pred de ces noeuds *)
+  List.iter (fun n ->
+    let edge_list = G.pred_e !graph n in
+    List.iter (fun e ->
+      let paths = ref [] in
+      (** On récupère les chemins partants de ces noeuds qui mène vers un noeud
+          dans l'etat mode src *)
+      get_path src_mode dst_mode [] e paths;
+      set_path !paths root
+    ) edge_list
+  ) dst_nodes
 
 let reset_display canvas =
   init_nodes canvas

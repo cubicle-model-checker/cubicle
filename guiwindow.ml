@@ -6,7 +6,6 @@ open Lexing
 open Options
 open Format
 
-
 exception CursorNotOverText 
 exception FileError
 exception KillThread
@@ -19,7 +18,7 @@ let wd = if gui_debug then 1600 else 1000
 
 module M = Map.Make (String)
 
-let var_l = ref M.empty 
+let var_map = ref M.empty 
 
 let window =
   let _ = GMain.init () in
@@ -120,9 +119,11 @@ let e_box = GBin.event_box ~height:500 ~packing:(source_frame1#add) ()
 (** Debug mode *)
 let e_box2 = GBin.event_box ~height:500 ~packing:(source_frame2#add) ()
  
-let result_frame = GBin.frame ~border_width:10 ~packing:(source_box1#pack ~expand:true ~fill:true) ()
+let result_frame = GBin.frame ~border_width:10 
+  ~packing:(source_box1#pack ~expand:true ~fill:true) ()
 
-let result_frame2 = GBin.frame ~border_width:10 ~packing:(source_box2#pack ~expand:true ~fill:true) ()
+let result_frame2 = GBin.frame ~border_width:10 
+  ~packing:(source_box2#pack ~expand:true ~fill:true) ()
 
 let result_scroll = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
@@ -202,10 +203,11 @@ let add_value_var l =
       Ed_main.var_l := (x, None)::!Ed_main.var_l
     else
       let str_l = Str.split (Str.regexp ";") e#text in 
-      Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l
+      Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l;
+  var_map := M.empty
+    
 
 let select_var l new_path ast =
-  Printf.printf "length : %d " (List.length !Ed_main.var_l);
   let t_edit_l = ref [] in
   let wnd = GWindow.window
     ~title:"Watch variables"
@@ -219,7 +221,7 @@ let select_var l new_path ast =
     ~packing:(v_box#pack ~expand:true ~fill:true) () in
   let table = GPack.table
     ~columns:2
-    ~rows:(M.cardinal !var_l) 
+    ~rows:(M.cardinal !var_map) 
     ~row_spacings:5
     ~col_spacings:10
     ~packing:(table_fr#add) () in
@@ -230,12 +232,12 @@ let select_var l new_path ast =
     t_edit_l := (x, text_entry) :: !t_edit_l;
     table#attach 0 !cpt (label#coerce);
     table#attach 1 !cpt (text_entry#coerce);
-    incr cpt) !var_l ;
+    incr cpt) !var_map ;
   let h_box = GPack.hbox ~packing:(v_box#pack) () in 
   let radio_button_box =  GPack.button_box
     ~packing:(h_box#pack) `VERTICAL () in
-  let radio_button_box2 =  GPack.button_box
-    ~packing:(h_box#pack) `VERTICAL () in
+  (* let radio_button_box2 =  GPack.button_box *)
+  (*   ~packing:(h_box#pack) `VERTICAL () in *)
   let button_box = GPack.button_box
     ~packing:(v_box#pack) `HORIZONTAL () in
   let button_cancel = GButton.button
@@ -248,13 +250,13 @@ let select_var l new_path ast =
   let button_change = GButton.radio_button 
     ~group:button_value#group ~label:"Change" 
     ~packing:(radio_button_box#add)() in
-  let button_or = GButton.radio_button
-    ~label:"||"
-    ~packing:(radio_button_box2#add) () in 
-  let button_and = GButton.radio_button
-    ~label:"&&"
-    ~group:button_or#group
-    ~packing:(radio_button_box2#add) () in 
+  (* let button_or = GButton.radio_button *)
+  (*   ~label:"||" *)
+  (*   ~packing:(radio_button_box2#add) () in  *)
+  (* let button_and = GButton.radio_button *)
+  (*   ~label:"&&" *)
+  (*   ~group:button_or#group *)
+  (*   ~packing:(radio_button_box2#add) () in  *)
   (* let button_var_watch_mode = GButton.check_button *)
   (*   ~label:"Suivi egal" *)
   (*   ~active:false *)
@@ -268,15 +270,18 @@ let select_var l new_path ast =
   (*   (\* else Ed_main.mode_equals := false *\))); *)
   ignore (button_show#event#connect#button_press 
             ~callback:(fun b -> 
-              if button_change#active then Ed_main.mode_change := true;
-              if button_and#active then Ed_main.mode_and := true;
+              if button_change#active then Ed_main.mode_change := true
+              else Ed_main.mode_value := true;
+              (* if button_and#active then Ed_main.mode_and := true; *)
               add_value_var !t_edit_l;
               wnd#destroy ();
               Ed_main.init new_path (punsafe_length (!ast)); true));
   ignore (button_cancel#event#connect#button_press
             ~callback:(fun b -> wnd#destroy (); true));
   Ed_main.mode_change := false;
-  Ed_main.mode_and := false; 
+  Ed_main.mode_value := false;
+  source#source_buffer#remove_tag_by_name "var"
+              ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
   wnd#show ()
 
 
@@ -356,14 +361,14 @@ let rec apply_tag = function
         source#source_buffer#apply_tag_by_name "var"
           ~start:start_iter ~stop:stop_iter;
         let str =  (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) in
-        if M.mem str !var_l then 
-          (let (be, en) = M.find str !var_l in
+        if M.mem str !var_map then 
+          (let (be, en) = M.find str !var_map in
             if be = start && en = stop then
-              var_l := M.remove str !var_l ;
+              var_map := M.remove str !var_map ;
             source#source_buffer#remove_tag_by_name "var"
               ~start:start_iter ~stop:stop_iter)
         else 
-          var_l := M.add str (start, stop) !var_l          
+          var_map := M.add str (start, stop) !var_map          
       (* let m =  Ed_main.Var_L.add (Ed_main.var_l) in () *)
         (* Ed_main.var_l := (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) :: !Ed_main.var_l *)
       end
@@ -608,7 +613,6 @@ let open_window s  =
   ignore (search_bar#connect#changed
             ~callback:(search));
   ignore (next_button#event#connect#button_press
-
             ~callback:(search_next));
   ignore (previous_button#event#connect#button_press
             ~callback:(search_previous));
@@ -619,7 +623,7 @@ let open_window s  =
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
     let _ = save_execute_file ast new_path b in  
     Ed_main.var_l := [];
-    if M.cardinal !var_l = 0 then 
+    if M.cardinal !var_map = 0 then 
       select_var_none new_path ast
     else  
       select_var !Ed_main.var_l new_path ast; true)); 

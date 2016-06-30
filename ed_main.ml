@@ -30,7 +30,9 @@ type model_t = Edge of (G.V.t * G.V.t) | Node of G.V.t | UnsafeNode of G.V.t
 
 let mode_change = ref false
 
-let mode_and = ref false 
+let mode_value = ref false
+
+(* let mode_and = ref false  *)
 
 let m = Mutex.create ()
 
@@ -128,7 +130,7 @@ module Model = struct
   let find_children row_v w =
     (let nb_child = model#iter_n_children (Some row_v) in
      let rec find n = 
-       let child = model#iter_children ~nth:(n-1) (Some row_v) in
+       let child = model#iter_children ~nth:(n - 1) (Some row_v) in
        let child_vertex = model#get ~row:child ~column:vertex  in
        match n with
          | 0 -> raise Not_found
@@ -179,8 +181,10 @@ let model_reset ()  = Model.reset ()
 let ed_name = "Ocamlgraph's Editor"
 
 let window =
-  let wnd = 
-    GWindow.window ~border_width:10 ~position: `CENTER () in
+  let wnd = GWindow.window
+    ~border_width: 10
+    ~resizable: true
+    ~position: `CENTER () in
   let _ = wnd#destroy_with_parent in
   let _ = wnd#event#connect#delete ~callback:(fun b -> 
     kill_thread := true;
@@ -207,10 +211,10 @@ let stop_button =
   toolbar#insert_button
     ~text:" Abort"
     ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce () 
+
 let test_button = 
   toolbar#insert_button 
-    ~text:" TEST" 
-    ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce () 
+    ~text:" " () 
 
 let resultbox, result_image, result_label =
   toolbar#insert_space ();
@@ -228,8 +232,17 @@ let menu_bar_box = GPack.vbox ~packing:v_box#pack ()
 (* treeview on the left, canvas on the right *)
 let h_box = GPack.hbox ~homogeneous:false ~spacing:30  ~packing:v_box#add () 
 
-let sw = GBin.scrolled_window ~shadow_type:`ETCHED_IN ~hpolicy:`NEVER
-  ~vpolicy:`AUTOMATIC ~packing:h_box#add () 
+(* let sw_frame =  *)
+(*   GBin.frame ~border_width:8 ~packing:(h_box#add) () *)
+
+let sw = GBin.scrolled_window 
+  ~shadow_type:`ETCHED_IN
+  ~hpolicy:`NEVER
+  ~vpolicy:`AUTOMATIC
+  ~packing:h_box#add () 
+
+(* let canvas_frame =  *)
+(*   GBin.frame ~border_width:8  ~packing:(h_box#add) () *)
 
 let canvas = 
   (GnoCanvas.canvas 
@@ -239,32 +252,63 @@ let canvas =
      ~packing:h_box#add ()) 
 
 (* unit circle as roots of graph drawing *)
-let canvas_root =
+let (canvas_root, focus_rectangle) =
   let circle_group = GnoCanvas.group ~x:(w/.2.) ~y:(h/.2.) canvas#root in
   circle_group#lower_to_bottom ();
   let w2 = 2. in
   let circle = GnoCanvas.ellipse 
-    ~props:[ `X1 (-.w/.2. +.w2); `Y1 (-.h/.2. +.w2); 
-             `X2  (w/.2. -.w2) ; `Y2 ( h/.2. -.w2) ;
+    ~props:[ `X1 (-.w/.2. +. w2); `Y1 (-.h/.2. +.w2); 
+             `X2 (  w/.2. -. w2); `Y2 ( h/.2. -. w2) ;
              `FILL_COLOR color_circle ; `OUTLINE_COLOR "black" ; 
              `WIDTH_PIXELS (truncate w2) ] circle_group 
   in
   circle_group#lower_to_bottom ();
-  circle#show();
+   let r = GnoCanvas.rect
+    ~x1:(-. 50.) ~y1:(-. 40.)
+    ~x2:(50.) ~y2:(40.) ~props:[`FILL_COLOR "#e0e0e0"] circle_group
+   in
+   r#hide ();
+   circle_group#lower_to_bottom ();
+   circle#show();
   let graph_root = GnoCanvas.group ~x:(-.(w/.2.)) ~y:(-.(h/.2.)) circle_group in
   graph_root#raise_to_top ();
-  graph_root
+  (graph_root, r)
 
-(* current root used for drawing *)
-let root = ref (choose_root ())
 
-(* refresh rate *)
-let refresh = ref 0
+let path_mode root = 
+  var_l := [];
+  let wnd = GWindow.dialog
+  ~title:"Select variables"
+  ~show: true
+  (* ~allow_grow:true *)
+  ~width:200
+  ~height:100 () in 
+  let label = GMisc.label ~text:"Select variables" () in 
+  wnd#vbox#pack ~padding:20 label#coerce;
+  let button_box = GPack.button_box
+    ~packing:(wnd#vbox#pack) `VERTICAL () in
+  let ok_button = GButton.button 
+    ~label:"Done"
+    ~packing:(button_box#pack) () in 
+  ignore (ok_button#event#connect#button_press 
+            ~callback:(fun b ->              
+              path_between
+                [("Exgntd", ["False"]);("Curcmd", ["Reqs"])]  
+                [("Curcmd", ["Reqe"])] !root;
+              true))
+
+ (* current root used for drawing *)
+ let root = ref (choose_root ())
+
+ (* refresh rate *)
+ let refresh = ref 0
 
 let do_refresh () =
   !refresh mod !refresh_rate = 0 
 
-let treeview = GTree.view ~model:Model.model ~packing:sw#add ()
+let treeview = GTree.view 
+  ~model:Model.model 
+  ~packing:sw#add ()
 
 (* graph drawing *)
 let draw tortue canvas (vc : GTree.view_column) renderer =
@@ -273,9 +317,9 @@ let draw tortue canvas (vc : GTree.view_column) renderer =
     | Some root -> 
       try 
         Ed_draw.draw_graph root tortue;
+        let center_node = Ed_display.draw_graph root canvas in
         if do_refresh () then
           canvas_root#canvas#update_now ();
-        let center_node = Ed_display.draw_graph root canvas in
         match center_node with 
           |None -> ()
           |Some v -> 
@@ -352,6 +396,7 @@ let vertex_event vertex item ellipse ev =
       end
 
     | `BUTTON_RELEASE ev ->
+      focus_rectangle#hide();
       ellipse#parent#ungrab (GdkEvent.Button.time ev);
 
     | `MOTION_NOTIFY ev -> 
@@ -360,6 +405,7 @@ let vertex_event vertex item ellipse ev =
       if Gdk.Convert.test_modifier `BUTTON1 state  then
         begin
           let curs = Gdk.Cursor.create `FLEUR in
+          focus_rectangle#show();
           ellipse#parent#grab [`POINTER_MOTION; `BUTTON_RELEASE]
             curs (GdkEvent.Button.time ev);
           if do_refresh ()
@@ -474,7 +520,7 @@ let split_node_info x m v changed_l mode new_name =
          (let a = Var_Map.find before m in
           let var_find = 
             (* if !mode_and then var_find_and before after *)
-            (* else  *)var_find_or before after in
+            (* else *) var_find_or before after in
           if a <> after && var_find then
             ((G.V.label v).vertex_mode <- VarChange;
              if a <> after then 
@@ -542,7 +588,7 @@ let link_node before v after =
      let e = G.E.create n (make_edge_info_label transition true) v in
      let map = build_map (G.V.label n).var_map v after mode new_name in 
      (G.V.label v).var_map <- map;
-     if not !mode_change then 
+     if !mode_value then 
        (let label = ref "" in 
         let b = List.fold_left (fun acc (x, var_i) -> 
        match var_i with 
@@ -574,17 +620,6 @@ let link_node before v after =
         G.add_edge_e !graph e;
         ignore (Model.add_edge x v)
           
-
-let rec color_edges v = 
-  match !root with 
-    |None -> ()
-    |Some r -> 
-      if r <> v then 
-        begin
-          G.iter_pred_e (fun edge ->
-            (G.E.label edge).edge_mode <- HighlightPath) !graph v;
-          G.iter_pred (fun vertex -> color_edges vertex) !graph v;
-        end
           
 let create_node s unsafe_l  =
   let pos = Str.search_forward (Str.regexp "=") s 0 in
@@ -595,18 +630,18 @@ let create_node s unsafe_l  =
   let v =
     (** Si un seul etat unsafe et node courant = unsafe *)
     if !cpt = 1 && unsafe_l = 1  then
-      (let vertex = G.V.create (make_node_info  (string_of_int !cpt)  name true) in
+      (let vertex = G.V.create (make_node_info (string_of_int !cpt) name true) in
        root := Some vertex;
        ignore (Model.add_vertex_unsafe vertex);
        vertex)
     (** Si plusieurs etats unsafe et node courant = unsafe *)
     else if !cpt <= unsafe_l then
-      (let vertex = G.V.create (make_node_info  (string_of_int !cpt)  name true) in
+      (let vertex = G.V.create (make_node_info (string_of_int !cpt) name true) in
        ignore (Model.add_vertex_unsafe vertex);
        vertex)
     else
       (** Si node courant <> unsafe *)
-      (let vertex = G.V.create (make_node_info  (string_of_int !cpt)  name true) in
+      (let vertex = G.V.create (make_node_info (string_of_int !cpt) name true) in
        ignore (Model.add_vertex vertex);
        vertex) in
   link_node transition_list v var_values;
@@ -614,14 +649,13 @@ let create_node s unsafe_l  =
   HT.add ht transition_list v;
   G.add_vertex !graph v;
   if (G.V.label v).vertex_mode = VarChange then
-    color_edges v;
+    color_edges v !root;
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
   let tor = make_turtle !origine 0.0 in
   draw tor canvas_root vc renderer;
   incr cpt;
   Thread.delay 0.001
-
 
 let rec list_to_node curr_node unsafe_l = function
   |[] -> ()
@@ -750,15 +784,13 @@ let safe_or_unsafe () =
   end_show_tree := false
     
 
-
-
 let tree (file, unsafe_l) =
   Queue.clear graph_trace;
   ignore (Thread.create show_tree file);
   ignore (Thread.create load_graph unsafe_l) ;
   ignore (Thread.create safe_or_unsafe ())
-(* ignore (Thread.create update_model()) *)
-
+(*ignore (Thread.create update_model())*)
+    
 let open_graph file unsafe_l =
   ignore (window#show ());
   reset_table_and_canvas ();
@@ -767,8 +799,12 @@ let open_graph file unsafe_l =
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; false));
   ignore (test_button#event#connect#button_press 
-            ~callback: (fun b -> path_between ["Curcmd", ["Empty"]]  
-              [("Curcmd", ["Reqe"])]; (* path_between ["Exgntd", ["True"]] ["Exgntd", ["False"]]; *) true));
+            ~callback: (fun b ->              
+              path_between
+                [("Exgntd", ["False"]);("Curcmd", ["Reqs"])]  
+                [("Curcmd", ["Reqe"])] !root;
+              let tor = make_turtle !origine 0.0 in
+              draw tor canvas_root vc renderer; true));
   GtkThread.async (fun () -> tree (file, unsafe_l)) ();
   draw (make_turtle_origine ()) canvas_root vc renderer;
   GtkThread.main ()
@@ -778,7 +814,6 @@ let init file nb_unsafe =
   kill_thread := false;
   Ed_graph.new_graph ();
   cpt := 1;
-  (* HT.reset ht; *)
   Model.reset();
   if nb_unsafe > 1 then
     (let v = (G.V.create (make_node_info "   " "   " true )) in
@@ -789,6 +824,3 @@ let init file nb_unsafe =
     root := None;
   reset_table_and_canvas ();
   open_graph file nb_unsafe
-
-
-
