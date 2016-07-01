@@ -260,7 +260,7 @@ let color_change_successor_edge (line:GnoCanvas.line) (line2:GnoCanvas.line) col
 let draw_intern_edge vw edge tv tw canvas =
   let bpath,line,texte = 
     try
-      let _,_,_ as pl = H2.find intern_edges vw in
+      let _, _, _ as pl = H2.find intern_edges vw in
       pl
     with Not_found ->
       let bpath = GnomeCanvas.PathDef.new_path () in

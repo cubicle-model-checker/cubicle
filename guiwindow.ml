@@ -9,7 +9,7 @@ open Format
 exception CursorNotOverText 
 exception FileError
 exception KillThread
-
+exception Value_mode_error
 let last_search_iter = ref None 
 
 let kill_thread = ref false
@@ -198,13 +198,22 @@ let list_to_string l  =
   List.fold_right (fun x acc -> acc ^ x ^ "\n") l ""
 
 let add_value_var l = 
+  try 
   List.iter (fun (x, e) -> 
     if e#text = "" then 
-      Ed_main.var_l := (x, None)::!Ed_main.var_l
+      (if !Ed_main.mode_value then
+          begin
+            GToolbox.message_box 
+              ~title:"Error" "Please enter a value or choose change mode";
+            raise Value_mode_error
+          end;
+       Ed_main.var_l := (x, None)::!Ed_main.var_l)
     else
       let str_l = Str.split (Str.regexp ";") e#text in 
       Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l;
-  var_map := M.empty
+  var_map := M.empty;
+  true
+  with Value_mode_error -> false
     
 let scroll_to_transition t = 
     match Str.split (Str.regexp "(") t with
@@ -256,16 +265,17 @@ let select_var l new_path ast =
     ~stock:`CANCEL
     ~packing:(button_box#add) () in
   let button_value = GButton.radio_button 
-    ~label:"Valeur"
+    ~label:"Watch variable value"
     ~packing:(radio_button_box#add) () in
   let button_change = GButton.radio_button 
-    ~group:button_value#group ~label:"Change" 
+    ~group:button_value#group ~label:"Watch variable change" 
     ~packing:(radio_button_box#add)() in
   let button_show = GButton.button
     ~label:"Show Graph"
     ~stock:`APPLY
     ~packing:(button_box#add) () in
-  ignore (button_show#event#connect#button_press 
+  wnd#show();
+  (ignore (button_show#event#connect#button_press 
             ~callback:(fun b -> 
               if button_change#active then 
                 (Ed_main.mode_value := false;
@@ -273,18 +283,22 @@ let select_var l new_path ast =
               else 
                 (Ed_main.mode_value := true;
                  Ed_main.mode_change := false);
-              add_value_var !t_edit_l;
-              wnd#destroy ();
-              Ed_main.init new_path (punsafe_length (!ast)); true));
+              if add_value_var !t_edit_l || !Ed_main.mode_change then 
+                ( wnd#destroy ();
+                   source#source_buffer#remove_tag_by_name "var"
+                   ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
+                  Ed_main.init new_path (punsafe_length (!ast))
+                );
+              true);
+          
+        );
   ignore (button_cancel#event#connect#button_press
             ~callback:(fun b -> wnd#destroy (); true));
   Ed_main.mode_change := false;
   Ed_main.mode_value := false;
   var_map := M.empty;
-  Ed_main.var_l := [];
-  source#source_buffer#remove_tag_by_name "var"
-              ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
-  wnd#show ()
+  Ed_main.var_l := []
+ )
 
 
 let select_var_none new_path ast =

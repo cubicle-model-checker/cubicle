@@ -831,7 +831,6 @@ let tree (file, unsafe_l) =
 let open_graph file unsafe_l =
   ignore (window#show ());
   Ed_graph.new_graph();
-  (* reset_table_and_canvas (); *)
   set_canvas_event ();
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (stop_button#event#connect#button_press
@@ -850,16 +849,17 @@ let open_graph file unsafe_l =
 
 let init file nb_unsafe = 
   kill_thread := false;
+  reset_table_and_canvas ();
   Ed_graph.new_graph ();
-  print_newline ();
   cpt := 1;
   Model.reset();
   if nb_unsafe > 1 then
     (let v = (G.V.create (make_node_info "   " "   " true )) in
      root := Some v;
      G.add_vertex !graph v;
+     Ed_display.add_node canvas_root v;
+     !set_vertex_event_fun v;
      ignore (Model.add_vertex v))
   else
     root := None;
-  reset_table_and_canvas ();
   open_graph file nb_unsafe
