@@ -25,6 +25,7 @@ val mode_value : bool ref
 
 val init : string -> int -> unit
 
+val scroll_to_transition : (string -> unit) ref
 val model_reset : unit -> unit 
 
 (* val cpt : int ref *)

@@ -58,6 +58,8 @@ let kill_thread = ref false
 
 let cpt = ref 1
 
+let scroll_to_transition = ref (fun _ -> ())
+
 (* let model = Queue.create () *)
 (* let m_model = Mutex.create ()  *)
 (* let c_model = Condition.create () *)
@@ -224,9 +226,6 @@ let resultbox, result_image, result_label =
   let result_label = GMisc.label ~text:" " ~packing:hbox#add () in
   ignore(toolbar#insert_widget hbox#coerce); hbox, result_image, result_label
 
-
-
-
 let menu_bar_box = GPack.vbox ~packing:v_box#pack () 
 
 (* treeview on the left, canvas on the right *)
@@ -264,8 +263,8 @@ let (canvas_root, focus_rectangle) =
   in
   circle_group#lower_to_bottom ();
    let r = GnoCanvas.rect
-    ~x1:(-. 50.) ~y1:(-. 40.)
-    ~x2:(50.) ~y2:(40.) ~props:[`FILL_COLOR "#e0e0e0"] circle_group
+    ~x1:(-. 100.) ~y1:(-. 80.)
+    ~x2:(100.) ~y2:(80.) ~props:[`FILL_COLOR "#e0e0e0"] circle_group
    in
    r#hide ();
    circle_group#lower_to_bottom ();
@@ -273,29 +272,6 @@ let (canvas_root, focus_rectangle) =
   let graph_root = GnoCanvas.group ~x:(-.(w/.2.)) ~y:(-.(h/.2.)) circle_group in
   graph_root#raise_to_top ();
   (graph_root, r)
-
-
-let path_mode root = 
-  var_l := [];
-  let wnd = GWindow.dialog
-  ~title:"Select variables"
-  ~show: true
-  (* ~allow_grow:true *)
-  ~width:200
-  ~height:100 () in 
-  let label = GMisc.label ~text:"Select variables" () in 
-  wnd#vbox#pack ~padding:20 label#coerce;
-  let button_box = GPack.button_box
-    ~packing:(wnd#vbox#pack) `VERTICAL () in
-  let ok_button = GButton.button 
-    ~label:"Done"
-    ~packing:(button_box#pack) () in 
-  ignore (ok_button#event#connect#button_press 
-            ~callback:(fun b ->              
-              path_between
-                [("Exgntd", ["False"]);("Curcmd", ["Reqs"])]  
-                [("Curcmd", ["Reqe"])] !root;
-              true))
 
  (* current root used for drawing *)
  let root = ref (choose_root ())
@@ -421,6 +397,7 @@ let vertex_event vertex item ellipse ev =
               draw turtle canvas_root vc renderer
             end
           end
+
         end
     | `BUTTON_PRESS ev ->  
       if (GdkEvent.Button.button ev) = 3
@@ -453,14 +430,71 @@ let vertex_event vertex item ellipse ev =
   end;
   true
 
+let contextual_menu_text t ev =
+  let menu = new GMenu.factory (GMenu.menu ()) in
+  ignore (menu#add_item "Show in editor"
+            ~callback:(fun () -> !scroll_to_transition t));
+  menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
+
+let edge_event texte label ev =
+  begin
+    match ev with
+      | `ENTER_NOTIFY _ -> 
+        texte#grab_focus ();
+        texte#set [(* `FILL_COLOR "red"; *) `WEIGHT 1000];
+        (* update_vertex rtex Focus; *)
+        refresh_display ()
+      | `LEAVE_NOTIFY ev ->
+      if not (Gdk.Convert.test_modifier `BUTTON1 (GdkEvent.Crossing.state ev))
+      then begin
+        texte#set [`FILL_COLOR "black"; `WEIGHT 0];
+        (* update_vertex vertex Unfocus; *)
+        refresh_display ()
+      end
+        
+    | `BUTTON_RELEASE ev ->
+      (* focus_rectangle#hide(); *)
+      texte#ungrab (GdkEvent.Button.time ev);
+
+    | `MOTION_NOTIFY ev -> 
+      (* texte#set [`FILL_COLOR "red"]; *)
+      incr refresh;
+      let state = GdkEvent.Motion.state ev in
+      if Gdk.Convert.test_modifier `BUTTON1 state  then
+        begin
+          let curs = Gdk.Cursor.create `FLEUR in
+          focus_rectangle#show();
+          texte#grab [`POINTER_MOTION; `BUTTON_RELEASE]
+            curs (GdkEvent.Button.time ev);
+        end
+    | `BUTTON_PRESS ev ->  
+      if (GdkEvent.Button.button ev) = 3
+      then
+        contextual_menu_text label ev
+    | _ ->
+      ()
+  end;
+  true
+
 let set_vertex_event vertex =
-  let item,ell,_ = H.find nodes vertex in
+  let item,ell,_ = H.find nodes vertex in 
   ignore (item#connect#event ~callback:(vertex_event vertex item ell))
+
+let set_edge_event e = 
+  let src = G.E.src e in 
+  let dst = G.E.dst e in 
+  let label = (G.E.label e).label in
+  let _, _, texte = 
+    H2.find successor_edges (src, dst) in 
+  ignore (texte#connect#event ~callback:(edge_event texte label))
+
 
 let () = set_vertex_event_fun := set_vertex_event
 
 let set_canvas_event () =
-  G.iter_vertex set_vertex_event !graph
+  G.iter_vertex set_vertex_event !graph;
+  G.iter_edges_e (set_edge_event) !graph
+
 
 (* reset *)
 
@@ -607,8 +641,10 @@ let link_node before v after =
            (G.V.label v).num_label <- (G.V.label v).num_label  ^ !label
          end
      );
-       G.add_edge_e !graph e;
-       ignore (Model.add_edge n v))
+     G.add_edge_e !graph e;
+     Ed_display.add_edge canvas_root (n, v) (G.E.label e);
+     set_edge_event e;
+     ignore (Model.add_edge n v))
   with Not_found ->
     match !root with
       |None -> failwith "pb None"
@@ -618,6 +654,8 @@ let link_node before v after =
         if not !mode then failwith "false";
         (G.V.label v).vertex_mode <- Unsafe;
         G.add_edge_e !graph e;
+        Ed_display.add_edge canvas_root (x, v) (G.E.label e);
+        set_edge_event e;
         ignore (Model.add_edge x v)
           
           
@@ -789,11 +827,11 @@ let tree (file, unsafe_l) =
   ignore (Thread.create show_tree file);
   ignore (Thread.create load_graph unsafe_l) ;
   ignore (Thread.create safe_or_unsafe ())
-(*ignore (Thread.create update_model())*)
     
 let open_graph file unsafe_l =
   ignore (window#show ());
-  reset_table_and_canvas ();
+  Ed_graph.new_graph();
+  (* reset_table_and_canvas (); *)
   set_canvas_event ();
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (stop_button#event#connect#button_press
@@ -801,7 +839,7 @@ let open_graph file unsafe_l =
   ignore (test_button#event#connect#button_press 
             ~callback: (fun b ->              
               path_between
-                [("Exgntd", ["False"]);("Curcmd", ["Reqs"])]  
+                [("Exgntd", ["False"]); ("Curcmd", ["Reqs"])]  
                 [("Curcmd", ["Reqe"])] !root;
               let tor = make_turtle !origine 0.0 in
               draw tor canvas_root vc renderer; true));
@@ -813,6 +851,7 @@ let open_graph file unsafe_l =
 let init file nb_unsafe = 
   kill_thread := false;
   Ed_graph.new_graph ();
+  print_newline ();
   cpt := 1;
   Model.reset();
   if nb_unsafe > 1 then

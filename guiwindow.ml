@@ -206,6 +206,19 @@ let add_value_var l =
       Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l;
   var_map := M.empty
     
+let scroll_to_transition t = 
+    match Str.split (Str.regexp "(") t with
+      |[] -> failwith "pb transition"
+      |str::_ -> 
+        let start_iter = source#source_buffer#start_iter in
+        window#present ();
+        match start_iter#forward_search str with
+          |None -> failwith "transition not found"
+          |Some (s, e) -> 
+            source#source_buffer#apply_tag_by_name "search"
+              ~start:s ~stop:e;
+            ignore (source#scroll_to_iter ~use_align:true ~yalign:0.2 s)
+ 
 
 let select_var l new_path ast =
   let t_edit_l = ref [] in
@@ -236,8 +249,6 @@ let select_var l new_path ast =
   let h_box = GPack.hbox ~packing:(v_box#pack) () in 
   let radio_button_box =  GPack.button_box
     ~packing:(h_box#pack) `VERTICAL () in
-  (* let radio_button_box2 =  GPack.button_box *)
-  (*   ~packing:(h_box#pack) `VERTICAL () in *)
   let button_box = GPack.button_box
     ~packing:(v_box#pack) `HORIZONTAL () in
   let button_cancel = GButton.button
@@ -250,29 +261,18 @@ let select_var l new_path ast =
   let button_change = GButton.radio_button 
     ~group:button_value#group ~label:"Change" 
     ~packing:(radio_button_box#add)() in
-  (* let button_or = GButton.radio_button *)
-  (*   ~label:"||" *)
-  (*   ~packing:(radio_button_box2#add) () in  *)
-  (* let button_and = GButton.radio_button *)
-  (*   ~label:"&&" *)
-  (*   ~group:button_or#group *)
-  (*   ~packing:(radio_button_box2#add) () in  *)
-  (* let button_var_watch_mode = GButton.check_button *)
-  (*   ~label:"Suivi egal" *)
-  (*   ~active:false *)
-  (*   ~packing:(radio_button_box#add) () in *)
   let button_show = GButton.button
     ~label:"Show Graph"
     ~stock:`APPLY
     ~packing:(button_box#add) () in
-  (* ignore (button_var_watch_mode#connect#toggled ~callback:(fun b -> *)
-  (*   if button_var_watch_mode#active then Ed_main.mode_equals := true *)
-  (*   (\* else Ed_main.mode_equals := false *\))); *)
   ignore (button_show#event#connect#button_press 
             ~callback:(fun b -> 
-              if button_change#active then Ed_main.mode_change := true
-              else Ed_main.mode_value := true;
-              (* if button_and#active then Ed_main.mode_and := true; *)
+              if button_change#active then 
+                (Ed_main.mode_value := false;
+                 Ed_main.mode_change := true)
+              else 
+                (Ed_main.mode_value := true;
+                 Ed_main.mode_change := false);
               add_value_var !t_edit_l;
               wnd#destroy ();
               Ed_main.init new_path (punsafe_length (!ast)); true));
@@ -280,18 +280,21 @@ let select_var l new_path ast =
             ~callback:(fun b -> wnd#destroy (); true));
   Ed_main.mode_change := false;
   Ed_main.mode_value := false;
+  var_map := M.empty;
+  Ed_main.var_l := [];
   source#source_buffer#remove_tag_by_name "var"
               ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
   wnd#show ()
 
 
 let select_var_none new_path ast =
-  if GToolbox.question_box
+   if GToolbox.question_box
     ~title:"List" ~buttons:["Add"; "Show trace"]
     ~default:2
     ~icon:(GMisc.image ~stock:`DIALOG_QUESTION  ~icon_size:`DIALOG ())
      "No variables.\n(Add with right click)" = 2 then
-    Ed_main.init new_path (punsafe_length (!ast))
+     (Ed_main.scroll_to_transition := scroll_to_transition;
+      Ed_main.init new_path (punsafe_length (!ast)))
 
   
 (* Debug mode*)
@@ -624,7 +627,9 @@ let open_window s  =
     let _ = save_execute_file ast new_path b in  
     Ed_main.var_l := [];
     if M.cardinal !var_map = 0 then 
-      select_var_none new_path ast
+      (Ed_main.mode_value := false;
+       Ed_main.mode_change := false;
+       select_var_none new_path ast)
     else  
       select_var !Ed_main.var_l new_path ast; true)); 
   ignore (window#event#connect#delete (confirm ast save_path));

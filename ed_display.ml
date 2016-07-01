@@ -24,13 +24,13 @@ let debug = ref false
 
 
 (* Original window size *)
-let (w,h) = (1000., 800.)
+let (w,h) = (1200., 800.)
 
 (* differents definitions *)
 let color_circle = "grey99"
 
 let color_intern_edge = "grey69"
-let color_successor_edge = "black" (*"grey38"*)
+let color_successor_edge = "grey38" (*"grey38"*)
 let color_vertex = "grey75"
 
 
@@ -53,7 +53,7 @@ let color_focused_intern_edge = "#4d51a9"
 let color_focused_successor_edge = "#4d51a9"
 let color_focused_vertex =  "#4d51a9"
 
-let color_selected_focused_intern_edge = "#e80000"
+let color_selected_focused_intern_edge= "#e80000"
 let color_selected_focused_vertex ="#e80000"
 let color_selected_focused_successor_edge = "#e80000"
 
@@ -151,11 +151,8 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
     if l mod 2 = 0 then (l, l+1) else (l+1, l) in 
-  (* if edge.visible_label then  *)
-    (texte#set [`TEXT edge.label; `X points.(x); `Y (points.(y) -. 50.)];
+    (texte#set [`TEXT  edge.label ; `X points.(x); `Y (points.(y))];
      texte#hide ())
-  (* else  *)
-  (*   texte#set [`TEXT ""; `X points.(x) ; `Y (points.(y) -. 50.)] *)
       
 type polaire = { radius : float; angle : float}
 type cartesien = { x : float; y: float}
@@ -197,7 +194,7 @@ let tdraw_string_gtk v turtle  =
     (texte#set [`TEXT vertex.label; `SIZE_POINTS w ];
      vertex.changed <- false)
   else
-    texte#set [`SIZE_POINTS w ];
+    texte#set [(* `TEXT vertex.label; *) `SIZE_POINTS w ];
   let w = texte#text_width in 
   let h = texte#text_height in
   ellipse#set [ `X1  (-.( w +. 25.)/.2.); `X2 ((w +. 25.)/.2.);
@@ -215,11 +212,33 @@ let add_node canvas v =
             `WIDTH_PIXELS 0] node_group  
   in
   let texte = GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT s;  
-                                     `FILL_COLOR color_text] node_group
-  in
+                                     `FILL_COLOR color_text] node_group in
   node_group#hide();
   H.add nodes v (node_group, ellipse, texte)
 
+let add_edge canvas vw e = 
+  let line = GnoCanvas.line canvas ~props:[  
+    `FILL_COLOR color_successor_edge ;
+    `WIDTH_PIXELS width_successor_edge ;
+    `SMOOTH true]
+  in 
+  let line2 = GnoCanvas.line canvas ~props:[  
+    `FILL_COLOR color_successor_edge ;
+    `WIDTH_PIXELS width_successor_edge ;
+    `LAST_ARROWHEAD true;
+    `ARROW_SHAPE_A 5.;
+    `ARROW_SHAPE_B 5.;
+    `ARROW_SHAPE_C 5.;
+    `SMOOTH true]
+  in 
+  let texte =  
+    GnoCanvas.text canvas ~props:[`X 0.0; `Y 0.0 ; `FILL_COLOR "black"] 
+  in
+  line#lower_to_bottom ();
+  line2#lower_to_bottom ();
+  H2.add successor_edges vw (line, line2, texte)
+      
+      
 let init_nodes canvas =
   H.clear nodes;
   G.iter_vertex (add_node canvas) !graph
@@ -248,11 +267,11 @@ let draw_intern_edge vw edge tv tw canvas =
       let line = GnoCanvas.bpath canvas
         ~props:[`BPATH bpath ; `WIDTH_PIXELS width_intern_edge] 
       in
-      let texte = GnoCanvas.text canvas  ~props:[`X 0.0; `Y 0.0 ; `TEXT  edge.label;
-                                                 `FILL_COLOR color_text]    in
+      let texte = GnoCanvas.text  ~props:[`X 0.0; `Y 0.0 ; `TEXT edge.label;
+                                                 `FILL_COLOR color_text] canvas  in
       line#lower_to_bottom ();
       H2.add intern_edges vw (bpath, line, texte);
-      let v,w  =  vw in
+      let v,w = vw in
       if (is_selected w) || (is_selected v)  
       then edge.edge_mode  <-  Selected;
       bpath,line,texte
@@ -262,34 +281,34 @@ let draw_intern_edge vw edge tv tw canvas =
 
 let draw_successor_edge vw edge canvas =
   let line, line2, texte =
-    try
+    (* try *)
       H2.find successor_edges vw
-    with Not_found ->      
-            let line = GnoCanvas.line canvas ~props:[  
-        `FILL_COLOR color_successor_edge ;
-        `WIDTH_PIXELS width_successor_edge ;
-        `SMOOTH true]
-      in 
-      let line2 = GnoCanvas.line canvas ~props:[  
-        `FILL_COLOR color_successor_edge ;
-        `WIDTH_PIXELS width_successor_edge ;
-	`LAST_ARROWHEAD true;
-        `ARROW_SHAPE_A 5.;
-	`ARROW_SHAPE_B 5.;
-	`ARROW_SHAPE_C 5.;
-        `SMOOTH true]
-      in
-      let v,w = vw in 
-      let texte =  
-        GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT edge.label;  
-                               `FILL_COLOR color_text] canvas
-      in
-      line#lower_to_bottom ();
-      line2#lower_to_bottom ();
-      H2.add successor_edges vw (line, line2, texte);   
-      if (is_selected w) || (is_selected v)  
-      then edge.edge_mode <-  Selected;
-      line, line2,  texte
+    (* with Not_found -> *)
+    (*         let line = GnoCanvas.line canvas ~props:[ *)
+    (*     `FILL_COLOR color_successor_edge ; *)
+    (*     `WIDTH_PIXELS width_successor_edge ; *)
+    (*     `SMOOTH true] *)
+    (*   in *)
+    (*   let line2 = GnoCanvas.line canvas ~props:[ *)
+    (*     `FILL_COLOR color_successor_edge ; *)
+    (*     `WIDTH_PIXELS width_successor_edge ; *)
+    (*     `LAST_ARROWHEAD true; *)
+    (*     `ARROW_SHAPE_A 5.; *)
+    (*     `ARROW_SHAPE_B 5.; *)
+    (*     `ARROW_SHAPE_C 5.; *)
+    (*     `SMOOTH true] *)
+    (*   in *)
+    (*   let v,w = vw in *)
+    (*   let texte = *)
+    (*     GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT edge.label; *)
+    (*                            `FILL_COLOR color_text] canvas *)
+    (*   in *)
+    (*   line#lower_to_bottom (); *)
+    (*   line2#lower_to_bottom (); *)
+    (*   H2.add successor_edges vw (line, line2, texte); *)
+    (*   if (is_selected w) || (is_selected v) *)
+    (*   then edge.edge_mode <-  Selected; *)
+    (*   line, line2,  texte *)
   in
   set_successor_edge edge edge.edge_turtle edge.edge_distance edge.edge_steps line line2 texte canvas;
   line, edge.draw, line2, texte
@@ -352,11 +371,10 @@ let draw_graph _root canvas  =
               |_ ->  color_change_successor_edge line line2 color_successor_edge;
           end;
           if (G.E.label e).visible_label then 
-            texte#show () 
-          else 
-            texte#hide ();
+            texte#show () ;
           (* line2#hide (); *)
-          line#show ();
+            line#show ();
+          (* line2#show(); *)
           hide_intern_edge vw
         end 
       else 
@@ -399,32 +417,42 @@ let draw_graph _root canvas  =
           node#raise_to_top();
           if show then 
             node#show();
-          let _, item, _ = H.find nodes v in
+          let _, item, texte  = H.find nodes v in
           (match !center_node with 
             |None -> 
               let bounds = node#get_bounds in
               let w_m = w /. 2. in 
               let h_m = h /. 2. in
-              if (bounds.(0) +. bounds.(2))/.2. > w_m -. 50.
-                && (bounds.(0) +. bounds.(2))/.2. < w_m +. 50.
-                && (bounds.(1) +. bounds.(3))/.2. > h_m -. 40.
-                && (bounds.(1) +. bounds.(3))/.2. < h_m +. 40.
+              if (bounds.(0) +. bounds.(2))/.2. > w_m -. 100.
+                && (bounds.(0) +. bounds.(2))/.2. < w_m +. 100.
+                && (bounds.(1) +. bounds.(3))/.2. > h_m -. 80.
+                && (bounds.(1) +. bounds.(3))/.2. < h_m +. 80.
               then 
-                center_node := Some v
+                (center_node := Some v;
+                 (* l.label_mode <- Str_Label; *)
+                 (* l.label <-  l.str_label; *)
+                 texte#set [`TEXT l.str_label];
+                 G.iter_succ_e (fun e -> (G.E.label e).visible_label <- true) !graph v)
+              else
+                ((* l.label_mode <- Num_Label; *)
+                 (* l.label <-  l.num_label ; *)
+                  if l.label_mode = Num_Label then 
+                    (texte#set [`TEXT l.num_label];
+                     G.iter_succ_e (fun e -> (G.E.label e).visible_label <- false) !graph v));
             |Some _ -> ());
-          match l.vertex_mode with
-            | Normal -> color_change_vertex item color_vertex 0;
-            | Selected -> color_change_vertex item color_selected_vertex 0;
-            | Focused ->  color_change_vertex item color_focused_vertex 3;
-            | Selected_Focused -> 
-              color_change_vertex item color_selected_focused_vertex 3;
-            | Unsafe -> color_change_vertex item color_unsafe 0;
-            | Unsafe_Focused -> color_change_vertex item color_unsafe_focused 3;
-            | VarChange -> color_change_vertex item color_varchange 0;
-            | VarChange_Focused -> color_change_vertex item color_varchange_focused 3;
-            | VarInit -> color_change_vertex item color_initvar 0;
-            | VarInit_Focused -> color_change_vertex item color_initvar_focused 3;
-            | _ -> ()
+            match l.vertex_mode with
+              | Normal -> color_change_vertex item color_vertex 0;
+              | Selected -> color_change_vertex item color_selected_vertex 0;
+              | Focused ->  color_change_vertex item color_focused_vertex 3;
+              | Selected_Focused -> 
+                color_change_vertex item color_selected_focused_vertex 3;
+              | Unsafe -> color_change_vertex item color_unsafe 0;
+              | Unsafe_Focused -> color_change_vertex item color_unsafe_focused 3;
+              | VarChange -> color_change_vertex item color_varchange 0;
+              | VarChange_Focused -> color_change_vertex item color_varchange_focused 3;
+              | VarInit -> color_change_vertex item color_initvar 0;
+              | VarInit_Focused -> color_change_vertex item color_initvar_focused 3;
+              | _ -> ()
         end
       else
         let node, _, _ = H.find nodes v in
