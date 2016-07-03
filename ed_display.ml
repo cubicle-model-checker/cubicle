@@ -30,7 +30,7 @@ let (w,h) = (1200., 800.)
 let color_circle = "grey99"
 
 let color_intern_edge = "grey69"
-let color_successor_edge = "grey38" (*"grey38"*)
+let color_successor_edge = "#bdbdbd" (* "grey38" *) (*"grey38"*)
 let color_vertex = "grey75"
 
 
@@ -50,7 +50,7 @@ let color_selected_successor_edge = "#9f1a1a"
 let color_selected_vertex = "#9f1a1a"
 
 let color_focused_intern_edge = "#4d51a9"
-let color_focused_successor_edge = "#4d51a9"
+let color_focused_successor_edge = (* "#4d51a9" *) "grey50"
 let color_focused_vertex =  "#4d51a9"
 
 let color_selected_focused_intern_edge= "#e80000"
@@ -117,8 +117,8 @@ let tlineto_gtk turtle line =
   let (x,y) = !current_point in 
   List.append line [(float x); (float y) ]
 
-let half_list l =
-  let length = (List.length l)/2 in  
+let split_list l r=
+  let length = truncate((float (List.length l))/.r) in  
   let rec f cpt = function
     |[] -> []
     |x::s when cpt >= length && cpt mod 2 = 0 -> []
@@ -141,13 +141,14 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
     [(float (x)); (float (y))] in 
   let _,lpoints = list_points turtle start steps in
   let points = Array.of_list lpoints in
-  let new_l = half_list lpoints in
+  let new_l = split_list lpoints 1.5 in
+  (* let text_l = split_list lpoints 0.5 in  *)
   let new_points = Array.of_list new_l in
   line2#set [`POINTS new_points ];
   line#set [`POINTS points;];
   line#hide ();
   line2#hide ();
-  let l = truncate (float (Array.length points) /. 2. ) in 
+  let l = truncate (float (Array.length points) /. 2.2 ) in 
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
     if l mod 2 = 0 then (l, l+1) else (l+1, l) in 
@@ -336,6 +337,22 @@ let hide_succesor_edge vw =
     line2#hide();
     texte#hide ()
   with Not_found -> ()
+
+let show_arrow e = 
+  let vw = G.E.src e, G.E.dst e in
+  try 
+    let _, line2,  _ = H2.find successor_edges vw in 
+    line2#show();
+  with Not_found -> ()
+
+let hide_arrow e = 
+  let vw = G.E.src e, G.E.dst e in
+  try 
+    let _, line2,  _ = H2.find successor_edges vw in 
+    line2#hide();
+  with Not_found -> ()
+
+
         
 (* graph drawing *)
 let draw_graph _root canvas  =
@@ -432,13 +449,25 @@ let draw_graph _root canvas  =
                  (* l.label_mode <- Str_Label; *)
                  (* l.label <-  l.str_label; *)
                  texte#set [`TEXT l.str_label];
-                 G.iter_succ_e (fun e -> (G.E.label e).visible_label <- true) !graph v)
+                 (* line2#show(); *)
+                 G.iter_succ_e (fun e ->
+                   (G.E.label e).visible_label <- true;
+                   show_arrow e;
+                 ) !graph v;
+                 G.iter_pred_e (fun e ->
+                   (G.E.label e).visible_label <- true;
+                   show_arrow e;
+                 ) !graph v)
               else
                 ((* l.label_mode <- Num_Label; *)
                  (* l.label <-  l.num_label ; *)
                   if l.label_mode = Num_Label then 
                     (texte#set [`TEXT l.num_label];
-                     G.iter_succ_e (fun e -> (G.E.label e).visible_label <- false) !graph v));
+                     G.iter_succ_e (fun e -> (G.E.label e).visible_label <- false; hide_arrow e) !graph v;
+                     (* G.iter_pred_e (fun e -> (G.E.label e).visible_label <- false; hide_arrow e) !graph v *)
+                    
+                  (* line2#hide () *));
+                );
             |Some _ -> ());
             match l.vertex_mode with
               | Normal -> color_change_vertex item color_vertex 0;
@@ -460,7 +489,7 @@ let draw_graph _root canvas  =
     !graph;
   !center_node
 
-let rec color_edges v root = 
+let rec color_edges v root =  
   match root with 
     |None -> ()
     |Some r -> 
@@ -470,6 +499,18 @@ let rec color_edges v root =
             (G.E.label edge).edge_mode <- HighlightPath) !graph v;
           G.iter_pred (fun vertex -> color_edges vertex root) !graph v;
         end
+
+(* let rec color_edges v root =   *)
+(*   match root with  *)
+(*     |None -> () *)
+(*     |Some r ->  *)
+(*       if r <> v then  *)
+(*         begin *)
+(*           G.iter_succ_e (fun edge -> *)
+(*             (G.E.label edge).edge_mode <- HighlightPath) !graph v; *)
+(*           G.iter_succ (fun vertex -> color_edges vertex root) !graph v; *)
+(*         end3 *)
+
 
 let set_path paths root = 
   List.iter ( fun p -> 
@@ -481,6 +522,22 @@ let set_path paths root =
     with Failure(_) -> ()
   ) paths
 
+let set_path_to paths = 
+  List.iter ( fun p -> 
+    
+    print_int (List.length p);
+    print_newline ();
+    List.iter (fun e -> (G.E.label e).edge_mode <- Path) p;
+    (* try  *)
+    (*   let src_e = List.nth p ((List.length p) - 1) in  *)
+    (*   let src_node = G.E.src src_e in *)
+    (*   let dst_e = List.hd p in  *)
+    (*   let dst_node = G.E.dst dst_e in *)
+    (*   (G.V.label src_node).vertex_mode <- VarChange; *)
+    (*   (G.V.label dst_node).vertex_mode <- VarChange; *)
+    (*   (\* color_edges src_node root *\) *)
+    (* with Failure(_) -> () *)
+  ) paths
 
 let path_between src_mode dst_mode  root =
   (** Pour tous les noeuds dans l'etat mode dst *)
@@ -496,6 +553,39 @@ let path_between src_mode dst_mode  root =
       set_path !paths root
     ) edge_list
   ) dst_nodes
+
+let path_to src_node dst_mode root = 
+  List.iter (fun e -> 
+    let paths = ref [] in 
+    get_path_to dst_mode [] e paths;
+    set_path_to !paths ;
+  ) (G.succ_e !graph src_node)
+
+(* let path_to src_node dst_mode root =  *)
+(*   (\* List.iter (fun edge ->  *\) *)
+(*   (\*   let node = G.E.dst edge in  *\) *)
+(*   if mode_node src_node dst_mode then  *)
+(*     set_path_to [G.pred_e !graph src_node]  *)
+(*   else *)
+(*     List.iter (fun e ->  *)
+(*       let paths = ref [] in  *)
+(*       get_path_to dst_mode [] e paths; *)
+(*       set_path_to !paths root) (\* (G.succ_e !graph node) *\) (G.succ_e !graph src_node) *)
+
+let path_to src_node dst_mode root = 
+   List.iter (fun e -> 
+    let paths = ref [] in 
+    get_path_to dst_mode [] e paths;
+    set_path_to !paths ;
+   ) (G.succ_e !graph src_node)
+     
+
+(* let path_to src_node dst_mode root =  *)
+(*   List.iter (fun e ->  *)
+(*     let paths = ref [] in  *)
+(*     get_path_to dst_mode [] e paths; *)
+(*     set_path_to !paths root; *)
+(*   ) (G.succ_e !graph src_node) *)
 
 let reset_display canvas =
   init_nodes canvas

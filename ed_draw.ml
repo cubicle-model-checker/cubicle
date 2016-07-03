@@ -172,8 +172,14 @@ let draw_bfs root turtle =
     let lab = G.V.label v in
     let depth = lab.depth in
     let tv = lab.turtle in
-    let dist = hspace_dist_sqr tv in
-    if dist <=  rlimit_sqr   then begin
+    let dist =
+      if v= root then 0. else hspace_dist_sqr tv in
+    
+    (* if lab.label = "53" || lab.label = "60" || lab.label = "1" then  *)
+    (*   (Printf.printf "%s %f" lab.label dist; *)
+    (*    print_newline ()); *)
+    (* let dist = 0. in *)
+   if dist <= (* 0.98  *)rlimit_sqr  then begin
       lab.visible <- Visible;
       let l = try G.succ !graph v with Invalid_argument _ -> []  in
       let l = List.filter (fun x -> (G.V.label x).visible = Hidden) l in

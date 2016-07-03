@@ -4,7 +4,7 @@ val root : Ed_graph.G.vertex option ref
 
 val reset_table_and_canvas : unit -> unit
  
-val var_l : (* (GText.iter * GText.iter) Var_L.t *) (string * string list option) list ref
+val var_l : (* (GText.iter * GText.iter) Var_L.t *) (string * string list (* option *)) list ref
 
 (* list ref (\* Var_L.t *\) *)
 
@@ -25,7 +25,9 @@ val mode_value : bool ref
 
 val init : string -> int -> unit
 
-val scroll_to_transition : (string -> unit) ref
+val scroll_to_transition : (string ->  unit) ref
 val model_reset : unit -> unit 
+
+val path_to : unit -> unit
 
 (* val cpt : int ref *)

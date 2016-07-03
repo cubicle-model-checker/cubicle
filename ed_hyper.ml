@@ -88,10 +88,20 @@ let cramer a1 a2 b1 b2 c1 c2 =
   (xdet/.cdet, ydet/.cdet) ;;
 
 let drag_origin (x0, y0) (x1, y1) (x2, y2) =
-  let (x1, y1) = translate (-.x0, -.y0) (x1, y1) in
+  let (x1, y1) = 
+    (* if (x1 > 0.) then  *)
+    (*   translate (-.x0, -.y0) (-.x1, y1)  *)
+    (* else  *)
+      translate (-.x0, -.y0) (x1, y1) 
+  in
   let x3 = x1*.x2 -. y1*.y2 in
   let y3 = x1*.y2 +. y1*.x2 in
-  cramer (1.0 -. x3) (-.y3) (-.y3) (1.0 +. x3) (x2 -. x1) (y2 -. y1)
+  let (xo, yo) as origin = 
+  cramer (1.0 -. x3) (-.y3) (-.y3) (1.0 +. x3) (x2 -. x1) (y2 -. y1) in 
+  (* Printf.printf "%f %f" xo yo; *)
+  (* print_newline (); *)
+  (* if x1 > 0. then (-.xo, yo) else *)
+  origin
 
 let shrink_factor (x, y) =
   1.0 -. (x*.x +. y*.y)

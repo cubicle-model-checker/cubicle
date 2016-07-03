@@ -46,6 +46,8 @@ let var_l = ref []
 
 let end_show_tree = ref false
 
+let mem_vertex = ref None 
+
 let center_row = ref ""
 
 let end_load_graph = ref false
@@ -58,7 +60,7 @@ let kill_thread = ref false
 
 let cpt = ref 1
 
-let scroll_to_transition = ref (fun _ -> ())
+let scroll_to_transition = ref (fun  _ -> ())
 
 (* let model = Queue.create () *)
 (* let m_model = Mutex.create ()  *)
@@ -234,11 +236,6 @@ let h_box = GPack.hbox ~homogeneous:false ~spacing:30  ~packing:v_box#add ()
 (* let sw_frame =  *)
 (*   GBin.frame ~border_width:8 ~packing:(h_box#add) () *)
 
-let sw = GBin.scrolled_window 
-  ~shadow_type:`ETCHED_IN
-  ~hpolicy:`NEVER
-  ~vpolicy:`AUTOMATIC
-  ~packing:h_box#add () 
 
 (* let canvas_frame =  *)
 (*   GBin.frame ~border_width:8  ~packing:(h_box#add) () *)
@@ -248,7 +245,13 @@ let canvas =
      ~aa:!aa 
      ~width:(truncate w) 
      ~height:(truncate h) 
-     ~packing:h_box#add ()) 
+     ~packing:h_box#pack ~border_width:50 ()) 
+let sw = GBin.scrolled_window 
+  ~shadow_type:`ETCHED_IN
+  ~hpolicy:`NEVER
+  ~vpolicy:`AUTOMATIC
+  ~packing:h_box#add () 
+
 
 (* unit circle as roots of graph drawing *)
 let (canvas_root, focus_rectangle) =
@@ -386,16 +389,21 @@ let vertex_event vertex item ellipse ev =
             curs (GdkEvent.Button.time ev);
           if do_refresh ()
           then begin
-            let old_origin = !origine in
+            (* let (x, y) as old_origin = !origine in *)
+            (* Printf.printf "%f %f" x y; *)
+            (* print_newline (); *)
             let turtle = motion_turtle ellipse ev in
-            let hspace = hspace_dist_sqr turtle in
-            if hspace <= rlimit_sqr then begin
+            (* let hspace = hspace_dist_sqr turtle in *)
+            (* let hspace = 0.  (\* hspace_dist_sqr turtle *\) in *)
+            (* Printf.printf "distance : %f" hspace; *)
+            (* print_newline(); *)
+            (* if hspace <=  (\* 0.999999 *\) rlimit_sqr then begin *)
               draw turtle canvas_root vc renderer;
-            end else begin
-              origine := old_origin;
-              let turtle = { turtle with pos = old_origin } in
-              draw turtle canvas_root vc renderer
-            end
+            (* end else begin *)
+            (*   origine := old_origin; *)
+            (*   let turtle = { turtle with pos = old_origin } in *)
+            (*   draw turtle canvas_root vc renderer; *)
+            (* end *)
           end
 
         end
@@ -430,13 +438,15 @@ let vertex_event vertex item ellipse ev =
   end;
   true
 
-let contextual_menu_text t ev =
+let contextual_menu_text t src ev =
   let menu = new GMenu.factory (GMenu.menu ()) in
   ignore (menu#add_item "Show in editor"
-            ~callback:(fun () -> !scroll_to_transition t));
+            ~callback:(fun () ->
+              mem_vertex := Some src;
+              !scroll_to_transition t));
   menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
 
-let edge_event texte label ev =
+let edge_event texte arrow_line label src ev =
   begin
     match ev with
       | `ENTER_NOTIFY _ -> 
@@ -447,7 +457,7 @@ let edge_event texte label ev =
       | `LEAVE_NOTIFY ev ->
       if not (Gdk.Convert.test_modifier `BUTTON1 (GdkEvent.Crossing.state ev))
       then begin
-        texte#set [`FILL_COLOR "black"; `WEIGHT 0];
+        texte#set [`FILL_COLOR "black"; `WEIGHT 400];
         (* update_vertex vertex Unfocus; *)
         refresh_display ()
       end
@@ -470,7 +480,7 @@ let edge_event texte label ev =
     | `BUTTON_PRESS ev ->  
       if (GdkEvent.Button.button ev) = 3
       then
-        contextual_menu_text label ev
+        contextual_menu_text label src ev
     | _ ->
       ()
   end;
@@ -484,9 +494,9 @@ let set_edge_event e =
   let src = G.E.src e in 
   let dst = G.E.dst e in 
   let label = (G.E.label e).label in
-  let _, _, texte = 
+  let _, arrow_line, texte = 
     H2.find successor_edges (src, dst) in 
-  ignore (texte#connect#event ~callback:(edge_event texte label))
+  ignore (texte#connect#event ~callback:(edge_event texte arrow_line label dst))
 
 
 let () = set_vertex_event_fun := set_vertex_event
@@ -512,7 +522,7 @@ let split_node_info x m v changed_l mode new_name =
   let var_find_or before after  =
     List.fold_left (fun acc (x, var_i) ->
       match var_i with 
-        |None -> 
+        |[] -> 
           (if x = before  then
               true
            else
@@ -524,7 +534,7 @@ let split_node_info x m v changed_l mode new_name =
                   true
                 else acc
               with Not_found -> acc)
-        |Some l ->  
+        |l ->  
           if x = before then
             List.mem after l
           else
@@ -573,9 +583,9 @@ let rec build_map m v l mode new_name=
     if not (Var_Map.mem before m) && 
       List.fold_left (fun acc (x, vars) ->
         match vars with 
-          |None -> 
-            if x = before then true else acc
-          |Some var_l -> 
+        |[] -> 
+          if x = before then true else acc
+        |var_l -> 
             if x = before && List.mem after var_l then true else acc
       ) false !var_l then 
       ((G.V.label v).vertex_mode <- VarInit;
@@ -626,8 +636,8 @@ let link_node before v after =
        (let label = ref "" in 
         let b = List.fold_left (fun acc (x, var_i) -> 
        match var_i with 
-         |None -> false
-         |Some l -> 
+         |[]-> false
+         |l -> 
            try
              let var_val = Var_Map.find x map in
              if List.mem var_val l then 
@@ -821,6 +831,12 @@ let safe_or_unsafe () =
   end_load_graph := false;
   end_show_tree := false
     
+let path_to () = 
+  (match !mem_vertex with
+  |None -> ()
+  |Some src -> path_to src !var_l !root);
+  let tor = make_turtle !origine 0.0 in
+  draw tor canvas_root vc renderer
 
 let tree (file, unsafe_l) =
   Queue.clear graph_trace;

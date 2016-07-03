@@ -197,6 +197,21 @@ let confirm s file e =
 let list_to_string l  =  
   List.fold_right (fun x acc -> acc ^ x ^ "\n") l ""
 
+let mode_var () = 
+  M.iter (fun x _ -> 
+    match Str.split (Str.regexp "=") x with 
+    |a::b::[] ->  
+      let a = String.trim a in 
+      let b = String.trim b in 
+      Ed_main.var_l := (a, [b])::!Ed_main.var_l  
+    |[l] -> (match Str.split (Str.regexp "<>") l with 
+      |a::b::[] ->  
+        let a = String.trim a in 
+        let b = String.trim b in
+        Ed_main.var_l := (a, [b])::!Ed_main.var_l 
+      |_ -> failwith "pb format")
+    |_ -> failwith "pb format") !var_map
+   
 let add_value_var l = 
   try 
   List.iter (fun (x, e) -> 
@@ -207,15 +222,16 @@ let add_value_var l =
               ~title:"Error" "Please enter a value or choose change mode";
             raise Value_mode_error
           end;
-       Ed_main.var_l := (x, None)::!Ed_main.var_l)
+       Ed_main.var_l := (x, [])::!Ed_main.var_l)
     else
       let str_l = Str.split (Str.regexp ";") e#text in 
-      Ed_main.var_l := (x, Some (str_l))::!Ed_main.var_l) l;
+      Ed_main.var_l := (x, str_l
+)::!Ed_main.var_l) l;
   var_map := M.empty;
   true
   with Value_mode_error -> false
     
-let scroll_to_transition t = 
+let scroll_to_transition t  = 
     match Str.split (Str.regexp "(") t with
       |[] -> failwith "pb transition"
       |str::_ -> 
@@ -229,7 +245,7 @@ let scroll_to_transition t =
             ignore (source#scroll_to_iter ~use_align:true ~yalign:0.2 s)
  
 
-let select_var l new_path ast =
+let select_var l new_path ast open_graph =
   let t_edit_l = ref [] in
   let wnd = GWindow.window
     ~title:"Watch variables"
@@ -285,14 +301,15 @@ let select_var l new_path ast =
                  Ed_main.mode_change := false);
               if add_value_var !t_edit_l || !Ed_main.mode_change then 
                 ( wnd#destroy ();
-                   source#source_buffer#remove_tag_by_name "var"
-                   ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
+                  source#source_buffer#remove_tag_by_name "var"
+                     ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
+                  open_graph := true;
                   Ed_main.init new_path (punsafe_length (!ast))
                 );
               true);
           
         );
-  ignore (button_cancel#event#connect#button_press
+   ignore (button_cancel#event#connect#button_press
             ~callback:(fun b -> wnd#destroy (); true));
   Ed_main.mode_change := false;
   Ed_main.mode_value := false;
@@ -301,13 +318,14 @@ let select_var l new_path ast =
  )
 
 
-let select_var_none new_path ast =
+let select_var_none new_path ast open_graph=
    if GToolbox.question_box
     ~title:"List" ~buttons:["Add"; "Show trace"]
     ~default:2
     ~icon:(GMisc.image ~stock:`DIALOG_QUESTION  ~icon_size:`DIALOG ())
      "No variables.\n(Add with right click)" = 2 then
      (Ed_main.scroll_to_transition := scroll_to_transition;
+      open_graph := true;
       Ed_main.init new_path (punsafe_length (!ast)))
 
   
@@ -594,6 +612,7 @@ let open_file inter_path save_path ast =
 
 
 let open_window s  = 
+  let open_graph = ref false in 
   let ast = ref s in
   let edit = ref false in 
   let file_name = Options.file in 
@@ -638,14 +657,20 @@ let open_window s  =
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
+
     let _ = save_execute_file ast new_path b in  
     Ed_main.var_l := [];
-    if M.cardinal !var_map = 0 then 
-      (Ed_main.mode_value := false;
-       Ed_main.mode_change := false;
-       select_var_none new_path ast)
-    else  
-      select_var !Ed_main.var_l new_path ast; true)); 
+    if !open_graph then 
+     (mode_var () ;
+      Ed_main.path_to ();)
+    else
+      if M.cardinal !var_map = 0 then 
+        (Ed_main.mode_value := false;
+         Ed_main.mode_change := false;
+         select_var_none new_path ast open_graph)
+      else  
+        select_var !Ed_main.var_l new_path ast open_graph;
+    true)); 
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();
   GtkThread.main ()

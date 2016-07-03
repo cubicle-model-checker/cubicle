@@ -349,8 +349,46 @@ let rec get_path dst_mode src_mode acc edge paths =
           get_path dst_mode src_mode (edge::acc) e paths) pred_e)
 
 
-
-
-
+(* let rec get_path_to dst_mode acc edge paths =  *)
+(*   let dst = G.E.dst edge in  *)
+(*   if mode_node dst dst_mode then  *)
+(*     paths := (edge::acc) :: !paths *)
+(*   else *)
+(*     let succ_e = G.succ_e !graph dst in  *)
+(*     if List.length succ_e <> 0 then  *)
+(*       (List.iter (fun e ->  *)
+(*         if mode_node dst dst_mode then  *)
+(*           get_path_to dst_mode [] e paths *)
+(*         else *)
+(*           get_path_to dst_mode (edge::acc) e paths) succ_e) *)
+(*     else *)
+(*       print_newline(); *)
   
-  
+let mode_node v m =
+  try 
+    List.iter (fun (x, var_i) ->
+      try
+        let var_val = Var_Map.find x (G.V.label v).var_map in
+        if not (List.mem var_val var_i) then 
+          raise Diff_Node
+      with Not_found -> raise Diff_Node) m;
+    true
+  with Diff_Node -> false
+
+
+let rec get_path_to dst_mode acc edge paths = 
+  let dst = G.E.dst edge in 
+  if not (mode_node dst dst_mode) then 
+    ((G.V.label dst).vertex_mode <- VarChange;
+     paths := (edge::acc) :: !paths)
+  else
+    let succ_e = G.succ_e !graph dst in 
+    if List.length succ_e <> 0 then 
+      (List.iter (fun e -> 
+        if not (mode_node dst dst_mode) then 
+          get_path_to dst_mode [] e paths
+        else
+          get_path_to dst_mode (edge::acc) e paths) succ_e)
+    else
+      paths := (edge::acc) :: !paths
+        
