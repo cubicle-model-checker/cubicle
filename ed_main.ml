@@ -32,6 +32,8 @@ let mode_change = ref false
 
 let mode_value = ref false
 
+let open_graph_b = ref true
+
 (* let mode_and = ref false  *)
 
 let m = Mutex.create ()
@@ -189,11 +191,8 @@ let window =
     ~border_width: 10
     ~resizable: true
     ~position: `CENTER () in
-  let _ = wnd#destroy_with_parent in
-  let _ = wnd#event#connect#delete ~callback:(fun b -> 
-    kill_thread := true;
-    wnd#misc#hide ();
-    true(* GMain.quit *))in wnd
+  let _ = wnd#destroy_with_parent
+in wnd
 
 (* menu bar *)
 let v_box = GPack.vbox ~homogeneous:false ~spacing:30  ~packing:window#add () 
@@ -263,8 +262,7 @@ let (canvas_root, focus_rectangle) =
              `X2 (  w/.2. -. w2); `Y2 ( h/.2. -. w2) ;
              `FILL_COLOR color_circle ; `OUTLINE_COLOR "black" ; 
              `WIDTH_PIXELS (truncate w2) ] circle_group 
-  in
-  circle_group#lower_to_bottom ();
+  in  circle_group#lower_to_bottom ();
    let r = GnoCanvas.rect
     ~x1:(-. 100.) ~y1:(-. 80.)
     ~x2:(100.) ~y2:(80.) ~props:[`FILL_COLOR "#e0e0e0"] circle_group
@@ -438,11 +436,11 @@ let vertex_event vertex item ellipse ev =
   end;
   true
 
-let contextual_menu_text t src ev =
+let contextual_menu_text t e ev =
   let menu = new GMenu.factory (GMenu.menu ()) in
   ignore (menu#add_item "Show in editor"
             ~callback:(fun () ->
-              mem_vertex := Some src;
+              mem_vertex := Some e  ;
               !scroll_to_transition t));
   menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
 
@@ -496,7 +494,7 @@ let set_edge_event e =
   let label = (G.E.label e).label in
   let _, arrow_line, texte = 
     H2.find successor_edges (src, dst) in 
-  ignore (texte#connect#event ~callback:(edge_event texte arrow_line label dst))
+  ignore (texte#connect#event ~callback:(edge_event texte arrow_line label e))
 
 
 let () = set_vertex_event_fun := set_vertex_event
@@ -558,6 +556,8 @@ let split_node_info x m v changed_l mode new_name =
      (Str.string_before x pos) in
    let after =  Str.global_replace (Str.regexp "[\n| ]+") ""
      (Str.string_after x (pos + 1)) in
+   (* print_string before; *)
+   (* print_newline (); *)
    let m =
      try
        if !mode_change then 
@@ -579,19 +579,19 @@ let split_node_info x m v changed_l mode new_name =
    (before, after, m))
     
 let rec build_map m v l mode new_name=
-  let var_init before after m = 
-    if not (Var_Map.mem before m) && 
-      List.fold_left (fun acc (x, vars) ->
-        match vars with 
-        |[] -> 
-          if x = before then true else acc
-        |var_l -> 
-            if x = before && List.mem after var_l then true else acc
-      ) false !var_l then 
-      ((G.V.label v).vertex_mode <- VarInit;
-       (G.V.label v).num_label <- 
-         (G.V.label v).num_label ^ "\n" ^ before ^ " <- " ^ after);
-  in 
+  (* let var_init before after m =  *)
+  (*   if not (Var_Map.mem before m) &&  *)
+  (*     List.fold_left (fun acc (x, vars) -> *)
+  (*       match vars with  *)
+  (*       |[] ->  *)
+  (*         if x = before then true else acc *)
+  (*       |var_l ->  *)
+  (*           if x = before && List.mem after var_l then true else acc *)
+  (*     ) false !var_l then  *)
+  (*     ((G.V.label v).vertex_mode <- VarInit; *)
+  (*      (G.V.label v).num_label <-  *)
+  (*        (G.V.label v).num_label ^ "\n" ^ before ^ " <- " ^ after); *)
+  (* in *) 
   let changed_l = ref "" in
   match l with
     |[] -> m
@@ -601,13 +601,13 @@ let rec build_map m v l mode new_name=
         |x::_ ->
           (try
              let before, after, m = split_node_info x m v changed_l mode new_name in
-             var_init before after m;
+             (* var_init before after m; *)
              Var_Map.add before after m
            with Not_found -> failwith "erreur build map"))
     |x::s ->
       try
         let before, after, m = split_node_info x m v changed_l mode new_name in
-        var_init before after m;
+        (* var_init before after m; *)
         build_map (Var_Map.add before after m) v s mode new_name
       with Not_found -> failwith "erreur build map"
         
@@ -630,7 +630,7 @@ let link_node before v after =
        (Str.string_after before (arrow_pos + 2)) in
      let n = HT.find ht node in
      let e = G.E.create n (make_edge_info_label transition true) v in
-     let map = build_map (G.V.label n).var_map v after mode new_name in 
+     let map = build_map (Var_Map.empty)(* (G.V.label n).var_map *) v after mode new_name in 
      (G.V.label v).var_map <- map;
      if !mode_value then 
        (let label = ref "" in 
@@ -786,32 +786,6 @@ let show_tree file  =
     |KillThread ->
       ignore (Unix.close_process_in ic)
 
-(* let update_model () =  *)
-(*   try *)
-(*     while true do *)
-(*       if !kill_thread || !end_show_tree || !end_load_graph then  *)
-(*         raise KillThread; *)
-(*       (\* Mutex.lock m_model; *\) *)
-(*       (\* while Queue.length model = 0 do *\) *)
-(*       (\*   Condition.wait c_model m *\) *)
-(*         (\* done; *\) *)
-(*         try *)
-(*           Mutex.lock m_model;  *)
-(*           let m = Queue.pop model in *)
-(*           Mutex.unlock m_model;  *)
-(*           (match m with *)
-(*             |Node n -> (Model.add_vertex n; *)
-(*                         Ed_display.add_node canvas_root n; *)
-(*                         !set_vertex_event_fun n) *)
-(*             |UnsafeNode n-> (Model.add_vertex_unsafe n; *)
-(*                          Ed_display.add_node canvas_root n; *)
-(*                          !set_vertex_event_fun n) *)
-(*             |Edge (n1, n2) -> Model.add_edge n1 n2) *)
-(*         with Queue.Empty -> (Printf.printf " " ; Mutex.unlock m_model); *)
-(*     done  *)
-(*   with  *)
-(*     |KillThread -> (end_show_tree := false; end_load_graph := false; Mutex.unlock m_model) *)
-
 
 let safe_or_unsafe () =
   while not (!end_load_graph && !end_show_tree) do
@@ -827,16 +801,37 @@ let safe_or_unsafe () =
       result_label#set_text "Unsafe")
    with Not_found ->
      (result_image#set_stock `APPLY;
-      result_label#set_text "Safe"));
-  end_load_graph := false;
-  end_show_tree := false
+      result_label#set_text "Safe"))
+    (* if !mem_vertex = None then  *)
+    (*   (end_load_graph := false; *)
+    (*    end_show_tree := false) *)
     
+let path_to_l () = 
+  while (not (!end_load_graph && !end_show_tree)) || (not !kill_thread)
+  do 
+    (match !mem_vertex with
+      |None -> ()
+      |Some src -> path_to src !var_l !root);
+    let tor = make_turtle !origine 0.0 in
+    draw tor canvas_root vc renderer
+  done
+  (* end_load_graph := false; *)
+  (* end_show_tree := false *)
+
 let path_to () = 
-  (match !mem_vertex with
-  |None -> ()
-  |Some src -> path_to src !var_l !root);
+   (match !mem_vertex with
+      |None -> ()
+      |Some src -> path_to src !var_l !root);
   let tor = make_turtle !origine 0.0 in
   draw tor canvas_root vc renderer
+
+let path_to_loop () = 
+  window#present ();
+  print_newline();
+  if (!end_load_graph &&  !end_show_tree)|| !kill_thread then
+    path_to ()  
+  else
+    (* GtkThread.async (fun () -> *) ignore (Thread.create path_to_l ())(* ) () *)
 
 let tree (file, unsafe_l) =
   Queue.clear graph_trace;
@@ -844,7 +839,7 @@ let tree (file, unsafe_l) =
   ignore (Thread.create load_graph unsafe_l) ;
   ignore (Thread.create safe_or_unsafe ())
     
-let open_graph file unsafe_l =
+let open_graph  file unsafe_l open_graph_b  =
   ignore (window#show ());
   Ed_graph.new_graph();
   set_canvas_event ();
@@ -860,10 +855,15 @@ let open_graph file unsafe_l =
               draw tor canvas_root vc renderer; true));
   GtkThread.async (fun () -> tree (file, unsafe_l)) ();
   draw (make_turtle_origine ()) canvas_root vc renderer;
+  ignore ( window#event#connect#delete ~callback:(fun b -> 
+    kill_thread := true;
+    open_graph_b := false;
+    window#misc#hide ();
+    true));
   GtkThread.main ()
     
 
-let init file nb_unsafe = 
+let init file nb_unsafe open_graph_b = 
   kill_thread := false;
   reset_table_and_canvas ();
   Ed_graph.new_graph ();
@@ -878,4 +878,4 @@ let init file nb_unsafe =
      ignore (Model.add_vertex v))
   else
     root := None;
-  open_graph file nb_unsafe
+  open_graph file nb_unsafe open_graph_b

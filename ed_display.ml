@@ -37,7 +37,7 @@ let color_vertex = "grey75"
 let color_varchange = "#98cfd6"
 let color_varchange_focused = "#98cfd6"
 
-let color_line_varchange = (* "#79a3a8" *) "red"
+let color_line_varchange = "#c35959" (* "#79a3a8" *) (* "red" *)
 
 let color_initvar = "#9c98b1"
 let color_initvar_focused = "#9c98b1"
@@ -152,7 +152,7 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
     if l mod 2 = 0 then (l, l+1) else (l+1, l) in 
-    (texte#set [`TEXT  edge.label ; `X points.(x); `Y (points.(y))];
+    (texte#set [`TEXT  edge.label ; `X points.(x); `Y (points.(y) -. 40.)];
      texte#hide ())
       
 type polaire = { radius : float; angle : float}
@@ -383,7 +383,7 @@ let draw_graph _root canvas  =
                 (color_change_successor_edge line line2 color_line_varchange;
                  line2#show ())
               | Path -> 
-                color_change_successor_edge line line2  "#79a3a8";
+                color_change_successor_edge line line2  "#66ff66" (* "#79a3a8" *);
                 
               |_ ->  color_change_successor_edge line line2 color_successor_edge;
           end;
@@ -409,7 +409,7 @@ let draw_graph _root canvas  =
             let _,line, texte = draw_intern_edge vw edge turv turw canvas in
             begin
               match edge.edge_mode with
-                | Normal -> color_change_intern_edge line color_intern_edge;
+                | Normal ->  color_change_intern_edge line color_intern_edge;
                 | Selected -> color_change_intern_edge line color_selected_intern_edge;
                 | Focused ->  color_change_intern_edge line color_focused_intern_edge;
                 | Selected_Focused -> color_change_intern_edge line color_selected_focused_intern_edge;
@@ -479,8 +479,6 @@ let draw_graph _root canvas  =
               | Unsafe_Focused -> color_change_vertex item color_unsafe_focused 3;
               | VarChange -> color_change_vertex item color_varchange 0;
               | VarChange_Focused -> color_change_vertex item color_varchange_focused 3;
-              | VarInit -> color_change_vertex item color_initvar 0;
-              | VarInit_Focused -> color_change_vertex item color_initvar_focused 3;
               | _ -> ()
         end
       else
@@ -522,12 +520,14 @@ let set_path paths root =
     with Failure(_) -> ()
   ) paths
 
-let set_path_to paths = 
-  List.iter ( fun p -> 
-    
-    print_int (List.length p);
-    print_newline ();
-    List.iter (fun e -> (G.E.label e).edge_mode <- Path) p;
+let set_path_to paths = print_newline ()
+  (* let paths =  *)
+  (*      List.tl paths  *)
+  (*   in  *)
+  (* List.iter ( fun p ->  *)
+    (* print_string " "; *)
+    (* print_newline(); *)
+    (* List.iter (fun e -> (G.E.label e).edge_mode <- HighlightPath) p; *)
     (* try  *)
     (*   let src_e = List.nth p ((List.length p) - 1) in  *)
     (*   let src_node = G.E.src src_e in *)
@@ -537,7 +537,7 @@ let set_path_to paths =
     (*   (G.V.label dst_node).vertex_mode <- VarChange; *)
     (*   (\* color_edges src_node root *\) *)
     (* with Failure(_) -> () *)
-  ) paths
+  (* ) paths *)
 
 let path_between src_mode dst_mode  root =
   (** Pour tous les noeuds dans l'etat mode dst *)
@@ -572,8 +572,14 @@ let path_to src_node dst_mode root =
 (*       get_path_to dst_mode [] e paths; *)
 (*       set_path_to !paths root) (\* (G.succ_e !graph node) *\) (G.succ_e !graph src_node) *)
 
-let path_to src_node dst_mode root = 
+let path_to e dst_mode root = 
+  (* let cpt = ref 0 in  *)
+  let src_node = G.E.dst e in
    List.iter (fun e -> 
+     print_newline ();
+     (* print_int !cpt; *)
+     (* print_newline(); *)
+     (* incr cpt; *)
     let paths = ref [] in 
     get_path_to dst_mode [] e paths;
     set_path_to !paths ;

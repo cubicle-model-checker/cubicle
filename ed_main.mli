@@ -23,11 +23,13 @@ val mode_value : bool ref
 
 (* val mode_and : bool ref *)
 
-val init : string -> int -> unit
+val init : string -> int -> bool ref -> unit
 
 val scroll_to_transition : (string ->  unit) ref
 val model_reset : unit -> unit 
 
 val path_to : unit -> unit
+
+val path_to_loop : unit -> unit
 
 (* val cpt : int ref *)

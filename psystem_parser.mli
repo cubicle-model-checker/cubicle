@@ -12,3 +12,5 @@ val parse_linact: Ptree.psystem -> unit
 val parse_var : Ptree.psystem -> (tag * int * int) list
 val parse_psystem_m : Ptree.psystem -> (tag * int * int) list
 val punsafe_length : Ptree.psystem -> int
+val find_transition_ast : string -> Ptree.psystem -> (int * int)
+val get_transition_args : string -> Ptree.psystem -> string list

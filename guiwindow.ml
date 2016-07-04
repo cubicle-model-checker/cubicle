@@ -10,7 +10,10 @@ exception CursorNotOverText
 exception FileError
 exception KillThread
 exception Value_mode_error
+
 let last_search_iter = ref None 
+
+let trans_args = ref []
 
 let kill_thread = ref false
 
@@ -33,8 +36,8 @@ let window =
 let cubicle  = 
   let manager = GSourceView2.source_language_manager ~default:true in 
   match manager#language "cubicle" with 
-  | None -> None
-  | some -> some
+    | None -> None
+    | some -> some
 
 let box = GPack.vbox ~packing:window#add ()
 
@@ -60,14 +63,14 @@ let save_button = toolbar#insert_button
   ~icon:(GMisc.image ~stock:`SAVE ~icon_size:`LARGE_TOOLBAR ())#coerce ()
 
 let edit_button = toolbar#insert_toggle_button
-          ~text:" Edit File"
-          ~icon:(GMisc.image ~stock:`EDIT ~icon_size:`LARGE_TOOLBAR ())#coerce ()
-   
+  ~text:" Edit File"
+  ~icon:(GMisc.image ~stock:`EDIT ~icon_size:`LARGE_TOOLBAR ())#coerce ()
+  
 let resultbox, result_image, result_label =
   toolbar#insert_space ();
   let hbox = GPack.hbox () in
   let result_image = GMisc.image ~icon_size:`LARGE_TOOLBAR
-     ~packing:hbox#add () in
+    ~packing:hbox#add () in
   let result_label = GMisc.label ~text:" " ~packing:hbox#add () in
   ignore(toolbar#insert_widget hbox#coerce); hbox, result_image, result_label
 
@@ -91,7 +94,7 @@ let next_button = toolsearch#insert_button
 let previous_button = toolsearch#insert_button
   ~text:" Previous"
   ~icon:(GMisc.image ~stock:`GO_UP ~icon_size:`SMALL_TOOLBAR())#coerce ()
-                                              
+  
 let trace_button = GButton.button ~label:"Trace" 
   ~packing:(toolbox#add) ()
 
@@ -110,26 +113,28 @@ let source_box1 = GPack.vbox ~packing:(debug_box#pack ~expand:true ~fill:true) (
 (** Debug mode *)
 let source_box2 = GPack.vbox ~packing:debug_box#add ~show:(gui_debug)() 
 
-let source_frame1 = GBin.frame  ~border_width:10  ~packing:(source_box1#pack) ()
+let source_frame1 = GBin.frame  ~border_width:10 
+  ~packing:(source_box1#pack ~expand:true ~fill:true) ()
 
-let source_frame2 = GBin.frame  ~border_width:10  ~packing:(source_box2#pack) ()
+let source_frame2 = GBin.frame  ~border_width:10 
+  ~packing:(source_box2#pack ~expand:true ~fill:true) ()
 
 let e_box = GBin.event_box ~height:500 ~packing:(source_frame1#add) ()
 
 (** Debug mode *)
 let e_box2 = GBin.event_box ~height:500 ~packing:(source_frame2#add) ()
- 
-let result_frame = GBin.frame ~border_width:10 
-  ~packing:(source_box1#pack ~expand:true ~fill:true) ()
+  
+let result_frame = GBin.frame ~border_width:10 ~height:200
+  ~packing:(source_box1#pack ~expand:false ~fill:true) ()
 
-let result_frame2 = GBin.frame ~border_width:10 
-  ~packing:(source_box2#pack ~expand:true ~fill:true) ()
+let result_frame2 = GBin.frame ~border_width:10 ~height:200
+  ~packing:(source_box2#pack ~expand:false ~fill:true) ()
 
 let result_scroll = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
   ~vpolicy:`ALWAYS 
   ~border_width:5
-  ~packing: result_frame#add()
+  ~packing: result_frame#add ()
 
 let result_text1 =  
   let t = GSourceView2.source_view 
@@ -188,62 +193,103 @@ let save_session s file b =
 
 let confirm s file e =
   (if GToolbox.question_box
-    ~title:"Save session" ~buttons:["Cancel"; "Save"]
-    ~default:2 ~icon:(GMisc.image ~stock:`SAVE  ~icon_size:`DIALOG ())
-    "Would you like to save the session ?" = 2 then
+      ~title:"Save session" ~buttons:["Cancel"; "Save"]
+      ~default:2 ~icon:(GMisc.image ~stock:`SAVE  ~icon_size:`DIALOG ())
+      "Would you like to save the session ?" = 2 then
       let _ = save_session s file e in ());
   false
- 
+    
 let list_to_string l  =  
   List.fold_right (fun x acc -> acc ^ x ^ "\n") l ""
 
-let mode_var () = 
-  M.iter (fun x _ -> 
-    match Str.split (Str.regexp "=") x with 
-    |a::b::[] ->  
-      let a = String.trim a in 
-      let b = String.trim b in 
-      Ed_main.var_l := (a, [b])::!Ed_main.var_l  
-    |[l] -> (match Str.split (Str.regexp "<>") l with 
-      |a::b::[] ->  
-        let a = String.trim a in 
+(* let mode_var () =  *)
+(*   let arg_list = !trans_args in  *)
+(*   M.iter (fun x _ ->  *)
+(*     match Str.split (Str.regexp "=") x with  *)
+(*       |a::b::[] ->   *)
+(*         let a = String.trim a in        *)
+(*         let b = String.trim b in  *)
+(*         Ed_main.var_l := (a, [b])::!Ed_main.var_l   *)
+(*       |[l] -> (match Str.split (Str.regexp "<>") l with  *)
+(*           |a::b::[] ->   *)
+(*             let a = String.trim a in  *)
+(*             let b = String.trim b in *)
+(*             Ed_main.var_l := (a, [b])::!Ed_main.var_l  *)
+(*           |_ -> failwith "pb format") *)
+(*       |_ -> failwith "pb format") !var_map *)
+    
+let mode_var () =
+  let arg_list = !trans_args in
+  M.iter (fun x _ ->
+    match Str.split (Str.regexp "=") x with
+      |a::b::[] ->
+        let a = String.trim a in
+        let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in
+        Printf.printf "position : %d\n" open_b;
+        print_newline();
+        let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
+        Printf.printf "position : %d\n" close_b;
+        print_newline();
+        let arg = String.sub a open_b  (close_b - open_b) in
+        Printf.printf "%s\n" arg;
+        print_newline();
+        List.iter (fun (_,x) -> print_string x; print_newline ()) arg_list;
+        let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
+        Printf.printf "%s\n" a;
+        print_newline();
+        let new_var = Str.replace_first (Str.regexp "\\[n\\]") ("["^r^"]") a in
+        Printf.printf ".%s.\n" new_var;
+        print_newline();
         let b = String.trim b in
-        Ed_main.var_l := (a, [b])::!Ed_main.var_l 
-      |_ -> failwith "pb format")
-    |_ -> failwith "pb format") !var_map
-   
+        Ed_main.var_l := (new_var, [b])::!Ed_main.var_l
+      |[l] -> (match Str.split (Str.regexp "<>") l with
+          |a::b::[] ->
+            let a = String.trim a in
+            let b = String.trim b in
+            Ed_main.var_l := (a, [b])::!Ed_main.var_l
+          |_ -> failwith "pb format")
+      |_ -> failwith "pb format") !var_map
+    
 let add_value_var l = 
   try 
-  List.iter (fun (x, e) -> 
-    if e#text = "" then 
-      (if !Ed_main.mode_value then
-          begin
-            GToolbox.message_box 
-              ~title:"Error" "Please enter a value or choose change mode";
-            raise Value_mode_error
-          end;
-       Ed_main.var_l := (x, [])::!Ed_main.var_l)
-    else
-      let str_l = Str.split (Str.regexp ";") e#text in 
-      Ed_main.var_l := (x, str_l
-)::!Ed_main.var_l) l;
-  var_map := M.empty;
-  true
+    List.iter (fun (x, e) -> 
+      if e#text = "" then 
+        (if !Ed_main.mode_value then
+            begin
+              GToolbox.message_box 
+                ~title:"Error" "Please enter a value or choose change mode";
+              raise Value_mode_error
+            end;
+         Ed_main.var_l := (x, [])::!Ed_main.var_l)
+      else
+        let str_l = Str.split (Str.regexp ";") e#text in 
+        Ed_main.var_l := (x, str_l
+        )::!Ed_main.var_l) l;
+    var_map := M.empty;
+    true
   with Value_mode_error -> false
+
+
     
-let scroll_to_transition t  = 
-    match Str.split (Str.regexp "(") t with
-      |[] -> failwith "pb transition"
-      |str::_ -> 
-        let start_iter = source#source_buffer#start_iter in
-        window#present ();
-        match start_iter#forward_search str with
-          |None -> failwith "transition not found"
-          |Some (s, e) -> 
-            source#source_buffer#apply_tag_by_name "search"
-              ~start:s ~stop:e;
-            ignore (source#scroll_to_iter ~use_align:true ~yalign:0.2 s)
- 
+let scroll_to_transition ast t =  
+  match Str.split (Str.regexp "(") t with
+    |[] -> failwith "pb transition"
+    |str::_ -> 
+      let open_p = (Str.search_forward (Str.regexp "(") t  0) + 1 in 
+      let close_p = Str.search_forward (Str.regexp ")") t 0 in 
+      let args = String.sub t open_p  (close_p - open_p) in 
+      let arg_list = Str.split (Str.regexp "[ \t]+") args in 
+      let list = List.map2 (fun proc arg_name -> (proc, arg_name))
+        arg_list (get_transition_args str !ast) in
+      trans_args := list;
+      let start, stop = find_transition_ast str !ast in 
+      let start_iter = source#source_buffer#get_iter(`OFFSET start) in 
+      let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
+      window#present ();
+      source#source_buffer#apply_tag_by_name "search" ~start:start_iter 
+        ~stop:stop_iter;
+      ignore (source#scroll_to_iter ~use_align:true ~yalign:0.2 start_iter)    
+
 
 let select_var l new_path ast open_graph =
   let t_edit_l = ref [] in
@@ -292,43 +338,43 @@ let select_var l new_path ast open_graph =
     ~packing:(button_box#add) () in
   wnd#show();
   (ignore (button_show#event#connect#button_press 
-            ~callback:(fun b -> 
-              if button_change#active then 
-                (Ed_main.mode_value := false;
-                 Ed_main.mode_change := true)
-              else 
-                (Ed_main.mode_value := true;
-                 Ed_main.mode_change := false);
-              if add_value_var !t_edit_l || !Ed_main.mode_change then 
-                ( wnd#destroy ();
-                  source#source_buffer#remove_tag_by_name "var"
+             ~callback:(fun b -> 
+               if button_change#active then 
+                 (Ed_main.mode_value := false;
+                  Ed_main.mode_change := true)
+               else 
+                 (Ed_main.mode_value := true;
+                  Ed_main.mode_change := false);
+               if add_value_var !t_edit_l || !Ed_main.mode_change then 
+                 ( wnd#destroy ();
+                   source#source_buffer#remove_tag_by_name "var"
                      ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
-                  open_graph := true;
-                  Ed_main.init new_path (punsafe_length (!ast))
-                );
-              true);
-          
-        );
+                   open_graph := true;
+                   Ed_main.init new_path (punsafe_length (!ast)) open_graph
+                 );
+               true);
+           
+   );
    ignore (button_cancel#event#connect#button_press
-            ~callback:(fun b -> wnd#destroy (); true));
-  Ed_main.mode_change := false;
-  Ed_main.mode_value := false;
-  var_map := M.empty;
-  Ed_main.var_l := []
- )
+             ~callback:(fun b -> wnd#destroy (); true));
+   Ed_main.mode_change := false;
+   Ed_main.mode_value := false;
+   var_map := M.empty;
+   Ed_main.var_l := []
+  )
 
 
 let select_var_none new_path ast open_graph=
-   if GToolbox.question_box
+  if GToolbox.question_box
     ~title:"List" ~buttons:["Add"; "Show trace"]
     ~default:2
     ~icon:(GMisc.image ~stock:`DIALOG_QUESTION  ~icon_size:`DIALOG ())
-     "No variables.\n(Add with right click)" = 2 then
-     (Ed_main.scroll_to_transition := scroll_to_transition;
-      open_graph := true;
-      Ed_main.init new_path (punsafe_length (!ast)))
+    "No variables.\n(Add with right click)" = 2 then
+    (Ed_main.scroll_to_transition := scroll_to_transition ast; 
+     open_graph := true;
+     Ed_main.init new_path (punsafe_length (!ast)) open_graph) 
 
-  
+      
 (* Debug mode*)
 let source2 = 
   let src = GSourceView2.source_view 
@@ -375,39 +421,39 @@ let rec apply_tag = function
     let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
     let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
     (match t_id with 
-    |Comment ->  
-      source#source_buffer#apply_tag_by_name "delete"
-        ~start:start_iter ~stop:stop_iter;
-      source#source_buffer#apply_tag_by_name "dark"
-        ~start:start_iter ~stop:stop_iter;
-    |Hover -> 
-      source#source_buffer#apply_tag_by_name "gray_background" 
-        ~start:start_iter ~stop:stop_iter; apply_tag s
-    |UndoComment -> 
-      source#source_buffer#remove_tag_by_name "delete"
-        ~start:start_iter ~stop:stop_iter;
-      source#source_buffer#remove_tag_by_name "dark"
-        ~start:start_iter ~stop:stop_iter
-    |UndoHover -> 
-      source#source_buffer#remove_tag_by_name "gray_background" 
-        ~start:start_iter ~stop:stop_iter
-    |Var -> 
-      begin
-        source#source_buffer#apply_tag_by_name "var"
+      |Comment ->  
+        source#source_buffer#apply_tag_by_name "delete"
           ~start:start_iter ~stop:stop_iter;
-        let str =  (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) in
-        if M.mem str !var_map then 
-          (let (be, en) = M.find str !var_map in
-            if be = start && en = stop then
-              var_map := M.remove str !var_map ;
-            source#source_buffer#remove_tag_by_name "var"
-              ~start:start_iter ~stop:stop_iter)
-        else 
-          var_map := M.add str (start, stop) !var_map          
+        source#source_buffer#apply_tag_by_name "dark"
+          ~start:start_iter ~stop:stop_iter;
+      |Hover -> 
+        source#source_buffer#apply_tag_by_name "gray_background" 
+          ~start:start_iter ~stop:stop_iter; apply_tag s
+      |UndoComment -> 
+        source#source_buffer#remove_tag_by_name "delete"
+          ~start:start_iter ~stop:stop_iter;
+        source#source_buffer#remove_tag_by_name "dark"
+          ~start:start_iter ~stop:stop_iter
+      |UndoHover -> 
+        source#source_buffer#remove_tag_by_name "gray_background" 
+          ~start:start_iter ~stop:stop_iter
+      |Var -> 
+        begin
+          source#source_buffer#apply_tag_by_name "var"
+            ~start:start_iter ~stop:stop_iter;
+          let str =  (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) in
+          if M.mem str !var_map then 
+            (let (be, en) = M.find str !var_map in
+             if be = start && en = stop then
+               var_map := M.remove str !var_map ;
+             source#source_buffer#remove_tag_by_name "var"
+               ~start:start_iter ~stop:stop_iter)
+          else 
+            var_map := M.add str (start, stop) !var_map          
       (* let m =  Ed_main.Var_L.add (Ed_main.var_l) in () *)
-        (* Ed_main.var_l := (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) :: !Ed_main.var_l *)
-      end
-);
+      (* Ed_main.var_l := (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) :: !Ed_main.var_l *)
+        end
+    );
     apply_tag s
 
 (** Parcourt l'AST pour trouver dans les bornes de quelle loc se trouve le curseur *)
@@ -423,14 +469,14 @@ let find_in_ast s edit m  =
 
 (** Appelé après un clic de souris pour commenter *)
 let modify_ast ast edit b = 
-    if !edit then false
+  if !edit then false
+  else 
+    if (GdkEvent.Button.button b) = 3 && !buffer_l <> -1 && !buffer_c <> -1 then 
+      (apply_tag (parse_var !ast); true)
     else 
-      if (GdkEvent.Button.button b) = 3 && !buffer_l <> -1 && !buffer_c <> -1 then 
-        (apply_tag (parse_var !ast); true)
-      else 
-        (if !buffer_l <> -1 && !buffer_c <> -1 then
-            apply_tag (parse_psystem_m !ast );
-         true)
+      (if !buffer_l <> -1 && !buffer_c <> -1 then
+          apply_tag (parse_psystem_m !ast );
+       true)
 
 (** Sauvegarde du fichier envoyé à Cubicle *)      
 let save_execute_file s file b =
@@ -453,36 +499,36 @@ let open_show_file ast new_file edit =
      source#source_buffer#set_text (read_file new_file);
      edit := false;
    with 
-   |Parsing.Parse_error -> 
-     let (start, stop) = (lexeme_start lb, lexeme_end lb) in
-     let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
-     let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
-     source#source_buffer#apply_tag_by_name "error" 
-       ~start:start_iter ~stop:stop_iter;
-     result_text1#buffer#set_text "syntax error";
-     close_in ic;
-     raise FileError
-   |Lexer.Lexical_error s ->
-     let (start, stop) = (lexeme_start lb, lexeme_end lb) in
-     let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
-     let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
-     source#source_buffer#apply_tag_by_name "error" 
-       ~start:start_iter ~stop:stop_iter;
-     result_text1#buffer#set_text ("lexical error : "^s);
-     close_in ic;
-     raise FileError
-   |Typing.Error (e,loc) ->
-     let (start, stop) = (lexeme_start lb, lexeme_end lb) in
-     let start_iter = source#source_buffer#get_iter (`OFFSET start) in
-     let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in
-     source#source_buffer#apply_tag_by_name "error"
-       ~start:start_iter ~stop:stop_iter;
-     result_text1#buffer#set_text ("typing error : ");
-     close_in ic;
-     raise FileError)  
+     |Parsing.Parse_error -> 
+       let (start, stop) = (lexeme_start lb, lexeme_end lb) in
+       let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
+       let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
+       source#source_buffer#apply_tag_by_name "error" 
+         ~start:start_iter ~stop:stop_iter;
+       result_text1#buffer#set_text "syntax error";
+       close_in ic;
+       raise FileError
+     |Lexer.Lexical_error s ->
+       let (start, stop) = (lexeme_start lb, lexeme_end lb) in
+       let start_iter = source#source_buffer#get_iter (`OFFSET start) in 
+       let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in 
+       source#source_buffer#apply_tag_by_name "error" 
+         ~start:start_iter ~stop:stop_iter;
+       result_text1#buffer#set_text ("lexical error : "^s);
+       close_in ic;
+       raise FileError
+     |Typing.Error (e,loc) ->
+       let (start, stop) = (lexeme_start lb, lexeme_end lb) in
+       let start_iter = source#source_buffer#get_iter (`OFFSET start) in
+       let stop_iter = source#source_buffer#get_iter (`OFFSET stop) in
+       source#source_buffer#apply_tag_by_name "error"
+         ~start:start_iter ~stop:stop_iter;
+       result_text1#buffer#set_text ("typing error : ");
+       close_in ic;
+       raise FileError)  
 
 (** Autorise les modifications quand on entre dans le mode edition,
-   parse et affiche le fichier, interdit les modifications en sortant du mode edition *) 
+    parse et affiche le fichier, interdit les modifications en sortant du mode edition *) 
 let edit_mode ast new_file button edit m =
   if button#active then 
     ( edit := true;
@@ -503,8 +549,8 @@ let safe_or_unsafe () =
   let str = result_text1#buffer#get_text () in 
   try 
     (let _ = Str.search_forward (Str.regexp "UNSAFE") str 0 in
-    result_image#set_stock `DIALOG_ERROR;
-    result_label#set_text "Unsafe" )
+     result_image#set_stock `DIALOG_ERROR;
+     result_label#set_text "Unsafe" )
   with Not_found ->
     (result_image#set_stock `APPLY;
      result_label#set_text "Safe")
@@ -522,12 +568,12 @@ let get_trace (buffer, file) =
       ignore (result_text1#scroll_to_iter ~use_align:true ~yalign:0.5 (result_text1#buffer#end_iter))
     done
   with
-  |End_of_file ->
-    (ignore (Unix.close_process_in ic);
-     safe_or_unsafe ())
-  |KillThread -> ignore (Unix.close_process_in ic) 
+    |End_of_file ->
+      (ignore (Unix.close_process_in ic);
+       safe_or_unsafe ())
+    |KillThread -> ignore (Unix.close_process_in ic) 
 
-  
+      
 let execute buffer file b  =
   ignore (Thread.create get_trace (buffer, file))
 
@@ -543,31 +589,31 @@ let search b =
   let rec f () =  
     let search_res = !last_search#forward_search str in
     match search_res with 
-    |None -> ()
-    |Some (start, stop) -> 
-      (source#source_buffer#apply_tag_by_name "search"
-         ~start:start ~stop:stop; last_search := stop;   last_search_iter := None;
-       f ()) in 
+      |None -> ()
+      |Some (start, stop) -> 
+        (source#source_buffer#apply_tag_by_name "search"
+           ~start:start ~stop:stop; last_search := stop;   last_search_iter := None;
+         f ()) in 
   f()
 
 let search_next b = 
   let start_iter = source#source_buffer#start_iter in
   let stop_iter = source#source_buffer#end_iter in
   let s_iter =  
-  match !last_search_iter with
-    |None -> start_iter
-    |Some (_, x) -> x in
+    match !last_search_iter with
+      |None -> start_iter
+      |Some (_, x) -> x in
   let str = search_bar#text in
   source#source_buffer#remove_tag_by_name "search_next"
     ~start:start_iter ~stop:stop_iter;
   let search_res = s_iter#forward_search str in
   (match search_res with 
-  |None -> last_search_iter := None 
-  |Some (start, stop) ->
-    last_search_iter := Some (start, stop);
-    ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 start);
-    source#source_buffer#apply_tag_by_name "search_next"
-      ~start:start ~stop:stop);
+    |None -> last_search_iter := None 
+    |Some (start, stop) ->
+      last_search_iter := Some (start, stop);
+      ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 start);
+      source#source_buffer#apply_tag_by_name "search_next"
+        ~start:start ~stop:stop);
   true
 
 let search_previous b = 
@@ -581,12 +627,12 @@ let search_previous b =
     ~start:start_iter ~stop:stop_iter;
   let search_res = s_iter#backward_search str in
   (match search_res with 
-  |None -> last_search_iter := None 
-  |Some (start, stop) -> 
-    last_search_iter := Some (start, stop);
-    ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 stop);
-    source#source_buffer#apply_tag_by_name "search_next"
-      ~start:start ~stop:stop);
+    |None -> last_search_iter := None 
+    |Some (start, stop) -> 
+      last_search_iter := Some (start, stop);
+      ignore (source#scroll_to_iter ~use_align:true ~yalign:0.5 stop);
+      source#source_buffer#apply_tag_by_name "search_next"
+        ~start:start ~stop:stop);
   true
 
 (** Coordonées fichier sauvegarde session *)
@@ -608,7 +654,7 @@ let open_file inter_path save_path ast =
      parse_init !ast;
      source#source_buffer#set_text (read_file inter_path);
      apply_tag (parse_psystem !ast);
-   with Sys_error(_) -> Printf.printf "pas de fichier %s" inter_path);;
+   with Sys_error(_) -> () (* Printf.printf "pas de fichier %s" inter_path *));;
 
 
 let open_window s  = 
@@ -657,19 +703,22 @@ let open_window s  =
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->
-
     let _ = save_execute_file ast new_path b in  
     Ed_main.var_l := [];
     if !open_graph then 
-     (mode_var () ;
-      Ed_main.path_to ();)
+      (source#source_buffer#remove_tag_by_name "var"
+         ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
+       source#source_buffer#remove_tag_by_name "search"
+         ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
+       mode_var () ;
+       Ed_main.path_to_loop ();)
     else
       if M.cardinal !var_map = 0 then 
         (Ed_main.mode_value := false;
          Ed_main.mode_change := false;
-         select_var_none new_path ast open_graph)
+         select_var_none new_path ast open_graph )
       else  
-        select_var !Ed_main.var_l new_path ast open_graph;
+        select_var !Ed_main.var_l new_path ast open_graph ;
     true)); 
   ignore (window#event#connect#delete (confirm ast save_path));
   window#show ();

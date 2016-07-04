@@ -385,3 +385,17 @@ let parse_init p =
 
 let punsafe_length p = 
   List.length (p.punsafe)
+
+let get_transition_args t_name p =
+  let trans = List.find (fun t -> (Hstring.view t.ptr_name.hstr) = t_name) p.ptrans in 
+  let arg_l = List.map (fun a -> (Hstring.view a.hstr)) trans.ptr_args in 
+  arg_l
+
+
+let find_transition_ast t_name p =
+  List.fold_left (fun acc t ->
+    if (Hstring.view t.ptr_name.hstr) = t_name then
+      let start_loc, stop_loc =  t.ptr_name.hstr_i.loc in 
+      (start_loc.pos_cnum, stop_loc.pos_cnum)
+    else acc
+  ) (0,0) p.ptrans

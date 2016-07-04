@@ -20,18 +20,18 @@
 open Graph
 open Ed_hyper
 
-exception Diff_Node
+exception Diff_Node of string
 
 type visibility = Visible | BorderNode | Hidden
 
 type label_t = Num_Label | Str_Label 
 
 type mode = 
-  | Normal | Focused
-  | Selected | Selected_Focused 
-  | Unsafe | Unsafe_Focused 
-  | VarChange | VarChange_Focused
-  | VarInit | VarInit_Focused 
+  | Normal        | Focused
+  | Selected      | Selected_Focused 
+  | Unsafe        | Unsafe_Focused 
+  | VarChange     | VarChange_Focused
+  | VarInit       | VarInit_Focused 
   | HighlightPath | HighlightPath_Focused 
   | Path
 
@@ -72,7 +72,8 @@ let make_node_info n s d =
 
 type edge_info = 
   {
-    label : string;
+    mutable label : string;
+    mem_label : string ;
     mutable draw : bool;
     mutable visible_label : bool;
     mutable visited : bool;
@@ -85,6 +86,7 @@ type edge_info =
 let make_edge_info () =
   { 
     label = "";
+    mem_label = "";
     draw = true;
     visible_label = false;
     visited = false; 
@@ -98,6 +100,7 @@ let make_edge_info_label s d =
   { 
     visible_label = false;
     label = s;
+    mem_label = s;
     draw = d;
     visited = false; 
     edge_mode = Normal;
@@ -285,10 +288,10 @@ let find_nodes l  =
         try
           let var_val = Var_Map.find x (G.V.label v).var_map in
             if not (List.mem var_val var_i) then 
-              raise Diff_Node
-        with Not_found -> raise Diff_Node) l;
+              raise (Diff_Node(x))
+        with Not_found -> raise (Diff_Node(x))) l;
       v::acc
-    with Diff_Node -> acc) !graph []
+    with Diff_Node(x) -> acc) !graph []
 
 let mode_node v m =
   try 
@@ -296,41 +299,10 @@ let mode_node v m =
       try
         let var_val = Var_Map.find x (G.V.label v).var_map in
         if not (List.mem var_val var_i) then 
-          raise Diff_Node
-      with Not_found -> raise Diff_Node) m;
+          raise (Diff_Node(x))
+      with Not_found -> raise (Diff_Node(x))) m;
     true
-  with Diff_Node -> false
-
-(* let path_between m1 m2 = *)
-(*   let module PWeight = struct *)
-(*   type edge = G.E.t *)
-(*   type t = int *)
-(*   let weight x = 0 *)
-(*   let compare e1 e2 = 0 *)
-(*   let add e1 e2 = 0 *)
-(*   let zero = 0 *)
-(*   end in *)
-(*   let module D = Path.Dijkstra(G)(PWeight) in *)
-(*   let nodes_m1 = find_nodes m1 in *)
-(*   let nodes_m2 = find_nodes m2 in *)
-(*   List.iter (fun v1 -> *)
-(*     (List.iter (fun v2 -> *)
-(*       try *)
-(*         let (path, _ ) = D.shortest_path !graph v1 v2  in *)
-(*         List.iter (fun e -> (G.E.label e).edge_mode <- Path) path *)
-(*       with Not_found -> ()) nodes_m2 )) nodes_m1 *)
-
-
-(* let rec test mode acc edge paths = *)
-(*   (\** Recupérer noeud destination de edge **\) *)
-(*   let dst = G.E.dst edge in *)
-(*   (\** Si le noeud de destination correspond au mode alors on renvoie edge **\) *)
-(*   if mode_node dst mode then *)
-(*     paths := (edge::acc) :: !paths *)
-(*   else *)
-(*     let succ_e = G.succ_e !graph dst in *)
-(*     List.iter (fun edge -> *)
-(*        test mode (edge::acc) edge paths) succ_e *)
+  with Diff_Node(x) -> false
 
 let rec get_path dst_mode src_mode acc edge paths =
   let src = G.E.src edge in
@@ -348,47 +320,39 @@ let rec get_path dst_mode src_mode acc edge paths =
         else
           get_path dst_mode src_mode (edge::acc) e paths) pred_e)
 
-
-(* let rec get_path_to dst_mode acc edge paths =  *)
-(*   let dst = G.E.dst edge in  *)
-(*   if mode_node dst dst_mode then  *)
-(*     paths := (edge::acc) :: !paths *)
-(*   else *)
-(*     let succ_e = G.succ_e !graph dst in  *)
-(*     if List.length succ_e <> 0 then  *)
-(*       (List.iter (fun e ->  *)
-(*         if mode_node dst dst_mode then  *)
-(*           get_path_to dst_mode [] e paths *)
-(*         else *)
-(*           get_path_to dst_mode (edge::acc) e paths) succ_e) *)
-(*     else *)
-(*       print_newline(); *)
-  
-let mode_node v m =
+let mode_node v m e =
+  let str = ref ((G.E.label e).mem_label ^ "\n") in
   try 
     List.iter (fun (x, var_i) ->
       try
         let var_val = Var_Map.find x (G.V.label v).var_map in
         if not (List.mem var_val var_i) then 
-          raise Diff_Node
-      with Not_found -> raise Diff_Node) m;
+          ( List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+           raise (Diff_Node(x)))
+      with Not_found -> ()
+         (* List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;  *)
+         (* raise (Diff_Node(x)) )*)) m ;
     true
-  with Diff_Node -> false
+  with Diff_Node(x) -> ((G.E.label e).label <- !str; false)
 
 
 let rec get_path_to dst_mode acc edge paths = 
   let dst = G.E.dst edge in 
-  if not (mode_node dst dst_mode) then 
-    ((G.V.label dst).vertex_mode <- VarChange;
+  if not (mode_node dst dst_mode edge) then 
+    ((G.E.label edge).edge_mode <- Path;
      paths := (edge::acc) :: !paths)
   else
     let succ_e = G.succ_e !graph dst in 
     if List.length succ_e <> 0 then 
       (List.iter (fun e -> 
-        if not (mode_node dst dst_mode) then 
-          get_path_to dst_mode [] e paths
+        if not (mode_node dst dst_mode e) then 
+          ((G.E.label e).edge_mode <- Path; 
+           get_path_to dst_mode [] e paths)
         else
-          get_path_to dst_mode (edge::acc) e paths) succ_e)
+          (get_path_to dst_mode (edge::acc) e paths;
+           (G.E.label edge).edge_mode <- HighlightPath))) succ_e
     else
-      paths := (edge::acc) :: !paths
+      (paths := (edge::acc) :: !paths;
+       (G.E.label edge).edge_mode <- Normal)
+       
         
