@@ -225,21 +225,21 @@ let mode_var () =
       |a::b::[] ->
         let a = String.trim a in
         let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in
-        Printf.printf "position : %d\n" open_b;
-        print_newline();
+        (* Printf.printf "position : %d\n" open_b; *)
+        (* print_newline(); *)
         let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
-        Printf.printf "position : %d\n" close_b;
-        print_newline();
+        (* Printf.printf "position : %d\n" close_b; *)
+        (* print_newline(); *)
         let arg = String.sub a open_b  (close_b - open_b) in
-        Printf.printf "%s\n" arg;
-        print_newline();
+        (* Printf.printf "%s\n" arg; *)
+        (* print_newline(); *)
         List.iter (fun (_,x) -> print_string x; print_newline ()) arg_list;
         let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
-        Printf.printf "%s\n" a;
-        print_newline();
+        (* Printf.printf "%s\n" a; *)
+        (* print_newline(); *)
         let new_var = Str.replace_first (Str.regexp "\\[n\\]") ("["^r^"]") a in
-        Printf.printf ".%s.\n" new_var;
-        print_newline();
+        (* Printf.printf ".%s.\n" new_var; *)
+        (* print_newline(); *)
         let b = String.trim b in
         Ed_main.var_l := (new_var, [b])::!Ed_main.var_l
       |[l] -> (match Str.split (Str.regexp "<>") l with
