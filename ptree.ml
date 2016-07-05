@@ -85,7 +85,7 @@ type ptrans_assign = { a_n : hstr_info  ; a_p : pglob_update ; a_i : info }
 type ptrans_nondet = { n_n : hstr_info  ; n_i : info}
 
 type ptrans_s = { ptr_assigns : ptrans_assign list; ptr_upds : ptrans_pupdate ; 
-                  ptr_nondets : ptrans_nondet list; ptr_i : info}
+                  ptr_nondets : ptrans_nondet list; ptr_i : info }
 
 type ptransition = {
   ptr_name : hstr_info ;

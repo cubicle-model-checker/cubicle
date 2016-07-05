@@ -310,7 +310,7 @@ end = struct
     | Comp (x, Eq, y) -> Comp (x, Neq, y)
     | Comp (x, Lt, y) -> Comp (y, Le, x)
     | Comp (x, Le, y) -> Comp (y, Lt, x)
-    | Comp (x, Neq,y) -> Comp (x, Eq, y)
+    | Comp (x, Neq, y) -> Comp (x, Eq, y)
     | _ -> assert false
 
   let hash (sa: Atom.t) = Hashtbl.hash_param 50 100 sa

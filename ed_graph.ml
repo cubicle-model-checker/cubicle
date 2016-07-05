@@ -37,6 +37,11 @@ type mode =
 
 module Var_Map = Map.Make(String)
 
+type condition =
+  |Eq | NEq | Greater | Less | GreaterEq | LessEq
+  |Forall_Eq | Forall_Diff | Forall_Greater | Forall_Less
+  |Forall_GreaterEq | Forall_LessEq
+
 
 type node_info = 
   { 
@@ -284,7 +289,7 @@ let unselect_all () =
 let find_nodes l  =
   G.fold_vertex (fun v acc ->
     try 
-      List.iter (fun (x, var_i) ->
+      List.iter (fun (x, (var_i, _)) ->
         try
           let var_val = Var_Map.find x (G.V.label v).var_map in
             if not (List.mem var_val var_i) then 
@@ -295,7 +300,7 @@ let find_nodes l  =
 
 let mode_node v m =
   try 
-    List.iter (fun (x, var_i) ->
+    List.iter (fun (x, (var_i, _)) ->
       try
         let var_val = Var_Map.find x (G.V.label v).var_map in
         if not (List.mem var_val var_i) then 
@@ -320,27 +325,52 @@ let rec get_path dst_mode src_mode acc edge paths =
         else
           get_path dst_mode src_mode (edge::acc) e paths) pred_e)
 
+
 let mode_node v m e =
   let str = ref ((G.E.label e).mem_label ^ "\n") in
   try 
-    List.iter (fun (x, var_i) ->
+    List.iter (fun (x, (var_i, _)) ->
       try
         let var_val = Var_Map.find x (G.V.label v).var_map in
-        if not (List.mem var_val var_i) then 
-          ( List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
-           raise (Diff_Node(x)))
-      with Not_found -> ()
-         (* List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;  *)
-         (* raise (Diff_Node(x)) )*)) m ;
+        if not (List.mem var_val var_i) then
+          (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+           raise (Diff_Node(x)));
+      with Not_found -> raise (Diff_Node(x))) m ;
     true
   with Diff_Node(x) -> ((G.E.label e).label <- !str; false)
 
+let mode_node v m e =
+  let str = ref ((G.E.label e).mem_label ^ "\n") in
+  try 
+    List.iter (fun (x, (var_i, ty)) ->
+      match ty with 
+        |Eq -> 
+          (try
+             Printf.printf ".%s." x;
+             print_newline ();
+             let var_val = Var_Map.find x (G.V.label v).var_map in  
+             if not (List.mem var_val var_i) then
+               (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+                raise (Diff_Node(x)));
+           with Not_found -> raise (Diff_Node(x)))
+        |NEq -> 
+          (try
+             let var_val = Var_Map.find x (G.V.label v).var_map in
+             (* print_string var_val; *)
+             (* print_newline (); *)
+             if  (List.mem var_val var_i) then
+               (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+                raise (Diff_Node(x)));
+           with Not_found -> raise (Diff_Node(x)))
+        |_ -> () ) m;
+    true
+  with Diff_Node(x) -> ((G.E.label e).label <- !str; false)
 
 let rec get_path_to dst_mode acc edge paths = 
   let dst = G.E.dst edge in 
   if not (mode_node dst dst_mode edge) then 
     ((G.E.label edge).edge_mode <- Path;
-     paths := (edge::acc) :: !paths)
+     paths := (edge :: acc) :: !paths)
   else
     let succ_e = G.succ_e !graph dst in 
     if List.length succ_e <> 0 then 
@@ -349,10 +379,10 @@ let rec get_path_to dst_mode acc edge paths =
           ((G.E.label e).edge_mode <- Path; 
            get_path_to dst_mode [] e paths)
         else
-          (get_path_to dst_mode (edge::acc) e paths;
+          (get_path_to dst_mode (edge ::acc) e paths;
            (G.E.label edge).edge_mode <- HighlightPath))) succ_e
     else
-      (paths := (edge::acc) :: !paths;
-       (G.E.label edge).edge_mode <- Normal)
+      (paths := (edge :: acc) :: !paths;
+       (G.E.label edge).edge_mode <- HighlightPath)
        
         

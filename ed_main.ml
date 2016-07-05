@@ -11,9 +11,8 @@
 (*                                                                        *)
 (*  This software is distributed in the hope that it will be useful,      *)
 (*  but WITHOUT ANY WARRANTY; without even the implied warranty of        *)
-(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                  *)
-(*                                                                        *)
-(**************************************************************************)
+(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.               
+*********************************************)
 
 (* This file is a contribution of Benjamin Vadon *)
 
@@ -23,6 +22,7 @@ open Ed_graph
 open Ed_display
 
 let graph_trace = Queue.create ()
+
 
 type model_t = Edge of (G.V.t * G.V.t) | Node of G.V.t | UnsafeNode of G.V.t 
 
@@ -219,6 +219,9 @@ let test_button =
   toolbar#insert_button 
     ~text:" " () 
 
+let reset_display_button = 
+  GButton.button ~label:"Reset display" ~packing:toolbar#add ()
+
 let resultbox, result_image, result_label =
   toolbar#insert_space ();
   let hbox = GPack.hbox () in
@@ -305,7 +308,7 @@ let draw tortue canvas (vc : GTree.view_column) renderer =
             let path = Model.model#get_path row in 
             treeview#scroll_to_cell ~align:(0.5, 0.5) path vc;
             vc#set_cell_data_func renderer (background_cell_data renderer);
-      with Not_found  -> ()
+      with Not_found -> ()
 
         
 let refresh_draw vc renderer () =
@@ -440,8 +443,11 @@ let contextual_menu_text t e ev =
   let menu = new GMenu.factory (GMenu.menu ()) in
   ignore (menu#add_item "Show in editor"
             ~callback:(fun () ->
-              mem_vertex := Some e  ;
-              !scroll_to_transition t));
+              mem_vertex := Some e;
+              (* match !mem_vertex with *)
+              (*   |None -> mem_vertex := Some e ; *)
+              (*   |_ -> if List.length !var_l = 0 then mem_vertex := Some e else ()); *)
+          !scroll_to_transition t));
   menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
 
 let edge_event texte arrow_line label src ev =
@@ -511,14 +517,14 @@ let reset_table_and_canvas () =
   List.iter (fun v -> trace v#destroy ()) l;
   H2.clear intern_edges;
   H2.clear successor_edges;
-  reset_display canvas_root;
+  (* reset_display canvas_root; *)
   origine := start_point;
   nb_selected := 0
 
 
 let split_node_info x m v changed_l mode new_name =
   let var_find_or before after  =
-    List.fold_left (fun acc (x, var_i) ->
+    List.fold_left (fun acc (x, (var_i,_)) ->
       match var_i with 
         |[] -> 
           (if x = before  then
@@ -634,7 +640,7 @@ let link_node before v after =
      (G.V.label v).var_map <- map;
      if !mode_value then 
        (let label = ref "" in 
-        let b = List.fold_left (fun acc (x, var_i) -> 
+        let b = List.fold_left (fun acc (x, (var_i,_)) -> 
        match var_i with 
          |[]-> false
          |l -> 
@@ -806,32 +812,38 @@ let safe_or_unsafe () =
     (*   (end_load_graph := false; *)
     (*    end_show_tree := false) *)
     
-let path_to_l () = 
-  while (not (!end_load_graph && !end_show_tree)) || (not !kill_thread)
+let path_to_l (l, src) = 
+  while  (not (!end_load_graph && !end_show_tree)) && (not !kill_thread)
   do 
-    (match !mem_vertex with
-      |None -> ()
-      |Some src -> path_to src !var_l !root);
+    path_to src l !root;
     let tor = make_turtle !origine 0.0 in
-    draw tor canvas_root vc renderer
+    draw tor canvas_root vc renderer;
+    if !end_load_graph && !end_show_tree then kill_thread := true
   done
   (* end_load_graph := false; *)
   (* end_show_tree := false *)
 
-let path_to () = 
-   (match !mem_vertex with
-      |None -> ()
-      |Some src -> path_to src !var_l !root);
+let path_to src l = 
+  (* (match !mem_vertex with *)
+  (*   |None -> () *)
+  (*   |Some src ->   mem_vertex := None; path_to src l !root); *)
+  Ed_display.path_to src l !root;
   let tor = make_turtle !origine 0.0 in
   draw tor canvas_root vc renderer
 
-let path_to_loop () = 
+    
+let path_to_loop l = 
   window#present ();
-  print_newline();
   if (!end_load_graph &&  !end_show_tree)|| !kill_thread then
-    path_to ()  
+    match !mem_vertex with 
+      |None -> ()
+      |Some src -> mem_vertex := None;
+        path_to src l  
   else
-    (* GtkThread.async (fun () -> *) ignore (Thread.create path_to_l ())(* ) () *)
+    (match !mem_vertex with 
+      |None -> ()
+      |Some src -> mem_vertex := None;
+        GtkThread.async (fun () -> ignore (Thread.create path_to_l (l, src))) ())
 
 let tree (file, unsafe_l) =
   Queue.clear graph_trace;
@@ -849,13 +861,20 @@ let open_graph  file unsafe_l open_graph_b  =
   ignore (test_button#event#connect#button_press 
             ~callback: (fun b ->              
               path_between
-                [("Exgntd", ["False"]); ("Curcmd", ["Reqs"])]  
-                [("Curcmd", ["Reqe"])] !root;
+                [("Exgntd", (["False"],Eq)); ("Curcmd",(["Reqs"], Eq))]  
+                [("Curcmd", (["Reqe"], Eq))] !root;
               let tor = make_turtle !origine 0.0 in
               draw tor canvas_root vc renderer; true));
+  ignore (reset_display_button#event#connect#button_press 
+            ~callback: (fun b ->
+              Ed_display.reset_display ();
+              let turtle = make_turtle_origine () in
+              draw turtle canvas_root vc renderer;
+              set_canvas_event ();
+              true));
   GtkThread.async (fun () -> tree (file, unsafe_l)) ();
   draw (make_turtle_origine ()) canvas_root vc renderer;
-  ignore ( window#event#connect#delete ~callback:(fun b -> 
+  ignore (window#event#connect#delete ~callback:(fun b -> 
     kill_thread := true;
     open_graph_b := false;
     window#misc#hide ();

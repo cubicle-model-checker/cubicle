@@ -116,7 +116,6 @@ let parse_ptrans_rev f   t =
     parse_pupds_rev f  x x.pup_info;
     f parg_i ;
     (List.iter (fun x -> f x.hstr_i ) p_arg))  t.ptr_s.ptr_upds.t_pup_l;
-
   List.iter (parse_assigns_rev f ) t.ptr_s.ptr_assigns;
   List.iter (fun n ->  f n.n_n.hstr_i ; f n.n_i ) t.ptr_s.ptr_nondets;
   List.iter (fun x -> f x.hstr_i ) t.ptr_args;
@@ -138,14 +137,14 @@ let parse_type_defs_rev f  t =
     
 let parse_glob_const_rev f  x =
   let (i, h, t) = x in 
-  f i ;
-  f t.hstr_i ;
+  f i;
+  f t.hstr_i;
   f h.hstr_i 
     
 let parse_array_rev f   x =
   let (i, h, (l, t)) = x in 
-  f i ;
-  f t.hstr_i ;
+  f i;
+  f t.hstr_i;
   List.iter (fun x -> f x.hstr_i ) l;
   f h.hstr_i 
 
@@ -202,7 +201,7 @@ let rec parse_formula f  = function
   |PAtom (a) -> parse_atom f  a 
   |PNot (not_i, form , i) -> f not_i ; parse_formula f  form; f i 
   |PAnd (l, i) 
-  |POr (l, i) -> List.iter (parse_formula f ) l ; f i 
+  |POr (l, i) -> List.iter (parse_formula f) l ; f i 
   |PImp (form1, form2, i) 
   |PEquiv (form1, form2, i) -> 
     parse_formula f  form1; parse_formula f  form2; f i 
@@ -392,10 +391,62 @@ let get_transition_args t_name p =
   arg_l
 
 
+      
 let find_transition_ast t_name p =
   List.fold_left (fun acc t ->
     if (Hstring.view t.ptr_name.hstr) = t_name then
       let start_loc, stop_loc =  t.ptr_name.hstr_i.loc in 
-      (start_loc.pos_cnum, stop_loc.pos_cnum)
+      (start_loc.pos_cnum, stop_loc.pos_cnum
+)
     else acc
-  ) (0,0) p.ptrans
+  ) (0, 0) p.ptrans
+
+(* let find_transition t_name p =  *)
+(*   List.fold_left (fun acc t -> *)
+(*     if (Hstring.view t.ptr_name.hstr) = t_name then *)
+(*       Some t *)
+(*     else acc) None p.ptrans *)
+    
+(* let compare_formula f (start,stop) i =  *)
+(*   let start_loc, stop_loc = i.loc in *)
+(*   if start =  start_loc.pos_cnum && stop = stop_loc.pos_cnum  then *)
+(*     raise Found *)
+(*   else f *)
+        
+(* let parse_atom_t at coord =  *)
+(*   try *)
+(*     match at with  *)
+(*       |AVar (_, i)  *)
+(*       |AAtom (_, i)  *)
+(*       |AEq (_, _, i)  *)
+(*       |ANeq(_, _, i) *)
+(*       |ALe(_, _, i) *)
+(*       |ALt(_, _, i) -> f i    *)
+(*   with Found -> at *)
+
+(* let rec parse_formula_t form coord =  *)
+(*   let f = compare_formula form coord in  *)
+(*   try *)
+(*     match form with  *)
+(*       |PAtom (a) -> parse_atom_t a coord *)
+(*       |PNot (not_i, form , i) ->  *)
+(*         parse_formula  *)
+(*       |PAnd (l, i)  *)
+(*       |POr (l, i) -> List.iter (fun fo -> parse_formula_t fo coord) l ; f coord i  *)
+(*       |PImp (form1, form2, i)  *)
+(*       |PEquiv (form1, form2, i) ->  *)
+(*         parse_formula_t form1 coord; parse_formula_t form2 coord; f coord i  *)
+(*       |PIte (form1, form2, form3, i) ->   *)
+(*         parse_formula_t form1 coord; parse_formula_t f form2; *)
+(*         parse_formula_t form3 coord; f coord i  *)
+(*       |PForall (vl, form, i)  *)
+(*       |PExists (vl, form, i) *)
+(*       |PForall_other (vl, form, i) *)
+(*       |PExists_other (vl, form, i) -> *)
+(*         List.iter (fun x -> f coord x.hstr_i) vl; *)
+(*         parse_formula_t form coord ; f coord i  *)
+(*   with Found -> form *)
+      
+(* let find_transition_formula t loc =  *)
+
+(* () *)

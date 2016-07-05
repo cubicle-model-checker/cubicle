@@ -1,7 +1,6 @@
 open Psystem_parser
 open Gdk.Color
 open GdkEvent.Button
-open Ed_tracegraph
 open Lexing
 open Options
 open Format
@@ -10,6 +9,7 @@ exception CursorNotOverText
 exception FileError
 exception KillThread
 exception Value_mode_error
+exception Match
 
 let last_search_iter = ref None 
 
@@ -202,53 +202,62 @@ let confirm s file e =
 let list_to_string l  =  
   List.fold_right (fun x acc -> acc ^ x ^ "\n") l ""
 
-(* let mode_var () =  *)
-(*   let arg_list = !trans_args in  *)
-(*   M.iter (fun x _ ->  *)
-(*     match Str.split (Str.regexp "=") x with  *)
-(*       |a::b::[] ->   *)
-(*         let a = String.trim a in        *)
-(*         let b = String.trim b in  *)
-(*         Ed_main.var_l := (a, [b])::!Ed_main.var_l   *)
-(*       |[l] -> (match Str.split (Str.regexp "<>") l with  *)
-(*           |a::b::[] ->   *)
-(*             let a = String.trim a in  *)
-(*             let b = String.trim b in *)
-(*             Ed_main.var_l := (a, [b])::!Ed_main.var_l  *)
-(*           |_ -> failwith "pb format") *)
-(*       |_ -> failwith "pb format") !var_map *)
+(* let match_condition s sep l t = *)
+(*   let arg_list = !trans_args in *)
+(*   try *)
+(*     ignore (Str.search_forward sep s 0); *)
+(*     (match Str.split sep s with *)
+(*       |a::b::[] -> *)
+(*         (let a = String.trim a in *)
+(*          let b = String.trim b in *)
+(*          try *)
+(*            let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in *)
+(*            let close_b = Str.search_forward (Str.regexp "\\]") a 0 in *)
+(*            let arg = String.sub a open_b  (close_b - open_b) in *)
+(*            List.iter (fun (_, x) -> print_string x; print_newline ()) arg_list; *)
+(*            let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in *)
+(*            let new_var = Str.replace_first (Str.regexp "\\[n\\]") ("["^r^"]") a in *)
+(*            Ed_main.var_l := (new_var, ([b], t))::!Ed_main.var_l *)
+(*          with Not_found -> (Ed_main.var_l := (a, ([b], t))::!Ed_main.var_l)) *)
+(*       |_ -> failwith "pb match_condition guiwindow"); *)
+(*     raise Match *)
+(*   with Not_found -> () *)
+
+let match_condition s sep l t =
+  let arg_list = !trans_args in
+  try
+    ignore (Str.search_forward sep s 0);
+    (match Str.split sep s with
+      |a::b::[] ->
+        (let a = String.trim a in
+         let b = String.trim b in
+         try
+           let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in
+           let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
+           let arg = String.sub a open_b  (close_b - open_b) in
+           let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
+           let new_var = Str.replace_first (Str.regexp "\\[.*\\]") ("["^r^"]") a in
+           l := (new_var, ([b], t)) :: !l
+         with Not_found -> (l := (a, ([b], t)) :: !l))
+      |_ -> failwith "pb match_condition guiwindow");
+    raise Match
+  with Not_found -> ()
     
 let mode_var () =
-  let arg_list = !trans_args in
-  M.iter (fun x _ ->
-    match Str.split (Str.regexp "=") x with
-      |a::b::[] ->
-        let a = String.trim a in
-        let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in
-        (* Printf.printf "position : %d\n" open_b; *)
-        (* print_newline(); *)
-        let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
-        (* Printf.printf "position : %d\n" close_b; *)
-        (* print_newline(); *)
-        let arg = String.sub a open_b  (close_b - open_b) in
-        (* Printf.printf "%s\n" arg; *)
-        (* print_newline(); *)
-        List.iter (fun (_,x) -> print_string x; print_newline ()) arg_list;
-        let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
-        (* Printf.printf "%s\n" a; *)
-        (* print_newline(); *)
-        let new_var = Str.replace_first (Str.regexp "\\[n\\]") ("["^r^"]") a in
-        (* Printf.printf ".%s.\n" new_var; *)
-        (* print_newline(); *)
-        let b = String.trim b in
-        Ed_main.var_l := (new_var, [b])::!Ed_main.var_l
-      |[l] -> (match Str.split (Str.regexp "<>") l with
-          |a::b::[] ->
-            let a = String.trim a in
-            let b = String.trim b in
-            Ed_main.var_l := (a, [b])::!Ed_main.var_l
-          |_ -> failwith "pb format")
-      |_ -> failwith "pb format") !var_map
+  let condition_list = ref [] in 
+  M.iter (fun x _ -> 
+    try 
+      match_condition x (Str.regexp ">=") condition_list Ed_graph.GreaterEq;
+      match_condition x (Str.regexp "<=") condition_list Ed_graph.LessEq;
+      match_condition x (Str.regexp "<>") condition_list Ed_graph.NEq;
+      match_condition x (Str.regexp ">")  condition_list Ed_graph.Greater;
+      match_condition x (Str.regexp "<")  condition_list Ed_graph.Less;
+      match_condition x (Str.regexp "=")  condition_list Ed_graph.Eq;
+      failwith "pb format mode_var guiwindow"
+    with Match -> ()
+  ) !var_map;
+  !condition_list 
+
     
 let add_value_var l = 
   try 
@@ -260,25 +269,24 @@ let add_value_var l =
                 ~title:"Error" "Please enter a value or choose change mode";
               raise Value_mode_error
             end;
-         Ed_main.var_l := (x, [])::!Ed_main.var_l)
+         Ed_main.var_l := (x, ([], Ed_graph.Eq))::!Ed_main.var_l)
       else
         let str_l = Str.split (Str.regexp ";") e#text in 
-        Ed_main.var_l := (x, str_l
-        )::!Ed_main.var_l) l;
+        let str_l = (str_l, Ed_graph.Eq) in
+        Ed_main.var_l := (x, str_l)::!Ed_main.var_l) l;
     var_map := M.empty;
     true
   with Value_mode_error -> false
-
-
     
 let scroll_to_transition ast t =  
+  var_map := M.empty;
   match Str.split (Str.regexp "(") t with
     |[] -> failwith "pb transition"
     |str::_ -> 
       let open_p = (Str.search_forward (Str.regexp "(") t  0) + 1 in 
       let close_p = Str.search_forward (Str.regexp ")") t 0 in 
       let args = String.sub t open_p  (close_p - open_p) in 
-      let arg_list = Str.split (Str.regexp "[ \t]+") args in 
+      let arg_list = Str.split (Str.regexp ",") args in 
       let list = List.map2 (fun proc arg_name -> (proc, arg_name))
         arg_list (get_transition_args str !ast) in
       trans_args := list;
@@ -372,7 +380,8 @@ let select_var_none new_path ast open_graph=
     "No variables.\n(Add with right click)" = 2 then
     (Ed_main.scroll_to_transition := scroll_to_transition ast; 
      open_graph := true;
-     Ed_main.init new_path (punsafe_length (!ast)) open_graph) 
+     Ed_main.init new_path (punsafe_length (!ast)) open_graph;
+    ) 
 
       
 (* Debug mode*)
@@ -710,8 +719,9 @@ let open_window s  =
          ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
        source#source_buffer#remove_tag_by_name "search"
          ~start:(source#source_buffer#start_iter) ~stop:(source#source_buffer#end_iter);
-       mode_var () ;
-       Ed_main.path_to_loop ();)
+       Ed_main.path_to_loop (mode_var());
+       var_map := M.empty
+      )
     else
       if M.cardinal !var_map = 0 then 
         (Ed_main.mode_value := false;

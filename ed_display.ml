@@ -151,8 +151,8 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   let l = truncate (float (Array.length points) /. 2.2 ) in 
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
-    if l mod 2 = 0 then (l, l+1) else (l+1, l) in 
-    (texte#set [`TEXT  edge.label ; `X points.(x); `Y (points.(y) -. 40.)];
+    if l mod 2 = 0 then (l, l + 1) else (l + 1, l) in 
+    (texte#set [`TEXT  edge.label ; `X points.(x); `Y (points.(y) -. 30.)];
      texte#hide ())
       
 type polaire = { radius : float; angle : float}
@@ -520,7 +520,7 @@ let set_path paths root =
     with Failure(_) -> ()
   ) paths
 
-let set_path_to paths = print_newline ()
+(* let set_path_to paths = () *)(* print_newline () *)
   (* let paths =  *)
   (*      List.tl paths  *)
   (*   in  *)
@@ -558,7 +558,7 @@ let path_to src_node dst_mode root =
   List.iter (fun e -> 
     let paths = ref [] in 
     get_path_to dst_mode [] e paths;
-    set_path_to !paths ;
+    (* set_path_to !paths ; *)
   ) (G.succ_e !graph src_node)
 
 (* let path_to src_node dst_mode root =  *)
@@ -573,16 +573,11 @@ let path_to src_node dst_mode root =
 (*       set_path_to !paths root) (\* (G.succ_e !graph node) *\) (G.succ_e !graph src_node) *)
 
 let path_to e dst_mode root = 
-  (* let cpt = ref 0 in  *)
   let src_node = G.E.dst e in
    List.iter (fun e -> 
-     print_newline ();
-     (* print_int !cpt; *)
-     (* print_newline(); *)
-     (* incr cpt; *)
+     print_newline();
     let paths = ref [] in 
     get_path_to dst_mode [] e paths;
-    set_path_to !paths ;
    ) (G.succ_e !graph src_node)
      
 
@@ -593,5 +588,20 @@ let path_to e dst_mode root =
 (*     set_path_to !paths root; *)
 (*   ) (G.succ_e !graph src_node) *)
 
-let reset_display canvas =
-  init_nodes canvas
+(* let reset_display canvas = *)
+(*   init_nodes canvas *)
+
+let reset_display () (* canvas *) = 
+  G.iter_vertex (fun v -> 
+    let vertex = (G.V.label v) in  
+    (match vertex.vertex_mode with 
+      |Unsafe | Normal -> ()
+      |_ -> vertex.vertex_mode <- Normal);
+    vertex.label <- vertex.num_label;
+  )
+ !graph;
+  G.iter_edges_e (fun e -> 
+    (G.E.label e).edge_mode <- Normal;
+    (G.E.label e).label <- (G.E.label e).mem_label
+  ) !graph
+    

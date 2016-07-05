@@ -52,7 +52,7 @@ requires { Curcmd = Empty && Chan[n] = Reqe }
 }
     
 transition inv_1 (n)
-requires { Shrset[n]=True  &&  Curcmd = Reqe }
+requires { not (Shrset[n] = False)  &&  Curcmd = Reqe }
 { 
   Exgntd := False;
   Cache[j] := case 
