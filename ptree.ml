@@ -188,7 +188,6 @@ let subst_atom sigma aa = match aa with
     let sigma' = restr_subst_to sigma (Atom.variables a) in
     let a' = Atom.subst sigma' a in
     if a == a' then PAtom (aa) else PAtom (AAtom (a', i))
-
 let rec apply_subst sigma (f:formula) = match f with
   | PAtom (a) ->
     let f' = subst_atom sigma a in

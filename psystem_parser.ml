@@ -66,16 +66,16 @@ let parse_atom_rev f  = function
   |ALt(t1, t2, i) -> f i ; parse_term_rev f  t1; parse_term_rev f  t2 
     
 let rec parse_formula_rev f = function
-  |PAtom (a) -> parse_atom_rev f  a 
-  |PNot (not_i, form , i) -> f i ; parse_formula_rev f  form; f not_i 
+  |PAtom (a) -> parse_atom_rev f a 
+  |PNot (not_i, form , i) -> f i ; parse_formula_rev f form; f not_i 
   |PAnd (l, i) 
-  |POr (l, i) -> f i ; List.iter (parse_formula_rev f ) l 
+  |POr (l, i) -> f i ; List.iter (parse_formula_rev f) l 
   |PImp (form1, form2, i) 
   |PEquiv (form1, form2, i) -> 
-    f i ; parse_formula_rev f  form1; parse_formula_rev f  form2
+    f i ; parse_formula_rev f  form1; parse_formula_rev f form2
   |PIte (form1, form2, form3, i) ->  
-    f i ; parse_formula_rev f  form1; parse_formula_rev f  form2;
-    parse_formula_rev f  form3
+    f i ; parse_formula_rev f form1; parse_formula_rev f form2;
+    parse_formula_rev f form3
   |PForall (vl, form, i) 
   |PExists (vl, form, i)
   |PForall_other (vl, form, i)

@@ -30,7 +30,7 @@ let (w,h) = (1200., 800.)
 let color_circle = "grey99"
 
 let color_intern_edge = "grey69"
-let color_successor_edge = "#bdbdbd" (* "grey38" *) (*"grey38"*)
+let color_successor_edge = "#bdbdbd" (* "grey38" *) (* "grey38" *)
 let color_vertex = "grey75"
 
 
@@ -45,7 +45,7 @@ let color_initvar_focused = "#9c98b1"
 let color_unsafe = "#e93b3b"
 let color_unsafe_focused = "#e93b3b"
 
-let color_selected_intern_edge = "#9f1a1a" (* "#74885e"*)
+let color_selected_intern_edge = "#9f1a1a" (* "#74885e" *)
 let color_selected_successor_edge = "#9f1a1a"
 let color_selected_vertex = "#9f1a1a"
 
@@ -117,7 +117,7 @@ let tlineto_gtk turtle line =
   let (x,y) = !current_point in 
   List.append line [(float x); (float y) ]
 
-let split_list l r=
+let split_list l r =
   let length = truncate((float (List.length l))/.r) in  
   let rec f cpt = function
     |[] -> []
@@ -148,11 +148,11 @@ let set_successor_edge edge turtle distance steps line line2 texte canvas =
   line#set [`POINTS points;];
   line#hide ();
   line2#hide ();
-  let l = truncate (float (Array.length points) /. 2.2 ) in 
+  let l = truncate (float (Array.length points) /. 2.2) in 
   (* let l2 = (Array.length points) in  *)
   let (x, y) = 
     if l mod 2 = 0 then (l, l + 1) else (l + 1, l) in 
-    (texte#set [`TEXT  edge.label ; `X points.(x); `Y (points.(y) -. 30.)];
+    (texte#set [`TEXT edge.label ; `X points.(x); `Y (points.(y) -. 20.)];
      texte#hide ())
       
 type polaire = { radius : float; angle : float}
@@ -457,7 +457,8 @@ let draw_graph _root canvas  =
                  G.iter_pred_e (fun e ->
                    (G.E.label e).visible_label <- true;
                    show_arrow e;
-                 ) !graph v)
+                 ) !graph v;
+                )
               else
                 ((* l.label_mode <- Num_Label; *)
                  (* l.label <-  l.num_label ; *)
@@ -498,16 +499,6 @@ let rec color_edges v root =
           G.iter_pred (fun vertex -> color_edges vertex root) !graph v;
         end
 
-(* let rec color_edges v root =   *)
-(*   match root with  *)
-(*     |None -> () *)
-(*     |Some r ->  *)
-(*       if r <> v then  *)
-(*         begin *)
-(*           G.iter_succ_e (fun edge -> *)
-(*             (G.E.label edge).edge_mode <- HighlightPath) !graph v; *)
-(*           G.iter_succ (fun vertex -> color_edges vertex root) !graph v; *)
-(*         end3 *)
 
 
 let set_path paths root = 
@@ -572,12 +563,17 @@ let path_to src_node dst_mode root =
 (*       get_path_to dst_mode [] e paths; *)
 (*       set_path_to !paths root) (\* (G.succ_e !graph node) *\) (G.succ_e !graph src_node) *)
 
+let color_path paths = 
+  List.iter ( fun p ->
+    List.iter (fun (e, m) -> (G.E.label e).edge_mode <- m ) p ) paths
+
 let path_to e dst_mode root = 
   let src_node = G.E.dst e in
    List.iter (fun e -> 
      print_newline();
     let paths = ref [] in 
     get_path_to dst_mode [] e paths;
+    color_path !paths;
    ) (G.succ_e !graph src_node)
      
 

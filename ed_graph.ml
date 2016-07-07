@@ -326,63 +326,160 @@ let rec get_path dst_mode src_mode acc edge paths =
           get_path dst_mode src_mode (edge::acc) e paths) pred_e)
 
 
-let mode_node v m e =
-  let str = ref ((G.E.label e).mem_label ^ "\n") in
-  try 
-    List.iter (fun (x, (var_i, _)) ->
-      try
-        let var_val = Var_Map.find x (G.V.label v).var_map in
-        if not (List.mem var_val var_i) then
-          (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
-           raise (Diff_Node(x)));
-      with Not_found -> raise (Diff_Node(x))) m ;
-    true
-  with Diff_Node(x) -> ((G.E.label e).label <- !str; false)
+(* let mode_node v m e = *)
+(*   let str = ref ((G.E.label e).mem_label ^ "\n") in *)
+(*   try  *)
+(*     List.iter (fun (x, (var_i, _)) -> *)
+(*       try *)
+(*         let var_val = Var_Map.find x (G.V.label v).var_map in *)
+(*         if not (List.mem var_val var_i) then *)
+(*           (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i; *)
+(*            raise (Diff_Node(x))); *)
+(*       with Not_found -> raise (Diff_Node(x))) m ; *)
+(*     true *)
+(*   with Diff_Node(x) -> ((G.E.label e).label <- !str; false) *)
 
 let mode_node v m e =
   let str = ref ((G.E.label e).mem_label ^ "\n") in
   try 
     List.iter (fun (x, (var_i, ty)) ->
+      (* Printf.printf "%s %d \n" x (List.length var_i); *)
+      (* List.iter (Printf.printf ".%s.") var_i; *)
+      (* print_newline (); *)
       match ty with 
         |Eq -> 
           (try
-             Printf.printf ".%s." x;
-             print_newline ();
              let var_val = Var_Map.find x (G.V.label v).var_map in  
              if not (List.mem var_val var_i) then
                (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
                 raise (Diff_Node(x)));
-           with Not_found -> raise (Diff_Node(x)))
+           with Not_found ->
+             (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+              raise (Diff_Node(x))))
         |NEq -> 
           (try
              let var_val = Var_Map.find x (G.V.label v).var_map in
-             (* print_string var_val; *)
-             (* print_newline (); *)
              if  (List.mem var_val var_i) then
-               (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
-                raise (Diff_Node(x)));
-           with Not_found -> raise (Diff_Node(x)))
+               (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
+             raise (Diff_Node(x)));
+           with Not_found -> 
+             (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
+              raise (Diff_Node(x))))
         |_ -> () ) m;
     true
-  with Diff_Node(x) -> ((G.E.label e).label <- !str; false)
+  with Diff_Node(x) -> ((* Printf.printf "%s\n" !str; print_newline(); *)(G.E.label e).label <- !str; false)
 
-let rec get_path_to dst_mode acc edge paths = 
-  let dst = G.E.dst edge in 
-  if not (mode_node dst dst_mode edge) then 
-    ((G.E.label edge).edge_mode <- Path;
-     paths := (edge :: acc) :: !paths)
-  else
-    let succ_e = G.succ_e !graph dst in 
-    if List.length succ_e <> 0 then 
-      (List.iter (fun e -> 
-        if not (mode_node dst dst_mode e) then 
-          ((G.E.label e).edge_mode <- Path; 
-           get_path_to dst_mode [] e paths)
+let mode_node v m e =
+  let str = ref ((G.E.label e).mem_label ^ "\n") in
+    if (List.fold_left (fun acc (x, (var_i, ty)) ->
+      match ty with 
+        |Eq -> 
+          (try
+             let var_val = Var_Map.find x (G.V.label v).var_map in  
+             if not (List.mem var_val var_i) then
+               (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+                acc || true)
+             else acc
+           with Not_found ->
+             (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+              acc || true))
+        |NEq -> 
+          (try
+             let var_val = Var_Map.find x (G.V.label v).var_map in
+             if  (List.mem var_val var_i) then
+               (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
+                acc || true)
+             else
+               acc
+           with Not_found -> 
+             (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s)
+ var_i;
+              acc || true))
+        |_ -> acc ) false m) then 
+      ((G.E.label e).label <- !str; false)
+    else 
+      (true)
+
+(* let rec get_path dst_mode src_mode acc edge paths = *)
+(*   let src = G.E.src edge in *)
+(*   (\** Si on trouve un noeud dans l'état scr, on ajoute le chemin à la liste *\) *)
+(*   if mode_node src dst_mode then *)
+(*     paths := (edge::acc) :: !paths *)
+(*   else *)
+(*     (\** Sinon on continue jusqu'à trouver la racine ou *)
+(*         un noeud dans l'état src *\) *)
+(*     let pred_e = G.pred_e !graph src in *)
+(*     if (G.V.label src).num_label <> "1" then  *)
+(*       (List.iter (fun e -> *)
+(*         if mode_node src src_mode then *)
+(*           get_path dst_mode src_mode [] e paths  *)
+(*         else *)
+(*           get_path dst_mode src_mode (edge::acc) e paths) pred_e) *)
+
+
+let rec get_path_to dst_mode acc edge paths =
+  let dst = G.E.dst edge in
+  if (mode_node dst dst_mode edge) then
+    let succ_e = G.succ_e !graph dst in
+    if List.length succ_e <> 0 then
+      List.iter (fun e ->
+        if not (mode_node dst dst_mode e) then
+          (paths := ((edge, Path)::acc) :: !paths;
+           (* get_path_to dst_mode [] e paths *))
         else
-          (get_path_to dst_mode (edge ::acc) e paths;
-           (G.E.label edge).edge_mode <- HighlightPath))) succ_e
+          get_path_to dst_mode ((edge, HighlightPath) ::acc) e paths) succ_e
     else
-      (paths := (edge :: acc) :: !paths;
-       (G.E.label edge).edge_mode <- HighlightPath)
+      ()
+  else
+    (paths := ((edge, Path) :: acc) :: !paths;
+     (* get_path_to dst_mode [] edge paths *))
+
+(* let get_path_succ  dst_mode acc edge paths = *)
+(*   let dst = G.E.dst edge in *)
+(*   let succ_e = G.succ_e !graph dst in *)
+(*   if List.length succ_e <> 0 then *)
+(*     List.iter (fun e -> *)
+(*       if not (mode_node dst dst_mode e) then *)
+(*         (paths := ((edge, Path)::acc) :: !paths; *)
+(*          get_path_to dst_mode [] e paths) *)
+(*       else *)
+(*         get_path_to dst_mode ((edge, HighlightPath) ::acc) e paths) succ_e *)
+
+(* let rec get_path_to dst_mode acc edge paths = *)
+(*   let dst = G.E.dst edge in *)
+(*   if (mode_node dst dst_mode edge) then *)
+(*     let succ_e = G.succ_e !graph dst in *)
+(*     if List.length succ_e <> 0 then *)
+(*       List.iter (fun e -> *)
+(*         if not (mode_node dst dst_mode e) then *)
+(*           (paths := ((edge, Path)::acc) :: !paths; *)
+(*            (\* get_path_succ dst_mode [] e path *\)s) *)
+(*         else *)
+(*           get_path_to dst_mode ((edge, HighlightPath) ::acc) e paths) succ_e *)
+(*     else *)
+(*       () *)
+(*   else *)
+(*     (paths := ((edge, Path) :: acc) :: !paths; *)
+     (* get_path_succ dst_mode [] e paths *)
+
+
+(* let rec get_path_to dst_mode acc edge paths = *)
+(*  let dst = G.E.dst edge in *)
+(*  if not (mode_node dst dst_mode edge) then *)
+(*    ((G.E.label edge).edge_mode <- Path; *)
+(*     paths := (edge :: acc) :: !paths) *)
+(*  else *)
+(*    let succ_e = G.succ_e !graph dst in *)
+(*    if List.length succ_e <> 0 then *)
+(*      (List.iter (fun e -> *)
+(*        if not (mode_node dst dst_mode e) then *)
+(*          ((G.E.label e).edge_mode <- Path; *)
+(*           (\* get_path_to dst_mode [] e paths *\)) *)
+(*        else *)
+(*          (get_path_to dst_mode (edge ::acc) e paths; *)
+(*           (G.E.label edge).edge_mode <- HighlightPath))) succ_e *)
+(*    else *)
+(*      (paths := (edge :: acc) :: !paths; *)
+(*       (G.E.label edge).edge_mode <- HighlightPath) *)
        
         

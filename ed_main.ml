@@ -385,7 +385,7 @@ let vertex_event vertex item ellipse ev =
       if Gdk.Convert.test_modifier `BUTTON1 state  then
         begin
           let curs = Gdk.Cursor.create `FLEUR in
-          focus_rectangle#show();
+           focus_rectangle#show();
           ellipse#parent#grab [`POINTER_MOTION; `BUTTON_RELEASE]
             curs (GdkEvent.Button.time ev);
           if do_refresh ()
@@ -396,7 +396,7 @@ let vertex_event vertex item ellipse ev =
             let turtle = motion_turtle ellipse ev in
             (* let hspace = hspace_dist_sqr turtle in *)
             (* let hspace = 0.  (\* hspace_dist_sqr turtle *\) in *)
-            (* Printf.printf "distance : %f" hspace; *)
+              (* Printf.printf "distance : %f" hspace; *)
             (* print_newline(); *)
             (* if hspace <=  (\* 0.999999 *\) rlimit_sqr then begin *)
               draw turtle canvas_root vc renderer;
@@ -411,7 +411,7 @@ let vertex_event vertex item ellipse ev =
     | `BUTTON_PRESS ev ->  
       if (GdkEvent.Button.button ev) = 3
       then 
-        contextual_menu vertex ev 
+        contextual_menu vertex ev
     | `TWO_BUTTON_PRESS ev->
       if (GdkEvent.Button.button ev) = 1
       then 
@@ -433,7 +433,6 @@ let vertex_event vertex item ellipse ev =
                                          e.visible_label <- false) !graph vertex );
               refresh_draw vc renderer ()
         end
-
     | _ ->
       ()
   end;
@@ -455,32 +454,19 @@ let edge_event texte arrow_line label src ev =
     match ev with
       | `ENTER_NOTIFY _ -> 
         texte#grab_focus ();
-        texte#set [(* `FILL_COLOR "red"; *) `WEIGHT 1000];
-        (* update_vertex rtex Focus; *)
+        texte#set [`WEIGHT 1000];
         refresh_display ()
+
       | `LEAVE_NOTIFY ev ->
-      if not (Gdk.Convert.test_modifier `BUTTON1 (GdkEvent.Crossing.state ev))
+        if not (Gdk.Convert.test_modifier `BUTTON1 (GdkEvent.Crossing.state ev))
       then begin
         texte#set [`FILL_COLOR "black"; `WEIGHT 400];
-        (* update_vertex vertex Unfocus; *)
         refresh_display ()
       end
-        
-    | `BUTTON_RELEASE ev ->
-      (* focus_rectangle#hide(); *)
+          
+      | `BUTTON_RELEASE ev ->
       texte#ungrab (GdkEvent.Button.time ev);
 
-    | `MOTION_NOTIFY ev -> 
-      (* texte#set [`FILL_COLOR "red"]; *)
-      incr refresh;
-      let state = GdkEvent.Motion.state ev in
-      if Gdk.Convert.test_modifier `BUTTON1 state  then
-        begin
-          let curs = Gdk.Cursor.create `FLEUR in
-          focus_rectangle#show();
-          texte#grab [`POINTER_MOTION; `BUTTON_RELEASE]
-            curs (GdkEvent.Button.time ev);
-        end
     | `BUTTON_PRESS ev ->  
       if (GdkEvent.Button.button ev) = 3
       then
@@ -505,7 +491,24 @@ let set_edge_event e =
 
 let () = set_vertex_event_fun := set_vertex_event
 
+
+(* let circle_event ev = *)
+(*   begin match ev with *)
+(*     | `BUTTON_PRESS ev -> *)
+(*       if (GdkEvent.Button.button ev) = 3 *)
+(*       then *)
+(*         begin *)
+(*           let menu = new GMenu.factory (GMenu.menu ()) in *)
+(*           menu#menu#popup *)
+(*             ~button:3 *)
+(*             ~time:(GdkEvent.Button.time ev) *)
+(*         end *)
+(*     | _ ->() *)
+(*   end; *)
+(*   true *)
+
 let set_canvas_event () =
+  (* ignore(canvas_root#parent#connect#event ~callback:(fun e -> false)); *)
   G.iter_vertex set_vertex_event !graph;
   G.iter_edges_e (set_edge_event) !graph
 
@@ -552,10 +555,10 @@ let split_node_info x m v changed_l mode new_name =
             with Not_found ->  acc) false !var_l
   in
   (let pos, eq = 
-     try (Str.search_forward (Str.regexp "[=]") x 0, true)
+     try (Str.search_forward (Str.regexp "=") x 0, true)
      with Not_found -> 
        try
-         (Str.search_forward (Str.regexp "[<>]") x 0, false)
+         (Str.search_forward (Str.regexp "<>") x 0, false)
        with Not_found -> failwith "Probleme format trace" in
    let pos = if eq then pos else pos - 1 in 
    let before = Str.global_replace (Str.regexp "[\n| ]+") ""

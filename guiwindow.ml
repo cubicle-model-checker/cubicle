@@ -46,7 +46,7 @@ let toolbox_frame = GBin.frame ~border_width:8 ~packing:(box#pack ~expand:false 
 let toolbox = GPack.hbox ~packing:(toolbox_frame#add) ()
 
 let toolbar =
-  let t = GButton.toolbar ~tooltips:true ~packing:toolbox#add ()
+  let t = GButton.toolbar ~tooltips:false ~packing:toolbox#add ()
   in t#set_icon_size `DIALOG; t
 
 let run_button = toolbar#insert_button
@@ -56,7 +56,7 @@ let run_button = toolbar#insert_button
 let stop_button =
   toolbar#insert_button
     ~text:" Abort"
-    ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce ()
+    ~icon:(GMisc.image ~stock:`STOP ~icon_size:`LARGE_TOOLBAR ())#coerce ()
 
 let save_button = toolbar#insert_button
   ~text:" Save"
@@ -224,6 +224,7 @@ let list_to_string l  =
 (*   with Not_found -> () *)
 
 let match_condition s sep l t =
+  Printf.printf "match condition\n";
   let arg_list = !trans_args in
   try
     ignore (Str.search_forward sep s 0);
@@ -236,9 +237,17 @@ let match_condition s sep l t =
            let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
            let arg = String.sub a open_b  (close_b - open_b) in
            let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
+           (* Printf.printf "var : %s\n" r;  *)
+           (* print_newline (); *)
            let new_var = Str.replace_first (Str.regexp "\\[.*\\]") ("["^r^"]") a in
            l := (new_var, ([b], t)) :: !l
-         with Not_found -> (l := (a, ([b], t)) :: !l))
+         with Not_found -> 
+           try 
+             let (r, n) = List.find (fun (_, x) -> x = b) arg_list in  
+             ((* Printf.printf "Var pair .%s. .%s. \n" a r; *)
+              (* print_newline (); *)
+              l := (a, ([r], t)) :: !l);
+           with Not_found -> l := (a, ([b], t)) :: !l)          
       |_ -> failwith "pb match_condition guiwindow");
     raise Match
   with Not_found -> ()
@@ -568,7 +577,7 @@ let get_trace (buffer, file) =
   let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
   result_text1#buffer#set_text "";
   try
-    while true do
+   while true do
       if !kill_thread then
         (kill_thread := false;
          raise KillThread);
@@ -580,7 +589,9 @@ let get_trace (buffer, file) =
     |End_of_file ->
       (ignore (Unix.close_process_in ic);
        safe_or_unsafe ())
-    |KillThread -> ignore (Unix.close_process_in ic) 
+    |KillThread -> 
+      ignore (Unix.close_process_in ic)
+
 
       
 let execute buffer file b  =
