@@ -193,7 +193,7 @@ let save_session s file b =
 
 let confirm s file e =
   (if GToolbox.question_box
-      ~title:"Save session" ~buttons:["Cancel"; "Save"]
+      ~title:"Save session" ~buttons:["Quit"; "Save"]
       ~default:2 ~icon:(GMisc.image ~stock:`SAVE  ~icon_size:`DIALOG ())
       "Would you like to save the session ?" = 2 then
       let _ = save_session s file e in ());
@@ -578,24 +578,26 @@ let get_trace (buffer, file) =
   result_text1#buffer#set_text "";
   try
    while true do
-      if !kill_thread then
-        (kill_thread := false;
-         raise KillThread);
+      (* if !kill_thread then *)
+      (*   (kill_thread := false; *)
+      (*    raise KillThread); *)
       let s = (input_line ic)^"\n" in
+      Printf.printf "%s" s;
+      print_newline();
       result_text1#buffer#insert s;
       ignore (result_text1#scroll_to_iter ~use_align:true ~yalign:0.5 (result_text1#buffer#end_iter))
     done
   with
     |End_of_file ->
-      (ignore (Unix.close_process_in ic);
-       safe_or_unsafe ())
-    |KillThread -> 
+       ignore (Unix.close_process_in ic;
+               safe_or_unsafe ())
+    |KillThread ->
       ignore (Unix.close_process_in ic)
 
 
       
 let execute buffer file b  =
-  ignore (Thread.create get_trace (buffer, file))
+  GtkThread.async (fun () -> ignore (Thread.create  get_trace (buffer, file))) ()
 
 let search b = 
   let start_iter = source#source_buffer#start_iter in 

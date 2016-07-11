@@ -355,7 +355,7 @@ let hide_arrow e =
 
         
 (* graph drawing *)
-let draw_graph _root canvas  =
+let draw_graph root canvas  =
   let center_node = ref None in 
   (*  edges *)           
   G.iter_edges_e
@@ -388,10 +388,11 @@ let draw_graph _root canvas  =
               |_ ->  color_change_successor_edge line line2 color_successor_edge;
           end;
           if (G.E.label e).visible_label then 
-            texte#show () ;
-          (* line2#hide (); *)
-            line#show ();
-          (* line2#show(); *)
+            (texte#show ();
+             line2#show ())
+          else
+            line2#hide();
+          line#show();
           hide_intern_edge vw
         end 
       else 
@@ -454,10 +455,14 @@ let draw_graph _root canvas  =
                    (G.E.label e).visible_label <- true;
                    show_arrow e;
                  ) !graph v;
-                 G.iter_pred_e (fun e ->
-                   (G.E.label e).visible_label <- true;
-                   show_arrow e;
-                 ) !graph v;
+                 match root with 
+                   |Some r -> 
+                     if r <> v then 
+                    G.iter_pred_e (fun e ->
+                      (G.E.label e).visible_label <- true;
+                      show_arrow e;
+                    ) !graph v;
+                   |_ -> ()
                 )
               else
                 ((* l.label_mode <- Num_Label; *)
@@ -567,13 +572,17 @@ let color_path paths =
   List.iter ( fun p ->
     List.iter (fun (e, m) -> (G.E.label e).edge_mode <- m ) p ) paths
 
-let path_to e dst_mode root = 
+let path_to e dst_mode root  = 
   let src_node = G.E.dst e in
-   List.iter (fun e -> 
-     print_newline();
-    let paths = ref [] in 
-    get_path_to dst_mode [] e paths;
-    color_path !paths;
+  List.iter (fun e -> 
+    (* Thread.delay 0.00001; *)
+     (* print_newline(); *)
+    if ((G.E.label e).edge_mode <> Path) then
+      begin
+        let paths = ref [] in 
+        get_path_to dst_mode [] e paths;
+        color_path !paths
+      end
    ) (G.succ_e !graph src_node)
      
 
