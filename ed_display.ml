@@ -42,6 +42,8 @@ let color_line_varchange = "#c35959" (* "#79a3a8" *) (* "red" *)
 let color_initvar = "#9c98b1"
 let color_initvar_focused = "#9c98b1"
 
+let color_init = "#12FF00"
+
 let color_unsafe = "#e93b3b"
 let color_unsafe_focused = "#e93b3b"
 
@@ -61,7 +63,7 @@ let color_text = "black"
 
 let width_successor_edge = 2
 let width_intern_edge = 2
-let point_size_text = 12.
+let point_size_text = Options.graph_font_size
 
 (* two tables for two types of edge :
    successor_edges = edges with successor of root
@@ -481,6 +483,8 @@ let draw_graph root canvas  =
               | Focused ->  color_change_vertex item color_focused_vertex 3;
               | Selected_Focused -> 
                 color_change_vertex item color_selected_focused_vertex 3;
+              | Init -> color_change_vertex item color_init 0;
+              | Init_Focused -> color_change_vertex item color_init 3;
               | Unsafe -> color_change_vertex item color_unsafe 0;
               | Unsafe_Focused -> color_change_vertex item color_unsafe_focused 3;
               | VarChange -> color_change_vertex item color_varchange 0;

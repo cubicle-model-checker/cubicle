@@ -230,7 +230,7 @@ let print_invs_or_unsafe str fmt l =
         str print_list_sep (vl, " ") print_formula f
     else 
       fprintf fmt "%s @[%s (%a) { %a }%s@.@.@]"
-        !open_c str print_list_sep (vl, " ") print_formula f !close_c) l
+        !open_c str print_list_sep (vl, " ") print_formula f !close_c) (List.rev l)
 
 
 let print_nondets fmt  l = 

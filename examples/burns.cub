@@ -25,7 +25,7 @@ requires { A[x] = Q1 && F[x] = True }
 }
 
 transition t2 (x y)
-requires { A[x] = Q2 && y < x && F[y] = True }
+requires { A[x] = Q2 && x > y && F[y] = True }
 { 
   A[j] := case 
        	   | j = x : Q1 
@@ -52,7 +52,7 @@ requires { A[x] = Q3 }
 }
 
 transition t5 (x y)
-requires { A[x] = Q4 && y<x && F[y] = True }
+requires { A[x] = Q4 && x > y && F[y] = True }
 { 
   A[j] := case 
        	   | j = x : Q1 

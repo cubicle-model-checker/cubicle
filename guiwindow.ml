@@ -17,7 +17,7 @@ let trans_args = ref []
 
 let kill_thread = ref false
 
-let wd = if gui_debug then 1600 else 1000
+let wd = if double then 1600 else 1000
 
 module M = Map.Make (String)
 
@@ -99,19 +99,20 @@ let trace_button = GButton.button ~label:"Trace"
   ~packing:(toolbox#add) ()
 
 (** Debug mode *)
-let show_file_button = GButton.button ~label:"Show new file"
-  ~packing:(toolbox#add (* ~expand:false ~fill:false *)) ~show:(gui_debug)()
+let show_file_button = GButton.button ~label:"Display file with comments"
+  ~packing:(toolbox#add (* ~expand:false ~fill:false *)) ~show:(double)()
 
 (** Debug mode *)
 let execute_button2 = GButton.button ~label:"Run original file"
-  ~packing:(toolbox#add) ~show:(gui_debug)()
+  ~packing:(toolbox#add) ~show:(double)()
   
-let debug_box = GPack.hbox ~packing:box#add ()
+let debug_box =  GPack.paned `HORIZONTAL ~show:true ~packing:(box#add) ()
+(* GPack.hbox ~packing:box#add () *)
 
-let source_box1 = GPack.vbox ~packing:(debug_box#pack ~expand:true ~fill:true) ()
+let source_box1 = GPack.vbox ~packing:(debug_box#add1 (* ~expand:true *) (* ~fill:true *)) ()
 
 (** Debug mode *)
-let source_box2 = GPack.vbox ~packing:debug_box#add ~show:(gui_debug)() 
+let source_box2 = GPack.vbox ~packing:debug_box#add2  ~show:(double)() 
 
 let source_frame1 = GBin.frame  ~border_width:10 
   ~packing:(source_box1#pack ~expand:true ~fill:true) ()
@@ -119,47 +120,54 @@ let source_frame1 = GBin.frame  ~border_width:10
 let source_frame2 = GBin.frame  ~border_width:10 
   ~packing:(source_box2#pack ~expand:true ~fill:true) ()
 
-let e_box = GBin.event_box ~height:500 ~packing:(source_frame1#add) ()
+let pane1 = GPack.paned `VERTICAL  ~show:true ~packing:(source_frame1#add) ()
 
 (** Debug mode *)
-let e_box2 = GBin.event_box ~height:500 ~packing:(source_frame2#add) ()
+let pane2 = GPack.paned `VERTICAL  ~show:true ~packing:(source_frame2#add) ()
   
-let result_frame = GBin.frame ~border_width:10 ~height:200
-  ~packing:(source_box1#pack ~expand:false ~fill:true) ()
+(* let result_frame = GBin.frame ~border_width:10 ~height:200 *)
+(*   ~packing:(source_box1#pack ~expand:false ~fill:true) () *)
 
-let result_frame2 = GBin.frame ~border_width:10 ~height:200
-  ~packing:(source_box2#pack ~expand:false ~fill:true) ()
+(* let result_frame2 = GBin.frame ~border_width:10 ~height:200 *)
+(*   ~packing:(source_box2#pack ~expand:false ~fill:true) () *)
 
 let result_scroll = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
   ~vpolicy:`ALWAYS 
   ~border_width:5
-  ~packing: result_frame#add ()
+  ~packing: pane1#add2 ()
 
 let result_text1 =  
   let t = GSourceView2.source_view 
-    ~packing:result_scroll#add () in 
+    ~packing: result_scroll#add () in 
   t#set_editable false;
   t#set_cursor_visible false;
   t
 
-let scroll = GBin.scrolled_window 
-  ~hpolicy:`ALWAYS 
-  ~vpolicy:`ALWAYS 
-  ~packing: e_box#add ()
+let scroll = 
+  let s = 
+    GBin.scrolled_window 
+      ~hpolicy:`ALWAYS 
+      ~vpolicy:`ALWAYS 
+      ~height:600
+      ~width:(wd/2)
+      ~packing:(pane1#add1) () in 
+  s
 
 (** Debug mode *)
 let scroll2 = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
   ~vpolicy:`ALWAYS 
-  ~packing: e_box2#add  () 
+  ~height:600
+  ~width:(wd/2)
+  ~packing: pane2#add1  () 
 
 (** Debug mode *)
 let result_scroll2 = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
   ~vpolicy:`ALWAYS 
   ~border_width:5
-  ~packing: result_frame2#add () 
+  ~packing: (* result_frame2 *)pane2#add2 () 
 
 (** Debug mode *)
 let result_text2 =  GSourceView2.source_view 
@@ -175,7 +183,7 @@ let source =
     ~border_width:5
     ~show_line_numbers:true 
     ~packing:scroll#add () in 
-  src#misc#modify_font_by_name "Monospace"; 
+  src#misc#modify_font_by_name ("DejaVu Sans Mono "^(string_of_float Options.source_font_size)); 
   let buf = src#source_buffer in 
   if cubicle <> None then 
     buf#set_language cubicle; 
@@ -224,30 +232,31 @@ let list_to_string l  =
 (*   with Not_found -> () *)
 
 let match_condition s sep l t =
-  Printf.printf "match condition\n";
   let arg_list = !trans_args in
   try
     ignore (Str.search_forward sep s 0);
     (match Str.split sep s with
       |a::b::[] ->
-        (let a = String.trim a in
-         let b = String.trim b in
-         try
-           let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in
-           let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
-           let arg = String.sub a open_b  (close_b - open_b) in
-           let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
+        (let a, b = 
+          try 
+            ignore (float_of_string (String.trim a));
+            print_endline (b^"TEST"^a);
+            (String.trim b, String.trim a)
+          with Failure(_) -> (String.trim a, String.trim b) in
+          try
+            let open_b = (Str.search_forward (Str.regexp "\\[") a  0) + 1 in
+            let close_b = Str.search_forward (Str.regexp "\\]") a 0 in
+            let arg = String.sub a open_b  (close_b - open_b) in
+            let (r, _) = List.find (fun (_, x) -> x = arg) arg_list in
            (* Printf.printf "var : %s\n" r;  *)
            (* print_newline (); *)
-           let new_var = Str.replace_first (Str.regexp "\\[.*\\]") ("["^r^"]") a in
-           l := (new_var, ([b], t)) :: !l
-         with Not_found -> 
-           try 
-             let (r, n) = List.find (fun (_, x) -> x = b) arg_list in  
-             ((* Printf.printf "Var pair .%s. .%s. \n" a r; *)
-              (* print_newline (); *)
-              l := (a, ([r], t)) :: !l);
-           with Not_found -> l := (a, ([b], t)) :: !l)          
+            let new_var = Str.replace_first (Str.regexp "\\[.*\\]") ("["^r^"]") a in
+            l := (new_var, ([b], t)) :: !l
+          with Not_found -> 
+            try 
+              let (r, n) = List.find (fun (_, x) -> x = b) arg_list in  
+              l := (a, ([r], t)) :: !l
+            with Not_found -> l := (a, ([b], t)) :: !l)          
       |_ -> failwith "pb match_condition guiwindow");
     raise Match
   with Not_found -> ()
@@ -568,19 +577,19 @@ let safe_or_unsafe () =
   try 
     (let _ = Str.search_forward (Str.regexp "UNSAFE") str 0 in
      result_image#set_stock `DIALOG_ERROR;
-     result_label#set_text "Unsafe" )
+     result_label#set_text "Unsafe")
   with Not_found ->
     (result_image#set_stock `APPLY;
      result_label#set_text "Safe")
       
 let get_trace (buffer, file) = 
-  let ic = Unix.open_process_in ("cubicle -nocolor "^file) in
+  let ic, oc, ec = Unix.open_process_full ("cubicle -nocolor  "^file) (Unix.environment ()) in
   result_text1#buffer#set_text "";
   try
    while true do
-      (* if !kill_thread then *)
-      (*   (kill_thread := false; *)
-      (*    raise KillThread); *)
+      if !kill_thread then
+        (kill_thread := false;
+         raise KillThread);
       let s = (input_line ic)^"\n" in
       Printf.printf "%s" s;
       print_newline();
@@ -589,10 +598,15 @@ let get_trace (buffer, file) =
     done
   with
     |End_of_file ->
-       ignore (Unix.close_process_in ic;
-               safe_or_unsafe ())
+      ((try
+         while true do 
+           result_text1#buffer#insert (input_line ec)
+         done
+       with End_of_file -> ());
+       ignore (Unix.close_process_full (ic, oc, ec));
+       safe_or_unsafe ())
     |KillThread ->
-      ignore (Unix.close_process_in ic)
+      ignore (Unix.close_process_full (ic, oc, ec))
 
 
       

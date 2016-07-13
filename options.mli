@@ -69,7 +69,11 @@ val cores : int
 val mode : string
 
 val debug : bool
-val gui_debug : bool
+(* val gui_debug : bool *)
+val single : bool
+val double : bool
+val graph_font_size : float 
+val source_font_size : float 
 val dot : bool
 val dot_level : int
 val dot_prog : viz_prog

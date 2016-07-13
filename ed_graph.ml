@@ -33,7 +33,8 @@ type mode =
   | VarChange     | VarChange_Focused
   | VarInit       | VarInit_Focused 
   | HighlightPath | HighlightPath_Focused 
-  | Path
+  | Path 
+  | Init |Init_Focused
 
 module Var_Map = Map.Make(String)
 
@@ -231,6 +232,8 @@ let update_vertex vertex event =
     | VarChange, _ -> ()
     | VarChange_Focused, Unfocus -> vertex_info.vertex_mode <- VarChange
     | VarChange_Focused, _ -> ()
+    | Init, Focus -> vertex_info.vertex_mode <- Init_Focused
+    | Init_Focused, Unfocus -> vertex_info.vertex_mode <- Init
     | _ -> ()
       
 
@@ -360,6 +363,7 @@ let mode_node v m e =
           (try
              let var_val = Var_Map.find x (G.V.label v).var_map in
              if  (List.mem var_val var_i) then
+
                (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
              raise (Diff_Node(x)));
            with Not_found -> 
@@ -373,27 +377,29 @@ let mode_node v m e =
   let str = ref ((G.E.label e).mem_label ^ "\n") in
     if (List.fold_left (fun acc (x, (var_i, ty)) ->
       match ty with 
-        |Eq -> 
+        |Eq | Less | LessEq | Greater | GreaterEq -> 
           (try
              let var_val = Var_Map.find x (G.V.label v).var_map in  
+             print_endline ("VAR VAL *"^var_val^"*"^" SEARCH *"^x^"*");
              if not (List.mem var_val var_i) then
                (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
                 acc || true)
              else acc
            with Not_found ->
-             (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+             (print_endline "not found"; 
+              List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
               acc || true))
         |NEq -> 
           (try
              let var_val = Var_Map.find x (G.V.label v).var_map in
+             print_endline ("VAR VAL "^var_val);
              if  (List.mem var_val var_i) then
                (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
                 acc || true)
              else
                acc
            with Not_found -> 
-             (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s)
- var_i;
+             (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
               acc || true))
         |_ -> acc ) false m) then 
       ((G.E.label e).label <- !str; false)

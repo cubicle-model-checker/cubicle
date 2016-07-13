@@ -29,7 +29,11 @@ let type_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
-let gui_debug = ref false
+let single = ref false
+let double = ref true
+let source_font_size = ref 10.0
+let graph_font_size = ref 12.0
+(* let gui_debug = ref false *)
 let dot = ref false
 let dot_level = ref 0
 let dot_prog = ref Dot
@@ -133,7 +137,10 @@ let specs =
     "-search", Arg.String set_mode, 
     "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
-    "-gui_debug", Arg.Set gui_debug, "cubicle debug mode";
+    "-single", Arg.Set single, "cubicle gui with single source view";
+    "-double", Arg.Set double, "cubicle gui with double source view";
+    "-source-font-size", Arg.Set_float source_font_size, "source font size";
+    "-graph-font-size", Arg.Set_float graph_font_size, "graph font size";
     "-dot", Arg.Int set_dot,
     "<level> graphviz (dot) output with a level of details";
     "-sfdp", Arg.Unit use_sfdp,
@@ -226,7 +233,11 @@ let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let max_proc = !max_proc
 let debug = !debug
-let gui_debug = !gui_debug
+(* let gui_debug = !gui_debug *)
+let single = !single
+let double = !double
+let source_font_size = !source_font_size
+let graph_font_size = !graph_font_size
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level

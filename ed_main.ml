@@ -11,8 +11,8 @@
 (*                                                                        *)
 (*  This software is distributed in the hope that it will be useful,      *)
 (*  but WITHOUT ANY WARRANTY; without even the implied warranty of        *)
-(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.          *)
-(*********************************************)
+(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                  *)
+(**************************************************************************)
 
 (* This file is a contribution of Benjamin Vadon *)
 
@@ -22,6 +22,9 @@ open Ed_graph
 open Ed_display
 open Ed_model
 open Ed_tracegraph
+
+
+exception Match of string * string 
 
 let graph_trace = Queue.create ()
 
@@ -432,6 +435,31 @@ let reset_table_and_canvas () =
   origine := start_point;
   nb_selected := 0
 
+let match_atom x sep length t = 
+  try 
+    let pos = Str.search_forward sep x 0 in
+    let before = Str.global_replace (Str.regexp "[\n| ]+") ""
+      (Str.string_before x pos) in
+    let after =  Str.global_replace (Str.regexp "[\n| ]+") ""
+      (Str.string_after x (pos + length)) in
+    try
+      ignore (float_of_string before);
+      raise (Match (after, before))
+    with Failure(_) -> 
+      raise (Match (before, after))
+  with Not_found -> () 
+    
+let get_expr e = 
+  try 
+      match_atom e (Str.regexp ">=") 2  Ed_graph.GreaterEq;
+      match_atom e (Str.regexp "<=") 2  Ed_graph.LessEq;
+      match_atom e (Str.regexp "<>") 2  Ed_graph.NEq;
+      match_atom e (Str.regexp ">")  1  Ed_graph.Greater;
+      match_atom e (Str.regexp "<")  1  Ed_graph.Less;
+      match_atom e (Str.regexp "=")  1  Ed_graph.Eq;
+      failwith "problem with trace format"
+  with Match(b,a) -> (b,a) 
+
 let split_node_info x m v changed_l mode new_name =
   let var_find_or before after  =
     List.fold_left (fun acc (x, (var_i,_)) ->
@@ -460,20 +488,8 @@ let split_node_info x m v changed_l mode new_name =
                 true
               else  acc
             with Not_found ->  acc) false !var_l
-  in
-  (let pos, eq = 
-     try (Str.search_forward (Str.regexp "=") x 0, true)
-     with Not_found -> 
-       try
-         (Str.search_forward (Str.regexp "<>") x 0, false)
-       with Not_found -> failwith "Probleme format trace" in
-   let pos = if eq then pos else pos - 1 in 
-   let before = Str.global_replace (Str.regexp "[\n| ]+") ""
-     (Str.string_before x pos) in
-   let after =  Str.global_replace (Str.regexp "[\n| ]+") ""
-     (Str.string_after x (pos + 1)) in
-   (* print_string before; *)
-   (* print_newline (); *)
+  in   
+  (let before, after = get_expr x in
    let m =
      try
        if !mode_change then 
@@ -586,6 +602,7 @@ let link_node before v after =
           
           
 let create_node s unsafe_l  =
+  (* Printf.printf "create node %s\n" s; *)
   let pos = Str.search_forward (Str.regexp "=") s 0 in
   let transition_list = Str.global_replace (Str.regexp "[\n| ]+") ""
     (String.trim (Str.string_before s pos)) in
@@ -616,14 +633,15 @@ let create_node s unsafe_l  =
   (G.V.label v).label <- (G.V.label v).num_label;
   HT.add ht transition_list v;
   G.add_vertex !graph v;
-  if (G.V.label v).vertex_mode = VarChange then
+  if (G.V.label v).vertex_mode = VarChange || (G.V.label v).vertex_mode = Init then
     color_edges v !root;
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
   let tor = make_turtle !origine 0.0 in
   draw tor canvas_root vc renderer;
   incr cpt;
-  Thread.delay 0.001
+  Thread.delay 0.001;
+  v
 
 let rec list_to_node curr_node unsafe_l = function
   |[] -> ()
@@ -632,26 +650,26 @@ let rec list_to_node curr_node unsafe_l = function
     (try
        let pos = Str.search_forward (Str.regexp "==") x 0 in
        let node_list = Str.string_before x pos in
-       create_node node_list unsafe_l;
+       ignore (create_node node_list unsafe_l);
        raise End_trace
      with Not_found -> (curr_node := !curr_node ^ x))
   |x::s ->
     (** On complète curr_node et on crée un noeud *)
     curr_node := !curr_node ^ x;
-    create_node !curr_node unsafe_l;
+    ignore (create_node !curr_node unsafe_l);
     (** Reinit curr_node *)
     curr_node := "";
     list_to_node curr_node unsafe_l s
    
    
 let rec build_node curr_node str unsafe_l  =
-  print_endline ("test "^str);
+  (* print_endline ("test "^str); *)
   let str_l = Str.split (Str.regexp "node [0-9]+:") str in
   match str_l with
     |[] -> ()
     |[x] ->
       if !curr_node <> "" then
-        create_node !curr_node unsafe_l;
+        ignore (create_node !curr_node unsafe_l);
       curr_node := x
     |x::s ->
       list_to_node curr_node unsafe_l str_l
@@ -675,8 +693,10 @@ let load_graph unsafe_l =
           (build_node curr_node str unsafe_l ;
            raise End_trace)
         else if Str.string_match (Str.regexp "node [0-9]+:") str 0 then
-          build_node curr_node str unsafe_l
-        else
+           build_node curr_node str unsafe_l
+        else if Str.string_match (Str.regexp "Unsafe trace:") str 0 then 
+          failwith "unsafe"
+        else 
           curr_node := !curr_node ^ str;
       with Queue.Empty ->  Mutex.unlock m;
        
@@ -691,7 +711,7 @@ let load_graph unsafe_l =
 (** Met sortie cubicle dans la file *)
 
 let show_tree file  =
-  let ic = Unix.open_process_in ("cubicle -nocolor -v "^file) in
+  let ic  = Unix.open_process_in ("cubicle -nocolor -v "^file) in
   try
     while true do
       if !kill_thread then raise KillThread;
@@ -703,12 +723,43 @@ let show_tree file  =
     done
   with
     |End_of_file ->
-      (ignore (Unix.close_process_in ic); 
-       end_show_tree := true)
+        (ignore (Unix.close_process_in ic); 
+        end_show_tree := true)
     |KillThread ->
       ignore (Unix.close_process_in ic)
 
+let create_unsafe_path str =
+  print_endline str;
+  let node_path = ref "" in 
+  let ls = Str.split (Str.regexp "Error trace: ") str in
+  (match ls with
+    |x::y::[] -> 
+      (let ll = Str.split (Str.regexp "UNSAFE") y in
+       match ll with
+         |x::z::[] ->
+           (let _::l =  (Str.split (Str.regexp "->") x) in
+            let init_state::_ = l in 
+            List.iteri (fun  i x -> 
+              (* print_endline ("*"^x^"*"); *)
+              let atom_l = Str.split (Str.regexp "\n") (String.trim x) in 
+              if i <> (List.length l - 1) then 
+                node_path := 
+                  !node_path ^ (String.trim (List.hd (List.rev atom_l))) ^ "->"
+            else 
+                node_path := 
+                  !node_path ^ (String.trim (List.hd (List.rev atom_l)))) l;
+            node_path := !node_path ^ "=" ^ init_state;
+            print_endline !node_path;
+            let v = create_node !node_path (-1) in 
+            (G.V.label v).vertex_mode <- Init;
+            color_edges v !root)
+         |_ -> failwith "format pb unsafe node")
+    |_ -> failwith "missing information about unsafe path");
+  let tor = make_turtle !origine 0.0 in
+  draw tor canvas_root vc renderer
+      
 
+    
 let safe_or_unsafe () =
   while not (!end_load_graph && !end_show_tree) do
     Condition.wait c_end m
@@ -717,10 +768,12 @@ let safe_or_unsafe () =
   while Queue.length graph_trace <> 0 do
     str := !str ^ (Queue.pop graph_trace)
   done;
+  (* print_endline !str; *)
   (try
      (let _ = Str.search_forward (Str.regexp "UNSAFE") !str 0 in
       result_image#set_stock `DIALOG_ERROR;
-      result_label#set_text "Unsafe")
+      result_label#set_text "Unsafe";
+      create_unsafe_path !str)
    with Not_found ->
      (result_image#set_stock `APPLY;
       result_label#set_text "Safe"))
@@ -730,7 +783,7 @@ let safe_or_unsafe () =
     
 let path_to_l (l, src) = 
   while (not (!end_load_graph && !end_show_tree)) && (not !kill_thread) do
-    print_endline "pathto";
+    (* print_endline "pathto"; *)
     path_to src l !root;
     Thread.delay 0.00001;
     if !end_load_graph && !end_show_tree then kill_thread := true;
@@ -756,7 +809,8 @@ let path_to_loop l =
   else
     (match !mem_vertex with 
       |None -> ()
-      |Some src -> mem_vertex := None;
+      |Some src ->
+        mem_vertex := None;
         GtkThread.async (fun () -> ignore (Thread.create path_to_l (l, src))) ())
 
     
@@ -766,7 +820,7 @@ let tree (file, unsafe_l) =
   ignore (Thread.create load_graph unsafe_l) ;
   ignore (Thread.create safe_or_unsafe ())
 
-let open_graph  file unsafe_l open_graph_b  =
+let open_graph file unsafe_l open_graph_b  =
   ignore (window#show ());
   Ed_graph.new_graph();
   set_canvas_event ();

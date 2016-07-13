@@ -60,6 +60,7 @@ requires { 1 <= C && 1 <= E }
 
 transition t12 ()
 requires { 1 <= F && 1 <= G }
- { E := E +1; F := F - 1; }
+ { E := E + 1; F := F - 1; }
+
 
 
