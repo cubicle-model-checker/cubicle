@@ -423,6 +423,7 @@ let source2 =
 let read_file path =
   let c_in = open_in path in
   let str = really_input_string c_in (in_channel_length c_in) in
+  close_in c_in;
   Glib.Convert.locale_to_utf8 str
 
 let get_mouse_coordinates m =
@@ -579,36 +580,50 @@ let safe_or_unsafe () =
      result_image#set_stock `DIALOG_ERROR;
      result_label#set_text "Unsafe")
   with Not_found ->
-    (result_image#set_stock `APPLY;
-     result_label#set_text "Safe")
-      
+    try 
+      (let _ = Str.search_forward (Str.regexp "SAFE") str 0 in
+       result_image#set_stock `APPLY;
+       result_label#set_text "Safe")
+    with Not_found -> 
+      ( result_image#set_stock `DIALOG_ERROR;
+       result_label#set_text "Error")
+        
+
+let rec read_loop pid descr_l  = 
+    let ready_read, _ , _ = Unix.select descr_l [] [] (0.1) in 
+    if !kill_thread then  
+       (Unix.kill pid Sys.sigint;
+        kill_thread := false;
+       raise KillThread);
+    match ready_read with 
+    |[] -> ()
+    |fd_l ->
+      (List.iter (fun fd ->
+        let str = String.make 100 ' ' in 
+        let n =   (Unix.read fd str 0 100) in 
+        result_text1#buffer#insert (String.sub str 0 n);
+        ignore (result_text1#scroll_to_iter ~use_align:true ~yalign:0.5 (result_text1#buffer#end_iter))) fd_l;
+       read_loop pid descr_l)
+        
 let get_trace (buffer, file) = 
-  let ic, oc, ec = Unix.open_process_full ("cubicle -nocolor  "^file) (Unix.environment ()) in
-  result_text1#buffer#set_text "";
-  try
-   while true do
-      if !kill_thread then
-        (kill_thread := false;
-         raise KillThread);
-      let s = (input_line ic)^"\n" in
-      Printf.printf "%s" s;
-      print_newline();
-      result_text1#buffer#insert s;
-      ignore (result_text1#scroll_to_iter ~use_align:true ~yalign:0.5 (result_text1#buffer#end_iter))
-    done
-  with
-    |End_of_file ->
-      ((try
-         while true do 
-           result_text1#buffer#insert (input_line ec)
-         done
-       with End_of_file -> ());
-       ignore (Unix.close_process_full (ic, oc, ec));
-       safe_or_unsafe ())
-    |KillThread ->
-      ignore (Unix.close_process_full (ic, oc, ec))
-
-
+  let inc, in_fd  = Unix.pipe () in
+  let outc, out_fd  = Unix.pipe () in
+  let errc, err_fd = Unix.pipe () in
+  let pid = Unix.create_process "cubicle" [|"cubicle";"-nocolor"; file|] 
+  inc out_fd err_fd  in
+  (try
+    read_loop pid [outc];
+    read_loop pid [outc];
+    read_loop pid [errc];
+    safe_or_unsafe ()
+  with KillThread ->
+    read_loop pid [outc];
+    read_loop pid [errc];
+    safe_or_unsafe ();
+    kill_thread := false);
+  Unix.close inc; Unix.close in_fd; 
+  Unix.close outc; Unix.close out_fd; 
+  Unix.close errc; Unix.close err_fd
       
 let execute buffer file b  =
   GtkThread.async (fun () -> ignore (Thread.create  get_trace (buffer, file))) ()
@@ -713,17 +728,17 @@ let open_window s  =
   ignore (source#source_buffer#create_tag ~name:"search" [`BACKGROUND "yellow"]);
   ignore (source#source_buffer#create_tag ~name:"search_next" [`BACKGROUND "orange"]);
   ignore (source#source_buffer#create_tag ~name:"var" [`BACKGROUND "pink"]);
-  source#event#add [`BUTTON_PRESS; `KEY_PRESS];   
+  (* source#event#add [`BUTTON_PRESS; `KEY_PRESS];    *)
   source#set_editable false;
-  open_file inter_path save_path ast;
+  (* open_file inter_path save_path ast; *)
   ignore (source#event#connect#motion_notify ~callback:(find_in_ast ast edit));
   ignore (source#event#connect#button_press ~callback:(modify_ast ast edit));
   ignore (save_button#event#connect#button_press 
             ~callback:(save_session ast save_path));
-  ignore (run_button#connect#clicked 
+  ignore (run_button#event#connect#button_press
             ~callback:(fun b -> 
               let _ = save_execute_file ast new_path b in 
-              execute result_text1#buffer new_path b));
+              execute result_text1#buffer new_path b; true));
   ignore (execute_button2#event#connect#button_press
             ~callback:(fun b -> execute result_text2#buffer file_name b; true));
   ignore (edit_button#connect#toggled

@@ -29,7 +29,7 @@ requires { Curcmd = Empty && Cache[n] <> Exclusive }
 }
     
 transition inv_1 (n)
-requires { Shrset[n]=True  &&  Curcmd = Reqe }
+requires { not Shrset[n]=True  &&  Curcmd = Reqe }
 { 
   Exgntd := False;
   Cache[n] := Invalid;

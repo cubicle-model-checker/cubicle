@@ -711,7 +711,7 @@ let load_graph unsafe_l =
 (** Met sortie cubicle dans la file *)
 
 let show_tree file  =
-  let ic  = Unix.open_process_in ("cubicle -nocolor -v "^file) in
+  let ic, ec, oc  = Unix.open_process_full ("cubicle -nocolor -v "^file)  (Unix.environment ()) in
   try
     while true do
       if !kill_thread then raise KillThread;
@@ -723,10 +723,11 @@ let show_tree file  =
     done
   with
     |End_of_file ->
-        (ignore (Unix.close_process_in ic); 
+        (ignore (Unix.close_process_full (ic, ec, oc));
         end_show_tree := true)
     |KillThread ->
-      ignore (Unix.close_process_in ic)
+      ignore (Unix.close_process_full (ic, ec, oc))
+
 
 let create_unsafe_path str =
   print_endline str;
