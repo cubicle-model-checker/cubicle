@@ -142,7 +142,8 @@ let result_text1 =
     ~packing: result_scroll#add () in 
   t#set_editable false;
   t#set_cursor_visible false;
-  t
+  t#misc#modify_font_by_name ("DejaVu Sans Mono "^(string_of_float Options.source_font_size)); 
+ t
 
 let scroll = 
   let s = 
@@ -170,9 +171,12 @@ let result_scroll2 = GBin.scrolled_window
   ~packing: (* result_frame2 *)pane2#add2 () 
 
 (** Debug mode *)
-let result_text2 =  GSourceView2.source_view 
-  ~packing:result_scroll2#add ()
-
+let result_text2 =  
+  let t = GSourceView2.source_view 
+    ~packing:result_scroll2#add () in 
+  t#misc#modify_font_by_name ("DejaVu Sans Mono "^(string_of_float Options.source_font_size)); 
+  t
+ 
 let source = 
   let src = GSourceView2.source_view 
     ~auto_indent:true 
@@ -413,7 +417,7 @@ let source2 =
     ~border_width:5
     ~show_line_numbers:true 
     ~packing:scroll2#add () in 
-  src#misc#modify_font_by_name "Monospace"; 
+  src#misc#modify_font_by_name ("DejaVu Sans Mono "^(string_of_float Options.source_font_size)); 
   src#set_editable false;
   let buf = src#source_buffer in 
   buf#set_language cubicle; 
@@ -606,6 +610,7 @@ let rec read_loop pid descr_l  =
        read_loop pid descr_l)
         
 let get_trace (buffer, file) = 
+  result_text1#buffer#set_text "";
   let inc, in_fd  = Unix.pipe () in
   let outc, out_fd  = Unix.pipe () in
   let errc, err_fd = Unix.pipe () in

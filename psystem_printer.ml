@@ -119,7 +119,7 @@ and
       | PAtom (a) -> print_atom fmt a 
       | PNot (not_i,f,loc) -> 
         if not_i.active || not !comments  then 
-          fprintf fmt "( not (%a) )" print_formula f
+          fprintf fmt " not %a " print_formula f
         else 
           fprintf fmt "( %snot%s %a )" !open_c !close_c print_formula f
       | PAnd (l,loc) -> 

@@ -378,7 +378,7 @@ let draw_graph root canvas  =
               | Selected -> color_change_successor_edge line line2 color_selected_successor_edge;
               | Focused ->  color_change_successor_edge line line2 color_focused_successor_edge;
               | Selected_Focused -> color_change_successor_edge line line2 color_selected_focused_successor_edge;
-              | HighlightPath -> 
+              | HighlightPath | InitPath-> 
                 (color_change_successor_edge line line2 color_line_varchange;
                  line2#show ())
               | HighlightPath_Focused -> 
@@ -497,15 +497,15 @@ let draw_graph root canvas  =
     !graph;
   !center_node
 
-let rec color_edges v root =  
+let rec color_edges v root path_t =  
   match root with 
     |None -> ()
     |Some r -> 
       if r <> v then 
         begin
           G.iter_pred_e (fun edge ->
-            (G.E.label edge).edge_mode <- HighlightPath) !graph v;
-          G.iter_pred (fun vertex -> color_edges vertex root) !graph v;
+            (G.E.label edge).edge_mode <- path_t) !graph v;
+          G.iter_pred (fun vertex -> color_edges vertex root path_t) !graph v;
         end
 
 
@@ -516,7 +516,7 @@ let set_path paths root =
     try 
       let src_e = List.hd p in 
       let src_node = G.E.src src_e in 
-      color_edges src_node root
+      color_edges src_node root HighlightPath
     with Failure(_) -> ()
   ) paths
 
@@ -604,13 +604,16 @@ let reset_display () (* canvas *) =
   G.iter_vertex (fun v -> 
     let vertex = (G.V.label v) in  
     (match vertex.vertex_mode with 
-      |Unsafe | Normal -> ()
+      |Unsafe | Normal | Init -> ()
       |_ -> vertex.vertex_mode <- Normal);
     vertex.label <- vertex.num_label;
   )
  !graph;
-  G.iter_edges_e (fun e -> 
-    (G.E.label e).edge_mode <- Normal;
-    (G.E.label e).label <- (G.E.label e).mem_label
+  G.iter_edges_e (fun e ->
+    match   (G.E.label e).edge_mode with 
+    |InitPath -> () 
+    |_ -> 
+      (G.E.label e).edge_mode <- Normal;
+      (G.E.label e).label <- (G.E.label e).mem_label
   ) !graph
     

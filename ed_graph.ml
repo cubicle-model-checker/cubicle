@@ -33,7 +33,7 @@ type mode =
   | VarChange     | VarChange_Focused
   | VarInit       | VarInit_Focused 
   | HighlightPath | HighlightPath_Focused 
-  | Path 
+  | Path | InitPath
   | Init |Init_Focused
 
 module Var_Map = Map.Make(String)
@@ -380,27 +380,25 @@ let mode_node v m e =
         |Eq | Less | LessEq | Greater | GreaterEq -> 
           (try
              let var_val = Var_Map.find x (G.V.label v).var_map in  
-             print_endline ("VAR VAL *"^var_val^"*"^" SEARCH *"^x^"*");
              if not (List.mem var_val var_i) then
                (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
                 acc || true)
              else acc
            with Not_found ->
-             (print_endline "not found"; 
+             (
               List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
               acc || true))
         |NEq -> 
           (try
              let var_val = Var_Map.find x (G.V.label v).var_map in
-             print_endline ("VAR VAL "^var_val);
-             if  (List.mem var_val var_i) then
+             if not (List.mem var_val var_i) then
                (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
-                acc || true)
+                acc)
              else
-               acc
-           with Not_found -> 
-             (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
-              acc || true))
+               acc || true
+           with Not_found -> acc || true 
+             (* (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i; *)
+             (*  acc || true) *))
         |_ -> acc ) false m) then 
       ((G.E.label e).label <- !str; false)
     else 

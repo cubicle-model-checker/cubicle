@@ -99,6 +99,7 @@ let window =
   let wnd = GWindow.window
     ~border_width: 10
     ~resizable: true
+    ~title:"Cubicle GUI"
     ~position: `CENTER () in
   let _ = wnd#destroy_with_parent
 in wnd
@@ -126,7 +127,7 @@ let stop_button =
 
 let test_button = 
   toolbar#insert_button 
-    ~text:" " () 
+    ~text:"test" () 
 
 let reset_display_button = 
   GButton.button ~label:"Reset display" ~packing:toolbar#add ()
@@ -144,24 +145,18 @@ let menu_bar_box = GPack.vbox ~packing:v_box#pack ()
 (* treeview on the left, canvas on the right *)
 let h_box = GPack.hbox ~homogeneous:false ~spacing:30  ~packing:v_box#add () 
 
-(* let sw_frame =  *)
-(*   GBin.frame ~border_width:8 ~packing:(h_box#add) () *)
-
-
-(* let canvas_frame =  *)
-(*   GBin.frame ~border_width:8  ~packing:(h_box#add) () *)
-
 let canvas = 
   (GnoCanvas.canvas 
      ~aa:!aa 
-     ~width:(truncate w) 
-     ~height:(truncate h) 
-     ~packing:h_box#pack ~border_width:50 ()) 
+     ~width:(truncate w)
+     ~height:(truncate h)
+     ~packing:(h_box#pack ~fill:true ~expand:true) ()  ~border_width:20) 
+
 let sw = GBin.scrolled_window 
   ~shadow_type:`ETCHED_IN
   ~hpolicy:`NEVER
   ~vpolicy:`AUTOMATIC
-  ~packing:h_box#add () 
+  ~packing:(h_box#pack ~fill:false ~expand:false) () 
 
 
 (* unit circle as roots of graph drawing *)
@@ -184,7 +179,7 @@ let (canvas_root, focus_rectangle) =
    circle#show();
   let graph_root = GnoCanvas.group ~x:(-.(w/.2.)) ~y:(-.(h/.2.)) circle_group in
   graph_root#raise_to_top ();
- (graph_root, r)
+  (graph_root, r)
 
  (* current root used for drawing *)
  let root = ref (choose_root ())
@@ -263,7 +258,7 @@ let refresh_display () =
 let set_vertex_event_fun = ref (fun _ -> ())
 
 
-let contextual_menu vertex ev =
+let contextual_menu (vertex, ev) =
   let menu = new GMenu.factory (GMenu.menu ()) in
   ignore (menu#add_item "As root" ~callback:(root_change (Some vertex) vc renderer));
   menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
@@ -317,10 +312,10 @@ let vertex_event vertex item ellipse ev =
           end
 
         end
-    | `BUTTON_PRESS ev ->  
-      if (GdkEvent.Button.button ev) = 3
-      then 
-        contextual_menu vertex ev
+    | `BUTTON_PRESS ev -> () 
+      (* if (GdkEvent.Button.button ev) = 3 *)
+      (* then  *)
+      (*   GtkThread.async (fun () -> ignore (Thread.create contextual_menu (vertex,ev))) () *)
     | `TWO_BUTTON_PRESS ev->
       if (GdkEvent.Button.button ev) = 1
       then 
@@ -348,17 +343,14 @@ let vertex_event vertex item ellipse ev =
   true
 
 
-let contextual_menu_text t e ev =
+let contextual_menu_text (t, e, ev) =
   let menu = new GMenu.factory (GMenu.menu ()) in
   ignore (menu#add_item "Show in editor"
             ~callback:(fun () ->
               mem_vertex := Some e;
-              (* match !mem_vertex with *)
-              (*   |None -> mem_vertex := Some e ; *)
-              (*   |_ -> if List.length !var_l = 0 then mem_vertex := Some e else ()); *)
-          !scroll_to_transition t));
+              !scroll_to_transition t));
   menu#menu#popup ~button:3 ~time:(GdkEvent.Button.time ev)
-
+    
 
 let edge_event texte arrow_line label src ev =
   begin
@@ -374,13 +366,18 @@ let edge_event texte arrow_line label src ev =
           texte#set [`FILL_COLOR "black"; `WEIGHT 400]; 
           ignore (Ed_display.draw_graph !root canvas_root)
        end
-          | `BUTTON_RELEASE ev ->
-      texte#ungrab (GdkEvent.Button.time ev);
-
-    | `BUTTON_PRESS ev ->  
-      if (GdkEvent.Button.button ev) = 3
-      then
-        contextual_menu_text label src ev
+      | `BUTTON_RELEASE ev ->
+        texte#ungrab (GdkEvent.Button.time ev);
+      | `TWO_BUTTON_PRESS ev->
+        if (GdkEvent.Button.button ev) = 1
+        then 
+          (mem_vertex := Some src;
+           !scroll_to_transition label)
+         
+    (* | `BUTTON_PRESS ev ->   *)
+      (* if (GdkEvent.Button.button ev) = 3 *)
+      (* then *)
+      (*   contextual_menu_text (label, src, ev) *)
     | _ ->
       ()
   end;
@@ -403,20 +400,21 @@ let set_edge_event e =
 let () = set_vertex_event_fun := set_vertex_event
 
 
-(* let circle_event ev = *)
-(*   begin match ev with *)
-(*     | `BUTTON_PRESS ev -> *)
-(*       if (GdkEvent.Button.button ev) = 3 *)
-(*       then *)
-(*         begin *)
-(*           let menu = new GMenu.factory (GMenu.menu ()) in *)
-(*           menu#menu#popup *)
-(*             ~button:3 *)
-(*             ~time:(GdkEvent.Button.time ev) *)
-(*         end *)
-(*     | _ ->() *)
-(*   end; *)
-(*   true *)
+let circle_event ev =
+  begin 
+    match ev with
+    | `BUTTON_PRESS ev ->
+      if (GdkEvent.Button.button ev) = 3
+      then
+        begin
+          let menu = new GMenu.factory (GMenu.menu ()) in
+          menu#menu#popup
+            ~button:3
+            ~time:(GdkEvent.Button.time ev)
+        end
+    | _ ->()
+  end;
+  true
 
 let set_canvas_event () =
   (* ignore(canvas_root#parent#connect#event ~callback:(fun e -> false)); *)
@@ -634,7 +632,7 @@ let create_node s unsafe_l  =
   HT.add ht transition_list v;
   G.add_vertex !graph v;
   if (G.V.label v).vertex_mode = VarChange || (G.V.label v).vertex_mode = Init then
-    color_edges v !root;
+    color_edges v !root HighlightPath;
   Ed_display.add_node canvas_root v;
   !set_vertex_event_fun v;
   let tor = make_turtle !origine 0.0 in
@@ -753,8 +751,8 @@ let create_unsafe_path str =
             print_endline !node_path;
             let v = create_node !node_path (-1) in 
             (G.V.label v).vertex_mode <- Init;
-            color_edges v !root)
-         |_ -> failwith "format pb unsafe node")
+            color_edges v !root InitPath)
+         |_ -> failwith "pb unsafe node format")
     |_ -> failwith "missing information about unsafe path");
   let tor = make_turtle !origine 0.0 in
   draw tor canvas_root vc renderer
@@ -786,7 +784,7 @@ let path_to_l (l, src) =
   while (not (!end_load_graph && !end_show_tree)) && (not !kill_thread) do
     (* print_endline "pathto"; *)
     path_to src l !root;
-    Thread.delay 0.00001;
+    Thread.delay 0.001;
     if !end_load_graph && !end_show_tree then kill_thread := true;
   done;           
   let tor = make_turtle !origine 0.0 in
@@ -812,15 +810,15 @@ let path_to_loop l =
       |None -> ()
       |Some src ->
         mem_vertex := None;
-        GtkThread.async (fun () -> ignore (Thread.create path_to_l (l, src))) ())
+        ignore (Thread.create path_to_l (l, src)))
 
     
 let tree (file, unsafe_l) =
-  Queue.clear graph_trace;
+  Queue.clear graph_trace; 
   ignore (Thread.create show_tree file);
-  ignore (Thread.create load_graph unsafe_l) ;
+  ignore (Thread.create load_graph unsafe_l) ; 
   ignore (Thread.create safe_or_unsafe ())
-
+ 
 let open_graph file unsafe_l open_graph_b  =
   ignore (window#show ());
   Ed_graph.new_graph();
