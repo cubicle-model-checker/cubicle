@@ -36,7 +36,7 @@ CUBICLE_CMOS = $(subst src/stats.cmo, stats.cmo,\
 main_js.com:main_js.ml
 	$(OCAMLC) -c $(JS_INCLUDE) $(CAMLP4) main_js.ml
 
-ALL_CMOS= $(NUM_CMOS) js_helper.cmo $(CUBICLE_CMOS) main_js.cmo
+ALL_CMOS= $(NUM_CMOS)  $(CUBICLE_CMOS) main_js.cmo
 
 cubicle_js.byte: $(ALL_CMOS)
 	$(OCAMLC) $(JS_INCLUDE) lwt.cma js_of_ocaml.cma unix.cma \

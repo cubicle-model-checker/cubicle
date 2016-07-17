@@ -5,6 +5,7 @@ open Lexing
 open Options
 open Format
 
+
 exception CursorNotOverText 
 exception FileError
 exception KillThread
@@ -29,7 +30,8 @@ let window =
     ~title:"Cubicle GUI" 
     ~position:`CENTER 
     ~resizable:true 
-    ~width:wd ~height:800 () in 
+    ~width:wd 
+    ~height:800 () in 
   let _ = wnd#connect#destroy ~callback:(GMain.quit) in
   wnd 
 
@@ -39,7 +41,26 @@ let cubicle  =
     | None -> None
     | some -> some
 
-let box = GPack.vbox ~packing:window#add ()
+let box = GPack.vbox ~homogeneous:false ~border_width:0 ~packing:window#add ()
+
+(* let menu_bar = GMenu.menu_bar *)
+(*   ~packing:(box#pack ~expand:false ~fill:false)() *)
+
+(* let create_menu label menubar = *)
+(*   let item = GMenu.menu_item ~label ~packing:menubar#append () in *)
+(*   GMenu.menu ~packing:item#set_submenu () *)
+  
+(* let options_menu, trace_menu  =  *)
+(*   let o_menu= create_menu "Options" menu_bar in  *)
+(*   GToolbox.build_menu o_menu *)
+(*     ~entries:[`C ("Options 1", false, fun _ -> () ); *)
+(*               `C ("Options 2", false, fun _ -> () )]; *)
+(*   let t_menu = create_menu "Display trace" menu_bar in *)
+(*   GToolbox.build_menu t_menu *)
+(*     ~entries:[`I ("Commented file", fun () -> () ); *)
+(*               `I ("Original file", fun () -> () )]; *)
+(*   o_menu, t_menu *)
+
 
 let toolbox_frame = GBin.frame ~border_width:8 ~packing:(box#pack ~expand:false ~fill:false) ()
 
@@ -72,10 +93,12 @@ let resultbox, result_image, result_label =
   let result_image = GMisc.image ~icon_size:`LARGE_TOOLBAR
     ~packing:hbox#add () in
   let result_label = GMisc.label ~text:" " ~packing:hbox#add () in
-  ignore(toolbar#insert_widget hbox#coerce); hbox, result_image, result_label
+  ignore(toolbar#insert_widget hbox#coerce); 
+  toolbar#insert_space ();
+  hbox, result_image, result_label
 
 let toolsearch =
-  let t =  GButton.toolbar ~tooltips:true ~packing:(toolbox#pack ~fill:true) () in
+  let t = GButton.toolbar ~tooltips:true ~packing:(toolbox#pack ~fill:false ~expand:false) () in
   t#set_icon_size `DIALOG; t
 
 let search_box =
@@ -85,26 +108,32 @@ let search_box =
 
 let search_bar =
   let sb = GEdit.entry ~packing:(search_box#add) () in
-  ignore (toolsearch#insert_widget search_box#coerce); sb
+  ignore (toolbar#insert_widget search_box#coerce); sb
 
-let next_button = toolsearch#insert_button
+let next_button = toolbar#insert_button
   ~text:" Next"
   ~icon:(GMisc.image ~stock:`GO_DOWN ~icon_size:`SMALL_TOOLBAR())#coerce ()
 
-let previous_button = toolsearch#insert_button
+let previous_button = toolbar#insert_button
   ~text:" Previous"
   ~icon:(GMisc.image ~stock:`GO_UP ~icon_size:`SMALL_TOOLBAR())#coerce ()
   
-let trace_button = GButton.button ~label:"Trace" 
-  ~packing:(toolbox#add) ()
+
+let trace_button = toolbar#insert_button ~text:"Display trace" ()
+
+(* ~icon:( *)
+(* GButton.button ~label:"Trace"  *)
+  (* ~packing:(toolbar#add (\* ~expand:false ~fill:false *\)) () *)
 
 (** Debug mode *)
-let show_file_button = GButton.button ~label:"Display file with comments"
-  ~packing:(toolbox#add (* ~expand:false ~fill:false *)) ~show:(double)()
+(* let show_file_button = GButton.button ~label:"Display file with comments" *)
+(*   ~packing:(toolbox#add (\* ~expand:false ~fill:false *\)) ~show:(double)() *)
 
 (** Debug mode *)
-let execute_button2 = GButton.button ~label:"Run original file"
-  ~packing:(toolbox#add) ~show:(double)()
+
+let execute_button2 = toolbar#insert_button ~text:"Run original file"
+ ~icon:(GMisc.image ~stock:`EXECUTE ~icon_size:`LARGE_TOOLBAR ())#coerce ()
+  (* ~packing:(toolbar#add (\* ~expand:false ~fill:false *\)) ~show:(double)() *)
   
 let debug_box =  GPack.paned `HORIZONTAL ~show:true ~packing:(box#add) ()
 (* GPack.hbox ~packing:box#add () *)
@@ -150,25 +179,25 @@ let scroll =
     GBin.scrolled_window 
       ~hpolicy:`ALWAYS 
       ~vpolicy:`ALWAYS 
-      ~height:600
       ~width:(wd/2)
+      ~height:600
       ~packing:(pane1#add1) () in 
   s
 
 (** Debug mode *)
 let scroll2 = GBin.scrolled_window 
-  ~hpolicy:`ALWAYS 
+  (* ~hpolicy:`ALWAYS  *)
   ~vpolicy:`ALWAYS 
+  ~width: (wd/2)
   ~height:600
-  ~width:(wd/2)
-  ~packing: pane2#add1  () 
+  ~packing:(pane2#add1)   () 
 
 (** Debug mode *)
 let result_scroll2 = GBin.scrolled_window 
   ~hpolicy:`ALWAYS 
   ~vpolicy:`ALWAYS 
   ~border_width:5
-  ~packing: (* result_frame2 *)pane2#add2 () 
+  ~packing: (* result_frame2 *)(pane2#pack2 ~resize:true ~shrink:true)  ()
 
 (** Debug mode *)
 let result_text2 =  
@@ -197,7 +226,7 @@ let source =
 let save_session s file b = 
   parse_linact !s;
   let l = !inact_l in
-  let oc = open_out file in 
+  let oc = open_out_gen  [Open_wronly; Open_creat] 0o644  file in 
   if l == [] then Printf.fprintf oc "vide" else
     List.iter (fun (s, e) -> Printf.fprintf oc "%d %d " s e) l;
   close_out oc;
@@ -415,7 +444,7 @@ let source2 =
     ~insert_spaces_instead_of_tabs:true 
     ~right_margin_position:80 
     ~border_width:5
-    ~show_line_numbers:true 
+   ~show_line_numbers:true 
     ~packing:scroll2#add () in 
   src#misc#modify_font_by_name ("DejaVu Sans Mono "^(string_of_float Options.source_font_size)); 
   src#set_editable false;
@@ -482,8 +511,6 @@ let rec apply_tag = function
                ~start:start_iter ~stop:stop_iter)
           else 
             var_map := M.add str (start, stop) !var_map          
-      (* let m =  Ed_main.Var_L.add (Ed_main.var_l) in () *)
-      (* Ed_main.var_l := (source#source_buffer#get_text ~start:start_iter ~stop:stop_iter() ) :: !Ed_main.var_l *)
         end
     );
     apply_tag s
@@ -502,20 +529,28 @@ let find_in_ast s edit m  =
 (** Appelé après un clic de souris pour commenter *)
 let modify_ast ast edit b = 
   if !edit then false
-  else 
-    if (GdkEvent.Button.button b) = 3 && !buffer_l <> -1 && !buffer_c <> -1 then 
-      (apply_tag (parse_var !ast); true)
     else 
-      (if !buffer_l <> -1 && !buffer_c <> -1 then
-          apply_tag (parse_psystem_m !ast );
-       true)
+      if (GdkEvent.Button.button b) = 3 && !buffer_l <> -1 && !buffer_c <> -1 then 
+        (apply_tag (parse_var !ast); true)
+      else 
+        (if !buffer_l <> -1 && !buffer_c <> -1 then
+            begin
+              apply_tag (parse_psystem_m !ast);
+              source2#source_buffer#set_text (Psystem_printer.psystem_to_string !ast)
+            end;
+         true)
 
 (** Sauvegarde du fichier envoyé à Cubicle *)      
 let save_execute_file s file b =
-  let oc = open_out file in
-  Printf.fprintf oc "%s" (Psystem_printer.psystem_to_string !s);
-  close_out oc;
-  true
+  if edit_button#active then 
+    (GToolbox.message_box ~title:"Edit mode" "Please exit edit mode before running cubicle"
+       ~icon:((GMisc.image ~stock:`DIALOG_WARNING ~icon_size:`DIALOG ())#coerce) ~ok:"ok" ;
+     false)
+  else
+    let oc = open_out_gen [Open_wronly; Open_creat] 0o644 file in
+    Printf.fprintf oc "%s" (Psystem_printer.psystem_to_string !s);
+    close_out oc;
+    true
 
 let show_file s new_name save_name b = 
   let _ = save_session s save_name new_name in
@@ -568,17 +603,19 @@ let edit_mode ast new_file button edit m =
       source#set_editable true;
       source#set_cursor_visible true; )
   else 
-    ( let oc = open_out new_file in
+    ( (* let c = source#source_buffer#cursor_position in  *)
+      let oc = open_out_gen [Open_creat; Open_wronly] 0o644 new_file in
       let str =  source#source_buffer#get_text  () in 
       Printf.fprintf oc "%s" str;
       close_out oc;
       try
         (open_show_file ast new_file edit;
-         result_text1#buffer#set_text "")
+         (* ignore (source#scroll_to_iter (source#source_buffer#get_iter (`OFFSET !buffer_c))); *)
+(* result_text1#buffer#set_text "" *))
       with FileError -> button#set_active true)
 
-let safe_or_unsafe () = 
-  let str = result_text1#buffer#get_text () in 
+let safe_or_unsafe (res_t:GSourceView2.source_view) = 
+  let str = res_t#buffer#get_text () in 
   try 
     (let _ = Str.search_forward (Str.regexp "UNSAFE") str 0 in
      result_image#set_stock `DIALOG_ERROR;
@@ -593,7 +630,7 @@ let safe_or_unsafe () =
        result_label#set_text "Error")
         
 
-let rec read_loop pid descr_l  = 
+let rec read_loop (res_t:GSourceView2.source_view) pid descr_l  = 
     let ready_read, _ , _ = Unix.select descr_l [] [] (0.1) in 
     if !kill_thread then  
        (Unix.kill pid Sys.sigint;
@@ -603,35 +640,35 @@ let rec read_loop pid descr_l  =
     |[] -> ()
     |fd_l ->
       (List.iter (fun fd ->
-        let str = String.make 100 ' ' in 
-        let n =   (Unix.read fd str 0 100) in 
-        result_text1#buffer#insert (String.sub str 0 n);
-        ignore (result_text1#scroll_to_iter ~use_align:true ~yalign:0.5 (result_text1#buffer#end_iter))) fd_l;
-       read_loop pid descr_l)
+        let str = String.make 1000 ' ' in 
+        let n =   (Unix.read fd str 0 1000) in 
+        res_t#buffer#insert (String.sub str 0 n);
+        ignore (res_t#scroll_to_iter ~use_align:true ~yalign:0.5 (res_t#buffer#end_iter))) fd_l;
+       read_loop res_t pid descr_l)
         
-let get_trace (buffer, file) = 
-  result_text1#buffer#set_text "";
+let get_trace (res_t, file) = 
+  res_t#buffer#set_text "";
   let inc, in_fd  = Unix.pipe () in
   let outc, out_fd  = Unix.pipe () in
   let errc, err_fd = Unix.pipe () in
   let pid = Unix.create_process "cubicle" [|"cubicle";"-nocolor"; file|] 
   inc out_fd err_fd  in
   (try
-    read_loop pid [outc];
-    read_loop pid [outc];
-    read_loop pid [errc];
-    safe_or_unsafe ()
+    read_loop res_t pid [outc];
+    read_loop res_t pid [outc];
+    read_loop res_t pid [errc];
+    safe_or_unsafe res_t
   with KillThread ->
-    read_loop pid [outc];
-    read_loop pid [errc];
-    safe_or_unsafe ();
+    read_loop res_t pid [outc];
+    read_loop res_t pid [errc];
+    safe_or_unsafe res_t;
     kill_thread := false);
   Unix.close inc; Unix.close in_fd; 
   Unix.close outc; Unix.close out_fd; 
   Unix.close errc; Unix.close err_fd
       
-let execute buffer file b  =
-  GtkThread.async (fun () -> ignore (Thread.create  get_trace (buffer, file))) ()
+let execute res_t file b  =
+  GtkThread.async (fun () -> ignore (Thread.create get_trace (res_t, file))) ()
 
 let search b = 
   let start_iter = source#source_buffer#start_iter in 
@@ -737,15 +774,15 @@ let open_window s  =
   source#set_editable false;
   (* open_file inter_path save_path ast; *)
   ignore (source#event#connect#motion_notify ~callback:(find_in_ast ast edit));
-  ignore (source#event#connect#button_press ~callback:(modify_ast ast edit));
+  ignore (source#event#connect#button_press ~callback:(modify_ast ast edit ));
   ignore (save_button#event#connect#button_press 
             ~callback:(save_session ast save_path));
   ignore (run_button#event#connect#button_press
             ~callback:(fun b -> 
-              let _ = save_execute_file ast new_path b in 
-              execute result_text1#buffer new_path b; true));
+              if  save_execute_file ast new_path b then
+              execute result_text1 new_path b; true));
   ignore (execute_button2#event#connect#button_press
-            ~callback:(fun b -> execute result_text2#buffer file_name b; true));
+            ~callback:(fun b -> execute result_text2 file_name b; true));
   ignore (edit_button#connect#toggled
             ~callback:(edit_mode ast inter_path edit_button edit));
   ignore (search_bar#connect#changed
@@ -754,8 +791,8 @@ let open_window s  =
             ~callback:(search_next));
   ignore (previous_button#event#connect#button_press
             ~callback:(search_previous));
-  ignore (show_file_button#event#connect#button_press 
-            ~callback: (fun b -> source2#source_buffer#set_text (Psystem_printer.psystem_to_string !ast); true));
+  (* ignore (show_file_button#event#connect#button_press  *)
+  (*           ~callback: (fun b -> source2#source_buffer#set_text (Psystem_printer.psystem_to_string !ast); true)); *)
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; true));
   ignore (trace_button#event#connect#button_press ~callback: (fun b ->

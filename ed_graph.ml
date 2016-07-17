@@ -49,7 +49,7 @@ type node_info =
     mutable label : string;
     mutable label_mode : label_t;
     mutable changed : bool;
-    mutable var_map : string Var_Map.t;
+    mutable var_map : (string * condition) Var_Map.t;
     mutable draw : bool;
     mutable str_label : string;
     mutable num_label : string;
@@ -294,7 +294,7 @@ let find_nodes l  =
     try 
       List.iter (fun (x, (var_i, _)) ->
         try
-          let var_val = Var_Map.find x (G.V.label v).var_map in
+          let (var_val, _) = Var_Map.find x (G.V.label v).var_map in
             if not (List.mem var_val var_i) then 
               raise (Diff_Node(x))
         with Not_found -> raise (Diff_Node(x))) l;
@@ -305,7 +305,7 @@ let mode_node v m =
   try 
     List.iter (fun (x, (var_i, _)) ->
       try
-        let var_val = Var_Map.find x (G.V.label v).var_map in
+        let (var_val, _) = Var_Map.find x (G.V.label v).var_map in
         if not (List.mem var_val var_i) then 
           raise (Diff_Node(x))
       with Not_found -> raise (Diff_Node(x))) m;
@@ -352,7 +352,7 @@ let mode_node v m e =
       match ty with 
         |Eq -> 
           (try
-             let var_val = Var_Map.find x (G.V.label v).var_map in  
+             let (var_val, _) = Var_Map.find x (G.V.label v).var_map in  
              if not (List.mem var_val var_i) then
                (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
                 raise (Diff_Node(x)));
@@ -361,7 +361,7 @@ let mode_node v m e =
               raise (Diff_Node(x))))
         |NEq -> 
           (try
-             let var_val = Var_Map.find x (G.V.label v).var_map in
+             let (var_val, _) = Var_Map.find x (G.V.label v).var_map in
              if  (List.mem var_val var_i) then
 
                (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
@@ -376,32 +376,37 @@ let mode_node v m e =
 let mode_node v m e =
   let str = ref ((G.E.label e).mem_label ^ "\n") in
     if (List.fold_left (fun acc (x, (var_i, ty)) ->
-      match ty with 
-        |Eq | Less | LessEq | Greater | GreaterEq -> 
-          (try
-             let var_val = Var_Map.find x (G.V.label v).var_map in  
-             if not (List.mem var_val var_i) then
-               (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
-                acc || true)
-             else acc
-           with Not_found ->
-             (
-              List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
-              acc || true))
-        |NEq -> 
-          (try
-             let var_val = Var_Map.find x (G.V.label v).var_map in
-             if not (List.mem var_val var_i) then
-               (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
-                acc)
-             else
-               acc || true
-           with Not_found -> acc || true 
+      match ty with
+      |Eq  ->
+        (try
+           let (var_val, t) = Var_Map.find x (G.V.label v).var_map in
+           if t = Eq then 
+             (if not (List.mem var_val var_i) then
+                 (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+                  acc || true)
+              else
+                 acc)
+           else acc
+         with Not_found ->
+           (List.iter (fun s -> str := !str ^ x ^ " <- " ^ s) var_i;
+            acc || true))
+      |NEq ->
+        (try
+           let (var_val, t) = Var_Map.find x (G.V.label v).var_map in
+           if t = Eq then 
+             (if (List.mem var_val var_i) then
+                 (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i;
+                  acc || true)
+              else 
+                 acc)
+           else
+             acc
+         with Not_found -> acc
              (* (List.iter (fun s -> str := !str ^ x ^ " <- <>" ^ s) var_i; *)
              (*  acc || true) *))
-        |_ -> acc ) false m) then 
+      |_ -> acc ) false m) then
       ((G.E.label e).label <- !str; false)
-    else 
+    else
       (true)
 
 (* let rec get_path dst_mode src_mode acc edge paths = *)

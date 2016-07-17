@@ -24,7 +24,7 @@ open Ed_model
 open Ed_tracegraph
 
 
-exception Match of string * string 
+exception Match of string * Ed_graph.condition * string 
 
 let graph_trace = Queue.create ()
 
@@ -32,6 +32,8 @@ let graph_trace = Queue.create ()
 type model_t = Edge of (G.V.t * G.V.t) | Node of G.V.t | UnsafeNode of G.V.t 
 
 (* let mode_equals = ref false  *)
+
+let reset_display = ref false
 
 let mode_change = ref false
 
@@ -118,16 +120,16 @@ let toolbar =
 let start_button = 
   toolbar#insert_button 
     ~text:" Start"
-    ~icon:(GMisc.image ~stock:`EXECUTE ())#coerce ()
+    ~icon:(GMisc.image ~stock:`EXECUTE ~icon_size:`LARGE_TOOLBAR())#coerce ()
 
 let stop_button =
   toolbar#insert_button
     ~text:" Abort"
     ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR())#coerce () 
 
-let test_button = 
-  toolbar#insert_button 
-    ~text:"test" () 
+(* let test_button =  *)
+(*   toolbar#insert_button  *)
+(*     ~text:"test" ()  *)
 
 let reset_display_button = 
   GButton.button ~label:"Reset display" ~packing:toolbar#add ()
@@ -442,9 +444,9 @@ let match_atom x sep length t =
       (Str.string_after x (pos + length)) in
     try
       ignore (float_of_string before);
-      raise (Match (after, before))
+      raise (Match (after, t , before))
     with Failure(_) -> 
-      raise (Match (before, after))
+      raise (Match (before, t , after))
   with Not_found -> () 
     
 let get_expr e = 
@@ -456,7 +458,7 @@ let get_expr e =
       match_atom e (Str.regexp "<")  1  Ed_graph.Less;
       match_atom e (Str.regexp "=")  1  Ed_graph.Eq;
       failwith "problem with trace format"
-  with Match(b,a) -> (b,a) 
+  with Match(a, t, b) -> (a, t, b) 
 
 let split_node_info x m v changed_l mode new_name =
   let var_find_or before after  =
@@ -487,11 +489,11 @@ let split_node_info x m v changed_l mode new_name =
               else  acc
             with Not_found ->  acc) false !var_l
   in   
-  (let before, after = get_expr x in
+  (let before, t, after = get_expr x in
    let m =
      try
        if !mode_change then 
-         (let a = Var_Map.find before m in
+         (let (a, _) = Var_Map.find before m in
           let var_find = 
             (* if !mode_and then var_find_and before after *)
             (* else *) var_find_or before after in
@@ -506,7 +508,7 @@ let split_node_info x m v changed_l mode new_name =
 ););
        m
      with Not_found -> m in
-   (before, after, m))
+   (before, t, after, m))
     
 let rec build_map m v l mode new_name=
   (* let var_init before after m =  *)
@@ -530,15 +532,15 @@ let rec build_map m v l mode new_name=
         |[] -> failwith "pb format trace 2"
         |x::_ ->
           (try
-             let before, after, m = split_node_info x m v changed_l mode new_name in
+             let before, t, after, m = split_node_info x m v changed_l mode new_name in
              (* var_init before after m; *)
-             Var_Map.add before after m
+             Var_Map.add before (after, t) m
            with Not_found -> failwith "erreur build map"))
     |x::s ->
       try
-        let before, after, m = split_node_info x m v changed_l mode new_name in
+        let before, t,  after, m = split_node_info x m v changed_l mode new_name in
         (* var_init before after m; *)
-        build_map (Var_Map.add before after m) v s mode new_name
+        build_map (Var_Map.add before (after, t) m) v s mode new_name
       with Not_found -> failwith "erreur build map"
         
         
@@ -569,7 +571,7 @@ let link_node before v after =
          |[]-> false
          |l -> 
            try
-             let var_val = Var_Map.find x map in
+             let (var_val, _) = Var_Map.find x map in
              if List.mem var_val l then 
                (label := !label ^ "\n" ^ x ^ ":\n" ^ var_val;
                 acc)
@@ -728,7 +730,7 @@ let show_tree file  =
 
 
 let create_unsafe_path str =
-  print_endline str;
+  (* print_endline str; *)
   let node_path = ref "" in 
   let ls = Str.split (Str.regexp "Error trace: ") str in
   (match ls with
@@ -748,7 +750,7 @@ let create_unsafe_path str =
                 node_path := 
                   !node_path ^ (String.trim (List.hd (List.rev atom_l)))) l;
             node_path := !node_path ^ "=" ^ init_state;
-            print_endline !node_path;
+            (* print_endline !node_path; *)
             let v = create_node !node_path (-1) in 
             (G.V.label v).vertex_mode <- Init;
             color_edges v !root InitPath)
@@ -781,7 +783,7 @@ let safe_or_unsafe () =
     (*    end_show_tree := false) *)
     
 let path_to_l (l, src) = 
-  while (not (!end_load_graph && !end_show_tree)) && (not !kill_thread) do
+  while (not (!end_load_graph && !end_show_tree)) && (not !kill_thread) && (not !reset_display) do
     (* print_endline "pathto"; *)
     path_to src l !root;
     Thread.delay 0.001;
@@ -799,6 +801,7 @@ let path_to src l =
 
     
 let path_to_loop l = 
+  reset_display := false;
   window#present ();
   if (!end_load_graph &&  !end_show_tree)|| !kill_thread then
     match !mem_vertex with 
@@ -826,15 +829,16 @@ let open_graph file unsafe_l open_graph_b  =
   canvas#set_scroll_region ~x1:0. ~y1:0. ~x2:w ~y2:h ;
   ignore (stop_button#event#connect#button_press
             ~callback: (fun b -> kill_thread:= true; false));
-  ignore (test_button#event#connect#button_press 
-            ~callback: (fun b ->              
-              path_between
-                [("Exgntd", (["False"],Eq)); ("Curcmd",(["Reqs"], Eq))]  
-                [("Curcmd", (["Reqe"], Eq))] !root;
-              let tor = make_turtle !origine 0.0 in
-              draw tor canvas_root vc renderer; true));
+  (* ignore (test_button#event#connect#button_press  *)
+  (*           ~callback: (fun b ->               *)
+  (*             path_between *)
+  (*               [("Exgntd", (["False"],Eq)); ("Curcmd",(["Reqs"], Eq))]   *)
+  (*               [("Curcmd", (["Reqe"], Eq))] !root; *)
+  (*             let tor = make_turtle !origine 0.0 in *)
+  (*             draw tor canvas_root vc renderer; true)); *)
   ignore (reset_display_button#event#connect#button_press 
             ~callback: (fun b ->
+              reset_display := true;
               Ed_display.reset_display ();
               let turtle = make_turtle_origine () in
               draw turtle canvas_root vc renderer;

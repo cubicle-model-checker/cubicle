@@ -44,7 +44,7 @@ let compare_button_press_left l  =
     if not l.active then
       (tag_list := (UndoComment, start_loc.pos_cnum, stop_loc.pos_cnum)::!tag_list;
        l.active <- not (l.active);
-       last_visited := None;
+       (* last_visited := None; *)
        raise Found)
         
 let rec parse_term_info_rev f  = function
@@ -335,7 +335,7 @@ let compare_button_press_left2 p   =
            tag_list := (Comment, start_loc.pos_cnum, stop_loc.pos_cnum)::!tag_list;
          inf.active <- not (inf.active);
          inact_l := (start_loc.pos_cnum, stop_loc.pos_cnum)::(!inact_l);
-         last_visited := None)
+         (* last_visited := None *))
 
 let compare_button_press_right p = 
   match !last_visited with
@@ -343,7 +343,7 @@ let compare_button_press_right p =
     |Some (inf, _, _)->
       let start_loc, stop_loc = inf.loc in
       (tag_list := (Var, start_loc.pos_cnum, stop_loc.pos_cnum)::!tag_list;
-       last_visited := None)
+       (* last_visited := None *))
         
 let parse f p  = 
   try 
