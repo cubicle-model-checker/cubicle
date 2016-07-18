@@ -28,7 +28,6 @@ exception Match of string * Ed_graph.condition * string
 
 let graph_trace = Queue.create ()
 
-
 type model_t = Edge of (G.V.t * G.V.t) | Node of G.V.t | UnsafeNode of G.V.t 
 
 (* let mode_equals = ref false  *)
@@ -280,7 +279,6 @@ let vertex_event vertex item ellipse ev =
         update_vertex vertex Unfocus;
         refresh_display ()
       end
-
     | `BUTTON_RELEASE ev ->
       focus_rectangle#hide();
       ellipse#parent#ungrab (GdkEvent.Button.time ev);
