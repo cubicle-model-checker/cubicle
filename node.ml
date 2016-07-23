@@ -32,7 +32,6 @@ let dim n = Cube.dim n.cube
 
 let size n = Cube.size n.cube
 
-
 let compare_kind s1 s2 =
   match s1.kind, s2.kind with
   | Approx, Approx -> 0

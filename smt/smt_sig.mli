@@ -69,7 +69,12 @@ module type S = sig
     (** [constructors ty] returns the list of constructors of [ty] when type is
         an enumerated data-type, otherwise returns [[]].*)
 
-    val declared_types : unit -> t list
+    val constructors_set : t -> Hstring.HSet.t
+    (** [constructors ty] returns the list of constructors of [ty] when type is
+        an enumerated data-type, otherwise returns [[]].*)
+
+    (* val declared_types : unit -> t list *)
+    val declared_types : unit -> Ty.t Hstring.H.t
 
   end
 

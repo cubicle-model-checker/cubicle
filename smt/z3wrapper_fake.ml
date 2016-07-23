@@ -41,6 +41,7 @@ module Type = struct
   let declare _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
+  let constructors_set _ = unsupported ()
   let declared_types _ = unsupported ()
 end
 

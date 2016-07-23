@@ -62,6 +62,9 @@ let copy_state = ref false
 let copy_regexp = ref false
 let debug_regexp = ref false
 
+(* INTERPOLANTS *)
+let interpolate_cands = ref false
+                            
 type rm = Start | End | Any
 
 let regexp_mode = ref Start
@@ -113,6 +116,8 @@ let bitsolver = ref false
 let enumsolver = ref false
 
 let incr_verbose () = incr verbose
+
+let pure_smt_check = ref false
 
 let debug_smt = ref false
 let dmcmt = ref false
@@ -301,6 +306,7 @@ let specs =
      with a finite model of size <nb>";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
+    "-icands", Arg.Set interpolate_cands, " try to have more general candidates";
     "-hist", Arg.Set approx_history, " to know where the history comes from";
     "-histt", Arg.Int set_approx_history, " to know where the history comes from";
     "-murphi", Arg.Set murphi,
@@ -347,6 +353,8 @@ let specs =
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-solver", Arg.String set_smt_solver,
     "<alt-ergo(default) | z3> SMT solver to use";
+    "-pure-smt", Arg.Set pure_smt_check, " no trivial fixpoint checks";
+    "-ps", Arg.Set pure_smt_check, " alias for -pure-smt";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
@@ -424,6 +432,8 @@ let copy_regexp = !copy_regexp
 let regexp_mode = !regexp_mode
 let debug_regexp = !debug_regexp
 
+let interpolate_cands = !interpolate_cands
+                         
 let res_output = !res_output
 let res_file = !res_file
 
@@ -448,6 +458,7 @@ let dot_prof = !dot_prof
 let bdot_prof = dot_prof > 0
 let dot_colors = !dot_colors
 let dot_prog = !dot_prog
+let pure_smt_check = !pure_smt_check
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling

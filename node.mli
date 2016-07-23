@@ -29,7 +29,7 @@ val array : t -> ArrayAtom.t
 
 val litterals : t -> SAtom.t
 (** returns the conjunction of litterals of the associated cube *)
-
+                                 
 val dim : t -> int
 (** returns the dimension of the associated cube (see {! Cube.dim}) *)
 

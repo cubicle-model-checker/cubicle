@@ -127,8 +127,6 @@ end = struct
     | Exit -> None
     | Smt.Unsat db -> Some db
                            
-
-
   let check s visited =
     Debug.unsafe s;
     TimeFix.start ();
@@ -413,6 +411,8 @@ end = struct
     in
     TimeFix.pause ();
     r
+
+  let check = if pure_smt_check then hard_fixpoint else check
 end
 
 

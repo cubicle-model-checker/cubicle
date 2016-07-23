@@ -60,6 +60,8 @@ val copy_regexp : bool
 val debug_regexp : bool
 val regexp_mode : rm
 
+val interpolate_cands : bool
+                          
 val res_output : bool
 val res_file : string
 
@@ -130,6 +132,7 @@ val quiet : bool
 val verbose : int
 val nocolor : bool
 
+val pure_smt_check : bool
 val smt_solver : solver
 val debug_smt : bool
 val dmcmt : bool

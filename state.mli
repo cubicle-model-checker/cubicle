@@ -14,6 +14,7 @@ val print : string -> t -> unit
 
 val distance : t -> t -> int
 val copy : t -> t
+                   
 val add_states : t -> t -> t
 
 val count_mones : t -> int

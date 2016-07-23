@@ -98,8 +98,15 @@ module Type = struct
       | Ty.Tsum (_ , cstrs) -> cstrs
       | _ -> []
 
-  let declared_types () =
-    H.fold (fun ty _ acc -> ty :: acc) decl_types []
+  let constructors_set ty =
+    if Hstring.equal ty type_bool then HSet.add htrue (HSet.singleton hfalse)
+    else match H.find decl_types ty with
+           | Ty.Tsum (_ , cstrs) ->
+               List.fold_left (fun acc c -> HSet.add c acc) HSet.empty cstrs
+           | _ -> HSet.empty
+
+  let declared_types () = decl_types
+    (* H.fold (fun ty _ acc -> ty :: acc) decl_types [] *)
     
 end
 

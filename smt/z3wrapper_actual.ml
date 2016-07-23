@@ -136,6 +136,21 @@ module Type = struct
             |> Hstring.make)
       else []
 
+  let constructors ty =
+    (* eprintf "constructors of %a@." Hstring.print ty; *)
+    if Hstring.equal ty type_bool then HSet.add htrue (HSet.singleton hfalse)
+    else
+      let z3_ty = H.find decl_types ty in
+      if Sort.get_sort_kind z3_ty = Z3enums.DATATYPE_SORT then
+        Enumeration.get_const_decls z3_ty
+        |> List.fold_left (fun acc f ->
+               f
+               |> FuncDecl.get_name
+               |> Symbol.get_string
+               |> Hstring.make
+               |> HSet.add acc)
+      else HSet.empty
+
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 

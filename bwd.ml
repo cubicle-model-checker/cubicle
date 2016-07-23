@@ -114,10 +114,14 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         let n = Q.pop q in
         Safety.check system n;
         begin
+          if debug_smt && verbose > 2 then Format.eprintf "[Fix] check %a @." Node.print n;
+
           match Fixpoint.check n !visited with
           | Some db ->
-             Stats.fixpoint n db
+            if debug_smt then Format.eprintf "[Fix] fixpoint@.";
+            Stats.fixpoint n db
           | None ->
+            if debug_smt then Format.eprintf "[Fix] no fixpoint@.";
             Stats.check_limit n;
             let n = if not forward then begin
               Stats.new_node n;
