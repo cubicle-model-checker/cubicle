@@ -26,6 +26,11 @@ type visibility = Visible | BorderNode | Hidden
 
 type label_t = Num_Label | Str_Label 
 
+type node_label = 
+  {str : float option * (Dom_html.canvasElement Js.t list) * (int * int);
+   num : float option * (Dom_html.canvasElement Js.t list) * (int * int)} 
+
+
 type mode = 
   | Normal        | Focused
   | Selected      | Selected_Focused 
@@ -99,6 +104,7 @@ type edge_info =
     mutable draw : bool;
     mutable visible_label : bool;
     mutable visited : bool;
+    mutable changed : bool;
     mutable edge_mode : mode;
     mutable edge_turtle : turtle;
     mutable edge_distance : float;
@@ -113,6 +119,7 @@ let make_edge_info () =
     visible_label = false;
     visited = false; 
     edge_mode = Normal;
+    changed = false;
     edge_turtle = dummy_turtle; 
     edge_distance = 0.; 
     edge_steps = 0; 
@@ -125,6 +132,7 @@ let make_edge_info_label s d =
     mem_label = s;
     draw = d;
     visited = false; 
+    changed = false;
     edge_mode = Normal;
     edge_turtle = dummy_turtle; 
     edge_distance = 0.; 
@@ -213,22 +221,28 @@ let load_graph f =
   graph_name := Some  f
 
 
+type text_info = 
+  { tx : float; ty : float; width : float; height : float ; edge : G.E.t}
 
 let dfs = ref false
 
-let refresh_rate = ref 10
+let refresh_rate = ref 1
 
 let aa = ref true
 
-module H2 = 
+module H2 =
   Hashtbl.Make
-    (struct 
+    (struct
       type t = G.V.t * G.V.t
       let hash (v,w) = Hashtbl.hash (G.V.hash v, G.V.hash w)
-      let equal (v1,w1) (v2,w2) = G.V.equal v1 v2 && G.V.equal w1 w2 
+      let equal (v1,w1) (v2,w2) = G.V.equal v1 v2 && G.V.equal w1 w2
     end)
 
+
+
 module H = Hashtbl.Make(G.V)
+
+(* module H2 = Hashtbl.Make(EDGE) *)
 
 (*  vertex select and unselect *)
 

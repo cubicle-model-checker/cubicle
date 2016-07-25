@@ -20,8 +20,60 @@
 open Ed_hyper
 open Ed_graph
 
+let nodes = H.create 500
+let edges = H2.create 500
+
+let nodes_pos = ref []
+     
+let label_edges_pos = ref []
+
+let font = "lighter 17pt DejaVu Sans Mono"
+
+let last_rectangle = ref None 
+
+let create_canvas w h =
+  let d = Dom_html.window##document in
+  let c = Dom_html.createCanvas d in
+  c##width <- w;
+  c##height <- h;
+  c
+
+let screen_transform canvas =
+  let w = canvas##width in
+  let h = canvas##height in
+
+  let rx = float w /. 2. in
+  let ry = float h /. 2. in
+  let dx = float w /. 2. in
+  let dy = float h /. 2. in
+  let rx = max 5. (rx (* -. offset *)) in
+  let ry = max 5. (ry (* -. offset *)) in
+(rx, ry, dx, dy)
+
 let debug = ref false
 
+
+let text_size_div =
+  let doc = Dom_html.document in
+  lazy
+    (let d = Dom_html.createDiv doc in
+     d##style##visibility <- Js.string "hidden";
+     d##style##position <- Js.string "absolute";
+     d##style##whiteSpace <- Js.string "nowrap";
+     Dom.appendChild (doc##body) d;
+     d)
+
+let text_size font txt =
+  let doc = Dom_html.document in
+  let d = Lazy.force text_size_div in
+  d##style##font <- font;
+  let txt = doc##createTextNode (Js.string txt) in
+  Dom.appendChild d txt;
+  let res = (d##clientWidth, d##clientHeight) in
+  Dom.removeChild d txt;
+  res
+
+let opt_style v default = Js.Optdef.get v (fun () -> default)
 
 (* Original window size *)
 let w = ref 1200.
@@ -29,11 +81,11 @@ let h = ref 800.
 (* let (w,h) = ref (1200., 800.) *)
 
 (* differents definitions *)
-let color_circle = "grey99"
+let color_circle = ""
 
 let color_intern_edge = "grey69"
 let color_successor_edge = "#bdbdbd" (* "grey38" *) (* "grey38" *)
-let color_vertex = "grey75"
+let color_vertex = "#c0c0c0"
 
 
 let color_varchange = "#98cfd6"
@@ -54,7 +106,7 @@ let color_selected_successor_edge = "#9f1a1a"
 let color_selected_vertex = "#9f1a1a"
 
 let color_focused_intern_edge = "#4d51a9"
-let color_focused_successor_edge = (* "#4d51a9" *) "grey50"
+let color_focused_successor_edge = (* "#4d51a9" *) "#6d6d6d"
 let color_focused_vertex =  "#4d51a9"
 
 let color_selected_focused_intern_edge= "#e80000"
@@ -62,19 +114,55 @@ let color_selected_focused_vertex ="#e80000"
 let color_selected_focused_successor_edge = "#e80000"
 
 let color_text = "black"
-
 let width_successor_edge = 2
 let width_intern_edge = 2
-let point_size_text = 12.
+let point_size_text = 20.
 
-(* two tables for two types of edge :
-   successor_edges = edges with successor of root
-   intern_edges = edges between  successors of root *)
-(* let successor_edges = H2.create 500 *)
-(* let intern_edges = H2.create 500 *)
 
-(* table of all nodes *)
-(* let nodes = H.create 500 *)
+let get_edge_display = function 
+  |Normal -> (color_successor_edge, false)
+  |Selected -> (color_selected_successor_edge, false)
+  |Focused -> (color_focused_successor_edge, false)
+  |Selected_Focused -> (color_selected_focused_successor_edge, false)
+  |HighlightPath | HighlightPath_Focused | InitPath -> (color_line_varchange, true)
+  |Path -> ("#66ff66", false)
+  |_ -> (color_successor_edge, false)
+
+let get_vertex_display = function 
+  |Normal -> (color_vertex, 0.5)
+  |Selected -> (color_selected_vertex, 0.5)
+  |Focused -> (color_focused_vertex, 2.5)
+  |Selected_Focused -> (color_selected_focused_vertex, 2.5)
+  |Init -> (color_init, 0.5)  
+  |Init_Focused -> (color_unsafe, 2.5) 
+  |Unsafe -> (color_unsafe, 0.5)
+  |Unsafe_Focused -> (color_unsafe_focused, 2.5)
+  |VarChange -> (color_varchange, 0.5)
+  |VarChange_Focused -> (color_varchange_focused, 2.5)
+  |_ -> (color_vertex, 0.5)
+
+(* let get_vertex_color = function  *)
+(*   |Normal ->  *)
+(*   |Selected ->  *)
+(*   |Selected_Focused ->  *)
+(*   |HighlightPath | InitPath ->  *)
+(*   |HighlightPath_Focused  *)
+(*   |Path *)
+(*   |_ ->  *)
+  
+let drawEllipse cx cy w h c mode = 
+  c##beginPath();
+  c##moveTo (cx, cy -. h/.2.);
+  c##bezierCurveTo (cx +. (w/.2.), cy -. (h/.2.), cx +. (w/.2.), cy +. (h/.2.), cx, cy +. h/.2.);
+  c##bezierCurveTo (cx -. w/.2., cy +. h/.2., cx -. w/.2., cy -. h/.2., cx, cy -. h/.2.);
+  let (color, line_width) = get_vertex_display mode in 
+  c##fillStyle <- (Js.string color);
+  c##fill();
+  c##lineWidth <- line_width;
+  c##strokeStyle <- Js.string "black";
+  c##stroke ();
+  c##closePath()
+   
 
 (* GTK to hyperbolic coordinates *)
 let to_turtle(x,y)=
@@ -87,6 +175,7 @@ let to_turtle(x,y)=
 
 (* Hyperbolic to GTK coordinates *)
 let from_turtle (x,y) =
+  let screen_size = Printf.sprintf "screen size : %f, %f\n" !w !h in 
   let xzoom = (!w/.2.)
   and yzoom = (!h/.2.) in
   (truncate (x*.xzoom +. xzoom), truncate(yzoom -. y*.yzoom))
@@ -128,14 +217,14 @@ let split_list l r =
     |x::s when cpt >= length && cpt mod 2 = 0 -> []
     |x::s -> x::(f (cpt+1) s)
   in
-  f 0 l
-
+ f 0 l
 
 (* Set line points for a distance with a number of steps, 
    set current point to last line's point, by side-effect of tlineto_gtk,
    and return the final turtle *)
-let draw_successor_edge edge turtle distance steps (* line line2 texte *) c =
-  Firebug.console##log (Js.string "draw edge");
+let draw_successor_edge e turtle distance steps c = 
+  let src, dst = G.E.src e, G.E.dst e in
+  let line = H2.find edges (src, dst) in
   let d = distance /. (float steps) in
   let rec list_points turtle liste = function
     | 0 -> (turtle,liste)
@@ -146,17 +235,43 @@ let draw_successor_edge edge turtle distance steps (* line line2 texte *) c =
     let (x,y) = from_turtle turtle.pos in
     [(float (x)); (float (y))] in
   let _,lpoints = list_points turtle start steps in
+  let factor = (shrink_factor turtle.pos) in
+  let r = factor *. point_size_text *. 0.03 in
   let points = Array.of_list lpoints in
+  let l = truncate (float (Array.length points) /. 2.2) in
+  let (x, y) =
+    if l mod 2 = 0 then (l, l+1) else (l+1, l) in
   c##beginPath ();
+  let (color, array) = get_edge_display (G.E.label e).edge_mode in 
+  c##strokeStyle <- (Js.string color);
+  c##lineWidth <- 2.;
   c##moveTo (points.(0), points.(1));
-  for i = 2 to (Array.length points) - 1 do 
-    if i mod 2 = 0 then 
+  for i = 2 to (Array.length points) - 1 do
+    if i mod 2 = 0 then
       begin
         c##lineTo (points.(i), points.(i + 1));
         c##moveTo (points.(i), points.(i + 1))
-      end 
+      end
   done;
-  c##stroke()
+
+  c##stroke();
+  c##closePath();
+  if (G.E.label e).visible_label then 
+    begin 
+      match line with
+        |(_,[],_) -> failwith "pb draw_successor_edge ed_display"
+        |(o, [t], pos) ->
+          let tw = (float t##width) *. r (* *. factor *. 0.8 *)  in
+          let th = (float t##height) *. r (* *. factor *. 0.8  *)in
+          c##drawImage_fromCanvasWithSize
+            (t, points.(x) -. ( tw /. 2.) , points.(y) -. (th /. 2.) +. 30., tw , th);
+          label_edges_pos := 
+            {tx = points.(x) ; ty = points.(y) +. 30.;
+              width = tw; height = th; edge = e } :: !label_edges_pos;
+        |_ -> failwith "pb draw_successor_edge ed_display";
+    end
+      
+      
   (* draw_line c (List.tl lpoints); *)
   (* c##stroke (); *)
 
@@ -171,184 +286,216 @@ let pol_to_cart p =
   }
 
 let cart_to_pol p =
-  let  radius = sqrt((p.x *. p.x) +.(p.y *. p.y)) in
+  let radius = sqrt((p.x *. p.x) +.(p.y *. p.y)) in
   {
     radius = radius;
     angle = 2. *. ath ((p.y /. radius) /. (1. +. p.x /. radius))
   }
 
-(* Set Bpath between turtles tv and tw where line is a gtk widget *) 
-(* let set_intern_edge tv tw bpath line =  *)
-(*   let (x, y) = let (x, y) = from_turtle tv.pos in ((float_of_int x),(float_of_int y)) in *)
-(*   let (x', y') = let (x', y') = from_turtle tw.pos in ((float_of_int x'),(float_of_int y')) in *)
-(*   let rate = 1. in *)
-(*   GnomeCanvas.PathDef.reset bpath; *)
-(*   GnomeCanvas.PathDef.moveto bpath x y ; *)
-(*   GnomeCanvas.PathDef.curveto bpath ((x +. x')/.rate) ((y +. y')/.rate) *)
-(*     ((x  +. x')/.rate) ((y +. y')/.rate) *)
-(*     x' y' ;  *)
-(*   line#set [`BPATH bpath] *)
+let test_rectangle x y vertex = 
+  if float x > !w/.2. -. 80. && float x < !w/.2. +. 80.
+    && float y > !h/.2. -. 60. && float y < !h/.2. +. 60.
+  then
+    begin
+     ( match !last_rectangle with
+        |None -> ()
+        |Some node ->
+          (let v = G.V.label node in
+             v.label <- v.num_label;
+             v.label_mode <- Num_Label;
+           G.iter_succ_e (fun x -> let e = G.E.label x in
+                                   e.visible_label <- false) !graph node));
+          let v = G.V.label vertex in
+      if v.label_mode = Num_Label then
+        (v.label <- v.str_label;
+         v.label_mode <- Str_Label;
+         last_rectangle := Some vertex ;
+         G.iter_succ_e (fun x -> let e = G.E.label x in
+                                 e.visible_label <- true) !graph vertex);
 
-(* Set ellipse coordinate to turtle's and set current point too *)
-let tdraw_string_gtk v turtle c w h  =
-  Firebug.console##log (Js.string "drawing node");
+    end
+
+let tdraw_string_gtk v turtle c =
+  let node_info = H.find nodes v in
   tmoveto_gtk turtle;
   let vertex = G.V.label v in
   let factor = (shrink_factor ((G.V.label v).turtle.pos)) in
-  let factor = if factor < 0.5 then 0.5 else factor in
-  let (x,y) = !current_point in
-  let s = Printf.sprintf "x : %d, y : %d\n" x y in 
-  Firebug.console##log (Js.string s);
-  let pi = 4. *. (atan 1.) in 
-  let w, h = float w, float h in 
-  c##beginPath();
-  (* c##translate (w/.2., h/.2.); *)
-  (* c##moveTo(100., 150.); *)
-  (* c##lineTo(450., 50.); *)
-  c##arc(float x, float y, 10., 0., 2. *. pi, Js.bool false);
-  c##restore();
-  c##lineWidth <- 2.;
-  c##strokeStyle <- Js.string "ff0000";
-  c##stroke ()
+  let r = factor *. point_size_text *. 0.03 in 
+  let (x,y) = !current_point in 
+  test_rectangle x y v;
+  print_debug  (Js.string (G.V.label v).label);
+  print_debug (x,y);
+  let txt = 
+    if vertex.label_mode = Num_Label then node_info.num
+    else node_info.str in
+  match txt with 
+  |(_, [], _) -> failwith "pb tdraw_string_gtk in ed_display"
+    |(o, [t], pos) -> 
+    let tw = (float t##width) *. r (* *. factor *. 0.8 *)  in 
+    let th = (float t##height) *. r(* *. factor *. 0.8  *)in 
+    drawEllipse (float x) (float y) (tw +. 20.) (th +. 8.) c vertex.vertex_mode;
+    c##drawImage_fromCanvasWithSize
+      (t, float x -. ( tw /. 2.) , float y -. (th /. 2.), tw , th);
+    nodes_pos :=(x, y, (tw +. th +. 28.)/. 4., v):: !nodes_pos;
+    if vertex.label_mode = Num_Label then
+      H.replace nodes v {node_info with num =  (o, [t], (x, y))}
+    else 
+      H.replace nodes v {node_info with str =  (o, [t], (x, y))}
+  |(Some max_w, l, pos) -> 
+    let fst::_ = l in 
+    let max_tw = max_w *. r in
+    let th = (float fst##height) *.r in 
+    let lgth = List.length l in 
+    let y_init = 
+      if lgth mod 2 = 0 then
+        (float y) -.((float(lgth/2)) *. th) 
+      else 
+        (float y) -. (float (lgth/2) +. 0.5) *. th in
+    drawEllipse (float x) (float y) (max_tw +. 62.) (th *. float lgth +. 28.) c vertex.vertex_mode;
+    List.iteri (fun i txt ->
+      let tw = (float txt##width) *. r   in 
+      let th = (float txt##height) *. r in 
+      c##drawImage_fromCanvasWithSize
+        (txt, float x -. ( max_tw /. 2.) , y_init  +. ((float i *. th) (* /. 2. *)), tw , th )) l;
+    nodes_pos := (x, y, ((max_tw +. 16.) +. (th *. float lgth)) /. 4., v)::!nodes_pos;
+    if vertex.label_mode = Num_Label then
+      H.replace nodes v {node_info with num =  (Some max_w, l, (x,y))}
+    else 
+      H.replace nodes v {node_info with str =  (Some max_w, l, (x,y))}
+    |_ -> ()
+  
+  
+let compute_text s font = 
+  let (w, h) = text_size (Js.string font) s in 
+  let tdebug = Printf.sprintf "(%d, %d)\n" w h in 
+  let w, h = w + 8, h + 8 in 
+  let canvas = create_canvas w h in  
+  let c = canvas##getContext (Dom_html._2d_) in 
+  c##fillStyle <- Js.string "black";
+  c##textAlign <- Js.string "center";
+  c##textBaseline <- Js.string "middle";
+  c##font <- Js.string font;
+  c##fillText (Js.string s, float w /. 2., float h /. 2.);  
+  canvas
+
+let compute_multiline_text s font arr_lines = 
+  let lines_l = ref [] in 
+  let lgth = arr_lines##length in 
+  let max_width = ref 0 in 
+  for i = 0 to lgth - 1 do 
+    let t = (Js.Optdef.get (Js.array_get arr_lines i) (fun () -> failwith "pb add_node optdef")) in
+    let (w, h) = text_size (Js.string font) (Js.to_string t) in 
+    let tdebug = Printf.sprintf "(%d, %d)\n" w h in 
+      let w, h = w + 8, h + 8 in 
+      let canvas = create_canvas w h in  
+      let c = canvas##getContext (Dom_html._2d_) in 
+      c##fillStyle <- Js.string "black";
+      c##textAlign <- Js.string "center";
+      c##textBaseline <- Js.string "middle";
+      c##font <- Js.string font;
+      if w > !max_width then max_width := w;
+      c##fillText (t, float w /. 2., float h /. 2.);  
+      lines_l := canvas :: !lines_l
+  done;
+  (!max_width, !lines_l)
+   
+let compute_node v label = 
+  let lines = (Js.string label)##split (Js.string "\n") in 
+  let arr_lines = Js.str_array lines in
+  if arr_lines##length = 1 then 
+    let canvas = compute_text label font in 
+     None, [canvas], (0, 0);
+  else 
+    let max_width, lines = compute_multiline_text label font arr_lines in 
+    (Some (float max_width), lines, (0, 0))
 
 
+let add_node vertex = 
+  let v = G.V.label vertex in
+  H.add nodes vertex {str = compute_node v v.str_label; num = compute_node v v.num_label}
 
-(* let add_node canvas v = *)
-(*   let s = string_of_label v in *)
-(*   let node_group = GnoCanvas.group ~x:0.0 ~y:0.0 canvas in *)
-(*   let ellipse = GnoCanvas.ellipse  *)
-(*     ~props:[`FILL_COLOR color_vertex; `OUTLINE_COLOR "black" ;  *)
-(*             `WIDTH_PIXELS 0] node_group   *)
-(*   in *)
-(*   let texte = GnoCanvas.text ~props:[`X 0.0; `Y 0.0 ; `TEXT s;   *)
-(*                                      `FILL_COLOR color_text] node_group in *)
-(*   node_group#hide(); *)
-(*   H.add nodes v (node_group, ellipse, texte) *)
-
-(* let add_edge canvas vw e =  *)
-(*   let line = GnoCanvas.line canvas ~props:[   *)
-(*     `FILL_COLOR color_successor_edge ; *)
-(*     `WIDTH_PIXELS width_successor_edge ; *)
-(*     `SMOOTH true] *)
-(*   in  *)
-(*   let line2 = GnoCanvas.line canvas ~props:[   *)
-(*     `FILL_COLOR color_successor_edge ; *)
-(*     `WIDTH_PIXELS width_successor_edge ; *)
-(*     `LAST_ARROWHEAD true; *)
-(*     `ARROW_SHAPE_A 5.; *)
-(*     `ARROW_SHAPE_B 5.; *)
-(*     `ARROW_SHAPE_C 5.; *)
-(*     `SMOOTH true] *)
-(*   in  *)
-(*   let texte =   *)
-(*     GnoCanvas.text canvas ~props:[`X 0.0; `Y 0.0 ; `FILL_COLOR "black"]  *)
-(*   in *)
-(*   line#lower_to_bottom (); *)
-(*   line2#lower_to_bottom (); *)
-(*   H2.add successor_edges vw (line, line2, texte) *)
-      
-      
-(* let init_nodes canvas = *)
-(*   H.clear nodes; *)
-(*   G.iter_vertex (add_node canvas) !graph *)
-
-(* change color for a vertex *)
-(* let color_change_vertex item color n = *)
-(*   item#set [ `FILL_COLOR color ; `WIDTH_PIXELS n ] *)
-
-(* change color for a successor edge *)
-(* let color_change_intern_edge (line:GnoCanvas.bpath) color =  *)
-(*   line#set [`OUTLINE_COLOR color] *)
-
-(* change color for an intern edge *)
-(* let color_change_successor_edge (line:GnoCanvas.line) (line2:GnoCanvas.line) color =  *)
-(*   line#set [`FILL_COLOR color]; *)
-(*   line2#set [`FILL_COLOR color] *)
-
-(* draws but don't show intern edges, and return a couple bpath (gtk_object), and line (gtw_widget)*)
-(* let draw_intern_edge vw edge tv tw canvas = *)
-(*   let bpath,line,texte =  *)
-(*     try *)
-(*       let _, _, _ as pl = H2.find intern_edges vw in *)
-(*       pl *)
-(*     with Not_found -> *)
-(*       let bpath = GnomeCanvas.PathDef.new_path () in *)
-(*       let line = GnoCanvas.bpath canvas *)
-(*         ~props:[`BPATH bpath ; `WIDTH_PIXELS width_intern_edge]  *)
-(*       in *)
-(*       let texte = GnoCanvas.text  ~props:[`X 0.0; `Y 0.0 ; `TEXT edge.label; *)
-(*                                                  `FILL_COLOR color_text] canvas  in *)
-(*       line#lower_to_bottom (); *)
-(*       H2.add intern_edges vw (bpath, line, texte); *)
-(*       let v,w = vw in *)
-(*       if (is_selected w) || (is_selected v)   *)
-(*       then edge.edge_mode  <-  Selected; *)
-(*       bpath,line,texte *)
-(*   in *)
-(*   set_intern_edge tv tw bpath line; *)
-(*   bpath, line, texte *)
-
-(* let draw_successor_edge vw edge canvas = *)
-(*   let line, line2, texte = *)
-(*       H2.find successor_edges vw *)
-(*   in *)
-(*   set_successor_edge edge edge.edge_turtle edge.edge_distance edge.edge_steps line line2 texte canvas; *)
-(*   line, edge.draw, line2, texte *)
+  
+let add_edge edge font = 
+  let e = G.E.label edge in
+  let v = G.E.src edge in 
+  let w = G.E.dst edge in 
+  let vw = (v, w) in 
+  let s = e.label in 
+  let lines = (Js.string s)##split (Js.string "\n") in 
+  let arr_lines = Js.str_array lines in
+  if arr_lines##length = 1 then 
+    let (w, h) = text_size (Js.string font) s in 
+    let tdebug = Printf.sprintf "(%d, %d)\n" w h in 
+    let w, h = w + 8, h + 8 in 
+    let canvas = create_canvas w h in  
+    let c = canvas##getContext (Dom_html._2d_) in 
+    c##fillStyle <- Js.string "black";
+    c##textAlign <- Js.string "center";
+    c##textBaseline <- Js.string "middle";
+    c##font <- Js.string font;
+    c##fillText (Js.string s, float w /. 2., float h /. 2.);  
+    H2.add edges vw (None, [canvas],(0, 0))
+  else 
+    let lines_l = ref [] in 
+    let lgth = arr_lines##length in 
+    let max_width = ref 0 in 
+    for i = 0 to lgth - 1 do 
+      let t = (Js.Optdef.get (Js.array_get arr_lines i) (fun () -> failwith "pb add_node optdef")) in
+      let (w, h) = text_size (Js.string font) (Js.to_string t) in 
+      let tdebug = Printf.sprintf "(%d, %d)\n" w h in 
+      let w, h = w + 8, h + 8 in 
+      let canvas = create_canvas w h in  
+      let c = canvas##getContext (Dom_html._2d_) in 
+      c##fillStyle <- Js.string "black";
+      c##textAlign <- Js.string "center";
+      c##textBaseline <- Js.string "middle";
+      c##font <- Js.string font;
+      if w > !max_width then max_width := w;
+      c##fillText (t, float w /. 2., float h /. 2.);  
+      lines_l := canvas :: !lines_l
+    done;
+    H2.add edges vw  (Some (float !max_width), !lines_l, (0, 0))
 
 (* set origine to new mouse position and return associated turtle *)
-let motion_turtle item mx my  =
-  let bounds = item#parent#get_bounds in
-  let z1 = to_turtle(truncate((bounds.(0)+. bounds.(2))/.2.),
-                     truncate((bounds.(1)+. bounds.(3))/.2.)) in
-  let z2 = to_turtle (truncate mx,
-                      truncate my) in
+let motion_turtle v (* mx1 my1 *) mx2 my2  = 
+  let label = H.find nodes v in 
+  let (_, _, (mx1, my1)) = 
+    if (G.V.label v).label_mode = Str_Label then 
+      label.str
+    else 
+      label.num
+  in
+  let z1 = to_turtle (mx1, my1) in
+  let z2 = to_turtle (mx2, my2) in
   let (x,y) = drag_origin !origine z1 z2 in
-  origine := (x,y); 
+  origine := (x,y);
   make_turtle !origine 0.0
-
-(* let hide_intern_edge vw = *)
-(*   try *)
-(*     let _,line, texte = H2.find intern_edges vw in line#hide (); texte#hide ()  *)
-(*   with Not_found -> () *)
-
-(* let hide_succesor_edge vw = *)
-(*   try  *)
-(*     let line, line2,  texte = H2.find successor_edges vw in  *)
-(*     line#hide (); *)
-(*     line2#hide(); *)
-(*     texte#hide () *)
-(*   with Not_found -> () *)
-
-(* let show_arrow e =  *)
-(*   let vw = G.E.src e, G.E.dst e in *)
-(*   try  *)
-(*     let _, line2,  _ = H2.find successor_edges vw in  *)
-(*     line2#show(); *)
-(*   with Not_found -> () *)
-
-(* let hide_arrow e =  *)
-(*   let vw = G.E.src e, G.E.dst e in *)
-(*   try  *)
-(*     let _, line2,  _ = H2.find successor_edges vw in  *)
-(*     line2#hide(); *)
-(*   with Not_found -> () *)
-
 
         
 (* graph drawing *)
-let draw_graph root c w h  =
-  Firebug.console##log (Js.string "draw_graph display");
+let draw_graph root c =
+  nodes_pos := [];
+  label_edges_pos := [];
+  (* G.iter_edges_e *)
+  (*   (fun edge -> *)
+  (*     let ( e : edge_info) = G.E.label edge in *)
+  (*        draw_successor_edge edge e.edge_turtle e.edge_distance e.edge_steps c; *)
+  (*   )!graph; *)
+  
   G.iter_vertex
     (fun v ->
       let ( l : node_info) = G.V.label v in
-         tdraw_string_gtk v l.turtle c w h
- )!graph;
-  G.iter_edges_e
-    (fun e ->
-      let ( e : edge_info) = G.E.label e in
-         draw_successor_edge e e.edge_turtle e.edge_distance e.edge_steps c
+      if l.visible = Visible then
+        begin
+          G.iter_succ_e 
+            (fun  edge -> 
+              let ( e : edge_info) = G.E.label edge in
+              draw_successor_edge edge e.edge_turtle e.edge_distance e.edge_steps c) 
+            !graph v;
+          tdraw_string_gtk v l.turtle c               
+        end 
  )!graph
-  
+
     
 let rec color_edges v root path_t =  
   match root with 

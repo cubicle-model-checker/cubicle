@@ -20,6 +20,12 @@
 
 (*** Complex numbers *)
 
+let debug = ref false
+
+let print_debug x = ()
+  (* if !debug then  *)
+  (*   Firebug.console##log (x) *)
+
 let ( ~-& ) (x, y) = (-.x, -.y) 
 let ( ~& ) (x, y) = (x, -.y) 
 
@@ -42,6 +48,7 @@ let ( *.& ) f (x, y) =
 let norm_sqr (x, y) =
   x*.x +. y*.y 
 
+
 let norm (x, y) =
   sqrt(x*.x +. y*.y) 
 
@@ -53,6 +60,7 @@ let expi t =
   (cos t, sin t) 
 
 (*** Hyperbolic geometry ***)
+
 
 let th t =
   let ept = exp t
