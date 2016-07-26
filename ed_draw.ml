@@ -174,9 +174,9 @@ let draw_bfs root turtle =
     let tv = lab.turtle in
     let dist =
       if  v= root then 0. else hspace_dist_sqr tv in
-    print_string "node ";
+    (* print_string "node "; *)
     if dist <= (* 0.98  *)rlimit_sqr  then begin
-      print_endline "drawing";
+      (* print_endline "drawing"; *)
       lab.visible <- Visible;
       let l = try G.succ !graph v with Invalid_argument _ -> []  in
       let l = List.filter (fun x -> (G.V.label x).visible = Hidden) l in

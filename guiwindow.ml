@@ -226,7 +226,7 @@ let source =
 let save_session s file b = 
   parse_linact !s;
   let l = !inact_l in
-  let oc = open_out_gen  [Open_wronly; Open_creat] 0o644  file in 
+  let oc = open_out  file in 
   if l == [] then Printf.fprintf oc "vide" else
     List.iter (fun (s, e) -> Printf.fprintf oc "%d %d " s e) l;
   close_out oc;
@@ -547,7 +547,7 @@ let save_execute_file s file b =
        ~icon:((GMisc.image ~stock:`DIALOG_WARNING ~icon_size:`DIALOG ())#coerce) ~ok:"ok" ;
      false)
   else
-    let oc = open_out_gen [Open_wronly; Open_creat] 0o644 file in
+    let oc = open_out file in
     Printf.fprintf oc "%s" (Psystem_printer.psystem_to_string !s);
     close_out oc;
     true
@@ -604,7 +604,7 @@ let edit_mode ast new_file button edit m =
       source#set_cursor_visible true; )
   else 
     ( (* let c = source#source_buffer#cursor_position in  *)
-      let oc = open_out_gen [Open_creat; Open_wronly] 0o644 new_file in
+      let oc = open_out new_file in
       let str =  source#source_buffer#get_text  () in 
       Printf.fprintf oc "%s" str;
       close_out oc;
@@ -740,6 +740,8 @@ let open_file inter_path save_path ast =
      let lb = from_channel ic in
      ast := Parser.system Lexer.token lb;
      close_in ic;
+   with Sys_error(_) -> () (* Printf.printf "pas de fichier %s" inter_path *));
+    try 
      let str = read_file save_path in 
      let fl = Str.split (Str.regexp "[ \t]+") str in
      let pos_l = list_position fl in
@@ -747,8 +749,7 @@ let open_file inter_path save_path ast =
      parse_init !ast;
      source#source_buffer#set_text (read_file inter_path);
      apply_tag (parse_psystem !ast);
-   with Sys_error(_) -> () (* Printf.printf "pas de fichier %s" inter_path *));;
-
+   with Sys_error(_) -> ()
 
 let open_window s  = 
   let open_graph = ref false in 
@@ -772,7 +773,7 @@ let open_window s  =
   ignore (source#source_buffer#create_tag ~name:"var" [`BACKGROUND "pink"]);
   (* source#event#add [`BUTTON_PRESS; `KEY_PRESS];    *)
   source#set_editable false;
-  (* open_file inter_path save_path ast; *)
+  open_file inter_path save_path ast;
   ignore (source#event#connect#motion_notify ~callback:(find_in_ast ast edit));
   ignore (source#event#connect#button_press ~callback:(modify_ast ast edit ));
   ignore (save_button#event#connect#button_press 
