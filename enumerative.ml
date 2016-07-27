@@ -27,8 +27,6 @@ module H = Hstring
 
 module HT = Hashtbl.Make (Term)
 
-module HA = Hashtbl.Make (Atom)
-
 module HH = Hashtbl.Make (H)
 
 module HHL = Hashtbl.Make (struct
@@ -188,7 +186,7 @@ type env = {
     partial_order : int list list;
 
     table_size : int;
-    mutable explicit_states : unit HST.t;
+    mutable explicit_states : (richstate option) HST.t;
     (* mutable states : State.t list; *)
     mutable states : richstate list;
     mutable histories : trans_history list;
@@ -1112,7 +1110,7 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
                           incr cpt_q;
                           Queue.add (depth + 1, vars, s) q;
                           incr cpt_f;
-                          HST.add visited st ();
+                          HST.add visited st None;
                           to_do
                         end
                       else begin
@@ -1168,7 +1166,7 @@ let forward_dfs s procs env l =
           eprintf "%d (%d)@." !cpt_f !cpt_q;
         (* if !cpt_f mod 3 = 1 then *)
         incr cpt_r;
-        HST.add h_visited st ();
+        HST.add h_visited st None;
         env.states <- {st; from = [[]]} :: env.states;
         if !limit_forward_depth && depth = !forward_depth then
           env.fringe <- st :: env.fringe;
@@ -1200,7 +1198,7 @@ let forward_bfs_switches s procs env l =
         if not quiet (* && !cpt_f mod 1000 = 0 *) then
           eprintf "%d (%d)@." !cpt_f !cpt_q;
         (* if !cpt_f > 3_000_000 then remove_first explicit_states; *)
-        HST.add explicit_states st ();
+        HST.add explicit_states st None;
         env.states <- {st; from = [[]] } :: env.states;
         if !limit_forward_depth && depth = !forward_depth - 1 then
           env.fringe <- st :: env.fringe;
@@ -1322,7 +1320,7 @@ let satom_to_cand env sa =
     sa []
 
 
-exception Sustainable of Node.t list
+exception Sustainable of Node.t * Node.t list
 
 
 (*********************************************************************)
@@ -1394,14 +1392,14 @@ let smallest_to_resist_on_trace ls =
       List.fold_left
 	(resist_on_trace_size progress_inc) ls !global_envs in
     match resistants with
-      | s :: _ -> raise (Sustainable [s])
+      | s :: _ -> raise (Sustainable (s, [s]))
       | [] -> raise Not_found
   with
     | Exit | Not_found ->
         TimeCheckCand.pause ();
         if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
         []
-    | Sustainable ls ->
+    | Sustainable (_, ls) ->
         TimeCheckCand.pause ();
         if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
         ls
@@ -1435,145 +1433,132 @@ let pp_iopi_list fmt l =
   Format.eprintf "@]]@\n"
 
 let one_resist_on_trace_size s env =
-  if Node.dim s <= env.model_cardinal then 
+  if Node.dim s <= env.model_cardinal then
     try
-      let hahtbl = HA.create (Node.size s) in
-      Format.eprintf ">>>>>>>>@.Node : %a@." Node.print s;
-      let satnode = Node.litterals s in
-      Format.eprintf "SATNODE : %a@." SAtom.print satnode;
+      let hahtbl = HT.create (Node.size s) in
+      let atoms_cand = Node.litterals s in
+      (* Format.eprintf "Node : %a@." Node.print s; *)
+      (* Format.eprintf "Atoms_cand : %a@." SAtom.print atoms_cand; *)
       let fill_hahtbl st comp sigma =
-        Format.eprintf "st : %a@." (print_state env) st;
-        let atoms =
-          List.map (fun (i1, _, _) ->
-              Atom.subst sigma (
-                  Atom.Comp (HI.find env.terms_id i1,
-                             Eq,
-                             HI.find env.terms_id st.(i1))
-                )
-            ) comp in
-        Format.eprintf "LATOMS : ";
-        List.iter (Format.eprintf "\t%a@." Atom.print) atoms;
-        let satoms =
-          List.fold_left (
-              fun acc a ->
-              if SAtom.mem a satnode then
-                SAtom.add a acc else acc)
-            SAtom.empty atoms in
-        Format.eprintf "SATOMS : %a@." SAtom.print satoms;
-        let satoms' =
-          List.fold_left (
-              fun acc a ->
-              SAtom.add a acc)
-            SAtom.empty atoms in
-        Format.eprintf "SATOMS' : %a@." SAtom.print satoms;
+        let amgis = Variable.inverse_subst sigma in
+        let mapping =
+          List.fold_left (fun acc (i1, _, _) ->
+              let key = HI.find env.terms_id i1 in
+              let bind = HI.find env.terms_id st.(i1) in
+              let skey = Term.subst amgis key in
+              let sbind = Term.subst amgis bind in
+              TMap.add skey sbind acc
+            ) TMap.empty comp in
+        (* Format.eprintf "State : %a@\nSigma : %a@\nMapping : @." *)
+        (*   (print_state env) st Variable.print_subst amgis; *)
+        (* TMap.iter (fun t1 t2 -> *)
+        (*     Format.eprintf "Key : %a@\nBind : %a@." *)
+        (*       Term.print t1 Term.print t2 *)
+        (*   ) mapping; *)
+        (* Format.eprintf "<<<<<<<@."; *)
         SAtom.iter (fun a ->
-            if SAtom.mem a satnode then
-              begin
-                let map = try HA.find hahtbl a
-                          with Not_found -> TMap.empty
-                in
-                Format.eprintf "SATOM MEM : %a@." Atom.print a;
-                let oatoms = SAtom.remove a satoms in
-                let nmap =
-                  SAtom.fold (fun a acc ->
-                      match a with
-                        | Atom.Comp (t1, Eq, t2) ->
-                            let s = try TMap.find t1 map
+            match a with
+              | Atom.Comp (ta1, op, ta2) ->
+                  let atoms, children =
+                    try HT.find hahtbl ta1
+                    with Not_found -> SAtom.empty, TMap.empty
+                  in
+                  let rep, mapping =
+                    TMap.partition (
+                        fun t1 t2 ->
+                        Term.equal ta1 t1 &&
+                          (match op with
+                             | Eq -> Term.equal ta2 t2
+                             | Neq -> not (Term.equal ta2 t2)
+                             | _ -> assert false
+                          )
+                      ) mapping in
+                  (* Format.eprintf "Rep : @."; *)
+                  (* TMap.iter (fun t1 t2 -> *)
+                  (*     Format.eprintf "%a@\nBind : %a@." *)
+                  (*       Term.print t1 Term.print t2 *)
+                  (*   ) rep; *)
+                  (* TMap.iter (fun t1 t2 -> *)
+                  (*     Format.eprintf "Map : %a@\nBind : %a@." *)
+                  (*       Term.print t1 Term.print t2 *)
+                  (*   ) mapping; *)
+                  if not (TMap.is_empty rep) then
+                    let nchildren =
+                      TMap.fold (fun t1 t2 acc ->
+                          if not (Term.equal t1 ta1) then
+                            let s = try TMap.find t1 children
                                     with Not_found -> Term.Set.empty
                             in
                             let s' = Term.Set.add t2 s in
-                            Format.eprintf "t1 : %a@." Term.print t1;
                             TMap.add t1 s' acc
-                        | _ -> assert false
-                    ) oatoms map in
-                HA.replace hahtbl a nmap
-              end
-          ) satoms
+                          else acc
+                        ) mapping children in
+                    HT.replace hahtbl ta1 (SAtom.add a atoms, nchildren)
+                  (* else Format.eprintf "Nothing to do@."; *)
+                  (* Format.eprintf "<<<<<<<@." *)
+
+              | _ -> ()
+          ) atoms_cand
       in
       let procs = List.rev (List.tl (List.rev env.all_procs)) in
       let ls = alpha_renamings env procs s in
+      let interpol =
+        interpolate_cands &&
+          SAtom.for_all (
+              function
+              | Atom.Comp (_, (Eq | Neq), _) -> true
+              | _ -> false
+            ) (Node.litterals s) in
       List.iter (fun {st} ->
           if not
                (List.for_all
                   (fun (comp, node, sigma) ->
-                    fill_hahtbl st comp sigma;
-                    (* Format.eprintf "st : %a@." (print_state env) st; *)
+                    if interpol then
+                      fill_hahtbl st comp sigma;
                     check_cand env st comp) ls) then
             raise (EBad (st, env));
         ) env.states;
-      Format.eprintf ">>>>>>>>>>@.HASHTBL@.";
+      (* Format.eprintf "Create ns@."; *)
       let ns =
-        HA.fold (fun a map acc ->
-            (* 'map' contains a mapping from variables/arrays to their values in
-             * the reachable states *)
-            Format.eprintf "Rep : %a -> @." Atom.print a;
-            let sa' =
-              TMap.fold (fun term values acc ->
-                  Format.eprintf "Child : %a@.\t{" Term.print term;
-                  Term.Set.iter (Format.eprintf "%a " Term.print) values;
-                  Format.eprintf "}@.";
-
-                  (* Gather all the possible values of 'term' to delete the ones
-                   * seen in the reachable states.
-                   *)
-                  let lh, types =
-                    try
-                      match term with
-                        | Elem (h, _) | Access (h, _) ->
-                            let _, ret = Smt.Symbol.type_of h in
-                            h, Smt.Type.constructors_set ret
-                        | _ -> assert false
-                    with Not_found -> assert false
-                  in
-                  (* Hstring.HSet.iter (Format.eprintf "%a " Hstring.print) types; *)
-                  let rest =
-                    Hstring.HSet.fold
-                      (fun t acc ->
-                        if Term.Set.exists
-                             (function
-                              | Elem (h, _) -> h = t
-                              | _ -> false
-                             ) values then acc
-                        else Hstring.HSet.add t acc
-                      ) types Hstring.HSet.empty in
-                  let rv, re, rop =
-                    let rv, re, rop = ref None, ref None, ref None in
-                    (try
-                       SAtom.iter (fun a ->
-                           match a with
-                             | Atom.Comp ((Elem (h, _) | Access (h, _)), op,
-                                          (Elem (v, _) as e))
-                                   when Hstring.equal h lh ->
-                                 rv := Some v; re := Some e; rop := Some op;
-                                 raise Exit
-                             | _ -> ()
-                         ) satnode;
-                     with Exit -> ());
-                    match !rv, !re, !rop with
-                      | Some rv, Some re, Some rop -> rv, re, rop
-                      | _ -> assert false
-                  in
-                  let rest = Hstring.HSet.remove rv rest in
-                  Format.eprintf "@.Rest : %a@.\t{" Term.print term;
-                  Hstring.HSet.iter (Format.eprintf "%a " Hstring.print) rest;
-                  Format.eprintf "}@.";
-                  let new_atom =
-                    if Hstring.HSet.cardinal rest = 1 then
-                      Atom.Comp (term, Neq, Elem (Hstring.HSet.choose rest, Constr))
-                    else
-                      Atom.Comp (term, Eq, re)
-                  in
-                  Format.eprintf "@.";
-                  SAtom.add new_atom acc
-                ) map SAtom.empty in
-            let sa' = SAtom.add a sa' in
-            Format.eprintf "SA' : %a@." SAtom.print sa';
-            let cube = Cube.create (Node.variables s) sa' in
-            let n = Node.create cube in
-            Format.eprintf "Node : %a@." Node.print n;
-            n :: acc
-          ) hahtbl [] in ns
-    with 
+        if interpolate_cands then
+          HT.fold (fun t (atoms, children) acc ->
+              (* 'map' contains a mapping from variables/arrays to their values in
+               * the reachable states *)
+              (* Format.eprintf "Term Rep : %a@\nSAtom : %a@." *)
+              (*   Term.print t SAtom.print atoms; *)
+              let sa' =
+                TMap.fold (fun term values acc ->
+                        (* Format.eprintf "Term child : %a@\n\t@[<hov>%a@]@." *)
+                        (*   Term.print term Term.print_set values; *)
+                    let nb_constr =
+                      try
+                        match term with
+                          | Elem (h, _) | Access (h, _) ->
+                              let _, ret = Smt.Symbol.type_of h in
+                              let l = Smt.Type.constructors ret in
+                              List.length l
+                          | _ -> -1
+                      with Not_found -> -1
+                    in
+                    let new_atoms =
+                      if Term.Set.cardinal values = 1 && nb_constr > 2 then
+                        SAtom.singleton
+                          (Atom.Comp (term, Neq, Term.Set.choose values))
+                      else
+                        Node.find_atoms s term
+                    in
+                    SAtom.union new_atoms acc
+                  ) children SAtom.empty in
+              let sa' = SAtom.union atoms sa' in
+              let cube = Cube.create (Node.variables s) sa' in
+              let n = Node.create cube ~kind:Approx in
+              n :: acc
+            ) hahtbl []
+        else [s] in
+      match ns with
+        | [] -> [s]
+        | _ -> ns
+    with
       | Not_found -> raise ECantSay
   else [s]
 
@@ -1625,8 +1610,9 @@ let post_bfs env (from, st) visited trs q cpt_q depth autom init =
                     Format.eprintf "%a@." (print_state env) s;
                 end;
               try 
-                let rs = HST.find visited s in
-                rs.from <- List.rev_append from rs.from;
+                (match HST.find visited s with
+                   | Some rs -> rs.from <- List.rev_append from rs.from;
+                   | _ -> assert false);
                 if der then
                   Format.eprintf " @{<fg_red>Already Visited@}@."
               with Not_found ->
@@ -1660,7 +1646,7 @@ let hstl_to_string hl =
                   
 let forward_bfs init env l autom =
   maxd := !forward_depth;
-  let h_visited = HST.create 17 (* env.explicit_states *) in
+  let h_visited = (* HST.create 17 *) env.explicit_states in
   let cpt_f = ref 0 in
   let cpt_r = ref 0 in
   let cpt_q = ref 1 in
@@ -1672,7 +1658,7 @@ let forward_bfs init env l autom =
     let depth, rs, st = HQueue.take to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
-        HST.add h_visited st rs;
+        HST.add h_visited st (Some rs);
         post_bfs env (rs.from, st) h_visited trs to_do cpt_q depth autom init ;
         incr cpt_f;
         if debug && verbose > 1 then
@@ -1689,13 +1675,17 @@ let forward_bfs init env l autom =
   done;
   (* if debug && verbose > 3 then *)
   
-  HST.iter (fun s rs ->
-      let f = List.map List.rev rs.from in
-      rs.from <- f;
-      env.histories <- List.rev_append f env.histories;
+  HST.iter (fun s rl ->
+      match rl with
+        | Some rs ->
+            let f = List.map List.rev rs.from in
+            rs.from <- f;
+            env.histories <- List.rev_append f env.histories;
+        | _ -> assert false
     ) h_visited;
   env.histories <- List.fast_sort (
-                       fun l1 l2 -> compare (List.length l1) (List.length l2)) env.histories;
+                       fun l1 l2 ->
+                       compare (List.length l1) (List.length l2)) env.histories;
   if verbose > 0 then Format.eprintf "%a\n------------@." pfrom env.histories
                                      
 let get_histories () = List.map (fun env -> env.histories) !global_envs 
@@ -1751,7 +1741,7 @@ let check_first_and_filter_rest = function
           List.fold_left (fun acc c ->
               let cl = one_resist_on_trace_size s c in
               List.rev_append acc cl) [] !global_envs in
-        raise (Sustainable (if interpolate_cands then nl else [s]))
+        raise (Sustainable (s ,(if interpolate_cands then nl else [s])))
       with
         | ECantSay -> rs
         | EBad (st, env) ->
@@ -1777,10 +1767,18 @@ let fast_resist_on_trace ls =
     TimeCheckCand.pause ();
     if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_red>X@}@.";
     []
-  with Sustainable cand ->
+  with Sustainable (cand, candl) ->
        TimeCheckCand.pause ();
-       if not quiet then eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
-       cand
+       if not quiet then
+         begin
+           eprintf "@{</i>@}@{<bg_default>@}@{<fg_green>!@}@.";
+           if not (SAtom.equal (Node.litterals cand)
+                     (Node.litterals (List.hd candl))) then
+             Format.eprintf "Candidate was : %a@\nNew candidates are now\
+                             : @[<hov>%a@]@."
+               Node.print cand Node.print_list candl;
+         end;
+       candl
 
 
 

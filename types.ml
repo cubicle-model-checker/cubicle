@@ -238,6 +238,11 @@ module Term = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print x (print_cs false) cs
 
+  let print_set fmt st =
+    Format.fprintf fmt "{";
+    Set.iter (fun t -> Format.fprintf fmt "%a, " print t) st;
+    Format.fprintf fmt "}"
+    
 end
 
 
@@ -518,9 +523,9 @@ module ArrayAtom = struct
       TimerApply.pause ();
       a'
 
-  let alpha atoms args =
-    let subst = Variable.build_subst args Variable.alphas in
-    List.map snd subst, apply_subst subst atoms
+  (* let alpha atoms args = *)
+  (*   let subst = Variable.build_subst args Variable.alphas in *)
+  (*   List.map snd subst, apply_subst subst atoms *)
 
   let nb_diff a1 a2 =
     TimerSubset.start ();

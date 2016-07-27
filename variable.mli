@@ -72,6 +72,10 @@ val all_instantiations : t list -> t list -> subst list
 
 val arity : Hstring.t -> int
 
+val inverse_subst : subst -> subst
+(** Given a substitution is an injective function, compute the inverse
+    function of it by assigning the non assigned values to a dummy one. *)
+                               
 val all_arrangements : int -> t list -> t list list
 val all_arrangements_arity : Hstring.t -> t list -> t list list
 val permutations_missing : t list -> t list -> subst list

@@ -148,7 +148,7 @@ let stateless = ref false
 let max_cands = ref (-1)
 let max_forward = ref (-1)
 let candidate_heuristic = ref (-1)
-let forward_sym = ref false
+let forward_sym = ref true
 
 let abstr_num = ref false
 let num_range_low = ref 0

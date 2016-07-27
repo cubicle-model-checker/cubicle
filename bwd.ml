@@ -128,12 +128,12 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
               match Approx.good n with
                 | None -> n
                 | Some c ->
-                  try
-                    (* Replace node with its approximation *)
-		    Safety.check system c;
-                    candidates := c :: !candidates;
-                    Stats.candidate n c;
-                    c
+                    try
+                      (* Replace node with its approximation *)
+		      Safety.check system c;
+                      candidates := c :: !candidates;
+                      Stats.candidate n c;
+                      c
                   with Safety.Unsafe _ -> n 
                  (* If the candidate is directly reachable, no need to
                     backtrack, just forget it. *)

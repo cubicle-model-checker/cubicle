@@ -24,7 +24,7 @@ module Set = Hstring.HSet
 
 let gen_vars s n = 
   let l = ref [] in
-  for i = 1 to max_proc do
+  for i = 1 to n do
     l := Hstring.make (s^(string_of_int i)) :: !l
   done;
   List.rev !l
@@ -34,10 +34,16 @@ let alphas = gen_vars "$" max_proc
 
 let procs = gen_vars "#" max_proc
 
+let brab_procs = List.fold_left (fun s e -> Set.add e s)
+                   Set.empty (gen_vars "#" enumerative)
+
+let dummy_proc = Hstring.make (Format.sprintf "#%d" (max_proc + 1))
+
 let freshs = gen_vars "?" max_proc
 
 let generals = gen_vars "z" max_proc
 
+                        
 
 let proc_vars_int = 
   let l = ref [] in
@@ -113,6 +119,21 @@ and cross l pr x st =
 	  if acc = [] then [[x,y]]
 	  else List.rev_map (fun ds -> (x, y)::ds) acc in
 	List.rev_append acc (cross l (y::pr) x p)
+
+let inverse_subst subst =
+  let set, subst' = 
+    List.fold_left
+      (fun (set, l) (a, b) ->
+        let set = Set.remove b set in
+        let l = (b, a) :: l in
+        (set, l)
+      ) (brab_procs, []) subst in
+  List.rev (
+      Set.fold (
+          fun e acc -> 
+          (e, dummy_proc) :: acc
+        ) set subst'
+    )
 
 let rec all_parts l = match l with
   | [] -> []

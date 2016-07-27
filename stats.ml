@@ -342,16 +342,22 @@ let output_report ~safe oc visited candidates =
   let fmt = formatter_of_out_channel oc in
   Array.iter (fun a -> Format.fprintf fmt "%s " a) Sys.argv;
   Format.fprintf fmt "@.";
+  Format.fprintf fmt "├─Result :                         : %s@."
+    (if safe then "SAFE" else "UNSAFE");
   if copy_regexp then
-    Format.fprintf fmt "Number of regexps :              : %d@." 
+    Format.fprintf fmt "├─Number of regexps :              : %d@." 
       (Ptree.get_rnumber ());
-  Format.fprintf fmt "Total forward nodes :            : %d@." 
+  Format.fprintf fmt "├─Total forward nodes :            : %d@." 
     (Enumerative.get_stats ());
-  Format.fprintf fmt "Number of visited nodes          : %d@." !cpt_nodes;
-  Format.fprintf fmt "Max Number of processes          : %d@." !cpt_process;
+  Format.fprintf fmt "├─Number of visited nodes          : %d@." !cpt_nodes;
+  Format.fprintf fmt "├─Max Number of processes          : %d@." !cpt_process;
   if do_brab && not far then
-    Format.fprintf fmt "Number of %s             : %d@."
+    Format.fprintf fmt "├─Number of %s             : %d@."
       (if safe then "invariants" else "candidates") (List.length candidates);
-  Format.fprintf fmt "Restarts                         : @[%d%a@]@." !cpt_restart
+  Format.fprintf fmt "%s─Restarts                         : @[%d%a@]@."
+    (if profiling then "├" else "└") !cpt_restart
     print_rounds_nb ();
-  Format.fprintf fmt "%a" Pretty.print_double_line ()
+  if profiling then
+    Format.fprintf fmt "└─Total Time                       : %a@."
+      print_time (TotalTime.get ());
+  Format.fprintf fmt "%a@." Pretty.print_double_line ()

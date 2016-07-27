@@ -17,6 +17,7 @@ open Format
 open Lexing
 
 (* Timers for profiling *)
+module TotalTime = Timer.Make (Options)
 module TimerSubset = Timer.Make (Options)
 module TimerApply = Timer.Make (Options)
 module TimeFix = Timer.Make (Options)

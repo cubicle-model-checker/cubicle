@@ -142,6 +142,9 @@ let print fmt n =
   fprintf fmt "%a%s" Cube.print n.cube
     (if approx_history then sprintf " heur = %d%%" n.heuristic else "")
 
+let print_list fmt nl =
+  List.iter (Format.fprintf fmt "%a@\n@\n" print) nl
+    
 module Latex = struct
 (* Latex printing of nodes, experimental - to rewrite *)
 
@@ -232,3 +235,15 @@ let print_history fmt n =
       fprintf fmt "@{<fg_blue>approx[%d]@}" last.tag
     else 
       fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.tag
+
+let find_atoms t term =
+  SAtom.filter (fun a ->
+      match a with
+        | Atom.Comp (t1, _, _) -> Term.equal term t1
+        | _ -> false
+    ) t.cube.Cube.litterals
+    (*         match !atom with *)
+    (* | Some a -> a *)
+    (* | _ -> Format.eprintf "The term %a isn't bind in the node %a@." *)
+    (*          Term.print term print t; *)
+    (*        exit 1 *)

@@ -1,0 +1,510 @@
+./cubicle.opt -brabfd 2 -1 examples/bakery.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 9
+├─Number of visited nodes          : 2
+├─Max Number of processes          : 2
+├─Number of invariants             : 0
+├─Restarts                         : 0
+└─Total Time                       : 0m0.016s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/bakery.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 9
+├─Number of visited nodes          : 2
+├─Max Number of processes          : 2
+├─Number of invariants             : 0
+├─Restarts                         : 0
+└─Total Time                       : 0m0.012s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/distrib_channels.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1941
+├─Number of visited nodes          : 412
+├─Max Number of processes          : 3
+├─Number of invariants             : 11
+├─Restarts                         : 0
+└─Total Time                       : 0m1.564s
+================================================================================
+
+./cubicle.opt -brabfd 2 9 examples/flash_nodata.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1503
+├─Number of visited nodes          : 37
+├─Max Number of processes          : 2
+├─Number of invariants             : 32
+├─Restarts                         : 0
+└─Total Time                       : 0m0.164s
+================================================================================
+
+./cubicle.opt -brabfd 2 9 examples/flash_nodata.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1503
+├─Number of visited nodes          : 37
+├─Max Number of processes          : 2
+├─Number of invariants             : 32
+├─Restarts                         : 0
+└─Total Time                       : 0m0.196s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/flash_enum_simpl.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 2520
+├─Number of visited nodes          : 160
+├─Max Number of processes          : 4
+├─Number of invariants             : 78
+├─Restarts                         : 0
+└─Total Time                       : 0m1.556s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/flash_enum_simpl.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 2520
+├─Number of visited nodes          : 120
+├─Max Number of processes          : 4
+├─Number of invariants             : 58
+├─Restarts                         : 0
+└─Total Time                       : 0m1.848s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 12
+├─Number of visited nodes          : 5
+├─Max Number of processes          : 2
+├─Number of invariants             : 3
+├─Restarts                         : 0
+└─Total Time                       : 0m0.008s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 12
+├─Number of visited nodes          : 5
+├─Max Number of processes          : 2
+├─Number of invariants             : 3
+├─Restarts                         : 0
+└─Total Time                       : 0m0.020s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish_data.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 12
+├─Number of visited nodes          : 11
+├─Max Number of processes          : 2
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.016s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish_data.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 12
+├─Number of visited nodes          : 11
+├─Max Number of processes          : 2
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.016s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish2.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 120
+├─Number of visited nodes          : 4
+├─Max Number of processes          : 2
+├─Number of invariants             : 3
+├─Restarts                         : 0
+└─Total Time                       : 0m0.012s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish2.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 120
+├─Number of visited nodes          : 4
+├─Max Number of processes          : 2
+├─Number of invariants             : 3
+├─Restarts                         : 0
+└─Total Time                       : 0m0.024s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish3.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 170
+├─Number of visited nodes          : 24
+├─Max Number of processes          : 3
+├─Number of invariants             : 10
+├─Restarts                         : 0
+└─Total Time                       : 0m0.024s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish3.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 170
+├─Number of visited nodes          : 23
+├─Max Number of processes          : 3
+├─Number of invariants             : 9
+├─Restarts                         : 0
+└─Total Time                       : 0m0.048s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish4.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 270
+├─Number of visited nodes          : 24
+├─Max Number of processes          : 3
+├─Number of invariants             : 9
+├─Restarts                         : 0
+└─Total Time                       : 0m0.032s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish4.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 270
+├─Number of visited nodes          : 22
+├─Max Number of processes          : 3
+├─Number of invariants             : 8
+├─Restarts                         : 0
+└─Total Time                       : 0m0.056s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish5.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 140
+├─Number of visited nodes          : 20
+├─Max Number of processes          : 2
+├─Number of invariants             : 14
+├─Restarts                         : 0
+└─Total Time                       : 0m0.024s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/germanish5.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 140
+├─Number of visited nodes          : 18
+├─Max Number of processes          : 2
+├─Number of invariants             : 11
+├─Restarts                         : 0
+└─Total Time                       : 0m0.028s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 45
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m0.068s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 40
+├─Max Number of processes          : 3
+├─Number of invariants             : 24
+├─Restarts                         : 0
+└─Total Time                       : 0m0.148s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_baukus.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 45
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m0.064s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_baukus.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 40
+├─Max Number of processes          : 3
+├─Number of invariants             : 24
+├─Restarts                         : 0
+└─Total Time                       : 0m0.136s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 63
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m0.096s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 63
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m0.204s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc_finite.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 20511
+├─Number of visited nodes          : 101
+├─Max Number of processes          : 3
+├─Number of invariants             : 30
+├─Restarts                         : 0
+└─Total Time                       : 0m1.028s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc_finite.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 20511
+├─Number of visited nodes          : 63
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m1.896s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc_function.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 63
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m0.124s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc_function.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 63
+├─Max Number of processes          : 3
+├─Number of invariants             : 29
+├─Restarts                         : 0
+└─Total Time                       : 0m0.216s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc_nodata.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 44
+├─Max Number of processes          : 3
+├─Number of invariants             : 27
+├─Restarts                         : 0
+└─Total Time                       : 0m0.056s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german.ctc_nodata.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 753
+├─Number of visited nodes          : 40
+├─Max Number of processes          : 3
+├─Number of invariants             : 24
+├─Restarts                         : 0
+└─Total Time                       : 0m0.128s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_pfs.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1737
+├─Number of visited nodes          : 51
+├─Max Number of processes          : 3
+├─Number of invariants             : 37
+├─Restarts                         : 0
+└─Total Time                       : 0m0.096s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_pfs.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1737
+├─Number of visited nodes          : 42
+├─Max Number of processes          : 3
+├─Number of invariants             : 28
+├─Restarts                         : 0
+└─Total Time                       : 0m0.272s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_pfs2.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1737
+├─Number of visited nodes          : 51
+├─Max Number of processes          : 3
+├─Number of invariants             : 37
+├─Restarts                         : 0
+└─Total Time                       : 0m0.104s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_pfs2.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1737
+├─Number of visited nodes          : 42
+├─Max Number of processes          : 3
+├─Number of invariants             : 28
+├─Restarts                         : 0
+└─Total Time                       : 0m0.308s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_pfs_data.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1737
+├─Number of visited nodes          : 1011
+├─Max Number of processes          : 3
+├─Number of invariants             : 42
+├─Restarts                         : 0
+└─Total Time                       : 0m5.836s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/german_pfs_data.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 1737
+├─Number of visited nodes          : 994
+├─Max Number of processes          : 3
+├─Number of invariants             : 28
+├─Restarts                         : 0
+└─Total Time                       : 0m16.972s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/ricart_abdulla.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 100
+├─Number of visited nodes          : 32
+├─Max Number of processes          : 2
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.056s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/ricart_abdulla.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 100
+├─Number of visited nodes          : 30
+├─Max Number of processes          : 2
+├─Number of invariants             : 4
+├─Restarts                         : 0
+└─Total Time                       : 0m0.044s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/ricart_abdulla_int.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 100
+├─Number of visited nodes          : 32
+├─Max Number of processes          : 2
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.060s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/ricart_abdulla_int.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 100
+├─Number of visited nodes          : 30
+├─Max Number of processes          : 2
+├─Number of invariants             : 4
+├─Restarts                         : 0
+└─Total Time                       : 0m0.060s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/sense_barrier.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 88
+├─Number of visited nodes          : 74
+├─Max Number of processes          : 3
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.144s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/sense_barrier.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 88
+├─Number of visited nodes          : 74
+├─Max Number of processes          : 3
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.120s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_at.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 43
+├─Number of visited nodes          : 31
+├─Max Number of processes          : 2
+├─Number of invariants             : 14
+├─Restarts                         : 0
+└─Total Time                       : 0m0.024s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_at.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 43
+├─Number of visited nodes          : 31
+├─Max Number of processes          : 2
+├─Number of invariants             : 14
+├─Restarts                         : 0
+└─Total Time                       : 0m0.024s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_na.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 75
+├─Number of visited nodes          : 38
+├─Max Number of processes          : 2
+├─Number of invariants             : 15
+├─Restarts                         : 0
+└─Total Time                       : 0m0.060s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_na.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 75
+├─Number of visited nodes          : 38
+├─Max Number of processes          : 2
+├─Number of invariants             : 15
+├─Restarts                         : 0
+└─Total Time                       : 0m0.056s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_boleslaw_bool_at.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 64
+├─Number of visited nodes          : 39
+├─Max Number of processes          : 3
+├─Number of invariants             : 17
+├─Restarts                         : 0
+└─Total Time                       : 0m0.028s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_boleslaw_bool_at.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 64
+├─Number of visited nodes          : 39
+├─Max Number of processes          : 3
+├─Number of invariants             : 17
+├─Restarts                         : 0
+└─Total Time                       : 0m0.036s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_talupur_at.cub -quiet -profiling -res bench_icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 44
+├─Number of visited nodes          : 9
+├─Max Number of processes          : 2
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.020s
+================================================================================
+
+./cubicle.opt -brabfd 2 -1 examples/szymanski_talupur_at.cub -quiet -profiling -res bench_icands -icands 
+├─Result :                         : SAFE
+├─Total forward nodes :            : 44
+├─Number of visited nodes          : 9
+├─Max Number of processes          : 2
+├─Number of invariants             : 5
+├─Restarts                         : 0
+└─Total Time                       : 0m0.016s
+================================================================================
+

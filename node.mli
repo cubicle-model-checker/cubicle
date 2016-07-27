@@ -68,5 +68,10 @@ val subset : t -> t -> bool
 val print :  Format.formatter -> t -> unit
 (** prints the cube of a node *)
 
+val print_list :  Format.formatter -> t list -> unit
+(** prints the cube of a node *)
+
 val print_history :  Format.formatter -> t -> unit
 (** prints the trace corresponding to the history of a node *)
+
+val find_atoms : t -> Term.t -> SAtom.t

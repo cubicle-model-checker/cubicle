@@ -84,6 +84,10 @@ module Term : sig
   module Set : Set.S with type elt = t
   (** set of terms *)
 
+  val print_set : Format.formatter -> Set.t -> unit
+  (** prints a term *)
+
+  
 end
 
 
@@ -235,7 +239,7 @@ module ArrayAtom : sig
   val diff : t -> t -> t
   (** array form of set difference *)
 
-  val alpha : t -> Variable.t list -> Variable.t list * t
+  (* val alpha : t -> Variable.t list -> Variable.t list * t *)
   (** alpha renaming of process variables *)
 
   val print : Format.formatter -> t -> unit
