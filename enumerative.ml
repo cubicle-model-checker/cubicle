@@ -1521,7 +1521,7 @@ let one_resist_on_trace_size s env =
         ) env.states;
       (* Format.eprintf "Create ns@."; *)
       let ns =
-        if interpolate_cands then
+        if interpol then
           HT.fold (fun t (atoms, children) acc ->
               (* 'map' contains a mapping from variables/arrays to their values in
                * the reachable states *)
