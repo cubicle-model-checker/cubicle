@@ -105,6 +105,13 @@ module Type = struct
                List.fold_left (fun acc c -> HSet.add c acc) HSet.empty cstrs
            | _ -> HSet.empty
 
+  let is_constructor ty =
+    Hstring.equal ty type_bool ||
+      (match H.find decl_types ty with
+         | Ty.Tsum (_ , _) -> true
+         | _ -> false
+      )
+      
   let declared_types () = decl_types
     (* H.fold (fun ty _ acc -> ty :: acc) decl_types [] *)
     

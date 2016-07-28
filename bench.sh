@@ -22,4 +22,5 @@ while read -ra line; do
     echo $ecmd
     $bcmd &> /dev/null
     $ecmd &> /dev/null
+    echo "================================================================================" >> $out_file
 done <files.bench

@@ -1506,7 +1506,8 @@ let one_resist_on_trace_size s env =
         interpolate_cands &&
           SAtom.for_all (
               function
-              | Atom.Comp (_, (Eq | Neq), _) -> true
+              | Atom.Comp (_, (Eq | Neq), t) ->
+                  Smt.Type.is_constructor (Term.type_of t)
               | _ -> false
             ) (Node.litterals s) in
       List.iter (fun {st} ->

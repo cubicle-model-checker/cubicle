@@ -62,6 +62,8 @@ module type S = sig
         name [n] and constructors [cstrs].}
         {- [declare n []] declares a new abstract type with name [n].}}*)
 
+    val is_constructor : t -> bool
+                                
     val all_constructors : unit -> Hstring.t list
     (** [all_constructors ()] returns a list of all the defined constructors. *)
 

@@ -136,6 +136,12 @@ module Type = struct
             |> Hstring.make)
       else []
 
+  let is_constructor ty =
+    (* eprintf "constructors of %a@." Hstring.print ty; *)
+    Hstring.equal ty type_bool ||
+      let z3_ty = H.find decl_types ty in
+      Sort.get_sort_kind z3_ty = Z3enums.DATATYPE_SORT
+
   let constructors ty =
     (* eprintf "constructors of %a@." Hstring.print ty; *)
     if Hstring.equal ty type_bool then HSet.add htrue (HSet.singleton hfalse)
