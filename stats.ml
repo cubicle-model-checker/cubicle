@@ -219,98 +219,131 @@ let print_time fmt sec =
   let extrasec = sec -. (minu *. 60.) in
   fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
           
+let print_empty fmt = fprintf fmt "│@."
 
-let print_time_fix () =
-  printf "Time for fixpoint                : %a@." print_time (TimeFix.get ())
+let print_start_time_cubicle fmt =
+  fprintf fmt "┌@.";
+  fprintf fmt "│ Time for basic Cubicle operations@.";
+  print_empty fmt
 
-let print_time_rp () =
-  printf "├─Time for relevant permutations : %a@." print_time (TimeRP.get ())
+let print_end_time fmt = fprintf fmt "└@."
 
-let print_time_simpl () =
-  printf "├─Time for simplifications       : %a@." print_time (TimeSimpl.get ())
+let print_time_fix fmt =
+  fprintf fmt "├─Time for fixpoint              : %a@." print_time (TimeFix.get ())
 
-let print_time_formulas () =
-  printf "├─Time in formulas               : %a@." print_time (TimeFormula.get ())
+let print_time_rp fmt =
+  fprintf fmt "├─Time for relevant permutations : %a@." print_time (TimeRP.get ())
 
-let print_time_prover () =
+let print_time_simpl fmt =
+  fprintf fmt "├─Time for simplifications       : %a@." print_time (TimeSimpl.get ())
+
+let print_time_formulas fmt =
+  fprintf fmt "├─Time in formulas               : %a@." print_time (TimeFormula.get ())
+
+let print_time_prover fmt =
   let sec = Prover.SMT.get_time () in
-  printf "└─Time in solver                 : %a@." print_time sec
+  fprintf fmt "├─Time in solver                 : %a@." print_time sec
          
-let print_time_pre () =
-  printf "Time for pre-image computation   : %a@." print_time (TimePre.get ())
+let print_time_pre fmt =
+  fprintf fmt "├─Time for pre-image computation : %a@." print_time (TimePre.get ())
 
-let print_time_subset () =
-  printf "├─Subset tests                   : %a@." print_time (TimerSubset.get ())
+let print_time_subset fmt =
+  fprintf fmt "├─Subset tests                   : %a@." print_time (TimerSubset.get ())
 
-let print_time_apply () =
-  printf "├─Apply substitutions            : %a@." print_time (TimerApply.get ())
+let print_time_apply fmt =
+  fprintf fmt "├─Apply substitutions            : %a@." print_time (TimerApply.get ())
 
-let print_time_sort () =
-  printf "├─Nodes sorting                  : %a@." print_time (TimeSort.get ())
+let print_time_sort fmt =
+  fprintf fmt "├─Nodes sorting                  : %a@." print_time (TimeSort.get ())
 
-let print_time_ccheck () =
-  printf "Filter candidates                : %a@." print_time (TimeCheckCand.get ())
-
-let print_time_forward () =
-  printf "Forward exploration              : %a@." print_time (TimeForward.get ())
-
-let print_time_far () =
-  printf "Time in far parts@."
-
-let print_time_subsuming () =
-  printf "├─Time in vertices subsuming     : %a@." print_time (TimeSubsuming.get ())
-
-let print_time_find_bads () =
-  printf "├─Time to find bads              : %a@." print_time (TimeFindBads.get ())
-
-let print_time_check_bads () =
-  printf "├─Time to check bads             : %a@." print_time (TimeCheckBad.get ())
-
-let print_time_select_bads () =
-  printf "└─Time to select bads            : %a@." print_time (TimeSelect.get ())
+let print_time_ccheck fmt =
+  fprintf fmt "├─Filter candidates              : %a@." print_time (TimeCheckCand.get ())
+         
+let print_time_forward fmt =
+  fprintf fmt "├─Forward exploration            : %a@." print_time (TimeForward.get ())
   
+let print_start_time_far fmt =
+  fprintf fmt "┌@.";
+  fprintf fmt "│ Time in far parts@."
+
+let print_time_subsuming fmt =
+  fprintf fmt "├─Time in vertices subsuming     : %a@." print_time (TimeSubsuming.get ())
+
+let print_time_find_bads fmt =
+  fprintf fmt "├─Time to find bads              : %a@." print_time (TimeFindBads.get ())
+
+let print_time_check_bads fmt =
+  fprintf fmt "├─Time to check bads             : %a@." print_time (TimeCheckBad.get ())
+
+let print_time_select_bads fmt =
+  fprintf fmt "└─Time to select bads            : %a@." print_time (TimeSelect.get ())
+  
+let print_start_time_icands fmt =
+  fprintf fmt "┌@.";
+  fprintf fmt "│ Time in candidates interpolation@.";
+  print_empty fmt
+
+let print_time_icands fmt =
+  fprintf fmt "├─Time ICands                    : %a@." print_time (TimerICands.get ())
+
+let print_total_time fmt =
+  fprintf fmt "┌@.";
+  fprintf fmt "├─Total Time                     : %a@." print_time (TotalTime.get ());
+  fprintf fmt "└@."
 
 let print_report ~safe visited candidates =
+  let fmt = std_formatter in
   print_candidates ~safe candidates;
   Pretty.print_title std_formatter "STATS";
   if far then
-    printf "Number of visited vertices       : %d@." !cpt_vertices;
-  printf (
+    fprintf fmt "Number of visited vertices       : %d@." !cpt_vertices;
+  fprintf fmt (
     if far 
     then "Number of bads generated         : %d@."
     else "Number of visited nodes          : %d@.") !cpt_nodes;
   if not far then 
-    printf "Fixpoints                        : %d@." !cpt_fix;
-  printf "Number of solver calls           : %d@." (Prover.SMT.get_calls ());
-  printf "Max Number of processes          : %d@." !cpt_process;
+    fprintf fmt "Fixpoints                        : %d@." !cpt_fix;
+  fprintf fmt "Number of solver calls           : %d@." (Prover.SMT.get_calls ());
+  fprintf fmt "Max Number of processes          : %d@." !cpt_process;
   if Options.delete && not far then 
-    printf "Number of deleted nodes          : %d@." !cpt_delete;
+    fprintf fmt "Number of deleted nodes          : %d@." !cpt_delete;
   if do_brab && not far then
-    printf "Number of %s             : %d@."
+    fprintf fmt "Number of %s             : %d@."
            (if safe then "invariants" else "candidates") (List.length candidates);
-  printf "Restarts                         : @[%d%a@]@." !cpt_restart
+  fprintf fmt "Restarts                         : @[%d%a@]@." !cpt_restart
          print_rounds_nb ();
   if profiling then
     begin
-      printf "%a" Pretty.print_line ();
-      print_time_pre ();
-      print_time_fix ();
-      print_time_rp ();
-      print_time_simpl ();
-      print_time_subset ();
-      print_time_apply ();
-      print_time_sort ();
-      print_time_formulas ();
-      print_time_prover ();
-      print_time_forward ();
-      print_time_ccheck ();
-      print_time_far ();
-      print_time_subsuming ();
-      print_time_find_bads ();
-      print_time_check_bads ();
-      print_time_select_bads ();
+      fprintf fmt "%a" Pretty.print_line ();
+      print_start_time_cubicle fmt;
+      print_time_pre fmt;
+      print_time_fix fmt;
+      print_time_rp fmt;
+      print_time_simpl fmt;
+      print_time_subset fmt;
+      print_time_apply fmt;
+      print_time_sort fmt;
+      print_time_formulas fmt;
+      print_time_prover fmt;
+      print_time_forward fmt;
+      print_time_ccheck fmt;
+      print_end_time fmt;
+      if far then begin
+          print_start_time_far fmt;
+          print_time_subsuming fmt;
+          print_time_find_bads fmt;
+          print_time_check_bads fmt;
+          print_time_select_bads fmt;
+          print_end_time fmt;
+        end;
+      if interpolate_cands then begin
+          print_start_time_icands fmt;
+          print_time_icands fmt;
+          print_end_time fmt;
+        end;
+      print_total_time fmt;
     end;
-  printf "%a" Pretty.print_double_line ()
+  fprintf fmt "%a" Pretty.print_double_line ()
 
 
 let print_file_size fmt n =
@@ -340,24 +373,33 @@ let print_stats_certificate visited cname =
   
 let output_report ~safe oc visited candidates =
   let fmt = formatter_of_out_channel oc in
-  Array.iter (fun a -> Format.fprintf fmt "%s " a) Sys.argv;
-  Format.fprintf fmt "@.";
-  Format.fprintf fmt "├─Result :                         : %s@."
+  Array.iter (fprintf fmt "%s ") Sys.argv;
+  fprintf fmt "@.";
+  fprintf fmt "┌@.";
+  fprintf fmt "│ Stats @.";
+  print_empty fmt;
+  fprintf fmt "├─Result                         : %s@."
     (if safe then "SAFE" else "UNSAFE");
   if copy_regexp then
-    Format.fprintf fmt "├─Number of regexps :              : %d@." 
+    fprintf fmt "├─Number of regexps              : %d@." 
       (Ptree.get_rnumber ());
-  Format.fprintf fmt "├─Total forward nodes :            : %d@." 
+  fprintf fmt "├─Total forward nodes            : %d@." 
     (Enumerative.get_stats ());
-  Format.fprintf fmt "├─Number of visited nodes          : %d@." !cpt_nodes;
-  Format.fprintf fmt "├─Max Number of processes          : %d@." !cpt_process;
+  fprintf fmt "├─Number of visited nodes        : %d@." !cpt_nodes;
+  fprintf fmt "├─Max Number of processes        : %d@." !cpt_process;
   if do_brab && not far then
-    Format.fprintf fmt "├─Number of %s             : %d@."
+    fprintf fmt "├─Number of %s           : %d@."
       (if safe then "invariants" else "candidates") (List.length candidates);
-  Format.fprintf fmt "%s─Restarts                         : @[%d%a@]@."
-    (if profiling then "├" else "└") !cpt_restart
+  fprintf fmt "├─Restarts                       : @[%d%a@]@."
+    !cpt_restart
     print_rounds_nb ();
-  if profiling then
-    Format.fprintf fmt "└─Total Time                       : %a@."
-      print_time (TotalTime.get ());
+  print_end_time fmt;
+  if profiling then begin
+      if interpolate_cands then begin
+          print_start_time_icands fmt;
+          print_time_icands fmt;
+          print_end_time fmt;
+        end;
+      print_total_time fmt;
+    end;
   Format.fprintf fmt "%a@." Pretty.print_double_line ()

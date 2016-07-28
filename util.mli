@@ -18,6 +18,7 @@
 (** {2 Timers } *)
 
 module TotalTime : Timer.S
+module TimerICands : Timer.S
 module TimerSubset : Timer.S
 module TimerApply  : Timer.S
 module TimeFix : Timer.S

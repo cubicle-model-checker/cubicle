@@ -1502,6 +1502,7 @@ let one_resist_on_trace_size s env =
       in
       let procs = List.rev (List.tl (List.rev env.all_procs)) in
       let ls = alpha_renamings env procs s in
+      TimerICands.start ();
       let interpol =
         interpolate_cands &&
           SAtom.for_all (
@@ -1510,12 +1511,17 @@ let one_resist_on_trace_size s env =
                   Smt.Type.is_constructor (Term.type_of t)
               | _ -> false
             ) (Node.litterals s) in
+      TimerICands.pause ();
       List.iter (fun {st} ->
           if not
                (List.for_all
                   (fun (comp, node, sigma) ->
                     if interpol then
-                      fill_hahtbl st comp sigma;
+                      begin
+                        TimerICands.start ();
+                        fill_hahtbl st comp sigma;
+                        TimerICands.pause ();
+                      end;
                     check_cand env st comp) ls) then
             raise (EBad (st, env));
         ) env.states;
