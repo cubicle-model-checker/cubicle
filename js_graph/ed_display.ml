@@ -134,7 +134,7 @@ let get_vertex_display = function
   |Focused -> (color_focused_vertex, 2.5)
   |Selected_Focused -> (color_selected_focused_vertex, 2.5)
   |Init -> (color_init, 0.5)  
-  |Init_Focused -> (color_unsafe, 2.5) 
+  |Init_Focused -> (color_init, 2.5) 
   |Unsafe -> (color_unsafe, 0.5)
   |Unsafe_Focused -> (color_unsafe_focused, 2.5)
   |VarChange -> (color_varchange, 0.5)

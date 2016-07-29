@@ -1,0 +1,6 @@
+# sources structures for Merlin mode
+S smt
+S common
+
+B smt
+B common

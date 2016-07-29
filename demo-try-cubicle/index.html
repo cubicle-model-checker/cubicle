@@ -25,7 +25,7 @@
     #editor2{
     height: 500px
     }
-     .onHoverHighlight{
+    .onHoverHighlight{
     position:absolute;
     z-index:20;
     background-color:#D3D3D3;
@@ -79,108 +79,141 @@
     </header>
 
     <div class="container" style="width:90%">
-      
+      <!-- <div class="column" style="width:50%"> -->
+      <!-- <div class="row" style="float:bottom" > -->
       <h1>Try
         Cubicle <!-- <small>version <span id="version">?</span></small> --></h1>
+      <!-- </div> -->
+      <!-- <div class="column"> -->
+      <div class="btn-group-horizontal" style="width:50%; float:left">
+        <button id="run-cubicle" type="button" class="btn btn-primary">Run Cubicle</button>
+        <button id="display-trace" type="button" class="btn btn-primary">Display Trace</button>
+        <button id="clearbtn" type="button" class="btn btn-primary">Clear</button>
+      </div>
+      <ul class="nav nav-tabs navbar-right" style="width:50%; float:right">
+        <li class="active"><a data-toggle="tab" href="#File">File</a></li>
+        <li><a data-toggle="tab" href="#Stats">Stats</a></li>
+        <li><a data-toggle="tab" href="#Options">Options</a></li>
+        <li><a data-toggle="tab" href="#Trace">Trace</a></li>
+        <li><a data-toggle="tab" href="#About">About</a></li>
+
+      </ul>
+      <!-- </div> -->
+    </div>
+    <div class="container" style="width:90%">
+
       <div class="row">
         <div class="column" style="width:50%; float:left">
           
           <!-- <div class="form-group"> -->
           <pre id="editor1" class="noselection">
-
+            
           </pre>
           <!-- </div> -->
         </div>
-
-  
         <div class="column" style="width:50%; float:right">
+
           
+          <div class="tab-content">
+            <div id="File" class="tab-pane fade in active">
+              <pre id="editor2" class="noselection">
+              </pre>
+            </div>
+            <div id="Stats" class="tab-pane fade">
+              <h3> </h3>
+            </div>
+            <div id="Options" class="tab-pane fade">
+            </div>
+            <div id="Trace" class="tab-pane fade">
+            </div>
+            <div id="About" class="tab-pane fade">
+            </div>
+          </div>
           <!-- <div class="form-group"> -->
-          <pre id="editor2" class="noselection">
-          </pre>
-          <!-- </div> -->
+          <!-- <pre id="editor2" class="noselection"> -->
+          <!-- </pre> -->
         </div>
       </div>
+    </div>
     <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>    
 
 
-      <script> 
-        var editor1 = ace.edit("editor1");  
-        var editor2 = ace.edit("editor2");
-        editor1.$blockScrolling = Infinity;
-        editor2.$blockScrolling = Infinity; 
-        editor2.setTheme("ace/theme/solarized_dark");
-        editor1.setHighlightActiveLine(false);
-        editor1.renderer.$cursorLayer.element.style.display = "none"
+    <script> 
+      var editor1 = ace.edit("editor1");  
+      var editor2 = ace.edit("editor2");
+      editor1.$blockScrolling = Infinity;
+      editor2.$blockScrolling = Infinity; 
+      editor2.setTheme("ace/theme/solarized_dark");
+      editor1.setHighlightActiveLine(false);
+      editor1.renderer.$cursorLayer.element.style.display = "none"
 
-        var Range = ace.require("ace/range").Range; 
-        function add_hover_marker (i, j, k, l) { 
-        return (editor1.session.addMarker(new Range (i, j, k, l), 
-        "onHoverHighlight","text"))
-        } 
-        function add_select_marker (i, j, k, l){
-        return (editor1.session.addMarker(new Range (i, j, k, l), 
-        "selectedHighlight","text"))  
-        }
-        function remove_marker (id) { 
-        editor1.session.removeMarker(id) 
-        } 
-      </script> 
-      <script src="cubicle.js"></script>
-      <div class="row" >
-          <div class="btn-group-horizontal" >
-            <button id="run-cubicle" type="button" class="btn btn-primary
-                                                           ">Run Cubicle</button>
-            <button id="display-trace" type="button"  class="btn btn-primary
-                                                           ">Display Trace</button> 
-            <button id="clearbtn" type="button" class="btn btn-primary
-                                                       ">Clear</button>
-            
-            <span id="lblnbnodes" class="label label-default">0</span>
-          </div> 
-          <!-- <textarea id="output2" -->
-          <!--           style="font-family:monospace" rows="20"></textarea> -->
-          <div id="debug-content-dynamic">
-          </div>
-          
-      </div>
-      <div class="row">
-        <pre id="output" class="prettyprint">
-        </pre>
-      </div>
-    </div>
+      var Range = ace.require("ace/range").Range; 
+      function add_hover_marker (i, j, k, l) { 
+      return (editor1.session.addMarker(new Range (i, j, k, l), 
+      "onHoverHighlight","text"))
+      } 
+      function add_select_marker (i, j, k, l){
+      return (editor1.session.addMarker(new Range (i, j, k, l), 
+      "selectedHighlight","text"))  
+      }
+      function remove_marker (id) { 
+      editor1.session.removeMarker(id) 
+      } 
+    </script> 
+    <script src="cubicle.js"></script>
+    <!-- <div class="row" > -->
+    <!--   <div class="btn-group-horizontal" > -->
+    <!--     <button id="run-cubicle" type="button" class="btn btn-primary -->
+    <!--                                                   ">Run Cubicle</button> -->
+    <!--     <button id="display-trace" type="button"  class="btn btn-primary -->
+    <!--                                                      ">Display Trace</button>  -->
+    <!--     <button id="clearbtn" type="button" class="btn btn-primary -->
+    <!--                                                ">Clear</button> -->
     
-
-      <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-      <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-      <!-- Include all compiled plugins (below), or include individual files as needed -->
-      <script src="bootstrap/js/bootstrap.min.js"></script>
-      <script>
-        var id = 0;
-        function get_id () {
-        id = id + 1;
-        return (id.toString ())
-        }
-      </script>
-
-
-      <!-- <script src="cubicle.js" async></script> -->
-      <!-- <script src="main.js"></script> -->
-
-      <!-- <script type="text/javascript"> -->
-      <!--  // default example -->
-      <!--  function handleFile(data) { -->
-      <!--    jQuery("textarea#input").val(data); -->
-      <!--  } -->
-
-      <!--  $(document).ready(function(){ -->
-      <!--    jQuery.get('germanish3.cub', -->
-      <!--               handleFile, -->
-      <!--               'text'); -->
-      <!--  }); -->
-      <!-- </script> -->
+    <!--     <span id="lblnbnodes" class="label label-default">0</span> -->
+    <!--   </div>  -->
+    <!--   <\!-- <textarea id="output2" -\-> -->
+    <!--   <\!--           style="font-family:monospace" rows="20"></textarea> -\-> -->
+    <!--   <div id="debug-content-dynamic"> -->
+    <!--   </div> -->
+    
+    <div class="row">
+      <pre id="output" class="prettyprint">
+      </pre>
+    </div>
+</div>
 
 
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="bootstrap/js/bootstrap.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script>
+  var id = 0;
+  function get_id () {
+  id = id + 1;
+  return (id.toString ())
+  }
+</script>
 
-  </body>
+
+<!-- <script src="cubicle.js" async></script> -->
+<!-- <script src="main.js"></script> -->
+
+<!-- <script type="text/javascript"> -->
+<!--  // default example -->
+<!--  function handleFile(data) { -->
+<!--    jQuery("textarea#input").val(data); -->
+<!--  } -->
+
+<!--  $(document).ready(function(){ -->
+<!--    jQuery.get('germanish3.cub', -->
+<!--               handleFile, -->
+<!--               'text'); -->
+<!--  }); -->
+<!-- </script> -->
+
+
+
+</body>
 </html>
