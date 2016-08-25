@@ -1,0 +1,15 @@
+type loc = L1 | L2
+
+array PC[proc] : loc
+var A : int
+
+init(z) {PC[z] = L1 && A = 0}
+
+unsafe(z) {PC[z] = L2 && A = 0}
+
+transition t(z)
+requires{PC[z] = L1}
+{
+        PC[z] := L2;
+        A := A + 1;
+        }

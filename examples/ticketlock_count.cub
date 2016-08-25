@@ -1,0 +1,35 @@
+type t = Idle | Wait | Crit
+
+var T : int
+var S : int
+
+array M[proc] : int
+array P[proc] : t
+
+init (z) { T = 0 && S = 0 && P[z] = Idle }
+
+(* invariant(i j) { M[i] <= S && P[i] = Wait && M[j] <= S && P[j] = Wait} *)
+(* invariant(z) {M[z] > T}(\* unsafe(i j) { M[i] <= S && P[i] = Wait && P[j] = Crit} *\) *)
+
+(* invariant() {S > T} *)
+
+unsafe (i j) { P[i] = Crit && P[j] = Crit }
+
+transition req(i)
+requires { P[i] = Idle }
+{ M[i] := T;
+  T := T + 1;
+  P[i] := Wait;
+}
+
+transition enter(i)
+requires { P[i] = Wait && M[i] <= S }
+{ P[i] := Crit; }
+
+transition exit1(i)
+requires { P[i] = Crit && M[i] <= S }
+{ S := S + 1; P[i] := Idle }
+
+(* transition exit2(i) *)
+(* requires { P[i] = Crit && M[i] > S } *)
+(* { P[i] := Idle } *)

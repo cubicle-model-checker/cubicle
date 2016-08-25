@@ -1,0 +1,12 @@
+var X : int
+
+init() {X = 0}
+
+unsafe() {X = 1}
+
+transition t()
+requires {True = True}
+{
+        X := X + 2;
+}        
+        

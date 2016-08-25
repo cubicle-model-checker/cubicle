@@ -1024,3 +1024,24 @@
 ================================================================================
 
 ================================================================================
+./cubicle.opt -brabfd 2 -1 examples/distrib_channels.cub -quiet -profiling -res bench_icands -icands 
+┌
+│ Stats 
+│
+├─Result                         : SAFE
+├─Total forward nodes            : 1941
+├─Number of visited nodes        : 396
+├─Max Number of processes        : 3
+├─Number of invariants           : 3
+├─Restarts                       : 0
+└
+┌
+│ Time in candidates interpolation
+│
+├─Time ICands                    : 0m0.440s
+└
+┌
+├─Total Time                     : 0m2.324s
+└
+===================================================================================================================
+
