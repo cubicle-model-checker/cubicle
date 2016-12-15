@@ -19,7 +19,6 @@ open Util
 open Ast
 open Types
 
-module HMap = Hstring.HMap
 
 module T = Smt.Term
 module F = Smt.Formula
@@ -27,9 +26,9 @@ module F = Smt.Formula
 module SMT = Smt.Make (Options)
 
 let proc_terms =
-  let procs = (Hstring.make "#0") :: Variable.procs in
   List.iter 
-    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) procs;
+    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc)
+      ((Hstring.make "#0") :: Variable.procs);
   List.map (fun x -> T.make_app x []) Variable.procs
 
 let distinct_vars =
@@ -108,8 +107,8 @@ let rec make_term = function
   | Arith (x, cs) ->
       let tx = make_term x in
       make_arith_cs cs tx
+
   | Field (t, f) -> T.make_app f [make_term t]
-  | List tl -> failwith "Prover.make_term List TODO"
   | Read _ -> failwith "Prover.make_term : Read should not be in atom"
   | Write _ -> failwith "Prover.make_term : Write should not be in atom"
   | Fence _ -> failwith "Prover.make_term : Fence should not be in atom"
@@ -119,13 +118,13 @@ let rec make_formula_set sa =
   (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), evts, ord)
 
 and make_literal = function
-  | Atom.True -> F.f_true
+  | Atom.True -> F.f_true 
   | Atom.False -> F.f_false
   | Atom.Comp (x, op, y) ->
       let tx = make_term x in
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
-  | Atom.Ite (la, a1, a2) ->
+  | Atom.Ite (la, a1, a2) -> 
       let (f, _, _) = make_formula_set la in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in
@@ -190,8 +189,6 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (*S only*)
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
 
-  (* Format.eprintf "%a\n" SAtom.print cube.Cube.litterals; *)
-  
   let hE = H.make "_e" in
   let hRf = H.make "_rf" in
   let hVal = H.make "_val" in
@@ -213,15 +210,13 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (*S only*)
   ) cube.Cube.litterals SAtom.empty in
 
   let (f, evts, ord) = make_formula_set sa in
-  (* let (f, evts, ord) = make_formula_set cube.Cube.litterals in *)
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
   SMT.assume ~id f;
-  let evts = Weakmem.merge_evts evts evts in
-  let f = Weakmem.make_orders evts ord in
-  if debug_smt then eprintf ">> rels: %a and %a@." F.print f F.print init;
-  SMT.assume ~id f;
-  (* SMT.assume ~id (Weakmem.make_orders evts ord); *)
+
+  let fo = Weakmem.make_orders evts ord in
+  if debug_smt then eprintf ">>>> rels: %a@." F.print fo;
+  SMT.assume ~id fo;
   SMT.check ()
 
 let unsafe_dnf node nb_procs invs dnf = (* S only *)
@@ -259,33 +254,36 @@ let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   let (f, evts, ord) = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord)
-  (* SMT.assume ~id (Weakmem.make_orders ~fp:false evts ord) *)
+
+  (* let fo = Weakmem.make_orders ~fp:true evts ord in *)
+  let fo = Weakmem.make_orders ~fp:false evts ord in
+  if debug_smt then eprintf ">>>> rels: %a@." F.print fo;
+  SMT.assume ~id fo
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
   let (f, evts, ord) = make_formula ap in
+
   let fo = Weakmem.make_orders ~fp:true evts ord in
-  (* let fo = Weakmem.make_orders ~fp:false evts ord in *)
   let f = if fo = F.f_true then f else F.make F.And [f;fo] in
+
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f
-  (* ; let fo = Weakmem.make_orders ~fp:true evts ord in *)
-  (* if fo <> F.f_true then *)
-  (*   SMT.assume ~id (F.make F.Not [fo]) *)
+
 
 let assume_goal n = (* FP only *)
   assume_goal_no_check n;
-  SMT.check ~fp:true ()
-  (* SMT.check ~fp:false () *)
+  (* SMT.check ~fp:true () *)
+  SMT.check ~fp:false ()
 
 let assume_node n ap = (* FP only *)
   assume_node_no_check n ap;
-  SMT.check ~fp:true ()
-  (* SMT.check ~fp:false () *)
+  (* SMT.check ~fp:true () *)
+  SMT.check ~fp:false ()
 
 
-let run () = SMT.check ~fp:true () (* FP only *)
+(* let run () = SMT.check ~fp:true () (\* FP only *\) *)
+let run () = SMT.check ~fp:false () (* FP only *)
 
 let check_guard args sa reqs = (* FW only *)
   SMT.clear ();
@@ -300,9 +298,13 @@ let assume_goal_nodes { tag = id; cube = cube } nodes = (* FP only *)
   let (f, evts, ord) = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
-  SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord);
+
+  (* SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord); *)
+  SMT.assume ~id (Weakmem.make_orders ~fp:false evts ord);
+
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
-  SMT.check ~fp:true ()
+  (* SMT.check ~fp:true () *)
+  SMT.check ~fp:false ()
 
 let init () =
   SMT.init_axioms ()

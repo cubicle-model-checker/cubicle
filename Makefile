@@ -33,25 +33,26 @@ OCAMLOPT = ocamlopt.opt
 OCAMLDEP = ocamldep
 OCAMLLEX = ocamllex
 OCAMLYACC= ocamlyacc
-OCAMLLIB = /Users/david/.opam/4.02.1/lib/ocaml
+OCAMLLIB = /Users/david/.opam/4.03.0/lib/ocaml
 FUNCTORYLIB = 
 Z3LIB = 
 Z3CCFLAGS = 
 OCAMLBEST= opt
-OCAMLVERSION = 4.02.1
+OCAMLVERSION = 4.03.0
 OCAMLWIN32 = no
 EXE = 
-ZARITHLIB = -I /Users/david/.opam/4.02.1/lib/zarith
-OCAMLGRAPHLIB = -I /Users/david/.opam/4.02.1/lib/ocamlgraph
+ZARITHLIB = -I /Users/david/.opam/4.03.0/lib/zarith
+OCAMLGRAPHLIB = -I /Users/david/.opam/4.03.0/lib/ocamlgraph
+EXTRA = -I /Users/David/.opam/4.03.0/lib/ocplib-simplex -I /Users/David/.opam/4.03.0/lib/zip
 
-INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) -I common/ -I smt/ -I alt-ergo
+INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) -I common/ -I smt/ -I alt-ergo $(EXTRA)
 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma str.cma zarith.cma graph.cma dynlink.cma
+REQBIB=nums.cma unix.cma functory.cma str.cma zarith.cma graph.cma dynlink.cma ocplibSimplex.cma zip.cma
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -119,7 +120,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) util.cmo $(SMTCMO) \
-      variable.cmo types.cmo weakmem.cmo \
+      variable.cmo weakutil.cmo types.cmo weakmem.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo \

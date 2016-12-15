@@ -1,0 +1,83 @@
+
+number_procs 2
+
+type loc = L1 | L2 | L3 | CS | L4 | L5 | End
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Global variables *)
+weak var Turn : int
+(* weak var X : int *)
+var X : int
+array LX[proc] : int
+
+init (p) { PC[p] = L1 && Turn = 1 && X = 0 }
+
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
+
+(* Thread 1 *)
+
+transition t1_L1_L2_W_Turn_p2 ()
+requires { PC[#1] = L1 }
+{ PC[#1] := L2; write(#1, Turn, 2) }
+
+transition t1_L2_CS_R_Turn_p1 ()
+(*fences (#1)*)
+requires { PC[#1] = L2 && read(#1, Turn) = 1 }
+{ PC[#1] := CS }
+
+transition t1_L2_CS_R_Turn_not_p1 ()
+(*fences (#1)*)
+requires { PC[#1] = L2 && read(#1, Turn) <> 1 }
+{ PC[#1] := L2 }
+
+(* Critical section *)
+
+transition t1_CS_L4 ()
+requires { PC[#1] = CS }
+(* { PC[#1] := L4; LX[#1] := read(#1, X) } *)
+{ PC[#1] := L4; (*LX[#1] := X*) }
+
+transition t1_L4_L5 ()
+requires { PC[#1] = L4 }
+(* { PC[#1] := L5; write(#1, X, LX[#1] + 1) } *)
+{ PC[#1] := L5; (*X := LX[#1] + 1*) }
+
+transition t1_L5_L1 ()
+requires { PC[#1] = L5 }
+{ PC[#1] := L1; }
+
+
+(* Thread 2 *)
+
+transition t2_L1_L2_W_Turn_p1 ()
+requires { PC[#2] = L1 }
+{ PC[#2] := L2; write(#2, Turn, 1) }
+
+transition t2_L2_CS_R_Turn_p2 ()
+(*fences (#2)*)
+requires { PC[#2] = L2 && read(#2, Turn) = 2 }
+{ PC[#2] := CS }
+
+transition t2_L2_CS_R_Turn_not_p2 ()
+(*fences (#2)*)
+requires { PC[#2] = L2 && read(#2, Turn) <> 2 }
+{ PC[#2] := L2 }
+
+(* Critical section *)
+
+transition t2_CS_L4 ()
+requires { PC[#2] = CS }
+(* { PC[#2] := L4; LX[#2] := read(#2, X) } *)
+{ PC[#2] := L4; (*LX[#2] := X*) }
+
+transition t2_L4_L5 ()
+requires { PC[#2] = L4 }
+(* { PC[#2] := L5; write(#2, X, LX[#2] + 1) } *)
+{ PC[#2] := L5; (*X := LX[#2] + 1*) }
+
+transition t2_L5_L1 ()
+requires { PC[#2] = L5 }
+{ PC[#2] := L1; }

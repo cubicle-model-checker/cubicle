@@ -720,7 +720,7 @@ axiom fr :
 
       (* Print all variables *)
       H.iter (fun f (fx, args, ret) ->
-	if not (Symbol.is_weak f) then
+	(*if not (Symbol.is_weak f) then*)
           fprintf filefmt "logic %s : %a%s\n" (replace (Hstring.view f) "#" "p")
 	  (print_list_sep "," print_type) args
 	  ((if args = [] then " " else " -> ") ^ (typeof ret))

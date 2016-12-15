@@ -41,6 +41,7 @@ val const_sign : int MConst.t -> int option
 val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
 
+
 (** the type of terms *)
 type term =
   | Const of int MConst.t
@@ -53,7 +54,6 @@ type term =
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 
   | Field of term * Hstring.t (* term is Elem/Access *)
-  | List of term list (* term is Elem / Elem list *)
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list *
 	       (Hstring.t * Hstring.t * Hstring.t) list (* Related reads *)

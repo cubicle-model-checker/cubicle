@@ -1,4 +1,3 @@
-
 (**************************************************************************)
 (*                                                                        *)
 (*                              Cubicle                                   *)
@@ -89,6 +88,7 @@ let refine_universal = ref false
 
 let subtyping = ref true
 let notyping = ref false
+let noqe = ref false
 
 let trace = ref NoTrace
 let set_trace = function
@@ -111,7 +111,7 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
-let smt_solver = ref AltErgoFile
+let smt_solver = ref AltErgo
 let set_smt_solver s =
   smt_solver := match s with
     | "alt-ergo" -> AltErgo
@@ -198,11 +198,12 @@ let specs =
     "-nodelete", Arg.Clear delete, " do not delete subsumed nodes";
     "-nosubtyping", Arg.Clear subtyping, " no static subtyping analysis";
     "-simpl", Arg.Set simpl_by_uc, " simplify nodes with unsat cores";
+    "-noqe", Arg.Set noqe, " disable elimination of postivie constants";
     "-refine-universal", Arg.Set refine_universal,
     " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-solver", Arg.String set_smt_solver,
-    "<alt-ergo | alt-ergo-file(default) | alt-ergo-lib | z3> SMT solver to use";
+    "<alt-ergo(default) | alt-ergo-file | alt-ergo-lib | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
@@ -211,8 +212,9 @@ let specs =
     "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
     "-out", Arg.String set_out,
     "<dir> set output directory for certificate traces to <dir>";
-    "-model", Arg.String set_model,
-    "<SC(default) | TSO> Memory model to use";
+    "-model", Arg.String set_model, "<SC(default) | TSO> Memory model to use";
+    (* Hidden options *)
+    "-notyping", Arg.Set notyping, ""; (* Disable typing *)
   ]
 
 let alspecs = Arg.align specs
@@ -273,6 +275,7 @@ let lazyinv = !lazyinv
 let stateless = !stateless
 let delete = !delete
 let simpl_by_uc = !simpl_by_uc
+let noqe = !noqe
 
 let cores = !cores
 

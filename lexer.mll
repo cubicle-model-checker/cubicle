@@ -55,6 +55,9 @@
       { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
 
   let num_of_stringfloat s =
+    let sign, s =
+      if s.[0] = '-' then -1, String.sub s 1 (String.length s - 1)
+      else 1, s in
     let r = ref (Num.Int 0) in
     let code_0 = Char.code '0' in
     let num10 = Num.Int 10 in
@@ -67,8 +70,9 @@
 	  (Num.num_of_int (Char.code s.[i] - code_0))
     done;
     assert (!pos_dot <> -1);
-    Num.div_num !r (Num.power_num num10 (Num.num_of_int !pos_dot))
-    
+    Num.div_num !r
+      (Num.power_num num10 (Num.num_of_int (String.length s - 1 - !pos_dot)))
+    |> Num.mult_num (Num.num_of_int sign)
 
   let string_buf = Buffer.create 1024
 
@@ -79,8 +83,8 @@
 
 let newline = '\n'
 let space = [' ' '\t' '\r']
-let integer = ['0' - '9'] ['0' - '9']*
-let real = ['0' - '9'] ['0' - '9']* '.' ['0' - '9']* 
+let integer = ('-')? ['0' - '9'] ['0' - '9']*
+let real = ('-')? ['0' - '9'] ['0' - '9']* '.' ['0' - '9']* 
 let mident = ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let lident = ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 

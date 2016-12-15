@@ -12,12 +12,6 @@ end
 
 module H3Map : Map.S with type key = HS3.t
 
-(*module VI : sig
-  type t = (H.t * (H.t list))
-end
-
-module VIMap : Map.S with type key = VI.t*)
-
 
 
 val hNone : H.t
@@ -75,33 +69,26 @@ val split_events_orders_set :
     H.t list HMap.t
 
 
+val split_event :
+  Types.Atom.t ->
+  (H.t * H.t * (Hstring.t * Hstring.t) list *
+     (bool * Types.op_comp * Types.Term.t) list) H3Map.t ->
+  (H.t * H.t * (Hstring.t * Hstring.t) list *
+     (bool * Types.op_comp * Types.Term.t) list) H3Map.t
+	
 
-val relevant_reads :
-  ('a * H.t * H.t list * Types.term) list ->
+val make_read_write_combinations:
+  (H.t * H.t * H.t list * Types.term) list ->
   Types.SAtom.t ->
-  (H.t * H.t * (H.t * H.t) list * bool * Types.op_comp * Types.Term.t) H3Map.t
-    
-val relevant_reads_by_write :
-  ('a * Hstring.t * H.t list * Types.term) list ->
-  ('b * H.t * ('c * H.t) list * bool * Types.op_comp * Types.term) H3Map.t ->
-  (('a * Hstring.t * H.t list * Types.term) *
-     (H3Map.key * ('b * H.t * ('c * H.t) list *
-		   bool * Types.op_comp * Types.term)) list) list
-
-(*  ('a * H.t * H.t list * Types.term) list ->
-  ('c * H.t * ('d * H.t) list * 'e * 'f * 'g) H3Map.t ->
-  (('a * H.t * H.t list * 'b) *
-     (H3Map.key * ('c * H.t * ('d * H.t) list * 'e * 'f * 'g)) list) list*)
-
-val read_combinations_by_write : ('a * 'b list) list -> ('a * 'b list list) list
-val all_permutations : ('a * 'b list) list -> ('a * 'b) list list
+   ((H.t * H.t * H.t list * Types.term) *
+    ((H.t * H.t * H.t) *
+     (H.t * H.t * (Hstring.t * H.t) list * (bool * Types.op_comp * Types.Term.t) list)
+    ) list
+   ) list list
 		       
 val unsatisfied_reads : Types.SAtom.t -> (H.t * Hstring.t list) H3Map.t
 
 
-
-(*val merge_ord : 'a list HMap.t -> 'a list HMap.t -> 'a list HMap.t*)
-val merge_evts : 'a HMap.t HMap.t -> 'a HMap.t HMap.t -> 'a HMap.t HMap.t
 
 
 
@@ -110,24 +97,3 @@ val make_orders :
   (H.t * H.t * (H.t * H.t) list) HMap.t HMap.t HMap.t ->
   H.t list HMap.t ->
   F.t
-
-
-
-(*
-
-val print : Format.formatter -> t -> unit
-
-val print_rd : Format.formatter ->
-	       (Hstring.t * Hstring.t * Variable.t list) -> unit
-
-val es_permutations : structure -> structure -> (int * int) list list
-
-val es_apply_subst : (int * int) list -> structure -> structure
-
-val es_add_events : structure -> t list -> structure
-
-val es_add_events_full : structure -> t list -> structure
-
-val es_add_fences : structure -> Variable.t list -> structure
-
- *)

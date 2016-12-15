@@ -157,9 +157,7 @@ module Latex = struct
 
     | Field (t, f) -> 
        fprintf fmt "%a.%a" print_term t Hstring.print f
-    | List tl -> 
-       fprintf fmt "(%a)" print_list tl
-    | Read (p, v, vi) -> failwith "Print Read TODO" (*Event.print_rd fmt (p, v, vi)*)
+    | Read (p, v, vi) -> failwith "Print Read TODO"
     | Write (p, v, vi, rr) -> failwith "Print Write TODO"
     | Fence p -> failwith "Print Fence TODO"
 

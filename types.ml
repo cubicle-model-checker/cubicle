@@ -55,6 +55,7 @@ module MConst = struct
     else None
 	   
 end
+
 type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
@@ -62,7 +63,6 @@ type term =
   | Arith of term * int MConst.t
 
   | Field of term * Hstring.t (* term is Elem/Access *)
-  | List of term list (* term is Elem / Elem list *)
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list *
 	       (Hstring.t * Hstring.t * Hstring.t) list (* Related reads *)
@@ -146,25 +146,7 @@ module Term = struct
 
   type t = term
 
-  let rec compare t1 t2 =
-
-    let compare_htriple (x1,y1,z1) (x2,y2,z2) =
-      let c = Hstring.compare x1 x2 in if c <> 0 then c else
-      let c = Hstring.compare y1 y2 in if c <> 0 then c else
-      Hstring.compare z1 z2
-    in
-
-    let rec compare_htlist l1 l2 =
-      match l1, l2 with
-      | [], [] -> 0
-      | [], _ -> -1
-      | _, [] -> 1
-      | x :: r1, y :: r2 ->
-	 let c = compare_htriple x y in
-	 if c <> 0 then c else
-	 compare_htlist r1 r2
-    in
-
+  let rec compare t1 t2 = 
     match t1, t2 with
     | Const c1, Const c2 -> compare_constants c1 c2
     | Const _, _ -> -1 | _, Const _ -> 1
@@ -184,8 +166,6 @@ module Term = struct
        let c = compare t1 t2 in
        if c<>0 then c else Hstring.compare f1 f2
     | Field (_, _), _ -> -1 | _, Field (_, _) -> 1
-    | List tl1, List tl2 -> compare_list tl1 tl2
-    | List _, _ -> -1 | _, List _ -> 1
     | Read (p1, v1, vi1), Read (p2, v2, vi2) ->
        let c = Hstring.compare v1 v2 in if c<>0 then c else
        let c = Hstring.compare p1 p2 in if c<>0 then c else
@@ -195,19 +175,11 @@ module Term = struct
        let c = Hstring.compare v1 v2 in if c<>0 then c else
        let c = Hstring.compare p1 p2 in if c<>0 then c else
        let c = Hstring.compare_list vi1 vi2 in if c<>0 then c else
-       compare_htlist rr1 rr2
+       Weakutil.compare_htlist rr1 rr2
      | Write (_, _, _, _), _ -> -1 | _, Write (_, _, _, _) -> 1
      | Fence p1, Fence p2 ->
        Hstring.compare p1 p2
-     (* | Fence p, _ -> -1 | _, Fence p -> 1 *)
-  and compare_list tl1 tl2 = match tl1, tl2 with
-    | [], [] -> 0
-    | [], _ :: _ -> -1
-    | _ :: _, [] -> 1
-    | t1 :: tl1, t2 :: tl2 ->
-       let c = compare t1 t2 in
-       if c<>0 then c else compare_list tl1 tl2
-      
+
   let hash = Hashtbl.hash_param 50 50
 
   let equal t1 t2 = compare t1 t2 = 0
@@ -241,7 +213,6 @@ module Term = struct
     | Arith (x, c) -> Arith (subst sigma x, c)
 
     | Field (t, f) -> Field (subst sigma t, f)
-    | List tl -> List (List.map (subst sigma) tl)
     | Read (p, v, vi) -> Read (safe_subst p, v, list_subst vi)
     | Write (p, v, vi, rr) ->
        Write (safe_subst p, v, list_subst vi, elist_subst rr)
@@ -257,10 +228,6 @@ module Term = struct
     | Arith (t, _) -> variables t
 
     | Field (t, _) -> variables t
-    | List tl ->
-       List.fold_left (fun vars t ->
-         Variable.Set.union vars (variables t)
-       ) Variable.Set.empty tl
     | Read (p, _, vi) ->
        List.fold_left (fun acc x -> Variable.Set.add x acc)
 		      (Variable.Set.singleton p) vi
@@ -285,7 +252,6 @@ module Term = struct
     | Arith(t, _) -> type_of t
 
     | Field (_, f) -> snd (Smt.Symbol.type_of f)
-    | List tl -> failwith "Types.Term.type_of List TODO"
     | Read (_, v, _) -> snd (Smt.Symbol.type_of v)
     | Write (_, v, _, _) -> snd (Smt.Symbol.type_of v)
     | Fence _ -> Smt.Type.type_bool
@@ -333,8 +299,6 @@ module Term = struct
 
     | Field (t, f) -> 
        fprintf fmt "%a.%a" print t Hstring.print f
-    | List tl -> 
-       fprintf fmt "(%a)" print_list tl
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
     | Write (p, v, vi, rr) ->
@@ -440,7 +404,6 @@ end = struct
     | Arith (x, _) ->  has_vars_term vs x
 
     | Field (t, _) -> has_vars_term vs t
-    | List tl -> List.exists (has_vars_term vs) tl
     | Read (p, _, vi) ->
        Hstring.list_mem p vs || List.exists (fun v -> Hstring.list_mem v vs) vi
     | Write (p, _, vi, rr) ->

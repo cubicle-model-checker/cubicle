@@ -1,0 +1,18 @@
+
+type pc = L1 | L2 | End
+
+weak var X : int
+var R : int
+array PC[proc] : pc
+
+unsafe (p) { PC[p] = End && R = 0 }
+
+init (p) { PC[p] = L1 && X = 0 && R = 0 }
+
+transition t1 (p)
+requires { PC[p] = L1 }
+{ PC[p] := L2; write(p, X, 1) }
+
+transition t2 (p)
+requires { PC[p] = L2 }
+{ PC[p] := End; R := read(p, X) }

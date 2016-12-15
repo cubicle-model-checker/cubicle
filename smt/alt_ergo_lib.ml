@@ -546,8 +546,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let mk_neq t1 t2 = AE.Formula.mk_not (mk_eq t1 t2)
   let mk_eq_true t = mk_eq t Term.t_true
   let mk_eq_false t = mk_eq t Term.t_false
-  let mk_and t1 t2 = AE.Formula.mk_and t1 t2 (id ())
-  let mk_or t1 t2 = AE.Formula.mk_or t1 t2 (id ())
+  let mk_and t1 t2 = AE.Formula.mk_and t1 t2 false (id ()) (* new param : is_impl -> false *)
+  let mk_or t1 t2 = AE.Formula.mk_or t1 t2 false (id ())  (* new param : is_impl -> false *)
   let mk_imp t1 t2 = AE.Formula.mk_imp t1 t2 (id ())
   let rec mk_diff t1 = function
     | [] -> assert false
@@ -558,6 +558,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
     | t :: tl -> mk_and (mk_diff t tl) (mk_all_diff tl)
   let mk_lit l = match (AE.Literal.LT.view l) with
     | AE.Literal.Builtin (true, n, ll) when AE.Hstring.view n = "distinct"
+      -> mk_all_diff ll
+    | AE.Literal.Distinct (false, ll)
       -> mk_all_diff ll
     | _ -> AE.Formula.mk_lit l (id ())
   let rec mk_clause = function
@@ -600,7 +602,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let mk_goal f =
     let f = mk_formula f in
     WPT.{ st_decl = Query("g", f, [], (*Check*)AE.Typed.Thm) ; st_loc = dl }
-       
+
   let init_axioms () =
     let qv = true in
     let ety2 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "_e1" ; mk_ety "_e2" ] in
@@ -630,56 +632,64 @@ module Make (Options_ : sig val profiling : bool end) = struct
     let tr = Term.make_app (Hstring.make "_R") [] in
 
     let axiom_rf_val = mk_axiom "axiom_rf_val" [] ety2s
-      [ [ mk_pred ~qv "_rf" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_rf" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_eq_true (mk_pred ~qv "_rf" e1e2s))
     	(mk_eq (mk_evt_f ~qv e1s "_val") (mk_evt_f ~qv e2s "_val"))) in
     Queue.push axiom_rf_val axioms;
 
     let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2s
-      [ [ mk_pred ~qv "_po_loc" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_po_loc" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_po_loc" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
 	(mk_eq_true (mk_pred ~qv "_po_loc" e1e2s))
 	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
     Queue.push axiom_po_loc axioms;
 
     let axiom_co_1 = mk_axiom "axiom_co_1" [] ety2s
-      [ [ mk_pred ~qv "_co" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_co" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_eq_true (mk_pred ~qv "_co" e1e2s))
     	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
     Queue.push axiom_co_1 axioms;
 
     let axiom_rf = mk_axiom "axiom_rf" [] ety2s
-      [ [ mk_pred ~qv "_rf" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_rf" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
 	(mk_eq_true (mk_pred ~qv "_rf" e1e2s))
 	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
     Queue.push axiom_rf axioms;
 
     let axiom_ppo = mk_axiom "axiom_ppo" [] ety2s
-      [ [ mk_pred ~qv "_ppo" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_ppo" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_ppo" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
 	(mk_eq_true (mk_pred ~qv "_ppo" e1e2s))
 	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
     Queue.push axiom_ppo axioms;
 
     let axiom_fence = mk_axiom "axiom_fence" [] ety2
-      [ [ mk_pred ~qv "_fence" e1e2 ], None ]
+      (* [ [ mk_pred ~qv "_fence" e1e2 ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_fence" e1e2 ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
 	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
     Queue.push axiom_fence axioms;
 
     let axiom_co_2 = mk_axiom "axiom_co_2" [] ety2s
-      [ [ mk_pred ~qv "_co" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_co" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_eq_true (mk_pred ~qv "_co" e1e2s))
     	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
     Queue.push axiom_co_2 axioms;
 
     let axiom_rfe = mk_axiom "axiom_rfe" [] ety2s
-      [ [ mk_pred ~qv "_rf" e1e2s ], None ]
+      (* [ [ mk_pred ~qv "_rf" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_and
     	  (mk_eq_true (mk_pred ~qv "_rf" e1e2s))
@@ -688,7 +698,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
     Queue.push axiom_rfe axioms;
 
     let axiom_fr = mk_axiom "axiom_fr" [] ety3s
-      [ [ mk_pred ~qv "_rf" e1e2s ; mk_pred ~qv "_co" e1e3s ], None ]
+      (* [ [ mk_pred ~qv "_rf" e1e2s ; mk_pred ~qv "_co" e1e3s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2s ; mk_pred ~qv "_co" e1e3s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_and
     	  (mk_eq_true (mk_pred ~qv "_rf" e1e2s))
@@ -795,7 +806,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	| FE.Sat t -> raise (Solver.Sat)
       in
       (* SAT.start (); *)
-      SAT.reset_steps ();
+      SAT.reset_refs (); (* was reset_steps *)
       ignore (Queue.fold (FE.process_decl report)
         (SAT.empty (), true, AE.Explanation.empty) q);
 

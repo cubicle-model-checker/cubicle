@@ -69,7 +69,6 @@ let rec is_prime_term = function
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
   | Field (_, _) -> failwith "Forward.is_prime_term Field TODO"
-  | List _ -> failwith "Forward.is_prime_term List TODO"
   | Read _ -> failwith "Forward.is_prime_term Read TODO"
   | Write _ -> failwith "Forward.is_prime_term Write TODO"
   | Fence _ -> failwith "Forward.is_prime_term Fence TODO"
@@ -371,14 +370,15 @@ let rec type_of_term = function
       MConst.fold (fun c _ _ -> match c with
 	| ConstReal _ -> Smt.Type.type_real
 	| ConstInt _ -> Smt.Type.type_int
-	| ConstName x -> snd (Smt.Symbol.type_of (unprime_h x))
+	| ConstName x -> 
+          let x = if is_prime (Hstring.view x) then unprime_h x else x in
+          snd (Smt.Symbol.type_of x)
       ) m Smt.Type.type_int
   | Elem (x, _) | Access (x, _) -> 
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
   | Field (_, _) -> failwith "Forward.type_of_term Field TODO"
-  | List _ -> failwith "Forward.type_of_term List TODO"
   | Read _ -> failwith "Forward.type_of_term Read TODO"
   | Write _ -> failwith "Forward.type_of_term Write TODO"
   | Fence _ -> failwith "Forward.type_of_term Fence TODO"
@@ -838,7 +838,7 @@ let instantiate_transitions all_procs procs trans =
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
   let acc, gp = 
     List.fold_left 
-      (fun (acc, gp) g -> 
+      (fun (acc, gp) g ->
 	Term.Set.add (Elem (g, Glob)) acc, gp
       ) (Term.Set.empty, []) globals
   in

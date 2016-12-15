@@ -177,11 +177,11 @@ const_decl:
 
 array_decl:
   | weak_opt ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
-    if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
-      raise Parsing.Parse_error;
-    if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
-    Arrays.add $3;
-    loc (), $3, ($5, $8), $1 }
+        if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
+	  raise Parsing.Parse_error;
+	if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
+	Arrays.add $3;
+	loc (), $3, ($5, $8), $1 }
 ;
 
 type_defs:

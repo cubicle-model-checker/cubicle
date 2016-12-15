@@ -1,0 +1,15 @@
+
+number_procs	1
+
+var X : int
+var Y : int
+
+init () { X = 10 }
+
+invariant () { X < 0 }
+
+unsafe { X = 2 && Y = 0 }
+
+transition t ()
+{ X := X + 1 }
+

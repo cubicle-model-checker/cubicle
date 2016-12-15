@@ -18,6 +18,7 @@ open Options
 open Util
 open Types
 
+
 module H = Hstring
 module S = H.HSet
 let hempty = H.empty
@@ -473,7 +474,6 @@ let rec add_arg args t =
   | Const _ -> args
 		 
   | Field (t, _) -> add_arg args t
-  | List tl -> List.fold_left add_arg args tl
   | Read (p, _, vi) -> add_arg_list args (p :: vi)
   | Write (p, _, vi, rr) ->
      let vl = List.fold_left (fun acc (v, _, _) -> v :: acc) (p :: vi) rr in
@@ -583,10 +583,12 @@ let remove_tick_atom sa (tick, at) =
   (* if !flag then SAtom.add at sa else sa *)
 
 let const_simplification sa =
-  try
-    let ticks = tick_pos sa in
-    List.fold_left remove_tick_atom sa ticks
-  with Not_found -> sa
+  if noqe then sa
+  else
+    try
+      let ticks = tick_pos sa in
+      List.fold_left remove_tick_atom sa ticks
+    with Not_found -> sa
 
 let simplification_atoms base sa =
   SAtom.fold
@@ -659,7 +661,8 @@ let elim_ite_atoms np =
 	ites
 	[base]
     in
-    List.rev (List.rev_map const_simplification lsa)
+    if noqe then lsa
+    else List.rev (List.rev_map const_simplification lsa)
   with Exit -> []
 
 
@@ -716,7 +719,6 @@ let rec term_globs t acc = match t with
   | Arith (x, _) -> term_globs x acc
 
   | Field (t, _) -> term_globs t acc
-  | List tl -> List.fold_left (fun acc t -> term_globs t acc) acc tl
   | Read (_, v, _) | Write (_, v, _, _) -> Term.Set.add t acc (* t or Elem (v, Glob) ? *)
   | _ -> acc
 

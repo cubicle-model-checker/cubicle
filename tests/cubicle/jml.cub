@@ -1,0 +1,58 @@
+
+type location = Idle | Owner | Handin | Handout | Waiting
+type lock = C0 | C1 | C2 | C3
+
+weak var Busy : bool
+weak var H : lock
+weak var C : int
+
+array A[proc] : location
+
+init (z) { A[z] = Idle && Busy = False && H = C0 && 0 < C }
+ 
+unsafe (z1 z2) { A[z1] = Owner && A[z2] = Owner }
+
+transition t1 (x)
+requires { A[x] = Idle && read(x, Busy) = False && 0 < read(x, C) }
+{ write(x, Busy, True);
+  A[x] := Owner; }
+
+transition t2 (x)
+requires { A[x] = Idle && read(x, Busy) = True && 0 < read(x, C) }
+{ write(x, C, read(x, C) + 1);
+  A[x] := Handin; }
+ 
+transition t3 (x)
+requires { A[x] = Owner && read(x, Busy) = True && read(x, C) = 0 }
+{ write(x, Busy, False);
+  A[x] := Idle; }
+
+transition t4 (x)
+requires { A[x] = Owner && read(x, Busy) = True && 0 < read(x, C) }
+{ write(x, C, read(x, C) - 1);
+  A[x] := Handout; }
+
+transition t5 (x)
+requires { A[x] = Handin && read(x, H) = C0 && 0 < read(x, C) }
+{ write(x, H, C1);
+  A[x] := Waiting; }
+
+transition t6 (x)
+requires { A[x] = Handout && read(x, H) = C0 && 0 < read(x, C) }
+{ write(x, H, C2);
+  A[x] := Idle; }
+
+transition t7 (x)
+requires { A[x] = Handout && read(x, H) = C1 && 0 < read(x, C) }
+{ write(x, H, C3);
+  A[x] := Idle; }
+
+transition t8 (x)
+requires { A[x] = Handin && read(x, H) = C2 && 0 < read(x, C) }
+{ write(x, H, C3);
+  A[x] := Waiting; }
+
+transition t9 (x)
+requires { A[x] = Waiting && read(x, H) = C3 && 0 < read(x, C) }
+{ write(x, H, C0);
+  A[x] := Owner; }

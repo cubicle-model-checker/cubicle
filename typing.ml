@@ -131,7 +131,6 @@ let infer_type x1 x2 =
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
       | Field _ -> failwith "Typing.infer_type Field TODO"
-      | List _ -> failwith "Typing.infer_type List TODO"
       | Read _ -> failwith "Typing.infer_type Read TODO"
       | Write _ -> failwith "Typing.infer_type Write TODO"
       | Fence _ -> failwith "Typing.infer_type Fence TODO"
@@ -196,8 +195,8 @@ let rec term loc ?(init=false) args = function
   | Access(a, li) ->
       if Smt.Symbol.is_weak a && not init then error (MustReadWeakVar a) loc;
       ty_access loc args a li
+
   | Field _ -> failwith "Typing.term : Field should not be typed"
-  | List _ -> failwith "Typing.term : List should not be typed"
   | Read (p, v, vi) ->
       if Options.model = Options.SC then error (OpInvalidInSC) loc;
       if init then error (CantUseReadInInit) loc;
@@ -588,6 +587,7 @@ let system s =
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
+  if not Options.notyping then List.iter unsafe (List.rev s.invs);
   if not Options.notyping then transitions s.trans;
   if Options.(subtyping && not murphi &&
 	      solver <> AltErgoFile && solver <> AltErgoLib) then begin
@@ -597,11 +597,11 @@ let system s =
 
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
-    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
+    List.map (fun (_,v,i) ->
+      create_node_rename Inv v (Weakmem.events_of_satom i)) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) ->
-      create_node_rename Orig v (Weakmem.events_of_satom u)
-    ) s.unsafe in
+      create_node_rename Orig v (Weakmem.events_of_satom u)) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in  
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
