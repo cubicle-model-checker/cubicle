@@ -303,9 +303,6 @@ module Term = struct
 
   let is_real = Term.is_real
 
-  let mk_pred ?(qv=false) p al = 
-    failwith "Alt_ergo.Term.mk_pred TODO"
-
 end
 
 module Formula = struct
@@ -465,6 +462,7 @@ let rec mk_cnf = function
     init [] sfnc
 
   (* let make_cnf f = mk_cnf (sform f) *)
+
 
 end
 
