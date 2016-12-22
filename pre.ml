@@ -230,48 +230,6 @@ let add_array_to_list n l =
     in
       n :: l
 
-let satisfy_reads tri unsafe = (* unsafe without ites *)
-  let hE = H.make "_e" in
-  let hVal = H.make "_val" in
-  let eTrue = Elem (Term.htrue, Constr) in
-
-  let writes, unsafe = SAtom.partition (fun a -> match a with
-    | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) -> true
-    | _ -> false
-  ) unsafe in
-
-  let writes = SAtom.fold (fun aw wl -> match aw with 
-    | Atom.Comp (Write (p, v, vi, _), Eq, t)
-    | Atom.Comp (t, Eq, Write (p, v, vi, _)) -> (p, v, vi, t) :: wl
-    | _ -> failwith "Internal error in satisfy_reads"
-  ) writes [] in
-
-  let wrcp = Weakmem.make_read_write_combinations writes unsafe in
- 
-  List.fold_left (fun pres wrcl ->
-    let unsafe = List.fold_left (fun unsafe ((wp, wv, wvi, wt), rcl) ->
-      let unsafe = List.fold_left (fun unsafe ((rp, re, rs), (_, _, rvi, _)) ->
-        SAtom.fold (fun at unsafe -> match at, false, true with (*what if 2 same reads in atom?*)
-	  | Atom.Comp (Field (Field (Access (a, [p;e;s]), f),_), op, rt), rev,_
-	  | Atom.Comp (rt, op, Field (Field (Access (a, [p;e;s]), f),_)), _,rev
-	     when H.equal a hE &&  H.equal f hVal &&
-		  H.equal p rp && H.equal e re && H.equal s rs ->
-               let arw = if rev then Atom.Comp (rt, op, wt)
-		         else Atom.Comp (wt, op, rt) in
-	       let avi = List.fold_left2 (fun avi ri (_, wi) ->
-	         SAtom.add (Atom.Comp (Elem (ri, Var), Eq, Elem (wi, Var))) avi
-	       ) SAtom.empty wvi rvi in
-	     SAtom.add arw (SAtom.union avi unsafe)
-	  | _ -> SAtom.add at unsafe (* also add wvi = rvi *)
-        ) unsafe SAtom.empty
-      ) unsafe rcl in
-      let srl = List.fold_left (fun srl (reid, _) -> reid :: srl) [] rcl in
-      SAtom.add (Atom.Comp (Write (wp, wv, wvi, srl), Eq, eTrue)) unsafe
-    ) unsafe wrcl in
-    unsafe :: pres (* should have generic function : satisfy rd by wr*)
-  ) [] wrcp
-
-	     
 let make_cubes (ls, post) rargs s tr cnp =
   let { cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in
   let nb_uargs = List.length uargs in
@@ -284,7 +242,7 @@ let make_cubes (ls, post) rargs s tr cnp =
     (* TSO *)
     let lnp = List.fold_left (fun lnp cnp ->
       (* build new cubes with writes satisfying reads *)
-      let lsa = satisfy_reads tr cnp.Cube.litterals in
+      let lsa = Weakwrite.satisfy_reads tr cnp.Cube.litterals in
       List.fold_left (fun lnp sa ->
         try (Cube.create_normal (Cube.simplify_atoms sa)) :: lnp
 	with Exit -> lnp
@@ -310,7 +268,7 @@ let make_cubes (ls, post) rargs s tr cnp =
 	    else
 
 	      (* TSO *)
-	      let np = Weakmem.events_of_satom np in
+	      let np = Weakevent.events_of_satom np in
 	      (* END TSO *)(*Debug.pre tr np;*)
 
               let new_cube = Cube.create nargs np in

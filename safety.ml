@@ -39,7 +39,7 @@ let check s n =
   (*Debug.unsafe s;*)
 (**)if debug then eprintf ">>> [safety check]";
   try
-    (* if not (obviously_safe s n) then *)
+    if not (obviously_safe s n) then
       begin
 (**)if debug then eprintf " asking smt\n";
 	Prover.unsafe s n;

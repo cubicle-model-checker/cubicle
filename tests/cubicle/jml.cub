@@ -13,6 +13,7 @@ init (z) { A[z] = Idle && Busy = False && H = C0 && 0 < C }
 unsafe (z1 z2) { A[z1] = Owner && A[z2] = Owner }
 
 transition t1 (x)
+fences (x)
 requires { A[x] = Idle && read(x, Busy) = False && 0 < read(x, C) }
 { write(x, Busy, True);
   A[x] := Owner; }

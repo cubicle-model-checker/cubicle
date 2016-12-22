@@ -8,7 +8,7 @@ init () { X = 15 }
 
 invariant (p) { read(p, X) < 0 }
 
-unsafe (p) { read(p, Y) = 0 && read(p, X) = 10 }
+unsafe (p) { read(p, Y) = 0 && read(p, X) = 13 }
 
 transition t (p)
 { write(p, X, read(p, X) + 1) }

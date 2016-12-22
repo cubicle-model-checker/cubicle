@@ -65,6 +65,10 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
+
+	(* begin try *)
+	(*   Prover.acyclic n; (* is there a cycle ? *) *)
+  
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
@@ -97,7 +101,10 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Q.push_list ls q;
              Stats.remaining (nb_remaining q postponed);
         end;
-        
+
+	(*   with Smt.Unsat _ -> () (* there is a cycle *) *)
+	(* end; *)
+
         if Q.is_empty q then
           (* When the queue is empty, pour back postponed nodes in it *)
           begin

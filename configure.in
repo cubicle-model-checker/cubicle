@@ -132,6 +132,54 @@ else
 fi
 
 
+#looking for zip library
+
+if test "$USEOCAMLFIND" = yes; then
+  ZIPLIB=$(ocamlfind query -i-format zip)
+fi
+
+if test -n "$ZIPLIB";then
+  echo "ocamlfind found zip in $ZIPLIB"
+  ZIP=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/zip/zip.cma,ZIP=yes,ZIP=no)
+  if test "$ZIP" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/zip.cma,ZIP=yes,ZIP=no)
+    if test "$ZIP" = no ; then
+      AC_MSG_ERROR(Cannot find zip library.)
+    else
+  	ZIPLIB=""
+     fi
+  else
+     ZIPLIB="-I +zip"
+  fi
+fi
+
+
+#looking for ocplib-simplex library
+
+if test "$USEOCAMLFIND" = yes; then
+  SIMPLEXLIB=$(ocamlfind query -i-format ocplib-simplex)
+fi
+
+if test -n "$SIMPLEXLIB";then
+  echo "ocamlfind found ocplib-simplex in $SIMPLEXLIB"
+  SIMPLEX=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/ocplib-simplex/ocplibSimplex.cma,SIMPLEX=yes,SIMPLEX=no)
+  if test "$SIMPLEX" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/ocplibSimplex.cma,SIMPLEX=yes,SIMPLEX=no)
+    if test "$SIMPLEX" = no ; then
+      AC_MSG_ERROR(Cannot find ocplib-simplex library.)
+    else
+  	SIMPLEXLIB=""
+     fi
+  else
+     SIMPLEXLIB="-I +ocplib-simplex"
+  fi
+fi
+
+
 #looking for Z3 ocaml bindings
 
 AC_ARG_WITH([z3],
@@ -191,6 +239,8 @@ AC_SUBST(OCAMLWIN32)
 AC_SUBST(EXE)
 AC_SUBST(OCAMLGRAPHLIB)
 AC_SUBST(ZARITHLIB)
+AC_SUBST(ZIPLIB)
+AC_SUBST(SIMPLEXLIB)
 
 AC_OUTPUT(Makefile)
 chmod a-w Makefile

@@ -140,7 +140,8 @@ module Symbol = struct
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
   let is_weak s =
-    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) =(Hstring.make "_weak_var")
+    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) =
+	  (Hstring.make "_weak_var")
     with Not_found -> false
 
   let declared s = 
@@ -596,9 +597,6 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let mk_axiom n up bv tr f =
     let f = mk_forall n up bv tr f in
     WPT.{ st_decl = Assume(f, true) ; st_loc = dl }
-  (* let mk_goal f = *)
-  (*   let f = mk_formula f in *)
-  (*   WPT.{ st_decl = Query("g", f, [], (\*Check*\)Thm) ; st_loc = dl } *)
   let mk_goal f =
     let f = mk_formula f in
     WPT.{ st_decl = Query("g", f, [], (*Check*)AE.Typed.Thm) ; st_loc = dl }
@@ -631,13 +629,13 @@ module Make (Options_ : sig val profiling : bool end) = struct
     let tw = Term.make_app (Hstring.make "_W") [] in
     let tr = Term.make_app (Hstring.make "_R") [] in
 
-    let axiom_rf_val = mk_axiom "axiom_rf_val" [] ety2s
+(*    let axiom_rf_val = mk_axiom "axiom_rf_val" [] ety2s
       (* [ [ mk_pred ~qv "_rf" e1e2s ], None ] *)
       [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2s ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
     	(mk_eq_true (mk_pred ~qv "_rf" e1e2s))
     	(mk_eq (mk_evt_f ~qv e1s "_val") (mk_evt_f ~qv e2s "_val"))) in
-    Queue.push axiom_rf_val axioms;
+    Queue.push axiom_rf_val axioms;*)
 
     let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2s
       (* [ [ mk_pred ~qv "_po_loc" e1e2s ], None ] *)
@@ -818,11 +816,11 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	  Time.pause ();
 	  raise (Unsat [] (*(export_unsatcore2 ex)*))
 
-  (*let save_state = CSolver.save
+  (* let save_state = CSolver.save *)
 
-  let restore_state = CSolver.restore*)
+  (* let restore_state = CSolver.restore *)
 
-  let entails f = failwith "Alt_ergo.entails unsupported"
+  let entails f =
     (*let st = save_state () in
     let ans = 
       try
@@ -833,12 +831,13 @@ module Make (Options_ : sig val profiling : bool end) = struct
     in
     restore_state st;
     ans*)
+    failwith "Alt_ergo_lib.entails unsupported"
 
   let push () = (*Stack.push (save_state ()) push_stack*)
-    failwith "Alt_ergo.push unsupported"
+    failwith "Alt_ergo_lib.push unsupported"
 
   let pop () = (*Stack.pop push_stack |> restore_state*)
-    failwith "Alt_ergo.pop unsupported"
+    failwith "Alt_ergo_lib.pop unsupported"
 
 end
 

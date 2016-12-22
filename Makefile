@@ -43,9 +43,10 @@ OCAMLWIN32 = no
 EXE = 
 ZARITHLIB = -I /Users/david/.opam/4.03.0/lib/zarith
 OCAMLGRAPHLIB = -I /Users/david/.opam/4.03.0/lib/ocamlgraph
-EXTRA = -I /Users/David/.opam/4.03.0/lib/ocplib-simplex -I /Users/David/.opam/4.03.0/lib/zip
+ZIPLIB = -I /Users/david/.opam/4.03.0/lib/zip
+SIMPLEXLIB = -I /Users/david/.opam/4.03.0/lib/ocplib-simplex
 
-INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) -I common/ -I smt/ -I alt-ergo $(EXTRA)
+INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) $(ZIPLIB) $(SIMPLEXLIB) -I common/ -I smt/ -I alt-ergo
 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
@@ -120,9 +121,11 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) util.cmo $(SMTCMO) \
-      variable.cmo weakutil.cmo types.cmo weakmem.cmo \
+      variable.cmo weakutil.cmo types.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
-      instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
+      instantiation.cmo dot.cmo cubetrie.cmo \
+      weakmem.cmo weakevent.cmo weakwrite.cmo weakorder.cmo \
+      prover.cmo safety.cmo weaksubst.cmo fixpoint.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \

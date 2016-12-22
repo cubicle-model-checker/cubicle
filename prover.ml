@@ -114,7 +114,7 @@ let rec make_term = function
   | Fence _ -> failwith "Prover.make_term : Fence should not be in atom"
 
 let rec make_formula_set sa =
-  let sa, evts, ord = Weakmem.split_events_orders_set sa in
+  let sa, evts, ord = Weakorder.split_events_orders_set sa in
   (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), evts, ord)
 
 and make_literal = function
@@ -124,7 +124,7 @@ and make_literal = function
       let tx = make_term x in
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
-  | Atom.Ite (la, a1, a2) -> 
+  | Atom.Ite (la, a1, a2) ->
       let (f, _, _) = make_formula_set la in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in
@@ -134,7 +134,7 @@ and make_literal = function
 
 
 let make_formula atoms =
-  let sa, evts, ord = Weakmem.split_events_orders_array atoms in
+  let sa, evts, ord = Weakorder.split_events_orders_array atoms in
   (F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa []), evts, ord)
 
 module HAA = Hashtbl.Make (ArrayAtom)
@@ -180,41 +180,20 @@ let get_user_invs s nb_procs = (* S only *)
   List.rev_map (fun a ->
     let (f, _, _) = make_formula a in F.make F.Not [f]) init_invs
 
-module H3Map = Weakmem.H3Map
-module H = Hstring
-
-let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (*S only*)
+let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (* S only *)
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs;
 
-  let hE = H.make "_e" in
-  let hRf = H.make "_rf" in
-  let hVal = H.make "_val" in
-  let eTrue = Elem (Term.htrue, Constr) in
-  let ur = Weakmem.unsatisfied_reads cube.Cube.litterals in
-  (* could detect trivially unsatisfiable reads *)
-  let sa = SAtom.fold (fun at sa -> match at, false, true with
-    (* WARNING : handle the case where both sides are events ! *)
-    | Atom.Comp (Field (Field (Access (a, [p; e; s]), f), _), op, rt), rev, _
-    | Atom.Comp (rt, op, Field (Field (Access (a, [p; e; s]), f), _)), _, rev
-       when H.equal a hE &&  H.equal f hVal ->
-         let (v, vi) = H3Map.find (p, e, s) ur in
-         let ((wp, we, ws), wt, nsa) = Weakmem.make_init_write (v, vi) in
-         let arw = if rev then Atom.Comp (rt, op, wt)
-		   else Atom.Comp (wt, op, rt) in
-	 let arf = Atom.Comp (Access (hRf, [wp;we;ws;p;e;s]), Eq, eTrue) in
-	 SAtom.add arf (SAtom.add arw (SAtom.union nsa sa))
-    | _ -> SAtom.add at sa
-  ) cube.Cube.litterals SAtom.empty in
+  let sa = Weakwrite.satisfy_unsatisfied_reads cube.Cube.litterals in
 
   let (f, evts, ord) = make_formula_set sa in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init;
   SMT.assume ~id f;
 
-  let fo = Weakmem.make_orders evts ord in
+  let fo = Weakorder.make_orders evts ord in
   if debug_smt then eprintf ">>>> rels: %a@." F.print fo;
   SMT.assume ~id fo;
   SMT.check ()
@@ -255,15 +234,15 @@ let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
 
-  (* let fo = Weakmem.make_orders ~fp:true evts ord in *)
-  let fo = Weakmem.make_orders ~fp:false evts ord in
+  (* let fo = Weakorder.make_orders ~fp:true evts ord in *)
+  let fo = Weakorder.make_orders ~fp:false evts ord in
   if debug_smt then eprintf ">>>> rels: %a@." F.print fo;
   SMT.assume ~id fo
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
   let (f, evts, ord) = make_formula ap in
 
-  let fo = Weakmem.make_orders ~fp:true evts ord in
+  let fo = Weakorder.make_orders ~fp:true evts ord in
   let f = if fo = F.f_true then f else F.make F.And [f;fo] in
 
   let f = F.make F.Not [f] in
@@ -299,12 +278,33 @@ let assume_goal_nodes { tag = id; cube = cube } nodes = (* FP only *)
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f;
 
-  (* SMT.assume ~id (Weakmem.make_orders ~fp:true evts ord); *)
-  SMT.assume ~id (Weakmem.make_orders ~fp:false evts ord);
+  (* SMT.assume ~id (Weakorder.make_orders ~fp:true evts ord); *)
+  SMT.assume ~id (Weakorder.make_orders ~fp:false evts ord);
 
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
   (* SMT.check ~fp:true () *)
   SMT.check ~fp:false ()
+
+
+let acyclic ({ tag = id; cube = cube } as n)  =
+  SMT.clear ();
+  let nb_procs = List.length (Node.variables n) in
+  SMT.assume ~id (distinct_vars nb_procs);
+  (* Can read from init => can read from other threads ? *)
+  (* let sa = Weakwrite.satisfy_unsatisfied_reads cube.Cube.litterals in *)
+  let sa, evts, ord = Weakorder.split_events_orders_set (cube.Cube.litterals) in
+  let sa = SAtom.filter (fun a -> match a with
+    | Atom.Comp (Access (a,[_;_;_;_;_;_]), Eq, Elem _)
+    | Atom.Comp (Elem _, Eq, Access (a,[_;_;_;_;_;_]))
+	 when Hstring.equal a Weakmem.hRf -> true
+    | _ -> false
+  ) sa in
+  let (f, _, _) = make_formula_set sa in
+  if not (SAtom.is_empty sa) then
+    SMT.assume ~id f;
+  let fo = Weakorder.make_orders evts ord in
+  SMT.assume ~id fo;
+  SMT.check ()
 
 let init () =
   SMT.init_axioms ()

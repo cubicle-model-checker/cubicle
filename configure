@@ -584,6 +584,8 @@ PACKAGE_URL=
 ac_unique_file="main.ml"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+SIMPLEXLIB
+ZIPLIB
 ZARITHLIB
 OCAMLGRAPHLIB
 EXE
@@ -2135,6 +2137,142 @@ $as_echo "Cannot find functory library." >&6; }
 fi
 
 
+#looking for zip library
+
+if test "$USEOCAMLFIND" = yes; then
+  ZIPLIB=$(ocamlfind query -i-format zip)
+fi
+
+if test -n "$ZIPLIB";then
+  echo "ocamlfind found zip in $ZIPLIB"
+  ZIP=yes
+else
+  as_ac_File=`$as_echo "ac_cv_file_$OCAMLLIB/zip/zip.cma" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $OCAMLLIB/zip/zip.cma" >&5
+$as_echo_n "checking for $OCAMLLIB/zip/zip.cma... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$OCAMLLIB/zip/zip.cma"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  ZIP=yes
+else
+  ZIP=no
+fi
+
+  if test "$ZIP" = no ; then
+    as_ac_File=`$as_echo "ac_cv_file_$OCAMLLIB/zip.cma" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $OCAMLLIB/zip.cma" >&5
+$as_echo_n "checking for $OCAMLLIB/zip.cma... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$OCAMLLIB/zip.cma"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  ZIP=yes
+else
+  ZIP=no
+fi
+
+    if test "$ZIP" = no ; then
+      as_fn_error $? "Cannot find zip library." "$LINENO" 5
+    else
+  	ZIPLIB=""
+     fi
+  else
+     ZIPLIB="-I +zip"
+  fi
+fi
+
+
+#looking for ocplib-simplex library
+
+if test "$USEOCAMLFIND" = yes; then
+  SIMPLEXLIB=$(ocamlfind query -i-format ocplib-simplex)
+fi
+
+if test -n "$SIMPLEXLIB";then
+  echo "ocamlfind found ocplib-simplex in $SIMPLEXLIB"
+  SIMPLEX=yes
+else
+  as_ac_File=`$as_echo "ac_cv_file_$OCAMLLIB/ocplib-simplex/ocplibSimplex.cma" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $OCAMLLIB/ocplib-simplex/ocplibSimplex.cma" >&5
+$as_echo_n "checking for $OCAMLLIB/ocplib-simplex/ocplibSimplex.cma... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$OCAMLLIB/ocplib-simplex/ocplibSimplex.cma"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  SIMPLEX=yes
+else
+  SIMPLEX=no
+fi
+
+  if test "$SIMPLEX" = no ; then
+    as_ac_File=`$as_echo "ac_cv_file_$OCAMLLIB/ocplibSimplex.cma" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $OCAMLLIB/ocplibSimplex.cma" >&5
+$as_echo_n "checking for $OCAMLLIB/ocplibSimplex.cma... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$OCAMLLIB/ocplibSimplex.cma"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  SIMPLEX=yes
+else
+  SIMPLEX=no
+fi
+
+    if test "$SIMPLEX" = no ; then
+      as_fn_error $? "Cannot find ocplib-simplex library." "$LINENO" 5
+    else
+  	SIMPLEXLIB=""
+     fi
+  else
+     SIMPLEXLIB="-I +ocplib-simplex"
+  fi
+fi
+
+
 #looking for Z3 ocaml bindings
 
 
@@ -2209,6 +2347,8 @@ else
     OCAMLWIN32=no
     EXE=
 fi
+
+
 
 
 

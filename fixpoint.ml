@@ -308,274 +308,32 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> Prover.run
 
-
-
-module H = Hstring
-module HMap = Hstring.HMap
-module HSet = Hstring.HSet
-module H3Map = Weakmem.H3Map
-let hE = H.make "_e"
-let hS1 = H.make "_s1"
-let hVar = H.make "_var"
-let hVal = H.make "_val"
-let hFence = H.make "_fence"
-let hRf = H.make "_rf"
-let hW = H.make "_W"
-
-let get_evts ar = (* just use regular split + sort params *)
-  let evts = Array.fold_left (fun evts a -> Weakmem.split_event a evts) H3Map.empty ar in
-  H3Map.fold (fun (p, e, s) (d, v, vi, vals) evts ->
-    let pevts = try HMap.find p evts with Not_found -> HMap.empty in
-    let sevts = try HMap.find e pevts with Not_found -> HMap.empty in
-    let evt = (d, v, List.sort (fun (p1, _) (p2, _) -> H.compare p1 p2) vi, vals) in
-    if HMap.mem s sevts then evts (* should not happen *)
-    else HMap.add p (HMap.add e (HMap.add s evt sevts) pevts) evts
-  ) evts HMap.empty
-
-
-(* Are e1 and e2 compatible / is e1 more general than e2 *)
-let compatible_values r1 op1 t1 r2 op2 t2 =
-  match t1, t2 with
-  | Const c1, Const c2 ->
-     begin match r1, op1 with
-     | false, Eq | true, Neq -> (* = *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 = 0
-	| _ -> false
-	end
-     | false, Neq | true, Eq -> (* <> *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 <> 0
-	| false, Neq | true, Eq -> Types.compare_constants c1 c2 = 0
-	| false, Lt -> Types.compare_constants c1 c2 >= 0
-	| false, Le -> Types.compare_constants c1 c2 > 0
-	| true, Le -> Types.compare_constants c1 c2 <= 0
-	| true, Lt -> Types.compare_constants c1 c2 < 0
-	end
-     | false, Lt -> (* < *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 > 0
-	| false, Lt -> Types.compare_constants c1 c2 >= 0
-	| false, Le -> Types.compare_constants c1 c2 > 0
-	| _ -> false
-	end
-     | false, Le -> (* <= *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 >= 0
-	| false, Lt -> Types.compare_constants c1 c2 >= 0 (* +1 *)
-	| false, Le -> Types.compare_constants c1 c2 >= 0
-	| _ -> false
-	end
-     | true, Le -> (* > *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 < 0
-	| true, Le -> Types.compare_constants c1 c2 <= 0
-	| true, Lt -> Types.compare_constants c1 c2 < 0
-	| _ -> false
-	end
-     | true, Lt -> (* >= *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 <= 0
-	| true, Le -> Types.compare_constants c1 c2 <= 0 (* +1 *)
-	| true, Lt -> Types.compare_constants c1 c2 <= 0
-	| _ -> false
-	end
-     end			  
-  | _ -> true
-
-(*= v1  = !<> v2      v1 = v2
-  = v1  <> != v2      false
-  = v1      < v2      false
-  = v1     <= v2      false
-  = v1    !<= v2      false
-  = v1     !< v2      false
-
- <> v1  = !<> v2      v1 <> v2         eg : x <> 4 / x = 4 // x <> 4 / x = 5 
- <> v1  <> != v2      v1 = v2
- <> v1      < v2      v1 >= v2         eg : x <> 4 / x = 3 // x <> 4 / x = 4
- <> v1     <= v2      v1 > v2
- <> v1    !<= v2      v1 <= v2
- <> v1     !< v2      v1 < v2          eg : x <> 4 / x = 4 // x <> 4 / x = 5
-
-  < v1  = !<> v2      v1 > v2          eg : x < 4 / x = 3 // x < 4 / x = 4 
-  < v1  <> != v2      false
-  < v1      < v2      v1 >= v2         eg : x < 4 / x <= 3 // x < 4 / x <= 4
-  < v1     <= v2      v1 > v2
-  < v1    !<= v2      false
-  < v1     !< v2      false
-
- <= v1  = !<> v2      v1 >= v2         eg : x < 4 / x = 4 // x < 4 / x = 5 
- <= v1  <> != v2      false
- <= v1      < v2      v1+1 >= v2       eg : x <= 4 / x < 5 // x <= 4 / x < 6
- <= v1     <= v2      v1 >= v2
- <= v1    !<= v2      false
- <= v1     !< v2      false
-
-  > v1  = !<> v2      v1 < v2          eg : x > 4 / x = 4 // x > 4 / x = 5 
-  > v1  <> != v2      false
-  > v1      < v2      false
-  > v1     <= v2      false
-  > v1    !<= v2      v1 <= v2
-  > v1     !< v2      v1 < v2          eg : x > 4 / x >= 4 // x > 4 / x >= 5
-
- >= v1  = !<> v2      v1 <= v2         eg : x >= 4 / x = 3 // x >= 4 / x = 4 
- >= v1  <> != v2      false
- >= v1      < v2      false
- >= v1     <= v2      false
- >= v1    !<= v2      v1 <= v2+1
- >= v1     !< v2      v1 <= v2         eg : x >= 4 / x >= 3 // x <= 4 / x >= 4
-
-x >= 4    x > 2   x > 3   x > 4   x > 5   x > 6    *)
-
-(* Are e1 and e2 compatible / is e1 more general than e2 *)
-let compat_evts (d1, v1, vi1, vals1) (d2, v2, vi2, vals2) =
-  H.equal d1 d2 && H.equal v1 v2 &&
-  List.for_all2 (fun (_, i1) (_, i2) -> H.equal i1 i2) vi1 vi2 &&
-    (vals1 = [] && vals2 = [] ||
-     vals1 <> [] && vals2 <> [] &&
-     List.for_all (fun (r1, op1, t1) ->
-       List.for_all (fun (r2, op2, t2) ->
-         compatible_values r1 op1 t1 r2 op2 t2
-       ) vals2
-     ) vals1)
-
-let cartesian_product op l1 l2 =
-  List.fold_left (fun rl e1 ->
-    List.fold_left (fun rl e2 ->
-      (op e1 e2) :: rl
-    ) rl l2
-  ) [] l1
-
-let cartesian_product_h3m =
-  cartesian_product (H3Map.union (fun k v1 v2 -> failwith "cartesian_product : duplicate"))
-
-let rec make_s_combs2 p ef et ssf sst = (* use min_binding *)
-  let rec aux cc rcl ssf sst =
-    try
-      let sf, evtf = HMap.choose ssf in
-      let ssf = HMap.remove sf ssf in
-      HMap.fold (fun st evtt rcl ->
-        let sst = HMap.remove st sst in
-        (* let cc = (p, ef, sf, et, st) :: cc in *)
-	(* let cc = H3Map.add (p, ef, sf) (et, st) cc in *)
-	(* aux cc rcl ssf sst *)
-	if compat_evts evtf evtt then
-	  let cc = H3Map.add (p, ef, sf) (et, st) cc in
-	  aux cc rcl ssf sst
-	else rcl
-      ) sst rcl (* To Set is finished -> combinations done for this sf *)
-    with Not_found -> cc :: rcl (* From Set is empty -> the combination is good *)
-  in
-  aux H3Map.empty [] ssf sst
-
-let rec make_s_combs p ef et ssf sst =
-  let rec aux cc rcl ssf sst =
-    try
-      let sf, evtf = HMap.choose ssf in
-      let ssf = HMap.remove sf ssf in
-      HMap.fold (fun st evtt rcl ->
-        let sst = HMap.remove st sst in
-        (* let cc = (p, ef, sf, et, st) :: cc in *)
-	(* let cc = H3Map.add (p, ef, sf) (et, st) cc in *)
-	(* aux cc rcl ssf sst *)
-	if compat_evts evtf evtt then
-	  let cc = H3Map.add (p, ef, sf) (et, st) cc in
-	  aux cc rcl ssf sst
-	else rcl
-      ) sst rcl (* To Set is finished -> combinations done for this sf *)
-    with Not_found -> cc :: rcl (* From Set is empty -> the combination is good *)
-  in
-  aux H3Map.empty [] ssf sst
-
-let rec make_e_combs p esf est =
-  let rec aux ccl rcl esf est =
-    try
-      let ef, ssf = HMap.choose esf in
-      let esf = HMap.remove ef esf in
-      let rcl, _ = HMap.fold (fun et sst (rcl, est) ->
-        let est = HMap.remove et est in
-        (* let ccl = cartesian_product (@) (make_s_combs p ef et ssf sst) ccl in *)
-        let ccl = cartesian_product_h3m (make_s_combs p ef et ssf sst) ccl in
-        aux ccl rcl esf est, est
-      ) est (rcl, est) (* To Set is finished -> combinations done for this ef *)
-      in rcl
-    with Not_found -> ccl @ rcl (* From Set is empty -> the combinations are good *)
-  in
-  aux [H3Map.empty] [] esf est
-
-let rec make_p_combs psf pst =
-  let rec aux ccl psf pst =
-    try
-      let p, esf = HMap.choose psf in
-      let psf = HMap.remove p psf in
-      try
-        let est = HMap.find p pst in
-        let pst = HMap.remove p pst in
-        (* let ccl = cartesian_product (@) (make_e_combs p esf est) ccl in *)
-        let ccl = cartesian_product_h3m (make_e_combs p esf est) ccl in
-        aux ccl psf pst (* Next process *)
-      with Not_found -> [H3Map.empty]
-    with Not_found -> ccl (* From Set is empty -> we're done *)
-  in
-  aux [H3Map.empty] psf pst
-
-
-let remap_events_ar ar sub =
-  let subst p e s =
-    (* try HMap.find (p, e, s) sub with Not_found -> e, s in *)
-    try H3Map.find (p, e, s) sub with Not_found -> failwith "remap_events : no substitution !"
-  in
-  let rec remap_t = function
-    | Arith (t, c) -> Arith (remap_t t, c)
-    | Field (t, f) -> Field (remap_t t, f)
-    | Access (a, [p;e;s]) when H.equal a hE ->
-        let e, s = subst p e s in Access (a, [p;e;s])
-    | Access (a, [p;e]) when H.equal a hFence ->
-        let e, _ = subst p e hS1 in Access (a, [p;e])
-    | Access (a, [p1;e1;s1;p2;e2;s2]) when H.equal a hRf ->
-        let e1, s1 = subst p1 e1 s1 in
-        let e2, s2 = subst p2 e2 s2 in
-        Access (a, [p1;e1;s1;p2;e2;s2])
-    | t -> t
-  in
-  let rec remap_a = function
-    | Atom.Comp (t1, op, t2) -> Atom.Comp (remap_t t1, op, remap_t t2)
-    | Atom.Ite (sa, a1, a2) -> Atom.Ite (sa, remap_a a1, remap_a a2)
-    | a -> a
-  in
-  let ar = Array.map remap_a ar in
-  Array.fast_sort Atom.compare ar;
-  ar
-
-let remap_events ar substs =
-  List.fold_left (fun nodes s ->
-    if H3Map.is_empty s then nodes
-    else (remap_events_ar ar s) :: nodes
-  ) [] substs    
-
-
-
-let check_and_add n nodes vis_n=
-  let n_array = Node.array n in
-  let vis_cube = vis_n.cube in
-  let vis_array = vis_cube.Cube.array in
-  let to_eids = get_evts n_array in
-  if !Options.size_proc <> 0 then (
-    let from_eids = get_evts vis_array in
-    let vis_array_l = (remap_events vis_array (make_p_combs from_eids to_eids)) in
-    let vis_array_l = List.filter (fun v_ar ->
-		        not (Cube.inconsistent_2arrays v_ar n_array)) vis_array_l in
-    List.fold_left (fun nodes v_ar -> (vis_n, v_ar) :: nodes) nodes vis_array_l) 
-  else
-    let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
-    List.fold_left (fun nodes ss ->
-      let vis_renamed = ArrayAtom.apply_subst ss vis_array in
-      let from_eids = get_evts vis_renamed in
-      let vis_renamed_l = (remap_events vis_renamed (make_p_combs from_eids to_eids)) in
-      let vis_renamed_l = List.filter (fun v_ren ->
-		            not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
-      List.fold_left (fun nodes v_ren -> (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
-    ) nodes d
+  
+  let check_and_add n nodes vis_n=
+    let n_array = Node.array n in
+    let vis_cube = vis_n.cube in
+    let vis_array = vis_cube.Cube.array in
+    let to_evts = Weaksubst.get_evts n_array in
+    if !Options.size_proc <> 0 then begin
+      let from_evts = Weaksubst.get_evts vis_array in
+      let vis_array_l = (Weaksubst.remap_events vis_array
+        (Weaksubst.build_event_substs from_evts to_evts)) in
+      let vis_array_l = List.filter (fun v_ar ->
+        not (Cube.inconsistent_2arrays v_ar n_array)) vis_array_l in
+      List.fold_left (fun nodes v_ar ->
+        (vis_n, v_ar) :: nodes) nodes vis_array_l
+    end else
+      let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
+      List.fold_left (fun nodes ss ->
+        let vis_renamed = ArrayAtom.apply_subst ss vis_array in
+        let from_evts = Weaksubst.get_evts vis_renamed in
+        let vis_renamed_l = (Weaksubst.remap_events vis_renamed
+          (Weaksubst.build_event_substs from_evts to_evts)) in
+        let vis_renamed_l = List.filter (fun v_ren ->
+          not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
+        List.fold_left (fun nodes v_ren ->
+	  (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
+      ) nodes d
 
 
 (*  let check_and_add n nodes vis_n=
@@ -599,7 +357,7 @@ let check_and_add n nodes vis_n=
             yield unsatifisability sooner *)
          (Prover.assume_node vis_n vis_renamed; nodes)
       ) nodes d *)
-
+      
 
   let check_fixpoint s visited =
     first_action s;

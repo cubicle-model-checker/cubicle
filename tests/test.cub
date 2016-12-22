@@ -1,22 +1,10 @@
 
-number_procs 1
+type prop = P1 | P2
+var X : int
 
-type loc = L1 | L2
+init () { X = 0 }
 
-type t = A | B
+unsafe () { X = 2 }
 
-array PC[proc] : loc
-
-weak var X : t 
-
-init (p) { PC[p] = L1 && X = B }
-
-unsafe (p) { PC[p] = L1 && read(p, X) = A }
-
-transition t1 (p)
-requires { PC[p] = L1 }
-{ PC[p] := L2; write(p, X, A) }
-
-transition t2 (p)
-requires { PC[p] = L2 }
-{ PC[p] := L1; write(p, X, B) }
+transition t ()
+{ X := X + 1 }

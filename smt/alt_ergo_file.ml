@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 open Format
-       
+
 type error = 
   | DuplicateTypeName of Hstring.t
   | DuplicateSymb of Hstring.t
@@ -86,14 +86,14 @@ module Type = struct
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
 
-  let declare t constrs =
+  let declare t constrs = 
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     match constrs with
-      | [] ->
+      | [] -> 
 	  let ty = Ty.Tabstract t in
           all_types := ty :: !all_types;
 	  H.add decl_types t ty
-      | _ ->
+      | _ -> 
 	  let ty = Ty.Tsum (t, constrs) in
           all_types := ty :: !all_types;
 	  H.add decl_types t ty;
@@ -132,7 +132,7 @@ module Symbol = struct
     
   type t = Hstring.t
 
-  let declare f args ret =
+  let declare f args ret  = 
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     H.add all_vars f (Symbols.name f, args, ret);
     List.iter 
@@ -275,7 +275,7 @@ module Variant = struct
       constructors
       
 end
-
+  
 module Term = struct
 
   type t = Term.t
@@ -328,7 +328,7 @@ module Formula = struct
     | Lit of literal
     | Comb of combinator * t list
 
-  let rec print fmt phi =
+  let rec print fmt phi = 
     let rec print_diff fmt t1 = function
       | [] -> assert false
       | [t2] -> TTerm.print fmt t1;
@@ -530,10 +530,10 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let init_axioms () =
     if Options.model = Options.SC then ()
     else axioms :=
-"axiom rf_val :
+"(*axiom rf_val :
   forall p1, p2, e1, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
   _rf(p1, e1, s1, p2, e2, s2)
-   -> _e(p1, e1, s1)._val = _e(p2, e2, s2)._val
+   -> _e(p1, e1, s1)._val = _e(p2, e2, s2)._val*)
 
 axiom po_loc :
   forall p1, p2, e1, e2, s1, s2 : int [_po_loc(p1,e1,s1,p2,e2,s2)].
@@ -544,6 +544,10 @@ axiom co_1 :
   forall p1, p2, e1, e2, s1, s2 : int [_co(p1,e1,s1,p2,e2,s2)].
   _co(p1, e1, s1, p2, e2, s2)
    -> _sci(p1, e1) < _sci(p2, e2)
+(*axiom co_1 :
+  forall p1, p2, e1, e2, s1, s2 : int [_coi(p1,e1,s1),_coi(p2,e2,s2)].
+  _coi(p1, e1, s1) < _coi (p2, e2, s2)
+   -> _sci(p1, e1) < _sci(p2, e2)*)
 
 axiom rf :
   forall p1, e1, p2, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
@@ -564,6 +568,10 @@ axiom co_2 :
   forall p1, e1, p2, e2, s1, s2 : int [_co(p1,e1,s1,p2,e2,s2)].
   _co(p1, e1, s1, p2, e2, s2)
   -> _propi(p1, e1) < _propi(p2, e2)
+(*axiom co_2 :
+  forall p1, e1, p2, e2, s1, s2 : int [_coi(p1,e1,s1),_coi(p2,e2,s2)].
+  _coi(p1, e1, s1) < _coi(p2, e2, s2)
+  -> _propi(p1, e1) < _propi(p2, e2)*)
 
 axiom rfe :
   forall p1, p2, e1, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
@@ -574,7 +582,12 @@ axiom fr :
   forall pr, pw1, pw2, r, w1, w2, sr, sw1, sw2 : int
     [_rf(pw1,w1,sw1,pr,r,sr),_co(pw1,w1,sw1,pw2,w2,sw2)].
   _rf(pw1, w1, sw1, pr, r, sr) and _co(pw1, w1, sw1, pw2, w2, sw2)
-  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)"
+  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)
+(*axiom fr :
+  forall pr, pw1, pw2, r, w1, w2, sr, sw1, sw2 : int
+    [_rf(pw1,w1,sw1,pr,r,sr),_coi(pw1,w1,sw1),_coi(pw2,w2,sw2)].
+  _rf(pw1, w1, sw1, pr, r, sr) and _coi(pw1, w1, sw1) < _coi(pw2, w2, sw2)
+  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)*)"
 
   let typeof t =
     let t = (Hstring.view t) in
@@ -634,8 +647,6 @@ axiom fr :
   let get_calls () = !calls
 
   (*module CSolver = Solver.Make (Options_)*)
-
-  (***********************************************)
 
   let clear () =
     formula := [](*;
@@ -748,17 +759,10 @@ axiom fr :
       close_out file;
 
       (* Call solver and check result *)
-      (* eprintf "-------------> Calling Alt-Ergo on %s <-------------\n" filename; *)
       let output = Util.syscall ("alt-ergo " ^ filename) in
-      if (contains output "Valid") then raise (Solver.Unsat []);
-      (* let output = Util.syscall ("alt-ergo -sat-mode " ^ filename) in *)
-      (* if String.compare output "unsat\n" = 0 then *)
-      (*   raise (Solver.Unsat []) *)
-      (* else if String.compare (String.sub output 0 5) "unsat" = 0 then *)
-      (*   raise (Solver.Unsat []) *)
-      (* else if String.compare output "unknown (sat)\n" <> 0 then *)
-      (* 	failwith "Error calling SMT solver"; *)
-      (*if String.compare output "unsat\n" = 0 then exit 0;*)
+      if contains output "Valid" then raise (Solver.Unsat [])
+      else if not (contains output "I don't know") then
+      	failwith "Alt_ergo_file.check : error calling SMT solver";
 
       (*CSolver.solve ();*)
       Time.pause ()
@@ -768,11 +772,11 @@ axiom fr :
 	  Time.pause ();
 	  raise (Unsat [] (*(export_unsatcore2 ex)*))
 
-  (*let save_state = CSolver.save
+  (* let save_state = CSolver.save *)
 
-  let restore_state = CSolver.restore*)
+  (* let restore_state = CSolver.restore *)
 
-  let entails f = failwith "Alt_ergo.entails unsupported"
+  let entails f =
     (*let st = save_state () in
     let ans = 
       try
@@ -783,70 +787,12 @@ axiom fr :
     in
     restore_state st;
     ans*)
+    failwith "Alt_ergo_file.entails unsupported"
 
   let push () = (*Stack.push (save_state ()) push_stack*)
-    failwith "Alt_ergo.push unsupported"
+    failwith "Alt_ergo_file.push unsupported"
 
   let pop () = (*Stack.pop push_stack |> restore_state*)
-    failwith "Alt_ergo.pop unsupported"
+    failwith "Alt_ergo_file.pop unsupported"
 
 end
-
-
-
-
-(*"axiom rf :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) -> _e(p1, e1)._val = _e(p2, e2)._val
-
-(* axiom po_loc : *)
-(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
-(*   _po(p1, e1, p2, e2) and _e(p1, e1)._var = _e(p2, e2)._var *)
-(*                       (* and _e(p1, e1)._par = _e(p2, e2)._par *) *)
-(*                       (* and _e(p1, e1)._p1 = _e(p2, e2)._p1 *) *)
-(*   -> _po_loc_U_com(p1, e1, p2, e2) *)
-
-axiom rfe :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) and p1 <> p2
-  -> _co_U_prop(p1, e1, p2, e2)
-
-axiom fr :
-  forall pr, pw1, pw2, r, w1, w2 : int [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
-  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
-  -> _po_loc_U_com(pr, r, pw2, w2) and _co_U_prop(pr, r, pw2, w2)
-
-(* axiom ppo_tso : *)
-(*   forall p1, p2, e1, e2 : int [_po(p1,e1,p2,e2)]. *)
-(*   _po(p1, e1, p2, e2) and not (_e(p1, e1)._dir = _W and _e(p2, e2)._dir = _R) *)
-(*   -> _co_U_prop(p1, e1, p2, e2) *)
-
-axiom po_loc_U_com_1 :
-  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-   -> _po_loc_U_com(p1, e1, p2, e2)
-
-axiom po_loc_U_com_2 :
-  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2)
-   -> _po_loc_U_com(p1, e1, p2, e2)
-
-axiom po_loc_U_com_t :
-  forall p1, p2, p3, e1, e2, e3 : int [_po_loc_U_com(p1,e1,p2,e2),_po_loc_U_com(p2,e2,p3,e3)].
-  _po_loc_U_com(p1, e1, p2, e2) and _po_loc_U_com(p2, e2, p3, e3)
-   -> _po_loc_U_com(p1, e1, p3, e3)
-
-axiom co_U_prop_1 :
-  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-  -> _co_U_prop(p1, e1, p2, e2)
-
-axiom co_U_prop_2 :
-  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
-  _fence(p1, e1, p2, e2)
-  -> _co_U_prop(p1, e1, p2, e2)
-
-axiom co_U_prop_t :
-  forall p1, p2, p3, e1, e2, e3 : int [_co_U_prop(p1,e1,p2,e2),_co_U_prop(p2,e2,p3,e3)].
-  _co_U_prop(p1, e1, p2, e2) and _co_U_prop(p2, e2, p3, e3)
-   -> _co_U_prop(p1, e1, p3, e3)"*)

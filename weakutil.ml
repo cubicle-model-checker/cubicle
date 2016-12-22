@@ -6,12 +6,19 @@ let compare_htriple (x1,y1,z1) (x2,y2,z2) =
     let c = H.compare y1 y2 in if c <> 0 then c else
       H.compare z1 z2
 
-let rec compare_htlist l1 l2 =
-  match l1, l2 with
+let rec compare_htlist l1 l2 = match l1, l2 with
   | [], [] -> 0
   | [], _ -> -1
   | _, [] -> 1
   | x :: r1, y :: r2 ->
      let c = compare_htriple x y in
-     if c <> 0 then c else
-       compare_htlist r1 r2
+     if c <> 0 then c else compare_htlist r1 r2
+
+let rec equal_hplist hpl1 hpl2 = match hpl1, hpl2 with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | (hl1, hr1) :: hpl1, (hl2, hr2) :: hpl2 ->
+     H.equal hl1 hl2 && H.equal hr1 hr2 && equal_hplist hpl1 hpl2
+
+let sort_hplist =
+  List.sort_uniq (fun (p1, _) (p2, _) -> H.compare p1 p2)

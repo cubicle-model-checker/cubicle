@@ -598,10 +598,10 @@ let system s =
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
     List.map (fun (_,v,i) ->
-      create_node_rename Inv v (Weakmem.events_of_satom i)) s.invs in
+      create_node_rename Inv v (Weakevent.events_of_satom i)) s.invs in
   let unsafe_woloc =
     List.map (fun (_,v,u) ->
-      create_node_rename Orig v (Weakmem.events_of_satom u)) s.unsafe in
+      create_node_rename Orig v (Weakevent.events_of_satom u)) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in  
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
