@@ -1,0 +1,29 @@
+# Memory layout:
+# 0 — F1
+# 1 — F2
+
+thread t0
+initial e0
+final e0
+transition	e0	l0	write	1	0
+transition	l0	l0b	read	F2	1
+transition	l0b	l0	check	== F2 0
+transition	l0b	e1	check	!= F2 0
+transition	e1	l1	write	0	0
+transition	l1	l1b	read	F2	1
+transition	l1b	l1	check	!= F2 0
+transition	l1b	e0	check	== F2 0
+end
+
+thread t1
+initial e0
+final e1
+transition	e0	l0	write	1	1
+transition	l0	l0b	read	F1	0
+transition	l0b	l0	check	== F1 0
+transition	l0b	e1	check	!= F1 0
+transition	e1	l1	write	0	1
+transition	l1	l1b	read	F1	0
+transition	l1b	l1	check	!= F1 0
+transition	l1b	e0	check	== F1 0
+end

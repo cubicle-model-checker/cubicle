@@ -1,0 +1,28 @@
+
+type loc = E0 | E1 | L0 | L1
+
+array PC[proc] : loc
+
+weak array F[proc] : bool
+
+init (i) { PC[i] = E0 && F[i] = False }
+
+unsafe (i j) { PC[i] = E0 && PC[j] = E1 }
+
+transition t1(i)
+requires { PC[i] = E0 }
+{ write(i, F[i], True);
+  PC[i] := L0; }
+
+transition t2(i)
+requires { PC[i] = L0 && (*read(i, F[i]) = True &&*) forall_other j. read(i, F[j]) = True }
+{ PC[i] := E1; }
+
+transition t3(i)
+requires { PC[i] = E1 }
+{ write(i, F[i], False);
+  PC[i] := L1; }
+
+transition t4(i)
+requires { PC[i] = L1 && (*read(i, F[i]) = False &&*) forall_other j. read(i, F[j]) = False }
+{ PC[i] := E0; }
