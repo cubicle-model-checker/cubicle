@@ -93,19 +93,19 @@ let h_proc = Hstring.make "proc"
 let h_bool = Hstring.make "bool"
 let h_int = Hstring.make "int"
 
-let user_types = Hstring.H.create 13
+let user_cubtypes = Hstring.H.create 13
 
 let ty_proc = 
   let tys = Ty.create_tysymbol (Ident.id_fresh "proc") [] (Some Ty.ty_int) in
-  Hstring.H.add user_types h_proc tys;
+  Hstring.H.add user_cubtypes h_proc tys;
   let ts = Ty.ty_app tys [] in
   ts
 
 let hs_to_tys ty =
-  try Hstring.H.find user_types ty
+  try Hstring.H.find user_cubtypes ty
   with Not_found ->
        let ts = Ty.create_tysymbol (hs_id ty) [] None in
-       Hstring.H.add user_types ty ts;
+       Hstring.H.add user_cubtypes ty ts;
        ts
 
 let tysymb = hs_to_tys

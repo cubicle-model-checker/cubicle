@@ -40,8 +40,8 @@ EXE = @EXE@
 
 INCLUDES = $(FUNCTORYLIB) -thread -I ../../ -I ../../common/ -I ../../smt/ -I why3
 
-BFLAGS = -dtypes -g $(INCLUDES) -annot
-OFLAGS = -dtypes $(INCLUDES) -annot
+BFLAGS = -dcubtypes -g $(INCLUDES) -annot
+OFLAGS = -dcubtypes $(INCLUDES) -annot
 
 BIBBYTE=nums.cma unix.cma
 
@@ -75,11 +75,11 @@ make_functory:
 
 SMTCMO = ../../smt/exception.cmo ../../smt/symbols.cmo \
 	 ../../smt/ty.cmo ../../smt/term.cmo ../../smt/literal.cmo \
-         ../../smt/solver_types.cmo ../../smt/explanation.cmo \
+         ../../smt/solver_cubtypes.cmo ../../smt/explanation.cmo \
          ../../smt/polynome.cmo ../../smt/uf.cmo ../../smt/use.cmo \
 	 ../../smt/intervals.cmo ../../smt/fm.cmo ../../smt/arith.cmo ../../smt/sum.cmo \
          ../../smt/combine.cmo ../../smt/cc.cmo ../../smt/solver.cmo \
-	 ../../smt/enumsolver_types.cmo ../../smt/enumsolver.cmo ../../smt/smt.cmo
+	 ../../smt/enumsolver_cubtypes.cmo ../../smt/enumsolver.cmo ../../smt/smt.cmo
 
 COMMONCMO = ../../common/timer.cmo ../../common/hashcons.cmo ../../common/hstring.cmo\
 	    ../../common/vec.cmo ../../common/heap.cmo ../../common/iheap.cmo\

@@ -1,5 +1,5 @@
 open Ast
-open Types
+open Cubtypes
 open Util
 
 module Solver = Smt.Make(Options)

@@ -17,7 +17,7 @@ open Format
 open Options
 open Util
 open Ast
-open Types
+open Cubtypes
 
 module Debug = struct
 

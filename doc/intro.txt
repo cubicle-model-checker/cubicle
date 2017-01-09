@@ -13,7 +13,7 @@ a reference manual for developers.
 
 {!modules:
 Variable
-Types
+Cubcubtypes
 Cube
 Ast
 Node
@@ -90,7 +90,7 @@ Smt_sig
 Smt
 Alt_ergo
 Solver	
-Solver_types	
+Solver_cubtypes	
 }
 
 

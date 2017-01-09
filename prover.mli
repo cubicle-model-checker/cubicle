@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Types
+open Cubtypes
 
 (** Interface with the SMT solver *)
 

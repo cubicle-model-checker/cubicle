@@ -16,7 +16,7 @@
 open Format
 open Options
 open Ast
-open Types
+open Cubtypes
 open Atom
 open Pervasives
 

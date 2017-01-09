@@ -5,7 +5,9 @@ array Crit[proc] : bool
 init (z) { Want[z] = False && Crit[z] = False }
 
 unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
-trans_regexp : req(z) enter(z);
+
+(* trans_regexp : req(z) enter(z); *)
+
 transition req (i)
 requires { Want[i] = False }
 { Want[i] := True }
@@ -17,9 +19,9 @@ requires { Want[i]=True && Crit[i] = False && Turn = i}
 transition exit (i)
 requires { Crit[i] = True }
 { 
-  Turn := . ;
-  Crit[i] := False; 
-  Want[i] := False
+Turn := . ;
+Crit[i] := False; 
+Want[i] := False
 }
 
 

@@ -16,7 +16,7 @@
 open Format
 open Options
 open Util
-open Types
+open Cubtypes
 
 
 module H = Hstring
@@ -465,36 +465,6 @@ let inconsistent_far sa1 sa2 =
       with Exit -> true
   ) sa1
     
-
-
-(* ---------- TODO : doublon avec SAtom.variables -----------*)
-
-let rec add_arg args = function
-  | Elem (s, _) ->
-      let s' = H.view s in
-      if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
-  | Access (_, ls) ->
-      List.fold_left (fun args s ->
-        let s' = H.view s in
-        if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args)
-        args ls        
-  | Arith (t, _) -> add_arg args t
-  | Const _ -> args
-
-let args_of_atoms sa = 
-  let rec args_rec sa args = 
-    SAtom.fold 
-      (fun a args -> 
-	 match a with 
-	   | Atom.True | Atom.False -> args
-	   | Atom.Comp (x, _, y) -> add_arg (add_arg args x) y
-	   | Atom.Ite (sa, a1, a2) -> 
-	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args) 
-      sa args
-  in 
-  S.elements (args_rec sa S.empty)
-
-(* --------------------------------------------------------------*)
 
 let tick_pos sa = 
   let ticks = ref [] in 

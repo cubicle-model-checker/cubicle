@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Types
+open Cubtypes
 
 (** Generation of graphical search graphs with dot/graphviz *)
 

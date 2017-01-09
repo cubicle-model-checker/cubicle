@@ -16,7 +16,7 @@
 %{
 
   open Ast
-  open Types
+  open Cubtypes
   open Parsing
   open Ptree
   open Util

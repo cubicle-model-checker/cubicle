@@ -1,5 +1,5 @@
 open Ast
-open Types
+open Cubtypes
 open Far_modules
 
 let contains_sa us s = List.exists (SAtom.equal s) us

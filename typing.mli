@@ -26,5 +26,5 @@ exception Error of error * Util.loc
 val report : Format.formatter -> error -> unit
 
 val system : system -> t_system
-(** Types an untyped system and performs subtyping analysis is the flag
+(** Cubtypes an untyped system and performs subtyping analysis is the flag
     {! Options.subtyping} is [true]. *)

@@ -17,7 +17,7 @@
 open Options
 open Format
 open Ast
-open Types
+open Cubtypes
 
 module SA = SAtom
 
@@ -117,16 +117,6 @@ let nb_neq s =
     | _ -> n
   ) (Node.litterals s) 0
 
-
-let nb_arith s =
-  SAtom.fold (fun a n -> match a with
-    | Atom.Comp (_, (Le|Lt), _)
-    | Atom.Comp (Arith _, _, _) 
-    | Atom.Comp (_, _, Arith _) 
-    | Atom.Comp (Const _, _, _) 
-    | Atom.Comp (_, _, Const _) -> n + 1
-    | _ -> n
-  ) (Node.litterals s) 0
 
 let respect_finite_order =
   SAtom.for_all (function

@@ -1,0 +1,399 @@
+(* type proc_type = Proc | Cluster *)
+type proc_type = L1Id | CId
+
+type cache_state = Invld | Shrd | Excl
+type command = None | Get | GetX | Putt | PutX | NAck | ShWb 
+              | Inv | InvAck | DxFer | WINV | WB
+
+
+(*-------------------- Global Network -------------------------*)
+array GUniMsg_Cmd[proc] : command
+array GUniMsg_Cluster[proc] : proc
+(* array GUniMsg_InvCnt[proc,proc] : bool (\* ClusterRange *\) *)
+array GUniMsg_ToInv[proc,proc] : bool
+
+array GInvMsg_Cmd[proc] : command
+array GInvMsg_Cluster[proc] : proc
+array GInvMsg_Cluster_defined[proc] : bool
+
+var GShWbMsg_Cmd : command
+var GShWbMsg_Cluster : proc
+
+var GWbMsg_Cmd : command
+var GWbMsg_Cluster : proc
+
+
+(*-------------------- Global Directory -----------------------*)
+var GDir_State : cache_state
+array GDir_ShrSet[proc] : bool
+var GDir_Owner : proc
+var GDir_Owner_defined : bool 
+var GDir_pending : bool
+
+
+
+(*------------------------ Clusters ---------------------------*)
+
+array Clusters_L1s_State[proc, proc] : cache_state
+array Clusters_L1s_Req[proc, proc] : command
+
+array Clusters_L2_State[proc] : cache_state
+array Clusters_L2_pending[proc] : bool
+
+array Clusters_OnlyCopy[proc] : bool
+
+array Clusters_ifInReq[proc] : bool
+array Clusters_ReqCmd[proc] : command
+
+array Clusters_ifOutRpy[proc] : bool
+array Clusters_outRpy_Cmd[proc] : command
+
+array Clusters_ifOutReq[proc] : bool
+array Clusters_outReq_Cmd[proc] : command
+array Clusters_outReq_Cluster[proc] : proc
+
+array Clusters_ifInRpy[proc] : bool
+array Clusters_inRpy_Cmd[proc] : command
+array Clusters_inRpy_Dest[proc] : proc
+
+array Clusters_WbReq_Cmd[proc] : command
+
+array Clusters_RAC_Cmd[proc] : command
+array Clusters_RAC_Inved[proc,proc] : bool
+array Clusters_RAC_ToInv[proc,proc] : bool
+
+
+array Sort[proc] : proc_type
+
+
+init (c i) {
+    (* Sort[c] = Cluster && Sort[i] = Proc => *)
+    Clusters_L1s_State[c,i] = Invld &&
+    Clusters_L1s_Req[c,i] = None &&
+
+    Clusters_L2_State[c] = Invld &&
+    Clusters_L2_pending[c] = False &&
+    Clusters_OnlyCopy[c] = False &&
+
+    Clusters_ifInReq[c] = False &&
+    Clusters_ReqCmd[c] = None &&
+    Clusters_ifOutRpy[c] = False &&
+    Clusters_outRpy_Cmd[c] = None &&
+
+    Clusters_ifOutReq[c] = False &&
+    Clusters_outReq_Cmd[c] = None &&
+    Clusters_ifInRpy[c] = False &&
+    Clusters_inRpy_Cmd[c] = None &&
+    Clusters_WbReq_Cmd[c] = None &&
+
+    Clusters_RAC_Cmd[c] = None &&
+    (* Clusters_RAC_InvCnt[c] = 0 && *)
+    Clusters_RAC_Inved[c,i] = False &&
+    Clusters_RAC_ToInv[c,i] = False &&
+
+    GUniMsg_Cmd[c] = None &&
+    (* GUniMsg_InvCnt[c] = 0 && *)
+    GUniMsg_ToInv[c,i] = False &&
+
+    GInvMsg_Cmd[c] = None &&
+    GInvMsg_Cluster_defined[c] = False &&
+
+    GShWbMsg_Cmd = None &&
+    GWbMsg_Cmd = None &&
+
+    (* GDir_Mem = d && *)
+    (* undefine GDir.Owner; *)
+    GDir_Owner_defined = False &&
+
+    GDir_State = Invld &&
+    GDir_pending = False &&
+    GDir_ShrSet[c] = False
+}
+
+(* unsafe (z) { *)
+(* Sort[z] = CId && GUniMsg_Cmd[z] = Get && Clusters_outReq_Cmd[z] = GetX *)
+(* } *)
+
+(* trans_regexp : t4(c i) (t4(z i) | t4(c z)) ; *)
+trans_regexp : t5_x(c i) t13(c);
+(* trans_regexp : t12(c i); *)
+(* trans_regexp : t4(c i) t12(c i) t3(cc i) t5(cc i) t13(c) t19_x(cc i) t13(i); *)
+(* trans_regexp: t23(c i) | t15(c); *)
+
+(* hide_transition: t37 ; *)
+
+(* invariant "I1" *)
+
+unsafe (c i j) {
+       Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
+       Clusters_L1s_State[c,i] = Excl && Clusters_L1s_State[c,j] = Excl
+}
+
+(* unsafe (c i) { *)
+(*        Sort[c] = CId && Sort[i] = L1Id && *)
+(*        Clusters_L2_State[c] = Excl && Clusters_L1s_State[c,i] = Excl *)
+(* } *)
+
+
+(* (\* invariant "I2" *\) *)
+(* unsafe (c1 c2 i j) { *)
+(*        Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id && Sort[j] = L1Id && *)
+(*        Clusters_L1s_State[c1,i] = Excl && Clusters_L1s_State[c2,j] = Excl *)
+(* } *)
+
+(* unsafe (c1 c2 i) { *)
+(*        Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id && *)
+(*        Clusters_L2_State[c1] = Excl && Clusters_L1s_State[c2,i] = Excl *)
+(* } *)
+
+(* unsafe (c1 c2) { *)
+(*        Sort[c1] = CId && Sort[c2] = CId && *)
+(*        Clusters_L2_State[c1] = Excl && Clusters_L2_State[c2] = Excl *)
+(* } *)
+
+(* trans_regexp : t13(z) t15(z) t33_then(z) t36(z) t41(z); *)
+(* trans_regexp : mt1_5(c); *)
+
+(* meta_transition mt1_2 (c) (\* t13 t15 (t33_then t36 t41) *\) *)
+(* requires { Sort[c] = CId && *)
+(*            (\* from t13 *\) *)
+(*            Clusters_ifInReq[c] = True && *)
+(*            Clusters_RAC_Cmd[c] = None && *)
+(*            Clusters_WbReq_Cmd[c] = None && *)
+(*            (\* from t15 *\) *)
+(*            (\* GUniMsg_Cmd[c] = GetX && *\) *)
+(*            (\* implied by t15 guard and t13 action *\) *)
+(*            Clusters_ReqCmd[c] = GetX && *)
+(*            GDir_State = Invld && *)
+(*            GDir_pending = False *)
+(* } *)
+(* { *)
+(*   (\* from t15 *\) *)
+(*   GUniMsg_Cmd[c] := PutX; *)
+(*   GUniMsg_ToInv[oc,x] := case | oc = c : False | _ : GUniMsg_ToInv[oc,x]; *)
+(*   GDir_Owner := c; *)
+(*   GDir_State := Excl; *)
+  
+(*   (\* from t13 *\) *)
+(*   Clusters_RAC_Cmd[c] := Clusters_ReqCmd[c]; *)
+(*   (\* GUniMsg_Cmd[c] := Clusters_ReqCmd[c]; *\) *)
+(*   GUniMsg_Cluster[c] := c; *)
+
+(*   Clusters_ifInReq[c] := False; *)
+(* } *)
+
+(* meta_transition mt1_3 (c) (\* t13 t15 t33_then (t36 t41) *\) *)
+(* requires { Sort[c] = CId && *)
+(*            (\* from t13 *\) *)
+(*            Clusters_ifInReq[c] = True && *)
+(*            Clusters_RAC_Cmd[c] = None && *)
+(*            Clusters_WbReq_Cmd[c] = None && *)
+(*            (\* from t15 *\) *)
+(*            (\* GUniMsg_Cmd[c] = GetX && *\) *)
+(*            (\* implied by t15 guard and t13 action *\) *)
+(*            Clusters_ReqCmd[c] = GetX && *)
+(*            GDir_State = Invld && *)
+(*            GDir_pending = False && *)
+(*            (\* from t33_then *\) *)
+(*            (\* GUniMsg_Cmd[c] = PutX && already done by t15 action *\) *)
+(*            forall_other i. (Sort[i] <> CId || GUniMsg_ToInv[c,i] = False ||  *)
+(*                                               Clusters_RAC_Inved[c,i] = True)  *)
+
+(* } *)
+(* { *)
+(*   (\* from t33_then *\) *)
+(*   (\* Clusters_RAC_Cmd[c] := None; redundant with guard *\) *)
+
+(*   Clusters_outRpy_Cmd[c] := PutX;  *)
+(*   (\* GUniMst_Cmd[c] was equal to PutX but will be equal to None so we *)
+(*      have to change it here *\) *)
+
+(*   GUniMsg_Cmd[c] := None; *)
+(*   Clusters_ReqCmd[c] := None; *)
+
+(*   (\* from t15 *\) *)
+(*   (\* GUniMsg_Cmd[c] := PutX; cancelled by t33_then action *\) *)
+(*   GUniMsg_ToInv[oc,x] := case | oc = c : False | _ : GUniMsg_ToInv[oc,x]; *)
+(*   GDir_Owner := c; *)
+(*   GDir_State := Excl; *)
+  
+(*   (\* from t13 *\) *)
+(*   (\* Clusters_RAC_Cmd[c] := Clusters_ReqCmd[c]; cancelled by t33_action *\) *)
+(*   (\* GUniMsg_Cmd[c] := Clusters_ReqCmd[c]; *\) *)
+(*   GUniMsg_Cluster[c] := c; *)
+
+(*   Clusters_ifInReq[c] := False; *)
+(* } *)
+
+
+(* meta_transition mt1_4 (c) (\* t13 t15 t33_then t36 (t41) *\) *)
+(* requires { Sort[c] = CId && *)
+(*            (\* from t13 *\) *)
+(*            Clusters_ifInReq[c] = True && *)
+(*            Clusters_RAC_Cmd[c] = None && *)
+(*            Clusters_WbReq_Cmd[c] = None && *)
+(*            (\* from t15 *\) *)
+(*            (\* GUniMsg_Cmd[c] = GetX && *\) *)
+(*            (\* implied by t15 guard and t13 action *\) *)
+(*            Clusters_ReqCmd[c] = GetX && *)
+(*            GDir_State = Invld && *)
+(*            GDir_pending = False && *)
+(*            (\* from t36 *\) *)
+(*            (\* Clusters_outRpy_Cmd[c] = PutX && already done by t33_then action*\) *)
+(*            (\* from t33_then *\) *)
+(*            (\* GUniMsg_Cmd[c] = PutX && already done by t15 action *\) *)
+(*            forall_other i. (Sort[i] <> CId || GUniMsg_ToInv[c,i] = False ||  *)
+(*                                               Clusters_RAC_Inved[c,i] = True)  *)
+
+(* } *)
+(* { *)
+(*   (\* from t36 *\) *)
+(*   Clusters_L2_pending[c] := False; *)
+
+(*   Clusters_L2_State[c] := Excl; *)
+(*   Clusters_OnlyCopy[c] := True; *)
+
+(*   Clusters_outRpy_Cmd[c] := None; *)
+
+(*   (\* from t33_then *\) *)
+(*   (\* Clusters_RAC_Cmd[c] := None; redundant with guard *\) *)
+
+(*   (\* Clusters_outRpy_Cmd[c] := PutX; cancelled by t36 action*\) *)
+
+(*   GUniMsg_Cmd[c] := None; *)
+(*   Clusters_ReqCmd[c] := None; *)
+
+(*   (\* from t15 *\) *)
+(*   (\* GUniMsg_Cmd[c] := PutX; cancelled by t33_then action *\) *)
+(*   GUniMsg_ToInv[oc,x] := case | oc = c : False | _ : GUniMsg_ToInv[oc,x]; *)
+(*   GDir_Owner := c; *)
+(*   GDir_State := Excl; *)
+  
+(*   (\* from t13 *\) *)
+(*   (\* Clusters_RAC_Cmd[c] := Clusters_ReqCmd[c]; cancelled by t33_action *\) *)
+(*   (\* GUniMsg_Cmd[c] := Clusters_ReqCmd[c]; *\) *)
+(*   GUniMsg_Cluster[c] := c; *)
+
+(*   Clusters_ifInReq[c] := False; *)
+(* } *)
+
+(* meta_transition mt1_5 (c) (\* t13 t15 t33_then t36 t41 *\) *)
+(* requires { Sort[c] = CId && *)
+(*            (\* from t13 *\) *)
+(*            Clusters_ifInReq[c] = True && *)
+(*            Clusters_RAC_Cmd[c] = None && *)
+(*            Clusters_WbReq_Cmd[c] = None && *)
+(*            (\* from t15 *\) *)
+(*            (\* GUniMsg_Cmd[c] = GetX && *\) *)
+(*            (\* implied by t15 guard and t13 action *\) *)
+(*            Clusters_ReqCmd[c] = GetX && *)
+(*            GDir_State = Invld && *)
+(*            GDir_pending = False && *)
+(*            (\* from t36 *\) *)
+(*            (\* Clusters_outRpy_Cmd[c] = PutX && already done by t33_then action*\) *)
+(*            (\* from t41 *\) *)
+(*            (\* Clusters_L2_State[c] = Excl && *\) *)
+(*            (\* Clusters_L2_pending[c] = False  *\) *)
+(*            (\* already implied by t36 action *\) *)
+(*            (\* from t33_then *\) *)
+(*            (\* GUniMsg_Cmd[c] = PutX && already done by t15 action *\) *)
+(*            forall_other i. (Sort[i] <> CId || GUniMsg_ToInv[c,i] = False ||  *)
+(*                                               Clusters_RAC_Inved[c,i] = True)  *)
+
+(* } *)
+(* { *)
+(*   (\* from t41 *\) *)
+(*   Clusters_WbReq_Cmd[c] := WB; *)
+(*   Clusters_L2_State[c] := Invld; *)
+(*   Clusters_OnlyCopy[c] := False; *)
+
+(*   (\* from t36 *\) *)
+(*   Clusters_L2_pending[c] := False; *)
+
+(*   (\* Clusters_L2_State[c] := Excl; cancelled by t41 action *\) *)
+(*   (\* Clusters_OnlyCopy[c] := True; cancelled by t41 action *\) *)
+
+(*   Clusters_outRpy_Cmd[c] := None; *)
+
+(*   (\* from t33_then *\) *)
+(*   (\* Clusters_RAC_Cmd[c] := None; redundant with guard *\) *)
+
+(*   (\* Clusters_outRpy_Cmd[c] := PutX; cancelled by t36 action*\) *)
+
+(*   GUniMsg_Cmd[c] := None; *)
+(*   Clusters_ReqCmd[c] := None; *)
+
+(*   (\* from t15 *\) *)
+(*   (\* GUniMsg_Cmd[c] := PutX; cancelled by t33_then action *\) *)
+(*   GUniMsg_ToInv[oc,x] := case | oc = c : False | _ : GUniMsg_ToInv[oc,x]; *)
+(*   GDir_Owner := c; *)
+(*   GDir_State := Excl; *)
+  
+(*   (\* from t13 *\) *)
+(*   (\* Clusters_RAC_Cmd[c] := Clusters_ReqCmd[c]; cancelled by t33_action *\) *)
+(*   (\* GUniMsg_Cmd[c] := Clusters_ReqCmd[c]; *\) *)
+(*   GUniMsg_Cluster[c] := c; *)
+
+(*   Clusters_ifInReq[c] := False; *)
+(* } *)
+
+(* meta_transition excl_trans_3 (c i) *)
+(* requires { Sort[c] = CId && Sort[i] = L1Id && *)
+(*            Clusters_L1s_State[c,i] = Invld && *)
+(*            Clusters_L1s_Req[c,i] = None && *)
+(*            Clusters_RAC_Cmd[c] = None && *)
+(*            Clusters_WbReq_Cmd[c] = None && *)
+(*            forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) && *)
+(*            Clusters_L2_State[c] = Invld && *)
+(*            Clusters_L2_pending[c] = False *)
+(* } *)
+(* { *)
+(*       Clusters_L2_pending[c] := True; *)
+(*       Clusters_ReqCmd[c] := GetX; *)
+(*       Clusters_RAC_Cmd[c] := GetX; *)
+(*       GUniMsg_Cmd[c] := GetX; *)
+(*       GUniMsg_Cluster[c] := c; *)
+(*       Clusters_ifInReq[c] := False; *)
+(* } *)
+
+
+(*------------ Murphi rule "2 L1 cache write back cache" ------*)
+
+(*------------ Murphi rule "4 L1 req excl copy" -------------*)
+transition t4 (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_State[c,i] <> Excl &&
+           Clusters_L1s_Req[c,i] = None }
+{
+  Clusters_L1s_Req[c,i] := GetX;
+}
+
+
+transition t5_x (c i)
+requires { Sort[c] = CId && Sort[i] = L1Id &&
+           Clusters_L1s_Req[c,i] = GetX &&
+           Clusters_L1s_State[c,i] = Invld &&
+           forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           Clusters_L2_State[c] = Invld &&
+           Clusters_L2_pending[c] = False }
+{
+  Clusters_L2_pending[c] := True;
+  Clusters_ifInReq[c] := True;
+  Clusters_ReqCmd[c] := Clusters_L1s_Req[c,i];
+
+  Clusters_L1s_Req[c,i] := None;
+}
+
+(*------- Murphi rule "13 Cluster sends req to global dir" -----*)
+transition t13 (c)
+requires { Sort[c] = CId &&
+           Clusters_ifInReq[c] = True &&
+           Clusters_RAC_Cmd[c] = None &&
+           Clusters_WbReq_Cmd[c] = None }
+{
+  Clusters_RAC_Cmd[c] := Clusters_ReqCmd[c];
+  GUniMsg_Cmd[c] := Clusters_ReqCmd[c];
+  GUniMsg_Cluster[c] := c;
+
+  Clusters_ifInReq[c] := False;
+}

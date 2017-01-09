@@ -112,7 +112,7 @@ val big_int_of_string : string -> big_int
            The string consists of an optional [-] or [+] sign,
            followed by one or several decimal digits. *)
 
-(** {6 Conversions to and from other numerical types} *)
+(** {6 Conversions to and from other numerical cubtypes} *)
 
 val big_int_of_int : int -> big_int
         (** Convert a small integer to a big integer. *)

@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Types
+open Cubtypes
 
 (** Cubes and simplifications *)
 

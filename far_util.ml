@@ -1,5 +1,5 @@
 open Ast
-open Types
+open Cubtypes
 
 let find_pre_node t acc ncube =
   let (nl, nl') = Pre.pre_image [t] ncube in

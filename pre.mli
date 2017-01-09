@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 open Ast
-open Types
+open Cubtypes
 
 (** Pre-image computation *)
 

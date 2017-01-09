@@ -344,7 +344,7 @@ and ( >=/ ) = ge_num
 let max_num num1 num2 = if lt_num num1 num2 then num2 else num1
 and min_num num1 num2 = if gt_num num1 num2 then num2 else num1
 
-(* Coercions with basic types *)
+(* Coercions with basic cubtypes *)
 
 (* Coercion with int type *)
 let int_of_num = function

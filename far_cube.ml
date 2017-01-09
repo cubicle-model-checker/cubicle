@@ -1,5 +1,5 @@
 open Ast
-open Types
+open Cubtypes
 
 include Node
 

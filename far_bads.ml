@@ -5,7 +5,7 @@ let print_bads bl =
   List.iter (
     fun n -> Format.eprintf "\t\tExists %a, @[%a@] AND\n@." 
       Variable.print_vars (Far_cube.variables n)
-      (Types.SAtom.print_sep "&&") (Far_cube.litterals n)
+      (Cubtypes.SAtom.print_sep "&&") (Far_cube.litterals n)
   ) bl    
 
 let find_included_bads v graph = 

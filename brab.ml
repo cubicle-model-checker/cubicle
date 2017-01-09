@@ -15,7 +15,7 @@
 
 open Format
 open Options
-open Types
+open Cubtypes
 open Ast
 
 module BWD = Bwd.Selected

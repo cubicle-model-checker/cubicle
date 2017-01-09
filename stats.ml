@@ -17,7 +17,7 @@ open Format
 open Util
 open Ast
 open Options
-open Types
+open Cubtypes
 
 exception ReachedLimit
 

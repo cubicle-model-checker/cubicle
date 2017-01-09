@@ -20,7 +20,7 @@
     Since bit vectors are particular cases of arrays, this module provides
     the same operations as module [Array] (Sections~\ref{barray}
     up to \ref{earray}). It also provides bitwise operations
-    (Section~\ref{bitwise}) and conversions to/from integer types.
+    (Section~\ref{bitwise}) and conversions to/from integer cubtypes.
 
     In the following, [false] stands for bit 0 and [true] for bit 1. *)
 

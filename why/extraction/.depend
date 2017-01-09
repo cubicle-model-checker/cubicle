@@ -44,20 +44,20 @@
     ../../smt/sum.cmx ../../smt/sig.cmi ../../smt/polynome.cmx \
     ../../smt/arith.cmx ../../smt/combine.cmi
 ../../smt/enumsolver.cmo : ../../common/vec.cmi ../../common/iheap.cmi \
-    ../../common/hstring.cmi ../../smt/enumsolver_types.cmi \
+    ../../common/hstring.cmi ../../smt/enumsolver_cubtypes.cmi \
     ../../smt/enumsolver.cmi
 ../../smt/enumsolver.cmx : ../../common/vec.cmx ../../common/iheap.cmx \
-    ../../common/hstring.cmx ../../smt/enumsolver_types.cmx \
+    ../../common/hstring.cmx ../../smt/enumsolver_cubtypes.cmx \
     ../../smt/enumsolver.cmi
-../../smt/enumsolver_types.cmo : ../../common/vec.cmi \
-    ../../common/hstring.cmi ../../smt/enumsolver_types.cmi
-../../smt/enumsolver_types.cmx : ../../common/vec.cmx \
-    ../../common/hstring.cmx ../../smt/enumsolver_types.cmi
+../../smt/enumsolver_cubtypes.cmo : ../../common/vec.cmi \
+    ../../common/hstring.cmi ../../smt/enumsolver_cubtypes.cmi
+../../smt/enumsolver_cubtypes.cmx : ../../common/vec.cmx \
+    ../../common/hstring.cmx ../../smt/enumsolver_cubtypes.cmi
 ../../smt/exception.cmo : ../../smt/explanation.cmi ../../smt/exception.cmi
 ../../smt/exception.cmx : ../../smt/explanation.cmx ../../smt/exception.cmi
-../../smt/explanation.cmo : ../../smt/solver_types.cmi \
+../../smt/explanation.cmo : ../../smt/solver_cubtypes.cmi \
     ../../smt/explanation.cmi
-../../smt/explanation.cmx : ../../smt/solver_types.cmx \
+../../smt/explanation.cmx : ../../smt/solver_cubtypes.cmx \
     ../../smt/explanation.cmi
 ../../smt/fm.cmo : ../../smt/ty.cmi ../../smt/term.cmi ../../smt/symbols.cmi \
     ../../smt/sig.cmi ../../smt/polynome.cmi ../../smt/literal.cmi \
@@ -81,28 +81,28 @@
     ../../smt/polynome.cmi
 ../../smt/smt.cmo : ../../common/vec.cmi ../../smt/ty.cmi \
     ../../common/timer.cmi ../../smt/term.cmi ../../smt/symbols.cmi \
-    ../../smt/solver_types.cmi ../../smt/solver.cmi ../../smt/literal.cmi \
-    ../../common/hstring.cmi ../../smt/enumsolver_types.cmi \
+    ../../smt/solver_cubtypes.cmi ../../smt/solver.cmi ../../smt/literal.cmi \
+    ../../common/hstring.cmi ../../smt/enumsolver_cubtypes.cmi \
     ../../smt/enumsolver.cmi ../../smt/combine.cmi ../../smt/cc.cmi \
     ../../smt/smt.cmi
 ../../smt/smt.cmx : ../../common/vec.cmx ../../smt/ty.cmx \
     ../../common/timer.cmx ../../smt/term.cmx ../../smt/symbols.cmx \
-    ../../smt/solver_types.cmx ../../smt/solver.cmx ../../smt/literal.cmx \
-    ../../common/hstring.cmx ../../smt/enumsolver_types.cmx \
+    ../../smt/solver_cubtypes.cmx ../../smt/solver.cmx ../../smt/literal.cmx \
+    ../../common/hstring.cmx ../../smt/enumsolver_cubtypes.cmx \
     ../../smt/enumsolver.cmx ../../smt/combine.cmx ../../smt/cc.cmx \
     ../../smt/smt.cmi
-../../smt/solver.cmo : ../../common/vec.cmi ../../smt/solver_types.cmi \
+../../smt/solver.cmo : ../../common/vec.cmi ../../smt/solver_cubtypes.cmi \
     ../../smt/literal.cmi ../../common/iheap.cmi ../../smt/explanation.cmi \
     ../../smt/exception.cmi ../../smt/combine.cmi ../../smt/cc.cmi \
     ../../smt/solver.cmi
-../../smt/solver.cmx : ../../common/vec.cmx ../../smt/solver_types.cmx \
+../../smt/solver.cmx : ../../common/vec.cmx ../../smt/solver_cubtypes.cmx \
     ../../smt/literal.cmx ../../common/iheap.cmx ../../smt/explanation.cmx \
     ../../smt/exception.cmx ../../smt/combine.cmx ../../smt/cc.cmx \
     ../../smt/solver.cmi
-../../smt/solver_types.cmo : ../../common/vec.cmi ../../smt/term.cmi \
-    ../../smt/literal.cmi ../../common/hstring.cmi ../../smt/solver_types.cmi
-../../smt/solver_types.cmx : ../../common/vec.cmx ../../smt/term.cmx \
-    ../../smt/literal.cmx ../../common/hstring.cmx ../../smt/solver_types.cmi
+../../smt/solver_cubtypes.cmo : ../../common/vec.cmi ../../smt/term.cmi \
+    ../../smt/literal.cmi ../../common/hstring.cmi ../../smt/solver_cubtypes.cmi
+../../smt/solver_cubtypes.cmx : ../../common/vec.cmx ../../smt/term.cmx \
+    ../../smt/literal.cmx ../../common/hstring.cmx ../../smt/solver_cubtypes.cmi
 ../../smt/sum.cmo : ../../smt/ty.cmi ../../smt/term.cmi \
     ../../smt/symbols.cmi ../../smt/sig.cmi ../../smt/literal.cmi \
     ../../common/hstring.cmi ../../smt/explanation.cmi \
@@ -138,11 +138,11 @@
     ../../smt/sig.cmi ../../smt/literal.cmi ../../smt/explanation.cmi
 ../../smt/combine.cmi : ../../smt/sig.cmi
 ../../smt/enumsolver.cmi : ../../common/hstring.cmi \
-    ../../smt/enumsolver_types.cmi
-../../smt/enumsolver_types.cmi : ../../common/vec.cmi \
+    ../../smt/enumsolver_cubtypes.cmi
+../../smt/enumsolver_cubtypes.cmi : ../../common/vec.cmi \
     ../../common/hstring.cmi
 ../../smt/exception.cmi : ../../smt/explanation.cmi
-../../smt/explanation.cmi : ../../smt/solver_types.cmi
+../../smt/explanation.cmi : ../../smt/solver_cubtypes.cmi
 ../../smt/fm.cmi : ../../smt/sig.cmi ../../smt/polynome.cmi
 ../../smt/intervals.cmi : ../../smt/ty.cmi ../../smt/sig.cmi \
     ../../smt/explanation.cmi
@@ -151,8 +151,8 @@
 ../../smt/sig.cmi : ../../smt/ty.cmi ../../smt/term.cmi \
     ../../smt/symbols.cmi ../../smt/literal.cmi ../../smt/explanation.cmi
 ../../smt/smt.cmi : ../../smt/literal.cmi ../../common/hstring.cmi
-../../smt/solver.cmi : ../../smt/solver_types.cmi ../../smt/literal.cmi
-../../smt/solver_types.cmi : ../../common/vec.cmi ../../smt/literal.cmi
+../../smt/solver.cmi : ../../smt/solver_cubtypes.cmi ../../smt/literal.cmi
+../../smt/solver_cubtypes.cmi : ../../common/vec.cmi ../../smt/literal.cmi
 ../../smt/sum.cmi : ../../smt/sig.cmi
 ../../smt/symbols.cmi : ../../common/hstring.cmi
 ../../smt/term.cmi : ../../smt/ty.cmi ../../smt/symbols.cmi

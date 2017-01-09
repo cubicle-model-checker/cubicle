@@ -6,13 +6,9 @@ var S : int
 array M[proc] : int
 array P[proc] : t
 
-init (z) { T = 0 && S = 0 && P[z] = Idle }
+init (z) { T = 0 && S = 0 && P[z] = Idle && M[z] = 0 }
 
-(* invariant(i j) { M[i] <= S && P[i] = Wait && M[j] <= S && P[j] = Wait} *)
-(* invariant(z) {M[z] > T}(\* unsafe(i j) { M[i] <= S && P[i] = Wait && P[j] = Crit} *\) *)
-
-(* invariant() {S > T} *)
-
+unsafe (i) { M[i] > T }
 unsafe (i j) { P[i] = Crit && P[j] = Crit }
 
 transition req(i)

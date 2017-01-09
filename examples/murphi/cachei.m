@@ -26,7 +26,7 @@ const channel1: 1;
 const channel2: 2;
 const channel3: 3;
 
-/**Message types. */
+/**Message cubtypes. */
 type opcode: enum {
   op_invalid,-- clear
   read_shared,
@@ -39,7 +39,7 @@ type opcode: enum {
   grant_exclusive
 };
 
-/**Memory access message types. */
+/**Memory access message cubtypes. */
 type request_opcode: enum {
   req_read_shared,-- clear
   req_read_exclusive,

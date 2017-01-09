@@ -17,7 +17,7 @@ open Format
 open Options
 open Ast
 open Util
-open Types
+open Cubtypes
 
 type t = node_cube
 

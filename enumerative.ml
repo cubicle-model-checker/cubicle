@@ -16,7 +16,7 @@
 open Options
 open Format
 open Ast
-open Types
+open Cubtypes
 open Util
 
 type trans_history = (Hstring.t * Hstring.t list) list

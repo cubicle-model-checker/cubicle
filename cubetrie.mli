@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Types
+open Cubtypes
 
 (** Trie structure for cubes sets *)
 

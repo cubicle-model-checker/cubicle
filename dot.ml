@@ -15,7 +15,7 @@
 
 open Format
 open Ast
-open Types
+open Cubtypes
 open Options
 open Util
 

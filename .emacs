@@ -271,7 +271,7 @@
  '(lambda ()
     (define-key tuareg-mode-map [f2] 'tuareg-eval-phrase)
     (define-key tuareg-mode-map [S-f2] 'tuareg-eval-until-point)
-    (define-key tuareg-mode-map [f3] 'caml-types-show-type)))
+    (define-key tuareg-mode-map [f3] 'caml-cubtypes-show-type)))
 
 (setq-default indent-tabs-mode nil)
 
@@ -334,7 +334,7 @@
 (global-set-key [f7]   'next-error)
 (global-set-key [f8]   'normal-mode)
 
-(global-set-key (kbd "C-c t")   'caml-types-show-type)
+(global-set-key (kbd "C-c t")   'caml-cubtypes-show-type)
 
 (global-set-key (kbd "C-n") 'next-error)
 (global-set-key (kbd "C-p") 'previous-error)

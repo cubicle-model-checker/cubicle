@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 open Ast
-open Types
+open Cubtypes
 
 (** Node of the search graph *)
 

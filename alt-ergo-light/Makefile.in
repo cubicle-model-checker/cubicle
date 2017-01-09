@@ -38,8 +38,8 @@ OBJEXT = @OBJEXT@
 
 INCLUDES = -I common/ -I smt/
 
-BFLAGS = -dtypes -g $(INCLUDES) -annot
-OFLAGS = -dtypes $(INCLUDES) -annot -for-pack AltErgoLight
+BFLAGS = -dcubtypes -g $(INCLUDES) -annot
+OFLAGS = -dcubtypes $(INCLUDES) -annot -for-pack AltErgoLight
 
 BIBBYTE=nums.cma unix.cma
 
@@ -62,7 +62,7 @@ opt: $(CMA) $(CMXA)
 
 SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/ty.cmo smt/term.cmo smt/literal.cmo \
-         smt/solver_types.cmo smt/explanation.cmo \
+         smt/solver_cubtypes.cmo smt/explanation.cmo \
          smt/polynome.cmo smt/uf.cmo smt/use.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo smt/smt.cmo

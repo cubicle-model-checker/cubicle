@@ -156,7 +156,7 @@ val approx_num_exp : int -> num -> string
 val num_of_string : string -> num
 (** Convert a string to a number. *)
 
-(** {6 Coercions between numerical types} *)
+(** {6 Coercions between numerical cubtypes} *)
 
 val int_of_num : num -> int
 val num_of_int : int -> num

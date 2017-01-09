@@ -15,7 +15,7 @@
 
 open Options
 open Util
-open Types
+open Cubtypes
 open Ast
 
 module H = Hstring
