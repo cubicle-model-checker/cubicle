@@ -24,7 +24,7 @@ type op_comp = Eq | Lt | Le | Neq
     
 type sort = Glob | Constr | Var
 
-type coef = Number | Constant of Hstring.t
+type const = Number of Num.num | Constant of Hstring.t
 
 let compare_const c1 c2 = match c1, c2 with
   | Number, Number -> 0
@@ -32,7 +32,13 @@ let compare_const c1 c2 = match c1, c2 with
   | _, Number -> 1
   | Constant h1, Constant h2 -> Hstring.compare h1 h2
 
-module MConst = struct
+type term =
+  | Const of Num.num MConst.t
+  | Elem of Hstring.t * sort
+  | Access of Hstring.t * Variable.t list
+  | Polynomial of Num.num PolyMap.t
+
+and module PolyMap = struct
 
   module M = Map.Make (struct type t = coef let compare = compare_const end)
   include M
@@ -53,7 +59,7 @@ module MConst = struct
 
       
   let is_int = function
-    | Number ->
+    | Number -> true
       (* begin *)
         (* match *)
     | ConstReal _ -> false
@@ -62,15 +68,7 @@ module MConst = struct
         
 end
   
-let compare_constants = MConst.compare Pervasives.compare 
-
-
-        
-type term =
-  | Const of Num.num MConst.t
-  | Elem of Hstring.t * sort
-  | Access of Hstring.t * Variable.t list
-  | Polynomial of term * Num.num MConst.t
+(* let compare_constants = MConst.compare Pervasives.compare  *)
 
 
 let num_of_const = function
