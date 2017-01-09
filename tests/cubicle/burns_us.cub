@@ -14,7 +14,7 @@ init (x) { A[x] = Q1 && F[x] = False }
 unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
 
 transition t1 (x)
-requires { A[x] = Q1 (*&& read(x, F[x]) = True*) }
+requires { A[x] = Q1 }
 { A[x] := Q2; write(x, F[x], False); }
 
 transition t2 (x y)
@@ -42,10 +42,9 @@ requires { A[x] = Q5 && forall_other j. (j <= x || read(x, F[j]) = False) }
 { A[x] := Q6; }
 
 transition t8 (x)
-requires { A[x] = Q6 (*&& read(x, F[x]) = True*) }
-{ A[x] := Q1; (*write(x, F[x], False);*) }
-(*
-transition t9 (x)
-requires { A[x] = Q7 (*&& read(x, F[x]) = True*) }
-{ A[x] := Q1; }
-*)
+requires { A[x] = Q6 }
+{ A[x] := Q1; write(x, F[x], False); }
+
+(*transition t9 (x)
+requires { A[x] = Q7 }
+{ A[x] := Q1; }*)

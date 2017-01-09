@@ -14,8 +14,8 @@ requires { A[x] = Q1 }
 { A[x] := Q2;
   write(x, F[x], F1); }
 
-
 transition t2 (x)
+fences (x)
 requires { A[x] = Q2 && 
 	 forall_other j. (P[j] = False || P[j] = True && read(x, F[j]) = F0)}
 { A[x] := Q3; }
@@ -36,6 +36,7 @@ requires { A[x] = Q5 && forall_other j. read(x, F[j]) <> F2 }
 { A[x] := Q6; }
 
 transition t6 (x y)
+fences (x)
 requires { A[x] = Q5 && read(x, F[y]) = F2 }
 { A[x] := Q1; }
 
@@ -45,5 +46,6 @@ requires { A[x] = Q6 }
   write(x, F[x], F0); }
 
 transition t8 (x)
+fences (x)
 requires { A[x] = Q7 }
 { A[x] := Q1; }

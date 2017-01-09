@@ -11,7 +11,8 @@ init (z) { Sense = False && Local_sense[z] = False &&
            Level[z] = 0 && Count[z] = True && PC[z] = L1 }
 
 (* unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] } *)
-unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] }
+(* unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] } *)
+unsafe (z1 z2) { PC[z1] = L5 && PC[z2] = L5 }
 
 transition enter (i)
 requires { PC[i] = L1 }
@@ -31,14 +32,16 @@ requires { PC[i] = L2 }
 
 
 transition test_last (i)
+fences (i)
 requires { PC[i] = L3 && (*read(i, Count[i]) = False &&*) forall_other j. read(i, Count[j]) = False }
 { 
   PC[i] := L5;
-  write(i, Count[j], True); (* should write the whole array *)
+  (* write(i, Count(\*[j]*\), True); (\* should write the whole array *\) *)
   write(i, Sense, Local_sense[i])
 }
 
 transition test_wait (i k)
+fences (i)
 requires { PC[i] = L3 && read(i, Count[k]) = True }
 { 
   PC[i] := L4;
