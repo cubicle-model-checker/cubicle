@@ -28,11 +28,8 @@ type term =
 type atom =
   | AVar of Variable.t
   | AAtom of Atom.t
-  | AEq of term * term
-  | ANeq of term * term
-  | ALe of term * term
-  | ALt of term * term
-
+  | ABinop of term * Cubtypes.op_comp * term
+  
 type formula =
   | PAtom of atom
   | PNot of formula
@@ -45,7 +42,7 @@ type formula =
   | PExists of Variable.t list * formula
   | PForall_other of Variable.t list * formula
   | PExists_other of Variable.t list * formula
-
+  | PCount of Variable.t list * formula * op_comp * int MConst.t
 
 type term_or_formula = PF of formula | PT of term
 
@@ -75,10 +72,8 @@ let print_term fmt = function
 let print_atom fmt = function
   | AVar v -> fprintf fmt "?%a" Hstring.print v
   | AAtom a -> Atom.print fmt a
-  | AEq (t1, t2) -> fprintf fmt "(= %a %a)" print_term t1 print_term t2
-  | ANeq (t1, t2) -> fprintf fmt "(<> %a %a)" print_term t1 print_term t2
-  | ALe (t1, t2) -> fprintf fmt "(<= %a %a)" print_term t1 print_term t2
-  | ALt (t1, t2) -> fprintf fmt "(< %a %a)" print_term t1 print_term t2
+  | ABinop (t1, op, t2) -> fprintf fmt "(%a %a %a)"
+    print_op op print_term t1 print_term t2
 
 let rec print fmt = function
   | PAtom a -> print_atom fmt a
@@ -246,19 +241,13 @@ let subst_atom sigma aa = match aa with
      | PF f -> f
      | PT _ -> failwith "Cannot apply term substitution in atom."
      | exception Not_found -> PAtom aa)
-  | AEq (t1, t2) | ANeq (t1, t2) | ALe (t1, t2) | ALt (t1, t2) ->
+  | ABinop (t1, op, t2) ->
     (* eprintf "susbst natom@."; *)
     let t1' = subst_term sigma t1 in
     let t2' = subst_term sigma t2 in
     if t1 == t1' && t2 == t2' then PAtom aa
     else
-      PAtom (match aa with
-          | AEq _ -> AEq (t1', t2')
-          | ANeq _ -> ANeq (t1', t2')
-          | ALe _ -> ALe (t1', t2')
-          | ALt _ -> ALt (t1', t2')
-          | _ -> assert false
-        )
+      PAtom (ABinop (t1', op, t2'))
   | AAtom a ->
     let sigma' = restr_subst_to sigma (Atom.variables a) in
     let a' = Atom.subst sigma' a in
@@ -325,10 +314,13 @@ let app_fun name args =
 let neg_atom aa = match aa with
   | AVar v -> PNot (PAtom aa)
   | AAtom a -> PAtom (AAtom (Atom.neg a))
-  | AEq (t1, t2) -> PAtom (ANeq (t1, t2))
-  | ANeq (t1, t2) -> PAtom (AEq (t1, t2))
-  | ALe (t1, t2) -> PAtom (ALt(t2, t1))
-  | ALt (t1, t2) -> PAtom (ALe(t2, t1))
+  | ABinop (t1, op, t2) ->
+    let t1, op, t2 = match op with
+      | Eq -> t1, Neq, t2
+      | Neq -> t1, Eq, t2
+      | Lt -> t2, Le, t1
+      | Le -> t2, Lt, t1
+    in PAtom (ABinop (t1, op, t2))
 
 let rec neg = function
   | PAtom a -> neg_atom a
@@ -467,16 +459,9 @@ let conv_term = function
 
 let conv_atom aa = match aa with
   | AVar _ -> failwith "Remaining free variables in atom."
-  | AEq (t1, t2) | ANeq (t1, t2) | ALe (t1, t2) | ALt (t1, t2) ->
+  | ABinop (t1, op, t2) ->
     let t1 = conv_term t1 in
     let t2 = conv_term t2 in
-    let op  = match aa with
-       | AEq _ -> Eq
-       | ANeq _ -> Neq
-       | ALe _ -> Le
-       | ALt _ -> Lt
-       | _ -> assert false
-    in
     Atom.Comp (t1, op, t2)
   | AAtom a -> a
 

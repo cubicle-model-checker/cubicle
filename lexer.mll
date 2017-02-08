@@ -59,9 +59,10 @@
     let code_0 = Char.code '0' in
     let num10 = Num.Int 10 in
     let pos_dot = ref (-1) in
-    for i=0 to String.length s - 1 do
+    let sl = String.length s - 1 in
+    for i=0 to sl do
       let c = s.[i] in
-      if c = '.' then pos_dot := i 
+      if c = '.' then pos_dot := sl - i 
       else
 	r := Num.add_num (Num.mult_num num10 !r) 
 	  (Num.num_of_int (Char.code s.[i] - code_0))
@@ -98,6 +99,8 @@ rule token = parse
   | mident as id { MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }
+  | "#"
+      { HASH }
   | "("
       { LEFTPAR }
   | ")"

@@ -1,151 +1,16 @@
-##########################################################################
-#                                                                        #
-#                              Cubicle                                   #
-#                                                                        #
-#                       Copyright (C) 2011-2014                          #
-#                                                                        #
-#                  Sylvain Conchon and Alain Mebsout                     #
-#                       Universite Paris-Sud 11                          #
-#                                                                        #
-#                                                                        #
-#  This file is distributed under the terms of the Apache Software       #
-#  License version 2.0                                                   #
-#                                                                        #
-##########################################################################
+AC_INIT([Name], [0.1-beta], [your@email])
+AC_CONFIG_FILES([_oasis])  
 
-AC_INIT(main.ml)
-
-AC_CHECK_PROG(OCAMLC,ocamlc.opt,ocamlc.opt,no)
-if test "$OCAMLC" = no ; then
-	AC_MSG_ERROR(Cannot find ocamlc.)
+Z3LIB=$(ocamlfind query -i-format -qe Z3)
+WRAPPER=z3wrapper_actual.ml
+rm -f smt/z3wrapper.ml
+if test -z "$Z3LIB" ; then
+   WRAPPER=z3wrapper_fake.ml
 fi
+cat smt/"$WRAPPER" >> smt/z3wrapper.ml;\
+chmod -w smt/z3wrapper.ml
 
-OCAMLVERSION=`$OCAMLC -version`
-echo "ocaml version is $OCAMLVERSION"
-OCAMLLIB=`$OCAMLC -where`
-echo "ocaml library path is $OCAMLLIB"
-
-# we look for ocamlfind; if not present, we just don't use it to find
-# libraries
-AC_CHECK_PROG(USEOCAMLFIND,ocamlfind,yes,no)
-
-if test "$USEOCAMLFIND" = yes; then
-   OCAMLFINDLIB=$(ocamlfind printconf stdlib)
-   OCAMLFIND=$(which ocamlfind)
-   if test "$OCAMLFINDLIB" != "$OCAMLLIB"; then
-    USEOCAMLFIND=no;
-    echo "but your ocamlfind is not compatible with your ocamlc:"
-    echo "ocamlfind : $OCAMLFINDLIB, ocamlc : $OCAMLLIB"
-   fi
-fi
-
-
-AC_CHECK_PROG(OCAMLOPT,ocamlopt.opt,ocamlopt.opt,no)
-OCAMLBEST=byte
-if test "$OCAMLOPT" = no ; then
-	AC_MSG_WARN(Cannot find ocamlopt; bytecode compilation only.)
-else
-        OCAMLBEST=opt
-fi
-
-AC_CHECK_PROG(OCAMLDEP,ocamldep,ocamldep,no)
-if test "$OCAMLDEP" = no ; then
-	AC_MSG_ERROR(Cannot find ocamldep.)
-fi
-
-AC_CHECK_PROG(OCAMLLEX,ocamllex,ocamllex,no)
-if test "$OCAMLLEX" = no ; then
-    AC_MSG_ERROR(Cannot find ocamllex.)
-fi
-
-AC_CHECK_PROG(OCAMLYACC,ocamlyacc,ocamlyacc,no)
-if test "$OCAMLYACC" = no ; then
-	AC_MSG_ERROR(Cannot find ocamlyacc.)
-fi
-
-AC_CHECK_PROG(MENHIR,menhir,menhir,no)
-if test "$MENHIR" = no ; then
-	AC_MSG_ERROR(Cannot find menhir.)
-fi
-
-
-#looking for functory library
-
-if test "$USEOCAMLFIND" = yes; then
-  FUNCTORYLIB=$(ocamlfind query -i-format functory)
-fi
-
-if test -n "$FUNCTORYLIB";then
-  echo "ocamlfind found functory in $FUNCTORYLIB"
-  FUNCTORYLD=yes
-else
-  AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
-  if test "$FUNCTORYLD" = no ; then
-      AC_MSG_RESULT(Cannot find functory library.)
-      FUNCTORYLIB=""
-  else
-     FUNCTORYLIB="-I +functory"
-  fi
-fi
-
-
-#looking for Z3 ocaml bindings
-
-AC_ARG_WITH([z3],
-    AS_HELP_STRING([--with-z3], [enable support for Z3 backend SMT solver] ),
-    [],
-    [with_z3=no])
-
-Z3LIB=""
-Z3CCFLAGS=""
-AS_IF([test "x$with_z3" != xno],
-if test "$USEOCAMLFIND" = yes; then
-  Z3LIB=$(ocamlfind query -i-format Z3)
-  Z3CCFLAGS="-cclib \"-L$(ocamlfind query Z3) -lz3\""
-fi
-
-if test -n "$Z3LIB";then
-  echo "ocamlfind found Z3 bindings in $Z3LIB"
-  Z3LD=yes
-else
-  AC_CHECK_FILE($OCAMLLIB/Z3/z3.cma,Z3LD=yes,Z3LD=no)
-  if test "$Z3LD" = no ; then
-      AC_MSG_RESULT(Cannot find Z3 OCaml bindings.)
-  else
-     Z3LIB="-I +z3"
-     Z3CCFLAGS="-cclib \"-L$OCAMLLIB/Z3 -lz3\""
-  fi
-fi
-,
-AC_MSG_RESULT(Compiling without support for Z3.)
-)
-
-AC_MSG_CHECKING(platform)
-if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then
-    echo "Windows platform"
-    AC_MSG_RESULT(Win32)
-    OCAMLWIN32=yes
-    EXE=.exe
-else
-    echo "Unix platform"
-    OCAMLWIN32=no
-    EXE=
-fi
-
-AC_SUBST(OCAMLC)
-AC_SUBST(OCAMLOPT)
-AC_SUBST(OCAMLDEP)
-AC_SUBST(OCAMLLEX)
-AC_SUBST(OCAMLYACC)
-AC_SUBST(OCAMLBEST)
-AC_SUBST(OCAMLVERSION)
-AC_SUBST(OCAMLLIB)
-AC_SUBST(ALTERGOLIB)
-AC_SUBST(FUNCTORYLIB)
-AC_SUBST(Z3LIB)
-AC_SUBST(Z3CCFLAGS)
-AC_SUBST(OCAMLWIN32)
-AC_SUBST(EXE)
-
-AC_OUTPUT(Makefile)
-chmod a-w Makefile
+dnl oasis setup
+AC_OUTPUT
+dnl AC_SUBST(WRAPPER)
+oasis setup

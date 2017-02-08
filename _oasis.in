@@ -1,0 +1,85 @@
+OASISFormat:            0.4
+Name:                   cubicle
+Version:                1.1.1a-1706
+Synopsis:               Cubicle is an open source model checker
+                        for verifying safety properties of
+                        array-based systems.
+Authors:                Sylvain Conchon, Alain Mebsout, David Declerck,
+                        Mattias Roux
+License:                Apache-2.0
+Plugins:                META (0.4), StdFiles (0.4)
+OCamlVersion:           >= 4.01
+Alphafeatures:          ocamlbuild_more_args, compiled_setup_ml
+XOCamlbuildExtraArgs:   "-use-menhir"
+PostBuildCommand:       cp -L main.native cubicle
+PostCleanCommand:       rm cubicle
+
+Executable cubicle
+  Path:                 .
+  BuildTools:           ocamlbuild
+  MainIs:               main.ml
+  BuildDepends:
+        smt,
+        common,
+        functory
+  NativeOpt:            -dtypes -g -annot
+  ByteOpt:              -dtypes -g -annot
+  CompiledObject:       best
+
+Library init
+  Path:                 .
+  BuildTools:           ocamlbuild
+  Modules:              Version, Options
+  NativeOpt:            -dtypes -g -annot
+  ByteOpt:              -dtypes -g -annot
+  CompiledObject:       best
+
+Library common
+  Path:                 common
+  BuildTools:           ocamlbuild
+  Modules:
+        Bitv,
+        Hashcons,
+        Heap,
+        Hstring,
+        Iheap,
+        Timer,
+        Vec
+  BuildDepends:         init
+  NativeOpt:            -dtypes -g -annot
+  ByteOpt:              -dtypes -g -annot
+  CompiledObject:       best
+
+Library smt
+  Path:                 smt
+  BuildTools:           ocamlbuild
+  Modules:
+        Alt_ergo,
+        Arith,
+        Cc,
+        Combine,
+        Enumsolver,
+        Enumsolver_types,
+        Exception,
+        Explanation,
+        Fm,
+        Intervals,
+        Literal,
+        Polynome,
+        Smt,
+        Solver,
+        Solver_types,
+        Sum,
+        Symbols,
+        Term,
+        Ty,
+        Uf,
+        Use,
+        Z3wrapper
+  BuildDepends:
+        common,
+        num
+  NativeOpt:            -dtypes -g -annot
+  ByteOpt:              -dtypes -g -annot
+  CompiledObject:       best
+

@@ -21,151 +21,135 @@ open Util
 module HSet = Hstring.HSet
 
 type op_comp = Eq | Lt | Le | Neq
-    
+
+let print_op fmt = function
+  | Eq -> Format.fprintf fmt "="
+  | Lt -> Format.fprintf fmt "<"
+  | Le -> Format.fprintf fmt "<="
+  | Neq -> Format.fprintf fmt "<>"
+
 type sort = Glob | Constr | Var
 
-type const = Number of Num.num | Constant of Hstring.t
+
+type const =
+    ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
 
 let compare_const c1 c2 = match c1, c2 with
-  | Number n1, Number n2 -> Num.compare_num n1 n2
-  | Number _, _ -> -1
-  | _, Number _ -> 1
-  | Constant h1, Constant h2 -> Hstring.compare h1 h2
+  | (ConstInt n1 | ConstReal n1), (ConstInt n2 | ConstReal n2) ->
+     Num.compare_num n1 n2
+  | (ConstInt _ | ConstReal _), _ -> -1
+  | _, (ConstInt _ | ConstReal _) -> 1
+  | ConstName h1, ConstName h2 -> Hstring.compare h1 h2
 
-type term = ..
+module MConst = struct
 
-type term +=
-  | Const of const (* Num.num  MConst.t *)
-  | Elem of Hstring.t * sort
-  | Access of Hstring.t * Variable.t list
-  (* | Polynomial of Num.num PolyMap.t *)
-
-let rec compare_t t1 t2 = 
-  match t1, t2 with
-  | Const c1, Const c2 -> compare_const c1 c2
-  | Const _, _ -> -1 | _, Const _ -> 1
-  | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
-  | Elem (_, Glob), Elem (_, (Constr | Var)) -> 1
-  | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
-  | Elem _, _ -> -1 | _, Elem _ -> 1
-  | Access (a1, l1), Access (a2, l2) ->
-    let c = Hstring.compare a1 a2 in
-    if c<>0 then c else Hstring.compare_list l1 l2
-  | Access _, _ -> -1 | _, Access _ -> 1 
-    
-module PolyMap = struct
-
-  module M = Map.Make (struct type t = term let compare = compare_bt end)
+  module M = Map.Make (struct type t = const let compare = compare_const end)
   include M
 
-  exception Choose of term * int
-  (* let choose m = *)
-  (*   try *)
-  (*     M.iter (fun c i -> raise (Choose (c, i))) m; *)
-  (*     raise Not_found *)
-  (*   with Choose (c, i) -> c, i *)
+  exception Choose of const * int
+  let choose m =
+    try
+      M.iter (fun c i -> raise (Choose (c, i))) m;
+      raise Not_found
+    with Choose (c, i) -> c, i
 
-  (* let num_value m = *)
-  (*   if M.cardinal m = 1 then *)
-  (*     match choose m with *)
-  (*     | Number n, i -> Some i *)
-  (*     | _ -> None *)
-  (*   else None *)
-
-      
-  (* let is_int = function *)
-  (*   | Number -> true *)
-  (*     (\* begin *\) *)
-  (*       (\* match *\) *)
-  (*   | ConstReal _ -> false *)
-  (*   | ConstName n ->  *)
-  (*     Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int *)
-        
+  let is_num m =
+    if M.cardinal m = 1 then
+      match choose m with
+      | (ConstInt n | ConstReal n), i -> Some (Num.mult_num (Num.Int i) n)
+      | _ -> None
+    else None
+	   
 end
 
-(* let compare_constants = MConst.compare Pervasives.compare  *)
+type term =
+  | Const of int MConst.t
+  | Elem of Hstring.t * sort
+  | Access of Hstring.t * Variable.t list
+  | Arith of term * int MConst.t
+
+let is_int_const = function
+  | ConstInt _ -> true
+  | ConstReal _ -> false
+  | ConstName n -> 
+     Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
+
+
+let compare_constants = MConst.compare Pervasives.compare 
 
 
 let num_of_const = function
-  | Number n -> n
+  | ConstInt n | ConstReal n -> n
   | _ -> assert false
 
 let add_constnum c i num =
   match c, num with
-  | Number n, Number m -> 
-    Number (Num.add_num (Num.mult_num (Num.Int i) n) m)
-  (* | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) -> *)
-  (*    ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m) *)
+  | ConstInt n, ConstInt m -> 
+     ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
+  | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
+     ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
   | _ -> assert false
 
-(* let split_num_consts cs = *)
-(*   MConst.fold *)
-(*     (fun c i (cs, num) -> *)
-(*      match c, num with *)
-(*      | ConstName _, _ -> MConst.add c i cs, num *)
-(*      | _ -> cs, add_constnum c i num) *)
-(*     cs (MConst.empty, ConstInt (Num.Int 0)) *)
+let split_num_consts cs =
+  MConst.fold
+    (fun c i (cs, num) ->
+     match c, num with
+     | ConstName _, _ -> MConst.add c i cs, num
+     | _ -> cs, add_constnum c i num)
+    cs (MConst.empty, ConstInt (Num.Int 0))
 
-(* let add_constant c i cs = *)
-(*   match c with *)
-(*   | ConstInt _ | ConstReal _ -> *)
-(*      let cs, num = split_num_consts cs in *)
-(*      let num = add_constnum c i num in *)
-(*      if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs *)
-(*      else MConst.add num 1 cs *)
-(*   | _ -> *)
-(*      let i' = try MConst.find c cs with Not_found -> 0 in *)
-(*      let i = i + i' in *)
-(*      if i = 0 then MConst.remove c cs *)
-(*      else MConst.add c i cs *)
+let add_constant c i cs =
+  match c with
+  | ConstInt _ | ConstReal _ ->
+     let cs, num = split_num_consts cs in
+     let num = add_constnum c i num in
+     if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
+     else MConst.add num 1 cs
+  | _ ->
+     let i' = try MConst.find c cs with Not_found -> 0 in
+     let i = i + i' in
+     if i = 0 then MConst.remove c cs
+     else MConst.add c i cs
 
-(* let const_sign c = *)
-(*   try *)
-(*     let n = ref (Num.Int 0) in *)
-(*     MConst.iter (fun c i -> *)
-(*       if i <> 0 then  *)
-(* 	match c with *)
-(* 	  | ConstName _ -> raise Exit *)
-(* 	  | ConstInt a | ConstReal a ->  *)
-(* 	    n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c; *)
-(*     Some (Num.compare_num !n (Num.Int 0)) *)
-(*   with Exit -> None *)
+let add_constants cs1 cs2 =
+  let m = MConst.fold add_constant cs2 cs1 in
+  if MConst.is_empty m then 
+    let c0 = 
+      if is_int_const (fst (MConst.choose cs1)) then 
+	ConstInt (Num.Int 0) 
+      else ConstReal (Num.Int 0)
+    in
+    MConst.add c0 1 m
+  else m
 
-(* let const_nul c = const_sign c = Some 0 *)
+let mult_const a =
+  MConst.map (fun i -> i * a)
 
-(* let add_constants cs1 cs2 = *)
-(*   if const_nul cs1 then cs2 *)
-(*   else if const_nul cs2 then cs1 *)
-(*   else *)
-(*     let m = MConst.fold add_constant cs2 cs1 in *)
-(*     if MConst.is_empty m then  *)
-(*       let c0 =  *)
-(*         if is_int_const (fst (MConst.choose cs1)) then  *)
-(* 	  ConstInt (Num.Int 0)  *)
-(*         else ConstReal (Num.Int 0) *)
-(*       in *)
-(*       MConst.add c0 1 m *)
-(*     else m *)
 
-(* let mult_const a = *)
-(*   MConst.map (fun i -> i * a) *)
-type term += Poly of Num.num PolyMap.t
+let const_sign c =
+  try
+    let n = ref (Num.Int 0) in
+    MConst.iter (fun c i ->
+      if i <> 0 then 
+	match c with
+	| ConstName _ -> raise Exit
+	| ConstInt a | ConstReal a -> 
+	   n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
+    Some (Num.compare_num !n (Num.Int 0))
+  with Exit -> None
+
+let const_nul c = const_sign c = Some 0
+
+
 
 module Term = struct
 
   type t = term
 
-  (* let hinfinity = Hstring.make "infinity" *)
-  (* let hneginfinity = Hstring.make "neginfinity" *)
-
   let rec compare t1 t2 = 
     match t1, t2 with
-    | Const c1, Const c2 -> compare_const c1 c2
+    | Const c1, Const c2 -> compare_constants c1 c2
     | Const _, _ -> -1 | _, Const _ -> 1
-    (* | Elem (h, _), _ when Hstring.equal h hneginfinity -> -1 *)
-    (* | Elem (h, _), _ when Hstring.equal h hinfinity -> 1 *)
-    (* | _, Elem (h, _) when Hstring.equal h hinfinity -> -1 *)
-    (* | _, Elem (h, _) when Hstring.equal h hneginfinity -> 1 *)
     | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
     | Elem (_, Glob), Elem (_, (Constr | Var)) -> 1
     | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
@@ -174,16 +158,13 @@ module Term = struct
        let c = Hstring.compare a1 a2 in
        if c<>0 then c else Hstring.compare_list l1 l2
     | Access _, _ -> -1 | _, Access _ -> 1 
-    | Poly p1, Poly p2 -> PolyMap.compare Num.compare_num p1 p2
-       (* let c = compare t1 t2 in *)
-       (* if c<>0 then c else compare_constants cs1 cs2 *)
+    | Arith (t1, cs1), Arith (t2, cs2) ->
+       let c = compare t1 t2 in
+       if c<>0 then c else compare_constants cs1 cs2
 
   let hash = Hashtbl.hash_param 50 50
 
   let equal t1 t2 = compare t1 t2 = 0
-
-  (* let tinfinity = Elem (hinfinity, Constr) *)
-  (* let tneg_infinity = Elem (hneginfinity, Constr) *)
 
   let htrue = Hstring.make "True"
   let hfalse = Hstring.make "False"
@@ -205,7 +186,7 @@ module Term = struct
        Access (a, List.map
                     (fun z ->
                      try Variable.subst sigma z with Not_found -> z) lz)
-    (* | Arith (x, c) -> Arith (subst sigma x, c) *)
+    | Arith (x, c) -> Arith (subst sigma x, c)
     | _ -> t
 
 
@@ -214,7 +195,7 @@ module Term = struct
     | Access (_, lx) ->
        List.fold_left (fun acc x -> Variable.Set.add x acc)
                       Variable.Set.empty lx
-    (* | Arith (t, _) -> variables t *)
+    | Arith (t, _) -> variables t
     | _ -> Variable.Set.empty
 
 
@@ -227,7 +208,7 @@ module Term = struct
        else Smt.Type.type_real
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
-    (* | Arith(t, _) -> type_of t *)
+    | Arith(t, _) -> type_of t
 
 
   let rec print_strings fmt = function
@@ -243,19 +224,16 @@ module Term = struct
     let first = ref true in
     MConst.iter 
       (fun c i ->
-        if i = 0 then
-          if alone then fprintf fmt "0"
-          else fprintf fmt " + 0"
-        else if !first && alone && i >= 0 then 
-          if i = 1 then print_const fmt c
-          else fprintf fmt "%s %a" (string_of_int (abs i)) print_const c
-        else
-          fprintf fmt " %s %a" 
-	    (if i = 1 then "+" else if i = -1 then "-" 
+         if !first && alone && i >= 0 then
+           if i = 1 then print_const fmt c
+           else fprintf fmt "%s %a" (string_of_int (abs i)) print_const c
+         else
+           fprintf fmt " %s %a" 
+	     (if i = 1 then "+" else if i = -1 then "-" 
 	      else if i < 0 then "- "^(string_of_int (abs i)) 
 	      else "+ "^(string_of_int (abs i)))
-	    print_const c;
-        first := false;
+	     print_const c;
+         first := false;
       ) cs
 
   let rec print fmt = function
@@ -264,13 +242,14 @@ module Term = struct
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+      fprintf fmt "@[%a%a@]" print x (print_cs false) cs
 
   let print_set fmt st =
     Format.fprintf fmt "{";
     Set.iter (fun t -> Format.fprintf fmt "%a, " print t) st;
     Format.fprintf fmt "}"
-    
+
+
 end
 
 
@@ -551,9 +530,9 @@ module ArrayAtom = struct
       TimerApply.pause ();
       a'
 
-  (* let alpha atoms args = *)
-  (*   let subst = Variable.build_subst args Variable.alphas in *)
-  (*   List.map snd subst, apply_subst subst atoms *)
+  let alpha atoms args =
+    let subst = Variable.build_subst args Variable.alphas in
+    List.map snd subst, apply_subst subst atoms
 
   let nb_diff a1 a2 =
     TimerSubset.start ();
