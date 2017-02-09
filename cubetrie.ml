@@ -274,24 +274,24 @@ let rec consistent cube trie = match cube, trie with
   | _, Full v -> [v]
   | (atom::cube), Node l -> List.flatten (List.map (consistent_list atom cube) l)
 and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
-  | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Constr)),
-    Atom.Comp (Elem (v2, Glob), Eq, Elem (x2, Constr))
-  | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Var)),
-    Atom.Comp (Elem (v2, Glob), Eq, Elem (x2, Var)) 
+  | Atom.Comp (Term.Elem (v1, Glob), Eq, Term.Elem (x1, Constr)),
+    Atom.Comp (Term.Elem (v2, Glob), Eq, Term.Elem (x2, Constr))
+  | Atom.Comp (Term.Elem (v1, Glob), Eq, Term.Elem (x1, Var)),
+    Atom.Comp (Term.Elem (v2, Glob), Eq, Term.Elem (x2, Var)) 
       when H.equal v1 v2 && not (H.equal x1 x2) ->
       []
-  | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Constr)),
-    Atom.Comp (Elem (v2, Glob), (Neq|Lt), Elem (x2, Constr))
+  | Atom.Comp (Term.Elem (v1, Glob), Eq, Term.Elem (x1, Constr)),
+    Atom.Comp (Term.Elem (v2, Glob), (Neq|Lt), Term.Elem (x2, Constr))
       when H.equal v1 v2 && H.equal x1 x2 ->
       []
-  | Atom.Comp (Access (a1,li1), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x1)),
-    Atom.Comp (Access (a2,li2), Eq, (Elem (_,(Constr|Glob)) | Arith _ as x2))
+  | Atom.Comp (Term.Access (a1,li1), Eq, (Term.Elem (_,(Constr|Glob)) | Term.Arith _ as x1)),
+    Atom.Comp (Term.Access (a2,li2), Eq, (Term.Elem (_,(Constr|Glob)) | Term.Arith _ as x2))
       when H.equal a1 a2 && H.list_equal li1 li2 && Term.compare x1 x2 <> 0 ->
       []
-  | Atom.Comp (Access (a1,li1), Eq,
-               (Elem (_, (Constr|Glob)) | Arith _ as x1)),
-    Atom.Comp (Access (a2,li2), (Neq | Lt), 
-               (Elem (_, (Constr|Glob)) | Arith _ as x2))
+  | Atom.Comp (Term.Access (a1,li1), Eq,
+               (Term.Elem (_, (Constr|Glob)) | Term.Arith _ as x1)),
+    Atom.Comp (Term.Access (a2,li2), (Neq | Lt), 
+               (Term.Elem (_, (Constr|Glob)) | Term.Arith _ as x2))
       when H.equal a1 a2 && H.list_equal li1 li2 && Term.compare x1 x2 = 0 ->
       []
   | _, _ ->

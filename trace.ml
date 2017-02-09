@@ -119,15 +119,15 @@ module AltErgo = struct
     | p :: r -> fprintf fmt "%a,%a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
-    | Elem (s, Constr) when Hstring.equal s Term.htrue -> fprintf fmt "true"
-    | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
-    | Access (a, li) ->
+    | Term.Const cs -> print_cs fmt cs
+    | Term.Elem (s, Var) -> print_proc fmt s
+    | Term.Elem (s, Constr) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
+    | Term.Elem (s, Constr) when Hstring.equal s Term.htrue -> fprintf fmt "true"
+    | Term.Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
+    | Term.Elem (s, Glob) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
+    | Term.Access (a, li) ->
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
-    | Arith (x, cs) -> 
+    | Term.Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
 
   let rec print_atom ~prime fmt = function
@@ -247,10 +247,10 @@ module AltErgo = struct
 
   let print_assign fmt (g, gu) =
     match gu with
-    | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
+    | UTerm t -> print_ite fmt (Term.Elem(g, Glob), [], t)
     | UCase swts ->
        let swts, default = split_swts_default swts in
-       print_ite fmt (Elem(g, Glob), swts, default)
+       print_ite fmt (Term.Elem(g, Glob), swts, default)
     
   let rec add_assign_list globals fmt = function
     | [] -> globals
@@ -278,7 +278,7 @@ module AltErgo = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Term.Access (a, args), swts, default)
 
 
   let rec add_updates_list arrays fmt = function
@@ -346,7 +346,7 @@ module AltErgo = struct
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Term.Access (a, args), swts, default)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -664,13 +664,13 @@ module Why3 = struct
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
-    | Access (a, li) ->
+    | Term.Const cs -> print_cs fmt cs
+    | Term.Elem (s, Var) -> print_proc fmt s
+    | Term.Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
+    | Term.Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Term.Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
-    | Arith (x, cs) -> 
+    | Term.Arith (x, cs) -> 
        fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
 
   let rec print_atom ~prime fmt = function
@@ -780,10 +780,10 @@ module Why3 = struct
 
   let print_assign fmt (g, gu) =
     match gu with
-    | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
+    | UTerm t -> print_ite fmt (Term.Elem(g, Glob), [], t)
     | UCase swts ->
        let swts, default = split_swts_default swts in
-       print_ite fmt (Elem(g, Glob), swts, default)
+       print_ite fmt (Term.Elem(g, Glob), swts, default)
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
@@ -811,7 +811,7 @@ module Why3 = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "@[<hov 2>forall %a:int.@ " print_args args;
-    print_ite fmt (Access (a, args), swts, default);
+    print_ite fmt (Term.Access (a, args), swts, default);
     fprintf fmt "@]"
 
 
@@ -881,7 +881,7 @@ module Why3 = struct
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Term.Access (a, args), swts, default)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -1463,13 +1463,13 @@ module Why3_INST = struct
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
-    | Access (a, li) ->
+    | Term.Const cs -> print_cs fmt cs
+    | Term.Elem (s, Var) -> print_proc fmt s
+    | Term.Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
+    | Term.Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Term.Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
-    | Arith (x, cs) -> 
+    | Term.Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
 
   let rec print_atom ~prime fmt = function
@@ -1583,10 +1583,10 @@ module Why3_INST = struct
 
   let print_assign fmt (g, gu) =
     match gu with
-    | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
+    | UTerm t -> print_ite fmt (Term.Elem(g, Glob), [], t)
     | UCase swts ->
        let swts, default = split_swts_default swts in
-       print_ite fmt (Elem(g, Glob), swts, default)
+       print_ite fmt (Term.Elem(g, Glob), swts, default)
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
@@ -1614,7 +1614,7 @@ module Why3_INST = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Term.Access (a, args), swts, default)
 
 
   let rec add_updates_list arrays fmt = function
@@ -1682,7 +1682,7 @@ module Why3_INST = struct
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Term.Access (a, args), swts, default)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays

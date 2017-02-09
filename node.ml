@@ -162,20 +162,24 @@ module Latex = struct
 	        else "+ "^(string_of_int (abs i)))
 	       print_const c) cs
 
-  let rec print_term fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "\\texttt{%a}" Hstring.print s
-    | Elem (s, Constr) -> fprintf fmt "\\textsf{%a}" Hstring.print s
-    | Access (a, li) ->
-       fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
-    | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print_term x print_cs cs
-
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"
 
-  let rec print_atom fmt = function
+  let rec print_term fmt = function
+    | Term.Const cs -> print_cs fmt cs
+    | Term.Elem (s, Var) -> fprintf fmt "%a" Hstring.print s
+    | Term.Elem (s, Glob) -> fprintf fmt "\\texttt{%a}" Hstring.print s
+    | Term.Elem (s, Constr) -> fprintf fmt "\\textsf{%a}" Hstring.print s
+    | Term.Access (a, li) ->
+       fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
+    | Term.Arith (x, cs) -> 
+      fprintf fmt "@[%a%a@]" print_term x print_cs cs
+    | Term.SetCardinality (v, sa) ->
+      fprintf fmt "@[#{%a | %a}@]" Variable.print v
+        (print_atoms false "\\land") (SAtom.elements sa)
+
+
+  and print_atom fmt = function
     | Atom.True -> fprintf fmt "true"
     | Atom.False -> fprintf fmt "false"
     | Atom.Comp (x, op, y) -> 

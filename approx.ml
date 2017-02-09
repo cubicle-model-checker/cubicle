@@ -103,9 +103,9 @@ module SSAtoms = Set.Make(SAtom)
 
 let nb_arrays_sa sa =
   SAtom.fold (fun a n -> match a with
-    | Atom.Comp (Elem _, _, Elem _) -> n
-    | Atom.Comp (Elem _, _, Access _) | Atom.Comp (Access _, _, Elem _) -> n + 1
-    | Atom.Comp (Access _, _, Access _) -> n + 2
+    | Atom.Comp (Term.Elem _, _, Term.Elem _) -> n
+    | Atom.Comp (Term.Elem _, _, Term.Access _) | Atom.Comp (Term.Access _, _, Term.Elem _) -> n + 1
+    | Atom.Comp (Term.Access _, _, Term.Access _) -> n + 2
     | _ -> n
   ) sa 0
 
@@ -120,9 +120,9 @@ let nb_neq s =
 
 let respect_finite_order =
   SAtom.for_all (function
-    | Atom.Comp (Elem (x, Var), Le, Elem (y, Var)) ->
+    | Atom.Comp (Term.Elem (x, Var), Le, Term.Elem (y, Var)) ->
         Hstring.compare x y <= 0
-    | Atom.Comp (Elem (x, Var), Lt, Elem (y, Var)) ->
+    | Atom.Comp (Term.Elem (x, Var), Lt, Term.Elem (y, Var)) ->
         Hstring.compare x y < 0
     | _ -> true
   )
@@ -134,25 +134,25 @@ let sorted_variables sa =
   let procs = SAtom.variables sa in
   Variable.Set.for_all (fun p ->
     SAtom.exists (function 
-      | Atom.Comp (Access (s, [x]), _, _) 
+      | Atom.Comp (Term.Access (s, [x]), _, _) 
         when Hstring.equal s hsort && Hstring.equal x p -> true
       | _ -> false) sa) procs
 
 let isolate_sorts =
   SAtom.partition (function 
-    | Atom.Comp (Access (s, _), _, _) -> Hstring.equal s hsort
-    | Atom.Comp (Elem (h, Glob), _, _) -> Hstring.equal h hhome
+    | Atom.Comp (Term.Access (s, _), _, _) -> Hstring.equal s hsort
+    | Atom.Comp (Term.Elem (h, Glob), _, _) -> Hstring.equal h hhome
     | _ -> false)
 
 
 let reattach_sorts sorts sa =
   let procs = Variable.Set.elements (SAtom.variables sa) in
   SAtom.fold (fun a sa -> match a with
-    | Atom.Comp (Access (s, [x]), _, _) 
+    | Atom.Comp (Term.Access (s, [x]), _, _) 
         when Hstring.equal s hsort && Hstring.list_mem x procs ->
         SAtom.add a sa
-    | Atom.Comp (Elem (h, Glob), _, Elem (x, Var))
-    | Atom.Comp (Elem (x, Var), _, Elem (h, Glob)) 
+    | Atom.Comp (Term.Elem (h, Glob), _, Term.Elem (x, Var))
+    | Atom.Comp (Term.Elem (x, Var), _, Term.Elem (h, Glob)) 
         when Hstring.equal h hhome && Hstring.list_mem x procs ->
         SAtom.add a sa
     | _ -> sa) sorts sa
@@ -161,23 +161,23 @@ let reattach_sorts sorts sa =
 let proc_present p a sa =
   let rest = SAtom.remove a sa in
   SAtom.exists (function
-    | Atom.Comp (Elem (h, Var), _, _)
-    | Atom.Comp (_, _, Elem (h, Var)) when Hstring.equal h p -> true
+    | Atom.Comp (Term.Elem (h, Var), _, _)
+    | Atom.Comp (_, _, Term.Elem (h, Var)) when Hstring.equal h p -> true
     | _ -> false) rest
 
 let useless_candidate sa =
   let open Atom in
   SAtom.exists (function
     (* heuristic: remove proc variables *)
-    | (Comp (Elem (p, Var), _, _) as a)
-    | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
+    | (Comp (Term.Elem (p, Var), _, _) as a)
+    | (Comp (_, _, Term.Elem (p, Var)) as a) -> not (proc_present p a sa)
 
-    | (Comp (Access (s, [p]), _, _) as a)
-    | (Comp (_, _, Access (s, [p])) as a) when Hstring.equal s hsort ->
+    | (Comp (Term.Access (s, [p]), _, _) as a)
+    | (Comp (_, _, Term.Access (s, [p])) as a) when Hstring.equal s hsort ->
        not (proc_present p a sa)
 
-    | Comp ((Elem (x, _) | Access (x,_)), _, _)
-    | Comp (_, _, (Elem (x, _) | Access (x,_))) ->
+    | Comp ((Term.Elem (x, _) | Term.Access (x,_)), _, _)
+    | Comp (_, _, (Term.Elem (x, _) | Term.Access (x,_))) ->
       (* Smt.Symbol.has_type_proc x ||  *)
         (enumerative <> -1 && Smt.Symbol.has_abstract_type x)
         (* (Hstring.equal (snd (Smt.Symbol.type_of x)) Smt.Type.type_real) || *)
@@ -187,8 +187,8 @@ let useless_candidate sa =
 
 
 let arith_atom = function
-  | Atom.Comp ((Arith _), _, _) | Atom.Comp (_, _, (Arith _)) 
-  | Atom.Comp ((Const _), _, _) | Atom.Comp (_, _, (Const _)) -> true
+  | Atom.Comp ((Term.Arith _), _, _) | Atom.Comp (_, _, (Term.Arith _)) 
+  | Atom.Comp ((Term.Const _), _, _) | Atom.Comp (_, _, (Term.Const _)) -> true
   | _ -> false
 
 
@@ -207,12 +207,12 @@ let cube_known_bad c =
 (*****************************************)
 
 let approx_arith a = match a with
-    | Atom.Comp (t, Eq, Const c) ->
+    | Atom.Comp (t, Eq, Term.Const c) ->
         begin
           match const_sign c with
             | None | Some 0 -> a
             | Some n ->
-	        let zer = Const (add_constants c (mult_const (-1) c)) in
+	        let zer = Term.Const (add_constants c (mult_const (-1) c)) in
 	        if n < 0 then Atom.Comp (t, Lt, zer)
 	        else Atom.Comp (zer, Lt, t)
         end

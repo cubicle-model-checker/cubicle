@@ -34,6 +34,15 @@ module MConst : sig
   val choose : int t -> key * int
   val is_num : int t -> Num.num option
 end
+  
+(** comparison operators for litterals *)
+type op_comp = 
+  | Eq  (** equality, [=] *)
+  | Lt  (** comparison less than, [<] *)
+  | Le  (** comparison less or equal, [<=] *)
+  | Neq (** disequality, [<>] *)
+
+val print_op : Format.formatter -> op_comp -> unit
 
 val compare_constants : int MConst.t -> int MConst.t -> int
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t
@@ -42,23 +51,24 @@ val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
 
 (* module rec Polynom : Map.S *)
-type term =
+  
+(** Module interface for terms *)
+module rec Term : sig
+
+  (** the type of terms *)
+  type t =
   | Const of int MConst.t
     (** constant given as a map. [1*2 + 3*c] is the map [[2 -> 1; c -> 3]] *)
   | Elem of Hstring.t * sort
     (** element, can be a variable or a process *)
   | Access of Hstring.t * Variable.t list
     (** an access to an array *)
-  | Arith of term * int MConst.t
+  | Arith of t * int MConst.t
+  | SetCardinality of Variable.t * SAtom.t
+
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
   (* | Polynomial of Num.num Polynom.t *)
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-  
-(** Module interface for terms *)
-module Term : sig
-
-  (** the type of terms *)
-  type t = term
   
   val compare : t -> t -> int
 
@@ -97,17 +107,8 @@ end
 
 (** {2 Atoms } *)
 
-(** comparison operators for litterals *)
-type op_comp = 
-  | Eq  (** equality, [=] *)
-  | Lt  (** comparison less than, [<] *)
-  | Le  (** comparison less or equal, [<=] *)
-  | Neq (** disequality, [<>] *)
-
-val print_op : Format.formatter -> op_comp -> unit
-
 (** Interface for the atoms of the language *)
-module rec Atom : sig
+and Atom : sig
 
   (** the type of atoms *)
   type t =

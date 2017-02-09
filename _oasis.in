@@ -11,13 +11,11 @@ Plugins:                META (0.4), StdFiles (0.4)
 OCamlVersion:           >= 4.01
 Alphafeatures:          ocamlbuild_more_args, compiled_setup_ml
 XOCamlbuildExtraArgs:   "-use-menhir"
-PostBuildCommand:       cp -L main.native cubicle
-PostCleanCommand:       rm cubicle
 
 Executable cubicle
   Path:                 .
   BuildTools:           ocamlbuild
-  MainIs:               main.ml
+  MainIs:               cubicle.ml
   BuildDepends:
         smt,
         common,

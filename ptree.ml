@@ -24,13 +24,14 @@ open Format
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
+  | TSetCardinality of Variable.t * formula
     
-type atom =
+and atom =
   | AVar of Variable.t
   | AAtom of Atom.t
   | ABinop of term * Cubtypes.op_comp * term
   
-type formula =
+and formula =
   | PAtom of atom
   | PNot of formula
   | PAnd of formula list
@@ -42,7 +43,6 @@ type formula =
   | PExists of Variable.t list * formula
   | PForall_other of Variable.t list * formula
   | PExists_other of Variable.t list * formula
-  | PCount of Variable.t list * formula * op_comp * int MConst.t
 
 type term_or_formula = PF of formula | PT of term
 
@@ -65,17 +65,19 @@ let function_defs = Hstring.H.create 17
 (*   | PExists_other of Variable.t list * cformula *)
 (* ] *)
 
-let print_term fmt = function
+let rec print_term fmt = function
   | TVar v -> fprintf fmt "'%a" Hstring.print v
   | TTerm t -> Term.print fmt t
+  | TSetCardinality (v, f) -> fprintf fmt "@[#{%a | %a}@]"
+    Variable.print v print f    
 
-let print_atom fmt = function
+and print_atom fmt = function
   | AVar v -> fprintf fmt "?%a" Hstring.print v
   | AAtom a -> Atom.print fmt a
   | ABinop (t1, op, t2) -> fprintf fmt "(%a %a %a)"
     print_op op print_term t1 print_term t2
 
-let rec print fmt = function
+and print fmt = function
   | PAtom a -> print_atom fmt a
   | PNot f -> fprintf fmt "~ %a" print f
   | PAnd l ->
@@ -209,7 +211,7 @@ let restr_subst_to sigma vars =
   List.fold_left (fun acc -> function
       | v, PF (PAtom (AVar v'))
       | v, PT (TVar v')
-      | v, PT (TTerm (Elem(v', Var))) ->
+      | v, PT (TTerm (Term.Elem(v', Var))) ->
         if Variable.Set.mem v vars then
           (v, v') :: acc
         else acc
@@ -454,8 +456,9 @@ let rec up_quantifiers = function
 
 
 let conv_term = function
-  | TVar v -> Elem (v, Var)
+  | TVar v -> Term.Elem (v, Var)
   | TTerm t -> t
+  (* | TSetCardinality (v, f) *)
 
 let conv_atom aa = match aa with
   | AVar _ -> failwith "Remaining free variables in atom."
@@ -518,7 +521,7 @@ let guard_of_formula f =
 (* Encodings of Ptree systems to AST systems *)
 
 let encode_term = function
-  | TVar v -> Elem (v, Var)
+  | TVar v -> Term.Elem (v, Var)
   | TTerm t -> t
 
 

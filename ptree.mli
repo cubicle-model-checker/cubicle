@@ -20,13 +20,14 @@ open Util
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
+  | TSetCardinality of Variable.t * formula
     
-type atom =
+and atom =
   | AVar of Variable.t
   | AAtom of Atom.t
   | ABinop of term * Cubtypes.op_comp * term
 
-type formula =
+and formula =
   | PAtom of atom
   | PNot of formula
   | PAnd of formula list
@@ -38,7 +39,6 @@ type formula =
   | PExists of Variable.t list * formula
   | PForall_other of Variable.t list * formula
   | PExists_other of Variable.t list * formula
-  | PCount of Variable.t list * formula * op_comp * int MConst.t
 
 type term_or_formula = PF of formula | PT of term
 

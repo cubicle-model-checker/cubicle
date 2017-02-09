@@ -34,10 +34,10 @@ let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
 let rec prime_term t = match t with
-  | Elem (e, Glob) -> Elem (prime_h e, Glob)
-  | Arith (x, c) -> Arith (prime_term x, c)
+  | Term.Elem (e, Glob) -> Term.Elem (prime_h e, Glob)
+  | Term.Arith (x, c) -> Term.Arith (prime_term x, c)
   (* | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob) *)
-  | Access (a, lx) -> Access (prime_h a, lx)
+  | Term.Access (a, lx) -> Term.Access (prime_h a, lx)
   | _ -> t
 
 let rec prime_atom a = match a with
@@ -54,22 +54,23 @@ let unprime_h h =
   Hstring.make (String.sub s 0 (String.index s '@'))
 
 let rec unprime_term t = match t with
-  | Elem (e, Glob) -> Elem (unprime_h e, Glob)
-  | Arith (x, c) -> Arith (unprime_term x, c)
+  | Term.Elem (e, Glob) -> Term.Elem (unprime_h e, Glob)
+  | Term.Arith (x, c) -> Term.Arith (unprime_term x, c)
   (* | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob) *)
-  | Access (a, lx) -> Access (unprime_h a, lx)
+  | Term.Access (a, lx) -> Term.Access (unprime_h a, lx)
   | _ -> t
 
 
 let is_prime s = String.contains s '@'
 
 let rec is_prime_term = function
-  | Const _ -> false 
-  | Elem (s, _) | Access (s, _) ->
+  | Term.Const _ -> false 
+  | Term.Elem (s, _) | Term.Access (s, _) ->
       is_prime (Hstring.view s)
-  | Arith (x, _) -> is_prime_term x
+  | Term.Arith (x, _) -> is_prime_term x
+  | Term.SetCardinality (_, sa) -> SAtom.exists is_prime_atom sa
 
-let rec is_prime_atom = function
+and is_prime_atom = function
   | True | False -> false
   | Comp (t1, _, t2) ->
     is_prime_term t1 || is_prime_term t2
@@ -78,11 +79,11 @@ let rec is_prime_atom = function
 
 
 let rec is_const = function
-  | Const _ | Elem (_, (Constr | Var)) -> true
-  | Arith (x, _) -> is_const x
+  | Term.Const _ | Term.Elem (_, (Constr | Var)) -> true
+  | Term.Arith (x, _) -> is_const x
   | _ -> false
 
-exception Found_const of (op_comp * term)
+exception Found_const of (op_comp * Term.t)
 
 let find_const_value g init =
   try
@@ -96,11 +97,11 @@ let find_const_value g init =
   with Found_const c -> c
 
 let find_const_value g init = match g with
-  | Arith (g', c) -> 
+  | Term.Arith (g', c) -> 
       begin
 	let op, t = find_const_value g' init in
 	match t with
-	  | Const c' -> op, Const (add_constants c c')
+	  | Term.Const c' -> op, Term.Const (add_constants c c')
 	  | _ -> assert false
       end
   | _ -> find_const_value g init
@@ -147,8 +148,8 @@ and elim_prime init sa =
   sa
 
 
-exception Found_eq of term * term * Atom.t
-exception Found_neq of term * term * Atom.t
+exception Found_eq of Term.t * Term.t * Atom.t
+exception Found_neq of Term.t * Term.t * Atom.t
 
 let rec apply_subst_terms_atom t t' a = match a with
   | True | False -> a
@@ -297,7 +298,7 @@ let rec elim_prime3 init sa =
 
 let gauss_elim sa =
   SAtom.fold (fun a sa -> match a with
-    | Comp ((Elem(_,Glob) as t1), Eq, (Elem(_,Glob) as t2)) ->
+    | Comp ((Term.Elem(_,Glob) as t1), Eq, (Term.Elem(_,Glob) as t2)) ->
       let rsa = SAtom.remove a sa in
       let rsa = apply_subst_terms_atoms t1 t2 rsa in
       SAtom.add a rsa
@@ -305,7 +306,7 @@ let gauss_elim sa =
   ) sa sa
 
 
-exception Found_prime_term of term
+exception Found_prime_term of Term.t
 
 let choose_prime_term sa =
   try
@@ -362,16 +363,16 @@ module MH = Map.Make (Hstring)
 
 
 let rec type_of_term = function
-  | Const m ->
+  | Term.Const m ->
       MConst.fold (fun c _ _ -> match c with
 	| ConstReal _ -> Smt.Type.type_real
 	| ConstInt _ -> Smt.Type.type_int
 	| ConstName x -> snd (Smt.Symbol.type_of (unprime_h x))
       ) m Smt.Type.type_int
-  | Elem (x, _) | Access (x, _) -> 
+  | Term.Elem (x, _) | Term.Access (x, _) -> 
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
-  | Arith (t, _) -> type_of_term t
+  | Term.Arith (t, _) -> type_of_term t
 
 let rec type_of_atom = function
   | True | False -> None
@@ -459,14 +460,14 @@ let swts_to_ites at swts sigma =
 let apply_assigns assigns sigma =
   List.fold_left 
     (fun (nsa, terms) (h, gu) ->
-      let nt = Elem (h, Glob) in
+      let nt = Term.Elem (h, Glob) in
       let sa = 
         match gu with
         | UTerm t -> 
           let t = Term.subst sigma t in
           begin match t with
-            | Arith (t, c) ->
-              let nt = Arith(nt, mult_const (-1) c) in
+            | Term.Arith (t, c) ->
+              let nt = Term.Arith(nt, mult_const (-1) c) in
               Comp (nt, Eq, prime_term t)
             | _ -> Comp (nt, Eq, prime_term t)
           end
@@ -477,13 +478,13 @@ let apply_assigns assigns sigma =
 
 
 let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
-  let at = Access (a, lj) in
+  let at = Term.Access (a, lj) in
   let ites = swts_to_ites at swts sigma in
   let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun (sa, st) li ->
     let sigma = List.combine lj li in
     SAtom.add (Atom.subst sigma ites) sa,
-    Term.Set.add (Access (a, li)) st
+    Term.Set.add (Term.Access (a, li)) st
   ) (sa, st) indexes
 
 let apply_updates upds procs sigma =
@@ -542,9 +543,9 @@ let missing_args procs tr_args =
   aux procs tr_args Variable.procs
 
 let rec term_contains_arg z = function
-  | Elem (x, Var) -> Hstring.equal x z
-  | Access (_, lx) -> Hstring.list_mem z lx
-  | Arith (x, _) -> term_contains_arg z x
+  | Term.Elem (x, Var) -> Hstring.equal x z
+  | Term.Access (_, lx) -> Hstring.list_mem z lx
+  | Term.Arith (x, _) -> term_contains_arg z x
   | _ -> false
 
 let rec atom_contains_arg z = function
@@ -685,7 +686,7 @@ let unconstrained_terms sa = Term.Set.filter (var_term_unconstrained sa)
 module MA = Map.Make (Atom)
 
 let lit_abstract = function
-  | Comp ((Elem (x, _) | Access (x,_)), _, _) ->
+  | Comp ((Term.Elem (x, _) | Term.Access (x,_)), _, _) ->
       Smt.Symbol.has_abstract_type x
   | _ -> false
 
@@ -799,7 +800,7 @@ let instance_of_transition { tr_args = tr_args;
   let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
   let nondet_terms =
-    List.fold_left (fun acc h -> Term.Set.add (Elem (h, Glob)) acc)
+    List.fold_left (fun acc h -> Term.Set.add (Term.Elem (h, Glob)) acc)
       Term.Set.empty nondets in
   {
     i_reqs = reqs;
@@ -829,13 +830,13 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
   let acc = 
     List.fold_left 
       (fun acc g ->
-	Term.Set.add (Elem (g, Glob)) acc
+	Term.Set.add (Term.Elem (g, Glob)) acc
       ) Term.Set.empty globals
   in
   List.fold_left (fun acc a ->
     let indexes = Variable.all_arrangements_arity a procs in
     List.fold_left (fun acc lp ->
-      Term.Set.add (Access (a, lp)) acc)
+      Term.Set.add (Term.Access (a, lp)) acc)
       acc indexes)
     acc arrays
 

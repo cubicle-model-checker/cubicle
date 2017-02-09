@@ -33,6 +33,16 @@
 
   let vars_to_hsset vl = Hstring.HSet.singleton (Hstring.make "#1")
 
+  type pop = PEq | PNeq | PLe | PLt | PGe | PGt
+
+  let pop_to_op = function
+    | PEq -> Eq
+    | PNeq -> Neq
+    | PLe -> Le
+    | PLt -> Lt
+    | PGe -> Le
+    | PGt -> Lt
+    
   type t = 
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
@@ -371,7 +381,7 @@ update:
             c :: cube, j :: rjs) ([], []) pnl in
         let a = PAnd cube in
         let js = List.rev rjs in
-	let sw = [(a, t); (PAtom (AAtom Atom.True), TTerm (Access(id, js)))] in
+	let sw = [(a, t); (PAtom (AAtom Atom.True), TTerm (Term.Access(id, js)))] in
 	Upd { pup_loc = loc (); pup_arr = id; pup_arg = js; pup_swts = sw}  }
 ;
 
@@ -393,21 +403,22 @@ constnum:
 
 var_term:
   | id=mident { 
-      if Consts.mem id then Const (MConst.add (ConstName id) 1 MConst.empty)
-      else Elem (id, sort id) }
-  | pn=proc_name { Elem (pn, Var) }
+      if Consts.mem id then Term.Const (MConst.add (ConstName id) 1 MConst.empty)
+      else Term.Elem (id, sort id) }
+  | pn=proc_name { Term.Elem (pn, Var) }
 ;
 
 top_id_term:
   | vt=var_term { match vt with
-      | Elem (v, Var) -> TVar v
-      | _ -> TTerm vt }
+      | Term.Elem (v, Var) -> TVar v
+      | _ -> TTerm vt
+  }
 ;
 
 
 array_term:
   | id=mident LEFTSQ pnl=proc_name_list_plus RIGHTSQ {
-    Access (id, pnl)
+    Term.Access (id, pnl)
   }
 ;
 
@@ -418,26 +429,26 @@ var_or_array_term:
 
 arith_term:
   | vat=var_or_array_term PLUS cn=constnum 
-      { Arith(vat, MConst.add cn 1 MConst.empty) }
+      { Term.Arith(vat, MConst.add cn 1 MConst.empty) }
   | vat=var_or_array_term MINUS cn=constnum 
-      { Arith(vat, MConst.add cn (-1) MConst.empty) }
+      { Term.Arith(vat, MConst.add cn (-1) MConst.empty) }
   | vat=var_or_array_term PLUS id=mident 
-      { Arith(vat, MConst.add (ConstName id) 1 MConst.empty) }
+      { Term.Arith(vat, MConst.add (ConstName id) 1 MConst.empty) }
   | vat=var_or_array_term PLUS i=INT TIMES id=mident
-      { Arith(vat, MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
+      { Term.Arith(vat, MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
   | vat=var_or_array_term PLUS id=mident TIMES i=INT
-      { Arith(vat, MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
+      { Term.Arith(vat, MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
   | vat=var_or_array_term MINUS id=mident 
-      { Arith(vat, MConst.add (ConstName id) (-1) MConst.empty) }
+      { Term.Arith(vat, MConst.add (ConstName id) (-1) MConst.empty) }
   | vat=var_or_array_term MINUS i=INT TIMES id=mident 
-      { Arith(vat, MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
+      { Term.Arith(vat, MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
   | vat=var_or_array_term MINUS id=mident TIMES i=INT 
-      { Arith(vat, MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
+      { Term.Arith(vat, MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
   | i=INT TIMES id=mident 
-      { Const(MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
+      { Term.Const(MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
   | MINUS i=INT TIMES id=mident 
-      { Const(MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
-  | cn=constnum { Const (MConst.add cn 1 MConst.empty) }
+      { Term.Const(MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
+  | cn=constnum { Term.Const (MConst.add cn 1 MConst.empty) }
 ;
 
 term:
@@ -485,30 +496,48 @@ lidents_plus_distinct:
 
 
 %inline binop:
-  | EQ { EQ }
-  | NEQ { NEQ }
-  | LT { Smt.set_arith true; LT }
-  | LE { Smt.set_arith true; LE }
-  | GT { Smt.set_arith true; GT }
-  | GE { Smt.set_arith true; GE }
+  | EQ { PEq }
+  | NEQ { PNeq }
+  | LT { Smt.set_arith true; PLt }
+  | LE { Smt.set_arith true; PLe }
+  | GT { Smt.set_arith true; PGt }
+  | GE { Smt.set_arith true; PGe }
 
+;
+
+setcardinality:
+  | HASH LEFTBR id=lident DOT e=expr RIGHTBR { TSetCardinality (id, e) }
+;
+
+right_side_count:
+  | i=INT
+      { TTerm (Term.Const (MConst.add (ConstInt i) 1 MConst.empty)) }
+  | i=INT TIMES id=mident 
+      { TTerm (Term.Const (MConst.add (ConstName id) (Num.int_of_num i) MConst.empty)) }
 ;
 
 literal:
   | TRUE { AAtom Atom.True }
   | FALSE { AAtom Atom.False }
-  /* | lident { AVar $1 } RR conflict with proc_name */
-    | t1=term op=binop t2=term {
-      let t1, op, t2 = match op with
-        | EQ -> t1, Eq, t2
-        | NEQ -> t1, Neq, t2
-        | LT -> t1, Lt, t2
-        | LE -> t1, Le, t2
-        | GT -> t2, Lt, t1
-        | GE -> t2, Le, t1
-        | _ -> assert false
-      in ABinop (t1, op, t2)
+  | t1=term pop=binop t2=term {
+      let t1, t2 = match pop with
+        | PGt | PGe -> t2, t1
+        | _ -> t1, t2
+      in ABinop (t1, pop_to_op pop, t2)
     }
+  | t1=setcardinality pop=binop t2=right_side_count {
+      let t1, t2 = match pop with
+        | PGt | PGe -> t2, t1
+        | _ -> t1, t2
+      in ABinop (t1, pop_to_op pop, t2)
+  }
+  | t1=right_side_count pop=binop t2=setcardinality {
+      let t1, t2 = match pop with
+        | PGt | PGe -> t2, t1
+        | _ -> t1, t2
+      in ABinop (t1, pop_to_op pop, t2)
+  }
+
 ;
 
 expr:
@@ -534,22 +563,6 @@ expr:
       { PForall_other ([id], e) }
   | EXISTS_OTHER id=lident DOT e=expr %prec prec_exists
       { PExists_other ([id], e) }
-  | HASH LEFTBR id=lident DOT e=expr RIGHTBR op=binop rc=right_side_count
-      { let op = match op with
-        | EQ -> Eq
-        | NEQ -> Neq
-        | LT -> Lt
-        | LE -> Le
-        | _ -> assert false
-        in
-        PCount ([id], e, op, rc) }
-;
-
-right_side_count:
-  | i=INT
-      {MConst.add (ConstInt i) 1 MConst.empty}
-  | i=INT TIMES id=mident 
-      { MConst.add (ConstName id) (Num.int_of_num i) MConst.empty }
 ;
       
 simple_expr:

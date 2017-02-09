@@ -76,7 +76,7 @@ let rec pre_atom tau a =
 (* Convert a transition into a function *)
 (****************************************)
 
-type assign = Single of term | Branch of swts
+type assign = Single of Term.t | Branch of swts
 
 let fresh_nondet = 
   let cpt = ref 0 in 
@@ -102,14 +102,14 @@ let rec find_update a li = function
 exception Remove_lit_var of Hstring.t
 
 let rec find_assign tr = function
-  | Elem (x, sx) -> 
+  | Term.Elem (x, sx) -> 
       let gu =
 	if H.list_mem x tr.tr_nondets then 
           raise (Remove_lit_var x)
 	  (* UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) *)
 	else 
 	  try H.list_assoc x tr.tr_assigns
-          with Not_found -> UTerm (Elem (x, sx))
+          with Not_found -> UTerm (Term.Elem (x, sx))
       in
       begin
         match gu with
@@ -117,25 +117,25 @@ let rec find_assign tr = function
         | UCase swts -> Branch swts
       end
 
-  | Const i as a -> Single a
+  | Term.Const i as a -> Single a
 
-  | Arith (x, cs1) ->
+  | Term.Arith (x, cs1) ->
       begin
 	let t = find_assign tr x in
 	match t with
-	  | Single (Const cs2) -> 
+	  | Single (Term.Const cs2) -> 
 	      let c = 
-		Const (add_constants cs1 cs2)
+		Term.Const (add_constants cs1 cs2)
 	      in
 	      Single c
-	  | Single (Arith (y, cs2)) ->
-	      Single (Arith (y, add_constants cs1 cs2))
-	  | Single y -> Single (Arith (y, cs1))
+	  | Single (Term.Arith (y, cs2)) ->
+	      Single (Term.Arith (y, add_constants cs1 cs2))
+	  | Single y -> Single (Term.Arith (y, cs1))
 	  | Branch up_swts ->
-	      Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
+	      Branch (List.map (fun (sa, y) -> (sa, (Term.Arith (y, cs1))))
 		               up_swts)
       end
-  | Access (a, li) -> 
+  | Term.Access (a, li) -> 
       let nli = li in
         (* List.map (fun i -> *)
 	(*   if H.list_mem i tr.tr_nondets then  *)
@@ -148,7 +148,7 @@ let rec find_assign tr = function
 	  (*   with Not_found -> i *)
         (* ) li in *)
       try find_update a nli tr.tr_upds
-      with Not_found -> Single (Access (a, nli))
+      with Not_found -> Single (Term.Access (a, nli))
 	(* let na =  *)
 	(*   try (match H.list_assoc a tr.tr_assigns with *)
 	(* 	 | Elem (na, _) -> na *)
