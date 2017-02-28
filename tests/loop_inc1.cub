@@ -9,6 +9,7 @@ weak var X : int
 
 init () { PC = L1 && X = 0 }
 
+(* ALLOWED Final State *)
 unsafe () { PC = End }
 
 transition t1 ()

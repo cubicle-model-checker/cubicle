@@ -1,12 +1,12 @@
 
-type loc = L1 | L2 | L3
+type loc = L1 | L2 | End
 
 array PC[proc] : loc
 array X[proc] : bool
 
 init (p) { PC[p] = L1 && X[p] = False }
 
-unsafe (p) { PC[p] = L3 }
+unsafe (p1 p2) { PC[p1] = End && PC[p2] = End }
 
 
 transition t1 (p q)
@@ -15,4 +15,4 @@ requires { PC[p] = L1 }
 
 transition t2 (p)
 requires { PC[p] = L2 && forall_other q. X[q] = True }
-{ PC[p] := L3 }
+{ PC[p] := End }
