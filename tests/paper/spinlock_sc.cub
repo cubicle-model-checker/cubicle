@@ -1,0 +1,38 @@
+
+(* Spinlock example *)
+
+type loc = Acquire | Spin | CS | Release
+
+array PC[proc] : loc
+array SF[proc] : int
+
+var LOCK : int
+
+init (p) { PC[p] = Acquire && SF[p] = 0 && LOCK = 0 }
+
+(* FORBIDDEN Final State *)
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
+transition t1_Acquire_dec_gz_CS (p)
+requires { PC[p] = Acquire && 0 < LOCK }
+{ PC[p] := CS; LOCK := LOCK - 1 }
+
+transition t1_Acquire_dec_lez_Spin (p)
+requires { PC[p] = Acquire && LOCK <= 0 }
+{ PC[p] := Spin; LOCK := LOCK - 1 }
+
+transition t2_Spin_cmp_lez_Spin (p)
+requires { PC[p] = Spin && LOCK <= 0 }
+{ PC[p] := Spin }
+
+transition t2_Spin_cmp_gz_Acquire (p)
+requires { PC[p] = Spin && 0 < LOCK }
+{ PC[p] := Acquire }
+
+transition t3_CS_Release (p)
+requires { PC[p] = CS }
+{ PC[p] := Release }
+
+transition t4_Release_Acquire (p)
+requires { PC[p] = Release }
+{ PC[p] := Acquire; LOCK := 1 }

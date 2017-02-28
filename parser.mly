@@ -29,12 +29,11 @@
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
-
   type t = 
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
-    | Write of Variable.t * Hstring.t * Variable.t list * Ptree.term
+    | Write of Variable.t * Hstring.t * Variable.t list * pglob_update
 
   module S = Set.Make(Hstring)
 
@@ -323,16 +322,21 @@ switchs:
   | BAR switch switchs { $2::$3 }
 ;
 
-write:
-  | WRITE LEFTPAR proc_name COMMA mident COMMA term RIGHTPAR
-      { Write ($3, $5, [], $7) }
-  | WRITE LEFTPAR proc_name COMMA mident
- 	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA term RIGHTPAR
-      { Write ($3, $5, $7, $10) }
-		    
 switch:
   | expr COLON term { $1, $3 }
 ;
+
+write:
+  | WRITE LEFTPAR proc_name COMMA mident COMMA CASE switchs RIGHTPAR
+      { Write ($3, $5, [], PUCase $8) }
+  | WRITE LEFTPAR proc_name COMMA mident
+ 	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA CASE switchs RIGHTPAR
+      { Write ($3, $5, $7, PUCase $11) }
+  | WRITE LEFTPAR proc_name COMMA mident COMMA term RIGHTPAR
+      { Write ($3, $5, [], PUTerm $7) }
+  | WRITE LEFTPAR proc_name COMMA mident
+ 	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA term RIGHTPAR
+      { Write ($3, $5, $7, PUTerm $10) }
 
 
 constnum:

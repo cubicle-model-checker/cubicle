@@ -65,7 +65,7 @@ type term =
   | Field of term * Hstring.t (* term is Elem/Access *)
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list *
-	       (Hstring.t * Hstring.t * Hstring.t) list (* Related reads *)
+	       (Hstring.t * Hstring.t) list (* Related reads *)
   | Fence of Variable.t
 
 let is_int_const = function
@@ -175,7 +175,7 @@ module Term = struct
        let c = Hstring.compare v1 v2 in if c<>0 then c else
        let c = Hstring.compare p1 p2 in if c<>0 then c else
        let c = Hstring.compare_list vi1 vi2 in if c<>0 then c else
-       Weakutil.compare_htlist rr1 rr2
+       Weakutil.compare_hplist rr1 rr2
      | Write (_, _, _, _), _ -> -1 | _, Write (_, _, _, _) -> 1
      | Fence p1, Fence p2 ->
        Hstring.compare p1 p2
@@ -200,7 +200,7 @@ module Term = struct
     let list_subst l =
       List.map safe_subst l in
     let elist_subst l =
-      List.map (fun (p,e,s) -> (safe_subst p, e, s)) l in
+      List.map (fun (p,e) -> (safe_subst p, e)) l in
     match t with
     | Elem (x, s) ->
        let nx = Variable.subst sigma x in
@@ -234,8 +234,7 @@ module Term = struct
     | Write (p, _, vi, rr) ->
        let vl = List.fold_left (fun acc x -> Variable.Set.add x acc)
 			       (Variable.Set.singleton p) vi in
-       List.fold_left (fun acc (x, _, _) -> Variable.Set.add x acc)
-		      vl rr
+       List.fold_left (fun acc (x, _) -> Variable.Set.add x acc) vl rr
     | Fence p -> Variable.Set.singleton p
     | _ -> Variable.Set.empty
 
@@ -281,6 +280,11 @@ module Term = struct
          first := false;
       ) cs
 
+  open Weakmem
+  let id_of_v v =
+    let v = H.view v in
+    String.sub v 1 (String.length v - 1)
+
   let rec print fmt t =
     let print_var fmt (v, vi) =
       if vi = [] then fprintf fmt "%a" Hstring.print v
@@ -290,6 +294,20 @@ module Term = struct
       | [t] -> print fmt t
       | t :: tl -> print fmt t; List.iter (fprintf fmt ",%a" print) tl in
     match t with
+    | Access (a, [p1; e1; s1; p2; e2; s2])
+	 when H.equal a hRf ->
+       fprintf fmt "RF((%a, %s, %s), (%a, %s, %s))"
+         H.print p1 (id_of_v e1) (id_of_v s1)
+	 H.print p2 (id_of_v e2) (id_of_v s2)
+    | Field (Access (a, [p; e; s]), f)
+	 when H.equal a hE  && H.equal f hDir ->
+       fprintf fmt "D(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
+    | Field (Access (a, [p; e; s]), f)
+	 when H.equal a hE  && H.equal f hVar ->
+       fprintf fmt "X(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
+    | Field (Field (Access (a, [p; e; s]), f), _)
+	 when H.equal a hE && H.equal f hVal ->
+       fprintf fmt "V(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
     | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
@@ -302,7 +320,10 @@ module Term = struct
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
     | Write (p, v, vi, rr) ->
-       fprintf fmt "write(%a, %a)" Hstring.print p print_var (v, vi)
+       fprintf fmt "write(%a, %a, [" Hstring.print p print_var (v, vi);
+       List.iter (fun (p, e) ->
+           fprintf fmt " (%a,%a)" Hstring.print p Hstring.print e) rr;
+       fprintf fmt " ])"
     | Fence p ->
        fprintf fmt "fence(%a)" Hstring.print p
 end
@@ -408,7 +429,7 @@ end = struct
        Hstring.list_mem p vs || List.exists (fun v -> Hstring.list_mem v vs) vi
     | Write (p, _, vi, rr) ->
        Hstring.list_mem p vs || List.exists (fun v -> Hstring.list_mem v vs) vi
-       || List.exists (fun (v, _, _) -> Hstring.list_mem v vs) rr
+       || List.exists (fun (v, _) -> Hstring.list_mem v vs) rr
     | Fence p -> Hstring.list_mem p vs
     | _ -> false
 
@@ -473,7 +494,7 @@ end = struct
 
   let add a s = 
     match a with
-    | Atom.True -> s
+    | Atom.True -> if is_empty s then singleton Atom.True else s (* patch *)
     | Atom.False -> singleton Atom.False
     | _ -> if mem Atom.False s then s else add a s
 

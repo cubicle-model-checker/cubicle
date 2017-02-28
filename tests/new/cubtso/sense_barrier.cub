@@ -11,57 +11,39 @@ init (z) { Sense = False && Local_sense[z] = False &&
            Level[z] = 0 && Count[z] = True && PC[z] = L1 }
 
 (* unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] } *)
-(* unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] } *)
-unsafe (z1 z2) { PC[z1] = L5 && PC[z2] = L5 }
+unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] }
 
 transition enter (i)
 requires { PC[i] = L1 }
-{ 
-  PC[i] := L2;
+{ PC[i] := L2;
   Local_sense[j] := case | i = j && Local_sense[j] = True : False 
                          | i = j && Local_sense[j] = False : True
-                         | _ : Local_sense[j];
-}
+                         | _ : Local_sense[j] }
 
 transition decr (i)
 requires { PC[i] = L2 }
-{
-  PC[i] := L3;
-  write(i, Count[i], False);
-}
-
+{ PC[i] := L3; write(i, Count[i], False) }
 
 transition test_last (i)
 fences (i)
 requires { PC[i] = L3 && (*read(i, Count[i]) = False &&*) forall_other j. read(i, Count[j]) = False }
-{ 
-  PC[i] := L5;
-  (* write(i, Count(\*[j]*\), True); (\* should write the whole array *\) *)
-  write(i, Sense, Local_sense[i])
-}
+{ PC[i] := L5;
+  write(i, Count[j], case | _ : True);
+  write(i, Sense, Local_sense[i]) }
 
 transition test_wait (i k)
 fences (i)
 requires { PC[i] = L3 && read(i, Count[k]) = True }
-{ 
-  PC[i] := L4;
-}
+{ PC[i] := L4 }
 
 transition wait (i)
 requires { PC[i] = L4 && Local_sense[i] <> read(i, Sense) }
-{ 
-  PC[i] := L4;
-}
+{ PC[i] := L4 }
 
 transition exit (i)
 requires { PC[i] = L4 && Local_sense[i] = read(i, Sense) }
-{ 
-  PC[i] := L5;
-}
+{ PC[i] := L5 }
 
 transition end (i)
 requires { PC[i] = L5 }
-{ 
-  PC[i] := L1;
-  Level[i] := Level[i] + 1;
-}
+{ PC[i] := L1; Level[i] := Level[i] + 1 }

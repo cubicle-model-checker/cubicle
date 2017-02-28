@@ -1,263 +1,245 @@
 
 open Weakmem
 open Types
+open Util
 
 module T = Smt.Term
 module F = Smt.Formula
 
+module RInt = struct
+  type t = int
+  let compare x y = - (Pervasives.compare x y)
+end
+
+module RIntMap = Map.Make (RInt)
 
 
-(* Extract events, event counts and fences from sa
-   Used when making formula for safety / fixpoint check
-   Used in split_events_orders_xxx only *)
-let split_event_order (sa, evts, cnt, fce) at =
-  let rec update_cnt_t cnt = function
-    | Arith (t, _) -> update_cnt_t cnt t
-    | Field (Access (a, [p;e;_]), _) when H.equal a hE ->
-       let cmin, cmax = try HMap.find p cnt with Not_found -> (max_int, 0) in
-       let e = int_of_e e in
-       if e > cmax && e < cmin then HMap.add p (e, e) cnt
-       else if e > cmax then HMap.add p (cmin, e) cnt
-       else if e < cmin then HMap.add p (e, cmax) cnt
-       else cnt
-    | _ -> cnt
-  in
-  let rec update_cnt cnt = function
-    | Atom.Comp (t1, _, t2) -> update_cnt_t (update_cnt_t cnt t1) t2
-    | Atom.Ite (sa, a1, a2) -> update_cnt (update_cnt cnt a1) a2
-    | _ -> cnt
+
+(* Extract events, event ids, rf, fences and sync from sa (fences/sync removed)
+   Used when making formula for safety / fixpoint check *)
+let extract_events (sa, evts, eids, rf, fce, sync) at =
+  let update_eids eids p hE =
+    let peids = try HMap.find p eids with Not_found -> RIntMap.empty in
+    let e = int_of_e hE in
+    HMap.add p (RIntMap.add e hE peids) eids
   in
   match at with
-  | Atom.Comp (Access (a,[p;e]), Eq, Elem _)
-  | Atom.Comp (Elem _, Eq, Access (a,[p;e])) when H.equal a hFence ->
-     let pfce = try HMap.find p fce with Not_found -> [] in
-     let fce = HMap.add p (e :: pfce) fce in (* ot could use a smarter predicate *)
-     (sa, evts, cnt, fce) (* we remove the fences, as the predicate can't be used directly *)
-  | Atom.Comp (Field (Access (a,[p;e;s]),f), Eq, Elem (c,t))
-  | Atom.Comp (Elem (c,t), Eq, Field (Access (a,[p;e;s]),f)) when H.equal a hE->
+  | Atom.Comp (Access (a, [pw; ew; pr; er]), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a, [pw; ew; pr; er])) when H.equal a hRf ->
+     (SAtom.add at sa, evts, eids, H2Map.add (pw, ew) (pr, er) rf, fce, sync)
+  | Atom.Comp (Access (a, sl), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a, sl)) when H.equal a hSync ->
+     (sa, evts, eids, rf, fce, sl :: sync)
+  | Atom.Comp (Access (a, [p; e]), Eq, Elem _)(*warning,several procs possible*)
+  | Atom.Comp (Elem _, Eq, Access (a, [p; e])) when H.equal a hFence ->
+     let pfce = try HMap.find p fce with Not_found -> HSet.empty in
+     let fce = HMap.add p (HSet.add e pfce) fce in (*or use a better predicate*)
+     (sa, evts, eids, rf, fce, sync)
+  | Atom.Comp (Field (Access (a, [p; e]), f), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c,t), Eq, Field (Access (a, [p; e]),f)) when H.equal a hE->
      let pevts = try HMap.find p evts with Not_found -> HMap.empty in
-     let spe = try HMap.find e pevts with Not_found -> HMap.empty in
-     let (d, v, vi) = try HMap.find s spe
-		      with Not_found -> (hNone, hNone, []) in
-     let d = if f = hDir then c else d in
-     let v = if f = hVar then c else v in
-     let vi = if is_param f then (f, c) :: vi else vi in 
+     let (d, v, vi) as evt = try HMap.find e pevts
+		             with Not_found -> (hNone, hNone, []) in
+     let evt = if H.equal f hDir then (c, v, vi)
+          else if H.equal f hVar then (d, c, vi)
+          else if is_param f then (d, v, (f, c) :: vi)
+          else evt in
      (SAtom.add at sa,
-      HMap.add p (HMap.add e (HMap.add s (d, v, vi) spe) pevts) evts,
-      update_cnt cnt at, fce)
-  | _ -> (SAtom.add at sa, evts, cnt, fce)
+      HMap.add p (HMap.add e evt pevts) evts,
+      update_eids eids p e, rf, fce, sync)
+  | Atom.Comp (Read _, _, _) | Atom.Comp (_, _, Read _) ->
+     failwith "Weakorder.extract_events : Read should not be there"
+  | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
+     failwith "Weakorder.extract_events : Write should not be there"
+  | Atom.Comp (Fence _, _, _) | Atom.Comp (_, _, Fence _) ->
+     failwith "Weakorder.extract_events : Fence should not be there"
+  | Atom.Ite _ ->
+     failwith "Weakorder.extract_events : Ite should not be there"
+  | _ -> (SAtom.add at sa, evts, eids, rf, fce, sync)
 
-(* Used in split_events_orders_xxx only *)
-let sort_event_params =
-  HMap.map (HMap.map (HMap.map (fun (d, v, vi) ->
-    let vi = List.sort_uniq (fun (p1, _) (p2, _) -> H.compare p1 p2) vi in
-    (d, v, List.map (fun (_, i) -> i) vi)
-  )))
 
-(* Used in split_events_orders_xxx only *)
-let make_ord cnt fce =
-  HMap.fold (fun p (cmin, cmax) ord ->
-    let pfce = try HMap.find p fce with Not_found -> [] in
-    let pord = ref [] in
-    for i = cmin to cmax do
-      let e = mk_hE i in
-      if List.exists (fun f -> H.equal f e) pfce then pord := hF :: e :: !pord
-      else pord := e :: !pord
+
+let make_sync sync =
+  let rec aux sm = function
+    | [] -> sm
+    | [_] -> failwith "Weakorder.make_sync : internal error"
+    | p :: e :: sl -> aux (H2Set.add (p, e) sm) sl
+  in
+  List.map (aux H2Set.empty) sync
+
+let are_sync sync p1 e1 p2 e2 =
+  List.exists (fun ss ->
+    H2Set.mem (p1, e1) ss && H2Set.mem (p2, e2) ss
+  ) sync
+
+let make_po eids sync = (* sync used *)
+  HMap.fold (fun p peids po ->
+    let peids = ref peids in
+    let ppo = ref H2Set.empty in
+    while not (RIntMap.is_empty !peids) do
+      let ef, hEf = RIntMap.min_binding !peids in
+      peids := RIntMap.remove ef !peids;
+      ppo := RIntMap.fold (fun et hEt ppo ->
+        if are_sync sync p hEf p hEt then ppo
+        else H2Set.add (hEf, hEt) ppo
+      ) !peids !ppo
     done;
-    HMap.add p !pord ord
-  ) cnt HMap.empty
+    HMap.add p !ppo po
+  ) eids HMap.empty
+
+let make_fence eids fce evts = (* no need to use sync *)
+  HMap.fold (fun p peids fence ->
+    let pevts = HMap.find p evts in
+    let pfce = try HMap.find p fce with Not_found -> HSet.empty in
+    let peids = ref peids in
+    let pfence = ref H2Set.empty in
+    while not (RIntMap.is_empty !peids) do
+      let ef, hEf = RIntMap.min_binding !peids in
+      peids := RIntMap.remove ef !peids;
+      let (df, _, _) = HMap.find hEf pevts in
+      if H.equal df hW then
+        let f = ref false in
+        pfence := RIntMap.fold (fun et hEt pfence ->
+          if HSet.mem hEt pfce then f := true;
+          if !f = false then pfence else
+          let (dt, _, _) = HMap.find hEt pevts in
+          if H.equal dt hR then H2Set.add (hEf, hEt) pfence else pfence
+        ) !peids !pfence;
+    done;
+    HMap.add p !pfence fence
+  ) eids HMap.empty
+
+
+
+let init_acc =
+  (SAtom.empty, HMap.empty, HMap.empty, H2Map.empty, HMap.empty, [])
+
+let post_process (sa, evts, eids, rf, fce, sync) =
+  let evts = HMap.map (HMap.map sort_params) evts in
+  let sync = make_sync sync in
+  sa, evts, (make_po eids sync, rf, make_fence eids fce evts, sync)
 
 (* Used when making formula for safety / fixpoint check *)
-let split_events_orders_array ar =
-  let sa, evts, cnt, fce = Array.fold_left (fun acc a ->
-    split_event_order acc a
-  ) (SAtom.empty, HMap.empty, HMap.empty, HMap.empty) ar in
-  sa, sort_event_params evts, make_ord cnt fce
+let extract_events_array ar =
+  post_process (Array.fold_left (fun acc a -> extract_events acc a) init_acc ar)
 
 (* Used when making formula for safety / fixpoint check *)
-let split_events_orders_set sa =
-  let sa, evts, cnt, fce = SAtom.fold (fun a acc ->
-    split_event_order acc a
-  ) sa (SAtom.empty, HMap.empty, HMap.empty, HMap.empty) in
-  sa, sort_event_params evts, make_ord cnt fce
+let extract_events_set sa =
+  post_process (SAtom.fold (fun a acc -> extract_events acc a) sa init_acc)
 
 
-
-
-let is_read (d, _, _) = H.equal d hR
-let is_write (d, _, _) = H.equal d hW
-let is_fence hs = H.equal hs hF
-let is_p0 hs = H.equal hs hP0
-
-let pick_event evts =
-  let p, pevts = HMap.choose evts in
-  let evts = HMap.remove p evts in
-  p, pevts, evts
 
 let filter_writes evts =
-  HMap.fold (fun p pe w ->
-    let pw = HMap.fold (fun e spe pw ->
-      let spw = HMap.filter (fun s ed -> is_write ed) spe in
-      HMap.add e spw pw) pe HMap.empty in
-    HMap.add p pw w) evts HMap.empty
+  HMap.fold (fun p pevts writes ->
+    let pw = HMap.filter (fun e ed -> is_write ed) pevts in
+    HMap.add p pw writes) evts HMap.empty
 
-let partition_rw evts =
-  HMap.fold (fun p pe (r, w) ->
-    let pr, pw = HMap.fold (fun e spe (pr, pw) ->
-      let spr, spw = HMap.partition (fun s ed -> is_read ed) spe in
-      (HMap.add e spr pr, HMap.add e spw pw)
-    ) pe (HMap.empty, HMap.empty) in
-    (HMap.add p pr r, HMap.add p pw w)
-  ) evts (HMap.empty, HMap.empty)
+let gen_po_pred pred evts po fence =
+  HMap.fold (fun p ppo pol ->
+    let pevts = HMap.find p evts in
+    H2Set.fold (fun (ef, et) pol ->
+      if pred (HMap.find ef pevts) (HMap.find et pevts)
+      then [p; ef; p; et] :: pol else pol
+    ) ppo pol
+  ) po []
 
+let gen_po_loc = gen_po_pred (fun ed1 ed2 -> same_var ed1 ed2)
 
+let gen_ppo_tso = gen_po_pred (fun ed1 ed2 -> not (is_write ed1 && is_read ed2))
 
-let gen_po ord =
-  let rec aux p po = function
-    | [] | [_] -> po
-    | f :: pord when is_fence f -> aux p po pord
-    | e1 :: pord ->
-       let po = List.fold_left (fun po e2 ->
-         if is_fence e2 then po else [p;e1;p;e2] :: po
-       ) po pord in
-       aux p po pord
-  in
-  HMap.fold (fun p pord po -> aux p po pord) ord []
+let gen_fence evts fence =
+  HMap.fold (fun p pfence fl ->
+    H2Set.fold (fun (ef, et) fl -> [p; ef; p; et] :: fl) pfence fl
+  ) fence []
 
-let rec gen_po_pred pred evts ord =
-  let rec aux p po pevts = function
-    | [] | [_] -> po
-    | f :: pord when is_fence f -> aux p po pevts pord
-    | e1 :: pord ->
-       let spe1 = HMap.find e1 pevts in
-       let po = List.fold_left (fun po e2 ->
-         if is_fence e2 then po else
-         let spe2 = HMap.find e2 pevts in
-         HMap.fold (fun s1 ed1 -> HMap.fold (fun s2 ed2 po ->
-           if pred ed1 ed2 then [p;e1;s1;p;e2;s2] :: po else po
-         ) spe2) spe1 po
-       ) po pord in
-       aux p po pevts pord
-  in
-  HMap.fold (fun p pord po -> aux p po (HMap.find p evts) pord) ord []
+let gen_sync evts sync = (* union find on map instead of array *)
+  List.fold_left (fun sl sync ->
+    let sl = ref sl in
+    let sync = ref sync in
+    while not (H2Set.is_empty !sync) do
+      let p1, e1 = H2Set.choose !sync in
+      sync := H2Set.remove (p1, e1) !sync;
+      try
+        let p2, e2 = H2Set.choose !sync in
+        sync := H2Set.remove (p1, e1) !sync;
+        sl := [p1; e1; p2; e2] :: !sl
+      with Not_found -> ()
+    done;
+    !sl
+  ) [] sync
 
-let gen_po_loc =
-  gen_po_pred (fun ed1 ed2 -> same_var ed1 ed2)
-
-let gen_ppo_tso =
-  gen_po_pred (fun ed1 ed2 -> not (is_write ed1 && is_read ed2))
-
-let gen_fence evts ord =
-(*  HMap.iter (fun p pevts -> HMap.iter (fun e sevts -> HMap.iter (fun s (d, vr, vl) ->
-    Format.eprintf "%a%a%a:%a%a\n" H.print p H.print e H.print s H.print d H.print vr
-  ) sevts) pevts) evts;
-  HMap.iter (fun p evts ->
-    Format.eprintf "%a : " H.print p;
-    List.iter (fun e -> Format.eprintf "%a " H.print e) evts;
-    Format.eprintf "\n"
-  ) ord; *)
-  let rec split_at_first_fence lpord = function
-    | [] -> lpord, []
-    | f :: rpord when is_fence f -> lpord, rpord
-    | e :: rpord -> split_at_first_fence (e :: lpord) rpord
-  in
-  let rec first_event dir p = function
-    | [] -> None
-    | f :: pord when is_fence f -> first_event dir p pord
-    | e :: pord ->
-       let pevts = HMap.find p evts in
-       begin try
-	 let spe = HMap.find e pevts in
-         if HMap.exists (fun _ (d, _, _) -> H.equal d dir) spe
-         then Some e else first_event dir p pord
-       with Not_found -> first_event dir p pord end
-  in
-  let rec aux p fence lpord rpord = match rpord with
-    | [] -> fence
-    | _ ->
-       let lpord, rpord = split_at_first_fence lpord rpord in
-       match first_event hW p lpord, first_event hR p rpord with
-       | Some w, Some r -> aux p ([p; w; p; r] :: fence) lpord rpord
-       | _, _ -> aux p fence lpord rpord
-  in
-  HMap.fold (fun p pord fence -> aux p fence [] pord) ord []
-
-let gen_co evts ord =
-  let iwrites, writes =
-    HMap.partition (fun p _ -> is_p0 p) (filter_writes evts) in
+let gen_co evts po =
+  let writes = filter_writes evts in
   (* Initial writes *)
-  let co = HMap.fold (fun p1 -> HMap.fold (fun e1 -> HMap.fold (fun s1 ed1 ->
-    HMap.fold (fun p2 -> HMap.fold (fun e2 -> HMap.fold (fun s2 ed2 co ->
-      if same_var ed1 ed2 then [p1;e1;s1;p2;e2;s2] :: co else co
-    ))) writes
-  ))) iwrites [] in
-  (* Writes from same thread *)
-  let rec aux p co pwrites = function
-    | [] | [_] -> co
-    | f :: pord when is_fence f -> aux p co pwrites pord
-    | e1 :: pord ->
-       let spe1 = HMap.find e1 pwrites in
-       let co = List.fold_left (fun co e2 ->
-	 if is_fence e2 then co else
-	 let spe2 = HMap.find e2 pwrites in
-	 HMap.fold (fun s1 ed1 -> HMap.fold (fun s2 ed2 co ->
-	   if same_var ed1 ed2 then [p;e1;s1;p;e2;s2] :: co else co
-	 ) spe2) spe1 co
-       ) co pord in
-       aux p co pwrites pord
-  in
-  HMap.fold (fun p pord co ->
-    aux p co (HMap.find p writes) pord
-  ) (HMap.remove hP0 ord) co
+  let co = HMap.fold (fun pt -> HMap.fold (fun et edt co ->
+    [hP0; hE0; pt; et] :: co)) writes [] in
+  (* Writes from the same thread *)
+  HMap.fold (fun p ppo co ->
+    let pwrites = HMap.find p writes in
+    H2Set.fold (fun (ef, et) co ->
+      try
+        if same_var (HMap.find ef pwrites) (HMap.find et pwrites)
+        then [p; ef; p; et] :: co else co
+      with Not_found -> co
+    ) ppo co
+  ) po co
 
-let gen_co_cands evts =
+(* more refinements to do :
+   if p1:RX reads from p2:WX, then
+    - all p1:WX that are po-before p1:RX are co-before P2:WX
+    - all p1:WX that are po-after p1:RX are co-after P2:WX
+
+gen_co_cands could do both co and co_cands
+evaluate condition inside loop
+must extract rf
+*)
+
+let get_rf_from_write_to_proc rf pwr ewr p =
+  H2Map.fold (fun (pw, ew) (pr, er) rfp ->
+    if H.equal pwr pw && H.equal ewr ew && H.equal p pr then
+      H2Set.add (pr, er) rfp else rfp
+  ) rf H2Set.empty
+
+let gen_co_cands evts po rf =
   let rec aux writes cco = try
-    let p1, p1writes, writes = pick_event writes in
-    let cco = HMap.fold (fun e1 -> HMap.fold (fun s1 ed1 cco ->
-      HMap.fold (fun p2 -> HMap.fold (fun e2 -> HMap.fold (fun s2 ed2 cco ->
-        if same_var ed1 ed2
-	then [[p1;e1;s1;p2;e2;s2];[p2;e2;s2;p1;e1;s1]] :: cco else cco
-      ))) writes cco
-    )) p1writes cco in
+    let p1, p1writes = HMap.choose writes in
+    let writes = HMap.remove p1 writes in
+    let cco = HMap.fold (fun e1 ed1 cco ->
+      HMap.fold (fun p2 -> HMap.fold (fun e2 ed2 cco ->
+        if same_var ed1 ed2 && not (H.equal p1 p2)
+	(* then [[p1;e1;p2;e2];[p2;e2;p1;e1]] :: cco else cco *)
+        then begin
+
+            let po1 = HMap.find p1 po in
+            let rf21 = get_rf_from_write_to_proc rf p2 e2 p1 in
+            let co21a = H2Set.exists (fun (_, er1) ->
+              H2Set.mem (er1, e1) po1) rf21 in
+            let co12a = H2Set.exists (fun (_, er1) ->
+              H2Set.mem (e1, er1) po1) rf21 in
+
+            let po2 = HMap.find p2 po in
+            let rf12 = get_rf_from_write_to_proc rf p1 e1 p2 in
+            let co12b = H2Set.exists (fun (_, er2) ->
+              H2Set.mem (er2, e2) po2) rf12 in
+            let co21b = H2Set.exists (fun (_, er2) ->
+              H2Set.mem (e2, er2) po2) rf12 in
+
+            if (co12a || co12b) && (co21a || co21b) then
+              [[p1;e1;p2;e2]] :: [[p2;e2;p1;e1]] :: cco
+              (* failwith "Weakorder.gen_co_cands : contradictory co" *)
+            else if (co12a || co12b) then [[p1;e1;p2;e2]] :: cco
+            else if (co21a || co21b) then [[p2;e2;p1;e1]] :: cco
+            else [[p1;e1;p2;e2];[p2;e2;p1;e1]] :: cco
+
+        end else cco
+      )) writes cco
+    ) p1writes cco in
     aux writes cco
     with Not_found -> cco
   in
-  aux (filter_writes (HMap.remove hP0 evts)) []
-
-(* should exclude trivially false rf (use value/const) *)
-(* for inter-thread read, should only read from the most recent *)
-(*let gen_rf_cands evts =
-  let reads, writes = partition_rw evts in
-  HMap.fold (fun p1 -> HMap.fold (fun e1 -> HMap.fold (fun s1 ed1 crf ->
-    let ecrf = HMap.fold (fun p2 -> HMap.fold (fun e2 ->
-      HMap.fold (fun s2 ed2 ecrf ->
-	if same_var ed1 ed2 then [p2;e2;s2;p1;e1;s1] :: ecrf else ecrf
-    ))) writes [] in
-    if ecrf = [] then crf else ecrf :: crf
-  ))) reads [] *)
+  aux (filter_writes evts) []
 
 
-
-let make_rel r pl1 pl2 =
-  let pl1 = List.map (fun p -> T.make_app p []) pl1 in
-  let pl2 = List.map (fun p -> T.make_app p []) pl2 in
-  F.make_lit F.Lt [ T.make_app r pl1 ; T.make_app r pl2 ]
-
-(* let make_rell r el f = *)
-(*   List.fold_left (fun f e -> make_rel r e :: f) f el *)
-let make_rell r el f =
-  List.fold_left (fun f e ->
-    let pl1, pl2 = match e with
-    | [p11;p12;p13;p21;p22;p23] -> [p11;p12(*;p13*)], [p21;p22(*;p23*)]
-    | [p11;p12;p21;p22] -> [p11;p12], [p21;p22]
-    | [p11;p21] -> [p11], [p21]
-    | _ -> failwith "Weakorder.make_rel : anomaly"
-    in
-    (make_rel r pl1 pl2) :: f
-  ) f el
-
-let make_rell_dl r ell f =
-  List.fold_left (fun f el -> (F.make F.Or (make_rell r el [])) :: f) f ell
 
 let make_pred p pl b =
   let pl = List.map (fun p -> T.make_app p []) pl in
@@ -270,60 +252,54 @@ let make_predl p el f =
 let make_predl_dl p ell f =
   List.fold_left (fun f el -> (F.make F.Or (make_predl p el [])) :: f) f ell
 
-(*let make_predrfl_dl ell f =
-  List.fold_left (fun f el ->
-    (F.make F.Or (
-      List.fold_left (fun f e ->
-	(F.make F.And [ make_pred hRf e true ;
-	  let (p1, e1, p2, e2) = e in
-	  let p1, p2 = T.make_app p1 [], T.make_app p2 [] in
-	  let e1, e2 = T.make_app e1 [], T.make_app e2 [] in
-	  let a1 = T.make_app hE [ p1; e1 ] in
-	  let a2 = T.make_app hE [ p2; e2 ] in
-	  let t1 = T.make_app hVal [ a1 ] in
-	  let t2 = T.make_app hVal [ a2 ] in
-	  F.make_lit F.Eq [ t1 ; t2 ]
-	]) :: f
-      ) [] el
-    )) :: f
-  ) f ell*)
-
-let make_orders_fp evts ord =
+let make_orders ?(fp=false) evts (po, rf, fence, sync) =
+  TimeRels.start ();
   let f = [] in
-  (* let f = make_predl hPo (gen_po ord) f in *) (* not necessary for fixpoint *)
-  let f = make_predl hFence (gen_fence evts ord) f in
-  f
+  let f = make_predl hFence (gen_fence evts fence) f in
+  let f = make_predl hSync (gen_sync evts sync) f in
+  let f = if fp then f else begin
+    let f = make_predl hPoLoc (gen_po_loc evts po fence) f in
+    let f = make_predl hPpo (gen_ppo_tso evts po fence) f in
+    let f = make_predl hCo (gen_co evts po) f in
+    let f = make_predl_dl hCo (gen_co_cands evts po rf) f in
+    f
+  end in
+  TimeRels.pause ();
+  if f = [] then None else
+  Some (F.make F.And f)
 
-let make_orders_sat evts ord =
-  let f = [] in
 
-  (* po_loc U com / co U prop *)
-  (* let f = make_predl hPo (gen_po ord) f in not necessary here either *)
-    let f = make_predl hPoLoc (gen_po_loc evts ord) f in
-    let f = make_predl hPpo (gen_ppo_tso evts ord) f in
-    (* let f = make_rell (Hstring.make "_sci") (gen_po_loc evts ord) f in *)
-    (* let f = make_rell (Hstring.make "_propi") (gen_ppo_tso evts ord) f in *)
 
-  (* co U prop *)
-  let f = make_predl hFence (gen_fence evts ord) f in
-    (* let f = make_rell (Hstring.make "_propi") (gen_fence evts ord) f in *)
 
-  (* po_loc U com / co U prop *)
-  let f = make_predl hCo (gen_co evts ord) f in
-  (* let f = make_rell (Hstring.make "_coi") (gen_co evts ord) f in *)
-  (* let f = make_rell (Hstring.make "_sci") (gen_co evts ord) f in *)
-  (* let f = make_rell (Hstring.make "_propi") (gen_co evts ord) f in *)
 
-(*  let f = make_predl_dl hRf (gen_rf_cands evts) f in (*no value test*)*)
-    (* let f = make_predrfl_dl (gen_rf_cands evts) f in (\* with value test *\) *)
+         
+  (* SC_LOC : po_loc U co U rf U fr *)
+  (* PROP :   ppo U fence U co U rfe U fr *)
 
-  let f = make_predl_dl hCo (gen_co_cands evts) f in
-  (* let f = make_rell_dl (Hstring.make "_coi") (gen_co_cands evts) f in *)
+    (* let f = make_rell hSci po_loc f in *)
+    (* let f = make_rell hPropi ppo f in *)
+    (* let f = make_rell hPropi fence f in *)
+     (* let f = make_rell hCoi co f in *)
+    (* let f = make_rell hSci co f in *)
+    (* let f = make_rell hPropi co f in *)
+    (* let f = make_rell_dl hCoi go_cands f in *)
 
-  f
 
-let make_orders ?(fp=false) evts ord =
-  let f = if fp then make_orders_fp evts ord
-	  else make_orders_sat evts ord in
-  if f = [] then F.f_true else
-  F.make F.And f
+(*let make_rel r pl1 pl2 =
+  let pl1 = List.map (fun p -> T.make_app p []) pl1 in
+  let pl2 = List.map (fun p -> T.make_app p []) pl2 in
+  F.make_lit F.Lt [ T.make_app r pl1 ; T.make_app r pl2 ]
+
+let make_rell r el f =
+  List.fold_left (fun f e ->
+    let pl1, pl2 = match e with
+    | [p11;p12;p13;p21;p22;p23] -> [p11;p12(*;p13*)], [p21;p22(*;p23*)]
+    | [p11;p12;p21;p22] -> [p11;p12], [p21;p22]
+    | [p11;p21] -> [p11], [p21]
+    | _ -> failwith "Weakorder.make_rel : anomaly"
+    in
+    (make_rel r pl1 pl2) :: f
+  ) f el
+
+let make_rell_dl r ell f =
+  List.fold_left (fun f el -> (F.make F.Or (make_rell r el [])) :: f) f ell*)

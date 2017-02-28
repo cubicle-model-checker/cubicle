@@ -121,10 +121,10 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) util.cmo $(SMTCMO) \
-      variable.cmo weakutil.cmo types.cmo \
+      variable.cmo weakutil.cmo weakmem.cmo types.cmo\
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo \
-      weakmem.cmo weakevent.cmo weakwrite.cmo weakorder.cmo \
+      weakevent.cmo weakwrite.cmo weakorder.cmo \
       prover.cmo safety.cmo weaksubst.cmo fixpoint.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \

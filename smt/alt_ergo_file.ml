@@ -531,32 +531,32 @@ module Make (Options_ : sig val profiling : bool end) = struct
     if Options.model = Options.SC then ()
     else axioms :=
 "(*axiom rf_val :
-  forall p1, p2, e1, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
-  _rf(p1, e1, s1, p2, e2, s2)
-   -> _e(p1, e1, s1)._val = _e(p2, e2, s2)._val*)
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2)
+   -> _e(p1, e1)._val = _e(p2, e2)._val*)
 
 axiom po_loc :
-  forall p1, p2, e1, e2, s1, s2 : int [_po_loc(p1,e1,s1,p2,e2,s2)].
-  _po_loc(p1, e1, s1, p2, e2, s2)
+  forall p1, p2, e1, e2 : int [_po_loc(p1,e1,p2,e2)].
+  _po_loc(p1, e1, p2, e2)
    -> _sci(p1, e1) < _sci(p2, e2)
 
 axiom co_1 :
-  forall p1, p2, e1, e2, s1, s2 : int [_co(p1,e1,s1,p2,e2,s2)].
-  _co(p1, e1, s1, p2, e2, s2)
+  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
    -> _sci(p1, e1) < _sci(p2, e2)
 (*axiom co_1 :
-  forall p1, p2, e1, e2, s1, s2 : int [_coi(p1,e1,s1),_coi(p2,e2,s2)].
-  _coi(p1, e1, s1) < _coi (p2, e2, s2)
+  forall p1, p2, e1, e2 : int [_coi(p1,e1),_coi(p2,e2)].
+  _coi(p1, e1) < _coi (p2, e2, s2)
    -> _sci(p1, e1) < _sci(p2, e2)*)
 
 axiom rf :
-  forall p1, e1, p2, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
-  _rf(p1, e1, s1, p2, e2, s2)
+  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2)
    -> _sci(p1, e1) < _sci(p2, e2)
 
 axiom ppo :
-  forall p1, p2, e1, e2, s1, s2 : int [_ppo(p1,e1,s1,p2,e2,s2)].
-  _ppo(p1, e1, s1, p2, e2, s2)
+  forall p1, p2, e1, e2 : int [_ppo(p1,e1,p2,e2)].
+  _ppo(p1, e1, p2, e2)
    -> _propi(p1, e1) < _propi(p2, e2)
 
 axiom fence :
@@ -565,29 +565,34 @@ axiom fence :
    -> _propi(p1, e1) < _propi(p2, e2)
 
 axiom co_2 :
-  forall p1, e1, p2, e2, s1, s2 : int [_co(p1,e1,s1,p2,e2,s2)].
-  _co(p1, e1, s1, p2, e2, s2)
+  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
+  _co(p1, e1, p2, e2)
   -> _propi(p1, e1) < _propi(p2, e2)
 (*axiom co_2 :
-  forall p1, e1, p2, e2, s1, s2 : int [_coi(p1,e1,s1),_coi(p2,e2,s2)].
-  _coi(p1, e1, s1) < _coi(p2, e2, s2)
+  forall p1, e1, p2, e2 : int [_coi(p1,e1),_coi(p2,e2)].
+  _coi(p1, e1) < _coi(p2, e2)
   -> _propi(p1, e1) < _propi(p2, e2)*)
 
 axiom rfe :
-  forall p1, p2, e1, e2, s1, s2 : int [_rf(p1,e1,s1,p2,e2,s2)].
-  _rf(p1, e1, s1, p2, e2, s2) and p1 <> p2
+  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
+  _rf(p1, e1, p2, e2) and p1 <> p2
   -> _propi(p1, e1) < _propi(p2, e2)
 
 axiom fr :
-  forall pr, pw1, pw2, r, w1, w2, sr, sw1, sw2 : int
-    [_rf(pw1,w1,sw1,pr,r,sr),_co(pw1,w1,sw1,pw2,w2,sw2)].
-  _rf(pw1, w1, sw1, pr, r, sr) and _co(pw1, w1, sw1, pw2, w2, sw2)
+  forall pr, pw1, pw2, r, w1, w2 : int
+    [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
+  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
   -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)
 (*axiom fr :
-  forall pr, pw1, pw2, r, w1, w2, sr, sw1, sw2 : int
-    [_rf(pw1,w1,sw1,pr,r,sr),_coi(pw1,w1,sw1),_coi(pw2,w2,sw2)].
-  _rf(pw1, w1, sw1, pr, r, sr) and _coi(pw1, w1, sw1) < _coi(pw2, w2, sw2)
-  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)*)"
+  forall pr, pw1, pw2, r, w1, w2 : int
+    [_rf(pw1,w1,pr,r),_coi(pw1,w1),_coi(pw2,w2)].
+  _rf(pw1, w1, pr, r) and _coi(pw1, w1) < _coi(pw2, w2)
+  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)*)
+
+axiom sync :
+  forall p1, p2, e1, e2 : int [_sync(p1,e1,p2,e2)].
+  _sync(p1, e1, p2, e2)
+   -> _sci(p1, e1) = _sci(p2, e2) and _propi(p1, e1) = _propi(p2, e2)"
 
   let typeof t =
     let t = (Hstring.view t) in

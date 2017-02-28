@@ -308,27 +308,28 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> Prover.run
 
-  
+
   let check_and_add n nodes vis_n=
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
     let to_evts = Weaksubst.get_evts n_array in
-    if !Options.size_proc <> 0 then begin
-      let from_evts = Weaksubst.get_evts vis_array in
-      let vis_array_l = (Weaksubst.remap_events vis_array
-        (Weaksubst.build_event_substs from_evts to_evts)) in
-      let vis_array_l = List.filter (fun v_ar ->
-        not (Cube.inconsistent_2arrays v_ar n_array)) vis_array_l in
-      List.fold_left (fun nodes v_ar ->
-        (vis_n, v_ar) :: nodes) nodes vis_array_l
-    end else
+    (* if !Options.size_proc <> 0 then begin *)
+    (*   let from_evts = Weaksubst.get_evts vis_array in *)
+    (*   let vis_array_l = (Weaksubst.remap_events vis_array *)
+    (*     (Weaksubst.build_event_substs from_evts to_evts)) in *)
+    (*   let vis_array_l = List.filter (fun v_ar -> *)
+    (*     not (Cube.inconsistent_2arrays v_ar n_array)) vis_array_l in *)
+    (*   List.fold_left (fun nodes v_ar -> *)
+    (*     (vis_n, v_ar) :: nodes) nodes vis_array_l *)
+    (* end else *)
       let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
       List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
         let from_evts = Weaksubst.get_evts vis_renamed in
         let vis_renamed_l = (Weaksubst.remap_events vis_renamed
           (Weaksubst.build_event_substs from_evts to_evts)) in
+        (* let vis_renamed_l = [vis_renamed] in *)
         let vis_renamed_l = List.filter (fun v_ren ->
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
         List.fold_left (fun nodes v_ren ->
@@ -398,7 +399,7 @@ end = struct
     else Cubetrie.mem_array (Node.array s) nodes
 
   let medium_fixpoint s visited  =
-    (*if !Options.size_proc <> 0 then None else*)
+    (* if !Options.size_proc <> 0 then None else *)
     let vars, s_array = Node.variables s, Node.array s in
     let substs = Variable.all_permutations vars vars in
     let substs = List.tl substs in (* Drop 'identity' permutation. 

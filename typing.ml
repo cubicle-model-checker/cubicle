@@ -296,16 +296,25 @@ let writes loc args wl =
     then error (OpInvalidInSC) loc;
   let dv = ref [] in
   List.iter (* could also prevent write by different threads *)
-    (fun (p, v, vi, t) ->
-       if Hstring.list_mem v !dv then error (DuplicateAssign v) loc;
+    (fun (p, v, vi, gu) ->
+       (* if Hstring.list_mem v !dv then error (DuplicateAssign v) loc; *)
        let ty_v = 
 	 try Smt.Symbol.type_of v
          with Not_found -> error (UnknownGlobal v) loc in
        begin
          if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
-         let ty_t = term loc args t in
-         unify loc ty_t ([], snd ty_v);
-         assignment v t ty_t;
+         match gu with
+         | UTerm t ->
+            let ty_t = term loc args t in
+            unify loc ty_t ([], snd ty_v);
+            assignment v t ty_t
+         | UCase swts -> (* to improve *)
+            List.iter (fun (sa, t) ->
+              atoms loc (vi @ args) sa;
+              let ty_t = term loc (vi @ args) t in
+              unify loc ty_t ([], snd ty_v);
+              assignment v t ty_t
+            ) swts
        end;         
        dv := v ::!dv) wl
 
@@ -558,11 +567,15 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
                         x, UCase swts
 	           ) tr.tr_assigns;
 	tr_writes = 
-	  List.map (fun (p, v, vi, t) ->
+	  List.map (fun (p, v, vi, gu) ->
 	    let sp = Variable.subst sigma p in
 	    let svi = List.map (Variable.subst sigma) vi in
-	    let st = Term.subst sigma t in
-	    sp, v, svi, st
+            let sgu = match gu with
+              | UTerm t -> UTerm (Term.subst sigma t)
+              | UCase swts -> UCase (List.map (fun (sa, t) ->
+                                SAtom.subst sigma sa, Term.subst sigma t) swts)
+            in
+	    sp, v, svi, sgu
 	  ) tr.tr_writes;
 	tr_upds = 
 	List.map 
@@ -596,13 +609,13 @@ let system s =
   end;
 
   let init_woloc = let _,v,i = s.init in v,i in
-  let invs_woloc =
-    List.map (fun (_,v,i) ->
-      create_node_rename Inv v (Weakevent.events_of_satom i)) s.invs in
-  let unsafe_woloc =
-    List.map (fun (_,v,u) ->
-      create_node_rename Orig v (Weakevent.events_of_satom u)) s.unsafe in
-  let init_instances = create_init_instances init_woloc invs_woloc in  
+  let invs_woloc = [] in (* as it would put reads in init... *) (*
+    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in *)
+  let invs_woloc_e = List.map (fun (_,v,i) ->
+    create_node_rename Inv v (Weakevent.instantiate_events i)) s.invs in
+  let unsafe_woloc_e = List.map (fun (_,v,u) ->
+    create_node_rename Orig v (Weakevent.instantiate_events u)) s.unsafe in
+  let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
   { 
@@ -611,7 +624,7 @@ let system s =
     t_arrays = List.map (fun (_,a,_,_) -> a) s.arrays;
     t_init = init_woloc;
     t_init_instances = init_instances;
-    t_invs = invs_woloc;
-    t_unsafe = unsafe_woloc;
+    t_invs = invs_woloc_e;
+    t_unsafe = unsafe_woloc_e;
     t_trans = List.map add_tau s.trans;
   }

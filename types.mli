@@ -56,7 +56,7 @@ type term =
   | Field of term * Hstring.t (* term is Elem/Access *)
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list *
-	       (Hstring.t * Hstring.t * Hstring.t) list (* Related reads *)
+	       (Hstring.t * Hstring.t) list (* Related reads *)
   | Fence of Variable.t
 
 (** Module interface for terms *)

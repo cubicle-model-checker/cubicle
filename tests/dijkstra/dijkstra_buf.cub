@@ -29,7 +29,7 @@ requires { Kind[x] = KProc && Kind[i] = KBuf &&
 { A[x] := Q2;
   Var[x,i] := VF; Par[x,i] := x; Val[x,i] := F1; }
 
-transition t2 (x)
+transition t2 (x) (* Should have a fence here ? *)
 requires { Kind[x] = KProc &&
 	   A[x] = Q2 && 
 	   forall_other j. (

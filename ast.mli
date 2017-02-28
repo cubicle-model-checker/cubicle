@@ -54,7 +54,7 @@ type transition_info = {
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
-  tr_writes : (Variable.t * Hstring.t * (Variable.t list) * Term.t) list;
+  tr_writes : (Variable.t * Hstring.t * (Variable.t list) * glob_update) list;
   tr_fences : Variable.t list;
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;

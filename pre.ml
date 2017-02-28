@@ -157,9 +157,9 @@ let rec find_assign tr = function
 	(* in *)
 	(* Single (Access (na, nli)) *) end
 
-  | Field _ as a -> Single a
+  | Field _ as a -> Single a (* No assigns to fields : internal use only *)
   | Read _ -> failwith "Pre.find_assign: Read should not be in atom"
-  | Write _ as a -> Single a
+  | Write _ -> failwith "Pre.find_assign: Write should not be in atom"
   | Fence _ -> failwith "Pre.find_assign: Fence should not be in atom"
 
 let make_tau tr x op y =
@@ -236,11 +236,16 @@ let make_cubes (ls, post) rargs s tr cnp =
   let args = cnp.Cube.vars in
   let cube acc sigma =
     let tr_args = List.map (Variable.subst sigma) tr.tr_args in
+
+(* let c = Cube.subst sigma cnp in *)
+(* if debug && verbose > 0 then Debug.pre_cubes c.Cube.litterals c.Cube.vars; *)
+
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
     (* cubes are in normal form *)
 
     (* TSO *)
     let lnp = List.fold_left (fun lnp cnp ->
+  (* if debug && verbose > 0 then Debug.pre_cubes cnp.Cube.litterals cnp.Cube.vars; *)
       (* build new cubes with writes satisfying reads *)
       let lsa = Weakwrite.satisfy_reads tr cnp.Cube.litterals in
       List.fold_left (fun lnp sa ->
@@ -268,15 +273,16 @@ let make_cubes (ls, post) rargs s tr cnp =
 	    else
 
 	      (* TSO *)
-	      let np = Weakevent.events_of_satom np in
-	      (* END TSO *)(*Debug.pre tr np;*)
-
+	      let np = Weakevent.instantiate_events np in
+              (*Debug.pre tr np;*)
+	      (* END TSO *)
+              
               let new_cube = Cube.create nargs np in
-              let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
+              let new_s = Node.create ~from:(Some (tr, tr_args,s)) new_cube in
 	      match post_strategy with
 	      | 0 -> add_list new_s ls, post
 	      | 1 -> 
-		 if List.length nargs > nb_uargs then
+	         if List.length nargs > nb_uargs then
 		   ls, add_list new_s post
 		 else add_list new_s ls, post
 	      | 2 -> 
@@ -284,11 +290,12 @@ let make_cubes (ls, post) rargs s tr cnp =
 		 then ls, add_list new_s post
 		 else add_list new_s ls, post
 	      | _ -> assert false
+
 	  with Exit -> ls, post
 	 ) (ls, post) lureq ) acc lnp
   in
   if List.length tr.tr_args > List.length rargs then
-    begin
+    begin (* rargs = pre vars + tr_args -> isn't this branch dead ? *)
       if !size_proc = 0 then assert false;
       (ls, post)
     end
@@ -314,13 +321,51 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
+open Weakmem
+
+let split_event at evts = match at with
+  | Atom.Comp (Field (Access (a, [p; e]), f), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c,t), Eq, Field (Access (a, [p; e]),f)) when H.equal a hE->
+     let (d, v, vi) as evt = try H2Map.find (p, e) evts with Not_found -> (hNone, hNone, []) in
+     let evt = if H.equal f hDir then (c, v, vi)
+	  else if H.equal f hVar then (d, c, vi)
+	  else if is_param f then (d, v, (f, c) :: vi)
+	  else evt in
+     H2Map.add (p, e) evt evts
+  | _ -> evts
+
+let split_events sa =
+  let evts = SAtom.fold split_event sa H2Map.empty in
+  H2Map.fold (fun (p, e) ((_, v, vi) as ed) vis ->
+    let vvis = try HMap.find v vis with Not_found -> [] in
+    let _, _, nvi = sort_params ed in
+    if List.exists (fun vi -> H.list_equal vi nvi) vvis then vis
+    else HMap.add v (nvi :: vvis) vis
+  ) evts HMap.empty
+
 let pre { tr_info = tri; tr_tau = tau } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe =
     let us = SAtom.union tri.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty) in
-    let us = List.fold_left (fun us (p, v, vi, t) ->
-      SAtom.add (Atom.Comp (Write (p, v, vi, []), Eq, t)) us
+    (* reads may "disappear" if term not used in us ; if there is both a read
+       and a write in the transition, should add a single dummied read
+       to make the instruction RMW (or maybe a fence could do the job) *)
+    let vis = split_events us in
+    let us = List.fold_left (fun us (p, v, vi, gu) -> match gu with
+      | UTerm t -> SAtom.add (Atom.Comp (Write (p, v, vi, []), Eq, t)) us
+      | UCase swts ->
+         let hv = mk_hV v in
+         let vvis = try HMap.find hv vis with Not_found -> [] in
+         List.fold_right (fun nvi us ->
+           let sigma = List.combine vi nvi in  
+           let ite = List.fold_right (fun (ci, ti) f ->
+             let ci = SAtom.subst sigma ci in
+             let ti = Term.subst sigma ti in
+             Atom.Ite (ci, Atom.Comp (Write (p, v, nvi, []), Eq, ti), f)
+           ) swts Atom.True in
+           SAtom.add ite us
+         ) vvis us
     ) us tri.tr_writes in
     let us = List.fold_left (fun us p ->
       SAtom.add (Atom.Comp (Fence p, Eq, Elem (Term.htrue, Constr))) us
@@ -328,14 +373,14 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
     us
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
-  let pre_u = Cube.create_normal pre_unsafe in
-  let args = pre_u.Cube.vars in
+  let pre_u = Cube.create_normal pre_unsafe in (* make proc vars consecutive *)
+  let args = pre_u.Cube.vars in (* args = consecutive prov vars #1 #2 #3...*)
   if tri.tr_args = [] then tri, pre_u, args
   else
     let nargs = Variable.append_extra_procs args tri.tr_args in
     if !size_proc <> 0 && List.length nargs > !size_proc then
-      tri, pre_u, args
-    else tri, pre_u, nargs
+      tri, pre_u, args (* should have all procs, not just initial args ? *)
+    else tri, pre_u, nargs (* with new procs from transition parameters *)
 
 
 (*********************************************************************)

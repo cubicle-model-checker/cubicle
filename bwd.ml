@@ -15,6 +15,7 @@
 
 open Options
 open Format
+open Util
 open Ast
 
 module type PriorityNodeQueue = sig
@@ -47,6 +48,16 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
   module Fixpoint = Fixpoint.FixpointTrie
   module Approx = Approx.Selected
 
+  module Int =
+    struct
+      type t = int
+      let compare = Pervasives.compare
+      let hash = Hashtbl.hash
+      let equal = (=)
+    end
+
+  module IntSet = Set.Make (Int)
+
   let nb_remaining q post () = Q.length q, List.length !post
 
   let search ?(invariants=[]) ?(candidates=[]) system =
@@ -67,15 +78,35 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         let n = Q.pop q in
 
 	(* begin try *)
-	(*   Prover.acyclic n; (* is there a cycle ? *) *)
-  
+	(*   Prover.acyclic n; (\* is there a cycle ? *\) *)
+
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
           | Some db ->
              Stats.fixpoint n db
           | None ->
-             Stats.check_limit n;
+        (* Safety.check system n; *)
+	     begin try
+		 Stats.check_limit n
+	       with Stats.ReachedLimit ->
+                 (* visited := Cubetrie.add_node n !visited; *)
+		 (* (\*Q.push n q;*\) *)
+		 (* (\* let ncs = ref IntSet.empty in *\) *)
+		 (* while not (Q.is_empty q) do *)
+		 (*   let n = Q.pop q in *)
+		 (*   match n.from with *)
+		 (*   | [] -> () *)
+		 (*   | (_, _, father) :: _ -> *)
+		 (*      begin match Fixpoint.check n !visited with *)
+		 (*        (\* | None -> ncs := IntSet.add father.tag !ncs *\) *)
+		 (*        | None -> Dot.new_node_frontier n *)
+                 (*        | Some db -> Dot.fixpoint n db *)
+		 (*      end *)
+		 (* done; *)
+		 (* (\* Dot.set_open_nodes (IntSet.elements !ncs); *\) *)
+		 raise Stats.ReachedLimit
+	     end;
              Stats.new_node n;
              let n = begin
                  match Approx.good n with
@@ -93,6 +124,16 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
+             TimeAcycl.start ();
+             let ls = List.filter (fun n ->
+	       try  Prover.acyclic n; true (* is there a cycle ? *)
+	       with Smt.Unsat _ -> false (* there is a cycle *)
+             ) ls in
+             let post = List.filter (fun n ->
+	       try  Prover.acyclic n; true (* is there a cycle ? *)
+	       with Smt.Unsat _ -> false (* there is a cycle *)
+             ) post in
+             TimeAcycl.pause ();
              if delete then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
@@ -102,7 +143,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Stats.remaining (nb_remaining q postponed);
         end;
 
-	(*   with Smt.Unsat _ -> () (* there is a cycle *) *)
+	(*   with Smt.Unsat _ -> () (\* there is a cycle *\) *)
 	(* end; *)
 
         if Q.is_empty q then

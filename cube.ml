@@ -476,7 +476,7 @@ let rec add_arg args t =
   | Field (t, _) -> add_arg args t
   | Read (p, _, vi) -> add_arg_list args (p :: vi)
   | Write (p, _, vi, rr) ->
-     let vl = List.fold_left (fun acc (v, _, _) -> v :: acc) (p :: vi) rr in
+     let vl = List.fold_left (fun acc (v, _) -> v :: acc) (p :: vi) rr in
      add_arg_list args vl
   | Fence p -> add_arg_list args [p]
 
@@ -624,6 +624,14 @@ let rec break a =
   		a1_and_c :: a2_and_nc_r
   	end
 
+(*let break a =
+  let sal = break a in
+  Format.eprintf "Break\n";
+  List.iter (fun sa ->
+      Format.eprintf "SA : %a\n" SAtom.print sa
+    ) sal;
+  sal*)
+
 let add_without_redondancy sa l =
   if List.exists (fun sa' -> SAtom.subset sa' sa) l then l
   else
@@ -639,6 +647,10 @@ let elim_ite_atoms np =
     let ites, base = SAtom.partition (function Atom.Ite _ -> true | _ -> false) np in
     let base = simplification_atoms SAtom.empty base in
     let ites = simplification_atoms base ites in
+   (* Format.eprintf "Ites:\n"; *)
+   (*  SAtom.iter (fun a -> *)
+   (*    Format.eprintf "Ite : %a\n" Atom.print a) ites; *)
+   (*  Format.eprintf "\n"; *)
     let lsa =
       SAtom.fold
 	(fun ite cubes ->

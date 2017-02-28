@@ -29,15 +29,15 @@ requires { Kind[x] = KProc && Kind[i] = KBuf &&
 	   A[x] = Q1 &&
 	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
 	       (k < i && Kind[k] = KBuf && Var[x, k] = VNone)) }
-{ A[x] := Q2f;
+{ A[x] := Q2; (* Q2f *)
   Var[x,i] := VF; Par[x,i] := x; Val[x,i] := F1; }
 
-transition t2f (x) (* Fence : buffer must be empty *)
-requires { Kind[x] = KProc &&
+(*transition t2f (x)*) (* Fence : buffer must be empty *)
+(*requires { Kind[x] = KProc &&
 	   A[x] = Q2f && forall_other j. (
 	       (Kind[j] = KProc) ||
 	       (Kind[j] = KBuf && Var[x, j] = VNone)) }
-{ A[x] := Q2; }
+{ A[x] := Q2; }*)
 
 transition t2 (x)
 requires { Kind[x] = KProc &&

@@ -1,5 +1,5 @@
 
-number_procs	1
+number_procs 1
 
 var X : int
 var Y : int

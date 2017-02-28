@@ -17,7 +17,11 @@ open Types
 
 (** Generation of graphical search graphs with dot/graphviz *)
 
+val set_open_nodes : int list -> unit
+
 val new_node : Node.t -> unit
+
+val new_node_frontier : Node.t -> unit
 
 val candidate : Node.t -> Node.t -> unit
 

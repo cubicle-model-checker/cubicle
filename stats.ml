@@ -240,6 +240,21 @@ let print_time_ccheck () =
 let print_time_forward () =
   printf "Forward exploration              : %a@." print_time (TimeForward.get ())
 
+let print_time_safety () =
+  printf "Time for safety                  : %a@." print_time (TimeSafety.get ())
+
+let print_time_rels () =
+  printf "Building relations               : %a@." print_time (TimeRels.get ())
+
+let print_time_acycl () =
+  printf "Acyclicity test                  : %a@." print_time (TimeAcycl.get ())
+
+let print_time_csubst () =
+  printf "Compute event id substitutions   : %a@." print_time (TimeCSubst.get ())
+
+let print_time_asubst () =
+  printf "Apply event id substitutions     : %a@." print_time (TimeASubst.get ())
+
 let print_report ~safe visited candidates =
   print_candidates ~safe candidates;
   Pretty.print_title std_formatter "STATS";
@@ -268,6 +283,11 @@ let print_report ~safe visited candidates =
       print_time_prover ();
       print_time_forward ();
       print_time_ccheck ();
+      print_time_safety ();
+      print_time_rels ();
+      print_time_acycl ();
+      print_time_csubst ();
+      print_time_asubst ();
     end;
   printf "%a" Pretty.print_double_line ()
 

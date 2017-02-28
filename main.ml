@@ -57,7 +57,7 @@ let () =
   if verbose > 0 then Printexc.record_backtrace true
 
 
-let _ = 
+let _ =
   let lb = from_channel cin in 
 let close_dot = Dot.open_dot () in (* debug *)
   try

@@ -92,11 +92,101 @@ let cedge_error ?(to_init=false) () =
               fontcolor=red, penwidth=4"^
                (if dot_level = 1 || to_init then "" else ", label=\" \""))
 
-
 let rec print_atoms fmt = function
   | [] -> ()
   | [a] -> Atom.print fmt a
   | a::l -> fprintf fmt "%a\\n%a" Atom.print a print_atoms l
+
+
+(* TSO *)		    
+open Weakmem
+
+let find_event_safe eid evts =
+  try H2Map.find eid evts
+  with Not_found -> ((hNone, hNone, []), [])
+
+let rec has_val = function
+  | Field (Field (Access (a, [p; e]), f), _)
+       when H.equal a hE && H.equal f hVal -> true
+  | Arith (t, c) -> has_val t
+  | _ -> false
+
+let rec get_val = function
+  | Field (Field (Access (a, [p; e]), f), _)
+       when H.equal a hE && H.equal f hVal -> Some (p, e)
+  | Arith (t, c) -> get_val t
+  | _ -> None
+
+let split_event (la, evts, rfs, rrfs) at = match at with
+  (* Read-from's *)
+  | Atom.Comp (Access (a, [p1; e1; p2; e2]), Eq, _)
+  | Atom.Comp (_, Eq, Access (a, [p1; e1; p2; e2]))
+       when H.equal a hRf ->
+     (la, evts, H2Map.add (p1, e1) (p2, e2) rfs,
+                H2Map.add (p2, e2) (p1, e1) rrfs)
+  (* Direction / Variable / Indices *)
+  | Atom.Comp (Field (Access (a, [p; e]), f), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [p; e]), f))
+       when H.equal a hE ->
+     let ((d, v, vi), vals) as evt = find_event_safe (p, e) evts in
+     let evt = if H.equal f hDir then ((c, v, vi), vals)
+	  else if H.equal f hVar then ((d, c, vi), vals)
+	  else if is_param f then ((d, v, (f, c) :: vi), vals)
+	  else evt in
+     (la, H2Map.add (p, e) evt evts, rfs, rrfs)
+  (* Value *)
+  | Atom.Comp (t1, _, t2)
+       when has_val t1 || has_val t2 ->
+     let p, e = match get_val t1 with
+	 Some (p, e) -> (p, e)
+       | _ -> match get_val t2 with
+		Some (p, e) -> (p, e)
+	      | _ -> failwith "Dot.split_event :internal error " in
+     let ((d, v, vi), vals) = find_event_safe (p, e) evts in
+     let evt = ((d, v, vi), at :: vals) in
+     (la, H2Map.add (p, e) evt evts, rfs, rrfs)
+  (* Others *)
+  | _ -> (at :: la, evts, rfs, rrfs)
+
+let split_events la =
+  let la, evts, rfs, rrfs = List.fold_left split_event
+		        ([], H2Map.empty, H2Map.empty, H2Map.empty) la in
+  List.rev la, H2Map.fold (fun (p, e) (ed, vals) evts ->
+    H2Map.add (p, e) (sort_params ed, vals) evts
+  ) evts H2Map.empty, rfs, rrfs
+
+let id_of_v v =
+    let v = H.view v in
+    String.sub v 1 (String.length v - 1)
+
+let print_atoms fmt la =
+  let la, evts, rfs, rrfs = split_events la in
+  print_atoms fmt la;
+  let last = ref "#0" in
+  H2Map.iter (fun (p, e) ((d, v, vi), vals) ->
+    if H.view p <> !last then begin last := H.view p; fprintf fmt "\\n" end;
+    fprintf fmt "\\nE(%a, %s) = %s : %s"
+      H.print p (id_of_v e) (id_of_v d) (var_of_v v);
+    if vi <> [] then
+      fprintf fmt "[%a]" (Hstring.print_list ", ") vi;
+    if vals <> [] then
+      List.iter (fun a -> fprintf fmt "          %a" Atom.print a) vals;
+    if H2Map.mem (p, e) rfs then
+      fprintf fmt "                                         "
+    else if H.view d = "_W" then
+      fprintf fmt "          not RF                         ";
+    try
+      let pw, ew = H2Map.find (p, e) rrfs in
+        fprintf fmt "          RF : (%a, %s)" H.print pw (id_of_v ew)
+        (* fprintf fmt "          RF : (%a, %s) -> (%a, %s)" *)
+        (* H.print pw (id_of_v ew) *)
+        (* H.print p (id_of_v e) *)
+    with _ -> ()
+  ) evts
+	     
+(* End TSO *)
+
+
 
 let print_cube fmt c =
   fprintf fmt "%a" print_atoms (SAtom.elements c.Cube.litterals)
@@ -112,10 +202,20 @@ let print_node_info fmt s = match display_node_contents with
 
 let nb_nodes = ref 0
 
+(* let print_node_c confstr fmt s = *)
+(*   incr nb_nodes; *)
+(*   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr *)
+
 let print_node_c confstr fmt s =
   incr nb_nodes;
+  let x = Cube.dim s.cube in
+  let confstr =
+    if x = 1 then confstr
+    else if x = 2 then confstr ^ ", color=red"
+    else if x = 3 then confstr ^ ", color=green"
+    else confstr ^ ", color=blue" in
   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr
-
+  
 let print_node fmt s = print_node_c (config s.kind) fmt s
 
 let print_subsumed_node fmt s = 
@@ -138,9 +238,30 @@ let print_pre cedge fmt n =
 
 let dot_fmt = ref std_formatter
 
+
+let set_open_nodes =
+  let count = ref 10000 in
+  fun ncl ->
+    List.iter (fun i ->
+      let c = !count in
+      count := c + 1;
+      fprintf !dot_fmt "%d [label=\"\"]" c;
+      fprintf !dot_fmt "%d -> %d [%s]@." i c (cedge_pre ())
+    ) ncl
+  
+
 let new_node n =
   current_color := next_shade ();
   fprintf !dot_fmt "%a@." print_node n;
+  print_pre (cedge_pre ()) !dot_fmt n
+
+
+let new_node_frontier n =
+  let conf = " , color = grey, \
+      fontcolor=white, fontsize=20, style=filled" in
+  current_color := next_shade ();
+  incr nb_nodes;
+  fprintf !dot_fmt "%d [label=\"%a\"%s]@." n.tag print_node_info n conf;
   print_pre (cedge_pre ()) !dot_fmt n
 
 

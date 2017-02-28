@@ -15,6 +15,7 @@
 
 open Format
 open Options
+open Util
 open Ast
 
 exception Unsafe of Node.t
@@ -37,17 +38,20 @@ let obviously_safe { t_init_instances = init_inst; } n =
  
 let check s n =
   (*Debug.unsafe s;*)
+  TimeSafety.start ();
 (**)if debug then eprintf ">>> [safety check]";
-  try
+  begin try
     if not (obviously_safe s n) then
       begin
 (**)if debug then eprintf " asking smt\n";
 	Prover.unsafe s n;
 	if not quiet then eprintf "\nUnsafe trace: @[%a@]@."
 	  Node.print_history n;
+        TimeSafety.pause ();
         raise (Unsafe n)
       end
 (* (\**\)else if debug then eprintf " obviously safe\n"; *)
   with
     | Smt.Unsat _ -> (**)if debug then eprintf " safe\n"; ()
-
+  end;
+  TimeSafety.pause ()
