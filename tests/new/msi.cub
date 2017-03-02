@@ -1,5 +1,5 @@
 
-number_procs 2
+number_procs 3 (* 3 OK with read + write *)
 
 type st = M | S | I
 
@@ -21,5 +21,5 @@ requires { read(i, Cache[i]) <> M }
 { write(i, Cache[j], case
        	   | j = i : M
 	   | _ : I ) }
-*)
 
+*)

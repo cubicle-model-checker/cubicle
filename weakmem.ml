@@ -46,12 +46,11 @@ let hPo = H.make "_po"
 let hRf = H.make "_rf"
 let hCo = H.make "_co"
 let hFence = H.make "_fence"
+let hSync = H.make "_sync"
 let hPoLoc = H.make "_po_loc"
 let hPpo = H.make "_ppo"
 let hSci = H.make "_sci"
 let hPropi = H.make "_propi"
-
-let hSync = H.make "_sync"
 
 let hUniprocRW = H.make "_uniprocRW"
 let hUniprocWR = H.make "_uniprocWR"

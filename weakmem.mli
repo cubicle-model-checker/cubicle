@@ -39,7 +39,7 @@ val hSync : H.t
 val hPoLoc : H.t
 val hPpo : H.t
 val hSci : H.t
-val hProp : H.t
+val hPropi : H.t
 
 val mk_hP : int -> H.t
 val mk_hE : int -> H.t

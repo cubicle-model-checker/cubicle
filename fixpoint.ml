@@ -308,8 +308,21 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> Prover.run
 
+open Weakmem
+
+let filter_rf = SAtom.filter (fun a -> match a with
+  | Atom.Comp (Access (a, _), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a, _)) when H.equal a hRf -> false
+  | _ -> true)
 
   let check_and_add n nodes vis_n=
+    let nc = Cube.create n.cube.Cube.vars
+      (filter_rf n.cube.Cube.litterals) in
+    let n = { n with cube = nc } in
+    let vnc = Cube.create vis_n.cube.Cube.vars
+      (filter_rf vis_n.cube.Cube.litterals) in
+    let vis_n2 = { vis_n with cube = vnc } in
+    
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
@@ -323,7 +336,7 @@ end = struct
     (*   List.fold_left (fun nodes v_ar -> *)
     (*     (vis_n, v_ar) :: nodes) nodes vis_array_l *)
     (* end else *)
-      let d = Instantiation.relevant ~of_cube:vis_cube ~to_cube:n.cube in
+      let d = Instantiation.relevant ~of_cube:vis_n2.cube ~to_cube:n.cube in
       List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
         let from_evts = Weaksubst.get_evts vis_renamed in

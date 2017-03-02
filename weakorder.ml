@@ -26,7 +26,9 @@ let extract_events (sa, evts, eids, rf, fce, sync) at =
   match at with
   | Atom.Comp (Access (a, [pw; ew; pr; er]), Eq, Elem _)
   | Atom.Comp (Elem _, Eq, Access (a, [pw; ew; pr; er])) when H.equal a hRf ->
-     (SAtom.add at sa, evts, eids, H2Map.add (pw, ew) (pr, er) rf, fce, sync)
+     let wrf = try H2Map.find (pw, ew) rf with Not_found -> [] in
+     let wrf = (pr, er) :: wrf in
+     ((*SAtom.add at*) sa, evts, eids, H2Map.add (pw, ew) wrf rf, fce, sync)
   | Atom.Comp (Access (a, sl), Eq, Elem _)
   | Atom.Comp (Elem _, Eq, Access (a, sl)) when H.equal a hSync ->
      (sa, evts, eids, rf, fce, sl :: sync)
@@ -134,7 +136,7 @@ let filter_writes evts =
     let pw = HMap.filter (fun e ed -> is_write ed) pevts in
     HMap.add p pw writes) evts HMap.empty
 
-let gen_po_pred pred evts po fence =
+let gen_po_pred pred evts (po, _, _, _) =
   HMap.fold (fun p ppo pol ->
     let pevts = HMap.find p evts in
     H2Set.fold (fun (ef, et) pol ->
@@ -147,12 +149,24 @@ let gen_po_loc = gen_po_pred (fun ed1 ed2 -> same_var ed1 ed2)
 
 let gen_ppo_tso = gen_po_pred (fun ed1 ed2 -> not (is_write ed1 && is_read ed2))
 
-let gen_fence evts fence =
+let gen_rf_pred pred _ (_, rf, _, _) =
+  H2Map.fold (fun (pw, ew) rl rf ->
+    List.fold_left (fun rf (pr, er) ->
+      if pred (pw, ew) (pr, er)
+      then [pw; ew; pr; er] :: rf else rf
+    ) rf rl
+  ) rf []
+
+let gen_rf = gen_rf_pred (fun _ _ -> true)
+
+let gen_rfe = gen_rf_pred (fun (pw, _) (pr, _) -> not (H.equal pw pr))
+
+let gen_fence evts (_, _, fence, _) =
   HMap.fold (fun p pfence fl ->
     H2Set.fold (fun (ef, et) fl -> [p; ef; p; et] :: fl) pfence fl
   ) fence []
 
-let gen_sync evts sync = (* union find on map instead of array *)
+let gen_sync evts (_, _, _, sync) = (* union find on map instead of array *)
   List.fold_left (fun sl sync ->
     let sl = ref sl in
     let sync = ref sync in
@@ -168,7 +182,7 @@ let gen_sync evts sync = (* union find on map instead of array *)
     !sl
   ) [] sync
 
-let gen_co evts po =
+let gen_co evts (po, _, _, _) =
   let writes = filter_writes evts in
   (* Initial writes *)
   let co = HMap.fold (fun pt -> HMap.fold (fun et edt co ->
@@ -195,12 +209,15 @@ must extract rf
 *)
 
 let get_rf_from_write_to_proc rf pwr ewr p =
-  H2Map.fold (fun (pw, ew) (pr, er) rfp ->
-    if H.equal pwr pw && H.equal ewr ew && H.equal p pr then
-      H2Set.add (pr, er) rfp else rfp
+  H2Map.fold (fun (pw, ew) rl rfp ->
+    if H.equal pwr pw && H.equal ewr ew then
+      List.fold_left (fun rfp (pr, er) ->
+        if H.equal p pr then H2Set.add (pr, er) rfp else rfp
+      ) rfp rl
+    else rfp
   ) rf H2Set.empty
 
-let gen_co_cands evts po rf =
+let gen_co_cands evts (po, rf, _, _) =
   let rec aux writes cco = try
     let p1, p1writes = HMap.choose writes in
     let writes = HMap.remove p1 writes in
@@ -252,16 +269,48 @@ let make_predl p el f =
 let make_predl_dl p ell f =
   List.fold_left (fun f el -> (F.make F.Or (make_predl p el [])) :: f) f ell
 
-let make_orders ?(fp=false) evts (po, rf, fence, sync) =
+
+let make_rel r pl1 pl2 =
+  let pl1 = List.map (fun p -> T.make_app p []) pl1 in
+  let pl2 = List.map (fun p -> T.make_app p []) pl2 in
+  F.make_lit F.Lt [ T.make_app r pl1 ; T.make_app r pl2 ]
+
+let make_rell r el f =
+  List.fold_left (fun f e ->
+    let pl1, pl2 = match e with
+    | [p11;p12;p13;p21;p22;p23] -> [p11;p12(*;p13*)], [p21;p22(*;p23*)]
+    | [p11;p12;p21;p22] -> [p11;p12], [p21;p22]
+    | [p11;p21] -> [p11], [p21]
+    | _ -> failwith "Weakorder.make_rel : anomaly"
+    in
+    (make_rel r pl1 pl2) :: f
+  ) f el
+
+
+
+let make_orders ?(fp=false) evts rels =
   TimeRels.start ();
   let f = [] in
-  let f = make_predl hFence (gen_fence evts fence) f in
-  let f = make_predl hSync (gen_sync evts sync) f in
-  let f = if fp then f else begin
-    let f = make_predl hPoLoc (gen_po_loc evts po fence) f in
-    let f = make_predl hPpo (gen_ppo_tso evts po fence) f in
-    let f = make_predl hCo (gen_co evts po) f in
-    let f = make_predl_dl hCo (gen_co_cands evts po rf) f in
+  let f = if fp then begin
+    (* let f = make_predl hRf (gen_rf evts rels) f in *)
+    (* let f = make_predl hFence (gen_fence evts rels) f in *)
+    (* let f = make_predl hSync (gen_sync evts rels) f in *)
+    let f = make_rell hSci (gen_sync evts rels) f in
+    let f = make_rell hSci (gen_po_loc evts rels) f in
+    let f = make_rell hSci (gen_rf evts rels) f in
+    let f = make_rell hPropi (gen_sync evts rels) f in
+    let f = make_rell hPropi (gen_ppo_tso evts rels) f in
+    let f = make_rell hPropi (gen_fence evts rels) f in
+    let f = make_rell hPropi (gen_rfe evts rels) f in
+    f
+  end else begin
+    let f = make_predl hRf (gen_rf evts rels) f in
+    let f = make_predl hFence (gen_fence evts rels) f in
+    let f = make_predl hSync (gen_sync evts rels) f in
+    let f = make_predl hPoLoc (gen_po_loc evts rels) f in
+    let f = make_predl hPpo (gen_ppo_tso evts rels) f in
+    let f = make_predl hCo (gen_co evts rels) f in
+    let f = make_predl_dl hCo (gen_co_cands evts rels) f in
     f
   end in
   TimeRels.pause ();

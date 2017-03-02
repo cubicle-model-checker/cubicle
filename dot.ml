@@ -213,7 +213,9 @@ let print_node_c confstr fmt s =
     if x = 1 then confstr
     else if x = 2 then confstr ^ ", color=red"
     else if x = 3 then confstr ^ ", color=green"
-    else confstr ^ ", color=blue" in
+    else if x = 4 then confstr ^ ", color=blue"
+    else if x = 5 then confstr ^ ", color=orange"
+    else confstr ^ ", color=magenta" in
   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr
   
 let print_node fmt s = print_node_c (config s.kind) fmt s

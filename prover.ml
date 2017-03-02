@@ -232,19 +232,30 @@ let reached args s sa = (* FW only *) (* events not handled yet *)
   SMT.assume ~id:0 f;
   SMT.check ()
 
+(*open Weakmem
 
+let filter_rf = SAtom.filter (fun a -> match a with
+  | Atom.Comp (Access (a, _), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a, _)) when H.equal a hRf -> false
+  | _ -> true)
+
+let filter_rf_array = Array.map (fun a -> match a with
+  | Atom.Comp (Access (a, _), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a, _)) when H.equal a hRf -> Atom.True
+  | _ -> a)
+ *)
 let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   (* let f = make_formula ~fp:true cube.Cube.array in *)
   (* let f = make_formula ~fp:false cube.Cube.array in *)
-  let f = make_formula_set ~fp:true cube.Cube.litterals in
+  let f = make_formula_set ~fp:true ((*filter_rf*) cube.Cube.litterals) in
   (* let f = make_formula_set ~fp:false cube.Cube.litterals in *)
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
-  let f = make_formula ~fp:true ap in
+  let f = make_formula ~fp:true ((*filter_rf_array*) ap) in
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f
@@ -285,7 +296,7 @@ let acyclic ({ tag = id; cube = cube } as n) =
   (* let sa = Weakwrite.satisfy_unsatisfied_reads cube.Cube.litterals in *)
   let sa, evts, rels = (* rels = po, rf, fence, sync *)
     Weakorder.extract_events_set (cube.Cube.litterals) in
-  let sa = SAtom.filter (fun a -> match a with
+(*  let sa = SAtom.filter (fun a -> match a with
     | Atom.Comp (Access (a,[_;_;_;_]), Eq, Elem _)
     | Atom.Comp (Elem _, Eq, Access (a,[_;_;_;_]))
 	 when Hstring.equal a Weakmem.hRf -> true
@@ -294,7 +305,7 @@ let acyclic ({ tag = id; cube = cube } as n) =
   if not (SAtom.is_empty sa) then begin
     let f = make_formula_set sa in (* just for rf *)
     SMT.assume ~id f
-  end;
+  end;*)
   match Weakorder.make_orders evts rels with
   | None -> ()
   | Some fo -> SMT.assume ~id fo;

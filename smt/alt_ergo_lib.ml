@@ -793,8 +793,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
     	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
     	(mk_and
           (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3))
-          (mk_imp (mk_eq tp1 tp2)
-	    (mk_lt (mk_fun ~qv "_uniprocWR" e1) (mk_fun ~qv "_uniprocWR" e2))))
+          (mk_imp (mk_eq tp2 tp3)
+	    (mk_lt (mk_fun ~qv "_uniprocWR" e2) (mk_fun ~qv "_uniprocWR" e3))))
       ) in
     Queue.push axiom_fr axioms;
 
@@ -875,7 +875,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	  try SInt.add (int_of_string n) s with _ -> s) SInt.empty cl
     in 
     SInt.elements s *)
-		 
+
   let assume ~id f =
     Time.start ();
     try
@@ -897,7 +897,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
       (* Generate goal formula *)
       let goal = mk_goal (List.rev !formula) in
       Queue.push goal q;
-      
+
       (* Call solver and check result *)
       let report d s steps = match s with
 	| FE.Unsat dep -> raise (Solver.Unsat [])
