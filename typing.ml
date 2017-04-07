@@ -182,7 +182,7 @@ let rec term loc ?(init=false) args = function
 	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e) loc
       end
   | Elem (e, _) ->
-      if Smt.Symbol.is_weak e && not init then error (MustReadWeakVar e) loc;
+      if Weakmem.is_weak e && not init then error (MustReadWeakVar e) loc;
       Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
@@ -193,14 +193,14 @@ let rec term loc ?(init=false) args = function
 	args, tx
       end
   | Access(a, li) ->
-      if Smt.Symbol.is_weak a && not init then error (MustReadWeakVar a) loc;
+      if Weakmem.is_weak a && not init then error (MustReadWeakVar a) loc;
       ty_access loc args a li
 
   | Field _ -> failwith "Typing.term : Field should not be typed"
   | Read (p, v, vi) ->
       if Options.model = Options.SC then error (OpInvalidInSC) loc;
       if init then error (CantUseReadInInit) loc;
-      if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
+      if not (Weakmem.is_weak v) then error (MustBeWeakVar v) loc;
       if not (Hstring.list_mem p args) then
 	begin try
 	  let pa, typ = Smt.Symbol.type_of p in
@@ -275,7 +275,7 @@ let assigns loc args =
 	 try Smt.Symbol.type_of g
          with Not_found -> error (UnknownGlobal g) loc in
        begin
-	 if Smt.Symbol.is_weak g then error (MustWriteWeakVar g) loc;
+	 if Weakmem.is_weak g then error (MustWriteWeakVar g) loc;
          match gu with
          | UTerm x ->
             let ty_x = term loc args x in
@@ -302,7 +302,7 @@ let writes loc args wl =
 	 try Smt.Symbol.type_of v
          with Not_found -> error (UnknownGlobal v) loc in
        begin
-         if not (Smt.Symbol.is_weak v) then error (MustBeWeakVar v) loc;
+         if not (Weakmem.is_weak v) then error (MustBeWeakVar v) loc;
          match gu with
          | UTerm t ->
             let ty_t = term loc args t in
@@ -337,7 +337,7 @@ let updates args =
 	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
        in       
        if args_a = [] then error (MustBeAnArray a) loc;
-       if Smt.Symbol.is_weak a then error (MustWriteWeakVar a) loc;
+       if Weakmem.is_weak a then error (MustWriteWeakVar a) loc;
        dv := a ::!dv;
        switchs loc a (lj @ args) ([], ty_a) swts) 
 
@@ -378,15 +378,15 @@ let init_global_env s =
        declare_symbol loc n [] t;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := (n, [], t) :: !weak_vars;
+	 weak_vars := (n, [], t, false) :: !weak_vars;
        end;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (loc, n, (args, ret), weak) -> 
+    (fun (loc, n, (args, ret), (weak, local)) -> 
        declare_symbol loc n args ret;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := (n, args, ret) :: !weak_vars;
+	 weak_vars := (n, args, ret, local) :: !weak_vars;
        end;
        l := (n, ret)::!l) s.arrays;
   if Options.model <> Options.SC then Weakmem.init_weak_env !weak_vars;

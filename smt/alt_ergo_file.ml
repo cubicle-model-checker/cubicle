@@ -143,10 +143,6 @@ module Symbol = struct
 
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
-  let is_weak s =
-    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) =(Hstring.make "_weak_var")
-    with Not_found -> false
-
   let declared s = 
     let res = H.mem decl_symbs s in
     if not res then begin 
@@ -530,11 +526,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let init_axioms () =
     if Options.model = Options.SC then ()
     else axioms :=
-"(*axiom rf_val :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2)
-   -> _e(p1, e1)._val = _e(p2, e2)._val*)
-
+(*"
 axiom po_loc :
   forall p1, p2, e1, e2 : int [_po_loc(p1,e1,p2,e2)].
   _po_loc(p1, e1, p2, e2)
@@ -592,7 +584,26 @@ axiom fr :
 axiom sync :
   forall p1, p2, e1, e2 : int [_sync(p1,e1,p2,e2)].
   _sync(p1, e1, p2, e2)
-   -> _sci(p1, e1) = _sci(p2, e2) and _propi(p1, e1) = _propi(p2, e2)"
+   -> _sci(p1, e1) = _sci(p2, e2) and _propi(p1, e1) = _propi(p2, e2)"*)
+
+(*"
+axiom co_1 :
+  forall e1, e2 : int [_co(e1,e2)].
+  _co(e1, e2)
+   -> _sci(e1) < _sci(e2)
+
+axiom co_2 :
+  forall e1, e2 : int [_co(e1,e2)].
+  _co(e1, e2)
+  -> _propi(e1) < _propi(e2)
+
+axiom fr :
+  forall r, w1, w2 : int
+    [_rf(w1,r),_co(w1,w2)].
+  _rf(w1, r) and _co(w1, w2)
+  -> _sci(r) < _sci(w2) and _propi(r) < _propi(w2)"*)
+
+  ""
 
   let typeof t =
     let t = (Hstring.view t) in
@@ -736,7 +747,7 @@ axiom sync :
 
       (* Print all variables *)
       H.iter (fun f (fx, args, ret) ->
-	(*if not (Symbol.is_weak f) then*)
+	(*if not (Weakmem.is_weak f) then*)
           fprintf filefmt "logic %s : %a%s\n" (replace (Hstring.view f) "#" "p")
 	  (print_list_sep "," print_type) args
 	  ((if args = [] then " " else " -> ") ^ (typeof ret))

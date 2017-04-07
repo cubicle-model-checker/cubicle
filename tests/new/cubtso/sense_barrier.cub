@@ -13,6 +13,23 @@ init (z) { Sense = False && Local_sense[z] = False &&
 (* unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] } *)
 unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] }
 
+(* invariant (z) { Local_sense[z] = read(z, Sense) && PC[z] = L2 } *)
+
+(* invariant (z) { read(z, Count[z]) = False && PC[z] = L1 } *)
+(* invariant (z) { read(z, Count[z]) = False && PC[z] = L2 } *)
+(* invariant (z) { read(z, Count[z]) = False && PC[z] = L5 } *)
+(* invariant (z) { read(z, Count[z]) = False && Local_sense[z] = False } *)
+
+(* invariant (z i) { read(i, Count[z]) = False && PC[z] = L1 } *)
+(* invariant (z i) { read(i, Count[z]) = False && PC[z] = L2 } *)
+(* invariant (z i) { read(i, Count[z]) = False && PC[z] = L5 } *)
+(* invariant (z i) { read(i, Count[z]) = False && Local_sense[z] = False } *)
+
+(* invariant (z i) { read(z, Count[i]) = False && PC[z] = L1 } *)
+(* invariant (z i) { read(z, Count[i]) = False && PC[z] = L2 } *)
+(* invariant (z i) { read(z, Count[i]) = False && PC[z] = L5 } *)
+(* invariant (z i) { read(z, Count[i]) = False && Local_sense[z] = False } *)
+
 transition enter (i)
 requires { PC[i] = L1 }
 { PC[i] := L2;

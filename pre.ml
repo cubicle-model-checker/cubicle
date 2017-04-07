@@ -324,21 +324,22 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 open Weakmem
 
 let split_event at evts = match at with
-  | Atom.Comp (Field (Access (a, [p; e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c,t), Eq, Field (Access (a, [p; e]),f)) when H.equal a hE->
-     let (d, v, vi) as evt = try H2Map.find (p, e) evts with Not_found -> (hNone, hNone, []) in
-     let evt = if H.equal f hDir then (c, v, vi)
-	  else if H.equal f hVar then (d, c, vi)
-	  else if is_param f then (d, v, (f, c) :: vi)
+  | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [e]),f)) when H.equal a hE ->
+     let (p, d, v, vi) as evt = try HMap.find e evts with Not_found -> (hNone, hNone, hNone, []) in
+     let evt = if H.equal f hThr then (c, d, v, vi)
+          else if H.equal f hDir then (p, c, v, vi)
+	  else if H.equal f hVar then (p, d, c, vi)
+	  else if is_param f then (p, d, v, (f, c) :: vi)
 	  else evt in
-     H2Map.add (p, e) evt evts
+     HMap.add e evt evts
   | _ -> evts
 
 let split_events sa =
-  let evts = SAtom.fold split_event sa H2Map.empty in
-  H2Map.fold (fun (p, e) ((_, v, vi) as ed) vis ->
+  let evts = SAtom.fold split_event sa HMap.empty in
+  HMap.fold (fun e (p, d, v, vi) vis ->
     let vvis = try HMap.find v vis with Not_found -> [] in
-    let _, _, nvi = sort_params ed in
+    let _, _, _, nvi = sort_params (p, d, v, vi) in
     if List.exists (fun vi -> H.list_equal vi nvi) vvis then vis
     else HMap.add v (nvi :: vvis) vis
   ) evts HMap.empty

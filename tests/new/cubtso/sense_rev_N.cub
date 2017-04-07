@@ -2,7 +2,7 @@
 type loc = E0 | E1 | L0 | L1
 
 array PC[proc] : loc
-weak array F[proc] : bool
+local_weak array F[proc] : bool
 
 init (i) { PC[i] = E0 && F[i] = False }
 

@@ -474,10 +474,7 @@ let rec add_arg args t =
   | Const _ -> args
 		 
   | Field (t, _) -> add_arg args t
-  | Read (p, _, vi) -> add_arg_list args (p :: vi)
-  | Write (p, _, vi, rr) ->
-     let vl = List.fold_left (fun acc (v, _) -> v :: acc) (p :: vi) rr in
-     add_arg_list args vl
+  | Read (p, _, vi) | Write (p, _, vi, _) -> add_arg_list args (p :: vi)
   | Fence p -> add_arg_list args [p]
 
 let args_of_atoms sa =

@@ -14,7 +14,7 @@ init (x) { A[x] = Q1 && F[x] = False }
 unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
   
 transition t1 (x)
-requires { A[x] = Q1 && F[x] = True }
+requires { A[x] = Q1 }
 { 
   A[j] := case 
        	   | j = x : Q2 

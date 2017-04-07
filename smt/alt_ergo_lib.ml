@@ -139,11 +139,6 @@ module Symbol = struct
 
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
-  let is_weak s =
-    try snd (type_of (Hstring.make ("_V" ^ Hstring.view s))) =
-	  (Hstring.make "_weak_var")
-    with Not_found -> false
-
   let declared s = 
     let res = H.mem decl_symbs s in
     if not res then begin 
@@ -697,9 +692,9 @@ module Make (Options_ : sig val profiling : bool end) = struct
     	  (mk_eq (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))
     	  (mk_eq (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2)))) in
     Queue.push axiom_sync axioms
- *)
+ *) 
 
-    
+(*   
     let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2
       [ AE.Formula.{ content = [ mk_pred ~qv "_po_loc" e1e2 ]; depth = 0; from_user = true; guard = None } ]
       (mk_imp
@@ -807,8 +802,55 @@ module Make (Options_ : sig val profiling : bool end) = struct
           (mk_eq (mk_fun ~qv "_uniprocWR" e1) (mk_fun ~qv "_uniprocWR" e2)))
     	  (mk_eq (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2)))) in
     Queue.push axiom_sync axioms
+ *)
 
+  let mk_fun ?(qv=false) p al =
+    let al = [ al ] in
+    let al = List.map (fun a ->
+      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
+    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tint in
 
+    let ety2 = [ mk_ety "_e1" ; mk_ety "_e2" ] in
+    let ety3 = [ mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ] in
+    let e1e2 = ["_e1";"_e2"] in
+    let e2e3 = ["_e2";"_e3"] in
+    let e1e3 = ["_e1";"_e3"] in
+    let e1 = ("_e1") in
+    let e2 = ("_e2") in
+    let e3 = ("_e3") in
+
+(*
+    let axiom_co_1 = mk_axiom "axiom_co_1" [] ety2
+      (* [ [ mk_pred ~qv "_co" e1e2s ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
+      (mk_imp
+    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
+    	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
+    Queue.push axiom_co_1 axioms;
+
+    let axiom_co_2 = mk_axiom "axiom_co_2" [] ety2
+      (* [ [ mk_pred ~qv "_co" e1e2 ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
+      (mk_imp
+    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
+    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
+    Queue.push axiom_co_2 axioms;
+
+    let axiom_fr = mk_axiom "axiom_fr" [] ety3
+      (* [ [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ], None ] *)
+      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ]; depth = 0; from_user = true; guard = None } ]
+      (mk_imp
+    	(mk_and
+    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
+    	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
+    	(mk_and
+    	  (mk_lt (mk_fun ~qv "_sci" e2) (mk_fun ~qv "_sci" e3))
+    	  (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3)))) in
+    Queue.push axiom_fr axioms
+ *)
+    ()
+
+    
   let init_axioms () =
     if Options.model = Options.SC then ()
     else init_axioms ()

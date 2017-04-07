@@ -1,12 +1,16 @@
 
 open Weakmem
 
+type cop = CEq | CNeq | CLt | CLe | CGt | CGe
+
+val string_of_cop : cop -> string
+
 val split_event :
   Types.Atom.t ->
-  ((H.t * H.t * (Hstring.t * Hstring.t) list) *
-     (bool * Types.op_comp * Types.Term.t) list) H2Map.t ->
-  ((H.t * H.t * (Hstring.t * Hstring.t) list) *
-     (bool * Types.op_comp * Types.Term.t) list) H2Map.t
+  ((H.t * H.t * H.t * (Hstring.t * Hstring.t) list) *
+     (cop * Types.Term.t) list) HMap.t ->
+  ((H.t * H.t * H.t * (Hstring.t * Hstring.t) list) *
+     (cop * Types.Term.t) list) HMap.t
 
 val satisfy_reads :
   'a -> Types.SAtom.t -> Types.SAtom.t list

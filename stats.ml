@@ -47,7 +47,7 @@ let new_node s =
       if verbose < 1 then printf "@[%a@]@." Node.print_history s
       else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
     end;
-  if dot then Dot.new_node s
+  if dot then Dot.new_node s(*; if !cpt_nodes = 13 then exit 0*)
 
 let check_limit s =
   if !cpt_nodes > maxnodes || s.depth > maxrounds then raise ReachedLimit

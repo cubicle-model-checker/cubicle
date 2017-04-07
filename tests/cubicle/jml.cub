@@ -12,6 +12,14 @@ init (z) { A[z] = Idle && Busy = False && H = C0 && 0 < C }
  
 unsafe (z1 z2) { A[z1] = Owner && A[z2] = Owner }
 
+unsafe (z1 z2) { A[z1] = Owner && A[z2] = Handout }
+unsafe (z1 z2) { A[z1] = Handout && A[z2] = Handout }
+
+unsafe (z1) { read(z1, Busy) = False && read(z1, H) = C3 }
+unsafe (z1) { read(z1, Busy) = False && read(z1, H) = C2 }
+unsafe (z1) { read(z1, Busy) = False && read(z1, H) = C1 && 0 < read(z1, C) }
+
+
 transition t1 (x)
 fences (x)
 requires { A[x] = Idle && read(x, Busy) = False && 0 < read(x, C) }

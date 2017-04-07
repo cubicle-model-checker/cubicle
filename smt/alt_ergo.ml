@@ -133,8 +133,6 @@ module Symbol = struct
 
   let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
 
-  let is_weak s = false
-
   let declared s = 
     let res = H.mem decl_symbs s in
     if not res then begin 

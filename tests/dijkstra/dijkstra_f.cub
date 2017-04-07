@@ -2,7 +2,7 @@ type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
 type flag = F0 | F1 | F2 | F3
 
 array A[proc] : location
-weak array F[proc] : flag
+local_weak array F[proc] : flag
 array P[proc] : bool
 
 init (x) { A[x] = Q1 && P[x] = False && F[x] = F0 }

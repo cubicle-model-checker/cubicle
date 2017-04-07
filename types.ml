@@ -64,8 +64,7 @@ type term =
 
   | Field of term * Hstring.t (* term is Elem/Access *)
   | Read of Variable.t * Hstring.t * Variable.t list
-  | Write of Variable.t * Hstring.t * Variable.t list *
-	       (Hstring.t * Hstring.t) list (* Related reads *)
+  | Write of Variable.t * Hstring.t * Variable.t list * Hstring.t list
   | Fence of Variable.t
 
 let is_int_const = function
@@ -175,7 +174,7 @@ module Term = struct
        let c = Hstring.compare v1 v2 in if c<>0 then c else
        let c = Hstring.compare p1 p2 in if c<>0 then c else
        let c = Hstring.compare_list vi1 vi2 in if c<>0 then c else
-       Weakutil.compare_hplist rr1 rr2
+       Hstring.compare_list rr1 rr2
      | Write (_, _, _, _), _ -> -1 | _, Write (_, _, _, _) -> 1
      | Fence p1, Fence p2 ->
        Hstring.compare p1 p2
@@ -199,8 +198,6 @@ module Term = struct
       try Variable.subst sigma v with Not_found -> v in
     let list_subst l =
       List.map safe_subst l in
-    let elist_subst l =
-      List.map (fun (p,e) -> (safe_subst p, e)) l in
     match t with
     | Elem (x, s) ->
        let nx = Variable.subst sigma x in
@@ -214,8 +211,7 @@ module Term = struct
 
     | Field (t, f) -> Field (subst sigma t, f)
     | Read (p, v, vi) -> Read (safe_subst p, v, list_subst vi)
-    | Write (p, v, vi, rr) ->
-       Write (safe_subst p, v, list_subst vi, elist_subst rr)
+    | Write (p, v, vi, rr) -> Write (safe_subst p, v, list_subst vi, rr)
     | Fence p -> Fence (safe_subst p)
     | _ -> t
 
@@ -228,13 +224,9 @@ module Term = struct
     | Arith (t, _) -> variables t
 
     | Field (t, _) -> variables t
-    | Read (p, _, vi) ->
+    | Read (p, _, vi) | Write (p, _, vi, _) ->
        List.fold_left (fun acc x -> Variable.Set.add x acc)
 		      (Variable.Set.singleton p) vi
-    | Write (p, _, vi, rr) ->
-       let vl = List.fold_left (fun acc x -> Variable.Set.add x acc)
-			       (Variable.Set.singleton p) vi in
-       List.fold_left (fun acc (x, _) -> Variable.Set.add x acc) vl rr
     | Fence p -> Variable.Set.singleton p
     | _ -> Variable.Set.empty
 
@@ -321,8 +313,7 @@ module Term = struct
        fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
     | Write (p, v, vi, rr) ->
        fprintf fmt "write(%a, %a, [" Hstring.print p print_var (v, vi);
-       List.iter (fun (p, e) ->
-           fprintf fmt " (%a,%a)" Hstring.print p Hstring.print e) rr;
+       List.iter (fun (e) -> fprintf fmt " (%a)" Hstring.print e) rr;
        fprintf fmt " ])"
     | Fence p ->
        fprintf fmt "fence(%a)" Hstring.print p
@@ -425,11 +416,8 @@ end = struct
     | Arith (x, _) ->  has_vars_term vs x
 
     | Field (t, _) -> has_vars_term vs t
-    | Read (p, _, vi) ->
+    | Read (p, _, vi) | Write (p, _, vi, _) ->
        Hstring.list_mem p vs || List.exists (fun v -> Hstring.list_mem v vs) vi
-    | Write (p, _, vi, rr) ->
-       Hstring.list_mem p vs || List.exists (fun v -> Hstring.list_mem v vs) vi
-       || List.exists (fun (v, _) -> Hstring.list_mem v vs) rr
     | Fence p -> Hstring.list_mem p vs
     | _ -> false
 

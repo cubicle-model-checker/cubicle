@@ -22,9 +22,9 @@
 type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
 
 array A[proc] : location
-weak array B[proc] : bool
-weak array S[proc] : bool
-weak array W[proc] : bool 
+local_weak array B[proc] : bool
+local_weak array S[proc] : bool
+local_weak array W[proc] : bool 
 
 init (x) { A[x] = L0 && S[x] = False && W[x] = False && B[x] = False }
  

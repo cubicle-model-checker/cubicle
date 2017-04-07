@@ -308,25 +308,48 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> Prover.run
 
-open Weakmem
+  let filter_rels c =
+    let open Weakmem in
+    let sa = SAtom.filter (fun at -> match at with
+      | Atom.Comp (Access (a, _), Eq, Elem _)
+      | Atom.Comp (Elem _, Eq, Access (a, _))
+           when H.equal a hFence || H.equal a hRf ||
+                  H.equal a hRmw || H.equal a hSync -> false
+      | _ -> true
+    ) c.Cube.litterals in
+    Cube.create c.Cube.vars sa
 
-let filter_rf = SAtom.filter (fun a -> match a with
-  | Atom.Comp (Access (a, _), Eq, Elem _)
-  | Atom.Comp (Elem _, Eq, Access (a, _)) when H.equal a hRf -> false
-  | _ -> true)
+  let preprocess_n n = (* may filter out evts too *)
+    let open Weakmem in
+    let sa = n.cube.Cube.litterals in
+    let evts = SAtom.fold (fun a evts -> (* get evts with value *)
+      Weakwrite.split_event a evts) sa HMap.empty in
+    let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
+    let sa, _, rels = Weakorder.extract_events_set sa in (* get rels *)
+    let sat_evt_lw = HMap.filter (fun e ((_, _, v, _), vals) ->
+      is_local_weak v && vals = []) evts in
+    let sa = SAtom.filter (fun a -> match a with
+      | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
+      | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
+         when H.equal a hE && (H.equal f hThr || H.equal f hVar || is_param f)
+              && HMap.mem e sat_evt_lw -> false
+      | _ -> true
+    ) sa in (* buggy patch to subsume more nodes... *)
+    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels
 
-  let check_and_add n nodes vis_n=
-    let nc = Cube.create n.cube.Cube.vars
-      (filter_rf n.cube.Cube.litterals) in
-    let n = { n with cube = nc } in
-    let vnc = Cube.create vis_n.cube.Cube.vars
-      (filter_rf vis_n.cube.Cube.litterals) in
-    let vis_n2 = { vis_n with cube = vnc } in
-    
+  let preprocess_ar ar =
+    let open Weakmem in
+    let evts = Array.fold_left (fun evts a -> (* get evts with value *)
+      Weakwrite.split_event a evts) HMap.empty ar in
+    let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
+    let _, _, rels = Weakorder.extract_events_array ar in (* get rels *)
+    evts, rels
+
+  let check_and_add (n, to_evts, to_rels) nodes vis_n=
+    let vis_n_cube = filter_rels vis_n.cube in
     let n_array = Node.array n in
-    let vis_cube = vis_n.cube in
-    let vis_array = vis_cube.Cube.array in
-    let to_evts = Weaksubst.get_evts n_array in
+    let vis_array = vis_n.cube.Cube.array in
+(* Format.fprintf Format.std_formatter "Visited node %d, " vis_n.tag; *)
     (* if !Options.size_proc <> 0 then begin *)
     (*   let from_evts = Weaksubst.get_evts vis_array in *)
     (*   let vis_array_l = (Weaksubst.remap_events vis_array *)
@@ -336,19 +359,24 @@ let filter_rf = SAtom.filter (fun a -> match a with
     (*   List.fold_left (fun nodes v_ar -> *)
     (*     (vis_n, v_ar) :: nodes) nodes vis_array_l *)
     (* end else *)
-      let d = Instantiation.relevant ~of_cube:vis_n2.cube ~to_cube:n.cube in
-      List.fold_left (fun nodes ss ->
+      let d = Instantiation.relevant ~of_cube:vis_n_cube ~to_cube:n.cube in
+let lb = List.length nodes in
+(* Format.fprintf Format.std_formatter "proc perms : %d, " (List.length d); *)
+        let n = List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
-        let from_evts = Weaksubst.get_evts vis_renamed in
+        let from_evts, from_rels = preprocess_ar vis_renamed in
         let vis_renamed_l = (Weaksubst.remap_events vis_renamed
-          (Weaksubst.build_event_substs from_evts to_evts)) in
-        (* let vis_renamed_l = [vis_renamed] in *)
-        let vis_renamed_l = List.filter (fun v_ren ->
+          (Weaksubst.build_event_substs from_evts from_rels to_evts to_rels)) in
+        let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
         List.fold_left (fun nodes v_ren ->
 	  (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
-      ) nodes d
-
+      ) nodes d in
+(* let tp = ((List.length n) - lb) in   *)
+(* Format.fprintf Format.std_formatter "total perms : %d\n" tp; *)
+(* if tp > 100 then Format.fprintf Format.std_formatter "%a\n" Node.print vis_n; *)
+(* Format.print_flush (); *)
+n
 
 (*  let check_and_add n nodes vis_n=
     let n_array = Node.array n in
@@ -371,12 +399,14 @@ let filter_rf = SAtom.filter (fun a -> match a with
             yield unsatifisability sooner *)
          (Prover.assume_node vis_n vis_renamed; nodes)
       ) nodes d *)
-      
 
-  let check_fixpoint s visited =
+
+  let check_fixpoint s visited = let t = s.tag in
+(* Format.fprintf Format.std_formatter "Fixpoint for node %d\n%a\n" t Node.print s; *)
     first_action s;
     let s_array = Node.array s in
     let unprioritize_cands = false in
+    let s = preprocess_n s in
     let nodes, cands =
       Cubetrie.fold
         (fun (nodes, cands) vis_p ->
@@ -385,6 +415,11 @@ let filter_rf = SAtom.filter (fun a -> match a with
          else check_and_add s nodes vis_p, cands
         ) ([], []) visited in
     let nodes = List.fold_left (check_and_add s) nodes cands in
+    (* Format.eprintf "FIXPOINT\n"; *)
+    (* List.iter (fun (_, ar) -> Format.eprintf "Atm : %a\n" ArrayAtom.print ar) nodes; *)
+    (* Cubetrie.iter (fun n -> Format.eprintf "Node : %a\n" Node.print n) visited; *)
+(* Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes); *)
+(* Format.print_flush (); *)
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes

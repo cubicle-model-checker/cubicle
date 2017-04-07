@@ -46,6 +46,7 @@
 	"read", READ;
 	"fences", FENCES;
 	"weak", WEAK;
+	"local_weak", LOCAL_WEAK;
 	"number_procs", SIZEPROC;
       ]
 	       

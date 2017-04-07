@@ -90,8 +90,6 @@ module type S = sig
 
     val type_of : t -> Type.t list * Type.t
     (** [type_of x] returns the type of x. *)
-
-    val is_weak : t -> bool
 				       
     val has_abstract_type : t -> bool
     (** [has_abstract_type x] is [true] if the type of x is abstract. *)

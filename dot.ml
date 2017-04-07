@@ -101,59 +101,56 @@ let rec print_atoms fmt = function
 (* TSO *)		    
 open Weakmem
 
-let find_event_safe eid evts =
-  try H2Map.find eid evts
-  with Not_found -> ((hNone, hNone, []), [])
+let find_event_safe e evts =
+  try HMap.find e evts with Not_found -> ((hNone, hNone, hNone, []), [])
 
 let rec has_val = function
-  | Field (Field (Access (a, [p; e]), f), _)
+  | Field (Field (Access (a, [e]), f), _)
        when H.equal a hE && H.equal f hVal -> true
   | Arith (t, c) -> has_val t
   | _ -> false
 
 let rec get_val = function
-  | Field (Field (Access (a, [p; e]), f), _)
-       when H.equal a hE && H.equal f hVal -> Some (p, e)
+  | Field (Field (Access (a, [e]), f), _)
+       when H.equal a hE && H.equal f hVal -> Some e
   | Arith (t, c) -> get_val t
   | _ -> None
 
 let split_event (la, evts, rfs, rrfs) at = match at with
   (* Read-from's *)
-  | Atom.Comp (Access (a, [p1; e1; p2; e2]), Eq, _)
-  | Atom.Comp (_, Eq, Access (a, [p1; e1; p2; e2]))
-       when H.equal a hRf ->
-     (la, evts, H2Map.add (p1, e1) (p2, e2) rfs,
-                H2Map.add (p2, e2) (p1, e1) rrfs)
+  | Atom.Comp (Access (a, [e1; e2]), Eq, _)
+  | Atom.Comp (_, Eq, Access (a, [e1; e2])) when H.equal a hRf ->
+     (la, evts, HMap.add e1 e2 rfs, HMap.add e2 e1 rrfs)
   (* Direction / Variable / Indices *)
-  | Atom.Comp (Field (Access (a, [p; e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [p; e]), f))
-       when H.equal a hE ->
-     let ((d, v, vi), vals) as evt = find_event_safe (p, e) evts in
-     let evt = if H.equal f hDir then ((c, v, vi), vals)
-	  else if H.equal f hVar then ((d, c, vi), vals)
-	  else if is_param f then ((d, v, (f, c) :: vi), vals)
+  | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [e]), f)) when H.equal a hE ->
+     let ((p, d, v, vi), vals) as evt = find_event_safe e evts in
+     let evt = if H.equal f hThr then ((c, d, v, vi), vals)
+          else if H.equal f hDir then ((p, c, v, vi), vals)
+	  else if H.equal f hVar then ((p, d, c, vi), vals)
+	  else if is_param f then ((p, d, v, (f, c) :: vi), vals)
 	  else evt in
-     (la, H2Map.add (p, e) evt evts, rfs, rrfs)
+     (la, HMap.add e evt evts, rfs, rrfs)
   (* Value *)
   | Atom.Comp (t1, _, t2)
        when has_val t1 || has_val t2 ->
-     let p, e = match get_val t1 with
-	 Some (p, e) -> (p, e)
+     let e = match get_val t1 with
+       | Some e -> e
        | _ -> match get_val t2 with
-		Some (p, e) -> (p, e)
+              | Some e -> e
 	      | _ -> failwith "Dot.split_event :internal error " in
-     let ((d, v, vi), vals) = find_event_safe (p, e) evts in
-     let evt = ((d, v, vi), at :: vals) in
-     (la, H2Map.add (p, e) evt evts, rfs, rrfs)
+     let ((p, d, v, vi), vals) = find_event_safe e evts in
+     let evt = ((p, d, v, vi), at :: vals) in
+     (la, HMap.add e evt evts, rfs, rrfs)
   (* Others *)
   | _ -> (at :: la, evts, rfs, rrfs)
 
 let split_events la =
   let la, evts, rfs, rrfs = List.fold_left split_event
-		        ([], H2Map.empty, H2Map.empty, H2Map.empty) la in
-  List.rev la, H2Map.fold (fun (p, e) (ed, vals) evts ->
-    H2Map.add (p, e) (sort_params ed, vals) evts
-  ) evts H2Map.empty, rfs, rrfs
+		        ([], HMap.empty, HMap.empty, HMap.empty) la in
+  List.rev la, HMap.fold (fun e (ed, vals) evts ->
+    HMap.add e (sort_params ed, vals) evts
+  ) evts HMap.empty, rfs, rrfs
 
 let id_of_v v =
     let v = H.view v in
@@ -161,23 +158,26 @@ let id_of_v v =
 
 let print_atoms fmt la =
   let la, evts, rfs, rrfs = split_events la in
+  let evts = HMap.fold (fun eid ((p, d, v, vi) as ed, vals) evts ->
+    H2Map.add (p, eid) (ed, vals) evts
+  ) evts H2Map.empty in
   print_atoms fmt la;
   let last = ref "#0" in
-  H2Map.iter (fun (p, e) ((d, v, vi), vals) ->
+  H2Map.iter (fun (p, e) ((_, d, v, vi), vals) ->
     if H.view p <> !last then begin last := H.view p; fprintf fmt "\\n" end;
-    fprintf fmt "\\nE(%a, %s) = %s : %s"
-      H.print p (id_of_v e) (id_of_v d) (var_of_v v);
+    fprintf fmt "\\nE(%s) = %a:%s:%s"
+      (id_of_v e) H.print p (id_of_v d) (var_of_v v);
     if vi <> [] then
       fprintf fmt "[%a]" (Hstring.print_list ", ") vi;
     if vals <> [] then
       List.iter (fun a -> fprintf fmt "          %a" Atom.print a) vals;
-    if H2Map.mem (p, e) rfs then
+    if HMap.mem e rfs then
       fprintf fmt "                                         "
     else if H.view d = "_W" then
       fprintf fmt "          not RF                         ";
     try
-      let pw, ew = H2Map.find (p, e) rrfs in
-        fprintf fmt "          RF : (%a, %s)" H.print pw (id_of_v ew)
+      let ew = HMap.find e rrfs in
+        fprintf fmt "          RF : (%s)" (id_of_v ew)
         (* fprintf fmt "          RF : (%a, %s) -> (%a, %s)" *)
         (* H.print pw (id_of_v ew) *)
         (* H.print p (id_of_v e) *)

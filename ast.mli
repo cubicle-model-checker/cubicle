@@ -75,7 +75,7 @@ type transition = {
 type system = {
   globals : (loc * Hstring.t * Smt.Type.t * bool) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
-  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
+  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * (bool * bool)) list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;

@@ -2,11 +2,13 @@
 type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
 
 array A[proc] : location
-weak array F[proc] : bool
+local_weak array F[proc] : bool
 
 init (x) { A[x] = Q1 && F[x] = False }
 
 unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
+
+(* unsafe (z1) { A[z1] = Q6 } *)
 
 transition t1 (x)
 requires { A[x] = Q1 }

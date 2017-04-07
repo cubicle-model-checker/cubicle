@@ -3,177 +3,123 @@ open Weakmem
 open Types
 open Util
 
-(*
-module RInt = struct
-  type t = int
-  let compare x y = - (Pervasives.compare x y)
-end
 
-module RIntMap = Map.Make (RInt)
-
-module UF = struct
-  type t = H2.t H2Map.t
-
-  let empty = H2Map.empty
-
-  let rec find m i =
-    try find m (H2Map.find i m) with Not_found -> i
-                                              
-  let union m i j =
-    let ri = find m i in
-    let rj = find m j in
-    if (H2.compare ri rj) <> 0 then H2Map.add ri rj m else m
-end
-                        
-let rec split_event_t = function
-  | Field (Field (Access (a, [p; e]), f), _)
-       when H.equal a hE && H.equal f hVal ->
-     Some (p, int_of_e e), None
-  | Arith (t, c) ->
-     fst (split_event_t t), Some c
-  | _ -> None, None
-
-let subs_const_from_term cs =
-  let cs = Types.mult_const (-1) cs in
-  function
-  | Const c -> Const (Types.add_constants c cs)
-  | Arith (t, c) -> Arith (t, Types.add_constants c cs)
-  | t -> Arith (t, cs)
-
-let find_event_safe (p, e) evts =
-  let pevts = try HMap.find p evts with Not_found -> RIntMap.empty in
-  try RIntMap.find e pevts with Not_found -> (hNone, (hNone, hNone, []), [])
-
-let add_event (p, e) evt evts =
-  let pevts = try HMap.find p evts with Not_found -> RIntMap.empty in
-  RIntMap.add e evt pevts
-
-let process_event eid c rev op tv evts = match eid with
-  | Some eid ->
-     let (e, ed, vals) = find_event_safe eid evts in
-     let tv = match c with Some c -> subs_const_from_term c tv | _ -> tv in
-     add_event eid (e, ed, (rev, op, tv) :: vals) evts
-  | None -> evts
-
-let extract_po_sync (evts, sync) at =
-  let rec make_sync sm = function
-    | [] | [_;_] -> sm
-    | [_] | [_;_;_] -> assert false
-    | p1 :: e1 :: ((p2 :: e2 :: _) as sl) ->
-       make_sync (UF.union sm (p1, e1) (p2, e2)) sl
-  in
-  match at with
-  | Atom.Comp (Access (a, sl), Eq, Elem _)
-  | Atom.Comp (Elem _, Eq, Access (a, sl)) when H.equal a hSync ->
-     (evts, make_sync sync sl)
-  | Atom.Comp (Field (Access (a, [p; e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c,t), Eq, Field (Access (a, [p;e]),f)) when H.equal a hE ->
-     let ie = int_of_e e in
-     let pevts = try HMap.find p evts with Not_found -> RIntMap.empty in
-     let (_, ((d, v, vi) as ed), vals) =
-       try RIntMap.find ie pevts
-       with Not_found -> (hNone, (hNone, hNone, []), []) in
-     let ed = if H.equal f hDir then (c, v, vi)
-         else if H.equal f hVar then (d, c, vi)
-         else if is_param f then (d, v, (f, c) :: vi)
-         else ed in
-     (HMap.add p (RIntMap.add ie (e, ed, vals) pevts) evts, sync)
-  | Atom.Comp (t1, op, t2) ->
-     let eid1, c1 = split_event_t t1 in
-     let eid2, c2 = split_event_t t2 in
-     let evts = process_event eid1 c1 false op t2 evts in
-     process_event eid2 c2 true op t1 evts
-  | _ -> (evts, sync)
- *)
-
-(* Retrive all events in a map of map (procs -> events *)
+(* evts : map (p, e) -> ed *)
+(* res : map p -> map e -> ed *)
+(* want : map p -> set (map e -> ed) *)
+       
+(* Retrive all events in a map of map (proc -> eid -> event *)
 let get_evts ar =
   let evts = Array.fold_left (fun evts a ->
-    Weakwrite.split_event a evts) H2Map.empty ar in
-  H2Map.fold (fun (p, e) (ed, vals) evts ->
+    Weakwrite.split_event a evts) HMap.empty ar in
+  HMap.fold (fun e ((p, _, _, _) as ed, vals) evts ->
     let pevts = try HMap.find p evts with Not_found -> HMap.empty in
     let evt = (sort_params ed, vals) in
     HMap.add p (HMap.add e evt pevts) evts
   ) evts HMap.empty
 
-(* Checks whether (r1, op1, t1) can subsume (r2, op2, t2) *)
-let compatible_values r1 op1 t1 r2 op2 t2 = match t1, t2 with
-  | Const c1, Const c2 ->
-     begin match r1, op1 with
-     | false, Eq | true, Neq -> (* = *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 = 0
-	| _ -> false
-	end
-     | false, Neq | true, Eq -> (* <> *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 <> 0
-	| false, Neq | true, Eq -> Types.compare_constants c1 c2 = 0
-	| false, Lt -> Types.compare_constants c1 c2 >= 0
-	| false, Le -> Types.compare_constants c1 c2 > 0
-	| true, Le -> Types.compare_constants c1 c2 <= 0
-	| true, Lt -> Types.compare_constants c1 c2 < 0
-	end
-     | false, Lt -> (* < *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 > 0
-	| false, Lt -> Types.compare_constants c1 c2 >= 0
-	| false, Le -> Types.compare_constants c1 c2 > 0
-	| _ -> false
-	end
-     | false, Le -> (* <= *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 >= 0
-	| false, Lt -> Types.compare_constants c1 c2 >= 0 (* +1 *)
-	| false, Le -> Types.compare_constants c1 c2 >= 0
-	| _ -> false
-	end
-     | true, Le -> (* > *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 < 0
-	| true, Le -> Types.compare_constants c1 c2 <= 0
-	| true, Lt -> Types.compare_constants c1 c2 < 0
-	| _ -> false
-	end
-     | true, Lt -> (* >= *)
-        begin match r2, op2 with
-	| false, Eq | true, Neq -> Types.compare_constants c1 c2 <= 0
-	| true, Le -> Types.compare_constants c1 c2 <= 0 (* +1 *)
-	| true, Lt -> Types.compare_constants c1 c2 <= 0
-	| _ -> false
-	end
+(* Checks whether (cop1, c1) can subsume (cop2, c2) *)
+let compatible_consts cop1 c1 cop2 c2 =
+  let open Weakwrite in
+  let c = Types.compare_constants c1 c2 in
+  begin match cop1, cop2 with
+  | CEq, CEq -> c = 0
+  | CNeq, CEq -> c <> 0
+  | CNeq, CNeq -> c = 0
+  | CNeq, CLt -> c >= 0 (* must have c1 >= c2 *)
+  | CNeq, CLe -> c > 0 (* must have c1 > c2 *)
+  | CNeq, CGt -> c <= 0 (* must have c1 <= c2 *)
+  | CNeq, CGe -> c < 0 (* must have c1 < c2 *)
+  | CLt, CEq -> c > 0 (* must have c1 > c2 *)
+  | CLt, CLt -> c >= 0 (* must have c1 >= c2 *)
+  | CLt, CLe -> c > 0 (* must have c1 > c2 *)
+  | CLe, CEq -> c >= 0 (* must have c1 >= c2 *)
+  | CLe, CLt -> c >= 0 (* must have c1 >= c2-1 *)
+  | CLe, CLe -> c >= 0 (* must have c1 >= c2 *)
+  | CGt, CEq -> c < 0 (* must have c1 < c2 *)
+  | CGt, CGt -> c <= 0 (* must have c1 <= c2 *)
+  | CGt, CGe -> c < 0 (* must have c1 < c2 *)
+  | CGe, CEq -> c <= 0 (* must have c1 <= c2 *)
+  | CGe, CGt -> c <= 0 (* must have c1 <= c2-1 *)
+  | CGe, CGe -> c <= 0 (* must have c1 <= c2 *)
+  | _ -> false
+  end
+
+(* Checks whether (cop1, t1) can subsume (cop2, t2) *)
+(* True means maybe, False means no *)
+let compatible_terms cop1 t1 cop2 t2 =
+  let open Weakwrite in
+  match t1, t2 with
+  | Const c1, Const c2 -> compatible_consts cop1 c1 cop2 c2
+  | Elem (c1, Constr), Elem (c2, Constr) -> (* in dekker, msi, lamp_tso *)
+     let equ = H.equal c1 c2 in
+     begin match cop1, cop2 with
+     | CEq, CEq -> equ | CEq, CNeq -> false
+     | CNeq, CEq -> not equ | CNeq, CNeq -> equ
+     | _ -> failwith "Weaksubst.compatible_values : invalid op on Constr"
      end
-  | _ -> true
+  | Elem (p1, Var), Elem (p2, Var) -> (* in dekker *)
+     let equ = H.equal p1 p2 in
+     begin match cop1, cop2 with
+     | CEq, CEq -> equ | CEq, _ -> false
+     | CNeq, CEq | CNeq, CLe | CNeq, CGe -> not equ
+     | CNeq, CNeq -> equ | CNeq, _ -> true
+     | CLt, CEq | CLt, CLe -> not equ | CLt, CLt -> true | CLt, _ -> false
+     | CGt, CEq | CGt, CGe -> not equ | CGt, CGt -> true | CGt, _ -> false
+     | CLe, CEq | CLe, CLe | CLe, CLt -> true | CLe, _ -> false
+     | CGe, CEq | CGe, CGe | CGe, CGt -> true | CGe, _ -> false
+     end
+  | Elem (v1, Glob), Elem (v2, Glob) -> (* not in lamp_tso, msi, dekker *)
+     if not (H.equal v1 v2) then
+     begin match cop1, cop2 with
+     | CEq, CEq -> true | CEq, _ -> false
+     | CNeq, _ -> true
+     | CLt, CEq | CLt, CLt | CLt, CLe -> true | CLt, _ -> false
+     | CGt, CEq | CGt, CGt | CGt, CGe -> true | CGt, _ -> false
+     | CLe, CEq | CLe, CLt | CLe, CLe -> true | CLe, _ -> false
+     | CGe, CEq | CGe, CGt | CGe, CGe -> true | CGe, _ -> false
+     end else
+     begin match cop1, cop2 with
+     | CEq, CEq -> true | CEq, _ -> false
+     | CNeq, CNeq | CNeq, CLt | CNeq, CGt -> true | CNeq, _ -> false
+     | CLt, CLt -> true | CLt, _ -> false
+     | CGt, CGt -> true | CGt, _ -> false
+     | CLe, CEq | CLe, CLe | CLe, CLt -> true | CLe, _ -> false
+     | CGe, CEq | CGe, CGe | CGe, CGt -> true | CGe, _ -> false
+     end
+  (* | Access (v1, vi1), Access (v2, vi2) -> TODO *)
+  | Arith (t1, c1), Arith (t2, c2) -> (* not in lamp_tso, msi, dekker *)
+     if not (Term.equal t1 t2) then true
+     else compatible_consts cop1 c1 cop2 c2
+  | _ ->
+     begin match cop1, cop2 with
+     | CEq, CEq -> true | CEq, _ -> false
+     | CNeq, _ -> true
+     | CLt, CEq | CLt, CLt | CLt, CLe -> true | CLt, _ -> false
+     | CGt, CEq | CGt, CGt | CGt, CGe -> true | CGt, _ -> false
+     | CLe, CEq | CLe, CLt | CLe, CLe -> true | CLe, _ -> false
+     | CGe, CEq | CGe, CGt | CGe, CGe -> true | CGe, _ -> false
+     end (* not in lamp_tso, msi, dekker *)
+(* add const vs elem/access *)
+(* add event value vs event value (Field/Field)*)
 
 (* Checks whether (ed1, vals) can subsume (ed2, vals2) *)
 let compat_evts (ed1, vals1) (ed2, vals2) =
-  same_dir ed1 ed2 && same_var ed1 ed2 &&
+  same_proc ed1 ed2 && same_dir ed1 ed2 && same_var ed1 ed2 &&
     (vals1 = [] (*&& vals2 = []*) ||
      vals1 <> [] && vals2 <> [] &&
     (* (vals1 = [] || vals2 = [] || *)
-     List.for_all (fun (r1, op1, t1) ->
-       List.for_all (fun (r2, op2, t2) ->
-         compatible_values r1 op1 t1 r2 op2 t2
+     List.for_all (fun (cop1, t1) ->
+       List.for_all (fun (cop2, t2) ->
+         compatible_terms cop1 t1 cop2 t2
        ) vals2
      ) vals1)
-
-let cartesian_product op l1 l2 =
-  if l1 = [] then l2 else if l2 = [] then l1 else
-  List.fold_left (fun rl e1 ->
-    List.fold_left (fun rl e2 ->
-      (op e1 e2) :: rl
-    ) rl l2
-  ) [] l1
-
-let cartesian_product_h2m =
-  cartesian_product (H2Map.union (fun k v1 v2 ->
-    failwith "Weaksubst.cartesian_product : duplicate"))
 
 (* SHOULD TAKE CARE OF SYNC ! *)
 (* [Empty] -> the source was empty, this is a valid substitution
                 (though it should not happen here)
    [] -> no combination (not enough compatible events in dest) *)
-let rec make_e_combs p esf est = (* order between e matters *)
+let make_e_combs p esf est = (* order between e matters *)
   let rec aux cc rcl esf est =
     try
       let ef, evtf = HMap.min_binding esf in
@@ -192,7 +138,7 @@ let rec make_e_combs p esf est = (* order between e matters *)
 
 (* [Empty] -> the source was empty, this is a valid substitution
    [] -> no combination (not enough compatible events in dest)  *)
-let rec make_p_combs psf pst = (* only map events from same procs *)
+let make_p_combs psf pst = (* only map events from same procs *)
   let rec aux ccl psf pst =
     try
       let p, esf = HMap.choose psf in
@@ -209,7 +155,7 @@ let rec make_p_combs psf pst = (* only map events from same procs *)
     with Not_found -> ccl (* From Set is empty -> we're done *)
   in
   aux [H2Map.empty] psf pst
-
+      
 (* from : visited node, more general / to : node to test, less general *)
 let build_event_substs from_evts to_evts =
   TimeCSubst.start ();
@@ -218,28 +164,152 @@ let build_event_substs from_evts to_evts =
   es
 
 
+
+
+
+
+(* Retrive all events in a map of (eid -> (proc, event)) *)
+let get_evts ar =
+  let evts = Array.fold_left (fun evts a ->
+    Weakwrite.split_event a evts) HMap.empty ar in
+  let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
+  evts
+
+let po_agree cs ef pf et pt pof pot =
+  let ppof = HMap.find pf pof in
+  let ppot = HMap.find pt pot in
+  HMap.for_all (fun ef0 (et0, mt0) ->
+    (*if mt0 then true
+    else*) if H2Set.mem (ef0, ef) ppof then H2Set.mem (et0, et) ppot
+    else if H2Set.mem (ef, ef0) ppof then H2Set.mem (et, et0) ppot
+    else true
+  ) cs
+
+(* po : pid -> (eid, eid) set
+   fce : pid -> (eid, eid) set
+   rf : eid -> eid list (write -> reads)
+   rmw : eid -> eid (read -> write)
+   s : (eid set) list *)
+let make_prop (po, f, rf, rmw, sf) =
+  let prop = HMap.fold (fun p ppo prop ->
+    H2Set.union ppo prop) po H2Set.empty in
+  let prop = HMap.fold (fun p pf prop ->
+    H2Set.fold (fun (fef, fet) prop ->
+      let pre = H2Set.filter (fun (_, pet) -> H.equal pet fef) prop in
+      let post = H2Set.filter (fun (pef, _) -> H.equal fet pef) prop in
+      let pre = H2Set.add (fef, fet) pre in
+      let post = H2Set.add (fef, fet) post in
+      H2Set.fold (fun (pef, _) prop ->
+        H2Set.fold (fun (_, pet) prop ->
+          H2Set.add (pef, pet) prop
+        ) post prop
+      ) pre prop
+    ) pf prop
+  ) po prop in
+  let prop = HMap.fold (fun wef retl prop ->
+    let pre = H2Set.filter (fun (_, pet) -> H.equal pet wef) prop in
+    let post = H2Set.filter (fun (pef, _) ->
+                 List.exists (fun ret -> H.equal ret pef) retl
+               ) prop in
+    let pre = List.fold_left (fun pre ret ->
+                H2Set.add (wef, ret) pre) pre retl in
+    let post = List.fold_left (fun post ret ->
+                 H2Set.add (wef, ret) post) post retl in
+    H2Set.fold (fun (pef, _) prop ->
+      H2Set.fold (fun (_, pet) prop ->
+        H2Set.add (pef, pet) prop
+      ) post prop
+    ) pre prop
+  ) rf prop in
+  prop  
+
+let prop_agree cs ef pf et pt propf propt =
+  HMap.for_all (fun ef0 (et0, mt0) ->
+    (*if mt0 then true
+    else*) if H2Set.mem (ef0, ef) propf then H2Set.mem (et0, et) propt
+    else if H2Set.mem (ef, ef0) propf then H2Set.mem (et, et0) propt
+    else true
+  ) cs
+
+let make_substs esf (pof, ff, rff, rmwf, sf) est (pot, ft, rft, rmwt, st) =
+  let propf = make_prop (pof, ff, rff, rmwf, sf) in
+  let propt = make_prop (pot, ft, rft, rmwt, st) in
+  let rec aux csl cs esf est =
+    try
+      let ef, (((pf, df, vf, vif) as edf, valf) as evtf) = HMap.choose esf in
+      let esf = HMap.remove ef esf in
+      let csl = HMap.fold (
+        fun et (((pt, dt, vt, vit) as edt, valt) as evtt) csl ->
+        (* buggy patch to try to subsume more nodes *)            
+        (*if valf = [] && is_read edf && is_read edt
+          then aux csl (HMap.add ef (et, true) cs) esf (HMap.remove et est)
+        else if (valf <> [] || is_write edf) &&
+            compat_evts evtf evtt && po_agree cs ef pf et pt pof pot
+          then aux csl (HMap.add ef (et, false) cs) esf (HMap.remove et est)
+	else csl*)
+        if valf = [] && valt = [] && same_dir edf edt && (*H.equal pf pt &&*)
+           is_local_weak vf && is_local_weak vt && H.equal vf vt &&
+             (*po_agree cs ef pf et pt pof pot &&*) H.equal pf pt
+           && prop_agree cs ef pf et pt propf propt
+          then aux csl (HMap.add ef (et, true) cs) esf (HMap.remove et est)
+        else if compat_evts evtf evtt (*&& po_agree cs ef pf et pt pof pot*)
+           && prop_agree cs ef pf et pt propf propt                  
+          then aux csl (HMap.add ef (et, false) cs) esf (HMap.remove et est)
+	else csl
+      ) est csl
+      in csl
+    with Not_found ->
+      let cs = HMap.map (fun (et, _) -> et) cs in
+      cs :: csl (* From Set is empty -> we're done *)
+  in
+  aux [] HMap.empty esf est
+
+(* from : visited node, more general / to : node to test, less general *)
+let build_event_substs from_evts from_rels to_evts to_rels =  (*
+  Format.eprintf "----------\nEvts from : \n";
+  HMap.iter (fun e ((p, d, v, vi), vals) ->
+    Format.eprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
+  ) from_evts;
+  Format.eprintf "\n----------\nEvts to : \n";
+  HMap.iter (fun e ((p, d, v, vi), vals) ->
+    Format.eprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
+  ) to_evts;
+  Format.eprintf "\n----------\n"; *)
+  TimeCSubst.start ();
+  let es = make_substs from_evts from_rels to_evts to_rels in (*
+  List.iter (fun s ->
+    Format.eprintf "Subst :";
+    HMap.iter (fun ef et -> Format.eprintf " %a->%a" H.print ef H.print et) s;
+    Format.eprintf "\n"
+  ) es;
+  if List.length es = 0 then Format.eprintf "No subst\n"; *)
+  TimeCSubst.pause ();
+  es
+
+
+
+
 let remap_events_ar ar sub =
-  let subst p e =
-    try H2Map.find (p, e) sub with Not_found ->
+  let subst e =
+    try HMap.find e sub with Not_found ->
       failwith "Weaksubst.remap_events : no substitution !"
   in
   let remap_sl sl =
     let rec aux rsl = function
       | [] -> rsl
-      | [_] -> failwith "Weaksubst.remap_events : internal error"
-      | p :: e :: sl -> aux ((subst p e) :: p :: rsl) sl
+      | e :: sl -> aux ((subst e) :: rsl) sl
     in
     List.rev (aux [] sl)
   in
   let rec remap_t = function
     | Arith (t, c) -> Arith (remap_t t, c)
     | Field (t, f) -> Field (remap_t t, f)
-    | Access (a, [p; e]) when H.equal a hE || H.equal a hFence ->
-        let e = subst p e in Access (a, [p; e])
-    | Access (a, [p1; e1; p2; e2]) when H.equal a hRf ->
-        let e1 = subst p1 e1 in
-        let e2 = subst p2 e2 in
-        Access (a, [p1; e1; p2; e2])
+    | Access (a, [e]) when H.equal a hE || H.equal a hFence ->
+        let e = subst e in Access (a, [e])
+    | Access (a, [e1; e2]) when H.equal a hRf ->
+        let e1 = subst e1 in
+        let e2 = subst e2 in
+        Access (a, [e1; e2])
     | Access (a, sl) when H.equal a hSync ->
        Access (a, remap_sl sl)
     (* Read / Write / Fence -> KO *)
@@ -255,9 +325,17 @@ let remap_events_ar ar sub =
   ar
 
 let remap_events ar substs =
+(*  Format.eprintf "Subst : \n";
+  List.iter (fun s ->
+    HMap.iter (fun ef et ->
+      Format.eprintf "%a->%a / " H.print ef H.print et
+    ) s;
+    if HMap.is_empty s then Format.eprintf "empty";
+    Format.eprintf "\n"
+  ) substs;*)
   TimeASubst.start ();
   let nl = List.fold_left (fun nodes s ->
-    if H2Map.is_empty s then ar :: nodes
+    if HMap.is_empty s then ar :: nodes
     else (remap_events_ar ar s) :: nodes
   ) [] substs in
   TimeASubst.pause ();

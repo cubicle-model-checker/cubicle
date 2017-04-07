@@ -77,6 +77,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
       while not (Q.is_empty q) do
         let n = Q.pop q in
 
+        (* Format.eprintf "Node : \n%a\n" Node.print n; *)
+        
 	(* begin try *)
 	(*   Prover.acyclic n; (\* is there a cycle ? *\) *)
 

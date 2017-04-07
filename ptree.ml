@@ -169,7 +169,7 @@ type ptransition = {
 type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t * bool) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
-  parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
+  parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * (bool * bool)) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;

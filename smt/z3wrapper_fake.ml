@@ -49,7 +49,6 @@ module Symbol = struct
   type t = Hstring.t
   let declare _ _ _ = unsupported ()
   let type_of _ = unsupported ()
-  let is_weak _ = unsupported ()
   let declared _ = unsupported ()
   let has_abstract_type s = unsupported ()
   let has_infinite_type s = unsupported ()
