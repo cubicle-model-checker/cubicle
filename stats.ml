@@ -255,6 +255,9 @@ let print_time_csubst () =
 let print_time_asubst () =
   printf "Apply event id substitutions     : %a@." print_time (TimeASubst.get ())
 
+let print_time_prop () =
+  printf "Building prop relation           : %a@." print_time (TimeProp.get ())
+
 let print_report ~safe visited candidates =
   print_candidates ~safe candidates;
   Pretty.print_title std_formatter "STATS";
@@ -288,6 +291,7 @@ let print_report ~safe visited candidates =
       print_time_acycl ();
       print_time_csubst ();
       print_time_asubst ();
+      print_time_prop ();
     end;
   printf "%a" Pretty.print_double_line ()
 

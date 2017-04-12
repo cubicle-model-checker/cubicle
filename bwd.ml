@@ -126,6 +126,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
+             Format.fprintf Format.std_formatter "ls : %d, post : %d\n" (List.length ls) (List.length post);
              TimeAcycl.start ();
              let ls = List.filter (fun n ->
 	       try  Prover.acyclic n; true (* is there a cycle ? *)
@@ -136,6 +137,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 	       with Smt.Unsat _ -> false (* there is a cycle *)
              ) post in
              TimeAcycl.pause ();
+             Format.fprintf Format.std_formatter "-> ls : %d, post : %d\n" (List.length ls) (List.length post);
              if delete then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;

@@ -125,23 +125,24 @@ let compat_val wtl vals =
 let is_satisfied = function [] -> true | _ -> false
 
 let skip_incompatible edw wtl pevts =
-  let rec aux incomp_rd = function
-    | [] -> incomp_rd, []
+  let rec aux ((wr, ird, srd) as reason) = function
+    | [] -> reason, []
     | ((_, (ed, vals)) as e) :: pevts ->
-       if not (same_var edw ed) then aux incomp_rd pevts
-       else if is_write ed || is_satisfied vals then aux incomp_rd pevts
-       else if not (compat_val wtl vals) then aux true pevts
-       else incomp_rd, e :: pevts
+       if not (same_var edw ed) then aux reason pevts
+       else if is_write ed then aux (true, ird, srd) pevts
+       else if is_satisfied vals then aux (wr, ird, true) pevts
+       else if not (compat_val wtl vals) then aux (wr, true, srd) pevts
+       else reason, e :: pevts
   in
-  aux false pevts
+  aux (false, false, false) pevts
 
 let get_read_chunk edw wtl pevts = (* wtl should contain only 1 element *)
   let rec aux chunk = function
     | [] -> List.rev chunk, []
     | ((_, (ed, vals)) as e) :: pevts ->
        if not (same_var edw ed) then aux chunk pevts
-       else if is_write ed || is_satisfied vals then List.rev chunk, pevts
-       else if not (compat_val wtl vals) then List.rev chunk, e :: pevts
+       else if is_write ed || is_satisfied vals || not (compat_val wtl vals)
+         then List.rev chunk, e :: pevts
        else aux (e :: chunk) pevts
   in
   aux [] pevts
@@ -151,12 +152,14 @@ let read_chunks_for_write same_thread local_weak edw wtl pevts =
     | [] -> List.rev chunks
     | pevts ->
        let chunk, pevts = get_read_chunk edw wtl pevts in
-       let incomp_rd, pevts = skip_incompatible edw wtl pevts in
-       let chunk = if local_weak && incomp_rd then [] else chunk in
+       let (wr, ird, srd), pevts = skip_incompatible edw wtl pevts in
+       let chunk = if local_weak && ird then [] else chunk in
        if same_thread then begin
-         if incomp_rd then raise UnsatLocalWeakRead;
-         if chunk = [] then []
-         else [chunk]
+         if local_weak && ird then raise UnsatLocalWeakRead;
+         if chunk = [] then [] else [chunk]
+       end else if wr then begin
+         if chunk = [] then List.rev chunks
+         else List.rev (chunk :: chunks)
        end else begin
          if chunk = [] then aux chunks pevts
          else aux (chunk :: chunks) pevts
@@ -307,15 +310,24 @@ let satisfy_reads tri unsafe = (* unsafe without ites *)
 
 let satisfy_unsatisfied_reads sa =
 
-  (* Retrieve unsatisfied reads *)
+  (* Retrive all events *)
   let evts = SAtom.fold split_event sa HMap.empty in
+
+  (* Retrieve unsatisfied reads *)
   let ur = HMap.fold (fun e ((p, d, v, vi) as ed, vals) ur ->
     if is_read ed && vals <> [] then
       HMap.add e (sort_params ed (* , vals *)) ur
     else ur
   ) evts HMap.empty in
 
-  (* Satisfy them from init *)
+  (* Retrieve all writes *)
+  let wevts = HMap.fold (fun e ((p, d, v, vi) as ed, _) wevts ->
+    if is_write ed then
+      HMap.add e (sort_params ed) wevts
+    else wevts
+  ) evts HMap.empty in
+
+  (* Satisfy unsat reads from init *)
   let sa = subst_event_val (fun _ e ->
     let (_, _, v, vi) = HMap.find e ur in
     let v = H.make (var_of_v v) in
@@ -323,8 +335,12 @@ let satisfy_unsatisfied_reads sa =
   ) sa in
 
   (* Add the necessary rf's *)
+  let sa = HMap.fold (fun e _ sa ->
+    SAtom.add (mk_eq_true (Access (hRf, [hE0; e]))) sa) ur sa in
+
+  (* Add the co's from init *) (* should name them, probably *)
   HMap.fold (fun e _ sa ->
-    SAtom.add (mk_eq_true (Access (hRf, [hE0; e]))) sa) ur sa
+    SAtom.add (mk_eq_true (Access (hCo, [hE0; e]))) sa) wevts sa
 
   (* SHOULD ADD DUMMY EVENT HERE *)        
 

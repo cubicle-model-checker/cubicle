@@ -7,7 +7,7 @@ type loc = L1 | L2 | L3 | CS | End
 array PC[proc] : loc
 
 (* Global variables *)
-weak array Want[proc] : bool
+local_weak array Want[proc] : bool
 weak var Turn : proc
 
 init (p) { PC[p] = L1 && Want[p] = False }

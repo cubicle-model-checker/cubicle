@@ -35,6 +35,7 @@ module TimeRels : Timer.S
 module TimeAcycl : Timer.S
 module TimeCSubst : Timer.S
 module TimeASubst : Timer.S
+module TimeProp : Timer.S
 
 
 (** {2 Misc } *)

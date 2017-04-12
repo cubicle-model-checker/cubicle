@@ -143,7 +143,7 @@ and make_literal = function
      fun a (unsat_evt, all_lw) -> match a with
       | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, _))
       | Atom.Comp (Elem (c, _), Eq, Field (Access (a, [e]), f))
-           when H.equal a hE && H.equal f hVar && is_local_weak c ->
+           when H.equal a hE && H.equal f hVar (*&& is_local_weak c*) ->
          unsat_evt, HSet.add e all_lw
       | Atom.Comp (Field (Field (Access (a, [e]), f), _), Eq, Elem (c, _))
       | Atom.Comp (Elem (c, _), Eq, Field (Field (Access (a, [e]), f), _))
@@ -155,7 +155,7 @@ and make_literal = function
     SAtom.filter (fun a -> match a with
       | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
       | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
-         when H.equal a hE && (H.equal f hThr || is_param f)
+       when H.equal a hE && ((*H.equal f hThr ||*) H.equal f hVar || is_param f)
               && HSet.mem e sat_evt_lw -> false
       | _ -> true
     ) sa
@@ -267,6 +267,7 @@ let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   SMT.assume ~id f
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
+  (* Format.eprintf "Array : %a\n" ArrayAtom.print ap; *)
   let f = make_formula ~fp:true ap in
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
@@ -296,28 +297,58 @@ let assume_goal_nodes n nodes = (* FP only *)
   SMT.check ~fp:true ()
 
 
+
 let acyclic ({ tag = id; cube = cube } as n) =
   SMT.clear ();
   let nb_procs = List.length (Node.variables n) in
   SMT.assume ~id (distinct_vars nb_procs);
-  (* Can read from init => can read from other threads ? *)
-  (* let sa = Weakwrite.satisfy_unsatisfied_reads cube.Cube.litterals in *)
-  let sa, evts, rels = (* rels = po, rf, fence, sync *)
-    Weakorder.extract_events_set (cube.Cube.litterals) in
-(*  let sa = SAtom.filter (fun a -> match a with
-    | Atom.Comp (Access (a,[_;_;_;_]), Eq, Elem _)
-    | Atom.Comp (Elem _, Eq, Access (a,[_;_;_;_]))
-	 when Hstring.equal a Weakmem.hRf -> true
-    | _ -> false
-  ) sa in
-  if not (SAtom.is_empty sa) then begin
-    let f = make_formula_set sa in (* just for rf *)
-    SMT.assume ~id f
-  end;*)
-  match Weakorder.make_orders evts rels with
-  | None -> ()
-  | Some fo -> SMT.assume ~id fo;
-               SMT.check ()
+  let _, evts, rels = Weakorder.extract_events_set (cube.Cube.litterals) in
+  
+  let prop = Weakorder.make_prop evts rels in
+  if Weakmem.H2Set.exists (fun (e1a, e2a) ->
+     Weakmem.H2Set.exists (fun (e1b, e2b) ->
+       Weakmem.H.equal e1a e2b && Weakmem.H.equal e2a e1b
+     ) prop
+  ) prop
+  then raise (Smt.Unsat [])
+
+  (*match Weakorder.make_orders evts rels with
+    | None -> ()
+    | Some fo -> SMT.assume ~id fo;
+                 SMT.check () *)
+
+(*let acyc1, prop = (* says acyclic *)
+    let prop = make_prop evts rels in
+    (if Weakmem.H2Set.exists (fun (e1a, e2a) ->
+      Weakmem.H2Set.exists (fun (e1b, e2b) ->
+        Weakmem.H.equal e1a e2b && Weakmem.H.equal e2a e1b
+      ) prop
+    ) prop then false else true),
+    prop
+  in
+
+  let acyc2, f = (* says cyclic *)
+    match Weakorder.make_orders evts rels with
+    | None -> true, F.f_true
+    | Some fo -> begin try SMT.assume ~id fo; SMT.check (); true, fo
+                       with Smt.Unsat _ -> false, fo end
+  in
+
+  if not acyc1 && not acyc2 then raise (Smt.Unsat []);
+
+  if acyc1 <> acyc2 then begin
+      let open Weakmem in
+      Format.fprintf Format.std_formatter "Prop says : %s, SMT says : %s\n"
+       (if acyc1 then "acyclic" else "cyclic")
+       (if acyc2 then "acyclic" else "cyclic");
+      Format.fprintf Format.std_formatter "N : %a\n" Node.print n;
+      Format.fprintf Format.std_formatter "F : %a\n" F.print f;
+      Format.fprintf Format.std_formatter "Prop : \n";
+      H2Set.iter (fun (ef, et) ->
+        Format.fprintf Format.std_formatter "%a < %a\n" H.print ef H.print et;
+      ) prop;
+      failwith "Stop"
+  end *)
 
 let init () =
   SMT.init_axioms ()

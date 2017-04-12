@@ -1,5 +1,5 @@
 
-number_procs 2
+(* number_procs 3 *)
 
 type state = I | W | CS
 

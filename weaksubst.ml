@@ -188,11 +188,13 @@ let po_agree cs ef pf et pt pof pot =
 (* po : pid -> (eid, eid) set
    fce : pid -> (eid, eid) set
    rf : eid -> eid list (write -> reads)
+   co : (eid, eid) set
    rmw : eid -> eid (read -> write)
-   s : (eid set) list *)
-let make_prop (po, f, rf, rmw, sf) =
+   s : (eid set) list *) (*
+let make_prop (po, f, rf, co, rmw, sf) =
+  let prop = co in
   let prop = HMap.fold (fun p ppo prop ->
-    H2Set.union ppo prop) po H2Set.empty in
+    H2Set.union ppo prop) po prop in
   let prop = HMap.fold (fun p pf prop ->
     H2Set.fold (fun (fef, fet) prop ->
       let pre = H2Set.filter (fun (_, pet) -> H.equal pet fef) prop in
@@ -221,7 +223,7 @@ let make_prop (po, f, rf, rmw, sf) =
       ) post prop
     ) pre prop
   ) rf prop in
-  prop  
+  prop  *)
 
 let prop_agree cs ef pf et pt propf propt =
   HMap.for_all (fun ef0 (et0, mt0) ->
@@ -231,9 +233,10 @@ let prop_agree cs ef pf et pt propf propt =
     else true
   ) cs
 
-let make_substs esf (pof, ff, rff, rmwf, sf) est (pot, ft, rft, rmwt, st) =
-  let propf = make_prop (pof, ff, rff, rmwf, sf) in
-  let propt = make_prop (pot, ft, rft, rmwt, st) in
+let make_substs esf (pof, ff, rff, cof, frf, rmwf, sf) propf
+                est (pot, ft, rft, cot, frt, rmwt, st) propt =
+  (* let propf = make_prop (pof, ff, rff, cof, rmwf, sf) in *)
+  (* let propt = make_prop (pot, ft, rft, cot, rmwt, st) in *)
   let rec aux csl cs esf est =
     try
       let ef, (((pf, df, vf, vif) as edf, valf) as evtf) = HMap.choose esf in
@@ -247,7 +250,12 @@ let make_substs esf (pof, ff, rff, rmwf, sf) est (pot, ft, rft, rmwt, st) =
             compat_evts evtf evtt && po_agree cs ef pf et pt pof pot
           then aux csl (HMap.add ef (et, false) cs) esf (HMap.remove et est)
 	else csl*)
-        if valf = [] && valt = [] && same_dir edf edt && (*H.equal pf pt &&*)
+        if valf = [] && valt = [] && H.equal pf pt &&
+           is_read edf && is_read edt
+             (*po_agree cs ef pf et pt pof pot &&*)
+           && prop_agree cs ef pf et pt propf propt
+          then aux csl (HMap.add ef (et, true) cs) esf (HMap.remove et est)
+        else if valf = [] && valt = [] && same_dir edf edt &&(*H.equal pf pt&&*)
            is_local_weak vf && is_local_weak vt && H.equal vf vt &&
              (*po_agree cs ef pf et pt pof pot &&*) H.equal pf pt
            && prop_agree cs ef pf et pt propf propt
@@ -265,27 +273,54 @@ let make_substs esf (pof, ff, rff, rmwf, sf) est (pot, ft, rft, rmwt, st) =
   aux [] HMap.empty esf est
 
 (* from : visited node, more general / to : node to test, less general *)
-let build_event_substs from_evts from_rels to_evts to_rels =  (*
-  Format.eprintf "----------\nEvts from : \n";
+let build_event_substs from_evts from_rels from_prop to_evts to_rels to_prop =
+(*
+  let fprintf s = Format.fprintf Format.std_formatter s in
+ 
+  fprintf "----------\nEvts from : \n";
   HMap.iter (fun e ((p, d, v, vi), vals) ->
-    Format.eprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
+    fprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
   ) from_evts;
-  Format.eprintf "\n----------\nEvts to : \n";
+  fprintf "\n";
+  H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) from_prop;
+  fprintf "\n----------\nEvts to : \n";
   HMap.iter (fun e ((p, d, v, vi), vals) ->
-    Format.eprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
+    fprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
   ) to_evts;
-  Format.eprintf "\n----------\n"; *)
+  fprintf "\n";
+  H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) to_prop;
+  fprintf "\n----------\n";  *)
   TimeCSubst.start ();
-  let es = make_substs from_evts from_rels to_evts to_rels in (*
+  let es = make_substs from_evts from_rels from_prop to_evts to_rels to_prop in
+(*
   List.iter (fun s ->
-    Format.eprintf "Subst :";
-    HMap.iter (fun ef et -> Format.eprintf " %a->%a" H.print ef H.print et) s;
-    Format.eprintf "\n"
+    fprintf "Subst :";
+    HMap.iter (fun ef et -> fprintf " %a->%a" H.print ef H.print et) s;
+    fprintf "\n"
   ) es;
-  if List.length es = 0 then Format.eprintf "No subst\n"; *)
+  if List.length es = 0 then fprintf "No subst\n"; *)
   TimeCSubst.pause ();
   es
+(*
+_e1:#1:_R:_VX[#1](1)
+_e2:#2:_R:_VX[#2](0)
+_e3:#2:_W:_VX[#2](0)
+_e4:#2:_R:_VX[#3](0)
+_e5:#3:_W:_VX[#3](0)
+_e6:#3:_R:_VX[#4](1)  
+_e3 < _e1   _e3 < _e2   _e4 < _e1   _e4 < _e2   _e5 < _e1   _e5 < _e2   _e5 < _e3   _e5 < _e4   _e6 < _e1   _e6 < _e2   _e6 < _e3   _e6 < _e4   
 
+_e1:#1:_R:_VX[#1](1)
+_e2:#2:_R:_VX[#2](0)
+_e3:#2:_W:_VX[#2](0)
+_e4:#2:_R:_VX[#3](0)
+_e5:#3:_W:_VX[#3](0)
+_e6:#3:_R:_VX[#4](0)
+_e7:#4:_W:_VX[#4](0)
+_e8:#4:_R:_VX[#5](1)  
+_e3 < _e1   _e3 < _e2   _e4 < _e1   _e4 < _e2   _e5 < _e1   _e5 < _e2   _e5 < _e3   _e5 < _e4   _e6 < _e1   _e6 < _e2   _e6 < _e3   _e6 < _e4   _e7 < _e5   _e7 < _e6   _e8 < _e5   _e8 < _e6   
+
+*)
 
 
 
@@ -304,14 +339,11 @@ let remap_events_ar ar sub =
   let rec remap_t = function
     | Arith (t, c) -> Arith (remap_t t, c)
     | Field (t, f) -> Field (remap_t t, f)
-    | Access (a, [e]) when H.equal a hE || H.equal a hFence ->
-        let e = subst e in Access (a, [e])
-    | Access (a, [e1; e2]) when H.equal a hRf ->
-        let e1 = subst e1 in
-        let e2 = subst e2 in
-        Access (a, [e1; e2])
-    | Access (a, sl) when H.equal a hSync ->
-       Access (a, remap_sl sl)
+    | Access (a, [e]) when H.equal a hE -> Access (a, [subst e])
+    | Access (a, [p; e]) when H.equal a hFence -> Access (a, [p; subst e])
+    | Access (a, [e1; e2]) when H.equal a hRf || H.equal a hCo
+        || H.equal a hRmw -> Access (a, [subst e1; subst e2])
+    | Access (a, sl) when H.equal a hSync -> Access (a, remap_sl sl)
     (* Read / Write / Fence -> KO *)
     | t -> t
   in

@@ -47,6 +47,7 @@ let hE = H.make "_e"
 let hPo = H.make "_po"
 let hRf = H.make "_rf"
 let hCo = H.make "_co"
+let hFr = H.make "_fr"
 let hRmw = H.make "_rmw"
 let hFence = H.make "_fence"
 let hSync = H.make "_sync"
@@ -158,6 +159,7 @@ let init_weak_env wvl =
   S.declare hPo int2 T.type_prop;
   S.declare hRf int2 T.type_prop;
   S.declare hCo int2 T.type_prop;
+  S.declare hFr int2 T.type_prop;
   S.declare hRmw int2 T.type_prop;
   S.declare hFence int2 T.type_prop;
   S.declare hSync int2 T.type_prop;

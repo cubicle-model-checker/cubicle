@@ -54,17 +54,38 @@ let extract_events sa =
        HMap.add p (IntSet.add (int_of_e e) peids) eids
     | _ -> eids
   in
-  SAtom.fold (fun a (sa_pure, sa_rds, sa_wts, fces, eids) -> match a with
+  let find_event_safe e evts =
+    try HMap.find e evts with Not_found -> ((hNone, hNone, hNone, []), false)
+  in
+  SAtom.fold (fun a (sa_pure, sa_rds, sa_wts, fces, eids, evts) -> match a with
+    | Atom.Comp (Field (Access (ar, [e]), f), Eq, Elem (c, t))
+    | Atom.Comp (Elem (c, t), Eq, Field (Access (ar, [e]), f))
+         when H.equal ar hE ->
+       let ((p, d, v, vi), hv) as evt = find_event_safe e evts in
+       let evt = if H.equal f hThr then ((c, d, v, vi), hv)
+            else if H.equal f hDir then ((p, c, v, vi), hv)
+	    else if H.equal f hVar then ((p, d, c, vi), hv)
+            else if is_param f then ((p, d, v, (f, c) :: vi), hv)
+            else evt in
+       (SAtom.add a sa_pure, sa_rds, sa_wts, fces,
+        update_eids eids a, HMap.add e evt evts)
+    | Atom.Comp (Field (Field (Access (ar, [e]), f), _), Eq, Elem (c, t))
+    | Atom.Comp (Elem (c, t), Eq, Field (Field (Access (ar, [e]), f), _))
+         when H.equal ar hE && H.equal f hVal ->
+       let ((p, d, v, vi), hv) as evt = find_event_safe e evts in
+       let evt = ((p, d, v, vi), true) in
+       (SAtom.add a sa_pure, sa_rds, sa_wts, fces,
+        update_eids eids a, HMap.add e evt evts)
     | Atom.Comp (Fence p, _, _) | Atom.Comp (_, _, Fence p) ->
-       (sa_pure, sa_rds, sa_wts, p :: fces, eids)
+       (sa_pure, sa_rds, sa_wts, p :: fces, eids, evts)
     | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
-       (sa_pure, sa_rds, SAtom.add a sa_wts, fces, eids)
+       (sa_pure, sa_rds, SAtom.add a sa_wts, fces, eids, evts)
     | Atom.Comp (t1, _, t2) when has_read t1 || has_read t2 ->
-       (sa_pure, SAtom.add a sa_rds, sa_wts, fces, update_eids eids a)
+       (sa_pure, SAtom.add a sa_rds, sa_wts, fces, update_eids eids a, evts)
     | Atom.Ite _ ->
        failwith "Weakevent.extract_events : Ite should not be there"
-    | _ -> (SAtom.add a sa_pure, sa_rds, sa_wts, fces, update_eids eids a)
-) sa (SAtom.empty, SAtom.empty, SAtom.empty, [], HMap.empty)
+    | _ -> (SAtom.add a sa_pure, sa_rds, sa_wts, fces, update_eids eids a, evts)
+  ) sa (SAtom.empty, SAtom.empty, SAtom.empty, [], HMap.empty, HMap.empty)
 
 
 
@@ -91,10 +112,22 @@ let write_terms sa =
     | _ -> swt
   ) sa STerm.empty
 
+(* Extract events corresponding to writes *)
+let write_events evts =
+  HMap.fold (fun e (ed, hv) wevts ->
+    if is_write ed then HMap.add e (sort_params ed) wevts else wevts
+  ) evts HMap.empty
+
+(* Extract unsatified reads *)
+let unsat_rd_events evts =
+  HMap.fold (fun e (ed, hv) urevts ->
+    if is_read ed && hv then HMap.add e (sort_params ed) urevts else urevts
+  ) evts HMap.empty
+
 
 
 (* Build an event *)
-let build_event p e d v vi = (* v in original form without _V *)
+let build_event e p d v vi = (* v in original form without _V *)
   let _, ret = Smt.Symbol.type_of v in
   let v = mk_hV v in
   let tevt = Access (hE, [e]) in
@@ -133,25 +166,35 @@ let instantiate_events sa =
     Atom.Comp (Access (pred, pl), Eq, Elem (Term.htrue, Constr)) in
 
   (* Extract the relevant events *)
-  let sa_pure, sa_rds, sa_wts, fce, eids = extract_events sa in
+  let sa_pure, sa_rds, sa_wts, fce, eids, evts = extract_events sa in
   let swt = write_terms sa_wts in
   let srt = read_terms sa_rds in
+  let wevts = write_events evts in
+  let urevts = unsat_rd_events evts in
 
   (* Remember eids before writes *)
   let eids_before_writes = eids in
 
-  (* First, generate Write events and their rf *)
+  (* First, generate Write events and their rf/co/fr *)
   let (eids, sa_new, writes) = STerm.fold (
     fun t (eids, sna, writes) -> match t with
     | Write (p, v, vi, srl) ->
        let eid, eids = fresh_eid eids p in
        let e = mk_hE eid in
-       let na, _ = build_event p e hW v vi in
-       let sna = List.fold_left (fun sna re ->
+       let evt = (p, hW, mk_hV v, vi) in
+       let na, _ = build_event e p hW v vi in
+       let sna = List.fold_left (fun sna re -> (* rf *)
 	 SAtom.add (mk_pred hRf [e; re]) sna
        ) (SAtom.union na sna) srl in
-       let writes = HMap.add e (p, hW, v, vi) writes in
-       (eids, sna, writes)
+       let sna = HMap.fold (fun we wevt sna -> (* co *)
+         if not (same_var evt wevt) then sna
+         else SAtom.add (mk_pred hCo [e; we]) sna
+       ) wevts sna in
+       let sna = HMap.fold (fun ure urevt sna -> (* fr *)
+         if not (same_var evt urevt) then sna
+         else SAtom.add (mk_pred hFr [ure; e]) sna
+       ) urevts sna in
+       (eids, sna, HMap.add e evt writes)
     | _ -> assert false
   ) swt (eids, SAtom.empty, HMap.empty) in
 
@@ -164,9 +207,13 @@ let instantiate_events sa =
     | Read (p, v, vi) ->
        let eid, eids = fresh_eid eids p in
        let e = mk_hE eid in
-       let na, tval = build_event p e hR v vi in
-       let reads = HMap.add e (p, hR, v, vi) reads in
-       (eids, SAtom.union na sna, event_subst t tval sra, reads)
+       let evt = (p, hR, mk_hV v, vi) in
+       let na, tval = build_event e p hR v vi in
+       let sna = HMap.fold (fun we wevt sna -> (* fr *)
+         if not (same_var evt wevt) then sna
+         else SAtom.add (mk_pred hFr [e; we]) sna
+       ) wevts (SAtom.union na sna) in
+       (eids, sna, event_subst t tval sra, HMap.add e evt reads)
     | _ -> assert false
   ) srt (eids, sa_new, sa_rds, HMap.empty) in
 

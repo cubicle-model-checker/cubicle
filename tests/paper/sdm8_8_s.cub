@@ -18,14 +18,14 @@ weak var X : int
 weak var Y : int
 
 init (p) {
-    PC[p] = L1 && ESI[p] = 1 && ESI[p] = 1 &&
+    PC[p] = L1 && ESI[p] = 1 && EDI[p] = 1 &&
     EAX[p] = 0 && EBX[p] = 0 && ECX[p] = 0 && EDX[p] = 0 &&
     X = 0 && Y = 0 }
 
 (* FORBIDDEN Final State *)
 unsafe (p1 p2 p3 p4) {
     p1 = #1 && p2 = #2 && p3 = #3 && p4 = #4 &&
-    PC[p1] = End && PC[p2] = End && PC[p3] = End && PC[p3] = End &&
+    PC[p1] = End && PC[p2] = End && PC[p3] = End && PC[p4] = End &&
     EAX[p3] = 1 && EBX[p3] = 0 && ECX[p4] = 1 && EDX[p4] = 0 }
 
 transition t1_1 (p)
@@ -34,7 +34,7 @@ requires { p = #1 && PC[p] = L1 }
 
 transition t2_1 (p)
 requires { p = #2 && PC[p] = L1 }
-{ PC[p] := End; EDI[p] := read(p, Y); write(p, Y, ESI[p]) }
+{ PC[p] := End; EDI[p] := read(p, Y); write(p, Y, EDI[p]) }
 
 transition t3_1 (p)
 requires { p = #3 && PC[p] = L1 }

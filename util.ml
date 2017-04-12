@@ -35,6 +35,7 @@ module TimeRels = Timer.Make (Options)
 module TimeAcycl = Timer.Make (Options)
 module TimeCSubst = Timer.Make (Options)
 module TimeASubst = Timer.Make (Options)
+module TimeProp = Timer.Make (Options)
 
 
 let nb_digits n =

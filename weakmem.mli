@@ -35,6 +35,7 @@ val hE : H.t
 val hPo : H.t
 val hRf : H.t
 val hCo : H.t
+val hFr : H.t
 val hRmw : H.t
 val hFence : H.t
 val hSync : H.t
