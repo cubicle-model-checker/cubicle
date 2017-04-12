@@ -1,0 +1,193 @@
+
+type loc = L0 | L1 | L2 | L3
+
+type kind = KP1 | KP2 | KP3 | KP4 | KBuf
+
+var F : bool
+array PC[proc] : loc
+
+array Kind[proc] : kind
+
+array Var[proc,proc] : bool
+array Val[proc,proc] : bool
+
+init (p i) { PC[p] = L0 && PC[i] = L0 && F = False &&
+     	     Var[p,i] = False && Var[p,p] = False && Var[i,i] = False }
+
+invariant (p1 p2) { Kind[p1] = KP1 && Kind[p2] = KP1 }
+invariant (p1 p2) { Kind[p1] = KP2 && Kind[p2] = KP2 }
+invariant (p1 p2) { Kind[p1] = KP3 && Kind[p2] = KP3 }
+invariant (p1 p2) { Kind[p1] = KP4 && Kind[p2] = KP4 }
+
+
+(* Invariants trouvés par BRAB *)
+
+(* 6+10 : 777 -> 707 / 20 *)
+(* invariant (p1 p2) { PC[p1] = L1 && PC[p2] = L3 } (\* 6 *\) *)
+(* invariant (p1 p2) { PC[p1] = L3 && PC[p2] = L3 } (\* 10 *\) *)
+
+(* 3+4 : 777 -> 778 / 18 *)
+(* 4+14+13 : 777 -> 701 / 18 *)
+(* 11+14+13 : 777 -> 687 / 18 *)
+(* 3+11 : 777 -> 0 *)
+(* invariant (p1 p2) { F = False && PC[p1] = L1 && Kind[p1] = KP2 } (\* 3 *\) *)
+(* invariant (p1 p2) { F = False && PC[p1] = L3 && Kind[p1] = KP2 } (\* 4 *\) *)
+(* invariant (p1 p2) { F = True && PC[p1] = L1 && Kind[p2] = KP2 } (\* 11 *\) *)
+(* invariant (p1 p2) { F = True && PC[p2] = L3 && Kind[p1] = KP2 } (\* 14 *\) *)
+(* invariant (p1 p2) { F = False && PC[p2] = L3 && Kind[p1] = KP1 } (\* 13 *\) *)
+
+(* Buffer de p vide si p en L1 (777 -> 717 / 17) *)
+(* invariant (p1 p2) { PC[p1] = L1 && Var[p1, p2] = True } (\* 5 *\) *)
+
+(* Buffer de p vide si p en L3 (777 -> 584 / 17) *)
+(* invariant (p1 p2) { PC[p1] = L3 && Var[p1, p2] = True } (\* 8 *\) *)
+
+(* Buffer de p2 vide si p1 en L3 (777 -> 280 / 10) *)
+(* invariant (p1 p2 p3) { PC[p1] = L3 && Var[p2, p3] = True } (\* 16 *\) *)
+
+(* Buffer de p2 vide si F vaut False (777 -> 655 / 18) *)
+(* invariant (p1 p2) { F = False && Kind[p1] = KP2 && Var[p1, p2] = True } (\* 12 *\) *)
+
+(* Buffer de p1 vide si F vaut True (777 -> 246 / 12) *)
+(* invariant (p1 p2 p3) { F = True && Kind[p1] = KP2 && Var[p2, p3] = True } (\* 18 *\) *)
+
+(* Buffer de p ne peut contenir False si F vaut False (777 -> 561 / 17) *)
+(* invariant (p1 p2) { F = False && Var[p2, p1] = True && Val[p2, p1] = False } (\* 15 *\) *)
+
+(* Maximum 1 case de buffer utilisée (777 -> 560 / 17) *)
+(* invariant (p1 p2 p3) { Var[p1, p2] = True && Var[p1, p3] = True } (\* 17 *\) *)
+
+(* Modélisation des buffers (nombre de noeuds explorés inchangé) *)
+(* invariant (p1) { PC[p1] = L1 && Kind[p1] = KBuf } (\* 1 *\) *)
+(* invariant (p1) { PC[p1] = L3 && Kind[p1] = KBuf } (\* 2 *\) *)
+(* invariant (p1 p2) { Kind[p2] <> KBuf && Var[p1, p2] = True } (\* 7 *\) *)
+(* invariant (p1 p2) { Kind[p1] = KBuf && Var[p1, p2] = True } (\* 9 *\) *)
+
+(*
+(8)  PC[#1] = L1 && PC[#2] = l3 (\* second one disappeared *\)
+
+(3)  F = False && PC[#1] = L1 && Kind[#1] = KP2
+(5)  F = False && PC[#1] = L3 && Kind[#1] = KP2
+(11)  F = True && PC[#1] = L1 && Kind[#2] = KP2
+(4)  F = True && PC[#1] = L3 && Kind[#1] = KP1 (\* new *\)
+(14)  F = True && PC[#2] = L3 && Kind[#1] = KP2
+(13)  F = False && PC[#2] = L3 && Kind[#1] = KP1
+
+(6)  PC[#1] = L1 && Var[#1, #2] = True
+(9)  PC[#1] = L3 && Var[#1, #2] = True
+(16)  PC[#1] = L3 && Var[#2, #3] = True
+
+(12)  F = False && Kind[#1] = KP2 && Var[#1, #2] = True
+(18)  F = True && Kind[#2] = KP2 && Var[#1, #3] = True
+(15)  F = False && Var[#2, #1] = True && Val[#2, #1] = False
+
+(17)  Var[#1, #2] = True && Var[#1, #3] = True
+
+(1)  PC[#1] = L1 && Kind[#1] = KBuf
+(2)  PC[#1] = L3 && Kind[#1] = KBuf
+(7)  Kind[#2] <> KBuf && Var[#1, #2] = True
+(10)  Kind[#1] = KBuf && Var[#1, #2] = True
+*)
+
+unsafe (p1 p2) { Kind[p1] = KP1 && Kind[p2] = KP2 &&
+       	       	 PC[p1] = L1 && PC[p2] = L1 }
+
+
+
+transition t1_1a_mem (p)
+requires { Kind[p] = KP1 &&
+	   PC[p] = L0 && F = False &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+(* here *)
+transition t1_1b_buf (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L0 && Var[p,i] = True && Val[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+transition t1_2 (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L1 && Var[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || (Kind[k] = KBuf && k > i) ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L2; Var[p,i] := True; Val[p,i] := True; }
+
+transition t1_3a_mem (p)
+requires { Kind[p] = KP1 &&
+	   PC[p] = L2 && F = False &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L3; }
+
+(* here *)
+transition t1_3b_buf (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L2 && Var[p,i] = True && Val[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L3; }
+
+transition t1_4 (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L3 && Var[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || (Kind[k] = KBuf && k > i) ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L0; Var[p,i] := True; Val[p,i] := True; }
+
+
+
+transition t2_1a_mem (p)
+requires { Kind[p] = KP2 &&
+	   PC[p] = L0 && F = True &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+(* here *)
+transition t2_1b_buf (p i)
+requires { Kind[p] = KP2 && Kind[i] = KBuf &&
+	   PC[p] = L0 && Var[p,i] = True && Val[p,i] = True &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+transition t2_2 (p i)
+requires { Kind[p] = KP2 && Kind[i] = KBuf &&
+	   PC[p] = L1 && Var[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || (Kind[k] = KBuf && k > i) ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L2; Var[p,i] := True; Val[p,i] := False; }
+
+transition t2_3a_mem (p)
+requires { Kind[p] = KP2 &&
+	   PC[p] = L2 && F = True &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L3; }
+
+(* here *)
+transition t2_3b_buf (p i)
+requires { Kind[p] = KP2 && Kind[i] = KBuf &&
+	   PC[p] = L2 && Var[p,i] = True && Val[p,i] = True &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L3; }
+
+transition t2_4 (p i)
+requires { Kind[p] = KP2 && Kind[i] = KBuf &&
+	   PC[p] = L3 && Var[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || (Kind[k] = KBuf && k > i) ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L0; Var[p,i] := True; Val[p,i] := False; }
+
+
+
+transition flush_F (p i)
+requires { Kind[p] <> KBuf && Kind[i] = KBuf && Var[p,i] = True &&
+	   forall_other k. (Kind[k] <> KBuf || (Kind[k] = KBuf && k < i) ||
+	   		     (Kind[k] = KBuf && k > i && Var[p,k] = False)) }
+{ F := Val[p,i]; Var[p,i] := False; }

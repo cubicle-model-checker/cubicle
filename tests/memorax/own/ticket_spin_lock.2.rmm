@@ -1,0 +1,43 @@
+/* Ticket spin lock from linux kernel (32 bit x86) */
+
+/* The discussion on the mailing lists was about whether the unlocking
+ * write (marked below) needed to be synchronized (fenced) or not.
+ *
+ * In the linux kernel the write remains synchronized when the kernel
+ * is compiled for Pentium Pro and when OOSTORE is used.
+ *
+ * References: https://lkml.org/lkml/1999/11/20/76
+ *
+ * Linux spinlock implementation in linux source (version 3.3)
+ * linux/arch/x86/include/asm/spinlock.h
+ */
+
+forbidden
+  FAIL *
+
+data
+  head = 0
+  tail = 0
+  a = 0
+
+process(2)
+registers
+  $r0 = * : Z
+text
+  L0: read: $r0 := tail;
+  cas(tail,$r0,$r0+1);
+  read: head = $r0;
+CS: locked write: a := 1;
+  locked write: a := 0;
+  either{
+    read: a = 1;
+    goto FAIL
+  or
+    write: head := $r0 + 1; /* <- Here */
+    goto L0
+  };
+FAIL: nop
+
+
+
+

@@ -1,0 +1,71 @@
+(* this is a prelude for Alt-Ergo*)
+type t
+
+type structure
+
+logic infix_breq : structure, t -> prop
+
+logic ffalse : t
+
+logic ttrue : t
+
+logic neg : t -> t
+
+logic and1 : t, t -> t
+
+logic or1 : t, t -> t
+
+axiom extensionality :
+  (forall f1:t. forall f2:t.
+  ((forall m:structure. (infix_breq(m, f1) <-> infix_breq(m, f2))) ->
+  (f1 = f2)))
+
+axiom structure_exists : (exists m:structure. (exists f:t. infix_breq(m, f)))
+
+axiom true_false : (not (ttrue = ffalse))
+
+axiom model_true : (forall m:structure. infix_breq(m, ttrue))
+
+axiom model_false : (forall m:structure. (not infix_breq(m, ffalse)))
+
+axiom model_neg :
+  (forall m:structure.
+  (forall f:t. (infix_breq(m, neg(f)) -> (not infix_breq(m, f)))))
+
+axiom model_neg1 :
+  (forall m:structure.
+  (forall f:t. ((not infix_breq(m, f)) -> infix_breq(m, neg(f)))))
+
+axiom model_and :
+  (forall m:structure.
+  (forall f1:t. forall f2:t. (infix_breq(m, and1(f1, f2)) -> infix_breq(m,
+  f1))))
+
+axiom model_and1 :
+  (forall m:structure.
+  (forall f1:t. forall f2:t. (infix_breq(m, and1(f1, f2)) -> infix_breq(m,
+  f2))))
+
+axiom model_and2 :
+  (forall m:structure.
+  (forall f1:t. forall f2:t. ((infix_breq(m, f1) and infix_breq(m, f2)) ->
+  infix_breq(m, and1(f1, f2)))))
+
+axiom model_or :
+  (forall m:structure.
+  (forall f1:t. forall f2:t. (infix_breq(m, or1(f1, f2)) -> (infix_breq(m,
+  f1) or infix_breq(m, f2)))))
+
+axiom model_or1 :
+  (forall m:structure.
+  (forall f1:t. forall f2:t. ((infix_breq(m, f1) or infix_breq(m, f2)) ->
+  infix_breq(m, or1(f1, f2)))))
+
+predicate sat(f: t) = (exists m:structure. infix_breq(m, f))
+
+predicate valid(f: t) = (not sat(neg(f)))
+
+goal valid_def :
+  (forall f:t. ((valid(f) -> (forall m:structure [m]. infix_breq(m, f))) and
+  ((forall m:structure [m]. infix_breq(m, f)) -> valid(f))))
+

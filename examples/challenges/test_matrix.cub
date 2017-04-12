@@ -1,0 +1,27 @@
+type t = A | B | C
+
+var P : proc
+var G : t
+
+array Tableau[proc] : t
+array Matrix[proc, proc] : t
+
+init (z1 z2) { 
+     (* z1 <> z2 && Tableau[z1] = A && Matrix[z1,z2] = B || *)
+     (* z1 = z2 && *) Tableau[z1] = A && Matrix[z1,z2] = A && G = A
+      }
+
+(* unsafe (z1 z2) { Matrix[z1,z2] = B } *)
+ 
+unsafe () { G = B }
+
+
+transition t1 (i)
+requires { Tableau[i] = A }
+{
+   Tableau[i] := B;
+
+   Matrix [x,y] := case 
+                    | x = y : B
+                    | _ : Matrix[x,y];
+}

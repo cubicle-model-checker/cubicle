@@ -1,0 +1,38 @@
+
+number_procs 3
+
+type pc = L1 | L2 | End
+
+array PC[proc] : pc
+weak var X : int
+weak var Y : int
+var R1 : int
+var R2 : int
+var R3 : int
+
+init () { PC[#1] = L1 && PC[#2] = L1 && PC[#3] = L1 &&
+          X = 0 && Y = 0 }
+
+unsafe () { PC[#1] = End && PC[#2] = End && PC[#3] = End &&
+            R1 = 1 && R2 = 0 && R3 = 0 }
+
+transition t1_1 ()
+requires { PC[#1] = L1 }
+{ PC[#1] := End; write(#1, X, 1) }
+
+transition t2_1 ()
+requires { PC[#2] = L1 }
+{ PC[#2] := L2; R1 := read(#2, X) }
+
+transition t2_2 ()
+requires { PC[#2] = L2 }
+{ PC[#2] := End; R2 := read(#2, Y) }
+
+transition t3_1 ()
+requires { PC[#3] = L1 }
+{ PC[#3] := L2; write(#3, Y, 2) }
+
+transition t3_2 ()
+fences (#3)
+requires { PC[#3] = L2 }
+{ PC[#3] := End; R3 := read(#3, X) }

@@ -1,0 +1,93 @@
+
+type loc = E0 | E1 | L0 | L1
+
+type vars = VNone | VF
+
+type kind = KProc | KBuf
+
+array F[proc] : bool
+array PC[proc] : loc
+
+array Kind[proc] : kind
+
+array Var[proc,proc] : vars
+array Par[proc,proc] : proc
+array Val[proc,proc] : bool
+
+
+init (p i) { PC[p] = E0 && F[p] = False &&
+     	     PC[i] = E0 && F[i] = False &&
+	     Var[p,i] = VNone && Var[p,p] = VNone && Var[i,i] = VNone }
+
+(* Maximum 2 procs *)
+invariant (p1 p2 p3) { Kind[p1] = KProc &&
+	      	       Kind[p2] = KProc &&
+		       Kind[p3] = KProc }
+
+(* Maximum 3 cases de buffer (quelque soit le proc) *)
+(*invariant (p1 p2 p3 p4) { Kind[p1] = KBuf &&
+	      	       Kind[p2] = KBuf &&
+	      	       Kind[p3] = KBuf &&
+		       Kind[p4] = KBuf }*)
+
+unsafe (p1 p2) { Kind[p1] = KProc && Kind[p2] = KProc &&
+       	       	 PC[p1] = E0 && PC[p2] = E1 }
+
+(* PC[p] = E0 => F[p] <- True, PC[p] <- L0 *)
+transition t1 (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   PC[p] = E0 && Var[p,i] = VNone &&
+	   forall_other k. (Kind[k] = KProc || k > i ||
+	   	 	     (k < i && Kind[k] = KBuf && Var[p, k] = VNone)) }
+{ Var[p,i] := VF;
+  Par[p,i] := p;
+  Val[p,i] := True;
+  PC[p] := L0; }
+
+(* PC[p] = L0 && Forall p2. F[p2] = True => PC[p] <- E1 *)
+transition t2 (p)
+requires { Kind[p] = KProc && PC[p] = L0 &&
+	   forall_other p2. (Kind[p2] = KBuf ||
+	   		      (Kind[p2] = KProc && F[p2] = True)) }
+{ PC[p] := E1; }
+
+(* PC[p] = L1 => F[p] <- False, PC[p] <- L1 *)
+transition t3 (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   PC[p] = E1 && Var[p,i] = VNone &&
+	   forall_other k. (Kind[k] = KProc || k > i ||
+	   		     (k < i && Kind[k] = KBuf && Var[p, k] = VNone)) }
+{ Var[p,i] := VF;
+  Par[p,i] := p;
+  Val[p,i] := False;
+  PC[p] := L1; }
+
+(* PC[p] = L1 && Forall p2. F[p2] = False => PC[p] <- E0 *)
+transition t4 (p)
+requires { Kind[p] = KProc &&  PC[p] = L1 &&
+	   forall_other p2. (Kind[p2] = KBuf ||
+	   		      (Kind[p2] = KProc && F[p2] = False)) }
+{ PC[p] := E0; }
+
+
+(* Gestion des buffers *)
+
+(* Ecritures par p sur F[p] *)
+transition flush_F_self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VF && Par[p,i] = p &&
+	   forall_other k. (Kind[k] = KProc || k < i ||
+	                     (i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ F[p] := Val[p,i];
+  Var[p,i] := VNone; }
+
+(* Ecritures par p sur F[p2] avec p <> p2 *)
+(* Inutile : un processus p n'écrit que dans F[p] *)
+(* Si on active cette transition, on peut attendre longtemps... *)
+transition flush_F_other (p i p2)
+requires { Kind[p] = KProc && Kind[p2] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VF && Par[p,i] = p2 &&
+	   forall_other k. (Kind[k] = KProc || k < i ||
+	   		     (i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ F[p2] := Val[p,i];
+  Var[p,i] := VNone; }

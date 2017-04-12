@@ -1,0 +1,61 @@
+
+number_procs 2
+
+type loc = E0 | E1 | L0 | L1
+
+weak var X : bool
+weak var Y : bool
+array PC[proc] : loc
+
+init (p i) { PC[p] = E0 && PC[i] = E0 && X = False && Y = False }
+
+invariant (p1 p2) { read(p1, X) = True && read(p1, Y) = True && PC[p1] = E0 }
+invariant (p1 p2) { read(p2, X) = True && read(p2, Y) = True && PC[p1] = E0 }
+invariant (p1 p2) { read(p2, X) = True && read(p1, Y) = True && PC[p1] = E0 }
+invariant (p1 p2) { read(p1, X) = True && read(p2, Y) = True && PC[p1] = E0 }
+
+invariant (p2 p1) { read(p1, X) = True && read(p1, Y) = True && PC[p1] = E0 }
+invariant (p2 p1) { read(p2, X) = True && read(p2, Y) = True && PC[p1] = E0 }
+invariant (p2 p1) { read(p2, X) = True && read(p1, Y) = True && PC[p1] = E0 }
+invariant (p2 p1) { read(p1, X) = True && read(p2, Y) = True && PC[p1] = E0 }
+
+
+
+unsafe (p1 p2) { PC[p1] = E0 && PC[p2] = E1 }
+
+
+
+transition t1_1 ()
+requires { PC[#1] = E0 }
+{ PC[#1] := L0; write(#1, X, True); }
+
+transition t1_2 ()
+requires { PC[#1] = L0 && read(#1, Y) = True }
+{ PC[#1] := E1; }
+
+transition t1_3 ()
+requires { PC[#1] = E1 }
+{ PC[#1] := L1; write(#1, X, False); }
+
+transition t1_4 ()
+requires { PC[#1] = L1 && read(#1, Y) = False }
+{ PC[#1] := E0; }
+
+
+
+transition t2_1 ()
+requires { PC[#2] = E0 }
+{ PC[#2] := L0; write(#2, Y, True); }
+
+transition t2_2 ()
+requires { PC[#2] = L0 && read(#2, X) = True }
+{ PC[#2] := E1; }
+
+transition t2_3 ()
+requires { PC[#2] = E1 }
+{ PC[#2] := L1; write(#2, Y, False); }
+
+transition t2_4 ()
+requires { PC[#2] = L1 && read(#2, X) = False }
+{ PC[#2] := E0; }
+

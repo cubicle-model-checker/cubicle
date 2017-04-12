@@ -1,0 +1,40 @@
+
+type loc = Idle | L1 | L2 | L3 | End
+type value = V1 | V2 | V3 | V4
+
+array PC[proc] : loc
+array T[proc] : value
+var Init : bool
+weak var X : value
+
+init (p) { Init = False && PC[p] = Idle && X = V1 }
+
+unsafe (p) { PC[p] = End }
+
+transition t_start (p)
+requires { Init = False }
+{ PC[p] := L1; Init := True }
+
+transition t1 (p)
+requires { PC[p] = L1 }
+{ PC[p] := L2; T[p] := read(p, X) }
+
+transition t2a (p)
+requires { PC[p] = L2 && T[p] = V1 }
+{ PC[p] := L3; T[p] := V2 }
+
+transition t2b (p)
+requires { PC[p] = L2 && T[p] = V2 }
+{ PC[p] := L3; T[p] := V3 }
+
+transition t2c (p)
+requires { PC[p] = L2 && T[p] = V3 }
+{ PC[p] := L3; T[p] := V4 }
+
+transition t2d (p)
+requires { PC[p] = L2 && T[p] = V4 }
+{ PC[p] := End }
+
+transition t4 (p)
+requires { PC[p] = L3 }
+{ PC[p] := L1; write(p, X, T[p]) }

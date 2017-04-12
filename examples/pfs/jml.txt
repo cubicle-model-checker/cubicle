@@ -1,0 +1,39 @@
+local
+a [1..5] *
+
+global
+b [0..1] * 
+h [0..3] *
+c [0..99999999] *
+
+
+transitions
+
+local a=1 & global (b=0 & 1<=c) => b:=1 & a:=2;
+
+local a=1 & global (b=1 & 1<=c) => c:=c+1 & a:=3;
+
+local a=2 & global (b=1 & c=0) => b:=0 & a:=1;
+
+local a=2 & global (b=1 & 1<=c) => c:=c-1 & a:=4;
+
+local a=3 & global (h=0 & 1<=c) => h:=1 & a:=5;
+
+local a=4 & global (h=0 & 1<=c) => h:=2 & a:=1;
+
+local a=4 & global (h=1 & 1<=c) => h:=3 & a:=1;
+
+local a=3 & global (h=2 & 1<=c) => h:=3 & a:=5;
+
+local a=5 & global (h=3 & 1<=c) => h:=0 & a:=2;
+
+
+initial
+b=0 & h=0 & 1<=c : a=1, a=1, a=1, a=1;
+
+
+final
+: a=2, a=2;
+
+
+

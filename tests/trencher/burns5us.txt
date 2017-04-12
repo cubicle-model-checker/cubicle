@@ -1,0 +1,97 @@
+
+# Memory layout:
+# 0 — F[0]
+# 1 — F[1]
+# 2 — F[2]
+# 3 — F[3]
+# 4 — F[4]
+
+thread t0
+initial q1
+final q6
+transition	q1	q3	write	0	0
+transition	q3	q5	write	1	0
+transition	q5	q5a	read	f1	1
+transition	q5a	q5b	read	f2	2
+transition	q5b	q5c	read	f3	3
+transition	q5c	q5d	read	f4	4
+transition	q5d	q6	check	&& == f1 0 && == f2 0 && == f3 0 == f4 0
+transition	q6	q1	noop
+end
+
+thread t1
+initial q1
+final q6
+transition	q1	q2a	write	0	1
+transition	q2a	q2b	read	f0	0
+transition	q2b	q1	check	== f0 1
+transition	q2b	q3	check	== f0 0
+transition	q3	q4a	write	1	1
+transition	q4a	q4b	read	f0	0
+transition	q4b	q1	check	== f0 1
+transition	q4b	q5	check	== f0 0
+transition	q5	q5a	read	f2	2
+transition	q5a	q5b	read	f3	3
+transition	q5b	q5c	read	f4	4
+transition	q5c	q6	check	&& == f2 0 && == f3 0 == f4 0
+transition	q6	q1	noop
+end
+
+thread t2
+initial q1
+final q6
+transition	q1	q2a	write	0	2
+transition	q2a	q2b	read	f0	0
+transition	q2b	q2c	read	f1	1
+transition	q2c	q1	check	|| == f0 1 == f1 1
+transition	q2c	q3	check	&& == f0 0 == f1 0
+transition	q3	q4a	write	1	2
+transition	q4a	q4b	read	f0	0
+transition	q4b	q4c	read	f1	1
+transition	q4c	q1	check	|| == f0 1 == f1 1
+transition	q4c	q5	check	&& == f0 0 == f1 0
+transition	q5	q5a	read	f3	3
+transition	q5a	q5b	read	f4	4
+transition	q5b	q6	check	&& == f3 0 == f4 0
+transition	q6	q1	noop
+end
+
+thread t3
+initial q1
+final q6
+transition	q1	q2a	write	0	3
+transition	q2a	q2b	read	f0	0
+transition	q2b	q2c	read	f1	1
+transition	q2c	q2d	read	f2	2
+transition	q2d	q1	check	|| == f0 1 || == f1 1 == f2 1
+transition	q2d	q3	check	&& == f0 0 && == f1 0 == f2 0
+transition	q3	q4a	write	1	3
+transition	q4a	q4b	read	f0	0
+transition	q4b	q4c	read	f1	1
+transition	q4c	q4d	read	f2	2
+transition	q4d	q1	check	|| == f0 1 || == f1 1 == f2 1
+transition	q4d	q6	check	&& == f0 0 && == f1 0 == f2 0
+transition	q5	q5a	read	f4	4
+transition	q5a	q6	check	== f4 0
+transition	q6	q1	noop
+end
+
+thread t4
+initial q1
+final q6
+transition	q1	q2a	write	0	4
+transition	q2a	q2b	read	f0	0
+transition	q2b	q2c	read	f1	1
+transition	q2c	q2d	read	f2	2
+transition	q2d	q2e	read	f3	3
+transition	q2e	q1	check	|| == f0 1 || == f1 1 || == f2 1 == f3 1
+transition	q2e	q3	check	&& == f0 0 && == f1 0 && == f2 0 == f3 0
+transition	q3	q4a	write	1	4
+transition	q4a	q4b	read	f0	0
+transition	q4b	q4c	read	f1	1
+transition	q4c	q4d	read	f2	2
+transition	q4d	q4e	read	f3	3
+transition	q4e	q1	check	|| == f0 1 || == f1 1 || == f2 1 == f3 1
+transition	q4e	q6	check	&& == f0 0 && == f1 0 && == f2 0 == f3 0
+transition	q6	q1	noop
+end

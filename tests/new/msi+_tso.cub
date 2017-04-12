@@ -1,0 +1,51 @@
+
+number_procs 2
+(*
+  2 procs : TO
+*)
+
+type state = M | S | I
+
+weak array Cache[proc]: state
+weak array Shr[proc] : bool
+weak var Current : proc
+weak var Extgnd : bool
+
+init ( i ) { Cache[i] = I && Shr[i] = False && Extgnd = False}
+
+unsafe ( i j ) { read(i, Cache[i]) = M && read(j, Cache[j]) = M }
+(*unsafe ( i j ) { read(j, Cache[j]) = M && read(j, Cache[j]) = M }
+unsafe ( i j ) { read(i, Cache[j]) = M && read(j, Cache[j]) = M }
+unsafe ( i j ) { read(j, Cache[i]) = M && read(j, Cache[j]) = M }
+unsafe ( i j ) { read(j, Cache[j]) = M && read(i, Cache[j]) = M }
+unsafe ( i j ) { read(j, Cache[j]) = M && read(j, Cache[i]) = M }
+unsafe ( i j ) { read(i, Cache[j]) = M && read(i, Cache[j]) = M }
+unsafe ( i j ) { read(i, Cache[j]) = M && read(j, Cache[i]) = M }*)
+
+transition read_miss_1 ( i j )
+requires { read(i, Cache[i]) = I && read(i, Current) = j && read(i, Extgnd) = True }
+{
+  write(i, Shr[i], True);
+  write(i, Cache[k], case 
+                     | k = i : S
+		     | k = j : S);
+  write(i, Extgnd, False)
+}	   
+
+
+transition read_miss_2 ( i )
+requires { read(i, Cache[i]) = I && read(i, Extgnd) = False }
+{ write(i, Shr[i], True); write(i, Cache[i], S) }
+
+transition write_miss ( i )
+requires { read(i, Cache[i]) <> M }
+{ 
+  write(i, Shr[k], case 
+  	   	   | k = i : True
+                   | read(i, Shr[k]) = True : False);
+  write(i, Cache[k], case
+ 	             | read(i, Shr[k]) = True : I
+	             | k = i : M);
+  write(i, Current, i);
+  write(i, Extgnd, True);
+}

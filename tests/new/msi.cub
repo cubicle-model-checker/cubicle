@@ -1,0 +1,34 @@
+
+(* number_procs 3 *)
+(*
+  2 procs : 33 nodes, 365 FP, 592 SC, 22s
+  3 procs : TO
+
+New version :
+  2 procs : 16 nodes, 77 FP, 264 SC, 2,6s, H = 3
+  3 procs : 259 nodes, 3490 FP, 12675 SC, 38m10, H = 7
+*)
+
+type st = M | S | I
+
+weak array Cache[proc] : st
+
+init (i) { Cache[i] = I }
+
+unsafe (i j k) { read(i, Cache[i]) = M && read(j, Cache[j]) <> I }
+(* unsafe (i j) { read(j, Cache[j]) = M && read(j, Cache[j]) <> I } *)
+
+(* unsafe (i j) { read(i, Cache[i]) = M && read(i, Cache[j]) <> I } *)
+(* unsafe (i j) { read(i, Cache[j]) = M && read(j, Cache[i]) <> I } *)
+
+transition read_miss (i)
+requires { read(i, Cache[i]) = I }
+{ write(i, Cache[j], case
+       	   | j = i : S
+       	   | read(i, Cache[j]) = M  : S) }
+
+transition write_miss (i)
+requires { read(i, Cache[i]) <> M }
+{ write(i, Cache[j], case
+       	   | j = i : M
+	   | _ : I ) }

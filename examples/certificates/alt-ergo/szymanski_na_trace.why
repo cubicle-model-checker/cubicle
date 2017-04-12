@@ -1,0 +1,828 @@
+type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7
+
+logic A : int -> location
+logic B : int -> bool
+logic S : int -> bool
+logic W : int -> bool
+logic X : int, int -> bool
+logic A' : int -> location
+logic B' : int -> bool
+logic S' : int -> bool
+logic W' : int -> bool
+logic X' : int, int -> bool
+
+goal initialisation:
+(* init *)
+(forall x,y:int. (A(x) = L0 and
+B(x) = false and
+S(x) = false and
+W(x) = false and
+X(x,y) = false))
+
+->
+
+(* invariant *)
+(not (exists z1,z2:int. z1 <> z2 and A(z2) = L7 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L2 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L1 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L0 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L7 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L7 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L7 and
+A(z2) = L7) and
+not (exists z1:int. A(z1) = L6 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L6 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L6 and
+A(z2) = L7 and
+X(z1,z2) = true) and
+not (exists z1:int. A(z1) = L5 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L5 and
+S(z1) = false) and
+not (exists z1:int. A(z1) = L4 and
+W(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L5 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L3 and
+W(z1) = false) and
+not (exists z1:int. A(z1) = L3 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L5 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+S(z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+B(z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L5) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L3 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L1 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L1 and
+S(z1) = true) and
+not (exists z1:int. A(z1) = L0 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L0 and
+S(z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L6 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L6 and
+A(z2) = L6 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L7 and
+X(z1,z2) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L7 and
+W(z2) = false and
+X(z1,z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L6 and
+X(z1,z2) = true and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L6 and
+W(z2) = false and
+X(z1,z2) = false and
+X(z2,z1) = true))
+
+
+goal property:
+(* invariant *)
+(not (exists z1,z2:int. z1 <> z2 and A(z2) = L7 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L2 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L1 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L0 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L7 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L7 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L7 and
+A(z2) = L7) and
+not (exists z1:int. A(z1) = L6 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L6 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L6 and
+A(z2) = L7 and
+X(z1,z2) = true) and
+not (exists z1:int. A(z1) = L5 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L5 and
+S(z1) = false) and
+not (exists z1:int. A(z1) = L4 and
+W(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L5 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L3 and
+W(z1) = false) and
+not (exists z1:int. A(z1) = L3 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L5 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+S(z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+B(z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L5) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L3 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L1 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L1 and
+S(z1) = true) and
+not (exists z1:int. A(z1) = L0 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L0 and
+S(z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L6 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L6 and
+A(z2) = L6 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L7 and
+X(z1,z2) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L7 and
+W(z2) = false and
+X(z1,z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L6 and
+X(z1,z2) = true and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L6 and
+W(z2) = false and
+X(z1,z2) = false and
+X(z2,z1) = true))
+
+->
+
+(* property *)
+(not (exists z1,z2:int. z1 <> z2 and A(z1) = L7 and
+A(z2) = L7))
+
+
+axiom induction_hypothesis:
+(* invariant before *)
+(not (exists z1,z2:int. z1 <> z2 and A(z2) = L7 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L2 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L1 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z2) = L0 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L7 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L7 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L7 and
+A(z2) = L7) and
+not (exists z1:int. A(z1) = L6 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L6 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L6 and
+A(z2) = L7 and
+X(z1,z2) = true) and
+not (exists z1:int. A(z1) = L5 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L5 and
+S(z1) = false) and
+not (exists z1:int. A(z1) = L4 and
+W(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L4 and
+A(z2) = L5 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L3 and
+W(z1) = false) and
+not (exists z1:int. A(z1) = L3 and
+S(z1) = false) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L3 and
+A(z2) = L5 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+S(z1) = true) and
+not (exists z1:int. A(z1) = L2 and
+B(z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L6) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L5) and
+not (exists z1,z2:int. z1 <> z2 and A(z1) = L2 and
+A(z2) = L3 and
+X(z2,z1) = true) and
+not (exists z1:int. A(z1) = L1 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L1 and
+S(z1) = true) and
+not (exists z1:int. A(z1) = L0 and
+W(z1) = true) and
+not (exists z1:int. A(z1) = L0 and
+S(z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L6 and
+A(z2) = L7) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L6 and
+A(z2) = L6 and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L7 and
+X(z1,z2) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L7 and
+W(z2) = false and
+X(z1,z2) = false) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L6 and
+X(z1,z2) = true and
+X(z2,z1) = true) and
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A(z1) = L5 and
+A(z2) = L6 and
+W(z2) = false and
+X(z1,z2) = false and
+X(z2,z1) = true))
+
+
+axiom transition_realtion:
+( (* Transition Relation *)
+(* transition t0 *)
+(exists x:int. 
+( (* requires *)
+A(x) = L0) and
+( (* actions *)
+(forall _j1:int.
+((_j1 = x) -> A'(_j1) = L1) and
+(not (_j1 = x) -> A'(_j1) = A(_j1))) and
+(forall _j2:int.
+((_j2 = x) -> B'(_j2) = true) and
+(not (_j2 = x) -> B'(_j2) = B(_j2))) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) and
+(forall z1,z2:int. X'(z1,z2) = X(z1,z2)) ))
+
+
+or
+
+(* transition t1 *)
+(exists x:int. 
+( (* requires *)
+A(x) = L1
+and (forall y:int.x = y or 
+(S(y) = false))
+) and
+( (* actions *)
+(forall _j3:int.
+((_j3 = x) -> A'(_j3) = L2) and
+(not (_j3 = x) -> A'(_j3) = A(_j3))) and
+(forall _j4:int.
+((_j4 = x) -> B'(_j4) = false) and
+(not (_j4 = x) -> B'(_j4) = B(_j4))) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) and
+(forall z1,z2:int. X'(z1,z2) = X(z1,z2)) ))
+
+
+or
+
+(* transition t2 *)
+(exists x:int. 
+( (* requires *)
+A(x) = L2) and
+( (* actions *)
+(forall _j5:int.
+((_j5 = x) -> A'(_j5) = L3) and
+(not (_j5 = x) -> A'(_j5) = A(_j5))) and
+(forall _j6:int.
+((_j6 = x) -> S'(_j6) = true) and
+(not (_j6 = x) -> S'(_j6) = S(_j6))) and
+(forall _j7:int.
+((_j7 = x) -> W'(_j7) = true) and
+(not (_j7 = x) -> W'(_j7) = W(_j7))) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1,z2:int. X'(z1,z2) = X(z1,z2)) ))
+
+
+or
+
+(* transition t3_abort_for *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L3 and
+B(y) = false and
+W(y) = false and
+X(x,y) = false) and
+( (* actions *)
+(forall _j8:int.
+((_j8 = x) -> A'(_j8) = L4) and
+(not (_j8 = x) -> A'(_j8) = A(_j8))) and
+(forall _j9:int.
+((_j9 = x) -> S'(_j9) = false) and
+(not (_j9 = x) -> S'(_j9) = S(_j9))) and
+(forall i,j:int.
+((i = x) -> X'(i,j) = false) and
+(not (i = x) -> X'(i,j) = X(i,j))) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t3_incr_for1 *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L3 and
+B(y) = true and
+X(x,y) = false) and
+( (* actions *)
+(forall _j10,_j11:int.
+((_j10 = x and
+_j11 = y) -> X'(_j10,_j11) = true) and
+(not (_j10 = x and
+_j11 = y) -> X'(_j10,_j11) = X(_j10,_j11))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t3_incr_for2 *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L3 and
+W(y) = true and
+X(x,y) = false) and
+( (* actions *)
+(forall _j12,_j13:int.
+((_j12 = x and
+_j13 = y) -> X'(_j12,_j13) = true) and
+(not (_j12 = x and
+_j13 = y) -> X'(_j12,_j13) = X(_j12,_j13))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t3_exit_for *)
+(exists x:int. 
+( (* requires *)
+A(x) = L3
+and (forall y:int.x = y or 
+(X(x,y) = true))
+) and
+( (* actions *)
+(forall _j14:int.
+((_j14 = x) -> A'(_j14) = L5) and
+(not (_j14 = x) -> A'(_j14) = A(_j14))) and
+(forall _j15:int.
+((_j15 = x) -> W'(_j15) = false) and
+(not (_j15 = x) -> W'(_j15) = W(_j15))) and
+(forall i,j:int.
+((i = x) -> X'(i,j) = false) and
+(not (i = x) -> X'(i,j) = X(i,j))) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) ))
+
+
+or
+
+(* transition t4_incr_for1 *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L4 and
+S(y) = false and
+X(x,y) = false) and
+( (* actions *)
+(forall _j16,_j17:int.
+((_j16 = x and
+_j17 = y) -> X'(_j16,_j17) = true) and
+(not (_j16 = x and
+_j17 = y) -> X'(_j16,_j17) = X(_j16,_j17))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t4_incr_for2 *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L4 and
+W(y) = true and
+X(x,y) = false) and
+( (* actions *)
+(forall _j18,_j19:int.
+((_j18 = x and
+_j19 = y) -> X'(_j18,_j19) = true) and
+(not (_j18 = x and
+_j19 = y) -> X'(_j18,_j19) = X(_j18,_j19))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t4_exit_for *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L4 and
+S(y) = true and
+W(y) = false and
+X(x,y) = false) and
+( (* actions *)
+(forall _j20:int.
+((_j20 = x) -> A'(_j20) = L5) and
+(not (_j20 = x) -> A'(_j20) = A(_j20))) and
+(forall _j21:int.
+((_j21 = x) -> S'(_j21) = true) and
+(not (_j21 = x) -> S'(_j21) = S(_j21))) and
+(forall _j22:int.
+((_j22 = x) -> W'(_j22) = false) and
+(not (_j22 = x) -> W'(_j22) = W(_j22))) and
+(forall i,j:int.
+((i = x) -> X'(i,j) = false) and
+(not (i = x) -> X'(i,j) = X(i,j))) and
+(forall z1:int. B'(z1) = B(z1)) ))
+
+
+or
+
+(* transition t4_restart_for *)
+(exists x:int. 
+( (* requires *)
+A(x) = L4
+and (forall y:int.x = y or 
+(X(x,y) = true))
+) and
+( (* actions *)
+(forall i,j:int.
+((i = x) -> X'(i,j) = false) and
+(not (i = x) -> X'(i,j) = X(i,j))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t5_enter_for *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+A(x) = L5 and
+W(y) = false and
+X(x,y) = false) and
+( (* actions *)
+(forall _j23,_j24:int.
+((_j23 = x and
+_j24 = y) -> X'(_j23,_j24) = true) and
+(not (_j23 = x and
+_j24 = y) -> X'(_j23,_j24) = X(_j23,_j24))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t5_exit_for *)
+(exists x:int. 
+( (* requires *)
+A(x) = L5
+and (forall y:int.x = y or 
+(X(x,y) = true))
+) and
+( (* actions *)
+(forall _j25:int.
+((_j25 = x) -> A'(_j25) = L6) and
+(not (_j25 = x) -> A'(_j25) = A(_j25))) and
+(forall i,j:int.
+((i = x) -> X'(i,j) = false) and
+(not (i = x) -> X'(i,j) = X(i,j))) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t6_enter_for *)
+(exists x,y:int. x <> y and 
+( (* requires *)
+y < x and
+A(x) = L6 and
+S(y) = false and
+X(x,y) = false) and
+( (* actions *)
+(forall _j26,_j27:int.
+((_j26 = x and
+_j27 = y) -> X'(_j26,_j27) = true) and
+(not (_j26 = x and
+_j27 = y) -> X'(_j26,_j27) = X(_j26,_j27))) and
+(forall z1:int. A'(z1) = A(z1)) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t6_exit_for *)
+(exists x:int. 
+( (* requires *)
+A(x) = L6
+and (forall y:int.x = y or 
+(x < y) or
+(X(x,y) = true))
+) and
+( (* actions *)
+(forall _j28:int.
+((_j28 = x) -> A'(_j28) = L7) and
+(not (_j28 = x) -> A'(_j28) = A(_j28))) and
+(forall i,j:int.
+((i = x) -> X'(i,j) = false) and
+(not (i = x) -> X'(i,j) = X(i,j))) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. S'(z1) = S(z1)) and
+(forall z1:int. W'(z1) = W(z1)) ))
+
+
+or
+
+(* transition t7 *)
+(exists x:int. 
+( (* requires *)
+A(x) = L7) and
+( (* actions *)
+(forall _j29:int.
+((_j29 = x) -> A'(_j29) = L0) and
+(not (_j29 = x) -> A'(_j29) = A(_j29))) and
+(forall _j30:int.
+((_j30 = x) -> S'(_j30) = false) and
+(not (_j30 = x) -> S'(_j30) = S(_j30))) and
+(forall z1:int. B'(z1) = B(z1)) and
+(forall z1:int. W'(z1) = W(z1)) and
+(forall z1,z2:int. X'(z1,z2) = X(z1,z2)) ))
+)
+
+
+(* invariant after *)
+goal invariant_preserved_1:
+not (exists z1,z2:int. z1 <> z2 and A'(z2) = L7 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_2:
+not (exists z1,z2:int. z1 <> z2 and A'(z2) = L2 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_3:
+not (exists z1,z2:int. z1 <> z2 and A'(z2) = L1 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_4:
+not (exists z1,z2:int. z1 <> z2 and A'(z2) = L0 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_5:
+not (exists z1:int. A'(z1) = L7 and
+W'(z1) = true)
+
+goal invariant_preserved_6:
+not (exists z1:int. A'(z1) = L7 and
+S'(z1) = false)
+
+goal invariant_preserved_7:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L7 and
+A'(z2) = L7)
+
+goal invariant_preserved_8:
+not (exists z1:int. A'(z1) = L6 and
+W'(z1) = true)
+
+goal invariant_preserved_9:
+not (exists z1:int. A'(z1) = L6 and
+S'(z1) = false)
+
+goal invariant_preserved_10:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L6 and
+A'(z2) = L7 and
+X'(z1,z2) = true)
+
+goal invariant_preserved_11:
+not (exists z1:int. A'(z1) = L5 and
+W'(z1) = true)
+
+goal invariant_preserved_12:
+not (exists z1:int. A'(z1) = L5 and
+S'(z1) = false)
+
+goal invariant_preserved_13:
+not (exists z1:int. A'(z1) = L4 and
+W'(z1) = false)
+
+goal invariant_preserved_14:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L4 and
+A'(z2) = L7)
+
+goal invariant_preserved_15:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L4 and
+A'(z2) = L6)
+
+goal invariant_preserved_16:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L4 and
+A'(z2) = L5 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_17:
+not (exists z1:int. A'(z1) = L3 and
+W'(z1) = false)
+
+goal invariant_preserved_18:
+not (exists z1:int. A'(z1) = L3 and
+S'(z1) = false)
+
+goal invariant_preserved_19:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L3 and
+A'(z2) = L7)
+
+goal invariant_preserved_20:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L3 and
+A'(z2) = L6)
+
+goal invariant_preserved_21:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L3 and
+A'(z2) = L5 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_22:
+not (exists z1:int. A'(z1) = L2 and
+W'(z1) = true)
+
+goal invariant_preserved_23:
+not (exists z1:int. A'(z1) = L2 and
+S'(z1) = true)
+
+goal invariant_preserved_24:
+not (exists z1:int. A'(z1) = L2 and
+B'(z1) = true)
+
+goal invariant_preserved_25:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L2 and
+A'(z2) = L7)
+
+goal invariant_preserved_26:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L2 and
+A'(z2) = L6)
+
+goal invariant_preserved_27:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L2 and
+A'(z2) = L5)
+
+goal invariant_preserved_28:
+not (exists z1,z2:int. z1 <> z2 and A'(z1) = L2 and
+A'(z2) = L3 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_29:
+not (exists z1:int. A'(z1) = L1 and
+W'(z1) = true)
+
+goal invariant_preserved_30:
+not (exists z1:int. A'(z1) = L1 and
+S'(z1) = true)
+
+goal invariant_preserved_31:
+not (exists z1:int. A'(z1) = L0 and
+W'(z1) = true)
+
+goal invariant_preserved_32:
+not (exists z1:int. A'(z1) = L0 and
+S'(z1) = true)
+
+goal invariant_preserved_33:
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A'(z1) = L6 and
+A'(z2) = L7)
+
+goal invariant_preserved_34:
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A'(z1) = L6 and
+A'(z2) = L6 and
+X'(z2,z1) = true)
+
+goal invariant_preserved_35:
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A'(z1) = L5 and
+A'(z2) = L7 and
+X'(z1,z2) = true)
+
+goal invariant_preserved_36:
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A'(z1) = L5 and
+A'(z2) = L7 and
+W'(z2) = false and
+X'(z1,z2) = false)
+
+goal invariant_preserved_37:
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A'(z1) = L5 and
+A'(z2) = L6 and
+X'(z1,z2) = true and
+X'(z2,z1) = true)
+
+goal invariant_preserved_38:
+not (exists z1,z2:int. z1 <> z2 and z1 < z2 and
+A'(z1) = L5 and
+A'(z2) = L6 and
+W'(z2) = false and
+X'(z1,z2) = false and
+X'(z2,z1) = true)

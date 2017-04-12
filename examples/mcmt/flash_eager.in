@@ -1,0 +1,133 @@
+:smt (define-type state ( subrange 1 3))
+:comment   Invalid->1, Shared->2, Exclusive->3 
+
+:smt (define-type data)
+
+:comment cachedata
+:local d data
+:comment Memory
+:global m data
+:comment cachestate
+:local s state
+
+
+:initial
+:var x
+:cnj (=  s[x]  1)
+
+:unsafe 
+:var x 
+:var y
+:cnj (= s[x] 3)  (= s[y] 3) 
+
+
+:comment :no_backward_simplification
+
+:comment atomwb
+:transition
+:var x
+:var j
+:guard (=  s[x]  3)
+:numcases 2
+:case (= x j)
+ :val d[j]
+ :val d[x]
+ :val 1
+:case
+ :val d[j]
+ :val d[x]
+ :val s[j]
+
+
+:comment atom_invalidate
+:transition
+:var x
+:var j
+:guard (not (=  s[x]  3))
+:numcases 2
+:case (= x j)
+ :val d[j]
+ :val m[j]
+ :val 1
+:case
+ :val d[j]
+ :val m[j]
+ :val s[j]
+
+
+:comment atom_get_1
+:transition
+:var x
+:var j
+:guard (not (=  s[x]  3))
+:uguard (not (=  s[j]  3))
+:numcases 2
+:case (= x j)
+ :val m[j]
+ :val m[j]
+ :val 2
+:case
+ :val d[j]
+ :val m[j]
+ :val s[j]
+
+
+:comment atom_get_2
+:transition
+:var x
+:var y
+:var j
+:guard (=  s[x]  3) (= y y)
+:numcases 3
+:case (= x j)
+ :val d[j]
+ :val m[j]
+ :val 2
+:case (= y j)
+ :val d[x]
+ :val m[j]
+ :val 2
+:case
+ :val d[j]
+ :val m[j]
+ :val s[j]
+
+
+
+:comment atom_getX_1
+:transition
+:var x
+:var j
+:guard (not (=  s[x]  3))
+:uguard (not (=  s[j]  3))
+:numcases 2
+:case (= x j)
+ :val m[j]
+ :val m[j]
+ :val 3
+:case
+ :val d[j]
+ :val m[j]
+ :val s[j]
+
+
+
+:comment atom_getX_2
+:transition
+:var x
+:var y
+:var j
+:guard (=  s[x]  3) (= y y)
+:numcases 3
+:case (= x j)
+ :val d[j]
+ :val m[j]
+ :val 1
+:case (= y j)
+ :val d[x]
+ :val m[j]
+ :val 3
+:case
+ :val d[j]
+ :val m[j]
+ :val s[j]

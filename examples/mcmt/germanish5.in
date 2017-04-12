@@ -1,0 +1,412 @@
+:comment   
+:comment   German's Cache Case Study
+:comment   --------------------------
+:comment   
+:comment   Taken from Pnueli, Ruah, Zuck "Automatic Deductive Verification with
+:comment   Invisible Invariants", TACAS'01, LNCS 2031, 2001.
+:comment   
+:comment   parameter N : natural such that N > 1
+:comment   type message = { empty, req_shared, req_exclusive,
+:comment                    invalidate, invalidate_ack, 
+:comment                    grant_shared, grant_exclusive }
+:comment   type cache_state = { invalid, shared, exclusive }
+:comment   
+:comment   local channel1, channel2, channel3 : array[1..N] of message 
+:comment         where forall j.channel1[j] = channel2[j] = channel3[j] =empty
+:comment   local sharer_list, invalidate_list : array[1..N] of bool 
+:comment         where forall j.sharer_list[j] = invalidate_list[j] = false
+:comment   local exclusive_granted : bool where exclusive_granted = false
+:comment   local curr_command : message where curr_command = empty
+:comment   local curr_client : message where curr_client = 1
+:comment   local cache : array[1..N] of cache_state where forall j.cache[j] = invalid
+:comment   
+:comment   Home || Client[1] || Client[2] || ... || Client[N]
+:comment   
+:comment   where
+:comment   
+:comment   Home := loop forever {
+:comment            m0 : when (curr_command = req_shared /\ exclusive_granted = false
+:comment                       /\ channel2[curr_client] = empty)
+:comment                 do ( sharer_list[curr_client] := true;
+:comment                      curr_command := empty;
+:comment                      channel2[curr_client] := grant_shared; )
+:comment                 or
+:comment            m1 : when (curr_command = req_exclusive /\ 
+:comment                       channel2[curr_client] = empty /\
+:comment                       forall j.sharer_list[j] = false)
+:comment                 do ( sharer_list[curr_client] := true;
+:comment                      curr_command := empty;
+:comment                      channel2[curr_client] := grant_exclusive; )
+:comment                 or
+:comment            m2 : when ( curr_command = empty /\ 
+:comment                        channel1[c] != empty )
+:comment                 do ( curr_command := channel1[c];
+:comment                      channel1[c] := empty;
+:comment                      invalidate_list := sharer_list;
+:comment                      curr_client := c; )
+:comment                 or
+:comment            m3 : when ( ((curr_command = req_shared /\ 
+:comment                          exclusive_granted = true) \/ 
+:comment                         curr_command = req_exclusive) /\
+:comment                         invalidate_list[c] = true /\
+:comment                         channel2[c] = empty )
+:comment                 do ( channel2[c] := invalidate;
+:comment                      invalidate_list[c] := false; )
+:comment                 or
+:comment            m4 : when ( curr_command != empty /\
+:comment                        channel3[c] = invalidate_ack )
+:comment                 do ( sharer_list[c] := false;
+:comment                      exclusive_granted := false;
+:comment                      channel3[c] := empty; )
+:comment           }
+:comment   
+:comment   and
+:comment   
+:comment   Client[c] := loop forever {
+:comment                 l1 : when ( cache[c] = invalid /\ channel1[c] = empty )
+:comment                      do ( channel1[c] := req_shared; )
+:comment                 or
+:comment                 l2 : when ( (cache[c] = invalid \/ cache[c] = shared) /\
+:comment                             channel1[c] = empty )
+:comment                      do ( channel1[c] := req_exclusive; )
+:comment                 or
+:comment                 l3 : when ( channel2[c] = invalidate /\ channel3[c] = empty )
+:comment                      do ( channel2[c] := empty; 
+:comment                           channel3[c] := invalidate_ack; 
+:comment                           cache[c] := invalid; )
+:comment                 or
+:comment                 l4 : when ( channel2[c] = grant_shared )
+:comment                      do ( cache[c] := shared;
+:comment                           channel2[c] := empty; )
+:comment                 or
+:comment                 l5 : when ( channel2[c] = grant_exclusive )
+:comment                      do ( cache[c] := exclusive;
+:comment                           channel2[c] := empty; )
+:comment                }
+:comment   
+:comment   The mutual exclusion properties to be checked are the following:
+:comment   
+:comment        [] (forall c != d.not(cache[c] = exclusive /\ cache[d] = shared))
+:comment   
+:comment   and
+:comment   
+:comment        [] (forall c != d.not(cache[c] = exclusive /\ cache[d] = exclusive)) .
+:comment   
+:comment   By the way, we also check this (very) simple invariant properties
+:comment   (they are more type-invariants a la B-method) about the sub-set of
+:comment   messages each channel can take:
+:comment   
+:comment   A.     channel1 can only assume values in the set 
+:comment               { empty, req_shared, req_exclusive }
+:comment   B.     channel2 can only assume values in the set 
+:comment               { empty, invalidate, grant_shared, grant_exclusive }
+:comment   C.     channel3 can only assume values in the set 
+:comment               { empty, invalidate_ack } 
+:comment   D.     curr_command can only assume values in the set 
+:comment               { empty, req_shared, req_exclusive } 
+:comment   
+:comment   NOTE: while the two mutual exclusion property takes a couple of
+:comment         minutes to be checked, the last four properties are immediately
+:comment         discharged by MCMT.
+:comment   
+:comment   
+:comment   
+:comment   
+:comment   
+
+:smt (define-type message ( subrange 1 7))
+:comment      Empty->1, Reqs->2, Reqe->3,
+:comment      Inv->4, Invack->5, 
+:comment      Gnts->6, Gnte->7 
+
+:smt (define-type cache_state ( subrange 1 3))
+:comment   Invalid->1, Shared->2, Exclusive->3 
+
+
+
+:comment Chan
+:local a message
+:comment Shrset
+:local d bool
+:comment Exgntd
+:global f bool
+:comment Curcmd
+:global g message
+:comment Curptr
+:global h int
+:comment Cache
+:local i cache_state
+
+
+
+:initial
+:var x
+:cnj (=  a[x]  1) (=  d[x]  false) (=  f[x]  false) (=  g[x]  1) (=  h[x]  1) (=  i[x]  1) 
+
+
+:unsafe 
+:var x 
+:var y
+:cnj (= i[x] 3)  (= i[y] 2) 
+
+
+:no_backward_simplification
+
+:comment send_shared
+:transition
+:var x
+:var j
+:guard (=  a[x]  1) (=  i[x]  1)
+:numcases 2
+:case (= x j)
+ :val 2
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_shared
+:transition
+:var x
+:var j
+:guard (=  g[x]  1) (=  a[x]  2)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val d[j]
+ :val f[j]
+ :val 2
+ :val x
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val 2
+ :val x
+ :val i[j]
+
+:comment send_exclusive
+:transition
+:var x
+:var j
+:guard (=  a[x]  1) (<  i[x]  3)
+:numcases 2
+:case (= x j)
+ :val 3
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_exclusive
+:transition
+:var x
+:var j
+:guard (=  g[x]  1) (=  a[x]  3)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val d[j]
+ :val f[j]
+ :val 3
+ :val x
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val 3
+ :val x
+ :val i[j]
+
+
+:comment send_inv1
+:transition
+:var x
+:var j
+:guard (=  a[x]  1) (=  d[x] true) (=  g[x]  3)
+:numcases 2
+:case (= x j)
+ :val 4
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+:comment send_inv2
+:transition
+:var x
+:var j
+:guard (=  a[x]  1) (=  d[x]  true) (=  g[x]  2) (=  f[x]  true)
+:numcases 2
+:case (= x j)
+ :val 4
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment recv_inv
+:transition
+:var x
+:var j
+:guard (=  a[x]  4)
+:numcases 2
+:case (= x j)
+ :val 5
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val 1
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+:comment recv_invack
+:transition
+:var x
+:var j
+:guard (=  a[x]  5) (>  g[x]  1)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val false
+ :val false
+ :val g[j]
+ :val h[j]
+ :val i[x]
+:case
+ :val a[j]
+ :val d[j]
+ :val false
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+
+:comment send_gnt_shared
+:transition
+:var x
+:var j
+:guard (=  h[x]  x) (=  g[x]  2) (=  f[x]  false) (=  a[x]  1)
+:numcases 2
+:case (= x j)
+ :val 6
+ :val true
+ :val f[j]
+ :val 1
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val 1
+ :val h[j]
+ :val i[j]
+
+
+:comment send_gnt_exclusive
+:transition
+:var x
+:var j
+:guard (=  d[x]  false) (=  g[x]  3) (=  f[x]  false) (=  h[x]  x) (=  a[x]  1)
+:uguard (=  d[j]  false) 
+:numcases 2
+:case (= x j)
+ :val 7
+ :val true
+ :val true
+ :val 1
+ :val h[j]
+ :val i[j]
+:case
+ :val a[j]
+ :val d[j]
+ :val true
+ :val 1
+ :val h[j]
+ :val i[j]
+
+:comment recv_gnt_shared
+:transition
+:var x
+:var j
+:guard (=  a[x]  6)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val 2
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]
+
+:comment recv_gnt_exclusive
+:transition
+:var x
+:var j
+:guard (=  a[x]  7)
+:numcases 2
+:case (= x j)
+ :val 1
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val 3
+:case
+ :val a[j]
+ :val d[j]
+ :val f[j]
+ :val g[j]
+ :val h[j]
+ :val i[j]

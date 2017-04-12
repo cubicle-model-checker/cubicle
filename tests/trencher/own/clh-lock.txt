@@ -1,0 +1,91 @@
+#
+# CLH lock, as presented in
+#
+# Maurice Herlihy and Nir Shavit. The art of multiprocessor programming.
+# Morgan Kaufmann, 2008. Page 153.
+#
+# IS robust.
+#
+#   public void lock() {
+# q1: QNode qnode = myNode.get();
+# q2: qnode.locked = true;
+# q3: QNode pred = tail.getAndSet(qnode);
+# q4: myPred.set(pred);
+# q5: while (pred.locked) {}
+#   }
+#
+#  public void unlock() {
+# u1: QNode qnode = myNode.get();
+# u2: qnode.locked = false;
+# u3: myNode.set(myPred.get());
+#  }
+#
+#
+# Memory layout:
+# tail pointer              : 0 — initially, 5
+# myPred pointer of thread 1: 1 — initially NULL, denoted by 100
+# myNode pointer of thread 1: 2 — initially 6
+# myPred pointer of thread 2: 3 — initially NULL, denoted by 100
+# myNode pointer of thread 2: 4 — initially 7
+
+thread initialize
+initial q0
+final q5
+transition	q0	q1	write	5	0
+transition	q1	q2	write	100	1
+transition	q2	q3	write	5	2
+transition	q3	q4	write	100	3
+transition	q4	q5	write	6	4
+end
+
+thread lock_unlock_1
+initial q0i
+final u4
+transition	q0	q0_1	read	test	4
+transition	q0_1	q1	check	test
+
+transition	q1	q2	read	qnode	2
+transition	q2	q3	write	1	qnode
+transition	q3	q3_1	lock
+transition	q3_1	q3_2	read	pred	0
+transition	q3_2	q3_3	write	qnode	0
+transition	q3_3	q4	unlock
+transition	q4	q5	write	pred	1
+transition	q5	q5_1	read	locked	pred
+transition	q5_1	q5	check	!= locked 0
+transition	q5_1	u0	check	== locked 0
+
+transition	u0	u0_1	read	test	4
+transition	u0_1	u1	check	test
+
+transition	u1	u2	read	qnode	2
+transition	u2	u3	write	0	qnode
+transition	u3	u3_1	read	pred	1
+transition	u3_1	u4	write	pred	2
+end
+
+thread lock_unlock_2
+initial q0
+final u4
+transition	q0	q0_1	read	test	4
+transition	q0_1	q1	check	test
+
+transition	q1	q2	read	qnode	4
+transition	q2	q3	write	1	qnode
+transition	q3	q3_1	lock
+transition	q3_1	q3_2	read	pred	0
+transition	q3_2	q3_3	write	qnode	0
+transition	q3_3	q4	unlock
+transition	q4	q5	write	pred	3
+transition	q5	q5_1	read	locked	pred
+transition	q5_1	q5	check	!= locked 0
+transition	q5_1	u0	check	== locked 0
+
+transition	u0	u0_1	read	test	4
+transition	u0_1	u1	check	test
+
+transition	u1	u2	read	qnode	4
+transition	u2	u3	write	0	qnode
+transition	u3	u3_1	read	pred	3
+transition	u3_1	u4	write	pred	4
+end
