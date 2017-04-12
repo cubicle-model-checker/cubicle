@@ -1,0 +1,123 @@
+type state = I | W | CS
+type _direction = _R | _W
+type _weak_var = _VC
+type _val_type = { _tstate : state }
+type _event = { _dir : _direction ; _var : _weak_var ; _val : _val_type ; _p1 : int }
+
+logic _propi : int , int -> int
+logic _e44 :  int
+logic _uniprocRW : int , int -> int
+logic _e45 :  int
+logic _uniprocWR : int , int -> int
+logic _e46 :  int
+logic _e47 :  int
+logic _e48 :  int
+logic _e49 :  int
+logic _e50 :  int
+logic C : int -> state
+logic _e1 :  int
+logic _e2 :  int
+logic _e3 :  int
+logic _e4 :  int
+logic p1 :  int
+logic _e5 :  int
+logic p2 :  int
+logic _e6 :  int
+logic p3 :  int
+logic _e7 :  int
+logic p4 :  int
+logic _e8 :  int
+logic p5 :  int
+logic _e9 :  int
+logic p6 :  int
+logic _e10 :  int
+logic p7 :  int
+logic _e11 :  int
+logic p8 :  int
+logic _e12 :  int
+logic p9 :  int
+logic _e13 :  int
+logic p10 :  int
+logic _e14 :  int
+logic _e15 :  int
+logic _e16 :  int
+logic _e17 :  int
+logic _e18 :  int
+logic _e19 :  int
+logic _e20 :  int
+logic _e21 :  int
+logic _e22 :  int
+logic _e23 :  int
+logic _e24 :  int
+logic _e25 :  int
+logic _e26 :  int
+logic _e27 :  int
+logic _e28 :  int
+logic _e29 :  int
+logic _e30 :  int
+logic _e31 :  int
+logic _e32 :  int
+logic _e33 :  int
+logic p0 :  int
+logic _e34 :  int
+logic _e0 :  int
+logic _e : int , int -> _event
+logic _e35 :  int
+logic _po : int , int , int , int -> prop
+logic _e36 :  int
+logic _rf : int , int , int , int -> prop
+logic _e37 :  int
+logic _co : int , int , int , int -> prop
+logic _e38 :  int
+logic _fence : int , int , int , int -> prop
+logic _e39 :  int
+logic _sync : int , int , int , int -> prop
+logic _e40 :  int
+logic _po_loc : int , int , int , int -> prop
+logic _e41 :  int
+logic _ppo : int , int , int , int -> prop
+logic _e42 :  int
+logic _sci : int , int -> int
+logic _e43 :  int
+
+goal g: not (true
+and (p2 <> p1 and p2 <> p0 and p1 <> p0 and true)
+ 
+and ( _sci(p1,_e1) < _sci(p2,_e1))
+and ( _sci(p1,_e3) < _sci(p1,_e4))
+and ( _sci(p1,_e2) < _sci(p1,_e3))
+and ( _sci(p1,_e3) < _sci(p1,_e1))
+and ( _sci(p1,_e2) < _sci(p1,_e1))
+and ( _sci(p1,_e2) < _sci(p1,_e1))
+
+and ( _propi(p1,_e1) < _propi(p2,_e1))
+and ( _propi(p1,_e3) < _propi(p1,_e4))
+and ( _propi(p1,_e2) < _propi(p1,_e3))
+and ( _propi(p1,_e4) < _propi(p1,_e1))
+and ( _propi(p1,_e3) < _propi(p1,_e1))
+
+and ((_e(p1,_e1))._dir=_R) and ((_e(p1,_e1))._var=_VC) and ((_e(p1,_e1))._p1=p1)
+and ((_e(p1,_e2))._dir=_W) and ((_e(p1,_e2))._var=_VC) and ((_e(p1,_e2))._p1=p1)
+and ((_e(p1,_e3))._dir=_R) and ((_e(p1,_e3))._var=_VC) and ((_e(p1,_e3))._p1=p1)
+and ((_e(p1,_e4))._dir=_R) and ((_e(p1,_e4))._var=_VC) and ((_e(p1,_e4))._p1=p2)
+and ((_e(p2,_e1))._dir=_R) and ((_e(p2,_e1))._var=_VC) and ((_e(p2,_e1))._p1=p2)
+and (((_e(p1,_e3))._val)._tstate=W)
+and (((_e(p1,_e4))._val)._tstate=I)
+and (((_e(p2,_e1))._val)._tstate=CS)
+
+and ( _sci(p1,_e2) >= _sci(p1,_e3)
+or  _sci(p1,_e1) >= _sci(p2,_e1)
+or  _sci(p1,_e3) >= _sci(p1,_e1)
+or  _sci(p1,_e2) >= _sci(p1,_e1)
+or  _sci(p1,_e2) >= _sci(p1,_e1)
+or  _propi(p1,_e2) >= _propi(p1,_e3)
+or  _propi(p1,_e1) >= _propi(p2,_e1)
+or  _propi(p1,_e3) >= _propi(p1,_e1)
+or  p1 >= p2
+or (_e(p1,_e1))._dir <> _R or (_e(p1,_e1))._var <> _VC or (_e(p1,_e1))._p1 <> p1
+or (_e(p1,_e2))._dir <> _W or (_e(p1,_e2))._var <> _VC or (_e(p1,_e2))._p1 <> p1
+or (_e(p1,_e3))._dir <> _R or (_e(p1,_e3))._var <> _VC or (_e(p1,_e3))._p1 <> p1
+or (_e(p2,_e1))._dir <> _R or (_e(p2,_e1))._var <> _VC or (_e(p2,_e1))._p1 <> p2
+or ((_e(p1,_e3))._val)._tstate <> W
+or ((_e(p2,_e1))._val)._tstate <> CS)
+)

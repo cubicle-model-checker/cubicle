@@ -1,0 +1,93 @@
+(*
+   Generalization of Dekker mutual exclusion algorithm by Alain J. Martin from
+   A new generalization of dekker’s algorithm for mutual
+   exclusion. Inf. Process. Lett., 23(6) :295–297, Dec. 1986.
+
+          --------------------------------------
+          p(i) =
+   NCS:       while true do
+                  x(i) := true;
+   LOOP:          while (exists j ≠ i. x(j)) do
+   AWAIT:             x(i) := false;      
+                      await [ t = 0 or t = i ];
+   TURN:              t := i;
+                      x(i) := true;
+                  done;
+   CS:            // CS(i);
+                  x(i) := false;
+                  t := 0;
+              done
+          --------------------------------------
+
+   Translated from MCMT v2 model.
+*)
+
+
+type location = NCS | LOOP | AWAIT | TURN | CS
+
+array P[proc] : location
+weak array X[proc] : bool
+
+weak var T : proc
+weak var T_set : bool
+
+init (i) { T_set = False && X[i] = False && P[i] = NCS }
+
+unsafe (i j) { P[i] = CS && P[j] = CS }
+
+
+transition start (i)
+requires { P[i] = NCS }
+{
+  P[i] := LOOP;
+  write(i, X[i], True);
+}
+
+
+transition wait (i j)
+fences (i)
+requires { P[i] = LOOP && read(i, X[j]) = True }
+{
+  P[i] := AWAIT;
+  write(i, X[i], False);
+}
+
+
+transition enter (i)
+fences (i)
+requires { P[i] = LOOP && forall_other j. read(i, X[j]) = False }
+{
+  P[i] := CS;
+}
+
+
+transition awaited_1 (i)
+requires { P[i] = AWAIT && read(i, T_set) = False }
+{
+  P[i] := TURN;
+}
+
+transition awaited_2 (i)
+requires { P[i] = AWAIT && read(i, T_set) = True && read(i, T) = i }
+{
+  P[i] := TURN;
+}
+
+
+transition turn (i)
+requires { P[i] = TURN }
+{
+  P[i] := LOOP;
+  write(i, X[i], True);
+  write(i, T_set, True);
+  write(i, T, i);
+}
+
+
+transition loop (i)
+requires { P[i] = CS }
+{
+  P[i] := NCS;
+  write(i, X[i], False);
+  write(i, T_set, False);
+}

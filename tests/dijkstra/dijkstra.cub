@@ -1,0 +1,47 @@
+type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
+type flag = F0 | F1 | F2 | F3
+
+array A[proc] : location
+array F[proc] : flag
+array P[proc] : bool
+
+init (x) { A[x] = Q1 && P[x] = False && F[x] = F0 }
+
+unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
+  
+transition t1 (x)
+requires { A[x] = Q1 }
+{ A[x] := Q2;
+  F[x] := F1; }
+
+transition t2 (x)
+requires { A[x] = Q2 && 
+	 forall_other j. (P[j] = False || P[j] = True && F[j] = F0) }
+{ A[x] := Q3; }
+
+transition t3 (x y)
+requires { A[x] = Q3 }
+{ A[x] := Q4;
+  P[y] := True; }
+
+transition t4 (x)
+requires { A[x] = Q4 }
+{ A[x] := Q5;
+  F[x] := F2; }
+
+transition t5 (x)
+requires { A[x] = Q5 && forall_other j. F[j] <> F2 }
+{ A[x] := Q6; }
+
+transition t6 (x y)
+requires { A[x] = Q5 && F[y] = F2 }
+{ A[x] := Q1; }
+
+transition t7 (x)
+requires { A[x] = Q6 }
+{ A[x] := Q7; 
+  F[x] := F0; }
+
+transition t8 (x)
+requires { A[x] = Q7 }
+{ A[x] := Q1; }

@@ -1,0 +1,39 @@
+
+(* number_procs 2 *)
+
+weak var Turn : proc
+local_weak array Want[proc] : bool
+array Crit[proc] : bool
+
+init (z) { Want[z] = False && Crit[z] = False }
+
+(* invariant (i j k) { read(i, Turn) = j && read(j, Turn) = k } (\* unsafe *\) *)
+(* invariant (i j k) { read(i, Turn) = j && read(k, Turn) = k } (\* unsafe *\) *)
+(* invariant (i j k) { read(i, Turn) = i && read(j, Turn) = k } (\* unsafe *\) *)
+(* invariant (i j) { read(i, Turn) = j && read(j, Turn) = i } (\* unsafe *\) *)
+(*invariant (i j k) { read(i, Turn) = j && read(j, Turn) = i && read(k, Turn) = k} (* can't prove *)*)
+
+(* invariant (i j k u) { read(i, Turn) = j && read(k, Turn) = u } *)
+(* invariant (i) { Crit[i] = True && read(i, Turn) <> i } *)
+
+(* invariant (i j) { read(i, Turn) = i && read(j, Turn) = j } *)
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+transition req (i)
+requires { read(i, Want[i]) = False }
+{ write(i, Want[i], True) }
+
+transition enter (i)
+requires { read(i, Want[i]) = True && Crit[i] = False && read(i, Turn) = i }
+{ Crit[i] := True }
+
+transition exit (i j)
+requires { Crit[i] = True }
+{ 
+  Crit[i] := False; 
+  write(i, Turn, j);
+  write(i, Want[i], False)
+}
+
+

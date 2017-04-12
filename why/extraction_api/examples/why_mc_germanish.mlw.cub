@@ -1,0 +1,86 @@
+module Germanish
+
+use import bool.Bool
+use import ref.Ref
+use import map.Map
+
+type proc = int
+
+type msg = Empty | Reqs | Reqe
+type state = Invalid | Shared | Exclusive
+
+val exgntd : ref bool
+val curcmd : ref msg
+val curptr : ref proc
+
+val cache : ref (map proc state)
+val shrset : ref (map proc bool)
+
+
+val init () : unit
+    ensures {
+          forall z:proc. get !cache z = Invalid /\
+                         get !shrset z = False  /\
+                         !exgntd = False        /\
+                         !curcmd = Empty
+          }
+
+
+let unsafe () : unit
+    requires {
+          exists z1 z2:proc. z1 <> z2 /\
+                             get !cache z1 = Exclusive /\
+                             get !cache z2 = Shared
+    } = absurd
+
+
+
+(* val transition_req_shared (n : proc) : unit *)
+(*     (\* reads {curcmd, cache} *\) *)
+(*     writes {curcmd, curptr} *)
+(*     requires {!curcmd = Empty /\ get !cache n = Invalid } *)
+(*     ensures {!curcmd = Reqs /\ !curptr = n } *)
+
+
+let transition_req_shared (n : proc) : unit
+    requires {!curcmd = Empty /\ get !cache n = Invalid } =
+    curcmd := Reqs;
+    curptr := n
+
+let transition_req_exclusive (n : proc) : unit
+    requires {!curcmd = Empty /\ get !cache n <> Exclusive } =
+    curcmd := Reqe;
+    curptr := n
+
+let transition_inv_1 (n : proc) : unit
+    requires { get !shrset n = True /\ !curcmd = Reqe } =
+    exgntd := False;
+    cache := set !cache n Invalid;
+    shrset := set !shrset n False
+
+let transition_inv_2 (n : proc) : unit
+    requires { get !shrset n = True /\ !curcmd = Reqs /\ !exgntd = True } =
+    exgntd := False;
+    cache := set !cache n Invalid;
+    shrset := set !shrset n False
+
+
+let transition_gnt_shared (n : proc) : unit
+    requires { !curptr = n /\ !curcmd = Reqs /\ !exgntd = False } =
+    curcmd := Empty;
+    shrset := set !shrset n True;
+    cache := set !cache n Shared
+
+
+let transition_gnt_exclusive (n : proc) : unit
+    requires { !curptr = n /\ !curcmd = Reqe /\ !exgntd = False /\
+               forall l:proc. get !shrset l = False } =
+    curcmd := Empty;
+    exgntd := True;
+    shrset := set !shrset n True;
+    cache := set !cache n Exclusive
+
+
+end
+
+

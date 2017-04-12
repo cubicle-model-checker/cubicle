@@ -1,0 +1,172 @@
+
+number_procs 3
+
+type loc =  L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8 | CS
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Global variables *)
+weak var X : int
+weak var Y : int
+
+(* Local variables *)
+array LX[proc] : int
+array LY[proc] : int
+
+init (p) { PC[p] = L1 && X = 0 && Y = 0 }
+
+unsafe (p1 p2 p3) { PC[p1] = CS && PC[p2] = CS && PC[p3] = CS }
+
+
+(* Thread 1 *)
+
+transition t1_L1_L2_W_X_Self ()
+requires { PC[#1] = L1 }
+{ PC[#1] := L2; write(#1, X, 1) }
+
+transition t1_L2_L3_R_Y ()
+fences (#1)
+requires { PC[#1] = L2 }
+{ PC[#1] := L3; LY[#1] := read(#1, Y) }
+
+transition t1_L3_L1_Y_NotNull ()
+requires { PC[#1] = L3 && LY[#1] <> 0 }
+{ PC[#1] := L1 }
+
+transition t1_L3_L4_Y_Null ()
+requires { PC[#1] = L3 && LY[#1] = 0 }
+{ PC[#1] := L4 }
+
+transition t1_L4_L5_W_Y_Self ()
+requires { PC[#1] = L4 }
+{ PC[#1] := L5; write(#1, Y, 1) }
+
+transition t1_L5_L6_R_X ()
+fences (#1)
+requires { PC[#1] = L5 }
+{ PC[#1] := L6; LX[#1] := read(#1, X) }
+
+transition t1_L6_L7_X_Other ()
+requires { PC[#1] = L6 && LX[#1] <> 1 }
+{ PC[#1] := L7 }
+
+transition t1_L7_L8_R_Y ()
+requires { PC[#1] = L7 }
+{ PC[#1] := L8; LY[#1] := read(#1, Y) }
+
+transition t1_L8_L1_Y_Other ()
+requires { PC[#1] = L8 && LY[#1] <> 1 }
+{ PC[#1] := L1 }
+
+transition t1_L6_CS_X_Self ()
+requires { PC[#1] = L6 && LX[#1] = 1 }
+{ PC[#1] := CS }
+
+(* Critical section *)
+
+transition t1_CS_L1_W_Y_Null ()
+requires { PC[#1] = CS }
+{ PC[#1] := L1; write(#1, Y, 0) }
+
+
+(* Thread 2 *)
+
+transition t2_L1_L2_W_X_Self ()
+requires { PC[#2] = L1 }
+{ PC[#2] := L2; write(#2, X, 2) }
+
+transition t2_L2_L3_R_Y ()
+fences (#2)
+requires { PC[#2] = L2 }
+{ PC[#2] := L3; LY[#2] := read(#2, Y) }
+
+transition t2_L3_L1_Y_NotNull ()
+requires { PC[#2] = L3 && LY[#2] <> 0 }
+{ PC[#2] := L1 }
+
+transition t2_L3_L4_Y_Null ()
+requires { PC[#2] = L3 && LY[#2] = 0 }
+{ PC[#2] := L4 }
+
+transition t2_L4_L5_W_Y_Self ()
+requires { PC[#2] = L4 }
+{ PC[#2] := L5; write(#2, Y, 2) }
+
+transition t2_L5_L6_R_X ()
+fences (#2)
+requires { PC[#2] = L5 }
+{ PC[#2] := L6; LX[#2] := read(#2, X) }
+
+transition t2_L6_L7_X_Other ()
+requires { PC[#2] = L6 && LX[#2] <> 2 }
+{ PC[#2] := L7 }
+
+transition t2_L7_L8_R_Y ()
+requires { PC[#2] = L7 }
+{ PC[#2] := L8; LY[#2] := read(#2, Y) }
+
+transition t2_L8_L1_Y_Other ()
+requires { PC[#2] = L8 && LY[#2] <> 2 }
+{ PC[#2] := L1 }
+
+transition t2_L6_CS_X_Self ()
+requires { PC[#2] = L6 && LX[#2] = 2 }
+{ PC[#2] := CS }
+
+(* Critical section *)
+
+transition t2_CS_L1_W_Y_Null ()
+requires { PC[#2] = CS }
+{ PC[#2] := L1; write(#2, Y, 0) }
+
+
+(* Thread 3 *)
+
+transition t3_L1_L2_W_X_Self ()
+requires { PC[#3] = L1 }
+{ PC[#3] := L2; write(#3, X, 3) }
+
+transition t3_L2_L3_R_Y ()
+fences (#3)
+requires { PC[#3] = L2 }
+{ PC[#3] := L3; LY[#3] := read(#3, Y) }
+
+transition t3_L3_L1_Y_NotNull ()
+requires { PC[#3] = L3 && LY[#3] <> 0 }
+{ PC[#3] := L1 }
+
+transition t3_L3_L4_Y_Null ()
+requires { PC[#3] = L3 && LY[#3] = 0 }
+{ PC[#3] := L4 }
+
+transition t3_L4_L5_W_Y_Self ()
+requires { PC[#3] = L4 }
+{ PC[#3] := L5; write(#3, Y, 3) }
+
+transition t3_L5_L6_R_X ()
+fences (#3)
+requires { PC[#3] = L5 }
+{ PC[#3] := L6; LX[#3] := read(#3, X) }
+
+transition t3_L6_L7_X_Other ()
+requires { PC[#3] = L6 && LX[#3] <> 3 }
+{ PC[#3] := L7 }
+
+transition t3_L7_L8_R_Y ()
+requires { PC[#3] = L7 }
+{ PC[#3] := L8; LY[#3] := read(#3, Y) }
+
+transition t3_L8_L1_Y_Other ()
+requires { PC[#3] = L8 && LY[#3] <> 3 }
+{ PC[#3] := L1 }
+
+transition t3_L6_CS_X_Self ()
+requires { PC[#3] = L6 && LX[#3] = 3 }
+{ PC[#3] := CS }
+
+(* Critical section *)
+
+transition t3_CS_L1_W_Y_Null ()
+requires { PC[#3] = CS }
+{ PC[#3] := L1; write(#3, Y, 0) }

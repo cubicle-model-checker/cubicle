@@ -1,0 +1,14 @@
+
+number_procs 3
+
+array F[proc] : int
+
+init (i) { F[i] = 0 }
+
+unsafe (i j k) { F[i] = 1 && F[j] = 2 && F[k] = 3 }
+
+transition t1 (i j)
+{ F[p] := case
+    | p = i : 1
+    | p = j : 2
+    | _ : 3 }

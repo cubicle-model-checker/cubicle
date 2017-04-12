@@ -1,0 +1,72 @@
+
+logic rfe : int, int -> prop
+logic co : int, int -> prop
+logic fr : int, int -> prop
+logic po : int, int -> prop
+logic sync : int, int -> prop
+
+logic propi : int -> int
+
+logic e0 : int
+logic e1 : int
+logic e2 : int
+logic e3 : int
+logic e4 : int
+logic e5 : int
+logic e6 : int
+
+axiom alldiff : e0 <> e1 <> e2 <> e3 <> e4 <> e5 <> e6
+
+goal g1:
+ rfe(e4, e1) and rfe(e4, e3) and rfe(e2, e1) and
+ po(e3, e2) and
+ (co(e4, e2) and fr(e3, e2) and fr(e1, e2) or
+  co(e2, e4) and fr(e1, e4))
+->
+ rfe(e4, e1) and
+ (co(e4, e2) and fr(e1, e2) or
+  co(e2, e4))
+
+goal g2:
+ rfe(e4, e1) and rfe(e4, e3) and rfe(e2, e1) and
+ po(e3, e2) and
+ (co(e4, e2) and fr(e3, e2) and fr(e1, e2) or
+  co(e2, e4) and fr(e1, e4))
+->
+                 rfe(e4, e3) and rfe(e2, e1) and
+ po(e3, e2) and
+ (co(e4, e2) and fr(e3, e2)                or
+  co(e2, e4) and fr(e1, e4))
+
+goal g20: (* counter-example where co is required / with co *)
+ propi(e1) = propi(e2) and	(* sync(e1, e2) *)
+ propi(e3) = propi(e4) and	(* sync(e3, e4) *)
+ propi(e5) < propi(e1) and	(* fence(e5, e1) *)
+ propi(e3) < propi(e2) and	(* rf(e3, e2) *)
+ (propi(e3) < propi(e5) and 	(* co(e3, e5) *)
+  propi(e2) < propi(e5) or	(* fr(e2, e5) *)
+  propi(e5) < propi(e3)) 	(* co(e5, e3) *)
+-> (* valid this way only *)
+ propi(e1) = propi(e2) and	(* sync(e1, e2) *)
+ propi(e3) = propi(e4) and	(* sync(e3, e4) *)
+ propi(e5) < propi(e1) and	(* fence(e5, e1) *)
+ propi(e3) < propi(e2) and	(* rf(e3, e2) *)
+ (propi(e4) < propi(e5) or 	(* co(e4, e5) *)
+  propi(e5) < propi(e4)) 	(* co(e5, e4) *)
+
+
+goal g30:  (* counter-example where co is required / with co *)
+  propi(e4) < propi(e2) and
+  propi(e2) < propi(e1) and
+  propi(e1) < propi(e0) and
+  propi(e3) < propi(e1) and
+  (propi(e3) < propi(e4) or
+   propi(e4) < propi(e3) and propi(e1) < propi(e3))
+-> (* not valid this way and the other way around *)
+  propi(e4) < propi(e2) and
+  propi(e2) < propi(e1) and
+  propi(e1) < propi(e0) and
+  propi(e3) < propi(e1) and
+  (propi(e3) < propi(e4) and propi(e1) < propi(e4) or
+   propi(e4) < propi(e3))
+

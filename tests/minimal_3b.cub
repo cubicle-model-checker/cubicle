@@ -1,0 +1,89 @@
+
+type loc = L0 | L1 | L2
+
+type kind = KP1 | KP2 | KBuf
+
+var F : bool
+array PC[proc] : loc
+
+array Kind[proc] : kind
+
+array Var[proc,proc] : bool
+array Val[proc,proc] : bool
+
+init (p i) { PC[p] = L0 && PC[i] = L0 && F = False &&
+     	     Var[p,i] = False && Var[p,p] = False && Var[i,i] = False }
+
+invariant (p1 p2) { Kind[p1] = Kind[p2] &&
+	      	    Kind[p1] <> KBuf && Kind[p2] <> KBuf }
+
+unsafe (p1 p2) { Kind[p1] = KP1 && Kind[p2] = KP2 &&
+       	       	 PC[p1] = L1 && PC[p2] = L1 }
+
+
+
+transition t1_1a_mem (p)
+requires { Kind[p] = KP1 &&
+	   PC[p] = L0 && F = False &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+transition t1_1b_buf (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L0 && Var[p,i] = True && Val[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+transition t1_2 (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L1 && Var[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L2; Var[p,i] := True; Val[p,i] := True; }
+
+transition t1_3a_mem (p)
+requires { Kind[p] = KP1 &&
+	   PC[p] = L2 && F = False &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L0; }
+
+transition t1_3b_buf (p i)
+requires { Kind[p] = KP1 && Kind[i] = KBuf &&
+	   PC[p] = L2 && Var[p,i] = True && Val[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L0; }
+
+
+
+transition t2_1a_mem (p)
+requires { Kind[p] = KP2 &&
+	   PC[p] = L0 && F = True &&
+	   forall_other k. (Kind[k] <> KBuf ||
+	   		     (Kind[k] = KBuf && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+transition t2_1b_buf (p i)
+requires { Kind[p] = KP2 && Kind[i] = KBuf &&
+	   PC[p] = L0 && Var[p,i] = True && Val[p,i] = True &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L1; }
+
+transition t2_2 (p i)
+requires { Kind[p] = KP2 && Kind[i] = KBuf &&
+	   PC[p] = L1 && Var[p,i] = False &&
+	   forall_other k. (Kind[k] <> KBuf || k > i ||
+	   		     (Kind[k] = KBuf && k < i && Var[p,k] = False)) }
+{ PC[p] := L0; Var[p,i] := True; Val[p,i] := False; }
+
+
+
+transition flush_F (p i)
+requires { Kind[p] <> KBuf && Kind[i] = KBuf && Var[p,i] = True &&
+	   forall_other k. (Kind[k] <> KBuf || k < i ||
+	   		     (Kind[k] = KBuf && k > i && Var[p,k] = False)) }
+{ F := Val[p,i]; Var[p,i] := False; }

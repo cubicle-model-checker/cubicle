@@ -1,0 +1,20 @@
+
+number_procs 5
+(*
+  3 procs : 14 nodes, 99 FP, 142 SC, 0.4s
+  4 procs : 33 nodes, 445 FP, 575 SC, 2.6s
+  5 procs : 62 nodes, 1294 FP, 1588 SC, 29s
+  6 procs : 103 nodes, 3026 FP, 3595 SC, 9m16s
+*)
+
+weak array X[proc] : bool
+
+init (i) { X[i] = True }
+
+unsafe (i j) { read(i, X[i]) = False && read(j, X[j]) = True }
+(* unsafe (i j) { read(i, X[i]) = False && read(i, X[j]) = True } *)
+(* unsafe (i j) { read(i, X[j]) = False && read(j, X[i]) = True } *)
+
+transition t (i j)
+requires { read(i, X[j]) = True }
+{ write(i, X[i], True) }

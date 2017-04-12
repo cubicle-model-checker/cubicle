@@ -1,0 +1,21 @@
+
+type state = I | W | CS
+
+(* Global variables *)
+array C[proc] : state
+
+init (p) { C[p] = I }
+
+unsafe (p1 p2) { C[p1] = CS && C[p2] = CS }
+
+transition t1 (p)
+requires { C[p] = I && forall_other q. (q < p || C[q] = I) }
+{ C[p] := W }
+
+transition t2 (p)
+requires { C[p] = W && forall_other q. (p < q || C[q] = I) }
+{ C[p] := CS }
+
+transition t3 (p)
+requires { C[p] = CS }
+{ C[p] := I }

@@ -1,0 +1,27 @@
+
+- Disjunctions of unsafe formulas
+
+  Alain's idea: use a restricted form of disjunctions on terms
+
+  	  T[z1] = A /\ (T[z2] = B \/ T[z2] = C)
+
+	  --->
+
+	  T[z1] = A /\ T[z2] = (B | C)
+  
+
+- Extend the syntax for arithmetic expressions
+
+- Compute the tau function only once
+
+- Improve the heuristic used for the generation of invariants
+
+- Mix backward and forward reasoning (Amit, Sava ?)
+
+- Benchmark Cubicle on other examples
+
+- Taking advantage of the unsat cores returned by the SMT solver.
+
+- Improve the concurrent computation of invariants
+
+

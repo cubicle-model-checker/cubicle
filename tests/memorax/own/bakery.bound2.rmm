@@ -1,0 +1,46 @@
+/* Lamport's bakery algorithm for two processes */
+
+forbidden
+  CS CS
+process
+data
+  c = 0 : [0:1]
+  n = 0 : [0:2]
+registers
+  $r0 = * : [0:2]
+  $r1 = * : [0:2]
+text
+  L0: write: c[my] := 1;
+  read: $r0 := n[0];
+  $r1 := $r0 + 1;
+  write: n[my] := $r1;
+  write: c[my] := 0;
+  read: c[0] = 0; /* spin wait */
+  L1: read: $r0 := n[0];
+  if $r0 != 0 && $r0 < $r1 then
+    goto L1;
+  CS: write: n[my] := 0;
+  goto L0
+
+process
+data
+  c = 0 : [0:1]
+  n = 0 : [0:2]
+registers
+  $r0 = * : [0:2]
+  $r1 = * : [0:2]
+text
+  L0: write: c[my] := 1;
+  read: $r0 := n[0];
+  $r1 := $r0 + 1;
+  write: n[my] := $r1;
+  write: c[my] := 0;
+  read: c[0] = 0; /* spin wait */
+  L1: read: $r0 := n[0];
+  if $r0 != 0 && [$r0 < $r1 || $r0 = $r1] then
+    goto L1;
+  CS: write: n[my] := 0;
+  goto L0
+
+
+

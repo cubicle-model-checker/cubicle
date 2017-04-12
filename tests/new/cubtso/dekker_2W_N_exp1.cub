@@ -1,0 +1,33 @@
+
+weak var Turn : proc
+weak array Want[proc] : bool
+array Crit[proc] : bool
+
+array LW[proc] : bool
+
+init (z) { Want[z] = False && Crit[z] = False && LW[z] = False }
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+transition req (i)
+requires { read(i, Want[i]) = False }
+{ write(i, Want[i], True) }
+
+transition enter_1 (i)
+requires { Crit[i] = False && LW[i] = False && read(i, Want[i]) = True }
+{ LW[i] := True }
+
+transition enter_2 (i)
+requires { LW[i] = True && Crit[i] = False && read(i, Turn) = i }
+{ Crit[i] := True }
+
+transition exit (i j)
+requires { Crit[i] = True }
+{ 
+  Crit[i] := False;
+  LW[i] := False;
+  write(i, Turn, j);
+  write(i, Want[i], False)
+}
+
+
