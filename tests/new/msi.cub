@@ -1,26 +1,32 @@
 
-number_procs 3
+(* number_procs 4 *)
 
 (*
   2 procs : 33 nodes, 365 FP, 592 SC, 22s
   3 procs : TO
 
 New version (better read/write assoc) :
-  2 procs : 16 nodes, 77 FP, 264 SC, 2,6s, H = 3
-  3 procs : 259 nodes, 3490 FP, 12675 SC, 38m10, H = 7
+  2 procs : 16 nodes, 77 FP, 264 SC, 2,6s
+  3 procs : 259 nodes, 3490 FP, 12675 SC, 38m10
 
 New version 2 (inline co, prop) :
-  2 procs : 33 nodes, 336 FP, 542 SC, 6s, H = ?
-  3 procs : 431 nodes, 16394 FP, 27573 SC, 35m04, H = ?
+  2 procs : 33 nodes, 336 FP, 542 SC, 6s
+  3 procs : 431 nodes, 16394 FP, 27573 SC, 35m04
 
 New version 3 (inline fr) :
-  2 procs : 14 nodes, 70 FP, 135 SC, 1s, H = ?
-  3 procs : 124 nodes, 1960 FP, 3561 SC, 2m08, H = ?
+  2 procs : 14 nodes, 70 FP, 135 SC, 1s
+  3 procs : 124 nodes, 1960 FP, 3561 SC, 2m08
 
 New version 4 (fix "bug" in prop/sync) :
-  2 procs : 14 nodes, 66 FP, 129 SC, 1s, H = ?
-  3 procs : 111 nodes, 1636 FP, 2986 SC, 1m45, H = ?
+  2 procs : 14 nodes, 66 FP, 129 SC, 1s
+  3 procs : 111 nodes, 1636 FP, 2986 SC, 1m45
   4 procs : TO / 470 N, 6394 FP, 11590 SC, 74m (60m FP, 16m psubst, 13m solv, 2m safety, 8m acyc, 8m esubst, 7m mk_prop)
+
+New version 5 (write groups in heuristics) :
+  2 procs : 4 N, 10 FP, 28 SC, 0,1s
+  3 procs : 13 N, 135 FP, 261 SC, 2,3s
+  4 procs : 17 N, 333 FP, 603 SC, 6,7s
+  N procs : 18 N / 512 FP / 923 SC, 42s
 *)
 
 type st = M | S | I

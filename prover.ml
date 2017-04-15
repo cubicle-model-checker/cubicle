@@ -303,7 +303,7 @@ let acyclic ({ tag = id; cube = cube } as n) =
   let nb_procs = List.length (Node.variables n) in
   SMT.assume ~id (distinct_vars nb_procs);
   let _, evts, rels = Weakorder.extract_events_set (cube.Cube.litterals) in
-  
+
   let prop = Weakorder.make_prop evts rels in
   if Weakmem.H2Set.exists (fun (e1a, e2a) ->
      Weakmem.H2Set.exists (fun (e1b, e2b) ->

@@ -368,7 +368,7 @@ let make_orders ?(fp=false) evts rels =
   TimeRels.start ();
   let evts = HMap.add hE0 (hP0, hW, hNone, []) evts in (* dummy event for e0 *)
   let f = [] in
-  let f = if fp then begin
+  let f = if fp then begin (*
     (* let f = make_predl hFence (gen_fence evts rels) f in *)
     (* let f = make_predl hRf (gen_rf evts rels) f in *)
     (* let f = make_predl hRmw (gen_rmw evts rels) f in *)
@@ -380,7 +380,7 @@ let make_orders ?(fp=false) evts rels =
     let f = make_rell hSci (gen_co evts rels) f in
     let f = make_rell hSci (gen_fr evts rels) f in
     let f = make_rell ~op:F.Eq hSci (gen_rmw evts rels) f in
-    (* let f = make_rell hSci (gen_rmw evts rels) f in *) (* rmw in po *)
+    (* let f = make_rell hSci (gen_rmw evts rels) f in rmw in po *)
 
     let f = make_rell ~op:F.Eq hPropi (gen_sync evts rels) f in
     let f = make_rell hPropi (gen_ppo_tso evts rels) f in
@@ -401,9 +401,9 @@ let make_orders ?(fp=false) evts rels =
     let f = make_ccofr hSci ccofrfw f in
     let f = make_cofr hPropi cofrfw f in
     let f = make_ccofr hPropi ccofrfw f in
-*)
+*) *)
     f
-  end else begin
+  end else begin (*
     (* let f = make_predl hSync (gen_sync evts rels) f in *)
     (* let f = make_predl hPoLoc (gen_po_loc evts rels) f in *)
     (* let f = make_predl hRf (gen_rf evts rels) f in *)
@@ -443,7 +443,7 @@ let make_orders ?(fp=false) evts rels =
     let f = make_ccofr hSci ccofrfw f in
     let f = make_cofr hPropi cofrfw f in
     let f = make_ccofr hPropi ccofrfw f in
-*)
+*) *)
     f
   end in
   TimeRels.pause ();
@@ -509,6 +509,11 @@ let make_prop evts (po, f, rf, co, fr, rmw, s) =
 
   (* rfe *)  
   let prop = HMap.fold (fun wef retl prop ->
+    let (pf, _, _, _) = HMap.find wef evts in
+    let retl = List.filter (fun ret ->
+      let (pt, _, _, _) = HMap.find ret evts in
+      not (H.equal pf pt)
+    ) retl in
     let pre = H2Set.filter (fun (_, pet) -> H.equal pet wef) prop in
     let post = H2Set.filter (fun (pef, _) ->
                  List.exists (fun ret -> H.equal ret pef) retl) prop in
@@ -622,6 +627,141 @@ let make_prop evts (po, f, rf, co, fr, rmw, s) =
 
 
 
+let make_scloc evts (po, f, rf, co, fr, rmw, s) =
+  TimeProp.start ();
+  
+  let scloc = H2Set.empty in
+
+  let is_rmw ef et =
+    try
+      let ewl = HMap.find ef rmw in
+      List.exists (fun ew -> H.equal ew et) ewl
+    with Not_found -> false
+  in
+
+  (* po_loc *)
+  let scloc = HMap.fold (fun p ppo scloc ->
+    H2Set.fold (fun (ef, et) scloc ->
+      let edf = HMap.find ef evts in
+      let edt = HMap.find et evts in
+      if not (same_var edf edt) || is_rmw ef et then scloc
+      else H2Set.add (ef, et) scloc
+    ) ppo scloc
+  ) po scloc in
+
+  (* co *)
+  let scloc = H2Set.fold (fun (ef, et) scloc ->
+    let pre = H2Set.filter (fun (_, pet) -> H.equal pet ef) scloc in
+    let post = H2Set.filter (fun (pef, _) -> H.equal et pef) scloc in
+    let pre = H2Set.add (ef, et) pre in
+    let post = H2Set.add (ef, et) post in
+    H2Set.fold (fun (pef, _) scloc ->
+      H2Set.fold (fun (_, pet) scloc ->
+        H2Set.add (pef, pet) scloc
+      ) post scloc
+    ) pre scloc
+  ) co scloc in
+
+  (* rf *)  
+  let scloc = HMap.fold (fun wef retl scloc ->
+    let pre = H2Set.filter (fun (_, pet) -> H.equal pet wef) scloc in
+    let post = H2Set.filter (fun (pef, _) ->
+                 List.exists (fun ret -> H.equal ret pef) retl) scloc in
+    let pre = List.fold_left (fun pre ret ->
+                H2Set.add (wef, ret) pre) pre retl in
+    let post = List.fold_left (fun post ret ->
+                 H2Set.add (wef, ret) post) post retl in
+    H2Set.fold (fun (pef, _) scloc ->
+      H2Set.fold (fun (_, pet) scloc ->
+        H2Set.add (pef, pet) scloc
+      ) post scloc
+    ) pre scloc
+  ) rf scloc in
+
+  (* fr *)
+  let scloc = HMap.fold (fun _ref wetl scloc ->
+    let pre = H2Set.filter (fun (_, pet) -> H.equal pet _ref) scloc in
+    let post = H2Set.filter (fun (pef, _) ->
+                 List.exists (fun wet -> H.equal wet pef) wetl) scloc in
+    let pre = List.fold_left (fun pre wet ->
+                H2Set.add (_ref, wet) pre) pre wetl in
+    let post = List.fold_left (fun post wet ->
+                 H2Set.add (_ref, wet) post) post wetl in
+    H2Set.fold (fun (pef, _) scloc ->
+      H2Set.fold (fun (_, pet) scloc ->
+        H2Set.add (pef, pet) scloc
+      ) post scloc
+    ) pre scloc
+  ) fr scloc in
+
+  let sync = List.fold_left (fun ss sync ->
+    let ss = ref ss in
+    let sync = ref sync in
+    while not (HSet.is_empty !sync) do
+      let e1 = HSet.choose !sync in
+      sync := HSet.remove e1 !sync;
+      try
+        let e2 = HSet.choose !sync in
+        ss := H2Set.add (e1, e2) !ss
+      with Not_found -> ()
+    done;
+    !ss
+  ) H2Set.empty s in
+
+  (* add rmw to sync *)
+  let sync = HMap.fold (fun ef etl sync ->
+    let eq_ef = H2Set.fold (fun (pef, pet) eq_ef ->
+      if H.equal pef ef then HSet.add pet eq_ef
+      else if H.equal pet ef then HSet.add pef eq_ef
+      else eq_ef
+    ) sync (HSet.of_list etl) in
+    List.fold_left (fun sync et ->
+      let eq_et = H2Set.fold (fun (pef, pet) eq_et ->
+        if H.equal pef et then HSet.add pet eq_et
+        else if H.equal pet et then HSet.add pef eq_et
+        else eq_et
+      ) sync (HSet.singleton ef) in
+      HSet.fold (fun eef sync ->
+        HSet.fold (fun eet sync ->
+          H2Set.add (eef, eet) sync
+        ) eq_et sync
+      ) eq_ef sync
+    ) sync etl
+  ) rmw sync in
+
+  let scloc = H2Set.fold (fun (e1, e2) scloc ->
+    let pre_e1 = H2Set.fold (fun (pef, pet) pre_e1 ->
+      if H.equal pet e1 then HSet.add pef pre_e1 else pre_e1
+    ) scloc HSet.empty in
+    let pre_e2 = H2Set.fold (fun (pef, pet) pre_e2 ->
+      if H.equal pet e2 then HSet.add pef pre_e2 else pre_e2
+    ) scloc HSet.empty in
+    let post_e1 = H2Set.fold (fun (pef, pet) post_e1 ->
+      if H.equal pef e1 then HSet.add pet post_e1 else post_e1
+    ) scloc HSet.empty in
+    let post_e2 = H2Set.fold (fun (pef, pet) post_e2 ->
+      if H.equal pef e2 then HSet.add pet post_e2 else post_e2
+    ) scloc HSet.empty in
+    let scloc = HSet.fold (fun pre scloc ->
+      HSet.fold (fun post scloc -> H2Set.add (pre, post) scloc) post_e2 scloc
+    ) pre_e1 scloc in
+    let scloc = HSet.fold (fun pre scloc ->
+      HSet.fold (fun post scloc -> H2Set.add (pre, post) scloc) post_e1 scloc
+    ) pre_e2 scloc in
+    let scloc = HSet.fold (fun pre scloc ->
+      H2Set.add (pre, e2) scloc) pre_e1 scloc in
+    let scloc = HSet.fold (fun pre scloc ->
+      H2Set.add (pre, e1) scloc) pre_e2 scloc in
+    let scloc = HSet.fold (fun post scloc ->
+      H2Set.add (e2, post) scloc) post_e1 scloc in
+    let scloc = HSet.fold (fun post scloc ->
+      H2Set.add (e1, post) scloc) post_e2 scloc in
+    scloc
+  ) sync scloc in
+
+  TimeProp.pause ();
+
+  scloc
 
        
 

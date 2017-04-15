@@ -3,13 +3,13 @@ number_procs 1
 
 type pc = L1 | L2 | End
 
-weak var X : int
-var R : int
 var PC : pc
-
-unsafe () { PC = End }
+var R : int
+weak var X : int
 
 init () { PC = L1 && X = 0 && R = 0 }
+
+unsafe () { PC = End }
 
 transition t1 ()
 requires { PC = L1 }

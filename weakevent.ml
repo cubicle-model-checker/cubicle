@@ -69,8 +69,8 @@ let extract_events sa =
             else evt in
        (SAtom.add a sa_pure, sa_rds, sa_wts, fces,
         update_eids eids a, HMap.add e evt evts)
-    | Atom.Comp (Field (Field (Access (ar, [e]), f), _), Eq, Elem (c, t))
-    | Atom.Comp (Elem (c, t), Eq, Field (Field (Access (ar, [e]), f), _))
+    | Atom.Comp (Field (Field (Access (ar, [e]), f), _), _, _)
+    | Atom.Comp (_, _, Field (Field (Access (ar, [e]), f), _))
          when H.equal ar hE && H.equal f hVal ->
        let ((p, d, v, vi), hv) as evt = find_event_safe e evts in
        let evt = ((p, d, v, vi), true) in

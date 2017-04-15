@@ -105,7 +105,7 @@ let compatible_terms cop1 t1 cop2 t2 =
 
 (* Checks whether (ed1, vals) can subsume (ed2, vals2) *)
 let compat_evts (ed1, vals1) (ed2, vals2) =
-  same_proc ed1 ed2 && same_dir ed1 ed2 && same_var ed1 ed2 &&
+  same_dir ed1 ed2 && same_var ed1 ed2 &&
     (vals1 = [] (*&& vals2 = []*) ||
      vals1 <> [] && vals2 <> [] &&
     (* (vals1 = [] || vals2 = [] || *)
@@ -175,105 +175,63 @@ let get_evts ar =
   let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
   evts
 
-let po_agree cs ef pf et pt pof pot =
-  let ppof = HMap.find pf pof in
-  let ppot = HMap.find pt pot in
-  HMap.for_all (fun ef0 (et0, mt0) ->
-    (*if mt0 then true
-    else*) if H2Set.mem (ef0, ef) ppof then H2Set.mem (et0, et) ppot
-    else if H2Set.mem (ef, ef0) ppof then H2Set.mem (et, et0) ppot
+(* let po_agree cs ef pf et pt (pof, _, _, _, _, _, _) (pot, _, _, _, _, _, _) = *)
+(*   let ppof = HMap.find pf pof in *)
+(*   let ppot = HMap.find pt pot in *)
+(*   HMap.for_all (fun ef0 et0 -> *)
+(*     if H2Set.mem (ef0, ef) ppof then H2Set.mem (et0, et) ppot *)
+(*     else if H2Set.mem (ef, ef0) ppof then H2Set.mem (et, et0) ppot *)
+(*     else true *)
+(*   ) cs *)
+
+let sync_agree cs ef pf et pt (_, _, _, _, _, _, sf) (_, _, _, _, _, _, st) =
+  HMap.for_all (fun ef0 et0 ->
+    if List.exists (fun sf -> HSet.mem ef0 sf && HSet.mem ef sf) sf then
+       List.exists (fun st -> HSet.mem et0 st && HSet.mem et st) st
     else true
   ) cs
 
-(* po : pid -> (eid, eid) set
-   fce : pid -> (eid, eid) set
-   rf : eid -> eid list (write -> reads)
-   co : (eid, eid) set
-   rmw : eid -> eid (read -> write)
-   s : (eid set) list *) (*
-let make_prop (po, f, rf, co, rmw, sf) =
-  let prop = co in
-  let prop = HMap.fold (fun p ppo prop ->
-    H2Set.union ppo prop) po prop in
-  let prop = HMap.fold (fun p pf prop ->
-    H2Set.fold (fun (fef, fet) prop ->
-      let pre = H2Set.filter (fun (_, pet) -> H.equal pet fef) prop in
-      let post = H2Set.filter (fun (pef, _) -> H.equal fet pef) prop in
-      let pre = H2Set.add (fef, fet) pre in
-      let post = H2Set.add (fef, fet) post in
-      H2Set.fold (fun (pef, _) prop ->
-        H2Set.fold (fun (_, pet) prop ->
-          H2Set.add (pef, pet) prop
-        ) post prop
-      ) pre prop
-    ) pf prop
-  ) po prop in
-  let prop = HMap.fold (fun wef retl prop ->
-    let pre = H2Set.filter (fun (_, pet) -> H.equal pet wef) prop in
-    let post = H2Set.filter (fun (pef, _) ->
-                 List.exists (fun ret -> H.equal ret pef) retl
-               ) prop in
-    let pre = List.fold_left (fun pre ret ->
-                H2Set.add (wef, ret) pre) pre retl in
-    let post = List.fold_left (fun post ret ->
-                 H2Set.add (wef, ret) post) post retl in
-    H2Set.fold (fun (pef, _) prop ->
-      H2Set.fold (fun (_, pet) prop ->
-        H2Set.add (pef, pet) prop
-      ) post prop
-    ) pre prop
-  ) rf prop in
-  prop  *)
-
-let prop_agree cs ef pf et pt propf propt =
-  HMap.for_all (fun ef0 (et0, mt0) ->
-    (*if mt0 then true
-    else*) if H2Set.mem (ef0, ef) propf then H2Set.mem (et0, et) propt
-    else if H2Set.mem (ef, ef0) propf then H2Set.mem (et, et0) propt
+let rel_agree cs ef pf et pt relf relt =
+  HMap.for_all (fun ef0 et0 ->
+    if H2Set.mem (ef0, ef) relf then H2Set.mem (et0, et) relt
+    else if H2Set.mem (ef, ef0) relf then H2Set.mem (et, et0) relt
     else true
   ) cs
 
-let make_substs esf (pof, ff, rff, cof, frf, rmwf, sf) propf
-                est (pot, ft, rft, cot, frt, rmwt, st) propt =
-  (* let propf = make_prop (pof, ff, rff, cof, rmwf, sf) in *)
-  (* let propt = make_prop (pot, ft, rft, cot, rmwt, st) in *)
+let make_substs esf relf propf sclocf
+                est relt propt scloct =
   let rec aux csl cs esf est =
     try
       let ef, (((pf, df, vf, vif) as edf, valf) as evtf) = HMap.choose esf in
       let esf = HMap.remove ef esf in
       let csl = HMap.fold (
         fun et (((pt, dt, vt, vit) as edt, valt) as evtt) csl ->
-        (* buggy patch to try to subsume more nodes *)            
-        (*if valf = [] && is_read edf && is_read edt
-          then aux csl (HMap.add ef (et, true) cs) esf (HMap.remove et est)
-        else if (valf <> [] || is_write edf) &&
-            compat_evts evtf evtt && po_agree cs ef pf et pt pof pot
-          then aux csl (HMap.add ef (et, false) cs) esf (HMap.remove et est)
-	else csl*)
-        if valf = [] && valt = [] && H.equal pf pt &&
-           is_read edf && is_read edt
-             (*po_agree cs ef pf et pt pof pot &&*)
-           && prop_agree cs ef pf et pt propf propt
-          then aux csl (HMap.add ef (et, true) cs) esf (HMap.remove et est)
-        else if valf = [] && valt = [] && same_dir edf edt &&(*H.equal pf pt&&*)
-           is_local_weak vf && is_local_weak vt && H.equal vf vt &&
-             (*po_agree cs ef pf et pt pof pot &&*) H.equal pf pt
-           && prop_agree cs ef pf et pt propf propt
-          then aux csl (HMap.add ef (et, true) cs) esf (HMap.remove et est)
-        else if compat_evts evtf evtt (*&& po_agree cs ef pf et pt pof pot*)
-           && prop_agree cs ef pf et pt propf propt                  
-          then aux csl (HMap.add ef (et, false) cs) esf (HMap.remove et est)
+        if valf = [] && valt = []
+           && H.equal pf pt
+           && is_read edf && is_read edt
+           (* && po_agree cs ef pf et pt relf relt *)
+           && sync_agree cs ef pf et pt relf relt
+           && rel_agree cs ef pf et pt sclocf scloct
+           && rel_agree cs ef pf et pt propf propt
+          then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
+        else if compat_evts evtf evtt
+           && H.equal pf pt
+           (* && po_agree cs ef pf et pt relf relt *)
+           && sync_agree cs ef pf et pt relf relt
+           && rel_agree cs ef pf et pt sclocf scloct
+           && rel_agree cs ef pf et pt propf propt                  
+          then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
 	else csl
       ) est csl
       in csl
     with Not_found ->
-      let cs = HMap.map (fun (et, _) -> et) cs in
       cs :: csl (* From Set is empty -> we're done *)
   in
   aux [] HMap.empty esf est
 
 (* from : visited node, more general / to : node to test, less general *)
-let build_event_substs from_evts from_rels from_prop to_evts to_rels to_prop =
+let build_event_substs from_evts from_rels from_prop from_scloc
+                       to_evts to_rels to_prop to_scloc =
 (*
   let fprintf s = Format.fprintf Format.std_formatter s in
  
@@ -291,7 +249,8 @@ let build_event_substs from_evts from_rels from_prop to_evts to_rels to_prop =
   H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) to_prop;
   fprintf "\n----------\n";  *)
   TimeCSubst.start ();
-  let es = make_substs from_evts from_rels from_prop to_evts to_rels to_prop in
+  let es = make_substs from_evts from_rels from_prop from_scloc
+                       to_evts to_rels to_prop to_scloc in
 (*
   List.iter (fun s ->
     fprintf "Subst :";
@@ -342,7 +301,7 @@ let remap_events_ar ar sub =
     | Access (a, [e]) when H.equal a hE -> Access (a, [subst e])
     | Access (a, [p; e]) when H.equal a hFence -> Access (a, [p; subst e])
     | Access (a, [e1; e2]) when H.equal a hRf || H.equal a hCo
-        || H.equal a hRmw -> Access (a, [subst e1; subst e2])
+       || H.equal a hFr || H.equal a hRmw -> Access (a, [subst e1; subst e2])
     | Access (a, sl) when H.equal a hSync -> Access (a, remap_sl sl)
     (* Read / Write / Fence -> KO *)
     | t -> t

@@ -26,7 +26,13 @@ val make_orders :
 
 
 val make_prop :
-  ('a * H.t * H.t * H.t list) HMap.t ->
+  (H.t * H.t * H.t * H.t list) HMap.t ->
+    (H2Set.t HMap.t * H2Set.t HMap.t * H.t list HMap.t *
+      H2Set.t * H.t list HMap.t * H.t list HMap.t * HSet.t list) ->
+    H2Set.t
+
+val make_scloc :
+  (H.t * H.t * H.t * H.t list) HMap.t ->
     (H2Set.t HMap.t * H2Set.t HMap.t * H.t list HMap.t *
       H2Set.t * H.t list HMap.t * H.t list HMap.t * HSet.t list) ->
     H2Set.t

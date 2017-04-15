@@ -1,10 +1,7 @@
 
-(* number_procs 3 *)
-
 type state = I | W | CS
 
-(* Global variables *)
-local_weak array C[proc] : state
+weak array C[proc] : state
 
 init (p) { C[p] = I }
 

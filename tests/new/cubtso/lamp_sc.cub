@@ -1,7 +1,6 @@
 
 type state = I | W | CS
 
-(* Global variables *)
 array C[proc] : state
 
 init (p) { C[p] = I }

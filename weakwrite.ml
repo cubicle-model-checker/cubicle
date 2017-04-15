@@ -3,6 +3,7 @@ open Weakmem
 open Types
 
 exception UnsatLocalWeakRead
+exception UnsatisfiableRead
 
 type cop = CEq | CNeq | CLt | CLe | CGt | CGe
 
@@ -124,106 +125,154 @@ let compat_val wtl vals =
 
 let is_satisfied = function [] -> true | _ -> false
 
-let skip_incompatible edw wtl pevts =
-  let rec aux ((wr, ird, srd) as reason) = function
+let get_write_on writes ed =
+  try Some (List.find (fun (edw, _) -> same_var edw ed) writes)
+  with Not_found -> None
+
+let remove_write_on writes ed =
+  List.filter (fun (edw, _) -> not (same_var edw ed)) writes
+
+let unsat_reads edw pevts =
+  List.exists (fun (_, (ed, vals)) -> same_var edw ed && vals <> []) pevts
+              
+let skip_incompatible writes pevts = (* wtl should contain only 1 element *)
+  let rec aux ((wr, ird, srd, urd) as reason) = function
     | [] -> reason, []
     | ((_, (ed, vals)) as e) :: pevts ->
-       if not (same_var edw ed) then aux reason pevts
-       else if is_write ed then aux (true, ird, srd) pevts
-       else if is_satisfied vals then aux (wr, ird, true) pevts
-       else if not (compat_val wtl vals) then aux (wr, true, srd) pevts
-       else reason, e :: pevts
+       begin match get_write_on writes ed with
+       | None -> aux reason pevts (* not same var : no problem *)
+       | Some (edw, wtl) ->
+          if is_write ed then
+            aux (true, ird, srd, urd || unsat_reads edw pevts) pevts
+          else if is_satisfied vals then
+            aux (wr, ird, true, urd || unsat_reads edw pevts) pevts
+          else if not (compat_val wtl vals) then
+            aux (wr, true, srd, urd) pevts
+          else
+            (wr, ird, srd, urd), e :: pevts (* compatible = go on *)
+       end
   in
-  aux (false, false, false) pevts
+  aux (false, false, false, false) pevts
 
-let get_read_chunk edw wtl pevts = (* wtl should contain only 1 element *)
-  let rec aux chunk = function
-    | [] -> List.rev chunk, []
+let get_read_chunk writes pevts =
+  let rec aux chunk writes cut = function
+    | [] -> List.rev chunk, cut
     | ((_, (ed, vals)) as e) :: pevts ->
-       if not (same_var edw ed) then aux chunk pevts
-       else if is_write ed || is_satisfied vals || not (compat_val wtl vals)
-         then List.rev chunk, e :: pevts
-       else aux (e :: chunk) pevts
+       begin match get_write_on writes ed with
+       | None -> aux chunk writes cut pevts
+       | Some (edw, wtl) ->
+          if is_write ed || is_satisfied vals || not (compat_val wtl vals)
+          then begin
+            let cut = if cut = [] then e :: pevts else cut in
+            let writes = remove_write_on writes ed in
+            if writes = [] then List.rev chunk, cut
+            else aux chunk writes cut pevts
+          end
+          else aux (e :: chunk) writes cut pevts
+       end
   in
-  aux [] pevts
+  aux [] writes [] pevts
 
-let read_chunks_for_write same_thread local_weak edw wtl pevts =
+let read_chunks_for_writes same_thread writes pevts =
   let rec aux chunks = function
     | [] -> List.rev chunks
     | pevts ->
-       let chunk, pevts = get_read_chunk edw wtl pevts in
-       let (wr, ird, srd), pevts = skip_incompatible edw wtl pevts in
-       let chunk = if local_weak && ird then [] else chunk in
+       let chunk, pevts = get_read_chunk writes pevts in
+       let (wr, ird, srd, urd), pevts = skip_incompatible writes pevts in
+       let chunk = if ird then [] else chunk in
        if same_thread then begin
-         if local_weak && ird then raise UnsatLocalWeakRead;
+         if ird || urd then raise UnsatisfiableRead;
          if chunk = [] then [] else [chunk]
-       end else if wr then begin
+       end else if wr || srd then begin
+         if urd then raise UnsatisfiableRead;
          if chunk = [] then List.rev chunks
          else List.rev (chunk :: chunks)
-       end else begin
-         if chunk = [] then aux chunks pevts
+       end else (* ird or no more events *) begin assert (ird || pevts = []);
+         if ird || chunk = [] then aux chunks pevts
          else aux (chunk :: chunks) pevts
        end
   in
   aux [] pevts
 
-let read_chunks_by_thread_by_write writes evts = (* evts by thread *)
-  List.fold_left (fun rctw (((wp, _, wv, _) as edw, wtl) as w) ->
-    let rct = HMap.fold (fun p pevts rct ->
-      let rc = read_chunks_for_write (H.equal wp p)
-        (is_local_weak wv) edw wtl pevts in
-      if rc = [] then rct else (p, rc) :: rct
-    ) evts [] in
-    (w, rct) :: rctw
-  ) [] writes
+let read_chunks_by_thread_for_writes writes evts = (* evts by thread *)
+  match writes with
+  | [] -> []
+  | ((wp, _, _, _), _) :: _ ->
+  if not (List.for_all (fun ((p, _, _, _), _) -> H.equal p wp) writes) then
+    failwith "Invalid proc\n";
+  let res = HMap.fold (fun p pevts rct ->
+    let rc = read_chunks_for_writes (H.equal wp p) writes pevts in
+    if rc = [] then rct else (p, rc) :: rct
+  ) evts [] in
+  res
 
-let read_combs same_thread local_weak rl =
+let read_combs same_thread rl =
   let rec aux = function
   | [] -> failwith "Weakwrite.read_combs : internal error" (*[[]], []*)
-  | [r] -> if same_thread && local_weak then [[r]], [[r]] else [[r] ; []], [[r]]
+  | [r] -> if same_thread then [[r]], [[r]] else [[r] ; []], [[r]]
   | r :: rl ->
      let combs, new_combs = aux rl in
      let combs, new_combs = List.fold_left (fun (combs, new_combs) nc ->
        let nc = (r :: nc) in
        nc :: combs, nc :: new_combs
      ) (if same_thread then [], [] else combs, []) new_combs in
-     combs, if local_weak then new_combs else [r] :: new_combs
+     combs, new_combs
   in
   fst (aux rl)
 
-let read_combs_by_thread_by_write rctw = (* merge with read_chunks_btbw *)
-  List.fold_left (fun rctw ((((wp, _, wv, _), _) as w), rct) ->
-    let rct = List.fold_left (fun rct (p, rc) ->
-      let rc = List.fold_left (fun rc rl ->
-        (read_combs (H.equal wp p) (is_local_weak wv) rl) @ rc
-      ) [] rc in (* rc <- all read combinations for this thread *)
-      (p, rc) :: rct (* source rc is a list of chunks *)
-    ) [] rct in
-    (w, rct) :: rctw
-  ) [] rctw
+let read_combs_by_thread_for_writes writes rct =
+  match writes with
+  | [] -> []
+  | ((wp, _, _, _), _) :: _ ->
+  List.fold_left (fun rct (p, rc) ->
+    let rc = List.fold_left (fun rc rl ->
+      (read_combs (H.equal wp p) rl) @ rc
+    ) [] rc in (* rc <- all read combinations for this thread *)
+    (p, rc) :: rct (* source rc is a list of chunks *)
+  ) [] rct
 
-let read_combs_by_write rctw =
-  List.fold_left (fun rcw (w, rct) ->
-    let lrc = List.fold_left (fun lrc (p, rcl) ->
-      cartesian_product (fun rc1 rc2 -> rc1 @ rc2) lrc rcl
-    ) [[]] rct in (* if no combination, we want to keep the write *)
-    (w, lrc) :: rcw (* we just say that it satisfies no reads *)
-  ) [] rctw
+let read_combs_for_writes writes rct =
+  List.fold_left (fun lrc (p, rcl) ->
+    cartesian_product (fun rc1 rc2 -> rc1 @ rc2) lrc rcl
+  ) [[]] rct (* if no combination, we want to keep the write *)
+               (* we just say that it satisfies no reads *)
 
-let all_combinations rcw =
-  List.fold_left (fun combs (w, lrc) ->
-    let lrc = List.map (fun rc -> [(w, rc)]) lrc in
-    cartesian_product (fun rc comb -> rc @ comb) lrc combs
-  ) [[]] rcw (* [[]] in case there is no combination / no write at all *)
+let all_combinations writes rcl =
+  List.map (fun rc -> List.map (fun (edw, wtl) ->
+    (edw, wtl), List.filter (fun (_, (edr, _)) -> same_var edw edr) rc
+  ) writes) rcl
 
 let make_read_write_combinations writes sa =
   try
     let evts = events_by_thread sa in
-    let rctw = read_chunks_by_thread_by_write writes evts in
-    let rctw = read_combs_by_thread_by_write rctw in
-    let rcw = read_combs_by_write rctw in
-    all_combinations rcw
-  with UnsatLocalWeakRead -> []
+    let rct = read_chunks_by_thread_for_writes writes evts in
+    let rct = read_combs_by_thread_for_writes writes rct in
+    let rcl = read_combs_for_writes writes rct in
+    let wrcp = all_combinations writes rcl in
+(*
+    (* Extract events corresponding to writes *)
+    let wevts, urevts = HMap.fold (fun p pevts res ->
+      List.fold_left (fun (wevts, urevts) (e, (ed, vals)) ->
+        let wevts = if is_write ed then
+                      HMap.add e ed wevts else wevts in
+        let urevts = if is_read ed && vals <> [] then
+                       HMap.add e ed urevts else urevts in
+        wevts, urevts
+      ) res pevts
+    ) evts (HMap.empty, HMap.empty) in
+
+    (* Filter out combinations that lead to cyclic relations *)
+    let wrcp = List.filter (fun wrcl ->
+      List.iter (fun (((wp, _, wv, wvi), wtl), rcl) ->
+        List.iter (fun (re, _) ->
+          ()
+        ) rcl
+      ) wrcl;
+      true
+    ) wrcp in
+ *)
+    wrcp
+  with UnsatisfiableRead -> []
 
 
 
@@ -280,7 +329,8 @@ let satisfy_reads tri unsafe = (* unsafe without ites *)
     | Atom.Comp (t, _, Write (p, v, vi, _)) ->
        let p_v_vi = p :: v :: vi in
        let tl = try HLMap.find p_v_vi wl with Not_found -> [] in
-       if tl <> [] then failwith "Weakwrite.satisfy_reads : anomaly";
+       (* in fact tl can have several values when using case construct *)
+       (* if tl <> [] then failwith "Weakwrite.satisfy_reads : anomaly"; *)
        HLMap.add p_v_vi (t :: tl) wl
     | _ -> failwith "Weakwrite.satisfy_reads : internal error"
   ) writes HLMap.empty in
@@ -291,7 +341,7 @@ let satisfy_reads tri unsafe = (* unsafe without ites *)
 
   (* Build the relevant read-write combinations *)
   let wrcp = make_read_write_combinations writes unsafe in
-
+  
   (* Generate the atom sets for each combination *)
   List.fold_left (fun pres wrcl ->
     let unsafe = List.fold_left (fun unsafe (((wp, _, wv, wvi), wtl), rcl) ->
@@ -320,12 +370,12 @@ let satisfy_unsatisfied_reads sa =
     else ur
   ) evts HMap.empty in
 
-  (* Retrieve all writes *)
+  (* Retrieve all writes *) (*
   let wevts = HMap.fold (fun e ((p, d, v, vi) as ed, _) wevts ->
     if is_write ed then
       HMap.add e (sort_params ed) wevts
     else wevts
-  ) evts HMap.empty in
+  ) evts HMap.empty in *)
 
   (* Satisfy unsat reads from init *)
   let sa = subst_event_val (fun _ e ->
@@ -333,6 +383,11 @@ let satisfy_unsatisfied_reads sa =
     let v = H.make (var_of_v v) in
     if vi = [] then [Elem (v, Glob)] else [Access (v, vi)]
   ) sa in
+  sa
+
+(*
+(* no need to add rf / co anymore : fri is built during pre, so cycles
+   are detected before, if any *)
 
   (* Add the necessary rf's *)
   let sa = HMap.fold (fun e _ sa ->
@@ -341,6 +396,7 @@ let satisfy_unsatisfied_reads sa =
   (* Add the co's from init *) (* should name them, probably *)
   HMap.fold (fun e _ sa ->
     SAtom.add (mk_eq_true (Access (hCo, [hE0; e]))) sa) wevts sa
+*)
 
   (* SHOULD ADD DUMMY EVENT HERE *)        
 

@@ -314,7 +314,7 @@ end = struct
       | Atom.Comp (Access (a, _), Eq, Elem _)
       | Atom.Comp (Elem _, Eq, Access (a, _))
            when H.equal a hFence || H.equal a hRf || H.equal a hCo ||
-                  H.equal a hRmw || H.equal a hSync -> false
+                H.equal a hFr || H.equal a hRmw || H.equal a hSync -> false
       | _ -> true
     ) c.Cube.litterals in
     Cube.create c.Cube.vars sa
@@ -336,10 +336,11 @@ end = struct
       | _ -> true
     ) sa in (* buggy patch to subsume more nodes... *)
     let prop = Weakorder.make_prop evtsX rels in
+    let scloc = Weakorder.make_scloc evtsX rels in
    (*  let fprintf s = Format.fprintf Format.std_formatter s in *)
    (* H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) prop; *)
    (* fprintf "\n"; *)
-    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, prop
+    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, prop, scloc
 
   let preprocess_ar ar =
     let open Weakmem in
@@ -348,12 +349,13 @@ end = struct
     let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
     let _, evtsX, rels = Weakorder.extract_events_array ar in (* get rels *)
     let prop = Weakorder.make_prop evtsX rels in
-    evts, rels, prop
+    let scloc = Weakorder.make_scloc evtsX rels in
+    evts, rels, prop, scloc
 
 module HAA = Hashtbl.Make (ArrayAtom)
 let cache = HAA.create 200001
-
-  let check_and_add (n, to_evts, to_rels, to_prop) nodes vis_n=
+                       
+  let check_and_add (n, to_evts, to_rels, to_prop, to_scloc) nodes vis_n=
     let vis_n_cube = filter_rels vis_n.cube in
     let n_array = Node.array n in
     let vis_array = vis_n.cube.Cube.array in
@@ -370,18 +372,20 @@ let cache = HAA.create 200001
       let n = List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
         (* let from_evts, from_rels, from_prop = preprocess_ar vis_renamed in *)
-        let from_evts, from_rels, from_prop =
-          try HAA.find cache vis_renamed
-          with Not_found ->
+        let from_evts, from_rels, from_prop, from_scloc =
+          try (* msi : 3360 miss / 297438 hits *)
+            HAA.find cache vis_renamed (* that may take some time *)
+          with Not_found ->           (* but it's worse not to do it*)
             let r = preprocess_ar vis_renamed in
             HAA.add cache vis_renamed r;
-            r
-        in
+            r (* TOO MANY PROC PERMS BTW *) (* WHY PETERSON 2 DIFF ON SC ? *)
+        in (* SIMPLIFY NODES, SO FIXPOINT BECOMES EASY *)
         let vis_renamed_l = (Weaksubst.remap_events vis_renamed
-          (Weaksubst.build_event_substs from_evts from_rels from_prop
-                                        to_evts to_rels to_prop)) in
+          (Weaksubst.build_event_substs from_evts from_rels from_prop from_scloc
+                                        to_evts to_rels to_prop to_scloc)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
+(* Format.fprintf Format.std_formatter "Matches for perm : %d\n" (List.length vis_renamed_l); *)
         List.fold_left (fun nodes v_ren ->
 	  (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
       ) nodes d in
@@ -391,7 +395,7 @@ let cache = HAA.create 200001
 (* Format.fprintf Format.std_formatter "Visited node %d, " vis_n.tag; *)
 (* Format.fprintf Format.std_formatter "proc perms : %d, " (List.length d); *)
 (* Format.fprintf Format.std_formatter "total perms : %d\n" perms; *)
-(* if perms > 12 then Format.fprintf Format.std_formatter "%a\n" Node.print vis_n; *)
+(* (\* if perms > 0 then Format.fprintf Format.std_formatter "%a\n" Node.print vis_n; *\) *)
 (* Format.print_flush (); end; *)
 n
 
@@ -435,8 +439,8 @@ n
     (* Format.eprintf "FIXPOINT\n"; *)
     (* List.iter (fun (_, ar) -> Format.eprintf "Atm : %a\n" ArrayAtom.print ar) nodes; *)
     (* Cubetrie.iter (fun n -> Format.eprintf "Node : %a\n" Node.print n) visited; *)
-Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes);
-Format.print_flush (); (*if t = 175 then (Format.fprintf Format.std_formatter "n : %a\n" Node.print sx; exit 0);*)
+(* Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes); *)
+(* Format.print_flush (); (\*if t = 16 then ((\*Format.fprintf Format.std_formatter "n : %a\n" Node.print sx;*\) List.iter (fun (n, ar) -> Format.fprintf Format.std_formatter "n (%d) : %a\n" n.tag ArrayAtom.print ar) nodes; exit 0);*\) *)
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes

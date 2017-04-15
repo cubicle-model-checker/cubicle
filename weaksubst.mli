@@ -30,10 +30,12 @@ val build_event_substs :
   (H2Set.t HMap.t * H2Set.t HMap.t * H.t list HMap.t *
      H2Set.t * H.t list HMap.t * H.t list HMap.t * HSet.t list) ->
   H2Set.t ->
+  H2Set.t ->
   ((H.t * H.t * H.t * H.t list) *
     (Weakwrite.cop * Types.Term.t) list) HMap.t ->
   (H2Set.t HMap.t * H2Set.t HMap.t * H.t list HMap.t *
      H2Set.t * H.t list HMap.t * H.t list HMap.t * HSet.t list) ->
+  H2Set.t ->
   H2Set.t ->
       Variable.t HMap.t list
 
