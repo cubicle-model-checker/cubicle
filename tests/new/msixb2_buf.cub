@@ -1,0 +1,67 @@
+
+(* number_procs 6 *)
+
+type kind = KProc | KBuf
+
+type vars = VNone | VX
+
+array Kind[proc] : kind
+
+array Var[proc,proc] : vars
+array Par[proc,proc] : proc
+array Val[proc,proc] : bool
+
+array X[proc] : bool
+
+var T : bool
+var F : bool
+
+init (p i) { X[p] = True && X[i] = True && T = True && F = False &&
+     	     Var[p,i] = VNone && Var[p,p] = VNone && Var[i,i] = VNone }
+
+(* no flush to other : 65 N, 6908 FP, 9029 SC, 5 P, 0 inv *)
+(* number_procs 5 : 518 N, 10713 FP, 187891 SC, 5 P, 0 inv *)
+(* 1 case de buffer, N procs : 187 N, 16579 FP, 42553 SC, 6 P, 0 inv *)
+(* N cases de buffer, 2 procs : 69 N, 7004 FP, 1815 SC, 5 P, 0 inv *)
+(* invariant (b1 b2) { Kind[b1] = KBuf && Kind[b2] = KBuf } *)
+(* invariant (p1 p2 p3) { Kind[p1] = KProc && Kind[p2] = KProc && Kind[p3] = KProc } *)
+
+(* X[p] can only be written by p *)
+(* invariant (p i) { Var[p,i] = VX && Par[p,i] <> p } *)
+
+unsafe (p1 p2) { X[p1] = F && X[p2] = T &&
+       	       	 Kind[p1] = KProc && Kind[p2] = KProc }
+
+(*transition t (p1 p2)
+requires { read(p1, X[p2]) = True }
+{ write(p1, X[p1], True) } *)
+
+transition t (p1 p2 i)
+requires { Kind[p1] = KProc && Kind[p2] = KProc && Kind[i] = KBuf &&
+	   Var[p1,i] = VNone &&
+	   X[p2] = True &&
+	   forall_other k. (
+	     (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	       (Kind[k] = KBuf && k < i && Var[p1,k] = VNone)) &&
+	     (Kind[k] = KProc ||
+	       (Kind[k] = KBuf && (Var[p1,k] <> VX || Par[p1,k] <> p2)))) }
+{ Var[p1,i] := VX; Par[p1,i] := p1; Val[p1,i] := True; }
+
+
+(* Ecritures par p sur X[p] *)
+transition flush_X_self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VX && Par[p,i] = p &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k < i) ||
+	                     (Kind[k] = KBuf && i < k && Var[p,k] = VNone)) }
+{ X[p] := Val[p,i];
+  Var[p,i] := VNone; }
+
+(* Ecritures par p sur X[p2] avec p <> p2 *)
+transition flush_X_other (p i p2)
+requires { Kind[p] = KProc && Kind[p2] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VX && Par[p,i] = p2 &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k < i) ||
+	   		     (Kind[k] = KBuf && i < k && Var[p,k] = VNone)) }
+{ X[p2] := Val[p,i];
+  Var[p,i] := VNone; }

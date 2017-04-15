@@ -1,0 +1,52 @@
+
+number_procs 4
+(*
+  2 procs : 3 N / 1 FP / 8 SC / 0.3s
+  3 procs : 16 N / 43 FP / 100 SC / 23s
+  4 procs : 37 N / 207 FP / 438 SC / 8m41s
+*)
+
+type state = M | S | I
+
+weak array Cache[proc]: state
+weak array Shr[proc] : bool
+weak var Current : proc
+weak var Extgnd : bool
+
+init ( i ) { Cache[i] = I && Shr[i] = False && Extgnd = False}
+
+unsafe ( i j ) { read(i, Cache[i]) = M && read(j, Cache[j]) = M }
+(*unsafe ( i j ) { read(j, Cache[j]) = M && read(j, Cache[j]) = M }
+unsafe ( i j ) { read(i, Cache[j]) = M && read(j, Cache[j]) = M }
+unsafe ( i j ) { read(j, Cache[i]) = M && read(j, Cache[j]) = M }
+unsafe ( i j ) { read(j, Cache[j]) = M && read(i, Cache[j]) = M }
+unsafe ( i j ) { read(j, Cache[j]) = M && read(j, Cache[i]) = M }
+unsafe ( i j ) { read(i, Cache[j]) = M && read(i, Cache[j]) = M }
+unsafe ( i j ) { read(i, Cache[j]) = M && read(j, Cache[i]) = M }*)
+
+transition read_miss_1 ( i j )
+requires { read(i, Cache[i]) = I && read(i, Current) = j && read(i, Extgnd) = True }
+{
+  write(i, Shr[i], True);
+  write(i, Cache[k], case 
+                     | k = i : S
+		     | k = j : S | _ : read(i, Cache[k]) );
+  write(i, Extgnd, False)
+}	   
+
+transition read_miss_2 ( i )
+requires { read(i, Cache[i]) = I && read(i, Extgnd) = False }
+{ write(i, Shr[i], True); write(i, Cache[i], S) }
+
+transition write_miss ( i )
+requires { read(i, Cache[i]) <> M }
+{ 
+  write(i, Shr[k], case 
+  	   	   | k = i : True
+                   | read(i, Shr[k]) = True : False | _ : read(i, Shr[k]));
+  write(i, Cache[k], case
+	             | k = i : M
+ 	             | read(i, Shr[k]) = True : I | _ : read(i, Cache[k]));
+  write(i, Current, i);
+  write(i, Extgnd, True);
+}

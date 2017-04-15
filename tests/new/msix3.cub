@@ -1,0 +1,17 @@
+
+number_procs 2
+
+weak var X : bool
+weak var Y : bool
+
+init () { X = True && Y = True }
+
+unsafe (i j) { read(i, X) = False && read(j, Y) = True }
+
+transition t1 (i)
+requires { i = #1 && read(i, Y) = True }
+{ write(i, X, True) }
+
+transition t2 (i)
+requires { i = #2 && read(i, X) = True }
+{ write(i, Y, True) }

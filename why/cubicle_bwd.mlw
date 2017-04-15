@@ -1,0 +1,112 @@
+module Cubicle_Bwd
+
+  use import ref.Ref
+  use import fol.FOL
+  use import abstract_queue.AbstractQueue as Q
+  use import reachability.Reachability
+
+  (* remove unecessary axioms for solvers *)
+  meta remove_prop prop extensionality
+  meta remove_prop prop structure_exists
+  meta remove_prop prop model_true
+  meta remove_prop prop model_false
+  meta remove_prop prop model_and
+  meta remove_prop prop model_or
+  meta remove_prop prop model_neg
+  meta remove_prop prop valid_def
+  (* meta remove_prop prop and_a *)
+  (* meta remove_prop prop and_c *)
+  (* meta remove_prop prop or_a *)
+  (* meta remove_prop prop or_c *)
+  meta remove_prop prop sat_def
+  (* meta remove_prop prop sat_or *)
+  meta remove_prop prop sat_neg
+  meta remove_prop prop sat_and
+  meta remove_prop prop valid_or
+  meta remove_prop prop valid_neg
+  meta remove_prop prop valid_and
+  meta remove_prop prop valid_sat
+  (* meta remove_prop prop pre_star_def2 *)
+  meta remove_prop prop pre_star_def3
+  meta remove_prop prop reachable_imply
+  meta remove_prop prop reachable_and
+  (* meta remove_prop prop pre_and *)
+  meta remove_prop prop pre_or
+  meta remove_prop prop unsat_invalid
+  meta remove_prop prop model_extensionality
+  meta remove_prop prop forget_subsumed_or
+  meta remove_prop prop imply_or
+  meta remove_prop prop imply_bigger
+  meta remove_prop prop imply_transitive
+  meta remove_prop prop or_same
+  meta remove_prop prop pre_star_bigger
+  meta remove_prop prop reachable_bigger
+  
+  
+  
+  type result = Safe | Unsafe
+  exception Unsafe_trace
+
+  
+  val visited : ref f
+  val q : Q.t
+
+    
+  let bwd (tau : trans_rel) (init : f) (theta : f) =
+    (* Soundness *)
+    ensures { result = Safe -> not (reachable tau init theta) }
+    (* Completeness *)
+    ensures { result = Unsafe -> reachable tau init theta }
+    visited := ffalse;
+    Q.clear q;
+    try
+       if sat (init & theta) then raise Unsafe_trace;
+       visited := theta ++ !visited;
+       Q.push (pre tau theta) q;
+       while not (Q.is_empty q) do
+        invariant { not (sat (init & !visited)) &&
+                    (pre_star tau !visited = !visited ++ (pre_star tau (q.formula & ~ !visited)) \/
+                    pre_star tau !visited = !visited ++ (pre_star tau (q.formula))      
+                    
+                    ) &&
+                    (pre_star tau theta = !visited ++ (pre_star tau (q.formula & ~ !visited)) \/
+                    pre_star tau theta = !visited ++ (pre_star tau (q.formula))       
+                    ) }
+        let ghost old_q = Q.copy q in
+        let phi = Q.pop q in
+        if sat (init & phi) then raise Unsafe_trace;
+        if not (phi |== !visited) then (
+          let ghost old_v = !visited in
+          visited := phi ++ !visited;
+          Q.push (pre tau phi) q;
+          assert {
+                   !visited ++ (pre_star tau q.formula) =
+	  	     old_v ++ pre_star tau phi ++ pre_star tau (~ phi & old_q.formula)
+
+	           &&
+	  
+                   !visited ++ (pre_star tau q.formula) =
+                     old_v ++ (pre_star tau (ttrue & (phi ++ old_q.formula))) }
+        )
+        else
+          assert {
+                valid ((~ (~ phi)) ++ (pre_star tau (~ phi)))
+
+                &&
+
+                !visited ++ (pre_star tau ((~ phi) & old_q.formula)) =
+                (!visited ++ (ttrue ++ (pre_star tau (~ phi)))) & (pre_star tau !visited)
+
+                &&
+
+                !visited ++ (pre_star tau ((~ phi) & old_q.formula)) =
+                ttrue & (pre_star tau !visited)
+          }
+      
+       done;
+      Safe
+    with
+        | Unsafe_trace -> Unsafe
+        | Q.Empty -> absurd
+    end
+end

@@ -1,0 +1,126 @@
+
+type loc =  L1 | L2 | L3 | L4 | L5 | CS
+
+type vars = VNone | VX | VY
+type kind = KProc | KBuf
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Global variables *)
+var X : int
+var Y : int
+
+(* Process IDs *)
+array ProcID[proc] : int
+var NullProc : int
+
+array Kind[proc] : kind
+array Var[proc,proc] : vars
+array Val[proc,proc] : int
+
+init (p i) { PC[p] = L1 && PC[i] = L1 && X = NullProc && Y = NullProc &&
+     	      Var[p,i] = VNone && Var[p,p] = VNone && Var[i,i] = VNone }
+
+invariant (p1 p2) { ProcID[p1] = ProcID[p2] }
+invariant (p) { NullProc = ProcID[p] }
+
+(* Maximum 2 procs *)
+invariant (p1 p2 p3) { Kind[p1] = KProc &&
+	      	       Kind[p2] = KProc &&
+		       Kind[p3] = KProc }
+
+(* Maximum 2 cases de buffer (quelque soit le proc) *)
+invariant (p1 p2 p3) { Kind[p1] = KBuf &&
+	      	       Kind[p2] = KBuf &&
+	      	       Kind[p3] = KBuf }
+
+unsafe (p1 p2 p3 p4) { Kind[p1] = KProc && Kind[p2] = KProc &&
+       	       	 PC[p1] = CS && PC[p2] = CS &&
+		 Kind[p3] = KBuf && Kind[p4] = KBuf }
+
+
+transition t_L1_L2_W_X_Self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   PC[p] = L1 && Var[p,i] = VNone &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	   	 	     (k < i && Kind[k] = KBuf && Var[p, k] = VNone)) }
+{ PC[p] := L2; Var[p,i] := VX; Val[p,i] := ProcID[p] }
+
+transition t_L2_L1_Y_NotNull (p) (* should only read from memory (fence) *)
+(* fences (p) *)
+requires { Kind[p] = KProc &&
+	   PC[p] = L2 && Y <> NullProc &&
+	   forall_other k. (Kind[k] = KProc ||
+	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ PC[p] := L1 }
+
+transition t_L2_L3_Y_Null (p) (* should only read from memory (fence) *)
+(* fences (p) *)
+requires { Kind[p] = KProc &&
+	   PC[p] = L2 && Y = NullProc &&
+	   forall_other k. (Kind[k] = KProc ||
+	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ PC[p] := L3 }
+
+transition t_L3_L4_W_Y_Self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   PC[p] = L3 && Var[p,i] = VNone &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	   	 	     (k < i && Kind[k] = KBuf && Var[p, k] = VNone)) }
+{ PC[p] := L4; Var[p,i] := VY; Val[p,i] := ProcID[p] }
+
+transition t_L4_L5_X_Other (p) (* should only read from memory (fence) *)
+(* fences (p) *)
+requires { Kind[p] = KProc &&
+	   PC[p] = L4 && X <> ProcID[p] &&
+	   forall_other k. (Kind[k] = KProc ||
+	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ PC[p] := L5 }
+
+transition t_L5_L1_Y_Other (p)  (* should only read from memory (fence) *)
+requires { Kind[p] = KProc &&
+	   PC[p] = L5 && Y <> ProcID[p] &&
+	   forall_other k. (Kind[k] = KProc ||
+	   		     (Kind[k] = KBuf && Var[p,k] <> VY)) }
+{ PC[p] := L1 }
+
+transition t_L4_CS_X_Self (p)  (* should only read from memory (fence) *)
+(* fences (p) *)
+requires { Kind[p] = KProc &&
+	   PC[p] = L4 && X = ProcID[p] &&
+	   forall_other k. (Kind[k] = KProc ||
+	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ PC[p] := CS }
+
+(* Critical section *)
+
+transition t_CS_L1_W_Y_Null (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   PC[p] = CS && Var[p,i] = VNone &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	   	 	     (k < i && Kind[k] = KBuf && Var[p, k] = VNone)) }
+{ PC[p] := L1; Var[p,i] := VY; Val[p,i] := NullProc }
+
+
+
+(* Gestion des buffers *)
+
+(* Ecriture par p sur X *)
+transition flush_X (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf && Var[p,i] = VX &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k < i) ||
+	                     (i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ X := Val[p,i];
+  Var[p,i] := VNone; }
+
+(* Ecriture par p sur Y *)
+transition flush_Y (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf && Var[p,i] = VY &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k < i) ||
+	                     (i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ Y := Val[p,i];
+  Var[p,i] := VNone; }
+
+
+

@@ -1,0 +1,29 @@
+
+number_procs 9
+
+(* type loc = L1 | L2 *)
+(* array PC[proc] : loc *)
+
+var R : bool
+weak array X[proc] : bool
+
+init (i) { X[i] = True && R = True }
+
+(* unsafe (i j) { read(i, X[i]) = False && read(j, X[j]) = True } *)
+(* unsafe (i j) { read(i, X[i]) = False && read(i, X[j]) = True } *)
+
+unsafe (i) { read(i, X[i]) = True && R = False }
+
+unsafe (i j) { read(i, X[j]) = True && R = False }
+
+transition t (i j)
+requires { read(i, X[j]) = True }
+{ write(i, X[i], True) }
+
+(* transition tr (i j) *)
+(* requires { PC[i] = L1 && read(i, X[j]) = True } *)
+(* { PC[i] := L2 } *)
+
+(* transition tw (i j) *)
+(* requires { PC[i] = L2 } *)
+(* { PC[i] := L1; write(i, X[i], True) } *)

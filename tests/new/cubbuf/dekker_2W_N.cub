@@ -1,0 +1,90 @@
+
+type kind = KProc | KBuf
+
+type vars = VNone | VTurn | VWant
+
+array Kind[proc] : kind
+
+array Var[proc,proc] : vars
+array Par[proc,proc] : proc
+array ValB[proc,proc] : bool
+array ValP[proc,proc] : proc
+
+var Turn : proc
+array Want[proc] : bool
+array Crit[proc] : bool
+
+init (p q) { Want[p] = False && Crit[p] = False && Var[p,q] = VNone }
+
+invariant (b1 b2) { Kind[b1] = KBuf && Kind[b2] = KBuf }
+invariant (p1 p2 p3) { Kind[p1] = KProc && Kind[p2] = KProc && Kind[p3] = KProc }
+
+unsafe (p1 p2) { Kind[p1] = KProc && Kind[p2] = KProc &&
+       	         Crit[p1] = True && Crit[p2] = True }
+
+(* Simplification : la lecture de Want[p] ne se fait qu'en mémoire *)
+transition req_mWant (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VNone &&
+	   Want[p] = False &&
+	   forall_other k. (
+	     (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	       (k < i && Kind[k] = KBuf && Var[p, k] = VNone)) &&
+	     (Kind[k] = KProc ||
+	       (Kind[k] = KBuf && (Var[p, k] <> VWant || Par[p, k] <> p)))) }
+{ Var[p,i] := VWant; Par[p,i] := p; ValB[p,i] := True; }
+
+(* Simplification : les lectures de Want[p] et Turn ne se font qu'en mémoire *)
+transition enter_mWant_mTurn (p)
+requires { Kind[p] = KProc &&
+	   Want[p] = True &&
+	   Turn = p &&
+	   Crit[p] = False && 
+	   forall_other k. (Kind[k] = KProc ||
+	     (Kind[k] = KBuf && Var[p, k] <> VTurn &&
+	       (Var[p, k] <> VWant || Par[p, k] <> p))) }
+{ Crit[p] := True }
+
+transition exit (p1 p2 i1 i2)
+requires { Kind[p1] = KProc && Kind[p2] = KProc &&
+	   Kind[i1] = KBuf && Kind[i2] = KBuf &&
+	   Var[p1,i1] = VNone && Var[p1,i2] = VNone &&
+	   Crit[p1] = True &&
+	   forall_other k. (Kind[k] = KProc || k > i1 || k > i2 ||
+	     (k < i1 && k < i2 && Kind[k] = KBuf && Var[p1, k] = VNone) ||
+	     (k < i2 && k < i1 && Kind[k] = KBuf && Var[p1, k] = VNone)) }
+{ Crit[p1] := False;
+  Var[px,ix] := case | px = p1 && ix = i1 : VWant
+  	     	     | px = p1 && ix = i2 : VTurn
+		     | _ : Var[px,ix];
+  Par[p1,i1] := p1;
+  ValB[p1,i1] := False;
+  ValP[p1,i2] := p2 }
+
+
+(* Flush par p sur Turn *)
+transition flush_Want_self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VTurn &&
+	   forall_other k. (Kind[k] = KProc || k < i ||
+	        (i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ Turn := ValP[p,i]; Var[p,i] := VNone }
+
+
+(* Flush par p sur Want[p] *)
+transition flush_Want_self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VWant && Par[p,i] = p &&
+	   forall_other k. (Kind[k] = KProc || k < i ||
+	   	(i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ Want[p] := ValB[p,i]; Var[p,i] := VNone }
+
+
+(* Flush par p sur Want[p2] avec p <> p2 *)
+(* Inutile, seul p écrit dans Want[p] *)
+(*transition flush_F_other (p i p2)
+requires { Kind[p] = KProc && Kind[p2] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VWant && Par[p,i] = p2 &&
+	   forall_other k. (Kind[k] = KProc || k < i ||
+	   	(i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ Want[p2] := ValB[p,i]; Var[p,i] := VNone }*)

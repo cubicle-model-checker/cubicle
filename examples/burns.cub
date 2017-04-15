@@ -1,0 +1,96 @@
+(* from "Regular Model Checking without Transducers 
+         (on efficient verification of parameterized systems)"
+   	Adulla et. al.
+	Tech report 2006-052 Uppsala Universitet
+*)
+
+type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
+
+array A[proc] : location
+array F[proc] : bool
+
+init (x) { A[x] = Q1 && F[x] = False }
+
+unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
+  
+transition t1 (x)
+requires { A[x] = Q1 }
+{ 
+  A[j] := case 
+       	   | j = x : Q2 
+	   | _ : A[j];
+  F[j] := case 
+           | j = x : False 
+	   | _ : F[j]
+}
+
+transition t2 (x y)
+requires { A[x] = Q2 && y < x && F[y] = True }
+{ 
+  A[j] := case 
+       	   | j = x : Q1 
+	   | _ : A[j]
+}
+
+transition t3 (x)
+requires { A[x] = Q2 && forall_other j. (x<=j || F[j] = False ) }
+{ 
+  A[j] := case 
+       	   | j = x : Q3 
+	   | _ : A[j]
+}
+
+transition t4 (x)
+requires { A[x] = Q3 }
+{ 
+  A[j] := case 
+       	   | j = x : Q5 
+	   | _ : A[j];
+  F[j] := case 
+       	   | j = x : True
+	   | _ : F[j]
+}
+
+transition t5 (x y)
+requires { A[x] = Q4 && y<x && F[y] = True }
+{ 
+  A[j] := case 
+       	   | j = x : Q1 
+	   | _ : A[j]
+}
+
+transition t6 (x)
+requires { A[x] = Q4 && forall_other j. (x<=j || F[j] = False) }
+{ 
+  A[j] := case 
+       	   | j = x : Q5
+	   | _ : A[j]
+}
+
+transition t7 (x)
+requires { A[x] = Q5 && forall_other j. (j <= x || F[j] = False) }
+{ 
+  A[j] := case 
+       	   | j = x : Q6
+	   | _ : A[j]
+}
+
+transition t8 (x)
+requires { A[x] = Q6 && F[x] = True }
+{ 
+  F[j] := case 
+       	   | j = x : False
+	   | _ : F[j];
+  A[j] := case 
+       	   | j = x : Q7 
+	   | _ : A[j]
+}
+
+transition t9 (x)
+requires { A[x] = Q7 && F[x] = True }
+{
+  A[j] := case 
+       	   | j = x : Q1
+	   | _ : A[j]
+}
+

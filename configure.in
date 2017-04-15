@@ -1,0 +1,246 @@
+##########################################################################
+#                                                                        #
+#                              Cubicle                                   #
+#                                                                        #
+#                       Copyright (C) 2011-2014                          #
+#                                                                        #
+#                  Sylvain Conchon and Alain Mebsout                     #
+#                       Universite Paris-Sud 11                          #
+#                                                                        #
+#                                                                        #
+#  This file is distributed under the terms of the Apache Software       #
+#  License version 2.0                                                   #
+#                                                                        #
+##########################################################################
+
+AC_INIT(main.ml)
+
+AC_CHECK_PROG(OCAMLC,ocamlc.opt,ocamlc.opt,no)
+if test "$OCAMLC" = no ; then
+	AC_MSG_ERROR(Cannot find ocamlc.)
+fi
+
+OCAMLVERSION=`$OCAMLC -version`
+echo "ocaml version is $OCAMLVERSION"
+OCAMLLIB=`$OCAMLC -where`
+echo "ocaml library path is $OCAMLLIB"
+
+# we look for ocamlfind; if not present, we just don't use it to find
+# libraries
+AC_CHECK_PROG(USEOCAMLFIND,ocamlfind,yes,no)
+
+if test "$USEOCAMLFIND" = yes; then
+   OCAMLFINDLIB=$(ocamlfind printconf stdlib)
+   OCAMLFIND=$(which ocamlfind)
+   if test "$OCAMLFINDLIB" != "$OCAMLLIB"; then
+    USEOCAMLFIND=no;
+    echo "but your ocamlfind is not compatible with your ocamlc:"
+    echo "ocamlfind : $OCAMLFINDLIB, ocamlc : $OCAMLLIB"
+   fi
+fi
+
+
+AC_CHECK_PROG(OCAMLOPT,ocamlopt.opt,ocamlopt.opt,no)
+OCAMLBEST=byte
+if test "$OCAMLOPT" = no ; then
+	AC_MSG_WARN(Cannot find ocamlopt; bytecode compilation only.)
+else
+        OCAMLBEST=opt
+fi
+
+AC_CHECK_PROG(OCAMLDEP,ocamldep,ocamldep,no)
+if test "$OCAMLDEP" = no ; then
+	AC_MSG_ERROR(Cannot find ocamldep.)
+fi
+
+AC_CHECK_PROG(OCAMLLEX,ocamllex,ocamllex,no)
+if test "$OCAMLLEX" = no ; then
+    AC_MSG_ERROR(Cannot find ocamllex.)
+fi
+
+AC_CHECK_PROG(OCAMLYACC,ocamlyacc,ocamlyacc,no)
+if test "$OCAMLYACC" = no ; then
+	AC_MSG_ERROR(Cannot find ocamlyacc.)
+fi
+
+
+#looking for ocamlgraph library
+
+if test "$USEOCAMLFIND" = yes; then
+  OCAMLGRAPHLIB=$(ocamlfind query -i-format ocamlgraph)
+fi
+
+if test -n "$OCAMLGRAPHLIB";then
+  echo "ocamlfind found ocamlgraph in $OCAMLGRAPHLIB"
+  OCAMLGRAPH=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/ocamlgraph/graph.cmi,OCAMLGRAPH=yes,OCAMLGRAPH=no)
+  if test "$OCAMLGRAPH" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/graph.cmi,OCAMLGRAPH=yes,OCAMLGRAPH=no)
+    if test "$OCAMLGRAPH" = no ; then
+      AC_MSG_ERROR(Cannot find ocamlgraph library. Please install the *libocamlgraph-ocaml-dev* Debian package - or use the GODI caml package system *http://godi.ocaml-programming.de/* - or compile from sources *http://ocamlgraph.lri.fr/*)
+    else
+  	OCAMLGRAPHLIB=""
+     fi
+  else
+     OCAMLGRAPHLIB="-I +ocamlgraph"
+  fi
+fi
+
+
+#looking for zarith library
+
+if test "$USEOCAMLFIND" = yes; then
+  ZARITHLIB=$(ocamlfind query -i-format zarith)
+fi
+
+if test -n "$ZARITHLIB";then
+  echo "ocamlfind found zarith in $ZARITHLIB"
+  ZARITH=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/zarith/zarith.cma,ZARITH=yes,ZARITH=no)
+  if test "$ZARITH" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/zarith.cma,ZARITH=yes,ZARITH=no)
+    if test "$ZARITH" = no ; then
+      AC_MSG_ERROR(Cannot find zarith library.)
+    else
+  	ZARITHLIB=""
+     fi
+  else
+     ZARITHLIB="-I +zarith"
+  fi
+fi
+
+
+#looking for functory library
+
+if test "$USEOCAMLFIND" = yes; then
+  FUNCTORYLIB=$(ocamlfind query -i-format functory)
+fi
+
+if test -n "$FUNCTORYLIB";then
+  echo "ocamlfind found functory in $FUNCTORYLIB"
+  FUNCTORYLD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/functory/functory.cma,FUNCTORYLD=yes,FUNCTORYLD=no)
+  if test "$FUNCTORYLD" = no ; then
+      AC_MSG_RESULT(Cannot find functory library.)
+      FUNCTORYLIB=""
+  else
+     FUNCTORYLIB="-I +functory"
+  fi
+fi
+
+
+#looking for zip library
+
+if test "$USEOCAMLFIND" = yes; then
+  ZIPLIB=$(ocamlfind query -i-format zip)
+fi
+
+if test -n "$ZIPLIB";then
+  echo "ocamlfind found zip in $ZIPLIB"
+  ZIP=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/zip/zip.cma,ZIP=yes,ZIP=no)
+  if test "$ZIP" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/zip.cma,ZIP=yes,ZIP=no)
+    if test "$ZIP" = no ; then
+      AC_MSG_ERROR(Cannot find zip library.)
+    else
+  	ZIPLIB=""
+     fi
+  else
+     ZIPLIB="-I +zip"
+  fi
+fi
+
+
+#looking for ocplib-simplex library
+
+if test "$USEOCAMLFIND" = yes; then
+  SIMPLEXLIB=$(ocamlfind query -i-format ocplib-simplex)
+fi
+
+if test -n "$SIMPLEXLIB";then
+  echo "ocamlfind found ocplib-simplex in $SIMPLEXLIB"
+  SIMPLEX=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/ocplib-simplex/ocplibSimplex.cma,SIMPLEX=yes,SIMPLEX=no)
+  if test "$SIMPLEX" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/ocplibSimplex.cma,SIMPLEX=yes,SIMPLEX=no)
+    if test "$SIMPLEX" = no ; then
+      AC_MSG_ERROR(Cannot find ocplib-simplex library.)
+    else
+  	SIMPLEXLIB=""
+     fi
+  else
+     SIMPLEXLIB="-I +ocplib-simplex"
+  fi
+fi
+
+
+#looking for Z3 ocaml bindings
+
+AC_ARG_WITH([z3],
+    AS_HELP_STRING([--with-z3], [enable support for Z3 backend SMT solver] ),
+    [],
+    [with_z3=no])
+
+Z3LIB=""
+Z3CCFLAGS=""
+AS_IF([test "x$with_z3" != xno],
+if test "$USEOCAMLFIND" = yes; then
+  Z3LIB=$(ocamlfind query -i-format Z3)
+  Z3CCFLAGS="-cclib \"-L$(ocamlfind query Z3) -lz3\""
+fi
+
+if test -n "$Z3LIB";then
+  echo "ocamlfind found Z3 bindings in $Z3LIB"
+  Z3LD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/Z3/z3.cma,Z3LD=yes,Z3LD=no)
+  if test "$Z3LD" = no ; then
+      AC_MSG_RESULT(Cannot find Z3 OCaml bindings.)
+  else
+     Z3LIB="-I +z3"
+     Z3CCFLAGS="-cclib \"-L$OCAMLLIB/Z3 -lz3\""
+  fi
+fi
+,
+AC_MSG_RESULT(Compiling without support for Z3.)
+)
+
+AC_MSG_CHECKING(platform)
+if echo "let _ = Sys.os_type" | ocaml | grep -q Win32; then
+    echo "Windows platform"
+    AC_MSG_RESULT(Win32)
+    OCAMLWIN32=yes
+    EXE=.exe
+else
+    echo "Unix platform"
+    OCAMLWIN32=no
+    EXE=
+fi
+
+AC_SUBST(OCAMLC)
+AC_SUBST(OCAMLOPT)
+AC_SUBST(OCAMLDEP)
+AC_SUBST(OCAMLLEX)
+AC_SUBST(OCAMLYACC)
+AC_SUBST(OCAMLBEST)
+AC_SUBST(OCAMLVERSION)
+AC_SUBST(OCAMLLIB)
+AC_SUBST(ALTERGOLIB)
+AC_SUBST(FUNCTORYLIB)
+AC_SUBST(Z3LIB)
+AC_SUBST(Z3CCFLAGS)
+AC_SUBST(OCAMLWIN32)
+AC_SUBST(EXE)
+AC_SUBST(OCAMLGRAPHLIB)
+AC_SUBST(ZARITHLIB)
+AC_SUBST(ZIPLIB)
+AC_SUBST(SIMPLEXLIB)
+
+AC_OUTPUT(Makefile)
+chmod a-w Makefile

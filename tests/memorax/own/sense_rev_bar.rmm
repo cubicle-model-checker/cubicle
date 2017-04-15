@@ -1,0 +1,17 @@
+/* Sense reversing barrier */
+forbidden
+  E0 E1 ;
+  E1 E0
+
+process(2)
+data
+  flag = 0 : [0:1]
+text
+E0:
+  write: flag[my] := 1;
+  read: flag[0] = 1;
+E1:
+  write: flag[my] := 0;
+  read: flag[0] = 0;
+  goto E0
+

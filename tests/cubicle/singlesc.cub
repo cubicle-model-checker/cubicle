@@ -1,0 +1,35 @@
+
+type loc = Idle | L1 | L2 | L3 | L4 | End
+
+array PC[proc] : loc
+array T[proc] : int
+var Init : bool
+var X : int
+
+init (p) { Init = False && PC[p] = Idle && X = 0 }
+
+unsafe (p) { PC[p] = End }
+
+transition t_start (p)
+requires { Init = False }
+{ PC[p] := L1; Init := True }
+
+transition t1 (p)
+requires { PC[p] = L1 }
+{ PC[p] := L2; T[p] := X }
+
+transition t2a (p)
+requires { PC[p] = L2 && T[p] < 2 }
+{ PC[p] := L3 }
+
+transition t2b (p)
+requires { PC[p] = L2 && T[p] = 2 }
+{ PC[p] := End }
+
+transition t3 (p)
+requires { PC[p] = L3 }
+{ PC[p] := L4; T[p] := T[p] + 1 }
+
+transition t4 (p)
+requires { PC[p] = L4 }
+{ PC[p] := L1; X := T[p] }

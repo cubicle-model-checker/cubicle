@@ -1,0 +1,24 @@
+
+number_procs 1
+
+type pc = L1 | L2 | End
+
+var PC : pc
+var R : int
+weak var X : int
+
+init () { PC = L1 && X = 0 && R = 0 }
+
+unsafe () { PC = End }
+
+transition t1 ()
+requires { PC = L1 }
+{ PC := L2; R := read(#1, X) }
+
+transition t2inf ()
+requires { PC = L2 && R < 2 }
+{ PC := L1; write(#1, X, R + 1); }
+
+transition t2sup ()
+requires { PC = L2 && R = 2 }
+{ PC := End;  }

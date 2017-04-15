@@ -1,0 +1,143 @@
+type req = Empty | Reqs | Reqe | Inv | Invack | Gnts | Gnte
+type cstate = Invalid | Shared | Exclusive
+
+var Exgntd : bool
+var Curcmd : req
+var Curptr : proc
+
+array Cache[proc] : cstate
+array Shrset[proc] : bool
+array Chan1[proc] : req
+array Chan3[proc] : req
+
+init (z) { Cache[z] = Invalid && Shrset[z] = False &&
+           Exgntd = False && Curcmd = Empty && 
+	   Chan1[z]=Empty && Chan3[z]=Empty }
+
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+
+transition send_shared (n)
+requires { Chan1[n] = Empty && Cache[n] = Invalid }
+{ 
+  Chan1[j] := case 
+  	       | j = n : Reqs 
+	       | _ : Chan1[j] 
+}
+
+transition recv_shared (n)
+requires { Curcmd = Empty && Chan1[n] = Reqs }
+{ 
+  Curcmd := Reqs; 
+  Curptr := n;
+  Chan1[j] := case 
+  	       | j = n : Empty 
+	       | _ : Chan1[j] 
+}
+    
+transition send_exclusive (n)
+requires { Chan1[n] = Empty && Cache[n] <> Exclusive }
+{ 
+  Chan1[j] := case 
+  	       | j = n : Reqe 
+	       | _ : Chan1[j] 
+}
+
+transition recv_exclusive (n)
+requires { Curcmd = Empty && Chan1[n] = Reqe }
+{ 
+  Curcmd := Reqe; 
+  Curptr := n;
+  Chan1[j] := case 
+  	       | j = n : Empty 
+	       | _ : Chan1[j] 
+}
+    
+transition sendinv_1 (n)
+requires { Chan3[n] = Empty && Shrset[n]=True  &&  Curcmd = Reqe }
+{ 
+  Chan3[j] := case 
+  	       | j = n : Inv 
+	       | _ : Chan3[j] 
+}
+
+transition sendinv_2 (n)
+requires { Chan3[n] = Empty && Shrset[n]=True  &&
+	   Curcmd = Reqs && Exgntd=True }
+{ 
+  Chan1[j] := case 
+  	       | j = n : Inv 
+	       | _ : Chan3[j] 
+}
+
+transition recv_inv(n)
+requires { Chan1[n] = Inv }
+{
+  Chan3[j] := case 
+  	       | j = n : Invack 
+	       | _ : Chan3[j];
+  Cache[j] := case 
+  	       | j = n : Invalid 
+	       | _ : Cache[j] 
+}
+    
+transition recv_invack(n)
+requires { Chan3[n] = Invack && Curcmd <> Empty }
+{ 
+  Exgntd := False;
+  Chan3[j] := case 
+  	       | j = n : Empty 
+	       | _ : Chan3[j];
+  Shrset[j] := case 
+  	        | j = n : False 
+		| _ : Shrset[j] 
+}
+
+transition send_gnt_shared(n)
+requires { Curptr = n && Curcmd = Reqs && 
+	   Exgntd = False && Chan1[n] = Empty }
+{ 
+  Curcmd := Empty;
+  Chan1[j] := case 
+  	       | j = n : Gnts 
+	       | _ : Chan1[j];
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j] 
+}
+
+transition send_gnt_exclusive(n)
+requires { Curptr = n && Curcmd = Reqe &&
+	   Chan1[n] = Empty && 
+	   forall_other j. Shrset[j] = False }
+{ 
+  Curcmd := Empty; 
+  Exgntd := True;
+  Chan1[j] := case 
+  	       | j = n : Gnte 
+	       | _ : Chan1[j];
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j] 
+}
+
+transition recv_gnt_shared(n)
+requires { Chan1[n] = Gnts}
+{ 
+  Cache[j] := case 
+  	       | j = n : Shared 
+	       | _ : Cache[j];
+  Chan1[j] := case 
+  	       | j = n : Empty 
+	       | _ : Chan1[j] 
+}
+
+transition recv_gnt_exclusive(n)
+requires { Chan1[n] = Gnte }
+{ 
+  Cache[j] := case 
+  	       | j = n : Exclusive 
+	       | _ : Cache[j];
+  Chan1[j] := case 
+  	       | j = n : Empty 
+	       | _ : Chan1[j] 
+}

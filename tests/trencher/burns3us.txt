@@ -1,0 +1,48 @@
+
+# Memory layout:
+# 0 — F[0]
+# 1 — F[1]
+# 2 — F[2]
+
+thread t0
+initial q1
+final q6
+transition	q1	q3	write	0	0
+transition	q3	q5	write	1	0
+transition	q5	q5a	read	f1	1
+transition	q5a	q5b	read	f2	2
+transition	q5b	q6	check	&& == f1 0 == f2 0
+transition	q6	q1	noop
+end
+
+thread t1
+initial q1
+final q6
+transition	q1	q2a	write	0	1
+transition	q2a	q2b	read	f0	0
+transition	q2b	q1	check	== f0 1
+transition	q2b	q3	check	== f0 0
+transition	q3	q4a	write	1	1
+transition	q4a	q4b	read	f0	0
+transition	q4b	q1	check	== f0 1
+transition	q4b	q5	check	== f0 0
+transition	q5	q5a	read	f2	2
+transition	q5a	q6	check	== f2 0
+transition	q6	q1	noop
+end
+
+thread t2
+initial q1
+final q6
+transition	q1	q2a	write	0	2
+transition	q2a	q2b	read	f0	0
+transition	q2b	q2c	read	f1	1
+transition	q2c	q1	check	|| == f0 1 == f1 1
+transition	q2c	q3	check	&& == f0 0 == f1 0
+transition	q3	q4a	write	1	2
+transition	q4a	q4b	read	f0	0
+transition	q4b	q4c	read	f1	1
+transition	q4c	q1	check	|| == f0 1 == f1 1
+transition	q4c	q6	check	&& == f0 0 == f1 0
+transition	q6	q1	noop
+end

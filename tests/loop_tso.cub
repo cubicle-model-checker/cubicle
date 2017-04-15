@@ -1,0 +1,15 @@
+
+number_procs 1
+
+weak var X : int
+weak var Y : int
+
+init () { X = 15 }
+
+invariant (p) { read(p, X) < 0 }
+
+(* FORBIDDEN Final State *)
+unsafe (p) { read(p, Y) = 0 && read(p, X) = 13 }
+
+transition t (p)
+{ write(p, X, read(p, X) + 1) }
