@@ -143,7 +143,7 @@ and make_literal = function
      fun a (unsat_evt, all_lw) -> match a with
       | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, _))
       | Atom.Comp (Elem (c, _), Eq, Field (Access (a, [e]), f))
-           when H.equal a hE && H.equal f hVar (*&& is_local_weak c*) ->
+           when H.equal a hE && H.equal f hVar ->
          unsat_evt, HSet.add e all_lw
       | Atom.Comp (Field (Field (Access (a, [e]), f), _), Eq, Elem (c, _))
       | Atom.Comp (Elem (c, _), Eq, Field (Field (Access (a, [e]), f), _))
@@ -161,27 +161,21 @@ and make_literal = function
     ) sa
 
 let make_formula ?(fp=false) array =
-  let sa, evts, rels = Weakorder.extract_events_array array in
+  let sa = Weakrel.filter_rels_array array in
   let sa = if fp then rm_sat_evt_thr_par sa else sa in
-  let f = make_formula_set sa in
-  match Weakorder.make_orders ~fp evts rels with
-  | None -> f
-  | Some fo -> F.make F.And [f; fo]
+  make_formula_set sa
 
 let make_formula_set ?(fp=false) satom =
-  let sa, evts, rels = Weakorder.extract_events_set satom in
+  let sa = Weakrel.filter_rels_set satom in
   let sa = if fp then rm_sat_evt_thr_par sa else sa in
-  let f = make_formula_set sa in
-  match Weakorder.make_orders ~fp evts rels with
-  | None -> f
-  | Some fo -> F.make F.And [f; fo]
+  make_formula_set sa
 
 module HAA = Hashtbl.Make (ArrayAtom)
 
 let make_formula =
   let cache = HAA.create 200001 in
   let cache_fp = HAA.create 200001 in
-  fun ?(fp=false) atoms -> (* dekker2 : 2110 false, 18588 true*)
+  fun ?(fp=false) atoms ->
     try HAA.find (if fp then cache_fp else cache) atoms
     with Not_found ->
       let f = make_formula ~fp atoms in
@@ -261,13 +255,11 @@ let reached args s sa = (* FW only *) (* events not handled yet *)
 let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  (* let f = make_formula ~fp:true cube.Cube.array in *)
   let f = make_formula_set ~fp:true cube.Cube.litterals in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
-  (* Format.eprintf "Array : %a\n" ArrayAtom.print ap; *)
   let f = make_formula ~fp:true ap in
   let f = F.make F.Not [f] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
@@ -296,59 +288,6 @@ let assume_goal_nodes n nodes = (* FP only *)
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
   SMT.check ~fp:true ()
 
-
-
-let acyclic ({ tag = id; cube = cube } as n) =
-  SMT.clear ();
-  let nb_procs = List.length (Node.variables n) in
-  SMT.assume ~id (distinct_vars nb_procs);
-  let _, evts, rels = Weakorder.extract_events_set (cube.Cube.litterals) in
-
-  let prop = Weakorder.make_prop evts rels in
-  if Weakmem.H2Set.exists (fun (e1a, e2a) ->
-     Weakmem.H2Set.exists (fun (e1b, e2b) ->
-       Weakmem.H.equal e1a e2b && Weakmem.H.equal e2a e1b
-     ) prop
-  ) prop
-  then raise (Smt.Unsat [])
-
-  (*match Weakorder.make_orders evts rels with
-    | None -> ()
-    | Some fo -> SMT.assume ~id fo;
-                 SMT.check () *)
-
-(*let acyc1, prop = (* says acyclic *)
-    let prop = make_prop evts rels in
-    (if Weakmem.H2Set.exists (fun (e1a, e2a) ->
-      Weakmem.H2Set.exists (fun (e1b, e2b) ->
-        Weakmem.H.equal e1a e2b && Weakmem.H.equal e2a e1b
-      ) prop
-    ) prop then false else true),
-    prop
-  in
-
-  let acyc2, f = (* says cyclic *)
-    match Weakorder.make_orders evts rels with
-    | None -> true, F.f_true
-    | Some fo -> begin try SMT.assume ~id fo; SMT.check (); true, fo
-                       with Smt.Unsat _ -> false, fo end
-  in
-
-  if not acyc1 && not acyc2 then raise (Smt.Unsat []);
-
-  if acyc1 <> acyc2 then begin
-      let open Weakmem in
-      Format.fprintf Format.std_formatter "Prop says : %s, SMT says : %s\n"
-       (if acyc1 then "acyclic" else "cyclic")
-       (if acyc2 then "acyclic" else "cyclic");
-      Format.fprintf Format.std_formatter "N : %a\n" Node.print n;
-      Format.fprintf Format.std_formatter "F : %a\n" F.print f;
-      Format.fprintf Format.std_formatter "Prop : \n";
-      H2Set.iter (fun (ef, et) ->
-        Format.fprintf Format.std_formatter "%a < %a\n" H.print ef H.print et;
-      ) prop;
-      failwith "Stop"
-  end *)
 
 let init () =
   SMT.init_axioms ()

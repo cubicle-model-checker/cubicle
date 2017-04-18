@@ -124,7 +124,7 @@ CMO = version.cmo options.cmo \
       variable.cmo weakutil.cmo weakmem.cmo types.cmo \
       cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo \
-      weakevent.cmo weakwrite.cmo weakorder.cmo \
+      weakevent.cmo weakrel.cmo weakpre.cmo weakwrite.cmo \
       prover.cmo safety.cmo weaksubst.cmo fixpoint.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \

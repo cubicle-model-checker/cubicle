@@ -243,9 +243,6 @@ let print_time_forward () =
 let print_time_safety () =
   printf "Time for safety                  : %a@." print_time (TimeSafety.get ())
 
-let print_time_rels () =
-  printf "Building relations               : %a@." print_time (TimeRels.get ())
-
 let print_time_acycl () =
   printf "Acyclicity test                  : %a@." print_time (TimeAcycl.get ())
 
@@ -257,6 +254,15 @@ let print_time_asubst () =
 
 let print_time_prop () =
   printf "Building prop relation           : %a@." print_time (TimeProp.get ())
+
+let print_time_satrd () =
+  printf "Satisfying reads with writes     : %a@." print_time (TimeSatRead.get ())
+
+let print_time_buildrw () =
+  printf "├─Computing read-write pairs     : %a@." print_time (TimeBuildRW.get ())
+
+let print_time_filterrw () =
+  printf "├─Filtering read-write pairs     : %a@." print_time (TimeFilterRW.get ())
 
 let print_report ~safe visited candidates =
   print_candidates ~safe candidates;
@@ -287,11 +293,13 @@ let print_report ~safe visited candidates =
       print_time_forward ();
       print_time_ccheck ();
       print_time_safety ();
-      print_time_rels ();
       print_time_acycl ();
       print_time_csubst ();
       print_time_asubst ();
       print_time_prop ();
+      print_time_satrd ();
+      print_time_buildrw ();
+      print_time_filterrw ();
     end;
   printf "%a" Pretty.print_double_line ()
 

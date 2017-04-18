@@ -31,11 +31,13 @@ module TimeFormula : Timer.S
 module TimeSimpl : Timer.S
 module TimeCertificate : Timer.S
 module TimeSafety : Timer.S
-module TimeRels : Timer.S
 module TimeAcycl : Timer.S
 module TimeCSubst : Timer.S
 module TimeASubst : Timer.S
 module TimeProp : Timer.S
+module TimeSatRead : Timer.S
+module TimeBuildRW : Timer.S
+module TimeFilterRW : Timer.S
 
 
 (** {2 Misc } *)

@@ -1,12 +1,12 @@
 
 (* Spinlock example *)
 
-number_procs 3
+number_procs 4
 
 (*
   2 procs : 33 N, 64 FP, 64 SC, 0,3s
   3 procs : 132 N, 452 FP, 281 SC, 3,5s
-  4 procs : TO / 652 N, 1755 FP, 1254 SC, 2m33
+  4 procs : TO / 1100 N, 3798 FP, 2382 SC, 19m20
 *)
 
 type loc = Acquire | Spin | CS | Release

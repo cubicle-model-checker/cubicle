@@ -1,5 +1,5 @@
 
-number_procs 5
+number_procs 7
 
 type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6
 

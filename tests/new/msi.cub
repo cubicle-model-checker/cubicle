@@ -1,5 +1,5 @@
 
-(* number_procs 4 *)
+(* number_procs 3 *)
 
 (*
   2 procs : 33 nodes, 365 FP, 592 SC, 22s

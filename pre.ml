@@ -236,25 +236,8 @@ let make_cubes (ls, post) rargs s tr cnp =
   let args = cnp.Cube.vars in
   let cube acc sigma =
     let tr_args = List.map (Variable.subst sigma) tr.tr_args in
-
-(* let c = Cube.subst sigma cnp in *)
-(* if debug && verbose > 0 then Debug.pre_cubes c.Cube.litterals c.Cube.vars; *)
-
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
     (* cubes are in normal form *)
-
-    (* TSO *)
-    let lnp = List.fold_left (fun lnp cnp ->
-  (* if debug && verbose > 0 then Debug.pre_cubes cnp.Cube.litterals cnp.Cube.vars; *)
-      (* build new cubes with writes satisfying reads *)
-      let lsa = Weakwrite.satisfy_reads tr cnp.Cube.litterals in
-      List.fold_left (fun lnp sa ->
-        try (Cube.create_normal (Cube.simplify_atoms sa)) :: lnp
-	with Exit -> lnp
-      ) lnp lsa
-    ) [] lnp in
-    (* END TSO *)
-
     List.fold_left
       (fun (ls, post) cnp ->
        let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
@@ -263,33 +246,44 @@ let make_cubes (ls, post) rargs s tr cnp =
 	 (fun (ls, post) ureq ->
 	  try
 	    let ureq = Cube.simplify_atoms_base np ureq in
-	    let np = SAtom.union ureq np in 
-	    if debug && verbose > 0 then Debug.pre_cubes np nargs;
-	    if Cube.inconsistent_set np then
-              begin
-		if debug && verbose > 0 then eprintf "(inconsistent)@.";
-		(ls, post)
+	    let np = SAtom.union ureq np in
+
+	    if Cube.inconsistent_set np then begin
+              if debug && verbose > 0 then
+                begin Debug.pre_cubes np nargs; eprintf "(inconsistent)@." end;
+	      (ls, post)
 	      end
 	    else
+ 
+              (* TSO *)
+              let lnp = Weakwrite.satisfy_reads tr np in
+              (* END TSO *)
 
-	      (* TSO *)
-	      let np = Weakevent.instantiate_events np in
-              (*Debug.pre tr np;*)
-	      (* END TSO *)
+              List.fold_left (fun (ls, post) np ->
+
+	        if debug && verbose > 0 then Debug.pre_cubes np nargs;
+	        if Cube.inconsistent_set np then
+                  begin
+		    if debug && verbose > 0 then eprintf "(inconsistent)@.";
+		    (ls, post)
+	          end
+	        else
               
-              let new_cube = Cube.create nargs np in
-              let new_s = Node.create ~from:(Some (tr, tr_args,s)) new_cube in
-	      match post_strategy with
-	      | 0 -> add_list new_s ls, post
-	      | 1 -> 
-	         if List.length nargs > nb_uargs then
-		   ls, add_list new_s post
-		 else add_list new_s ls, post
-	      | 2 -> 
-		 if not (SAtom.is_empty ureq) || postpone args p np 
-		 then ls, add_list new_s post
-		 else add_list new_s ls, post
-	      | _ -> assert false
+                  let new_cube = Cube.create nargs np in
+                  let new_s = Node.create ~from:(Some(tr,tr_args,s)) new_cube in
+	          match post_strategy with
+	          | 0 -> add_list new_s ls, post
+	          | 1 -> 
+	             if List.length nargs > nb_uargs then
+		       ls, add_list new_s post
+		     else add_list new_s ls, post
+	          | 2 -> 
+		     if not (SAtom.is_empty ureq) || postpone args p np 
+		     then ls, add_list new_s post
+		     else add_list new_s ls, post
+	          | _ -> assert false
+
+              ) (ls, post) lnp
 
 	  with Exit -> ls, post
 	 ) (ls, post) lureq ) acc lnp

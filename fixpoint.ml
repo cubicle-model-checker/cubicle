@@ -308,55 +308,41 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> Prover.run
 
-  let filter_rels c =
-    let open Weakmem in
-    let sa = SAtom.filter (fun at -> match at with
-      | Atom.Comp (Access (a, _), Eq, Elem _)
-      | Atom.Comp (Elem _, Eq, Access (a, _))
-           when H.equal a hFence || H.equal a hRf || H.equal a hCo ||
-                H.equal a hFr || H.equal a hRmw || H.equal a hSync -> false
-      | _ -> true
-    ) c.Cube.litterals in
-    Cube.create c.Cube.vars sa
-
   let preprocess_n n = (* may filter out evts too *)
     let open Weakmem in
     let sa = n.cube.Cube.litterals in
     let evts = SAtom.fold (fun a evts -> (* get evts with value *)
       Weakwrite.split_event a evts) sa HMap.empty in
     let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
-    let sa, evtsX, rels = Weakorder.extract_events_set sa in (* get rels *)
-    let sat_evt_lw = HMap.filter (fun e ((_, _, v, _), vals) ->
-      (*is_local_weak v &&*) vals = []) evts in
+    let sa, rels = Weakrel.extract_rels_set evts sa in (* get rels *)
+    let sat_evt = HMap.filter (fun _ (_, vals) -> vals = []) evts in
     let sa = SAtom.filter (fun a -> match a with
       | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
       | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
        when H.equal a hE && ((*H.equal f hThr ||*) H.equal f hVar || is_param f)
-            && HMap.mem e sat_evt_lw -> false
+            && HMap.mem e sat_evt -> false
       | _ -> true
-    ) sa in (* buggy patch to subsume more nodes... *)
-    let prop = Weakorder.make_prop evtsX rels in
-    let scloc = Weakorder.make_scloc evtsX rels in
-   (*  let fprintf s = Format.fprintf Format.std_formatter s in *)
-   (* H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) prop; *)
-   (* fprintf "\n"; *)
-    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, prop, scloc
+    ) sa in
+    let ghb = Weakrel.make_ghb evts rels in
+    let scloc = Weakrel.make_scloc evts rels in
+    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, ghb, scloc
 
   let preprocess_ar ar =
     let open Weakmem in
     let evts = Array.fold_left (fun evts a -> (* get evts with value *)
       Weakwrite.split_event a evts) HMap.empty ar in
     let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
-    let _, evtsX, rels = Weakorder.extract_events_array ar in (* get rels *)
-    let prop = Weakorder.make_prop evtsX rels in
-    let scloc = Weakorder.make_scloc evtsX rels in
-    evts, rels, prop, scloc
-
+    let _, rels = Weakrel.extract_rels_array evts ar in (* get rels *)
+    let ghb = Weakrel.make_ghb evts rels in
+    let scloc = Weakrel.make_scloc evts rels in
+    evts, rels, ghb, scloc (* could extract ghb only once at start *)
+                              (* since it's the same even with proc renaming *)
 module HAA = Hashtbl.Make (ArrayAtom)
 let cache = HAA.create 200001
                        
-  let check_and_add (n, to_evts, to_rels, to_prop, to_scloc) nodes vis_n=
-    let vis_n_cube = filter_rels vis_n.cube in
+  let check_and_add (n, to_evts, to_rels, to_ghb, to_scloc) nodes vis_n=
+    let vis_n_cube = Cube.create vis_n.cube.Cube.vars
+                       (Weakrel.filter_rels_set vis_n.cube.Cube.litterals) in
     let n_array = Node.array n in
     let vis_array = vis_n.cube.Cube.array in
     (* if !Options.size_proc <> 0 then begin *)
@@ -371,8 +357,8 @@ let cache = HAA.create 200001
       let d = Instantiation.relevant ~of_cube:vis_n_cube ~to_cube:n.cube in
       let n = List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
-        (* let from_evts, from_rels, from_prop = preprocess_ar vis_renamed in *)
-        let from_evts, from_rels, from_prop, from_scloc =
+        (* let from_evts, from_rels, from_ghb = preprocess_ar vis_renamed in *)
+        let from_evts, from_rels, from_ghb, from_scloc =
           try (* msi : 3360 miss / 297438 hits *)
             HAA.find cache vis_renamed (* that may take some time *)
           with Not_found ->           (* but it's worse not to do it*)
@@ -381,8 +367,8 @@ let cache = HAA.create 200001
             r (* TOO MANY PROC PERMS BTW *) (* WHY PETERSON 2 DIFF ON SC ? *)
         in (* SIMPLIFY NODES, SO FIXPOINT BECOMES EASY *)
         let vis_renamed_l = (Weaksubst.remap_events vis_renamed
-          (Weaksubst.build_event_substs from_evts from_rels from_prop from_scloc
-                                        to_evts to_rels to_prop to_scloc)) in
+          (Weaksubst.build_event_substs from_evts from_rels from_ghb from_scloc
+                                        to_evts to_rels to_ghb to_scloc)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
 (* Format.fprintf Format.std_formatter "Matches for perm : %d\n" (List.length vis_renamed_l); *)
@@ -439,8 +425,8 @@ n
     (* Format.eprintf "FIXPOINT\n"; *)
     (* List.iter (fun (_, ar) -> Format.eprintf "Atm : %a\n" ArrayAtom.print ar) nodes; *)
     (* Cubetrie.iter (fun n -> Format.eprintf "Node : %a\n" Node.print n) visited; *)
-(* Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes); *)
-(* Format.print_flush (); (\*if t = 16 then ((\*Format.fprintf Format.std_formatter "n : %a\n" Node.print sx;*\) List.iter (fun (n, ar) -> Format.fprintf Format.std_formatter "n (%d) : %a\n" n.tag ArrayAtom.print ar) nodes; exit 0);*\) *)
+Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes);
+Format.print_flush (); (*if t = 16 then ((*Format.fprintf Format.std_formatter "n : %a\n" Node.print sx;*) List.iter (fun (n, ar) -> Format.fprintf Format.std_formatter "n (%d) : %a\n" n.tag ArrayAtom.print ar) nodes; exit 0);*)
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes

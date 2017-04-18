@@ -31,11 +31,13 @@ module TimeFormula = Timer.Make (Options)
 module TimeSimpl = Timer.Make (Options)
 module TimeCertificate = Timer.Make (struct let profiling = true end)
 module TimeSafety = Timer.Make (Options)
-module TimeRels = Timer.Make (Options)
 module TimeAcycl = Timer.Make (Options)
 module TimeCSubst = Timer.Make (Options)
 module TimeASubst = Timer.Make (Options)
 module TimeProp = Timer.Make (Options)
+module TimeSatRead = Timer.Make (Options)
+module TimeBuildRW = Timer.Make (Options)
+module TimeFilterRW = Timer.Make (Options)
 
 
 let nb_digits n =

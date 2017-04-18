@@ -1,5 +1,6 @@
 
 open Weakmem
+open Weakevent
 open Types
 open Util
 
@@ -175,7 +176,7 @@ let get_evts ar =
   let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
   evts
 
-(* let po_agree cs ef pf et pt (pof, _, _, _, _, _, _) (pot, _, _, _, _, _, _) = *)
+(* let po_agree cs ef pf et pt (pof, _, _, _, _, _) (pot, _, _, _, _, _) = *)
 (*   let ppof = HMap.find pf pof in *)
 (*   let ppot = HMap.find pt pot in *)
 (*   HMap.for_all (fun ef0 et0 -> *)
@@ -198,8 +199,8 @@ let rel_agree cs ef pf et pt relf relt =
     else true
   ) cs
 
-let make_substs esf relf propf sclocf
-                est relt propt scloct =
+let make_substs esf relf ghbf sclocf
+                est relt ghbt scloct =
   let rec aux csl cs esf est =
     try
       let ef, (((pf, df, vf, vif) as edf, valf) as evtf) = HMap.choose esf in
@@ -212,14 +213,14 @@ let make_substs esf relf propf sclocf
            (* && po_agree cs ef pf et pt relf relt *)
            && sync_agree cs ef pf et pt relf relt
            && rel_agree cs ef pf et pt sclocf scloct
-           && rel_agree cs ef pf et pt propf propt
+           && rel_agree cs ef pf et pt ghbf ghbt
           then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
         else if compat_evts evtf evtt
            && H.equal pf pt
            (* && po_agree cs ef pf et pt relf relt *)
            && sync_agree cs ef pf et pt relf relt
            && rel_agree cs ef pf et pt sclocf scloct
-           && rel_agree cs ef pf et pt propf propt                  
+           && rel_agree cs ef pf et pt ghbf ghbt                  
           then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
 	else csl
       ) est csl
@@ -230,8 +231,8 @@ let make_substs esf relf propf sclocf
   aux [] HMap.empty esf est
 
 (* from : visited node, more general / to : node to test, less general *)
-let build_event_substs from_evts from_rels from_prop from_scloc
-                       to_evts to_rels to_prop to_scloc =
+let build_event_substs from_evts from_rels from_ghb from_scloc
+                       to_evts to_rels to_ghb to_scloc =
 (*
   let fprintf s = Format.fprintf Format.std_formatter s in
  
@@ -249,8 +250,8 @@ let build_event_substs from_evts from_rels from_prop from_scloc
   H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) to_prop;
   fprintf "\n----------\n";  *)
   TimeCSubst.start ();
-  let es = make_substs from_evts from_rels from_prop from_scloc
-                       to_evts to_rels to_prop to_scloc in
+  let es = make_substs from_evts from_rels from_ghb from_scloc
+                       to_evts to_rels to_ghb to_scloc in
 (*
   List.iter (fun s ->
     fprintf "Subst :";

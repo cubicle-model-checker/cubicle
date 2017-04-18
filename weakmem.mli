@@ -7,6 +7,16 @@ module H2 : sig type t = (H.t * H.t) val compare : t -> t -> int end
 module H2Map : Map.S with type key = H2.t
 module H2Set : Set.S with type elt = H2.t
 
+module HEvt : sig
+  type t = (H.t * H.t * H.t * H.t list)
+  val compare : t -> t -> int
+end
+module HEvtMap : sig
+  include Map.S with type key = HEvt.t
+  val findp : (key -> 'a -> bool) -> 'a t -> (key * 'a)
+end
+module HEvtSet : Set.S with type elt = HEvt.t
+
 module HL : sig type t = H.t list val compare : t -> t -> int end
 module HLMap : Map.S with type key = HL.t
 module HLSet : Set.S with type elt = HL.t

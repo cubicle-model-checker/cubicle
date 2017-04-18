@@ -52,6 +52,4 @@ val run : unit -> unit
 
 val assume_goal_nodes : Node.t -> (Node.t * ArrayAtom.t) list -> unit
 
-val acyclic : Node.t -> unit
-
 val init : unit -> unit

@@ -14,6 +14,32 @@ end
 module H2Map = Map.Make (H2)
 module H2Set = Set.Make (H2)
 
+module HEvt = struct
+  type t = (H.t * H.t * H.t * H.t list)
+  let compare (s1p, s1d, s1v, s1vi) (s2p, s2d, s2v, s2vi) =
+    let c = H.compare s1p s2p in
+    if c <> 0 then c else
+    let c = H.compare s1d s2d in
+    if c <> 0 then c else
+    let c = H.compare s1v s2v in
+    if c <> 0 then c else
+    H.compare_list s1vi s2vi
+end
+
+module HEvtMap = struct
+  include Map.Make (HEvt)
+  exception Stop
+  let findp p m =
+    let res = ref None in
+    begin try iter (fun k v -> if p k v then begin
+                    res := Some (k, v); raise Stop end) m
+          with Stop -> () end;
+    match !res with
+    | Some (k, v) -> k, v
+    | _ -> raise Not_found
+end
+module HEvtSet = Set.Make (HEvt)
+
 module HL = struct
   type t = H.t list
   let compare = H.compare_list
@@ -149,7 +175,8 @@ let init_weak_env wvl =
     ((hThr, hInt) :: (hDir, hDirection) ::
      (hVar, hWeakVar) :: (hVal, hValType) :: !pl);
 
-  for i = 0 to 50 do S.declare (mk_hE i) [] T.type_int done;
+  (* should adjust automatically *)
+  for i = 0 to 100 do S.declare (mk_hE i) [] T.type_int done;
 
   let int1 = [T.type_int] in
   let int2 = [T.type_int; T.type_int] in

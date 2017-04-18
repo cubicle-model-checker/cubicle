@@ -612,9 +612,9 @@ let system s =
   let invs_woloc = [] in (* as it would put reads in init... *) (*
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in *)
   let invs_woloc_e = List.map (fun (_,v,i) ->
-    create_node_rename Inv v (Weakevent.instantiate_events i)) s.invs in
+    create_node_rename Inv v (Weakpre.instantiate_events i)) s.invs in
   let unsafe_woloc_e = List.map (fun (_,v,u) ->
-    create_node_rename Orig v (Weakevent.instantiate_events u)) s.unsafe in
+    create_node_rename Orig v (Weakpre.instantiate_events u)) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
