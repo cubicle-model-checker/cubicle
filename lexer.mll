@@ -44,9 +44,8 @@
         "false", FALSE;
 	"write", WRITE;
 	"read", READ;
-	"fences", FENCES;
+	"fence", FENCE;
 	"weak", WEAK;
-	"local_weak", LOCAL_WEAK;
 	"number_procs", SIZEPROC;
       ]
 	       

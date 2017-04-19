@@ -344,7 +344,7 @@ let updates args =
 let transitions = 
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) ->
-       if Options.model = Options.SC && t.tr_fences <> []
+       if Options.model = Options.SC && t.tr_fence <> None
          then error (OpInvalidInSC) loc;
        unique (fun x-> error (DuplicateName x) loc) args; 
        atoms loc args t.tr_reqs;
@@ -382,7 +382,7 @@ let init_global_env s =
        end;
        l := (n, t)::!l) s.globals;
   List.iter 
-    (fun (loc, n, (args, ret), (weak, local)) -> 
+    (fun (loc, n, (args, ret), weak) -> 
        declare_symbol loc n args ret;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;

@@ -362,9 +362,8 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
            SAtom.add ite us
          ) vvis us
     ) us tri.tr_writes in
-    let us = List.fold_left (fun us p ->
-      SAtom.add (Atom.Comp (Fence p, Eq, Elem (Term.htrue, Constr))) us
-    ) us tri.tr_fences in
+    let us = match tri.tr_fence with None -> us | Some p ->
+      SAtom.add (Atom.Comp (Fence p, Eq, Elem (Term.htrue, Constr))) us in
     us
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;

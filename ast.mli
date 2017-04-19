@@ -55,7 +55,7 @@ type transition_info = {
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
   tr_writes : (Variable.t * Hstring.t * (Variable.t list) * glob_update) list;
-  tr_fences : Variable.t list;
+  tr_fence : Variable.t option;
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
@@ -75,7 +75,7 @@ type transition = {
 type system = {
   globals : (loc * Hstring.t * Smt.Type.t * bool) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
-  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * (bool * bool)) list;
+  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
