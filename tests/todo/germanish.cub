@@ -1,0 +1,65 @@
+
+type msg = Empty | Reqs | Reqe
+type state = Invalid | Shared | Exclusive
+
+weak var Exgntd : bool
+weak var Curcmd : msg
+weak var Curptr : proc
+
+array Cache[proc] : state
+weak array Shrset[proc] : bool
+
+init (z) { Cache[z] = Invalid && Shrset[z] = False &&
+           Exgntd = False && Curcmd = Empty }
+
+unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+
+
+transition req_shared (n)
+requires { read(n, Curcmd) = Empty && Cache[n] = Invalid }
+{ 
+  write(n, Curcmd, Reqs); 
+  write(n, Curptr, n) ;
+}
+    
+transition req_exclusive (n)
+requires { read(n, Curcmd) = Empty && Cache[n] <> Exclusive }
+{ 
+  write(n, Curcmd, Reqe); 
+  write(n, Curptr, n);
+}
+    
+transition inv_1 (n)
+requires { read(n, Shrset[n])=True  &&  read(n, Curcmd) = Reqe }
+{ 
+  write(n, Exgntd, False);
+  Cache[n] := Invalid;
+  write(n, Shrset[n], False);
+}
+
+transition inv_2 (n)
+requires { read(n, Shrset[n])=True  && read(n, Curcmd) = Reqs && read(n, Exgntd)=True }
+{ 
+  write(n, Exgntd, False);
+  Cache[n] := Invalid;
+  write(n, Shrset[n], False);
+}
+    
+transition gnt_shared (n)
+requires { read(n, Curptr) = n && read(n, Curcmd) = Reqs && read(n, Exgntd) = False }
+{ 
+  write(n, Curcmd, Empty);
+  write(n, Shrset[n], True);
+  Cache[n] := Shared;
+}
+
+transition gnt_exclusive (n)
+requires { read(n, Shrset[n]) = False && read(n, Curcmd) = Reqe &&
+           read(n, Exgntd) = False && read(n, Curptr) = n &&
+	   forall_other l. read(n, Shrset[l]) = False }
+{ 
+  write(n, Curcmd, Empty); 
+  write(n, Exgntd, True);
+  write(n, Shrset[n], True);
+  Cache[n] := Exclusive;
+}

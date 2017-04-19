@@ -7,11 +7,11 @@ open Types
 (*   Types.Atom.t array -> *)
 (*   ((H.t * H.t * H.t list) * (bool * Types.op_comp * Types.Term.t) list) *)
 (*   HMap.t HMap.t *)
-
+(*
 val get_evts :
   Types.Atom.t array ->
   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
-
+ *)
 val remap_events :
   Types.Atom.t array ->
   Variable.t HMap.t list ->

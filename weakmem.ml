@@ -74,16 +74,10 @@ let hPo = H.make "_po"
 let hRf = H.make "_rf"
 let hCo = H.make "_co"
 let hFr = H.make "_fr"
-let hRmw = H.make "_rmw"
 let hFence = H.make "_fence"
 let hSync = H.make "_sync"
 let hPoLoc = H.make "_po_loc"
 let hPpo = H.make "_ppo"
-let hSci = H.make "_sci"
-let hPropi = H.make "_propi"
-
-let hUniprocRW = H.make "_uniprocRW"
-let hUniprocWR = H.make "_uniprocWR"
 
 let mk_hP p = H.make ("_p" ^ (string_of_int p))
 let mk_hE e = H.make ("_e" ^ (string_of_int e))
@@ -129,7 +123,7 @@ let weak_vars = HTbl.create 17
 
 let is_weak = HTbl.mem weak_vars
 
-let is_local_weak v = try HTbl.find weak_vars v with Not_found -> false
+let weak_type = HTbl.find weak_vars
 
 
 
@@ -152,16 +146,16 @@ module S = Smt.Symbol
 
 let init_weak_env wvl =
 
-  List.iter (fun (wv, _, _, local) ->
-      HTbl.replace weak_vars wv local;
-      HTbl.replace weak_vars (mk_hV wv) local;
+  List.iter (fun (wv, args, ret) ->
+    HTbl.replace weak_vars wv (args, ret);
+    HTbl.replace weak_vars (mk_hV wv) (args, ret);
   ) wvl;
   
   T.declare hDirection [hR; hW];
-  T.declare hWeakVar (List.map (fun (wv, _, _, _) -> mk_hV wv) wvl);
+  T.declare hWeakVar (List.map (fun (wv, _, _) -> mk_hV wv) wvl);
 
   (* wts : set of all types of weak variables / maxp : max. number of params *)
-  let wts, maxp = List.fold_left (fun (wts, maxp) (wv, args, ret, local) ->
+  let wts, maxp = List.fold_left (fun (wts, maxp) (wv, args, ret) ->
     let nbp = List.length args in
     HSet.add ret wts, if nbp > maxp then nbp else maxp
   ) (HSet.empty, 0) wvl in
@@ -187,14 +181,7 @@ let init_weak_env wvl =
   S.declare hRf int2 T.type_prop;
   S.declare hCo int2 T.type_prop;
   S.declare hFr int2 T.type_prop;
-  S.declare hRmw int2 T.type_prop;
   S.declare hFence int2 T.type_prop;
   S.declare hSync int2 T.type_prop;
   S.declare hPoLoc int2 T.type_prop;
   S.declare hPpo int2 T.type_prop;
-
-  S.declare hSci int1 T.type_int;
-  S.declare hPropi int1 T.type_int;
-
-  S.declare hUniprocRW int1 T.type_int;
-  S.declare hUniprocWR int1 T.type_int

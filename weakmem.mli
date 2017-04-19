@@ -46,13 +46,10 @@ val hPo : H.t
 val hRf : H.t
 val hCo : H.t
 val hFr : H.t
-val hRmw : H.t
 val hFence : H.t
 val hSync : H.t
 val hPoLoc : H.t
 val hPpo : H.t
-val hSci : H.t
-val hPropi : H.t
 
 val mk_hP : int -> H.t
 val mk_hE : int -> H.t
@@ -75,9 +72,9 @@ val var_of_v : H.t -> string
 
 val is_weak : H.t -> bool
 
-val is_local_weak : H.t -> bool
-
-val init_weak_env : (H.t * H.t list * H.t * bool) list -> unit
+val weak_type : H.t -> H.t list * HSet.elt
+                 
+val init_weak_env : (H.t * H.t list * H.t) list -> unit
 
 val cartesian_product : ('a -> 'a -> 'a) -> 'a list -> 'a list -> 'a list
 val cartesian_product_h2m :'a H2Map.t list -> 'a H2Map.t list -> 'a H2Map.t list

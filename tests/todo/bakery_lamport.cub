@@ -1,0 +1,52 @@
+type location = NCS | Choose | Wait | CS
+
+array PC[proc] : location
+weak array Ticket[proc] : int
+weak array Num[proc] : int
+weak var Max : int
+
+init (x) { PC[x] = NCS && Num[x] = 0 && 
+           Max = 1 && Ticket[x] = 0 }
+
+invariant (x) { read(x, Max) < 0 }
+
+unsafe (x y) { PC[x] = CS && PC[y] = CS }
+
+transition next_ticket (x)
+{ 
+  write(x, Ticket[j], case | _ : read(x, Max));
+  write(x, Max, read(x, Max) + 1);
+}
+
+transition take_ticket (x)
+requires { PC[x] = NCS &&
+    forall_other j. read(x, Num[j]) < read(x, Max) }
+{
+  PC[x] := Choose;
+  write(x, Ticket[x], read(x, Max));
+}
+
+transition wait (x)
+requires { PC[x] = Choose }
+{
+  PC[x] := Wait;
+  write(x, Num[x], read(x, Ticket[x]));
+}
+
+transition turn (x)
+requires { PC[x] = Wait && 
+  forall_other j. 
+  (PC[j] <> Choose && read(x, Num[j]) = 0 ||
+   PC[j] <> Choose && read(x, Num[x]) < read(x, Num[j]) ||
+   PC[j] <> Choose &&
+   read(x, Num[x]) = read(x, Num[j]) && x < j) }
+{
+  PC[x] := CS;
+}
+
+transition exit (x)
+requires { PC[x] = CS }
+{
+  PC[x] := NCS;
+  write(x, Num[x], 0);
+}

@@ -137,7 +137,7 @@ let filter_rels_array ar =
     | Atom.Comp (Access (a, _), Eq, Elem _)
     | Atom.Comp (Elem _, Eq, Access (a, _))
          when H.equal a hFence || H.equal a hRf || H.equal a hCo ||
-              H.equal a hFr || H.equal a hRmw || H.equal a hSync -> sa
+              H.equal a hFr || H.equal a hSync -> sa
     | _ -> SAtom.add at sa
   ) SAtom.empty ar
 
@@ -146,7 +146,7 @@ let filter_rels_set sa =
     | Atom.Comp (Access (a, _), Eq, Elem _)
     | Atom.Comp (Elem _, Eq, Access (a, _))
          when H.equal a hFence || H.equal a hRf || H.equal a hCo ||
-              H.equal a hFr || H.equal a hRmw || H.equal a hSync -> false
+              H.equal a hFr || H.equal a hSync -> false
     | _ -> true
   ) sa
 

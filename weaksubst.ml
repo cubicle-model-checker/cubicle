@@ -4,11 +4,11 @@ open Weakevent
 open Types
 open Util
 
-
+(*
 (* evts : map (p, e) -> ed *)
 (* res : map p -> map e -> ed *)
 (* want : map p -> set (map e -> ed) *)
-       
+
 (* Retrive all events in a map of map (proc -> eid -> event *)
 let get_evts ar =
   let evts = Array.fold_left (fun evts a ->
@@ -18,7 +18,7 @@ let get_evts ar =
     let evt = (sort_params ed, vals) in
     HMap.add p (HMap.add e evt pevts) evts
   ) evts HMap.empty
-
+*)
 (* Checks whether (cop1, c1) can subsume (cop2, c2) *)
 let compatible_consts cop1 c1 cop2 c2 =
   let open Weakwrite in
@@ -115,7 +115,7 @@ let compat_evts (ed1, vals1) (ed2, vals2) =
          compatible_terms cop1 t1 cop2 t2
        ) vals2
      ) vals1)
-
+(*
 (* SHOULD TAKE CARE OF SYNC ! *)
 (* [Empty] -> the source was empty, this is a valid substitution
                 (though it should not happen here)
@@ -163,19 +163,19 @@ let build_event_substs from_evts to_evts =
   let es = make_p_combs from_evts to_evts in
   TimeCSubst.pause ();
   es
+ *)
 
 
 
 
-
-
+(*
 (* Retrive all events in a map of (eid -> (proc, event)) *)
 let get_evts ar =
   let evts = Array.fold_left (fun evts a ->
     Weakwrite.split_event a evts) HMap.empty ar in
   let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
   evts
-
+ *)
 (* let po_agree cs ef pf et pt (pof, _, _, _, _, _) (pot, _, _, _, _, _) = *)
 (*   let ppof = HMap.find pf pof in *)
 (*   let ppot = HMap.find pt pot in *)
@@ -261,26 +261,6 @@ let build_event_substs from_evts from_rels from_ghb from_scloc
   if List.length es = 0 then fprintf "No subst\n"; *)
   TimeCSubst.pause ();
   es
-(*
-_e1:#1:_R:_VX[#1](1)
-_e2:#2:_R:_VX[#2](0)
-_e3:#2:_W:_VX[#2](0)
-_e4:#2:_R:_VX[#3](0)
-_e5:#3:_W:_VX[#3](0)
-_e6:#3:_R:_VX[#4](1)  
-_e3 < _e1   _e3 < _e2   _e4 < _e1   _e4 < _e2   _e5 < _e1   _e5 < _e2   _e5 < _e3   _e5 < _e4   _e6 < _e1   _e6 < _e2   _e6 < _e3   _e6 < _e4   
-
-_e1:#1:_R:_VX[#1](1)
-_e2:#2:_R:_VX[#2](0)
-_e3:#2:_W:_VX[#2](0)
-_e4:#2:_R:_VX[#3](0)
-_e5:#3:_W:_VX[#3](0)
-_e6:#3:_R:_VX[#4](0)
-_e7:#4:_W:_VX[#4](0)
-_e8:#4:_R:_VX[#5](1)  
-_e3 < _e1   _e3 < _e2   _e4 < _e1   _e4 < _e2   _e5 < _e1   _e5 < _e2   _e5 < _e3   _e5 < _e4   _e6 < _e1   _e6 < _e2   _e6 < _e3   _e6 < _e4   _e7 < _e5   _e7 < _e6   _e8 < _e5   _e8 < _e6   
-
-*)
 
 
 
@@ -302,7 +282,7 @@ let remap_events_ar ar sub =
     | Access (a, [e]) when H.equal a hE -> Access (a, [subst e])
     | Access (a, [p; e]) when H.equal a hFence -> Access (a, [p; subst e])
     | Access (a, [e1; e2]) when H.equal a hRf || H.equal a hCo
-       || H.equal a hFr || H.equal a hRmw -> Access (a, [subst e1; subst e2])
+        || H.equal a hFr -> Access (a, [subst e1; subst e2])
     | Access (a, sl) when H.equal a hSync -> Access (a, remap_sl sl)
     (* Read / Write / Fence -> KO *)
     | t -> t

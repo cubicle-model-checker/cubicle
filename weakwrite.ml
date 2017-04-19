@@ -7,7 +7,7 @@ open Util
 exception UnsatisfiableRead
 
 
-
+(*
 (* Used internally by split_event *)
 let find_event_safe e evts =
   try HMap.find e evts with Not_found -> ((hNone, hNone, hNone, []), [])
@@ -64,10 +64,10 @@ let events_by_thread sa =
     let pevts = (e, (sort_params ed, vals)) :: pevts in
     HMap.add p pevts evts
   ) evts HMap.empty
+ *)
 
 
-open Weakpre
-            
+
 let compatible_consts c1 cop c2 =
   let c = Types.compare_constants c1 c2 in
   match cop with
@@ -458,71 +458,224 @@ let subst_event_val sfun sa =
     | _ -> SAtom.add at sa
   ) sa SAtom.empty
 
+
+(* Retrieve the maximum event id for this proc *)
+let max_proc_eid eids p =
+  try IntSet.max_elt (HMap.find p eids) with Not_found -> 0
+
+(* Generate a fresh event id for this proc *)
+let fresh_eid eids p =
+  let eid = 1 + HMap.fold (fun _ peids maxeid ->
+    max maxeid (IntSet.max_elt peids)) eids 0 in
+  let peids = try HMap.find p eids with Not_found -> IntSet.empty in
+  eid, HMap.add p (IntSet.add eid peids) eids
+
+(* Compute the difference between event id sets by proc *)
+let eid_diff eids_high eids_low =
+  HMap.merge (fun _ h l ->
+    match h, l with
+    | Some h, Some l -> Some (IntSet.diff h l)
+    | Some h, None -> Some h
+    | _ -> failwith "Weakevent.eid_diff : internal error"
+  ) eids_high eids_low
+
+(* Build an event *)
+let build_event e p d v vi = (* v in original form without _V *)
+  let _, ret = Weakmem.weak_type v in
+  (* let v = mk_hV v in *)
+  let tevt = Access (hE, [e]) in
+  let tval = Field (Field (tevt, hVal), mk_hT ret) in
+  let athr = Atom.Comp (Field (tevt, hThr), Eq, Elem (p, Var)) in
+  let adir = Atom.Comp (Field (tevt, hDir), Eq, Elem (d, Constr)) in
+  let avar = Atom.Comp (Field (tevt, hVar), Eq, Elem (v, Constr)) in
+  let sa, _ = List.fold_left (fun (sa, i) v ->
+    SAtom.add (Atom.Comp (Field (tevt, mk_hP i), Eq, Elem (v, Var))) sa, i + 1
+  ) (SAtom.add avar (SAtom.add adir (SAtom.singleton athr)), 1) vi in
+  sa, tval
+
 let mk_eq_true term =
   Atom.Comp (term, Eq, Elem (Term.htrue, Constr))
 
-let satisfy_reads tri unsafe = (* unsafe without ites *)
+(* Build a predicate atom *)
+let mk_pred pred pl =
+  Atom.Comp (Access (pred, pl), Eq, Elem (Term.htrue, Constr))
+
+let satisfy_reads tri sa =
 
   TimeSatRead.start ();
 
-  let sa_pure, rds, wts, fces, eids, evts, wevts, urevts =
-    Weakevent.extract_events_set unsafe in
+  let saX, rds, wts, fces, eids, evts = Weakevent.extract_events_set sa in
 
-  let _, rels = Weakrel.extract_rels_set evts unsafe in
+  let wevts = Weakevent.write_events evts in
+  let urevts = Weakevent.unsat_read_events evts in
+  let _, rels = Weakrel.extract_rels_set evts sa in
 
   (* Remove writes with their values from unsafe *)
-  let _, unsafe = SAtom.partition (fun a -> match a with
+  let _, sa = SAtom.partition (fun a -> match a with
     | Atom.Comp (Write (_, _, _, []), Eq, _)
     | Atom.Comp (_, Eq, Write (_, _, _, [])) -> true
     | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
        failwith "Weakwrite.satisfy_reads : invalid Write"
     | _ -> false
-  ) unsafe in
+  ) sa in
 
   (* Build the relevant read-write combinations *)
   let wrcp = make_read_write_combinations wts rds evts wevts urevts rels in
+(*
+  let eids_before = eids in
+
+  (* Instantiate write events, keep a map to values *)
+  let iwts, sa, eids = HEvtMap.fold (fun (p, d, v, vi) _ (iwts, sa, eids) ->
+    let eid, eids = fresh_eid eids p in
+    let e = mk_hE eid in
+    let na, tval = build_event e p d v vi in
+    (HEvtMap.add (p, d, v, vi) (e, tval) iwts, SAtom.union na sa, eids)
+  ) wts (HEvtMap.empty, sa, eids) in
+
+  (* Instantiate read events, keep a map to values *)
+  let irds, sa, eids = HEvtMap.fold (fun (p, d, v, vi) _ (irds, sa, eids) ->
+    let eid, eids = fresh_eid eids p in
+    let e = mk_hE eid in
+    let na, tval = build_event e p d v vi in
+    (HEvtMap.add (p, d, v, vi) (e, tval) irds, SAtom.union na sa, eids)
+  ) rds (HEvtMap.empty, sa, eids) in
+
+  (* Generate fences *)
+  let sa = List.fold_left (fun sfa p ->
+    let eid = max_proc_eid eids p in
+    if eid <= 0 then sfa else
+    SAtom.add (mk_pred hFence [p; mk_hE eid]) sfa
+  ) sa fces in
+
+  (* Generate sync for synchronous events (for reads : even on <> threads)*)
+  let mk_sync eid_range = HMap.fold (fun _ peids sync ->
+    IntSet.fold (fun eid sync -> (mk_hE eid) :: sync
+  ) peids sync) eid_range [] in
+  let mk_sync_sa sync = match sync with [] | [_] -> SAtom.empty | _ ->
+    SAtom.singleton (mk_pred hSync (List.rev sync)) in
+  let sa = SAtom.union sa (mk_sync_sa (mk_sync (eid_diff eids eids_before))) in
+
+
+  let rec subst_ievent ievts t = match t with
+    | Read (p, v, vi) -> snd (HEvtMap.find (p, hR, mk_hV v, vi) ievts)
+    | Arith (t, c) -> Arith (subst_ievent ievts t, c)
+    | _ -> t
+  in
+
+  (* Substitute write values by instantiated read values *)
+  let wts_iv = HEvtMap.map (fun vals ->
+    List.map (fun t -> subst_ievent irds t) vals
+  ) wts in
+ 
+  (* Substitute read values by instantiated read values *)
+  let rds_iv = HEvtMap.map (fun vals ->
+    List.map (fun (cop, t) -> (cop, subst_ievent irds t)) vals              
+  ) rds in
+
+  (* Remove duplicate pairs of reads *)
+  (* should find opposite affectations *)(*
+  let reads = HEvtMap.filter (fun (p, d, v, vi) vals ->
+    List.exists (fun (cop, t) ->
+        match t with
+        | Read (rp, rv, rvi) -> H.equal p rp H.equal v rv H.list_equal vi rvi
+        | Arith (c, t) -> true
+        | _ -> false
+    ) vals
+  ) rds in *)
+ *)
+
+  (* Could add relations that are already known *)
 
   (* Generate the atom sets for each combination *)
   let res = List.fold_left (fun pres wrcl ->
-    let unsafe = List.fold_left (fun unsafe (((wp, _, wv, wvi), wtl), rcl) ->
-      let unsafe = List.fold_left (fun unsafe (re, _) ->
-        subst_event_val (fun t e ->
-          if H.equal e re then wtl else [t]) unsafe
-      ) unsafe rcl in
+    let sa = List.fold_left (fun sa (((wp, _, wv, wvi), wtl), rcl) ->
+      let sa = List.fold_left (fun sa (re, _) ->
+        subst_event_val (fun t e -> if H.equal e re then wtl else [t]) sa
+      ) sa rcl in
       let srl = List.fold_left (fun srl (re, _) -> re :: srl) [] rcl in
       let wv = H.make (var_of_v wv) in
-      SAtom.add (mk_eq_true (Write (wp, wv, wvi, srl))) unsafe
-    ) unsafe wrcl in
+      SAtom.add (mk_eq_true (Write (wp, wv, wvi, srl))) sa (* remove *)
+    ) sa wrcl in
+
+    (* let sa = List.fold_left (fun sa (((wp, _, wv, wvi), wtl), rcl) -> *)
+    (*   let wtl = List.map (subst_ievent irds) wtl in *)
+    (*   List.fold_left (fun sa (re, _) -> *)
+    (*     subst_event_val (fun t e -> if H.equal e re then wtl else [t]) sa *)
+    (*   ) sa rcl *)
+    (* ) sa wrcl in *)
+
     try
-      let np = Cube.simplify_atoms unsafe in
-      let np = Weakpre.instantiate_events np in
-      np  :: pres
+(*
+      (* Add reads with their values (which may be reads too) *)
+      let sa = HEvtMap.fold (fun pdvvi vals sa ->
+        let (_, lt) = HEvtMap.find pdvvi irds in
+        List.fold_left (fun sa (cop, rt) ->
+          let a = match cop with
+            | CEq -> Atom.Comp (lt, Eq, rt)
+            | CNeq -> Atom.Comp (lt, Neq, rt)
+            | CLt -> Atom.Comp (lt, Lt, rt)
+            | CLe -> Atom.Comp (lt, Le, rt)
+            | CGt -> Atom.Comp (rt, Le, lt)
+            | CGe -> Atom.Comp (rt, Lt, lt)
+          in
+          SAtom.add a sa
+        ) sa vals
+      ) rds_iv sa in
+
+      (* Remove satisfied reads from unsatisfied reads *)
+      let urevts = List.fold_left (fun urevts ((wed, _), rcl) ->
+        List.fold_left (fun urevts (re, ((p, d, v, vi), _)) ->
+          HMap.remove re urevts) urevts rcl
+      ) urevts wrcl in
+
+      (* Add relations impling new writes (rf, fr, co) *)
+      let sa = List.fold_left (fun sa ((ed, wtl), rcl) ->
+        let e, _ = HEvtMap.find ed iwts in
+        let sa = List.fold_left (fun sa (re, _) -> (* rf *)
+	  SAtom.add (mk_pred hRf [e; re]) sa
+        ) sa rcl in
+        let sa = HMap.fold (fun we (wed, _) sa -> (* co *)
+          if not (same_var ed wed) then sa
+          else SAtom.add (mk_pred hCo [e; we]) sa
+        ) wevts sa in
+        let sa = HMap.fold (fun re (red, _) sa -> (* fr *)
+          if not (same_var ed red) then sa
+          else SAtom.add (mk_pred hFr [re; e]) sa
+        ) urevts sa in
+        sa
+      ) sa wrcl in
+
+      (* Add relations impling new reads (fr) *)
+      let sa = HEvtMap.fold (fun ed (e, _) sa ->
+        let sa = HMap.fold (fun we (wed, _) sa -> (* fr *)
+          if not (same_var ed wed) then sa
+          else SAtom.add (mk_pred hFr [e; we]) sa
+        ) wevts sa in
+        sa
+      ) irds sa in
+ *) 
+      (* Simplify here in case adding reads added duplicates *)
+      let sa = Cube.simplify_atoms sa in (* Cube.create_normal ? *)
+      let sa = Weakpre.instantiate_events sa in
+
+      sa  :: pres
     with Exit -> pres
   ) [] wrcp in
-
-  (* Cube.create_normal ? *)
 
   TimeSatRead.pause ();
 
   res
 
 
-    
+
 let satisfy_unsatisfied_reads sa =
   
-  (* Retrive all events *)
-  let evts = SAtom.fold split_event sa HMap.empty in
-
-  (* Retrieve unsatisfied reads *)
-  let ur = HMap.fold (fun e ((p, d, v, vi) as ed, vals) ur ->
-    if is_read ed && vals <> [] then
-      HMap.add e (sort_params ed) ur
-    else ur
-  ) evts HMap.empty in
+  let _, _, _, _, _, evts  = Weakevent.extract_events_set sa in
+  let urevts = Weakevent.unsat_read_events evts in
 
   (* Satisfy unsat reads from init *)
   let sa = subst_event_val (fun _ e ->
-    let (_, _, v, vi) = HMap.find e ur in
+    let (_, _, v, vi), _ = HMap.find e urevts in
     let v = H.make (var_of_v v) in
     if vi = [] then [Elem (v, Glob)] else [Access (v, vi)]
   ) sa in

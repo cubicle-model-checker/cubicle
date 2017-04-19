@@ -108,6 +108,8 @@ let extract_events (sa_pure, rds, wts, fces, eids, evts) at = match at with
   | Atom.Comp (Fence p, _, _) | Atom.Comp (_, _, Fence p) ->
      (sa_pure, rds, wts, p :: fces, eids, evts) (* single fence allowed *)
   (* Write (may have Reads as value) *)
+  | Atom.Comp (Write _, _, Write _) ->
+     failwith "Weakevent.extract_events : can't have Write on both sides !"
   | Atom.Comp (Write (p, v, vi, _), _, t)
   | Atom.Comp (t, _, Write (p, v, vi, [])) ->
      let wts = add_uevent wts (p, hW, mk_hV v, vi) [t] in
@@ -145,12 +147,19 @@ let init_acc =
 
 let post_process (sa_pure, rds, wts, fces, eids, evts) =
   let evts = HMap.map (fun (ed, vals) -> sort_params ed, vals) evts in
-  let wevts = HMap.filter (fun _ (ed, _) -> is_write ed) evts in
-  let urevts = HMap.filter (fun _ (ed, vl) -> is_read ed && vl <> []) evts in
-  sa_pure, rds, wts, fces, eids, evts, wevts, urevts
+  sa_pure, rds, wts, fces, eids, evts
 
 let extract_events_array ar =
   post_process (Array.fold_left (fun acc a -> extract_events acc a) init_acc ar)
 
 let extract_events_set sa =
   post_process (SAtom.fold (fun a acc -> extract_events acc a) sa init_acc)
+
+let write_events evts =
+  HMap.filter (fun _ (ed, _) -> is_write ed) evts
+
+let unsat_read_events evts =
+  HMap.filter (fun _ (ed, vals) -> is_read ed && vals <> []) evts
+
+let sat_events evts =
+  HMap.filter (fun _ (_, vals) -> vals = []) evts

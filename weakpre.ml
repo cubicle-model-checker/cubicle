@@ -128,7 +128,7 @@ let unsat_rd_events evts =
 
 (* Build an event *)
 let build_event e p d v vi = (* v in original form without _V *)
-  let _, ret = Smt.Symbol.type_of v in
+  let _, ret = Weakmem.weak_type v in
   let v = mk_hV v in
   let tevt = Access (hE, [e]) in
   let tval = Field (Field (tevt, hVal), mk_hT ret) in

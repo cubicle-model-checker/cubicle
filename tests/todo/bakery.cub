@@ -1,0 +1,30 @@
+
+type t = Idle | Wait | Crit | Crash
+
+weak array A[proc] : t
+
+init (z) { A[z] = Idle }
+unsafe (z1 z2) { read(z1, A[z1]) = Crit && read(z2, A[z2]) = Crit }
+
+transition tr1 (z)
+requires { read(z, A[z]) = Idle }
+{ write(z, A[j], case
+  | j = z : Wait
+  | j < z : read(z, A[j])
+  | z < j && read(z, A[j]) = Idle : read(z, A[j])
+  | _ : Crash)
+}
+
+transition tr2 (z)
+requires { read(z, A[z]) = Wait }
+{ write(z, A[j], case
+  | j = z : Crit
+  | z < j : read(z, A[j])
+  | j < z && read(z, A[j]) = Idle : Idle
+  | _ : Crash)
+}
+
+
+transition tr3 (z)
+requires { read(z, A[z]) = Crit }
+{ write(z, A[j], case | j = z : Idle) }

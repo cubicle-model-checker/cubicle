@@ -22,17 +22,25 @@ val extract_events_array :
    Term.t list HEvtMap.t *
    H.t list *
    IntSet.t HMap.t *
-   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t *
-   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t *
    ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
 
 val extract_events_set :
   SAtom.t ->
    SAtom.t *
-   (cop * Types.Term.t) list HEvtMap.t *
+   (cop * Term.t) list HEvtMap.t *
    Term.t list HEvtMap.t *
    H.t list *
    IntSet.t HMap.t *
-   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t *
-   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t *
    ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
+
+val write_events :
+  ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
+    ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
+
+val unsat_read_events : 
+  ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
+    ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
+
+val sat_events : 
+  ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
+    ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t

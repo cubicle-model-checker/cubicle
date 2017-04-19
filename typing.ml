@@ -378,7 +378,7 @@ let init_global_env s =
        declare_symbol loc n [] t;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := (n, [], t, false) :: !weak_vars;
+	 weak_vars := (n, [], t) :: !weak_vars;
        end;
        l := (n, t)::!l) s.globals;
   List.iter 
@@ -386,7 +386,7 @@ let init_global_env s =
        declare_symbol loc n args ret;
        if weak then begin
          if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := (n, args, ret, local) :: !weak_vars;
+	 weak_vars := (n, args, ret) :: !weak_vars;
        end;
        l := (n, ret)::!l) s.arrays;
   if Options.model <> Options.SC then Weakmem.init_weak_env !weak_vars;

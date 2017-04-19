@@ -311,15 +311,13 @@ end = struct
   let preprocess_n n = (* may filter out evts too *)
     let open Weakmem in
     let sa = n.cube.Cube.litterals in
-    let evts = SAtom.fold (fun a evts -> (* get evts with value *)
-      Weakwrite.split_event a evts) sa HMap.empty in
-    let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
-    let sa, rels = Weakrel.extract_rels_set evts sa in (* get rels *)
-    let sat_evt = HMap.filter (fun _ (_, vals) -> vals = []) evts in
+    let _, _, _, _, eids, evts = Weakevent.extract_events_set sa in
+    let sa, rels = Weakrel.extract_rels_set evts sa in
+    let sat_evt = Weakevent.sat_events evts in
     let sa = SAtom.filter (fun a -> match a with
       | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
       | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
-       when H.equal a hE && ((*H.equal f hThr ||*) H.equal f hVar || is_param f)
+       when H.equal a hE && (H.equal f hVar || is_param f)
             && HMap.mem e sat_evt -> false
       | _ -> true
     ) sa in
@@ -328,11 +326,8 @@ end = struct
     { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, ghb, scloc
 
   let preprocess_ar ar =
-    let open Weakmem in
-    let evts = Array.fold_left (fun evts a -> (* get evts with value *)
-      Weakwrite.split_event a evts) HMap.empty ar in
-    let evts = HMap.map (fun (ed, vals) -> (sort_params ed, vals)) evts in
-    let _, rels = Weakrel.extract_rels_array evts ar in (* get rels *)
+    let _, _, _, _, eids, evts = Weakevent.extract_events_array ar in
+    let _, rels = Weakrel.extract_rels_array evts ar in
     let ghb = Weakrel.make_ghb evts rels in
     let scloc = Weakrel.make_scloc evts rels in
     evts, rels, ghb, scloc (* could extract ghb only once at start *)
@@ -425,8 +420,8 @@ n
     (* Format.eprintf "FIXPOINT\n"; *)
     (* List.iter (fun (_, ar) -> Format.eprintf "Atm : %a\n" ArrayAtom.print ar) nodes; *)
     (* Cubetrie.iter (fun n -> Format.eprintf "Node : %a\n" Node.print n) visited; *)
-Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes);
-Format.print_flush (); (*if t = 16 then ((*Format.fprintf Format.std_formatter "n : %a\n" Node.print sx;*) List.iter (fun (n, ar) -> Format.fprintf Format.std_formatter "n (%d) : %a\n" n.tag ArrayAtom.print ar) nodes; exit 0);*)
+(* Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes); *)
+(* Format.print_flush (); (\*if t = 16 then ((\*Format.fprintf Format.std_formatter "n : %a\n" Node.print sx;*\) List.iter (fun (n, ar) -> Format.fprintf Format.std_formatter "n (%d) : %a\n" n.tag ArrayAtom.print ar) nodes; exit 0);*\) *)
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes

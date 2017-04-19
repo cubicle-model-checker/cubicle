@@ -1,0 +1,17 @@
+
+number_procs 6
+
+type st = M | S | I
+
+weak array Cache[proc] : st
+var R : st
+
+init (i) { Cache[i] = I && R = I }
+
+unsafe (i j) { R = M && read(j, Cache[j]) <> I }
+
+unsafe (i j) { R = M && read(i, Cache[j]) <> I }
+
+transition read_miss (i j)
+requires { read(i, Cache[j]) <> M }
+{ write(i, Cache[i], S) }
