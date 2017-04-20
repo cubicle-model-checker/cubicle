@@ -571,7 +571,7 @@ let satisfy_reads tri sa =
   let rds_iv = HEvtMap.map (fun vals ->
     List.map (fun (cop, t) -> (cop, subst_ievent irds t)) vals              
   ) rds in
-
+*)
   (* Remove duplicate pairs of reads *)
   (* should find opposite affectations *)(*
   let reads = HEvtMap.filter (fun (p, d, v, vi) vals ->
@@ -582,7 +582,7 @@ let satisfy_reads tri sa =
         | _ -> false
     ) vals
   ) rds in *)
- *)
+ 
 
   (* Could add relations that are already known *)
 
@@ -653,7 +653,7 @@ let satisfy_reads tri sa =
         ) wevts sa in
         sa
       ) irds sa in
- *) 
+*) 
       (* Simplify here in case adding reads added duplicates *)
       let sa = Cube.simplify_atoms sa in (* Cube.create_normal ? *)
       let sa = Weakpre.instantiate_events sa in

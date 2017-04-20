@@ -24,12 +24,12 @@ requires { PC[p] = L2 }
 { PC[p] := L3; write(p, Turn, q) }
 
 transition t_L3_CS_R_WantP_False (p q)
-fences (p)
+fence (p)
 requires { PC[p] = L3 && read(p, Want[q]) = False }
 { PC[p] := CS }
 
 transition t_L3_CS_R_Turn_Self (p)
-(* fences (p) *)
+(* fence (p) *)
 requires { PC[p] = L3 && read(p, Turn) = p }
 { PC[p] := CS }
 

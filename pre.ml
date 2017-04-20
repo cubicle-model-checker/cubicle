@@ -271,6 +271,10 @@ let make_cubes (ls, post) rargs s tr cnp =
               
                   let new_cube = Cube.create nargs np in
                   let new_s = Node.create ~from:(Some(tr,tr_args,s)) new_cube in
+
+                  (* Format.print_flush (); *)
+                  (* if new_s.tag == 129 then exit 0; *)
+                  
 	          match post_strategy with
 	          | 0 -> add_list new_s ls, post
 	          | 1 -> 

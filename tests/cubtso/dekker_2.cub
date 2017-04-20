@@ -20,12 +20,12 @@ requires { PC[p] = L1 }
 { PC[p] := L2; write(p, Want[p], True) }
 
 transition t_L2_L3_R_WantO_True (p q)
-(* fences (p) *)
+(* fence (p) *)
 requires { PC[p] = L2 && read(p, Want[q]) = True }
 { PC[p] := L3 }
 
 transition t_L2_L7_R_WantO_False (p q)
-fences (p)
+fence (p)
 requires { PC[p] = L2 && read(p, Want[q]) = False }
 { PC[p] := L7 }
 

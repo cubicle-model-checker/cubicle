@@ -178,7 +178,7 @@ let instantiate_events sa =
   (* First, generate Write events and their rf/co/fr *)
   let (eids, sa_new, writes) = STerm.fold (
     fun t (eids, sna, writes) -> match t with
-    | Write (p, v, vi, srl) ->
+      | Write (p, v, vi, srl) ->
        let eid, eids = fresh_eid eids p in
        let e = mk_hE eid in
        let evt = (p, hW, mk_hV v, vi) in

@@ -77,18 +77,18 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
       while not (Q.is_empty q) do
         let n = Q.pop q in
 
-        (* Format.eprintf "Node : \n%a\n" Node.print n; *)
+        (* Format.fprintf Format.std_formatter *)
+        (*   "---------- Node %d ----------\n" n.tag; *)
+        (* Format.print_flush (); *)
         
-	(* begin try *)
-	(*   Prover.acyclic n; (\* is there a cycle ? *\) *)
-
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
           | Some db ->
+             (* Format.fprintf Format.std_formatter "----- FP -----\n"; *)
+             (* Format.print_flush (); *)
              Stats.fixpoint n db
           | None ->
-        (* Safety.check system n; *)
 	     begin try
 		 Stats.check_limit n
 	       with Stats.ReachedLimit ->
@@ -110,6 +110,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 		 raise Stats.ReachedLimit
 	     end;
              Stats.new_node n;
+             (*let delayed () = Stats.new_node n in*)
              let n = begin
                  match Approx.good n with
                  | None -> n
@@ -126,6 +127,10 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
+             (* Format.fprintf Format.std_formatter *)
+             (*   "----- PRE = %d -----\n" (List.length ls + List.length post); *)
+             (* Format.print_flush (); *)
+             (* delayed (); *)
              (* let lls, lpost = List.length ls, List.length post in *)
              (* TimeAcycl.start (); *)
              (* let ls = List.filter (fun n -> *)
@@ -148,9 +153,6 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              Q.push_list ls q;
              Stats.remaining (nb_remaining q postponed);
         end;
-
-	(*   with Smt.Unsat _ -> () (\* there is a cycle *\) *)
-	(* end; *)
 
         if Q.is_empty q then
           (* When the queue is empty, pour back postponed nodes in it *)

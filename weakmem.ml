@@ -21,7 +21,8 @@ module HEvt = struct
     if c <> 0 then c else
     let c = H.compare s1d s2d in
     if c <> 0 then c else
-    let c = H.compare s1v s2v in
+    (* let c = H.compare s1v s2v in *)
+    let c = Pervasives.compare (H.view s1v) (H.view s2v) in
     if c <> 0 then c else
     H.compare_list s1vi s2vi
 end

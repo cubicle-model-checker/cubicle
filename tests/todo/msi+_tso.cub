@@ -33,9 +33,9 @@ requires { read(i, Cache[i]) = I && read(i, Current) = j && read(i, Extgnd) = Tr
   write(i, Shr[i], True);
   write(i, Cache[k], case 
                      | k = i : S
-		     | k = j : S | _ : read(i, Cache[k]) );
+		     | k = j : S (*| _ : read(i, Cache[k])*) );
   write(i, Extgnd, False)
-}	   
+}
 
 transition read_miss_2 ( i )
 requires { read(i, Cache[i]) = I && read(i, Extgnd) = False }
@@ -46,10 +46,10 @@ requires { read(i, Cache[i]) <> M }
 { 
   write(i, Shr[k], case 
   	   	   | k = i : True
-                   | read(i, Shr[k]) = True : False | _ : read(i, Shr[k]));
+                   | read(i, Shr[k]) = True : False (*| _ : read(i, Shr[k])*));
   write(i, Cache[k], case
 	             | k = i : M
- 	             | read(i, Shr[k]) = True : I | _ : read(i, Cache[k]));
+ 	             | read(i, Shr[k]) = True : I (*| _ : read(i, Cache[k])*));
   write(i, Current, i);
   write(i, Extgnd, True);
 }

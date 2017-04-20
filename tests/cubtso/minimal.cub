@@ -1,0 +1,22 @@
+
+number_procs 2
+
+type loc = L1 | L2 | L3
+
+array PC[proc] : loc
+
+weak array X[proc] : bool
+
+init (p) { PC[p] = L1 && X[p] = False }
+
+unsafe (p1 p2) { PC[p1] = L3 && PC[p2] = L3 }
+
+
+transition t1 (p)
+requires { PC[p] = L1 }
+{ PC[p] := L2; write(p, X[p], True) }
+
+transition t2 (p q)
+(* fence (p) *)
+requires { PC[p] = L2 && read(p, X[q]) = False }
+{ PC[p] := L3 }
