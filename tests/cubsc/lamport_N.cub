@@ -10,6 +10,7 @@ var Y : proc
 var X_set : bool
 var Y_set : bool
 
+
 init (p) { PC[p] = L1 && X_set = False && Y_set = False }
 
 unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }

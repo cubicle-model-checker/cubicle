@@ -1,26 +1,25 @@
 
+(* Global variables *)
 weak var Turn : proc
 weak array Want[proc] : bool
 array Crit[proc] : bool
+
 
 init (z) { Want[z] = False && Crit[z] = False }
 
 unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
 
-transition req (i)
-requires { read(i, Want[i]) = False }
-{ write(i, Want[i], True) }
 
-transition enter (i)
-requires { read(i, Want[i]) = True && Crit[i] = False && read(i, Turn) = i }
+transition req ([i])
+requires { Want[i] = False }
+{ Want[i] := True }
+
+transition enter ([i])
+requires { Want[i] = True && Crit[i] = False && Turn = i }
 { Crit[i] := True }
 
-transition exit (i j)
+transition exit ([i] j)
 requires { Crit[i] = True }
-{ 
-  Crit[i] := False; 
-  write(i, Turn, j);
-  write(i, Want[i], False)
-}
-
-
+{ Crit[i] := False;
+  Want[i] := False;
+  Turn := j }

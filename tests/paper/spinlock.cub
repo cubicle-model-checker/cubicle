@@ -1,7 +1,7 @@
 
 (* Spinlock example *)
 
-number_procs 4
+number_procs 3
 
 (*
   2 procs : 33 N, 64 FP, 64 SC, 0,3s
@@ -11,36 +11,40 @@ number_procs 4
 
 type loc = Acquire | Spin | CS | Release
 
+(* Program counters *)
 array PC[proc] : loc
-array SF[proc] : int
 
+(* Global variables *)
+array SF[proc] : int
 weak var LOCK : int
+
 
 init (p) { PC[p] = Acquire && SF[p] = 0 && LOCK = 0 }
 
 (* FORBIDDEN Final State *)
 unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
 
-transition t1_Acquire_dec_gz_CS (p)
-requires { PC[p] = Acquire && 0 < read(p, LOCK) }
-{ PC[p] := CS; write(p, LOCK, read(p, LOCK) - 1) }
 
-transition t1_Acquire_dec_lez_Spin (p)
-requires { PC[p] = Acquire && read(p, LOCK) <= 0 }
-{ PC[p] := Spin; write(p, LOCK, read(p, LOCK) - 1) }
+transition t1_Acquire_dec_gz_CS ([p])
+requires { PC[p] = Acquire && 0 < LOCK }
+{ PC[p] := CS; LOCK := LOCK - 1 }
 
-transition t2_Spin_cmp_lez_Spin (p)
-requires { PC[p] = Spin && read(p, LOCK) <= 0 }
+transition t1_Acquire_dec_lez_Spin ([p])
+requires { PC[p] = Acquire && LOCK <= 0 }
+{ PC[p] := Spin; LOCK := LOCK - 1 }
+
+transition t2_Spin_cmp_lez_Spin ([p])
+requires { PC[p] = Spin && LOCK <= 0 }
 { PC[p] := Spin }
 
-transition t2_Spin_cmp_gz_Acquire (p)
-requires { PC[p] = Spin && 0 < read(p, LOCK) }
+transition t2_Spin_cmp_gz_Acquire ([p])
+requires { PC[p] = Spin && 0 < LOCK }
 { PC[p] := Acquire }
 
-transition t3_CS_Release (p)
+transition t3_CS_Release ([p])
 requires { PC[p] = CS }
 { PC[p] := Release }
 
-transition t4_Release_Acquire (p)
+transition t4_Release_Acquire ([p])
 requires { PC[p] = Release }
-{ PC[p] := Acquire; write(p, LOCK, 1) }
+{ PC[p] := Acquire; LOCK := 1 }

@@ -3,15 +3,19 @@
 
 type loc = Acquire | Spin | CS | Release
 
+(* Global variables *)
 array PC[proc] : loc
-array SF[proc] : int
 
+(* Global variables *)
+array SF[proc] : int
 var LOCK : int
+
 
 init (p) { PC[p] = Acquire && SF[p] = 0 && LOCK = 0 }
 
 (* FORBIDDEN Final State *)
 unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
 
 transition t1_Acquire_dec_gz_CS (p)
 requires { PC[p] = Acquire && 0 < LOCK }

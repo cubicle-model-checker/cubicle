@@ -1,23 +1,23 @@
 
 type state = I | W | CS
 
+(* Global variables *)
 weak array C[proc] : state
+
 
 init (p) { C[p] = I }
 
-unsafe (p1 p2) { read(p1, C[p1]) = CS && read(p2, C[p2]) = CS }
+unsafe (p1 p2) { [p1]C[p1] = CS && [p2]C[p2] = CS }
 
 
-transition t1 (p)
-requires { read(p, C[p]) = I &&
-	     forall_other q. (q < p || (q > p && read(p, C[q]) = I)) }
-{ write(p, C[p], W); }
+transition t1 ([p])
+requires { C[p] = I && forall_other q. (q < p || (q > p && C[q] = I)) }
+{ C[p] := W }
 
-transition t2 (p)
-requires { read(p, C[p]) = W &&
-	     forall_other q. (p < q || (p > q && read(p, C[q]) = I)) }
-{ write(p, C[p], CS); }
+transition t2 ([p])
+requires { C[p] = W && forall_other q. (p < q || (p > q && C[q] = I)) }
+{ C[p] := CS }
 
-transition t3 (p)
-requires { read(p, C[p]) = CS }
-{ write(p, C[p], I); }
+transition t3 ([p])
+requires { C[p] = CS }
+{ C[p] := I }

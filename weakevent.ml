@@ -130,7 +130,7 @@ let extract_events (sa_pure, rds, wts, fces, eids, evts) at = match at with
 	  else if H.equal f hVar then ((p, d, c, vi), vals)
           else if is_param f then ((p, d, v, (f, c) :: vi), vals)
           else evt in
-     let eids = if H.equal f hThr then update_eids eids p e else eids in
+     let eids = if H.equal f hThr then update_eids eids c e else eids in
      (SAtom.add at sa_pure, rds, wts, fces, eids, HMap.add e evt evts)
   (* Value *)
   | Atom.Comp (t1, op, t2) ->

@@ -26,18 +26,18 @@ unsafe (p1 p2) {
     PC[p1] = End && PC[p2] = End &&
     EAX[p1] = 0 && EBX[p1] = 0 && ECX[p2] = 0 && EDX[p2] = 0 }
 
-transition t1_1 (p)
+transition t1_1 ([p])
 requires { p = #1 && PC[p] = L1 }
-{ PC[p] := L2; EAX[p] := read(p, X); write(p, X, EAX[p]) }
+{ PC[p] := L2; EAX[p] := X; X := EAX[p] }
 
-transition t1_2 (p)
+transition t1_2 ([p])
 requires { p = #1 && PC[p] = L2 }
-{ PC[p] := End; EBX[p] := read(p, Y) }
+{ PC[p] := End; EBX[p] := Y }
 
-transition t2_1 (p)
+transition t2_1 ([p])
 requires { p = #2 && PC[p] = L1 }
-{ PC[p] := L2; ECX[p] := read(p, Y); write(p, Y, ECX[p]) }
+{ PC[p] := L2; ECX[p] := Y; Y := ECX[p] }
 
-transition t2_2 (p)
+transition t2_2 ([p])
 requires { p = #2 && PC[p] = L2 }
-{ PC[p] := End; EDX[p] := read(p, X) }
+{ PC[p] := End; EDX[p] := X }

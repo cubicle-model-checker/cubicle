@@ -26,26 +26,26 @@ unsafe (p1 p2 p3 p4) {
     PC[p1] = End && PC[p2] = End && PC[p3] = End && PC[p4] = End &&
     EAX[p3] = 1 && EBX[p3] = 0 && ECX[p4] = 1 && EDX[p4] = 0 }
 
-transition t1_1 (p)
+transition t1_1 ([p])
 requires { p = #1 && PC[p] = L1 }
-{ PC[p] := End; write(p, X, 1) }
+{ PC[p] := End; X := 1 }
 
-transition t2_1 (p)
+transition t2_1 ([p])
 requires { p = #2 && PC[p] = L1 }
-{ PC[p] := End; write(p, Y, 1) }
+{ PC[p] := End; Y := 1 }
 
-transition t3_1 (p)
+transition t3_1 ([p])
 requires { p = #3 && PC[p] = L1 }
-{ PC[p] := L2; EAX[p] := read(p, X) }
+{ PC[p] := L2; EAX[p] := X }
 
-transition t3_2 (p)
+transition t3_2 ([p])
 requires { p = #3 && PC[p] = L2 }
-{ PC[p] := End; EBX[p] := read(p, Y) }
+{ PC[p] := End; EBX[p] := Y }
 
-transition t4_1 (p)
+transition t4_1 ([p])
 requires { p = #4 && PC[p] = L1 }
-{ PC[p] := L2; ECX[p] := read(p, Y) }
+{ PC[p] := L2; ECX[p] := Y }
 
-transition t4_2 (p)
+transition t4_2 ([p])
 requires { p = #4 && PC[p] = L2 }
-{ PC[p] := End; EDX[p] := read(p, X) }
+{ PC[p] := End; EDX[p] := X }

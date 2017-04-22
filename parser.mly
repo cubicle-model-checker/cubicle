@@ -33,7 +33,7 @@
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
-    | Write of Variable.t * Hstring.t * Variable.t list * pglob_update
+    | Write of Variable.t option * Hstring.t * Variable.t list * pglob_update
 
   module S = Set.Make(Hstring)
 
@@ -62,6 +62,12 @@
     let mem x = S.mem x !s
   end
 
+  module Weaks = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
   let sort s = 
     if Constructors.mem s then Constr 
     else if Globals.mem s then Glob
@@ -71,6 +77,97 @@
         Var
       end
 
+  let is_weak s = Weaks.mem s
+
+  let hNone = Hstring.make ""
+ 
+  let rec process_read_term fn = function
+  | Read (p, v, vi) -> fn p v vi
+  | Arith (t, c) -> Arith (process_read_term fn t, c)
+  | t -> t
+
+  let rec process_read_atom fn = function
+  | Atom.Comp (t1, op, t2) ->
+     Atom.Comp (process_read_term fn t1, op, process_read_term fn t2)
+  | Atom.Ite (sa, a1, a2) ->
+     Atom.Ite (SAtom.fold (fun a sa ->
+       SAtom.add (process_read_atom fn a) sa) sa SAtom.empty,
+       process_read_atom fn a1, process_read_atom fn a2)
+  | t -> t
+
+  let process_read_pterm fn = function
+  | TTerm t -> TTerm (process_read_term fn t)
+  | t -> t
+
+  let process_read_patom fn = function
+  | AAtom a -> AAtom (process_read_atom fn a)
+  | AEq (t1, t2) -> AEq (process_read_pterm fn t1, process_read_pterm fn t2)
+  | ANeq (t1, t2) -> ANeq (process_read_pterm fn t1, process_read_pterm fn t2)
+  | ALe (t1, t2) -> ALe (process_read_pterm fn t1, process_read_pterm fn t2)
+  | ALt (t1, t2) -> ALt (process_read_pterm fn t1, process_read_pterm fn t2)
+  | t -> t
+
+  let rec process_read_pform fn = function
+  | PAtom a -> PAtom (process_read_patom fn a)
+  | PNot f -> PNot (process_read_pform fn f)
+  | PAnd fl -> PAnd (List.map (process_read_pform fn) fl)
+  | POr fl -> POr (List.map (process_read_pform fn) fl)
+  | PImp (f1, f2) -> PImp (process_read_pform fn f1, process_read_pform fn f2)
+  | PEquiv (f1, f2) ->
+     PEquiv (process_read_pform fn f1, process_read_pform fn f2)
+  | PIte (f1, f2, f3) ->
+     PIte (process_read_pform fn f1, process_read_pform fn f2,
+           process_read_pform fn f3)
+  | PForall (vl, f) -> PForall (vl, process_read_pform fn f)
+  | PExists (vl, f) -> PExists (vl, process_read_pform fn f)
+  | PForall_other (vl, f) -> PForall_other (vl, process_read_pform fn f)
+  | PExists_other (vl, f) -> PExists_other (vl, process_read_pform fn f)
+
+  let process_read_pswts fn s =
+    List.map (fun (f, t) -> process_read_pform fn f, process_read_pterm fn t) s
+
+  let process_read_pgu fn = function
+  | PUTerm t -> PUTerm (process_read_pterm fn t)
+  | PUCase s -> PUCase (process_read_pswts fn s)
+
+  let fix_thr t p v vi =
+    let pdef = not (Hstring.equal p hNone) in
+    match pdef, t with
+    | false, Some t -> Read (t, v, vi)
+    | true, None -> Read (p, v, vi)
+    | false, None -> failwith "No thread in read"
+    | true, Some t -> if Hstring.equal p t then Read (p, v, vi)
+                      else failwith "Threads differ in read"
+
+  let fix_rd_upd t upd =
+    { upd with pup_swts = process_read_pswts (fix_thr t) upd.pup_swts }
+
+  let fix_rd_assign t (v, pgu) =
+    (v, process_read_pgu (fix_thr t) pgu)
+
+  let fix_rd_write t (p, v, vi, pgu) =
+    let pgu = process_read_pgu (fix_thr t) pgu in
+    match p, t with
+    | None, Some p -> (p, v, vi, pgu)
+    | Some p, None -> (p, v, vi, pgu)
+    | None, None -> failwith "No thread in write"
+    | Some p, Some q ->
+       if Hstring.equal p q then (p, v, vi, pgu)
+       else failwith "Threads differ in write"
+
+  let fix_rd_expr t expr =
+    process_read_pform (fix_thr t) expr
+
+  let fix_rd_init expr =
+    process_read_pform (fun p v vi ->
+      if Hstring.equal p hNone then
+        match vi with
+        | [] -> Elem (v, Glob)
+        | _ -> Access (v, vi)
+      else
+        failwith "Thread not allowed in init"
+    ) expr
+                       
   let hproc = Hstring.make "proc"
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
@@ -134,9 +231,9 @@ decl_list :
 ;
 
 decl :
-  | init { PInit $1 }
-  | invariant { PInv $1 }
-  | unsafe { PUnsafe $1 }
+  | init { let l, p, e = $1 in PInit (l, p, fix_rd_init e) }
+  | invariant { let l, p, e = $1 in PInv (l, p, fix_rd_expr None e) }
+  | unsafe { let l, p, e = $1 in PUnsafe (l, p, fix_rd_expr None e) }
   | transition { PTrans $1 }
   | function_decl { PFun  }
 
@@ -163,7 +260,7 @@ weak_opt:
 var_decl:
   | weak_opt VAR mident COLON lident { 
     if Hstring.equal $5 hint || Hstring.equal $5 hreal then Smt.set_arith true;
-    Globals.add $3; 
+    Globals.add $3; if $1 then Weaks.add $3;
     loc (), $3, $5, $1 }
 ;
 
@@ -179,7 +276,7 @@ array_decl:
         if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
 	  raise Parsing.Parse_error;
 	if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
-	Arrays.add $3;
+	Arrays.add $3; if $1 then Weaks.add $3;
 	loc (), $3, ($5, $8), $1 }
 ;
 
@@ -231,26 +328,26 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR
+  | TRANSITION transition_name LEFTPAR lidents_thr RIGHTPAR
       fence
       require
       LEFTBR assigns_nondets_updates RIGHTBR
       { let assigns, nondets, upds, writes = $9 in
 	  { ptr_name = $2;
-            ptr_args = $4; 
-	    ptr_reqs = $7;
-	    ptr_assigns = assigns; 
+            ptr_args = fst $4; 
+	    ptr_reqs = fix_rd_expr (snd $4) $7;
+	    ptr_assigns = List.map (fix_rd_assign (snd $4)) assigns;
 	    ptr_nondets = nondets; 
-	    ptr_upds = upds;
+	    ptr_upds = List.map (fix_rd_upd (snd $4)) upds;
             ptr_loc = loc ();
-	    ptr_writes = writes;
+	    ptr_writes = List.map (fix_rd_write (snd $4)) writes;
 	    ptr_fence = $6;
           }
       }
 ;
 
 assigns_nondets_updates:
-  |  { [], [], [], [] }
+  | { [], [], [], [] }
   | assign_nondet_update 
       {  
 	match $1 with
@@ -274,12 +371,23 @@ assign_nondet_update:
   | assignment { $1 }
   | nondet { $1 }
   | update { $1 }
-  | write { $1 }
+/*  | write { $1 }*/
 ;
 
 assignment:
-  | mident AFFECT term { Assign ($1, PUTerm $3) }
-  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+  | mident AFFECT term {
+      if is_weak $1 then Write (None, $1, [], PUTerm $3)
+      else Assign ($1, PUTerm $3) }
+  | mident AFFECT CASE switchs {
+      if is_weak $1 then Write (None, $1, [], PUCase $4)
+      else Assign ($1, PUCase $4) }
+/* Duplicated rules for optional proc (to avoir s/r conflict) */
+  | LEFTSQ proc_name RIGHTSQ mident AFFECT term {
+      if is_weak $4 then Write (Some $2, $4, [], PUTerm $6)
+      else Assign ($4, PUTerm $6) }
+  | LEFTSQ proc_name RIGHTSQ mident AFFECT CASE switchs {
+      if is_weak $4 then Write (Some $2, $4, [], PUCase $7)
+      else Assign ($4, PUCase $7) }
 ;
 
 nondet:
@@ -298,14 +406,17 @@ require:
 ;
 
 update:
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
-      { List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then
-            raise Parsing.Parse_error;
-        ) $3;
-        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7} }
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
-      { let cube, rjs =
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
+      if is_weak $1 then Write (None, $1, $3, PUCase $7)
+      else begin
+        List.iter (fun p ->
+          if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $3;
+        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7 }
+      end }
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
+      if is_weak $1 then Write (None, $1, $3, PUTerm $6)
+      else begin
+        let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
             let c = PAtom (AEq (TVar j, TVar i)) in
@@ -313,7 +424,31 @@ update:
         let a = PAnd cube in
         let js = List.rev rjs in
 	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw }
+      end }
+/* Duplicated rules for optional proc (to avoir s/r conflict) */
+  | LEFTSQ proc_name RIGHTSQ
+        mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
+      if is_weak $4 then Write (Some $2, $4, $6, PUCase $10)
+      else begin
+        List.iter (fun p ->
+          if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $6;
+        Upd { pup_loc = loc (); pup_arr = $4; pup_arg = $6; pup_swts = $10 }
+      end }
+  | LEFTSQ proc_name RIGHTSQ
+        mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
+      if is_weak $4 then Write (Some $2, $4, $6, PUTerm $9)
+      else begin
+        let cube, rjs =
+          List.fold_left (fun (cube, rjs) i ->
+            let j = fresh_var () in
+            let c = PAtom (AEq (TVar j, TVar i)) in
+            c :: cube, j :: rjs) ([], []) $6 in
+        let a = PAnd cube in
+        let js = List.rev rjs in
+	let sw = [(a, $9); (PAtom (AAtom Atom.True), TTerm (Access($4, js)))] in
+	Upd { pup_loc = loc (); pup_arr = $4; pup_arg = js; pup_swts = sw }
+      end }
 ;
 
 switchs:
@@ -326,17 +461,17 @@ switch:
   | expr COLON term { $1, $3 }
 ;
 
-write:
+/*write:
   | WRITE LEFTPAR proc_name COMMA mident COMMA CASE switchs RIGHTPAR
-      { Write ($3, $5, [], PUCase $8) }
+      { Write (Some $3, $5, [], PUCase $8) }
   | WRITE LEFTPAR proc_name COMMA mident
  	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA CASE switchs RIGHTPAR
-      { Write ($3, $5, $7, PUCase $11) }
+      { Write (Some $3, $5, $7, PUCase $11) }
   | WRITE LEFTPAR proc_name COMMA mident COMMA term RIGHTPAR
-      { Write ($3, $5, [], PUTerm $7) }
+      { Write (Some $3, $5, [], PUTerm $7) }
   | WRITE LEFTPAR proc_name COMMA mident
  	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA term RIGHTPAR
-      { Write ($3, $5, $7, PUTerm $10) }
+      { Write (Some $3, $5, $7, PUTerm $10) }*/
 
 
 constnum:
@@ -345,10 +480,15 @@ constnum:
 ;
 
 var_term:
-  | mident { 
-      if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
+  | mident {
+      if is_weak $1 then Read(Hstring.make "", $1, [])
+     else if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
   | proc_name { Elem ($1, Var) }
+  | LEFTSQ proc_name RIGHTSQ mident {
+      if is_weak $4 then Read($2, $4, [])
+     else if Consts.mem $4 then Const (MConst.add (ConstName $4) 1 MConst.empty)
+      else Elem ($4, sort $4) }
 ;
 
 top_id_term:
@@ -359,22 +499,25 @@ top_id_term:
 
 array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
-    Access ($1, $3)
-  }
+      if is_weak $1 then Read(Hstring.make "", $1, $3)
+      else Access ($1, $3) }
+  | LEFTSQ proc_name RIGHTSQ mident LEFTSQ proc_name_list_plus RIGHTSQ {
+      if is_weak $4 then Read($2, $4, $6)
+      else Access ($4, $6) }
 ;
 
-read_term:
+/*read_term:
   | READ LEFTPAR proc_name COMMA mident RIGHTPAR
       { Read ($3, $5, []) }
   | READ LEFTPAR proc_name COMMA mident
 	 LEFTSQ proc_name_list_plus RIGHTSQ RIGHTPAR
        { Read ($3, $5, $7) }
-;
+;*/
 
 var_or_array_term:
   | var_term { $1 }
   | array_term { $1 }
-  | read_term { $1 }
+/*  | read_term { $1 }*/
 ;
 
 arith_term:
@@ -405,7 +548,7 @@ term:
   | top_id_term { $1 } 
   | array_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
-  | read_term { TTerm $1 }
+/*  | read_term { TTerm $1 }*/
 ;
 
 lident:
@@ -439,6 +582,17 @@ lidents:
   | { [] }
   | lidents_plus { $1 }
 ;
+
+lidents_thr_plus:
+  | lident { [$1], None }
+  | lident lidents_thr_plus { $1::(fst $2), (snd $2) }
+  | LEFTSQ lident RIGHTSQ { [$2], Some $2 }
+  | LEFTSQ lident RIGHTSQ lidents_plus { $2::$4, Some $2 }
+;
+
+lidents_thr:
+  | { [], None }
+  | lidents_thr_plus { $1 }
 
 lident_list_plus:
   | lident { [$1] }

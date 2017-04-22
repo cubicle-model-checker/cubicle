@@ -64,11 +64,11 @@
 
 type loc = L1 | L2 | L3 | L4 | L5
 
+array PC[proc] : loc
+array Count[proc] : bool
 var Sense : bool
 array Local_sense[proc] : bool
 array Level[proc] : int
-array Count[proc] : bool
-array PC[proc] : loc
 
 init (z) { Sense = False && Local_sense[z] = False &&
            Level[z] = 0 && Count[z] = True && PC[z] = L1 }

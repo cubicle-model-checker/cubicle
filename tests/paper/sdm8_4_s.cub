@@ -19,10 +19,10 @@ unsafe (p) { p = #1 && PC[p] = End && EAX[p] <> 1 }
 (* REQUIRED Final State *)
 (* unsafe (p) { p = #1 && PC[p] = End && EAX[p] = 1 } *)
 
-transition t1_1 (p)
+transition t1_1 ([p])
 requires { p = #1 && PC[p] = L1 }
-{ PC[p] := L2; write(p, X, 1) }
+{ PC[p] := L2; X := 1 }
 
-transition t1_2 (p)
+transition t1_2 ([p])
 requires { p = #1 && PC[p] = L2 }
-{ PC[p] := End; EAX[p] := read(p, X) }
+{ PC[p] := End; EAX[p] := X }

@@ -10,6 +10,7 @@ array PC[proc] : loc
 array Want[proc] : bool
 var Turn : proc
 
+
 init (p) { PC[p] = L1 && Want[p] = False }
 
 unsafe (p1 p2) { PC[p1] = L7 && PC[p2] = L7 }

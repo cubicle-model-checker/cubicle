@@ -6,10 +6,10 @@ weak var Y : int
 
 init () { X = 15 }
 
-invariant (p) { read(p, X) < 0 }
+invariant (p) { [p]X < 0 }
 
 (* FORBIDDEN Final State *)
-unsafe (p) { read(p, Y) = 0 && read(p, X) = 13 }
+unsafe (p) { [p]Y = 0 && [p]X = 13 }
 
 transition t (p)
-{ write(p, X, read(p, X) + 1) }
+{ [p]X := [p]X + 1 }

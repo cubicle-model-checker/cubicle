@@ -504,24 +504,24 @@ let satisfy_reads tri sa =
 
   TimeSatRead.start ();
 
-  let saX, rds, wts, fces, eids, evts = Weakevent.extract_events_set sa in
-
+  let sa, rds, wts, fces, eids, evts = Weakevent.extract_events_set sa in
+  
   let wevts = Weakevent.write_events evts in
   let urevts = Weakevent.unsat_read_events evts in
   let _, rels = Weakrel.extract_rels_set evts sa in
 
   (* Remove writes with their values from unsafe *)
-  let _, sa = SAtom.partition (fun a -> match a with
-    | Atom.Comp (Write (_, _, _, []), Eq, _)
-    | Atom.Comp (_, Eq, Write (_, _, _, [])) -> true
-    | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) ->
-       failwith "Weakwrite.satisfy_reads : invalid Write"
-    | _ -> false
-  ) sa in
+  (* let _, sa = SAtom.partition (fun a -> match a with *)
+  (*   | Atom.Comp (Write (_, _, _, []), Eq, _) *)
+  (*   | Atom.Comp (_, Eq, Write (_, _, _, [])) -> true *)
+  (*   | Atom.Comp (Write _, _, _) | Atom.Comp (_, _, Write _) -> *)
+  (*      failwith "Weakwrite.satisfy_reads : invalid Write" *)
+  (*   | _ -> false *)
+  (* ) sa in *)
 
   (* Build the relevant read-write combinations *)
   let wrcp = make_read_write_combinations wts rds evts wevts urevts rels in
-(*
+
   let eids_before = eids in
 
   (* Instantiate write events, keep a map to values *)
@@ -539,6 +539,22 @@ let satisfy_reads tri sa =
     let na, tval = build_event e p d v vi in
     (HEvtMap.add (p, d, v, vi) (e, tval) irds, SAtom.union na sa, eids)
   ) rds (HEvtMap.empty, sa, eids) in
+
+  (* Add relations impling new writes (co) *)
+  let sa = HEvtMap.fold (fun ed (e, _) sa ->
+    HMap.fold (fun we (wed, _) sa ->
+      if not (same_var ed wed) then sa
+      else SAtom.add (mk_pred hCo [e; we]) sa
+    ) wevts sa
+  ) iwts sa in
+
+  (* Add relations impling new reads (fr) *)
+  let sa = HEvtMap.fold (fun ed (e, _) sa ->
+    HMap.fold (fun we (wed, _) sa ->
+      if not (same_var ed wed) then sa
+      else SAtom.add (mk_pred hFr [e; we]) sa
+    ) wevts sa
+  ) irds sa in
 
   (* Generate fences *)
   let sa = List.fold_left (fun sfa p ->
@@ -571,7 +587,7 @@ let satisfy_reads tri sa =
   let rds_iv = HEvtMap.map (fun vals ->
     List.map (fun (cop, t) -> (cop, subst_ievent irds t)) vals              
   ) rds in
-*)
+
   (* Remove duplicate pairs of reads *)
   (* should find opposite affectations *)(*
   let reads = HEvtMap.filter (fun (p, d, v, vi) vals ->
@@ -582,30 +598,30 @@ let satisfy_reads tri sa =
         | _ -> false
     ) vals
   ) rds in *)
- 
+  
 
   (* Could add relations that are already known *)
 
   (* Generate the atom sets for each combination *)
   let res = List.fold_left (fun pres wrcl ->
-    let sa = List.fold_left (fun sa (((wp, _, wv, wvi), wtl), rcl) ->
-      let sa = List.fold_left (fun sa (re, _) ->
-        subst_event_val (fun t e -> if H.equal e re then wtl else [t]) sa
-      ) sa rcl in
-      let srl = List.fold_left (fun srl (re, _) -> re :: srl) [] rcl in
-      let wv = H.make (var_of_v wv) in
-      SAtom.add (mk_eq_true (Write (wp, wv, wvi, srl))) sa (* remove *)
-    ) sa wrcl in
-
     (* let sa = List.fold_left (fun sa (((wp, _, wv, wvi), wtl), rcl) -> *)
-    (*   let wtl = List.map (subst_ievent irds) wtl in *)
-    (*   List.fold_left (fun sa (re, _) -> *)
+    (*   let sa = List.fold_left (fun sa (re, _) -> *)
     (*     subst_event_val (fun t e -> if H.equal e re then wtl else [t]) sa *)
-    (*   ) sa rcl *)
+    (*   ) sa rcl in *)
+    (*   let srl = List.fold_left (fun srl (re, _) -> re :: srl) [] rcl in *)
+    (*   let wv = H.make (var_of_v wv) in *)
+    (*   SAtom.add (mk_eq_true (Write (wp, wv, wvi, srl))) sa (\* remove *\) *)
     (* ) sa wrcl in *)
 
+    let sa = List.fold_left (fun sa (((wp, _, wv, wvi), wtl), rcl) ->
+      let wtl = List.map (subst_ievent irds) wtl in
+      List.fold_left (fun sa (re, _) ->
+        subst_event_val (fun t e -> if H.equal e re then wtl else [t]) sa
+      ) sa rcl
+    ) sa wrcl in
+
     try
-(*
+
       (* Add reads with their values (which may be reads too) *)
       let sa = HEvtMap.fold (fun pdvvi vals sa ->
         let (_, lt) = HEvtMap.find pdvvi irds in
@@ -628,16 +644,12 @@ let satisfy_reads tri sa =
           HMap.remove re urevts) urevts rcl
       ) urevts wrcl in
 
-      (* Add relations impling new writes (rf, fr, co) *)
+      (* Add relations impling new writes (rf, fr) *)
       let sa = List.fold_left (fun sa ((ed, wtl), rcl) ->
         let e, _ = HEvtMap.find ed iwts in
         let sa = List.fold_left (fun sa (re, _) -> (* rf *)
 	  SAtom.add (mk_pred hRf [e; re]) sa
         ) sa rcl in
-        let sa = HMap.fold (fun we (wed, _) sa -> (* co *)
-          if not (same_var ed wed) then sa
-          else SAtom.add (mk_pred hCo [e; we]) sa
-        ) wevts sa in
         let sa = HMap.fold (fun re (red, _) sa -> (* fr *)
           if not (same_var ed red) then sa
           else SAtom.add (mk_pred hFr [re; e]) sa
@@ -645,18 +657,9 @@ let satisfy_reads tri sa =
         sa
       ) sa wrcl in
 
-      (* Add relations impling new reads (fr) *)
-      let sa = HEvtMap.fold (fun ed (e, _) sa ->
-        let sa = HMap.fold (fun we (wed, _) sa -> (* fr *)
-          if not (same_var ed wed) then sa
-          else SAtom.add (mk_pred hFr [e; we]) sa
-        ) wevts sa in
-        sa
-      ) irds sa in
-*) 
       (* Simplify here in case adding reads added duplicates *)
       let sa = Cube.simplify_atoms sa in (* Cube.create_normal ? *)
-      let sa = Weakpre.instantiate_events sa in
+      (* let sa = Weakpre.instantiate_events sa in *)
 
       sa  :: pres
     with Exit -> pres

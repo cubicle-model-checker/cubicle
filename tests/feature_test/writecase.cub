@@ -7,9 +7,9 @@ weak array F[proc] : int
 
 init (i) { F[i] = 0 }
 
-unsafe (i j) { read(i, F[i]) = 1 && read(i, F[j]) = 1 }
+unsafe (i j) { [i]F[i] = 1 && [i]F[j] = 1 }
 
-transition t1 (i j)
-{ write(i, F[p], case
-       	   | p = i : 1
-       	   | p = j : 2) }
+transition t1 ([i] j)
+{ F[p] := case
+          | p = i : 1
+       	  | p = j : 2 }

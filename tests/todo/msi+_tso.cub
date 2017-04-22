@@ -16,40 +16,40 @@ weak array Shr[proc] : bool
 weak var Current : proc
 weak var Extgnd : bool
 
-init ( i ) { Cache[i] = I && Shr[i] = False && Extgnd = False}
+init (i) { Cache[i] = I && Shr[i] = False && Extgnd = False}
 
-unsafe ( i j ) { read(i, Cache[i]) = M && read(j, Cache[j]) = M }
-(*unsafe ( i j ) { read(j, Cache[j]) = M && read(j, Cache[j]) = M }
-unsafe ( i j ) { read(i, Cache[j]) = M && read(j, Cache[j]) = M }
-unsafe ( i j ) { read(j, Cache[i]) = M && read(j, Cache[j]) = M }
-unsafe ( i j ) { read(j, Cache[j]) = M && read(i, Cache[j]) = M }
-unsafe ( i j ) { read(j, Cache[j]) = M && read(j, Cache[i]) = M }
-unsafe ( i j ) { read(i, Cache[j]) = M && read(i, Cache[j]) = M }
-unsafe ( i j ) { read(i, Cache[j]) = M && read(j, Cache[i]) = M }*)
+unsafe (i j) { [i]Cache[i] = M && [j]Cache[j] = M }
+(*unsafe (i j) { read(j, Cache[j]) = M && read(j, Cache[j]) = M }
+unsafe (i j) { read(i, Cache[j]) = M && read(j, Cache[j]) = M }
+unsafe (i j) { read(j, Cache[i]) = M && read(j, Cache[j]) = M }
+unsafe (i j) { read(j, Cache[j]) = M && read(i, Cache[j]) = M }
+unsafe (i j) { read(j, Cache[j]) = M && read(j, Cache[i]) = M }
+unsafe (i j) { read(i, Cache[j]) = M && read(i, Cache[j]) = M }
+unsafe (i j) { read(i, Cache[j]) = M && read(j, Cache[i]) = M }*)
 
-transition read_miss_1 ( i j )
-requires { read(i, Cache[i]) = I && read(i, Current) = j && read(i, Extgnd) = True }
+transition read_miss_1 ([i] j)
+requires { Cache[i] = I && Current = j && Extgnd = True }
 {
-  write(i, Shr[i], True);
-  write(i, Cache[k], case 
-                     | k = i : S
-		     | k = j : S (*| _ : read(i, Cache[k])*) );
-  write(i, Extgnd, False)
-}
+  Shr[i] := True;
+  Cache[k] := case 
+              | k = i : S
+              | k = j : S
+	      | _ : Cache[k];
+  Extgnd := False }
 
-transition read_miss_2 ( i )
-requires { read(i, Cache[i]) = I && read(i, Extgnd) = False }
-{ write(i, Shr[i], True); write(i, Cache[i], S) }
+transition read_miss_2 ([i])
+requires { Cache[i] = I && Extgnd = False }
+{ Shr[i] := True; Cache[i] := S }
 
-transition write_miss ( i )
-requires { read(i, Cache[i]) <> M }
-{ 
-  write(i, Shr[k], case 
-  	   	   | k = i : True
-                   | read(i, Shr[k]) = True : False (*| _ : read(i, Shr[k])*));
-  write(i, Cache[k], case
-	             | k = i : M
- 	             | read(i, Shr[k]) = True : I (*| _ : read(i, Cache[k])*));
-  write(i, Current, i);
-  write(i, Extgnd, True);
-}
+transition write_miss ([i])
+requires { Cache[i] <> M }
+{ Shr[k] := case 
+  	    | k = i : True
+            | Shr[k] = True : False
+	    | _ : Shr[k];
+  Cache[k] := case
+	      | k = i : M
+ 	      | Shr[k] = True : I
+	      | _ : Cache[k];
+  Current := i;
+  Extgnd := True }

@@ -61,14 +61,15 @@
 
 *)
 
+number_procs 2
 
 type loc = L1 | L2 | L3 | L4 | L5
 
+array PC[proc] : loc
+weak array Count[proc] : bool
 weak var Sense : bool
 array Local_sense[proc] : bool
 array Level[proc] : int
-weak array Count[proc] : bool
-array PC[proc] : loc
 
 init (z) { Sense = False && Local_sense[z] = False &&
            Level[z] = 0 && Count[z] = True && PC[z] = L1 }
@@ -76,36 +77,35 @@ init (z) { Sense = False && Local_sense[z] = False &&
 (* unsafe (z1 z2) { Level[z1] + 2 <= Level[z2] } *)
 unsafe (z1 z2) { PC[z1] = L1 && PC[z2] = L1 && Level[z1] <> Level[z2] }
 
-transition enter (i)
+transition enter ([i])
 requires { PC[i] = L1 }
 { PC[i] := L2;
   Local_sense[j] := case | i = j && Local_sense[j] = True : False 
                          | i = j && Local_sense[j] = False : True
                          | _ : Local_sense[j] }
 
-transition decr (i)
+transition decr ([i])
 requires { PC[i] = L2 }
-{ PC[i] := L3; write(i, Count[i], False) }
+{ PC[i] := L3; Count[i] := False }
 
-transition test_last (i)
-requires { PC[i] = L3 && read(i, Count[i]) = False && forall_other j. read(i, Count[j]) = False }
+transition test_last ([i])
+requires { PC[i] = L3 && Count[i] = False && forall_other j. Count[j] = False }
 { PC[i] := L5;
-  write(i, Count[j], case | _ : True);
-  write(i, Sense, Local_sense[i]) }
+  Count[j] := case | _ : True;
+  Sense := Local_sense[i] }
 
-transition test_wait (i k)
-(* fences (i) *)
-requires { PC[i] = L3 && read(i, Count[k]) = True }
+transition test_wait ([i] k) (* fence (i) *)
+requires { PC[i] = L3 && Count[k] = True }
 { PC[i] := L4 }
 
-transition wait (i)
-requires { PC[i] = L4 && Local_sense[i] <> read(i, Sense) }
+transition wait ([i])
+requires { PC[i] = L4 && Local_sense[i] <> Sense }
 { PC[i] := L4 }
 
-transition exit (i)
-requires { PC[i] = L4 && Local_sense[i] = read(i, Sense) }
+transition exit ([i])
+requires { PC[i] = L4 && Local_sense[i] = Sense }
 { PC[i] := L5 }
 
-transition end (i)
+transition end ([i])
 requires { PC[i] = L5 }
 { PC[i] := L1; Level[i] := Level[i] + 1 }

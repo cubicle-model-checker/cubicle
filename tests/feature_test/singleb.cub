@@ -17,7 +17,7 @@ requires { Init = False }
 
 transition t1 (p)
 requires { PC[p] = L1 }
-{ PC[p] := L2; T[p] := read(p, X) }
+{ PC[p] := L2; T[p] := [p]X }
 
 transition t2a (p)
 requires { PC[p] = L2 && T[p] = V1 }
@@ -37,4 +37,4 @@ requires { PC[p] = L2 && T[p] = V4 }
 
 transition t4 (p)
 requires { PC[p] = L3 }
-{ PC[p] := L1; write(p, X, T[p]) }
+{ PC[p] := L1; [p]X := T[p] }

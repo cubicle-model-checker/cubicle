@@ -7,7 +7,7 @@ invariant (p) { PC[p] < 0 }
 
 init (p) { Init = False && PC[p] = 0 && X = 0 }
 
-unsafe (p) { Init = True && PC[p] = 10 && read(p, X) = 9 }
+unsafe (p) { Init = True && PC[p] = 10 && [p]X = 9 }
 
 transition t_start (p)
 requires { Init = False }
@@ -15,4 +15,4 @@ requires { Init = False }
 
 transition t_count (p)
 requires { Init = True }
-{ PC[p] := PC[p] + 1; write(p, X, PC[p]) }
+{ PC[p] := PC[p] + 1; [p]X := PC[p] }

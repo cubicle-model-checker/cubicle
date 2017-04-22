@@ -1,21 +1,24 @@
 
 type st = M | S | I
 
+(* Global variables *)
 array Cache[proc] : st
+
 
 init (i) { Cache[i] = I }
 
 unsafe (i j) { Cache[i] = M && Cache[j] <> I }
 
+
 transition read_miss (i)
 requires { Cache[i] = I }
 { Cache[j] := case
-       	   | j = i : S
-       	   | Cache[j] = M  : S
-	   | _ : Cache[j] }
+              | j = i : S
+       	      | Cache[j] = M  : S
+	      | _ : Cache[j] }
 
 transition write_miss (i)
 requires { Cache[i] <> M }
 { Cache[j] := case
-       	   | j = i : M
-	   | _ : I }
+       	      | j = i : M
+	      | _ : I }

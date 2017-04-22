@@ -1,12 +1,17 @@
 
 type loc = L1 | L2 | L3
 
+(* Program counters *)
 array PC[proc] : loc
+
+(* Global variables *)
 var Turn : proc
+
 
 init (z) { PC[z] = L1 }
 
 unsafe (z1 z2) { PC[z1] = L3 && PC[z2] = L3 }
+
 
 transition req (i)
 requires { PC[i] = L1 }
