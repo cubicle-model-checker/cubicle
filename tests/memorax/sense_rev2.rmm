@@ -7,7 +7,6 @@ data
 
 process
 registers
-  $rF1 = * : [0:1]
   $rF2 = * : [0:1]
 text
   E0: write: F1 := 1;
@@ -23,7 +22,6 @@ text
 process
 registers
   $rF1 = * : [0:1]
-  $rF2 = * : [0:1]
 text
   E0: write: F2 := 1;
   L0: read: $rF1 := F1;
