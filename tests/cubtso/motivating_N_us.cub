@@ -16,7 +16,7 @@ transition t1 ([p])
 requires { PC[p] = L1 }
 { PC[p] := L2; R[p] := True }
 
-transition t2 ([p]) (*fence (p)*)
+transition t2 ([p])
 requires { PC[p] = L2 && forall_other q. R[q] = False }
 { PC[p] := L3 }
 

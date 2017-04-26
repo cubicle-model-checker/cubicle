@@ -1,0 +1,160 @@
+
+# Memory layout:
+# 0 — C1
+# 1 — C2
+# 2 — C3
+# 3 — C4
+# 0 = I, 1 = S, 2 = M
+
+thread t0
+initial bad0
+final bad
+transition	bad0	bad1	lock
+transition	bad1	bad2	read	C1	0
+transition	bad2	bad3	read	C2	1
+transition	bad3	bad4	read	C3	2
+transition	bad4	badul	read	C4	3
+transition	badul	badchk	unlock
+transition 	badchk	bad	check	|| && == C1 2 != C2 0 && != C1 0 == C2 2
+transition 	badchk	bad	check	|| && == C1 2 != C3 0 && != C1 0 == C3 2
+transition 	badchk	bad	check	|| && == C1 2 != C4 0 && != C1 0 == C4 2
+transition 	badchk	bad	check	|| && == C2 2 != C3 0 && != C2 0 == C3 2
+transition 	badchk	bad	check	|| && == C2 2 != C4 0 && != C2 0 == C4 2
+transition 	badchk	bad	check	|| && == C3 2 != C4 0 && != C3 0 == C4 2
+end
+
+thread t1
+initial l1
+final l1
+transition	l1	l2	lock
+transition	l2	l3	read	C1	0
+transition	l3	rm	check	== C1   0
+transition	l3	wm	check	!= C1   2
+
+transition	rm	rm21	write   1	0
+
+transition	rm21	rm22	read	C2	1
+transition	rm22	rm23	check	== C2	2
+transition	rm22	rm24	check	!= C2	2
+transition	rm23	rm31	write	1	1
+
+transition	rm31	rm32	read	C3	2
+transition	rm32	rm33	check	== C3	2
+transition	rm32	rm33	check	!= C3	2
+transition	rm33	rm41	write	1	2
+
+transition	rm41	rm42	read	C4	3
+transition	rm42	rm43	check	== C4	2
+transition	rm42	rm43	check	!= C4	2
+transition	rm43	rmul	write	1	3
+
+transition	rmul	l1	unlock
+
+transition	wm	wm2	write   2	0
+transition	wm2	wm3	write	0	1
+transition	wm3	wm4	write	0	2
+transition	wm4	wmul	write	0	3
+transition	wmul	l1	unlock
+end
+
+thread t2
+initial l1
+final l1
+transition	l1	l2	lock
+transition	l2	l3	read	C2	1
+transition	l3	rm	check	== C2   0
+transition	l3	wm	check	!= C2   2
+
+transition	rm	rm11	write   1	1
+
+transition	rm11	rm12	read	C1	0
+transition	rm12	rm13	check	== C1	2
+transition	rm12	rm14	check	!= C1	2
+transition	rm13	rm31	write	1	0
+
+transition	rm31	rm32	read	C3	2
+transition	rm32	rm33	check	== C3	2
+transition	rm32	rm34	check	!= C3	2
+transition	rm33	rm41	write	1	2
+
+transition	rm41	rm42	read	C4	3
+transition	rm42	rm43	check	== C4	2
+transition	rm42	rm43	check	!= C4	2
+transition	rm43	rmul	write	1	3
+
+transition	rmul	l1	unlock
+
+transition	wm	wm1	write   2	1
+transition	wm1	wm3	write	0	0
+transition	wm3	wm4	write	0	2
+transition	wm4	wmul	write	0	3
+transition	wmul	l1	unlock
+end
+
+thread t3
+initial l1
+final l1
+transition	l1	l2	lock
+transition	l2	l3	read	C3	2
+transition	l3	rm	check	== C3   0
+transition	l3	wm	check	!= C3   2
+
+transition	rm	rm11	write   1	2
+
+transition	rm11	rm12	read	C1	0
+transition	rm12	rm13	check	== C1	2
+transition	rm12	rm14	check	!= C1	2
+transition	rm13	rm21	write	1	0
+
+transition	rm21	rm22	read	C2	1
+transition	rm22	rm23	check	== C2	2
+transition	rm22	rm24	check	!= C2	2
+transition	rm23	rm41	write	1	1
+
+transition	rm41	rm42	read	C4	3
+transition	rm42	rm43	check	== C4	2
+transition	rm42	rm43	check	!= C4	2
+transition	rm43	rmul	write	1	3
+
+transition	rmul	l1	unlock
+
+transition	wm	wm1	write   2	2
+transition	wm1	wm2	write	0	0
+transition	wm2	wm4	write	0	1
+transition	wm4	wmul	write	0	3
+transition	wmul	l1	unlock
+end
+
+thread t4
+initial l1
+final l1
+transition	l1	l2	lock
+transition	l2	l3	read	C4	3
+transition	l3	rm	check	== C4   0
+transition	l3	wm	check	!= C4   3
+
+transition	rm	rm11	write   1	3
+
+transition	rm11	rm12	read	C1	0
+transition	rm12	rm13	check	== C1	2
+transition	rm12	rm14	check	!= C1	2
+transition	rm13	rm21	write	1	0
+
+transition	rm21	rm22	read	C2	1
+transition	rm22	rm23	check	== C2	2
+transition	rm22	rm24	check	!= C2	2
+transition	rm23	rm31	write	1	1
+
+transition	rm31	rm32	read	C3	2
+transition	rm32	rm33	check	== C3	2
+transition	rm32	rm33	check	!= C3	2
+transition	rm33	rmul	write	1	2
+
+transition	rmul	l1	unlock
+
+transition	wm	wm1	write   2	3
+transition	wm1	wm2	write	0	0
+transition	wm2	wm3	write	0	1
+transition	wm3	wmul	write	0	2
+transition	wmul	l1	unlock
+end
