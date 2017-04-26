@@ -266,49 +266,7 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
         HMap.add p we fwrites
       with Not_found -> fwrites in
       fevts, fwrites
-    ) evts_bt (HMap.empty, HMap.empty) in
-
-(*
-    let manip = List.fold_left (fun manip (ed, _) ->
-      ed :: manip) reads writes in
-    
-    let is_manip manip ed =
-      List.exists (fun med -> same_var ed med) manip in
- *)
-    (* TODO : restrict ghb & wevts/urevts to manipualated only *)
-    
-
-    let add_rel_aux rel nef net =
-      let pre = H2Set.filter (fun (_, et) -> H.equal et nef) rel in
-      let post = H2Set.filter (fun (ef, _) -> H.equal net ef) rel in
-      let pre = H2Set.add (nef, net) pre in
-      let post = H2Set.add (nef, net) post in
-      H2Set.fold (fun (ef, _) rel ->
-        H2Set.fold (fun (_, et) rel ->
-          H2Set.add (ef, et) rel
-        ) post rel
-      ) pre rel
-    in
-
-    let add_rel rel nef net =
-      let sef = try List.find (HSet.mem nef) sync
-        with Not_found -> HSet.singleton nef in
-      let set = try List.find (HSet.mem net) sync
-        with Not_found -> HSet.singleton net in
-      HSet.fold (fun nef rel ->
-        HSet.fold (fun net rel ->
-          add_rel_aux rel nef net
-        ) set rel
-      ) sef rel
-    in
-
-    let acyclic rel =
-      not (H2Set.exists (fun (e1a, e2a) ->
-        H2Set.exists (fun (e1b, e2b) ->
-          H.equal e1a e2b && H.equal e2a e1b
-        ) rel
-      ) rel)
-    in
+    ) evts_bt (HMap.empty, HMap.empty) in    
     
     (* Add fr from new reads to old writes *)
     let ghb = HEvtMap.fold (fun red _ ghb -> (* fr *)
@@ -318,7 +276,7 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
         else begin
           (* Format.fprintf Format.std_formatter "fr : %a -> %a\n" *)
           (*   H.print re H.print we; *)
-          add_rel ghb re we
+          Weakrel.add_rel sync ghb re we
         end
       ) wevts ghb in
       ghb
@@ -332,7 +290,7 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
         else begin
           (* Format.fprintf Format.std_formatter "co : %a -> %a\n" *)
           (*   H.print we H.print we2; *)
-          add_rel ghb we we2
+          Weakrel.add_rel sync ghb we we2
         end
       ) wevts ghb in
       ghb
@@ -342,11 +300,11 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
     let ghb = HEvtMap.fold (fun (wp, _, _, _) _ ghb -> (* fence *)
       let we = hE0 in
       let ghb = try let fe = HMap.find wp ffces in
-                     let ghb = add_rel ghb we fe in
-                     (* Format.fprintf Format.std_formatter "f : %a -> %a\n" *)
-                     (*   H.print we H.print fe; *)
-                     ghb
-                 with Not_found -> ghb in
+                    let ghb = Weakrel.add_rel sync ghb we fe in
+                    (* Format.fprintf Format.std_formatter "f : %a -> %a\n" *)
+                    (*   H.print we H.print fe; *)
+                    ghb
+                with Not_found -> ghb in
       ghb
     ) writes ghb in
 
@@ -354,11 +312,11 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
     let ghb = HEvtMap.fold (fun (rp, _, _, _) _ ghb -> (* ppo *)
       let re = hE0 in
       let ghb = try let fe = HMap.find rp fevts in
-                     let ghb = add_rel ghb re fe in
-                     (*Format.fprintf Format.std_formatter "ppo : %a -> %a\n" *)
-                     (*   H.print re H.print fe; *)
-                     ghb
-                 with Not_found -> ghb in
+                    let ghb = Weakrel.add_rel sync ghb re fe in
+                    (*Format.fprintf Format.std_formatter "ppo : %a -> %a\n" *)
+                    (*   H.print re H.print fe; *)
+                    ghb
+                with Not_found -> ghb in
       ghb
     ) reads ghb in
 
@@ -366,11 +324,11 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
     let ghb = HEvtMap.fold (fun (wp, _, _, _) _ ghb -> (* ppo *)
       let we = hE0 in
       let ghb = try let fe = HMap.find wp fwrites in
-                     let ghb = add_rel ghb we fe in
-                     (*Format.fprintf Format.std_formatter "ppo : %a -> %a\n" *)
-                     (*   H.print we H.print fe; *)
-                     ghb
-                 with Not_found -> ghb in
+                    let ghb = Weakrel.add_rel sync ghb we fe in
+                    (*Format.fprintf Format.std_formatter "ppo : %a -> %a\n" *)
+                    (*   H.print we H.print fe; *)
+                    ghb
+                with Not_found -> ghb in
       ghb
     ) writes ghb in
 
@@ -391,15 +349,15 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
         let ghb = List.fold_left (fun ghb (re, _) -> (* rf *)
           (* Format.fprintf Format.std_formatter "rf : %a -> %a\n" *)
           (*                H.print we H.print re; *)
-	  add_rel ghb we re
+	  Weakrel.add_rel sync ghb we re
         ) ghb rcl in
         let ghb = HMap.fold (fun ure (ured, _) ghb -> (* fr *)
           if not (same_var wed ured) then ghb
           else begin
-              (* Format.fprintf Format.std_formatter "fr : %a -> %a\n" *)
-              (*                H.print ure H.print we; *)
-              add_rel ghb ure we
-            end
+            (* Format.fprintf Format.std_formatter "fr : %a -> %a\n" *)
+            (*                H.print ure H.print we; *)
+            Weakrel.add_rel sync ghb ure we
+          end
         ) urevts ghb in
         ghb
       ) ghb wrcl in
@@ -413,7 +371,7 @@ let make_read_write_combinations writes reads evts wevts urevts rels =
       (*   Format.fprintf Format.std_formatter "\n" *)
       (* end; *)
 
-      acyclic ghb
+      Weakrel.acyclic ghb
     ) wrcp in
 
     (* Format.fprintf Format.std_formatter "After : %d\n" (List.length wrcp); *)

@@ -496,8 +496,31 @@ let make_scloc evts (_, po, f, rf, co, fr, s) =
 
 
 
+let add_rel_aux rel nef net =
+  let pre = H2Set.filter (fun (_, et) -> H.equal et nef) rel in
+  let post = H2Set.filter (fun (ef, _) -> H.equal net ef) rel in
+  let pre = H2Set.add (nef, net) pre in
+  let post = H2Set.add (nef, net) post in
+  H2Set.fold (fun (ef, _) rel ->
+    H2Set.fold (fun (_, et) rel -> H2Set.add (ef, et) rel) post rel
+  ) pre rel
 
-let acyclic ({ Ast.tag = id; cube = cube } as n) = failwith "Acyclic to fix" (*
+let add_rel sync rel nef net =
+  let sef = try List.find (HSet.mem nef) sync
+            with Not_found -> HSet.singleton nef in
+  let set = try List.find (HSet.mem net) sync
+            with Not_found -> HSet.singleton net in
+  HSet.fold (fun nef rel ->
+    HSet.fold (fun net rel -> add_rel_aux rel nef net) set rel
+  ) sef rel
+
+let acyclic rel =
+  not (H2Set.exists (fun (e1a, e2a) ->
+    H2Set.exists (fun (e1b, e2b) -> H.equal e1a e2b && H.equal e2a e1b) rel
+  ) rel)
+
+
+let acyclic_n ({ Ast.tag = id; cube = cube } as n) = failwith "Acyclic to fix" (*
   let _, evts, rels = extract_events_set (cube.Cube.litterals) in
   let prop = make_prop evts rels in
   if H2Set.exists (fun (e1a, e2a) ->

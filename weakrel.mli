@@ -33,4 +33,12 @@ val make_scloc :
       H.t list HMap.t * H2Set.t * H.t list HMap.t * HSet.t list) ->
     H2Set.t
 
-val acyclic : Ast.node_cube -> unit
+
+
+(* val add_rel_aux : H2Set.t -> H.t -> H.t -> H2Set.t *)
+
+val add_rel : HSet.t list -> H2Set.t -> H.t -> H.t -> H2Set.t
+
+val acyclic : H2Set.t -> bool
+      
+val acyclic_n : Ast.node_cube -> unit
