@@ -1,0 +1,63 @@
+forbidden
+BAD L L
+
+data
+  lock = 0 : [0:1]
+  C1 = 0 : [0:2]
+  C2 = 0 : [0:2]
+
+process
+registers
+  $rC1 = * : [0:2]
+  $rC2 = * : [0:2]
+text
+  L: cas(lock, 0, 1);
+     read: $rC1 := C1;
+     read: $rC2 := C2;
+     write: lock := 0;
+     if $rC1 = 2 && $rC2 != 0 || $rC1 != 0 && $rC2 = 2 then
+       goto BAD;
+     goto L;
+  BAD : nop
+
+process
+registers
+  $rC1 = * : [0:2]
+  $rC2 = * : [0:2]
+text
+  L: either {
+       cas(lock, 0, 1);
+       read: C1 = 0;
+       write: C1 := 1;
+       read: $rC2 := C2; if $rC2 = 2 then write: C2 := 1;
+       locked write: lock := 0
+     or
+       cas(lock, 0, 1);
+       read: $rC1 := C1;
+       assume: $rC1 != 2;
+       write: C1 := 2;
+       write: C2 := 0;
+       locked write: lock := 0
+     };
+     goto L
+
+process
+registers
+  $rC1 = * : [0:2]
+  $rC2 = * : [0:2]
+text
+  L: either {
+       cas(lock, 0, 1);
+       read: C2 = 0;
+       write: C2 := 1;
+       read: $rC1 := C1; if $rC1 = 2 then write: C1 := 1;
+       locked write: lock := 0
+     or
+       cas(lock, 0, 1);
+       read: $rC2 := C2;
+       assume: $rC2 != 2;
+       write: C2 := 2;
+       write: C1 := 0;
+       locked write: lock := 0
+     };
+     goto L
