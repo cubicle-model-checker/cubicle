@@ -198,6 +198,8 @@
 %token UNDERSCORE AFFECT
 %token EOF
 
+%nonassoc lowest
+%nonassoc COLON
 %nonassoc prec_forall prec_exists
 %right IMP EQUIV  
 %right OR
@@ -206,7 +208,8 @@
 /* %left prec_relation EQ NEQ LT LE GT GE */
 /* %left PLUS MINUS */
 %nonassoc NOT
-/* %left BAR */
+ /* %left BAR */
+%nonassoc highest
 
 %type <Ast.system> system
 %start system
@@ -371,7 +374,6 @@ assign_nondet_update:
   | assignment { $1 }
   | nondet { $1 }
   | update { $1 }
-/*  | write { $1 }*/
 ;
 
 assignment:
@@ -382,12 +384,12 @@ assignment:
       if is_weak $1 then Write (None, $1, [], PUCase $4)
       else Assign ($1, PUCase $4) }
 /* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | LEFTSQ proc_name RIGHTSQ mident AFFECT term {
-      if is_weak $4 then Write (Some $2, $4, [], PUTerm $6)
-      else Assign ($4, PUTerm $6) }
-  | LEFTSQ proc_name RIGHTSQ mident AFFECT CASE switchs {
-      if is_weak $4 then Write (Some $2, $4, [], PUCase $7)
-      else Assign ($4, PUCase $7) }
+  | proc_name COLON mident AFFECT term {
+      if is_weak $3 then Write (Some $1, $3, [], PUTerm $5)
+      else Assign ($3, PUTerm $5) }
+  | proc_name COLON mident AFFECT CASE switchs {
+      if is_weak $3 then Write (Some $1, $3, [], PUCase $6)
+      else Assign ($3, PUCase $6) }
 ;
 
 nondet:
@@ -427,27 +429,27 @@ update:
 	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw }
       end }
 /* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | LEFTSQ proc_name RIGHTSQ
+  | proc_name COLON
         mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
-      if is_weak $4 then Write (Some $2, $4, $6, PUCase $10)
+      if is_weak $3 then Write (Some $1, $3, $5, PUCase $9)
       else begin
         List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $6;
-        Upd { pup_loc = loc (); pup_arr = $4; pup_arg = $6; pup_swts = $10 }
+          if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $5;
+        Upd { pup_loc = loc (); pup_arr = $3; pup_arg = $5; pup_swts = $9 }
       end }
-  | LEFTSQ proc_name RIGHTSQ
+  | proc_name COLON
         mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
-      if is_weak $4 then Write (Some $2, $4, $6, PUTerm $9)
+      if is_weak $3 then Write (Some $1, $3, $5, PUTerm $8)
       else begin
         let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
             let c = PAtom (AEq (TVar j, TVar i)) in
-            c :: cube, j :: rjs) ([], []) $6 in
+            c :: cube, j :: rjs) ([], []) $5 in
         let a = PAnd cube in
         let js = List.rev rjs in
-	let sw = [(a, $9); (PAtom (AAtom Atom.True), TTerm (Access($4, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $4; pup_arg = js; pup_swts = sw }
+	let sw = [(a, $8); (PAtom (AAtom Atom.True), TTerm (Access($3, js)))] in
+	Upd { pup_loc = loc (); pup_arr = $3; pup_arg = js; pup_swts = sw }
       end }
 ;
 
@@ -461,19 +463,6 @@ switch:
   | expr COLON term { $1, $3 }
 ;
 
-/*write:
-  | WRITE LEFTPAR proc_name COMMA mident COMMA CASE switchs RIGHTPAR
-      { Write (Some $3, $5, [], PUCase $8) }
-  | WRITE LEFTPAR proc_name COMMA mident
- 	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA CASE switchs RIGHTPAR
-      { Write (Some $3, $5, $7, PUCase $11) }
-  | WRITE LEFTPAR proc_name COMMA mident COMMA term RIGHTPAR
-      { Write (Some $3, $5, [], PUTerm $7) }
-  | WRITE LEFTPAR proc_name COMMA mident
- 	  LEFTSQ proc_name_list_plus RIGHTSQ COMMA term RIGHTPAR
-      { Write (Some $3, $5, $7, PUTerm $10) }*/
-
-
 constnum:
   | REAL { ConstReal $1 }
   | INT { ConstInt $1 }
@@ -484,11 +473,11 @@ var_term:
       if is_weak $1 then Read(Hstring.make "", $1, [])
      else if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
-  | proc_name { Elem ($1, Var) }
-  | LEFTSQ proc_name RIGHTSQ mident {
-      if is_weak $4 then Read($2, $4, [])
-     else if Consts.mem $4 then Const (MConst.add (ConstName $4) 1 MConst.empty)
-      else Elem ($4, sort $4) }
+  | proc_name %prec lowest { Elem ($1, Var) }
+  | proc_name COLON mident {
+      if is_weak $3 then Read($1, $3, [])
+     else if Consts.mem $3 then Const (MConst.add (ConstName $3) 1 MConst.empty)
+      else Elem ($3, sort $3) }
 ;
 
 top_id_term:
@@ -501,23 +490,14 @@ array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
       if is_weak $1 then Read(Hstring.make "", $1, $3)
       else Access ($1, $3) }
-  | LEFTSQ proc_name RIGHTSQ mident LEFTSQ proc_name_list_plus RIGHTSQ {
-      if is_weak $4 then Read($2, $4, $6)
-      else Access ($4, $6) }
+  | proc_name COLON mident LEFTSQ proc_name_list_plus RIGHTSQ {
+      if is_weak $3 then Read($1, $3, $5)
+      else Access ($3, $5) }
 ;
-
-/*read_term:
-  | READ LEFTPAR proc_name COMMA mident RIGHTPAR
-      { Read ($3, $5, []) }
-  | READ LEFTPAR proc_name COMMA mident
-	 LEFTSQ proc_name_list_plus RIGHTSQ RIGHTPAR
-       { Read ($3, $5, $7) }
-;*/
 
 var_or_array_term:
   | var_term { $1 }
   | array_term { $1 }
-/*  | read_term { $1 }*/
 ;
 
 arith_term:
@@ -548,7 +528,6 @@ term:
   | top_id_term { $1 } 
   | array_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
-/*  | read_term { TTerm $1 }*/
 ;
 
 lident:
