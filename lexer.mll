@@ -42,8 +42,6 @@
         "not", NOT;
         "true", TRUE;
         "false", FALSE;
-	"write", WRITE;
-	"read", READ;
 	"fence", FENCE;
 	"weak", WEAK;
 	"number_procs", SIZEPROC;
@@ -102,6 +100,8 @@ rule token = parse
   | mident as id { MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }
+  | "@"
+      { AT }
   | "("
       { LEFTPAR }
   | ")"

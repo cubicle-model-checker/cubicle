@@ -7,7 +7,7 @@ weak array C[proc] : state
 
 init (p) { C[p] = I }
 
-unsafe (p1 p2) { p1: C[p1] = CS && p2: C[p2] = CS }
+unsafe (p1 p2) { p1 @ C[p1] = CS && p2 @ C[p2] = CS }
 
 
 transition t1 ([p])

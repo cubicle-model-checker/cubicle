@@ -7,7 +7,7 @@ weak array Cache[proc] : st
 
 init (i) { Cache[i] = I }
 
-unsafe (i j k) { [i]Cache[i] = M && [j]Cache[j] <> I }
+unsafe (i j k) { i @ Cache[i] = M && j @ Cache[j] <> I }
 
 
 transition read_miss ([i])

@@ -24,11 +24,11 @@ transition t_L2_L3_W_Turn_Other ([p] q)
 requires { PC[p] = L2 }
 { PC[p] := L3; Turn := q }
 
-transition t_L3_CS_R_WantO_False ([p] q) fence (p)
-requires { PC[p] = L3 && Want[q] = False }
+transition t_L3_CS_R_WantO_False ([p] q)
+requires { fence (p) && PC[p] = L3 && Want[q] = False }
 { PC[p] := CS }
 
-transition t_L3_CS_R_Turn_Self ([p]) (* fence (p) *)
+transition t_L3_CS_R_Turn_Self ([p])
 requires { PC[p] = L3 && Turn = p }
 { PC[p] := CS }
 

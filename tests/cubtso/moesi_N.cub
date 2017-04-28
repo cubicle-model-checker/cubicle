@@ -7,7 +7,7 @@ weak array A[proc] : location
 
 init (z) { A[z] = I }
 
-unsafe (z1 z2) { z1: A[z1] = M &&  z2: A[z2] = M }
+unsafe (z1 z2) { z1 @ A[z1] = M &&  z2 @ A[z2] = M }
 
 
 transition t1 ([x])

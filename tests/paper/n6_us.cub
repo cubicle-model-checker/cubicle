@@ -19,7 +19,7 @@ init (p) { PC[p] = L1 && EAX[p] = 0 && EBX[p] = 0 && X = 0 && Y = 0 }
 unsafe (p1 p2) {
     p1 = #1 && p2 = #2 &&
     PC[p1] = End && PC[p2] = End &&
-    EAX[p1] = 1 && EBX[p1] = 0 && [p2]X = 1 }
+    EAX[p1] = 1 && EBX[p1] = 0 && p2 @ X = 1 }
 
 transition t1_1 ([p])
 requires { p = #1 && PC[p] = L1 }

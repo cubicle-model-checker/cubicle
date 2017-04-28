@@ -20,12 +20,12 @@ transition t_L1_L2_W_WantS_True ([p])
 requires { PC[p] = L1 }
 { PC[p] := L2; Want[p] := True }
 
-transition t_L2_L3_R_WantO_True ([p] q) (* fence (p) *)
+transition t_L2_L3_R_WantO_True ([p] q)
 requires { PC[p] = L2 && Want[q] = True }
 { PC[p] := L3 }
 
-transition t_L2_L7_R_WantO_False ([p] q) fence (p)
-requires { PC[p] = L2 && Want[q] = False }
+transition t_L2_L7_R_WantO_False ([p] q)
+requires { fence (p) && PC[p] = L2 && Want[q] = False }
 { PC[p] := L7 }
 
 transition t_L3_L4_R_Turn_Other ([p])

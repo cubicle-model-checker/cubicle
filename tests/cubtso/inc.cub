@@ -12,7 +12,7 @@ weak var X : int
 
 init (p) { PC[p] = L1 && X = 0 }
 
-unsafe (p1 p2) { PC[p1] = L2 && PC[p2] = L2 && p1: X <> 2 && p2: X <> 2}
+unsafe (p1 p2) { PC[p1] = L2 && PC[p2] = L2 && p1 @ X <> 2 && p2 @ X <> 2}
 
 
 transition t ([p])

@@ -94,9 +94,8 @@ let close_dot = Dot.open_dot () in (* debug *)
 
   | Parsing.Parse_error ->
      let loc = (lexeme_start_p lb, lexeme_end_p lb) in
-     let l = Lexing.lexeme lb in
      Util.report_loc err_formatter loc;
-     eprintf "syntax error: %s@." l;
+     eprintf "syntax error: @.";
      exit 2
 
   | Typing.Error (e,loc) ->

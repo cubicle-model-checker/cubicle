@@ -43,6 +43,7 @@ type error =
   | WeakInvalidInSC
   | OpInvalidInSC
   | CantUseReadInInit
+  | CantUseFenceInInit
   | MustReadWeakVar of Hstring.t
   | MustWriteWeakVar of Hstring.t
   | MustBeWeakVar of Hstring.t
@@ -106,6 +107,8 @@ let report fmt = function
       fprintf fmt "operation is invalid in SC"
   | CantUseReadInInit ->
       fprintf fmt "can't use Read in init"
+  | CantUseFenceInInit ->
+      fprintf fmt "can't use Fence in init"
   | MustReadWeakVar s ->
       fprintf fmt "must use Read to access weak variable %a" Hstring.print s
   | MustWriteWeakVar s ->
@@ -213,7 +216,17 @@ let rec term loc ?(init=false) args = function
       	| _ -> ty_access loc args v vi
       end
   | Write (p, v, vi, srl) -> failwith "Typing.term : Write should not be typed"
-  | Fence p -> failwith "Typing.term : Fence should not be typed"
+  | Fence p ->
+      if Options.model = Options.SC then error (OpInvalidInSC) loc;
+      if init then error (CantUseFenceInInit) loc;
+      if not (Hstring.list_mem p args) then
+	begin try
+	  let pa, typ = Smt.Symbol.type_of p in
+	  if pa <> [] || not (Hstring.equal typ Smt.Type.type_proc) then
+	    error (MustBeOfTypeProc p) loc
+	  with Not_found -> error (UnknownName p) loc
+	end;
+      [], Smt.Type.type_bool
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 

@@ -183,7 +183,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE PREDICATE WRITE READ FENCE WEAK
+%token REQUIRE UNSAFE PREDICATE FENCE WEAK AT 
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -198,8 +198,6 @@
 %token UNDERSCORE AFFECT
 %token EOF
 
-%nonassoc lowest
-%nonassoc COLON
 %nonassoc prec_forall prec_exists
 %right IMP EQUIV  
 %right OR
@@ -209,7 +207,6 @@
 /* %left PLUS MINUS */
 %nonassoc NOT
  /* %left BAR */
-%nonassoc highest
 
 %type <Ast.system> system
 %start system
@@ -332,19 +329,18 @@ transition_name:
 
 transition:
   | TRANSITION transition_name LEFTPAR lidents_thr RIGHTPAR
-      fence
       require
       LEFTBR assigns_nondets_updates RIGHTBR
-      { let assigns, nondets, upds, writes = $9 in
+      { let assigns, nondets, upds, writes = $8 in
 	  { ptr_name = $2;
             ptr_args = fst $4; 
-	    ptr_reqs = fix_rd_expr (snd $4) $7;
+	    ptr_reqs = fix_rd_expr (snd $4) $6;
 	    ptr_assigns = List.map (fix_rd_assign (snd $4)) assigns;
 	    ptr_nondets = nondets; 
 	    ptr_upds = List.map (fix_rd_upd (snd $4)) upds;
             ptr_loc = loc ();
 	    ptr_writes = List.map (fix_rd_write (snd $4)) writes;
-	    ptr_fence = $6;
+	    ptr_fence = None;
           }
       }
 ;
@@ -384,10 +380,10 @@ assignment:
       if is_weak $1 then Write (None, $1, [], PUCase $4)
       else Assign ($1, PUCase $4) }
 /* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | proc_name COLON mident AFFECT term {
+  | proc_name AT mident AFFECT term {
       if is_weak $3 then Write (Some $1, $3, [], PUTerm $5)
       else Assign ($3, PUTerm $5) }
-  | proc_name COLON mident AFFECT CASE switchs {
+  | proc_name AT mident AFFECT CASE switchs {
       if is_weak $3 then Write (Some $1, $3, [], PUCase $6)
       else Assign ($3, PUCase $6) }
 ;
@@ -395,11 +391,6 @@ assignment:
 nondet:
   | mident AFFECT DOT { Nondet $1 }
   | mident AFFECT QMARK { Nondet $1 }
-;
-
-fence:
-  | { None }
-  | FENCE LEFTPAR proc_name RIGHTPAR { Some $3 }
 ;
 
 require:
@@ -429,16 +420,14 @@ update:
 	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw }
       end }
 /* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | proc_name COLON
-        mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
+  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
       if is_weak $3 then Write (Some $1, $3, $5, PUCase $9)
       else begin
         List.iter (fun p ->
           if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $5;
         Upd { pup_loc = loc (); pup_arr = $3; pup_arg = $5; pup_swts = $9 }
       end }
-  | proc_name COLON
-        mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
+  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
       if is_weak $3 then Write (Some $1, $3, $5, PUTerm $8)
       else begin
         let cube, rjs =
@@ -473,8 +462,8 @@ var_term:
       if is_weak $1 then Read(Hstring.make "", $1, [])
      else if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
-  | proc_name %prec lowest { Elem ($1, Var) }
-  | proc_name COLON mident {
+  | proc_name { Elem ($1, Var) }
+  | proc_name AT mident {
       if is_weak $3 then Read($1, $3, [])
      else if Consts.mem $3 then Const (MConst.add (ConstName $3) 1 MConst.empty)
       else Elem ($3, sort $3) }
@@ -490,7 +479,7 @@ array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
       if is_weak $1 then Read(Hstring.make "", $1, $3)
       else Access ($1, $3) }
-  | proc_name COLON mident LEFTSQ proc_name_list_plus RIGHTSQ {
+  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ {
       if is_weak $3 then Read($1, $3, $5)
       else Access ($3, $5) }
 ;
@@ -602,6 +591,7 @@ operator:
 literal:
   | TRUE { AAtom Atom.True }
   | FALSE { AAtom Atom.False }
+  | FENCE LEFTPAR proc_name RIGHTPAR { AEq (TTerm (Fence $3), TTerm (Elem (Term.htrue, Constr))) }
   /* | lident { AVar $1 } RR conflict with proc_name */
   | term EQ term { AEq ($1, $3) }
   | term NEQ term { ANeq ($1, $3) }
