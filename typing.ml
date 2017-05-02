@@ -622,8 +622,8 @@ let system s =
   end;
 
   let init_woloc = let _,v,i = s.init in v,i in
-  let invs_woloc = [] in (* as it would put reads in init... *) (*
-    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in *)
+  let invs_woloc = (*[] in*) (* as it would put reads in init... *)
+    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let invs_woloc_e = List.map (fun (_,v,i) ->
     create_node_rename Inv v (Weakpre.instantiate_events i)) s.invs in
   let unsafe_woloc_e = List.map (fun (_,v,u) ->
