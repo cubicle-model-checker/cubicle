@@ -38,6 +38,7 @@ val freshs : t list
 val generals : t list
 val number : t -> int
 
+val compare : t -> t -> int  
 
 val is_proc : t -> bool
 (** returns [true] if the variable is a skolem process [#i] *)

@@ -373,6 +373,7 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Term.Arith (t, _) -> type_of_term t
+  | Term.SetCardinality _ -> Smt.Type.type_int
 
 let rec type_of_atom = function
   | True | False -> None

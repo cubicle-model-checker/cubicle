@@ -4,7 +4,7 @@ array Crit[proc] : bool
 
 init (z) { Want[z] = False && Crit[z] = False }
 
-unsafe () { #{z. Crit[z] = True} > 1}
+unsafe () { #{p. Crit[p] = True} > 1}
 
 (* trans_regexp : req(z) enter(z); *)
 

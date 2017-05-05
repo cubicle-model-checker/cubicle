@@ -162,7 +162,7 @@ let proc_present p a sa =
   let rest = SAtom.remove a sa in
   SAtom.exists (function
     | Atom.Comp (Term.Elem (h, Var), _, _)
-    | Atom.Comp (_, _, Term.Elem (h, Var)) when Hstring.equal h p -> true
+    | Atom.Comp (_, _, Term.Elem (h, Var)) -> Hstring.equal h p
     | _ -> false) rest
 
 let useless_candidate sa =

@@ -107,20 +107,6 @@ let unify loc (args_1, ty_1) (args_2, ty_2) =
 
 let refinements = Hstring.H.create 17
 
-let infer_type x1 x2 =
-  try
-    let h1 = match x1 with
-      | Term.Const _ | Term.Arith _ -> raise Exit
-      | Term.Elem (h1, _) | Term.Access (h1, _) -> h1
-    in
-    let ref_ty, ref_cs =
-      try Hstring.H.find refinements h1 with Not_found -> [], [] in
-    match x2 with
-      | Term.Elem (e2, Constr) -> Hstring.H.add refinements h1 (e2::ref_ty, ref_cs)
-      | Term.Elem (e2, Glob) -> Hstring.H.add refinements h1 (ref_ty, e2::ref_cs)
-      | _ -> ()
-  with Exit -> ()
-
 let refinement_cycles () = (* TODO *) ()
 
 let rec term loc args = function
@@ -171,8 +157,12 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
+  | Term.SetCardinality (v, sa) ->
+    atoms loc (v::args) sa;
+    [], Smt.Type.type_int
+    
 
-let assignment ?(init_variant=false) g x (_, ty) = 
+and assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
     || ty = Smt.Type.type_bool
     || ty = Smt.Type.type_int
@@ -187,7 +177,7 @@ let assignment ?(init_variant=false) g x (_, ty) =
 	    Smt.Variant.assign_var n g
       | _ -> ()
 
-let atom loc init_variant args = function
+and atom loc init_variant args = function
   | True | False -> ()
   | Comp (Term.Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Term.Elem(g, Glob) as x))
@@ -200,7 +190,7 @@ let atom loc init_variant args = function
       unify loc (term loc args x) (term loc args y)
   | Ite _ -> assert false
 
-let atoms loc ?(init_variant=false) args =
+and atoms loc ?(init_variant=false) args =
   SAtom.iter (atom loc init_variant args)
 
 let init (loc, args, lsa) = List.iter (atoms loc ~init_variant:true args) lsa

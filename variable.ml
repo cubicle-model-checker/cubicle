@@ -43,7 +43,7 @@ let freshs = gen_vars "?" max_proc
 
 let generals = gen_vars "z" max_proc
 
-                        
+let compare = Hstring.compare
 
 let proc_vars_int = 
   let l = ref [] in

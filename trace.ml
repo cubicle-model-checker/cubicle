@@ -129,8 +129,10 @@ module AltErgo = struct
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
     | Term.Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
-
-  let rec print_atom ~prime fmt = function
+    | Term.SetCardinality (v, sa) -> fprintf fmt "#{%a@ |@ %a}"
+      Variable.print v (print_satom ~prime) sa
+      
+  and print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
     | Atom.False -> fprintf fmt "false"
     | Atom.Comp (x, op, y) -> 
@@ -147,7 +149,7 @@ module AltErgo = struct
     | a::l -> fprintf fmt "%a %s@\n%a" (print_atom ~prime) a sep
 		      (print_atoms ~prime sep) l
 
-  let print_satom ~prime fmt sa = 
+  and print_satom ~prime fmt sa = 
     fprintf fmt "%a" (print_atoms ~prime "and") (SAtom.elements sa)
 
   let print_array ~prime fmt a =
@@ -672,8 +674,10 @@ module Why3 = struct
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Term.Arith (x, cs) -> 
        fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
+    | Term.SetCardinality (v, sa) -> fprintf fmt "#{%a@ |@ %a}"
+      Variable.print v (print_satom ~prime) sa
 
-  let rec print_atom ~prime fmt = function
+  and print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
     | Atom.False -> fprintf fmt "false"
     | Atom.Comp (x, op, y) -> 
@@ -690,7 +694,7 @@ module Why3 = struct
     | a::l -> fprintf fmt "%a %s@ %a" (print_atom ~prime) a sep
 		      (print_atoms ~prime sep) l
 
-  let print_satom ~prime fmt sa = 
+  and print_satom ~prime fmt sa = 
     fprintf fmt "%a" (print_atoms ~prime "/\\") (SAtom.elements sa)
 
   let print_array ~prime fmt a =
@@ -1471,8 +1475,10 @@ module Why3_INST = struct
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Term.Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+    | Term.SetCardinality (v, sa) -> fprintf fmt "#{%a@ |@ %a}"
+      Variable.print v (print_satom ~prime) sa
 
-  let rec print_atom ~prime fmt = function
+  and print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
     | Atom.False -> fprintf fmt "false"
     | Atom.Comp (x, op, y) -> 
@@ -1489,7 +1495,7 @@ module Why3_INST = struct
     | a::l -> fprintf fmt "%a %s@\n%a" (print_atom ~prime) a sep
 		      (print_atoms ~prime sep) l
 
-  let print_satom ~prime fmt sa = 
+  and print_satom ~prime fmt sa = 
     fprintf fmt "%a" (print_atoms ~prime "/\\") (SAtom.elements sa)
 
   let print_array ~prime fmt a =

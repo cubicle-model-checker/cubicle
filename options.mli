@@ -73,6 +73,8 @@ val hist_threshhold : int
 
 val goods : bool
 
+val internal_debug : bool
+
 val max_proc : int
 val type_only : bool
 val maxrounds : int

@@ -100,6 +100,8 @@ let bwd_fwd = ref (-1)
 
 let goods = ref false
 
+let internal_debug = ref false
+  
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -247,6 +249,7 @@ let specs =
     "-search", Arg.String set_mode, 
     "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa | bfshh > search strategies";
     "-debug", Arg.Set debug, " debug mode";
+    "-intdebug", Arg.Set internal_debug, " internal debug mode";
     "-dot", Arg.Int set_dot,
     "<level> graphviz (dot) output with a level of details";
     "-dot-prof", Arg.Set_int dot_prof,
@@ -446,6 +449,8 @@ let bwd_fwd = !bwd_fwd
 
 let goods = !goods
 
+let internal_debug = !internal_debug
+  
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes

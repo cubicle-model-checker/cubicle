@@ -204,6 +204,10 @@ end = struct
       | Arith (t1, cs1), Arith (t2, cs2) ->
         let c = compare t1 t2 in
         if c<>0 then c else compare_constants cs1 cs2
+      | Arith _, _ -> -1 | _, Arith _ -> 1
+      | SetCardinality (v1, sa1), SetCardinality (v2, sa2) ->
+        let c = Variable.compare v1 v2 in
+        if c <> 0 then c else SAtom.compare sa1 sa2
 
   let hash t = Hashtbl.hash_param 50 50 t
 
@@ -252,6 +256,7 @@ end = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
+    | SetCardinality _ -> Smt.Type.type_int
 
 
   let rec print_strings fmt = function
@@ -286,6 +291,8 @@ end = struct
       fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+    | SetCardinality (v, sa) -> fprintf fmt "#{%a@ |@ %a}"
+      Variable.print v SAtom.print sa    
 
   let print_set fmt st =
     Format.fprintf fmt "{";

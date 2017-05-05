@@ -18,19 +18,19 @@ open Cubtypes
 open Util
 open Ast
 open Format
-
+open Options
 
 
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
   | TSetCardinality of Variable.t * formula
-    
+      
 and atom =
   | AVar of Variable.t
   | AAtom of Atom.t
   | ABinop of term * Cubtypes.op_comp * term
-  
+      
 and formula =
   | PAtom of atom
   | PNot of formula
@@ -68,56 +68,58 @@ let function_defs = Hstring.H.create 17
 let rec print_term fmt = function
   | TVar v -> fprintf fmt "'%a" Hstring.print v
   | TTerm t -> Term.print fmt t
-  | TSetCardinality (v, f) -> fprintf fmt "@[#{%a | %a}@]"
+  | TSetCardinality (v, f) -> fprintf fmt "#{%a@ |@ %a}"
     Variable.print v print f    
 
 and print_atom fmt = function
   | AVar v -> fprintf fmt "?%a" Hstring.print v
   | AAtom a -> Atom.print fmt a
-  | ABinop (t1, op, t2) -> fprintf fmt "(%a %a %a)"
+  | ABinop (t1, op, t2) -> fprintf fmt "(%a@ %a@ %a)"
     print_op op print_term t1 print_term t2
 
 and print fmt = function
   | PAtom a -> print_atom fmt a
-  | PNot f -> fprintf fmt "~ %a" print f
+  | PNot f -> fprintf fmt "~%a" print f
   | PAnd l ->
-    fprintf fmt "(and";
-    List.iter (fprintf fmt " %a" print) l;
-    fprintf fmt ")";
+    fprintf fmt "@[<hov 3>(and";
+    List.iter (fprintf fmt "@ %a" print) l;
+    fprintf fmt ")@]";
   | POr l ->
-    fprintf fmt "(or";
-    List.iter (fprintf fmt " %a" print) l;
-    fprintf fmt ")";
-  | PImp (a, b) -> fprintf fmt "(%a => %a)" print a print b
-  | PEquiv (a, b) -> fprintf fmt "(%a <=> %a)" print a print b
+    fprintf fmt "@[<hov 3>(or";
+    List.iter (fprintf fmt "@ %a" print) l;
+    fprintf fmt ")@]";
+  | PImp (a, b) -> fprintf fmt "(%a@ =>@ %a)" print a print b
+  | PEquiv (a, b) -> fprintf fmt "(%a@ <=>@ %a)" print a print b
   | PIte (c, t, e) ->
-    fprintf fmt "(if %a then %a else %a)" print c print t print e
+    fprintf fmt "(if@ %a@ then@ %a@ else@ %a)" print c print t print e
   | PForall (vs, f) ->
-    fprintf fmt "(forall";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
-    fprintf fmt ". %a)" print f
+    fprintf fmt "(forall@[<1>";
+    List.iter (fprintf fmt "@ %a" Variable.print) vs;
+    fprintf fmt "@].@ %a)" print f
   | PExists (vs, f) ->
-    fprintf fmt "(exists";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
-    fprintf fmt ". %a)" print f
+    fprintf fmt "(exists@[<1>";
+    List.iter (fprintf fmt "@ %a" Variable.print) vs;
+    fprintf fmt "@].@ %a)" print f
   | PForall_other (vs, f) ->
-    fprintf fmt "(forall_other";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
-    fprintf fmt ". %a)" print f
+    fprintf fmt "(forall_other@[<1>";
+    List.iter (fprintf fmt "@ %a" Variable.print) vs;
+    fprintf fmt "@].@ %a)" print f
   | PExists_other (vs, f) ->
-    fprintf fmt "(exists_other";
-    List.iter (fprintf fmt " %a" Variable.print) vs;
-    fprintf fmt ". %a)" print f
+    fprintf fmt "@[(exists_other@[<1>";
+    List.iter (fprintf fmt "@ %a" Variable.print) vs;
+    fprintf fmt "@].@ %a)@]" print f
 
 
 let print_tof fmt = function
-  | PF f -> fprintf fmt "F<%a>" print f
-  | PT t -> fprintf fmt "T<%a>" print_term t
+  | PF f -> fprintf fmt "F<@[<1>%a@]>" print f
+  | PT t -> fprintf fmt "T<@[<1>%a@]>" print_term t
 
-let print_subst fmt =
+let print_subst fmt subst =
+  fprintf fmt "@[<v 1>";
   List.iter (fun (v, tof) ->
-      fprintf fmt " %a -> %a, " Hstring.print v print_tof tof
-    )
+    fprintf fmt "@[%a@ ->@ %a@ " Hstring.print v print_tof tof
+  ) subst;
+  fprintf fmt "@]"
 
 
 (* type atom = [ PAtom of Atom.t ] *)
@@ -161,13 +163,13 @@ type ptransition = {
 }
 
 type pregexp = 
-    | PEpsilon 
-    | PChar of Hstring.t * Hstring.t list
-    | PUnion of pregexp list
-    | PConcat of pregexp list
-    | PStar of pregexp
-    | PPlus of pregexp
-    | POption of pregexp
+  | PEpsilon 
+  | PChar of Hstring.t * Hstring.t list
+  | PUnion of pregexp list
+  | PConcat of pregexp list
+  | PStar of pregexp
+  | PPlus of pregexp
+  | POption of pregexp
 
 
 type psystem = {
@@ -208,26 +210,33 @@ type subst = (Variable.t * term_or_formula) list
 
 
 let restr_subst_to sigma vars =
-  List.fold_left (fun acc -> function
-      | v, PF (PAtom (AVar v'))
-      | v, PT (TVar v')
-      | v, PT (TTerm (Term.Elem(v', Var))) ->
-        if Variable.Set.mem v vars then
-          (v, v') :: acc
-        else acc
-      | v,  _ ->
-        if Variable.Set.mem v vars then
-          failwith "Can only apply substitutions of kind var -> var \
+  if internal_debug then begin
+    Format.eprintf "restr_subst_to:@[<v 2>@,Sigma : %a" print_subst sigma
+  end;
+  let res = List.fold_left (fun acc -> function
+    | v, PF (PAtom (AVar v'))
+    | v, PT (TVar v')
+    | v, PT (TTerm (Term.Elem(v', Var))) ->
+      if Variable.Set.mem v vars then
+        (v, v') :: acc
+      else acc
+    | v,  _ ->
+      if Variable.Set.mem v vars then
+        failwith "Can only apply substitutions of kind var -> var \
                     inside terms and atom."
-        else acc
-    ) [] sigma
-
+      else acc
+  ) [] sigma in
+  if internal_debug then begin
+    Format.eprintf "res %a@]" Variable.print_subst res
+  end;
+  res
+    
 let subst_term sigma tt = match tt with
   | TVar v ->
     (match Hstring.list_assoc v sigma with
-     | PT t -> t
-     | PF _ -> failwith "Cannot apply formula substitution in term."
-     | exception Not_found -> tt)
+      | PT t -> t
+      | PF _ -> failwith "Cannot apply formula substitution in term."
+      | exception Not_found -> tt)
   | TTerm t ->
     (* eprintf "susbst in term %a (%a)@." Term.print t *)
     (*   Variable.print_vars (Term.variables t |> Variable.Set.elements); *)
@@ -240,9 +249,9 @@ let subst_term sigma tt = match tt with
 let subst_atom sigma aa = match aa with
   | AVar v ->
     (match Hstring.list_assoc v sigma with
-     | PF f -> f
-     | PT _ -> failwith "Cannot apply term substitution in atom."
-     | exception Not_found -> PAtom aa)
+      | PF f -> f
+      | PT _ -> failwith "Cannot apply term substitution in atom."
+      | exception Not_found -> PAtom aa)
   | ABinop (t1, op, t2) ->
     (* eprintf "susbst natom@."; *)
     let t1' = subst_term sigma t1 in
@@ -309,7 +318,7 @@ let app_fun name args =
     (* eprintf "result : %a@." print r; *)
     r
   with Not_found ->
-      failwith (asprintf "Undefined function symbol %a." Hstring.print name)
+    failwith (asprintf "Undefined function symbol %a." Hstring.print name)
 
 
 
@@ -343,13 +352,13 @@ let rec nnf = function
   | PNot f -> nnf (neg f)
   | PAnd l ->
     let l' = List.fold_left (fun acc x -> match nnf x with
-        | PAnd xs -> List.rev_append xs acc
-        | nx -> nx :: acc) [] l |> List.rev in
+      | PAnd xs -> List.rev_append xs acc
+      | nx -> nx :: acc) [] l |> List.rev in
     PAnd l'
   | POr l ->
     let l' = List.fold_left (fun acc x -> match nnf x with
-        | POr xs -> List.rev_append xs acc
-        | nx -> nx :: acc) [] l |> List.rev in
+      | POr xs -> List.rev_append xs acc
+      | nx -> nx :: acc) [] l |> List.rev in
     POr l'
   | PImp (a, b) -> nnf (POr [neg a; b])
   | PIte (c, t, e) -> nnf (PAnd [POr [neg c; t]; POr [c; e]])
@@ -378,23 +387,23 @@ let list_of_dnf = function
 
 let cross a b =
   List.fold_left (fun acc la ->
-      List.fold_left (fun acc' lb ->
-          PAnd (list_of_conj lb @ list_of_conj la) :: acc'
-        ) acc (list_of_dnf b)
-    |> List.rev
-    ) [] (list_of_dnf a)
+    List.fold_left (fun acc' lb ->
+      PAnd (list_of_conj lb @ list_of_conj la) :: acc'
+    ) acc (list_of_dnf b)
+                     |> List.rev
+  ) [] (list_of_dnf a)
   |> (fun l -> POr l)
-    
+      
 let rec dnf_aux = function
   | PAtom _ | PNot _ as lit -> lit
   | PAnd (f :: l) ->
     List.fold_left (fun acc g ->
-        cross (dnf_aux g) acc)
+      cross (dnf_aux g) acc)
       (dnf_aux f) l
   | POr l ->
     let l' = List.fold_left (fun acc x -> match dnf_aux x with
-        | POr xs -> List.rev_append xs acc
-        | (* (PAnd _ | PAtom _) as *) nx -> nx :: acc) [] l |> List.rev in
+      | POr xs -> List.rev_append xs acc
+      | (* (PAnd _ | PAtom _) as *) nx -> nx :: acc) [] l |> List.rev in
     POr l'
   | PAnd [] -> assert false
   | PForall (vs, f) -> PExists (vs, dnf_aux f)
@@ -423,8 +432,8 @@ let rec foralls_above_and (vars, acc) = function
     let c = PAnd (List.rev acc) in
     if vars = [] then c else PForall (List.rev vars, c)
   | f :: l ->
-  (* | (PEquiv _ | PImp _ | PIte _ | PNot _ | PVar _ | PAtom _ | PAnd _ | POr _ | PExists _ *)
-  (*   | PForall_other _ | PExists_other _ as f) :: l -> *)
+    (* | (PEquiv _ | PImp _ | PIte _ | PNot _ | PVar _ | PAtom _ | PAnd _ | POr _ | PExists _ *)
+    (*   | PForall_other _ | PExists_other _ as f) :: l -> *)
     foralls_above_and (vars, f :: acc) l
 
 
@@ -440,7 +449,7 @@ let rec exists_above_or (vars, acc) = function
   (* | ( PEquiv _ | PImp _ | PIte _ | PNot _ | PVar _ | PAtom _ | PAnd _ | POr _ | PForall _ *)
   (*   | PForall_other _ | PExists_other _ as f) :: l -> *)
   | f :: l ->
-        exists_above_or (vars, f :: acc) l
+    exists_above_or (vars, f :: acc) l
 
 
 let rec up_quantifiers = function
@@ -455,12 +464,12 @@ let rec up_quantifiers = function
   | PEquiv _ | PImp _ | PIte _ | PNot _  -> assert false
 
 
-let conv_term = function
+let rec conv_term = function
   | TVar v -> Term.Elem (v, Var)
   | TTerm t -> t
-  (* | TSetCardinality (v, f) *)
+  | TSetCardinality (v, f) -> Term.SetCardinality (v, satom_of_cube f)
 
-let conv_atom aa = match aa with
+and conv_atom aa = match aa with
   | AVar _ -> failwith "Remaining free variables in atom."
   | ABinop (t1, op, t2) ->
     let t1 = conv_term t1 in
@@ -468,31 +477,31 @@ let conv_atom aa = match aa with
     Atom.Comp (t1, op, t2)
   | AAtom a -> a
 
-let satom_of_atom_list =
+and satom_of_atom_list l =
   List.fold_left (fun acc -> function
-      | PAtom a -> SAtom.add (conv_atom a) acc
-      | x -> eprintf "%a@." print x;  assert false
-    ) SAtom.empty
-  
-let satom_of_cube = function
+    | PAtom a -> SAtom.add (conv_atom a) acc
+    | x -> eprintf "%a@." print x;  assert false
+  ) SAtom.empty l
+    
+and satom_of_cube = function
   | PAtom a -> SAtom.singleton (conv_atom a)
   | PAnd l -> satom_of_atom_list l
   | _ -> assert false
 
-let satoms_of_dnf = function
+and satoms_of_dnf = function
   | PAtom _ | PAnd _ as c -> [satom_of_cube c]
   | POr l -> List.map satom_of_cube l
   | _ -> assert false
 
 let unsafes_of_formula f =
   match up_quantifiers (dnf f) with
-  | PExists (vs, f) -> vs, satoms_of_dnf f
-  | sf -> [], satoms_of_dnf sf
+    | PExists (vs, f) -> vs, satoms_of_dnf f
+    | sf -> [], satoms_of_dnf sf
 
 let inits_of_formula f =
   match up_quantifiers (dnf f) with
-  | PForall (vs, f) -> vs, satoms_of_dnf f
-  | sf -> [], satoms_of_dnf sf
+    | PForall (vs, f) -> vs, satoms_of_dnf f
+    | sf -> [], satoms_of_dnf sf
 
 let uguard_of_formula = function
   | PForall_other ([v], f) -> v, satoms_of_dnf f
@@ -514,8 +523,8 @@ let rec guard_of_formula_aux = function
 
 let guard_of_formula f =
   match up_quantifiers (dnf f) with
-  | PForall _ | PExists _ | PExists_other _ -> assert false
-  | f -> guard_of_formula_aux f
+    | PForall _ | PExists _ | PExists_other _ -> assert false
+    | f -> guard_of_formula_aux f
 
 
 (* Encodings of Ptree systems to AST systems *)
@@ -523,14 +532,15 @@ let guard_of_formula f =
 let encode_term = function
   | TVar v -> Term.Elem (v, Var)
   | TTerm t -> t
+  | TSetCardinality (v, f) -> Term.SetCardinality (v, satom_of_cube f)
 
 
 let encode_pswts pswts =
   List.fold_left (fun acc (f, t) ->
-      let d = satoms_of_dnf (dnf f) in
-      let t = encode_term t in
-      List.fold_left (fun acc sa -> (sa, t) :: acc) acc d
-    ) [] pswts
+    let d = satoms_of_dnf (dnf f) in
+    let t = encode_term t in
+    List.fold_left (fun acc sa -> (sa, t) :: acc) acc d
+  ) [] pswts
   |> List.rev
 
 let encode_pglob_update = function
@@ -549,18 +559,18 @@ let encode_ptransition
      ptr_upds; ptr_nondets; ptr_loc;} =
   let dguards = guard_of_formula ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
-      (i, encode_pglob_update pgu)) ptr_assigns in
+    (i, encode_pglob_update pgu)) ptr_assigns in
   let tr_upds = List.map encode_pupdate ptr_upds in
   List.rev_map (fun (req, ureq) ->
-      {  tr_name = ptr_name;
-         tr_args = ptr_args;
-         tr_reqs = req;
-         tr_ureq = ureq;
-         tr_assigns;
-         tr_upds;
-         tr_nondets = ptr_nondets;
-         tr_loc = ptr_loc }
-    ) dguards
+    {  tr_name = ptr_name;
+       tr_args = ptr_args;
+       tr_reqs = req;
+       tr_ureq = ureq;
+       tr_assigns;
+       tr_upds;
+       tr_nondets = ptr_nondets;
+       tr_loc = ptr_loc }
+  ) dguards
 
 let pregexp_to_simplerl p =
   let rec pr acc = function
@@ -572,7 +582,7 @@ let pregexp_to_simplerl p =
   let subst = Variable.all_permutations vs 
     (Variable.give_procs Options.enumerative) in
 
-  let apply_subst s p = 
+  let aux_app_subst s p = 
     let open Regexp.RTrans in
     let rec ar = function
       | PEpsilon -> SEpsilon
@@ -586,7 +596,7 @@ let pregexp_to_simplerl p =
       | POption p -> SOption (ar p)
     in ar p
   in
-  List.map (fun sigma -> apply_subst sigma p) subst
+  List.map (fun sigma -> aux_app_subst sigma p) subst
     
 let rnumber = ref 0
 
@@ -598,20 +608,20 @@ let encode_psystem
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
     List.fold_left (fun acc (inv_loc, inv_vars, inv_f) ->
-        let other_vars, dnf = unsafes_of_formula inv_f in
-        let inv_vars = inv_vars @ other_vars in
-        List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
-      ) [] pinvs
-    |> List.rev
+      let other_vars, dnf = unsafes_of_formula inv_f in
+      let inv_vars = inv_vars @ other_vars in
+      List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
+    ) [] pinvs
+  |> List.rev
   in
   let unsafe =
     List.fold_left (fun acc (unsafe_loc, unsafe_vars, unsafe_f) ->
-        let other_vars, dnf = unsafes_of_formula unsafe_f in
-        (* List.iter (fun sa -> eprintf "unsafe : %a@." SAtom.print sa) dnf; *)
-        let unsafe_vars = unsafe_vars @ other_vars in
-        List.fold_left
-          (fun acc sa -> (unsafe_loc, unsafe_vars, sa) :: acc) acc dnf
-      ) [] punsafe
+      let other_vars, dnf = unsafes_of_formula unsafe_f in
+      (* List.iter (fun sa -> eprintf "unsafe : %a@." SAtom.print sa) dnf; *)
+      let unsafe_vars = unsafe_vars @ other_vars in
+      List.fold_left
+        (fun acc sa -> (unsafe_loc, unsafe_vars, sa) :: acc) acc dnf
+    ) [] punsafe
   in
   let hset = List.fold_left (
     fun acc h -> Hstring.HSet.add h acc) Hstring.HSet.empty phidetrans in
@@ -684,7 +694,7 @@ let encode_psystem
     trans;
     automaton;
   }
-      
+    
 
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
@@ -732,7 +742,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     phidetrans;
     pregexps;
   }
-  
+    
 let get_rnumber () = !rnumber  
 
 
