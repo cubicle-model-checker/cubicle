@@ -1,0 +1,24 @@
+
+number_procs 2
+
+type loc = L1 | L2
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Global variables *)
+weak var X : int
+
+
+init (p) { PC[p] = L1 && X = 0 }
+
+unsafe (p1 p2) { PC[p1] = L2 && PC[p2] = L2 && p1 @ X <> 2 && p2 @ X <> 2}
+
+
+transition t ([p])
+requires { PC[p] = L1 }
+{ PC[p] := L2; X := X + 1 }
+
+(* requires a notion of synchronization points between threads *)
+(* only for nodes talking about several threads *)
+(* or could have a "locked write" *)

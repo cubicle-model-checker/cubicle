@@ -1,0 +1,192 @@
+number_procs 2
+
+type loc = IDLE | L_wait_1_1 | L_sc_2_2 | L_sc_2_4 | L_sc_1_1 | L__start | L_wait_2 | L_sc_1_2 | L_thread_2 | L_wait_1 | L_sc_2 | L__start_4 | L_thread_1 | L_sc_1 | L_sc_2_3 | L_wait_2b | L__start_2 | L__start_3 | L_sc_2_1 | L__start_1 | L_sc_1_4 | L_sc_1_3 | L_wait_1b | L_wait_2_1 | END
+(* type tvar = None | Vturn *)
+
+var GLOB_turn : int
+var TLS_1x1_want : int
+var TLS_1x1_crit : int
+var TLS_2x1_want : int
+var TLS_2x1_crit : int
+var PC_0x1 : loc
+var RES_0x1 : int
+var TMP_0x1 : int
+var ARG_0x1 : int
+var PC_1x1 : loc
+var RES_1x1 : int
+var TMP_1x1 : int
+var ARG_1x1 : int
+var PC_2x1 : loc
+var RES_2x1 : int
+var TMP_2x1 : int
+var ARG_2x1 : int
+(* var LOCK : bool *)
+(* array BVAR_0x1[proc] : tvar *)
+(* array BVAL_0x1[proc] : int *)
+(* var BLEN_0x1 : int *)
+(* array BVAR_1x1[proc] : tvar *)
+(* array BVAL_1x1[proc] : int *)
+(* var BLEN_1x1 : int *)
+(* array BVAR_2x1[proc] : tvar *)
+(* array BVAL_2x1[proc] : int *)
+(* var BLEN_2x1 : int *)
+
+(*init (p b) { GLOB_turn = 0 && TLS_1x1_want = 0 && TLS_1x1_crit = 0 && TLS_2x1_want = 0 && TLS_2x1_crit = 0 && PC_0x1 = IDLE && PC_1x1 = IDLE && PC_2x1 = IDLE && LOCK = False && BVAR_0x1[b] = None && BLEN_0x1 = 0 && BVAR_1x1[b] = None && BLEN_1x1 = 0 && BVAR_2x1[b] = None && BLEN_2x1 = 0 }*)
+
+init (p b) { GLOB_turn = 0 && TLS_1x1_want = 0 && TLS_1x1_crit = 0 && TLS_2x1_want = 0 && TLS_2x1_crit = 0 && PC_0x1 = IDLE && PC_1x1 = L_thread_1 && PC_2x1 = L_thread_2 }
+
+unsafe (p) { PC_1x1 = L_sc_1_1 && PC_2x1 = L_sc_2_1 }
+
+transition t0x1_IDLE_L__start ()
+requires { PC_0x1 = IDLE }
+{ PC_0x1 := L__start }
+
+transition t0x1_L__start_L__start_1_pthread_create ()
+requires { PC_0x1 = L__start }
+{ PC_0x1 := L__start_1; PC_1x1 := L_thread_1 }
+
+transition t0x1_L__start_1_L__start_2_pthread_create ()
+requires { PC_0x1 = L__start_1 }
+{ PC_0x1 := L__start_2; PC_2x1 := L_thread_2 }
+
+transition t0x1_L__start_2_L__start_3_pthread_join ()
+requires { PC_0x1 = L__start_2 && PC_1x1 = END }
+{ PC_0x1 := L__start_3 }
+
+transition t0x1_L__start_3_L__start_4_pthread_join ()
+requires { PC_0x1 = L__start_3 && PC_2x1 = END }
+{ PC_0x1 := L__start_4 }
+
+transition t0x1_L__start_4_END ()
+requires { PC_0x1 = L__start_4 }
+{ PC_0x1 := END }
+
+transition t1x1_L_thread_1_L_wait_1_mov ()
+requires { PC_1x1 = L_thread_1 }
+{ PC_1x1 := L_wait_1; TLS_1x1_want := 1 }
+
+(* transition t1x1_L_wait_1_L_wait_1b_pre_early (bs) *)
+(* requires { PC_1x1 = L_wait_1 && LOCK = False && BVAR_1x1[bs] = Vturn && forall_other bx. (bx < bs || BVAR_1x1[bx] <> Vturn) } *)
+(* { PC_1x1 := L_wait_1b; TMP_1x1 := BVAL_1x1[bs] } *)
+
+(* transition t1x1_L_wait_1_L_wait_1b_pre_direct () *)
+(* requires { PC_1x1 = L_wait_1 && LOCK = False && forall_other bx. (BVAR_1x1[bx] <> Vturn) } *)
+(* { PC_1x1 := L_wait_1b; TMP_1x1 := GLOB_turn } *)
+
+transition t1x1_L_wait_1_L_wait_1b_pre_direct ([p])
+requires { p = #1 && PC_1x1 = L_wait_1 }
+{ PC_1x1 := L_wait_1b; TMP_1x1 := GLOB_turn }
+
+transition t1x1_L_wait_1b_L_wait_1_1_cmp ()
+requires { PC_1x1 = L_wait_1b }
+{ PC_1x1 := L_wait_1_1; RES_1x1 := TMP_1x1 - 0 }
+
+transition t1x1_L_wait_1_1_L_wait_1_jmp_true ()
+requires { PC_1x1 = L_wait_1_1 && RES_1x1 <> 0 }
+{ PC_1x1 := L_wait_1 }
+
+transition t1x1_L_wait_1_1_L_sc_1_jmp_false ()
+requires { PC_1x1 = L_wait_1_1 && RES_1x1 = 0 }
+{ PC_1x1 := L_sc_1 }
+
+transition t1x1_L_sc_1_L_sc_1_1_mov ()
+requires { PC_1x1 = L_sc_1 }
+{ PC_1x1 := L_sc_1_1; TLS_1x1_crit := 1 }
+
+transition t1x1_L_sc_1_1_L_sc_1_2_mov ()
+requires { PC_1x1 = L_sc_1_1 }
+{ PC_1x1 := L_sc_1_2; TLS_1x1_want := 0 }
+
+transition t1x1_L_sc_1_2_L_sc_1_3_mov ()
+requires { PC_1x1 = L_sc_1_2 }
+{ PC_1x1 := L_sc_1_3; TLS_1x1_crit := 0 }
+
+(* transition t1x1_L_sc_1_3_L_sc_1_4_mov0 (bd) *)
+(* requires { PC_1x1 = L_sc_1_3 && BVAR_1x1[bd] = None && forall_other bx. (bx < bd || BVAR_1x1[bx] = None) } *)
+(* { PC_1x1 := L_sc_1_4; BVAL_1x1[bd] := 0; BVAR_1x1[bd] := Vturn; BLEN_1x1 := BLEN_1x1 + 1 } *)
+
+(* transition t1x1_L_sc_1_3_L_sc_1_4_mov1 (bd) *)
+(* requires { PC_1x1 = L_sc_1_3 && BVAR_1x1[bd] = None && forall_other bx. (bx < bd || BVAR_1x1[bx] = None) } *)
+(* { PC_1x1 := L_sc_1_4; BVAL_1x1[bd] := 1; BVAR_1x1[bd] := Vturn; BLEN_1x1 := BLEN_1x1 + 1 } *)
+
+transition t1x1_L_sc_1_3_L_sc_1_4_mov0 ([p])
+requires { p = #1 && PC_1x1 = L_sc_1_3 }
+{ PC_1x1 := L_sc_1_4; GLOB_turn := 0 }
+
+transition t1x1_L_sc_1_3_L_sc_1_4_mov1 ([p])
+requires { p = #1 && PC_1x1 = L_sc_1_3 }
+{ PC_1x1 := L_sc_1_4; GLOB_turn := 1 }
+
+transition t1x1_L_sc_1_4_L_thread_1_jmp ()
+requires { PC_1x1 = L_sc_1_4 }
+{ PC_1x1 := L_thread_1 }
+
+
+transition t2x1_L_thread_2_L_wait_2_mov ()
+requires { PC_2x1 = L_thread_2 }
+{ PC_2x1 := L_wait_2; TLS_2x1_want := 1 }
+
+(* transition t2x1_L_wait_2_L_wait_2b_pre_early (bs) *)
+(* requires { PC_2x1 = L_wait_2 && LOCK = False && BVAR_2x1[bs] = Vturn && forall_other bx. (bx < bs || BVAR_2x1[bx] <> Vturn) } *)
+(* { PC_2x1 := L_wait_2b; TMP_2x1 := BVAL_2x1[bs] } *)
+
+(* transition t2x1_L_wait_2_L_wait_2b_pre_direct () *)
+(* requires { PC_2x1 = L_wait_2 && LOCK = False && forall_other bx. (BVAR_2x1[bx] <> Vturn) } *)
+(* { PC_2x1 := L_wait_2b; TMP_2x1 := GLOB_turn } *)
+
+transition t2x1_L_wait_2_L_wait_2b_pre_direct ([p])
+requires { p = #2 && PC_2x1 = L_wait_2 }
+{ PC_2x1 := L_wait_2b; TMP_2x1 := GLOB_turn }
+
+transition t2x1_L_wait_2b_L_wait_2_1_cmp ()
+requires { PC_2x1 = L_wait_2b }
+{ PC_2x1 := L_wait_2_1; RES_2x1 := TMP_2x1 - 1 }
+
+transition t2x1_L_wait_2_1_L_wait_2_jmp_true ()
+requires { PC_2x1 = L_wait_2_1 && RES_2x1 <> 0 }
+{ PC_2x1 := L_wait_2 }
+
+transition t2x1_L_wait_2_1_L_sc_2_jmp_false ()
+requires { PC_2x1 = L_wait_2_1 && RES_2x1 = 0 }
+{ PC_2x1 := L_sc_2 }
+
+transition t2x1_L_sc_2_L_sc_2_1_mov ()
+requires { PC_2x1 = L_sc_2 }
+{ PC_2x1 := L_sc_2_1; TLS_2x1_crit := 1 }
+
+transition t2x1_L_sc_2_1_L_sc_2_2_mov ()
+requires { PC_2x1 = L_sc_2_1 }
+{ PC_2x1 := L_sc_2_2; TLS_2x1_want := 0 }
+
+transition t2x1_L_sc_2_2_L_sc_2_3_mov ()
+requires { PC_2x1 = L_sc_2_2 }
+{ PC_2x1 := L_sc_2_3; TLS_2x1_crit := 0 }
+
+(* transition t2x1_L_sc_2_3_L_sc_2_4_mov0 (bd) *)
+(* requires { PC_2x1 = L_sc_2_3 && BVAR_2x1[bd] = None && forall_other bx. (bx < bd || BVAR_2x1[bx] = None) } *)
+(* { PC_2x1 := L_sc_2_4; BVAL_2x1[bd] := 0; BVAR_2x1[bd] := Vturn; BLEN_2x1 := BLEN_2x1 + 1 } *)
+
+(* transition t2x1_L_sc_2_3_L_sc_2_4_mov1 (bd) *)
+(* requires { PC_2x1 = L_sc_2_3 && BVAR_2x1[bd] = None && forall_other bx. (bx < bd || BVAR_2x1[bx] = None) } *)
+(* { PC_2x1 := L_sc_2_4; BVAL_2x1[bd] := 1; BVAR_2x1[bd] := Vturn; BLEN_2x1 := BLEN_2x1 + 1 } *)
+
+transition t2x1_L_sc_2_3_L_sc_2_4_mov0 ([p])
+requires { p = #2 && PC_2x1 = L_sc_2_3 }
+{ PC_2x1 := L_sc_2_4; GLOB_turn := 0 }
+
+transition t2x1_L_sc_2_3_L_sc_2_4_mov1 ([p])
+requires { p = #2 && PC_2x1 = L_sc_2_3 }
+{ PC_2x1 := L_sc_2_4; GLOB_turn := 1 }
+
+transition t2x1_L_sc_2_4_L_thread_2_jmp ()
+requires { PC_2x1 = L_sc_2_4 }
+{ PC_2x1 := L_thread_2 }
+
+(*transition mt1x1_store_turn (b)
+requires { LOCK = False && BVAR_1x1[b] = Vturn && forall_other bx. (b <= bx || BVAR_1x1[bx] = None) }
+{ BVAR_1x1[b] := None; GLOB_turn := BVAL_1x1[b]; BLEN_1x1 := BLEN_1x1 - 1 }
+
+transition mt2x1_store_turn (b)
+requires { LOCK = False && BVAR_2x1[b] = Vturn && forall_other bx. (b <= bx || BVAR_2x1[bx] = None) }
+{ BVAR_2x1[b] := None; GLOB_turn := BVAL_2x1[b]; BLEN_2x1 := BLEN_2x1 - 1 }*)
+

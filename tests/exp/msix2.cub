@@ -1,0 +1,19 @@
+
+number_procs 2
+
+type st = M | S | I
+
+weak var X : st
+weak var Y : st
+
+init (i) { X = I && Y = I }
+
+unsafe (i j) { read(i, X) = M && read(j, Y) <> I }
+
+transition t1 (i)
+requires { i = #1 && read(i, Y) <> M }
+{ write(i, X, S) }
+
+transition t2 (i)
+requires { i = #2 && read(i, X) <> M }
+{ write(i, Y, S) }

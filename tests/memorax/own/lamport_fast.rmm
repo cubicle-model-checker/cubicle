@@ -1,0 +1,78 @@
+forbidden
+  CS CS
+
+data
+  x = 0 : [0:2]
+  y = 0 : [0:2]
+
+process
+data
+  b = 0 : [0:1]
+text
+L0:
+  write: b[my] := 1;
+  write: x := 1;
+  either{
+    read: y = 0
+  or
+    either{ read: y = 1 or read: y = 2 };
+    write: b[my] := 0;
+    read: y = 0;
+    goto L0
+  };
+  write: y := 1;
+  either{
+    read: x = 1
+  or
+    either{ read: x = 0 or read: x = 2 };
+    write: b[my] := 0;
+    read: b[0] = 0;
+    either{
+      read: y = 1
+    or
+      read: y = 0;
+      goto L0
+    }
+  };
+CS:
+  write: y := 0;
+  write: b[my] := 0;
+  goto L0
+
+
+process
+data
+  b = 0 : [0:1]
+text
+L0:
+  write: b[my] := 1;
+  write: x := 2;
+  either{
+    read: y = 0
+  or
+    either{ read: y = 2 or read: y = 1 };
+    write: b[my] := 0;
+    read: y = 0;
+    goto L0
+  };
+  write: y := 2;
+  either{
+    read: x = 2
+  or
+    either{ read: x = 0 or read: x = 1 };
+    write: b[my] := 0;
+    read: b[0] = 0;
+    either{
+      read: y = 2
+    or
+      read: y = 0;
+      goto L0
+    }
+  };
+CS:
+  write: y := 0;
+  write: b[my] := 0;
+  goto L0
+
+
+

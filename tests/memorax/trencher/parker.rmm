@@ -1,0 +1,35 @@
+forbidden
+CS CS
+
+data
+  cond  = * : [0:1]
+  counter  = * : [0:1]
+
+process
+registers
+  $rcond = * : [0:1]
+  $rcount = * : [0:1]
+text
+  L0: read: $rcond := cond;
+      if $rcond = 0 then {
+        nop;
+        either{
+          CS: nop 
+        or 
+          read: $rcount := counter; 
+          write: counter := 0; 
+          read: $rcond := cond; 
+          goto L0 
+        }
+      }
+
+process
+registers
+  $r = * : [0:1]
+text
+  L0: locked write: cond := 1;
+      write: counter := 1;
+      read: $r := counter;
+      if $r = 0 then 
+        CS: nop 
+

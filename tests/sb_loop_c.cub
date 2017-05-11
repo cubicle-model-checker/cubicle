@@ -1,0 +1,791 @@
+type location = IDLE | END | L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8 | L9 | L10 | L11 | L12 | L13 | L14 | L15 | L16 | L17 | L18 | L19 | L20 | L21 | L22 | L23 | L24 | L25 | L26 | L27 | L28 | L29 | L30 | L31 | L32 | L33 | L34 | L35 | L36 | L37 | L38 | L39 | L40 | L41 | L42 | L43 | L44 | L45 | L46 | L47 | L48 | L49 | L50 | L51 | L52 | L53 | L54
+
+array GLOBAL_S_b_M_count [proc] : bool
+var GLOBAL_S_b_M_sense : bool
+var Proc : proc
+array ProcCnt [proc] : bool
+var PC : location
+var STACK_BOOL_0 : bool
+array PCm [proc] : location
+array STACK_BOOLm_0 [proc] : bool
+array STACK_BOOLm_1 [proc] : bool
+array STACK_BOOLm_2 [proc] : bool
+array STACK_BOOLm_3 [proc] : bool
+array STACK_BOOLm_4 [proc] : bool
+
+init (p) {
+	(* PC = L1 && PCm[p] = IDLE *)
+	PCm[p] = L1 &&
+	GLOBAL_S_b_M_count[p] = True &&
+	GLOBAL_S_b_M_sense = False
+}
+
+unsafe (p1 p2) {
+	[p1]PCm[p1] = L28 && [p2]PCm[p2] = L5
+}
+(*
+transition ecall_jump_1 ()
+requires {
+	PC = L1
+}
+{
+	PC := L3
+}
+
+transition ecall_return_5 ()
+requires {
+	PC = L2
+}
+{
+	PC := L6
+}
+
+transition init_counter_2 ()
+requires {
+	PC = L3
+}
+{
+	PC := L4;
+	GLOBAL_S_b_M_count[c] := case
+	| _ : True
+}
+
+transition enull_3 ()
+requires {
+	PC = L4
+}
+{
+	STACK_BOOL_0 := False;
+	PC := L5
+}
+
+transition eassign_4 ()
+requires {
+	PC = L5
+}
+{
+	GLOBAL_S_b_M_sense := STACK_BOOL_0;
+	PC := L6
+}
+
+transition forprocs_init_6 ()
+requires {
+	PC = L6
+}
+{
+	PC := L7;
+	ProcCnt[fp] := case
+	| _ : True
+}
+
+transition forprocs_true_8 (fp)
+requires {
+	PC = L7 && ProcCnt[fp] = True
+}
+{
+	Proc := fp;
+	PC := L8;
+	ProcCnt[fp] := False
+}
+
+transition forprocs_false_9 ()
+requires {
+	PC = L7
+	&& forall_other fp . (
+		ProcCnt[fp] = False
+	)
+
+}
+{
+	PC := L10
+}
+
+transition start_proc_7 (fp)
+requires {
+	PC = L8 && Proc = fp
+}
+{
+	PC := L9;
+	PCm[fp] := L1
+}
+
+transition forprocs_loop_10 ()
+requires {
+	PC = L9
+}
+{
+	PC := L7
+}
+
+transition forprocs_init_11 ()
+requires {
+	PC = L10
+}
+{
+	PC := L11;
+	ProcCnt[fp] := case
+	| _ : True
+}
+
+transition forprocs_true_13 (fp)
+requires {
+	PC = L11 && ProcCnt[fp] = True
+}
+{
+	Proc := fp;
+	PC := L12;
+	ProcCnt[fp] := False
+}
+
+transition forprocs_false_14 ()
+requires {
+	PC = L11
+	&& forall_other fp . (
+		ProcCnt[fp] = False
+	)
+
+}
+{
+	PC := L14
+}
+
+transition wait_proc_12 (fp)
+requires {
+	PC = L12 && Proc = fp && PCm[fp] = END
+}
+{
+	PC := L13
+}
+
+transition forprocs_loop_15 ()
+requires {
+	PC = L13
+}
+{
+	PC := L11
+}
+
+transition enull_16 ()
+requires {
+	PC = L14
+}
+{
+	STACK_BOOL_0 := False;
+	PC := L15
+}
+
+transition sreturn_17 ()
+requires {
+	PC = L15
+}
+{
+	PC := END
+}
+*)
+transition enull_18 ([p])
+requires {
+	PCm[p] = L1
+}
+{
+	STACK_BOOLm_1[p] := False;
+	PCm[p] := L2
+}
+
+transition eassign_19 ([p])
+requires {
+	PCm[p] = L2
+}
+{
+	STACK_BOOLm_0[p] := STACK_BOOLm_1[p];
+	PCm[p] := L3
+}
+
+transition econst_20 ([p])
+requires {
+	PCm[p] = L3
+}
+{
+	STACK_BOOLm_1[p] := True;
+	PCm[p] := L4
+}
+
+transition swhile_true_81 ([p])
+requires {
+	PCm[p] = L4 && STACK_BOOLm_1[p] = True
+}
+{
+	PCm[p] := L5
+}
+
+transition swhile_false_82 ([p])
+requires {
+	PCm[p] = L4 && STACK_BOOLm_1[p] = False
+}
+{
+	PCm[p] := L52
+}
+
+transition ecall_jump_21 ([p])
+requires {
+	PCm[p] = L5
+}
+{
+	PCm[p] := L7
+}
+
+transition ecall_return_50 ([p])
+requires {
+	PCm[p] = L6
+}
+{
+	PCm[p] := L28
+}
+
+transition eunop_ustar_22 ([p])
+requires {
+	PCm[p] = L7
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_0[p];
+	PCm[p] := L8
+}
+
+transition eassign_23 ([p])
+requires {
+	PCm[p] = L8
+}
+{
+	STACK_BOOLm_2[p] := STACK_BOOLm_3[p];
+	PCm[p] := L9
+}
+
+transition mark_and_test_neqz_24 ([p] q)
+requires {
+	GLOBAL_S_b_M_count[p] = True && GLOBAL_S_b_M_count[q] = True && PCm[p] = L9
+}
+{
+	GLOBAL_S_b_M_count[p] := False;
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L10
+}
+
+transition mark_and_test_eqz_25 ([p])
+requires {
+	PCm[p] = L9
+	&& forall_other q . (
+		GLOBAL_S_b_M_count[q] = False
+	)
+
+}
+{
+	GLOBAL_S_b_M_count[p] := False;
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L10
+}
+
+transition eassign_26 ([p])
+requires {
+	PCm[p] = L10
+}
+{
+	STACK_BOOLm_1[p] := STACK_BOOLm_3[p];
+	PCm[p] := L11
+}
+
+transition eident_27 ([p])
+requires {
+	PCm[p] = L11
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_1[p];
+	PCm[p] := L12
+}
+
+transition enull_28 ([p])
+requires {
+	PCm[p] = L12
+}
+{
+	STACK_BOOLm_4[p] := False;
+	PCm[p] := L13
+}
+
+transition ebinop_bool_true_29 ([p])
+requires {
+	PCm[p] = L13 && STACK_BOOLm_3[p] = STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L14
+}
+
+transition ebinop_bool_false_30 ([p])
+requires {
+	PCm[p] = L13 && STACK_BOOLm_3[p] <> STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L14
+}
+
+transition sif_true_43 ([p])
+requires {
+	PCm[p] = L14 && STACK_BOOLm_3[p] = True
+}
+{
+	PCm[p] := L15
+}
+
+transition sif_false_44 ([p])
+requires {
+	PCm[p] = L14 && STACK_BOOLm_3[p] = False
+}
+{
+	PCm[p] := L20
+}
+
+transition init_counter_31 ([p])
+requires {
+	PCm[p] = L15
+}
+{
+	PCm[p] := L16;
+	GLOBAL_S_b_M_count[c] := case
+	| _ : True
+}
+
+transition eident_32 ([p])
+requires {
+	PCm[p] = L16
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_2[p];
+	PCm[p] := L17
+}
+
+transition eunop_unot_true_33 ([p])
+requires {
+	PCm[p] = L17 && STACK_BOOLm_3[p] = True
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L18
+}
+
+transition eunop_unot_false_34 ([p])
+requires {
+	PCm[p] = L17 && STACK_BOOLm_3[p] = False
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L18
+}
+
+transition eassign_35 ([p])
+requires {
+	PCm[p] = L18
+}
+{
+	GLOBAL_S_b_M_sense := STACK_BOOLm_3[p];
+	PCm[p] := L19
+}
+
+transition sif_jump_45 ([p])
+requires {
+	PCm[p] = L19
+}
+{
+	PCm[p] := L25
+}
+
+transition edot_36 ([p])
+requires {
+	PCm[p] = L20
+}
+{
+	STACK_BOOLm_3[p] := GLOBAL_S_b_M_sense;
+	PCm[p] := L21
+}
+
+transition eident_37 ([p])
+requires {
+	PCm[p] = L21
+}
+{
+	STACK_BOOLm_4[p] := STACK_BOOLm_2[p];
+	PCm[p] := L22
+}
+
+transition ebinop_bool_true_38 ([p])
+requires {
+	PCm[p] = L22 && STACK_BOOLm_3[p] = STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L23
+}
+
+transition ebinop_bool_false_39 ([p])
+requires {
+	PCm[p] = L22 && STACK_BOOLm_3[p] <> STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L23
+}
+
+transition swhile_true_40 ([p])
+requires {
+	PCm[p] = L23 && STACK_BOOLm_3[p] = True
+}
+{
+	PCm[p] := L24
+}
+
+transition swhile_false_41 ([p])
+requires {
+	PCm[p] = L23 && STACK_BOOLm_3[p] = False
+}
+{
+	PCm[p] := L25
+}
+
+transition swhile_loop_42 ([p])
+requires {
+	PCm[p] = L24
+}
+{
+	PCm[p] := L20
+}
+
+transition eident_46 ([p])
+requires {
+	PCm[p] = L25
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_2[p];
+	PCm[p] := L26
+}
+
+transition eunop_unot_true_47 ([p])
+requires {
+	PCm[p] = L26 && STACK_BOOLm_3[p] = True
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L27
+}
+
+transition eunop_unot_false_48 ([p])
+requires {
+	PCm[p] = L26 && STACK_BOOLm_3[p] = False
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L27
+}
+
+transition eassign_49 ([p])
+requires {
+	PCm[p] = L27
+}
+{
+	STACK_BOOLm_0[p] := STACK_BOOLm_3[p];
+	PCm[p] := L28
+}
+
+transition ecall_jump_51 ([p])
+requires {
+	PCm[p] = L28
+}
+{
+	PCm[p] := L30
+}
+
+transition ecall_return_80 ([p])
+requires {
+	PCm[p] = L29
+}
+{
+	PCm[p] := L51
+}
+
+transition eunop_ustar_52 ([p])
+requires {
+	PCm[p] = L30
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_0[p];
+	PCm[p] := L31
+}
+
+transition eassign_53 ([p])
+requires {
+	PCm[p] = L31
+}
+{
+	STACK_BOOLm_2[p] := STACK_BOOLm_3[p];
+	PCm[p] := L32
+}
+
+transition mark_and_test_neqz_54 ([p] q)
+requires {
+	GLOBAL_S_b_M_count[p] = True && GLOBAL_S_b_M_count[q] = True && PCm[p] = L32
+}
+{
+	GLOBAL_S_b_M_count[p] := False;
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L33
+}
+
+transition mark_and_test_eqz_55 ([p])
+requires {
+	PCm[p] = L32
+	&& forall_other q . (
+		GLOBAL_S_b_M_count[q] = False
+	)
+
+}
+{
+	GLOBAL_S_b_M_count[p] := False;
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L33
+}
+
+transition eassign_56 ([p])
+requires {
+	PCm[p] = L33
+}
+{
+	STACK_BOOLm_1[p] := STACK_BOOLm_3[p];
+	PCm[p] := L34
+}
+
+transition eident_57 ([p])
+requires {
+	PCm[p] = L34
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_1[p];
+	PCm[p] := L35
+}
+
+transition enull_58 ([p])
+requires {
+	PCm[p] = L35
+}
+{
+	STACK_BOOLm_4[p] := False;
+	PCm[p] := L36
+}
+
+transition ebinop_bool_true_59 ([p])
+requires {
+	PCm[p] = L36 && STACK_BOOLm_3[p] = STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L37
+}
+
+transition ebinop_bool_false_60 ([p])
+requires {
+	PCm[p] = L36 && STACK_BOOLm_3[p] <> STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L37
+}
+
+transition sif_true_73 ([p])
+requires {
+	PCm[p] = L37 && STACK_BOOLm_3[p] = True
+}
+{
+	PCm[p] := L38
+}
+
+transition sif_false_74 ([p])
+requires {
+	PCm[p] = L37 && STACK_BOOLm_3[p] = False
+}
+{
+	PCm[p] := L43
+}
+
+transition init_counter_61 ([p])
+requires {
+	PCm[p] = L38
+}
+{
+	PCm[p] := L39;
+	GLOBAL_S_b_M_count[c] := case
+	| _ : True
+}
+
+transition eident_62 ([p])
+requires {
+	PCm[p] = L39
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_2[p];
+	PCm[p] := L40
+}
+
+transition eunop_unot_true_63 ([p])
+requires {
+	PCm[p] = L40 && STACK_BOOLm_3[p] = True
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L41
+}
+
+transition eunop_unot_false_64 ([p])
+requires {
+	PCm[p] = L40 && STACK_BOOLm_3[p] = False
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L41
+}
+
+transition eassign_65 ([p])
+requires {
+	PCm[p] = L41
+}
+{
+	GLOBAL_S_b_M_sense := STACK_BOOLm_3[p];
+	PCm[p] := L42
+}
+
+transition sif_jump_75 ([p])
+requires {
+	PCm[p] = L42
+}
+{
+	PCm[p] := L48
+}
+
+transition edot_66 ([p])
+requires {
+	PCm[p] = L43
+}
+{
+	STACK_BOOLm_3[p] := GLOBAL_S_b_M_sense;
+	PCm[p] := L44
+}
+
+transition eident_67 ([p])
+requires {
+	PCm[p] = L44
+}
+{
+	STACK_BOOLm_4[p] := STACK_BOOLm_2[p];
+	PCm[p] := L45
+}
+
+transition ebinop_bool_true_68 ([p])
+requires {
+	PCm[p] = L45 && STACK_BOOLm_3[p] = STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L46
+}
+
+transition ebinop_bool_false_69 ([p])
+requires {
+	PCm[p] = L45 && STACK_BOOLm_3[p] <> STACK_BOOLm_4[p]
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L46
+}
+
+transition swhile_true_70 ([p])
+requires {
+	PCm[p] = L46 && STACK_BOOLm_3[p] = True
+}
+{
+	PCm[p] := L47
+}
+
+transition swhile_false_71 ([p])
+requires {
+	PCm[p] = L46 && STACK_BOOLm_3[p] = False
+}
+{
+	PCm[p] := L48
+}
+
+transition swhile_loop_72 ([p])
+requires {
+	PCm[p] = L47
+}
+{
+	PCm[p] := L43
+}
+
+transition eident_76 ([p])
+requires {
+	PCm[p] = L48
+}
+{
+	STACK_BOOLm_3[p] := STACK_BOOLm_2[p];
+	PCm[p] := L49
+}
+
+transition eunop_unot_true_77 ([p])
+requires {
+	PCm[p] = L49 && STACK_BOOLm_3[p] = True
+}
+{
+	STACK_BOOLm_3[p] := False;
+	PCm[p] := L50
+}
+
+transition eunop_unot_false_78 ([p])
+requires {
+	PCm[p] = L49 && STACK_BOOLm_3[p] = False
+}
+{
+	STACK_BOOLm_3[p] := True;
+	PCm[p] := L50
+}
+
+transition eassign_79 ([p])
+requires {
+	PCm[p] = L50
+}
+{
+	STACK_BOOLm_0[p] := STACK_BOOLm_3[p];
+	PCm[p] := L51
+}
+
+transition swhile_loop_83 ([p])
+requires {
+	PCm[p] = L51
+}
+{
+	PCm[p] := L3
+}
+
+transition enull_84 ([p])
+requires {
+	PCm[p] = L52
+}
+{
+	STACK_BOOLm_1[p] := False;
+	PCm[p] := L53
+}
+
+transition sreturn_85 ([p])
+requires {
+	PCm[p] = L53
+}
+{
+	STACK_BOOLm_0[p] := STACK_BOOLm_1[p];
+	PCm[p] := END
+}
+

@@ -1,0 +1,118 @@
+
+# Memory layout:
+# 0 — C1
+# 1 — C2
+# 2 — C3
+# 0 = I, 1 = S, 2 = E, 3 = O, 4 = M
+
+thread t0
+initial bad0
+final bad
+transition	bad0	bad1	lock
+transition	bad1	bad2	read	C1	0
+transition	bad2	bad3	read	C2	1
+transition	bad3	badul	read	C3	2
+transition	badul	badchk	unlock
+transition 	badchk	bad	check	&& == C1 4 == C2 4
+transition 	badchk	bad	check	&& == C1 4 == C3 4
+transition 	badchk	bad	check	&& == C2 4 == C3 4
+end
+
+thread t1
+initial init
+final init
+transition	init	l1	lock
+transition	l1	l2	read	C	0
+transition	l2	sh	check	== C    0
+transition	l2	md	check	== C    2
+transition	l2	ex	check	|| || == C 0 == C 1 == C 3
+
+transition	sh	sh21	write	1	0
+transition	sh21	sh22	read	C	1
+transition	sh22	sh23	check	== C    2
+transition	sh22	sh24	check	== C    4
+transition	sh22	sh31	check	&& != C 2 != C 4
+transition	sh23	sh31	write	1     	1
+transition	sh24	sh31	write	3     	1
+transition	sh31	sh32	read	C	2
+transition	sh32	sh33	check	== C    2
+transition	sh32	sh34	check	== C    4
+transition	sh32	shul	check	&& != C 2 != C 4
+transition	sh33	shul	write	1     	2
+transition	sh34	shul	write	3     	2
+transition	shul	init	unlock
+
+transition	md	mdul	write	4	0
+transition	mdul	init	unlock
+
+transition	ex	ex2	write	2	0
+transition	ex2	ex3	write   0	1
+transition	ex3	exul	write   0	2
+transition	exul	init	unlock
+end
+
+thread t2
+initial init
+final init
+transition	init	l1	lock
+transition	l1	l2	read	C	1
+transition	l2	sh	check	== C    0
+transition	l2	md	check	== C    2
+transition	l2	ex	check	|| || == C 0 == C 1 == C 3
+
+transition	sh	sh11	write	1	1
+transition	sh11	sh12	read	C	0
+transition	sh12	sh13	check	== C    2
+transition	sh12	sh14	check	== C    4
+transition	sh12	sh31	check	&& != C 2 != C 4
+transition	sh13	sh31	write	1     	0
+transition	sh14	sh31	write	3     	0
+transition	sh31	sh32	read	C	2
+transition	sh32	sh33	check	== C    2
+transition	sh32	sh34	check	== C    4
+transition	sh32	shul	check	&& != C 2 != C 4
+transition	sh33	shul	write	1     	2
+transition	sh34	shul	write	3     	2
+transition	shul	init	unlock
+
+transition	md	mdul	write	4	1
+transition	mdul	init	unlock
+
+transition	ex	ex1	write	2	1
+transition	ex1	ex3	write   0	0
+transition	ex3	exul	write   0	2
+transition	exul	init	unlock
+end
+
+thread t3
+initial init
+final init
+transition	init	l1	lock
+transition	l1	l2	read	C	2
+transition	l2	sh	check	== C    0
+transition	l2	md	check	== C    2
+transition	l2	ex	check	|| || == C 0 == C 1 == C 3
+
+transition	sh	sh11	write	1	2
+transition	sh11	sh12	read	C	0
+transition	sh12	sh13	check	== C    2
+transition	sh12	sh14	check	== C    4
+transition	sh12	sh21	check	&& != C 2 != C 4
+transition	sh13	sh21	write	1     	0
+transition	sh14	sh21	write	3     	0
+transition	sh21	sh22	read	C	1
+transition	sh22	sh23	check	== C    2
+transition	sh22	sh24	check	== C    4
+transition	sh22	shul	check	&& != C 2 != C 4
+transition	sh23	shul	write	1     	1
+transition	sh24	shul	write	3     	1
+transition	shul	init	unlock
+
+transition	md	mdul	write	4	2
+transition	mdul	init	unlock
+
+transition	ex	ex1	write	2	2
+transition	ex1	ex2	write   0	0
+transition	ex2	exul	write   0	1
+transition	exul	init	unlock
+end

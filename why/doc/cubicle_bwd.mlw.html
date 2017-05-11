@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title>cubicle_bwd.mlw</title>
+</head>
+<body>
+<p>Cubicle BRAB in Why3 <a href="index.html">index</a></p>
+<hr>
+<div class="why3doc">
+<pre>
+<span class="keyword1">module</span> <a name="Cubicle_Bwd_1">Cubicle_Bwd</a>
+
+  <span class="keyword1">use</span> <span class="keyword1">import</span> ref.Ref
+  <span class="keyword1">use</span> <span class="keyword1">import</span> fol.FOL
+  <span class="keyword1">use</span> <span class="keyword1">import</span> abstract_queue.AbstractQueue <span class="keyword1">as</span> Q
+  <span class="keyword1">use</span> <span class="keyword1">import</span> reachability.Reachability
+
+  <span class="comment">(* remove unecessary axioms for solvers *)</span>
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> extensionality
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> structure_exists
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> model_true
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> model_false
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> model_and
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> model_or
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> model_neg
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> valid_def
+  <span class="comment">(* meta remove_prop prop and_a *)</span>
+  <span class="comment">(* meta remove_prop prop and_c *)</span>
+  <span class="comment">(* meta remove_prop prop or_a *)</span>
+  <span class="comment">(* meta remove_prop prop or_c *)</span>
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> sat_def
+  <span class="comment">(* meta remove_prop prop sat_or *)</span>
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> sat_neg
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> sat_and
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> valid_or
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> valid_neg
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> valid_and
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> valid_sat
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> pre_star_def2
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> pre_star_def3
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> reachable_imply
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> reachable_and
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> pre_and
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> pre_or
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> unsat_invalid
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> model_extensionality
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> forget_subsumed_or
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> imply_or
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> imply_bigger
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> imply_transitive
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> or_same
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> pre_star_bigger
+  <span class="keyword1">meta</span> remove_prop <span class="keyword1">prop</span> reachable_bigger
+  
+  
+  
+  <span class="keyword1">type</span> <a name="result_47">result</a> = <a name="Safe_47">Safe</a> | <a name="Unsafe_47">Unsafe</a>
+  <span class="keyword1">exception</span> Unsafe_trace
+
+  
+  <span class="keyword1">val</span> visited : ref f
+  <span class="keyword1">val</span> q : Q.t
+
+    
+  <span class="keyword1">let</span> <a name="WP_parameter.20bwd_55">bwd</a> (tau : trans_rel) (init : f) (theta : f) =
+    <span class="comment">(* Soundness *)</span>
+    <span class="keyword2">ensures</span> { result = <a href="#Safe_47">Safe</a> -&gt; <span class="keyword1">not</span> (reachable tau init theta) }
+    <span class="comment">(* Completeness *)</span>
+    <span class="keyword2">ensures</span> { result = <a href="#Unsafe_47">Unsafe</a> -&gt; reachable tau init theta }
+    <a href="#visited_51">visited</a> := ffalse;
+    Q.clear <a href="#q_52">q</a>;
+    <span class="keyword1">try</span>
+       <span class="keyword1">if</span> sat (init &amp; theta) <span class="keyword1">then</span> <span class="keyword1">raise</span> <a href="#Unsafe_trace_48">Unsafe_trace</a>;
+       <a href="#visited_51">visited</a> := theta ++ !<a href="#visited_51">visited</a>;
+       Q.push (pre tau theta) <a href="#q_52">q</a>;
+       <span class="keyword1">while</span> <span class="keyword1">not</span> (Q.is_empty <a href="#q_52">q</a>) <span class="keyword1">do</span>
+        <span class="keyword2">invariant</span> { <span class="keyword1">not</span> (sat (init &amp; !<a href="#visited_51">visited</a>)) &amp;&amp;
+                    pre_star tau !<a href="#visited_51">visited</a> = !<a href="#visited_51">visited</a> ++ (pre_star tau <a href="#q_52">q</a>.formula) &amp;&amp;
+                    pre_star tau theta = !<a href="#visited_51">visited</a> ++ (pre_star tau <a href="#q_52">q</a>.formula) }
+        <span class="keyword1">let</span> <span class="keyword1">ghost</span> old_q = Q.copy <a href="#q_52">q</a> <span class="keyword1">in</span>
+        <span class="keyword1">let</span> phi = Q.pop <a href="#q_52">q</a> <span class="keyword1">in</span>
+        <span class="keyword1">if</span> sat (init &amp; phi) <span class="keyword1">then</span> <span class="keyword1">raise</span> <a href="#Unsafe_trace_48">Unsafe_trace</a>;
+        <span class="keyword1">if</span> <span class="keyword1">not</span> (phi |== !<a href="#visited_51">visited</a>) <span class="keyword1">then</span> (
+          <span class="keyword1">let</span> <span class="keyword1">ghost</span> old_v = !<a href="#visited_51">visited</a> <span class="keyword1">in</span>
+          <a href="#visited_51">visited</a> := phi ++ !<a href="#visited_51">visited</a>;
+          Q.push (pre tau phi) <a href="#q_52">q</a>;
+          <span class="keyword2">assert</span> {
+                   !<a href="#visited_51">visited</a> ++ (pre_star tau <a href="#q_52">q</a>.formula) =
+	  	     old_v ++ pre_star tau phi ++ pre_star tau (~ phi &amp; old_q.formula)
+
+		   &amp;&amp;
+	  
+                   !<a href="#visited_51">visited</a> ++ (pre_star tau <a href="#q_52">q</a>.formula) =
+                     old_v ++ (pre_star tau (ttrue &amp; (phi ++ old_q.formula))) }
+        )
+        <span class="keyword1">else</span>
+          <span class="keyword2">assert</span> {
+                valid ((~ (~ phi)) ++ (pre_star tau (~ phi)))
+
+                &amp;&amp;
+
+                !<a href="#visited_51">visited</a> ++ (pre_star tau ((~ phi) &amp; old_q.formula)) =
+                (!<a href="#visited_51">visited</a> ++ (ttrue ++ (pre_star tau (~ phi)))) &amp; (pre_star tau !<a href="#visited_51">visited</a>)
+
+                &amp;&amp;
+
+                !<a href="#visited_51">visited</a> ++ (pre_star tau ((~ phi) &amp; old_q.formula)) =
+                ttrue &amp; (pre_star tau !<a href="#visited_51">visited</a>)
+          }
+        
+       <span class="keyword1">done</span>;
+      <a href="#Safe_47">Safe</a>
+    <span class="keyword1">with</span>
+        | <a href="#Unsafe_trace_48">Unsafe_trace</a> -&gt; <a href="#Unsafe_47">Unsafe</a>
+        | Q.Empty -&gt; <span class="keyword2">absurd</span>
+    <span class="keyword1">end</span>
+<span class="keyword1">end</span>
+</pre>
+</div>
+<hr>
+<p>Generated by why3doc 0.82+git</p>
+</body>
+</html>

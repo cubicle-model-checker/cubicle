@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="time trencher -rtso $1"
+echo $cmd
+$cmd

@@ -1,0 +1,25 @@
+
+(* Global variables *)
+weak var Turn : proc
+weak array Want[proc] : bool
+weak array Crit[proc] : bool
+
+
+init (z) { Want[z] = False && Crit[z] = False }
+
+unsafe (z1 z2) { z1 @ Crit[z1] = True && z2 @ Crit[z2] = True }
+
+
+transition req ([i])
+requires { Want[i] = False }
+{ Want[i] := True }
+
+transition enter ([i])
+requires { Want[i] = True && Crit[i] = False && Turn = i }
+{ Crit[i] := True }
+
+transition exit ([i] j)
+requires { Crit[i] = True }
+{ Crit[i] := False;
+  Want[i] := False;
+  Turn := j }

@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="time memorax -a $1 $2"
+echo $cmd
+$cmd

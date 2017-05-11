@@ -1,0 +1,41 @@
+/* Peterson's lock */
+
+forbidden
+  CS CS
+
+data
+  turn = * : [0:1]
+
+process
+data
+  flag = 0 : [0:1]
+registers
+  $r0 = * : [0:1]
+  $r1 = * : [0:1]
+text
+  L0: write: flag[my] := 1;
+  write: turn := 1;
+  L1: read: $r0 := flag[0];
+  read: $r1 := turn;
+  if $r0 = 1 && $r1 = 1 then
+    goto L1;
+  CS: write: flag[my] := 0;
+  goto L0
+
+process
+data
+  flag = 0 : [0:1]
+registers
+  $r0 = * : [0:1]
+  $r1 = * : [0:1]
+text
+  L0: write: flag[my] := 1;
+  write: turn := 0;
+  L1: read: $r0 := flag[0];
+  read: $r1 := turn;
+  if $r0 = 1 && $r1 = 0 then
+    goto L1;
+  CS: write: flag[my] := 0;
+  goto L0
+
+

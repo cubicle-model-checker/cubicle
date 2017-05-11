@@ -1,0 +1,58 @@
+
+type location = Idle | Owner | Handin | Handout | Waiting
+type lock = C0 | C1 | C2 | C3
+
+array A[proc] : location
+
+var Busy : bool
+var H : lock
+var C : int
+
+
+init (z) { A[z] = Idle && Busy = False && H = C0 && 0 < C }
+ 
+unsafe (z1 z2) { A[z1] = Owner && A[z2] = Owner }
+
+unsafe (z1 z2) { A[z1] = Owner && A[z2] = Handout }
+unsafe (z1 z2) { A[z1] = Handout && A[z2] = Handout }
+
+unsafe (z1) { Busy = False && H = C3 }
+unsafe (z1) { Busy = False && H = C2 }
+unsafe (z1) { Busy = False && H = C1 && 0 < C }
+
+
+transition t1 (x) fence (x)
+requires { A[x] = Idle && Busy = False && 0 < C }
+{ Busy := True; A[x] := Owner }
+
+transition t2 (x)
+requires { A[x] = Idle && Busy = True && 0 < C }
+{ C := C + 1; A[x] := Handin }
+ 
+transition t3 (x)
+requires { A[x] = Owner && Busy = True && C = 0 }
+{ Busy := False; A[x] := Idle }
+
+transition t4 (x)
+requires { A[x] = Owner && Busy = True && 0 < C }
+{ C := C - 1; A[x] := Handout }
+
+transition t5 (x)
+requires { A[x] = Handin && H = C0 && 0 < C }
+{ H := C1; A[x] := Waiting }
+
+transition t6 (x)
+requires { A[x] = Handout && H = C0 && 0 < C }
+{ H := C2; A[x] := Idle }
+
+transition t7 (x)
+requires { A[x] = Handout && H = C1 && 0 < C }
+{ H := C3; A[x] := Idle }
+
+transition t8 (x)
+requires { A[x] = Handin && H = C2 && 0 < C }
+{ H := C3; A[x] := Waiting }
+
+transition t9 (x)
+requires { A[x] = Waiting && H = C3 && 0 < C }
+{ H := C0; A[x] := Owner }

@@ -1,0 +1,60 @@
+/* Dijkstra's lock */
+
+forbidden
+  CS CS
+
+data
+  turn = * : [0:1]
+
+process
+data
+  flag = 0 : [0:2]
+registers
+  $flag = * : [0:2]
+  $turn = * : [0:1]
+text
+  START:
+  write: flag[my] := 1;
+  read: $turn := turn;
+  while $turn != 0 do{
+    read: $flag := flag[0];
+    if $flag = 0 then
+      write: turn := 0;
+    read: $turn := turn
+  };
+  write: flag[my] := 2;
+  read: $flag := flag[0];
+  if $flag = 2 then
+    goto START;
+  CS:
+  write: flag[my] := 0;
+  goto START
+
+
+process
+data
+  flag = 0 : [0:2]
+registers
+  $flag = * : [0:2]
+  $turn = * : [0:1]
+text
+  START:
+  write: flag[my] := 1;
+  read: $turn := turn;
+  while $turn != 1 do{
+    read: $flag := flag[0];
+    if $flag = 0 then
+      write: turn := 1;
+    read: $turn := turn
+  };
+  write: flag[my] := 2;
+  read: $flag := flag[0];
+  if $flag = 2 then
+    goto START;
+  CS:
+  write: flag[my] := 0;
+  goto START
+
+
+
+

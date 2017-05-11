@@ -1,0 +1,129 @@
+#
+# A model of the lock-free stack implementation by Ivan Tkachev:
+#
+# https://github.com/Begun/lockfree-malloc/blob/33e3f229caed2416e5bcf9af196d354247d5e185/stack.h
+#
+# Description of the lock-free stack data structure in literature can be found in
+#
+# Maurice Herlihy and Nir Shavit. The art of multiprocessor programming.
+# Morgan Kaufmann, 2008. Page 153.
+#
+# IS robust.
+#
+# void push (T* obj) {
+# q0:
+#     for ( ; ; ) {
+# q1:     Head const old = m_head, h = {(long) obj, old.tag + 1};
+# q2:     obj->next = ptr (old);
+# q3:     if (cas (&m_head, old, h))
+# q4:         return;
+#         }
+# }
+#
+# IS robust.
+#
+# Memory layout:
+# 1 — m_head
+# 2 — obj pushed by push1
+# 3 — obj pushed by push2
+
+thread push1
+initial q0
+final q4
+transition q0	q1	local	obj	2
+transition q1	q2	read	old	1
+transition q2	q3	write	old	obj
+
+transition q3	q3_1	lock
+transition q3_1	q3_2	read	tmp	1
+transition q3_2	q3_3	local	flag	== tmp old
+transition q3_3	q3_4	check	== flag 0
+transition q3_4	q0	unlock
+
+transition q3_3	q3_4	check	!= flag 0
+transition q3_4	q3_5	write	obj	1
+transition q3_5	q4	unlock
+end
+
+thread push2
+initial q0
+final q4
+transition q0	q1	local	obj	3
+transition q1	q2	read	old	1
+transition q2	q3	write	old	obj
+
+transition q3	q3_1	lock
+transition q3_1	q3_2	read	tmp	1
+transition q3_2	q3_3	local	flag	== tmp old
+transition q3_3	q3_4	check	== flag 0
+transition q3_4	q0	unlock
+
+transition q3_3	q3_4	check	!= flag 0
+transition q3_4	q3_5	write	obj	1
+transition q3_5	q4	unlock
+end
+
+
+# T* pop() {
+#     for ( ; ; ) {
+# q0:     Head const old = m_head;
+# 
+# q1:     if (ptr (old) == NULL)
+# q2:         return NULL;
+# 
+# q3:     Head const h = {(long) ptr (old)->next, old.tag};
+# 
+# q4:     if (cas (&m_head, old, h)) {
+# q5:         return ptr (old);
+#         }
+#     }
+# }
+
+thread pop1
+initial q0
+final q5
+transition q0	q1	read	old	0
+
+transition q1	q2	check	== old 0
+transition q2	q_end	local	result	0
+
+transition q1	q3	check 	!= old 0
+transition q3	q4	read	next	old
+
+transition q4	q4_1	lock
+transition q4_1	q4_2	read	tmp	1
+transition q4_2	q4_3	local	flag	== tmp old
+transition q4_3	q4_4	check	!= flag 0
+transition q4_4 q4_5	write	next	1
+transition q4_3	q4_5	check	== flag	0
+transition q4_5	q4_a	unlock
+
+transition q4_a	q5	check	== flag 0
+
+transition q4_1	q0	check	!= flag	0
+
+end
+
+thread pop2
+initial q0
+final q5
+transition q0	q1	read	old	0
+
+transition q1	q2	check	== old 0
+transition q2	q_end	local	result	0
+
+transition q1	q3	check 	!= old 0
+transition q3	q4	read	next	old
+
+transition q4	q4_1	lock
+transition q4_1	q4_2	read	tmp	1
+transition q4_2	q4_3	local	flag	== tmp old
+transition q4_3	q4_4	check	!= flag 0
+transition q4_4 q4_5	write	next	1
+transition q4_3	q4_5	check	== flag	0
+transition q4_5	q4_a	unlock
+
+transition q4_a	q5	check	== flag 0
+
+transition q4_1	q0	check	!= flag	0
+end

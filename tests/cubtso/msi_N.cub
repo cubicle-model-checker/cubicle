@@ -1,0 +1,23 @@
+
+type st = M | S | I
+
+(* Global variables *)
+weak array Cache[proc] : st
+
+
+init (i) { Cache[i] = I }
+
+unsafe (i j k) { i @ Cache[i] = M && j @ Cache[j] <> I }
+
+
+transition read_miss ([i])
+requires { Cache[i] = I }
+{ Cache[j] := case
+       	      | j = i : S
+       	      | Cache[j] = M  : S }
+
+transition write_miss ([i])
+requires { Cache[i] <> M }
+{ Cache[j] := case
+       	      | j = i : M
+	      | _ : I }

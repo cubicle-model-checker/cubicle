@@ -1,0 +1,48 @@
+(* from "Regular Model Checking without Transducers 
+         (on efficient verification of parameterized systems)"
+   	Adulla et. al.
+	Tech report 2006-052 Uppsala Universitet
+*)
+
+number_procs 6
+
+type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6
+
+array A[proc] : location
+weak array F[proc] : bool
+
+init (x) { A[x] = Q1 && F[x] = False }
+
+unsafe (z1 z2) { A[z1] = Q6 && A[z2] = Q6 }
+
+transition t1 ([x])
+requires { A[x] = Q1 }
+{ A[x] := Q2; F[x] := False }
+
+transition t2 ([x] y)
+requires { A[x] = Q2 && y < x && F[y] = True }
+{ A[x] := Q1 }
+
+transition t3 ([x])
+requires { A[x] = Q2 && forall_other j. (x <= j || (j < x && F[j] = False)) }
+{ A[x] := Q3 }
+
+transition t4 ([x])
+requires { A[x] = Q3 }
+{ A[x] := Q4; F[x] := True }
+
+transition t5 ([x] y)
+requires { A[x] = Q4 && y < x && F[y] = True }
+{ A[x] := Q1 }
+
+transition t6 ([x]) fence (x)
+requires { A[x] = Q4 && forall_other j. (x <= j || (j < x && F[j] = False)) }
+{ A[x] := Q5 }
+
+transition t7 ([x])
+requires { A[x] = Q5 && forall_other j. (j <= x || (x < j && F[j] = False)) }
+{ A[x] := Q6 }
+
+transition t8 ([x])
+requires { A[x] = Q6 }
+{ A[x] := Q1; F[x] := False }

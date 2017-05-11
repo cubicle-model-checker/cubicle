@@ -1,0 +1,22 @@
+
+# Memory layout:
+# 0 — R1
+# 1 — R2
+
+thread t1
+initial l1
+final cs
+transition	l1	l3	write	1	0
+transition	l3	l4	read	R2	1
+transition	l4	cs	check	== R2   0
+transition	cs	l1	write	0  	0
+end
+
+thread t2
+initial l1
+final cs
+transition	l1	l3	write	1	1
+transition	l3	l4	read	R1	0
+transition	l4	cs	check	== R1   0
+transition	cs	l1	write	0  	1
+end

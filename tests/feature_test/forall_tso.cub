@@ -1,0 +1,19 @@
+
+type loc = L1 | L2 | End
+
+array PC[proc] : loc
+weak array X[proc] : bool
+
+init (p) { PC[p] = L1 && X[p] = False }
+
+(* FORBIDDEN Final State *)
+unsafe (p1 p2) { PC[p1] = End && PC[p2] = End }
+
+
+transition t1 (p)
+requires { PC[p] = L1 }
+{ PC[p] := L2; [p]X[p] := False }
+
+transition t2 (p)
+requires { PC[p] = L2 && forall_other q. [p]X[q] = True }
+{ PC[p] := End }
