@@ -321,15 +321,19 @@ end = struct
             && HMap.mem e sat_evt -> false
       | _ -> true
     ) sa in
-    let ghb = Weakrel.make_ghb evts rels in
-    let scloc = Weakrel.make_scloc evts rels in
+    (* let ghb = Weakrel.make_ghb evts rels in *)
+    (* let scloc = Weakrel.make_scloc evts rels in *)
+    let (_, ghb, _) = rels in
+    let scloc = H2Set.empty in
     { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, ghb, scloc
 
   let preprocess_ar ar =
     let _, _, _, _, eids, evts = Weakevent.extract_events_array ar in
     let _, rels = Weakrel.extract_rels_array evts ar in
-    let ghb = Weakrel.make_ghb evts rels in
-    let scloc = Weakrel.make_scloc evts rels in
+    (* let ghb = Weakrel.make_ghb evts rels in *)
+    (* let scloc = Weakrel.make_scloc evts rels in *)
+    let (_, ghb, _) = rels in
+    let scloc = Weakmem.H2Set.empty in
     evts, rels, ghb, scloc (* could extract ghb only once at start *)
                               (* since it's the same even with proc renaming *)
 module HAA = Hashtbl.Make (ArrayAtom)

@@ -18,7 +18,7 @@ weak var Extgnd : bool
 
 init (i) { Cache[i] = I && Shr[i] = False && Extgnd = False}
 
-unsafe (i j) { [i]Cache[i] = M && [j]Cache[j] = M }
+unsafe (i j) { i @ Cache[i] = M && j @ Cache[j] = M }
 (*unsafe (i j) { read(j, Cache[j]) = M && read(j, Cache[j]) = M }
 unsafe (i j) { read(i, Cache[j]) = M && read(j, Cache[j]) = M }
 unsafe (i j) { read(j, Cache[i]) = M && read(j, Cache[j]) = M }

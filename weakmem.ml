@@ -79,6 +79,7 @@ let hFence = H.make "_fence"
 let hSync = H.make "_sync"
 let hPoLoc = H.make "_po_loc"
 let hPpo = H.make "_ppo"
+let hGhb = H.make "_ghb"
 
 let mk_hP p = H.make ("_p" ^ (string_of_int p))
 let mk_hE e = H.make ("_e" ^ (string_of_int e))

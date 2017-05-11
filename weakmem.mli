@@ -42,14 +42,15 @@ val hP0 : H.t
 val hE0 : H.t
 val hE : H.t
 
-val hPo : H.t
-val hRf : H.t
-val hCo : H.t
-val hFr : H.t
+(* val hPo : H.t *)
+(* val hRf : H.t *)
+(* val hCo : H.t *)
+(* val hFr : H.t *)
 val hFence : H.t
 val hSync : H.t
-val hPoLoc : H.t
-val hPpo : H.t
+(* val hPoLoc : H.t *)
+(* val hPpo : H.t *)
+val hGhb : H.t
 
 val mk_hP : int -> H.t
 val mk_hE : int -> H.t

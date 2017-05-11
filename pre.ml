@@ -256,7 +256,7 @@ let make_cubes (ls, post) rargs s tr cnp =
 	    else
  
               (* TSO *)
-              let lnp = Weakwrite.satisfy_reads tr np in
+              let lnp = Weakwrite.satisfy_reads np in
               (* END TSO *)
 
               List.fold_left (fun (ls, post) np ->

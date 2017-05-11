@@ -288,11 +288,6 @@ module Term = struct
       | [t] -> print fmt t
       | t :: tl -> print fmt t; List.iter (fprintf fmt ",%a" print) tl in
     match t with
-    | Access (a, [p1; e1; s1; p2; e2; s2])
-	 when H.equal a hRf ->
-       fprintf fmt "RF((%a, %s, %s), (%a, %s, %s))"
-         H.print p1 (id_of_v e1) (id_of_v s1)
-	 H.print p2 (id_of_v e2) (id_of_v s2)
     | Field (Access (a, [p; e; s]), f)
 	 when H.equal a hE  && H.equal f hDir ->
        fprintf fmt "D(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)

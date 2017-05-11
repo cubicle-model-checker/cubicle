@@ -116,11 +116,7 @@ let rec get_val = function
   | Arith (t, c) -> get_val t
   | _ -> None
 
-let split_event (la, evts, rfs, rrfs) at = match at with
-  (* Read-from's *)
-  | Atom.Comp (Access (a, [e1; e2]), Eq, _)
-  | Atom.Comp (_, Eq, Access (a, [e1; e2])) when H.equal a hRf ->
-     (la, evts, HMap.add e1 e2 rfs, HMap.add e2 e1 rrfs)
+let split_event (la, evts) at = match at with
   (* Direction / Variable / Indices *)
   | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))
   | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [e]), f)) when H.equal a hE ->
@@ -130,7 +126,7 @@ let split_event (la, evts, rfs, rrfs) at = match at with
 	  else if H.equal f hVar then ((p, d, c, vi), vals)
 	  else if is_param f then ((p, d, v, (f, c) :: vi), vals)
 	  else evt in
-     (la, HMap.add e evt evts, rfs, rrfs)
+     (la, HMap.add e evt evts)
   (* Value *)
   | Atom.Comp (t1, _, t2)
        when has_val t1 || has_val t2 ->
@@ -141,23 +137,22 @@ let split_event (la, evts, rfs, rrfs) at = match at with
 	      | _ -> failwith "Dot.split_event :internal error " in
      let ((p, d, v, vi), vals) = find_event_safe e evts in
      let evt = ((p, d, v, vi), at :: vals) in
-     (la, HMap.add e evt evts, rfs, rrfs)
+     (la, HMap.add e evt evts)
   (* Others *)
-  | _ -> (at :: la, evts, rfs, rrfs)
+  | _ -> (at :: la, evts)
 
 let split_events la =
-  let la, evts, rfs, rrfs = List.fold_left split_event
-		        ([], HMap.empty, HMap.empty, HMap.empty) la in
+  let la, evts = List.fold_left split_event ([], HMap.empty) la in
   List.rev la, HMap.fold (fun e (ed, vals) evts ->
     HMap.add e (sort_params ed, vals) evts
-  ) evts HMap.empty, rfs, rrfs
+  ) evts HMap.empty
 
 let id_of_v v =
     let v = H.view v in
     String.sub v 1 (String.length v - 1)
 
 let print_atoms fmt la =
-  let la, evts, rfs, rrfs = split_events la in
+  let la, evts = split_events la in
   let evts = HMap.fold (fun eid ((p, d, v, vi) as ed, vals) evts ->
     H2Map.add (p, eid) (ed, vals) evts
   ) evts H2Map.empty in
@@ -171,17 +166,6 @@ let print_atoms fmt la =
       fprintf fmt "[%a]" (Hstring.print_list ", ") vi;
     if vals <> [] then
       List.iter (fun a -> fprintf fmt "          %a" Atom.print a) vals;
-    if HMap.mem e rfs then
-      fprintf fmt "                                         "
-    else if H.view d = "_W" then
-      fprintf fmt "          not RF                         ";
-    try
-      let ew = HMap.find e rrfs in
-        fprintf fmt "          RF : (%s)" (id_of_v ew)
-        (* fprintf fmt "          RF : (%a, %s) -> (%a, %s)" *)
-        (* H.print pw (id_of_v ew) *)
-        (* H.print p (id_of_v e) *)
-    with _ -> ()
   ) evts
 	     
 (* End TSO *)

@@ -185,7 +185,7 @@ let get_evts ar =
 (*     else true *)
 (*   ) cs *)
 
-let sync_agree cs ef pf et pt (_, _, _, _, _, _, sf) (_, _, _, _, _, _, st) =
+let sync_agree cs ef pf et pt (_, _, sf) (_, _, st) =
   HMap.for_all (fun ef0 et0 ->
     if List.exists (fun sf -> HSet.mem ef0 sf && HSet.mem ef sf) sf then
        List.exists (fun st -> HSet.mem et0 st && HSet.mem et st) st
@@ -281,8 +281,7 @@ let remap_events_ar ar sub =
     | Field (t, f) -> Field (remap_t t, f)
     | Access (a, [e]) when H.equal a hE -> Access (a, [subst e])
     | Access (a, [p; e]) when H.equal a hFence -> Access (a, [p; subst e])
-    | Access (a, [e1; e2]) when H.equal a hRf || H.equal a hCo
-        || H.equal a hFr -> Access (a, [subst e1; subst e2])
+    | Access (a, [e1; e2]) when H.equal a hGhb -> Access (a, [subst e1; subst e2])
     | Access (a, sl) when H.equal a hSync -> Access (a, remap_sl sl)
     (* Read / Write / Fence -> KO *)
     | t -> t

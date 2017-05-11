@@ -184,15 +184,15 @@ let instantiate_events sa =
        let evt = (p, hW, mk_hV v, vi) in
        let na, _ = build_event e p hW v vi in
        let sna = List.fold_left (fun sna re -> (* rf *)
-	 SAtom.add (mk_pred hRf [e; re]) sna
+	 SAtom.add (mk_pred hGhb [e; re]) sna
        ) (SAtom.union na sna) srl in
        let sna = HMap.fold (fun we wevt sna -> (* co *)
          if not (same_var evt wevt) then sna
-         else SAtom.add (mk_pred hCo [e; we]) sna
+         else SAtom.add (mk_pred hGhb [e; we]) sna
        ) wevts sna in
        let sna = HMap.fold (fun ure urevt sna -> (* fr *)
          if not (same_var evt urevt) then sna
-         else SAtom.add (mk_pred hFr [ure; e]) sna
+         else SAtom.add (mk_pred hGhb [ure; e]) sna
        ) urevts sna in
        (eids, sna, HMap.add e evt writes)
     | _ -> assert false
@@ -208,7 +208,7 @@ let instantiate_events sa =
        let na, tval = build_event e p hR v vi in
        let sna = HMap.fold (fun we wevt sna -> (* fr *)
          if not (same_var evt wevt) then sna
-         else SAtom.add (mk_pred hFr [e; we]) sna
+         else SAtom.add (mk_pred hGhb [e; we]) sna
        ) wevts (SAtom.union na sna) in
        (eids, sna, event_subst t tval sra, HMap.add e evt reads)
     | _ -> assert false
