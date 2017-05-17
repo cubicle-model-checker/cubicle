@@ -115,10 +115,12 @@ let extract_events (sa_pure, rds, wts, fces, eids, evts) at = match at with
      let wts = add_uevent wts (p, hW, mk_hV v, vi) [t] in
      let rds = process_read_noval rds t in
      (sa_pure, rds, wts, fces, eids, evts)
-  (* Read (both sides may be Reads) *)
+  (* Read (both sides may be Reads + can have instantiated read as value) *)
   | Atom.Comp (t1, op, t2) when has_read t1 || has_read t2 ->
      let rds = process_read rds t1 (cop_of_r_op false op) t2 in
      let rds = process_read rds t2 (cop_of_r_op true op) t1 in
+     let evts = process_event evts t1 (cop_of_r_op false op) t2 in
+     let evts = process_event evts t2 (cop_of_r_op true op) t1 in
      (sa_pure, rds, wts, fces, eids, evts)
   (* Thread / Direction / Variable / Indices *)
   | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))

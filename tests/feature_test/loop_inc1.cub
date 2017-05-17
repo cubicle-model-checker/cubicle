@@ -14,7 +14,7 @@ unsafe () { PC = End }
 
 transition t1 ()
 requires { PC = L1 }
-{ PC := L2; T := [#1]X }
+{ PC := L2; T := #1 @ X }
 
 transition t2a ()
 requires { PC = L2 && T < 2 }
@@ -26,4 +26,4 @@ requires { PC = L2 && T = 2 }
 
 transition t3 ()
 requires { PC = L3 }
-{ PC := L1; [#1]X := T + 1 }
+{ PC := L1; #1 @ X := T + 1 }

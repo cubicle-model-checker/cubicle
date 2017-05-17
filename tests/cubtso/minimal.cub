@@ -19,6 +19,6 @@ transition t1 ([p])
 requires { PC[p] = L1 }
 { PC[p] := L2; X[p] := True }
 
-transition t2 ([p] q) (* fence (p) *)
-requires { PC[p] = L2 && X[q] = False }
+transition t2 ([p] q)
+requires { PC[p] = L2 && fence (p) && X[q] = False }
 { PC[p] := L3 }

@@ -6,10 +6,10 @@ weak var Y : int
 
 init () { X = 15 }
 
-invariant (p) { [p]X < 0 }
+invariant (p) { p @ X < 0 }
 
 (* FORBIDDEN Final State *)
-unsafe (p) { [p]Y = 0 && [p]X = 13 }
+unsafe (p) { p @ Y = 0 && p @ X = 13 }
 
-transition t (p)
-{ [p]X := [p]X + 1 }
+transition t ([p])
+{ X := X + 1 }
