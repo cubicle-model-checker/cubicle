@@ -1,5 +1,5 @@
 
-number_procs 3
+(* number_procs 3 *)
 (*
   2 procs : 3 N / 1 FP / 8 SC / 0.1s
   3 procs : 19 N / 42 FP / 104 SC / 9s

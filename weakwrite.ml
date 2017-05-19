@@ -177,18 +177,18 @@ let mk_eq_true term =
 let mk_pred pred pl =
   Atom.Comp (Access (pred, pl), Eq, Elem (Term.htrue, Constr))
 
+let add_ghb_lt_atoms ghb sa =
+  Weakrel.Rel.fold_lt (fun ef et sa ->
+    SAtom.add (mk_pred hGhb [ef; et]) sa) ghb sa
+
+let add_ghb_eq_atoms ghb sa =
+  Weakrel.Rel.fold_eq (fun e1 e2 sa ->
+    SAtom.add (mk_pred hSync [e1; e2]) sa) ghb sa
 
 
 
-let ghb_to_satom ghb =
-  H2Set.fold (fun (ef, et) sa ->
-    SAtom.add (mk_pred hGhb [ef; et]) sa) ghb SAtom.empty
 
-
-
-
-
-let make_read_write_combinations writes evts_bt urevts ghb sync =
+let make_read_write_combinations writes evts_bt urevts ghb =
 
   TimeBuildRW.start ();
 
@@ -203,8 +203,7 @@ let make_read_write_combinations writes evts_bt urevts ghb sync =
 
   TimeFilterRW.start ();
 
-
-  let olen = List.length wrcp in
+  (* let olen = List.length wrcp in *)
   (* Format.fprintf Format.std_formatter "Before : %d\n" (List.length wrcp); *)
   (* Format.print_flush (); *)
 
@@ -217,61 +216,27 @@ let make_read_write_combinations writes evts_bt urevts ghb sync =
         HMap.remove re urevts) urevts rcl
     ) urevts wrcl in
 
-    (* Format.fprintf Format.std_formatter "GHB card before : %d\n" (H2Set.cardinal ghb); *)
-
     (* Adjust ghb for this combination *)
-    let ghb = List.fold_left (fun ghb (((wp, _, _, _) as wed, (we, _, _)), rcl) ->
-      TimeProp.start ();
-
+    let ghb = List.fold_left (fun ghb (((wp,_,_,_) as wed, (we,_,_)), rcl) ->
       let ghb = List.fold_left (fun ghb (re, (red, _)) -> (* rf *)
-        (* Format.fprintf Format.std_formatter "rf : %a -> %a\n" *)
-        (*                H.print we H.print re; *)
         if same_proc wed red then ghb
-        else begin
-          let nghb = Weakrel.get_new_pairs sync ghb we re in
-          H2Set.union ghb nghb
-        end
+        else Weakrel.Rel.add_lt we re ghb
       ) ghb rcl in
-
-      TimeProp.pause ();
-
-      TimeAcycl.start ();
-      
       let ghb = HMap.fold (fun ure (ured, _) ghb -> (* fr *)
         if not (same_var wed ured) then ghb
-        else begin
-          (* Format.fprintf Format.std_formatter "fr : %a -> %a\n" *)
-          (*                H.print ure H.print we; *)
-          let nghb = Weakrel.get_new_pairs sync ghb ure we in
-          H2Set.union ghb nghb
-        end
+        else Weakrel.Rel.add_lt ure we ghb
       ) urevts ghb in
-      
-      TimeAcycl.pause ();
-
       ghb
+    ) ghb wrcl in (* should remember this ghb to avoid recomputing *)
 
-    ) ghb wrcl in
-    
-    (* if Weakrel.acyclic ghb then begin *)
-    (*   Format.fprintf Format.std_formatter "Node : %a\n" SAtom.print sa; *)
-    (*   Format.fprintf Format.std_formatter "Ghb : "; *)
-    (*   H2Set.iter (fun (ef, et) -> *)
-    (*     Format.fprintf Format.std_formatter "%a < %a  " H.print ef H.print et *)
-    (*   ) ghb; *)
-    (*   Format.fprintf Format.std_formatter "\n" *)
-    (* end; *)
-
-    (* Format.fprintf Format.std_formatter "GHB card after : %d\n" (H2Set.cardinal ghb); *)
-
-    Weakrel.acyclic ghb (* is this the culprit ? maybe*)
+    Weakrel.Rel.acyclic ghb
   ) wrcp in
 
+  (* let nlen = List.length wrcp in *)
+  (* if olen > 0 && nlen = 0 then *)
+  (*   Format.fprintf Format.std_formatter "Reduced %d -> 0\n" olen; *)
   (* Format.fprintf Format.std_formatter "After : %d\n" (List.length wrcp); *)
-  let nlen = List.length wrcp in
-
-  if olen > 0 && nlen = 0 then
-    Format.fprintf Format.std_formatter "Reduced %d -> 0\n" olen;
+  (* Format.print_flush (); *)
 
   TimeFilterRW.pause ();
 
@@ -364,7 +329,7 @@ let satisfy_reads sa =
   let evts_bt = Weakevent.events_by_thread evts in
   let wevts = Weakevent.write_events evts in (* only for co/fr *)
   let urevts = Weakevent.unsat_read_events evts in (* to associate to wts *)
-  let ffces, ghb, sync = Weakrel.extract_rels_set sa in (* for acyclicity *)
+  let ffces, ghb = Weakrel.extract_rels_set sa in (* for acyclicity *)
 
     (* Format.eprintf "Evts :"; *)
     (* HMap.iter (fun e (ed, vals) -> *)
@@ -379,29 +344,8 @@ let satisfy_reads sa =
 
 
 
-  (* Get first write on each var *) (* in weakevent *)
-  let gfw = HMap.fold (fun we ((p, _, v, vi), _) gfw ->
-    let vvi = v :: vi in
-    let cwe = try HLMap.find vvi gfw with Not_found -> hE0 in
-    if H.compare we cwe <= 0 then gfw
-    else HLMap.add vvi we gfw
-  ) wevts HLMap.empty in
-
-  (* Get first read and first write of each thread *) (* in weakevent *)
-  let freads, fwrites = HMap.fold (fun p pevts (freads, fwrites) ->
-    let freads = try
-        let (re, _) = List.find (fun (_, (ed, _)) -> is_read ed) pevts in
-        HMap.add p re freads
-      with Not_found -> fwrites in
-    let fwrites = try
-        let (we, _) = List.find (fun (_, (ed, _)) -> is_write ed) pevts in
-        HMap.add p we fwrites
-      with Not_found -> fwrites in
-    freads, fwrites
-  ) evts_bt (HMap.empty, HMap.empty) in
 
 
-  
   let eids_before = eids in
 
   (* Instantiate write events, keep a map to values *)
@@ -436,60 +380,80 @@ let satisfy_reads sa =
   let nsync_l = HMap.fold (fun _ peids sync ->
     IntSet.fold (fun eid sync -> (mk_hE eid) :: sync
   ) peids sync) (eid_diff eids eids_before) [] in
-  let mk_sync l = let rec aux s = function
-    | [] | [_] -> s
+  let mk_sync l ghb = let rec aux ghb = function
+    | [] | [_] -> ghb
     | e1 :: el ->
-       let s = List.fold_left (fun s e2 ->
-         H2Set.add (e1, e2) (H2Set.add (e2, e1) s)) s el in
-       aux s el
-  in aux H2Set.empty l in
-  let nsync = mk_sync nsync_l in
-  let sa = H2Set.fold (fun (e1, e2) sa ->
-    SAtom.add (mk_pred hSync [e1; e2]) sa) nsync sa in
-  let sync = H2Set.union sync nsync in
+       let ghb = List.fold_left (fun ghb e2 ->
+         Weakrel.Rel.add_eq e1 e2 ghb) ghb el in
+       aux ghb el
+  in aux ghb l in
+  let nghb = mk_sync nsync_l ghb in
 
 
 
-  let add_ievts_rels sa rel ievts f =
-    HEvtMap.fold (fun ied (ie, _, _) (sa, rel) -> match f ied ie with
-      | None -> sa, rel | Some e ->
-         let nrel = Weakrel.get_new_pairs sync rel ie e in
-         let nsa = ghb_to_satom nrel in
-         SAtom.union sa nsa, H2Set.union rel nrel
-    ) ievts (sa, rel) in
+
+
+  (* Get first write on each var *) (* in weakevent *)
+  let gfw = HMap.fold (fun we ((p, _, v, vi), _) gfw ->
+    let vvi = v :: vi in
+    let cwe = try HLMap.find vvi gfw with Not_found -> hE0 in
+    if H.compare we cwe <= 0 then gfw
+    else HLMap.add vvi we gfw
+  ) wevts HLMap.empty in
+
+  (* Get first read and first write of each thread *) (* in weakevent *)
+  (* Writes and fences are grouped together for simplicity *)
+  let freads, fwrites = HMap.fold (fun p pevts (freads, fwrites) ->
+    let freads = try
+        let (re, _) = List.find (fun (_, (ed, _)) -> is_read ed) pevts in
+        HMap.add p re freads
+      with Not_found -> freads in
+    let fwrites = try
+        let (we, _) = List.find (fun (_, (ed, _)) -> is_write ed) pevts in
+        let cwe = try HMap.find p fwrites with Not_found -> hE0 in
+        if H.compare we cwe >= 0 then HMap.add p we fwrites else fwrites
+      with Not_found -> fwrites in
+    freads, fwrites
+  ) evts_bt (HMap.empty, ffces) in
+
+
+
+
+  
+  let add_ievts_rels rel ievts f =
+    HEvtMap.fold (fun ied (ie, _, _) rel -> match f ied ie with
+      | None -> rel | Some e -> Weakrel.Rel.add_lt ie e rel
+    ) ievts rel in
 
   (* Add co from new writes to first old write on same variable *)
-  let sa, ghb = add_ievts_rels sa ghb iwts (fun (_, _, v, vi) _ ->
-    try Some (HLMap.find (v :: vi) gfw)
-    with Not_found -> None) in
+  let nghb = add_ievts_rels nghb iwts (fun (_, _, v, vi) _ ->
+    try Some (HLMap.find (v :: vi) gfw) with Not_found -> None) in
   
   (* Add fr from new reads to first old write on same variable *)
-  let sa, ghb = add_ievts_rels sa ghb irds (fun (_, _, v, vi) _ ->
-    try Some (HLMap.find (v :: vi) gfw)
-    with Not_found -> None) in
+  let nghb = add_ievts_rels nghb irds (fun (_, _, v, vi) _ ->
+    try Some (HLMap.find (v :: vi) gfw) with Not_found -> None) in
 
   (* Add ppo from new reads to first old read of same thread *)
-  let sa, ghb = add_ievts_rels sa ghb irds (fun (p, _, _, _) _ ->
-    try Some (HMap.find p freads)
-    with Not_found -> None) in
+  let nghb = add_ievts_rels nghb irds (fun (p, _, _, _) _ ->
+    try Some (HMap.find p freads) with Not_found -> None) in
 
   (* Add ppo from new reads to first old write of same thread *)
-  let sa, ghb = add_ievts_rels sa ghb irds (fun (p, _, _, _) _ ->
-    try Some (HMap.find p fwrites)
-    with Not_found -> None) in
+  let nghb = add_ievts_rels nghb irds (fun (p, _, _, _) _ ->
+    try Some (HMap.find p fwrites) with Not_found -> None) in
 
-  (* Add ppo/fence from new writes to first old write or first old fenced evt *)
+  (* Add ppo/fence from new writes to first old write (or fence) *)
   (* However, if it's an atomic RMW, then consider first old read instead *)
-  let sa, ghb = add_ievts_rels sa ghb iwts (fun (p, _, _, _) _ ->
-    if HEvtMap.is_empty irds then
-      let fw = try HMap.find p fwrites with Not_found -> hE0 in
-      let ff = try HMap.find p ffces with Not_found -> hE0 in
-      let fe = if H.compare ff fw > 0 then ff else fw in
-      if H.equal fe hE0 then None else Some fe
-    else try Some (HMap.find p freads) with Not_found -> None) in
+  (* No need to split the RMW case if reads exists. But it might be useful
+     in fact since we could add the lock prefix to the transition
+     syntactically to avoir missing reads causing instr to be not locked *)
+  let nghb = add_ievts_rels nghb iwts (fun (p, _, _, _) _ ->
+    let fevts = if HEvtMap.is_empty irds then fwrites else freads in
+    try Some (HMap.find p fevts) with Not_found -> None) in
 
 
 
+
+  
   let rec subst_ievent ievts t = match t with
     | Read (p, v, vi) ->
        let _, tval, _ = HEvtMap.find (p, hR, mk_hV v, vi) ievts in
@@ -502,6 +466,16 @@ let satisfy_reads sa =
     e, tval, List.map (fun t -> subst_ievent irds t) vals
   ) iwts in
  
+
+
+
+  (* Build the relevant read-write combinations *)
+  let wrcp = make_read_write_combinations wts_iv evts_bt urevts nghb in
+
+let pres = if wrcp = [] then [] else begin
+
+
+
   (* Substitute read values by instantiated read values *)
   let rds_iv = HEvtMap.map (fun (e, tval, vals) ->
     e, tval, List.map (fun (cop, t) -> (cop, subst_ievent irds t)) vals
@@ -550,41 +524,46 @@ let satisfy_reads sa =
     HMap.add p e freads
   ) irds freads in
 
-  (* Update first writes by thread  *)
-  let fwrites' = HEvtMap.fold (fun (p, _, _, _) (e, _, _) fwrites ->
-    HMap.add p e fwrites
-  ) iwts fwrites in
-
-  (* Update first fences by thread *)
-  let ffces' = List.fold_left (fun ffces p ->
+  (* Update first fences by thread (considered as writes) *)
+  let fwrites' = List.fold_left (fun ffces p ->
     let eid = max_proc_eid eids p in
     if eid <= 0 then ffces else
       HMap.add p (mk_hE eid) ffces
-  ) ffces fces in
+  ) fwrites fces in
+
+  (* Update first writes by thread  *)
+  let fwrites' = HEvtMap.fold (fun (p, _, _, _) (e, _, _) fwrites ->
+    let cwe = try HMap.find p fwrites with Not_found -> hE0 in
+    if H.compare e cwe >= 0 then HMap.add p e fwrites else fwrites
+  ) iwts fwrites' in
 
   (* Make set of events to keep *)
   let keep = HSet.empty in
   let keep = HLMap.fold (fun _ e keep -> HSet.add e keep) gfw' keep in
   let keep = HMap.fold (fun _ e keep -> HSet.add e keep) freads' keep in
   let keep = HMap.fold (fun _ e keep -> HSet.add e keep) fwrites' keep in
-  let keep = HMap.fold (fun _ e keep -> HSet.add e keep) ffces' keep in
-  (* here only keep one of fwrite/ffce, might as well discard fevt *)
-  (* We keep :
-         1st W on each var          gfw'     (for other W on same var)
-         1st R of each thread       freads'  (for R by same thread)
-         1st W of each thread       fwrites' (for RW by same thread)
-         1st FR of each thread      ffces'   (for RW by same thread)
-         all unsat R
-         (all E sync with unsat R)
-         however, we exclude from this set events that are not
-         ghb before an unsat read  *)
+  (* let keep = HEvtMap.fold (fun _ (e, _, _) keep -> HSet.add e keep) iwts keep in *)
+  (* the last one should not be necessary *)
+  (* We keep the following events, provided they are ghb-before an unsat read :
+       1st W on each var          gfw'     (for other W on same var)
+       1st R of each thread       freads'  (for R by same thread)
+       1st W/F of each thread     fwrites' (for RW by same thread)
+       all unsat R *)
+  (* might have to keep writes sync with unsat reads for atomic RMW...
+     otherwise it might give spurious unsafes *)
 
 
 
-  
 
-  (* Build the relevant read-write combinations *)
-  let wrcp = make_read_write_combinations wts_iv evts_bt urevts ghb sync in
+  (* Update the set of atoms *)
+  let d = Weakrel.Rel.diff nghb ghb in
+  let sa = add_ghb_lt_atoms d sa in
+  let sa = add_ghb_eq_atoms d sa in
+  let ghb = nghb in  
+
+
+
+
   
   (* Generate the atom sets for each combination *)
   let pres = List.fold_left (fun pres wrcl ->
@@ -610,45 +589,37 @@ let satisfy_reads sa =
     ) urevts wrcl in
     
     (* Add rf/fr from new writes to old sat/unsat reads *)
-    let sa, ghb = List.fold_left (fun (sa, ghb) ((wed, wtl), rcl) ->
+    let nghb = List.fold_left (fun nghb ((wed, wtl), rcl) ->
       let e, _, _ = HEvtMap.find wed iwts in
-      let sa, ghb = List.fold_left (fun (sa, ghb) (re, (red, _)) -> (* rf *)
-        if same_proc wed red then sa, ghb
-        else
-          let nghb = Weakrel.get_new_pairs sync ghb e re in
-          SAtom.union sa (ghb_to_satom nghb), H2Set.union ghb nghb
-      ) (sa, ghb) rcl in
-      let sa, ghb = HMap.fold (fun re (red, _) (sa, ghb) -> (* fr *) (* internal ? *)
-        if not (same_var wed red) then sa, ghb
-        else
-          let nghb = Weakrel.get_new_pairs sync ghb re e in
-          SAtom.union sa (ghb_to_satom nghb), H2Set.union ghb nghb
-      ) urevts (sa, ghb) in
-      sa, ghb
-    ) (sa, ghb) wrcl in
-    
+      let nghb = List.fold_left (fun nghb (re, (red, _)) -> (* rf *)
+        if same_proc wed red then nghb
+        else Weakrel.Rel.add_lt e re nghb
+      ) nghb rcl in
+      let nghb = HMap.fold (fun re (red, _) ghb -> (* fr *) (* internal ? *)
+        if not (same_var wed red) then ghb
+        else Weakrel.Rel.add_lt re e ghb
+      ) urevts nghb in
+      nghb
+    ) nghb wrcl in
+
+    let d = Weakrel.Rel.diff nghb ghb in
+    let sa = add_ghb_lt_atoms d sa in
+    let ghb = nghb in
+
     (* Format.eprintf "Keep1 : "; *)
     (* HSet.iter (fun e -> Format.eprintf " %a " H.print e) keep; *)
     (* Format.eprintf "\n"; *)
 
-    (* Add instantiated writes *)
-    let keep = HEvtMap.fold (fun _ (e, _, _) keep ->
-      HSet.add e keep) iwts keep in
+    (* Add instantiated reads to unsatisfied reads *)
+    let urevts = HEvtMap.fold (fun red (re, _, rvals) urevts ->
+      HMap.add re (red, rvals) urevts
+    ) irds urevts in
 
-    (* Keep only events that are ghb-before or sync with
-       an unsatisfied read or an instantiated read *)
+    (* Keep only events that are ghb-before or sync with an unsatisfied read *)
     let keep = HSet.filter (fun e ->
       HMap.exists (fun re (red, rvals) ->
-        H2Set.mem (e, re) ghb || H2Set.mem (e, re) sync
-      ) urevts ||
-      HEvtMap.exists (fun _ (re, _, _) ->
-        H2Set.mem (e, re) ghb || H2Set.mem (e, re) sync
-      ) irds
+        Weakrel.Rel.mem_lt e re ghb || Weakrel.Rel.mem_eq e re ghb) urevts
     ) keep in
-
-    (* Add instantiated reads *)
-    let keep = HEvtMap.fold (fun _ (e, _, _) keep ->
-      HSet.add e keep) irds keep in
 
     (* And add the unsatisfied reads *)
     let keep = HMap.fold (fun e _ keep ->
@@ -661,49 +632,46 @@ let satisfy_reads sa =
     let sa = SAtom.filter (function
       | Atom.Comp (Access (a, [_; e]), _, _)
       | Atom.Comp (_, _, Access (a, [_; e]))
-           when H.equal a hFence && not (HSet.mem e keep) -> false
+           when H.equal a hFence -> HSet.mem e keep
       | Atom.Comp (Access (a, [ef; et]), _, _)
       | Atom.Comp (_, _, Access (a, [ef; et]))
-           when H.equal a hGhb &&
-             not (HSet.mem ef keep && HSet.mem et keep) -> false
+           when H.equal a hGhb || H.equal a hSync ->
+             HSet.mem ef keep && HSet.mem et keep
       | Atom.Comp (Access (a, [ef; et]), _, _)
-      | Atom.Comp (_, _, Access (a, [ef; et]))
-           when H.equal a hGhb && ((HMap.mem et wevts) ||
-             HEvtMap.exists (fun _ (e, _, _) -> H.equal e et) iwts) -> false
+      | Atom.Comp (_, _, Access (a, [ef; et])) (* sync necessary for RMW *)
+           when H.equal a hGhb (*|| H.equal a hSync *) ->
+             not (HMap.mem et wevts ||
+               HEvtMap.exists (fun _ (e, _, _) -> H.equal e et) iwts)
+      | Atom.Comp (Field (Access (a, [e]), f), _, _)
+      | Atom.Comp (_, _, Field (Access (a, [e]), f))
+           when H.equal a hE && (H.equal f hVar || is_param f) ->
+         HSet.mem e keep && (HLMap.exists (fun _ we -> H.equal e we) gfw' ||
+           HMap.exists (fun re _ -> H.equal e re) urevts)
       | Atom.Comp (Field (Access (a, [e]), _), _, _)
       | Atom.Comp (_, _, Field (Access (a, [e]), _))
-           when H.equal a hE && not (HSet.mem e keep) -> false
+           when H.equal a hE -> HSet.mem e keep
       | Atom.Comp (t1, _, t2) ->
          let k1 = match t1 with
          | Field (Field (Access (a, [e]), _), _)
          | Arith (Field (Field (Access (a, [e]), _), _), _)
-              when H.equal a hE && not (HSet.mem e keep) -> false
+              when H.equal a hE -> HSet.mem e keep
          | _ -> true in
          let k2 = match t2 with
          | Field (Field (Access (a, [e]), _), _)
          | Arith (Field (Field (Access (a, [e]), _), _), _)
-              when H.equal a hE && not (HSet.mem e keep) -> false
+              when H.equal a hE -> HSet.mem e keep
          | _ -> true in
            k1 && k2
       | _ -> true
     ) sa in
-    let sa = SAtom.fold (fun a sa -> match a with
-      | Atom.Comp (Access (a, sl), op,  t) when H.equal a hSync ->
-         let sl = List.filter (fun e -> HSet.mem e keep) sl in
-         (match sl with [] | [_] -> sa
-         | _ -> SAtom.add (Atom.Comp (Access (a, sl), op,  t)) sa)
-      | Atom.Comp (t, op, Access (a, sl)) when H.equal a hSync ->
-         let sl = List.filter (fun e -> HSet.mem e keep) sl in
-         (match sl with [] | [_] -> sa
-         | _ -> SAtom.add (Atom.Comp (t, op, Access (a, sl))) sa)
-      | _ -> SAtom.add a sa
-    ) sa SAtom.empty in
 
     (* Simplify here in case adding reads added duplicates *)
     try (Cube.simplify_atoms sa) :: pres (* Cube.create_normal ? *)
     with Exit -> pres
 
-  ) [] wrcp in
+  ) [] wrcp in pres
+
+end in
 
   TimeSatRead.pause ();
 

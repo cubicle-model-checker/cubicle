@@ -24,10 +24,17 @@ val remap_events :
     HMap.t HMap.t ->
   Variable.t H2Map.t list*)
 
+(* val build_event_substs : *)
+(*   ((H.t * H.t * H.t * H.t list) * (cop * Types.Term.t) list) HMap.t -> *)
+(*   ('a * H2Set.t * H2Set.t) -> *)
+(*   ((H.t * H.t * H.t * H.t list) * (cop * Types.Term.t) list) HMap.t -> *)
+(*   ('a * H2Set.t * H2Set.t) -> *)
+(*     H.t HMap.t list *)
+               
 val build_event_substs :
   ((H.t * H.t * H.t * H.t list) * (cop * Types.Term.t) list) HMap.t ->
-  ('a * H2Set.t * H2Set.t) ->
+  ('a * Weakrel.Rel.t) ->
   ((H.t * H.t * H.t * H.t list) * (cop * Types.Term.t) list) HMap.t ->
-  ('a * H2Set.t * H2Set.t) ->
+  ('a * Weakrel.Rel.t) ->
     H.t HMap.t list
 

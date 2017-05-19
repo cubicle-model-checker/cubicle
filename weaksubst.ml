@@ -185,30 +185,39 @@ let get_evts ar =
 (*     else true *)
 (*   ) cs *)
 
-let sync_agree cs ef pf et pt (_, _, sf) (_, _, st) =
+(* let sync_agree cs ef pf et pt (_, _, sf) (_, _, st) = *)
+let sync_agree cs ef pf et pt relf relt =
   let r = HMap.for_all (fun ef0 et0 ->
-    if H2Set.mem (ef0, ef) sf then H2Set.mem (et0, et) st else true
+    (* if H2Set.mem (ef0, ef) sf then H2Set.mem (et0, et) st else true *)
     (* if List.exists (fun sf -> HSet.mem ef0 sf && HSet.mem ef sf) sf then *)
     (*    List.exists (fun st -> HSet.mem et0 st && HSet.mem et st) st *)
     (* else true *)
+    if Weakrel.Rel.mem_eq ef0 ef relf then Weakrel.Rel.mem_eq et0 et relt
+    else if Weakrel.Rel.mem_eq ef ef0 relf then Weakrel.Rel.mem_eq et et0 relt
+    else true
   ) cs in
   (* Format.fprintf Format.std_formatter "Sync agree : %b\n" r; *)
   r
   
 let rel_agree cs ef pf et pt relf relt =
   let r = HMap.for_all (fun ef0 et0 ->
-    if H2Set.mem (ef0, ef) relf then H2Set.mem (et0, et) relt
-    else if H2Set.mem (ef, ef0) relf then H2Set.mem (et, et0) relt
+    (* if H2Set.mem (ef0, ef) relf then H2Set.mem (et0, et) relt *)
+    (* else if H2Set.mem (ef, ef0) relf then H2Set.mem (et, et0) relt *)
+    (* else true *)
+    if Weakrel.Rel.mem_lt ef0 ef relf then Weakrel.Rel.mem_lt et0 et relt
+    else if Weakrel.Rel.mem_lt ef ef0 relf then Weakrel.Rel.mem_lt et et0 relt
     else true
   ) cs in
   (* Format.fprintf Format.std_formatter "Rel agree : %b\n" r; *)
   r
 
 let make_substs esf relf est relt =
-  let (_, ghbf, _) = relf in
-  let (_, ghbt, _) = relt in
-  let sclocf = H2Set.empty in
-  let scloct = H2Set.empty in
+  let (_, ghbf) = relf in
+  let (_, ghbt) = relt in
+  (* let (_, ghbf, _) = relf in *)
+  (* let (_, ghbt, _) = relt in *)
+  (* let sclocf = H2Set.empty in *)
+  (* let scloct = H2Set.empty in *)
   let rec aux csl cs esf est =
     try
       let ef, (((pf, df, vf, vif) as edf, valf) as evtf) = HMap.choose esf in
@@ -221,16 +230,20 @@ let make_substs esf relf est relt =
            && H.equal pf pt
            && is_read edf && is_read edt
            (* && po_agree cs ef pf et pt relf relt *)
-           && sync_agree cs ef pf et pt relf relt
-           && rel_agree cs ef pf et pt sclocf scloct
+           (* && sync_agree cs ef pf et pt relf relt *)
+           (* && rel_agree cs ef pf et pt sclocf scloct *)
+           (* && rel_agree cs ef pf et pt ghbf ghbt *)
+           && sync_agree cs ef pf et pt ghbf ghbt
            && rel_agree cs ef pf et pt ghbf ghbt
           then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
         else if compat_evts evtf evtt
            && H.equal pf pt
            (* && po_agree cs ef pf et pt relf relt *)
-           && sync_agree cs ef pf et pt relf relt
-           && rel_agree cs ef pf et pt sclocf scloct
-           && rel_agree cs ef pf et pt ghbf ghbt                  
+           (* && sync_agree cs ef pf et pt relf relt *)
+           (* && rel_agree cs ef pf et pt sclocf scloct *)
+           (* && rel_agree cs ef pf et pt ghbf ghbt *)
+           && sync_agree cs ef pf et pt ghbf ghbt
+           && rel_agree cs ef pf et pt ghbf ghbt
           then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
 	else begin (*Format.fprintf Format.std_formatter "No\n";*) csl end
       ) est csl
