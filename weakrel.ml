@@ -23,32 +23,27 @@ let filter_rels_set sa =
   ) sa
 
 
-
-let find_event_safe e evts =
-  try HMap.find e evts with Not_found -> (hNone, hNone, hNone, [])
-
-let extract_rels (sa, (fce, ghb, sync)) at = match at with
+(* process could be removed in fence (kept for simplicity) *)
+let extract_rels (fce, ghb, sync) at = match at with
   | Atom.Comp (Access (a, [p; e]), Eq, Elem _)
   | Atom.Comp (Elem _, Eq, Access (a, [p; e])) when H.equal a hFence ->
-     let pfce = try HMap.find p fce with Not_found -> HSet.empty in
-     let fce = HMap.add p (HSet.add e pfce) fce in
-     (sa, (fce, ghb, sync))
+     HMap.add p e fce, ghb, sync
   | Atom.Comp (Access (a, [ef; et]), Eq, Elem _)
   | Atom.Comp (Elem _, Eq, Access (a, [ef; et])) when H.equal a hGhb ->
-     (sa, (fce, H2Set.add (ef, et) ghb, sync))
-  | Atom.Comp (Access (a, sl), Eq, Elem _)
-  | Atom.Comp (Elem _, Eq, Access (a, sl)) when H.equal a hSync ->
-     (sa, (fce, ghb, (HSet.of_list sl) :: sync))
-  | _ -> (SAtom.add at sa, (fce, ghb, sync))
+     fce, H2Set.add (ef, et) ghb, sync
+  | Atom.Comp (Access (a, [e1; e2]), Eq, Elem _)
+  | Atom.Comp (Elem _, Eq, Access (a, [e1; e2])) when H.equal a hSync ->
+     fce, ghb, H2Set.add (e1, e2) sync
+  | _ -> fce, ghb, sync
 
 
 
-let init_acc = (SAtom.empty, (HMap.empty, H2Set.empty, []))
+let init_acc = HMap.empty, H2Set.empty, H2Set.empty
 
-let extract_rels_array evts ar =
+let extract_rels_array ar =
   Array.fold_left (fun acc a -> extract_rels acc a) init_acc ar
 
-let extract_rels_set evts sa =
+let extract_rels_set sa =
   SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc
 
 
@@ -296,7 +291,10 @@ let make_scloc evts (_, po, f, rf, co, fr, s) =
  *)
 
 
-let add_rel_aux rel nef net =
+
+             
+
+let add_pairs_aux rel nef net =
   let pre = H2Set.filter (fun (_, et) -> H.equal et nef) rel in
   let post = H2Set.filter (fun (ef, _) -> H.equal net ef) rel in
   let pre = H2Set.add (nef, net) pre in
@@ -305,17 +303,32 @@ let add_rel_aux rel nef net =
     H2Set.fold (fun (_, et) rel -> H2Set.add (ef, et) rel) post rel
   ) pre rel
 
-let add_rel sync rel nef net =
-  let sef = try List.find (HSet.mem nef) sync
-            with Not_found -> HSet.singleton nef in
-  let set = try List.find (HSet.mem net) sync
-            with Not_found -> HSet.singleton net in
-  HSet.fold (fun nef rel ->
-    HSet.fold (fun net rel -> add_rel_aux rel nef net) set rel
-  ) sef rel
+let add_pairs_internal sync rel nef net nrel =
+  let sef, set = H2Set.fold (fun (e1, e2) (sef, set) ->
+    let sef = if H.equal e1 nef then HSet.add e2 sef
+              else if H.equal e2 nef then HSet.add e1 sef
+              else sef in
+    let set = if H.equal e1 net then HSet.add e2 set
+              else if H.equal e2 net then HSet.add e1 set
+              else set in
+    sef, set
+  ) sync (HSet.singleton nef, HSet.singleton net) in
+  HSet.fold (fun nef nrel ->
+    HSet.fold (fun net nrel ->
+      let npairs = add_pairs_aux rel nef net in
+      H2Set.union npairs nrel
+    ) set nrel
+  ) sef nrel (* MUST DO SIMPLER : query pre/post first, then add
+                                  pairs for all elems in sync *)
+
+let add_pairs sync rel nef net =
+  add_pairs_internal sync rel nef net rel
+
+let get_new_pairs sync rel nef net =
+  add_pairs_internal sync rel nef net H2Set.empty
 
 
-
+(* let acyclic rel = not (H2Set.exists (fun (e1, e2) -> H.equal e1 e2) rel) *)
 let acyclic rel =
   not (H2Set.exists (fun (e1a, e2a) ->
     H2Set.exists (fun (e1b, e2b) -> H.equal e1a e2b && H.equal e2a e1b) rel

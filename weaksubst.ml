@@ -186,27 +186,37 @@ let get_evts ar =
 (*   ) cs *)
 
 let sync_agree cs ef pf et pt (_, _, sf) (_, _, st) =
-  HMap.for_all (fun ef0 et0 ->
-    if List.exists (fun sf -> HSet.mem ef0 sf && HSet.mem ef sf) sf then
-       List.exists (fun st -> HSet.mem et0 st && HSet.mem et st) st
-    else true
-  ) cs
-
+  let r = HMap.for_all (fun ef0 et0 ->
+    if H2Set.mem (ef0, ef) sf then H2Set.mem (et0, et) st else true
+    (* if List.exists (fun sf -> HSet.mem ef0 sf && HSet.mem ef sf) sf then *)
+    (*    List.exists (fun st -> HSet.mem et0 st && HSet.mem et st) st *)
+    (* else true *)
+  ) cs in
+  (* Format.fprintf Format.std_formatter "Sync agree : %b\n" r; *)
+  r
+  
 let rel_agree cs ef pf et pt relf relt =
-  HMap.for_all (fun ef0 et0 ->
+  let r = HMap.for_all (fun ef0 et0 ->
     if H2Set.mem (ef0, ef) relf then H2Set.mem (et0, et) relt
     else if H2Set.mem (ef, ef0) relf then H2Set.mem (et, et0) relt
     else true
-  ) cs
+  ) cs in
+  (* Format.fprintf Format.std_formatter "Rel agree : %b\n" r; *)
+  r
 
-let make_substs esf relf ghbf sclocf
-                est relt ghbt scloct =
+let make_substs esf relf est relt =
+  let (_, ghbf, _) = relf in
+  let (_, ghbt, _) = relt in
+  let sclocf = H2Set.empty in
+  let scloct = H2Set.empty in
   let rec aux csl cs esf est =
     try
       let ef, (((pf, df, vf, vif) as edf, valf) as evtf) = HMap.choose esf in
+      (* Format.fprintf Format.std_formatter "From %a\n" H.print ef; *)
       let esf = HMap.remove ef esf in
       let csl = HMap.fold (
         fun et (((pt, dt, vt, vit) as edt, valt) as evtt) csl ->
+        (* Format.fprintf Format.std_formatter "Try %a\n" H.print et; *)
         if valf = [] && valt = []
            && H.equal pf pt
            && is_read edf && is_read edt
@@ -222,7 +232,7 @@ let make_substs esf relf ghbf sclocf
            && rel_agree cs ef pf et pt sclocf scloct
            && rel_agree cs ef pf et pt ghbf ghbt                  
           then aux csl (HMap.add ef et cs) esf (HMap.remove et est)
-	else csl
+	else begin (*Format.fprintf Format.std_formatter "No\n";*) csl end
       ) est csl
       in csl
     with Not_found ->
@@ -231,34 +241,32 @@ let make_substs esf relf ghbf sclocf
   aux [] HMap.empty esf est
 
 (* from : visited node, more general / to : node to test, less general *)
-let build_event_substs from_evts from_rels from_ghb from_scloc
-                       to_evts to_rels to_ghb to_scloc =
-(*
-  let fprintf s = Format.fprintf Format.std_formatter s in
- 
-  fprintf "----------\nEvts from : \n";
-  HMap.iter (fun e ((p, d, v, vi), vals) ->
-    fprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
-  ) from_evts;
-  fprintf "\n";
-  H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) from_prop;
-  fprintf "\n----------\nEvts to : \n";
-  HMap.iter (fun e ((p, d, v, vi), vals) ->
-    fprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals);
-  ) to_evts;
-  fprintf "\n";
-  H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) to_prop;
-  fprintf "\n----------\n";  *)
+let build_event_substs from_evts from_rels to_evts to_rels =
+
+  (* let fprintf s = Format.fprintf Format.std_formatter s in *)
+  (* fprintf "----------\nEvts from : \n"; *)
+  (* HMap.iter (fun e ((p, d, v, vi), vals) -> *)
+  (*   fprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals); *)
+  (* ) from_evts; *)
+  (* fprintf "\n"; *)
+  (* let (_, fghb, _) = from_rels in *)
+  (* H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) fghb; *)
+  (* fprintf "\n----------\nEvts to : \n"; *)
+  (* HMap.iter (fun e ((p, d, v, vi), vals) -> *)
+  (*   fprintf "%a:%a:%a:%a[%a](%d)  " H.print e H.print p H.print d H.print v (H.print_list ",") vi (List.length vals); *)
+  (* ) to_evts; *)
+  (* fprintf "\n"; *)
+  (* let (_, tghb, _) = from_rels in   *)
+  (* H2Set.iter (fun (ef, et) -> fprintf "%a < %a   " H.print ef H.print et) tghb; *)
+  (* fprintf "\n----------\n";   *)
   TimeCSubst.start ();
-  let es = make_substs from_evts from_rels from_ghb from_scloc
-                       to_evts to_rels to_ghb to_scloc in
-(*
-  List.iter (fun s ->
-    fprintf "Subst :";
-    HMap.iter (fun ef et -> fprintf " %a->%a" H.print ef H.print et) s;
-    fprintf "\n"
-  ) es;
-  if List.length es = 0 then fprintf "No subst\n"; *)
+  let es = make_substs from_evts from_rels to_evts to_rels in
+  (* List.iter (fun s -> *)
+  (*   fprintf "Subst :"; *)
+  (*   HMap.iter (fun ef et -> fprintf " %a->%a" H.print ef H.print et) s; *)
+  (*   fprintf "\n" *)
+  (* ) es; *)
+  (* if List.length es = 0 then fprintf "No subst\n"; *)
   TimeCSubst.pause ();
   es
 

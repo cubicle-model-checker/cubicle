@@ -3,19 +3,13 @@ open Types
 open Weakmem
 open Weakevent
 
-val filter_rels_array : SAtom.elt array -> SAtom.t
+val filter_rels_array : ArrayAtom.t -> SAtom.t
 
 val filter_rels_set : SAtom.t -> SAtom.t
 
-val extract_rels_array :
-  ((H.t * H.t * H.t * H.t list) * 'c) HMap.t ->
-  ArrayAtom.t ->
-    SAtom.t * (HSet.t HMap.t * H2Set.t * HSet.t list)
+val extract_rels_array : ArrayAtom.t -> H.t HMap.t * H2Set.t * H2Set.t
 
-val extract_rels_set :
-  ((H.t * H.t * H.t * H.t list) * 'c) HMap.t ->
-  SAtom.t ->
-    SAtom.t * (HSet.t HMap.t * H2Set.t * HSet.t list)
+val extract_rels_set : SAtom.t -> H.t HMap.t * H2Set.t * H2Set.t
 
 (*
 val make_ghb :
@@ -32,9 +26,11 @@ val make_scloc :
  *)
 
 
-val add_rel_aux : H2Set.t -> H.t -> H.t -> H2Set.t
+val add_pairs_aux : H2Set.t -> H.t -> H.t -> H2Set.t
 
-val add_rel : HSet.t list -> H2Set.t -> H.t -> H.t -> H2Set.t
+val add_pairs : H2Set.t -> H2Set.t -> H.t -> H.t -> H2Set.t
+
+val get_new_pairs : H2Set.t -> H2Set.t -> H.t -> H.t -> H2Set.t
 
 val acyclic : H2Set.t -> bool
       

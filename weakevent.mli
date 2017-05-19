@@ -44,3 +44,7 @@ val unsat_read_events :
 val sat_events : 
   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
     ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
+
+val events_by_thread :
+  ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
+    (H.t * ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list)) list HMap.t

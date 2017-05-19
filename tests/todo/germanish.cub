@@ -15,51 +15,51 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
 
-transition req_shared (n)
-requires { read(n, Curcmd) = Empty && Cache[n] = Invalid }
+transition req_shared ([n])
+requires { Curcmd = Empty && Cache[n] = Invalid }
 { 
-  write(n, Curcmd, Reqs); 
-  write(n, Curptr, n) ;
+  Curcmd := Reqs; 
+  Curptr := n;
 }
     
-transition req_exclusive (n)
-requires { read(n, Curcmd) = Empty && Cache[n] <> Exclusive }
+transition req_exclusive ([n])
+requires { Curcmd = Empty && Cache[n] <> Exclusive }
 { 
-  write(n, Curcmd, Reqe); 
-  write(n, Curptr, n);
+  Curcmd := Reqe; 
+  Curptr := n;
 }
     
-transition inv_1 (n)
-requires { read(n, Shrset[n])=True  &&  read(n, Curcmd) = Reqe }
+transition inv_1 ([n])
+requires { Shrset[n] = True  &&  Curcmd = Reqe }
 { 
-  write(n, Exgntd, False);
+  Exgntd := False;
   Cache[n] := Invalid;
-  write(n, Shrset[n], False);
+  Shrset[n] := False;
 }
 
-transition inv_2 (n)
-requires { read(n, Shrset[n])=True  && read(n, Curcmd) = Reqs && read(n, Exgntd)=True }
+transition inv_2 ([n])
+requires { Shrset[n] = True  && Curcmd = Reqs && Exgntd = True }
 { 
-  write(n, Exgntd, False);
+  Exgntd := False;
   Cache[n] := Invalid;
-  write(n, Shrset[n], False);
+  Shrset[n] := False;
 }
     
-transition gnt_shared (n)
-requires { read(n, Curptr) = n && read(n, Curcmd) = Reqs && read(n, Exgntd) = False }
+transition gnt_shared ([n])
+requires { Curptr = n && Curcmd = Reqs && Exgntd = False }
 { 
-  write(n, Curcmd, Empty);
-  write(n, Shrset[n], True);
+  Curcmd := Empty;
+  Shrset[n] := True;
   Cache[n] := Shared;
 }
 
-transition gnt_exclusive (n)
-requires { read(n, Shrset[n]) = False && read(n, Curcmd) = Reqe &&
-           read(n, Exgntd) = False && read(n, Curptr) = n &&
-	   forall_other l. read(n, Shrset[l]) = False }
+transition gnt_exclusive ([n])
+requires { Shrset[n] = False && Curcmd = Reqe &&
+           Exgntd = False && Curptr = n &&
+	   forall_other l. Shrset[l] = False }
 { 
-  write(n, Curcmd, Empty); 
-  write(n, Exgntd, True);
-  write(n, Shrset[n], True);
+  Curcmd := Empty; 
+  Exgntd := True;
+  Shrset[n] := True;
   Cache[n] := Exclusive;
 }

@@ -103,7 +103,7 @@ let update_eids eids p e =
   let peids = try HMap.find p eids with Not_found -> IntSet.empty in
   HMap.add p (IntSet.add (int_of_e e) peids) eids
 
-let extract_events (sa_pure, rds, wts, fces, eids, evts) at = match at with
+let extract_event (sa_pure, rds, wts, fces, eids, evts) at = match at with
   (* Fence *)
   | Atom.Comp (Fence p, _, _) | Atom.Comp (_, _, Fence p) ->
      (sa_pure, rds, wts, p :: fces, eids, evts) (* single fence allowed *)
@@ -152,10 +152,10 @@ let post_process (sa_pure, rds, wts, fces, eids, evts) =
   sa_pure, rds, wts, fces, eids, evts
 
 let extract_events_array ar =
-  post_process (Array.fold_left (fun acc a -> extract_events acc a) init_acc ar)
+  post_process (Array.fold_left (fun acc a -> extract_event acc a) init_acc ar)
 
 let extract_events_set sa =
-  post_process (SAtom.fold (fun a acc -> extract_events acc a) sa init_acc)
+  post_process (SAtom.fold (fun a acc -> extract_event acc a) sa init_acc)
 
 let write_events evts =
   HMap.filter (fun _ (ed, _) -> is_write ed) evts
@@ -165,3 +165,10 @@ let unsat_read_events evts =
 
 let sat_events evts =
   HMap.filter (fun _ (_, vals) -> vals = []) evts
+
+let events_by_thread evts = (* by chance, this sorts event in correct order *)
+  HMap.fold (fun e ((p, _, _, _) as ed, vals) evts ->
+    let pevts = try HMap.find p evts with Not_found -> [] in
+    let pevts = (e, (ed, vals)) :: pevts in
+    HMap.add p pevts evts
+  ) evts HMap.empty

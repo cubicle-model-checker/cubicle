@@ -17,29 +17,29 @@ requires { A[z] = Idle }
   A[z] := Lsup;
 }
 
-transition sup_exit (z)
-requires { A[z] = Lsup && forall_other j. read(z, Cpt[z,j]) = True }
+transition sup_exit ([z])
+requires { A[z] = Lsup && forall_other j. Cpt[z,j] = True }
 { 
-  write(z, Cpt[x,y], case | x = z : False (*| _ : Cpt[x,y]*));
+  Cpt[x,y] := case | x = z : False (*| _ : Cpt[x,y]*);
   A[z] := Wait;
 }
  
-transition sup_incr1 (z j)
-requires { A[z] = Lsup && j < z && read(z, Cpt[z,j]) = False }
+transition sup_incr1 ([z] j)
+requires { A[z] = Lsup && j < z && Cpt[z,j] = False }
 { 
-  write(z, Cpt[z,j], True);
+  Cpt[z,j] := True;
 }
 
-transition sup_incr2 (z j)
-requires { A[z] = Lsup &&  z < j && A[j] = Idle && read(z, Cpt[z,j]) = False }
+transition sup_incr2 ([z] j)
+requires { A[z] = Lsup &&  z < j && A[j] = Idle && Cpt[z,j] = False }
 { 
-  write(z, Cpt[z,j], True);
+  Cpt[z,j] := True;
 }
 
-transition sup_abort (z j)
-requires { A[z] = Lsup &&  z < j && A[j] <> Idle && read(z, Cpt[z,j]) = False }
+transition sup_abort ([z] j)
+requires { A[z] = Lsup &&  z < j && A[j] <> Idle && Cpt[z,j] = False }
 { 
-  write(z, Cpt[x,y], case | x = z : False (*| _ : Cpt[x,y]*));
+  Cpt[x,y] := case | x = z : False (*| _ : Cpt[x,y]*);
 }
 
 
@@ -49,29 +49,29 @@ requires { A[z] = Wait }
   A[z] := Linf
 }
 
-transition inf_exit (z)
-requires { A[z] = Linf && forall_other j. read(z, Cpt[z,j]) = True }
+transition inf_exit ([z])
+requires { A[z] = Linf && forall_other j. Cpt[z,j] = True }
 { 
-  write(z, Cpt[x,y], case | x = z : False (*| _ : Cpt[x,y]*));
+  Cpt[x,y] := case | x = z : False (*| _ : Cpt[x,y]*);
   A[z] := Crit;
 }
 
-transition inf_incr1 (z j)
-requires { A[z] = Linf && z < j && read(z, Cpt[z,j]) = False }
+transition inf_incr1 ([z] j)
+requires { A[z] = Linf && z < j && Cpt[z,j] = False }
 { 
-  write(z, Cpt[z,j], True);
+  Cpt[z,j] := True;
 }
 
-transition inf_incr2 (z j)
-requires { A[z] = Linf &&  j < z && A[j] = Idle && read(z, Cpt[z,j]) = False }
+transition inf_incr2 ([z] j)
+requires { A[z] = Linf &&  j < z && A[j] = Idle && Cpt[z,j] = False }
 { 
-  write(z, Cpt[z,j], True);
+  Cpt[z,j] := True;
 }
 
-transition inf_abort (z j)
-requires { A[z] = Linf &&  j < z && A[j] <> Idle && read(z, Cpt[z,j]) = False }
+transition inf_abort ([z] j)
+requires { A[z] = Linf &&  j < z && A[j] <> Idle && Cpt[z,j] = False }
 { 
-  write(z, Cpt[x,y], case | x = z : False (*| _ : Cpt[x,y]*));
+  Cpt[x,y] := case | x = z : False (*| _ : Cpt[x,y]*);
 }
 
 transition tr3 (z)

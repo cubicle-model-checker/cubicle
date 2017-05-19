@@ -1,7 +1,7 @@
 
 (* Spinlock example *)
 
-number_procs 3
+(* number_procs 3 *)
 
 (*
   2 procs : 33 N, 64 FP, 64 SC, 0,3s

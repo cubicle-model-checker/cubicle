@@ -36,58 +36,56 @@ init (i) { T_set = False && X[i] = False && P[i] = NCS }
 unsafe (i j) { P[i] = CS && P[j] = CS }
 
 
-transition start (i)
+transition start ([i])
 requires { P[i] = NCS }
 {
   P[i] := LOOP;
-  write(i, X[i], True);
+  X[i] := True;
 }
 
 
-transition wait (i j)
-fences (i)
-requires { P[i] = LOOP && read(i, X[j]) = True }
+transition wait ([i] j)
+requires { P[i] = LOOP && fence(i) && X[j] = True }
 {
   P[i] := AWAIT;
-  write(i, X[i], False);
+  X[i] := False;
 }
 
 
-transition enter (i)
-fences (i)
-requires { P[i] = LOOP && forall_other j. read(i, X[j]) = False }
+transition enter ([i])
+requires { P[i] = LOOP && fence(i) && forall_other j. X[j] = False }
 {
   P[i] := CS;
 }
 
 
-transition awaited_1 (i)
-requires { P[i] = AWAIT && read(i, T_set) = False }
+transition awaited_1 ([i])
+requires { P[i] = AWAIT && T_set = False }
 {
   P[i] := TURN;
 }
 
-transition awaited_2 (i)
-requires { P[i] = AWAIT && read(i, T_set) = True && read(i, T) = i }
+transition awaited_2 ([i])
+requires { P[i] = AWAIT && T_set = True && T = i }
 {
   P[i] := TURN;
 }
 
 
-transition turn (i)
+transition turn ([i])
 requires { P[i] = TURN }
 {
   P[i] := LOOP;
-  write(i, X[i], True);
-  write(i, T_set, True);
-  write(i, T, i);
+  X[i] := True;
+  T_set := True;
+  T := i;
 }
 
 
-transition loop (i)
+transition loop ([i])
 requires { P[i] = CS }
 {
   P[i] := NCS;
-  write(i, X[i], False);
-  write(i, T_set, False);
+  X[i] := False;
+  T_set := False;
 }

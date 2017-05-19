@@ -222,12 +222,25 @@ let instantiate_events sa =
   ) SAtom.empty fce in
 
   (* Generate sync for synchronous events (for reads : even on <> threads) *)
-  let mk_sync eid_range = HMap.fold (fun _ peids sync ->
-      IntSet.fold (fun eid sync -> (mk_hE eid) :: sync
-    ) peids sync) eid_range [] in
-  let mk_sync_sa sync = match sync with [] | [_] -> SAtom.empty | _ ->
-    SAtom.singleton (mk_pred hSync (List.rev sync)) in
-  let sa_sync = mk_sync_sa (mk_sync (eid_diff eids eids_before)) in
+  (* let mk_sync eid_range = HMap.fold (fun _ peids sync -> *)
+  (*     IntSet.fold (fun eid sync -> (mk_hE eid) :: sync *)
+  (*   ) peids sync) eid_range [] in *)
+  (* let mk_sync_sa sync = match sync with [] | [_] -> SAtom.empty | _ -> *)
+  (*   SAtom.singleton (mk_pred hSync (List.rev sync)) in *)
+  (* let sa_sync = mk_sync_sa (mk_sync (eid_diff eids eids_before)) in *)
+  let nsync_l = HMap.fold (fun _ peids sync ->
+    IntSet.fold (fun eid sync -> (mk_hE eid) :: sync
+  ) peids sync) (eid_diff eids eids_before) [] in
+  let mk_sync l = let rec aux s = function
+    | [] | [_] -> s
+    | e1 :: el ->
+       let s = List.fold_left (fun s e2 ->
+         H2Set.add (e1, e2) (H2Set.add (e2, e1) s)) s el in
+       aux s el
+  in aux H2Set.empty l in
+  let nsync = mk_sync nsync_l in
+  let sa_sync = H2Set.fold (fun (e1, e2) sa ->
+    SAtom.add (mk_pred hSync [e1; e2]) sa) nsync SAtom.empty in
 
   (* Merge all atom sets *)
   SAtom.union sa_pure (SAtom.union sa_fence

@@ -311,36 +311,29 @@ end = struct
   let preprocess_n n = (* may filter out evts too *)
     let open Weakmem in
     let sa = n.cube.Cube.litterals in
-    let _, _, _, _, eids, evts = Weakevent.extract_events_set sa in
-    let sa, rels = Weakrel.extract_rels_set evts sa in
+    let _, _, _, _, _, evts = Weakevent.extract_events_set sa in
     let sat_evt = Weakevent.sat_events evts in
+    let rels = Weakrel.extract_rels_set sa in
+    let sa = Weakrel.filter_rels_set sa in
     let sa = SAtom.filter (fun a -> match a with
       | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
       | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
        when H.equal a hE && (H.equal f hVar || is_param f)
-            && HMap.mem e sat_evt -> false
+            && HMap.mem e sat_evt -> false (* beware first writes ! *)
       | _ -> true
     ) sa in
-    (* let ghb = Weakrel.make_ghb evts rels in *)
-    (* let scloc = Weakrel.make_scloc evts rels in *)
-    let (_, ghb, _) = rels in
-    let scloc = H2Set.empty in
-    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels, ghb, scloc
+    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels
 
-  let preprocess_ar ar =
-    let _, _, _, _, eids, evts = Weakevent.extract_events_array ar in
-    let _, rels = Weakrel.extract_rels_array evts ar in
-    (* let ghb = Weakrel.make_ghb evts rels in *)
-    (* let scloc = Weakrel.make_scloc evts rels in *)
-    let (_, ghb, _) = rels in
-    let scloc = Weakmem.H2Set.empty in
-    evts, rels, ghb, scloc (* could extract ghb only once at start *)
-                              (* since it's the same even with proc renaming *)
+  let get_evts_rels_ar ar = (* this is done after renaming *)
+    let _, _, _, _, _, evts = Weakevent.extract_events_array ar in
+    let rels = Weakrel.extract_rels_array ar in
+    evts, rels (* could extract ghb/rels only once at start --> DO THAT *)
+               (* since it's the same even with proc renaming *)
 module HAA = Hashtbl.Make (ArrayAtom)
 let cache = HAA.create 200001
-                       
-  let check_and_add (n, to_evts, to_rels, to_ghb, to_scloc) nodes vis_n=
-    let vis_n_cube = Cube.create vis_n.cube.Cube.vars
+
+  let check_and_add (n, to_evts, to_rels) nodes vis_n=
+    let vis_n_cube = Cube.create vis_n.cube.Cube.vars (*for inst only*)
                        (Weakrel.filter_rels_set vis_n.cube.Cube.litterals) in
     let n_array = Node.array n in
     let vis_array = vis_n.cube.Cube.array in
@@ -356,18 +349,16 @@ let cache = HAA.create 200001
       let d = Instantiation.relevant ~of_cube:vis_n_cube ~to_cube:n.cube in
       let n = List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
-        (* let from_evts, from_rels, from_ghb = preprocess_ar vis_renamed in *)
-        let from_evts, from_rels, from_ghb, from_scloc =
+        let from_evts, from_rels =
           try (* msi : 3360 miss / 297438 hits *)
             HAA.find cache vis_renamed (* that may take some time *)
           with Not_found ->           (* but it's worse not to do it*)
-            let r = preprocess_ar vis_renamed in
+            let r = get_evts_rels_ar vis_renamed in
             HAA.add cache vis_renamed r;
             r (* TOO MANY PROC PERMS BTW *) (* WHY PETERSON 2 DIFF ON SC ? *)
         in (* SIMPLIFY NODES, SO FIXPOINT BECOMES EASY *)
         let vis_renamed_l = (Weaksubst.remap_events vis_renamed
-          (Weaksubst.build_event_substs from_evts from_rels from_ghb from_scloc
-                                        to_evts to_rels to_ghb to_scloc)) in
+          (Weaksubst.build_event_substs from_evts from_rels to_evts to_rels)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
 (* Format.fprintf Format.std_formatter "Matches for perm : %d\n" (List.length vis_renamed_l); *)
