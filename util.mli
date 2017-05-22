@@ -33,6 +33,7 @@ module TimeCertificate : Timer.S
 module TimeSafety : Timer.S
 module TimeGhb : Timer.S
 module TimePESubst : Timer.S
+module TimeFPRels : Timer.S
 module TimeCSubst : Timer.S
 module TimeASubst : Timer.S
 module TimeSatRead : Timer.S

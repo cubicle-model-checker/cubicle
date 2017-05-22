@@ -494,3 +494,13 @@ let extract_rels_set sa =
   let sa = SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc in
   TimeGhb.pause ();
   sa
+
+
+
+let subst sigma (fces, ghb) =
+  let fces = HMap.fold (fun p e fces ->
+    HMap.add (Variable.subst sigma p) e fces
+  ) fces HMap.empty in
+  fces, ghb
+
+

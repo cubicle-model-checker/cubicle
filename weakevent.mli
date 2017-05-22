@@ -48,3 +48,9 @@ val sat_events :
 val events_by_thread :
   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
     (H.t * ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list)) list HMap.t
+
+
+val subst :
+  Variable.subst ->
+  ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
+  ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t

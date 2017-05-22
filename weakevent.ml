@@ -149,7 +149,7 @@ let init_acc =
 
 let post_process (sa_pure, rds, wts, fces, eids, evts) =
   let evts = HMap.map (fun (ed, vals) -> sort_params ed, vals) evts in
-  sa_pure, rds, wts, fces, eids, evts
+  sa_pure, rds, wts, fces, eids, evts (* should be sorted already *)
 
 let extract_events_array ar =
   post_process (Array.fold_left (fun acc a -> extract_event acc a) init_acc ar)
@@ -172,3 +172,12 @@ let events_by_thread evts = (* by chance, this sorts event in correct order *)
     let pevts = (e, (ed, vals)) :: pevts in
     HMap.add p pevts evts
   ) evts HMap.empty
+
+
+let subst sigma evts =
+  HMap.map (fun ((p, d, v, vi), vals) ->
+    let pdvvi = Variable.subst sigma p, d, v,
+                List.map (Variable.subst sigma) vi in
+    let vals = List.map (fun (cop, t) -> cop, Term.subst sigma t) vals in
+    pdvvi, vals
+  ) evts

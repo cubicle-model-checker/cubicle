@@ -34,6 +34,7 @@ module TimeSafety = Timer.Make (Options)
 
 module TimeGhb = Timer.Make (Options)
 module TimePESubst = Timer.Make (Options)
+module TimeFPRels = Timer.Make (Options)
 module TimeCSubst = Timer.Make (Options)
 module TimeASubst = Timer.Make (Options)
 module TimeSatRead = Timer.Make (Options)

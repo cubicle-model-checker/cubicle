@@ -60,3 +60,5 @@ end
 val extract_rels_array : ArrayAtom.t -> H.t HMap.t * Rel.t
 
 val extract_rels_set : SAtom.t -> H.t HMap.t * Rel.t
+
+val subst : Variable.subst -> H.t HMap.t * Rel.t -> H.t HMap.t * Rel.t

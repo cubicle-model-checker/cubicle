@@ -8,45 +8,45 @@ weak var Max : int
 init (x) { PC[x] = NCS && Num[x] = 0 && 
            Max = 1 && Ticket[x] = 0 }
 
-invariant (x) { read(x, Max) < 0 }
+invariant (x) { x @ Max < 0 }
 
 unsafe (x y) { PC[x] = CS && PC[y] = CS }
 
-transition next_ticket (x)
+transition next_ticket ([x])
 { 
-  write(x, Ticket[j], case | _ : read(x, Max));
-  write(x, Max, read(x, Max) + 1);
+  Ticket[j] := case | _ : Max;
+  Max := Max + 1;
 }
 
-transition take_ticket (x)
-requires { PC[x] = NCS &&
-    forall_other j. read(x, Num[j]) < read(x, Max) }
+transition take_ticket ([x])
+requires { PC[x] = NCS && (*fence(x) &&*)
+    forall_other j. Num[j] < Max }
 {
   PC[x] := Choose;
-  write(x, Ticket[x], read(x, Max));
+  Ticket[x] := Max;
 }
 
-transition wait (x)
-requires { PC[x] = Choose }
+transition wait ([x])
+requires { PC[x] = Choose (*&& fence(x)*)}
 {
   PC[x] := Wait;
-  write(x, Num[x], read(x, Ticket[x]));
+  Num[x] := Ticket[x];
 }
 
-transition turn (x)
-requires { PC[x] = Wait && 
+transition turn ([x])
+requires { PC[x] = Wait && (*fence(x) &&*)
   forall_other j. 
-  (PC[j] <> Choose && read(x, Num[j]) = 0 ||
-   PC[j] <> Choose && read(x, Num[x]) < read(x, Num[j]) ||
+  (PC[j] <> Choose && Num[j] = 0 ||
+   PC[j] <> Choose && Num[x] < Num[j] ||
    PC[j] <> Choose &&
-   read(x, Num[x]) = read(x, Num[j]) && x < j) }
+   Num[x] = Num[j] && x < j) }
 {
   PC[x] := CS;
 }
 
-transition exit (x)
+transition exit ([x])
 requires { PC[x] = CS }
 {
   PC[x] := NCS;
-  write(x, Num[x], 0);
+  Num[x] := 0;
 }

@@ -249,6 +249,9 @@ let print_time_ghb () =
 let print_time_pesubst () =
   printf "FP Proc/Evt substitutions        : %a@." print_time (TimePESubst.get ())
 
+let print_time_fprels () =
+  printf "FP build relations (cached)      : %a@." print_time (TimeFPRels.get ())
+
 let print_time_csubst () =
   printf "Compute event id substitutions   : %a@." print_time (TimeCSubst.get ())
 
@@ -295,6 +298,7 @@ let print_report ~safe visited candidates =
       print_time_safety ();
       print_time_ghb ();
       print_time_pesubst ();
+      print_time_fprels ();
       print_time_csubst ();
       print_time_asubst ();
       print_time_satrd ();
