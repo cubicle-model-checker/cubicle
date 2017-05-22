@@ -1,8 +1,8 @@
 
 module H = Hstring
-module HTbl = Hstring.H
 module HMap = Hstring.HMap
 module HSet = Hstring.HSet
+module HTbl = Hstring.H
 
 module H2 = struct
   type t = (H.t * H.t)
@@ -10,7 +10,6 @@ module H2 = struct
     let c = H.compare s1a s2a in
     if c <> 0 then c else H.compare s1b s2b
 end
-
 module H2Map = Map.Make (H2)
 module H2Set = Set.Make (H2)
 
@@ -26,7 +25,6 @@ module HEvt = struct
     if c <> 0 then c else
     H.compare_list s1vi s2vi
 end
-
 module HEvtMap = struct
   include Map.Make (HEvt)
   exception Stop
@@ -41,11 +39,32 @@ module HEvtMap = struct
 end
 module HEvtSet = Set.Make (HEvt)
 
+module HVar = struct
+  type t = (H.t * H.t list)
+  let compare (s1v, s1vi) (s2v, s2vi) =
+    (* let c = H.compare s1v s2v in *)
+    let c = Pervasives.compare (H.view s1v) (H.view s2v) in
+    if c <> 0 then c else
+    H.compare_list s1vi s2vi
+end
+module HVarMap = struct
+  include Map.Make (HVar)
+  exception Stop
+  let findp p m =
+    let res = ref None in
+    begin try iter (fun k v -> if p k v then begin
+                    res := Some (k, v); raise Stop end) m
+          with Stop -> () end;
+    match !res with
+    | Some (k, v) -> k, v
+    | _ -> raise Not_found
+end
+module HVarSet = Set.Make (HVar)
+
 module HL = struct
   type t = H.t list
   let compare = H.compare_list
 end
-
 module HLMap = Map.Make (HL)
 module HLSet = Set.Make (HL)
 

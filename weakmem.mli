@@ -17,6 +17,16 @@ module HEvtMap : sig
 end
 module HEvtSet : Set.S with type elt = HEvt.t
 
+module HVar : sig
+  type t = (H.t * H.t list)
+  val compare : t -> t -> int
+end
+module HVarMap : sig
+  include Map.S with type key = HVar.t
+  val findp : (key -> 'a -> bool) -> 'a t -> (key * 'a)
+end
+module HVarSet : Set.S with type elt = HVar.t
+
 module HL : sig type t = H.t list val compare : t -> t -> int end
 module HLMap : Map.S with type key = HL.t
 module HLSet : Set.S with type elt = HL.t
