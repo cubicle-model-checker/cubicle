@@ -24,7 +24,7 @@ let filter_rels_set sa =
 
 
 (* process could be removed in fence (kept for simplicity) *)
-let extract_rels (fce, ghb, sync) at = match at with
+(*let extract_rels (fce, ghb, sync) at = match at with
   | Atom.Comp (Access (a, [p; e]), Eq, Elem _)
   | Atom.Comp (Elem _, Eq, Access (a, [p; e])) when H.equal a hFence ->
      HMap.add p e fce, ghb, sync
@@ -45,7 +45,7 @@ let extract_rels_array ar =
 
 let extract_rels_set sa =
   SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc
-
+ *)
 
 (*
 (* ghb = ppo U fence U co U rfe U fr *)
@@ -484,7 +484,13 @@ let extract_rels (fce, ghb) at = match at with
 let init_acc = HMap.empty, Rel.empty
 
 let extract_rels_array ar =
-  Array.fold_left (fun acc a -> extract_rels acc a) init_acc ar
+  TimeGhb.start ();
+  let ar = Array.fold_left (fun acc a -> extract_rels acc a) init_acc ar in
+  TimeGhb.pause ();
+  ar
 
 let extract_rels_set sa =
-  SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc
+  TimeGhb.start ();
+  let sa = SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc in
+  TimeGhb.pause ();
+  sa

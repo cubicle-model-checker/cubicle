@@ -217,7 +217,7 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (* S only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars nb_procs);
   List.iter (SMT.assume ~id) invs; (* without events *)
-  let sa = Weakwrite.satisfy_unsatisfied_reads cube.Cube.litterals in
+  let sa = Weakpre.satisfy_unsatisfied_reads cube.Cube.litterals in
   let f = make_formula_set ~fp:false sa in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init; (* without events *)

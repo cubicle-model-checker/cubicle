@@ -338,17 +338,19 @@ let cache = HAA.create 200001
     let n_array = Node.array n in
     let vis_array = vis_n.cube.Cube.array in
     (* if !Options.size_proc <> 0 then begin *)
-    (*   let from_evts = Weaksubst.get_evts vis_array in *)
-    (*   let vis_array_l = (Weaksubst.remap_events vis_array *)
-    (*     (Weaksubst.build_event_substs from_evts to_evts)) in *)
+    (*   let from_evts = Weakfp.get_evts vis_array in *)
+    (*   let vis_array_l = (Weakfp.remap_events vis_array *)
+    (*     (Weakfp.build_event_substs from_evts to_evts)) in *)
     (*   let vis_array_l = List.filter (fun v_ar -> *)
     (*     not (Cube.inconsistent_2arrays v_ar n_array)) vis_array_l in *)
     (*   List.fold_left (fun nodes v_ar -> *)
     (*     (vis_n, v_ar) :: nodes) nodes vis_array_l *)
     (* end else *)
+    TimePESubst.start ();
       let d = Instantiation.relevant ~of_cube:vis_n_cube ~to_cube:n.cube in
       let n = List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
+        (* let from_evts, from_rels = get_evts_rels_ar vis_renamed in *)
         let from_evts, from_rels =
           try (* msi : 3360 miss / 297438 hits *)
             HAA.find cache vis_renamed (* that may take some time *)
@@ -356,15 +358,16 @@ let cache = HAA.create 200001
             let r = get_evts_rels_ar vis_renamed in
             HAA.add cache vis_renamed r;
             r (* TOO MANY PROC PERMS BTW *) (* WHY PETERSON 2 DIFF ON SC ? *)
-        in (* SIMPLIFY NODES, SO FIXPOINT BECOMES EASY *)
-        let vis_renamed_l = (Weaksubst.remap_events vis_renamed
-          (Weaksubst.build_event_substs from_evts from_rels to_evts to_rels)) in
+        in (* SIMPLIFY NODES, SO FIXPOINT BECOMES EASIER *)
+        let vis_renamed_l = (Weakfp.remap_events vis_renamed
+          (Weakfp.build_event_substs from_evts from_rels to_evts to_rels)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
 (* Format.fprintf Format.std_formatter "Matches for perm : %d\n" (List.length vis_renamed_l); *)
         List.fold_left (fun nodes v_ren ->
 	  (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
-      ) nodes d in
+        ) nodes d in
+    TimePESubst.pause ();
 (* let lnodes = List.length nodes in *)
 (* let perms = ((List.length n) - lnodes) in *)
 (* if perms > 0 then begin *)

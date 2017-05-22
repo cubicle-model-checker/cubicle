@@ -4,12 +4,12 @@ number_procs 1
 weak var X : int
 weak var Y : int
 
-init () { X = 15 }
+init () { X = 50 }
 
 invariant (p) { p @ X < 0 }
 
 (* FORBIDDEN Final State *)
-unsafe (p) { p @ Y = 0 && p @ X = 13 }
+unsafe (p) { p @ Y = 0 && p @ X = 45 }
 
 transition t ([p])
 { X := X + 1 }
