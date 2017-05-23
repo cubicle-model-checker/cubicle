@@ -42,7 +42,7 @@ let compatible_terms cop1 t1 cop2 t2 =
      begin match cop1, cop2 with
      | CEq, CEq -> equ | CEq, CNeq -> false
      | CNeq, CEq -> not equ | CNeq, CNeq -> equ
-     | _ -> failwith "Weaksubst.compatible_values : invalid op on Constr"
+     | _ -> failwith "Weakfp.compatible_values : invalid op on Constr"
      end
   | Elem (p1, Var), Elem (p2, Var) -> (* in dekker *)
      let equ = H.equal p1 p2 in
@@ -91,7 +91,7 @@ let compatible_terms cop1 t1 cop2 t2 =
 
 (* Checks whether (ed1, vals) can subsume (ed2, vals2) *)
 let compat_evts (ed1, vals1) (ed2, vals2) =
-  same_dir ed1 ed2 && same_var ed1 ed2 &&
+  same_dir ed1 ed2 && (same_var ed1 ed2 || no_var ed1) &&
     (vals1 = [] (*&& vals2 = []*) ||
      vals1 <> [] && vals2 <> [] &&
     (* (vals1 = [] || vals2 = [] || *)
@@ -194,7 +194,7 @@ let build_event_substs from_evts from_rels to_evts to_rels =
 let remap_events_ar ar sub =
   let subst e =
     try HMap.find e sub with Not_found ->
-      failwith "Weaksubst.remap_events : no substitution !"
+      failwith "Weakfp.remap_events : no substitution !"
   in
   let rec remap_t tt = match tt with
     | Arith (t, c) ->

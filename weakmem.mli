@@ -74,6 +74,7 @@ val sort_params : 'a * 'b * 'c * (H.t * 'd) list -> 'a * 'b * 'c * 'd list
 val same_proc : H.t * 'a * 'b * 'c -> H.t * 'd * 'e * 'f -> bool
 val same_dir : 'a * H.t * 'b * 'c -> 'd * H.t * 'e * 'f -> bool
 val same_var : 'a * 'b * H.t * H.t list -> 'c * 'd * H.t * H.t list -> bool
+val no_var : 'a * 'b * H.t * 'c -> bool
 val is_read : 'a * H.t * 'b * 'c -> bool
 val is_write : 'a * H.t * 'b * 'c -> bool
 
@@ -88,4 +89,4 @@ val weak_type : H.t -> H.t list * HSet.elt
 val init_weak_env : (H.t * H.t list * H.t) list -> unit
 
 val cartesian_product : ('a -> 'a -> 'a) -> 'a list -> 'a list -> 'a list
-val cartesian_product_h2m :'a H2Map.t list -> 'a H2Map.t list -> 'a H2Map.t list
+(* val cartesian_product_h2m :'a H2Map.t list -> 'a H2Map.t list -> 'a H2Map.t list *)

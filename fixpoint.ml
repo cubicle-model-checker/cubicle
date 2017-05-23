@@ -324,11 +324,11 @@ end = struct
     ) sa in
     { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels
 
-  let get_evts_rels_ar ar = (* this is done after renaming *)
+  let get_evts_rels_ar ar = (* this is now done before renaming *)
     let _, _, _, _, _, evts = Weakevent.extract_events_array ar in
     let rels = Weakrel.extract_rels_array ar in
-    evts, rels (* could extract ghb/rels only once at start --> DO THAT *)
-               (* since it's the same even with proc renaming *)
+    evts, rels
+
 module HAA = Hashtbl.Make (ArrayAtom)
 let cache = HAA.create 200001
 
@@ -354,6 +354,7 @@ let cache = HAA.create 200001
           Weakmem.HMap.empty, (Weakmem.HMap.empty, Weakrel.Rel.empty)
         else begin
           TimeFPRels.start ();
+          (* let from_evts, from_rels = get_evts_rels_ar vis_array in *)
           let from_evts, from_rels =
             try
               HAA.find cache vis_array
@@ -369,20 +370,8 @@ let cache = HAA.create 200001
 
       let n = List.fold_left (fun nodes ss ->
         let vis_renamed = ArrayAtom.apply_subst ss vis_array in
-
         let from_evts = Weakevent.subst ss from_evts in
         let from_rels = Weakrel.subst ss from_rels in
-        (* TimeFPRels.start (); *)
-        (* (\* let from_evts, from_rels = get_evts_rels_ar vis_renamed in *\) *)
-        (* let from_evts, from_rels = *)
-        (*   try (\* msi : 3360 miss / 297438 hits *\) *)
-        (*     HAA.find cache vis_renamed (\* that may take some time *\) *)
-        (*   with Not_found ->           (\* but it's worse not to do it*\) *)
-        (*     let r = get_evts_rels_ar vis_renamed in *)
-        (*     HAA.add cache vis_renamed r; *)
-        (*     r (\* TOO MANY PROC PERMS BTW *\) (\* WHY PETERSON 2 DIFF ON SC ? *\) *)
-        (* in (\* SIMPLIFY NODES, SO FIXPOINT BECOMES EASIER *\) *)
-        (* TimeFPRels.pause (); *)
         let vis_renamed_l = (Weakfp.remap_events vis_renamed
           (Weakfp.build_event_substs from_evts from_rels to_evts to_rels)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)

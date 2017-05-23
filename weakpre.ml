@@ -57,13 +57,12 @@ let remove_write_on writes ed =
 let unsat_reads edw pevts =
   List.exists (fun (_, (ed, vals)) -> same_var edw ed && vals <> []) pevts
               
-let skip_incompatible writes pevts = (* wtl should contain only 1 element *)
+let skip_incompatible writes pevts = (* wtl may contain more than 1 element *)
   let rec aux ((wr, ird, srd, urd) as reason) = function
     | [] -> reason, []
     | ((_, (ed, vals)) as e) :: pevts ->
        begin match get_write_on writes ed with
        | None -> aux reason pevts (* not same var : no problem *)
-       (* | Some (edw, (_, _, wtl)) -> *)
        | Some (edw, (_, wtl)) ->
           if is_write ed then
             aux (true, ird, srd, urd || unsat_reads edw pevts) pevts
@@ -83,7 +82,6 @@ let get_read_chunk writes pevts =
     | ((_, (ed, vals)) as e) :: pevts ->
        begin match get_write_on writes ed with
        | None -> aux chunk writes cut pevts
-       (* | Some (edw, (_, _, wtl)) -> *)
        | Some (edw, (_, wtl)) ->
           if is_write ed || is_satisfied vals || not (compat_val wtl vals)
           then begin
@@ -207,7 +205,7 @@ let make_read_write_combinations writes evts_bt urevts ghb =
         else Weakrel.Rel.add_lt ure we ghb
       ) urevts ghb in
       ghb
-    ) ghb wrcl in (* should remember this ghb to avoid recomputing *)
+    ) ghb wrcl in
 
     if Weakrel.Rel.acyclic ghb then
       (wrcl, ghb, urevts) :: wrcp
@@ -262,6 +260,11 @@ let rec subst_ievent ievts t = match t with
   | Arith (t, c) -> Arith (subst_ievent ievts t, c)
   | _ -> t
 
+let add_ievts_rels rel ievts f =
+  HEvtMap.fold (fun ied (ie, _) rel -> match f ied ie with
+    | None -> rel | Some e -> Weakrel.Rel.add_lt ie e rel
+  ) ievts rel
+
 let add_reads_to_sa irds sa =
   (* That might generate duplicate (opposite direction) atoms *)
   HEvtMap.fold (fun pdvvi (e, lt, vals) sa ->
@@ -278,6 +281,10 @@ let add_reads_to_sa irds sa =
       SAtom.add a sa
     ) sa vals
   ) irds sa
+
+let ghb_before_urd ghb urd e =
+  HMap.exists (fun re _ ->
+    Weakrel.Rel.mem_lt e re ghb || Weakrel.Rel.mem_eq e re ghb) urd
 
 let mk_pred pred pl =
   Atom.Comp (Access (pred, pl), Eq, Elem (Term.htrue, Constr))
@@ -397,11 +404,6 @@ let satisfy_reads sa =
 
 
 
-  let add_ievts_rels rel ievts f =
-    HEvtMap.fold (fun ied (ie, _) rel -> match f ied ie with
-      | None -> rel | Some e -> Weakrel.Rel.add_lt ie e rel
-    ) ievts rel in
-
   (* Add co from new writes to first old write on same variable *)
   let ghb' = add_ievts_rels ghb' iwts (fun (_, _, v, vi) _ ->
     try Some (HVarMap.find (v, vi) gfw) with Not_found -> None) in
@@ -496,22 +498,33 @@ let pres = if wrcp = [] then [] else begin
 
 
 
-  (* Make set of events to keep *)
-  (* We keep the following events, provided they are ghb-before an unsat read :
+  (* Make set of events to keep ("entry points") *)
+  (* We keep the following events, provided they are
+     ghb-before or sync with an unsat read (or are an unsat read) :
        1st W on each var          gfw'     (for other W on same var)
        1st R of each thread       freads'  (for R by same thread)
        1st W/F of each thread     fwrites' (for RW by same thread)
-       all unsat R *)
-  (* might have to keep writes sync with unsat reads for atomic RMW...
-     otherwise it might give spurious unsafes *)
-  let keep = HVarMap.fold (fun _ e keep -> HSet.add e keep) gfw' HSet.empty in
-  let keep = HMap.fold (fun _ e keep -> HSet.add e keep) freads' keep in
-  let keep = HMap.fold (fun _ e keep -> HSet.add e keep) fwrites' keep in
+       all unsat R                urevts   (for W by any thread) *)
+  (* No need to keep non-first writes sync with unsat reads for atomic RMW :
+     the first W will be ghb-before them, thus protecting them from cycles
+     caused by adding the fr relation *)
+  let kgfw = HVarMap.fold (fun _ e keep -> HSet.add e keep) gfw' HSet.empty in
+  let kfrd = HMap.fold (fun _ e keep -> HSet.add e keep) freads' HSet.empty in
+  let kfwt = HMap.fold (fun _ e keep -> HSet.add e keep) fwrites' HSet.empty in
 
+  (* Relations to keep on "entry points" *)
+  (* W entry points : don't keep ghb-before pairs (first W by var suffices *)
+  (* R entry points : keep ghb-before pairs on unsat reads only *)
+  (* However, keep WR/RW syncs in all cases (for atomic RMW) *)
+  (* WW / RR syncs are most probably needed too *)
+  (* In fact, simpler : don't keep ghb-before pairs to events not urd *)
 
-  
+  (* Variables to keep on "entry points" *)
+  (* W entry points : keep var only on first W by var *)
+  (* R entry points : keep var only if unsat R *)
+
   (* Generate the atom sets for each combination *)
-  let pres = List.fold_left (fun pres (wrcl, ghb', urevts) ->
+  let pres = List.fold_left (fun pres (wrcl, ghb', urevts') ->
 
     (* Substitute the satisfied read value with the write value *)
     let sa = List.fold_left (fun sa ((_, (_, wtl)), rcl) ->
@@ -522,24 +535,31 @@ let pres = if wrcp = [] then [] else begin
     ) sa wrcl in
 
     (* Update the set of atoms with the remaining relations (rf / fr) *)
-    let d = Weakrel.Rel.diff ghb' ghb in
-    let sa = add_ghb_lt_atoms d sa in
-    let ghb = ghb' in
+    let sa = add_ghb_lt_atoms (Weakrel.Rel.diff ghb' ghb) sa in
 
-    (* Add instantiated reads to unsatisfied reads *)
-    let urevts = HEvtMap.fold (fun red (re, _, rvals) urevts ->
-      HMap.add re (red, rvals) urevts
-    ) irds urevts in
+    (* Determine which reads were satisfied *)
+    let satrd = HMap.filter (fun e _ -> not (HMap.mem e urevts')) urevts in
+
+    (* Add instantiated reads to unsatisfied reads *) (* merge with following*)
+    let urevts' = HEvtMap.fold (fun red (re, _, rvals) urevts' ->
+      HMap.add re (red, rvals) urevts'
+    ) irds urevts' in
+
+    (* Keep unsatisfied reads *)
+    let kurd = HMap.fold (fun e _ keep -> HSet.add e keep) urevts' HSet.empty in
 
     (* Keep only events that are ghb-before or sync with an unsatisfied read *)
-    let keep = HSet.filter (fun e ->
-      HMap.exists (fun re (red, rvals) ->
-        Weakrel.Rel.mem_lt e re ghb || Weakrel.Rel.mem_eq e re ghb) urevts
-    ) keep in
+    let kgfw = HSet.filter (ghb_before_urd ghb' urevts') kgfw in
+    let kfrd = HSet.filter (ghb_before_urd ghb' urevts') kfrd in
+    let kfwt = HSet.filter (ghb_before_urd ghb' urevts') kfwt in
 
-    (* And add the unsatisfied reads *)
-    let keep = HMap.fold (fun e _ keep ->
-      HSet.add e keep) urevts keep in
+    (* Generate keep set *)
+    let keep = HSet.union (HSet.union kgfw kfwt) (HSet.union kfrd kurd) in
+
+
+  (* Variables to keep on "entry points" *)
+  (* W entry points : keep var only on first W by var *)
+  (* R entry points : keep var only if unsat R *)
 
     (* Here, remove events that do not satisfy criterion to stay *)
     let sa = SAtom.filter (function
@@ -551,15 +571,20 @@ let pres = if wrcp = [] then [] else begin
            when (H.equal a hGhb || H.equal a hSync) &&
              not (HSet.mem ef keep && HSet.mem et keep) -> false
       | Atom.Comp (Access (a, [ef; et]), _, _)
-      | Atom.Comp (_, _, Access (a, [ef; et])) (* sync necessary for RMW *)
-           when H.equal a hGhb (*|| H.equal a hSync *) ->
-             not (HMap.mem et wevts ||
-               HEvtMap.exists (fun _ (e, _) -> H.equal e et) iwts)
-      (* | Atom.Comp (Field (Access (a, [e]), f), _, _) *)
-      (* | Atom.Comp (_, _, Field (Access (a, [e]), f)) *)
-      (*      when H.equal a hE && (H.equal f hVar || is_param f) -> *)
-      (*    HSet.mem e keep && (HLMap.exists (fun _ we -> H.equal e we) gfw' || *)
-      (*      HMap.exists (fun re _ -> H.equal e re) urevts) *)
+      | Atom.Comp (_, _, Access (a, [ef; et]))
+           when H.equal a hGhb && not (HSet.mem et kurd) -> false (*
+         not (HSet.mem et kfwt || HSet.mem et kgfw || HSet.mem et kfrd)*)
+       (* not (HMap.mem et wevts *)
+       (*     || HEvtMap.exists (fun _ (e, _) -> H.equal e et) iwts) *)
+      | Atom.Comp (Field (Access (a, [e]), f), _, _)
+      | Atom.Comp (_, _, Field (Access (a, [e]), f))
+           when H.equal a hE && (H.equal f hVar || is_param f) ->
+         (* HSet.mem e keep && (HSet.mem e kurd || HSet.mem e kgfw) *)
+         HSet.mem e keep && (HSet.mem e kurd ||
+                             HSet.mem e kgfw || HSet.mem e kfwt)
+
+      (*    HSet.mem e keep && (HVarMap.exists (fun _ we -> H.equal e we) gfw' || *)
+      (*      HMap.exists (fun re _ -> H.equal e re) urevts') *) (* more nodes on peterson, same on dekker *)
       | Atom.Comp (Field (Access (a, [e]), _), _, _)
       | Atom.Comp (_, _, Field (Access (a, [e]), _))
            when H.equal a hE -> HSet.mem e keep

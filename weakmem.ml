@@ -122,6 +122,8 @@ let same_dir (_, d1, _, _) (_, d2, _, _) = H.equal d1 d2
 let same_var (_, _, v1, vi1) (_, _, v2, vi2) =
   H.equal v1 v2 && H.list_equal vi1 vi2
 
+let no_var (_, _, v, _) = H.equal v hNone
+
 let is_read (_, d, _, _) = H.equal d hR
 
 let is_write (_, d, _, _) = H.equal d hW
@@ -147,7 +149,7 @@ let is_weak = HTbl.mem weak_vars
 let weak_type = HTbl.find weak_vars
 
 
-
+(* could extend op with Some/None to conditionally compute product *)
 let cartesian_product op l1 l2 =
   if l1 = [] then l2 else if l2 = [] then l1 else
   List.fold_left (fun rl e1 ->
@@ -156,9 +158,9 @@ let cartesian_product op l1 l2 =
     ) rl l2
   ) [] l1
 
-let cartesian_product_h2m l1 l2 =
-  cartesian_product (H2Map.union (fun k v1 v2 ->
-    failwith "Weakmem.cartesian_product : duplicate")) l1 l2
+(* let cartesian_product_h2m l1 l2 = *)
+(*   cartesian_product (H2Map.union (fun k v1 v2 -> *)
+(*     failwith "Weakmem.cartesian_product : duplicate")) l1 l2 *)
 
 
 

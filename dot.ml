@@ -161,7 +161,8 @@ let print_atoms fmt la =
   H2Map.iter (fun (p, e) ((_, d, v, vi), vals) ->
     if H.view p <> !last then begin last := H.view p; fprintf fmt "\\n" end;
     fprintf fmt "\\nE(%s) = %a:%s:%s"
-      (id_of_v e) H.print p (id_of_v d) (var_of_v v);
+      (id_of_v e) H.print p (id_of_v d)
+      (if H.equal v hNone then "" else (var_of_v v));
     if vi <> [] then
       fprintf fmt "[%a]" (Hstring.print_list ", ") vi;
     if vals <> [] then
