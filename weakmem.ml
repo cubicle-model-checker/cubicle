@@ -90,14 +90,8 @@ let hP0 = H.make "#0"
 let hE0 = H.make "_e0"
 let hE = H.make "_e"
 
-let hPo = H.make "_po"
-let hRf = H.make "_rf"
-let hCo = H.make "_co"
-let hFr = H.make "_fr"
 let hFence = H.make "_fence"
 let hSync = H.make "_sync"
-let hPoLoc = H.make "_po_loc"
-let hPpo = H.make "_ppo"
 let hGhb = H.make "_ghb"
 
 let mk_hP p = H.make ("_p" ^ (string_of_int p))
@@ -185,12 +179,8 @@ let init_weak_env wvl =
 
   (* wtl : list of all types of weak variable + corresponding field name *)
   let wtl = HSet.fold (fun wt wtl -> (mk_hT wt, wt) :: wtl) wts [] in
-  T.declare_record hValType (List.rev wtl);
 
   for i = maxp downto 1 do pl := (mk_hP i, hInt) :: !pl done;
-  T.declare_record hEvent
-    ((hThr, hInt) :: (hDir, hDirection) ::
-     (hVar, hWeakVar) :: (hVal, hValType) :: !pl);
 
   (* should adjust automatically *)
   for i = 0 to 100 do S.declare (mk_hE i) [] T.type_int done;
@@ -200,11 +190,11 @@ let init_weak_env wvl =
 
   S.declare hE int1 hEvent;
 
-  S.declare hPo int2 T.type_prop;
-  S.declare hRf int2 T.type_prop;
-  S.declare hCo int2 T.type_prop;
-  S.declare hFr int2 T.type_prop;
+  (* S.declare hPo int2 T.type_prop; *)
+  (* S.declare hRf int2 T.type_prop; *)
+  (* S.declare hCo int2 T.type_prop; *)
+  (* S.declare hFr int2 T.type_prop; *)
   S.declare hFence int2 T.type_prop;
   S.declare hSync int2 T.type_prop;
-  S.declare hPoLoc int2 T.type_prop;
-  S.declare hPpo int2 T.type_prop;
+  (* S.declare hPoLoc int2 T.type_prop; *)
+  (* S.declare hPpo int2 T.type_prop; *)
