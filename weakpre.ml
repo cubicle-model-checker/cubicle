@@ -50,7 +50,7 @@ let is_satisfied = function [] -> true | _ -> false
 let get_write_on writes ed =
   try Some (HEvtMap.findp (fun edw _ -> same_var edw ed) writes)
   with Not_found -> None
-
+(*
 let remove_write_on writes ed =
   HEvtMap.filter (fun edw _ -> not (same_var edw ed)) writes
 
@@ -69,7 +69,7 @@ let skip_incompatible writes pevts = (* wtl may contain more than 1 element *)
           else if is_satisfied vals then
             aux (wr, ird, true, urd || unsat_reads edw pevts) pevts
           else if not (compat_val wtl vals) then
-            aux (wr, true, srd, urd) pevts
+            aux (wr, true, srd, urd) pevts (* urd <- true ? *)
           else
             (wr, ird, srd, urd), e :: pevts (* compatible = go on *)
        end
@@ -115,7 +115,28 @@ let read_chunks_for_writes same_thread writes pevts =
        end
   in
   aux [] pevts
+ *)
 
+
+
+let read_chunks_for_writes same_thread writes pevts =
+  let rec aux chunk = function
+    | [] -> chunk
+    | ((_, (ed, vals)) as e) :: pevts ->
+       if is_write ed || is_satisfied vals then aux chunk pevts
+       else
+         begin match get_write_on writes ed with
+         | None -> aux chunk pevts
+         | Some (edw, (_, wtl)) ->
+            if compat_val wtl vals then aux (e :: chunk) pevts
+            else if same_thread then raise UnsatisfiableRead
+            else chunk
+         end
+  in
+  (* aux [] (List.rev pevts) *)
+  let chk = aux [] (List.rev pevts) in
+  if chk = [] then [] else [chk]
+      
 let read_chunks_by_thread_for_writes writes evts = (* evts by thread *)
   try
     let (wp, _, _, _), _ = HEvtMap.choose writes in
@@ -169,7 +190,6 @@ let all_combinations writes rcl =
 
 
 
-
 let make_read_write_combinations writes evts_bt urevts ghb =
 
   TimeBuildRW.start ();
@@ -179,7 +199,7 @@ let make_read_write_combinations writes evts_bt urevts ghb =
     let rct = read_combs_by_thread_for_writes writes rct in
     let rcl = read_combs_for_writes writes rct in
     all_combinations writes rcl
-  with UnsatisfiableRead -> [] in
+    with UnsatisfiableRead -> [] in
 
   TimeBuildRW.pause ();
 
@@ -196,13 +216,18 @@ let make_read_write_combinations writes evts_bt urevts ghb =
 
     (* Adjust ghb for this combination *)
     let ghb = List.fold_left (fun ghb (((wp,_,_,_) as wed, (we,_)), rcl) ->
-      let ghb = List.fold_left (fun ghb (re, (red, _)) -> (* rf *)
+      let ghb = List.fold_left (fun ghb (re, (red, _)) -> (* rfe *)
         if same_proc wed red then ghb
         else Weakrel.Rel.add_lt we re ghb
       ) ghb rcl in
-      let ghb = HMap.fold (fun ure (ured, _) ghb -> (* fr *)
+      let ghb = HMap.fold (fun ure (ured, _) ghb -> (* fr(e) *)
         if not (same_var wed ured) then ghb
-        else Weakrel.Rel.add_lt ure we ghb
+        else begin
+          if same_proc wed ured then
+            failwith ("Weakpre.mk_combs : invalid fr : " ^
+                        (H.view ure) ^ " -> " ^ (H.view we))
+          else Weakrel.Rel.add_lt ure we ghb
+        end
       ) urevts ghb in
       ghb
     ) ghb wrcl in

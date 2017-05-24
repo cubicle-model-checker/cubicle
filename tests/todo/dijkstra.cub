@@ -1,5 +1,5 @@
 
-number_procs 3
+(* 5 procs, 372 nodes, 29s *)
 
 type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
 type flag = F0 | F1 | F2 | F3

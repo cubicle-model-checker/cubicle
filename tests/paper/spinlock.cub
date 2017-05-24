@@ -19,7 +19,10 @@ array SF[proc] : int
 weak var LOCK : int
 
 
-init (p) { PC[p] = Acquire && SF[p] = 0 && LOCK = 0 }
+init (p) { PC[p] = Acquire && SF[p] = 0 && LOCK = 1 }
+
+invariant (p) { 1 < p @ LOCK }
+(* unsafe (p) { 1 < p @ LOCK } *)
 
 (* FORBIDDEN Final State *)
 unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
