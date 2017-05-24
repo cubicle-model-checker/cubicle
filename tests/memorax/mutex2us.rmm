@@ -1,0 +1,21 @@
+
+forbidden
+L3 L3
+
+data
+  R1 = 0 : [0:1]
+  R2 = 0 : [0:1]
+
+process
+text
+  L1: write: R1 := 1;
+  L2: read: R2 = 0;
+  L3: write: R1 := 0;
+      goto L1
+
+process
+text
+  L1: write: R2 := 1;
+  L2: read: R1 = 0;
+  L3: write: R2 := 0;
+      goto L1

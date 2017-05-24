@@ -1,0 +1,26 @@
+
+
+number_procs 2
+
+type loc = L1 | L2 | L3 | End
+
+array PC[proc] : loc
+weak var X1 : int
+weak var X2 : int
+
+init (i) { PC[i] = L1 && X1 = 0 && X2 = 0 }
+
+(* FORBIDDEN Final State *)
+unsafe (i j) { PC[i] = End && PC[j] = End }
+
+transition t1_1 (i)
+requires { i = #1 && PC[i] = L1 }
+{ PC[i] := L2; [i]X1 := 1 }
+
+transition t1_2 (i)
+requires { i = #1 && PC[i] = L2 }
+{ PC[i] := End; [i]X2 := 2 }
+
+transition t2_1 (i)
+requires { i = #2 && PC[i] = L1 && [i]X1 = 0 && [i]X2 = 2 }
+{ PC[i] := End }

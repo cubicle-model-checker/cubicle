@@ -1,0 +1,116 @@
+forbidden
+CS CS CS CS CS
+
+data
+  x  = * : [0:5]
+  y  = * : [0:5]
+
+process
+registers
+  $rx = * : [0:5]
+  $ry = * : [0:5]
+text
+  L0: write: x := 1;
+      read: $ry := y;
+      if $ry != 0 then 
+        goto L0;
+      write: y := 1;
+      read: $rx := x;
+      if $rx != 1 then {
+        read: $ry := y;
+        if $ry != 1 then
+          goto L0;
+	assume: false
+      };
+      goto CS;
+  CS: 
+      write: y := 0;
+      goto L0
+
+process
+registers
+  $rx = * : [0:5]
+  $ry = * : [0:5]
+text
+  L0: write: x := 2;
+      read: $ry := y;
+      if $ry != 0 then
+        goto L0;
+      write: y := 2;
+      read: $rx := x;
+      if $rx != 2 then {
+        read: $ry := y;
+        if $ry != 2 then
+          goto L0;
+	assume: false
+      };
+      goto CS;
+  CS:
+      write: y := 0;
+      goto L0
+
+process
+registers
+  $rx = * : [0:5]
+  $ry = * : [0:5]
+text
+  L0: write: x := 3;
+      read: $ry := y;
+      if $ry != 0 then
+        goto L0;
+      write: y := 3;
+      read: $rx := x;
+      if $rx != 3 then {
+        read: $ry := y;
+        if $ry != 3 then
+          goto L0;
+	assume: false
+      };
+      goto CS;
+  CS:
+      write: y := 0;
+      goto L0
+
+process
+registers
+  $rx = * : [0:5]
+  $ry = * : [0:5]
+text
+  L0: write: x := 4;
+      read: $ry := y;
+      if $ry != 0 then
+        goto L0;
+      write: y := 4;
+      read: $rx := x;
+      if $rx != 4 then {
+        read: $ry := y;
+        if $ry != 4 then
+          goto L0;
+	assume: false
+      };
+      goto CS;
+  CS:
+      write: y := 0;
+      goto L0
+
+process
+registers
+  $rx = * : [0:5]
+  $ry = * : [0:5]
+text
+  L0: write: x := 5;
+      read: $ry := y;
+      if $ry != 0 then
+        goto L0;
+      write: y := 5;
+      read: $rx := x;
+      if $rx != 5 then {
+        read: $ry := y;
+        if $ry != 5 then
+          goto L0;
+	assume: false
+      };
+      goto CS;
+  CS:
+      write: y := 0;
+      goto L0

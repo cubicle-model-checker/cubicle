@@ -1,0 +1,164 @@
+type _direction = _R | _W
+type _weak_var = _VX
+type _val_type = { _tbool : bool }
+type _event = { _dir : _direction ; _var : _weak_var ; _val : _val_type ; _p1 : int }
+
+logic _propi : int -> int
+logic _uniprocRW : int -> int
+logic _uniprocWR : int -> int
+logic X : int -> bool
+logic _e1 :  int
+logic _e2 :  int
+logic _e3 :  int
+logic _e4 :  int
+logic _e5 :  int
+logic _e6 :  int
+logic _e7 :  int
+logic _e8 :  int
+logic _e9 :  int
+logic _e10 :  int
+logic _e11 :  int
+logic _e12 :  int
+logic p1 :  int
+logic _e13 :  int
+logic p2 :  int
+logic _e14 :  int
+logic p3 :  int
+logic _e15 :  int
+logic p4 :  int
+logic _e16 :  int
+logic p5 :  int
+logic _e17 :  int
+logic p6 :  int
+logic _e18 :  int
+logic p7 :  int
+logic _e19 :  int
+logic p8 :  int
+logic _e20 :  int
+logic p9 :  int
+logic _e21 :  int
+logic p10 :  int
+logic _e22 :  int
+logic _e23 :  int
+logic _e24 :  int
+logic _e25 :  int
+logic _e26 :  int
+logic _e27 :  int
+logic _e28 :  int
+logic _e29 :  int
+logic _e30 :  int
+logic _e31 :  int
+logic _e32 :  int
+logic _e33 :  int
+logic _e34 :  int
+logic _e35 :  int
+logic _e36 :  int
+logic _e37 :  int
+logic _e38 :  int
+logic _e39 :  int
+logic _e40 :  int
+logic _e41 :  int
+logic p0 :  int
+logic _e42 :  int
+logic _e0 :  int
+logic _e : int , int -> _event
+logic _e43 :  int
+logic _po : int , int -> prop
+logic _e44 :  int
+logic _rf : int , int -> prop
+logic _e45 :  int
+logic _co : int , int -> prop
+logic _e46 :  int
+logic _fence : int , int -> prop
+logic _e47 :  int
+logic _sync : int , int -> prop
+logic _e48 :  int
+logic _po_loc : int , int -> prop
+logic _e49 :  int
+logic _ppo : int , int -> prop
+logic _e50 :  int
+logic _sci : int -> int
+
+goal gx : not (
+(p4 <> p3 and p4 <> p2 and p4 <> p1 and p4 <> p0 and
+ p3 <> p2 and p3 <> p1 and p3 <> p0 and p2 <> p1 and
+ p2 <> p0 and p1 <> p0)
+
+and
+
+((_e(p1,_e1))._dir=_R) and ((_e(p1,_e1))._var=_VX) and ((_e(p1,_e1))._p1=p1) and
+((_e(p2,_e2))._dir=_R) and
+((_e(p2,_e3))._dir=_W) and ((_e(p2,_e3))._var=_VX) and ((_e(p2,_e3))._p1=p2) and
+((_e(p2,_e4))._dir=_R) and
+((_e(p3,_e5))._dir=_W) and ((_e(p3,_e5))._var=_VX) and ((_e(p3,_e5))._p1=p3) and
+((_e(p3,_e6))._dir=_R) and ((_e(p3,_e6))._var=_VX) and ((_e(p3,_e6))._p1=p4) and
+
+(((_e(p1,_e1))._val)._tbool=false) and
+(((_e(p3,_e6))._val)._tbool=true)
+
+and
+(
+(_e(p1,_e1))._dir <> _R or (_e(p1,_e1))._var <> _VX or (_e(p1,_e1))._p1 <> p1 or
+(_e(p2,_e2))._dir <> _R or
+(_e(p3,_e5))._dir <> _W or (_e(p3,_e5))._var <> _VX or (_e(p3,_e5))._p1 <> p3 or
+(_e(p3,_e6))._dir <> _R or (_e(p3,_e6))._var <> _VX or (_e(p3,_e6))._p1 <> p4 or
+
+((_e(p1,_e1))._val)._tbool=true or
+((_e(p3,_e6))._val)._tbool=false)
+)
+
+goal g: not (
+
+(p4 <> p3 and p4 <> p2 and p4 <> p1 and p4 <> p0 and
+ p3 <> p2 and p3 <> p1 and p3 <> p0 and p2 <> p1 and
+ p2 <> p0 and p1 <> p0)
+
+and
+
+(_sci(_e1) = _sci(_e2)) and (_sci(_e3) = _sci(_e4)) and
+(_sci(_e5) = _sci(_e6)) and (_sci(_e4) < _sci(_e2)) and
+( _sci(_e5) < _sci(_e4)) and ( _sci(_e3) < _sci(_e2)) and
+ 
+(_propi(_e1) = _propi(_e2)) and (_propi(_e3 )= _propi(_e4)) and
+(_propi(_e5) = _propi(_e6)) and ( _propi(_e4) < _propi(_e2)) and
+(_propi(_e5) < _propi(_e4)) and
+
+((_e(p1,_e1))._dir=_R) and ((_e(p1,_e1))._var=_VX) and ((_e(p1,_e1))._p1=p1) and
+((_e(p2,_e2))._dir=_R) and
+((_e(p2,_e3))._dir=_W) and ((_e(p2,_e3))._var=_VX) and ((_e(p2,_e3))._p1=p2) and
+((_e(p2,_e4))._dir=_R) and
+((_e(p3,_e5))._dir=_W) and ((_e(p3,_e5))._var=_VX) and ((_e(p3,_e5))._p1=p3) and
+((_e(p3,_e6))._dir=_R) and ((_e(p3,_e6))._var=_VX) and ((_e(p3,_e6))._p1=p4) and
+
+(((_e(p1,_e1))._val)._tbool=false) and
+(((_e(p3,_e6))._val)._tbool=true)
+
+and
+
+(_sci(_e1) <> _sci(_e2) or _sci(_e5) <> _sci(_e6) or _sci(_e5) >= _sci(_e2) or
+ _propi(_e1) <> _propi(_e2) or _propi(_e5) <> _propi(_e6) or
+ _propi(_e6) >= _propi(_e2) or
+
+(_e(p1,_e1))._dir <> _R or (_e(p1,_e1))._var <> _VX or (_e(p1,_e1))._p1 <> p1 or
+(_e(p3,_e2))._dir <> _R or
+(_e(p3,_e5))._dir <> _W or (_e(p3,_e5))._var <> _VX or (_e(p3,_e5))._p1 <> p3 or
+(_e(p3,_e6))._dir <> _R or (_e(p3,_e6))._var <> _VX or (_e(p3,_e6))._p1 <> p4 or
+
+((_e(p1,_e1))._val)._tbool=true or
+((_e(p3,_e6))._val)._tbool=false)
+
+(* and
+
+(_sci(_e1) <> _sci(_e4) or _sci(_e5) <> _sci(_e6) or _sci(_e5) >= _sci(_e4) or
+ _propi(_e1) <> _propi(_e4) or _propi(_e5) <> _propi(_e6) or
+ _propi(_e6) >= _propi(_e4) or
+
+(_e(p1,_e1))._dir <> _R or (_e(p1,_e1))._var <> _VX or (_e(p1,_e1))._p1 <> p1 or
+(_e(p3,_e4))._dir <> _R or
+(_e(p3,_e5))._dir <> _W or (_e(p3,_e5))._var <> _VX or (_e(p3,_e5))._p1 <> p3 or
+(_e(p3,_e6))._dir <> _R or (_e(p3,_e6))._var <> _VX or (_e(p3,_e6))._p1 <> p4 or
+
+((_e(p1,_e1))._val)._tbool=true or
+((_e(p3,_e6))._val)._tbool=false) *)
+
+)

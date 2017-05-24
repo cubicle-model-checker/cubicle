@@ -1,0 +1,57 @@
+
+# Memory layout:
+# 0 — C1
+# 1 — C2
+# 0 = I, 1 = S, 2 = M
+
+thread t0
+initial bad0
+final bad
+transition	bad0	bad1	lock
+transition	bad1	bad2	read	C1	0
+transition	bad2	badul	read	C2	1
+transition	badul	badchk	unlock
+transition 	badchk	bad	check	|| && == C1 2 != C2 0 && != C1 0 == C2 2
+end
+
+thread t1
+initial init
+final init
+transition	init	rm1	lock
+transition	rm1	rm2	read	C1	0
+transition	rm2	rm3	check	== C1   0
+transition	rm3	rm21	write   1	0
+transition	rm21	rm22	read	C2	1
+transition	rm22	rm23	check	== C2	2
+transition	rm22	rmul	check	!= C2	2
+transition	rm23	rmul	write	1	1
+transition	rmul	init	unlock
+
+transition	init	wm1	lock
+transition	wm1	wm2	read	C1	0
+transition	wm2	wm3	check	!= C1   2
+transition	wm3	wm21	write   2	0
+transition	wm21	wmul	write	0	1
+transition	wmul	init	unlock
+end
+
+thread t2
+initial init
+final init
+transition	init	rm1	lock
+transition	rm1	rm2	read	C2	1
+transition	rm2	rm3	check	== C2   0
+transition	rm3	rm11	write   1	1
+transition	rm11	rm12	read	C1	0
+transition	rm12	rm13	check	== C1	2
+transition	rm12	rmul	check	!= C1	2
+transition	rm13	rmul	write	1	0
+transition	rmul	init	unlock
+
+transition	init	wm1	lock
+transition	wm1	wm2	read	C2	1
+transition	wm2	wm3	check	!= C2   2
+transition	wm3	wm11	write   2	1
+transition	wm11	wmul	write	0	0
+transition	wmul	init	unlock
+end

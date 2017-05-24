@@ -1,0 +1,27 @@
+
+type loc = L1 | L2 | L3
+
+array PC[proc] : loc
+
+(* Global variables *)
+weak array R[proc] : bool
+
+
+init (p) { PC[p] = L1 && R[p] = False }
+
+unsafe (p1 p2) { PC[p1] = L3 && PC[p2] = L3 }
+
+
+transition t1 ([p])
+requires { PC[p] = L1 }
+{ PC[p] := L2; R[p] := True }
+
+transition t2 ([p])
+requires { fence (p) && PC[p] = L2 && forall_other q. R[q] = False }
+{ PC[p] := L3 }
+
+(* Critical section *)
+
+transition t3 ([p])
+requires { PC[p] = L3 }
+{ PC[p] := L1; R[p] := False }

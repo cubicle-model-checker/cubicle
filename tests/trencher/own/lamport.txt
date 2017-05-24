@@ -1,0 +1,65 @@
+#
+# Lamport's fast mutex algorithm 1, as presented in
+#
+# L. Lamport. A fast mutual exclusion algorithm. ACM Trans. Comput.
+# Syst., 5(1), 1987.
+#
+# IS NOT robust.
+#
+# Memory layout:
+# 0 — x
+# 1 — y
+
+thread t0
+initial start
+final enter
+transition	start	q0	local	i	1
+transition	q0	q1	write	i	0
+transition	q1	q2	read	y	1
+transition	q2	q0	check	!= y 0
+transition	q2	q3	check	== y 0
+transition	q3	q4	write	i	1
+transition	q4	q5	read	x	0
+transition	q5	q6	check	!= x i
+transition	q6	q7	read	y	1
+transition	q7	q0	check	!= y i
+transition	q5	enter	check	== x i
+
+transition	enter	q9	write	0	1
+end
+
+thread t1
+initial start
+final enter
+transition	start	q0	local	i	2
+transition	q0	q1	write	i	0
+transition	q1	q2	read	y	1
+transition	q2	q0	check	!= y 0
+transition	q2	q3	check	== y 0
+transition	q3	q4	write	i	1
+transition	q4	q5	read	x	0
+transition	q5	q6	check	!= x i
+transition	q6	q7	read	y	1
+transition	q7	q0	check	!= y i
+transition	q5	enter	check	== x i
+
+transition	enter	q9	write	0	1
+end
+
+thread t2
+initial start
+final enter
+transition	start	q0	local	i	3
+transition	q0	q1	write	i	0
+transition	q1	q2	read	y	1
+transition	q2	q0	check	!= y 0
+transition	q2	q3	check	== y 0
+transition	q3	q4	write	i	1
+transition	q4	q5	read	x	0
+transition	q5	q6	check	!= x i
+transition	q6	q7	read	y	1
+transition	q7	q0	check	!= y i
+transition	q5	enter	check	== x i
+
+transition	enter	q9	write	0	1
+end

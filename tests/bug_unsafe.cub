@@ -1,0 +1,33 @@
+
+number_procs 2
+
+type pc = L1 | L2 | End
+
+array PC[proc] : pc
+
+init () { PC[#1] = L1 && PC[#2] = L1 }
+
+unsafe () { PC[#1] = End && PC[#2] = End }
+
+
+transition t1_1 ()
+requires { PC[#1] = L1 }
+{ PC[#1] := L2 }
+
+transition t1_2 ()
+requires { PC[#1] = L2 }
+{ PC[#1] := End }
+
+
+(*transition t2_1 ()
+requires { PC[#2] = L1 }
+{ PC[#2] := L2 }*)
+
+transition t2_1x ()
+requires { PC[#2] = L1 }
+{ PC[p] := case | p = #1 : End
+                | p = #2 : L2 }
+
+transition t2_2 ()
+requires { PC[#2] = L2 }
+{ PC[#2] := End }

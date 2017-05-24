@@ -1,0 +1,57 @@
+/* Dekker's lock with deadlock protection */
+
+forbidden
+  CS CS
+data
+  turn = * : [0:1]
+
+process
+data
+  flag = 0 : [0:1]
+text
+  L0: write: flag[my] := 1;
+  L1:
+  either{
+    read: flag[0] = 1;
+    either{
+      read: turn = 1;
+      write: flag[my] := 0;
+      read: turn = 0; /* spin wait */
+      goto L0
+    or
+      read: turn = 0;
+      goto L1
+    }
+  or
+    read: flag[0] = 0;
+  CS: write: turn := 1;
+    write: flag[my] := 0;
+    goto L0
+  }
+
+process
+data
+  flag = 0 : [0:1]
+text
+  L0: write: flag[my] := 1;
+  L1:
+  either{
+    read: flag[0] = 1;
+    either{
+      read: turn = 0;
+      write: flag[my] := 0;
+      read: turn = 1; /* spin wait */
+      goto L0
+    or
+      read: turn = 1;
+      goto L1
+    }
+  or
+    read: flag[0] = 0;
+  CS: write: turn := 0;
+    write: flag[my] := 0;
+    goto L0
+  }
+
+
+

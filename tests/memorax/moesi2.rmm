@@ -1,0 +1,74 @@
+forbidden
+BAD L L
+
+data
+  lock = 0 : [0:1]
+  C1 = 0 : [0:4]
+  C2 = 0 : [0:4]
+
+process
+registers
+  $rC1 = * : [0:4]
+  $rC2 = * : [0:4]
+text
+  L: cas(lock, 0, 1);
+     read: $rC1 := C1;
+     read: $rC2 := C2;
+     write: lock := 0;
+     if $rC1 = 4 && $rC2 = 4 then goto BAD;
+     goto L;
+  BAD : nop
+
+process
+registers
+  $r = * : [0:4]
+text
+  L: either {
+       cas(lock, 0, 1);
+       read: C1 = 0;
+       write: C1 := 1;
+       read: $r := C2;
+       if $r = 2 then write: C2 := 1;
+       if $r = 4 then write: C2 := 3;
+       locked write: lock := 0
+     or
+       cas(lock, 0, 1);
+       read: C1 = 2;
+       write: C1 := 4;
+       locked write: lock := 0
+     or
+       cas(lock, 0, 1);
+       read: $r := C1;
+       assume: $r = 0 || $r = 1 || $r = 3;
+       write: C1 := 2;
+       write: C2 := 0;
+       locked write: lock := 0
+     };
+     goto L
+
+process
+registers
+  $r = * : [0:4]
+text
+  L: either {
+       cas(lock, 0, 1);
+       read: C2 = 0;
+       write: C2 := 1;
+       read: $r := C1;
+       if $r = 2 then write: C1 := 1;
+       if $r = 4 then write: C1 := 3;
+       locked write: lock := 0
+     or
+       cas(lock, 0, 1);
+       read: C2 = 2;
+       write: C2 := 4;
+       locked write: lock := 0
+     or
+       cas(lock, 0, 1);
+       read: $r := C2;
+       assume: $r = 0 || $r = 1 || $r = 3;
+       write: C2 := 2;
+       write: C1 := 0;
+       locked write: lock := 0
+     };
+     goto L

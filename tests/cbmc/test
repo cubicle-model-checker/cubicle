@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="time cbmc --mm tso --no-unwinding-assertions --unwind $1 $2"
+echo $cmd
+$cmd

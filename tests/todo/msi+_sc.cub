@@ -1,0 +1,40 @@
+type state = M | S | I
+
+array Cache[proc]: state
+array Shr[proc] : bool
+var Current : proc
+var Extgnd : bool
+
+init ( i ) { Cache[i] = I && Shr[i] = False && Extgnd = False}
+
+unsafe ( i j ) { Cache[i] = M && Cache[j] = M }
+
+transition read_miss_1 ( i j )
+requires { Cache[i] = I && Current = j && Extgnd = True }
+{ Shr[i] := True;
+ Cache [k] := case 
+ 	        | k = i : S
+   		| k = j : S
+		| _ : Cache[k];
+ Extgnd := False
+}	   
+
+
+transition read_miss_2 ( i )
+requires { Cache[i] = I && Extgnd = False }
+{ Shr[i] := True ; Cache[i] := S }
+
+transition write_miss ( i )
+requires { Cache[i] <> M }
+{ 
+ Shr[k] := case 
+  	     | k = i : True
+	     | Shr[k] = True : False
+	     | _ : Shr[k];
+ Cache[k] := case
+	       | k = i : M
+ 	       | Shr[k] = True : I
+	       | _ : Cache[k];
+ Current := i;
+ Extgnd := True;
+}

@@ -1,0 +1,19 @@
+
+# Memory layout:
+# 0 — C1
+# 0 = I, 1 = S, 2 = M
+
+thread t0
+initial bad1
+final bad
+transition	bad1	badchk	read	C1	0
+transition 	badchk	bad	check	== C1 2
+end
+
+thread t1
+initial l1
+final l1
+transition	l1	wm	lock
+transition	wm	wmul	write   2	0
+transition	wmul	l1	unlock
+end

@@ -1,0 +1,192 @@
+module Cubicle_BRAB
+
+  use import ref.Ref
+  use import option.Option
+  use import fol.FOL
+  use import abstract_annoted_queue.AbstractQueue as Q
+  use import reachability.Reachability
+
+  (* remove unecessary axioms for solvers *)
+  meta remove_prop prop extensionality
+  meta remove_prop prop structure_exists
+  meta remove_prop prop model_true
+  meta remove_prop prop model_false
+  meta remove_prop prop model_and
+  meta remove_prop prop model_or
+  meta remove_prop prop model_neg
+  meta remove_prop prop valid_def
+  (* meta remove_prop prop and_a *)
+  (* meta remove_prop prop and_c *)
+  (* meta remove_prop prop or_a *)
+  (* meta remove_prop prop or_c *)
+  meta remove_prop prop sat_def
+  (* meta remove_prop prop sat_or *)
+  meta remove_prop prop sat_neg
+  meta remove_prop prop sat_and
+  meta remove_prop prop valid_or
+  meta remove_prop prop valid_neg
+  meta remove_prop prop valid_and
+  meta remove_prop prop valid_sat
+  meta remove_prop prop pre_star_def2
+  meta remove_prop prop pre_star_def3
+  meta remove_prop prop reachable_imply
+  meta remove_prop prop reachable_and
+  meta remove_prop prop pre_and
+  meta remove_prop prop pre_or
+  meta remove_prop prop unsat_invalid
+  meta remove_prop prop model_extensionality
+  meta remove_prop prop forget_subsumed_or
+  
+  
+  type result = Safe | Unsafe
+  exception Unsafe_trace
+
+  
+  val visited : ref f
+  val bad : ref f
+  
+  val q : Q.t
+
+  constant finite_model : f
+
+  (* function kind f : kind *)
+  (* function from f : f *)
+
+  
+  val faulty : ref f_annot
+
+  let init_annot (phi: f) =
+  { f = phi; kind = Undef; from = phi }
+  
+
+  (* val approx (phi : f) : option f *)
+  (* ensures { match result with *)
+  (*           | Some psi -> not (!bad |== psi) /\ not (finite_model |== psi) /\ *)
+  (* 	      	       	  phi |== psi /\ kind psi = Appr /\ *)
+  (* 	                  (kind phi = Orig -> from psi = psi) /\ *)
+  (* 			  (kind phi = Appr -> from psi = from phi) *)
+  (* 	    | None -> true end } *)
+
+  val pre_or_approx (phi : f_annot) : f_annot (* writes { phi } *)
+    ensures { (result.f = pre phi.f /\ result.kind = phi.kind /\ result.from = phi.from) \/
+              (phi.f |== result.f /\ result.kind = Appr /\
+	       not (!bad |== result.f) /\ not (finite_model |== result.f) /\
+	       (phi.kind = Orig -> result.from = result.f) /\
+	       (phi.kind = Appr -> result.from = phi.from)) }
+    (* match approx phi with *)
+    (*   | Some psi -> psi *)
+    (*   | None -> pre phi *)
+    (* end *)
+  
+    
+  let bwd (init : f) (theta : f_annot) =
+    (* Soundness *)
+    ensures { result = Safe -> not (reachable init theta.f) }
+    ensures { result = Unsafe -> kind !faulty = Orig -> reachable init theta.f }
+    visited := ffalse;
+    Q.clear q;
+    try
+       !faulty.kind <- Undef; (* Just for init *)
+       if sat (init & theta.f) then raise Unsafe_trace;
+       visited := theta.f ++ !visited;
+       let pre_theta = init_annot (pre theta.f) in
+       pre_theta.kind <- theta.kind;
+       Q.push pre_theta q;
+       while not (Q.is_empty q) do
+        invariant { not (sat (init & !visited)) &&
+                    (* pre_star !visited |== !visited ++ (pre_star q.formula) && *)
+                    pre_star theta.f |== !visited ++ (pre_star q.formula.f) &&
+		    !faulty.kind = Orig -> !faulty.from = theta.f &&
+		    reachable init !faulty.f -> reachable init !faulty.from }
+        let ghost old_q = Q.copy q in
+        let phi = Q.pop q in
+        if sat (init & phi.f) then (faulty := phi; raise Unsafe_trace);
+        if not (phi.f |== !visited) then (
+          let ghost old_v = !visited in
+          visited := phi.f ++ !visited;
+          let poa = pre_or_approx phi in
+          Q.push poa q;
+          assert {
+	           old_v ++ pre_star q.formula.f |==
+		     old_v ++ (pre_star phi.f ++ pre_star q.formula.f)
+
+		   &&
+		   
+		   (phi.f ++ old_v) ++ pre_star (pre phi.f ++ ((~ phi.f) & old_q.formula.f)) =
+		     old_v ++ (pre_star phi.f ++ pre_star (~ phi.f & old_q.formula.f))
+
+		   &&
+		   
+		   (phi.f ++ old_v) ++ pre_star (pre phi.f ++ ((~ phi.f) & old_q.formula.f)) =
+		     old_v ++ pre_star (ttrue & (phi.f ++ old_q.formula.f))
+		     
+		   &&
+
+		   (phi.f |== poa.f ->
+		     ((phi.f ++ old_v) ++
+		      (pre_star phi.f ++ pre_star (~ phi.f & old_q.formula.f))) |==
+		     ((phi.f ++ old_v) ++ (pre_star poa.f ++
+		       pre_star (~ phi.f & old_q.formula.f))))
+		     
+		 }
+
+        )
+        else
+           assert {
+	        valid ((~ phi.f) => pre_star (~ phi.f))
+
+                &&
+		
+		!visited ++ ((~ phi.f) ++ (pre_star (~ phi.f))) =
+        	  (phi.f ++ !visited) ++ ((~ phi.f) ++ (pre_star (~ phi.f)))
+		  
+                &&
+		
+
+		 ((!visited ++ (~ phi.f ++ pre_star (~ phi.f)))
+		   & (!visited ++ pre_star old_q.formula.f)) = 
+                 ((!visited ++  ((phi.f ++ ~ phi.f) ++ pre_star (~ phi.f))) &
+		   (!visited ++ pre_star old_q.formula.f))
+		   
+                &&
+		
+
+		 ((!visited ++ (~ phi.f ++ pre_star (~ phi.f)))
+		   & (!visited ++ pre_star old_q.formula.f)) = 
+                 ((!visited ++  (ttrue ++ pre_star (~ phi.f))) &
+		   (!visited ++ pre_star old_q.formula.f))
+
+		&&
+
+		 ((!visited ++ (~ phi.f ++ pre_star (~ phi.f)))
+		   & (!visited ++ pre_star old_q.formula.f)) = 
+		 (!visited ++ ttrue) & (!visited ++ pre_star old_q.formula.f)
+          }
+        
+       done;
+      Safe
+    with
+        | Unsafe_trace -> Unsafe
+        | Q.Empty -> absurd
+    end
+
+
+    
+    let brab (init : f) (theta : f) =
+	requires { kind theta = Orig /\ from theta = theta }
+        requires { forall psi:f. psi <> theta -> kind psi = Undef /\ from psi = psi }
+	ensures { result = Safe -> not (reachable init theta) }
+	ensures { result = Unsafe -> reachable init theta }
+    	bad := ffalse;
+	try
+	    while bwd init theta = Unsafe do
+	        if kind !faulty = Orig then raise Unsafe_trace;
+	    	bad := from !faulty ++ !bad
+	    done;
+	    Safe
+        with
+            Unsafe_trace -> Unsafe
+	end
+
+
+end

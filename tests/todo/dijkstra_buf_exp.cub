@@ -1,0 +1,116 @@
+
+
+type kind = KProc | KBuf
+type vars = VNone | VF
+
+type location = Q1 | Q2f | Q2 | Q3 | Q4 | Q5f | Q5 | Q6 | Q7
+type flag = F0 | F1 | F2 | F3
+
+array Kind[proc] : kind
+array Var[proc,proc] : vars
+array Par[proc,proc] : proc
+array Val[proc,proc] : flag
+
+array A[proc] : location
+array F[proc] : flag
+array P[proc] : bool
+
+init (x y) { A[x] = Q1 && P[x] = False && F[x] = F0 && Var[x,y] = VNone }
+
+invariant (b1 b2) { Kind[b1] = KBuf && Kind[b2] = KBuf }
+(* BRAB 4 does not find any invariant *)
+
+unsafe (z1 z2 z3) { Kind[z1] = KProc && Kind[z2] = KProc && Kind[z3] = KBuf &&
+       	       	 A[z1] = Q6 && A[z2] = Q6 }
+
+transition t1 (x i)
+requires { Kind[x] = KProc && Kind[i] = KBuf &&
+	   Var[x,i] = VNone &&
+	   A[x] = Q1 &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	       (k < i && Kind[k] = KBuf && Var[x, k] = VNone)) }
+{ A[x] := Q2; (* Q2f *)
+  Var[x,i] := VF; Par[x,i] := x; Val[x,i] := F1; }
+
+(*transition t2f (x)*) (* Fence : buffer must be empty *)
+(*requires { Kind[x] = KProc &&
+	   A[x] = Q2f && forall_other j. (
+	       (Kind[j] = KProc) ||
+	       (Kind[j] = KBuf && Var[x, j] = VNone)) }
+{ A[x] := Q2; }*)
+
+transition t2 (x)
+requires { Kind[x] = KProc &&
+	   A[x] = Q2 && 
+	   forall_other j. (
+	       (Kind[j] = KProc && P[j] = False) ||
+	       (Kind[j] = KProc && P[j] = True && F[j] = F0) ||
+	       (Kind[j] = KBuf)) }
+{ A[x] := Q3; }
+
+transition t3 (x y)
+requires { Kind[x] = KProc && Kind[y] = KProc &&
+	   A[x] = Q3 }
+{ A[x] := Q4;
+  P[y] := True; }
+
+transition t4 (x i)
+requires { Kind[x] = KProc && Kind[i] = KBuf &&
+	   Var[x,i] = VNone &&
+	   A[x] = Q4 &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	       (k < i && Kind[k] = KBuf && Var[x, k] = VNone)) }
+{ A[x] := Q5f;
+  Var[x,i] := VF; Par[x,i] := x; Val[x,i] := F2; }
+
+transition t5f (x) (* Fence : buffer must be empty *)
+requires { Kind[x] = KProc &&
+	   A[x] = Q5f && forall_other j. (
+	       (Kind[j] = KProc) ||
+	       (Kind[j] = KBuf && Var[x, j] = VNone)) }
+{ A[x] := Q5; }
+
+transition t5 (x)
+requires { Kind[x] = KProc &&
+	   A[x] = Q5 && forall_other j. (
+	       (Kind[j] = KProc && F[j] <> F2) ||
+	       (Kind[j] = KBuf)) }
+{ A[x] := Q6; }
+
+transition t6 (x y)
+requires { Kind[x] = KProc && Kind[y] = KProc &&
+	   A[x] = Q5 && F[y] = F2 }
+{ A[x] := Q1; }
+
+transition t7 (x i)
+requires { Kind[x] = KProc && Kind[i] = KBuf &&
+	   Var[x,i] = VNone &&
+	   A[x] = Q6 &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k > i) ||
+	       (k < i && Kind[k] = KBuf && Var[x, k] = VNone)) }
+{ A[x] := Q7; 
+  Var[x,i] := VF; Par[x,i] := x; Val[x,i] := F0; }
+
+transition t8 (x)
+requires { Kind[x] = KProc &&
+	   A[x] = Q7 }
+{ A[x] := Q1; }
+
+
+(* Flush par p sur F[p] *)
+transition flush_F_self (p i)
+requires { Kind[p] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VF && Par[p,i] = p &&
+	   forall_other k. (Kind[k] = KProc || (Kind[k] = KBuf && k < i) ||
+	   	(i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ F[p] := Val[p,i]; Var[p,i] := VNone }
+
+
+(* Flush par p sur F[p2] avec p <> p2 *)
+(* Inutile car seul p écrit sur F[p] *)
+(*transition flush_F_other (p i p2)
+requires { Kind[p] = KProc && Kind[p2] = KProc && Kind[i] = KBuf &&
+	   Var[p,i] = VF && Par[p,i] = p2 &&
+	   forall_other k. (Kind[k] = KProc || k < i ||
+	   	(i < k && Kind[k] = KBuf && Var[p,k] = VNone)) }
+{ F[p2] := Val[p,i]; Var[p,i] := VNone }*)

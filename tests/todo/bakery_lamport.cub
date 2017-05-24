@@ -1,0 +1,52 @@
+type location = NCS | Choose | Wait | CS
+
+array PC[proc] : location
+weak array Ticket[proc] : int
+weak array Num[proc] : int
+weak var Max : int
+
+init (x) { PC[x] = NCS && Num[x] = 0 && 
+           Max = 1 && Ticket[x] = 0 }
+
+invariant (x) { x @ Max < 0 }
+
+unsafe (x y) { PC[x] = CS && PC[y] = CS }
+
+transition next_ticket ([x])
+{ 
+  Ticket[j] := case | _ : Max;
+  Max := Max + 1;
+}
+
+transition take_ticket ([x])
+requires { PC[x] = NCS && (*fence(x) &&*)
+    forall_other j. Num[j] < Max }
+{
+  PC[x] := Choose;
+  Ticket[x] := Max;
+}
+
+transition wait ([x])
+requires { PC[x] = Choose (*&& fence(x)*)}
+{
+  PC[x] := Wait;
+  Num[x] := Ticket[x];
+}
+
+transition turn ([x])
+requires { PC[x] = Wait && (*fence(x) &&*)
+  forall_other j. 
+  (PC[j] <> Choose && Num[j] = 0 ||
+   PC[j] <> Choose && Num[x] < Num[j] ||
+   PC[j] <> Choose &&
+   Num[x] = Num[j] && x < j) }
+{
+  PC[x] := CS;
+}
+
+transition exit ([x])
+requires { PC[x] = CS }
+{
+  PC[x] := NCS;
+  Num[x] := 0;
+}

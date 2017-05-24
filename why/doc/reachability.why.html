@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title>reachability.why</title>
+</head>
+<body>
+<p>Cubicle BRAB in Why3 <a href="index.html">index</a></p>
+<hr>
+<div class="why3doc">
+<pre>
+<span class="keyword1">theory</span> <a name="Reachability_1">Reachability</a>
+
+   <span class="keyword1">use</span> <span class="keyword1">import</span> fol.FOL
+
+   <span class="keyword1">type</span> <a name="trans_rel_5">trans_rel</a>
+   
+   <span class="comment">(* Just for instantiation *)</span>
+   <span class="keyword1">constant</span> <a name="tau_8">tau</a> : <a href="#trans_rel_5">trans_rel</a>
+
+   <span class="keyword1">function</span> <a name="pre_10">pre</a> <a href="#trans_rel_5">trans_rel</a> t : t
+ 
+   <span class="keyword1">axiom</span> <a name="pre_false_12">pre_false</a> : <span class="keyword1">forall</span> tau:<a href="#trans_rel_5">trans_rel</a>. <a href="#pre_10">pre</a> tau ffalse = ffalse
+   
+
+   <span class="keyword1">function</span> <a name="pre_star_15">pre_star</a> <a href="#trans_rel_5">trans_rel</a> t : t
+     
+   <span class="keyword1">axiom</span> <a name="pre_star_def1_17">pre_star_def1</a> : <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>. <span class="keyword1">forall</span> f : t.
+                         valid (f =&gt; <a href="#pre_star_15">pre_star</a> tau f)
+   <span class="keyword1">axiom</span> <a name="pre_star_def2_19">pre_star_def2</a> : <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>. <span class="keyword1">forall</span> f : t.
+                         <a href="#pre_10">pre</a> tau (<a href="#pre_star_15">pre_star</a> tau f) = <a href="#pre_star_15">pre_star</a> tau f
+   <span class="keyword1">axiom</span> <a name="pre_star_def3_21">pre_star_def3</a> : <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>. <span class="keyword1">forall</span> f : t.
+                         <a href="#pre_star_15">pre_star</a> tau (<a href="#pre_star_15">pre_star</a> tau f) = <a href="#pre_star_15">pre_star</a> tau f
+   <span class="keyword1">axiom</span> <a name="pre_star_def4_23">pre_star_def4</a> : <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>. <span class="keyword1">forall</span> f : t.
+                         ((<a href="#pre_star_15">pre_star</a> tau (<a href="#pre_10">pre</a> tau f)) ++ f) = <a href="#pre_star_15">pre_star</a> tau f
+
+   <span class="keyword1">axiom</span> <a name="pre_and_26">pre_and</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 : t. <a href="#pre_10">pre</a> tau (f1 &amp; f2) = (<a href="#pre_10">pre</a> tau f1) &amp; (<a href="#pre_10">pre</a> tau f2)
+     
+   <span class="keyword1">axiom</span> <a name="pre_or_30">pre_or</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 : t. <a href="#pre_10">pre</a> tau (f1 ++ f2) = (<a href="#pre_10">pre</a> tau f1) ++ (<a href="#pre_10">pre</a> tau f2)
+
+     
+   <span class="keyword1">axiom</span> <a name="pre_star_false_35">pre_star_false</a> : 
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>. <a href="#pre_star_15">pre_star</a> tau ffalse = ffalse
+   
+   <span class="keyword1">axiom</span> <a name="pre_star_and_38">pre_star_and</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 : t.
+     <a href="#pre_star_15">pre_star</a> tau (f1 &amp; f2) = (<a href="#pre_star_15">pre_star</a> tau f1) &amp; (<a href="#pre_star_15">pre_star</a> tau f2)
+     
+   <span class="keyword1">axiom</span> <a name="pre_star_or_43">pre_star_or</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 : t. 
+     <a href="#pre_star_15">pre_star</a> tau (f1 ++ f2) = (<a href="#pre_star_15">pre_star</a> tau f1) ++ (<a href="#pre_star_15">pre_star</a> tau f2)
+     
+   <span class="keyword1">predicate</span> <a name="reachable_48">reachable</a> <span class="comment">(* trans_rel t t *)</span>
+   (tau:<a href="#trans_rel_5">trans_rel</a>) (init : t) (f : t) = sat ((<a href="#pre_star_15">pre_star</a> tau f) &amp; init)
+   
+   <span class="keyword1">axiom</span> <a name="reachable_def_51">reachable_def</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> init f : t. sat ((<a href="#pre_star_15">pre_star</a> tau f) &amp; init) -&gt; <a href="#reachable_48">reachable</a> tau init f 
+            
+   <span class="keyword1">lemma</span> <a name="directly_reachable_55">directly_reachable</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> init f : t. sat (f &amp; init) -&gt; <a href="#reachable_48">reachable</a> tau init f 
+   
+   <span class="keyword1">lemma</span> <a name="false_unreachable_59">false_unreachable</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> init : t. <span class="keyword1">not</span> (<a href="#reachable_48">reachable</a> tau init ffalse)
+
+   <span class="keyword1">lemma</span> <a name="reachable_or_63">reachable_or</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 init :t.
+       <a href="#reachable_48">reachable</a> tau init (f1 ++ f2) &lt;-&gt;
+         <a href="#reachable_48">reachable</a> tau init f1 \/ <a href="#reachable_48">reachable</a> tau init f2
+       
+   <span class="keyword1">lemma</span> <a name="reachable_and_69">reachable_and</a> :
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 init :t.
+       <a href="#reachable_48">reachable</a> tau init (f1 &amp; f2) -&gt;
+         <a href="#reachable_48">reachable</a> tau init f1 /\ <a href="#reachable_48">reachable</a> tau init f2
+
+   <span class="keyword1">lemma</span> <a name="reachable_imply_75">reachable_imply</a>:
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> x f init : t.
+       valid (x =&gt; f) -&gt; <a href="#reachable_48">reachable</a> tau init x -&gt; <a href="#reachable_48">reachable</a> tau init f
+
+   <span class="keyword1">lemma</span> <a name="reachable_bigger_80">reachable_bigger</a>:
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 init : t.
+       f1 |== f2 -&gt; <a href="#reachable_48">reachable</a> tau init f1 -&gt; <a href="#reachable_48">reachable</a> tau init f2
+
+   <span class="keyword1">lemma</span> <a name="pre_star_bigger_85">pre_star_bigger</a>:
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f1 f2 : t.
+       f1 |== f2 -&gt; <a href="#pre_star_15">pre_star</a> tau f1 |== <a href="#pre_star_15">pre_star</a> tau f2
+       
+   <span class="keyword1">lemma</span> <a name="reachable_by_pre_90">reachable_by_pre</a>:
+   <span class="keyword1">forall</span> tau : <a href="#trans_rel_5">trans_rel</a>.
+     <span class="keyword1">forall</span> f init : t. <a href="#reachable_48">reachable</a> tau init (<a href="#pre_10">pre</a> tau f) -&gt; <a href="#reachable_48">reachable</a> tau init f
+
+<span class="keyword1">end</span>
+</pre>
+</div>
+<hr>
+<p>Generated by why3doc 0.82+git</p>
+</body>
+</html>

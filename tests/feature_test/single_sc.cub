@@ -1,0 +1,18 @@
+
+array PC[proc] : int
+var Init : bool
+var X : int
+
+invariant (p) { PC[p] < 0 } 
+
+init (p) { Init = False && PC[p] = 0 && X = 0 }
+
+unsafe (p) { Init = True && PC[p] = 10 && X = 9 }
+
+transition t_start (p)
+requires { Init = False }
+{ PC[p] := 1; Init := True }
+
+transition t_count (p)
+requires { Init = True }
+{ PC[p] := PC[p] + 1; X := PC[p] }

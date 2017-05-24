@@ -1,0 +1,1125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE why3session PUBLIC "-//Why3//proof session v2//EN" "http://why3.lri.fr/why3session.dtd">
+<why3session shape_version="2">
+ <prover
+  id="0"
+  name="Alt-Ergo"
+  version="0.96"/>
+ <prover
+  id="1"
+  name="CVC3"
+  version="2.4.1"/>
+ <prover
+  id="2"
+  name="Coq"
+  version="8.3pl4"/>
+ <prover
+  id="3"
+  name="Eprover"
+  version="1.6"/>
+ <file
+  name="../cubicle.mlw"
+  verified="true"
+  expanded="true">
+  <theory
+   name="FOL"
+   locfile="../cubicle.mlw"
+   loclnum="1" loccnumb="7" loccnume="10"
+   verified="true"
+   expanded="true">
+   <goal
+    name="valid_def"
+    locfile="../cubicle.mlw"
+    loclnum="48" loccnumb="9" loccnume="18"
+    sum="e423b5876eeffa659fa4b3e8c6729837"
+    proved="true"
+    expanded="true"
+    shape="ainfix |=V1V0FV1qavalidV0F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="negneg"
+    locfile="../cubicle.mlw"
+    loclnum="51" loccnumb="9" loccnume="15"
+    sum="45df8440882cb82516b6d17e9c01ac4a"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aneganegV0V0FaneganegV0">
+    <proof
+     prover="2"
+     timelimit="10"
+     memlimit="1000"
+     edited="cubicle_FOL_negneg_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.82"/>
+    </proof>
+   </goal>
+   <goal
+    name="and_a"
+    locfile="../cubicle.mlw"
+    loclnum="53" loccnumb="9" loccnume="14"
+    sum="75b1b211a4297277aa4dd19add8cfe56"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandaandV0V1V2aandV0aandV1V2F">
+    <proof
+     prover="2"
+     timelimit="10"
+     memlimit="1000"
+     edited="cubicle_FOL_and_a_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.64"/>
+    </proof>
+   </goal>
+   <goal
+    name="and_c"
+    locfile="../cubicle.mlw"
+    loclnum="55" loccnumb="9" loccnume="14"
+    sum="fcf8c6caa622d66e6928f0ec5a8cec07"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0V1aandV1V0F">
+    <proof
+     prover="1"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.83"/>
+    </proof>
+   </goal>
+   <goal
+    name="or_a"
+    locfile="../cubicle.mlw"
+    loclnum="57" loccnumb="9" loccnume="13"
+    sum="6fb6962b0aea30412eef06b1715a389e"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aoraorV0V1V2aorV0aorV1V2F">
+    <proof
+     prover="2"
+     timelimit="10"
+     memlimit="1000"
+     edited="cubicle_FOL_or_a_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.65"/>
+    </proof>
+   </goal>
+   <goal
+    name="or_c"
+    locfile="../cubicle.mlw"
+    loclnum="59" loccnumb="9" loccnume="13"
+    sum="a7d67b59d452048c222b5b6fa391f43a"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0V1aorV1V0F">
+    <proof
+     prover="1"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.66"/>
+    </proof>
+   </goal>
+   <goal
+    name="distr_and"
+    locfile="../cubicle.mlw"
+    loclnum="61" loccnumb="9" loccnume="18"
+    sum="ee1971243aff9832bc074cc2e54a9370"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0aorV1V2aoraandV0V1aandV0V2F">
+    <proof
+     prover="2"
+     timelimit="10"
+     memlimit="1000"
+     edited="cubicle_FOL_distr_and_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.64"/>
+    </proof>
+   </goal>
+   <goal
+    name="distr_or"
+    locfile="../cubicle.mlw"
+    loclnum="64" loccnumb="9" loccnume="17"
+    sum="de75ba1f240f2d9bdf7036540862363c"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0aandV1V2aandaorV0V1aorV0V2F">
+    <proof
+     prover="2"
+     timelimit="10"
+     memlimit="1000"
+     edited="cubicle_FOL_distr_or_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.64"/>
+    </proof>
+   </goal>
+   <goal
+    name="neutral_and"
+    locfile="../cubicle.mlw"
+    loclnum="67" loccnumb="9" loccnume="20"
+    sum="d0eaaa0c2a0526a84e9d801538875fe6"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0attrueV0F">
+    <proof
+     prover="1"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.17"/>
+    </proof>
+   </goal>
+   <goal
+    name="neutral_or"
+    locfile="../cubicle.mlw"
+    loclnum="69" loccnumb="9" loccnume="19"
+    sum="5d905d8ab1a0cb9deee17f9b8197e318"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0affalseV0F">
+    <proof
+     prover="1"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.44"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="2.40"/>
+    </proof>
+   </goal>
+   <goal
+    name="absorb_and"
+    locfile="../cubicle.mlw"
+    loclnum="71" loccnumb="9" loccnume="19"
+    sum="10424b0db2b69f358e0468524f3830c1"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aandV0affalseaffalseF">
+    <proof
+     prover="1"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.75"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="absorb_or"
+    locfile="../cubicle.mlw"
+    loclnum="73" loccnumb="9" loccnume="18"
+    sum="15f8569e4490af6da3ae2964e9ca7bb8"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0attrueattrueF">
+    <proof
+     prover="1"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="1.19"/>
+    </proof>
+    <proof
+     prover="3"
+     timelimit="10"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_def"
+    locfile="../cubicle.mlw"
+    loclnum="76" loccnumb="9" loccnume="16"
+    sum="d4349d4fe50022b459a315806331cca4"
+    proved="true"
+    expanded="true"
+    shape="avalidanegV0NqasatV0F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="unsat_invalid"
+    locfile="../cubicle.mlw"
+    loclnum="78" loccnumb="9" loccnume="22"
+    sum="f9e858b835a3032789fe879f92403497"
+    proved="true"
+    expanded="true"
+    shape="asatanegV0IavalidV0NF">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_sat"
+    locfile="../cubicle.mlw"
+    loclnum="80" loccnumb="9" loccnume="18"
+    sum="96fdbd5ade92faeb4c64860a1b775f53"
+    proved="true"
+    expanded="true"
+    shape="asatV0IavalidV0F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     edited="cubicle-FOL-valid_sat_4.why"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.02"/>
+    </proof>
+   </goal>
+   <goal
+    name="ttrue_valid"
+    locfile="../cubicle.mlw"
+    loclnum="82" loccnumb="9" loccnume="20"
+    sum="57ef9829dded8b49b0d143683617eca9"
+    proved="true"
+    expanded="true"
+    shape="avalidattrue">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+   </goal>
+   <goal
+    name="ffaslse_invalid"
+    locfile="../cubicle.mlw"
+    loclnum="83" loccnumb="9" loccnume="24"
+    sum="53cad8450ff91f6f669cbf5beb3b6c0c"
+    proved="true"
+    expanded="true"
+    shape="avalidaffalseN">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="ttrue_sat"
+    locfile="../cubicle.mlw"
+    loclnum="84" loccnumb="9" loccnume="18"
+    sum="e5beb2c1ad3f7e1534cae47d1752a346"
+    proved="true"
+    expanded="true"
+    shape="asatattrue">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+   </goal>
+   <goal
+    name="ffalse_unsat"
+    locfile="../cubicle.mlw"
+    loclnum="85" loccnumb="9" loccnume="21"
+    sum="1650902187e2556267c698bd4072c8b1"
+    proved="true"
+    expanded="true"
+    shape="asataffalseN">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_neg"
+    locfile="../cubicle.mlw"
+    loclnum="88" loccnumb="9" loccnume="16"
+    sum="0b04c87c3fd2fc7f0dac9d926bc2abf3"
+    proved="true"
+    expanded="true"
+    shape="asatanegV0IasatV0NF">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     edited="cubicle-FOL-sat_neg_1.why"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_neg"
+    locfile="../cubicle.mlw"
+    loclnum="91" loccnumb="9" loccnume="18"
+    sum="a2c224466e0f115913aa13ecd447cfdf"
+    proved="true"
+    expanded="true"
+    shape="avalidV0NIavalidanegV0F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.00"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_or"
+    locfile="../cubicle.mlw"
+    loclnum="94" loccnumb="9" loccnume="15"
+    sum="110c312630c7cd8a1a30e2928ef6260b"
+    proved="true"
+    expanded="true"
+    shape="asatV1OasatV0qasataorV0V1F">
+    <transf
+     name="split_goal_wp"
+     proved="true"
+     expanded="true">
+     <goal
+      name="sat_or.1"
+      locfile="../cubicle.mlw"
+      loclnum="94" loccnumb="9" loccnume="15"
+      expl="1."
+      sum="704646287cdf06b6364a955467ff65a5"
+      proved="true"
+      expanded="true"
+      shape="asatV1OasatV0IasataorV0V1F">
+      <proof
+       prover="0"
+       timelimit="15"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.01"/>
+      </proof>
+     </goal>
+     <goal
+      name="sat_or.2"
+      locfile="../cubicle.mlw"
+      loclnum="94" loccnumb="9" loccnume="15"
+      expl="2."
+      sum="67fa0c3d7b85e53018561f4ded3c037c"
+      proved="true"
+      expanded="true"
+      shape="asataorV0V1IasatV1OasatV0F">
+      <proof
+       prover="0"
+       timelimit="15"
+       memlimit="1000"
+       edited="cubicle-FOL-sat_or_1.why"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.83"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+   <goal
+    name="valid_and"
+    locfile="../cubicle.mlw"
+    loclnum="98" loccnumb="9" loccnume="18"
+    sum="853444264dccce3215000de0c02346a3"
+    proved="true"
+    expanded="true"
+    shape="avalidV1AavalidV0qavalidaandV0V1F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.14"/>
+    </proof>
+   </goal>
+   <goal
+    name="valid_or"
+    locfile="../cubicle.mlw"
+    loclnum="102" loccnumb="9" loccnume="17"
+    sum="0b27dbe2e2c7c4ab0b641f08ed329ce0"
+    proved="true"
+    expanded="true"
+    shape="avalidaorV0V1IavalidV1OavalidV0F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.04"/>
+    </proof>
+   </goal>
+   <goal
+    name="sat_and"
+    locfile="../cubicle.mlw"
+    loclnum="106" loccnumb="9" loccnume="16"
+    sum="a7c0f2f5519bf25498c6432a60d9cd61"
+    proved="true"
+    expanded="true"
+    shape="asatV1AasatV0IasataandV0V1F">
+    <proof
+     prover="0"
+     timelimit="15"
+     memlimit="1000"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.03"/>
+    </proof>
+   </goal>
+   <goal
+    name="forget_subsumed"
+    locfile="../cubicle.mlw"
+    loclnum="111" loccnumb="9" loccnume="24"
+    sum="dfb3916825527f165f34a52d835f4e36"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aorV0V1V1IavalidaoranegV0V1F">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="cubicle_FOL_forget_subsumed_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.64"/>
+    </proof>
+   </goal>
+   <goal
+    name="classic_neg"
+    locfile="../cubicle.mlw"
+    loclnum="115" loccnumb="9" loccnume="20"
+    sum="65008b57335c5f2237db39cdc6a2cf56"
+    proved="true"
+    expanded="true"
+    shape="ainfix =aoranegV0V0attrueF">
+    <proof
+     prover="2"
+     timelimit="5"
+     memlimit="1000"
+     edited="cubicle_FOL_classic_neg_1.v"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.64"/>
+    </proof>
+   </goal>
+  </theory>
+  <theory
+   name="Reachability"
+   locfile="../cubicle.mlw"
+   loclnum="127" loccnumb="7" loccnume="19"
+   verified="true"
+   expanded="true">
+   <goal
+    name="false_unreachable"
+    locfile="../cubicle.mlw"
+    loclnum="163" loccnumb="9" loccnume="26"
+    sum="0abb771ae94a051f3304740dac61a710"
+    proved="true"
+    expanded="true"
+    shape="areachableV0affalseNF">
+    <proof
+     prover="0"
+     timelimit="5"
+     memlimit="1000"
+     edited="cubicle-Reachability-false_unreachable_1.why"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.01"/>
+    </proof>
+   </goal>
+   <goal
+    name="reachable_or"
+    locfile="../cubicle.mlw"
+    loclnum="166" loccnumb="9" loccnume="21"
+    sum="81086054953302f08f1f2ae297172aa1"
+    proved="true"
+    expanded="true"
+    shape="areachableV2V1OareachableV2V0qareachableV2aorV0V1F">
+    <transf
+     name="split_goal_wp"
+     proved="true"
+     expanded="true">
+     <goal
+      name="reachable_or.1"
+      locfile="../cubicle.mlw"
+      loclnum="166" loccnumb="9" loccnume="21"
+      expl="1."
+      sum="ec5bfaef5b6fc0a14e66cbb564913423"
+      proved="true"
+      expanded="true"
+      shape="areachableV2V1OareachableV2V0IareachableV2aorV0V1F">
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       edited="cubicle_Reachability_reachable_or_1.v"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.64"/>
+      </proof>
+     </goal>
+     <goal
+      name="reachable_or.2"
+      locfile="../cubicle.mlw"
+      loclnum="166" loccnumb="9" loccnume="21"
+      expl="2."
+      sum="4f9cfb33669650fc99c51f0ac39a89f1"
+      proved="true"
+      expanded="true"
+      shape="areachableV2aorV0V1IareachableV2V1OareachableV2V0F">
+      <proof
+       prover="2"
+       timelimit="5"
+       memlimit="1000"
+       edited="cubicle_Reachability_reachable_or_2.v"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.64"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+   <goal
+    name="reachable_and"
+    locfile="../cubicle.mlw"
+    loclnum="170" loccnumb="9" loccnume="22"
+    sum="8dd3a035be8b475c2d5634836dad4c0c"
+    proved="true"
+    expanded="true"
+    shape="areachableV2V1AareachableV2V0IareachableV2aandV0V1F">
+    <transf
+     name="split_goal_wp"
+     proved="true"
+     expanded="true">
+     <goal
+      name="reachable_and.1"
+      locfile="../cubicle.mlw"
+      loclnum="170" loccnumb="9" loccnume="22"
+      expl="1."
+      sum="78b06576355967974cb4129b7954dcd6"
+      proved="true"
+      expanded="true"
+      shape="areachableV2V0IareachableV2aandV0V1F">
+      <proof
+       prover="3"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.25"/>
+      </proof>
+     </goal>
+     <goal
+      name="reachable_and.2"
+      locfile="../cubicle.mlw"
+      loclnum="170" loccnumb="9" loccnume="22"
+      expl="2."
+      sum="5ccd68f3a1ff3226c14649c3d2b035a5"
+      proved="true"
+      expanded="true"
+      shape="areachableV2V1IareachableV2aandV0V1F">
+      <proof
+       prover="3"
+       timelimit="5"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.24"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+   <goal
+    name="reachable_imply"
+    locfile="../cubicle.mlw"
+    loclnum="174" loccnumb="9" loccnume="24"
+    sum="83386c503ce71b1dbea9f70108b96a9c"
+    proved="true"
+    expanded="true"
+    shape="areachableV2V1IareachableV2V0IavalidaoranegV0V1F">
+    <proof
+     prover="0"
+     timelimit="10"
+     memlimit="1000"
+     edited="cubicle-Reachability-reachable_imply_1.why"
+     obsolete="false"
+     archived="false">
+     <result status="valid" time="0.51"/>
+    </proof>
+   </goal>
+  </theory>
+  <theory
+   name="AbstractQueue"
+   locfile="../cubicle.mlw"
+   loclnum="210" loccnumb="7" loccnume="20"
+   verified="true"
+   expanded="false">
+  </theory>
+  <theory
+   name="Cubicle"
+   locfile="../cubicle.mlw"
+   loclnum="246" loccnumb="7" loccnume="14"
+   verified="true"
+   expanded="true">
+   <goal
+    name="WP_parameter bwd"
+    locfile="../cubicle.mlw"
+    loclnum="260" loccnumb="6" loccnume="9"
+    expl="VC for bwd"
+    sum="b9aaebf97c0725f6e2031e37518a7d6f"
+    proved="true"
+    expanded="true"
+    shape="iasataandV0V1areachableV0V1iainfix =V11aTrueNfIainfix =V9affalseAais_emptyV8Aainfix =V15affalseAais_emptyV14FAiasataandV0V18areachableV0V1iavalidaoranegV18V10Nainfix =apre_starV1aorV19apre_starV21Aainfix =apre_starV19aorV19apre_starV21AasataandV0V19NAainfix =aorV19apre_starV21aorV10apre_staraandattrueaorV18V12Iainfix =V20aaddapreV18V16Aainfix =V21aorapreV18V17FIainfix =V19aorV18V10Fainfix =apre_starV1aorV10apre_starV17Aainfix =apre_starV10aorV10apre_starV17AasataandV0V10NAainfix =aorV10apre_staraandanegV18V12aandattrueapre_starV10Aainfix =aorV10apre_staraandanegV18V12aandaorV10aorattrueapre_staranegV18apre_starV10AavalidaoraneganegV18apre_staranegV18Iainfix =V17aandanegV18V9AavalidaoranegV18V9Aainfix =V16aremoveV18V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FareachableV0V1NIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFAainfix =apre_starV1aorV5apre_starV7Aainfix =apre_starV5aorV5apre_starV7AasataandV0V5NIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+    <label
+     name="expl:VC for bwd"/>
+    <transf
+     name="split_goal_wp"
+     proved="true"
+     expanded="true">
+     <goal
+      name="WP_parameter bwd.1"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="1. postcondition"
+      sum="d302f68384ca04fa58bb0a10885706f0"
+      proved="true"
+      expanded="true"
+      shape="areachableV0V1IasataandV0V1Iainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="10"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.01"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.2"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="2. loop invariant init"
+      sum="d0849209ffed20da901878ed52299092"
+      proved="true"
+      expanded="true"
+      shape="ainfix =apre_starV1aorV5apre_starV7Aainfix =apre_starV5aorV5apre_starV7AasataandV0V5NIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="10"
+       memlimit="1000"
+       edited="cubicle-Cubicle-WP_parameter_bwd_14.why"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.03"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.3"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="3. postcondition"
+      sum="265fc1073d31d1bf8b93172c515e0821"
+      proved="true"
+      expanded="true"
+      shape="areachableV0V1IasataandV0V16Iainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="15"
+       memlimit="1000"
+       edited="cubicle-Cubicle-WP_parameter_bwd_16.why"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="4.23"/>
+      </proof>
+      <proof
+       prover="2"
+       timelimit="10"
+       memlimit="1000"
+       edited="cubicle_Cubicle_WP_parameter_bwd_23.v"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.73"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.4"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="4. assertion"
+      sum="cc4ac9595e1273fd531132de451c2ddc"
+      proved="true"
+      expanded="true"
+      shape="ainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="15"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="5.68"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.5"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="5. loop invariant preservation"
+      sum="f021e418e43b62b389bd7f47ebefb924"
+      proved="true"
+      expanded="true"
+      shape="ainfix =apre_starV1aorV17apre_starV19Aainfix =apre_starV17aorV17apre_starV19AasataandV0V17NIainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <transf
+       name="split_goal_wp"
+       proved="true"
+       expanded="true">
+       <goal
+        name="WP_parameter bwd.5.1"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="1."
+        sum="73d8e48cc8272a68598602103bcdaaed"
+        proved="true"
+        expanded="true"
+        shape="asataandV0V17NIainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.10"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.5.2"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="2."
+        sum="540a4593305c70108d244263a869b80a"
+        proved="true"
+        expanded="true"
+        shape="ainfix =apre_starV17aorV17apre_starV19IasataandV0V17NIainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         edited="cubicle-Cubicle-WP_parameter_bwd_17.why"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.36"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="10"
+         memlimit="1000"
+         edited="cubicle_Cubicle_WP_parameter_bwd_19.v"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.75"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.5.3"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="3."
+        sum="a3293f2294cfc666fa7d98f24a1084d8"
+        proved="true"
+        expanded="true"
+        shape="ainfix =apre_starV1aorV17apre_starV19Iainfix =apre_starV17aorV17apre_starV19IasataandV0V17NIainfix =aorV17apre_starV19aorV10apre_staraandattrueaorV16V12Iainfix =V18aaddapreV16V14Aainfix =V19aorapreV16V15FIainfix =V17aorV16V10FIavalidaoranegV16V10NIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         edited="cubicle-Cubicle-WP_parameter_bwd_13.why"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.24"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+     <goal
+      name="WP_parameter bwd.6"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="6. assertion"
+      sum="3efce75a6ecf11935f8d9c73e6bcc99b"
+      proved="true"
+      expanded="true"
+      shape="ainfix =aorV10apre_staraandanegV16V12aandattrueapre_starV10Aainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10AavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="15"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="3.61"/>
+      </proof>
+      <transf
+       name="split_goal_wp"
+       proved="true"
+       expanded="true">
+       <goal
+        name="WP_parameter bwd.6.1"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="1."
+        sum="5938639b41445301082bbcde25f8f0af"
+        proved="true"
+        expanded="true"
+        shape="avalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.01"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.6.2"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="2."
+        sum="d4c0b6d9a49760e5d12cb3b860946f3a"
+        proved="true"
+        expanded="true"
+        shape="ainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10IavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="2.48"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.6.3"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="3."
+        sum="ca592e5975d5a16c6b31f4b8199229c9"
+        proved="true"
+        expanded="true"
+        shape="ainfix =aorV10apre_staraandanegV16V12aandattrueapre_starV10Iainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10IavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.30"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+     <goal
+      name="WP_parameter bwd.7"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="7. loop invariant preservation"
+      sum="26d691882b91af8b683488690f1788fd"
+      proved="true"
+      expanded="true"
+      shape="ainfix =apre_starV1aorV10apre_starV15Aainfix =apre_starV10aorV10apre_starV15AasataandV0V10NIainfix =aorV10apre_staraandanegV16V12aandattrueapre_starV10Aainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10AavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <transf
+       name="split_goal_wp"
+       proved="true"
+       expanded="true">
+       <goal
+        name="WP_parameter bwd.7.1"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="1."
+        sum="15bade4fd633b4a260b85bb3d4062662"
+        proved="true"
+        expanded="true"
+        shape="asataandV0V10NIainfix =aorV10apre_staraandanegV16V12aandattrueapre_starV10Aainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10AavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.01"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.7.2"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="2."
+        sum="1762471886cbd8c04b0334bba7e19e53"
+        proved="true"
+        expanded="true"
+        shape="ainfix =apre_starV10aorV10apre_starV15IasataandV0V10NIainfix =aorV10apre_staraandanegV16V12aandattrueapre_starV10Aainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10AavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.36"/>
+        </proof>
+        <proof
+         prover="2"
+         timelimit="10"
+         memlimit="1000"
+         edited="cubicle_Cubicle_WP_parameter_bwd_20.v"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.84"/>
+        </proof>
+       </goal>
+       <goal
+        name="WP_parameter bwd.7.3"
+        locfile="../cubicle.mlw"
+        loclnum="260" loccnumb="6" loccnume="9"
+        expl="3."
+        sum="ae7507e7879d57c3f5629360112b08c2"
+        proved="true"
+        expanded="true"
+        shape="ainfix =apre_starV1aorV10apre_starV15Iainfix =apre_starV10aorV10apre_starV15IasataandV0V10NIainfix =aorV10apre_staraandanegV16V12aandattrueapre_starV10Aainfix =aorV10apre_staraandanegV16V12aandaorV10aorattrueapre_staranegV16apre_starV10AavalidaoraneganegV16apre_staranegV16IavalidaoranegV16V10NNIasataandV0V16NIainfix =V15aandanegV16V9AavalidaoranegV16V9Aainfix =V14aremoveV16V8Aais_emptyV8NLachooseV8FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+        <label
+         name="expl:VC for bwd"/>
+        <proof
+         prover="0"
+         timelimit="15"
+         memlimit="1000"
+         obsolete="false"
+         archived="false">
+         <result status="valid" time="0.01"/>
+        </proof>
+       </goal>
+      </transf>
+     </goal>
+     <goal
+      name="WP_parameter bwd.8"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="8. unreachable point"
+      sum="d21e762e8d36c743028ec64d08dd7430"
+      proved="true"
+      expanded="true"
+      shape="fIainfix =V9affalseAais_emptyV8Aainfix =V15affalseAais_emptyV14FIainfix =V13V8Aainfix =V12V9FIainfix =V11aTrueNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="10"
+       memlimit="1000"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.02"/>
+      </proof>
+     </goal>
+     <goal
+      name="WP_parameter bwd.9"
+      locfile="../cubicle.mlw"
+      loclnum="260" loccnumb="6" loccnume="9"
+      expl="9. postcondition"
+      sum="673f33241a97266f127037e63f25296d"
+      proved="true"
+      expanded="true"
+      shape="areachableV0V1NIainfix =V11aTrueNNIainfix =V9affalseAais_emptyV8qainfix =V11aTrueFIainfix =apre_starV1aorV10apre_starV9Aainfix =apre_starV10aorV10apre_starV9AasataandV0V10NFIainfix =V6aaddapreV1V3Aainfix =V7aorapreV1V4FIainfix =V5aorV1V2FIasataandV0V1NIainfix =V3aemptyAainfix =V4affalseFIainfix =V2affalseFF">
+      <label
+       name="expl:VC for bwd"/>
+      <proof
+       prover="0"
+       timelimit="10"
+       memlimit="1000"
+       edited="cubicle-Cubicle-WP_parameter_bwd_12.why"
+       obsolete="false"
+       archived="false">
+       <result status="valid" time="0.03"/>
+      </proof>
+     </goal>
+    </transf>
+   </goal>
+  </theory>
+ </file>
+</why3session>

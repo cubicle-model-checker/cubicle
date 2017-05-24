@@ -1,0 +1,29 @@
+forbidden
+  CS CS
+
+data
+  m0 = 0 : [0:1]
+  m1 = 0 : [0:1]
+  m2 = 0 : [0:1]
+  lock = 2 : [0:2]
+
+macro clh(pid)
+process
+registers
+  $i = pid : [0:2]
+  $p = pid : [0:2]
+text
+L0:
+  write: [$i] := 1;
+  read: $p := lock;
+  cas(lock,$p,$i);
+  read: [$p] = 0;
+CS:
+  write: [$i] := 0;
+  $i := $p;
+  goto L0
+endmacro
+
+clh(0)
+clh(1)
+

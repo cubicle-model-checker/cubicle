@@ -1,0 +1,24 @@
+
+number_procs 2
+
+type loc = L1 | L2 | L3
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Global variables *)
+weak array X[proc] : bool
+
+
+init (p) { PC[p] = L1 && X[p] = False }
+
+unsafe (p1 p2) { PC[p1] = L3 && PC[p2] = L3 }
+
+
+transition t1 ([p])
+requires { PC[p] = L1 }
+{ PC[p] := L2; X[p] := True }
+
+transition t2 ([p] q)
+requires { PC[p] = L2 && fence (p) && X[q] = False }
+{ PC[p] := L3 }
