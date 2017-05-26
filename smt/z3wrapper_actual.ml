@@ -394,7 +394,6 @@ let set_arith _ = ()
 let set_sum _ = ()
 
 module type Solver = sig
-  val init_axioms : unit -> unit
     
   val check_strategy : check_strategy
     
@@ -411,8 +410,6 @@ module type Solver = sig
 end
 
 module Make (Options : sig val profiling : bool end) = struct
-
-  let init_axioms () = ()
 
   let check_strategy = Lazy
 

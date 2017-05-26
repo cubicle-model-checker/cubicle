@@ -108,7 +108,6 @@ let rec make_term = function
       let tx = make_term x in
       make_arith_cs cs tx
 
-  | Field (t, f) -> T.make_app f [make_term t]
   | Read _ -> failwith "Prover.make_term : Read should not be there"
   | Write _ -> failwith "Prover.make_term : Write should not be there"
   | Fence _ -> failwith "Prover.make_term : Fence should not be there"
@@ -141,21 +140,21 @@ and make_literal = function
     let open Weakmem in
     let unsat_evt, all_lw = SAtom.fold (
      fun a (unsat_evt, all_lw) -> match a with
-      | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, _))
-      | Atom.Comp (Elem (c, _), Eq, Field (Access (a, [e]), f))
-           when H.equal a hE && H.equal f hVar ->
+      | Atom.Comp (Access (f, [e]), Eq, Elem (c, _))
+      | Atom.Comp (Elem (c, _), Eq, Access (f, [e]))
+           when H.equal f hVar ->
          unsat_evt, HSet.add e all_lw
-      | Atom.Comp (Field (Field (Access (a, [e]), f), _), Eq, Elem (c, _))
-      | Atom.Comp (Elem (c, _), Eq, Field (Field (Access (a, [e]), f), _))
-           when H.equal a hE && H.equal f hVal ->
+      | Atom.Comp (Access (f, [e]), Eq, Elem (c, _))
+      | Atom.Comp (Elem (c, _), Eq, (Access (f, [e])))
+           when is_value f ->
          HSet.add e unsat_evt, all_lw (* writes never have values *)
       | _ -> unsat_evt, all_lw
     ) sa (HSet.empty, HSet.empty) in
     let sat_evt_lw = HSet.diff all_lw unsat_evt in
     SAtom.filter (fun a -> match a with
-      | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
-      | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
-       when H.equal a hE && ((*H.equal f hThr ||*) H.equal f hVar || is_param f)
+      | Atom.Comp (Access (f, [e]), Eq, _)
+      | Atom.Comp (_, Eq, Access (f, [e]))
+       when (H.equal f hVar || is_param f)
               && HSet.mem e sat_evt_lw -> false
       | _ -> true
     ) sa
@@ -287,7 +286,3 @@ let assume_goal_nodes n nodes = (* FP only *)
   assume_goal_no_check n;
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
   SMT.check ~fp:true ()
-
-
-let init () =
-  SMT.init_axioms ()

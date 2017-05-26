@@ -471,7 +471,6 @@ let set_arith = Combine.CX.set_arith_active
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
-  val init_axioms : unit -> unit
 
   val check_strategy : check_strategy
 
@@ -489,8 +488,6 @@ end
 
 module Make (Options : sig val profiling : bool end) = struct
 
-  let init_axioms () = ()
-    
   let check_strategy = Eager
 
   let push_stack = Stack.create ()

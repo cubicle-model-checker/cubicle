@@ -105,21 +105,20 @@ let find_event_safe e evts =
   try HMap.find e evts with Not_found -> ((hNone, hNone, hNone, []), [])
 
 let rec has_val = function
-  | Field (Field (Access (a, [e]), f), _)
-       when H.equal a hE && H.equal f hVal -> true
+  | Access (f, [e]) when is_value f -> true
   | Arith (t, c) -> has_val t
   | _ -> false
 
 let rec get_val = function
-  | Field (Field (Access (a, [e]), f), _)
-       when H.equal a hE && H.equal f hVal -> Some e
+  | Access (f, [e]) when is_value f -> Some e
   | Arith (t, c) -> get_val t
   | _ -> None
 
 let split_event (la, evts) at = match at with
   (* Direction / Variable / Indices *)
-  | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [e]), f)) when H.equal a hE ->
+  | Atom.Comp (Access (f, [e]), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c, t), Eq, Access (f, [e]))
+       when is_event f && not (is_value f) ->
      let ((p, d, v, vi), vals) as evt = find_event_safe e evts in
      let evt = if H.equal f hThr then ((c, d, v, vi), vals)
           else if H.equal f hDir then ((p, c, v, vi), vals)

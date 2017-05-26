@@ -38,34 +38,27 @@ val hR : H.t
 val hW : H.t
 val hDirection : H.t
 val hWeakVar : H.t
-val hValType : H.t
 val hThr : H.t
 val hDir : H.t
 val hVar : H.t
-val hVal : H.t
-val hEvent : H.t
 
 val hInt : H.t
 val hProp : H.t
 
 val hP0 : H.t
 val hE0 : H.t
-val hE : H.t
 
-(* val hPo : H.t *)
-(* val hRf : H.t *)
-(* val hCo : H.t *)
-(* val hFr : H.t *)
 val hFence : H.t
 val hSync : H.t
-(* val hPoLoc : H.t *)
-(* val hPpo : H.t *)
 val hGhb : H.t
 
 val mk_hP : int -> H.t
 val mk_hE : int -> H.t
 val mk_hV : H.t -> H.t
 val mk_hT : H.t -> H.t
+
+val is_event : H.t -> bool
+val is_value : H.t -> bool
 
 val is_param : H.t -> bool
 

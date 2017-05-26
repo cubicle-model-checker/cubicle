@@ -22,8 +22,8 @@ let cop_of_r_op r op =
   | _, Neq -> CNeq
   | false, Lt -> CLt
   | false, Le -> CLe
-  | true, Lt -> CGe
-  | true, Le -> CGt
+  | true, Lt -> CGt
+  | true, Le -> CGe
 
 let string_of_cop = function
   | CEq -> "="
@@ -52,8 +52,7 @@ let add_ievent evts e nvals =
   HMap.add e (ed, nvals @ vals) evts
 
 let rec split_event_val = function
-  | Field (Field (Access (a, [e]), f), _)
-     when H.equal a hE && H.equal f hVal -> Some e, None
+  | Access (f, [e]) when is_value f -> Some e, None
   | Arith (t, c) -> fst (split_event_val t), Some c
   | _ -> None, None
 
@@ -123,9 +122,9 @@ let extract_event (sa_pure, rds, wts, fces, eids, evts) at = match at with
      let evts = process_event evts t2 (cop_of_r_op true op) t1 in
      (sa_pure, rds, wts, fces, eids, evts)
   (* Thread / Direction / Variable / Indices *)
-  | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [e]), f))
-       when H.equal a hE ->
+  | Atom.Comp (Access (f, [e]), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c, t), Eq, Access (f, [e]))
+       when is_event f && not (is_value f) ->
      let ((p, d, v, vi), vals) as evt = find_ievent evts e in
      let evt = if H.equal f hThr then ((c, d, v, vi), vals)
           else if H.equal f hDir then ((p, c, v, vi), vals)

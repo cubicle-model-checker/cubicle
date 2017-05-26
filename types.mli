@@ -53,7 +53,6 @@ type term =
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 
-  | Field of term * Hstring.t (* term is Elem/Access *)
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list * Hstring.t list
   | Fence of Variable.t

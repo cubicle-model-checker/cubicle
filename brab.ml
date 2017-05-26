@@ -59,7 +59,6 @@ let reinstall_sigint () =
 (**************************************************************)
 
 let brab system =
-  Prover.init ();
   Oracle.init system;
   if only_forward then exit 0;
   reinstall_sigint ();

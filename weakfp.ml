@@ -8,7 +8,7 @@ open Util
 let compatible_consts cop1 c1 cop2 c2 =
   let open Weakpre in
   let c = Types.compare_constants c1 c2 in
-  begin match cop1, cop2 with
+  let res = begin match cop1, cop2 with
   | CEq, CEq -> c = 0
   | CNeq, CEq -> c <> 0
   | CNeq, CNeq -> c = 0
@@ -29,7 +29,12 @@ let compatible_consts cop1 c1 cop2 c2 =
   | CGe, CGt -> c <= 0 (* must have c1 <= c2-1 *)
   | CGe, CGe -> c <= 0 (* must have c1 <= c2 *)
   | _ -> false
-  end
+  end in
+  (* Format.fprintf Format.std_formatter "%s %a // %s %a : %b\n" *)
+  (*   (string_of_cop cop1) Term.print (Const c1) *)
+  (*   (string_of_cop cop2) Term.print (Const c2) res; *)
+  (* Format.print_flush (); *)
+  res
 
 (* Checks whether (cop1, t1) can subsume (cop2, t2) *)
 (* True means maybe, False means no *)
@@ -95,8 +100,8 @@ let compat_evts (ed1, vals1) (ed2, vals2) =
     (vals1 = [] (*&& vals2 = []*) ||
      vals1 <> [] && vals2 <> [] &&
     (* (vals1 = [] || vals2 = [] || *)
-     List.for_all (fun (cop1, t1) ->
-       List.for_all (fun (cop2, t2) ->
+     List.for_all (fun (cop1, t1) -> (* replaced forall by exists *)
+       List.exists (fun (cop2, t2) -> (* see spinlock *)
          compatible_terms cop1 t1 cop2 t2
        ) vals2
      ) vals1)
@@ -199,9 +204,7 @@ let remap_events_ar ar sub =
   let rec remap_t tt = match tt with
     | Arith (t, c) ->
        let t' = remap_t t in if t' == t then tt else Arith (t', c)
-    | Field (t, f) ->
-       let t' = remap_t t in if t' == t then tt else Field (t', f)
-    | Access (a, [e]) when H.equal a hE ->
+    | Access (a, [e]) when is_event a ->
        let e' = subst e in if e' == e then tt else Access (a, [e'])
     | Access (a, [p; e]) when H.equal a hFence ->
        let e' = subst e in if e' == e then tt else Access (a, [p; e'])

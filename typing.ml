@@ -133,7 +133,6 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
-      | Field _ -> failwith "Typing.infer_type Field TODO"
       | Read _ -> failwith "Typing.infer_type Read TODO"
       | Write _ -> failwith "Typing.infer_type Write TODO"
       | Fence _ -> failwith "Typing.infer_type Fence TODO"
@@ -199,7 +198,6 @@ let rec term loc ?(init=false) args = function
       if Weakmem.is_weak a && not init then error (MustReadWeakVar a) loc;
       ty_access loc args a li
 
-  | Field _ -> failwith "Typing.term : Field should not be typed"
   | Read (p, v, vi) ->
       if Options.model = Options.SC then error (OpInvalidInSC) loc;
       if init then error (CantUseReadInInit) loc;

@@ -111,7 +111,7 @@ let set_mode m =
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
 
-let smt_solver = ref AltErgoLib
+let smt_solver = ref AltErgo
 let set_smt_solver s =
   smt_solver := match s with
     | "alt-ergo" -> AltErgo
@@ -203,7 +203,7 @@ let specs =
     " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-solver", Arg.String set_smt_solver,
-    "<alt-ergo | alt-ergo-file | alt-ergo-lib(default) | z3> SMT solver to use";
+    "<alt-ergo(default) | alt-ergo-file | alt-ergo-lib | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";

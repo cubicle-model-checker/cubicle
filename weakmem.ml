@@ -76,34 +76,40 @@ let hR = H.make "_R"
 let hW = H.make "_W"
 let hDirection = H.make "_direction"
 let hWeakVar = H.make "_weak_var"
-let hValType = H.make "_val_type"
-let hThr = H.make "_thr"
-let hDir = H.make "_dir"
-let hVar = H.make "_var"
-let hVal = H.make "_val"
-let hEvent = H.make "_event"
+let hThr = H.make "_e_thr"
+let hDir = H.make "_e_dir"
+let hVar = H.make "_e_var"
 
 let hInt = H.make "int"
 let hProp = H.make "prop"
 
 let hP0 = H.make "#0"
 let hE0 = H.make "_e0"
-let hE = H.make "_e"
 
 let hFence = H.make "_fence"
 let hSync = H.make "_sync"
 let hGhb = H.make "_ghb"
 
-let mk_hP p = H.make ("_p" ^ (string_of_int p))
+let mk_hP p = H.make ("_e_p" ^ (string_of_int p))
 let mk_hE e = H.make ("_e" ^ (string_of_int e))
 let mk_hV hv = H.make ("_V" ^ (H.view hv))
-let mk_hT ht = H.make ("_t" ^ (H.view ht)) (* for event value type *)
+let mk_hT ht = H.make ("_e_val_" ^ (H.view ht)) (* for event value type *)
 
 
 
-let pl = ref [] (* event fields corresponding to array parameters *)
+let is_event a =
+  let a = H.view a in
+  if String.length a < 3 then false else
+  let a = String.sub a 0 3 in
+  a = "_e_"
 
-let is_param f = List.exists (fun (p, _) -> H.equal f p) !pl
+let wtl = ref [] (* arrays corresponding to event values *)
+
+let is_value a = List.exists (fun (wt, _) -> H.equal a wt) !wtl
+
+let pl = ref [] (* arrays corresponding to event array parameters *)
+
+let is_param a = List.exists (fun (p, _) -> H.equal a p) !pl
 
 let sort_params (p, d, v, vi) =
   let vi = List.sort_uniq (fun (p1, _) (p2, _) -> H.compare p1 p2) vi in
@@ -178,9 +184,10 @@ let init_weak_env wvl =
   ) (HSet.empty, 0) wvl in
 
   (* wtl : list of all types of weak variable + corresponding field name *)
-  let wtl = HSet.fold (fun wt wtl -> (mk_hT wt, wt) :: wtl) wts [] in
+  wtl := HSet.fold (fun wt wtl -> (mk_hT wt, wt) :: wtl) wts [];
 
-  for i = maxp downto 1 do pl := (mk_hP i, hInt) :: !pl done;
+  for i = maxp downto 1 do
+    pl := (mk_hP i, hInt) :: !pl done;
 
   (* should adjust automatically *)
   for i = 0 to 100 do S.declare (mk_hE i) [] T.type_int done;
@@ -188,13 +195,12 @@ let init_weak_env wvl =
   let int1 = [T.type_int] in
   let int2 = [T.type_int; T.type_int] in
 
-  S.declare hE int1 hEvent;
+  S.declare hThr int1 T.type_proc;
+  S.declare hDir int1 hDirection;
+  S.declare hVar int1 hWeakVar;
+  List.iter (fun (hP, t) -> S.declare hP int1 t) !pl;
+  List.iter (fun (hT, t) -> S.declare hT int1 t) !wtl;
 
-  (* S.declare hPo int2 T.type_prop; *)
-  (* S.declare hRf int2 T.type_prop; *)
-  (* S.declare hCo int2 T.type_prop; *)
-  (* S.declare hFr int2 T.type_prop; *)
   S.declare hFence int2 T.type_prop;
   S.declare hSync int2 T.type_prop;
-  (* S.declare hPoLoc int2 T.type_prop; *)
-  (* S.declare hPpo int2 T.type_prop; *)
+  S.declare hGhb int2 T.type_prop

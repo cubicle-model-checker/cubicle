@@ -266,8 +266,6 @@ module type S = sig
           check ();]}
     *)
 
-    val init_axioms : unit -> unit
-
     val check_strategy : check_strategy
     (** The stragey used for preforming check-sat. Lazy means that we chech the
         context only when needed, whereas Eager means the context should be

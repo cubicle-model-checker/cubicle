@@ -247,8 +247,7 @@ let make_read_write_combinations writes evts_bt urevts ghb =
 
 let subst_event_val sfun sa =
   let rec process_t = function
-    | Field (Field (Access (a, [e]), f), _) as t
-         when H.equal a hE && H.equal f hVal -> sfun t e
+    | Access (f, [e]) as t when is_value f -> sfun t e
     | Arith (t, c) ->
        let ntl = process_t t in
        begin match ntl with
@@ -300,8 +299,8 @@ let add_reads_to_sa irds sa =
         | CNeq -> Atom.Comp (lt, Neq, rt)
         | CLt -> Atom.Comp (lt, Lt, rt)
         | CLe -> Atom.Comp (lt, Le, rt)
-        | CGt -> Atom.Comp (rt, Le, lt)
-        | CGe -> Atom.Comp (rt, Lt, lt)
+        | CGt -> Atom.Comp (rt, Lt, lt)
+        | CGe -> Atom.Comp (rt, Le, lt)
       in
       SAtom.add a sa
     ) sa vals
@@ -356,13 +355,12 @@ let eid_diff eids_high eids_low =
 (* Build an event *)
 let build_event e p d v vi = (* v with _V prefix *)
   let _, ret = Weakmem.weak_type v in
-  let tevt = Access (hE, [e]) in
-  let tval = Field (Field (tevt, hVal), mk_hT ret) in
-  let athr = Atom.Comp (Field (tevt, hThr), Eq, Elem (p, Var)) in
-  let adir = Atom.Comp (Field (tevt, hDir), Eq, Elem (d, Constr)) in
-  let avar = Atom.Comp (Field (tevt, hVar), Eq, Elem (v, Constr)) in
+  let tval = Access (mk_hT ret, [e]) in
+  let athr = Atom.Comp (Access (hThr, [e]), Eq, Elem (p, Var)) in
+  let adir = Atom.Comp (Access (hDir, [e]), Eq, Elem (d, Constr)) in
+  let avar = Atom.Comp (Access (hVar, [e]), Eq, Elem (v, Constr)) in
   let sa, _ = List.fold_left (fun (sa, i) v ->
-    SAtom.add (Atom.Comp (Field (tevt, mk_hP i), Eq, Elem (v, Var))) sa, i + 1
+    SAtom.add (Atom.Comp (Access (mk_hP i, [e]), Eq, Elem (v, Var))) sa, i + 1
   ) (SAtom.add avar (SAtom.add adir (SAtom.singleton athr)), 1) vi in
   sa, tval
 
@@ -601,30 +599,27 @@ let pres = if wrcp = [] then [] else begin
          not (HSet.mem et kfwt || HSet.mem et kgfw || HSet.mem et kfrd)*)
        (* not (HMap.mem et wevts *)
        (*     || HEvtMap.exists (fun _ (e, _) -> H.equal e et) iwts) *)
-      | Atom.Comp (Field (Access (a, [e]), f), _, _)
-      | Atom.Comp (_, _, Field (Access (a, [e]), f))
-           when H.equal a hE && (H.equal f hVar || is_param f) ->
+      | Atom.Comp (Access (f, [e]), _, _)
+      | Atom.Comp (_, _, Access (f, [e])) when (H.equal f hVar || is_param f) ->
          (* HSet.mem e keep && (HSet.mem e kurd || HSet.mem e kgfw) *)
          HSet.mem e keep && (HSet.mem e kurd ||
                              HSet.mem e kgfw || HSet.mem e kfwt)
 
       (*    HSet.mem e keep && (HVarMap.exists (fun _ we -> H.equal e we) gfw' || *)
       (*      HMap.exists (fun re _ -> H.equal e re) urevts') *) (* more nodes on peterson, same on dekker *)
-      | Atom.Comp (Field (Access (a, [e]), _), _, _)
-      | Atom.Comp (_, _, Field (Access (a, [e]), _))
-           when H.equal a hE -> HSet.mem e keep
+      | Atom.Comp (Access (a, [e]), _, _)
+      | Atom.Comp (_, _, Access (a, [e]))
+           when is_event a -> HSet.mem e keep
       | Atom.Comp (t1, _, t2) ->
          let k1 = match t1 with
-         | Field (Field (Access (a, [e]), _), _)
-         | Arith (Field (Field (Access (a, [e]), _), _), _)
-              when H.equal a hE -> HSet.mem e keep
+         | Access (f, [e]) | Arith (Access (f, [e]), _)
+              when is_value f -> HSet.mem e keep
          | _ -> true in
          let k2 = match t2 with
-         | Field (Field (Access (a, [e]), _), _)
-         | Arith (Field (Field (Access (a, [e]), _), _), _)
-              when H.equal a hE -> HSet.mem e keep
+         | Access (f, [e]) | Arith (Access (f, [e]), _)
+              when is_value f -> HSet.mem e keep
          | _ -> true in
-           k1 && k2
+         k1 && k2
       | _ -> true
     ) sa in
 

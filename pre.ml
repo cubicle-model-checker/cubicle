@@ -157,7 +157,6 @@ let rec find_assign tr = function
 	(* in *)
 	(* Single (Access (na, nli)) *) end
 
-  | Field _ as a -> Single a (* No assigns to fields : internal use only *)
   | Read _ -> failwith "Pre.find_assign: Read should not be in atom"
   | Write _ -> failwith "Pre.find_assign: Write should not be in atom"
   | Fence _ -> failwith "Pre.find_assign: Fence should not be in atom"
@@ -322,8 +321,8 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 open Weakmem
 
 let split_event at evts = match at with
-  | Atom.Comp (Field (Access (a, [e]), f), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c, t), Eq, Field (Access (a, [e]),f)) when H.equal a hE ->
+  | Atom.Comp (Access (f, [e]), Eq, Elem (c, t))
+  | Atom.Comp (Elem (c, t), Eq, Access (f, [e])) when is_event f ->
      let (p, d, v, vi) as evt = try HMap.find e evts with Not_found -> (hNone, hNone, hNone, []) in
      let evt = if H.equal f hThr then (c, d, v, vi)
           else if H.equal f hDir then (p, c, v, vi)

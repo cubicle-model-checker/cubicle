@@ -62,7 +62,6 @@ type term =
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
 
-  | Field of term * Hstring.t (* term is Elem/Access *)
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list * Hstring.t list
   | Fence of Variable.t
@@ -161,10 +160,6 @@ module Term = struct
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
     | Arith (_, _), _ -> -1 | _, Arith (_, _) -> 1
-    | Field (t1, f1), Field (t2, f2) -> 
-       let c = compare t1 t2 in
-       if c<>0 then c else Hstring.compare f1 f2
-    | Field (_, _), _ -> -1 | _, Field (_, _) -> 1
     | Read (p1, v1, vi1), Read (p2, v2, vi2) ->
        let c = Hstring.compare p1 p2 in if c<>0 then c else
        (* let c = Hstring.compare v1 v2 in if c<>0 then c else *)
@@ -211,7 +206,6 @@ module Term = struct
                      try Variable.subst sigma z with Not_found -> z) lz)
     | Arith (x, c) -> Arith (subst sigma x, c)
 
-    | Field (t, f) -> Field (subst sigma t, f)
     | Read (p, v, vi) -> Read (safe_subst p, v, list_subst vi)
     | Write (p, v, vi, rr) -> Write (safe_subst p, v, list_subst vi, rr)
     | Fence p -> Fence (safe_subst p)
@@ -225,7 +219,6 @@ module Term = struct
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t
 
-    | Field (t, _) -> variables t
     | Read (p, _, vi) | Write (p, _, vi, _) ->
        List.fold_left (fun acc x -> Variable.Set.add x acc)
 		      (Variable.Set.singleton p) vi
@@ -244,7 +237,6 @@ module Term = struct
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
 
-    | Field (_, f) -> snd (Smt.Symbol.type_of f)
     | Read (_, v, _) -> snd (Smt.Symbol.type_of v)
     | Write (_, v, _, _) -> snd (Smt.Symbol.type_of v)
     | Fence _ -> Smt.Type.type_bool
@@ -288,14 +280,14 @@ module Term = struct
       | [t] -> print fmt t
       | t :: tl -> print fmt t; List.iter (fprintf fmt ",%a" print) tl in
     match t with
-    | Field (Access (a, [p; e; s]), f)
-	 when H.equal a hE  && H.equal f hDir ->
+    | Access (a, [p; e; s])
+	 when H.equal a hDir ->
        fprintf fmt "D(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
-    | Field (Access (a, [p; e; s]), f)
-	 when H.equal a hE  && H.equal f hVar ->
+    | Access (a, [p; e; s])
+	 when H.equal a hVar ->
        fprintf fmt "X(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
-    | Field (Field (Access (a, [p; e; s]), f), _)
-	 when H.equal a hE && H.equal f hVal ->
+    | Access (a, [p; e; s])
+	 when is_value a ->
        fprintf fmt "V(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
     | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
@@ -304,8 +296,6 @@ module Term = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print x (print_cs false) cs
 
-    | Field (t, f) -> 
-       fprintf fmt "%a.%a" print t Hstring.print f
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" Hstring.print p print_var (v, vi)
     | Write (p, v, vi, rr) ->
@@ -412,7 +402,6 @@ end = struct
     | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs 
     | Arith (x, _) ->  has_vars_term vs x
 
-    | Field (t, _) -> has_vars_term vs t
     | Read (p, _, vi) | Write (p, _, vi, _) ->
        Hstring.list_mem p vs || List.exists (fun v -> Hstring.list_mem v vs) vi
     | Fence p -> Hstring.list_mem p vs

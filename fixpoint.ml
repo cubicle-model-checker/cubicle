@@ -316,9 +316,9 @@ end = struct
     let rels = Weakrel.extract_rels_set sa in
     let sa = Weakrel.filter_rels_set sa in
     let sa = SAtom.filter (fun a -> match a with
-      | Atom.Comp (Field (Access (a, [e]), f), Eq, _)
-      | Atom.Comp (_, Eq, Field (Access (a, [e]), f))
-       when H.equal a hE && (H.equal f hVar || is_param f)
+      | Atom.Comp (Access (f, [e]), Eq, _)
+      | Atom.Comp (_, Eq, Access (f, [e]))
+       when (H.equal f hVar || is_param f)
             && HMap.mem e sat_evt -> false (* beware first writes ! *)
       | _ -> true
     ) sa in
@@ -376,7 +376,7 @@ let cache = HAA.create 200001
           (Weakfp.build_event_substs from_evts from_rels to_evts to_rels)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
           not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
-(* Format.fprintf Format.std_formatter "Matches for perm : %d\n" (List.length vis_renamed_l); *)
+(* Format.fprintf Format.std_formatter "Matches for perm : %d (proc perms : %d)\n" (List.length vis_renamed_l) (List.length d); *)
         List.fold_left (fun nodes v_ren ->
 	  (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
         ) nodes d in
@@ -423,6 +423,7 @@ n
     let nodes, cands =
       Cubetrie.fold
         (fun (nodes, cands) vis_p ->
+          (* Format.fprintf Format.std_formatter "Visited %d\n%a\n" vis_p.tag Node.print vis_p; *)
          if unprioritize_cands && vis_p.kind = Approx then
            nodes, vis_p :: cands
          else check_and_add s nodes vis_p, cands

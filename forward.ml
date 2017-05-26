@@ -68,7 +68,6 @@ let rec is_prime_term = function
   | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
-  | Field (_, _) -> failwith "Forward.is_prime_term Field TODO"
   | Read _ -> failwith "Forward.is_prime_term Read TODO"
   | Write _ -> failwith "Forward.is_prime_term Write TODO"
   | Fence _ -> failwith "Forward.is_prime_term Fence TODO"
@@ -378,7 +377,6 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
-  | Field (_, _) -> failwith "Forward.type_of_term Field TODO"
   | Read _ -> failwith "Forward.type_of_term Read TODO"
   | Write _ -> failwith "Forward.type_of_term Write TODO"
   | Fence _ -> failwith "Forward.type_of_term Fence TODO"

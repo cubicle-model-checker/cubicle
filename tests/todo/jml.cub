@@ -1,4 +1,6 @@
 
+number_procs 2
+
 type location = Idle | Owner | Handin | Handout | Waiting
 type lock = C0 | C1 | C2 | C3
 
@@ -10,7 +12,9 @@ weak var C : int
 
 
 init (z) { A[z] = Idle && Busy = False && H = C0 && 0 < C }
- 
+
+unsafe (z) { z @ C < 0 }
+
 unsafe (z1 z2) { A[z1] = Owner && A[z2] = Owner }
 
 unsafe (z1 z2) { A[z1] = Owner && A[z2] = Handout }

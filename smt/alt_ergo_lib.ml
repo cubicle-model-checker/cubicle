@@ -40,6 +40,7 @@ let report fmt = function
   | UnknownSymb s ->
       fprintf fmt "unknown symbol %a" Hstring.print s
 
+
 type check_strategy = Lazy | Eager
                       
 module H = Hstring.H
@@ -344,14 +345,7 @@ module Formula = struct
         | Eq, [t1; t2] ->
 	    AE.Literal.LT.mkv_eq t1 t2
 	| Neq, ts ->
-	   (* begin match ts with *)
-	   (*   | t1 :: t2 :: [] -> *)
-		AE.Literal.LT.mkv_distinct false ts
-	     	(* AE.Literal.LT.view (AE.Literal.LT.neg *)
-	     	(* 		      (AE.Literal.LT.mk_eq t1 t2)) *)
-	   (*   | _ -> AE.Literal.LT.mkv_builtin false *)
-	   (*   			   (AE.Hstring.make "distinct") ts *)
-	   (* end *)
+	    AE.Literal.LT.mkv_distinct false ts
 	| Le, [t1; t2] ->
 	    AE.Literal.LT.mkv_builtin true (AE.Hstring.make "<=") [t1; t2]
 	| Lt, [t1; t2] ->
@@ -476,11 +470,6 @@ let rec mk_cnf = function
 
 end
 
-(* module WPT = AE.Why_ptree *)
-module WPT = AE.Commands
-module SAT = (val (AE.Sat_solvers.get_current ()) : AE.Sat_solvers.S)
-module FE = AE.Frontend.Make(SAT)
-
 exception Unsat of int list
 
 let set_cc b = Cc.cc_active := b
@@ -488,8 +477,7 @@ let set_arith = Combine.CX.set_arith_active
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
-  val init_axioms : unit -> unit
-    
+
   val check_strategy : check_strategy
 
   val get_time : unit -> float
@@ -504,46 +492,21 @@ module type Solver = sig
   val pop : unit -> unit
 end
 
+module WPT = AE.Commands
+module SAT = (val (AE.Sat_solvers.get_current ()) : AE.Sat_solvers.S)
+module FE = AE.Frontend.Make(SAT)
+
 module Make (Options_ : sig val profiling : bool end) = struct
 
-  (********** weak memory stuff **********)
+  (***********************************************)
 
-  let axioms = Queue.create ()
-
-  let mk_symb ?(qv=false) s =
-    if qv then AE.Symbols.var s else AE.Symbols.name s
-
-  let mk_pred ?(qv=false) p al =
-    let al = List.map (fun a ->
-      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
-    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tbool
-
-  let mk_fun ?(qv=false) p al =
-    let al = [ fst al ; snd al ] in
-    let al = List.map (fun a ->
-      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
-    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tint
-(*
-  let mk_evt_f ?(qv=false) (p, e) f =
-    let tp = AE.Term.make (mk_symb ~qv p) [] AE.Ty.Tint in
-    let te = AE.Term.make (mk_symb ~qv e) [] AE.Ty.Tint in
-    let tem = Term.make_app (Hstring.make "_e") [tp;te] in
-    Term.make_app (Hstring.make f) [tem]
- *)
   let dl = (Lexing.dummy_pos, Lexing.dummy_pos)
   let id = let c = ref 0 in fun () -> c := !c + 1; !c
-  let mk_lt t1 t2 =
-    AE.Formula.mk_lit
-      (AE.Literal.LT.mk_builtin true (AE.Hstring.make "<") [t1;t2]) (id ())
-  let mk_ety e = (e, AE.Ty.Tint)
   let mk_true () = AE.Formula.mk_lit AE.Literal.LT.vrai (id ())
   let mk_eq t1 t2 = AE.Formula.mk_lit (AE.Literal.LT.mk_eq t1 t2) (id ())
   let mk_neq t1 t2 = AE.Formula.mk_not (mk_eq t1 t2)
-  let mk_eq_true t = mk_eq t Term.t_true
-  let mk_eq_false t = mk_eq t Term.t_false
-  let mk_and t1 t2 = AE.Formula.mk_and t1 t2 false (id ()) (* new param : is_impl -> false *)
-  let mk_or t1 t2 = AE.Formula.mk_or t1 t2 false (id ())  (* new param : is_impl -> false *)
-  let mk_imp t1 t2 = AE.Formula.mk_imp t1 t2 (id ())
+  let mk_and t1 t2 = AE.Formula.mk_and t1 t2 false (id ()) (* is_impl : false *)
+  let mk_or t1 t2 = AE.Formula.mk_or t1 t2 false (id ())  (* is_impl : false *)
   let rec mk_diff t1 = function
     | [] -> assert false
     | [t2] -> mk_neq t1 t2
@@ -565,295 +528,14 @@ module Make (Options_ : sig val profiling : bool end) = struct
     | [] -> mk_true ()
     | [c] -> mk_clause c
     | c :: cl -> mk_and (mk_clause c) (mk_cnf cl)
-  (* let rec mk_formula = function *)
-  (*   | [] -> mk_true () *)
-  (*   | [c] -> mk_cnf c *)
-  (*   | c :: cl -> mk_and (mk_cnf c) (mk_formula cl) *)
   let rec mk_formula = function
     | [] -> mk_true ()
     | [c] -> mk_cnf c
     | cl -> mk_cnf (List.flatten cl)
-  (* let mk_forall n up bv tr f = *)
-  (*   let mk_vterm = List.map (fun (v, t) -> *)
-  (*     AE.Term.make (AE.Symbols.var v) [] t) in *)
-  (*   let up = mk_vterm up in (\* should be empty *\) *)
-  (*   let bv = mk_vterm bv in *)
-  (*   AE.Formula.mk_forall *)
-  (*     (AE.Term.Set.of_list up) (\* upvars = vars bound before *\) *)
-  (*     (AE.Term.Set.of_list bv) (\* bvars = qtf vars in formula *\) *)
-  (*     tr f n (id ()) *)
-  let mk_forall n up bv tr f =
-    let mk_vterm = List.map (fun (v, t) ->
-      AE.Term.make (AE.Symbols.var v) [] t) in
-    let qvars = AE.Term.Set.of_list (mk_vterm bv) in (* bvars = qtf vars in f *)
-    let binders = AE.Formula.mk_binders qvars in
-    AE.Formula.mk_forall n dl binders tr f (id ()) None
-  let mk_axiom n up bv tr f =
-    let f = mk_forall n up bv tr f in
-    WPT.{ st_decl = Assume(f, true) ; st_loc = dl }
   let mk_goal f =
     let f = mk_formula f in
     WPT.{ st_decl = Query("g", f, [], (*Check*)AE.Typed.Thm) ; st_loc = dl }
 
-  let init_axioms () =
-    let qv = true in
-    let ety2 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "_e1" ; mk_ety "_e2" ] in
-    let ety3 = [ mk_ety "p1" ; mk_ety "p2" ; mk_ety "p3" ;
-		 mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ] in
-    let e1e2 = ["p1";"_e1";"p2";"_e2"] in
-    let e2e3 = ["p2";"_e2";"p3";"_e3"] in
-    let e1e3 = ["p1";"_e1";"p3";"_e3"] in
-    let e1 = ("p1", "_e1") in
-    let e2 = ("p2", "_e2") in
-    let e3 = ("p3", "_e3") in
-    let tp1 = AE.Term.make (mk_symb ~qv "p1") [] AE.Ty.Tint in
-    let tp2 = AE.Term.make (mk_symb ~qv "p2") [] AE.Ty.Tint in
-    let tp3 = AE.Term.make (mk_symb ~qv "p3") [] AE.Ty.Tint in
-    let tw = Term.make_app (Hstring.make "_W") [] in
-    let tr = Term.make_app (Hstring.make "_R") [] in
-
-(*
-    let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2
-      (* [ [ mk_pred ~qv "_po_loc" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_po_loc" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-	(mk_eq_true (mk_pred ~qv "_po_loc" e1e2))
-	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
-    Queue.push axiom_po_loc axioms;
-
-    let axiom_co_1 = mk_axiom "axiom_co_1" [] ety2
-      (* [ [ mk_pred ~qv "_co" e1e2s ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-    	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
-    Queue.push axiom_co_1 axioms;
-
-    let axiom_rf = mk_axiom "axiom_rf" [] ety2
-      (* [ [ mk_pred ~qv "_rf" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-	(mk_eq_true (mk_pred ~qv "_rf" e1e2))
-	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
-    Queue.push axiom_rf axioms;
-
-    let axiom_ppo = mk_axiom "axiom_ppo" [] ety2
-      (* [ [ mk_pred ~qv "_ppo" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_ppo" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-	(mk_eq_true (mk_pred ~qv "_ppo" e1e2))
-	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_ppo axioms;
-
-    let axiom_fence = mk_axiom "axiom_fence" [] ety2
-      (* [ [ mk_pred ~qv "_fence" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_fence" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
-	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_fence axioms;
-
-    let axiom_co_2 = mk_axiom "axiom_co_2" [] ety2
-      (* [ [ mk_pred ~qv "_co" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_co_2 axioms;
-
-    let axiom_rfe = mk_axiom "axiom_rfe" [] ety2
-      (* [ [ mk_pred ~qv "_rf" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_neq tp1 tp2))
-    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_rfe axioms;
-
-    let axiom_fr = mk_axiom "axiom_fr" [] ety3
-      (* [ [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
-    	(mk_and
-    	  (mk_lt (mk_fun ~qv "_sci" e2) (mk_fun ~qv "_sci" e3))
-    	  (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3)))) in
-    Queue.push axiom_fr axioms;
-
-    let axiom_sync = mk_axiom "axiom_sync" [] ety2
-      (* [ [ mk_pred ~qv "_sync" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_sync" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_sync" e1e2))
-    	(mk_and
-    	  (mk_eq (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))
-    	  (mk_eq (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2)))) in
-    Queue.push axiom_sync axioms
- *) 
-
-(*   
-    let axiom_po_loc = mk_axiom "axiom_po_loc" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_po_loc" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-	(mk_eq_true (mk_pred ~qv "_po_loc" e1e2))
-	(mk_and
-          (mk_lt (mk_fun ~qv "_uniprocRW" e1) (mk_fun ~qv "_uniprocRW" e2))
-          (mk_lt (mk_fun ~qv "_uniprocWR" e1) (mk_fun ~qv "_uniprocWR" e2)))) in
-    Queue.push axiom_po_loc axioms;
-
-(*
-    let axiom_rfi = mk_axiom "axiom_rfi" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_eq tp1 tp2))
-	(mk_lt (mk_fun ~qv "_uniprocRW" e1) (mk_fun ~qv "_uniprocRW" e2))) in
-    Queue.push axiom_rfi axioms;
-*)
-
-(*
-    let axiom_fri = mk_axiom "axiom_fri" [] ety3
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and (mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
-    	  (mk_eq tp2 tp3))
-	(mk_lt (mk_fun ~qv "_uniprocWR" e2) (mk_fun ~qv "_uniprocWR" e3))) in
-    Queue.push axiom_fri axioms;
-*)
-
-    let axiom_ppo = mk_axiom "axiom_ppo" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_ppo" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-	(mk_eq_true (mk_pred ~qv "_ppo" e1e2))
-	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_ppo axioms;
-
-    let axiom_fence = mk_axiom "axiom_fence" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_fence" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_fence" e1e2))
-	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_fence axioms;
-
-    let axiom_co = mk_axiom "axiom_co" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_co axioms;
-
-(*
-    let axiom_rfe = mk_axiom "axiom_rfe" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_neq tp1 tp2))
-    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_rfe axioms;
-*)
-    let axiom_rf = mk_axiom "axiom_rf" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-        (mk_and
-          (mk_imp (mk_neq tp1 tp2)
-    	    (mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2)))
-          (mk_imp (mk_eq tp1 tp2)
-	    (mk_lt (mk_fun ~qv "_uniprocRW" e1) (mk_fun ~qv "_uniprocRW" e2))))
-      ) in
-    Queue.push axiom_rf axioms;
-
-(*
-    let axiom_fr = mk_axiom "axiom_fr" [] ety3
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
-    	(mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3))) in
-    Queue.push axiom_fr axioms;
-*)
-
-    let axiom_fr = mk_axiom "axiom_fr" [] ety3
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
-    	(mk_and
-          (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3))
-          (mk_imp (mk_eq tp2 tp3)
-	    (mk_lt (mk_fun ~qv "_uniprocWR" e2) (mk_fun ~qv "_uniprocWR" e3))))
-      ) in
-    Queue.push axiom_fr axioms;
-
-    let axiom_sync = mk_axiom "axiom_sync" [] ety2
-      [ AE.Formula.{ content = [ mk_pred ~qv "_sync" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_sync" e1e2))
-    	(mk_and (mk_and
-    	  (mk_eq (mk_fun ~qv "_uniprocRW" e1) (mk_fun ~qv "_uniprocRW" e2))
-          (mk_eq (mk_fun ~qv "_uniprocWR" e1) (mk_fun ~qv "_uniprocWR" e2)))
-    	  (mk_eq (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2)))) in
-    Queue.push axiom_sync axioms
- *)
-
-  let mk_fun ?(qv=false) p al =
-    let al = [ al ] in
-    let al = List.map (fun a ->
-      AE.Term.make (mk_symb ~qv a) [] AE.Ty.Tint) al in
-    AE.Term.make (AE.Symbols.name p) al AE.Ty.Tint in
-
-    let ety2 = [ mk_ety "_e1" ; mk_ety "_e2" ] in
-    let ety3 = [ mk_ety "_e1" ; mk_ety "_e2" ; mk_ety "_e3" ] in
-    let e1e2 = ["_e1";"_e2"] in
-    let e2e3 = ["_e2";"_e3"] in
-    let e1e3 = ["_e1";"_e3"] in
-    let e1 = ("_e1") in
-    let e2 = ("_e2") in
-    let e3 = ("_e3") in
-
-(*
-    let axiom_co_1 = mk_axiom "axiom_co_1" [] ety2
-      (* [ [ mk_pred ~qv "_co" e1e2s ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-    	(mk_lt (mk_fun ~qv "_sci" e1) (mk_fun ~qv "_sci" e2))) in
-    Queue.push axiom_co_1 axioms;
-
-    let axiom_co_2 = mk_axiom "axiom_co_2" [] ety2
-      (* [ [ mk_pred ~qv "_co" e1e2 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_co" e1e2 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_eq_true (mk_pred ~qv "_co" e1e2))
-    	(mk_lt (mk_fun ~qv "_propi" e1) (mk_fun ~qv "_propi" e2))) in
-    Queue.push axiom_co_2 axioms;
-
-    let axiom_fr = mk_axiom "axiom_fr" [] ety3
-      (* [ [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ], None ] *)
-      [ AE.Formula.{ content = [ mk_pred ~qv "_rf" e1e2 ; mk_pred ~qv "_co" e1e3 ]; depth = 0; from_user = true; guard = None } ]
-      (mk_imp
-    	(mk_and
-    	  (mk_eq_true (mk_pred ~qv "_rf" e1e2))
-    	  (mk_eq_true (mk_pred ~qv "_co" e1e3)))
-    	(mk_and
-    	  (mk_lt (mk_fun ~qv "_sci" e2) (mk_fun ~qv "_sci" e3))
-    	  (mk_lt (mk_fun ~qv "_propi" e2) (mk_fun ~qv "_propi" e3)))) in
-    Queue.push axiom_fr axioms
- *)
-    ()
-
-    
-  let init_axioms () =
-    if Options.model = Options.SC then ()
-    else init_axioms ()
 
   let formula = ref []
 
@@ -870,8 +552,6 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let get_calls () = !calls
 
   (*module CSolver = Solver.Make (Options_)*)
-
-  (***********************************************)
 
   let clear () =
     formula := [](*;
@@ -933,12 +613,9 @@ module Make (Options_ : sig val profiling : bool end) = struct
     Time.start ();
     try
 
-      (* Initial queue *)
-      let q = if fp then Queue.create () else Queue.copy axioms in
-
       (* Generate goal formula *)
-      let goal = mk_goal (List.rev !formula) in
-      Queue.push goal q;
+      let q = Queue.create () in
+      Queue.push (mk_goal (List.rev !formula)) q;
 
       (* Call solver and check result *)
       let report d s steps = match s with

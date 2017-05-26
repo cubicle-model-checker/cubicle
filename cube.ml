@@ -473,7 +473,6 @@ let rec add_arg args t =
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
 		 
-  | Field (t, _) -> add_arg args t
   | Read (p, _, vi) | Write (p, _, vi, _) -> add_arg_list args (p :: vi)
   | Fence p -> add_arg_list args [p]
 
@@ -727,7 +726,6 @@ let rec term_globs t acc = match t with
   | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
   | Arith (x, _) -> term_globs x acc
 
-  | Field (t, _) -> term_globs t acc
   | Read (_, v, _) | Write (_, v, _, _) -> Term.Set.add t acc (* t or Elem (v, Glob) ? *)
   | _ -> acc
 

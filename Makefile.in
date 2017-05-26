@@ -92,7 +92,7 @@ make_functory:
 
 smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
 	@rm -f smt/z3wrapper.ml
-	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+	@printf "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
 	@if [ -z "$(Z3LIB)" ]; then \
 	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
 	else \

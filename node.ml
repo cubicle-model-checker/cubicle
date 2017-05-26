@@ -155,8 +155,6 @@ module Latex = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
 
-    | Field (t, f) -> 
-       fprintf fmt "%a.%a" print_term t Hstring.print f
     | Read (p, v, vi) -> failwith "Print Read TODO"
     | Write (p, v, vi, rr) -> failwith "Print Write TODO"
     | Fence p -> failwith "Print Fence TODO"

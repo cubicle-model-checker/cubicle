@@ -21,7 +21,7 @@ weak var LOCK : int
 
 init (p) { PC[p] = Acquire && SF[p] = 0 && LOCK = 1 }
 
-invariant (p) { 1 < p @ LOCK }
+(* invariant (p) { 1 < p @ LOCK } *)
 (* unsafe (p) { 1 < p @ LOCK } *)
 
 (* FORBIDDEN Final State *)

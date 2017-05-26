@@ -139,8 +139,6 @@ module AltErgo = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
 
-    | Field (t, f) -> 
-       fprintf fmt "%a.%a" (print_term ~prime) t Hstring.print f
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
     | Write (p, v, vi, rr) ->
@@ -700,8 +698,6 @@ module Why3 = struct
     | Arith (x, cs) -> 
        fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
 
-    | Field (t, f) -> 
-       fprintf fmt "%a.%a" (print_term ~prime) t Hstring.print f
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
     | Write (p, v, vi, rr) ->
@@ -1516,8 +1512,6 @@ module Why3_INST = struct
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
 
-    | Field (t, f) -> 
-       fprintf fmt "%a.%a" (print_term ~prime) t Hstring.print f
     | Read (p, v, vi) ->
        fprintf fmt "read(%a, %a)" print_proc p print_var (v, vi)
     | Write (p, v, vi, rr) ->

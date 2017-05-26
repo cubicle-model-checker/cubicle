@@ -132,7 +132,7 @@ module Symbol = struct
     
   type t = Hstring.t
 
-  let declare f args ret  = 
+  let declare f args ret = 
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     H.add all_vars f (Symbols.name f, args, ret);
     List.iter 
@@ -501,7 +501,6 @@ let set_arith = Combine.CX.set_arith_active
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
-  val init_axioms : unit -> unit
 
   val check_strategy : check_strategy
 
@@ -519,91 +518,7 @@ end
 
 module Make (Options_ : sig val profiling : bool end) = struct
 
-  (********** weak memory stuff **********)
-
-  let axioms = ref ""
-
-  let init_axioms () =
-    if Options.model = Options.SC then ()
-    else axioms :=
-(*"
-axiom po_loc :
-  forall p1, p2, e1, e2 : int [_po_loc(p1,e1,p2,e2)].
-  _po_loc(p1, e1, p2, e2)
-   -> _sci(p1, e1) < _sci(p2, e2)
-
-axiom co_1 :
-  forall p1, p2, e1, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-   -> _sci(p1, e1) < _sci(p2, e2)
-(*axiom co_1 :
-  forall p1, p2, e1, e2 : int [_coi(p1,e1),_coi(p2,e2)].
-  _coi(p1, e1) < _coi (p2, e2, s2)
-   -> _sci(p1, e1) < _sci(p2, e2)*)
-
-axiom rf :
-  forall p1, e1, p2, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2)
-   -> _sci(p1, e1) < _sci(p2, e2)
-
-axiom ppo :
-  forall p1, p2, e1, e2 : int [_ppo(p1,e1,p2,e2)].
-  _ppo(p1, e1, p2, e2)
-   -> _propi(p1, e1) < _propi(p2, e2)
-
-axiom fence :
-  forall p1, p2, e1, e2 : int [_fence(p1,e1,p2,e2)].
-  _fence(p1, e1, p2, e2)
-   -> _propi(p1, e1) < _propi(p2, e2)
-
-axiom co_2 :
-  forall p1, e1, p2, e2 : int [_co(p1,e1,p2,e2)].
-  _co(p1, e1, p2, e2)
-  -> _propi(p1, e1) < _propi(p2, e2)
-(*axiom co_2 :
-  forall p1, e1, p2, e2 : int [_coi(p1,e1),_coi(p2,e2)].
-  _coi(p1, e1) < _coi(p2, e2)
-  -> _propi(p1, e1) < _propi(p2, e2)*)
-
-axiom rfe :
-  forall p1, p2, e1, e2 : int [_rf(p1,e1,p2,e2)].
-  _rf(p1, e1, p2, e2) and p1 <> p2
-  -> _propi(p1, e1) < _propi(p2, e2)
-
-axiom fr :
-  forall pr, pw1, pw2, r, w1, w2 : int
-    [_rf(pw1,w1,pr,r),_co(pw1,w1,pw2,w2)].
-  _rf(pw1, w1, pr, r) and _co(pw1, w1, pw2, w2)
-  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)
-(*axiom fr :
-  forall pr, pw1, pw2, r, w1, w2 : int
-    [_rf(pw1,w1,pr,r),_coi(pw1,w1),_coi(pw2,w2)].
-  _rf(pw1, w1, pr, r) and _coi(pw1, w1) < _coi(pw2, w2)
-  -> _sci(pr, r) < _sci(pw2, w2) and _propi(pr, r) < _propi(pw2, w2)*)
-
-axiom sync :
-  forall p1, p2, e1, e2 : int [_sync(p1,e1,p2,e2)].
-  _sync(p1, e1, p2, e2)
-   -> _sci(p1, e1) = _sci(p2, e2) and _propi(p1, e1) = _propi(p2, e2)"*)
-
-(*"
-axiom co_1 :
-  forall e1, e2 : int [_co(e1,e2)].
-  _co(e1, e2)
-   -> _sci(e1) < _sci(e2)
-
-axiom co_2 :
-  forall e1, e2 : int [_co(e1,e2)].
-  _co(e1, e2)
-  -> _propi(e1) < _propi(e2)
-
-axiom fr :
-  forall r, w1, w2 : int
-    [_rf(w1,r),_co(w1,w2)].
-  _rf(w1, r) and _co(w1, w2)
-  -> _sci(r) < _sci(w2) and _propi(r) < _propi(w2)"*)
-
-  ""
+  (***********************************************)
 
   let typeof t =
     let t = (Hstring.view t) in
@@ -645,10 +560,9 @@ axiom fr :
   let formula = ref []
 
   let contains s1 s2 =
-    let re = Str.regexp_string s2
-    in
-        try ignore (Str.search_forward re s1 0); true
-        with Not_found -> false
+    let re = Str.regexp_string s2 in
+    try ignore (Str.search_forward re s1 0); true
+    with Not_found -> false
 
   (***********************************************)
 
@@ -741,22 +655,17 @@ axiom fr :
         | Ty.Trecord (t, fl) ->
 	   fprintf filefmt "type %a = { %a }\n" Hstring.print t
       		   (print_list_sep ";" print_field) fl
-	| _ -> failwith "AltErgoFile.check : invalid type"
+	| _ -> failwith "Alt_ergo_file.check : invalid type"
       ) (List.rev !all_types); (* allows to skip variants *)
       fprintf filefmt "\n";
 
       (* Print all variables *)
       H.iter (fun f (fx, args, ret) ->
-	(*if not (Weakmem.is_weak f) then*)
-          fprintf filefmt "logic %s : %a%s\n" (replace (Hstring.view f) "#" "p")
+        fprintf filefmt "logic %s : %a%s\n" (replace (Hstring.view f) "#" "p")
 	  (print_list_sep "," print_type) args
 	  ((if args = [] then " " else " -> ") ^ (typeof ret))
       ) all_vars;
       fprintf filefmt "\n";
-
-      (* Print Weak Memory Axomatization *)
-      if not fp then fprintf filefmt "%s\n\n" !axioms;
-      (* fprintf filefmt "%s\n\n" !axioms; *)
 
       (* Print formula *)
       fprintf filefmt "goal g: not (true\n";
@@ -769,7 +678,7 @@ axiom fr :
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
       fprintf filefmt ")\n";
-	      
+
       (* Output file *)
       flush file;
       close_out file;
