@@ -100,7 +100,7 @@ module Type = struct
 
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
-    
+
 end
 
 module Symbol = struct
@@ -211,7 +211,7 @@ module Variant = struct
            hset_print c) 
       constructors
 
-	
+
   let get_variants = H.find constructors
     
   let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
