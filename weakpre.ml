@@ -355,12 +355,12 @@ let eid_diff eids_high eids_low =
 (* Build an event *)
 let build_event e p d v vi = (* v with _V prefix *)
   let _, ret = Weakmem.weak_type v in
-  let tval = Access (mk_hT ret, [e]) in
+  let tval = Access (mk_hVal ret, [e]) in
   let athr = Atom.Comp (Access (hThr, [e]), Eq, Elem (p, Var)) in
   let adir = Atom.Comp (Access (hDir, [e]), Eq, Elem (d, Constr)) in
   let avar = Atom.Comp (Access (hVar, [e]), Eq, Elem (v, Constr)) in
   let sa, _ = List.fold_left (fun (sa, i) v ->
-    SAtom.add (Atom.Comp (Access (mk_hP i, [e]), Eq, Elem (v, Var))) sa, i + 1
+    SAtom.add (Atom.Comp (Access (mk_hArg i, [e]), Eq, Elem (v, Var))) sa, i + 1
   ) (SAtom.add avar (SAtom.add adir (SAtom.singleton athr)), 1) vi in
   sa, tval
 

@@ -72,6 +72,8 @@ module HLSet = Set.Make (HL)
 
 let hNone = H.make ""
 
+let hE0 = H.make "_e0"
+
 let hR = H.make "_R"
 let hW = H.make "_W"
 let hDirection = H.make "_direction"
@@ -80,20 +82,15 @@ let hThr = H.make "_e_thr"
 let hDir = H.make "_e_dir"
 let hVar = H.make "_e_var"
 
-let hInt = H.make "int"
-let hProp = H.make "prop"
-
-let hP0 = H.make "#0"
-let hE0 = H.make "_e0"
-
 let hFence = H.make "_fence"
 let hSync = H.make "_sync"
 let hGhb = H.make "_ghb"
 
-let mk_hP p = H.make ("_e_p" ^ (string_of_int p))
-let mk_hE e = H.make ("_e" ^ (string_of_int e))
-let mk_hV hv = H.make ("_V" ^ (H.view hv))
-let mk_hT ht = H.make ("_e_val_" ^ (H.view ht)) (* for event value type *)
+let mk_hE e = H.make ("_e" ^ (string_of_int e)) (* event id *)
+let mk_hV hv = H.make ("_V" ^ (H.view hv)) (* var *)
+let mk_hArg p = H.make ("_e_p" ^ (string_of_int p)) (* arguments *)
+let mk_hVal ht = H.make ("_e_val_" ^ (H.view ht)) (* value / type *)
+
 
 
 
@@ -169,6 +166,8 @@ module S = Smt.Symbol
 
 let init_weak_env wvl =
 
+  let hInt = H.make "int" in
+
   List.iter (fun (wv, args, ret) ->
     HTbl.replace weak_vars wv (args, ret);
     HTbl.replace weak_vars (mk_hV wv) (args, ret);
@@ -183,11 +182,12 @@ let init_weak_env wvl =
     HSet.add ret wts, if nbp > maxp then nbp else maxp
   ) (HSet.empty, 0) wvl in
 
+  (* Make value fields *)
   (* wtl : list of all types of weak variable + corresponding field name *)
-  wtl := HSet.fold (fun wt wtl -> (mk_hT wt, wt) :: wtl) wts [];
+  wtl := HSet.fold (fun wt wtl -> (mk_hVal wt, wt) :: wtl) wts [];
 
-  for i = maxp downto 1 do
-    pl := (mk_hP i, hInt) :: !pl done;
+  (* Make argument fields *)
+  for i = maxp downto 1 do pl := (mk_hArg i, hInt) :: !pl done;
 
   (* should adjust automatically *)
   for i = 0 to 100 do S.declare (mk_hE i) [] T.type_int done;
@@ -198,8 +198,8 @@ let init_weak_env wvl =
   S.declare hThr int1 T.type_proc;
   S.declare hDir int1 hDirection;
   S.declare hVar int1 hWeakVar;
-  List.iter (fun (hP, t) -> S.declare hP int1 t) !pl;
-  List.iter (fun (hT, t) -> S.declare hT int1 t) !wtl;
+  List.iter (fun (hArg, t) -> S.declare hArg int1 t) !pl;
+  List.iter (fun (hVal, t) -> S.declare hVal int1 t) !wtl;
 
   S.declare hFence int2 T.type_prop;
   S.declare hSync int2 T.type_prop;

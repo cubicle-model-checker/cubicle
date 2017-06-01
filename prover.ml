@@ -27,18 +27,17 @@ module SMT = Smt.Make (Options)
 
 let proc_terms =
   List.iter 
-    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc)
-      (Weakmem.hP0 :: Variable.procs);
+    (fun x -> Smt.Symbol.declare x [] Smt.Type.type_proc) Variable.procs;
   List.map (fun x -> T.make_app x []) Variable.procs
 
-let distinct_vars =
+let distinct_vars = 
   let t = Array.make max_proc F.f_true in
   let _ = 
     List.fold_left 
       (fun (acc,i) v -> 
-       (*if i<>0 then*) t.(i) <- F.make_lit F.Neq (v::acc);
+	 if i<>0 then t.(i) <- F.make_lit F.Neq (v::acc);
 	 v::acc, i+1) 
-      ([T.make_app Weakmem.hP0 []],0) proc_terms 
+      ([],0) proc_terms 
   in
   function n -> if n = 0 then F.f_true else t.(n-1)
 

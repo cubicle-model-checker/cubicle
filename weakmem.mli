@@ -34,6 +34,8 @@ module HLSet : Set.S with type elt = HL.t
 
 val hNone : H.t
 
+val hE0 : H.t
+
 val hR : H.t
 val hW : H.t
 val hDirection : H.t
@@ -42,20 +44,14 @@ val hThr : H.t
 val hDir : H.t
 val hVar : H.t
 
-val hInt : H.t
-val hProp : H.t
-
-val hP0 : H.t
-val hE0 : H.t
-
 val hFence : H.t
 val hSync : H.t
 val hGhb : H.t
 
-val mk_hP : int -> H.t
 val mk_hE : int -> H.t
 val mk_hV : H.t -> H.t
-val mk_hT : H.t -> H.t
+val mk_hArg : int -> H.t
+val mk_hVal : H.t -> H.t
 
 val is_event : H.t -> bool
 val is_value : H.t -> bool
