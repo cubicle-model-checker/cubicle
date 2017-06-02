@@ -3,12 +3,12 @@ AC_CONFIG_FILES([_oasis])
 
 Z3LIB=$(ocamlfind query -i-format -qe Z3)
 WRAPPER=z3wrapper_actual.ml
-rm -f smt/z3wrapper.ml
+rm -f src/smt/z3wrapper.ml
 if test -z "$Z3LIB" ; then
    WRAPPER=z3wrapper_fake.ml
 fi
-cat smt/"$WRAPPER" >> smt/z3wrapper.ml;\
-chmod -w smt/z3wrapper.ml
+cat src/smt/"$WRAPPER" >> src/smt/z3wrapper.ml;\
+chmod -w src/smt/z3wrapper.ml
 
 dnl oasis setup
 AC_OUTPUT

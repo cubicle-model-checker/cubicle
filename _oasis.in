@@ -13,7 +13,7 @@ Alphafeatures:          ocamlbuild_more_args, compiled_setup_ml
 XOCamlbuildExtraArgs:   "-use-menhir"
 
 Executable cubicle
-  Path:                 .
+  Path:                 src
   BuildTools:           ocamlbuild
   MainIs:               cubicle.ml
   BuildDepends:
@@ -25,7 +25,7 @@ Executable cubicle
   CompiledObject:       best
 
 Library init
-  Path:                 .
+  Path:                 src
   BuildTools:           ocamlbuild
   Modules:              Version, Options
   NativeOpt:            -dtypes -g -annot
@@ -33,7 +33,7 @@ Library init
   CompiledObject:       best
 
 Library common
-  Path:                 common
+  Path:                 src/common
   BuildTools:           ocamlbuild
   Modules:
         Bitv,
@@ -49,7 +49,7 @@ Library common
   CompiledObject:       best
 
 Library smt
-  Path:                 smt
+  Path:                 src/smt
   BuildTools:           ocamlbuild
   Modules:
         Alt_ergo,
