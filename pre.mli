@@ -17,8 +17,9 @@ open Ast
 open Types
 
 (** Pre-image computation *)
-
-val make_tau : transition_info -> transition_func
+type reset_memo = unit -> unit
+			    
+val make_tau : transition_info -> transition_func * reset_memo
 (** functional form of transition *)
 
 val pre_image : transition list -> Node.t -> Node.t list * Node.t list

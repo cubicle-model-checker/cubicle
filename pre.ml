@@ -19,6 +19,8 @@ open Ast
 open Util
 open Types
 
+type reset_memo = unit -> unit
+			    
 module H = Hstring
 
 module Debug = struct
@@ -101,65 +103,72 @@ let rec find_update a li = function
 
 exception Remove_lit_var of Hstring.t
 
-let rec find_assign tr = function
+let rec find_assign memo tr = function
   | Elem (x, sx) -> 
-      let gu =
-	if H.list_mem x tr.tr_nondets then 
-          raise (Remove_lit_var x)
-	  (* UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) *)
-	else 
-	  try H.list_assoc x tr.tr_assigns
-          with Not_found -> UTerm (Elem (x, sx))
-      in
-      begin
-        match gu with
-        | UTerm t -> Single t
-        | UCase swts -> Branch swts
-      end
+     let gu =
+       if H.list_mem x tr.tr_nondets then 
+         (*raise (Remove_lit_var x)*)
+	  try List.assoc (Hstring.view x) !memo
+	  with Not_found ->
+	    let nv =
+	      UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) in
+	    memo := (Hstring.view x,nv) :: !memo;
+	    nv
+       else 
+	 try H.list_assoc x tr.tr_assigns
+         with Not_found -> UTerm (Elem (x, sx))
+     in
+     begin
+       match gu with
+       | UTerm t -> Single t
+       | UCase swts -> Branch swts
+     end
 
   | Const i as a -> Single a
 
   | Arith (x, cs1) ->
-      begin
-	let t = find_assign tr x in
-	match t with
-	  | Single (Const cs2) -> 
-	      let c = 
-		Const (add_constants cs1 cs2)
-	      in
-	      Single c
-	  | Single (Arith (y, cs2)) ->
-	      Single (Arith (y, add_constants cs1 cs2))
-	  | Single y -> Single (Arith (y, cs1))
-	  | Branch up_swts ->
-	      Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
-		               up_swts)
-      end
+     begin
+       let t = find_assign memo tr x in
+       match t with
+       | Single (Const cs2) -> 
+	  let c = 
+	    Const (add_constants cs1 cs2)
+	  in
+	  Single c
+       | Single (Arith (y, cs2)) ->
+	  Single (Arith (y, add_constants cs1 cs2))
+       | Single y -> Single (Arith (y, cs1))
+       | Branch up_swts ->
+	  Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
+		           up_swts)
+     end
   | Access (a, li) -> 
-      let nli = li in
-        (* List.map (fun i -> *)
-	(*   if H.list_mem i tr.tr_nondets then  *)
-        (*     (assert false; *)
-	(*     fresh_nondet (Smt.Symbol.type_of i)) *)
-	(*   else i *)
-	  (*   try (match H.list_assoc i tr.tr_assigns with *)
-	  (*     | Elem (ni, _) -> ni *)
-	  (*     | Const _ | Arith _ | Access _ -> assert false) *)
-	  (*   with Not_found -> i *)
-        (* ) li in *)
-      try find_update a nli tr.tr_upds
-      with Not_found -> Single (Access (a, nli))
-	(* let na =  *)
-	(*   try (match H.list_assoc a tr.tr_assigns with *)
-	(* 	 | Elem (na, _) -> na *)
-	(* 	 | Const _ | Arith _ | Access _ -> assert false) *)
-	(*   with Not_found -> a *)
-	(* in *)
-	(* Single (Access (na, nli)) *)
-
-let make_tau tr x op y =
+     let nli = li in
+     (* List.map (fun i -> *)
+     (*   if H.list_mem i tr.tr_nondets then  *)
+     (*     (assert false; *)
+     (*     fresh_nondet (Smt.Symbol.type_of i)) *)
+     (*   else i *)
+     (*   try (match H.list_assoc i tr.tr_assigns with *)
+     (*     | Elem (ni, _) -> ni *)
+     (*     | Const _ | Arith _ | Access _ -> assert false) *)
+     (*   with Not_found -> i *)
+     (* ) li in *)
+     try find_update a nli tr.tr_upds
+     with Not_found -> Single (Access (a, nli))
+			      (* let na =  *)
+			      (*   try (match H.list_assoc a tr.tr_assigns with *)
+			      (* 	 | Elem (na, _) -> na *)
+			      (* 	 | Const _ | Arith _ | Access _ -> assert false) *)
+			      (*   with Not_found -> a *)
+			      (* in *)
+			      (* Single (Access (na, nli)) *)
+				
+let make_tau tr =
+  let memo = ref [] in
+  (fun x op y ->
   try 
-    match find_assign tr x, find_assign tr y with
+    match find_assign memo tr x, find_assign memo tr y with
     | Single tx, Single ty -> Atom.Comp (tx, op, ty)
     | Single tx, Branch ls ->
        List.fold_right
@@ -176,7 +185,8 @@ let make_tau tr x op y =
 	    (fun (cj, tj) f ->
 	     Atom.Ite(SAtom.union ci cj, Atom.Comp(ti, op, tj), f)) ls2 f)
 	 ls1 Atom.True
-  with Remove_lit_var _ -> Atom.True
+  with Remove_lit_var _ -> Atom.True),
+  (fun () -> memo := [])
 
 (**********************)
 (* Postponed Formulas *)
@@ -292,7 +302,7 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (* Pre-image of an unsafe formula w.r.t a transition *)
 (*****************************************************)
 
-let pre { tr_info = tri; tr_tau = tau } unsafe =
+let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
     SAtom.union tri.tr_reqs 
@@ -300,6 +310,7 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
+  reset();
   let args = pre_u.Cube.vars in
   if tri.tr_args = [] then tri, pre_u, args
   else

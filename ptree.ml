@@ -155,6 +155,7 @@ type pupdate = {
 }
 
 type ptransition = {
+  ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
   ptr_reqs : cformula;
@@ -539,17 +540,19 @@ let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
   }
 
 let encode_ptransition
-    {ptr_name; ptr_args; ptr_reqs; ptr_assigns;
+    {ptr_lets; ptr_name; ptr_args; ptr_reqs; ptr_assigns;
      ptr_upds; ptr_nondets; ptr_loc;} =
   let dguards = guard_of_formula ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
       (i, encode_pglob_update pgu)) ptr_assigns in
   let tr_upds = List.map encode_pupdate ptr_upds in
+  let tr_lets = List.map (fun (x, t) -> (x, encode_term t)) ptr_lets in
   List.rev_map (fun (req, ureq) ->
       {  tr_name = ptr_name;
          tr_args = ptr_args;
          tr_reqs = req;
          tr_ureq = ureq;
+	 tr_lets = tr_lets;
          tr_assigns;
          tr_upds;
          tr_nondets = ptr_nondets;

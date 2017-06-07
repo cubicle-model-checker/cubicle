@@ -92,7 +92,9 @@
 %token <string> LIDENT
 %token <string> MIDENT
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE GT GE
-%token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR 
+%token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR
+%token IN
+%token LET
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
@@ -101,6 +103,7 @@
 %token UNDERSCORE AFFECT
 %token EOF
 
+%nonassoc IN       
 %nonassoc prec_forall prec_exists
 %right IMP EQUIV  
 %right OR
@@ -229,9 +232,10 @@ transition_name:
 transition:
   | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
       require
-      LEFTBR assigns_nondets_updates RIGHTBR
-      { let assigns, nondets, upds = $8 in
-	  { ptr_name = $2;
+      LEFTBR let_assigns_nondets_updates RIGHTBR
+      { let lets, (assigns, nondets, upds) = $8 in
+	{   ptr_lets = lets;
+	    ptr_name = $2;
             ptr_args = $4; 
 	    ptr_reqs = $6;
 	    ptr_assigns = assigns; 
@@ -242,6 +246,13 @@ transition:
       }
 ;
 
+let_assigns_nondets_updates:
+  | assigns_nondets_updates { [], $1 }
+  | LET lident EQ term IN let_assigns_nondets_updates {
+	  let lets, l = $6 in
+	  ($2, $4) :: lets, l}
+;
+  
 assigns_nondets_updates:
   |  { [], [], [] }
   | assign_nondet_update 

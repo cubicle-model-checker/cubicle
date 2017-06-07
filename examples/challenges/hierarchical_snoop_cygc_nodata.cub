@@ -2,8 +2,8 @@
 type proc_type = L1Id | CId
 
 type cache_state = Invld | Shrd | Excl
-type command = None | Get | GetX | Putt | PutX | NAck | ShWb 
-              | Inv | InvAck | DxFer | WINV | WB
+type command = None | Get | GetX | Putt | PutX | NAck (*| ShWb *)
+              | Inv | InvAck (*| DxFer*) | WINV | WB
 
 
 (*-------------------- Global Network -------------------------*)
@@ -140,11 +140,6 @@ invariant (c) { Clusters_WbReq_Cmd[c] <> None && Sort[c] <> CId }
 unsafe (c i j) {
        Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
        Clusters_L1s_State[c,i] = Excl && Clusters_L1s_State[c,j] = Excl
-}
-
-unsafe (c i) {
-       Sort[c] = CId && Sort[i] = L1Id &&
-       Clusters_L2_State[c] = Excl && Clusters_L1s_State[c,i] = Excl
 }
 
 
@@ -364,6 +359,8 @@ requires { Sort[c] = CId &&
 }
 
 
+(* RAC *)
+
 
 (*------- Murphi rule "14 global dir reply cluster shrd req" -------*)
 transition t14 (c)
@@ -484,6 +481,7 @@ transition t18 ()
   GDir_pending := False;
 }
 
+(* Debut de la reponse *)
 
 (*------- Murphi rule "19 Cluster c2 takes c1's req" ----------*)
 transition t19 (c1 c2)
@@ -559,7 +557,7 @@ requires { Sort[c] = CId &&
 
 
 (*------- Murphi rule "22 Cluster reply fwd req by PutX1" ----------*)
-transition t21 (c)
+transition t22 (c)
 requires { Sort[c] = CId &&
            Clusters_outReq_Cmd[c] = GetX &&
            Clusters_L2_pending[c] = False &&
@@ -643,6 +641,8 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 
 
 (*------- Murphi rule "26 cluster send Put reply to another cluster" -----*)
+
+(*
 transition t26 (c dest)
 requires { Sort[c] = CId && Sort[dest] = CId &&
            Clusters_inRpy_Cmd[c] = Putt &&
@@ -657,10 +657,10 @@ requires { Sort[c] = CId && Sort[dest] = CId &&
   Clusters_inRpy_Cmd[c] := None;
   (* undefine Clusters_inRpy_Dest[c]; *)
 }
-
+*)
 
 (*------- Murphi rule "27 Cluster reply fwded excl req" -----*)
-transition t27 (c dest)
+(*transition t27 (c dest)
 requires { Sort[c] = CId && Sort[dest] = CId &&
            Clusters_inRpy_Cmd[c] = PutX &&
            Clusters_inRpy_Dest[c] = dest }
@@ -675,11 +675,12 @@ requires { Sort[c] = CId && Sort[dest] = CId &&
   Clusters_inRpy_Cmd[c] := None;
   (* undefine Clusters_inRpy_Dest[c]; *)
 }
-
+*)
 
 
 (*------- Murphi rule "28 Global dir receive ShWb" -----*)
-transition t28_o (c gd)
+
+(*transition t28_o (c gd)
 requires { Sort[c] = CId && Sort[gd] = CId && 
            GShWbMsg_Cmd = ShWb  &&
            GShWbMsg_Cluster = c &&
@@ -696,7 +697,9 @@ requires { Sort[c] = CId && Sort[gd] = CId &&
   (* GShWbMsg_Cmd := None; *)
   (* undefine GShWbMsg_Cluster; *)
 }
+*)
 
+(*
 transition t28_same (c)
 requires { Sort[c] = CId &&
            GShWbMsg_Cmd = ShWb  &&
@@ -715,6 +718,9 @@ requires { Sort[c] = CId &&
   (* undefine GShWbMsg_Cluster; *)
 }
 
+*)
+
+(*
 transition t28_no (c)
 requires { Sort[c] = CId &&
            GShWbMsg_Cmd = ShWb  &&
@@ -730,10 +736,10 @@ requires { Sort[c] = CId &&
   (* GShWbMsg_Cmd := None; *)
   (* undefine GShWbMsg_Cluster; *)
 }
-
+*)
 
 (*------- Murphi rule "29 Global dir receive DxFer" -----*)
-transition t29 ()
+(*transition t29 ()
 requires { GShWbMsg_Cmd = DxFer }
 {
   (* assert GDir_pending = True; *)
@@ -744,7 +750,7 @@ requires { GShWbMsg_Cmd = DxFer }
   GShWbMsg_Cmd := None;
   (* undefine GShWbMsg_Cluster; *)
 }
-
+*)
 
 
 (*------- Murphi rule "30 Cluster c1 sends NAck rpy to c2"-----*)
@@ -994,7 +1000,7 @@ requires { Sort[c1] = CId && Sort[c2] = CId && Sort[y] = CId &&
 
 
 (*------- Murphi rule "41 Cluster write back cache copy" -----*)
-transition t41 (c)
+(*transition t41 (c)
 requires { Sort[c] = CId &&
            Clusters_L2_State[c] = Excl &&
            Clusters_L2_pending[c] = False }
@@ -1003,11 +1009,11 @@ requires { Sort[c] = CId &&
   Clusters_L2_State[c] := Invld;
   Clusters_OnlyCopy[c] := False;
 }
-
+*)
 
 
 (*------- Murphi rule "42 Cluster write back cache copy" -----*)
-transition t42 (c)
+(*transition t42 (c)
 requires { Sort[c] = CId &&
            Clusters_WbReq_Cmd[c] = WB 
            (* comment the following is our inserted bug *)
@@ -1017,12 +1023,12 @@ requires { Sort[c] = CId &&
   GWbMsg_Cluster := c;
 
   Clusters_WbReq_Cmd[c] := None;
-}
+}*)
 
 
 
 (*------- Murphi rule "43 Global dir receive writeback" -----*)
-transition t43 ()
+(*transition t43 ()
 requires { GWbMsg_Cmd = WB }
 {
   GDir_State := Invld;
@@ -1031,7 +1037,7 @@ requires { GWbMsg_Cmd = WB }
   GWbMsg_Cmd := None;
   (* undefine GWbMsg_Cluster; *)
 }
-
+*)
 
 
 

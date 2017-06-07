@@ -53,6 +53,7 @@ type transition_info = {
   tr_reqs : SAtom.t; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
+  tr_lets : (Hstring.t * Term.t) list;
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
@@ -68,6 +69,7 @@ type transition_func = Term.t -> op_comp -> Term.t -> Atom.t
 type transition = {
   tr_info : transition_info;
   tr_tau : transition_func;
+  tr_reset : unit -> unit;
 }
 
 type system = {

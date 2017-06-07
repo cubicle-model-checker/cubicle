@@ -135,7 +135,8 @@ let rec term loc args = function
   | Elem (e, Var) ->
       if Hstring.list_mem e args then [], Smt.Type.type_proc
       else begin 
-	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e) loc
+	  try Smt.Symbol.type_of e with Not_found ->
+	    error (UnknownName e) loc
       end
   | Elem (e, _) -> Smt.Symbol.type_of e
   | Arith (x, _) ->
@@ -264,6 +265,12 @@ let updates args =
        dv := a ::!dv;
        switchs loc a (lj @ args) ([], ty_a) swts) 
 
+let check_lets loc args l =
+  List.iter 
+    (fun (x, t) ->
+     let _ = term loc args t in ()
+    ) l
+	       
 let transitions = 
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) -> 
@@ -271,7 +278,8 @@ let transitions =
        atoms loc args t.tr_reqs;
        List.iter 
 	 (fun (x, cnf) -> 
-	    List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+       check_lets loc args t.tr_lets;
        updates args t.tr_upds;
        assigns loc args t.tr_assigns;
        nondets loc t.tr_nondets)
@@ -491,8 +499,11 @@ let add_tau tr =
   (* (\* let tr = fresh_args tr in *\) *)
   (* { tr with *)
   (*   tr_tau = Pre.make_tau tr } *)
+  let pre,reset_memo = Pre.make_tau tr in
   { tr_info = tr;
-    tr_tau = Pre.make_tau tr }
+    tr_tau = pre;
+    tr_reset = reset_memo;
+  }
     
 let system s = 
   let l = init_global_env s in

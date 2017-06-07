@@ -283,7 +283,7 @@ module type S = sig
 
     val assume : id:int -> Formula.t -> unit
     (** [assume id f] adds the formula [f] to the context of the
-        solver with idetifier [id].
+        solver with identifier [id].
         This function only performs unit propagation.
 
         {b Raises} {! Unsat} if the context becomes inconsistent after unit

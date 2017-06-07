@@ -43,6 +43,8 @@
         "true", TRUE;
         "false", FALSE;
 	"number_procs", SIZEPROC;
+	"let", LET;
+	"in", IN;
       ]
 	       
   let newline lexbuf =

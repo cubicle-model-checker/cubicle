@@ -58,6 +58,7 @@ unsafe (x y) {
   Coord[x] = True && Coord[y] = True
 }
 
+
 (* If 'c' is Coordinator, all other process with Id < c have
    already been Coordinator *)
 unsafe (x y) {

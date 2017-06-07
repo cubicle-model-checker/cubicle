@@ -20,9 +20,9 @@ requires { A[x] = Q2 &&
 { A[j] := case | j = x : Q3 | _ : A[j]; }
 
 transition t3 (x y)
-requires { A[x] = Q3 && P[y] = True }
+requires { A[x] = Q3 (* && P[y] = True *) }
 { A[j] := case | j = x : Q4 | _ : A[j];
-  P[j] := case | j = y : True | _ : P[j]; }
+  P[j] := case | j = y : True | _ : False (*P[j]; *) }
 
 transition t4 (x)
 requires { A[x] = Q4 }

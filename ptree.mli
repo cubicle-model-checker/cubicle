@@ -79,6 +79,7 @@ type pupdate = {
 }
 
 type ptransition = {
+  ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
   ptr_reqs : cformula;
