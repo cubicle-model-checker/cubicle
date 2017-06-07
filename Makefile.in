@@ -140,7 +140,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.1b
+VERSION=1.1.1c
 # comment the following line for release
 SVNREV=-$(shell svnversion -n)
 
