@@ -260,7 +260,7 @@ let atoms loc ?(init_variant=false) ?(init=false) args =
 let init (loc, args, lsa) =
   List.iter (atoms loc ~init_variant:true ~init:true args) lsa
 
-let unsafe (loc, args, sa) = 
+let unsafe (loc, name, args, sa) = 
   unique (fun x-> error (DuplicateName x) loc) args; 
   atoms loc args sa
 
@@ -550,11 +550,11 @@ let debug_init_instances insts =
     ) insts
 
 
-let create_node_rename kind vars sa =
+let create_node_rename name kind vars sa =
   let sigma = Variable.build_subst vars Variable.procs in
   let c = Cube.subst sigma (Cube.create vars sa) in
   let c = Cube.normal_form c in
-  Node.create ~kind c
+  Node.create ~name ~kind c
 
 
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
@@ -620,12 +620,12 @@ let system s =
   end;
 
   let init_woloc = let _,v,i = s.init in v,i in
-  let invs_woloc = List.map (fun (_,v,i) ->
-    create_node_rename Inv v (Weakpre.remove_reads i)) s.invs in
-  let invs_woloc_e = List.map (fun (_,v,i) ->
-    create_node_rename Inv v (Weakpre.instantiate_init_evts i)) s.invs in
-  let unsafe_woloc_e = List.map (fun (_,v,u) ->
-    create_node_rename Orig v (Weakpre.instantiate_init_evts u)) s.unsafe in
+  let invs_woloc = List.map (fun (_,n,v,i) ->
+    create_node_rename n Inv v (Weakpre.remove_reads i)) s.invs in
+  let invs_woloc_e = List.map (fun (_,n,v,i) ->
+    create_node_rename n Inv v (Weakpre.instantiate_init_evts i)) s.invs in
+  let unsafe_woloc_e = List.map (fun (_,n,v,u) ->
+    create_node_rename n Orig v (Weakpre.instantiate_init_evts u)) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;

@@ -308,20 +308,29 @@ end = struct
     | Smt.Eager -> fun () -> ()
     | Smt.Lazy -> Prover.run
 
-  let preprocess_n n = (* may filter out evts too *)
+  let filter_events sa =
+    let open Weakmem in
+    SAtom.filter (function
+      | Atom.Comp (Access (a, [_]), Eq, _)
+      | Atom.Comp (_, Eq, Access (a, [_]))
+           when is_event a && not (is_value a) -> false
+      | _ -> true) sa
+
+  let preprocess_n n =
     let open Weakmem in
     let sa = n.cube.Cube.litterals in
     let _, _, _, _, _, evts = Weakevent.extract_events_set sa in
-    let sat_evt = Weakevent.sat_events evts in
     let rels = Weakrel.extract_rels_set sa in
     let sa = Weakrel.filter_rels_set sa in
-    let sa = SAtom.filter (fun a -> match a with
-      | Atom.Comp (Access (f, [e]), Eq, _)
-      | Atom.Comp (_, Eq, Access (f, [e]))
-       when (H.equal f hVar || is_param f)
-            && HMap.mem e sat_evt -> false (* beware first writes ! *)
-      | _ -> true
-    ) sa in
+    let sa = filter_events sa in
+    (* let sat_evt = Weakevent.sat_events evts in *)
+    (* let sa = SAtom.filter (fun a -> match a with *)
+    (*   | Atom.Comp (Access (f, [e]), Eq, _) *)
+    (*   | Atom.Comp (_, Eq, Access (f, [e])) *)
+    (*    when (H.equal f hVar || is_param f) *)
+    (*         && HMap.mem e sat_evt -> false (\* beware first writes ! *\) *)
+    (*   | _ -> true *)
+    (* ) sa in *)
     { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels
 
   let get_evts_rels_ar ar = (* this is now done before renaming *)
@@ -329,12 +338,14 @@ end = struct
     let rels = Weakrel.extract_rels_array ar in
     evts, rels
 
-module HAA = Hashtbl.Make (ArrayAtom)
-let cache = HAA.create 200001
+(* module HAA = Hashtbl.Make (ArrayAtom) *)
+module HAA = Hashtbl.Make (Weakevent.Int)
+let cache = HAA.create 10000
 
   let check_and_add (n, to_evts, to_rels) nodes vis_n=
     let vis_n_cube = Cube.create vis_n.cube.Cube.vars (*for inst only*)
-                       (Weakrel.filter_rels_set vis_n.cube.Cube.litterals) in
+                    (* (Weakrel.filter_rels_set vis_n.cube.Cube.litterals) in *)
+    (filter_events (Weakrel.filter_rels_set vis_n.cube.Cube.litterals)) in
     let n_array = Node.array n in
     let vis_array = vis_n.cube.Cube.array in
     (* if !Options.size_proc <> 0 then begin *)
@@ -357,10 +368,12 @@ let cache = HAA.create 200001
           (* let from_evts, from_rels = get_evts_rels_ar vis_array in *)
           let from_evts, from_rels =
             try
-              HAA.find cache vis_array
+              (* HAA.find cache vis_array *)
+              HAA.find cache vis_n.tag
             with Not_found ->
               let r = get_evts_rels_ar vis_array in
-              HAA.add cache vis_array r;
+              (* HAA.add cache vis_array r; *)
+              HAA.add cache vis_n.tag r;
               r
           in
           TimeFPRels.pause ();
@@ -369,7 +382,8 @@ let cache = HAA.create 200001
       in
 
       let n = List.fold_left (fun nodes ss ->
-        let vis_renamed = ArrayAtom.apply_subst ss vis_array in
+        (* let vis_renamed = ArrayAtom.apply_subst ss vis_array in *)
+        let vis_renamed = ArrayAtom.apply_subst ss vis_n_cube.Cube.array in
         let from_evts = Weakevent.subst ss from_evts in
         let from_rels = Weakrel.subst ss from_rels in
         let vis_renamed_l = (Weakfp.remap_events vis_renamed
@@ -416,19 +430,20 @@ n
 
   let check_fixpoint s visited = let t = s.tag in
 (* Format.fprintf Format.std_formatter "Begin fixpoint for node %d\n%a\n" t Node.print s; *)
-    first_action s; let sx = s in
+    let s,e,r  = preprocess_n s in
+    first_action s;
     let s_array = Node.array s in
     let unprioritize_cands = false in
-    let s = preprocess_n s in
+    (* let s,e,r = preprocess_n s in *)
     let nodes, cands =
       Cubetrie.fold
         (fun (nodes, cands) vis_p ->
           (* Format.fprintf Format.std_formatter "Visited %d\n%a\n" vis_p.tag Node.print vis_p; *)
          if unprioritize_cands && vis_p.kind = Approx then
            nodes, vis_p :: cands
-         else check_and_add s nodes vis_p, cands
+         else check_and_add (s,e,r) nodes vis_p, cands
         ) ([], []) visited in
-    let nodes = List.fold_left (check_and_add s) nodes cands in
+    let nodes = List.fold_left (check_and_add (s,e,r)) nodes cands in
     (* Format.eprintf "FIXPOINT\n"; *)
     (* List.iter (fun (_, ar) -> Format.eprintf "Atm : %a\n" ArrayAtom.print ar) nodes; *)
     (* Cubetrie.iter (fun n -> Format.eprintf "Node : %a\n" Node.print n) visited; *)

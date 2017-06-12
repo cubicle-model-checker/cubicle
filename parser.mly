@@ -232,8 +232,8 @@ decl_list :
 
 decl :
   | init { let l, p, e = $1 in PInit (l, p, fix_rd_init e) }
-  | invariant { let l, p, e = $1 in PInv (l, p, fix_rd_expr None e) }
-  | unsafe { let l, p, e = $1 in PUnsafe (l, p, fix_rd_expr None e) }
+  | invariant { let l, n, p, e = $1 in PInv (l, n, p, fix_rd_expr None e) }
+  | unsafe { let l, n, p, e = $1 in PUnsafe (l, n, p, fix_rd_expr None e) }
   | transition { PTrans $1 }
   | function_decl { PFun  }
 
@@ -314,13 +314,21 @@ init:
 ;
 
 invariant:
-  | INVARIANT LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | INVARIANT LEFTBR expr RIGHTBR { loc (), None, [], $3 }
+  | INVARIANT transition_name LEFTBR expr RIGHTBR { loc (), Some $2, [], $4 }
+  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
+        { loc (), None, $3, $6 }
+  | INVARIANT transition_name LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
+        { loc (), Some $2, $4, $7 }
 ;
 
 unsafe:
-  | UNSAFE LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | UNSAFE LEFTBR expr RIGHTBR { loc (), None, [], $3 }
+  | UNSAFE transition_name LEFTBR expr RIGHTBR { loc (), Some $2, [], $4 }
+  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
+        { loc (), None, $3, $6 }
+  | UNSAFE transition_name LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
+        { loc (), Some $2, $4, $7 }
 ;
 
 transition_name:

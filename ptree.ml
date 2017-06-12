@@ -172,16 +172,16 @@ type psystem = {
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
-  pinvs : (loc * Variable.t list * cformula) list;
-  punsafe : (loc * Variable.t list * cformula) list;
+  pinvs : (loc * Hstring.t option * Variable.t list * cformula) list;
+  punsafe : (loc * Hstring.t option * Variable.t list * cformula) list;
   ptrans : ptransition list;
 }
 
 
 type pdecl =
   | PInit of (loc * Variable.t list * cformula)
-  | PInv of (loc * Variable.t list * cformula)
-  | PUnsafe of (loc * Variable.t list * cformula)
+  | PInv of (loc * Hstring.t option * Variable.t list * cformula)
+  | PUnsafe of (loc * Hstring.t option * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
 
@@ -570,20 +570,21 @@ let encode_psystem
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
-    List.fold_left (fun acc (inv_loc, inv_vars, inv_f) ->
+    List.fold_left (fun acc (inv_loc, inv_name, inv_vars, inv_f) ->
         let other_vars, dnf = unsafes_of_formula inv_f in
         let inv_vars = inv_vars @ other_vars in
-        List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
+        List.fold_left (fun acc sa ->
+          (inv_loc, inv_name, inv_vars, sa) :: acc) acc dnf
       ) [] pinvs
     |> List.rev
   in
   let unsafe =
-    List.fold_left (fun acc (unsafe_loc, unsafe_vars, unsafe_f) ->
+    List.fold_left (fun acc (unsafe_loc, unsafe_name, unsafe_vars, unsafe_f) ->
         let other_vars, dnf = unsafes_of_formula unsafe_f in
         (* List.iter (fun sa -> eprintf "unsafe : %a@." SAtom.print sa) dnf; *)
         let unsafe_vars = unsafe_vars @ other_vars in
-        List.fold_left
-          (fun acc sa -> (unsafe_loc, unsafe_vars, sa) :: acc) acc dnf
+        List.fold_left (fun acc sa ->
+          (unsafe_loc, unsafe_name, unsafe_vars, sa) :: acc) acc dnf
       ) [] punsafe
   in
   let trans =

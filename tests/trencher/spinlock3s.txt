@@ -1,0 +1,74 @@
+
+# Memory layout:
+# 0 - ready flag
+# 1 — lock
+
+thread init
+initial q0
+final q2
+transition	q0	q1	write	1	1
+transition	q1	q2	write	1	0
+end
+
+
+thread t0
+initial q0
+final qcs
+transition	q0	q1	read	rdy	0
+transition	q1	qacq	check	== rdy	1
+
+transition	qacq	q2	lock
+transition	q2	q3	read	reg	1
+transition	q3	q4	write	reg-1	1
+transition	q4	q5	unlock
+transition	q5	qcs	check	== reg	1
+transition	q5	qspn	check	!= reg	1
+
+transition	qspn	q7	read	reg	1
+transition	q7	qacq	check	== reg	1
+transition	q7	qspn	check	!= reg	1
+
+transition	qcs	qacq	write	1  	1
+end
+
+
+thread t1
+initial q0
+final qcs
+transition	q0	q1	read	rdy	0
+transition	q1	qacq	check	== rdy	1
+
+transition	qacq	q2	lock
+transition	q2	q3	read	reg	1
+transition	q3	q4	write	reg-1	1
+transition	q4	q5	unlock
+transition	q5	qcs	check	== reg	1
+transition	q5	qspn	check	!= reg	1
+
+transition	qspn	q7	read	reg	1
+transition	q7	qacq	check	== reg	1
+transition	q7	qspn	check	!= reg	1
+
+transition	qcs	qacq	write	1  	1
+end
+
+
+thread t2
+initial q0
+final qcs
+transition	q0	q1	read	rdy	0
+transition	q1	qacq	check	== rdy	1
+
+transition	qacq	q2	lock
+transition	q2	q3	read	reg	1
+transition	q3	q4	write	reg-1	1
+transition	q4	q5	unlock
+transition	q5	qcs	check	== reg	1
+transition	q5	qspn	check	!= reg	1
+
+transition	qspn	q7	read	reg	1
+transition	q7	qacq	check	== reg	1
+transition	q7	qspn	check	!= reg	1
+
+transition	qcs	qacq	write	1  	1
+end

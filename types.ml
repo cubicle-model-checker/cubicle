@@ -214,7 +214,7 @@ module Term = struct
 
   let rec variables = function
     | Elem (x, Var) -> Variable.Set.singleton x
-    | Access (_, lx) ->
+    | Access (a, lx) when not (Weakmem.is_event a) ->
        List.fold_left (fun acc x -> Variable.Set.add x acc)
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t

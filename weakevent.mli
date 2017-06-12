@@ -5,6 +5,8 @@ open Weakmem
 module Int : sig
   type t = int
   val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val hash : t -> int
 end
 
 module IntSet : Set.S with type elt = Int.t

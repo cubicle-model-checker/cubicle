@@ -62,12 +62,12 @@
 *)
 
 (* number_procs 4 *)
-(* 3 : 1795 nodes, 2m30/3m01 *) (* assembly : 2m54/3m12, 1810 nodes, 4 procs *)
-(* 4 : 2331 nodes, 16m06/18m56 *)
-(* 5 : 2408 nodes, 37m24 *)
-(* 6 : 2412 nodes, 44m37 *)
-(* 7 : 2412 nodes, 40m22 *)
-(* N(6) : 2412 nodes, 48m00 *)
+(* 3 : 1795 nodes, 2m30/3m01/1m36 *) (* assembly : 2m54/3m12, 1810 nodes, 4 procs *)
+(* 4 : 2331 nodes, 16m06/18m56/7m21 *)
+(* 5 : 2408 nodes, 37m24// *)
+(* 6 : 2412 nodes, 44m37// *)
+(* 7 : 2412 nodes, 40m22// *)
+(* N(6) : 2412 nodes, 48m00//14m02s *)
 
 type loc = L1 | L2 | L3 | L4 | L5
 

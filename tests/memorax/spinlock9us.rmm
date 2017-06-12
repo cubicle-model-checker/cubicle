@@ -1,0 +1,18 @@
+forbidden
+CS CS CS CS CS CS CS CS CS
+
+data
+  lock = 1 : [-8:1] /* the real lower bound is -N, but the tool requires finite domains */
+
+process (9)
+registers
+  $r = * : [-8:1]
+text
+  ACQ:  { read: $r := lock; write: lock := $r - 1 };
+       if $r = 1 then goto CS;
+  SPN: read: $r := lock;
+       if $r = 1 then goto ACQ;
+       goto SPN;
+  CS:  nop;
+  REL: write: lock := 1;
+       goto ACQ

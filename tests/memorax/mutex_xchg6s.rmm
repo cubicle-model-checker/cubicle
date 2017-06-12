@@ -1,0 +1,17 @@
+forbidden
+CS CS CS CS CS CS
+
+data
+  lock = 0 : [0:1]
+
+process (6)
+registers
+  $r = * : [0:1]
+  $t = * : [0:1]
+text
+  ENT: $r := 1;
+       locked { read: $t := lock; write: lock := $r; $r := $t };
+       if $r = 1 then goto ENT;
+  CS:  nop;
+  REL: write: lock := 0;
+       goto ENT

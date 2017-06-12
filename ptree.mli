@@ -96,16 +96,16 @@ type psystem = {
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
-  pinvs : (loc * Variable.t list * cformula) list;
-  punsafe : (loc * Variable.t list * cformula) list;
+  pinvs : (loc * Hstring.t option * Variable.t list * cformula) list;
+  punsafe : (loc * Hstring.t option * Variable.t list * cformula) list;
   ptrans : ptransition list;
 }
 
 
 type pdecl =
   | PInit of (loc * Variable.t list * cformula)
-  | PInv of (loc * Variable.t list * cformula)
-  | PUnsafe of (loc * Variable.t list * cformula)
+  | PInv of (loc * Hstring.t option * Variable.t list * cformula)
+  | PUnsafe of (loc * Hstring.t option * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
 

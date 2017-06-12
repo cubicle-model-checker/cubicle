@@ -457,7 +457,7 @@ let satisfy_reads sa =
   (* Build the relevant read-write combinations *)
   let wrcp = make_read_write_combinations iwts evts_bt urevts ghb' in
 
-let pres = if wrcp = [] then [] else begin
+  let pres = if wrcp = [] then [] else begin
 
 
 
@@ -561,7 +561,7 @@ let pres = if wrcp = [] then [] else begin
     let sa = add_ghb_lt_atoms (Weakrel.Rel.diff ghb' ghb) sa in
 
     (* Determine which reads were satisfied *)
-    let satrd = HMap.filter (fun e _ -> not (HMap.mem e urevts')) urevts in
+   (* let satrd = HMap.filter (fun e _ -> not (HMap.mem e urevts')) urevts in *)
 
     (* Add instantiated reads to unsatisfied reads *) (* merge with following*)
     let urevts' = HEvtMap.fold (fun red (re, _, rvals) urevts' ->
@@ -578,11 +578,6 @@ let pres = if wrcp = [] then [] else begin
 
     (* Generate keep set *)
     let keep = HSet.union (HSet.union kgfw kfwt) (HSet.union kfrd kurd) in
-
-
-  (* Variables to keep on "entry points" *)
-  (* W entry points : keep var only on first W by var *)
-  (* R entry points : keep var only if unsat R *)
 
     (* Here, remove events that do not satisfy criterion to stay *)
     let sa = SAtom.filter (function

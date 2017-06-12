@@ -51,6 +51,9 @@ module Rel : sig
   val mem_eq : H.t -> H.t -> t -> bool
   val print_lt : Format.formatter -> t -> unit
   val print_eq : Format.formatter -> t -> unit
+  val get_pred : H.t -> t -> HSet.t
+  val get_succ : H.t -> t -> HSet.t
+  val get_equ : H.t -> t -> HSet.t
   val add_lt : H.t -> H.t -> t -> t
   val add_eq : H.t -> H.t -> t -> t
   val diff : t -> t -> t

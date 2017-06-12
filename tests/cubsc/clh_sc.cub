@@ -1,0 +1,42 @@
+
+number_procs 7
+
+type loc = L1 | L2 | L3 | L4
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Local variables (registers) *)
+array Pred[proc] : proc
+
+(* Global variables *)
+var Tail : proc
+array Locked[proc] : bool
+
+var Dummy : proc
+
+
+init (i) { PC[i] = L1 && Locked[i] = False && Tail = Dummy }
+
+invariant (i) { i = Dummy && Locked[i] = True }
+invariant (i) { Pred[i] = i }
+(* invariant (i j) { Pred[i] = Pred[j] } *)
+
+unsafe (i j k) { i = Dummy && PC[j] = L4 && PC[k] = L4 }
+
+
+transition t1_set_lock(i)
+requires { PC[i] = L1 && i <> Dummy }
+{ PC[i] := L2; Locked[i] := True }
+
+transition t2_set_tail(i)
+requires { PC[i] = L2 && i <> Dummy }
+{ PC[i] := L3; Pred[i] := Tail; Tail := i }
+
+transition t3_wait(i j)
+requires { PC[i] = L3 && Pred[i] = j && Locked[j] = False && i <> Dummy }
+{ PC[i] := L4; }
+
+transition t4(i)
+requires { PC[i] = L4 && i <> Dummy }
+{ PC[i] := L1; Locked[i] := False }

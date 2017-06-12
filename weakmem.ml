@@ -73,6 +73,7 @@ module HLSet = Set.Make (HL)
 let hNone = H.make ""
 
 let hE0 = H.make "_e0"
+(* let hP0 = H.make "#0" *)
 
 let hR = H.make "_R"
 let hW = H.make "_W"
@@ -102,11 +103,21 @@ let is_event a =
 
 let wtl = ref [] (* arrays corresponding to event values *)
 
-let is_value a = List.exists (fun (wt, _) -> H.equal a wt) !wtl
+(* let is_value a = List.exists (fun (wt, _) -> H.equal a wt) !wtl *)
+let is_value a =
+  let a = H.view a in
+  if String.length a < 7 then false else
+  let a = String.sub a 0 7 in
+  a = "_e_val_"
 
 let pl = ref [] (* arrays corresponding to event array parameters *)
 
-let is_param a = List.exists (fun (p, _) -> H.equal a p) !pl
+(* let is_param a = List.exists (fun (p, _) -> H.equal a p) !pl *)
+let is_param a =
+  let a = H.view a in
+  if String.length a < 4 then false else
+  let a = String.sub a 0 4 in
+  a = "_e_p"
 
 let sort_params (p, d, v, vi) =
   let vi = List.sort_uniq (fun (p1, _) (p2, _) -> H.compare p1 p2) vi in
@@ -194,6 +205,8 @@ let init_weak_env wvl =
 
   let int1 = [T.type_int] in
   let int2 = [T.type_int; T.type_int] in
+
+  (* S.declare hP0 [] T.type_proc; *)
 
   S.declare hThr int1 T.type_proc;
   S.declare hDir int1 hDirection;

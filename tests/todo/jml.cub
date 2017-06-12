@@ -1,5 +1,6 @@
 
-number_procs 2
+(* number_procs 3 *)
+(* N : 1476 N / 972 FP / 13658 SC / 67m *)
 
 type location = Idle | Owner | Handin | Handout | Waiting
 type lock = C0 | C1 | C2 | C3

@@ -1,0 +1,83 @@
+
+number_procs 3
+
+type loc = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8 | L9
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Local variables (registers) *)
+array Pred[proc] : proc
+array Pred_null[proc] : bool
+
+(* Global variables *)
+(*weak*) var Tail : proc
+(*weak*) var Tail_null : bool
+(*weak*) array Next[proc] : proc
+(*weak*) array Next_null[proc] : bool
+(*weak*) array Locked[proc] : bool
+
+
+init (i) { PC[i] = L1 && Locked[i] = False &&
+           Tail_null = True && Next_null[i] = True }
+
+unsafe (i j) { PC[i] = L5 && PC[j] = L5 }
+
+
+transition t1_get_set_tail([i])
+requires { PC[i] = L1 }
+{ PC[i] := L2;
+  Pred_null[i] := Tail_null; Pred[i] := Tail;
+  Tail_null := False; Tail := i  }
+
+transition t2a_pred_null([i])
+requires { PC[i] = L2 && Pred_null[i] = True }
+{ PC[i] := L5; }
+
+transition t2b_pred_not_null_set_lock([i])
+requires { PC[i] = L2 && Pred_null[i] = False }
+{ PC[i] := L3; Locked[i] := True }
+
+transition t3_set_pred_next([i] j)
+requires { PC[i] = L3 && Pred_null[i] = False && Pred[i] = j }
+{ PC[i] := L4; Next_null[j] := False; Next[j] := i }
+
+transition t4_wait([i] j)
+requires { PC[i] = L4 && Locked[i] = False }
+{ PC[i] := L5; }
+
+
+transition t5a_next_not_null([i])
+requires { PC[i] = L5 && Next_null[i] = False }
+{ PC[i] := L8 }
+
+transition t5b_next_null([i])
+requires { PC[i] = L5 && Next_null[i] = True }
+{ PC[i] := L6 }
+
+transition t6a_cas_tail_eq_self([i])
+requires { PC[i] = L6 && Tail_null = False && Tail = i }
+{ PC[i] := L1; Tail_null := True }
+
+transition t6b_cas_tail_neq_self([i])
+requires { PC[i] = L6 && Tail_null = False && Tail <> i }
+{ PC[i] := L7 }
+
+transition t6c_cas_tail_neq_self([i])
+requires { PC[i] = L6 && Tail_null = True }
+{ PC[i] := L7 }
+
+transition t7_next_not_null([i])
+requires { PC[i] = L7 && Next_null[i] = False }
+{ PC[i] := L8 }
+
+
+transition t8_set_next_locked_false([i] j)
+requires { PC[i] = L8 && Next_null[i] = False && Next[i] = j }
+{ PC[i] := L9; Locked[j] := False }
+
+transition t9_set_next_null([i] j)
+requires { PC[i] = L9 }
+{ PC[i] := L1; Next_null[i] := True }
+
+

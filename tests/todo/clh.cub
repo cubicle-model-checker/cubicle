@@ -1,0 +1,36 @@
+
+number_procs 8
+
+type loc = L1 | L2 | L3 | L4
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Local variables (registers) *)
+array Pred[proc] : proc
+
+(* Global variables *)
+(*weak*) var Tail : proc
+(*weak*) array Locked[proc] : bool
+
+
+init (i) { PC[i] = L1 && Locked[i] = False }
+
+unsafe (i j) { PC[i] = L4 && PC[j] = L4 }
+
+
+transition t1_set_lock([i])
+requires { PC[i] = L1 }
+{ PC[i] := L2; Locked[i] := True }
+
+transition t2_set_tail([i])
+requires { PC[i] = L2 }
+{ PC[i] := L3; Pred[i] := Tail; Tail := i }
+
+transition t3_wait([i] j)
+requires { PC[i] = L3 && Pred[i] = j && Locked[j] = False }
+{ PC[i] := L4; }
+
+transition t4([i])
+requires { PC[i] = L4 }
+{ PC[i] := L1; Locked[i] := False }

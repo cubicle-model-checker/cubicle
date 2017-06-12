@@ -57,6 +57,19 @@ let () =
   if verbose > 0 then Printexc.record_backtrace true
 
 
+let get_unsafe_name n =
+  let rec aux = function
+    | [] -> ""
+    | [(_, _, n)] ->
+       begin match Node.node_name n with
+       | Some n -> Hstring.view n
+       | None -> "unsafe[" ^ (string_of_int n.tag) ^ "]"
+       end
+    | _ :: tl -> aux tl
+  in
+  aux n.from
+
+
 let _ =
   let lb = from_channel cin in 
 let close_dot = Dot.open_dot () in (* debug *)
@@ -82,7 +95,9 @@ let close_dot = Dot.open_dot () in (* debug *)
          if (not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
          (*if not quiet then Stats.error_trace system faulty;*)
-         printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+         printf "\n@{<b>@{<bg_red>%s@} is reachable !@}\n@."
+                (get_unsafe_name faulty);
+         printf "@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
          close_dot ();
          exit 1
     end

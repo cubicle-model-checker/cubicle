@@ -21,6 +21,9 @@ open Types
 
 type t = node_cube
 
+(* Names associated to some nodes *)
+let node_names = ref []
+
 
 let variables {cube = {Cube.vars = vars }} = vars 
 
@@ -85,18 +88,23 @@ let new_tag =
   | _ -> incr cpt_pos; !cpt_pos
 
 
-let create ?(kind=Node) ?(from=None) cube =
+let create ?(name=None) ?(kind=Node) ?(from=None) cube =
   let hist =  match from with
     | None -> []
     | Some ((_, _, n) as f) -> f :: n.from in
-  { 
+  let node = { 
     cube = cube;
     tag = new_tag ~kind ();
     kind = kind;
     depth = List.length hist;
     deleted = false;
     from = hist;
-  }
+    } in
+  begin match name with
+  | Some n -> node_names := (node.tag, n) :: !node_names
+  | _ -> ()
+  end;
+  node
 
 let has_deleted_ancestor n =
   let rec has acc = function
@@ -219,6 +227,14 @@ let print_history fmt n =
   if dmcmt then fprintf fmt "[0]  "
   else
     if last.kind = Approx then 
-      fprintf fmt "@{<fg_blue>approx[%d]@}" last.tag
-    else 
-      fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.tag
+      try fprintf fmt "@{<fg_blue>%a@}"
+                  Hstring.print (List.assoc last.tag !node_names)
+      with Not_found -> fprintf fmt "@{<fg_blue>approx[%d]@}" last.tag
+    else
+      try fprintf fmt "@{<fg_magenta>%a@}"
+                  Hstring.print (List.assoc last.tag !node_names)
+      with Not_found -> fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.tag
+
+let node_name n =
+  try Some (List.assoc n.tag !node_names)
+  with Not_found -> None

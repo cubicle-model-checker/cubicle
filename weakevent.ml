@@ -7,6 +7,8 @@ open Types
 module Int = struct
   type t = int
   let compare = Pervasives.compare
+  let equal = (=)
+  let hash i = i
 end
 
 module IntSet = Set.Make (Int)
@@ -98,9 +100,9 @@ let process_read_noval rds tr =
 
 
 
-let update_eids eids p e =
-  let peids = try HMap.find p eids with Not_found -> IntSet.empty in
-  HMap.add p (IntSet.add (int_of_e e) peids) eids
+(* let update_eids eids p e = *)
+(*   let peids = try HMap.find p eids with Not_found -> IntSet.empty in *)
+(*   HMap.add p (IntSet.add (int_of_e e) peids) eids *)
 
 let extract_event (sa_pure, rds, wts, fces, eids, evts) at = match at with
   (* Fence *)
@@ -131,7 +133,7 @@ let extract_event (sa_pure, rds, wts, fces, eids, evts) at = match at with
 	  else if H.equal f hVar then ((p, d, c, vi), vals)
           else if is_param f then ((p, d, v, (f, c) :: vi), vals)
           else evt in
-     let eids = if H.equal f hThr then update_eids eids c e else eids in
+     (* let eids = if H.equal f hThr then update_eids eids c e else eids in *)
      (SAtom.add at sa_pure, rds, wts, fces, eids, HMap.add e evt evts)
   (* Value *)
   | Atom.Comp (t1, op, t2) ->
@@ -148,6 +150,10 @@ let init_acc =
 
 let post_process (sa_pure, rds, wts, fces, eids, evts) =
   let evts = HMap.map (fun (ed, vals) -> sort_params ed, vals) evts in
+  let eids = HMap.fold (fun e ((p, _, _, _), _) eids ->
+    let peids = try HMap.find p eids with Not_found -> IntSet.empty in
+    HMap.add p (IntSet.add (int_of_e e) peids) eids
+  ) evts HMap.empty in
   sa_pure, rds, wts, fces, eids, evts (* should be sorted already *)
 
 let extract_events_array ar =

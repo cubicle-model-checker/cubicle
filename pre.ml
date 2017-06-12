@@ -371,7 +371,7 @@ let pre { tr_info = tri; tr_tau = tau } unsafe =
   in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in (* make proc vars consecutive *)
-  let args = pre_u.Cube.vars in (* args = consecutive prov vars #1 #2 #3...*)
+  let args = pre_u.Cube.vars in (* args = consecutive proc vars #1 #2 #3...*)
   if tri.tr_args = [] then tri, pre_u, args
   else
     let nargs = Variable.append_extra_procs args tri.tr_args in

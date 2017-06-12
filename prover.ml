@@ -130,12 +130,12 @@ and make_literal = function
       F.make F.And [ff1; ff2]
 
 
-(* let make_formula atoms = *)
-(*   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms) *)
+let make_formula atoms =
+  F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
 (* this function should be in prover, in assume_goal *)
 (* but that would be problematic in make_orders... *)
-  let rm_sat_evt_thr_par sa =
+(*  let rm_sat_evt_thr_par sa =
     let open Weakmem in
     let unsat_evt, all_lw = SAtom.fold (
      fun a (unsat_evt, all_lw) -> match a with
@@ -156,17 +156,19 @@ and make_literal = function
        when (H.equal f hVar || is_param f)
               && HSet.mem e sat_evt_lw -> false
       | _ -> true
-    ) sa
+    ) sa*)
 
 let make_formula ?(fp=false) array =
-  let sa = Weakrel.filter_rels_array array in
-  let sa = if fp then rm_sat_evt_thr_par sa else sa in
-  make_formula_set sa
+  (* let sa = Weakrel.filter_rels_array array in *)
+  (* let sa = if fp then rm_sat_evt_thr_par sa else sa in *)
+  (* make_formula_set sa *)
+  make_formula array
 
 let make_formula_set ?(fp=false) satom =
-  let sa = Weakrel.filter_rels_set satom in
-  let sa = if fp then rm_sat_evt_thr_par sa else sa in
-  make_formula_set sa
+  (* let sa = Weakrel.filter_rels_set satom in *)
+  (* let sa = if fp then rm_sat_evt_thr_par sa else sa in *)
+  (* make_formula_set sa *)
+  make_formula_set satom
 
 module HAA = Hashtbl.Make (ArrayAtom)
 

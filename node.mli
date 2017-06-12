@@ -37,7 +37,7 @@ val size : t -> int
 (** returns the size of the associated cube (see {! Cube.size}) *)
 
 val create :
-  ?kind:kind -> ?from:trace_step option -> Cube.t -> t
+  ?name:Hstring.t option -> ?kind:kind -> ?from:trace_step option -> Cube.t -> t
 (** given a cube creates a node with a given kind, and a history *)
 
 val compare_by_breadth : t -> t -> int
@@ -66,3 +66,5 @@ val print :  Format.formatter -> t -> unit
 
 val print_history :  Format.formatter -> t -> unit
 (** prints the trace corresponding to the history of a node *)
+
+val node_name : Ast.node_cube -> Hstring.t option
