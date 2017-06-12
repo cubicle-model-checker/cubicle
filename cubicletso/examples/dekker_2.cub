@@ -1,0 +1,63 @@
+
+number_procs 2
+
+type loc = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Global variables *)
+weak array Want[proc] : bool
+weak var Turn : proc
+
+
+init (p) { PC[p] = L1 && Want[p] = False }
+
+unsafe (p1 p2) { PC[p1] = L7 && PC[p2] = L7 }
+
+
+transition t_L1_L2_W_WantS_True ([p])
+requires { PC[p] = L1 }
+{ PC[p] := L2; Want[p] := True }
+
+transition t_L2_L3_R_WantO_True ([p] q)
+requires { PC[p] = L2 && Want[q] = True }
+{ PC[p] := L3 }
+
+transition t_L2_L7_R_WantO_False ([p] q)
+requires { fence (p) && PC[p] = L2 && Want[q] = False }
+{ PC[p] := L7 }
+
+transition t_L3_L4_R_Turn_Other ([p])
+requires { PC[p] = L3 && Turn <> p }
+{ PC[p] := L4 }
+
+transition t_L5_L2_R_Turn_Self ([p])
+requires { PC[p] = L3 && Turn = p }
+{ PC[p] := L2 }
+
+transition t_L4_L5_W_WantS_False ([p])
+requires { PC[p] = L4 }
+{ PC[p] := L5; Want[p] := False }
+
+transition t_L5_L5_R_Turn_Other ([p])
+requires { PC[p] = L5 && Turn <> p }
+{ PC[p] := L5 }
+
+transition t_L5_L6_R_Turn_Self ([p])
+requires { PC[p] = L5 && Turn = p }
+{ PC[p] := L6 }
+
+transition t_L6_L2_W_WantS_True ([p])
+requires { PC[p] = L6 }
+{ PC[p] := L2; Want[p] := True }
+
+(* Critical section *)
+
+transition t_L7_L8_W_Turn_Other ([p] q)
+requires { PC[p] = L7 }
+{ PC[p] := L8; Turn := q }
+
+transition t_L8_L1_W_WantS_False ([p])
+requires { PC[p] = L8 }
+{ PC[p] := L1; Want[p] := False }
