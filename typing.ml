@@ -171,8 +171,8 @@ let rec term loc args = function
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
-    || ty = Smt.Type.type_bool
-    || ty = Smt.Type.type_int
+     || ty = Smt.Type.type_bool
+     || ty = Smt.Type.type_int
   then ()
   else
     match x with
@@ -295,6 +295,12 @@ let declare_symbol loc n args ret =
 
 let init_global_env s = 
   List.iter declare_type s.type_defs;
+  (* patch completeness on Boolean *)
+  (*let mybool = Hstring.make "mbool" in
+  let mytrue = Hstring.make "@MTrue" in
+  let myfalse = Hstring.make "@MFalse" in
+  let dummypos = Lexing.dummy_pos, Lexing.dummy_pos in
+  declare_type (dummypos, (mybool, [mytrue; myfalse]));*)
   let l = ref [] in
   List.iter 
     (fun (loc, n, t) -> 

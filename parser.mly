@@ -38,8 +38,8 @@
   module S = Set.Make(Hstring)
 
   module Constructors = struct
-    let s = ref (S.add (Hstring.make "True") 
-		   (S.singleton (Hstring.make "False")))
+    let s = ref (S.add (Hstring.make "@MTrue") 
+		   (S.singleton (Hstring.make "@MFalse")))
     let add x = s := S.add x !s
     let mem x = S.mem x !s
   end
@@ -63,7 +63,7 @@
   end
 
   let sort s = 
-    if Constructors.mem s then Constr 
+    if Constructors.mem s then Constr
     else if Globals.mem s then Glob
     else
       begin
@@ -125,6 +125,10 @@ symbold_decls
 decl_list
 EOF
 { let ptype_defs = $2 in
+  Smt.set_sum true;
+  let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
+  List.iter Constructors.add b;
+  let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
    |> encode_psystem 
