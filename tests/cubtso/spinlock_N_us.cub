@@ -18,7 +18,7 @@ init (p) { PC[p] = Acquire && LOCK = 1 }
 unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
 
 
-transition t1a_Acquire_dec_gz_CS ([p])
+transition t1a_Acquire_dec ([p])
 requires { PC[p] = Acquire }
 { PC[p] := Acquire2; T[p] := LOCK }
 

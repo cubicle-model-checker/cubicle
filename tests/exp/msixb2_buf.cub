@@ -1,5 +1,6 @@
 
 (* number_procs 6 *)
+(* number_procs 2 *)
 
 type kind = KProc | KBuf
 
@@ -24,7 +25,7 @@ init (p i) { X[p] = True && X[i] = True && T = True && F = False &&
 (* 1 case de buffer, N procs : 187 N, 16579 FP, 42553 SC, 6 P, 0 inv *)
 (* N cases de buffer, 2 procs : 69 N, 7004 FP, 1815 SC, 5 P, 0 inv *)
 (* invariant (b1 b2) { Kind[b1] = KBuf && Kind[b2] = KBuf } *)
-(* invariant (p1 p2 p3) { Kind[p1] = KProc && Kind[p2] = KProc && Kind[p3] = KProc } *)
+invariant (p1 p2 p3) { Kind[p1] = KProc && Kind[p2] = KProc && Kind[p3] = KProc }
 
 (* X[p] can only be written by p *)
 (* invariant (p i) { Var[p,i] = VX && Par[p,i] <> p } *)

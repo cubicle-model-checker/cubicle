@@ -110,7 +110,6 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 		 raise Stats.ReachedLimit
 	     end;
              Stats.new_node n;
-             (*let delayed () = Stats.new_node n in*)
              let n = begin
                  match Approx.good n with
                  | None -> n
@@ -127,24 +126,6 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
-             (* Format.fprintf Format.std_formatter *)
-             (*   "----- PRE = %d -----\n" (List.length ls + List.length post); *)
-             (* Format.print_flush (); *)
-             (* delayed (); *)
-             (* let lls, lpost = List.length ls, List.length post in *)
-             (* TimeAcycl.start (); *)
-             (* let ls = List.filter (fun n -> *)
-	     (*   try  Weakorder.acyclic n; true (\* is there a cycle ? *\) *)
-	     (*   with Smt.Unsat _ -> false (\* there is a cycle *\) *)
-             (* ) ls in *)
-             (* let post = List.filter (fun n -> *)
-	     (*   try  Weakorder.acyclic n; true (\* is there a cycle ? *\) *)
-	     (*   with Smt.Unsat _ -> false (\* there is a cycle *\) *)
-             (* ) post in *)
-             (* TimeAcycl.pause (); *)
-             (* (\* Format.fprintf Format.std_formatter "ls : %d, post : %d -> ls : %d, post : %d\n" lls lpost (List.length ls) (List.length post); *\) *)
-             (* if List.length ls <> lls then failwith "Bwd:Anom"; *)
-             (* if List.length post <> lpost then failwith "Bwd:Anom"; *)
              if delete then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
@@ -156,8 +137,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
         if Q.is_empty q then
           (* When the queue is empty, pour back postponed nodes in it *)
-          begin
-            Q.push_list !postponed q;
+          begin 
+            Q.push_list (*(List.rev*) !postponed(*)*) q; (* added rev *)
             postponed := []
           end
       done;
