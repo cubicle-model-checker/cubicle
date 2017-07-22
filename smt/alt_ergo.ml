@@ -529,8 +529,9 @@ module Make (Options : sig val profiling : bool end) = struct
 
   let assume ~id f = 
     Time.start ();
-    try 
-      CSolver.assume (Formula.make_cnf f) id;
+    try
+      let cnf = (Formula.make_cnf f) in
+      CSolver.assume cnf id;
       Time.pause ()
     with Solver.Unsat ex ->
       Time.pause ();

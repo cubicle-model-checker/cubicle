@@ -188,14 +188,14 @@ let unsafe_dnf node nb_procs invs dnf =
         try 
           unsafe_conj node nb_procs invs init;
           raise Exit
-        with Smt.Unsat uc -> List.rev_append uc accuc)
-        [] dnf in
+        with Smt.Unsat uc -> List.rev_append uc accuc) [] dnf
+    in
     raise (Smt.Unsat uc)
   with Exit -> ()
 
 let unsafe_cdnf s n =
   let nb_procs = List.length (Node.variables n) in
-  let cdnf_init = make_init_dnfs s nb_procs in
+  let cdnf_init = make_init_dnfs s nb_procs in  
   let invs = get_user_invs s nb_procs in
   List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 

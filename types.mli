@@ -53,7 +53,19 @@ type term =
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 
+module Var : sig
+    type t =
+      | V of Hstring.t * sort
+      | T of Hstring.t * Variable.t list
 
+    val compare : t -> t -> int
+end
+
+module VMap : Map.S with type key = Var.t
+
+type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
+type poly = cst VMap.t * cst
+			
 (** Module interface for terms *)
 module Term : sig
 

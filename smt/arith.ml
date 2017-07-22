@@ -283,16 +283,6 @@ module Make
   let apply_subst sb v = 
     is_mine (List.fold_left (fun v (x, p) -> embed (subst x p v)) v sb)
 
-  (* substituer toutes variables plus grandes que x *)
-  let subst_bigger x l = 
-    List.fold_left 
-      (fun (l, sb) (b, y) ->
-         if X.compare y x > 0 then
-	   let k = X.term_embed (fresh_name ()) in
-	   (b, k) :: l, (y, embed k)::sb
-	 else (b, y) :: l, sb)
-      ([], []) l
-
   let is_mine_p = List.map (fun (x,p) -> x, is_mine p)
    
   let extract_min = function
@@ -314,18 +304,17 @@ module Make
 
     (* 2. substituer les aliens plus grand que x pour 
        assurer l'invariant sur l'ordre AC *)
-    let l, sbs = subst_bigger x l in
     let p = P.create l b Ty.Tint in
     match a with
       | Int 0 -> assert false
       | Int 1 -> 
           (* 3.1. si a = 1 alors on a une substitution entiere pour x *)
           let p = mult_const p (Int (-1)) in 
-          (x, is_mine p) :: (is_mine_p sbs)
+          [x, is_mine p]
             
       | Int (-1) -> 
           (* 3.2. si a = -1 alors on a une subst entiere pour x*)
-          (x,is_mine p) :: (is_mine_p sbs)
+         [x, is_mine p]
       | _        -> 
           (* 4. sinon, (|a| <> 1) et a <> 0 *)
           (* 4.1. on rend le coef a positif s'il ne l'est pas deja *)
@@ -336,7 +325,7 @@ module Make
             else (a, l, b)
           in
           (* 4.2. on reduit le systeme *)
-          omega_sigma sbs a x l b
+          omega_sigma [] a x l b
 
   and omega_sigma sbs a x l b =
     

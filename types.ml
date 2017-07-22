@@ -56,11 +56,39 @@ module MConst = struct
 	   
 end
 
+module Var = struct
+    type t = 
+      | V of Hstring.t * sort
+      | T of Hstring.t * Variable.t list
+
+    let compare x y =
+      match x, y with
+      | V(a1,s1), V(a2, s2) ->
+	 let c = Pervasives.compare s1 s2 in
+	 if c <> 0 then c
+	 else Hstring.compare a1 a2
+
+      | T(t1,l1), T(t2,l2) ->
+	 let c = Hstring.compare t1 t2 in
+	 if c<>0 then c
+	 else Variable.compare_list l1 l2
+      | V(_,_), T(_,_) -> -1
+      | T(_,_), V(_,_) -> 1
+	 
+  end
+
+module VMap = Map.Make(Var)
+
+type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
+type poly = cst VMap.t * cst
+		  
 type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
+(*  | NArith of cst VMap.t * cst*)
+
 
 let is_int_const = function
   | ConstInt _ -> true

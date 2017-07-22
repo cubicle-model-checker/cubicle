@@ -84,7 +84,7 @@ let fresh_nondet =
   let cpt = ref 0 in 
   fun (args, ret) -> 
     incr cpt; 
-    let s = H.make ("*"^(string_of_int !cpt)) in
+    let s = H.make ("!"^(string_of_int !cpt)) in
     Smt.Symbol.declare s args ret;
     s
 
@@ -308,8 +308,8 @@ let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
     SAtom.union tri.tr_reqs 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
-  if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   let pre_u = Cube.create_normal pre_unsafe in
+  if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   reset();
   let args = pre_u.Cube.vars in
   if tri.tr_args = [] then tri, pre_u, args

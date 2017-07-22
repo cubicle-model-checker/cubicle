@@ -42,7 +42,7 @@ let check s n =
       begin
 	Prover.unsafe s n;
 	if not quiet then eprintf "\nUnsafe trace: @[%a@]@."
-	  Node.print_history n;
+				  Node.print_history n;
         raise (Unsafe n)
       end
   with

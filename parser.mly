@@ -20,7 +20,7 @@
   open Parsing
   open Ptree
   
-  let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
+  let _ = Smt.set_cc true; Smt.set_arith false; Smt.set_sum false
 
 
   (* Helper functions for location info *)
@@ -341,8 +341,8 @@ var_term:
 
 top_id_term:
   | var_term { match $1 with
-      | Elem (v, Var) -> TVar v
-      | _ -> TTerm $1 }
+                 | Elem (v, Var) -> TVar v
+                 | _ -> TTerm $1 }
 ;
 
 
@@ -385,7 +385,7 @@ term:
   | top_id_term { $1 } 
   | array_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
-;
+  ;
 
 lident:
   | LIDENT { Hstring.make $1 }

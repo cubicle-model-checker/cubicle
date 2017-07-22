@@ -224,6 +224,7 @@ module Make (X : Sig.X) = struct
     let uf, res = Uf.union env.uf r1 r2 ex in
     List.fold_left 
       (fun (env, l) (p, touched, v) ->
+
 	 (* we look for use(p) *)
       	 let p_t, p_a = Use.find p env.use in
 	 

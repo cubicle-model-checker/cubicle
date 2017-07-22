@@ -437,7 +437,8 @@ let theory_propagate () =
     let full_model = nb_assigns() = env.nb_init_vars in
     env.tenv <- 
       List.fold_left 
-      (fun t (a,ex) -> let t,_,_ = Th.assume ~cs:full_model a ex t in t) 
+	(fun t (a,ex) ->
+	 let t,_,_ = Th.assume ~cs:full_model a ex t in t) 
       env.tenv !facts;
     if full_model then expensive_theory_propagate ()
     else None
