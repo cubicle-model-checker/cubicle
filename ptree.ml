@@ -505,7 +505,10 @@ let rec guard_of_formula_aux = function
     let req, ureq = classify_guards ([],[]) l in
     [satom_of_cube req, List.map uguard_of_formula ureq]
   | POr l -> List.map guard_of_formula_aux l |> List.flatten
-  | _ -> assert false
+  | f ->
+    let req, ureq = classify_guards ([],[]) [f] in
+    [satom_of_cube req, List.map uguard_of_formula ureq]
+  (* | _ -> assert false *)
 
 let guard_of_formula f =
   match up_quantifiers (dnf f) with

@@ -565,8 +565,8 @@ module Why3 = struct
 
   let print_name fmt s =
     fprintf fmt "%s"
-            (String.uncapitalize 
-               (sanitize_string_for_why3 (Hstring.view s)))
+      (String.uncapitalize_ascii
+         (sanitize_string_for_why3 (Hstring.view s)))
 
   let rec print_constructors fmt = function
     | [] -> assert false
@@ -1047,7 +1047,7 @@ module Why3 = struct
 
 
   let capital_base f =
-    String.capitalize 
+    String.capitalize_ascii
       (sanitize_string_for_why3
          (Filename.chop_extension (Filename.basename f)))
 
@@ -1381,7 +1381,8 @@ module Why3_INST = struct
   module FixpointC = Fixpoint.FixpointCertif
 
 
-  let print_name fmt s = fprintf fmt "%s" (String.uncapitalize (Hstring.view s))
+  let print_name fmt s =
+    fprintf fmt "%s" (String.uncapitalize_ascii (Hstring.view s))
 
   let rec print_constructors fmt = function
     | [] -> assert false
@@ -1863,7 +1864,7 @@ module Why3_INST = struct
 
   
   let capital_base f =
-    String.capitalize (Filename.chop_extension (Filename.basename f))
+    String.capitalize_ascii (Filename.chop_extension (Filename.basename f))
 
   let theory_decls fmt s =
     let name = (capital_base file)^"_defs" in

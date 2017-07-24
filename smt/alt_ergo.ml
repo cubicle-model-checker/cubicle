@@ -451,7 +451,11 @@ end
 exception Unsat of int list
 
 let set_cc b = Cc.cc_active := b
-let set_arith = Combine.CX.set_arith_active
+
+let set_arith b =
+  Combine.CX.set_arith_active b;
+  if b then Cc.cc_active := true
+
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig

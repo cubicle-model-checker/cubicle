@@ -20,7 +20,7 @@
   open Parsing
   open Ptree
   
-  let _ = Smt.set_cc true; Smt.set_arith false; Smt.set_sum false
+  let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
 
   (* Helper functions for location info *)
