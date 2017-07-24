@@ -41,18 +41,6 @@ val const_sign : int MConst.t -> int option
 val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
 
-
-(** the type of terms *)
-type term =
-  | Const of int MConst.t
-  (** constant given as a map. [1*2 + 3*c] is the map [[2 -> 1; c -> 3]] *)
-  | Elem of Hstring.t * sort
-  (** element, can be a variable or a process *)
-  | Access of Hstring.t * Variable.t list
-  (** an access to an array *)
-  | Arith of term * int MConst.t
-  (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-
 module Var : sig
     type t =
       | V of Hstring.t * sort
@@ -65,7 +53,19 @@ module VMap : Map.S with type key = Var.t
 
 type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
 type poly = cst VMap.t * cst
-			
+
+(** the type of terms *)
+type term =
+  | Const of int MConst.t
+  (** constant given as a map. [1*2 + 3*c] is the map [[2 -> 1; c -> 3]] *)
+  | Elem of Hstring.t * sort
+  (** element, can be a variable or a process *)
+  | Access of Hstring.t * Variable.t list
+  (** an access to an array *)
+  | Arith of term * int MConst.t
+  (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
+(*  | NArith of cst VMap.t * cst*)
+			   
 (** Module interface for terms *)
 module Term : sig
 

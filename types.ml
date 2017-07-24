@@ -268,10 +268,6 @@ module Term = struct
 
 end
 
-
-
-
-
 module rec Atom : sig
 
   type t =

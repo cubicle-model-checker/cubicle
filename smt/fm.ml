@@ -436,7 +436,7 @@ module Make
 	let p = num_of_big_int p in
 	a // p, b // p
       else a, b
-    with Failure "big_int_of_ratio" -> a, b
+    with Failure _ -> a, b
 
   let cross x cpos cneg = 
     let rec cross_rec acc = function 

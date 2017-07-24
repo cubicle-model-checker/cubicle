@@ -219,7 +219,7 @@ module Make (X : S) = struct
   let abs_big_int_to_num b =
     let b = 
       try Int (Big_int.int_of_big_int b) 
-      with Failure "int_of_big_int" -> Big_int b
+      with Failure _ -> Big_int b
     in
     abs_num b
     
