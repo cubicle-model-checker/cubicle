@@ -14,16 +14,24 @@
 ##########################################################################
 
 AC_INIT(main.ml)
+m4_include([m4/ax_compare_version.m4])
 
 AC_CHECK_PROG(OCAMLC,ocamlc.opt,ocamlc.opt,no)
 if test "$OCAMLC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlc.)
 fi
 
+MINOCAMLVERSION=4.03.0
 OCAMLVERSION=`$OCAMLC -version`
-echo "ocaml version is $OCAMLVERSION"
+echo "OCaml version is $OCAMLVERSION"
+AX_COMPARE_VERSION([$OCAMLVERSION], [ge], [$MINOCAMLVERSION],
+                   [], [badocaml=yes])
+if test "$badocaml" = yes; then
+   AC_MSG_ERROR(Need OCaml version $MINOCAMLVERSION or higher.)
+fi
+
 OCAMLLIB=`$OCAMLC -where`
-echo "ocaml library path is $OCAMLLIB"
+echo "OCaml library path is $OCAMLLIB"
 
 # we look for ocamlfind; if not present, we just don't use it to find
 # libraries
