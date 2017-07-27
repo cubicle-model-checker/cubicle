@@ -61,7 +61,16 @@ let rec unprime_term t = match t with
   | _ -> t
 
 
-let is_prime s = String.contains s '@'
+let is_prime s =
+  try
+    let pos_at = String.rindex s '@' in
+    ignore (int_of_string
+              (String.sub s (pos_at + 1) (String.length s - pos_at - 1)));
+    true
+  with
+  | Not_found -> false
+  | Invalid_argument _ -> false
+  | Failure _ -> false
 
 let rec is_prime_term = function
   | Const _ -> false 

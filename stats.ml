@@ -176,7 +176,9 @@ let print_history fmt n =
 let error_trace sys faulty =
   if not quiet then
     match Forward.replay_history sys faulty with
-    | None -> printf "@\n@{<fg_red>Spurious trace@}: "
+    | None ->
+      printf "@\n@{<fg_red>Spurious trace@}\n@.";
+      raise Exit
     | Some trace ->
       printf "@\n@{<fg_red>Error trace@}: ";
       (* printf "@[%a@]@." (print_trace faulty) trace *)

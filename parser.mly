@@ -67,7 +67,7 @@
     else if Globals.mem s then Glob
     else
       begin
-        assert (not (Arrays.mem s));
+        (* assert (not (Arrays.mem s)); *)
         Var
       end
 

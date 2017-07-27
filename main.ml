@@ -80,8 +80,11 @@ let _ =
       | Bwd.Unsafe (faulty, candidates) ->
          if (not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
-         if not quiet then Stats.error_trace system faulty;
-         printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+         begin try
+             if not quiet then Stats.error_trace system faulty;
+             printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+           with Exit -> ()
+         end;
          close_dot ();
          exit 1
     end
