@@ -121,3 +121,7 @@ val psystem_of_decls:
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list ->
   ptype_defs : (loc * Ast.type_constructors) list ->
   pdecl list -> psystem
+
+(** {2 Pretty printing ASTs} *)
+
+val print_system : Format.formatter -> Ast.system -> unit

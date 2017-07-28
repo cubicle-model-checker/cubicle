@@ -448,7 +448,7 @@ end = struct
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
 
   let print fmt sa =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (elements sa)
+    fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (elements sa)
 
   let print_inline fmt sa =
     fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)
@@ -608,6 +608,6 @@ module ArrayAtom = struct
     Array.sub d 0 !cpt
 
   let print fmt a =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (Array.to_list a)
+    fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (Array.to_list a)
 
 end
