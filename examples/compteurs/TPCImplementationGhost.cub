@@ -1,0 +1,81 @@
+(* Lower-level model of two-phase commit protocol where nodes *)
+(* communicate by message passing. *)
+
+type state = Unknown | ReadyCommit | ReadyAbort | Committed | Aborted
+type proposal = PCommit | PAbort | PNone
+type order = OCommit | OAbort | ONone
+type location = A1 | A2 | Done
+
+array PC[proc] : location
+array Astate[proc] : state
+array Proposal[proc] : proposal
+array Commits[proc] : bool  (* true when coordinator received commit proposal from agent *)
+var Cstate : state
+var Order : order  (* order of coordinator, if any, modeled as scalar variable *)
+
+var Ghost : int
+
+invariant () { Ghost < 0 }
+
+init (n) {
+  PC[n] = A1 &&
+  Astate[n] = Unknown &&
+  Cstate = Unknown &&
+  Proposal[n] = PNone &&
+  Commits[n] = False &&
+  Order = ONone &&
+  Ghost = 0
+}
+
+unsafe(m n) { Astate[m] = Committed && Astate[n] = Aborted }
+
+transition proposeCommit(n)
+requires { PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyCommit;
+  Proposal[n] := PCommit;
+}
+
+transition proposeAbort(n)
+requires { PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyAbort;
+  Proposal[n] := PAbort;
+  Ghost := Ghost + 1;
+}
+
+transition receiveCommit(n)
+requires { Proposal[n] = PCommit }
+{
+  Commits[n] := True;
+}
+
+transition decideCommit(i)
+requires { Ghost = 0 && Commits[i] = True && forall_other n. Commits[n] = True }
+{
+  Cstate := Committed;
+  Order := OCommit;
+}
+
+transition decideAbort(n)
+requires { Proposal[n] = PAbort }
+{
+  Cstate := Aborted;
+  Order := OAbort;
+}
+
+transition executeCommit(n)
+requires { PC[n] = A2 && Order = OCommit }
+{
+  PC[n] := Done;
+  Astate[n] := Committed;
+}
+
+transition executeAbort(n)
+requires { PC[n] = A2 && Order = OAbort }
+{
+  PC[n] := Done;
+  Astate[n] := Aborted;
+}

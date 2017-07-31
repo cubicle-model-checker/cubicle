@@ -1,0 +1,50 @@
+(* High-level model of two-phase commit protocol where nodes directly *)
+(* access each other's memory. *)
+
+type state = Unknown | ReadyCommit | ReadyAbort | Committed | Aborted
+type location = A1 | A2 | Done
+
+array PC[proc] : location
+array Astate[proc] : state
+var Cstate : state
+
+init (n) {
+  PC[n] = A1 &&
+  Astate[n] = Unknown &&
+  Cstate = Unknown
+}
+
+unsafe(m n) { Astate[m] = Committed && Astate[n] = Aborted }
+
+transition proposeCommit(n)
+requires { PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyCommit;
+}
+
+transition proposeAbort(n)
+requires { PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyAbort;
+}
+
+transition decideCommit(i)
+requires { Astate[i] = ReadyCommit && forall_other n. Astate[n] = ReadyCommit }
+{
+  Cstate := Committed;
+}
+
+transition decideAbort(n)
+requires { Astate[n] = ReadyAbort }
+{
+  Cstate := Aborted;
+}
+
+transition executeDecision(n)
+requires { PC[n] = A2 && Cstate <> Unknown }
+{
+  PC[n] := Done;
+  Astate[n] := Cstate;
+}
