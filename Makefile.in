@@ -141,10 +141,7 @@ $(NAME).opt: $(MAINCMX)
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
 VERSION=1.1.1
-# comment the following line for release
-SVNREV=-$(shell svnversion -n)
-
-VERSION_STR=$(VERSION)$(SVNREV)
+VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION_STR)"\"" > version.ml

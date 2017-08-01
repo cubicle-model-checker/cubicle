@@ -1,0 +1,29 @@
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+*.opt
+*.byte
+*.output
+
+# Generated
+lexer.ml
+parser.mli
+parser.ml
+mulexer.ml
+muparser.mli
+muparser.ml
+functory.mli
+functory.ml
+smt/z3wrapper.ml
+version.ml
+
+# Temporary files
+*~
+\#*\#
+.\#*
