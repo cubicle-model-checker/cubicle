@@ -15,7 +15,7 @@ install:
 - opam init
 - eval `opam config env`
 - opam update
-- opam install ocamlfind
+- opam install ocamlfind functory
 
 script:
 - autoconf

@@ -1,9 +1,11 @@
-;;; cubicle-mode.el --- Cubicle major mode for emacs
+;;; cubicle-mode.el --- Major mode for the Cubicle model checker
 
 ;; Author: Alain Mebsout
 ;; Version: 0.2
 
 
+;;; Commentary:
+;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Usage:                                                                     ;;
 ;;   Copy this file to a location of your load path (e.g. ~/.emacs.d) and add ;;
@@ -43,6 +45,8 @@
 ;; where :brab is an optional argument that will be passed on to cubicle when ;;
 ;; executed                                                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Code:
 
 (defvar cubicle-mode-syntax-table
   (let ((st (make-syntax-table)))
@@ -98,7 +102,7 @@
 (define-derived-mode cubicle-mode fundamental-mode "Cubicle"
   "A major mode for editing Cubicle files."
   :syntax-table cubicle-mode-syntax-table
-  (set (make-local-variable 'comment-start) "(*")  
+  (set (make-local-variable 'comment-start) "(*")
   (set (make-local-variable 'comment-end) "*)")
   (when (buffer-file-name)
     (set (make-local-variable 'compile-command)
