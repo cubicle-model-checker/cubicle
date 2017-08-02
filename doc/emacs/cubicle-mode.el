@@ -99,6 +99,8 @@
     "Keyword highlighting specification for `cubicle-mode'."))
 
 (require 'compile)
+
+;;;###autoload
 (define-derived-mode cubicle-mode fundamental-mode "Cubicle"
   "A major mode for editing Cubicle files."
   :syntax-table cubicle-mode-syntax-table
@@ -109,6 +111,10 @@
          (format "cubicle %s" (file-name-nondirectory buffer-file-name))))
   (set (make-local-variable 'font-lock-defaults)'(cubicle-font-lock-keywords))
   )
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.cub$" . cubicle-mode) t)
+
 (provide 'cubicle-mode)
 
 ;;; cubicle-mode.el ends here
