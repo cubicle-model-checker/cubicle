@@ -677,7 +677,9 @@ let init_to_states env procs s =
 
 let atom_to_st_req env = function
   | Atom.Comp (t1, op, t2) -> 
-      HT.find env.id_terms t1, op, HT.find env.id_terms t2
+    HT.find env.id_terms t1, op, HT.find env.id_terms t2
+  | Atom.True -> raise Not_found
+  | Atom.False -> env.id_true, Eq, env.id_false
   | _ -> assert false
 
 let satom_to_st_req env sa =

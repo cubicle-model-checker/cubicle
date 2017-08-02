@@ -11,11 +11,11 @@ before_install:
 install:
 - wget -qq https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
 - export OPAMYES=1
-- opam switch 4.04.0
+# - opam switch 4.04.0
 - opam init
 - eval `opam config env`
 - opam update
-- opam install ocamlfind camlp4 menhir
+- opam install ocamlfind
 
 script:
 - autoconf

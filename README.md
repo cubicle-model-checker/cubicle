@@ -1,6 +1,8 @@
 Cubicle
 =======
 
+[![Build Status](https://travis-ci.org/cubicle-model-checker/cubicle.svg?branch=master)](https://travis-ci.org/cubicle-model-checker/cubicle)
+
 Cubicle is a tool that combines model checking algorithms and automatic SMT
 theorem provers with a powerful invariants inference mechanism.
 
