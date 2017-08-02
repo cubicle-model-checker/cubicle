@@ -22,6 +22,12 @@ functory.mli
 functory.ml
 smt/z3wrapper.ml
 version.ml
+.depend
+config.log
+config.status
+configure
+Makefile
+autom4te.cache
 
 # Temporary files
 *~

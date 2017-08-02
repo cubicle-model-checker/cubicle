@@ -380,6 +380,52 @@ release: export/$(EXPORTDIR).tar.gz doc
 	cp -f -R doc/ocamldoc $(WEB)/
 
 
+# Tests
+#######
+
+define test_good
+	printf "%-40s " $(1) ; \
+	if timeout 30 ./$(OPT) -quiet $(1) $(2) > /dev/null ; then \
+		printf "\033[0;32mOK\033[0m\n" ; \
+	else \
+		printf "\033[0;31mKO\033[0m\n"; \
+		exit 1; \
+	fi
+endef
+
+define test_bad
+	printf "%-40s " $(1) ; \
+	if timeout 30 ./$(OPT) -quiet $(1) $(2) > /dev/null ; then \
+		printf "\033[0;31mKO\033[0m\n"; \
+		exit 1; \
+	else \
+		printf "\033[0;32mOK\033[0m\n" ; \
+	fi
+endef
+
+test_good:
+	@echo "------------------ SAFE -------------------"
+	@$(call test_good,examples/bakery.cub)
+	@$(call test_good,examples/bakery_lamport.cub)
+	@$(call test_good,examples/bakery_lamport_na.cub,-brab 2)
+	@$(call test_good,examples/german.cub,-brab 2)
+	@$(call test_good,examples/german.ctc.cub,-brab 2)
+	@$(call test_good,examples/german_baukus.cub,-brab 2)
+	@$(call test_good,examples/ricart_abdulla_int.cub,-brab 2)
+	@$(call test_good,examples/szymanski_at.cub,-brab 2)
+	@$(call test_good,examples/szymanski_na.cub,-brab 2)
+	@$(call test_good,examples/flash_nodata.cub,-brab 2 -forward-depth 6)
+
+test_bad:
+	@echo "----------------- UNSAFE ------------------"
+	@$(call test_bad,examples/bakery_lamport_bogus.cub)
+	@$(call test_bad,examples/futurebus.cub)
+	@$(call test_bad,examples/swimming_pool.cub)
+	@$(call test_bad,examples/flash_buggy.cub,-brab 2 -forward-depth 6)
+
+test: $(OPT) test_good test_bad
+
+
 # Try Cubicle
 #############
 export CMO
@@ -430,4 +476,4 @@ archi:
 	rm -f doc/archi.dot
 
 
-.PHONY: doc docpdf archi export release
+.PHONY: doc docpdf archi export release test
