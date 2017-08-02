@@ -385,7 +385,7 @@ release: export/$(EXPORTDIR).tar.gz doc
 
 define test_good
 	printf "%-40s " $(1) ; \
-	if timeout 30 ./$(OPT) -quiet $(1) $(2) > /dev/null ; then \
+	if timeout 30 ./$(OPT) -nocolor -quiet $(1) $(2) | grep -q "The system is SAFE" ; then \
 		printf "\033[0;32mOK\033[0m\n" ; \
 	else \
 		printf "\033[0;31mKO\033[0m\n"; \
@@ -395,11 +395,11 @@ endef
 
 define test_bad
 	printf "%-40s " $(1) ; \
-	if timeout 30 ./$(OPT) -quiet $(1) $(2) > /dev/null ; then \
+	if timeout 30 ./$(OPT) -nocolor -quiet $(1) $(2)  | grep -q "^UNSAFE" ; then \
+		printf "\033[0;32mOK\033[0m\n" ; \
+	else \
 		printf "\033[0;31mKO\033[0m\n"; \
 		exit 1; \
-	else \
-		printf "\033[0;32mOK\033[0m\n" ; \
 	fi
 endef
 

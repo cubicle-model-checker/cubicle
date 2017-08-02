@@ -132,5 +132,7 @@ let _ =
 
     let backtrace = Printexc.get_backtrace () in
     eprintf "Fatal error: %s@." (Printexc.to_string e);
-    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+    
+    exit 1
 
