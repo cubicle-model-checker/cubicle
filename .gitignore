@@ -28,6 +28,10 @@ config.status
 configure
 Makefile
 autom4te.cache
+doc/archi.pdf
+doc/ocamldoc/latex
+doc/ocamldoc/*.html
+doc/ocamldoc/style.css
 
 # Temporary files
 *~

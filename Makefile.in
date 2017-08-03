@@ -470,9 +470,10 @@ archi:
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \
 	-t "Cubicle $(VERSION) architecture" \
 	$(INCLPATHS) \
-	$(filter-out *.mll *.mly fake_functory.ml fake_functory.mli, $(FILES)) \
-	$(COMMONFILES) smt/smt_sig.mli
-	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf
+	$(filter-out %.mll %.mly fake_functory.ml fake_functory.mli, $(FILES)) \
+	$(COMMONFILES) \
+	smt/smt_sig.mli smt/smt.ml smt/alt_ergo.ml smt/z3wrapper.ml
+	dot -G"rotate=0" -N"shape=box" -Tpdf doc/archi.dot > doc/archi.pdf
 	rm -f doc/archi.dot
 
 
