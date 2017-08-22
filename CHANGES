@@ -1,3 +1,33 @@
+1.1.1 2017-06-13
+    NEW FEATURES
+    * Option -noqe to disable elimination of constants
+
+    BUG FIXES
+    * Parsing floats and negative reals/integers
+    * Fix too broad over-approximation with non-deterministic updates
+    * Fix type bool is now an enumerative data type
+
+1.1   2016-03-17
+    NEW FEATURES
+    * Murphi (external tool) as an oracle for performing enumerative forward
+      (Experimental)
+    * Macros for predicates/formulas (Experimental)
+    * Symmetry reduction by normalization in enumerative forward. Can be
+      disabled with -forward-nosym.
+    
+    IMPROVEMENTS
+    * Report solver errors
+    * Indentation in Why3 certificates
+    * Stop forward exploration with Ctrl-C and continue with backward
+    * Sort transitions to not depend on order
+    
+    BUG FIXES
+    * Renaming bug in forward
+    * Certificates: reals/constants and user supplied invariants
+    * Various fixes in reporting of spurious traces
+    * Add user supplied invariants in initial formula
+    * Various fixes in arithmetic
+    
 1.0.2 2015-02-09
     BUG FIXES
     * Create correct actions for preservation of values in Enumerative

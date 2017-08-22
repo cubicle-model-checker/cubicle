@@ -123,7 +123,7 @@ module Symbol = struct
     
   type t = Hstring.t
 
-  let declare f args ret =
+  let declare f args ret  = 
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
       (fun t -> 
@@ -227,7 +227,7 @@ module Variant = struct
            hset_print c) 
       constructors
 
-	
+
   let get_variants = H.find constructors
     
   let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
@@ -467,11 +467,14 @@ end
 exception Unsat of int list
 
 let set_cc b = Cc.cc_active := b
-let set_arith = Combine.CX.set_arith_active
+
+let set_arith b =
+  Combine.CX.set_arith_active b;
+  if b then Cc.cc_active := true
+
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
-
   val check_strategy : check_strategy
 
   val get_time : unit -> float
@@ -544,10 +547,11 @@ module Make (Options : sig val profiling : bool end) = struct
     in 
     SInt.elements s
 
-  let assume ~id f =
+  let assume ~id f = 
     Time.start ();
-    try 
-      CSolver.assume (Formula.make_cnf f) id;
+    try
+      let cnf = (Formula.make_cnf f) in
+      CSolver.assume cnf id;
       Time.pause ()
     with Solver.Unsat ex ->
       Time.pause ();

@@ -135,13 +135,10 @@ let redondant_or_false others a = match a with
       (try
 	 (SAtom.iter (function
 	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1')
-	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) ->
-	     raise Exit
-	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1')
-	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0) ->
-	     raise Not_found
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') ->
+	     if Term.compare t1' t1 = 0 then
+               if Term.compare t2' t2 = 0 then raise Exit
+               else raise Not_found
 	   | _ -> ()) others);
 	 a
        with Not_found -> Atom.True | Exit -> Atom.False)
@@ -150,12 +147,12 @@ let redondant_or_false others a = match a with
       (try
 	 (SAtom.iter (function
 	   | Atom.Comp (t1', Neq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1')
-	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0) ->
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Neq, t1') ->
+	     if Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0 then
 	     raise Exit
 	   | Atom.Comp (t1', Eq, (Elem (x', (Var | Constr)) as t2'))
-	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1')
-	     when (Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0) ->
+	   | Atom.Comp ((Elem (x', (Var | Constr)) as t2'), Eq, t1') ->
+	     if Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0 then
 	     raise Exit
 	   | _ -> ()) others); a
        with Not_found -> Atom.True | Exit -> Atom.False)
@@ -619,14 +616,6 @@ let rec break a =
 		in
   		a1_and_c :: a2_and_nc_r
   	end
-
-(*let break a =
-  let sal = break a in
-  Format.eprintf "Break\n";
-  List.iter (fun sa ->
-      Format.eprintf "SA : %a\n" SAtom.print sa
-    ) sal;
-  sal*)
 
 let add_without_redondancy sa l =
   if List.exists (fun sa' -> SAtom.subset sa' sa) l then l

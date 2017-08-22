@@ -449,6 +449,7 @@ n
     (* Cubetrie.iter (fun n -> Format.eprintf "Node : %a\n" Node.print n) visited; *)
 (* Format.fprintf Format.std_formatter "Fixpoint for node %d, possible matches : %d\n" t (List.length nodes); *)
 (* Format.print_flush (); (\*if t = 16 then ((\*Format.fprintf Format.std_formatter "n : %a\n" Node.print sx;*\) List.iter (fun (n, ar) -> Format.fprintf Format.std_formatter "n (%d) : %a\n" n.tag ArrayAtom.print ar) nodes; exit 0);*\) *)
+
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes

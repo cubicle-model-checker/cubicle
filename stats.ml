@@ -47,7 +47,7 @@ let new_node s =
       if verbose < 1 then printf "@[%a@]@." Node.print_history s
       else printf "@[%a@] =@\n     @[%a@]@." Node.print_history s Node.print s
     end;
-  if dot then Dot.new_node s(*; if !cpt_nodes = 13 then exit 0*)
+  if dot then Dot.new_node s
 
 let check_limit s =
   if !cpt_nodes > maxnodes || s.depth > maxrounds then raise ReachedLimit
@@ -176,7 +176,9 @@ let print_history fmt n =
 let error_trace sys faulty =
   if not quiet then
     match Forward.replay_history sys faulty with
-    | None -> printf "@\n@{<fg_red>Spurious trace@}: "
+    | None ->
+      printf "@\n@{<fg_red>Spurious trace@}\n@.";
+      raise Exit
     | Some trace ->
       printf "@\n@{<fg_red>Error trace@}: ";
       (* printf "@[%a@]@." (print_trace faulty) trace *)

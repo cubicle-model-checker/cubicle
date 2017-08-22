@@ -17,7 +17,6 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
-(* type solver = AltErgo | AltErgoFile | AltErgoLib | Z3 *)
 type solver = AltErgo | AltErgoFile | Z3
 
 type model = SC | TSO
@@ -117,7 +116,6 @@ let set_smt_solver s =
   smt_solver := match s with
     | "alt-ergo" -> AltErgo
     | "alt-ergo-file" -> AltErgoFile
-    (* | "alt-ergo-lib" -> AltErgoLib *)
     | "z3" -> Z3
     | _ -> raise (Arg.Bad ("SMT solver "^s^" not supported"))
 
@@ -204,7 +202,6 @@ let specs =
     " refine universal guards by symbolic forward";
     "-j", Arg.Set_int cores, "<n> number of cores to use";
     "-solver", Arg.String set_smt_solver,
-    (* "<alt-ergo(default) | alt-ergo-file | alt-ergo-lib | z3> SMT solver to use"; *)
     "<alt-ergo(default) | alt-ergo-file | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";

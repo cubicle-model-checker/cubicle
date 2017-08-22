@@ -26,6 +26,10 @@ type subst = (t * t) list
 module Set : Set.S with type elt = t
 (** set of variables *)
 
+val compare : t -> t -> int
+
+val compare_list : t list -> t list -> int
+				     
 (** {2 Predefinied variables } *)
 
 val procs : t list
@@ -84,3 +88,4 @@ val give_procs : int -> t list
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit
 val print_subst : formatter -> subst -> unit
+

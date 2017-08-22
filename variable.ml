@@ -22,6 +22,9 @@ type subst = (t * t) list
 
 module Set = Hstring.HSet
 
+let compare = Hstring.compare
+let compare_list = Hstring.compare_list
+	       
 let gen_vars s n = 
   let l = ref [] in
   for i = 1 to max_proc do

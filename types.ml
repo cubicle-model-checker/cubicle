@@ -56,15 +56,43 @@ module MConst = struct
 	   
 end
 
+module Var = struct
+    type t = 
+      | V of Hstring.t * sort
+      | T of Hstring.t * Variable.t list
+
+    let compare x y =
+      match x, y with
+      | V(a1,s1), V(a2, s2) ->
+	 let c = Pervasives.compare s1 s2 in
+	 if c <> 0 then c
+	 else Hstring.compare a1 a2
+
+      | T(t1,l1), T(t2,l2) ->
+	 let c = Hstring.compare t1 t2 in
+	 if c<>0 then c
+	 else Variable.compare_list l1 l2
+      | V(_,_), T(_,_) -> -1
+      | T(_,_), V(_,_) -> 1
+	 
+  end
+
+module VMap = Map.Make(Var)
+
+type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
+type poly = cst VMap.t * cst
+		  
 type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
+(*  | NArith of cst VMap.t * cst*)
 
   | Read of Variable.t * Hstring.t * Variable.t list
   | Write of Variable.t * Hstring.t * Variable.t list * Hstring.t list
   | Fence of Variable.t
+
 
 let is_int_const = function
   | ConstInt _ -> true
@@ -280,15 +308,13 @@ module Term = struct
       | [t] -> print fmt t
       | t :: tl -> print fmt t; List.iter (fprintf fmt ",%a" print) tl in
     match t with
-    | Access (a, [p; e; s])
-	 when H.equal a hDir ->
+    | Access (a, [p; e; s]) when H.equal a hDir ->
        fprintf fmt "D(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
-    | Access (a, [p; e; s])
-	 when H.equal a hVar ->
+    | Access (a, [p; e; s]) when H.equal a hVar ->
        fprintf fmt "X(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
-    | Access (a, [p; e; s])
-	 when is_value a ->
+    | Access (a, [p; e; s]) when is_value a ->
        fprintf fmt "V(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
+
     | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
@@ -304,11 +330,8 @@ module Term = struct
        fprintf fmt " ])"
     | Fence p ->
        fprintf fmt "fence(%a)" Hstring.print p
+
 end
-
-
-
-
 
 module rec Atom : sig
 
@@ -494,7 +517,7 @@ end = struct
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
 
   let print fmt sa =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (elements sa)
+    fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (elements sa)
 
   let print_inline fmt sa =
     fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)
@@ -654,6 +677,6 @@ module ArrayAtom = struct
     Array.sub d 0 !cpt
 
   let print fmt a =
-    fprintf fmt "@[%a@]" (Atom.print_atoms false "&&") (Array.to_list a)
+    fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (Array.to_list a)
 
 end

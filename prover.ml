@@ -121,7 +121,7 @@ and make_literal = function
       let tx = make_term x in
       let ty = make_term y in
       F.make_lit (make_op_comp op) [tx; ty]
-  | Atom.Ite (la, a1, a2) ->
+  | Atom.Ite (la, a1, a2) -> 
       let f = make_formula_set la in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in
@@ -195,18 +195,18 @@ let make_formula_set ?(fp=false) satom =
   f
 
 
-(* let make_disjunction nodes = F.make F.Or (List.map make_formula nodes) *)
+let make_disjunction nodes = F.make F.Or (List.map make_formula nodes)
 
 
-(* let make_conjuct atoms1 atoms2 = *)
-(*   let l = Array.fold_left (fun l a -> make_literal a::l) [] atoms1 in *)
-(*   let l = Array.fold_left (fun l a -> make_literal a::l) l atoms2 in *)
-(*   F.make F.And l *)
+let make_conjuct atoms1 atoms2 =
+  let l = Array.fold_left (fun l a -> make_literal a::l) [] atoms1 in
+  let l = Array.fold_left (fun l a -> make_literal a::l) l atoms2 in
+  F.make F.And l
 
 
 let make_init_dnfs s nb_procs = (* S only *) (* no events to handle *)
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (List.rev_map (fun sa -> make_formula_set sa)) init_cdnf
+  List.rev_map (List.rev_map make_formula_set) init_cdnf
 
 let get_user_invs s nb_procs = (* S only *) (* no events to handle *)
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
@@ -231,8 +231,8 @@ let unsafe_dnf node nb_procs invs dnf = (* S only *)
         try 
           unsafe_conj node nb_procs invs init;
           raise Exit
-        with Smt.Unsat uc -> List.rev_append uc accuc)
-        [] dnf in
+        with Smt.Unsat uc -> List.rev_append uc accuc) [] dnf
+    in
     raise (Smt.Unsat uc)
   with Exit -> ()
 
@@ -243,7 +243,6 @@ let unsafe_cdnf s n = (* S only *)
   List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 
 let unsafe s n = unsafe_cdnf s n (* S only *)
-
 
 let reached args s sa = (* FW only *) (* events not handled yet *)
   SMT.clear ();
@@ -256,12 +255,12 @@ let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula_set ~fp:true cube.Cube.litterals in
+  (* let f = make_formula cube.Cube.array in *) (* in branch master *)
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
-  let f = make_formula ~fp:true ap in
-  let f = F.make F.Not [f] in
+  let f = F.make F.Not [make_formula ~fp:true ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f
 

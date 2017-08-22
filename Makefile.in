@@ -41,20 +41,14 @@ OCAMLBEST= @OCAMLBEST@
 OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
-ZARITHLIB = @ZARITHLIB@
-OCAMLGRAPHLIB = @OCAMLGRAPHLIB@
-ZIPLIB = @ZIPLIB@
-SIMPLEXLIB = @SIMPLEXLIB@
 
-INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) $(ZIPLIB) $(SIMPLEXLIB) -I common/ -I smt/
-#-I alt-ergo
-
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma str.cma zarith.cma graph.cma dynlink.cma ocplibSimplex.cma zip.cma
+REQBIB=nums.cma unix.cma functory.cma str.cma
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -93,7 +87,7 @@ make_functory:
 
 smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
 	@rm -f smt/z3wrapper.ml
-	@printf "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
 	@if [ -z "$(Z3LIB)" ]; then \
 	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
 	else \
@@ -115,9 +109,6 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/alt_ergo_file.cmo \
 	 smt/z3wrapper.cmo smt/smt.cmo
 
-#	 alt-ergo/altErgo.cmo \
-	 smt/alt_ergo_file.cmo smt/alt_ergo_lib.cmo \
-
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo\
 	    common/bitv.cmo
@@ -125,7 +116,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 CMO = version.cmo options.cmo \
       $(COMMONCMO) util.cmo $(SMTCMO) \
       variable.cmo weakmem.cmo types.cmo \
-      cube.cmo node.cmo ptree.cmo parser.cmo lexer.cmo pretty.cmo \
+      cube.cmo node.cmo pretty.cmo ptree.cmo parser.cmo lexer.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo \
       weakevent.cmo weakrel.cmo weakpre.cmo \
       prover.cmo safety.cmo weakfp.cmo fixpoint.cmo \
@@ -152,11 +143,8 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1c
-# comment the following line for release
-SVNREV=-$(shell svnversion -n)
-
-VERSION_STR=$(VERSION)$(SVNREV)
+VERSION=1.1.1
+VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION_STR)"\"" > version.ml
@@ -336,7 +324,7 @@ EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
 
 DOCFILES = cubicle.1 intro.txt ocamldoc.css
 
-OTHERFILES = .depend configure.in configure Makefile.in CHANGES README COPYING
+OTHERFILES = .depend configure.in configure Makefile.in CHANGES README.md LICENSE
 
 ARCH = $(shell uname -m)
 OSNAME = $(shell uname -s)
@@ -395,6 +383,52 @@ release: export/$(EXPORTDIR).tar.gz doc
 	cp -f -R doc/ocamldoc $(WEB)/
 
 
+# Tests
+#######
+
+define test_good
+	printf "%-40s " $(1) ; \
+	if timeout 30 ./$(OPT) -nocolor -quiet $(1) $(2) | grep -q "The system is SAFE" ; then \
+		printf "\033[0;32mOK\033[0m\n" ; \
+	else \
+		printf "\033[0;31mKO\033[0m\n"; \
+		exit 1; \
+	fi
+endef
+
+define test_bad
+	printf "%-40s " $(1) ; \
+	if timeout 30 ./$(OPT) -nocolor -quiet $(1) $(2)  | grep -q "^UNSAFE" ; then \
+		printf "\033[0;32mOK\033[0m\n" ; \
+	else \
+		printf "\033[0;31mKO\033[0m\n"; \
+		exit 1; \
+	fi
+endef
+
+test_good:
+	@echo "------------------ SAFE -------------------"
+	@$(call test_good,examples/bakery.cub)
+	@$(call test_good,examples/bakery_lamport.cub)
+	@$(call test_good,examples/bakery_lamport_na.cub,-brab 2)
+	@$(call test_good,examples/german.cub,-brab 2)
+	@$(call test_good,examples/german.ctc.cub,-brab 2)
+	@$(call test_good,examples/german_baukus.cub,-brab 2)
+	@$(call test_good,examples/ricart_abdulla_int.cub,-brab 2)
+	@$(call test_good,examples/szymanski_at.cub,-brab 2)
+	@$(call test_good,examples/szymanski_na.cub,-brab 2)
+	@$(call test_good,examples/flash_nodata.cub,-brab 2 -forward-depth 6)
+
+test_bad:
+	@echo "----------------- UNSAFE ------------------"
+	@$(call test_bad,examples/bakery_lamport_bogus.cub)
+	@$(call test_bad,examples/futurebus.cub)
+	@$(call test_bad,examples/swimming_pool.cub)
+	@$(call test_bad,examples/flash_buggy.cub,-brab 2 -forward-depth 6)
+
+test: $(OPT) test_good test_bad
+
+
 # Try Cubicle
 #############
 export CMO
@@ -439,10 +473,11 @@ archi:
 	ocamldoc -dot -dot-reduce -o doc/archi.dot \
 	-t "Cubicle $(VERSION) architecture" \
 	$(INCLPATHS) \
-	$(filter-out *.mll *.mly fake_functory.ml fake_functory.mli, $(FILES)) \
-	$(COMMONFILES) smt/smt_sig.mli
-	dot -G"rotate=0" -Tpdf doc/archi.dot > doc/archi.pdf
+	$(filter-out %.mll %.mly fake_functory.ml fake_functory.mli, $(FILES)) \
+	$(COMMONFILES) \
+	smt/smt_sig.mli smt/smt.ml smt/alt_ergo.ml smt/z3wrapper.ml
+	dot -G"rotate=0" -N"shape=box" -Tpdf doc/archi.dot > doc/archi.pdf
 	rm -f doc/archi.dot
 
 
-.PHONY: doc docpdf archi export release
+.PHONY: doc docpdf archi export release test

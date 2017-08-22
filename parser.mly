@@ -29,6 +29,7 @@
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
+
   type t = 
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
@@ -38,8 +39,8 @@
   module S = Set.Make(Hstring)
 
   module Constructors = struct
-    let s = ref (S.add (Hstring.make "True") 
-		   (S.singleton (Hstring.make "False")))
+    let s = ref (S.add (Hstring.make "@MTrue") 
+		   (S.singleton (Hstring.make "@MFalse")))
     let add x = s := S.add x !s
     let mem x = S.mem x !s
   end
@@ -69,11 +70,11 @@
   end
 
   let sort s = 
-    if Constructors.mem s then Constr 
+    if Constructors.mem s then Constr
     else if Globals.mem s then Glob
     else
       begin
-        assert (not (Arrays.mem s));
+        (* assert (not (Arrays.mem s)); *)
         Var
       end
 
@@ -189,7 +190,9 @@
 %token <string> LIDENT
 %token <string> MIDENT
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE GT GE
-%token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR 
+%token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR
+%token IN
+%token LET
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
@@ -198,6 +201,7 @@
 %token UNDERSCORE AFFECT
 %token EOF
 
+%nonassoc IN       
 %nonassoc prec_forall prec_exists
 %right IMP EQUIV  
 %right OR
@@ -206,7 +210,7 @@
 /* %left prec_relation EQ NEQ LT LE GT GE */
 /* %left PLUS MINUS */
 %nonassoc NOT
- /* %left BAR */
+/* %left BAR */
 
 %type <Ast.system> system
 %start system
@@ -219,6 +223,10 @@ symbold_decls
 decl_list
 EOF
 { let ptype_defs = $2 in
+  Smt.set_sum true;
+  let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
+  List.iter Constructors.add b;
+  let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
    |> encode_psystem 
@@ -338,9 +346,10 @@ transition_name:
 transition:
   | TRANSITION transition_name LEFTPAR lidents_thr RIGHTPAR
       require
-      LEFTBR assigns_nondets_updates RIGHTBR
-      { let assigns, nondets, upds, writes = $8 in
-	  { ptr_name = $2;
+      LEFTBR let_assigns_nondets_updates RIGHTBR
+      { let lets, (assigns, nondets, upds, writes) = $8 in
+	{   ptr_lets = lets;
+	    ptr_name = $2;
             ptr_args = fst $4; 
 	    ptr_reqs = fix_rd_expr (snd $4) $6;
 	    ptr_assigns = List.map (fix_rd_assign (snd $4)) assigns;
@@ -351,6 +360,13 @@ transition:
 	    ptr_fence = None;
           }
       }
+;
+
+let_assigns_nondets_updates:
+  | assigns_nondets_updates { [], $1 }
+  | LET lident EQ term IN let_assigns_nondets_updates {
+	  let lets, l = $6 in
+	  ($2, $4) :: lets, l}
 ;
 
 assigns_nondets_updates:
@@ -407,15 +423,17 @@ require:
 ;
 
 update:
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
-      if is_weak $1 then Write (None, $1, $3, PUCase $7)
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
+    { if is_weak $1 then Write (None, $1, $3, PUCase $7)
       else begin
         List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $3;
+          if (Hstring.view p).[0] = '#' then
+            raise Parsing.Parse_error
+        ) $3;
         Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7 }
       end }
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
-      if is_weak $1 then Write (None, $1, $3, PUTerm $6)
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
+    { if is_weak $1 then Write (None, $1, $3, PUTerm $6)
       else begin
         let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -428,15 +446,17 @@ update:
 	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw }
       end }
 /* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs {
-      if is_weak $3 then Write (Some $1, $3, $5, PUCase $9)
+  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
+    { if is_weak $3 then Write (Some $1, $3, $5, PUCase $9)
       else begin
         List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then raise Parsing.Parse_error) $5;
+          if (Hstring.view p).[0] = '#' then
+            raise Parsing.Parse_error
+        ) $5;
         Upd { pup_loc = loc (); pup_arr = $3; pup_arg = $5; pup_swts = $9 }
       end }
-  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term {
-      if is_weak $3 then Write (Some $1, $3, $5, PUTerm $8)
+  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
+    { if is_weak $3 then Write (Some $1, $3, $5, PUTerm $8)
       else begin
         let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -459,6 +479,7 @@ switchs:
 switch:
   | expr COLON term { $1, $3 }
 ;
+
 
 constnum:
   | REAL { ConstReal $1 }

@@ -92,10 +92,6 @@ let cedge_error ?(to_init=false) () =
               fontcolor=red, penwidth=4"^
                (if dot_level = 1 || to_init then "" else ", label=\" \""))
 
-let rec print_atoms fmt = function
-  | [] -> ()
-  | [a] -> Atom.print fmt a
-  | a::l -> fprintf fmt "%a\\n%a" Atom.print a print_atoms l
 
 
 (* TSO *)		    
@@ -150,7 +146,7 @@ let id_of_v v =
     let v = H.view v in
     String.sub v 1 (String.length v - 1)
 
-let print_atoms fmt la =
+let rec print_atoms fmt la =
   let la, evts = split_events la in
   let evts = HMap.fold (fun eid ((p, d, v, vi) as ed, vals) evts ->
     H2Map.add (p, eid) (ed, vals) evts
@@ -172,6 +168,11 @@ let print_atoms fmt la =
 
 
 
+(* let rec print_atoms fmt = function *)
+(*   | [] -> () *)
+(*   | [a] -> Atom.print fmt a *)
+(*   | a::l -> fprintf fmt "%a\\n%a" Atom.print a print_atoms l *)
+
 let print_cube fmt c =
   fprintf fmt "%a" print_atoms (SAtom.elements c.Cube.litterals)
 
@@ -186,10 +187,6 @@ let print_node_info fmt s = match display_node_contents with
 
 let nb_nodes = ref 0
 
-(* let print_node_c confstr fmt s = *)
-(*   incr nb_nodes; *)
-(*   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr *)
-
 let print_node_c confstr fmt s =
   incr nb_nodes;
   let x = Cube.dim s.cube in
@@ -201,7 +198,11 @@ let print_node_c confstr fmt s =
     else if x = 5 then confstr ^ ", color=orange"
     else confstr ^ ", color=magenta" in
   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr
-  
+
+(* let print_node_c confstr fmt s = *)
+(*   incr nb_nodes; *)
+(*   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr *)
+
 let print_node fmt s = print_node_c (config s.kind) fmt s
 
 let print_subsumed_node fmt s = 
@@ -223,7 +224,6 @@ let print_pre cedge fmt n =
 (* Exported functions *)
 
 let dot_fmt = ref std_formatter
-
 
 let set_open_nodes =
   let count = ref 10000 in

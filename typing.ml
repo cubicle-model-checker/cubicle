@@ -181,7 +181,8 @@ let rec term loc ?(init=false) args = function
   | Elem (e, Var) ->
       if Hstring.list_mem e args then [], Smt.Type.type_proc
       else begin 
-	try Smt.Symbol.type_of e with Not_found -> error (UnknownName e) loc
+	  try Smt.Symbol.type_of e with Not_found ->
+            error (UnknownName e) loc
       end
   | Elem (e, _) ->
       if Weakmem.is_weak e && not init then error (MustReadWeakVar e) loc;
@@ -352,6 +353,12 @@ let updates args =
        dv := a ::!dv;
        switchs loc a (lj @ args) ([], ty_a) swts) 
 
+let check_lets loc args l =
+  List.iter 
+    (fun (x, t) ->
+     let _ = term loc args t in ()
+    ) l
+
 let transitions = 
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) ->
@@ -361,7 +368,8 @@ let transitions =
        atoms loc args t.tr_reqs;
        List.iter 
 	 (fun (x, cnf) -> 
-	    List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+       check_lets loc args t.tr_lets;
        updates args t.tr_upds;
        assigns loc args t.tr_assigns;
        writes loc args t.tr_writes;
@@ -378,6 +386,12 @@ let declare_symbol loc n args ret =
 
 let init_global_env s = 
   List.iter declare_type s.type_defs;
+  (* patch completeness on Boolean *)
+  (*let mybool = Hstring.make "mbool" in
+  let mytrue = Hstring.make "@MTrue" in
+  let myfalse = Hstring.make "@MFalse" in
+  let dummypos = Lexing.dummy_pos, Lexing.dummy_pos in
+  declare_type (dummypos, (mybool, [mytrue; myfalse]));*)
   let l = ref [] in
   let weak_vars = ref [] in
   List.iter 
@@ -603,18 +617,20 @@ let add_tau tr =
   (* (\* let tr = fresh_args tr in *\) *)
   (* { tr with *)
   (*   tr_tau = Pre.make_tau tr } *)
+  let pre,reset_memo = Pre.make_tau tr in
   { tr_info = tr;
-    tr_tau = Pre.make_tau tr }
-
-let system s =
+    tr_tau = pre;
+    tr_reset = reset_memo;
+  }
+    
+let system s = 
   let l, wvl = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then List.iter unsafe (List.rev s.invs);
   if not Options.notyping then transitions s.trans;
-  if Options.(subtyping && not murphi &&
-	        solver <> AltErgoFile (*&& solver <> AltErgoLib*)) then begin
+  if Options.(subtyping && not murphi && solver <> AltErgoFile) then begin
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
   end;

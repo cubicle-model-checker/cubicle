@@ -31,7 +31,6 @@ module TimeFormula = Timer.Make (Options)
 module TimeSimpl = Timer.Make (Options)
 module TimeCertificate = Timer.Make (struct let profiling = true end)
 module TimeSafety = Timer.Make (Options)
-
 module TimeGhb = Timer.Make (Options)
 module TimePESubst = Timer.Make (Options)
 module TimeFPRels = Timer.Make (Options)

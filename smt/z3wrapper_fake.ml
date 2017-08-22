@@ -21,6 +21,7 @@ type error =
 
 exception Error of error
 
+
 type check_strategy = Lazy | Eager
 
 let unsupported _ =
@@ -100,7 +101,6 @@ let set_arith _ = unsupported ()
 let set_sum _ = unsupported ()
 
 module type Solver = sig
-
   val check_strategy : check_strategy
 
   val get_time : unit -> float

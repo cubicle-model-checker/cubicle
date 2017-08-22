@@ -155,7 +155,7 @@ module Symbol = struct
     
   type t = Hstring.t
 
-  let declare f args ret =
+  let declare f args ret  =
     (* eprintf "declare@."; *)
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     let z3_args = List.map (fun t ->
@@ -394,7 +394,6 @@ let set_arith _ = ()
 let set_sum _ = ()
 
 module type Solver = sig
-    
   val check_strategy : check_strategy
     
   val get_time : unit -> float

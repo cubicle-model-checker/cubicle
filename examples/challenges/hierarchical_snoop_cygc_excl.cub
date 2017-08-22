@@ -110,6 +110,7 @@ init (c i) {
   GDir_ShrSet[c] = False
 }
 
+(*
 
 invariant (c) { GUniMsg_Cmd[c] <> None && Sort[c] <> CId }
 invariant (c1 c2) { GUniMsg_ToInv[c1,c2] = True && Sort[c1] <> CId }
@@ -136,6 +137,10 @@ invariant (c) { Clusters_ifInRpy[c] <> False && Sort[c] <> CId }
 invariant (c) { Clusters_inRpy_Cmd[c] <> None && Sort[c] <> CId }
 invariant (c) { Clusters_WbReq_Cmd[c] <> None && Sort[c] <> CId }
 
+*)
+
+
+(*
 (* invariant "I1" *)
 unsafe (c i j) {
        Sort[c] = CId && Sort[i] = L1Id && Sort[j] = L1Id &&
@@ -158,6 +163,8 @@ unsafe (c1 c2 i) {
        Sort[c1] = CId && Sort[c2] = CId && Sort[i] = L1Id &&
        Clusters_L2_State[c1] = Excl && Clusters_L1s_State[c2,i] = Excl
 }
+
+*)
 
 unsafe (c1 c2) {
        Sort[c1] = CId && Sort[c2] = CId &&
@@ -196,7 +203,7 @@ requires { Sort[c] = CId && Sort[i] = L1Id &&
 transition t5_x (c i)
 requires { Sort[c] = CId && Sort[i] = L1Id &&
            Clusters_L1s_Req[c,i] = GetX &&
-           forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld) &&
+           (forall_other j. (Sort[j] = CId || Clusters_L1s_State[c,j] = Invld)) &&
            Clusters_L2_State[c] = Invld &&
            Clusters_L2_pending[c] = False }
 {

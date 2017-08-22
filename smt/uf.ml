@@ -240,7 +240,7 @@ module Make ( R : Sig.X ) = struct
   let add env t =
     if MapT.mem t env.make then env, [] else Env.init_term env t
 
-  let ac_solve eqs dep (env, tch) (p, v) = 
+  let ac_solve eqs dep (env, tch) (p, v) =
     (* pourquoi recuperer le representant de rv? r = rv d'apres testopt *)
     (* assert ( let rp, _ = Env.find_or_normal_form env p in R.equal p rp); *)
     let rv, ex_rv = Env.find_or_normal_form env v in

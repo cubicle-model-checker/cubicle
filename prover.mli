@@ -43,9 +43,9 @@ val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 (** [check_guard vars s g] checks if the guard g is feasible in state [s];
     raises [Unsat] if it is not the case *)
 
-(*val make_literal : Atom.t -> Smt.Formula.t
-val make_formula : ArrayAtom.t -> Smt.Formula.t
-val make_formula_set : SAtom.t -> Smt.Formula.t*)
+val make_literal : Atom.t -> Smt.Formula.t
+val make_formula : ?fp:bool -> ArrayAtom.t -> Smt.Formula.t
+val make_formula_set : ?fp:bool -> SAtom.t -> Smt.Formula.t
 
 val run : unit -> unit
 (** Runs the SMT solver on its current context *)

@@ -155,6 +155,7 @@ type pupdate = {
 }
 
 type ptransition = {
+  ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
   ptr_reqs : cformula;
@@ -490,6 +491,36 @@ let inits_of_formula f =
   | PForall (vs, f) -> vs, satoms_of_dnf f
   | sf -> [], satoms_of_dnf sf
 
+let rec forall_to_others tr_args f = match f with
+  | PAtom _ -> f
+  | PNot f1 ->
+    let f1' = forall_to_others tr_args f1 in
+    if f1 == f1' then f else PNot f1'
+  | PAnd l ->
+    let l' = List.map (forall_to_others tr_args) l in
+    if List.for_all2 (==) l l' then f else PAnd l'
+  | POr l ->
+    let l' = List.map (forall_to_others tr_args) l in
+    if List.for_all2 (==) l l' then f else POr l'
+  | PImp (a, b) ->
+    let a' = forall_to_others tr_args a in
+    let b' = forall_to_others tr_args b in
+    if a == a' && b == b' then f else PImp(a', b')
+  | PIte (c, t, e) ->
+    let c' = forall_to_others tr_args c in
+    let t' = forall_to_others tr_args t in
+    let e' = forall_to_others tr_args e in
+    if c == c' && t == t' && e == e' then f else PIte(c', t', e')
+  | PEquiv (a, b) ->
+    let a' = forall_to_others tr_args a in
+    let b' = forall_to_others tr_args b in
+    if a == a' && b == b' then f else PEquiv(a', b')
+  | PForall ([v], f) ->
+    PAnd (PForall_other ([v], f) ::
+          List.map (fun a -> apply_subst [v, PT (TVar a)] f) tr_args)
+  | PForall  _ | PExists _ | PForall_other _ | PExists_other _ -> f
+ 
+
 let uguard_of_formula = function
   | PForall_other ([v], f) -> v, satoms_of_dnf f
   | _ -> assert false
@@ -506,10 +537,13 @@ let rec guard_of_formula_aux = function
     let req, ureq = classify_guards ([],[]) l in
     [satom_of_cube req, List.map uguard_of_formula ureq]
   | POr l -> List.map guard_of_formula_aux l |> List.flatten
-  | _ -> assert false
+  | f ->
+    let req, ureq = classify_guards ([],[]) [f] in
+    [satom_of_cube req, List.map uguard_of_formula ureq]
+  (* | _ -> assert false *)
 
-let guard_of_formula f =
-  match up_quantifiers (dnf f) with
+let guard_of_formula tr_args f =
+  match f |> forall_to_others tr_args |> dnf |> up_quantifiers with
   | PForall _ | PExists _ | PExists_other _ -> assert false
   | f -> guard_of_formula_aux f
 
@@ -541,19 +575,21 @@ let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
   }
 
 let encode_ptransition
-    {ptr_name; ptr_args; ptr_reqs; ptr_assigns; ptr_writes; ptr_fence;
+    {ptr_lets; ptr_name; ptr_args; ptr_reqs; ptr_assigns; ptr_writes; ptr_fence;
      ptr_upds; ptr_nondets; ptr_loc;} =
-  let dguards = guard_of_formula ptr_reqs in
+  let dguards = guard_of_formula ptr_args ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
       (i, encode_pglob_update pgu)) ptr_assigns in
   let tr_writes = List.map (fun (p, bv, bvi, pgu) ->
       (p, bv, bvi, encode_pglob_update pgu)) ptr_writes in
   let tr_upds = List.map encode_pupdate ptr_upds in
+  let tr_lets = List.map (fun (x, t) -> (x, encode_term t)) ptr_lets in
   List.rev_map (fun (req, ureq) ->
       {  tr_name = ptr_name;
          tr_args = ptr_args;
          tr_reqs = req;
          tr_ureq = ureq;
+	 tr_lets = tr_lets;
          tr_assigns;
 	 tr_writes;
 	 tr_fence = ptr_fence;
@@ -637,19 +673,165 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     pinvs;
     punsafe;
     ptrans }
-  
-  
 
 
 
+let print_type_defs fmt =
+  List.iter (function
+      | _, (ty, []) ->
+        fprintf fmt "@{<fg_magenta>type@} @{<fg_green>%a@}" Hstring.print ty
+      | _, (ty, cstrs) ->
+        fprintf fmt "@{<fg_magenta>type@} @{<fg_green>%a@} = @[<hov>%a@]\n"
+          Hstring.print ty
+          (Pretty.print_list
+             (fun fmt -> fprintf fmt "@{<fg_blue>%a@}" Hstring.print)
+             "@ | ") cstrs
+    )
 
-(* let rec formula_to_dnf = function *)
-(*   | PAtom _ as pa -> pa *)
-(*   | PNot f ->  *)
-(*   | PAnd of formula * formula *)
-(*   | POr of formula * formula *)
-(*   | PImp of formula * formula *)
-(*   | PIte of formula * formula * formula *)
-(*   | PForall of Variable.t list * formula *)
-(*   | PExists of Variable.t list * formula *)
-(*   | PForall_other of Variable.t list * formula *)
+let print_globals fmt  =
+  List.iter (fun (_, g, ty, weak) ->
+      fprintf fmt "@{<fg_magenta>var@} @{<fg_red>%a@} : @{<fg_green>%a@}@."
+        Hstring.print g Hstring.print ty
+    )
+     
+let print_arrays fmt  =
+  List.iter (fun (_, a, (args_ty, ty), weak) ->
+      fprintf fmt "@{<fg_magenta>array@} @{<fg_red>%a@}[%a] : \
+                   @{<fg_green>%a@}@."
+        Hstring.print a
+        (Pretty.print_list
+           (fun fmt -> fprintf fmt "@{<fg_green>%a@}" Hstring.print)
+           ",@ ") args_ty
+        Hstring.print ty
+    )
+
+let print_consts fmt  =
+  List.iter (fun (_, c, ty) ->
+      fprintf fmt "@{<fg_magenta>const@} @{<fg_blue>%a@} : @{<fg_green>%a@}@."
+        Hstring.print c Hstring.print ty
+    )
+
+let print_dnf =
+   Pretty.print_list
+     (fun fmt -> fprintf fmt "@[<hov 4>%a@]" SAtom.print_inline)
+     "@ || "
+     
+let print_init fmt (_, vars, dnf) =
+  fprintf fmt "@{<fg_magenta>init@} (%a) {@ %a@ }@,"
+    Variable.print_vars vars
+    print_dnf dnf
+
+let print_unsafe fmt =
+  List.iter (fun (_, name, vars, u) ->
+      fprintf fmt "@{<fg_magenta>unsafe@} (%a) {@ %a@ }@,"
+        Variable.print_vars vars
+        SAtom.print_inline u
+    )
+
+let print_invs fmt =
+  List.iter (fun (_, name, vars, inv) ->
+      fprintf fmt "@{<fg_magenta>invariant@} (%a) {@ %a@ }@,"
+        Variable.print_vars vars
+        SAtom.print_inline inv
+    )
+
+
+let print_reqs fmt (tr_reqs, tr_ureq) =
+  if SAtom.for_all Atom.(equal True) tr_reqs && tr_ureq = [] then ()
+  else
+    fprintf fmt "@{<fg_magenta>requires@} @[<hov 2>{@ %a%a@ }@]@,"
+      SAtom.print_inline tr_reqs
+      (fun fmt -> List.iter (fun (v, u) ->
+           fprintf fmt "@ &&@ @[<hov 1>(@{<fg_magenta>forall_other@} %a.@ %a)@]"
+             Variable.print v print_dnf u
+         )) tr_ureq
+
+let print_lets fmt tr_lets =
+  List.iter (fun (v, t) ->
+      fprintf fmt "@[<hov>@{<fg_magenta>let@} %a@ =@ %a@ @{<fg_magenta>in@}@]@,"
+        Hstring.print v Term.print t
+    ) tr_lets
+
+let print_swts fmt swts =
+  match List.rev swts with
+  | (_, def) :: rsw ->
+    fprintf fmt "@[<v -2>@{<fg_magenta>case@}@,";
+    List.iter (fun (c, t) ->
+        fprintf fmt "@[<hov 2>| %a :@ %a@]@," SAtom.print_inline c Term.print t
+      ) (List.rev rsw);
+    fprintf fmt "@[<hov 2>| _ :@ %a@]" Term.print def;
+    fprintf fmt "@]"
+  | _ -> assert false
+
+let print_assigns fmt tr_assigns =
+  List.iter (fun (g, gu) ->
+      fprintf fmt "@[<hov>%a@ =@ " Hstring.print g;
+      match gu with
+      | UTerm t -> fprintf fmt "%a;@]@," Term.print t
+      | UCase swts -> fprintf fmt "%a;@]@," print_swts swts
+    ) tr_assigns
+
+let print_updates fmt tr_upds =
+  List.iter (fun { up_arr; up_arg; up_swts } ->
+      fprintf fmt "@[<hov>%a[%a]@ =@ %a;@]@,"
+        Hstring.print up_arr
+        Variable.print_vars up_arg
+        print_swts up_swts
+    ) tr_upds
+
+let print_nondets fmt =
+  List.iter (fprintf fmt "%a = ?;@," Hstring.print)
+
+let print_trans fmt =
+  List.iter
+    (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
+           tr_assigns; tr_upds; tr_nondets } ->
+      fprintf fmt
+        "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
+         %a\
+         {@[<v 2>@,\
+         %a\
+         %a\
+         %a\
+         %a\
+         @]}\
+         @,@,@]"
+        Hstring.print tr_name
+        Variable.print_vars tr_args
+        print_reqs (tr_reqs, tr_ureq)
+        print_lets tr_lets
+        print_assigns tr_assigns
+        print_updates tr_upds
+        print_nondets tr_nondets
+    )
+
+
+let print_system fmt { type_defs;
+                       globals;
+                       arrays;
+                       consts;
+                       init;
+                       invs;
+                       unsafe;
+                       trans } =
+  print_type_defs fmt type_defs;
+  pp_print_newline fmt ();
+  print_globals fmt globals;
+  (* pp_print_newline fmt (); *)
+  print_arrays fmt arrays;
+  (* pp_print_newline fmt (); *)
+  print_consts fmt consts;
+  pp_print_newline fmt ();
+  print_init fmt init;
+  pp_print_newline fmt ();
+  print_invs fmt invs;
+  pp_print_newline fmt ();
+  print_unsafe fmt unsafe;
+  pp_print_newline fmt ();
+  print_trans fmt (List.rev trans)
+
+
+let encode_psystem psys =
+  let sys = encode_psystem psys in
+  if Options.debug then print_system std_formatter sys;
+  sys

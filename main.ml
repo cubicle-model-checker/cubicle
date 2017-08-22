@@ -94,10 +94,13 @@ let close_dot = Dot.open_dot () in (* debug *)
       | Bwd.Unsafe (faulty, candidates) ->
          if (not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
-         (*if not quiet then Stats.error_trace system faulty;*)
-         printf "\n@{<b>@{<bg_red>%s@} is reachable !@}\n@."
-                (get_unsafe_name faulty);
-         printf "@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+         begin try
+             (*if not quiet then Stats.error_trace system faulty;*)
+             printf "\n@{<b>@{<bg_red>%s@} is reachable !@}\n@."
+                    (get_unsafe_name faulty);
+             printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+           with Exit -> ()
+         end;
          close_dot ();
          exit 1
     end
@@ -110,7 +113,7 @@ let close_dot = Dot.open_dot () in (* debug *)
   | Parsing.Parse_error ->
      let loc = (lexeme_start_p lb, lexeme_end_p lb) in
      Util.report_loc err_formatter loc;
-     eprintf "syntax error: @.";
+     eprintf "syntax error@.";
      exit 2
 
   | Typing.Error (e,loc) ->
@@ -146,5 +149,6 @@ close_dot (); (* print dot anyways *)
 
     let backtrace = Printexc.get_backtrace () in
     eprintf "Fatal error: %s@." (Printexc.to_string e);
-    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace
-
+    if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
+    
+    exit 1

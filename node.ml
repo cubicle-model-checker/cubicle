@@ -99,7 +99,7 @@ let create ?(name=None) ?(kind=Node) ?(from=None) cube =
     depth = List.length hist;
     deleted = false;
     from = hist;
-    } in
+  } in
   begin match name with
   | Some n -> node_names := (node.tag, n) :: !node_names
   | _ -> ()

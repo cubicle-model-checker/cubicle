@@ -79,6 +79,7 @@ type pupdate = {
 }
 
 type ptransition = {
+  ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
   ptr_reqs : cformula;
@@ -122,3 +123,7 @@ val psystem_of_decls:
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list ->
   ptype_defs : (loc * Ast.type_constructors) list ->
   pdecl list -> psystem
+
+(** {2 Pretty printing ASTs} *)
+
+val print_system : Format.formatter -> Ast.system -> unit

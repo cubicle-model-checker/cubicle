@@ -49,6 +49,7 @@ requires { Cache[n] = Invalid && Chan1[n] = Empty }
 		| _ : Chan1[j];
 }
 
+
 transition send_req_exclusive_1(n)
 requires { Cache[n] = Invalid && Chan1[n] = Empty }
 { 

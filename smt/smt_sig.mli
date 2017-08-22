@@ -90,7 +90,7 @@ module type S = sig
 
     val type_of : t -> Type.t list * Type.t
     (** [type_of x] returns the type of x. *)
-				       
+
     val has_abstract_type : t -> bool
     (** [has_abstract_type x] is [true] if the type of x is abstract. *)
 
@@ -287,7 +287,7 @@ module type S = sig
 
     val assume : id:int -> Formula.t -> unit
     (** [assume id f] adds the formula [f] to the context of the
-        solver with idetifier [id].
+        solver with identifier [id].
         This function only performs unit propagation.
 
         {b Raises} {! Unsat} if the context becomes inconsistent after unit
@@ -313,7 +313,7 @@ module type S = sig
     val pop : unit -> unit
     (** Pop the last context from the stack and forget what was done since the
         last push. *)
-
+    
   end
 
   (** Functor to create several instances of the solver *)
