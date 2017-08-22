@@ -123,6 +123,7 @@ let read_chunks_for_writes same_thread writes pevts =
   let rec aux chunk = function
     | [] -> chunk
     | ((_, (ed, vals)) as e) :: pevts ->
+       (* should fail if write or sat read on same thread with n/e chunk *)
        if is_write ed || is_satisfied vals then aux chunk pevts
        else
          begin match get_write_on writes ed with
@@ -148,7 +149,7 @@ let read_chunks_by_thread_for_writes writes evts = (* evts by thread *)
     ) evts [] in
     res
   with Not_found -> []
-      
+
 let read_combs same_thread rl =
   let rec aux = function
   | [] -> failwith "Weakpre.read_combs : internal error" (*[[]], []*)
@@ -199,7 +200,7 @@ let make_read_write_combinations writes evts_bt urevts ghb =
     let rct = read_combs_by_thread_for_writes writes rct in
     let rcl = read_combs_for_writes writes rct in
     all_combinations writes rcl
-    with UnsatisfiableRead -> [] in
+  with UnsatisfiableRead -> [] in
 
   TimeBuildRW.pause ();
 
@@ -242,7 +243,7 @@ let make_read_write_combinations writes evts_bt urevts ghb =
   wrcp
 
 
-    
+
 
 
 let subst_event_val sfun sa =

@@ -19,7 +19,8 @@ type trace =  NoTrace | AltErgoTr | WhyTr | WhyInst
 
 type viz_prog = Dot | Sfdp
 
-type solver = AltErgo | AltErgoFile | AltErgoLib | Z3
+(* type solver = AltErgo | AltErgoFile | AltErgoLib | Z3 *)
+type solver = AltErgo | AltErgoFile | Z3
 
 type model = SC | TSO
 

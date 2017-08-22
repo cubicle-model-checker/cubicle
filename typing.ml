@@ -614,7 +614,7 @@ let system s =
   if not Options.notyping then List.iter unsafe (List.rev s.invs);
   if not Options.notyping then transitions s.trans;
   if Options.(subtyping && not murphi &&
-	      solver <> AltErgoFile && solver <> AltErgoLib) then begin
+	        solver <> AltErgoFile (*&& solver <> AltErgoLib*)) then begin
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
   end;

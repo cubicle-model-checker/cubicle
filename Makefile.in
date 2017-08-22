@@ -46,7 +46,8 @@ OCAMLGRAPHLIB = @OCAMLGRAPHLIB@
 ZIPLIB = @ZIPLIB@
 SIMPLEXLIB = @SIMPLEXLIB@
 
-INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) $(ZIPLIB) $(SIMPLEXLIB) -I common/ -I smt/ -I alt-ergo
+INCLPATHS = $(FUNCTORYLIB) $(ZARITHLIB) $(OCAMLGRAPHLIB) $(Z3LIB) $(ZIPLIB) $(SIMPLEXLIB) -I common/ -I smt/
+#-I alt-ergo
 
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
@@ -111,9 +112,11 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo \
 	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/alt_ergo.cmo \
-	 alt-ergo/altErgo.cmo \
-	 smt/alt_ergo_file.cmo smt/alt_ergo_lib.cmo \
+	 smt/alt_ergo_file.cmo \
 	 smt/z3wrapper.cmo smt/smt.cmo
+
+#	 alt-ergo/altErgo.cmo \
+	 smt/alt_ergo_file.cmo smt/alt_ergo_lib.cmo \
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo\
