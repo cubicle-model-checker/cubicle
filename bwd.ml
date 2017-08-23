@@ -137,7 +137,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         if Q.is_empty q then
           (* When the queue is empty, pour back postponed nodes in it *)
           begin
-            Q.push_list (*(List.rev*) !postponed(*)*) q;
+            Q.push_list (*(List.rev*) !postponed(* )*) q;
             postponed := []
           end
       done;

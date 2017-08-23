@@ -122,11 +122,6 @@ module AltErgo = struct
     let print_var fmt (v, vi) =
       if vi = [] then fprintf fmt "%a%s" Hstring.print v (spr prime)
       else fprintf fmt "%a%s[%a]" Hstring.print v (spr prime) (Hstring.print_list ", ") vi in
-    let print_list fmt = function
-      | [] -> ()
-      | [t] -> print_term ~prime fmt t
-      | t :: tl -> print_term ~prime fmt t;
-		   List.iter (fprintf fmt ",%a" (print_term ~prime)) tl in
     match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
@@ -683,11 +678,6 @@ module Why3 = struct
     let print_var fmt (v, vi) =
       if vi = [] then fprintf fmt "%a%s" Hstring.print v (spr prime)
       else fprintf fmt "%a%s[%a]" Hstring.print v (spr prime) (Hstring.print_list ", ") vi in
-    let print_list fmt = function
-      | [] -> ()
-      | [t] -> print_term ~prime fmt t
-      | t :: tl -> print_term ~prime fmt t;
-		   List.iter (fprintf fmt ",%a" (print_term ~prime)) tl in
     match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s
@@ -1498,11 +1488,6 @@ module Why3_INST = struct
     let print_var fmt (v, vi) =
       if vi = [] then fprintf fmt "%a%s" Hstring.print v (spr prime)
       else fprintf fmt "%a%s[%a]" Hstring.print v (spr prime) (Hstring.print_list ", ") vi in
-    let print_list fmt = function
-      | [] -> ()
-      | [t] -> print_term ~prime fmt t
-      | t :: tl -> print_term ~prime fmt t;
-		   List.iter (fprintf fmt ",%a" (print_term ~prime)) tl in
     match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> print_proc fmt s

@@ -428,7 +428,7 @@ n
       ) nodes d *)
 
 
-  let check_fixpoint s visited = let t = s.tag in
+  let check_fixpoint s visited = (*let t = s.tag in*)
 (* Format.fprintf Format.std_formatter "Begin fixpoint for node %d\n%a\n" t Node.print s; *)
     let s,e,r  = preprocess_n s in
     first_action s;

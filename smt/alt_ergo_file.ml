@@ -628,8 +628,6 @@ module Make (Options_ : sig val profiling : bool end) = struct
       let filefmt = formatter_of_out_channel file in
 
       (* Print all types *)
-      let print_field fmt (f, t) =
-      	fprintf fmt "%a : %a" Hstring.print f Ty.print t in
       List.iter (fun ty -> match ty with
         | Ty.Tabstract t -> fprintf filefmt "type %a\n" Hstring.print t
         | Ty.Tsum (t, cl) ->

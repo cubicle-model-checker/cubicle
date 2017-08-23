@@ -303,11 +303,7 @@ module Term = struct
     let print_var fmt (v, vi) =
       if vi = [] then fprintf fmt "%a" Hstring.print v
       else fprintf fmt "%a[%a]" Hstring.print v (Hstring.print_list ", ") vi in
-    let print_list fmt = function
-      | [] -> ()
-      | [t] -> print fmt t
-      | t :: tl -> print fmt t; List.iter (fprintf fmt ",%a" print) tl in
-    match t with
+    match t with (* quite obsolete *)
     | Access (a, [p; e; s]) when H.equal a hDir ->
        fprintf fmt "D(%a, %s, %s)" H.print p (id_of_v e) (id_of_v s)
     | Access (a, [p; e; s]) when H.equal a hVar ->
