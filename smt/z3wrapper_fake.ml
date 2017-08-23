@@ -38,7 +38,6 @@ module Type = struct
   let type_real = hfake
   let type_bool = hfake
   let type_proc = hfake
-  let type_prop = hfake
   let declare _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()

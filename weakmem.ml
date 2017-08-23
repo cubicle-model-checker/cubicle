@@ -73,7 +73,6 @@ module HLSet = Set.Make (HL)
 let hNone = H.make ""
 
 let hE0 = H.make "_e0"
-(* let hP0 = H.make "#0" *)
 
 let hR = H.make "_R"
 let hW = H.make "_W"
@@ -203,17 +202,8 @@ let init_weak_env wvl =
   (* should adjust automatically *)
   for i = 0 to 100 do S.declare (mk_hE i) [] T.type_int done;
 
-  let int1 = [T.type_int] in
-  let int2 = [T.type_int; T.type_int] in
-
-  (* S.declare hP0 [] T.type_proc; *)
-
-  S.declare hThr int1 T.type_proc;
-  S.declare hDir int1 hDirection;
-  S.declare hVar int1 hWeakVar;
-  List.iter (fun (hArg, t) -> S.declare hArg int1 t) !pl;
-  List.iter (fun (hVal, t) -> S.declare hVal int1 t) !wtl;
-
-  S.declare hFence int2 T.type_prop;
-  S.declare hSync int2 T.type_prop;
-  S.declare hGhb int2 T.type_prop
+  S.declare hThr [T.type_int] T.type_proc;
+  S.declare hDir [T.type_int] hDirection;
+  S.declare hVar [T.type_int] hWeakVar;
+  List.iter (fun (hArg, t) -> S.declare hArg [T.type_int] t) !pl;
+  List.iter (fun (hVal, t) -> S.declare hVal [T.type_int] t) !wtl;

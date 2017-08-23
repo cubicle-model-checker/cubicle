@@ -35,7 +35,6 @@ module HLSet : Set.S with type elt = HL.t
 val hNone : H.t
 
 val hE0 : H.t
-(* val hP0 : H.t *)
 
 val hR : H.t
 val hW : H.t

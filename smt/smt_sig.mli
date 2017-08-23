@@ -55,8 +55,6 @@ module type S = sig
     val type_proc : t
     (** The type processes (identifiers) *)
 
-    val type_prop : t
-
     (** {3 Declaring new types } *)
 
     val declare : Hstring.t -> Hstring.t list -> unit
