@@ -19,6 +19,7 @@
   open Types
   open Parsing
   open Ptree
+  open Weakparse
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -78,97 +79,6 @@
         Var
       end
 
-  let is_weak s = Weaks.mem s
-
-  let hNone = Hstring.make ""
- 
-  let rec process_read_term fn = function
-  | Read (p, v, vi) -> fn p v vi
-  | Arith (t, c) -> Arith (process_read_term fn t, c)
-  | t -> t
-
-  let rec process_read_atom fn = function
-  | Atom.Comp (t1, op, t2) ->
-     Atom.Comp (process_read_term fn t1, op, process_read_term fn t2)
-  | Atom.Ite (sa, a1, a2) ->
-     Atom.Ite (SAtom.fold (fun a sa ->
-       SAtom.add (process_read_atom fn a) sa) sa SAtom.empty,
-       process_read_atom fn a1, process_read_atom fn a2)
-  | t -> t
-
-  let process_read_pterm fn = function
-  | TTerm t -> TTerm (process_read_term fn t)
-  | t -> t
-
-  let process_read_patom fn = function
-  | AAtom a -> AAtom (process_read_atom fn a)
-  | AEq (t1, t2) -> AEq (process_read_pterm fn t1, process_read_pterm fn t2)
-  | ANeq (t1, t2) -> ANeq (process_read_pterm fn t1, process_read_pterm fn t2)
-  | ALe (t1, t2) -> ALe (process_read_pterm fn t1, process_read_pterm fn t2)
-  | ALt (t1, t2) -> ALt (process_read_pterm fn t1, process_read_pterm fn t2)
-  | t -> t
-
-  let rec process_read_pform fn = function
-  | PAtom a -> PAtom (process_read_patom fn a)
-  | PNot f -> PNot (process_read_pform fn f)
-  | PAnd fl -> PAnd (List.map (process_read_pform fn) fl)
-  | POr fl -> POr (List.map (process_read_pform fn) fl)
-  | PImp (f1, f2) -> PImp (process_read_pform fn f1, process_read_pform fn f2)
-  | PEquiv (f1, f2) ->
-     PEquiv (process_read_pform fn f1, process_read_pform fn f2)
-  | PIte (f1, f2, f3) ->
-     PIte (process_read_pform fn f1, process_read_pform fn f2,
-           process_read_pform fn f3)
-  | PForall (vl, f) -> PForall (vl, process_read_pform fn f)
-  | PExists (vl, f) -> PExists (vl, process_read_pform fn f)
-  | PForall_other (vl, f) -> PForall_other (vl, process_read_pform fn f)
-  | PExists_other (vl, f) -> PExists_other (vl, process_read_pform fn f)
-
-  let process_read_pswts fn s =
-    List.map (fun (f, t) -> process_read_pform fn f, process_read_pterm fn t) s
-
-  let process_read_pgu fn = function
-  | PUTerm t -> PUTerm (process_read_pterm fn t)
-  | PUCase s -> PUCase (process_read_pswts fn s)
-
-  let fix_thr t p v vi =
-    let pdef = not (Hstring.equal p hNone) in
-    match pdef, t with
-    | false, Some t -> Read (t, v, vi)
-    | true, None -> Read (p, v, vi)
-    | false, None -> failwith "No thread in read"
-    | true, Some t -> if Hstring.equal p t then Read (p, v, vi)
-                      else failwith "Threads differ in read"
-
-  let fix_rd_upd t upd =
-    { upd with pup_swts = process_read_pswts (fix_thr t) upd.pup_swts }
-
-  let fix_rd_assign t (v, pgu) =
-    (v, process_read_pgu (fix_thr t) pgu)
-
-  let fix_rd_write t (p, v, vi, pgu) =
-    let pgu = process_read_pgu (fix_thr t) pgu in
-    match p, t with
-    | None, Some p -> (p, v, vi, pgu)
-    | Some p, None -> (p, v, vi, pgu)
-    | None, None -> failwith "No thread in write"
-    | Some p, Some q ->
-       if Hstring.equal p q then (p, v, vi, pgu)
-       else failwith "Threads differ in write"
-
-  let fix_rd_expr t expr =
-    process_read_pform (fix_thr t) expr
-
-  let fix_rd_init expr =
-    process_read_pform (fun p v vi ->
-      if Hstring.equal p hNone then
-        match vi with
-        | [] -> Elem (v, Glob)
-        | _ -> Access (v, vi)
-      else
-        failwith "Thread not allowed in init"
-    ) expr
-                       
   let hproc = Hstring.make "proc"
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
@@ -184,7 +94,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE PREDICATE FENCE WEAK AT 
+%token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -200,6 +110,7 @@
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
 %token EOF
+%token FENCE WEAK AT
 
 %nonassoc IN       
 %nonassoc prec_forall prec_exists
@@ -322,22 +233,20 @@ init:
 ;
 
 invariant:
-  | INVARIANT LEFTBR expr RIGHTBR { loc (), None, [], $3 }
-  | INVARIANT transition_name LEFTBR expr RIGHTBR { loc (), Some $2, [], $4 }
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
-        { loc (), None, $3, $6 }
-  | INVARIANT transition_name LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
-        { loc (), Some $2, $4, $7 }
+  | INVARIANT name_opt LEFTBR expr RIGHTBR { loc (), $2, [], $4 }
+  | INVARIANT name_opt LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
+        { loc (), $2, $4, $7 }
 ;
 
 unsafe:
-  | UNSAFE LEFTBR expr RIGHTBR { loc (), None, [], $3 }
-  | UNSAFE transition_name LEFTBR expr RIGHTBR { loc (), Some $2, [], $4 }
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
-        { loc (), None, $3, $6 }
-  | UNSAFE transition_name LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
-        { loc (), Some $2, $4, $7 }
+  | UNSAFE name_opt LEFTBR expr RIGHTBR { loc (), $2, [], $4 }
+  | UNSAFE name_opt LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR
+        { loc (), $2, $4, $7 }
 ;
+
+name_opt:
+  | /*epsilon*/     { None }
+  | transition_name { Some $1 }
 
 transition_name:
   | lident {$1}
@@ -368,9 +277,9 @@ let_assigns_nondets_updates:
 	  let lets, l = $6 in
 	  ($2, $4) :: lets, l}
 ;
-
+  
 assigns_nondets_updates:
-  | { [], [], [], [] }
+  |  { [], [], [], [] }
   | assign_nondet_update 
       {  
 	match $1 with
@@ -397,19 +306,26 @@ assign_nondet_update:
 ;
 
 assignment:
-  | mident AFFECT term {
-      if is_weak $1 then Write (None, $1, [], PUTerm $3)
-      else Assign ($1, PUTerm $3) }
-  | mident AFFECT CASE switchs {
-      if is_weak $1 then Write (None, $1, [], PUCase $4)
-      else Assign ($1, PUCase $4) }
-/* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | proc_name AT mident AFFECT term {
-      if is_weak $3 then Write (Some $1, $3, [], PUTerm $5)
-      else Assign ($3, PUTerm $5) }
-  | proc_name AT mident AFFECT CASE switchs {
-      if is_weak $3 then Write (Some $1, $3, [], PUCase $6)
-      else Assign ($3, PUCase $6) }
+  | assignment_weak { $1 }
+  | proc_name AT assignment_weak {
+      match $3 with
+      | Write (_, var, args, upd) ->
+         Write (Some $1, var, args, upd)
+      | _ -> $3 }
+;
+
+assignment_weak:
+  | assignment_base {
+      match $1 with
+      | Assign (var, upd) ->
+         if Weaks.mem var then Write (None, var, [], upd)
+         else $1
+      | _ -> assert false }
+;
+
+assignment_base:
+  | mident AFFECT term { Assign ($1, PUTerm $3) }
+  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
 ;
 
 nondet:
@@ -423,17 +339,26 @@ require:
 ;
 
 update:
+  | update_weak { $1 }
+  | proc_name AT update_weak {
+      match $3 with
+      | Write (_, var, args, upd) ->
+         Write (Some $1, var, args, upd)
+      | _ -> $3 }
+;
+
+update_weak:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
-    { if is_weak $1 then Write (None, $1, $3, PUCase $7)
+    { if Weaks.mem $1 then Write (None, $1, $3, PUCase $7)
       else begin
         List.iter (fun p ->
           if (Hstring.view p).[0] = '#' then
-            raise Parsing.Parse_error
+            raise Parsing.Parse_error;
         ) $3;
         Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7 }
       end }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
-    { if is_weak $1 then Write (None, $1, $3, PUTerm $6)
+    { if Weaks.mem $1 then Write (None, $1, $3, PUTerm $6)
       else begin
         let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -444,29 +369,6 @@ update:
         let js = List.rev rjs in
 	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
 	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw }
-      end }
-/* Duplicated rules for optional proc (to avoir s/r conflict) */
-  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
-    { if is_weak $3 then Write (Some $1, $3, $5, PUCase $9)
-      else begin
-        List.iter (fun p ->
-          if (Hstring.view p).[0] = '#' then
-            raise Parsing.Parse_error
-        ) $5;
-        Upd { pup_loc = loc (); pup_arr = $3; pup_arg = $5; pup_swts = $9 }
-      end }
-  | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
-    { if is_weak $3 then Write (Some $1, $3, $5, PUTerm $8)
-      else begin
-        let cube, rjs =
-          List.fold_left (fun (cube, rjs) i ->
-            let j = fresh_var () in
-            let c = PAtom (AEq (TVar j, TVar i)) in
-            c :: cube, j :: rjs) ([], []) $5 in
-        let a = PAnd cube in
-        let js = List.rev rjs in
-	let sw = [(a, $8); (PAtom (AAtom Atom.True), TTerm (Access($3, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $3; pup_arg = js; pup_swts = sw }
       end }
 ;
 
@@ -487,29 +389,30 @@ constnum:
 ;
 
 var_term:
-  | mident {
-      if is_weak $1 then Read(Hstring.make "", $1, [])
-     else if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
+  | mident { 
+      if Weaks.mem $1 then Read(Hstring.make "", $1, []) else
+      if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
   | proc_name { Elem ($1, Var) }
   | proc_name AT mident {
-      if is_weak $3 then Read($1, $3, [])
-     else if Consts.mem $3 then Const (MConst.add (ConstName $3) 1 MConst.empty)
+      if Weaks.mem $3 then Read($1, $3, []) else
+      if Consts.mem $3 then Const (MConst.add (ConstName $3) 1 MConst.empty)
       else Elem ($3, sort $3) }
 ;
 
 top_id_term:
   | var_term { match $1 with
-      | Elem (v, Var) -> TVar v
-      | _ -> TTerm $1 }
+                 | Elem (v, Var) -> TVar v
+                 | _ -> TTerm $1 }
 ;
+
 
 array_term:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {
-      if is_weak $1 then Read(Hstring.make "", $1, $3)
+      if Weaks.mem $1 then Read(Hstring.make "", $1, $3)
       else Access ($1, $3) }
   | proc_name AT mident LEFTSQ proc_name_list_plus RIGHTSQ {
-      if is_weak $3 then Read($1, $3, $5)
+      if Weaks.mem $3 then Read($1, $3, $5)
       else Access ($3, $5) }
 ;
 
@@ -546,7 +449,7 @@ term:
   | top_id_term { $1 } 
   | array_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
-;
+  ;
 
 lident:
   | LIDENT { Hstring.make $1 }
