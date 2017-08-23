@@ -40,7 +40,6 @@ module Type = struct
   let type_proc = hfake
   let type_prop = hfake
   let declare _ _ = unsupported ()
-  let declare_record _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
@@ -77,7 +76,6 @@ module Term = struct
   let make_arith _ _ _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
-  let mk_pred ?(qv=false) p al = unsupported ()
 end
 
 module Formula = struct

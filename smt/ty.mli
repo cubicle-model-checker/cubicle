@@ -19,7 +19,6 @@ type t =
   | Tbool
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
-  | Trecord of Hstring.t * (Hstring.t * t) list
 
 val hash : t -> int
 val equal : t -> t -> bool

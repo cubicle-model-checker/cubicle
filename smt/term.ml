@@ -43,8 +43,6 @@ let view t = t
 let rec print fmt t = 
   let {f=x; xs=l; ty=ty} = view t in
   match x, l with
-    | Sy.Op (Sy.Access _), [_] ->
-        fprintf fmt "(%a)%a" print_list l Sy.print x
     | Sy.Op op, [e1; e2] -> 
 	fprintf fmt "(%a %a %a)" print e1 Sy.print x print e2
     | _, [] -> fprintf fmt "%a" Sy.print x

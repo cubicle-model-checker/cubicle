@@ -21,7 +21,6 @@ type t =
   | Tbool
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
-  | Trecord of Hstring.t * (Hstring.t * t) list
 
 let hash t =
   match t with
@@ -32,19 +31,12 @@ let hash t =
 	    (fun h x -> 13 * h + Hstring.hash x) (Hstring.hash s) l
 	in
 	abs h
-    | Trecord (s, l) -> 
-	let h = 
-	  List.fold_left 
-	    (fun h (x, _) -> 13 * h + Hstring.hash x) (Hstring.hash s) l
-	in
-	abs h
     | _ -> Hashtbl.hash t
 
 let equal t1 t2 = 
   match t1, t2 with
     | Tabstract s1, Tabstract s2 
-    | Tsum (s1, _), Tsum (s2, _)
-    | Trecord (s1, _), Trecord (s2, _) ->
+    | Tsum (s1, _), Tsum (s2, _) ->
 	Hstring.equal s1 s2
     | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
     | _ -> false
@@ -54,12 +46,9 @@ let compare t1 t2 =
     | Tabstract s1, Tabstract s2 ->
 	Hstring.compare s1 s2 
     | Tabstract _, _ -> -1 | _ , Tabstract _ -> 1
-    | Tsum (s1, _), Tsum (s2, _) ->
+    | Tsum (s1, _), Tsum(s2, _) ->
 	Hstring.compare s1 s2
     | Tsum _, _ -> -1 | _ , Tsum _ -> 1
-    | Trecord (s1, _), Trecord (s2, _) ->
-	Hstring.compare s1 s2
-    | Trecord _, _ -> -1 | _ , Trecord _ -> 1
     | t1, t2 -> Pervasives.compare t1 t2
 
 let print fmt ty = 
@@ -69,4 +58,3 @@ let print fmt ty =
     | Tbool -> fprintf fmt "bool"
     | Tabstract s -> fprintf fmt "%s" (Hstring.view s)
     | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)
-    | Trecord (s, _) -> fprintf fmt "%s" (Hstring.view s)

@@ -121,9 +121,6 @@ module Type = struct
       H.add decl_types t ty;
       List.iter2 (declare_constructor t) constrs (Enumeration.get_const_decls ty)
 
-  let declare_record t field = 
-    failwith "Z3Wrapper_actual.Type.declare_record TODO"
-
   let all_constructors () =
     (* eprintf "all_constructors@."; *)
     H.fold (fun h c acc ->
@@ -343,9 +340,6 @@ module Term = struct
   let is_int = is_int
 
   let is_real = is_real
-
-  let mk_pred ?(qv=false) p al = 
-    failwith "Z3Wrapper_actual.Term.mk_pred TODO"
 
 end
 

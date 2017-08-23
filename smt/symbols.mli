@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 type operator = 
-  | Plus | Minus | Mult | Div | Modulo | Access of Hstring.t
+  | Plus | Minus | Mult | Div | Modulo 
 
 type name_kind = Ac | Constructor | Other
 

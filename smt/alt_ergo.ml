@@ -71,7 +71,7 @@ module Type = struct
     H.add decl_types tproc Ty.Tint;
     tproc
 
-  let type_prop = 
+  let type_prop =
     let tprop = Hstring.make "prop" in
     H.add decl_types tprop Ty.Tbool;
     tprop
@@ -90,17 +90,6 @@ module Type = struct
 	  let ty = Ty.Tsum (t, constrs) in
 	  H.add decl_types t ty;
 	  List.iter (fun c -> declare_constructor t c) constrs
-
-  let declare_field ty f =
-    if H.mem decl_symbs f then raise (Error (DuplicateSymb f));
-    H.add decl_symbs f (Symbols.Op (Symbols.Access f), [], ty)
-
-  let declare_record t fields =
-    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
-    let tfields = List.map (fun (f, ty) -> (f, H.find decl_types ty)) fields in
-    let ty = Ty.Trecord (t, tfields) in
-    H.add decl_types t ty;
-    List.iter (fun (f, ty) -> declare_field ty f) fields
 
   let all_constructors () =
     H.fold (fun _ c acc -> match c with
