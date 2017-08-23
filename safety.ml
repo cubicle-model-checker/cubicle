@@ -46,7 +46,7 @@ let check s n =
 (**)if debug then eprintf " asking smt\n";
 	Prover.unsafe s n;
 	if not quiet then eprintf "\nUnsafe trace: @[%a@]@."
-	  Node.print_history n;
+				  Node.print_history n;
         TimeSafety.pause ();
         raise (Unsafe n)
       end

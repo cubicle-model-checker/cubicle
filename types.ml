@@ -192,7 +192,7 @@ module Term = struct
        let c = Hstring.compare p1 p2 in if c<>0 then c else
        (* let c = Hstring.compare v1 v2 in if c<>0 then c else *)
        let c = Pervasives.compare (Hstring.view v1) (Hstring.view v2) in if c <> 0 then c else
-       Hstring.compare_list vi1 vi2       
+       Hstring.compare_list vi1 vi2
      | Read (_, _, _), _ -> -1 | _, Read (_, _, _) -> 1
     | Write (p1, v1, vi1, rr1), Write (p2, v2, vi2, rr2) ->
        let c = Hstring.compare p1 p2 in if c<>0 then c else

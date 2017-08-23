@@ -177,7 +177,7 @@ weak_opt:
   | WEAK { true }
 
 var_decl:
-  | weak_opt VAR mident COLON lident { 
+  | weak_opt VAR mident COLON lident {
     if Hstring.equal $5 hint || Hstring.equal $5 hreal then Smt.set_arith true;
     Globals.add $3; if $1 then Weaks.add $3;
     loc (), $3, $5, $1 }
@@ -191,7 +191,7 @@ const_decl:
 ;
 
 array_decl:
-  | weak_opt ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+  | weak_opt ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident {
         if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
 	  raise Parsing.Parse_error;
 	if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
@@ -259,7 +259,7 @@ transition:
       { let lets, (assigns, nondets, upds, writes) = $8 in
 	{   ptr_lets = lets;
 	    ptr_name = $2;
-            ptr_args = fst $4; 
+            ptr_args = fst $4;
 	    ptr_reqs = fix_rd_expr (snd $4) $6;
 	    ptr_assigns = List.map (fix_rd_assign (snd $4)) assigns;
 	    ptr_nondets = nondets; 

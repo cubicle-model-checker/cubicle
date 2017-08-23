@@ -15,7 +15,6 @@
 
 open Options
 open Format
-open Util
 open Ast
 
 module type PriorityNodeQueue = sig
@@ -48,15 +47,15 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
   module Fixpoint = Fixpoint.FixpointTrie
   module Approx = Approx.Selected
 
-  module Int =
-    struct
-      type t = int
-      let compare = Pervasives.compare
-      let hash = Hashtbl.hash
-      let equal = (=)
-    end
+  (* module Int = *)
+  (*   struct *)
+  (*     type t = int *)
+  (*     let compare = Pervasives.compare *)
+  (*     let hash = Hashtbl.hash *)
+  (*     let equal = (=) *)
+  (*   end *)
 
-  module IntSet = Set.Make (Int)
+  (* module IntSet = Set.Make (Int) *)
 
   let nb_remaining q post () = Q.length q, List.length !post
 
@@ -80,7 +79,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         (* Format.fprintf Format.std_formatter *)
         (*   "---------- Node %d ----------\n" n.tag; *)
         (* Format.print_flush (); *)
-        
+
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
@@ -138,7 +137,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         if Q.is_empty q then
           (* When the queue is empty, pour back postponed nodes in it *)
           begin
-            Q.push_list (*(List.rev*) !postponed(*)*) q; (* added rev *)
+            Q.push_list (*(List.rev*) !postponed(*)*) q;
             postponed := []
           end
       done;

@@ -469,7 +469,7 @@ let rec add_arg args t =
         args ls
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
-		 
+
   | Read (p, _, vi) | Write (p, _, vi, _) -> add_arg_list args (p :: vi)
   | Fence p -> add_arg_list args [p]
 

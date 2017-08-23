@@ -92,7 +92,7 @@ let create ?(name=None) ?(kind=Node) ?(from=None) cube =
   let hist =  match from with
     | None -> []
     | Some ((_, _, n) as f) -> f :: n.from in
-  let node = { 
+  let node = {
     cube = cube;
     tag = new_tag ~kind ();
     kind = kind;
@@ -148,11 +148,11 @@ module Latex = struct
 	       print_const c) cs
 
   let rec print_term fmt t =
-    let print_list fmt = function
-      | [] -> ()
-      | [t] -> print_term fmt t
-      | t :: tl -> print_term fmt t;
-		   List.iter (fprintf fmt ",%a" print_term) tl in
+    (* let print_list fmt = function *)
+    (*   | [] -> () *)
+    (*   | [t] -> print_term fmt t *)
+    (*   | t :: tl -> print_term fmt t; *)
+    (*     	   List.iter (fprintf fmt ",%a" print_term) tl in *)
     match t with
     | Const cs -> print_cs fmt cs
     | Elem (s, Var) -> fprintf fmt "%a" Hstring.print s

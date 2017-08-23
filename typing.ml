@@ -148,7 +148,7 @@ let infer_type x1 x2 =
 let refinement_cycles () = (* TODO *) ()
 
 let ty_access loc args a li =
-  let args_a, ty_a = 
+  let args_a, ty_a =
     try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
   if List.length args_a <> List.length li then
     error (WrongNbArgs (a, List.length args_a)) loc
@@ -156,8 +156,8 @@ let ty_access loc args a li =
     List.iter (fun i ->
       let ty_i =
 	if Hstring.list_mem i args then Smt.Type.type_proc
-	else 
-	  try 
+	else
+	  try
 	    let ia, tyi = Smt.Symbol.type_of i in
 	    if ia <> [] then error (MustBeOfTypeProc i) loc;
 	    tyi
@@ -168,7 +168,7 @@ let ty_access loc args a li =
 	error (MustBeOfTypeProc i) loc;
     ) li;
   [], ty_a
-			
+
 let rec term loc ?(init=false) args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
@@ -182,7 +182,7 @@ let rec term loc ?(init=false) args = function
       if Hstring.list_mem e args then [], Smt.Type.type_proc
       else begin 
 	  try Smt.Symbol.type_of e with Not_found ->
-            error (UnknownName e) loc
+           error (UnknownName e) loc
       end
   | Elem (e, _) ->
       if Weakmem.is_weak e && not init then error (MustReadWeakVar e) loc;
@@ -211,8 +211,8 @@ let rec term loc ?(init=false) args = function
 	  with Not_found -> error (UnknownName p) loc
 	end;
       begin match vi with
-      	| [] -> Smt.Symbol.type_of v
-      	| _ -> ty_access loc args v vi
+        | [] -> Smt.Symbol.type_of v
+        | _ -> ty_access loc args v vi
       end
   | Write (p, v, vi, srl) -> failwith "Typing.term : Write should not be typed"
   | Fence p ->
@@ -229,8 +229,8 @@ let rec term loc ?(init=false) args = function
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
-    || ty = Smt.Type.type_bool
-    || ty = Smt.Type.type_int
+     || ty = Smt.Type.type_bool
+     || ty = Smt.Type.type_int
   then ()
   else
     match x with
@@ -310,7 +310,7 @@ let writes loc args wl =
   List.iter (* could also prevent write by different threads *)
     (fun (p, v, vi, gu) ->
        (* if Hstring.list_mem v !dv then error (DuplicateAssign v) loc; *)
-       let ty_v = 
+       let ty_v =
 	 try Smt.Symbol.type_of v
          with Not_found -> error (UnknownGlobal v) loc in
        begin
@@ -327,7 +327,7 @@ let writes loc args wl =
               unify loc ty_t ([], snd ty_v);
               assignment v t ty_t
             ) swts
-       end;         
+       end;
        dv := v ::!dv) wl
 
 let switchs loc a args ty_e l = 
@@ -591,7 +591,7 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
                              SAtom.subst sigma sa, Term.subst sigma t) swts in
                         x, UCase swts
 	           ) tr.tr_assigns;
-	tr_writes = 
+	tr_writes =
 	  List.map (fun (p, v, vi, gu) ->
 	    let sp = Variable.subst sigma p in
 	    let svi = List.map (Variable.subst sigma) vi in

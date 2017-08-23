@@ -81,7 +81,7 @@ type system = {
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Hstring.t option * Variable.t list * SAtom.t) list;
-  unsafe : (loc * Hstring.t option * Variable.t list * SAtom.t) list;  
+  unsafe : (loc * Hstring.t option * Variable.t list * SAtom.t) list;
   trans : transition_info list;
 }
 (** type of untyped transition systems constructed by parsing *)

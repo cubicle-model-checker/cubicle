@@ -94,7 +94,7 @@ let cedge_error ?(to_init=false) () =
 
 
 
-(* TSO *)		    
+(* TSO *)
 open Weakmem
 
 let find_event_safe e evts =
@@ -163,7 +163,7 @@ let rec print_atoms fmt la =
     if vals <> [] then
       List.iter (fun a -> fprintf fmt "          %a" Atom.print a) vals;
   ) evts
-	     
+
 (* End TSO *)
 
 
@@ -234,7 +234,7 @@ let set_open_nodes =
       fprintf !dot_fmt "%d [label=\"\"]" c;
       fprintf !dot_fmt "%d -> %d [%s]@." i c (cedge_pre ())
     ) ncl
-  
+
 
 let new_node n =
   current_color := next_shade ();

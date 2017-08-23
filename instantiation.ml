@@ -129,7 +129,7 @@ let obvious_impossible a1 a2 =
     	       | _ -> ()
     	   end
        (* added *)
-       | Atom.Comp (Elem (x1, Var), Lt, Elem (y1, Var)), 
+       | Atom.Comp (Elem (x1, Var), Lt, Elem (y1, Var)),
 	 Atom.Comp (Elem (x2, Var), Lt, Elem (y2, Var)) ->
           if H.equal x1 x2 && H.equal y1 y2 then
             (add_obv (x1,x2) obvs; add_obv (y1,y2) obvs)
