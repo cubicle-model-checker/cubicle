@@ -28,7 +28,7 @@ let unsupported _ =
   failwith "Cubicle was not compiled with the Z3 library."
 
 let report _ = unsupported ()
-
+  
 let hfake = Hstring.make "fake_Z3"
 
 module Type = struct
@@ -105,7 +105,7 @@ module type Solver = sig
 
   val clear : unit -> unit
   val assume : id:int -> Formula.t -> unit
-  val check : ?fp:bool -> unit -> unit
+  val check : unit -> unit
 
   val entails : Formula.t -> bool
   val push : unit -> unit
@@ -118,7 +118,7 @@ module Make (Options : sig val profiling : bool end) = struct
   let get_calls _ = unsupported ()
   let clear _ = unsupported ()
   let assume ~id f = unsupported ()
-  let check ?(fp=false) () = unsupported ()
+  let check () = unsupported ()
   let entails _ = unsupported ()
   let push _ =  unsupported ()
   let pop _ =  unsupported ()

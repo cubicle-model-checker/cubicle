@@ -466,7 +466,7 @@ module type Solver = sig
 
   val clear : unit -> unit
   val assume : id:int -> Formula.t -> unit
-  val check : ?fp:bool -> unit -> unit
+  val check : unit -> unit
 
   val entails : Formula.t -> bool
   val push : unit -> unit
@@ -541,7 +541,7 @@ module Make (Options : sig val profiling : bool end) = struct
       Time.pause ();
       raise (Unsat (export_unsatcore2 ex))
 
-  let check ?(fp=false) () =
+  let check () =
     incr calls;
     Time.start ();
     try 

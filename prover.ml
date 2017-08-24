@@ -103,7 +103,7 @@ let rec make_term = function
   | Elem (e, _) -> T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
-  | Arith (x, cs) ->
+  | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
 
@@ -111,7 +111,7 @@ let rec make_term = function
   | Write _ -> failwith "Prover.make_term : Write should not be there"
   | Fence _ -> failwith "Prover.make_term : Fence should not be there"
 
-let rec make_formula_set sa =
+let rec make_formula_set sa = 
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
 
 and make_literal = function
@@ -133,64 +133,26 @@ and make_literal = function
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)
 
-(* this function should be in prover, in assume_goal *)
-(* but that would be problematic in make_orders... *)
-(*  let rm_sat_evt_thr_par sa =
-    let open Weakmem in
-    let unsat_evt, all_lw = SAtom.fold (
-     fun a (unsat_evt, all_lw) -> match a with
-      | Atom.Comp (Access (f, [e]), Eq, Elem (c, _))
-      | Atom.Comp (Elem (c, _), Eq, Access (f, [e]))
-           when H.equal f hVar ->
-         unsat_evt, HSet.add e all_lw
-      | Atom.Comp (Access (f, [e]), Eq, Elem (c, _))
-      | Atom.Comp (Elem (c, _), Eq, (Access (f, [e])))
-           when is_value f ->
-         HSet.add e unsat_evt, all_lw (* writes never have values *)
-      | _ -> unsat_evt, all_lw
-    ) sa (HSet.empty, HSet.empty) in
-    let sat_evt_lw = HSet.diff all_lw unsat_evt in
-    SAtom.filter (fun a -> match a with
-      | Atom.Comp (Access (f, [e]), Eq, _)
-      | Atom.Comp (_, Eq, Access (f, [e]))
-       when (H.equal f hVar || is_param f)
-              && HSet.mem e sat_evt_lw -> false
-      | _ -> true
-    ) sa*)
-
-let make_formula ?(fp=false) array =
-  (* let sa = Weakrel.filter_rels_array array in *)
-  (* let sa = if fp then rm_sat_evt_thr_par sa else sa in *)
-  (* make_formula_set sa *)
-  make_formula array
-
-let make_formula_set ?(fp=false) satom =
-  (* let sa = Weakrel.filter_rels_set satom in *)
-  (* let sa = if fp then rm_sat_evt_thr_par sa else sa in *)
-  (* make_formula_set sa *)
-  make_formula_set satom
-
 module HAA = Hashtbl.Make (ArrayAtom)
 
 let make_formula =
   let cache = HAA.create 200001 in
-  let cache_fp = HAA.create 200001 in
-  fun ?(fp=false) atoms ->
-    try HAA.find (if fp then cache_fp else cache) atoms
+  fun atoms ->
+    try HAA.find cache atoms
     with Not_found ->
-      let f = make_formula ~fp atoms in
-      HAA.add (if fp then cache_fp else cache) atoms f;
+      let f = make_formula atoms in
+      HAA.add cache atoms f;
       f
 
-let make_formula ?(fp=false) array =
+let make_formula array =
   TimeFormula.start ();
-  let f = make_formula ~fp array in
+  let f = make_formula array in
   TimeFormula.pause ();
   f
 
-let make_formula_set ?(fp=false) satom =
+let make_formula_set satom =
   TimeFormula.start ();
-  let f = make_formula_set ~fp satom in
+  let f = make_formula_set satom in
   TimeFormula.pause ();
   f
 
@@ -219,7 +181,7 @@ let unsafe_conj { tag = id; cube = cube } nb_procs invs init = (* S only *)
   List.iter (SMT.assume ~id) invs; (* without events *)
   let sa = Weakrel.filter_rels_set cube.Cube.litterals in
   let sa = Weakpre.satisfy_unsatisfied_reads sa in
-  let f = make_formula_set ~fp:false sa in
+  let f = make_formula_set sa in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
   SMT.assume ~id init; (* without events *)
   SMT.assume ~id f;
@@ -239,51 +201,52 @@ let unsafe_dnf node nb_procs invs dnf = (* S only *)
 
 let unsafe_cdnf s n = (* S only *)
   let nb_procs = List.length (Node.variables n) in
-  let cdnf_init = make_init_dnfs s nb_procs in
+  let cdnf_init = make_init_dnfs s nb_procs in  
   let invs = get_user_invs s nb_procs in
   List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 
 let unsafe s n = unsafe_cdnf s n (* S only *)
 
+
 let reached args s sa = (* FW only *) (* events not handled yet *)
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
-  let f = make_formula_set ~fp:false (SAtom.union sa s) in
+  let f = make_formula_set (SAtom.union sa s) in
   SMT.assume ~id:0 f;
   SMT.check ()
+
 
 let assume_goal_no_check { tag = id; cube = cube } = (* FP only *)
   SMT.clear ();
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
-  let f = make_formula_set ~fp:true cube.Cube.litterals in
-  (* let f = make_formula cube.Cube.array in *) (* in branch master *)
+  let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
   SMT.assume ~id f
 
 let assume_node_no_check { tag = id } ap = (* FP only *)
-  let f = F.make F.Not [make_formula ~fp:true ap] in
+  let f = F.make F.Not [make_formula ap] in
   if debug_smt then eprintf "[smt] assume node: %a@." F.print f;
   SMT.assume ~id f
 
 let assume_goal n = (* FP only *)
   assume_goal_no_check n;
-  SMT.check ~fp:true ()
+  SMT.check  ()
 
 let assume_node n ap = (* FP only *)
   assume_node_no_check n ap;
-  SMT.check ~fp:true ()
+  SMT.check  ()
 
 
-let run () = SMT.check ~fp:true () (* FP only *)
+let run () = SMT.check () (* FP only *)
 
 let check_guard args sa reqs = (* FW only *)
   SMT.clear ();
   SMT.assume ~id:0 (distinct_vars (List.length args));
-  let f = make_formula_set ~fp:false (SAtom.union sa reqs) in
+  let f = make_formula_set (SAtom.union sa reqs) in
   SMT.assume ~id:0 f;
   SMT.check ()
 
 let assume_goal_nodes n nodes = (* FP only *)
   assume_goal_no_check n;
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
-  SMT.check ~fp:true ()
+  SMT.check  ()

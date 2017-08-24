@@ -115,7 +115,7 @@ module Symbol = struct
     
   type t = Hstring.t
 
-  let declare f args ret = 
+  let declare f args ret  = 
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     H.add all_vars f (Symbols.name f, args, ret);
     List.iter 
@@ -475,16 +475,20 @@ let rec mk_cnf = function
 
   (* let make_cnf f = mk_cnf (sform f) *)
 
+
 end
 
 exception Unsat of int list
 
 let set_cc b = Cc.cc_active := b
-let set_arith = Combine.CX.set_arith_active
+
+let set_arith b =
+  Combine.CX.set_arith_active b;
+  if b then Cc.cc_active := true
+
 let set_sum = Combine.CX.set_sum_active
 
 module type Solver = sig
-
   val check_strategy : check_strategy
 
   val get_time : unit -> float
@@ -492,7 +496,7 @@ module type Solver = sig
 
   val clear : unit -> unit
   val assume : id:int -> Formula.t -> unit
-  val check : ?fp:bool -> unit -> unit
+  val check : unit -> unit
 
   val entails : Formula.t -> bool
   val push : unit -> unit
@@ -535,7 +539,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
     fprintf fmt "_V%s" (replace (Hstring.view v) "#" "p")
 
   let gen_filename =
-    let cnt = ref 0 in
+    let cnt = ref 0 in (* should use tag instead *)
     fun name ext ->
       cnt := !cnt + 1;
       name ^ (string_of_int !cnt) ^ ext
@@ -609,20 +613,22 @@ module Make (Options_ : sig val profiling : bool end) = struct
   let assume ~id f =
     Time.start ();
     try
-      formula := (Formula.make_cnf f) :: !formula;
-      (*CSolver.assume (Formula.make_cnf f) id;*)
+      let cnf = (Formula.make_cnf f) in
+      formula := cnf :: !formula;
+      (*CSolver.assume cnf id;*)
       Time.pause ()
     with Solver.Unsat ex ->
       Time.pause ();
       raise (Unsat [] (*(export_unsatcore2 ex)*))
-    
-  let check ?(fp=false) () =
+
+  let check () =
     incr calls;
     Time.start ();
     try
 
       (* Create .why file *)
-      let prefix = if fp then "formula_fp_" else "formula_sat_" in
+      (* let prefix = if !Options.fp then "formula_fp_" else "formula_sat_" in*)
+      let prefix = "formula_" in
       let filename = gen_filename prefix ".why" in
       let file = open_out filename in
       let filefmt = formatter_of_out_channel file in
@@ -630,7 +636,7 @@ module Make (Options_ : sig val profiling : bool end) = struct
       (* Print all types *)
       List.iter (fun ty -> match ty with
         | Ty.Tabstract t -> fprintf filefmt "type %a\n" Hstring.print t
-        | Ty.Tsum (t, cl) ->
+        | Ty.Tsum (t, cl) -> if Hstring.view t = "mbool" then () else
 	   fprintf filefmt "type %a = %a\n" Hstring.print t
       		   (print_list_sep "|" Hstring.print) cl
 	| _ -> failwith "Alt_ergo_file.check : invalid type"
@@ -639,6 +645,10 @@ module Make (Options_ : sig val profiling : bool end) = struct
 
       (* Print all variables *)
       H.iter (fun f (fx, args, ret) ->
+        let args = List.map (fun t ->
+          if Hstring.view t = "mbool" then Hstring.make "bool" else t) args in
+        let ret =
+          if Hstring.view ret = "mbool" then Hstring.make "bool" else ret in
         fprintf filefmt "logic %s : %a%s\n" (replace (Hstring.view f) "#" "p")
 	  (print_list_sep "," print_type) args
 	  ((if args = [] then " " else " -> ") ^ (typeof ret))
@@ -651,8 +661,8 @@ module Make (Options_ : sig val profiling : bool end) = struct
 	fprintf str_formatter " and %a\n" print_cnf cnf;
 	let t = flush_str_formatter () in
 	let t = replace t "#" "p" in
-	let t = replace t "True" "true" in
-	let t = replace t "False" "false" in
+	let t = replace t "@MTrue" "true" in
+	let t = replace t "@MFalse" "false" in
 	fprintf filefmt "%s" t;
       ) (List.rev !formula);
       fprintf filefmt ")\n";
