@@ -35,6 +35,15 @@ val extract_events_set :
    IntSet.t HMap.t *
    ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
 
+val extract_events_list :
+  Atom.t list ->
+   SAtom.t *
+   (cop * Term.t) list HEvtMap.t *
+   Term.t list HEvtMap.t *
+   H.t list *
+   IntSet.t HMap.t *
+   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
+
 val write_events :
   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
     ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
@@ -56,3 +65,5 @@ val subst :
   Variable.subst ->
   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t ->
   ((H.t * H.t * H.t * H.t list) * (cop * Term.t) list) HMap.t
+
+val filter_events_set : SAtom.t -> SAtom.t

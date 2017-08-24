@@ -117,8 +117,8 @@ CMO = version.cmo options.cmo \
       $(COMMONCMO) util.cmo $(SMTCMO) \
       variable.cmo weakmem.cmo types.cmo \
       cube.cmo node.cmo pretty.cmo ptree.cmo weakparse.cmo parser.cmo lexer.cmo\
-      instantiation.cmo dot.cmo cubetrie.cmo \
-      weakevent.cmo weakrel.cmo weakpre.cmo weakfp.cmo \
+      instantiation.cmo weakevent.cmo weakrel.cmo dot.cmo cubetrie.cmo \
+      weakpre.cmo weakfp.cmo \
       prover.cmo safety.cmo fixpoint.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \

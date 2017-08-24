@@ -93,85 +93,61 @@ let cedge_error ?(to_init=false) () =
                (if dot_level = 1 || to_init then "" else ", label=\" \""))
 
 
+let rec print_atoms fmt = function
+  | [] -> ()
+  | [a] -> Atom.print fmt a
+  | a::l -> fprintf fmt "%a\\n%a" Atom.print a print_atoms l
+
+
 
 (* TSO *)
 open Weakmem
 
-let find_event_safe e evts =
-  try HMap.find e evts with Not_found -> ((hNone, hNone, hNone, []), [])
+let rem_us s =
+  let s = H.view s in
+  String.sub s 1 (String.length s - 1)
 
-let rec has_val = function
-  | Access (f, [e]) when is_value f -> true
-  | Arith (t, c) -> has_val t
-  | _ -> false
+let print_atoms fmt la =
+  let sa, _, _, _, eids, evts = Weakevent.extract_events_list la in
+  let evts = Weakevent.events_by_thread evts in
+  let sa = Weakevent.filter_events_set sa in
+  let fce, ghb = Weakrel.extract_rels_set sa in
+  let sa = Weakrel.filter_rels_set sa in
+  print_atoms fmt (SAtom.elements sa);
+  HMap.iter (fun p ->
+    fprintf fmt "\\n";
+    let pfce = try [HMap.find p fce] with Not_found -> [] in
+    List.iter (fun (e, ((_, d, v, vi), vals)) ->
+      let f = if List.exists (H.equal e) pfce then "(f) " else "" in
+      fprintf fmt "\\n%s(%s) %a:%s:%s" f (rem_us e) H.print p (rem_us d)
+        (if H.equal v hNone then "" else (var_of_v v)); (* necessary *)
+      if vi <> [] then
+        fprintf fmt "[%a]" (Hstring.print_list ", ") vi;
+      if vals <> [] then
+        List.iter (fun (o, t) ->
+          fprintf fmt "\t\t%s %a" (Weakevent.string_of_cop o) Term.print t) vals
+      else fprintf fmt "\t\t\t"
+    )
+  ) evts;
+  if Weakrel.Rel.exists_lt (fun _ _ -> true) ghb then
+    fprintf fmt "\n\n";
+  let cpt = ref 0 in
+  Weakrel.Rel.iter_lt (fun ef et ->
+    cpt := !cpt + 1; if !cpt = 5 then begin cpt := 1; fprintf fmt "\n" end;
+    fprintf fmt "%s < %s   " (rem_us ef) (rem_us et)
+  ) ghb;
+  if Weakrel.Rel.exists_eq (fun _ _ -> true) ghb then
+    fprintf fmt "\n\n";
+  let cpt = ref 0 in
+  Weakrel.Rel.iter_eq (fun ef et ->
+    cpt := !cpt + 1; if !cpt = 5 then begin cpt := 1; fprintf fmt "\n" end;
+    fprintf fmt "%s = %s   " (rem_us ef) (rem_us et)
+  ) ghb
 
-let rec get_val = function
-  | Access (f, [e]) when is_value f -> Some e
-  | Arith (t, c) -> get_val t
-  | _ -> None
-
-let split_event (la, evts) at = match at with
-  (* Direction / Variable / Indices *)
-  | Atom.Comp (Access (f, [e]), Eq, Elem (c, t))
-  | Atom.Comp (Elem (c, t), Eq, Access (f, [e]))
-       when is_event f && not (is_value f) ->
-     let ((p, d, v, vi), vals) as evt = find_event_safe e evts in
-     let evt = if H.equal f hThr then ((c, d, v, vi), vals)
-          else if H.equal f hDir then ((p, c, v, vi), vals)
-	  else if H.equal f hVar then ((p, d, c, vi), vals)
-	  else if is_param f then ((p, d, v, (f, c) :: vi), vals)
-	  else evt in
-     (la, HMap.add e evt evts)
-  (* Value *)
-  | Atom.Comp (t1, _, t2)
-       when has_val t1 || has_val t2 ->
-     let e = match get_val t1 with
-       | Some e -> e
-       | _ -> match get_val t2 with
-              | Some e -> e
-	      | _ -> failwith "Dot.split_event :internal error " in
-     let ((p, d, v, vi), vals) = find_event_safe e evts in
-     let evt = ((p, d, v, vi), at :: vals) in
-     (la, HMap.add e evt evts)
-  (* Others *)
-  | _ -> (at :: la, evts)
-
-let split_events la =
-  let la, evts = List.fold_left split_event ([], HMap.empty) la in
-  List.rev la, HMap.fold (fun e (ed, vals) evts ->
-    HMap.add e (sort_params ed, vals) evts
-  ) evts HMap.empty
-
-let id_of_v v =
-    let v = H.view v in
-    String.sub v 1 (String.length v - 1)
-
-let rec print_atoms fmt la =
-  let la, evts = split_events la in
-  let evts = HMap.fold (fun eid ((p, d, v, vi) as ed, vals) evts ->
-    H2Map.add (p, eid) (ed, vals) evts
-  ) evts H2Map.empty in
-  print_atoms fmt la;
-  let last = ref "#0" in
-  H2Map.iter (fun (p, e) ((_, d, v, vi), vals) ->
-    if H.view p <> !last then begin last := H.view p; fprintf fmt "\\n" end;
-    fprintf fmt "\\nE(%s) = %a:%s:%s"
-      (id_of_v e) H.print p (id_of_v d)
-      (if H.equal v hNone then "" else (var_of_v v));
-    if vi <> [] then
-      fprintf fmt "[%a]" (Hstring.print_list ", ") vi;
-    if vals <> [] then
-      List.iter (fun a -> fprintf fmt "          %a" Atom.print a) vals;
-  ) evts
 
 (* End TSO *)
 
 
-
-(* let rec print_atoms fmt = function *)
-(*   | [] -> () *)
-(*   | [a] -> Atom.print fmt a *)
-(*   | a::l -> fprintf fmt "%a\\n%a" Atom.print a print_atoms l *)
 
 let print_cube fmt c =
   fprintf fmt "%a" print_atoms (SAtom.elements c.Cube.litterals)
@@ -189,21 +165,24 @@ let nb_nodes = ref 0
 
 let print_node_c confstr fmt s =
   incr nb_nodes;
-  let x = Cube.dim s.cube in
-  let confstr =
-    if x = 1 then confstr
-    else if x = 2 then confstr ^ ", color=red"
-    else if x = 3 then confstr ^ ", color=green"
-    else if x = 4 then confstr ^ ", color=blue"
-    else if x = 5 then confstr ^ ", color=orange"
-    else confstr ^ ", color=magenta" in
   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr
 
-(* let print_node_c confstr fmt s = *)
-(*   incr nb_nodes; *)
-(*   fprintf fmt "%d [label=\"%a\"%s]" s.tag print_node_info s confstr *)
+let orange = { c_red = 255.; c_green = 165.; c_blue = 0. }
 
+let print_node fmt s =
+  let x = Cube.dim s.cube in
+  current_color := if x = 1 then black
+              else if x = 2 then red
+              else if x = 3 then green
+              else if x = 4 then blue
+              else if x = 5 then orange
+              else magenta;
+  print_node_c (config s.kind) fmt s;
+  current_color := black
+
+(*
 let print_node fmt s = print_node_c (config s.kind) fmt s
+*)
 
 let print_subsumed_node fmt s = 
   print_node_c config_subsumed fmt s

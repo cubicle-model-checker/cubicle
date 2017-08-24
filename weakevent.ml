@@ -148,7 +148,7 @@ let extract_event (sa_pure, rds, wts, fces, eids, evts) at = match at with
 let init_acc =
   (SAtom.empty, HEvtMap.empty, HEvtMap.empty, [], HMap.empty, HMap.empty)
 
-let post_process (sa_pure, rds, wts, fces, eids, evts) =
+let post_process (sa_pure, rds, wts, fces, eids, evts) = (* eids always empty *)
   let evts = HMap.map (fun (ed, vals) -> sort_params ed, vals) evts in
   let eids = HMap.fold (fun e ((p, _, _, _), _) eids ->
     let peids = try HMap.find p eids with Not_found -> IntSet.empty in
@@ -161,6 +161,9 @@ let extract_events_array ar =
 
 let extract_events_set sa =
   post_process (SAtom.fold (fun a acc -> extract_event acc a) sa init_acc)
+
+let extract_events_list la =
+  post_process (List.fold_left (fun acc a -> extract_event acc a) init_acc la)
 
 let write_events evts =
   HMap.filter (fun _ (ed, _) -> is_write ed) evts
@@ -186,3 +189,9 @@ let subst sigma evts =
     let vals = List.map (fun (cop, t) -> cop, Term.subst sigma t) vals in
     pdvvi, vals
   ) evts
+
+let filter_events_set sa =
+  SAtom.filter (function
+    | Atom.Comp (Access (a, [_]), _, _)
+    | Atom.Comp (_, _, Access (a, [_])) -> not (is_event a)
+    | _ -> true) sa

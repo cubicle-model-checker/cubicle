@@ -322,7 +322,7 @@ end = struct
     let _, _, _, _, _, evts = Weakevent.extract_events_set sa in
     let rels = Weakrel.extract_rels_set sa in
     let sa = Weakrel.filter_rels_set sa in
-    let sa = filter_events sa in
+    let sa = filter_events sa in (* optional *)
     (* let sat_evt = Weakevent.sat_events evts in *)
     (* let sa = SAtom.filter (fun a -> match a with *)
     (*   | Atom.Comp (Access (f, [e]), Eq, _) *)

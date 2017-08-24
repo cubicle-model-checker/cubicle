@@ -485,15 +485,15 @@ let init_acc = HMap.empty, Rel.empty
 
 let extract_rels_array ar =
   TimeGhb.start ();
-  let ar = Array.fold_left (fun acc a -> extract_rels acc a) init_acc ar in
+  let r = Array.fold_left (fun acc a -> extract_rels acc a) init_acc ar in
   TimeGhb.pause ();
-  ar
+  r
 
 let extract_rels_set sa =
   TimeGhb.start ();
-  let sa = SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc in
+  let r = SAtom.fold (fun a acc -> extract_rels acc a) sa init_acc in
   TimeGhb.pause ();
-  sa
+  r
 
 
 
