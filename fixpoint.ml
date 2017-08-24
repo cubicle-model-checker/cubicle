@@ -323,14 +323,6 @@ end = struct
     let rels = Weakrel.extract_rels_set sa in
     let sa = Weakrel.filter_rels_set sa in
     let sa = filter_events sa in (* optional *)
-    (* let sat_evt = Weakevent.sat_events evts in *)
-    (* let sa = SAtom.filter (fun a -> match a with *)
-    (*   | Atom.Comp (Access (f, [e]), Eq, _) *)
-    (*   | Atom.Comp (_, Eq, Access (f, [e])) *)
-    (*    when (H.equal f hVar || is_param f) *)
-    (*         && HMap.mem e sat_evt -> false (\* beware first writes ! *\) *)
-    (*   | _ -> true *)
-    (* ) sa in *)
     { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels
 
   let get_evts_rels_ar ar = (* this is now done before renaming *)

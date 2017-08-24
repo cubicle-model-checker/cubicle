@@ -141,7 +141,7 @@ let extract_event (sa_pure, rds, wts, fces, eids, evts) at = match at with
      let evts = process_event evts t2 (cop_of_r_op true op) t1 in
      (SAtom.add at sa_pure, rds, wts, fces, eids, evts)
   | Atom.Ite _ ->
-     failwith "Weakpre.extract_events : Ite should not be there"
+     failwith "Weakevent.extract_events : Ite should not be there"
   | _ -> (SAtom.add at sa_pure, rds, wts, fces, eids, evts)
 
 
