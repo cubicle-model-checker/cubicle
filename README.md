@@ -34,7 +34,7 @@ then with superuser rights:
     make install
 
 Cubicle comes with its own emacs major
-mode [cubicle-mode.el](doc/emacs/cubicle-mode.el). You should copy this file to
+mode [cubicle-mode.el](emacs/cubicle-mode.el). You should copy this file to
 your emacs.d directory (or anywhere in your load path) and add the following to
 your init file (`.emacs` or `emacs.d/init.el`):
 
