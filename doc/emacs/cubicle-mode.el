@@ -3,48 +3,53 @@
 ;; Author: Alain Mebsout
 ;; Version: 0.2
 
+;; (C) Copyright 2011-2017 Sylvain Conchon and Alain Mebsout, Universite
+;; Paris-Sud 11.
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;     http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
 
 ;;; Commentary:
 ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Usage:                                                                     ;;
-;;   Copy this file to a location of your load path (e.g. ~/.emacs.d) and add ;;
-;;   the following to your .emacs (or .emacs.d/init.el):                      ;;
-;;                                                                            ;;
-;; ;-----------------                                                         ;;
-;; ; mode Cubicle                                                             ;;
-;; ;-----------------                                                         ;;
-;; (setq auto-mode-alist                                                      ;;
-;;       (cons '("\\.cub$" . cubicle-mode) auto-mode-alist))                  ;;
-;; (autoload 'cubicle-mode "cubicle-mode" "Major mode for Cubicle." t)        ;;
-;;                                                                            ;;
-;; To add colors to the compilation buffer, also add this:                    ;;
-;; (require 'ansi-color)                                                      ;;
-;; (defun colorize-compilation-buffer ()                                      ;;
-;;   (toggle-read-only)                                                       ;;
-;;   (ansi-color-apply-on-region (point-min) (point-max))                     ;;
-;;   (toggle-read-only))                                                      ;;
-;; (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)           ;;
-;;                                                                            ;;
-;;                                                                            ;;
-;; You can also use Cubicle in org-mode through babel by adding the following ;;
-;; to your .emacs:                                                            ;;
-;;                                                                            ;;
-;; (defun org-babel-execute:cubicle (body params)                             ;;
-;;   "Execute a block of Cubicle code with org-babel."                        ;;
-;;   (message "executing Cubicle source code block")                          ;;
-;;   (let ((brab (cdr (assoc :brab (org-babel-process-params params)))))      ;;
-;;     (if brab                                                               ;;
-;;         (org-babel-eval (format "cubicle -brab %S" brab) body)             ;;
-;;         (org-babel-eval "cubicle" body)                                    ;;
-;;       )))                                                                  ;;
-;;                                                                            ;;
-;; In this case you can define Cubicle source blocks and evaluate them with   ;;
-;; #+begin_src cubicle :brab 2                                                ;;
-;; #+end_src                                                                  ;;
-;; where :brab is an optional argument that will be passed on to cubicle when ;;
-;; executed                                                                   ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Usage:
+;;   Install via package or copy this file to a location of your load path
+;;   (e.g. ~/.emacs.d) and add the following to your .emacs (or
+;;   .emacs.d/init.el):
+;;
+;; ;-----------------
+;; ; mode Cubicle
+;; ;-----------------
+;; (setq auto-mode-alist
+;;       (cons '("\\.cub\\'" . cubicle-mode) auto-mode-alist))
+;; (autoload 'cubicle-mode "cubicle-mode" "Major mode for Cubicle." t)
+;;
+;;
+;; You can also use Cubicle in org-mode through babel by adding the following
+;; to your .emacs:
+;;
+;; (defun org-babel-execute:cubicle (body params)
+;;   "Execute a block of Cubicle code with org-babel."
+;;   (message "executing Cubicle source code block")
+;;   (let ((brab (cdr (assoc :brab (org-babel-process-params params)))))
+;;     (if brab
+;;         (org-babel-eval (format "cubicle -brab %S" brab) body)
+;;         (org-babel-eval "cubicle" body)
+;;       )))
+;;
+;; In this case you can define Cubicle source blocks and evaluate them with
+;; #+begin_src cubicle :brab 2
+;; #+end_src
+;; where :brab is an optional argument that will be passed on to cubicle when
+;; executed.
 
 ;;; Code:
 
@@ -106,14 +111,14 @@
   :syntax-table cubicle-mode-syntax-table
   (set (make-local-variable 'comment-start) "(*")
   (set (make-local-variable 'comment-end) "*)")
-  (when (buffer-file-name)
-    (set (make-local-variable 'compile-command)
-         (format "cubicle %s" (file-name-nondirectory buffer-file-name))))
+  ;; (when (buffer-file-name)
+  ;;   (set (make-local-variable 'compile-command)
+  ;;        (format "cubicle %s" (file-name-nondirectory buffer-file-name))))
   (set (make-local-variable 'font-lock-defaults)'(cubicle-font-lock-keywords))
   )
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.cub$" . cubicle-mode) t)
+(add-to-list 'auto-mode-alist '("\\.cub\\'" . cubicle-mode) t)
 
 (provide 'cubicle-mode)
 
