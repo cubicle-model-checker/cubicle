@@ -18,42 +18,42 @@ open Format
 open Options
 open Ast
 open Util
-       
+
 (** Entry point of Cubicle *)
 
 
 
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
-let () = 
-  Sys.set_signal Sys.sigint 
-    (Sys.Signal_handle 
+let () =
+  Sys.set_signal Sys.sigint
+    (Sys.Signal_handle
        (fun _ ->
-         eprintf "@{<n>@}@."; (* Remove colors *)
-         Stats.print_report ~safe:false [] [];
-         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
-         exit 1)) 
+          eprintf "@{<n>@}@."; (* Remove colors *)
+          Stats.print_report ~safe:false [] [];
+          eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+          exit 1))
 
-let () = 
+let () =
   Sys.set_signal Sys.sigterm
-    (Sys.Signal_handle 
+    (Sys.Signal_handle
        (fun _ ->
-         eprintf "@{<n>@}@."; (* Remove colors *)
-         Stats.print_report ~safe:false [] [];
-         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
-         exit 1)) 
+          eprintf "@{<n>@}@."; (* Remove colors *)
+          Stats.print_report ~safe:false [] [];
+          eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
+          exit 1))
 
 (** intercepts SIGUSR1 to display progress *)
 let () =
   try
-    Sys.set_signal Sys.sigusr1 
-      (Sys.Signal_handle 
+    Sys.set_signal Sys.sigusr1
+      (Sys.Signal_handle
          (fun _ ->
-           eprintf "@{<n>@}@."; (* Remove colors *)
-           Stats.print_report ~safe:false [] []))
+            eprintf "@{<n>@}@."; (* Remove colors *)
+            Stats.print_report ~safe:false [] []))
   with Invalid_argument _ -> () (* doesn't exist on windows *)
 
-let _ = 
-  let lb = from_channel cin in 
+let _ =
+  let lb = from_channel cin in
   try
     TotalTime.start ();
     let s = Parser.system Lexer.token lb in
@@ -62,50 +62,50 @@ let _ =
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
-    let close_dot = Dot.open_dot () in 
-    let oc = 
-      if res_output 
+    let close_dot = Dot.open_dot () in
+    let oc =
+      if res_output
       then open_out_gen [Open_wronly; Open_append; Open_creat] 0o644 res_file
       else stdout in
-    begin 
+    begin
       if far then
-	match Far.search system with
-	  | Far.FSafe -> 
-	      printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
-	      if (not quiet || profiling) then
+        match Far.search system with
+          | Far.FSafe ->
+              printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+              if (not quiet || profiling) then
                 Stats.print_report ~safe:true [] [];
-          | Far.FUnsafe -> 
-	      printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+          | Far.FUnsafe ->
+              printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
               if (not quiet || profiling) then
                 Stats.print_report ~safe:false [] [];
               exit 1
-              else 
-                match Brab.brab system with
-                  | Bwd.Safe (visited, candidates) ->
-                      TotalTime.pause ();
-                      if (not quiet || profiling) then
-                        Stats.print_report ~safe:true visited candidates;
-                      if res_output then
-                        Stats.output_report oc ~safe:true visited candidates;
-                      
-                      printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
-                      Trace.Selected.certificate system visited;
-                      close_dot ();
-	              exit 0
+      else
+        match Brab.brab system with
+          | Bwd.Safe (visited, candidates) ->
+              TotalTime.pause ();
+              if (not quiet || profiling) then
+                Stats.print_report ~safe:true visited candidates;
+              if res_output then
+                Stats.output_report oc ~safe:true visited candidates;
 
-                  | Bwd.Unsafe (faulty, candidates) ->
-                      TotalTime.pause ();
-                      if (not quiet || profiling) then
-                        Stats.print_report ~safe:false [] candidates;
-                      if res_output then
-                        Stats.output_report oc ~safe:false [] candidates;
-                      if not quiet then Stats.error_trace system faulty;
-                      printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
-                      close_dot ();
-                      exit 1
+              printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+              Trace.Selected.certificate system visited;
+              close_dot ();
+              exit 0
+
+          | Bwd.Unsafe (faulty, candidates) ->
+              TotalTime.pause ();
+              if (not quiet || profiling) then
+                Stats.print_report ~safe:false [] candidates;
+              if res_output then
+                Stats.output_report oc ~safe:false [] candidates;
+              if not quiet then Stats.error_trace system faulty;
+              printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+              close_dot ();
+              exit 1
     end
   with
-    | Lexer.Lexical_error s -> 
+    | Lexer.Lexical_error s ->
         Util.report_loc err_formatter (lexeme_start_p lb, lexeme_end_p lb);
         eprintf "lexical error: %s@." s;
         exit 2
@@ -129,7 +129,7 @@ let _ =
         exit 1
 
     | Failure str ->
-        
+
         let backtrace = Printexc.get_backtrace () in
         eprintf "\n@{<u>Internal failure:@}%s@." str;
         if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;

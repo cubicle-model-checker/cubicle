@@ -10,7 +10,9 @@ License:                Apache-2.0
 Plugins:                META (0.4), StdFiles (0.4)
 OCamlVersion:           >= 4.01
 Alphafeatures:          ocamlbuild_more_args, compiled_setup_ml
-XOCamlbuildExtraArgs:   "-use-menhir"
+XOCamlbuildExtraArgs:
+  -use-menhir
+  -yaccflag --explain
 
 Executable cubicle
   Path:                 src
@@ -80,4 +82,3 @@ Library smt
   NativeOpt:            -dtypes -g -annot
   ByteOpt:              -dtypes -g -annot
   CompiledObject:       best
-

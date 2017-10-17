@@ -7,7 +7,7 @@ type result = FUnsafe | FSafe
 
 let graph = Far_graph.create 17
 
-let init_nodes system = 
+let init_nodes system =
   let u = system.t_unsafe in
   let top = Vertex.create [] [] u in
   List.iter Stats.new_node u;
@@ -16,10 +16,10 @@ let init_nodes system =
       | [e] -> e
       | _ -> assert false
   in
-  let initl = 
+  let initl =
     SAtom.fold (
         fun a acc -> (
-	  Variable.Set.elements (Atom.variables a), 
+	  Variable.Set.elements (Atom.variables a),
 	  SAtom.singleton a
         )::acc
       ) initf [] in
@@ -38,7 +38,7 @@ let search system =
 
   let trans = system.t_trans in
   let trans_from = Far_modules.init_trans_from trans in
-  
+
   let rec rsearch () =
     try
       let v1 = Q.pop queue in
@@ -53,7 +53,7 @@ let search system =
       let tm = Far_graph.trans_map v1 graph in
       let trans = trans_from v1 in
       if verbose > 0 then Format.eprintf "\n%a@." Vertex.print_world v1;
-      
+
       (try
         List.iter (
           fun t ->
@@ -73,7 +73,7 @@ let search system =
           | l -> Far_unwind.propagate v1 l graph system);
       with Far_unwind.PropBad b -> Far_unwind.prop v1 b graph system);
       rsearch ()
-    with 
+    with
       | Q.Empty -> FSafe
       | Exit -> FUnsafe
   in
