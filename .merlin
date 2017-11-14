@@ -1,6 +1,3 @@
-# sources structures for Merlin mode
-S smt
-S common
+S src/**
 
-B smt
-B common
+B _build/**

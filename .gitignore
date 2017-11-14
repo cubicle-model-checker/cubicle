@@ -26,12 +26,18 @@ version.ml
 config.log
 config.status
 configure
-Makefile
+# Makefile
 autom4te.cache
 doc/archi.pdf
 doc/ocamldoc/latex
 doc/ocamldoc/*.html
 doc/ocamldoc/style.css
+
+#Oasis generated
+setup.*
+_oasis
+AUTHORS.TXT
+
 
 # Temporary files
 *~
