@@ -1,0 +1,86 @@
+(* splitter with cubicle *)
+
+(* Model inspired by the Pluscal version (more precisely, by the translation
+  in TLA+ of the Pluscal version).
+  Tentative to express the safe states by counting. Cubicle runs forever (> 15h) without conclusion.
+*)
+
+type directions = None | Right | Stop | Down
+
+type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
+
+var X : proc
+var Y : bool
+array Rval[proc] : directions
+array PC[proc] : pc
+
+var Alive : int  (* number of active processes, i.e. not yet finished. *)
+var CountStop : int (* number of processes which have finished with Stop decision *)
+var CountDown : int (* number of processes which have finished with Down decision *)
+var CountRight : int (* number of processes which have finished with Right decision *)
+
+number_procs 2
+
+init(i) { Rval[i] = None && Y = False && PC[i] = PC0 &&
+	  CountStop = 0 && CountDown = 0 && CountRight = 0 && Alive = 0 }
+
+(* ================================================================ *)
+
+invariant() { Alive < 0 }
+invariant() { CountStop < 0 }
+invariant() { CountRight < 0 }
+invariant() { CountDown < 0 }
+
+(*     /\ Cardinality ({ i \in ProcSet : rval[i] = Stop}) <= 1
+       /\ Cardinality ({ i \in ProcSet : rval[i] = Down}) < NP
+       /\ Cardinality ({ i \in ProcSet : rval[i] = Right}) < NP
+*)
+unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop }
+unsafe() { 1 < CountStop  }
+unsafe() { Alive = 0 && 1 < CountRight && CountDown = 0 && CountStop = 0 }
+unsafe() { Alive = 0 && 1 < CountDown && CountRight = 0 && CountStop = 0 }
+
+(* ================================================================ *)
+
+transition spl0(i)
+requires { PC[i] = PC0 }
+{ Alive := Alive + 1;
+  X := i; PC[i] := PC1 }
+
+transition spl1a(i)
+requires { PC[i] = PC1 && Y = True }
+{ PC[i] := PC2 }
+
+transition spl1b(i)
+requires { PC[i] = PC1 && Y = False }
+{ PC[i] := PC3 }
+
+transition spl2(i)
+requires { PC[i] = PC2 }
+{ CountRight := CountRight + 1;
+  Alive := Alive - 1;
+  Rval[i] := Right; PC[i] := PC7 }
+
+transition spl3(i)
+requires { PC[i] = PC3 }
+{ Y := True; PC[i] := PC4 }
+
+transition spl4a(i)
+requires { PC[i] = PC4 && X = i }
+{ PC[i] := PC5 }
+
+transition spl4b(i)
+requires { PC[i] = PC4 && X <> i }
+{ PC[i] := PC6 }
+
+transition spl5(i)
+requires { PC[i] = PC5 }
+{ CountStop := CountStop + 1;
+  Alive := Alive - 1;
+  Rval[i] := Stop; PC[i] := PC8 }
+
+transition spl6(i)
+requires { PC[i] = PC6 }
+{ CountDown := CountDown + 1;
+  Alive := Alive - 1;
+  Rval[i] := Down; PC[i] := PC9 }

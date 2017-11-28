@@ -18,22 +18,22 @@
   open Parser
 
   let keywords = Hashtbl.create 97
-  let () = 
-    List.iter 
+  let () =
+    List.iter
       (fun (x,y) -> Hashtbl.add keywords x y)
       [ "type", TYPE;
-	"init", INIT;
-	"transition", TRANSITION;
-	"invariant", INVARIANT;
-	"requires", REQUIRE;
+        "init", INIT;
+        "transition", TRANSITION;
+        "invariant", INVARIANT;
+        "requires", REQUIRE;
         "array", ARRAY;
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;
-	"case", CASE;
-	"forall_other", FORALL_OTHER;
-	"exists_other", EXISTS_OTHER;
-	"forall", FORALL;
+        "case", CASE;
+        "forall_other", FORALL_OTHER;
+        "exists_other", EXISTS_OTHER;
+        "forall", FORALL;
         "exists", EXISTS;
         "predicate", PREDICATE;
         "if", IF;
@@ -42,14 +42,14 @@
         "not", NOT;
         "true", TRUE;
         "false", FALSE;
-	"number_procs", SIZEPROC;
-	"let", LET;
-	"in", IN;
+        "number_procs", SIZEPROC;
+        "let", LET;
+        "in", IN;
       ]
-	       
+
   let newline lexbuf =
     let pos = lexbuf.lex_curr_p in
-    lexbuf.lex_curr_p <- 
+    lexbuf.lex_curr_p <-
       { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
 
   let num_of_stringfloat s =
@@ -62,9 +62,9 @@
     let pos_dot = ref (-1) in
     for i=0 to String.length s - 1 do
       let c = s.[i] in
-      if c = '.' then pos_dot := i 
+      if c = '.' then pos_dot := i
       else
-	r := Num.add_num (Num.mult_num num10 !r) 
+	r := Num.add_num (Num.mult_num num10 !r)
 	  (Num.num_of_int (Char.code s.[i] - code_0))
     done;
     assert (!pos_dot <> -1);
@@ -82,14 +82,14 @@
 let newline = '\n'
 let space = [' ' '\t' '\r']
 let integer = ('-')? ['0' - '9'] ['0' - '9']*
-let real = ('-')? ['0' - '9'] ['0' - '9']* '.' ['0' - '9']* 
+let real = ('-')? ['0' - '9'] ['0' - '9']* '.' ['0' - '9']*
 let mident = ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let lident = ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 rule token = parse
-  | newline 
+  | newline
       { newline lexbuf; token lexbuf }
-  | space+  
+  | space+
       { token lexbuf }
   | lident as id
       { try Hashtbl.find keywords id
@@ -112,6 +112,8 @@ rule token = parse
       { DOT }
   | "?"
       { QMARK }
+  | "#"
+      { HASH }
   | "+"
       { PLUS }
   | "-"
@@ -160,19 +162,19 @@ rule token = parse
       { AND }
   | "(*"
       { comment lexbuf; token lexbuf }
-  | eof 
+  | eof
       { EOF }
   | _ as c
       { raise (Lexical_error ("illegal character: " ^ String.make 1 c)) }
 
 and comment = parse
-  | "*)" 
+  | "*)"
       { () }
-  | "(*" 
+  | "(*"
       { comment lexbuf; comment lexbuf }
   | eof
       { raise (Lexical_error "unterminated comment") }
-  | newline 
+  | newline
       { newline lexbuf; comment lexbuf }
-  | _ 
+  | _
       { comment lexbuf }

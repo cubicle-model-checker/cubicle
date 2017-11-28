@@ -19,7 +19,7 @@
   open Types
   open Parsing
   open Ptree
-  
+
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
 
@@ -30,7 +30,7 @@
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
 
-  type t = 
+  type t =
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
@@ -38,7 +38,7 @@
   module S = Set.Make(Hstring)
 
   module Constructors = struct
-    let s = ref (S.add (Hstring.make "@MTrue") 
+    let s = ref (S.add (Hstring.make "@MTrue")
 		   (S.singleton (Hstring.make "@MFalse")))
     let add x = s := S.add x !s
     let mem x = S.mem x !s
@@ -62,7 +62,7 @@
     let mem x = S.mem x !s
   end
 
-  let sort s = 
+  let sort s =
     if Constructors.mem s then Constr
     else if Globals.mem s then Glob
     else
@@ -75,9 +75,9 @@
   let hreal = Hstring.make "real"
   let hint = Hstring.make "int"
 
-  let set_from_list = List.fold_left (fun sa a -> SAtom.add a sa) SAtom.empty 
+  let set_from_list = List.fold_left (fun sa a -> SAtom.add a sa) SAtom.empty
 
-  let fresh_var = 
+  let fresh_var =
     let cpt = ref 0 in
     fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
 
@@ -103,9 +103,9 @@
 %token UNDERSCORE AFFECT
 %token EOF
 
-%nonassoc IN       
+%nonassoc IN
 %nonassoc prec_forall prec_exists
-%right IMP EQUIV  
+%right IMP EQUIV
 %right OR
 %right AND
 %nonassoc prec_ite
@@ -131,7 +131,7 @@ EOF
   let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
-   |> encode_psystem 
+   |> encode_psystem
 }
 ;
 
@@ -164,21 +164,21 @@ function_decl :
 ;
 
 var_decl:
-  | VAR mident COLON lident { 
+  | VAR mident COLON lident {
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Globals.add $2; 
+    Globals.add $2;
     loc (), $2, $4 }
 ;
 
 const_decl:
-  | CONST mident COLON lident { 
+  | CONST mident COLON lident {
     if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
     Consts.add $2;
     loc (), $2, $4 }
 ;
 
 array_decl:
-  | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+  | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident {
         if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
@@ -200,12 +200,12 @@ size_proc:
   | { () }
   | SIZEPROC INT { Options.size_proc := Num.int_of_num $2 }
 ;
-      
+
 type_def:
   | TYPE lident { (loc (), ($2, [])) }
-  | TYPE lident EQ constructors 
+  | TYPE lident EQ constructors
       { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
-  | TYPE lident EQ BAR constructors 
+  | TYPE lident EQ BAR constructors
       { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
 ;
 
@@ -215,7 +215,7 @@ constructors:
 ;
 
 init:
-  | INIT LEFTBR expr RIGHTBR { loc (), [], $3 } 
+  | INIT LEFTBR expr RIGHTBR { loc (), [], $3 }
   | INIT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
 ;
 
@@ -227,6 +227,7 @@ invariant:
 unsafe:
   | UNSAFE LEFTBR expr RIGHTBR { loc (), [], $3 }
   | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | UNSAFE LEFTBR card_expr RIGHTBR { loc (), [], $3 }
 ;
 
 transition_name:
@@ -234,16 +235,16 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR
       require
       LEFTBR let_assigns_nondets_updates RIGHTBR
       { let lets, (assigns, nondets, upds) = $8 in
 	{   ptr_lets = lets;
 	    ptr_name = $2;
-            ptr_args = $4; 
+            ptr_args = $4;
 	    ptr_reqs = $6;
-	    ptr_assigns = assigns; 
-	    ptr_nondets = nondets; 
+	    ptr_assigns = assigns;
+	    ptr_nondets = nondets;
 	    ptr_upds = upds;
             ptr_loc = loc ();
           }
@@ -256,18 +257,18 @@ let_assigns_nondets_updates:
 	  let lets, l = $6 in
 	  ($2, $4) :: lets, l}
 ;
-  
+
 assigns_nondets_updates:
   |  { [], [], [] }
-  | assign_nondet_update 
-      {  
+  | assign_nondet_update
+      {
 	match $1 with
 	  | Assign (x, y) -> [x, y], [], []
 	  | Nondet x -> [], [x], []
 	  | Upd x -> [], [], [x]
       }
-  | assign_nondet_update PV assigns_nondets_updates 
-      { 
+  | assign_nondet_update PV assigns_nondets_updates
+      {
 	let assigns, nondets, upds = $3 in
 	match $1 with
 	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds
@@ -333,7 +334,7 @@ constnum:
 ;
 
 var_term:
-  | mident { 
+  | mident {
       if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
   | proc_name { Elem ($1, Var) }
@@ -358,31 +359,31 @@ var_or_array_term:
 ;
 
 arith_term:
-  | var_or_array_term PLUS constnum 
+  | var_or_array_term PLUS constnum
       { Arith($1, MConst.add $3 1 MConst.empty) }
-  | var_or_array_term MINUS constnum 
+  | var_or_array_term MINUS constnum
       { Arith($1, MConst.add $3 (-1) MConst.empty) }
-  | var_or_array_term PLUS mident 
+  | var_or_array_term PLUS mident
       { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
   | var_or_array_term PLUS INT TIMES mident
       { Arith($1, MConst.add (ConstName $5) (Num.int_of_num $3) MConst.empty) }
   | var_or_array_term PLUS mident TIMES INT
       { Arith($1, MConst.add (ConstName $3) (Num.int_of_num $5) MConst.empty) }
-  | var_or_array_term MINUS mident 
+  | var_or_array_term MINUS mident
       { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
-  | var_or_array_term MINUS INT TIMES mident 
+  | var_or_array_term MINUS INT TIMES mident
       { Arith($1, MConst.add (ConstName $5) (- (Num.int_of_num $3)) MConst.empty) }
-  | var_or_array_term MINUS mident TIMES INT 
+  | var_or_array_term MINUS mident TIMES INT
       { Arith($1, MConst.add (ConstName $3) (- (Num.int_of_num $5)) MConst.empty) }
-  | INT TIMES mident 
+  | INT TIMES mident
       { Const(MConst.add (ConstName $3) (Num.int_of_num $1) MConst.empty) }
-  | MINUS INT TIMES mident 
+  | MINUS INT TIMES mident
       { Const(MConst.add (ConstName $4) (- (Num.int_of_num $2)) MConst.empty) }
   | constnum { Const (MConst.add $1 1 MConst.empty) }
 ;
 
 term:
-  | top_id_term { $1 } 
+  | top_id_term { $1 }
   | array_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
   ;

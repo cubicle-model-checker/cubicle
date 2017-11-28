@@ -9,6 +9,7 @@
 *.cmxa
 *.opt
 *.byte
+*.native
 *.output
 
 # Generated
@@ -20,7 +21,7 @@ muparser.mli
 muparser.ml
 functory.mli
 functory.ml
-smt/z3wrapper.ml
+src/smt/z3wrapper.ml
 version.ml
 .depend
 config.log
@@ -34,10 +35,17 @@ doc/ocamldoc/*.html
 doc/ocamldoc/style.css
 
 #Oasis generated
+_build/
 setup.*
 _oasis
-AUTHORS.TXT
-
+AUTHORS.txt
+INSTALL.txt
+README.txt
+myocamlbuild.ml
+_tags
+**/META
+**/*.mldylib
+**/*.mllib
 
 # Temporary files
 *~

@@ -1,0 +1,34 @@
+(*number_procs 4*)
+
+
+type t = A | B | C | D
+
+var X : int
+array T[proc] : t
+
+init(z) { T[z] = A && X = 0 }
+
+unsafe(i) { X = 0 && T[i] = B }
+
+(*
+invariant () { #{T[k] = B} = X - 1 }
+invariant () { #{T[k] = A} = - X }
+*)
+
+transition t1(i)
+requires { T[i] = A}
+{ X := X + 1;
+  T[i] := B }
+
+transition t2(i)
+requires { T[i] = B}
+{ X := X - 1;
+  T[i] := C }
+
+transition t2(i)
+requires { T[i] = B}
+{ X := X - 1;
+  T[i] := D }
+
+
+
