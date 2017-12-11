@@ -673,10 +673,22 @@ let init_to_states env procs s =
       List.rev_append sts acc
     ) [] l_inits in
   List.map (fun st -> 0, st) sts
-  
+
+(* TSO *)
+let preprocess_term = function
+  | Write (p, v, vi, _) ->
+     failwith "Enumerative.preprocess_term : write not allowed in req"
+  | Fence p -> (*Elem (Term.htrue, Constr)*)
+     failwith "Enumerative.preprocess_term : fence not allowed in req"
+  | Read (p, v, []) -> Elem (v, Glob)
+  | Read (p, v, vi) -> Access (v, vi)
+  | t -> t
+(* END TSO *)
 
 let atom_to_st_req env = function
-  | Atom.Comp (t1, op, t2) -> 
+  | Atom.Comp (t1, op, t2) ->
+    let t1 = preprocess_term t1 in
+    let t2 = preprocess_term t2 in
     HT.find env.id_terms t1, op, HT.find env.id_terms t2
   | Atom.True -> raise Not_found
   | Atom.False -> env.id_true, Eq, env.id_false
@@ -932,6 +944,9 @@ let ordered_fst_subst = function
 (****************************************************)
 (* Instantiate transitions and transform to closure *)
 (****************************************************)
+  let fresh_var = 
+    let cpt = ref 0 in
+    fun () -> incr cpt; Hstring.make ("_k"^(string_of_int !cpt))
         
 let transitions_to_func_aux procs env reduce acc 
                             { tr_info = { tr_args = tr_args; 
@@ -940,7 +955,8 @@ let transitions_to_func_aux procs env reduce acc
 		                          tr_ureq = ureqs;
 		                          tr_assigns = assigns; 
 		                          tr_upds = upds; 
-		                          tr_nondets = nondets }} =
+		                          tr_nondets = nondets;
+                                          tr_writes = writes }} =
   if List.length tr_args > List.length procs then acc
   else 
     let d = Variable.all_permutations tr_args procs in
@@ -954,6 +970,29 @@ let transitions_to_func_aux procs env reduce acc
 	  try (Variable.subst sigma p) :: acc
 	  with Not_found -> p :: acc) [] tr_args in
       let udnfs = Forward.uguard_dnf sigma procs t_args_ef ureqs in
+      (* TSO *)
+      let reqs = SAtom.filter (fun a ->
+        match a with
+        | Atom.Comp (Fence _, _, _) | Atom.Comp (_, _, Fence _) -> false
+        | _ -> true
+      ) reqs in
+      let assigns, upds = List.fold_left (fun (ass, upds) (p, v, vi, gu) ->
+        match vi, gu with
+        | [], _ -> (v, gu) :: ass, upds
+        | _, UTerm t ->
+           let c, rvj = List.fold_left (fun (c, rvj) i ->
+             let j = fresh_var () in
+             SAtom.add (Atom.Comp (Elem (i, Var), Eq, Elem (j, Var))) c, j::rvj
+           ) (SAtom.empty, []) vi in
+           let s = [ (c, t) ;
+             (SAtom.singleton Atom.True, Access (v, List.rev rvj))] in
+           ass, { up_loc = Lexing.dummy_pos, Lexing.dummy_pos;
+                  up_arr = v; up_arg = rvj; up_swts = s } :: upds
+        | _, UCase s ->
+           ass, { up_loc = Lexing.dummy_pos, Lexing.dummy_pos;
+                  up_arr = v; up_arg = vi; up_swts = s } :: upds
+      ) (assigns, upds) writes in
+      (* END TSO *)
       let st_reqs = satom_to_st_req env reqs in
       let st_udnfs = List.map (List.map (satom_to_st_req env)) udnfs in
       let st_actions = assigns_to_actions env sigma [] assigns in

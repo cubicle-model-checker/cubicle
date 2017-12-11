@@ -16,31 +16,31 @@ init (z) { Cache[z] = Invalid && Shrset[z] = False &&
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
 transition send_shared (n)
-requires { read(n, Chan[n]) = Empty && Cache[n] = Invalid }
+requires { n @ Chan[n] = Empty && Cache[n] = Invalid }
 {
-  write(n, Chan[n], Reqs); 
+  n @ Chan[n] := Reqs
 }
 
 transition recv_shared (n)
-requires { Curcmd = Empty && read(n, Chan[n]) = Reqs }
+requires { Curcmd = Empty && n @ Chan[n] = Reqs }
 { 	 
   Curcmd := Reqs; 
   Curptr := n ;
-  write(n, Chan[n], Empty)
+  n @ Chan[n] := Empty
 }
     
 transition send_exclusive (n)
-requires { read(n, Chan[n]) = Empty && Cache[n] <> Exclusive }
+requires { n @ Chan[n] = Empty && Cache[n] <> Exclusive }
 { 
-  write(n, Chan[n], Reqe)
+  n @ Chan[n] := Reqe
 }
 
 transition recv_exclusive (n)
-requires { Curcmd = Empty && read(n, Chan[n]) = Reqe }
+requires { Curcmd = Empty && n @ Chan[n] = Reqe }
 { 
   Curcmd := Reqe; 
   Curptr := n ;
-  write(n, Chan[n], Empty) 
+  n @ Chan[n] := Empty 
 }
     
 transition inv_1 (n)

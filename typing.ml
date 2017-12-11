@@ -225,7 +225,7 @@ let rec term loc ?(init=false) args = function
 	    error (MustBeOfTypeProc p) loc
 	  with Not_found -> error (UnknownName p) loc
 	end;
-      [], Smt.Type.type_bool
+      [], (Hstring.make "mbool") (*Smt.Type.type_bool*)
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 

@@ -228,8 +228,26 @@ let approx_arith a = match a with
      end
   | _ -> a
 
+(* TSO *)
+let rec is_weak = function
+  | Access (a, _) ->
+     let a = Hstring.view a in
+     if String.length a < 3 then false
+     else if a = "_fence" || a = "_sync" || a = "_ghb" then true
+     else let a = String.sub a 0 3 in a = "_e_"
+  | Arith (t, _) -> is_weak t
+  | _ -> false
+           
+let filter sa =
+  SAtom.filter (fun a ->
+    match a with
+    | Atom.Comp (t1, _, t2) -> not (is_weak t1 || is_weak t2)
+    | _ -> true
+  ) sa
+(* END TSO *)
+
 let approximations s =
-  let args, sa = Node.variables s, Node.litterals s in
+  let args, sa = Node.variables s, filter (Node.litterals s) in
   let sorts_sa, sa = isolate_sorts sa in
   (* Heuristics for generating candidates *)
   let max_procs = enumerative in

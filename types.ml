@@ -208,8 +208,8 @@ module Term = struct
 
   let equal t1 t2 = compare t1 t2 = 0
 
-  let htrue = Hstring.make "True"
-  let hfalse = Hstring.make "False"
+  let htrue = Hstring.make "@MTrue"
+  let hfalse = Hstring.make "@MFalse"
 
   module STerm = Set.Make (struct
                             type t = term

@@ -373,7 +373,10 @@ let cache = HAA.create 10000
         end
       in
 
-      let n = List.fold_left (fun nodes ss ->
+      let n = if Weakmem.HMap.cardinal to_evts <
+                   Weakmem.HMap.cardinal from_evts then nodes
+              else List.fold_left (fun nodes ss ->
+      (* let n = List.fold_left (fun nodes ss -> *)
         (* let vis_renamed = ArrayAtom.apply_subst ss vis_array in *)
         let vis_renamed = ArrayAtom.apply_subst ss vis_n_cube.Cube.array in
         let from_evts = Weakevent.subst ss from_evts in

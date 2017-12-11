@@ -1,5 +1,25 @@
 forbidden
-CS CS CS CS CS CS CS
+CS CS * * * * * ;
+CS * CS * * * * ;
+CS * * CS * * * ;
+CS * * * CS * * ;
+CS * * * * CS * ;
+CS * * * * * CS ;
+* CS CS * * * * ;
+* CS * CS * * * ;
+* CS * * CS * * ;
+* CS * * * CS * ;
+* CS * * * * CS ;
+* * CS CS * * * ;
+* * CS * CS * * ;
+* * CS * * CS * ;
+* * CS * * * CS ;
+* * * CS CS * * ;
+* * * CS * CS * ;
+* * * CS * * CS ;
+* * * * CS CS * ;
+* * * * CS * CS ;
+* * * * * CS CS
 
 data
   lock = 0 : [0:1]
