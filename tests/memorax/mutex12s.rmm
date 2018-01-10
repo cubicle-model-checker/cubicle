@@ -1,0 +1,166 @@
+
+forbidden
+L3 L3 * * * * * * * * * * ;
+L3 * L3 * * * * * * * * * ;
+L3 * * L3 * * * * * * * * ;
+L3 * * * L3 * * * * * * * ;
+L3 * * * * L3 * * * * * * ;
+L3 * * * * * L3 * * * * * ;
+L3 * * * * * * L3 * * * * ;
+L3 * * * * * * * L3 * * * ;
+L3 * * * * * * * * L3 * * ;
+L3 * * * * * * * * * L3 * ;
+L3 * * * * * * * * * * L3 ;
+* L3 L3 * * * * * * * * * ;
+* L3 * L3 * * * * * * * * ;
+* L3 * * L3 * * * * * * * ;
+* L3 * * * L3 * * * * * * ;
+* L3 * * * * L3 * * * * * ;
+* L3 * * * * * L3 * * * * ;
+* L3 * * * * * * L3 * * * ;
+* L3 * * * * * * * L3 * * ;
+* L3 * * * * * * * * L3 * ;
+* L3 * * * * * * * * * L3 ;
+* * L3 L3 * * * * * * * * ;
+* * L3 * L3 * * * * * * * ;
+* * L3 * * L3 * * * * * * ;
+* * L3 * * * L3 * * * * * ;
+* * L3 * * * * L3 * * * * ;
+* * L3 * * * * * L3 * * * ;
+* * L3 * * * * * * L3 * * ;
+* * L3 * * * * * * * L3 * ;
+* * L3 * * * * * * * * L3 ;
+* * * L3 L3 * * * * * * * ;
+* * * L3 * L3 * * * * * * ;
+* * * L3 * * L3 * * * * * ;
+* * * L3 * * * L3 * * * * ;
+* * * L3 * * * * L3 * * * ;
+* * * L3 * * * * * L3 * * ;
+* * * L3 * * * * * * L3 * ;
+* * * L3 * * * * * * * L3 ;
+* * * * L3 L3 * * * * * * ;
+* * * * L3 * L3 * * * * * ;
+* * * * L3 * * L3 * * * * ;
+* * * * L3 * * * L3 * * * ;
+* * * * L3 * * * * L3 * * ;
+* * * * L3 * * * * * L3 * ;
+* * * * L3 * * * * * * L3 ;
+* * * * * L3 L3 * * * * * ;
+* * * * * L3 * L3 * * * * ;
+* * * * * L3 * * L3 * * * ;
+* * * * * L3 * * * L3 * * ;
+* * * * * L3 * * * * L3 * ;
+* * * * * L3 * * * * * L3 ;
+* * * * * * L3 L3 * * * * ;
+* * * * * * L3 * L3 * * * ;
+* * * * * * L3 * * L3 * * ;
+* * * * * * L3 * * * L3 * ;
+* * * * * * L3 * * * * L3 ;
+* * * * * * * L3 L3 * * * ;
+* * * * * * * L3 * L3 * * ;
+* * * * * * * L3 * * L3 * ;
+* * * * * * * L3 * * * L3 ;
+* * * * * * * * L3 L3 * * ;
+* * * * * * * * L3 * L3 * ;
+* * * * * * * * L3 * * L3 ;
+* * * * * * * * * L3 L3 * ;
+* * * * * * * * * L3 * L3 ;
+* * * * * * * * * * L3 L3
+
+data
+  R1 = 0 : [0:1]
+  R2 = 0 : [0:1]
+  R3 = 0 : [0:1]
+  R4 = 0 : [0:1]
+  R5 = 0 : [0:1]
+  R6 = 0 : [0:1]
+  R7 = 0 : [0:1]
+  R8 = 0 : [0:1]
+  R9 = 0 : [0:1]
+  R10 = 0 : [0:1]
+  R11 = 0 : [0:1]
+  R12 = 0 : [0:1]
+
+process
+text
+  L1: locked write: R1 := 1;
+  L2: locked { read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R1 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R2 := 1;
+  L2: locked { read: R1 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R2 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R3 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R3 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R4 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R4 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R5 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R5 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R6 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R6 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R7 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R7 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R8 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R8 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R9 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R10 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R9 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R10 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R11 = 0; read: R12 = 0 };
+  L3: write: R10 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R11 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R12 = 0 };
+  L3: write: R11 := 0;
+      goto L1
+
+process
+text
+  L1: locked write: R12 := 1;
+  L2: locked { read: R1 = 0; read: R2 = 0; read: R3 = 0; read: R4 = 0; read: R5 = 0; read: R6 = 0; read: R7 = 0; read: R8 = 0; read: R9 = 0; read: R10 = 0; read: R11 = 0 };
+  L3: write: R12 := 0;
+      goto L1

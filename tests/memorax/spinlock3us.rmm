@@ -1,5 +1,8 @@
+
 forbidden
-CS CS CS
+CS CS * ;
+CS * CS ;
+* CS CS
 
 data
   lock = 1 : [-2:1] /* the real lower bound is -N, but the tool requires finite domains */

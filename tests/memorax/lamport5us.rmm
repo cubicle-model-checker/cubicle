@@ -1,5 +1,15 @@
+
 forbidden
-CS CS CS CS CS
+CS CS * * * ;
+CS * CS * * ;
+CS * * CS * ;
+CS * * * CS ;
+* CS CS * * ;
+* CS * CS * ;
+* CS * * CS ;
+* * CS CS * ;
+* * CS * CS ;
+* * * CS CS
 
 data
   x  = * : [0:5]

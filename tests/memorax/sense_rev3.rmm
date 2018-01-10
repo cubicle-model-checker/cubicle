@@ -1,5 +1,11 @@
+
 forbidden
-E0 E1 E1
+E0 E1 * ;
+E1 E0 * ;
+E0 * E1 ;
+E1 * E0 ;
+* E0 E1 ;
+* E1 E0
 
 data
   F1  = 0 : [0:1]

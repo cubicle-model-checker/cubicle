@@ -1,0 +1,39 @@
+forbidden
+CS CS * * * ;
+CS * CS * * ;
+CS * * CS * ;
+CS * * * CS ;
+* CS CS * * ;
+* CS * CS * ;
+* CS * * CS ;
+* * CS CS * ;
+* * CS * CS ;
+* * * CS CS
+
+data
+  lock = 0 : [0:1]
+
+process (5)
+registers
+  $r1 = * : [0:1]
+  $r2 = * : [0:1]
+  $e = * : [0:1]
+  $t = * : [0:1]
+text
+  ENT: $r1 := 1;
+  REQ: $r2 := 0;
+       locked {
+         read: $t := lock;
+	 assume: $t = $r2;
+	 write: lock := $r1;
+	 $e := 1
+       or
+         read: $t := lock;
+	 assume: $t != $r2;
+	 $r2 := $t;
+	 $e := 0
+       };
+       if $e = 0 then { goto REQ };
+  CS:  nop;
+  REL: write: lock := 0;
+       goto ENT

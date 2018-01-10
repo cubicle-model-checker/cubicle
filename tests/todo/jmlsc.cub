@@ -21,7 +21,7 @@ unsafe (z1) { Busy = False && H = C2 }
 unsafe (z1) { Busy = False && H = C1 && 0 < C }
 
 
-transition t1 (x) fence (x)
+transition t1 (x)
 requires { A[x] = Idle && Busy = False && 0 < C }
 { Busy := True; A[x] := Owner }
 

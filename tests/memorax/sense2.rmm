@@ -1,0 +1,38 @@
+/*
+ Initially, sense = 0 and count = N (number of processes)
+ L1:  local_sense := not sense;
+ L2:  count := count - 1;
+ L3 : if count = 0 then (count := N; sense := local_sense; goto L5);
+ L4 : if local_sense <> sense then goto L4;
+ L5 : goto L1
+*/
+
+forbidden
+L1 L5
+/** L4*/
+
+data
+  Sense = 0 : [0:1]
+  Count = 2 : [0:2]
+
+process (2)
+registers
+  $rLocalSense = * : [0:1]
+  $rCount      = * : [0:2]
+  $rSense      = * : [0:1]
+text
+  L1: read: $rLocalSense := Sense;
+      $rLocalSense := 1 - $rLocalSense;
+  L2: locked {
+      	 read: $rCount := Count;
+      	 $rCount := $rCount - 1;
+      	 write: Count := $rCount
+      };
+  L3: if $rCount = 0 then {
+      	 write: Count := 2;
+	 write: Sense := $rLocalSense;
+      	 goto L5
+      };
+  L4: read: $rSense := Sense;
+      if $rSense != $rLocalSense then goto L4;
+  L5: nop
