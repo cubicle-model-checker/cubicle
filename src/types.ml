@@ -20,7 +20,14 @@ open Util
 
 module HSet = Hstring.HSet
 
+type op_arith = Plus | Minus
 type op_comp = Eq | Lt | Le | Neq
+
+let print_op fmt = function
+  | Eq -> Format.fprintf fmt "="
+  | Lt -> Format.fprintf fmt "<"
+  | Le -> Format.fprintf fmt "<="
+  | Neq -> Format.fprintf fmt "<>"
 
 type sort = Glob | Constr | Var
 

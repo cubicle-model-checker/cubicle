@@ -24,10 +24,7 @@ type term =
 type atom =
   | AVar of Variable.t
   | AAtom of Atom.t
-  | AEq of term * term
-  | ANeq of term * term
-  | ALe of term * term
-  | ALt of term * term
+  | ABinop of term * op_comp * term
 
 type formula =
   | PAtom of atom
@@ -42,9 +39,7 @@ type formula =
   | PForall_other of Variable.t list * formula
   | PExists_other of Variable.t list * formula
 
-
 type term_or_formula = PF of formula | PT of term
-
 
 type cformula = formula
   

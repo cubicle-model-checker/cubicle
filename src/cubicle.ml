@@ -94,7 +94,7 @@ let _ =
      eprintf "lexical error: %s@." s;
      exit 2
 
-  | Parsing.Parse_error ->
+  | Parser.Error ->
      let loc = (lexeme_start_p lb, lexeme_end_p lb) in
      Util.report_loc err_formatter loc;
      eprintf "syntax error@.";

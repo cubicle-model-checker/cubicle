@@ -29,6 +29,16 @@
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
+  type pop = PEq | PNeq | PLe | PLt | PGe | PGt
+      
+  let pop_to_op t1 t2 = function
+    | PEq -> t1, t2, Eq
+    | PNeq -> t1, t2, Neq
+    | PLe -> t1, t2, Le
+    | PLt -> t1, t2, Lt
+    | PGe -> t2, t1, Le
+    | PGt -> t2, t1, Lt
+
 
   type t =
     | Assign of Hstring.t * pglob_update
@@ -62,6 +72,8 @@
     let mem x = S.mem x !s
   end
 
+  let coef = function Plus -> 1 | Minus -> -1
+    
   let sort s =
     if Constructors.mem s then Constr
     else if Globals.mem s then Glob
@@ -85,7 +97,7 @@
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
-%token SIZEPROC
+%token SIZEPROC HASH
 %token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
@@ -120,80 +132,74 @@
 
 system:
 size_proc
-type_defs
-symbold_decls
-decl_list
+td=type_defs
+sd=symbold_decls
+dl=decl_list
 EOF
-{ let ptype_defs = $2 in
+{ let ptype_defs = td in
   Smt.set_sum true;
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
   let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
-  let pconsts, pglobals, parrays = $3 in
-  psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
+  let pconsts, pglobals, parrays = sd in
+  psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs dl
    |> encode_psystem
 }
 ;
 
-decl_list :
-  | decl { [$1] }
-  | decl decl_list { $1 :: $2 }
+decl_list : 
+  | dl=list(decl) { dl }
 ;
 
 decl :
-  | init { PInit $1 }
-  | invariant { PInv $1 }
-  | unsafe { PUnsafe $1 }
-  | transition { PTrans $1 }
-  | function_decl { PFun  }
+  | i=init { PInit i }
+  | i=invariant { PInv i }
+  | u=unsafe { PUnsafe u }
+  | t=transition { PTrans t }
+  | function_decl { PFun }
+;
 
 symbold_decls :
   | { [], [], [] }
-  | const_decl symbold_decls
-      { let consts, vars, arrays = $2 in ($1::consts), vars, arrays }
-  | var_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
-  | array_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
+  | cd=const_decl sd=symbold_decls
+      { let consts, vars, arrays = sd in (cd::consts), vars, arrays }
+  | vd=var_decl sd=symbold_decls
+      { let consts, vars, arrays = sd in consts, (vd::vars), arrays }
+  | ad=array_decl sd=symbold_decls
+      { let consts, vars, arrays = sd in consts, vars, (ad::arrays) }
 ;
 
 function_decl :
-  | PREDICATE lident LEFTPAR lident_comma_list RIGHTPAR LEFTBR expr RIGHTBR {
-    add_fun_def $2 $4 $7
+  | PREDICATE lid=lident LEFTPAR lidl=lident_comma_list RIGHTPAR LEFTBR e=expr RIGHTBR {
+    add_fun_def lid lidl e
   }
 ;
 
 var_decl:
-  | VAR mident COLON lident {
-    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Globals.add $2;
-    loc (), $2, $4 }
+  | VAR mid=mident COLON lid=lident {
+    if Hstring.equal lid hint || Hstring.equal lid hreal then Smt.set_arith true;
+    Globals.add mid;
+    loc (), mid, lid }
 ;
 
 const_decl:
-  | CONST mident COLON lident {
-    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Consts.add $2;
-    loc (), $2, $4 }
+  | CONST mid=mident COLON lid=lident {
+    if Hstring.equal lid hint || Hstring.equal lid hreal then Smt.set_arith true;
+    Consts.add mid;
+    loc (), mid, lid }
 ;
 
 array_decl:
-  | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident {
-        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+  | ARRAY mid=mident LEFTSQ lidl=lident_comma_list_plus RIGHTSQ COLON lid=lident {
+        if not (List.for_all (fun p -> Hstring.equal p hproc) lidl) then
           raise Parsing.Parse_error;
-        if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
-	Arrays.add $2;
-	loc (), $2, ($4, $7)}
+        if Hstring.equal lid hint || Hstring.equal lid hreal then Smt.set_arith true;
+	Arrays.add mid;
+	loc (), mid, (lidl, lid)}
 ;
 
 type_defs:
-  | { [] }
-  | type_def_plus { $1 }
-;
-
-type_def_plus:
-  | type_def { [$1] }
-  | type_def type_def_plus { $1::$2 }
+  | l=type_def* { l }
 ;
 
 size_proc:
@@ -202,75 +208,83 @@ size_proc:
 ;
 
 type_def:
-  | TYPE lident { (loc (), ($2, [])) }
-  | TYPE lident EQ constructors
-      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
-  | TYPE lident EQ BAR constructors
-      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
+  | TYPE li=lident { (loc (), (li, [])) }
+  | TYPE li=lident EQ cs=constructors
+      { Smt.set_sum true; List.iter Constructors.add cs; (loc (), (li, cs)) }
+  | TYPE li=lident EQ BAR cs=constructors
+      { Smt.set_sum true; List.iter Constructors.add cs; (loc (), (li, cs)) }
 ;
 
 constructors:
-  | mident { [$1] }
-  | mident BAR constructors { $1::$3 }
+  | l=separated_nonempty_list(BAR, mident) { l }
 ;
 
 init:
-  | INIT LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | INIT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | INIT LEFTBR e=expr RIGHTBR { loc (), [], e }
+  | INIT LEFTPAR ls=lidents RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), ls, e }
 ;
 
 invariant:
-  | INVARIANT LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | INVARIANT LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
+  | INVARIANT LEFTBR e=expr RIGHTBR { loc (), [], e }
+  | INVARIANT LEFTPAR li=lidents RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), li, e }
+  | INVARIANT LEFTBR e=card_expr RIGHTBR { loc (), [], e }
 ;
 
+(* card_expr: *)
+(*   | literal EQ term { AEq ($1, $3) } *)
+(*   | literal NEQ term { ANeq ($1, $3) } *)
+(*   | literal LT term { Smt.set_arith true; ALt ($1, $3) } *)
+(*   | literal LE term { Smt.set_arith true; ALe ($1, $3) } *)
+(*   | literal GT term { Smt.set_arith true; ALt ($3, $1) } *)
+(*   | literal GE term { Smt.set_arith true; ALe ($3, $1) } *)
+
+(* ; *)
 unsafe:
-  | UNSAFE LEFTBR expr RIGHTBR { loc (), [], $3 }
-  | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
-  | UNSAFE LEFTBR card_expr RIGHTBR { loc (), [], $3 }
+  | UNSAFE LEFTBR e=expr RIGHTBR { loc (), [], e }
+  | UNSAFE LEFTPAR li=lidents RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), li, e }
 ;
 
 transition_name:
-  | lident {$1}
-  | mident {$1}
+  | li=lident { li }
+  | mi=mident { mi }
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR
-      require
-      LEFTBR let_assigns_nondets_updates RIGHTBR
-      { let lets, (assigns, nondets, upds) = $8 in
-	{   ptr_lets = lets;
-	    ptr_name = $2;
-            ptr_args = $4;
-	    ptr_reqs = $6;
-	    ptr_assigns = assigns;
-	    ptr_nondets = nondets;
-	    ptr_upds = upds;
-            ptr_loc = loc ();
-          }
-      }
+  | TRANSITION ptr_name=transition_name LEFTPAR ptr_args=lidents RIGHTPAR
+     ptr_reqs=require
+     LEFTBR upd=let_assigns_nondets_updates RIGHTBR
+     { let ptr_lets, (ptr_assigns, ptr_nondets, ptr_upds) = upd in
+       {   ptr_lets;
+	   ptr_name;
+           ptr_args;
+	   ptr_reqs;
+	   ptr_assigns;
+	   ptr_nondets;
+	   ptr_upds;
+           ptr_loc = loc ();
+       }
+     }
 ;
 
 let_assigns_nondets_updates:
-  | assigns_nondets_updates { [], $1 }
-  | LET lident EQ term IN let_assigns_nondets_updates {
-	  let lets, l = $6 in
-	  ($2, $4) :: lets, l}
+  | upd=assigns_nondets_updates { [], upd }
+  | LET li=lident EQ t=term IN llet=let_assigns_nondets_updates {
+	  let lets, l = llet in
+	  (li, t) :: lets, l}
 ;
 
 assigns_nondets_updates:
   |  { [], [], [] }
-  | assign_nondet_update
+  | a=assign_nondet_update
       {
-	match $1 with
+	match a with
 	  | Assign (x, y) -> [x, y], [], []
 	  | Nondet x -> [], [x], []
 	  | Upd x -> [], [], [x]
       }
-  | assign_nondet_update PV assigns_nondets_updates
+  | a=assign_nondet_update PV al=assigns_nondets_updates
       {
-	let assigns, nondets, upds = $3 in
-	match $1 with
+	let assigns, nondets, upds = al in
+	match a with
 	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds
 	  | Nondet x -> assigns, x :: nondets, upds
 	  | Upd x -> assigns, nondets, x :: upds
@@ -278,212 +292,207 @@ assigns_nondets_updates:
 ;
 
 assign_nondet_update:
-  | assignment { $1 }
-  | nondet { $1 }
-  | update { $1 }
+  | a=assignment { a }
+  | n=nondet { n }
+  | u=update { u }
 ;
 
 assignment:
-  | mident AFFECT term { Assign ($1, PUTerm $3) }
-  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+  | mi=mident AFFECT t=term { Assign (mi, PUTerm t) }
+  | mi=mident AFFECT CASE s=switchs { Assign (mi, PUCase s) }
 ;
 
 nondet:
-  | mident AFFECT DOT { Nondet $1 }
-  | mident AFFECT QMARK { Nondet $1 }
+  | mi=mident AFFECT nondet_end { Nondet mi }
+;
+
+%inline nondet_end:
+  | DOT      { }
+  | QMARK    { }
 ;
 
 require:
   | { PAtom (AAtom (Atom.True)) }
-  | REQUIRE LEFTBR expr RIGHTBR { $3 }
+  | REQUIRE LEFTBR e=expr RIGHTBR { e }
 ;
 
 update:
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
+  | pup_arr=mident LEFTSQ pnl=proc_name_list_plus RIGHTSQ AFFECT CASE pup_swts=switchs
       { List.iter (fun p ->
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
-        ) $3;
-        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7} }
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
+        ) pnl;
+        Upd { pup_loc = loc (); pup_arr; pup_arg = pnl; pup_swts} }
+  | id=mident LEFTSQ pnl=proc_name_list_plus RIGHTSQ AFFECT t=term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
             let j = fresh_var () in
-            let c = PAtom (AEq (TVar j, TVar i)) in
-            c :: cube, j :: rjs) ([], []) $3 in
+            let c = PAtom (ABinop (TVar j, Eq, TVar i)) in
+            c :: cube, j :: rjs) ([], []) pnl in
         let a = PAnd cube in
         let js = List.rev rjs in
-	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+	let sw = [(a, t); (PAtom (AAtom Atom.True), TTerm (Access(id, js)))] in
+	Upd { pup_loc = loc (); pup_arr = id; pup_arg = js; pup_swts = sw}  }
 ;
 
 switchs:
-  | BAR UNDERSCORE COLON term { [(PAtom (AAtom (Atom.True)), $4)] }
-  | BAR switch { [$2] }
-  | BAR switch switchs { $2::$3 }
+  | BAR UNDERSCORE COLON t=term { [(PAtom (AAtom (Atom.True)), t)] }
+  | BAR s=switch { [s] }
+  | BAR s=switch sl=switchs { s::sl }
 ;
 
 switch:
-  | expr COLON term { $1, $3 }
+  | e=expr COLON t=term { e, t }
 ;
 
 
 constnum:
-  | REAL { ConstReal $1 }
-  | INT { ConstInt $1 }
+  | r=REAL { ConstReal r }
+  | i=INT { ConstInt i }
 ;
 
 var_term:
-  | mident {
-      if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
-      else Elem ($1, sort $1) }
-  | proc_name { Elem ($1, Var) }
+  | id=mident {
+      if Consts.mem id then Const (MConst.add (ConstName id) 1 MConst.empty)
+      else Elem (id, sort id) }
+  | id=proc_name { Elem (id, Var) }
 ;
 
 top_id_term:
-  | var_term { match $1 with
-                 | Elem (v, Var) -> TVar v
-                 | _ -> TTerm $1 }
+  | id=var_term {
+    match id with
+      | Elem (v, Var) -> TVar v
+      | _ -> TTerm id }
 ;
 
-
 array_term:
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ {
-    Access ($1, $3)
+  | id=mident LEFTSQ pnl=proc_name_list_plus RIGHTSQ {
+    Access (id, pnl)
   }
 ;
 
 var_or_array_term:
-  | var_term { $1 }
-  | array_term { $1 }
+  | t=var_term { t }
+  | t=array_term { t }
+;
+
+%inline ar_binop:
+      | PLUS { Plus }
+      | MINUS { Minus }
 ;
 
 arith_term:
-  | var_or_array_term PLUS constnum
-      { Arith($1, MConst.add $3 1 MConst.empty) }
-  | var_or_array_term MINUS constnum
-      { Arith($1, MConst.add $3 (-1) MConst.empty) }
-  | var_or_array_term PLUS mident
-      { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
-  | var_or_array_term PLUS INT TIMES mident
-      { Arith($1, MConst.add (ConstName $5) (Num.int_of_num $3) MConst.empty) }
-  | var_or_array_term PLUS mident TIMES INT
-      { Arith($1, MConst.add (ConstName $3) (Num.int_of_num $5) MConst.empty) }
-  | var_or_array_term MINUS mident
-      { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
-  | var_or_array_term MINUS INT TIMES mident
-      { Arith($1, MConst.add (ConstName $5) (- (Num.int_of_num $3)) MConst.empty) }
-  | var_or_array_term MINUS mident TIMES INT
-      { Arith($1, MConst.add (ConstName $3) (- (Num.int_of_num $5)) MConst.empty) }
-  | INT TIMES mident
-      { Const(MConst.add (ConstName $3) (Num.int_of_num $1) MConst.empty) }
-  | MINUS INT TIMES mident
-      { Const(MConst.add (ConstName $4) (- (Num.int_of_num $2)) MConst.empty) }
-  | constnum { Const (MConst.add $1 1 MConst.empty) }
+  | t=var_or_array_term op=ar_binop c=constnum
+     { Arith(t, MConst.add c (coef op) MConst.empty) }
+  | t=var_or_array_term op=ar_binop id=mident
+      { Arith(t, MConst.add (ConstName id) (coef op) MConst.empty) }
+  | t=var_or_array_term op=ar_binop i=INT TIMES id=mident
+  | t=var_or_array_term op=ar_binop id=mident TIMES i=INT
+      { Arith(t, MConst.add (ConstName id) ((coef op) * Num.int_of_num i) MConst.empty) }
+  | i=INT TIMES id=mident
+      { Const(MConst.add (ConstName id) (Num.int_of_num i) MConst.empty) }
+  | MINUS i=INT TIMES id=mident
+      { Const(MConst.add (ConstName id) (- (Num.int_of_num i)) MConst.empty) }
+  | c=constnum { Const (MConst.add c 1 MConst.empty) }
 ;
 
 term:
-  | top_id_term { $1 }
-  | array_term { TTerm $1 }
-  | arith_term { Smt.set_arith true; TTerm $1 }
+  | t=top_id_term { t }
+  | t=array_term { TTerm t }
+  | t=arith_term { Smt.set_arith true; TTerm t }
   ;
 
 lident:
-  | LIDENT { Hstring.make $1 }
+  | id=LIDENT { Hstring.make id }
 ;
 
 const_proc:
-  | CONSTPROC { Hstring.make $1 }
+  | c=CONSTPROC { Hstring.make c }
 ;
 
 proc_name:
-  | lident { $1 }
-  | const_proc { $1 }
+  | id=lident { id }
+  | c=const_proc { c }
 ;
 
 proc_name_list_plus:
-  | proc_name { [$1] }
-  | proc_name COMMA proc_name_list_plus { $1::$3 }
+  | l=separated_nonempty_list(COMMA, proc_name) { l }
 ;
 
 mident:
-  | MIDENT { Hstring.make $1 }
-;
-
-lidents_plus:
-  | lident { [$1] }
-  | lident lidents_plus { $1::$2 }
+  | id=MIDENT { Hstring.make id }
 ;
 
 lidents:
-  | { [] }
-  | lidents_plus { $1 }
+  | l=list(lident){ l }
 ;
 
-lident_list_plus:
-  | lident { [$1] }
-  | lident COMMA lident_list_plus { $1::$3 }
+lident_comma_list_plus:
+  | l=separated_nonempty_list(COMMA, lident) { l }
 ;
 
 
 lident_comma_list:
-  | { [] }
-  | lident_list_plus { $1 }
+  | l=separated_list(COMMA, lident) { l }
 ;
 
 lidents_plus_distinct:
-  | lident { [$1] }
-  | lident NEQ lidents_plus_distinct { $1 :: $3 }
+  | l=separated_nonempty_list(NEQ, lident) { l }
 ;
 
+%inline cmp_binop:
+  | EQ { PEq }
+  | NEQ { PNeq }
+  | LT { Smt.set_arith true; PLt }
+  | LE { Smt.set_arith true; PLe }
+  | GT { Smt.set_arith true; PGt }
+  | GE { Smt.set_arith true; PGe }
 
-/*
-operator:
-  | EQ { Eq }
-  | NEQ { Neq }
-  | LT { Smt.set_arith true; Lt }
-  | LE { Smt.set_arith true; Le }
 ;
-*/
+
 
 literal:
   | TRUE { AAtom Atom.True }
   | FALSE { AAtom Atom.False }
-  /* | lident { AVar $1 } RR conflict with proc_name */
-  | term EQ term { AEq ($1, $3) }
+    /* | lident { AVar $1 } RR conflict with proc_name */
+  | t1=term pop=cmp_binop t2=term {
+      let t1, t2, op = pop_to_op t1 t2 pop in
+      ABinop (t1, op, t2)
+    }
+
+  /*| term EQ term { AEq ($1, $3) }
   | term NEQ term { ANeq ($1, $3) }
   | term LT term { Smt.set_arith true; ALt ($1, $3) }
   | term LE term { Smt.set_arith true; ALe ($1, $3) }
   | term GT term { Smt.set_arith true; ALt ($3, $1) }
-  | term GE term { Smt.set_arith true; ALe ($3, $1) }
+  | term GE term { Smt.set_arith true; ALe ($3, $1) }*/
 ;
 
 expr:
-  | simple_expr { $1 }
-  | NOT expr { PNot $2 }
-  | expr AND expr { PAnd [$1; $3] }
-  | expr OR expr  { POr [$1; $3] }
-  | expr IMP expr { PImp ($1, $3) }
-  | expr EQUIV expr { PEquiv ($1, $3) }
-  | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6) }
-  | FORALL lidents_plus_distinct DOT expr %prec prec_forall { PForall ($2, $4) }
-  | EXISTS lidents_plus_distinct DOT expr %prec prec_exists { PExists ($2, $4) }
-  | FORALL_OTHER lident DOT expr %prec prec_forall { PForall_other ([$2], $4) }
-  | EXISTS_OTHER lident DOT expr %prec prec_exists { PExists_other ([$2], $4) }
+  | e=simple_expr { e }
+  | NOT e=expr { PNot e }
+  | e1=expr AND e2=expr { PAnd [e1; e2] }
+  | e1=expr OR e2=expr  { POr [e1; e2] }
+  | e1=expr IMP e2=expr { PImp (e1, e2) }
+  | e1=expr EQUIV e2=expr { PEquiv (e1, e2) }
+  | IF cond=expr THEN et=expr ELSE ee=expr %prec prec_ite { PIte (cond, et, ee) }
+  | FORALL idl=lidents_plus_distinct DOT e=expr %prec prec_forall { PForall (idl, e) }
+  | EXISTS idl=lidents_plus_distinct DOT e=expr %prec prec_exists { PExists (idl, e) }
+  | FORALL_OTHER id=lident DOT e=expr %prec prec_forall { PForall_other ([id], e) }
+  | EXISTS_OTHER id=lident DOT e=expr %prec prec_exists { PExists_other ([id], e) }
 ;
 
 simple_expr:
-  | literal { PAtom $1 }
-  | LEFTPAR expr RIGHTPAR { $2 }
-  | lident LEFTPAR expr_or_term_comma_list RIGHTPAR { app_fun $1 $3 }
+  | l=literal { PAtom l }
+  | LEFTPAR e=expr RIGHTPAR { e }
+  | id=lident LEFTPAR etl=expr_or_term_comma_list RIGHTPAR { app_fun id etl }
 ;
 
-
+%inline expr_or_term:
+  | t=term { PT t }
+  | e=expr { PF e }
+;
 
 expr_or_term_comma_list:
-  | { [] }
-  | term  { [PT $1] }
-  | expr  { [PF $1] }
-  | term COMMA expr_or_term_comma_list { PT $1 :: $3 }
-  | expr COMMA expr_or_term_comma_list { PF $1 :: $3 }
+  | l = separated_list(COMMA, expr_or_term) { l }
 ;

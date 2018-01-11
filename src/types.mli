@@ -17,6 +17,16 @@
 (** Terms, atoms and conjunctions *)
 
 
+(** arithmetic operators for litterals *)
+type op_arith = Plus | Minus
+
+(** comparison operators for litterals *)
+type op_comp = 
+  | Eq  (** equality, [=] *)
+  | Lt  (** comparison less than, [<] *)
+  | Le  (** comparison less or equal, [<=] *)
+  | Neq (** disequality, [<>] *)
+
 (** {2 Terms } *)
 
 (** sort of single symbol *)
@@ -64,6 +74,7 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
+  | Card of term * op_comp * term
 (*  | NArith of cst VMap.t * cst*)
 			   
 (** Module interface for terms *)
@@ -101,13 +112,7 @@ end
 
 (** {2 Atoms } *)
 
-(** comparison operators for litterals *)
-type op_comp = 
-  | Eq  (** equality, [=] *)
-  | Lt  (** comparison less than, [<] *)
-  | Le  (** comparison less or equal, [<=] *)
-  | Neq (** disequality, [<>] *)
-
+val print_op : Format.formatter -> op_comp -> unit
 
 (** Interface for the atoms of the language *)
 module rec Atom : sig
