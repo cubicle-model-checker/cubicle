@@ -109,8 +109,7 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/z3wrapper.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
-	    common/vec.cmo common/heap.cmo common/iheap.cmo\
-	    common/bitv.cmo
+	    common/vec.cmo common/heap.cmo common/iheap.cmo
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
@@ -289,8 +288,7 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 	      common/heap.mli common/hstring.ml common/hstring.mli\
 	      common/iheap.ml common/iheap.mli common/timer.ml\
-	      common/timer.mli common/vec.ml common/vec.mli\
-	      common/bitv.ml common/bitv.mli
+	      common/timer.mli common/vec.ml common/vec.mli
 
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
