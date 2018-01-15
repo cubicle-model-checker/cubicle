@@ -1,3 +1,13 @@
+1.1.2 2018-01-15
+    IMPROVEMENTS
+    * Cubicle Emacs mode on MELPA (package-install cubicle-mode)
+
+    BUG FIXES
+    * Compatibility with OCaml 4.06.0
+    * Fix arithmetic buc in solver usage (set_cc)
+    * Configure with OCaml 4.03.0 minimum
+    * Fix issue with spurious trace replay
+
 1.1.1 2017-06-13
     NEW FEATURES
     * Option -noqe to disable elimination of constants

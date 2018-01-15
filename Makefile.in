@@ -87,7 +87,7 @@ make_functory:
 
 smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
 	@rm -f smt/z3wrapper.ml
-	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+	@echo "(*------------ Generated file, do not modify ------------*)" > smt/z3wrapper.ml
 	@if [ -z "$(Z3LIB)" ]; then \
 	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
 	else \
@@ -139,7 +139,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.1
+VERSION=1.1.2
 VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
@@ -204,7 +204,7 @@ tags:
 install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
-	@echo "Installation completed in $(BINDIR). You may want to copy (doc/)emacs/cubicle-mode.el in your emacs.d if you use Emacs."
+	@echo "Installation completed in $(BINDIR). You may want to copy emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
 install-byte:
 	mkdir -p $(BINDIR)
@@ -355,7 +355,7 @@ export/$(EXPORTDIR).tar.gz:
 	cp $(OTHERFILES) export/$(EXPORTDIR)/
 	cd doc/; cp $(DOCFILES) ../export/$(EXPORTDIR)/doc/; cd ..
 	cd examples/; cp $(EXAMPLES) ../export/$(EXPORTDIR)/examples/; cd ..
-	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
+	cp emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
 
 export: export/$(EXPORTDIR).tar.gz
