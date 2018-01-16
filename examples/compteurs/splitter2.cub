@@ -5,6 +5,8 @@
   Tentative to express the safe states by counting. Cubicle runs forever (> 15h) without conclusion.
 *)
 
+(* number_procs 4 *)
+
 type directions = None | Right | Stop | Down
 
 type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
@@ -19,26 +21,30 @@ var CountStop : int (* number of processes which have finished with Stop decisio
 var CountDown : int (* number of processes which have finished with Down decision *)
 var CountRight : int (* number of processes which have finished with Right decision *)
 
-number_procs 2
-
 init(i) { Rval[i] = None && Y = False && PC[i] = PC0 &&
 	  CountStop = 0 && CountDown = 0 && CountRight = 0 && Alive = 0 }
 
 (* ================================================================ *)
 
-invariant() { Alive < 0 }
-invariant() { CountStop < 0 }
-invariant() { CountRight < 0 }
-invariant() { CountDown < 0 }
+unsafe() { Alive < 0 }
+(* invariant() { CountStop < 0 } *)
+(* invariant() { CountRight < 0 } *)
+(* invariant() { CountDown < 0 } *)
 
 (*     /\ Cardinality ({ i \in ProcSet : rval[i] = Stop}) <= 1
        /\ Cardinality ({ i \in ProcSet : rval[i] = Down}) < NP
        /\ Cardinality ({ i \in ProcSet : rval[i] = Right}) < NP
 *)
-unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop }
-unsafe() { 1 < CountStop  }
-unsafe() { Alive = 0 && 1 < CountRight && CountDown = 0 && CountStop = 0 }
-unsafe() { Alive = 0 && 1 < CountDown && CountRight = 0 && CountStop = 0 }
+(* unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop } *)
+(* unsafe() { 1 < CountStop  } *)
+(* unsafe() { Alive = 0 && 1 < CountRight && CountDown = 0 && CountStop = 0 } *)
+(* unsafe() { Alive = 0 && 1 < CountDown && CountRight = 0 && CountStop = 0 } *)
+
+(* ================================================================ *)
+(* Unsafe from merci *)
+(* ================================================================ *)
+
+(* unsafe(i j) {PC[i] = PC2 && PC[j] = PC2 && Alive < 2} *)
 
 (* ================================================================ *)
 

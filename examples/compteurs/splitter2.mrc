@@ -142,13 +142,18 @@ def bool inv6 = forall (process i) (y = false => pc[i] != pc4)
 def bool inv7 = forall (process i) (y = false => pc[i] != pc6)
 def bool inv8 = forall (process i) (y = false => pc[i] != pc2)
 
-def bool invar2 = inv5 && inv6 && inv7 && inv8
+// def bool inv9 = forall (process i, process j) (i != j && pc[i] = pc5 => pc[j] != pc5)
+
+def bool invar2 = inv5 && inv6 && inv7 && inv8 
 
 // -----------------------------------------------------------------------------
 // Goals
 // -----------------------------------------------------------------------------
 
 // goal g0 = invariant invar2
-goal g0 = invariant (invar && pcalive1 && pcalive2)
+goal g0 = invariant (invar
+// && pcalive1 && pcalive2
+&& invar2
+)
 
 // goal main = formula (invar2 => two_stops && cptstop && safe1 && safe1)
