@@ -236,7 +236,7 @@ let assignment ?(init_variant=false) g x (_, ty) =
     match x with
       | Elem (n, Constr) -> 
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) -> 
+      | Elem (n, _) | Access (n, _) | Read (_, n, _) -> 
 	  Smt.Variant.assign_var g n;
 	  if init_variant then 
 	    Smt.Variant.assign_var n g

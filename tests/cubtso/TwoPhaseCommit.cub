@@ -1,0 +1,60 @@
+(* High-level model of two-phase commit protocol where nodes directly *)
+(* access each other's memory. *)
+
+type state = Unknown | ReadyCommit | ReadyAbort | Committed | Aborted
+type location = A1 | A2 | Done
+
+array PC[proc] : location
+weak array Astate[proc] : state
+weak var Cstate : state
+
+init (n) {
+  PC[n] = A1 &&
+  Astate[n] = Unknown &&
+  Cstate = Unknown
+}
+
+unsafe(m n) { m@Astate[m] = Committed && n@Astate[n] = Aborted }
+
+transition proposeCommit([n])
+requires { PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyCommit;
+}
+
+transition proposeAbort([n])
+requires { PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyAbort;
+}
+
+transition decideCommit([i])
+requires { Astate[i] = ReadyCommit && forall_other n. Astate[n] = ReadyCommit }
+{
+  Cstate := Committed;
+}
+
+(* The following is not syntactically legal because existential guards
+   are not allowed. Transformed to the following transition (which could
+   be combined with transition proposeAbort).
+  transition decideAbort(n)
+  requires { exists n. Astate[n] = ReadyAbort }
+  {
+    Cstate := Aborted;
+  }
+*)
+
+transition decideAbort([n])
+requires { Astate[n] = ReadyAbort }
+{
+  Cstate := Aborted;
+}
+
+transition executeDecision([n])
+requires { PC[n] = A2 && Cstate <> Unknown }
+{
+  PC[n] := Done;
+  Astate[n] := Cstate;
+}
