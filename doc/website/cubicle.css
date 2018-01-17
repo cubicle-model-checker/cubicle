@@ -396,139 +396,139 @@ a[href$='.bib'].icon {
 
 
 /* menu on top on tiny screens and mobile phones */
-@media all  and (max-width: 640px),
-       only screen and (-webkit-min-device-pixel-ratio : 1.5),
-       only screen and (min-device-pixel-ratio : 1.5) {
-    #menu-banner {
-        display:inline-block;
-        position:relative;
-        width:100%;
-        z-index:10;0
-    }
+/* @media all  and (max-width: 640px), */
+/*        only screen and (-webkit-min-device-pixel-ratio : 1.5), */
+/*        only screen and (min-device-pixel-ratio : 1.5) { */
+/*     #menu-banner { */
+/*         display:inline-block; */
+/*         position:relative; */
+/*         width:100%; */
+/*         z-index:10;0 */
+/*     } */
 
-    #menu-banner img {
-        margin-left:1.5em;
-        float:none;
-    }
+/*     #menu-banner img { */
+/*         margin-left:1.5em; */
+/*         float:none; */
+/*     } */
     
-    #banner {
-        /* display:inline-block; */
-        background:none;
-        position:absolute;
-        left:6.5em;
-        top:0;
-        /* width:100%; */
-        margin-left:0em;
-        z-index:20;
-    }
+/*     #banner { */
+/*         /\* display:inline-block; *\/ */
+/*         background:none; */
+/*         position:absolute; */
+/*         left:6.5em; */
+/*         top:0; */
+/*         /\* width:100%; *\/ */
+/*         margin-left:0em; */
+/*         z-index:20; */
+/*     } */
     
-    #menu-banner-right {
-        display:none;
-    }
+/*     #menu-banner-right { */
+/*         display:none; */
+/*     } */
 
-    #menu-right {
-        position:relative;
-        background-color:#ccc;
-        width:100%;
-        left:0;
-        top:0;
-        padding-left:0;
-    }
+/*     #menu-right { */
+/*         position:relative; */
+/*         background-color:#ccc; */
+/*         width:100%; */
+/*         left:0; */
+/*         top:0; */
+/*         padding-left:0; */
+/*     } */
     
-    #menu-right table, #menu-right h {
-        margin-left:0;
-        padding-left:3%;
-    }
+/*     #menu-right table, #menu-right h { */
+/*         margin-left:0; */
+/*         padding-left:3%; */
+/*     } */
 
-    #menu-right h {
-        width: 97%;
-        padding-left:3%;
-        border-top-style:solid;
-        border-top-width:0.15em;
-        border-top-color:#ddd;
-    }
+/*     #menu-right h { */
+/*         width: 97%; */
+/*         padding-left:3%; */
+/*         border-top-style:solid; */
+/*         border-top-width:0.15em; */
+/*         border-top-color:#ddd; */
+/*     } */
     
-    #menu-right h.release {
-        border-top-style:none;
-    }
+/*     #menu-right h.release { */
+/*         border-top-style:none; */
+/*     } */
     
-    #content {
-        width:100%;
-        margin-right:0;
-        margin-left:0;
-    }
+/*     #content { */
+/*         width:100%; */
+/*         margin-right:0; */
+/*         margin-left:0; */
+/*     } */
     
-    #content table {
-        min-width:0;
-    }
+/*     #content table { */
+/*         min-width:0; */
+/*     } */
     
-    #content table.opts {
-        margin-left: 0;
-        margin-right: 0;
-    }
+/*     #content table.opts { */
+/*         margin-left: 0; */
+/*         margin-right: 0; */
+/*     } */
         
-    #menu {
-        width:100%;
-        position:relative;
-        top:0;
-        left:0;
-        padding-left:0;
-        /* padding-left:2em; */
-    }
+/*     #menu { */
+/*         width:100%; */
+/*         position:relative; */
+/*         top:0; */
+/*         left:0; */
+/*         padding-left:0; */
+/*         /\* padding-left:2em; *\/ */
+/*     } */
 
     
-    #menu ul {
-        margin-left:0;
-        overflow:hidden;
-        list-style: none;
-        padding-left:2em;
-    }
+/*     #menu ul { */
+/*         margin-left:0; */
+/*         overflow:hidden; */
+/*         list-style: none; */
+/*         padding-left:2em; */
+/*     } */
     
-    #menu ul li {
-        float: left;
-        width: 50%;
-        /* display:inline; */
-        /* height:10em; */
-    }
+/*     #menu ul li { */
+/*         float: left; */
+/*         width: 50%; */
+/*         /\* display:inline; *\/ */
+/*         /\* height:10em; *\/ */
+/*     } */
     
-    #menu ul li ul {
-        display:none;
-    }
+/*     #menu ul li ul { */
+/*         display:none; */
+/*     } */
 
-    #menu-right ul {
-        margin-left:0;
-        overflow:hidden;
-        list-style: none;
-        padding-left:2em;
-    }
+/*     #menu-right ul { */
+/*         margin-left:0; */
+/*         overflow:hidden; */
+/*         list-style: none; */
+/*         padding-left:2em; */
+/*     } */
     
-    #menu-right ul li {
-        float: left;
-        width: 50%;
-        /* display:inline; */
-        /* height:10em; */
-    }
+/*     #menu-right ul li { */
+/*         float: left; */
+/*         width: 50%; */
+/*         /\* display:inline; *\/ */
+/*         /\* height:10em; *\/ */
+/*     } */
     
-}
+/* } */
 
 
 /* remove right margin on small screens */
-@media all  and (min-width: 640px) and (max-width: 1024px){
-    #menu-banner-right {
-        display:none;
-    }    
+/* @media all  and (min-width: 640px) and (max-width: 1024px){ */
+/*     #menu-banner-right { */
+/*         display:none; */
+/*     }     */
 
-    #menu-right {
-        background-color:#ccc;
-        width:8em;
-        left:0;
-        top:30em;
-    }
+/*     #menu-right { */
+/*         background-color:#ccc; */
+/*         width:8em; */
+/*         left:0; */
+/*         top:30em; */
+/*     } */
 
-    #content {
-        margin-right:0;
-    }
-}
+/*     #content { */
+/*         margin-right:0; */
+/*     } */
+/* } */
 
 
 /* keep content at 80em on huge screens */
