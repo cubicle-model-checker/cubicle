@@ -367,9 +367,9 @@ release: export/$(EXPORTDIR).tar.gz doc
 	cp export/$(EXPORTDIR)/examples/* export/release/examples/
 	cp doc/website/* export/release/
 	cd export/release/; \
-	  sed -i '' 's/#version#/$(VERSION)/g' index.html; \
-	  sed -i '' 's@#date#@$(DATE)@g' index.html; \
-	  sed -i '' -e '/#CHANGELOG#/{r ../../CHANGES' -e 'd' -e '}' index.html
+	  sed -i'' 's/#version#/$(VERSION)/g' index.html; \
+	  sed -i'' 's@#date#@$(DATE)@g' index.html; \
+	  sed -i'' -e '/#CHANGELOG#/{r ../../CHANGES' -e 'd' -e '}' index.html
 	mkdir -p $(WEB)/backup/$(LONGDATE)
 	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
 	cp $(WEB)/backup/$(LONGDATE)/google*.html $(WEB)
