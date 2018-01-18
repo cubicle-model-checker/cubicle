@@ -1,0 +1,39 @@
+
+forbidden
+* CS CS * ;
+* CS * CS ;
+* * CS CS
+
+process (1)
+text
+  loop:
+    either {
+      read: attn[0] = 1;
+      write: answ[0] := 1;
+      read: attn[0] = 0;
+      write: answ[0] := 0
+    or
+      read: attn[1] = 1;
+      write: answ[1] := 1;
+      read: attn[1] = 0;
+      write: answ[1] := 0
+    or
+      read: attn[2] = 1;
+      write: answ[2] := 1;
+      read: attn[2] = 0;
+      write: answ[2] := 0
+    };
+    goto loop
+
+process (3)
+data
+  attn = 0 : [0:1]
+  answ = 0 : [0:1]
+text
+  loop:
+    read: answ[my] = 0;
+    write: attn[my] := 1;
+    read: answ[my] = 1;
+  CS:
+    write: attn[my] := 0;
+    goto loop

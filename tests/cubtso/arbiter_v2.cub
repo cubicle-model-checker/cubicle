@@ -4,7 +4,7 @@ https://pdfs.semanticscholar.org/c282/cb70cd6cdf3d5e08bd39c016f54b006b6555.pdf
 *)
 
 type kind = Arb | Proc
-type loc = L1 | L2 | L3 | CS | End
+type loc = L1 | L2 | L3 | L4 | CS
 
 (* Local variables *)
 array Kind[proc] : kind
@@ -33,10 +33,13 @@ transition t_arb_L2_L3 ([p] q)
 requires { Kind[p] = Arb && PC[p] = L2 && Pr[p] = q }
 { PC[p] := L3; Answ[q] := True }
 
-transition t_arb_L3_L1 ([p] q)
+transition t_arb_L3_L4 ([p] q)
 requires { Kind[p] = Arb && PC[p] = L3 && Pr[p] = q && Attn[q] = False }
-{ PC[p] := L1; Answ[q] := True }
+{ PC[p] := L4 }
 
+transition t_arb_L4_L1 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L4 && Pr[p] = q }
+{ PC[p] := L1; Answ[q] := False }
 
 
 (* Processes (N) *)
@@ -56,5 +59,4 @@ requires { Kind[p] = Proc && PC[p] = L3 && Answ[p] = True }
 transition t_proc_CS_L1 ([p])
 requires { Kind[p] = Proc && PC[p] = CS }
 { PC[p] := L1; Attn[p] := False }
-
 

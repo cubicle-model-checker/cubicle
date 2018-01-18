@@ -1,0 +1,127 @@
+
+(*
+https://pdfs.semanticscholar.org/c282/cb70cd6cdf3d5e08bd39c016f54b006b6555.pdf
+*)
+
+(*
+SC / No BRAB : 4273 N / 296808 FP / 266 D / 157649 SC / 5P / 2m03
+SC / BRAB 3 : 1238 N / 95075 FP / 36 D / 174432 SC / 4P / 38s
+
+(1)  Kind[#1] = Arb && Answ[#1] = @MTrue
+(2)  PC[#1] = L3 && Chng[#1] = @MFalse
+(3)  PC[#1] = L9 && Attn[#1] = @MTrue
+(4)  PC[#1] = L9 && Chng[#1] = @MFalse
+(5)  PC[#1] = L8 && Chng[#1] = @MFalse
+(6)  PC[#1] = CS && Attn[#1] = @MFalse
+(7)  PC[#1] = L4 && Chng[#1] = @MFalse
+(8)  Kind[#1] = Arb && Attn[#1] = @MTrue
+(9)  PC[#1] = CS && Answ[#2] = @MTrue
+(10)  Answ[#1] = @MTrue && Answ[#2] = @MTrue
+*)
+
+type kind = Arb | Proc
+type loc = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8 | L9 | L10 | CS
+
+(* Local variables *)
+array Kind[proc] : kind
+array PC[proc] : loc
+array Pr[proc] : proc
+
+(* Global variables *)
+ array Attn[proc] : bool
+ array Answ[proc] : bool
+ array Chng[proc] : bool
+
+
+invariant (p1 p2) { Kind[p1] = Arb && Kind[p2] = Arb }
+
+init (p) { PC[p] = L1 && Attn[p] = False && Answ[p] = False && Chng[p] = False }
+
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
+
+(* Arbitrer (1) *)
+
+transition t_arb_L1_L2 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L1 && Attn[q] = True }
+{ PC[p] := L2; Pr[p] := q }
+
+transition t_arb_L2_L3 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L2 }
+{ PC[p] := L3; Chng[p] := True }
+
+transition t_arb_L3_L4 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L3 && Pr[p] = q }
+{ PC[p] := L4; Answ[q] := True }
+
+transition t_arb_L4_L5 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L4 }
+{ PC[p] := L5; Chng[p] := False }
+
+transition t_arb_L5_L6 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L5 && Pr[p] = q && Chng[q] = False }
+{ PC[p] := L6 }
+
+transition t_arb_L6_L7 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L6 && Pr[p] = q && Attn[q] = False }
+{ PC[p] := L7 }
+
+transition t_arb_L7_L8 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L7 }
+{ PC[p] := L8; Chng[p] := True }
+
+transition t_arb_L8_L9 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L8 && Pr[p] = q }
+{ PC[p] := L9; Answ[q] := False }
+
+transition t_arb_L9_L10 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L9 }
+{ PC[p] := L10; Chng[p] := False }
+
+transition t_arb_L10_L1 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L10 && Pr[p] = q && Chng[q] = False }
+{ PC[p] := L1 }
+
+
+(* Processes (N) *)
+
+transition t_proc_L1_L2 ([p])
+requires { Kind[p] = Proc && PC[p] = L1 && Answ[p] = False }
+{ PC[p] := L2 }
+
+transition t_proc_L2_L3 ([p])
+requires { Kind[p] = Proc && PC[p] = L2 }
+{ PC[p] := L3; Chng[p] := True }
+
+transition t_proc_L3_L4 ([p])
+requires { Kind[p] = Proc && PC[p] = L3 }
+{ PC[p] := L4; Attn[p] := True }
+
+transition t_proc_L4_L5 ([p])
+requires { Kind[p] = Proc && PC[p] = L4 }
+{ PC[p] := L5; Chng[p] := False }
+
+transition t_proc_L5_L6 ([p] q)
+requires { Kind[p] = Proc && PC[p] = L5 && Kind[q] = Arb && Chng[q] = False }
+{ PC[p] := L6 }
+
+transition t_proc_L6_CS ([p])
+requires { Kind[p] = Proc && PC[p] = L6 && Answ[p] = True }
+{ PC[p] := CS }
+
+transition t_proc_CS_L7 ([p] q)
+requires { Kind[p] = Proc && PC[p] = CS && Kind[q] = Arb && Chng[q] = False }
+{ PC[p] := L7 }
+
+transition t_proc_L7_L8 ([p])
+requires { Kind[p] = Proc && PC[p] = L7 }
+{ PC[p] := L8; Chng[p] := True }
+
+transition t_proc_L8_L9 ([p])
+requires { Kind[p] = Proc && PC[p] = L8 }
+{ PC[p] := L9; Attn[p] := False }
+
+transition t_proc_L9_L1 ([p])
+requires { Kind[p] = Proc && PC[p] = L9 }
+{ PC[p] := L1; Chng[p] := False }
+

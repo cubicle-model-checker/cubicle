@@ -1,0 +1,48 @@
+
+forbidden
+* CS CS * * ;
+* CS * CS * ;
+* CS * * CS ;
+* * CS CS * ;
+* * CS * CS ;
+* * * CS CS
+
+data
+  leaving = 0 : [0:1]
+
+process (1)
+text
+  loop:
+    either {
+      read: attn[0] = 1;
+      write: attn[0] := 0;
+      read: leaving = 1;
+      write: leaving := 0
+    or
+      read: attn[1] = 1;
+      write: attn[1] := 1;
+      read: leaving = 1;
+      write: leaving := 0
+    or
+      read: attn[2] = 1;
+      write: attn[2] := 1;
+      read: leaving = 1;
+      write: leaving := 0
+    or
+      read: attn[3] = 1;
+      write: attn[3] := 1;
+      read: leaving = 1;
+      write: leaving := 0
+    };
+    goto loop
+
+process (4)
+data
+  attn = 0 : [0:1]
+text
+  loop:
+    write: attn[my] := 1;
+    read: attn[my] = 0;
+  CS:
+    write: leaving := 1;
+    goto loop

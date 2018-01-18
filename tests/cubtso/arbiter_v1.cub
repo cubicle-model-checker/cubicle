@@ -1,0 +1,58 @@
+
+(*
+https://pdfs.semanticscholar.org/c282/cb70cd6cdf3d5e08bd39c016f54b006b6555.pdf
+*)
+
+type kind = Arb | Proc
+type loc = L1 | L2 | L3 | L4 | CS
+
+(* Local variables *)
+array Kind[proc] : kind
+array PC[proc] : loc
+array Pr[proc] : proc
+
+(* Global variables *)
+weak array Attn[proc] : bool
+weak var Leaving : bool
+
+
+invariant (p1 p2) { Kind[p1] = Arb && Kind[p2] = Arb }
+
+init (p) { PC[p] = L1 && Attn[p] = False && Leaving = False }
+
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
+
+(* Arbitrer (1) *)
+
+transition t_arb_L1_L2 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L1 && Attn[q] = True }
+{ PC[p] := L2; Pr[p] := q }
+
+transition t_arb_L2_L3 ([p] q)
+requires { Kind[p] = Arb && PC[p] = L2 && Pr[p] = q }
+{ PC[p] := L3; Attn[q] := False }
+
+transition t_arb_L3_L4 ([p])
+requires { Kind[p] = Arb && PC[p] = L3 && Leaving = True }
+{ PC[p] := L4 }
+
+transition t_arb_L4_L1 ([p])
+requires { Kind[p] = Arb && PC[p] = L4 }
+{ PC[p] := L1; Leaving := False }
+
+
+(* Processes (N) *)
+
+transition t_proc_L1_L2 ([p])
+requires { Kind[p] = Proc && PC[p] = L1 }
+{ PC[p] := L2; Attn[p] := True }
+
+transition t_proc_L2_CS ([p])
+requires { Kind[p] = Proc && PC[p] = L2 && Attn[p] = False }
+{ PC[p] := CS }
+
+transition t_proc_CS_L1 ([p])
+requires { Kind[p] = Proc && PC[p] = CS }
+{ PC[p] := L1; Leaving := True }
+
