@@ -10,6 +10,7 @@ init(z) { T[z] = A && X = 0 }
 
 unsafe(i) { X = 0 && T[i] = B }
 
+invariant () { X < 0 }
 (*
 invariant () { #{T[k] = B} = X - 1 }
 invariant () { #{T[k] = A} = - X }
@@ -25,10 +26,7 @@ requires { T[i] = B}
 { X := X - 1;
   T[i] := C }
 
-transition t2(i)
-requires { T[i] = B}
-{ X := X - 1;
-  T[i] := D }
-
-
-
+(* transition t2(i) *)
+(* requires { T[i] = B} *)
+(* { X := X - 1; *)
+(*   T[i] := D } *)

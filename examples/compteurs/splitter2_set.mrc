@@ -18,6 +18,14 @@ var int alive = 0
 var int countstop = 0
 var int countdown = 0
 var int countright = 0
+u
+// -----------------------------------------------------------------------------
+// Sets
+// -----------------------------------------------------------------------------
+
+module S = Set<type process>
+
+var S.t salive = S.empty
 
 // -----------------------------------------------------------------------------
 // Transitions
@@ -29,6 +37,7 @@ require ( pc[i] = pc0 )
         alive := alive + 1;
         x := i;
         pc[i] := pc1;
+        salive := S.add (i, salive);
 }
 
 transition spl1a(process i)
@@ -52,6 +61,7 @@ require ( pc[i] = pc2 )
         alive := alive - 1;
         rval[i] := right;
         pc[i] := pc7;
+        salive := S.remove (i, salive);
 }
 
 transition spl3(process i)
@@ -82,6 +92,7 @@ require ( pc[i] = pc5 )
         alive := alive - 1;
         rval[i] := stop;
         pc[i] := pc8;
+        salive := S.remove (i, salive);
 }
 
 transition spldown(process i)
@@ -91,6 +102,7 @@ require ( pc[i] = pc6 )
         alive := alive - 1;
         rval[i] := down;
         pc[i] := pc9;
+        salive := S.remove (i, salive);
 }
 
 // -----------------------------------------------------------------------------
@@ -151,8 +163,7 @@ def bool invar2 = inv5 && inv6 && inv7 && inv8
 // -----------------------------------------------------------------------------
 
 // goal g0 = invariant invar2
-goal g0 = invariant (
-invar
+goal g0 = invariant (invar
 // && pcalive1 && pcalive2
 && invar2
 )
