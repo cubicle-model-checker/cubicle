@@ -1,0 +1,64 @@
+# Memory layout:
+# 01 — Attn[1]
+# 02 — Attn[2]
+# 11 — Answ[1]
+# 12 — Anws[2]
+
+thread t0
+initial l10
+final any
+transition	l10	l11	read	Attn1	   01
+transition	l11	l20	check	== Attn1   0
+transition	l11	l12	check	!= Attn1   0
+transition	l12	l13	write	1	   11
+transition	l13	l14	read	Attn1	   01
+transition	l14	l13	check	!= Attn1   0
+transition	l14	l15	check	== Attn1   0
+transition	l15	l20	write	0	   11
+transition	l20	l21	read	Attn2	   02
+transition	l21	l10	check	== Attn2   0
+transition	l21	l22	check	!= Attn2   0
+transition	l22	l23	write	1	   12
+transition	l23	l24	read	Attn2	   02
+transition	l24	l23	check	!= Attn2   0
+transition	l24	l25	check	== Attn2   0
+transition	l25	l10	write	0	   12
+transition	l10	any	noop
+transition	l11	any	noop
+transition	l12	any	noop
+transition	l13	any	noop
+transition	l14	any	noop
+transition	l15	any	noop
+transition	l20	any	noop
+transition	l21	any	noop
+transition	l22	any	noop
+transition	l23	any	noop
+transition	l24	any	noop
+transition	l25	any	noop
+end
+
+thread t1
+initial l1
+final cs
+transition	l1	l2	read	Answ1	   11
+transition	l2	l1	check	!= Answ1   0
+transition	l2	l3	check	== Answ1   0
+transition	l3	l4	write	1	   01
+transition	l4	l5	read	Answ1	   11
+transition	l5	l4	check	== Answ1   0
+transition	l5	cs	check	!= Answ1   0
+transition	cs	l1	write	0	   01
+end
+
+thread t2
+initial l1
+final cs
+transition	l1	l2	read	Answ2	   12
+transition	l2	l1	check	!= Answ2   0
+transition	l2	l3	check	== Answ2   0
+transition	l3	l4	write	1	   02
+transition	l4	l5	read	Answ2	   12
+transition	l5	l4	check	== Answ2   0
+transition	l5	cs	check	!= Answ2   0
+transition	cs	l1	write	0	   02
+end

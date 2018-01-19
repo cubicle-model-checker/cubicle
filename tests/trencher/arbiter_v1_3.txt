@@ -1,0 +1,82 @@
+# Memory layout:
+# 0 — Leaving
+# 1 — Attn[1]
+# 2 — Attn[2]
+# 3 — Attn[3]
+
+thread t0
+initial l10
+final any
+transition	l10	l11	read	Attn1	   1
+transition	l11	l20	check	== Attn1   0
+transition	l11	l12	check	!= Attn1   0
+transition	l12	l13	write	0	   1
+transition	l13	l14	read	Leaving	   0
+transition	l14	l13	check	== Leaving 0
+transition	l14	l15	check	!= Leaving 0
+transition	l15	l20	write	0	   0
+transition	l20	l21	read	Attn2	   2
+transition	l21	l30	check	== Attn2   0
+transition	l21	l22	check	!= Attn2   0
+transition	l22	l23	write	0	   2
+transition	l23	l24	read	Leaving	   0
+transition	l24	l23	check	== Leaving 0
+transition	l24	l25	check	!= Leaving 0
+transition	l25	l30	write	0	   0
+transition	l30	l31	read	Attn3	   3
+transition	l31	l10	check	== Attn3   0
+transition	l31	l32	check	!= Attn3   0
+transition	l32	l33	write	0	   3
+transition	l33	l34	read	Leaving	   0
+transition	l34	l33	check	== Leaving 0
+transition	l34	l35	check	!= Leaving 0
+transition	l35	l10	write	0	   0
+transition	l10	any	noop
+transition	l11	any	noop
+transition	l12	any	noop
+transition	l13	any	noop
+transition	l14	any	noop
+transition	l15	any	noop
+transition	l20	any	noop
+transition	l21	any	noop
+transition	l22	any	noop
+transition	l23	any	noop
+transition	l24	any	noop
+transition	l25	any	noop
+transition	l30	any	noop
+transition	l31	any	noop
+transition	l32	any	noop
+transition	l33	any	noop
+transition	l34	any	noop
+transition	l35	any	noop
+end
+
+thread t1
+initial l1
+final cs
+transition	l1	l2	write	1	   1
+transition	l2	l3	read	Attn1	   1
+transition	l3	l2	check	!= Attn1   0
+transition	l3	cs	check	== Attn1   0
+transition	cs	l1	write	1	   0
+end
+
+thread t2
+initial l1
+final cs
+transition	l1	l2	write	1	   2
+transition	l2	l3	read	Attn2	   2
+transition	l3	l2	check	!= Attn2   0
+transition	l3	cs	check	== Attn2   0
+transition	cs	l1	write	1	   0
+end
+
+thread t3
+initial l1
+final cs
+transition	l1	l2	write	1	   3
+transition	l2	l3	read	Attn3	   3
+transition	l3	l2	check	!= Attn3   0
+transition	l3	cs	check	== Attn3   0
+transition	cs	l1	write	1	   0
+end
