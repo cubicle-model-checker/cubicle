@@ -41,6 +41,7 @@ type error =
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
   | WeakInvalidInSC
+  | NonArrayMustBeWeak
   | OpInvalidInSC
   | CantUseReadInInit
   | CantUseFenceInInit
@@ -103,6 +104,8 @@ let report fmt = function
       fprintf fmt "unknown symbol %a" Hstring.print s
   | WeakInvalidInSC ->
       fprintf fmt "weak is invalid in SC"
+  | NonArrayMustBeWeak ->
+      fprintf fmt "non-array variables must be weak under weak models"
   | OpInvalidInSC ->
       fprintf fmt "operation is invalid in SC"
   | CantUseReadInInit ->
@@ -402,16 +405,22 @@ let init_global_env s =
     (fun (loc, n, t, weak) -> 
        declare_symbol loc n [] t;
        if weak then begin
-         if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := (n, [], t) :: !weak_vars;
+         (* if Options.model = Options.SC then error (WeakInvalidInSC) loc; *)
+	 (* weak_vars := (n, [], t) :: !weak_vars; *)
+         if Options.model <> Options.SC then
+	   weak_vars := (n, [], t) :: !weak_vars;
+       end else begin
+         if Options.model <> Options.SC then error (NonArrayMustBeWeak) loc;
        end;
        l := (n, t)::!l) s.globals;
   List.iter 
     (fun (loc, n, (args, ret), weak) -> 
        declare_symbol loc n args ret;
        if weak then begin
-         if Options.model = Options.SC then error (WeakInvalidInSC) loc;
-	 weak_vars := (n, args, ret) :: !weak_vars;
+         (* if Options.model = Options.SC then error (WeakInvalidInSC) loc; *)
+	 (* weak_vars := (n, args, ret) :: !weak_vars; *)
+         if Options.model <> Options.SC then
+	   weak_vars := (n, args, ret) :: !weak_vars;
        end;
        l := (n, ret)::!l) s.arrays;
   if Options.model <> Options.SC then Weakmem.init_weak_env !weak_vars;

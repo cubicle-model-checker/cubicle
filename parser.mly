@@ -179,7 +179,7 @@ weak_opt:
 var_decl:
   | weak_opt VAR mident COLON lident {
     if Hstring.equal $5 hint || Hstring.equal $5 hreal then Smt.set_arith true;
-    Globals.add $3; if $1 then Weaks.add $3;
+    Globals.add $3; if $1 && Options.model <> Options.SC then Weaks.add $3;
     loc (), $3, $5, $1 }
 ;
 
@@ -195,7 +195,7 @@ array_decl:
         if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
 	  raise Parsing.Parse_error;
 	if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
-	Arrays.add $3; if $1 then Weaks.add $3;
+	Arrays.add $3; if $1 && Options.model <> Options.SC then Weaks.add $3;
 	loc (), $3, ($5, $8), $1 }
 ;
 
