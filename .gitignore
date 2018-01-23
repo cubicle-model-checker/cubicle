@@ -37,3 +37,6 @@ doc/ocamldoc/style.css
 *~
 \#*\#
 .\#*
+
+# OS Specific
+.DS_Store

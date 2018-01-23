@@ -1,0 +1,108 @@
+#!/bin/bash
+
+DISTDIR="./dist"
+
+CUBTSO="peterson_2.cub         peterson_2_us.cub
+        dekker_2.cub           dekker_2_us.cub
+        mutex_N.cub            mutex_N_us.cub
+        lamport_N.cub          lamport_N_us.cub
+        spinlock_N.cub         spinlock_N_us.cub
+        sense_rev_N.cub
+	arbiter_v1_N.cub
+        arbiter_v2_N.cub
+        two_phase_N.cub
+        moesi_N.cub
+        msi_N.cub
+        ticket_spin_lock_N.cub"
+
+CBMC="peterson2s.c             peterson2us.c
+      dekker2s.c               dekker2us.c
+      mutex*s.c                mutex*us.c
+      lamport*s.c              lamport*us.c
+      spinlock*.c
+      sense_rev*.c
+      arbiter_v1_*.c
+      arbiter_v2_*.c
+      two_phase_*.c
+      moesi*.c
+      msi*.c"
+
+MEMORAX="peterson2s.rmm        peterson2us.rmm
+         dekker2s.rmm          dekker2us.rmm
+         mutex*s.rmm           mutex*us.rmm
+         lamport*s.rmm         lamport*us.rmm
+         spinlock*s.rmm        spinlock*us.rmm
+         sense_rev*.rmm
+         arbiter_v1_*.rmm
+         arbiter_v2_*.rmm
+         two_phase_*.rmm
+         moesi*.rmm
+         msi*.rmm"
+
+TRENCHER="peterson2s.txt       peterson2us.txt
+          dekker2s.txt         dekker2us.txt
+          mutex*s.txt          mutex*us.txt
+          lamport*s.txt        lamport*us.txt
+          spinlock*s.txt
+          sense_rev*.txt
+          arbiter_v1_*.txt
+          arbiter_v2_*.txt
+          moesi*.txt
+          msi*.txt"
+
+LITMUS="*.cub"
+
+
+BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+cd $BASEDIR
+
+if [ -e $DISTDIR ]; then
+   echo "Directory $DISTDIR already exists. Exiting."
+   exit
+fi
+
+echo "Building Cubicle-W..."
+make
+
+if [ $? -ne 0 ]; then
+   echo "Build failed. Exiting."
+   exit
+fi
+
+echo "Creating directories..."
+mkdir $DISTDIR
+mkdir $DISTDIR/cubiclew
+mkdir $DISTDIR/cubiclew/examples
+mkdir $DISTDIR/cubiclew/litmus
+mkdir $DISTDIR/examples
+mkdir $DISTDIR/examples/cubicle
+mkdir $DISTDIR/examples/cbmc
+mkdir $DISTDIR/examples/memorax
+mkdir $DISTDIR/examples/trencher
+mkdir $DISTDIR/litmus
+
+echo "Copying files (cubiclew)..."
+cp cubicle.opt $DISTDIR/cubiclew/cubiclew
+for f in $CUBTSO;   do cp `ls tests/cubtso/$f`   $DISTDIR/cubiclew/examples; done
+for f in $LITMUS;   do cp `ls tests/paper/$f`    $DISTDIR/cubiclew/litmus; done
+
+echo "Copying files (examples)..."
+for f in $CUBTSO;   do cp `ls tests/cubtso/$f`   $DISTDIR/examples/cubicle; done
+for f in $CBMC;     do cp `ls tests/cbmc/$f`     $DISTDIR/examples/cbmc; done
+for f in $MEMORAX;  do cp `ls tests/memorax/$f`  $DISTDIR/examples/memorax; done
+for f in $TRENCHER; do cp `ls tests/trencher/$f` $DISTDIR/examples/trencher; done
+
+echo "Copying files (litmus)..."
+for f in $LITMUS;   do cp `ls tests/paper/$f`    $DISTDIR/litmus; done
+
+echo "Creating archive (cubiclew)..."
+tar -czf $DISTDIR/cubiclew.tar.gz --exclude '.DS_Store' -C $DISTDIR cubiclew
+
+echo "Creating archive (examples)..."
+tar -czf $DISTDIR/examples.tar.gz --exclude '.DS_Store' -C $DISTDIR examples
+
+echo "Creating archive (litmus)..."
+tar -czf $DISTDIR/litmus.tar.gz --exclude '.DS_Store' -C $DISTDIR litmus
+
+echo "Done."

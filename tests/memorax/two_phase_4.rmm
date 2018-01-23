@@ -1,0 +1,66 @@
+
+forbidden
+
+* C A * * ;
+* C * A * ;
+* C * * A ;
+* * C A * ;
+* * C * A ;
+* * * C A ;
+* A C * * ;
+* A * C * ;
+* A * * C ;
+* * A C * ;
+* * A * C ;
+* * * A C
+
+/* States :
+    0 = Unknown
+    1 = ReadyCommit
+    2 = ReadyAbort
+    3 = Committed
+    4 = Aborted     */
+
+data
+  Cstate = 0 : [0:4]
+
+process (1)
+text
+  loop:
+    either {
+      read: Astate[0] = 1;
+      read: Astate[1] = 1;
+      read: Astate[2] = 1;
+      read: Astate[3] = 1;
+      write: Cstate := 3
+    or
+      either {
+           read: Astate[0] = 2
+        or read: Astate[1] = 2
+        or read: Astate[2] = 2
+        or read: Astate[3] = 2
+      };
+      write: Cstate := 4
+    };
+    goto loop
+
+process (4)
+registers
+  $R = 0 : [0:4]
+data
+  Astate = 0 : [0:4]
+text
+    either {
+         write: Astate[my] := 1
+      or write: Astate[my] := 2
+    };
+    while $R = 0 do
+      read: $R := Cstate;
+    write: Astate[my] := $R;
+    either {
+      read: Astate[my] = 3;
+ C:   nop
+    or
+      read: Astate[my] = 4;
+ A:   nop
+    }
