@@ -53,6 +53,14 @@ TRENCHER="peterson2s.txt       peterson2us.txt
 LITMUS="*.cub"
 
 
+OS=`uname -s`
+HW=`uname -m`
+SFX=-unk
+
+if [ $OS = 'Darwin' ]; then SFX='-osx'
+elif [ $OS = 'Linux' ] && [[ $HW =~ ^i[2-7]86$ ]]; then SFX='-linux32'
+elif [ $OS = 'Linux' ] && [ $HW = 'x86_64' ]; then SFX='-linux64' ; fi
+
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 cd $BASEDIR
@@ -99,7 +107,7 @@ for f in $LITMUS;   do cp `ls tests/paper/$f`    $DISTDIR/litmus; done
 pushd $DISTDIR > /dev/null
 
 echo "Creating archive (cubiclew)..."
-tar -czf cubiclew.tar.gz cubiclew
+tar -czf cubiclew${SFX}.tar.gz cubiclew
 
 echo "Creating archive (examples)..."
 zip -rq examples.zip examples
