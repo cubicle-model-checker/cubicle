@@ -96,13 +96,17 @@ for f in $TRENCHER; do cp `ls tests/trencher/$f` $DISTDIR/examples/trencher; don
 echo "Copying files (litmus)..."
 for f in $LITMUS;   do cp `ls tests/paper/$f`    $DISTDIR/litmus; done
 
+pushd $DISTDIR > /dev/null
+
 echo "Creating archive (cubiclew)..."
-tar -czf $DISTDIR/cubiclew.tar.gz --exclude '.DS_Store' -C $DISTDIR cubiclew
+tar -czf cubiclew.tar.gz cubiclew
 
 echo "Creating archive (examples)..."
-tar -czf $DISTDIR/examples.tar.gz --exclude '.DS_Store' -C $DISTDIR examples
+zip -rq examples.zip examples
 
 echo "Creating archive (litmus)..."
-tar -czf $DISTDIR/litmus.tar.gz --exclude '.DS_Store' -C $DISTDIR litmus
+zip -rq litmus.zip litmus
+
+popd > /dev/null
 
 echo "Done."
