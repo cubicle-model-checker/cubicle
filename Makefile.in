@@ -61,7 +61,7 @@ BIBOPT=$(BIBBYTE:.cma=.cmxa)
 # main target
 #############
 
-NAME = cubicle
+NAME = cubiclew
 BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
