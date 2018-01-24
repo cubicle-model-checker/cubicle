@@ -87,7 +87,7 @@ make_functory:
 
 smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
 	@rm -f smt/z3wrapper.ml
-	@echo "(*------------ Generated file, do not modify ------------*)\n" > smt/z3wrapper.ml
+	@echo "(*------------ Generated file, do not modify ------------*)" > smt/z3wrapper.ml
 	@if [ -z "$(Z3LIB)" ]; then \
 	cat smt/z3wrapper_fake.ml >> smt/z3wrapper.ml;\
 	else \
@@ -110,8 +110,7 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/z3wrapper.cmo smt/smt.cmo
 
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
-	    common/vec.cmo common/heap.cmo common/iheap.cmo\
-	    common/bitv.cmo
+	    common/vec.cmo common/heap.cmo common/iheap.cmo
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) util.cmo $(SMTCMO) \
@@ -143,7 +142,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.1
+VERSION=1.1.2
 VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
@@ -208,7 +207,7 @@ tags:
 install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
-	@echo "Installation completed in $(BINDIR). You may want to copy (doc/)emacs/cubicle-mode.el in your emacs.d if you use Emacs."
+	@echo "Installation completed in $(BINDIR). You may want to copy emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
 install-byte:
 	mkdir -p $(BINDIR)
@@ -292,8 +291,7 @@ SMTFILES = smt/arith.ml smt/arith.mli smt/cc.ml smt/cc.mli smt/combine.ml\
 COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 	      common/heap.mli common/hstring.ml common/hstring.mli\
 	      common/iheap.ml common/iheap.mli common/timer.ml\
-	      common/timer.mli common/vec.ml common/vec.mli\
-	      common/bitv.ml common/bitv.mli
+	      common/timer.mli common/vec.ml common/vec.mli
 
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
@@ -360,7 +358,7 @@ export/$(EXPORTDIR).tar.gz:
 	cp $(OTHERFILES) export/$(EXPORTDIR)/
 	cd doc/; cp $(DOCFILES) ../export/$(EXPORTDIR)/doc/; cd ..
 	cd examples/; cp $(EXAMPLES) ../export/$(EXPORTDIR)/examples/; cd ..
-	cp doc/emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
+	cp emacs/cubicle-mode.el export/$(EXPORTDIR)/emacs/
 	cd export ; tar cf $(TAR) $(EXPORTDIR) ; gzip -f --best $(TAR)
 
 export: export/$(EXPORTDIR).tar.gz
@@ -372,9 +370,9 @@ release: export/$(EXPORTDIR).tar.gz doc
 	cp export/$(EXPORTDIR)/examples/* export/release/examples/
 	cp doc/website/* export/release/
 	cd export/release/; \
-	  sed -i '' 's/#version#/$(VERSION)/g' index.html; \
-	  sed -i '' 's@#date#@$(DATE)@g' index.html; \
-	  sed -i '' -e '/#CHANGELOG#/{r ../../CHANGES' -e 'd' -e '}' index.html
+	  sed -i'' 's/#version#/$(VERSION)/g' index.html; \
+	  sed -i'' 's@#date#@$(DATE)@g' index.html; \
+	  sed -i'' -e '/#CHANGELOG#/{r ../../CHANGES' -e 'd' -e '}' index.html
 	mkdir -p $(WEB)/backup/$(LONGDATE)
 	mv $(WEB)/*.* $(WEB)/backup/$(LONGDATE)
 	cp $(WEB)/backup/$(LONGDATE)/google*.html $(WEB)

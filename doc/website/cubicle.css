@@ -7,7 +7,7 @@ body{
     color: black;
     background: #DDDDDD; /* #DDDAEC; */
     font-family: 'Roboto', sans-serif, Verdana, Arial, Helvetica; 
-    font-size: 0.86em;
+    /* font-size: 0.86em; */
     height: 100%;
 }
 html {
@@ -396,9 +396,7 @@ a[href$='.bib'].icon {
 
 
 /* menu on top on tiny screens and mobile phones */
-@media all  and (max-width: 640px),
-       only screen and (-webkit-min-device-pixel-ratio : 1.5),
-       only screen and (min-device-pixel-ratio : 1.5) {
+@media all  and (max-width: 640px) {
     #menu-banner {
         display:inline-block;
         position:relative;
@@ -516,7 +514,7 @@ a[href$='.bib'].icon {
 @media all  and (min-width: 640px) and (max-width: 1024px){
     #menu-banner-right {
         display:none;
-    }    
+    }
 
     #menu-right {
         background-color:#ccc;
