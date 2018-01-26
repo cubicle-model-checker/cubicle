@@ -9,15 +9,18 @@ enum state Cstate = Unknown;
 
 void * thr0(void *p)
 {
-    if (Astate1 == ReadyCommit && Astate2 == ReadyCommit &&
-	Astate3 == ReadyCommit)
+    for (;;)
     {
-	Cstate = Committed;
-    }
-    else if (Astate1 == ReadyAbort || Astate2 == ReadyAbort ||
-	     Astate3 == ReadyAbort)
-    {
-	Cstate = Aborted;
+	if (Astate1 == ReadyCommit && Astate2 == ReadyCommit &&
+	    Astate3 == ReadyCommit)
+	{
+	    Cstate = Committed;
+	}
+	else if (Astate1 == ReadyAbort || Astate2 == ReadyAbort ||
+		 Astate3 == ReadyAbort)
+	{
+	    Cstate = Aborted;
+	}
     }
 }
 

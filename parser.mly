@@ -174,12 +174,12 @@ function_decl :
 
 weak_opt:
   | /*epsilon*/ { false }
-  | WEAK { true }
+  | WEAK { Options.model <> Options.SC }
 
 var_decl:
   | weak_opt VAR mident COLON lident {
     if Hstring.equal $5 hint || Hstring.equal $5 hreal then Smt.set_arith true;
-    Globals.add $3; if $1 && Options.model <> Options.SC then Weaks.add $3;
+    Globals.add $3; if $1 then Weaks.add $3;
     loc (), $3, $5, $1 }
 ;
 
@@ -195,7 +195,7 @@ array_decl:
         if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
 	  raise Parsing.Parse_error;
 	if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
-	Arrays.add $3; if $1 && Options.model <> Options.SC then Weaks.add $3;
+	Arrays.add $3; if $1 then Weaks.add $3;
 	loc (), $3, ($5, $8), $1 }
 ;
 
@@ -325,7 +325,12 @@ assignment_weak:
 
 assignment_base:
   | mident AFFECT term { Assign ($1, PUTerm $3) }
-  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+  | mident AFFECT CASE switchs {
+      let swts = match List.rev $4 with
+        | (PAtom (AAtom (Atom.True)), _) :: _ -> $4
+        | swts -> List.rev (
+            (PAtom (AAtom (Atom.True)), TTerm (Elem ($1, Glob))) :: swts) in
+      Assign ($1, PUCase swts) }
 ;
 
 nondet:
@@ -354,8 +359,12 @@ update_weak:
         List.iter (fun p ->
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
-        ) $3;
-        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7 }
+          ) $3;
+        let swts = match List.rev $7 with
+          | (PAtom (AAtom (Atom.True)), _) :: _ -> $7
+          | swts -> List.rev (
+              (PAtom (AAtom (Atom.True)), TTerm (Access ($1, $3))) :: swts) in
+        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = swts }
       end }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
     { if Weaks.mem $1 then Write (None, $1, $3, PUTerm $6)
@@ -523,7 +532,9 @@ operator:
 literal:
   | TRUE { AAtom Atom.True }
   | FALSE { AAtom Atom.False }
-  | FENCE LEFTPAR proc_name RIGHTPAR { AEq (TTerm (Fence $3), TTerm (Elem (Term.htrue, Constr))) }
+  | FENCE LEFTPAR proc_name RIGHTPAR {
+      if Options.model = Options.SC then AAtom Atom.True
+      else AEq (TTerm (Fence $3), TTerm (Elem (Term.htrue, Constr))) }
   /* | lident { AVar $1 } RR conflict with proc_name */
   | term EQ term { AEq ($1, $3) }
   | term NEQ term { ANeq ($1, $3) }

@@ -9,13 +9,16 @@ enum state Cstate = Unknown;
 
 void * thr0(void *p)
 {
-    if (Astate1 == ReadyCommit && Astate2 == ReadyCommit)
+    for (;;)
     {
-	Cstate = Committed;
-    }
-    else if (Astate1 == ReadyAbort || Astate2 == ReadyAbort)
-    {
-	Cstate = Aborted;
+	if (Astate1 == ReadyCommit && Astate2 == ReadyCommit)
+	{
+	    Cstate = Committed;
+	}
+	else if (Astate1 == ReadyAbort || Astate2 == ReadyAbort)
+	{
+	    Cstate = Aborted;
+	}
     }
 }
 

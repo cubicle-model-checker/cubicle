@@ -64,13 +64,15 @@ void * thr0(void *p)
     {
 	if (Astate1 == ReadyCommit && Astate2 == ReadyCommit &&
 	    Astate3 == ReadyCommit && Astate4 == ReadyCommit &&
-	    Astate5 == ReadyCommit && Astate6 == ReadyCommit)
+	    Astate5 == ReadyCommit && Astate6 == ReadyCommit &&
+	    Astate7 == ReadyCommit)
 	{
 	    Cstate = Committed;
 	}
 	else if (Astate1 == ReadyAbort || Astate2 == ReadyAbort ||
 		 Astate3 == ReadyAbort || Astate4 == ReadyAbort ||
-		 Astate5 == ReadyAbort || Astate6 == ReadyAbort)
+		 Astate5 == ReadyAbort || Astate6 == ReadyAbort ||
+		 Astate7 == ReadyAbort)
 	{
 	    Cstate = Aborted;
 	}
@@ -125,9 +127,17 @@ void * thr6(void *p)
     safety_prop();
 }
 
+void * thr7(void *p)
+{
+    Astate7 = (nondet_int() % 2 == 0) ? ReadyCommit : ReadyAbort;
+    while (Cstate == Unknown);
+    Astate7 = Cstate;
+    safety_prop();
+}
+
 int main()
 {
-    pthread_t th[6];
+    pthread_t th[7];
     pthread_create(&th[0], NULL, thr0, NULL);
     pthread_create(&th[1], NULL, thr1, NULL);
     pthread_create(&th[2], NULL, thr2, NULL);
@@ -135,6 +145,7 @@ int main()
     pthread_create(&th[4], NULL, thr4, NULL);
     pthread_create(&th[5], NULL, thr5, NULL);
     pthread_create(&th[6], NULL, thr6, NULL);
+    pthread_create(&th[7], NULL, thr7, NULL);
     pthread_join(th[0], NULL);
     pthread_join(th[1], NULL);
     pthread_join(th[2], NULL);
@@ -142,5 +153,6 @@ int main()
     pthread_join(th[4], NULL);
     pthread_join(th[5], NULL);
     pthread_join(th[6], NULL);
+    pthread_join(th[7], NULL);
     return 0;
 }

@@ -118,6 +118,7 @@ let is_param a =
   let a = String.sub a 0 4 in
   a = "_e_p"
 
+(* Assumes the param Hstrings have been created in the right order *)
 let sort_params (p, d, v, vi) =
   let vi = List.sort_uniq (fun (p1, _) (p2, _) -> H.compare p1 p2) vi in
   (p, d, v, List.map (fun (_, i) -> i) vi)
@@ -196,8 +197,10 @@ let init_weak_env wvl =
   (* wtl : list of all types of weak variable + corresponding field name *)
   wtl := HSet.fold (fun wt wtl -> (mk_hVal wt, wt) :: wtl) wts [];
 
-  (* Make argument fields *)
-  for i = maxp downto 1 do pl := (mk_hArg i, hInt) :: !pl done;
+  (* Make argument fields - order is important *)
+  (* for i = maxp downto 1 do pl := (mk_hArg i, hInt) :: !pl done; *)
+  for i = 1 to maxp do pl := (mk_hArg i, hInt) :: !pl done;
+  pl := List.rev !pl;
 
   (* should adjust automatically *)
   for i = 0 to 100 do S.declare (mk_hE i) [] T.type_int done;
