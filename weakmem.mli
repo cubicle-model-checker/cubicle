@@ -55,8 +55,8 @@ val mk_hVal : H.t -> H.t
 
 val is_event : H.t -> bool
 val is_value : H.t -> bool
-
 val is_param : H.t -> bool
+val is_rel : H.t -> bool
 
 val sort_params : 'a * 'b * 'c * (H.t * 'd) list -> 'a * 'b * 'c * 'd list
 

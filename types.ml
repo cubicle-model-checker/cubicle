@@ -242,7 +242,9 @@ module Term = struct
 
   let rec variables = function
     | Elem (x, Var) -> Variable.Set.singleton x
-    | Access (a, lx) when not (Weakmem.is_event a) ->
+    | Access (a, [p;_]) when Hstring.equal a Weakmem.hFence ->
+                      Variable.Set.singleton p
+    | Access (a, lx) when not (Weakmem.is_event a || Weakmem.is_rel a) ->
        List.fold_left (fun acc x -> Variable.Set.add x acc)
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t

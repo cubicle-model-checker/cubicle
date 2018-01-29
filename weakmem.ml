@@ -118,6 +118,9 @@ let is_param a =
   let a = String.sub a 0 4 in
   a = "_e_p"
 
+let is_rel a =
+  a = hFence || a = hSync || a = hGhb
+
 (* Assumes the param Hstrings have been created in the right order *)
 let sort_params (p, d, v, vi) =
   let vi = List.sort_uniq (fun (p1, _) (p2, _) -> H.compare p1 p2) vi in
