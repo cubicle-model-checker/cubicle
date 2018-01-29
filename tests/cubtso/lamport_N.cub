@@ -25,7 +25,7 @@ requires { PC[p] = L2 && Y_set = True }
 { PC[p] := L1 }
 
 transition t_L2_L3_Y_Null ([p])
-requires { fence (p) && PC[p] = L2 && Y_set = False }
+requires { fence() && PC[p] = L2 && Y_set = False }
 { PC[p] := L3 }
 
 transition t_L3_L4_W_Y_Self ([p])
@@ -41,7 +41,7 @@ requires { PC[p] = L5 && Y <> p }
 { PC[p] := L1 }
 
 transition t_L4_CS_X_Self ([p])
-requires { fence (p) && PC[p] = L4 && X = p && X_set = True }
+requires { fence() && PC[p] = L4 && X = p && X_set = True }
 { PC[p] := CS }
 
 (* Critical section *)

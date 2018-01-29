@@ -25,7 +25,7 @@ requires { PC[p] = L2 && Want[q] = True }
 { PC[p] := L3 }
 
 transition t_L2_L7_R_WantO_False ([p] q)
-requires { fence (p) && PC[p] = L2 && Want[q] = False }
+requires { fence() && PC[p] = L2 && Want[q] = False }
 { PC[p] := L7 }
 
 transition t_L3_L4_R_Turn_Other ([p])

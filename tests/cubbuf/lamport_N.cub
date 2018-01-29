@@ -48,16 +48,14 @@ requires { Kind[p] = KProc && Kind[i] = KBuf &&
 { PC[p] := L2; Var[p,i] := VX; Val[p,i] := ProcID[p] }
 
 transition t_L2_L1_Y_NotNull (p) (* should only read from memory (fence) *)
-(* fences (p) *)
-requires { Kind[p] = KProc &&
+requires { Kind[p] = KProc && (* fence() *)
 	   PC[p] = L2 && Y <> NullProc &&
 	   forall_other k. (Kind[k] = KProc ||
 	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
 { PC[p] := L1 }
 
 transition t_L2_L3_Y_Null (p) (* should only read from memory (fence) *)
-(* fences (p) *)
-requires { Kind[p] = KProc &&
+requires { Kind[p] = KProc && (* fence() *)
 	   PC[p] = L2 && Y = NullProc &&
 	   forall_other k. (Kind[k] = KProc ||
 	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
@@ -71,23 +69,21 @@ requires { Kind[p] = KProc && Kind[i] = KBuf &&
 { PC[p] := L4; Var[p,i] := VY; Val[p,i] := ProcID[p] }
 
 transition t_L4_L5_X_Other (p) (* should only read from memory (fence) *)
-(* fences (p) *)
-requires { Kind[p] = KProc &&
+requires { Kind[p] = KProc && (* fence() *)
 	   PC[p] = L4 && X <> ProcID[p] &&
 	   forall_other k. (Kind[k] = KProc ||
 	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }
 { PC[p] := L5 }
 
 transition t_L5_L1_Y_Other (p)  (* should only read from memory (fence) *)
-requires { Kind[p] = KProc &&
+requires { Kind[p] = KProc && (* fence() *)
 	   PC[p] = L5 && Y <> ProcID[p] &&
 	   forall_other k. (Kind[k] = KProc ||
 	   		     (Kind[k] = KBuf && Var[p,k] <> VY)) }
 { PC[p] := L1 }
 
 transition t_L4_CS_X_Self (p)  (* should only read from memory (fence) *)
-(* fences (p) *)
-requires { Kind[p] = KProc &&
+requires { Kind[p] = KProc && (* fence() *)
 	   PC[p] = L4 && X = ProcID[p] &&
 	   forall_other k. (Kind[k] = KProc ||
 	   		     (Kind[k] = KBuf && Var[p,k] = VNone)) }

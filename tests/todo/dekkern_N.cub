@@ -45,7 +45,7 @@ requires { P[i] = NCS }
 
 
 transition wait ([i] j)
-requires { P[i] = LOOP && fence(i) && X[j] = True }
+requires { P[i] = LOOP && fence() && X[j] = True }
 {
   P[i] := AWAIT;
   X[i] := False;
@@ -53,7 +53,7 @@ requires { P[i] = LOOP && fence(i) && X[j] = True }
 
 
 transition enter ([i])
-requires { P[i] = LOOP && fence(i) && forall_other j. X[j] = False }
+requires { P[i] = LOOP && fence() && forall_other j. X[j] = False }
 {
   P[i] := CS;
 }

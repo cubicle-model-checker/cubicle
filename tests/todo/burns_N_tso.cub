@@ -36,7 +36,7 @@ requires { A[x] = Q4 && y < x && F[y] = True }
 { A[x] := Q1 }
 
 transition t6 ([x])
-requires { A[x] = Q4 && fence (x) && forall_other j. (x <= j || (j < x && F[j] = False)) }
+requires { A[x] = Q4 && fence() && forall_other j. (x <= j || (j < x && F[j] = False)) }
 { A[x] := Q5 }
 
 transition t7 ([x])

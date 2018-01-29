@@ -19,7 +19,7 @@ transition next_ticket ([x])
 }
 
 transition take_ticket ([x])
-requires { PC[x] = NCS && fence(x) &&
+requires { PC[x] = NCS && fence() &&
     forall_other j. Num[j] < Max }
 {
   PC[x] := Choose;
@@ -27,14 +27,14 @@ requires { PC[x] = NCS && fence(x) &&
 }
 
 transition wait ([x])
-requires { PC[x] = Choose && fence(x) }
+requires { PC[x] = Choose && fence() }
 {
   PC[x] := Wait;
   Num[x] := Ticket[x];
 }
 
 transition turn ([x])
-requires { PC[x] = Wait && fence(x) &&
+requires { PC[x] = Wait && fence() &&
   forall_other j. 
   (PC[j] <> Choose && Num[j] = 0 ||
    PC[j] <> Choose && Num[x] < Num[j] ||

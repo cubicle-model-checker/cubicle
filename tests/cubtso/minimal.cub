@@ -20,5 +20,5 @@ requires { PC[p] = L1 }
 { PC[p] := L2; X[p] := True }
 
 transition t2 ([p] q)
-requires { PC[p] = L2 && fence (p) && X[q] = False }
+requires { PC[p] = L2 && fence() && X[q] = False }
 { PC[p] := L3 }

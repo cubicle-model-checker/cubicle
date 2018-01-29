@@ -61,8 +61,7 @@ requires { Kind[p1] = KProc && Kind[p2] = KProc &&
 { A[p1] := Q1; }
 
 transition t6 (p)
-(* fences (p) *)
-requires { Kind[p] = KProc &&
+requires { Kind[p] = KProc && (* fence() *)
 	   A[p] = Q4 && forall_other p2. (
 	     (Kind[p2] = KBuf && Var[p, p2] = VNone) ||
 	     (Kind[p2] = KProc && p <= p2) ||

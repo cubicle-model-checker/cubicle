@@ -27,7 +27,7 @@ unsafe (z1) { z1 @ Busy = False && z1 @ H = C1 && 0 < z1 @ C }
 
 
 transition t1 ([x])
-requires { A[x] = Idle && fence (x) && Busy = False && 0 < C }
+requires { A[x] = Idle && fence() && Busy = False && 0 < C }
 { Busy := True; A[x] := Owner }
 
 transition t2 ([x])

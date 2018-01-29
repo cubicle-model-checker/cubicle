@@ -532,9 +532,9 @@ operator:
 literal:
   | TRUE { AAtom Atom.True }
   | FALSE { AAtom Atom.False }
-  | FENCE LEFTPAR proc_name RIGHTPAR {
+  | FENCE LEFTPAR RIGHTPAR {
       if Options.model = Options.SC then AAtom Atom.True
-      else AEq (TTerm (Fence $3), TTerm (Elem (Term.htrue, Constr))) }
+      else AEq (TTerm (Fence (Hstring.make "")), TTerm (Elem (Term.htrue, Constr))) }
   /* | lident { AVar $1 } RR conflict with proc_name */
   | term EQ term { AEq ($1, $3) }
   | term NEQ term { ANeq ($1, $3) }

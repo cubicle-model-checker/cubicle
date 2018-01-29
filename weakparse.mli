@@ -1,6 +1,6 @@
 
-val fix_thr :
-  Variable.t option -> Hstring.t -> Hstring.t -> Variable.t list -> Types.term
+(* val fix_thr :
+ *   Variable.t option -> Hstring.t -> Hstring.t -> Variable.t list -> Types.term *)
 
 val fix_rd_upd :
   Variable.t option -> Ptree.pupdate -> Ptree.pupdate

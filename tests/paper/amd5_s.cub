@@ -25,7 +25,7 @@ requires { p = #1 && PC[p] = L1 }
 { PC[p] := L2; X := 1 }
 
 transition t1_2 ([p])
-requires { p = #1 && fence (p) && PC[p] = L2 }
+requires { p = #1 && fence() && PC[p] = L2 }
 { PC[p] := End; EAX[p] := Y }
 
 transition t2_1 ([p])
@@ -33,5 +33,5 @@ requires { p = #2 && PC[p] = L1 }
 { PC[p] := L2; Y := 1 }
 
 transition t2_2 ([p])
-requires { p = #2 && fence (p) && PC[p] = L2 }
+requires { p = #2 && fence() && PC[p] = L2 }
 { PC[p] := End; EBX[p] := X }
