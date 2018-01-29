@@ -82,6 +82,7 @@ type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
+  ptr_thread : Variable.t option;
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_writes : (Variable.t * Hstring.t * (Variable.t list) * pglob_update) list;

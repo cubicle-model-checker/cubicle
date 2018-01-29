@@ -48,6 +48,7 @@ type error =
   | MustReadWeakVar of Hstring.t
   | MustWriteWeakVar of Hstring.t
   | MustBeWeakVar of Hstring.t
+  | MissingThreadInTrans
 
 exception Error of error * loc
 
@@ -118,6 +119,8 @@ let report fmt = function
       fprintf fmt "must use Write to assign to weak variable %a" Hstring.print s
   | MustBeWeakVar s ->
       fprintf fmt "%a must be a weak variable" Hstring.print s
+  | MissingThreadInTrans ->
+      fprintf fmt "Missing memory accessing process in transition parameters (specify with [])"
 
 let error e l = raise (Error (e,l))
 
@@ -367,6 +370,8 @@ let transitions =
     (fun ({tr_args = args; tr_loc = loc} as t) ->
        if Options.model = Options.SC && t.tr_fence <> None
          then error (OpInvalidInSC) loc;
+       if Options.model <> Options.SC && t.tr_thread = None
+         then error (MissingThreadInTrans) loc;
        unique (fun x-> error (DuplicateName x) loc) args; 
        atoms loc args t.tr_reqs;
        List.iter 

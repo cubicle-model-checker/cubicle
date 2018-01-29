@@ -1,0 +1,129 @@
+(* Chandy-Misra bounded and adaptative algorithm for mutual exclusion *)
+
+(* Permission based: a site gives its permission to other nodes.
+   Bounded: no timestamp to avoid starvation, a boolean priority is enough.
+   Adaptative: if a site is not interested, it will eventually stops receiving request message.
+*)
+
+(* Problem:
+   - precise initialization is impossible: should be Request[i,j] = (j > i) && Priority[i,j] = (j < i)
+     It doesn't seem wrong to put Request[i,j] = True (request everyone initially)
+   - Priority is necessary for liveness but should have no influence on safety.
+     As it can't be correctly initialized (it must be a order), I have removed it.
+*)
+(* Tricky points:
+   - Network is modelled with two arrays NetReq[i,j], NetPerm[i,j] as there can
+     sometimes be two messages (a permission and a request) between a pair.
+     The algorithm doesn't require the communication to be FIFO.
+*)
+type state = Trying | In | Out
+
+array State[proc] : state       (* out/trying/in *)
+array Request[proc,proc] : bool (* Request[i,j] = site i must obtain permission from j in order to acquire *)
+array Delayed[proc,proc] : bool (* Delayed[i,j] = site i have to send permission to j when releasing *)
+weak array NetReq[proc,proc] : bool  (* NetReq[i,j] = request message from i to j *)
+weak array NetPerm[proc,proc] : bool (* NetPerm[i,j] = permission message from i to j *)
+
+(* Actually: Request[i,j] = (j > i) is enough *)
+init(i j) {  State[i] = Out
+          && Request[i,j] = True
+          && Delayed[i,j] = False
+          && NetReq[i,j] = False
+          && NetPerm[i,j] = False }
+
+(* ---------------------------------------------------------------- *)
+
+(* Mutual exclusion *)
+unsafe(i j) { State[i] = In && State[j] = In }
+
+(* Consistency invariants. *)
+(* Commented out: other consistency invariants exist, -brab 2 found some interesting ones.
+unsafe(i j) { NetReq[i,j] = True && State[i] <> Trying }
+unsafe(i j) { NetPerm[j,i] = True && State[i] <> Trying }
+*)
+
+(* ---------------------------------------------------------------- *)
+
+(* Request access: send a Request message to the processes to which site i has previously given its permission. *)
+transition request_mutex([i])
+requires { State[i] = Out }
+{
+  State[i] := Trying;
+  NetReq[x,y] := case
+              | x = i && Request[x,y] = True && y <> i : True;
+              (* | _ : NetReq[x,y]; *)
+}
+
+(* When all asked sites have given their permission, i can enter. *)
+transition acquire_mutex([i])
+requires { State[i] = Trying && forall_other j. Request[i,j] = False }
+{
+  State[i] := In;
+}
+
+(* Release mutex and send a permission message to all delayed requests,
+ * and remember that site i will need to request permission from those sites. *)
+transition release_mutex([i])
+requires { State[i] = In }
+{
+  State[i] := Out;
+  NetPerm[x,y] := case
+              | x = i && Delayed[x,y] = True : True;
+              (* | _ : NetPerm[x,y]; *)
+  Request[x,y] := case
+                  | x = i : Delayed[x,y]
+                  | _ : Request[x,y];
+  Delayed[x,y] := case
+                  | x = i : False
+                  | _ : Delayed[x,y];
+}
+
+(* Receive a permission message from j *)
+transition receive_permission([i] j)
+requires { NetPerm[j,i] = True }
+{
+  Request[i,j] := False;
+  NetPerm[j,i] := False;
+}
+
+(* Receive a request message from j, while in: delay permission. *)
+transition receive_request_prio1([i] j)
+requires { NetReq[j,i] = True && State[i] = In }
+{
+  Delayed[i,j] := True;
+  NetReq[j,i] := False;
+}
+
+(* Receive a request message from j, while trying and having priority: delay permission *)
+(* XXXX Unclear if Request[i,j] = True is necessary: see below receive_request_nonprio2 *)
+transition receive_request_prio2([i] j)
+requires { NetReq[j,i] = True && State[i] = Trying && Request[i,j] = True }
+{
+  Delayed[i,j] := True;
+  NetReq[j,i] := False;
+}
+
+(* Receive a request message from j while not interested: give permission *)
+transition receive_request_nonprio1([i] j)
+requires { NetReq[j,i] = True && State[i]  = Out }
+{
+  Request[i,j] := True;
+  NetReq[j,i] := False;
+  NetPerm[i,j] := True;
+}
+
+(* Receive a request message from j while trying and not having priority:
+ * give permission to j and simultaneously request permission from j.
+ * (note: FIFO communication is not required) *)
+(* XXXX unclear if I should remove Request[i,j] = False: in order to model Priority with
+ * non-determinism. *)
+transition receive_request_nonprio2([i] j)
+requires { NetReq[j,i] = True && State[i]  = Trying && Request[i,j] = False }
+{
+  Request[i,j] := True;
+  NetPerm[i,j] := True; (* send a permission message to j *)
+  NetReq[x,y] := case
+              | x = j && y = i : False
+              | x = i && y = j : True; (* and also send a request message as i has given its permission *)
+              (* | _ : NetReq[x,y]; *)
+}

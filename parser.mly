@@ -260,6 +260,7 @@ transition:
 	{   ptr_lets = lets;
 	    ptr_name = $2;
             ptr_args = fst $4;
+            ptr_thread = snd $4;
 	    ptr_reqs = fix_rd_expr (snd $4) $6;
 	    ptr_assigns = List.map (fix_rd_assign (snd $4)) assigns;
 	    ptr_nondets = nondets; 

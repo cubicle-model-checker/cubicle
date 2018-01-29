@@ -59,7 +59,7 @@ let fix_rd_thr t p v vi =
   match pdef, t with
   | false, Some t -> Read (t, v, vi)
   | true, None -> Read (p, v, vi)
-  | false, None -> failwith "No thread in read"
+  | false, None -> Read (p, v, vi) (*failwith "No thread in read"*)
   | true, Some t -> if Hstring.equal p t then Read (p, v, vi)
                     else failwith "Threads differ in read"
 
@@ -68,7 +68,7 @@ let fix_f_thr t p =
   match pdef, t with
   | false, Some t -> Fence (t)
   | true, None -> Fence (p)
-  | false, None -> failwith "No thread in fence"
+  | false, None -> Fence (p) (*failwith "No thread in fence"*)
   | true, Some t -> if Hstring.equal p t then Fence (p)
                     else failwith "Threads differ in fence"
 
@@ -88,7 +88,7 @@ let fix_rd_write t (p, v, vi, pgu) =
   match p, t with
   | None, Some p -> (p, v, vi, pgu)
   | Some p, None -> (p, v, vi, pgu)
-  | None, None -> failwith "No thread in write"
+  | None, None -> (hNone, v, vi, pgu) (*failwith "No thread in write"*)
   | Some p, Some q ->
      if Hstring.equal p q then (p, v, vi, pgu)
      else failwith "Threads differ in write"

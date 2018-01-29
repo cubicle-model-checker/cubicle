@@ -1,0 +1,190 @@
+
+forbidden
+In In
+
+data
+  NetReq11 = 0 : [0:1]
+  NetReq12 = 0 : [0:1]
+  NetReq21 = 0 : [0:1]
+  NetReq22 = 0 : [0:1]
+  NetPerm11 = 0 : [0:1]
+  NetPerm12 = 0 : [0:1]
+  NetPerm21 = 0 : [0:1]
+  NetPerm22 = 0 : [0:1]
+
+process (1)
+registers
+  $State = 2 : [0:2]    /* State[1] - 0 = Trying | 1 = In | 2 = Out */
+  $Request1 = 1 : [0:1] /* Request[1,1] */
+  $Request2 = 1 : [0:1] /* Request[1,2] */
+  $Delayed1 = 0 : [0:1] /* Delayed[1,1] */
+  $Delayed2 = 0 : [0:1] /* Delayed[1,2] */
+text
+  Out:
+    either { /* request_mutex */
+      if $Request2 = 1 then
+        write: NetReq12 := 1
+    or /* receive_request_nonprio1 */
+      read: NetReq21 = 1;
+      write: NetReq21 := 0;
+      write: NetPerm12 := 1;
+      $Request2 := 1;
+      goto Out
+    or /* receive_permission */
+      read: NetPerm21 = 1;
+      write: NetPerm21 := 0;
+      $Request2 := 0;
+      goto Out
+    };
+  Trying:
+    either { /* acquire_mutex */
+      assume: $Request2 = 0
+    or /* receive_request_prio2 */
+      assume: $Request2 = 1;
+      read: NetReq21 = 1;
+      write: NetReq21 := 0;
+      $Delayed2 := 1;
+      goto Trying
+    or /* receive_request_nonprio2 */
+      assume: $Request2 = 0;
+      read: NetReq21 = 1;
+      write: NetPerm12 := 1;
+      write: NetReq12 := 1;
+      write: NetReq21 := 0;
+      $Request2 := 1;
+      goto Trying
+    or /* receive_permission */
+      read: NetPerm21 = 1;
+      write: NetPerm21 := 0;
+      $Request2 := 0;
+      goto Out
+    };
+  In:
+    either { /* release_mutex */
+      if $Delayed2 = 1 then
+        write: NetPerm12 := 1;
+      $Request2 := $Delayed2;
+      $Delayed2 := 0;
+      goto Out
+    or /* receive_request_prio1 */
+      read: NetReq21 = 1;
+      write: NetReq21 := 0;
+      $Delayed2 := 1;
+      goto In
+    or /* receive_permission */
+      read: NetPerm21 = 1;
+      write: NetPerm21 := 0;
+      $Request2 := 0;
+      goto Out
+    }
+
+
+process (1)
+registers
+  $State = 2 : [0:2]    /* State[1] - 0 = Trying | 1 = In | 2 = Out */
+  $Request1 = 1 : [0:1] /* Request[2,1] */
+  $Request2 = 1 : [0:1] /* Request[2,2] */
+  $Delayed1 = 0 : [0:1] /* Delayed[2,1] */
+  $Delayed2 = 0 : [0:1] /* Delayed[2,2] */
+text
+  Out:
+    either { /* request_mutex */
+      if $Request1 = 1 then
+        write: NetReq21 := 1
+    or /* receive_request_nonprio1 */
+      read: NetReq12 = 1;
+      write: NetReq12 := 0;
+      write: NetPerm21 := 1;
+      $Request1 := 1;
+      goto Out
+    or /* receive_permission */
+      read: NetPerm12 = 1;
+      write: NetPerm12 := 0;
+      $Request1 := 0;
+      goto Out
+    };
+  Trying:
+    either { /* acquire_mutex */
+      assume: $Request1 = 0
+    or /* receive_request_prio2 */
+      assume: $Request1 = 1;
+      read: NetReq12 = 1;
+      write: NetReq12 := 0;
+      $Delayed1 := 1;
+      goto Trying
+    or /* receive_request_nonprio2 */
+      assume: $Request1 = 0;
+      read: NetReq12 = 1;
+      write: NetPerm21 := 1;
+      write: NetReq21 := 1;
+      write: NetReq12 := 0;
+      $Request1 := 1;
+      goto Trying
+    or /* receive_permission */
+      read: NetPerm12 = 1;
+      write: NetPerm12 := 0;
+      $Request1 := 0;
+      goto Out
+    };
+  In:
+    either { /* release_mutex */
+      if $Delayed1 = 1 then
+        write: NetPerm21 := 1;
+      $Request1 := $Delayed1;
+      $Delayed1 := 0;
+      goto Out
+    or /* receive_request_prio1 */
+      read: NetReq12 = 1;
+      write: NetReq12 := 0;
+      $Delayed1 := 1;
+      goto In
+    or /* receive_permission */
+      read: NetPerm12 = 1;
+      write: NetPerm12 := 0;
+      $Request1 := 0;
+      goto Out
+    }
+
+/*
+
+transition request_mutex([i])
+requires { State[i] = Out }
+{ State[i] := Trying;
+  NetReq[i,y] := case | Request[i,y] = True && y <> i : True }
+
+transition receive_request_nonprio1([i] j)
+requires { NetReq[j,i] = True && State[i]  = Out }
+{ Request[i,j] := True; NetReq[j,i] := False; NetPerm[i,j] := True }
+
+
+transition acquire_mutex([i])
+requires { State[i] = Trying && forall_other j. Request[i,j] = False }
+{ State[i] := In }
+
+transition receive_request_prio2([i] j)
+requires { NetReq[j,i] = True && State[i] = Trying && Request[i,j] = True }
+{ Delayed[i,j] := True; NetReq[j,i] := False }
+
+transition receive_request_nonprio2([i] j)
+requires { NetReq[j,i] = True && State[i]  = Trying && Request[i,j] = False }
+{ Request[i,j] := True; NetPerm[i,j] := True;
+  NetReq[i,j] := True; NetReq[j,i] := False }
+
+
+transition release_mutex([i])
+requires { State[i] = In }
+{ State[i] := Out;
+  NetPerm[i,y] := case | Delayed[x,y] = True : True;
+  Request[i,y] := case | _ : Delayed[i,y];
+  Delayed[i,y] := case | _ : False }
+
+transition receive_request_prio1([i] j)
+requires { NetReq[j,i] = True && State[i] = In }
+{ Delayed[i,j] := True; NetReq[j,i] := False }
+
+
+transition receive_permission([i] j)
+requires { NetPerm[j,i] = True }
+{ Request[i,j] := False; NetPerm[j,i] := False }
+
+*/

@@ -204,6 +204,22 @@ let make_read_write_combinations writes evts_bt urevts ghb =
 
   TimeBuildRW.pause ();
 
+  (* List.iter (fun wrcl ->
+   *   List.iter (fun (((wp, wd, wv, wvi), (we, wt)), rcl) ->
+   *     Format.eprintf "(%a,%a,%a,%a) (%a,%a) -> (%a)\n"
+   *       H.print wp H.print wd H.print wv (H.print_list ".") wvi
+   *       H.print we
+   *       (fun fmt lt ->
+   *         List.iter (Format.fprintf fmt " %a" Term.print) lt
+   *       ) wt
+   *       (fun fmt rc ->
+   *         List.iter (fun (re, (red, rvals)) ->
+   *             Format.fprintf fmt " %a" H.print re) rc
+   *       ) rcl
+   *   ) wrcl
+   * ) wrcp;
+   * Format.print_flush (); *)
+  
   TimeFilterRW.start ();
 
   (* Filter out combinations that lead to cyclic relations *)

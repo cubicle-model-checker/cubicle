@@ -50,6 +50,7 @@ type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
+  tr_thread : Variable.t option;
   tr_reqs : SAtom.t; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
