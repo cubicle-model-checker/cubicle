@@ -13,15 +13,11 @@ init (p) { PC[p] = L1 && X = 0 && Y = 0 }
 
 unsafe (p q r) { p = #1 && q = #2 && r = #3 &&
                  PC[p] = End && PC[q] = End && PC[r] = End &&
-                 R1[q] = 1 && R2[q] = 0 && R1[r] = 2 && R2[r] = 0 }
+       	         R1[q] = 1 && R1[r] = 2 && R2[r] = 0}
 
 transition t1_1 ([p])
 requires { p = #1 && PC[p] = L1 }
-{ PC[p] := L2; X := 1 }
-
-transition t1_2 ([p])
-requires { p = #1 && PC[p] = L2 }
-{ PC[p] := End; Y := 2 }
+{ PC[p] := End; X := 1 }
 
 transition t2_1 ([p])
 requires { p = #2 && PC[p] = L1 }
@@ -29,7 +25,7 @@ requires { p = #2 && PC[p] = L1 }
 
 transition t2_2 ([p])
 requires { p = #2 && PC[p] = L2 }
-{ PC[p] := End; R2[p] := Y }
+{ PC[p] := End; Y := 2 }
 
 transition t3_1 ([p])
 requires { p = #3 && PC[p] = L1 }

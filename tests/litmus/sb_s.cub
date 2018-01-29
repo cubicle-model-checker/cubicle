@@ -1,0 +1,31 @@
+
+number_procs 2
+
+type pc = L1 | L2 | End
+
+array PC[proc] : pc
+array R[proc] : int
+weak var X : int
+weak var Y : int
+
+init (p) { PC[p] = L1 && X = 0 && Y = 0 }
+
+unsafe (p q) { p = #1 && q = #2 &&
+               PC[p] = End && PC[q] = End &&
+       	       R[p] = 0 && R[q] = 0 }
+
+transition t1_1 ([p])
+requires { p = #1 && PC[p] = L1 }
+{ PC[p] := L2; X := 1 }
+
+transition t1_2 ([p])
+requires { p = #1 && PC[p] = L2 && fence() }
+{ PC[p] := End; R[p] := Y }
+
+transition t2_1 ([p])
+requires { p = #2 && PC[p] = L1 }
+{ PC[p] := L2; Y := 1 }
+
+transition t2_2 ([p])
+requires { p = #2 && PC[p] = L2 && fence() }
+{ PC[p] := End; R[p] := X }
