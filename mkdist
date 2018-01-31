@@ -47,6 +47,7 @@ TRENCHER="peterson2s.txt       peterson2us.txt
           sense_rev*.txt
           arbiter_v1_*.txt
           arbiter_v2_*.txt
+          two_phase_*.txt
           moesi*.txt
           msi*.txt"
 
