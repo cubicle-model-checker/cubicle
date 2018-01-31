@@ -13,33 +13,27 @@ unsafe (i j) { PC[i] = L0 && PC[j] = L1 }
 
 (* TODO : model this with explicit buffers *)
 
-transition t1_1 ()
-requires { PC[#1] = L0 && read(#1, F) = E0 }
-{ write(#1, F, E1);
-  PC[#1] := L1; }
+transition t1_1 ([p])
+requires { p = #1 && PC[p] = L0 && F = E0 }
+{ F := E1; PC[p] := L1; }
 
-transition t1_2 ()
-requires { PC[#1] = L1 && read(#1, F) = E2 }
-{ write(#1, F, E3);
-  PC[#1] := L2; }
+transition t1_2 ([p])
+requires { p = #1 && PC[p] = L1 && F = E2 }
+{ F := E3; PC[p] := L2; }
 
-transition t1_3 ()
-requires { PC[#1] = L2 && read(#1, F) = E4 }
-{ write(#1, F, E0);
-  PC[#1] := L0; }
+transition t1_3 ([p])
+requires { p = #1 && PC[p] = L2 && F = E4 }
+{ F := E0; PC[p] := L0; }
 
 
-transition t2_1 ()
-requires { PC[#2] = L0 && read(#2, F) = E1 }
-{ write(#2, F, E2);
-  PC[#2] := L1; }
+transition t2_1 ([p])
+requires { p = #2 && PC[p] = L0 && F = E1 }
+{ F := E2; PC[p] := L1; }
 
-transition t2_2 ()
-requires { PC[#2] = L1 && read(#2, F) = E3 }
-{ write(#2, F, E4);
-  PC[#2] := L0; }
+transition t2_2 ([p])
+requires { p = #2 && PC[p] = L1 && F = E3 }
+{ F := E4; PC[p] := L0; }
 
-(*transition t2_3 ()
-requires { PC[#2] = L2 && read(#2, F) = E5 }
-{ write(#2, F, E0);
-  PC[#2] := L0; }*)
+(*transition t2_3 ([p])
+requires { p = #2 && PC[p] = L2 && F = E5 }
+{ F := E0; PC[p] := L0; }*)

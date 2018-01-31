@@ -8,8 +8,8 @@ array PC[proc] : loc
 
 init (i) { PC[i] = L0 && F = False }
 
-unsafe (p1 p2) { p1 = #1 && p2 = #2 && read(p1, F) = False && PC[p2] = L1 } (* 3 *)
-unsafe (p1 p2) { p1 = #1 && p2 = #2 && read(p2, F) = True && PC[p1] = L1 } (* 11 *)
+unsafe (p1 p2) { p1 = #1 && p2 = #2 && p1@F = False && PC[p2] = L1 } (* 3 *)
+unsafe (p1 p2) { p1 = #1 && p2 = #2 && p2@F = True && PC[p1] = L1 } (* 11 *)
 
 (*
 unsafe (p1 p2) { p1 = #1 && p2 = #2 && read(p1, F) = False && read(p2, F) = False && PC[p2] = L1 }
@@ -19,38 +19,34 @@ unsafe (p1 p2) { p1 = #1 && p2 = #2 && read(p2, F) = True && read(p1, F) = True 
 unsafe (i j) { PC[i] = L1 && PC[j] = L1 }
 
 
-transition t1_1 ()
-requires { PC[#1] = L0 && read(#1, F) = False }
-{ PC[#1] := L1; }
+transition t1_1 ([p])
+requires { p = #1 && PC[p] = L0 && F = False }
+{ PC[p] := L1; }
 
-transition t1_2 ()
-requires { PC[#1] = L1 }
-{ write(#1, F, True);
-  PC[#1] := L2; }
+transition t1_2 ([p])
+requires { p = #1 && PC[p] = L1 }
+{ F := True; PC[p] := L2; }
 
-transition t1_3 ()
-requires { PC[#1] = L2 && read(#1, F) = False }
-{ PC[#1] := L3; }
+transition t1_3 ([p])
+requires { p = #1 && PC[p] = L2 && F = False }
+{ PC[p] := L3; }
 
-transition t1_4 ()
-requires { PC[#1] = L3 }
-{ write(#1, F, True);
-  PC[#1] := L0; }
+transition t1_4 ([p])
+requires { p = #1 && PC[p] = L3 }
+{ F := True; PC[p] := L0; }
 
-transition t2_1 ()
-requires { PC[#2] = L0 && read(#2, F) = True }
-{ PC[#2] := L1; }
+transition t2_1 ([p])
+requires { p = #2 && PC[p] = L0 && F = True }
+{ PC[p] := L1; }
 
-transition t2_2 ()
-requires { PC[#2] = L1 }
-{ write(#2, F, False);
-  PC[#2] := L2; }
+transition t2_2 ([p])
+requires { p = #2 && PC[p] = L1 }
+{ F := False; PC[p] := L2; }
 
-transition t2_3 ()
-requires { PC[#2] = L2 && read(#2, F) = True }
-{ PC[#2] := L3; }
+transition t2_3 ([p])
+requires { p = #2 && PC[p] = L2 && F = True }
+{ PC[p] := L3; }
 
-transition t2_4 ()
-requires { PC[#2] = L3 }
-{ write(#2, F, False);
-  PC[#2] := L0; }
+transition t2_4 ([p])
+requires { p = #2 && PC[p] = L3 }
+{ F := False; PC[p] := L0; }

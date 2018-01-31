@@ -3,27 +3,27 @@ number_procs 1
 
 type loc = L1 | L2 | L3 | End
 
-var PC : loc
-var T : int
+array PC[proc] : loc
+array T[proc] : int
 weak var X : int
 
-init () { PC = L1 && X = 0 }
+init (p) { PC[p] = L1 && X = 0 }
 
 (* ALLOWED Final State *)
-unsafe () { PC = End }
+unsafe (p) { PC[p] = End }
 
-transition t1 ()
-requires { PC = L1 }
-{ PC := L2; T := #1 @ X }
+transition t1 ([p])
+requires { PC[p] = L1 }
+{ PC[p] := L2; T[p] := X }
 
-transition t2a ()
-requires { PC = L2 && T < 2 }
-{ PC := L3 }
+transition t2a ([p])
+requires { PC[p] = L2 && T[p] < 2 }
+{ PC[p] := L3 }
 
-transition t2b ()
-requires { PC = L2 && T = 2 }
-{ PC := End }
+transition t2b ([p])
+requires { PC[p] = L2 && T[p] = 2 }
+{ PC[p] := End }
 
-transition t3 ()
-requires { PC = L3 }
-{ PC := L1; #1 @ X := T + 1 }
+transition t3 ([p])
+requires { PC[p] = L3 }
+{ PC[p] := L1; X := T[p] + 1 }

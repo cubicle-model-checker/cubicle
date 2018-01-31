@@ -21,18 +21,18 @@ registers
   $Delayed2 = 0 : [0:1] /* Delayed[1,2] */
 text
   Out:
-    either { /* request_mutex */
+    either { /* request_mutex */ /* lock to make safe */
       if $Request2 = 1 then
         write: NetReq12 := 1
     or /* receive_request_nonprio1 */
-      read: NetReq21 = 1;
+      locked { read: NetReq21 = 1;
       write: NetReq21 := 0;
-      write: NetPerm12 := 1;
+      write: NetPerm12 := 1 };
       $Request2 := 1;
       goto Out
-    or /* receive_permission */
-      read: NetPerm21 = 1;
-      write: NetPerm21 := 0;
+    or /* receive_permission */ /* ??? */
+      locked { read: NetPerm21 = 1;
+      write: NetPerm21 := 0 };
       $Request2 := 0;
       goto Out
     };
@@ -53,9 +53,9 @@ text
       write: NetReq21 := 0;
       $Request2 := 1;
       goto Trying
-    or /* receive_permission */
-      read: NetPerm21 = 1;
-      write: NetPerm21 := 0;
+    or /* receive_permission */ /* lock to make safe */
+      locked { read: NetPerm21 = 1;
+      write: NetPerm21 := 0 };
       $Request2 := 0;
       goto Out
     };
@@ -71,9 +71,9 @@ text
       write: NetReq21 := 0;
       $Delayed2 := 1;
       goto In
-    or /* receive_permission */
-      read: NetPerm21 = 1;
-      write: NetPerm21 := 0;
+    or /* receive_permission */ /* ??? */
+      locked { read: NetPerm21 = 1;
+      write: NetPerm21 := 0 };
       $Request2 := 0;
       goto Out
     }
@@ -91,15 +91,15 @@ text
     either { /* request_mutex */
       if $Request1 = 1 then
         write: NetReq21 := 1
-    or /* receive_request_nonprio1 */
-      read: NetReq12 = 1;
+    or /* receive_request_nonprio1 */ /* lock to make safe */
+      locked { read: NetReq12 = 1;
       write: NetReq12 := 0;
-      write: NetPerm21 := 1;
+      write: NetPerm21 := 1 };
       $Request1 := 1;
       goto Out
-    or /* receive_permission */
-      read: NetPerm12 = 1;
-      write: NetPerm12 := 0;
+    or /* receive_permission */ /* ??? */
+      locked { read: NetPerm12 = 1;
+      write: NetPerm12 := 0 };
       $Request1 := 0;
       goto Out
     };
@@ -120,9 +120,9 @@ text
       write: NetReq12 := 0;
       $Request1 := 1;
       goto Trying
-    or /* receive_permission */
-      read: NetPerm12 = 1;
-      write: NetPerm12 := 0;
+    or /* receive_permission */ /* lock to make safe */
+      locked { read: NetPerm12 = 1;
+      write: NetPerm12 := 0 };
       $Request1 := 0;
       goto Out
     };
@@ -138,9 +138,9 @@ text
       write: NetReq12 := 0;
       $Delayed1 := 1;
       goto In
-    or /* receive_permission */
-      read: NetPerm12 = 1;
-      write: NetPerm12 := 0;
+    or /* receive_permission */ /* ??? */
+      locked { read: NetPerm12 = 1;
+      write: NetPerm12 := 0 };
       $Request1 := 0;
       goto Out
     }

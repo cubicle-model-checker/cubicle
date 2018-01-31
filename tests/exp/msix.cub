@@ -7,13 +7,13 @@ weak array Cache[proc] : st
 
 init (i) { Cache[i] = I }
 
-unsafe (i j) { read(i, Cache[i]) = M && read(j, Cache[j]) <> I }
+(* unsafe (i j) { i@Cache[i] = M && j@Cache[j] <> I } *)
 
-unsafe (i j) { read(j, Cache[j]) = M && read(j, Cache[j]) <> I }
+unsafe (i j) { j@Cache[j] = M && j@Cache[j] <> I }
 
 (* unsafe (i j) { read(i, Cache[i]) = M && read(i, Cache[j]) <> I } *)
 (* unsafe (i j) { read(j, Cache[j]) = M && read(i, Cache[j]) <> I } *)
 
-transition read_miss (i j)
-requires { read(i, Cache[j]) <> M }
-{ write(i, Cache[i], S) }
+transition read_miss ([i] j)
+requires { Cache[j] <> M }
+{ Cache[i] := S }

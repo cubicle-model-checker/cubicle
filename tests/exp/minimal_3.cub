@@ -11,24 +11,22 @@ init (p) { PC[p] = L0 && F = False }
 unsafe (p1 p2) { PC[p1] = L1 && PC[p2] = L1 }
 
 
-transition t1_1 ()
-requires { PC[#1] = L0 && read(#1, F) = False }
-{ PC[#1] := L1; }
+transition t1_1 ([p])
+requires { p = #1 && PC[p] = L0 && F = False }
+{ PC[p] := L1; }
 
-transition t1_2 ()
-requires { PC[#1] = L1 }
-{ write(#1, F, True);
-  PC[#1] := L2; }
+transition t1_2 ([p])
+requires { p = #1 && PC[p] = L1 }
+{ F := True; PC[p] := L2; }
 
-transition t1_3 ()
-requires { PC[#1] = L2 && read(#1, F) = False }
-{ PC[#1] := L0; }
+transition t1_3 ([p])
+requires { p = #1 && PC[p] = L2 && F = False }
+{ PC[p] := L0; }
 
-transition t2_1 ()
-requires { PC[#2] = L0 && read(#2, F) = True }
-{ PC[#2] := L1; }
+transition t2_1 ([p])
+requires { p = #2 && PC[p] = L0 && F = True }
+{ PC[p] := L1; }
 
-transition t2_2 ()
-requires { PC[#2] = L1 }
-{ write(#2, F, False);
-  PC[#2] := L0; }
+transition t2_2 ([p])
+requires { p = #2 && PC[p] = L1 }
+{ F := False; PC[p] := L0; }

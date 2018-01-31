@@ -1,0 +1,65 @@
+# Memory layout:
+# 0 — Cstate	0 = Unknown, 1 = ReadyCommit, 2 = ReadyAbort,
+# 1 — Astate[1]	    	     3 = Committed,   4 = Abort
+# 2 — Astate[2]
+# 3 — Astate[3]
+
+thread t0
+initial l1
+final any
+transition	l1	l2	read	Astate1	   1
+transition	l2	l3	read	Astate2	   2
+transition	l3	l4	read	Astate3	   3
+transition	l4	l5	check	&& && == Astate1 1 == Astate2 1 == Astate3 1
+transition	l4	l6	check	|| || == Astate1 2 == Astate2 2 == Astate3 2
+transition	l5	l1	write	3	   0
+transition	l6	l1	write	4	   0
+transition	l1	any	noop
+transition	l2	any	noop
+transition	l3	any	noop
+transition	l4	any	noop
+transition	l5	any	noop
+transition	l6	any	noop
+end
+
+thread t1
+initial l1
+final c
+transition	l1	l2	write	1	   1
+transition	l1	l2	write	2	   1
+transition	l2	l3	read	Cstate	   0
+transition	l3	l2	check	== Cstate  0
+transition	l3	l4	check	!= Cstate  0
+transition	l4	l5	write	Cstate     1
+transition	l5	l6	read	Astate1    1
+transition	l6	c	check	== Astate1 3
+transition	l6	a	check	== Astate1 4
+end
+
+thread t2
+initial l1
+final a
+transition	l1	l2	write	1	   2
+transition	l1	l2	write	2	   2
+transition	l2	l3	read	Cstate	   0
+transition	l3	l2	check	== Cstate  0
+transition	l3	l4	check	!= Cstate  0
+transition	l4	l5	write	Cstate     2
+transition	l5	l6	read	Astate2    2
+transition	l6	c	check	== Astate2 3
+transition	l6	a	check	== Astate2 4
+end
+
+thread t3
+initial l1
+final c
+transition	l1	l2	write	1	   3
+transition	l1	l2	write	2	   3
+transition	l2	l3	read	Cstate	   0
+transition	l3	l2	check	== Cstate  0
+transition	l3	l4	check	!= Cstate  0
+transition	l4	l5	write	Cstate     3
+transition	l5	l6	read	Astate3    3
+transition	l6	c	check	== Astate3 3
+transition	l6	a	check	== Astate3 4
+end
