@@ -72,8 +72,8 @@ let fix_f_thr t p =
   | true, Some t -> if Hstring.equal p t then Fence (p)
                     else failwith "Threads differ in fence"
 
-let no_fce _ _ =
-  failwith "Fence not allowed in this context"
+let no_fce _ p = Fence (p)
+  (* failwith "Fence not allowed in this context" *)
 
 let fix_rd_upd t upd =
   { upd with pup_swts = process_event_pswts

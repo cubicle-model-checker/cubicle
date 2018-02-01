@@ -109,6 +109,8 @@ let print_local_var fmt n =
 let const fmt = function
   | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
   | ConstName n -> print_mcmt_var fmt n
+  | ConstArray (n,[p]) -> fprintf fmt "%a[%a]" print_mcmt_var a print_local_var x
+  | ConstArray (_, _) -> assert false
 
 let int_consts fmt mc =
   fprintf fmt "(+ ";

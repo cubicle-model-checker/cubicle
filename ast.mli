@@ -77,7 +77,7 @@ type transition = {
 
 type system = {
   globals : (loc * Hstring.t * Smt.Type.t * bool) list;
-  consts : (loc * Hstring.t * Smt.Type.t) list;
+  consts : (loc * Hstring.t * Hstring.t list * Smt.Type.t) list;
   arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
@@ -129,7 +129,7 @@ type init_instance = {
 
 type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
-  t_consts : Hstring.t list; (** Existential constants *)
+  t_consts : (Hstring.t * Hstring.t list) list; (** Existential constants *)
   t_arrays : Hstring.t list; (** Array names *)
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally

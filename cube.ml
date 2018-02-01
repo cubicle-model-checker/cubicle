@@ -500,7 +500,7 @@ let tick_pos sa =
 		(fun c i ->
 		   if i > 0 then
 		     match c with
-		       | ConstName t ->
+		       | ConstName t | ConstArray (t, _) ->
 			   if !n = None then n := Some c else raise Not_found
 		       | _ -> raise Not_found )
 		m;
@@ -632,10 +632,6 @@ let elim_ite_atoms np =
     let ites, base = SAtom.partition (function Atom.Ite _ -> true | _ -> false) np in
     let base = simplification_atoms SAtom.empty base in
     let ites = simplification_atoms base ites in
-   (* Format.eprintf "Ites:\n"; *)
-   (*  SAtom.iter (fun a -> *)
-   (*    Format.eprintf "Ite : %a\n" Atom.print a) ites; *)
-   (*  Format.eprintf "\n"; *)
     let lsa =
       SAtom.fold
 	(fun ite cubes ->

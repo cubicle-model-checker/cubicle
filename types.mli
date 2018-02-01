@@ -28,7 +28,8 @@ type sort =
 (** constant: it can be an integer, a real or a constant name *)
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
-                                                                
+    | ConstArray of Hstring.t * Variable.t list
+                                                            
 module MConst : sig 
   include Map.S with type key = const
   val choose : int t -> key * int

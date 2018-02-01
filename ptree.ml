@@ -170,7 +170,7 @@ type ptransition = {
 
 type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t * bool) list;
-  pconsts : (loc * Hstring.t * Smt.Type.t) list;
+  pconsts : (loc * Hstring.t * Hstring.t list * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
@@ -709,9 +709,13 @@ let print_arrays fmt  =
     )
 
 let print_consts fmt  =
-  List.iter (fun (_, c, ty) ->
+  List.iter (fun (_, c, pl, ty) ->
+    if pl = [] then
       fprintf fmt "@{<fg_magenta>const@} @{<fg_blue>%a@} : @{<fg_green>%a@}@."
         Hstring.print c Hstring.print ty
+    else
+     fprintf fmt "@{<fg_magenta>const@} @{<fg_blue>%a[%a]@} : @{<fg_green>%a@}@."
+        Hstring.print c (Hstring.print_list ",") pl Hstring.print ty
     )
 
 let print_dnf =

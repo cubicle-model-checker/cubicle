@@ -378,7 +378,7 @@ let rec type_of_term = function
       MConst.fold (fun c _ _ -> match c with
 	| ConstReal _ -> Smt.Type.type_real
 	| ConstInt _ -> Smt.Type.type_int
-	| ConstName x -> 
+	| ConstName x | ConstArray (x, _) ->
           let x = if is_prime (Hstring.view x) then unprime_h x else x in
           snd (Smt.Symbol.type_of x)
       ) m Smt.Type.type_int
@@ -941,7 +941,6 @@ let possible_trace ~starts ~finish ~procs ~trace =
     forward_rec init trace
   with
     | Reachable hist -> Reach hist
-  
 
 let rec list_excedent = function
   | _, [] -> assert false
@@ -971,7 +970,7 @@ let procs_on_trace trace =
     List.fold_left (fun acc (_, procs_t, n) ->
       List.fold_left (fun acc p -> Hstring.HSet.add p acc) acc
 	(List.rev_append procs_t
-    (Variable.Set.elements (SAtom.variables (Node.litterals n))))
+    (Variable.Set.elements (SAtom.variables_proc (Node.litterals n))))
     (* (Node.variables n)) *)
       ) Hstring.HSet.empty trace
   in

@@ -94,7 +94,7 @@ type ptransition = {
 
 type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t * bool) list;
-  pconsts : (loc * Hstring.t * Smt.Type.t) list;
+  pconsts : (loc * Hstring.t * Hstring.t list * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
@@ -120,7 +120,7 @@ val encode_psystem : psystem -> Ast.system
 
 val psystem_of_decls:
   pglobals : (loc * Hstring.t * Smt.Type.t * bool) list ->
-  pconsts : (loc * Hstring.t * Smt.Type.t) list ->
+  pconsts : (loc * Hstring.t * Hstring.t list * Smt.Type.t) list ->
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t) * bool) list ->
   ptype_defs : (loc * Ast.type_constructors) list ->
   pdecl list -> psystem

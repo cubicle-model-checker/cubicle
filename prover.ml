@@ -68,11 +68,13 @@ let make_const = function
   | ConstInt i -> T.make_int i
   | ConstReal i -> T.make_real i
   | ConstName n -> T.make_app n []
+  | ConstArray (n, pl) -> T.make_app n (List.map (fun p -> T.make_app p []) pl)
 
 let ty_const = function
   | ConstInt _ -> Smt.Type.type_int
   | ConstReal _ -> Smt.Type.type_real
   | ConstName n -> snd (Smt.Symbol.type_of n)
+  | ConstArray (n, pl) -> snd (Smt.Symbol.type_of n)
 
 let rec mult_const tc c i =
  match i with

@@ -64,6 +64,12 @@
     let mem x = S.mem x !s
   end
 
+  module ConstArrays = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
   module Weaks = struct
     let s = ref S.empty
     let add x = s := S.add x !s
@@ -172,6 +178,19 @@ function_decl :
   }
 ;
 
+const_decl:
+  | CONST mident COLON lident { 
+    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
+    Consts.add $2;
+    loc (), $2, [], $4 }
+  | CONST mident LEFTSQ lident_list_plus RIGHTSQ COLON lident {
+    if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+      raise Parsing.Parse_error;
+    if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
+    ConstArrays.add $2;
+    loc (), $2, $4, $7 }
+;
+
 weak_opt:
   | /*epsilon*/ { false }
   | WEAK { Options.model <> Options.SC }
@@ -183,20 +202,13 @@ var_decl:
     loc (), $3, $5, $1 }
 ;
 
-const_decl:
-  | CONST mident COLON lident { 
-    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Consts.add $2;
-    loc (), $2, $4 }
-;
-
 array_decl:
   | weak_opt ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident {
-        if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
-	  raise Parsing.Parse_error;
-	if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
-	Arrays.add $3; if $1 then Weaks.add $3;
-	loc (), $3, ($5, $8), $1 }
+    if not (List.for_all (fun p -> Hstring.equal p hproc) $5) then
+      raise Parsing.Parse_error;
+    if Hstring.equal $8 hint || Hstring.equal $8 hreal then Smt.set_arith true;
+    Arrays.add $3; if $1 then Weaks.add $3;
+    loc (), $3, ($5, $8), $1 }
 ;
 
 type_defs:
@@ -307,31 +319,16 @@ assign_nondet_update:
 ;
 
 assignment:
-  | assignment_weak { $1 }
-  | proc_name AT assignment_weak {
-      match $3 with
-      | Write (_, var, args, upd) ->
-         Write (Some $1, var, args, upd)
-      | _ -> $3 }
-;
-
-assignment_weak:
-  | assignment_base {
-      match $1 with
-      | Assign (var, upd) ->
-         if Weaks.mem var then Write (None, var, [], upd)
-         else $1
-      | _ -> assert false }
-;
-
-assignment_base:
-  | mident AFFECT term { Assign ($1, PUTerm $3) }
+  | mident AFFECT term {
+      if Weaks.mem $1 then Write (None, $1, [], PUTerm $3)
+      else Assign ($1, PUTerm $3) }
   | mident AFFECT CASE switchs {
       let swts = match List.rev $4 with
         | (PAtom (AAtom (Atom.True)), _) :: _ -> $4
         | swts -> List.rev (
             (PAtom (AAtom (Atom.True)), TTerm (Elem ($1, Glob))) :: swts) in
-      Assign ($1, PUCase swts) }
+      if Weaks.mem $1 then Write (None, $1, [], PUCase swts)
+      else Assign ($1, PUCase swts) }
 ;
 
 nondet:
@@ -345,15 +342,6 @@ require:
 ;
 
 update:
-  | update_weak { $1 }
-  | proc_name AT update_weak {
-      match $3 with
-      | Write (_, var, args, upd) ->
-         Write (Some $1, var, args, upd)
-      | _ -> $3 }
-;
-
-update_weak:
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT CASE switchs
     { if Weaks.mem $1 then Write (None, $1, $3, PUCase $7)
       else begin

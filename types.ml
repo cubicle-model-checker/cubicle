@@ -27,6 +27,7 @@ type sort = Glob | Constr | Var
 
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
+    | ConstArray of Hstring.t * Variable.t list
 
 let compare_const c1 c2 = match c1, c2 with
   | (ConstInt n1 | ConstReal n1), (ConstInt n2 | ConstReal n2) ->
@@ -34,6 +35,11 @@ let compare_const c1 c2 = match c1, c2 with
   | (ConstInt _ | ConstReal _), _ -> -1
   | _, (ConstInt _ | ConstReal _) -> 1
   | ConstName h1, ConstName h2 -> Hstring.compare h1 h2
+  | ConstArray (h1, pl1), ConstArray (h2, pl2) ->
+     let c = Hstring.compare h1 h2 in
+     if c = 0 then Hstring.compare_list pl1 pl2 else c
+  | ConstName _, ConstArray _ -> -1
+  | ConstArray _, ConstName _ -> 1
 
 module MConst = struct
 
@@ -97,7 +103,7 @@ type term =
 let is_int_const = function
   | ConstInt _ -> true
   | ConstReal _ -> false
-  | ConstName n -> 
+  | ConstName n | ConstArray (n, _) ->
      Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
 
 
@@ -120,7 +126,7 @@ let split_num_consts cs =
   MConst.fold
     (fun c i (cs, num) ->
      match c, num with
-     | ConstName _, _ -> MConst.add c i cs, num
+     | ConstName _, _ | ConstArray _, _ -> MConst.add c i cs, num
      | _ -> cs, add_constnum c i num)
     cs (MConst.empty, ConstInt (Num.Int 0))
 
@@ -158,7 +164,7 @@ let const_sign c =
     MConst.iter (fun c i ->
       if i <> 0 then 
 	match c with
-	| ConstName _ -> raise Exit
+	| ConstName _ | ConstArray _ -> raise Exit
 	| ConstInt a | ConstReal a -> 
 	   n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
     Some (Num.compare_num !n (Num.Int 0))
@@ -279,6 +285,8 @@ module Term = struct
   let print_const fmt = function
     | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstName n -> fprintf fmt "%a" Hstring.print n
+    | ConstArray (n, pl) ->
+       fprintf fmt "%a[%a]" Hstring.print n (Hstring.print_list ",") pl
 
   let print_cs alone fmt cs =
     let first = ref true in

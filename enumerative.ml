@@ -619,7 +619,7 @@ let mkinits procs ({t_init = ia, l_init}) =
 let int_of_const = function
   | ConstInt n -> Num.int_of_num n
   | ConstReal n -> Num.int_of_num (Num.integer_num n)
-  | ConstName _ -> 1
+  | ConstName _ | ConstArray _ -> 1
 
 let int_of_consts cs =
   MConst.fold (fun c i acc -> i * (int_of_const c) + acc) cs 0

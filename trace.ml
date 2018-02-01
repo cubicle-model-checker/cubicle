@@ -623,8 +623,8 @@ module Why3 = struct
   let add_decls fmt s =
     let d = List.iter
         (fprintf fmt "%a@ " (print_decl ~prime:false ~const:false)) in
-    let c = List.iter
-        (fprintf fmt "%a@ " (print_decl ~prime:false ~const:true)) in
+    let c = List.iter (fun (c, _) ->
+        fprintf fmt "%a@ " (print_decl ~prime:false ~const:true) c) in
     let d_prime = List.iter
         (fprintf fmt "%a@ " (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
@@ -640,6 +640,8 @@ module Why3 = struct
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
+    | ConstArray (n, pl) ->
+       fprintf fmt "%a[%a]" print_name n (Hstring.print_list ", ") pl
 
   let print_cs ?(arith=false) fmt cs =
     let ls = MConst.fold (fun c i acc -> (c,i) :: acc) cs [] in
@@ -1450,8 +1452,8 @@ module Why3_INST = struct
   let add_decls fmt s =
     let d = List.iter
         (fprintf fmt "%a@." (print_decl ~prime:false ~const:false)) in
-    let c = List.iter
-        (fprintf fmt "%a@." (print_decl ~prime:false ~const:true)) in
+    let c = List.iter (fun (c, _) ->
+        fprintf fmt "%a@." (print_decl ~prime:false ~const:true) c) in
     let d_prime = List.iter
         (fprintf fmt "%a@." (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
@@ -1465,6 +1467,8 @@ module Why3_INST = struct
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
+    | ConstArray (n, pl) ->
+       fprintf fmt "%a[%a]" print_name n (Hstring.print_list ", ") pl
 
   let print_cs fmt cs =
     MConst.iter 

@@ -137,6 +137,8 @@ module Latex = struct
   let print_const fmt = function
     | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstName n -> fprintf fmt "%a" Hstring.print n
+    | ConstArray (n, pl) ->
+       fprintf fmt "%a[%a]" Hstring.print n (Hstring.print_list ",") pl
 
   let print_cs fmt cs =
     MConst.iter 
