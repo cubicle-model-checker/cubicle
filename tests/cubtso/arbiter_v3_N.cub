@@ -23,14 +23,14 @@ type kind = Arb | Proc
 type loc = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8 | L9 | L10 | CS
 
 (* Local variables *)
-array Kind[proc] : kind
+const Kind[proc] : kind
 array PC[proc] : loc
 array Pr[proc] : proc
 
 (* Global variables *)
- array Attn[proc] : bool
- array Answ[proc] : bool
- array Chng[proc] : bool
+weak array Attn[proc] : bool
+weak array Answ[proc] : bool
+weak array Chng[proc] : bool
 
 
 invariant (p1 p2) { Kind[p1] = Arb && Kind[p2] = Arb }

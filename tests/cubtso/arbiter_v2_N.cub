@@ -7,7 +7,7 @@ type kind = Arb | Proc
 type loc = L1 | L2 | L3 | L4 | CS
 
 (* Local variables *)
-array Kind[proc] : kind
+const Kind[proc] : kind
 array PC[proc] : loc
 array Pr[proc] : proc
 

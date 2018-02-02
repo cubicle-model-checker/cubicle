@@ -65,11 +65,14 @@ module Consts = struct
   let mem x = S.mem x !s
 end
 
-type context = { init: bool; unsafe: bool; proc: Hstring.t option }
+type ct = None | Init | Unsafe | Trans
 
-let defctx = { init = false; unsafe = false; proc = None }
-let initctx = { init = true; unsafe = false; proc = None }
-let usctx = { init = false; unsafe = true; proc = None }
+type context = { c: ct; thr: Hstring.t list }
+
+let dctx = { c = None; thr = [] }
+let tctx = { c = Trans; thr = [] }
+let ictx = { c = Init; thr = [] }
+let uctx = { c = Unsafe; thr = [] }
 
 let print_htype fmt (args, ty) =
   fprintf fmt "%a%a" 
@@ -204,7 +207,7 @@ let ty_access loc args a li =
     ) li;
   [], ty_a
 
-let rec term loc ?(ctx=defctx) args = function
+let rec term loc ?(ctx=dctx) args = function
   | Const cs ->
       let c, _ = MConst.choose cs in
       (match c with
@@ -232,20 +235,19 @@ let rec term loc ?(ctx=defctx) args = function
       end
   | Access(a, li) ->
      (*if Weakmem.is_weak a && not ctx.init then error (MustReadWeakVar a) loc;*)
-      if Options.model <> SC && not (Consts.mem a) &&
-        not ctx.unsafe && not ctx.init then begin
-          let ok = match li, ctx.proc with
-            | p :: _, Some t ->
-               Hstring.equal p t
-            | p :: _, None -> true (* more complex than this *)
-            | _, _ -> false in
-          if not ok then error (ProcCantReadOtherSC) loc;
+      if Options.model <> SC && not (Consts.mem a) && ctx.c = Trans
+      then begin
+        let ok = match li, ctx.thr with
+          | p :: _, _ :: _ -> List.exists (fun t -> Hstring.equal p t) ctx.thr
+          | p :: _, [] -> failwith "Typing.ml: missing thread in transition"
+          | [], _ -> failwith "Typing.ml: empty argument list" in
+        if not ok then error (ProcCantReadOtherSC) loc;
       end;
       ty_access loc args a li
 
   | Read (p, v, vi) ->
       (* if Options.model = Options.SC then error (OpInvalidInSC) loc; *)
-      (* if ctx.init then error (CantUseReadInInit) loc; *)
+      (* if ctx.c = Init then error (CantUseReadInInit) loc; *)
       (* if not (Weakmem.is_weak v) then error (MustBeWeakVar v) loc; *)
       if not (Hstring.list_mem p args) then
 	begin try
@@ -261,8 +263,8 @@ let rec term loc ?(ctx=defctx) args = function
   | Write (p, v, vi, srl) -> failwith "Typing.term : Write should not be typed"
   | Fence p ->
       (* if Options.model = Options.SC then error (OpInvalidInSC) loc; *)
-      if ctx.init then error (CantUseFenceInInit) loc;
-      if ctx.unsafe then error (CantUseFenceInUnsafe) loc;
+      if ctx.c = Init then error (CantUseFenceInInit) loc;
+      if ctx.c = Unsafe then error (CantUseFenceInUnsafe) loc;
       if not (Hstring.list_mem p args) then
 	begin try
 	  let pa, typ = Smt.Symbol.type_of p in
@@ -272,7 +274,7 @@ let rec term loc ?(ctx=defctx) args = function
 	end;
       [], (Hstring.make "mbool") (*Smt.Type.type_bool*)
 
-let assignment ?(init_variant=false) ?(ctx=defctx) g x (_, ty) = 
+let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
      || ty = Smt.Type.type_bool
      || ty = Smt.Type.type_int
@@ -287,7 +289,7 @@ let assignment ?(init_variant=false) ?(ctx=defctx) g x (_, ty) =
 	    Smt.Variant.assign_var n g
       | _ -> ()
 
-let atom loc init_variant ?(ctx=defctx) args = function
+let atom loc init_variant ?(ctx=dctx) args = function
   | True | False -> ()
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
@@ -295,22 +297,22 @@ let atom loc init_variant ?(ctx=defctx) args = function
   | Comp (Access(g, _) as x, Eq, y) -> 
       let ty = term ~ctx loc args y in
       unify loc (term ~ctx loc args x) ty;
-      if init_variant then assignment ~ctx ~init_variant g y ty
+      if init_variant then assignment ~init_variant g y ty
   | Comp (x, op, y) -> 
       unify loc (term ~ctx loc args x) (term ~ctx loc args y)
   | Ite _ -> assert false
 
-let atoms loc ?(init_variant=false) ?(ctx=defctx) args =
+let atoms loc ?(init_variant=false) ?(ctx=dctx) args =
   SAtom.iter (atom loc init_variant ~ctx args)
 
 let init (loc, args, lsa) =
-  List.iter (atoms loc ~init_variant:true ~ctx:initctx args) lsa
+  List.iter (atoms loc ~init_variant:true ~ctx:ictx args) lsa
 
 let unsafe (loc, name, args, sa) = 
   unique (fun x-> error (DuplicateName x) loc) args; 
-  atoms ~ctx:usctx loc args sa
+  atoms ~ctx:uctx loc args sa
 
-let nondets loc ?(ctx=defctx) l = 
+let nondets loc ?(ctx=dctx) l = 
   unique (fun c -> error (DuplicateAssign c) loc) l;
   List.iter 
     (fun g -> 
@@ -323,7 +325,7 @@ let nondets loc ?(ctx=defctx) l =
 	 (*   error (MustBeOfTypeProc g) *)
        with Not_found -> error (UnknownGlobal g) loc) l
 
-let assigns loc ?(ctx=defctx) args = 
+let assigns loc ?(ctx=dctx) args = 
   let dv = ref [] in
   List.iter 
     (fun (g, gu) ->
@@ -338,18 +340,32 @@ let assigns loc ?(ctx=defctx) args =
          | UTerm x ->
             let ty_x = term ~ctx loc args x in
             unify loc ty_x ty_g;
-            assignment ~ctx g x ty_x;
+            assignment g x ty_x;
          | UCase swts ->
             List.iter (fun (sa, x) ->
               atoms ~ctx loc args sa;
               let ty_x = term ~ctx loc args x in
               unify loc ty_x ty_g;
-              assignment ~ctx g x ty_x;
+              assignment g x ty_x;
             ) swts
        end;         
        dv := g ::!dv)
 
-let writes loc ?(ctx=defctx) args wl =
+let update_ctxthr sa ctx =
+  SAtom.fold (fun a ctx ->
+    match a with
+    | Comp (Elem (p1, Var), Eq, Elem (p2, Var)) ->
+       let thr =
+         if List.exists (fun p -> Hstring.equal p p1) ctx.thr
+           then p2 :: ctx.thr
+         else if List.exists (fun p -> Hstring.equal p p2) ctx.thr
+           then p1 :: ctx.thr
+         else ctx.thr in
+       { ctx with thr = thr }
+    | _ -> ctx
+  ) sa ctx
+
+let writes loc ?(ctx=dctx) args wl =
   (* if Options.model = Options.SC && wl <> []
    *   then error (OpInvalidInSC) loc; *)
   let dv = ref [] in
@@ -360,32 +376,44 @@ let writes loc ?(ctx=defctx) args wl =
        let ty_v =
 	 try Smt.Symbol.type_of v
          with Not_found -> error (UnknownGlobal v) loc in
-       begin
+       begin (* check vis match this variable number of procs *)
          (* if not (Weakmem.is_weak v) then error (MustBeWeakVar v) loc; *)
          match gu with
-         | UTerm t ->
+         | UTerm t -> (* check vis are in args *)
             let ty_t = term ~ctx loc args t in
             unify loc ty_t ([], snd ty_v);
-            assignment ~ctx v t ty_t
-         | UCase swts ->
+            assignment v t ty_t
+         | UCase swts -> (* check vis are not in args *)
             List.iter (fun (sa, t) ->
+              let ctx = update_ctxthr sa ctx in
               atoms ~ctx loc (vi @ args) sa;
-              let ty_t = term loc (vi @ args) t in
+              let ty_t = term ~ctx loc (vi @ args) t in
               unify loc ty_t ([], snd ty_v);
-              assignment ~ctx v t ty_t
+              assignment v t ty_t
             ) swts
        end;
        dv := v ::!dv) wl
 
-let switchs loc ?(ctx=defctx) a args ty_e l = 
+let rec list_forall2_short p l1 l2 = match l1, l2 with
+  | e1 :: l1, e2 :: l2 -> p e1 e2 && list_forall2_short p l1 l2
+  | _ -> true
+  
+let update_ident v1 vi1 = function
+  | Access (v2, vi2) ->
+     Hstring.equal v1 v2 && list_forall2_short Hstring.equal vi1 vi2
+  | _ -> false
+  
+let switchs loc ?(ctx=dctx) a args ty_e l =
   List.iter 
-    (fun (sa, t) -> 
-       atoms ~ctx loc args sa; 
-       let ty = term ~ctx loc args t in
-       unify loc ty ty_e;
-       assignment ~ctx a t ty) l
+    (fun (sa, t) ->
+       let ctx = update_ctxthr sa ctx in
+       atoms ~ctx loc args sa;
+       if not (update_ident a args t) then
+         let ty = term ~ctx loc args t in
+         unify loc ty ty_e;
+         assignment a t ty) l
 
-let updates ?(ctx=defctx) args = 
+let updates ?(ctx=dctx) args = 
   let dv = ref [] in
   List.iter 
     (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
@@ -399,10 +427,9 @@ let updates ?(ctx=defctx) args =
        if args_a = [] then error (MustBeAnArray a) loc;
        (* if Weakmem.is_weak a then error (MustWriteWeakVar a) loc; *)
        dv := a ::!dv;
-       (* switchs ~ctx loc a (lj @ args) ([], ty_a) swts) *) 
-       switchs loc a (lj @ args) ([], ty_a) swts) 
+       switchs ~ctx loc a (lj @ args) ([], ty_a) swts)
 
-let check_lets loc ?(ctx=defctx) args l =
+let check_lets loc ?(ctx=dctx) args l =
   List.iter 
     (fun (x, t) ->
      let _ = term ~ctx loc args t in ()
@@ -414,13 +441,14 @@ let transitions =
        (* if Options.model = Options.SC && t.tr_fence <> None
         *   then error (OpInvalidInSC) loc; *)
        if Options.model <> Options.SC && t.tr_thread = None
-         then error (MissingThreadInTrans) loc;
-       let ctx = { defctx with proc = t.tr_thread } in
+       then error (MissingThreadInTrans) loc;
+       let th = match t.tr_thread with Some t -> [t] | None -> [] in
+       let ctx = { tctx with thr = th } in
        unique (fun x-> error (DuplicateName x) loc) args; 
        atoms ~ctx loc args t.tr_reqs;
        List.iter 
 	 (fun (x, cnf) -> 
-	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+	  List.iter (atoms ~ctx loc (x::args)) cnf)  t.tr_ureq;
        check_lets ~ctx loc args t.tr_lets;
        updates ~ctx args t.tr_upds;
        assigns ~ctx loc args t.tr_assigns;

@@ -51,7 +51,7 @@ requires { State[i] = Out }
   State[i] := Trying;
   NetReq[x,y] := case
               | x = i && Request[x,y] = True && y <> i : True
-	      | _ : False
+  	      | _ : False
               (* | _ : NetReq[x,y]; *)
 }
 
@@ -126,7 +126,7 @@ requires { NetReq[j,i] = True && State[i]  = Trying && Request[i,j] = False }
   NetPerm[i,j] := True; (* send a permission message to j *)
   NetReq[x,y] := case
               | x = j && y = i : False
-              | x = i && y = j : True; (* and also send a request message as i has given its permission *)
+              | x = i && y = j : True (* and also send a request message as i has given its permission *)
 	      | _ : False
               (* | _ : NetReq[x,y]; *)
 }
