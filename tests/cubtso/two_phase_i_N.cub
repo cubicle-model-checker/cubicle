@@ -1,0 +1,95 @@
+
+(* Lower-level model of two-phase commit protocol where nodes *)
+(* communicate by message passing. *)
+
+(* This version is similar to TPCImplementation.cub, with an additional ghost
+ * variable that counts the aborts.
+ * This version is checkable by cubicle. *)
+
+type state = Unknown | ReadyCommit | ReadyAbort | Committed | Aborted
+type proposal = PCommit | PAbort | PNone
+type order = OCommit | OAbort | ONone
+type location = A1 | A2 | Done
+type kind = A | P
+
+const Kind[proc] : kind
+array PC[proc] : location
+array Astate[proc] : state
+weak array Proposal[proc] : proposal
+array Commits[proc,proc] : bool  (* true when coordinator received commit proposal from agent *)
+array Cstate[proc] : state
+weak var Order : order  (* order of coordinator, if any, modeled as scalar variable *)
+weak var Ghost : bool
+
+init (n m) {
+  PC[n] = A1 &&
+  Astate[n] = Unknown &&
+  Cstate[n] = Unknown &&
+  Proposal[n] = PNone &&
+  Commits[n,m] = False &&
+  Order = ONone &&
+  Ghost = False
+}
+
+(* invariant (m) { m @ Ghost < 0 } *)
+invariant (m n) { Kind[m] = A && Kind[n] = A }
+
+unsafe(m n) { Astate[m] = Committed && Astate[n] = Aborted }
+
+
+(* Arbiter process *)
+
+transition receiveCommit([m] n)
+requires { Kind[m] = A && PC[m] = A1 && Kind[n] = P && Proposal[n] = PCommit }
+{
+  Commits[m,n] := True;
+}
+
+transition decideCommit([m])
+requires { Kind[m] = A && PC[m] = A1 && Ghost = False && forall_other k. Kind[k] = P && Commits[m,k] = True }
+{
+  Cstate[m] := Committed;
+  Order := OCommit;
+  (* PC[m] := Done *)
+}
+
+transition decideAbort([m] n)
+requires { Kind[m] = A && PC[m] = A1 && Kind[n] = P && Proposal[n] = PAbort }
+{
+  Cstate[m] := Aborted;
+  Order := OAbort;
+  (* PC[m] := Done *)
+}
+
+(* Other processes *)
+
+transition proposeCommit([n])
+requires { Kind[n] = P && PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyCommit;
+  Proposal[n] := PCommit;
+}
+
+transition proposeAbort([n])
+requires { Kind[n] = P && PC[n] = A1 }
+{
+  PC[n] := A2;
+  Astate[n] := ReadyAbort;
+  Proposal[n] := PAbort;
+  Ghost := True;
+}
+
+transition executeCommit([n])
+requires { Kind[n] = P && PC[n] = A2 && Order = OCommit }
+{
+  PC[n] := Done;
+  Astate[n] := Committed;
+}
+
+transition executeAbort([n])
+requires { Kind[n] = P && PC[n] = A2 && Order = OAbort }
+{
+  PC[n] := Done;
+  Astate[n] := Aborted;
+}
