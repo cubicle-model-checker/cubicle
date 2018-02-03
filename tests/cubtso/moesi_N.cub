@@ -1,4 +1,6 @@
 
+(* MOESI cache coherence protocol *)
+
 type location = M | O | E | S | I
 
 (* Global variables *)

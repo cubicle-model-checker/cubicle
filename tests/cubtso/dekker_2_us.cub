@@ -1,7 +1,9 @@
 
+(* Dekker's mutual exclusion algorithm for 2 processes *)
+
 number_procs 2
 
-type loc = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8
+type loc = L1 | L2 | L3 | L4 | L5 | L6 | L7 | CS
 
 (* Program counters *)
 array PC[proc] : loc
@@ -13,7 +15,7 @@ weak var Turn : proc
 
 init (p) { PC[p] = L1 && Want[p] = False }
 
-unsafe (p1 p2) { PC[p1] = L7 && PC[p2] = L7 }
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
 
 
 transition t_L1_L2_W_WantS_True ([p])
@@ -24,9 +26,9 @@ transition t_L2_L3_R_WantO_True ([p] q)
 requires { PC[p] = L2 && Want[q] = True }
 { PC[p] := L3 }
 
-transition t_L2_L7_R_WantO_False ([p] q)
-requires { PC[p] = L2 && Want[q] = False }
-{ PC[p] := L7 }
+transition t_L2_CS_R_WantO_False ([p] q)
+requires { PC[p] = L2 && Want[q] = False && fence() }
+{ PC[p] := CS }
 
 transition t_L3_L4_R_Turn_Other ([p])
 requires { PC[p] = L3 && Turn <> p }
@@ -54,10 +56,10 @@ requires { PC[p] = L6 }
 
 (* Critical section *)
 
-transition t_L7_L8_W_Turn_Other ([p] q)
-requires { PC[p] = L7 }
-{ PC[p] := L8; Turn := q }
+transition t_CS_L7_W_Turn_Other ([p] q)
+requires { PC[p] = CS }
+{ PC[p] := L7; Turn := q }
 
-transition t_L8_L1_W_WantS_False ([p])
-requires { PC[p] = L8 }
+transition t_L7_L1_W_WantS_False ([p])
+requires { PC[p] = L7 }
 { PC[p] := L1; Want[p] := False }

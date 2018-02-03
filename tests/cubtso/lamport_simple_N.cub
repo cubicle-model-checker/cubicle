@@ -1,4 +1,6 @@
 
+(* Simplified Lamport Algorithm for N processes *)
+
 type state = I | W | CS
 
 (* Global variables *)

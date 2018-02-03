@@ -1,6 +1,7 @@
 
-(*
-https://pdfs.semanticscholar.org/c282/cb70cd6cdf3d5e08bd39c016f54b006b6555.pdf
+(* The Arbiter algortihm (version 1)
+
+https://www.semanticscholar.org/paper/The-arbiter-an-active-system-component-for-impleme-Goeman/c282cb70cd6cdf3d5e08bd39c016f54b006b6555
 *)
 
 type kind = Arb | Proc
@@ -55,4 +56,3 @@ requires { Kind[p] = Proc && PC[p] = L2 && Attn[p] = False }
 transition t_proc_CS_L1 ([p])
 requires { Kind[p] = Proc && PC[p] = CS }
 { PC[p] := L1; Leaving := True }
-

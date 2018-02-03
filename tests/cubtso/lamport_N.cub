@@ -1,4 +1,6 @@
 
+(* Lamport's mutual exclusion algorithm for N processes *)
+
 type loc =  L1 | L2 | L3 | L4 | L5 | CS
 
 (* Program counters *)
@@ -25,7 +27,7 @@ requires { PC[p] = L2 && Y_set = True }
 { PC[p] := L1 }
 
 transition t_L2_L3_Y_Null ([p])
-requires { fence() && PC[p] = L2 && Y_set = False }
+requires { PC[p] = L2 && Y_set = False && fence() }
 { PC[p] := L3 }
 
 transition t_L3_L4_W_Y_Self ([p])
@@ -41,7 +43,7 @@ requires { PC[p] = L5 && Y <> p }
 { PC[p] := L1 }
 
 transition t_L4_CS_X_Self ([p])
-requires { fence() && PC[p] = L4 && X = p && X_set = True }
+requires { PC[p] = L4 && X = p && X_set = True && fence() }
 { PC[p] := CS }
 
 (* Critical section *)

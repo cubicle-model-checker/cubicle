@@ -1,12 +1,13 @@
 
 (* Peterson's mutual exclusion algorithm for 2 processes *)
 
-number_procs 2
-
 type loc = L1 | L2 | L3 | CS | End
 
 (* Program counters *)
 array PC[proc] : loc
+
+(* Constants *)
+const Active[proc] : bool
 
 (* Global variables *)
 weak array Want[proc] : bool
@@ -15,27 +16,35 @@ weak var Turn : proc
 
 init (p) { PC[p] = L1 && Want[p] = False }
 
-unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+invariant (p1 p2 p3) {
+  Active[p1] = True &&
+  Active[p2] = True &&
+  Active[p3] = True }
+
+unsafe (p1 p2) { Active[p1] = True && PC[p1] = CS &&
+                 Active[p2] = True && PC[p2] = CS }
 
 
 transition t_L1_L2_W_WantS_True ([p])
-requires { PC[p] = L1 }
+requires { Active[p] = True && PC[p] = L1 }
 { PC[p] := L2; Want[p] := True }
 
 transition t_L2_L3_W_Turn_Other ([p] q)
-requires { PC[p] = L2 }
+requires { Active[p] = True && PC[p] = L2 &&
+           Active[q] = True }
 { PC[p] := L3; Turn := q }
 
 transition t_L3_CS_R_WantO_False ([p] q)
-requires { PC[p] = L3 && Want[q] = False }
+requires { Active[p] = True && PC[p] = L3 && fence() &&
+           Active[q] = True && Want[q] = False }
 { PC[p] := CS }
 
 transition t_L3_CS_R_Turn_Self ([p])
-requires { PC[p] = L3 && Turn = p }
+requires { Active[p] = True && PC[p] = L3 && Turn = p }
 { PC[p] := CS }
 
 (* Critical section *)
 
 transition t_CS_L1_W_WantS_False ([p])
-requires { PC[p] = CS }
+requires { Active[p] = True && PC[p] = CS }
 { PC[p] := L1; Want[p] := False }

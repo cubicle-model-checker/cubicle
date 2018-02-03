@@ -1,0 +1,25 @@
+
+(* Simplified Dekker algorithm for N processes *)
+
+(* Global variables *)
+weak var Turn : proc
+weak array Want[proc] : bool
+weak array Crit[proc] : bool
+
+
+init (p) { Want[p] = False && Crit[p] = False }
+
+unsafe (p1 p2) { p1 @ Crit[p1] = True && p2 @ Crit[p2] = True }
+
+
+transition req ([p])
+requires { Want[p] = False }
+{ Want[p] := True }
+
+transition enter ([p])
+requires { Want[p] = True && Crit[p] = False && Turn = p }
+{ Crit[p] := True }
+
+transition exit ([p] q)
+requires { Crit[p] = True }
+{ Crit[p] := False; Want[p] := False; Turn := q }

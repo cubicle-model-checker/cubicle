@@ -1,4 +1,6 @@
 
+(* MSI cache coherence protocol *)
+
 type st = M | S | I
 
 (* Global variables *)

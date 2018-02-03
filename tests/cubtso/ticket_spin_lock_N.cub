@@ -1,4 +1,6 @@
 
+(* Ticker spinlock algorithm *)
+
 type loc = L1 | L2 | L3 | L4
 
 (* Program counters *)

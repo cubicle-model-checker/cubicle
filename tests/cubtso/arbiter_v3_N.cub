@@ -1,6 +1,7 @@
 
-(*
-https://pdfs.semanticscholar.org/c282/cb70cd6cdf3d5e08bd39c016f54b006b6555.pdf
+(* The Arbiter algortihm (version 3)
+
+https://www.semanticscholar.org/paper/The-arbiter-an-active-system-component-for-impleme-Goeman/c282cb70cd6cdf3d5e08bd39c016f54b006b6555
 *)
 
 (*
@@ -124,4 +125,3 @@ requires { Kind[p] = Proc && PC[p] = L8 }
 transition t_proc_L9_L1 ([p])
 requires { Kind[p] = Proc && PC[p] = L9 }
 { PC[p] := L1; Chng[p] := False }
-

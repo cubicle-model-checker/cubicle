@@ -1,4 +1,6 @@
 
+(* Lamport's mutual exclusion algorithm for N processes *)
+
 type loc =  L1 | L2 | L3 | L4 | L5 | CS
 
 (* Program counters *)

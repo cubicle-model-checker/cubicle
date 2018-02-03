@@ -1,4 +1,6 @@
 
+(* Sense-reversing barrier algorithm *)
+
 type loc = E0 | E1 | L0 | L1
 
 (* Program counters *)

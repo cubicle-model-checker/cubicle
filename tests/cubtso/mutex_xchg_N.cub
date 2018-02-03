@@ -1,4 +1,6 @@
 
+(* Mutex with an x86-like lock xchg instruction *)
+
 type loc = L1 | L2 | L3
 
 array PC[proc] : loc
@@ -29,6 +31,6 @@ requires { PC[p] = L2 && R[p] <> 0 }
 
 (* Critical section *)
 
-transition t4 ([p])
+transition t3 ([p])
 requires { PC[p] = L3 }
 { PC[p] := L1; Lock := 0 }

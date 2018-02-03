@@ -1,5 +1,7 @@
 
-type loc = L1 | L2 | L3
+(* Simplified Dekker algorithm for N processes *)
+
+type loc = L1 | L2 | CS
 
 (* Program counters *)
 array PC[proc] : loc
@@ -8,19 +10,19 @@ array PC[proc] : loc
 weak var Turn : proc
 
 
-init (z) { PC[z] = L1 }
+init (p) { PC[p] = L1 }
 
-unsafe (z1 z2) { PC[z1] = L3 && PC[z2] = L3 }
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
 
 
-transition req ([i])
-requires { PC[i] = L1 }
-{ PC[i] := L2 }
+transition req ([p])
+requires { PC[p] = L1 }
+{ PC[p] := L2 }
 
-transition enter ([i])
-requires { PC[i] = L2 && Turn = i }
-{ PC[i] := L3 }
+transition enter ([p])
+requires { PC[p] = L2 && Turn = p }
+{ PC[p] := CS }
 
-transition exit ([i] j)
-requires { PC[i] = L3 }
-{ PC[i] := L1; Turn := j }
+transition exit ([p] q)
+requires { PC[p] = CS }
+{ PC[p] := L1; Turn := q }
