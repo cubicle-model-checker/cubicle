@@ -15,41 +15,41 @@ CUBTSO="peterson_2.cub         peterson_2_us.cub
         msi_N.cub
         ticket_spin_lock_N.cub"
 
-CBMC="peterson2s.c             peterson2us.c
-      dekker2s.c               dekker2us.c
-      mutex*s.c                mutex*us.c
-      lamport*s.c              lamport*us.c
-      spinlock*.c
-      sense_rev*.c
+CBMC="peterson_2.c             peterson_2_us.c
+      dekker_2.c               dekker_2_us.c
+      mutex_*.c                mutex_*_us.c
+      lamport_*.c              lamport_*_us.c
+      spinlock_*.c
+      sense_rev_*.c
       arbiter_v1_*.c
       arbiter_v2_*.c
       two_phase_*.c
-      moesi*.c
-      msi*.c"
+      moesi_*.c
+      msi_*.c"
 
-MEMORAX="peterson2s.rmm        peterson2us.rmm
-         dekker2s.rmm          dekker2us.rmm
-         mutex*s.rmm           mutex*us.rmm
-         lamport*s.rmm         lamport*us.rmm
-         spinlock*s.rmm        spinlock*us.rmm
-         sense_rev*.rmm
+MEMORAX="peterson_2.rmm        peterson_2_us.rmm
+         dekker_2.rmm          dekker_2_us.rmm
+         mutex_*.rmm           mutex_*_us.rmm
+         lamport_*.rmm         lamport_*_us.rmm
+         spinlock_*.rmm        spinlock_*_us.rmm
+         sense_rev_*.rmm
          arbiter_v1_*.rmm
          arbiter_v2_*.rmm
          two_phase_*.rmm
-         moesi*.rmm
-         msi*.rmm"
+         moesi_*.rmm
+         msi_*.rmm"
 
-TRENCHER="peterson2s.txt       peterson2us.txt
-          dekker2s.txt         dekker2us.txt
-          mutex*s.txt          mutex*us.txt
-          lamport*s.txt        lamport*us.txt
-          spinlock*s.txt
-          sense_rev*.txt
+TRENCHER="peterson_2.txt       peterson_2_us.txt
+          dekker_2.txt         dekker_2_us.txt
+          mutex_*.txt          mutex_*_us.txt
+          lamport_*.txt        lamport_*_us.txt
+          spinlock_*.txt
+          sense_rev_*.txt
           arbiter_v1_*.txt
           arbiter_v2_*.txt
           two_phase_*.txt
-          moesi*.txt
-          msi*.txt"
+          moesi_*.txt
+          msi_*.txt"
 
 LITMUS="*.cub"
 
@@ -92,7 +92,7 @@ mkdir $DISTDIR/examples/trencher
 mkdir $DISTDIR/litmus
 
 echo "Copying files (cubiclew)..."
-cp cubicle.opt $DISTDIR/cubiclew/cubiclew
+cp cubiclew.opt $DISTDIR/cubiclew/cubiclew
 for f in $CUBTSO;   do cp `ls tests/cubtso/$f`   $DISTDIR/cubiclew/examples; done
 for f in $LITMUS;   do cp `ls tests/paper/$f`    $DISTDIR/cubiclew/litmus; done
 
