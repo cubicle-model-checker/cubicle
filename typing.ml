@@ -45,6 +45,7 @@ type error =
   | ConstantWrite of Hstring.t
   | DuplicateWrite of Hstring.t
   | ProcCantReadOtherSC
+  | ProcCantWriteOtherSC
   | NonArrayMustBeWeak
   | MissingThreadInTrans
   | CantUseFenceInInit
@@ -135,6 +136,8 @@ let report fmt = function
       fprintf fmt "duplicate write for %a" Hstring.print s
   | ProcCantReadOtherSC ->
       fprintf fmt "a process can't read other process's non-weak array cells"
+  | ProcCantWriteOtherSC ->
+      fprintf fmt "a process can't update other process's non-weak array cells"
   | NonArrayMustBeWeak ->
       fprintf fmt "non-array variables must be weak under weak models"
   | MissingThreadInTrans ->
@@ -235,7 +238,7 @@ let rec term loc ?(ctx=dctx) args = function
       end
   | Access(a, li) ->
      (*if Weakmem.is_weak a && not ctx.init then error (MustReadWeakVar a) loc;*)
-      if Options.model <> SC && not (Consts.mem a) && ctx.c = Trans
+      if Options.model <> Options.SC && not (Consts.mem a) && ctx.c = Trans
       then begin
         let ok = match li, ctx.thr with
           | p :: _, _ :: _ -> List.exists (fun t -> Hstring.equal p t) ctx.thr
@@ -399,19 +402,28 @@ let rec list_forall2_short p l1 l2 = match l1, l2 with
   | _ -> true
   
 let update_ident v1 vi1 = function
-  | Access (v2, vi2) ->
+  | Access (v2, vi2) -> (* why forall2_short ? *)
      Hstring.equal v1 v2 && list_forall2_short Hstring.equal vi1 vi2
   | _ -> false
-  
+
+let update_own ctx = function
+  | p :: _ -> List.exists (fun t -> Hstring.equal p t) ctx.thr
+  | _ -> false
+
 let switchs loc ?(ctx=dctx) a args ty_e l =
   List.iter 
     (fun (sa, t) ->
        let ctx = update_ctxthr sa ctx in
        atoms ~ctx loc args sa;
        if not (update_ident a args t) then
-         let ty = term ~ctx loc args t in
-         unify loc ty ty_e;
-         assignment a t ty) l
+         if not (update_own ctx args) then
+           error ProcCantWriteOtherSC loc
+         else begin
+           let ty = term ~ctx loc args t in
+           unify loc ty ty_e;
+           assignment a t ty
+         end
+    ) l
 
 let updates ?(ctx=dctx) args = 
   let dv = ref [] in

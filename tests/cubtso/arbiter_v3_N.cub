@@ -1,4 +1,6 @@
 
+(* number_procs 3 *)
+
 (* The Arbiter algortihm (version 3)
 
 https://www.semanticscholar.org/paper/The-arbiter-an-active-system-component-for-impleme-Goeman/c282cb70cd6cdf3d5e08bd39c016f54b006b6555

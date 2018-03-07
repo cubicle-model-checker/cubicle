@@ -4,8 +4,6 @@
 	Tech report 2006-052 Uppsala Universitet
 *)
 
-(* number_procs 5 *) (*7 -> ~ 15 m for 750 nodes *)
-
 type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6
 
 array A[proc] : location

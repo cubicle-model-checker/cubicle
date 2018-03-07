@@ -245,6 +245,8 @@ let make_cubes (ls, post) rargs s tr cnp =
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
   let cube acc sigma =
+    (* Format.fprintf Format.std_formatter "----- %a \n" SAtom.print (Cube.subst sigma cnp).Cube.litterals;
+     * Format.print_flush (); *)
     let tr_args = List.map (Variable.subst sigma) tr.tr_args in
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
     (* cubes are in normal form *)
@@ -252,6 +254,8 @@ let make_cubes (ls, post) rargs s tr cnp =
       (fun (ls, post) cnp ->
        let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
        let lureq = uguard sigma nargs tr_args tr.tr_ureq in
+    (* Format.fprintf Format.std_formatter "----> %a \n" SAtom.print cnp.Cube.litterals;
+     * Format.print_flush (); *)
        List.fold_left 
 	 (fun (ls, post) ureq ->
 	  try

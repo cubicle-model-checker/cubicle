@@ -11,7 +11,7 @@ unsafe (x y) { A[x] = Crit && A[y] = Crit }
 
 
 
-transition t1 (z)
+transition t1 ([z])
 requires { A[z] = Idle }
 { 
   A[z] := Lsup;
@@ -43,7 +43,7 @@ requires { A[z] = Lsup &&  z < j && A[j] <> Idle && Cpt[z,j] = False }
 }
 
 
-transition t2 (z)
+transition t2 ([z])
 requires { A[z] = Wait }
 {
   A[z] := Linf
@@ -74,7 +74,7 @@ requires { A[z] = Linf &&  j < z && A[j] <> Idle && Cpt[z,j] = False }
   Cpt[x,y] := case | x = z : False (*| _ : Cpt[x,y]*);
 }
 
-transition tr3 (z)
+transition tr3 ([z])
 requires { A[z] = Crit }
 { 
   A[z] := Idle

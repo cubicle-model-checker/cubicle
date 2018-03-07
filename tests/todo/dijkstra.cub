@@ -1,4 +1,6 @@
 
+number_procs 4
+
 type location = Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7
 type flag = F0 | F1 | F2 | F3
 
@@ -7,9 +9,6 @@ array A[proc] : location
 
 (* Global variables *)
 weak array F[proc] : flag
-
-(* Registers *)
-(* weak array P[proc] : bool *)
 weak array P[proc] : bool
 
 

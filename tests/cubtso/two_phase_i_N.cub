@@ -1,4 +1,6 @@
 
+number_procs 6
+
 (* Lower-level model of two-phase commit protocol where nodes *)
 (* communicate by message passing. *)
 

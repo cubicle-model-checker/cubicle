@@ -1,5 +1,5 @@
 
-number_procs 8
+number_procs 7
 
 type loc = L1 | L2 | L3 | L4
 
@@ -10,8 +10,8 @@ array PC[proc] : loc
 array Pred[proc] : proc
 
 (* Global variables *)
-(*weak*) var Tail : proc
-(*weak*) array Locked[proc] : bool
+weak var Tail : proc
+weak array Locked[proc] : bool
 
 
 init (i) { PC[i] = L1 && Locked[i] = False }

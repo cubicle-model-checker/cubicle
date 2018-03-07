@@ -21,7 +21,7 @@
 
    Translated from MCMT v2 model.
 *)
-
+number_procs 5
 
 type location = NCS | LOOP | AWAIT | TURN | CS
 
