@@ -690,6 +690,7 @@ let print_unsafe =
     let rprocs = List.map (fun p ->
         let p' = Bytes.of_string (Hstring.view p) in
         Bytes.set p' 0 'p';
+        let p' = Bytes.to_string p' in
         Hstring.make p'
       ) procs in
     let sigma = List.combine procs rprocs in

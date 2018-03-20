@@ -602,11 +602,13 @@ let encode_psystem
           (fun acc sa -> (unsafe_loc, unsafe_vars, sa) :: acc) acc dnf
       ) [] punsafe
   in
-  let trans =
-    List.fold_left (fun acc ptr ->
-        List.fold_left (fun acc tr -> tr :: acc) acc (encode_ptransition ptr)
-      ) [] ptrans
-    |> List.sort (fun t1 t2  ->
+  let trans, max_arity =
+    let l, ma = List.fold_left (fun (l, ma) ptr ->
+      let l = List.fold_left (fun acc tr -> tr :: acc) l (encode_ptransition ptr) in
+      let ma = let l = List.length ptr.ptr_args in if l > ma then l else ma in
+      (l, ma)
+      ) ([], 0) ptrans
+    in List.sort (fun t1 t2  ->
         let c = compare (List.length t1.tr_args) (List.length t2.tr_args) in
         if c <> 0 then c else
         let c = compare (List.length t1.tr_upds) (List.length t2.tr_upds) in
@@ -614,7 +616,7 @@ let encode_psystem
         let c = compare (List.length t1.tr_ureq) (List.length t2.tr_ureq) in
         if c <> 0 then c else
         compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
-      )
+      ) l, ma
   in
   {
     globals = pglobals;
@@ -625,6 +627,7 @@ let encode_psystem
     invs;
     unsafe;
     trans;
+    max_arity
   }
       
 
@@ -642,7 +645,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
   let pinit = match inits with
     | [i] -> i
     | [] -> failwith "No inititial formula."
-    | _::_ -> failwith "Only one initital formula alowed."
+    | _::_ -> failwith "Only one initital formula allowed."
   in
   { pglobals;
     pconsts;

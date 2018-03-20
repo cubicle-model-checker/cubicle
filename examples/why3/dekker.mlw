@@ -1,0 +1,34 @@
+module Dekker
+
+use import array.Array
+use import int.Int
+use import ref.Refint
+use import random.Random
+
+let dekker (n:int) (maxpas:int) : array bool =
+
+    requires {0 < n}
+    ensures {forall i j : int. 0 <= i < n /\ 0 <= j < n /\ result[i] /\ result[j] -> i = j}
+
+    let turn = ref (Random.random_int n) in
+    let want = Array.make n false in
+    let crit = Array.make n false in
+
+    for nbpas = 0 to maxpas do
+      invariant {forall i:int. 0 <= i < n /\ crit[i] -> !turn = i}
+      let proc = Random.random_int n in
+      (* Req *)
+      if not want[proc] then
+         want[proc] <- true
+      (* Enter *)
+      else if want[proc] && not crit[proc] && !turn = proc then
+         crit[proc] <- true
+      (* Exit *)
+      else if crit[proc] then begin
+         crit[proc] <- false;
+         want[proc] <- false;
+         turn := Random.random_int n
+      end
+   done;
+   crit
+end

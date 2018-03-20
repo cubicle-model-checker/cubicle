@@ -8,7 +8,7 @@ Authors:                Sylvain Conchon, Alain Mebsout, David Declerck,
                         Mattias Roux
 License:                Apache-2.0
 Plugins:                META (0.4), StdFiles (0.4)
-OCamlVersion:           >= 4.01
+OCamlVersion:           >= 4.05.0
 Alphafeatures:          ocamlbuild_more_args, compiled_setup_ml
 XOCamlbuildExtraArgs:
   -use-menhir

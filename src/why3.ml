@@ -41,7 +41,8 @@ let pp_atom fmt = function
   | Atom.Comp (t1, op, t2) -> Format.fprintf fmt "%a %a %a"
                                 pp_term t1 print_op op pp_term t2
   | _ -> assert false
-    
+
+
 (* Transforms type declarations in scopes with definition of equality *)
 
 let pp_trad_type_def fmt (_, (t, cl)) =
@@ -132,7 +133,7 @@ let init n f =
     if i = n then List.rev acc
     else aux (i+1) (f i :: acc)
   in aux 0 []
-    
+
 let new_procs a =
   init a (fun i -> Hstring.make @@ Printf.sprintf "p%d" i)
 
@@ -146,15 +147,14 @@ let print_satoms fmt sa =
   let pp_sep fmt () = Format.fprintf fmt " && @," in
   Format.fprintf fmt "@[<hov>%a@]"
     (Format.pp_print_list ~pp_sep:pp_sep pp_atom) (SAtom.elements sa)
-    
 
-let pp_guard map fmt g = 
+let pp_guard map fmt g =
   print_satoms fmt g
-    
+
 let pp_uguard map fmt g = Format.fprintf fmt ""
 
 module HMap = Hstring.HMap
-                
+
 let map_procs args pl =
   let rec aux acc = function
     | [], _ -> acc

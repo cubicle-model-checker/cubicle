@@ -51,15 +51,15 @@ val empty : t
 val list_assoc : t -> (t * 'a) list -> 'a
 (** [list_assoc x l] returns the element associated with [x] in the list of
     pairs [l].
-    @raise Not_found if there is no value associated with [x] in the list [l].*)
+    @raise not_found if there is no value associated with [x] in the list [l].*)
 
 val list_assoc_inv : t -> ('a * t) list -> 'a
 (** [list_assoc_inv x l] returns the first element which is associated to [x]
     in the list of pairs [l].
-    @raise Not_found if there is no value associated to [x] in the list [l].*)
+    @raise not_found if there is no value associated to [x] in the list [l].*)
 
 val list_mem_assoc : t -> (t * 'a) list -> bool
-(** Same as {! list_assoc}, but simply returns [true] if a binding exists, and
+(** same as {! list_assoc}, but simply returns [true] if a binding exists, and
     [false] if no bindings exist for the given key.*)
 
 val list_mem : t -> t list -> bool
@@ -76,16 +76,16 @@ val list_equal : t list -> t list -> bool
 (** [list_equal l1 l2] returns [true] if and only if [l1] is equal to [l2].*)
 
 val print : Format.formatter -> t -> unit
-(** Prints a hash-consed strings on a formatter. *)
+(** prints a hash-consed strings on a formatter. *)
 
 val print_list : string -> Format.formatter -> t list -> unit
-(** Prints a list of hash-consed strings on a formatter. *)
+(** prints a list of hash-consed strings on a formatter. *)
 
 module H : Hashtbl.S with type key = t
-(** Hash-tables indexed by hash-consed strings *)
+(** hash-tables indexed by hash-consed strings *)
 
 module HSet : Set.S with type elt = t
-(** Sets of hash-consed strings *)
+(** sets of hash-consed strings *)
 
 module HMap : Map.S with type key = t
 (** Maps indexed by hash-consed strings *)

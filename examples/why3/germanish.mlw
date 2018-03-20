@@ -1,0 +1,117 @@
+module Germanish
+
+use import array.Array
+use import int.Int
+use import ref.Refint
+use import random.Random
+
+scope import Msg
+
+  type msg = Empty | Reqs | Reqe
+
+  let (=) (a b: msg): bool
+    ensures { result <-> a = b }
+  = match a, b with
+    | Empty, Empty | Reqs, Reqs | Reqe, Reqe -> true
+    | _ -> false end
+
+end
+
+scope import State
+
+  type state = Invalid | Shared | Exclusive
+
+  let (=) (a b: state): bool
+    ensures { result <-> a = b }
+  = match a, b with
+    | Invalid, Invalid | Shared, Shared | Exclusive, Exclusive -> true
+    | _ -> false end
+
+end
+
+let empty_shared (shrset : array bool)
+    ensures {result = True <-> forall proc:int. 0 <= proc < shrset.length -> not shrset[proc]}
+=
+     let res = ref true in
+     for proc = 0 to shrset.length - 1 do
+         invariant {!res = True <-> forall p:int. 0 <= p < proc -> not shrset[p]}
+         if shrset[proc] then res := false
+     done;
+     !res
+     
+type proc = int
+
+type system = {
+  mutable exgntd : bool;
+  mutable curcmd : msg;
+  mutable curptr : proc;
+  cache : array state;
+  shrset : array bool;
+}
+
+let germanish (n:int) : system
+    diverges
+    requires {0 < n}
+    ensures {forall i j : int. 0 <= i < n /\ 0 <= j < n /\
+                    result.cache[i] = Exclusive /\ result.cache[j] <> Invalid
+                    -> i = j}
+=                   
+    
+    let s =  {
+      exgntd = false;
+      curcmd = Empty;
+      curptr = Random.random_int n;
+      
+      cache = Array.make n Invalid;
+      shrset = Array.make n false;
+    } in
+    
+    while true do
+        (* invariant {forall i: int. 0 <= i < n /\ s.cache[i] = Exclusive -> s.curptr = i} *)
+        invariant {forall i j : int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.cache[j] = Exclusive -> i = j}
+        invariant {forall i: int. 0 <= i < n /\ not s.exgntd -> s.cache[i] <> Exclusive}
+        invariant {forall i: int. 0 <= i < n /\ s.cache[i] = Shared -> s.shrset[i]}
+        invariant {forall i j: int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.shrset[j] -> i = j}
+
+
+        let proc = Random.random_int n in
+
+        (* Req_shared *)
+        if s.curcmd = Empty && s.cache[proc] = Invalid then begin
+           s.curcmd <- Reqs;
+           s.curptr <- proc;
+        end
+        (* req_exclusive *)
+        else if s.curcmd = Empty && s.cache[proc] <> Exclusive then begin
+           s.curcmd <- Reqe;
+           s.curptr <- proc;
+        end
+        (* inv_1 *)
+        else if s.shrset[proc] && s.curcmd = Reqe then begin
+           s.exgntd <- false;
+           s.cache[proc] <- Invalid;
+           s.shrset[proc] <- false;
+        end
+        (* inv_2 *)
+        else if s.shrset[proc] && s.curcmd = Reqs && s.exgntd then begin
+           s.exgntd <- false;
+           s.cache[proc] <- Invalid;
+           s.shrset[proc] <- false;
+        end
+        (* gnt_shared *)
+        else if s.curptr = proc && s.curcmd = Reqs && not s.exgntd then begin
+           s.curcmd <- Empty;
+           s.cache[proc] <- Shared;
+           s.shrset[proc] <- true;
+        end
+        (* gnt_exclusive *)
+        else if s.curcmd = Reqe && not s.exgntd && s.curptr = proc
+                && empty_shared s.shrset then begin
+           s.exgntd <- true;
+           s.cache[proc] <- Exclusive;
+           s.shrset[proc] <- true;
+           s.curcmd <- Empty;
+        end
+    done;
+    s
+end

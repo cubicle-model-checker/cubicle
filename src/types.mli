@@ -74,7 +74,7 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-  | Card of term * op_comp * term
+  (* | Card of term * op_comp * term *)
 (*  | NArith of cst VMap.t * cst*)
 			   
 (** Module interface for terms *)

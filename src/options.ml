@@ -24,6 +24,8 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
+let towhy3 = ref false
+    
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -123,6 +125,7 @@ let specs =
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
+    "-towhy3", Arg.Set towhy3, "translate the cubicle file to why3";
     "-max-procs", Arg.Set_int max_proc, 
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds, 
@@ -217,6 +220,8 @@ let cin =
   match !ofile with 
   | Some f -> file := f ; open_in f 
   | None -> stdin
+
+let towhy3 = !towhy3
 
 let type_only = !type_only
 let maxrounds = !maxrounds

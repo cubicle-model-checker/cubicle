@@ -81,6 +81,7 @@ type system = {
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
+  max_arity : int;
 }
 (** type of untyped transition systems constructed by parsing *)
 

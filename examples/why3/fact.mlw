@@ -1,0 +1,19 @@
+module CheckingALargeRoutine
+ use import int.Int
+ use import int.Fact
+ use import ref.Ref
+
+ let routine (n: int) : int
+   requires {n >= 0}
+   ensures {result = fact n}
+ =
+   let u = ref 1 in
+   for r = 0 to n-1 do
+     invariant { !u = fact r }
+     let v = !u in
+     for s = 1 to r do
+       u := !u + v
+     done
+   done;
+   !u
+end

@@ -97,7 +97,7 @@
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
-%token SIZEPROC HASH
+%token SIZEPROC 
 %token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
@@ -115,7 +115,7 @@
 %token UNDERSCORE AFFECT
 %token EOF
 
-%nonassoc IN
+(* %nonassoc IN *)
 %nonassoc prec_forall prec_exists
 %right IMP EQUIV
 %right OR
@@ -227,7 +227,7 @@ init:
 invariant:
   | INVARIANT LEFTBR e=expr RIGHTBR { loc (), [], e }
   | INVARIANT LEFTPAR li=lidents RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), li, e }
-  | INVARIANT LEFTBR e=card_expr RIGHTBR { loc (), [], e }
+  (* | INVARIANT LEFTBR e=card_expr RIGHTBR { loc (), [], e } *)
 ;
 
 (* card_expr: *)

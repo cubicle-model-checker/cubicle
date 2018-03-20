@@ -112,8 +112,8 @@ rule token = parse
       { DOT }
   | "?"
       { QMARK }
-  | "#"
-      { HASH }
+  (* | "#" *)
+  (*     { HASH } *)
   | "+"
       { PLUS }
   | "-"

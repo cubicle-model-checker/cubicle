@@ -1,0 +1,99 @@
+module Germanish
+
+use import array.Array
+use import int.Int
+use import ref.Refint
+use import random.Random
+
+type msg = Empty | Reqs | Reqe
+type state = Invalid | Shared | Exclusive
+
+let empty_shared (shrset : array bool)
+    ensures {result = True <-> forall proc:int. 0 <= proc < shrset.length -> not shrset[proc]}
+=
+     let res = ref true in
+     for proc = 0 to shrset.length - 1 do
+         invariant {!res = True <-> forall p:int. 0 <= p < proc -> not shrset[p]}
+         if shrset[proc] then res := false
+     done;
+     !res
+     
+let germanish (n:int) (maxpas:int) : array state
+
+    requires {0 < n}
+    ensures {forall i j : int. 0 <= i < n /\ 0 <= j < n /\
+                    result[i] = Exclusive /\ result[j] <> Invalid -> i = j}
+=                   
+    let exgntd = ref false in
+    let curcmd = ref Empty in
+    let curptr = ref (Random.random_int n) in
+    
+    let cache = Array.make n Invalid in
+    let shrset = Array.make n false in
+    let chan = Array.make n Empty in
+
+    for nbpas = 0 to maxpas do
+        invariant {forall i j : int. 0 <= i < n /\ 0 <= j < n /\ cache[i] = Exclusive /\ cache[j] = Exclusive -> i = j}
+        invariant {forall i: int. 0 <= i < n /\ not !exgntd -> cache[i] <> Exclusive}
+        invariant {forall i: int. 0 <= i < n /\ cache[i] = Shared -> shrset[i]}
+        invariant {forall i j: int. 0 <= i < n /\ 0 <= j < n /\ cache[i] = Exclusive /\ shrset[j] -> i = j}
+
+
+        let proc = Random.random_int n in
+
+        (* send_shared *)
+        if chan[proc] = Empty && cache[proc] = Invalid then begin
+           chan[proc] <- Reqs
+        end
+        
+        (* recv_shared *)
+        else if !curcmd = Empty && chan[proc] = Reqs then begin
+           curcmd := Reqs;
+           curptr := proc;
+           chan[proc] <- Empty
+        end
+        
+        (* send_exclusive *)
+        else if chan[proc] = Empty && cache[proc] <> Exclusive then begin
+           chan[proc] <- Reqe
+        end
+
+        (* recv_exclusive *)
+        else if !curcmd = Empty && chan[proc] = Reqe then begin
+           curcmd := Reqe;
+           curptr := proc;
+           chan[proc] <- Empty
+        end
+        
+        (* inv_1 *)
+        else if shrset[proc] && !curcmd = Reqe then begin
+           exgntd := false;
+           cache[proc] <- Invalid;
+           shrset[proc] <- false;
+        end
+        
+        (* inv_2 *)
+        else if shrset[proc] && !curcmd = Reqs && !exgntd then begin
+           exgntd := false;
+           cache[proc] <- Invalid;
+           shrset[proc] <- false;
+        end
+        
+        (* gnt_shared *)
+        else if !curptr = proc && !curcmd = Reqs && not !exgntd then begin
+           curcmd := Empty;
+           cache[proc] <- Shared;
+           shrset[proc] <- true;
+        end
+        
+        (* gnt_exclusive *)
+        else if !curcmd = Reqe && not !exgntd && !curptr = proc
+                && empty_shared shrset then begin
+           exgntd := true;
+           cache[proc] <- Exclusive;
+           shrset[proc] <- true;
+           curcmd := Empty;
+        end
+    done;
+    cache
+end
