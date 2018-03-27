@@ -30,12 +30,15 @@ let pp_list_pairs fmt cl =
     fmt cl
 
 let pp_term fmt = function
-  | Elem (x, _) ->
+  | Elem (x, s) ->
     if Hstring.equal x mytrue then Format.fprintf fmt "true"
     else if Hstring.equal x myfalse then Format.fprintf fmt "false"
-    else Format.fprintf fmt "%a" Hstring.print (uncapitalize x)
-  | t -> Format.fprintf fmt "%s" (String.uncapitalize_ascii (
-    Format.asprintf "%a" Term.print t))
+    else Format.fprintf fmt "%a" Hstring.print (
+        match s with
+        | Constr -> x
+        | _ -> uncapitalize x
+      )
+  | t -> Format.fprintf fmt "%a" Term.print t
 
 let pp_atom fmt = function
   | Atom.Comp (t1, op, t2) -> Format.fprintf fmt "%a %a %a"
@@ -91,42 +94,42 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
   let elems = List.fold_left (fun acc (_, id, _) -> HSet.add id acc)
       HSet.empty globals in
   let init_elems = List.fold_left (fun acc sa ->
-    SAtom.fold (fun a acc ->
-      match a with
-        | Comp (t1, Eq, t2) ->
-          begin match t1 with
-            | Elem (id, _) ->
-              let acc = HSet.add id acc in
-              Format.fprintf fmt "@,%a = %a;"
-                pp_hstring_uncap id pp_term t2;
-              acc
-            | Access (id, _) ->
-              Format.fprintf fmt "@,%a = Array.make n %a;"
-                pp_hstring_uncap id pp_term t2;
-              acc
-            | _ -> assert false
-          end;
-        | Comp (t1, Neq, _) ->
-          begin match t1 with
-            | Elem (id, _) ->
-              let acc = HSet.add id acc in
-              Format.fprintf fmt "@,%a = -1;"
-                pp_hstring_uncap id;
-              acc
-            | Access (id, _) ->
-              Format.fprintf fmt "@,%a = Array.make n -1;"
-                pp_hstring_uncap id;
-              acc
-            | _ -> assert false
-          end
-        | _ -> assert false
-    ) sa acc
-  ) HSet.empty dnf in
+      SAtom.fold (fun a acc ->
+          match a with
+          | Comp (t1, Eq, t2) ->
+            begin match t1 with
+              | Elem (id, _) ->
+                let acc = HSet.add id acc in
+                Format.fprintf fmt "@,%a = %a;"
+                  pp_hstring_uncap id pp_term t2;
+                acc
+              | Access (id, _) ->
+                Format.fprintf fmt "@,%a = Array.make n %a;"
+                  pp_hstring_uncap id pp_term t2;
+                acc
+              | _ -> assert false
+            end;
+          | Comp (t1, Neq, _) ->
+            begin match t1 with
+              | Elem (id, _) ->
+                let acc = HSet.add id acc in
+                Format.fprintf fmt "@,%a = -1;"
+                  pp_hstring_uncap id;
+                acc
+              | Access (id, _) ->
+                Format.fprintf fmt "@,%a = Array.make n -1;"
+                  pp_hstring_uncap id;
+                acc
+              | _ -> assert false
+            end
+          | _ -> assert false
+        ) sa acc
+    ) HSet.empty dnf in
   let ninit_elems = HSet.diff elems init_elems in
   HSet.iter (fun e ->
-    Format.fprintf fmt "@,%a = Random.random_int n"
-      pp_hstring_uncap e
-  ) ninit_elems
+      Format.fprintf fmt "@,%a = Random.random_int n"
+        pp_hstring_uncap e
+    ) ninit_elems
 
 let init n f =
   let rec aux i acc =
@@ -151,7 +154,7 @@ let print_satoms fmt sa =
 let pp_guard map fmt g =
   print_satoms fmt g
 
-let pp_uguard map fmt g = Format.fprintf fmt ""
+let pp_uguard map fmt g = assert (g = [])
 
 module HMap = Hstring.HMap
 
@@ -162,7 +165,7 @@ let map_procs args pl =
     | _ -> assert false
   in aux HMap.empty (args, pl)
 
-let pp_transition ?cond:(cond="else if") pl fmt t =
+let pp_transition ?(cond="else if") pl fmt t =
   let map = map_procs t.tr_args pl in
   Format.fprintf fmt "(*%a*)@,\
                       @[<v 2>%s coin () && %a %a then begin@,\
@@ -173,10 +176,10 @@ let pp_transition ?cond:(cond="else if") pl fmt t =
 
 let pp_transitions pl fmt s =
   match s.trans with
-    | hd :: tl ->
-      Format.fprintf fmt "%a@," (pp_transition ~cond:"if" pl) hd;
-      Format.pp_print_list (pp_transition pl) fmt tl
-    | _ -> assert false
+  | hd :: tl ->
+    Format.fprintf fmt "%a@," (pp_transition ~cond:"if" pl) hd;
+    Format.pp_print_list (pp_transition pl) fmt tl
+  | _ -> assert false
 
 (* Transforms a Cubicle program in a whyml one *)
 
