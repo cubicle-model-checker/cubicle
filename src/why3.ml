@@ -21,6 +21,13 @@ let pp_cut_if_nempty l =
 
 let pp_sep_pipe fmt () = Format.fprintf fmt " |@ "
 
+let pp_sep_and fmt () = Format.fprintf fmt " && @,"
+
+let pp_sep_nil fmt () = Format.fprintf fmt ""
+
+let pp_for fmt arr =
+  Format.fprintf fmt "for i = 0 to s.%a.length - 1 do@," pp_hstring_uncap arr
+
 let pp_list_const fmt cl =
   Format.pp_print_list ~pp_sep:pp_sep_pipe Hstring.print fmt cl
 
@@ -29,46 +36,51 @@ let pp_list_pairs fmt cl =
     fun fmc c -> Format.fprintf fmt "%a, %a" Hstring.print c Hstring.print c)
     fmt cl
 
-let pp_term fmt = function
+let pp_term sub fmt = function
   | Elem (x, s) ->
     if Hstring.equal x mytrue then Format.fprintf fmt "true"
     else if Hstring.equal x myfalse then Format.fprintf fmt "false"
     else Format.fprintf fmt "%a" Hstring.print (
-        match s with
+      match s with
         | Constr -> x
-        | _ -> uncapitalize x
-      )
+        | Glob -> uncapitalize x
+        | Var -> Variable.subst sub x
+    )
+  | Access (id, vl) ->
+    let vl = List.map (Variable.subst sub) vl in
+    Format.fprintf fmt "%a[%a]" pp_hstring_uncap id Variable.print_vars vl
   | t -> Format.fprintf fmt "%a" Term.print t
 
-let pp_atom fmt = function
-  | Atom.Comp (t1, op, t2) -> Format.fprintf fmt "%a %a %a"
-                                pp_term t1 print_op op pp_term t2
-  | _ -> assert false
+let pp_atom sub fmt = function
+  | Atom.Comp (t1, op, t2) ->
+    Format.fprintf fmt "%a %a %a"
+      (pp_term sub) t1 print_op op (pp_term sub) t2
+  | a -> Format.eprintf "%a@." Atom.print a
 
 
 (* Transforms type declarations in scopes with definition of equality *)
 
-let pp_trad_type_def fmt (_, (t, cl)) =
-  if not @@ Hstring.equal t tbool then
-    Format.fprintf fmt "@[<v 2>scope import %a@,\
-                        @,\
-                        type %a = @[<hov 2>%a@]@,\
-                        @,\
-                        @[<v 2>let (=) (a b: %a): bool@,\
-                        ensures {result <-> a = b}@,\
-                        = @[<v 0>match a, b with@,\
-                        | @[<hov>%a@] -> true@,\
-                        | _ -> false\
-                        @]@]@ end@,@]@,\
-                        end@,\
-                       "
-      pp_hstring_cap t
-      Hstring.print t
-      pp_list_const cl
-      Hstring.print t
-      pp_list_pairs cl
-
 let pp_trad_type_defs fmt tdl =
+  let pp_trad_type_def fmt (_, (t, cl)) =
+    if not @@ Hstring.equal t tbool then
+      Format.fprintf fmt "@[<v 2>scope import %a@,\
+                          @,\
+                          type %a = @[<hov 2>%a@]@,\
+                          @,\
+                          @[<v 2>let (=) (a b: %a): bool@,\
+                          ensures {result <-> a = b}@,\
+                          = @[<v 0>match a, b with@,\
+                          | @[<hov>%a@] -> true@,\
+                          | _ -> false\
+                          @]@]@ end@,@]@,\
+                          end@,\
+                         "
+        pp_hstring_cap t
+        Hstring.print t
+        pp_list_const cl
+        Hstring.print t
+        pp_list_pairs cl
+  in
   Format.pp_print_list pp_trad_type_def fmt tdl
 
 let pp_type fmt t =
@@ -94,42 +106,40 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
   let elems = List.fold_left (fun acc (_, id, _) -> HSet.add id acc)
       HSet.empty globals in
   let init_elems = List.fold_left (fun acc sa ->
-      SAtom.fold (fun a acc ->
-          match a with
-          | Comp (t1, Eq, t2) ->
-            begin match t1 with
-              | Elem (id, _) ->
-                let acc = HSet.add id acc in
-                Format.fprintf fmt "@,%a = %a;"
-                  pp_hstring_uncap id pp_term t2;
-                acc
-              | Access (id, _) ->
-                Format.fprintf fmt "@,%a = Array.make n %a;"
-                  pp_hstring_uncap id pp_term t2;
-                acc
-              | _ -> assert false
-            end;
-          | Comp (t1, Neq, _) ->
-            begin match t1 with
-              | Elem (id, _) ->
-                let acc = HSet.add id acc in
-                Format.fprintf fmt "@,%a = -1;"
-                  pp_hstring_uncap id;
-                acc
-              | Access (id, _) ->
-                Format.fprintf fmt "@,%a = Array.make n -1;"
-                  pp_hstring_uncap id;
-                acc
-              | _ -> assert false
-            end
-          | _ -> assert false
-        ) sa acc
-    ) HSet.empty dnf in
+    SAtom.fold (fun a acc ->
+      match a with
+        | Comp (t1, Eq, t2) ->
+          begin match t1 with
+            | Elem (id, _) ->
+              let acc = HSet.add id acc in
+              Format.fprintf fmt "@,%a = %a;" pp_hstring_uncap id (pp_term []) t2;
+              acc
+            | Access (id, _) ->
+              Format.fprintf fmt "@,%a = Array.make n %a;"
+                pp_hstring_uncap id (pp_term []) t2;
+              acc
+            | _ -> assert false
+          end;
+        | Comp (t1, Neq, _) ->
+          begin match t1 with
+            | Elem (id, _) ->
+              let acc = HSet.add id acc in
+              Format.fprintf fmt "@,%a = -1;" pp_hstring_uncap id;
+              acc
+            | Access (id, _) ->
+              Format.fprintf fmt "@,%a = Array.make n -1;"
+                pp_hstring_uncap id;
+              acc
+            | _ -> assert false
+          end
+        | _ -> assert false
+    ) sa acc
+  ) HSet.empty dnf in
   let ninit_elems = HSet.diff elems init_elems in
   HSet.iter (fun e ->
-      Format.fprintf fmt "@,%a = Random.random_int n"
-        pp_hstring_uncap e
-    ) ninit_elems
+    Format.fprintf fmt "@,%a = Random.random_int n"
+      pp_hstring_uncap e
+  ) ninit_elems
 
 let init n f =
   let rec aux i acc =
@@ -146,40 +156,70 @@ let pp_newprocs fmt l =
   Format.fprintf fmt "(*If there is more than one value,@,\
                       the variables could be equal, need to work on it*)"
 
-let print_satoms fmt sa =
-  let pp_sep fmt () = Format.fprintf fmt " && @," in
+let pp_satoms sub fmt sa =
   Format.fprintf fmt "@[<hov>%a@]"
-    (Format.pp_print_list ~pp_sep:pp_sep pp_atom) (SAtom.elements sa)
+    (Format.pp_print_list ~pp_sep:pp_sep_and (pp_atom sub)) (SAtom.elements sa)
 
-let pp_guard map fmt g =
-  print_satoms fmt g
+let pp_guard sub fmt g =
+  pp_satoms sub fmt g
 
-let pp_uguard map fmt g = assert (g = [])
-
-module HMap = Hstring.HMap
+let pp_uguard map fmt g =
+  if g <> [] then Format.fprintf fmt "(* todo forall_other *)"
+  else Format.fprintf fmt ""
 
 let map_procs args pl =
   let rec aux acc = function
     | [], _ -> acc
-    | hd1 :: tl1, hd2 :: tl2 -> aux (HMap.add hd1 hd2 acc) (tl1, tl2)
+    | hd1 :: tl1, hd2 :: tl2 -> aux ((hd1, hd2) :: acc) (tl1, tl2)
     | _ -> assert false
-  in aux HMap.empty (args, pl)
+  in aux [] (args, pl)
 
-let pp_transition ?(cond="else if") pl fmt t =
-  let map = map_procs t.tr_args pl in
-  Format.fprintf fmt "(*%a*)@,\
-                      @[<v 2>%s coin () && %a %a then begin@,\
-                      (* updates *)\
-                      @]@,end@,"
-    Hstring.print t.tr_name cond
-    (pp_guard map) t.tr_reqs (pp_uguard map) t.tr_ureq
+let pp_arr_access sub fmt u =
+  let vl = List.map (Variable.subst sub) u.up_arg in
+  Format.fprintf fmt "%a[%a]" pp_hstring_uncap u.up_arr Variable.print_vars vl
+
+let pp_assigns sub fmt al =
+  let pp_upd fmt = function
+    | UTerm t -> Format.fprintf fmt "%a" (pp_term sub) t
+    | _ -> Format.eprintf "pp_assigns@."; assert false
+  in
+  let pp_assign fmt (id, upd) =
+    Format.fprintf fmt "s.%a <- %a;@," pp_hstring_uncap id pp_upd upd
+  in
+  Format.fprintf fmt "@[<v 0>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_nil pp_assign) al
+
+let pp_updates sub fmt ul =
+  let pp_swt fmt (sa, t) =
+    Format.fprintf fmt "if %a then s. %a" (pp_satoms sub) sa (pp_term sub) t
+  in
+  let pp_swts fmt swts =
+    Format.fprintf fmt "@[<v 0>%a@]" (Format.pp_print_list pp_swt) swts
+  in
+  let pp_upd fmt u =
+    Format.fprintf fmt "s.%a <- @[<v 0>%a@];@,"
+      (pp_arr_access sub) u pp_swts u.up_swts
+  in
+  Format.fprintf fmt "@[<v 0>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_nil pp_upd) ul
 
 let pp_transitions pl fmt s =
+  let pp_transition ?(cond="else if") pl fmt t =
+    let map = map_procs t.tr_args pl in
+    Format.fprintf fmt "(*%a*)@,\
+                        @[<v 2>%s coin () && %a %a then begin@,\
+                        %a%a\
+                        @]@,end@,"
+      Hstring.print t.tr_name cond
+      (pp_guard map) t.tr_reqs (pp_uguard map) t.tr_ureq
+      (pp_assigns map) t.tr_assigns (pp_updates map) t.tr_upds
+      (* (pp_nondets map) t.tr_nondets *)
+  in
   match s.trans with
-  | hd :: tl ->
-    Format.fprintf fmt "%a@," (pp_transition ~cond:"if" pl) hd;
-    Format.pp_print_list (pp_transition pl) fmt tl
-  | _ -> assert false
+    | hd :: tl ->
+      Format.fprintf fmt "%a@," (pp_transition ~cond:"if" pl) hd;
+      Format.pp_print_list (pp_transition pl) fmt tl
+    | _ -> assert false
 
 (* Transforms a Cubicle program in a whyml one *)
 

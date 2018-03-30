@@ -29,7 +29,7 @@ module Set : Set.S with type elt = t
 val compare : t -> t -> int
 
 val compare_list : t list -> t list -> int
-				     
+
 (** {2 Predefinied variables } *)
 
 val procs : t list
@@ -65,7 +65,7 @@ val well_formed_subst : subst -> bool
 (** {2 Variable instantiation } *)
 
 val all_permutations : 'a list -> 'a list -> ('a * 'a) list list
-(** [all_permutations l1 l2] returns all possible substitutions from 
+(** [all_permutations l1 l2] returns all possible substitutions from
     [l1] to [l2] assuming that the variables of both lists are distinct.
     [l2] must be longer than (or the same size as) [l1] *)
 
@@ -88,5 +88,3 @@ val give_procs : int -> t list
 val print : formatter -> t -> unit
 val print_vars : formatter -> t list -> unit
 val print_subst : formatter -> subst -> unit
-
-					  

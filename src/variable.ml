@@ -24,8 +24,8 @@ module Set = Hstring.HSet
 
 let compare = Hstring.compare
 let compare_list = Hstring.compare_list
-	       
-let gen_vars s n = 
+
+let gen_vars s n =
   let l = ref [] in
   for i = 1 to max_proc do
     l := Hstring.make (s^(string_of_int i)) :: !l
@@ -40,7 +40,7 @@ let procs = gen_vars "#" max_proc
 let freshs = gen_vars "?" max_proc
 
 
-let proc_vars_int = 
+let proc_vars_int =
   let l = ref [] in
   for i = 1 to max_proc do
     l := i :: !l
@@ -50,14 +50,13 @@ let proc_vars_int =
 
 let number v =
   let s = Hstring.view v in
-  if s.[0] = '#' then 
+  if s.[0] = '#' then
     int_of_string (String.sub s 1 (String.length s - 1))
   else 1
 
 let is_proc v =
   let s = Hstring.view v in
   s.[0] = '#' || s.[0] = '$'
-  
 
 let build_subst args a_args =
   let rec a_subst acc args a_args =
@@ -84,8 +83,8 @@ let well_formed_subst sigma =
                        ) ([],[]) sigma);
     true
   with Exit -> false
-               
-let rec all_permutations_not_tail_recursive l1 l2 = 
+
+let rec all_permutations_not_tail_recursive l1 l2 =
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with
     | [] -> [[]]
@@ -93,14 +92,14 @@ let rec all_permutations_not_tail_recursive l1 l2 =
 and cross l pr x st =
   match st with
     | [] -> []
-    | y::p -> 
+    | y::p ->
 	let acc = all_permutations_not_tail_recursive l (pr@p) in
-	let acc = 
+	let acc =
 	  if acc = [] then [[x,y]]
 	  else List.map (fun ds -> (x, y)::ds) acc in
 	acc@(cross l (y::pr) x p)
 
-let rec all_permutations l1 l2 = 
+let rec all_permutations l1 l2 =
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with
     | [] -> [[]]
@@ -108,9 +107,9 @@ let rec all_permutations l1 l2 =
 and cross l pr x st =
   match st with
     | [] -> []
-    | y::p -> 
+    | y::p ->
 	let acc = all_permutations l (List.rev_append pr p) in
-	let acc = 
+	let acc =
 	  if acc = [] then [[x,y]]
 	  else List.rev_map (fun ds -> (x, y)::ds) acc in
 	List.rev_append acc (cross l (y::pr) x p)
@@ -132,7 +131,7 @@ let rec all_arrangements n l =
   assert (n > 0);
   match n with
     | 1 -> List.map (fun x -> [x]) l
-    | _ -> 
+    | _ ->
         List.fold_left (fun acc l' ->
           List.fold_left (fun acc x -> (x :: l') :: acc) acc l
         ) [] (all_arrangements (n - 1) l)
@@ -146,7 +145,7 @@ let rec all_instantiations l1 l2 =
   match l1 with
     | [] -> []
     | [x1] -> List.map (fun x2 -> [x1, x2]) l2
-    | x1 :: r1 -> 
+    | x1 :: r1 ->
         List.fold_left (fun acc l' ->
           List.fold_left (fun acc x2 -> ((x1, x2) :: l') :: acc) acc l2
         ) [] (all_instantiations r1 l2)
@@ -154,10 +153,10 @@ let rec all_instantiations l1 l2 =
 
 let rec mix x = function
   | [] -> [[x]]
-  | y::r as l -> 
+  | y::r as l ->
      (x :: l) :: (List.map (fun l' -> y :: l') (mix x r))
 
-let rec interleave l1 l2 = 
+let rec interleave l1 l2 =
   let rec aux acc = function
     | [], [] -> acc
     | l, [] | [], l -> List.map (List.rev_append l) acc
@@ -208,22 +207,22 @@ let missing args tr_args extra =
   let nb = List.length tr_args - List.length args in
   if nb <= 0 then []
   else first_n nb extra
-    
+
 let insert_missing l tr_args =
   let ex = extra_procs l tr_args in
-  let ms = missing l tr_args ex in 
+  let ms = missing l tr_args ex in
   List.flatten (List.map (fun x -> mix x l) ms)
 
 
 let rec all_parts_max n l =
   List.filter (fun p -> List.length p <= n) (all_parts l)
-  
+
 let permutations_missing tr_args l =
-  let parts = [] :: List.flatten 
+  let parts = [] :: List.flatten
 		      (List.map perms (all_parts_max (List.length tr_args) l))
   in
   let ex = extra_procs l tr_args in
-  let l' = List.fold_left 
+  let l' = List.fold_left
     (fun acc l ->
      let ms = missing l tr_args ex in
      List.rev_append (interleave l ms) acc)
@@ -243,7 +242,7 @@ let extra_vars vs1 vs2 =
 
 
 let give_procs n =
-  let rp, _ = 
+  let rp, _ =
     List.fold_left (fun (acc, n) v ->
       if n > 0 then v :: acc, n - 1
       else acc, n) ([], n) procs in
@@ -259,7 +258,7 @@ let rec print_vars fmt = function
      let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
      if dmcmt then fprintf fmt "_%s" s
      else fprintf fmt "%s" s
-  | a::r -> 
+  | a::r ->
      let s = Hstring.view a in
      let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
      if dmcmt then  fprintf fmt "_%s%a" s print_vars r
@@ -269,7 +268,7 @@ let rec print_subst fmt = function
   | [] -> ()
   | [x,y] ->
      fprintf fmt "%a -> %a" print x print y
-  | (x,y)::r -> 
+  | (x,y)::r ->
      fprintf fmt "%a -> %a, %a" print x print y print_subst r
 
 

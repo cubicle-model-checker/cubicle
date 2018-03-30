@@ -29,17 +29,22 @@ scope import State
 
 end
 
-let empty_shared (shrset : array bool)
-    ensures {result = True <-> forall proc:int. 0 <= proc < shrset.length -> not shrset[proc]}
+val coin () : bool
+
+type proc = int
+
+let forall_other_gnt_exclusive (arr : array bool) (p : proc)
+    requires { p < arr.length }
+    ensures {result = True <-> forall p':proc.
+    	     0 <= p' < arr.length /\ p' <> p -> not arr[p']}
 =
      let res = ref true in
-     for proc = 0 to shrset.length - 1 do
-         invariant {!res = True <-> forall p:int. 0 <= p < proc -> not shrset[p]}
-         if shrset[proc] then res := false
+     for i = 0 to arr.length - 1 do
+         invariant {!res = True <-> forall p':proc.
+	 	    0 <= p' < i /\ p' <> p -> not arr[p']}
+         if arr[i] && i <> p then res := false
      done;
      !res
-     
-type proc = int
 
 type system = {
   mutable exgntd : bool;
@@ -55,17 +60,17 @@ let germanish (n:int) : system
     ensures {forall i j : int. 0 <= i < n /\ 0 <= j < n /\
                     result.cache[i] = Exclusive /\ result.cache[j] <> Invalid
                     -> i = j}
-=                   
-    
+=
+
     let s =  {
       exgntd = false;
       curcmd = Empty;
       curptr = Random.random_int n;
-      
+
       cache = Array.make n Invalid;
       shrset = Array.make n false;
     } in
-    
+
     while true do
         (* invariant {forall i: int. 0 <= i < n /\ s.cache[i] = Exclusive -> s.curptr = i} *)
         invariant {forall i j : int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.cache[j] = Exclusive -> i = j}
@@ -74,42 +79,55 @@ let germanish (n:int) : system
         invariant {forall i j: int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.shrset[j] -> i = j}
 
 
-        let proc = Random.random_int n in
+        let p0 = Random.random_int n in
 
         (* Req_shared *)
-        if s.curcmd = Empty && s.cache[proc] = Invalid then begin
+        if s.curcmd = Empty && s.cache[p0] = Invalid then begin
            s.curcmd <- Reqs;
-           s.curptr <- proc;
+           s.curptr <- p0;
         end
         (* req_exclusive *)
-        else if s.curcmd = Empty && s.cache[proc] <> Exclusive then begin
+        else if s.curcmd = Empty && s.cache[p0] <> Exclusive then begin
            s.curcmd <- Reqe;
-           s.curptr <- proc;
+           s.curptr <- p0;
         end
         (* inv_1 *)
-        else if s.shrset[proc] && s.curcmd = Reqe then begin
+        else if s.shrset[p0] && s.curcmd = Reqe then begin
+	   label Inv_1 in
            s.exgntd <- false;
-           s.cache[proc] <- Invalid;
-           s.shrset[proc] <- false;
+           for i = 0 to s.cache.length - 1 do
+	       invariant {forall p':proc. 0 <= p' < i ->
+	       		  p' = p0 -> s.cache[p'] = Invalid}
+	       invariant {forall p':proc. p' <> p0 ->
+	       		 s.cache[p'] = (s.cache[p'] at Inv_1)}
+	       if i = p0 then s.cache[i] <- Invalid;
+	   done;
+           for i = 0 to s.cache.length - 1 do
+	       invariant {forall p':proc. 0 <= p' < i ->
+	       		  p' = p0 -> s.shrset[p'] = False}
+	       invariant {forall p':proc. p' <> p0 ->
+	       		  s.shrset[p'] = (s.shrset[p'] at Inv_1)}
+	       if i = p0 then s.shrset[i] <- false;
+	   done;
         end
         (* inv_2 *)
-        else if s.shrset[proc] && s.curcmd = Reqs && s.exgntd then begin
+        else if s.shrset[p0] && s.curcmd = Reqs && s.exgntd then begin
            s.exgntd <- false;
-           s.cache[proc] <- Invalid;
-           s.shrset[proc] <- false;
+           s.cache[p0] <- Invalid;
+           s.shrset[p0] <- false;
         end
         (* gnt_shared *)
-        else if s.curptr = proc && s.curcmd = Reqs && not s.exgntd then begin
+        else if s.curptr = p0 && s.curcmd = Reqs && not s.exgntd then begin
            s.curcmd <- Empty;
-           s.cache[proc] <- Shared;
-           s.shrset[proc] <- true;
+           s.cache[p0] <- Shared;
+           s.shrset[p0] <- true;
         end
         (* gnt_exclusive *)
-        else if s.curcmd = Reqe && not s.exgntd && s.curptr = proc
-                && empty_shared s.shrset then begin
+        else if s.curcmd = Reqe && not s.exgntd && s.curptr = p0
+                && forall_other_gnt_exclusive s.shrset p0 then begin
            s.exgntd <- true;
-           s.cache[proc] <- Exclusive;
-           s.shrset[proc] <- true;
+           s.cache[p0] <- Exclusive;
+           s.shrset[p0] <- true;
            s.curcmd <- Empty;
         end
     done;
