@@ -106,6 +106,8 @@ let rec make_term = function
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
+  | Recv _ -> failwith "Prover.make_term : Recv should not be there"
+  | Send _ -> failwith "Prover.make_term : Send should not be there"
 
 let rec make_formula_set sa = 
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])

@@ -148,6 +148,8 @@ module Latex = struct
        fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
+    | Recv _ -> failwith "Node.print_term Recv TODO"
+    | Send _ -> failwith "Node.print_term Send TODO"
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

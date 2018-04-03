@@ -19,6 +19,7 @@
   open Types
   open Parsing
   open Ptree
+  open Chanparse
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -34,7 +35,8 @@
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
-
+    | Send of Variable.t * Variable.t * Hstring.t * term
+           
   module S = Set.Make(Hstring)
 
   module Constructors = struct
@@ -102,6 +104,7 @@
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
 %token EOF
+%token CHAN EMARK QUOTE
 
 %nonassoc IN       
 %nonassoc prec_forall prec_exists
@@ -129,8 +132,8 @@ EOF
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
   let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
-  let pconsts, pglobals, parrays = $3 in
-  psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
+  let pconsts, pglobals, parrays, pchans = $3 in
+  psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans ~ptype_defs $4
    |> encode_psystem 
 }
 ;
@@ -141,20 +144,26 @@ decl_list :
 ;
 
 decl :
-  | init { PInit $1 }
-  | invariant { PInv $1 }
-  | unsafe { PUnsafe $1 }
+  | init { let _, _, e = $1 in forbid_recv e; PInit $1 }
+  | invariant { let _, _, e = $1 in forbid_recv e; PInv $1 }
+  | unsafe { let _, _, e = $1 in forbid_recv e; PUnsafe $1 }
   | transition { PTrans $1 }
   | function_decl { PFun  }
 
 symbold_decls :
-  | { [], [], [] }
+  | { [], [], [], [] }
   | const_decl symbold_decls
-      { let consts, vars, arrays = $2 in ($1::consts), vars, arrays }
+      { let consts, vars, arrays, chans = $2 in
+        ($1::consts), vars, arrays, chans }
   | var_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
+      { let consts, vars, arrays, chans = $2 in
+        consts, ($1::vars), arrays, chans }
   | array_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
+      { let consts, vars, arrays, chans = $2 in
+        consts, vars, ($1::arrays), chans }
+  | chan_decl symbold_decls
+      { let consts, vars, arrays, chans = $2 in
+        consts, vars, arrays, ($1::chans) }
 ;
 
 function_decl :
@@ -182,10 +191,45 @@ array_decl:
         if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
-	Arrays.add $2;
+	Globals.add $2;
 	loc (), $2, ($4, $7)}
 ;
 
+chan_decl:
+  | CHAN mident LEFTSQ chantype RIGHTSQ COLON lident { 
+      if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
+      Arrays.add $2;
+      loc (), $2, $4, $7 }
+;
+
+chantype:
+  | INT COMMA INT {
+      let n1 = Num.int_of_num $1 in
+      let n2 = Num.int_of_num $3 in
+      if n1 <> 1 || n2 <> 1 then raise Parsing.Parse_error;
+      C11 }
+  | INT COMMA MIDENT {
+      let n1 = Num.int_of_num $1 in
+      let n2 = $3 in
+      if n1 <> 1 || n2 <> "N" then raise Parsing.Parse_error;
+      C1N }
+  | MIDENT COMMA INT {
+      let n1 = $1 in
+      let n2 = Num.int_of_num $3 in
+      if n1 <> "N" || n2 <> 1 then raise Parsing.Parse_error;
+      CN1 }
+  | MIDENT COMMA MIDENT {
+      let n1 = $1 in
+      let n2 = $3 in
+      if n1 <> "N" || n2 <> "N" then raise Parsing.Parse_error;
+      CNN }
+  | MIDENT {
+      match $1 with
+      | "RSC" -> CRSC
+      | "ASYNC" -> CASYNC
+      | "CAUSAL" -> CCAUSAL
+      | _ -> raise Parsing.Parse_error }
+  
 type_defs:
   | { [] }
   | type_def_plus { $1 }
@@ -234,17 +278,19 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents_thr RIGHTPAR 
       require
       LEFTBR let_assigns_nondets_updates RIGHTBR
-      { let lets, (assigns, nondets, upds) = $8 in
+      { let lets, (assigns, sends, nondets, upds) = $8 in
 	{   ptr_lets = lets;
 	    ptr_name = $2;
-            ptr_args = $4; 
-	    ptr_reqs = $6;
-	    ptr_assigns = assigns; 
+            ptr_args = fst $4; 
+            ptr_thread = snd $4; 
+	    ptr_reqs = fix_recv_expr (snd $4) $6;
+	    ptr_assigns = List.map (fix_recv_assign (snd $4)) assigns; 
+	    ptr_sends = List.map (fix_recv_send (snd $4)) sends; 
 	    ptr_nondets = nondets; 
-	    ptr_upds = upds;
+	    ptr_upds = List.map (fix_recv_upd (snd $4)) upds;
             ptr_loc = loc ();
           }
       }
@@ -256,28 +302,31 @@ let_assigns_nondets_updates:
 	  let lets, l = $6 in
 	  ($2, $4) :: lets, l}
 ;
-  
+
 assigns_nondets_updates:
-  |  { [], [], [] }
+  |  { [], [], [], [] }
   | assign_nondet_update 
       {  
 	match $1 with
-	  | Assign (x, y) -> [x, y], [], []
-	  | Nondet x -> [], [x], []
-	  | Upd x -> [], [], [x]
+	  | Assign (x, y) -> [x, y], [], [], []
+	  | Send (p, q, c, t) -> [], [p, q, c, t], [], []
+	  | Nondet x -> [], [], [x], []
+	  | Upd x -> [], [], [], [x]
       }
   | assign_nondet_update PV assigns_nondets_updates 
       { 
-	let assigns, nondets, upds = $3 in
+	let assigns, sends, nondets, upds = $3 in
 	match $1 with
-	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds
-	  | Nondet x -> assigns, x :: nondets, upds
-	  | Upd x -> assigns, nondets, x :: upds
+	  | Assign (x, y) -> (x, y) :: assigns, sends, nondets, upds
+	  | Send (p, q, c, t) -> assigns, (p, q, c, t) :: sends, nondets, upds
+	  | Nondet x -> assigns, sends, x :: nondets, upds
+	  | Upd x -> assigns, sends, nondets, x :: upds
       }
 ;
 
 assign_nondet_update:
   | assignment { $1 }
+  | send { $1 }
   | nondet { $1 }
   | update { $1 }
 ;
@@ -285,6 +334,13 @@ assign_nondet_update:
 assignment:
   | mident AFFECT term { Assign ($1, PUTerm $3) }
   | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+;
+
+send:
+  | mident EMARK term
+      { Send (Hstring.make "", Hstring.make "", $1, $3) }
+  | mident QUOTE proc_name EMARK term
+      { Send (Hstring.make "", $3, $1, $5) }
 ;
 
 nondet:
@@ -352,9 +408,17 @@ array_term:
   }
 ;
 
+chan_term:
+  | mident QMARK
+      { Recv (Hstring.make "", Hstring.make "", $1) }
+  | mident QUOTE proc_name QMARK
+      { Recv (Hstring.make "", $3, $1) }
+;
+
 var_or_array_term:
   | var_term { $1 }
   | array_term { $1 }
+  | chan_term { $1 }
 ;
 
 arith_term:
@@ -384,6 +448,7 @@ arith_term:
 term:
   | top_id_term { $1 } 
   | array_term { TTerm $1 }
+  | chan_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
   ;
 
@@ -418,6 +483,16 @@ lidents:
   | { [] }
   | lidents_plus { $1 }
 ;
+
+lidents_thr_plus:
+  | lident lidents_thr_plus { $1::(fst $2), (snd $2) }
+  | LEFTSQ lident RIGHTSQ { [$2], Some $2 }
+  | LEFTSQ lident RIGHTSQ lidents_plus { $2::$4, Some $2 }
+;
+
+lidents_thr:
+  | { [], None }
+  | lidents_thr_plus { $1 }
 
 lident_list_plus:
   | lident { [$1] }

@@ -453,7 +453,12 @@ let inconsistent_2 ?(use_sets=false)
 
 (* ---------- TODO : doublon avec SAtom.variables -----------*)
 
-let rec add_arg args = function
+let rec add_arg args t =
+  let add_arg_list init l =
+    List.fold_left (fun acc i ->
+      let i' = H.view i in
+      if i'.[0] = '#' || i'.[0] = '$' then S.add i acc else acc) init l in
+  match t with
   | Elem (s, _) ->
       let s' = H.view s in
       if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
@@ -464,6 +469,8 @@ let rec add_arg args = function
         args ls
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
+  | Recv (p, q, _) | Send (p, q, _, _) ->
+     add_arg_list args [p;q]
 
 let args_of_atoms sa =
   let rec args_rec sa args =
@@ -702,6 +709,7 @@ let resolve_two c1 c2 =
 let rec term_globs t acc = match t with
   | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
   | Arith (x, _) -> term_globs x acc
+  | Recv (_, _, c) | Send (_, _, c, _) -> Term.Set.add t acc (* t or Elem (v, Glob) ? *)
   | _ -> acc
 
 let rec atom_globs a acc = match a with

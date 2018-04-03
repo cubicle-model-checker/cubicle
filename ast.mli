@@ -50,11 +50,15 @@ type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
+  tr_thread : Variable.t option;
   tr_reqs : SAtom.t; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
+  tr_sends : (Variable.t * Variable.t * Hstring.t * Term.t) list; (** send (by, to, chan, value **)
+  (* chan[x]'y <- chan[y]'x + 1 // thr, peer, chan, params, upd *)
+
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
@@ -76,6 +80,7 @@ type system = {
   globals : (loc * Hstring.t * Smt.Type.t) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
   arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  chans : (loc * Hstring.t * chantype * Smt.Type.t) list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
@@ -128,6 +133,7 @@ type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
   t_consts : Hstring.t list; (** Existential constants *)
   t_arrays : Hstring.t list; (** Array names *)
+  t_chans : Hstring.t list; (** Channel names *)
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)

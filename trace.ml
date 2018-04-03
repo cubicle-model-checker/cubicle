@@ -129,6 +129,8 @@ module AltErgo = struct
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
+    | Recv _ -> failwith "Trace.AltErgo.print_term Recv TODO"
+    | Send _ -> failwith "Trace.AltErgo.print_term Send TODO"
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -672,6 +674,8 @@ module Why3 = struct
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
+    | Recv _ -> failwith "Trace.Why3.print_term Recv TODO"
+    | Send _ -> failwith "Trace.Why3.print_term Send TODO"
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1471,6 +1475,8 @@ module Why3_INST = struct
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+    | Recv _ -> failwith "Trace.Why3_INST.print_term Recv TODO"
+    | Send _ -> failwith "Trace.Why3_INST.print_term Send TODO"
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"

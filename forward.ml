@@ -77,6 +77,8 @@ let rec is_prime_term = function
   | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
+  | Recv _ -> failwith "Forward.is_prime_term Recv TODO"
+  | Send _ -> failwith "Forward.is_prime_term Send TODO"
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -383,6 +385,8 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
+  | Recv _ -> failwith "Forward.type_of_term Recv TODO"
+  | Send _ -> failwith "Forward.type_of_term Send TODO"
 
 let rec type_of_atom = function
   | True | False -> None

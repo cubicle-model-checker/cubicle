@@ -143,7 +143,7 @@ let rec find_assign memo tr = function
 		           up_swts)
      end
   | Access (a, li) -> 
-     let nli = li in
+     let nli = li in begin
      (* List.map (fun i -> *)
      (*   if H.list_mem i tr.tr_nondets then  *)
      (*     (assert false; *)
@@ -162,8 +162,10 @@ let rec find_assign memo tr = function
 			      (* 	 | Const _ | Arith _ | Access _ -> assert false) *)
 			      (*   with Not_found -> a *)
 			      (* in *)
-			      (* Single (Access (na, nli)) *)
-				
+			      (* Single (Access (na, nli)) *) end
+  | Recv _ -> failwith "Pre.find_assign: Recv should not be in atom"
+  | Send _ -> failwith "Pre.find_assign: Send should not be in atom"
+          
 let make_tau tr =
   let memo = ref [] in
   (fun x op y ->
@@ -259,6 +261,19 @@ let make_cubes (ls, post) rargs s tr cnp =
 		(ls, post)
 	      end
 	    else
+
+              (* Channels *)
+              let lnp = Chanpre.satisfy_recvs np in
+
+              List.fold_left (fun (ls, post) np ->
+	        if debug && verbose > 0 then Debug.pre_cubes np nargs;
+	        if Cube.inconsistent_set np then
+                  begin
+		    if debug && verbose > 0 then eprintf "(inconsistent)@.";
+		    (ls, post)
+	          end
+	        else
+              
               let new_cube = Cube.create nargs np in
               let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
 	      match post_strategy with
@@ -272,6 +287,9 @@ let make_cubes (ls, post) rargs s tr cnp =
 		 then ls, add_list new_s post
 		 else add_list new_s ls, post
 	      | _ -> assert false
+
+              ) (ls, post) lnp
+       
 	  with Exit -> ls, post
 	 ) (ls, post) lureq ) acc lnp
   in
@@ -304,9 +322,11 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
   (* let tau = tr.tr_tau in *)
-  let pre_unsafe = 
-    SAtom.union tri.tr_reqs 
-      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
+  let pre_unsafe =
+    let us = SAtom.union tri.tr_reqs 
+      (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty) in
+    List.fold_left (fun us (p, q, c, t) ->
+      SAtom.add (Atom.Comp (Send (p, q, c, []), Eq, t)) us) us tri.tr_sends
   in
   let pre_u = Cube.create_normal pre_unsafe in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;

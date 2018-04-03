@@ -45,6 +45,7 @@
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
+        "chan", CHAN;
       ]
 	       
   let newline lexbuf =
@@ -112,6 +113,8 @@ rule token = parse
       { DOT }
   | "?"
       { QMARK }
+  | "!"
+      { EMARK }
   | "+"
       { PLUS }
   | "-"
@@ -154,6 +157,8 @@ rule token = parse
       { COMMA }
   | ";"
       { PV }
+  | "'"
+      { QUOTE }
   | '_'
       { UNDERSCORE }
   | "&&"

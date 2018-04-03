@@ -112,12 +112,16 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
+      | Recv _ -> failwith "Typing.infer_type Recv TODO"
+      | Send _ -> failwith "Typing.infer_type Send TODO"
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
     match x2 with
       | Elem (e2, Constr) -> Hstring.H.add refinements h1 (e2::ref_ty, ref_cs)
       | Elem (e2, Glob) -> Hstring.H.add refinements h1 (ref_ty, e2::ref_cs)
+      | Recv _ -> failwith "Typing.infer_type Recv TODO"
+      | Send _ -> failwith "Typing.infer_type Send TODO"
       | _ -> ()
   with Exit -> ()
 
@@ -168,6 +172,23 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
+  | Recv (p, q, c) ->
+      if not (Hstring.list_mem p args) then
+	begin try
+	  let pa, typ = Smt.Symbol.type_of p in
+	  if pa <> [] || not (Hstring.equal typ Smt.Type.type_proc) then
+	    error (MustBeOfTypeProc p) loc
+	  with Not_found -> error (UnknownName p) loc
+	end;
+      if (Hstring.view q) <> "" && not (Hstring.list_mem q args) then
+	begin try
+	  let pa, typ = Smt.Symbol.type_of q in
+	  if pa <> [] || not (Hstring.equal typ Smt.Type.type_proc) then
+	    error (MustBeOfTypeProc q) loc
+	  with Not_found -> error (UnknownName q) loc
+	end;
+      Smt.Symbol.type_of c
+  | Send _ -> failwith "Typing.term : Send should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -243,6 +264,24 @@ let assigns loc args =
        end;         
        dv := g ::!dv)
 
+let sends loc args =
+  let dc = ref [] in
+  List.iter
+    (fun (p, q, c, t) ->
+       (* if Hstring.list_mem c !dc then error (DuplicateSend c) loc; *)
+       let ty_v =
+	 try Smt.Symbol.type_of c
+         with Not_found -> error (UnknownGlobal c) loc in
+       begin
+         (* if not (Channels.is_chan c) then error (MustBeChan c) loc; *)
+         (* CHECK THAT V IS A CHANNEL (and in regular accesses check it's not*)
+         (* check p and q *)
+         let ty_t = term loc args t in
+         unify loc ty_t ([], snd ty_v);
+         assignment c t ty_t
+       end;
+       dc := c ::!dc)
+
 let switchs loc a args ty_e l = 
   List.iter 
     (fun (sa, t) -> 
@@ -282,6 +321,7 @@ let transitions =
        check_lets loc args t.tr_lets;
        updates args t.tr_upds;
        assigns loc args t.tr_assigns;
+       sends loc args t.tr_sends;
        nondets loc t.tr_nondets)
 
 let declare_type (loc, (x, y)) =
@@ -302,6 +342,7 @@ let init_global_env s =
   let dummypos = Lexing.dummy_pos, Lexing.dummy_pos in
   declare_type (dummypos, (mybool, [mytrue; myfalse]));*)
   let l = ref [] in
+  let chans = ref [] in
   List.iter 
     (fun (loc, n, t) -> 
        declare_symbol loc n [] t;
@@ -314,6 +355,12 @@ let init_global_env s =
     (fun (loc, n, (args, ret)) -> 
        declare_symbol loc n args ret;
        l := (n, ret)::!l) s.arrays;
+  List.iter 
+    (fun (loc, n, ct, vt) -> 
+       declare_symbol loc n [] vt;
+       chans := (n, ct, vt) :: !chans;
+       l := (n, vt)::!l) s.chans;
+  Channels.init_env !chans;
   !l
 
 
@@ -490,6 +537,12 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
                              SAtom.subst sigma sa, Term.subst sigma t) swts in
                         x, UCase swts
 	           ) tr.tr_assigns;
+	tr_sends = 
+	  List.map (fun (p, q, c, t) ->
+            (* maybe not necessary to subst p, q, and vi *)
+            (Variable.subst sigma p, Variable.subst sigma q,
+             c, Term.subst sigma t)
+            ) tr.tr_sends;
 	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 
@@ -535,6 +588,7 @@ let system s =
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
+    t_chans = List.map (fun (_,c,_,_) -> c) s.chans;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

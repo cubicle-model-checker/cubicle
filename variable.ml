@@ -56,7 +56,7 @@ let number v =
 
 let is_proc v =
   let s = Hstring.view v in
-  s.[0] = '#' || s.[0] = '$'
+  String.length s > 0 && (s.[0] = '#' || s.[0] = '$')
   
 
 let build_subst args a_args =

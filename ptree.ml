@@ -158,8 +158,10 @@ type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
+  ptr_thread : Variable.t option;
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
+  ptr_sends : (Variable.t * Variable.t * Hstring.t * term) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
   ptr_loc : loc;
@@ -169,6 +171,7 @@ type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  pchans : (loc * Hstring.t * chantype * Smt.Type.t) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
@@ -573,28 +576,31 @@ let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
   }
 
 let encode_ptransition
-    {ptr_lets; ptr_name; ptr_args; ptr_reqs; ptr_assigns;
-     ptr_upds; ptr_nondets; ptr_loc;} =
+    {ptr_lets; ptr_name; ptr_args; ptr_thread; ptr_reqs; ptr_assigns;
+     ptr_sends; ptr_upds; ptr_nondets; ptr_loc;} =
   let dguards = guard_of_formula ptr_args ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
       (i, encode_pglob_update pgu)) ptr_assigns in
+  let tr_sends = List.map (fun (p, q, c, t) ->
+      (p, q, c, encode_term t)) ptr_sends in
   let tr_upds = List.map encode_pupdate ptr_upds in
   let tr_lets = List.map (fun (x, t) -> (x, encode_term t)) ptr_lets in
   List.rev_map (fun (req, ureq) ->
       {  tr_name = ptr_name;
          tr_args = ptr_args;
+         tr_thread = ptr_thread;
          tr_reqs = req;
          tr_ureq = ureq;
 	 tr_lets = tr_lets;
          tr_assigns;
+         tr_sends;
          tr_upds;
          tr_nondets = ptr_nondets;
          tr_loc = ptr_loc }
     ) dguards
 
-
 let encode_psystem
-    {pglobals; pconsts; parrays; ptype_defs;
+    {pglobals; pconsts; parrays; pchans; ptype_defs;
      pinit = init_loc, init_vars, init_f;
      pinvs; punsafe; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
@@ -634,6 +640,7 @@ let encode_psystem
     globals = pglobals;
     consts = pconsts;
     arrays = parrays;
+    chans = pchans;
     type_defs = ptype_defs;
     init;
     invs;
@@ -643,7 +650,7 @@ let encode_psystem
       
 
 
-let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
+let psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans ~ptype_defs pdecls =
   let inits, pinvs, punsafe, ptrans =
     List.fold_left (fun (inits, invs, unsafes, trans) -> function
         | PInit i -> i :: inits, invs, unsafes, trans
@@ -661,6 +668,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
   { pglobals;
     pconsts;
     parrays;
+    pchans;
     ptype_defs;
     pinit;
     pinvs;
@@ -764,6 +772,16 @@ let print_assigns fmt tr_assigns =
       | UCase swts -> fprintf fmt "%a;@]@," print_swts swts
     ) tr_assigns
 
+let print_sends fmt tr_sends =
+  let print_chan fmt (p, q, c) =
+    let hNone = Hstring.make "" in
+    fprintf fmt "%a:%a" Hstring.print p Hstring.print c;
+    if q <> hNone then fprintf fmt "'%a" Hstring.print q in
+  List.iter (fun (p, q, c, t) ->
+      fprintf fmt "@[<hov>%a@!@ " print_chan (p, q, c);
+      fprintf fmt "%a;@]@," Term.print t
+    ) tr_sends
+
 let print_updates fmt tr_upds =
   List.iter (fun { up_arr; up_arg; up_swts } ->
       fprintf fmt "@[<hov>%a[%a]@ =@ %a;@]@,"
@@ -777,12 +795,13 @@ let print_nondets fmt =
 
 let print_trans fmt =
   List.iter
-    (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
-           tr_assigns; tr_upds; tr_nondets } ->
+    (fun { tr_name; tr_args; tr_thread; tr_reqs; tr_ureq; tr_lets;
+           tr_assigns; tr_sends; tr_upds; tr_nondets } ->
       fprintf fmt
         "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
          %a\
          {@[<v 2>@,\
+         %a\
          %a\
          %a\
          %a\
@@ -794,6 +813,7 @@ let print_trans fmt =
         print_reqs (tr_reqs, tr_ureq)
         print_lets tr_lets
         print_assigns tr_assigns
+        print_sends tr_sends
         print_updates tr_upds
         print_nondets tr_nondets
     )

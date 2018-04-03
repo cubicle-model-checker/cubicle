@@ -82,8 +82,10 @@ type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
+  ptr_thread : Variable.t option;
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
+  ptr_sends : (Variable.t * Variable.t * Hstring.t * term) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
   ptr_loc : loc;
@@ -93,6 +95,7 @@ type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  pchans : (loc * Hstring.t * chantype * Smt.Type.t) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
@@ -119,6 +122,7 @@ val psystem_of_decls:
   pglobals : (loc * Hstring.t * Smt.Type.t) list ->
   pconsts : (loc * Hstring.t * Smt.Type.t) list ->
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list ->
+  pchans : (loc * Hstring.t * chantype * Smt.Type.t) list ->
   ptype_defs : (loc * Ast.type_constructors) list ->
   pdecl list -> psystem
 

@@ -22,6 +22,9 @@ module HSet = Hstring.HSet
 
 type op_comp = Eq | Lt | Le | Neq
 
+type chantype =
+  | C11 | C1N | CN1 | CNN | CRSC | CCAUSAL | CASYNC
+
 type sort = Glob | Constr | Var
 
 
@@ -88,6 +91,9 @@ type term =
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
 (*  | NArith of cst VMap.t * cst*)
+
+  | Recv of Variable.t * Variable.t * Hstring.t
+  | Send of Variable.t * Variable.t * Hstring.t * Hstring.t list
 
 
 let is_int_const = function
@@ -168,7 +174,7 @@ module Term = struct
 
   type t = term
 
-  let rec compare t1 t2 = 
+  let rec compare t1 t2 =
     match t1, t2 with
     | Const c1, Const c2 -> compare_constants c1 c2
     | Const _, _ -> -1 | _, Const _ -> 1
@@ -183,6 +189,17 @@ module Term = struct
     | Arith (t1, cs1), Arith (t2, cs2) ->
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
+    | Recv (p1, q1, c1), Recv (p2, q2, c2) ->
+       let c = Hstring.compare p1 p2 in if c<>0 then c else
+       let c = Hstring.compare q1 q2 in if c<>0 then c else
+       Hstring.compare c1 c2
+    | Recv _, _ -> -1 | _, Recv _ -> 1
+    | Send (p1, q1, c1, sr1), Send (p2, q2, c2, sr2) ->
+       let c = Hstring.compare p1 p2 in if c<>0 then c else
+       let c = Hstring.compare q1 q2 in if c<>0 then c else
+       let c = Hstring.compare c1 c2 in if c<>0 then c else
+       Hstring.compare_list sr1 sr2
+     | Send _, _ -> -1 | _, Send _ -> 1
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -199,6 +216,8 @@ module Term = struct
   module Set = STerm
 
   let rec subst sigma t =
+    let safe_subst v =
+      try Variable.subst sigma v with Not_found -> v in
     match t with
     | Elem (x, s) ->
        let nx = Variable.subst sigma x in
@@ -209,6 +228,8 @@ module Term = struct
                     (fun z ->
                      try Variable.subst sigma z with Not_found -> z) lz)
     | Arith (x, c) -> Arith (subst sigma x, c)
+    | Recv (p, q, c) -> Recv (safe_subst p, safe_subst q, c)
+    | Send (p, q, c, sr) -> Send (safe_subst p, safe_subst q, c, sr)
     | _ -> t
 
 
@@ -218,6 +239,7 @@ module Term = struct
        List.fold_left (fun acc x -> Variable.Set.add x acc)
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t
+    | Recv (p, q, _) | Send (p, q, _, _) -> Variable.Set.of_list [p;q]
     | _ -> Variable.Set.empty
 
 
@@ -231,6 +253,8 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
+    | Recv (_, _, c) -> snd (Smt.Symbol.type_of c)
+    | Send (_, _, c, _) -> snd (Smt.Symbol.type_of c)
 
 
   let rec print_strings fmt = function
@@ -258,13 +282,23 @@ module Term = struct
          first := false;
       ) cs
 
-  let rec print fmt = function
+  let rec print fmt t =
+    let print_chan fmt (p, q, v) =
+      let hNone = Hstring.make "" in
+      fprintf fmt "%a:%a" Hstring.print p Hstring.print v;
+      if not (Hstring.equal q hNone) then fprintf fmt "'%a" Hstring.print q in
+    match t with
     | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+    | Recv (p, q, c) ->
+       fprintf fmt "%a?" print_chan (p, q, c)
+    | Send (p, q, c, sr) ->
+       fprintf fmt "%a![%a]" print_chan (p, q, c)
+         (Hstring.print_list ",") sr
 
 end
 
@@ -359,6 +393,8 @@ end = struct
     | Elem (x, Var) -> Hstring.list_mem x vs
     | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs 
     | Arith (x, _) ->  has_vars_term vs x
+    | Recv (p, q, _) | Send (p, q, _, _) ->
+       List.exists (fun v -> Hstring.list_mem v vs) [p;q]
     | _ -> false
 
   let rec has_vars vs = function

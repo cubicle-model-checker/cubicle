@@ -19,6 +19,9 @@
 
 (** {2 Terms } *)
 
+type chantype =
+  | C11 | C1N | CN1 | CNN | CRSC | CCAUSAL | CASYNC
+
 (** sort of single symbol *)
 type sort =
   | Glob (** global variable *)
@@ -65,7 +68,10 @@ type term =
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 (*  | NArith of cst VMap.t * cst*)
-			   
+
+  | Recv of Variable.t * Variable.t * Hstring.t
+  | Send of Variable.t * Variable.t * Hstring.t * Hstring.t list
+
 (** Module interface for terms *)
 module Term : sig
 
