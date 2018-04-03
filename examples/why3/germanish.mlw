@@ -95,12 +95,15 @@ let germanish (n:int) : system
         else if s.shrset[p0] && s.curcmd = Reqe then begin
 	   label Inv_1 in
            s.exgntd <- false;
-           for i = 0 to s.cache.length - 1 do
-	       invariant {forall p':proc. 0 <= p' < i ->
-	       		  p' = p0 -> s.cache[p'] = Invalid}
-	       invariant {forall p':proc. p' <> p0 ->
+           for _j8 = 0 to s.cache.length - 1 do
+	       invariant {forall p':proc. 0 <= p' < _j8 ->
+	       		  (p' = p0 -> s.cache[p'] = Invalid) /\
+			  (p' <> p0 -> s.cache[p'] = (s.cache[p'] at Inv_1))}
+	       invariant {forall p':proc. p' >= _j8 ->
 	       		 s.cache[p'] = (s.cache[p'] at Inv_1)}
-	       if i = p0 then s.cache[i] <- Invalid;
+	       s.cache[_j8] <- (
+	       		  if _j8 = p0 then Invalid
+			  else s.cache[_j8])
 	   done;
            for i = 0 to s.cache.length - 1 do
 	       invariant {forall p':proc. 0 <= p' < i ->

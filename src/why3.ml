@@ -21,12 +21,14 @@ let pp_cut_if_nempty l =
 
 let pp_sep_pipe fmt () = Format.fprintf fmt " |@ "
 
-let pp_sep_and fmt () = Format.fprintf fmt " && @,"
+let pp_sep_and_ml fmt () = Format.fprintf fmt " && @ "
+let pp_sep_and_log fmt () = Format.fprintf fmt " /\\ @ "
 
 let pp_sep_nil fmt () = Format.fprintf fmt ""
 
-let pp_for fmt arr =
-  Format.fprintf fmt "for i = 0 to s.%a.length - 1 do@," pp_hstring_uncap arr
+let pp_for fmt u =
+  Format.fprintf fmt "for %a = 0 to s.%a.length - 1 do"
+    Variable.print_vars u.up_arg pp_hstring_uncap u.up_arr
 
 let pp_list_const fmt cl =
   Format.pp_print_list ~pp_sep:pp_sep_pipe Hstring.print fmt cl
@@ -36,27 +38,37 @@ let pp_list_pairs fmt cl =
     fun fmc c -> Format.fprintf fmt "%a, %a" Hstring.print c Hstring.print c)
     fmt cl
 
-let pp_term sub fmt = function
-  | Elem (x, s) ->
-    if Hstring.equal x mytrue then Format.fprintf fmt "true"
-    else if Hstring.equal x myfalse then Format.fprintf fmt "false"
-    else Format.fprintf fmt "%a" Hstring.print (
-      match s with
-        | Constr -> x
-        | Glob -> uncapitalize x
-        | Var -> Variable.subst sub x
-    )
-  | Access (id, vl) ->
-    let vl = List.map (Variable.subst sub) vl in
-    Format.fprintf fmt "%a[%a]" pp_hstring_uncap id Variable.print_vars vl
-  | t -> Format.fprintf fmt "%a" Term.print t
+let pp_term ?(syst=false) sub fmt t =
+  if syst then
+    (match t with
+      | Elem (_, Glob) | Elem (_, Var) | Access _ -> Format.fprintf fmt "s."
+      | _ -> ());
+  match t with
+    | Elem (x, s) ->
+      if Hstring.equal x mytrue then Format.fprintf fmt "true"
+      else if Hstring.equal x myfalse then Format.fprintf fmt "false"
+      else Format.fprintf fmt "%a" Hstring.print (
+        match s with
+          | Constr -> x
+          | Glob -> uncapitalize x
+          | Var -> Variable.subst sub x
+      )
+    | Access (id, vl) ->
+      let vl = List.map (Variable.subst sub) vl in
+      Format.fprintf fmt "%a[%a]" pp_hstring_uncap id Variable.print_vars vl
+    | t -> Format.fprintf fmt "%a" Term.print t
+
+let pp_term_syst = pp_term ~syst:true
 
 let pp_atom sub fmt = function
   | Atom.Comp (t1, op, t2) ->
     Format.fprintf fmt "%a %a %a"
       (pp_term sub) t1 print_op op (pp_term sub) t2
-  | a -> Format.eprintf "%a@." Atom.print a
+  | a -> Format.fprintf fmt "%a" Atom.print a
 
+let pp_satoms ?(pp_sep=pp_sep_and_ml) sub fmt sa =
+  Format.fprintf fmt "@[<hov>%a@]"
+    (Format.pp_print_list ~pp_sep (pp_atom sub)) (SAtom.elements sa)
 
 (* Transforms type declarations in scopes with definition of equality *)
 
@@ -156,10 +168,6 @@ let pp_newprocs fmt l =
   Format.fprintf fmt "(*If there is more than one value,@,\
                       the variables could be equal, need to work on it*)"
 
-let pp_satoms sub fmt sa =
-  Format.fprintf fmt "@[<hov>%a@]"
-    (Format.pp_print_list ~pp_sep:pp_sep_and (pp_atom sub)) (SAtom.elements sa)
-
 let pp_guard sub fmt g =
   pp_satoms sub fmt g
 
@@ -180,7 +188,7 @@ let pp_arr_access sub fmt u =
 
 let pp_assigns sub fmt al =
   let pp_upd fmt = function
-    | UTerm t -> Format.fprintf fmt "%a" (pp_term sub) t
+    | UTerm t -> Format.fprintf fmt "%a" (pp_term_syst sub) t
     | _ -> Format.eprintf "pp_assigns@."; assert false
   in
   let pp_assign fmt (id, upd) =
@@ -189,29 +197,59 @@ let pp_assigns sub fmt al =
   Format.fprintf fmt "@[<v 0>%a@]"
     (Format.pp_print_list ~pp_sep:pp_sep_nil pp_assign) al
 
+let is_true sa = SAtom.equal sa (SAtom.singleton Atom.True)
+
 let pp_updates sub fmt ul =
   let pp_swt fmt (sa, t) =
-    Format.fprintf fmt "if %a then s. %a" (pp_satoms sub) sa (pp_term sub) t
+    if is_true sa then
+      Format.fprintf fmt "else (*%a*) %a" (pp_satoms sub ) sa (pp_term_syst sub) t
+    else Format.fprintf fmt "if %a then %a" (pp_satoms sub) sa (pp_term_syst sub) t
   in
   let pp_swts fmt swts =
     Format.fprintf fmt "@[<v 0>%a@]" (Format.pp_print_list pp_swt) swts
   in
-  let pp_upd fmt u =
-    Format.fprintf fmt "s.%a <- @[<v 0>%a@];@,"
-      (pp_arr_access sub) u pp_swts u.up_swts
+  let pp_prev fmt prev =
+    Format.fprintf fmt "@[<v 0>%a@]"
+      (Format.pp_print_list ~pp_sep:pp_sep_and_log
+         (pp_satoms ~pp_sep:pp_sep_and_log sub)) prev
   in
-  Format.fprintf fmt "@[<v 0>%a@]"
-    (Format.pp_print_list ~pp_sep:pp_sep_nil pp_upd) ul
+  let pp_invariant ?(last=false) prev u fmt (inv, t) =
+    if last then Format.fprintf fmt "(%a" pp_prev prev
+    else
+      Format.fprintf fmt "(%a%s%a"
+        (pp_satoms ~pp_sep:pp_sep_and_log sub) inv
+        (if prev <> [] then " /\\ " else "") pp_prev prev;
+    let sub = Variable.build_subst u.up_arg [Hstring.make "p"] @ sub in
+    Format.fprintf fmt " -> s.%a = %a)" (pp_arr_access sub) u (pp_term sub) t
+  in
+  let pp_invariants fmt u =
+    Format.fprintf fmt "invariant { @[<v 2>forall p:proc. 0 <= p < %a ->@,"
+      Variable.print_vars u.up_arg;
+    let rec aux prev fmt = function
+      | [upd] -> pp_invariant ~last:true prev u fmt upd
+      | ((inv, _) as upd) :: tl -> pp_invariant prev u fmt upd;
+        Format.fprintf fmt " /\\@,";
+        aux (SAtom.map Atom.neg inv :: prev) fmt tl
+      | _ -> assert false
+    in
+    aux [] fmt u.up_swts;
+    Format.fprintf fmt " }@]@,@,"
+  in
+  let pp_upd fmt u =
+    Format.fprintf fmt "@[<v 2>%a@,%as.%a <- %a@]@,done;"
+      pp_for u pp_invariants u (pp_arr_access sub) u pp_swts u.up_swts
+  in
+  Format.fprintf fmt "@[<v 0>%a@]" (Format.pp_print_list pp_upd) ul
 
 let pp_transitions pl fmt s =
   let pp_transition ?(cond="else if") pl fmt t =
     let map = map_procs t.tr_args pl in
     Format.fprintf fmt "(*%a*)@,\
-                        @[<v 2>%s coin () && %a %a then begin@,\
-                        %a%a\
-                        @]@,end@,"
+                        @[<hov 2>%s coin () &&@ %a@ %a@]@ \
+                        @[<v 2>then begin@,label %a in@,%a%a@]@,end@,"
       Hstring.print t.tr_name cond
       (pp_guard map) t.tr_reqs (pp_uguard map) t.tr_ureq
+      pp_hstring_cap t.tr_name
       (pp_assigns map) t.tr_assigns (pp_updates map) t.tr_upds
       (* (pp_nondets map) t.tr_nondets *)
   in

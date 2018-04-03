@@ -21,7 +21,7 @@
 type op_arith = Plus | Minus
 
 (** comparison operators for litterals *)
-type op_comp = 
+type op_comp =
   | Eq  (** equality, [=] *)
   | Lt  (** comparison less than, [<] *)
   | Le  (** comparison less or equal, [<=] *)
@@ -38,8 +38,8 @@ type sort =
 (** constant: it can be an integer, a real or a constant name *)
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
-                                                                
-module MConst : sig 
+
+module MConst : sig
   include Map.S with type key = const
   val choose : int t -> key * int
   val is_num : int t -> Num.num option
@@ -76,7 +76,7 @@ type term =
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
   (* | Card of term * op_comp * term *)
 (*  | NArith of cst VMap.t * cst*)
-			   
+
 (** Module interface for terms *)
 module Term : sig
 
@@ -172,7 +172,7 @@ end
 (** Interface for the conjunctions of atoms seen as sets of atoms. This
     module is mutually recursive with [Atom] because of the [if-then-else] *)
 and SAtom : sig
-              
+
 
   include Set.S with type elt = Atom.t
   (** {e Attention}: the function [add] performs some simple semantic
