@@ -63,12 +63,18 @@ let _ =
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
     if type_only then exit 0;
-    if towhy3 then
-      let dir = Filename.(dirname file ^ dir_sep ^ "why3" ^ dir_sep) in
-      let nf = Filename.((remove_extension @@ basename file) ^ "test.mlw") in
-      let cout = open_out (dir ^ nf) in
-      let _ = Format.formatter_of_out_channel cout in
-      Format.printf "%a" (Why3.cub_to_whyml s) Options.file;
+    if towhy3 then begin
+      let out =
+        if Options.why3_out_file then
+          let dir = Filename.(dirname file ^ dir_sep ^ "why3" ^ dir_sep) in
+          let nf = Filename.((remove_extension @@ basename file) ^ "test.mlw") in
+          let cout = open_out (dir ^ nf) in
+          Format.formatter_of_out_channel cout
+        else
+          Format.std_formatter
+      in
+      Format.fprintf out "%a" (Why3.cub_to_whyml s) Options.file
+    end;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";

@@ -25,7 +25,8 @@ let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
 let towhy3 = ref false
-    
+let why3_out_file = ref false
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -60,7 +61,7 @@ let cpp_cmd = ref "g++ -O4"
 let brab = ref (-1)
 let brab_up_to = ref false
 let forward_depth = ref (-1)
-let localized = ref false 
+let localized = ref false
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
@@ -120,19 +121,20 @@ let use_sfdp () =
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
-let specs = 
+let specs =
   [ "-version", Arg.Unit show_version, " prints the version number";
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-towhy3", Arg.Set towhy3, "translate the cubicle file to why3";
-    "-max-procs", Arg.Set_int max_proc, 
+    "-why3_out_file", Arg.Set why3_out_file, "write the output in a file";
+    "-max-procs", Arg.Set_int max_proc,
     "<nb> max number of processes to introduce (default 10)";
-    "-depth", Arg.Set_int maxrounds, 
+    "-depth", Arg.Set_int maxrounds,
     "<nb> max depth of the search tree (default 100)";
-    "-nodes", Arg.Set_int maxnodes, 
+    "-nodes", Arg.Set_int maxnodes,
     "<nb> max number nodes to explore (default 100000)";
-    "-search", Arg.String set_mode, 
+    "-search", Arg.String set_mode,
     "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
@@ -145,11 +147,11 @@ let specs =
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
-    "-symbolic", Arg.Set_int forward_inv, 
+    "-symbolic", Arg.Set_int forward_inv,
     "<n> symbolic forward invariant generation with n processes";
-    "-enumerative", Arg.Set_int enumerative, 
+    "-enumerative", Arg.Set_int enumerative,
     "<n> enumerative forward invariant generation with n processes";
-    "-local", Arg.Set localized, 
+    "-local", Arg.Set localized,
     " localized invariant candidates";
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
@@ -182,8 +184,8 @@ let specs =
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
     "-forward-nosym", Arg.Clear forward_sym,
     " disable symmetry reduction in forward exploration";
-    "-postpone", Arg.Set_int post_strategy, 
-    "<0|1|2> 
+    "-postpone", Arg.Set_int post_strategy,
+    "<0|1|2>
                           0: do not postpone nodes
                           1: postpone nodes with n+1 processes
                           2: postpone nodes that don't add information";
@@ -217,11 +219,12 @@ let cin =
     else raise (Arg.Bad "no .cub extension");
   in
   Arg.parse alspecs set_file usage;
-  match !ofile with 
-  | Some f -> file := f ; open_in f 
+  match !ofile with
+  | Some f -> file := f ; open_in f
   | None -> stdin
 
 let towhy3 = !towhy3
+let why3_out_file = !why3_out_file
 
 let type_only = !type_only
 let maxrounds = !maxrounds

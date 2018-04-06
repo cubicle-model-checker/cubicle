@@ -21,8 +21,8 @@ let pp_cut_if_nempty l =
 
 let pp_sep_pipe fmt () = Format.fprintf fmt " |@ "
 
-let pp_sep_and_ml fmt () = Format.fprintf fmt " && @ "
-let pp_sep_and_log fmt () = Format.fprintf fmt " /\\ @ "
+let pp_sep_and_ml fmt () = Format.fprintf fmt " &&@ "
+let pp_sep_and_log fmt () = Format.fprintf fmt " /\\@ "
 
 let pp_sep_nil fmt () = Format.fprintf fmt ""
 
@@ -41,7 +41,7 @@ let pp_list_pairs fmt cl =
 let pp_term ?(syst=false) sub fmt t =
   if syst then
     (match t with
-      | Elem (_, Glob) | Elem (_, Var) | Access _ -> Format.fprintf fmt "s."
+      | Elem (_, Glob) | Access _ -> Format.fprintf fmt "s."
       | _ -> ());
   match t with
     | Elem (x, s) ->
@@ -60,15 +60,32 @@ let pp_term ?(syst=false) sub fmt t =
 
 let pp_term_syst = pp_term ~syst:true
 
-let pp_atom sub fmt = function
+let pp_term_at sub lbl fmt t =
+  match t with
+    | Elem (_, Glob) | Access _ ->
+      Format.fprintf fmt "(%a at %a)" (pp_term_syst sub) t pp_hstring_cap lbl
+    | _ -> pp_term sub fmt t
+
+let pp_atom ?(syst=false) ?(cond=false) sub fmt = function
   | Atom.Comp (t1, op, t2) ->
-    Format.fprintf fmt "%a %a %a"
-      (pp_term sub) t1 print_op op (pp_term sub) t2
+    if cond then match t2, op with
+      | Elem (x, _), Eq when Hstring.equal x mytrue ->
+        Format.fprintf fmt "%a" (pp_term ~syst sub) t1
+      | Elem (x, _), Eq when Hstring.equal x myfalse ->
+        Format.fprintf fmt "not %a" (pp_term ~syst sub) t1
+      | _ -> Format.fprintf fmt "%a %a %a"
+               (pp_term ~syst sub) t1 print_op op (pp_term sub) t2
+    else  Format.fprintf fmt "%a %a %a"
+        (pp_term ~syst sub) t1 print_op op (pp_term sub) t2
   | a -> Format.fprintf fmt "%a" Atom.print a
 
-let pp_satoms ?(pp_sep=pp_sep_and_ml) sub fmt sa =
+let pp_atom_syst = pp_atom ~syst:true
+
+let pp_satoms ?(syst=true) ?(cond=false) ?(pp_sep=pp_sep_and_ml) sub fmt sa =
   Format.fprintf fmt "@[<hov>%a@]"
-    (Format.pp_print_list ~pp_sep (pp_atom sub)) (SAtom.elements sa)
+    (Format.pp_print_list ~pp_sep (pp_atom ~syst ~cond sub)) (SAtom.elements sa)
+
+let pp_satoms_syst = pp_satoms ~syst:true
 
 (* Transforms type declarations in scopes with definition of equality *)
 
@@ -169,7 +186,7 @@ let pp_newprocs fmt l =
                       the variables could be equal, need to work on it*)"
 
 let pp_guard sub fmt g =
-  pp_satoms sub fmt g
+  pp_satoms_syst ~cond:true sub fmt g
 
 let pp_uguard map fmt g =
   if g <> [] then Format.fprintf fmt "(* todo forall_other *)"
@@ -199,43 +216,59 @@ let pp_assigns sub fmt al =
 
 let is_true sa = SAtom.equal sa (SAtom.singleton Atom.True)
 
-let pp_updates sub fmt ul =
-  let pp_swt fmt (sa, t) =
-    if is_true sa then
-      Format.fprintf fmt "else (*%a*) %a" (pp_satoms sub ) sa (pp_term_syst sub) t
-    else Format.fprintf fmt "if %a then %a" (pp_satoms sub) sa (pp_term_syst sub) t
-  in
-  let pp_swts fmt swts =
-    Format.fprintf fmt "@[<v 0>%a@]" (Format.pp_print_list pp_swt) swts
-  in
-  let pp_prev fmt prev =
-    Format.fprintf fmt "@[<v 0>%a@]"
-      (Format.pp_print_list ~pp_sep:pp_sep_and_log
-         (pp_satoms ~pp_sep:pp_sep_and_log sub)) prev
-  in
-  let pp_invariant ?(last=false) prev u fmt (inv, t) =
-    if last then Format.fprintf fmt "(%a" pp_prev prev
-    else
-      Format.fprintf fmt "(%a%s%a"
-        (pp_satoms ~pp_sep:pp_sep_and_log sub) inv
-        (if prev <> [] then " /\\ " else "") pp_prev prev;
-    let sub = Variable.build_subst u.up_arg [Hstring.make "p"] @ sub in
-    Format.fprintf fmt " -> s.%a = %a)" (pp_arr_access sub) u (pp_term sub) t
-  in
-  let pp_invariants fmt u =
-    Format.fprintf fmt "invariant { @[<v 2>forall p:proc. 0 <= p < %a ->@,"
-      Variable.print_vars u.up_arg;
-    let rec aux prev fmt = function
-      | [upd] -> pp_invariant ~last:true prev u fmt upd
-      | ((inv, _) as upd) :: tl -> pp_invariant prev u fmt upd;
-        Format.fprintf fmt " /\\@,";
-        aux (SAtom.map Atom.neg inv :: prev) fmt tl
-      | _ -> assert false
-    in
-    aux [] fmt u.up_swts;
-    Format.fprintf fmt " }@]@,@,"
-  in
+let pp_updates sub lbl fmt ul =
   let pp_upd fmt u =
+    let sub' = Variable.build_subst u.up_arg [Hstring.make "p"] @ sub in
+    let pp_swt ?(cond="else if") fmt (sa, t) =
+      if is_true sa then
+        Format.fprintf fmt "else (*%a*) %a)"
+          (pp_satoms sub) sa (pp_term_syst sub) t
+      else Format.fprintf fmt "%s %a then %a"
+          cond (pp_satoms sub) sa (pp_term_syst sub) t
+    in
+    let pp_swts fmt swts =
+      Format.fprintf fmt "@[<v 0>";
+      (match swts with
+        | hd :: tl ->
+          Format.fprintf fmt "%a@," (pp_swt ~cond:"(if") hd;
+          Format.pp_print_list pp_swt fmt tl
+        | _ -> assert false);
+      Format.fprintf fmt "@]"
+    in
+    let pp_prev fmt prev =
+      Format.fprintf fmt "@[<v 0>%a@]"
+        (Format.pp_print_list ~pp_sep:pp_sep_and_log
+           (pp_satoms ~pp_sep:pp_sep_and_log sub')) prev
+    in
+    let pp_invariant ?(last=false) prev u fmt (inv, t) =
+      if last then Format.fprintf fmt "(%a" pp_prev prev
+      else
+        Format.fprintf fmt "(%a%s%a"
+          (pp_satoms ~pp_sep:pp_sep_and_log sub') inv
+          (if prev <> [] then " /\\ " else "") pp_prev prev;
+      Format.fprintf fmt " -> s.%a = %a)" (pp_arr_access sub') u
+        (pp_term_at sub' lbl) t
+    in
+    let pp_invariants fmt u =
+      Format.fprintf fmt "invariant { @[<v 2>forall p:proc. 0 <= p < %a ->@,"
+        Variable.print_vars u.up_arg;
+      let rec aux prev fmt = function
+        | [upd] -> pp_invariant ~last:true prev u fmt upd
+        | ((inv, _) as upd) :: tl -> pp_invariant prev u fmt upd;
+          Format.fprintf fmt " /\\@,";
+          aux (SAtom.map Atom.neg inv :: prev) fmt tl
+        | _ -> assert false
+      in
+      let pp_inv_array lbl fmt u =
+        Format.fprintf fmt "s.%a = (s.%a at %a)"
+          (pp_arr_access sub') u (pp_arr_access sub') u pp_hstring_cap lbl
+      in
+      aux [] fmt u.up_swts;
+      Format.fprintf fmt " }@]@,";
+      Format.fprintf fmt "invariant { @[<v 2>forall p:proc. %a <= p < n ->@,\
+                          %a }@]@,@,"
+        Variable.print_vars u.up_arg (pp_inv_array lbl) u;
+    in
     Format.fprintf fmt "@[<v 2>%a@,%as.%a <- %a@]@,done;"
       pp_for u pp_invariants u (pp_arr_access sub) u pp_swts u.up_swts
   in
@@ -243,14 +276,14 @@ let pp_updates sub fmt ul =
 
 let pp_transitions pl fmt s =
   let pp_transition ?(cond="else if") pl fmt t =
-    let map = map_procs t.tr_args pl in
+    let sub = map_procs t.tr_args pl in
     Format.fprintf fmt "(*%a*)@,\
                         @[<hov 2>%s coin () &&@ %a@ %a@]@ \
                         @[<v 2>then begin@,label %a in@,%a%a@]@,end@,"
       Hstring.print t.tr_name cond
-      (pp_guard map) t.tr_reqs (pp_uguard map) t.tr_ureq
+      (pp_guard sub) t.tr_reqs (pp_uguard sub) t.tr_ureq
       pp_hstring_cap t.tr_name
-      (pp_assigns map) t.tr_assigns (pp_updates map) t.tr_upds
+      (pp_assigns sub) t.tr_assigns (pp_updates sub t.tr_name) t.tr_upds
       (* (pp_nondets map) t.tr_nondets *)
   in
   match s.trans with

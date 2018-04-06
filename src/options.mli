@@ -25,6 +25,7 @@ val file : string
 val cin : in_channel
 
 val towhy3 : bool
+val why3_out_file : bool
 
 val max_proc : int
 val type_only : bool

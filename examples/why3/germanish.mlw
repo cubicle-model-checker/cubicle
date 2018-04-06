@@ -82,24 +82,24 @@ let germanish (n:int) : system
         let p0 = Random.random_int n in
 
         (* Req_shared *)
-        if s.curcmd = Empty && s.cache[p0] = Invalid then begin
+        if coin () && s.curcmd = Empty && s.cache[p0] = Invalid then begin
            s.curcmd <- Reqs;
            s.curptr <- p0;
         end
         (* req_exclusive *)
-        else if s.curcmd = Empty && s.cache[p0] <> Exclusive then begin
+        else if coin () && s.curcmd = Empty && s.cache[p0] <> Exclusive then begin
            s.curcmd <- Reqe;
            s.curptr <- p0;
         end
         (* inv_1 *)
-        else if s.shrset[p0] && s.curcmd = Reqe then begin
+        else if coin () && s.shrset[p0] && s.curcmd = Reqe then begin
 	   label Inv_1 in
            s.exgntd <- false;
            for _j8 = 0 to s.cache.length - 1 do
 	       invariant {forall p':proc. 0 <= p' < _j8 ->
 	       		  (p' = p0 -> s.cache[p'] = Invalid) /\
 			  (p' <> p0 -> s.cache[p'] = (s.cache[p'] at Inv_1))}
-	       invariant {forall p':proc. p' >= _j8 ->
+	       invariant {forall p':proc. _j8 <= p' < n ->
 	       		 s.cache[p'] = (s.cache[p'] at Inv_1)}
 	       s.cache[_j8] <- (
 	       		  if _j8 = p0 then Invalid
@@ -114,19 +114,19 @@ let germanish (n:int) : system
 	   done;
         end
         (* inv_2 *)
-        else if s.shrset[p0] && s.curcmd = Reqs && s.exgntd then begin
+        else if coin () && s.shrset[p0] && s.curcmd = Reqs && s.exgntd then begin
            s.exgntd <- false;
            s.cache[p0] <- Invalid;
            s.shrset[p0] <- false;
         end
         (* gnt_shared *)
-        else if s.curptr = p0 && s.curcmd = Reqs && not s.exgntd then begin
+        else if coin () && s.curptr = p0 && s.curcmd = Reqs && not s.exgntd then begin
            s.curcmd <- Empty;
            s.cache[p0] <- Shared;
            s.shrset[p0] <- true;
         end
         (* gnt_exclusive *)
-        else if s.curcmd = Reqe && not s.exgntd && s.curptr = p0
+        else if coin () && s.curcmd = Reqe && not s.exgntd && s.curptr = p0
                 && forall_other_gnt_exclusive s.shrset p0 then begin
            s.exgntd <- true;
            s.cache[p0] <- Exclusive;
