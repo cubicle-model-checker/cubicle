@@ -79,6 +79,7 @@ val dot_level : int
 val dot_prog : viz_prog
 val dot_colors : int
 val quiet : bool
+val stats : bool
 val verbose : int
 val nocolor : bool
 

@@ -44,6 +44,7 @@ let dot_prog = ref Dot
 let dot_colors = ref 0
 let verbose = ref 0
 let quiet = ref false
+let stats = ref false
 let bitsolver = ref false
 let enumsolver = ref false
 
@@ -130,6 +131,7 @@ let show_version () = Format.printf "%s@." Version.version; exit 0
 
 let specs = 
   [ "-version", Arg.Unit show_version, " prints the version number";
+    "-stats", Arg.Set stats, " show statistics";
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
@@ -295,6 +297,7 @@ let abstr_num = !abstr_num
 let num_range = (!num_range_low, !num_range_up)
 
 let quiet = !quiet
+let stats = !stats
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
 

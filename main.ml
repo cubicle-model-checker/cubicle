@@ -84,7 +84,7 @@ let close_dot = Dot.open_dot () in (* debug *)
     begin
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
-         if (not quiet || profiling) then
+         if (stats && not quiet || profiling) then
            Stats.print_report ~safe:true visited candidates;
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
          Trace.Selected.certificate system visited;
@@ -92,7 +92,7 @@ let close_dot = Dot.open_dot () in (* debug *)
 	 exit 0
 
       | Bwd.Unsafe (faulty, candidates) ->
-         if (not quiet || profiling) then
+         if (stats && not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
          begin try
              (*if not quiet then Stats.error_trace system faulty;*)
@@ -122,7 +122,8 @@ let close_dot = Dot.open_dot () in (* debug *)
      exit 2
 
   | Stats.ReachedLimit ->
-     if (not quiet || profiling) then Stats.print_report ~safe:false [] [];
+     if (stats && not quiet || profiling) then
+       Stats.print_report ~safe:false [] [];
      eprintf "\n@{<b>@{<fg_yellow>Reached Limit@} !@}\n";
      eprintf "It is likely that the search diverges, increase \
               the limit to explore further.@.";
