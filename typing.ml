@@ -415,8 +415,8 @@ let switchs loc ?(ctx=dctx) a args ty_e l =
     (fun (sa, t) ->
        let ctx = update_ctxthr sa ctx in
        atoms ~ctx loc args sa;
-       if not (update_ident a args t || Options.model = Options.SC) then
-         if not (update_own ctx args) then
+       if not (update_ident a args t) then
+         if not (update_own ctx args || Options.model = Options.SC) then
            error ProcCantWriteOtherSC loc
          else begin
            let ty = term ~ctx loc args t in
