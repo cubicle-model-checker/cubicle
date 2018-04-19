@@ -11,6 +11,10 @@ array Shrset[proc] : bool
 init (z) { Cache[z] = Invalid && Shrset[z] = False &&
            Exgntd = False && Curcmd = Empty }
 
+invariant (z) { Exgntd = False && Cache[z] = Exclusive }
+invariant (z) { Cache[z] = Shared && Shrset[z] = False }
+invariant (z1 z2) { Cache[z1] = Exclusive && Shrset[z2] = True }
+
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
 
 transition req_shared (n)

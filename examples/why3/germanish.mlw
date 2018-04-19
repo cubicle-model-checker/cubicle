@@ -33,19 +33,6 @@ val coin () : bool
 
 type proc = int
 
-let forall_other_gnt_exclusive (arr : array bool) (p : proc)
-    requires { p < arr.length }
-    ensures {result = True <-> forall p':proc.
-    	     0 <= p' < arr.length /\ p' <> p -> not arr[p']}
-=
-     let res = ref true in
-     for i = 0 to arr.length - 1 do
-         invariant {!res = True <-> forall p':proc.
-	 	    0 <= p' < i /\ p' <> p -> not arr[p']}
-         if arr[i] && i <> p then res := false
-     done;
-     !res
-
 type system = {
   mutable exgntd : bool;
   mutable curcmd : msg;
@@ -71,6 +58,20 @@ let germanish (n:int) : system
       shrset = Array.make n false;
     } in
 
+
+    let forall_other_gnt_exclusive (p : proc)
+    	requires { p < n }
+    	ensures {result = True <-> forall p':proc.
+    	     0 <= p' < n /\ p' <> p -> not s.shrset[p']}
+	=
+     let res = ref true in
+     for i = 0 to n - 1 do
+         invariant {!res = True <-> forall p':proc.
+	 	    0 <= p' < i /\ p' <> p -> not s.shrset[p']}
+         if s.shrset[i] && i <> p then res := false
+     done;
+     !res
+in
     while true do
         (* invariant {forall i: int. 0 <= i < n /\ s.cache[i] = Exclusive -> s.curptr = i} *)
         invariant {forall i j : int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.cache[j] = Exclusive -> i = j}
@@ -79,58 +80,58 @@ let germanish (n:int) : system
         invariant {forall i j: int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.shrset[j] -> i = j}
 
 
-        let p0 = Random.random_int n in
+        let _p0 = Random.random_int n in
 
         (* Req_shared *)
-        if coin () && s.curcmd = Empty && s.cache[p0] = Invalid then begin
+        if coin () && s.curcmd = Empty && s.cache[_p0] = Invalid then begin
            s.curcmd <- Reqs;
-           s.curptr <- p0;
+           s.curptr <- _p0;
         end
         (* req_exclusive *)
-        else if coin () && s.curcmd = Empty && s.cache[p0] <> Exclusive then begin
+        else if coin () && s.curcmd = Empty && s.cache[_p0] <> Exclusive then begin
            s.curcmd <- Reqe;
-           s.curptr <- p0;
+           s.curptr <- _p0;
         end
         (* inv_1 *)
-        else if coin () && s.shrset[p0] && s.curcmd = Reqe then begin
+        else if coin () && s.shrset[_p0] && s.curcmd = Reqe then begin
 	   label Inv_1 in
            s.exgntd <- false;
            for _j8 = 0 to s.cache.length - 1 do
 	       invariant {forall p':proc. 0 <= p' < _j8 ->
-	       		  (p' = p0 -> s.cache[p'] = Invalid) /\
-			  (p' <> p0 -> s.cache[p'] = (s.cache[p'] at Inv_1))}
+	       		  (p' = _p0 -> s.cache[p'] = Invalid) /\
+			  (p' <> _p0 -> s.cache[p'] = (s.cache[p'] at Inv_1))}
 	       invariant {forall p':proc. _j8 <= p' < n ->
 	       		 s.cache[p'] = (s.cache[p'] at Inv_1)}
 	       s.cache[_j8] <- (
-	       		  if _j8 = p0 then Invalid
+	       		  if _j8 = _p0 then Invalid
 			  else s.cache[_j8])
 	   done;
            for i = 0 to s.cache.length - 1 do
 	       invariant {forall p':proc. 0 <= p' < i ->
-	       		  p' = p0 -> s.shrset[p'] = False}
-	       invariant {forall p':proc. p' <> p0 ->
+	       		  p' = _p0 -> s.shrset[p'] = False}
+	       invariant {forall p':proc. p' <> _p0 ->
 	       		  s.shrset[p'] = (s.shrset[p'] at Inv_1)}
-	       if i = p0 then s.shrset[i] <- false;
+	       if i = _p0 then s.shrset[i] <- false;
 	   done;
         end
         (* inv_2 *)
-        else if coin () && s.shrset[p0] && s.curcmd = Reqs && s.exgntd then begin
+        else if coin () && s.shrset[_p0] && s.curcmd = Reqs && s.exgntd then begin
            s.exgntd <- false;
-           s.cache[p0] <- Invalid;
-           s.shrset[p0] <- false;
+           s.cache[_p0] <- Invalid;
+           s.shrset[_p0] <- false;
         end
         (* gnt_shared *)
-        else if coin () && s.curptr = p0 && s.curcmd = Reqs && not s.exgntd then begin
+        else if coin () && s.curptr = _p0 && s.curcmd = Reqs && not s.exgntd then begin
            s.curcmd <- Empty;
-           s.cache[p0] <- Shared;
-           s.shrset[p0] <- true;
+           s.cache[_p0] <- Shared;
+           s.shrset[_p0] <- true;
         end
         (* gnt_exclusive *)
-        else if coin () && s.curcmd = Reqe && not s.exgntd && s.curptr = p0
-                && forall_other_gnt_exclusive s.shrset p0 then begin
+        else if coin () && s.curcmd = Reqe && not s.exgntd && s.curptr = _p0
+                && forall_other_gnt_exclusive _p0 then begin
            s.exgntd <- true;
-           s.cache[p0] <- Exclusive;
-           s.shrset[p0] <- true;
+           s.cache[_p0] <- Exclusive;
+           s.shrset[_p0] <- true;
            s.curcmd <- Empty;
         end
     done;

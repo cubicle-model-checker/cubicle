@@ -6,47 +6,34 @@ use import ref.Refint
 use import random.Random
 
 scope import Msg
-
+  
   type msg = Empty | Reqs | Reqe
-
+  
   let (=) (a b: msg): bool
     ensures {result <-> a = b}
     = match a, b with
       | Empty, Empty | Reqs, Reqs | Reqe, Reqe -> true
       | _ -> false
   end
-
+  
 end
 
 scope import State
-
+  
   type state = Invalid | Shared | Exclusive
-
+  
   let (=) (a b: state): bool
     ensures {result <-> a = b}
     = match a, b with
       | Invalid, Invalid | Shared, Shared | Exclusive, Exclusive -> true
       | _ -> false
   end
-
+  
 end
 
 val coin () : bool
 
 type proc = int
-
-let forall_other_gnt_exclusive (arr : array bool) (p : proc)
-    requires { p < arr.length }
-    ensures {result = True <-> forall p':proc.
-    	     0 <= p' < arr.length /\ p' <> p -> not arr[p']}
-=
-     let res = ref true in
-     for i = 0 to arr.length - 1 do
-         invariant {!res = True <-> forall p':proc.
-	 	    0 <= p' < i /\ p' <> p -> not arr[p']}
-         if arr[i] && i <> p then res := false
-     done;
-     !res
 
 type system = {
   mutable exgntd : bool;
@@ -54,160 +41,177 @@ type system = {
   mutable curptr : proc;cache : array state;
   shrset : array bool;
 }
-let germanish (n : int) : system
+let germanish (_n : int) : system
   diverges
-  requires { 0 < n }
-    ensures {forall i j : int. 0 <= i < n /\ 0 <= j < n /\
-                    result.cache[i] = Exclusive /\ result.cache[j] <> Invalid
-                    -> i = j}
+  requires { 0 < _n }
 =
   let s = {
     exgntd = false;
     curcmd = Empty;
-    cache = Array.make n Invalid;
-    shrset = Array.make n false;
-    curptr = Random.random_int n
+    cache = Array.make _n Invalid;
+    shrset = Array.make _n false;
+    curptr = Random.random_int _n
   } in
+  
+  let forall_other_gnt_exclusive0 (_p0 : proc)
+    requires { _p0 < _n }
+    ensures { result = True <-> forall _p0':proc. 0 <= _p0' < _n /\
+              _p0' <> _p0 -> not s.shrset[_p0']}
+  =
+    let res = ref true in
+    for _fi = 0 to _n - 1 do
+      invariant { !res = True <-> forall _p0':proc. 0 <= _p0' < _fi /\
+                  _p0' <> _p0 -> not s.shrset[_p0']}
+      if _fi <> _p0 && s.shrset[_fi] then res := false
+    done;
+    !res
+  in
+  
   while true do
-        invariant {forall i j : int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.cache[j] = Exclusive -> i = j}
-        invariant {forall i: int. 0 <= i < n /\ not s.exgntd -> s.cache[i] <> Exclusive}
-        invariant {forall i: int. 0 <= i < n /\ s.cache[i] = Shared -> s.shrset[i]}
-        invariant {forall i j: int. 0 <= i < n /\ 0 <= j < n /\ s.cache[i] = Exclusive /\ s.shrset[j] -> i = j}
-
-    let p0 = Random.random_int n in
+    
+    invariant { forall z1 z2 : int. 0 <= z1 < _n /\ 0 <= z2 < _n /\
+                  z1 <> z2 /\ s.cache[z1] = Exclusive ->
+                          s.cache[z2] <> Shared }
+    invariant { forall z1 z2 : int. 0 <= z1 < _n /\ 0 <= z2 < _n /\
+                  z1 <> z2 /\ s.cache[z1] = Exclusive -> not s.shrset[z2] }
+    invariant { forall z : int. 0 <= z < _n /\ s.cache[z] = Shared ->
+                                           s.shrset[z] }
+    invariant { forall z : int. 0 <= z < _n /\ not s.exgntd ->
+                                           s.cache[z] <> Exclusive }
+    let _p0 = Random.random_int _n in
     (*If there is more than one value,
     the variables could be equal, need to work on it*)
-
+    
     (*req_shared*)
-    if coin () && s.curcmd = Empty && s.cache[p0] = Invalid
+    if coin () && s.curcmd = Empty && s.cache[_p0] = Invalid
     then begin
       label Req_shared in
       s.curcmd <- Reqs;
-      s.curptr <- p0;
-
+      s.curptr <- _p0;
+      
     end
-
+    
     (*req_exclusive*)
-    else if coin () && s.curcmd = Empty && s.cache[p0] <> Exclusive
+    else if coin () && s.curcmd = Empty && s.cache[_p0] <> Exclusive
     then begin
       label Req_exclusive in
       s.curcmd <- Reqe;
-      s.curptr <- p0;
-
+      s.curptr <- _p0;
+      
     end
-
+    
     (*inv_1*)
-    else if coin () && s.curcmd = Reqe && s.shrset[p0]
+    else if coin () && s.curcmd = Reqe && s.shrset[_p0]
     then begin
       label Inv_1 in
       s.exgntd <- false;
       for _j1 = 0 to s.cache.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j1 ->
-                      (p = p0 -> s.cache[p] = Invalid) /\
-                      (p <> p0 -> s.cache[p] = (s.cache[p] at Inv_1)) }
-        invariant { forall p:proc. _j1 <= p < n ->
-                      s.cache[p] = (s.cache[p] at Inv_1) }
-
-        s.cache[_j1] <- (if _j1 = p0 then Invalid
+        invariant { forall _p:proc. 0 <= _p < _j1 ->
+                      (_p = _p0 -> s.cache[_p] = Invalid) /\
+                      (_p <> _p0 -> s.cache[_p] = (s.cache[_p] at Inv_1)) }
+        invariant { forall _p:proc. _j1 <= _p < _n ->
+                      s.cache[_p] = (s.cache[_p] at Inv_1) }
+        
+        s.cache[_j1] <- (if _j1 = _p0 then Invalid
                         else (*true*) s.cache[_j1])
       done;
       for _j2 = 0 to s.shrset.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j2 ->
-                      (p = p0 -> s.shrset[p] = false) /\
-                      (p <> p0 -> s.shrset[p] = (s.shrset[p] at Inv_1)) }
-        invariant { forall p:proc. _j2 <= p < n ->
-                      s.shrset[p] = (s.shrset[p] at Inv_1) }
-
-        s.shrset[_j2] <- (if _j2 = p0 then false
+        invariant { forall _p:proc. 0 <= _p < _j2 ->
+                      (_p = _p0 -> s.shrset[_p] = false) /\
+                      (_p <> _p0 -> s.shrset[_p] = (s.shrset[_p] at Inv_1)) }
+        invariant { forall _p:proc. _j2 <= _p < _n ->
+                      s.shrset[_p] = (s.shrset[_p] at Inv_1) }
+        
+        s.shrset[_j2] <- (if _j2 = _p0 then false
                          else (*true*) s.shrset[_j2])
       done;
     end
-
+    
     (*inv_2*)
-    else if coin () && s.exgntd && s.curcmd = Reqs && s.shrset[p0]
+    else if coin () && s.exgntd && s.curcmd = Reqs && s.shrset[_p0]
     then begin
       label Inv_2 in
       s.exgntd <- false;
       for _j3 = 0 to s.cache.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j3 ->
-                      (p = p0 -> s.cache[p] = Invalid) /\
-                      (p <> p0 -> s.cache[p] = (s.cache[p] at Inv_2)) }
-        invariant { forall p:proc. _j3 <= p < n ->
-                      s.cache[p] = (s.cache[p] at Inv_2) }
-
-        s.cache[_j3] <- (if _j3 = p0 then Invalid
+        invariant { forall _p:proc. 0 <= _p < _j3 ->
+                      (_p = _p0 -> s.cache[_p] = Invalid) /\
+                      (_p <> _p0 -> s.cache[_p] = (s.cache[_p] at Inv_2)) }
+        invariant { forall _p:proc. _j3 <= _p < _n ->
+                      s.cache[_p] = (s.cache[_p] at Inv_2) }
+        
+        s.cache[_j3] <- (if _j3 = _p0 then Invalid
                         else (*true*) s.cache[_j3])
       done;
       for _j4 = 0 to s.shrset.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j4 ->
-                      (p = p0 -> s.shrset[p] = false) /\
-                      (p <> p0 -> s.shrset[p] = (s.shrset[p] at Inv_2)) }
-        invariant { forall p:proc. _j4 <= p < n ->
-                      s.shrset[p] = (s.shrset[p] at Inv_2) }
-
-        s.shrset[_j4] <- (if _j4 = p0 then false
+        invariant { forall _p:proc. 0 <= _p < _j4 ->
+                      (_p = _p0 -> s.shrset[_p] = false) /\
+                      (_p <> _p0 -> s.shrset[_p] = (s.shrset[_p] at Inv_2)) }
+        invariant { forall _p:proc. _j4 <= _p < _n ->
+                      s.shrset[_p] = (s.shrset[_p] at Inv_2) }
+        
+        s.shrset[_j4] <- (if _j4 = _p0 then false
                          else (*true*) s.shrset[_j4])
       done;
     end
-
+    
     (*gnt_shared*)
-    else if coin () && not s.exgntd && s.curcmd = Reqs && s.curptr = p0
+    else if coin () && not s.exgntd && s.curcmd = Reqs && s.curptr = _p0
     then begin
       label Gnt_shared in
       s.curcmd <- Empty;
       for _j5 = 0 to s.shrset.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j5 ->
-                      (p = p0 -> s.shrset[p] = true) /\
-                      (p <> p0 -> s.shrset[p] = (s.shrset[p] at Gnt_shared)) }
-        invariant { forall p:proc. _j5 <= p < n ->
-                      s.shrset[p] = (s.shrset[p] at Gnt_shared) }
-
-        s.shrset[_j5] <- (if _j5 = p0 then true
+        invariant { forall _p:proc. 0 <= _p < _j5 ->
+                      (_p = _p0 -> s.shrset[_p] = true) /\
+                      (_p <> _p0 -> s.shrset[_p] = (s.shrset[_p] at Gnt_shared)) }
+        invariant { forall _p:proc. _j5 <= _p < _n ->
+                      s.shrset[_p] = (s.shrset[_p] at Gnt_shared) }
+        
+        s.shrset[_j5] <- (if _j5 = _p0 then true
                          else (*true*) s.shrset[_j5])
       done;
       for _j6 = 0 to s.cache.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j6 ->
-                      (p = p0 -> s.cache[p] = Shared) /\
-                      (p <> p0 -> s.cache[p] = (s.cache[p] at Gnt_shared)) }
-        invariant { forall p:proc. _j6 <= p < n ->
-                      s.cache[p] = (s.cache[p] at Gnt_shared) }
-
-        s.cache[_j6] <- (if _j6 = p0 then Shared
+        invariant { forall _p:proc. 0 <= _p < _j6 ->
+                      (_p = _p0 -> s.cache[_p] = Shared) /\
+                      (_p <> _p0 -> s.cache[_p] = (s.cache[_p] at Gnt_shared)) }
+        invariant { forall _p:proc. _j6 <= _p < _n ->
+                      s.cache[_p] = (s.cache[_p] at Gnt_shared) }
+        
+        s.cache[_j6] <- (if _j6 = _p0 then Shared
                         else (*true*) s.cache[_j6])
       done;
     end
-
+    
     (*gnt_exclusive*)
     else if coin () &&
-      not s.exgntd && s.curcmd = Reqe && s.curptr = p0 && not s.shrset[p0]
-      (* todo forall_other *)
-    && forall_other_gnt_exclusive s.shrset p0 then begin
+      not s.exgntd && s.curcmd = Reqe && s.curptr = _p0 && not s.shrset[_p0] &&
+      forall_other_gnt_exclusive0 (_p0 : proc)
+    then begin
       label Gnt_exclusive in
       s.curcmd <- Empty;
       s.exgntd <- true;
       for _j7 = 0 to s.shrset.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j7 ->
-                      (p = p0 -> s.shrset[p] = true) /\
-                      (p <> p0 -> s.shrset[p] = (s.shrset[p] at Gnt_exclusive)) }
-        invariant { forall p:proc. _j7 <= p < n ->
-                      s.shrset[p] = (s.shrset[p] at Gnt_exclusive) }
-
-        s.shrset[_j7] <- (if _j7 = p0 then true
+        invariant { forall _p:proc. 0 <= _p < _j7 ->
+                      (_p = _p0 -> s.shrset[_p] = true) /\
+                      (_p <> _p0 -> s.shrset[_p] = (s.shrset[_p] at Gnt_exclusive)) }
+        invariant { forall _p:proc. _j7 <= _p < _n ->
+                      s.shrset[_p] = (s.shrset[_p] at Gnt_exclusive) }
+        
+        s.shrset[_j7] <- (if _j7 = _p0 then true
                          else (*true*) s.shrset[_j7])
       done;
       for _j8 = 0 to s.cache.length - 1 do
-        invariant { forall p:proc. 0 <= p < _j8 ->
-                      (p = p0 -> s.cache[p] = Exclusive) /\
-                      (p <> p0 -> s.cache[p] = (s.cache[p] at Gnt_exclusive)) }
-        invariant { forall p:proc. _j8 <= p < n ->
-                      s.cache[p] = (s.cache[p] at Gnt_exclusive) }
-
-        s.cache[_j8] <- (if _j8 = p0 then Exclusive
+        invariant { forall _p:proc. 0 <= _p < _j8 ->
+                      (_p = _p0 -> s.cache[_p] = Exclusive) /\
+                      (_p <> _p0 -> s.cache[_p] = (s.cache[_p] at Gnt_exclusive)) }
+        invariant { forall _p:proc. _j8 <= _p < _n ->
+                      s.cache[_p] = (s.cache[_p] at Gnt_exclusive) }
+        
+        s.cache[_j8] <- (if _j8 = _p0 then Exclusive
                         else (*true*) s.cache[_j8])
       done;
     end
-
-
+    
+    
   done;
   s
 end
