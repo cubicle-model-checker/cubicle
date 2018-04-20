@@ -165,7 +165,7 @@ let rec find_assign memo tr = function
 			      (* Single (Access (na, nli)) *) end
   | Recv _ -> failwith "Pre.find_assign: Recv should not be in atom"
   | Send _ -> failwith "Pre.find_assign: Send should not be in atom"
-          
+
 let make_tau tr =
   let memo = ref [] in
   (fun x op y ->

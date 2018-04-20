@@ -180,3 +180,5 @@ let init_env (cl:(H.t * Types.chantype * Smt.Type.t) list) : unit =
   S.declare hDir [T.type_int] hDirection;
   S.declare hChan [T.type_int] hChannel;
   List.iter (fun (hVal, vt) -> S.declare hVal [T.type_int] vt) cvtl;
+
+  S.declare hGhb [T.type_int; T.type_int] T.type_bool; (* to remove *)

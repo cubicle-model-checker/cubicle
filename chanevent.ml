@@ -120,7 +120,7 @@ let extract_event (sa_pure, rcs, sds, eids, evts) at = match at with
      let evts = process_event evts t1 (cop_of_r_op false op) t2 in
      let evts = process_event evts t2 (cop_of_r_op true op) t1 in
      (sa_pure, rcs, sds, eids, evts)
-  (* Direction / Thrad / Peer / Channel *)
+  (* Direction / Thread / Peer / Channel *)
   | Atom.Comp (Access (f, [e]), Eq, Elem (c, t))
   | Atom.Comp (Elem (c, t), Eq, Access (f, [e]))
        when is_event f && not (is_value f) ->

@@ -242,6 +242,18 @@ let print_time_ccheck () =
 let print_time_forward () =
   printf "Forward exploration              : %a@." print_time (TimeForward.get ())
 
+let print_time_safety () =
+  printf "Time for safety                  : %a@." print_time (TimeSafety.get ())
+
+let print_time_satrc () =
+  printf "Satisfying recvs with sends      : %a@." print_time (TimeSatRecv.get ())
+
+let print_time_buildrs () =
+  printf "├─Computing recv-send pairs      : %a@." print_time (TimeBuildRS.get ())
+
+let print_time_filterrs () =
+  printf "├─Filtering recv-send pairs      : %a@." print_time (TimeFilterRS.get ())
+
 let print_report ~safe visited candidates =
   print_candidates ~safe candidates;
   Pretty.print_title std_formatter "STATS";
@@ -270,6 +282,10 @@ let print_report ~safe visited candidates =
       print_time_prover ();
       print_time_forward ();
       print_time_ccheck ();
+      print_time_safety ();
+      print_time_satrc ();
+      print_time_buildrs ();
+      print_time_filterrs ()
     end;
   printf "%a" Pretty.print_double_line ()
 

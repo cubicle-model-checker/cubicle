@@ -30,6 +30,10 @@ module TimeCheckCand = Timer.Make (Options)
 module TimeFormula = Timer.Make (Options)
 module TimeSimpl = Timer.Make (Options)
 module TimeCertificate = Timer.Make (struct let profiling = true end)
+module TimeSafety = Timer.Make (Options)
+module TimeBuildRS = Timer.Make (Options)
+module TimeFilterRS = Timer.Make (Options)
+module TimeSatRecv = Timer.Make (Options)
 
 
 let nb_digits n =

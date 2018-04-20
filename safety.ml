@@ -16,7 +16,8 @@
 open Format
 open Options
 open Ast
-
+open Util
+   
 exception Unsafe of Node.t
 
 (*************************************************)
@@ -34,12 +35,20 @@ let obviously_safe { t_init_instances = init_inst; } n =
   let nb_procs = Node.dim n in
   let { init_cdnf_a } = Hashtbl.find init_inst nb_procs in
   cdnf_asafe (Node.array n) init_cdnf_a
- 
+
+let has_unsat_recv n =
+  let _, _, _, _, evts = Chanevent.extract_events_set n.cube.Cube.litterals in
+  let urevts = Chanevent.unsat_recv_events evts in
+  not (Channels.HMap.is_empty urevts)
+
 let check s n =
   (*Debug.unsafe s;*)
-  try
-    if not (obviously_safe s n) then
+  TimeSafety.start ();
+  begin try
+    if not (obviously_safe s n || has_unsat_recv n) then
       begin
+        let n = { n with cube = Cube.(create
+          n.cube.vars (Chanrel.filter_rels_set n.cube.litterals)) } in
 	Prover.unsafe s n;
 	if not quiet then eprintf "\nUnsafe trace: @[%a@]@."
 				  Node.print_history n;
@@ -47,4 +56,5 @@ let check s n =
       end
   with
     | Smt.Unsat _ -> ()
-
+  end;
+  TimeSafety.pause ();

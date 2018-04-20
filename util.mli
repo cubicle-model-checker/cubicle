@@ -30,6 +30,10 @@ module TimeCheckCand : Timer.S
 module TimeFormula : Timer.S
 module TimeSimpl : Timer.S
 module TimeCertificate : Timer.S
+module TimeSafety : Timer.S
+module TimeBuildRS : Timer.S
+module TimeFilterRS : Timer.S
+module TimeSatRecv : Timer.S
 
 
 (** {2 Misc } *)
