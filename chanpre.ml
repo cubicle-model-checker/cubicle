@@ -99,10 +99,10 @@ let make_recv_send_combinations sends evts urevts ghb =
     ) urevts src in
 
     (* Adjust ghb for this combination *)
-    let ghb = List.fold_left (
-      fun ghb (((_,_,_,sc), (se,_)), (re, _)) ->
-        let ghb = Chanrel.Rel.add_lt se re ghb in (* rf *)
-        HMap.fold (fun ure ((_,_,_,urc), _) ghb -> (* fr *) (* adjust *)
+    let ghb = List.fold_left (fun ghb (((_,_,_,sc), (se,_)), (re, _)) ->
+      let ghb = Chanrel.Rel.add_lt se re ghb in (* rf *)
+      
+      HMap.fold (fun ure ((_,_,_,urc), _) ghb -> (* fr *)
           if H.equal sc urc then
             Chanrel.Rel.add_lt ure se ghb
           else ghb
@@ -117,7 +117,42 @@ let make_recv_send_combinations sends evts urevts ghb =
 
   srcl
 
+(*
 
+new recv (cc)
+ -> csl : ghb + po/rs
+
+new send (cc)
+ -> csl : ghb + po/ss
+
+new recv (ro) :
+ -> async : nothing
+ -> rsc / n-n / 1-n : ghb + sched/rr
+ -> csl / n-1 / 1-1 : ghb + po/rr
+
+new send (so):
+ -> async : nothing
+ -> rsc / n-n : ghb + sched/ss
+ ->       n-1 : ghb + sched/ss/rpo
+ ->       1-n : ghb + po/ss
+ ->       1-1 : ghb + po/ss/rpo
+ ->       csl : ghb + po/ss
+
+recv + send :
+ -> add ghb (recv, send)
+
+when new send satisfy old recv
+ -> new send if ghb-before (rf) old recv
+ -> old recv is ghb-before (fr) old sends that are ghb-after (so) the new send
+
+Heuristics :
+n-n : a new send MUST satisfy the oldest recv in ro (or none if lossy)
+n-1 : a new send MUST satisfy the oldest recv in ro / thread (non if lossy)
+1-n : a new send CAN'T satisfy the oldest recv in ro if it is so-before
+      an older send that satisfies old recv that are before the oldest
+1-1 : a new send CAN'T satisfy the oldest recv in ro / thread if it is so-before
+      an older send that satisfies old recv that are before the oldest
+*)
 
 
 
