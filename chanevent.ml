@@ -164,6 +164,9 @@ let extract_events_list la =
 let send_events evts =
   HMap.filter (fun _ (ed, _) -> is_send ed) evts
 
+let recv_events evts =
+  HMap.filter (fun _ (ed, _) -> is_recv ed) evts
+
 let unsat_recv_events evts =
   HMap.filter (fun _ (ed, vals) -> is_recv ed && vals <> []) evts
 

@@ -45,6 +45,10 @@ val send_events :
   ((H.t * H.t * H.t * H.t) * (cop * Term.t) list) HMap.t ->
     ((H.t * H.t * H.t * H.t) * (cop * Term.t) list) HMap.t
 
+val recv_events :
+  ((H.t * H.t * H.t * H.t) * (cop * Term.t) list) HMap.t ->
+    ((H.t * H.t * H.t * H.t) * (cop * Term.t) list) HMap.t
+
 val unsat_recv_events : 
   ((H.t * H.t * H.t * H.t) * (cop * Term.t) list) HMap.t ->
     ((H.t * H.t * H.t * H.t) * (cop * Term.t) list) HMap.t

@@ -4,8 +4,6 @@ open Chanevent
 open Types
 open Util
 
-(* exception UnsatisfiableRecv *)
-
 
 
 let compatible_consts c1 cop c2 =
@@ -40,24 +38,13 @@ let compatible_terms st cop rt = match st, rt with
      if cop = CNeq || cop = CLt || cop = CGt then not (Term.equal st rt)
      else true
 
+(* True means maybe, False means no *)
 let compat_val stl vals =
   List.for_all (fun st ->
     List.for_all (fun (cop, t) -> compatible_terms st cop t) vals
   ) stl
 
-(* let is_satisfied = function [] -> true | _ -> false *)
-
-(* let get_send_on sends ed =
- *   try Some (HEvtMap.findp (fun eds _ -> same_chan eds ed) sends)
- *   with Not_found -> None *)
-(*
-let remove_write_on writes ed =
-  HEvtMap.filter (fun edw _ -> not (same_var edw ed)) writes
-let unsat_reads edw pevts =
-  List.exists (fun (_, (ed, vals)) -> same_var edw ed && vals <> []) pevts
- *)
-
-
+(* For each send, get its compatible recvs *)
 let recv_by_sends sends evts =
   HEvtMap.fold (fun (sd, sp, sq, sc) (se, stl) rbs ->
     (((sd, sp, sq, sc), (se, stl)), HMap.bindings
@@ -67,7 +54,8 @@ let recv_by_sends sends evts =
        rvals <> [] && compat_val stl rvals) evts)
     ) :: rbs
   ) sends []
-  
+
+(* Build all possible send/recv combinations (no relation check) *)
 let all_combinations rbs =
   let rec aux cl cc = function
     | [] -> cc :: cl
@@ -78,7 +66,7 @@ let all_combinations rbs =
   aux [] [] rbs (* if rbs empty, this should correctly return [] *)
 
 
-
+(* Build all send/recv combinations that do not lead to a cyclic ghb *)
 let make_recv_send_combinations sends evts urevts ghb =
 
   TimeBuildRS.start ();
@@ -95,22 +83,25 @@ let make_recv_send_combinations sends evts urevts ghb =
 
     (* Remove satisfied recvs from unsatisfied set *)
     let urevts = List.fold_left (fun urevts (_, (re, _)) ->
-        HMap.remove re urevts
+      HMap.remove re urevts
     ) urevts src in
 
     (* Adjust ghb for this combination *)
-    let ghb = List.fold_left (fun ghb (((_,_,_,sc), (se,_)), (re, _)) ->
+    let ghb = List.fold_left (fun ghb (((_, _, _, sc), (se, _)), (re, _)) ->
       let ghb = Chanrel.Rel.add_lt se re ghb in (* rf *)
-      
-      HMap.fold (fun ure ((_,_,_,urc), _) ghb -> (* fr *)
-          if H.equal sc urc then
-            Chanrel.Rel.add_lt ure se ghb
-          else ghb
-        ) urevts ghb
+      HMap.fold (fun se2 ((sd2, _, _, sc2), _) ghb  -> (* fr *)
+        if H.equal sd2 hS && H.equal sc sc2 &&
+          Chanrel.Rel.mem_lt se se2 ghb then
+            Chanrel.Rel.add_lt re se2 ghb
+        else ghb
+      ) evts ghb
     ) ghb src in
+
+    (* Validate or reject combination depending on acyclicity test *)
     if Chanrel.Rel.acyclic ghb then
       (src, ghb, urevts) :: srcl
     else srcl
+
   ) [] srcl in
 
   TimeFilterRS.pause ();
@@ -118,32 +109,32 @@ let make_recv_send_combinations sends evts urevts ghb =
   srcl
 
 (*
+ghb = co U ro U so U rf U fr
 
-new recv (cc)
- -> csl : ghb + po/rs
+asc : co = /         ro = /         so = /
+n-n : co = /         ro = eo ^ RR   so = eo ^ SS
+1-n : co = /         ro = eo ^ RR   so = po ^ SS
+n-1 : co = /         ro = po ^ RR   so = eo ^ SS
+1-1 : co = /         ro = po ^ RR   so = po ^ SS
+csl : co = po ^ RS   ro = po ^ RR   so = po ^ SS   (= 1-1 + co)
+rsc : n-n + single pending send
 
-new send (cc)
- -> csl : ghb + po/ss
+new recv :
+ *-n : ghb + eo ^ RR (ro)
+ *-1 : ghb + po ^ RR (ro)
+ csl : ghb + po ^ R* (ro / co)
 
-new recv (ro) :
- -> async : nothing
- -> rsc / n-n / 1-n : ghb + sched/rr
- -> csl / n-1 / 1-1 : ghb + po/rr
-
-new send (so):
- -> async : nothing
- -> rsc / n-n : ghb + sched/ss
- ->       n-1 : ghb + sched/ss/rpo
- ->       1-n : ghb + po/ss
- ->       1-1 : ghb + po/ss/rpo
- ->       csl : ghb + po/ss
+new send :
+ n-* : ghb + eo ^ SS (so)
+ 1-* : ghb + po ^ SS (so)
+ csl : ghb + po ^ SS (so)
 
 recv + send :
- -> add ghb (recv, send)
+ * : ghb + rf + fr
 
-when new send satisfy old recv
- -> new send if ghb-before (rf) old recv
- -> old recv is ghb-before (fr) old sends that are ghb-after (so) the new send
+fr (when S sat R) :
+ n-* : fr = rf + (eo ^ SS) (so)
+ 1-* : fr = rf + (po ^ SS) (so)
 
 Heuristics :
 n-n : a new send MUST satisfy the oldest recv in ro (or none if lossy)
@@ -197,10 +188,8 @@ let rec subst_ievent ievts t = match t with
 
 let add_ievts_rels rel ievts f =
   HEvtMap.fold (fun ied (ie, _) rel ->
-    match f ied ie with
-    | None -> rel | Some el ->
-      List.fold_left (fun rel e ->
-        Chanrel.Rel.add_lt ie e rel) rel el
+    List.fold_left (fun rel e ->
+      Chanrel.Rel.add_lt ie e rel) rel (f ied ie)
   ) ievts rel
 
 let add_recvs_to_sa irds sa =
@@ -220,10 +209,6 @@ let add_recvs_to_sa irds sa =
     ) sa vals
   ) irds sa
 
-(* let ghb_before_urd ghb urd e =
- *   HMap.exists (fun re _ ->
- *     Chanrel.Rel.mem_lt e re ghb || Chanrel.Rel.mem_eq e re ghb) urd *)
-
 let mk_pred pred pl =
   Atom.Comp (Access (pred, pl), Eq, Elem (Term.htrue, Constr))
 
@@ -231,24 +216,11 @@ let add_ghb_lt_atoms ghb sa =
   Chanrel.Rel.fold_lt (fun ef et sa ->
     SAtom.add (mk_pred hGhb [ef; et]) sa) ghb sa
 
-(* let add_ghb_eq_atoms ghb sa =
- *   Chanrel.Rel.fold_eq (fun e1 e2 sa ->
- *     SAtom.add (mk_pred hSync [e1; e2]) sa) ghb sa *)
-
-(* let mk_pairs l =
- *   let rec aux acc = function
- *     | [] | [_] -> acc
- *     | e1 :: el -> aux (List.fold_left (fun acc e2 -> (e1, e2) :: acc) acc el) el
- *   in
- *   aux [] l *)
-
-
-
 
 
 (* Retrieve the maximum event id for this proc *)
-let max_proc_eid eids p =
-  try IntSet.max_elt (HMap.find p eids) with Not_found -> 0
+(* let max_proc_eid eids p =
+ *   try IntSet.max_elt (HMap.find p eids) with Not_found -> 0 *)
 
 (* Generate a fresh event id for this proc *)
 let fresh_eid eids p =
@@ -287,8 +259,10 @@ let satisfy_recvs sa =
   TimeSatRecv.start ();
 
   let sa, rcs, sds, eids, evts = Chanevent.extract_events_set sa in
-  let urevts = Chanevent.unsat_recv_events evts in (* to associate to sds *)
-  let ghb = Chanrel.extract_rels_set sa in (* for acyclicity *)
+  let sevts = Chanevent.send_events evts in (* to compute ro *)
+  let revts = Chanevent.recv_events evts in (* to compute so / co *)
+  let urevts = Chanevent.unsat_recv_events evts in (* to build rf/fr *)
+  let ghb = Chanrel.extract_rels_set sa in (* for acyclicity test *)
 
   let eids' = eids in
   let ghb' = ghb in
@@ -305,30 +279,85 @@ let satisfy_recvs sa =
     HEvtMap.add dpqc (mk_hE eid, vals) ircs, eids'
   ) rcs (HEvtMap.empty, eids') in
 
-  (* Add so from new sends to old sends on same channel,
-     depending on the channel type *)
-  let ghb' = add_ievts_rels ghb' isds (
-    fun (d, p, q, c) _ ->
-      try None (*Some (HVarMap.find (v, vi) gfw)*) (* list of sends in so *)
-      with Not_found -> None
+  (* Extend ghb according to the following rules :
+       New recv event :
+         *-n : ghb + (eo ^ RR) (ro)
+         *-1 : ghb + (po ^ RR) (ro)
+         csl : ghb + (po ^ R* ) (ro / co)   *)
+  let ghb' = add_ievts_rels ghb' ircs (fun (_, p1, _, c1) _ ->
+    let ct, _ = chan_type c1 in
+    let el =
+      if ct = CCAUSAL then
+        HMap.fold (fun e2 ((_, p2, _, c2), _) el ->
+          if H.equal c1 c2 && H.equal p1 p2 then e2 :: el
+          else el
+        ) sevts []
+      else [] in
+    HMap.fold (fun e2 ((_, p2, _, c2), _) el ->
+      if H.equal c1 c2 then
+        match ct with
+        | CNN | C1N | CRSC -> e2 :: el
+        | CN1 | C11 | CCAUSAL -> if H.equal p1 p2 then e2 :: el else el
+        | CASYNC -> el
+      else el
+    ) revts el
   ) in
 
-  (* Add ro from new recvs to old recvs on same channel,
-     depending on the channel type *)
-  let ghb' = add_ievts_rels ghb' ircs (
-    fun (d, p, q, c) _ ->
-      try None (*Some (HVarMap.find (v, vi) gfw)*) (* list of sends in so *)
-      with Not_found -> None
+  (* Extend ghb according to the following rules :
+       New send event :
+         n-* : ghb + (eo ^ SS) (so)
+         1-* : ghb + (po ^ SS) (so)
+         csl : ghb + (po ^ SS) (so) *)
+  let ghb' = add_ievts_rels ghb' isds (fun (_, p1, _, c1) _ ->
+    let ct, _ = chan_type c1 in
+    HMap.fold (fun e2 ((_, p2, _, c2), _) el ->
+      if H.equal c1 c2 then
+        match ct with
+        | CNN | CN1 | CRSC -> e2 :: el
+        | C1N | C11 | CCAUSAL -> if H.equal p1 p2 then e2 :: el else el
+        | CASYNC -> el
+      else el
+    ) sevts []
   ) in
+(*
+  Format.fprintf Format.std_formatter "isds : \n";
+  HEvtMap.iter (fun (d, p, q, c) (e, _) ->
+      Format.fprintf Format.std_formatter "%a:(%a,%a,%a,%a)\n"
+        H.print e H.print d H.print p H.print q H.print c;
+      Format.fprintf Format.std_formatter "\n"
+  ) isds;
 
-  (* Add fr from new recvs to first old sends on same channel *)
-  let ghb' = add_ievts_rels ghb' ircs (
-    fun (d, p, q, c) _ ->
-      try None (*Some (HVarMap.find (v, vi) gfw)*)
-      with Not_found -> None
-  ) in
+  Format.fprintf Format.std_formatter "ircs : \n";
+  HEvtMap.iter (fun (d, p, q, c) (e, _) ->
+      Format.fprintf Format.std_formatter "%a:(%a,%a,%a,%a)\n"
+        H.print e H.print d H.print p H.print q H.print c;
+      Format.fprintf Format.std_formatter "\n"
+  ) ircs;
 
-  
+  Format.fprintf Format.std_formatter "sevts : \n";
+  HMap.iter (fun e ((d, p, q, c), _) ->
+      Format.fprintf Format.std_formatter "%a:(%a,%a,%a,%a)\n"
+        H.print e H.print d H.print p H.print q H.print c;
+      Format.fprintf Format.std_formatter "\n"
+  ) sevts;
+
+  Format.fprintf Format.std_formatter "revts : \n";
+  HMap.iter (fun e ((d, p, q, c), _) ->
+      Format.fprintf Format.std_formatter "%a:(%a,%a,%a,%a)\n"
+        H.print e H.print d H.print p H.print q H.print c;
+      Format.fprintf Format.std_formatter "\n"
+  ) revts;
+
+  Format.fprintf Format.std_formatter "Ghb : ";
+  Chanrel.Rel.print_lt Format.std_formatter ghb';
+  Format.fprintf Format.std_formatter "\n";
+ *)
+  (* Add fr from new recvs to old sends, depending on channel type *)
+  (* let ghb' = add_ievts_rels ghb' ircs (
+   *   fun (d, p, q, c) _ ->
+   *     try None (\*Some (HVarMap.find (v, vi) gfw)*\)
+   *     with Not_found -> None
+   * ) in *)
 
   (* Build the relevant recv-send combinations *)
   let srcl = make_recv_send_combinations isds evts urevts ghb' in
