@@ -39,6 +39,7 @@ let procs = gen_vars "#" max_proc
 
 let freshs = gen_vars "?" max_proc
 
+let wprocs = gen_vars "_p" max_proc
 
 let proc_vars_int =
   let l = ref [] in
@@ -68,7 +69,7 @@ let build_subst args a_args =
   in
   a_subst [] args a_args
 
-
+let subst_ptowp = build_subst procs wprocs
 
 let is_subst_identity sigma =
   List.for_all (fun (x,y) -> Hstring.equal x y) sigma

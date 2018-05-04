@@ -256,6 +256,7 @@ let pp_updates sub lbl fmt ul =
     let pp_swts fmt swts =
       Format.fprintf fmt "@[<v 0>";
       (match swts with
+        | [(_, t)] -> Format.fprintf fmt "%a" (pp_term_syst sub) t
         | hd :: tl ->
           Format.fprintf fmt "%a@," (pp_swt ~cond:"(if") hd;
           Format.pp_print_list pp_swt fmt tl
@@ -273,8 +274,9 @@ let pp_updates sub lbl fmt ul =
         Format.fprintf fmt "(%a%s%a"
           (pp_satom ~pp_sep:pp_sep_and_log sub') inv
           (if prev <> [] then " /\\ " else "") pp_prev prev;
-      Format.fprintf fmt " -> s.%a = %a)" (pp_arr_access sub') u
-        (pp_term_at sub' lbl) t
+      Format.fprintf fmt "%ss.%a = %a)"
+        (if prev = [] && is_true inv then "" else " -> ")
+        (pp_arr_access sub') u (pp_term_at sub' lbl) t
     in
     let pp_invariants fmt u =
       Format.fprintf fmt "invariant { @[<v 2>forall _p:proc. 0 <= _p < %a ->@,"
@@ -343,12 +345,20 @@ let pp_vars_distinct fmt vl =
   if List.compare_length_with vl 1 > 0 then Format.fprintf fmt " /\\@ ";
   aux vl
 
-let pp_invariants fmt s =
-  let pp_invariant fmt (_, vl, sa) =
+let pp_invariants invs fmt s =
+  let pp_invariant fmt (vl, sa) =
     Format.fprintf fmt "@[invariant { @[<hov 2>forall %a : int. %a%a%a@] }@]"
       pp_vars vl pp_vars_bound vl pp_vars_distinct vl pp_satom_nlast sa
   in
-  Format.pp_print_list pp_invariant fmt (List.rev_append s.unsafe s.invs)
+  let sinvs = List.map (
+    fun (_, vl, sa) -> (vl, sa)) (List.rev_append s.unsafe s.invs)
+  in
+  let invs = List.map (
+    fun {Ast.cube = {Cube.vars; Cube.litterals}} ->
+      let wvars = List.map Variable.(subst subst_ptowp) vars in
+      let wlit = SAtom.subst Variable.subst_ptowp litterals in
+      (wvars, wlit)) invs in
+  Format.pp_print_list pp_invariant fmt (List.rev_append invs sinvs)
 
 let pp_forall_others pl fmt tl =
   let pl' = List.map (fun h -> Hstring.make ((Hstring.view h)^"'")) pl in
@@ -387,7 +397,7 @@ let pp_forall_others pl fmt tl =
 
 (* Transforms a Cubicle program in a whyml one *)
 
-let cub_to_whyml s fmt file =
+let cub_to_whyml s invs fmt file =
   let name = Filename.(remove_extension @@ basename file) in
   let plist = new_procs s.max_arity in
   Format.fprintf fmt "@[<v>\
@@ -412,7 +422,7 @@ let cub_to_whyml s fmt file =
   Format.fprintf fmt "@[<v 2>let s = {%a@]@,} in@," pp_init s;
   Format.fprintf fmt "@,%a" (pp_forall_others plist) s.trans;
   Format.fprintf fmt "@,@[<v 2>while true do@,";
-  Format.fprintf fmt "@,@[<v 0>%a@]" pp_invariants s;
+  Format.fprintf fmt "@,@[<v 0>%a@]" (pp_invariants invs) s;
   Format.fprintf fmt "@,%a@," pp_newprocs plist;
   Format.fprintf fmt "@,%a@," (pp_transitions plist) s;
   Format.fprintf fmt "@]@,done;@,s@]@,end";

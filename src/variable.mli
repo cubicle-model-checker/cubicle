@@ -61,6 +61,7 @@ val well_formed_subst : subst -> bool
     and different elements of the domain are associated to different elements of
     the codomain. *)
 
+val subst_ptowp : subst
 
 (** {2 Variable instantiation } *)
 

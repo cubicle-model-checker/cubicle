@@ -63,6 +63,7 @@ let _ =
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
     if type_only then exit 0;
+    let close_dot = Dot.open_dot () in
     if towhy3 then begin
       let out =
         if Options.why3_out_file then
@@ -73,12 +74,27 @@ let _ =
         else
           Format.std_formatter
       in
-      Format.fprintf out "%a" (Why3.cub_to_whyml s) Options.file
+      let invs =
+        begin
+          match Brab.brab system with
+            | Bwd.Safe (visited, candidates) -> candidates
+            | Bwd.Unsafe (faulty, candidates) ->
+              if (not quiet || profiling) then
+                Stats.print_report ~safe:false [] candidates;
+              begin try
+                  if not quiet then Stats.error_trace system faulty;
+                  printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
+                with Exit -> ()
+              end;
+              close_dot ();
+              exit 1
+        end
+      in
+      Format.fprintf out "%a" (Why3.cub_to_whyml s invs) Options.file
     end;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
-    let close_dot = Dot.open_dot () in
     begin
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
