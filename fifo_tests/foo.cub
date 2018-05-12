@@ -1,0 +1,16 @@
+(* Avec C!1 dans t2 : unsafe puis Internal failure:Forward.type_of_term Recv TODO *)
+(* Sinon (rien ou C!2) : safe OK *)
+
+var X : int
+chan C[ASYNC] : int
+
+init () { X = 0 }
+
+unsafe () { X = 1 }
+
+transition t1([p])
+requires { X = 0 }
+{ X := C? }
+
+transition t2([p])
+{ C!1 }

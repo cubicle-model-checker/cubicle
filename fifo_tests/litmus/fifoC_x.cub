@@ -1,0 +1,37 @@
+
+type loc = L1 | L2 | L3
+type kind = K1 | K2 | K3
+
+array PC[proc] : loc
+array Kind[proc] : kind
+chan C[CAUSAL] : int
+
+init (p) { PC[p] = L1 }
+
+invariant (p1 p2) { Kind[p1] = Kind[p2] }
+
+unsafe (p1 p2 p3) { PC[p1] = L3 && PC[p2] = L3 && PC[p3] = L3 }
+
+transition t11 ([p] q)
+requires { Kind[p] = K1 && PC[p] = L1 && Kind[q] = K3 }
+{ PC[p] := L2; C'q!1 }
+
+transition t12 ([p])
+requires { Kind[p] = K1 && PC[p] = L2 }
+{ PC[p] := L3; C!2 }
+
+transition t21 ([p])
+requires { Kind[p] = K2 && PC[p] = L1 && C? = 2 }
+{ PC[p] := L2; }
+
+transition t22 ([p])
+requires { Kind[p] = K2 && PC[p] = L2 }
+{ PC[p] := L3; C!3 }
+
+transition t31 ([p])
+requires { Kind[p] = K3 && PC[p] = L1 && C? = 3 }
+{ PC[p] := L2 }
+
+transition t32 ([p])
+requires { Kind[p] = K3 && PC[p] = L2 && C? = 1 }
+{ PC[p] := L3 }

@@ -81,7 +81,7 @@ let _ =
          if (not quiet || profiling) then
            Stats.print_report ~safe:false [] candidates;
          begin try
-             if not quiet then Stats.error_trace system faulty;
+             (* if not quiet then Stats.error_trace system faulty; *)
              printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
            with Exit -> ()
          end;

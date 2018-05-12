@@ -1,0 +1,39 @@
+(* Expected to be unsafe : the state where all processes are at L3 is reachable. *)
+(* ?? : *)
+
+type kind = K1 | K2 | K3
+type loc = L1 | L2 | L3
+
+array Kind[proc] : kind
+array Seq[proc] : loc
+chan C[CAUSAL] : int
+
+init (p) { Seq[p] = L1 }
+
+invariant (p1 p2) { Kind[p1] = Kind[p2] }
+
+unsafe (p1 p2 p3) { Seq[p1] = L3 && Seq[p2] = L3 && Seq[p3] = L3 }
+
+transition t11 ([p] q)
+requires { Kind[p] = K1 && Kind[q] = K3 && Seq[p] = L1 }
+{ Seq[p] := L2; C'q!1 }
+
+transition t12 ([p] q)
+requires { Kind[p] = K1 && Kind[q] = K2 && Seq[p] = L2 }
+{ Seq[p] := L3; C'q!2 }
+
+transition t21 ([p] q)
+requires { Kind[p] = K2 && Kind[q] = K1 && Seq[p] = L1 && C'q? = 2 }
+{ Seq[p] := L2 }
+
+transition t22 ([p] q)
+requires { Kind[p] = K2 && Kind[q] = K3 && Seq[p] = L2 }
+{ Seq[p] := L3; C'q!3 }
+
+transition t31 ([p] q)
+requires { Kind[p] = K3  && Kind[q] = K1 && Seq[p] = L1 && C'q? = 1 }
+{ Seq[p] := L2 }
+
+transition t32 ([p] q)
+requires { Kind[p] = K3  && Kind[q] = K2 && Seq[p] = L2 && C'q? = 3 }
+{ Seq[p] := L3 }

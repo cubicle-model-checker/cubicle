@@ -1,0 +1,56 @@
+(* Mutual exclusion based on a moving token. *)
+
+(* The token is modeled by an array of boolean, indexed by processus.
+*)
+
+type state = Hungry | Thinking | Eating
+
+var Initdone : bool
+array State[proc] : state
+array Token[proc] : bool
+chan Network[ASYNC] : bool
+
+init(i) { State[i] = Thinking && Token[i] = False && Initdone = False }
+
+(* unsafe(i)   { Token[i] = True && Network <> 0 } *)
+unsafe(i j) { Token[i] = True && Token[j] = True }
+unsafe(i j) { State[i] = Eating && State[j] = Eating }
+
+(* Only at initialisation, to create a unique token. *)
+transition init_create_token([i])
+requires { Initdone = False }
+{  Token[i] := True;
+   Initdone := True
+}
+
+transition request([i])
+requires { State[i] = Thinking }
+{
+   State[i] := Hungry
+}
+
+transition enter([i])
+requires { State[i] = Hungry && Token[i] = True }
+{
+  State[i] := Eating
+}
+
+transition leave([i])
+requires { State[i] = Eating }
+{
+  State[i] := Thinking
+}
+
+transition token_send([i])
+requires { State[i] <> Eating && Token[i] = True }  (* SAFE *)
+(* requires { Token[i] = True } (* UNSAFE *) *)
+{
+  Token[i] := False;
+  Network!True;
+}
+
+transition token_receive([i])
+requires { Network? = True }
+{
+  Token[i] := True;
+}

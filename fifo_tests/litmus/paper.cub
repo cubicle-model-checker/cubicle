@@ -1,0 +1,115 @@
+
+type kind = KSupervisor | KSecretary | KStudent | KTeacher
+type loc = L1 | L2 | L3 | L4 | L5 | End
+
+const InitialMark : int
+const NewMark : int
+
+array Kind[proc] : kind
+array PC[proc] : loc
+var FinalMark : int
+
+chan CStudentName[CAUSAL] : bool
+chan CResit[CAUSAL] : bool
+chan CExamReq[CAUSAL] : bool
+chan CCancel[CAUSAL] : bool
+chan CMark[CAUSAL] : int
+chan CMaterials[1,1] : bool
+chan CExam[1,1] : bool
+chan COk[ASYNC] : bool
+chan CKo[ASYNC] : bool
+chan CAnswers[ASYNC] : bool
+
+
+init (p) { PC[p] = L1 && InitialMark = 5 && NewMark = 15 && FinalMark = -1 }
+
+invariant (p1 p2) { Kind[p1] = Kind[p2] }
+
+(* unsafe (p1 p2 p3 p4) { PC[p1] = End && PC[p2] = End && *)
+(*                        PC[p3] = End && PC[p4] = End } *)
+
+(* unsafe (p) { Kind[p] = KSecretary && PC[p] = End && FinalMark = -1 } *)
+
+(* unsafe () { FinalMark = InitialMark } *)
+
+unsafe () { FinalMark = NewMark }
+
+
+transition t_sup_1 ([p])
+requires { Kind[p] = KSupervisor && PC[p] = L1 }
+{ PC[p] := L2; CStudentName!True }
+
+transition t_sup_2 ([p])
+requires { Kind[p] = KSupervisor && PC[p] = L2 }
+{ PC[p] := L3; CStudentName!True }
+
+transition t_sup_3 ([p])
+requires { Kind[p] = KSupervisor && PC[p] = L3 }
+{ PC[p] := L4; CResit!True }
+
+transition t_sup_4a ([p])
+requires { Kind[p] = KSupervisor && PC[p] = L4 && COk? = True }
+{ PC[p] := End }
+
+transition t_sup_4b ([p])
+requires { Kind[p] = KSupervisor && PC[p] = L4 && CKo? = True }
+{ PC[p] := L5; CCancel!True }
+
+transition t_sup_5 ([p])
+requires { Kind[p] = KSupervisor && PC[p] = L5 }
+{ PC[p] := End; CMark!InitialMark }
+
+
+transition t_sec_1 ([p])
+requires { Kind[p] = KSecretary && PC[p] = L1 && CStudentName? = True }
+{ PC[p] := L2 }
+
+transition t_sec_2 ([p])
+requires { Kind[p] = KSecretary && PC[p] = L2 }
+{ PC[p] := End; FinalMark := CMark? }
+
+
+transition t_std_1 ([p])
+requires { Kind[p] = KStudent && PC[p] = L1 && CResit? = True }
+{ PC[p] := L2 }
+
+transition t_std_2a ([p])
+requires { Kind[p] = KStudent && PC[p] = L2 }
+{ PC[p] := End; CKo!True }
+
+transition t_std_2b ([p])
+requires { Kind[p] = KStudent && PC[p] = L2 }
+{ PC[p] := L3; COk!True }
+
+transition t_std_3 ([p])
+requires { Kind[p] = KStudent && PC[p] = L3 }
+{ PC[p] := L4; CExamReq!True }
+
+transition t_std_4 ([p])
+requires { Kind[p] = KStudent && PC[p] = L4 && CMaterials? = True }
+{ PC[p] := L5 }
+
+transition t_std_5 ([p])
+requires { Kind[p] = KStudent && PC[p] = L5 && CExam? = True }
+{ PC[p] := End; CAnswers!True }
+
+
+transition t_tch_1 ([p])
+requires { Kind[p] = KTeacher && PC[p] = L1 && CStudentName? = True }
+{ PC[p] := L2 }
+
+transition t_tch_2a ([p])
+requires { Kind[p] = KTeacher && PC[p] = L2 && CCancel? = True }
+{ PC[p] := End }
+
+transition t_tch_2b ([p])
+requires { Kind[p] = KTeacher && PC[p] = L2 && CExamReq? = True }
+{ PC[p] := L3; CMaterials!True }
+
+transition t_tch_3 ([p])
+requires { Kind[p] = KTeacher && PC[p] = L3 }
+{ PC[p] := L4; CExam!True }
+
+transition t_tch_4 ([p])
+requires { Kind[p] = KTeacher && PC[p] = L4 && CAnswers? = True }
+{ PC[p] := End; CMark!NewMark }
