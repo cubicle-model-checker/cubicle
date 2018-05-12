@@ -309,7 +309,102 @@ end = struct
     | Smt.Lazy -> Prover.run
 
   
-  let check_and_add n nodes vis_n=
+  let filter_events sa =
+    let open Channels in
+    SAtom.filter (function
+      | Atom.Comp (Access (a, [_]), Eq, _)
+      | Atom.Comp (_, Eq, Access (a, [_]))
+           when is_event a && not (is_value a) -> false
+      | _ -> true) sa
+
+  let preprocess_n n =
+    let open Channels in
+    let sa = n.cube.Cube.litterals in
+    let _, _, _, _, evts = Chanevent.extract_events_set sa in
+    let rels = Chanrel.extract_rels_set sa in
+    let sa = Chanrel.filter_rels_set sa in
+    let sa = filter_events sa in (* optional *)
+    { n with cube = Cube.create n.cube.Cube.vars sa }, evts, rels
+
+  let get_evts_rels_ar ar = (* this is now done before renaming *)
+    let _, _, _, _, evts = Chanevent.extract_events_array ar in
+    let rels = Chanrel.extract_rels_array ar in
+    evts, rels
+
+(* module HAA = Hashtbl.Make (ArrayAtom) *)
+module HAA = Hashtbl.Make (Chanevent.Int)
+let cache = HAA.create 10000
+
+
+  let check_and_add (n, to_evts, to_rels) nodes vis_n=
+    let vis_n_cube = Cube.create vis_n.cube.Cube.vars (*for inst only*)
+                    (* (Chanrel.filter_rels_set vis_n.cube.Cube.litterals) in *)
+    (filter_events (Chanrel.filter_rels_set vis_n.cube.Cube.litterals)) in
+    let n_array = Node.array n in
+    let vis_array = vis_n.cube.Cube.array in
+    (* if !Options.size_proc <> 0 then begin *)
+    (*   let from_evts = Weakfp.get_evts vis_array in *)
+    (*   let vis_array_l = (Weakfp.remap_events vis_array *)
+    (*     (Weakfp.build_event_substs from_evts to_evts)) in *)
+    (*   let vis_array_l = List.filter (fun v_ar -> *)
+    (*     not (Cube.inconsistent_2arrays v_ar n_array)) vis_array_l in *)
+    (*   List.fold_left (fun nodes v_ar -> *)
+    (*     (vis_n, v_ar) :: nodes) nodes vis_array_l *)
+    (* end else *)
+    (* TimePESubst.start (); *)
+      let d = Instantiation.relevant ~of_cube:vis_n_cube ~to_cube:n.cube in
+
+      let from_evts, from_rels =
+          Channels.HMap.empty, (Channels.HMap.empty, Chanrel.Rel.empty)
+        (* if d = [] then
+         *   Channels.HMap.empty, (Channels.HMap.empty, Chanrel.Rel.empty)
+         * else begin
+         *   (\* TimeFPRels.start (); *\)
+         *   (\* let from_evts, from_rels = get_evts_rels_ar vis_array in *\)
+         *   let from_evts, from_rels =
+         *     try
+         *       (\* HAA.find cache vis_array *\)
+         *       HAA.find cache vis_n.tag
+         *     with Not_found ->
+         *       let r = get_evts_rels_ar vis_array in
+         *       (\* HAA.add cache vis_array r; *\)
+         *       HAA.add cache vis_n.tag r;
+         *       r
+         *   in
+         *   (\* TimeFPRels.pause (); *\)
+         *   from_evts, from_rels
+         * end *)
+      in
+
+      let n = if Channels.HMap.cardinal to_evts <
+                   Channels.HMap.cardinal from_evts then nodes
+              else List.fold_left (fun nodes ss ->
+      (* let n = List.fold_left (fun nodes ss -> *)
+        (* let vis_renamed = ArrayAtom.apply_subst ss vis_array in *)
+        let vis_renamed = ArrayAtom.apply_subst ss vis_n_cube.Cube.array in
+        let from_evts = Chanevent.subst ss from_evts in
+        let from_rels = Chanrel.subst ss from_rels in
+        let vis_renamed_l = (Chanfp.remap_events vis_renamed
+          (Chanfp.build_event_substs from_evts from_rels to_evts to_rels)) in
+        let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)
+          not (Cube.inconsistent_2arrays v_ren n_array)) vis_renamed_l in
+(* Format.fprintf Format.std_formatter "Matches for perm : %d (proc perms : %d)\n" (List.length vis_renamed_l) (List.length d); *)
+        List.fold_left (fun nodes v_ren ->
+	  (vis_n, v_ren) :: nodes) nodes vis_renamed_l      
+        ) nodes d in
+    (* TimePESubst.pause (); *)
+(* let lnodes = List.length nodes in *)
+(* let perms = ((List.length n) - lnodes) in *)
+(* if perms > 0 then begin *)
+(* Format.fprintf Format.std_formatter "Visited node %d, " vis_n.tag; *)
+(* Format.fprintf Format.std_formatter "proc perms : %d, " (List.length d); *)
+(* Format.fprintf Format.std_formatter "total perms : %d\n" perms; *)
+(* (\* if perms > 0 then Format.fprintf Format.std_formatter "%a\n" Node.print vis_n; *\) *)
+(* Format.print_flush (); end; *)
+n
+
+
+(*  let check_and_add n nodes vis_n=
     let n_array = Node.array n in
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
@@ -329,10 +424,11 @@ end = struct
          (* These are worth assuming and checking right away because they might
             yield unsatifisability sooner *)
          (Prover.assume_node vis_n vis_renamed; nodes)
-      ) nodes d
+      ) nodes d *)
       
 
   let check_fixpoint s visited =
+    let s,e,r  = preprocess_n s in
     first_action s;
     let s_array = Node.array s in
     let unprioritize_cands = false in
@@ -341,9 +437,9 @@ end = struct
         (fun (nodes, cands) vis_p ->
          if unprioritize_cands && vis_p.kind = Approx then
            nodes, vis_p :: cands
-         else check_and_add s nodes vis_p, cands
+         else check_and_add (s,e,r) nodes vis_p, cands
         ) ([], []) visited in
-    let nodes = List.fold_left (check_and_add s) nodes cands in
+    let nodes = List.fold_left (check_and_add (s,e,r)) nodes cands in
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
       | Smt.Lazy -> nodes
