@@ -355,25 +355,24 @@ let cache = HAA.create 10000
       let d = Instantiation.relevant ~of_cube:vis_n_cube ~to_cube:n.cube in
 
       let from_evts, from_rels =
-          Channels.HMap.empty, (Channels.HMap.empty, Chanrel.Rel.empty)
-        (* if d = [] then
-         *   Channels.HMap.empty, (Channels.HMap.empty, Chanrel.Rel.empty)
-         * else begin
-         *   (\* TimeFPRels.start (); *\)
-         *   (\* let from_evts, from_rels = get_evts_rels_ar vis_array in *\)
-         *   let from_evts, from_rels =
-         *     try
-         *       (\* HAA.find cache vis_array *\)
-         *       HAA.find cache vis_n.tag
-         *     with Not_found ->
-         *       let r = get_evts_rels_ar vis_array in
-         *       (\* HAA.add cache vis_array r; *\)
-         *       HAA.add cache vis_n.tag r;
-         *       r
-         *   in
-         *   (\* TimeFPRels.pause (); *\)
-         *   from_evts, from_rels
-         * end *)
+        if d = [] then
+          Channels.HMap.empty, Chanrel.Rel.empty
+        else begin
+          (* TimeFPRels.start (); *)
+          (* let from_evts, from_rels = get_evts_rels_ar vis_array in *)
+          let from_evts, from_rels =
+            try
+              (* HAA.find cache vis_array *)
+              HAA.find cache vis_n.tag
+            with Not_found ->
+              let r = get_evts_rels_ar vis_array in
+              (* HAA.add cache vis_array r; *)
+              HAA.add cache vis_n.tag r;
+              r
+          in
+          (* TimeFPRels.pause (); *)
+          from_evts, from_rels
+        end
       in
 
       let n = if Channels.HMap.cardinal to_evts <
@@ -383,7 +382,8 @@ let cache = HAA.create 10000
         (* let vis_renamed = ArrayAtom.apply_subst ss vis_array in *)
         let vis_renamed = ArrayAtom.apply_subst ss vis_n_cube.Cube.array in
         let from_evts = Chanevent.subst ss from_evts in
-        let from_rels = Chanrel.subst ss from_rels in
+        (* let from_rels = Chanrel.subst ss from_rels in *)
+        let from_rels = from_rels in
         let vis_renamed_l = (Chanfp.remap_events vis_renamed
           (Chanfp.build_event_substs from_evts from_rels to_evts to_rels)) in
         let vis_renamed_l = List.filter (fun v_ren -> (* IMPROVE INCONSISTENT *)

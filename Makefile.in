@@ -117,7 +117,7 @@ CMO = version.cmo options.cmo \
       cube.cmo node.cmo pretty.cmo ptree.cmo chanparse.cmo channels.cmo \
       parser.cmo lexer.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo \
-      chanevent.cmo chanrel.cmo chanpre.cmo \
+      chanevent.cmo chanrel.cmo chanpre.cmo chanfp.ml \
       safety.cmo fixpoint.cmo pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \

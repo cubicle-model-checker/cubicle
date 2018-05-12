@@ -107,6 +107,8 @@ let same_peer (_, _, q1, _) (_, _, q2, _) = H.equal q1 q2
 
 let same_chan (_, _, _, c1) (_, _, _, c2) = H.equal c1 c2
 
+let no_peer (_, _, q, _) = H.equal q hNone
+
 let no_chan (_, _, _, c) = H.equal c hNone
 
 let is_recv (d, _, _, _) = H.equal d hR

@@ -60,6 +60,7 @@ val same_dir : H.t * 'a * 'b * 'c -> H.t * 'd * 'e * 'f -> bool
 val same_thr : 'a * H.t * 'b * 'c -> 'd * H.t * 'e * 'f -> bool
 val same_peer : 'a * 'b * H.t * 'c -> 'd * 'e * H.t * 'f -> bool
 val same_chan : 'a * 'b * 'c * H.t -> 'd * 'e * 'f * H.t -> bool
+val no_peer : 'a * 'b * H.t * 'c -> bool
 val no_chan : 'a * 'b * 'c * H.t -> bool
 val is_recv : H.t * 'a * 'b * 'c -> bool
 val is_send : H.t * 'a * 'b * 'c -> bool

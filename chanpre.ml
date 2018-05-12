@@ -50,7 +50,9 @@ let recv_by_sends sends evts =
     (((sd, sp, sq, sc), (se, stl)), HMap.bindings
       (HMap.filter (fun re ((rd, rp, rq, rc), rvals) ->
        H.equal rd hR && H.equal sc rc &&
-       (H.equal sq hNone || H.equal rq hNone || H.equal sq rq) &&
+       (* (H.equal sq hNone || H.equal rq hNone || H.equal sq rq) && *)
+       (H.equal rq hNone || H.equal sp rq) &&
+       (H.equal sq hNone || H.equal sq rp) &&
        rvals <> [] && compat_val stl rvals) evts)
     ) :: rbs
   ) sends []
