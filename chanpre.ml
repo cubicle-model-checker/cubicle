@@ -156,7 +156,7 @@ let subst_event_val sfun sa =
        let ntl = process_t t in
        begin match ntl with
        | [] -> failwith "Chanpre.subst_event_val : ntl can't be empty"
-       | [nt] when nt == t -> [t]
+       | [nt] when nt == t -> [Arith (t, c)]
        | _ -> List.map (fun nt -> Arith (nt, c)) ntl
        end
     | t -> [t]
