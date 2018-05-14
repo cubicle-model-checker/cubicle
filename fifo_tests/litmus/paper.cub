@@ -4,6 +4,7 @@ type loc = L1 | L2 | L3 | L4 | L5 | End
 
 const InitialMark : int
 const NewMark : int
+const NullMark : int
 
 array Kind[proc] : kind
 array PC[proc] : loc
@@ -21,14 +22,16 @@ chan CKo[ASYNC] : bool
 chan CAnswers[ASYNC] : bool
 
 
-init (p) { PC[p] = L1 && InitialMark = 5 && NewMark = 15 && FinalMark = -1 }
+init (p) { PC[p] = L1 && InitialMark <> NullMark
+                      && NewMark <> NullMark
+		      && FinalMark = NullMark }
 
 invariant (p1 p2) { Kind[p1] = Kind[p2] }
 
 (* unsafe (p1 p2 p3 p4) { PC[p1] = End && PC[p2] = End && *)
 (*                        PC[p3] = End && PC[p4] = End } *)
 
-(* unsafe (p) { Kind[p] = KSecretary && PC[p] = End && FinalMark = -1 } *)
+(* unsafe (p) { Kind[p] = KSecretary && PC[p] = End && FinalMark = NullMark } *)
 
 (* unsafe () { FinalMark = InitialMark } *)
 
