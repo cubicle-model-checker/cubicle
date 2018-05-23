@@ -1,0 +1,128 @@
+(* Chandy-Misra bounded and adaptative algorithm for mutual exclusion *)
+(* Permission based: a site gives its permission to other nodes.
+   Bounded: no timestamp to avoid starvation, a boolean priority is enough.
+   Adaptative: if a site is not interested, it will eventually stops receiving request message.
+*)
+
+(* Plante après ~1h, 19414 nodes *)
+
+(* Problem:
+   - Priority is necessary for liveness but should have no influence on safety.
+     As it can't be correctly initialized (it must be a order), it has been removed.
+*)
+type state = Trying | In | Out
+
+array State[proc] : state       (* out/trying/in *)
+array Request[proc,proc] : bool (* Request[i,j] = site i must obtain permission from j in order to acquire *)
+array Expected[proc,proc] : bool (* expected[i,j] = site i is waiting for j's permission *)
+array Delayed[proc,proc] : bool (* Delayed[i,j] = site i has to send permission to j when possible *)
+
+chan NetReq[ASYNC] : bool  (* request message from i *)
+chan NetPerm[ASYNC] : bool (* permission message from i *)
+
+(* Actually: Request[i,j] = (j < i) is enough *)
+init(i j) {  State[i] = Out
+          && Request[i,j] = True
+          && Delayed[i,j] = False
+          && Expected[i,j] = False
+           }
+
+(* ---------------------------------------------------------------- *)
+
+(* Mutual exclusion *)
+unsafe(i j) { State[i] = In && State[j] = In }
+
+(* Consistency invariants. *)
+(* unsafe(i) { NetReq from i = True && State[i] <> Trying } *)
+(* unsafe(i) { NetPerm to i = True && State[i] <> Trying } *)
+
+(* ---------------------------------------------------------------- *)
+
+(* Request access: goes in trying state. Must have first replied to all previous requesters.
+   XXXX and no pending request. *)
+transition request_mutex([i])
+requires { State[i] = Out && forall_other j. Delayed[i,j] = False }
+{
+  State[i] := Trying;
+  Expected[x,y] := case
+                | x = i && Request[x,y] = True : True
+                | _ : Expected[x,y];
+}
+
+(* Send a Request message to a process to which site i has previously given its permission. *)
+transition send_request([i] j)
+requires { State[i] = Trying && Request[i,j] = True }
+{
+  Request[i,j] := False;
+  NetReq'j!True
+}
+
+(* When all asked sites have given their permission, i can enter. *)
+transition acquire_mutex([i])
+requires { State[i] = Trying && forall_other j. Expected[i,j] = False }
+{
+  State[i] := In;
+}
+
+(* Release mutex. *)
+transition release_mutex([i])
+requires { State[i] = In }
+{
+  State[i] := Out;
+}
+
+(* Send permission if allowed. Remember to ask for its permission if needed. *)
+transition send_permission1([i] j)
+requires { State[i] = Out && Delayed[i,j] = True }
+{
+  Delayed[i,j] := False;
+  Request[i,j] := True;
+  NetPerm'j!True
+}
+
+(* Send permission if allowed. Remember to ask for its permission if needed. *)
+transition send_permission2([i] j)
+requires { State[i] = Trying && Delayed[i,j] = True && Request[i,j] = False }
+{
+  Delayed[i,j] := False;
+  Request[i,j] := True;
+  NetPerm'j!True
+}
+
+(* Receive a permission message from j *)
+transition receive_permission([i] j)
+requires { NetPerm'j? = True }
+{
+  Expected[i,j] := False;
+}
+
+(* Receive a request message from j, while in: delay permission. *)
+transition receive_request_prio1([i] j)
+requires { State[i] = In && NetReq'j? = True }
+{
+  Delayed[i,j] := True;
+}
+
+(* Receive a request message from j, while trying with priority: delay permission. *)
+transition receive_request_prio2([i] j)
+requires { State[i] = Trying && NetReq'j? = True && Request[i,j] = True }
+{
+  Delayed[i,j] := True;
+}
+
+(* Receive a request message from j while not interested: give permission *)
+transition receive_request_out([i] j)
+requires { State[i]  = Out && NetReq'j? = True }
+{
+  Delayed[i,j] := True;
+}
+
+(* Receive a request message from j while trying and not having priority:
+ * give permission to j and remember to wait for its permission. *)
+transition receive_request_trying([i] j)
+requires { State[i]  = Trying && NetReq'j? = True && Request[i,j] = False }
+{
+  Delayed[i,j] := True;
+  Request[i,j] := True;
+  Expected[i,j] := True;
+}

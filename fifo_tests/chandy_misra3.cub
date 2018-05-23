@@ -1,30 +1,34 @@
 (* Chandy-Misra bounded and adaptative algorithm for mutual exclusion *)
 (* Permission based: a site gives its permission to other nodes.
    Bounded: no timestamp to avoid starvation, a boolean priority is enough.
-   Adaptative: if a site is not interested, it will eventually stops receiving request message.
+   Adaptative: if a site is not interested, it will eventually stops receiving request messages.
 *)
 
-(* Plante après ~1h, 19414 nodes *)
+(* A slightly abstracted version.
+ * Liveness is not ensured: deadlock if two nodes request each other in the initial state.
+ * This is only because Priority should be initialized as asymmetric.
+ * Note that when a process has succeeded, Priority becomes asymmetric. A
+ * valid initial state is thus reachable by individual request and entrance.
+ *)
+ 
+(* SAFE in 4s, 2 processes, 252 nodes. Youpi! *)
 
-(* Problem:
-   - Priority is necessary for liveness but should have no influence on safety.
-     As it can't be correctly initialized (it must be a order), it has been removed.
-*)
 type state = Trying | In | Out
 
 array State[proc] : state       (* out/trying/in *)
-array Request[proc,proc] : bool (* Request[i,j] = site i must obtain permission from j in order to acquire *)
+array Request[proc,proc] : bool (* Request[i,j] = site i must ask permission from j *)
 array Expected[proc,proc] : bool (* expected[i,j] = site i is waiting for j's permission *)
 array Delayed[proc,proc] : bool (* Delayed[i,j] = site i has to send permission to j when possible *)
+array Priority[proc,proc] : bool (* Priority[i,j] = i has lower priority than j *)
 
 chan NetReq[ASYNC] : bool  (* request message from i *)
 chan NetPerm[ASYNC] : bool (* permission message from i *)
 
-(* Actually: Request[i,j] = (j < i) is enough *)
 init(i j) {  State[i] = Out
           && Request[i,j] = True
           && Delayed[i,j] = False
-          && Expected[i,j] = False
+          && Expected[i,j] = True (* init = Request[i,j] *)
+          && Priority[i,j] = False (* should be i < j to avoid deadlock *)
            }
 
 (* ---------------------------------------------------------------- *)
@@ -33,20 +37,19 @@ init(i j) {  State[i] = Out
 unsafe(i j) { State[i] = In && State[j] = In }
 
 (* Consistency invariants. *)
+(* Priorities between trying sites must be an order. *)
+unsafe(i j) { State[i] = Trying && State[j] = Trying && Priority[i,j] = True && Priority[j,i] = True }
 (* unsafe(i) { NetReq from i = True && State[i] <> Trying } *)
 (* unsafe(i) { NetPerm to i = True && State[i] <> Trying } *)
 
 (* ---------------------------------------------------------------- *)
 
-(* Request access: goes in trying state. Must have first replied to all previous requesters.
-   XXXX and no pending request. *)
+(* Request access: goes in trying state.
+ * For safety, it is not necessary to have first replied to all previous requesters.*)
 transition request_mutex([i])
-requires { State[i] = Out && forall_other j. Delayed[i,j] = False }
+requires { State[i] = Out (*  && forall_other j. Delayed[i,j] = False *) }
 {
   State[i] := Trying;
-  Expected[x,y] := case
-                | x = i && Request[x,y] = True : True
-                | _ : Expected[x,y];
 }
 
 (* Send a Request message to a process to which site i has previously given its permission. *)
@@ -62,6 +65,9 @@ transition acquire_mutex([i])
 requires { State[i] = Trying && forall_other j. Expected[i,j] = False }
 {
   State[i] := In;
+  Priority[x,y] := case
+                   | x = i : True  (* i has lower priority than all the others as it has just succeeded. *)
+                   | _ : Priority[x,y];
 }
 
 (* Release mutex. *)
@@ -71,22 +77,15 @@ requires { State[i] = In }
   State[i] := Out;
 }
 
-(* Send permission if allowed. Remember to ask for its permission if needed. *)
-transition send_permission1([i] j)
+(* Send permission if allowed. Remember to ask for its permission for later. *)
+transition send_permission([i] j)
 requires { State[i] = Out && Delayed[i,j] = True }
 {
   Delayed[i,j] := False;
   Request[i,j] := True;
-  NetPerm'j!True
-}
-
-(* Send permission if allowed. Remember to ask for its permission if needed. *)
-transition send_permission2([i] j)
-requires { State[i] = Trying && Delayed[i,j] = True && Request[i,j] = False }
-{
-  Delayed[i,j] := False;
-  Request[i,j] := True;
-  NetPerm'j!True
+  Expected[i,j] := True;
+  NetPerm'j!True;
+  Priority[i,j] := False;
 }
 
 (* Receive a permission message from j *)
@@ -97,15 +96,8 @@ requires { NetPerm'j? = True }
 }
 
 (* Receive a request message from j, while in: delay permission. *)
-transition receive_request_prio1([i] j)
+transition receive_request_in([i] j)
 requires { State[i] = In && NetReq'j? = True }
-{
-  Delayed[i,j] := True;
-}
-
-(* Receive a request message from j, while trying with priority: delay permission. *)
-transition receive_request_prio2([i] j)
-requires { State[i] = Trying && NetReq'j? = True && Request[i,j] = True }
 {
   Delayed[i,j] := True;
 }
@@ -114,15 +106,28 @@ requires { State[i] = Trying && NetReq'j? = True && Request[i,j] = True }
 transition receive_request_out([i] j)
 requires { State[i]  = Out && NetReq'j? = True }
 {
+  Request[i,j] := True;
+  Expected[i,j] := True;
+  NetPerm'j!True;
+  Priority[i,j] := False;
+}
+
+(* Receive a request message from j while trying: give or refuse permission based on priority. *)
+transition receive_request_trying1([i] j)
+requires { State[i] = Trying && NetReq'j? = True && Priority[i,j] = False }
+{
   Delayed[i,j] := True;
 }
 
-(* Receive a request message from j while trying and not having priority:
- * give permission to j and remember to wait for its permission. *)
-transition receive_request_trying([i] j)
-requires { State[i]  = Trying && NetReq'j? = True && Request[i,j] = False }
+(* Receive a request message from j while trying: give or refuse permission based on priority. *)
+transition receive_request_trying2([i] j)
+requires { State[i] = Trying && NetReq'j? = True && Priority[i,j] = True }
 {
-  Delayed[i,j] := True;
-  Request[i,j] := True;
+  NetPerm'j!True;  (* give permission *)
+  NetReq'j!True;   (* and ask for it *)
+  Request[i,j] := False;
   Expected[i,j] := True;
+  Priority[i,j] := False;
 }
+
+

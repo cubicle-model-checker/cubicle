@@ -256,6 +256,10 @@ let build_event e d p q ch = (* ch with _C prefix *)
 
 
 
+let ghb_before_urd ghb urd e =
+  HMap.exists (fun re _ ->
+      Chanrel.Rel.mem_lt e re ghb || Chanrel.Rel.mem_eq e re ghb) urd
+
 let satisfy_recvs sa =
 
   TimeSatRecv.start ();
@@ -400,6 +404,52 @@ let satisfy_recvs sa =
       (* Update the set of atoms with the remaining relations (rf / fr) *)
       let sa = add_ghb_lt_atoms (Chanrel.Rel.diff ghb' ghb) sa in
 
+      (* Add instantiated reads to unsatisfied reads *)
+      let urevts' = HEvtMap.fold (fun red (re, _, rvals) urevts' ->
+          HMap.add re (red, rvals) urevts'
+      ) ircs urevts' in
+    
+      (* Keep unsatisfied recvs and events that are ghb-before an unsatisfied recv *)
+      let keep = HMap.fold (fun e _ keep ->
+        HSet.add e keep
+      ) urevts' HSet.empty in
+      (*
+      let keep = HEvtMap.fold (fun _ (e, _, _) keep ->
+        if ghb_before_urd ghb' urevts' e then HSet.add e keep else keep
+      ) isds keep in
+      let keep = HEvtMap.fold (fun _ (e, _, _) keep ->
+        if ghb_before_urd ghb' urevts' e then HSet.add e keep else keep
+      ) ircs keep in *)
+      let keep = HMap.fold (fun _ peids keep ->
+        IntSet.fold (fun eid keep ->
+          let e = mk_hE eid in
+          if ghb_before_urd ghb' urevts' e then HSet.add e keep else keep
+        ) peids keep
+      ) eids' keep in
+
+      (* Here, remove events that do not satisfy criterion to stay *)
+      let sa = SAtom.filter (function
+        | Atom.Comp (Access (a, [ef; et]), _, _)
+        | Atom.Comp (_, _, Access (a, [ef; et]))
+             when H.equal a hGhb || H.equal a hSync ->
+               HSet.mem ef keep && HSet.mem et keep
+        | Atom.Comp (Access (a, [e]), _, _)
+        | Atom.Comp (_, _, Access (a, [e]))
+             when is_event a ->
+               HSet.mem e keep
+        | Atom.Comp (t1, _, t2) ->
+           let k1 = match t1 with
+             | Access (f, [e]) | Arith (Access (f, [e]), _)
+                  when is_value f -> HSet.mem e keep
+             | _ -> true in
+           let k2 = match t2 with
+             | Access (f, [e]) | Arith (Access (f, [e]), _)
+                  when is_value f -> HSet.mem e keep
+             | _ -> true in
+           k1 && k2
+        | _ -> true
+      ) sa in
+    
       (* Simplify here in case adding reads added duplicates *)
       try (Cube.simplify_atoms sa) :: pres (* Cube.create_normal ? *)
       with Exit -> pres
