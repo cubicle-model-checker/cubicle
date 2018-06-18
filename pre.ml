@@ -242,11 +242,22 @@ let make_cubes (ls, post) rargs s tr cnp =
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
   let cube acc sigma =
+
+    Format.eprintf "Before ITE_SIMP\n";
+    Format.eprintf "%a\n" Cube.print cnp;
+    Format.print_flush ();
+
     let tr_args = List.map (Variable.subst sigma) tr.tr_args in
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
+
     (* cubes are in normal form *)
     List.fold_left
       (fun (ls, post) cnp ->
+
+        Format.eprintf "After ITE_SIMP\n";
+        Format.eprintf "%a\n" Cube.print cnp;
+        Format.print_flush ();
+
        let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
        let lureq = uguard sigma nargs tr_args tr.tr_ureq in
        List.fold_left 
@@ -302,6 +313,12 @@ let make_cubes (ls, post) rargs s tr cnp =
     (* let d_old = Variable.all_permutations tr.tr_args rargs in *)
     (* TODO: Benchmark this *)
     let d = Variable.permutations_missing tr.tr_args args in
+    (* List.iter (fun s ->
+     *   List.iter (fun (v1, v2) ->
+     *     Format.eprintf "(%a -> %a) " H.print v1 H.print v2
+     *   ) s;
+     *   Format.eprintf "\n"
+     * ) d; *)
     (* assert (List.length d_old >= List.length d); *)
     List.fold_left cube (ls, post) d
 

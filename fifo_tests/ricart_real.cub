@@ -1,0 +1,144 @@
+(* Ricart Agrawala mutual exclusion algorithm *)
+
+(*
+With a global time. In the real algorithm, Lamport's clock are used to totally order requests.
+With a Ghost variable to count waited permission
+*)
+
+(*number_procs 2*)
+
+type location = Out | Trying | In | Exiting
+
+var Time : real
+
+array State[proc] : location
+array Last[proc] : real  (* time of the last request of this site *)
+array Request[proc,proc] : bool (* for i, the sites to which it must send a request *)
+array Wait[proc,proc] : bool (* for i, the sites from which it expects a permission *)
+array Delayed[proc,proc] : bool (* for i, the sites that have requested its permission *)
+
+array Ghost[proc] : int (* To count waited permissions. Unncessary except to ease verification *)
+
+chan CRequest[1,1] : real
+chan CPermission[1,1] : proc
+
+const Tick : real
+
+(****************************************************************)
+
+init(i j) {
+  State[i] = Out && Last[i] = 0.0
+  && Request[i,j] = False && Wait[i,j] = False && Delayed[i,j] = False
+  && Ghost[i] = 0
+  && Time = 1.0
+}
+
+(****************************************************************)
+
+unsafe(i j) { State[i] = In && State[j] = In }
+
+(*
+unsafe(i j) { State[i] <> Trying && Request[i,j] = True }
+unsafe(i j) { State[i] <> Trying && Wait[i,j] = True }
+
+unsafe(i j) { State[i] = Out && Delayed[i,j] = True }
+*)
+
+(* unsafe(i) { Last[i] > Time } *)
+
+(* unsafe(i j) { Last[i] > 0 && Last[j] > 0 && Last[i] = Last[j] } *)
+
+(****************************************************************)
+
+transition try([i])
+requires { State[i] = Out && 0.0 < Tick }
+{
+  State[i] := Trying;
+  Last[i] := Time;
+  Time := Time + Tick;
+  Request[x,y] := case
+                  | x = i && y <> i : True
+               (* | x = i && y = i : False *)
+                  | _ : Request[x,y] ;
+  Wait[x,y] := case
+               | x = i && y <> i : True
+            (* | x = i && y = i : False *)
+               | _ : Wait[x,y] ;
+  (* Ghost[i] := 0; *)
+}
+
+transition sendreq([i] j)
+requires { State[i] = Trying && Request[i,j] = True }
+{
+  Request[i,j] := False;
+  CRequest'j!Last[i];
+  (* Ghost[i] := Ghost[i] + 1; *)
+}
+
+(****************************************************************)
+
+(* With a global time, there is no local Clock[i] to be updated with max(Clock[i], CRequest? + 1).
+ * This simplifies the transitions. *)
+
+transition req_ack1([i] j)   (* request while not trying => give permission *)
+requires { State[i] = Out && 0.0 <= CRequest'j? }
+{
+  CPermission'j!i;
+}
+
+transition req_ack2([i] j)   (* request while trying with greater date => give permission *)
+requires { State[i] = Trying && CRequest'j? < Last[i] }
+{
+  CPermission'j!i;
+}
+
+transition req_nack1([i] j)   (* request while trying with lower date => delay *)
+requires { State[i] = Trying && Last[i] < CRequest'j? }
+{
+  Delayed[i,j] := True;
+}
+
+transition req_nack2([i] j)   (* request while in => delay. *)
+                               (* Last[i] < CRequest'j? is necessarily true *)
+requires { State[i] = In && 0.0 <= CRequest'j? }
+{
+  Delayed[i,j] := True;
+}
+
+(****************************************************************)
+
+transition recvperm([i] j)     (* receive a permission *)
+requires { State[i] = Trying && Wait[i,j] = True && CPermission? = j }
+{
+  Wait[i,j] := False;
+  (* Ghost[i] := Ghost[i] - 1; *)
+}
+
+transition enter([i])       (* can enter when there is no waiting permission *)
+requires { State[i] = Trying && (*Ghost[i] = 0 &&*) forall_other j. Wait[i,j] = False }
+{
+  State[i] := In
+}
+
+(****************************************************************)
+
+transition exit([i])
+requires { State[i] = In }
+{
+  State[i] := Exiting
+}
+
+transition exiting1([i] j)
+requires { State[i] = Exiting && Delayed[i,j] = True }
+{
+  Delayed[i,j] := False;
+  CPermission'j!i
+}
+
+transition exiting2([i])
+requires { State[i] = Exiting && forall_other j. Delayed[i,j] = False }
+{
+  State[i] := Out
+}
+
+(****************************************************************)

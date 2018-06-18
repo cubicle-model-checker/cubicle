@@ -262,6 +262,8 @@ let ghb_before_urd ghb urd e =
 
 let satisfy_recvs sa =
 
+  Format.eprintf "Satifying RECVS\n";
+
   TimeSatRecv.start ();
 
   let sa, rcs, sds, eids, evts = Chanevent.extract_events_set sa in
@@ -269,6 +271,9 @@ let satisfy_recvs sa =
   let revts = Chanevent.recv_events evts in (* to compute so / co *)
   let urevts = Chanevent.unsat_recv_events evts in (* to build rf/fr *)
   let ghb = Chanrel.extract_rels_set sa in (* for acyclicity test *)
+
+  Format.eprintf "EVTS : %d\n" (HMap.cardinal evts);
+  Format.eprintf "UREVTS : %d\n" (HMap.cardinal urevts);
 
   let eids' = eids in
   let ghb' = ghb in
@@ -427,6 +432,12 @@ let satisfy_recvs sa =
         ) peids keep
       ) eids' keep in
 
+      Format.eprintf "Keep = \n";
+      HSet.iter (fun e ->
+          Format.eprintf "%a " H.print e) keep;
+      Format.eprintf "\n";
+      Format.print_flush ();
+
       (* Here, remove events that do not satisfy criterion to stay *)
       let sa = SAtom.filter (function
         | Atom.Comp (Access (a, [ef; et]), _, _)
@@ -459,5 +470,7 @@ let satisfy_recvs sa =
   end in
 
   TimeSatRecv.pause ();
+
+  Format.print_flush ();
 
   pres
