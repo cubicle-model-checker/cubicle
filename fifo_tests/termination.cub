@@ -1,0 +1,117 @@
+(* Inspired by Misra's termination detection algorithm. *)
+
+(* An active site can send a message to wake up another site, or can become inactive.
+ * When a site is active, it is marked Black.
+ * A token visits all the nodes and marks them white when they are found inactive.
+ * If the token finds all the sites as White (consecutively), it declares termination.
+ *
+ * The network has no specific structure, neither for the application nor for
+ * the token (it does not have to be a ring).
+ * This algorithm requires that the communication is CAUSAL.
+ * If not, the token may pass by way to reach a white site,
+ * while a late wakeup message uses another way and wakes up the site after the
+ * token has visited it.
+ *
+ * Expected results:
+ * async: unsafe with 2 sites
+ * fifo11: safe with 2 sites, unsafe with 3 and more
+ * causal: safe.
+ *)
+
+type color = White | Black  (* color of a site *)
+
+type message = MToken | Application
+
+array Color[proc] : color
+array Active[proc] : bool
+
+array Visited[proc] : bool  (* actually embedded with the token *)
+var Token : proc  (* only if TokenInTransit = False *)
+var TokenInTransit : bool
+
+var Terminated : bool
+
+var Ghost : int
+
+chan Communication[CAUSAL] : message
+
+init(i) {
+  Ghost = 0 &&
+  Color[i] = Black
+  && Active[i] = True
+  && Visited[i] = False
+  && Terminated = False
+  && TokenInTransit = False
+}
+
+invariant { Ghost < 0 }
+
+(* ---------------- *)
+
+unsafe(i) { Terminated = True && Active[i] = True }
+
+(* unsafe(i) { Active[i] = True && Color[i] = White } *)
+
+(* ---------------- *)
+(* Application actions: send a message to some other, receive a message, becomes inactive. *)
+
+transition AppSend([i])
+requires { Active[i] = True }
+{
+  Communication!Application;
+}
+
+transition AppReceive([i])
+requires { Communication? = Application }
+{
+  Color[i] := Black;
+  Active[i] := True
+}
+
+transition AppStop([i])
+requires { Active[i] = True }
+{
+  Active[i] := False;
+  Ghost := Ghost + 1;
+}
+
+(* ---------------- *)
+(* Token actions *)
+
+transition TokenDetection([i])
+requires { Token = i && TokenInTransit = False && Color[i] = White && forall_other j. Visited[j] = True && Ghost = 1 }
+{ Terminated := True }
+
+transition TokenReceive1([i])
+requires { Communication? = MToken && Color[i] = Black }
+{
+  Token := i;
+  TokenInTransit := False;
+  Visited[x] := case | _ : False  (* reset *)
+}
+
+transition TokenReceive2([i])
+requires { Communication? = MToken && Color[i] = White }
+{
+  Token := i;
+  TokenInTransit := False;
+}
+
+transition TokenSendA([i])
+requires { Token = i && TokenInTransit = False && Active[i] = False && Visited[i] = True }
+{
+  Color[i] := White;
+  Visited[i] := True;
+  TokenInTransit := True;
+  Communication!MToken;
+}
+
+transition TokenSendB([i])
+requires { Token = i && TokenInTransit = False && Active[i] = False && Visited[i] = False }
+{
+  Color[i] := White;
+  Visited[i] := True;
+  TokenInTransit := True;
+  Communication!MToken;
+  Ghost := Ghost - 1;
+}

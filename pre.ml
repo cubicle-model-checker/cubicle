@@ -243,9 +243,9 @@ let make_cubes (ls, post) rargs s tr cnp =
   let args = cnp.Cube.vars in
   let cube acc sigma =
 
-    Format.eprintf "Before ITE_SIMP\n";
-    Format.eprintf "%a\n" Cube.print cnp;
-    Format.print_flush ();
+    (* Format.eprintf "Before ITE_SIMP\n";
+     * Format.eprintf "%a\n" Cube.print cnp;
+     * Format.print_flush (); *)
 
     let tr_args = List.map (Variable.subst sigma) tr.tr_args in
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
@@ -254,9 +254,9 @@ let make_cubes (ls, post) rargs s tr cnp =
     List.fold_left
       (fun (ls, post) cnp ->
 
-        Format.eprintf "After ITE_SIMP\n";
-        Format.eprintf "%a\n" Cube.print cnp;
-        Format.print_flush ();
+        (* Format.eprintf "After ITE_SIMP\n";
+         * Format.eprintf "%a\n" Cube.print cnp;
+         * Format.print_flush (); *)
 
        let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
        let lureq = uguard sigma nargs tr_args tr.tr_ureq in

@@ -53,6 +53,7 @@ let recv_by_sends sends evts =
        (* (H.equal sq hNone || H.equal rq hNone || H.equal sq rq) && *)
        (H.equal rq hNone || H.equal sp rq) &&
        (H.equal sq hNone || H.equal sq rp) &&
+       not (H.equal sp rp) &&
        rvals <> [] && compat_val stl rvals) evts)
     ) :: rbs
   ) sends []
@@ -262,7 +263,7 @@ let ghb_before_urd ghb urd e =
 
 let satisfy_recvs sa =
 
-  Format.eprintf "Satifying RECVS\n";
+  (* Format.eprintf "Satifying RECVS\n"; *)
 
   TimeSatRecv.start ();
 
@@ -272,8 +273,8 @@ let satisfy_recvs sa =
   let urevts = Chanevent.unsat_recv_events evts in (* to build rf/fr *)
   let ghb = Chanrel.extract_rels_set sa in (* for acyclicity test *)
 
-  Format.eprintf "EVTS : %d\n" (HMap.cardinal evts);
-  Format.eprintf "UREVTS : %d\n" (HMap.cardinal urevts);
+  (* Format.eprintf "EVTS : %d\n" (HMap.cardinal evts);
+   * Format.eprintf "UREVTS : %d\n" (HMap.cardinal urevts); *)
 
   let eids' = eids in
   let ghb' = ghb in
@@ -432,11 +433,11 @@ let satisfy_recvs sa =
         ) peids keep
       ) eids' keep in
 
-      Format.eprintf "Keep = \n";
-      HSet.iter (fun e ->
-          Format.eprintf "%a " H.print e) keep;
-      Format.eprintf "\n";
-      Format.print_flush ();
+      (* Format.eprintf "Keep = \n";
+       * HSet.iter (fun e ->
+       *     Format.eprintf "%a " H.print e) keep;
+       * Format.eprintf "\n";
+       * Format.print_flush (); *)
 
       (* Here, remove events that do not satisfy criterion to stay *)
       let sa = SAtom.filter (function
