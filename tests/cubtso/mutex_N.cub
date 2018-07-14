@@ -22,9 +22,9 @@ transition t2 ([p])
 requires { PC[p] = L2 && forall_other q. R[q] = False && fence() }
 { PC[p] := L3 }
 
-transition t3 ([p] q)
-requires { PC[p] = L2 && R[q] = True && fence() }
-{ PC[p] := L1; R[p] := False }
+(* transition t3 ([p] q) *)
+(* requires { PC[p] = L2 && R[q] = True && fence() } *)
+(* { PC[p] := L1; R[p] := False } *)
 
 (* Critical section *)
 
