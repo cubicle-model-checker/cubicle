@@ -28,14 +28,14 @@ let splitter (n:int) (maxpas:int): array direction =
   while (!nbpas < maxpas ) do
     variant {maxpas-(!nbpas)}
 
-    (****** Première post-condition ******) 
+    (****** Première post-condition ******)
     invariant {(n=1 /\ pc[0]=Step0) -> (not (!y))}
     invariant {(n=1 /\ pc[0]=Step1) -> (not (!y))}
     invariant {n=1 -> (!x = 0)}
     invariant {n=1 -> (pc[0]=Step0 \/ pc[0]=Step1 \/ pc[0]=Step3 \/  pc[0]=Step4 \/  pc[0]=Step5 \/  pc[0]=Step7)}
     invariant {n=1 -> (rval[0]=None \/ rval[0]=Stop)}
 
-    (****** Généralités ******) 
+    (****** Généralités ******)
     invariant {forall i :int. 0<=i<n /\ pc[i]=Step0 -> rval[i]=None}
     invariant {forall i :int. 0<=i<n /\ pc[i]=Step1 -> rval[i]=None}
     invariant {forall i :int. 0<=i<n /\ pc[i]=Step2 -> rval[i]=None}
@@ -47,7 +47,7 @@ let splitter (n:int) (maxpas:int): array direction =
     invariant {forall i :int. 0<=i<n /\ rval[i]=Stop -> pc[i]=Step7}
     invariant {forall i :int. 0<=i<n /\ rval[i]=Down -> pc[i]=Step7}
     invariant {forall i :int. 0<=i<n /\ pc[i]=Step7 -> rval[i]<>None}
-    
+
     invariant {0 <= (!x) <n}
 
     (****** Deuxième post-condition ******)
@@ -61,9 +61,9 @@ let splitter (n:int) (maxpas:int): array direction =
     invariant {not (exists i j: int. 0<=i<n /\  0<=j<n /\ pc[i]=Step5  /\ pc[j]=Step7 /\ rval[j]=Stop)}
     invariant {forall i j: int. 0<=i<n /\  0<=j<n /\ pc[i]=Step7 /\ rval[i]=Stop  /\ pc[j]=Step7  /\ rval[j]=Stop-> i=j}
     invariant {forall i j: int. 0<=i<n /\  0<=j<n /\ rval[i]=Stop  /\ rval[j]=Stop -> i=j}
-    
 
-    (****** Troisième post-condition ******) 
+
+    (****** Troisième post-condition ******)
     invariant {(exists i : int. 0<=i<n /\ pc[i]=Step2) -> (!y)}
     invariant {(exists i : int. 0<=i<n /\ rval[i]=Right ) -> (!y)}
     invariant {(!y) -> ((exists i : int. 0<=i<n /\ pc[i]=Step4 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=Step5 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=Step6 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=Step7 /\ rval[i]=Down) \/ (exists i : int. 0<=i<n /\ pc[i]=Step7 /\ rval[i]=Stop))}

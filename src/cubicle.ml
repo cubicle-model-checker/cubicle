@@ -67,7 +67,7 @@ let _ =
     if towhy3 then begin
       let out =
         if Options.why3_out_file then
-          let dir = Filename.(dirname file ^ dir_sep ^ "why3" ^ dir_sep) in
+          let dir = Filename.("examples" ^ dir_sep ^ "why3" ^ dir_sep) in
           let nf = Filename.((remove_extension @@ basename file) ^ "test.mlw") in
           let cout = open_out (dir ^ nf) in
           Format.formatter_of_out_channel cout
@@ -77,15 +77,9 @@ let _ =
       let invs =
         begin
           match Brab.brab system with
+            | Bwd.TimeOut (_, candidates) -> candidates
             | Bwd.Safe (visited, candidates) -> candidates
             | Bwd.Unsafe (faulty, candidates) ->
-              if (not quiet || profiling) then
-                Stats.print_report ~safe:false [] candidates;
-              begin try
-                  if not quiet then Stats.error_trace system faulty;
-                  printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
-                with Exit -> ()
-              end;
               close_dot ();
               exit 1
         end
@@ -97,6 +91,14 @@ let _ =
               is an experimental feature. Use at your own risks.\n@.";
     begin
       match Brab.brab system with
+      | Bwd.TimeOut (visited, candidates) ->
+         if (not quiet || profiling) then
+           Stats.print_report ~safe:true visited candidates;
+         printf "\n\nThe system reached a @{<b>@{<fg_blue>TIMEOUT@}@}\n@.";
+         Trace.Selected.certificate system visited;
+         close_dot ();
+	 exit 0
+
       | Bwd.Safe (visited, candidates) ->
          if (not quiet || profiling) then
            Stats.print_report ~safe:true visited candidates;

@@ -30,19 +30,25 @@ let pp_sep_nil fmt () = fprintf fmt ""
 let pp_sep_space fmt () = fprintf fmt " "
 (* let pp_sep_implies fmt () = fprintf fmt " ->@ " *)
 
+(* for loop on an array *)
 let pp_for fmt u =
   fprintf fmt "for %a = 0 to s.%a.length - 1 do"
     Variable.print_vars u.up_arg pp_hstring_uncap u.up_arr
 
+(* print the constructors *)
 let pp_list_const fmt cl =
   pp_print_list ~pp_sep:pp_sep_pipe Hstring.print fmt cl
 
+(* used to print the pairs of constructors for the equality *)
 let pp_list_pairs fmt cl =
   pp_print_list ~pp_sep:pp_sep_pipe (
     fun fmc c -> fprintf fmt "%a, %a" Hstring.print c Hstring.print c)
     fmt cl
 
-let pp_term ?(syst=false) sub fmt t =
+(* if the term is a variable or an array and syst is true,
+   the term is a field of the system, hence the s.*
+*)
+let rec pp_term ?(syst=false) sub fmt t =
   if syst then
     (match t with
       | Elem (_, Glob) | Access _ -> fprintf fmt "s."
@@ -60,16 +66,22 @@ let pp_term ?(syst=false) sub fmt t =
     | Access (id, vl) ->
       let vl = List.map (Variable.subst sub) vl in
       fprintf fmt "%a[%a]" pp_hstring_uncap id Variable.print_vars vl
+    | Arith (t, cs) ->
+      fprintf fmt "%a%a" (pp_term ~syst sub) t (Term.print_cs false) cs
     | t -> fprintf fmt "%a" Term.print t
 
 let pp_term_syst = pp_term ~syst:true
 
+(* print a term associated to its value at a certain label *)
 let pp_term_at sub lbl fmt t =
   match t with
     | Elem (_, Glob) | Access _ ->
       fprintf fmt "(%a at %a)" (pp_term_syst sub) t pp_hstring_cap lbl
     | _ -> pp_term sub fmt t
 
+(* if the atom is in a condition, no need to print
+   bool = true or false
+   if it's not, it means that we are giving a value to a variable *)
 let pp_atom ?(syst=false) ?(cond=false) sub fmt = function
   | Atom.Comp (t1, op, t2) ->
     if cond then
@@ -91,25 +103,37 @@ let pp_atom ?(syst=false) ?(cond=false) sub fmt = function
 
 let pp_atom_syst = pp_atom ~syst:true
 
+(* prints a set of atoms (by default as a conjunction of atoms) *)
 let pp_satom ?(syst=true) ?(cond=false) ?(pp_sep=pp_sep_and_ml) sub fmt sa =
   fprintf fmt "@[<hov>%a@]"
     (pp_print_list ~pp_sep (pp_atom ~syst ~cond sub)) (SAtom.elements sa)
 
-let pp_satom_nlast fmt sa =
+let pp_satom_syst = pp_satom ~syst:true
+
+(* prints a conjunction of atoms in a conjunction leading to an implication
+   for better readability *)
+let pp_satom_nlast bvars fmt sa =
   fprintf fmt "@[<hov>";
-  let rec aux fmt = function
-    | [a] ->
-      fprintf fmt " ->@ %a" (pp_atom_syst ~cond:true []) (Atom.neg a)
-    | hd :: tl ->
-      fprintf fmt " /\\@ %a%a" (pp_atom_syst ~cond:true []) hd aux tl
-    | _ -> assert false
+  let aux fmt l =
+    let rec aux fmt = function
+      | [a] ->
+        fprintf fmt " ->@ %a" (pp_atom_syst ~cond:true []) (Atom.neg a)
+      | hd :: tl ->
+        fprintf fmt " /\\@ %a%a" (pp_atom_syst ~cond:true []) hd aux tl
+      | _ -> assert false
+    in match l with
+      | [a] ->
+        fprintf fmt "%s@ %a" (if bvars then " ->" else "")
+          (pp_atom_syst ~cond:true []) (Atom.neg a)
+      | hd :: tl ->
+        fprintf fmt "%s@ %a%a" (if bvars then " /\\" else "")
+          (pp_atom_syst ~cond:true []) hd aux tl
+      | _ -> assert false
   in aux fmt @@ SAtom.elements sa;
   fprintf fmt "@]"
 
-let pp_satom_syst = pp_satom ~syst:true
-
-(* Transforms type declarations in scopes with definition of equality *)
-
+(* Transforms type declarations in scopes with definition of equality
+   between each constructor *)
 let pp_trad_type_defs fmt tdl =
   let pp_trad_type_def fmt (_, (t, cl)) =
     if not @@ Hstring.equal t tbool then
@@ -135,9 +159,11 @@ let pp_type fmt t =
   if Hstring.equal t tbool then fprintf fmt "bool"
   else fprintf fmt "%a" Hstring.print t
 
+(* transforms a global variable in a mutable field of the system record *)
 let pp_global_to_field fmt (_, id, ty) =
   fprintf fmt "@[mutable %a : %a;@]" pp_hstring_uncap id pp_type ty
 
+(* transforms an array in a field of the system record *)
 let pp_array_to_field fmt (_, id, (ktl, ty)) =
   assert (List.compare_length_with ktl 1 = 0);
   fprintf fmt "@[%a : array %a;@]" pp_hstring_uncap id pp_type ty
@@ -322,7 +348,9 @@ let pp_transitions pl fmt s =
     | _ -> assert false
 
 let pp_vars fmt vl =
-  pp_print_list ~pp_sep:pp_sep_space Hstring.print fmt vl
+  if List.compare_length_with vl 0 > 0 then
+    Format.fprintf fmt "forall %a : int. "
+      (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
 
 let pp_vars_bound fmt vl =
   let pp_v_b fmt v =
@@ -347,8 +375,9 @@ let pp_vars_distinct fmt vl =
 
 let pp_invariants invs fmt s =
   let pp_invariant fmt (vl, sa) =
-    fprintf fmt "@[invariant { @[<hov 2>forall %a : int. %a%a%a@] }@]"
-      pp_vars vl pp_vars_bound vl pp_vars_distinct vl pp_satom_nlast sa
+    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
+      pp_vars vl pp_vars_bound vl pp_vars_distinct vl
+      (pp_satom_nlast (vl <> [])) sa
   in
   let sinvs = List.map (
     fun (_, vl, sa) -> (vl, sa)) (List.rev_append s.unsafe s.invs)

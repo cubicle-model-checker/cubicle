@@ -69,15 +69,15 @@ let germanish (_n : int) : system
   
   while true do
     
+    invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.exgntd ->
+                                               s.cache[_p1] <> Exclusive }
+    invariant { forall _p1 : int. 0 <= _p1 < _n /\ s.cache[_p1] = Shared ->
+                                               s.shrset[_p1] }
+    invariant { forall _p1 _p2 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                  _p1 <> _p2 /\ s.cache[_p1] = Exclusive -> not s.shrset[_p2] }
     invariant { forall z1 z2 : int. 0 <= z1 < _n /\ 0 <= z2 < _n /\
                   z1 <> z2 /\ s.cache[z1] = Exclusive ->
                           s.cache[z2] <> Shared }
-    invariant { forall z1 z2 : int. 0 <= z1 < _n /\ 0 <= z2 < _n /\
-                  z1 <> z2 /\ s.cache[z1] = Exclusive -> not s.shrset[z2] }
-    invariant { forall z : int. 0 <= z < _n /\ s.cache[z] = Shared ->
-                                           s.shrset[z] }
-    invariant { forall z : int. 0 <= z < _n /\ not s.exgntd ->
-                                           s.cache[z] <> Exclusive }
     let _p0 = Random.random_int _n in
     (*If there is more than one value,
     the variables could be equal, need to work on it*)

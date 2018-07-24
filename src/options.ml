@@ -98,6 +98,14 @@ let set_out o =
     raise (Arg.Bad "-out takes a directory as argument");
   out := o
 
+let limit_steps = ref false
+let max_steps = ref (-1)
+let steps = ref 0
+
+let set_steps n =
+  limit_steps := true;
+  max_steps := n
+
 let mode = ref "bfs"
 let set_mode m =
   mode := m;
@@ -128,6 +136,7 @@ let specs =
     "-type-only", Arg.Set type_only, " stop after typing";
     "-towhy3", Arg.Set towhy3, "translate the cubicle file to why3";
     "-why3_out_file", Arg.Set why3_out_file, "write the output in a file";
+    "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
     "-max-procs", Arg.Set_int max_proc,
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds,
@@ -225,6 +234,10 @@ let cin =
 
 let towhy3 = !towhy3
 let why3_out_file = !why3_out_file
+
+let limit_steps = !limit_steps
+let max_steps = !max_steps
+
 
 let type_only = !type_only
 let maxrounds = !maxrounds

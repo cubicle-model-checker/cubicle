@@ -101,6 +101,8 @@ module Term : sig
   val type_of : t -> Smt.Type.t
   (** returns the type of the term as it is known by the SMT solver *)
 
+  val print_cs : bool -> Format.formatter -> int MConst.t -> unit
+
   val print : Format.formatter -> t -> unit
   (** prints a term *)
 

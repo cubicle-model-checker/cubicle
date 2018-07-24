@@ -91,15 +91,20 @@ let delete nb =
 let remaining compute =
   if not quiet then
     let r, post = compute () in
-    if post_strategy = 0 then
-      printf "%s@{<dim>%d remaining@}\n@."
-        (String.make (Pretty.vt_width - 10 - nb_digits r) ' ') r
-    else
-      let tot = r + post in
-      printf "%s@{<dim>%d (%d+%d) remaining@}\n@."
-        (String.make (Pretty.vt_width - 14 - (nb_digits r) -
-                      (nb_digits post) - (nb_digits tot)) ' ')
-        tot r post
+    let tot = r + post in
+    let stlength = Pretty.vt_width -
+                   (if post_strategy = 0 then 10 + nb_digits r
+                    else 14 + nb_digits r + nb_digits post +  2*nb_digits tot) -
+                   (if limit_steps then nb_digits !steps + nb_digits max_steps + 9
+                    else 0) in
+    (if post_strategy = 0 then
+       printf "%s@{<dim>%d" (String.make stlength ' ') r
+     else
+       printf "%s@{<dim>%d (%d+%d)" (String.make stlength ' ') tot r post
+    );
+    printf "%s remaining@}\n@."
+      (if limit_steps then sprintf "(%d/%d steps)" !steps max_steps
+       else "")
 
 
 let print_candidates ~safe candidates =

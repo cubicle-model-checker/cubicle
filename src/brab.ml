@@ -26,33 +26,33 @@ module Oracle = Approx.SelectedOracle
 let rec search_and_backtrack candidates system =
   let res = BWD.search ~candidates system in
   match res with
-  | Bwd.Safe _ -> res
-  | Bwd.Unsafe (faulty, candidates) ->
-     let o = Node.origin faulty in
-     if o.kind = Orig then res
-     else
-       (* Bad candidate, we backtrack while keeping interresting candidates *)
-       begin
-         assert (o.kind = Approx);
-         if not quiet then eprintf "The candidate %d = %a is BAD\n@."
-                                   o.tag Node.print o;
-         Stats.restart ();
-         let candidates =
-           Approx.remove_bad_candidates system faulty candidates
-         in
-         (* Restarting *)
-         search_and_backtrack candidates system
-       end
+    | Bwd.Safe _ | Bwd.TimeOut _ -> res
+    | Bwd.Unsafe (faulty, candidates) ->
+      let o = Node.origin faulty in
+      if o.kind = Orig then res
+      else
+        (* Bad candidate, we backtrack while keeping interresting candidates *)
+        begin
+          assert (o.kind = Approx);
+          if not quiet then eprintf "The candidate %d = %a is BAD\n@."
+              o.tag Node.print o;
+          Stats.restart ();
+          let candidates =
+            Approx.remove_bad_candidates system faulty candidates
+          in
+          (* Restarting *)
+          search_and_backtrack candidates system
+        end
 
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
-let reinstall_sigint () = 
-  Sys.set_signal Sys.sigint 
-    (Sys.Signal_handle 
+let reinstall_sigint () =
+  Sys.set_signal Sys.sigint
+    (Sys.Signal_handle
        (fun _ ->
           eprintf "@{<n>@}@."; (* Remove colors *)
           Stats.print_report ~safe:false [] [];
           eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
-          exit 1)) 
+          exit 1))
 
 (**************************************************************)
 (* Backward reachability with approximations and backtracking *)

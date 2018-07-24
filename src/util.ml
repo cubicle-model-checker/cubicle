@@ -44,7 +44,7 @@ let nb_digits n =
 let reset_gc_params =
   let gc_c = Gc.get() in
   fun () -> Gc.set gc_c
-  
+
 let set_liberal_gc () =
   Gc.full_major ();
   let gc_c =
@@ -72,7 +72,7 @@ let syscall cmd =
 
 
 let syscall_full cmd =
-  let inc, outc, errc = Unix.open_process_full cmd (Unix.environment ()) in  
+  let inc, outc, errc = Unix.open_process_full cmd (Unix.environment ()) in
   let buf = Buffer.create 16 in
   let buferr = Buffer.create 16 in
   (try
@@ -93,8 +93,8 @@ let syscall_full cmd =
 
 
 let rec remove_trailing_whitespaces_end str =
-  if String.length str > 0 && 
-    (str.[String.length str - 1] = '\n' 
+  if String.length str > 0 &&
+    (str.[String.length str - 1] = '\n'
     || str.[String.length str - 1] = ' '
       || str.[String.length str - 1] = '\t')  then
     remove_trailing_whitespaces_end (String.sub str 0 (String.length str - 1))
@@ -142,7 +142,7 @@ let chromatic start stop steps =
       c_blue = incr_ccomp !now.c_blue inc_blue;
     };
     !now
-    
+
 
 type loc = Lexing.position * Lexing.position
 
@@ -150,5 +150,5 @@ let report_loc fmt (b,e) =
   let l = b.pos_lnum in
   let fc = b.pos_cnum - b.pos_bol + 1 in
   let lc = e.pos_cnum - b.pos_bol + 1 in
-  fprintf fmt "File \"%s\", line %d, characters %d-%d:" 
+  fprintf fmt "File \"%s\", line %d, characters %d-%d:"
     Options.file l fc lc

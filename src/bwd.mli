@@ -41,6 +41,9 @@ end
 
 
 type result =
+  | TimeOut of Node.t list * Node.t list
+  (** The system could not be proved in the number of steps fixed as a limit
+      we return the set of visited nodes and the candidate invariants *)
   | Safe of Node.t list * Node.t list
   (** The system is safe and we return the set of visited nodes and the
       inferred invariants *)
@@ -52,7 +55,7 @@ type result =
 (** {2 Strategies } *)
 
 module type Strategy = sig
-  
+
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
                t_system -> result
   (** Backward reachability search on a system. The user can also provide

@@ -1,0 +1,299 @@
+module Splitter2_count
+
+use import array.Array
+use import int.Int
+use import ref.Refint
+use import random.Random
+
+module MutableSet
+
+  use import set.Fset
+
+  type elt
+
+  type t = private { ghost mutable s: set elt }
+
+  val create () : t
+    ensures { is_empty result.s }
+
+  val add (t: t) (x: elt) : unit
+    writes  { t.s }
+    ensures { t.s = add x (old t.s) }
+
+  val contains (t: t) (x: elt) : bool
+    ensures { result <-> mem x t.s }
+
+  val clear (t: t) : unit
+    writes  { t.s }
+    ensures { is_empty t.s }
+
+  val size (t: t) : int
+    ensures { result = cardinal t.s }
+
+end
+
+scope import Directions
+
+  type directions = None | Right | Stop | Down
+
+  let (=) (a b: directions): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | None, None | Right, Right | Stop, Stop | Down, Down -> true
+      | _ -> false
+  end
+
+end
+
+scope import Pc
+
+  type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
+
+  let (=) (a b: pc): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | PC0, PC0 | PC1, PC1 | PC2, PC2 | PC3, PC3 | PC4, PC4 | PC5, PC5 |
+        PC6, PC6 | PC7, PC7 | PC8, PC8 | PC9, PC9 -> true
+      | _ -> false
+  end
+
+end
+
+val coin () : bool
+
+type proc = int
+
+type system = {
+  mutable x : proc;
+  mutable y : bool;
+  aliveSet : MutableSet.t;
+  stopSet : MutableSet.t;
+  downSet : MutableSet.t;
+  rightSet : MutableSet.t;
+  rval : array directions;
+  pC : array pc;
+}
+let splitter2_count (_n : int) : system
+  diverges
+  requires { 0 < _n }
+=
+  let s = {
+    y = false;
+    alive = MutableSet.create ();
+    countStop = MutableSet.create ();
+    countDown = MutableSet.create ();
+    countRight = MutableSet.create ();
+    rval = Array.make _n None;
+    pC = Array.make _n PC0;
+    x = Random.random_int _n
+  } in
+
+
+  while true do
+
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC6 }
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC2 }
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC4 }
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.rval[i] <> Stop }
+    invariant {  1 < s.countDown /\ s.alive = 0 /\ s.countStop = 0 ->
+                s.countRight <> 0 }
+    invariant {  1 < s.countRight /\ s.alive = 0 /\ s.countStop = 0 ->
+                s.countDown <> 0 }
+    invariant {  s.countStop <= 1 }
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.rval[i] = Stop -> s.rval[j] <> Stop }
+    invariant {  0 <= s.countDown }
+    invariant {  0 <= s.countRight }
+    invariant {  0 <= s.countStop }
+    invariant {  0 <= s.alive }
+    let _p0 = Random.random_int _n in
+    (*If there is more than one value,
+    the variables could be equal, need to work on it*)
+
+    (*spl0*)
+    if coin () && s.pC[_p0] = PC0
+    then begin
+      label Spl0 in
+      s.alive <- s.alive + 1;
+      s.x <- _p0;
+      for _j1 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j1 ->
+                      (_p = _p0 -> s.pC[_p] = PC1) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl0)) }
+        invariant { forall _p:proc. _j1 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl0) }
+
+        s.pC[_j1] <- (if _j1 = _p0 then PC1
+                     else (*true*) s.pC[_j1])
+      done;
+    end
+
+    (*spl3*)
+    else if coin () && s.pC[_p0] = PC3
+    then begin
+      label Spl3 in
+      s.y <- true;
+      for _j6 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j6 ->
+                      (_p = _p0 -> s.pC[_p] = PC4) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl3)) }
+        invariant { forall _p:proc. _j6 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl3) }
+
+        s.pC[_j6] <- (if _j6 = _p0 then PC4
+                     else (*true*) s.pC[_j6])
+      done;
+    end
+
+    (*spl1a*)
+    else if coin () && s.y && s.pC[_p0] = PC1
+    then begin
+      label Spl1a in
+      for _j2 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j2 ->
+                      (_p = _p0 -> s.pC[_p] = PC2) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl1a)) }
+        invariant { forall _p:proc. _j2 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl1a) }
+
+        s.pC[_j2] <- (if _j2 = _p0 then PC2
+                     else (*true*) s.pC[_j2])
+      done;
+    end
+
+    (*spl1b*)
+    else if coin () && not s.y && s.pC[_p0] = PC1
+    then begin
+      label Spl1b in
+      for _j3 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j3 ->
+                      (_p = _p0 -> s.pC[_p] = PC3) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl1b)) }
+        invariant { forall _p:proc. _j3 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl1b) }
+
+        s.pC[_j3] <- (if _j3 = _p0 then PC3
+                     else (*true*) s.pC[_j3])
+      done;
+    end
+
+    (*spl4a*)
+    else if coin () && s.x = _p0 && s.pC[_p0] = PC4
+    then begin
+      label Spl4a in
+      for _j7 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j7 ->
+                      (_p = _p0 -> s.pC[_p] = PC5) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl4a)) }
+        invariant { forall _p:proc. _j7 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl4a) }
+
+        s.pC[_j7] <- (if _j7 = _p0 then PC5
+                     else (*true*) s.pC[_j7])
+      done;
+    end
+
+    (*spl4b*)
+    else if coin () && s.x <> _p0 && s.pC[_p0] = PC4
+    then begin
+      label Spl4b in
+      for _j8 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j8 ->
+                      (_p = _p0 -> s.pC[_p] = PC6) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl4b)) }
+        invariant { forall _p:proc. _j8 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl4b) }
+
+        s.pC[_j8] <- (if _j8 = _p0 then PC6
+                     else (*true*) s.pC[_j8])
+      done;
+    end
+
+    (*spl2*)
+    else if coin () && s.pC[_p0] = PC2
+    then begin
+      label Spl2 in
+      s.countRight <- s.countRight + 1;
+      s.alive <- s.alive - 1;
+      for _j4 = 0 to s.rval.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j4 ->
+                      (_p = _p0 -> s.rval[_p] = Right) /\
+                      (_p <> _p0 -> s.rval[_p] = (s.rval[_p] at Spl2)) }
+        invariant { forall _p:proc. _j4 <= _p < _n ->
+                      s.rval[_p] = (s.rval[_p] at Spl2) }
+
+        s.rval[_j4] <- (if _j4 = _p0 then Right
+                       else (*true*) s.rval[_j4])
+      done;
+      for _j5 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j5 ->
+                      (_p = _p0 -> s.pC[_p] = PC7) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl2)) }
+        invariant { forall _p:proc. _j5 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl2) }
+
+        s.pC[_j5] <- (if _j5 = _p0 then PC7
+                     else (*true*) s.pC[_j5])
+      done;
+    end
+
+    (*spl5*)
+    else if coin () && s.pC[_p0] = PC5
+    then begin
+      label Spl5 in
+      s.countStop <- s.countStop + 1;
+      s.alive <- s.alive - 1;
+      for _j9 = 0 to s.rval.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j9 ->
+                      (_p = _p0 -> s.rval[_p] = Stop) /\
+                      (_p <> _p0 -> s.rval[_p] = (s.rval[_p] at Spl5)) }
+        invariant { forall _p:proc. _j9 <= _p < _n ->
+                      s.rval[_p] = (s.rval[_p] at Spl5) }
+
+        s.rval[_j9] <- (if _j9 = _p0 then Stop
+                       else (*true*) s.rval[_j9])
+      done;
+      for _j10 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j10 ->
+                      (_p = _p0 -> s.pC[_p] = PC8) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl5)) }
+        invariant { forall _p:proc. _j10 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl5) }
+
+        s.pC[_j10] <- (if _j10 = _p0 then PC8
+                      else (*true*) s.pC[_j10])
+      done;
+    end
+
+    (*spl6*)
+    else if coin () && s.pC[_p0] = PC6
+    then begin
+      label Spl6 in
+      s.countDown <- s.countDown + 1;
+      s.alive <- s.alive - 1;
+      for _j11 = 0 to s.rval.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j11 ->
+                      (_p = _p0 -> s.rval[_p] = Down) /\
+                      (_p <> _p0 -> s.rval[_p] = (s.rval[_p] at Spl6)) }
+        invariant { forall _p:proc. _j11 <= _p < _n ->
+                      s.rval[_p] = (s.rval[_p] at Spl6) }
+
+        s.rval[_j11] <- (if _j11 = _p0 then Down
+                        else (*true*) s.rval[_j11])
+      done;
+      for _j12 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j12 ->
+                      (_p = _p0 -> s.pC[_p] = PC9) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl6)) }
+        invariant { forall _p:proc. _j12 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl6) }
+
+        s.pC[_j12] <- (if _j12 = _p0 then PC9
+                      else (*true*) s.pC[_j12])
+      done;
+    end
+
+
+  done;
+  s
+end

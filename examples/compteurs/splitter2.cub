@@ -29,6 +29,8 @@ init(i) { Rval[i] = None && Y = False && PC[i] = PC0 }
        /\ Cardinality ({ i \in ProcSet : rval[i] = Right}) < NP
 *)
 unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop }
+unsafe(i j) { Y = False && Rval[i] = Stop }
+(* unsafe(i) { Y = False && PC[i] = PC5 } *)
 
 (* ================================================================ *)
 (* Unsafe from merci *)
