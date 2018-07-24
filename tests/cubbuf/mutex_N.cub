@@ -1,0 +1,77 @@
+
+(* Naive mutual exclusion algorithm for N processes *)
+
+type loc = L1 | L2 | L3
+
+array PC[proc] : loc
+
+(* Buffer *)
+array Var[proc,proc] : bool
+array Proc[proc,proc] : proc
+array Val[proc,proc] : bool
+
+(* Global variables *)
+array R[proc] : bool
+
+
+init (p) { PC[p] = L1 && R[p] = False }
+
+unsafe (p1 p2) { PC[p1] = L3 && PC[p2] = L3 }
+
+
+transition t1 (p q)
+requires { PC[p] = L1 && Var[p,q] = False &&
+           forall_other r. (r < q || Var[p,r] = False) }
+{ PC[p] := L2;
+  Var[p,q] := True;
+  Proc[p,q] := p;
+  Val[p,q] := True } (* R[p] := True *)
+
+transition t2_self (p)
+requires { PC[p] = L2 &&
+           forall_other q. R[q] = False }
+{ PC[p] := L3 }
+
+transition t2 (p)
+requires { PC[p] = L2 && forall_other q. R[q] = False }
+{ PC[p] := L3 }
+
+transition t2 (p)
+requires { PC[p] = L2 && forall_other q. R[q] = False && fence() }
+{ PC[p] := L3 }
+
+(* transition t3 (p q) *)
+(* requires { PC[p] = L2 && R[q] = True && fence() } *)
+(* { PC[p] := L1; R[p] := False } *)
+
+(* Critical section *)
+
+transition t4 (p q)
+requires { PC[p] = L3 && Var[p,q] = False &&
+           forall_other r. (r < q || Var[p,r] = False) }
+{ PC[p] := L1;
+  Var[p,q] := True;
+  Proc[p,q] := p;
+  Val[p,q] := False } (* R[p] := False *)
+
+
+(* Flush transition *)
+(* transition t_flush_PPP (p) *)
+(* requires { Var[p,p] = True & Proc[p,p] = p } *)
+(* { R[p] := Val[p,p]; Var[p,p] := False } *)
+
+(* transition t_flush_PPQ (p q) *)
+(* requires { Var[p,p] = True & Proc[p,p] = q } *)
+(* { R[q] := Val[p,p]; Var[p,p] := False } *)
+
+transition t_flush_p (p q)
+requires { Var[p,q] = True & Proc[p,q] = p }
+{ R[p] := Val[p,q]; Var[p,q] := False }
+
+transition t_flush_q (p q)
+requires { Var[p,q] = True & Proc[p,q] = q }
+{ R[q] := Val[p,q]; Var[p,q] := False }
+
+transition t_flush_r (p q r)
+requires { Var[p,q] = True & Proc[p,q] = r }
+{ R[r] := Val[p,q]; Var[p,q] := False }

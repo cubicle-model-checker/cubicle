@@ -1,0 +1,88 @@
+
+(* Naive mutual exclusion algorithm for N processes *)
+
+type loc = Acquire | Spin | CS | Release
+type vars = VEmpty | VLock
+
+(* Program counters *)
+array PC[proc] : loc
+
+(* Dual-TSO Buffer *)
+array Var[proc,proc] : vars
+array Val[proc,proc] : int
+array Own[proc,proc] : bool
+
+(* Global variables *)
+var Lock : int
+
+
+init (p b) { PC[p] = Acquire && Lock = 1 && Var[p,b] = VEmpty }
+
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
+
+transition t1_Acquire_CS_armw (p)
+requires { PC[p] = Acquire && 0 < Lock &&
+           forall_other b. Var[p,b] = VEmpty }
+{ PC[p] := CS; Lock := Lock - 1 }
+
+transition t2_Acquire_Spin_armw (p)
+requires { PC[p] = Acquire && Lock <= 0 &&
+           forall_other b. Var[p,b] = VEmpty }
+{ PC[p] := Spin; Lock := Lock - 1 }
+
+transition t2_Spin_Spin_rown (p b)
+requires { PC[p] = Spin &&
+	   Var[p,b] = VLock && Val[p,b] <= 0 && Own[p,b] = True &&
+           forall_other b2. (b < b2 || Var[p,b2] <> VLock || Own[p,b] = False) }
+{ PC[p] := Spin }
+
+transition t2_Spin_Spin_rbuf (p b)
+requires { PC[p] = Spin &&
+           Var[p,b] = VLock && Val[p,b] <= 0 && Own[p,b] = False &&
+           forall_other b2. (b2 < b && Var[p,b2] <> VLock
+	                  || b2 < b && Own[p,b2] = False
+	                  || b < b2 && Var[p,b2] = VEmpty) }
+{ PC[p] := Spin }
+
+transition t2_Spin_Acquire_rown (p b)
+requires { PC[p] = Spin &&
+           Var[p,b] = VLock && 0 < Val[p,b] && Own[p,b] = True &&
+           forall_other b2. (b < b2 || Var[p,b2] <> VLock || Own[p,b] = False) }
+{ PC[p] := Acquire }
+
+transition t2_Spin_Acquire_rbuf (p b)
+requires { PC[p] = Spin &&
+           Var[p,b] = VLock && 0 < Val[p,b] && Own[p,b] = False &&
+           forall_other b2. (b2 < b && Var[p,b2] <> VLock
+	                  || b2 < b && Own[p,b2] = False
+	                  || b < b2 && Var[p,b2] = VEmpty) }
+{ PC[p] := Acquire }
+
+
+
+(* Critical section *)
+
+transition t3_CS_Release (p)
+requires { PC[p] = CS }
+{ PC[p] := Release }
+
+transition t4_Release_Acquire_w (p b)
+requires { PC[p] = Release && Var[p,b] = VEmpty &&
+           forall_other b2. (b < b2 || Var[p,b2] = VEmpty) }
+{ PC[p] := Acquire; Lock := 1;
+  Var[p,b] := VLock; Val[p,b] := 1; Own[p,b] := True }
+
+
+
+(* Propagate transition : propagate value from memory to read buffer (left) *)
+transition t_propagate_lock (p b)
+requires { Var[p,b] = VEmpty &&
+           forall_other b2. (b < b2 || Var[p,b2] = VEmpty) }
+{ Var[p,b] := VLock; Val[p,b] := Lock; Own[p,b] := False }
+
+(* Delete transition : delete oldest read from buffer (right) *)
+transition t_delete (p b)
+requires { Var[p,b] <> VEmpty &&
+           forall_other b2. (b2 < b || Var[p,b2] = VEmpty) }
+{ Var[p,b] := VEmpty }

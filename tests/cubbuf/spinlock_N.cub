@@ -1,0 +1,69 @@
+
+(* Naive mutual exclusion algorithm for N processes *)
+
+type loc = Acquire | Spin | CS | Release
+type vars = VEmpty | VLock
+
+array PC[proc] : loc
+
+(* Buffer *)
+array Var[proc,proc] : vars
+array Val[proc,proc] : int
+
+(* Global variables *)
+var Lock : int
+
+
+init (p b) { PC[p] = Acquire && Lock = 1 && Var[p,b] = VEmpty }
+
+unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+
+
+transition t1_Acquire_CS_armw (p)
+requires { PC[p] = Acquire && 0 < Lock &&
+           forall_other b. Var[p,b] = VEmpty }
+{ PC[p] := CS; Lock := Lock - 1 }
+
+transition t2_Acquire_Spin_armw (p)
+requires { PC[p] = Acquire && Lock <= 0 &&
+           forall_other b. Var[p,b] = VEmpty }
+{ PC[p] := Spin; Lock := Lock - 1 }
+
+transition t2_Spin_Spin_rmem (p)
+requires { PC[p] = Spin && Lock <= 0 &&
+           forall_other b. Var[p,b] <> VLock }
+{ PC[p] := Spin }
+
+transition t2_Spin_Spin_rbuf (p b)
+requires { PC[p] = Spin && Var[p,b] = VLock && Val[p,b] <= 0 &&
+           forall_other b2. (b < b2 || Var[p,b2] <> VLock) }
+{ PC[p] := Spin }
+
+transition t2_Spin_Acquire_rmem (p)
+requires { PC[p] = Spin && 0 < Lock &&
+           forall_other b. Var[p,b] <> VLock }
+{ PC[p] := Acquire }
+
+transition t2_Spin_Acquire_rbuf (p b)
+requires { PC[p] = Spin && Var[p,b] = VLock && 0 < Val[p,b] &&
+           forall_other b2. (b < b2 || Var[p,b2] <> VLock) }
+{ PC[p] := Acquire }
+
+(* Critical section *)
+
+transition t3_CS_Release (p)
+requires { PC[p] = CS }
+{ PC[p] := Release }
+
+transition t4_Release_Acquire_w (p b)
+requires { PC[p] = Release && Var[p,b] = VEmpty &&
+           forall_other b2. (b < b2 || Var[p,b2] = VEmpty) }
+{ PC[p] := Acquire; Var[p,b] := VLock; Val[p,b] := 1 }
+
+
+
+(* Flush transition *)
+transition t_flush_lock (p b)
+requires { Var[p,b] = VLock &&
+           forall_other b2. (b2 < b || Var[p,b2] = VEmpty) }
+{ Lock := Val[p,b]; Var[p,b] := VEmpty }
