@@ -2,11 +2,16 @@
 (* Naive mutual exclusion algorithm for N processes *)
 
 type loc = Acquire | Spin | CS | Release
+type kind = KProc | KBuf
 type vars = VEmpty | VLock
 
+(* Program counters *)
 array PC[proc] : loc
 
-(* Buffer *)
+(* Process kinds *)
+array Kind[proc] : kind
+
+(* Buffers *)
 array Var[proc,proc] : vars
 array Val[proc,proc] : int
 
@@ -14,46 +19,67 @@ array Val[proc,proc] : int
 var Lock : int
 
 
+
 init (p b) { PC[p] = Acquire && Lock = 1 && Var[p,b] = VEmpty }
 
-unsafe (p1 p2) { PC[p1] = CS && PC[p2] = CS }
+unsafe (p1 p2) { Kind[p1] = KProc && Kind[p2] = KProc &&
+                 PC[p1] = CS && PC[p2] = CS }
+
 
 
 transition t1_Acquire_CS_armw (p)
-requires { PC[p] = Acquire && 0 < Lock &&
-           forall_other b. Var[p,b] = VEmpty }
+requires { Kind[p] = KProc &&
+           PC[p] = Acquire &&
+	   0 < Lock &&
+           forall_other b. (Kind[b] <> KBuf || Var[p,b] = VEmpty) }
 { PC[p] := CS; Lock := Lock - 1 }
 
+
 transition t2_Acquire_Spin_armw (p)
-requires { PC[p] = Acquire && Lock <= 0 &&
-           forall_other b. Var[p,b] = VEmpty }
+requires { Kind[p] = KProc &&
+           PC[p] = Acquire &&
+	   Lock <= 0 &&
+           forall_other b. (Kind[b] <> KBuf || Var[p,b] = VEmpty) }
 { PC[p] := Spin; Lock := Lock - 1 }
 
+
 transition t2_Spin_Spin_rmem (p)
-requires { PC[p] = Spin && Lock <= 0 &&
-           forall_other b. Var[p,b] <> VLock }
+requires { Kind[p] = KProc &&
+           PC[p] = Spin &&
+	   Lock <= 0 &&
+           forall_other b. (Kind[b] <> KBuf || Var[p,b] <> VLock) }
 { PC[p] := Spin }
 
 transition t2_Spin_Spin_rbuf (p b)
-requires { PC[p] = Spin && Var[p,b] = VLock && Val[p,b] <= 0 &&
-           forall_other b2. (b < b2 || Var[p,b2] <> VLock) }
+requires { Kind[p] = KProc && Kind[b] = KBuf &&
+           PC[p] = Spin &&
+	   Var[p,b] = VLock && Val[p,b] <= 0 &&
+           forall_other b2. (Kind[b2] <> KBuf || b < b2 || Var[p,b2] <> VLock) }
 { PC[p] := Spin }
 
+
 transition t2_Spin_Acquire_rmem (p)
-requires { PC[p] = Spin && 0 < Lock &&
-           forall_other b. Var[p,b] <> VLock }
+requires { Kind[p] = KProc &&
+           PC[p] = Spin &&
+	   0 < Lock &&
+           forall_other b. (Kind[b] <> KBuf || Var[p,b] <> VLock }
 { PC[p] := Acquire }
 
 transition t2_Spin_Acquire_rbuf (p b)
-requires { PC[p] = Spin && Var[p,b] = VLock && 0 < Val[p,b] &&
-           forall_other b2. (b < b2 || Var[p,b2] <> VLock) }
+requires { Kind[p] = KProc && Kind[b] = KBuf &&
+           PC[p] = Spin &&
+	   Var[p,b] = VLock && 0 < Val[p,b] &&
+           forall_other b2. (Kind[b2] <> KBuf || b < b2 || Var[p,b2] <> VLock) }
 { PC[p] := Acquire }
+
 
 (* Critical section *)
 
 transition t3_CS_Release (p)
-requires { PC[p] = CS }
+requires { Kind[p] = KProc &&
+           PC[p] = CS }
 { PC[p] := Release }
+
 
 transition t4_Release_Acquire_w (p b)
 requires { PC[p] = Release && Var[p,b] = VEmpty &&
@@ -67,3 +93,6 @@ transition t_flush_lock (p b)
 requires { Var[p,b] = VLock &&
            forall_other b2. (b2 < b || Var[p,b2] = VEmpty) }
 { Lock := Val[p,b]; Var[p,b] := VEmpty }
+
+
+

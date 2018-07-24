@@ -50,8 +50,8 @@ requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
 
 transition t_L3_L4_Fence (p)
 requires { Kind[p] = KProc &&
-           PC[p] = L3 (*&&
-	   forall_other b2. (Kind[b2] <> KBuf || Var[p,b2] = VEmpty)*) }
+           PC[p] = L3 &&
+	   forall_other b2. (Kind[b2] <> KBuf || Var[p,b2] = VEmpty) }
 { PC[p] := L4 }
 
 
