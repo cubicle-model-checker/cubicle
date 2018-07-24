@@ -16,7 +16,6 @@ array Var[proc,proc] : vars
 array Proc[proc,proc] : proc
 array ValP[proc,proc] : proc
 array ValB[proc,proc] : bool
-array BLen[proc] : int
 
 (* Global variables *)
 array Want[proc] : bool
@@ -24,14 +23,16 @@ var Turn : proc
 
 
 
-init (p b) { PC[p] = L1 && Want[p] = False && Var[p,b] = VEmpty && BLen[p] = 0 }
+init (p b) { PC[p] = L1 && Want[p] = False && Var[p,b] = VEmpty }
 
 invariant (p1 p2 p3) { Kind[p1] = KProc && Kind[p2] = KProc && Kind[p3] = KProc}
 
-invariant (p) { BLen[p] < 0 }
-
 unsafe (p1 p2) { Kind[p1] = KProc && Kind[p2] = KProc &&
                  PC[p1] = CS && PC[p2] = CS }
+
+(* unsafe (p1 p2 p3 p4) { Kind[p1] = KProc && Kind[p2] = KProc && *)
+(*                        Kind[p3] = KBuf && Kind[p4] = KBuf && *)
+(*                        PC[p1] = CS && PC[p2] = CS } *)
 
 
 
@@ -41,7 +42,7 @@ requires { Kind[p] = KProc && Kind[b] = KBuf &&
 	   Var[p,b] = VEmpty &&
            forall_other b2. (Kind[b2] <> KBuf || b < b2 || Var[p,b2] = VEmpty) }
 { PC[p] := L2;
-  Var[p,b] := VWant; Proc[p,b] := p; ValB[p,b] := True; BLen[p] := BLen[p] + 1 }
+  Var[p,b] := VWant; Proc[p,b] := p; ValB[p,b] := True }
 
 
 transition t_L2_L3_W_Turn_Other (p q b)
@@ -50,12 +51,12 @@ requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
 	   Var[p,b] = VEmpty &&
            forall_other b2. (Kind[b2] <> KBuf || b < b2 || Var[p,b2] = VEmpty) }
 { PC[p] := L3;
-  Var[p,b] := VTurn; ValP[p,b] := q; BLen[p] := BLen[p] + 1 }
+  Var[p,b] := VTurn; ValP[p,b] := q }
 
 
 transition t_L3_L4_Fence (p)
 requires { Kind[p] = KProc &&
-           PC[p] = L3 && BLen[p] = 0 &&
+           PC[p] = L3 &&
 	   forall_other b. (Kind[b] <> KBuf || Var[p,b] = VEmpty) }
 { PC[p] := L4 }
 
@@ -100,7 +101,7 @@ requires { Kind[p] = KProc && Kind[b] = KBuf &&
 	   Var[p,b] = VEmpty &&
            forall_other b2. (Kind[b2] <> KBuf || b < b2 || Var[p,b2] = VEmpty) }
 { PC[p] := L1;
-  Var[p,b] := VWant; Proc[p,b] := p; ValB[p,b] := False; BLen[p] := BLen[p] + 1}
+  Var[p,b] := VWant; Proc[p,b] := p; ValB[p,b] := False }
 
 
 
@@ -111,20 +112,20 @@ requires { Kind[p] = KProc && Kind[b] = KBuf &&
            Var[p,b] = VTurn &&
            forall_other b2. (
 	       Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
-{ Turn := ValP[p,b]; Var[p,b] := VEmpty; BLen[p] := BLen[p] - 1 }
+{ Turn := ValP[p,b]; Var[p,b] := VEmpty }
 
 transition t_flush_want_p (p b)
 requires { Kind[p] = KProc && Kind[b] = KBuf &&
            Var[p,b] = VWant && Proc[p,b] = p &&
            forall_other b2. (
 	       Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
-{ Want[p] := ValB[p,b]; Var[p,b] := VEmpty; BLen[p] := BLen[p] - 1 }
+{ Want[p] := ValB[p,b]; Var[p,b] := VEmpty }
 
 transition t_flush_want_q (p q b)
 requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
            Var[p,b] = VWant && Proc[p,b] = q &&
            forall_other b2. (
 	       Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
-{ Want[q] := ValB[p,b]; Var[p,b] := VEmpty; BLen[p] := BLen[p] - 1 }
+{ Want[q] := ValB[p,b]; Var[p,b] := VEmpty }
 
 
