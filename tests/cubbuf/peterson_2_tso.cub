@@ -110,22 +110,19 @@ requires { Kind[p] = KProc && Kind[b] = KBuf &&
 transition t_flush_turn (p b)
 requires { Kind[p] = KProc && Kind[b] = KBuf &&
            Var[p,b] = VTurn &&
-           forall_other b2. (
-	       Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
+           forall_other b2. (Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
 { Turn := ValP[p,b]; Var[p,b] := VEmpty }
 
 transition t_flush_want_p (p b)
 requires { Kind[p] = KProc && Kind[b] = KBuf &&
            Var[p,b] = VWant && Proc[p,b] = p &&
-           forall_other b2. (
-	       Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
+           forall_other b2. (Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
 { Want[p] := ValB[p,b]; Var[p,b] := VEmpty }
 
 transition t_flush_want_q (p q b)
 requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
            Var[p,b] = VWant && Proc[p,b] = q &&
-           forall_other b2. (
-	       Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
+           forall_other b2. (Kind[b2] <> KBuf || b2 < b || Var[p,b2] = VEmpty) }
 { Want[q] := ValB[p,b]; Var[p,b] := VEmpty }
 
 

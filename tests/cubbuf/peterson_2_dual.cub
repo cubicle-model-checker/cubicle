@@ -51,7 +51,7 @@ requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
 transition t_L3_L4_Fence (p)
 requires { Kind[p] = KProc &&
            PC[p] = L3 &&
-	   forall_other b2. (Kind[b2] <> KBuf || Var[p,b2] = VEmpty) }
+	   forall_other b. (Kind[b] <> KBuf || Var[p,b] = VEmpty) }
 { PC[p] := L4 }
 
 
@@ -60,8 +60,9 @@ requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
            PC[p] = L4 &&	   
 	   Var[p,b] = VWant && Proc[p,b] = q &&
 	   ValB[p,b] = False && Own[p,b] = True &&
-           forall_other b2. (Kind[b2] <> KBuf || b < b2
-	       || Var[p,b2] <> VWant || Proc[p,b2] <> q || Own[p,b] = False) }
+           forall_other b2. (Kind[b2] <> KBuf || b < b2 ||
+	                     Var[p,b2] <> VWant || Proc[p,b2] <> q ||
+			     Own[p,b] = False) }
 { PC[p] := CS }
 
 transition t_L4_CS_R_WantO_False_rbuf (p q b)
@@ -69,11 +70,11 @@ requires { Kind[p] = KProc && Kind[q] = KProc && Kind[b] = KBuf &&
            PC[p] = L4 &&	   
 	   Var[p,b] = VWant && Proc[p,b] = q &&
 	   ValB[p,b] = False && Own[p,b] = False &&
-           forall_other b2. (Kind[b2] <> KBuf
-	       || b2 < b && Var[p,b2] <> VWant
-	       || b2 < b && Proc[p,b2] <> q
-	       || b2 < b && Own[p,b2] = False
-	       || b < b2 && Var[p,b2] = VEmpty) }
+           forall_other b2. (Kind[b2] <> KBuf ||
+	                     b2 < b && Var[p,b2] <> VWant ||
+	                     b2 < b && Proc[p,b2] <> q ||
+	                     b2 < b && Own[p,b2] = False ||
+	                     b < b2 && Var[p,b2] = VEmpty) }
 { PC[p] := CS }
 
 
@@ -81,18 +82,18 @@ transition t_L4_CS_R_Turn_Self_rown (p b)
 requires { Kind[p] = KProc && Kind[b] = KBuf &&
            PC[p] = L4 &&
 	   Var[p,b] = VTurn && ValP[p,b] = p && Own[p,b] = True &&
-           forall_other b2. (Kind[b2] <> KBuf || b < b2
-	       || Var[p,b2] <> VTurn || Own[p,b] = False) }
+           forall_other b2. (Kind[b2] <> KBuf || b < b2 ||
+	                     Var[p,b2] <> VTurn || Own[p,b] = False) }
 { PC[p] := CS }
 
 transition t_L4_CS_R_Turn_Self_rbuf (p b)
 requires { Kind[p] = KProc && Kind[b] = KBuf &&
            PC[p] = L4 &&
 	   Var[p,b] = VTurn && ValP[p,b] = p && Own[p,b] = False &&
-           forall_other b2. (Kind[b2] <> KBuf
-	       || b2 < b && Var[p,b2] <> VTurn
-	       || b2 < b && Own[p,b2] = False
-	       || b < b2 && Var[p,b2] = VEmpty) }
+           forall_other b2. (Kind[b2] <> KBuf ||
+	                     b2 < b && Var[p,b2] <> VTurn ||
+	                     b2 < b && Own[p,b2] = False ||
+	                     b < b2 && Var[p,b2] = VEmpty) }
 { PC[p] := CS }
 
 
