@@ -96,6 +96,7 @@ type psystem = {
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
   pchans : (loc * Hstring.t * chantype * Smt.Type.t) list;
+  pgrps : (loc * Hstring.t list) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
@@ -123,6 +124,7 @@ val psystem_of_decls:
   pconsts : (loc * Hstring.t * Smt.Type.t) list ->
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list ->
   pchans : (loc * Hstring.t * chantype * Smt.Type.t) list ->
+  pgrps : (loc * Hstring.t list) list ->
   ptype_defs : (loc * Ast.type_constructors) list ->
   pdecl list -> psystem
 

@@ -81,6 +81,7 @@ type system = {
   consts : (loc * Hstring.t * Smt.Type.t) list;
   arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
   chans : (loc * Hstring.t * chantype * Smt.Type.t) list;
+  grps : (loc * Hstring.t list) list;
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
@@ -134,6 +135,7 @@ type t_system = {
   t_consts : Hstring.t list; (** Existential constants *)
   t_arrays : Hstring.t list; (** Array names *)
   t_chans : Hstring.t list; (** Channel names *)
+  t_grps : Hstring.t list list; (** Channel groups *)
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)

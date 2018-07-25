@@ -1,0 +1,30 @@
+
+type kind = K1 | K2 | K3
+
+array Kind[proc] : kind
+var Seq : int
+chan C1[N,1] : int
+chan C2[N,1] : int
+group { C1, C2 }
+
+init (p) { Seq = 1 }
+
+invariant (p1 p2) { Kind[p1] = Kind[p2] }
+
+unsafe () { Seq = 5 }
+
+transition t1 ([p])
+requires { Kind[p] = K1 && Seq = 1 }
+{ Seq := 2; C1!1 }
+
+transition t2 ([p])
+requires { Kind[p] = K2 && Seq = 2 }
+{ Seq := 3; C2!2 }
+
+transition t31 ([p])
+requires { Kind[p] = K3 && Seq = 3 && C2? = 2 }
+{ Seq := 4 }
+
+transition t32 ([p])
+requires { Kind[p] = K3 && Seq = 4 && C1? = 1 }
+{ Seq := 5 }

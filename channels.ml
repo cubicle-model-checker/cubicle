@@ -86,6 +86,17 @@ let mk_hVal ht = H.make ("_e_val_" ^ (H.view ht)) (* value / type *)
 
 
 
+let channels = HTbl.create 17
+
+let is_chan = HTbl.mem channels
+
+let chan_type = HTbl.find channels
+
+
+
+let changrps = ref []
+
+
 
 let is_event a =
   let a = H.view a in
@@ -106,6 +117,11 @@ let same_thr (_, p1, _, _) (_, p2, _, _) = H.equal p1 p2
 let same_peer (_, _, q1, _) (_, _, q2, _) = H.equal q1 q2
 
 let same_chan (_, _, _, c1) (_, _, _, c2) = H.equal c1 c2
+
+let same_group (_, _, _, c1) (_, _, _, c2) =
+  List.exists (fun g -> HSet.mem c1 g && HSet.mem c2 g) !changrps
+
+let echan_type (_, _, _, c) = fst (HTbl.find channels c)
 
 let no_peer (_, _, q, _) = H.equal q hNone
 
@@ -129,13 +145,6 @@ let var_of_v v =
 
 
 
-let channels = HTbl.create 17
-
-let is_chan = HTbl.mem channels
-
-let chan_type = HTbl.find channels
-
-
 (* could extend op with Some/None to conditionally compute product *)
 let cartesian_product op l1 l2 =
   if l1 = [] then l2 else if l2 = [] then l1 else
@@ -155,13 +164,18 @@ module T = Smt.Type
 module S = Smt.Symbol
 
 (* let init_env cl = *)
-let init_env (cl:(H.t * Types.chantype * Smt.Type.t) list) : unit =
+let init_env (cl:(H.t * Types.chantype * Smt.Type.t) list)
+             (grps:(H.t list list)) : unit =
 
   List.iter (fun (c, ct, vt) ->
     HTbl.replace channels c (ct, vt);
     HTbl.replace channels (mk_hC c) (ct, vt);
   ) cl;
-  
+
+  changrps := List.map (fun cl ->
+    List.fold_left (fun g c -> HSet.add (mk_hC c) g) HSet.empty cl
+  ) grps;
+
   T.declare hDirection [hR; hS];
   T.declare hChannel (List.map (fun (c, _, _) -> mk_hC c) cl);
 

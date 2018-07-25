@@ -60,11 +60,12 @@ val same_dir : H.t * 'a * 'b * 'c -> H.t * 'd * 'e * 'f -> bool
 val same_thr : 'a * H.t * 'b * 'c -> 'd * H.t * 'e * 'f -> bool
 val same_peer : 'a * 'b * H.t * 'c -> 'd * 'e * H.t * 'f -> bool
 val same_chan : 'a * 'b * 'c * H.t -> 'd * 'e * 'f * H.t -> bool
+val same_group : 'a * 'b * 'c * H.t -> 'd * 'e * 'f * H.t -> bool
+val echan_type : 'a * 'b * 'c * H.t -> Types.chantype
 val no_peer : 'a * 'b * H.t * 'c -> bool
 val no_chan : 'a * 'b * 'c * H.t -> bool
 val is_recv : H.t * 'a * 'b * 'c -> bool
 val is_send : H.t * 'a * 'b * 'c -> bool
-
 val int_of_e : H.t -> int
 
 val var_of_v : H.t -> string
@@ -73,7 +74,7 @@ val is_chan : H.t -> bool
 
 val chan_type : H.t -> Types.chantype * Smt.Type.t
 
-val init_env : (H.t * Types.chantype * Smt.Type.t) list -> unit
+val init_env : (H.t * Types.chantype * Smt.Type.t) list -> H.t list list -> unit
 
 
 val cartesian_product : ('a -> 'a -> 'a) -> 'a list -> 'a list -> 'a list

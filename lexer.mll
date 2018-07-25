@@ -46,6 +46,7 @@
 	"let", LET;
 	"in", IN;
         "chan", CHAN;
+        "group", GROUP;
       ]
 	       
   let newline lexbuf =

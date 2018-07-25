@@ -64,6 +64,12 @@
     let mem x = S.mem x !s
   end
 
+  module Chans = struct
+    let s = ref S.empty
+    let add x = s := S.add x !s
+    let mem x = S.mem x !s
+  end
+
   let sort s = 
     if Constructors.mem s then Constr
     else if Globals.mem s then Glob
@@ -104,7 +110,7 @@
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
 %token EOF
-%token CHAN EMARK QUOTE
+%token CHAN GROUP EMARK QUOTE
 
 %nonassoc IN       
 %nonassoc prec_forall prec_exists
@@ -132,8 +138,8 @@ EOF
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
   let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
-  let pconsts, pglobals, parrays, pchans = $3 in
-  psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans ~ptype_defs $4
+  let pconsts, pglobals, parrays, pchans, pgrps = $3 in
+  psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans ~pgrps ~ptype_defs $4
    |> encode_psystem 
 }
 ;
@@ -151,19 +157,22 @@ decl :
   | function_decl { PFun  }
 
 symbold_decls :
-  | { [], [], [], [] }
+  | { [], [], [], [], [] }
   | const_decl symbold_decls
-      { let consts, vars, arrays, chans = $2 in
-        ($1::consts), vars, arrays, chans }
+      { let consts, vars, arrays, chans, grps = $2 in
+        ($1::consts), vars, arrays, chans, grps }
   | var_decl symbold_decls
-      { let consts, vars, arrays, chans = $2 in
-        consts, ($1::vars), arrays, chans }
+      { let consts, vars, arrays, chans, grps = $2 in
+        consts, ($1::vars), arrays, chans, grps }
   | array_decl symbold_decls
-      { let consts, vars, arrays, chans = $2 in
-        consts, vars, ($1::arrays), chans }
+      { let consts, vars, arrays, chans, grps = $2 in
+        consts, vars, ($1::arrays), chans, grps }
   | chan_decl symbold_decls
-      { let consts, vars, arrays, chans = $2 in
-        consts, vars, arrays, ($1::chans) }
+      { let consts, vars, arrays, chans, grps = $2 in
+        consts, vars, arrays, ($1::chans), grps }
+  | group_decl symbold_decls
+      { let consts, vars, arrays, chans, grps = $2 in
+        consts, vars, arrays, chans, ($1::grps) }
 ;
 
 function_decl :
@@ -191,15 +200,20 @@ array_decl:
         if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
-	Globals.add $2;
+	Arrays.add $2;
 	loc (), $2, ($4, $7)}
 ;
 
 chan_decl:
   | CHAN mident LEFTSQ chantype RIGHTSQ COLON lident { 
       if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
-      Arrays.add $2;
+      Chans.add $2;
       loc (), $2, $4, $7 }
+;
+
+group_decl:
+  | GROUP LEFTBR mident_list_plus RIGHTBR { 
+      loc (), $3 }
 ;
 
 chantype:
@@ -472,6 +486,11 @@ proc_name_list_plus:
 
 mident:
   | MIDENT { Hstring.make $1 }
+;
+
+mident_list_plus:
+  | mident { [$1] }
+  | mident COMMA mident_list_plus { $1::$3 }
 ;
 
 lidents_plus:

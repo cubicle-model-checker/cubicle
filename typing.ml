@@ -40,6 +40,8 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
+  | UnknownChannel of Hstring.t
+  | DifferentChanType of Hstring.t * Hstring.t
 
 exception Error of error * loc
 
@@ -94,6 +96,11 @@ let report fmt = function
       fprintf fmt "unknown type %a" Hstring.print s
   | Smt (Smt.UnknownSymb s) ->
       fprintf fmt "unknown symbol %a" Hstring.print s
+  | UnknownChannel s ->
+      fprintf fmt "unknown channel %a" Hstring.print s
+  | DifferentChanType (s1, s2) ->
+      fprintf fmt "different channel types in same group %a %a"
+        Hstring.print s1 Hstring.print s2
 
 let error e l = raise (Error (e,l))
 
@@ -187,7 +194,7 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc q) loc
 	  with Not_found -> error (UnknownName q) loc
 	end;
-      Smt.Symbol.type_of c
+      (try Smt.Symbol.type_of c with Not_found -> error (UnknownChannel c) loc)
   | Send _ -> failwith "Typing.term : Send should not be typed"
 
 let assignment ?(init_variant=false) g x (_, ty) = 
@@ -271,7 +278,7 @@ let sends loc args =
        (* if Hstring.list_mem c !dc then error (DuplicateSend c) loc; *)
        let ty_v =
 	 try Smt.Symbol.type_of c
-         with Not_found -> error (UnknownGlobal c) loc in
+         with Not_found -> error (UnknownChannel c) loc in
        begin
          (* if not (Channels.is_chan c) then error (MustBeChan c) loc; *)
          (* CHECK THAT V IS A CHANNEL (and in regular accesses check it's not*)
@@ -309,8 +316,8 @@ let check_lets loc args l =
     (fun (x, t) ->
      let _ = term loc args t in ()
     ) l
-	       
-let transitions = 
+
+let transitions =
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) -> 
        unique (fun x-> error (DuplicateName x) loc) args; 
@@ -343,6 +350,7 @@ let init_global_env s =
   declare_type (dummypos, (mybool, [mytrue; myfalse]));*)
   let l = ref [] in
   let chans = ref [] in
+  let grps = ref [] in
   List.iter 
     (fun (loc, n, t) -> 
        declare_symbol loc n [] t;
@@ -360,7 +368,23 @@ let init_global_env s =
        declare_symbol loc n [] vt;
        chans := (n, ct, vt) :: !chans;
        l := (n, vt)::!l) s.chans;
-  Channels.init_env !chans;
+  List.iter 
+    (fun (loc, cl) ->
+       List.iter (fun c ->
+         if not (List.exists (fun (c2, _, _) -> Hstring.equal c c2) !chans)
+           then error (UnknownChannel c) loc;
+         match cl with
+         | [] -> ()
+         | c :: cl ->
+            let _, ct, _ = List.find (fun (c2, _, _) ->
+                             Hstring.equal c c2) !chans in
+            try let c2, _, _ = List.find (fun (c2, ct2, _) ->
+                                 ct <> ct2) !chans in
+                error (DifferentChanType (c, c2)) loc
+            with Not_found -> ()
+       ) cl;
+       grps := cl :: !grps) s.grps;
+  Channels.init_env !chans !grps;
   !l
 
 
@@ -589,6 +613,7 @@ let system s =
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
     t_chans = List.map (fun (_,c,_,_) -> c) s.chans;
+    t_grps = List.map (fun (_,g) -> g) s.grps;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

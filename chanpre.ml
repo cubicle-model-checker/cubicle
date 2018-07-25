@@ -90,12 +90,12 @@ let make_recv_send_combinations sends evts urevts ghb =
     ) urevts src in
 
     (* Adjust ghb for this combination *)
-    let ghb = List.fold_left (fun ghb (((_, _, _, sc), (se, _)), (re, _)) ->
+    let ghb = List.fold_left (fun ghb ((eds, (se, _)), (re, _)) ->
       let ghb = Chanrel.Rel.add_lt se re ghb in (* rf *)
-      HMap.fold (fun se2 ((sd2, _, _, sc2), _) ghb  -> (* fr *)
-        if H.equal sd2 hS && H.equal sc sc2 &&
-          Chanrel.Rel.mem_lt se se2 ghb then
-            Chanrel.Rel.add_lt re se2 ghb
+      HMap.fold (fun e (ed, _) ghb  -> (* fr *)
+        if is_send ed && (same_chan eds ed || same_group eds ed) &&
+          Chanrel.Rel.mem_lt se e ghb then
+            Chanrel.Rel.add_lt re e ghb
         else ghb
       ) evts ghb
     ) ghb src in
@@ -141,7 +141,7 @@ fr (when S sat R) :
 
 Heuristics :
 n-n : a new send MUST satisfy the oldest recv in ro (or none if lossy)
-n-1 : a new send MUST satisfy the oldest recv in ro / thread (non if lossy)
+n-1 : a new send MUST satisfy the oldest recv in ro / thread (none if lossy)
 1-n : a new send CAN'T satisfy the oldest recv in ro if it is so-before
       an older send that satisfies old recv that are before the oldest
 1-1 : a new send CAN'T satisfy the oldest recv in ro / thread if it is so-before
@@ -280,36 +280,37 @@ let satisfy_recvs sa =
   let ghb' = ghb in
   
   (* Generate an id for each new send event *)
-  let isds, eids' = HEvtMap.fold (fun ((_,p,_,_) as dpqc) vals (isds, eids') ->
+  let isds, eids' = HEvtMap.fold (fun ((_,p,_,_) as ed) vals (isds, eids') ->
     let eid, eids' = fresh_eid eids' p in
-    HEvtMap.add dpqc (mk_hE eid, vals) isds, eids'
+    HEvtMap.add ed (mk_hE eid, vals) isds, eids'
   ) sds (HEvtMap.empty, eids') in
 
   (* Generate an id for each new recv event *)
-  let ircs, eids' = HEvtMap.fold (fun ((_,p,_,_) as dpqc) vals (ircs, eids') ->
+  let ircs, eids' = HEvtMap.fold (fun ((_,p,_,_) as ed) vals (ircs, eids') ->
     let eid, eids' = fresh_eid eids' p in
-    HEvtMap.add dpqc (mk_hE eid, vals) ircs, eids'
+    HEvtMap.add ed (mk_hE eid, vals) ircs, eids'
   ) rcs (HEvtMap.empty, eids') in
 
   (* Extend ghb according to the following rules :
        New recv event :
          *-n : ghb + (eo ^ RR) (ro)
          *-1 : ghb + (po ^ RR) (ro)
-         csl : ghb + (po ^ R* ) (ro / co)   *)
-  let ghb' = add_ievts_rels ghb' ircs (fun (_, p1, _, c1) _ ->
-    let ct, _ = chan_type c1 in
+         csl : ghb + (po ^ R* ) (ro / co) *)
+  let ghb' = add_ievts_rels ghb' ircs (fun ed1 _ ->
+    let ct = echan_type ed1 in
     let el =
       if ct = CCAUSAL then
-        HMap.fold (fun e2 ((_, p2, _, c2), _) el ->
-          if H.equal c1 c2 && H.equal p1 p2 then e2 :: el
+        HMap.fold (fun e2 (ed2, _) el ->
+            if (same_chan ed1 ed2 || same_group ed1 ed2) &&
+                 same_thr ed1 ed2 then e2 :: el
           else el
         ) sevts []
       else [] in
-    HMap.fold (fun e2 ((_, p2, _, c2), _) el ->
-      if H.equal c1 c2 then
+    HMap.fold (fun e2 (ed2, _) el ->
+      if same_chan ed1 ed2 || same_group ed1 ed2 then
         match ct with
         | CNN | C1N | CRSC -> e2 :: el
-        | CN1 | C11 | CCAUSAL -> if H.equal p1 p2 then e2 :: el else el
+        | CN1 | C11 | CCAUSAL -> if same_thr ed1 ed2 then e2 :: el else el
         | CASYNC -> el
       else el
     ) revts el
@@ -320,13 +321,13 @@ let satisfy_recvs sa =
          n-* : ghb + (eo ^ SS) (so)
          1-* : ghb + (po ^ SS) (so)
          csl : ghb + (po ^ SS) (so) *)
-  let ghb' = add_ievts_rels ghb' isds (fun (_, p1, _, c1) _ ->
-    let ct, _ = chan_type c1 in
-    HMap.fold (fun e2 ((_, p2, _, c2), _) el ->
-      if H.equal c1 c2 then
+  let ghb' = add_ievts_rels ghb' isds (fun ed1 _ ->
+    let ct = echan_type ed1 in
+    HMap.fold (fun e2 (ed2, _) el ->
+      if same_chan ed1 ed2 || same_group ed1 ed2 then
         match ct with
         | CNN | CN1 | CRSC -> e2 :: el
-        | C1N | C11 | CCAUSAL -> if H.equal p1 p2 then e2 :: el else el
+        | C1N | C11 | CCAUSAL -> if same_thr ed1 ed2 then e2 :: el else el
         | CASYNC -> el
       else el
     ) sevts []

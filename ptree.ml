@@ -172,6 +172,7 @@ type psystem = {
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
   pchans : (loc * Hstring.t * chantype * Smt.Type.t) list;
+  pgrps : (loc * Hstring.t list) list;
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
@@ -600,7 +601,7 @@ let encode_ptransition
     ) dguards
 
 let encode_psystem
-    {pglobals; pconsts; parrays; pchans; ptype_defs;
+    {pglobals; pconsts; parrays; pchans; pgrps; ptype_defs;
      pinit = init_loc, init_vars, init_f;
      pinvs; punsafe; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
@@ -641,6 +642,7 @@ let encode_psystem
     consts = pconsts;
     arrays = parrays;
     chans = pchans;
+    grps = pgrps;
     type_defs = ptype_defs;
     init;
     invs;
@@ -650,7 +652,8 @@ let encode_psystem
       
 
 
-let psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans ~ptype_defs pdecls =
+let psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans
+                     ~pgrps ~ptype_defs pdecls =
   let inits, pinvs, punsafe, ptrans =
     List.fold_left (fun (inits, invs, unsafes, trans) -> function
         | PInit i -> i :: inits, invs, unsafes, trans
@@ -669,6 +672,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~pchans ~ptype_defs pdecls =
     pconsts;
     parrays;
     pchans;
+    pgrps;
     ptype_defs;
     pinit;
     pinvs;
