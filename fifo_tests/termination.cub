@@ -31,20 +31,15 @@ var TokenInTransit : bool
 
 var Terminated : bool
 
-var Ghost : int
-
 chan Communication[CAUSAL] : message
 
 init(i) {
-  Ghost = 0 &&
   Color[i] = Black
   && Active[i] = True
   && Visited[i] = False
   && Terminated = False
   && TokenInTransit = False
 }
-
-invariant { Ghost < 0 }
 
 (* ---------------- *)
 
@@ -72,14 +67,13 @@ transition AppStop([i])
 requires { Active[i] = True }
 {
   Active[i] := False;
-  Ghost := Ghost + 1;
 }
 
 (* ---------------- *)
 (* Token actions *)
 
 transition TokenDetection([i])
-requires { Token = i && TokenInTransit = False && Color[i] = White && forall_other j. Visited[j] = True && Ghost = 1 }
+requires { Token = i && TokenInTransit = False && Color[i] = White && forall_other j. Visited[j] = True }
 { Terminated := True }
 
 transition TokenReceive1([i])
@@ -113,5 +107,4 @@ requires { Token = i && TokenInTransit = False && Active[i] = False && Visited[i
   Visited[i] := True;
   TokenInTransit := True;
   Communication!MToken;
-  Ghost := Ghost - 1;
 }
