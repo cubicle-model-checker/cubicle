@@ -20,7 +20,7 @@ open Util
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
-    
+
 type atom =
   | AVar of Variable.t
   | AAtom of Atom.t
@@ -42,7 +42,7 @@ type formula =
 type term_or_formula = PF of formula | PT of term
 
 type cformula = formula
-  
+
 (* type atom = [ PAtom of Atom.t ] *)
 
 (* type clause = [atom | POr of atom list] *)
@@ -92,6 +92,7 @@ type psystem = {
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
+  pwhyinvs : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
 }
 
@@ -100,6 +101,7 @@ type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
+  | PWhyInv of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
 

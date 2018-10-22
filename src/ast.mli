@@ -79,7 +79,8 @@ type system = {
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
-  unsafe : (loc * Variable.t list * SAtom.t) list;  
+  unsafe : (loc * Variable.t list * SAtom.t) list;
+  whyinvs : (loc * Variable.t list * SAtom.t) list;
   trans : transition_info list;
   max_arity : int;
 }
@@ -89,7 +90,7 @@ type system = {
 (** {2 Typed transition system} *)
 
 (** the kind of nodes *)
-type kind = 
+type kind =
   | Approx (** approximation *)
   | Orig   (** original unsafe formula *)
   | Node   (** reguar node *)
@@ -97,7 +98,7 @@ type kind =
 
 
 type node_cube =
-    { 
+    {
       cube : Cube.t;          (** the associated cube *)
       tag : int;              (** a unique tag (negative for approximations
                                   and positive otherwise) *)

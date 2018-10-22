@@ -30,7 +30,7 @@
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
 
   type pop = PEq | PNeq | PLe | PLt | PGe | PGt
-      
+
   let pop_to_op t1 t2 = function
     | PEq -> t1, t2, Eq
     | PNeq -> t1, t2, Neq
@@ -73,7 +73,7 @@
   end
 
   let coef = function Plus -> 1 | Minus -> -1
-    
+
   let sort s =
     if Constructors.mem s then Constr
     else if Globals.mem s then Glob
@@ -97,7 +97,7 @@
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
-%token SIZEPROC 
+%token SIZEPROC WHY3
 %token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
@@ -147,7 +147,7 @@ EOF
 }
 ;
 
-decl_list : 
+decl_list :
   | dl=list(decl) { dl }
 ;
 
@@ -157,6 +157,12 @@ decl :
   | u=unsafe { PUnsafe u }
   | t=transition { PTrans t }
   | function_decl { PFun }
+  | w=why3_invariant { PWhyInv w }
+;
+
+why3_invariant :
+  | WHY3 LEFTBR e=expr RIGHTBR { loc (), [], e }
+  | WHY3 LEFTPAR li=lidents RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), li, e }
 ;
 
 symbold_decls :

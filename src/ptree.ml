@@ -24,7 +24,7 @@ open Format
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
-    
+
 type atom =
   | AVar of Variable.t
   | AAtom of Atom.t
@@ -168,6 +168,7 @@ type psystem = {
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
+  pwhyinvs : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
 }
 
@@ -176,6 +177,7 @@ type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
+  | PWhyInv of (loc * Variable.t list * cformula)
   | PTrans of ptransition
   | PFun
 
@@ -245,10 +247,10 @@ let rec apply_subst sigma (f:formula) = match f with
     if nf == nf' then f else PNot nf'
   | PAnd l ->
     let l' = List.map (apply_subst sigma) l in
-    if List.for_all2 (fun c c' -> c == c') l l' then f else PAnd l'  
+    if List.for_all2 (fun c c' -> c == c') l l' then f else PAnd l'
   | POr l ->
     let l' = List.map (apply_subst sigma) l in
-    if List.for_all2 (fun c c' -> c == c') l l' then f else POr l'  
+    if List.for_all2 (fun c c' -> c == c') l l' then f else POr l'
   | PImp (a, b) ->
     let a', b' = apply_subst sigma a, apply_subst sigma b in
     if a == a' && b == b' then f else PImp (a', b')
@@ -342,19 +344,19 @@ let rec nnf = function
   | PExists_other (vs, f) -> PForall_other (vs, nnf f)
 
 
-let list_of_conj = function 
+let list_of_conj = function
   | PAnd l -> l
   | (* PAtom _ as *) a -> [a]
 
-let list_of_disj = function 
+let list_of_disj = function
   | POr l -> l
   | (* PAtom _ as *) a -> [a]
 
-let list_of_cnf = function 
+let list_of_cnf = function
   | PAnd l -> l
   | (* (PAtom _ | POr _) as *) f -> [ f ]
 
-let list_of_dnf = function 
+let list_of_dnf = function
   | POr l -> l
   | (* (PAtom _ | PAnd _) as *) f -> [ f ]
 
@@ -366,7 +368,7 @@ let cross a b =
     |> List.rev
     ) [] (list_of_dnf a)
   |> (fun l -> POr l)
-    
+
 let rec dnf_aux = function
   | PAtom _ | PNot _ as lit -> lit
   | PAnd (f :: l) ->
@@ -454,7 +456,7 @@ let satom_of_atom_list =
       | PAtom a -> SAtom.add (conv_atom a) acc
       | x -> eprintf "%a@." print x;  assert false
     ) SAtom.empty
-  
+
 let satom_of_cube = function
   | PAtom a -> SAtom.singleton (conv_atom a)
   | PAnd l -> satom_of_atom_list l
@@ -503,7 +505,7 @@ let rec forall_to_others tr_args f = match f with
     PAnd (PForall_other ([v], f) ::
           List.map (fun a -> apply_subst [v, PT (TVar a)] f) tr_args)
   | PForall  _ | PExists _ | PForall_other _ | PExists_other _ -> f
- 
+
 
 let uguard_of_formula = function
   | PForall_other ([v], f) -> v, satoms_of_dnf f
@@ -582,15 +584,23 @@ let encode_ptransition
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
-     pinvs; punsafe; ptrans} =
+     pinvs; punsafe; pwhyinvs; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
     List.fold_left (fun acc (inv_loc, inv_vars, inv_f) ->
-        let other_vars, dnf = unsafes_of_formula inv_f in
-        let inv_vars = inv_vars @ other_vars in
-        List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
-      ) [] pinvs
+      let other_vars, dnf = unsafes_of_formula inv_f in
+      let inv_vars = inv_vars @ other_vars in
+      List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
+    ) [] pinvs
+    |> List.rev
+  in
+  let whyinvs =
+    List.fold_left (fun acc (inv_loc, inv_vars, inv_f) ->
+      let other_vars, dnf = unsafes_of_formula inv_f in
+      let inv_vars = inv_vars @ other_vars in
+      List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
+    ) [] pwhyinvs
     |> List.rev
   in
   let unsafe =
@@ -626,23 +636,33 @@ let encode_psystem
     init;
     invs;
     unsafe;
+    whyinvs;
     trans;
     max_arity
   }
-      
 
+type rsyst = {
+  inits : (loc * Variable.t list * cformula) list;
+  invs : (loc * Variable.t list * cformula) list;
+  unsafes : (loc * Variable.t list * cformula) list;
+  whyinvs : (loc * Variable.t list * cformula) list;
+  trans : ptransition list;
+}
+
+let ers = { inits = []; invs = []; unsafes = []; whyinvs = []; trans = [] }
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
-  let inits, pinvs, punsafe, ptrans =
-    List.fold_left (fun (inits, invs, unsafes, trans) -> function
-        | PInit i -> i :: inits, invs, unsafes, trans
-        | PInv i -> inits, i :: invs, unsafes, trans
-        | PUnsafe u -> inits, invs, u :: unsafes, trans
-        | PTrans t -> inits, invs, unsafes, t :: trans
-        | PFun -> inits, invs, unsafes, trans
-      ) ([],[],[],[]) pdecls
+  let rs =
+    List.fold_left (fun rs -> function
+        | PInit i -> { rs with inits = i :: rs.inits }
+        | PInv i -> { rs with invs = i :: rs.invs }
+        | PUnsafe u -> { rs with unsafes = u :: rs.unsafes }
+        | PWhyInv w -> { rs with whyinvs = w :: rs.whyinvs }
+        | PTrans t -> { rs with trans = t :: rs.trans }
+        | PFun -> rs
+      ) ers pdecls
   in
-  let pinit = match inits with
+  let pinit = match rs.inits with
     | [i] -> i
     | [] -> failwith "No inititial formula."
     | _::_ -> failwith "Only one initital formula allowed."
@@ -652,11 +672,12 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     parrays;
     ptype_defs;
     pinit;
-    pinvs;
-    punsafe;
-    ptrans }
-  
-  
+    pinvs = rs.invs;
+    punsafe = rs.unsafes;
+    pwhyinvs = rs.whyinvs;
+    ptrans = rs.trans}
+
+
 
 let print_type_defs fmt =
   List.iter (function
@@ -675,7 +696,7 @@ let print_globals fmt  =
       fprintf fmt "@{<fg_magenta>var@} @{<fg_red>%a@} : @{<fg_green>%a@}@."
         Hstring.print g Hstring.print ty
     )
-     
+
 let print_arrays fmt  =
   List.iter (fun (_, a, (args_ty, ty)) ->
       fprintf fmt "@{<fg_magenta>array@} @{<fg_red>%a@}[%a] : \
@@ -697,7 +718,7 @@ let print_dnf =
    Pretty.print_list
      (fun fmt -> fprintf fmt "@[<hov 4>%a@]" SAtom.print_inline)
      "@ || "
-     
+
 let print_init fmt (_, vars, dnf) =
   fprintf fmt "@{<fg_magenta>init@} (%a) {@ %a@ }@,"
     Variable.print_vars vars

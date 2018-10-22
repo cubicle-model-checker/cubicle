@@ -33,10 +33,13 @@ invariant() { CountDown < 0 }
        /\ Cardinality ({ i \in ProcSet : rval[i] = Down}) < NP
        /\ Cardinality ({ i \in ProcSet : rval[i] = Right}) < NP
 *)
-unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop }
-unsafe() { 1 < CountStop  }
-unsafe() { Alive = 0 && 1 < CountRight && CountDown = 0 && CountStop = 0 }
-unsafe() { Alive = 0 && 1 < CountDown && CountRight = 0 && CountStop = 0 }
+invariant(i j) { Rval[i] = Stop && Rval[j] = Stop }
+invariant() { 1 < CountStop  }
+(* unsafe() { Alive = 0 && 1 < CountRight && CountDown = 0 && CountStop = 0 } *)
+(* unsafe() { Alive = 0 && 1 < CountDown && CountRight = 0 && CountStop = 0 } *)
+invariant() { CountRight > 0 && Y = False }
+(* unsafe() { Alive = 0 && CountDown = 0 && Y = True && CountStop = 0 } *)
+unsafe() { Alive = 0 && CountDown = 0 && Y = True && CountStop = 0 }
 
 (* ================================================================ *)
 

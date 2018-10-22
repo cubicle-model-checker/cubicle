@@ -215,6 +215,8 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
       pp_hstring_uncap e
   ) ninit_elems
 
+(* Can be replaced with List.init but Functory is not compatible
+   with the last versions of OCaml *)
 let init n f =
   let rec aux i acc =
     if i = n then List.rev acc
@@ -382,12 +384,15 @@ let pp_invariants invs fmt s =
   let sinvs = List.map (
     fun (_, vl, sa) -> (vl, sa)) (List.rev_append s.unsafe s.invs)
   in
+  let swinvs = List.map (
+    fun (_, vl, sa) -> (vl, sa)) s.whyinvs
+  in
   let invs = List.map (
     fun {Ast.cube = {Cube.vars; Cube.litterals}} ->
       let wvars = List.map Variable.(subst subst_ptowp) vars in
       let wlit = SAtom.subst Variable.subst_ptowp litterals in
       (wvars, wlit)) invs in
-  pp_print_list pp_invariant fmt (List.rev_append invs sinvs)
+  pp_print_list pp_invariant fmt (invs @ sinvs @ swinvs)
 
 let pp_forall_others pl fmt tl =
   let pl' = List.map (fun h -> Hstring.make ((Hstring.view h)^"'")) pl in
