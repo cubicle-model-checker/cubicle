@@ -1,0 +1,449 @@
+module Splitter2_count
+
+use array.Array
+use int.Int
+use ref.Refint
+use random.Random
+clone impset.Impset with type elt = int
+
+scope import Directions
+
+  type directions = None | Right | Stop | Down
+
+  let (=) (a b: directions): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | None, None | Right, Right | Stop, Stop | Down, Down -> true
+      | _ -> false
+  end
+
+end
+
+scope import Pc
+
+  type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
+
+  let (=) (a b: pc): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | PC0, PC0 | PC1, PC1 | PC2, PC2 | PC3, PC3 | PC4, PC4 | PC5, PC5 |
+        PC6, PC6 | PC7, PC7 | PC8, PC8 | PC9, PC9 -> true
+      | _ -> false
+  end
+
+end
+
+val coin () : bool
+
+type proc = int
+
+type system = {
+  mutable x : proc;
+  mutable y : bool;
+  aliveSet : Impset.t;
+  stopSet : Impset.t;
+  downSet : Impset.t;
+  rightSet : Impset.t;
+  rval : array directions;
+  pC : array pc;
+}
+let splitter2_count (_n : int) : system
+  diverges
+  requires { 0 < _n }
+  ensures { Impset.cardinal result.stopSet <= 1 }
+  ensures { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+             i <> j /\ result.rval[i] = Stop -> result.rval[j] <> Stop }
+=
+  let s = {
+    y = false;
+    aliveSet = Impset.empty ();
+    stopSet = Impset.empty ();
+    downSet = Impset.empty ();
+    rightSet = Impset.empty ();
+    rval = Array.make _n None;
+    pC = Array.make _n PC0;
+    x = Random.random_int _n
+  } in
+
+
+  while true do
+
+    (* Cubicle invariant from brab *)
+
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC6 }
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC2 }
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC4 }
+
+    (* Cubicle nodes 1 *)
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.pC[i] <> PC5 }
+
+    (* Proven goal with Cubicle nodes 1 *)
+
+    invariant { forall i : int. 0 <= i < _n /\ not s.y -> s.rval[i] <> Stop }
+
+    (* Proven goals with Cubicle nodes 4 *)
+
+    invariant { Impset.cardinal s.stopSet <= 1 }
+
+    (* Proven goals with Cubicle nodes 5 *)
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.rval[i] = Stop -> s.rval[j] <> Stop }
+
+    (* Cubicle nodes 2 *)
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC1 ->
+                  Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC2 ->
+                  Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC3 ->
+                  Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC4 ->
+                  Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC5 ->
+                  Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC6 ->
+                  Impset.mem i s.aliveSet }
+
+    (* Trad from above in terms of cardinality *)
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC1 ->
+                  Impset.cardinal s.aliveSet >= 1 }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC2 ->
+                  Impset.cardinal s.aliveSet >= 1 }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC3 ->
+                  Impset.cardinal s.aliveSet >= 1 }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC4 ->
+                  Impset.cardinal s.aliveSet >= 1 }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC5 ->
+                  Impset.cardinal s.aliveSet >= 1 }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC6 ->
+                  Impset.cardinal s.aliveSet >= 1 }
+
+    (* ----------- *)
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC0 ->
+                  not Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC7 ->
+                  not Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC8 ->
+                  not Impset.mem i s.aliveSet }
+
+    invariant { forall i : int. 0 <= i < _n /\ s.pC[i] = PC9 ->
+                  not Impset.mem i s.aliveSet }
+
+    (* Cubicle nodes 3 *)
+
+    invariant { forall i : int. 0 <= i < _n /\
+                 s.pC[i] = PC6 -> s.x <> i }
+
+    invariant { forall i : int. 0 <= i < _n /\
+                 s.pC[i] = PC9 -> s.x <> i }
+
+    (* Cubicle nodes 4 *)
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.pC[i] = PC5 -> s.pC[j] <> PC5 }
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.pC[i] = PC5 /\ s.pC[j] = PC3 -> s.x <> j }
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.pC[i] = PC5 /\ s.pC[j] = PC4 -> s.x <> j }
+
+    invariant { forall i : int. 0 <= i < _n /\
+                  s.pC[i] = PC0 /\ not s.y -> Impset.cardinal s.stopSet = 0 }
+
+    invariant { forall i : int. 0 <= i < _n /\
+                  s.pC[i] = PC1 /\ not s.y /\ s.x = i -> Impset.cardinal s.stopSet = 0 }
+
+    invariant { forall i : int. 0 <= i < _n /\
+                  s.pC[i] = PC3 /\ s.x = i -> Impset.cardinal s.stopSet = 0 }
+
+    invariant { forall i : int. 0 <= i < _n /\
+                  s.pC[i] = PC4 /\ s.x = i -> Impset.cardinal s.stopSet = 0 }
+
+    invariant { forall i : int. 0 <= i < _n /\
+                  s.pC[i] = PC5 -> Impset.cardinal s.stopSet = 0 }
+
+    (* Cubicle nodes 5 *)
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.rval[i] = Stop -> s.pC[j] <> PC5 }
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.rval[i] = Stop /\ s.x = j -> s.pC[j] <> PC4 }
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.rval[i] = Stop /\ s.x = j -> s.pC[j] <> PC3 }
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC4 }
+
+    invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC3 }
+
+    (* Hard goals *)
+
+    invariant { s.y /\
+                Impset.cardinal s.aliveSet = 0 ->
+                Impset.cardinal s.rightSet > 0 \/
+                Impset.cardinal s.stopSet > 0 \/
+                Impset.cardinal s.downSet > 0 }
+
+    invariant { s.y /\
+                Impset.cardinal s.aliveSet = 0 ->
+                Impset.cardinal s.stopSet > 0 \/
+                Impset.cardinal s.downSet > 0 }
+
+    invariant { Impset.cardinal s.aliveSet = 0 /\
+                Impset.cardinal s.rightSet > 0 ->
+                Impset.cardinal s.stopSet > 0 \/
+                Impset.cardinal s.downSet > 0 }
+
+    invariant { s.y /\
+                Impset.cardinal s.aliveSet = 0 /\
+                Impset.cardinal s.rightSet > 0 ->
+                Impset.cardinal s.stopSet > 0 \/
+                Impset.cardinal s.downSet > 0 }
+
+    invariant { s.y /\
+                Impset.cardinal s.downSet = 0 /\
+                Impset.cardinal s.aliveSet = 0 ->
+                Impset.cardinal s.stopSet > 0 }
+
+    invariant { Impset.cardinal s.stopSet > 0 \/
+                Impset.cardinal s.downSet > 0 -> s.y }
+
+    (* invariant { Impset.cardinal s.aliveSet = 0 /\ *)
+    (*             Impset.cardinal s.rightSet = 0 /\ *)
+    (*             Impset.cardinal s.stopSet = 0 -> *)
+    (*             Impset.cardinal s.downSet = 0 } *)
+
+    invariant { Impset.cardinal s.aliveSet = 0 /\
+                Impset.cardinal s.downSet = 0 /\
+                Impset.cardinal s.rightSet >= 1 ->
+                Impset.cardinal s.stopSet = 1 }
+
+    invariant { Impset.cardinal s.aliveSet = 0 /\
+                Impset.cardinal s.downSet = 0 /\
+                Impset.cardinal s.stopSet = 0 ->
+                Impset.cardinal s.rightSet <= 1 }
+
+    invariant { Impset.cardinal s.aliveSet = 0 /\
+                Impset.cardinal s.rightSet = 0 /\
+                Impset.cardinal s.downSet > 1 ->
+                Impset.cardinal s.stopSet = 1 }
+
+    (* invariant { forall i : int. 0 <= i < _n /\ *)
+    (*             s.pC[i] = PC2 } *)
+
+    invariant { Impset.cardinal s.rightSet > 0 -> s.y }
+
+
+    (* invariant { Impset.cardinal s.downSet < _n } *)
+    (* invariant { Impset.cardinal s.rightSet < _n } *)
+
+    let _p0 = Random.random_int _n in
+    (*If there is more than one value,
+    the variables could be equal, need to work on it*)
+
+    (*spl0*)
+    if coin () && s.pC[_p0] = PC0
+    then begin
+      label Spl0 in
+      Impset.add _p0 s.aliveSet;
+      s.x <- _p0;
+      for _j1 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j1 ->
+                      (_p = _p0 -> s.pC[_p] = PC1) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl0)) }
+        invariant { forall _p:proc. _j1 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl0) }
+
+        s.pC[_j1] <- (if _j1 = _p0 then PC1
+                     else (*true*) s.pC[_j1])
+      done;
+    end
+
+    (*spl3*)
+    else if coin () && s.pC[_p0] = PC3
+    then begin
+      label Spl3 in
+      s.y <- true;
+      for _j6 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j6 ->
+                      (_p = _p0 -> s.pC[_p] = PC4) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl3)) }
+        invariant { forall _p:proc. _j6 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl3) }
+
+        s.pC[_j6] <- (if _j6 = _p0 then PC4
+                     else (*true*) s.pC[_j6])
+      done;
+    end
+
+    (*spl1a*)
+    else if coin () && s.y && s.pC[_p0] = PC1
+    then begin
+      label Spl1a in
+      for _j2 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j2 ->
+                      (_p = _p0 -> s.pC[_p] = PC2) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl1a)) }
+        invariant { forall _p:proc. _j2 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl1a) }
+
+        s.pC[_j2] <- (if _j2 = _p0 then PC2
+                     else (*true*) s.pC[_j2])
+      done;
+    end
+
+    (*spl1b*)
+    else if coin () && not s.y && s.pC[_p0] = PC1
+    then begin
+      label Spl1b in
+      for _j3 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j3 ->
+                      (_p = _p0 -> s.pC[_p] = PC3) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl1b)) }
+        invariant { forall _p:proc. _j3 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl1b) }
+
+        s.pC[_j3] <- (if _j3 = _p0 then PC3
+                     else (*true*) s.pC[_j3])
+      done;
+    end
+
+    (*spl4a*)
+    else if coin () && s.x = _p0 && s.pC[_p0] = PC4
+    then begin
+      label Spl4a in
+      for _j7 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j7 ->
+                      (_p = _p0 -> s.pC[_p] = PC5) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl4a)) }
+        invariant { forall _p:proc. _j7 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl4a) }
+
+        s.pC[_j7] <- (if _j7 = _p0 then PC5
+                     else (*true*) s.pC[_j7])
+      done;
+    end
+
+    (*spl4b*)
+    else if coin () && s.x <> _p0 && s.pC[_p0] = PC4
+    then begin
+      label Spl4b in
+      for _j8 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j8 ->
+                      (_p = _p0 -> s.pC[_p] = PC6) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl4b)) }
+        invariant { forall _p:proc. _j8 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl4b) }
+
+        s.pC[_j8] <- (if _j8 = _p0 then PC6
+                     else (*true*) s.pC[_j8])
+      done;
+    end
+
+    (*spl2*)
+    else if coin () && s.pC[_p0] = PC2
+    then begin
+      label Spl2 in
+      Impset.add _p0 s.rightSet;
+      Impset.remove _p0 s.aliveSet;
+      for _j4 = 0 to s.rval.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j4 ->
+                      (_p = _p0 -> s.rval[_p] = Right) /\
+                      (_p <> _p0 -> s.rval[_p] = (s.rval[_p] at Spl2)) }
+        invariant { forall _p:proc. _j4 <= _p < _n ->
+                      s.rval[_p] = (s.rval[_p] at Spl2) }
+
+        s.rval[_j4] <- (if _j4 = _p0 then Right
+                       else (*true*) s.rval[_j4])
+      done;
+      for _j5 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j5 ->
+                      (_p = _p0 -> s.pC[_p] = PC7) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl2)) }
+        invariant { forall _p:proc. _j5 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl2) }
+
+        s.pC[_j5] <- (if _j5 = _p0 then PC7
+                     else (*true*) s.pC[_j5])
+      done;
+    end
+
+    (*spl5*)
+    else if coin () && s.pC[_p0] = PC5
+    then begin
+      label Spl5 in
+      Impset.add _p0 s.stopSet;
+      Impset.remove _p0 s.aliveSet;
+      for _j9 = 0 to s.rval.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j9 ->
+                      (_p = _p0 -> s.rval[_p] = Stop) /\
+                      (_p <> _p0 -> s.rval[_p] = (s.rval[_p] at Spl5)) }
+        invariant { forall _p:proc. _j9 <= _p < _n ->
+                      s.rval[_p] = (s.rval[_p] at Spl5) }
+
+        s.rval[_j9] <- (if _j9 = _p0 then Stop
+                       else (*true*) s.rval[_j9])
+      done;
+      for _j10 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j10 ->
+                      (_p = _p0 -> s.pC[_p] = PC8) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl5)) }
+        invariant { forall _p:proc. _j10 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl5) }
+
+        s.pC[_j10] <- (if _j10 = _p0 then PC8
+                      else (*true*) s.pC[_j10])
+      done;
+    end
+
+    (*spl6*)
+    else if coin () && s.pC[_p0] = PC6
+    then begin
+      label Spl6 in
+      Impset.add _p0 s.downSet;
+      Impset.remove _p0 s.aliveSet;
+      for _j11 = 0 to s.rval.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j11 ->
+                      (_p = _p0 -> s.rval[_p] = Down) /\
+                      (_p <> _p0 -> s.rval[_p] = (s.rval[_p] at Spl6)) }
+        invariant { forall _p:proc. _j11 <= _p < _n ->
+                      s.rval[_p] = (s.rval[_p] at Spl6) }
+
+        s.rval[_j11] <- (if _j11 = _p0 then Down
+                        else (*true*) s.rval[_j11])
+      done;
+      for _j12 = 0 to s.pC.length - 1 do
+        invariant { forall _p:proc. 0 <= _p < _j12 ->
+                      (_p = _p0 -> s.pC[_p] = PC9) /\
+                      (_p <> _p0 -> s.pC[_p] = (s.pC[_p] at Spl6)) }
+        invariant { forall _p:proc. _j12 <= _p < _n ->
+                      s.pC[_p] = (s.pC[_p] at Spl6) }
+
+        s.pC[_j12] <- (if _j12 = _p0 then PC9
+                      else (*true*) s.pC[_j12])
+      done;
+    end
+
+
+  done;
+  s
+end
