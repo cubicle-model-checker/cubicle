@@ -22,7 +22,7 @@ open Types
 type t = node_cube
 
 
-let variables {cube = {Cube.vars = vars }} = vars 
+let variables {cube = {Cube.vars = vars }} = vars
 
 let array n = n.cube.Cube.array
 
@@ -51,7 +51,7 @@ let compare_by_breadth s1 s2 =
     if c <> 0 then c else
       let c =  compare_kind s1 s2 in
       if c <> 0 then c else
-        let c = Pervasives.compare s1.depth s2.depth in 
+        let c = Pervasives.compare s1.depth s2.depth in
         if c <> 0 then c else
           Pervasives.compare (abs s1.tag) (abs s2.tag)
 
@@ -66,7 +66,7 @@ let compare_by_depth  s1 s2 =
     if c <> 0 then c else
       let c =  compare_kind s1 s2 in
       if c <> 0 then c else
-        let c = Pervasives.compare s2.depth s1.depth in 
+        let c = Pervasives.compare s2.depth s1.depth in
         if c <> 0 then c else
           Pervasives.compare (abs s1.tag) (abs s2.tag)
 
@@ -79,8 +79,8 @@ let rec origin n = match n.from with
 let new_tag =
   let cpt_pos = ref 0 in
   let cpt_neg = ref 0 in
-  fun ?(kind=Node) () -> 
-  match kind with 
+  fun ?(kind=Node) () ->
+  match kind with
   | Approx -> decr cpt_neg; !cpt_neg
   | _ -> incr cpt_pos; !cpt_pos
 
@@ -89,12 +89,13 @@ let create ?(kind=Node) ?(from=None) cube =
   let hist =  match from with
     | None -> []
     | Some ((_, _, n) as f) -> f :: n.from in
-  { 
+  {
     cube = cube;
     tag = new_tag ~kind ();
     kind = kind;
     depth = List.length hist;
     deleted = false;
+    approximated = false;
     from = hist;
   }
 
@@ -108,7 +109,7 @@ let has_deleted_ancestor n =
   let del, children = has [] n.from in
   if del then List.iter (fun a -> a.deleted <- true) children;
   del
-    
+
 let has_deleted_ancestor n =
   List.exists (fun (_, _, a) -> a.deleted) n.from
 
@@ -119,7 +120,7 @@ let ancestor_of n s =
 
 
 let subset n1 n2 = ArrayAtom.subset (array n1) (array n2)
-       
+
 let print fmt n = Cube.print fmt n.cube
 
 module Latex = struct
@@ -131,11 +132,11 @@ module Latex = struct
     | ConstName n -> fprintf fmt "%a" Hstring.print n
 
   let print_cs fmt cs =
-    MConst.iter 
+    MConst.iter
       (fun c i ->
-       fprintf fmt " %s %a" 
-	       (if i = 1 then "+" else if i = -1 then "-" 
-	        else if i < 0 then "- "^(string_of_int (abs i)) 
+       fprintf fmt " %s %a"
+	       (if i = 1 then "+" else if i = -1 then "-"
+	        else if i < 0 then "- "^(string_of_int (abs i))
 	        else "+ "^(string_of_int (abs i)))
 	       print_const c) cs
 
@@ -146,7 +147,7 @@ module Latex = struct
     | Elem (s, Constr) -> fprintf fmt "\\textsf{%a}" Hstring.print s
     | Access (a, li) ->
        fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
-    | Arith (x, cs) -> 
+    | Arith (x, cs) ->
        fprintf fmt "@[%a%a@]" print_term x print_cs cs
 
   let str_op_comp =
@@ -155,7 +156,7 @@ module Latex = struct
   let rec print_atom fmt = function
     | Atom.True -> fprintf fmt "true"
     | Atom.False -> fprintf fmt "false"
-    | Atom.Comp (x, op, y) -> 
+    | Atom.Comp (x, op, y) ->
        fprintf fmt "%a %s %a" print_term x (str_op_comp op) print_term y
     | Atom.Ite (la, a1, a2) ->
        fprintf fmt "@[ite(%a,@ %a,@ %a)@]"
@@ -165,13 +166,13 @@ module Latex = struct
   and print_atoms inline sep fmt = function
     | [] -> ()
     | [a] -> print_atom fmt a
-    | a::l -> 
-       if inline then 
+    | a::l ->
+       if inline then
          fprintf fmt "%a %s@ %a" print_atom a sep (print_atoms inline sep) l
        else
          fprintf fmt "%a %s@\n%a" print_atom a sep (print_atoms inline sep) l
 
-  let print fmt n = 
+  let print fmt n =
     fprintf fmt "\\item $";
     let l = variables n in
     (match l with
@@ -197,18 +198,18 @@ end
 (* let print = Latex.print *)
 
 let print_history fmt n =
-  let last = List.fold_left 
+  let last = List.fold_left
     (fun last (tr, args, a) ->
-      if dmcmt then 
+      if dmcmt then
 	fprintf fmt "[%a%a]" Hstring.print tr.tr_name Variable.print_vars args
-      else 
+      else
 	fprintf fmt "%a(%a) ->@ " Hstring.print tr.tr_name
                 Variable.print_vars args;
       a
     ) n n.from in
   if dmcmt then fprintf fmt "[0]  "
   else
-    if last.kind = Approx then 
+    if last.kind = Approx then
       fprintf fmt "@{<fg_blue>approx[%d]@}" last.tag
-    else 
+    else
       fprintf fmt "@{<fg_magenta>unsafe[%d]@}" last.tag

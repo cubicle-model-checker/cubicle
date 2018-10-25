@@ -19,15 +19,15 @@ open Ast
 
 module type PriorityNodeQueue = sig
 
-    type t
+  type t
 
-    val create : unit -> t
-    val pop : t -> Node.t
-    val push : Node.t -> t -> unit
-    val push_list : Node.t list -> t -> unit
-    val clear : t -> unit
-    val length : t -> int
-    val is_empty : t -> bool
+  val create : unit -> t
+  val pop : t -> Node.t
+  val push : Node.t -> t -> unit
+  val push_list : Node.t list -> t -> unit
+  val clear : t -> unit
+  val length : t -> int
+  val is_empty : t -> bool
 end
 
 
@@ -40,7 +40,7 @@ type result =
 module type Strategy = sig
 
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
-               t_system -> result
+    t_system -> result
 
 end
 
@@ -63,7 +63,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     Q.push_list !candidates q;
     Q.push_list system.t_unsafe q;
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-              (invariants @ system.t_invs);
+      (invariants @ system.t_invs);
 
     try
       while not (Q.is_empty q) && (not limit_steps || !steps <> max_steps) do
@@ -72,34 +72,35 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
-          | Some db ->
-             Stats.fixpoint n db
-          | None ->
-             Stats.check_limit n;
-             Stats.new_node n;
-             let n = begin
-                 match Approx.good n with
-                 | None -> n
-                 | Some c ->
+            | Some db ->
+              Stats.fixpoint n db
+            | None ->
+              Stats.check_limit n;
+              Stats.new_node n;
+              let n = begin
+                match Approx.good n with
+                  | None -> n
+                  | Some c ->
                     try
                       (* Replace node with its approximation *)
                       Safety.check system c;
                       candidates := c :: !candidates;
                       Stats.candidate n c;
+                      n.approximated <- true;
                       c
                     with Safety.Unsafe _ -> n
-                         (* If the candidate is directly reachable, no need to
-                            backtrack, just forget it. *)
-               end
-             in
-             let ls, post = Pre.pre_image system.t_trans n in
-             if delete then
-               visited :=
-                 Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-	     postponed := List.rev_append post !postponed;
-             visited := Cubetrie.add_node n !visited;
-             Q.push_list ls q;
-             Stats.remaining (nb_remaining q postponed);
+                    (* If the candidate is directly reachable, no need to
+                       backtrack, just forget it. *)
+              end
+              in
+              let ls, post = Pre.pre_image system.t_trans n in
+              if delete then
+                visited :=
+                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+              postponed := List.rev_append post !postponed;
+              visited := Cubetrie.add_node n !visited;
+              Q.push_list ls q;
+              Stats.remaining (nb_remaining q postponed);
         end;
 
         if Q.is_empty q then
@@ -147,8 +148,8 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     let tasks, _ =
       List.fold_left
         (fun (tasks, visited) n ->
-         (Task_node (n, visited), ()) :: tasks,
-         Cubetrie.add_node n visited
+           (Task_node (n, visited), ()) :: tasks,
+           Cubetrie.add_node n visited
         ) ([], visited) nodes
     in
     List.rev tasks
@@ -157,62 +158,62 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     let tasks, _ =
       List.fold_left
         (fun (tasks, visited) n ->
-         Safety.check system n;
-         if Fixpoint.peasy_fixpoint n visited <> None then tasks, visited
-         else
-           (Task_node (n, visited), ()) :: tasks,
-         Cubetrie.add_node n visited
+           Safety.check system n;
+           if Fixpoint.peasy_fixpoint n visited <> None then tasks, visited
+           else
+             (Task_node (n, visited), ()) :: tasks,
+             Cubetrie.add_node n visited
         ) ([], visited) nodes
     in
     (* List.rev *) tasks
 
   let worker system = function
     | Task_node (n, visited) ->
-       try
-         Safety.check system n;
-         match Fixpoint.check n visited with
-         | Some db -> WR_Fixpoint db
-         | None ->
+      try
+        Safety.check system n;
+        match Fixpoint.check n visited with
+          | Some db -> WR_Fixpoint db
+          | None ->
             Stats.check_limit n;
             match Approx.good n with
-            | None ->
-               WR_PreNormal (Pre.pre_image system.t_trans n)
-            | Some c ->
-               try
-                 (* Replace node with its approximation *)
-                 Safety.check system c;
-                 WR_PreCandidate (c, (Pre.pre_image system.t_trans n))
-               with Safety.Unsafe _ ->
-                 WR_PreNormal (Pre.pre_image system.t_trans n)
-       with
-       | Safety.Unsafe faulty  ->
+              | None ->
+                WR_PreNormal (Pre.pre_image system.t_trans n)
+              | Some c ->
+                try
+                  (* Replace node with its approximation *)
+                  Safety.check system c;
+                  WR_PreCandidate (c, (Pre.pre_image system.t_trans n))
+                with Safety.Unsafe _ ->
+                  WR_PreNormal (Pre.pre_image system.t_trans n)
+      with
+        | Safety.Unsafe faulty  ->
           WR_Unsafe faulty
-       | Stats.ReachedLimit ->
+        | Stats.ReachedLimit ->
           WR_ReachLimit
 
   let print_smt_error = function
     | Smt.DuplicateTypeName h ->
-       eprintf "Duplicate type name %a@." Hstring.print h
+      eprintf "Duplicate type name %a@." Hstring.print h
     | Smt.DuplicateSymb h ->
-       eprintf "Duplicate symbol %a@." Hstring.print h
+      eprintf "Duplicate symbol %a@." Hstring.print h
     | Smt.UnknownType h ->
-       eprintf "Unknown type %a@." Hstring.print h
+      eprintf "Unknown type %a@." Hstring.print h
     | Smt.UnknownSymb h ->
-       eprintf "Unknown symbol %a@." Hstring.print h
+      eprintf "Unknown symbol %a@." Hstring.print h
 
 
   let worker_fix system = function
     | Task_node (n, visited) ->
-       try
-         match Fixpoint.hard_fixpoint n visited with
-         | Some db -> WR_Fixpoint db
-         | None -> WR_NoFixpoint
-       with
-       | Safety.Unsafe faulty  ->
+      try
+        match Fixpoint.hard_fixpoint n visited with
+          | Some db -> WR_Fixpoint db
+          | None -> WR_NoFixpoint
+      with
+        | Safety.Unsafe faulty  ->
           WR_Unsafe faulty
-       | Stats.ReachedLimit ->
+        | Stats.ReachedLimit ->
           WR_ReachLimit
-       | Smt.Error e -> print_smt_error e; assert false
+        | Smt.Error e -> print_smt_error e; assert false
 
 
   let populate_pre q postponed visited n ls post =
@@ -234,50 +235,50 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
   let master_fetch system q postponed visited candidates task res =
     begin
       match res, task with
-      | WR_Unsafe faulty, _ ->
-         raise (Safety.Unsafe faulty)
-      | WR_ReachLimit, _ -> raise Stats.ReachedLimit
-      | WR_Fixpoint db, (Task_node (n, _), ()) ->
-         if not quiet && debug then eprintf "\nRECIEVED FIX\n@.";
-         Stats.fixpoint n db
-      | WR_PreNormal (ls, post), (Task_node (n, _), ()) ->
-         Stats.new_node n;
-         populate_pre q postponed visited n ls post
-      | WR_PreCandidate (c, (ls, post)), (Task_node (n, _), ()) ->
-         Stats.new_node n;
-         candidates := c :: !candidates;
-         Stats.candidate n c;
-         populate_pre q postponed visited c ls post
-      | WR_NoFixpoint, (Task_node (n, _), ()) ->
-         begin
-         if not quiet && debug then eprintf "\nRECIEVED NO_FIX\n@.";
-         Stats.check_limit n;
-         Stats.new_node n;
-         let n = begin
-             match Approx.good n with
-             | None -> n
-             | Some c ->
-                try
-                  (* Replace node with its approximation *)
-                  Safety.check system c;
-                  candidates := c :: !candidates;
-                  Stats.candidate n c;
-                  c
-                with Safety.Unsafe _ -> n
-           (* If the candidate is directly reachable, no need to
-                            backtrack, just forget it. *)
-           end
-         in
+        | WR_Unsafe faulty, _ ->
+          raise (Safety.Unsafe faulty)
+        | WR_ReachLimit, _ -> raise Stats.ReachedLimit
+        | WR_Fixpoint db, (Task_node (n, _), ()) ->
+          if not quiet && debug then eprintf "\nRECIEVED FIX\n@.";
+          Stats.fixpoint n db
+        | WR_PreNormal (ls, post), (Task_node (n, _), ()) ->
+          Stats.new_node n;
+          populate_pre q postponed visited n ls post
+        | WR_PreCandidate (c, (ls, post)), (Task_node (n, _), ()) ->
+          Stats.new_node n;
+          candidates := c :: !candidates;
+          Stats.candidate n c;
+          populate_pre q postponed visited c ls post
+        | WR_NoFixpoint, (Task_node (n, _), ()) ->
+          begin
+            if not quiet && debug then eprintf "\nRECIEVED NO_FIX\n@.";
+            Stats.check_limit n;
+            Stats.new_node n;
+            let n = begin
+              match Approx.good n with
+                | None -> n
+                | Some c ->
+                  try
+                    (* Replace node with its approximation *)
+                    Safety.check system c;
+                    candidates := c :: !candidates;
+                    Stats.candidate n c;
+                    c
+                  with Safety.Unsafe _ -> n
+                  (* If the candidate is directly reachable, no need to
+                                   backtrack, just forget it. *)
+            end
+            in
 
-         let ls, post = Pre.pre_image system.t_trans n in
-         if delete then
-           visited :=
-             Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-	 postponed := List.rev_append post !postponed;
-         visited := Cubetrie.add_node n !visited;
-         Q.push_list ls q;
-         Stats.remaining (nb_remaining q postponed);
-         end
+            let ls, post = Pre.pre_image system.t_trans n in
+            if delete then
+              visited :=
+                Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+            postponed := List.rev_append post !postponed;
+            visited := Cubetrie.add_node n !visited;
+            Q.push_list ls q;
+            Stats.remaining (nb_remaining q postponed);
+          end
 
     end;
     if do_sync_barrier then []
@@ -296,7 +297,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     Q.push_list !candidates q;
     Q.push_list system.t_unsafe q;
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-              (invariants @ system.t_invs);
+      (invariants @ system.t_invs);
 
     try
       while not (Q.is_empty q) && (not limit_steps || !steps <> max_steps) do
@@ -376,14 +377,14 @@ end
 
 
 module type StdQ = sig
-    type 'a t
+  type 'a t
 
-    val create : unit -> 'a t
-    val pop : 'a t -> 'a
-    val push : 'a -> 'a t -> unit
-    val clear : 'a t -> unit
-    val length : 'a t -> int
-    val is_empty : 'a t -> bool
+  val create : unit -> 'a t
+  val pop : 'a t -> 'a
+  val push : 'a -> 'a t -> unit
+  val clear : 'a t -> unit
+  val length : 'a t -> int
+  val is_empty : 'a t -> bool
 end
 
 module NodeQ (Q : StdQ) : PriorityNodeQueue = struct
@@ -413,8 +414,8 @@ module ApproxQ (Q : PriorityNodeQueue) = struct
 
   let push n (aq, nq) =
     match n.kind with
-    | Approx -> Q.push n aq
-    | _ -> Q.push n nq
+      | Approx -> Q.push n aq
+      | _ -> Q.push n nq
 
   let clear (aq, nq) = Q.clear aq; Q.clear nq
 
@@ -447,12 +448,12 @@ module DFSA : Strategy = Maker (ApproxQ (NodeQ (Stack)))
 
 let select_search =
   match mode with
-  | "bfs" -> (module BFS : Strategy)
-  | "dfs" -> (module DFS)
-  | "bfsh" -> (module BFSH)
-  | "dfsh" -> (module DFSH)
-  | "bfsa" -> (module BFSA)
-  | "dfsa" -> (module DFSA)
-  | _ -> failwith ("The strategy "^mode^" is not implemented.")
+    | "bfs" -> (module BFS : Strategy)
+    | "dfs" -> (module DFS)
+    | "bfsh" -> (module BFSH)
+    | "dfsh" -> (module DFSH)
+    | "bfsa" -> (module BFSA)
+    | "dfsa" -> (module DFSA)
+    | _ -> failwith ("The strategy "^mode^" is not implemented.")
 
 module Selected : Strategy = (val (select_search))

@@ -22,7 +22,7 @@
     List.iter
       (fun (x,y) -> Hashtbl.add keywords x y)
       [
-        "#why3", WHY3;
+        "why3", WHY3;
         "array", ARRAY;
         "case", CASE;
         "const", CONST;

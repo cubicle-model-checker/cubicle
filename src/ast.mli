@@ -93,7 +93,7 @@ type system = {
 type kind =
   | Approx (** approximation *)
   | Orig   (** original unsafe formula *)
-  | Node   (** reguar node *)
+  | Node   (** regular node *)
   | Inv    (** or user supplied invariant*)
 
 
@@ -107,6 +107,8 @@ type node_cube =
       mutable deleted : bool; (** flag changed when the {e a-posteriori}
                                   simplification detects subsumption
                                   (see {! Cubetrie.delete_subsumed}) *)
+      mutable approximated : bool; (** flag changed when a candidate invariant
+                                       is chosen from this node *)
       from : trace;           (** history of the node *)
     }
 (** the type of nodes, i.e. cubes with extra information *)
