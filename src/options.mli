@@ -26,6 +26,8 @@ val cin : in_channel
 
 val towhy3 : bool
 val why3_out_file : bool
+val why3_cub_invs : bool
+val only_brab_invs : bool
 
 val limit_steps : bool
 val max_steps : int

@@ -21,7 +21,6 @@ open Ast
 module BWD = Bwd.Selected
 module Oracle = Approx.SelectedOracle
 
-
 (* FIXME Bug when search is parallel *)
 let rec search_and_backtrack candidates system =
   let res = BWD.search ~candidates system in

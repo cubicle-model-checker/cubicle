@@ -26,6 +26,8 @@ let file = ref "_stdin"
 
 let towhy3 = ref false
 let why3_out_file = ref false
+let why3_cub_invs = ref false
+let only_brab_invs = ref true
 
 let max_proc = ref 10
 let type_only = ref false
@@ -134,8 +136,11 @@ let specs =
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
-    "-towhy3", Arg.Set towhy3, "translate the cubicle file to why3";
-    "-why3_out_file", Arg.Set why3_out_file, "write the output in a file";
+    "-towhy3", Arg.Set towhy3, " translate the cubicle file to why3";
+    "-why3_out_file", Arg.Set why3_out_file, " write the output in a file";
+    "-cub-invs", Arg.Set why3_cub_invs, " gives Cubicle invariants to the why3 file";
+
+    "-all-invs", Arg.Clear only_brab_invs, " gives only invariants found by approximations";
     "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
     "-max-procs", Arg.Set_int max_proc,
     "<nb> max number of processes to introduce (default 10)";
@@ -234,6 +239,8 @@ let cin =
 
 let towhy3 = !towhy3
 let why3_out_file = !why3_out_file
+let why3_cub_invs = !why3_cub_invs
+let only_brab_invs = !only_brab_invs
 
 let limit_steps = !limit_steps
 let max_steps = !max_steps

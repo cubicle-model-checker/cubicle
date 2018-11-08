@@ -381,18 +381,17 @@ let pp_invariants invs fmt s =
       pp_vars vl pp_vars_bound vl pp_vars_distinct vl
       (pp_satom_nlast (vl <> [])) sa
   in
+  let sinvs = if Options.only_brab_invs then s.invs else [] in
   let sinvs = List.map (
-    fun (_, vl, sa) -> (vl, sa)) (List.rev_append s.unsafe s.invs)
+    fun (_, vl, sa) -> (vl, sa)
+  ) (s.whyinvs @ sinvs @ s.unsafe)
   in
-  let swinvs = List.map (
-    fun (_, vl, sa) -> (vl, sa)) s.whyinvs
-  in
-  let invs = List.map (
+  let invs = if Options.why3_cub_invs then List.map (
     fun {Ast.cube = {Cube.vars; Cube.litterals}} ->
       let wvars = List.map Variable.(subst subst_ptowp) vars in
       let wlit = SAtom.subst Variable.subst_ptowp litterals in
-      (wvars, wlit)) invs in
-  pp_print_list pp_invariant fmt (invs @ sinvs @ swinvs)
+      (wvars, wlit)) invs else [] in
+  pp_print_list pp_invariant fmt (invs @ sinvs)
 
 let pp_forall_others pl fmt tl =
   let pl' = List.map (fun h -> Hstring.make ((Hstring.view h)^"'")) pl in
@@ -437,10 +436,10 @@ let cub_to_whyml s invs fmt file =
   fprintf fmt "@[<v>\
                module %s@,\
                @,\
-               use import array.Array@,\
-               use import int.Int@,\
-               use import ref.Refint@,\
-               use import random.Random@,\
+               use array.Array@,\
+               use int.Int@,\
+               use ref.Refint@,\
+               use random.Random@,\
               " (String.capitalize_ascii name);
   fprintf fmt "%a" pp_trad_type_defs s.type_defs;
   fprintf fmt "@,val coin () : bool@,";

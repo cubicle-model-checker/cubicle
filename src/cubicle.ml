@@ -65,24 +65,28 @@ let _ =
     if towhy3 then begin
       let out =
         if Options.why3_out_file then
-          let dir = Filename.("examples" ^ dir_sep ^ "why3" ^ dir_sep) in
-          let nf = Filename.((remove_extension @@ basename file) ^ "test.mlw") in
-          let cout = open_out (dir ^ nf) in
+          let dir = Filename.(concat (dirname file) "why3") in
+          let nf = Filename.(
+            temp_file ~temp_dir:dir (remove_extension @@ basename file) ".mlw") in
+          eprintf "%s@." nf;
+          let cout = open_out nf in
           Format.formatter_of_out_channel cout
         else
           Format.std_formatter
       in
       let invs =
-        begin
-          match Brab.brab system with
-            | Bwd.TimeOut (visited, _) | Bwd.Safe (visited, _) ->
-              List.fold_left (fun acc n ->
-                if n.approximated || n.deleted then acc else n :: acc
-              ) [] visited
-            | Bwd.Unsafe (faulty, candidates) ->
-              close_dot ();
-              exit 1
-        end
+        if Options.only_forward then []
+        else
+          begin
+            match Brab.brab system with
+              | Bwd.TimeOut (vis, cand) | Bwd.Safe (vis, cand) ->
+                List.fold_left (fun acc n ->
+                  if n.approximated || n.deleted then acc else n :: acc
+                ) [] (if Options.only_brab_invs then cand else vis)
+              | Bwd.Unsafe (faulty, candidates) ->
+                close_dot ();
+                exit 1
+          end
       in
       Format.fprintf out "%a" (Why3.cub_to_whyml s invs) Options.file
     end;

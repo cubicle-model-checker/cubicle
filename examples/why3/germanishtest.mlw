@@ -77,6 +77,8 @@ let germanish (_n : int) : system
     invariant { forall _p1 _p2 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
                   _p1 <> _p2 /\ s.cache[_p1] = Exclusive -> not s.shrset[_p2] }
     invariant { forall z1 z2 : int. 0 <= z1 < _n /\ 0 <= z2 < _n /\
+                  z1 <> z2 /\ s.cache[z1] = Shared -> s.shrset[z2] }
+    invariant { forall z1 z2 : int. 0 <= z1 < _n /\ 0 <= z2 < _n /\
                   z1 <> z2 /\ s.cache[z1] = Exclusive ->
                           s.cache[z2] <> Exclusive }
     let _p0 = Random.random_int _n in
