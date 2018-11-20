@@ -98,7 +98,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC WHY3
-%token REQUIRE UNSAFE PREDICATE
+%token REQUIRE UNIVUNSAFE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string> CONSTPROC
 %token <string> LIDENT
@@ -155,6 +155,7 @@ decl :
   | i=init { PInit i }
   | i=invariant { PInv i }
   | u=unsafe { PUnsafe u }
+  | uu=univ_unsafe { PUnivUnsafe uu }
   | t=transition { PTrans t }
   | function_decl { PFun }
   | w=why3_invariant { PWhyInv w }
@@ -248,6 +249,11 @@ invariant:
 unsafe:
   | UNSAFE LEFTBR e=expr RIGHTBR { loc (), [], e }
   | UNSAFE LEFTPAR li=lidents RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), li, e }
+;
+
+univ_unsafe:
+  | UNIVUNSAFE LEFTBR e=expr RIGHTBR { loc (), [], e }
+  | UNIVUNSAFE LEFTPAR li=lident RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), [li], e }
 ;
 
 transition_name:

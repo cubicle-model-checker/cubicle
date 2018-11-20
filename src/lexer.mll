@@ -45,6 +45,7 @@
         "transition", TRANSITION;
         "true", TRUE;
         "type", TYPE;
+        "universal_unsafe", UNIVUNSAFE;
         "unsafe", UNSAFE;
         "var", VAR;
       ]

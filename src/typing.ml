@@ -20,12 +20,12 @@ open Types
 open Atom
 open Pervasives
 
-type error = 
+type error =
   | UnknownConstr of Hstring.t
   | UnknownVar of Hstring.t
   | UnknownGlobal of Hstring.t
   | DuplicateAssign of Hstring.t
-  | DuplicateName of Hstring.t 
+  | DuplicateName of Hstring.t
   | DuplicateUpdate of Hstring.t
   | UnknownArray of Hstring.t
   | UnknownName of Hstring.t
@@ -35,7 +35,7 @@ type error =
   | MustBeAnArray of Hstring.t
   | MustBeOfType of Hstring.t * Hstring.t
   | MustBeNum of term
-  | MustBeOfTypeProc of Hstring.t 
+  | MustBeOfTypeProc of Hstring.t
   | IncompatibleType of Hstring.t list * Hstring.t * Hstring.t list * Hstring.t
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
@@ -44,10 +44,10 @@ type error =
 exception Error of error * loc
 
 let print_htype fmt (args, ty) =
-  fprintf fmt "%a%a" 
+  fprintf fmt "%a%a"
     (fun fmt -> List.iter (fprintf fmt "%a -> " Hstring.print)) args
     Hstring.print ty
-       
+
 let report fmt = function
   | UnknownConstr e ->
       fprintf fmt "unknown constructor %a" Hstring.print e
@@ -56,7 +56,7 @@ let report fmt = function
   | DuplicateName e ->
       fprintf fmt "duplicate name for %a" Hstring.print e
   | DuplicateUpdate s ->
-      fprintf fmt 
+      fprintf fmt
 	"duplicate array update for %a (You may want to use a case construct)"
 	Hstring.print s
   | UnknownVar x ->
@@ -82,7 +82,7 @@ let report fmt = function
   | MustBeOfTypeProc s ->
       fprintf fmt "%a must be of proc" Hstring.print s
   | IncompatibleType (args1, ty1, args2, ty2) ->
-      fprintf fmt "types %a and %a are not compatible" 
+      fprintf fmt "types %a and %a are not compatible"
 	print_htype (args1, ty1) print_htype (args2, ty2)
   | NotATerm s -> fprintf fmt "%a is not a term" Hstring.print s
   | WrongNbArgs (a, nb) -> fprintf fmt "%a must have %d arguments" Hstring.print a nb
@@ -129,12 +129,12 @@ let rec term loc args = function
       (match c with
 	| ConstInt _ -> [], Smt.Type.type_int
 	| ConstReal _ -> [], Smt.Type.type_real
-	| ConstName x -> 
+	| ConstName x ->
 	    try Smt.Symbol.type_of x
             with Not_found -> error (UnknownName x) loc)
   | Elem (e, Var) ->
       if Hstring.list_mem e args then [], Smt.Type.type_proc
-      else begin 
+      else begin
 	  try Smt.Symbol.type_of e with Not_found ->
 	    error (UnknownName e) loc
       end
@@ -142,13 +142,13 @@ let rec term loc args = function
   | Arith (x, _) ->
       begin
 	let args, tx = term loc args x in
-	if not (Hstring.equal tx Smt.Type.type_int) 
-	  && not (Hstring.equal tx Smt.Type.type_real) then 
+	if not (Hstring.equal tx Smt.Type.type_int)
+	  && not (Hstring.equal tx Smt.Type.type_real) then
 	  error (MustBeNum x) loc;
 	args, tx
       end
-  | Access(a, li) -> 
-      let args_a, ty_a = 
+  | Access(a, li) ->
+      let args_a, ty_a =
 	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
         error (WrongNbArgs (a, List.length args_a)) loc
@@ -156,8 +156,8 @@ let rec term loc args = function
         List.iter (fun i ->
           let ty_i =
 	    if Hstring.list_mem i args then Smt.Type.type_proc
-	    else 
-	      try 
+	    else
+	      try
 	        let ia, tyi = Smt.Symbol.type_of i in
 	        if ia <> [] then error (MustBeOfTypeProc i) loc;
 	        tyi
@@ -169,18 +169,18 @@ let rec term loc args = function
 	) li;
       [], ty_a
 
-let assignment ?(init_variant=false) g x (_, ty) = 
-  if ty = Smt.Type.type_proc 
+let assignment ?(init_variant=false) g x (_, ty) =
+  if ty = Smt.Type.type_proc
      || ty = Smt.Type.type_bool
      || ty = Smt.Type.type_int
   then ()
   else
     match x with
-      | Elem (n, Constr) -> 
+      | Elem (n, Constr) ->
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) -> 
+      | Elem (n, _) | Access (n, _) ->
 	  Smt.Variant.assign_var g n;
-	  if init_variant then 
+	  if init_variant then
 	    Smt.Variant.assign_var n g
       | _ -> ()
 
@@ -189,11 +189,11 @@ let atom loc init_variant args = function
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
   | Comp (y, Eq, (Access(g, _) as x))
-  | Comp (Access(g, _) as x, Eq, y) -> 
+  | Comp (Access(g, _) as x, Eq, y) ->
       let ty = term loc args y in
       unify loc (term loc args x) ty;
       if init_variant then assignment ~init_variant g y ty
-  | Comp (x, op, y) -> 
+  | Comp (x, op, y) ->
       unify loc (term loc args x) (term loc args y)
   | Ite _ -> assert false
 
@@ -202,14 +202,14 @@ let atoms loc ?(init_variant=false) args =
 
 let init (loc, args, lsa) = List.iter (atoms loc ~init_variant:true args) lsa
 
-let unsafe (loc, args, sa) = 
-  unique (fun x-> error (DuplicateName x) loc) args; 
+let unsafe (loc, args, sa) =
+  unique (fun x-> error (DuplicateName x) loc) args;
   atoms loc args sa
 
-let nondets loc l = 
+let nondets loc l =
   unique (fun c -> error (DuplicateAssign c) loc) l;
-  List.iter 
-    (fun g -> 
+  List.iter
+    (fun g ->
        try
 	 let args_g, ty_g = Smt.Symbol.type_of g in
          if args_g <> [] then error (NotATerm g) loc;
@@ -219,12 +219,12 @@ let nondets loc l =
 	 (*   error (MustBeOfTypeProc g) *)
        with Not_found -> error (UnknownGlobal g) loc) l
 
-let assigns loc args = 
+let assigns loc args =
   let dv = ref [] in
-  List.iter 
+  List.iter
     (fun (g, gu) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g) loc;
-       let ty_g = 
+       let ty_g =
 	 try Smt.Symbol.type_of g
          with Not_found -> error (UnknownGlobal g) loc in
        begin
@@ -240,44 +240,44 @@ let assigns loc args =
               unify loc ty_x ty_g;
               assignment g x ty_x;
             ) swts
-       end;         
+       end;
        dv := g ::!dv)
 
-let switchs loc a args ty_e l = 
-  List.iter 
-    (fun (sa, t) -> 
-       atoms loc args sa; 
+let switchs loc a args ty_e l =
+  List.iter
+    (fun (sa, t) ->
+       atoms loc args sa;
        let ty = term loc args t in
        unify loc ty ty_e;
        assignment a t ty) l
 
-let updates args = 
+let updates args =
   let dv = ref [] in
-  List.iter 
-    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
+  List.iter
+    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} ->
        if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
-       List.iter (fun j -> 
+       List.iter (fun j ->
          if Hstring.list_mem j args then error (ClashParam j) loc) lj;
-       let args_a, ty_a = 
+       let args_a, ty_a =
 	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
-       in       
+       in
        if args_a = [] then error (MustBeAnArray a) loc;
        dv := a ::!dv;
-       switchs loc a (lj @ args) ([], ty_a) swts) 
+       switchs loc a (lj @ args) ([], ty_a) swts)
 
 let check_lets loc args l =
-  List.iter 
+  List.iter
     (fun (x, t) ->
      let _ = term loc args t in ()
     ) l
-	       
-let transitions = 
-  List.iter 
-    (fun ({tr_args = args; tr_loc = loc} as t) -> 
-       unique (fun x-> error (DuplicateName x) loc) args; 
+
+let transitions =
+  List.iter
+    (fun ({tr_args = args; tr_loc = loc} as t) ->
+       unique (fun x-> error (DuplicateName x) loc) args;
        atoms loc args t.tr_reqs;
-       List.iter 
-	 (fun (x, cnf) -> 
+       List.iter
+	 (fun (x, cnf) ->
 	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
        check_lets loc args t.tr_lets;
        updates args t.tr_upds;
@@ -293,7 +293,7 @@ let declare_symbol loc n args ret =
   with Smt.Error e -> error (Smt e) loc
 
 
-let init_global_env s = 
+let init_global_env s =
   List.iter declare_type s.type_defs;
   (* patch completeness on Boolean *)
   (*let mybool = Hstring.make "mbool" in
@@ -302,23 +302,23 @@ let init_global_env s =
   let dummypos = Lexing.dummy_pos, Lexing.dummy_pos in
   declare_type (dummypos, (mybool, [mytrue; myfalse]));*)
   let l = ref [] in
-  List.iter 
-    (fun (loc, n, t) -> 
+  List.iter
+    (fun (loc, n, t) ->
        declare_symbol loc n [] t;
        l := (n, t)::!l) s.consts;
-  List.iter 
-    (fun (loc, n, t) -> 
+  List.iter
+    (fun (loc, n, t) ->
        declare_symbol loc n [] t;
        l := (n, t)::!l) s.globals;
-  List.iter 
-    (fun (loc, n, (args, ret)) -> 
+  List.iter
+    (fun (loc, n, (args, ret)) ->
        declare_symbol loc n args ret;
        l := (n, ret)::!l) s.arrays;
   !l
 
 
-let init_proc () = 
-  List.iter 
+let init_proc () =
+  List.iter
     (fun n -> Smt.Symbol.declare n [] Smt.Type.type_proc) Variable.procs
 
 
@@ -382,7 +382,7 @@ let mk_init_inst init_cdnf init_cdnf_a =
     init_cdnf_a;
     init_invs = [] }
 
-let create_init_instances (iargs, l_init) invs = 
+let create_init_instances (iargs, l_init) invs =
   let init_instances = Hashtbl.create 11 in
   begin
     match l_init with
@@ -417,7 +417,7 @@ let create_init_instances (iargs, l_init) invs =
         let vars = List.rev v_acc in
         let inst_sa, inst_ar =
           List.fold_left (fun (cdnf_sa, cdnf_ar) sigma ->
-            let dnf_sa, dnf_ar = 
+            let dnf_sa, dnf_ar =
               List.fold_left (fun (dnf_sa, dnf_ar) init ->
               let sa = SAtom.subst sigma init in
               try
@@ -470,34 +470,34 @@ let create_node_rename kind vars sa =
   Node.create ~kind c
 
 
-let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
+let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
   if args = [] then tr
   else
     let sigma = Variable.build_subst args Variable.freshs in
-    { tr with 
-	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
+    { tr with
+	tr_args = List.map (Variable.subst sigma) tr.tr_args;
 	tr_reqs = SAtom.subst sigma tr.tr_reqs;
-	tr_ureq = 
-	List.map 
+	tr_ureq =
+	List.map
 	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
-	tr_assigns = 
+	tr_assigns =
 	  List.map (function
                      | x, UTerm t -> x, UTerm (Term.subst sigma t)
                      | x, UCase swts ->
-                        let swts = 
-	                  List.map 
+                        let swts =
+	                  List.map
 		            (fun (sa, t) ->
                              SAtom.subst sigma sa, Term.subst sigma t) swts in
                         x, UCase swts
 	           ) tr.tr_assigns;
-	tr_upds = 
-	List.map 
-	  (fun ({up_swts = swts} as up) -> 
-	     let swts = 
-	       List.map 
+	tr_upds =
+	List.map
+	  (fun ({up_swts = swts} as up) ->
+	     let swts =
+	       List.map
 		 (fun (sa, t) -> SAtom.subst sigma sa, Term.subst sigma t) swts
 	     in
-	     { up with up_swts = swts }) 
+	     { up with up_swts = swts })
 	  upds}
 
 
@@ -510,11 +510,12 @@ let add_tau tr =
     tr_tau = pre;
     tr_reset = reset_memo;
   }
-    
-let system s = 
+
+let system s =
   let l = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
+  if not Options.notyping then List.iter unsafe s.univ_unsafe;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then List.iter unsafe (List.rev s.invs);
   if not Options.notyping then transitions s.trans;
@@ -526,18 +527,21 @@ let system s =
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
+  let univ_unsafe_woloc =
+    List.map (fun (_,v,u) -> create_node_rename Orig v u) s.univ_unsafe in
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
   if Options.debug && Options.verbose > 0 then
     debug_init_instances init_instances;
-  { 
+  {
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
     t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;
+    t_univ_unsafe = univ_unsafe_woloc;
     t_unsafe = unsafe_woloc;
     t_trans = List.map add_tau s.trans;
   }

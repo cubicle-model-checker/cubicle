@@ -79,6 +79,7 @@ type system = {
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
+  univ_unsafe : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;
   whyinvs : (loc * Variable.t list * SAtom.t) list;
   trans : transition_info list;
@@ -139,6 +140,8 @@ type t_system = {
   (** pre-computed instances of the initial formula with invariants *)
   t_invs : node_cube list;
   (** user supplied invariants in negated form *)
+  t_univ_unsafe : node_cube list;
+  (** universally quantified unsafe formulas (in the form of cubes *)
   t_unsafe : node_cube list;
   (** unsafe formulas (in the form of cubes *)
   t_trans : transition list;

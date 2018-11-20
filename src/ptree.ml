@@ -167,6 +167,7 @@ type psystem = {
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
+  puniv_unsafe : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
   pwhyinvs : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
@@ -176,6 +177,7 @@ type psystem = {
 type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
+  | PUnivUnsafe of (loc * Variable.t list * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
   | PWhyInv of (loc * Variable.t list * cformula)
   | PTrans of ptransition
@@ -584,7 +586,7 @@ let encode_ptransition
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
-     pinvs; punsafe; pwhyinvs; ptrans} =
+     pinvs; puniv_unsafe; punsafe; pwhyinvs; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
@@ -602,6 +604,15 @@ let encode_psystem
       List.fold_left (fun acc sa -> (inv_loc, inv_vars, sa) :: acc) acc dnf
     ) [] pwhyinvs
     |> List.rev
+  in
+  let univ_unsafe =
+    List.fold_left (fun acc (uunsafe_loc, uunsafe_vars, uunsafe_f) ->
+        let other_vars, dnf = unsafes_of_formula uunsafe_f in
+        (* List.iter (fun sa -> eprintf "unsafe : %a@." SAtom.print sa) dnf; *)
+        let uunsafe_vars = uunsafe_vars @ other_vars in
+        List.fold_left
+          (fun acc sa -> (uunsafe_loc, uunsafe_vars, sa) :: acc) acc dnf
+      ) [] puniv_unsafe
   in
   let unsafe =
     List.fold_left (fun acc (unsafe_loc, unsafe_vars, unsafe_f) ->
@@ -635,6 +646,7 @@ let encode_psystem
     type_defs = ptype_defs;
     init;
     invs;
+    univ_unsafe;
     unsafe;
     whyinvs;
     trans;
@@ -644,18 +656,21 @@ let encode_psystem
 type rsyst = {
   inits : (loc * Variable.t list * cformula) list;
   invs : (loc * Variable.t list * cformula) list;
+  univ_unsafes : (loc * Variable.t list * cformula) list;
   unsafes : (loc * Variable.t list * cformula) list;
   whyinvs : (loc * Variable.t list * cformula) list;
   trans : ptransition list;
 }
 
-let ers = { inits = []; invs = []; unsafes = []; whyinvs = []; trans = [] }
+let ers = { inits = []; invs = []; univ_unsafes = [];
+            unsafes = []; whyinvs = []; trans = [] }
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
   let rs =
     List.fold_left (fun rs -> function
         | PInit i -> { rs with inits = i :: rs.inits }
         | PInv i -> { rs with invs = i :: rs.invs }
+        | PUnivUnsafe u -> { rs with unsafes = u :: rs.unsafes }
         | PUnsafe u -> { rs with unsafes = u :: rs.unsafes }
         | PWhyInv w -> { rs with whyinvs = w :: rs.whyinvs }
         | PTrans t -> { rs with trans = t :: rs.trans }
@@ -673,6 +688,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     ptype_defs;
     pinit;
     pinvs = rs.invs;
+    puniv_unsafe = rs.univ_unsafes;
     punsafe = rs.unsafes;
     pwhyinvs = rs.whyinvs;
     ptrans = rs.trans}
