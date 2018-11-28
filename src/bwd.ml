@@ -54,68 +54,79 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
   let search ?(invariants=[]) ?(candidates=[]) system =
 
-    let visited = ref Cubetrie.empty in
-    let candidates = ref candidates in
-    let q = Q.create () in
-    let postponed = ref [] in
+    let aux uns =
+      let visited = ref Cubetrie.empty in
+      let candidates = ref candidates in
+      let q = Q.create () in
+      let postponed = ref [] in
 
-    (* Initialization *)
-    Q.push_list !candidates q;
-    Q.push_list system.t_unsafe q;
-    List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-      (invariants @ system.t_invs);
+      (* Initialization *)
+      Q.push_list !candidates q;
+      Q.push_list uns q;
+      List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
+        (invariants @ system.t_invs);
 
-    try
-      while not (Q.is_empty q) && (not limit_steps || !steps <> max_steps) do
-        let n = Q.pop q in
-        if limit_steps then incr steps;
-        Safety.check system n;
-        begin
-          match Fixpoint.check n !visited with
-            | Some db ->
-              Stats.fixpoint n db
-            | None ->
-              Stats.check_limit n;
-              Stats.new_node n;
-              let n = begin
-                match Approx.good n with
-                  | None -> n
-                  | Some c ->
-                    try
-                      (* Replace node with its approximation *)
-                      Safety.check system c;
-                      candidates := c :: !candidates;
-                      Stats.candidate n c;
-                      n.approximated <- true;
-                      c
-                    with Safety.Unsafe _ -> n
-                    (* If the candidate is directly reachable, no need to
-                       backtrack, just forget it. *)
-              end
-              in
-              let ls, post = Pre.pre_image system.t_trans n in
-              if delete then
-                visited :=
-                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-              postponed := List.rev_append post !postponed;
-              visited := Cubetrie.add_node n !visited;
-              Q.push_list ls q;
-              Stats.remaining (nb_remaining q postponed);
-        end;
-
-        if Q.is_empty q then
-          (* When the queue is empty, pour back postponed nodes in it *)
+      try
+        while not (Q.is_empty q) && (not limit_steps || !steps <> max_steps) do
+          let n = Q.pop q in
+          if limit_steps then incr steps;
+          Safety.check system n;
           begin
-            Q.push_list !postponed q;
-            postponed := []
-          end
-      done;
-      if limit_steps && !steps = max_steps then
-        TimeOut (Cubetrie.all_vals !visited, !candidates)
-      else Safe (Cubetrie.all_vals !visited, !candidates)
-    with Safety.Unsafe faulty ->
-      if dot then Dot.error_trace faulty;
-      Unsafe (faulty, !candidates)
+            match Fixpoint.check n !visited with
+              | Some db ->
+                Stats.fixpoint n db
+              | None ->
+                Stats.check_limit n;
+                Stats.new_node n;
+                let n = begin
+                  match Approx.good n with
+                    | None -> n
+                    | Some c ->
+                      try
+                        (* Replace node with its approximation *)
+                        Safety.check system c;
+                        candidates := c :: !candidates;
+                        Stats.candidate n c;
+                        n.approximated <- true;
+                        c
+                      with Safety.Unsafe _ -> n
+                      (* If the candidate is directly reachable, no need to
+                         backtrack, just forget it. *)
+                end
+                in
+                let ls, post = Pre.pre_image system.t_trans n in
+                if delete then
+                  visited :=
+                    Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+                postponed := List.rev_append post !postponed;
+                visited := Cubetrie.add_node n !visited;
+                Q.push_list ls q;
+                Stats.remaining (nb_remaining q postponed);
+          end;
+
+          if Q.is_empty q then
+            (* When the queue is empty, pour back postponed nodes in it *)
+            begin
+              Q.push_list !postponed q;
+              postponed := []
+            end
+        done;
+        if limit_steps && !steps = max_steps then
+          TimeOut (Cubetrie.all_vals !visited, !candidates)
+        else Safe (Cubetrie.all_vals !visited, !candidates)
+      with Safety.Unsafe faulty ->
+        if dot then Dot.error_trace faulty;
+        Unsafe (faulty, !candidates)
+    in
+    let res = aux system.t_unsafe in
+    if univ_unsafe then
+      let tmp = !size_proc in
+      size_proc := uu_nb_procs;
+      let c = List.iter (fun {Ast.cube} ->
+        Format.eprintf "Cube : %a@." Cube.print cube
+      ) system.t_univ_unsafe in
+      res
+    else res
 
 end
 

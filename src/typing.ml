@@ -469,6 +469,12 @@ let create_node_rename kind vars sa =
   let c = Cube.normal_form c in
   Node.create ~kind c
 
+let create_node_universal nbp kind vars sa =
+  let procs = gen_vars "#" nbp in
+  SAtom.fold (fun a acc ->
+
+  let c = Cube.normal_form c in
+  Node.create ~kind c
 
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
   if args = [] then tr
@@ -528,7 +534,8 @@ let system s =
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let univ_unsafe_woloc =
-    List.map (fun (_,v,u) -> create_node_rename Orig v u) s.univ_unsafe in
+    List.map (fun (_,v,u) -> create_node_universal Options.uu_nb_procs Orig v u)
+      s.univ_unsafe in
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in

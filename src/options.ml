@@ -29,6 +29,9 @@ let why3_out_file = ref false
 let why3_cub_invs = ref false
 let only_brab_invs = ref true
 
+let univ_unsafe = ref false
+let uu_nb_procs = ref (-1)
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -108,6 +111,10 @@ let set_steps n =
   limit_steps := true;
   max_steps := n
 
+let set_univ_unsafe n =
+  univ_unsafe := true;
+  uu_nb_procs := n
+
 let mode = ref "bfs"
 let set_mode m =
   mode := m;
@@ -142,6 +149,8 @@ let specs =
 
     "-all-invs", Arg.Clear only_brab_invs, " gives only invariants found by approximations";
     "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
+    "-univ-unsafe", Arg.Int set_univ_unsafe, "<n> instantiate universal unsafe with n
+    processes and start brab on it";
     "-max-procs", Arg.Set_int max_proc,
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds,
@@ -241,6 +250,9 @@ let towhy3 = !towhy3
 let why3_out_file = !why3_out_file
 let why3_cub_invs = !why3_cub_invs
 let only_brab_invs = !only_brab_invs
+
+let univ_unsafe = !univ_unsafe
+let uu_nb_procs = !uu_nb_procs
 
 let limit_steps = !limit_steps
 let max_steps = !max_steps

@@ -29,6 +29,9 @@ val why3_out_file : bool
 val why3_cub_invs : bool
 val only_brab_invs : bool
 
+val univ_unsafe : bool
+val uu_nb_procs : int
+
 val limit_steps : bool
 val max_steps : int
 val steps : int ref

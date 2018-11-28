@@ -354,6 +354,11 @@ let pp_vars fmt vl =
     Format.fprintf fmt "forall %a : int. "
       (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
 
+let pp_vars_exists fmt vl =
+  if List.compare_length_with vl 0 > 0 then
+    Format.fprintf fmt "exists %a : int. "
+      (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
+
 let pp_vars_bound fmt vl =
   let pp_v_b fmt v =
     fprintf fmt "0 <= %a < _n" Hstring.print v
@@ -392,6 +397,15 @@ let pp_invariants invs fmt s =
       let wlit = SAtom.subst Variable.subst_ptowp litterals in
       (wvars, wlit)) invs else [] in
   pp_print_list pp_invariant fmt (invs @ sinvs)
+
+let pp_univ_unsafes fmt uul =
+  let pp_univ_unsafe fmt (vl, sa) =
+    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
+      pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
+      (pp_satom_nlast (vl <> [])) sa
+  in
+  let uul = List.map (fun (_, vl, sa) -> (vl, sa)) uul in
+  pp_print_list pp_univ_unsafe fmt uul
 
 let pp_forall_others pl fmt tl =
   let pl' = List.map (fun h -> Hstring.make ((Hstring.view h)^"'")) pl in
@@ -456,6 +470,7 @@ let cub_to_whyml s invs fmt file =
   fprintf fmt "@,%a" (pp_forall_others plist) s.trans;
   fprintf fmt "@,@[<v 2>while true do@,";
   fprintf fmt "@,@[<v 0>%a@]" (pp_invariants invs) s;
+  fprintf fmt "@,@[<v 0>%a@]" pp_univ_unsafes s.univ_unsafe;
   fprintf fmt "@,%a@," pp_newprocs plist;
   fprintf fmt "@,%a@," (pp_transitions plist) s;
   fprintf fmt "@]@,done;@,s@]@,end";

@@ -670,7 +670,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     List.fold_left (fun rs -> function
         | PInit i -> { rs with inits = i :: rs.inits }
         | PInv i -> { rs with invs = i :: rs.invs }
-        | PUnivUnsafe u -> { rs with unsafes = u :: rs.unsafes }
+        | PUnivUnsafe u -> { rs with univ_unsafes = u :: rs.univ_unsafes }
         | PUnsafe u -> { rs with unsafes = u :: rs.unsafes }
         | PWhyInv w -> { rs with whyinvs = w :: rs.whyinvs }
         | PTrans t -> { rs with trans = t :: rs.trans }

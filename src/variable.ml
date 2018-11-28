@@ -27,11 +27,10 @@ let compare_list = Hstring.compare_list
 
 let gen_vars s n =
   let l = ref [] in
-  for i = 1 to max_proc do
+  for i = 1 to n do
     l := Hstring.make (s^(string_of_int i)) :: !l
   done;
   List.rev !l
-
 
 let alphas = gen_vars "$" max_proc
 
@@ -40,14 +39,6 @@ let procs = gen_vars "#" max_proc
 let freshs = gen_vars "?" max_proc
 
 let wprocs = gen_vars "_p" max_proc
-
-let proc_vars_int =
-  let l = ref [] in
-  for i = 1 to max_proc do
-    l := i :: !l
-  done;
-  List.rev !l
-
 
 let number v =
   let s = Hstring.view v in
