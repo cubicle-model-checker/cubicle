@@ -24,6 +24,8 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
+let tla = ref false
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -122,6 +124,7 @@ let specs =
   [ "-version", Arg.Unit show_version, " prints the version number";
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
+    "-tla", Arg.Set tla, " output TLA+ module";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-max-procs", Arg.Set_int max_proc, 
     "<nb> max number of processes to introduce (default 10)";
@@ -218,6 +221,7 @@ let cin =
   | Some f -> file := f ; open_in f 
   | None -> stdin
 
+let tla = !tla
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
