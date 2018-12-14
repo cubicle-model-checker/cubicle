@@ -1,0 +1,205 @@
+module Splitter2_exist
+
+use array.Array
+use array.NumOfEq
+use int.Int
+use ref.Refint
+use random.Random
+
+scope import Directions
+
+  type directions = None | Right | Stop | Down
+
+  let (=) (a b: directions): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | None, None | Right, Right | Stop, Stop | Down, Down -> true
+      | _ -> false
+  end
+
+end
+
+scope import Pc
+
+  type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
+
+  let (=) (a b: pc): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | PC0, PC0 | PC1, PC1 | PC2, PC2 | PC3, PC3 | PC4, PC4 | PC5, PC5 |
+        PC6, PC6 | PC7, PC7 | PC8, PC8 | PC9, PC9 -> true
+      | _ -> false
+  end
+
+end
+
+val coin () : bool
+
+type proc = int
+
+type system = {
+  mutable x : proc;
+  mutable y : bool;
+  rval : array directions;
+  pC : array pc;
+}
+
+let lemma decomp (s:system) (i:int) (_n:int)
+requires { 0 <= i < _n = length s.rval }
+ensures { numof s.rval Down 0 _n = numof s.rval Down 0 i + numof s.rval Down (i+1) _n +
+      if s.rval[i] = Down then 1 else 0 } = ()
+
+let splitter2_exist (_n : int) : system
+  diverges
+  requires { 0 < _n }
+  =
+    let s = {
+      y = false;
+      rval = Array.make _n None;
+      pC = Array.make _n PC0;
+      x = Random.random_int _n
+    } in
+
+    assert {s.rval[0] = None};
+
+    while true do
+
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ s.rval[_p1] = Down ->
+                                                 s.pC[_p1] <> PC0 }
+
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.rval[_p1] <> Stop }
+
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC2 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC4 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC5 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC6 }
+
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.rval[_p1] <> Down }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                  i <> j /\ s.rval[i] = Stop -> s.rval[j] <> Stop }
+
+      invariant { forall i : int. 0 <= i < _n /\
+                   s.pC[i] = PC6 -> s.x <> i }
+
+      invariant { forall i : int. 0 <= i < _n /\
+                   s.pC[i] = PC9 -> s.x <> i }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 -> s.pC[j] <> PC5 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.pC[j] = PC3 -> s.x <> j }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.pC[j] = PC4 -> s.x <> j }
+
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.rval[i] = Stop -> s.pC[j] <> PC5 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.rval[i] = Stop /\ s.x = j -> s.pC[j] <> PC4 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.rval[i] = Stop /\ s.x = j -> s.pC[j] <> PC3 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC4 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC3 }
+
+      (* invariant { [@expl:numofltn] NumOfEq.numof s.rval Down 0 _n < _n } *)
+      invariant { [@expl:existnotdown]
+      		  exists i : int. 0 <= i < _n /\ s.rval[i] <> Down }
+
+      let _p0 = Random.random_int _n in
+      (*If there is more than one value,
+      the variables could be equal, need to work on it*)
+
+      label L in
+
+      decomp s _p0 _n;
+
+      (*spl0*)
+      if coin () && s.pC[_p0] = PC0
+      then begin
+        label Spl0 in
+        s.x <- _p0;
+        s.pC[_p0] <- PC1;
+      end
+
+      (*spl3*)
+      else if coin () && s.pC[_p0] = PC3
+      then begin
+        label Spl3 in
+        s.y <- true;
+        s.pC[_p0] <- PC4;
+      end
+
+      (*spl1a*)
+      else if coin () && s.y && s.pC[_p0] = PC1
+      then begin
+        label Spl1a in
+        s.pC[_p0] <- PC2;
+      end
+
+      (*spl1b*)
+      else if coin () && not s.y && s.pC[_p0] = PC1
+      then begin
+        label Spl1b in
+        s.pC[_p0] <- PC3;
+      end
+
+      (*spl4a*)
+      else if coin () && s.x = _p0 && s.pC[_p0] = PC4
+      then begin
+        label Spl4a in
+        s.pC[_p0] <- PC5;
+      end
+
+      (*spl4b*)
+      else if coin () && s.x <> _p0 && s.pC[_p0] = PC4
+      then begin
+        label Spl4b in
+        s.pC[_p0] <- PC6;
+      end
+
+      (*spl2*)
+      else if coin () && s.pC[_p0] = PC2
+      then begin
+        label Spl2 in
+        s.rval[_p0] <- Right;
+        s.pC[_p0] <- PC7;
+      end
+
+      (*spl5*)
+      else if coin () && s.pC[_p0] = PC5
+      then begin
+        label Spl5 in
+        s.rval[_p0] <- Stop;
+        s.pC[_p0] <- PC8;
+      end
+
+      (*spl6*)
+      else if coin () && s.pC[_p0] = PC6
+      then begin
+        label Spl6 in
+        s.rval[_p0] <- Down;
+        s.pC[_p0] <- PC9;
+      end;
+
+      assert { numof s.rval Down 0 _p0 = (numof s.rval Down 0 _p0) at L };
+      assert { numof s.rval Down (_p0+1) _n = (numof s.rval Down (_p0+1) _n) at L };
+      decomp s _p0 _n;
+
+    done;
+    s
+  end

@@ -1,0 +1,39 @@
+module Splitter2
+
+use array.Array
+use int.Int
+use ref.Refint
+use random.Random
+
+scope import Directions
+
+  type directions = None | Right | Stop | Down
+
+  let (=) (a b: directions): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | None, None | Right, Right | Stop, Stop | Down, Down -> true
+      | _ -> false
+  end
+
+end
+
+type system = {
+  rval : array directions;
+}
+let splitter2 (_n : int) : system
+  diverges
+  requires { 0 < _n }
+=
+  let s = {
+    rval = Array.make _n None;
+  } in
+
+  assert { s.rval[0] = None };
+
+  while true do
+    invariant {exists i : int. 0 <= i < _n /\ s.rval[i] <> Stop}
+    ()
+  done;
+  s
+end

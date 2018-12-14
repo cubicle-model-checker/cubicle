@@ -1,0 +1,74 @@
+module Splitter2_min
+
+use array.Array
+use array.NumOfEq
+use int.Int
+use ref.Refint
+use random.Random
+
+scope import Pc
+
+  type pc = PC0 | PC1 | PC2
+
+  let (=) (a b: pc): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | PC0, PC0 | PC1, PC1 | PC2, PC2 -> true
+      | _ -> false
+  end
+
+end
+
+type proc = int
+
+type system = {
+  mutable alive : int;
+  pC : array pc;
+}
+
+let lemma decomp (s:system) (i:int) (_n:int)
+requires { 0 <= i < _n = length s.pC }
+ensures { numof s.pC PC1 0 _n = numof s.pC PC1 0 i + numof s.pC PC1 (i+1) _n +
+      if s.pC[i] = PC1 then 1 else 0 } = ()
+
+let splitter2_3 (_n : int) : system
+  diverges
+  requires { 0 < _n }
+=
+  let s = {
+    alive = 0;
+    pC = Array.make _n PC0;
+  } in
+
+  while true do
+    invariant { [@expl:i1] s.alive = NumOfEq.numof s.pC PC1 0 _n }
+    invariant { [@expl:i2] 0 <= s.alive }
+    invariant { [@expl:i3] forall i : int. 0 <= i < _n /\ s.pC[i] = PC1 -> s.alive > 0 }
+
+    let _p0 = Random.random_int _n in
+
+    label L in
+
+    decomp s _p0 _n;
+
+    (* spl0 *)
+    if s.pC[_p0] = PC0
+    then begin
+      s.alive <- s.alive + 1;
+      s.pC[_p0] <- PC1
+    end
+
+    (*spl2*)
+    else if s.pC[_p0] = PC1
+    then begin
+      s.alive <- s.alive - 1;
+      s.pC[_p0] <- PC2
+    end;
+
+    assert { numof s.pC PC1 0 _p0 = (numof s.pC PC1 0 _p0) at L };
+    assert { numof s.pC PC1 (_p0+1) _n = (numof s.pC PC1 (_p0+1) _n) at L };
+    decomp s _p0 _n;
+
+  done;
+  s
+end

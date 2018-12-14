@@ -1,0 +1,112 @@
+(* splitter with cubicle *)
+
+(* Model inspired by the Pluscal version (more precisely, by the translation
+  in TLA+ of the Pluscal version).
+  Tentative to express the safe states by counting. Cubicle runs forever (> 15h) without conclusion.
+*)
+
+(* number_procs 4 *)
+
+type directions = None | Right | Stop | Down
+
+type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
+
+var X : proc
+var Y : bool
+array Rval[proc] : directions
+array PC[proc] : pc
+array Alive[proc] : bool
+
+(* ================================================================ *)
+(* Tentative d'invariants *)
+(* ================================================================ *)
+
+init(i) { Rval[i] = None && Y = False && PC[i] = PC0 && Alive[i] = True }
+
+(* ================================================================ *)
+
+(*     /\ Cardinality ({ i \in ProcSet : rval[i] = Stop}) <= 1
+       /\ Cardinality ({ i \in ProcSet : rval[i] = Down}) < NP
+       /\ Cardinality ({ i \in ProcSet : rval[i] = Right}) < NP
+*)
+
+(* unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop } *)
+(* unsafe(p1 p2) { X = p2 && Rval[p1] = Stop && PC[p2] = PC3 } *)
+(* unsafe(i) { Rval[i] = Down && PC[i] = PC0 } *)
+(* unsafe(i) { Y = False && Rval[i] = Down } *)
+(* universal_unsafe (i) { PC[i] <> PC8 && PC[i] <> PC4 && PC[i] <> PC3 *)
+(* 		       && PC[i] <> PC1 && PC[i] <> PC0 && PC[i] <> PC5 *)
+(* 		       && PC[i] <> PC2 && PC[i] <> PC7 && Rval[i] <> Stop } *)
+universal_unsafe (i) { Alive[i] = False && Rval[i] <> Stop && Rval[i] <> Right}
+
+(* unsafe(i) { Y = False && PC[i] = PC4 } *)
+(* unsafe(i) { Y = False && PC[i] = PC5 } *)
+
+
+(* ================================================================ *)
+(* Unsafe from merci *)
+(* ================================================================ *)
+
+(* ================================================================ *)
+
+transition spl0(i)
+requires { PC[i] = PC0 }
+{
+        X := i;
+        PC[i] := PC1;
+}
+
+transition spl1a(i)
+requires { PC[i] = PC1 && Y = True }
+{
+        PC[i] := PC2;
+}
+
+transition spl1b(i)
+requires { PC[i] = PC1 && Y = False }
+{
+        PC[i] := PC3
+}
+
+transition spl2(i)
+requires { PC[i] = PC2 }
+{
+        Rval[i] := Right;
+	Alive[i] := False;
+        PC[i] := PC7
+}
+
+transition spl3(i)
+requires { PC[i] = PC3 }
+{
+        Y := True;
+        PC[i] := PC4
+}
+
+transition spl4a(i)
+requires { PC[i] = PC4 && X = i }
+{
+        PC[i] := PC5;
+}
+
+transition spl4b(i)
+requires { PC[i] = PC4 && X <> i }
+{
+        PC[i] := PC6;
+}
+
+transition spl5(i)
+requires { PC[i] = PC5 }
+{
+        Rval[i] := Stop;
+	Alive[i] := False;
+        PC[i] := PC8
+}
+
+transition spl6(i)
+requires { PC[i] = PC6 }
+{
+        Rval[i] := Down;
+	Alive[i] := False;
+        PC[i] := PC9
+}
