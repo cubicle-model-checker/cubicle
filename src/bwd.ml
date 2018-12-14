@@ -119,13 +119,17 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         Unsafe (faulty, !candidates)
     in
     let res = aux system.t_unsafe in
-    if univ_unsafe then
-      let tmp = !size_proc in
-      size_proc := uu_nb_procs;
-      let c = List.iter (fun {Ast.cube} ->
-        Format.eprintf "Cube : %a@." Cube.print cube
-      ) system.t_univ_unsafe in
-      res
+    if univ_unsafe then begin
+      match res with
+        | Unsafe _ -> res
+        | Safe (vis, cand) | TimeOut (vis, cand) ->
+          size_proc := uu_nb_procs;
+          let res = aux system.t_univ_unsafe in
+          match res with
+            | Unsafe _ -> res
+            | Safe (vis', cand') -> Safe (vis @ vis', cand @ cand')
+            | TimeOut (vis', cand') -> TimeOut (vis @ vis', cand @ cand')
+    end
     else res
 
 end

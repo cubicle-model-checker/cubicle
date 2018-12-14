@@ -147,7 +147,7 @@ let specs =
     "-why3_out_file", Arg.Set why3_out_file, " write the output in a file";
     "-cub-invs", Arg.Set why3_cub_invs, " gives Cubicle invariants to the why3 file";
 
-    "-all-invs", Arg.Clear only_brab_invs, " gives only invariants found by approximations";
+    "-all-invs", Arg.Clear only_brab_invs, " gives all invariants to the why3 file";
     "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
     "-univ-unsafe", Arg.Int set_univ_unsafe, "<n> instantiate universal unsafe with n
     processes and start brab on it";

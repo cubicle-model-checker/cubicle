@@ -30,10 +30,13 @@ let pp_sep_nil fmt () = fprintf fmt ""
 let pp_sep_space fmt () = fprintf fmt " "
 (* let pp_sep_implies fmt () = fprintf fmt " ->@ " *)
 
+let pp_length_array fmt u =
+  fprintf fmt "s.%a.length - 1" pp_hstring_uncap u.up_arr
+
 (* for loop on an array *)
 let pp_for fmt u =
   fprintf fmt "for %a = 0 to s.%a.length - 1 do"
-    Variable.print_vars u.up_arg pp_hstring_uncap u.up_arr
+    Variable.print_vars u.up_arg pp_length_array u
 
 (* print the constructors *)
 let pp_list_const fmt cl =
@@ -111,23 +114,33 @@ let pp_satom ?(syst=true) ?(cond=false) ?(pp_sep=pp_sep_and_ml) sub fmt sa =
 let pp_satom_syst = pp_satom ~syst:true
 
 (* prints a conjunction of atoms in a conjunction leading to an implication
-   for better readability *)
-let pp_satom_nlast bvars fmt sa =
+   for better readability
+   In case of universal unsafe, it's an implication leading to a
+   conjunction *)
+let pp_satom_nlast ?(uu=false) bvars fmt sa =
   fprintf fmt "@[<hov>";
   let aux fmt l =
     let rec aux fmt = function
       | [a] ->
-        fprintf fmt " ->@ %a" (pp_atom_syst ~cond:true []) (Atom.neg a)
+        fprintf fmt " %s@ %a@ )" (if uu then "\\/" else "->")
+          (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
-        fprintf fmt " /\\@ %a%a" (pp_atom_syst ~cond:true []) hd aux tl
+        let a = if uu then Atom.neg hd else hd in
+        fprintf fmt " %s@ %a%a" (if uu then "\\/" else "/\\")
+          (pp_atom_syst ~cond:true []) a aux tl
       | _ -> assert false
     in match l with
       | [a] ->
-        fprintf fmt "%s@ %a" (if bvars then " ->" else "")
+        fprintf fmt "%s@ %a" (
+          if bvars then
+            if uu then " /\\"
+            else " ->"
+          else "")
           (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
-        fprintf fmt "%s@ %a%a" (if bvars then " /\\" else "")
-          (pp_atom_syst ~cond:true []) hd aux tl
+        let a = if uu then Atom.neg hd else hd in
+        fprintf fmt "%s@ %a%a" (if bvars then " /\\ (" else "")
+          (pp_atom_syst ~cond:true []) a aux tl
       | _ -> assert false
   in aux fmt @@ SAtom.elements sa;
   fprintf fmt "@]"
@@ -271,63 +284,68 @@ let pp_assigns sub fmt al =
 
 let is_true sa = SAtom.equal sa (SAtom.singleton Atom.True)
 
-let pp_updates sub lbl fmt ul =
+let pp_updates plist sub lbl fmt ul =
   let pp_upd fmt u =
-    let sub' = Variable.build_subst u.up_arg [Hstring.make "_p"] @ sub in
-    let pp_swt ?(cond="else if") fmt (sa, t) =
-      if is_true sa then
-        fprintf fmt "else (*%a*) %a)"
-          (pp_satom sub) sa (pp_term_syst sub) t
-      else fprintf fmt "%s %a then %a"
-          cond (pp_satom sub) sa (pp_term_syst sub) t
-    in
-    let pp_swts fmt swts =
-      fprintf fmt "@[<v 0>";
-      (match swts with
-        | [(_, t)] -> fprintf fmt "%a" (pp_term_syst sub) t
-        | hd :: tl ->
-          fprintf fmt "%a@," (pp_swt ~cond:"(if") hd;
-          pp_print_list pp_swt fmt tl
-        | _ -> assert false);
-      fprintf fmt "@]"
-    in
-    let pp_prev fmt prev =
-      fprintf fmt "@[<v 0>%a@]"
-        (pp_print_list ~pp_sep:pp_sep_and_log
-           (pp_satom ~pp_sep:pp_sep_and_log sub')) prev
-    in
-    let pp_invariant ?(last=false) prev u fmt (inv, t) =
-      if last then fprintf fmt "(%a" pp_prev prev
-      else
-        fprintf fmt "(%a%s%a"
-          (pp_satom ~pp_sep:pp_sep_and_log sub') inv
-          (if prev <> [] then " /\\ " else "") pp_prev prev;
-      fprintf fmt "%ss.%a = %a)"
-        (if prev = [] && is_true inv then "" else " -> ")
-        (pp_arr_access sub') u (pp_term_at sub' lbl) t
-    in
-    let pp_invariants fmt u =
-      fprintf fmt "invariant { @[<v 2>forall _p:proc. 0 <= _p < %a ->@,"
-        Variable.print_vars u.up_arg;
-      let rec aux prev fmt = function
-        | [upd] -> pp_invariant ~last:true prev u fmt upd
-        | ((inv, _) as upd) :: tl -> pp_invariant prev u fmt upd;
-          fprintf fmt " /\\@,";
-          aux (SAtom.map Atom.neg inv :: prev) fmt tl
-        | _ -> assert false
-      in
-      let pp_inv_array lbl fmt u =
-        fprintf fmt "s.%a = (s.%a at %a)"
-          (pp_arr_access sub') u (pp_arr_access sub') u pp_hstring_cap lbl
-      in
-      aux [] fmt u.up_swts;
-      fprintf fmt " }@]@,";
-      fprintf fmt "invariant { @[<v 2>forall _p:proc. %a <= _p < _n ->@,\
-                   %a }@]@,@,"
-        Variable.print_vars u.up_arg (pp_inv_array lbl) u;
-    in
-    fprintf fmt "@[<v 2>%a@,%as.%a <- %a@]@,done;"
-      pp_for u pp_invariants u (pp_arr_access sub) u pp_swts u.up_swts
+    match u.up_swts with
+      | [(sa, t); _] ->
+        let sub' = Variable.build_subst u.up_arg plist @ sub in
+        fprintf fmt "@[<v 2>s.%a <- %a;@]"
+          (pp_arr_access sub') u (pp_term_syst sub') t
+      | _ ->
+        let sub' = Variable.build_subst u.up_arg [Hstring.make "_p"] @ sub in
+        let pp_swt ?(cond="else if") fmt (sa, t) =
+          if is_true sa then
+            fprintf fmt "else %a)" (pp_term_syst sub) t
+          else fprintf fmt "%s %a then %a"
+              cond (pp_satom sub) sa (pp_term_syst sub) t
+        in
+        let pp_swts fmt swts =
+          fprintf fmt "@[<v 0>";
+          (match swts with
+            | [(_, t)] -> fprintf fmt "%a" (pp_term_syst sub) t
+            | hd :: tl ->
+              fprintf fmt "%a@," (pp_swt ~cond:"(if") hd;
+              pp_print_list pp_swt fmt tl
+            | _ -> assert false);
+          fprintf fmt "@]"
+        in
+        let pp_prev fmt prev =
+          fprintf fmt "@[<v 0>%a@]"
+            (pp_print_list ~pp_sep:pp_sep_and_log
+               (pp_satom ~pp_sep:pp_sep_and_log sub')) prev
+        in
+        let pp_invariant ?(last=false) prev u fmt (inv, t) =
+          if last then fprintf fmt "(%a" pp_prev prev
+          else
+            fprintf fmt "(%a%s%a"
+              (pp_satom ~pp_sep:pp_sep_and_log sub') inv
+              (if prev <> [] then " /\\ " else "") pp_prev prev;
+          fprintf fmt "%ss.%a = %a)"
+            (if prev = [] && is_true inv then "" else " -> ")
+            (pp_arr_access sub') u (pp_term_at sub' lbl) t
+        in
+        let pp_invariants fmt u =
+          fprintf fmt "invariant { @[<v 2>forall _p:proc. 0 <= _p < %a ->@,"
+            Variable.print_vars u.up_arg;
+          let rec aux prev fmt = function
+            | [upd] -> pp_invariant ~last:true prev u fmt upd
+            | ((inv, _) as upd) :: tl -> pp_invariant prev u fmt upd;
+              fprintf fmt " /\\@,";
+              aux (SAtom.map Atom.neg inv :: prev) fmt tl
+            | _ -> assert false
+          in
+          let pp_inv_array lbl fmt u =
+            fprintf fmt "s.%a = (s.%a at %a)"
+              (pp_arr_access sub') u (pp_arr_access sub') u pp_hstring_cap lbl
+          in
+          aux [] fmt u.up_swts;
+          fprintf fmt " }@]@,";
+          fprintf fmt "invariant { @[<v 2>forall _p:proc. %a <= _p < _n ->@,\
+                       %a }@]@,@,"
+            Variable.print_vars u.up_arg (pp_inv_array lbl) u;
+        in
+        fprintf fmt "@[<v 2>%a@,%as.%a <- %a@]@,done;"
+          pp_for u pp_invariants u (pp_arr_access sub) u pp_swts u.up_swts
   in
   fprintf fmt "@[<v 0>%a@]" (pp_print_list pp_upd) ul
 
@@ -340,7 +358,7 @@ let pp_transitions pl fmt s =
       Hstring.print t.tr_name cond
       (pp_guard sub) t.tr_reqs (pp_uguards pl) t
       pp_hstring_cap t.tr_name
-      (pp_assigns sub) t.tr_assigns (pp_updates sub t.tr_name) t.tr_upds
+      (pp_assigns sub) t.tr_assigns (pp_updates pl sub t.tr_name) t.tr_upds
       (* (pp_nondets map) t.tr_nondets *)
   in
   match s.trans with
@@ -380,6 +398,21 @@ let pp_vars_distinct fmt vl =
   if List.compare_length_with vl 1 > 0 then fprintf fmt " /\\@ ";
   aux vl
 
+(* let pp_ensures fmt s =
+ *   let pp_univ_ensure fmt (_, vl, sa) =
+ *     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
+ *       pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
+ *       (pp_satom_nlast (vl <> [])) sa
+ *   in
+ *   let pp_ensure fmt (_, vl, sa) =
+ *     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
+ *       pp_vars vl pp_vars_bound vl pp_vars_distinct vl
+ *       (pp_satom_nlast (vl <> [])) sa
+ *   in
+ *   pp_print_list pp_ensure fmt s.unsafe;
+ *   fprintf fmt (if List.compare_length_with s.univ_unsafe 0 = 0 then "" else "@,");
+ *   pp_print_list pp_univ_ensure fmt s.univ_unsafe *)
+
 let pp_invariants invs fmt s =
   let pp_invariant fmt (vl, sa) =
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
@@ -399,12 +432,11 @@ let pp_invariants invs fmt s =
   pp_print_list pp_invariant fmt (invs @ sinvs)
 
 let pp_univ_unsafes fmt uul =
-  let pp_univ_unsafe fmt (vl, sa) =
+  let pp_univ_unsafe fmt (_, vl, sa) =
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
       pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
-      (pp_satom_nlast (vl <> [])) sa
+      (pp_satom_nlast ~uu:true (vl <> [])) sa
   in
-  let uul = List.map (fun (_, vl, sa) -> (vl, sa)) uul in
   pp_print_list pp_univ_unsafe fmt uul
 
 let pp_forall_others pl fmt tl =
@@ -463,7 +495,7 @@ let cub_to_whyml s invs fmt file =
     pp_system_to_type s;
   fprintf fmt "@,@[<v 2>let %s (_n : int) : system@,\
                diverges@,\
-               requires { 0 < _n }@]@,\
+               requires { 0 < _n }@,\
                @[<v 2>=@,"
     name;
   fprintf fmt "@[<v 2>let s = {%a@]@,} in@," pp_init s;

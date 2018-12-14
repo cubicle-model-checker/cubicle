@@ -13,13 +13,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 open Types
 open Util
 open Ast
 open Format
-
-
 
 type term =
   | TVar of Variable.t
@@ -50,21 +47,6 @@ type cformula = formula
 
 
 let function_defs = Hstring.H.create 17
-
-
-(* type cformula = [ *)
-(*   | PAtom of Atom.t *)
-(*   | PNot of cformula *)
-(*   | PAnd of cformula list *)
-(*   | POr of cformula list *)
-(*   | PImp of cformula * cformula *)
-(*   | PEquiv of cformula * cformula *)
-(*   | PIte of cformula * cformula * cformula *)
-(*   | PForall of Variable.t list * cformula *)
-(*   | PExists of Variable.t list * cformula *)
-(*   | PForall_other of Variable.t list * cformula *)
-(*   | PExists_other of Variable.t list * cformula *)
-(* ] *)
 
 let print_term fmt = function
   | TVar v -> fprintf fmt "'%a" Hstring.print v
@@ -117,6 +99,160 @@ let print_subst fmt =
   List.iter (fun (v, tof) ->
       fprintf fmt " %a -> %a, " Hstring.print v print_tof tof
     )
+
+let print_type_defs fmt =
+  List.iter (function
+      | _, (ty, []) ->
+        fprintf fmt "@{<fg_magenta>type@} @{<fg_green>%a@}" Hstring.print ty
+      | _, (ty, cstrs) ->
+        fprintf fmt "@{<fg_magenta>type@} @{<fg_green>%a@} = @[<hov>%a@]\n"
+          Hstring.print ty
+          (Pretty.print_list
+             (fun fmt -> fprintf fmt "@{<fg_blue>%a@}" Hstring.print)
+             "@ | ") cstrs
+    )
+
+let print_globals fmt  =
+  List.iter (fun (_, g, ty) ->
+      fprintf fmt "@{<fg_magenta>var@} @{<fg_red>%a@} : @{<fg_green>%a@}@."
+        Hstring.print g Hstring.print ty
+    )
+
+let print_arrays fmt  =
+  List.iter (fun (_, a, (args_ty, ty)) ->
+      fprintf fmt "@{<fg_magenta>array@} @{<fg_red>%a@}[%a] : \
+                   @{<fg_green>%a@}@."
+        Hstring.print a
+        (Pretty.print_list
+           (fun fmt -> fprintf fmt "@{<fg_green>%a@}" Hstring.print)
+           ",@ ") args_ty
+        Hstring.print ty
+    )
+
+let print_consts fmt  =
+  List.iter (fun (_, c, ty) ->
+      fprintf fmt "@{<fg_magenta>const@} @{<fg_blue>%a@} : @{<fg_green>%a@}@."
+        Hstring.print c Hstring.print ty
+    )
+
+let print_dnf =
+   Pretty.print_list
+     (fun fmt -> fprintf fmt "@[<hov 4>%a@]" SAtom.print_inline)
+     "@ || "
+
+let print_init fmt (_, vars, dnf) =
+  fprintf fmt "@{<fg_magenta>init@} (%a) {@ %a@ }@,"
+    Variable.print_vars vars
+    print_dnf dnf
+
+let print_unsafe fmt =
+  List.iter (fun (_, vars, u) ->
+      fprintf fmt "@{<fg_magenta>unsafe@} (%a) {@ %a@ }@,"
+        Variable.print_vars vars
+        SAtom.print_inline u
+    )
+
+let print_invs fmt =
+  List.iter (fun (_, vars, inv) ->
+      fprintf fmt "@{<fg_magenta>invariant@} (%a) {@ %a@ }@,"
+        Variable.print_vars vars
+        SAtom.print_inline inv
+    )
+
+
+let print_reqs fmt (tr_reqs, tr_ureq) =
+  if SAtom.for_all Atom.(equal True) tr_reqs && tr_ureq = [] then ()
+  else
+    fprintf fmt "@{<fg_magenta>requires@} @[<hov 2>{@ %a%a@ }@]@,"
+      SAtom.print_inline tr_reqs
+      (fun fmt -> List.iter (fun (v, u) ->
+           fprintf fmt "@ &&@ @[<hov 1>(@{<fg_magenta>forall_other@} %a.@ %a)@]"
+             Variable.print v print_dnf u
+         )) tr_ureq
+
+let print_lets fmt tr_lets =
+  List.iter (fun (v, t) ->
+      fprintf fmt "@[<hov>@{<fg_magenta>let@} %a@ =@ %a@ @{<fg_magenta>in@}@]@,"
+        Hstring.print v Term.print t
+    ) tr_lets
+
+let print_swts fmt swts =
+  match List.rev swts with
+  | (_, def) :: rsw ->
+    fprintf fmt "@[<v -2>@{<fg_magenta>case@}@,";
+    List.iter (fun (c, t) ->
+        fprintf fmt "@[<hov 2>| %a :@ %a@]@," SAtom.print_inline c Term.print t
+      ) (List.rev rsw);
+    fprintf fmt "@[<hov 2>| _ :@ %a@]" Term.print def;
+    fprintf fmt "@]"
+  | _ -> assert false
+
+let print_assigns fmt tr_assigns =
+  List.iter (fun (g, gu) ->
+      fprintf fmt "@[<hov>%a@ =@ " Hstring.print g;
+      match gu with
+      | UTerm t -> fprintf fmt "%a;@]@," Term.print t
+      | UCase swts -> fprintf fmt "%a;@]@," print_swts swts
+    ) tr_assigns
+
+let print_updates fmt tr_upds =
+  List.iter (fun { up_arr; up_arg; up_swts } ->
+      fprintf fmt "@[<hov>%a[%a]@ =@ %a;@]@,"
+        Hstring.print up_arr
+        Variable.print_vars up_arg
+        print_swts up_swts
+    ) tr_upds
+
+let print_nondets fmt =
+  List.iter (fprintf fmt "%a = ?;@," Hstring.print)
+
+let print_trans fmt =
+  List.iter
+    (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
+           tr_assigns; tr_upds; tr_nondets } ->
+      fprintf fmt
+        "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
+         %a\
+         {@[<v 2>@,\
+         %a\
+         %a\
+         %a\
+         %a\
+         @]}\
+         @,@,@]"
+        Hstring.print tr_name
+        Variable.print_vars tr_args
+        print_reqs (tr_reqs, tr_ureq)
+        print_lets tr_lets
+        print_assigns tr_assigns
+        print_updates tr_upds
+        print_nondets tr_nondets
+    )
+
+
+let print_system fmt { type_defs;
+                       globals;
+                       arrays;
+                       consts;
+                       init;
+                       invs;
+                       unsafe;
+                       trans } =
+  print_type_defs fmt type_defs;
+  pp_print_newline fmt ();
+  print_globals fmt globals;
+  (* pp_print_newline fmt (); *)
+  print_arrays fmt arrays;
+  (* pp_print_newline fmt (); *)
+  print_consts fmt consts;
+  pp_print_newline fmt ();
+  print_init fmt init;
+  pp_print_newline fmt ();
+  print_invs fmt invs;
+  pp_print_newline fmt ();
+  print_unsafe fmt unsafe;
+  pp_print_newline fmt ();
+  print_trans fmt (List.rev trans)
 
 
 (* type atom = [ PAtom of Atom.t ] *)
@@ -692,163 +828,6 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     punsafe = rs.unsafes;
     pwhyinvs = rs.whyinvs;
     ptrans = rs.trans}
-
-
-
-let print_type_defs fmt =
-  List.iter (function
-      | _, (ty, []) ->
-        fprintf fmt "@{<fg_magenta>type@} @{<fg_green>%a@}" Hstring.print ty
-      | _, (ty, cstrs) ->
-        fprintf fmt "@{<fg_magenta>type@} @{<fg_green>%a@} = @[<hov>%a@]\n"
-          Hstring.print ty
-          (Pretty.print_list
-             (fun fmt -> fprintf fmt "@{<fg_blue>%a@}" Hstring.print)
-             "@ | ") cstrs
-    )
-
-let print_globals fmt  =
-  List.iter (fun (_, g, ty) ->
-      fprintf fmt "@{<fg_magenta>var@} @{<fg_red>%a@} : @{<fg_green>%a@}@."
-        Hstring.print g Hstring.print ty
-    )
-
-let print_arrays fmt  =
-  List.iter (fun (_, a, (args_ty, ty)) ->
-      fprintf fmt "@{<fg_magenta>array@} @{<fg_red>%a@}[%a] : \
-                   @{<fg_green>%a@}@."
-        Hstring.print a
-        (Pretty.print_list
-           (fun fmt -> fprintf fmt "@{<fg_green>%a@}" Hstring.print)
-           ",@ ") args_ty
-        Hstring.print ty
-    )
-
-let print_consts fmt  =
-  List.iter (fun (_, c, ty) ->
-      fprintf fmt "@{<fg_magenta>const@} @{<fg_blue>%a@} : @{<fg_green>%a@}@."
-        Hstring.print c Hstring.print ty
-    )
-
-let print_dnf =
-   Pretty.print_list
-     (fun fmt -> fprintf fmt "@[<hov 4>%a@]" SAtom.print_inline)
-     "@ || "
-
-let print_init fmt (_, vars, dnf) =
-  fprintf fmt "@{<fg_magenta>init@} (%a) {@ %a@ }@,"
-    Variable.print_vars vars
-    print_dnf dnf
-
-let print_unsafe fmt =
-  List.iter (fun (_, vars, u) ->
-      fprintf fmt "@{<fg_magenta>unsafe@} (%a) {@ %a@ }@,"
-        Variable.print_vars vars
-        SAtom.print_inline u
-    )
-
-let print_invs fmt =
-  List.iter (fun (_, vars, inv) ->
-      fprintf fmt "@{<fg_magenta>invariant@} (%a) {@ %a@ }@,"
-        Variable.print_vars vars
-        SAtom.print_inline inv
-    )
-
-
-let print_reqs fmt (tr_reqs, tr_ureq) =
-  if SAtom.for_all Atom.(equal True) tr_reqs && tr_ureq = [] then ()
-  else
-    fprintf fmt "@{<fg_magenta>requires@} @[<hov 2>{@ %a%a@ }@]@,"
-      SAtom.print_inline tr_reqs
-      (fun fmt -> List.iter (fun (v, u) ->
-           fprintf fmt "@ &&@ @[<hov 1>(@{<fg_magenta>forall_other@} %a.@ %a)@]"
-             Variable.print v print_dnf u
-         )) tr_ureq
-
-let print_lets fmt tr_lets =
-  List.iter (fun (v, t) ->
-      fprintf fmt "@[<hov>@{<fg_magenta>let@} %a@ =@ %a@ @{<fg_magenta>in@}@]@,"
-        Hstring.print v Term.print t
-    ) tr_lets
-
-let print_swts fmt swts =
-  match List.rev swts with
-  | (_, def) :: rsw ->
-    fprintf fmt "@[<v -2>@{<fg_magenta>case@}@,";
-    List.iter (fun (c, t) ->
-        fprintf fmt "@[<hov 2>| %a :@ %a@]@," SAtom.print_inline c Term.print t
-      ) (List.rev rsw);
-    fprintf fmt "@[<hov 2>| _ :@ %a@]" Term.print def;
-    fprintf fmt "@]"
-  | _ -> assert false
-
-let print_assigns fmt tr_assigns =
-  List.iter (fun (g, gu) ->
-      fprintf fmt "@[<hov>%a@ =@ " Hstring.print g;
-      match gu with
-      | UTerm t -> fprintf fmt "%a;@]@," Term.print t
-      | UCase swts -> fprintf fmt "%a;@]@," print_swts swts
-    ) tr_assigns
-
-let print_updates fmt tr_upds =
-  List.iter (fun { up_arr; up_arg; up_swts } ->
-      fprintf fmt "@[<hov>%a[%a]@ =@ %a;@]@,"
-        Hstring.print up_arr
-        Variable.print_vars up_arg
-        print_swts up_swts
-    ) tr_upds
-
-let print_nondets fmt =
-  List.iter (fprintf fmt "%a = ?;@," Hstring.print)
-
-let print_trans fmt =
-  List.iter
-    (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
-           tr_assigns; tr_upds; tr_nondets } ->
-      fprintf fmt
-        "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
-         %a\
-         {@[<v 2>@,\
-         %a\
-         %a\
-         %a\
-         %a\
-         @]}\
-         @,@,@]"
-        Hstring.print tr_name
-        Variable.print_vars tr_args
-        print_reqs (tr_reqs, tr_ureq)
-        print_lets tr_lets
-        print_assigns tr_assigns
-        print_updates tr_upds
-        print_nondets tr_nondets
-    )
-
-
-let print_system fmt { type_defs;
-                       globals;
-                       arrays;
-                       consts;
-                       init;
-                       invs;
-                       unsafe;
-                       trans } =
-  print_type_defs fmt type_defs;
-  pp_print_newline fmt ();
-  print_globals fmt globals;
-  (* pp_print_newline fmt (); *)
-  print_arrays fmt arrays;
-  (* pp_print_newline fmt (); *)
-  print_consts fmt consts;
-  pp_print_newline fmt ();
-  print_init fmt init;
-  pp_print_newline fmt ();
-  print_invs fmt invs;
-  pp_print_newline fmt ();
-  print_unsafe fmt unsafe;
-  pp_print_newline fmt ();
-  print_trans fmt (List.rev trans)
-
 
 let encode_psystem psys =
   let sys = encode_psystem psys in
