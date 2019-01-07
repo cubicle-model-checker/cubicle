@@ -15,13 +15,12 @@ var X : proc
 var Y : bool
 array Rval[proc] : directions
 array PC[proc] : pc
-array Alive[proc] : bool
 
 (* ================================================================ *)
 (* Tentative d'invariants *)
 (* ================================================================ *)
 
-init(i) { Rval[i] = None && Y = False && PC[i] = PC0 && Alive[i] = True }
+init(i) { Rval[i] = None && Y = False && PC[i] = PC0 }
 
 (* ================================================================ *)
 
@@ -37,7 +36,7 @@ init(i) { Rval[i] = None && Y = False && PC[i] = PC0 && Alive[i] = True }
 (* universal_unsafe (i) { PC[i] <> PC8 && PC[i] <> PC4 && PC[i] <> PC3 *)
 (* 		       && PC[i] <> PC1 && PC[i] <> PC0 && PC[i] <> PC5 *)
 (* 		       && PC[i] <> PC2 && PC[i] <> PC7 && Rval[i] <> Stop } *)
-universal_unsafe (i) { Alive[i] = False && Rval[i] <> Stop && Rval[i] <> Right}
+universal_unsafe (i) { Rval[i] = Down}
 
 (* unsafe(i) { Y = False && PC[i] = PC4 } *)
 (* unsafe(i) { Y = False && PC[i] = PC5 } *)
@@ -72,7 +71,6 @@ transition spl2(i)
 requires { PC[i] = PC2 }
 {
         Rval[i] := Right;
-	Alive[i] := False;
         PC[i] := PC7
 }
 
@@ -99,7 +97,6 @@ transition spl5(i)
 requires { PC[i] = PC5 }
 {
         Rval[i] := Stop;
-	Alive[i] := False;
         PC[i] := PC8
 }
 
@@ -107,6 +104,5 @@ transition spl6(i)
 requires { PC[i] = PC6 }
 {
         Rval[i] := Down;
-	Alive[i] := False;
         PC[i] := PC9
 }

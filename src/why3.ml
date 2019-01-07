@@ -392,7 +392,9 @@ let pp_vars_distinct fmt vl =
   in
   let rec aux = function
     | [] -> ()
-    | hd :: tl -> pp_v_dist_vl hd fmt tl;
+    | hd :: tl ->
+      pp_v_dist_vl hd fmt tl;
+      if List.compare_length_with tl 1 > 0 then pp_sep_and_log fmt ();
       aux tl
   in
   if List.compare_length_with vl 1 > 0 then fprintf fmt " /\\@ ";
