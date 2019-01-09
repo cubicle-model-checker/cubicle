@@ -38,6 +38,7 @@ val procs : t list
 (** predefinied list of skolem variables [#1], [#2], [#3], ... Their number is
     controlled by {! Options.max_proc } *)
 
+val finite_procs : unit -> t list
 val alphas : t list
 val freshs : t list
 val number : t -> int

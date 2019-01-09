@@ -420,6 +420,8 @@ and SAtom : sig
   val subst : Variable.subst -> t -> t
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
+  val var_atoms : t -> t
+  val glob_atoms : t -> t
   val print : Format.formatter -> t -> unit
   val print_inline : Format.formatter -> t -> unit
 
@@ -453,6 +455,18 @@ end = struct
     fold (fun a -> Variable.Set.union (Atom.variables a)) sa Variable.Set.empty
 
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
+
+  let var_atoms sa =
+    filter (function
+        | Comp (Elem (_, Var), _, _) -> true
+        | _ -> false
+      ) sa
+
+  let glob_atoms sa =
+    filter (function
+        | Comp (Elem (_, Glob), _, _) -> true
+        | _ -> false
+      ) sa
 
   let print fmt sa =
     fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (elements sa)

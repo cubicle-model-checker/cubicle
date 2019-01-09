@@ -194,6 +194,9 @@ and SAtom : sig
   (** same as [variables] but only return skolemized variables of the form
       [#i] *)
 
+  val var_atoms : t -> t
+  val glob_atoms : t -> t
+
   val print : Format.formatter -> t -> unit
   (** prints a conjunction *)
 

@@ -36,6 +36,8 @@ let alphas = gen_vars "$" max_proc
 
 let procs = gen_vars "#" max_proc
 
+let finite_procs () = gen_vars "#" !size_proc
+
 let freshs = gen_vars "?" max_proc
 
 let wprocs = gen_vars "_p" max_proc

@@ -303,11 +303,13 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (*****************************************************)
 
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
+  (* eprintf "Cube : %a@." SAtom.print unsafe; *)
   (* let tau = tr.tr_tau in *)
   let pre_unsafe =
     SAtom.union tri.tr_reqs
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
+  (* eprintf "Pre Cube : %a@." SAtom.print pre_unsafe; *)
   let pre_u = Cube.create_normal pre_unsafe in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   reset();

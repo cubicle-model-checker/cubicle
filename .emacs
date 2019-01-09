@@ -193,7 +193,6 @@
 ;;-----------
 ;; mode Why3
 ;; ----------
-
 (setq auto-mode-alist
       (cons '("\\.\\(\\(mlw\\)\\|\\(why\\)\\)$" . why3-mode) auto-mode-alist))
 (autoload 'why3-mode "why3-mode" "Major mode for Why3." t)
