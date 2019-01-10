@@ -122,7 +122,7 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
   let aux fmt l =
     let rec aux fmt = function
       | [a] ->
-        fprintf fmt " %s@ %a@ )" (if uu then "\\/" else "->")
+        fprintf fmt " %s@ %a" (if uu then "\\/" else "->")
           (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
         let a = if uu then Atom.neg hd else hd in
@@ -139,7 +139,7 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
           (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
         let a = if uu then Atom.neg hd else hd in
-        fprintf fmt "%s@ %a%a" (if bvars then " /\\ (" else "")
+        fprintf fmt "%s@ %a%a" (if bvars then " /\\" else "")
           (pp_atom_syst ~cond:true []) a aux tl
       | _ -> assert false
   in aux fmt @@ SAtom.elements sa;
