@@ -1,0 +1,137 @@
+module Splitter2_exist_pc
+
+use array.Array
+use int.Int
+use ref.Refint
+use random.Random
+
+scope import Directions
+
+  type directions = None | Right | Stop | Down
+
+  let (=) (a b: directions): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | None, None | Right, Right | Stop, Stop | Down, Down -> true
+      | _ -> false
+  end
+
+end
+
+scope import Pc
+
+  type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6
+
+  let (=) (a b: pc): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | PC0, PC0 | PC1, PC1 | PC2, PC2 | PC3, PC3 | PC4, PC4 | PC5, PC5 |
+        PC6, PC6 -> true
+      | _ -> false
+  end
+
+end
+
+val coin () : bool
+
+type proc = int
+
+type system = {
+  mutable x : proc;
+  mutable y : bool;pC : array pc;
+}
+let splitter2_exist_pc (_n : int) : system
+  diverges
+  requires { 0 < _n }
+  =
+    let s = {
+      y = false;
+      pC = Array.make _n PC0;
+      x = Random.random_int _n
+    } in
+
+    assert { s.pC[0] = PC0 };
+
+    while true do
+
+      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
+                    _p2 <> _p3 /\ s.x = _p1 /\ s.pC[_p1] = PC6 /\
+                              s.pC[_p2] = PC3 -> s.pC[_p3] <> PC3 }
+      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
+                    _p2 <> _p3 /\ s.x = _p1 /\ s.pC[_p1] = PC6 /\
+                              s.pC[_p2] = PC4 -> s.pC[_p3] <> PC3 }
+      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
+                    _p2 <> _p3 /\ s.x = _p1 /\ s.pC[_p1] = PC6 /\
+                              s.pC[_p2] = PC4 -> s.pC[_p3] <> PC4 }
+      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
+                    _p2 <> _p3 /\ s.x <> _p3 /\ s.pC[_p1] = PC6 /\
+                              s.pC[_p2] = PC6 -> s.pC[_p3] <> PC3 }
+      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
+                    _p2 <> _p3 /\ s.x <> _p3 /\ s.pC[_p1] = PC6 /\
+                              s.pC[_p2] = PC6 -> s.pC[_p3] <> PC4 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC4 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC6 }
+      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
+                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
+                    _p2 <> _p3 /\ s.pC[_p1] = PC6 /\ s.pC[_p2] = PC6 ->
+                              s.pC[_p3] <> PC6 }
+      invariant { exists i : int. 0 <= i < _n /\ s.pC[i] <> PC6 }
+      let _p0 = Random.random_int _n in
+      (*If there is more than one value,
+      the variables could be equal, need to work on it*)
+
+      (*spl0*)
+      if coin () && s.pC[_p0] = PC0
+      then begin
+        label Spl0 in
+        s.x <- _p0;
+        s.pC[_p0] <- PC1;
+      end
+
+      (*spl3*)
+      else if coin () && s.pC[_p0] = PC3
+      then begin
+        label Spl3 in
+        s.y <- true;
+        s.pC[_p0] <- PC4;
+      end
+
+      (*spl1a*)
+      else if coin () && s.y && s.pC[_p0] = PC1
+      then begin
+        label Spl1a in
+        s.pC[_p0] <- PC2;
+      end
+
+      (*spl1b*)
+      else if coin () && not s.y && s.pC[_p0] = PC1
+      then begin
+        label Spl1b in
+        s.pC[_p0] <- PC3;
+      end
+
+      (*spl4a*)
+      else if coin () && s.x = _p0 && s.pC[_p0] = PC4
+      then begin
+        label Spl4a in
+        s.pC[_p0] <- PC5;
+      end
+
+      (*spl4b*)
+      else if coin () && s.x <> _p0 && s.pC[_p0] = PC4
+      then begin
+        label Spl4b in
+        s.pC[_p0] <- PC6;
+      end
+
+
+    done;
+    s
+  end

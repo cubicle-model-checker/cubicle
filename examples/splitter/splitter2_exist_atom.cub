@@ -1,0 +1,201 @@
+(* splitter with cubicle *)
+
+(* Model inspired by the Pluscal version (more precisely, by the translation
+  in TLA+ of the Pluscal version).
+  Tentative to express the safe states by counting. Cubicle runs forever (> 15h) without conclusion.
+*)
+
+type directions = None | Right | Stop | Down
+
+type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
+
+var X : proc
+var Y : bool
+array Rval[proc] : directions
+array PC[proc] : pc
+
+init(i) { Rval[i] = None && Y = False && PC[i] = PC0 }
+
+(* ================================================================ *)
+
+(* UNSAFE *)
+
+(* NEEDS TO BE TRANSLATED *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC6 } *)
+
+(* universal_unsafe (p) { PC[p] <> PC6 } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      Rval[p1] = Down && *)
+(*      Rval[p2] = Down && *)
+(*      PC[p3] = PC6 } *)
+
+(* exists p1 : int. 0 <= p1 < _n /\ *)
+(*    (forall p2 : int. 0 <= p2 < _n /\ p1 <> p2 -> s.rval[p2] = Down) *)
+(*    -> s.pC[p1] <> PC6  *)
+
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      Rval[p1] = Down && *)
+(*      Rval[p2] = Down && *)
+(*      PC[p3] = PC4 } *)
+
+(* invariant { exists p1 : int. 0 <= p1 < _n /\ s.x <> p1 /\ *)
+(* 		    (forall p2 : int. 0 <= p2 < _n /\ p1 <> p2 -> s.rval[p2] = Down) *)
+(* 		     -> s.pC[p1] <> PC4 } *)
+
+
+(* unsafe (p1 p2 p3) { *)
+(*      Rval[p1] = Down && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC6 } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      Rval[p1] = Down && *)
+(*      Rval[p2] = Down && *)
+(*      PC[p3] = PC3 } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      Rval[p1] = Down && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC4 } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      Rval[p1] = Down && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC3 } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*       X <> p3 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC4 } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC3 } *)
+
+(* SAFE *)
+
+unsafe (p1 p2 p3) {
+     X = p1 &&
+     PC[p1] = PC6 &&
+     PC[p2] = PC3 &&
+     PC[p3] = PC3 }
+
+unsafe (p1) {
+     Rval[p1] = Down &&
+     PC[p1] = PC0 }
+
+unsafe (p1) {
+      Y = False &&
+      Rval[p1] = Down }
+
+unsafe (p1 p2 p3) {
+     X = p1 &&
+     Rval[p1] = Down &&
+     PC[p2] = PC4 &&
+     PC[p3] = PC4 }
+
+unsafe (p1) {
+     Y = False &&
+     PC[p1] = PC6 }
+
+unsafe (p1 p2 p3) {
+     X = p1 &&
+     Rval[p1] = Down &&
+     PC[p2] = PC4 &&
+     PC[p3] = PC3 }
+
+unsafe (p1 p2 p3) {
+     X = p1 &&
+     PC[p1] = PC6 &&
+     PC[p2] = PC4 &&
+     PC[p3] = PC4 }
+
+unsafe (p1) {
+     Y = False &&
+     PC[p1] = PC4 }
+
+unsafe (p1 p2 p3) {
+     X = p1 &&
+     Rval[p1] = Down &&
+     PC[p2] = PC3 &&
+     PC[p3] = PC3 }
+
+unsafe (p1 p2 p3) {
+     X = p1 &&
+     PC[p1] = PC6 &&
+     PC[p2] = PC4 &&
+     PC[p3] = PC3 }
+
+(* Test *)
+
+transition spl0(i)
+requires { PC[i] = PC0 }
+{
+        X := i;
+        PC[i] := PC1;
+}
+
+transition spl1a(i)
+requires { PC[i] = PC1 && Y = True }
+{
+        PC[i] := PC2;
+}
+
+transition spl1b(i)
+requires { PC[i] = PC1 && Y = False }
+{
+        PC[i] := PC3
+}
+
+transition spl2(i)
+requires { PC[i] = PC2 }
+{
+        Rval[i] := Right;
+        PC[i] := PC7
+}
+
+transition spl3(i)
+requires { PC[i] = PC3 }
+{
+        Y := True;
+        PC[i] := PC4
+}
+
+transition spl4a(i)
+requires { PC[i] = PC4 && X = i }
+{
+        PC[i] := PC5;
+}
+
+transition spl4b(i)
+requires { PC[i] = PC4 && X <> i }
+{
+        PC[i] := PC6;
+}
+
+transition spl5(i)
+requires { PC[i] = PC5 }
+{
+        Rval[i] := Stop;
+        PC[i] := PC8
+}
+
+transition spl6(i)
+requires { PC[i] = PC6 }
+{
+        Rval[i] := Down;
+        PC[i] := PC9
+}
