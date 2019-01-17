@@ -1,0 +1,75 @@
+module Splitter
+
+  use import array.Array
+  use import int.Int
+  use import ref.Refint
+  use import random.Random
+
+type step = Step0 | Step1 | Step2 | Step3 | Step4 | Step5 | Step6 | Step7
+type direction = None | Right | Stop | Down
+
+function pick int int : int
+axiom in_pick :  forall n :int. forall  k:int. 0<= pick n k < n
+
+
+
+let splitter (n:int) (maxpas:int): array direction =
+  requires {0<n}
+  ensures {n=1 -> (result[0]=None \/ result[0]=Stop)}
+  ensures {forall i j: int. 0<=i<n /\  0<=j<n /\ result[i]=Stop  /\ result[j]=Stop -> i=j}
+  ensures {exists i : int. 0<=i<n /\ result[i]<>Right}
+  ensures {exists i : int. 0<=i<n /\ result[i]<>Down}
+  let pc = Array.make n Step0 in
+  let rval = Array.make n None in
+  let x = ref 0 in
+  let y = ref false in
+  let nbpas = ref 0 in
+  while (!nbpas < maxpas ) do
+    variant {maxpas-(!nbpas)}
+
+    (****** Première post-condition ******)
+    invariant {(n=1 /\ (pc[0]=Step0 \/ pc[0]=Step1)) -> (not (!y))}
+    invariant {n=1 -> (!x = 0)}
+    invariant {n=1 -> (pc[0]=Step0 \/ pc[0]=Step1 \/ pc[0]=Step3 \/  pc[0]=Step4 \/  pc[0]=Step5 \/  pc[0]=Step7)}
+    invariant {n=1 -> (rval[0]=None \/ rval[0]=Stop)}
+
+    (****** Généralités ******)
+    invariant {forall i :int. 0<=i<n /\ pc[i]=Step7 <-> rval[i]<>None}
+
+    invariant {0 <= (!x) <n}
+
+    (****** Deuxième post-condition ******)
+    invariant {(exists i : int. 0<=i<n /\ (pc[i]=Step4 \/ pc[i]=Step5)) -> (!y)}
+    invariant {(exists i : int. 0<=i<n /\ rval[i]=Stop) -> (!y)}
+    invariant {forall i : int. 0<=i<n /\ pc[i]=Step5 -> (!x=i \/ pc[!x]=Step1 \/ pc[!x]=Step2 \/ (pc[!x]=Step7 /\ rval[!x]=Right))}
+    invariant {forall i : int. 0<=i<n /\ pc[i]=Step7 /\ rval[i]=Stop -> (!x=i \/ pc[!x]=Step1 \/ pc[!x]=Step2 \/ (pc[!x]=Step7 /\ rval[!x]=Right))}
+    invariant {forall i j: int. 0<=i<n /\  0<=j<n /\ pc[i]=Step5  /\ pc[j]=Step5 -> i=j}
+    invariant {not (exists i j: int. 0<=i<n /\  0<=j<n /\ pc[i]=Step5  /\ pc[j]=Step7 /\ rval[j]=Stop)}
+    invariant {forall i j: int. 0<=i<n /\  0<=j<n /\ rval[i]=Stop  /\ rval[j]=Stop -> i=j}
+
+
+    (****** Troisième post-condition ******)
+    invariant {(exists i : int. 0<=i<n /\ (pc[i]=Step2 \/ rval[i]=Right )) -> (!y)}
+    invariant {(!y) -> ((exists i : int. 0<=i<n /\ pc[i]=Step4 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=Step5 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=Step6 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=Step7 /\ rval[i]=Down) \/ (exists i : int. 0<=i<n /\ pc[i]=Step7 /\ rval[i]=Stop))}
+
+    (****** Quatrème post-condition ******)
+    invariant {(pc[!x]=Step0 /\ rval[!x]=None) \/ (pc[!x]=Step1 /\ rval[!x]=None) \/ (pc[!x]=Step2 /\ rval[!x]=None) \/ (pc[!x]=Step3 /\ rval[!x]=None) \/ (pc[!x]=Step4 /\ rval[!x]=None) \/ (pc[!x]=Step5 /\ rval[!x]=None) \/ (pc[!x]=Step7 /\ rval[!x]=Right) \/ (pc[!x]=Step7 /\ rval[!x]=Stop)}
+
+    (* On choisit de façon aléatoire un proc à faire avancer *)
+    let proc = pick n (!nbpas) in
+    (* le proc fait un pas *)
+    match pc[proc] with
+    |Step0 -> x:= proc; pc[proc] <- Step1
+    |Step1 -> if (!y) then pc[proc] <- Step2 else pc[proc] <- Step3
+    |Step2 -> rval[proc] <- Right;  pc[proc] <- Step7
+    |Step3 -> y := true; pc[proc] <- Step4
+    |Step4 -> if ((!x)=(proc)) then pc[proc] <- Step5 else pc[proc] <- Step6
+    |Step5 -> rval[proc] <- Stop;  pc[proc] <- Step7
+    |Step6 -> rval[proc] <- Down;  pc[proc] <- Step7
+    |Step7 -> ()
+    end;
+    nbpas := !nbpas +1;
+  done;
+  rval
+
+end
