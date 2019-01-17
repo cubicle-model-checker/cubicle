@@ -144,7 +144,7 @@ let specs =
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
     "-towhy3", Arg.Set towhy3, " translate the cubicle file to why3";
-    "-why3_out_file", Arg.Set why3_out_file, " write the output in a file";
+    "-why3-out-file", Arg.Set why3_out_file, " write the output in a file";
     "-cub-invs", Arg.Set why3_cub_invs, " gives Cubicle invariants to the why3 file";
 
     "-all-invs", Arg.Clear only_brab_invs, " gives all invariants to the why3 file";

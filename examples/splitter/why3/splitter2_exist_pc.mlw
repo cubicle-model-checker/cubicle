@@ -54,35 +54,19 @@ let splitter2_exist_pc (_n : int) : system
 
     while true do
 
-      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
-                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
-                    _p2 <> _p3 /\ s.x = _p1 /\ s.pC[_p1] = PC6 /\
-                              s.pC[_p2] = PC3 -> s.pC[_p3] <> PC3 }
-      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
-                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
-                    _p2 <> _p3 /\ s.x = _p1 /\ s.pC[_p1] = PC6 /\
-                              s.pC[_p2] = PC4 -> s.pC[_p3] <> PC3 }
-      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
-                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
-                    _p2 <> _p3 /\ s.x = _p1 /\ s.pC[_p1] = PC6 /\
-                              s.pC[_p2] = PC4 -> s.pC[_p3] <> PC4 }
-      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
-                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
-                    _p2 <> _p3 /\ s.x <> _p3 /\ s.pC[_p1] = PC6 /\
-                              s.pC[_p2] = PC6 -> s.pC[_p3] <> PC3 }
-      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
-                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
-                    _p2 <> _p3 /\ s.x <> _p3 /\ s.pC[_p1] = PC6 /\
-                              s.pC[_p2] = PC6 -> s.pC[_p3] <> PC4 }
+      invariant { exists _p1 : int. 0 <= _p1 < _n /\ s.x <> _p1  /\ (
+      		    forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6)
+		    -> s.pC[_p1] <> PC3 }
+
+      invariant { exists _p1 : int. 0 <= _p1 < _n /\ s.x <> _p1  /\ (
+      		    forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6)
+		    -> s.pC[_p1] <> PC4 }
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
                                                  s.pC[_p1] <> PC4 }
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
                                                  s.pC[_p1] <> PC6 }
-      invariant { forall _p1 _p2 _p3 : int. 0 <= _p1 < _n /\ 0 <= _p2 < _n /\
-                    0 <= _p3 < _n /\ _p1 <> _p2 /\ _p1 <> _p3 /\
-                    _p2 <> _p3 /\ s.pC[_p1] = PC6 /\ s.pC[_p2] = PC6 ->
-                              s.pC[_p3] <> PC6 }
       invariant { exists i : int. 0 <= i < _n /\ s.pC[i] <> PC6 }
+
       let _p0 = Random.random_int _n in
       (*If there is more than one value,
       the variables could be equal, need to work on it*)
