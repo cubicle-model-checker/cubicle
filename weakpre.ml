@@ -265,11 +265,11 @@ let make_read_write_combinations writes evts_bt urevts ghb =
 let subst_event_val sfun sa =
   let rec process_t = function
     | Access (f, [e]) as t when is_value f -> sfun t e
-    | Arith (t, c) ->
+    | Arith (t, c) as arith_tc ->
        let ntl = process_t t in
        begin match ntl with
        | [] -> failwith "Weakpre.subst_event_val : ntl can't be empty"
-       | [nt] when nt == t -> [t]
+       | [nt] when nt == t -> [arith_tc]
        | _ -> List.map (fun nt -> Arith (nt, c)) ntl
        end
     | t -> [t]
