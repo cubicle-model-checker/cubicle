@@ -1,0 +1,21 @@
+logic p : int -> prop
+
+goal g1 : (exists x : int. (exists y : int. y <> x and not p(y)) or not p(x)) <->
+       	 (exists z : int. not p(z))
+
+goal g1b : (exists x : int. (forall y : int. y <> x -> p(y)) -> not p(x)) <->
+       	 (exists z : int. not p(z))
+
+goal g2 : (exists x : int. 0 <= x < 10 and ((exists y : int. 0 <= y < 10 and y <> x and not p(y)) or (not p(x))))
+	 <->
+       	 (exists z : int. (0 <= z < 10 and not p(z)))
+
+goal g3 : (exists x : int. (0 <= x < 10 and (
+       	    (forall y : int. 0 <= y < 10 and y <> x -> not p(y))))
+	    -> not p(x))
+	 <->
+       	 (exists z : int. (0 <= z < 10 and not p(z)))
+
+(* goal g3 : (exists x : int. (exists y : int. y <> x and not p(y)) or not p(x)) *)
+
+(* goal g4 : (exists x : int. not p(x)) *)
