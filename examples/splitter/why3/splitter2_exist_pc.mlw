@@ -58,33 +58,29 @@ let splitter2_exist_pc (_n : int) : system
       		   (forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6))
       		   -> s.pC[_p1] <> PC3) }
 
-
-
       invariant { [@expl:pcq]
       		  exists _p1 : int. 0 <= _p1 < _n /\ ((
 		    s.x <> _p1  /\
       		    ( forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6 ))
       		    -> s.pC[_p1] <> PC4) }
 
-
-
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
                                                  s.pC[_p1] <> PC4 }
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
                                                  s.pC[_p1] <> PC6 }
 
-      invariant { [@expl:comp]
-      		  exists _p1 : int. 0 <= _p1 < _n /\ ((
-      		    (forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6))
-		    -> s.pC[_p1] <> PC6) }
+      (* invariant { [@expl:comp] *)
+      (* 		  exists _p1 : int. 0 <= _p1 < _n /\ (( *)
+      (* 		    (forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6)) *)
+      (* 		    -> s.pC[_p1] <> PC6) } *)
 
       (* invariant { [@expl:comp3] *)
       (* 		  exists _p1 : int. (0 <= _p1 < _n /\ ( *)
       (* 		    (exists _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 /\ s.pC[_p2] <> PC6))) *)
       (* 		    \/ s.pC[_p1] <> PC6 } *)
 
-      (* invariant { [@expl:mygoal] *)
-      (* 		  exists i : int. 0 <= i < _n /\ s.pC[i] <> PC6 } *)
+      invariant { [@expl:mygoal]
+       		  exists i : int. 0 <= i < _n /\ s.pC[i] <> PC6 }
 
       let _p0 = Random.random_int _n in
       (*If there is more than one value,

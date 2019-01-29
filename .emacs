@@ -43,13 +43,12 @@
  '(require-final-newline t)
  '(safe-local-variable-values (quote ((TeX-Master . "these") (TeX-Master . t))))
  '(scroll-bar-mode (quote right))
- '(show-paren-mode t)
  '(show-trailing-whitespace t)
  '(tool-bar-mode nil)
  '(tuareg-function-indent 2)
  '(tuareg-match-clause-indent 0)
  '(tuareg-type-indent 2)
- '(tuareg-use-abbrev-mode t)
+ '(tuareg-use-abbrev-mode nil)
  '(tuareg-with-indent 2)
  '(use-file-dialog nil)
  '(user-mail-address "roux@lri.fr")
@@ -193,6 +192,7 @@
 ;;-----------
 ;; mode Why3
 ;; ----------
+
 (setq auto-mode-alist
       (cons '("\\.\\(\\(mlw\\)\\|\\(why\\)\\)$" . why3-mode) auto-mode-alist))
 (autoload 'why3-mode "why3-mode" "Major mode for Why3." t)
@@ -206,7 +206,7 @@
 
 (defun my-set-tuareg-mode ()
   (when (and (stringp buffer-file-name)
-             (string-match "\\.mly\\'" buffer-file-name))
+             (string-match "\\.ml\\(y\\|l\\)\\'" buffer-file-name))
     (tuareg-mode)
     (lambda () (electric-indent-local-mode -1))))
 
@@ -238,7 +238,9 @@
                                         ;(global-set-key [end] 'end-of-buffer)
 
 ;; Montrer la correspondance des parenthèses (systématiquement et non seulement après la frappe)
+
 (require 'paren)
+(setq show-paren-delay 0)
 (show-paren-mode 1)
 (setq blink-matching-paren t)
 (setq blink-matching-paren-on-screen t)
@@ -322,8 +324,7 @@
 (add-hook 'tuareg-mode-hook 'set-ocaml-error-regexp)
 (add-hook 'caml-mode-hook 'set-ocaml-error-regexp)
 
-(add-to-list 'load-path
-	     "/home/mattias/.opam/4.05.0/share/emacs/site-lisp/")
+(add-to-list 'load-path "/home/mattias/.opam/4.07.1/share/emacs/site-lisp/")
 
 ;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
 (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
