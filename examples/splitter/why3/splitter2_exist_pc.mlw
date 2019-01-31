@@ -54,6 +54,39 @@ let splitter2_exist_pc (_n : int) : system
 
     while true do
 
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC2 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC4 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC5 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC6 }
+
+      invariant { forall i : int. 0 <= i < _n /\
+                   s.pC[i] = PC6 -> s.x <> i }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 -> s.pC[j] <> PC5 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.pC[j] = PC3 -> s.x <> j }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.pC[j] = PC4 -> s.x <> j }
+
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC4 }
+
+      invariant { forall i j : int. 0 <= i < _n /\ 0 <= j < _n /\
+                    i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC3 }
+
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC4 }
+      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
+                                                 s.pC[_p1] <> PC6 }
+
       invariant { exists _p1 : int. 0 <= _p1 < _n /\ ((s.x <> _p1  /\
       		   (forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6))
       		   -> s.pC[_p1] <> PC3) }
@@ -63,11 +96,6 @@ let splitter2_exist_pc (_n : int) : system
 		    s.x <> _p1  /\
       		    ( forall _p2 : int. 0 <= _p2 < _n /\ _p1 <> _p2 -> s.pC[_p2] = PC6 ))
       		    -> s.pC[_p1] <> PC4) }
-
-      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
-                                                 s.pC[_p1] <> PC4 }
-      invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
-                                                 s.pC[_p1] <> PC6 }
 
       (* invariant { [@expl:comp] *)
       (* 		  exists _p1 : int. 0 <= _p1 < _n /\ (( *)
