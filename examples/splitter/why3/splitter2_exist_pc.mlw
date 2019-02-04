@@ -54,6 +54,8 @@ let splitter2_exist_pc (_n : int) : system
 
     while true do
 
+      invariant { 0 <= s.x < _n }
+
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
                                                  s.pC[_p1] <> PC2 }
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
@@ -62,7 +64,6 @@ let splitter2_exist_pc (_n : int) : system
                                                  s.pC[_p1] <> PC5 }
       invariant { forall _p1 : int. 0 <= _p1 < _n /\ not s.y ->
                                                  s.pC[_p1] <> PC6 }
-
       invariant { forall i : int. 0 <= i < _n /\
                    s.pC[i] = PC6 -> s.x <> i }
 

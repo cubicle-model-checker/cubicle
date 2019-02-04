@@ -1,0 +1,72 @@
+module Splitter
+
+  use array.Array
+  use int.Int
+  use ref.Refint
+  use random.Random
+
+type step = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7
+type direction = None | Right | Stop | Down
+
+
+
+let splitter (n:int) (maxpas:int): array direction =
+  requires {0<n}
+  ensures {n=1 -> (result[0]=None \/ result[0]=Stop)}
+  ensures {forall i j: int. 0<=i<n /\  0<=j<n /\ result[i]=Stop  /\ result[j]=Stop -> i=j}
+  ensures {exists i : int. 0<=i<n /\ result[i]<>Right}
+  ensures {exists i : int. 0<=i<n /\ result[i]<>Down}
+  let pc = Array.make n PC0 in
+  let rval = Array.make n None in
+  let x = ref 0 in
+  let y = ref false in
+  let nbpas = ref 0 in
+  while (!nbpas < maxpas ) do
+    variant {maxpas-(!nbpas)}
+
+    (****** Première post-condition ******)
+    invariant {(n=1 /\ (pc[0]=PC0 \/ pc[0]=PC1)) -> (not (!y))}
+    invariant {n=1 -> (!x = 0)}
+    invariant {n=1 -> (pc[0]=PC0 \/ pc[0]=PC1 \/ pc[0]=PC3 \/  pc[0]=PC4 \/  pc[0]=PC5 \/  pc[0]=PC7)}
+    invariant {n=1 -> (rval[0]=None \/ rval[0]=Stop)}
+
+    (****** Généralités ******)
+    (* invariant {forall i :int. 0<=i<n /\ pc[i]=PC7 <-> rval[i]<>None} *)
+
+    invariant {0 <= (!x) <n}
+
+    (****** Deuxième post-condition ******)
+    invariant {(exists i : int. 0<=i<n /\ (pc[i]=PC4 \/ pc[i]=PC5)) -> (!y)}
+    invariant {(exists i : int. 0<=i<n /\ rval[i]=Stop) -> (!y)}
+    invariant {forall i : int. 0<=i<n /\ pc[i]=PC5 -> (!x=i \/ pc[!x]=PC1 \/ pc[!x]=PC2 \/ (pc[!x]=PC7 /\ rval[!x]=Right))}
+    invariant {forall i : int. 0<=i<n /\ pc[i]=PC7 /\ rval[i]=Stop -> (!x=i \/ pc[!x]=PC1 \/ pc[!x]=PC2 \/ (pc[!x]=PC7 /\ rval[!x]=Right))}
+    invariant {forall i j: int. 0<=i<n /\  0<=j<n /\ pc[i]=PC5  /\ pc[j]=PC5 -> i=j}
+    invariant {not (exists i j: int. 0<=i<n /\  0<=j<n /\ pc[i]=PC5  /\ pc[j]=PC7 /\ rval[j]=Stop)}
+    invariant {forall i j: int. 0<=i<n /\  0<=j<n /\ rval[i]=Stop  /\ rval[j]=Stop -> i=j}
+
+
+    (****** Troisième post-condition ******)
+    invariant {(exists i : int. 0<=i<n /\ (pc[i]=PC2 \/ rval[i]=Right )) -> (!y)}
+    invariant {(!y) -> ((exists i : int. 0<=i<n /\ pc[i]=PC4 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=PC5 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=PC6 /\ rval[i]=None) \/ (exists i : int. 0<=i<n /\ pc[i]=PC7 /\ rval[i]=Down) \/ (exists i : int. 0<=i<n /\ pc[i]=PC7 /\ rval[i]=Stop))}
+
+    (****** Quatrème post-condition ******)
+    invariant {(pc[!x]=PC0 /\ rval[!x]=None) \/ (pc[!x]=PC1 /\ rval[!x]=None) \/ (pc[!x]=PC2 /\ rval[!x]=None) \/ (pc[!x]=PC3 /\ rval[!x]=None) \/ (pc[!x]=PC4 /\ rval[!x]=None) \/ (pc[!x]=PC5 /\ rval[!x]=None) \/ (pc[!x]=PC7 /\ rval[!x]=Right) \/ (pc[!x]=PC7 /\ rval[!x]=Stop) \/ (pc[!x]=PC7 /\ rval[!x]=Down)}
+
+    (* On choisit de façon aléatoire un proc à faire avancer *)
+    let proc = Random.random_int n in
+    (* le proc fait un pas *)
+    match pc[proc] with
+    |PC0 -> x:= proc; pc[proc] <- PC1
+    |PC1 -> if (!y) then pc[proc] <- PC2 else pc[proc] <- PC3
+    |PC2 -> rval[proc] <- Right;  pc[proc] <- PC7
+    |PC3 -> y := true; pc[proc] <- PC4
+    |PC4 -> if ((!x)=(proc)) then pc[proc] <- PC5 else pc[proc] <- PC6
+    |PC5 -> rval[proc] <- Stop;  pc[proc] <- PC7
+    |PC6 -> rval[proc] <- Down;  pc[proc] <- PC7
+    |PC7 -> ()
+    end;
+    nbpas := !nbpas +1;
+  done;
+  rval
+
+end
