@@ -21,13 +21,13 @@ end
 
 scope import Pc
 
-  type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7
+  type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6 | PC7 | PC8 | PC9
 
   let (=) (a b: pc): bool
     ensures {result <-> a = b}
     = match a, b with
       | PC0, PC0 | PC1, PC1 | PC2, PC2 | PC3, PC3 | PC4, PC4 | PC5, PC5 |
-        PC6, PC6 | PC7, PC7 -> true
+        PC6, PC6 | PC7, PC7 | PC8, PC8 | PC9, PC9 -> true
       | _ -> false
   end
 
@@ -119,6 +119,10 @@ let splitter2_exist (_n : int) : system
                     i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC3 }
 
       (* invariant { [@expl:numofltn] NumOfEq.numof s.rval Down 0 _n < _n } *)
+      invariant { [@expl:existnotdown]
+      		  exists i : int. 0 <= i < _n /\ s.pC[i] <> PC6 }
+
+
       invariant { [@expl:existnotdown]
       		  exists i : int. 0 <= i < _n /\ s.rval[i] <> Down }
 
