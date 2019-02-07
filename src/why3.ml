@@ -400,20 +400,20 @@ let pp_vars_distinct fmt vl =
   if List.compare_length_with vl 1 > 0 then fprintf fmt " /\\@ ";
   aux vl
 
-(* let pp_ensures fmt s =
- *   let pp_univ_ensure fmt (_, vl, sa) =
- *     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
- *       pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
- *       (pp_satom_nlast (vl <> [])) sa
- *   in
- *   let pp_ensure fmt (_, vl, sa) =
- *     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
- *       pp_vars vl pp_vars_bound vl pp_vars_distinct vl
- *       (pp_satom_nlast (vl <> [])) sa
- *   in
- *   pp_print_list pp_ensure fmt s.unsafe;
- *   fprintf fmt (if List.compare_length_with s.univ_unsafe 0 = 0 then "" else "@,");
- *   pp_print_list pp_univ_ensure fmt s.univ_unsafe *)
+let pp_ensures fmt s =
+  let pp_univ_ensure fmt (_, vl, sa) =
+    fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
+      pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
+      (pp_satom_nlast (vl <> [])) sa
+  in
+  let pp_ensure fmt (_, vl, sa) =
+    fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
+      pp_vars vl pp_vars_bound vl pp_vars_distinct vl
+      (pp_satom_nlast (vl <> [])) sa
+  in
+  pp_print_list pp_ensure fmt s.unsafe;
+  fprintf fmt (if List.compare_length_with s.univ_unsafe 0 = 0 then "" else "@,");
+  pp_print_list pp_univ_ensure fmt s.univ_unsafe
 
 let pp_invariants invs fmt s =
   let pp_invariant fmt (vl, sa) =
@@ -497,13 +497,16 @@ let cub_to_whyml s invs fmt file =
     pp_system_to_type s;
   fprintf fmt "@,@[<v 2>let %s (_n : int) : system@,\
                diverges@,\
-               requires { 0 < _n }@,\
+               requires { 0 < _n }\
+               %a@,\
                @[<v 2>=@,"
-    name;
-  fprintf fmt "@[<v 2>let s = {%a@]@,} in@," pp_init s;
-  fprintf fmt "@,%a" (pp_forall_others plist) s.trans;
-  fprintf fmt "@,@[<v 2>while true do@,";
-  fprintf fmt "@,@[<v 0>%a@]" (pp_invariants invs) s;
+    name pp_ensures s;
+  fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,let nbsteps = ref 0 in@,"
+    pp_init s;
+  fprintf fmt "%a" (pp_forall_others plist) s.trans;
+  fprintf fmt "@,@[<v 2>while ( !nbsteps < maxsteps ) do@,";
+  fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]%a@]"
+    (pp_invariants invs) s;
   fprintf fmt "@,@[<v 0>%a@]" pp_univ_unsafes s.univ_unsafe;
   fprintf fmt "@,%a@," pp_newprocs plist;
   fprintf fmt "@,%a@," (pp_transitions plist) s;

@@ -44,11 +44,6 @@ type system = {
   pC : array pc;
 }
 
-let lemma decomp (s:system) (i:int) (_n:int)
-requires { 0 <= i < _n = length s.rval }
-ensures { numof s.rval Down 0 _n = numof s.rval Down 0 i + numof s.rval Down (i+1) _n +
-      if s.rval[i] = Down then 1 else 0 } = ()
-
 let splitter2_exist (_n : int) : system
   diverges
   requires { 0 < _n }
@@ -119,9 +114,13 @@ let splitter2_exist (_n : int) : system
                     i <> j /\ s.pC[i] = PC5 /\ s.x = j -> s.pC[j] <> PC3 }
 
       (* invariant { [@expl:numofltn] NumOfEq.numof s.rval Down 0 _n < _n } *)
-      invariant { [@expl:existnotdown]
+      invariant { [@expl:existnotpc6]
       		  exists i : int. 0 <= i < _n /\ s.pC[i] <> PC6 }
 
+      invariant { [@expl:existnotpc9]
+      		  exists i : int. 0 <= i < _n /\ s.pC[i] <> PC9 }
+
+      invariant { forall i : int. 0 <= i < _n /\ s.pC[i] <> PC9 -> s.rval[i] <> Down }
 
       invariant { [@expl:existnotdown]
       		  exists i : int. 0 <= i < _n /\ s.rval[i] <> Down }
@@ -129,10 +128,6 @@ let splitter2_exist (_n : int) : system
       let _p0 = Random.random_int _n in
       (*If there is more than one value,
       the variables could be equal, need to work on it*)
-
-      label L in
-
-      decomp s _p0 _n;
 
       (*spl0*)
       if coin () && s.pC[_p0] = PC0
@@ -201,10 +196,6 @@ let splitter2_exist (_n : int) : system
         s.rval[_p0] <- Down;
         s.pC[_p0] <- PC9;
       end;
-
-      assert { numof s.rval Down 0 _p0 = (numof s.rval Down 0 _p0) at L };
-      assert { numof s.rval Down (_p0+1) _n = (numof s.rval Down (_p0+1) _n) at L };
-      decomp s _p0 _n;
 
     done;
     s
