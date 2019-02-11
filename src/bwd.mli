@@ -56,6 +56,9 @@ type result =
 
 module type Strategy = sig
 
+  val aux_search : ?invariants:Node.t list -> ?candidates:Node.t list ->
+                   t_system -> Node.t list -> result
+
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
                t_system -> result
   (** Backward reachability search on a system. The user can also provide

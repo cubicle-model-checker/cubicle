@@ -506,7 +506,6 @@ let system s =
   let univ_unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_universal Options.uu_nb_procs Orig v u)
       s.univ_unsafe in
-  List.iter (eprintf "Node : %a@." Node.print) univ_unsafe_woloc;
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in

@@ -39,6 +39,9 @@ type result =
 
 module type Strategy = sig
 
+  val aux_search : ?invariants:Node.t list -> ?candidates:Node.t list ->
+                   t_system -> Node.t list -> result
+
   val search : ?invariants:Node.t list -> ?candidates:Node.t list ->
     t_system -> result
 
@@ -52,79 +55,80 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
   let nb_remaining q post () = Q.length q, List.length !post
 
-  let search ?(invariants=[]) ?(candidates=[]) system =
+  let aux_search ?(invariants=[]) ?(candidates=[]) system uns =
+    let visited = ref Cubetrie.empty in
+    let candidates = ref candidates in
+    let q = Q.create () in
+    let postponed = ref [] in
 
-    let aux uns =
-      let visited = ref Cubetrie.empty in
-      let candidates = ref candidates in
-      let q = Q.create () in
-      let postponed = ref [] in
+    (* Initialization *)
+    Q.push_list !candidates q;
+    Q.push_list uns q;
+    List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
+      (invariants @ system.t_invs);
 
-      (* Initialization *)
-      Q.push_list !candidates q;
-      Q.push_list uns q;
-      List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-        (invariants @ system.t_invs);
+    try
+      while not (Q.is_empty q) && (not limit_steps || !steps <> max_steps) do
+        let n = Q.pop q in
+        if limit_steps then incr steps;
+        Safety.check system n;
+        begin
+          match Fixpoint.check n !visited with
+            | Some db ->
+              Stats.fixpoint n db
+            | None ->
+              Stats.check_limit n;
+              Stats.new_node n;
+              let n = begin
+                match Approx.good n with
+                  | None -> n
+                  | Some c ->
+                    try
+                      (* Replace node with its approximation *)
+                      Safety.check system c;
+                      candidates := c :: !candidates;
+                      Stats.candidate n c;
+                      n.approximated <- true;
+                      c
+                    with Safety.Unsafe _ -> n
+                    (* If the candidate is directly reachable, no need to
+                       backtrack, just forget it. *)
+              end
+              in
+              let ls, post = Pre.pre_image system.t_trans n in
+              if delete then
+                visited :=
+                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+              postponed := List.rev_append post !postponed;
+              visited := Cubetrie.add_node n !visited;
+              Q.push_list ls q;
+              Stats.remaining (nb_remaining q postponed);
+        end;
 
-      try
-        while not (Q.is_empty q) && (not limit_steps || !steps <> max_steps) do
-          let n = Q.pop q in
-          if limit_steps then incr steps;
-          Safety.check system n;
+        if Q.is_empty q then
+          (* When the queue is empty, pour back postponed nodes in it *)
           begin
-            match Fixpoint.check n !visited with
-              | Some db ->
-                Stats.fixpoint n db
-              | None ->
-                Stats.check_limit n;
-                Stats.new_node n;
-                let n = begin
-                  match Approx.good n with
-                    | None -> n
-                    | Some c ->
-                      try
-                        (* Replace node with its approximation *)
-                        Safety.check system c;
-                        candidates := c :: !candidates;
-                        Stats.candidate n c;
-                        n.approximated <- true;
-                        c
-                      with Safety.Unsafe _ -> n
-                      (* If the candidate is directly reachable, no need to
-                         backtrack, just forget it. *)
-                end
-                in
-                let ls, post = Pre.pre_image system.t_trans n in
-                if delete then
-                  visited :=
-                    Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-                postponed := List.rev_append post !postponed;
-                visited := Cubetrie.add_node n !visited;
-                Q.push_list ls q;
-                Stats.remaining (nb_remaining q postponed);
-          end;
+            Q.push_list !postponed q;
+            postponed := []
+          end
+      done;
+      if limit_steps && !steps = max_steps then
+        TimeOut (Cubetrie.all_vals !visited, !candidates)
+      else Safe (Cubetrie.all_vals !visited, !candidates)
+    with Safety.Unsafe faulty ->
+      if dot then Dot.error_trace faulty;
+      Unsafe (faulty, !candidates)
 
-          if Q.is_empty q then
-            (* When the queue is empty, pour back postponed nodes in it *)
-            begin
-              Q.push_list !postponed q;
-              postponed := []
-            end
-        done;
-        if limit_steps && !steps = max_steps then
-          TimeOut (Cubetrie.all_vals !visited, !candidates)
-        else Safe (Cubetrie.all_vals !visited, !candidates)
-      with Safety.Unsafe faulty ->
-        if dot then Dot.error_trace faulty;
-        Unsafe (faulty, !candidates)
-    in
-    let res = aux system.t_unsafe in
+  let search ?(invariants=[]) ?(candidates=[]) system =
+    let res = aux_search ~invariants ~candidates system system.t_unsafe in
     if univ_unsafe then begin
       match res with
         | Unsafe _ -> res
         | Safe (vis, cand) | TimeOut (vis, cand) ->
+          let tmp = !size_proc in
           size_proc := uu_nb_procs;
-          let res = aux system.t_univ_unsafe in
+          let res = aux_search ~invariants ~candidates system system.t_univ_unsafe in
+          size_proc := tmp;
           match res with
             | Unsafe _ -> res
             | Safe (vis', cand') -> Safe (vis @ vis', cand @ cand')
@@ -299,6 +303,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     if do_sync_barrier then []
     else gentasks_hard system (empty_queue q) !visited
 
+  let aux_search ?(invariants=[]) ?(candidates=[]) system uns = assert false
 
 
   let search ?(invariants=[]) ?(candidates=[]) system =

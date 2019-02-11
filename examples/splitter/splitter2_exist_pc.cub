@@ -22,7 +22,7 @@ array PC[proc] : pc
 init(i) { Y = False && PC[i] = PC0 }
 
 (* ================================================================ *)
-(* universal_unsafe (i) { PC[i] = PC6} *)
+universal_unsafe (i) { PC[i] = PC6}
 
 (* Not existential *)
 
@@ -32,12 +32,12 @@ init(i) { Y = False && PC[i] = PC0 }
 (*      PC[p3] = PC6 *)
 (* } *)
 
-unsafe (p1 p2 p3) {
-     X <> p3 &&
-     PC[p1] = PC6 &&
-     PC[p2] = PC6 &&
-     PC[p3] = PC4
-}
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC4 *)
+(* } *)
 
 (* unsafe (p1 p2 p3) { *)
 (*      X <> p3 && *)

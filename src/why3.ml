@@ -415,6 +415,12 @@ let pp_ensures fmt s =
   fprintf fmt (if List.compare_length_with s.univ_unsafe 0 = 0 then "" else "@,");
   pp_print_list pp_univ_ensure fmt s.univ_unsafe
 
+let pp_proc_bounds fmt s =
+  let pp_proc_bound fmt (_, h, _) =
+      Format.fprintf fmt "@[invariant { 0 <= s.%a < _n }@]" pp_hstring_uncap h
+  in pp_print_list pp_proc_bound fmt
+    (List.filter (fun (_, _, t) -> t = Smt.Type.type_proc) s.globals)
+
 let pp_invariants invs fmt s =
   let pp_invariant fmt (vl, sa) =
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
@@ -495,21 +501,25 @@ let cub_to_whyml s invs fmt file =
 
   fprintf fmt "@,@[<v 2>type system = {@,%a@]@,}"
     pp_system_to_type s;
-  fprintf fmt "@,@[<v 2>let %s (_n : int) : system@,\
-               diverges@,\
-               requires { 0 < _n }\
-               %a@,\
+  fprintf fmt "@,@[<v 2>let %s (_n : int) (maxsteps : int) : system@,\
+               requires { 0 < _n }@,\
                @[<v 2>=@,"
-    name pp_ensures s;
+    name (* pp_ensures s *);
   fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,let nbsteps = ref 0 in@,"
     pp_init s;
   fprintf fmt "%a" (pp_forall_others plist) s.trans;
   fprintf fmt "@,@[<v 2>while ( !nbsteps < maxsteps ) do@,";
-  fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]%a@]"
-    (pp_invariants invs) s;
+  fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]@,%a@,%a@]"
+    pp_proc_bounds s (pp_invariants invs) s;
   fprintf fmt "@,@[<v 0>%a@]" pp_univ_unsafes s.univ_unsafe;
   fprintf fmt "@,%a@," pp_newprocs plist;
   fprintf fmt "@,%a@," (pp_transitions plist) s;
   fprintf fmt "@]@,done;@,s@]@,end";
   fprintf fmt "@.";
   exit 0
+
+let replay_invs system invs =
+  List.fold_left (fun acc inv ->
+    match Bwd.Selected.aux_search ~invariants:[] ~candidates:[] system [inv] with
+      | Unsafe _ | TimeOut _ -> acc
+      | Safe (vis, cand) -> inv :: acc) [] invs
