@@ -32,6 +32,8 @@ val only_brab_invs : bool
 val univ_unsafe : bool
 val uu_nb_procs : int
 
+val eliminate_proc_var : bool
+
 val limit_steps : bool
 val max_steps : int
 val steps : int ref

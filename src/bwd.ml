@@ -127,7 +127,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         | Safe (vis, cand) | TimeOut (vis, cand) ->
           let tmp = !size_proc in
           size_proc := uu_nb_procs;
-          let res = aux_search ~invariants ~candidates system system.t_univ_unsafe in
+          let res =
+            aux_search ~invariants ~candidates system system.t_univ_unsafe in
           size_proc := tmp;
           match res with
             | Unsafe _ -> res

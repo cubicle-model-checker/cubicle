@@ -75,11 +75,12 @@ let subst sigma { vars = vs; array = ar } =
 (* Good renaming of a cube's variables *)
 (***************************************)
 
+let test_size_proc v = !size_proc <> 0 && List.length v > !size_proc
 
 
 let normal_form ({ litterals = sa; array = ar } as c) =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
-  if !size_proc <> 0 && List.length vars > !size_proc then
+  if test_size_proc vars then
     cube_false
   else
     let sigma = Variable.build_subst vars Variable.procs in
@@ -125,7 +126,7 @@ let simplify_satom =
 
 let create_norma_sa_ar sa ar =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
-  if !size_proc <> 0 && List.compare_length_with vars !size_proc > 0 then
+  if test_size_proc vars then
     cube_false
   else
     let sigma = Variable.build_subst vars Variable.procs in

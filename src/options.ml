@@ -32,6 +32,8 @@ let only_brab_invs = ref true
 let univ_unsafe = ref false
 let uu_nb_procs = ref (-1)
 
+let eliminate_proc_var = ref true
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -151,6 +153,7 @@ let specs =
     "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
     "-univ-unsafe", Arg.Int set_univ_unsafe, "<n> instantiate universal unsafe with n
     processes and start brab on it";
+    "-keep-proc-var", Arg.Clear eliminate_proc_var, " keep proc variables for approximations";
     "-max-procs", Arg.Set_int max_proc,
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds,
@@ -253,6 +256,8 @@ let only_brab_invs = !only_brab_invs
 
 let univ_unsafe = !univ_unsafe
 let uu_nb_procs = !uu_nb_procs
+
+let eliminate_proc_var = !eliminate_proc_var
 
 let limit_steps = !limit_steps
 let max_steps = !max_steps
