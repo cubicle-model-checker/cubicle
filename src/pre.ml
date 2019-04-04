@@ -284,6 +284,12 @@ let make_cubes (ls, post) rargs s tr cnp =
     (* let d_old = Variable.all_permutations tr.tr_args rargs in *)
     (* TODO: Benchmark this *)
     let d = Variable.permutations_missing tr.tr_args args in
+    (* eprintf "Targs : %a@." Variable.print_vars tr.tr_args; *)
+    (* eprintf "Uargs : %a@." Variable.print_vars uargs; *)
+    (* eprintf "Args : %a@." Variable.print_vars args; *)
+    (* eprintf "Rargs : %a@." Variable.print_vars rargs; *)
+    (* List.iter (eprintf "Subst : %a@." Variable.print_subst) d; *)
+
     (* assert (List.length d_old >= List.length d); *)
     List.fold_left cube (ls, post) d
 
@@ -303,13 +309,12 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (*****************************************************)
 
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
-  (* eprintf "Cube : %a@." SAtom.print unsafe; *)
-  (* let tau = tr.tr_tau in *)
+
+  (* eprintf "V : %a@." Variable.print_vars tri.tr_args; *)
   let pre_unsafe =
     SAtom.union tri.tr_reqs
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
-  (* eprintf "Pre Cube : %a@." SAtom.print pre_unsafe; *)
   let pre_u = Cube.create_normal pre_unsafe in
   if debug && verbose > 0 then Debug.pre tri pre_unsafe;
   reset();

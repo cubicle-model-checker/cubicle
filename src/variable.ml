@@ -182,9 +182,9 @@ let append_extra_procs_to acc args tr_args =
     | [], [], _ -> List.rev acc
     | [], x :: rtr, p :: rpr -> aux (p::acc) [] rtr rpr
     | a :: ra, _, p :: rpr -> aux acc ra tr_args rpr
-    | _, _, [] -> failwith "Not enough procs"
+    | _, _, [] -> if !size_proc <> 0 then List.rev acc else failwith "Not enough procs"
   in
-  aux (List.rev acc) args tr_args procs
+  aux (List.rev acc) args tr_args (if !size_proc <> 0 then finite_procs () else procs)
 
 let append_extra_procs args tr_args = append_extra_procs_to args args tr_args
 
@@ -218,12 +218,13 @@ let permutations_missing tr_args l =
   let ex = extra_procs l tr_args in
   let l' = List.fold_left
     (fun acc l ->
-     let ms = missing l tr_args ex in
-     List.rev_append (interleave l ms) acc)
+      match l with
+        | [] -> acc
+        | _ -> let ms = missing l tr_args ex in
+          List.rev_append (interleave l ms) acc)
     [] parts in
   List.map (List.combine tr_args) l'
   (* List.map (insert_missing tr_args) parts *)
-
 
 let extra_vars vs1 vs2 =
   let rec aux dif vs1 vs2 = match vs1, vs2 with
