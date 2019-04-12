@@ -252,8 +252,8 @@ unsafe:
 ;
 
 univ_unsafe:
-  | UNIVUNSAFE LEFTBR e=expr RIGHTBR { loc (), [], e }
-  | UNIVUNSAFE LEFTPAR i=lident RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), [i], e }
+  | UNIVUNSAFE LEFTPAR i=lident RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), [], i, e }
+  | UNIVUNSAFE LEFTPAR li=lidents COMMA i=lident RIGHTPAR LEFTBR e=expr RIGHTBR { loc (), li, i, e }
 ;
 
 transition_name:

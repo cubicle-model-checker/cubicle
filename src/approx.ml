@@ -239,7 +239,6 @@ let approximations s =
        else SSAtoms.add (SAtom.singleton a) acc)
       sa SSAtoms.empty in
   (* All subsets of sa of relevant size *)
-  SSAtoms.iter (eprintf "%a@." SAtom.print) init;
   let parts =
     SAtom.fold
       (fun a acc ->

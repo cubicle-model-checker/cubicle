@@ -206,6 +206,10 @@ let unsafe (loc, args, sa) =
   unique (fun x-> error (DuplicateName x) loc) args;
   atoms loc args sa
 
+let univ_unsafe (loc, args, arg, sa) =
+  unique (fun x-> error (DuplicateName x) loc) (arg::args);
+  atoms loc (arg::args) sa
+
 let nondets loc l =
   unique (fun c -> error (DuplicateAssign c) loc) l;
   List.iter
@@ -469,16 +473,34 @@ let create_node_rename kind vars sa =
   let c = Cube.normal_form c in
   Node.create ~kind c
 
-let create_node_universal nbp kind vars sa =
+let create_node_universal nbp kind vars var sa =
   let open Variable in
-  assert (List.length vars = 1);
+  (* assert (List.length vars = 1); *)
+  let unsa, exsa = SAtom.partition (has_var var) sa in
   let procs = gen_vars "#" nbp in
+  let rec aux acc evars procs = match evars, procs with
+    | [], _ -> acc, procs
+    | hd1 :: tl1, hd2 :: tl2 ->
+      let s = build_subst [hd1] [hd2] in
+      eprintf "subst : %a@." print_subst s;
+      let acc = SAtom.union (SAtom.subst s exsa) acc in
+      eprintf "SAtom : %a@." SAtom.print acc;
+      aux acc tl1 tl2
+    | _ -> assert false
+  in
+  eprintf "Exist : @.";
+  let exsa, procs = aux SAtom.empty vars procs in
+  eprintf "%a (%a)@.Forall : @." SAtom.print exsa print_vars procs;
   let sa = List.fold_left (fun acc p ->
-    let s = build_subst vars [p] in
-    SAtom.union (SAtom.subst s sa) acc
-  ) SAtom.empty procs in
+    let s = build_subst [var] [p] in
+    eprintf "subst : %a@." print_subst s;
+    let acc = SAtom.union (SAtom.subst s unsa) acc in
+    eprintf "SAtom : %a@." SAtom.print acc;
+    acc
+  ) exsa procs in
   let c = Cube.create procs sa in
   let c = Cube.normal_form c in
+  (* assert false; *)
   Node.create ~kind c
 
 let add_tau tr =
@@ -492,7 +514,7 @@ let system s =
   let l = init_global_env s in
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
-  if not Options.notyping then List.iter unsafe s.univ_unsafe;
+  if not Options.notyping then List.iter univ_unsafe s.univ_unsafe;
   if not Options.notyping then List.iter unsafe s.unsafe;
   if not Options.notyping then List.iter unsafe (List.rev s.invs);
   if not Options.notyping then transitions s.trans;
@@ -504,7 +526,7 @@ let system s =
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
   let univ_unsafe_woloc =
-    List.map (fun (_,v,u) -> create_node_universal Options.uu_nb_procs Orig v u)
+    List.map (fun (_,vl, v,u) -> create_node_universal Options.uu_nb_procs Orig vl v u)
       s.univ_unsafe in
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in

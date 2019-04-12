@@ -91,7 +91,7 @@ type psystem = {
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
-  puniv_unsafe : (loc * Variable.t list * cformula) list;
+  puniv_unsafe : (loc * Variable.t list * Variable.t * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
   pwhyinvs : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
@@ -101,7 +101,7 @@ type psystem = {
 type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
-  | PUnivUnsafe of (loc * Variable.t list * cformula)
+  | PUnivUnsafe of (loc * Variable.t list * Variable.t * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
   | PWhyInv of (loc * Variable.t list * cformula)
   | PTrans of ptransition

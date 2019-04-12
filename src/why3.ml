@@ -401,9 +401,9 @@ let pp_vars_distinct fmt vl =
   aux vl
 
 let pp_ensures fmt s =
-  let pp_univ_ensure fmt (_, vl, sa) =
+  let pp_univ_ensure fmt (_, vl, v, sa) =
     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
+      pp_vars_exists vl pp_vars_bound (v :: vl) pp_vars_distinct (v :: vl)
       (pp_satom_nlast (vl <> [])) sa
   in
   let pp_ensure fmt (_, vl, sa) =
@@ -440,9 +440,9 @@ let pp_invariants invs fmt s =
   pp_print_list pp_invariant fmt (invs @ sinvs)
 
 let pp_univ_unsafes fmt uul =
-  let pp_univ_unsafe fmt (_, vl, sa) =
+  let pp_univ_unsafe fmt (_, vl, v, sa) =
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
+      pp_vars_exists vl pp_vars_bound (v :: vl) pp_vars_distinct (v :: vl)
       (pp_satom_nlast ~uu:true (vl <> [])) sa
   in
   pp_print_list pp_univ_unsafe fmt uul

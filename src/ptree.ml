@@ -303,7 +303,7 @@ type psystem = {
   ptype_defs : (loc * Ast.type_constructors) list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
-  puniv_unsafe : (loc * Variable.t list * cformula) list;
+  puniv_unsafe : (loc * Variable.t list * Variable.t * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
   pwhyinvs : (loc * Variable.t list * cformula) list;
   ptrans : ptransition list;
@@ -313,7 +313,7 @@ type psystem = {
 type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
-  | PUnivUnsafe of (loc * Variable.t list * cformula)
+  | PUnivUnsafe of (loc * Variable.t list * Variable.t * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
   | PWhyInv of (loc * Variable.t list * cformula)
   | PTrans of ptransition
@@ -742,12 +742,12 @@ let encode_psystem
     |> List.rev
   in
   let univ_unsafe =
-    List.fold_left (fun acc (uunsafe_loc, uunsafe_vars, uunsafe_f) ->
+    List.fold_left (fun acc (uunsafe_loc, uunsafe_evars, uunsafe_uvar, uunsafe_f) ->
         let other_vars, dnf = unsafes_of_formula uunsafe_f in
         (* List.iter (fun sa -> eprintf "unsafe : %a@." SAtom.print sa) dnf; *)
-        let uunsafe_vars = uunsafe_vars @ other_vars in
+        let uunsafe_evars = uunsafe_evars @ other_vars in
         List.fold_left
-          (fun acc sa -> (uunsafe_loc, uunsafe_vars, sa) :: acc) acc dnf
+          (fun acc sa -> (uunsafe_loc, uunsafe_evars, uunsafe_uvar, sa) :: acc) acc dnf
       ) [] puniv_unsafe
   in
   let unsafe =
@@ -792,7 +792,7 @@ let encode_psystem
 type rsyst = {
   inits : (loc * Variable.t list * cformula) list;
   invs : (loc * Variable.t list * cformula) list;
-  univ_unsafes : (loc * Variable.t list * cformula) list;
+  univ_unsafes : (loc * Variable.t list * Variable.t * cformula) list;
   unsafes : (loc * Variable.t list * cformula) list;
   whyinvs : (loc * Variable.t list * cformula) list;
   trans : ptransition list;

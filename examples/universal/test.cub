@@ -1,0 +1,117 @@
+type directions = None | Right | Stop | Down
+
+type pc = PC0 | PC1 | PC2 | PC3 | PC4 | PC5 | PC6
+
+var X : proc
+var Y : bool
+array PC[proc] : pc
+
+(* ================================================================ *)
+(* Tentative d'invariants *)
+(* ================================================================ *)
+
+init(i) { Y = False && PC[i] = PC0 }
+
+(* ================================================================ *)
+universal_unsafe (j, i) { PC[j] = PC5 && PC[i] = PC6}
+
+(* Not existential *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC6 *)
+(* } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC4 *)
+(* } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X <> p3 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC6 && *)
+(*      PC[p3] = PC3 *)
+(* } *)
+
+(* Trivial *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X = p1 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC4 && *)
+(*      PC[p3] = PC4 *)
+(* } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X = p1 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC4 && *)
+(*      PC[p3] = PC3 *)
+(* } *)
+
+(* unsafe (p1 p2 p3) { *)
+(*      X = p1 && *)
+(*      PC[p1] = PC6 && *)
+(*      PC[p2] = PC3 && *)
+(*      PC[p3] = PC3 *)
+(* } *)
+
+(* Existential unsafe *)
+
+(* unsafe (p1) { *)
+(*      Y = False && *)
+(*      PC[p1] = PC6 *)
+(* } *)
+
+(* unsafe (p1) { *)
+(*      Y = False && *)
+(*      PC[p1] = PC4 *)
+(* } *)
+
+(* ================================================================ *)
+(* Unsafe from merci *)
+(* ================================================================ *)
+
+(* ================================================================ *)
+
+transition spl0(i)
+requires { PC[i] = PC0 }
+{
+        X := i;
+        PC[i] := PC1;
+}
+
+transition spl1a(i)
+requires { PC[i] = PC1 && Y = True }
+{
+        PC[i] := PC2;
+}
+
+transition spl1b(i)
+requires { PC[i] = PC1 && Y = False }
+{
+        PC[i] := PC3
+}
+
+transition spl3(i)
+requires { PC[i] = PC3 }
+{
+        Y := True;
+        PC[i] := PC4
+}
+
+transition spl4a(i)
+requires { PC[i] = PC4 && X = i }
+{
+        PC[i] := PC5;
+}
+
+transition spl4b(i)
+requires { PC[i] = PC4 && X <> i }
+{
+        PC[i] := PC6;
+}
