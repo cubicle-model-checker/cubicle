@@ -26,14 +26,22 @@ let compare = Hstring.compare
 let compare_list = Hstring.compare_list
 
 let gen_vars s n =
+  let l = ref [] in
+  for i = 1 to n do
+    l := Hstring.make (s^(string_of_int i)) :: !l
+  done;
+  List.rev !l
+
+let gen_varsrec s n =
   let rec aux i acc =
     if i = 0 then acc
     else aux (i - 1) (Hstring.make (s^(string_of_int i)) :: acc)
-  in aux n []
+  in
+  aux n []
 
 let alphas = gen_vars "$" max_proc
 
-let procs = gen_vars "#" max_proc
+(* let procs = gen_varsrec "#" max_proc *)
 
 let finite_procs () = gen_vars "#" !size_proc
 
@@ -164,15 +172,23 @@ let rec perms = function
 (*   in *)
 (*   aux [] (List.length args + 1) tr_args *)
 
+(* let procsvar = gen_varsrec "#" max_proc
+ * let l = List.map Hstring.view procsvar
+ * let () = eprintf "procs1 : ["; List.iter (eprintf "\"%s\" ") l; eprintf "]@." *)
+
+let procsvar = gen_vars "#" max_proc
+let l = List.map Hstring.view procsvar
+let () = eprintf "procs2 : ["; List.iter (eprintf "\"%s\" ") l; eprintf "]@."
+
 let append_extra_procs_to acc args tr_args =
   let rec aux acc args tr_args procs =
     match args, tr_args, procs with
       | [], [], _ -> List.rev acc
       | [], x :: rtr, p :: rpr -> aux (p::acc) [] rtr rpr
       | a :: ra, _, p :: rpr -> aux acc ra tr_args rpr
-      | _, _, [] -> if !size_proc <> 0 then List.rev acc else failwith "Not enough procs"
+      | _, _, [] -> (* if !size_proc <> 0 then List.rev acc else *) failwith "Not enough procs"
   in
-  aux (List.rev acc) args tr_args (if !size_proc <> 0 then finite_procs () else procs)
+  aux (List.rev acc) args tr_args (*(if !size_proc <> 0 then finite_procs () else procs) *) procsvar
 
 let append_extra_procs args tr_args = append_extra_procs_to args args tr_args
 
@@ -206,9 +222,9 @@ let permutations_missing tr_args l =
   let ex = extra_procs l tr_args in
   let l' = List.fold_left
       (fun acc l ->
-         match l with
-           | [] -> acc
-           | _ -> let ms = missing l tr_args ex in
+         (* match l with
+          *   | [] -> acc
+          *   | _ -> *) let ms = missing l tr_args ex in
              List.rev_append (interleave l ms) acc)
       [] parts in
   List.map (List.combine tr_args) l'
@@ -228,7 +244,7 @@ let give_procs n =
   let rp, _ =
     List.fold_left (fun (acc, n) v ->
       if n > 0 then v :: acc, n - 1
-      else acc, n) ([], n) procs in
+      else acc, n) ([], n) procsvar in
   List.rev rp
 
 
@@ -265,8 +281,13 @@ let build_subst args a_args =
   in
   a_subst [] args a_args
 
-let subst_ptowp = build_subst procs wprocs
+let subst_ptowp = build_subst procsvar wprocs
 
 let subst sigma v =
   try Hstring.list_assoc v sigma
   with Not_found -> v
+
+
+let procs = gen_vars "#" max_proc
+
+let () = assert (procs = procsvar)

@@ -477,9 +477,9 @@ let create_node_universal nbp kind vars var sa =
   let open Variable in
   (* assert (List.length vars = 1); *)
   let unsa, exsa = SAtom.partition (has_var var) sa in
-  let procs = gen_vars "#" nbp in
-  let rec aux acc evars procs = match evars, procs with
-    | [], _ -> acc, procs
+  let ps = gen_vars "#" nbp in
+  let rec aux acc evars procs = match evars, ps with
+    | [], _ -> acc, ps
     | hd1 :: tl1, hd2 :: tl2 ->
       let s = build_subst [hd1] [hd2] in
       eprintf "subst : %a@." print_subst s;
@@ -489,16 +489,16 @@ let create_node_universal nbp kind vars var sa =
     | _ -> assert false
   in
   eprintf "Exist : @.";
-  let exsa, procs = aux SAtom.empty vars procs in
-  eprintf "%a (%a)@.Forall : @." SAtom.print exsa print_vars procs;
+  let exsa, ps = aux SAtom.empty vars ps in
+  eprintf "%a (%a)@.Forall : @." SAtom.print exsa print_vars ps;
   let sa = List.fold_left (fun acc p ->
     let s = build_subst [var] [p] in
     eprintf "subst : %a@." print_subst s;
     let acc = SAtom.union (SAtom.subst s unsa) acc in
     eprintf "SAtom : %a@." SAtom.print acc;
     acc
-  ) exsa procs in
-  let c = Cube.create procs sa in
+  ) exsa ps in
+  let c = Cube.create ps sa in
   let c = Cube.normal_form c in
   (* assert false; *)
   Node.create ~kind c
