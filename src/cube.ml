@@ -100,7 +100,7 @@ module TM = Map.Make (Term)
 let simplify_satom =
   let open Hstring in
   fun sa ->
-    let sfp = HSet.of_list (Variable.finite_procs ()) in
+    let sfp = HSet.of_list (Variable.finite_procs_sp ()) in
     let l = SAtom.elements sa in
     let rec aux ((tosimpl, nomod) as acc)  = function
       | Atom.Comp (v1, Neq, (Elem (h, _))) :: tl ->

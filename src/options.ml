@@ -29,6 +29,8 @@ let why3_out_file = ref false
 let why3_cub_invs = ref false
 let only_brab_invs = ref true
 
+let debugm = ref false
+
 let univ_unsafe = ref false
 let uu_nb_procs = ref (-1)
 
@@ -148,7 +150,7 @@ let specs =
     "-towhy3", Arg.Set towhy3, " translate the cubicle file to why3";
     "-why3-out-file", Arg.Set why3_out_file, " write the output in a file";
     "-cub-invs", Arg.Set why3_cub_invs, " gives Cubicle invariants to the why3 file";
-
+    "-debugm", Arg.Set debugm, " debug mode mattias";
     "-all-invs", Arg.Clear only_brab_invs, " gives all invariants to the why3 file";
     "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
     "-univ-unsafe", Arg.Int set_univ_unsafe, "<n> instantiate universal unsafe with n
@@ -253,6 +255,8 @@ let towhy3 = !towhy3
 let why3_out_file = !why3_out_file
 let why3_cub_invs = !why3_cub_invs
 let only_brab_invs = !only_brab_invs
+
+let debugm = !debugm
 
 let univ_unsafe = !univ_unsafe
 let uu_nb_procs = !uu_nb_procs

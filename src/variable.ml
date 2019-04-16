@@ -13,6 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+
 open Options
 open Format
 
@@ -21,6 +22,28 @@ type t = Hstring.t
 type subst = (t * t) list
 
 module Set = Hstring.HSet
+
+let print fmt v = Hstring.print fmt v
+
+let rec print_vars fmt = function
+  | [] -> ()
+  | [a] ->
+    let s = Hstring.view a in
+    let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
+    if dmcmt then fprintf fmt "_%s" s
+    else fprintf fmt "%s" s
+  | a::r ->
+    let s = Hstring.view a in
+    let s = if dmcmt then (String.sub s 1 (String.length s - 1)) else s in
+    if dmcmt then  fprintf fmt "_%s%a" s print_vars r
+    else  fprintf fmt "%s, %a" s print_vars r
+
+let rec print_subst fmt = function
+  | [] -> ()
+  | [x,y] ->
+    fprintf fmt "%a -> %a" print x print y
+  | (x,y)::r ->
+    fprintf fmt "%a -> %a, %a" print x print y print_subst r
 
 let compare = Hstring.compare
 let compare_list = Hstring.compare_list
@@ -36,7 +59,15 @@ let alphas = gen_vars "$" max_proc
 
 let procs = gen_vars "#" max_proc
 
-let finite_procs () = gen_vars "#" !size_proc
+let finite_procs n =
+  let rec aux i acc procs =
+    if i = n then List.rev acc
+    else match procs with
+      | hd :: tl -> aux (i+1) (hd :: acc) tl
+      | _ -> assert false
+  in aux 0 [] procs
+
+let finite_procs_sp () = finite_procs !size_proc
 
 let freshs = gen_vars "?" max_proc
 
@@ -172,9 +203,9 @@ let append_extra_procs_to acc args tr_args =
       | [], [], _ -> List.rev acc
       | [], x :: rtr, p :: rpr -> aux (p::acc) [] rtr rpr
       | a :: ra, _, p :: rpr -> aux acc ra tr_args rpr
-      | _, _, [] -> (* if !size_proc <> 0 then List.rev acc else *) failwith "Not enough procs"
+      | _, _, [] -> if !size_proc <> 0 then List.rev acc else failwith "Not enough procs"
   in
-  aux (List.rev acc) args tr_args (*(if !size_proc <> 0 then finite_procs () else procs) *) procs
+  aux (List.rev acc) args tr_args (if !size_proc <> 0 then finite_procs_sp () else procs)
 
 let append_extra_procs args tr_args = append_extra_procs_to args args tr_args
 
@@ -206,13 +237,28 @@ let permutations_missing tr_args l =
 		(List.map perms (all_parts_max (List.length tr_args) l))
   in
   let ex = extra_procs l tr_args in
+  if debugm then
+    (eprintf "---[@.Parts : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) parts;
+     eprintf "Extra procs : %a@."  print_vars ex);
   let l' = List.fold_left
       (fun acc l ->
-         (* match l with
-          *   | [] -> acc
-          *   | _ -> *) let ms = missing l tr_args ex in
-             List.rev_append (interleave l ms) acc)
+         if debugm then eprintf "l : %a@." print_vars l;
+         let ms = missing l tr_args ex in
+         if debugm then eprintf "MS : %a@." print_vars ms;
+         let il = interleave l ms in
+         match l, il with
+           | [], [[]] -> acc
+           | _ ->
+         if debugm then (
+           eprintf "IL : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) il;
+           eprintf "ACC : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc);
+         let acc = List.rev_append il acc in
+         if debugm then eprintf "ACC' : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc;
+         acc
+      )
       [] parts in
+  if debugm then eprintf "l' : %a@.]---@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) l';
+
   List.map (List.combine tr_args) l'
 (* List.map (insert_missing tr_args) parts *)
 
@@ -272,6 +318,3 @@ let subst_ptowp = build_subst procs wprocs
 let subst sigma v =
   try Hstring.list_assoc v sigma
   with Not_found -> v
-
-
-let procs = gen_vars "#" max_proc

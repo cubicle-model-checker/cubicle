@@ -440,9 +440,10 @@ let pp_invariants invs fmt s =
   pp_print_list pp_invariant fmt (invs @ sinvs)
 
 let pp_univ_unsafes fmt uul =
-  let pp_univ_unsafe fmt (_, vl, v, sa) =
+  let pp_univ_unsafe fmt (_, _, v, sa) =
+    let vl = [v] in
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars_exists vl pp_vars_bound (v :: vl) pp_vars_distinct (v :: vl)
+      pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
       (pp_satom_nlast ~uu:true (vl <> [])) sa
   in
   pp_print_list pp_univ_unsafe fmt uul
@@ -512,8 +513,8 @@ let cub_to_whyml s invs fmt file =
   fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]@,%a@,%a@]"
     pp_proc_bounds s (pp_invariants invs) s;
   fprintf fmt "@,@[<v 0>%a@]" pp_univ_unsafes s.univ_unsafe;
-  fprintf fmt "@,%a@," pp_newprocs plist;
-  fprintf fmt "@,%a@," (pp_transitions plist) s;
+  fprintf fmt "@,@,incr nbsteps;@,@,%a@," pp_newprocs plist;
+  fprintf fmt "@,%a" (pp_transitions plist) s;
   fprintf fmt "@]@,done;@,s@]@,end";
   fprintf fmt "@.";
   exit 0

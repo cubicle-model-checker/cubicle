@@ -30,15 +30,16 @@ val compare : t -> t -> int
 
 val compare_list : t list -> t list -> int
 
-(** {2 Predefinied variables } *)
+(** {2 Predefined variables } *)
 
-val gen_vars : string -> int -> Hstring.t list
+(* val gen_vars : string -> int -> Hstring.t list *)
 
 val procs : t list
 (** predefinied list of skolem variables [#1], [#2], [#3], ... Their number is
     controlled by {! Options.max_proc } *)
 
-val finite_procs : unit -> t list
+val finite_procs : int -> t list
+val finite_procs_sp : unit -> t list
 val alphas : t list
 val freshs : t list
 val number : t -> int
