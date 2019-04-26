@@ -213,10 +213,7 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
               let acc = HSet.add id acc in
               fprintf fmt "@,%a = -1;" pp_hstring_uncap id;
               acc
-            | Access (id, _) ->
-              fprintf fmt "@,%a = Array.make _n -1;"
-                pp_hstring_uncap id;
-              acc
+            | Access (id, _) -> assert false
             | _ -> assert false
           end
         | _ -> assert false
@@ -227,6 +224,17 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
     fprintf fmt "@,%a = Random.random_int _n"
       pp_hstring_uncap e
   ) ninit_elems
+
+let pp_asserts_arrays fmt {init = (_, _, dnf)} =
+  List.iter (fun sa ->
+    SAtom.iter (fun a ->
+      match a with
+        | Comp (Access (id, _), Eq, t2) ->
+          fprintf fmt "@,assert {s.%a[O] = %a};"
+            pp_hstring_uncap id (pp_term []) t2;
+        | _ -> ()
+        ) sa
+    ) dnf
 
 (* Can be replaced with List.init but Functory is not compatible
    with the last versions of OCaml *)
@@ -506,8 +514,8 @@ let cub_to_whyml s invs fmt file =
                requires { 0 < _n }@,\
                @[<v 2>=@,"
     name (* pp_ensures s *);
-  fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,let nbsteps = ref 0 in@,"
-    pp_init s;
+  fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,%a@,@,let nbsteps = ref 0 in@,"
+    pp_init s pp_asserts_arrays s;
   fprintf fmt "%a" (pp_forall_others plist) s.trans;
   fprintf fmt "@,@[<v 2>while ( !nbsteps < maxsteps ) do@,";
   fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]@,%a@,%a@]"
