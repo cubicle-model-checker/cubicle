@@ -309,7 +309,7 @@ let build_subst args a_args =
       | [], _ -> List.rev acc
       | x::args, ax::a_args ->
 	a_subst ((x, ax)::acc) args a_args
-      | _ -> eprintf "args %a@.a_args %a@." print_vars args print_vars a_args;assert false
+      | _ -> assert false
   in
   a_subst [] args a_args
 
