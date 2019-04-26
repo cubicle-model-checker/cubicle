@@ -230,7 +230,7 @@ let pp_asserts_arrays fmt {init = (_, _, dnf)} =
     SAtom.iter (fun a ->
       match a with
         | Comp (Access (id, _), Eq, t2) ->
-          fprintf fmt "@,assert {s.%a[O] = %a};"
+          fprintf fmt "@,assert {s.%a[0] = %a};"
             pp_hstring_uncap id (pp_term []) t2;
         | _ -> ()
         ) sa
