@@ -473,37 +473,36 @@ let create_node_rename kind vars sa =
   let c = Cube.normal_form c in
   Node.create ~kind c
 
-let create_node_universal nbp kind vars var sa =
+let create_node_universal nbp kind evars uvar sa =
   let open Variable in
-  (* assert (List.length vars = 1); *)
-  let unsa, exsa = SAtom.partition (has_var var) sa in
-  let ps = finite_procs nbp in
+  let unsa, exsa = SAtom.partition (has_var uvar) sa in
+  let inst_vars = finite_procs nbp in
   (* eprintf "Vars : %a@." Variable.print_vars ps; *)
-  let rec aux acc evars ps = match evars, ps with
-    | [], _ -> acc, ps
+  let rec aux (iexsa, ievars) evars rem_vars = match evars, rem_vars with
+    | [], _ -> (iexsa, ievars), rem_vars
     | hd1 :: tl1, hd2 :: tl2 ->
       let s = build_subst [hd1] [hd2] in
-      eprintf "subst : %a@." print_subst s;
-      let acc = SAtom.union (SAtom.subst s exsa) acc in
-      eprintf "SAtom : %a@." SAtom.print acc;
-      aux acc tl1 tl2
+      (* eprintf "subst : %a@." print_subst s; *)
+      let iexsa = SAtom.union (SAtom.subst s exsa) iexsa in
+      (* eprintf "SAtom : %a@." SAtom.print acc; *)
+      aux (iexsa, hd2::ievars) tl1 tl2
     | _ -> assert false
   in
   (* eprintf "Exist : @."; *)
-  let exsa, ps = aux SAtom.empty vars ps in
+  let (iexsa, ievars), rem_vars = aux (SAtom.empty, []) evars inst_vars in
   (* eprintf "@.SAtom from exist : %a@.Remaining vars : (%a)@.SAtom for forall : %a@.Forall : @."
    *   SAtom.print exsa print_vars ps SAtom.print unsa; *)
-  let sa = List.fold_left (fun acc p ->
-    let s = build_subst [var] [p] in
+  let isa = List.fold_left (fun acc p ->
+    let s = build_subst [uvar] [p] in
     (* eprintf "subst : %a@." print_subst s; *)
     let acc = SAtom.union (SAtom.subst s unsa) acc in
     (* eprintf "SAtom : %a@." SAtom.print acc; *)
     acc
-  ) exsa ps in
-  let c = Cube.create ps sa in
+  ) iexsa rem_vars in
+  let c = Cube.create inst_vars isa in
   let c = Cube.normal_form c in
   (* assert false; *)
-  Node.create ~kind c
+  Node.create ~kind ~logic:ForallExists ~evars:ievars c
 
 let add_tau tr =
   let pre,reset_memo = Pre.make_tau tr in

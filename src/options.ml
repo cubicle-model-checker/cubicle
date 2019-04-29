@@ -32,7 +32,7 @@ let only_brab_invs = ref true
 let debugm = ref false
 
 let univ_unsafe = ref false
-let uu_nb_procs = ref (-1)
+let uu_nb_procs = ref 0
 
 let eliminate_proc_var = ref true
 

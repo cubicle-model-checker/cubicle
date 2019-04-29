@@ -97,20 +97,24 @@ type kind =
   | Node   (** regular node *)
   | Inv    (** or user supplied invariant*)
 
+type logic = Cube | ForallExists
 
 type node_cube =
     {
-      cube : Cube.t;          (** the associated cube *)
-      tag : int;              (** a unique tag (negative for approximations
-                                  and positive otherwise) *)
-      kind : kind;            (** the kind of the node *)
-      depth : int;            (** its depth in the search tree*)
-      mutable deleted : bool; (** flag changed when the {e a-posteriori}
-                                  simplification detects subsumption
-                                  (see {! Cubetrie.delete_subsumed}) *)
+      cube : Cube.t;           (** the associated cube *)
+      evars : Variable.t list; (** if the cube is not just an existential cube,
+                                   keeps track of the existential variables *)
+      tag : int;               (** a unique tag (negative for approximations
+                                   and positive otherwise) *)
+      kind : kind;             (** the kind of the node *)
+      depth : int;             (** its depth in the search tree*)
+      logic: logic;            (** normal cube or forall exists formula *)
+      mutable deleted : bool;  (** flag changed when the {e a-posteriori}
+                                   simplification detects subsumption
+                                   (see {! Cubetrie.delete_subsumed}) *)
       mutable approximated : bool; (** flag changed when a candidate invariant
                                        is chosen from this node *)
-      from : trace;           (** history of the node *)
+      from : trace;            (** history of the node *)
     }
 (** the type of nodes, i.e. cubes with extra information *)
 

@@ -13,70 +13,7 @@ array PC[proc] : pc
 init(i) { Y = False && PC[i] = PC0 }
 
 (* ================================================================ *)
-universal_unsafe (j, i) { PC[j] = PC5 && PC[i] = PC6}
-
-(* Not existential *)
-
-(* unsafe (p1 p2 p3) { *)
-(*      PC[p1] = PC6 && *)
-(*      PC[p2] = PC6 && *)
-(*      PC[p3] = PC6 *)
-(* } *)
-
-(* unsafe (p1 p2 p3) { *)
-(*      X <> p3 && *)
-(*      PC[p1] = PC6 && *)
-(*      PC[p2] = PC6 && *)
-(*      PC[p3] = PC4 *)
-(* } *)
-
-(* unsafe (p1 p2 p3) { *)
-(*      X <> p3 && *)
-(*      PC[p1] = PC6 && *)
-(*      PC[p2] = PC6 && *)
-(*      PC[p3] = PC3 *)
-(* } *)
-
-(* Trivial *)
-
-(* unsafe (p1 p2 p3) { *)
-(*      X = p1 && *)
-(*      PC[p1] = PC6 && *)
-(*      PC[p2] = PC4 && *)
-(*      PC[p3] = PC4 *)
-(* } *)
-
-(* unsafe (p1 p2 p3) { *)
-(*      X = p1 && *)
-(*      PC[p1] = PC6 && *)
-(*      PC[p2] = PC4 && *)
-(*      PC[p3] = PC3 *)
-(* } *)
-
-(* unsafe (p1 p2 p3) { *)
-(*      X = p1 && *)
-(*      PC[p1] = PC6 && *)
-(*      PC[p2] = PC3 && *)
-(*      PC[p3] = PC3 *)
-(* } *)
-
-(* Existential unsafe *)
-
-(* unsafe (p1) { *)
-(*      Y = False && *)
-(*      PC[p1] = PC6 *)
-(* } *)
-
-(* unsafe (p1) { *)
-(*      Y = False && *)
-(*      PC[p1] = PC4 *)
-(* } *)
-
-(* ================================================================ *)
-(* Unsafe from merci *)
-(* ================================================================ *)
-
-(* ================================================================ *)
+universal_unsafe (j, i) { PC[j] = PC5 && PC[i] = PC6 }
 
 transition spl0(i)
 requires { PC[i] = PC0 }

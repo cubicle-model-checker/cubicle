@@ -85,14 +85,13 @@ let new_tag =
   | _ -> incr cpt_pos; !cpt_pos
 
 
-let create ?(kind=Node) ?(from=None) cube =
+let create ?(kind=Node) ?(from=None) ?(logic=Cube) ?(evars=[]) cube =
   let hist =  match from with
     | None -> []
     | Some ((_, _, n) as f) -> f :: n.from in
+  let tag = new_tag ~kind () in
   {
-    cube = cube;
-    tag = new_tag ~kind ();
-    kind = kind;
+    cube; evars; tag; kind; logic;
     depth = List.length hist;
     deleted = false;
     approximated = false;

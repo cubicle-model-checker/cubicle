@@ -64,7 +64,7 @@ let finite_procs n =
     if i = n then List.rev acc
     else match procs with
       | hd :: tl -> aux (i+1) (hd :: acc) tl
-      | _ -> assert false
+      | _ -> eprintf "%d" n; assert false
   in aux 0 [] procs
 
 let finite_procs_sp () = finite_procs !size_proc
@@ -91,42 +91,42 @@ let well_formed_subst sigma =
   try
     ignore (
       List.fold_left (fun (acc_x, acc_y) (x, y) ->
-        if Hstring.list_mem x acc_x || Hstring.list_mem y acc_y
-        then raise Exit;
-        x :: acc_x, y :: acc_y
-      ) ([],[]) sigma);
+          if Hstring.list_mem x acc_x || Hstring.list_mem y acc_y
+          then raise Exit;
+          x :: acc_x, y :: acc_y
+        ) ([],[]) sigma);
     true
   with Exit -> false
 
 let rec all_permutations_not_tail_recursive l1 l2 =
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with
-    | [] -> [[]]
-    | x::l -> cross l [] x l2
+  | [] -> [[]]
+  | x::l -> cross l [] x l2
 and cross l pr x st =
   match st with
-    | [] -> []
-    | y::p ->
-      let acc = all_permutations_not_tail_recursive l (pr@p) in
-      let acc =
-	if acc = [] then [[x,y]]
-	else List.map (fun ds -> (x, y)::ds) acc in
-      acc@(cross l (y::pr) x p)
+  | [] -> []
+  | y::p ->
+    let acc = all_permutations_not_tail_recursive l (pr@p) in
+    let acc =
+      if acc = [] then [[x,y]]
+      else List.map (fun ds -> (x, y)::ds) acc in
+    acc@(cross l (y::pr) x p)
 
 let rec all_permutations l1 l2 =
   (*assert (List.length l1 <= List.length l2);*)
   match l1 with
-    | [] -> [[]]
-    | x::l -> cross l [] x l2
+  | [] -> [[]]
+  | x::l -> cross l [] x l2
 and cross l pr x st =
   match st with
-    | [] -> []
-    | y::p ->
-      let acc = all_permutations l (List.rev_append pr p) in
-      let acc =
-	if acc = [] then [[x,y]]
-	else List.rev_map (fun ds -> (x, y)::ds) acc in
-      List.rev_append acc (cross l (y::pr) x p)
+  | [] -> []
+  | y::p ->
+    let acc = all_permutations l (List.rev_append pr p) in
+    let acc =
+      if acc = [] then [[x,y]]
+      else List.rev_map (fun ds -> (x, y)::ds) acc in
+    List.rev_append acc (cross l (y::pr) x p)
 
 let rec all_parts l = match l with
   | [] -> []
@@ -144,9 +144,9 @@ let rec all_partial_permutations l1 l2 =
 let rec all_arrangements n l =
   assert (n > 0);
   match n with
-    | 1 -> List.map (fun x -> [x]) l
-    | _ ->
-      List.fold_left (fun acc l' ->
+  | 1 -> List.map (fun x -> [x]) l
+  | _ ->
+    List.fold_left (fun acc l' ->
         List.fold_left (fun acc x -> (x :: l') :: acc) acc l
       ) [] (all_arrangements (n - 1) l)
 
@@ -157,10 +157,10 @@ let rec all_arrangements_arity s l = all_arrangements (arity s) l
 
 let rec all_instantiations l1 l2 =
   match l1 with
-    | [] -> []
-    | [x1] -> List.map (fun x2 -> [x1, x2]) l2
-    | x1 :: r1 ->
-      List.fold_left (fun acc l' ->
+  | [] -> []
+  | [x1] -> List.map (fun x2 -> [x1, x2]) l2
+  | x1 :: r1 ->
+    List.fold_left (fun acc l' ->
         List.fold_left (fun acc x2 -> ((x1, x2) :: l') :: acc) acc l2
       ) [] (all_instantiations r1 l2)
 
@@ -200,10 +200,10 @@ let rec perms = function
 let append_extra_procs_to acc args tr_args =
   let rec aux acc args tr_args procs =
     match args, tr_args, procs with
-      | [], [], _ -> List.rev acc
-      | [], x :: rtr, p :: rpr -> aux (p::acc) [] rtr rpr
-      | a :: ra, _, p :: rpr -> aux acc ra tr_args rpr
-      | _, _, [] -> if !size_proc <> 0 then List.rev acc else failwith "Not enough procs"
+    | [], [], _ -> List.rev acc
+    | [], x :: rtr, p :: rpr -> aux (p::acc) [] rtr rpr
+    | a :: ra, _, p :: rpr -> aux acc ra tr_args rpr
+    | _, _, [] -> if !size_proc <> 0 then List.rev acc else failwith "Not enough procs"
   in
   aux (List.rev acc) args tr_args (if !size_proc <> 0 then finite_procs_sp () else procs)
 
@@ -234,7 +234,7 @@ let rec all_parts_max n l =
 
 let permutations_missing tr_args l =
   let parts = [] :: List.flatten
-		(List.map perms (all_parts_max (List.length tr_args) l))
+                (List.map perms (all_parts_max (List.length tr_args) l))
   in
   let ex = extra_procs l tr_args in
   if debugm then
@@ -247,14 +247,14 @@ let permutations_missing tr_args l =
          if debugm then eprintf "MS : %a@." print_vars ms;
          let il = interleave l ms in
          match l, il with
-           | [], [[]] -> acc
-           | _ ->
-         if debugm then (
-           eprintf "IL : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) il;
-           eprintf "ACC : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc);
-         let acc = List.rev_append il acc in
-         if debugm then eprintf "ACC' : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc;
-         acc
+         | [], [[]] -> acc
+         | _ ->
+           if debugm then (
+             eprintf "IL : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) il;
+             eprintf "ACC : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc);
+           let acc = List.rev_append il acc in
+           if debugm then eprintf "ACC' : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc;
+           acc
       )
       [] parts in
   if debugm then eprintf "l' : %a@.]---@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) l';
@@ -275,8 +275,8 @@ let extra_vars vs1 vs2 =
 let give_procs n =
   let rp, _ =
     List.fold_left (fun (acc, n) v ->
-      if n > 0 then v :: acc, n - 1
-      else acc, n) ([], n) procs in
+        if n > 0 then v :: acc, n - 1
+        else acc, n) ([], n) procs in
   List.rev rp
 
 
@@ -306,10 +306,10 @@ let rec print_subst fmt = function
 let build_subst args a_args =
   let rec a_subst acc args a_args =
     match args, a_args with
-      | [], _ -> List.rev acc
-      | x::args, ax::a_args ->
-	a_subst ((x, ax)::acc) args a_args
-      | _ -> assert false
+    | [], _ -> List.rev acc
+    | x::args, ax::a_args ->
+      a_subst ((x, ax)::acc) args a_args
+    | _ -> assert false
   in
   a_subst [] args a_args
 
