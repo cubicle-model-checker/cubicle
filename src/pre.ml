@@ -234,7 +234,7 @@ let add_array_to_list n l =
     n :: l
 
 let make_cubes (ls, post) rargs s tr cnp =
-  eprintf "Rargs : %a@." Variable.print_vars rargs;
+  let module VS = Variable.Set in
   let { cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
@@ -259,8 +259,12 @@ let make_cubes (ls, post) rargs s tr cnp =
 	          end
 	        else
                   let new_cube = Cube.create nargs np in
+                  let evars = match s.logic with
+                    | ForallExists -> List.fold_left (fun acc v -> VS.add v acc) s.evars tr_args
+                    | _ -> s.evars
+                  in
                   let new_s =
-                    Node.create ~from:(Some (tr, tr_args, s)) ~logic:s.logic ~evars:s.evars
+                    Node.create ~from:(Some (tr, tr_args, s)) ~logic:s.logic ~evars
                       new_cube in
 	          match post_strategy with
 	            | 0 -> add_list new_s ls, post
@@ -329,9 +333,6 @@ let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
 let pre_image trs s =
   TimePre.start ();
   Debug.unsafe s;
-  (match s.logic with
-   | ForallExists -> eprintf "Node : %a@.  vars : %a@." Node.print s Variable.print_vars s.evars
-   | _ -> ());
   let u = Node.litterals s in
   let ls, post =
     List.fold_left

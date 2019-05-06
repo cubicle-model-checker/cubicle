@@ -385,6 +385,11 @@ let pp_vars_exists fmt vl =
     Format.fprintf fmt "exists %a : int. "
       (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
 
+let pp_vars_forall fmt vl =
+  if List.compare_length_with vl 0 > 0 then
+    Format.fprintf fmt "forall %a : int. "
+      (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
+
 let pp_vars_bound fmt vl =
   let pp_v_b fmt v =
     fprintf fmt "0 <= %a < _n" Hstring.print v
@@ -447,12 +452,25 @@ let pp_invariants invs fmt s =
       (wvars, wlit)) invs else [] in
   pp_print_list pp_invariant fmt (invs @ sinvs)
 
+let simpl_satom uvl ev sa =
+  SAtom.subst Variable.subst_ptowp @@ SAtom.filter (fun a -> Atom.has_var ev a ||
+                         (List.exists (fun v -> Atom.has_var v a) uvl)) sa
+
 let pp_univ_unsafes fmt uul =
-  let pp_univ_unsafe fmt (_, _, v, sa) =
-    let vl = [v] in
-    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars_exists vl pp_vars_bound vl pp_vars_distinct vl
-      (pp_satom_nlast ~uu:true (vl <> [])) sa
+  let module VS = Variable.Set in
+  let pp_univ_unsafe fmt n =
+    (* Existential variables in Cubicle turn to universal variables in Why3 *)
+    let uvl = VS.elements n.evars in
+    (* Universal variable in Cubicle turns to existential variable in Why3 *)
+    let ev = VS.min_elt (VS.diff (VS.of_list n.cube.vars) n.evars) in
+    let sa = simpl_satom uvl ev n.cube.litterals in
+    let uvl = List.map (Variable.(subst subst_ptowp)) uvl in
+    let ev = Variable.(subst subst_ptowp ev) in
+    let sa = SAtom.subst Variable.subst_ptowp sa in
+    let vars = List.rev (ev :: uvl) in
+    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a%a@] }@]"
+      pp_vars_forall uvl pp_vars_exists [ev] pp_vars_bound vars pp_vars_distinct vars
+      (pp_satom_nlast ~uu:true (vars <> [])) sa
   in
   pp_print_list pp_univ_unsafe fmt uul
 
@@ -493,9 +511,9 @@ let pp_forall_others pl fmt tl =
 
 (* Transforms a Cubicle program in a whyml one *)
 
-let cub_to_whyml s invs fmt file =
+let cub_to_whyml t_syst syst invs fmt file =
   let name = Filename.(remove_extension @@ basename file) in
-  let plist = new_procs s.max_arity in
+  let plist = new_procs syst.max_arity in
   fprintf fmt "@[<v>\
                module %s@,\
                @,\
@@ -504,25 +522,25 @@ let cub_to_whyml s invs fmt file =
                use ref.Refint@,\
                use random.Random@,\
               " (String.capitalize_ascii name);
-  fprintf fmt "%a" pp_trad_type_defs s.type_defs;
+  fprintf fmt "%a" pp_trad_type_defs syst.type_defs;
   fprintf fmt "@,val coin () : bool@,";
   fprintf fmt "@,type proc = int@,";
 
   fprintf fmt "@,@[<v 2>type system = {@,%a@]@,}"
-    pp_system_to_type s;
+    pp_system_to_type syst;
   fprintf fmt "@,@[<v 2>let %s (_n : int) (maxsteps : int) : system@,\
                requires { 0 < _n }@,\
                @[<v 2>=@,"
     name (* pp_ensures s *);
   fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,%a@,@,let nbsteps = ref 0 in@,"
-    pp_init s pp_asserts_arrays s;
-  fprintf fmt "%a" (pp_forall_others plist) s.trans;
+    pp_init syst pp_asserts_arrays syst;
+  fprintf fmt "%a" (pp_forall_others plist) syst.trans;
   fprintf fmt "@,@[<v 2>while ( !nbsteps < maxsteps ) do@,";
   fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]@,%a@,%a@]"
-    pp_proc_bounds s (pp_invariants invs) s;
-  fprintf fmt "@,@[<v 0>%a@]" pp_univ_unsafes s.univ_unsafe;
+    pp_proc_bounds syst (pp_invariants invs) syst;
+  fprintf fmt "@,@[<v 0>%a@]" pp_univ_unsafes t_syst.t_univ_unsafe;
   fprintf fmt "@,@,incr nbsteps;@,@,%a@," pp_newprocs plist;
-  fprintf fmt "@,%a" (pp_transitions plist) s;
+  fprintf fmt "@,%a" (pp_transitions plist) syst;
   fprintf fmt "@]@,done;@,s@]@,end";
   fprintf fmt "@.";
   exit 0

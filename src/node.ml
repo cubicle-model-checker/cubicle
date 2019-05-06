@@ -85,7 +85,7 @@ let new_tag =
   | _ -> incr cpt_pos; !cpt_pos
 
 
-let create ?(kind=Node) ?(from=None) ?(logic=Cube) ?(evars=[]) cube =
+let create ?(kind=Node) ?(from=None) ?(logic=Cube) ?(evars=Variable.Set.empty) cube =
   let hist =  match from with
     | None -> []
     | Some ((_, _, n) as f) -> f :: n.from in

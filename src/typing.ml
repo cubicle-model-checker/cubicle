@@ -502,7 +502,7 @@ let create_node_universal nbp kind evars uvar sa =
   let c = Cube.create inst_vars isa in
   let c = Cube.normal_form c in
   (* assert false; *)
-  Node.create ~kind ~logic:ForallExists ~evars:ievars c
+  Node.create ~kind ~logic:ForallExists ~evars:(Variable.Set.of_list ievars) c
 
 let add_tau tr =
   let pre,reset_memo = Pre.make_tau tr in

@@ -102,7 +102,7 @@ type logic = Cube | ForallExists
 type node_cube =
     {
       cube : Cube.t;           (** the associated cube *)
-      evars : Variable.t list; (** if the cube is not just an existential cube,
+      evars : Variable.Set.t; (** if the cube is not just an existential cube,
                                    keeps track of the existential variables *)
       tag : int;               (** a unique tag (negative for approximations
                                    and positive otherwise) *)

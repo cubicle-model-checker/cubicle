@@ -316,9 +316,9 @@ module Make ( O : Oracle.S ) : S = struct
     if verbose > 0 && not quiet then
       eprintf "Checking %d approximations:@." (List.length approx);
 
-    if verbose > 2 && not quiet then
-      (let pp_sep fmt () = fprintf fmt "@.@." in
-      pp_print_list ~pp_sep Node.print err_formatter approx);
+    (* if verbose > 2 && not quiet then
+     *   (let pp_sep fmt () = fprintf fmt "@.@." in
+     *   pp_print_list ~pp_sep Node.print err_formatter approx); *)
     O.first_good_candidate approx
 
 

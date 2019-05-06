@@ -39,6 +39,7 @@ init(i) { Rval[i] = None && Y = False && PC[i] = PC0 }
 universal_unsafe (i) { PC[i] = PC6}
 universal_unsafe (i) { PC[i] = PC9}
 universal_unsafe (i) { Rval[i] = Down}
+universal_unsafe (i) { Rval[i] = Down && PC[i] = PC9 }
 
 (* unsafe(i) { Y = False && PC[i] = PC4 } *)
 (* unsafe(i) { Y = False && PC[i] = PC5 } *)
