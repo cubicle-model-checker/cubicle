@@ -21,7 +21,7 @@ open Ast
 module H = Hstring
 
 (* Trie, mapping cubes to value of type 'a *)
-type 'a t = 
+type 'a t =
   | Empty
   | Full of 'a
   | Node of (Atom.t * 'a t) list
@@ -101,12 +101,12 @@ let add_array cube v trie = add (Array.to_list cube) v trie
 let add_array_force cube v trie = add_force (Array.to_list cube) v trie
 
 (* Is cube subsumed by some cube in the trie? *)
-let rec mem cube trie = match trie with 
+let rec mem cube trie = match trie with
   | Empty -> None
   | Full { tag = id } -> Some [id]
   | Node l -> match cube with
       | [] -> None
-      | atom::cube -> 
+      | atom::cube ->
           mem_list atom cube l
 and mem_list atom cube l = match l with
   | [] -> None
@@ -123,12 +123,12 @@ and mem_list atom cube l = match l with
           | [] -> None
           | atom::cube -> mem_list atom cube l
 
-let rec mem_poly cube trie = match trie with 
+let rec mem_poly cube trie = match trie with
   | Empty -> false
   | Full _ -> true
   | Node l -> match cube with
       | [] -> false
-      | atom::cube -> 
+      | atom::cube ->
           mem_poly_list atom cube l
 and mem_poly_list atom cube l = match l with
   | [] -> false
@@ -206,7 +206,7 @@ let mem c t =
   let res = mem c t in
   TimerSubset.pause ();
   res
-   
+
 (* Apply f to all values mapped to in the trie. *)
 let rec iter f trie = match trie with
   | Empty -> ()
@@ -230,26 +230,26 @@ let rec fold f acc trie = match trie with
 (* Apply f to all values whose keys (cubes) are subsumed by the given cube. *)
 let rec iter_subsumed f cube trie = match cube, trie with
   | [], _ -> iter f trie
-  | _, Empty 
-  | _, Full _ -> () 
+  | _, Empty
+  | _, Full _ -> ()
   | _, Node l -> iter_subsumed_list f cube l
 and iter_subsumed_list f cube l = match l with
   | [] -> ()
   | (atom',t')::n ->
       let atom = List.hd cube in
       let cmp = Atom.compare atom atom' in
-      if cmp=0 then 
+      if cmp=0 then
         iter_subsumed f (List.tl cube) t'
       else if cmp>0 then begin
         iter_subsumed f cube t';
-        iter_subsumed_list f cube n 
+        iter_subsumed_list f cube n
       end
 
 (* Delete all values which satisfy the predicate p *)
-let rec delete p trie = match trie with 
+let rec delete p trie = match trie with
   | Empty -> Empty
   | Full v -> if p v then Empty else trie
-  | Node l -> 
+  | Node l ->
       let l' = delete_list p l in
       if l == l' then trie else Node l'
 and delete_list p l = match l with
@@ -264,7 +264,7 @@ and delete_list p l = match l with
 let rec all_vals = function
   | Empty -> []
   | Full v -> [v]
-  | Node l -> 
+  | Node l ->
       List.flatten (List.fold_left (fun acc (_,t) -> (all_vals t)::acc) [] l)
 
 (* All values whose keys (cubes) are not inconsistent with the given cube. *)
@@ -277,7 +277,7 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
   | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Constr)),
     Atom.Comp (Elem (v2, Glob), Eq, Elem (x2, Constr))
   | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Var)),
-    Atom.Comp (Elem (v2, Glob), Eq, Elem (x2, Var)) 
+    Atom.Comp (Elem (v2, Glob), Eq, Elem (x2, Var))
       when H.equal v1 v2 && not (H.equal x1 x2) ->
       []
   | Atom.Comp (Elem (v1, Glob), Eq, Elem (x1, Constr)),
@@ -290,7 +290,7 @@ and consistent_list atom cube ((atom', t') as n) = match (atom, atom') with
       []
   | Atom.Comp (Access (a1,li1), Eq,
                (Elem (_, (Constr|Glob)) | Arith _ as x1)),
-    Atom.Comp (Access (a2,li2), (Neq | Lt), 
+    Atom.Comp (Access (a2,li2), (Neq | Lt),
                (Elem (_, (Constr|Glob)) | Arith _ as x2))
       when H.equal a1 a2 && H.list_equal li1 li2 && Term.compare x1 x2 = 0 ->
       []
@@ -308,7 +308,7 @@ let rec add_and_resolve n visited =
     fold (fun visited nv ->
       match Cube.resolve_two n.cube nv.cube with
         | None -> visited
-        | Some cube_res -> add_and_resolve (Node.create cube_res) visited
+        | Some cube_res -> add_and_resolve (Node.create ~logic:n.logic ~evars:n.evars cube_res) visited
     ) visited visited in
   add_array (Node.array n) n visited
 

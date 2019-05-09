@@ -88,7 +88,6 @@ let _ =
                 exit 1
           end
       in
-      let invs = Why3.replay_invs system invs in
       Format.fprintf out "%a" (Why3.cub_to_whyml system s invs) Options.file
     end;
     if refine_universal then

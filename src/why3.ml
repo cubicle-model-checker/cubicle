@@ -511,7 +511,19 @@ let pp_forall_others pl fmt tl =
 
 (* Transforms a Cubicle program in a whyml one *)
 
+let replay_invs system invs =
+  List.fold_left (fun acc inv ->
+    match Bwd.Selected.aux_search ~invariants:[] ~candidates:[] system [inv] with
+      | Unsafe _ | TimeOut _ -> acc
+      | Safe (vis, cand) -> inv :: acc) [] invs
+
 let cub_to_whyml t_syst syst invs fmt file =
+  (* eprintf "Invs : @.";
+   * List.iter (fun n ->
+   *   eprintf "%a@.(%a)@.@." Node.print n Variable.print_vars (Variable.Set.elements n.evars)) invs; *)
+  let invs = replay_invs t_syst invs in
+  (* eprintf "Replayed : @.";
+   * List.iter (eprintf "%a@.@." Node.print) invs; *)
   let name = Filename.(remove_extension @@ basename file) in
   let plist = new_procs syst.max_arity in
   fprintf fmt "@[<v>\
@@ -544,9 +556,3 @@ let cub_to_whyml t_syst syst invs fmt file =
   fprintf fmt "@]@,done;@,s@]@,end";
   fprintf fmt "@.";
   exit 0
-
-let replay_invs system invs =
-  List.fold_left (fun acc inv ->
-    match Bwd.Selected.aux_search ~invariants:[] ~candidates:[] system [inv] with
-      | Unsafe _ | TimeOut _ -> acc
-      | Safe (vis, cand) -> inv :: acc) [] invs

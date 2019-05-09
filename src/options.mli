@@ -28,6 +28,7 @@ val towhy3 : bool
 val why3_out_file : bool
 val why3_cub_invs : bool
 val only_brab_invs : bool
+val simpl_neq : bool
 
 val debugm : bool
 

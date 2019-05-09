@@ -80,7 +80,7 @@ let test_size_proc v = !size_proc <> 0 && List.length v > !size_proc
 
 let normal_form ({ litterals = sa; array = ar } as c) =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
-  if test_size_proc vars then
+  if test_size_proc vars || neq_finite_procs sa then
     cube_false
   else
     let sigma = Variable.build_subst vars Variable.procs in
@@ -97,9 +97,10 @@ let normal_form ({ litterals = sa; array = ar } as c) =
 
 module TM = Map.Make (Term)
 
-let simplify_satom =
-  let open Hstring in
-  fun sa ->
+let simplify_satom sa =
+  if not simpl_neq then sa, SAtom.empty
+  else
+    let open Hstring in
     let sfp = HSet.of_list (Variable.finite_procs_sp ()) in
     let l = SAtom.elements sa in
     let rec aux ((tosimpl, nomod) as acc)  = function
