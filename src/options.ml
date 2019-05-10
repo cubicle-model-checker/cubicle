@@ -28,7 +28,7 @@ let towhy3 = ref false
 let why3_out_file = ref false
 let why3_cub_invs = ref false
 let only_brab_invs = ref true
-let simpl_neq = ref false
+let simpl_neq = ref true
 
 let debugm = ref false
 
@@ -153,7 +153,7 @@ let specs =
     "-cub-invs", Arg.Set why3_cub_invs, " gives Cubicle invariants to the why3 file";
     "-debugm", Arg.Set debugm, " debug mode mattias";
     "-all-invs", Arg.Clear only_brab_invs, " gives all invariants to the why3 file";
-    "-simpl-neq", Arg.Set simpl_neq, " simplify cubes when the number of procs is finite";
+    "-no-simpl-neq", Arg.Clear simpl_neq, " simplify cubes when the number of procs is finite";
     "-steps", Arg.Int set_steps, "<n> stops the search after n steps";
     "-univ-unsafe", Arg.Int set_univ_unsafe, "<n> instantiate universal unsafe with n
     processes and start brab on it";

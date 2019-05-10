@@ -78,6 +78,23 @@ let subst sigma { vars = vs; array = ar } =
 let test_size_proc v = !size_proc <> 0 && List.length v > !size_proc
 
 
+let neq_finite_procs sa =
+  let module HM = Hstring.HMap in
+  let module HS = Hstring.HSet in
+  !size_proc <> 0 &&
+  let nbneq =
+    let hm = SAtom.fold (fun a acc ->
+      match a with
+        | Atom.Comp (Elem(h1, _), Neq, (Elem (h2, Var))) ->
+          let hs = try HM.find h1 acc with Not_found -> HS.empty in
+          HM.add h1 (HS.add h2 hs) acc
+        | _ -> acc
+    ) sa HM.empty in
+    HM.fold (fun _ hs acc -> let c = HS.cardinal hs in if c > acc then c else acc)
+      hm 0
+  in nbneq >= !size_proc
+
+
 let normal_form ({ litterals = sa; array = ar } as c) =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
   if test_size_proc vars || neq_finite_procs sa then
@@ -127,7 +144,7 @@ let simplify_satom sa =
 
 let create_norma_sa_ar sa ar =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
-  if test_size_proc vars then
+  if test_size_proc vars || neq_finite_procs sa then
     cube_false
   else
     let sigma = Variable.build_subst vars Variable.procs in
