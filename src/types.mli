@@ -152,6 +152,9 @@ module rec Atom : sig
   val has_var : Variable.t -> t -> bool
   (** returns [true] if the atom contains the variable given in argument *)
 
+  val has_no_vars : t -> bool
+  (** returns [true] if the atom doesn't contain any variable *)
+
   val has_vars : Variable.t list -> t -> bool
   (** returns [true] if the atom contains one of the variable given in
       argument *)

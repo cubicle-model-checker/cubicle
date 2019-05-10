@@ -290,6 +290,7 @@ module rec Atom : sig
   val equal : t -> t -> bool
   val subst : Variable.subst -> t -> t
   val has_var : Variable.t -> t -> bool
+  val has_no_vars : t -> bool
   val has_vars : Variable.t list -> t -> bool
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
@@ -367,6 +368,19 @@ end = struct
     | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs
     | Arith (x, _) ->  has_vars_term vs x
     | _ -> false
+
+
+  let rec has_no_vars_term = function
+    | Elem (x, Var) -> false
+    | Access (_, lx) -> false
+    | Arith (x, _) ->  has_no_vars_term x
+    | _ -> true
+
+  let rec has_no_vars = function
+    | True | False -> true
+    | Comp (x, _, y) -> has_no_vars_term x && has_no_vars_term y
+    | Ite (sa, a1, a2) ->
+       SAtom.for_all has_no_vars sa && has_no_vars a1 && has_no_vars a2
 
   let rec has_vars vs = function
     | True | False -> false

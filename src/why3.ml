@@ -375,15 +375,14 @@ let pp_transitions pl fmt s =
       pp_print_list (pp_transition pl) fmt tl
     | _ -> assert false
 
-let pp_vars fmt vl =
-  if List.compare_length_with vl 0 > 0 then
-    Format.fprintf fmt "forall %a : int. "
-      (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
-
 let pp_vars_exists fmt vl =
   if List.compare_length_with vl 0 > 0 then
     Format.fprintf fmt "exists %a : int. "
       (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
+
+let pp_vars_exists_opt fmt = function
+  | None -> ()
+  | Some v -> pp_vars_exists fmt [v]
 
 let pp_vars_forall fmt vl =
   if List.compare_length_with vl 0 > 0 then
@@ -421,7 +420,7 @@ let pp_ensures fmt s =
   in
   let pp_ensure fmt (_, vl, sa) =
     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars vl pp_vars_bound vl pp_vars_distinct vl
+      pp_vars_forall vl pp_vars_bound vl pp_vars_distinct vl
       (pp_satom_nlast (vl <> [])) sa
   in
   pp_print_list pp_ensure fmt s.unsafe;
@@ -435,42 +434,54 @@ let pp_proc_bounds fmt s =
     (List.filter (fun (_, _, t) -> t = Smt.Type.type_proc) s.globals)
 
 let pp_invariants invs fmt s =
-  let pp_invariant fmt (vl, sa) =
-    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars vl pp_vars_bound vl pp_vars_distinct vl
-      (pp_satom_nlast (vl <> [])) sa
+
+  let pp_invariant fmt (vars, uvl, ev, sa) =
+    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a%a@] }@]"
+      pp_vars_forall uvl pp_vars_exists_opt ev pp_vars_bound vars
+      pp_vars_distinct vars (pp_satom_nlast (vars <> [])) sa
   in
-  let sinvs = if Options.only_brab_invs then s.invs else [] in
+  let sinvs = s.whyinvs @ (if Options.only_brab_invs then s.invs else []) in
   let sinvs = List.map (
-    fun (_, vl, sa) -> (vl, sa)
-  ) (s.whyinvs @ sinvs @ s.unsafe)
+    fun (_, vl, sa) -> (vl, vl, None, sa)
+  ) sinvs
   in
-  let invs = if Options.why3_cub_invs then List.map (
-    fun {Ast.cube = {Cube.vars; Cube.litterals}} ->
-      let wvars = List.map Variable.(subst subst_ptowp) vars in
-      let wlit = SAtom.subst Variable.subst_ptowp litterals in
-      (wvars, wlit)) invs else [] in
+  (* let invs = if Options.why3_cub_invs then List.map (
+   *   fun {Ast.cube = {Cube.vars; Cube.litterals}} ->
+   *     let wvars = List.map Variable.(subst subst_ptowp) vars in
+   *     let wlit = SAtom.subst Variable.subst_ptowp litterals in
+   *     (wvars, wlit)) invs else [] in *)
   pp_print_list pp_invariant fmt (invs @ sinvs)
 
-let simpl_satom uvl ev sa =
-  SAtom.subst Variable.subst_ptowp @@ SAtom.filter (fun a -> Atom.has_var ev a ||
-                         (List.exists (fun v -> Atom.has_var v a) uvl)) sa
+(* function used to transform a node in a formula with proper quantifiers *)
+let simpl_node n =
+  match n.logic with
+    | Cube ->
+      let vars = n.cube.vars in
+      vars, vars, None, n.cube.litterals
+    | ForallExists ->
+      let module VS = Variable.Set in
+      (* Existential variables in Cubicle turn to universal variables in Why3 *)
+      let uvl = VS.elements n.evars in
+      (* Universal variable in Cubicle turns to existential variable in Why3 *)
+      let ev = VS.min_elt (VS.diff (VS.of_list n.cube.vars) n.evars) in
+      let sa = SAtom.subst Variable.subst_ptowp @@ SAtom.filter (
+        fun a -> Atom.has_var ev a ||
+                 (List.exists (fun v -> Atom.has_var v a) uvl) ||
+                 Atom.has_no_vars a
+      ) n.cube.litterals in
+      eprintf "Cube(%a) (%a) : %a@,Simpl : %a@.@." Variable.print_vars uvl Variable.print ev Node.print n SAtom.print sa;
+
+      let uvl = List.map (Variable.(subst subst_ptowp)) uvl in
+      let ev = Variable.(subst subst_ptowp ev) in
+      let sa = SAtom.subst Variable.subst_ptowp sa in
+      List.rev (ev :: uvl), uvl, Some ev, sa
 
 let pp_univ_unsafes fmt uul =
-  let module VS = Variable.Set in
   let pp_univ_unsafe fmt n =
-    (* Existential variables in Cubicle turn to universal variables in Why3 *)
-    let uvl = VS.elements n.evars in
-    (* Universal variable in Cubicle turns to existential variable in Why3 *)
-    let ev = VS.min_elt (VS.diff (VS.of_list n.cube.vars) n.evars) in
-    let sa = simpl_satom uvl ev n.cube.litterals in
-    let uvl = List.map (Variable.(subst subst_ptowp)) uvl in
-    let ev = Variable.(subst subst_ptowp ev) in
-    let sa = SAtom.subst Variable.subst_ptowp sa in
-    let vars = List.rev (ev :: uvl) in
+    let vars, uvl, ev, sa = simpl_node n in
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a%a@] }@]"
-      pp_vars_forall uvl pp_vars_exists [ev] pp_vars_bound vars pp_vars_distinct vars
-      (pp_satom_nlast ~uu:true (vars <> [])) sa
+      pp_vars_forall uvl pp_vars_exists_opt ev pp_vars_bound vars
+      pp_vars_distinct vars (pp_satom_nlast ~uu:true (vars <> [])) sa
   in
   pp_print_list pp_univ_unsafe fmt uul
 
@@ -518,12 +529,16 @@ let replay_invs system invs =
       | Safe (vis, cand) -> inv :: acc) [] invs
 
 let cub_to_whyml t_syst syst invs fmt file =
-  (* eprintf "Invs : @.";
-   * List.iter (fun n ->
-   *   eprintf "%a@.(%a)@.@." Node.print n Variable.print_vars (Variable.Set.elements n.evars)) invs; *)
-  let invs = replay_invs t_syst invs in
-  (* eprintf "Replayed : @.";
-   * List.iter (eprintf "%a@.@." Node.print) invs; *)
+  eprintf "Invs : @.";
+  List.iter (fun n ->
+    eprintf "%a@.(%a)@.@." Node.print n Variable.print_vars (Variable.Set.elements n.evars)) invs;
+  let invs2 = List.map simpl_node invs in
+  eprintf "Replayed : @.";
+  List.iter2 (fun (_, uvl, ev, sa) n ->
+    let ev = match ev with None -> [] | Some v -> [v] in
+    eprintf "forall %a, exists %a : @[<v 0>%a@,@,%a@]@.@."
+      Variable.print_vars uvl Variable.print_vars ev SAtom.print sa Node.print n ) invs2 invs;
+  let invs = invs2 in
   let name = Filename.(remove_extension @@ basename file) in
   let plist = new_procs syst.max_arity in
   fprintf fmt "@[<v>\
