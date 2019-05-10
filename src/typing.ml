@@ -476,6 +476,7 @@ let create_node_rename kind vars sa =
 let create_node_universal nbp kind evars uvar sa =
   let open Variable in
   let unsa, exsa = SAtom.partition (has_var uvar) sa in
+  let nvsa, exsa = SAtom.partition has_no_vars exsa in
   let inst_vars = finite_procs nbp in
   (* eprintf "Vars : %a@." Variable.print_vars ps; *)
   let rec aux (iexsa, ievars) evars rem_vars = match evars, rem_vars with
@@ -489,9 +490,7 @@ let create_node_universal nbp kind evars uvar sa =
     | _ -> assert false
   in
   (* eprintf "Exist : @."; *)
-  let (iexsa, ievars), rem_vars = aux (SAtom.empty, []) evars inst_vars in
-  (* eprintf "@.SAtom from exist : %a@.Remaining vars : (%a)@.SAtom for forall : %a@.Forall : @."
-   *   SAtom.print exsa print_vars ps SAtom.print unsa; *)
+  let (iexsa, ievars), rem_vars = aux (nvsa, []) evars inst_vars in
   let isa = List.fold_left (fun acc p ->
     let s = build_subst [uvar] [p] in
     (* eprintf "subst : %a@." print_subst s; *)

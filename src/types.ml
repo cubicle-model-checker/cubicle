@@ -37,7 +37,7 @@ type const =
 
 let compare_const c1 c2 = match c1, c2 with
   | (ConstInt n1 | ConstReal n1), (ConstInt n2 | ConstReal n2) ->
-     Num.compare_num n1 n2
+    Num.compare_num n1 n2
   | (ConstInt _ | ConstReal _), _ -> -1
   | _, (ConstInt _ | ConstReal _) -> 1
   | ConstName h1, ConstName h2 -> Hstring.compare h1 h2
@@ -57,32 +57,32 @@ module MConst = struct
   let is_num m =
     if M.cardinal m = 1 then
       match choose m with
-      | (ConstInt n | ConstReal n), i -> Some (Num.mult_num (Num.Int i) n)
-      | _ -> None
+        | (ConstInt n | ConstReal n), i -> Some (Num.mult_num (Num.Int i) n)
+        | _ -> None
     else None
 
 end
 
 module Var = struct
-    type t =
-      | V of Hstring.t * sort
-      | T of Hstring.t * Variable.t list
+  type t =
+    | V of Hstring.t * sort
+    | T of Hstring.t * Variable.t list
 
-    let compare x y =
-      match x, y with
+  let compare x y =
+    match x, y with
       | V(a1,s1), V(a2, s2) ->
-	 let c = Pervasives.compare s1 s2 in
-	 if c <> 0 then c
-	 else Hstring.compare a1 a2
+	let c = Pervasives.compare s1 s2 in
+	if c <> 0 then c
+	else Hstring.compare a1 a2
 
       | T(t1,l1), T(t2,l2) ->
-	 let c = Hstring.compare t1 t2 in
-	 if c<>0 then c
-	 else Variable.compare_list l1 l2
+	let c = Hstring.compare t1 t2 in
+	if c<>0 then c
+	else Variable.compare_list l1 l2
       | V(_,_), T(_,_) -> -1
       | T(_,_), V(_,_) -> 1
 
-  end
+end
 
 module VMap = Map.Make(Var)
 
@@ -94,14 +94,14 @@ type term =
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
-(*  | NArith of cst VMap.t * cst*)
+  (*  | NArith of cst VMap.t * cst*)
 
 
 let is_int_const = function
   | ConstInt _ -> true
   | ConstReal _ -> false
   | ConstName n ->
-     Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
+    Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
 
 
 let compare_constants = MConst.compare Pervasives.compare
@@ -113,32 +113,32 @@ let num_of_const = function
 
 let add_constnum c i num =
   match c, num with
-  | ConstInt n, ConstInt m ->
-     ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
-  | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
-     ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
-  | _ -> assert false
+    | ConstInt n, ConstInt m ->
+      ConstInt (Num.add_num (Num.mult_num (Num.Int i) n) m)
+    | (ConstInt n | ConstReal n), (ConstInt m | ConstReal m) ->
+      ConstReal (Num.add_num (Num.mult_num (Num.Int i) n) m)
+    | _ -> assert false
 
 let split_num_consts cs =
   MConst.fold
     (fun c i (cs, num) ->
-     match c, num with
-     | ConstName _, _ -> MConst.add c i cs, num
-     | _ -> cs, add_constnum c i num)
+       match c, num with
+         | ConstName _, _ -> MConst.add c i cs, num
+         | _ -> cs, add_constnum c i num)
     cs (MConst.empty, ConstInt (Num.Int 0))
 
 let add_constant c i cs =
   match c with
-  | ConstInt _ | ConstReal _ ->
-     let cs, num = split_num_consts cs in
-     let num = add_constnum c i num in
-     if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
-     else MConst.add num 1 cs
-  | _ ->
-     let i' = try MConst.find c cs with Not_found -> 0 in
-     let i = i + i' in
-     if i = 0 then MConst.remove c cs
-     else MConst.add c i cs
+    | ConstInt _ | ConstReal _ ->
+      let cs, num = split_num_consts cs in
+      let num = add_constnum c i num in
+      if Num.compare_num (num_of_const num) (Num.Int 0) = 0 then cs
+      else MConst.add num 1 cs
+    | _ ->
+      let i' = try MConst.find c cs with Not_found -> 0 in
+      let i = i + i' in
+      if i = 0 then MConst.remove c cs
+      else MConst.add c i cs
 
 let add_constants cs1 cs2 =
   let m = MConst.fold add_constant cs2 cs1 in
@@ -161,9 +161,9 @@ let const_sign c =
     MConst.iter (fun c i ->
       if i <> 0 then
 	match c with
-	| ConstName _ -> raise Exit
-	| ConstInt a | ConstReal a ->
-	   n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
+	  | ConstName _ -> raise Exit
+	  | ConstInt a | ConstReal a ->
+	    n := Num.add_num (Num.mult_num (Num.Int i) a) !n) c;
     Some (Num.compare_num !n (Num.Int 0))
   with Exit -> None
 
@@ -177,19 +177,19 @@ module Term = struct
 
   let rec compare t1 t2 =
     match t1, t2 with
-    | Const c1, Const c2 -> compare_constants c1 c2
-    | Const _, _ -> -1 | _, Const _ -> 1
-    | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
-    | Elem (_, Glob), Elem (_, (Constr | Var)) -> 1
-    | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
-    | Elem _, _ -> -1 | _, Elem _ -> 1
-    | Access (a1, l1), Access (a2, l2) ->
-       let c = Hstring.compare a1 a2 in
-       if c<>0 then c else Hstring.compare_list l1 l2
-    | Access _, _ -> -1 | _, Access _ -> 1
-    | Arith (t1, cs1), Arith (t2, cs2) ->
-       let c = compare t1 t2 in
-       if c<>0 then c else compare_constants cs1 cs2
+      | Const c1, Const c2 -> compare_constants c1 c2
+      | Const _, _ -> -1 | _, Const _ -> 1
+      | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
+      | Elem (_, Glob), Elem (_, (Constr | Var)) -> 1
+      | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
+      | Elem _, _ -> -1 | _, Elem _ -> 1
+      | Access (a1, l1), Access (a2, l2) ->
+        let c = Hstring.compare a1 a2 in
+        if c<>0 then c else Hstring.compare_list l1 l2
+      | Access _, _ -> -1 | _, Access _ -> 1
+      | Arith (t1, cs1), Arith (t2, cs2) ->
+        let c = compare t1 t2 in
+        if c<>0 then c else compare_constants cs1 cs2
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -199,31 +199,31 @@ module Term = struct
   let hfalse = Hstring.make "False"
 
   module STerm = Set.Make (struct
-                            type t = term
-                            let compare = compare
-                          end)
+      type t = term
+      let compare = compare
+    end)
 
   module Set = STerm
 
   let rec subst sigma t =
     match t with
-    | Elem (x, s) ->
-       let nx = Variable.subst sigma x in
-       if x == nx then t
-       else Elem (nx, s)
-    | Access (a, lz) ->
-       Access (a, List.map
-                    (fun z ->
+      | Elem (x, s) ->
+        let nx = Variable.subst sigma x in
+        if x == nx then t
+        else Elem (nx, s)
+      | Access (a, lz) ->
+        Access (a, List.map
+                  (fun z ->
                      try Variable.subst sigma z with Not_found -> z) lz)
-    | Arith (x, c) -> Arith (subst sigma x, c)
-    | _ -> t
+      | Arith (x, c) -> Arith (subst sigma x, c)
+      | _ -> t
 
 
   let rec variables = function
     | Elem (x, Var) -> Variable.Set.singleton x
     | Access (_, lx) ->
-       List.fold_left (fun acc x -> Variable.Set.add x acc)
-                      Variable.Set.empty lx
+      List.fold_left (fun acc x -> Variable.Set.add x acc)
+        Variable.Set.empty lx
     | Arith (t, _) -> variables t
     | _ -> Variable.Set.empty
 
@@ -232,9 +232,9 @@ module Term = struct
 
   let rec type_of = function
     | Const cs ->
-       if is_int_const (fst (MConst.choose cs)) then
-         Smt.Type.type_int
-       else Smt.Type.type_real
+      if is_int_const (fst (MConst.choose cs)) then
+        Smt.Type.type_int
+      else Smt.Type.type_real
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
@@ -269,9 +269,9 @@ module Term = struct
     | Const cs -> print_cs true fmt cs
     | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
     | Access (a, li) ->
-       fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
+      fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) ->
-       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+      fprintf fmt "@[%a%a@]" print x (print_cs false) cs
 
 end
 
@@ -291,6 +291,7 @@ module rec Atom : sig
   val subst : Variable.subst -> t -> t
   val has_var : Variable.t -> t -> bool
   val has_vars : Variable.t list -> t -> bool
+  val has_no_vars : t -> bool
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
@@ -311,34 +312,34 @@ end = struct
       | False, False -> 0
       | False, _ -> -1 | _, False -> 1
       | Comp (x1, op1, y1), Comp (x2, op2, y2) ->
-	  let c1 = Term.compare x1 x2 in
-	  if c1 <> 0  then c1
+	let c1 = Term.compare x1 x2 in
+	if c1 <> 0  then c1
+	else
+	  let c0 = Pervasives.compare op1 op2 in
+	  if c0 <> 0 then c0
 	  else
-	    let c0 = Pervasives.compare op1 op2 in
-	    if c0 <> 0 then c0
-	    else
-	      let c2 = Term.compare y1 y2 in c2
+	    let c2 = Term.compare y1 y2 in c2
       | Comp _, _ -> -1 | _, Comp _ -> 1
       | Ite (sa1, a1, b1), Ite (sa2, a2, b2) ->
-	  let c = SAtom.compare sa1 sa2 in
-	  if c<>0 then c else
-	    let c = compare a1 a2 in
-	    if c<>0 then c else compare b1 b2
+	let c = SAtom.compare sa1 sa2 in
+	if c<>0 then c else
+	  let c = compare a1 a2 in
+	  if c<>0 then c else compare b1 b2
 
   let trivial_is_implied a1 a2 =
     match a1, a2 with
       | Comp (x1, Neq, Elem (v1, (Constr|Var))),
         Comp (x2, Eq, Elem (v2, (Constr|Var)))
-          when not (Hstring.equal v1 v2) && Term.compare x1 x2 = 0 -> 0
+        when not (Hstring.equal v1 v2) && Term.compare x1 x2 = 0 -> 0
       | _ -> compare a1 a2
 
   let neg = function
     | True -> False
     | False -> True
     | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.hfalse ->
-	Comp (c, Eq, (Elem (Term.htrue, Constr)))
+      Comp (c, Eq, (Elem (Term.htrue, Constr)))
     | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.htrue ->
-	Comp (c, Eq, (Elem (Term.hfalse, Constr)))
+      Comp (c, Eq, (Elem (Term.hfalse, Constr)))
     | Comp (x, Eq, y) -> Comp (x, Neq, y)
     | Comp (x, Lt, y) -> Comp (y, Le, x)
     | Comp (x, Le, y) -> Comp (y, Lt, x)
@@ -351,16 +352,16 @@ end = struct
 
   let rec subst sigma a =
     match a with
-    | Ite (sa, a1, a2) ->
-       Ite(SAtom.subst sigma sa,
-           subst sigma a1,
-           subst sigma a2)
-    | Comp (x, op, y) ->
-       let sx = Term.subst sigma x in
-       let sy = Term.subst sigma y in
-       if x == sx && y == sy then a
-       else Comp(sx, op, sy)
-    | _ -> a
+      | Ite (sa, a1, a2) ->
+        Ite(SAtom.subst sigma sa,
+            subst sigma a1,
+            subst sigma a2)
+      | Comp (x, op, y) ->
+        let sx = Term.subst sigma x in
+        let sy = Term.subst sigma y in
+        if x == sx && y == sy then a
+        else Comp(sx, op, sy)
+      | _ -> a
 
   let rec has_vars_term vs = function
     | Elem (x, Var) -> Hstring.list_mem x vs
@@ -372,18 +373,30 @@ end = struct
     | True | False -> false
     | Comp (x, _, y) -> has_vars_term vs x || has_vars_term vs y
     | Ite (sa, a1, a2) ->
-       SAtom.exists (has_vars vs) sa || has_vars vs a1 || has_vars vs a2
+      SAtom.exists (has_vars vs) sa || has_vars vs a1 || has_vars vs a2
 
   let has_var v = has_vars [v]
+
+  let rec has_no_vars_term = function
+    | Elem (x, Var) -> false
+    | Access (_, lx) -> false
+    | Arith (x, _) ->  has_no_vars_term x
+    | _ -> true
+
+  let rec has_no_vars = function
+    | True | False -> true
+    | Comp (x, _, y) -> has_no_vars_term x && has_no_vars_term y
+    | Ite (sa, a1, a2) ->
+      SAtom.for_all has_no_vars sa && has_no_vars a1 && has_no_vars a2
 
 
   let rec variables = function
     | True | False -> Variable.Set.empty
     | Comp (t1, _, t2) ->
-       Variable.Set.union (Term.variables t1) (Term.variables t2)
+      Variable.Set.union (Term.variables t1) (Term.variables t2)
     | Ite (sa, a1, a2) ->
-       let acc = Variable.Set.union (variables a1) (variables a2) in
-       Variable.Set.union acc (SAtom.variables sa)
+      let acc = Variable.Set.union (variables a1) (variables a2) in
+      Variable.Set.union acc (SAtom.variables sa)
 
 
   let variables_proc a = Variable.Set.filter Variable.is_proc (variables a)
@@ -395,19 +408,19 @@ end = struct
     | True -> fprintf fmt "true"
     | False -> fprintf fmt "false"
     | Comp (x, op, y) ->
-       fprintf fmt "%a %s %a" Term.print x (str_op_comp op) Term.print y
+      fprintf fmt "%a %s %a" Term.print x (str_op_comp op) Term.print y
     | Ite (la, a1, a2) ->
-       fprintf fmt "@[ite(%a,@ %a,@ %a)@]"
-	       (print_atoms false "&&") (SAtom.elements la) print a1 print a2
+      fprintf fmt "@[ite(%a,@ %a,@ %a)@]"
+	(print_atoms false "&&") (SAtom.elements la) print a1 print a2
 
   and print_atoms inline sep fmt = function
     | [] -> ()
     | [a] -> print fmt a
     | a::l ->
-       if inline then
-         fprintf fmt "%a %s@ %a" print a sep (print_atoms inline sep) l
-       else
-         fprintf fmt "%a %s@\n%a" print a sep (print_atoms inline sep) l
+      if inline then
+        fprintf fmt "%a %s@ %a" print a sep (print_atoms inline sep) l
+      else
+        fprintf fmt "%a %s@\n%a" print a sep (print_atoms inline sep) l
 
 end
 
@@ -431,9 +444,9 @@ end = struct
 
   let add a s =
     match a with
-    | Atom.True -> s
-    | Atom.False -> singleton Atom.False
-    | _ -> if mem Atom.False s then s else add a s
+      | Atom.True -> s
+      | Atom.False -> singleton Atom.False
+      | _ -> if mem Atom.False s then s else add a s
 
 
   let equal sa1 sa2 = compare sa1 sa2 = 0
@@ -458,15 +471,15 @@ end = struct
 
   let var_atoms sa =
     filter (function
-        | Comp (Elem (_, Var), _, _) -> true
-        | _ -> false
-      ) sa
+      | Comp (Elem (_, Var), _, _) -> true
+      | _ -> false
+    ) sa
 
   let glob_atoms sa =
     filter (function
-        | Comp (Elem (_, Glob), _, _) -> true
-        | _ -> false
-      ) sa
+      | Comp (Elem (_, Glob), _, _) -> true
+      | _ -> false
+    ) sa
 
   let print fmt sa =
     fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (elements sa)
@@ -545,10 +558,10 @@ module ArrayAtom = struct
     Array.fold_left (fun s a -> SAtom.add a s) SAtom.empty
 
   let union a b = Array.append a b
-    (* let cpt = ref 0 in fun a b -> incr cpt; eprintf "%d@." !cpt;  *)
-    (*                               Array.append a b *)
-    (* let a = Array.append a1 a2 in *)
-    (* Array.fast_sort Atom.compare a; a *)
+  (* let cpt = ref 0 in fun a b -> incr cpt; eprintf "%d@." !cpt;  *)
+  (*                               Array.append a b *)
+  (* let a = Array.append a1 a2 in *)
+  (* Array.fast_sort Atom.compare a; a *)
 
   let apply_subst sigma a =
     TimerApply.start ();

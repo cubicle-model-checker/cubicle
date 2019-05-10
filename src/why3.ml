@@ -453,8 +453,11 @@ let pp_invariants invs fmt s =
   pp_print_list pp_invariant fmt (invs @ sinvs)
 
 let simpl_satom uvl ev sa =
-  SAtom.subst Variable.subst_ptowp @@ SAtom.filter (fun a -> Atom.has_var ev a ||
-                         (List.exists (fun v -> Atom.has_var v a) uvl)) sa
+  SAtom.subst Variable.subst_ptowp @@ SAtom.filter (fun a ->
+    Atom.has_var ev a ||
+    (List.exists (fun v -> Atom.has_var v a) uvl) ||
+    Atom.has_no_vars a
+  ) sa
 
 let pp_univ_unsafes fmt uul =
   let module VS = Variable.Set in

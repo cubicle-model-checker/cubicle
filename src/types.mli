@@ -156,6 +156,9 @@ module rec Atom : sig
   (** returns [true] if the atom contains one of the variable given in
       argument *)
 
+  val has_no_vars : t -> bool
+  (** returns [true] if the atom doesn't contain any variable *)
+
   val variables : t -> Variable.Set.t
   (** returns the existential variables of the given atom *)
 
