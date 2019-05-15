@@ -122,8 +122,8 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
   let aux fmt l =
     let rec aux fmt = function
       | [a] ->
-        fprintf fmt " %s@ %a)" (if uu then "\\/" else "->")
-          (pp_atom_syst ~cond:true []) (Atom.neg a)
+        fprintf fmt " %s@ %a%s" (if uu then "\\/" else "->")
+          (pp_atom_syst ~cond:true []) (Atom.neg a) (if uu then ")" else "")
       | hd :: tl ->
         let a = if uu then Atom.neg hd else hd in
         fprintf fmt " %s@ %a%a" (if uu then "\\/" else "/\\")
@@ -131,7 +131,7 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
       | _ -> assert false
     in match l with
       | [a] ->
-        fprintf fmt "%s@ (%a)" (
+        fprintf fmt "%s@ %a" (
           if bvars then
             if uu then " /\\"
             else " ->"
@@ -139,7 +139,8 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
           (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
         let a = if uu then Atom.neg hd else hd in
-        fprintf fmt "%s@ (%a%a" (if bvars then " /\\" else "")
+        fprintf fmt "%s@ %s%a%a" (if bvars then " /\\" else "")
+          (if uu then "(" else "")
           (pp_atom_syst ~cond:true []) a aux tl
       | _ -> assert false
   in aux fmt @@ SAtom.elements sa;
@@ -227,19 +228,19 @@ let pp_init fmt {globals; arrays; init = (_, _, dnf)} =
     HM.filter (fun e _ -> not @@ HSet.mem e init_elems) elems in
   let ninit_arrays =
     HM.filter (fun e _ -> not @@ HSet.mem e init_arrays) arrays in
-  let typed_random t =
+  let typed_random id t =
     let open Smt.Type in
-    if t = type_int then "Random.random_int _n"
+    if t = type_int || t = type_proc then "Random.random_int _n"
     else if t = tbool then "Random.random_bool ()"
-    else assert false
+    else (eprintf "%a, %a@." Hstring.print id Hstring.print t; assert false)
   in
   HM.iter (fun e t ->
     fprintf fmt "@,%a = %s;"
-      pp_hstring_uncap e (typed_random t)
+      pp_hstring_uncap e (typed_random e t)
   ) ninit_elems;
   HM.iter (fun a t ->
     fprintf fmt "@,%a = Array.make _n (%s);"
-      pp_hstring_uncap a (typed_random t)
+      pp_hstring_uncap a (typed_random a t)
   ) ninit_arrays
 
 
