@@ -7,7 +7,6 @@ init (i) { T[i] = False && R = False}
 
 universal_unsafe (i) {P[i] = False && R = True }
 
-
 (* unsafe () { Err = True } *)
 
 transition t1(i)
@@ -15,5 +14,7 @@ requires { T[i] = False && P[i] = False }
 { T[i] := True }
 
 transition t2(i)
-requires { T[i] = False && P[i] = True }
-{ R := True }
+requires { T[i] = False }
+{
+  P[i] := True;
+  R := True }

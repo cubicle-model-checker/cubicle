@@ -122,7 +122,7 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
   let aux fmt l =
     let rec aux fmt = function
       | [a] ->
-        fprintf fmt " %s@ %a" (if uu then "\\/" else "->")
+        fprintf fmt " %s@ %a)" (if uu then "\\/" else "->")
           (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
         let a = if uu then Atom.neg hd else hd in
@@ -131,7 +131,7 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
       | _ -> assert false
     in match l with
       | [a] ->
-        fprintf fmt "%s@ %a" (
+        fprintf fmt "%s@ (%a)" (
           if bvars then
             if uu then " /\\"
             else " ->"
@@ -139,7 +139,7 @@ let pp_satom_nlast ?(uu=false) bvars fmt sa =
           (pp_atom_syst ~cond:true []) (Atom.neg a)
       | hd :: tl ->
         let a = if uu then Atom.neg hd else hd in
-        fprintf fmt "%s@ %a%a" (if bvars then " /\\" else "")
+        fprintf fmt "%s@ (%a%a" (if bvars then " /\\" else "")
           (pp_atom_syst ~cond:true []) a aux tl
       | _ -> assert false
   in aux fmt @@ SAtom.elements sa;
@@ -186,22 +186,26 @@ let pp_system_to_type fmt s =
   pp_cut_if_nempty s.arrays;
   pp_print_list pp_array_to_field fmt s.arrays
 
+module HM = Map.Make(Hstring)
 module HSet = Hstring.HSet
 
-let pp_init fmt {globals; init = (_, _, dnf)} =
+let pp_init fmt {globals; arrays; init = (_, _, dnf)} =
   let open Atom in
-  let elems = List.fold_left (fun acc (_, id, _) -> HSet.add id acc)
-      HSet.empty globals in
-  let init_elems = List.fold_left (fun acc sa ->
-    SAtom.fold (fun a acc ->
+  let elems = List.fold_left (fun acc (_, id, t) -> HM.add id t acc)
+      HM.empty globals in
+  let arrays = List.fold_left (fun acc (_, id, (_, t)) -> HM.add id t acc)
+      HM.empty arrays in
+  let init_elems, init_arrays = List.fold_left (fun acc sa ->
+    SAtom.fold (fun a (elems, arrays) ->
       match a with
         | Comp (t1, Eq, t2) ->
           begin match t1 with
             | Elem (id, _) ->
-              let acc = HSet.add id acc in
+              let acc = HSet.add id elems, arrays in
               fprintf fmt "@,%a = %a;" pp_hstring_uncap id (pp_term []) t2;
               acc
             | Access (id, _) ->
+              let acc = elems, HSet.add id arrays in
               fprintf fmt "@,%a = Array.make _n %a;"
                 pp_hstring_uncap id (pp_term []) t2;
               acc
@@ -210,7 +214,7 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
         | Comp (t1, Neq, _) ->
           begin match t1 with
             | Elem (id, _) ->
-              let acc = HSet.add id acc in
+              let acc = HSet.add id elems, arrays in
               fprintf fmt "@,%a = -1;" pp_hstring_uncap id;
               acc
             | Access (id, _) -> assert false
@@ -218,12 +222,26 @@ let pp_init fmt {globals; init = (_, _, dnf)} =
           end
         | _ -> assert false
     ) sa acc
-  ) HSet.empty dnf in
-  let ninit_elems = HSet.diff elems init_elems in
-  HSet.iter (fun e ->
-    fprintf fmt "@,%a = Random.random_int _n"
-      pp_hstring_uncap e
-  ) ninit_elems
+  ) (HSet.empty, HSet.empty) dnf in
+  let ninit_elems =
+    HM.filter (fun e _ -> not @@ HSet.mem e init_elems) elems in
+  let ninit_arrays =
+    HM.filter (fun e _ -> not @@ HSet.mem e init_arrays) arrays in
+  let typed_random t =
+    let open Smt.Type in
+    if t = type_int then "Random.random_int _n"
+    else if t = tbool then "Random.random_bool ()"
+    else assert false
+  in
+  HM.iter (fun e t ->
+    fprintf fmt "@,%a = %s;"
+      pp_hstring_uncap e (typed_random t)
+  ) ninit_elems;
+  HM.iter (fun a t ->
+    fprintf fmt "@,%a = Array.make _n (%s);"
+      pp_hstring_uncap a (typed_random t)
+  ) ninit_arrays
+
 
 let pp_asserts_arrays fmt {init = (_, _, dnf)} =
   List.iter (fun sa ->
