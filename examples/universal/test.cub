@@ -24,13 +24,20 @@ init(i) { Rval[i] = None && Y = False && PC[i] = PC0 }
 
 (* ================================================================ *)
 
+(* unsafe () { Error = True } *)
 universal_unsafe (i, j) { PC[i] = PC6 && PC[j] = PC9 }
+universal_unsafe (i) { PC[i] = PC6 }
+universal_unsafe (i) { PC[i] = PC9 }
 
 (* ================================================================ *)
 (* Unsafe from merci *)
 (* ================================================================ *)
 
 (* ================================================================ *)
+
+(* transition error(i) *)
+(* requires {PC[i] = PC9 && forall_other j. PC[j] = PC9 } *)
+(* { Error := True } *)
 
 transition spl0(i)
 requires { PC[i] = PC0 }

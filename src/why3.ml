@@ -244,13 +244,15 @@ let pp_init fmt {globals; arrays; init = (_, _, dnf)} =
   ) ninit_arrays
 
 
-let pp_asserts_arrays fmt {init = (_, _, dnf)} =
+let pp_asserts_arrays mb fmt {init = (_, _, dnf)} =
   List.iter (fun sa ->
     SAtom.iter (fun a ->
       match a with
         | Comp (Access (id, _), Eq, t2) ->
-          fprintf fmt "@,assert {s.%a[0] = %a};"
-            pp_hstring_uncap id (pp_term []) t2;
+          for i = 0 to mb do
+            fprintf fmt "@,assert {s.%a[%d] = %a};"
+              pp_hstring_uncap id i (pp_term []) t2
+          done;
         | _ -> ()
         ) sa
     ) dnf
@@ -409,9 +411,9 @@ let pp_vars_forall fmt vl =
     Format.fprintf fmt "forall %a : int. "
       (pp_print_list ~pp_sep:pp_sep_space Hstring.print) vl
 
-let pp_vars_bound fmt vl =
+let pp_vars_bound ?(neg=false) () fmt vl =
   let pp_v_b fmt v =
-    fprintf fmt "0 <= %a < _n" Hstring.print v
+    fprintf fmt "%s0 <= %a < _n" (if neg then "not " else "") Hstring.print v
   in
   pp_print_list ~pp_sep:pp_sep_and_log pp_v_b fmt vl
 
@@ -435,12 +437,12 @@ let pp_vars_distinct fmt vl =
 let pp_ensures fmt s =
   let pp_univ_ensure fmt (_, vl, v, sa) =
     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars_exists vl pp_vars_bound (v :: vl) pp_vars_distinct (v :: vl)
+      pp_vars_exists vl (pp_vars_bound ()) (v :: vl) pp_vars_distinct (v :: vl)
       (pp_satom_nlast (vl <> [])) sa
   in
   let pp_ensure fmt (_, vl, sa) =
     fprintf fmt "@[ensures { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars vl pp_vars_bound vl pp_vars_distinct vl
+      pp_vars vl (pp_vars_bound ()) vl pp_vars_distinct vl
       (pp_satom_nlast (vl <> [])) sa
   in
   pp_print_list pp_ensure fmt s.unsafe;
@@ -456,7 +458,7 @@ let pp_proc_bounds fmt s =
 let pp_invariants invs fmt s =
   let pp_invariant fmt (vl, sa) =
     fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a@] }@]"
-      pp_vars vl pp_vars_bound vl pp_vars_distinct vl
+      pp_vars vl (pp_vars_bound ()) vl pp_vars_distinct vl
       (pp_satom_nlast (vl <> [])) sa
   in
   let sinvs = if Options.only_brab_invs then s.invs else [] in
@@ -490,8 +492,10 @@ let pp_univ_unsafes fmt uul =
     let ev = Variable.(subst subst_ptowp ev) in
     let sa = SAtom.subst Variable.subst_ptowp sa in
     let vars = List.rev (ev :: uvl) in
-    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%a%a@] }@]"
-      pp_vars_forall uvl pp_vars_exists [ev] pp_vars_bound vars pp_vars_distinct vars
+    fprintf fmt "@[invariant { @[<hov 2>%a%a%a%s%a%a%a@] }@]"
+      pp_vars_forall uvl pp_vars_exists [ev] (pp_vars_bound ~neg:true ()) uvl
+      (if uvl <> [] then " \\/ " else "")
+      (pp_vars_bound ()) [ev] pp_vars_distinct vars
       (pp_satom_nlast ~uu:true (vars <> [])) sa
   in
   pp_print_list pp_univ_unsafe fmt uul
@@ -510,7 +514,7 @@ let pp_forall_others pl fmt tl =
       let vs = asprintf "%a" Variable.print_vars pl in
       fprintf fmt
         "@[<v 2>let forall_other_%a%d (%s : proc)@,\
-         requires { %s < _n }@,\
+         requires { 0 <= %s < _n }@,\
          ensures { @[<hov 0>result = True <->@ forall %s':proc.@ \
          0 <= %s' < _n /\\@ %s' <> %s@ ->@ %a}@]@]@,\
          @[<v 2>=@,\
@@ -539,6 +543,12 @@ let replay_invs system invs =
       | Unsafe _ | TimeOut _ -> acc
       | Safe (vis, cand) -> inv :: acc) [] invs
 
+let get_min_bound s =
+  List.fold_left (fun acc (_, vl, _, _) ->
+    let l = List.length vl in
+    if l > acc then l else acc
+  ) 0 s.univ_unsafe
+
 let cub_to_whyml t_syst syst invs fmt file =
   (* eprintf "Invs : @.";
    * List.iter (fun n ->
@@ -546,6 +556,7 @@ let cub_to_whyml t_syst syst invs fmt file =
   let invs = replay_invs t_syst invs in
   (* eprintf "Replayed : @.";
    * List.iter (eprintf "%a@.@." Node.print) invs; *)
+  let mb = get_min_bound syst in
   let name = Filename.(remove_extension @@ basename file) in
   let plist = new_procs syst.max_arity in
   fprintf fmt "@[<v>\
@@ -563,11 +574,11 @@ let cub_to_whyml t_syst syst invs fmt file =
   fprintf fmt "@,@[<v 2>type system = {@,%a@]@,}"
     pp_system_to_type syst;
   fprintf fmt "@,@[<v 2>let %s (_n : int) (maxsteps : int) : system@,\
-               requires { 0 < _n }@,\
+               requires { %d < _n }@,\
                @[<v 2>=@,"
-    name (* pp_ensures s *);
+    name mb;
   fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,%a@,@,let nbsteps = ref 0 in@,"
-    pp_init syst pp_asserts_arrays syst;
+    pp_init syst (pp_asserts_arrays mb) syst;
   fprintf fmt "%a" (pp_forall_others plist) syst.trans;
   fprintf fmt "@,@[<v 2>while ( !nbsteps < maxsteps ) do@,";
   fprintf fmt "@[<v 0>@[variant { maxsteps - !nbsteps }@]@,%a@,%a@]"
