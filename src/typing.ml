@@ -477,6 +477,10 @@ let create_node_universal nbp kind evars uvar sa =
   let open Variable in
   let unsa, exsa = SAtom.partition (has_var uvar) sa in
   let nvsa, exsa = SAtom.partition has_no_vars exsa in
+  Format.eprintf "UNSA : %a@." SAtom.print unsa;
+  Format.eprintf "NVSA : %a@." SAtom.print nvsa;
+  Format.eprintf "EXSA : %a@." SAtom.print exsa;
+  Format.eprintf "IEXSA : %a@." SAtom.print (SAtom.union exsa nvsa);
   let inst_vars = finite_procs nbp in
   (* eprintf "Vars : %a@." Variable.print_vars ps; *)
   let rec aux (iexsa, ievars) evars rem_vars = match evars, rem_vars with
@@ -484,13 +488,14 @@ let create_node_universal nbp kind evars uvar sa =
     | hd1 :: tl1, hd2 :: tl2 ->
       let s = build_subst [hd1] [hd2] in
       (* eprintf "subst : %a@." print_subst s; *)
-      let iexsa = SAtom.union (SAtom.subst s exsa) iexsa in
-      (* eprintf "SAtom : %a@." SAtom.print acc; *)
+      let iexsa = SAtom.subst s iexsa in
       aux (iexsa, hd2::ievars) tl1 tl2
     | _ -> assert false
   in
   (* eprintf "Exist : @."; *)
-  let (iexsa, ievars), rem_vars = aux (nvsa, []) evars inst_vars in
+  let (iexsa, ievars), rem_vars = aux (SAtom.union exsa nvsa, []) evars inst_vars in
+  Format.eprintf "IEXSA : %a@." SAtom.print iexsa;
+
   let isa = List.fold_left (fun acc p ->
     let s = build_subst [uvar] [p] in
     (* eprintf "subst : %a@." print_subst s; *)
@@ -499,6 +504,8 @@ let create_node_universal nbp kind evars uvar sa =
     acc
   ) iexsa rem_vars in
   let c = Cube.create inst_vars isa in
+  Format.eprintf "SAtom  : %a@." SAtom.print sa;
+  Format.eprintf "Cube 1 : %a@." Cube.print c;
   let c = Cube.normal_form c in
   (* assert false; *)
   Node.create ~kind ~logic:ForallExists ~evars:(Variable.Set.of_list ievars) c

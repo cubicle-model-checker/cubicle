@@ -28,9 +28,10 @@ init(i) { Rval[i] = None && Y = False && PC[i] = PC0 }
        /\ Cardinality ({ i \in ProcSet : rval[i] = Down}) < NP
        /\ Cardinality ({ i \in ProcSet : rval[i] = Right}) < NP
 *)
-unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop }
+(* unsafe(i j) { Rval[i] = Stop && Rval[j] = Stop } *)
 
-universal_unsafe (i) { Rval[i] = Down }
+(* universal_unsafe (i) { Rval[i] = Down } *)
+universal_unsafe (i j, l) { Rval[i] = Down && Rval[j] = Down && Rval[l] = Down }
 
 (* unsafe(p1 p2) { X = p2 && Rval[p1] = Stop && PC[p2] = PC3 } *)
 (* unsafe(i) { Rval[i] = Down && PC[i] = PC0 } *)
