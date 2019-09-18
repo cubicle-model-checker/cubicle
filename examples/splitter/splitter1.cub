@@ -1,0 +1,35 @@
+type pc = PC0 | PC1 | PC2 | PC3 | Stop | Down | Right
+
+var X : proc
+var Y : bool
+array PC[proc] : pc
+
+init(i) { Y = False && PC[i] = PC0 }
+
+universal_unsafe (i) { PC[i] = Down }
+
+transition spl0(i)
+requires { PC[i] = PC0 }
+{  X := i;
+   PC[i] := PC1; }
+
+transition spl1a(i)
+requires { PC[i] = PC1 && Y = True }
+{  PC[i] := Right; }
+
+transition spl1b(i)
+requires { PC[i] = PC1 && Y = False }
+{  PC[i] := PC2; }
+
+transition spl2(i)
+requires { PC[i] = PC2 }
+{  Y := True;
+   PC[i] := PC3; }
+
+transition spl4stop(i)
+requires { PC[i] = PC3 && X = i }
+{  PC[i] := Stop;}
+
+transition spl4Down(i)
+requires { PC[i] = PC3 && X <> i }
+{  PC[i] := Down; }

@@ -1,0 +1,108 @@
+module Splitter
+
+use array.Array
+use int.Int
+use ref.Refint
+use random.Random
+
+type proc = int
+
+scope import State
+  type state = PC0 | PC1 | PC2 | PC3 | Stop | Down | Right
+
+  let (=) (a b: state): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | PC0, PC0 | PC1, PC1 | PC2, PC2 | PC3, PC3 | Stop, Stop | Down, Down |
+        Right, Right -> true
+      | _ -> false
+  end
+end
+
+val k_random (k:int) (n:int) : (result:array int)
+    requires { 0 <= k }
+    requires { k <= n }
+    ensures { length result = k }
+    ensures { forall i j:int. 0 <= i < n /\ 0 <= j < n /\ i <> j -> result[i] <> result[j] }
+    ensures { forall i:int. 0 <= i < n -> 0 <= result[i] < n }
+
+val coin () : bool
+
+type system = {
+  mutable x : proc;
+  mutable y : bool;
+  pc : array state;
+}
+
+let splitter (maxprocs : int) (maxsteps : int) : system
+  requires { 0 < maxprocs }
+  ensures { exists _p1 : int. 0 <= _p1 < maxprocs /\ result.pc[_p1] <> Down }
+  =
+    let s = {
+      y = false;
+      pc = Array.make maxprocs PC0;
+      x = Random.random_int maxprocs;
+    } in
+
+    assert {s.pc[0] = PC0};
+
+    let nbsteps = ref 0 in
+    while ( !nbsteps < maxsteps ) do
+      variant { maxsteps - !nbsteps }
+      invariant { 0 <= s.x < maxprocs }
+      invariant { forall _p1 : int. 0 <= _p1 < maxprocs /\ s.x = _p1 ->
+                                                 s.pc[_p1] <> Down }
+      invariant { exists _p1 : int. 0 <= _p1 < maxprocs /\ s.pc[_p1] <> Down }
+
+      incr nbsteps;
+
+      let procs = k_random 1 maxprocs in
+      let _p0 = procs[0] in
+
+      (*spl0*)
+      if coin () && s.pc[_p0] = PC0
+      then begin
+        label Spl0 in
+        s.x <- _p0;
+        s.pc[_p0] <- PC1;
+      end
+
+      (*spl2*)
+      else if coin () && s.pc[_p0] = PC2
+      then begin
+        label Spl2 in
+        s.y <- true;
+        s.pc[_p0] <- PC3;
+      end
+
+      (*spl1a*)
+      else if coin () && s.y && s.pc[_p0] = PC1
+      then begin
+        label Spl1a in
+        s.pc[_p0] <- Right;
+      end
+
+      (*spl1b*)
+      else if coin () && not s.y && s.pc[_p0] = PC1
+      then begin
+        label Spl1b in
+        s.pc[_p0] <- PC2;
+      end
+
+      (*spl4stop*)
+      else if coin () && s.x = _p0 && s.pc[_p0] = PC3
+      then begin
+        label Spl4stop in
+        s.pc[_p0] <- Stop;
+      end
+
+      (*spl4Down*)
+      else if coin () && s.x <> _p0 && s.pc[_p0] = PC3
+      then begin
+        label Spl4Down in
+        s.pc[_p0] <- Down;
+      end
+
+    done;
+    s
+  end

@@ -8,6 +8,8 @@ let tbool = Hstring.make "mbool"
 let mytrue = Hstring.make "@MTrue"
 let myfalse = Hstring.make "@MFalse"
 
+let maxprocs = "maxprocs"
+
 let capitalize h =
   Hstring.make @@ String.capitalize_ascii @@ Hstring.view h
 
@@ -207,8 +209,8 @@ let pp_init fmt {globals; arrays; init = (_, _, dnf)} =
               acc
             | Access (id, _) ->
               let acc = elems, HSet.add id arrays in
-              fprintf fmt "@,%a = Array.make _n %a;"
-                pp_hstring_uncap id (pp_term []) t2;
+              fprintf fmt "@,%a = Array.make %s %a;"
+                pp_hstring_uncap id maxprocs (pp_term []) t2;
               acc
             | _ -> assert false
           end;
@@ -230,7 +232,8 @@ let pp_init fmt {globals; arrays; init = (_, _, dnf)} =
     HM.filter (fun e _ -> not @@ HSet.mem e init_arrays) arrays in
   let typed_random id t =
     let open Smt.Type in
-    if t = type_int || t = type_proc then "Random.random_int _n"
+    if t = type_int || t = type_proc then
+      (sprintf "Random.random_int %s" maxprocs)
     else if t = tbool then "Random.random_bool ()"
     else (eprintf "%a, %a@." Hstring.print id Hstring.print t; assert false)
   in
@@ -239,8 +242,8 @@ let pp_init fmt {globals; arrays; init = (_, _, dnf)} =
       pp_hstring_uncap e (typed_random e t)
   ) ninit_elems;
   HM.iter (fun a t ->
-    fprintf fmt "@,%a = Array.make _n (%s);"
-      pp_hstring_uncap a (typed_random a t)
+    fprintf fmt "@,%a = Array.make %s (%s);"
+      pp_hstring_uncap a maxprocs (typed_random a t)
   ) ninit_arrays
 
 
@@ -268,11 +271,20 @@ let init n f =
 let new_procs a =
   init a (fun i -> Hstring.make @@ Printf.sprintf "_p%d" i)
 
+let pp_sep_diff fmt () = fprintf fmt " <> "
+
+let pp_print_distincts fmt l =
+  pp_print_list ~pp_sep:pp_sep_diff Hstring.print fmt l
+
 let pp_newprocs fmt l =
-  List.iter (
-    fprintf fmt "let %a = Random.random_int _n in@," Hstring.print) l;
-  fprintf fmt "(*If there is more than one value,@,\
-               the variables could be equal, need to work on it*)"
+  fprintf fmt "let procs = k_random %d %s in@," (List.length l) maxprocs;
+  List.iteri (fun i hs ->
+    fprintf fmt "let %a = procs[%d] in@,"
+      Hstring.print hs i) l;
+  if List.compare_length_with l 1 > 0 then
+    fprintf fmt "assert { %a };" pp_print_distincts l
+
+
 
 let pp_guard sub fmt g =
   if not @@ SAtom.is_empty g then fprintf fmt "@ &&@ ";
@@ -369,9 +381,9 @@ let pp_updates plist sub lbl fmt ul =
           in
           aux [] fmt u.up_swts;
           fprintf fmt " }@]@,";
-          fprintf fmt "invariant { @[<v 2>forall _p:proc. %a <= _p < _n ->@,\
+          fprintf fmt "invariant { @[<v 2>forall _p:proc. %a <= _p < %s ->@,\
                        %a }@]@,@,"
-            Variable.print_vars u.up_arg (pp_inv_array lbl) u;
+            Variable.print_vars u.up_arg maxprocs (pp_inv_array lbl) u;
         in
         fprintf fmt "@[<v 2>%a@,%as.%a <- %a@]@,done;"
           pp_for u pp_invariants u (pp_arr_access sub) u pp_swts u.up_swts
@@ -413,7 +425,8 @@ let pp_vars_forall fmt vl =
 
 let pp_vars_bound ?(neg=false) () fmt vl =
   let pp_v_b fmt v =
-    fprintf fmt "%s0 <= %a < _n" (if neg then "not " else "") Hstring.print v
+    fprintf fmt "%s0 <= %a < %s" (if neg then "not " else "") Hstring.print v
+      maxprocs
   in
   pp_print_list ~pp_sep:pp_sep_and_log pp_v_b fmt vl
 
@@ -451,7 +464,8 @@ let pp_ensures fmt s =
 
 let pp_proc_bounds fmt s =
   let pp_proc_bound fmt (_, h, _) =
-      Format.fprintf fmt "@[invariant { 0 <= s.%a < _n }@]" pp_hstring_uncap h
+      Format.fprintf fmt "@[invariant { 0 <= s.%a < %s }@]"
+        pp_hstring_uncap h maxprocs
   in pp_print_list pp_proc_bound fmt
     (List.filter (fun (_, _, t) -> t = Smt.Type.type_proc) s.globals)
 
@@ -514,18 +528,18 @@ let pp_forall_others pl fmt tl =
       let vs = asprintf "%a" Variable.print_vars pl in
       fprintf fmt
         "@[<v 2>let forall_other_%a%d (%s : proc)@,\
-         requires { 0 <= %s < _n }@,\
+         requires { 0 <= %s < %s }@,\
          ensures { @[<hov 0>result = True <->@ forall %s':proc.@ \
-         0 <= %s' < _n /\\@ %s' <> %s@ ->@ %a}@]@]@,\
+         0 <= %s' < %s /\\@ %s' <> %s@ ->@ %a}@]@]@,\
          @[<v 2>=@,\
          let res = ref true in@,\
-         @[<v 2>for _fi = 0 to _n - 1 do@,\
+         @[<v 2>for _fi = 0 to %s - 1 do@,\
          invariant { @[<hov 0>!res = True <->@ forall %s':proc.@ \
          0 <= %s' < _fi /\\@ %s' <> %s -> %a}@]@,\
          if _fi <> %s && %a then res := false@]@,\
          done;@,!res@]@,in@,"
-        pp_hstring_uncap t.tr_name !cpt vs vs vs vs vs vs (pp_dnf subinv) dnf
-        vs vs vs vs (pp_dnf subinv) dnf vs
+        pp_hstring_uncap t.tr_name !cpt vs vs maxprocs vs vs vs maxprocs vs
+        (pp_dnf subinv) dnf maxprocs vs vs vs vs (pp_dnf subinv) dnf vs
         (pp_dnf subml) (List.map (fun sa -> SAtom.map Atom.neg sa) dnf)
       ;
       incr cpt
@@ -569,15 +583,22 @@ let cub_to_whyml t_syst syst invs fmt file =
               " (String.capitalize_ascii name);
   fprintf fmt "%a" pp_trad_type_defs syst.type_defs;
   fprintf fmt "@,val coin () : bool@,";
+  fprintf fmt "@[<v 2>val k_random (k:int) (n:int) : (result:array int)@,\
+               requires { 0 <= k }@,\
+               requires { k <= n }@,\
+               ensures { length result = k }@,\
+               ensures { forall i j:int. 0 <= i < n /\\ 0 <= j < n /\\ i <> j -> result[i] <> result[j] }@,\
+               ensures { forall i:int. 0 <= i < n -> 0 <= result[i] < n }@]@,";
+
   fprintf fmt "@,type proc = int@,";
 
-  fprintf fmt "@,@[<v 2>type system = {@,%a@]@,}"
+  fprintf fmt "@,@[<v 2>type system = {@,%a@]@,}@,"
     pp_system_to_type syst;
-  fprintf fmt "@,@[<v 2>let %s (_n : int) (maxsteps : int) : system@,\
-               requires { %d < _n }@,\
+  fprintf fmt "@,@[<v 2>let %s (%s : int) (maxsteps : int) : system@,\
+               requires { %d < %s }@,\
                @[<v 2>=@,"
-    name mb;
-  fprintf fmt "@[<v 2>let s = {%a@]@,} in@,@,%a@,@,let nbsteps = ref 0 in@,"
+    name maxprocs mb maxprocs;
+  fprintf fmt "@[<v 2>let s = {%a@]@,} in@,%a@,@,let nbsteps = ref 0 in@,"
     pp_init syst (pp_asserts_arrays mb) syst;
   fprintf fmt "%a" (pp_forall_others plist) syst.trans;
   fprintf fmt "@,@[<v 2>while ( !nbsteps < maxsteps ) do@,";
