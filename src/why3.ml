@@ -576,9 +576,9 @@ let cub_to_whyml t_syst syst invs fmt file =
   (* eprintf "Invs : @.";
    * List.iter (fun n ->
    *   eprintf "%a@.(%a)@.@." Node.print n Variable.print_vars (Variable.Set.elements n.evars)) invs; *)
-  eprintf "Replay : @.";
+  (* eprintf "Replay : @."; *)
   let invs = replay_invs t_syst invs in
-  eprintf "Replayed : @.";
+  (* eprintf "Replayed : @."; *)
   (* List.iter (eprintf "%a@.@." Node.print) invs; *)
   let mb = get_min_bound syst in
   let name = Filename.(remove_extension @@ basename file) in

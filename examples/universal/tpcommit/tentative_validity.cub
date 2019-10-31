@@ -18,7 +18,7 @@ array Hasdecided[proc] : bool
 array Decision[proc] : int
 var State : state
 
-init(i) { Decision[i] = Proposed[i] && Hasdecided[i] = False && State = Ok }
+init(i) { Hasdecided[i] = False && State = Ok }
 
 unsafe(i j) { Hasdecided[i] = True && Hasdecided[j] = True && Decision[i] <> Decision[j] }
 

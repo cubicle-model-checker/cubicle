@@ -230,35 +230,27 @@ let insert_missing l tr_args =
 
 
 let rec all_parts_max n l =
-  List.filter (fun p -> List.length p <= n) (all_parts l)
+  List.filter (fun p -> List.length p = n) (all_parts l)
+
+(* let rec all_parts_max n l =
+ *   List.filter (fun p -> List.length p <= n) (all_parts l) *)
 
 let permutations_missing tr_args l =
   let parts = [] :: List.flatten
                 (List.map perms (all_parts_max (List.length tr_args) l))
   in
   let ex = extra_procs l tr_args in
-  if debugm then
-    (eprintf "---[@.Parts : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) parts;
-     eprintf "Extra procs : %a@."  print_vars ex);
   let l' = List.fold_left
       (fun acc l ->
-         if debugm then eprintf "l : %a@." print_vars l;
          let ms = missing l tr_args ex in
-         if debugm then eprintf "MS : %a@." print_vars ms;
          let il = interleave l ms in
          match l, il with
          | [], [[]] -> acc
          | _ ->
-           if debugm then (
-             eprintf "IL : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) il;
-             eprintf "ACC : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc);
            let acc = List.rev_append il acc in
-           if debugm then eprintf "ACC' : %a@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) acc;
            acc
       )
       [] parts in
-  if debugm then eprintf "l' : %a@.]---@." (fun fmt hll -> List.iter (fprintf fmt "(%a)" print_vars) hll) l';
-
   List.map (List.combine tr_args) l'
 (* List.map (insert_missing tr_args) parts *)
 

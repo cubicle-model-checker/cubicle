@@ -1,0 +1,109 @@
+module Tentative_validity
+
+use array.Array
+use int.Int
+use ref.Refint
+use random.Random
+
+scope import State
+
+  type state = Ok | Error
+
+  let (=) (a b: state): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | Ok, Ok | Error, Error -> true
+      | _ -> false
+  end
+
+end
+
+val coin () : bool
+val k_random (k:int) (n:int) : (result:array int)
+  requires { 0 <= k }
+  requires { k <= n }
+  ensures { length result = k }
+  ensures { forall i j:int. 0 <= i < n /\ 0 <= j < n /\ i <> j -> result[i] <> result[j] }
+  ensures { forall i:int. 0 <= i < n -> 0 <= result[i] < n }
+
+type proc = int
+
+type system = {
+  mutable state : state;proposed : array int;
+  hasdecided : array bool;
+  decision : array int;
+}
+
+let tentative_validity (maxprocs : int) (maxsteps : int) : system
+  requires { 1 < maxprocs }
+  =
+    let s = {
+      state = Ok;
+      hasdecided = Array.make maxprocs false;
+      proposed = Array.make maxprocs (Random.random_int maxprocs);
+      decision = Array.make maxprocs (Random.random_int maxprocs);
+    } in
+
+    assert {s.hasdecided[0] = false};
+    assert {s.hasdecided[1] = false};
+
+    let nbsteps = ref 0 in
+    let forall_other_decide_first0 (_p0 _p1: proc)
+      requires { 0 <= _p0 < maxprocs && 0 <= _p1 < maxprocs }
+      ensures { result = True <-> (forall _p1':proc.
+                0 <= _p1' < maxprocs /\ _p0 <> _p1' /\ _p1 <> _p1' ->
+                not s.hasdecided[_p1']) }
+    =
+      let res = ref true in
+      for _fi = 0 to maxprocs - 1 do
+        invariant { !res = True <-> (forall _p1':proc.
+                    0 <= _p1' < _fi /\
+                   _p1' <> _p0 /\ _p1' <> _p1 -> not s.hasdecided[_p1'])}
+        if _fi <> _p0 && _fi <> _p1 && s.hasdecided[_fi] then res := false
+      done;
+      !res
+    in
+
+    while ( !nbsteps < maxsteps ) do
+      variant { maxsteps - !nbsteps }
+
+      invariant { forall _p1 _p2 : int. 0 <= _p1 < maxprocs /\
+                    0 <= _p2 < maxprocs /\
+                    _p1 <> _p2 /\ s.hasdecided[_p1] /\ s.hasdecided[_p2] ->
+                              s.decision[_p1] = s.decision[_p2] }
+      invariant { forall _p1 _p2 : int. 0 <= _p1 < maxprocs /\
+                    0 <= _p2 < maxprocs /\
+                    _p1 <> _p2 /\ s.hasdecided[_p1] /\
+                              s.decision[_p1] <> s.proposed[_p1] ->
+                              s.decision[_p1] <> s.proposed[_p2] }
+      invariant { forall i j : int. 0 <= i < maxprocs /\ 0 <= j < maxprocs /\
+                    i <> j /\ s.hasdecided[i] /\ s.hasdecided[j] ->
+                          s.decision[i] = s.decision[j] }
+
+      incr nbsteps;
+
+      let procs = k_random 2 maxprocs in
+      let _p0 = procs[0] in
+      let _p1 = procs[1] in
+      assert { _p0 <> _p1 };
+
+      (*decide*)
+      if coin () && not s.hasdecided[_p0] && s.hasdecided[_p1]
+      then begin
+        label Decide in
+        s.hasdecided[_p0] <- true;
+        s.decision[_p0] <- s.decision[_p1];
+      end
+
+      (*decide_first*)
+      else if coin () && not s.hasdecided[_p0] && not s.hasdecided[_p1] &&
+        forall_other_decide_first0 (_p0 : proc)(_p1 : proc)
+      then begin
+        label Decide_first in
+        s.hasdecided[_p0] <- true;
+        s.decision[_p0] <- s.proposed[_p1];
+      end
+
+    done;
+    s
+  end
