@@ -553,6 +553,15 @@ let pp_forall_others pl fmt tl =
 
 let replay_invs system invs =
   List.fold_left (fun acc inv ->
+    let inv =
+      match Approx.Selected.good inv with
+        | None -> inv
+        | Some c ->
+          try
+            Safety.check system c;
+            c
+          with Safety.Unsafe _ -> inv
+    in
     match Bwd.Selected.aux_search ~invariants:[] ~candidates:[] system [inv] with
       | Unsafe _ | TimeOut _ -> acc
       | Safe (vis, cand) -> inv :: acc) [] invs
@@ -567,9 +576,10 @@ let cub_to_whyml t_syst syst invs fmt file =
   (* eprintf "Invs : @.";
    * List.iter (fun n ->
    *   eprintf "%a@.(%a)@.@." Node.print n Variable.print_vars (Variable.Set.elements n.evars)) invs; *)
+  eprintf "Replay : @.";
   let invs = replay_invs t_syst invs in
-  (* eprintf "Replayed : @.";
-   * List.iter (eprintf "%a@.@." Node.print) invs; *)
+  eprintf "Replayed : @.";
+  (* List.iter (eprintf "%a@.@." Node.print) invs; *)
   let mb = get_min_bound syst in
   let name = Filename.(remove_extension @@ basename file) in
   let plist = new_procs syst.max_arity in
