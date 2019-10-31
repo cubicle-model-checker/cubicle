@@ -1,0 +1,41 @@
+(* Abstract specification of consensus. No failure. *)
+(* Time-stamp: <20 fév 2017 15:39 queinnec@enseeiht.fr> *)
+
+(* Failed tentative of verifying the Validity property of consensus (the decided value is one of the proposed values).
+
+1) One cannot write (this is not a cube):
+ unsafe(i) { Hasdecided[i] && Decision[i] <> Proposed[i] && forall_other j. Decision[i] <> Proposed[j] }
+
+2) Implementing the property detection as below (a transition which leads to an error state) leads to a spurious trace:
+ Spurious trace: decide_first(#1, #2) -> unvalid(#1) -> unsafe[2]
+ Intuitively, #1 decides on #2 value, then #2 disappear, and #1 decision is not valid any longer. The fault model of Cubicle is not crash but disappearance!
+*)
+
+type state = Ok | Error
+
+array Proposed[proc] : int
+array Hasdecided[proc] : bool
+array Decision[proc] : int
+var State : state
+
+init(i) { Decision[i] = Proposed[i] && Hasdecided[i] = False && State = Ok }
+
+unsafe(i j) { Hasdecided[i] = True && Hasdecided[j] = True && Decision[i] <> Decision[j] }
+
+universal_unsafe(i, j) { Hasdecided[i] = True && Decision[i] <> Proposed[i] && Decision[i] <> Proposed[j] }
+
+(* i is the first correct process to decide, and decides the value proposed by process k *)
+transition decide_first(i k)
+requires { Hasdecided[i] = False && Hasdecided[k] = False && forall_other j. (Hasdecided[j] = False) }
+{
+  Hasdecided[i] := True;
+  Decision[i] := Proposed[k];
+}
+
+(* j has already decided. *)
+transition decide(i j)
+requires { Hasdecided[i] = False && Hasdecided[j] = True }
+{
+  Hasdecided[i] := True;
+  Decision[i] := Decision[j];
+}
