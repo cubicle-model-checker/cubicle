@@ -1,0 +1,82 @@
+module Exemple1
+
+use array.Array
+use int.Int
+use ref.Refint
+use random.Random
+
+scope import T
+
+  type t = A | B | C
+
+  let (=) (a b: t): bool
+    ensures {result <-> a = b}
+    = match a, b with
+      | A, A | B, B | C, C -> true
+      | _ -> false
+  end
+
+end
+
+val coin () : bool
+val k_random (k:int) (n:int) : (result:array int)
+  requires { 0 <= k }
+  requires { k <= n }
+  ensures { length result = k }
+  (* ensures { forall i j:int. 0 <= i < n /\ 0 <= j < n /\ i <> j -> result[i] <> result[j] } *)
+  ensures { forall i:int. 0 <= i < n -> 0 <= result[i] < n }
+
+type proc = int
+
+type system = {
+  mutable y : bool;
+  x : array t;
+}
+
+let exemple1 (maxprocs : int) (maxsteps : int) : system
+  requires { 1 < maxprocs }
+  =
+    let s = {
+      y = false;
+      x = Array.make maxprocs A;
+    } in
+
+    assert {s.x[0] = A};
+    assert {s.x[1] = A};
+
+    let nbsteps = ref 0 in
+
+    while ( !nbsteps < maxsteps ) do
+      variant { maxsteps - !nbsteps }
+
+      invariant { forall _p1 : int. 0 <= _p1 < maxprocs -> s.x[_p1] <> C }
+      invariant { forall _p1 : int. 0 <= _p1 < maxprocs /\ not s.y -> s.x[_p1] <> B }
+      invariant { forall _p1 _p2 : int. 0 <= _p1 < maxprocs /\ 0 <= _p2 < maxprocs /\ _p1 <> _p2 /\ s.x[_p1] = B -> s.x[_p2] = A }
+      invariant { forall i : int. 0 <= i < maxprocs -> s.x[i] <> C }
+      invariant { forall _p1 : int. exists _p2 : int. not 0 <= _p1 < maxprocs \/ 0 <= _p2 < maxprocs /\ _p1 <> _p2 /\ (s.x[_p1] <> B \/ s.x[_p2] = A) }
+
+      incr nbsteps;
+
+      let procs = k_random 2 maxprocs in
+      let _p0 = procs[0] in
+      let _p1 = procs[1] in
+      assert { _p0 <> _p1 };
+
+      (*t2*)
+      if coin () && not s.y && s.x[_p0] = B
+      then begin
+        label T2 in
+        s.x[_p0] <- C;
+      end
+
+      (*t1*)
+      else if coin () && s.x[_p0] = A && s.x[_p1] = A
+      then begin
+        label T1 in
+        s.y <- true;
+        s.x[_p0] <- B;
+      end
+
+    done;
+    s
+  end

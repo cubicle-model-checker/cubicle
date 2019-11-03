@@ -1,0 +1,21 @@
+type t = A | B | C
+var Y : bool
+array X[proc] : t
+
+unsafe (i) { X[i] = C }
+universal_unsafe(i, j) { X[i] = B && X[j] <> A}
+
+init (i) { Y = False && X[i] = A }
+
+transition t1(i j)
+requires { X[i]=A && X[j]=A }
+{ X[i] := B ; Y := True }
+
+transition t2(i)
+requires { X[i]=B && Y = False }
+{ X[i] := C; }
+
+(*
+transition t3(i)
+requires { X[i]=B && forall_other j. X[j]<>A }
+{ X[i] := C }*)
