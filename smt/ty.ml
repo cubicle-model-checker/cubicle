@@ -21,6 +21,7 @@ type t =
   | Tbool
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
+  | Trecord of Hstring.t * (Hstring.t * Hstring.t) list
 
 let hash t =
   match t with
@@ -58,3 +59,4 @@ let print fmt ty =
     | Tbool -> fprintf fmt "bool"
     | Tabstract s -> fprintf fmt "%s" (Hstring.view s)
     | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)
+    | Trecord (r, _) -> fprintf fmt "%s" (Hstring.view r)

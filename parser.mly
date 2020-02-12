@@ -203,13 +203,13 @@ size_proc:
 ;
 
 record_field:
-  | lident COLON lident { assert false }
+  | lident COLON lident { ($1, $3) }
 ;
 
 record_fields:
-  | record_field { assert false }
-  | record_field PV { assert false }
-  | record_field PV record_fields { assert false }
+  | record_field { [$1] }
+  | record_field PV { [$1] }
+  | record_field PV record_fields { $1::$3 }
 ;
       
 type_def:
@@ -218,7 +218,7 @@ type_def:
       { Smt.set_sum true; List.iter Constructors.add $4; Constructors ((loc (), ($2, $4))) }
   | TYPE lident EQ BAR constructors 
       { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }
-  | TYPE lident EQ LEFTBR record_fields RIGHTBR { assert false }
+  | TYPE lident EQ LEFTBR record_fields RIGHTBR { Records (loc (), ($2, $5)) }
 ;
 
 constructors:
@@ -297,7 +297,7 @@ assign_nondet_update:
 assignment:
   | mident AFFECT term { Assign ($1, PUTerm $3) }
   | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
-  | assign_record { assert false }
+  | assign_record { $1 }
 ;
 
 nondet:
@@ -340,17 +340,17 @@ switch:
 ;
 
 assign_record:
-  | mident DOT lident AFFECT term { assert false }
-  | mident AFFECT LEFTBR mident WITH assign_record_with_multiple RIGHTBR { assert false }
+  | mident DOT lident AFFECT term { Assign ($1, PURecord($3, $5)) }
+  | mident AFFECT LEFTBR mident WITH assign_record_with_multiple RIGHTBR { Assign ($1, PUWithRec($4,$6)) (*to redo*) }
 ;
 
 assign_record_with:
-  |lident EQ term { assert false }
+  |lident EQ term { ($1, $3) }
 ;
 
 assign_record_with_multiple:
-  | assign_record_with { assert false }
-  | assign_record_with PV assign_record_with_multiple { assert false }
+  | assign_record_with { [$1] }
+  | assign_record_with PV assign_record_with_multiple { $1::$3 }
 ;
 
 

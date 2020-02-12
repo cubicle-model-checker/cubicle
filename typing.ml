@@ -290,10 +290,14 @@ let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y
   with Smt.Error e -> error (Smt e) loc
 
+let declare_record (loc, (ty, l)) =
+  try Smt.Type.declare_record ty l
+  with Smt.Error e -> error (Smt e) loc
+
         
 let declare_t = function
   | Constructors (loc, (x,y)) -> declare_type (loc,(x,y))
-  | Records (loc, (ty, l)) ->  assert false
+  | Records (loc, (ty, l)) -> declare_record (loc, (ty,l))
 
 let declare_symbol loc n args ret =
   try Smt.Symbol.declare n args ret

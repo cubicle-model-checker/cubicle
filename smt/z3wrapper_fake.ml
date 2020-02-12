@@ -42,6 +42,8 @@ module Type = struct
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
+  let declare_record _ _ = unsupported () (*todo*)
+  let records _ = unsupported ()
 end
 
 module Symbol = struct

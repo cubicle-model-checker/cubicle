@@ -31,10 +31,16 @@ type type_constructors = Hstring.t * (Hstring.t list)
     declaration of type [t] with two constructors [A] and [B]. If the
     list of constructors is empty, the type [t] is defined abstract. *)
 
+type record_type = Hstring.t * (Hstring.t * Hstring.t) list
+
 type swts = (SAtom.t * Term.t) list
 (** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
 
-type glob_update = UTerm of Term.t | UCase of swts
+type records =
+  | RecField of Hstring.t * Term.t
+  | RecWith of Hstring.t * (Hstring.t * Term.t) list 
+
+type glob_update = UTerm of Term.t | UCase of swts | URecord of records
 (** Updates of global variables, can be a term or a case construct. *)
 
 type update = {
@@ -72,11 +78,16 @@ type transition = {
   tr_reset : unit -> unit;
 }
 
+type type_defs =
+  | Constructors of (loc * type_constructors)
+  | Records of (loc * record_type)
+
 type system = {
   globals : (loc * Hstring.t * Smt.Type.t) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
   arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  type_defs : (loc * type_constructors) list;
+  (*type_defs : (loc * type_constructors) list;*)
+  type_defs : type_defs list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  

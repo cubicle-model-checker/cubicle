@@ -69,6 +69,11 @@ module type S = sig
     (** [constructors ty] returns the list of constructors of [ty] when type is
         an enumerated data-type, otherwise returns [[]].*)
 
+    val declare_record : Hstring.t -> ((Hstring.t * Hstring.t) list) -> unit
+    (** declare_record r fields:types*)
+
+    val records : t -> Hstring.t list
+
     val declared_types : unit -> t list
 
   end

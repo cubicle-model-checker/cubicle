@@ -98,6 +98,19 @@ module Type = struct
       | Ty.Tsum (_ , cstrs) -> cstrs
       | _ -> []
 
+  let declare_record t l =
+    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
+    List.iter (fun (n,t) ->
+      if not (H.mem decl_types t) then raise (Error (UnknownType t));
+      if H.mem decl_symbs n then raise (Error (DuplicateSymb n))
+      else H.add decl_symbs n (Symbols.name n, [], t) (*todo*)
+
+    ) l;
+    H.add decl_types t (Ty.Trecord (t,l))
+  (*to redo?*)
+
+  let records r = assert false
+
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 

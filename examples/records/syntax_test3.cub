@@ -1,8 +1,8 @@
 type record = { field1 : int; field2 : bool }
-type record1  = { field2 : int; field3 : bool }
+type record1  = { field1 : int; field2 : bool }
 array J[proc] : bool
 
-var X : record3
+var X : record
 var Y : int
 
 init () { Y = 1 }
