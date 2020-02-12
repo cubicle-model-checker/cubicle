@@ -1,0 +1,8 @@
+type record = { field1 : int; field2 : bool }
+type record1  = { field3 : int; field4 : record }
+array J[proc] : bool
+
+var X : record
+var Y : int
+
+init () { X = { field1 = 10; field2 = True} }
