@@ -101,6 +101,7 @@
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
+%token WITH
 %token EOF
 
 %nonassoc IN       
@@ -128,7 +129,7 @@ EOF
   Smt.set_sum true;
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
-  let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
+  let ptype_defs = Constructors ((loc (), (Hstring.make "mbool", b))) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
    |> encode_psystem 
@@ -200,13 +201,24 @@ size_proc:
   | { () }
   | SIZEPROC INT { Options.size_proc := Num.int_of_num $2 }
 ;
+
+record_field:
+  | lident COLON lident { assert false }
+;
+
+record_fields:
+  | record_field { assert false }
+  | record_field PV { assert false }
+  | record_field PV record_fields { assert false }
+;
       
 type_def:
-  | TYPE lident { (loc (), ($2, [])) }
+  | TYPE lident { Constructors ((loc (), ($2, []))) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
+      { Smt.set_sum true; List.iter Constructors.add $4; Constructors ((loc (), ($2, $4))) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
+      { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }
+  | TYPE lident EQ LEFTBR record_fields RIGHTBR { assert false }
 ;
 
 constructors:
@@ -285,6 +297,7 @@ assign_nondet_update:
 assignment:
   | mident AFFECT term { Assign ($1, PUTerm $3) }
   | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+  | assign_record { assert false }
 ;
 
 nondet:
@@ -326,6 +339,21 @@ switch:
   | expr COLON term { $1, $3 }
 ;
 
+assign_record:
+  | mident DOT lident AFFECT term { assert false }
+  | mident AFFECT LEFTBR mident WITH assign_record_with_multiple RIGHTBR { assert false }
+;
+
+assign_record_with:
+  |lident EQ term { assert false }
+;
+
+assign_record_with_multiple:
+  | assign_record_with { assert false }
+  | assign_record_with PV assign_record_with_multiple { assert false }
+;
+
+
 
 constnum:
   | REAL { ConstReal $1 }
@@ -337,6 +365,7 @@ var_term:
       if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
   | proc_name { Elem ($1, Var) }
+  | mident DOT lident { assert false }
 ;
 
 top_id_term:
@@ -475,7 +504,19 @@ simple_expr:
   | literal { PAtom $1 }
   | LEFTPAR expr RIGHTPAR { $2 }
   | lident LEFTPAR expr_or_term_comma_list RIGHTPAR { app_fun $1 $3 }
+  | term EQ LEFTBR rec_inits RIGHTBR { assert false }
 ;
+
+rec_init:
+  | lident EQ term { assert false }
+;
+
+rec_inits:
+  | rec_init { assert false }
+  | rec_init PV { assert false }
+  | rec_init PV rec_inits { assert false }
+;
+
 
 
 

@@ -45,6 +45,7 @@
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
+	"with", WITH;
       ]
 	       
   let newline lexbuf =

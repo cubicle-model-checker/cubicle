@@ -168,6 +168,7 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
+  (*| Record _ -> assert false *)
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -240,6 +241,7 @@ let assigns loc args =
               unify loc ty_x ty_g;
               assignment g x ty_x;
             ) swts
+	 | URecord _ -> assert false 
        end;         
        dv := g ::!dv)
 
@@ -288,13 +290,18 @@ let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y
   with Smt.Error e -> error (Smt e) loc
 
+        
+let declare_t = function
+  | Constructors (loc, (x,y)) -> declare_type (loc,(x,y))
+  | Records (loc, (ty, l)) ->  assert false
+
 let declare_symbol loc n args ret =
   try Smt.Symbol.declare n args ret
   with Smt.Error e -> error (Smt e) loc
 
 
 let init_global_env s = 
-  List.iter declare_type s.type_defs;
+  List.iter declare_t s.type_defs;
   (* patch completeness on Boolean *)
   (*let mybool = Hstring.make "mbool" in
   let mytrue = Hstring.make "@MTrue" in

@@ -145,7 +145,10 @@ let print_subst fmt =
 
 type pswts = (cformula * term) list
 
-type pglob_update = PUTerm of term | PUCase of pswts
+type precord = Hstring.t * term
+type withrec = Hstring.t * (Hstring.t * term) list
+
+type pglob_update = PUTerm of term | PUCase of pswts | PURecord of precord | PUWithRec of withrec 
 
 type pupdate = {
   pup_loc : loc;
@@ -169,7 +172,8 @@ type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  ptype_defs : (loc * Ast.type_constructors) list;
+  (*ptype_defs : (loc * Ast.type_constructors) list;*)
+  ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
@@ -564,6 +568,8 @@ let encode_pswts pswts =
 let encode_pglob_update = function
   | PUTerm t -> UTerm (encode_term t)
   | PUCase pswts -> UCase (encode_pswts pswts)
+  | PURecord _ -> assert false
+  | PUWithRec _ -> assert false
 
 let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
   {  up_loc = pup_loc;
@@ -762,6 +768,7 @@ let print_assigns fmt tr_assigns =
       match gu with
       | UTerm t -> fprintf fmt "%a;@]@," Term.print t
       | UCase swts -> fprintf fmt "%a;@]@," print_swts swts
+      | URecord _ -> assert false
     ) tr_assigns
 
 let print_updates fmt tr_upds =
@@ -807,6 +814,11 @@ let print_system fmt { type_defs;
                        invs;
                        unsafe;
                        trans } =
+  let type_defs, precords =
+    List.fold_left (fun (constrs, recs) -> function
+      | Constructors i -> i::constrs, recs
+      | Records i -> constrs, i::recs
+    ) ([],[]) type_defs in
   print_type_defs fmt type_defs;
   pp_print_newline fmt ();
   print_globals fmt globals;
