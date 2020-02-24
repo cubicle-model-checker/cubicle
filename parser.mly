@@ -524,7 +524,7 @@ simple_expr:
       | TTerm (Access _) -> Record ($1, [] *)
     let t = (match $1 with
       | TTerm ((Access _) as a ) -> PAtom(AEq(TTerm (Record(a, l, Record)), $1))::p
-      | TTerm (Elem (n, s) as a ) ->Printf.printf "4444444444 %s\n%!" (Hstring.view n); PAtom(AEq(TTerm(Record (a, l, Record)), $1))::p
+      | TTerm (Elem (n, s) as a ) ->PAtom(AEq(TTerm(Record (a, l, Record)), $1))::p
       | _ -> assert false
     )
     in
