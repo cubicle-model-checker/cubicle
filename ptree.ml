@@ -145,7 +145,7 @@ let print_subst fmt =
 
 type pswts = (cformula * term) list
 
-type precord = Hstring.t * term
+type precord = Hstring.t * (Hstring.t * term)
 type withrec = Hstring.t * (Hstring.t * term) list
 
 type pglob_update = PUTerm of term | PUCase of pswts | PURecord of precord | PUWithRec of withrec 
@@ -153,6 +153,7 @@ type pglob_update = PUTerm of term | PUCase of pswts | PURecord of precord | PUW
 type pupdate = {
   pup_loc : loc;
   pup_arr : Hstring.t;
+  pup_arr_field : Hstring.t option;
   pup_arg : Variable.t list;
   pup_swts : pswts;
 }
@@ -568,12 +569,13 @@ let encode_pswts pswts =
 let encode_pglob_update = function
   | PUTerm t -> UTerm (encode_term t)
   | PUCase pswts -> UCase (encode_pswts pswts)
-  | PURecord _ -> assert false
-  | PUWithRec _ -> assert false
+  | PURecord (n, (f, v)) -> URecord (RecField (n, (f, encode_term v)))
+  | PUWithRec (n, l) -> URecord (RecWith (n, List.map (fun (n,e) -> (n, encode_term e)) l   )) 
 
-let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
+let encode_pupdate {pup_loc; pup_arr; pup_arr_field; pup_arg; pup_swts} =
   {  up_loc = pup_loc;
      up_arr = pup_arr;
+     up_arr_field = pup_arr_field;
      up_arg = pup_arg;
      up_swts = encode_pswts pup_swts;
   }

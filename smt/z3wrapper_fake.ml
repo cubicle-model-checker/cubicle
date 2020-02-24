@@ -54,6 +54,7 @@ module Symbol = struct
   let has_abstract_type s = unsupported ()
   let has_infinite_type s = unsupported ()
   let has_type_proc s = unsupported ()
+  let rec_compare s = unsupported ()
 end
 
 

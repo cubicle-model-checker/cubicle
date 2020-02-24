@@ -69,7 +69,7 @@ type cformula = formula
 
 type pswts = (cformula * term) list
 
-type precord = Hstring.t * term
+type precord = Hstring.t * (Hstring.t * term)
 type withrec = Hstring.t * (Hstring.t * term) list
 
 type pglob_update = PUTerm of term | PUCase of pswts | PURecord of precord | PUWithRec of withrec
@@ -77,6 +77,7 @@ type pglob_update = PUTerm of term | PUCase of pswts | PURecord of precord | PUW
 type pupdate = {
   pup_loc : loc;
   pup_arr : Hstring.t;
+  pup_arr_field :  Hstring.t option;
   pup_arg : Variable.t list;
   pup_swts : pswts;
 }

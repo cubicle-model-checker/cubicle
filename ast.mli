@@ -37,7 +37,7 @@ type swts = (SAtom.t * Term.t) list
 (** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
 
 type records =
-  | RecField of Hstring.t * Term.t
+  | RecField of Hstring.t * (Hstring.t * Term.t)
   | RecWith of Hstring.t * (Hstring.t * Term.t) list 
 
 type glob_update = UTerm of Term.t | UCase of swts | URecord of records
@@ -46,6 +46,7 @@ type glob_update = UTerm of Term.t | UCase of swts | URecord of records
 type update = {
   up_loc : loc; (** location information *)
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
+  up_arr_field : Hstring.t option; (** field to modify*)
   up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : swts;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)

@@ -103,7 +103,9 @@ module type S = sig
         identifier. *)
 
     val declared : t -> bool
-    (** [declared x] is [true] if [x] is already declared. *)
+  (** [declared x] is [true] if [x] is already declared. *)
+
+    val rec_compare : t -> Ty.t
 
   end
 

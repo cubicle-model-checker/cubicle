@@ -24,6 +24,7 @@ type sort =
   | Glob (** global variable *)
   | Constr (** constructor *)
   | Var (** variable of the paramterized domain *)
+  | Record
 
 (** constant: it can be an integer, a real or a constant name *)
 type const =
@@ -65,6 +66,8 @@ type term =
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
 (*  | NArith of cst VMap.t * cst*)
+  | Record of term  * Variable.t list * sort 
+
 			   
 (** Module interface for terms *)
 module Term : sig

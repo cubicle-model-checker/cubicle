@@ -316,7 +316,7 @@ update:
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
         ) $3;
-        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7} }
+        Upd { pup_loc = loc (); pup_arr = $1; pup_arr_field = None; pup_arg = $3; pup_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -326,7 +326,21 @@ update:
         let a = PAnd cube in
         let js = List.rev rjs in
 	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+	Upd { pup_loc = loc (); pup_arr = $1; pup_arr_field = None; pup_arg = js; pup_swts = sw}  }
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ DOT lident AFFECT term {
+    
+     let cube, rjs =
+          List.fold_left (fun (cube, rjs) i ->
+            let j = fresh_var () in
+            let c = PAtom (AEq (TVar j, TVar i)) in
+            c :: cube, j :: rjs) ([], []) $3 in
+        let a = PAnd cube in
+        let js = List.rev rjs in
+        let sw = [(a, $8); (PAtom (AAtom Atom.True), TTerm (Record(Access($1, js),[$6], Record)))] in
+        Upd { pup_loc = loc (); pup_arr = $1; pup_arr_field = Some $6; pup_arg = js; pup_swts = sw} 
+
+  }
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT LEFTBR mident WITH assign_record_with_multiple RIGHTBR { assert false}
 ;
 
 switchs:
@@ -340,7 +354,7 @@ switch:
 ;
 
 assign_record:
-  | mident DOT lident AFFECT term { Assign ($1, PURecord($3, $5)) }
+  | mident DOT lident AFFECT term { Assign ($1, PURecord ($1, ($3, $5))) }
   | mident AFFECT LEFTBR mident WITH assign_record_with_multiple RIGHTBR { Assign ($1, PUWithRec($4,$6)) (*to redo*) }
 ;
 
@@ -365,7 +379,7 @@ var_term:
       if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
       else Elem ($1, sort $1) }
   | proc_name { Elem ($1, Var) }
-  | mident DOT lident { assert false }
+  | var_or_array_term  DOT lident { Record ($1, [$3], Record) }
 ;
 
 top_id_term:
@@ -504,17 +518,28 @@ simple_expr:
   | literal { PAtom $1 }
   | LEFTPAR expr RIGHTPAR { $2 }
   | lident LEFTPAR expr_or_term_comma_list RIGHTPAR { app_fun $1 $3 }
-  | term EQ LEFTBR rec_inits RIGHTBR { assert false }
+  | term EQ LEFTBR rec_inits RIGHTBR {
+    let p,l = List.fold_left ( fun (a,b) (x,y) -> x::a, y::b) ([],[]) $4 in
+    (*let t = match $1 with
+      | TTerm (Access _) -> Record ($1, [] *)
+    let t = (match $1 with
+      | TTerm ((Access _) as a ) -> PAtom(AEq(TTerm (Record(a, l, Record)), $1))::p
+      | TTerm (Elem (n, s) as a ) ->Printf.printf "4444444444 %s\n%!" (Hstring.view n); PAtom(AEq(TTerm(Record (a, l, Record)), $1))::p
+      | _ -> assert false
+    )
+    in
+    PAnd t
+  }
 ;
 
 rec_init:
-  | lident EQ term { assert false }
+  | lident EQ term { PAtom(AEq((TTerm (Elem($1,Record))),$3)), $1 }
 ;
 
 rec_inits:
-  | rec_init { assert false }
-  | rec_init PV { assert false }
-  | rec_init PV rec_inits { assert false }
+  | rec_init { [$1] }
+  | rec_init PV { [$1] }
+  | rec_init PV rec_inits { $1::$3 }
 ;
 
 

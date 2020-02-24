@@ -40,6 +40,8 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
+  | UnknownField of Hstring.t * Hstring.t
+  | MustBeRecord of Hstring.t
 
 exception Error of error * loc
 
@@ -93,7 +95,9 @@ let report fmt = function
   | Smt (Smt.UnknownType s) ->
       fprintf fmt "unknown type %a" Hstring.print s
   | Smt (Smt.UnknownSymb s) ->
-      fprintf fmt "unknown symbol %a" Hstring.print s
+    fprintf fmt "unknown symbol %a" Hstring.print s
+  | UnknownField (r,f) -> fprintf fmt "%a does not belong to type %a" Hstring.print f Hstring.print r
+  | MustBeRecord r -> fprintf fmt "%a is not a record type" Hstring.print r
 
 let error e l = raise (Error (e,l))
 
@@ -112,6 +116,8 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
+      | Record _ -> assert false (* todo *)
+		
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -168,7 +174,28 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
-  (*| Record _ -> assert false *)
+    | Record (name, field, _) -> 
+    let t = term loc args name in
+    let n = Smt.Symbol.rec_compare (snd t) in
+    (match n with
+      | Ty.Trecord (re, l) ->
+	(
+	  match field with
+	    |[] -> assert false
+	    |[f] ->  let t = try Smt.Symbol.type_of f with Not_found -> error (UnknownField (snd t, f)) loc in t
+	    |l2 ->
+		    (List.iter (fun x ->
+		      let b' = 
+			List.fold_left ( fun acc (a,b) -> acc || (Hstring.equal a x)) false l
+		      in
+		      if not b' then error (UnknownField (re, x)) loc
+		      
+		    ) l2); [],re
+	      
+
+	)
+      | _ -> error (MustBeRecord (snd t)) loc
+      )
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -222,6 +249,7 @@ let nondets loc l =
 
 let assigns loc args = 
   let dv = ref [] in
+  let df = ref [] in
   List.iter 
     (fun (g, gu) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g) loc;
@@ -230,20 +258,72 @@ let assigns loc args =
          with Not_found -> error (UnknownGlobal g) loc in
        begin
          match gu with
-         | UTerm x ->
-            let ty_x = term loc args x in
-            unify loc ty_x ty_g;
-            assignment g x ty_x;
-         | UCase swts ->
+           | UTerm x ->
+             let ty_x = term loc args x in
+             unify loc ty_x ty_g;
+             assignment g x ty_x;
+	     dv := g ::!dv
+	   | URecord r ->
+	     (match r with
+	       | RecField (n, (field, t)) ->
+		 if Hstring.list_mem field !df then error (DuplicateAssign field) loc;
+		 let ty_t = term loc args t in
+		 let _, t' = Smt.Symbol.type_of n in
+		 let t'' = Smt.Symbol.rec_compare t' in
+		 let b =
+		   ( match t'' with
+		     | Ty.Trecord (re, l) -> 
+		       List.fold_left ( fun acc (x,y) -> acc || (Hstring.equal x field)) false l
+		     | _ -> assert false
+	       ) in
+		 if not b then error (UnknownField (n, field)) loc ;
+		 let ty_t' = Smt.Symbol.type_of field in
+		 unify loc ty_t ty_t';
+		 assignment g t ty_t;
+		 df := field::!df;
+	       assert false; 
+	       
+	       | RecWith (r, l) ->
+	      (* l is the list of stuff to modify - so need to check that l belongs to bot*)
+		 let ty_r = 
+		   try Smt.Symbol.type_of r
+		   with Not_found -> error (UnknownGlobal r) loc in
+		 unify loc ty_r ty_g ;
+		 let _, r' = ty_r in
+		 let r' = Smt.Symbol.rec_compare r' in
+		 ( match r' with
+		  | Ty.Trecord (re, l1) ->
+		    List.iter (fun (x, y) ->
+		      if Hstring.list_mem x !df then error (DuplicateAssign x) loc;
+		      let b' = 
+			List.fold_left ( fun acc (a,b) -> acc || (Hstring.equal a x)) false l1
+		      in
+		      if not b' then error (UnknownField (re, x)) loc
+		      else
+			begin
+			  let ty_b = term loc args y in
+			  let ty_a = Smt.Symbol.type_of x in
+			  unify loc ty_b ty_a;
+			  df := x::!df
+ 			end
+		    ) l;
+		    dv := g::!dv	    
+		  | _ -> assert false
+	       ) ;
+		 assert false
+	     )
+	       
+           | UCase swts ->
             List.iter (fun (sa, x) ->
               atoms loc args sa;
               let ty_x = term loc args x in
               unify loc ty_x ty_g;
               assignment g x ty_x;
-            ) swts
-	 | URecord _ -> assert false 
-       end;         
-       dv := g ::!dv)
+            ) swts;
+	     dv := g ::!dv
+	       
+       end         
+    )
 
 let switchs loc a args ty_e l = 
   List.iter 
@@ -255,17 +335,38 @@ let switchs loc a args ty_e l =
 
 let updates args = 
   let dv = ref [] in
-  List.iter 
-    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
-       if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
-       List.iter (fun j -> 
-         if Hstring.list_mem j args then error (ClashParam j) loc) lj;
-       let args_a, ty_a = 
-	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
-       in       
-       if args_a = [] then error (MustBeAnArray a) loc;
-       dv := a ::!dv;
-       switchs loc a (lj @ args) ([], ty_a) swts) 
+  let df = ref [] in
+  List.iter (
+      fun {up_loc=loc; up_arr=a; up_arr_field = af; up_arg=lj; up_swts=swts} ->
+	let args_a, ty_a =
+	  try Smt.Symbol.type_of a
+	  with Not_found -> error (UnknownArray a) loc
+	in
+	if args_a = [] then error (MustBeAnArray a) loc;
+	(match af with
+	  | Some field ->
+	    (match (Smt.Symbol.rec_compare ty_a) with
+	      | Ty.Trecord (r, l) ->
+		if Hstring.list_mem field !df then error (DuplicateAssign field) loc;
+		let b = List.fold_left (fun acc (x,y) -> acc || (Hstring.equal x field)) false l in
+		if not b then error (UnknownField (r,field)) loc;
+		df := field::!df;
+		let ty_f =  Smt.Symbol.type_of field in
+		switchs loc a (lj @ args) ty_f swts
+	      | _ -> assert false
+	    )
+	  | None ->
+	    if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
+	    List.iter (fun j ->
+              if Hstring.list_mem j args then error (ClashParam j) loc) lj;
+	    dv := a ::!dv;
+	    switchs loc a (lj @ args) ([], ty_a) swts) 
+	  
+	)
+    
+
+
+  
 
 let check_lets loc args l =
   List.iter 
@@ -493,24 +594,26 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_ureq;
 	tr_assigns = 
 	  List.map (function
-                     | x, UTerm t -> x, UTerm (Term.subst sigma t)
-                     | x, UCase swts ->
-                        let swts = 
-	                  List.map 
-		            (fun (sa, t) ->
-                             SAtom.subst sigma sa, Term.subst sigma t) swts in
-                        x, UCase swts
-	           ) tr.tr_assigns;
+            | x, UTerm t -> x, UTerm (Term.subst sigma t)
+	    | x, URecord _ -> assert false (* todo *)
+	      
+            | x, UCase swts ->
+              let swts = 
+	        List.map 
+		  (fun (sa, t) ->
+                    SAtom.subst sigma sa, Term.subst sigma t) swts in
+              x, UCase swts
+	  ) tr.tr_assigns;
 	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 
-	     let swts = 
+	    let swts = 
 	       List.map 
 		 (fun (sa, t) -> SAtom.subst sigma sa, Term.subst sigma t) swts
-	     in
+	    in
 	     { up with up_swts = swts }) 
 	  upds}
-
+      
 
 let add_tau tr =
   (* (\* let tr = fresh_args tr in *\) *)

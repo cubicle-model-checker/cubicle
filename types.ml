@@ -22,7 +22,7 @@ module HSet = Hstring.HSet
 
 type op_comp = Eq | Lt | Le | Neq
 
-type sort = Glob | Constr | Var
+type sort = Glob | Constr | Var | Record
 
 
 type const =
@@ -87,6 +87,8 @@ type term =
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
+  | Record of term  * Variable.t list * sort 
+
 (*  | NArith of cst VMap.t * cst*)
 
 
@@ -183,6 +185,9 @@ module Term = struct
     | Arith (t1, cs1), Arith (t2, cs2) ->
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
+    | Arith (_, _), Record (_, _, _) -> assert false
+    | Record (_, _, _), Arith (_, _) -> assert false
+    | Record (_, _, _), Record (_, _, _) -> assert false 
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -231,6 +236,8 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
+    | Record _ -> assert false (* todo *)
+
 
 
   let rec print_strings fmt = function
@@ -264,7 +271,9 @@ module Term = struct
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+      fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+    | Record _ -> assert false (* todo *)
+
 
 end
 

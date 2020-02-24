@@ -107,7 +107,6 @@ module Type = struct
 
     ) l;
     H.add decl_types t (Ty.Trecord (t,l))
-  (*to redo?*)
 
   let records r = assert false
 
@@ -163,6 +162,9 @@ module Symbol = struct
      
   let has_type_proc s =
     Hstring.equal (snd (type_of s)) Type.type_proc
+
+  let rec_compare t =
+    try H.find decl_types t with Not_found -> raise (Error (UnknownType t))
       
   let _ = 
     H.add decl_symbs htrue (Symbols.True, [], Type.type_bool);
