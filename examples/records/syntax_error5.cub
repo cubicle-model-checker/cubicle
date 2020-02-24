@@ -1,0 +1,14 @@
+(* Error : types record2 and record are not compatible  *)
+type record = {field1 : int; field2 : bool }
+type record2 = {field3 : int; field4 : bool; }
+
+var X : int
+var Y : record
+array A[proc] : record2
+
+init () {X = 1}
+
+transition t1 (i)
+{
+  Y  := A[i];
+}

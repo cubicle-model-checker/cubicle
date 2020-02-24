@@ -21,6 +21,6 @@ transition t(i j)
 {
  Ar[i].field1 := 3;
  Ar[i].field2 := False;
- R := { T with field1 = 3; field2 = True}
+ R := {field1 = 3; field1 = 1}
 
 }

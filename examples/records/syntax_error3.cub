@@ -1,0 +1,12 @@
+(* Error : syntax error line 3 *)
+type record = {field1 : int; field2 : bool }
+type record2 = {field3 : int; field4 : int;; }
+
+var X : int
+var Y : record
+array A[proc] : record2
+
+init () {X = 1}
+
+transition t1 ()
+{ X  := Y.field1 }

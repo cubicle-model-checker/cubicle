@@ -356,6 +356,7 @@ switch:
 assign_record:
   | mident DOT lident AFFECT term { Assign ($1, PURecord ($1, ($3, $5))) }
   | mident AFFECT LEFTBR mident WITH assign_record_with_multiple RIGHTBR { Assign ($1, PUWithRec($4,$6)) (*to redo*) }
+  | mident AFFECT LEFTBR assign_record_with_multiple RIGHTBR {Assign ($1, PUWithRec(Hstring.empty,$4))}
 ;
 
 assign_record_with:
@@ -364,6 +365,7 @@ assign_record_with:
 
 assign_record_with_multiple:
   | assign_record_with { [$1] }
+  | assign_record_with PV { [$1] }
   | assign_record_with PV assign_record_with_multiple { $1::$3 }
 ;
 

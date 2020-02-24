@@ -268,48 +268,49 @@ let assigns loc args =
 	       | RecField (n, (field, t)) ->
 		 if Hstring.list_mem field !df then error (DuplicateAssign field) loc;
 		 let ty_t = term loc args t in
-		 let _, t' = Smt.Symbol.type_of n in
-		 let t'' = Smt.Symbol.rec_compare t' in
+		 (*let _, t' = Smt.Symbol.type_of n in*)
+		 let t'' = Smt.Symbol.rec_compare (snd ty_g) in
 		 let b =
 		   ( match t'' with
 		     | Ty.Trecord (re, l) -> 
 		       List.fold_left ( fun acc (x,y) -> acc || (Hstring.equal x field)) false l
 		     | _ -> assert false
-	       ) in
+		   ) in
 		 if not b then error (UnknownField (n, field)) loc ;
 		 let ty_t' = Smt.Symbol.type_of field in
 		 unify loc ty_t ty_t';
 		 assignment g t ty_t;
 		 df := field::!df;
-	       assert false; 
-	       
 	       | RecWith (r, l) ->
-	      (* l is the list of stuff to modify - so need to check that l belongs to bot*)
-		 let ty_r = 
-		   try Smt.Symbol.type_of r
-		   with Not_found -> error (UnknownGlobal r) loc in
-		 unify loc ty_r ty_g ;
-		 let _, r' = ty_r in
-		 let r' = Smt.Symbol.rec_compare r' in
-		 ( match r' with
-		  | Ty.Trecord (re, l1) ->
-		    List.iter (fun (x, y) ->
-		      if Hstring.list_mem x !df then error (DuplicateAssign x) loc;
-		      let b' = 
-			List.fold_left ( fun acc (a,b) -> acc || (Hstring.equal a x)) false l1
-		      in
-		      if not b' then error (UnknownField (re, x)) loc
-		      else
+		 let check_record t =
+		   (match t with
+		     | Ty.Trecord (re, l1) ->
+		       List.iter (fun (x, y) ->
+			 if Hstring.list_mem x !df then error (DuplicateAssign x) loc;
+			 let b' = 
+			   List.fold_left ( fun acc (a,b) -> acc || (Hstring.equal a x)) false l1
+			 in
+			 if not b' then error (UnknownField (re, x)) loc
+			 else
 			begin
 			  let ty_b = term loc args y in
 			  let ty_a = Smt.Symbol.type_of x in
 			  unify loc ty_b ty_a;
 			  df := x::!df
  			end
-		    ) l;
-		    dv := g::!dv	    
-		  | _ -> assert false
-	       ) ;
+		       ) l;
+		       dv := g::!dv
+		     | _ -> assert false)
+		 in	     
+		 (match (Hstring.equal Hstring.empty r) with
+		   | true -> check_record (Smt.Symbol.rec_compare (snd ty_g))
+		   | false  -> let ty_r = 
+		   try Smt.Symbol.type_of r
+		   with Not_found -> error (UnknownGlobal r) loc in
+		 unify loc ty_r ty_g ;
+		 let _, r' = ty_r in
+		 let r' = Smt.Symbol.rec_compare r' in
+		 check_record r');
 		 assert false
 	     )
 	       

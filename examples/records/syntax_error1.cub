@@ -1,0 +1,10 @@
+(* Error : type record is declared twice  *)
+type record = {field1 : int; field2 : bool }
+type record = {field3 : int; field4 : int }
+
+var X : record
+
+init () { X = 2 }
+
+transition t1 ()
+{ X  := 1 }
