@@ -1,0 +1,26 @@
+type record = {field1 : int; field2 : bool }
+type t = A | B | C
+type rec2 = {field3 : t; field4 : bool}
+type g = F | G
+var X : int
+var K : int
+var Z : t
+var R : record
+var T : record
+array Ar[proc] : record
+
+array Y[proc] : int
+array Y1[proc] : int
+
+init (i j) { Y[i] = 2 }
+
+
+
+
+transition t(i j)
+{
+ Ar[i].field1 := 3;
+ Ar[i].field2 := False;
+ R := { T with field1 = 3; field2 = True}
+
+}
