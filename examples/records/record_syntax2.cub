@@ -1,0 +1,34 @@
+type record = {field1 : int; field2 : bool }
+type t = A | B | C
+type rec2 = {field3 : t; field4 : bool}
+type rec3 = {a : rec2; b : bool}
+type g = F | G
+
+var X : int
+var K : int
+var Z : t
+var R : record
+var T : record
+array Ar[proc] : record
+array Ar2[proc] : rec3
+
+array Y[proc] : int
+array Y1[proc] : int
+
+init (i j) { Y[i] = 2 && R = { field1 = 1 } }
+
+transition t(i j)
+requires { R.field1 = 0 && Ar[i].field1 = R.field1 &&
+	  {R with field1 = 42} = { field1 = X; field2 = True } &&
+	  {R with field1 = 42}.field2 = True &&
+	  { Ar[i] with field2 = False} =  Ar[j] &&
+	  Ar2[i].a.field1 = 42
+}
+{
+ Ar[i].field1 := R.field1;
+ Ar[i].field2 := False;
+(* R := { field1 = 3; field2 = True};*)
+ T := { T with field1 = 3; };
+}
+ 
+ 
