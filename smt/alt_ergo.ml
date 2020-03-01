@@ -108,7 +108,22 @@ module Type = struct
     ) l;
     H.add decl_types t (Ty.Trecord (t,l))
 
-  let records r = assert false
+  let records () =
+    let d = H.to_seq_values decl_types in
+    Seq.fold_left (fun acc v ->
+      match v with
+	| Ty.Trecord (re,l) -> (re,l)::acc
+	| _ -> acc
+    ) [] d
+
+  let rec_get t =
+    try let t1 = H.find decl_types t 
+	in
+	(match t1 with
+	  | Ty.Trecord (re,l) -> true, (re,l)
+	  | _ -> false, (Hstring.empty,[])
+	)
+    with Not_found -> raise (Error (UnknownType t))
 
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
@@ -162,9 +177,6 @@ module Symbol = struct
      
   let has_type_proc s =
     Hstring.equal (snd (type_of s)) Type.type_proc
-
-  let rec_compare t =
-    try H.find decl_types t with Not_found -> raise (Error (UnknownType t))
       
   let _ = 
     H.add decl_symbs htrue (Symbols.True, [], Type.type_bool);

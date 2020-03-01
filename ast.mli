@@ -32,21 +32,19 @@ type type_constructors = Hstring.t * (Hstring.t list)
     list of constructors is empty, the type [t] is defined abstract. *)
 
 type record_type = Hstring.t * (Hstring.t * Hstring.t) list
+    (** Record declarations: [("t", [("f", "t1")])] declates the record type t 
+	with a field f of type t1.*)
 
 type swts = (SAtom.t * Term.t) list
-(** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
+(** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *) 
 
-type records =
-  | RecField of Hstring.t * (Hstring.t * Term.t)
-  | RecWith of Hstring.t * (Hstring.t * Term.t) list 
-
-type glob_update = UTerm of Term.t | UCase of swts | URecord of records
+type glob_update = UTerm of Term.t  | UCase of swts 
 (** Updates of global variables, can be a term or a case construct. *)
+
 
 type update = {
   up_loc : loc; (** location information *)
   up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
-  up_arr_field : Hstring.t option; (** field to modify*)
   up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : swts;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
@@ -61,12 +59,28 @@ type transition_info = {
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
-  tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
+  tr_assigns : (Hstring.t * glob_update) list ; (** updates of global variables *)
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
   tr_loc : loc; (** location information *)
 }
+
+type transition_info_loc_assign = {
+  tr_loc_name : Hstring.t; (** name of the transition *)
+  tr_loc_args : Variable.t list;
+  (** existentially quantified parameters of the transision *)
+  tr_loc_reqs : SAtom.t * loc; (** guard *)
+  tr_loc_ureq : (Variable.t * dnf) list;
+  (** global condition of the guard, i.e. universally quantified DNF *)
+  tr_loc_lets : (Hstring.t * Term.t) list;
+  tr_loc_assigns : (Hstring.t * glob_update * loc) list ; (** updates of global variables *)
+  tr_loc_upds : update list; (** updates of arrays *)
+  tr_loc_nondets : Hstring.t list;
+  (** non deterministic updates (only for global variables) *)
+  tr_loc_loc : loc; (** location information *)
+}
+  
 (** type of parameterized transitions *)
 
 type transition_func = Term.t -> op_comp -> Term.t -> Atom.t
@@ -92,7 +106,7 @@ type system = {
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  
-  trans : transition_info list;
+  trans : transition_info_loc_assign list;
 }
 (** type of untyped transition systems constructed by parsing *)
 

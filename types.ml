@@ -22,7 +22,7 @@ module HSet = Hstring.HSet
 
 type op_comp = Eq | Lt | Le | Neq
 
-type sort = Glob | Constr | Var | Record
+type sort = Glob | Constr | Var 
 
 
 type const =
@@ -81,13 +81,24 @@ module VMap = Map.Make(Var)
 
 type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
 type poly = cst VMap.t * cst
-		  
+
+type binop =
+  | Addition
+  | Subtraction
+  | Multiplication
+type op =
+  | UMinus
+      
 type term =
   | Const of int MConst.t
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
-  | Record of term  * Variable.t list * sort 
+  | BinOp of term * binop * term
+  | UnOp of op * term
+  | RecordWith of term  * (Hstring.t * term) list
+  | RecordField of term * Hstring.t
+  | Record of (Hstring.t * term) list
 
 (*  | NArith of cst VMap.t * cst*)
 
@@ -170,24 +181,46 @@ module Term = struct
 
   type t = term
 
-  let rec compare t1 t2 = 
+
+  let rec compare t1 t2 =
     match t1, t2 with
-    | Const c1, Const c2 -> compare_constants c1 c2
-    | Const _, _ -> -1 | _, Const _ -> 1
-    | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
-    | Elem (_, Glob), Elem (_, (Constr | Var)) -> 1
-    | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
-    | Elem _, _ -> -1 | _, Elem _ -> 1
-    | Access (a1, l1), Access (a2, l2) ->
+    | Const c1, Const c2 -> (*Printf.printf "Compare1 \n%!" ;*)compare_constants c1 c2
+    | Const _, _ -> (*Printf.printf "Compare2 \n%!";*)-1
+    | _, Const _ -> (*Printf.printf "Compare3 \n%!";*)1
+    | Elem (e, (Constr | Var)), Elem (e1, Glob) -> (*Printf.printf "Compare4 : %s and %s \n%!" (Hstring.view e) (Hstring.view e1);*)-1
+    | Elem (e, Glob), Elem (e1, (Constr | Var)) -> (*Printf.printf "Compare5 : %s %s\n%!" (Hstring.view e) (Hstring.view e1);*)1
+    | Elem (s1, _), Elem (s2, _) ->  (*Printf.printf "Compar6: %s and %s and %d\n%!" (Hstring.view s1) (Hstring.view s2) (Hstring.compare s1 s2);*)Hstring.compare s1 s2
+    | Elem (e,_), _ -> (*Printf.printf "Compare7: %s \n%!" (Hstring.view e);*)-1
+    | _, Elem _ -> (*Printf.printf "Compare8 \n%!";*)1
+    | Access (a1, l1), Access (a2, l2) -> (*Printf.printf "Compare9 \n%!";*)
        let c = Hstring.compare a1 a2 in
        if c<>0 then c else Hstring.compare_list l1 l2
-    | Access _, _ -> -1 | _, Access _ -> 1 
-    | Arith (t1, cs1), Arith (t2, cs2) ->
+    | Access _, _ -> (*Printf.printf "Compare10 \n%!";*)-1
+    | _, Access _ -> (*Printf.printf "Compare11 \n%!";*)1 
+    | Arith (t1, cs1), Arith (t2, cs2) -> (*Printf.printf "Compare112 \n%!";*)
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
-    | Arith (_, _), Record (_, _, _) -> assert false
+    | Arith (_, _), RecordWith (_, _) -> assert false
+    | Arith (_, _), Record _ -> assert false
+    | Arith (_, _), RecordField (_, _) -> assert false
+    | Record _,Arith (_, _) -> assert false
+    | Record _, RecordField (_, _) -> assert false
+    | Record _, Record _ -> assert false
+    | Record _, RecordWith (_, _) -> assert false
+    | RecordField _, RecordField _ -> assert false
+    | RecordField _, Record _ -> assert false
+    | RecordField _ , RecordWith _ -> assert false
+    | RecordField _, Arith _ -> assert false
+    | RecordWith _ , Record _ -> assert false
+    | RecordWith _ , RecordField _ -> assert false
+    | RecordWith _ , RecordWith _ -> assert false
+    | RecordWith _ , Arith _ -> assert false
+    | _ -> assert false
+
+      
+  (*| Arith (_, _), Record (_, _, _) -> assert false
     | Record (_, _, _), Arith (_, _) -> assert false
-    | Record (_, _, _), Record (_, _, _) -> assert false 
+    | Record (_, _, _), Record (_, _, _) -> assert false *)
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -273,6 +306,8 @@ module Term = struct
     | Arith (x, cs) -> 
       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
     | Record _ -> assert false (* todo *)
+
+
 
 
 end

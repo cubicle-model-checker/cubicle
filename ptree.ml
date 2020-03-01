@@ -19,8 +19,6 @@ open Util
 open Ast
 open Format
 
-
-
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
@@ -145,15 +143,11 @@ let print_subst fmt =
 
 type pswts = (cformula * term) list
 
-type precord = Hstring.t * (Hstring.t * term)
-type withrec = Hstring.t * (Hstring.t * term) list
-
-type pglob_update = PUTerm of term | PUCase of pswts | PURecord of precord | PUWithRec of withrec 
+type pglob_update = PUTerm of term | PUCase of pswts 
 
 type pupdate = {
   pup_loc : loc;
   pup_arr : Hstring.t;
-  pup_arr_field : Hstring.t option;
   pup_arg : Variable.t list;
   pup_swts : pswts;
 }
@@ -162,8 +156,8 @@ type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
-  ptr_reqs : cformula;
-  ptr_assigns : (Hstring.t * pglob_update) list;
+  ptr_reqs : cformula *loc ;
+  ptr_assigns : (Hstring.t * pglob_update * loc) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
   ptr_loc : loc;
@@ -443,7 +437,7 @@ let rec up_quantifiers = function
   | PAnd l ->
     let l' = List.map up_quantifiers l in
     foralls_above_and ([],[]) l'
-  | POr l ->
+  | POr l -> 
     let l' = List.map up_quantifiers l in
     exists_above_or ([],[]) l'
   | PEquiv _ | PImp _ | PIte _ | PNot _  -> assert false
@@ -496,13 +490,13 @@ let inits_of_formula f =
 
 let rec forall_to_others tr_args f = match f with
   | PAtom _ -> f
-  | PNot f1 ->
+  | PNot f1 -> 
     let f1' = forall_to_others tr_args f1 in
     if f1 == f1' then f else PNot f1'
-  | PAnd l ->
+  | PAnd l -> 
     let l' = List.map (forall_to_others tr_args) l in
     if List.for_all2 (==) l l' then f else PAnd l'
-  | POr l ->
+  | POr l -> 
     let l' = List.map (forall_to_others tr_args) l in
     if List.for_all2 (==) l l' then f else POr l'
   | PImp (a, b) ->
@@ -536,11 +530,11 @@ let rec classify_guards (req, ureq) = function
 
 let rec guard_of_formula_aux = function
   | PAtom _ as f -> [satom_of_cube f, []]
-  | PAnd l ->
+  | PAnd l -> 
     let req, ureq = classify_guards ([],[]) l in
     [satom_of_cube req, List.map uguard_of_formula ureq]
   | POr l -> List.map guard_of_formula_aux l |> List.flatten
-  | f ->
+  | f -> 
     let req, ureq = classify_guards ([],[]) [f] in
     [satom_of_cube req, List.map uguard_of_formula ureq]
   (* | _ -> assert false *)
@@ -569,13 +563,12 @@ let encode_pswts pswts =
 let encode_pglob_update = function
   | PUTerm t -> UTerm (encode_term t)
   | PUCase pswts -> UCase (encode_pswts pswts)
-  | PURecord (n, (f, v)) -> URecord (RecField (n, (f, encode_term v)))
-  | PUWithRec (n, l) -> URecord (RecWith (n, List.map (fun (n,e) -> (n, encode_term e)) l   )) 
+  (*| PURecord (n, (f, v)) -> URecord (RecField (n, (f, encode_term v)))
+  | PUWithRec (n, l) -> URecord (RecWith (n, List.map (fun (n,e) -> (n, encode_term e)) l   )) *)
 
-let encode_pupdate {pup_loc; pup_arr; pup_arr_field; pup_arg; pup_swts} =
+let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
   {  up_loc = pup_loc;
      up_arr = pup_arr;
-     up_arr_field = pup_arr_field;
      up_arg = pup_arg;
      up_swts = encode_pswts pup_swts;
   }
@@ -583,21 +576,22 @@ let encode_pupdate {pup_loc; pup_arr; pup_arr_field; pup_arg; pup_swts} =
 let encode_ptransition
     {ptr_lets; ptr_name; ptr_args; ptr_reqs; ptr_assigns;
      ptr_upds; ptr_nondets; ptr_loc;} =
-  let dguards = guard_of_formula ptr_args ptr_reqs in
-  let tr_assigns = List.map (fun (i, pgu) ->
-      (i, encode_pglob_update pgu)) ptr_assigns in
-  let tr_upds = List.map encode_pupdate ptr_upds in
+  let dguards = guard_of_formula ptr_args (fst ptr_reqs) in
+  let tr_loc_assigns = List.map (fun (i, pgu,location) ->
+      (i, encode_pglob_update pgu,location)) ptr_assigns in (*(Hstring.t * pglob_update * loc) list;
+*)
+  let tr_loc_upds = List.map encode_pupdate ptr_upds in
   let tr_lets = List.map (fun (x, t) -> (x, encode_term t)) ptr_lets in
   List.rev_map (fun (req, ureq) ->
-      {  tr_name = ptr_name;
-         tr_args = ptr_args;
-         tr_reqs = req;
-         tr_ureq = ureq;
-	 tr_lets = tr_lets;
-         tr_assigns;
-         tr_upds;
-         tr_nondets = ptr_nondets;
-         tr_loc = ptr_loc }
+      {  tr_loc_name = ptr_name;
+         tr_loc_args = ptr_args;
+         tr_loc_reqs = (req, snd ptr_reqs);
+         tr_loc_ureq = ureq;
+	 tr_loc_lets = tr_lets;
+         tr_loc_assigns;
+         tr_loc_upds;
+         tr_loc_nondets = ptr_nondets;
+         tr_loc_loc = ptr_loc }
     ) dguards
 
 
@@ -628,14 +622,14 @@ let encode_psystem
     List.fold_left (fun acc ptr ->
         List.fold_left (fun acc tr -> tr :: acc) acc (encode_ptransition ptr)
       ) [] ptrans
-    |> List.sort (fun t1 t2  ->
-        let c = compare (List.length t1.tr_args) (List.length t2.tr_args) in
+  |> List.sort (fun t1 t2  ->
+        let c = compare (List.length t1.tr_loc_args) (List.length t2.tr_loc_args) in
         if c <> 0 then c else
-        let c = compare (List.length t1.tr_upds) (List.length t2.tr_upds) in
+        let c = compare (List.length t1.tr_loc_upds) (List.length t2.tr_loc_upds) in
         if c <> 0 then c else
-        let c = compare (List.length t1.tr_ureq) (List.length t2.tr_ureq) in
+        let c = compare (List.length t1.tr_loc_ureq) (List.length t2.tr_loc_ureq) in
         if c <> 0 then c else
-        compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
+        compare (SAtom.cardinal (fst t1.tr_loc_reqs)) (SAtom.cardinal (fst t2.tr_loc_reqs)) 
       )
   in
   {
@@ -738,10 +732,10 @@ let print_invs fmt =
 
 
 let print_reqs fmt (tr_reqs, tr_ureq) =
-  if SAtom.for_all Atom.(equal True) tr_reqs && tr_ureq = [] then ()
+  if SAtom.for_all Atom.(equal True) (fst tr_reqs) && tr_ureq = [] then ()
   else
     fprintf fmt "@{<fg_magenta>requires@} @[<hov 2>{@ %a%a@ }@]@,"
-      SAtom.print_inline tr_reqs
+      SAtom.print_inline (fst tr_reqs)
       (fun fmt -> List.iter (fun (v, u) ->
            fprintf fmt "@ &&@ @[<hov 1>(@{<fg_magenta>forall_other@} %a.@ %a)@]"
              Variable.print v print_dnf u
@@ -765,12 +759,11 @@ let print_swts fmt swts =
   | _ -> assert false
 
 let print_assigns fmt tr_assigns =
-  List.iter (fun (g, gu) ->
+  List.iter (fun (g, gu, location) ->
       fprintf fmt "@[<hov>%a@ =@ " Hstring.print g;
       match gu with
       | UTerm t -> fprintf fmt "%a;@]@," Term.print t
       | UCase swts -> fprintf fmt "%a;@]@," print_swts swts
-      | URecord _ -> assert false
     ) tr_assigns
 
 let print_updates fmt tr_upds =
@@ -786,8 +779,8 @@ let print_nondets fmt =
 
 let print_trans fmt =
   List.iter
-    (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
-           tr_assigns; tr_upds; tr_nondets } ->
+    (fun { tr_loc_name; tr_loc_args; tr_loc_reqs; tr_loc_ureq; tr_loc_lets;
+           tr_loc_assigns; tr_loc_upds; tr_loc_nondets } ->
       fprintf fmt
         "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
          %a\
@@ -798,13 +791,13 @@ let print_trans fmt =
          %a\
          @]}\
          @,@,@]"
-        Hstring.print tr_name
-        Variable.print_vars tr_args
-        print_reqs (tr_reqs, tr_ureq)
-        print_lets tr_lets
-        print_assigns tr_assigns
-        print_updates tr_upds
-        print_nondets tr_nondets
+        Hstring.print tr_loc_name
+        Variable.print_vars tr_loc_args
+        print_reqs (tr_loc_reqs, tr_loc_ureq)
+        print_lets tr_loc_lets
+        print_assigns tr_loc_assigns
+        print_updates tr_loc_upds
+        print_nondets tr_loc_nondets
     )
 
 

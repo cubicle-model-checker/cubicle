@@ -26,6 +26,7 @@ let file = ref "_stdin"
 
 let max_proc = ref 10
 let type_only = ref false
+let parse_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
@@ -123,6 +124,7 @@ let specs =
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
+    "-parse-only", Arg.Set parse_only, " stop after parsing";
     "-max-procs", Arg.Set_int max_proc, 
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds, 
@@ -218,6 +220,7 @@ let cin =
   | Some f -> file := f ; open_in f 
   | None -> stdin
 
+let parse_only = !parse_only 
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes

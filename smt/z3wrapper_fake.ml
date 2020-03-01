@@ -44,6 +44,8 @@ module Type = struct
   let declared_types _ = unsupported ()
   let declare_record _ _ = unsupported () (*todo*)
   let records _ = unsupported ()
+  let rec_get s = unsupported ()
+
 end
 
 module Symbol = struct
@@ -54,7 +56,6 @@ module Symbol = struct
   let has_abstract_type s = unsupported ()
   let has_infinite_type s = unsupported ()
   let has_type_proc s = unsupported ()
-  let rec_compare s = unsupported ()
 end
 
 

@@ -72,7 +72,9 @@ module type S = sig
     val declare_record : Hstring.t -> ((Hstring.t * Hstring.t) list) -> unit
     (** declare_record r fields:types*)
 
-    val records : t -> Hstring.t list
+    val records : unit -> (Hstring.t * (Hstring.t * Hstring.t) list) list
+
+    val rec_get : t -> bool * (Hstring.t * (Hstring.t * Hstring.t) list)
 
     val declared_types : unit -> t list
 
@@ -104,8 +106,6 @@ module type S = sig
 
     val declared : t -> bool
   (** [declared x] is [true] if [x] is already declared. *)
-
-    val rec_compare : t -> Ty.t
 
   end
 

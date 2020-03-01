@@ -24,7 +24,6 @@ type sort =
   | Glob (** global variable *)
   | Constr (** constructor *)
   | Var (** variable of the paramterized domain *)
-  | Record
 
 (** constant: it can be an integer, a real or a constant name *)
 type const =
@@ -55,6 +54,14 @@ module VMap : Map.S with type key = Var.t
 type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
 type poly = cst VMap.t * cst
 
+type binop =
+  | Addition
+  | Subtraction
+  | Multiplication
+
+type op =
+  | UMinus
+
 (** the type of terms *)
 type term =
   | Const of int MConst.t
@@ -65,8 +72,16 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-(*  | NArith of cst VMap.t * cst*)
-  | Record of term  * Variable.t list * sort 
+  (*  | NArith of cst VMap.t * cst*)
+  | BinOp of term * binop * term
+  | UnOp of op * term
+  | RecordWith of term  * (Hstring.t * term) list
+  (** record type with field values: { R with field1 = ...; field2 = ...} *)
+  | RecordField of term * Hstring.t
+  (** record field access: R.field1  *)
+  | Record of (Hstring.t * term) list
+(** record field values: {field1 = ...; field2 = ...} *)
+
 
 			   
 (** Module interface for terms *)
