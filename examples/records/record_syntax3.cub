@@ -26,7 +26,8 @@ Y[i] := -((5 + R.field1) * 8);
 Ar[i] := { R with field2 = True };
 Y1[i] := { R with field1 = 1; field2 = False };
 R := { field2 = True; field1 = 2 };
-Ar2[i] := {a = {field3 = A; field4 = True}; b = True}; 
+Ar2[i] := {a = {field3 = A; field4 = True}; b = True};
+K := Ar2[i].a.field4;
 
 
 }
