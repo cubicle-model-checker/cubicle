@@ -181,6 +181,16 @@ module Term = struct
 
   type t = term
 
+  let rec compare_term_list t1 t2 =
+    match t1,t2 with
+      |[],[] -> 0
+      |[], _ -> -1
+      | _, [] -> 1
+      | hd::tl, hd1::tl1 ->
+	let c = compare hd hd1 in
+	if c<>0 then c else compare_term_list tl tl1
+    
+
 
   let rec compare t1 t2 =
     match t1, t2 with
@@ -215,20 +225,61 @@ module Term = struct
        if c <> 0 then c else Hstring.compare lab1 lab2
 
     | RecordField (_, _), _ -> -1
-    | _, RecordField (_, _), _ -> 1
+    | _, RecordField (_, _) -> 1
+
+    | RecordWith (t1, l1), RecordWith (t2,l2) ->
+      let c = compare t1 t2 in
+      if c <> 0 then c else begin
+	let l1 = List.rev l1 in
+	let l2 = List.rev l2 in 
+	let sl1, sl2, tl1, tl2 = List.fold_left2 (fun (sl1,sl2,tl1,tl2) (s1,t1) (s2,t2) ->
+	s1::sl1, s2::sl2,t1::tl2,t2::tl2) ([],[],[],[]) l1 l2 in
+	let c = Hstring.compare_list sl1 sl2 in
+	if c <> 0 then c else compare_term_list tl1 tl2
+      end
                        
-    | Record _, RecordField (_, _) -> assert false
-    | Record _, Record _ -> assert false
-    | Record _, RecordWith (_, _) -> assert false
-    | RecordField _, RecordField _ -> assert false
-    | RecordField _, Record _ -> assert false
-    | RecordField _ , RecordWith _ -> assert false
-    | RecordField _, Arith _ -> assert false
-    | RecordWith _ , Record _ -> assert false
-    | RecordWith _ , RecordField _ -> assert false
-    | RecordWith _ , RecordWith _ -> assert false
-    | RecordWith _ , Arith _ -> assert false
-    | _ -> assert false
+    | RecordWith _, _ -> -1 
+    | _ , RecordWith _ -> 1
+
+
+    |Record l1, Record l2 ->
+      let l1 = List.rev l1 in
+      let l2 = List.rev l2 in 
+      let sl1, sl2, tl1, tl2 = List.fold_left2 (fun (sl1,sl2,tl1,tl2) (s1,t1) (s2,t2) ->
+	s1::sl1, s2::sl2,t1::tl2,t2::tl2) ([],[],[],[]) l1 l2 in
+      let c = Hstring.compare_list sl1 sl2 in
+      if c <> 0 then c else compare_term_list tl1 tl2
+      
+
+    | Record _, _ -> -1
+    | _ , Record _-> 1
+
+    | UnOp (_, t1), UnOp(_,t2) ->
+      compare t1 t2
+    | UnOp _, _ -> -1
+    | _, UnOp _ -> 1
+
+    | BinOp(t1,op1,t2), BinOp(t3,op2,t4) ->
+      let c = compare t1 t3 in
+      if c<>0 then c else
+        begin
+	  let c = compare t2 t4 in
+	  if c<>0 then c else
+	    (let comp_op = function
+	      | Multiplication, Multiplication -> 0
+	      | Multiplication, _ -> 1
+	      | _, Multiplication -> -1
+	      | Addition, Addition -> 0
+	      | Addition, _ -> 1
+	      | _, Addition -> -1
+	      | Subtraction, Subtraction -> 0
+	     in comp_op (op1,op2))
+	end
+	  
+  (*  | BinOp _, _ -> -1
+    | _ , BinOp _ -> 1*)
+	
+
 
       
   (*| Arith (_, _), Record (_, _, _) -> assert false
@@ -282,7 +333,9 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
-    | Record _ -> assert false (* todo *)
+    | Record l -> assert false
+    | RecordWith (t, _) -> type_of t
+    | RecordField (t, _) -> type_of t
 
 
 
