@@ -184,26 +184,39 @@ module Term = struct
 
   let rec compare t1 t2 =
     match t1, t2 with
-    | Const c1, Const c2 -> (*Printf.printf "Compare1 \n%!" ;*)compare_constants c1 c2
-    | Const _, _ -> (*Printf.printf "Compare2 \n%!";*)-1
-    | _, Const _ -> (*Printf.printf "Compare3 \n%!";*)1
-    | Elem (e, (Constr | Var)), Elem (e1, Glob) -> (*Printf.printf "Compare4 : %s and %s \n%!" (Hstring.view e) (Hstring.view e1);*)-1
-    | Elem (e, Glob), Elem (e1, (Constr | Var)) -> (*Printf.printf "Compare5 : %s %s\n%!" (Hstring.view e) (Hstring.view e1);*)1
-    | Elem (s1, _), Elem (s2, _) ->  (*Printf.printf "Compar6: %s and %s and %d\n%!" (Hstring.view s1) (Hstring.view s2) (Hstring.compare s1 s2);*)Hstring.compare s1 s2
-    | Elem (e,_), _ -> (*Printf.printf "Compare7: %s \n%!" (Hstring.view e);*)-1
-    | _, Elem _ -> (*Printf.printf "Compare8 \n%!";*)1
-    | Access (a1, l1), Access (a2, l2) -> (*Printf.printf "Compare9 \n%!";*)
+    | Const c1, Const c2 -> compare_constants c1 c2
+                          
+    | Const _, _ -> -1
+    | _, Const _ -> 1
+                  
+    | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
+    | Elem (e, Glob), Elem (e1, (Constr | Var)) -> 1
+    | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
+                                  
+    | Elem (e,_), _ -> -1
+    | _, Elem _ -> 1
+                 
+    | Access (a1, l1), Access (a2, l2) ->
        let c = Hstring.compare a1 a2 in
        if c<>0 then c else Hstring.compare_list l1 l2
-    | Access _, _ -> (*Printf.printf "Compare10 \n%!";*)-1
-    | _, Access _ -> (*Printf.printf "Compare11 \n%!";*)1 
-    | Arith (t1, cs1), Arith (t2, cs2) -> (*Printf.printf "Compare112 \n%!";*)
+       
+    | Access _, _ -> -1
+    | _, Access _ -> 1
+                                                      
+    | Arith (t1, cs1), Arith (t2, cs2) -> 
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
-    | Arith (_, _), RecordWith (_, _) -> assert false
-    | Arith (_, _), Record _ -> assert false
-    | Arith (_, _), RecordField (_, _) -> assert false
-    | Record _,Arith (_, _) -> assert false
+       
+    | Arith (_, _), _ -> -1
+    | _, Arith (_, _) -> 1
+
+    | RecordField (t1, lab1), RecordField (t2, lab2) ->
+       let c = compare t1 t2 in
+       if c <> 0 then c else Hstring.compare lab1 lab2
+
+    | RecordField (_, _), _ -> -1
+    | _, RecordField (_, _), _ -> 1
+                       
     | Record _, RecordField (_, _) -> assert false
     | Record _, Record _ -> assert false
     | Record _, RecordWith (_, _) -> assert false
