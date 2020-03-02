@@ -25,9 +25,6 @@ requires { R.field1 = 0 && Ar[i].field1 = R.field1 &&
 	  Ar2[i].a.field1 = 42
 }
 {
- Ar[i].field1 := R.field1;
- Ar[i].field2 := False;
-(* R := { field1 = 3; field2 = True};*)
  T := { T with field1 = 3; };
 }
  

@@ -350,17 +350,14 @@ switch:
   | expr COLON term { $1, TTerm $3 }
 ;
 
-constnum:
-  | REAL { ConstReal $1 }
-  | INT { ConstInt $1 }
-;
-
-
 term:
-  | constnum { Const (MConst.add $1 1 MConst.empty) }
+  | REAL { Const (MConst.add (ConstReal $1) 1 MConst.empty) }
+  | INT { Const (MConst.add (ConstInt $1) 1 MConst.empty) }
   | proc_name { Elem ($1, Var) }
-  | mident { let t = if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
-    else Elem ($1, sort $1) in  t}
+  | mident {
+	let t = if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
+		else Elem ($1, sort $1) in  t
+      }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ {  Access ($1, $3) }
   | MINUS term { UnOp(UMinus, $2) }
   | term PLUS term { BinOp($1, Addition, $3) }
