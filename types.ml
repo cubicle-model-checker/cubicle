@@ -232,8 +232,8 @@ module Term = struct
       if c <> 0 then c else begin
 	let l1 = List.rev l1 in
 	let l2 = List.rev l2 in 
-	let sl1, sl2, tl1, tl2 = List.fold_left2 (fun (sl1,sl2,tl1,tl2) (s1,t1) (s2,t2) ->
-	s1::sl1, s2::sl2,t1::tl2,t2::tl2) ([],[],[],[]) l1 l2 in
+	let sl1, tl1 = List.fold_left (fun (sl1,tl1) (s1,t1) -> s1::sl1, t1::tl1) ([],[]) l1 in
+	let sl2, tl2 = List.fold_left (fun (sl2,tl2) (s2,t2) -> s2::sl2, t2::tl2) ([],[]) l2 in
 	let c = Hstring.compare_list sl1 sl2 in
 	if c <> 0 then c else compare_term_list tl1 tl2
       end
@@ -245,8 +245,8 @@ module Term = struct
     |Record l1, Record l2 ->
       let l1 = List.rev l1 in
       let l2 = List.rev l2 in 
-      let sl1, sl2, tl1, tl2 = List.fold_left2 (fun (sl1,sl2,tl1,tl2) (s1,t1) (s2,t2) ->
-	s1::sl1, s2::sl2,t1::tl2,t2::tl2) ([],[],[],[]) l1 l2 in
+      	let sl1, tl1 = List.fold_left (fun (sl1,tl1) (s1,t1) -> s1::sl1, t1::tl1) ([],[]) l1 in
+	let sl2, tl2 = List.fold_left (fun (sl2,tl2) (s2,t2) -> s2::sl2, t2::tl2) ([],[]) l2 in
       let c = Hstring.compare_list sl1 sl2 in
       if c <> 0 then c else compare_term_list tl1 tl2
       
