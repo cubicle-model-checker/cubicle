@@ -106,7 +106,7 @@ let rec make_term = function
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
-  | UnOp (o,t) -> assert false
+  | UnOp (o,t) -> Format.eprintf "ici@."; assert false
   | BinOp (t1, op, t2) -> assert false 
   | Record htl -> let t = snd (List.hd htl) in make_term t
   | RecordWith (t, htl) -> assert false
