@@ -108,7 +108,7 @@ let rec make_term = function
       make_arith_cs cs tx
   | UnOp (o,t) -> assert false
   | BinOp (t1, op, t2) -> assert false 
-  | Record htl -> assert false
+  | Record htl -> let t = snd (List.hd htl) in make_term t
   | RecordWith (t, htl) -> assert false
   | RecordField (t, s) -> assert false
 
