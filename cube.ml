@@ -464,6 +464,11 @@ let rec add_arg args = function
         args ls
   | Arith (t, _) -> add_arg args t
   | Const _ -> args
+  | UnOp _ -> assert false
+  | BinOp _ -> assert false
+  | Record _ -> assert false
+  | RecordWith _ -> assert false
+  | RecordField _ -> assert false
 
 let args_of_atoms sa =
   let rec args_rec sa args =

@@ -336,6 +336,8 @@ module Term = struct
     | Record l -> assert false
     | RecordWith (t, _) -> type_of t
     | RecordField (t, _) -> type_of t
+    | UnOp _ -> assert false
+    | BinOp _ -> assert false
 
 
 
@@ -371,8 +373,12 @@ module Term = struct
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
-    | Record _ -> assert false (* todo *)
-
+   | UnOp _ -> assert false
+   | BinOp _ -> assert false
+   | Record _ -> assert false
+   | RecordWith _ -> assert false
+   | RecordField _ -> assert false
+    
 
 
 

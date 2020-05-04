@@ -103,7 +103,7 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 	 smt/ty.cmo smt/term.cmo smt/literal.cmo \
          smt/solver_types.cmo smt/explanation.cmo \
          smt/polynome.cmo smt/uf.cmo smt/use.cmo \
-	 smt/intervals.cmo smt/fm.cmo smt/arith.cmo smt/sum.cmo \
+	 smt/intervals.cmo smt/fm.cmo smt/records.cmo smt/arith.cmo smt/sum.cmo \
          smt/combine.cmo smt/cc.cmo smt/solver.cmo \
 	 smt/enumsolver_types.cmo smt/enumsolver.cmo smt/alt_ergo.cmo \
 	 smt/z3wrapper.cmo smt/smt.cmo

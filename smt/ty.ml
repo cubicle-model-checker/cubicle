@@ -15,6 +15,9 @@
 
 open Format
 
+type trecord = { name : Hstring.t;
+		 fv : (Hstring.t * Hstring.t) list}
+
 type t = 
   | Tint
   | Treal

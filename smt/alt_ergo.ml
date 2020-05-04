@@ -308,6 +308,7 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
+
   let is_int = Term.is_int
 
   let is_real = Term.is_real

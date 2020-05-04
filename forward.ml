@@ -77,6 +77,11 @@ let rec is_prime_term = function
   | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
+  | UnOp _ -> assert false
+  | BinOp _ -> assert false
+  | Record _ -> assert false
+  | RecordWith _ -> assert false
+  | RecordField _ -> assert false
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -383,6 +388,11 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
+  | UnOp _ -> assert false
+  | BinOp _ -> assert false
+  | Record _ -> assert false
+  | RecordWith _ -> assert false
+  | RecordField _ -> assert false
 
 let rec type_of_atom = function
   | True | False -> None

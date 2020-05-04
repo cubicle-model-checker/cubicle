@@ -106,6 +106,12 @@ let rec make_term = function
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
+  | UnOp (o,t) -> assert false
+  | BinOp (t1, op, t2) -> assert false 
+  | Record htl -> assert false
+  | RecordWith (t, htl) -> assert false
+  | RecordField (t, s) -> assert false
+
 
 let rec make_formula_set sa = 
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])

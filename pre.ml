@@ -127,23 +127,28 @@ let rec find_assign memo tr = function
   | Const i as a -> Single a
 
   | Arith (x, cs1) ->
-     begin
-       let t = find_assign memo tr x in
+    begin
+      let t = find_assign memo tr x in
        match t with
-       | Single (Const cs2) -> 
-	  let c = 
-	    Const (add_constants cs1 cs2)
-	  in
-	  Single c
-       | Single (Arith (y, cs2)) ->
+	 | Single (Const cs2) -> 
+	   let c = 
+	     Const (add_constants cs1 cs2)
+	   in
+	   Single c
+	 | Single (Arith (y, cs2)) ->
 	  Single (Arith (y, add_constants cs1 cs2))
-       | Single y -> Single (Arith (y, cs1))
-       | Branch up_swts ->
-	  Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
-		           up_swts)
-     end
+	 | Single y -> Single (Arith (y, cs1))
+	 | Branch up_swts ->
+	   Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
+		     up_swts)
+    end
+  | UnOp _ -> assert false
+  | BinOp _ -> assert false
+  | Record _ -> assert false
+  | RecordWith _ -> assert false
+  | RecordField _ ->assert false
   | Access (a, li) -> 
-     let nli = li in
+    let nli = li in
      (* List.map (fun i -> *)
      (*   if H.list_mem i tr.tr_nondets then  *)
      (*     (assert false; *)
@@ -156,13 +161,16 @@ let rec find_assign memo tr = function
      (* ) li in *)
      try find_update a nli tr.tr_upds
      with Not_found -> Single (Access (a, nli))
-			      (* let na =  *)
-			      (*   try (match H.list_assoc a tr.tr_assigns with *)
-			      (* 	 | Elem (na, _) -> na *)
-			      (* 	 | Const _ | Arith _ | Access _ -> assert false) *)
-			      (*   with Not_found -> a *)
-			      (* in *)
-			      (* Single (Access (na, nli)) *)
+       
+(* let na =  *)
+(*   try (match H.list_assoc a tr.tr_assigns with *)
+(* 	 | Elem (na, _) -> na *)
+(* 	 | Const _ | Arith _ | Access _ -> assert false) *)
+(*   with Not_found -> a *)
+(* in *)
+(* Single (Access (na, nli)) *)
+
+
 				
 let make_tau tr =
   let memo = ref [] in

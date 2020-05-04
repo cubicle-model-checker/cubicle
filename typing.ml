@@ -120,8 +120,12 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
-      | Record _ -> assert false (* todo *)
-		
+      | UnOp _ -> assert false
+      | BinOp _ -> assert false
+      | Record _ -> assert false
+      | RecordWith _ -> assert false
+      | RecordField _ -> assert false
+	
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -270,7 +274,8 @@ let rec term loc args = function
     in
     let record = find_record f1 r in
     let _, (name,list) = Smt.Type.rec_get record in
-    if (List.length l) <> (List.length list) then error (MissingFields name) loc;
+    (*if (List.length l) <> (List.length list) then error (MissingFields name) loc;
+     *)
     List.iter (fun (x, y) ->
       if Hstring.list_mem x !vf then error (DuplicateAssign x) loc;
 	  let b' = 
