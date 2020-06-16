@@ -366,7 +366,7 @@ term:
   | LEFTPAR term RIGHTPAR { $2 }
   | LEFTBR term WITH field_list RIGHTBR { RecordWith($2, $4) }
   | term DOT lident { RecordField($1, $3) }
-  | LEFTBR field_list RIGHTBR {Record($2) }
+  | LEFTBR field_list RIGHTBR { Record($2) }
 
 ;
 

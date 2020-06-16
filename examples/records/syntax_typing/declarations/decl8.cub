@@ -1,0 +1,16 @@
+(* Declare multiple record types with fields of different names, different typesDeclare arrays of record  
+
+*)
+
+type t = A | B | C | D
+
+type r = {field1: int; field2: t}
+type r1 = {field3: t; field4: bool}
+type r3 = {field5: int; field6: bool; field7: proc}
+
+var X : int
+
+array R[proc] : r
+array R1[proc, proc] : r3
+
+init ()  {X = 1}

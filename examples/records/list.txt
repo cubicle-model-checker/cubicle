@@ -1,0 +1,69 @@
+Stuff to test:
+
+Syntax/Typing:
+
+Declaration:
+
+Should pass:
+- declaring record type with fields of different names, different types
+- declaring record type with fields of different names, same type
+- declaring record type with one field
+- declaring multiple record types with different type names / field
+names
+- declaring record types where field of lower-declared record can be
+type higher-declared record (I think that's a thing)
+- declaring a record type with user-defined types for fields
+- declaring a record type with built-in types for fields
+- declaring variables of record types
+- declaring arrays proc -> record [or proc,proc -> record]
+
+Should fail:
+- declaring one record type with fields of same name
+- declaring mutliple record types with same type name
+- declaring multiple record types with same type name and with fields
+of same names
+- declaring mutliple record types with different type name but with
+one field same name
+-- redone several times in different order
+- declaring record type with field that has an undeclared type
+- declaring record type with field that has a type declared lower
+- declaring record type with a field that is that same record type
+- declaring record type with capital letters
+-- for type, fields, field types
+
+Init / Unsafe:
+
+Should pass:
+----assuming types fit----
+- init full record as variable = { all field declarations }
+- init partial record as variable = { some field declarations }
+- init one field as variable.field = value
+-- redo w/ & w/o proc arrays
+-- redo w/ & w/o proc as variable but no array 
+--- init, init(i) no array, init(i) w/ array, unsafe, unsafe(i) no
+array, unsafe (i) w/ array
+--- multiple procs
+
+Should fail:
+- init full record with one field of incorrect type
+- init partial record with one field of incorrect type
+- init one field with incorrect type
+-- redo w/ & w/o proc arrays
+-- redo w/ & w/o proc as variable but no array 
+---init, init(i) no array, init(i) w/ array, unsafe, unsafe(i) no
+array, unsafe (i) w/ array
+--- multiple procs
+
+Transitions :
+Should pass: 
+----assuming correct types----
+W/o proc:
+Requires:
+- Record.field = something
+- Record = { all fields }
+- Record = { some fields }
+- Record = Other record of same type
+- Record.field = OtherRecord.field
+-- Record and OtherRecord same type
+-- Record and OtherRecord different types, same field types
+- 

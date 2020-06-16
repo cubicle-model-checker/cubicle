@@ -1,0 +1,17 @@
+(* Should return unsafe init -> unsafe *)
+
+type t = A | B | C | D
+type r = {f: int; u: t}
+type k = { g: int; e: int}
+type j = { v: int; b: r}
+type et = L | V
+var X : int
+var T : k
+var Y : r
+var Z: int
+var H : j
+
+array R[proc] : k
+
+init (i) {  X = 2 && Z = 2   && Y = { f = 4; u = C} }
+unsafe(i) { R[i] = { g = 5; e = 7} }

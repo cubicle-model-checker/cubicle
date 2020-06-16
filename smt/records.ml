@@ -11,6 +11,8 @@ type 'a abstract =
   | Access of Hstring.t * 'a abstract * Ty.t
   | Other of 'a * Ty.t 
 
+
+
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
@@ -81,6 +83,7 @@ module Make (X : ALIEN) = struct
       |(_, x1)::tl1, (_, x2)::tl2 ->
 	let c = raw_compare x1 x2 in
 	if c <> 0 then c else raw_compare_list tl1 tl2
+	  
 
 	  
   let rec normalize v =
@@ -116,10 +119,61 @@ module Make (X : ALIEN) = struct
 	
   let compare t u = raw_compare (normalize t) (normalize u)
 
+
   (*let compare x y = compare_mine (embed x) (embed y)*)
 
- 
+  let rec subst_access x s e = 
+    match e with
+      | Record (lbs, ty) -> 
+	  Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
+      | Access (lb, e', _) when compare e e' = 0 -> 
+	Hstring.list_assoc lb s
+      | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
+      | Other _ -> e
 
+  let rec occurs x = function
+    | Record (lbs, _) -> 
+	List.exists (fun (_, v) -> occurs x v) lbs
+    | Access (_, v, _) -> occurs x v
+    | Other _ as v -> compare x v = 0
+    
+  let direct_args_of_labels x = List.exists (fun (_, y)-> compare x y = 0)
+
+      let fresh_string = 
+    let cpt = ref 0 in
+    fun () ->
+      incr cpt;
+      "!k" ^ (string_of_int !cpt)
+    
+  let fresh_name ty = 
+    T.make (Sy.name (Hstring.make (fresh_string()))) [] ty
+
+  let mk_fresh_record x info =
+    let ty = type_info x in
+    let lbs = match ty with Ty.Trecord (_,r) -> r | _ -> assert false in
+    let lbs = 
+      List.map 
+	(fun (lb, ty1) -> 
+	   match info with
+	     | Some (a, v) when Hstring.equal lb a -> lb, v
+	     | _ ->  let n = embed (X.term_embed (fresh_name ty)) in lb, n)
+	lbs
+    in
+    Record (lbs, ty), lbs
+
+        let rec find_list x = function
+    | [] -> raise Not_found
+    | (y, t) :: _ when compare x y = 0 -> t
+    | _ :: l -> find_list x l
+
+  let split l = 
+    let rec split_rec acc = function
+      | [] -> acc, []
+      | ((x, t) as v) :: l -> 
+	  try acc, (t, find_list x acc) :: l 
+	  with Not_found -> split_rec (v::acc) l
+    in
+    split_rec [] l
   let is_mine t =
     match normalize t with
       | Other(r, _) -> r
@@ -128,17 +182,114 @@ module Make (X : ALIEN) = struct
   let aux_solve x y =
        if List.mem x (X.leaves y) then raise Unsolvable;
 	[x,y]
+	
+  let rec solve_one u v =
+    if compare u v = 0 then [] else
+      match u, v with
+	| Access (a, x, _), v | v, Access (a, x, _) ->
+	    let nr, _ = mk_fresh_record x (Some(a,v)) in
+	    solve_one x nr
+
+	| Record (lbs1, _), Record (lbs2, _) ->
+	    let l = 
+	      List.fold_left2 
+		(fun l (_, x) (_, y) -> (solve_one x y)@l) [] lbs1 lbs2
+	    in 
+	    resolve l
+
+	| (Record (lbs, _) as w), (Other _ as x) ->
+	  if not (occurs x w) then [x, w]
+	    else if direct_args_of_labels x lbs then raise Exception.Unsolvable
+	    else 
+	      let nr, sigma = mk_fresh_record w None in
+	      let l = 
+		List.fold_left2
+		  (fun l (_, ai) (_, ei) -> 
+		     (solve_one ai (subst_access x sigma ei))@l) [] sigma lbs
+	      in
+	      (x, nr)::resolve l
+	| (Other _ as x), (Record (lbs, _) as w) ->
+	    if not (occurs x w) then [x, w]
+	    else if direct_args_of_labels x lbs then raise Exception.Unsolvable
+	    else 
+	      let nr, sigma = mk_fresh_record w None in
+	      let l = 
+		List.fold_left2
+		  (fun l (_, ai) (_, ei) -> 
+		     (solve_one ai (subst_access x sigma ei))@l) [] sigma lbs
+	      in
+	      (x, nr)::resolve l
+
+	| Other _, Other _ ->  [u, v]
+    
+	    
+  and resolve l =
+    let s, r = split l in
+    match r with [] -> s | (u, v) :: l -> resolve (s@(solve_one u v)@l)
+
+     
+
+  let solve r1 r2 = 
+    let r1 = normalize (embed r1) in
+    let r2 = normalize (embed r2) in
+    List.map (fun (x, y) -> is_mine x, is_mine y) (solve_one r1 r2)
+
+              
+  let orient_solved p v  = 
+    if List.mem p (X.leaves v) then raise Exception.Unsolvable;
+    [p,v]
       
-  let solve r1 r2  = 
+  let solve4 r1 r2  = 
     match embed r1, embed r2 with
-      | Record (l1, _), Record (l2, _) when l1 = l2 -> []
-      | Record (l1, _), Record (l2, _) -> assert false
-      | Other (a1, _), Other (a2, _) ->
-	if X.compare r1 r2 > 0  then [r1,r2] else [r2,r1]
-      | Other (a1, _), Record(l2, _) -> aux_solve r1 r2
-      | Record (l1, _), Other (a2, _) -> aux_solve r2 r1	
-      | Access _, _ -> assert false
-      |_, Access _ -> assert false
+      | Record (l1, _), Record (l2, _) ->
+        let eqs = 
+          List.fold_left2 
+            (fun eqs (a,b) (x,y) ->
+              assert (Hstring.compare a x = 0);
+              (is_mine y, is_mine b) :: eqs
+            )[] l1 l2
+        in
+        eqs
+          
+      | Other (a1,_), Other (a2,_)    ->   
+        if X.compare r1 r2 > 0 then [r1,r2] 
+        else [r2,r1]
+
+      | Other (a1,_), Record (l2, _)  ->  orient_solved r1 r2 
+      | Record (l1, _), Other (a2,_)  ->  orient_solved r2 r1 
+      | Access (a,b,c), v
+      | v, Access (a,b,c)  ->
+	let nr, _ = mk_fresh_record b (Some(a,v)) in
+	List.map (fun (x, y) -> is_mine x, is_mine y) (solve_one  nr b)
+	  
+      (*| _ , Access _ -> assert false*)
+     
+        
+  (*let orient_solved p v pb = 
+    if List.mem p (X.leaves v) then raise Exception.Unsolvable;
+    { pb with sbt = (p,v) :: pb.sbt }
+      
+  let solve r1 r2 pb = 
+    match embed r1, embed r2 with
+      | Record (l1, _), Record (l2, _) -> 
+        let eqs = 
+          List.fold_left2 
+            (fun eqs (a,b) (x,y) ->
+              assert (Hstring.compare a x = 0);
+              (is_mine y, is_mine b) :: eqs
+            )pb.eqs l1 l2
+        in
+        {pb with eqs=eqs}
+          
+      | Other (a1,_), Other (a2,_)    -> 
+        if X.compare r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
+        else { pb with sbt = (r2,r1)::pb.sbt }
+
+      | Other (a1,_), Record (l2, _)  -> orient_solved r1 r2 pb
+      | Record (l1, _), Other (a2,_)  -> orient_solved r2 r1 pb
+      | Access _ , _ -> assert false
+      | _ , Access _ -> assert false
+	*)
     
   let leaves t =
     let rec leaves t =
@@ -199,11 +350,26 @@ module Make (X : ALIEN) = struct
       end
       | None -> X.term_extract r
 
-  let make t = assert false
-   (* let rec make_rec t ctx = 
+  let make t =
+    let rec make_rec t ctx = 
       let { Term.f = f; xs = xs; ty = ty} = T.view t in
-      match f, ty with*)
-	(*| Symbols.Op (Symbols.Record), Ty.Trecord {Ty.lbs=lbs} ->
+      match f, ty with
+
+	| Symbols.Op (Symbols.Record), Ty.Trecord (_,lbs) ->
+	  assert (List.length xs = List.length lbs);
+	  let l, ctx = 
+	    List.fold_right2 
+	      (fun x (lb, _) (l, ctx) -> 
+		let r, ctx = make_rec x ctx in 
+                let tyr = type_info r in
+		let dlb = T.make (Symbols.Op (Symbols.Access lb)) [t] tyr in
+		let c = Literal.LT.make (Literal.Eq (dlb, dlb)) in
+		(lb, r)::l, c::ctx
+	      ) 
+	      xs lbs ([], ctx)
+	    in
+	     Record (l, ty), ctx
+(*	| Symbols.Op (Symbols.Record), Ty.Trecord {Ty.lbs=lbs} ->
 	  assert (List.length xs = List.length lbs);
 	  let l, ctx = 
 	    List.fold_right2 
@@ -217,7 +383,7 @@ module Make (X : ALIEN) = struct
 	      xs lbs ([], ctx)
 	  in
 	  Record (l, ty), ctx*)
-(*	| Symbols.Op (Symbols.Access a), _ ->
+	| Symbols.Op (Symbols.Access a), _ ->
 	  begin
 	    match xs with
 	      | [x] -> 
@@ -226,14 +392,14 @@ module Make (X : ALIEN) = struct
 	      | _ -> assert false
 	  end
 
-	| _, _ -> 
+	| _, _ ->
 	  let r, ctx' = X.make t in
 	  Other (r, ty), ctx'@ctx
     in
     let r, ctx = make_rec t [] in
     let is_m = is_mine r in
     is_m, ctx
-*)
+
   module Rel =
   struct
     type r = X.r

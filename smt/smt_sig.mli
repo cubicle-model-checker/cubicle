@@ -69,7 +69,7 @@ module type S = sig
     (** [constructors ty] returns the list of constructors of [ty] when type is
         an enumerated data-type, otherwise returns [[]].*)
 
-    val declare_record : Hstring.t -> ((Hstring.t * Hstring.t) list) -> unit
+    val declare_record : Hstring.t -> ((Hstring.t * t) list) -> unit
     (** declare_record r fields:types*)
 
     val records : unit -> (Hstring.t * (Hstring.t * Hstring.t) list) list
@@ -174,6 +174,10 @@ module type S = sig
 
     val make_arith : operator -> t -> t -> t
     (** [make_arith op t1 t2] creates the term [t1 <op> t2]. *)
+
+    val make_record : Hstring.t * (Hstring.t * Hstring.t) list-> t list  -> t
+
+    val make_field : Hstring.t -> t ->  Hstring.t * (Hstring.t * Hstring.t) list -> t
 
     val is_int : t -> bool
     (** [is_int x] is [true] if the term [x] has type int *)

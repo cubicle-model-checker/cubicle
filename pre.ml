@@ -144,9 +144,16 @@ let rec find_assign memo tr = function
     end
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | Record _ -> assert false
+  | Record htl -> Single (Record htl)
+    
   | RecordWith _ -> assert false
-  | RecordField _ ->assert false
+  | RecordField (t,x) ->  (match t with
+      |  (Record l) -> (*Single (Record l)*)let e = List.find (fun (x',_) -> Hstring.compare x x' = 0) l in
+		   				  Single (snd e)
+
+      |  (RecordField _) -> assert false
+      |  (Elem (f,r) as c) ->  find_assign memo tr c
+      | _ -> assert false)
   | Access (a, li) -> 
     let nli = li in
      (* List.map (fun i -> *)

@@ -104,7 +104,6 @@ module Type = struct
       if not (H.mem decl_types t) then raise (Error (UnknownType t));
       if H.mem decl_symbs n then raise (Error (DuplicateSymb n))
       else H.add decl_symbs n (Symbols.name n, [], t) (*todo*)
-
     ) l;
     H.add decl_types t (Ty.Trecord (t,l))
 
@@ -116,7 +115,7 @@ module Type = struct
 	| _ -> acc
     ) [] d
 
-  let rec_get t =
+  let rec_get t = 
     try let t1 = H.find decl_types t 
 	in
 	(match t1 with
@@ -124,7 +123,7 @@ module Type = struct
 	  | _ -> false, (Hstring.empty,[])
 	)
     with Not_found -> raise (Error (UnknownType t))
-
+      
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
@@ -142,7 +141,7 @@ module Symbol = struct
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
-  let type_of s = let _, args, ret = H.find decl_symbs s in args, ret
+  let type_of s = let _, args, ret = H.find decl_symbs s in  args, ret
 
   let declared s = 
     let res = H.mem decl_symbs s in
@@ -308,7 +307,12 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
+  let make_record (n,l) ls = Term.make (Symbols.Op Symbols.Record) ls (Ty.Trecord(n,l))
+    (*Trecord of name Hstring *  fields,types(Hstring*Hstring) list*)
 
+  let make_field f t (n,l) =    
+    Term.make (Symbols.Op (Symbols.Access (f))) [t] (Ty.Trecord (n,l))
+    
   let is_int = Term.is_int
 
   let is_real = Term.is_real

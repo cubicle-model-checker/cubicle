@@ -1,0 +1,10 @@
+(* Declare record type with field type of unknown*)
+
+
+type r = {field1: int; field2: int}
+type r1 = {field3: bool; field4: r1}
+
+var X: int
+
+init() { X = 3}
+

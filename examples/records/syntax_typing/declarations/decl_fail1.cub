@@ -1,0 +1,9 @@
+(*Declare type with same field names
+-> duplicate field name
+ *)
+
+type r = {field1 : int; field1: int}
+
+var X : int
+
+init ()  {X = 1}

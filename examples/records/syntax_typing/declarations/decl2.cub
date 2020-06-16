@@ -1,0 +1,9 @@
+(* Declare multiple record types with fields of different names, different built-in types  *)
+
+type r = {field1: int; field2: bool}
+type r1 = {field3: int; field4: bool}
+type r3 = {field5: int; field6: bool; field7: proc}
+
+var X : int
+
+init ()  {X = 1}

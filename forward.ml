@@ -79,9 +79,9 @@ let rec is_prime_term = function
   | Arith (x, _) -> is_prime_term x
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | Record _ -> assert false
+  | Record htl -> List.fold_left (fun acc (x,_) -> is_prime (Hstring.view x) && acc) true  htl
   | RecordWith _ -> assert false
-  | RecordField _ -> assert false
+  | RecordField (t,s) -> is_prime_term t
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -374,6 +374,23 @@ let rec gauss_prime_elim sa =
 
 module MH = Map.Make (Hstring)
 
+let type_rec (l,_) =
+  let r = Smt.Type.records () in
+    let rec find_record field1 li =
+      match li with
+      | [] -> assert false
+      | (r_name,r_list)::tl ->
+	let rec check2 = function
+	    | [] -> find_record field1 tl
+	    | (fn,ft)::ftl ->
+	      if (Hstring.equal field1 fn) then r_name
+	      else check2 ftl
+	  in check2 r_list
+    in
+
+    find_record l r
+  
+
 
 let rec type_of_term = function
   | Const m ->
@@ -390,9 +407,9 @@ let rec type_of_term = function
   | Arith (t, _) -> type_of_term t
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | Record _ -> assert false
+  | Record htl -> type_rec (List.hd htl)
   | RecordWith _ -> assert false
-  | RecordField _ -> assert false
+  | RecordField (t,s) -> snd (Smt.Symbol.type_of s)
 
 let rec type_of_atom = function
   | True | False -> None

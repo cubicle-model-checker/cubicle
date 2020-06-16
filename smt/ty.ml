@@ -40,7 +40,9 @@ let hash t =
 let equal t1 t2 = 
   match t1, t2 with
     | Tabstract s1, Tabstract s2 
-    | Tsum (s1, _), Tsum (s2, _) ->
+    | Tsum (s1, _), Tsum (s2, _)
+    | Trecord (s1, _), Trecord (s2, _) (*todo*)
+      ->
 	Hstring.equal s1 s2
     | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
     | _ -> false
@@ -53,6 +55,8 @@ let compare t1 t2 =
     | Tsum (s1, _), Tsum(s2, _) ->
 	Hstring.compare s1 s2
     | Tsum _, _ -> -1 | _ , Tsum _ -> 1
+    | Trecord (r1,_), Trecord(r2,_) -> Hstring.compare r1 r2
+    | Trecord _, _ -> -1 | _, Trecord _ -> 1
     | t1, t2 -> Pervasives.compare t1 t2
 
 let print fmt ty = 

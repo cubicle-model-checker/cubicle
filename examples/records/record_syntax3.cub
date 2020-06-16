@@ -16,8 +16,8 @@ array Ar2[proc] : rec3
 array Y[proc] : int
 array Y1[proc] : record
 
-init (i j) { Y[i] = 2 && X = 3 (*&& R.field1 = 3&& R = { field1 = 1; field2 = True }*) }
-unsafe (i)  { R = { field1 = 2; field2 = True}(*R.field1 = 2*)(* Y[i] = 100*)}
+init (i j) { Y[i] = 2 && X = 3 && R.field1 = 3(*&& R = { field1 = 1; field2 = True }*) }
+unsafe (i)  {R = { field1 = 2; field2 = True}(*R.field1 = 2*)(* Y[i] = 100*)}
 
 transition t(i j)
 (*requires { X = 1}*)

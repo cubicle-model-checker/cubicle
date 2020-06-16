@@ -25,6 +25,9 @@ type 'a result = {
   remove: ('a literal * Explanation.t) list;
 }
 
+type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
+
+
 module type RELATION = sig
   type t
   type r

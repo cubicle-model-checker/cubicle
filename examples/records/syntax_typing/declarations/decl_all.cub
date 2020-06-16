@@ -1,0 +1,16 @@
+(* All declare syntax *)
+
+type t = A | B | C | D
+
+type r = {field1: int; field2: t}
+type r1 = {field3: t; field4: bool}
+type r3 = {field5: int; field6: r1; field7: proc}
+
+var X : int
+var H : r3
+var K : r
+
+array R[proc] : r
+array R1[proc, proc] : r3
+
+init ()  {X = 1}

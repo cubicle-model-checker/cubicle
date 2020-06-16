@@ -1,0 +1,18 @@
+(* Should return safe *)
+(* the two v values are different *)
+
+type t = A | B | C | D
+type r = {f: int; u: t}
+type k = { g: int; e: int}
+type j = { v: int; b: r}
+type et = L | V
+var X : int
+var T : k
+var Y : r
+var Z: int
+var H : j
+
+array R[proc] : j
+
+init (i) { X = 3 && R[i] = { v = 2; b = {f = 2; u = C}} }
+unsafe(i) { R[i] = {v= 3; b = {f = 2; u = C}} }

@@ -1,0 +1,9 @@
+(* Declare record type with capital letters - type name *)
+
+
+type R = {field1: int; field2: t}
+
+var X: int
+
+init() { X = 3}
+

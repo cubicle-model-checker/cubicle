@@ -1,0 +1,7 @@
+type r = {a : int; b : int }
+
+var R : r
+
+init () { R = { a = 2; b = 3 } }
+
+unsafe () { R = {a = 2; b = 3}}

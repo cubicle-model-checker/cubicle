@@ -1,0 +1,10 @@
+(* Declare multiple record types with different type name, same field name, same field type*)
+
+
+type r = {field1: int; field2: int}
+type r1 = {field1: int; field4: bool}
+
+var X: int
+
+init() { X = 3}
+

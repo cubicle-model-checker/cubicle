@@ -77,6 +77,8 @@ module Term = struct
   let t_true = ()
   let t_false = ()
   let make_arith _ _ _ = unsupported ()
+  let make_record _ = unsupported ()
+  let make_field _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
 end

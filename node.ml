@@ -147,7 +147,12 @@ module Latex = struct
     | Access (a, li) ->
        fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print_term x print_cs cs
+      fprintf fmt "@[%a%a@]" print_term x print_cs cs
+    | UnOp _ -> assert false
+    | BinOp _ -> assert false
+    | Record _ -> assert false
+    | RecordWith _ -> assert false
+    | RecordField _ -> assert false
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

@@ -1,0 +1,7 @@
+(* Declare record type with fields of different names, different built-in types  *)
+
+type r = {field1: int; field2: bool}
+
+var X : int
+
+init ()  {X = 1}

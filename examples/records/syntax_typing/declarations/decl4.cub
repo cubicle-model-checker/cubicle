@@ -1,0 +1,7 @@
+(* Declare  record type with one field  *)
+
+type r = {field1: int;}
+
+var X : int
+
+init ()  {X = 1}
