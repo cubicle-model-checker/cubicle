@@ -16,8 +16,10 @@
 type error = 
   | DuplicateTypeName of Hstring.t
   | DuplicateSymb of Hstring.t
+  | DuplicateLabel of Hstring.t
   | UnknownType of Hstring.t
   | UnknownSymb of Hstring.t
+  | UnknownLabel of Hstring.t
 
 exception Error of error
 
@@ -38,13 +40,17 @@ module Type = struct
   let type_real = hfake
   let type_bool = hfake
   let type_proc = hfake
-  let declare _ _ = unsupported ()
+  let declare_enum _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
+  let compare_rec _ _ = unsupported ()
   let declare_record _ _ = unsupported () (*todo*)
-  let records _ = unsupported ()
-  let rec_get s = unsupported ()
+  let record_field_type _ = unsupported ()
+  let all_record_types _ = unsupported ()
+  let find_record _ = unsupported ()
+  let find_record_by_field _ = unsupported ()
+  let ty_to_hstring _ = unsupported ()
 
 end
 

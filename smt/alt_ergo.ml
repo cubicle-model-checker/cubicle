@@ -18,20 +18,26 @@ open Format
 type error = 
   | DuplicateTypeName of Hstring.t
   | DuplicateSymb of Hstring.t
+  | DuplicateLabel of Hstring.t
   | UnknownType of Hstring.t
   | UnknownSymb of Hstring.t
+  | UnknownLabel of Hstring.t 
 
 exception Error of error
 
 let report fmt = function
   | DuplicateTypeName s ->
-      fprintf fmt "duplicate type name for %a" Hstring.print s
+    fprintf fmt "duplicate type name for %a" Hstring.print s
   | DuplicateSymb e ->
-      fprintf fmt "duplicate name for %a" Hstring.print e
+    fprintf fmt "duplicate name for %a" Hstring.print e
+  | DuplicateLabel s ->
+    fprintf fmt "duplicate name for %a" Hstring.print s
   | UnknownType s ->
-      fprintf fmt "unknown type %a" Hstring.print s
+    fprintf fmt "unknown type %a" Hstring.print s
   | UnknownSymb s ->
-      fprintf fmt "unknown symbol %a" Hstring.print s
+    fprintf fmt "unknown symbol %a" Hstring.print s
+  | UnknownLabel s ->
+    fprintf fmt "unknown label %a" Hstring.print s 
 
 
 type check_strategy = Lazy | Eager
@@ -41,6 +47,7 @@ module HSet = Hstring.HSet
 
 let decl_types = H.create 17
 let decl_symbs = H.create 17
+let decl_labels = H.create 17
 
 let htrue = Hstring.make "True"
 let hfalse = Hstring.make "False"
@@ -76,7 +83,7 @@ module Type = struct
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
 
-  let declare t constrs = 
+  let declare_enum t constrs = 
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     match constrs with
       | [] -> 
@@ -98,31 +105,68 @@ module Type = struct
       | Ty.Tsum (_ , cstrs) -> cstrs
       | _ -> []
 
-  let declare_record t l =
-    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
-    List.iter (fun (n,t) ->
-      if not (H.mem decl_types t) then raise (Error (UnknownType t));
-      if H.mem decl_symbs n then raise (Error (DuplicateSymb n))
-      else H.add decl_symbs n (Symbols.name n, [], t) (*todo*)
-    ) l;
-    H.add decl_types t (Ty.Trecord (t,l))
+  let compare_rec (x,y) (x',y') =
+    Hstring.compare x x'
 
-  let records () =
+ 
+
+  let declare_record ty l =
+    if H.mem decl_types ty then raise (Error (DuplicateTypeName ty));
+    let new_list = List.fold_left (fun acc (f_n, f_ty) ->
+      if not (H.mem decl_types f_ty) then raise (Error (UnknownType f_ty));
+      if H.mem decl_labels f_n then raise (Error (DuplicateLabel f_n))
+      else H.add decl_labels f_n (ty, f_ty);
+      let fty_ty =
+	try H.find decl_types f_ty
+	with Not_found -> raise (Error(UnknownType f_ty))
+      in (f_n, fty_ty)::acc
+      
+    ) [] l in
+    
+    let l1 = List.sort compare_rec new_list  in
+    H.add decl_types ty (Ty.Trecord {name = ty; lbs = l1})
+
+  let all_record_types () =
     let d = H.to_seq_values decl_types in
     Seq.fold_left (fun acc v ->
       match v with
-	| Ty.Trecord (re,l) -> (re,l)::acc
+	| Ty.Trecord {name = re; lbs = l} -> (re,l)::acc
 	| _ -> acc
     ) [] d
 
-  let rec_get t = 
-    try let t1 = H.find decl_types t 
+  let record_field_type lbl =
+    try let _, fty = H.find decl_labels lbl
+	in fty
+    with Not_found -> raise (Error (UnknownLabel lbl))
+
+  let find_record_by_field lbl =
+    let rty,_ = H.find decl_labels lbl
 	in
-	(match t1 with
-	  | Ty.Trecord (re,l) -> true, (re,l)
+	try let r = H.find decl_types rty in
+	    match r with
+	      | Ty.Trecord {name = re; lbs = l} -> re,l
+	      | _ -> raise (Error (UnknownType rty))
+	with Not_found -> raise (Error (UnknownType rty))
+    (*with
+	Not_found -> raise (Error (UnknownLabel lbl))*)
+	      
+  let find_record t = 
+    try  H.find decl_types t 
+	
+	(*(match t1 with
+	  | Ty.Trecord {name = re; lbs = l} ->  (re,l)
 	  | _ -> false, (Hstring.empty,[])
-	)
+	)*)
     with Not_found -> raise (Error (UnknownType t))
+
+  let ty_to_hstring = function
+    | Ty.Tint -> Hstring.make "int"
+    | Ty.Treal -> Hstring.make "real"
+    | Ty.Tbool -> Hstring.make "bool"
+    | Ty.Tabstract a -> a
+    | Ty.Tsum (s, _) -> s
+    | Ty.Trecord {name = name; lbs = _ } -> name
+      
       
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
@@ -141,9 +185,12 @@ module Symbol = struct
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
-  let type_of s = let _, args, ret = H.find decl_symbs s in  args, ret
+  let type_of s = let _, args, ret = try H.find decl_symbs s with Not_found -> failwith "idiot" in  args, ret
+    
+  (*let type_of_field s = let _, args, ret = H.find decl_labels s in  args, ret*)
 
-  let declared s = 
+
+  let declared s =
     let res = H.mem decl_symbs s in
     if not res then begin 
       eprintf "Not declared : %a in@." Hstring.print s;
@@ -307,11 +354,11 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let make_record (n,l) ls = Term.make (Symbols.Op Symbols.Record) ls (Ty.Trecord(n,l))
+  let make_record (rec_name, rec_fields) lbs = Term.make (Symbols.Op Symbols.Record) lbs (Ty.Trecord {name = rec_name; lbs = rec_fields})
     (*Trecord of name Hstring *  fields,types(Hstring*Hstring) list*)
 
-  let make_field f t (n,l) =    
-    Term.make (Symbols.Op (Symbols.Access (f))) [t] (Ty.Trecord (n,l))
+  let make_field field term (rec_name, rec_fields)=    
+    Term.make (Symbols.Op (Symbols.Access (field))) [term] (Ty.Trecord {name = rec_name; lbs = rec_fields})
     
   let is_int = Term.is_int
 

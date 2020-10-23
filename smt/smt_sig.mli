@@ -23,8 +23,10 @@ module type S = sig
   type error =
     | DuplicateTypeName of Hstring.t (** raised when a type is already declared *)
     | DuplicateSymb of Hstring.t (** raised when a symbol is already declared *)
+    | DuplicateLabel of Hstring.t (** raised when a record field name already declared*)
     | UnknownType of Hstring.t (** raised when the given type is not declared *)
     | UnknownSymb of Hstring.t (** raised when the given symbol is not declared *)
+    | UnknownLabel of Hstring.t (** raised when a label doesn't exist*)
 
   exception Error of error
 
@@ -57,7 +59,7 @@ module type S = sig
 
     (** {3 Declaring new types } *)
 
-    val declare : Hstring.t -> Hstring.t list -> unit
+    val declare_enum : Hstring.t -> Hstring.t list -> unit
     (** {ul {- [declare n cstrs] declares a new enumerated data-type with
         name [n] and constructors [cstrs].}
         {- [declare n []] declares a new abstract type with name [n].}}*)
@@ -69,12 +71,20 @@ module type S = sig
     (** [constructors ty] returns the list of constructors of [ty] when type is
         an enumerated data-type, otherwise returns [[]].*)
 
+    val compare_rec : (Hstring.t * 'a) -> (Hstring.t * 'a) -> int
+
     val declare_record : Hstring.t -> ((Hstring.t * t) list) -> unit
     (** declare_record r fields:types*)
 
-    val records : unit -> (Hstring.t * (Hstring.t * Hstring.t) list) list
+    val record_field_type: Hstring.t -> t
+      
+    val all_record_types : unit -> (t * (Hstring.t * Ty.t) list) list
 
-    val rec_get : t -> bool * (Hstring.t * (Hstring.t * Hstring.t) list)
+    val find_record : t -> Ty.t
+
+    val find_record_by_field:  t -> (t * (Hstring.t * Ty.t) list)
+
+    val ty_to_hstring: Ty.t -> Hstring.t
 
     val declared_types : unit -> t list
 
@@ -175,9 +185,9 @@ module type S = sig
     val make_arith : operator -> t -> t -> t
     (** [make_arith op t1 t2] creates the term [t1 <op> t2]. *)
 
-    val make_record : Hstring.t * (Hstring.t * Hstring.t) list-> t list  -> t
+    val make_record : Hstring.t * (Hstring.t * Ty.t) list  -> t list  -> t
 
-    val make_field : Hstring.t -> t ->  Hstring.t * (Hstring.t * Hstring.t) list -> t
+    val make_field : Hstring.t -> t ->  Hstring.t * (Hstring.t * Ty.t) list -> t
 
     val is_int : t -> bool
     (** [is_int x] is [true] if the term [x] has type int *)

@@ -374,23 +374,6 @@ let rec gauss_prime_elim sa =
 
 module MH = Map.Make (Hstring)
 
-let type_rec (l,_) =
-  let r = Smt.Type.records () in
-    let rec find_record field1 li =
-      match li with
-      | [] -> assert false
-      | (r_name,r_list)::tl ->
-	let rec check2 = function
-	    | [] -> find_record field1 tl
-	    | (fn,ft)::ftl ->
-	      if (Hstring.equal field1 fn) then r_name
-	      else check2 ftl
-	  in check2 r_list
-    in
-
-    find_record l r
-  
-
 
 let rec type_of_term = function
   | Const m ->
@@ -407,9 +390,10 @@ let rec type_of_term = function
   | Arith (t, _) -> type_of_term t
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | Record htl -> type_rec (List.hd htl)
+  | Record htl -> let l = fst (List.hd htl) in
+		  fst (Smt.Type.find_record_by_field l)
   | RecordWith _ -> assert false
-  | RecordField (t,s) -> snd (Smt.Symbol.type_of s)
+  | RecordField (t,s) -> fst (Smt.Type.find_record_by_field s)
 
 let rec type_of_atom = function
   | True | False -> None

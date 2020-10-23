@@ -188,7 +188,9 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     | Smt.DuplicateTypeName h ->
        eprintf "Duplicate type name %a@." Hstring.print h
     | Smt.DuplicateSymb h ->
-       eprintf "Duplicate symbol %a@." Hstring.print h
+      eprintf "Duplicate symbol %a@." Hstring.print h
+    | Smt.DuplicateLabel h ->
+      eprintf "Duplicate record field name %a@." Hstring.print h
     | Smt.UnknownType h ->
        eprintf "Unknown type %a@." Hstring.print h
     | Smt.UnknownSymb h ->

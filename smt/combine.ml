@@ -60,8 +60,8 @@ struct
     let ty  = match v with
       | X5 x -> X5.type_info x
       | X1 x -> X1.type_info x
-      | Term t -> (Term.view t).Term.ty
       | X2 x -> X2.type_info x (*this*)
+      | Term t -> (Term.view t).Term.ty
     in 
     ty = Ty.Tint
       
@@ -265,7 +265,7 @@ struct
       else if !x1_active then X1.Rel.query env.r1 a
       else if !x5_active then X5.Rel.query env.r5 a
 	else No*)
-     match X1.Rel.query env.r1 a with
+     (*match X1.Rel.query env.r1 a with
 	| Yes _ as ans -> ans  
 	| No ->
 	  match X5.Rel.query env.r5 a with
@@ -273,7 +273,18 @@ struct
 	    | No ->
 	      match X2.Rel.query env.r2 a with
 		| Yes _ as ans -> ans
-		| No -> No 
+       | No -> No *)
+      if !x1_active && !x5_active && !x2_active then
+        match X5.Rel.query env.r5 a with
+	  | Yes _ as ans -> ans
+	  | No ->
+	    match X1.Rel.query env.r1 a with
+	      | Yes _ as ans -> ans
+	      | No -> X2.Rel.query env.r2 a 
+      else if !x1_active then X1.Rel.query env.r1 a
+      else if !x5_active then X5.Rel.query env.r5 a
+      else if !x2_active then X2.Rel.query env.r2 a 
+      else No
 
 
     let case_split env = 

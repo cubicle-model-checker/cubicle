@@ -98,9 +98,9 @@ type type_defs =
   | Records of (loc * record_type)
 
 type system = {
-  globals : (loc * Hstring.t * Smt.Type.t) list;
-  consts : (loc * Hstring.t * Smt.Type.t) list;
-  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
+  globals : (loc * Hstring.t * Hstring.t) list;
+  consts : (loc * Hstring.t * Hstring.t) list;
+  arrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
   (*type_defs : (loc * type_constructors) list;*)
   type_defs : type_defs list;
   init : loc * Variable.t list * dnf;

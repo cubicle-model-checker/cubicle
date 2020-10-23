@@ -60,6 +60,9 @@ let compare s1 s2 =  match s1, s2 with
   | Int i1, Int i2 -> Hstring.compare i1 i2
   | Int _, _ -> -1
   | _ ,Int _ -> 1
+  | Op(Access s1), Op(Access s2) -> Hstring.compare s1 s2
+  | Op(Access _), _ -> -1
+  | _, Op(Access _) -> 1
   | _  -> Pervasives.compare s1 s2
   
 let equal s1 s2 = compare s1 s2 = 0
@@ -68,6 +71,7 @@ let hash = function
   | Name (n,Ac) -> Hstring.hash n * 19 + 1
   | Name (n,_) -> Hstring.hash n * 19
   | Var n (*| Int n*) -> Hstring.hash n * 19 + 1
+  | Op (Access s) -> Hstring.hash s + 19
   | s -> Hashtbl.hash s
 	
 let to_string =  function
@@ -80,6 +84,8 @@ let to_string =  function
   | Op Mult -> "*"
   | Op Div -> "/"
   | Op Modulo -> "%"
+  | Op (Access s) -> "@Access_"^(Hstring.view s) 
+  | Op Record -> "@Record"
   | True -> "true"
   | False -> "false"
 
