@@ -98,24 +98,6 @@ let make_cs cs =
   let r = MConst.remove c cs in
   if MConst.is_empty r then mult_const t_c c i
   else make_arith_cs r (mult_const t_c c i)
-
-let make_record l =
-  let r = Smt.Type.records () in
-  let rec find_record field1 li =
-    match li with
-      | [] -> assert false
-      | (r_name,r_list)::tl ->
-	  let rec check2 = function
-	    | [] -> find_record field1 tl
-	    | (fn,ft)::ftl ->
-	      if (Hstring.equal field1 fn) then r_name
-	      else check2 ftl
-	  in check2 r_list
-  in
-  let record = find_record l r in
-  let _, nl = Smt.Type.rec_get record in
-  nl
-  (*T.make_record (name,list) ls*)
   
 	 
 let rec make_term = function
@@ -127,15 +109,15 @@ let rec make_term = function
       make_arith_cs cs tx
   | UnOp (o,t) -> Format.eprintf "ici@."; assert false
   | BinOp (t1, op, t2) -> Format.eprintf "ici@."; assert false
-  | Record lbs -> 
+  | Record lbs ->
+    let record = Smt.Type.find_record_by_field (fst (List.hd lbs)) in 
     let ls = List.map (fun (_,t) -> make_term t) lbs in
-		  let nl = make_record (fst (List.hd lbs)) 
-		  in T.make_record nl ls
+		   T.make_record record ls
   | RecordWith (t, htl) -> assert false
-  | RecordField (t, s) -> 
-    let t = make_term t in
-    let nl = make_record s in
-    T.make_field s t nl
+  | RecordField (record, field) -> 
+    let t_record = make_term record in
+    let re = Smt.Type.find_record_by_field field  in 
+    T.make_field field t_record re
 
 
 let rec make_formula_set sa = 
