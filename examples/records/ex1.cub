@@ -1,13 +1,15 @@
 type t = A | B | C | D
-type r = {f: int; u: t}
+type r = {f: int; u: t;}
+type r1 = {f1: int; u1: int; w: int; j: int; m: int;}
 type k = { g: int; e: int}
 type j = { v: int; b: r}
 type et = L | V
+
 var X : t
-var T : t
+var T : r
 var Y : r
 var Z: int
-var H : j
+var H : k
 
 array R[proc] : int
 (*init () {Y = {f = 2; u = A}}
@@ -15,23 +17,24 @@ array R[proc] : int
 unsafe() {Y = { f = 3; u = B}}
 *)
 
-init (i) {  T = C&&X = A && Z = 3 && R[i] = 8  && Y = { f = 4; u = B} }
+init (i) { X = A && Z = 3 && R[i] = 8 && Y = { f = 4; u = B} && H = { u1= 2; w =2 ; j =2; m =2;} }
 unsafe(i) { (*Y = { f = 3; u = B}*) (*R[i] = 3*)(* Z = 3 *)(*Y = {f=2; u=C}*)X = D}
-unsafe () {Z = 2}
+unsafe () {Y.f = 2}
 unsafe () {Y = { f = 3; u = C}}
 unsafe(i) { R[i] = 31 }
 
 
 transition t1 ()
-{ Y := { u = B; f = 5 }
+{ Y := { u = B; f = 2;  }
+ (*Y := { Y with u = 2} *)
 }
 transition t2 (i)
 requires {Z =31}
 {
-R[i] := {g= 6; e = 3}.e;
+R[i] := {g= 6; e = 31}.m;
 (*R[i] := H.v;*)
 Y := { u = C; f = 3};
- X := T ;
+ (*X := T ;*)
  Z := 21;
  
 (*Y := { f = 4; u = B};*)

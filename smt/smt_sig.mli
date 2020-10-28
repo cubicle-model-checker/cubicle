@@ -82,7 +82,9 @@ module type S = sig
 
     val find_record : t -> Ty.t
 
-    val find_record_by_field:  t -> (t * (Hstring.t * Ty.t) list)
+    val find_record_by_field:  t -> t * (Hstring.t * Hstring.t) list
+
+    val record_ty_by_field: t -> t * (Hstring.t * Ty.t) list
 
     val ty_to_hstring: Ty.t -> Hstring.t
 

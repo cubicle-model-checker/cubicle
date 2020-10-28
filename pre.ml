@@ -163,15 +163,13 @@ let rec find_assign memo tr = function
     
     
   | RecordWith _ -> assert false
-  | RecordField (t,x) -> let tt = find_assign memo tr t in assert false
+  | RecordField (t,x) -> let tt = find_assign memo tr t in 
+  (match tt with
+      |  (Single (Record l)) ->(* List.map (fun field, f_term -> if *) assert false
 
-  (*(match t with
-      |  (Record l) ->(*Single (Record l)*)let e = List.find (fun (x',_) -> Hstring.compare x x' = 0) l in
-		   				  Single (snd e)
-
-      |  (RecordField _) -> assert false
-      |  (Elem (f,r) as c) ->  find_assign memo tr c
-      | _ -> assert false)*)
+      |  Single (RecordField _) -> assert false
+      |  Single (Elem (f,r) as c) ->  failwith "na" (*find_assign memo tr c*)
+      | _ -> assert false)
   | Access (a, li) -> 
     let nli = li in
      (* List.map (fun i -> *)

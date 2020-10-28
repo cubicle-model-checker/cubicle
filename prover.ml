@@ -110,13 +110,13 @@ let rec make_term = function
   | UnOp (o,t) -> Format.eprintf "ici@."; assert false
   | BinOp (t1, op, t2) -> Format.eprintf "ici@."; assert false
   | Record lbs ->
-    let record = Smt.Type.find_record_by_field (fst (List.hd lbs)) in 
+    let record = Smt.Type.record_ty_by_field (fst (List.hd lbs)) in 
     let ls = List.map (fun (_,t) -> make_term t) lbs in
 		   T.make_record record ls
   | RecordWith (t, htl) -> assert false
   | RecordField (record, field) -> 
     let t_record = make_term record in
-    let re = Smt.Type.find_record_by_field field  in 
+    let re = Smt.Type.record_ty_by_field field  in 
     T.make_field field t_record re
 
 

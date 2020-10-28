@@ -50,6 +50,7 @@ module Type = struct
   let all_record_types _ = unsupported ()
   let find_record _ = unsupported ()
   let find_record_by_field _ = unsupported ()
+  let record_ty_by_field _ = unsupported ()
   let ty_to_hstring _ = unsupported ()
 
 end

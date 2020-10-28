@@ -115,17 +115,16 @@ module Type = struct
     let new_list = List.fold_left (fun acc (f_n, f_ty) ->
       if not (H.mem decl_types f_ty) then raise (Error (UnknownType f_ty));
       if H.mem decl_labels f_n then raise (Error (DuplicateLabel f_n))
-      else H.add decl_labels f_n (ty, f_ty);
+      else H.add decl_labels f_n (ty, f_ty, l);
       let fty_ty =
 	try H.find decl_types f_ty
 	with Not_found -> raise (Error(UnknownType f_ty))
       in (f_n, fty_ty)::acc
       
     ) [] l in
-    
-    let l1 = List.sort compare_rec new_list  in
+    let l1 = List.sort compare_rec new_list in
     H.add decl_types ty (Ty.Trecord {name = ty; lbs = l1})
-
+      
   let all_record_types () =
     let d = H.to_seq_values decl_types in
     Seq.fold_left (fun acc v ->
@@ -135,20 +134,29 @@ module Type = struct
     ) [] d
 
   let record_field_type lbl =
-    try let _, fty = H.find decl_labels lbl
+    try let _, fty, _ = H.find decl_labels lbl
 	in fty
     with Not_found -> raise (Error (UnknownLabel lbl))
 
-  let find_record_by_field lbl =
-    let rty,_ = H.find decl_labels lbl
-	in
+  let record_ty_by_field lbl =
+    let rty, _, fields= H.find decl_labels lbl
+    in
 	try let r = H.find decl_types rty in
 	    match r with
 	      | Ty.Trecord {name = re; lbs = l} -> re,l
 	      | _ -> raise (Error (UnknownType rty))
-	with Not_found -> raise (Error (UnknownType rty))
-    (*with
-	Not_found -> raise (Error (UnknownLabel lbl))*)
+	  with Not_found -> raise (Error (UnknownType rty))
+
+  let find_record_by_field lbl =
+    let rty, _, fields= H.find decl_labels lbl
+	in
+    rty, fields
+
+
+  let find_record_fields_by_field lbl =
+    let _, _, fields = H.find decl_labels lbl in
+    assert false
+    
 	      
   let find_record t = 
     try  H.find decl_types t 
