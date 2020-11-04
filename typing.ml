@@ -238,15 +238,16 @@ let rec term loc args = function
 
 
   | RecordField (t, s) ->
-    let _, fields =
+    let ty_term = term loc args t in
+    let therecord, fields =
       try Smt.Type.find_record_by_field s
       with
 	  Not_found -> error (UnknownName s) loc
     in
     let _,field_ty =
       try List.find (fun (x,_) -> x = s) fields
-      with Not_found -> error (UnknownName s) loc in 
-    (*unify loc ty_term ([], field_ty);*)
+      with Not_found -> error (UnknownName s) loc in
+    unify loc ty_term ([], therecord);
     [], field_ty
 
       

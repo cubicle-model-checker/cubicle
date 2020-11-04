@@ -103,7 +103,8 @@ let make_cs cs =
 let rec make_term = function
   | Elem (e, _) ->  T.make_app e []
   | Const cs -> make_cs cs 
-  | Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
+  | Access (a, li) -> 
+    T.make_app a (List.map (fun i -> T.make_app i []) li)
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
@@ -114,10 +115,23 @@ let rec make_term = function
     let ls = List.map (fun (_,t) -> make_term t) lbs in
 		   T.make_record record ls
   | RecordWith (t, htl) -> assert false
-  | RecordField (record, field) -> 
+  | RecordField (record, field) ->
+    Format.eprintf "First Prover RecField %s@." (Hstring.view field);
+    (match record with
+      | Record l -> List.iter (fun (x,y) -> Format.eprintf "Prover iter field: %s@." (Hstring.view x)) l
+      | RecordField (rn, f)  -> Format.eprintf "Prover iter RecField %s@." (Hstring.view f)
+      | Elem (e,_) ->  Format.eprintf "Prover iter Elem: %s@." (Hstring.view e)
+      | Access (a,li) -> Format.eprintf "LookyAccess: %s@." (Hstring.view a);
+     (List.iter (fun i -> Format.eprintf "LookylooAccess: %s@." (Hstring.view i)) li)
+      | _ -> assert false
+    );
     let t_record = make_term record in
-    let re = Smt.Type.record_ty_by_field field  in 
-    T.make_field field t_record re
+    let re = Smt.Type.record_ty_by_field field  in
+    let () = 
+      Format.eprintf "re: %s@." (Hstring.view (fst re)) in
+    let () = 
+    Format.eprintf "re field: %s@." (Hstring.view field) in 
+    T.make_field field t_record  re
 
 
 let rec make_formula_set sa = 

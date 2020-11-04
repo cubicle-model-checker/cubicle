@@ -146,30 +146,26 @@ let rec find_assign memo tr = function
   | BinOp _ -> assert false
   | Record htl -> 
     let l = List.fold_left (fun acc (field, term) -> let t = find_assign memo tr term in
-						     let t1 = 
+						     let t1 =
+						       begin 
 						     match t with
-						       | Single s ->(* Printf.printf "Sup\n%!";
-							 (match s with
-							   | Elem _ -> Printf.printf "Element %s\n%!" (Hstring.view field);
-							   | Const _ -> Printf.printf "Const %s \n%!" (Hstring.view field);
-							   | Arith _ -> Printf.printf "Arith %s \n%!" (Hstring.view field);
-							   | Record _ -> Printf.printf "Rec %s \n%!" (Hstring.view field););*)
-							 s
+						       | Single s -> s
 						       | _ -> assert false
-			    in 
+						       end 
+						     in 
 						     (field, t1)::acc) [] htl
-		    in Single (Record l)
+		    in Single (Record (List.rev l))
     (*let l = List.map (fun (field, ter) -> find_assign memo tr ter) htl in Single (Record l)*)
     
     
   | RecordWith _ -> assert false
-  | RecordField (t,x) -> let tt = find_assign memo tr t in 
-  (match tt with
-      |  (Single (Record l)) ->(* List.map (fun field, f_term -> if *) assert false
-
-      |  Single (RecordField _) -> assert false
-      |  Single (Elem (f,r) as c) ->  failwith "na" (*find_assign memo tr c*)
-      | _ -> assert false)
+  | RecordField (r,lbl) ->
+    let tt = find_assign memo tr r in 
+    begin
+      match tt with
+	|  Single s -> Single (RecordField(s,lbl))
+	| _ -> assert false
+    end 
   | Access (a, li) -> 
     let nli = li in
      (* List.map (fun i -> *)

@@ -94,14 +94,16 @@ module Make (X : ALIEN) = struct
 		  | (lb1, Access(lb2, y, _)) -> 
 		    Hstring.equal lb1 lb2 && raw_compare x y = 0
 		  | _ -> false) l 
-	      then x
-	      else Record (lbs_n, ty)
+	      then x 
+	      else  Record (lbs_n, ty) 
 	    | _ -> Record (lbs_n, ty)
 	end
-      | Access (a, x, ty) ->
+      | Access (a, x, ty) ->				
 	begin 
 	  match normalize x with 
-	    | Record (lbs, _) -> Hstring.list_assoc a lbs
+	    | Record (lbs, _) ->  Format.eprintf "The record in rec.ml %s@."(Hstring.view a);
+	      List.iter (fun (x,y) ->Format.eprintf "Record.ml %s field %s@." (Hstring.view a) (Hstring.view x)) lbs;
+	      (try Hstring.list_assoc a lbs with Not_found -> assert false)
 	    | x_n -> Access (a, x_n, ty)
 	end
       | Other _ -> v
@@ -311,7 +313,7 @@ module Make (X : ALIEN) = struct
       | Access _ , _ -> assert false
     | _ , Access _ -> assert false*)
 
-       let rec solve_one u v =
+  let rec solve_one u v =
     if compare_mine u v = 0 then [] else
       match u, v with
 	| Access (a, x, _), v | v, Access (a, x, _) ->

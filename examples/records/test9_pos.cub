@@ -1,0 +1,17 @@
+type t = {a : bool; b : bool }
+
+array X[proc] : t
+array Y[proc] : int
+var Z : int
+
+init (i) { X[i] = { a = True; b = True } && Z  =2   }
+
+
+unsafe (i) { X[i].a = False }
+(*unsafe(i) { Y[i] = 5 + 1 }*)
+
+
+transition t1(i)
+{
+X[i] := { a = False; b = True }
+}

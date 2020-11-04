@@ -373,11 +373,11 @@ module Term = struct
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
-   | UnOp _ -> assert false
-   | BinOp _ -> assert false
+   | UnOp _ -> ()
+   | BinOp _ -> ()
    | Record fl -> fprintf fmt "{"; List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print y) fl; fprintf fmt "}"
    | RecordWith (r,f) -> fprintf fmt "%a" print r
-   | RecordField _ -> assert false
+   | RecordField (r,f) -> fprintf fmt "%a.%a" print r Hstring.print f
     
 
 

@@ -440,6 +440,7 @@ let theory_propagate () =
 	(fun t (a,ex) ->
 	 let t,_,_ = Th.assume ~cs:full_model a ex t in t) 
       env.tenv !facts;
+    
     if full_model then expensive_theory_propagate ()
     else None
   with Exception.Inconsistent dep -> 
@@ -933,6 +934,7 @@ let add_clause ~cnumber atoms =
 
 let add_clauses cnf ~cnumber = 
   List.iter (add_clause ~cnumber) cnf;
+  Format.eprintf "#@."; 
   match theory_propagate () with
       None -> () | Some dep -> report_t_unsat dep
   

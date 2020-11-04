@@ -1,0 +1,12 @@
+type t = {a : bool; b : bool }
+
+array X[proc] : t
+
+init (i) { X[i] = {a = True; b = True}}
+
+unsafe (i) { X[i] = {a = True; b = True} }
+
+(*transition t1(i)
+{
+X[i] := { a = False; b = True }
+}*)

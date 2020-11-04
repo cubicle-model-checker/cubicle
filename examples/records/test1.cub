@@ -1,0 +1,13 @@
+type t = {a : bool; b : bool }
+
+var X : t
+
+init () { X = { a = True; b = True } }
+
+unsafe () { X.a = False }
+
+
+transition t1()
+{
+X := { a = False; b = True }
+}

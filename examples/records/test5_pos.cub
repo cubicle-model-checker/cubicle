@@ -1,0 +1,16 @@
+type t = {a : bool; b : bool }
+type t2 = {c : t; d : bool }
+
+
+var X : t
+var Y : t2
+
+init () { X = { a = True; b = True }  && Y = { c = X; d = True }}
+
+unsafe () { X.b = False }
+
+
+transition t1()
+{
+X := { a = False; b = True }
+}

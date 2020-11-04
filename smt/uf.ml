@@ -212,11 +212,15 @@ module Make ( R : Sig.X ) = struct
       let use_p = MapR.find p env.gamma in
       try 
 	let env, tch, neqs_to_up = SetR.fold 
-	  (fun r (env, touched, neqs_to_up) -> 
-	     let rr, ex = MapR.find r env.repr in
+	  (fun r (env, touched, neqs_to_up) ->
+	    
+	    let rr, ex =
+	      try MapR.find r env.repr
+	      with Not_found -> assert false
+	    in
 	     let nrr = R.subst p v rr in
 	     if R.equal rr nrr then env, touched, neqs_to_up
-	     else 
+	     else
 	       let ex  = Ex.union ex dep in
                let env = 
 		 {env with
@@ -225,9 +229,10 @@ module Make ( R : Sig.X ) = struct
 	       in
 	       env, (r, nrr, ex)::touched, SetRR.add (rr, nrr) neqs_to_up
 	  ) use_p (env, [], SetRR.empty) in
+
 	(* Correction : Do not update neqs twice for the same r *)
-	update_aux dep neqs_to_up env, tch 
-	
+	let toto = update_aux dep neqs_to_up env in
+	toto, tch	
       with Not_found -> assert false
 	  
     let apply_sigma eqs env tch ((p, v, dep) as sigma) = 

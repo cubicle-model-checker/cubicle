@@ -330,13 +330,24 @@ end
 module Term = struct
 
   type t = Term.t
-  type operator = Plus | Minus | Mult | Div | Modulo
+  type operator = Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t 
 
   let make_int i = Term.int (Num.string_of_num i)
 
   let make_real r = Term.real (Num.string_of_num r)
 
   let make_app s l =
+    List.iter (fun x ->
+      match (Term.view x).f with
+	  | True  -> Format.eprintf "True@."
+	  | False  -> Format.eprintf "False@."
+	  | Name (s,k)  -> Format.eprintf "Name %s@." (Hstring.view s)
+	  | Int _  -> Format.eprintf "Int@."
+	  | Real _ ->   Format.eprintf "Real@."
+	  | Op _   -> Format.eprintf "Op@."
+	  | Var _  -> Format.eprintf "Var@."
+    )l;
+    Format.eprintf "LOOK %s@." (Hstring.view s);
     try
       let (sb, _, nty) = H.find decl_symbs s in
       let ty = H.find decl_types nty in
@@ -354,6 +365,7 @@ module Term = struct
 	| Mult ->  Symbols.Mult
 	| Div -> Symbols.Div
 	| Modulo -> Symbols.Modulo
+	| _ -> assert false  (* added due to records *)
     in
     let ty = 
       if Term.is_int t1 && Term.is_int t2 then Ty.Tint
@@ -362,10 +374,12 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let make_record (rec_name, rec_fields) lbs = Term.make (Symbols.Op Symbols.Record) lbs (Ty.Trecord {name = rec_name; lbs = rec_fields})
+  let make_record (rec_name, rec_fields) terms =	     
+    Term.make (Symbols.Op Symbols.Record) terms (Ty.Trecord {name = rec_name; lbs = rec_fields})
     (*Trecord of name Hstring *  fields,types(Hstring*Hstring) list*)
 
-  let make_field field term (rec_name, rec_fields)=    
+  let make_field field term (rec_name, rec_fields)=
+
     Term.make (Symbols.Op (Symbols.Access (field))) [term] (Ty.Trecord {name = rec_name; lbs = rec_fields})
     
   let is_int = Term.is_int

@@ -173,6 +173,8 @@ module type S = sig
       | Mult (** [*] *) 
       | Div (** [/] *)
       | Modulo (** [mod] *)
+      | Record
+      | Access of Hstring.t
 
     val make_int : Num.num -> t
     (** [make_int n] creates an integer constant of value [n]. *)

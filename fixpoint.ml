@@ -332,7 +332,7 @@ end = struct
       ) nodes d
       
 
-  let check_fixpoint s visited =
+  let check_fixpoint s visited = 
     first_action s;
     let s_array = Node.array s in
     let unprioritize_cands = false in

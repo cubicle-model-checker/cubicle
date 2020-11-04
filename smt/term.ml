@@ -60,7 +60,7 @@ let rec print fmt t =
 	    false
 	  ) true lbs l);
 	  fprintf fmt "}";
-	| _ -> assert false
+	| _ -> () (*todo*)
       end
     | _, [] -> fprintf fmt "%a" Sy.print x
     | _, _ -> fprintf fmt "%a(%a)" Sy.print x print_list l

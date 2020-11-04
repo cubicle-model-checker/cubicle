@@ -77,7 +77,7 @@ end
   
 module Term = struct
   type t = unit
-  type operator = Plus | Minus | Mult | Div | Modulo
+  type operator = Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t
   let make_int _ = unsupported ()
   let make_real _ = unsupported ()
   let make_app _ _ = unsupported ()
