@@ -934,7 +934,6 @@ let add_clause ~cnumber atoms =
 
 let add_clauses cnf ~cnumber = 
   List.iter (add_clause ~cnumber) cnf;
-  Format.eprintf "#@."; 
   match theory_propagate () with
       None -> () | Some dep -> report_t_unsat dep
   

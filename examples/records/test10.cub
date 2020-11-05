@@ -6,11 +6,11 @@ var Y : int
 init (i) { Y = 0 && X[i] = { a = True; b = True }   }
 
 
-unsafe (i) { X[i].a = True && Y = 42  }
+unsafe (i) { X[i] = { a = False; b = True}  && Y = 42  }
 
 
 transition t1(i)
-requires {X[i].a = True}
+requires {X[i]  = { a =True; b = True}}
 {
 Y := 42;
 X[i] := { a = False; b = True }

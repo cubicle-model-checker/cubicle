@@ -191,7 +191,7 @@ module type S = sig
 
     val make_record : Hstring.t * (Hstring.t * Ty.t) list  -> t list  -> t
 
-    val make_field : Hstring.t -> t ->  Hstring.t * (Hstring.t * Ty.t) list -> t
+    val make_field : Hstring.t -> t ->  Ty.t -> t
 
     val is_int : t -> bool
     (** [is_int x] is [true] if the term [x] has type int *)

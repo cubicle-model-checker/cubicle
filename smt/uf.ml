@@ -215,8 +215,7 @@ module Make ( R : Sig.X ) = struct
 	  (fun r (env, touched, neqs_to_up) ->
 	    
 	    let rr, ex =
-	      try MapR.find r env.repr
-	      with Not_found -> assert false
+	       MapR.find r env.repr
 	    in
 	     let nrr = R.subst p v rr in
 	     if R.equal rr nrr then env, touched, neqs_to_up

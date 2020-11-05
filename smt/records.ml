@@ -98,12 +98,11 @@ module Make (X : ALIEN) = struct
 	      else  Record (lbs_n, ty) 
 	    | _ -> Record (lbs_n, ty)
 	end
-      | Access (a, x, ty) ->				
-	begin 
-	  match normalize x with 
-	    | Record (lbs, _) ->  Format.eprintf "The record in rec.ml %s@."(Hstring.view a);
-	      List.iter (fun (x,y) ->Format.eprintf "Record.ml %s field %s@." (Hstring.view a) (Hstring.view x)) lbs;
-	      (try Hstring.list_assoc a lbs with Not_found -> assert false)
+      | Access (a, x, ty) ->
+	let n = normalize x in 
+	begin
+	  match n with 
+	    | Record (lbs, _) ->  Hstring.list_assoc a lbs 
 	    | x_n -> Access (a, x_n, ty)
 	end
       | Other _ -> v
@@ -122,11 +121,12 @@ module Make (X : ALIEN) = struct
       | Other(r, _) -> r
       | x -> X.embed x
 
-  let type_info = function
+  let type_info t =
+    match t with 
     | Record (_, ty) | Access (_, _, ty) | Other (_, ty) -> ty
 
-  let make t = 
-    let rec make_rec t ctx = 
+  let make t =
+    let rec make_rec t ctx =
       let { T.f = f; xs = xs; ty = ty} = T.view t in
       match f, ty with
 	| Symbols.Op (Symbols.Record), Ty.Trecord {Ty.lbs=lbs} ->
@@ -223,7 +223,8 @@ module Make (X : ALIEN) = struct
       List.map 
 	(fun (lb, ty) -> 
 	  match info with
-	    | Some (a, v) when Hstring.equal lb a -> lb, v 
+	    | Some (a, v) when Hstring.equal lb a ->	      
+	      lb, v 
 	    | _ -> let n = embed (X.term_embed (fresh_name ty)) in lb, n)
 	lbs
     in
@@ -239,8 +240,9 @@ module Make (X : ALIEN) = struct
 
   let rec subst_access x s e = 
     match e with
-      | Record (lbs, ty) -> 
-	Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
+      | Record (lbs, ty) ->
+	  Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
+	 	    
       | Access (lb, e', _) when compare_mine x e' = 0 -> 
 	Hstring.list_assoc lb s
       | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
@@ -313,11 +315,11 @@ module Make (X : ALIEN) = struct
       | Access _ , _ -> assert false
     | _ , Access _ -> assert false*)
 
-  let rec solve_one u v =
+  let rec solve_one u v =    
     if compare_mine u v = 0 then [] else
       match u, v with
 	| Access (a, x, _), v | v, Access (a, x, _) ->
-	    let nr, _ = mk_fresh_record x (Some(a,v)) in
+	  let nr, _ = mk_fresh_record x (Some(a,v)) in
 	    solve_one x nr
 
 	| Record (lbs1, _), Record (lbs2, _) ->
@@ -346,7 +348,7 @@ module Make (X : ALIEN) = struct
     let s, r = split l in
     match r with [] -> s | (u, v) :: l -> resolve (s@(solve_one u v)@l)
 
-  let solve r1 r2 = 
+  let solve r1 r2 =
     let r1 = normalize (embed r1) in
     let r2 = normalize (embed r2) in
     List.map (fun (x, y) -> is_mine x, is_mine y) (solve_one r1 r2)

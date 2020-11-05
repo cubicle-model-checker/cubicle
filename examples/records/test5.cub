@@ -7,7 +7,7 @@ var Y : t2
 
 init () { X = { a = True; b = True }  && Y = { c = X; d = True }}
 
-unsafe () { (Y.c).a = True }
+unsafe () { (Y.c).a = False }
 
 
 transition t1()

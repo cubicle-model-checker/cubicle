@@ -247,7 +247,10 @@ let rec term loc args = function
     let _,field_ty =
       try List.find (fun (x,_) -> x = s) fields
       with Not_found -> error (UnknownName s) loc in
-    unify loc ty_term ([], therecord);
+
+    (*unify loc ty_term ([], therecord);*)
+   
+
     [], field_ty
 
       

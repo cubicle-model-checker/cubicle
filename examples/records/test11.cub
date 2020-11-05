@@ -1,0 +1,14 @@
+type t = {a : int; }
+
+var X : int
+
+init () {  X = 0    }
+
+
+unsafe () { { a = X } = {a = 42}  }
+
+
+transition t1()
+{
+X := case | _ : 43;
+}

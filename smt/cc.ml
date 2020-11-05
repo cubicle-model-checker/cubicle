@@ -343,7 +343,7 @@ module Make (X : Sig.X) = struct
           (fun (env, choices) (sa, _, ex) ->
             Print.assume_literal sa;
             match sa with
-              | A.Eq(r1, r2) -> Format.eprintf "ici@.";
+              | A.Eq(r1, r2) -> 
                 if !cc_active then
         	    let env, l = congruence_closure env r1 r2 ex in
         	    let env, choices = assume_literal env choices l in

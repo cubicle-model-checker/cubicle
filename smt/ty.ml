@@ -88,11 +88,14 @@ and compare_list l1 l2 = match l1, l2 with
     let c = compare x y in
     if c<>0 then c else compare_list ll1 ll2
 
-let print fmt ty = 
+let rec print fmt ty = 
   match ty with
     | Tint -> fprintf fmt "int"
     | Treal -> fprintf fmt "real"
     | Tbool -> fprintf fmt "bool"
     | Tabstract s -> fprintf fmt "%s" (Hstring.view s)
     | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)
-    | Trecord _ -> assert false (*fprintf fmt "%s" (Hstring.view r)*)
+    | Trecord {name = n; lbs = lbs} ->
+      fprintf fmt "record %a = { " Hstring.print n;
+      List.iter (fun (x,y) -> fprintf fmt "%a : %a" Hstring.print x print y) lbs;
+      fprintf fmt "}"

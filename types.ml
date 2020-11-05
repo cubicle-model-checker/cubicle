@@ -311,6 +311,11 @@ module Term = struct
                     (fun z ->
                      try Variable.subst sigma z with Not_found -> z) lz)
     | Arith (x, c) -> Arith (subst sigma x, c)
+
+    | RecordField (r, f) -> RecordField(subst sigma r, f)
+    | Record lbs -> Record (List.map (fun (l,v) -> l, subst sigma v ) lbs)
+    | RecordWith (t, lbs) -> RecordWith ( subst sigma t, List.map (fun (l,v) -> l, subst sigma v ) lbs) 
+
     | _ -> t
 
 
@@ -320,6 +325,14 @@ module Term = struct
        List.fold_left (fun acc x -> Variable.Set.add x acc)
                       Variable.Set.empty lx
     | Arith (t, _) -> variables t
+
+    | RecordField (r, _) -> variables r 
+    | Record lbs ->
+      List.fold_left (fun acc (_, v) -> let sv = variables v in Variable.Set.union sv acc) Variable.Set.empty lbs
+      
+    | RecordWith (t, lbs) ->
+      List.fold_left (fun acc (_, v) -> let sv = variables v in Variable.Set.union sv acc) (variables t) lbs
+      
     | _ -> Variable.Set.empty
 
 
@@ -333,9 +346,11 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
+      
     | Record l -> assert false
     | RecordWith (t, _) -> type_of t
     | RecordField (t, _) -> type_of t
+      
     | UnOp _ -> assert false
     | BinOp _ -> assert false
 

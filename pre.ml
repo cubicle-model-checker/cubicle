@@ -145,26 +145,41 @@ let rec find_assign memo tr = function
   | UnOp _ -> assert false
   | BinOp _ -> assert false
   | Record htl -> 
-    let l = List.fold_left (fun acc (field, term) -> let t = find_assign memo tr term in
-						     let t1 =
-						       begin 
-						     match t with
-						       | Single s -> s
-						       | _ -> assert false
-						       end 
-						     in 
-						     (field, t1)::acc) [] htl
-		    in Single (Record (List.rev l))
-    (*let l = List.map (fun (field, ter) -> find_assign memo tr ter) htl in Single (Record l)*)
-    
+    let l = List.map (fun (lbl, term) -> (lbl, find_assign memo tr term)) htl in
+    let l2 = List.fold_right (fun (lbl, x) acc ->
+      match x with
+	| Single s -> List.map (fun (saopt,l) -> saopt,(lbl,s)::l) acc
+	| Branch b ->
+	  List.fold_left (fun acc (sa, t) ->
+	    List.map (fun (saopt, l) ->
+	      match saopt with
+		| None -> Some sa, (lbl,t)::l
+		| Some sa' -> Some (SAtom.union sa sa'), (lbl,t)::l
+	    ) acc 
+	  )acc b
+    ) l [None,[]] 
+    in
+    let l3 = List.map (fun (saopt, l) -> saopt, Record l) l2
+    in
+    begin
+      match l3 with
+	| [] -> assert false
+	| [None, r] -> Single r
+	| _ ->
+	  Branch(List.map (fun (saopt, l) -> match saopt with
+	    | Some sa -> sa, l
+	    | None -> assert false) l3)
+	  
+    end 
     
   | RecordWith _ -> assert false
   | RecordField (r,lbl) ->
     let tt = find_assign memo tr r in 
     begin
       match tt with
-	|  Single s -> Single (RecordField(s,lbl))
-	| _ -> assert false
+	| Single s -> Single (RecordField(s,lbl))
+	| Branch b ->
+	  Branch (List.map (fun (x,y) -> x, RecordField(y, lbl)) b)
     end 
   | Access (a, li) -> 
     let nli = li in

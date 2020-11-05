@@ -193,10 +193,8 @@ module Symbol = struct
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret)
 
-  let type_of s = let _, args, ret = try H.find decl_symbs s with Not_found -> failwith "idiot" in  args, ret
+  let type_of s = let _, args, ret =  H.find decl_symbs s in  args, ret
     
-  (*let type_of_field s = let _, args, ret = H.find decl_labels s in  args, ret*)
-
 
   let declared s =
     let res = H.mem decl_symbs s in
@@ -337,17 +335,6 @@ module Term = struct
   let make_real r = Term.real (Num.string_of_num r)
 
   let make_app s l =
-    List.iter (fun x ->
-      match (Term.view x).f with
-	  | True  -> Format.eprintf "True@."
-	  | False  -> Format.eprintf "False@."
-	  | Name (s,k)  -> Format.eprintf "Name %s@." (Hstring.view s)
-	  | Int _  -> Format.eprintf "Int@."
-	  | Real _ ->   Format.eprintf "Real@."
-	  | Op _   -> Format.eprintf "Op@."
-	  | Var _  -> Format.eprintf "Var@."
-    )l;
-    Format.eprintf "LOOK %s@." (Hstring.view s);
     try
       let (sb, _, nty) = H.find decl_symbs s in
       let ty = H.find decl_types nty in
@@ -376,11 +363,9 @@ module Term = struct
 
   let make_record (rec_name, rec_fields) terms =	     
     Term.make (Symbols.Op Symbols.Record) terms (Ty.Trecord {name = rec_name; lbs = rec_fields})
-    (*Trecord of name Hstring *  fields,types(Hstring*Hstring) list*)
 
-  let make_field field term (rec_name, rec_fields)=
-
-    Term.make (Symbols.Op (Symbols.Access (field))) [term] (Ty.Trecord {name = rec_name; lbs = rec_fields})
+  let make_field field term ty_field=
+    Term.make (Symbols.Op (Symbols.Access (field))) [term] ty_field
     
   let is_int = Term.is_int
 
