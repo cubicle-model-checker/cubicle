@@ -283,13 +283,26 @@ assign_nondet_update:
 ;
 
 assignment:
-  | mident AFFECT term { Assign ($1, PUTerm $3) }
-  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
+  | mident AFFECT term
+    {
+      if Consts.mem $1 then raise Parsing.Parse_error;
+      Assign ($1, PUTerm $3)
+    }
+  | mident AFFECT CASE switchs
+    { Assign ($1, PUCase $4) }
 ;
 
 nondet:
-  | mident AFFECT DOT { Nondet $1 }
-  | mident AFFECT QMARK { Nondet $1 }
+  | mident AFFECT DOT
+    {
+      if Consts.mem $1 then raise Parsing.Parse_error;
+      Nondet $1
+    }
+  | mident AFFECT QMARK
+    {
+     if Consts.mem $1 then raise Parsing.Parse_error;
+      Nondet $1
+    }
 ;
 
 require:
@@ -363,7 +376,10 @@ arith_term:
   | var_or_array_term MINUS constnum 
       { Arith($1, MConst.add $3 (-1) MConst.empty) }
   | var_or_array_term PLUS mident 
-      { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+    {
+      if not (Consts.mem $3) then raise Parsing.Parse_error;
+      Arith($1, MConst.add (ConstName $3) 1 MConst.empty)
+    }
   | var_or_array_term PLUS INT TIMES mident
       { Arith($1, MConst.add (ConstName $5) (Num.int_of_num $3) MConst.empty) }
   | var_or_array_term PLUS mident TIMES INT
