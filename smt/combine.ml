@@ -94,10 +94,10 @@ struct
     
   let print fmt r = 
     match r with
-      | X5 t    -> fprintf fmt "%a" X5.print t
-      | X1 t    -> fprintf fmt "%a" X1.print t
-      | X2 t    -> fprintf fmt "%a" X2.print t 
-      | Term t  -> fprintf fmt "%a" Term.print t
+      | X5 t    -> fprintf fmt "X5 %a" X5.print t
+      | X1 t    -> fprintf fmt "X1 %a" X1.print t
+      | X2 t    -> fprintf fmt "X2 %a" X2.print t 
+      | Term t  -> fprintf fmt "Term %a" Term.print t
             
   let leaves r = 
     match r with 
@@ -153,7 +153,7 @@ struct
 	
   let partition tag = 
     List.partition 
-      (fun (u,t) -> 
+      (fun (u,t) ->
 	 (theory_num u = tag || unsolvable u) && 
 	   (theory_num t = tag || unsolvable t))
 
@@ -164,18 +164,18 @@ struct
 	 if cmp = 0 then solved else
 	   match a , b with
 	       (* both sides are empty *)
-	     | Term _ , Term _  -> 
+	     | Term _ , Term _  ->
 		 add_mr solved (unsolvable_values cmp  a b)
 		   
 	     (* only one side is empty *)
 	     | (a, b) 
                  when unsolvable a || unsolvable b ||  compare_tag a b = 0 ->
-		 let a,b = if unsolvable a then b,a else a,b in
+		   let a,b = if unsolvable a then b,a else a,b in
 		 let cp , sol = partition (theory_num a) (solvei  b a) in
 		 solve_list  (add_mr solved cp) sol
 		   
 	     (* both sides are not empty *)
-	     | a , b -> solve_theoryj  solved a b
+	     | a , b -> solve_theoryj solved a b
       ) solved l
 
   and unsolvable_values cmp a b =

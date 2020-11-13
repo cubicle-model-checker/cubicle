@@ -43,12 +43,6 @@ let view t = t
 let rec print fmt t = 
   let {f=x; xs=l; ty=ty} = view t in
   match x, l with
-    | Sy.Op op, [e1; e2] -> 
-      fprintf fmt "(%a %a %a)" print e1 Sy.print x print e2
-	
-    | Sy.Op (Sy.Access field), [e] ->
-      fprintf fmt "%a.%s" print e (Hstring.view field)
-
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
 	| Ty.Trecord {Ty.lbs=lbs} ->
@@ -62,6 +56,14 @@ let rec print fmt t =
 	  fprintf fmt "}";
 	| _ -> () (*todo*)
       end
+      
+    | Sy.Op op, [e1; e2] -> 
+      fprintf fmt "(%a %a %a)" print e1 Sy.print x print e2
+   
+    | Sy.Op (Sy.Access field), [e] ->
+      fprintf fmt "%a.%s" print e (Hstring.view field)
+
+
     | _, [] -> fprintf fmt "%a" Sy.print x
     | _, _ -> fprintf fmt "%a(%a)" Sy.print x print_list l
 

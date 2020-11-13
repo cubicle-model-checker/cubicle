@@ -102,7 +102,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     let hash = hash
   end
 
-  let make t = H.hashcons t
+  let make t =  H.hashcons t
   let view a = a.node
 
   let neg a = match view a with

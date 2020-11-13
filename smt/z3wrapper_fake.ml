@@ -88,6 +88,7 @@ module Term = struct
   let make_field _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
+  let print _ = unsupported ()
 end
 
 module Formula = struct

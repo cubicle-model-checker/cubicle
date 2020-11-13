@@ -50,7 +50,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
   let nb_remaining q post () = Q.length q, List.length !post
 
   let search ?(invariants=[]) ?(candidates=[]) system =
-    
+
     let visited = ref Cubetrie.empty in
     let candidates = ref candidates in
     let q = Q.create () in
@@ -61,7 +61,6 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     Q.push_list system.t_unsafe q;
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
               (invariants @ system.t_invs);
-
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
@@ -282,7 +281,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
 
    
   let search ?(invariants=[]) ?(candidates=[]) system =
-    
+
     let visited = ref Cubetrie.empty in
     let candidates = ref candidates in
     let q = Q.create () in

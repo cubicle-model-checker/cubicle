@@ -315,7 +315,7 @@ module Make (X : ALIEN) = struct
       | Access _ , _ -> assert false
     | _ , Access _ -> assert false*)
 
-  let rec solve_one u v =    
+  let rec solve_one u v =
     if compare_mine u v = 0 then [] else
       match u, v with
 	| Access (a, x, _), v | v, Access (a, x, _) ->

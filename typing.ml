@@ -161,32 +161,33 @@ let rec iter2 f l1 l2 acc =
     | ((a,_)::_,  []) -> raise (RecordSize a)
     | ([], (a,_)::_) -> a::acc
 
-let rec term loc args = function
+let rec term loc args t =
+  match t with 
   | Const cs -> 
       let c, _ = MConst.choose cs in
       (match c with
-	| ConstInt _ -> [], Smt.Type.type_int
-	| ConstReal _ -> [], Smt.Type.type_real
+	| ConstInt _ -> t, ([], Smt.Type.type_int)
+	| ConstReal _ -> t, ([], Smt.Type.type_real)
 	| ConstName x -> 
-	  try Smt.Symbol.type_of x 
+	  try t, Smt.Symbol.type_of x 
             with Not_found -> error (UnknownName x) loc)
   | Elem (e, Var) -> 
-      if Hstring.list_mem e args then [], Smt.Type.type_proc
+      if Hstring.list_mem e args then t,([], Smt.Type.type_proc)
       else begin 
-	  try Smt.Symbol.type_of e with Not_found ->
+	  try t, Smt.Symbol.type_of e with Not_found ->
 	    error (UnknownName e) loc
       end
-  | Elem (e, _) ->  Smt.Symbol.type_of e
+  | Elem (e, _) ->  t, Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
-	let args, tx = term loc args x in
+	let t, (args, tx) = term loc args x in
 	if not (Hstring.equal tx Smt.Type.type_int) 
 	  && not (Hstring.equal tx Smt.Type.type_real) then 
 	  error (MustBeNum x) loc;
-	args, tx
+	t, (args, tx)
       end
   | Access(a, li) -> 
-      let args_a, ty_a = 
+    let args_a, ty_a = 
 	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
         error (WrongNbArgs (a, List.length args_a)) loc
@@ -205,40 +206,29 @@ let rec term loc args = function
           if not (Hstring.equal ty_i Smt.Type.type_proc) then
 	    error (MustBeOfTypeProc i) loc;
 	) li;
-      [], ty_a
-  | RecordWith (t, l) -> (* { T with field1: int; field2: bool .... } *)
-    (*let vf = ref [] in
-    let args_t, te_t = term loc args t in
-    let b, (name, list) = Smt.Type.find_record te_t in
-    let orig_fields = List.length list in
-    (match b with
-      | false -> error (MustBeRecord te_t) loc
-      | true ->	
-	List.iter (fun (x, y) ->
-	  if Hstring.list_mem x !vf then error (DuplicateAssign x) loc;
-	  let b' = 
-	    List.fold_left ( fun acc (a,b) -> acc || (Hstring.equal a x)) false list
-	  in 
-	  if not b' then error (UnknownField (name, x)) loc
-	  else
-	    begin
-	      let ty_b = term loc args y in
-	      let ty_a = Smt.Symbol.type_of x in
-	      unify loc ty_b ty_a;
-	      vf := x::!vf;
-	    end
-	) l;
-	let p1,_ = loc in 
-	 if List.length !vf = orig_fields
-	      then printf "@{<b>@{<fg_cyan>Warning@}@} line %d: 'with' is useless \n@." p1.pos_lnum	
-    );
-      [], te_t*)
-  (*term loc args t*)
-    assert false
+      t,([], ty_a)
+  | RecordWith (rt, l) ->
+    let n_rt, ty_term = term loc args rt in
+    let lh = fst (List.hd l) in
+    let therecord, fields =
+      try Smt.Type.find_record_by_field lh
+      with
+	  Not_found -> error (UnknownName lh) loc
+    in
+    unify loc ty_term ([], therecord);
+    
+    if List.length fields = List.length l then
+      printf "@{<b>@{<fg_cyan>Warning@}@} line %d: the 'with' is useless \n@." (fst loc).pos_lnum;
+    
+    let comp = List.filter (fun (lbl,_) -> not (List.exists (fun (x,_) -> Hstring.compare lbl x = 0) l )) fields in
+    let n_comp = List.map (fun (lbl,_) -> lbl,RecordField(rt, lbl)) comp in
+    let n_fields = List.sort Smt.Type.compare_rec (l@n_comp) in
 
+    Record(n_fields), ([], therecord)
+    
 
-  | RecordField (t, s) ->
-    let ty_term = term loc args t in
+  | RecordField (r, s) ->
+    let r, ty_term = term loc args r in
     let therecord, fields =
       try Smt.Type.find_record_by_field s
       with
@@ -248,12 +238,10 @@ let rec term loc args = function
       try List.find (fun (x,_) -> x = s) fields
       with Not_found -> error (UnknownName s) loc in
 
-    (*unify loc ty_term ([], therecord);*)
-   
+    unify loc ty_term ([], therecord);
+    RecordField(r, s), ([], field_ty)
 
-    [], field_ty
-
-      
+     
   | Record l ->
     let field1,_  = List.hd l in
     let recty, recfields =
@@ -261,27 +249,31 @@ let rec term loc args = function
       with
 	  Not_found -> error (UnknownName field1  ) loc
     in
-    let ordered_rec = List.sort Smt.Type.compare_rec l in 
-    (*ordered_rec is the record the user is entering*)
+    let l = List.map (fun (field, f_term) ->
+      let t, _ = term loc args f_term in
+      field, t) l 
+    in
+    let l = List.sort Smt.Type.compare_rec l in
+    (*l is the record the user is entering*)
     (* rec1 is the record that exists in the thing *)
-     let missing_list =
+     let missing =
       try iter2 (
 	fun (field, f_term) (field1, field1_type) ->
-	  let ty_term = term loc args f_term in
+	  let t, ty_term = term loc args f_term in
 	  unify loc ty_term ([], field1_type); 
-      ) ordered_rec recfields []  
+      ) l recfields []  
       with RecordSize _ ->  error (ExpectedRecord) loc
-    in 
-    (match missing_list with
-      | [] -> [], recty
-      | _ -> error (MissingFields (recty,missing_list)) loc
+     in 	  
+    (match missing with
+      | [] -> Record l,([], recty)
+      | _ -> error (MissingFields (recty,missing)) loc
       )
    
   | BinOp (t1, op, t2) ->  
-    let tt1 = term loc args t1 in
-    let tt2 = term loc args t2 in
+    let t1,tt1 = term loc args t1 in
+    let t2,tt2 = term loc args t2 in
     unify loc tt1 tt2;
-    tt1
+    t, tt1
    (* begin
       match op with
 	| Addition -> assert false
@@ -289,9 +281,9 @@ let rec term loc args = function
 	| Multiplication -> assert false
     end *)
   | UnOp(op, t) -> 
-    let tt = term loc args t in
+    let t, tt = term loc args t in
     unify loc ([], Smt.Type.type_int) tt;
-    tt
+    t,tt
 
     
 let assignment ?(init_variant=false) g x (_, ty) = 
@@ -309,27 +301,33 @@ let assignment ?(init_variant=false) g x (_, ty) =
 	    Smt.Variant.assign_var n g
       | _ -> ()
 
-let atom loc init_variant args = function
-  | True | False -> ()
+let atom loc init_variant args a =
+  match a with 
+  | True | False -> a
   | Comp (Elem(g, Glob) as x, Eq, y)
   | Comp (y, Eq, (Elem(g, Glob) as x))
   | Comp (y, Eq, (Access(g, _) as x))
   | Comp (Access(g, _) as x, Eq, y) ->
-      let ty = term loc args y in
-      unify loc (term loc args x) ty;
-      if init_variant then assignment ~init_variant g y ty
-  | Comp (x, op, y) -> 
-      unify loc (term loc args x) (term loc args y)
+    let x', tx = term loc args x in
+    let y',ty = term loc args y in
+      unify loc tx ty;
+    if init_variant then assignment ~init_variant g y' ty ;
+    Comp(x', Eq, y')
+  | Comp (x, op, y) ->
+    let x', tx = term loc args x in
+    let y',ty = term loc args y in
+    unify loc tx ty;
+    Comp(x', op, y')
   | Ite _ -> assert false
 
 let atoms loc ?(init_variant=false) args =
-  SAtom.iter (atom loc init_variant args)
+  SAtom.map (atom loc init_variant args)
 
-let init (loc, args, lsa) = List.iter (atoms loc ~init_variant:true args) lsa
-
+let init (loc, args, lsa) = loc,args, List.map (atoms loc ~init_variant:true args) lsa
+ 
 let unsafe (loc, args, sa) = 
   unique (fun x-> error (DuplicateName x) loc) args; 
-  atoms loc args sa
+  (loc, args, atoms loc args sa)
 
 let nondets loc l = 
   unique (fun c -> error (DuplicateAssign c) loc) l;
@@ -345,76 +343,86 @@ let nondets loc l =
        with Not_found -> error (UnknownGlobal g) loc) l
 
 
-let assigns loc args = 
+let assigns args la = 
   let dv = ref [] in
-  List.iter 
-    (fun (g, gu, location) ->
+  List.map 
+    (fun (g, gu, loc) ->
        if Hstring.list_mem g !dv then error (DuplicateAssign g) loc;
        let ty_g = 
 	 try Smt.Symbol.type_of g
          with Not_found -> error (UnknownGlobal g) loc in
-       begin
+       let gu = 
          match gu with
-           | UTerm (x)->
-            let ty_x = term location args x in
-            unify location ty_x ty_g;
-            assignment g x ty_x;
-         | UCase (swts) ->
-            List.iter (fun (sa, x) ->
-              atoms location args sa;
-              let ty_x = term location args x in
-              unify location ty_x ty_g;
-              assignment g x ty_x;
-            ) swts
-       end;         
-       dv := g ::!dv) 
-
+           | UTerm x->
+             let tx, ty_x = term loc args x in
+             unify loc ty_x ty_g;
+             assignment g tx ty_x;
+	     UTerm tx
+           | UCase swts ->
+             let swts =
+	       List.map (fun (sa, t) ->
+		 let sa = atoms loc args sa in 
+		 let tx, ty_x = term loc args t in
+		 unify loc ty_x ty_g;
+		 assignment g tx ty_x;
+		 sa, tx
+               ) swts
+	     in UCase swts
+       in
+       dv := g ::!dv;
+    g,gu,loc) la
+    
 let switchs loc a args ty_e l = 
-  List.iter 
+  List.map 
     (fun (sa, t) -> 
-       atoms loc args sa; 
-       let ty = term loc args t in
+      let sa =  atoms loc args sa in
+       let tt,ty = term loc args t in
        unify loc ty ty_e;
-       assignment a t ty) l
+       assignment a tt ty;
+       sa, tt) l
 
 
-let updates args = 
+let updates args upds = 
   let dv = ref [] in
-  List.iter 
-    (fun {up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} -> 
+  List.map 
+    (fun ({up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} as upd) -> 
        if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
        List.iter (fun j -> 
-         if Hstring.list_mem j args then error (ClashParam j) loc) lj;
+         if Hstring.list_mem j args then error (ClashParam j)loc) lj;
        let args_a, ty_a = 
 	 try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc
        in       
        if args_a = [] then error (MustBeAnArray a) loc;
        dv := a ::!dv;
-       switchs loc a (lj @ args) ([], ty_a) swts) 
+       let up_swts = switchs loc a (lj @ args) ([], ty_a) swts in
+       {upd with up_swts}
+    ) upds 
+
     
-
-
-  
-
 let check_lets loc args l =
-  List.iter 
-    (fun (x, t) ->
-     let _ = term loc args t in ()
-    ) l
+  List.map 
+    (fun (x, t) ->  let tt,_ = term loc args t in x, tt) l
 	       
-let transitions = 
-  List.iter 
-    (fun ({tr_loc_args = args; tr_loc_loc = loc} as t) -> 
-      unique (fun x-> error (DuplicateName x) loc) args;
-      let r, l = t.tr_loc_reqs in
-       atoms l args r;
-       List.iter 
-	 (fun (x, cnf) -> 
-	  List.iter (atoms loc (x::args)) cnf)  t.tr_loc_ureq;
-       check_lets loc args t.tr_loc_lets;
-       updates args t.tr_loc_upds;
-       assigns loc args t.tr_loc_assigns;
-       nondets loc t.tr_loc_nondets)
+let transitions tl = 
+  List.map 
+    (fun tr -> 
+      unique (fun x -> error (DuplicateName x) tr.tr_loc) tr.tr_args;
+      let reqs, loc_reqs = tr.tr_reqs in
+      let tr_reqs = atoms loc_reqs tr.tr_args reqs, loc_reqs in 
+      let tr_ureq =
+	List.map 
+	 (fun (ur, dnf, loc_req) -> 
+	   let dnf =
+	     List.map (atoms tr.tr_loc (ur::tr.tr_args)) dnf in
+	   ur, dnf, loc_req) tr.tr_ureq in
+      let tr_lets = check_lets tr.tr_loc tr.tr_args tr.tr_lets in 
+      let tr_upds = updates tr.tr_args tr.tr_upds in 
+      let tr_assigns = assigns tr.tr_args tr.tr_assigns in 
+      nondets tr.tr_loc tr.tr_nondets;
+      { tr with tr_reqs; tr_ureq; tr_lets; tr_upds; tr_assigns }
+
+    ) tl
+    
 
 let declare_type (loc, (x, y)) =
   try Smt.Type.declare_enum x y
@@ -611,17 +619,17 @@ let create_node_rename kind vars sa =
   Node.create ~kind c
 
 
-let fresh_args ({ tr_loc_args = args; tr_loc_upds = upds} as tr) = 
+let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
   if args = [] then tr
   else
     let sigma = Variable.build_subst args Variable.freshs in
     { tr with 
-	tr_loc_args = List.map (Variable.subst sigma) tr.tr_loc_args; 
-	tr_loc_reqs = (SAtom.subst sigma (fst tr.tr_loc_reqs), snd tr.tr_loc_reqs) ;
-	tr_loc_ureq = 
+	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
+	tr_reqs = (SAtom.subst sigma (fst tr.tr_reqs), snd tr.tr_reqs) ;
+	tr_ureq = 
 	List.map 
-	  (fun (s, dnf) -> s, List.map (SAtom.subst sigma) dnf) tr.tr_loc_ureq;
-	tr_loc_assigns = 
+	  (fun (s, dnf, loc) -> s, List.map (SAtom.subst sigma) dnf, loc) tr.tr_ureq;
+	tr_assigns = 
 	  List.map (function
             | x, UTerm t, loc -> x, UTerm (Term.subst sigma t),loc
 	    | x, UCase swts, loc ->
@@ -630,8 +638,8 @@ let fresh_args ({ tr_loc_args = args; tr_loc_upds = upds} as tr) =
 		  (fun (sa, t) ->
                     SAtom.subst sigma sa, Term.subst sigma t) swts in
               x, UCase swts, loc
-	  ) tr.tr_loc_assigns;
-	tr_loc_upds = 
+	  ) tr.tr_assigns;
+	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 
 	    let swts = 
@@ -652,128 +660,28 @@ let add_tau tr =
     tr_reset = reset_memo;
   }
 
-(*let remove_loc {tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;*)
-
-let transition_loc_to_transition {tr_loc_name; tr_loc_args; tr_loc_reqs; tr_loc_ureq; tr_loc_lets; tr_loc_assigns; tr_loc_upds; tr_loc_nondets; tr_loc_loc } =
-  let assigns = List.fold_left (fun a (s, pg, _) -> (s,pg)::a) [] tr_loc_assigns in
- (*let reqs = List.fold_left (fun a (s,_) -> s::a) [] tr_loc_reqs*)
-  let reqs = fst tr_loc_reqs in
-
-  { tr_name = tr_loc_name;
-    tr_args = tr_loc_args;
-    tr_reqs = reqs;
-    tr_ureq = tr_loc_ureq;
-    tr_lets = tr_loc_lets;
-    tr_assigns = assigns;
-    tr_upds = tr_loc_upds;
-    tr_nondets = tr_loc_nondets;
-    tr_loc = tr_loc_loc;
-  }
-
-
-let replace_with record fields =
-  let record_name, record_fields = Smt.Type.find_record_by_field (fst (List.hd fields)) in assert false
-(* now it's record_name, record_fields:their type*)
-									  
-								    
-let rec assoc x = function
-  | [] -> raise Not_found
-  | (a,b,c)::l -> if compare a x = 0 then b else assoc x l
-
-let rec find p = function
-  | [] -> raise Not_found
-  | x :: l -> if p x then
-      (match x with
-	| UTerm (Record g) -> g
-	| _ -> assert false)
-     else find p l
-
-let replace_record_with {globals; consts; arrays; type_defs; init; invs; unsafe; trans} =
-  let s_trans = List.map (fun {tr_loc_name; tr_loc_args; tr_loc_reqs; tr_loc_ureq; tr_loc_lets; tr_loc_assigns; tr_loc_upds; tr_loc_nondets; tr_loc_loc} ->
-    {
-      tr_loc_name = tr_loc_name;
-      tr_loc_args = tr_loc_args; 
-      tr_loc_reqs = tr_loc_reqs;
-      tr_loc_ureq = tr_loc_ureq;
-      tr_loc_lets = tr_loc_lets;
-      tr_loc_assigns =
-(*Hstring * Ast.glob_update * location *)
-	List.map (fun (h, glob, loc) -> 
-	  match glob with
-	    | UTerm (RecordWith (record_name, fields_to_modify)) ->
-	      
-
-
-
-	      assert false
-	    | UCase _ -> assert false
-	    | _ -> assert false) tr_loc_assigns;
-
-
-
-
-      (* List.map (fun (x, y, l) ->
-	match y with
-	  | UTerm (RecordWith (r, f)) ->
-	    let found =
-	      try find (fun (_,r,_) ->
-		match r with | UTerm (Record _) -> true | _ -> false) tr_loc_assigns
-	      with Not_found -> failwith "???" in
-	    let new_list =
-	      List.map (fun x ->
-	      let m =
-		match List.assoc_opt (fst x) f with
-		| None -> snd x
-		| Some y -> y
-	      in
-	      (fst x, m)) found
-	    in (x, UTerm(Record(new_list)), l)
-	  | UCase swts -> failwith "e"
-	  | _ as c -> x,c,l
-      ) tr_loc_assigns;
-		      *)
-
-      
-      tr_loc_upds = tr_loc_upds;
-      tr_loc_nondets = tr_loc_nondets;
-      tr_loc_loc = tr_loc_loc;
-    }
-  ) trans
-  in 
-  { globals = globals;
-    consts = consts;
-    arrays = arrays;
-    type_defs = type_defs;
-    init = init;
-    invs = invs;
-    unsafe = unsafe;
-    trans = s_trans;
-  }
-
     
 let system s = 
   let l = init_global_env s in
-  (*let s = replace_record_with s in*) 
-  if not Options.notyping then init s.init;
+  let s_init = if not Options.notyping then init s.init else s.init in
   if Options.subtyping    then Smt.Variant.init l;
-  if not Options.notyping then List.iter unsafe s.unsafe;
-  if not Options.notyping then List.iter unsafe (List.rev s.invs);
-  if not Options.notyping then transitions s.trans;
+  let s_unsafe = if not Options.notyping then List.map unsafe s.unsafe else s.unsafe in
+  let s_invs = if not Options.notyping then List.map unsafe (List.rev s.invs) else s.invs in
+  let s_trans = if not Options.notyping then transitions s.trans else s.trans in
   if Options.(subtyping && not murphi) then begin
     Smt.Variant.close ();
     if Options.debug then Smt.Variant.print ();
   end;
 
-  let init_woloc = let _,v,i = s.init in v,i in
+  let init_woloc = let _,v,i = s_init in v,i in
   let invs_woloc =
-    List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
+    List.map (fun (_,v,i) -> create_node_rename Inv v i) s_invs in
   let unsafe_woloc =
-    List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
+    List.map (fun (_,v,u) -> create_node_rename Orig v u) s_unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
     if Options.debug && Options.verbose > 0 then
       debug_init_instances init_instances;
-  let trans = List.fold_left( fun acc x -> (transition_loc_to_transition x)::acc) [] s.trans in
-  let trans = List.rev trans in 
+ 
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
@@ -782,5 +690,5 @@ let system s =
     t_init_instances = init_instances;
     t_invs = invs_woloc;
     t_unsafe = unsafe_woloc;
-    t_trans = List.map add_tau trans;
+    t_trans = List.map add_tau s_trans;
   }

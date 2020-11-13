@@ -752,7 +752,7 @@ let swts_to_stites env at sigma swts =
 
 let assigns_to_actions env sigma acc tr_assigns =
   List.fold_left 
-    (fun acc (h, gu) ->
+    (fun acc (h, gu, _) ->
       let nt = Elem (h, Glob) in
       match gu with
       | UTerm t ->
@@ -935,7 +935,7 @@ let ordered_fst_subst = function
         
 let transitions_to_func_aux procs env reduce acc 
                             { tr_info = { tr_args = tr_args; 
-		                          tr_reqs = reqs; 
+		                          tr_reqs = (reqs,_); 
 		                          tr_name = name;
 		                          tr_ureq = ureqs;
 		                          tr_assigns = assigns; 

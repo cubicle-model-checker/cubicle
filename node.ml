@@ -150,9 +150,15 @@ module Latex = struct
       fprintf fmt "@[%a%a@]" print_term x print_cs cs
     | UnOp _ -> assert false
     | BinOp _ -> assert false
-    | Record _ -> assert false
-    | RecordWith _ -> assert false
-    | RecordField _ -> assert false
+    | Record fl ->
+      fprintf fmt "{";
+      List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print_term y) fl;
+      fprintf fmt "}"
+    | RecordWith (r,f) ->
+      fprintf fmt "{%a with " print_term r ;
+      List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print_term y) f;
+      fprintf fmt "}"
+    | RecordField (r,f) -> fprintf fmt "%a.%a" print_term r Hstring.print f
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

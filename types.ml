@@ -348,8 +348,8 @@ module Term = struct
     | Arith(t, _) -> type_of t
       
     | Record l -> assert false
-    | RecordWith (t, _) -> type_of t
-    | RecordField (t, _) -> type_of t
+    | RecordWith (t, _) -> (*type_of t*) assert false
+    | RecordField (t, _) -> (*type_of t*) assert false
       
     | UnOp _ -> assert false
     | BinOp _ -> assert false
@@ -390,8 +390,14 @@ module Term = struct
       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
    | UnOp _ -> ()
    | BinOp _ -> ()
-   | Record fl -> fprintf fmt "{"; List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print y) fl; fprintf fmt "}"
-   | RecordWith (r,f) -> fprintf fmt "%a" print r
+   | Record fl ->
+     fprintf fmt "{";
+     List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print y) fl;
+     fprintf fmt "}"
+   | RecordWith (r,f) ->
+     fprintf fmt "{%a with " print r ;
+     List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print y) f;
+     fprintf fmt "}"
    | RecordField (r,f) -> fprintf fmt "%a.%a" print r Hstring.print f
     
 
@@ -490,6 +496,9 @@ end = struct
     | Elem (x, Var) -> Hstring.list_mem x vs
     | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs 
     | Arith (x, _) ->  has_vars_term vs x
+    | RecordField (r, _) -> has_vars_term vs r
+    | Record lbs -> List.exists (fun (_, t) -> has_vars_term vs t) lbs
+    | RecordWith _ -> assert false
     | _ -> false
 
   let rec has_vars vs = function

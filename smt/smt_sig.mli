@@ -80,13 +80,9 @@ module type S = sig
       
     val all_record_types : unit -> (t * (Hstring.t * Ty.t) list) list
 
-    val find_record : t -> Ty.t
-
     val find_record_by_field:  t -> t * (Hstring.t * Hstring.t) list
 
     val record_ty_by_field: t -> t * (Hstring.t * Ty.t) list
-
-    val ty_to_hstring: Ty.t -> Hstring.t
 
     val declared_types : unit -> t list
 
@@ -203,7 +199,9 @@ module type S = sig
     (** [t_true] is the boolean term [true] *)
 
     val t_false : t
-    (** [t_false] is the boolean term [false] *)
+  (** [t_false] is the boolean term [false] *)
+
+    val print : Format.formatter -> t -> unit 
 
   end
 

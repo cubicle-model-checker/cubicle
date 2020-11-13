@@ -24,7 +24,7 @@
 
 
   (* Helper functions for location info *)
-
+ 
   let loc () = (symbol_start_pos (), symbol_end_pos ())
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
@@ -205,7 +205,9 @@ size_proc:
 ;
 
 record_field:
-  | lident COLON lident { ($1, $3) }
+  | lident COLON lident {
+    if Hstring.equal $3 hint || Hstring.equal $3 hreal then Smt.set_arith true;
+    ($1, $3) }
 ;
 
 record_fields:
@@ -362,17 +364,18 @@ term:
       }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ { Access ($1, $3) }
 
-     
+  /*
   | MINUS term { UnOp(UMinus, $2) }
   | term PLUS term { BinOp($1, Addition, $3) }
   | term MINUS term { BinOp($1, Subtraction, $3) }
   | term TIMES term {  BinOp($1, Multiplication, $3) }
+ */
 
-/*
+
   | term PLUS INT { Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
   | term PLUS mident { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
   | term MINUS INT { Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
- */     
+   
       
   | LEFTPAR term RIGHTPAR { $2 }
   | LEFTBR term WITH field_list RIGHTBR { RecordWith($2, $4) }

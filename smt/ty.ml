@@ -97,5 +97,5 @@ let rec print fmt ty =
     | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)
     | Trecord {name = n; lbs = lbs} ->
       fprintf fmt "record %a = { " Hstring.print n;
-      List.iter (fun (x,y) -> fprintf fmt "%a : %a" Hstring.print x print y) lbs;
+      List.iter (fun (x,y) -> fprintf fmt "%a : %a; " Hstring.print x print y) lbs;
       fprintf fmt "}"

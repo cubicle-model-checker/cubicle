@@ -100,40 +100,43 @@ let make_cs cs =
   else make_arith_cs r (mult_const t_c c i)
   
 	 
-let rec make_term = function
+let rec make_term tt =
+  match tt with 
   | Elem (e, _) ->  T.make_app e []
   | Const cs -> make_cs cs 
-  | Access (a, li) as t ->
+  | Access (a, li)  ->
     T.make_app a (List.map (fun i -> T.make_app i []) li)
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
-  | UnOp (o,t) -> Format.eprintf "ici@."; assert false
+  | UnOp (o,t1) -> Format.eprintf "ici@."; assert false
   | BinOp (t1, op, t2) -> Format.eprintf "ici@."; assert false
   | Record lbs ->
-    let record = Smt.Type.record_ty_by_field (fst (List.hd lbs)) in 
-    let ls = List.map (fun (_,t) -> make_term t) lbs in
+    let record = Smt.Type.record_ty_by_field (fst (List.hd lbs)) in
+    let ls = List.map (fun (f,t) -> make_term t) lbs in
+
     T.make_record record ls
       
-  | RecordWith (t, htl) -> assert false
+  | RecordWith (t, htl)  ->  assert false
     
   | RecordField (record, field) ->
     let t_record = make_term record in
     let _, re = Smt.Type.record_ty_by_field field  in
-    let ty_field= Hstring.list_assoc field re in 
+    let ty_field= Hstring.list_assoc field re in
     T.make_field field t_record ty_field 
 
 
 let rec make_formula_set sa = 
-  F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
+ F.make F.And (SAtom.fold (fun a l ->  make_literal a::l) sa []) 
+
 
 and make_literal = function
-  | Atom.True -> F.f_true 
+  | Atom.True ->  F.f_true 
   | Atom.False -> F.f_false
   | Atom.Comp (x, op, y) ->
-      let tx = make_term x in
-      let ty = make_term y in
-      F.make_lit (make_op_comp op) [tx; ty]
+    let tx = make_term x in
+    let ty = make_term y in
+    F.make_lit (make_op_comp op) [tx; ty]
   | Atom.Ite (la, a1, a2) -> 
       let f = make_formula_set la in
       let a1 = make_literal a1 in
@@ -181,7 +184,7 @@ let make_conjuct atoms1 atoms2 =
 
 let make_init_dnfs s nb_procs =
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
-  List.rev_map (List.rev_map make_formula_set) init_cdnf
+   List.rev_map (List.rev_map make_formula_set) init_cdnf 
 
 let get_user_invs s nb_procs =
   let { init_invs } =  Hashtbl.find s.t_init_instances nb_procs in
@@ -202,7 +205,7 @@ let unsafe_dnf node nb_procs invs dnf =
   try
     let uc =
       List.fold_left (fun accuc init ->
-        try 
+        try
           unsafe_conj node nb_procs invs init;
           raise Exit
         with Smt.Unsat uc -> List.rev_append uc accuc) [] dnf
@@ -212,7 +215,7 @@ let unsafe_dnf node nb_procs invs dnf =
 
 let unsafe_cdnf s n =
   let nb_procs = List.length (Node.variables n) in
-  let cdnf_init = make_init_dnfs s nb_procs in  
+  let cdnf_init = make_init_dnfs s nb_procs in
   let invs = get_user_invs s nb_procs in
   List.iter (unsafe_dnf n nb_procs invs) cdnf_init
 

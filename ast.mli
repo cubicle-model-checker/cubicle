@@ -51,7 +51,7 @@ type update = {
 }
 (** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
 
-type transition_info = {
+(*type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
@@ -64,21 +64,21 @@ type transition_info = {
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
   tr_loc : loc; (** location information *)
-}
+}*)
 
-type transition_info_loc_assign = {
-  tr_loc_name : Hstring.t; (** name of the transition *)
-  tr_loc_args : Variable.t list;
+type transition_info = {
+  tr_name : Hstring.t; (** name of the transition *)
+  tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
-  tr_loc_reqs : SAtom.t * loc; (** guard *)
-  tr_loc_ureq : (Variable.t * dnf) list;
+  tr_reqs : SAtom.t * loc; (** guard *)
+  tr_ureq : (Variable.t * dnf * loc) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
-  tr_loc_lets : (Hstring.t * Term.t) list;
-  tr_loc_assigns : (Hstring.t * glob_update * loc) list ; (** updates of global variables *)
-  tr_loc_upds : update list; (** updates of arrays *)
-  tr_loc_nondets : Hstring.t list;
+  tr_lets : (Hstring.t * Term.t) list;
+  tr_assigns : (Hstring.t * glob_update * loc) list ; (** updates of global variables *)
+  tr_upds : update list; (** updates of arrays *)
+  tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
-  tr_loc_loc : loc; (** location information *)
+  tr_loc : loc; (** location information *)
 }
   
 (** type of parameterized transitions *)
@@ -106,7 +106,7 @@ type system = {
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  
-  trans : transition_info_loc_assign list;
+  trans : transition_info list;
 }
 (** type of untyped transition systems constructed by parsing *)
 

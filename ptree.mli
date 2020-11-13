@@ -125,4 +125,7 @@ val psystem_of_decls:
 
 (** {2 Pretty printing ASTs} *)
 
+
+val print_swts : Format.formatter -> Ast.swts -> unit
+val print_trans: Format.formatter -> Ast.transition_info list -> unit
 val print_system : Format.formatter -> Ast.system -> unit

@@ -103,32 +103,33 @@ let rec find_update a li = function
 
 exception Remove_lit_var of Hstring.t
 
-let rec find_assign memo tr = function
-  | Elem (x, sx) -> 
-     let gu =
-       if H.list_mem x tr.tr_nondets then 
-         (*raise (Remove_lit_var x)*)
+let rec find_assign memo tr tt =
+  match tt with 
+    | Elem (x, sx) -> 
+      let gu =
+	if H.list_mem x tr.tr_nondets then 
+          (*raise (Remove_lit_var x)*)
 	  try List.assoc (Hstring.view x) !memo
 	  with Not_found ->
 	    let nv =
 	      UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) in
 	    memo := (Hstring.view x,nv) :: !memo;
 	    nv
-       else 
-	 try H.list_assoc x tr.tr_assigns
-         with Not_found -> UTerm (Elem (x, sx))
-     in
-     begin
+	else 
+	  try fst (H.list_assoc_triplet x tr.tr_assigns)
+          with Not_found -> UTerm (Elem (x, sx))
+      in
+      begin
        match gu with
-       | UTerm t -> Single t
-       | UCase swts -> Branch swts
-     end
-
-  | Const i as a -> Single a
-
-  | Arith (x, cs1) ->
-    begin
-      let t = find_assign memo tr x in
+	 | UTerm t -> Single t
+	 | UCase swts -> Branch swts
+      end
+	
+    | Const i as a -> Single a
+      
+    | Arith (x, cs1) ->
+      begin
+	let t = find_assign memo tr x in
        match t with
 	 | Single (Const cs2) -> 
 	   let c = 
@@ -136,53 +137,69 @@ let rec find_assign memo tr = function
 	   in
 	   Single c
 	 | Single (Arith (y, cs2)) ->
-	  Single (Arith (y, add_constants cs1 cs2))
+	   Single (Arith (y, add_constants cs1 cs2))
 	 | Single y -> Single (Arith (y, cs1))
 	 | Branch up_swts ->
 	   Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
 		     up_swts)
-    end
-  | UnOp _ -> assert false
-  | BinOp _ -> assert false
-  | Record htl -> 
-    let l = List.map (fun (lbl, term) -> (lbl, find_assign memo tr term)) htl in
-    let l2 = List.fold_right (fun (lbl, x) acc ->
-      match x with
-	| Single s -> List.map (fun (saopt,l) -> saopt,(lbl,s)::l) acc
-	| Branch b ->
-	  List.fold_left (fun acc (sa, t) ->
-	    List.map (fun (saopt, l) ->
-	      match saopt with
-		| None -> Some sa, (lbl,t)::l
-		| Some sa' -> Some (SAtom.union sa sa'), (lbl,t)::l
-	    ) acc 
-	  )acc b
-    ) l [None,[]] 
-    in
-    let l3 = List.map (fun (saopt, l) -> saopt, Record l) l2
-    in
-    begin
-      match l3 with
-	| [] -> assert false
-	| [None, r] -> Single r
-	| _ ->
-	  Branch(List.map (fun (saopt, l) -> match saopt with
-	    | Some sa -> sa, l
-	    | None -> assert false) l3)
-	  
-    end 
+      end
+    | UnOp _ -> assert false
+    | BinOp _ -> assert false
+    | Record htl ->
+
+      let htl' = List.sort Smt.Type.compare_rec htl in
+      List.iter2 ( fun p1 p2 -> if Smt.Type.compare_rec p1 p2 <> 0 then assert false) htl htl';
+
+      let l = List.map (fun (lbl, term) -> (lbl, find_assign memo tr term)) htl in
+
+      
+      let l2 = List.fold_right (fun (lbl, x) acc1 ->
+	match x with
+	  | Single s -> List.map (fun (saopt,l) -> saopt,(lbl,s)::l) acc1
+	  | Branch b ->
+	    List.fold_right (fun (sa, t) acc  ->
+	      let acc1 = List.map (fun (saopt, l) ->
+		match saopt with
+		  | None -> Some sa, (lbl,t)::l
+		  | Some sa' -> Some (SAtom.union sa sa'), (lbl,t)::l
+	      ) acc1
+	      in acc1@acc
+	    )b []
+      ) l [None,[]] 
+      in
+      let l3 = List.map (fun (saopt, l) ->
+
+      List.iter2 ( fun p1 p2 -> if Smt.Type.compare_rec p1 p2 <> 0 then assert false) htl l;
+
+
+	saopt, Record l) l2
+      in
+      begin
+	match l3 with
+	  | [] -> assert false
+	  | [None, r] -> Single r
+	  | _ ->
+	    let temp = (List.map (fun (saopt, l) -> match saopt with
+	      | Some sa -> sa, l
+	      | None -> assert false) l3)
+	    in
+	     Branch(temp)
+	      
+	      
+	      
+      end 
     
-  | RecordWith _ -> assert false
-  | RecordField (r,lbl) ->
-    let tt = find_assign memo tr r in 
-    begin
-      match tt with
-	| Single s -> Single (RecordField(s,lbl))
-	| Branch b ->
-	  Branch (List.map (fun (x,y) -> x, RecordField(y, lbl)) b)
-    end 
-  | Access (a, li) -> 
-    let nli = li in
+    | RecordWith _ -> assert false
+    | RecordField (r,lbl) ->
+      let tt = find_assign memo tr r in 
+      begin
+	match tt with
+	  | Single s -> Single (RecordField(s,lbl))
+	  | Branch b ->
+	    Branch (List.map (fun (x,y) -> x, RecordField(y, lbl)) b)
+      end 
+    | Access (a, li) -> 
+      let nli = li in
      (* List.map (fun i -> *)
      (*   if H.list_mem i tr.tr_nondets then  *)
      (*     (assert false; *)
@@ -193,9 +210,9 @@ let rec find_assign memo tr = function
      (*     | Const _ | Arith _ | Access _ -> assert false) *)
      (*   with Not_found -> i *)
      (* ) li in *)
-     try find_update a nli tr.tr_upds
-     with Not_found -> Single (Access (a, nli))
-       
+      try find_update a nli tr.tr_upds
+      with Not_found -> Single (Access (a, nli))
+	
 (* let na =  *)
 (*   try (match H.list_assoc a tr.tr_assigns with *)
 (* 	 | Elem (na, _) -> na *)
@@ -239,21 +256,22 @@ let postpone args p np =
   let sa2 = SAtom.filter (Atom.has_vars args) np in
   SAtom.equal sa2 sa1
 
-let uguard sigma args tr_args = function
-  | [] -> [SAtom.empty]
-  | [j, dnf] ->
+let uguard sigma args tr_args tr_ureq =
+  match tr_ureq with
+    | [] -> [SAtom.empty]
+    | [j, dnf, _] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.fold_left 
 	(fun lureq z ->
 	   let m = List.map (SAtom.subst ((j, z)::sigma)) dnf in
 	   List.fold_left 
 	     (fun acc sa -> 
-		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
+	       (List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
 	)
 	[SAtom.empty]
 	uargs
-
-  | _ -> assert false
+	
+    | _ -> assert false
 
 let add_list n l =
   if List.exists (fun n' -> Node.subset n' n) l then l
@@ -347,7 +365,7 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
-    SAtom.union tri.tr_reqs 
+    SAtom.union (fst tri.tr_reqs) 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
   let pre_u = Cube.create_normal pre_unsafe in

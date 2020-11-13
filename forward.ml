@@ -79,9 +79,10 @@ let rec is_prime_term = function
   | Arith (x, _) -> is_prime_term x
   | UnOp _ -> assert false
   | BinOp _ -> assert false
+  | RecordField (t,_) -> is_prime_term t
+  | RecordWith _ -> assert false	
   | Record htl -> List.fold_left (fun acc (x,_) -> is_prime (Hstring.view x) && acc) true  htl
-  | RecordWith _ -> assert false
-  | RecordField (t,s) -> is_prime_term t
+ 
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -480,7 +481,7 @@ let swts_to_ites at swts sigma =
 
 let apply_assigns assigns sigma =
   List.fold_left 
-    (fun (nsa, terms) (h, gu) ->
+    (fun (nsa, terms) (h, gu, _) ->
       let nt = Elem (h, Glob) in
       let sa = 
         match gu with
@@ -519,14 +520,15 @@ let preserve_terms upd_terms sa =
     SAtom.add (Comp (t, Eq, prime_term t)) acc)
     unc SAtom.empty
 
-let uguard_dnf sigma args tr_args = function
-  | [] -> []
-  | [j, dnf] ->
+let uguard_dnf sigma args tr_args ureq =
+  match ureq with 
+    | [] -> []
+    | [j, dnf, _] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.map (fun i ->
 	List.map (fun sa -> SAtom.subst ((j, i)::sigma) sa) dnf) uargs
-  | _ -> assert false
-
+    | _ -> assert false
+      
 
 let possible_init args init reqs =
   (** Very incomplete semantic test **)
@@ -534,7 +536,7 @@ let possible_init args init reqs =
     (* try Prover.check_guard args init reqs; true *)
     (* with Smt.Unsat _ -> false *)
 
-let possible_guard args all_args tr_args sigma init reqs ureqs =
+let possible_guard args all_args tr_args sigma init (reqs,_) ureqs =
   let reqs = SAtom.subst sigma reqs in
   possible_init args init reqs &&
     let t_args_ef = 
@@ -804,7 +806,7 @@ let mkinits procs ({t_init = ia, l_init}) =
 
 
 let instance_of_transition { tr_args = tr_args; 
-		             tr_reqs = reqs; 
+		             tr_reqs = (reqs,_); 
 		             tr_name = name;
 		             tr_ureq = ureqs;
 		             tr_assigns = assigns; 

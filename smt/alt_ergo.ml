@@ -143,7 +143,8 @@ module Type = struct
     in
 	try let r = H.find decl_types rty in
 	    match r with
-	      | Ty.Trecord {name = re; lbs = l} -> re,l
+	      | Ty.Trecord {name = re; lbs = l} ->
+				re,l
 	      | _ -> raise (Error (UnknownType rty))
 	  with Not_found -> raise (Error (UnknownType rty))
 
@@ -151,29 +152,6 @@ module Type = struct
     let rty, _, fields= H.find decl_labels lbl
 	in
     rty, fields
-
-
-  let find_record_fields_by_field lbl =
-    let _, _, fields = H.find decl_labels lbl in
-    assert false
-    
-	      
-  let find_record t = 
-    try  H.find decl_types t 
-	
-	(*(match t1 with
-	  | Ty.Trecord {name = re; lbs = l} ->  (re,l)
-	  | _ -> false, (Hstring.empty,[])
-	)*)
-    with Not_found -> raise (Error (UnknownType t))
-
-  let ty_to_hstring = function
-    | Ty.Tint -> Hstring.make "int"
-    | Ty.Treal -> Hstring.make "real"
-    | Ty.Tbool -> Hstring.make "bool"
-    | Ty.Tabstract a -> a
-    | Ty.Tsum (s, _) -> s
-    | Ty.Trecord {name = name; lbs = _ } -> name
       
       
   let declared_types () =
@@ -361,7 +339,7 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let make_record (rec_name, rec_fields) terms =	     
+  let make_record (rec_name, rec_fields) terms =
     Term.make (Symbols.Op Symbols.Record) terms (Ty.Trecord {name = rec_name; lbs = rec_fields})
 
   let make_field field term ty_field=
@@ -370,6 +348,8 @@ module Term = struct
   let is_int = Term.is_int
 
   let is_real = Term.is_real
+
+  let print = Term.print
 
 end
 
@@ -402,11 +382,11 @@ module Formula = struct
   let f_true = Lit Literal.LT.vrai
   let f_false = Lit Literal.LT.faux
 
-  let make_lit cmp l = 
+  let make_lit cmp l =
     let lit = 
       match cmp, l with
 	| Eq, [t1; t2] -> 
-	    Literal.Eq (t1, t2)
+	   Literal.Eq (t1, t2) 
 	| Neq, ts -> 
 	    Literal.Distinct (false, ts)
 	| Le, [t1; t2] ->
@@ -415,7 +395,7 @@ module Formula = struct
 	    Literal.Builtin (true, Hstring.make "<", [t1; t2])
 	| _ -> assert false
     in
-    Lit (Literal.LT.make lit)
+      Lit (Literal.LT.make lit) 
 
   let rec sform = function
     | Comb (Not, [Lit a]) -> Lit (Literal.LT.neg a)
