@@ -53,6 +53,11 @@ val list_assoc : t -> (t * 'a) list -> 'a
     pairs [l].
     @raise Not_found if there is no value associated with [x] in the list [l].*)
 
+val list_assoc_triplet: t -> (t * 'a * 'b) list -> 'a * 'b
+(** [list_assoc_triplet x l] returns the element associated with [x] in the list of
+    triplets [l].
+    @raise Not_found if there is no value associated with [x] in the list [l].*)
+
 val list_assoc_inv : t -> ('a * t) list -> 'a
 (** [list_assoc_inv x l] returns the first element which is associated to [x]
     in the list of pairs [l].
