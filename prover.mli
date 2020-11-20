@@ -46,6 +46,7 @@ val check_guard : Hstring.t list -> SAtom.t -> SAtom.t -> unit
 val make_literal : Atom.t -> Smt.Formula.t
 val make_formula : ArrayAtom.t -> Smt.Formula.t
 val make_formula_set : SAtom.t -> Smt.Formula.t
+val make_term : Types.term -> Smt.Term.t
 
 val run : unit -> unit
 (** Runs the SMT solver on its current context *)

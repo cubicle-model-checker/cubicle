@@ -59,16 +59,26 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     (* Initialization *)
     Q.push_list !candidates q;
     Q.push_list system.t_unsafe q;
+    assert (List.length invariants = 0);
+    assert (List.length !candidates = 0);
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-              (invariants @ system.t_invs);
+      (invariants @ system.t_invs);
+    let cpt_pre = ref 0 in 
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
+	(*Format.eprintf "n: %d@." n.tag;*)
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
           | Some db ->
-             Stats.fixpoint n db
+            Stats.fixpoint n db
+	    (*Format.eprintf "Begin cubetrie@.";
+	    List.iter (fun x -> Format.eprintf "db: %d@." x) db;
+	    Cubetrie.iter (fun x -> Format.eprintf "cubetrie: %a@." Node.print x) !visited;
+	    Format.eprintf "Fixpoint %a - done@." Node.print n;
+	    Format.eprintf "End cubetrie@.";*)
+
           | None ->
              Stats.check_limit n;
              Stats.new_node n;
@@ -88,6 +98,12 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
+	     let ls = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) ls in
+	     let post = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) post in
+	     cpt_pre := !cpt_pre + (List.length ls) + (List.length post);
+	     (*Format.eprintf "Begin: %d %d @." (List.length ls) (List.length post);
+	     List.iter (fun x -> Format.eprintf "%a@." Node.print x) ls;
+	     Format.eprintf "End@.";*)
              if delete then
                visited :=
                  Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
@@ -104,6 +120,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
             postponed := []
           end
       done;
+      Format.eprintf "Pre counter %d@." !cpt_pre; 
       Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
       if dot then Dot.error_trace faulty;

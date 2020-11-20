@@ -300,11 +300,12 @@ let make_cubes (ls, post) rargs s tr cnp =
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
   let cube acc sigma =
-    let tr_args = List.map (Variable.subst sigma) tr.tr_args in
+    let tr_args = List.map (Variable.subst sigma) tr.tr_args in 
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
     (* cubes are in normal form *)
     List.fold_left
       (fun (ls, post) cnp ->
+	(*Format.eprintf "make_cube fold_left %a@." Cube.print cnp; *)
        let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
        let lureq = uguard sigma nargs tr_args tr.tr_ureq in
        List.fold_left 

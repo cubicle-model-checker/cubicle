@@ -253,8 +253,29 @@ let rec simplification np a =
 	 | _ -> a
        end
     | Atom.Comp (Const _ as c, Eq, y) -> Atom.Comp (y, Eq, c)
+
+    
+
+      
+      
     | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
-    | Atom.Comp (x, (Eq | Neq as op), y) when Term.compare x y < 0 -> Atom.Comp (y, op, x)
+
+
+    
+      
+    | Atom.Comp (x, (Eq | Neq as op), y) ->
+      begin
+	match Structures.simplify_smt_atom x op y with
+	  | None ->
+	    if  Term.compare x y < 0 then Atom.Comp (y, op, x)
+	    else a 
+	  | Some a -> a 
+	    
+      end
+
+       
+      
+
     | Atom.Comp _ -> a
     | Atom.Ite (sa, a1, a2) ->
 	let sa =

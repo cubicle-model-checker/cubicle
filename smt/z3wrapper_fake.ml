@@ -76,19 +76,20 @@ module Variant = struct
 end
   
 module Term = struct
-  type t = unit
+  type t = Term.t
   type operator = Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t
   let make_int _ = unsupported ()
   let make_real _ = unsupported ()
   let make_app _ _ = unsupported ()
-  let t_true = ()
-  let t_false = ()
+  let t_true = Term.vrai
+  let t_false = Term.faux
   let make_arith _ _ _ = unsupported ()
   let make_record _ = unsupported ()
   let make_field _ = unsupported ()
   let is_int _ = unsupported ()
   let is_real _ = unsupported ()
   let print _ = unsupported ()
+  let compare _ _ = unsupported ()
 end
 
 module Formula = struct

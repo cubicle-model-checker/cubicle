@@ -276,15 +276,20 @@ module Term = struct
 	     in comp_op (op1,op2))
 	end
 	  
-  (*  | BinOp _, _ -> -1
-    | _ , BinOp _ -> 1*)
+  let rec is_ground t =
+    match t with
+      | Const _ | Elem (_, (Var|Constr)) -> true
+      | Elem _ -> false 
+      | Access _ -> false 
+      | Arith (t, _) -> is_ground t
+      | BinOp (t1, _, t2) -> is_ground t1 && is_ground t2
+      | UnOp (_, t) -> is_ground t
 	
-
-
-      
-  (*| Arith (_, _), Record (_, _, _) -> assert false
-    | Record (_, _, _), Arith (_, _) -> assert false
-    | Record (_, _, _), Record (_, _, _) -> assert false *)
+      | RecordWith _ -> assert false
+	
+      | RecordField (t, _) -> is_ground t
+	
+      | Record l -> List.for_all (fun (_,t) -> is_ground t) l
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -425,6 +430,7 @@ module rec Atom : sig
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
   val print_atoms : bool -> string -> Format.formatter -> t list -> unit
+  val is_ground : t -> bool
 
 end = struct
 
@@ -508,6 +514,13 @@ end = struct
        SAtom.exists (has_vars vs) sa || has_vars vs a1 || has_vars vs a2
 
   let has_var v = has_vars [v]
+
+  let rec is_ground a =
+    match a with
+      | True | False -> true
+      | Comp (t1, _, t2) -> Term.is_ground t1 && Term.is_ground t2 
+      | Ite (s, t1, t2) ->
+	SAtom.for_all is_ground s && is_ground t1 && is_ground t2
 
 
   let rec variables = function

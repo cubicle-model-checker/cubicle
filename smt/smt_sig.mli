@@ -159,7 +159,7 @@ module type S = sig
 
   module Term : sig
 
-    type t
+    type t = Term.t
     (** The type of terms *)
 
     (** The type of operators *)
@@ -201,7 +201,9 @@ module type S = sig
     val t_false : t
   (** [t_false] is the boolean term [false] *)
 
-    val print : Format.formatter -> t -> unit 
+    val print : Format.formatter -> t -> unit
+
+    val compare : t -> t -> int
 
   end
 

@@ -351,6 +351,9 @@ module Term = struct
 
   let print = Term.print
 
+  let compare = Term.compare
+    
+
 end
 
 module Formula = struct

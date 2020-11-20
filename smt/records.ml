@@ -157,7 +157,7 @@ module Make (X : ALIEN) = struct
 	  Other (r, ty), ctx'@ctx
     in
     let r, ctx = make_rec t [] in
-    let is_m = is_mine r in
+    let is_m = is_mine (normalize r) in
     is_m, ctx
 
   let color _ = assert false
