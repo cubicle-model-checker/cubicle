@@ -1,0 +1,47 @@
+type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
+
+
+type bsw = { a: location; b: bool; s: bool; w: bool}
+
+array P[proc] : bsw
+
+init (i) {P[i] = { a = L0; s = False; w = False; b = False}}
+
+unsafe (i j) { P[i].a = L7 && P[j].a = L7 }
+
+
+transition t0 (x)
+requires { P[x].a = L0 }
+{ P[x] := { P[x] with a = L1; b= True } }
+
+transition t1 (x)
+requires { P[x].a = L1 && forall_other y. P[y].s = False }
+{ P[x] := { P[x] with a= L2;  b= False }}
+
+transition t2 (x)
+requires { P[x].a = L2 }
+{ P[x] := { P[x] with a = L3; s = True; w = True } }
+
+transition t3_then (x y)
+requires { P[x].a = L3 && P[y].b = False && P[y].w = False }
+{ P[x] := { P[x] with a= L4; s = False } }
+
+transition t3_else (x)
+requires { P[x].a = L3 && forall_other y. ( P[y].b =  True || P[y].w = True ) }
+{ P[x] := { P[x] with a =L5; w = False }}
+
+transition t4 (x y)
+requires { P[x].a = L4 && P[y].s = True && P[y].w = False }
+{ P[x] := { P[x] with a = L5; s= True; w= False }}
+
+transition t5 (x)
+requires { P[x].a = L5 && forall_other y. P[y].w = False }
+{ P[x] := { P[x] with a = L6 }}
+
+transition t6 (x)
+requires { P[x].a = L6 && forall_other j. (x <= j || P[j].s = False) }
+{ P[x]:= {P[x] with a= L7 }}
+
+transition t7 (x)
+requires { P[x].a = L7 }
+{P[x] := { P[x] with a= L0; s = False }}
