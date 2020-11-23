@@ -124,7 +124,7 @@ CMO = version.cmo options.cmo \
 CMX = $(CMO:.cmo=.cmx)
 
 MAINCMO = $(CMO) main.cmo
-MAINCMX = $(MAINCMO:.cmo=.cmx)
+lsMAINCMX = $(MAINCMO:.cmo=.cmx)
 
 GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
 
