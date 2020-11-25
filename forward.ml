@@ -623,7 +623,7 @@ let post_inst init all_procs procs { i_reqs = reqs;
         let csa = Cube.create_normal sa in
         let sa, nargs = csa.Cube.litterals, csa.Cube.vars in
         (sa, nargs) :: acc
-      with Exit -> acc)
+      with Stdlib.Exit -> acc)
       [] (Cube.elim_ite_simplify_atoms sa) 
   else []
 
@@ -767,7 +767,7 @@ let make_init_cdnf args lsa lvars =
             (* let sa = abs_inf sa in *)
             let sa = SAtom.subst sigma sa in
             try (Cube.simplify_atoms_base SAtom.empty sa) :: dnf
-            with Exit -> dnf
+            with Stdlib.Exit -> dnf
           ) [] lsa in
           dnf :: conj
         ) [] lsigs
