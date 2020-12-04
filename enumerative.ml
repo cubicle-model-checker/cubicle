@@ -674,13 +674,11 @@ let write_atom_to_states env sts = function
       Format.eprintf "i1 = %a: %d et i2 = %a: %d@." Types.Term.print t1 i1 Types.Term.print t2 i2;
       if i1 < i2 then
 	begin
-	  Format.eprintf "Begin: i1 is %d;\n st.(i1) is : %d;\n i2 is %d@." i1 st.(i1) i2;
 	  st.(i1) <- i2;
 	  Array.iteri (fun i v -> if v = i1 then st.(i) <- i2) st
 	end 
       else
 	begin
-	  Format.eprintf "Begin2: i2 is %d st.(i2) is : %d;\n i1 is %d@." i2 st.(i2) i1;
 	  st.(i2) <- i1;
 	  Array.iteri (fun i v -> if v = i2 then st.(i) <- i1) st
 	end
