@@ -80,6 +80,7 @@ let rec pre_atom tau a =
 
 type assign = Single of term | Branch of swts
 
+
 let fresh_nondet = 
   let cpt = ref 0 in 
   fun (args, ret) -> 
@@ -102,6 +103,11 @@ let rec find_update a li = function
 
 
 exception Remove_lit_var of Hstring.t
+
+let print_assign fmt a =
+  match a with
+    | Single a -> Format.fprintf fmt "%a\n" Term.print a
+    | Branch b -> List.iter (fun (sa,t) -> Format.fprintf fmt "%a : %a\n" SAtom.print sa Term.print t) b
 
 let rec find_assign memo tr tt =
   match tt with 
@@ -146,16 +152,12 @@ let rec find_assign memo tr tt =
     | UnOp _ -> assert false
     | BinOp _ -> assert false
     | Record htl ->
-
-      let htl' = List.sort Smt.Type.compare_rec htl in
-      List.iter2 ( fun p1 p2 -> if Smt.Type.compare_rec p1 p2 <> 0 then assert false) htl htl';
-
-      let l = List.map (fun (lbl, term) -> (lbl, find_assign memo tr term)) htl in
-
-      
-      let l2 = List.fold_right (fun (lbl, x) acc1 ->
+      let l = List.map (fun (lbl, term) -> lbl, find_assign memo tr term) htl in
+      let l = List.rev l in
+      let l2 = List.fold_left (fun  acc1 (lbl, x)   ->
 	match x with
-	  | Single s -> List.map (fun (saopt,l) -> saopt,(lbl,s)::l) acc1
+	  | Single s ->
+	      List.map (fun (saopt,l) ->  saopt,(lbl,s)::l ) acc1
 	  | Branch b ->
 	    List.fold_right (fun (sa, t) acc  ->
 	      let acc1 = List.map (fun (saopt, l) ->
@@ -163,16 +165,55 @@ let rec find_assign memo tr tt =
 		  | None -> Some sa, (lbl,t)::l
 		  | Some sa' -> Some (SAtom.union sa sa'), (lbl,t)::l
 	      ) acc1
+		
 	      in acc1@acc
 	    )b []
-      ) l [None,[]] 
+      ) [None,[]] l  
       in
-      let l3 = List.map (fun (saopt, l) ->
-
-      List.iter2 ( fun p1 p2 -> if Smt.Type.compare_rec p1 p2 <> 0 then assert false) htl l;
-
-
-	saopt, Record l) l2
+      let l3 = List.map (fun (saopt, l) -> saopt, Record l) l2 in
+      begin
+	match l3 with
+	  | [] -> assert false
+	  | [None, r] -> Single r
+	  | _ ->
+	    let temp = (List.map (fun (saopt, l) -> match saopt with
+	      | Some sa -> sa, l
+	      | None -> assert false) l3)
+	    in
+	    Branch(temp)
+      end 
+    | RecordWith (t, htl) ->
+      let pre_t = find_assign memo tr t in
+      let l = List.map (fun (lbl, term) ->  lbl, find_assign memo tr term ) htl in
+      let l = List.rev l in
+      let l2 = List.fold_left (fun  acc1 (lbl, x)   ->
+	match x with
+	  | Single s ->
+	      List.map (fun (saopt,l) ->  saopt,(lbl,s)::l ) acc1  
+	  | Branch b ->
+	    List.fold_right (fun (sa, t) acc  ->
+	      let acc1 = List.map (fun (saopt, l) ->
+		match saopt with
+		  | None -> Some sa, (lbl,t)::l
+		  | Some sa' -> Some (SAtom.union sa sa'), (lbl,t)::l
+	      ) acc1
+		
+	      in acc1@acc
+	    )b []
+      ) [None,[]] l  
+      in
+      let l3 =
+	match pre_t with
+	  | Single s -> List.map (fun (saopt, l) -> saopt, RecordWith (s,l)) l2
+	  | Branch b ->
+	    List.fold_right (fun (sa, t) acc  ->
+	      let acc1 = List.map (fun (saopt, l) ->
+		match saopt with
+		  | None -> Some sa, RecordWith(t, l)
+		  | Some sa' -> Some (SAtom.union sa sa'), RecordWith(t, l)
+	      ) l2	
+	      in acc1@acc
+	    )b []
       in
       begin
 	match l3 with
@@ -183,20 +224,29 @@ let rec find_assign memo tr tt =
 	      | Some sa -> sa, l
 	      | None -> assert false) l3)
 	    in
-	     Branch(temp)
-	      
-	      
-	      
+	    Branch(temp)
       end 
-    
-    | RecordWith _ -> assert false
     | RecordField (r,lbl) ->
       let tt = find_assign memo tr r in 
       begin
 	match tt with
+	  | Single (Record htl) -> let v = List.assoc lbl htl in Single v
+	  | Single (RecordWith (r,htl))  ->
+	    if List.mem_assoc lbl htl
+	    then let v = List.assoc lbl htl in Single v
+	    else Single (RecordField(r,lbl))
+	      
 	  | Single s -> Single (RecordField(s,lbl))
 	  | Branch b ->
-	    Branch (List.map (fun (x,y) -> x, RecordField(y, lbl)) b)
+	    Branch (List.map (fun (x,y) ->
+	      match y with
+		| Record htl -> let v = List.assoc lbl htl in x, v
+		| RecordWith (r, htl)  ->
+		  if List.mem_assoc lbl htl then
+		    let v = List.assoc lbl htl in x, v
+		  else x, RecordField(r, lbl)
+		| _ -> x, RecordField(y, lbl)
+	    ) b)	      
       end 
     | Access (a, li) -> 
       let nli = li in
@@ -312,7 +362,7 @@ let make_cubes (ls, post) rargs s tr cnp =
 	 (fun (ls, post) ureq ->
 	  try
 	    let ureq = Cube.simplify_atoms_base np ureq in
-	    let np = SAtom.union ureq np in 
+	    let np = SAtom.union ureq np in
 	    if debug && verbose > 0 then Debug.pre_cubes np nargs;
 	    if Cube.inconsistent_set np then
               begin

@@ -130,32 +130,42 @@ type state_transistion = {
 
 
 type env = {
-  model_cardinal : int;
-  var_terms : Term.Set.t;
-  nb_vars : int;
-  max_id_vars : int;
-  perm_procs : (int * int) list list;
+  model_cardinal : int; (* n in -brab n *)
+  var_terms : Term.Set.t; (* all instantiated global variables *)
+  nb_vars : int; (* var_terms cardinal *)
+  max_id_vars : int; (* nb_vars - 1  *)
+  perm_procs : (int * int) list list; (* all possible permutations [0..max_id_vars] w*)
   perm_states : ((Hstring.t * Hstring.t) list *
                     (int * int) list * (int * int) list) list;
-  first_proc : int;
-  extra_proc : int;
-  all_procs : Hstring.t list;
-  proc_ids : int list;
-  id_terms : int HT.t;
-  id_true : int;
-  id_false : int;
-  st_trs : state_transistion list;
-  low_int_abstr : int;
-  up_int_abstr : int;
+  (* [(sigma_1, term_sigma_1 , proc_sigma_1); ...; (sigma_k, term_sigma_k, proc_sigma_k) ]
+     where:
+     sigma_i: a list of all possible proc permutations
+     term_sigma_i: represents the (t |-> sigma_i t) mappings by c_t |-> c_(sigma_i t) where 
+     c_u is the int tag of u, for each term u 
+     proc_sigma_i: represents the (p |-> sigma_i p) mappings by c_p |-> c_(sigma_i p) where 
+     c_u is the int tag of u, for each proc u  
+  *)
+  first_proc : int; (* same as nb_vars *)
+  extra_proc : int; (* n+1 *)
+  all_procs : Hstring.t list; (* list of all procs ["#1".."#n+1"] *)
+  proc_ids : int list; (* [i_1..i_n+1] tags associated to "#1".."#n+1" *)
+  id_terms : int HT.t; (* all terms associated to their tags *)
+  id_true : int; (* tag for true *)
+  id_false : int; (* tag for false  *)
+  st_trs : state_transistion list; (**)
+  low_int_abstr : int; (* integer interval over which ints are interpreted: lower bound *)
+  up_int_abstr : int; (* integer interval over which ints are interpreted: upper bound *)
   pinf_int_abstr : int;
   minf_int_abstr : int;
-  proc_substates : int list HLI.t;
-  reverse_proc_substates : int list HI.t;
+  proc_substates : int list HLI.t; (* which Access terms are mapped to ["#i"; ... ;"#i+k"]  *)
+  reverse_proc_substates : int list HI.t; (* inversed proc_substates map *)
   partial_order : int list list;
+  (* Regroup Access terms whose last proc differs
+     [[P[#1,#2]; P[#1,#3]]; [P[#2,#1]; P[#2,#3]; P[#2,#2]];...; [T[#1];T[#2]] ]*)
 
-  table_size : int;
-  mutable explicit_states : unit HST.t;
-  mutable states : state list;
+  table_size : int; (* max size of explicit states *)
+  mutable explicit_states : unit HST.t; (* explicit states table*)
+  mutable states : state list; 
 }
 
 let empty_env = {
@@ -486,6 +496,8 @@ let init_tables ?(alloc=true) procs s =
   let max_id_vars = !i - 1 in
   let proc_ids = ref [] in
   let first_proc = !i in
+  assert (first_proc = nb_vars);
+  Format.eprintf "First proc %d@." !i;
   List.iter (fun t -> HT.add ht t !i; proc_ids := !i :: !proc_ids; incr i)
     proc_terms;
   (* add an extra process in case we need it : change this to statically compute
@@ -589,10 +601,10 @@ let rec cdnf_to_dnf_rec acc = function
   | [] :: r ->
       cdnf_to_dnf_rec acc r
   | dnf :: r ->
-      let acc = 
-        List.flatten (List.rev_map (fun sac -> 
-          List.rev_map (SAtom.union sac) dnf) acc) in
-      cdnf_to_dnf_rec acc r
+    let acc = List.rev_map (fun sac -> 
+      List.rev_map (SAtom.union sac) dnf) acc in 
+    let acc = List.flatten acc in
+    cdnf_to_dnf_rec acc r
 
 let cdnf_to_dnf = function
   | [] -> [SAtom.singleton Atom.False]
@@ -650,8 +662,31 @@ let write_atom_to_states env sts = function
       done;
       !l
   | Atom.Comp (t1, Eq, t2) ->
-      List.iter (fun st -> 
-        st.(HT.find env.id_terms t1) <- HT.find env.id_terms t2) sts;
+    List.iter (fun st ->
+      let nb = Array.length st - 1 in
+      Format.eprintf "Array length %d@." nb;
+      Array.iter (fun x -> Format.eprintf "el: %d " x) st;
+      Format.eprintf "@.";
+      let i1 = HT.find env.id_terms t1 in
+      let i1 = if st.(i1) = -1 then i1 else st.(i1) in 
+      let i2 = HT.find env.id_terms t2 in
+      let i2 = if i2 > nb then i2 else if st.(i2) = -1 then i2 else st.(i2) in
+      Format.eprintf "i1 = %a: %d et i2 = %a: %d@." Types.Term.print t1 i1 Types.Term.print t2 i2;
+      if i1 < i2 then
+	begin
+	  Format.eprintf "Begin: i1 is %d;\n st.(i1) is : %d;\n i2 is %d@." i1 st.(i1) i2;
+	  st.(i1) <- i2;
+	  Array.iteri (fun i v -> if v = i1 then st.(i) <- i2) st
+	end 
+      else
+	begin
+	  Format.eprintf "Begin2: i2 is %d st.(i2) is : %d;\n i1 is %d@." i2 st.(i2) i1;
+	  st.(i2) <- i1;
+	  Array.iteri (fun i v -> if v = i2 then st.(i) <- i1) st
+	end
+      (*Array.iteri (fun i v -> if v = i1 then st.(i) <- i2) st;*)
+    ) sts;
+    
       sts
   | Atom.Comp (t1, Neq, Elem(_, Var)) ->
       (* Assume an extra process if a disequality is mentioned on
@@ -666,10 +701,12 @@ let write_cube_to_states env st sa =
 let init_to_states env procs s =
   let nb = env.nb_vars in
   let l_inits = mkinits procs s in
+  List.iter (fun x -> Format.eprintf "SAtom: %a@." Types.SAtom.print x) l_inits;
   let sts =
     List.fold_left (fun acc init -> 
       let st_init = Array.make nb (-1) in
       let sts = write_cube_to_states env st_init init in
+      List.iter (fun x -> Array.iteri (fun i d -> Format.eprintf " %d = %d\n" i d)  x; Format.eprintf "@.") sts;
       List.rev_append sts acc
     ) [] l_inits in
   List.map (fun st -> 0, st) sts

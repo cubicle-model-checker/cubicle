@@ -79,9 +79,9 @@ let rec is_prime_term = function
   | Arith (x, _) -> is_prime_term x
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | RecordField (t,_) -> is_prime_term t
+  | RecordField _ -> assert false
   | RecordWith _ -> assert false	
-  | Record htl -> List.fold_left (fun acc (x,_) -> is_prime (Hstring.view x) && acc) true  htl
+  | Record _ -> assert false
  
 
 let rec is_prime_atom = function
@@ -391,10 +391,9 @@ let rec type_of_term = function
   | Arith (t, _) -> type_of_term t
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | Record htl -> let l = fst (List.hd htl) in
-		  fst (Smt.Type.find_record_by_field l)
+  | Record _ -> assert false
   | RecordWith _ -> assert false
-  | RecordField (t,s) -> fst (Smt.Type.find_record_by_field s)
+  | RecordField _ -> assert false
 
 let rec type_of_atom = function
   | True | False -> None
@@ -845,7 +844,6 @@ let instantiate_transitions all_procs procs trans =
     ) acc d
   in
   List.fold_left aux [] trans
-
 
 
 

@@ -219,13 +219,21 @@ let rec term loc args t =
     
     if List.length fields = List.length l then
       printf "@{<b>@{<fg_cyan>Warning@}@} line %d: the 'with' is useless \n@." (fst loc).pos_lnum;
-    
-    let comp = List.filter (fun (lbl,_) -> not (List.exists (fun (x,_) -> Hstring.compare lbl x = 0) l )) fields in
-    let n_comp = List.map (fun (lbl,_) -> lbl,RecordField(rt, lbl)) comp in
-    let n_fields = List.sort Smt.Type.compare_rec (l@n_comp) in
 
-    Record(n_fields), ([], therecord)
+    let nl = List.map (fun (lbl, t) ->
+      try
+	let ty_lbl = List.assoc lbl fields in
+	let nt, ty_t = term loc args t in
+	unify loc ([],ty_lbl) ty_t;
+	
+	lbl,nt
+      with Not_found -> error (UnknownField (lbl, therecord)) loc) l
+    in 
+     
+    let nl = List.sort Smt.Type.compare_rec nl in
+    RecordWith(n_rt, nl), ([], therecord)
     
+
 
   | RecordField (r, s) ->
     let r, ty_term = term loc args r in
@@ -303,22 +311,22 @@ let assignment ?(init_variant=false) g x (_, ty) =
 
 let atom loc init_variant args a =
   match a with 
-  | True | False -> a
-  | Comp (Elem(g, Glob) as x, Eq, y)
-  | Comp (y, Eq, (Elem(g, Glob) as x))
-  | Comp (y, Eq, (Access(g, _) as x))
-  | Comp (Access(g, _) as x, Eq, y) ->
-    let x', tx = term loc args x in
-    let y',ty = term loc args y in
+    | True | False -> a
+    | Comp (Elem(g, Glob) as x, Eq, y)
+    | Comp (y, Eq, (Elem(g, Glob) as x))
+    | Comp (y, Eq, (Access(g, _) as x))
+    | Comp (Access(g, _) as x, Eq, y) ->
+      let x', tx = term loc args x in
+      let y',ty = term loc args y in
       unify loc tx ty;
-    if init_variant then assignment ~init_variant g y' ty ;
-    Comp(x', Eq, y')
-  | Comp (x, op, y) ->
-    let x', tx = term loc args x in
-    let y',ty = term loc args y in
-    unify loc tx ty;
-    Comp(x', op, y')
-  | Ite _ -> assert false
+      if init_variant then assignment ~init_variant g y' ty ;
+      Comp(x', Eq, y')
+    | Comp (x, op, y) ->
+      let x', tx = term loc args x in
+      let y',ty = term loc args y in
+      unify loc tx ty;
+      Comp(x', op, y')
+    | Ite _ -> assert false
 
 let atoms loc ?(init_variant=false) args =
   SAtom.map (atom loc init_variant args)

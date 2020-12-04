@@ -263,7 +263,7 @@ let rec simplification np a =
 
     
       
-    | Atom.Comp (x, (Eq | Neq as op), y) ->
+    (*| Atom.Comp (x, (Eq | Neq as op), y) ->
       begin
 	match Structures.simplify_smt_atom x op y with
 	  | None ->
@@ -271,7 +271,7 @@ let rec simplification np a =
 	    else a 
 	  | Some a -> a 
 	    
-      end
+      end*)
 
        
       
