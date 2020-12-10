@@ -119,7 +119,7 @@ let print_candidates ~safe candidates =
     end
 
 
-let print_trace faulty fmt trace =
+let print_trace faulty fmt trace = 
   let o = Node.origin faulty in
   let first = ref true in
   List.iter 
@@ -138,7 +138,7 @@ let print_trace faulty fmt trace =
   if o.kind = Approx then fprintf fmt "@{<fg_blue>approx[%d]@}" o.tag
   else fprintf fmt "@{<fg_magenta>unsafe[%d]@}" o.tag
 
-let print_trace faulty fmt trace =
+let print_trace faulty fmt trace = 
   let o = Node.origin faulty in
   let first = ref true in
   List.iter 
@@ -157,7 +157,7 @@ let print_trace faulty fmt trace =
   if o.kind = Approx then fprintf fmt "@{<fg_blue>approx[%d]@}" o.tag
   else fprintf fmt "@{<fg_magenta>unsafe[%d]@}" o.tag
 
-let print_history fmt n =
+let print_history fmt n = 
   fprintf fmt "@[<hov4>Init ->";
   if verbose > 0 then fprintf fmt "@ %a" Node.print n;
   fprintf fmt "@ @]@,";

@@ -253,15 +253,8 @@ let rec simplification np a =
 	 | _ -> a
        end
     | Atom.Comp (Const _ as c, Eq, y) -> Atom.Comp (y, Eq, c)
-
-    
-
-      
       
     | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
-
-
-    
       
     (*| Atom.Comp (x, (Eq | Neq as op), y) ->
       begin
@@ -272,9 +265,6 @@ let rec simplification np a =
 	  | Some a -> a 
 	    
       end*)
-
-       
-      
 
     | Atom.Comp _ -> a
     | Atom.Ite (sa, a1, a2) ->

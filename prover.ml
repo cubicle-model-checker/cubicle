@@ -117,7 +117,25 @@ let rec make_term tt =
 
     T.make_record record ls
       
-  | RecordWith (t, htl)  ->  assert false
+  | RecordWith (t, htl)  ->
+    
+    
+    let lh = fst (List.hd htl) in
+    let (_, fields) as record = Smt.Type.record_ty_by_field lh in
+
+          
+    
+    let comp = List.filter (fun (lbl,_) -> not (List.exists (fun (x,_) -> Hstring.compare lbl x = 0) htl )) fields in
+    
+    let n_comp = List.map (fun (lbl,_) -> lbl,make_term (RecordField(t, lbl))) comp in
+
+    let htl =
+      List.fold_left (fun ls (lbl, v) -> (lbl, make_term v)::ls) n_comp htl in
+    
+    let n_fields = List.sort Smt.Type.compare_rec htl in
+    let n_fields = List.map snd n_fields in 
+
+    T.make_record record n_fields
     
   | RecordField (record, field) ->
     let t_record = make_term record in

@@ -1,0 +1,30 @@
+type p = { want : bool; crit : bool }
+
+var Turn : proc
+
+array P[proc] : p
+
+init(z) { P[z] = { want = False; crit = False} }
+
+unsafe ( x y ) { P[x].crit = True && P[y].crit = True }
+
+
+transition req(i)
+requires { P[i].want = False }
+{  P[i] := { P[i] with want = True }
+}
+
+transition enter (i)
+requires { P[i] = { want = True; crit = False } && Turn = i }
+(*requires { P[i].want = True && P[i].crit = False  && Turn = i }*)
+
+{ P[i] := { P[i] with crit = True }
+}
+
+transition exit (i)
+requires { P[i].crit = True }
+{
+ Turn := .;
+ P[i] :=  { want = False; crit = False}
+
+}

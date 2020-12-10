@@ -111,8 +111,6 @@ module Term : sig
   val print : Format.formatter -> t -> unit
   (** prints a term *)
 
-  val is_ground : t -> bool 
-
   module Set : Set.S with type elt = t
   (** set of terms *)
 
@@ -179,7 +177,6 @@ module rec Atom : sig
   val print : Format.formatter -> t -> unit
     (** prints an atom *)
 
-  val is_ground : t -> bool
 
 end
 

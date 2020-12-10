@@ -14,10 +14,8 @@ unsafe (x y) {
 transition req (i)
 requires { Want[i] = False }
 {
- Want[j] := case 
-             | i = j : True
-             | _ : Want[j]
-}
+ Want[i] := True
+ }
 
 transition enter (i)
 requires { 
@@ -25,20 +23,13 @@ requires {
    && Crit[i] = False
    && Turn = i }
 {
- Crit[j] := case
-             | i = j : True
-             | _ : Crit[j]
+ Crit[i] := True;
 }
 
 transition exit (i)
 requires { Crit[i] = True }
 {
  Turn := . ;
- Crit[j] := case
-             | i = j : False 
-             | _ : Crit[j]  ;
- Want[j] := case
-             | i = j : False
-             | _ : Want[j]
-}
-  
+ Crit[i] := False;
+ Want[i] := False
+  }

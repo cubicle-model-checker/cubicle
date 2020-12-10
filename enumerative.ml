@@ -664,25 +664,16 @@ let write_atom_to_states env sts = function
   | Atom.Comp (t1, Eq, t2) ->
     List.iter (fun st ->
       let nb = Array.length st - 1 in
-      Format.eprintf "Array length %d@." nb;
       Array.iter (fun x -> Format.eprintf "el: %d " x) st;
       Format.eprintf "@.";
       let i1 = HT.find env.id_terms t1 in
-      let i1 = if st.(i1) = -1 then i1 else st.(i1) in 
+      if st.(i1) = -1 then st.(i1) <- i1;
       let i2 = HT.find env.id_terms t2 in
-      let i2 = if i2 > nb then i2 else if st.(i2) = -1 then i2 else st.(i2) in
-      Format.eprintf "i1 = %a: %d et i2 = %a: %d@." Types.Term.print t1 i1 Types.Term.print t2 i2;
-      if i1 < i2 then
-	begin
-	  st.(i1) <- i2;
-	  Array.iteri (fun i v -> if v = i1 then st.(i) <- i2) st
-	end 
-      else
-	begin
-	  st.(i2) <- i1;
-	  Array.iteri (fun i v -> if v = i2 then st.(i) <- i1) st
-	end
-      (*Array.iteri (fun i v -> if v = i1 then st.(i) <- i2) st;*)
+      if i2 <= nb && st.(i2) = -1 then st.(i2) <- i2;
+      let r1 = if i1 < nb then st.(i1) else i1 in
+      let r2 = if i2 < nb then st.(i2) else i2 in
+      let r1, r2 = if r1 < r2 then r1, r2 else r2, r1 in
+      Array.iteri (fun i v -> if v = r1 then st.(i) <- r2) st
     ) sts;
     
       sts
@@ -984,10 +975,11 @@ let transitions_to_func_aux procs env reduce acc
     (* let d = List.filter ordered_subst d in *)
     List.fold_left (fun acc sigma ->
       let reqs = SAtom.subst sigma reqs in
-      let t_args_ef = 
-	List.fold_left (fun acc p -> 
+      let t_args_ef =
+	List.map (fun p -> try Variable.subst sigma p with Not_found -> p ) tr_args in
+	(*List.fold_left (fun acc p -> 
 	  try (Variable.subst sigma p) :: acc
-	  with Not_found -> p :: acc) [] tr_args in
+	  with Not_found -> p :: acc) [] tr_args in*)
       let udnfs = Forward.uguard_dnf sigma procs t_args_ef ureqs in
       let st_reqs = satom_to_st_req env reqs in
       let st_udnfs = List.map (List.map (satom_to_st_req env)) udnfs in

@@ -98,8 +98,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                end
              in
              let ls, post = Pre.pre_image system.t_trans n in
-	     (*let ls = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) ls in
-	     let post = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) post in*)
+	     let ls = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) ls in
+	     let post = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) post in
 	     cpt_pre := !cpt_pre + (List.length ls) + (List.length post);
 	     (*Format.eprintf "Begin: %d %d @." (List.length ls) (List.length post);
 	     List.iter (fun x -> Format.eprintf "%a@." Node.print x) ls;

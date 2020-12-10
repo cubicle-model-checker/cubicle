@@ -234,7 +234,6 @@ let rec term loc args t =
     RecordWith(n_rt, nl), ([], therecord)
     
 
-
   | RecordField (r, s) ->
     let r, ty_term = term loc args r in
     let therecord, fields =
@@ -390,7 +389,7 @@ let switchs loc a args ty_e l =
        sa, tt) l
 
 
-let updates args upds = 
+let updates args upds =
   let dv = ref [] in
   List.map 
     (fun ({up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} as upd) -> 

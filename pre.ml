@@ -34,9 +34,9 @@ module Debug = struct
 	  | _ -> 
 	      List.iter (eprintf "@.New branch : %a@." Node.print) ls
 
-  let unsafe = 
+  let unsafe =
     if not debug then fun _ -> () else 
-      fun s -> eprintf "    %a@." Node.print s
+      fun s -> eprintf "Unsafe:   %a@." Node.print s
 
   let invariant = 
       fun s -> eprintf "Invariant ?@. %a@." Cube.print s
