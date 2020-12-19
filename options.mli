@@ -24,6 +24,8 @@ type solver = AltErgo | Z3
 val file : string
 val cin : in_channel
 
+val tla : bool
+
 val max_proc : int
 val type_only : bool
 val maxrounds : int

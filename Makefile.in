@@ -48,7 +48,7 @@ INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 BFLAGS = -dtypes -g $(INCLUDES) -annot
 OFLAGS = -dtypes -g $(INCLUDES) -annot
 
-REQBIB=nums.cma unix.cma functory.cma
+REQBIB=nums.cma unix.cma functory.cma str.cma
 
 ifeq ($(Z3LIB),)
   BIBBYTE=$(REQBIB)
@@ -119,6 +119,7 @@ CMO = version.cmo options.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \
+      tla.cmo \
       stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
@@ -139,7 +140,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.2
+VERSION=1.1.3
 VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
@@ -305,7 +306,8 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\
 	safety.ml safety.mli stats.ml stats.mli trace.ml trace.mli\
 	types.ml types.mli typing.ml typing.mli util.ml util.mli\
-	variable.ml variable.mli version.ml
+	variable.ml variable.mli version.ml \
+	tla.mli tla.ml
 
 EXAMPLES = bakery.cub dijkstra.cub distrib_channels.cub jml.cub\
 	   ricart_abdulla.cub szymanski_at.cub berkeley.cub flash_eager.cub\

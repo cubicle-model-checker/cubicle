@@ -63,6 +63,7 @@ let _ =
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
     if type_only then exit 0;
+    if tla then begin Tla.print stdout s; exit 0; end;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
