@@ -275,7 +275,27 @@ module Term = struct
 	      | Subtraction, Subtraction -> 0
 	     in comp_op (op1,op2))
 	end
-	  
+
+
+  let rec is_ground t =
+    match t with 
+    | Const _ | Elem (_, (Var|Constr)) -> true
+    | Elem _ -> false
+    | Access _ -> false
+    | Arith (t, _) -> is_ground t
+    | BinOp (t1, _, t2) -> is_ground t1 && is_ground t2
+    | UnOp (_, t) -> is_ground t
+      
+    | RecordWith (t, l) -> is_ground t && List.for_all (fun (_,t) -> is_ground t) l
+      
+    | RecordField (t, _) -> is_ground t 
+      
+    | Record l -> List.for_all (fun (_,t) -> is_ground t) l
+
+  let can_simp t =
+    match t with 
+    | Const _ | Elem _ | Access _ -> false
+    | _ -> true 
   
 
   let hash = Hashtbl.hash_param 50 50
@@ -288,7 +308,13 @@ module Term = struct
   module STerm = Set.Make (struct
                             type t = term
                             let compare = compare
-                          end)
+  end)
+
+  module HMap = Hashtbl.Make (struct
+    type t = term
+    let equal = equal
+    let hash = hash  
+  end )
 
   module Set = STerm
 
@@ -416,6 +442,7 @@ module rec Atom : sig
   val variables : t -> Variable.Set.t
   val variables_proc : t -> Variable.Set.t
   val print : Format.formatter -> t -> unit
+  val str_op_comp: op_comp -> string
   val print_atoms : bool -> string -> Format.formatter -> t list -> unit
 
 end = struct

@@ -29,7 +29,7 @@ module type S = sig
 
   val union : 
     t -> R.r -> R.r -> Explanation.t -> 
-    t * (R.r * (R.r * R.r * Explanation.t) list * R.r) list
+    t * ((R.r * (R.r * R.r * Explanation.t) list * R.r) list * (R.r * R.r) list)
 
   val distinct : t -> R.r list -> Explanation.t -> t
 

@@ -200,7 +200,81 @@ let simplify_comp i si op j sj =
     | _ ->
         Atom.Comp (Elem (i, si), op, Elem (j, sj))
 
+
+
+	
+	  
+	  
 let rec simplification np a =
+  let a = redondant_or_false (SAtom.remove a np) a in
+  match a with
+    | Atom.True | Atom.False -> a
+    | Atom.Comp (Elem (i, si), op , Elem (j, sj)) -> simplify_comp i si op j sj
+    | Atom.Comp (Arith (i, csi), op, (Arith (j, csj)))
+      when compare_constants csi csj = 0 -> simplification np (Atom.Comp (i, op, j))
+    | Atom.Comp (Arith (i, csi), op, (Arith (j, csj))) ->
+        let cs = add_constants (mult_const (-1) csi) csj in
+	if MConst.is_empty cs then Atom.Comp (i, op, j)
+	else Atom.Comp (i, op, (Arith (j, cs)))
+    (* | Atom.Comp (Const cx, op, Arith (y, sy, cy)) -> *)
+    (* 	Atom.Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
+    (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
+    (* | Atom.Comp ( Arith (x, sx, cx), op, Const cy) -> *)
+    (* 	Atom.Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
+    (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
+    | Atom.Comp (Arith (x, cx), op, Const cy) ->
+       let mcx = mult_const (-1) cx in
+       Atom.Comp (x, op, Const (add_constants cy mcx))
+    | Atom.Comp (Const cx, op, Arith (y, cy)) ->
+       let mcy = mult_const (-1) cy in
+       Atom.Comp (Const (add_constants cx mcy), op, y)
+
+    | Atom.Comp (x, op, Arith (y, cy)) when Term.compare x y = 0 ->
+        let cx = add_constants (mult_const (-1) cy) cy in
+	let c, i = MConst.choose cy in
+	let my = MConst.remove c cy in
+	let cy =
+	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
+        Atom.Comp (Const cx, op, Const cy)
+    | Atom.Comp (Arith (y, cy), op, x) when Term.compare x y = 0 ->
+        let cx = add_constants (mult_const (-1) cy) cy in
+	let c, i = MConst.choose cy in
+	let my = MConst.remove c cy in
+	let cy =
+	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
+        Atom.Comp (Const cy, op, Const cx)
+    | Atom.Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
+       Atom.True
+    | Atom.Comp (Const c1, Le, Const c2) ->
+       begin
+	 match MConst.is_num c1, MConst.is_num c2 with
+	 | Some n1, Some n2 -> if Num.le_num n1 n2 then Atom.True else Atom.False
+	 | _ -> a
+       end
+    | Atom.Comp (Const c1, Lt, Const c2) ->
+       begin
+	 match MConst.is_num c1, MConst.is_num c2 with
+	 | Some n1, Some n2 -> if Num.lt_num n1 n2 then Atom.True else Atom.False
+	 | _ -> a
+       end
+    | Atom.Comp (Const _ as c, Eq, y) -> Atom.Comp (y, Eq, c)
+    | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
+
+    | Atom.Comp (x, (Eq | Neq as op), y) when Term.compare x y < 0 -> Atom.Comp (y, op, x)
+    | Atom.Comp _ -> a
+    | Atom.Ite (sa, a1, a2) ->
+	let sa =
+	  SAtom.fold
+	    (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
+	in
+	let a1 = simplification np a1 in
+	let a2 = simplification np a2 in
+	if SAtom.is_empty sa || SAtom.subset sa np then a1
+	else if SAtom.mem Atom.False sa then a2
+	else Atom.Ite(sa, a1, a2)
+
+	  
+(*let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
     | Atom.True | Atom.False -> a
@@ -278,7 +352,7 @@ let rec simplification np a =
 	else if SAtom.mem Atom.False sa then a2
 	else Atom.Ite(sa, a1, a2)
 
-
+	  *)
 
 let rec simplification_terms a = match a with
     | Atom.True | Atom.False -> a

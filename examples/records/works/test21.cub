@@ -24,5 +24,5 @@ transition t1()
 requires { X = 3 }
 {
 Y := { f = 5; u = A };
-X := 4
+X :=4;
 }

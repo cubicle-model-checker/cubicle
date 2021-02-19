@@ -109,6 +109,17 @@ module Make(X : ALIEN) = struct
 
   let term_extract _ = None
 
+  let term_extract t =
+    match X.extract t with
+      | Some v ->
+	begin
+	   match v with
+	    | Cons (hs, ty) ->
+	      Some (T.make (Symbols.Name(hs, Symbols.Constructor)) [] ty)
+	    | Alien a -> X.term_extract a
+	end
+      | None -> X.term_extract t
+
   module Rel = struct
     type r = X.r
 
@@ -154,7 +165,7 @@ module Make(X : ALIEN) = struct
         | Alien r1   , Alien r2   -> env, eqs
         |  _ -> env, eqs
 
-    let add_eq hss sm1 sm2 dep env eqs = 
+    let add_eq hss sm1 sm2 dep env eqs =
       match sm1, sm2 with
         | Alien r, Cons(h,ty) | Cons (h,ty), Alien r  ->
 

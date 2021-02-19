@@ -79,9 +79,11 @@ let rec is_prime_term = function
   | Arith (x, _) -> is_prime_term x
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | RecordField _ -> assert false
-  | RecordWith _ -> assert false	
-  | Record _ -> assert false
+  | RecordField (t, _) -> is_prime_term t
+  | RecordWith (t, l)  -> let fl = List.filter (fun (_,x) -> is_prime_term x) l in
+			 not  (fl = [])
+  | Record l -> let fl = List.filter (fun (_,x) -> is_prime_term x) l in
+			  not (fl = [])
  
 
 let rec is_prime_atom = function
@@ -391,9 +393,9 @@ let rec type_of_term = function
   | Arith (t, _) -> type_of_term t
   | UnOp _ -> assert false
   | BinOp _ -> assert false
-  | Record _ -> assert false
-  | RecordWith _ -> assert false
-  | RecordField _ -> assert false
+  | Record l -> let f, _ = List.hd l in fst (Smt.Type.record_ty_by_field f)
+  | RecordWith (t,_) -> type_of_term t
+  | RecordField (t,_) -> type_of_term t
 
 let rec type_of_atom = function
   | True | False -> None
@@ -848,15 +850,20 @@ let instantiate_transitions all_procs procs trans =
 
 
 let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
+  Format.eprintf "globals length: %d@." (List.length globals);
   let acc, gp = 
     List.fold_left 
       (fun (acc, gp) g ->
+	Format.eprintf "all_var_terms term: %a done@." Hstring.print g;
 	Term.Set.add (Elem (g, Glob)) acc, gp
       ) (Term.Set.empty, []) globals
   in
   List.fold_left (fun acc a ->
     let indexes = Variable.all_arrangements_arity a (procs@gp) in
     List.fold_left (fun acc lp ->
+      Format.eprintf "all_var_terms variable: %a@." Hstring.print a;
+      List.iter (Format.eprintf "%a@." Variable.print) lp;
+      Format.eprintf "done@.";
       Term.Set.add (Access (a, lp)) acc)
       acc indexes)
     acc arrays

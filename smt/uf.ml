@@ -32,7 +32,7 @@ module type S = sig
     
   val union : 
     t -> R.r -> R.r -> Explanation.t -> 
-    t * (R.r * (R.r * R.r * Explanation.t) list * R.r) list
+    t * ((R.r * (R.r * R.r * Explanation.t) list * R.r) list * (R.r * R.r) list)
 
   val distinct : t -> R.r list -> Explanation.t -> t
 
@@ -268,18 +268,18 @@ module Make ( R : Sig.X ) = struct
 	  raise (Inconsistent dep)
       end
         
-  let rec ac_x eqs env tch = 
-    if Queue.is_empty eqs then env, tch
+  let rec ac_x eqs env tch subst = 
+    if Queue.is_empty eqs then env, (tch, subst)
     else 
       let r1, r2, dep = Queue.pop eqs in
       let sbs = x_solve env r1 r2 dep in
       let env, tch = List.fold_left (ac_solve eqs dep) (env, tch) sbs in
-      ac_x eqs env tch
+      ac_x eqs env tch (sbs@subst)
       
   let union env r1 r2 dep =
     let equations = Queue.create () in 
     Queue.push (r1,r2, dep) equations;
-    ac_x equations env []
+    ac_x equations env [] []
 
   let rec distinct env rl dep =
     let d = Lit.make (Literal.Distinct (false,rl)) in

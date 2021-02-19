@@ -108,11 +108,18 @@ module Term : sig
   val type_of : t -> Smt.Type.t
   (** returns the type of the term as it is known by the SMT solver *)
 
+  val is_ground : t -> bool
+  val can_simp : t -> bool
+
   val print : Format.formatter -> t -> unit
   (** prints a term *)
 
   module Set : Set.S with type elt = t
-  (** set of terms *)
+(** set of terms *)
+
+  module HMap : Hashtbl.S with type key = t
+
+    
 
 end
 
@@ -174,6 +181,8 @@ module rec Atom : sig
   (** same as [variables] but only return skolemized variables of the form
       [#i] *)
 
+  val str_op_comp: op_comp -> string
+
   val print : Format.formatter -> t -> unit
     (** prints an atom *)
 
@@ -192,7 +201,7 @@ and SAtom : sig
   (** {e Attention}: the function [add] performs some simple semantic
       simplifications, so it is advised to not use this module for real sets of
       atoms. *)
-
+ 
   val equal : t -> t -> bool
   val hash : t -> int
   val subst : Variable.subst -> t -> t

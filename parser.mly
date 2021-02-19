@@ -223,6 +223,8 @@ type_def:
   | TYPE lident EQ BAR constructors 
       { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }
   | TYPE lident EQ LEFTBR record_fields RIGHTBR { Records (loc (), ($2, $5)) }
+  
+						       
 ;
 
 constructors:
@@ -375,6 +377,7 @@ term:
   | term PLUS INT { Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
   | term PLUS mident { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
   | term MINUS INT { Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
+  | term MINUS mident { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
    
       
   | LEFTPAR term RIGHTPAR { $2 }

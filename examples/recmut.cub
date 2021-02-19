@@ -1,12 +1,12 @@
-type p = { want : bool; crit : bool }
+type p = { want : bool; crit : bool; toto: bool }
 
 var Turn : proc
 
 array P[proc] : p
 
-init(z) { P[z] = { want = False; crit = False} }
+init(z) { P[z] = { want = False; crit = False; toto = False} && {want=False; crit= False; toto= False}.toto = False }
 
-unsafe ( x y ) { P[x].crit = True && P[y].crit = True }
+unsafe ( x y ) { P[x].crit = True && P[y].crit = True && {want=False; crit= False; toto= False}.toto = False && True = True}
 
 
 transition req(i)
@@ -15,7 +15,7 @@ requires { P[i].want = False }
 }
 
 transition enter (i)
-requires { P[i] = { want = True; crit = False } && Turn = i }
+requires { P[i] = { want = True; crit = False; toto = False} && Turn = i }
 (*requires { P[i].want = True && P[i].crit = False  && Turn = i }*)
 
 { P[i] := { P[i] with crit = True }
@@ -25,6 +25,6 @@ transition exit (i)
 requires { P[i].crit = True }
 {
  Turn := .;
- P[i] :=  { want = False; crit = False}
+ P[i] :=  { P[i] with want = False; crit = False}
 
 }

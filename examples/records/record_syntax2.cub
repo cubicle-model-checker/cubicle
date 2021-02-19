@@ -15,17 +15,17 @@ array Ar2[proc] : rec3
 array Y[proc] : int
 array Y1[proc] : int
 
-init (i j) { Y[i] = 2 && R = { field1 = 1 } }
+init (i j) { Y[i] = 2 && R = { field1 = 1; field2 = True } }
 
 transition t(i j)
 requires { R.field1 = 0 && Ar[i].field1 = R.field1 &&
 	  {R with field1 = 42} = { field1 = X; field2 = True } &&
 	  {R with field1 = 42}.field2 = True &&
-	  { Ar[i] with field2 = False} =  Ar[j] &&
-	  Ar2[i].a.field1 = 42
+	  { Ar[i] with field2 = False} = Ar[j] &&
+	  Ar2[i].a.field4 = True
 }
 {
- T := { T with field1 = 3; };
+ T := { T with field1 = True; };
 }
  
  

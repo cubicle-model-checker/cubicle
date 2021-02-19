@@ -18,6 +18,7 @@ exception Unsat of Solver_types.clause list
 
 module Make (Dummy : sig end) : sig
   type state
+ 
 
   val solve : unit -> unit
   val assume : Literal.LT.t list list -> cnumber : int -> unit
@@ -25,5 +26,7 @@ module Make (Dummy : sig end) : sig
 
   val save : unit -> state
   val restore : state -> unit
+
+  val normalize : Literal.LT.t list  -> Literal.LT.t list 
 
 end

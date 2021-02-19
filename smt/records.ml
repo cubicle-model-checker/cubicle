@@ -99,7 +99,7 @@ module Make (X : ALIEN) = struct
 	    | _ -> Record (lbs_n, ty)
 	end
       | Access (a, x, ty) ->
-	let n = normalize x in 
+	let n = normalize x in
 	begin
 	  match n with 
 	    | Record (lbs, _) ->  Hstring.list_assoc a lbs 
@@ -264,7 +264,7 @@ module Make (X : ALIEN) = struct
 
   let fully_interpreted _ = false
 
-  let rec term_extract r = 
+  let rec term_extract r =
     match X.extract r with
       | Some v -> begin match v with
 	  | Record (lbs, ty) -> 

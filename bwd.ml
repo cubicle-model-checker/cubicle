@@ -58,7 +58,9 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
     (* Initialization *)
     Q.push_list !candidates q;
+    (*let sys = List.map Prover.normalize system.t_unsafe in*)
     Q.push_list system.t_unsafe q;
+    (* Q.push_list sys q; *)
     assert (List.length invariants = 0);
     assert (List.length !candidates = 0);
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
@@ -67,11 +69,12 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
-	(*Format.eprintf "n: %d@." n.tag;*)
+	
+	Format.eprintf "n: %a@." Node.print n;
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
-          | Some db ->
+          | Some db -> Format.eprintf "some db@.";
             Stats.fixpoint n db
 	    (*Format.eprintf "Begin cubetrie@.";
 	    List.iter (fun x -> Format.eprintf "db: %d@." x) db;
@@ -97,9 +100,12 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                             backtrack, just forget it. *)
                end
              in
+	      Format.eprintf "ici@.";
+
              let ls, post = Pre.pre_image system.t_trans n in
-	     let ls = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) ls in
-	     let post = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) post in
+	     
+	     (*let ls = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) ls in
+	     let post = List.filter (fun n ->  Fixpoint.check n Cubetrie.empty = None) post in*)
 	     cpt_pre := !cpt_pre + (List.length ls) + (List.length post);
 	     (*Format.eprintf "Begin: %d %d @." (List.length ls) (List.length post);
 	     List.iter (fun x -> Format.eprintf "%a@." Node.print x) ls;

@@ -437,8 +437,8 @@ let theory_propagate () =
     let full_model = nb_assigns() = env.nb_init_vars in
     env.tenv <- 
       List.fold_left 
-	(fun t (a,ex) ->
-	 let t,_,_ = Th.assume ~cs:full_model a ex t in t) 
+      (fun t (a,ex) ->
+	 let t,_,_,_ = Th.assume ~cs:full_model a ex t in t) 
       env.tenv !facts;
     
     if full_model then expensive_theory_propagate ()
@@ -700,7 +700,7 @@ let check_inconsistence_of dep =
     let env = ref (Th.empty()) in ();
     Ex.iter_atoms
       (fun atom ->
-    	let t,_,_ = Th.assume ~cs:true atom.lit (Ex.singleton atom) !env in
+    	let t,_,_,_ = Th.assume ~cs:true atom.lit (Ex.singleton atom) !env in
     	env := t)
       dep;
     (* ignore (Th.expensive_processing !env); *)
@@ -1055,5 +1055,52 @@ let restore { env = s_env; st_cpt_mk_var = st_cpt_mk_var; st_ma = st_ma } =
   Solver_types.cpt_mk_var := st_cpt_mk_var;
   Solver_types.ma := st_ma
 
+let normalize l =
+  Format.eprintf "Solver-normalize@.";
+  List.iter (Format.eprintf "%a@." Literal.LT.print) l; 
+  try
+    let subst,_ = List.fold_left 
+      (fun (subst,env) lit->
+    	let env,_,_,sbs = Th.assume ~cs:false lit Ex.empty env in
+	(sbs@subst, env)
+      ) ([], Th.empty ()) l
+    in
+    let nl = 
+      (*List.map2 (fun (x,y) lit ->
+	let ex = Th.extract_term x in
+	let ey = Th.extract_term x in
+	let nx, ny = 
+	  match ex, ey with
+	    | Some t1, Some t2 -> t1,t2
+	    | _ -> assert false
+	in
+	match Literal.LT.view lit with
+	  | Literal.Eq _ -> Literal.LT.make (Literal.Eq (nx, ny))
+	  | Distinct _ -> Literal.LT.make (Literal.Distinct (false, [nx;ny]))
+	| Builtin (_, _, _) -> assert false  ) subst (List.rev l)	*)
 
+      Format.eprintf "Solver-normalize-subst@.";
+      List.iter (fun (x,y) -> Format.eprintf "%a -> %a@." Th.print_r x Th.print_r y ) subst;
+      List.map (fun (x,y) ->
+	let ex = Th.extract_term x in
+	let ey = Th.extract_term y in
+	let nx, ny = 
+	  match ex, ey with
+	    | Some t1, Some t2 -> t1,t2
+	    | Some _, None -> assert false
+	    | None, Some _ -> assert false
+	    | _ -> assert false
+	in
+	Format.eprintf "Solver-normalize-extracted@.";
+	Format.eprintf "%a -> %a@." Term.print nx Term.print ny;
+	Literal.LT.make (Literal.Eq (nx,ny))
+	
+      ) subst 
+    in
+    nl
+     (*-XXX-*)
+  with Exception.Inconsistent _ -> l
+  
+  
 end
+  

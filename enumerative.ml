@@ -636,7 +636,9 @@ let int_of_const = function
 let int_of_consts cs =
   MConst.fold (fun c i acc -> i * (int_of_const c) + acc) cs 0
 
-let write_atom_to_states env sts = function
+let write_atom_to_states env sts sa  =
+  Format.eprintf "Write Atom: %a@." Atom.print sa;
+  match sa with 
   | Atom.Comp (t1, (Le | Lt as op), (Const _ as t2)) when abstr_num ->
       let v2 = HT.find env.id_terms t2 in
       let i1 = HT.find env.id_terms t1 in
@@ -661,6 +663,21 @@ let write_atom_to_states env sts = function
         ) sts
       done;
       !l
+
+  | Atom.Comp (Record l1, Eq, Record l2) -> assert false
+  | Atom.Comp (t, Eq, (Record l as _t1))
+  | Atom.Comp ((Record l as _t1), Eq, t)
+    -> assert false
+
+  | Atom.Comp (RecordWith (t1, l1), Eq, RecordWith (t2, l2)) -> assert false
+  | Atom.Comp ((RecordWith (t,l) as _r), Eq, t1)
+  | Atom.Comp (t1, Eq, (RecordWith(t, l) as _r)) -> assert false
+
+  | Atom.Comp ((RecordField (t1, f1) as _r1), Eq, (RecordField(t2, g2) as _r2)) -> assert false
+  | Atom.Comp ((RecordField (t, f) as _r1), Eq, t1)
+  | Atom.Comp (t1, Eq, (RecordField(t,f) as _r1)) -> assert false
+       
+    
   | Atom.Comp (t1, Eq, t2) ->
     List.iter (fun st ->
       let nb = Array.length st - 1 in

@@ -84,6 +84,8 @@ module type S = sig
 
     val record_ty_by_field: t -> t * (Hstring.t * Ty.t) list
 
+    val is_record: t -> bool
+
     val declared_types : unit -> t list
 
   end
@@ -169,8 +171,7 @@ module type S = sig
       | Mult (** [*] *) 
       | Div (** [/] *)
       | Modulo (** [mod] *)
-      | Record
-      | Access of Hstring.t
+
 
     val make_int : Num.num -> t
     (** [make_int n] creates an integer constant of value [n]. *)
@@ -204,6 +205,11 @@ module type S = sig
     val print : Format.formatter -> t -> unit
 
     val compare : t -> t -> int
+    val view_symbol : Term.t -> Symbols.t
+    val view_ty : Term.t -> Ty.t
+    val view_xs : Term.t -> Term.t list
+      
+    val is_proc : Hstring.t -> Hstring.t list
 
   end
 
@@ -239,7 +245,11 @@ module type S = sig
     (** The formula which represents [false]*)
 
     val make_lit : comparator -> Term.t list -> t
-    (** [make_lit cmp [t1; t2]] creates the literal [(t1 <cmp> t2)]. *)
+    (** [make_formula cmp [t1; t2]] creates the literal [(t1 <cmp> t2)]. *)
+
+    val terms_to_lit : comparator -> Term.t list -> Literal.LT.t list
+
+    val lit_to_terms : Literal.LT.t -> Term.t * Term.t
 
     val make : combinator -> t list -> t
     (** [make cmb [f_1; ...; f_n]] creates the formula
@@ -254,6 +264,8 @@ module type S = sig
     (** [print fmt f] prints the formula on the formatter [fmt].*)
 
   end
+
+
 
   (** {2 The SMT solver} *)
 
@@ -334,10 +346,18 @@ module type S = sig
     val pop : unit -> unit
     (** Pop the last context from the stack and forget what was done since the
         last push. *)
-    
+
+  (*val normalize : Formula.literal list -> Formula.literal list*)
+      
+  val normalize : Literal.LT.t list -> Literal.LT.t list
+
   end
 
   (** Functor to create several instances of the solver *)
   module Make (Options : sig val profiling : bool end) : Solver
 
+
+    
+
+    
 end

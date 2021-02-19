@@ -293,19 +293,32 @@ let rec term loc args t =
     t,tt
 
     
-let assignment ?(init_variant=false) g x (_, ty) = 
+let rec assignment ?(init_variant=false) g x (_, ty) =
+  Format.eprintf "g: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;
   if ty = Smt.Type.type_proc 
      || ty = Smt.Type.type_bool
-     || ty = Smt.Type.type_int
+       || ty = Smt.Type.type_int
   then ()
   else
     match x with
-      | Elem (n, Constr) -> 
+      | Elem (n, Constr) -> Format.eprintf "constr, n is %a@." Hstring.print n;
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) -> 
+      | Elem (n, _) | Access (n, _) -> Format.eprintf "elem/access, n is %a@." Hstring.print n;
 	  Smt.Variant.assign_var g n;
-	  if init_variant then 
-	    Smt.Variant.assign_var n g
+	  if init_variant then (
+	    Format.eprintf "fucked off here second@.";
+	    Smt.Variant.assign_var n g)
+      | Record l -> List.iter (fun (h, t) -> Format.eprintf "record?@.";
+	let ty_t = Smt.Type.record_field_type h in
+	assignment ~init_variant h t ([], ty_t)
+
+      ) l
+      | RecordWith (_, l) -> List.iter (fun (h, t) -> Format.eprintf "record?@.";
+	let ty_t = Smt.Type.record_field_type h in
+	assignment ~init_variant h t ([], ty_t)
+
+      ) l
+      
       | _ -> ()
 
 let atom loc init_variant args a =
@@ -318,7 +331,7 @@ let atom loc init_variant args a =
       let x', tx = term loc args x in
       let y',ty = term loc args y in
       unify loc tx ty;
-      if init_variant then assignment ~init_variant g y' ty ;
+      if init_variant then (Format.eprintf "fucked off here first@.";assignment ~init_variant g y' ty );
       Comp(x', Eq, y')
     | Comp (x, op, y) ->
       let x', tx = term loc args x in
@@ -363,6 +376,7 @@ let assigns args la =
            | UTerm x->
              let tx, ty_x = term loc args x in
              unify loc ty_x ty_g;
+	     Format.eprintf "came from assigns@.";
              assignment g tx ty_x;
 	     UTerm tx
            | UCase swts ->
@@ -371,6 +385,7 @@ let assigns args la =
 		 let sa = atoms loc args sa in 
 		 let tx, ty_x = term loc args t in
 		 unify loc ty_x ty_g;
+		 Format.eprintf "came here from ucase@.";
 		 assignment g tx ty_x;
 		 sa, tx
                ) swts
@@ -385,6 +400,7 @@ let switchs loc a args ty_e l =
       let sa =  atoms loc args sa in
        let tt,ty = term loc args t in
        unify loc ty ty_e;
+       Format.eprintf "came from switchs@.";
        assignment a tt ty;
        sa, tt) l
 
@@ -622,6 +638,7 @@ let debug_init_instances insts =
 let create_node_rename kind vars sa =
   let sigma = Variable.build_subst vars Variable.procs in
   let c = Cube.subst sigma (Cube.create vars sa) in
+  (*let c = Cube.create c.vars (Prover.normalize c.litterals) in*)
   let c = Cube.normal_form c in
   Node.create ~kind c
 

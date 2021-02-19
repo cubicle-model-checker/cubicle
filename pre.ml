@@ -227,10 +227,16 @@ let rec find_assign memo tr tt =
 	    Branch(temp)
       end 
     | RecordField (r,lbl) ->
-      let tt = find_assign memo tr r in 
+      let t' = find_assign memo tr r in 
       begin
-	match tt with
-	  | Single (Record htl) -> let v = List.assoc lbl htl in Single v
+	match t' with
+
+	  (*|Single s -> Single (RecordField(s,lbl))
+	  | Branch b ->
+	    Branch (List.map (fun (x,y) -> x, RecordField(y, lbl)) b)
+	    *)
+	    
+	  | Single (Record htl) -> Single (RecordField(Record htl, lbl)) (*let v = List.assoc lbl htl in Single v*)
 	  | Single (RecordWith (r,htl))  ->
 	    if List.mem_assoc lbl htl
 	    then let v = List.assoc lbl htl in Single v
@@ -355,9 +361,13 @@ let make_cubes (ls, post) rargs s tr cnp =
     (* cubes are in normal form *)
     List.fold_left
       (fun (ls, post) cnp ->
-	(*Format.eprintf "make_cube fold_left %a@." Cube.print cnp; *)
-       let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
-       let lureq = uguard sigma nargs tr_args tr.tr_ureq in
+	Format.eprintf "make_cube fold_left %a@." Cube.print cnp; 
+	let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
+	Format.eprintf "make_cube fold litterals: %a@." Types.SAtom.print np;
+
+	
+	
+	let lureq = uguard sigma nargs tr_args tr.tr_ureq in
        List.fold_left 
 	 (fun (ls, post) ureq ->
 	  try
@@ -370,7 +380,8 @@ let make_cubes (ls, post) rargs s tr cnp =
 		(ls, post)
 	      end
 	    else
-              let new_cube = Cube.create nargs np in
+              let new_cube = Cube.create nargs  np in
+	      let new_cube = Cube.create new_cube.vars (Prover.normalize new_cube.litterals) in 
               let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
 	      match post_strategy with
 	      | 0 -> add_list new_s ls, post
@@ -405,7 +416,11 @@ let make_cubes (ls, post) rargs s tr cnp =
           (check order, ...)
 *)
 let make_cubes_new (ls, post) rargs s tr cnp =
-  failwith "To implement"
+  failwith "To implement" 
+
+
+
+	 
 
 
 
@@ -415,12 +430,14 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
   (* let tau = tr.tr_tau in *)
+  (*let unsafe = Prover.canonize unsafe in*)
+  (*let unsafe = Prover.normalize unsafe in*)
   let pre_unsafe = 
     SAtom.union (fst tri.tr_reqs) 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
   let pre_u = Cube.create_normal pre_unsafe in
-  if debug && verbose > 0 then Debug.pre tri pre_unsafe;
+  if debug && verbose > 0 then (Debug.pre tri pre_unsafe);
   reset();
   let args = pre_u.Cube.vars in
   if tri.tr_args = [] then tri, pre_u, args
@@ -437,9 +454,14 @@ let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
 (*********************************************************************)
 
 let pre_image trs s =
+  Format.eprintf "pre_image@.";
   TimePre.start (); 
   Debug.unsafe s;
   let u = Node.litterals s in
+  Format.eprintf "pre_image u1: %a@." Types.SAtom.print u;
+
+  let u = Prover.normalize u in
+  Format.eprintf "pre_image u2: %a@." Types.SAtom.print u;
   let ls, post = 
     List.fold_left
     (fun acc tr ->

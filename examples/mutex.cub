@@ -8,7 +8,7 @@ init (z) {
 }
 
 unsafe (x y) {
- Crit[x] = True && Crit[y] = True
+ Crit[x] = True && Crit[y] = True && True = True
 }
 
 transition req (i)

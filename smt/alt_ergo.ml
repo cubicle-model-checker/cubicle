@@ -78,6 +78,8 @@ module Type = struct
     H.add decl_types tproc Ty.Tint;
     tproc
 
+      
+
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
@@ -115,7 +117,12 @@ module Type = struct
     let new_list = List.fold_left (fun acc (f_n, f_ty) ->
       if not (H.mem decl_types f_ty) then raise (Error (UnknownType f_ty));
       if H.mem decl_labels f_n then raise (Error (DuplicateLabel f_n))
-      else H.add decl_labels f_n (ty, f_ty, l);
+      else
+	begin
+	  H.add decl_labels f_n (ty, f_ty, l);
+	  H.add decl_symbs f_n (Symbols.name f_n, [], f_ty)
+	end;
+	
       let fty_ty =
 	try H.find decl_types f_ty
 	with Not_found -> raise (Error(UnknownType f_ty))
@@ -138,6 +145,9 @@ module Type = struct
 	in fty
     with Not_found -> raise (Error (UnknownLabel lbl))
 
+  let record_field_ty lbl =
+    assert false
+
   let record_ty_by_field lbl =
     let rty, _, fields= H.find decl_labels lbl
     in
@@ -152,6 +162,12 @@ module Type = struct
     let rty, _, fields= H.find decl_labels lbl
 	in
     rty, fields
+
+  let is_record ty  =
+    match H.find decl_types ty with
+      | Ty.Trecord _ -> true
+      | _ -> false
+    
       
       
   let declared_types () =
@@ -163,7 +179,8 @@ module Symbol = struct
     
   type t = Hstring.t
 
-  let declare f args ret  = 
+  let declare f args ret  =
+    Format.eprintf "f in declare: %a@." Hstring.print f;
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
       (fun t -> 
@@ -228,19 +245,23 @@ module Variant = struct
       
   let assign_constr = add constructors
     
-  let assign_var x y = 
+  let assign_var x y =
+    Format.eprintf "assign_var: x: %a; y: %a@." Hstring.print x Hstring.print y; 
     if not (Hstring.equal x y) then
       add assignments x y
 	
-  let rec compute () = 
+  let rec compute () =
+    Format.eprintf "in compute@.";
     let flag = ref false in
     let visited = ref HSet.empty in
+
     let rec dfs x s = 
       if not (HSet.mem x !visited) then
 	begin
 	  visited := HSet.add x !visited;
 	  HSet.iter 
-	    (fun y -> 
+	    (fun y ->
+	      Format.eprintf "compute: x: %a; y: %a" Hstring.print x Hstring.print y;
 	      let c_x = find constructors x in
 	      let c_y = find constructors y in
 	      let c = HSet.union c_x c_y in
@@ -289,24 +310,81 @@ module Variant = struct
     let new_ty = Hstring.(view old_ty ^ "_" ^ view x |> make) in
     let l = HSet.elements s in
     let ty = Ty.Tsum (new_ty, (* List.rev *) l) in
+    Format.eprintf "update decl_types- new_ty: %a@." Hstring.print new_ty;
     H.replace decl_types new_ty ty;
-    new_ty
+    new_ty, ty
 
-  let close () = 
+  let close () =
+    Format.eprintf "CLOSE, 1st print@.";
+    print ();
     compute ();
     H.iter 
-      (fun x s -> 
+      (fun x s ->
+	Format.eprintf "close: x is %a@." Hstring.print x; 
 	let sy, args, old_ty = H.find decl_symbs x in
-	let nty = update_decl_types s old_ty x in
-	H.replace decl_symbs x (sy, args, nty))
-      constructors
+	let nty,typ = update_decl_types s old_ty x in
+	Format.eprintf "Nty is : %a and typ is %a@." Hstring.print nty Ty.print typ;
+	try
+	  (* if it's a record - do the new thing, if it's not a record, do whatever it was before*)
+	  let rty, rfty, rl = H.find decl_labels x  in (* raises Not_found at this point if it's not actually about records*)
+
+	  Format.eprintf "rty: %a; rfty: %a; " Hstring.print rty Hstring.print rfty ;
+	  List.iter (fun (f,s) -> Format.eprintf "f: %a of s: %a@." Hstring.print f Hstring.print s) rl;
+	  
+	  (*H.replace decl_labels x (rty, nty, rl);*) (*_labels contains lbl -> (its  record, its type, the list of all other lbls x types in its record)  *)
+	  let r = H.find decl_types rty in (* find the record type *)
+	  let r, r_fields=
+	    match r with
+	      | Ty.Trecord {name = re; lbs = l } ->
+
+	      	
+	(*	let nl = List.map (fun (hs, t) ->
+		if Hstring.equal hs x then (hs,typ) else (hs,t)) l (*replace the type for the field only*)
+		in*)
+	      
+	      
+	      let nl_ty, nl_l = 
+	      List.fold_right2 (fun (hs1, t1) (hs2, t2) (acc1,acc2) ->
+		if Hstring.equal hs1 x then (hs1,typ)::acc1,(hs2, nty)::acc2 else (hs1, t1)::acc1, (hs2,t2)::acc2) l rl ([],[])
+	      in 
+	      
+		Format.eprintf "re is %a@." Hstring.print re;
+		(*List.iter (fun (f,s) -> Format.eprintf "field: %a, type: %a@." Hstring.print f Ty.print s) nl;*)
+
+		Ty.Trecord {name = re; lbs = nl_ty},nl_l
+	    | _ -> assert false (* should technically never go here since it should always return a record*)
+	  in
+	  H.replace decl_types rty r; (* modify the record type with the new one (w/ modified field)*)
+	  H.replace decl_labels x (rty, nty, r_fields);
+
+	  let testty, testfty, testl = H.find decl_labels x in
+	  Format.eprintf "test rty: %a; test rfty: %a; " Hstring.print testty Hstring.print testfty ;
+	  List.iter (fun (f,s) -> Format.eprintf "test f: %a of s: %a@." Hstring.print f Hstring.print s) testl;
+	  
+	  (*H.replace decl_symbs rty (sy, args, rty);*) (* modify the record variable w/ it's new type*)
+	(* ^ nvm not necessary (also incorrect oops) -- never use decl_symbs when declaring records for alt-ergo. delete this*)
+	  
+	  
+	with Not_found ->
+	  begin
+	    H.replace decl_symbs x (sy, args, nty);
+	    List.iter (Format.eprintf "DT: %a@." Hstring.print) (Type.declared_types ());
+	    Format.eprintf "\n\n@.";
+	  (*List.iter (Format.eprintf "AC: %a@." Hstring.print) (Type.all_constructors ());*)
+	    (*List.iter (Format.eprintf "CONS: %a@." Hstring.print) (Type.constructors (Hstring.make "t_A"));*)
+	    let s, a, n = H.find decl_symbs x in 
+	    Format.eprintf "Type for %a: %a@." Hstring.print x Hstring.print n 
+
+
+	  end)
+      constructors;
       
 end
   
 module Term = struct
 
   type t = Term.t
-  type operator = Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t 
+  type operator = Plus | Minus | Mult | Div | Modulo 
 
   let make_int i = Term.int (Num.string_of_num i)
 
@@ -330,7 +408,6 @@ module Term = struct
 	| Mult ->  Symbols.Mult
 	| Div -> Symbols.Div
 	| Modulo -> Symbols.Modulo
-	| _ -> assert false  (* added due to records *)
     in
     let ty = 
       if Term.is_int t1 && Term.is_int t2 then Ty.Tint
@@ -352,6 +429,13 @@ module Term = struct
   let print = Term.print
 
   let compare = Term.compare
+
+  let view_symbol t = (Term.view t).f
+
+  let view_ty t = (Term.view t).ty
+
+  let view_xs t = (Term.view t).xs
+  let is_proc p = let _, args, _ = H.find decl_symbs p in args
     
 
 end
@@ -398,7 +482,22 @@ module Formula = struct
 	    Literal.Builtin (true, Hstring.make "<", [t1; t2])
 	| _ -> assert false
     in
-      Lit (Literal.LT.make lit) 
+    Lit (Literal.LT.make lit)
+
+  let terms_to_lit cmp l =
+    let lit =
+      match cmp, l with
+	| Eq, [t1;t2] -> Literal.Eq (t1,t2)
+	| Neq, t -> Literal.Distinct (false, t)
+	| _ -> assert false
+    in [Literal.LT.make lit]
+
+  let lit_to_terms lit =
+    match Literal.LT.view lit with
+      | Eq (t1, t2) 
+      | Distinct (_, [t1;t2]) 
+      | Builtin (_, _, [t1;t2]) -> t1,t2
+      | _ -> assert false
 
   let rec sform = function
     | Comb (Not, [Lit a]) -> Lit (Literal.LT.neg a)
@@ -540,6 +639,7 @@ module type Solver = sig
   val entails : Formula.t -> bool
   val push : unit -> unit
   val pop : unit -> unit
+  val normalize : Literal.LT.t list -> Literal.LT.t list
 end
 
 module Make (Options : sig val profiling : bool end) = struct
@@ -641,5 +741,25 @@ module Make (Options : sig val profiling : bool end) = struct
   let push () = Stack.push (save_state ()) push_stack
 
   let pop () = Stack.pop push_stack |> restore_state
-  
+
+  let normalize l (*op*) =
+    let nl = CSolver.normalize l  in nl
+
+    (*List.fold_left (fun acc x ->
+
+    let nt1, nt2 = Formula.lit_to_terms x in
+
+    let aa = match Term.view_symbol nt1, Term.view_symbol nt2 with
+      | Name (h,_), Name(h1,_) ->
+	if Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h) 0 ||  Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h1) 0 then acc
+	else (
+
+    in 
+    
+    ) nl*)
+				  
+
+      
+
+    
 end

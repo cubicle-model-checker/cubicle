@@ -5,7 +5,9 @@ type bsw = { a: location; b: bool; s: bool; w: bool}
 
 array P[proc] : bsw
 
-init (i) {P[i] = { a = L0; s = False; w = False; b = False}}
+(*init (i) {P[i] = { a = L0; s = False; w = False; b = False}}*)
+
+init(i) { P[i].a = L0 && P[i].s = False && P[i].w = False && P[i].b = False }
 
 unsafe (i j) { P[i].a = L7 && P[j].a = L7 }
 

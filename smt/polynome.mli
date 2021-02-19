@@ -51,6 +51,7 @@ module type T = sig
     
   val print : Format.formatter -> t -> unit
   val type_info : t -> Ty.t
+  val c_info : t -> num
   val is_monomial : t -> (num * r * num) option
 
   (* PPMC des denominateurs des coefficients excepte la constante *)

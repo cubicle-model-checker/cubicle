@@ -413,7 +413,36 @@ module Make
       | Sy.Op (Sy.Plus | Sy.Minus) -> true
       | _ -> false
 
+
   let term_extract _ = None
+
+  let term_of_num n ty =
+    let n = Hstring.make (Num.string_of_num n) in 
+    match ty with
+      | Ty.Tint -> T.make (Sy.Int n) [] ty
+      | Ty.Treal ->  T.make (Sy.Real n) [] ty
+      | _ -> assert false 
+	
+	  
+  let rec term_extract r = 
+    match C.extract r with
+      | Some v ->  
+	let l,c = P.to_list v in
+	begin
+	  let ty = P.type_info v in 
+	  let ai_xi = List.map (fun (a, x) ->
+	    match term_extract x  with
+	      | Some tx ->  T.make (Sy.Op Sy.Mult) [term_of_num a ty; tx] ty
+	      | None -> raise Not_found 
+	  ) l 
+	  in
+	  let c =  T.make (Symbols.Int (Hstring.make(Num.string_of_num c))) [] ty in 
+	  Some (T.make (Sy.Op Sy.Plus) (c::ai_xi) ty)
+	  
+	end 	
+      | None -> X.term_extract r
+
+    
 
   module Rel = Fm.Make (X) 
     (struct

@@ -118,13 +118,10 @@ let rec make_term tt =
     T.make_record record ls
       
   | RecordWith (t, htl)  ->
-    
+    Format.eprintf "\nRecordWith @.";
     
     let lh = fst (List.hd htl) in
     let (_, fields) as record = Smt.Type.record_ty_by_field lh in
-
-          
-    
     let comp = List.filter (fun (lbl,_) -> not (List.exists (fun (x,_) -> Hstring.compare lbl x = 0) htl )) fields in
     
     let n_comp = List.map (fun (lbl,_) -> lbl,make_term (RecordField(t, lbl))) comp in
@@ -143,6 +140,96 @@ let rec make_term tt =
     let ty_field= Hstring.list_assoc field re in
     T.make_field field t_record ty_field 
 
+
+    
+let extract_with l lbs =
+  let tab = Term.HMap.create 17 in  
+  List.iter (fun t ->
+      match t with
+	| RecordField(r,_) ->
+	  begin
+	    try
+	      Term.HMap.replace tab r (Term.HMap.find tab r+1)
+	    with Not_found -> Term.HMap.add tab r 1
+	  end
+	| _ -> ()) l;
+  let max =
+    let max =
+      Term.HMap.fold (fun k n xopt ->
+	match xopt with
+	  | Some (_,xn) -> if n > xn then Some(k,n) else xopt
+	  | None -> if n > 1 then Some (k,n) else xopt
+      ) tab None
+    in
+    match max with Some (x,_) -> Some x | _ -> None
+  in 
+  let eq_max lbl = 
+    match max with
+      | None -> false
+      | Some x -> Types.Term.compare x lbl = 0
+  in
+  max, List.fold_right2 (fun (a,_) t acc ->
+    match t with
+      | RecordField(r,_) ->
+	if eq_max r then acc else (a,t)::acc
+      | _ -> (a,t)::acc 
+
+  ) lbs l []
+      
+  let rec convert_term t = 
+    (*type view = private {f: Symbols.t ; xs: t list; ty: Ty.t; tag : int}
+    *)
+    let tt = T.view_symbol t in 
+    match tt  with  
+      | True -> Elem (Hstring.make "@MTrue", Constr)
+      | False -> Elem (Hstring.make "@MFalse", Constr)
+      | Name (h, nk) ->
+	begin
+	  match nk with
+	    | Constructor -> Elem (h, Constr)
+	    | Other ->
+	      let xs = T.view_xs t in
+	      if xs = [] then 
+		Elem (h,Glob)
+	      else 
+		let l = List.map (fun x ->
+		  match T.view_symbol x with
+		    | Name (n', _) -> n'
+		    | _ -> assert false) xs in
+		Access(h, l)
+	    | Ac -> assert false
+	end 
+      | Int i -> Const(MConst.add (ConstInt (Num.num_of_string (Hstring.view i))) 1 MConst.empty)
+      | Real r -> Const(MConst.add (ConstReal (Num.num_of_string (Hstring.view r))) 1 MConst.empty)
+      | Op o ->
+	begin
+	  let xs = List.map convert_term (T.view_xs t) in
+	  match o, xs with
+	    | Plus, _
+	    | Minus, _
+	    | Mult, _
+	    | Div , _
+	    | Modulo , _ -> assert false
+	    | Record, l ->
+		begin
+		  match T.view_ty t with
+		    | Trecord { lbs = lbs } ->
+		      begin
+		      match extract_with l lbs with
+			| None, wl -> Record wl
+			  
+			| Some w, wl -> RecordWith(w, wl)
+		      end
+		    | _ -> assert false 
+	
+		end 
+	    | Access h, [el] -> RecordField(el, h)
+	    | Access h, _ -> assert false
+	end
+	  
+      | Var v -> assert (T.view_ty t = Tint); Elem (v, Var)
+     
+      
 
 let rec make_formula_set sa = 
  F.make F.And (SAtom.fold (fun a l ->  make_literal a::l) sa []) 
@@ -286,3 +373,111 @@ let assume_goal_nodes { tag = id; cube = cube } nodes =
   SMT.assume ~id f;
   List.iter (fun (n, a) -> assume_node_no_check n a) nodes;
   SMT.check  ()
+
+
+    
+let canonize a =
+    match a with
+      | Atom.Comp (t1, op, t2) -> 
+	Format.eprintf "In canonize: @.";
+	Format.eprintf "%a %s %a ((t1 op t2)) @." Types.Term.print t1 (Types.Atom.str_op_comp op) Types.Term.print t2;
+
+	let nt1 = make_term t1 in
+	let nt2 = make_term t2 in
+	let nt1 = match Combine.CX.term_extract ( fst (Combine.CX.make nt1)) with
+	  | Some nt1 -> nt1
+	  | None -> nt1
+	in
+	let nt2 = match Combine.CX.term_extract ( fst (Combine.CX.make nt2 ))with
+	  | Some nt2 -> nt2
+	  | None -> nt2
+	in
+	let nt11 = convert_term nt1 in
+	let nt21 = convert_term nt2 in
+	Format.eprintf "nt1 converted: %a and nt2 converted %a@." Types.Term.print nt11 Types.Term.print nt21;
+	Atom.Comp (convert_term nt1, op,  convert_term nt2)
+      | _ -> a
+  
+
+let check_terms (h1,t1) (h2,t2) =
+  if Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h1) 0 ||  Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h2) 0 then None
+  else Some (Atom.Comp (t1, Eq, t2))
+  
+	
+let filter_map2 l1 l2 =
+  let l =
+    let rec aux acc l1 l2 = 
+      match l1, l2 with
+	| [], [] -> List.rev acc 
+	| hd1::tl1, hd2::tl2 ->
+	  begin 
+	    match check_terms hd1 hd2 with
+	      | None -> aux acc tl1 tl2
+	    | Some s -> aux (s::acc) tl1 tl2
+	  end
+	| _, _ -> assert false
+    in aux [] l1 l2
+  in
+  List.fold_right (fun el acc -> SAtom.add el acc) l SAtom.empty  
+	 
+let extract_term op (*sa*) acc lit =
+  let nt1, nt2 = F.lit_to_terms lit in
+  let cn1 = convert_term nt1 in
+  let cn2 = convert_term nt2 in
+  if debug_smt then 
+  Format.eprintf "[smt] Term1: %a, Term2: %a@." Types.Term.print cn1 Types.Term.print cn2;
+  match cn1, cn2 with
+	    | Elem (h,_), Elem (h1, _) ->
+	      if Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h) 0 ||  Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h1) 0 then acc
+	      else SAtom.add (Atom.Comp (cn1, op, cn2)) acc
+	    | Elem (h, _), _ | _, Elem (h, _) when Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h) 0 ->
+	      acc
+	    | Record l1, Record l2 ->
+	      let sal = filter_map2 l1 l2 in
+	      if SAtom.is_empty sal then SAtom.add (Atom.Comp (cn1, op, cn2)) acc
+	      else SAtom.union sal acc
+	    | Record l, _  | _, Record l -> 
+	      let filter2 l1 =
+		let rec aux acc1 l2 b =
+		  match l2 with
+		    | [] -> if b then Some acc1 else None
+		    | (h,t)::tl ->
+		      begin
+			match t with
+			  | Elem (h1,_) ->
+			    if Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h1) 0 then aux acc1 tl true 
+				else aux (Atom.Comp (RecordField(cn1, h), Eq, t)::acc1) tl b
+			  | _ -> aux (Atom.Comp (RecordField(cn1, h), Eq, t)::acc1) tl b
+		      end
+		in aux [] l1 false
+	      in 		  
+	      begin
+		match filter2 l with
+		  | None -> SAtom.add (Atom.Comp (cn1, op, cn2)) acc
+		  | Some s -> List.fold_right (fun el acc -> SAtom.add el acc) s SAtom.empty
+	      end
+	    | _, _ -> SAtom.add (Atom.Comp (cn1, op, cn2)) acc
+  
+	
+let normalize s =
+  let sf = SAtom.fold ( fun a cn ->
+    match a with
+     | Comp (t1, ((Eq ) as op) , t2) ->
+	let r1 = make_term t1 in
+	let r2 = make_term t2 in
+	let op1 = (match op with Eq -> F.Eq | Neq -> Neq | _ -> assert false) in 
+	let lit = F.terms_to_lit op1 [r1;r2] in
+	let nlit = SMT.normalize lit (*op1*) in
+	let nt =
+	  List.fold_left (extract_term op) SAtom.empty nlit 
+	in
+	SAtom.union cn nt
+      | _ -> SAtom.add (canonize a) cn
+  ) s SAtom.empty
+  in 
+  Format.eprintf "Pre-normalized s: %a@." Types.SAtom.print s;
+  Format.eprintf "Post-normalized s: %a@." Types.SAtom.print sf;
+  sf
+
+
+let normalize1 s = s

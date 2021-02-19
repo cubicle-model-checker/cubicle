@@ -52,6 +52,7 @@ module Type = struct
   let find_record_by_field _ = unsupported ()
   let record_ty_by_field _ = unsupported ()
   let ty_to_hstring _ = unsupported ()
+  let is_record _ = unsupported ()
 
 end
 
@@ -77,7 +78,7 @@ end
   
 module Term = struct
   type t = Term.t
-  type operator = Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t
+  type operator = Plus | Minus | Mult | Div | Modulo 
   let make_int _ = unsupported ()
   let make_real _ = unsupported ()
   let make_app _ _ = unsupported ()
@@ -90,6 +91,10 @@ module Term = struct
   let is_real _ = unsupported ()
   let print _ = unsupported ()
   let compare _ _ = unsupported ()
+  let view_symbol _ = unsupported ()
+  let view_ty _ = unsupported ()
+  let view_xs _ = unsupported ()
+  let is_proc _ = unsupported ()
 end
 
 module Formula = struct
@@ -102,6 +107,8 @@ module Formula = struct
   let f_true = ()
   let f_false = ()
   let make_lit _ _ = unsupported ()
+  let terms_to_lit _ _ = unsupported ()
+  let lit_to_terms _ = unsupported () 
   let make _ _ = unsupported ()
   let make_cnf _ = unsupported ()
 end
@@ -125,6 +132,10 @@ module type Solver = sig
   val entails : Formula.t -> bool
   val push : unit -> unit
   val pop : unit -> unit
+  
+(*val normalize : Formula.literal list -> Formula.literal list*)
+    val normalize : Literal.LT.t list ->  Literal.LT.t list
+    
 end
 
 module Make (Options : sig val profiling : bool end) = struct
@@ -137,4 +148,7 @@ module Make (Options : sig val profiling : bool end) = struct
   let entails _ = unsupported ()
   let push _ =  unsupported ()
   let pop _ =  unsupported ()
+
+let normalize _ = unsupported ()
+    
 end

@@ -332,8 +332,10 @@ end = struct
       ) nodes d
       
 
-  let check_fixpoint s visited = 
+  let check_fixpoint s visited =
+
     first_action s;
+
     let s_array = Node.array s in
     let unprioritize_cands = false in
     let nodes, cands =
@@ -343,6 +345,7 @@ end = struct
            nodes, vis_p :: cands
          else check_and_add s nodes vis_p, cands
         ) ([], []) visited in
+    
     let nodes = List.fold_left (check_and_add s) nodes cands in
     TimeSort.start ();
     let nodes = match Prover.SMT.check_strategy with
@@ -404,9 +407,9 @@ end = struct
     TimeFix.start ();
     let r =
       match easy_fixpoint s nodes with
-      | None ->
+      | None -> Format.eprintf "check easy@.";
          (match medium_fixpoint s nodes with
-          | None -> hard_fixpoint s nodes
+          | None -> Format.eprintf "check medium@.";hard_fixpoint s nodes
           | r -> r)
       | r -> r
     in

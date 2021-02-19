@@ -47,8 +47,12 @@ val make_literal : Atom.t -> Smt.Formula.t
 val make_formula : ArrayAtom.t -> Smt.Formula.t
 val make_formula_set : SAtom.t -> Smt.Formula.t
 val make_term : Types.term -> Smt.Term.t
+val convert_term : Smt.Term.t -> Types.term
 
 val run : unit -> unit
 (** Runs the SMT solver on its current context *)
 
 val assume_goal_nodes : Node.t -> (Node.t * ArrayAtom.t) list -> unit
+
+val normalize : SAtom.t -> SAtom.t
+

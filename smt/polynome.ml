@@ -51,6 +51,7 @@ module type T = sig
     
   val print : Format.formatter -> t -> unit
   val type_info : t -> Ty.t
+  val c_info : t -> num
   val is_monomial : t -> (num * r * num) option
 
   val ppmc_denominators : t -> num
@@ -192,6 +193,8 @@ module Make (X : S) = struct
     List.rev l, p.c
 
   let type_info p = p.ty
+
+  let c_info p = p.c
 
   let is_monomial p  = 
     try 
