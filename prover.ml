@@ -117,9 +117,7 @@ let rec make_term tt =
 
     T.make_record record ls
       
-  | RecordWith (t, htl)  ->
-    Format.eprintf "\nRecordWith @.";
-    
+  | RecordWith (t, htl)  ->    
     let lh = fst (List.hd htl) in
     let (_, fields) as record = Smt.Type.record_ty_by_field lh in
     let comp = List.filter (fun (lbl,_) -> not (List.exists (fun (x,_) -> Hstring.compare lbl x = 0) htl )) fields in
@@ -176,7 +174,8 @@ let extract_with l lbs =
 
   ) lbs l []
       
-  let rec convert_term t = 
+let rec convert_term t =
+  Format.eprintf "Convert term t: %a @." T.print t;
     (*type view = private {f: Symbols.t ; xs: t list; ty: Ty.t; tag : int}
     *)
     let tt = T.view_symbol t in 
@@ -205,11 +204,12 @@ let extract_with l lbs =
 	begin
 	  let xs = List.map convert_term (T.view_xs t) in
 	  match o, xs with
+	    | Plus, [el] -> el
 	    | Plus, _
 	    | Minus, _
 	    | Mult, _
 	    | Div , _
-	    | Modulo , _ -> assert false
+	    | Modulo , _ -> assert false	     
 	    | Record, l ->
 		begin
 		  match T.view_ty t with
@@ -389,9 +389,10 @@ let canonize a =
 	  | None -> nt1
 	in
 	let nt2 = match Combine.CX.term_extract ( fst (Combine.CX.make nt2 ))with
-	  | Some nt2 -> nt2
+	  | Some nt2 ->  nt2
 	  | None -> nt2
 	in
+	Format.eprintf "pre nt1 converted: %a and pre nt2 converted %a@." T.print nt1 T.print nt2;
 	let nt11 = convert_term nt1 in
 	let nt21 = convert_term nt2 in
 	Format.eprintf "nt1 converted: %a and nt2 converted %a@." Types.Term.print nt11 Types.Term.print nt21;
