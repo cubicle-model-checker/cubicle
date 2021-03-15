@@ -38,6 +38,10 @@ let rec prime_term t = match t with
   | Arith (x, c) -> Arith (prime_term x, c)
   (* | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob) *)
   | Access (a, lx) -> Access (prime_h a, lx)
+  | RecordField(t,f) -> RecordField(prime_term t, f) (*this? apparently*)
+  | Record l -> let l = List.map (fun (f,tr) ->   f, prime_term tr) l in Record l
+  | RecordWith (t, l) -> let l = List.map (fun (f,tr) -> f, prime_term tr) l
+			 in RecordWith(prime_term t, l)
   | _ -> t
 
 let rec prime_atom a = match a with
@@ -58,6 +62,10 @@ let rec unprime_term t = match t with
   | Arith (x, c) -> Arith (unprime_term x, c)
   (* | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob) *)
   | Access (a, lx) -> Access (unprime_h a, lx)
+  | RecordField(t,f) -> RecordField(unprime_term t,  f)
+  | Record l -> let l = List.map (fun (f,tr) ->  f, unprime_term tr) l in Record l
+  | RecordWith (t, l) -> let l = List.map (fun (f,tr) ->  f, unprime_term tr) l
+			 in RecordWith(unprime_term t, l)
   | _ -> t
 
 
@@ -82,7 +90,7 @@ let rec is_prime_term = function
   | RecordField (t, _) -> is_prime_term t
   | RecordWith (t, l)  -> let fl = List.filter (fun (_,x) -> is_prime_term x) l in
 			 not  (fl = [])
-  | Record l -> let fl = List.filter (fun (_,x) -> is_prime_term x) l in
+  | Record l -> let fl = List.filter (fun (_,x) ->  is_prime_term x) l in
 			  not (fl = [])
  
 
