@@ -1,0 +1,17 @@
+type t = { a : int }
+type t1 = { b : int }
+
+var X : t
+
+init() { X = NULL<t>}
+
+unsafe() { X.a = 44 }
+
+
+transition t1()
+requires { X = NULL<t> }
+{ X := { a = 42 } }
+
+transition t2()
+requires { X = { a = 42} }
+{ X := { a = X.a + 1 }}
