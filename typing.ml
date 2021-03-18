@@ -121,7 +121,8 @@ let rec unique error = function
 
 let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
-  then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
+    then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
+     
 
 let refinements = Hstring.H.create 17
 
@@ -177,7 +178,7 @@ let rec term loc args t =
 	  try t, Smt.Symbol.type_of e with Not_found ->
 	    error (UnknownName e) loc
       end
-  | Elem (e, _) ->  t, Smt.Symbol.type_of e
+  | Elem (e, _) -> Format.eprintf "e: %a@." Hstring.print e; t, Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
 	let t, (args, tx) = term loc args x in
@@ -291,6 +292,8 @@ let rec term loc args t =
     let t, tt = term loc args t in
     unify loc ([], Smt.Type.type_int) tt;
     t,tt
+      
+      
 
     
 let rec assignment ?(init_variant=false) g x (_, ty) =
@@ -301,19 +304,18 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
   then ()
   else
     match x with
-      | Elem (n, Constr) -> Format.eprintf "constr, n is %a@." Hstring.print n;
+      | Elem (n, Constr) -> 
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) -> Format.eprintf "elem/access, n is %a@." Hstring.print n;
+      | Elem (n, _) | Access (n, _) -> 
 	  Smt.Variant.assign_var g n;
 	  if init_variant then (
-	    Format.eprintf "fucked off here second@.";
 	    Smt.Variant.assign_var n g)
-      | Record l -> List.iter (fun (h, t) -> Format.eprintf "record?@.";
+      | Record l -> List.iter (fun (h, t) -> 
 	let ty_t = Smt.Type.record_field_type h in
 	assignment ~init_variant h t ([], ty_t)
 
       ) l
-      | RecordWith (_, l) -> List.iter (fun (h, t) -> Format.eprintf "record?@.";
+      | RecordWith (_, l) -> List.iter (fun (h, t) -> 
 	let ty_t = Smt.Type.record_field_type h in
 	assignment ~init_variant h t ([], ty_t)
 

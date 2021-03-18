@@ -102,7 +102,15 @@ let make_cs cs =
 	 
 let rec make_term tt =
   match tt with 
-  | Elem (e, _) ->  T.make_app e []
+    | Elem (e, _) ->
+      let _, ty = Smt.Symbol.type_of e in
+      let ty' = Hstring.view ty in
+      let null = Hstring.make ("Null"^ty') in
+      let n, l = Smt.Type.record_type_details ty in 
+      if Hstring.compare null e = 0 then T.make_record (n,l) []
+	else
+
+      T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li)  ->
     T.make_app a (List.map (fun i -> T.make_app i []) li)

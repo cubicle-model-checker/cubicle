@@ -40,8 +40,8 @@
         "then", THEN;
         "else", ELSE;
         "not", NOT;
-        "true", TRUE;
-        "false", FALSE;
+        "true", MIDENT "@MTRUE";
+        "false", MIDENT "@MFALSE";
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
@@ -99,10 +99,11 @@ rule token = parse
   | '#'(['1'-'9']['0'-'9']* as n) as id
       { if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;
         CONSTPROC id }
-  | mident as id {
-		  if id = "True" then MIDENT "@MTrue"
-		  else if id = "False" then MIDENT "@MFalse"
-		  else MIDENT id }
+  | "NULL<" (lident as typ)  ">" { NULL typ }
+  | mident as id{
+    try Hashtbl.find keywords id with
+	Not_found ->
+	  MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }
   | "("

@@ -58,6 +58,7 @@ module Type = struct
 
   let equal = Hstring.equal
 
+
   let type_int = 
     let tint = Hstring.make "int" in
     H.add decl_types tint Ty.Tint;
@@ -77,6 +78,7 @@ module Type = struct
     let tproc = Hstring.make "proc" in
     H.add decl_types tproc Ty.Tint;
     tproc
+
 
       
 
@@ -130,8 +132,13 @@ module Type = struct
       
     ) [] l in
     let l1 = List.sort compare_rec new_list in
-    H.add decl_types ty (Ty.Trecord {name = ty; lbs = l1})
-      
+    H.add decl_types ty (Ty.Trecord {name = ty; lbs = l1});
+    let null =
+      let t = Hstring.view ty in 
+      Hstring.make ("Null_"^t) in
+    Format.eprintf "altergo: null: %a; ty: %a@." Hstring.print null Hstring.print ty;
+    H.add decl_symbs null (Symbols.name null, [], ty)
+
   let all_record_types () =
     let d = H.to_seq_values decl_types in
     Seq.fold_left (fun acc v ->
@@ -173,6 +180,14 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
+  let record_type_details t =
+    match H.find decl_types t with
+      | Ty.Trecord { name = name; lbs = lbs } -> name, lbs
+      | _ -> assert false
+       
+	
+
+
 end
 
 module Symbol = struct
@@ -189,6 +204,7 @@ module Symbol = struct
     H.add decl_symbs f (Symbols.name f, args, ret)
 
   let type_of s = let _, args, ret =  H.find decl_symbs s in  args, ret
+    
     
 
   let declared s =
@@ -333,29 +349,29 @@ module Variant = struct
 	  
 	  (*H.replace decl_labels x (rty, nty, rl);*) (*_labels contains lbl -> (its  record, its type, the list of all other lbls x types in its record)  *)
 	  let r = H.find decl_types rty in (* find the record type *)
-	  let r, r_fields=
+	  let r(*, r_fields*)=
 	    match r with
 	      | Ty.Trecord {name = re; lbs = l } ->
 
 	      	
-	(*	let nl = List.map (fun (hs, t) ->
+		let nl = List.map (fun (hs, t) ->
 		if Hstring.equal hs x then (hs,typ) else (hs,t)) l (*replace the type for the field only*)
-		in*)
+		in
 	      
 	      
-	      let nl_ty, nl_l = 
+	      (*let nl_ty, nl_l = 
 	      List.fold_right2 (fun (hs1, t1) (hs2, t2) (acc1,acc2) ->
 		if Hstring.equal hs1 x then (hs1,typ)::acc1,(hs2, nty)::acc2 else (hs1, t1)::acc1, (hs2,t2)::acc2) l rl ([],[])
-	      in 
+	      in *)
 	      
 		Format.eprintf "re is %a@." Hstring.print re;
 		(*List.iter (fun (f,s) -> Format.eprintf "field: %a, type: %a@." Hstring.print f Ty.print s) nl;*)
 
-		Ty.Trecord {name = re; lbs = nl_ty},nl_l
+		Ty.Trecord {name = re; lbs = nl}(*,nl_l*)
 	    | _ -> assert false (* should technically never go here since it should always return a record*)
 	  in
 	  H.replace decl_types rty r; (* modify the record type with the new one (w/ modified field)*)
-	  H.replace decl_labels x (rty, nty, r_fields);
+	  H.replace decl_labels x (rty, nty, (*r_fields*) rl);
 
 	  let testty, testfty, testl = H.find decl_labels x in
 	  Format.eprintf "test rty: %a; test rfty: %a; " Hstring.print testty Hstring.print testfty ;

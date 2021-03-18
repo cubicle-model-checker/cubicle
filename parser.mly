@@ -91,6 +91,7 @@
 %token <string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
+%token <string> NULL
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE GT GE
 %token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR
 %token IN
@@ -101,7 +102,7 @@
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
-%token WITH
+%token WITH 
 %token EOF
 
 %nonassoc IN       
@@ -384,8 +385,15 @@ term:
   | LEFTBR term WITH field_list RIGHTBR { RecordWith($2, $4) }
   | term DOT lident { RecordField($1, $3) }
   | LEFTBR field_list RIGHTBR { Record($2) }
+  | null {
+    let t = Hstring.view $1 in
+    let null = Hstring.make ("Null_"^t) in
+    Elem(null, Constr) }
 
 ;
+
+null:
+  | NULL { Hstring.make $1 }
 
 lident:
   | LIDENT { Hstring.make $1 }
