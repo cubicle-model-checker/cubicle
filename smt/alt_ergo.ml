@@ -59,6 +59,7 @@ module Type = struct
 
   let equal = Hstring.equal
 
+
   let type_int = 
     let tint = Hstring.make "int" in
     H.add decl_types tint Ty.Tint;
@@ -78,6 +79,7 @@ module Type = struct
     let tproc = Hstring.make "proc" in
     H.add decl_types tproc Ty.Tint;
     tproc
+
 
       
 
@@ -132,7 +134,8 @@ module Type = struct
     ) [] l in
     let l1 = List.sort compare_rec new_list in
     H.add decl_types ty (Ty.Trecord {name = ty; lbs = l1})
-      
+ 
+
   let all_record_types () =
     let d = H.to_seq_values decl_types in
     Seq.fold_left (fun acc v ->
@@ -180,6 +183,14 @@ module Type = struct
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
 
+  let record_type_details t =
+    match H.find decl_types t with
+      | Ty.Trecord { name = name; lbs = lbs } -> name, lbs
+      | _ -> assert false
+       
+	
+
+
 end
 
 module Symbol = struct
@@ -195,6 +206,7 @@ module Symbol = struct
     H.add decl_symbs f (Symbols.name f, args, ret)
 
   let type_of s = let _, args, ret =  H.find decl_symbs s in  args, ret
+    
     
 
   let declared s =

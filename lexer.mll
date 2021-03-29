@@ -40,8 +40,8 @@
         "then", THEN;
         "else", ELSE;
         "not", NOT;
-        "true", TRUE;
-        "false", FALSE;
+        "true", MIDENT "@MTRUE";
+        "false", MIDENT "@MFALSE";
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;

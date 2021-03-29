@@ -102,6 +102,7 @@
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
 %token WITH NULL
+%token WITH 
 %token EOF
 
 %nonassoc IN       
@@ -386,9 +387,7 @@ term:
   | LEFTBR field_list RIGHTBR { Record($2) }
   | NULL { Null (None, (Hstring.make ""))  }
 	   
-
 ;
-
 
 lident:
   | LIDENT { Hstring.make $1 }

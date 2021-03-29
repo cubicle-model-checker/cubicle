@@ -16,7 +16,9 @@
 open Format
 
 type trecord = { name : Hstring.t;
-		 lbs : (Hstring.t * t) list}
+		 lbs : (Hstring.t * t) list;
+	       (*null : bool*)
+	       }
 
 and t = 
   | Tint
@@ -25,6 +27,7 @@ and t =
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
+  | Tnull
 
 let rec hash t =
   match t with
@@ -51,7 +54,7 @@ let rec equal t1 t2 =
       ->
 	Hstring.equal s1 s2
     | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
-    | Trecord {name=s1;lbs=l1}, Trecord {name=s2;lbs=l2} ->
+    | Trecord {name=s1;lbs=l1; (*null = false*)}, Trecord {name=s2;lbs=l2; (*null = false*)} ->
       begin
 	try 
 	  Hstring.equal s1 s2  &&
@@ -70,7 +73,9 @@ let rec compare t1 t2 =
     | Tsum (s1, _), Tsum(s2, _) ->
 	Hstring.compare s1 s2
     | Tsum _, _ -> -1 | _ , Tsum _ -> 1
-    | Trecord {name=s1;lbs=l1},Trecord {name=s2;lbs=l2} ->
+    (*| Trecord { null = true} , Trecord {null = true } -> -1
+    | Trecord {null = true}, _ -> -1 | _, Trecord { null = true} -> 1*)
+    | Trecord {name=s1;lbs=l1; (*null = false*)},Trecord {name=s2;lbs=l2; (*null = false*)} ->
       let c = Hstring.compare s1 s2 in
       if c <> 0 then c else
 	  let l1, l2 = List.map snd l1, List.map snd l2 in
@@ -95,7 +100,12 @@ let rec print fmt ty =
     | Tbool -> fprintf fmt "bool"
     | Tabstract s -> fprintf fmt "%s" (Hstring.view s)
     | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)
-    | Trecord {name = n; lbs = lbs} ->
-      fprintf fmt "record %a = { " Hstring.print n;
-      List.iter (fun (x,y) -> fprintf fmt "%a : %a; " Hstring.print x print y) lbs;
-      fprintf fmt "}"
+    | Trecord {name = n; lbs = lbs;(* null = null*)} ->
+      (*if null then*)
+	begin
+	  fprintf fmt "record %a = { " Hstring.print n;
+	  List.iter (fun (x,y) -> fprintf fmt "%a : %a; " Hstring.print x print y) lbs;
+	  fprintf fmt "}"
+	end
+(*      else
+	fprintf fmt "record %a = Null " Hstring.print n; *)

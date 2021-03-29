@@ -43,6 +43,7 @@ module type S = sig
     type t = Hstring.t
     (** The type of types in the solver *)
 
+	
     (** {3 Builtin types } *)
 
     val type_int : t
@@ -56,6 +57,8 @@ module type S = sig
 
     val type_proc : t
     (** The type processes (identifiers) *)
+
+  
 
     (** {3 Declaring new types } *)
 
@@ -89,7 +92,6 @@ module type S = sig
     val declared_types : unit -> t list
 
     val record_type_details : Hstring.t -> t * (Hstring.t * Ty.t) list
-
 
   end
 

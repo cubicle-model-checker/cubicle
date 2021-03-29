@@ -102,7 +102,8 @@ let make_cs cs =
 	 
 let rec make_term tt =
   match tt with 
-  | Elem (e, _) ->  T.make_app e []
+    | Elem (e, _) ->
+      T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li)  ->
     T.make_app a (List.map (fun i -> T.make_app i []) li)
@@ -137,6 +138,7 @@ let rec make_term tt =
     let _, re = Smt.Type.record_ty_by_field field  in
     let ty_field= Hstring.list_assoc field re in
     T.make_field field t_record ty_field
+      
   | Null (_,t) ->
     let n, l = Smt.Type.record_type_details t in
     T.make_record (n,l) [] 

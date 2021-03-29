@@ -138,7 +138,8 @@ let check_record (_,pot) =
     
 let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
-  then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
+    then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
+     
 
 let refinements = Hstring.H.create 17
 
@@ -333,6 +334,8 @@ let rec term loc args t =
     let t, tt = term loc args t in
     unify loc ([], Smt.Type.type_int) tt;
     t,tt
+      
+      
 
     
 let rec assignment ?(init_variant=false) g x (_, ty) =
