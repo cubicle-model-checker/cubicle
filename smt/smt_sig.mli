@@ -88,6 +88,9 @@ module type S = sig
 
     val declared_types : unit -> t list
 
+    val record_type_details : Hstring.t -> t * (Hstring.t * Ty.t) list
+
+
   end
 
 

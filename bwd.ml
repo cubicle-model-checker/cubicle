@@ -69,13 +69,14 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
+	if debug then 
+	  Format.eprintf "[bwd] n: %a@." Node.print n;
 	
-	Format.eprintf "n: %a@." Node.print n;
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
-          | Some db -> Format.eprintf "some db@.";
-            Stats.fixpoint n db
+            | Some db -> (*Format.eprintf "some db@.";*)
+              Stats.fixpoint n db
 	    (*Format.eprintf "Begin cubetrie@.";
 	    List.iter (fun x -> Format.eprintf "db: %d@." x) db;
 	    Cubetrie.iter (fun x -> Format.eprintf "cubetrie: %a@." Node.print x) !visited;
@@ -100,7 +101,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
                             backtrack, just forget it. *)
                end
              in
-	      Format.eprintf "ici@.";
+	      (*Format.eprintf "ici@.";*)
 
              let ls, post = Pre.pre_image system.t_trans n in
 	     
@@ -126,7 +127,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
             postponed := []
           end
       done;
-      Format.eprintf "Pre counter %d@." !cpt_pre; 
+      if debug then 
+      Format.eprintf "[bwd] Pre counter: %d@." !cpt_pre; 
       Safe (Cubetrie.all_vals !visited, !candidates)
     with Safety.Unsafe faulty ->
       if dot then Dot.error_trace faulty;

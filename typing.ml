@@ -44,6 +44,8 @@ type error =
   | MustBeRecord of Hstring.t
   | ExpectedRecord
   | MissingFields of Hstring.t * Hstring.t list
+  | CannotAssignToNull
+  | ImpossibleNull of Hstring.t 
 
 exception Error of error * loc
 exception RecordSize of Hstring.t
@@ -112,6 +114,10 @@ let report fmt = function
   | ExpectedRecord  -> fprintf fmt "verify record fields"  
   | MissingFields (r,l) ->
     fprintf fmt "missing field declarations for type %a: %a" Hstring.print r print_missing_fields l
+  | CannotAssignToNull ->
+    fprintf fmt "NULL cannot be left-hand side of assignment"
+  | ImpossibleNull t ->
+    fprintf fmt "NULL is only compatible with record types. Type %a is not a record type" Hstring.print t
 
 let error e l = raise (Error (e,l))
 
@@ -119,6 +125,17 @@ let rec unique error = function
   | [] -> ()
   | x :: l -> if Hstring.list_mem x l then error x; unique error l
 
+let check_record (_,pot) =
+  if Smt.Type.is_record pot then
+    begin
+    (*let t = Hstring.view pot in
+    let n = "Null_"^t in*)
+    Some pot
+      end
+  else None 
+     
+    
+    
 let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
   then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
@@ -135,6 +152,7 @@ let infer_type x1 x2 =
       | Record _ -> assert false
       | RecordWith _ -> assert false
       | RecordField _ -> assert false
+      | Null _ -> assert false
 	
     in
     let ref_ty, ref_cs =
@@ -170,7 +188,8 @@ let rec term loc args t =
 	| ConstReal _ -> t, ([], Smt.Type.type_real)
 	| ConstName x -> 
 	  try t, Smt.Symbol.type_of x 
-            with Not_found -> error (UnknownName x) loc)
+          with Not_found -> error (UnknownName x) loc)
+  | Null _ -> t, ([], Hstring.make "Null")
   | Elem (e, Var) -> 
       if Hstring.list_mem e args then t,([], Smt.Type.type_proc)
       else begin 
@@ -219,11 +238,24 @@ let rec term loc args t =
     
     if List.length fields = List.length l then
       printf "@{<b>@{<fg_cyan>Warning@}@} line %d: the 'with' is useless \n@." (fst loc).pos_lnum;
-
+    let null = Hstring.make "Null" in 
+    
     let nl = List.map (fun (lbl, t) ->
       try
 	let ty_lbl = List.assoc lbl fields in
 	let nt, ty_t = term loc args t in
+
+	let nt, ty_t =
+	  if Hstring.equal (snd ty_t) null
+	  then
+	    begin
+	      match check_record ([], ty_lbl) with
+		| None -> error (ImpossibleNull ty_lbl) loc
+		| Some typ -> Null (Some nt, typ), ([],ty_lbl)
+	    end
+	  else
+	    nt, ty_t
+	in
 	unify loc ([],ty_lbl) ty_t;
 	
 	lbl,nt
@@ -244,7 +276,6 @@ let rec term loc args t =
     let _,field_ty =
       try List.find (fun (x,_) -> x = s) fields
       with Not_found -> error (UnknownName s) loc in
-
     unify loc ty_term ([], therecord);
     RecordField(r, s), ([], field_ty)
 
@@ -267,6 +298,17 @@ let rec term loc args t =
       try iter2 (
 	fun (field, f_term) (field1, field1_type) ->
 	  let t, ty_term = term loc args f_term in
+	  let null = Hstring.make "Null" in
+	  let t, ty_term = 
+	    if Hstring.equal (snd ty_term) null
+	    then
+	      begin
+		match check_record ([], field1_type) with
+		  | None -> error (ImpossibleNull field1_type) loc
+		  | Some typ -> Null (Some t, typ), (fst ty_term,field1_type)
+	      end
+	    else t, ty_term
+	  in   
 	  unify loc ty_term ([], field1_type); 
       ) l recfields []  
       with RecordSize _ ->  error (ExpectedRecord) loc
@@ -294,26 +336,24 @@ let rec term loc args t =
 
     
 let rec assignment ?(init_variant=false) g x (_, ty) =
-  Format.eprintf "g: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;
   if ty = Smt.Type.type_proc 
      || ty = Smt.Type.type_bool
        || ty = Smt.Type.type_int
   then ()
   else
     match x with
-      | Elem (n, Constr) -> Format.eprintf "constr, n is %a@." Hstring.print n;
+      | Elem (n, Constr) -> 
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) -> Format.eprintf "elem/access, n is %a@." Hstring.print n;
+      | Elem (n, _) | Access (n, _) ->
 	  Smt.Variant.assign_var g n;
-	  if init_variant then (
-	    Format.eprintf "fucked off here second@.";
-	    Smt.Variant.assign_var n g)
-      | Record l -> List.iter (fun (h, t) -> Format.eprintf "record?@.";
+	  if init_variant then 
+	    Smt.Variant.assign_var n g
+      | Record l -> List.iter (fun (h, t) ->
 	let ty_t = Smt.Type.record_field_type h in
 	assignment ~init_variant h t ([], ty_t)
 
       ) l
-      | RecordWith (_, l) -> List.iter (fun (h, t) -> Format.eprintf "record?@.";
+      | RecordWith (_, l) -> List.iter (fun (h, t) -> 
 	let ty_t = Smt.Type.record_field_type h in
 	assignment ~init_variant h t ([], ty_t)
 
@@ -322,6 +362,7 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
       | _ -> ()
 
 let atom loc init_variant args a =
+  let null = Hstring.make "Null" in 
   match a with 
     | True | False -> a
     | Comp (Elem(g, Glob) as x, Eq, y)
@@ -330,14 +371,48 @@ let atom loc init_variant args a =
     | Comp (Access(g, _) as x, Eq, y) ->
       let x', tx = term loc args x in
       let y',ty = term loc args y in
+      let y', ty = 
+	if Hstring.equal (snd ty) null then
+	  begin
+	    match check_record tx with
+	      | None ->  error (ImpossibleNull (snd tx) ) loc
+	      | Some typ -> Null (Some x',typ), tx
+	       	 
+	  end
+	else
+	  y', ty
+      in 
       unify loc tx ty;
-      if init_variant then (Format.eprintf "fucked off here first@.";assignment ~init_variant g y' ty );
+      if init_variant then assignment ~init_variant g y' ty;
       Comp(x', Eq, y')
+	
     | Comp (x, op, y) ->
       let x', tx = term loc args x in
       let y',ty = term loc args y in
-      unify loc tx ty;
-      Comp(x', op, y')
+
+      let null = Hstring.make "Null" in
+      let nx, ny =
+	Hstring.equal (snd tx) null, Hstring.equal (snd ty) null
+      in
+      begin
+	match nx, ny with
+	  | true, true -> True
+	  | true, _ ->
+	    begin
+	      match check_record ty with
+		| None -> error (ImpossibleNull (snd ty) ) loc
+		| Some typ -> Comp(Null (Some y',typ), op, y') 
+	    end 
+	  | _, true ->
+	    begin
+	      match check_record tx with
+		| None -> error (ImpossibleNull (snd tx) ) loc
+		| Some typ -> Comp(x', op, Null (Some x', typ))
+	    end 
+	  | _, _ -> unify loc tx ty; Comp (x', op, y')
+      end 
+(*      unify loc tx ty;
+      Comp(x', op, y')*)
     | Ite _ -> assert false
 
 let atoms loc ?(init_variant=false) args =
@@ -375,8 +450,18 @@ let assigns args la =
          match gu with
            | UTerm x->
              let tx, ty_x = term loc args x in
+	     let null = Hstring.make "Null" in
+	     let tx, ty_x = 
+	       if Hstring.equal (snd ty_x) null
+	       then
+		 begin
+		   match check_record ty_g with
+		     | None -> error (ImpossibleNull (snd ty_g) ) loc
+		     | Some typ -> Null (Some (Elem(g, Glob)), typ), ty_g
+		 end
+	       else tx, ty_x
+	     in 
              unify loc ty_x ty_g;
-	     Format.eprintf "came from assigns@.";
              assignment g tx ty_x;
 	     UTerm tx
            | UCase swts ->
@@ -384,8 +469,18 @@ let assigns args la =
 	       List.map (fun (sa, t) ->
 		 let sa = atoms loc args sa in 
 		 let tx, ty_x = term loc args t in
+		 let null = Hstring.make "Null" in
+		 let tx, ty_x =
+		   if Hstring.equal (snd ty_x) null
+		   then
+		     begin
+		       match check_record ty_g with
+			 | None -> error (ImpossibleNull (snd ty_g) ) loc
+			 | Some typ -> Null (Some (Elem(g,Glob)),typ), ty_g
+		     end
+		   else tx, ty_x
+		     in 
 		 unify loc ty_x ty_g;
-		 Format.eprintf "came here from ucase@.";
 		 assignment g tx ty_x;
 		 sa, tx
                ) swts
@@ -398,11 +493,21 @@ let switchs loc a args ty_e l =
   List.map 
     (fun (sa, t) -> 
       let sa =  atoms loc args sa in
-       let tt,ty = term loc args t in
-       unify loc ty ty_e;
-       Format.eprintf "came from switchs@.";
-       assignment a tt ty;
-       sa, tt) l
+      let tt,ty = term loc args t in
+      let null = Hstring.make "Null" in
+      let tt, ty =
+	if Hstring.equal (snd ty) null
+	then
+	  begin
+	    match check_record ty_e with
+	      | None -> error (ImpossibleNull (snd ty_e) ) loc
+	      | Some typ -> Null (None, typ), ty_e
+	  end
+	else tt, ty
+      in 
+      unify loc ty ty_e;
+      assignment a tt ty;
+      sa, tt) l
 
 
 let updates args upds =

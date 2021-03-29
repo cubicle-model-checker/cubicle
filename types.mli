@@ -81,6 +81,7 @@ type term =
   (** record field access: R.field1  *)
   | Record of (Hstring.t * term) list
 (** record field values: {field1 = ...; field2 = ...} *)
+  | Null of term option * Hstring.t
 
 
 			   

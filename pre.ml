@@ -253,7 +253,13 @@ let rec find_assign memo tr tt =
 		  else x, RecordField(r, lbl)
 		| _ -> x, RecordField(y, lbl)
 	    ) b)	      
-      end 
+      end
+    | Null (_,t) ->
+      Format.eprintf "PRE NULL: %a @." Hstring.print t; 
+      let n,l = Smt.Type.record_type_details t in
+      
+      assert false
+	
     | Access (a, li) -> 
       let nli = li in
      (* List.map (fun i -> *)
@@ -361,9 +367,11 @@ let make_cubes (ls, post) rargs s tr cnp =
     (* cubes are in normal form *)
     List.fold_left
       (fun (ls, post) cnp ->
-	Format.eprintf "make_cube fold_left %a@." Cube.print cnp; 
+	if debug then 
+	Format.eprintf "[pre: make_cubes]fold_left %a@." Cube.print cnp; 
 	let np, nargs = cnp.Cube.litterals, cnp.Cube.vars in
-	Format.eprintf "make_cube fold litterals: %a@." Types.SAtom.print np;
+	if debug then 
+	Format.eprintf "[pre: make_cubes] fold litterals: %a@." Types.SAtom.print np;
 
 	
 	
@@ -454,14 +462,14 @@ let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
 (*********************************************************************)
 
 let pre_image trs s =
-  Format.eprintf "pre_image@.";
   TimePre.start (); 
   Debug.unsafe s;
   let u = Node.litterals s in
-  Format.eprintf "pre_image u1: %a@." Types.SAtom.print u;
-
+  if debug_normalize then 
+  Format.eprintf "[normalize: pre_image]: pre_image u: %a@." Types.SAtom.print u;
   let u = Prover.normalize u in
-  Format.eprintf "pre_image u2: %a@." Types.SAtom.print u;
+  if debug_normalize then 
+  Format.eprintf "[normalize: pre_image]: u post normalized: %a@." Types.SAtom.print u;
   let ls, post = 
     List.fold_left
     (fun acc tr ->

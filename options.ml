@@ -26,6 +26,8 @@ let file = ref "_stdin"
 
 let max_proc = ref 10
 let type_only = ref false
+let debug_normalize = ref false
+
 let parse_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
@@ -38,6 +40,7 @@ let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
 let enumsolver = ref false
+
 
 let incr_verbose () = incr verbose
 
@@ -134,6 +137,8 @@ let specs =
     "-search", Arg.String set_mode, 
     "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
+    "-debug-normalize", Arg.Set debug_normalize, " debug prover's normalizer"; 
+
     "-dot", Arg.Int set_dot,
     "<level> graphviz (dot) output with a level of details";
     "-sfdp", Arg.Unit use_sfdp,
@@ -226,6 +231,7 @@ let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let max_proc = !max_proc
 let debug = !debug
+let debug_normalize = !debug_normalize
 let nocolor = !nocolor
 let dot = !dot
 let dot_level = !dot_level

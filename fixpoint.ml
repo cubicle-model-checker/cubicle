@@ -407,9 +407,9 @@ end = struct
     TimeFix.start ();
     let r =
       match easy_fixpoint s nodes with
-      | None -> Format.eprintf "check easy@.";
+      | None -> 
          (match medium_fixpoint s nodes with
-          | None -> Format.eprintf "check medium@.";hard_fixpoint s nodes
+          | None -> hard_fixpoint s nodes
           | r -> r)
       | r -> r
     in

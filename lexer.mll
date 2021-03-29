@@ -46,6 +46,9 @@
 	"let", LET;
 	"in", IN;
 	"with", WITH;
+	"NULL", NULL;
+	"True", MIDENT "@MTrue";
+	"False", MIDENT "@MFalse";
       ]
 	       
   let newline lexbuf =
@@ -99,10 +102,11 @@ rule token = parse
   | '#'(['1'-'9']['0'-'9']* as n) as id
       { if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;
         CONSTPROC id }
-  | mident as id {
-		  if id = "True" then MIDENT "@MTrue"
-		  else if id = "False" then MIDENT "@MFalse"
-		  else MIDENT id }
+  | mident as id
+      {
+	try Hashtbl.find keywords id
+	with Not_found -> 
+		   MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }
   | "("

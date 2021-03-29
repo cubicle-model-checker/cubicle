@@ -26,6 +26,8 @@ val cin : in_channel
 
 val max_proc : int
 val type_only : bool
+val debug_normalize : bool
+    
 val parse_only: bool
 val maxrounds : int
 val maxnodes : int
@@ -45,6 +47,7 @@ val murphi_uopts : string
 val mu_cmd : string
 val mu_opts : string
 val cpp_cmd : string
+
 
 
 val limit_forward_depth : bool

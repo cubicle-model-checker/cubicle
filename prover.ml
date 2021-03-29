@@ -136,8 +136,10 @@ let rec make_term tt =
     let t_record = make_term record in
     let _, re = Smt.Type.record_ty_by_field field  in
     let ty_field= Hstring.list_assoc field re in
-    T.make_field field t_record ty_field 
-
+    T.make_field field t_record ty_field
+  | Null (_,t) ->
+    let n, l = Smt.Type.record_type_details t in
+    T.make_record (n,l) [] 
 
     
 let extract_with l lbs =
@@ -175,7 +177,8 @@ let extract_with l lbs =
   ) lbs l []
       
 let rec convert_term t =
-  Format.eprintf "Convert term t: %a @." T.print t;
+  if debug_normalize then 
+  Format.eprintf "[normalize: convert term] Convert term t: %a @." T.print t;
     (*type view = private {f: Symbols.t ; xs: t list; ty: Ty.t; tag : int}
     *)
     let tt = T.view_symbol t in 
@@ -213,7 +216,9 @@ let rec convert_term t =
 	    | Record, l ->
 		begin
 		  match T.view_ty t with
-		    | Trecord { lbs = lbs } ->
+		    | Trecord { name = name; lbs = lbs } ->
+		      if T.view_xs t = [] then Null (None, name)
+		      else
 		      begin
 		      match extract_with l lbs with
 			| None, wl -> Record wl
@@ -378,9 +383,12 @@ let assume_goal_nodes { tag = id; cube = cube } nodes =
     
 let canonize a =
     match a with
-      | Atom.Comp (t1, op, t2) -> 
-	Format.eprintf "In canonize: @.";
-	Format.eprintf "%a %s %a ((t1 op t2)) @." Types.Term.print t1 (Types.Atom.str_op_comp op) Types.Term.print t2;
+      | Atom.Comp (t1, op, t2) ->
+	if debug_normalize then
+	  begin
+	Format.eprintf "[normalize: canonize] @.";
+	    Format.eprintf "Term1 op Term2 : %a %s %a  @." Types.Term.print t1 (Types.Atom.str_op_comp op) Types.Term.print t2
+	  end;
 
 	let nt1 = make_term t1 in
 	let nt2 = make_term t2 in
@@ -392,10 +400,12 @@ let canonize a =
 	  | Some nt2 ->  nt2
 	  | None -> nt2
 	in
-	Format.eprintf "pre nt1 converted: %a and pre nt2 converted %a@." T.print nt1 T.print nt2;
+	if debug_normalize then 
+	Format.eprintf "[normalize: canonize2] pre nt1 converted: %a and pre nt2 converted %a@." T.print nt1 T.print nt2;
 	let nt11 = convert_term nt1 in
 	let nt21 = convert_term nt2 in
-	Format.eprintf "nt1 converted: %a and nt2 converted %a@." Types.Term.print nt11 Types.Term.print nt21;
+	if debug_normalize then 
+	Format.eprintf "[normalize: canonize3] nt1 converted: %a and nt2 converted %a@." Types.Term.print nt11 Types.Term.print nt21;
 	Atom.Comp (convert_term nt1, op,  convert_term nt2)
       | _ -> a
   
@@ -425,8 +435,8 @@ let extract_term op (*sa*) acc lit =
   let nt1, nt2 = F.lit_to_terms lit in
   let cn1 = convert_term nt1 in
   let cn2 = convert_term nt2 in
-  if debug_smt then 
-  Format.eprintf "[smt] Term1: %a, Term2: %a@." Types.Term.print cn1 Types.Term.print cn2;
+  if debug_normalize then 
+  Format.eprintf "[normalize: extract-term] Term1 op Term2: %a %s %a@." Types.Term.print cn1 (Types.Atom.str_op_comp op) Types.Term.print cn2;
   match cn1, cn2 with
 	    | Elem (h,_), Elem (h1, _) ->
 	      if Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h) 0 ||  Str.string_match (Str.regexp "!k[0-9]*$") (Hstring.view h1) 0 then acc
@@ -463,7 +473,9 @@ let extract_term op (*sa*) acc lit =
 let normalize s =
   let sf = SAtom.fold ( fun a cn ->
     match a with
-     | Comp (t1, ((Eq ) as op) , t2) ->
+      | Comp (Null _, op, _) 
+      | Comp (_, op, Null _) -> SAtom.add a cn
+      | Comp (t1, ((Eq ) as op) , t2) ->
 	let r1 = make_term t1 in
 	let r2 = make_term t2 in
 	let op1 = (match op with Eq -> F.Eq | Neq -> Neq | _ -> assert false) in 
@@ -475,9 +487,14 @@ let normalize s =
 	SAtom.union cn nt
       | _ -> SAtom.add (canonize a) cn
   ) s SAtom.empty
-  in 
-  Format.eprintf "Pre-normalized s: %a@." Types.SAtom.print s;
-  Format.eprintf "Post-normalized s: %a@." Types.SAtom.print sf;
+  in
+  if debug_normalize then
+    begin
+      Format.eprintf "[normalize: normalize]@.";
+      Format.eprintf "Pre-normalized s: %a@." Types.SAtom.print s;
+      Format.eprintf "Post-normalized s: %a@." Types.SAtom.print sf;
+    end
+  else ();
   sf
 
 

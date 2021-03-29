@@ -15,6 +15,7 @@
 
 open Solver_types
 open Format
+ 
 
 module Th = Cc.Make(Combine.CX)
 module Ex = Explanation
@@ -1056,8 +1057,11 @@ let restore { env = s_env; st_cpt_mk_var = st_cpt_mk_var; st_ma = st_ma } =
   Solver_types.ma := st_ma
 
 let normalize l =
-  Format.eprintf "Solver-normalize@.";
-  List.iter (Format.eprintf "%a@." Literal.LT.print) l; 
+  if Options.debug_normalize then
+    begin 
+      Format.eprintf "[normalize - solver]@.";
+      List.iter (Format.eprintf "%a@." Literal.LT.print) l
+    end;
   try
     let subst,_ = List.fold_left 
       (fun (subst,env) lit->
@@ -1078,9 +1082,11 @@ let normalize l =
 	  | Literal.Eq _ -> Literal.LT.make (Literal.Eq (nx, ny))
 	  | Distinct _ -> Literal.LT.make (Literal.Distinct (false, [nx;ny]))
 	| Builtin (_, _, _) -> assert false  ) subst (List.rev l)	*)
-
-      Format.eprintf "Solver-normalize-subst@.";
-      List.iter (fun (x,y) -> Format.eprintf "%a -> %a@." Th.print_r x Th.print_r y ) subst;
+      if Options.debug_normalize then
+	begin 
+	  Format.eprintf "[normalize - solver] subst@.";
+	  List.iter (fun (x,y) -> Format.eprintf "%a -> %a@." Th.print_r x Th.print_r y ) subst
+	end;
       List.map (fun (x,y) ->
 	let ex = Th.extract_term x in
 	let ey = Th.extract_term y in
@@ -1091,8 +1097,11 @@ let normalize l =
 	    | None, Some _ -> assert false
 	    | _ -> assert false
 	in
-	Format.eprintf "Solver-normalize-extracted@.";
-	Format.eprintf "%a -> %a@." Term.print nx Term.print ny;
+	if Options.debug_normalize then
+	  begin 
+	    Format.eprintf "[normalize - solver :extracted]@.";
+	    Format.eprintf "%a -> %a@." Term.print nx Term.print ny
+	  end; 
 	Literal.LT.make (Literal.Eq (nx,ny))
 	
       ) subst 

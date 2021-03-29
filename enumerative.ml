@@ -37,12 +37,12 @@ end)
 
 module SI = Set.Make (struct
     type t = int
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 module SLI = Set.Make (struct
     type t = int list
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 module TMap = Map.Make (Term)
@@ -1487,7 +1487,7 @@ let fast_resist_on_trace ls =
 module SCand =
   Set.Make (struct
       type t = st_req * Atom.t
-      let compare (t,_) (t',_) = Pervasives.compare t t'
+      let compare (t,_) (t',_) = Stdlib.compare t t'
   end)
 
 

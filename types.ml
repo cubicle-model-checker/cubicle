@@ -64,7 +64,7 @@ module Var = struct
     let compare x y =
       match x, y with
       | V(a1,s1), V(a2, s2) ->
-	 let c = Pervasives.compare s1 s2 in
+	 let c = Stdlib.compare s1 s2 in
 	 if c <> 0 then c
 	 else Hstring.compare a1 a2
 
@@ -99,9 +99,10 @@ type term =
   | RecordWith of term  * (Hstring.t * term) list
   | RecordField of term * Hstring.t
   | Record of (Hstring.t * term) list
+  | Null of term option * Hstring.t
 
 (*  | NArith of cst VMap.t * cst*)
-
+ 
 
 let is_int_const = function
   | ConstInt _ -> true
@@ -110,7 +111,7 @@ let is_int_const = function
      Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
 
 
-let compare_constants = MConst.compare Pervasives.compare 
+let compare_constants = MConst.compare Stdlib.compare 
 
 
 let num_of_const = function
@@ -174,8 +175,6 @@ let const_sign c =
   with Exit -> None
 
 let const_nul c = const_sign c = Some 0
-
-
 
 module Term = struct
 
@@ -275,6 +274,9 @@ module Term = struct
 	      | Subtraction, Subtraction -> 0
 	     in comp_op (op1,op2))
 	end
+    | Null _, Null _ -> 0
+    | Null _, _ -> -1
+    | _, Null _ -> 1
 
 
   let rec is_ground t =
@@ -291,6 +293,7 @@ module Term = struct
     | RecordField (t, _) -> is_ground t 
       
     | Record l -> List.for_all (fun (_,t) -> is_ground t) l
+    | Null _ -> true
 
   let can_simp t =
     match t with 
@@ -368,6 +371,7 @@ module Term = struct
     | Record l -> assert false
     | RecordWith (t, _) -> (*type_of t*) assert false
     | RecordField (t, _) -> (*type_of t*) assert false
+    | Null _ -> assert false
       
     | UnOp _ -> assert false
     | BinOp _ -> assert false
@@ -417,6 +421,13 @@ module Term = struct
      List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print y) f;
      fprintf fmt "}"
    | RecordField (r,f) -> fprintf fmt "%a.%a" print r Hstring.print f
+   | Null (t,n )->
+     begin
+       match t with
+	 | None -> fprintf fmt "Null<None ; %a>"  Hstring.print n
+	 | Some s -> fprintf fmt "Null<%a : %a>" print s Hstring.print n
+     end 
+     
     
 
 
@@ -463,7 +474,7 @@ end = struct
 	  let c1 = Term.compare x1 x2 in
 	  if c1 <> 0  then c1 
 	  else 
-	    let c0 = Pervasives.compare op1 op2 in
+	    let c0 = Stdlib.compare op1 op2 in
 	    if c0 <> 0 then c0 
 	    else 
 	      let c2 = Term.compare y1 y2 in c2
@@ -720,7 +731,7 @@ module ArrayAtom = struct
     !cpt + (n1 - !i1)
 
   let compare_nb_diff a p1 p2 =
-    Pervasives.compare (nb_diff p1 a) (nb_diff p2 a)
+    Stdlib.compare (nb_diff p1 a) (nb_diff p2 a)
 
 
   let nb_common a1 a2 =
@@ -741,7 +752,7 @@ module ArrayAtom = struct
 
 
   let compare_nb_common a p1 p2 =
-    Pervasives.compare (nb_common p2 a) (nb_common p1 a)
+    Stdlib.compare (nb_common p2 a) (nb_common p1 a)
 
   let diff a1 a2 =
     let n1 = Array.length a1 in

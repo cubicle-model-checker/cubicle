@@ -52,6 +52,7 @@ let decl_labels = H.create 17
 let htrue = Hstring.make "True"
 let hfalse = Hstring.make "False"
 
+
 module Type = struct
 
   type t = Hstring.t
@@ -167,6 +168,12 @@ module Type = struct
     match H.find decl_types ty with
       | Ty.Trecord _ -> true
       | _ -> false
+
+	
+  let record_type_details t =
+    match H.find decl_types t with
+      | Ty.Trecord { name = name; lbs = lbs } -> name, lbs
+      | _ -> assert false
     
       
       
@@ -180,7 +187,6 @@ module Symbol = struct
   type t = Hstring.t
 
   let declare f args ret  =
-    Format.eprintf "f in declare: %a@." Hstring.print f;
     if H.mem decl_symbs f then raise (Error (DuplicateTypeName f));
     List.iter 
       (fun t -> 
@@ -246,12 +252,12 @@ module Variant = struct
   let assign_constr = add constructors
     
   let assign_var x y =
-    Format.eprintf "assign_var: x: %a; y: %a@." Hstring.print x Hstring.print y; 
+ (* Format.eprintf "assign_var: x: %a; y: %a@." Hstring.print x Hstring.print y; *)
     if not (Hstring.equal x y) then
       add assignments x y
 	
   let rec compute () =
-    Format.eprintf "in compute@.";
+    (*Format.eprintf "in compute@.";*)
     let flag = ref false in
     let visited = ref HSet.empty in
 
@@ -333,29 +339,29 @@ module Variant = struct
 	  
 	  (*H.replace decl_labels x (rty, nty, rl);*) (*_labels contains lbl -> (its  record, its type, the list of all other lbls x types in its record)  *)
 	  let r = H.find decl_types rty in (* find the record type *)
-	  let r, r_fields=
+	  let r(*, r_fields*)=
 	    match r with
 	      | Ty.Trecord {name = re; lbs = l } ->
 
 	      	
-	(*	let nl = List.map (fun (hs, t) ->
+		let nl = List.map (fun (hs, t) ->
 		if Hstring.equal hs x then (hs,typ) else (hs,t)) l (*replace the type for the field only*)
-		in*)
+		in
 	      
 	      
-	      let nl_ty, nl_l = 
+	      (*let nl_ty, nl_l = 
 	      List.fold_right2 (fun (hs1, t1) (hs2, t2) (acc1,acc2) ->
 		if Hstring.equal hs1 x then (hs1,typ)::acc1,(hs2, nty)::acc2 else (hs1, t1)::acc1, (hs2,t2)::acc2) l rl ([],[])
-	      in 
+	      in *)
 	      
 		Format.eprintf "re is %a@." Hstring.print re;
 		(*List.iter (fun (f,s) -> Format.eprintf "field: %a, type: %a@." Hstring.print f Ty.print s) nl;*)
 
-		Ty.Trecord {name = re; lbs = nl_ty},nl_l
+		Ty.Trecord {name = re; lbs = nl}(*,nl_l*)
 	    | _ -> assert false (* should technically never go here since it should always return a record*)
 	  in
 	  H.replace decl_types rty r; (* modify the record type with the new one (w/ modified field)*)
-	  H.replace decl_labels x (rty, nty, r_fields);
+	  H.replace decl_labels x (rty, nty, (*r_fields*) rl);
 
 	  let testty, testfty, testl = H.find decl_labels x in
 	  Format.eprintf "test rty: %a; test rfty: %a; " Hstring.print testty Hstring.print testfty ;
