@@ -249,37 +249,89 @@ module Symbol = struct
     
 end
 
-
 module Variant = struct
     
   let constructors = H.create 17
   let assignments = H.create 17
 
+  module R = Set.Make (struct
+    type t = Hstring.t * Hstring.t
+    let compare (a,b) (x,y) =
+      let c = Hstring.compare a x in
+      if c = 0 then Hstring.compare b y
+      else c
+  end)
+
+  let record_assignments = H.create 17
+  let rec_constructors = H.create 17
+
+
   let find t x = try H.find t x with Not_found -> HSet.empty
+
+  let find_record t x = try H.find t x with Not_found -> R.empty
+
+    
+  let get_variants = H.find constructors
+    
+  let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
+    
     
   let add t x v = 
     let s = find t x in
     H.replace t x (HSet.add v s)
+
+  let add_record_constr g (field, el)  =
+    let curr = (*(Hstring.t * HSet.t option) list *)
+      try H.find rec_constructors g
+      with Not_found -> []	
+    in
+    let l =
+      if curr = [] then
+	begin
+	  let s = HSet.add el HSet.empty in [(field,Some s)]
+	end
+      else
+	begin
+	  List.map (fun (f, so) ->
+	    if Hstring.equal field f then
+	      begin
+		match so with
+		  | None -> assert false
+	      (* assert false since called from typing, so it shouldn't not be a constructor*)
+		  | Some s ->
+		    let s = HSet.add el s in (f, Some s)
+	      end 
+	    else (f,so)
+	  ) curr
+	end
+    in
+    H.replace rec_constructors g l 
       
   let assign_constr = add constructors
+
+  let hset_print fmt s = 
+    HSet.iter (fun c -> Format.eprintf "%a, " Hstring.print c) s
     
-  let assign_var x y =
- (* Format.eprintf "assign_var: x: %a; y: %a@." Hstring.print x Hstring.print y; *)
+  let assign_var x y = 
     if not (Hstring.equal x y) then
       add assignments x y
-	
+
+  let assign_record g fconstr =
+    let s =
+      try H.find record_assignments g with
+	  Not_found -> R.empty
+    in
+    H.replace record_assignments g (R.add fconstr s) 
+    	  
   let rec compute () =
-    (*Format.eprintf "in compute@.";*)
     let flag = ref false in
     let visited = ref HSet.empty in
-
-    let rec dfs x s = 
+    let rec dfs x s =
       if not (HSet.mem x !visited) then
 	begin
 	  visited := HSet.add x !visited;
 	  HSet.iter 
-	    (fun y ->
-	      Format.eprintf "compute: x: %a; y: %a" Hstring.print x Hstring.print y;
+	    (fun y -> 
 	      let c_x = find constructors x in
 	      let c_y = find constructors y in
 	      let c = HSet.union c_x c_y in
@@ -294,10 +346,51 @@ module Variant = struct
     in
     H.iter dfs assignments;
     if !flag then compute ()
-      
-  let hset_print fmt s = 
-    HSet.iter (fun c -> Format.eprintf "%a, " Hstring.print c) s
-      
+
+
+  let rec compute_records () =
+    let flag = ref false in
+    let visited = ref HSet.empty in
+    let rec search g set_of_values =
+      if not (HSet.mem g !visited) then  
+	begin
+	  visited := HSet.add g !visited;
+	  R.iter (
+	    fun (field, elem) -> 
+	      let c_g =
+		try H.find rec_constructors g
+		with Not_found -> assert false (* the record should exist *)
+	      in
+	      let c_elem = find constructors elem
+	      in
+	      let l =
+		List.map (fun (fd, so) ->
+		  if Hstring.equal fd field then
+		    begin
+		      match so with
+			| None -> assert false (* shouldn't happen *)
+			| Some s ->
+			  let s' = HSet.union s c_elem
+			  in
+			  if not (HSet.equal s s') then flag := true;
+			  (fd, Some s')
+		    end
+		  else (fd, so)
+		) c_g
+	      in
+	      H.replace rec_constructors g l 
+	  ) set_of_values
+	    (* [ (field, option set of constr) ]
+		if a field is type constr, then it has a Some set 
+	       of the poss values of the constr. 
+	       If the field is not a constr then None
+	    *)
+	end
+    in
+    H.iter search record_assignments;
+    if !flag then compute_records ()
+    
+    
   let print () =
     H.iter 
       (fun x c -> 
@@ -308,96 +401,126 @@ module Variant = struct
       constructors
 
 
-  let get_variants = H.find constructors
-    
-  let set_of_list = List.fold_left (fun s x -> HSet.add x s) HSet.empty 
-    
-  let init l = 
+  let init l =
     compute ();
+    compute_records ();
     List.iter 
-      (fun (x, nty) -> 
+      (fun (x, nty) ->
 	if not (H.mem constructors x) then
 	  let ty = H.find decl_types nty in
 	  match ty with
 	    | Ty.Tsum (_, l) ->
 	      H.add constructors x (set_of_list l)
+	    (*| Ty.Trecord {name = name; lbs = lbs} ->
+	      let ll =
+		List.map (fun (field, typ) ->
+		match typ with
+		  | Ty.Tsum (_, ls) -> field, Some HSet.empty
+		  | _ -> field, None
+		) lbs
+	      in
+	    H.add rec_constructors x ll
+	      *)
 	    | _ -> ()) l;
-    H.clear assignments
+    H.clear assignments;
+    H.clear record_assignments
 
   let update_decl_types s old_ty x =
     let new_ty = Hstring.(view old_ty ^ "_" ^ view x |> make) in
     let l = HSet.elements s in
     let ty = Ty.Tsum (new_ty, (* List.rev *) l) in
-    Format.eprintf "update decl_types- new_ty: %a@." Hstring.print new_ty;
     H.replace decl_types new_ty ty;
-    new_ty, ty
+    new_ty
 
-  let close () =
-    Format.eprintf "CLOSE, 1st print@.";
-    print ();
+  let close () = 
     compute ();
+    compute_records ();
     H.iter 
-      (fun x s ->
-	Format.eprintf "close: x is %a@." Hstring.print x; 
+      (fun x s -> 
 	let sy, args, old_ty = H.find decl_symbs x in
-	let nty,typ = update_decl_types s old_ty x in
-	Format.eprintf "Nty is : %a and typ is %a@." Hstring.print nty Ty.print typ;
-	try
-	  (* if it's a record - do the new thing, if it's not a record, do whatever it was before*)
-	  let rty, rfty, rl = H.find decl_labels x  in (* raises Not_found at this point if it's not actually about records*)
-
-	  Format.eprintf "rty: %a; rfty: %a; " Hstring.print rty Hstring.print rfty ;
-	  List.iter (fun (f,s) -> Format.eprintf "f: %a of s: %a@." Hstring.print f Hstring.print s) rl;
-	  
-	  (*H.replace decl_labels x (rty, nty, rl);*) (*_labels contains lbl -> (its  record, its type, the list of all other lbls x types in its record)  *)
-	  let r = H.find decl_types rty in (* find the record type *)
-	  let r(*, r_fields*)=
-	    match r with
-	      | Ty.Trecord {name = re; lbs = l } ->
-
-	      	
-		let nl = List.map (fun (hs, t) ->
-		if Hstring.equal hs x then (hs,typ) else (hs,t)) l (*replace the type for the field only*)
-		in
-	      
-	      
-	      (*let nl_ty, nl_l = 
-	      List.fold_right2 (fun (hs1, t1) (hs2, t2) (acc1,acc2) ->
-		if Hstring.equal hs1 x then (hs1,typ)::acc1,(hs2, nty)::acc2 else (hs1, t1)::acc1, (hs2,t2)::acc2) l rl ([],[])
-	      in *)
-	      
-		Format.eprintf "re is %a@." Hstring.print re;
-		(*List.iter (fun (f,s) -> Format.eprintf "field: %a, type: %a@." Hstring.print f Ty.print s) nl;*)
-
-		Ty.Trecord {name = re; lbs = nl}(*,nl_l*)
-	    | _ -> assert false (* should technically never go here since it should always return a record*)
-	  in
-	  H.replace decl_types rty r; (* modify the record type with the new one (w/ modified field)*)
-	  H.replace decl_labels x (rty, nty, (*r_fields*) rl);
-
-	  let testty, testfty, testl = H.find decl_labels x in
-	  Format.eprintf "test rty: %a; test rfty: %a; " Hstring.print testty Hstring.print testfty ;
-	  List.iter (fun (f,s) -> Format.eprintf "test f: %a of s: %a@." Hstring.print f Hstring.print s) testl;
-	  
-	  (*H.replace decl_symbs rty (sy, args, rty);*) (* modify the record variable w/ it's new type*)
-	(* ^ nvm not necessary (also incorrect oops) -- never use decl_symbs when declaring records for alt-ergo. delete this*)
-	  
-	  
-	with Not_found ->
-	  begin
-	    H.replace decl_symbs x (sy, args, nty);
-	    List.iter (Format.eprintf "DT: %a@." Hstring.print) (Type.declared_types ());
-	    Format.eprintf "\n\n@.";
-	  (*List.iter (Format.eprintf "AC: %a@." Hstring.print) (Type.all_constructors ());*)
-	    (*List.iter (Format.eprintf "CONS: %a@." Hstring.print) (Type.constructors (Hstring.make "t_A"));*)
-	    let s, a, n = H.find decl_symbs x in 
-	    Format.eprintf "Type for %a: %a@." Hstring.print x Hstring.print n 
-
-
-	  end)
+	let nty = update_decl_types s old_ty x in
+	H.replace decl_symbs x (sy, args, nty))
       constructors;
+    H.iter (fun g l ->
+      match l with
+	| [] -> ()
+	| _ -> 
+	  let sy, args, old_ty = H.find decl_symbs g in
+	  let ll = 
+	    List.map (fun (field, so) ->
+	      match so with
+		| None -> (field, None, None)
+		| Some s ->
+		  let s' = HSet.elements s in
+		  let ty_new = Hstring.(view old_ty ^ "_"^view g ^"_" ^view field)  in
+		  let ty_new = Hstring.make ty_new in
+		  let ty = Ty.Tsum (ty_new, s') in
+		  H.replace decl_types ty_new ty;
+		  (field, Some ty, Some ty_new)
+	    ) l
+	     
+	  in      
+	  let tr =
+	    try
+	      H.find decl_types old_ty
+	    with Not_found -> assert false
+	  in
+	  begin
+	    match tr with
+	      | Ty.Trecord {name = name; lbs = lbs } ->
+		let l' =
+		  List.map2 (fun (f1, t1, no1) (f2, t2) ->
+		    if not (Hstring.equal f1 f2) then assert false;
+		    match t1 with
+		      | None -> f2, t2
+		      | Some s -> f2, s
+		  ) ll lbs
+		    
+		in
+		let nname = Hstring.(view old_ty ^ "_" ^view g) in
+		let nname = Hstring.make nname in 
+		let ntr = Ty.Trecord { name = nname; lbs = l' }
+		in
+		H.replace decl_types nname ntr;
+		H.replace decl_symbs g (sy, args, nname);
+
+		List.iter2 (fun (f1, t1, no1) (f2, t2) ->
+		  if not (Hstring.equal f1 f2) then assert false;
+		  match t1,no1 with
+		    | None, None -> ()
+		    | Some st, Some sno ->
+		      let _,_,ugh = H.find decl_labels f1 in
+		      H.replace decl_labels f1 (nname, sno, ugh)
+		    | _ -> assert false
+		) ll lbs
+		      
+
+
+		  
+		  
+	      | _ -> assert false
+	  end
+
+
+    ) rec_constructors;
+
+    
+    if Options.debug_subtypes then
+      begin 
+    Format.eprintf "---------------Debug Subtyping---------------@.";
+    Format.eprintf "All types:@."; 
+    let ttt = Type.declared_types () in
+    List.iter (fun x ->
+      let tx = H.find decl_types x in
+      Format.eprintf "type %a : %a@." Hstring.print x Ty.print tx
+    ) ttt;
+    Format.eprintf "---------------------------------------------@.";
+      end 
+      
+    
       
 end
+
   
 module Term = struct
 
@@ -708,7 +831,7 @@ module Make (Options : sig val profiling : bool end) = struct
     uc
 
   module SInt = 
-    Set.Make (struct type t = int let compare = Pervasives.compare end)
+    Set.Make (struct type t = int let compare = Stdlib.compare end)
 
   let export_unsatcore2 cl =
     let s = 

@@ -151,15 +151,27 @@ module Make(X : ALIEN) = struct
       match sm1, sm2 with
         | Alien r , Cons(h,ty) 
         | Cons (h,ty), Alien r  ->
+	  (*h is the constructor itself, ty is the type it belongs to *)
+	  (* h = Idle and ty = t *)
+
           let enum, ex = try MX.find r env with Not_found -> hss, Ex.empty in
           let enum = HSS.remove h enum in
+	  (*unbind h in enum *)
           let ex = Ex.union ex dep in
+	  (*combine explanations*)
           if HSS.is_empty enum then raise (Inconsistent ex)
-          else 
+	  (* if every binding has been removed -> oops *)
+          else
+	    (*there are still bindings left*)
             let env = MX.add r (enum, ex) env in
+	    (* bind (alien) r to (enum, ex) - values that the term r can have - in env*)
             if HSS.cardinal enum = 1 then
+	      (*if there is only on possible value, then pick that value and add the
+		new equality to all of the equalities
+	      *)
               let h' = HSS.choose enum in
               env, (LSem (A.Eq(r, is_mine (Cons(h',ty)))), ex)::eqs
+	    (*if there's more than one thing in enum*)
             else env, eqs
               
         | Alien r1   , Alien r2   -> env, eqs
@@ -168,22 +180,30 @@ module Make(X : ALIEN) = struct
     let add_eq hss sm1 sm2 dep env eqs =
       match sm1, sm2 with
         | Alien r, Cons(h,ty) | Cons (h,ty), Alien r  ->
-
+	  (*find the term r in the environment*)
           let enum, ex = try MX.find r env with Not_found -> hss, Ex.empty in
+	  (*combine explanations*)
           let ex = Ex.union ex dep in
+	  (*if the constructor h isn't a possible value -> oops*)
           if not (HSS.mem h enum) then raise (Inconsistent ex);
+	  (* specifically add that r is equal to this one constructor in the env*)
 	  MX.add r (HSS.singleton h, ex) env, eqs
             
         | Alien r1, Alien r2   -> 
-
+	  (*try to find the two r's in the environment*)
           let enum1,ex1 = try MX.find r1 env with Not_found -> hss, Ex.empty in
           let enum2,ex2 = try MX.find r2 env with Not_found -> hss, Ex.empty in
+	  (*combine the explanations*)
           let ex = Ex.union dep (Ex.union ex1 ex2) in
-          let diff = HSS.inter enum1 enum2 in 
-          if HSS.is_empty diff then raise (Inconsistent ex);
+	  (* the intersection of the two sets of possible values *)
+          let diff = HSS.inter enum1 enum2 in
+	  (*at least one value must be common*)
+          if HSS.is_empty diff then raise (Inconsistent ex); 
+	  (*r1/r2 is equal to this intersection in the environment*)
           let env = MX.add r1 (diff, ex) env in
           let env = MX.add r2 (diff, ex) env in
           if HSS.cardinal diff = 1 then
+	    (*if there's only one possible value then it can be added to the eqs to be assumed*)
             let h' = HSS.choose diff in
             let ty = X.type_info r1 in
             env, (LSem (A.Eq(r1, is_mine (Cons(h',ty)))), ex)::eqs
@@ -205,10 +225,13 @@ module Make(X : ALIEN) = struct
       let env, eqs = 
 	List.fold_left
           (fun (env,eqs) -> function
-             | A.Eq(r1,r2), _, ex -> 
+            | A.Eq(r1,r2), _, ex ->
+		 (*if the element is an equality*)
+		 (*values_of -> all the possible constructors for r1's type*)
+		 (* if r1's type isn't a sum type, then you get None from the fct*)
 		 aux true  r1 r2 ex env eqs (values_of r1)
 		   
-             | A.Distinct(false, [r1;r2]), _, ex -> 
+            | A.Distinct(false, [r1;r2]), _, ex ->
 		 aux false r1 r2 ex env eqs (values_of r1)
 		   
              | _ -> env, eqs
@@ -221,18 +244,26 @@ module Make(X : ALIEN) = struct
        case split *)
 
     let case_split env =
+      (*fold on the map of thing = stuff *)
       let acc = MX.fold
         (fun r (hss, ex) acc ->
-           let sz = HSS.cardinal hss in
-           if sz = 1 then acc
-           else match acc with
-             | Some (n,r,hs) when n <= sz -> acc
-             | _ -> Some (sz, r, HSS.choose hss)
+          let sz = HSS.cardinal hss in
+	  (*if the thing is only equal to one stuff, 
+	    don't do anything, no reason to case-split
+	  *)
+          if sz = 1 then acc
+	   (* if there's multiple stuff*)
+          else match acc with
+	     (* if there's something smaller in my acc then nothing*)
+            | Some (n,r,hs) when n <= sz -> acc
+	     (* otherwise pick something*)
+             | _ ->   Some (sz, r, HSS.choose hss)
         ) env None
       in
       match acc with
         | Some (n,r,hs) ->
-            let r' = is_mine (Cons(hs,X.type_info r)) in
+	  
+          let r' = is_mine (Cons(hs,X.type_info r)) in
             [A.Eq(r, r'), Ex.empty, Num.Int n]
         | None -> []
       

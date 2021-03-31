@@ -152,6 +152,10 @@ module type S = sig
         subtype of [x] (use this function when [x := y] appear in your 
         program *)
 
+    val assign_record : Symbol.t -> (Symbol.t * Hstring.t) -> unit
+
+    val add_record_constr : Symbol.t -> (Symbol.t * Hstring.t) -> unit
+
     val print : unit -> unit
     (** [print ()] will output the computed refined types on std_err. This
         function is here only for debugging purposes. Use it afer [close ()].*)

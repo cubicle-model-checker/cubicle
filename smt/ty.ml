@@ -27,7 +27,6 @@ and t =
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
-  | Tnull
 
 let rec hash t =
   match t with
@@ -83,7 +82,7 @@ let rec compare t1 t2 =
     | Trecord _, _ -> -1 | _ , Trecord _ -> 1
 
       
-    | t1, t2 -> Pervasives.compare t1 t2
+    | t1, t2 -> Stdlib.compare t1 t2
 
 and compare_list l1 l2 = match l1, l2 with
   | [] , [] -> 0
@@ -99,7 +98,13 @@ let rec print fmt ty =
     | Treal -> fprintf fmt "real"
     | Tbool -> fprintf fmt "bool"
     | Tabstract s -> fprintf fmt "%s" (Hstring.view s)
-    | Tsum (s, _) -> fprintf fmt "%s" (Hstring.view s)
+    | Tsum (s, sl) -> fprintf fmt "%s" (Hstring.view s);
+      if Options.debug_subtypes then
+	begin
+	  fprintf fmt " (= ";
+	  List.iter (fprintf fmt "| %a " Hstring.print) sl;
+	  fprintf fmt ")"   
+	end
     | Trecord {name = n; lbs = lbs;(* null = null*)} ->
       (*if null then*)
 	begin

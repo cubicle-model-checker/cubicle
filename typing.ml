@@ -18,7 +18,7 @@ open Util
 open Ast
 open Types
 open Atom
-open Pervasives
+(*open Pervasives*)
 
 type error = 
   | UnknownConstr of Hstring.t
@@ -351,17 +351,27 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
 	  Smt.Variant.assign_var g n;
 	  if init_variant then 
 	    Smt.Variant.assign_var n g
-      | Record l -> List.iter (fun (h, t) ->
+      | Record l -> List.iter (fun (h, t) -> 
 	let ty_t = Smt.Type.record_field_type h in
+	List.iter (fun (h, _) ->
+	  match t with
+	    | Elem(e, Constr) -> Smt.Variant.add_record_constr g (h,e)
+	    | Elem(e, _) -> Smt.Variant.assign_record g (h,e)
+	    | _ -> ()
+	) l; 
+	assignment ~init_variant h t ([], ty_t)
+      ) l
+      | RecordWith (_, l) -> List.iter (fun (h, t) ->
+	let ty_t = Smt.Type.record_field_type h in
+	List.iter (fun (h, _) ->
+	  match t with
+	    | Elem(e, Constr) -> Smt.Variant.add_record_constr g (h,e)
+	    | Elem(e, _) -> Smt.Variant.assign_record g (h,e)
+	    | _ -> ()
+	) l;
 	assignment ~init_variant h t ([], ty_t)
 
       ) l
-      | RecordWith (_, l) -> List.iter (fun (h, t) -> 
-	let ty_t = Smt.Type.record_field_type h in
-	assignment ~init_variant h t ([], ty_t)
-
-      ) l
-      
       | _ -> ()
 
 let atom loc init_variant args a =

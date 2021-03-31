@@ -71,6 +71,8 @@ end
 module Variant = struct
   let assign_constr _ = unsupported ()
   let assign_var _ _ = unsupported ()
+  let assign_record _ = unsupported ()
+  let add_record_constr _ = unsupported ()
   let print _ = unsupported ()
   let init _ = unsupported ()
   let close _ = unsupported ()

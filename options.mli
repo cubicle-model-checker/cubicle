@@ -27,6 +27,7 @@ val cin : in_channel
 val max_proc : int
 val type_only : bool
 val debug_normalize : bool
+val debug_subtypes : bool
     
 val parse_only: bool
 val maxrounds : int

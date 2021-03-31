@@ -38,37 +38,37 @@ let compare_kind s1 s2 =
   | Approx, Approx -> 0
   | Approx, _ -> -1
   | _, Approx -> 1
-  | k1, k2 -> Pervasives.compare k1 k2
+  | k1, k2 -> Stdlib.compare k1 k2
 
 let compare_by_breadth s1 s2 =
   let v1 = dim s1 in
   let v2 = dim s2 in
-  let c = Pervasives.compare v1 v2 in
+  let c = Stdlib.compare v1 v2 in
   if c <> 0 then c else
     let c1 = size s1 in
     let c2 = size s2 in
-    let c = Pervasives.compare c1 c2 in
+    let c = Stdlib.compare c1 c2 in
     if c <> 0 then c else
       let c =  compare_kind s1 s2 in
       if c <> 0 then c else
-        let c = Pervasives.compare s1.depth s2.depth in 
+        let c = Stdlib.compare s1.depth s2.depth in 
         if c <> 0 then c else
-          Pervasives.compare (abs s1.tag) (abs s2.tag)
+          Stdlib.compare (abs s1.tag) (abs s2.tag)
 
 let compare_by_depth  s1 s2 =
   let v1 = dim s1 in
   let v2 = dim s2 in
-  let c = Pervasives.compare v1 v2 in
+  let c = Stdlib.compare v1 v2 in
   if c <> 0 then c else
     let c1 = size s1 in
     let c2 = size s2 in
-    let c = Pervasives.compare c1 c2 in
+    let c = Stdlib.compare c1 c2 in
     if c <> 0 then c else
       let c =  compare_kind s1 s2 in
       if c <> 0 then c else
-        let c = Pervasives.compare s2.depth s1.depth in 
+        let c = Stdlib.compare s2.depth s1.depth in 
         if c <> 0 then c else
-          Pervasives.compare (abs s1.tag) (abs s2.tag)
+          Stdlib.compare (abs s1.tag) (abs s2.tag)
 
 let rec origin n = match n.from with
   | [] -> n
@@ -159,6 +159,12 @@ module Latex = struct
       List.iter (fun (x,y) -> fprintf fmt "%a = %a; " Hstring.print x print_term y) f;
       fprintf fmt "}"
     | RecordField (r,f) -> fprintf fmt "%a.%a" print_term r Hstring.print f
+    | Null(n,t) ->
+      begin
+	match n with
+	  | None -> fprintf fmt "Null<None: %a>" Hstring.print t
+	  | Some s -> fprintf fmt "Null<%a: %a>" print_term s Hstring.print t
+      end 
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

@@ -63,7 +63,7 @@ let compare s1 s2 =  match s1, s2 with
   | Op(Access s1), Op(Access s2) -> Hstring.compare s1 s2
   | Op(Access _), _ -> -1
   | _, Op(Access _) -> 1
-  | _  -> Pervasives.compare s1 s2
+  | _  -> Stdlib.compare s1 s2
   
 let equal s1 s2 = compare s1 s2 = 0
 

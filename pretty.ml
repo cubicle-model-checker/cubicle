@@ -201,10 +201,10 @@ let style_of_tag = function
   | _ -> raise Not_found
 
 
-let start_tag t = 
-  try Printf.sprintf "[%sm" (assoc_style (style_of_tag t))
-  with Not_found -> ""
-
+let start_tag t =
+    try Printf.sprintf "[%sm" (assoc_style (style_of_tag t))
+    with Not_found -> ""
+  
 let stop_tag t = 
   let st = match style_of_tag t with
     | Bold -> Bold_off

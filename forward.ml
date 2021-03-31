@@ -18,7 +18,7 @@ open Options
 open Ast
 open Types
 open Atom
-open Pervasives
+(*open Pervasives*)
 
 module H = Hstring
 
@@ -92,7 +92,8 @@ let rec is_prime_term = function
   | RecordWith (t, l)  -> let fl = List.filter (fun (_,x) -> is_prime_term x) l in
 			 not  (fl = [])
   | Record l -> let fl = List.filter (fun (_,x) ->  is_prime_term x) l in
-			  not (fl = [])
+		not (fl = [])
+  | Null _ -> false
  
 
 let rec is_prime_atom = function
@@ -405,6 +406,8 @@ let rec type_of_term = function
   | Record l -> let f, _ = List.hd l in fst (Smt.Type.record_ty_by_field f)
   | RecordWith (t,_) -> type_of_term t
   | RecordField (t,_) -> type_of_term t
+  | Null(_,t) -> t
+      
 
 let rec type_of_atom = function
   | True | False -> None

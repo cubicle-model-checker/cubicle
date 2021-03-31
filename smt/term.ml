@@ -46,14 +46,19 @@ let rec print fmt t =
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
 	| Ty.Trecord {Ty.lbs=lbs} ->
-	  assert (List.length l = List.length lbs);
-	  fprintf fmt "{";
-	  ignore (List.fold_left2 (fun first (field,_) e -> 
-	    fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-	      (Hstring.view field) print e;
-	    false
-	  ) true lbs l);
-	  fprintf fmt "}";
+	  let ll = List.length l in
+	  if ll = 0 then fprintf fmt "NULL"
+	  else
+	    begin
+	      assert (ll = List.length lbs);
+	      fprintf fmt "{";
+	      ignore (List.fold_left2 (fun first (field,_) e -> 
+		fprintf fmt "%s%s = %a"  (if first then "" else "; ")
+		  (Hstring.view field) print e;
+		false
+	      ) true lbs l);
+	      fprintf fmt "}";
+	    end 
 	| _ -> () (*todo*)
       end
       
@@ -73,7 +78,7 @@ and print_list fmt = function
   | t::l -> Format.fprintf fmt "%a,%a" print t print_list l
 
 let compare t1 t2 =
-  let c = Pervasives.compare t2.tag t1.tag in
+  let c = Stdlib.compare t2.tag t1.tag in
   if c = 0 then c else
   match (view t1).f, (view t2).f with
     | (Sy.True | Sy.False ), (Sy.True | Sy.False ) -> c

@@ -554,6 +554,7 @@ let rec add_arg args = function
   | Record _ -> assert false
   | RecordWith _ -> assert false
   | RecordField _ -> assert false
+  | Null _ -> assert false
 
 let args_of_atoms sa =
   let rec args_rec sa args =

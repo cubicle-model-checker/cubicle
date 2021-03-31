@@ -218,7 +218,8 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     | Smt.UnknownType h ->
        eprintf "Unknown type %a@." Hstring.print h
     | Smt.UnknownSymb h ->
-       eprintf "Unknown symbol %a@." Hstring.print h
+      eprintf "Unknown symbol %a@." Hstring.print h
+    | Smt.UnknownLabel l -> eprintf "Unknown label %a" Hstring.print l
 
 
   let worker_fix system = function
