@@ -78,7 +78,8 @@ let simplify_smt_atom t1 op t2 =
 	let t_record = make_term record in
 	let _, re = Smt.Type.record_ty_by_field field  in
 	let ty_field= Hstring.list_assoc field re in
-	T.make_field field t_record ty_field 
+	T.make_field field t_record ty_field
+      | Null (n,t) -> assert false
   in
   let nt1 = make_term t1 in
   let nt2 = make_term t2 in
