@@ -53,6 +53,7 @@ module Type = struct
   let record_ty_by_field _ = unsupported ()
   let ty_to_hstring _ = unsupported ()
   let is_record _ = unsupported ()
+  let is_record_opt _ = unsupported ()
   let record_type_details _ = unsupported ()
 
 end

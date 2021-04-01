@@ -89,6 +89,8 @@ module type S = sig
 
     val is_record: t -> bool
 
+    val is_record_opt: t -> Hstring.t list option
+
     val declared_types : unit -> t list
 
     val record_type_details : Hstring.t -> t * (Hstring.t * Ty.t) list

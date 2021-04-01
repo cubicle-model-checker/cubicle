@@ -123,7 +123,7 @@ module Type = struct
       else
 	begin
 	  H.add decl_labels f_n (ty, f_ty, l);
-	  H.add decl_symbs f_n (Symbols.name f_n, [], f_ty)
+	  (*H.add decl_symbs f_n (Symbols.name f_n, [], f_ty)*)
 	end;
 	
       let fty_ty =
@@ -172,6 +172,11 @@ module Type = struct
       | Ty.Trecord _ -> true
       | _ -> false
 
+  let is_record_opt ty =
+    match H.find decl_types ty with
+      | Ty.Trecord {lbs = lbs } -> let l = List.map fst lbs in Some l
+      | _ -> None
+	   
 	
   let record_type_details t =
     match H.find decl_types t with
@@ -203,7 +208,19 @@ module Symbol = struct
       (fun t -> 
 	if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
       (ret::args);
-    H.add decl_symbs f (Symbols.name f, args, ret)
+    H.add decl_symbs f (Symbols.name f, args, ret);
+    match Type.is_record_opt ret with
+      | None -> ()
+      | Some l ->
+	let f' = Hstring.view f in 
+	List.iter (fun fd ->
+	  let fd' = Hstring.view fd in
+	  let nfd = Hstring.make (f'^fd') in
+	  let _,fty,_ = H.find decl_labels fd in
+	  H.add decl_symbs nfd (Symbols.name nfd, [], fty)
+	) l
+  
+   
 
   let type_of s = let _, args, ret =  H.find decl_symbs s in  args, ret
     
@@ -436,7 +453,7 @@ module Variant = struct
     compute ();
     compute_records ();
     H.iter 
-      (fun x s -> 
+      (fun x s ->
 	let sy, args, old_ty = H.find decl_symbs x in
 	let nty = update_decl_types s old_ty x in
 	H.replace decl_symbs x (sy, args, nty))
@@ -469,12 +486,31 @@ module Variant = struct
 	    match tr with
 	      | Ty.Trecord {name = name; lbs = lbs } ->
 		let l' =
+		  (*
 		  List.map2 (fun (f1, t1, no1) (f2, t2) ->
 		    if not (Hstring.equal f1 f2) then assert false;
 		    match t1 with
 		      | None -> f2, t2
 		      | Some s -> f2, s
-		  ) ll lbs
+		    ) ll lbs*)
+
+		  
+		  List.map (fun (f2, t2) ->
+		    let el' =
+		      List.fold_left (fun acc (f1, t1, no1) ->
+			if Hstring.equal f1 f2 then
+			  begin
+			    match t1 with
+			      | None -> acc
+			      | Some s -> Some (f2, s)
+			  end
+			else
+			  acc) None ll
+		    in
+		    match el' with
+		      | None -> f2, t2
+		      | Some s -> s
+		  ) lbs
 		    
 		in
 		let nname = Hstring.(view old_ty ^ "_" ^view g) in
@@ -484,7 +520,7 @@ module Variant = struct
 		H.replace decl_types nname ntr;
 		H.replace decl_symbs g (sy, args, nname);
 
-		List.iter2 (fun (f1, t1, no1) (f2, t2) ->
+		(*List.iter2 (fun (f1, t1, no1) (f2, t2) ->
 		  if not (Hstring.equal f1 f2) then assert false;
 		  match t1,no1 with
 		    | None, None -> ()
@@ -492,11 +528,22 @@ module Variant = struct
 		      let _,_,ugh = H.find decl_labels f1 in
 		      H.replace decl_labels f1 (nname, sno, ugh)
 		    | _ -> assert false
-		) ll lbs
-		      
+		  ) ll lbs*)
 
-
-		  
+		List.iter (fun (f2, t2) ->
+		  List.iter (fun (f1, t1, no1) ->
+		    if Hstring.equal f1 f2 then
+		      begin
+		    match t1, no1 with
+		      | None, None -> ()
+		      | Some st, Some sno ->
+			let _,_,ugh = H.find decl_labels f1 in
+			H.replace decl_labels f1 (nname, sno, ugh)
+		      | _ -> assert false
+		      end
+		    else ()
+		      ) ll
+		) lbs
 		  
 	      | _ -> assert false
 	  end

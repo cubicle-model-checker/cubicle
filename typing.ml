@@ -339,6 +339,7 @@ let rec term loc args t =
 
     
 let rec assignment ?(init_variant=false) g x (_, ty) =
+  (*Format.eprintf "g: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
   if ty = Smt.Type.type_proc 
      || ty = Smt.Type.type_bool
        || ty = Smt.Type.type_int
@@ -353,31 +354,84 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
 	    Smt.Variant.assign_var n g
       | Record l -> List.iter (fun (h, t) -> 
 	let ty_t = Smt.Type.record_field_type h in
-	List.iter (fun (h, _) ->
+	List.iter (fun (h, t) ->
 	  match t with
-	    | Elem(e, Constr) -> Smt.Variant.add_record_constr g (h,e)
-	    | Elem(e, _) -> Smt.Variant.assign_record g (h,e)
+	    | Elem(e, Constr) ->
+	      let h' = Hstring.view h in
+	      let g' = Hstring.view g in
+	      let gh = Hstring.make (g'^h') in
+	      Smt.Variant.add_record_constr g (h,e);
+	      Smt.Variant.assign_constr gh e
+	    | Elem(e, _) ->
+	      let h' = Hstring.view h in
+	      let g' = Hstring.view g in
+	      let gh = Hstring.make (g'^h') in
+	      Smt.Variant.assign_var g gh;
+	      Smt.Variant.assign_record g (h,e)
 	    | _ -> ()
 	) l; 
-	assignment ~init_variant h t ([], ty_t)
+	(*assignment ~init_variant h t ([], ty_t)*)
       ) l
       | RecordWith (_, l) -> List.iter (fun (h, t) ->
 	let ty_t = Smt.Type.record_field_type h in
-	List.iter (fun (h, _) ->
+	List.iter (fun (h, t) ->
 	  match t with
-	    | Elem(e, Constr) -> Smt.Variant.add_record_constr g (h,e)
-	    | Elem(e, _) -> Smt.Variant.assign_record g (h,e)
+	    | Elem(e, Constr) ->
+	      let h' = Hstring.view h in
+	      let g' = Hstring.view g in
+	      let gh = Hstring.make (g'^h') in
+	      Smt.Variant.add_record_constr g (h,e);
+	      Smt.Variant.assign_constr gh e
+	    | Elem(e, _) ->
+	      let h' = Hstring.view h in
+	      let g' = Hstring.view g in
+	      let gh = Hstring.make (g'^h') in
+	      Smt.Variant.assign_var g gh;
+	      Smt.Variant.assign_record g (h,e)
 	    | _ -> ()
 	) l;
-	assignment ~init_variant h t ([], ty_t)
+	(*assignment ~init_variant h t ([], ty_t)*)
 
       ) l
+      | RecordField(re, field) ->
+	(* Types.term * Hstring.t *)
+	
+	begin
+	  match re with
+	    | Elem (e, Glob) ->
+	      let e' = Hstring.view e in
+	      let f' = Hstring.view field in
+	      let fe = Hstring.make (e'^f') in 
+	      Smt.Variant.assign_record e (field, g);
+	      Smt.Variant.assign_var g fe
+	    | _ -> ()
+	end 
+	
+	
+
       | _ -> ()
 
 let atom loc init_variant args a =
   let null = Hstring.make "Null" in 
   match a with 
     | True | False -> a
+
+    (*| Comp (x, Eq, (RecordField(ter, field) as y))
+    | Comp (RecordField(ter, field) as y, Eq, x) ->
+      begin match x with
+	| Elem(g, Glob) ->
+	  let x', tx = term loc args x in
+	  let y', ty = term loc args y in
+
+	  
+	  Comp(x',Eq,y')
+	    
+	  
+	  
+	| _ -> assert false
+      end *)
+
+      
     | Comp (Elem(g, Glob) as x, Eq, y)
     | Comp (y, Eq, (Elem(g, Glob) as x))
     | Comp (y, Eq, (Access(g, _) as x))
@@ -398,11 +452,9 @@ let atom loc init_variant args a =
       unify loc tx ty;
       if init_variant then assignment ~init_variant g y' ty;
       Comp(x', Eq, y')
-	
     | Comp (x, op, y) ->
       let x', tx = term loc args x in
       let y',ty = term loc args y in
-
       let null = Hstring.make "Null" in
       let nx, ny =
 	Hstring.equal (snd tx) null, Hstring.equal (snd ty) null
@@ -451,7 +503,7 @@ let nondets loc l =
        with Not_found -> error (UnknownGlobal g) loc) l
 
 
-let assigns args la = 
+let assigns args la =
   let dv = ref [] in
   List.map 
     (fun (g, gu, loc) ->
@@ -519,6 +571,7 @@ let switchs loc a args ty_e l =
 	else tt, ty
       in 
       unify loc ty ty_e;
+
       assignment a tt ty;
       sa, tt) l
 
