@@ -428,16 +428,16 @@ module Variant = struct
 	  match ty with
 	    | Ty.Tsum (_, l) ->
 	      H.add constructors x (set_of_list l)
-	    (*| Ty.Trecord {name = name; lbs = lbs} ->
+	    | Ty.Trecord {name = name; lbs = lbs} ->
 	      let ll =
 		List.map (fun (field, typ) ->
 		match typ with
-		  | Ty.Tsum (_, ls) -> field, Some HSet.empty
+		  | Ty.Tsum (_, ls) -> field, Some (set_of_list ls)
 		  | _ -> field, None
 		) lbs
 	      in
 	    H.add rec_constructors x ll
-	      *)
+	      
 	    | _ -> ()) l;
     H.clear assignments;
     H.clear record_assignments

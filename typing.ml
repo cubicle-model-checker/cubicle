@@ -334,10 +334,7 @@ let rec term loc args t =
     let t, tt = term loc args t in
     unify loc ([], Smt.Type.type_int) tt;
     t,tt
-      
-      
 
-    
 let rec assignment ?(init_variant=false) g x (_, ty) =
   (*Format.eprintf "g: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
   if ty = Smt.Type.type_proc 
@@ -353,7 +350,7 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
 	  if init_variant then 
 	    Smt.Variant.assign_var n g
       | Record l -> List.iter (fun (h, t) -> 
-	let ty_t = Smt.Type.record_field_type h in
+      (*let ty_t = Smt.Type.record_field_type h in*)
 	List.iter (fun (h, t) ->
 	  match t with
 	    | Elem(e, Constr) ->
@@ -367,13 +364,13 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
 	      let g' = Hstring.view g in
 	      let gh = Hstring.make (g'^h') in
 	      Smt.Variant.assign_var g gh;
-	      Smt.Variant.assign_record g (h,e)
+	      Smt.Variant.assign_record g (h,e);
 	    | _ -> ()
 	) l; 
 	(*assignment ~init_variant h t ([], ty_t)*)
       ) l
       | RecordWith (_, l) -> List.iter (fun (h, t) ->
-	let ty_t = Smt.Type.record_field_type h in
+      (*let ty_t = Smt.Type.record_field_type h in*)
 	List.iter (fun (h, t) ->
 	  match t with
 	    | Elem(e, Constr) ->
@@ -859,7 +856,7 @@ let add_tau tr =
 let system s = 
   let l = init_global_env s in
   let s_init = if not Options.notyping then init s.init else s.init in
-  if Options.subtyping    then Smt.Variant.init l;
+  if Options.subtyping  then Smt.Variant.init l;
   let s_unsafe = if not Options.notyping then List.map unsafe s.unsafe else s.unsafe in
   let s_invs = if not Options.notyping then List.map unsafe (List.rev s.invs) else s.invs in
   let s_trans = if not Options.notyping then transitions s.trans else s.trans in
