@@ -1,0 +1,16 @@
+type t = A | B | C | D | E
+
+var X_a : t
+var X_b : t
+var X_c : bool
+
+init () { X_a = B && X_b = D && X_c = True }
+
+unsafe { X_b = A }
+
+
+transition t1()
+{ X_a := D;
+  X_b := E;
+  X_c := True
+  }

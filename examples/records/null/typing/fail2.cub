@@ -1,0 +1,5 @@
+type t = {a : int }
+var X : int
+var R : t 
+
+init() { X <> NULL}

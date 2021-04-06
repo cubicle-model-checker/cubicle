@@ -131,9 +131,8 @@ module Make (X : ALIEN) = struct
     let rec make_rec t ctx =
       let { T.f = f; xs = xs; ty = ty} = T.view t in
       match f, ty with
-	
-	| Symbols.Op (Symbols.Record), Ty.Trecord {Ty.lbs=lbs} ->
-	  if xs = [] then Record([],ty), []
+	| Symbols.Op (Symbols.Record), Ty.Trecord {Ty.name = name;Ty.lbs=lbs} ->
+	  if xs = [] then Record([],(Ty.Tnull{name;lbs})), []
 	  else
 	    begin
 	      assert (List.length xs = List.length lbs);
@@ -328,9 +327,19 @@ module Make (X : ALIEN) = struct
 	| Access (a, x, _), v | v, Access (a, x, _) ->
 	  let nr, _ = mk_fresh_record x (Some(a,v)) in
 	  solve_one x nr
-
-	| Record ([], _), _ | _, Record([], _) -> raise Exception.Unsolvable
-
+	| Record([],_), Record([],_) -> (*Format.eprintf "Records: Null and null@.";*) []
+	(*| Record ([], _), ((Other (t,ty)) as x) | ((Other (t,ty))as x), Record([], _) ->
+	  Format.eprintf "Null & Other %a -- %a@." X.print (is_mine u) X.print (is_mine v);
+	  begin
+	    match ty with
+	      | Ty.Tnull _ ->
+		[]
+	      | _ -> raise Exception.Unsolvable
+		end
+	  
+	| Record([],_), _ | _, Record([],_) -> Format.eprintf "Null & Something@."; raise Exception.Unsolvable
+	*)
+	    
 	| Record (lbs1, _), Record (lbs2, _) ->
 	    let l = 
 	      List.fold_left2 
@@ -435,6 +444,7 @@ module Make (X : ALIEN) = struct
 	      | A.Distinct(false, [r1;r2 ]), _, ex-> 
 		begin
 		  match embed r1, embed r2 with
+		    | Record ([],_), _ | _, Record ([],_) -> assert false
 		    | Record (rf1,ty1), Record(rf2,ty2) ->
 		      let flag, (ineqs, eqs, candidates), left, right =
 			try true, MX.find r1 env, r1, r2  with Not_found -> (* maybe the other record already exists in the table *)
@@ -629,6 +639,20 @@ module Make (X : ALIEN) = struct
 
 		begin
 		  match embed r1, embed r2 with
+		    | (Record ([],_) as re),  ((Other (el, el_ty)) as x)
+		    | ((Other (el, el_ty)) as x), (Record ([],_) as re) ->
+
+		      let ineqs, eqs, cand =
+			try MX.find (is_mine x) env with
+			    Not_found -> XRS.empty, EQS.empty, None in
+		      let ineqs =
+			XRS.filter (fun (neq, _) -> X.compare (is_mine x) neq <> 0) ineqs
+		      in
+		      let eqs = EQS.add (is_mine re) eqs in
+		      let env = MX.add (is_mine x) (ineqs, eqs, cand) env
+		      in env, neqs, remove 
+			
+		      
 		    | re, ((Other (el, el_ty)) as x)
 		    | ((Other (el, el_ty)) as x), re ->
 		      begin

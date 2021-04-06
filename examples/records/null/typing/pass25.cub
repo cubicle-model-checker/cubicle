@@ -1,0 +1,10 @@
+type t = {a : int }
+type t2 = { b : t; c : t }
+var X : int
+array R[proc] : t2
+
+init(i) { R[i].b = NULL }
+
+transition t1(i)
+requires { R[i].b <> NULL}
+{ R[i] := { b = NULL; c = NULL }}

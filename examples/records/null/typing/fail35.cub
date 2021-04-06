@@ -1,0 +1,10 @@
+type t = {a : int }
+type t2 = { b : t; c : bool }
+var X: int
+array R[proc] : t2
+
+init(i j) { X = 2 && { R[i] with c = False} = { b = {a = R[i].b.a }; c = NULL}}
+
+transition t1(i)
+requires { { b = {a = 2} ; c = False} = { R[i] with c = True} }
+{ R[i] := { R[i] with c = True }}

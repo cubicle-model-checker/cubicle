@@ -1,0 +1,24 @@
+(*
+subtyping:
+
+-nosubtyping
+Number of visited nodes          : 1
+Fixpoints                        : 1
+Number of solver calls           : 1
+
+*)
+
+type t = A | B | C | D | E
+
+type r = { a: t; b : t ; c : bool }
+
+var X : r
+var Y : t
+
+init() { X.b = D}
+
+unsafe() { X.a = D }
+
+transition t1()
+{ X := { a = D; b = E; c = True }}
+

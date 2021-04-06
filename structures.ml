@@ -70,7 +70,7 @@ let simplify_smt_atom t1 op t2 =
 	let record = Smt.Type.record_ty_by_field (fst (List.hd lbs)) in
 	let ls = List.map (fun (f,t) -> make_term t) lbs in
 
-	T.make_record record ls
+	T.make_record record ls 
       
       | RecordWith (t, htl)  ->  assert false
 	

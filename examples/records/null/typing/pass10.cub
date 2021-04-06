@@ -1,0 +1,9 @@
+type t = {a : int }
+var X : int
+array R[proc,proc] : t 
+
+init(i) { R[i,i] = NULL}
+
+transition t1(i)
+requires { X <> 2 }
+{ X := 3 }

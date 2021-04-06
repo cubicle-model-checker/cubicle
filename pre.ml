@@ -110,6 +110,7 @@ let print_assign fmt a =
     | Branch b -> List.iter (fun (sa,t) -> Format.fprintf fmt "%a : %a\n" SAtom.print sa Term.print t) b
 
 let rec find_assign memo tr tt =
+  (*Format.eprintf "Find_assign: %a @." Types.Term.print tt;*)
   match tt with 
     | Elem (x, sx) -> 
       let gu =
@@ -255,8 +256,8 @@ let rec find_assign memo tr tt =
 	    ) b)	      
       end
     | Null (_,t) ->
-      Format.eprintf "PRE NULL: %a @." Hstring.print t; 
-      let n,l = Smt.Type.record_type_details t in
+      assert false;
+      let _n,_l = Smt.Type.record_type_details t in
       
       assert false
 	

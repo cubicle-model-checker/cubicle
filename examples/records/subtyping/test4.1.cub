@@ -1,0 +1,15 @@
+type t = A | B | C | D | E
+
+type r = { a: t; b : t ; c : bool }
+
+var X : r
+var Y_a : t
+var Y_b : t 
+
+init() { Y_a = B }
+
+unsafe() {Y_b = A }
+
+transition t1()
+{ (*X := { a = D; b = E; c = True }*) Y_b := E; Y_a := D}
+

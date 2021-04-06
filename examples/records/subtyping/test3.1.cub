@@ -1,0 +1,9 @@
+type t = A | B | C | D | E | F | G | H  
+type r = { a : t }
+
+var X : t
+init () { X = B}
+
+
+unsafe() { X = B }
+

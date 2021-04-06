@@ -1,0 +1,22 @@
+type t = A | B | C | D | E
+
+type r = { a: t; b : t ; c : bool }
+type r1  = { d : t}
+
+var X : r
+var Z : r1
+var Y : t
+
+(*(init() { X.a = B }
+
+unsafe() { X.b = A }*)
+
+init() {  Z = { d = D } && Y = Z.d }
+unsafe () { Y = D }
+
+
+transition t1()
+{ X := { a = D; b = E; c = True }}
+
+transition t2()
+{ Z := { d = A }} 

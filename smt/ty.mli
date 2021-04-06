@@ -20,6 +20,7 @@ type t =
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
+  | Tnull of trecord
 and trecord = { name: Hstring.t;
 		lbs: (Hstring.t * t) list
 	      }

@@ -413,22 +413,26 @@ let atom loc init_variant args a =
   match a with 
     | True | False -> a
 
-    (*| Comp (x, Eq, (RecordField(ter, field) as y))
-    | Comp (RecordField(ter, field) as y, Eq, x) ->
-      begin match x with
-	| Elem(g, Glob) ->
-	  let x', tx = term loc args x in
-	  let y', ty = term loc args y in
-
-	  
-	  Comp(x',Eq,y')
-	    
-	  
-	  
-	| _ -> assert false
-      end *)
-
+    | Comp ((Elem(c,Constr) as x), Eq, (RecordField((Elem(g,Glob)), field) as y))
+    | Comp ( (RecordField((Elem(g,Glob)),field) as x), Eq, (Elem(c,Constr) as y))
+    | Comp ((Elem(c,Constr) as x), Eq, (RecordField((Access(g,_)), field) as y))
+    | Comp ( (RecordField((Access(g,_)),field) as x), Eq, (Elem(c,Constr) as y)) 
+      -> 
+      (*Format.eprintf "g-- %a; c -- %a; field-- %a@." Hstring.print g Hstring.print c Hstring.print field;*)
+      let x', tx = term loc args x in
+      let y', ty = term loc args y in
       
+      unify loc tx ty;
+      let h' = Hstring.view field in
+      let g' = Hstring.view g in
+      let gh = Hstring.make (g'^h') in
+      Smt.Variant.assign_constr gh c;
+      (*Smt.Variant.assign_var g gh;*)
+      Smt.Variant.add_record_constr g (field, c);
+      
+      Comp(y', Eq, x')
+
+	
     | Comp (Elem(g, Glob) as x, Eq, y)
     | Comp (y, Eq, (Elem(g, Glob) as x))
     | Comp (y, Eq, (Access(g, _) as x))
@@ -856,6 +860,7 @@ let add_tau tr =
 let system s = 
   let l = init_global_env s in
   let s_init = if not Options.notyping then init s.init else s.init in
+  (*List.iter (fun (f,t) -> Format.eprintf "system: f: %a; t: %a @." Hstring.print f Hstring.print t) l;*)
   if Options.subtyping  then Smt.Variant.init l;
   let s_unsafe = if not Options.notyping then List.map unsafe s.unsafe else s.unsafe in
   let s_invs = if not Options.notyping then List.map unsafe (List.rev s.invs) else s.invs in

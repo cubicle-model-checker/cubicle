@@ -1,0 +1,27 @@
+(*
+-nosubtyping: 
+Number of visited nodes          : 1
+Fixpoints                        : 2
+Number of solver calls           : 1
+
+w/ subtyping 
+Number of visited nodes          : 0
+Fixpoints                        : 1
+Number of solver calls           : 0
+*)
+
+type t = A | B | C | D | E | F | G | H  
+type r = { a : t }
+
+var X : r
+init () { X = { a = B }}
+unsafe() { X.a = F }
+
+
+transition t1()
+requires { X.a = D }
+{ X := { a = C }}
+
+
+transition t2()
+{ X := { a = E }}

@@ -298,30 +298,45 @@ module Variant = struct
     H.replace t x (HSet.add v s)
 
   let add_record_constr g (field, el)  =
+    if Options.debug_subtypes then
+      begin
+	Format.eprintf "[debug subtypes] add record constructor:@.";
+	Format.eprintf "g: %a, field: %a; el: %a@."
+	  Hstring.print g Hstring.print field Hstring.print el;
+      end;
     let curr = (*(Hstring.t * HSet.t option) list *)
       try H.find rec_constructors g
       with Not_found -> []	
     in
-    let l =
+    let flag, l =
       if curr = [] then
 	begin
-	  let s = HSet.add el HSet.empty in [(field,Some s)]
+	  let s = HSet.add el HSet.empty in true, [(field,Some s)]
 	end
       else
 	begin
-	  List.map (fun (f, so) ->
-	    if Hstring.equal field f then
+	  List.fold_left (fun (flag,acc) (f, so) ->
 	      begin
 		match so with
 		  | None -> assert false
 	      (* assert false since called from typing, so it shouldn't not be a constructor*)
 		  | Some s ->
-		    let s = HSet.add el s in (f, Some s)
+		    if Hstring.equal field f then
+		      
+		      let s = HSet.add el s in
+		      true, ((f, Some s)::acc)
+		    else
+		      flag,((f, so)::acc)	      
 	      end 
-	    else (f,so)
-	  ) curr
+	    
+	  ) (false,[]) curr
 	end
     in
+    let l =
+      if not flag then
+	let s = HSet.add el HSet.empty in (field, Some s)::l
+      else l
+    in 
     H.replace rec_constructors g l 
       
   let assign_constr = add constructors
@@ -423,21 +438,47 @@ module Variant = struct
     compute_records ();
     List.iter 
       (fun (x, nty) ->
-	if not (H.mem constructors x) then
 	  let ty = H.find decl_types nty in
 	  match ty with
 	    | Ty.Tsum (_, l) ->
-	      H.add constructors x (set_of_list l)
+	      	if not (H.mem constructors x) then
+		  H.add constructors x (set_of_list l)
 	    | Ty.Trecord {name = name; lbs = lbs} ->
-	      let ll =
-		List.map (fun (field, typ) ->
-		match typ with
-		  | Ty.Tsum (_, ls) -> field, Some (set_of_list ls)
-		  | _ -> field, None
-		) lbs
-	      in
-	    H.add rec_constructors x ll
 	      
+	      begin
+	      try
+		let curr = H.find rec_constructors x in
+		let mm =
+		  List.fold_left  (fun acc (field, typ) ->
+		    match typ with
+		      | Ty.Tsum (_, ls) ->
+			let l'= 
+			  try
+			    Hstring.list_assoc field curr
+			  with Not_found -> Some (set_of_list ls) 
+			in
+			(field, l')::acc
+		      | _ -> acc
+			
+		   
+		  ) [] lbs
+		in
+		H.replace rec_constructors x mm
+	      with
+		  Not_found ->
+		    begin
+		      let ll =
+			List.map (fun (field, typ) ->
+			  match typ with
+			    | Ty.Tsum (_, ls) -> 
+				  field, Some (set_of_list ls)
+			    | _ -> field, None
+			) lbs
+		      in
+			  H.add rec_constructors x ll
+		    end
+	      end
+		  
 	    | _ -> ()) l;
     H.clear assignments;
     H.clear record_assignments
@@ -458,6 +499,8 @@ module Variant = struct
 	let nty = update_decl_types s old_ty x in
 	H.replace decl_symbs x (sy, args, nty))
       constructors;
+
+    
     H.iter (fun g l ->
       match l with
 	| [] -> ()
@@ -474,8 +517,7 @@ module Variant = struct
 		  let ty = Ty.Tsum (ty_new, s') in
 		  H.replace decl_types ty_new ty;
 		  (field, Some ty, Some ty_new)
-	    ) l
-	     
+	    ) l	      
 	  in      
 	  let tr =
 	    try
@@ -492,9 +534,7 @@ module Variant = struct
 		    match t1 with
 		      | None -> f2, t2
 		      | Some s -> f2, s
-		    ) ll lbs*)
-
-		  
+		    ) ll lbs*) 
 		  List.map (fun (f2, t2) ->
 		    let el' =
 		      List.fold_left (fun acc (f1, t1, no1) ->
@@ -517,6 +557,7 @@ module Variant = struct
 		let nname = Hstring.make nname in 
 		let ntr = Ty.Trecord { name = nname; lbs = l' }
 		in
+		(*List.iter (fun (f,t) -> Format.eprintf "ugh: %a : %a@." Hstring.print f Ty.print t) l';*)
 		H.replace decl_types nname ntr;
 		H.replace decl_symbs g (sy, args, nname);
 
@@ -545,8 +586,11 @@ module Variant = struct
 		      ) ll
 		) lbs
 		  
-	      | _ -> assert false
+	      | _ -> (*Format.eprintf "g was: %a@." Hstring.print g;*) assert false
 	  end
+
+	   (* let _,_,ttt = H.find decl_symbs g in
+	    Format.eprintf "g is now: %a : %a@." Hstring.print g Hstring.print ttt*)
 
 
     ) rec_constructors;
@@ -604,7 +648,7 @@ module Term = struct
     in
     Term.make (Symbols.Op op) [t1; t2] ty
 
-  let make_record (rec_name, rec_fields) terms =
+  let make_record (rec_name, rec_fields) terms  =
     Term.make (Symbols.Op Symbols.Record) terms (Ty.Trecord {name = rec_name; lbs = rec_fields})
 
   let make_field field term ty_field=

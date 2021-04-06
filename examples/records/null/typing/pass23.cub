@@ -1,0 +1,10 @@
+type t = {a : int }
+type t2 = { b : t; c : t }
+var X : int
+var R : t2
+
+init(i) { X = 2 }
+
+transition t1(i)
+requires { R.b <> NULL}
+{ R := { b = NULL; c = NULL }}

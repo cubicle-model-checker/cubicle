@@ -27,6 +27,7 @@ and t =
   | Tabstract of Hstring.t
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
+  | Tnull of trecord
 
 let rec hash t =
   match t with

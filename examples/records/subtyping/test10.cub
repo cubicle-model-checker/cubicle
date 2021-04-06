@@ -1,0 +1,72 @@
+type t = Idle | Wait | Crit | Linf | Lsup | Monkey
+
+type r = { state : t }
+type cpt = { c : bool }
+
+
+var A : r
+var Cpt : cpt
+
+(*
+init (z y) { A[z] = { state = Lsup } && Cpt[z,y] = { c = False }}
+
+unsafe (x y ) { A[x] = {state = Crit} && A[y] = { state = Crit}}*)
+
+init () { A.state = (*Idle*) Lsup  && Cpt.c = False }
+
+unsafe () { A.state = Crit}
+
+(*
+
+transition t1(z)
+requires { A[z].state = Idle}
+{ A[z] := { state = Lsup }
+}
+*)
+transition sup_exit ()
+requires { A.state = Lsup && Cpt.c = True}
+{ Cpt :=  {c = False} ;
+  A := {state = (*Wait*) Linf }
+}
+(*
+transition sup_incr1(z j)
+requires{ A[z].state = Lsup  && j < z && Cpt[z,j].c = False }
+{ Cpt[z,j] := { c = True }
+}
+
+transition sup_incr2(z j)
+requires { A[z].state = Lsup  && z < j && A[j].state=  Idle && Cpt[z,j].c = False}
+{ Cpt[z,j] := { c = True};
+}
+
+transition sup_abort (z j)
+requires { A[z] = { state = Lsup } && z < j && A[j].state <> Idle && Cpt[z,j].c =False}
+{ Cpt[x,y] := case | x = z : { c = False } | _ : Cpt[x,y]
+}
+
+transition t2(z)
+requires {A[z].state = Wait }
+{ A[z] := { state = Linf} }
+*)
+transition inf_exit ()
+requires { A.state = Linf && Cpt.c = True}
+{ Cpt :={c = False} ;
+  A := { state = Crit }
+  }
+
+transition inf_incr1 ()
+requires { A.state = Linf && Cpt.c= False} 
+{ Cpt := {c = True }}
+(*
+transition inf_incr2 (z j)
+requires { A[z].state = Linf && j < z && A[j].state = Idle && Cpt[z,j].c = False}
+{ Cpt[z,j] := { c = True};
+}
+*)
+transition inf_abort()
+requires {A.state = Linf && A.state <> Idle && Cpt.c = False }
+{ Cpt := { c = False}}
+(*
+transition tr3 (z)
+requires {A[z].state = Crit }
+{ A[z] := { state = Idle }}*)

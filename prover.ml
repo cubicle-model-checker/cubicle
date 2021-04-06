@@ -101,8 +101,12 @@ let make_cs cs =
   
 	 
 let rec make_term tt =
+  (*Format.eprintf "Make_term: %a@." Types.Term.print tt; *)
   match tt with 
     | Elem (e, _) ->
+      let tyl, ty = Smt.Symbol.type_of e in
+      (*Format.printf "ty: %a@." Hstring.print ty;*)
+      List.iter (Format.eprintf "tyl: %a@." Hstring.print) tyl;
       T.make_app e []
   | Const cs -> make_cs cs 
   | Access (a, li)  ->
@@ -116,7 +120,7 @@ let rec make_term tt =
     let record = Smt.Type.record_ty_by_field (fst (List.hd lbs)) in
     let ls = List.map (fun (f,t) -> make_term t) lbs in
 
-    T.make_record record ls
+    T.make_record record ls 
       
   | RecordWith (t, htl)  ->    
     let lh = fst (List.hd htl) in
@@ -131,17 +135,19 @@ let rec make_term tt =
     let n_fields = List.sort Smt.Type.compare_rec htl in
     let n_fields = List.map snd n_fields in 
 
-    T.make_record record n_fields
+    T.make_record record n_fields 
     
   | RecordField (record, field) ->
     let t_record = make_term record in
-    let _, re = Smt.Type.record_ty_by_field field  in
+    let nre, re = Smt.Type.record_ty_by_field field  in
+    Format.eprintf "nre: %a@." Hstring.print nre;
+    List.iter(fun (h,t) -> Format.eprintf "h: %a ; t : %a@." Hstring.print h Ty.print t) re;
     let ty_field= Hstring.list_assoc field re in
     T.make_field field t_record ty_field
       
   | Null (_,t) ->
-    let n, l = Smt.Type.record_type_details t in
-    T.make_record (n,l) [] 
+    let _n, _l = Smt.Type.record_type_details t in
+    T.make_record (_n,_l) [] 
 
     
 let extract_with l lbs =
