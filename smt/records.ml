@@ -327,16 +327,7 @@ module Make (X : ALIEN) = struct
 	| Access (a, x, _), v | v, Access (a, x, _) ->
 	  let nr, _ = mk_fresh_record x (Some(a,v)) in
 	  solve_one x nr
-	| Record([],_), Record([],_) -> (*Format.eprintf "Records: Null and null@.";*) []
-	(*| Record ([], _), ((Other (t,ty)) as x) | ((Other (t,ty))as x), Record([], _) ->
-	  Format.eprintf "Null & Other %a -- %a@." X.print (is_mine u) X.print (is_mine v);
-	  begin
-	    match ty with
-	      | Ty.Tnull _ ->
-		[]
-	      | _ -> raise Exception.Unsolvable
-		end
-	*)
+	| Record([],_), Record([],_) -> []
 	| (Record([],_)as y), x | x, (Record([],_) as y) ->
 	   begin
 	  match x with
