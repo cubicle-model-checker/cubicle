@@ -336,10 +336,14 @@ module Make (X : ALIEN) = struct
 		[]
 	      | _ -> raise Exception.Unsolvable
 		end
-	  
-	| Record([],_), _ | _, Record([],_) -> Format.eprintf "Null & Something@."; raise Exception.Unsolvable
 	*)
-	    
+	| (Record([],_)as y), x | x, (Record([],_) as y) ->
+	   begin
+	  match x with
+	    | Other _ -> [x,y]
+	    | Record _ -> raise Exception.Unsolvable
+	    | Access _ -> [x,y]
+	    end
 	| Record (lbs1, _), Record (lbs2, _) ->
 	    let l = 
 	      List.fold_left2 
@@ -444,7 +448,7 @@ module Make (X : ALIEN) = struct
 	      | A.Distinct(false, [r1;r2 ]), _, ex-> 
 		begin
 		  match embed r1, embed r2 with
-		    | Record ([],_), _ | _, Record ([],_) -> assert false
+		    | Record ([],_), _ | _, Record ([],_) -> env, neqs, remove
 		    | Record (rf1,ty1), Record(rf2,ty2) ->
 		      let flag, (ineqs, eqs, candidates), left, right =
 			try true, MX.find r1 env, r1, r2  with Not_found -> (* maybe the other record already exists in the table *)
