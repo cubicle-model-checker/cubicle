@@ -140,14 +140,17 @@ let rec make_term tt =
   | RecordField (record, field) ->
     let t_record = make_term record in
     let nre, re = Smt.Type.record_ty_by_field field  in
-    Format.eprintf "nre: %a@." Hstring.print nre;
-    List.iter(fun (h,t) -> Format.eprintf "h: %a ; t : %a@." Hstring.print h Ty.print t) re;
     let ty_field= Hstring.list_assoc field re in
     T.make_field field t_record ty_field
       
-  | Null (_,t) ->
-    let _n, _l = Smt.Type.record_type_details t in
-    T.make_record (_n,_l) [] 
+  | Null (te,t) ->
+    begin
+      match te with
+	| None -> assert false
+	| Some _ ->
+	  let _n, _l = Smt.Type.record_type_details t in
+	  T.make_record (_n,_l) []
+    end
 
     
 let extract_with l lbs =
@@ -255,7 +258,7 @@ and make_literal = function
     let tx = make_term x in
     let ty = make_term y in
     F.make_lit (make_op_comp op) [tx; ty]
-  | Atom.Ite (la, a1, a2) -> 
+  | Atom.Ite (la, a1, a2) ->
       let f = make_formula_set la in
       let a1 = make_literal a1 in
       let a2 = make_literal a2 in

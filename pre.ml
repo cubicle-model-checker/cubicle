@@ -254,13 +254,21 @@ let rec find_assign memo tr tt =
 		| _ -> x, RecordField(y, lbl)
 	    ) b)	      
       end
-    | Null (te,_) ->
-      (*let _n,_l = Smt.Type.record_type_details t in*)
-      begin
+    | Null (te,tet) -> Single tt
+      
+      (*begin
       match te with
 	| None -> assert false
-	| Some s -> find_assign memo tr  s
-      end 
+	| Some s ->
+	  (*find_assign memo tr s*)
+	  let t' = find_assign memo tr s in
+	  begin
+	    match t' with
+	      | Single s' -> Single (Null(Some s', tet))
+	      | _ -> assert false
+	  end
+	    
+      end *)
 	
     | Access (a, li) -> 
       let nli = li in

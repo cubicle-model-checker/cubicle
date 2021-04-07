@@ -462,7 +462,12 @@ let atom loc init_variant args a =
       in
       begin
 	match nx, ny with
-	  | true, true -> True
+	  | true, true ->
+	    begin
+	      match op with
+		| Eq -> True
+		| _ -> False
+	    end 
 	  | true, _ ->
 	    begin
 	      match check_record ty with
@@ -730,7 +735,7 @@ let create_init_instances (iargs, l_init) invs =
   let init_instances = Hashtbl.create 11 in
   begin
     match l_init with
-    | [init] ->
+      | [init] ->
       let sa, cst = SAtom.partition (fun a ->
         List.exists (fun z -> has_var z a) iargs) init in
       let ar0 = ArrayAtom.of_satom cst in

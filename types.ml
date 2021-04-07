@@ -424,7 +424,7 @@ module Term = struct
    | Null (t,n )->
      begin
        match t with
-	 | None -> fprintf fmt "Null<None ; %a>"  Hstring.print n
+	 | None -> fprintf fmt "Null<None : %a>"  Hstring.print n
 	 | Some s -> fprintf fmt "Null<%a : %a>" print s Hstring.print n
      end 
      

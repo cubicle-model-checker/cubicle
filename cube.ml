@@ -128,7 +128,9 @@ let size c = Array.length c.array
 (* variables are all disctincts					 *)
 (*****************************************************************)
 
-let redondant_or_false others a = match a with
+let redondant_or_false others a =
+
+  match a with  
   | Atom.True -> Atom.True
   | Atom.Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))
   | Atom.Comp ((Elem (x, (Var | Constr)) as t2), Neq, t1) ->

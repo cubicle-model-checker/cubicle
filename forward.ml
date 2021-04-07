@@ -43,6 +43,12 @@ let rec prime_term t = match t with
   | Record l -> let l = List.map (fun (f,tr) ->   f, prime_term tr) l in Record l
   | RecordWith (t, l) -> let l = List.map (fun (f,tr) -> f, prime_term tr) l
 			 in RecordWith(t, l)
+  | Null (ot,tt) ->
+    begin
+      match ot with
+	| None -> t
+	| Some s -> Null(Some (prime_term s), tt)
+    end
   | _ -> t
 
 let rec prime_atom a = match a with
@@ -67,6 +73,12 @@ let rec unprime_term t = match t with
   | Record l -> let l = List.map (fun (f,tr) ->  f, unprime_term tr) l in Record l
   | RecordWith (t, l) -> let l = List.map (fun (f,tr) ->  f, unprime_term tr) l
 			 in RecordWith(t, l)
+  | Null (ot,tt) ->
+    begin
+      match ot with
+	| None -> t
+	| Some s -> Null(Some (unprime_term s), tt)
+			 end
   | _ -> t
 
 
@@ -93,7 +105,12 @@ let rec is_prime_term = function
 			 not  (fl = [])
   | Record l -> let fl = List.filter (fun (_,x) ->  is_prime_term x) l in
 		not (fl = [])
-  | Null _ -> false
+  | Null (ot,tt) ->
+    begin
+      match ot with
+	| None -> false
+	| Some s -> is_prime_term s
+    end
  
 
 let rec is_prime_atom = function

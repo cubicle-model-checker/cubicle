@@ -103,8 +103,9 @@ module Make (X : ALIEN) = struct
       | Access (a, x, ty) ->
 	let n = normalize x in
 	begin
-	  match n with 
-	    | Record (lbs, _) ->  Hstring.list_assoc a lbs 
+	  match n with
+	    | Record([],_) -> v
+	    | Record (lbs, _) -> Hstring.list_assoc a lbs 
 	    | x_n -> Access (a, x_n, ty)
 	end
       | Other _ -> v
@@ -132,7 +133,7 @@ module Make (X : ALIEN) = struct
       let { T.f = f; xs = xs; ty = ty} = T.view t in
       match f, ty with
 	| Symbols.Op (Symbols.Record), Ty.Trecord {Ty.name = name;Ty.lbs=lbs} ->
-	  if xs = [] then Record([],(Ty.Tnull{name;lbs})), []
+	  if xs = [] then Record([],ty), []
 	  else
 	    begin
 	      assert (List.length xs = List.length lbs);
@@ -439,7 +440,10 @@ module Make (X : ALIEN) = struct
 	      | A.Distinct(false, [r1;r2 ]), _, ex-> 
 		begin
 		  match embed r1, embed r2 with
-		    | Record ([],_), _ | _, Record ([],_) -> env, neqs, remove
+		    | Record ([],_), x | x, Record ([],_) -> 
+
+
+		      env, neqs, remove
 		    | Record (rf1,ty1), Record(rf2,ty2) ->
 		      let flag, (ineqs, eqs, candidates), left, right =
 			try true, MX.find r1 env, r1, r2  with Not_found -> (* maybe the other record already exists in the table *)
@@ -635,8 +639,7 @@ module Make (X : ALIEN) = struct
 		begin
 		  match embed r1, embed r2 with
 		    | (Record ([],_) as re),  ((Other (el, el_ty)) as x)
-		    | ((Other (el, el_ty)) as x), (Record ([],_) as re) ->
-
+		    | ((Other (el, el_ty)) as x), (Record ([],_) as re) -> 
 		      let ineqs, eqs, cand =
 			try MX.find (is_mine x) env with
 			    Not_found -> XRS.empty, EQS.empty, None in
@@ -800,7 +803,7 @@ module Make (X : ALIEN) = struct
 		  let temp = Access (field, r, ty) in
 		  let value = Hstring.list_assoc field re_chosen in
 		  let my_temp = is_mine temp in
-		  Format.eprintf "temp: %a@." X.print my_temp;
+		  (*Format.eprintf "temp: %a@." X.print my_temp;*)
 
 		  let flag, (_,equalities,_) =
 		    try true,
@@ -893,7 +896,7 @@ module Make (X : ALIEN) = struct
      match acc with
        | None -> []
        | Some (n, xfield, proposed) -> 
-	 Format.eprintf "proposed casesplit: %a != %a@." X.print xfield X.print proposed;
+	 (*Format.eprintf "proposed casesplit: %a != %a@." X.print xfield X.print proposed;*)
 	 [A.Distinct(false, [xfield;proposed]), Ex.empty, Num.Int n]
 
 
