@@ -1,0 +1,24 @@
+type t1 = A | B | C 
+type t = { a: t1 }
+
+var X : t
+
+
+init() { X = { a = A }}
+
+unsafe() { X = NULL}
+
+
+
+transition t1()
+requires { X = {a = A} }
+{ X := NULL }
+
+transition t2()
+requires { X = NULL }
+{ X := { a = B }}
+
+transition t3()
+requires { X = {a = B} }
+{ X := { a = C }}
+

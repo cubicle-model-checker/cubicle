@@ -1,0 +1,9 @@
+type t = A | B | C
+
+type r = { a: t; b : bool }
+
+var X : r
+
+init() { X < NULL }
+
+unsafe() { X = NULL }
