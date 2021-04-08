@@ -841,6 +841,7 @@ let rec mk_cnf = function
 	
   let make_cnf f =
     let sfnc = cnf (sform f) in
+    (*Format.eprintf "make_cnf %a@." print sfnc;*)
     init [] sfnc
 
   (* let make_cnf f = mk_cnf (sform f) *)
@@ -932,7 +933,8 @@ module Make (Options : sig val profiling : bool end) = struct
     in 
     SInt.elements s
 
-  let assume ~id f = 
+  let assume ~id f =
+    (*Format.eprintf "Assumed f in smt:  %a@." Formula.print f;*)
     Time.start ();
     try
       let cnf = (Formula.make_cnf f) in

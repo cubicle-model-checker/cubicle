@@ -61,6 +61,7 @@ module FixpointList : sig
 end = struct
 
   let check_fixpoint ?(pure_smt=false) n visited =
+    Format.eprintf "check fix@.";
     Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
     let nodes = 
@@ -172,6 +173,7 @@ end = struct
     Prover.assume_node { n with tag = nid } a
  
   let check_fixpoint env ?(pure_smt=false) n visited =
+    Format.eprintf "yo@.";
     Prover.assume_goal n;
     let n_array = n.cube.Cube.array in
     let nodes = 
@@ -335,7 +337,6 @@ end = struct
   let check_fixpoint s visited =
 
     first_action s;
-
     let s_array = Node.array s in
     let unprioritize_cands = false in
     let nodes, cands =

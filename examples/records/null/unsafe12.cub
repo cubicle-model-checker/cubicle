@@ -1,0 +1,19 @@
+type t = A | B | C
+
+type r = { a: t; b : bool }
+
+var X : r
+var Y : t
+
+init() { X = {a = A; b = True } && Y = C}
+
+unsafe() { X = NULL}
+
+transition t()
+requires { X.a = A }
+{ Y := B }
+
+transition t2()
+requires { Y = B }
+{ X := NULL }
+

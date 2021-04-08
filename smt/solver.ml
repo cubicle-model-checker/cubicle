@@ -843,7 +843,7 @@ let check_model () =
   check_vec env.learnts
 
 
-let solve () = 
+let solve () =
   (* printf "------------SMT---------------@."; *)
   (* for i = 0 to Vec.size env.vars - 1 do *)
   (*   let v = Vec.get env.vars i in *)
@@ -868,7 +868,7 @@ let solve () =
     | Sat -> 
         (*check_model ();*)
         raise Sat
-    | (Unsat cl) as e -> 
+    | (Unsat cl) as e ->
         (* check_unsat_core cl; *)
         raise e
 

@@ -129,7 +129,6 @@ let size c = Array.length c.array
 (*****************************************************************)
 
 let redondant_or_false others a =
-
   match a with  
   | Atom.True -> Atom.True
   | Atom.Comp (t1, Neq, (Elem (x, (Var | Constr)) as t2))

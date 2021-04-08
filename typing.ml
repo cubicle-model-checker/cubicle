@@ -752,7 +752,7 @@ let create_init_instances (iargs, l_init) invs =
         incr cpt;
         v_acc) [] Variable.procs)
 
-    | _ ->
+    | _ -> 
       let dnf_sa0, dnf_ar0 =
         List.fold_left (fun (dnf_sa0, dnf_ar0) sa ->
           let sa0 = SAtom.filter (fun a ->

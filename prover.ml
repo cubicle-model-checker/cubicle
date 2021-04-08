@@ -314,13 +314,23 @@ let get_user_invs s nb_procs =
 let unsafe_conj { tag = id; cube = cube } nb_procs invs init =
   if debug_smt then eprintf ">>> [smt] safety with: %a@." F.print init;
   SMT.clear ();
-  SMT.assume ~id (distinct_vars nb_procs);
+
+      SMT.assume ~id (distinct_vars nb_procs);
+
   List.iter (SMT.assume ~id) invs;
+
+  (*Format.eprintf "litterals: %a@." Types.SAtom.print cube.Cube.litterals;*)
   let f = make_formula_set cube.Cube.litterals in
   if debug_smt then eprintf "[smt] safety: %a and %a@." F.print f F.print init;
+  (*Format.eprintf "Assume1@.";*)
   SMT.assume ~id init;
+  (*Format.eprintf "Assume1 done@.";*)
+  (*Format.eprintf "F pre assume 2: %a@." F.print f ;*)
+  (*Format.eprintf "Assume 2 @.";*)
   SMT.assume ~id f;
+  (*Format.eprintf "Assume2 done@.";*)
   SMT.check ()
+  (*Format.eprintf "Check done@."*)
 
 let unsafe_dnf node nb_procs invs dnf =
   try
@@ -345,17 +355,25 @@ let unsafe s n = unsafe_cdnf s n
 
 let reached args s sa =
   SMT.clear ();
+
   SMT.assume ~id:0 (distinct_vars (List.length args));
   let f = make_formula_set (SAtom.union sa s) in
+
   SMT.assume ~id:0 f;
   SMT.check ()
 
 
 let assume_goal_no_check { tag = id; cube = cube } =
   SMT.clear ();
+  (*Format.eprintf "Fuck1 %d@." (List.length cube.Cube.vars);
+  let hhh = distinct_vars (List.length cube.Cube.vars) in
+  Format.eprintf ": %a@." F.print hhh;*)
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
+  (*Format.eprintf "goals--: %a@." Types.ArrayAtom.print cube.Cube.array;*)
+  
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;
+
   SMT.assume ~id f
 
 let assume_node_no_check { tag = id } ap =
@@ -383,6 +401,7 @@ let check_guard args sa reqs =
 
 let assume_goal_nodes { tag = id; cube = cube } nodes =
   SMT.clear ();
+
   SMT.assume ~id (distinct_vars (List.length cube.Cube.vars));
   let f = make_formula cube.Cube.array in
   if debug_smt then eprintf "[smt] goal g: %a@." F.print f;

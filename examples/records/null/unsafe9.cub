@@ -1,0 +1,10 @@
+type t = A | B | C
+
+type r = { a: t; b : bool }
+
+var X : r
+var Y : t
+
+init() { X > NULL && NULL > {a = A; b = True } }
+
+unsafe() { X > {a = A; b = True} }

@@ -328,20 +328,24 @@ module Make (X : ALIEN) = struct
 	| Access (a, x, _), v | v, Access (a, x, _) ->
 	  let nr, _ = mk_fresh_record x (Some(a,v)) in
 	  solve_one x nr
-	| Record([],_), Record([],_) -> []
+	(*| Record([],_), Record([],_) -> []
 	| (Record([],_)as y), x | x, (Record([],_) as y) ->
 	   begin
 	  match x with
 	    | Other _ -> [x,y]
 	    | Record _ -> raise Exception.Unsolvable
 	    | Access _ -> [x,y]
-	    end
+	    end*)
 	| Record (lbs1, _), Record (lbs2, _) ->
-	    let l = 
-	      List.fold_left2 
-		(fun l (_, x) (_, y) -> (solve_one x y)@l) [] lbs1 lbs2
-	    in 
-	    resolve l
+	  begin
+	    try 
+	      let l = 
+		List.fold_left2 
+		  (fun l (_, x) (_, y) -> (solve_one x y)@l) [] lbs1 lbs2
+	      in 
+	      resolve l
+	    with Invalid_argument _ -> raise Exception.Unsolvable
+	  end
 
 	| (Record (lbs, _) as w), (Other _ as x) 
 	| (Other _ as x), (Record (lbs, _) as w) ->
