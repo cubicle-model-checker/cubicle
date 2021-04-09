@@ -200,7 +200,7 @@ let rec term loc args t =
   | Elem (e, _) ->  t, Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
-	let t, (args, tx) = term loc args x in
+	let _, (args, tx) = term loc args x in
 	if not (Hstring.equal tx Smt.Type.type_int) 
 	  && not (Hstring.equal tx Smt.Type.type_real) then 
 	  error (MustBeNum x) loc;
@@ -331,7 +331,7 @@ let rec term loc args t =
 	| Multiplication -> assert false
     end *)
   | UnOp(op, t) -> 
-    let t, tt = term loc args t in
+    let _, tt = term loc args t in
     unify loc ([], Smt.Type.type_int) tt;
     t,tt
 
@@ -550,7 +550,7 @@ let assigns args la =
 			 | Some typ -> Null (Some (Elem(g,Glob)),typ), ty_g
 		     end
 		   else tx, ty_x
-		     in 
+		 in 
 		 unify loc ty_x ty_g;
 		 assignment g tx ty_x;
 		 sa, tx

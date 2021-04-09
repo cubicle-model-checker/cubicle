@@ -528,4 +528,4 @@ let normalize s =
   sf
 
 
-let normalize1 s = s
+let normalize s = s

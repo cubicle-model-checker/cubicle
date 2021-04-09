@@ -355,6 +355,7 @@ switch:
   | expr COLON term { $1, TTerm $3 }
 ;
 
+
   
 
 term:
@@ -367,6 +368,8 @@ term:
       }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ { Access ($1, $3) }
 
+
+
   /*
   | MINUS term { UnOp(UMinus, $2) }
   | term PLUS term { BinOp($1, Addition, $3) }
@@ -376,10 +379,21 @@ term:
 
 
   | term PLUS INT { Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
-  | term PLUS mident { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+
+
+      
+  | term PLUS mident {
+          if not (Consts.mem $3) then raise Parsing.Parse_error;
+    Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+
+
+      
   | term MINUS INT { Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
+
+
+      
   | term MINUS mident { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
-   
+    
       
   | LEFTPAR term RIGHTPAR { $2 }
   | LEFTBR term WITH field_list RIGHTBR { RecordWith($2, $4) }
