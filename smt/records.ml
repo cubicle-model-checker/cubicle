@@ -795,7 +795,12 @@ module Make (X : ALIEN) = struct
 
 
     let choose_case r xr env lbs_length acc ty =
-      let chosen = XRS.choose xr in
+
+      let chosen =
+	try XRS.choose xr
+	with
+	    Not_found -> assert false
+      in
       let r = embed r in 
       let emb_chosen = embed (fst chosen) in
       begin (*3*)

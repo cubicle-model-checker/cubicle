@@ -128,13 +128,9 @@ let rec unique error = function
 let check_record (_,pot) =
   if Smt.Type.is_record pot then
     begin
-    (*let t = Hstring.view pot in
-    let n = "Null_"^t in*)
     Some pot
       end
   else None 
-     
-    
     
 let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
@@ -290,6 +286,11 @@ let rec term loc args t =
     in
     let l = List.map (fun (field, f_term) ->
       let t, _ = term loc args f_term in
+      match t with
+	| Null(e,et) -> let ty_temp = Smt.Type.record_field_type field in
+			field, Null(e, ty_temp)
+	| _ ->
+			 
       field, t) l 
     in
     let l = List.sort Smt.Type.compare_rec l in
@@ -298,18 +299,19 @@ let rec term loc args t =
      let missing =
       try iter2 (
 	fun (field, f_term) (field1, field1_type) ->
-	  let t, ty_term = term loc args f_term in
+	  let t1, ty_term = term loc args f_term in
 	  let null = Hstring.make "Null" in
-	  let t, ty_term = 
+	  let t1, ty_term = 
 	    if Hstring.equal (snd ty_term) null
 	    then
 	      begin
 		match check_record ([], field1_type) with
 		  | None -> error (ImpossibleNull field1_type) loc
-		  | Some typ -> Null (Some t, typ), (fst ty_term,field1_type)
+		  | Some typ ->
+		    Null (Some t, typ), (fst ty_term, field1_type)
 	      end
-	    else t, ty_term
-	  in   
+	    else t1, ty_term
+	  in
 	  unify loc ty_term ([], field1_type); 
       ) l recfields []  
       with RecordSize _ ->  error (ExpectedRecord) loc
@@ -336,7 +338,7 @@ let rec term loc args t =
     t,tt
 
 let rec assignment ?(init_variant=false) g x (_, ty) =
-  (*Format.eprintf "g: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
+  (*Format.eprintf "GG: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
   if ty = Smt.Type.type_proc 
      || ty = Smt.Type.type_bool
        || ty = Smt.Type.type_int
@@ -409,7 +411,7 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
       | _ -> ()
 
 let atom loc init_variant args a =
-  let null = Hstring.make "Null" in 
+  let null = Hstring.make "Null" in
   match a with 
     | True | False -> a
 
@@ -418,7 +420,7 @@ let atom loc init_variant args a =
     | Comp ((Elem(c,Constr) as x), Eq, (RecordField((Access(g,_)), field) as y))
     | Comp ( (RecordField((Access(g,_)),field) as x), Eq, (Elem(c,Constr) as y)) 
       -> 
-      (*Format.eprintf "g-- %a; c -- %a; field-- %a@." Hstring.print g Hstring.print c Hstring.print field;*)
+     Format.eprintf "gg-- %a; c -- %a; field-- %a@." Hstring.print g Hstring.print c Hstring.print field;
       let x', tx = term loc args x in
       let y', ty = term loc args y in
       
@@ -437,8 +439,11 @@ let atom loc init_variant args a =
     | Comp (y, Eq, (Elem(g, Glob) as x))
     | Comp (y, Eq, (Access(g, _) as x))
     | Comp (Access(g, _) as x, Eq, y) ->
+      (*Format.eprintf "g2: %a = %a@." Hstring.print g Types.Term.print y;*)
       let x', tx = term loc args x in
       let y',ty = term loc args y in
+     (* Format.eprintf "g21: %a = %a snd ty %a@." Types.Term.print x' Types.Term.print y' Hstring.print (snd ty);*)
+
       let y', ty = 
 	if Hstring.equal (snd ty) null then
 	  begin
@@ -449,13 +454,19 @@ let atom loc init_variant args a =
 	  end
 	else
 	  y', ty
-      in 
+      in
+      (*Format.eprintf "g211: %a = %a@." Types.Term.print x' Types.Term.print y';*)
+
       unify loc tx ty;
       if init_variant then assignment ~init_variant g y' ty;
       Comp(x', Eq, y')
     | Comp (x, op, y) ->
+      (*Format.eprintf "g3: %a op %a@." Types.Term.print x Types.Term.print y;*)
+
       let x', tx = term loc args x in
       let y',ty = term loc args y in
+      (*Format.eprintf "g3: %a op %a@." Types.Term.print x' Types.Term.print y';*)
+
       let null = Hstring.make "Null" in
       let nx, ny =
 	Hstring.equal (snd tx) null, Hstring.equal (snd ty) null

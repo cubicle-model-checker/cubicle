@@ -316,13 +316,14 @@ module Variant = struct
       else
 	begin
 	  List.fold_left (fun (flag,acc) (f, so) ->
+	    if Options.debug_subtypes then
+	      Format.eprintf "[debug sybtypes] f in fold_left: %a@." Hstring.print f;
 	      begin
 		match so with
-		  | None -> assert false
+		  | None -> flag,((f,so)::acc)
 	      (* assert false since called from typing, so it shouldn't not be a constructor*)
 		  | Some s ->
-		    if Hstring.equal field f then
-		      
+		    if Hstring.equal field f then	      
 		      let s = HSet.add el s in
 		      true, ((f, Some s)::acc)
 		    else
@@ -436,6 +437,7 @@ module Variant = struct
   let init l =
     compute ();
     compute_records ();
+
     List.iter 
       (fun (x, nty) ->
 	  let ty = H.find decl_types nty in

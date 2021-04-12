@@ -143,14 +143,16 @@ let rec make_term tt =
     let ty_field= Hstring.list_assoc field re in
     T.make_field field t_record ty_field
       
-  | Null (te,t) ->
-    begin
+  | Null (_,t) ->
+    let n, l = Smt.Type.record_type_details t in
+	  T.make_record (n,l) []
+    (*begin
       match te with
-	| None -> assert false
-	| Some _ ->
+	| None  
+	| Some _ -> Format.eprintf "t is %a@." Hstring.print t;
 	  let _n, _l = Smt.Type.record_type_details t in
 	  T.make_record (_n,_l) []
-    end
+    end*)
 
     
 let extract_with l lbs =
@@ -528,4 +530,4 @@ let normalize s =
   sf
 
 
-let normalize s = s
+let normalize1 s = s
