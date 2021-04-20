@@ -378,7 +378,6 @@ module Make (X : ALIEN) = struct
     (*type t = unit
 
     let empty _ = ()*)
-   exception Inconsistent
     exception Done of X.r   * X.r 
 
 
@@ -444,10 +443,18 @@ module Make (X : ALIEN) = struct
 	      | A.Distinct(false, [r1;r2 ]), _, ex-> 
 		begin
 		  match embed r1, embed r2 with
-		    | Record ([],_), x | x, Record ([],_) -> 
+		    | Record ([],_), x | x, Record ([],_) ->
 
+		      begin
+			match x with
+			  | Record ([],_) -> Format.eprintf "here1@.";raise (Inconsistent ex)
+			  | Record (r, rl) -> Format.eprintf "here2@.";env, neqs, remove
+			  | Other _ -> Format.eprintf "here3@.";env, neqs, remove
+			  | Access _ -> Format.eprintf "here4@.";env, neqs, remove
+			
+		      end 
+		      
 
-		      env, neqs, remove
 		    | Record (rf1,ty1), Record(rf2,ty2) ->
 		      let flag, (ineqs, eqs, candidates), left, right =
 			try true, MX.find r1 env, r1, r2  with Not_found -> (* maybe the other record already exists in the table *)
@@ -493,16 +500,14 @@ module Make (X : ALIEN) = struct
 			      end 
 			    else candidates
 			end 
-		      in 
-			 
-		      
+		      in
 		      let env = MX.add left (XRS.add (right,ex) ineqs, eqs,  candidates) env in
 
 		      env, neqs, remove	
 			
 		    | ((Other(el,_)) as x), re  | re, ((Other (el,_)) as x)-> 
 		      (* split according to what re is *)
-		      (* todo? break into different cases instead of match inside match -> don't really repeat cod*)
+		      (* todo? break into different cases instead of match inside match -> don't really repeat code*)
 		      begin
 			match re with
 			  | Record (r,t) ->
@@ -719,10 +724,6 @@ module Make (X : ALIEN) = struct
 					      ) s CANDIDATES.empty in*)
 					  ineqs, eqs, Some cand
 				    end (*cand match *)
-
-				      
-				      
-				    
 				  | _ -> ineqs, eqs, None) env
 			    in
 			    env, neqs, remove
@@ -795,7 +796,6 @@ module Make (X : ALIEN) = struct
 
 
     let choose_case r xr env lbs_length acc ty =
-
       let chosen =
 	try XRS.choose xr
 	with
