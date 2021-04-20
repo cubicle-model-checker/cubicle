@@ -27,6 +27,7 @@
 	"invariant", INVARIANT;
 	"requires", REQUIRE;
         "array", ARRAY;
+	"map", MAP;
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;

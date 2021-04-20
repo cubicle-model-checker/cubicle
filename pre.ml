@@ -91,7 +91,7 @@ let fresh_nondet =
 
 let rec find_update a li = function
   | [] -> raise Not_found
-  | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
+  | { up_loc = loc; up_map = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
       let ls = 
 	List.map 
 	  (fun (ci, ti) ->

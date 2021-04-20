@@ -44,7 +44,7 @@ type glob_update = UTerm of Term.t  | UCase of swts
 
 type update = {
   up_loc : loc; (** location information *)
-  up_arr : Hstring.t; (** Name of array to update (ex. [A]) *)
+  up_map : Hstring.t; (** Name of map to update (ex. [A]) *)
   up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : swts;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
@@ -75,7 +75,7 @@ type transition_info = {
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
   tr_assigns : (Hstring.t * glob_update * loc) list ; (** updates of global variables *)
-  tr_upds : update list; (** updates of arrays *)
+  tr_upds : update list; (** updates of maps *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
   tr_loc : loc; (** location information *)
@@ -100,7 +100,7 @@ type type_defs =
 type system = {
   globals : (loc * Hstring.t * Hstring.t) list;
   consts : (loc * Hstring.t * Hstring.t) list;
-  arrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  maps : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
   (*type_defs : (loc * type_constructors) list;*)
   type_defs : type_defs list;
   init : loc * Variable.t list * dnf;
@@ -153,7 +153,7 @@ type init_instance = {
 type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
   t_consts : Hstring.t list; (** Existential constants *)
-  t_arrays : Hstring.t list; (** Array names *)
+  t_maps : Hstring.t list; (** Map names *)
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)

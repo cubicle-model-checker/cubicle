@@ -166,7 +166,7 @@ type ptransition = {
 type psystem = {
   pglobals : (loc * Hstring.t * Hstring.t) list;
   pconsts : (loc * Hstring.t * Hstring.t) list;
-  parrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  pmaps : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
   (*ptype_defs : (loc * Ast.type_constructors) list;*)
   ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
@@ -572,7 +572,7 @@ let encode_pglob_update u =
 
 let encode_pupdate up =
   {  up_loc = up.pup_loc;
-     up_arr = up.pup_arr;
+     up_map = up.pup_arr;
      up_arg = up.pup_arg;
      up_swts = encode_pswts up.pup_swts;
   }
@@ -597,7 +597,7 @@ let encode_ptransition tr =
 
 
 let encode_psystem
-    {pglobals; pconsts; parrays; ptype_defs;
+    {pglobals; pconsts; pmaps; ptype_defs;
      pinit = init_loc, init_vars, init_f;
      pinvs; punsafe; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
@@ -636,7 +636,7 @@ let encode_psystem
   {
     globals = pglobals;
     consts = pconsts;
-    arrays = parrays;
+    maps = pmaps;
     type_defs = ptype_defs;
     init;
     invs;
@@ -646,7 +646,7 @@ let encode_psystem
       
 
 
-let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
+let psystem_of_decls ~pglobals ~pconsts ~pmaps ~ptype_defs pdecls =
   let inits, pinvs, punsafe, ptrans =
     List.fold_left (fun (inits, invs, unsafes, trans) -> function
         | PInit i -> i :: inits, invs, unsafes, trans
@@ -663,7 +663,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
   in
   { pglobals;
     pconsts;
-    parrays;
+    pmaps;
     ptype_defs;
     pinit;
     pinvs;
@@ -768,9 +768,9 @@ let print_assigns fmt tr_assigns =
     ) tr_assigns
 
 let print_updates fmt tr_upds =
-  List.iter (fun { up_arr; up_arg; up_swts } ->
+  List.iter (fun { up_map; up_arg; up_swts } ->
       fprintf fmt "@[<hov>%a[%a]@ =@ %a;@]@,"
-        Hstring.print up_arr
+        Hstring.print up_map
         Variable.print_vars up_arg
         print_swts up_swts
     ) tr_upds
@@ -804,7 +804,7 @@ let print_trans fmt =
 
 let print_system fmt { type_defs;
                        globals;
-                       arrays;
+                       maps;
                        consts;
                        init;
                        invs;
@@ -819,7 +819,7 @@ let print_system fmt { type_defs;
   pp_print_newline fmt ();
   print_globals fmt globals;
   (* pp_print_newline fmt (); *)
-  print_arrays fmt arrays;
+  print_arrays fmt maps;
   (* pp_print_newline fmt (); *)
   print_consts fmt consts;
   pp_print_newline fmt ();

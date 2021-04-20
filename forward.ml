@@ -529,7 +529,7 @@ let apply_assigns assigns sigma =
     (SAtom.empty, Term.Set.empty) assigns
 
 
-let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
+let add_update (sa, st) {up_map=a; up_arg=lj; up_swts=swts} procs sigma =
   let at = Access (a, lj) in
   let ites = swts_to_ites at swts sigma in
   let indexes = Variable.all_arrangements_arity a procs in
@@ -878,7 +878,7 @@ let instantiate_transitions all_procs procs trans =
 
 
 
-let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
+let all_var_terms procs {t_globals = globals; t_maps = maps} =
   Format.eprintf "globals length: %d@." (List.length globals);
   let acc, gp = 
     List.fold_left 
@@ -895,7 +895,7 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
       Format.eprintf "done@.";
       Term.Set.add (Access (a, lp)) acc)
       acc indexes)
-    acc arrays
+    acc maps
 
 let search procs init =
   let inst_trans = instantiate_transitions procs procs init.t_trans in

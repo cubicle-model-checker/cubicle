@@ -596,7 +596,7 @@ let switchs loc a args ty_e l =
 let updates args upds =
   let dv = ref [] in
   List.map 
-    (fun ({up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} as upd) -> 
+    (fun ({up_loc=loc; up_map=a; up_arg=lj; up_swts=swts} as upd) -> 
        if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
        List.iter (fun j -> 
          if Hstring.list_mem j args then error (ClashParam j)loc) lj;
@@ -673,7 +673,7 @@ let init_global_env s =
   List.iter 
     (fun (loc, n, (args, ret)) -> 
        declare_symbol loc n args ret;
-       l := (n, ret)::!l) s.arrays;
+       l := (n, ret)::!l) s.maps;
   !l
 
 
@@ -898,7 +898,7 @@ let system s =
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
-    t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
+    t_maps = List.map (fun (_,a,_) -> a) s.maps;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

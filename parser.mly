@@ -19,6 +19,7 @@
   open Types
   open Parsing
   open Ptree
+  open Options
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -50,7 +51,7 @@
     let mem x = S.mem x !s
   end
 
-  module Arrays = struct
+  module Maps = struct
     let s = ref S.empty
     let add x = s := S.add x !s
     let mem x = S.mem x !s
@@ -83,7 +84,7 @@
 
 %}
 
-%token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
+%token VAR ARRAY MAP CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
 %token REQUIRE UNSAFE PREDICATE
@@ -133,8 +134,8 @@ EOF
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
   let ptype_defs = Constructors ((loc (), (Hstring.make "mbool", b))) :: ptype_defs in
-  let pconsts, pglobals, parrays = $3 in
-  psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
+  let pconsts, pglobals, pmaps = $3 in
+  psystem_of_decls ~pglobals ~pconsts ~pmaps ~ptype_defs $4
    |> encode_psystem 
 }
 ;
@@ -154,11 +155,11 @@ decl :
 symbold_decls :
   | { [], [], [] }
   | const_decl symbold_decls
-      { let consts, vars, arrays = $2 in ($1::consts), vars, arrays }
+      { let consts, vars, maps = $2 in ($1::consts), vars, maps }
   | var_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
-  | array_decl symbold_decls
-      { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
+      { let consts, vars, maps = $2 in consts, ($1::vars), maps }
+  | map_decl symbold_decls
+      { let consts, vars, maps = $2 in consts, vars, ($1::maps) }
 ;
 
 function_decl :
@@ -181,12 +182,19 @@ const_decl:
     loc (), $2, $4 }
 ;
 
-array_decl:
-  | ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+map_decl:
+  /*| ARRAY mident LEFTSQ lident_list_plus RIGHTSQ COLON lident {
+    
         if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
           raise Parsing.Parse_error;
         if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
 	Arrays.add $2;
+	loc (), $2, ($4, $7)}*/
+  | MAP mident LEFTSQ lident_list_plus RIGHTSQ COLON lident { 
+        if not (List.for_all (fun p -> Hstring.equal p hproc) $4) then
+          raise Parsing.Parse_error;
+        if Hstring.equal $7 hint || Hstring.equal $7 hreal then Smt.set_arith true;
+	Maps.add $2;
 	loc (), $2, ($4, $7)}
 ;
 
