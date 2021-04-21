@@ -84,6 +84,7 @@ val nocolor : bool
 
 val smt_solver : solver
 val debug_smt : bool
+val debug_bitv : bool
 val dmcmt : bool
 val profiling : bool
 

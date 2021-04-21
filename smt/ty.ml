@@ -28,6 +28,10 @@ and t =
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
   | Tnull of trecord
+  | Tbitv of int
+  | Text of t list * Hstring.t
+  | Tfarray of t * t
+  | Tnext of t
 
 let rec hash t =
   match t with
@@ -45,6 +49,10 @@ let rec hash t =
 	  (Hstring.hash s) lbs
       in 
       abs h
+    | Text(l,s) -> 
+      abs (List.fold_left (fun acc x-> acc*19 + hash x) (Hstring.hash s) l)
+    | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
+	
     | _ -> Hashtbl.hash t
       
 let rec equal t1 t2 = 
@@ -63,6 +71,15 @@ let rec equal t1 t2 =
 	      Hstring.equal l1 l2 && equal ty1 ty2) l1 l2
 	with Invalid_argument _ -> false
       end
+
+    | Text(l1, s1), Text(l2, s2) ->
+      (try s1.tag = s2.tag && List.for_all2 equal l1 l2
+       with Invalid_argument _ -> false)
+    | Tfarray (ta1, ta2), Tfarray (tb1, tb2) -> 
+      equal ta1 tb1 && equal ta2 tb2
+    | Tbitv n1, Tbitv n2 -> n1 =n2
+    | Tnext t1, Tnext t2 -> equal t1 t2
+	
     | _ -> false
 	
 let rec compare t1 t2 = 
@@ -82,6 +99,17 @@ let rec compare t1 t2 =
 	  compare_list l1 l2
     | Trecord _, _ -> -1 | _ , Trecord _ -> 1
 
+    | Text(l1, s1) , Text(l2, s2) ->
+      let c = Hstring.compare s1 s2 in
+      if c<>0 then c
+      else compare_list l1 l2
+    | Text _, _ -> -1 | _ , Text _ -> 1
+    | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
+      let c = compare ta1 tb1 in
+      if c<>0 then c
+      else compare ta2 tb2
+    | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
+      
       
     | t1, t2 -> Stdlib.compare t1 t2
 
@@ -113,5 +141,6 @@ let rec print fmt ty =
 	  List.iter (fun (x,y) -> fprintf fmt "%a : %a; " Hstring.print x print y) lbs;
 	  fprintf fmt "}"
 	end
+    | _ -> ()
 (*      else
 	fprintf fmt "record %a = Null " Hstring.print n; *)

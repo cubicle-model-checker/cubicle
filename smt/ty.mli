@@ -13,6 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+
 type t = 
   | Tint
   | Treal
@@ -21,6 +22,10 @@ type t =
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
   | Tnull of trecord
+  | Tbitv of int
+  | Text of t list * Hstring.t
+  | Tfarray of t * t
+  | Tnext of t
 and trecord = { name: Hstring.t;
 		lbs: (Hstring.t * t) list
 	      }

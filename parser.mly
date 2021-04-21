@@ -160,6 +160,7 @@ symbold_decls :
       { let consts, vars, maps = $2 in consts, ($1::vars), maps }
   | map_decl symbold_decls
       { let consts, vars, maps = $2 in consts, vars, ($1::maps) }
+  | array_decl symbold_decls { assert false }
 ;
 
 function_decl :
@@ -197,6 +198,9 @@ map_decl:
 	Maps.add $2;
 	loc (), $2, ($4, $7)}
 ;
+
+array_decl:
+  | ARRAY mident LEFTSQ INT RIGHTSQ COLON lident { assert false }
 
 type_defs:
   | { [] }

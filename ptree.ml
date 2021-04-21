@@ -646,7 +646,7 @@ let encode_psystem
       
 
 
-let psystem_of_decls ~pglobals ~pconsts ~pmaps ~ptype_defs pdecls =
+let psystem_of_decls ~pglobals ~pconsts ~pmaps  ~ptype_defs pdecls =
   let inits, pinvs, punsafe, ptrans =
     List.fold_left (fun (inits, invs, unsafes, trans) -> function
         | PInit i -> i :: inits, invs, unsafes, trans

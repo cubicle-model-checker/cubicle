@@ -17,6 +17,8 @@ open Hashcons
 
 type operator = 
   | Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t
+  | Concat | Extract 
+  | Get | Set 
 
 type name_kind = Ac | Constructor | Other
 
@@ -28,6 +30,8 @@ type t =
   | Real of Hstring.t
   | Op of operator
   | Var of Hstring.t
+  | Bitv of string
+
 
 let name ?(kind=Other) s = Name (s, kind)
 let var s = Var (Hstring.make s)
@@ -88,6 +92,11 @@ let to_string =  function
   | Op Record -> "@Record"
   | True -> "true"
   | False -> "false"
+  | Bitv s -> "[|"^s^"|]"
+  | Op Get -> "get"
+  | Op Set -> "set"
+  | _ -> ""
+
 
 let print fmt s = Format.fprintf fmt "%s" (to_string s)
 

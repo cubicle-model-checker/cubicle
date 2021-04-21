@@ -46,6 +46,8 @@ let enumsolver = ref false
 let incr_verbose () = incr verbose
 
 let debug_smt = ref false
+let debug_bitv = ref false
+  
 let dmcmt = ref false
 let profiling = ref false
 let nocolor = ref false
@@ -202,6 +204,7 @@ let specs =
     "-solver", Arg.String set_smt_solver,
     "<alt-ergo(default) | z3> SMT solver to use";
     "-dsmt", Arg.Set debug_smt, " debug mode for the SMT solver";
+    "-dbitv", Arg.Set debug_bitv, "  sets the debugging flag of bitv";
     "-dmcmt", Arg.Set dmcmt, " output trace in MCMT format";
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
     "-enumsolver", Arg.Set enumsolver,
@@ -240,6 +243,7 @@ let dot_level = !dot_level
 let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let debug_smt = !debug_smt
+let debug_bitv = !debug_bitv
 let dmcmt = !dmcmt
 let profiling = !profiling
 let file = !file

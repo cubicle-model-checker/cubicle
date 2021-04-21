@@ -15,6 +15,8 @@
 
 type operator = 
   | Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t
+  | Concat | Extract 
+  | Get | Set
 
 type name_kind = Ac | Constructor | Other
 
@@ -26,6 +28,7 @@ type t =
   | Real of Hstring.t
   | Op of operator
   | Var of Hstring.t
+  | Bitv of string
 
 val name : ?kind:name_kind -> Hstring.t -> t
 val var : string -> t
