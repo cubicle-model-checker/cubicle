@@ -147,10 +147,12 @@ type pglob_update = PUTerm of term | PUCase of pswts
 
 type pupdate = {
   pup_loc : loc;
-  pup_arr : Hstring.t;
+  pup_map : Hstring.t;
   pup_arg : Variable.t list;
   pup_swts : pswts;
 }
+
+    
 
 type ptransition = {
   ptr_lets : (Hstring.t * term) list;
@@ -167,6 +169,7 @@ type psystem = {
   pglobals : (loc * Hstring.t * Hstring.t) list;
   pconsts : (loc * Hstring.t * Hstring.t) list;
   pmaps : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  (*parrays : (loc * Hstring.t * int * Hstring.t) list; (*array A[size] : type *)*)
   (*ptype_defs : (loc * Ast.type_constructors) list;*)
   ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
@@ -572,10 +575,18 @@ let encode_pglob_update u =
 
 let encode_pupdate up =
   {  up_loc = up.pup_loc;
-     up_map = up.pup_arr;
+     up_map = up.pup_map;
      up_arg = up.pup_arg;
      up_swts = encode_pswts up.pup_swts;
   }
+(*
+let encode_array_update up =
+  {
+    up_loc = up.pup_loc;
+    up_array = up.pup_array;
+    up_arg = up.pup_arg;
+    up_swts = encode_pswts up.pup_swts;
+  }*)
 
 let encode_ptransition tr =
   let dguards = guard_of_formula tr.ptr_args tr.ptr_reqs in

@@ -72,7 +72,7 @@ type pswts = (cformula * term) list
 type pglob_update = PUTerm of term | PUCase of pswts 
 type pupdate = {
   pup_loc : loc;
-  pup_arr : Hstring.t;
+  pup_map : Hstring.t;
   pup_arg : Variable.t list;
   pup_swts : pswts;
 }
@@ -92,6 +92,7 @@ type psystem = {
   pglobals : (loc * Hstring.t * Hstring.t) list;
   pconsts : (loc * Hstring.t * Hstring.t) list;
   pmaps : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  (*parrays : (loc * Hstring.t * int * Hstring.t) list ;*)
   (* ptype_defs : (loc * Ast.type_constructors) list;*)
   ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;

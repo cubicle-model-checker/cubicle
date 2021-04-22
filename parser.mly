@@ -334,7 +334,7 @@ update:
           if (Hstring.view p).[0] = '#' then
             raise Parsing.Parse_error;
         ) $3;
-        Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7} }
+        Upd { pup_loc = loc (); pup_map = $1; pup_arg = $3; pup_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       { let cube, rjs =
           List.fold_left (fun (cube, rjs) i ->
@@ -344,7 +344,7 @@ update:
         let a = PAnd cube in
         let js = List.rev rjs in
 	let sw = [(a, TTerm $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+	Upd { pup_loc = loc (); pup_map = $1; pup_arg = js; pup_swts = sw}  }
 
 ;
 
