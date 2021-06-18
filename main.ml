@@ -23,29 +23,29 @@ open Ast
 
 
 (** intercepts SIGINT [Ctrl-C] to display progress before exit *)
-let () = 
-  Sys.set_signal Sys.sigint 
-    (Sys.Signal_handle 
+let () =
+  Sys.set_signal Sys.sigint
+    (Sys.Signal_handle
        (fun _ ->
         eprintf "@{<n>@}@."; (* Remove colors *)
         Stats.print_report ~safe:false [] [];
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
-        exit 1)) 
+        exit 1))
 
-let () = 
+let () =
   Sys.set_signal Sys.sigterm
-    (Sys.Signal_handle 
+    (Sys.Signal_handle
        (fun _ ->
         eprintf "@{<n>@}@."; (* Remove colors *)
         Stats.print_report ~safe:false [] [];
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
-        exit 1)) 
+        exit 1))
 
 (** intercepts SIGUSR1 to display progress *)
 let () =
   try
-    Sys.set_signal Sys.sigusr1 
-      (Sys.Signal_handle 
+    Sys.set_signal Sys.sigusr1
+      (Sys.Signal_handle
          (fun _ ->
             eprintf "@{<n>@}@."; (* Remove colors *)
             Stats.print_report ~safe:false [] []))
@@ -57,8 +57,8 @@ let () =
   if verbose > 0 then Printexc.record_backtrace true
 
 
-let _ = 
-  let lb = from_channel cin in 
+let _ =
+  let lb = from_channel cin in
   try
     let s = Parser.system Lexer.token lb in
     let system = Typing.system s in
@@ -66,8 +66,8 @@ let _ =
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
-    let close_dot = Dot.open_dot () in 
-    begin 
+    let close_dot = Dot.open_dot () in
+    begin
       match Brab.brab system with
       | Bwd.Safe (visited, candidates) ->
          if (not quiet || profiling) then
@@ -89,7 +89,7 @@ let _ =
          exit 1
     end
   with
-  | Lexer.Lexical_error s -> 
+  | Lexer.Lexical_error s ->
      Util.report_loc err_formatter (lexeme_start_p lb, lexeme_end_p lb);
      eprintf "lexical error: %s@." s;
      exit 2
@@ -133,6 +133,6 @@ let _ =
     let backtrace = Printexc.get_backtrace () in
     eprintf "Fatal error: %s@." (Printexc.to_string e);
     if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
-    
+
     exit 1
 

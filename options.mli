@@ -76,6 +76,9 @@ val dot_colors : int
 val quiet : bool
 val verbose : int
 val nocolor : bool
+val html : bool
+val html_online : bool
+val js_of_cubicle : string
 
 val smt_solver : solver
 val debug_smt : bool

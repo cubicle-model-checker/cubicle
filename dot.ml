@@ -18,6 +18,7 @@ open Ast
 open Types
 open Options
 open Util
+open Html
 
 type node_info = Empty | Empty_C | Tag | Full
 
@@ -44,40 +45,40 @@ let next_shade = chromatic green magenta Options.dot_colors
 (* Shape and color configurations for displaying nodes *)
 
 let config = function
-  | Orig ->  
+  | Orig ->
      " , color = red, shape=octagon, \
-      fontcolor=white, fontsize=20, style=filled"
+      fontcolor=white, fontsize=20, style=filled, orig=true"
   | Approx ->
      " , color = blue, shape=rectangle, \
-      fontcolor=white, fontsize=20, style=filled"
+      fontcolor=white, fontsize=20, style=filled, approx=true"
   | Inv ->
      " , color = orange, shape=rectangle, \
-      fontcolor=white, fontsize=20, style=filled"
-  | Node -> 
+      fontcolor=white, fontsize=20, style=filled, invariant=true"
+  | Node ->
      match display_node_contents with
      | Empty | Empty_C -> 
-         sprintf " , shape=point, color=\"%s\"" (hex_color !current_color)
+         sprintf " , shape=point, color=\"%s\", empty=true" (hex_color !current_color)
      | _ -> sprintf "color=\"%s\"" (hex_color !current_color)
 
 let info_sfdp s = match dot_prog with
   | Sfdp -> "label=\" \", "^s
   | _ -> s
 
-let config_subsumed = " , color = gray, fontcolor=gray"
+let config_subsumed = " , color = gray, fontcolor=gray, subsumed=true"
 
 let config_init =
-  " , color = green, fontsize=20, shape=doublecircle, style=filled"
+  " , color = green, fontsize=20, shape=doublecircle, style=filled, unsafe=true"
 
-let config_error = ", color=red, fillcolor=lightpink, style=filled"
+let config_error = ", color=red, fillcolor=lightpink, style=filled, error=true"
 
 
 (* Shape and color configurations for displaying edges *)
 
 let cedge_subsume = info_sfdp
-  "style=dashed, arrowhead=onormal, color=gray, constraint=false"
+  "style=dashed, arrowhead=onormal, color=gray, constraint=false, subsume=true"
 
 let cedge_candidate = info_sfdp
-  "style=dashed, arrowhead=onormal, color=blue, penwidth=4"
+  "style=dashed, arrowhead=onormal, color=blue, penwidth=4, candidate=true"
 
 let cedge_pre () =
   if dot_level <= 1 then
@@ -89,7 +90,7 @@ let cedge_pre () =
 
 let cedge_error ?(to_init=false) () =
   info_sfdp ("color=red, dir=back, pencolor=red, \
-              fontcolor=red, penwidth=4"^
+              fontcolor=red, penwidth=4, error=true"^
                (if dot_level = 1 || to_init then "" else ", label=\" \""))
 
 
@@ -186,7 +187,7 @@ let delete_node_by n p =
       (* fprintf !dot_fmt "%d -> %d [style=dashed, constraint=false]" s.tag n.tag *)
     end
 
-let dot_header = 
+let dot_header =
   let run = ref 0 in
   let name = Filename.basename file in
   fun fmt ->
@@ -203,15 +204,30 @@ let restart () =
   dot_header !dot_fmt
 
 
-let display_graph dot_file =
-  let pdf = dot_file^".pdf" in
+let display_graph dot_file online =
+  let html_file = dot_file^".html" in
+  let ic = open_in dot_file in
+  let dot_str = try
+    let str = really_input_string ic (in_channel_length ic) in
+    close_in ic;
+    str
+  with e ->
+    eprintf "There was an error while reading the dot file.";
+    close_in_noerr ic;
+    raise e
+  in
+  (if online then
+    print_html html_file Js_of_cubicle.online_path dot_str
+  else
+    match js_of_cubicle with
+    | "" -> print_html html_file Js_of_cubicle.local_path dot_str
+    | _ as path -> print_html html_file path dot_str);
   let com = match Util.syscall "uname" with
     | "Darwin\n" -> "open"
     | "Linux\n" -> "xdg-open"
     | _ -> (* Windows *) "cmd /c start"
   in
-  match Sys.command ((graphviz_prog !nb_nodes)^" -Tpdf "^dot_file^
-                       " > "^pdf^" && "^com^" "^pdf) with
+  match Sys.command (com^" "^html_file) with
   | 0 -> ()
   | _ ->
      eprintf "There was an error with dot. Make sure graphviz is installed."
@@ -221,8 +237,7 @@ let open_dot () =
   if not dot then fun () -> ()
   else
     let bfile = Filename.basename file in
-    let dot_file, dot_channel =
-      Filename.open_temp_file bfile ".dot" in
+    let dot_file, dot_channel = (bfile ^ ".dot"), open_out (bfile ^ ".dot") in
     dot_fmt := formatter_of_out_channel dot_channel;
     fprintf !dot_fmt "digraph \"%s\" {@." bfile;
     fprintf !dot_fmt "orientation = portrait;\n\
@@ -241,4 +256,7 @@ let open_dot () =
       dot_footer !dot_fmt;
       dot_footer !dot_fmt;
       close_out dot_channel;
-      display_graph dot_file
+      match (html, html_online) with
+      | true, _
+      | _, true -> display_graph dot_file html_online
+      | _ -> ()
