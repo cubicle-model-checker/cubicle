@@ -26,11 +26,11 @@ let template = Printf.sprintf {|<!doctype html>
     <script type="text/javascript">
     window.__DOT_STR__ = '%s'
     </script>
-    <script defer="defer" src="%s"></script>
 </head>
 <body style="height: 100%%">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root" style="height: 100%%"></div>
+    %s
 </body>
 </html>|}
 
@@ -40,10 +40,28 @@ let get_html jsoc_path dot =
   |> List.filter (fun s -> s <> "")
   |> String.concat "'+\n'"
   in
-  template dot jsoc_path
+  template dot (Printf.sprintf {|<script defer="defer" src="%s"></script>|} jsoc_path)
 
-let print_html outfile jsoc_path dot =
-  let html = get_html jsoc_path dot in
+let get_html_embedded jsoc_path dot =
+  let dot = dot
+  |> String.split_on_char '\n'
+  |> List.filter (fun s -> s <> "")
+  |> String.concat "'+\n'"
+  in
+  let ic = open_in jsoc_path in
+  try
+    let str = really_input_string ic (in_channel_length ic) in
+    close_in ic;
+    template dot (Printf.sprintf {|<script type="text/javascript">%s</script>|} str)
+  with e ->
+    close_in_noerr ic;
+    raise e
+
+
+let print_html outfile jsoc_path dot embedded =
+  let html =
+    if embedded then get_html_embedded jsoc_path dot
+    else get_html jsoc_path dot in
   let oc = open_out outfile in
   try
     Printf.fprintf oc "%s" html;

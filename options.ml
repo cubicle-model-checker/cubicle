@@ -39,17 +39,27 @@ let bitsolver = ref false
 let enumsolver = ref false
 let html = ref false
 let html_online = ref false
-let set_html online () =
+let html_embedded = ref false
+let set_html online embedded () =
   if online then
     begin
       html := false;
+      html_embedded := false;
       html_online := true
     end
   else
     begin
       html := true;
-      html_online := true
+      html_online := false
+    end;
+    if embedded then
+      begin
+        html := false;
+        html_embedded := true;
+        html_online := false;
     end
+  else
+    html_embedded := false
 
 let js_of_cubicle = ref ""
 let set_js_of_cubicle path =
@@ -159,10 +169,12 @@ let specs =
     " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
     "number of colors for dot output";
-    "-html", Arg.Unit (set_html false), " generate an html file for \
+    "-html", Arg.Unit (set_html false false), " generate an html file for \
      visualizing the dot graph with local js_of_cubicle";
-    "-html-online", Arg.Unit (set_html true), " generate an html file for \
+    "-html-online", Arg.Unit (set_html true false), " generate an html file for \
      visualizing the dot graph using the cdn version of js_of_cubicle";
+    "-html-embedded", Arg.Unit(set_html false true), "generate an html file for \
+     visualizing the dot graph. The javascript logic is copied in the html file.";
     "-js_of_cubicle", Arg.String set_js_of_cubicle, " set the path to the \
      js_of_cubicle script in the local html file";
     "-v", Arg.Unit incr_verbose, " more debugging information";
@@ -257,6 +269,7 @@ let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let html = !html
 let html_online = !html_online
+let html_embedded = !html_embedded
 let js_of_cubicle = !js_of_cubicle
 
 let debug_smt = !debug_smt

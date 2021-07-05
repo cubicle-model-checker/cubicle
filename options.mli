@@ -77,6 +77,7 @@ val quiet : bool
 val verbose : int
 val nocolor : bool
 val html : bool
+val html_embedded: bool
 val html_online : bool
 val js_of_cubicle : string
 

@@ -204,7 +204,7 @@ let restart () =
   dot_header !dot_fmt
 
 
-let display_graph dot_file online =
+let display_graph dot_file online embedded =
   let html_file = dot_file^".html" in
   let ic = open_in dot_file in
   let dot_str = try
@@ -217,11 +217,11 @@ let display_graph dot_file online =
     raise e
   in
   (if online then
-    print_html html_file Js_of_cubicle.online_path dot_str
+    print_html html_file Js_of_cubicle.online_path dot_str embedded
   else
     match js_of_cubicle with
-    | "" -> print_html html_file Js_of_cubicle.local_path dot_str
-    | _ as path -> print_html html_file path dot_str);
+    | "" -> print_html html_file Js_of_cubicle.local_path dot_str embedded
+    | _ as path -> print_html html_file path dot_str embedded);
   let com = match Util.syscall "uname" with
     | "Darwin\n" -> "open"
     | "Linux\n" -> "xdg-open"
@@ -256,7 +256,8 @@ let open_dot () =
       dot_footer !dot_fmt;
       dot_footer !dot_fmt;
       close_out dot_channel;
-      match (html, html_online) with
-      | true, _
-      | _, true -> display_graph dot_file html_online
+      match (html, html_online, html_embedded) with
+      | true, _, _
+      | _, true, _
+      | _, _, true -> display_graph dot_file html_online html_embedded
       | _ -> ()

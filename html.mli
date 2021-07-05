@@ -13,5 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val print_html: string -> string -> string -> unit
+val print_html: string -> string -> string -> bool -> unit
 val get_html: string -> string -> string
+val get_html_embedded: string -> string -> string
