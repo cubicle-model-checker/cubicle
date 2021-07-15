@@ -39,35 +39,27 @@ let bitsolver = ref false
 let enumsolver = ref false
 let html = ref false
 let html_online = ref false
-let html_embedded = ref false
-let set_html online embedded () =
+let set_html online () =
   if online then
     begin
       html := false;
-      html_embedded := false;
       html_online := true
     end
   else
     begin
       html := true;
       html_online := false
-    end;
-    if embedded then
-      begin
-        html := false;
-        html_embedded := true;
-        html_online := false;
     end
-  else
-    html_embedded := false
 
-let js_of_cubicle = ref ""
-let set_js_of_cubicle path =
+let js_viewer = ref ""
+let set_js_viewer path =
   if (not !html || !html_online) then
     raise( Arg.Bad "This option is incompatible with the `-html-online` \
      flag and requires the `-html` file")
   else
-    js_of_cubicle := path
+    js_viewer := path
+
+let pdf = ref false
 
 let incr_verbose () = incr verbose
 
@@ -169,14 +161,14 @@ let specs =
     " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
     "number of colors for dot output";
-    "-html", Arg.Unit (set_html false false), " generate an html file for \
-     visualizing the dot graph with local js_of_cubicle";
-    "-html-online", Arg.Unit (set_html true false), " generate an html file for \
-     visualizing the dot graph using the cdn version of js_of_cubicle";
-    "-html-embedded", Arg.Unit(set_html false true), "generate an html file for \
-     visualizing the dot graph. The javascript logic is copied in the html file.";
-    "-js_of_cubicle", Arg.String set_js_of_cubicle, " set the path to the \
-     js_of_cubicle script in the local html file";
+    "-html", Arg.Unit (set_html false), " generate an html file for \
+     visualizing the dot graph with embedded html";
+    "-html-online", Arg.Unit (set_html true), " generate an html file for \
+     visualizing the dot graph using the cdn version of js_viewer";
+    "-pdf", Arg.Set pdf, " generate a pdf version of the .dot file \
+    must be used with -dot flag";
+    "-js_viewer", Arg.String set_js_viewer, " set the path to the \
+     js_viewer script in the local html file";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
@@ -269,8 +261,8 @@ let dot_colors = !dot_colors
 let dot_prog = !dot_prog
 let html = !html
 let html_online = !html_online
-let html_embedded = !html_embedded
-let js_of_cubicle = !js_of_cubicle
+let js_viewer = !js_viewer
+let pdf = !pdf
 
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt

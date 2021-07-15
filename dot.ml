@@ -204,8 +204,9 @@ let restart () =
   dot_header !dot_fmt
 
 
-let display_graph dot_file online embedded =
+let display_graph dot_file online pdf =
   let html_file = dot_file^".html" in
+  let pdf_file = dot_file^".pdf" in
   let ic = open_in dot_file in
   let dot_str = try
     let str = really_input_string ic (in_channel_length ic) in
@@ -217,17 +218,23 @@ let display_graph dot_file online embedded =
     raise e
   in
   (if online then
-    print_html html_file Js_of_cubicle.online_path dot_str embedded
+    print_html html_file Js_viewer.online_path dot_str false
   else
-    match js_of_cubicle with
-    | "" -> print_html html_file Js_of_cubicle.local_path dot_str embedded
-    | _ as path -> print_html html_file path dot_str embedded);
+    if not pdf then
+      match js_viewer with
+      | "" -> print_html html_file Js_viewer.local_path dot_str true
+      | _ as path -> print_html html_file path dot_str true);
   let com = match Util.syscall "uname" with
     | "Darwin\n" -> "open"
     | "Linux\n" -> "xdg-open"
     | _ -> (* Windows *) "cmd /c start"
   in
-  match Sys.command (com^" "^html_file) with
+  let exec = if pdf then
+    ((graphviz_prog !nb_nodes)^" -Tpdf "^dot_file^" > "^pdf_file^" && "^com^" "^pdf_file)
+  else
+    (com^" "^html_file)
+  in
+  match Sys.command (exec) with
   | 0 -> ()
   | _ ->
      eprintf "There was an error with dot. Make sure graphviz is installed."
@@ -256,8 +263,8 @@ let open_dot () =
       dot_footer !dot_fmt;
       dot_footer !dot_fmt;
       close_out dot_channel;
-      match (html, html_online, html_embedded) with
+      match (html, html_online, pdf) with
       | true, _, _
       | _, true, _
-      | _, _, true -> display_graph dot_file html_online html_embedded
+      | _, _, true -> display_graph dot_file html_online pdf
       | _ -> ()
