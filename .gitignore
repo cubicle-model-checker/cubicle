@@ -23,7 +23,7 @@ functory.mli
 functory.ml
 smt/z3wrapper.ml
 version.ml
-js_of_cubicle.ml
+js_viewer.ml
 .depend
 config.log
 config.status
