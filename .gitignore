@@ -10,6 +10,7 @@
 *.opt
 *.byte
 *.output
+*.dot*
 
 # Generated
 lexer.ml
@@ -22,6 +23,7 @@ functory.mli
 functory.ml
 smt/z3wrapper.ml
 version.ml
+js_viewer.ml
 .depend
 config.log
 config.status
@@ -37,3 +39,4 @@ doc/ocamldoc/style.css
 *~
 \#*\#
 .\#*
+.DS_Store

@@ -4,7 +4,7 @@
 #                                                                        #
 #                       Copyright (C) 2011-2014                          #
 #                                                                        #
-#                  Sylvain Conchon and Alain Mebsout                     #
+#          Sylvain Conchon and Alain Mebsout and Emilien Lemaire         #
 #                       Universite Paris-Sud 11                          #
 #                                                                        #
 #                                                                        #
@@ -115,6 +115,7 @@ CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
       util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo pretty.cmo ptree.cmo parser.cmo lexer.cmo \
+      js_viewer.cmo html.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
@@ -126,7 +127,8 @@ CMX = $(CMO:.cmo=.cmx)
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
 
-GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
+GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml js_viewer.ml
+
 
 byte: $(NAME).byte
 opt: $(NAME).opt
@@ -139,13 +141,20 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.2
+VERSION=1.1.3
 VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
 	@echo "let version = \""$(VERSION_STR)"\"" > version.ml
 	@echo "let date = \""`date`"\"" >> version.ml
 	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
+
+JSOC_PATH=$(DATAROOTDIR)/cubicle/js_viewer.js
+JSOC_PATH_ONLINE=https://raw.githubusercontent.com/cubicle-model-checker/cubicle/$(VERSION)/js_viewer/js_viewer.js
+
+js_viewer.ml: config.status
+	@echo "let local_path = \""$(JSOC_PATH)"\"" > js_viewer.ml
+	@echo "let online_path = \""$(JSOC_PATH_ONLINE)"\"" >> js_viewer.ml
 
 # generic rules
 ###############
@@ -204,6 +213,8 @@ tags:
 install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
+	mkdir -p $(DATAROOTDIR)/cubicle
+	cp -f js_viewer/js_viewer.js $(DATAROOTDIR)/cubicle
 	@echo "Installation completed in $(BINDIR). You may want to copy emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
 install-byte:
@@ -298,8 +309,9 @@ FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
 	cube.ml cube.mli cubetrie.ml cubetrie.mli dot.ml dot.mli\
 	enumerative.ml enumerative.mli fake_functory.ml fake_functory.mli\
 	fixpoint.ml fixpoint.mli forward.ml forward.mli\
-	instantiation.ml instantiation.mli lexer.mll main.ml\
-	murphi.ml murphi.mli\
+	html.ml html.mli\
+	instantiation.ml instantiation.mli js_viewer.ml js_viewer.mli\
+	lexer.mll main.ml murphi.ml murphi.mli\
 	mulexer.mll muparser.mly muparser_globals.mli muparser_globals.ml\
 	node.ml node.mli options.ml options.mli oracle.mli\
 	parser.mly pre.ml pre.mli pretty.ml pretty.mli prover.ml prover.mli\

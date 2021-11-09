@@ -4,7 +4,7 @@
 (*                                                                        *)
 (*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
-(*                  Sylvain Conchon and Alain Mebsout                     *)
+(*          Sylvain Conchon and Alain Mebsout and Emilien Lemaire         *)
 (*                       Universite Paris-Sud 11                          *)
 (*                                                                        *)
 (*                                                                        *)
@@ -76,6 +76,10 @@ val dot_colors : int
 val quiet : bool
 val verbose : int
 val nocolor : bool
+val html : bool
+val html_online : bool
+val js_viewer : string
+val pdf : bool
 
 val smt_solver : solver
 val debug_smt : bool

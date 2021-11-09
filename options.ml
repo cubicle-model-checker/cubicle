@@ -4,7 +4,7 @@
 (*                                                                        *)
 (*                       Copyright (C) 2011-2014                          *)
 (*                                                                        *)
-(*                  Sylvain Conchon and Alain Mebsout                     *)
+(*          Sylvain Conchon and Alain Mebsout and Emilien Lemaire         *)
 (*                       Universite Paris-Sud 11                          *)
 (*                                                                        *)
 (*                                                                        *)
@@ -37,6 +37,29 @@ let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
 let enumsolver = ref false
+let html = ref false
+let html_online = ref false
+let set_html online () =
+  if online then
+    begin
+      html := false;
+      html_online := true
+    end
+  else
+    begin
+      html := true;
+      html_online := false
+    end
+
+let js_viewer = ref ""
+let set_js_viewer path =
+  if (not !html || !html_online) then
+    raise( Arg.Bad "This option is incompatible with the `-html-online` \
+     flag and requires the `-html` file")
+  else
+    js_viewer := path
+
+let pdf = ref false
 
 let incr_verbose () = incr verbose
 
@@ -58,7 +81,7 @@ let cpp_cmd = ref "g++ -O4"
 let brab = ref (-1)
 let brab_up_to = ref false
 let forward_depth = ref (-1)
-let localized = ref false 
+let localized = ref false
 let lazyinv = ref false
 let refine = ref false
 let stateless = ref false
@@ -118,18 +141,18 @@ let use_sfdp () =
 
 let show_version () = Format.printf "%s@." Version.version; exit 0
 
-let specs = 
+let specs =
   [ "-version", Arg.Unit show_version, " prints the version number";
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
-    "-max-procs", Arg.Set_int max_proc, 
+    "-max-procs", Arg.Set_int max_proc,
     "<nb> max number of processes to introduce (default 10)";
-    "-depth", Arg.Set_int maxrounds, 
+    "-depth", Arg.Set_int maxrounds,
     "<nb> max depth of the search tree (default 100)";
-    "-nodes", Arg.Set_int maxnodes, 
+    "-nodes", Arg.Set_int maxnodes,
     "<nb> max number nodes to explore (default 100000)";
-    "-search", Arg.String set_mode, 
+    "-search", Arg.String set_mode,
     "<bfs(default) | bfsh | bfsa | dfs | dfsh | dfsa> search strategies";
     "-debug", Arg.Set debug, " debug mode";
     "-dot", Arg.Int set_dot,
@@ -138,15 +161,23 @@ let specs =
     " use sfdp for drawing graph instead of dot (for big graphs)";
     "-dot-colors", Arg.Set_int dot_colors,
     "number of colors for dot output";
+    "-html", Arg.Unit (set_html false), " generate an html file for \
+     visualizing the dot graph with embedded html";
+    "-html-online", Arg.Unit (set_html true), " generate an html file for \
+     visualizing the dot graph using the cdn version of js_viewer";
+    "-pdf", Arg.Set pdf, " generate a pdf version of the .dot file \
+    must be used with -dot flag";
+    "-js_viewer", Arg.String set_js_viewer, " set the path to the \
+     js_viewer script in the local html file";
     "-v", Arg.Unit incr_verbose, " more debugging information";
     "-profiling", Arg.Set profiling, " profiling mode";
     "-only-forward", Arg.Set only_forward, " only do one forward search";
     "-geninv", Arg.Set gen_inv, " invariant generation";
-    "-symbolic", Arg.Set_int forward_inv, 
+    "-symbolic", Arg.Set_int forward_inv,
     "<n> symbolic forward invariant generation with n processes";
-    "-enumerative", Arg.Set_int enumerative, 
+    "-enumerative", Arg.Set_int enumerative,
     "<n> enumerative forward invariant generation with n processes";
-    "-local", Arg.Set localized, 
+    "-local", Arg.Set localized,
     " localized invariant candidates";
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
@@ -179,8 +210,8 @@ let specs =
     "-stateless", Arg.Set stateless, " stateless symbolic forward search";
     "-forward-nosym", Arg.Clear forward_sym,
     " disable symmetry reduction in forward exploration";
-    "-postpone", Arg.Set_int post_strategy, 
-    "<0|1|2> 
+    "-postpone", Arg.Set_int post_strategy,
+    "<0|1|2>
                           0: do not postpone nodes
                           1: postpone nodes with n+1 processes
                           2: postpone nodes that don't add information";
@@ -214,8 +245,8 @@ let cin =
     else raise (Arg.Bad "no .cub extension");
   in
   Arg.parse alspecs set_file usage;
-  match !ofile with 
-  | Some f -> file := f ; open_in f 
+  match !ofile with
+  | Some f -> file := f ; open_in f
   | None -> stdin
 
 let type_only = !type_only
@@ -228,6 +259,11 @@ let dot = !dot
 let dot_level = !dot_level
 let dot_colors = !dot_colors
 let dot_prog = !dot_prog
+let html = !html
+let html_online = !html_online
+let js_viewer = !js_viewer
+let pdf = !pdf
+
 let debug_smt = !debug_smt
 let dmcmt = !dmcmt
 let profiling = !profiling
