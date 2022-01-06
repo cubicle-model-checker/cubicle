@@ -372,7 +372,7 @@ module Make (X : ALIEN) = struct
     List.map (fun (x, y) -> is_mine x, is_mine y) (solve_one r1 r2)
 
 
-  module Rel =
+  module Rel1 =
   struct
     type r = X.r
     (*type t = unit
@@ -813,7 +813,6 @@ module Make (X : ALIEN) = struct
 		  let value = Hstring.list_assoc field re_chosen in
 		  let my_temp = is_mine temp in
 		  (*Format.eprintf "temp: %a@." X.print my_temp;*)
-
 		  let flag, (_,equalities,_) =
 		    try true,
 		      MX.find my_temp env
@@ -833,7 +832,7 @@ module Make (X : ALIEN) = struct
 		) re_chosen acc
 	      with Done (x,v) -> Some (lbs_length, x, v)
 	    end (*4*)
-	  | _ -> assert false (*you can't technically end up here since case-splitting is only on things mapped to records*)
+	  | _ -> Format.eprintf "%a@." X.print (fst chosen);assert false (*you can't technically end up here since case-splitting is only on things mapped to records*)
       end (*3*)
 	
 
@@ -869,7 +868,7 @@ module Make (X : ALIEN) = struct
 			    if lbs_length = 1 then acc else 
 			      begin
 				match fty with
-				  | Trecord _  ->
+				  | Trecord _  -> Format.eprintf "%a@." Ty.print fty;
 				    choose_case r xr env lbs_length acc ty
 				  | _ -> acc
 			      end
@@ -921,6 +920,21 @@ module Make (X : ALIEN) = struct
 	      | _ -> env)*)
 
       
+    let print_model _ _ _ = ()
+    let new_terms env = T.Set.empty
+  end
+
+      module Rel =
+  struct
+    type r = X.r
+    type t = unit
+    exception Inconsistent    
+    let empty _ = ()
+    let assume _ _ = 
+      (), { assume = []; remove = []}
+    let query _ _  = Sig.No
+    let case_split env = []
+    let add env _ = env
     let print_model _ _ _ = ()
     let new_terms env = T.Set.empty
   end

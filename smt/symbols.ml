@@ -17,7 +17,10 @@ open Hashcons
 
 type operator = 
   | Plus | Minus | Mult | Div | Modulo | Record | Access of Hstring.t
-  | Concat | Extract 
+
+ (* | Bitvector | BAccess of int*)
+  | Concat of Hstring.t | Extract of Hstring.t
+
   | Get | Set 
 
 type name_kind = Ac | Constructor | Other
@@ -31,6 +34,10 @@ type t =
   | Op of operator
   | Var of Hstring.t
   | Bitv of string
+      
+(*| Bitv of string*) (* "10101"*)
+
+  (*| Bitv of ??*)
 
 
 let name ?(kind=Other) s = Name (s, kind)

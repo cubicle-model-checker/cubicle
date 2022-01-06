@@ -21,35 +21,39 @@
   let () = 
     List.iter 
       (fun (x,y) -> Hashtbl.add keywords x y)
-      [ "type", TYPE;
-	"init", INIT;
-	"transition", TRANSITION;
-	"invariant", INVARIANT;
-	"requires", REQUIRE;
-        "array", ARRAY;
-	"map", MAP;
-        "var", VAR;
-        "const", CONST;
-        "unsafe", UNSAFE;
+      [
+	"array", ARRAY;
 	"case", CASE;
-	"forall_other", FORALL_OTHER;
-	"exists_other", EXISTS_OTHER;
-	"forall", FORALL;
-        "exists", EXISTS;
-        "predicate", PREDICATE;
-        "if", IF;
-        "then", THEN;
+	"const", CONST;
         "else", ELSE;
-        "not", NOT;
-        "true", MIDENT "@MTRUE";
-        "false", MIDENT "@MFALSE";
-	"number_procs", SIZEPROC;
-	"let", LET;
-	"in", IN;
-	"with", WITH;
-	"NULL", NULL;
-	"True", MIDENT "@MTrue";
+        "exists", EXISTS;
+	"exists_other", EXISTS_OTHER;
 	"False", MIDENT "@MFalse";
+        "false", MIDENT "@MFALSE";
+	"forall", FORALL;
+	"forall_other", FORALL_OTHER;
+        "if", IF;
+	"in", IN;
+	"init", INIT;
+	"invariant", INVARIANT;
+	"let", LET;
+	"macro", MACRO;
+	"map", MAP;
+        "not", NOT;
+	"NULL", NULL;
+	"number_procs", SIZEPROC;
+	"of", OF;
+        "predicate", PREDICATE;
+	"requires", REQUIRE;
+	"set", SET; 
+        "then", THEN;
+	"transition", TRANSITION;
+	"True", MIDENT "@MTrue";
+        "true", MIDENT "@MTRUE";
+	"type", TYPE;
+        "unsafe", UNSAFE;
+        "var", VAR;
+       	"with", WITH;
       ]
 	       
   let newline lexbuf =
@@ -164,6 +168,8 @@ rule token = parse
       { UNDERSCORE }
   | "&&"
       { AND }
+  | "@"
+      { AT }
   | "(*"
       { comment lexbuf; token lexbuf }
   | eof 

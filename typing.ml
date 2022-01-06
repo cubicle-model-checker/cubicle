@@ -45,7 +45,10 @@ type error =
   | ExpectedRecord
   | MissingFields of Hstring.t * Hstring.t list
   | CannotAssignToNull
-  | ImpossibleNull of Hstring.t 
+  | ImpossibleNull of Hstring.t
+
+  | IncorrectBVArgument of Hstring.t * int * int 
+      
 
 exception Error of error * loc
 exception RecordSize of Hstring.t
@@ -118,6 +121,9 @@ let report fmt = function
     fprintf fmt "NULL cannot be left-hand side of assignment"
   | ImpossibleNull t ->
     fprintf fmt "NULL is only compatible with record types. Type %a is not a record type" Hstring.print t
+  | IncorrectBVArgument (n, s, ac_s)->
+    fprintf fmt "Array %a: index %d out of bounds : please enter an index between 0 and %d" Hstring.print n s ac_s
+
 
 let error e l = raise (Error (e,l))
 
@@ -150,6 +156,9 @@ let infer_type x1 x2 =
       | RecordWith _ -> assert false
       | RecordField _ -> assert false
       | Null _ -> assert false
+      | BitVector _ -> assert false
+      | BitVAccess _ -> assert false
+      | BitVOp _ -> assert false 
 	
     in
     let ref_ty, ref_cs =
@@ -337,6 +346,11 @@ let rec term loc args t =
     unify loc ([], Smt.Type.type_int) tt;
     t,tt
 
+
+  | BitVAccess (name, index) -> assert false
+  | BitVector tl -> assert false
+  | BitVOp _ -> assert false
+
 let rec assignment ?(init_variant=false) g x (_, ty) =
   (*Format.eprintf "GG: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
   if ty = Smt.Type.type_proc 
@@ -420,7 +434,7 @@ let atom loc init_variant args a =
     | Comp ((Elem(c,Constr) as x), Eq, (RecordField((Access(g,_)), field) as y))
     | Comp ( (RecordField((Access(g,_)),field) as x), Eq, (Elem(c,Constr) as y)) 
       -> 
-     Format.eprintf "gg-- %a; c -- %a; field-- %a@." Hstring.print g Hstring.print c Hstring.print field;
+    (* Format.eprintf "gg-- %a; c -- %a; field-- %a@." Hstring.print g Hstring.print c Hstring.print field;*)
       let x', tx = term loc args x in
       let y', ty = term loc args y in
       
@@ -596,7 +610,7 @@ let switchs loc a args ty_e l =
 let updates args upds =
   let dv = ref [] in
   List.map 
-    (fun ({up_loc=loc; up_map=a; up_arg=lj; up_swts=swts} as upd) -> 
+    (fun ({up_loc=loc; up_arr=a; up_arg=lj; up_swts=swts} as upd) -> 
        if Hstring.list_mem a !dv then error (DuplicateUpdate a) loc;
        List.iter (fun j -> 
          if Hstring.list_mem j args then error (ClashParam j)loc) lj;
@@ -652,6 +666,9 @@ let declare_symbol loc n args ret =
   try Smt.Symbol.declare n args ret
   with Smt.Error e -> error (Smt e) loc
 
+let declare_array loc n args ret =
+  declare_symbol loc n args ret
+
 
 let init_global_env s = 
   List.iter declare_t s.type_defs;
@@ -673,7 +690,8 @@ let init_global_env s =
   List.iter 
     (fun (loc, n, (args, ret)) -> 
        declare_symbol loc n args ret;
-       l := (n, ret)::!l) s.maps;
+      l := (n, ret)::!l) s.arrays;
+  
   !l
 
 
@@ -898,7 +916,7 @@ let system s =
   { 
     t_globals = List.map (fun (_,g,_) -> g) s.globals;
     t_consts = List.map (fun (_,c,_) -> c) s.consts;
-    t_maps = List.map (fun (_,a,_) -> a) s.maps;
+    t_arrays = List.map (fun (_,a,_) -> a) s.arrays;
     t_init = init_woloc;
     t_init_instances = init_instances;
     t_invs = invs_woloc;

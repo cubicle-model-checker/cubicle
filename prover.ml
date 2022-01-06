@@ -104,6 +104,7 @@ let rec make_term tt =
   (*Format.eprintf "Make_term: %a@." Types.Term.print tt; *)
   match tt with 
     | Elem (e, _) ->
+      (*Format.eprintf "Elemt is %a@." Hstring.print e;*) 
       let tyl, ty = Smt.Symbol.type_of e in
       (*Format.printf "ty: %a@." Hstring.print ty;*)
       List.iter (Format.eprintf "tyl: %a@." Hstring.print) tyl;
@@ -246,6 +247,7 @@ let rec convert_term t =
 	end
 	  
       | Var v -> assert (T.view_ty t = Tint); Elem (v, Var)
+      | _ -> assert false
      
       
 
@@ -530,4 +532,4 @@ let normalize s =
   sf
 
 
-let normalize1 s = s
+let normalize s = s

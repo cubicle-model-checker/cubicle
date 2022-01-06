@@ -221,8 +221,10 @@ let open_dot () =
   if not dot then fun () -> ()
   else
     let bfile = Filename.basename file in
-    let dot_file, dot_channel =
-      Filename.open_temp_file bfile ".dot" in
+    (*let dot_file, dot_channel =
+      Filename.open_temp_file bfile ".dot" in*)
+    let dot_file =  bfile^".dot" in
+    let dot_channel = open_out dot_file in
     dot_fmt := formatter_of_out_channel dot_channel;
     fprintf !dot_fmt "digraph \"%s\" {@." bfile;
     fprintf !dot_fmt "orientation = portrait;\n\
@@ -241,4 +243,5 @@ let open_dot () =
       dot_footer !dot_fmt;
       dot_footer !dot_fmt;
       close_out dot_channel;
+      Format.eprintf "DOT: %s@." dot_file;  
       display_graph dot_file

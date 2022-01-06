@@ -26,6 +26,9 @@ open Util
 type dnf = SAtom.t list
 (** Disjunctive normal form: each element of the list is a disjunct *)
 
+type type_constr_args = Hstring.t * ((Hstring.t * Hstring.t option) list)
+
+    
 type type_constructors = Hstring.t * (Hstring.t list)
 (** Type and constructors declaration: [("t", ["A";"B"])] represents the
     declaration of type [t] with two constructors [A] and [B]. If the
@@ -34,6 +37,8 @@ type type_constructors = Hstring.t * (Hstring.t list)
 type record_type = Hstring.t * (Hstring.t * Hstring.t) list
     (** Record declarations: [("t", [("f", "t1")])] declates the record type t 
 	with a field f of type t1.*)
+
+ 
 
 type swts = (SAtom.t * Term.t) list
 (** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *) 
@@ -44,7 +49,7 @@ type glob_update = UTerm of Term.t  | UCase of swts
 
 type update = {
   up_loc : loc; (** location information *)
-  up_map : Hstring.t; (** Name of map to update (ex. [A]) *)
+  up_arr : Hstring.t; (** Name of map to update (ex. [A]) *)
   up_arg : Variable.t list; (** list of universally quantified variables *)
   up_swts : swts;
   (** condition (conjunction)(ex. [C]) and term (ex. [t] *)
@@ -100,7 +105,7 @@ type type_defs =
 type system = {
   globals : (loc * Hstring.t * Hstring.t) list;
   consts : (loc * Hstring.t * Hstring.t) list;
-  maps : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  arrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
   (*type_defs : (loc * type_constructors) list;*)
   type_defs : type_defs list;
   init : loc * Variable.t list * dnf;
@@ -153,7 +158,7 @@ type init_instance = {
 type t_system = {
   t_globals : Hstring.t list; (** Global variables *)
   t_consts : Hstring.t list; (** Existential constants *)
-  t_maps : Hstring.t list; (** Map names *)
+  t_arrays : Hstring.t list; (** Map names *)
   t_init : Variable.t list * dnf;
   (** Formula describing the initial states of the system, universally
       quantified DNF : \forall i. c1 \/ c2 \/ ... *)

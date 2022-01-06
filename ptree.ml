@@ -147,11 +147,18 @@ type pglob_update = PUTerm of term | PUCase of pswts
 
 type pupdate = {
   pup_loc : loc;
-  pup_map : Hstring.t;
+  pup_arr : Hstring.t;
   pup_arg : Variable.t list;
   pup_swts : pswts;
 }
 
+type parraye_update = {
+  paup : loc;
+  pup_array : Hstring.t;
+  pup_index: Num.num;
+  paup_swts :pswts;
+}
+    
     
 
 type ptransition = {
@@ -168,8 +175,7 @@ type ptransition = {
 type psystem = {
   pglobals : (loc * Hstring.t * Hstring.t) list;
   pconsts : (loc * Hstring.t * Hstring.t) list;
-  pmaps : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
-  (*parrays : (loc * Hstring.t * int * Hstring.t) list; (*array A[size] : type *)*)
+  parrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
   (*ptype_defs : (loc * Ast.type_constructors) list;*)
   ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
@@ -290,7 +296,7 @@ let rec apply_subst sigma (f:formula) = match f with
 let app_fun name args =
   try
     let vars, f = Hstring.H.find function_defs name in
-    (* eprintf "app fun %a (%a)@." Hstring.print name Variable.print_vars vars; *)
+    eprintf "app fun %a (%a)@." Hstring.print name Variable.print_vars vars; 
     let nvars, nargs = List.length vars, List.length args in
     if nvars <> nargs then
       failwith (asprintf
@@ -575,7 +581,7 @@ let encode_pglob_update u =
 
 let encode_pupdate up =
   {  up_loc = up.pup_loc;
-     up_map = up.pup_map;
+     up_arr = up.pup_arr;
      up_arg = up.pup_arg;
      up_swts = encode_pswts up.pup_swts;
   }
@@ -608,7 +614,7 @@ let encode_ptransition tr =
 
 
 let encode_psystem
-    {pglobals; pconsts; pmaps; ptype_defs;
+    {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
      pinvs; punsafe; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
@@ -647,7 +653,7 @@ let encode_psystem
   {
     globals = pglobals;
     consts = pconsts;
-    maps = pmaps;
+    arrays = parrays;
     type_defs = ptype_defs;
     init;
     invs;
@@ -657,7 +663,7 @@ let encode_psystem
       
 
 
-let psystem_of_decls ~pglobals ~pconsts ~pmaps  ~ptype_defs pdecls =
+let psystem_of_decls ~pglobals ~pconsts ~parrays  ~ptype_defs pdecls =
   let inits, pinvs, punsafe, ptrans =
     List.fold_left (fun (inits, invs, unsafes, trans) -> function
         | PInit i -> i :: inits, invs, unsafes, trans
@@ -674,7 +680,7 @@ let psystem_of_decls ~pglobals ~pconsts ~pmaps  ~ptype_defs pdecls =
   in
   { pglobals;
     pconsts;
-    pmaps;
+    parrays;
     ptype_defs;
     pinit;
     pinvs;
@@ -692,7 +698,7 @@ let print_type_defs fmt =
           Hstring.print ty
           (Pretty.print_list
              (fun fmt -> fprintf fmt "@{<fg_blue>%a@}" Hstring.print)
-             "@ | ") cstrs
+             "@ | ") cstrs (*TODO: new types*)
     )
 
 let print_globals fmt  =
@@ -779,9 +785,9 @@ let print_assigns fmt tr_assigns =
     ) tr_assigns
 
 let print_updates fmt tr_upds =
-  List.iter (fun { up_map; up_arg; up_swts } ->
+  List.iter (fun { up_arr; up_arg; up_swts } ->
       fprintf fmt "@[<hov>%a[%a]@ =@ %a;@]@,"
-        Hstring.print up_map
+        Hstring.print up_arr
         Variable.print_vars up_arg
         print_swts up_swts
     ) tr_upds
@@ -815,7 +821,7 @@ let print_trans fmt =
 
 let print_system fmt { type_defs;
                        globals;
-                       maps;
+		       arrays;
                        consts;
                        init;
                        invs;
@@ -830,7 +836,7 @@ let print_system fmt { type_defs;
   pp_print_newline fmt ();
   print_globals fmt globals;
   (* pp_print_newline fmt (); *)
-  print_arrays fmt maps;
+  print_arrays fmt arrays;
   (* pp_print_newline fmt (); *)
   print_consts fmt consts;
   pp_print_newline fmt ();

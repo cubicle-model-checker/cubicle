@@ -28,7 +28,12 @@ and t =
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
   | Tnull of trecord
+      
+(*| Tbitv of (*int*) { size : int;
+  typ : t; }	 *)
   | Tbitv of int
+
+      
   | Text of t list * Hstring.t
   | Tfarray of t * t
   | Tnext of t
@@ -77,7 +82,8 @@ let rec equal t1 t2 =
        with Invalid_argument _ -> false)
     | Tfarray (ta1, ta2), Tfarray (tb1, tb2) -> 
       equal ta1 tb1 && equal ta2 tb2
-    | Tbitv n1, Tbitv n2 -> n1 =n2
+    (*| Tbitv (n1,t1), Tbitv (n2,t2) -> Hstring.equal n1 n2 && t1 = t2*)
+    | Tbitv t1, Tbitv t2 ->  t1 = t2
     | Tnext t1, Tnext t2 -> equal t1 t2
 	
     | _ -> false

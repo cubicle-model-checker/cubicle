@@ -823,7 +823,7 @@ let nondets_to_actions env sigma acc =
     ) acc
 
 let update_to_actions procs sigma env acc
-    {up_map=a; up_arg=lj; up_swts=swts} =
+    {up_arr=a; up_arg=lj; up_swts=swts} =
   let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun acc li ->
     let sigma = (List.combine lj li) @ sigma in

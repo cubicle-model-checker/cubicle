@@ -62,6 +62,8 @@ let _ =
   try
     let s = Parser.system Lexer.token lb in
     if parse_only then exit 0;
+        (*Ptree.print_system std_formatter s;*)
+
     let system = Typing.system s in
     if type_only then exit 0;
     if refine_universal then

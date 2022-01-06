@@ -60,7 +60,7 @@ let mk_short_names sys =
       let a' = Hstring.make (array_prefix ^ string_of_int !cpt) in
       incr cpt;
       H.add short_names a a'
-    ) sys.t_maps
+    ) sys.t_arrays
 
 
 let letters = [| 'A'; 'B'; 'C'; 'D'; 'E'; 'F'; 'G'; 'H'; 'I'; 'J'; 'K'; 'L';
@@ -83,7 +83,7 @@ let mk_shorter_names sys =
   List.iter (fun n ->
     let f = Hstring.make (next_name ()) in
     H.add short_names n f
-  ) (sys.t_globals @ sys.t_maps @ constrs)
+  ) (sys.t_globals @ sys.t_arrays @ constrs)
 
 
 let mk_short_names =
@@ -434,8 +434,8 @@ let print_init globals arrays qvars fmt sa =
   close_startstate ()
    
 
-let print_inits fmt { t_globals; t_maps; t_init = qvars, inits } =
-  List.iter (fprintf fmt "%a@." (print_init t_globals t_maps qvars)) inits
+let print_inits fmt { t_globals; t_arrays; t_init = qvars, inits } =
+  List.iter (fprintf fmt "%a@." (print_init t_globals t_arrays qvars)) inits
 
 
 
@@ -476,8 +476,8 @@ let print_assign fmt (v, up,_) =
 let print_assigns fmt = List.iter (fprintf fmt "%a@ " print_assign)
 
 
-let print_update fmt { up_map; up_arg; up_swts } =
-  let ta = Access(up_map, up_arg) in
+let print_update fmt { up_arr; up_arg; up_swts } =
+  let ta = Access(up_arr, up_arg) in
   let close_fors = print_fors fmt up_arg in
   print_swts ta fmt up_swts;
   close_fors ()
@@ -785,10 +785,10 @@ let print_system nbprocs abstr fmt sys =
   let proc_ord = ordered_procs_sys sys in
   print_constants fmt nbprocs abstr; pp_print_newline fmt ();
   print_types ~proc_ord fmt []; pp_print_newline fmt ();
-  print_vars_defs [] fmt (sys.t_globals @ sys.t_maps);
+  print_vars_defs [] fmt (sys.t_globals @ sys.t_arrays);
   pp_print_newline fmt ();
   print_inits fmt sys; pp_print_newline fmt ();
-  print_transitions sys.t_globals sys.t_maps fmt sys.t_trans;
+  print_transitions sys.t_globals sys.t_arrays fmt sys.t_trans;
   print_unsafes fmt sys.t_unsafe
 
 

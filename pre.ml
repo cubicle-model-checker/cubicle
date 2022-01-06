@@ -91,7 +91,7 @@ let fresh_nondet =
 
 let rec find_update a li = function
   | [] -> raise Not_found
-  | { up_loc = loc; up_map = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
+  | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
       let ls = 
 	List.map 
 	  (fun (ci, ti) ->
@@ -255,6 +255,7 @@ let rec find_assign memo tr tt =
 	    ) b)	      
       end
     | Null (te,tet) -> Single tt
+    | BitVector _ | BitVAccess _ | BitVOp _  -> assert false
       
       (*begin
       match te with
@@ -269,7 +270,8 @@ let rec find_assign memo tr tt =
 	  end
 	    
       end *)
-	
+
+
     | Access (a, li) -> 
       let nli = li in
      (* List.map (fun i -> *)
@@ -284,6 +286,7 @@ let rec find_assign memo tr tt =
      (* ) li in *)
       try find_update a nli tr.tr_upds
       with Not_found -> Single (Access (a, nli))
+	
 	
 (* let na =  *)
 (*   try (match H.list_assoc a tr.tr_assigns with *)

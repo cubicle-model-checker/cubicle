@@ -209,6 +209,12 @@ module Symbol = struct
 	if not (H.mem decl_types t) then raise (Error (UnknownType t)) )
       (ret::args);
     H.add decl_symbs f (Symbols.name f, args, ret);
+    (* match ... : for record field subtyping *)
+    (* each field needs to exists with its possible values, but also 
+       linked to its parent record (e.g. R1.f and R2.f - both have fields f, but they 
+       donc necessarily have the same possible values. 
+       Therefore need to add a symbol for each field with each record, so the 
+       type can be associated to it. *)
     match Type.is_record_opt ret with
       | None -> ()
       | Some l ->
@@ -655,6 +661,9 @@ module Term = struct
 
   let make_field field term ty_field=
     Term.make (Symbols.Op (Symbols.Access (field))) [term] ty_field
+
+  let make_bitv bv ty =
+    Term.make (Symbols.Bitv bv) [] ty 
     
   let is_int = Term.is_int
 

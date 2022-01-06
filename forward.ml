@@ -111,6 +111,7 @@ let rec is_prime_term = function
 	| None -> false
 	| Some s -> is_prime_term s
     end
+  | _ -> assert false
  
 
 let rec is_prime_atom = function
@@ -424,6 +425,7 @@ let rec type_of_term = function
   | RecordWith (t,_) -> type_of_term t
   | RecordField (t,_) -> type_of_term t
   | Null(_,t) -> t
+  | _ -> assert false
       
 
 let rec type_of_atom = function
@@ -529,7 +531,7 @@ let apply_assigns assigns sigma =
     (SAtom.empty, Term.Set.empty) assigns
 
 
-let add_update (sa, st) {up_map=a; up_arg=lj; up_swts=swts} procs sigma =
+let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
   let at = Access (a, lj) in
   let ites = swts_to_ites at swts sigma in
   let indexes = Variable.all_arrangements_arity a procs in
@@ -878,7 +880,7 @@ let instantiate_transitions all_procs procs trans =
 
 
 
-let all_var_terms procs {t_globals = globals; t_maps = maps} =
+let all_var_terms procs {t_globals = globals; t_arrays = maps} =
   Format.eprintf "globals length: %d@." (List.length globals);
   let acc, gp = 
     List.fold_left 

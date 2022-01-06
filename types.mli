@@ -82,6 +82,10 @@ type term =
   | Record of (Hstring.t * term) list
 (** record field values: {field1 = ...; field2 = ...} *)
   | Null of term option * Hstring.t
+  | BitVAccess of Hstring.t * Num.num
+  | BitVector of term list
+  | BitVOp of (Hstring.t * (Num.num * Num.num)) list
+
 
 
 			   

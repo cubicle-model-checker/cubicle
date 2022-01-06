@@ -100,6 +100,10 @@ type term =
   | RecordField of term * Hstring.t
   | Record of (Hstring.t * term) list
   | Null of term option * Hstring.t
+  | BitVAccess of Hstring.t * Num.num
+  | BitVector of term list
+  | BitVOp of (Hstring.t * (Num.num * Num.num)) list
+
 
 (*  | NArith of cst VMap.t * cst*)
  

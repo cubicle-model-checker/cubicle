@@ -33,19 +33,19 @@ let collect_types s =
 			    List.fold_left (fun acc t -> HSet.add t acc)
 					   (HSet.add t_ret acc) t_args
 			   ) in
-  add (add HSet.empty s.t_globals) s.t_maps
+  add (add HSet.empty s.t_globals) s.t_arrays
 
 let need_bool s =
   let f = List.fold_left (fun acc t ->
       acc || Hstring.equal Smt.Type.type_bool (snd (Smt.Symbol.type_of t))
     ) in
-  f (f false s.t_globals) s.t_maps
+  f (f false s.t_globals) s.t_arrays
 
 let need_real s =
   let f = List.fold_left (fun acc t ->
       acc || Hstring.equal Smt.Type.type_real (snd (Smt.Symbol.type_of t))
     ) in
-  f (f false s.t_globals) s.t_maps
+  f (f false s.t_globals) s.t_arrays
 
 
 let cert_file_name () =
@@ -100,7 +100,7 @@ module AltErgo = struct
     let d = List.iter (fprintf fmt "%a@." (print_decl ~prime:false)) in
     let d_prime = List.iter (fprintf fmt "%a@." (print_decl ~prime:true)) in
     d s.t_globals; d_prime s.t_globals;
-    d s.t_maps; d_prime s.t_maps
+    d s.t_arrays; d_prime s.t_arrays
 
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
@@ -135,6 +135,7 @@ module AltErgo = struct
     | RecordWith _ -> assert false
     | RecordField _ -> assert false
     | Null _ -> assert false
+    | _ -> assert false
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -281,7 +282,7 @@ module AltErgo = struct
     if ags <> [] && remaining <> [] then fprintf fmt " and\n";
     print_assigns_unchanged fmt remaining
 
-  let print_update fmt {up_map=a; up_arg=args; up_swts=swts} =
+  let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
     print_ite fmt (Access (a, args), swts, default)
@@ -289,10 +290,10 @@ module AltErgo = struct
 
   let rec add_updates_list arrays fmt = function
     | [] -> arrays
-    | [{up_map=a} as u] ->
+    | [{up_arr=a} as u] ->
        fprintf fmt "(%a)" print_update u;
        HSet.remove a arrays
-    | ({up_map=a} as u) :: r ->
+    | ({up_arr=a} as u) :: r ->
        fprintf fmt "(%a) and\n" print_update u;
        add_updates_list (HSet.remove a arrays) fmt r
 
@@ -346,7 +347,7 @@ module AltErgo = struct
 	 zify (z :: acc) (n - 1) in
     zify [] nb
 
-  let print_norm_update vars fmt {up_map=a; up_arg=args; up_swts=swts} =
+  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
@@ -356,10 +357,10 @@ module AltErgo = struct
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
-    | [{up_map=a} as u] ->
+    | [{up_arr=a} as u] ->
        fprintf fmt "(%a)" (print_norm_update vars) u;
        HSet.remove a arrays
-    | ({up_map=a} as u) :: r ->
+    | ({up_arr=a} as u) :: r ->
        fprintf fmt "(%a) and\n" (print_norm_update vars) u;
        add_norm_updates vars (HSet.remove a arrays) fmt r
 
@@ -408,14 +409,14 @@ module AltErgo = struct
       fprintf fmt ")\n";
     ) t.tr_ureq;
     fprintf fmt ")";
-    if s.t_globals <> [] || s.t_maps <> [] then
+    if s.t_globals <> [] || s.t_arrays <> [] then
       begin
 	fprintf fmt " and\n";
 	fprintf fmt "( (* actions *)\n";
 	print_assigns s.t_globals fmt t.tr_assigns;
-	if s.t_globals <> [] && s.t_maps <> [] then fprintf fmt " and\n";
+	if s.t_globals <> [] && s.t_arrays <> [] then fprintf fmt " and\n";
 	(* print_norm_updates s.t_arrays fmt t.tr_upds; *)
-	print_updates s.t_maps fmt t.tr_upds;
+	print_updates s.t_arrays fmt t.tr_upds;
 	fprintf fmt ")";
       end;
     fprintf fmt ")@."
@@ -624,7 +625,7 @@ module Why3 = struct
         (fprintf fmt "%a@ " (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
     fprintf fmt "@\n";
-    d s.t_maps; d_prime s.t_maps;
+    d s.t_arrays; d_prime s.t_arrays;
     fprintf fmt "@\n";
     c s.t_consts
 
@@ -684,6 +685,7 @@ module Why3 = struct
     | RecordWith _ -> assert false
     | RecordField _ -> assert false
     | Null _ -> assert false
+    | _ -> assert false 
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -820,7 +822,7 @@ module Why3 = struct
     if ags <> [] && remaining <> [] then fprintf fmt " /\\@ ";
     print_assigns_unchanged fmt remaining
 
-  let print_update fmt {up_map=a; up_arg=args; up_swts=swts} =
+  let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "@[<hov 2>forall %a:int.@ " print_args args;
     print_ite fmt (Access (a, args), swts, default);
@@ -829,10 +831,10 @@ module Why3 = struct
 
   let rec add_updates_list arrays fmt = function
     | [] -> arrays
-    | [{up_map=a} as u] ->
+    | [{up_arr=a} as u] ->
        fprintf fmt "(%a)" print_update u;
        HSet.remove a arrays
-    | ({up_map=a} as u) :: r ->
+    | ({up_arr=a} as u) :: r ->
        fprintf fmt "(%a) /\\@ " print_update u;
        add_updates_list (HSet.remove a arrays) fmt r
 
@@ -887,7 +889,7 @@ module Why3 = struct
 	 zify (z :: acc) (n - 1) in
     zify [] nb
 
-  let print_norm_update vars fmt {up_map=a; up_arg=args; up_swts=swts} =
+  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
@@ -897,10 +899,10 @@ module Why3 = struct
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
-    | [{up_map=a} as u] ->
+    | [{up_arr=a} as u] ->
        fprintf fmt "(%a)" (print_norm_update vars) u;
        HSet.remove a arrays
-    | ({up_map=a} as u) :: r ->
+    | ({up_arr=a} as u) :: r ->
        fprintf fmt "(%a) /\\@ " (print_norm_update vars) u;
        add_norm_updates vars (HSet.remove a arrays) fmt r
 
@@ -949,14 +951,14 @@ module Why3 = struct
       fprintf fmt ")\n";
     ) t.tr_ureq;
     fprintf fmt " )@]";
-    if s.t_globals <> [] || s.t_maps <> [] then
+    if s.t_globals <> [] || s.t_arrays <> [] then
       begin
 	fprintf fmt " /\\@ ";
 	fprintf fmt "@[<v 2>( (* actions *)@\n";
 	print_assigns s.t_globals fmt t.tr_assigns;
-	if s.t_globals <> [] && s.t_maps <> [] then fprintf fmt " /\\@ ";
+	if s.t_globals <> [] && s.t_arrays <> [] then fprintf fmt " /\\@ ";
 	(* print_norm_updates s.t_arrays fmt t.tr_upds; *)
-	print_updates s.t_maps fmt t.tr_upds;
+	print_updates s.t_arrays fmt t.tr_upds;
 	fprintf fmt ")@]";
       end;
     fprintf fmt ")@\n"
@@ -1445,7 +1447,7 @@ module Why3_INST = struct
     let d_prime = List.iter
         (fprintf fmt "%a@." (print_decl ~prime:true ~const:false)) in
     d s.t_globals; d_prime s.t_globals;
-    d s.t_maps; d_prime s.t_maps;
+    d s.t_arrays; d_prime s.t_arrays;
     c s.t_consts
 
   
@@ -1489,6 +1491,7 @@ module Why3_INST = struct
     | RecordWith _ -> assert false
     | RecordField _ -> assert false
     | Null _ -> assert false
+    | _ -> assert false
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1629,7 +1632,7 @@ module Why3_INST = struct
     if ags <> [] && remaining <> [] then fprintf fmt " /\\\n";
     print_assigns_unchanged fmt remaining
 
-  let print_update fmt {up_map=a; up_arg=args; up_swts=swts} =
+  let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
     print_ite fmt (Access (a, args), swts, default)
@@ -1637,10 +1640,10 @@ module Why3_INST = struct
 
   let rec add_updates_list arrays fmt = function
     | [] -> arrays
-    | [{up_map=a} as u] ->
+    | [{up_arr=a} as u] ->
        fprintf fmt "(%a)" print_update u;
        HSet.remove a arrays
-    | ({up_map=a} as u) :: r ->
+    | ({up_arr=a} as u) :: r ->
        fprintf fmt "(%a) /\\\n" print_update u;
        add_updates_list (HSet.remove a arrays) fmt r
 
@@ -1694,7 +1697,7 @@ module Why3_INST = struct
 	 zify (z :: acc) (n - 1) in
     zify [] nb
 
-  let print_norm_update vars fmt {up_map=a; up_arg=args; up_swts=swts} =
+  let print_norm_update vars fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let sigma = make_norm_subst [] (args, vars) in
     let args = List.map snd sigma in
     let swts = List.map (fun (cond, t) ->
@@ -1704,10 +1707,10 @@ module Why3_INST = struct
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
-    | [{up_map=a} as u] ->
+    | [{up_arr=a} as u] ->
        fprintf fmt "(%a)" (print_norm_update vars) u;
        HSet.remove a arrays
-    | ({up_map=a} as u) :: r ->
+    | ({up_arr=a} as u) :: r ->
        fprintf fmt "(%a) /\\\n" (print_norm_update vars) u;
        add_norm_updates vars (HSet.remove a arrays) fmt r
 
@@ -1756,14 +1759,14 @@ module Why3_INST = struct
       fprintf fmt ")\n";
     ) t.tr_ureq;
     fprintf fmt ")";
-    if s.t_globals <> [] || s.t_maps <> [] then
+    if s.t_globals <> [] || s.t_arrays <> [] then
       begin
 	fprintf fmt " /\\\n";
 	fprintf fmt "( (* actions *)\n";
 	print_assigns s.t_globals fmt t.tr_assigns;
-	if s.t_globals <> [] && s.t_maps <> [] then fprintf fmt " /\\\n";
+	if s.t_globals <> [] && s.t_arrays <> [] then fprintf fmt " /\\\n";
 	(* print_norm_updates s.t_arrays fmt t.tr_upds; *)
-	print_updates s.t_maps fmt t.tr_upds;
+	print_updates s.t_arrays fmt t.tr_upds;
 	fprintf fmt ")";
       end;
     fprintf fmt ")@."

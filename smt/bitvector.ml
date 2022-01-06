@@ -50,7 +50,7 @@ module Make(X : ALIEN) = struct
   let unsolvable _ = false
 
   let is_mine_symb = function
-    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract)  -> true
+    | Sy.Bitv _ | Sy.Op (Sy.Concat _ | Sy.Extract _)  -> true
     | _ -> false
 
   let embed r =
@@ -184,7 +184,7 @@ module Make(X : ALIEN) = struct
       List.fold_left (fun ac bt ->{ bv = I_Comp (ac,bt) ; sz = bt.sz + ac.sz })
 
     let string_to_bitv s =
-      let tmp = ref[] in
+      let tmp = ref [] in
       String.iter(fun car -> tmp := (car<>'0',1)::(!tmp)) s;
       let rec f_aux l acc = match l with
 	| [] -> assert false
@@ -199,11 +199,11 @@ module Make(X : ALIEN) = struct
     let make t =
       let rec make_rec t' ctx = match T.view t' with
 	| {T.f = Sy.Bitv s } -> string_to_bitv s, ctx
-	| {T.f = Sy.Op Sy.Concat ; xs = [t1;t2] ; ty = Ty.Tbitv n} ->
+	| {T.f = Sy.Op (Sy.Concat cv)  ; xs = [t1;t2] ; ty = Ty.Tbitv n } ->
 	  let r1, ctx = make_rec t1 ctx in
 	  let r2, ctx = make_rec t2 ctx in
 	  { bv = I_Comp (r1, r2) ; sz = n }, ctx
-	| {T.f = Sy.Op Sy.Extract; xs = [t1;ti;tj] ; ty = Ty.Tbitv n} ->
+	| {T.f = Sy.Op (Sy.Extract ev); xs = [t1;ti;tj] ; ty = Ty.Tbitv n} ->
 	  begin 
 	    match T.view ti , T.view tj with
 	      | { T.f = Sy.Int i } , { T.f = Sy.Int j } -> 
@@ -213,7 +213,7 @@ module Make(X : ALIEN) = struct
 		{ sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
 	      | _ -> assert false
 	  end
-	| {T.ty = Ty.Tbitv n} -> 
+	| {T.ty = Ty.Tbitv  n} -> 
 	  let r', ctx' = X.make t' in
 	  let ctx = ctx' @ ctx in
 	  {bv = I_Other (Alien r') ; sz = n}, ctx
@@ -221,6 +221,15 @@ module Make(X : ALIEN) = struct
       in 
       let r, ctx = make_rec t [] in
       sigma r, ctx
+
+   (* let make1 t =
+      let rec make_rec t' ctx =
+	let { T.f = f; xs = xs; ty = ty} = T.view t in
+	match f, ty with
+	  | Sy.Op (Sy.BitVector), Ty.Tbitv {Ty.size = bvsize; Ty.typ = bvtyp } -> assert false
+	  | _ -> assert false*)
+
+	
   end
 
   (*BISECT-IGNORE-BEGIN*)
