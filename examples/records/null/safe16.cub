@@ -7,6 +7,5 @@ var X : r
 var Y : r1
 
 init() { Y = NULL }
-(*
-unsafe() { }
-*)
+
+unsafe() { Y.c = NULL }

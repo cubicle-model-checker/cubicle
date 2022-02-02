@@ -6,7 +6,7 @@ var X : t
 
 init() { X = { a = A }}
 
-unsafe() { X = NULL}
+unsafe() { X = { a = C }}
 
 
 

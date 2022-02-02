@@ -1,3 +1,33 @@
+(* for init + unsafe + t6:
+Pre counter 8
+* STATS
+---------------------------------------------
+Number of visited nodes          : 1
+Fixpoints                        : 8
+Number of solver calls           : 1
+Max Number of processes          : 2
+Number of deleted nodes          : 0
+Restarts                         : 0
+
+for init+ unsafe + nosubtyping:
+
+Pre counter 24
+* STATS
+---------------------------------------------
+Number of visited nodes          : 4
+Fixpoints                        : 21
+Number of solver calls           : 7
+Max Number of processes          : 2
+Number of deleted nodes          : 0
+Restarts                         : 0
+
+
+
+
+-- Note: t4 + t5 + t6*)
+
+
+
 type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
 
 
@@ -5,9 +35,9 @@ type bsw = { a: location; b: bool; s: bool; w: bool}
 
 array P[proc] : bsw
 
-(*init (i) {P[i] = { a = L0; s = False; w = False; b = False}}*)
+init (i) {P[i] = { a = L0; s = False; w = False; b = False}}
 
-init(i) { P[i].a = L0 && P[i].s = False && P[i].w = False && P[i].b = False }
+(*init(i) { P[i].a = L0 && P[i].s = False && P[i].w = False && P[i].b = False }*)
 
 unsafe (i j) { P[i].a = L7 && P[j].a = L7 }
 
@@ -16,17 +46,22 @@ transition t0 (x)
 requires { P[x].a = L0 }
 { P[x] := { P[x] with a = L1; b= True } }
 
+
 transition t1 (x)
 requires { P[x].a = L1 && forall_other y. P[y].s = False }
 { P[x] := { P[x] with a= L2;  b= False }}
+
 
 transition t2 (x)
 requires { P[x].a = L2 }
 { P[x] := { P[x] with a = L3; s = True; w = True } }
 
+
 transition t3_then (x y)
 requires { P[x].a = L3 && P[y].b = False && P[y].w = False }
 { P[x] := { P[x] with a= L4; s = False } }
+
+(*adding t3_else -nosubtyping => 10 fixpoints vs. the 6 w/o records *)
 
 transition t3_else (x)
 requires { P[x].a = L3 && forall_other y. ( P[y].b =  True || P[y].w = True ) }

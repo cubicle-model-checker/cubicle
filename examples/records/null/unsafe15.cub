@@ -5,8 +5,8 @@ type r = { a: t; b : bool }
 var X : r
 var Y : r
 
-init() { X = NULL }
+init() { X <> NULL }
 
-unsafe() { X.a <> A }
+unsafe() { X.a = A }
 
 
