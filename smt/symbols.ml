@@ -60,7 +60,7 @@ let compare s1 s2 =  match s1, s2 with
   | Int i1, Int i2 -> Hstring.compare i1 i2
   | Int _, _ -> -1
   | _ ,Int _ -> 1
-  | _  -> Pervasives.compare s1 s2
+  | _  -> Stdlib.compare s1 s2
   
 let equal s1 s2 = compare s1 s2 = 0
 

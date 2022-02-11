@@ -37,24 +37,48 @@ end)
 
 module SI = Set.Make (struct
     type t = int
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 module SLI = Set.Make (struct
     type t = int list
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 module TMap = Map.Make (Term)
 
-type state = int array
+module State : sig
+  type t
+  val make : int -> int -> t
+  val copy : t -> t
+  val length : t -> int
+  val get : t -> int -> int
+  val set : t -> int -> int -> unit
+  val fold_left : ('a -> int -> 'a) -> 'a -> t -> 'a
+  val iteri : (int -> int -> unit) -> t -> unit
+  val as_array : t -> int array
+end = struct
+  type t = int array
+  let copy a = Obj.(obj (with_tag abstract_tag (repr a)))
+  let make len elt = copy (Array.make len elt)
+  let length = Array.length
+  let get = Array.get
+  let set = Array.set
+  let fold_left = Array.fold_left
+  let iteri = Array.iteri
+  let as_array x = x
+end
 
+module Array = State
+
+type state = State.t
+let state_as_array = State.as_array
 
 type state_info = int HT.t
 
 let equal_state a1 a2 =
-  let n = Array.length a1 in
-  let n2 = Array.length a2 in
+  let n = State.length a1 in
+  let n2 = State.length a2 in
   if n <> n2 then false
   else
     let res = ref true in
@@ -217,7 +241,7 @@ let id_to_term env id =
 (* inefficient but only used for debug *)
 let state_to_cube env st =
   let i = ref 0 in
-  Array.fold_left (fun sa sti ->
+  State.fold_left (fun sa sti ->
     let sa = 
       if sti <> -1 then
 	let t1 = id_to_term env !i in
@@ -243,7 +267,7 @@ let swap a i j =
 let swap_c a (i,j) = swap a i j
 
 let apply_perm_state env st (_, p_vars, p_procs) =
-  let st' = Array.copy st in
+  let st' = State.copy st in
   List.iter (swap_c st') p_vars;
   for i = 0 to env.nb_vars - 1 do
     try let v = List.assoc st'.(i) p_procs in st'.(i) <- v
@@ -313,7 +337,7 @@ let apply_subst_in_place env st sigma =
   end
 
 let apply_subst env st sigma =
-  let st' = Array.copy st in
+  let st' = State.copy st in
   apply_subst_in_place env st' sigma;
   st'
 
@@ -326,7 +350,7 @@ let find_subst_for_norm env st =
   let met = ref [] in
   let remaining = ref env.proc_ids in
   let sigma = HI.create env.model_cardinal in
-  for i = 0 to Array.length st - 1 do
+  for i = 0 to State.length st - 1 do
     let v = st.(i) in
     match !remaining with
     | r :: tail ->
@@ -365,13 +389,13 @@ let find_subst_for_norm2 sigma env st =
   
 
 let normalize_state env st =
-  (* let old = Array.copy st in *)
+  (* let old = State.copy st in *)
   let sigma = find_subst_for_norm env st in
   apply_subst_in_place env st sigma (* ; *)
   (* find_subst_for_norm2 sigma env st *)
   (* ; *)
   (* let same = ref true in *)
-  (* for i = 0 to Array.length st - 1 do *)
+  (* for i = 0 to State.length st - 1 do *)
   (*   same := !same && st.(i) = old.(i) *)
   (* done; *)
   (* if not !same then eprintf "\nNormalize :@.%a@.->@.%a@." *)
@@ -631,7 +655,7 @@ let write_atom_to_states env sts = function
       let l = ref [] in
       for i2 = env.low_int_abstr to (if op = Lt then v2 - 1 else v2) do
         List.iter (fun st ->
-          let st = Array.copy st in
+          let st = State.copy st in
           st.(i1) <- i2;
           l := st :: !l
         ) sts
@@ -643,7 +667,7 @@ let write_atom_to_states env sts = function
       let l = ref [] in
       for i1 = (if op = Lt then v1 + 1 else v1) to env.up_int_abstr do
         List.iter (fun st ->
-          let st = Array.copy st in
+          let st = State.copy st in
           st.(i2) <- i1;
           l := st :: !l
         ) sts
@@ -668,7 +692,7 @@ let init_to_states env procs s =
   let l_inits = mkinits procs s in
   let sts =
     List.fold_left (fun acc init -> 
-      let st_init = Array.make nb (-1) in
+      let st_init = State.make nb (-1) in
       let sts = write_cube_to_states env st_init init in
       List.rev_append sts acc
     ) [] l_inits in
@@ -865,13 +889,13 @@ let rec apply_action env st sts' = function
   | St_ite (reqs, a1, a2) -> (* explore both branches if possible *)
       let sts'1 = 
         if check_reqs env st reqs then 
-          let sts' = List.map Array.copy sts' in 
+          let sts' = List.map State.copy sts' in
           apply_action env st sts' a1
         else [] in
       let sts'2 =
         if List.exists (fun req -> check_req env st (neg_req env req)) reqs
         then 
-          let sts' = List.map Array.copy sts' in
+          let sts' = List.map State.copy sts' in
           apply_action env st sts' a2
         else [] in
       begin
@@ -884,7 +908,7 @@ let rec apply_action env st sts' = function
   | _ (* St_ignore or St_arith when ignoring nums *) -> sts'
 
 let apply_actions env st acts =
-  let st' = Array.copy st in
+  let st' = State.copy st in
   List.fold_left (apply_action env st) [st'] acts
 
 
@@ -1181,10 +1205,7 @@ let shuffle d =
     let sond = List.sort compare nd in
     List.rev_map snd sond
 
-let no_scan_states env =
-  (* Prevent the GC from scanning the list env.states as it is going to be
-     kept in memory all the time. *)
-  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states
+let no_scan_states env = ()
 
 let finalize_search env =
   let st = HST.stats env.explicit_states in
@@ -1197,7 +1218,7 @@ let finalize_search env =
     printf "Buckets          : %d@." st.Hashtbl.num_buckets;
     printf "Max bucket size  : %d@." st.Hashtbl.max_bucket_length;
     printf "Bucket histogram : @?";
-    Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v )
+    Stdlib.Array.iteri (fun i v -> if v <> 0 then printf "[%d->%d]" i v )
       st.Hashtbl.bucket_histogram;
     printf "@.";
   end;
@@ -1443,7 +1464,7 @@ let fast_resist_on_trace ls =
 module SCand =
   Set.Make (struct
       type t = st_req * Atom.t
-      let compare (t,_) (t',_) = Pervasives.compare t t'
+      let compare (t,_) (t',_) = Stdlib.compare t t'
   end)
 
 
@@ -1492,10 +1513,10 @@ let int_of_term env t =
 
 let next_id env = env.pinf_int_abstr + 1
 
-let empty_state = [||]
+let empty_state = (Obj.magic [||] : state)
 
 let new_undef_state env =
-  Array.make env.nb_vars (-1)
+  State.make env.nb_vars (-1)
   (* env.states <- st :: env.states; *)
   (* eprintf "nb states : %d@." (List.length env.states); *)
   (* st *)
