@@ -18,7 +18,6 @@ open Options
 open Ast
 open Types
 open Atom
-open Pervasives
 
 module H = Hstring
 

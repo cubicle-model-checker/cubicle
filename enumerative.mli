@@ -35,9 +35,12 @@ val smallest_to_resist_on_trace : Node.t list -> Node.t list
 type env
 (** The type of environments for enumerative explorations *)
 
-type state = private int array
+type state
 (** The type of states, we allow states to be constructed from the outside by
     calling the function [new_undef_state]. *)
+
+(** Cast a state as an int array *)
+val state_as_array : state -> int array
 
 val print_state : env -> Format.formatter -> state -> unit
 (** Printing a state. It is decoded to an {!SAtom} in a very inefficient
