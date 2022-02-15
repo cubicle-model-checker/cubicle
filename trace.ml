@@ -542,11 +542,11 @@ end
 module Why3 = struct
     
 
-  module CompInt = struct type t = int let compare = Pervasives.compare end
+  module CompInt = struct type t = int let compare = Stdlib.compare end
 
   module NodeH = struct
     type t = Node.t
-    let compare n1 n2 = Pervasives.compare n1.tag n2.tag
+    let compare n1 n2 = Stdlib.compare n1.tag n2.tag
     let equal n1 n2 = n1.tag == n2.tag
     let hash n = n.tag
   end
@@ -1358,11 +1358,11 @@ end
 module Why3_INST = struct
     
 
-  module CompInt = struct type t = int let compare = Pervasives.compare end
+  module CompInt = struct type t = int let compare = Stdlib.compare end
 
   module NodeH = struct
     type t = Node.t
-    let compare n1 n2 = Pervasives.compare n1.tag n2.tag
+    let compare n1 n2 = Stdlib.compare n1.tag n2.tag
     let equal n1 n2 = n1.tag == n2.tag
     let hash n = n.tag
   end
@@ -1370,8 +1370,8 @@ module Why3_INST = struct
   module SPinst = Set.Make (struct
     type t = Node.t * Variable.subst
     let compare (n1, s1) (n2, s2) = 
-      let c = Pervasives.compare n1.tag n2.tag in
-      if c = 0 then Pervasives.compare s1 s2 else c
+      let c = Stdlib.compare n1.tag n2.tag in
+      if c = 0 then Stdlib.compare s1 s2 else c
   end)
 
   module SI = Set.Make(CompInt)

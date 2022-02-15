@@ -521,7 +521,7 @@ module Make (Options : sig val profiling : bool end) = struct
     uc
 
   module SInt = 
-    Set.Make (struct type t = int let compare = Pervasives.compare end)
+    Set.Make (struct type t = int let compare = Stdlib.compare end)
 
   let export_unsatcore2 cl =
     let s = 

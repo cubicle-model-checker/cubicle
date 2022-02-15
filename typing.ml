@@ -18,7 +18,7 @@ open Util
 open Ast
 open Types
 open Atom
-open Pervasives
+open Stdlib
 
 type error = 
   | UnknownConstr of Hstring.t

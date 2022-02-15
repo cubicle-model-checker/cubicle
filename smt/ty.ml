@@ -49,7 +49,7 @@ let compare t1 t2 =
     | Tsum (s1, _), Tsum(s2, _) ->
 	Hstring.compare s1 s2
     | Tsum _, _ -> -1 | _ , Tsum _ -> 1
-    | t1, t2 -> Pervasives.compare t1 t2
+    | t1, t2 -> Stdlib.compare t1 t2
 
 let print fmt ty = 
   match ty with
