@@ -21,7 +21,7 @@ if test "$OCAMLC" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlc.)
 fi
 
-MINOCAMLVERSION=4.03.0
+MINOCAMLVERSION=4.08.0
 OCAMLVERSION=`$OCAMLC -version`
 echo "OCaml version is $OCAMLVERSION"
 AX_COMPARE_VERSION([$OCAMLVERSION], [ge], [$MINOCAMLVERSION],
