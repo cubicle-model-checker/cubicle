@@ -23,7 +23,7 @@ See the enclosed file [LICENSE](LICENSE).
 Installation
 ------------
 
-To compile Cubicle you will need [OCaml](http://ocaml.org) version 4.03.0 (or
+To compile Cubicle you will need [OCaml](http://ocaml.org) version 4.08.0 (or
 newer) and issue:
 
     ./configure

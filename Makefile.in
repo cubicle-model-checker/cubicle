@@ -139,7 +139,7 @@ $(NAME).opt: $(MAINCMX)
 	$(if $(QUIET),@echo 'Linking $@' &&) \
 	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
 
-VERSION=1.1.2
+VERSION=1.2.0
 VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$(VERSION)")
 
 version.ml: config.status
