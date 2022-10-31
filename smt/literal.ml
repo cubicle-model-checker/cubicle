@@ -90,7 +90,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
   module H = Make_consed(V)
 
-  let compare a1 a2 = Pervasives.compare a1.tag a2.tag
+  let compare a1 a2 = Stdlib.compare a1.tag a2.tag
   let equal a1 a2 = a1 == a2
   let hash a1 = a1.tag
 

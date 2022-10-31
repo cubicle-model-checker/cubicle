@@ -227,14 +227,21 @@ let stop_tag t =
   in
   Printf.sprintf "[%sm" (assoc_style st)
         
+let start_tag = function
+  | Format.String_tag s -> start_tag s
+  | _ -> ""
+
+let stop_tag = function
+  | Format.String_tag s -> stop_tag s
+  | _ -> ""
 
 let add_colors formatter =
   pp_set_tags formatter true;
-  let old_fs = Format.pp_get_formatter_tag_functions formatter () in
-  Format.pp_set_formatter_tag_functions formatter
+  let old_fs = Format.pp_get_formatter_stag_functions formatter () in
+  Format.pp_set_formatter_stag_functions formatter
     { old_fs with
-      Format.mark_open_tag = start_tag;
-      Format.mark_close_tag = stop_tag }
+      Format.mark_open_stag = start_tag;
+      Format.mark_close_stag = stop_tag }
 
 let _ =
   if not nocolor then begin

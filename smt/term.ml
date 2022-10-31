@@ -54,7 +54,7 @@ and print_list fmt = function
   | t::l -> Format.fprintf fmt "%a,%a" print t print_list l
 
 let compare t1 t2 =
-  let c = Pervasives.compare t2.tag t1.tag in
+  let c = Stdlib.compare t2.tag t1.tag in
   if c = 0 then c else
   match (view t1).f, (view t2).f with
     | (Sy.True | Sy.False ), (Sy.True | Sy.False ) -> c

@@ -18,7 +18,7 @@ open Options
 open Ast
 open Types
 open Atom
-open Pervasives
+open Stdlib
 
 module H = Hstring
 

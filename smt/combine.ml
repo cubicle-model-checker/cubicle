@@ -61,7 +61,7 @@ struct
     if c = 0 then comparei a b else c
 
   and compare_tag a b = 
-    Pervasives.compare (theory_num a) (theory_num b)
+    Stdlib.compare (theory_num a) (theory_num b)
       
   and comparei a b = 
     match a, b with

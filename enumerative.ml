@@ -37,12 +37,12 @@ end)
 
 module SI = Set.Make (struct
     type t = int
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 module SLI = Set.Make (struct
     type t = int list
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 module TMap = Map.Make (Term)
@@ -1181,10 +1181,12 @@ let shuffle d =
     let sond = List.sort compare nd in
     List.rev_map snd sond
 
-let no_scan_states env =
+let no_scan_states _env =
   (* Prevent the GC from scanning the list env.states as it is going to be
      kept in memory all the time. *)
-  List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states
+  (* This is commented out for the moment as Obj.set_tag was removed in OCaml 5.00 *)
+  (* List.iter (fun s -> Obj.set_tag (Obj.repr s) (Obj.no_scan_tag)) env.states *)
+  ()
 
 let finalize_search env =
   let st = HST.stats env.explicit_states in
@@ -1443,7 +1445,7 @@ let fast_resist_on_trace ls =
 module SCand =
   Set.Make (struct
       type t = st_req * Atom.t
-      let compare (t,_) (t',_) = Pervasives.compare t t'
+      let compare (t,_) (t',_) = Stdlib.compare t t'
   end)
 
 
