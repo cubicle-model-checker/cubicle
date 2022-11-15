@@ -205,7 +205,7 @@ let specs =
     "<dir> set output directory for certificate traces to <dir>";
     (* Hidden options *)
     "-notyping", Arg.Set notyping, ""; (* Disable typing *)
-    "-sim", Arg.Set simulator, "simulator mode";
+    "-sim", Arg.Set simulator, " simulator mode";
   ]
 
 let alspecs = Arg.align specs

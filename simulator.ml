@@ -1,4 +1,4 @@
 
 
-let run () =
-  ()
+let run s =
+  exit 0

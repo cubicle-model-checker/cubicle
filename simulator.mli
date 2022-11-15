@@ -1,1 +1,1 @@
-val run : unit -> unit
+val run : Ast.t_system -> unit
