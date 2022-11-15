@@ -45,8 +45,8 @@ EXE = @EXE@
 INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
-BFLAGS = -dtypes -g $(INCLUDES) -annot
-OFLAGS = -dtypes -g $(INCLUDES) -annot
+BFLAGS = -dtypes -g $(INCLUDES) -annot -bin-annot
+OFLAGS = -dtypes -g $(INCLUDES) -annot -bin-annot
 
 REQBIB=nums.cma unix.cma functory.cma
 
@@ -119,7 +119,7 @@ CMO = version.cmo options.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \
-      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
+      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo simulator.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 

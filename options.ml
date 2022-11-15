@@ -81,6 +81,8 @@ let subtyping = ref true
 let notyping = ref false
 let noqe = ref false
 
+let simulator = ref false
+         
 let trace = ref NoTrace
 let set_trace = function
   | "alt-ergo" -> trace := AltErgoTr
@@ -203,6 +205,7 @@ let specs =
     "<dir> set output directory for certificate traces to <dir>";
     (* Hidden options *)
     "-notyping", Arg.Set notyping, ""; (* Disable typing *)
+    "-sim", Arg.Set simulator, "simulator mode";
   ]
 
 let alspecs = Arg.align specs
@@ -310,3 +313,5 @@ let set_js_mode b = js_mode := b
 
 (* Getters *)
 let js_mode () = !js_mode
+
+let simulator = !simulator

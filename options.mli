@@ -95,3 +95,5 @@ val js_mode : unit -> bool
 
 
 val set_js_mode : bool -> unit
+
+val simulator : bool
