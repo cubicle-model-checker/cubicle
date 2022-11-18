@@ -5,9 +5,9 @@ open Util
 
 (*  NOTES: 
    Cas particuier : dégager les @MTrue et remplacer par true
-   Il y a sûrement un moyen de factoriser tous les fprintf out_file .... et le remplacer par une seule variable que l'on va set une bonne fois pour toute
-   La méthode actuelle fonctionne t-elle réellement sur des transitions sans arguments ??
-   Les variables qui ont un nom qui commence par une majuscule ne fonctionnent pas -> Donc toutes en cubicle
+   Factoriser tous les (fprintf out_file)
+   Varifier que la méthode actuelle fonctionne t-elle réellement sur des transitions sans arguments
+   Les variables cubicle commencent par une majuscule, il faut le changer.
 *)
 
 (* Variables globales utilisées *)
@@ -40,10 +40,8 @@ let write_types out_file t_def =
   List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @M bool qu'on ne va pas utiliser*)
   Printf.fprintf out_file "\n"
   
-(* Déclaration des variables 
-* PREMIERE ETAPE : Déclarer chaque variable avec le bon nom; Mettre comme valeur initiale une valeur random parmi toutes les valeurs que peux prendre ce type   
-* On peut commencer par les types simple (Int, Bool, ...). Les types énuméré viennent plus tard, il vont nécéssiter de mémoriser les valeurs défini pour un type énuméré
-*)
+(* Déclaration des variables *)
+
 let write_vars out_file s =
   let write_global (loc, name, t) =
     Printf.fprintf out_file "let %s = %s" (Hstring.view name) (get_value_for_type t);
