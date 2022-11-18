@@ -7,10 +7,20 @@ open Util
    Cas particuier : dégager les @MTrue et remplacer par true
    Il y a sûrement un moyen de factoriser tous les fprintf out_file .... et le remplacer par une seule variable que l'on va set une bonne fois pour toute
    La méthode actuelle fonctionne t-elle réellement sur des transitions sans arguments ??
-   Les variables qui ont un nom qui commence par une majuscule ne fonctionnent pas
+   Les variables qui ont un nom qui commence par une majuscule ne fonctionnent pas -> Donc toutes en cubicle
 *)
 
+(* Variables globales utilisées *)
+
 let tmp_file_name = "sim_tmp.ml"
+
+let get_value_for_type ty = 
+  match (Hstring.view ty) with 
+  | "int" -> "0"
+  | "real" -> "0."
+  | "bool" -> "true"
+  | "proc" -> "get_random_proc ()"
+  | _ -> "On doit ici prendre un array de toute les valeurs tu type énuméré et en prendre un random dedans... -> On doit donc stocker les déclarations de types"
 
 (* Fonctions d'aide *)
 
@@ -30,29 +40,27 @@ let write_types out_file t_def =
   List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @M bool qu'on ne va pas utiliser*)
   Printf.fprintf out_file "\n"
   
-(* Déclaration des variables *)
-let write_vars out_file ts =
-  let write_global global =
-    Printf.fprintf out_file "let %s = " (Hstring.view global);
+(* Déclaration des variables 
+* PREMIERE ETAPE : Déclarer chaque variable avec le bon nom; Mettre comme valeur initiale une valeur random parmi toutes les valeurs que peux prendre ce type   
+* On peut commencer par les types simple (Int, Bool, ...). Les types énuméré viennent plus tard, il vont nécéssiter de mémoriser les valeurs défini pour un type énuméré
+*)
+let write_vars out_file s =
+  let write_global (loc, name, t) =
+    Printf.fprintf out_file "let %s = %s" (Hstring.view name) (get_value_for_type t);
     Printf.fprintf out_file "\n"
   in
-  let write_const const = 
-    Printf.fprintf out_file "let %s = " (Hstring.view const);
+  let write_const (loc, name, t) = 
+    Printf.fprintf out_file "let %s = %s" (Hstring.view name) (get_value_for_type t);
     Printf.fprintf out_file "\n"
   in
-  let write_array array =
-    Printf.fprintf out_file "let %s = Array.make (get_nb_proc ()) 0" (Hstring.view array);
+  let write_array (loc, name, t) =
+    Printf.fprintf out_file "let %s = Array.make (get_nb_proc ()) 0" (Hstring.view name); (* Ici le cas va être complexe ^^ *)
     Printf.fprintf out_file "\n"
   in
-  (*
-  let print_tester (to_print_list, dnf) =
-    Printf.fprintf out_file "%s" (string_of_int (List.length to_print_list)); 
-    List.iter (print_hstring out_file) to_print_list
-  in
-  *)
-  List.iter write_global ts.t_globals;
-  List.iter write_const ts.t_consts;
-  List.iter write_array ts.t_arrays
+  
+  List.iter write_global s.globals;
+  List.iter write_const s.consts;
+  List.iter write_array s.arrays
 
   
 (* Déclaration des transitions *)
@@ -78,7 +86,7 @@ let run ts s =
   let out_file = open_out tmp_file_name in
   Printf.fprintf out_file "%s\n" "open Sim_usual";
   write_types out_file s.type_defs;
-  write_vars out_file ts;
+  write_vars out_file s;
   write_transitions out_file ts.t_trans;
   close_out out_file;
   exit 0
