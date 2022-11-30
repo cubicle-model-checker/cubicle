@@ -1,5 +1,8 @@
-let nb_proc = ref 1000 (* Note : La valeur initiale est la valeur maximale autorisée actuellement *)
+
+
+let nb_proc = ref 1000 (* NOTE : La valeur initiale est la valeur maximale autorisée actuellement *)
 let get_nb_proc () = !nb_proc
+
 
 let rec find_ieme l i =
   match i with
@@ -21,9 +24,8 @@ let print_list_int l =
   List.iter (fun i -> Format.printf "%i " i) l;
   Format.print_newline ()
 
-(* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément *)
-(*
-* Note : C'est actuellement très crade et donc a refaire. 
+(* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément
+* TODO : Nettoyer pour avoir un code plus efficace, probable grande perte de performance ici 
 *)
 let rec get_args n =
   if n < 0 || n > (get_nb_proc ()) then assert false else
@@ -35,7 +37,7 @@ let rec get_args n =
   in
 
   match n with
-  | 0 -> []
+  | 0 -> [[]]
   | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
   | _ -> let prec = get_args (n-1) in sub_get_args 0 prec []
 
@@ -75,7 +77,7 @@ type event =
   | Button_up of char
   | None
 
-(** NOTE : Pourrait on utiliser un Set ici ? *)
+(** TODO : Utiliser un set ici. *)
 let event_list = ref [None]
 
 let event_to_string e=
@@ -113,14 +115,17 @@ let get_possible_action_for_arg trans_list arg =
   in
   sub_gpafa trans_list []
 
+(*
+* TODO : Pour gagner en performance, il serait possible de ne calculer les arg_list qu'une seule fois plutôt qu'a chaque boucle.
+*)
 let step () = 
   let possible_actions = 
     let returned_list = ref [] in
     for i = 0 to get_nb_proc () do
       if Hashtbl.mem req_aq_table i then
-      let arg_list = get_args i in
-      let trans_list = Hashtbl.find req_aq_table i in
-      List.iter (fun arg -> returned_list := (get_possible_action_for_arg trans_list arg)@(!returned_list)) arg_list
+        let arg_list = get_args i in
+        let trans_list = Hashtbl.find req_aq_table i in
+        List.iter (fun arg -> returned_list := (get_possible_action_for_arg trans_list arg)@(!returned_list)) arg_list
     done;
     !returned_list
   in
@@ -131,3 +136,4 @@ let step () =
     Format.printf "%s " name;
     print_list_int arg
     )
+  else Format.printf "Pas d'action possible\n"

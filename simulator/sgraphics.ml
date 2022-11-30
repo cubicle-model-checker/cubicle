@@ -1,5 +1,10 @@
-open Cubicle_usual
+open Shelp
 open Graphics
+
+(* 
+* TODO : écrire l'état des variables globales quelque part
+* TODO : écrire l'état de toutes les variables d'un proc dans le proc correspondant
+*)
 
 (* Settings *)
 
