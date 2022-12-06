@@ -41,6 +41,7 @@ let rec get_args n =
   | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
   | _ -> let prec = get_args (n-1) in sub_get_args 0 prec []
 
+(*
 let rec combi n =
   if n < 0 then assert false else
   let rec sub_combi cur l l_returned =
@@ -49,10 +50,10 @@ let rec combi n =
     in
   
     match n with
-    | 0 -> []
+    | 0 -> [[]]
     | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
     | _ -> let prec = combi (n-1) in sub_combi 0 prec []
-
+*)
 (* Transitions *)
 type transition = string*(int list -> bool) * (int list -> unit)
 
@@ -92,8 +93,7 @@ let exist_event e = List.exists (fun e' -> e = e') (!event_list)
 let add_event e =
   if not (exist_event e) then
     (
-      Format.printf "Added event %s" (event_to_string e);
-      Format.print_newline ();
+      Printf.printf "Added event %s\n%!" (event_to_string e);
       event_list := (!event_list)@[e] (* La raison d'utiliser un add est que c'est plus pratique si on veut changer le fonctionnement des event*)
     )
 
@@ -117,15 +117,18 @@ let get_possible_action_for_arg trans_list arg =
 
 (*
 * TODO : Pour gagner en performance, il serait possible de ne calculer les arg_list qu'une seule fois plutôt qu'a chaque boucle.
+* TODO : On peut aussi gagner en remplacer le for i = 0 to get_nb_proc itérer sur les keys de la hashtbl rreq_aq_table
 *)
 let step () = 
   let possible_actions = 
     let returned_list = ref [] in
     for i = 0 to get_nb_proc () do
       if Hashtbl.mem req_aq_table i then
-        let arg_list = get_args i in
-        let trans_list = Hashtbl.find req_aq_table i in
-        List.iter (fun arg -> returned_list := (get_possible_action_for_arg trans_list arg)@(!returned_list)) arg_list
+        begin
+          let arg_list = get_args i in
+          let trans_list = Hashtbl.find req_aq_table i in
+          List.iter (fun arg -> returned_list := (get_possible_action_for_arg trans_list arg)@(!returned_list)) arg_list
+        end;
     done;
     !returned_list
   in
@@ -134,6 +137,8 @@ let step () =
     let (arg, ac, name) = get_random_in_list possible_actions in
     ac arg;
     Format.printf "%s " name;
-    print_list_int arg
+    print_list_int arg;
+    Format.print_newline ()
     )
-  else Format.printf "Pas d'action possible\n"
+  else Printf.printf "Pas d'action possible\n%!"
+

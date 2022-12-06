@@ -1,4 +1,5 @@
 open Shelp
+open Stmp
 open Unix
 
 let _ =
@@ -7,7 +8,8 @@ let _ =
   let sleep_time = float_of_string Sys.argv.(2) in
   let last_time = ref (time ()) in
   Sgraphics.init ();
-    
+  Stmp.init ();
+
   while true do
     Sgraphics.handle_input ();
     
