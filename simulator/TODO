@@ -1,0 +1,38 @@
+## TODO
+
+# Compilateur
+
+- [.] "Applatir" les ac, en regroupant les différentes étapes
+- [.] Essayer de factoriser les boucles for dans l'init
+- [.] Implémenter l'Union-Find dans l'init
+- [.] Il faut factoriser tous les printf out_file, on peut sûrement écrire un shortcut ?
+- [.] écrire une meilleure documentation pour les fonctions. écrire un fichier sutils.mli avec une bonne déclaration des fonctions
+- [.] Trouver une meilleure structure d'organisation des fichiers. On veut probablement :
+		simulator/
+    |	out/
+    |	|	sutils.ml 
+    |	|	sgraphics.ml 
+    |	|	smain.ml 
+    |	|	stmp.ml 
+    |	compiler/
+    |	|	cutils.ml 
+    |	|	simulator.ml 
+  
+  Ou quelque chose du style.
+- [.] On peut essayer d'attaquer quelques trucs plus compliqué que simplement l'égalité et essayer de faire des comparaison pour des entiers simples
+- [.] Regarder comment les constantes sont actuellement gérée par le compilateur -> On peut les considérer comme une variable normale qu'on initialise qu'une seule fois
+	-> Pourquoi est-ce que ça change vraiment quelquechose de calculer la pré-image pour une constante par rapport a une variable qui ne change jamais ? Est-ce que on ne peut pas considérer une variable qui ne change jamais comme une variable ? Cubicle le fait-il déjà ?
+- [.] On doit pouvoir faire un List.filter dans le get_possible_action_for_arg
+- [.] En y réfléchissant, toutes les Acess doivent dépendre des arguments de l'init. Les arguments de l'init n'ont d'influence que sur les acess tableau 
+- [.] Réfléchire a la situation ou on a une transition X:= Y et Y:= X. Cette transition n'est pas faisable avec le fonctionnement immédiat. On doit stocker les nouvelles valeurs puis les remplacer en faisant les nX = Y let nY = x puis X := nX et Y := nY
+- [.] écrire ureq pour transition
+
+# Simulateur
+
+- [.] STmp : Pré-Calculer les combinaisons possible 
+- [.] Initialiser les arrays dans le init, pour qu'ils soient uniquement de la taille nécéssaire (économie de mémoire)
+- [.] Remplacer la boucle "for" dans le step par une itération sur les clefs de la Hashtbl, si possible
+- [.] Utiliser un 'set' pour les events
+- [.] Utiliser un fold_left pour get_possible_action_for_arg
+- [.] Remplacer le "args" par un array plutôt qu'une liste pour gagner un peu de performance
+

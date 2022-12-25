@@ -1,8 +1,5 @@
-
-
 let nb_proc = ref 1000 (* NOTE : La valeur initiale est la valeur maximale autorisée actuellement *)
 let get_nb_proc () = !nb_proc
-
 
 let rec find_ieme l i =
   match i with
@@ -24,9 +21,7 @@ let print_list_int l =
   List.iter (fun i -> Format.printf "%i " i) l;
   Format.print_newline ()
 
-(* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément
-* TODO : Nettoyer pour avoir un code plus efficace, probable grande perte de performance ici 
-*)
+(* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément *)
 let rec get_args n =
   if n < 0 || n > (get_nb_proc ()) then assert false else
   let rec sub_get_args cur prec returned = 
@@ -55,9 +50,9 @@ let rec combi n =
     | _ -> let prec = combi (n-1) in sub_combi 0 prec []
 *)
 (* Transitions *)
-type transition = string*(int list -> bool) * (int list -> unit)
+type transition = string*(int list -> bool) * (int list -> unit) (* (nom_de_la_transition, transition_req, transition_ac) *)
 
-let req_aq_table : (int, transition list) Hashtbl.t = Hashtbl.create (get_nb_proc ())
+let req_aq_table : (int, transition list) Hashtbl.t = Hashtbl.create (get_nb_proc ()) (* La req_aq_table associe un int (nombre d'arguments) a toutes les transitions prenant ce nombre d'argument *)
 
 let add_req_acc nb_arg trans = 
   let cur = if Hashtbl.mem req_aq_table nb_arg then Hashtbl.find req_aq_table nb_arg else [] in
@@ -115,10 +110,6 @@ let get_possible_action_for_arg trans_list arg =
   in
   sub_gpafa trans_list []
 
-(*
-* TODO : Pour gagner en performance, il serait possible de ne calculer les arg_list qu'une seule fois plutôt qu'a chaque boucle.
-* TODO : On peut aussi gagner en remplacer le for i = 0 to get_nb_proc itérer sur les keys de la hashtbl rreq_aq_table
-*)
 let step () = 
   let possible_actions = 
     let returned_list = ref [] in
@@ -135,8 +126,8 @@ let step () =
   if List.length possible_actions > 0 then
     (
     let (arg, ac, name) = get_random_in_list possible_actions in
-    ac arg;
-    Format.printf "%s " name;
+    ac arg;                     (* Effectue l'action *)
+    Format.printf "%s " name;   (* Affiche une trace de l'action dans la sortie standard*)
     print_list_int arg;
     Format.print_newline ()
     )

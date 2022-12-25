@@ -5,34 +5,17 @@ open Atom
 open Printf
 
 (* NOTES: 
-
   TODO : Implémentation des update d'array 
-  TODO : Correction de l'implémentation d'init avec les constantes : Actuellement les constantes sont considérée deux fois pour les constantes entière ?
   TODO : Implémentation de l'union find dans l'init
   TODO : Tenter de compiler un programme cubicle avec uniquement des attribution non déterministe dans l'init et regarder le résultat 
   TODO : Essayer de factoriser les boucles for dans l'init
-  TODO : Trouver une meilleure structure d'organisation des fichiers. On veut probablement :
-    simulator/
-      out/
-        sutils.ml 
-        sgraphics.ml 
-        smain.ml 
-        stmp.ml 
-      compiler/
-        cutils.ml 
-        simulator.ml 
-  
-  Ou quelque chose du style. 
-  Réfléchire également a un meilleur moyen que de devoir make soit même le stmp.ml
-
 *)
 
 (* Variables globales utilisées *)
 
-let tmp_file_name = "simulator/stmp.ml"        (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
-let out_file = open_out tmp_file_name   
-let var_prefix = "v"                    (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule. *)
-
+let tmp_file_name = "simulator/stmp.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
+let out_file = open_out tmp_file_name  
+let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule. *)
 
 (* Fonctions d'aides *)
 let get_var_name v = Format.sprintf "%s%s" var_prefix (Hstring.view v)
@@ -44,7 +27,7 @@ let get_value_for_type ty ty_defs =
   | "int" | "proc" -> "0"
   | "real" -> "0."
   | "bool" | "mbool" -> "true"
-  | _ -> Hstring.view (List.hd (Hashtbl.find ty_defs ty)) (* TODO : On peut ajouter une erreur ici si Hashtbl.find throw not_found *) 
+  | _ -> Hstring.view (List.hd (Hashtbl.find ty_defs ty)) (* Note : Hashtbl.find ne devrait pas throw Not_Found car ast valide. *) 
 
 
 let hstring_list_to_string hsl =
@@ -67,7 +50,6 @@ let print_cs cs =
       fprintf out_file "%d" (tmp*v)
   | _ -> assert false)
   cs 
-
 
 let write_term = function
   | Elem(g_var, Glob) -> fprintf out_file "%s" (get_var_name g_var)
@@ -102,6 +84,8 @@ let write_atom_with_fun first_term mid_term end_term f = function
         write_term t2;
         fprintf out_file "%s" end_term
         end
+    | True -> printf "true ?\n"
+    | False -> printf "fales ? \n"
     | _ -> ()
 
 let write_atom_with_fun_dep t_from_atom f atom =
@@ -121,25 +105,6 @@ let get_random_for_type ty ty_defs =
   | _-> 
       let possible = Hashtbl.find ty_defs ty in 
       Format.sprintf "get_random_in_list %s" (hstring_list_to_string possible)
-
-(* init
-   simple analyse de dépendance avec union find 
-   sans array, sans arith
-
-  gérer uniquement les égalité et les random
-  gérer les formules avec les forall 
-
-  variable aléatoire en finction du type
-
-  Transition : ignorer les lets
-  Gérer les UCase plus tard
-  nondets utilisé uniquelent pour les processus
-
-  switch : cascade de if plutôt qu'un match
-
-  look: fuzzing cubicle pour ne pas choisir les prochaines étapes par rapport au random
-
-*)
 
 (* Déclaration de l'init *)
 let write_init (vars, dnf) g_vars ty_defs =
@@ -262,7 +227,8 @@ let write_transitions trans_list ty_defs g_vars =
         | Comp(Access(_,_), _, _) | Comp(_, _, Access(_,_)) -> " && "," = ",""
         | _ -> " && (!",") = ",""
         in
-        SAtom.iter (write_atom_with_dep choose_t_from_atom_other) req_without_first
+        SAtom.iter (write_atom_with_dep choose_t_from_atom_other) req_without_first;
+
     end; 
 
     (* Write Ac *)
@@ -282,8 +248,7 @@ let write_transitions trans_list ty_defs g_vars =
       fprintf out_file ";\n\t\t";
       write_assign tr
     in
-    begin
-      match (List.length trans_info.tr_assigns == 0) with (* TODO  : Ici on peut économiser légerement en faisant un is_empty plutôt que de regarder tout le count *)
+    begin match (List.length trans_info.tr_assigns == 0) with (* TODO  : Ici on peut économiser légerement en faisant un is_empty plutôt que de regarder tout le count *)
       | true -> fprintf out_file "()"
       | false -> 
         let assign_hd = List.hd trans_info.tr_assigns in
@@ -317,17 +282,28 @@ let write_transitions trans_list ty_defs g_vars =
     (* Ac_Updates *)
     fprintf out_file "\tlet update () = \n\t\t";
 
-    let write_upd (_, g_var, l_varlist, swts) = () in 
+    let write_upd up =
+      fprintf out_file "let val = "; (* Déplier les switch ici pour associer une valeur a val*)
+      printf "%d" (List.length up.up_arg);
+      fprintf out_file "in %s.(%s) <- val\n" (get_var_name up.up_arr) (Hstring.view (List.hd up.up_arg));
+      List.iter (fun (satom, term) -> write_term term; fprintf out_file " "; SAtom.iter (write_atom "" "" "\n" ) satom) up.up_swts;
       
+
+    in 
+    let write_upd_and up = write_upd up in 
 
     begin match (List.length trans_info.tr_upds == 0) with 
     | true -> fprintf out_file "()"
-    | _ -> fprintf out_file "()"
+    | _ -> 
+        let upd_hd = List.hd trans_info.tr_upds in 
+        let upd_tl = List.tl trans_info.tr_upds in 
+        write_upd upd_hd;
+        List.iter write_upd_and upd_tl
     end;
     fprintf out_file "\n\tin\n";
 
     (* End *)
-    fprintf out_file " assign (); nondets ()";
+    fprintf out_file " assign (); nondets (); update ()";
     
     (* Write transition for table *)
     fprintf out_file "\nlet %s = (\"%s\", req_%s, ac_%s) \n\n" trans_name trans_name trans_name trans_name
