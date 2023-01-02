@@ -1,64 +1,77 @@
 open Shelp
-type t = A | B
 
-let vX = ref A
-let vY = ref A
-let vZ = ref 0
-let vE = ref 0
-let vF = ref true
-let vHello = Array.make (get_nb_proc ()) A
-let vBonjour = Array.make (get_nb_proc ()) A
+let vTurn = ref 0
+let vWant = Array.make (get_nb_proc ()) true
+let vCrit = Array.make (get_nb_proc ()) true
 
 let init () = 
-	vX := A;
-	vZ := 2;
-	vY := get_random_in_list [A; B];
-	vE := get_random_proc ();
-	vF := Random.bool ()
-let req_t2 args = 
-	let i = find_ieme args 0 in
-	(!vX) = B && (!vZ) = 2
-let ac_t2 args = 
-	let i = find_ieme args 0 in
-	let assign () =
-		vX := A
-	in
-	let nondets () =
-		vY := get_random_in_list [A; B]
-	in
-	let update () = 
-		()
-	in
- assign (); nondets (); update ()
-let t2 = ("t2", req_t2, ac_t2) 
+	for z = 0 to get_nb_proc () do 
+		vWant.(z) <- false
+	done;
+	for z = 0 to get_nb_proc () do 
+		vCrit.(z) <- false
+	done;
+	vTurn := get_random_proc ();
+	()
 
-let req_t1 args = 
+let req_req args = 
 	let i = find_ieme args 0 in
-	let j = find_ieme args 1 in
-	(!vX) = A
-let ac_t1 args = 
+	vWant.(i) = false
+
+let ac_req args = 
 	let i = find_ieme args 0 in
-	let j = find_ieme args 1 in
-	let assign () =
-		vX := B;
-		vY := A;
-		vE := i
-	in
-	let nondets () =
-		()
-	in
-	let update () = 
-		let val = in vHello.(_j1) <- val
-A _j1j
-vHello.(_j1) let val = in vBonjour.(_j2) <- val
-B _j2i
-vBonjour.(_j2) 
-	in
- assign (); nondets (); update ()
-let t1 = ("t1", req_t1, ac_t1) 
+	for j = 0 to (get_nb_proc ()) do 
+ 		let newval = 
+			if i=j then true
+			else vWant.(j)
+		in vWant.(j) <- newval
+	done; 
+	()
+
+let req = ("req", req_req, ac_req) 
+
+let req_enter args = 
+	let i = find_ieme args 0 in
+	(!vTurn) = i && vWant.(i) = true && vCrit.(i) = false
+
+let ac_enter args = 
+	let i = find_ieme args 0 in
+	for j = 0 to (get_nb_proc ()) do 
+ 		let newval = 
+			if i=j then true
+			else vCrit.(j)
+		in vCrit.(j) <- newval
+	done; 
+	()
+
+let enter = ("enter", req_enter, ac_enter) 
+
+let req_exit args = 
+	let i = find_ieme args 0 in
+	vCrit.(i) = true
+
+let ac_exit args = 
+	let i = find_ieme args 0 in
+	vTurn := get_random_proc ();
+	for j = 0 to (get_nb_proc ()) do 
+ 		let newval = 
+			if i=j then false
+			else vCrit.(j)
+		in vCrit.(j) <- newval
+	done; 
+	for j = 0 to (get_nb_proc ()) do 
+ 		let newval = 
+			if i=j then false
+			else vWant.(j)
+		in vWant.(j) <- newval
+	done; 
+	()
+
+let exit = ("exit", req_exit, ac_exit) 
 
 
 let build_table = 
-	add_req_acc 1 t2;
-	add_req_acc 2 t1;
+	add_req_acc 1 req;
+	add_req_acc 1 enter;
+	add_req_acc 1 exit;
 

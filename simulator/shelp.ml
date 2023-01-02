@@ -22,33 +22,28 @@ let print_list_int l =
   Format.print_newline ()
 
 (* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément *)
+let computed_args = Hashtbl.create 124 
+
 let rec get_args n =
-  if n < 0 || n > (get_nb_proc ()) then assert false else
-  let rec sub_get_args cur prec returned = 
-    let tmp_returned' = (List.map (fun l_part -> if cur > List.hd l_part then l_part@[cur] else []) prec) in
-    let tmp_tmp_returned' = List.filter (fun l -> List.length l > 0) tmp_returned' in
-    let returned' = tmp_tmp_returned'@returned in
-    if cur < (get_nb_proc () - 1) then sub_get_args (cur+1) prec returned' else returned'
-  in
+  try Hashtbl.find computed_args n with Not_found ->
+    (
+      if n < 0 || n > (get_nb_proc ()) then assert false else
+        let rec sub_get_args cur prec returned = 
+        let tmp_returned' = (List.map (fun l_part -> if cur > List.hd l_part then l_part@[cur] else []) prec) in
+        let tmp_tmp_returned' = List.filter (fun l -> List.length l > 0) tmp_returned' in
+        let returned' = tmp_tmp_returned'@returned in
+        if cur < (get_nb_proc () - 1) then sub_get_args (cur+1) prec returned' else returned'
+      in
 
-  match n with
-  | 0 -> [[]]
-  | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
-  | _ -> let prec = get_args (n-1) in sub_get_args 0 prec []
-
-(*
-let rec combi n =
-  if n < 0 then assert false else
-  let rec sub_combi cur l l_returned =
-  let l_returned' = (List.map (fun l_part -> cur::l_part) l)@l_returned in
-    if cur < (get_nb_proc () - 1) then sub_combi (cur+1) l l_returned' else l_returned'
-    in
-  
-    match n with
-    | 0 -> [[]]
-    | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
-    | _ -> let prec = combi (n-1) in sub_combi 0 prec []
-*)
+      match n with
+      | 0 -> [[]]
+      | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
+      | _ -> 
+          let prec = get_args (n-1) in 
+          let result = sub_get_args 0 prec [] in 
+          Hashtbl.add computed_args n result;
+          result
+    )
 (* Transitions *)
 type transition = string*(int list -> bool) * (int list -> unit) (* (nom_de_la_transition, transition_req, transition_ac) *)
 
@@ -113,6 +108,7 @@ let get_possible_action_for_arg trans_list arg =
 let step () = 
   let possible_actions = 
     let returned_list = ref [] in
+    (* TODO : Utiliser un Hashtbl.iter ici plutôt qu'une boucle for. Mettre le arg_list avant en le pré-calculant *)
     for i = 0 to get_nb_proc () do
       if Hashtbl.mem req_aq_table i then
         begin
