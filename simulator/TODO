@@ -2,7 +2,6 @@
 
 # Compilateur
 
-- [.] Il faudrait factoriser tous les fprintf out_file, on peut sûrement écrire un shortcut ?
 - [.] écrire un fichier sutils.mli avec une bonne déclaration des fonctions
 - [.] Trouver une meilleure structure d'organisation des fichiers. On veut probablement :
 		simulator/
@@ -16,12 +15,13 @@
 		| | ccompiler.ml
   
   Ou quelque chose du style.
-- [.] On peut essayer d'attaquer quelques trucs plus compliqué que simplement l'égalité et essayer de faire des comparaison pour des entiers simples
-- [.] Regarder comment les constantes sont actuellement gérée par le compilateur -> On peut les considérer comme une variable normale qu'on initialise qu'une seule fois
-- [.] Réfléchire a la situation ou on a une transition X := Y et Y:= X. Cette transition n'est pas faisable avec le fonctionnement immédiat. On doit stocker les nouvelles valeurs puis les remplacer en faisant les nX = Y let nY = x puis X := nX et Y := nY
+- [.] Réfléchire a la situation ou on a une transition X := Y et Y:= X. Cette transition n'est pas faisable avec le fonctionnement immédiat. 
+	On doit stocker les nouvelles valeurs puis les remplacer en faisant les nX = Y let nY = x puis X := nX et Y := nY
 - [.] écrire ureq pour transition
-- [.] Compiler les matrices : Nécéssite de filtrer les boucles for
+- [.] Union-Find pour les matrices/array dans l'init - Unir également par les var_list pour permettre d'imbriquer les boucles for correctement.
 - [.] Initialisation non déterministe des array ?
+- [.] Implémenter le if then else
+- [.] Meilleure tabulation si possible
 
 # Simulateur
 
