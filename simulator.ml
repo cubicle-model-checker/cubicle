@@ -36,6 +36,16 @@ let get_value_for_type ty ty_defs =
   | "bool" | "mbool" -> "true"
   | _ -> Hstring.view (List.hd (Hashtbl.find ty_defs ty)) (* Note : Hashtbl.find ne devrait pas throw Not_Found car ast valide. *) 
 
+let mconst_is_float mconst g_vars  = 
+  MConst.exists 
+  (
+    fun k v -> match k with 
+    | ConstReal(_) -> true 
+    | ConstName(n) -> (try ((Hstring.view (Hstring.HMap.find n g_vars)) = "real") with Not_found -> false)
+    | _ -> false
+  ) 
+  mconst
+
 let deplier_var_list var_list = 
   List.fold_left (fun prev v -> sprintf "%s.(%s)" prev (Hstring.view v)) "" var_list
 
@@ -58,16 +68,29 @@ let print_const cs = pfile "%s" (const_to_string cs)
 let mconst_to_string cs =
   MConst.fold (fun k v prev -> sprintf "%s%s" (const_to_string k) prev) cs ""
 
-let print_mconst = fun cs -> pfile "%s" (mconst_to_string cs)
+let const_ref_to_string = function
+  | ConstInt n -> sprintf "%s" (Num.string_of_num n)
+  | ConstReal n -> sprintf "%s." (Num.string_of_num n)
+  | ConstName n -> sprintf "!(%s)" (get_var_name n)
 
-let print_term = function
-  | Elem(g_var, Glob) -> pfile "%s" (get_var_name g_var)
+let mconst_ref_to_string cs = 
+  MConst.fold (fun k v prev -> sprintf "%s%s" (const_ref_to_string k) prev) cs ""
+
+let print_mconst = fun cs -> pfile "%s" (mconst_to_string cs)
+let print_mconst_ref = fun cs -> pfile "%s" (mconst_ref_to_string cs)
+
+let rec print_term g_vars = function
+  | Elem(g_var, Glob) -> pfile "!(%s)" (get_var_name g_var)
   | Elem(var, _) -> pfile "%s" (get_constr_name var)
-  | Const(c) -> print_mconst c
+  | Const(c) -> print_mconst_ref c
   | Access(g_var, var_list) -> 
       pfile "%s" (get_var_name g_var); 
       List.iter (fun var -> pfile ".(%s)" (Hstring.view var)) var_list
-  | _ -> () 
+  | Arith(t, c) -> 
+      print_term g_vars t; 
+      let op = if (mconst_is_float c g_vars) then "+." else "+"  in
+      pfile " %s " op; 
+      print_mconst_ref c
 
 let get_random_for_type ty ty_defs =
   match (Hstring.view ty) with
@@ -245,15 +268,16 @@ let write_transitions trans_list ty_defs g_vars =
     in
     let print_atom = function
     | Comp(t1, op, t2) -> 
-      print_term t1;
+      print_term g_vars t1;
       print_op op;
-      print_term t2;
-      pfile " && "
-    | True -> pfile "true && "
-    | False -> pfile "false && "
+      print_term g_vars t2;
+    | True -> pfile "true"
+    | False -> pfile "false"
     | _ -> ()
     in
-    SAtom.iter print_atom trans_info.tr_reqs;
+    let print_atom_and atom = print_atom atom; pfile " && " in
+    pfile "\t";
+    SAtom.iter print_atom_and trans_info.tr_reqs;
     pfile "true\n\n";
 
     (* Write Ac *)
@@ -261,12 +285,31 @@ let write_transitions trans_list ty_defs g_vars =
     write_args ();
 
     (* Ac_Assigne *)
+    let print_switch swts = 
+      let print_switch_sub last (satom, term) = 
+        if not last then   
+        begin
+          pfile "if ";
+          SAtom.iter (print_atom_and) satom;
+          pfile "true then "
+        end;
+        print_term g_vars term;
+        pfile "\n";
+        if not last then pfile "\t\t\telse "
+      in
+      let reved = List.rev swts in
+      let last_swts = List.hd reved in
+      let swts_list = List.rev (List.tl reved) in
+      List.iter (print_switch_sub false) swts_list;
+      print_switch_sub true last_swts;
+    in
+
     let write_assign (var_to_updt, new_value) =
       pfile "\t%s := " (get_var_name var_to_updt);
       begin
       match new_value with
-        | UTerm(t) -> print_term t 
-        | _ -> () (* TODO : Assignations par swts *)
+        | UTerm(t) -> print_term g_vars t 
+        | UCase(swts) -> print_switch swts
       end ;
       pfile ";\n";
     in
@@ -279,37 +322,11 @@ let write_transitions trans_list ty_defs g_vars =
     List.iter write_nondet trans_info.tr_nondets;
 
     (* Ac_Updates *)
-
-    let print_atom = function  
-      | Comp(t1, Eq, t2) -> 
-          begin
-          print_term t1;
-          pfile "=";
-          print_term t2
-          end
-      | _ -> ()
-    in 
-    let write_switch last (satom, term) =
-      if not last then   
-        (
-        pfile "if ";
-        SAtom.iter (print_atom) satom;
-        pfile " then "
-        );
-        print_term term;
-        pfile "\n";
-        if not last then 
-        pfile "\t\t\telse "
-    in
     let write_upd up =
       List.iter (fun arg -> pfile "\tfor %s = 0 to (get_nb_proc ()) do \n " (Hstring.view arg)) up.up_arg;
       pfile "\t\tlet newval = \n\t\t\t";
+      print_switch up.up_swts;
       (* On va déplier les switch avec une série de if else ici. Le dernier else ne doit pas être un if else mais seulement un else pour que la fonction soit bien typé, *)
-      let reved = List.rev up.up_swts in
-      let last_swts = List.hd reved in
-      let swts_list = List.rev (List.tl reved) in
-      List.iter (write_switch false) swts_list;
-      write_switch true last_swts;
       pfile "\t\tin %s%s <- newval\n" (get_var_name up.up_arr) (deplier_var_list up.up_arg);
       List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
     in 
