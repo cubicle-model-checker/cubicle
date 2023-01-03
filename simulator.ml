@@ -19,14 +19,14 @@ let out_file = open_out tmp_file_name
 let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule, impossible en caml *)
 let pfile = fun d -> fprintf out_file d
 
-(* Fonctions d'aides *)
+(* BEGIN : Fonction d'aide ; Peut être a déplacer dans un fichier 'clib.ml' *)
 let get_var_name v = Format.sprintf "%s%s" var_prefix (Hstring.view v)
 let get_constr_name s = 
   let s = Hstring.view s in match s with
     | "@MTrue" -> "true"
     | "@MFalse" -> "false"
     | _ -> s 
-let print_hstring hs = fprintf out_file "%s" (Hstring.view hs)
+let print_hstring hs = pfile "%s" (Hstring.view hs)
 
 (* Utilisé pour renvoyer une valeur d'initialisation quelconque avec le bon type pour une variable *)
 let get_value_for_type ty ty_defs = 
@@ -47,66 +47,27 @@ let hstring_list_to_string hsl =
   in 
   Format.sprintf "[%s]" (sub_hsllts hsl "")
 
-let print_const = function
-  | ConstInt n | ConstReal n -> fprintf out_file "%s" (Num.string_of_num n)
-  | ConstName n -> fprintf out_file "%s" (Hstring.view n) 
+let const_to_string = function 
+  | ConstInt n -> sprintf "%s" (Num.string_of_num n)
+  | ConstReal n -> sprintf "%s." (Num.string_of_num n)
+  | ConstName n -> sprintf "%s" (get_var_name n)
 
-(* FIXME Le cs to string actuellement ne marche pas vraiment : Il n'y a pas les symboles *)
-let cs_to_string cs =
-  MConst.fold (fun k v prev -> match k with 
-  | ConstInt(i) -> 
-      let tmp = Num.int_of_num i in 
-    sprintf "%d%s" tmp prev
-  | ConstReal(i) ->
-      let tmp = Num.float_of_num i in 
-      sprintf "%f%s" tmp prev
-  |_ -> assert false
-  ) 
-  cs ""
+let print_const cs = pfile "%s" (const_to_string cs)
 
-let print_cs = fun cs -> fprintf out_file "%s" (cs_to_string cs)
+(* FIXME Le cs to string actuellement ne marche pas vraiment : Il n'y a pas les symboles '*' et '+' *)
+let mconst_to_string cs =
+  MConst.fold (fun k v prev -> sprintf "%s%s" (const_to_string k) prev) cs ""
 
-let write_term = function
-  | Elem(g_var, Glob) -> fprintf out_file "%s" (get_var_name g_var)
-  | Elem(var, _) -> 
-      let str = get_constr_name var in
-      fprintf out_file "%s" str
-  | Const(c) -> print_cs c
+let print_mconst = fun cs -> pfile "%s" (mconst_to_string cs)
+
+let print_term = function
+  | Elem(g_var, Glob) -> pfile "%s" (get_var_name g_var)
+  | Elem(var, _) -> pfile "%s" (get_constr_name var)
+  | Const(c) -> print_mconst c
   | Access(g_var, var_list) -> 
-      fprintf out_file "%s" (get_var_name g_var); (* TODO : Array a plus d'une dimension *)
-      List.iter (fun var -> fprintf out_file ".(%s)" (Hstring.view var)) var_list
+      pfile "%s" (get_var_name g_var); 
+      List.iter (fun var -> pfile ".(%s)" (Hstring.view var)) var_list
   | _ -> () 
-
-(* FIXME : LE write atom with fun n'est plus utilisé réellement directement *)
-(* Les fonctions suivantes permettent de factoriser énormément de code. Elles permettent d'itérer sur des atoms et de les écrire facilement pour différent scénario possible *)
-let write_atom_with_fun first_term mid_term end_term f = function 
-    | Comp(t1, Eq, t2) ->
-        begin
-          let t1, t2 = begin
-            match t1, t2 with
-            | (Elem(g_var, Glob) as t1), (Elem(constr, Constr) as t2) | (Elem(constr, Constr) as t2), (Elem(g_var, Glob) as t1) -> f g_var; t1, t2
-            | (Const(c) as t2), (Elem(g_var, Glob) as t1) | (Elem(g_var, Glob) as t1), (Const(c) as t2) -> f g_var; t1, t2
-            | (Access(g_var, var_list) as t1), (Const(c) as t2) | (Const(c) as t2), (Access(g_var, var_list) as t1) -> f g_var; t1, t2
-            | (Access(g_var, var_list) as t1), (Elem(constr, Constr) as t2) | (Elem(constr, Constr) as t2), (Access(g_var, var_list) as t1) -> f g_var; t1, t2
-            |   _ -> t1, t2
-          end in
-        fprintf out_file "%s" first_term;
-        write_term t1;
-        fprintf out_file "%s" mid_term;
-        write_term t2;
-        fprintf out_file "%s" end_term
-        end
-    | True -> fprintf out_file "%strue%s" mid_term end_term
-    | False -> fprintf out_file "%sfalse%s" mid_term end_term
-    | _ -> ()
-
-let write_atom_with_fun_dep t_from_atom f atom =
-  let ft,mt,et = t_from_atom atom in 
-  write_atom_with_fun ft mt et f atom
-
-let write_atom first_term mid_term end_term = write_atom_with_fun first_term mid_term end_term (fun g_var -> ())
-
-let write_atom_with_dep t_from_atom = write_atom_with_fun_dep t_from_atom (fun g_var -> ())
 
 let get_random_for_type ty ty_defs =
   match (Hstring.view ty) with
@@ -118,9 +79,56 @@ let get_random_for_type ty ty_defs =
       let possible = Hashtbl.find ty_defs ty in 
       Format.sprintf "get_random_in_list %s" (hstring_list_to_string possible)
 
+(* END : Fonction d'aide *)
+
+(* Déclaration des types *)
+
+let write_types t_def =
+  let returned = Hashtbl.create (List.length t_def) in 
+  let print_type hs = pfile " | "; (print_hstring hs) in
+  let write_possible_type hstring_list = List.iter print_type hstring_list in
+  let write_type (loc, (t_name, t_values)) = 
+    pfile "type %s = " (Hstring.view t_name);
+    print_hstring (List.hd t_values);
+    write_possible_type (List.tl t_values);
+    pfile "\n";
+    Hashtbl.add returned t_name t_values
+  in
+  List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @Mbool qu'on ne va pas utiliser*)
+  pfile "\n";
+  returned
+
+(* Déclaration des variables *)
+
+(* Renvoie une map avec comme clef le nom des variables et comme values leurs types *)
+let write_vars s ty_defs =
+  let returned = ref Hstring.HMap.empty in
+  let add_to_map n t = returned := (Hstring.HMap.add n t (!returned)) in
+  let write_global (loc, name, var_type) =
+    add_to_map name var_type;
+    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
+  in
+  let write_const (loc, name, var_type) = 
+    add_to_map name var_type;
+    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs) (* Note : les const n'ont pas réellement besoin d'être des ref *)
+  in
+  let write_array (loc, name, (dim, var_type)) =
+    pfile "let %s = " (get_var_name name);
+    List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") dim;
+    pfile "%s" (get_value_for_type var_type ty_defs);
+    List.iter (fun _ -> pfile ")") dim;
+    pfile "\n"
+  in
+  List.iter write_global s.globals;
+  List.iter write_const s.consts;
+  List.iter write_array s.arrays;
+  pfile "\n";
+  !returned
+
 (* Déclaration de l'init *)
+
 let write_init (vars, dnf) g_vars ty_defs =
-  fprintf out_file "let init () = \n";
+  pfile "let init () = \n";
   let written_var = ref Hstring.HSet.empty in
   let register_written_var g_var = written_var := Hstring.HSet.add g_var (!written_var) in
   let manage_satom satom =
@@ -132,7 +140,7 @@ let write_init (vars, dnf) g_vars ty_defs =
     
     (* BEGIN : UNION-FIND *)
     (* Note : Implémentation de l'Union-Find sous optimale. *)
-
+  
     let unionfindlist = ref [] in
     Hstring.HMap.iter (fun k v -> unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
     let find e = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!unionfindlist) with Not_found -> Hstring.HSet.singleton e in
@@ -145,7 +153,7 @@ let write_init (vars, dnf) g_vars ty_defs =
     in 
     let unionfind = function 
       | Comp(Elem(e1, _) , Eq, Elem(e2, _))  -> union e1 e2
-      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (cs_to_string e2))
+      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2))
       | _ -> assert false 
     in
     
@@ -189,7 +197,7 @@ let write_init (vars, dnf) g_vars ty_defs =
             begin match other with
             | Elem(name, Glob) -> sprintf "!%s" (get_var_name name)
             | Elem(name, Constr) -> get_constr_name name 
-            | Const(c) -> cs_to_string c
+            | Const(c) -> mconst_to_string c
             | _ -> ""
             end in
           register_written_var g_var;
@@ -203,46 +211,6 @@ let write_init (vars, dnf) g_vars ty_defs =
   List.iter manage_satom dnf;
   
   pfile "\t()\n\n"
-
-(* Déclaration des types *)
-
-let write_types t_def =
-  let returned = Hashtbl.create (List.length t_def) in 
-  let print_type hs = pfile " | "; (print_hstring hs) in
-  let write_possible_type hstring_list = List.iter print_type hstring_list in
-  let write_type (loc, (t_name, t_values)) = 
-    pfile "type %s = " (Hstring.view t_name);
-    print_hstring (List.hd t_values);
-    write_possible_type (List.tl t_values);
-    pfile "\n";
-    Hashtbl.add returned t_name t_values
-  in
-  List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @Mbool qu'on ne va pas utiliser*)
-  pfile "\n";
-  returned
-
-(* Déclaration des variables *)
-
-(* Renvoie une map avec comme clef le nom des variables et comme values leurs types *)
-let write_vars s ty_defs=
-  let returned = ref Hstring.HMap.empty in
-  let add_to_map n t = returned := (Hstring.HMap.add n t (!returned)) in
-  let write_global (loc, name, var_type) =
-    add_to_map name var_type;
-    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
-  in
-  let write_const (loc, name, var_type) = 
-    add_to_map name var_type;
-    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
-  in
-  let write_array (loc, name, (dim, var_type)) =
-    pfile "let %s = Array.make (get_nb_proc ()) %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
-  in
-  List.iter write_global s.globals;
-  List.iter write_const s.consts;
-  List.iter write_array s.arrays;
-  pfile "\n";
-  !returned
 
 (* Déclaration des transitions *)
 let write_transitions trans_list ty_defs g_vars =
@@ -267,32 +235,29 @@ let write_transitions trans_list ty_defs g_vars =
     (* Write Req *)
     (* tr_reqs : Garde, tr_ureqs : Garde sur universally quantified *)
     pfile "let req_%s args = \n" trans_name;
-    begin
-      match SAtom.is_empty trans_info.tr_reqs with 
-      | true -> pfile "\ttrue"
-      | false -> 
-        write_args ();
-        let first_atom = SAtom.choose trans_info.tr_reqs in
-        let req_without_first = SAtom.remove first_atom trans_info.tr_reqs in
+    write_args ();
         
-        (* On écrit le premier atome, puis tous les autres sont écrit avec un && write TODO : Ne pas faire ça. On peut s'inspirer du () pour faire un && true mais bon c'est pas des plus propre ! *)
-        let choose_t_from_atom_first = function
-        | Comp(Access(_,_), _, _) | Comp(_, _, Access(_,_)) -> "\t"," = ",""
-        | _ -> "\t(!",") = ",""
-        in
-        write_atom_with_dep choose_t_from_atom_first first_atom;
-        let choose_t_from_atom_other = function
-        | Comp(Access(_,_), _, _) | Comp(_, _, Access(_,_)) -> " && "," = ",""
-        | _ -> " && (!",") = ",""
-        in
-        SAtom.iter (write_atom_with_dep choose_t_from_atom_other) req_without_first;
-
-    end; 
-
-    pfile "\n";
+    let print_op = function 
+    | Eq -> pfile " = "
+    | Le -> pfile " <= "
+    | Lt -> pfile " < "
+    | Neq -> pfile " <> "
+    in
+    let print_atom = function
+    | Comp(t1, op, t2) -> 
+      print_term t1;
+      print_op op;
+      print_term t2;
+      pfile " && "
+    | True -> pfile "true && "
+    | False -> pfile "false && "
+    | _ -> ()
+    in
+    SAtom.iter print_atom trans_info.tr_reqs;
+    pfile "true\n\n";
 
     (* Write Ac *)
-    pfile "\nlet ac_%s args = \n" trans_name;
+    pfile "let ac_%s args = \n" trans_name;
     write_args ();
 
     (* Ac_Assigne *)
@@ -300,8 +265,8 @@ let write_transitions trans_list ty_defs g_vars =
       pfile "\t%s := " (get_var_name var_to_updt);
       begin
       match new_value with
-        | UTerm(t) -> write_term t 
-        | _ -> ()
+        | UTerm(t) -> print_term t 
+        | _ -> () (* TODO : Assignations par swts *)
       end ;
       pfile ";\n";
     in
@@ -315,19 +280,23 @@ let write_transitions trans_list ty_defs g_vars =
 
     (* Ac_Updates *)
 
-    let watomfundep tfromatom = 
-      match tfromatom with 
-      | Comp(_, Eq, _) -> ("","=", "")
-      | _ -> ("","","")
+    let print_atom = function  
+      | Comp(t1, Eq, t2) -> 
+          begin
+          print_term t1;
+          pfile "=";
+          print_term t2
+          end
+      | _ -> ()
     in 
     let write_switch last (satom, term) =
       if not last then   
         (
         pfile "if ";
-        SAtom.iter (write_atom_with_dep watomfundep) satom;
+        SAtom.iter (print_atom) satom;
         pfile " then "
         );
-        write_term term;
+        print_term term;
         pfile "\n";
         if not last then 
         pfile "\t\t\telse "
