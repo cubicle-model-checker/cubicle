@@ -45,7 +45,7 @@ let rec get_args n =
           result
     )
 (* Transitions *)
-type transition = string*(int list -> bool) * (int list -> unit) (* (nom_de_la_transition, transition_req, transition_ac) *)
+type transition = string * (int list -> bool) * (int list -> unit) (* (nom_de_la_transition, transition_req, transition_ac) *)
 
 let req_aq_table : (int, transition list) Hashtbl.t = Hashtbl.create (get_nb_proc ()) (* La req_aq_table associe un int (nombre d'arguments) a toutes les transitions prenant ce nombre d'argument *)
 
@@ -68,7 +68,7 @@ type event =
   | Button_up of char
   | None
 
-(** TODO : Utiliser un set ici. *)
+(* TODO : Utiliser un set ici. *)
 let event_list = ref [None]
 
 let event_to_string e=
@@ -84,7 +84,7 @@ let add_event e =
   if not (exist_event e) then
     (
       Printf.printf "Added event %s\n%!" (event_to_string e);
-      event_list := (!event_list)@[e] (* La raison d'utiliser un add est que c'est plus pratique si on veut changer le fonctionnement des event*)
+      event_list := (!event_list)@[e] 
     )
 
 let remove_event e = 
@@ -97,26 +97,19 @@ let remove_event e =
 
 (* Simulation *)
 
-let get_possible_action_for_arg trans_list arg =
-  let rec sub_gpafa remain returned =
-    match remain with
-    | [] -> returned
-    | (name, req, ac) :: remain' -> if req arg then sub_gpafa remain' ((arg, ac, name)::returned) else sub_gpafa remain' returned
-  in
-  sub_gpafa trans_list []
+let get_possible_action_for_arg arg trans_list = 
+  let rec sub_gpafa returned (name, req, ac) = if req arg then ((arg,ac,name)::returned) else returned in
+  List.fold_left sub_gpafa [] trans_list
 
 let step () = 
   let possible_actions = 
-    let returned_list = ref [] in
-    (* TODO : Utiliser un Hashtbl.iter ici plutôt qu'une boucle for. Mettre le arg_list avant en le pré-calculant *)
-    for i = 0 to get_nb_proc () do
-      if Hashtbl.mem req_aq_table i then
-        begin
-          let arg_list = get_args i in
-          let trans_list = Hashtbl.find req_aq_table i in
-          List.iter (fun arg -> returned_list := (get_possible_action_for_arg trans_list arg)@(!returned_list)) arg_list
-        end;
-    done;
+    let returned_list = ref [] in 
+    (* Attention : Si on a des fonctions avec plus d'argument que le nombre de proc, il y a de très fort risque d'avoir un comportement inatendu. Il faudrait peut être mettre un warning et crash. *)
+    let test_transition arg_number trans_list = 
+      let arg_list = get_args arg_number in 
+      List.iter (fun arg -> returned_list := (get_possible_action_for_arg arg trans_list)@(!returned_list)) arg_list
+    in 
+    Hashtbl.iter test_transition req_aq_table;
     !returned_list
   in
   if List.length possible_actions > 0 then

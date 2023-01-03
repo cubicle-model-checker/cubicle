@@ -2,10 +2,9 @@
 
 # Compilateur
 
-- [.] Essayer de factoriser les boucles for dans l'init
 - [.] Implémenter l'Union-Find dans l'init
 - [.] Il faudrait factoriser tous les fprintf out_file, on peut sûrement écrire un shortcut ?
-- [.] écrire une meilleure documentation pour les fonctions. écrire un fichier sutils.mli avec une bonne déclaration des fonctions
+- [.] écrire un fichier sutils.mli avec une bonne déclaration des fonctions
 - [.] Trouver une meilleure structure d'organisation des fichiers. On veut probablement :
 		simulator/
     |	out/
@@ -14,23 +13,20 @@
     |	|	smain.ml 
     |	|	stmp.ml 
     |	compiler/
-    |	|	cutils.ml 
-    |	|	simulator.ml 
+    |	|	cutils.ml
+		| | ccompiler.ml
   
   Ou quelque chose du style.
 - [.] On peut essayer d'attaquer quelques trucs plus compliqué que simplement l'égalité et essayer de faire des comparaison pour des entiers simples
 - [.] On peut raise une exception quand on essaye de faire quelquechose de pas prévu ou pas implémenté
 - [.] Regarder comment les constantes sont actuellement gérée par le compilateur -> On peut les considérer comme une variable normale qu'on initialise qu'une seule fois
-- [.] On doit pouvoir faire un List.filter dans le get_possible_action_for_arg
-- [.] Réfléchire a la situation ou on a une transition X:= Y et Y:= X. Cette transition n'est pas faisable avec le fonctionnement immédiat. On doit stocker les nouvelles valeurs puis les remplacer en faisant les nX = Y let nY = x puis X := nX et Y := nY
+- [.] Réfléchire a la situation ou on a une transition X := Y et Y:= X. Cette transition n'est pas faisable avec le fonctionnement immédiat. On doit stocker les nouvelles valeurs puis les remplacer en faisant les nX = Y let nY = x puis X := nX et Y := nY
 - [.] écrire ureq pour transition
-- [.] Compiler les matrices
+- [.] Compiler les matrices : Nécéssite de filtrer les boucles for
+- [.] Initialisation non déterministe des array ?
 
 # Simulateur
 
-- [.] STmp : Pré-Calculer les combinaisons possible 
 - [.] Initialiser les arrays dans le init, pour qu'ils soient uniquement de la taille nécéssaire (économie de mémoire)
-- [.] Remplacer la boucle for par une Hashtbl.iter
 - [.] Utiliser un 'set' pour les events
-- [.] Utiliser un fold_left pour get_possible_action_for_arg
 - [.] Remplacer le "args" par un array plutôt qu'une liste pour gagner un peu de performance. permet de supprimer la fonction find_ieme et la remplacer par juste ".(n)";

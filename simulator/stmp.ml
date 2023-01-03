@@ -6,11 +6,9 @@ let vCrit = Array.make (get_nb_proc ()) true
 
 let init () = 
 	for z = 0 to get_nb_proc () do 
-		vWant.(z) <- false
-	done;
-	for z = 0 to get_nb_proc () do 
-		vCrit.(z) <- false
-	done;
+		vWant.(z) <- false;
+ 		vCrit.(z) <- false;
+ 	done;
 	vTurn := get_random_proc ();
 	()
 

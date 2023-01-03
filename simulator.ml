@@ -112,19 +112,31 @@ let write_init (vars, dnf) g_vars ty_defs =
   let written_var = ref Hstring.HSet.empty in
   let register_written_var g_var = written_var := Hstring.HSet.add g_var (!written_var) in
   let manage_satom satom =
-    let choose_t_from_atom = function
-      | Comp(Access(_,var_list), _, _) | Comp(_,_, Access(_,var_list)) -> 
-        let vl = Hstring.view (List.hd var_list) in 
-        Format.sprintf "\tfor %s = 0 to get_nb_proc () do \n\t\t" vl, " <- ", "\n\tdone;\n"
-      | _ -> "\t"," := ", ";\n"
-    in
-    SAtom.iter (write_atom_with_fun_dep choose_t_from_atom register_written_var) satom;
+    let is_access = function
+      | Comp(Access(_,var_list), _, _) | Comp(_,_, Access(_,var_list)) -> true
+      | _ -> false 
+    in 
+    let (access_set, other_set) = SAtom.partition is_access satom in 
+   
+    (* 
+       TODO : Il faut filtrer le acess_set en fonction des variables, on peut penser a créer une Hashtbl avec les variables qui  composent l'accès. 
+       On peut ensuite les regrouper en fonction de ces variables. 
+       On peut également penser a faire une première passe qui, tant qu'a regrouper toutes les acces avec les mêmes variables, permet également de voir quelles sont les variables initialisée et 
+       quelles sont les variables qui ne le sont pas. 
+       On peut même faire une passe globale pour les variables également ? 
+    *)
+    List.iter (fun var -> fprintf out_file "\tfor %s = 0 to get_nb_proc () do \n" (Hstring.view var)) vars;
+    SAtom.iter (write_atom_with_fun "\t\t" " <- " ";\n " register_written_var) access_set;
+    List.iter (fun _ -> fprintf out_file "\tdone;\n") vars;
+    SAtom.iter (write_atom_with_fun "\t" " := " ";\n" register_written_var) other_set;
+
     in
   List.iter manage_satom dnf;
   
   (* Toutes les valeurs qui n'ont pas une valeur explicite doivent tout de même être initialisée *)
   let to_write = Hstring.HMap.filter (fun k v -> not (Hstring.HSet.mem k (!written_var))) g_vars in 
-  let init_undet n t = 
+  let init_undet n t =
+    (* FIXME : Ici les variables peuvent aussi être des array supposément *)
     fprintf out_file "\t%s := %s;\n" (get_var_name n) (get_random_for_type t ty_defs)  
     in
   Hstring.HMap.iter init_undet to_write ;
