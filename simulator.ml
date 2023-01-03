@@ -30,6 +30,9 @@ let get_value_for_type ty ty_defs =
   | "bool" | "mbool" -> "true"
   | _ -> Hstring.view (List.hd (Hashtbl.find ty_defs ty)) (* Note : Hashtbl.find ne devrait pas throw Not_Found car ast valide. *) 
 
+let deplier_var_list var_list = 
+  List.fold_left (fun prev v -> sprintf "%s.(%s)" prev (Hstring.view v)) "" var_list
+
 let hstring_list_to_string hsl =
   let rec sub_hsllts hsl_rem prev =
     match hsl_rem with
@@ -42,13 +45,26 @@ let print_const = function
   | ConstInt n | ConstReal n -> fprintf out_file "%s" (Num.string_of_num n)
   | ConstName n -> fprintf out_file "%s" (Hstring.view n) 
 
+(* TODO : On peut remplacer print_cs par un printf cs_to_string *)
 let print_cs cs = 
   MConst.iter (fun k v -> match k with 
   | ConstInt(i) -> 
       let tmp = Num.int_of_num i in 
       fprintf out_file "%d" (tmp*v)
   | _ -> assert false)
-  cs 
+  cs
+
+let cs_to_string cs =
+  MConst.fold (fun k v prev -> match k with 
+  | ConstInt(i) -> 
+      let tmp = Num.int_of_num i in 
+    sprintf "%d%s" tmp prev
+  | ConstReal(i) ->
+      let tmp = Num.float_of_num i in 
+      sprintf "%f%s" tmp prev
+  |_ -> assert false
+  ) 
+  cs "" 
 
 let write_term = function
   | Elem(g_var, Glob) -> fprintf out_file "%s" (get_var_name g_var)
@@ -117,29 +133,75 @@ let write_init (vars, dnf) g_vars ty_defs =
       | _ -> false 
     in 
     let (access_set, other_set) = SAtom.partition is_access satom in 
-   
+    
+    (* BEGIN : UNION-FIND *)
+    (* Note : Implémentation de l'Union-Find sous optimale. *)
+
+    let unionfindlist = ref [] in
+    Hstring.HMap.iter (fun k v -> unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
+    let find e = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!unionfindlist) with Not_found -> Hstring.HSet.singleton e in
+    let union e1 e2 = 
+      let s1 = find e1 in 
+      let s2 = find e2 in 
+      let ns = Hstring.HSet.union s1 s2 in 
+      let filtered = List.filter (fun s -> s <> s1 && s <> s2) (!unionfindlist) in 
+      unionfindlist := ns::filtered
+    in 
+    let unionfind = function 
+      | Comp(Elem(e1, _) , Eq, Elem(e2, _))  -> union e1 e2
+      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (cs_to_string e2))
+      | _ -> assert false 
+    in
+    
+    let find_head_in set =  (* Renvoie en priorité un constructeur, puis une variable sinon *)
+      let is_constr v = not (Hstring.HMap.mem v g_vars) in
+      try (Hstring.HSet.find_first is_constr set, true) with Not_found -> (Hstring.HSet.choose set, false)
+    in 
+    SAtom.iter unionfind other_set;
+    let write_union_find set = 
+      let (head, is_constr) = find_head_in set in
+      (* Si head est un constr, toutes les valeurs suivantes prennent la valeur de head. Sinon on initialise une tête random *)
+      let header = ref (Hstring.view head) in
+      if not is_constr then
+        (
+          (* Si ce n'est pas une constante, on l'initialise. Sinon pas besoin *)
+          try let t = Hstring.HMap.find head g_vars in
+          header := sprintf "!%s" (get_var_name head);
+          fprintf out_file "\t%s := %s;\n" (get_var_name head) (get_random_for_type t ty_defs); 
+          with Not_found -> ()
+        );
+      let tail = Hstring.HSet.filter (fun v -> v <> head) set in 
+      Hstring.HSet.iter (fun v -> fprintf out_file "\t%s := %s;\n" (get_var_name v) (!header)) tail;
+    in
+    List.iter write_union_find (!unionfindlist);
+    (* END : UNION-FIND *)
+
     (* 
        TODO : Il faut filtrer le acess_set en fonction des variables, on peut penser a créer une Hashtbl avec les variables qui  composent l'accès. 
        On peut ensuite les regrouper en fonction de ces variables. 
        On peut également penser a faire une première passe qui, tant qu'a regrouper toutes les acces avec les mêmes variables, permet également de voir quelles sont les variables initialisée et 
        quelles sont les variables qui ne le sont pas. 
-       On peut même faire une passe globale pour les variables également ? 
+       On peut même faire une passe globale pour les variables également ?
+       TODO : Attribution non déterministe des tableaux
     *)
     List.iter (fun var -> fprintf out_file "\tfor %s = 0 to get_nb_proc () do \n" (Hstring.view var)) vars;
-    SAtom.iter (write_atom_with_fun "\t\t" " <- " ";\n " register_written_var) access_set;
+    let write_access = function 
+      | Comp(Access(g_var,var_list), _, other) | Comp(other,_, Access(g_var,var_list)) ->
+          let access_value = 
+            begin match other with
+            | Elem(name, Glob) -> sprintf "!%s" (get_var_name name)
+            | Elem(name, Constr) -> Hstring.view name 
+            | Const(c) -> cs_to_string c
+            | _ -> ""
+            end in
+          fprintf out_file "\t\t%s%s <- %s;\n" (get_var_name g_var) (deplier_var_list var_list) access_value
+      | _ -> ()
+    in
+    SAtom.iter write_access access_set;
     List.iter (fun _ -> fprintf out_file "\tdone;\n") vars;
-    SAtom.iter (write_atom_with_fun "\t" " := " ";\n" register_written_var) other_set;
-
     in
   List.iter manage_satom dnf;
   
-  (* Toutes les valeurs qui n'ont pas une valeur explicite doivent tout de même être initialisée *)
-  let to_write = Hstring.HMap.filter (fun k v -> not (Hstring.HSet.mem k (!written_var))) g_vars in 
-  let init_undet n t =
-    (* FIXME : Ici les variables peuvent aussi être des array supposément *)
-    fprintf out_file "\t%s := %s;\n" (get_var_name n) (get_random_for_type t ty_defs)  
-    in
-  Hstring.HMap.iter init_undet to_write ;
   fprintf out_file "\t()\n\n"
 
 (* Déclaration des types *)
@@ -279,7 +341,7 @@ let write_transitions trans_list ty_defs g_vars =
       let swts_list = List.rev (List.tl reved) in
       List.iter (write_switch false) swts_list;
       write_switch true last_swts;
-      fprintf out_file "\t\tin %s.(%s) <- newval\n" (get_var_name up.up_arr) (Hstring.view (List.hd up.up_arg));
+      fprintf out_file "\t\tin %s%s <- newval\n" (get_var_name up.up_arr) (deplier_var_list up.up_arg);
       List.iter (fun arg -> fprintf out_file "\tdone; \n") up.up_arg; 
     in 
     List.iter write_upd trans_info.tr_upds;
