@@ -17,9 +17,15 @@ open Printf
 let tmp_file_name = "simulator/stmp.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
 let out_file = open_out tmp_file_name  
 let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule, impossible en caml *)
+let pfile = fun d -> fprintf out_file d
 
 (* Fonctions d'aides *)
 let get_var_name v = Format.sprintf "%s%s" var_prefix (Hstring.view v)
+let get_constr_name s = 
+  let s = Hstring.view s in match s with
+    | "@MTrue" -> "true"
+    | "@MFalse" -> "false"
+    | _ -> s 
 let print_hstring hs = fprintf out_file "%s" (Hstring.view hs)
 
 (* Utilisé pour renvoyer une valeur d'initialisation quelconque avec le bon type pour une variable *)
@@ -45,15 +51,7 @@ let print_const = function
   | ConstInt n | ConstReal n -> fprintf out_file "%s" (Num.string_of_num n)
   | ConstName n -> fprintf out_file "%s" (Hstring.view n) 
 
-(* TODO : On peut remplacer print_cs par un printf cs_to_string *)
-let print_cs cs = 
-  MConst.iter (fun k v -> match k with 
-  | ConstInt(i) -> 
-      let tmp = Num.int_of_num i in 
-      fprintf out_file "%d" (tmp*v)
-  | _ -> assert false)
-  cs
-
+(* FIXME Le cs to string actuellement ne marche pas vraiment : Il n'y a pas les symboles *)
 let cs_to_string cs =
   MConst.fold (fun k v prev -> match k with 
   | ConstInt(i) -> 
@@ -64,17 +62,14 @@ let cs_to_string cs =
       sprintf "%f%s" tmp prev
   |_ -> assert false
   ) 
-  cs "" 
+  cs ""
+
+let print_cs = fun cs -> fprintf out_file "%s" (cs_to_string cs)
 
 let write_term = function
   | Elem(g_var, Glob) -> fprintf out_file "%s" (get_var_name g_var)
   | Elem(var, _) -> 
-      let s = Hstring.view var in 
-      let str = begin match s with 
-      | "@MTrue" -> "true"
-      | "@MFalse" -> "false"
-      | _ -> s 
-      end in 
+      let str = get_constr_name var in
       fprintf out_file "%s" str
   | Const(c) -> print_cs c
   | Access(g_var, var_list) -> 
@@ -82,6 +77,7 @@ let write_term = function
       List.iter (fun var -> fprintf out_file ".(%s)" (Hstring.view var)) var_list
   | _ -> () 
 
+(* FIXME : LE write atom with fun n'est plus utilisé réellement directement *)
 (* Les fonctions suivantes permettent de factoriser énormément de code. Elles permettent d'itérer sur des atoms et de les écrire facilement pour différent scénario possible *)
 let write_atom_with_fun first_term mid_term end_term f = function 
     | Comp(t1, Eq, t2) ->
@@ -167,58 +163,62 @@ let write_init (vars, dnf) g_vars ty_defs =
           (* Si ce n'est pas une constante, on l'initialise. Sinon pas besoin *)
           try let t = Hstring.HMap.find head g_vars in
           header := sprintf "!%s" (get_var_name head);
-          fprintf out_file "\t%s := %s;\n" (get_var_name head) (get_random_for_type t ty_defs); 
+          pfile "\t%s := %s;\n" (get_var_name head) (get_random_for_type t ty_defs); 
           with Not_found -> ()
         );
       let tail = Hstring.HSet.filter (fun v -> v <> head) set in 
-      Hstring.HSet.iter (fun v -> fprintf out_file "\t%s := %s;\n" (get_var_name v) (!header)) tail;
+      Hstring.HSet.iter (fun v -> register_written_var v; pfile "\t%s := %s;\n" (get_var_name v) (!header)) tail;
     in
     List.iter write_union_find (!unionfindlist);
     (* END : UNION-FIND *)
 
-    (* 
-       TODO : Il faut filtrer le acess_set en fonction des variables, on peut penser a créer une Hashtbl avec les variables qui  composent l'accès. 
-       On peut ensuite les regrouper en fonction de ces variables. 
-       On peut également penser a faire une première passe qui, tant qu'a regrouper toutes les acces avec les mêmes variables, permet également de voir quelles sont les variables initialisée et 
-       quelles sont les variables qui ne le sont pas. 
-       On peut même faire une passe globale pour les variables également ?
-       TODO : Attribution non déterministe des tableaux
+    (*
+    TODO : On veut regrouper les acess en fonction de leurs var_list, et imbriquer les for correctement. 
+    On fait par exemple :
+      for i = 0 to get_nb_proc ():
+        azek.(i) <- true 
+        for j = 0 to get_nb_proc() :
+          ribo.(i).(j) <- azek.(i)
+    On peut penser a le faire avec une Hashtbl ou HSet 
+    On peut dans cette même passe s'occuper de register_written_var.
     *)
-    List.iter (fun var -> fprintf out_file "\tfor %s = 0 to get_nb_proc () do \n" (Hstring.view var)) vars;
+    List.iter (fun var -> pfile "\tfor %s = 0 to get_nb_proc () do \n" (Hstring.view var)) vars;
     let write_access = function 
       | Comp(Access(g_var,var_list), _, other) | Comp(other,_, Access(g_var,var_list)) ->
           let access_value = 
             begin match other with
             | Elem(name, Glob) -> sprintf "!%s" (get_var_name name)
-            | Elem(name, Constr) -> Hstring.view name 
+            | Elem(name, Constr) -> get_constr_name name 
             | Const(c) -> cs_to_string c
             | _ -> ""
             end in
-          fprintf out_file "\t\t%s%s <- %s;\n" (get_var_name g_var) (deplier_var_list var_list) access_value
+          register_written_var g_var;
+          pfile "\t\t%s%s <- %s;\n" (get_var_name g_var) (deplier_var_list var_list) access_value
       | _ -> ()
     in
     SAtom.iter write_access access_set;
-    List.iter (fun _ -> fprintf out_file "\tdone;\n") vars;
+    (* TODO ICI : Attribution non déterministe pour les array restant *)
+    List.iter (fun _ -> pfile "\tdone;\n") vars;
     in
   List.iter manage_satom dnf;
   
-  fprintf out_file "\t()\n\n"
+  pfile "\t()\n\n"
 
 (* Déclaration des types *)
 
 let write_types t_def =
-  let returned = Hashtbl.create 124 in (* NOTE : 124 choisi ici arbitrairement de façon aléatoire. *)
-  let print_type hs = Printf.fprintf out_file " | "; (print_hstring hs) in
+  let returned = Hashtbl.create (List.length t_def) in 
+  let print_type hs = pfile " | "; (print_hstring hs) in
   let write_possible_type hstring_list = List.iter print_type hstring_list in
   let write_type (loc, (t_name, t_values)) = 
-    fprintf out_file "type %s = " (Hstring.view t_name);
+    pfile "type %s = " (Hstring.view t_name);
     print_hstring (List.hd t_values);
     write_possible_type (List.tl t_values);
-    fprintf out_file "\n";
+    pfile "\n";
     Hashtbl.add returned t_name t_values
   in
   List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @Mbool qu'on ne va pas utiliser*)
-  fprintf out_file "\n";
+  pfile "\n";
   returned
 
 (* Déclaration des variables *)
@@ -229,19 +229,19 @@ let write_vars s ty_defs=
   let add_to_map n t = returned := (Hstring.HMap.add n t (!returned)) in
   let write_global (loc, name, var_type) =
     add_to_map name var_type;
-    fprintf out_file "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
+    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
   in
   let write_const (loc, name, var_type) = 
     add_to_map name var_type;
-    fprintf out_file "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
+    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
   in
   let write_array (loc, name, (dim, var_type)) =
-    fprintf out_file "let %s = Array.make (get_nb_proc ()) %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
+    pfile "let %s = Array.make (get_nb_proc ()) %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
   in
   List.iter write_global s.globals;
   List.iter write_const s.consts;
   List.iter write_array s.arrays;
-  fprintf out_file "\n";
+  pfile "\n";
   !returned
 
 (* Déclaration des transitions *)
@@ -258,7 +258,7 @@ let write_transitions trans_list ty_defs g_vars =
       let count = ref 0 in
       let write_args arg = 
         begin 
-          fprintf out_file "\tlet %s = find_ieme args %d in\n" (Hstring.view arg) (!count);
+          pfile "\tlet %s = find_ieme args %d in\n" (Hstring.view arg) (!count);
           count := (!count) + 1; 
         end in
       List.iter write_args trans_args;
@@ -266,10 +266,10 @@ let write_transitions trans_list ty_defs g_vars =
 
     (* Write Req *)
     (* tr_reqs : Garde, tr_ureqs : Garde sur universally quantified *)
-    fprintf out_file "let req_%s args = \n" trans_name;
+    pfile "let req_%s args = \n" trans_name;
     begin
       match SAtom.is_empty trans_info.tr_reqs with 
-      | true -> Printf.fprintf out_file "\ttrue"
+      | true -> pfile "\ttrue"
       | false -> 
         write_args ();
         let first_atom = SAtom.choose trans_info.tr_reqs in
@@ -289,27 +289,27 @@ let write_transitions trans_list ty_defs g_vars =
 
     end; 
 
-    fprintf out_file "\n";
+    pfile "\n";
 
     (* Write Ac *)
-    fprintf out_file "\nlet ac_%s args = \n" trans_name;
+    pfile "\nlet ac_%s args = \n" trans_name;
     write_args ();
 
     (* Ac_Assigne *)
     let write_assign (var_to_updt, new_value) =
-      fprintf out_file "\t%s := " (get_var_name var_to_updt);
+      pfile "\t%s := " (get_var_name var_to_updt);
       begin
       match new_value with
         | UTerm(t) -> write_term t 
         | _ -> ()
       end ;
-      fprintf out_file ";\n";
+      pfile ";\n";
     in
     List.iter write_assign trans_info.tr_assigns;
 
     (* Ac_Nondets *)
     let write_nondet var_name =
-      fprintf out_file "\t%s := %s;\n" (get_var_name var_name) (get_random_for_type (Hstring.HMap.find var_name g_vars) ty_defs)
+      pfile "\t%s := %s;\n" (get_var_name var_name) (get_random_for_type (Hstring.HMap.find var_name g_vars) ty_defs)
     in
     List.iter write_nondet trans_info.tr_nondets;
 
@@ -323,49 +323,49 @@ let write_transitions trans_list ty_defs g_vars =
     let write_switch last (satom, term) =
       if not last then   
         (
-        Printf.fprintf out_file "if ";
+        pfile "if ";
         SAtom.iter (write_atom_with_dep watomfundep) satom;
-        fprintf out_file " then "
+        pfile " then "
         );
         write_term term;
-        fprintf out_file "\n";
+        pfile "\n";
         if not last then 
-        fprintf out_file "\t\t\telse "
+        pfile "\t\t\telse "
     in
     let write_upd up =
-      List.iter (fun arg -> fprintf out_file "\tfor %s = 0 to (get_nb_proc ()) do \n " (Hstring.view arg)) up.up_arg;
-      fprintf out_file "\t\tlet newval = \n\t\t\t";
+      List.iter (fun arg -> pfile "\tfor %s = 0 to (get_nb_proc ()) do \n " (Hstring.view arg)) up.up_arg;
+      pfile "\t\tlet newval = \n\t\t\t";
       (* On va déplier les switch avec une série de if else ici. Le dernier else ne doit pas être un if else mais seulement un else pour que la fonction soit bien typé, *)
       let reved = List.rev up.up_swts in
       let last_swts = List.hd reved in
       let swts_list = List.rev (List.tl reved) in
       List.iter (write_switch false) swts_list;
       write_switch true last_swts;
-      fprintf out_file "\t\tin %s%s <- newval\n" (get_var_name up.up_arr) (deplier_var_list up.up_arg);
-      List.iter (fun arg -> fprintf out_file "\tdone; \n") up.up_arg; 
+      pfile "\t\tin %s%s <- newval\n" (get_var_name up.up_arr) (deplier_var_list up.up_arg);
+      List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
     in 
     List.iter write_upd trans_info.tr_upds;
-    fprintf out_file "\t()\n";
+    pfile "\t()\n";
 
     (* On écrit la transition pour la table *)
-    fprintf out_file "\nlet %s = (\"%s\", req_%s, ac_%s) \n\n" trans_name trans_name trans_name trans_name
+    pfile "\nlet %s = (\"%s\", req_%s, ac_%s) \n\n" trans_name trans_name trans_name trans_name
   in
   List.iter write_transition trans_list;
   
   (* écriture de la table de transition *) 
 
-  fprintf out_file "\nlet build_table = \n";
+  pfile "\nlet build_table = \n";
 
   let write_table trans = 
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-    fprintf out_file "\tadd_req_acc %s %s;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
+    pfile  "\tadd_req_acc %s %s;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
   in
   List.iter write_table trans_list;
-  fprintf out_file "\n"
+  pfile "\n"
 
 let run ts s =
-  fprintf out_file "%s\n" "open Shelp";
+  pfile "%s\n" "open Shelp";
   let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
   write_init ts.t_init g_vars g_types;
