@@ -10,6 +10,8 @@ open Printf
   On l'écrit également en considérant qu'on est sur une nouvelle ligne. On va donc généralement finir les ligne par ';\n'.
   On va en genéral finir toutes les fonctions de type unit par "()". Si il n'y a aucune instruction avant, ça marchera quand même, et si il y en a ça permet d'avoir une instruction finale.
   C'est une solution beaucoup plus simple que de séparer les premières instruction de la dernière, créant un code pour le compilateur plus complexe.
+
+  Les fonctions print_"..." écrivent dans le fichier destination. 
 *)
 
 (* Variables globales utilisées *)
@@ -64,9 +66,20 @@ let const_to_string = function
 
 let print_const cs = pfile "%s" (const_to_string cs)
 
-(* FIXME Le cs to string actuellement ne marche pas vraiment : Il n'y a pas les symboles '*' et '+' *)
 let mconst_to_string cs =
-  MConst.fold (fun k v prev -> sprintf "%s%s" (const_to_string k) prev) cs ""
+  MConst.fold 
+  (
+    fun k v prev -> 
+      let nv = 
+      match v with 
+      | 1 -> sprintf "%s" (const_to_string k)
+      | _ -> sprintf "(%s * %d)" (const_to_string k) v (* Note : Ici les parentèse dans le string ne sont pas réllement obligatoire mais je trouve que ça rend le code final plus lisible *) 
+    in
+    match prev with 
+    | "" -> sprintf "%s" nv
+    | _ -> sprintf "%s + %s" nv prev
+  )
+  cs ""
 
 let const_ref_to_string = function
   | ConstInt n -> sprintf "%s" (Num.string_of_num n)
