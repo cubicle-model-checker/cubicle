@@ -45,7 +45,8 @@ let mconst_is_float mconst g_vars  =
   (
     fun k v -> match k with 
     | ConstReal(_) -> true 
-    | ConstName(n) -> (try ((Hstring.view (Hstring.HMap.find n g_vars)) = "real") with Not_found -> false)
+    | ConstName(n) -> 
+        (try (let (t, d) = (Hstring.HMap.find n g_vars) in (Hstring.view t) = "real") with Not_found -> false)
     | _ -> false
   ) 
   mconst
@@ -143,17 +144,17 @@ let write_types t_def =
 (* Renvoie une map avec comme clef le nom des variables et comme values leurs types *)
 let write_vars s ty_defs =
   let returned = ref Hstring.HMap.empty in
-  let add_to_map n t = returned := (Hstring.HMap.add n t (!returned)) in
+  let add_to_map n t dim = returned := (Hstring.HMap.add n (t,dim) (!returned)) in
   let write_global (loc, name, var_type) =
-    add_to_map name var_type;
+    add_to_map name var_type 0;
     pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
   in
   let write_const (loc, name, var_type) = 
-    add_to_map name var_type;
+    add_to_map name var_type 0;
     pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs) (* Note : les const n'ont pas réellement besoin d'être des ref *)
   in
   let write_array (loc, name, (dim, var_type)) =
-    add_to_map name var_type;
+    add_to_map name var_type (List.length dim);
     pfile "let %s = " (get_var_name name);
     List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") dim;
     pfile "%s" (get_value_for_type var_type ty_defs);
@@ -183,7 +184,7 @@ let write_init (vars, dnf) g_vars ty_defs =
     (* Note : Implémentation de l'Union-Find sous optimale. *)
   
     let unionfindlist = ref [] in
-    Hstring.HMap.iter (fun k v -> unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
+    Hstring.HMap.iter (fun k (t,d) -> if d = 0 then unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
     let find e = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!unionfindlist) with Not_found -> Hstring.HSet.singleton e in
     let union e1 e2 = 
       let s1 = find e1 in 
@@ -210,7 +211,7 @@ let write_init (vars, dnf) g_vars ty_defs =
       if not is_constr then
         (
           (* Si ce n'est pas une constante, on l'initialise. Sinon pas besoin *)
-          try let t = Hstring.HMap.find head g_vars in
+          try let (t,d) = Hstring.HMap.find head g_vars in
           header := sprintf "!%s" (get_var_name head);
           pfile "\t%s := %s;\n" (get_var_name head) (get_random_for_type t ty_defs); 
           with Not_found -> ()
@@ -258,7 +259,7 @@ let write_transitions trans_list ty_defs g_vars =
   let write_transition trans =
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-    let get_var_type var_name = Hstring.HMap.find var_name g_vars in
+    let get_var_type var_name = let (t,d) = Hstring.HMap.find var_name g_vars in t in
     (* Write arguments *)
     
     let trans_args = trans_info.tr_args in 
