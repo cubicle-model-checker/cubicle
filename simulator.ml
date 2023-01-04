@@ -19,10 +19,12 @@ open Printf
 let tmp_file_name = "simulator/stmp.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
 let out_file = open_out tmp_file_name  
 let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule, impossible en caml *)
+let updated_prefix = "n"                  (* Voir dans transition *)
 let pfile = fun d -> fprintf out_file d
 
 (* BEGIN : Fonction d'aide ; Peut être a déplacer dans un fichier 'clib.ml' *)
 let get_var_name v = Format.sprintf "%s%s" var_prefix (Hstring.view v)
+let get_updated_name v = Format.sprintf "%s%s" updated_prefix (Hstring.view v)
 let get_constr_name s = 
   let s = Hstring.view s in match s with
     | "@MTrue" -> "true"
@@ -115,6 +117,8 @@ let get_random_for_type ty ty_defs =
       let possible = Hashtbl.find ty_defs ty in 
       Format.sprintf "get_random_in_list %s" (hstring_list_to_string possible)
 
+module IntMap = Map.Make(struct type t = int let compare : int -> int -> int = Int.compare end) 
+
 (* END : Fonction d'aide *)
 
 (* Déclaration des types *)
@@ -149,6 +153,7 @@ let write_vars s ty_defs =
     pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs) (* Note : les const n'ont pas réellement besoin d'être des ref *)
   in
   let write_array (loc, name, (dim, var_type)) =
+    add_to_map name var_type;
     pfile "let %s = " (get_var_name name);
     List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") dim;
     pfile "%s" (get_value_for_type var_type ty_defs);
@@ -253,7 +258,7 @@ let write_transitions trans_list ty_defs g_vars =
   let write_transition trans =
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-
+    let get_var_type var_name = Hstring.HMap.find var_name g_vars in
     (* Write arguments *)
     
     let trans_args = trans_info.tr_args in 
@@ -267,6 +272,13 @@ let write_transitions trans_list ty_defs g_vars =
         end in
       List.iter write_args trans_args;
     end in
+
+    (* Note : 
+      Comme j'ai décidé d'utiliser des ref pour une écriture plus simple du fichier, et que les transitions cubicle sont une évolution d'état en simulatané, il faut d'abord créer le nouvel état puis l'appliquer.
+      On store une hashtbl avec toutes les nouvelles valeurs : Clef : Nom de variable Value : Nom de la variable contenant la nouvelle valeur
+    *)
+
+    let updated = Hashtbl.create (Hstring.HMap.cardinal g_vars) in
 
     (* Write Req *)
     (* tr_reqs : Garde, tr_ureqs : Garde sur universally quantified *)
@@ -309,49 +321,95 @@ let write_transitions trans_list ty_defs g_vars =
           pfile "true then "
         end;
         print_term g_vars term;
-        pfile "\n";
-        if not last then pfile "\t\t\telse "
+        if not last then pfile " else "
       in
       let reved = List.rev swts in
       let last_swts = List.hd reved in
       let swts_list = List.rev (List.tl reved) in
       List.iter (print_switch_sub false) swts_list;
       print_switch_sub true last_swts;
+      pfile "\n"
     in
 
     let write_assign (var_to_updt, new_value) =
-      pfile "\t%s := " (get_var_name var_to_updt);
+      pfile "\tlet %s = " (get_updated_name var_to_updt);
       begin
       match new_value with
         | UTerm(t) -> print_term g_vars t 
         | UCase(swts) -> print_switch swts
       end ;
-      pfile ";\n";
+      pfile " in \n";
+      Hashtbl.add updated (get_var_name var_to_updt) (get_updated_name var_to_updt)
     in
     List.iter write_assign trans_info.tr_assigns;
 
     (* écriture des assignations non déterministe de ac_ *)
     let write_nondet var_name =
-      pfile "\t%s := %s;\n" (get_var_name var_name) (get_random_for_type (Hstring.HMap.find var_name g_vars) ty_defs)
+      pfile "\tlet %s = %s in\n" (get_updated_name var_name) (get_random_for_type (get_var_type var_name) ty_defs);
+      Hashtbl.add updated (get_var_name var_name) (get_updated_name var_name)
     in
     List.iter write_nondet trans_info.tr_nondets;
 
     (* écriture des update d'array de ac_ *)
+    (* 
+      Pareil que updated, mais a comme clef la dimension de l'array mis a jour, puis comme valeur une liste de paire (var_name, new_value) 
+      Il serait ici beaucoup plus efficace d'utiliser une Map
+    *)
+
+    let updated_array = ref IntMap.empty in
+    let add_updated_array dim var_name updated_name =
+      updated_array :=
+      try 
+        let tab = IntMap.find dim (!updated_array) in 
+        IntMap.add dim ((var_name, updated_name)::tab) (!updated_array)
+      with Not_found -> IntMap.add dim [(var_name, updated_name)] (!updated_array)
+    in
     let write_upd up =
+      let dim = List.length up.up_arg in
+      add_updated_array dim (get_var_name up.up_arr) (get_updated_name up.up_arr);
+      pfile "\tlet %s = " (get_updated_name up.up_arr);
+      List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") up.up_arg;
+      pfile "%s" (get_value_for_type (get_var_type up.up_arr) ty_defs);
+      List.iter (fun _ -> pfile ")") up.up_arg;
+      pfile (" in\n");
       List.iter (fun arg -> pfile "\tfor %s = 0 to (get_nb_proc ()) do \n " (Hstring.view arg)) up.up_arg;
-      pfile "\t\tlet newval = \n\t\t\t";
+      pfile "\t\t%s%s <- " (get_updated_name up.up_arr) (deplier_var_list up.up_arg);
       print_switch up.up_swts;
-      pfile "\t\tin %s%s <- newval\n" (get_var_name up.up_arr) (deplier_var_list up.up_arg);
       List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
     in 
     List.iter write_upd trans_info.tr_upds;
+
+    (* Application de la transition *)
+
+    Hashtbl.iter (fun k v -> pfile "\t%s := %s;\n" k  v) updated;
+    let app_upd k v =
+      pfile "\tfor tmp_%d = 0 to (get_nb_proc ()) do \n" (k-1);
+      List.iter 
+      (
+        let deplier () = for i = 0 to (k-1) do pfile ".(tmp_%d)" i done in
+        fun (var_name, new_value) -> pfile "\t\t%s" var_name;
+        deplier ();
+        pfile " <- %s" new_value;
+        deplier ();
+        pfile ";\n";
+      ) 
+      v
+    in
+    IntMap.iter app_upd (!updated_array);
+    for i = 0 to ((IntMap.cardinal (!updated_array) - 1)) do pfile "\tdone;\n" done;
+    
     pfile "\t()\n";
 
     (* On écrit la transition pour la table *)
     pfile "\nlet %s = (\"%s\", req_%s, ac_%s) \n\n" trans_name trans_name trans_name trans_name
-  in
+    
+
+
+    in
   List.iter write_transition trans_list;
   
+
+
   (* écriture de la table de transition *) 
 
   pfile "\nlet build_table = \n";
