@@ -171,8 +171,6 @@ let write_vars s ty_defs =
 
 let write_init (vars, dnf) g_vars ty_defs =
   pfile "let init () = \n";
-  let written_var = ref Hstring.HSet.empty in
-  let register_written_var g_var = written_var := Hstring.HSet.add g_var (!written_var) in
   let manage_satom satom =
     let is_access = function
       | Comp(Access(_,var_list), _, _) | Comp(_,_, Access(_,var_list)) -> true
@@ -185,17 +183,17 @@ let write_init (vars, dnf) g_vars ty_defs =
   
     let unionfindlist = ref [] in
     Hstring.HMap.iter (fun k (t,d) -> if d = 0 then unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
-    let find e = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!unionfindlist) with Not_found -> Hstring.HSet.singleton e in
-    let union e1 e2 = 
-      let s1 = find e1 in 
-      let s2 = find e2 in 
+    let find e ufl = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!unionfindlist) with Not_found -> Hstring.HSet.singleton e in
+    let union e1 e2 ufl  = 
+      let s1 = find e1 ufl in 
+      let s2 = find e2 ufl in 
       let ns = Hstring.HSet.union s1 s2 in 
       let filtered = List.filter (fun s -> s <> s1 && s <> s2) (!unionfindlist) in 
       unionfindlist := ns::filtered
     in 
     let unionfind = function 
-      | Comp(Elem(e1, _) , Eq, Elem(e2, _))  -> union e1 e2
-      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2))
+      | Comp(Elem(e1, _) , Eq, Elem(e2, _))  -> union e1 e2 unionfindlist
+      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) unionfindlist
       | _ -> assert false 
     in
     
@@ -217,22 +215,32 @@ let write_init (vars, dnf) g_vars ty_defs =
           with Not_found -> ()
         );
       let tail = Hstring.HSet.filter (fun v -> v <> head) set in 
-      Hstring.HSet.iter (fun v -> register_written_var v; pfile "\t%s := %s;\n" (get_var_name v) (!header)) tail;
+      Hstring.HSet.iter (fun v -> pfile "\t%s := %s;\n" (get_var_name v) (!header)) tail;
     in
     List.iter write_union_find (!unionfindlist);
     (* END : UNION-FIND *)
 
     (*
-    TODO : On veut regrouper les acess en fonction de leurs var_list, et imbriquer les for correctement. 
-    On fait par exemple :
-      for i = 0 to get_nb_proc ():
-        azek.(i) <- true 
-        for j = 0 to get_nb_proc() :
-          ribo.(i).(j) <- azek.(i)
-    On peut penser a le faire avec une Hashtbl ou HSet 
-    On peut dans cette même passe s'occuper de register_written_var.
+    TODO : Regrouper les accès par dimension.
+    Faire un union-find par dimension. 
+    Faire une affectation par dimension croissante. 
+    On a un IntMap qui prend un int (dimension) en entrée et renvoie une liste de Set (union find)
     *)
-    List.iter (fun var -> pfile "\tfor %s = 0 to get_nb_proc () do \n" (Hstring.view var)) vars;
+  
+    (* BEGIN : WIP *)
+    let access_unionmap = ref IntMap.empty in
+    Hstring.HMap.iter (fun var_name (t,d) -> if d > 0 then
+      let k_unionfindlist = try IntMap.find d (!access_unionmap) with Not_found -> [] in 
+      access_unionmap := IntMap.add d ((Hstring.HSet.singleton var_name)::(k_unionfindlist)) (!access_unionmap);
+    ) g_vars; 
+  
+    let access_unionfind dim dim_unionfindlist = () in 
+    IntMap.iter access_unionfind (!access_unionmap);
+
+
+    (* END : WIP *)
+ 
+    List.iter (fun var -> pfile "\tfor %s = 0 to ((get_nb_proc ()) - 1) do \n" (Hstring.view var)) vars;
     let write_access = function 
       | Comp(Access(g_var,var_list), _, other) | Comp(other,_, Access(g_var,var_list)) ->
           let access_value = 
@@ -242,12 +250,10 @@ let write_init (vars, dnf) g_vars ty_defs =
             | Const(c) -> mconst_to_string c
             | _ -> ""
             end in
-          register_written_var g_var;
           pfile "\t\t%s%s <- %s;\n" (get_var_name g_var) (deplier_var_list var_list) access_value
       | _ -> ()
     in
     SAtom.iter write_access access_set;
-    (* TODO ICI : Attribution non déterministe pour les array restant *)
     List.iter (fun _ -> pfile "\tdone;\n") vars;
     in
   List.iter manage_satom dnf;
@@ -299,7 +305,7 @@ let write_transitions trans_list ty_defs g_vars =
       print_term g_vars t2;
     | True -> pfile "true"
     | False -> pfile "false"
-    | _ -> ()
+    | _ -> () (* TODO : If then else *)
     in
     let print_atom_and atom = print_atom atom; pfile " && " in
     pfile "\t";
@@ -373,7 +379,7 @@ let write_transitions trans_list ty_defs g_vars =
       pfile "%s" (get_value_for_type (get_var_type up.up_arr) ty_defs);
       List.iter (fun _ -> pfile ")") up.up_arg;
       pfile (" in\n");
-      List.iter (fun arg -> pfile "\tfor %s = 0 to (get_nb_proc ()) do \n " (Hstring.view arg)) up.up_arg;
+      List.iter (fun arg -> pfile "\tfor %s = 0 to ((get_nb_proc ()) - 1) do \n " (Hstring.view arg)) up.up_arg;
       pfile "\t\t%s%s <- " (get_updated_name up.up_arr) (deplier_var_list up.up_arg);
       print_switch up.up_swts;
       List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
@@ -384,7 +390,7 @@ let write_transitions trans_list ty_defs g_vars =
 
     Hashtbl.iter (fun k v -> pfile "\t%s := %s;\n" k  v) updated;
     let app_upd k v =
-      pfile "\tfor tmp_%d = 0 to (get_nb_proc ()) do \n" (k-1);
+      pfile "\tfor tmp_%d = 0 to ((get_nb_proc ()) - 1) do \n" (k-1);
       List.iter 
       (
         let deplier () = for i = 0 to (k-1) do pfile ".(tmp_%d)" i done in
