@@ -183,13 +183,13 @@ let write_init (vars, dnf) g_vars ty_defs =
   
     let unionfindlist = ref [] in
     Hstring.HMap.iter (fun k (t,d) -> if d = 0 then unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
-    let find e ufl = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!unionfindlist) with Not_found -> Hstring.HSet.singleton e in
+    let find e ufl = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!ufl) with Not_found -> Hstring.HSet.singleton e in
     let union e1 e2 ufl  = 
       let s1 = find e1 ufl in 
       let s2 = find e2 ufl in 
       let ns = Hstring.HSet.union s1 s2 in 
-      let filtered = List.filter (fun s -> s <> s1 && s <> s2) (!unionfindlist) in 
-      unionfindlist := ns::filtered
+      let filtered = List.filter (fun s -> s <> s1 && s <> s2) (!ufl) in 
+      ufl := ns::filtered
     in 
     let unionfind = function 
       | Comp(Elem(e1, _) , Eq, Elem(e2, _))  -> union e1 e2 unionfindlist
@@ -230,11 +230,23 @@ let write_init (vars, dnf) g_vars ty_defs =
     (* BEGIN : WIP *)
     let access_unionmap = ref IntMap.empty in
     Hstring.HMap.iter (fun var_name (t,d) -> if d > 0 then
-      let k_unionfindlist = try IntMap.find d (!access_unionmap) with Not_found -> [] in 
-      access_unionmap := IntMap.add d ((Hstring.HSet.singleton var_name)::(k_unionfindlist)) (!access_unionmap);
+      let k_unionfindlist = try !(IntMap.find d (!access_unionmap)) with Not_found -> [] in 
+      access_unionmap := IntMap.add d (ref ((Hstring.HSet.singleton var_name)::(k_unionfindlist))) (!access_unionmap);
     ) g_vars; 
   
-    let access_unionfind dim dim_unionfindlist = () in 
+    let access_unionfind dim dim_unionfindlist = 
+      let dim_unionfind = function 
+        | Comp(Access(e1, _) , Eq, Access(e2, _)) | Comp(Access(e1,_), Eq, Elem(e2,_)) | Comp(Elem(e2,_),Eq,Access(e1,_)) -> union e1 e2 dim_unionfindlist
+        | Comp(Access(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Access(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) dim_unionfindlist
+        | _ -> assert false 
+      in
+      (* -- DEBUG -- *)
+      SAtom.iter dim_unionfind access_set;
+      printf "%d : " dim;
+      List.iter (fun s -> printf "["; Hstring.HSet.iter (fun var -> printf " %s" (Hstring.view var)) s; printf "]") !dim_unionfindlist;
+      (* -- END DEBUG **)
+      ()
+    in 
     IntMap.iter access_unionfind (!access_unionmap);
 
 
