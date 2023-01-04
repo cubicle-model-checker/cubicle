@@ -293,11 +293,13 @@ let write_transitions trans_list ty_defs g_vars =
     SAtom.iter print_atom_and trans_info.tr_reqs;
     pfile "true\n\n";
 
-    (* Write Ac *)
+    (* écriture de la tête de ac_ *)
     pfile "let ac_%s args = \n" trans_name;
     write_args ();
 
-    (* Ac_Assigne *)
+    (* écriture des assignations de variables de ac_ *)
+
+    (* On écrit des switch comme un dépliement de if_else pour simplifier. *)
     let print_switch swts = 
       let print_switch_sub last (satom, term) = 
         if not last then   
@@ -328,18 +330,17 @@ let write_transitions trans_list ty_defs g_vars =
     in
     List.iter write_assign trans_info.tr_assigns;
 
-    (* Ac_Nondets *)
+    (* écriture des assignations non déterministe de ac_ *)
     let write_nondet var_name =
       pfile "\t%s := %s;\n" (get_var_name var_name) (get_random_for_type (Hstring.HMap.find var_name g_vars) ty_defs)
     in
     List.iter write_nondet trans_info.tr_nondets;
 
-    (* Ac_Updates *)
+    (* écriture des update d'array de ac_ *)
     let write_upd up =
       List.iter (fun arg -> pfile "\tfor %s = 0 to (get_nb_proc ()) do \n " (Hstring.view arg)) up.up_arg;
       pfile "\t\tlet newval = \n\t\t\t";
       print_switch up.up_swts;
-      (* On va déplier les switch avec une série de if else ici. Le dernier else ne doit pas être un if else mais seulement un else pour que la fonction soit bien typé, *)
       pfile "\t\tin %s%s <- newval\n" (get_var_name up.up_arr) (deplier_var_list up.up_arg);
       List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
     in 
