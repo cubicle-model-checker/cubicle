@@ -54,6 +54,22 @@ let mconst_is_float mconst g_vars  =
 let deplier_var_list var_list = 
   List.fold_left (fun prev v -> sprintf "%s.(%s)" prev (Hstring.view v)) "" var_list
 
+(* Permet de multiplier le string s par le string n. Utile pour permettre la tabulation correcte. *)
+let mult_string s n = 
+  let reste = ref "" in 
+  for i = 1 to n do 
+    reste := s^(!reste)
+  done;
+  !reste
+
+(* Permet d'accéder a un tableau de dimension n. Renvoie le string ".(tmp_0).(tmp_1)..." *)
+let deplier_var n = 
+  let reste = ref "" in 
+  for i = 1 to n do 
+    reste := (!reste)^(sprintf ".(tmp_%d)" (i-1))
+  done;
+  !reste
+
 let hstring_list_to_string hsl =
   let rec sub_hsllts hsl_rem prev =
     match hsl_rem with
@@ -118,6 +134,9 @@ let get_random_for_type ty ty_defs =
       let possible = Hashtbl.find ty_defs ty in 
       Format.sprintf "get_random_in_list %s" (hstring_list_to_string possible)
 
+let get_var_type var_name g_vars = let (t,_) = Hstring.HMap.find var_name g_vars in t
+let get_var_dim var_name g_vars = try let (_, d) = Hstring.HMap.find var_name g_vars in d with Not_found -> -1
+
 module IntMap = Map.Make(struct type t = int let compare : int -> int -> int = Int.compare end) 
 
 (* END : Fonction d'aide *)
@@ -172,100 +191,102 @@ let write_vars s ty_defs =
 let write_init (vars, dnf) g_vars ty_defs =
   pfile "let init () = \n";
   let manage_satom satom =
-    let is_access = function
-      | Comp(Access(_,var_list), _, _) | Comp(_,_, Access(_,var_list)) -> true
-      | _ -> false 
-    in 
-    let (access_set, other_set) = SAtom.partition is_access satom in 
-    
-    (* BEGIN : UNION-FIND *)
-    (* Note : Implémentation de l'Union-Find sous optimale. *)
-  
-    let unionfindlist = ref [] in
-    Hstring.HMap.iter (fun k (t,d) -> if d = 0 then unionfindlist := (Hstring.HSet.singleton k)::(!unionfindlist)) g_vars; 
-    let find e ufl = try List.find (fun s -> Hstring.HSet.exists (fun a -> a = e) s) (!ufl) with Not_found -> Hstring.HSet.singleton e in
-    let union e1 e2 ufl  = 
-      let s1 = find e1 ufl in 
-      let s2 = find e2 ufl in 
-      let ns = Hstring.HSet.union s1 s2 in 
-      let filtered = List.filter (fun s -> s <> s1 && s <> s2) (!ufl) in 
-      ufl := ns::filtered
-    in 
+    let union_list = ref [] in
+    Hstring.HMap.iter (fun var_name (t,d) -> union_list := (Hstring.HSet.singleton var_name)::(!union_list)) g_vars;
+    let find e = try List.find (fun s -> Hstring.HSet.mem e s) !(union_list) with Not_found -> Hstring.HSet.singleton e
+    in (* Renvoie la clef du union_map contenant e : Soit c'est une clef; soit c'est la clef de l'ensemble qui le contient *)
+    let union e1 e2 = 
+      let s1 = find e1 in 
+      let s2 = find e2 in 
+      let sunion = Hstring.HSet.union s1 s2 in 
+      union_list := List.filter (fun s -> (s <> s1) && (s <> s2)) (!union_list);
+      union_list := sunion::(!union_list)
+    in
+    (* Union find *)
     let unionfind = function 
-      | Comp(Elem(e1, _) , Eq, Elem(e2, _))  -> union e1 e2 unionfindlist
-      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) unionfindlist
+      | Comp(Elem(e1, _) , Eq, Elem(e2, _)) | Comp(Elem(e1,_), Eq, Access(e2,_)) | Comp(Access(e1,_), Eq, Elem(e2,_)) | Comp(Access(e1,_), Eq, Access(e2, _)) -> union e1 e2 
+      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) 
       | _ -> assert false 
-    in
-    
-    let find_head_in set =  (* Renvoie en priorité un constructeur, puis une variable sinon *)
-      let is_constr v = not (Hstring.HMap.mem v g_vars) in
-      try (Hstring.HSet.find_first is_constr set, true) with Not_found -> (Hstring.HSet.choose set, false)
     in 
-    SAtom.iter unionfind other_set;
-    let write_union_find set = 
-      let (head, is_constr) = find_head_in set in
-      (* Si head est un constr, toutes les valeurs suivantes prennent la valeur de head. Sinon on initialise une tête random *)
-      let header = ref (Hstring.view head) in
-      if not is_constr then
+    SAtom.iter unionfind satom;
+    let union_map = ref (IntMap.empty) in
+    let find_head_in s = 
+      let h = ref (Hstring.HSet.choose s) in
+      let d = ref (get_var_dim (!h) g_vars) in
+      Hstring.HSet.iter (fun v -> 
+        let nd = get_var_dim v g_vars in
+        if nd < !d then (d := nd; h := v)
+      ) s;
+      !h
+    in 
+    let sub_build set = 
+      let head = find_head_in set in 
+      let set_without_head = Hstring.HSet.filter (fun v -> v <> head) set in
+      let hm = try IntMap.find (get_var_dim head g_vars) (!union_map) with Not_found -> Hstring.HMap.empty in
+      union_map := IntMap.add (get_var_dim head g_vars) (Hstring.HMap.add head Hstring.HSet.empty hm) (!union_map);
+      Hstring.HSet.iter 
+      (
+        fun v -> let dim = get_var_dim v g_vars in 
+        let hm = try IntMap.find dim (!union_map) with Not_found -> Hstring.HMap.empty in
+        let s = try Hstring.HMap.find head hm with Not_found -> Hstring.HSet.empty in 
+          
+        union_map := IntMap.add dim (Hstring.HMap.add head (Hstring.HSet.add v s) hm) (!union_map)
+      ) 
+      set_without_head
+    in
+    List.iter sub_build (!union_list);
+    (* Print union_map *)
+
+    IntMap.iter 
+    (
+      fun d m -> 
+        printf "%d : " d; 
+        Hstring.HMap.iter (
+          fun h s -> 
+            printf " (%s :" (Hstring.view h);
+            Hstring.HSet.iter (
+              fun v -> 
+                printf " %s " (Hstring.view v))
+        s;
+            printf ")") m;
+        printf "\n"
+    )
+    (!union_map);
+    printf "\n";
+    (* On a maintenant l'union_map, plus qu'a l'écrire. *)
+    let print_dim dim hm = 
+      (* Les variables a dimension négatives sont les constantes *)
+      if dim >= 0 then
         (
-          (* Si ce n'est pas une constante, on l'initialise. Sinon pas besoin *)
-          try let (t,d) = Hstring.HMap.find head g_vars in
-          header := sprintf "!%s" (get_var_name head);
-          pfile "\t%s := %s;\n" (get_var_name head) (get_random_for_type t ty_defs); 
-          with Not_found -> ()
-        );
-      let tail = Hstring.HSet.filter (fun v -> v <> head) set in 
-      Hstring.HSet.iter (fun v -> pfile "\t%s := %s;\n" (get_var_name v) (!header)) tail;
-    in
-    List.iter write_union_find (!unionfindlist);
-    (* END : UNION-FIND *)
-
-    (*
-    TODO : Regrouper les accès par dimension.
-    Faire un union-find par dimension. 
-    Faire une affectation par dimension croissante. 
-    On a un IntMap qui prend un int (dimension) en entrée et renvoie une liste de Set (union find)
-    *)
-  
-    (* BEGIN : WIP *)
-    let access_unionmap = ref IntMap.empty in
-    Hstring.HMap.iter (fun var_name (t,d) -> if d > 0 then
-      let k_unionfindlist = try !(IntMap.find d (!access_unionmap)) with Not_found -> [] in 
-      access_unionmap := IntMap.add d (ref ((Hstring.HSet.singleton var_name)::(k_unionfindlist))) (!access_unionmap);
-    ) g_vars; 
-  
-    let access_unionfind dim dim_unionfindlist = 
-      let dim_unionfind = function 
-        | Comp(Access(e1, _) , Eq, Access(e2, _)) | Comp(Access(e1,_), Eq, Elem(e2,_)) | Comp(Elem(e2,_),Eq,Access(e1,_)) -> union e1 e2 dim_unionfindlist
-        | Comp(Access(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Access(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) dim_unionfindlist
-        | _ -> assert false 
-      in
-      (* -- DEBUG -- *)
-      SAtom.iter dim_unionfind access_set;
-      printf "%d : " dim;
-      List.iter (fun s -> printf "["; Hstring.HSet.iter (fun var -> printf " %s" (Hstring.view var)) s; printf "]") !dim_unionfindlist;
-      (* -- END DEBUG **)
-      ()
+        (* On écrit une boucle for si dim > 0 *)
+        if dim > 0 then 
+          pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" dim) (dim-1);
+        let print_set head set =
+          (* On initialise la tête si dim tête = dim *)
+          let init_sign = if dim = 0 then ":=" else "<-" in
+          let dim_head = get_var_dim head g_vars in 
+          let init_head = (dim_head = dim) in 
+        
+          let tabstr = mult_string "\t" (dim+1) in
+          let headstr = if dim_head >= 0 then sprintf "%s%s" (get_var_name head) (deplier_var dim_head) else Hstring.view head in 
+          let headgetstr = if dim_head = 0 then "(!"^headstr^")" else headstr in
+          if init_head then 
+            (
+              pfile "%s%s %s %s;\n" tabstr headstr init_sign (get_random_for_type (get_var_type head g_vars) ty_defs)
+            );
+          let tail_set v = 
+            pfile "%s%s%s %s %s;\n" tabstr (get_var_name v) (deplier_var dim) init_sign headgetstr
+          in
+          Hstring.HSet.iter tail_set set
+          (* On met toutes les valeurs de la queue égale a la valeur de la tête *)
+        in 
+        Hstring.HMap.iter print_set hm
+      )
     in 
-    IntMap.iter access_unionfind (!access_unionmap);
+    
+    IntMap.iter print_dim (!union_map);
+    (* Utiliser to_rev_set pour faire les done *)
 
-
-    (* END : WIP *)
- 
-    List.iter (fun var -> pfile "\tfor %s = 0 to ((get_nb_proc ()) - 1) do \n" (Hstring.view var)) vars;
-    let write_access = function 
-      | Comp(Access(g_var,var_list), _, other) | Comp(other,_, Access(g_var,var_list)) ->
-          let access_value = 
-            begin match other with
-            | Elem(name, Glob) -> sprintf "!%s" (get_var_name name)
-            | Elem(name, Constr) -> get_constr_name name 
-            | Const(c) -> mconst_to_string c
-            | _ -> ""
-            end in
-          pfile "\t\t%s%s <- %s;\n" (get_var_name g_var) (deplier_var_list var_list) access_value
-      | _ -> ()
-    in
-    SAtom.iter write_access access_set;
     List.iter (fun _ -> pfile "\tdone;\n") vars;
     in
   List.iter manage_satom dnf;
@@ -277,7 +298,7 @@ let write_transitions trans_list ty_defs g_vars =
   let write_transition trans =
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-    let get_var_type var_name = let (t,d) = Hstring.HMap.find var_name g_vars in t in
+    
     (* Write arguments *)
     
     let trans_args = trans_info.tr_args in 
@@ -364,7 +385,7 @@ let write_transitions trans_list ty_defs g_vars =
 
     (* écriture des assignations non déterministe de ac_ *)
     let write_nondet var_name =
-      pfile "\tlet %s = %s in\n" (get_updated_name var_name) (get_random_for_type (get_var_type var_name) ty_defs);
+      pfile "\tlet %s = %s in\n" (get_updated_name var_name) (get_random_for_type (get_var_type var_name g_vars) ty_defs);
       Hashtbl.add updated (get_var_name var_name) (get_updated_name var_name)
     in
     List.iter write_nondet trans_info.tr_nondets;
@@ -388,7 +409,7 @@ let write_transitions trans_list ty_defs g_vars =
       add_updated_array dim (get_var_name up.up_arr) (get_updated_name up.up_arr);
       pfile "\tlet %s = " (get_updated_name up.up_arr);
       List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") up.up_arg;
-      pfile "%s" (get_value_for_type (get_var_type up.up_arr) ty_defs);
+      pfile "%s" (get_value_for_type (get_var_type up.up_arr g_vars) ty_defs);
       List.iter (fun _ -> pfile ")") up.up_arg;
       pfile (" in\n");
       List.iter (fun arg -> pfile "\tfor %s = 0 to ((get_nb_proc ()) - 1) do \n " (Hstring.view arg)) up.up_arg;
