@@ -303,7 +303,6 @@ let write_transitions trans_list ty_defs g_vars =
     let updated = Hashtbl.create (Hstring.HMap.cardinal g_vars) in
 
     (* Write Req *)
-    (* tr_reqs : Garde, tr_ureqs : Garde sur universally quantified *)
     pfile "let req_%s args = \n" trans_name;
     write_args ();
         
@@ -320,7 +319,7 @@ let write_transitions trans_list ty_defs g_vars =
       print_term g_vars t2;
     | True -> pfile "true"
     | False -> pfile "false"
-    | Ite(satom, t1, t2) -> 
+    | Ite(satom, t1, t2) -> (* Note : Les Ite ne sont pas réellement implémenté, donc ce code est inutile *) 
         pfile "if (";
         SAtom.iter print_atom_and satom;
         pfile ")then (";
@@ -331,16 +330,16 @@ let write_transitions trans_list ty_defs g_vars =
     and print_atom_and atom = print_atom atom; pfile " && " in
     pfile "\t";
     SAtom.iter print_atom_and trans_info.tr_reqs;
-    pfile "true\n\n";
+    pfile "\n";
     (* Type tr_ureq : Variable.t * Ast.dnf *)
-    (* écriture UREQ *)
     let print_ureq (v, dnf) = 
-      pfile "(* v : %s\n" (Hstring.view v); 
+      pfile "\t(forall_other (fun %s -> " (Hstring.view v);
       List.iter (SAtom.iter print_atom_and) dnf;
-      pfile "*)\n";
+      pfile "true) ";
+      pfile "args) && \n"; 
     in
     List.iter print_ureq trans_info.tr_ureq;
-
+    pfile "\ttrue\n\n";
     (* écriture de la tête de ac_ *)
     pfile "let ac_%s args = \n" trans_name;
     write_args ();
