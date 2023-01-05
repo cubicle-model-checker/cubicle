@@ -453,7 +453,7 @@ let write_transitions trans_list ty_defs g_vars =
   pfile "\n"
 
 let run ts s =
-  pfile "%s\n" "open Shelp";
+  pfile "%s\n" "open Sutils";
   let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
   write_init ts.t_init g_vars g_types;

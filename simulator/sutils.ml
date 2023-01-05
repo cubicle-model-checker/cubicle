@@ -55,10 +55,10 @@ let add_req_acc nb_arg trans =
    
 let forall_other f i = 
   let rec forall_sub n =
-    if (n != i) && not (f n) then false else if n == ((get_nb_proc ()) - 1) then true else forall_sub (n+1) in
+    if not (List.exists (fun v -> v = n) i) && not (f n) then false else if n == ((get_nb_proc ()) - 1) then true else forall_sub (n+1) in
   forall_sub 0
 
-let forall f = forall_other f (-1)
+let forall f = forall_other f []
 
 (* Gestion d'évènements *)
 
