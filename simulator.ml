@@ -413,7 +413,7 @@ let write_transitions trans_list ty_defs g_vars =
       List.iter (fun arg -> depth := (!depth) + 1; pfile "%sfor %s = 0 to ((get_nb_proc ()) - 1) do \n " (mult_string "\t" (!depth)) (Hstring.view arg)) up.up_arg;
       pfile "%s%s%s <- " tabstrapp (get_updated_name up.up_arr) (deplier_var_list up.up_arg);
       print_switch up.up_swts;
-      List.iter (fun arg -> pfile "%sdone; \n" (mult_string "\t" (!depth)); depth := (!depth) - 1) up.up_arg; 
+      List.iter (fun arg -> pfile "%sdone; \n" (mult_string "\t" (!depth)); depth := (!depth)-1) up.up_arg; 
     in 
     List.iter write_upd trans_info.tr_upds;
 
