@@ -3,29 +3,16 @@
 # Compilateur
 
 - [.] écrire un fichier sutils.mli avec une bonne déclaration des fonctions
-- [.] Trouver une meilleure structure d'organisation des fichiers. On veut probablement :
-		simulator/
-    |	out/
-    |	|	sutils.ml 
-    |	|	sgraphics.ml 
-    |	|	smain.ml 
-    |	|	stmp.ml 
-    |	compiler/
-    |	|	cutils.ml
-		| | ccompiler.ml
-  
-  Ou quelque chose du style.
 
 # Simulateur
 
 - [.] Initialiser les arrays dans le init, pour qu'ils soient uniquement de la taille nécéssaire (économie de mémoire)
-- [.] Utiliser un 'set' pour les events
 - [.] Remplacer le "args" par un array plutôt qu'une liste pour gagner un peu de performance. permet de supprimer la fonction find_ieme et la remplacer par juste ".(n)";
-- [.] Arguments : 
+- [.] Utiliser le module 'Args' et implémenter Arguments : 
 	--graphics : Utiliser l'affichage graphique. 
 	--save-trace : Sauvegarde la trace de la simulation 
 	--check-unsafe : Vérifie si unsafe. Si c'est unsafe, crash et enregistre la trace
 
-# Documentation 
+# Simulateur:Interaction
 
-- [.] Mettre les commentaires en anglais 
+- [.] Utiliser un 'set' pour les events
