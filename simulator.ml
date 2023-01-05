@@ -206,7 +206,7 @@ let write_init (vars, dnf) g_vars ty_defs =
     let unionfind = function 
       | Comp(Elem(e1, _) , Eq, Elem(e2, _)) | Comp(Elem(e1,_), Eq, Access(e2,_)) | Comp(Access(e1,_), Eq, Elem(e2,_)) | Comp(Access(e1,_), Eq, Access(e2, _)) -> union e1 e2 
       | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) 
-      | _ -> assert false 
+      | _ -> () (* assert false *) 
     in 
     SAtom.iter unionfind satom;
     let union_map = ref (IntMap.empty) in
@@ -268,7 +268,7 @@ let write_init (vars, dnf) g_vars ty_defs =
           let init_head = (dim_head = dim) in 
         
           let tabstr = mult_string "\t" (dim+1) in
-          let headstr = if dim_head >= 0 then sprintf "%s%s" (get_var_name head) (deplier_var dim_head) else Hstring.view head in 
+          let headstr = if dim_head >= 0 then sprintf "%s%s" (get_var_name head) (deplier_var dim_head) else get_constr_name head in 
           let headgetstr = if dim_head = 0 then "(!"^headstr^")" else headstr in
           if init_head then 
             (
@@ -412,8 +412,9 @@ let write_transitions trans_list ty_defs g_vars =
       pfile "%s" (get_value_for_type (get_var_type up.up_arr g_vars) ty_defs);
       List.iter (fun _ -> pfile ")") up.up_arg;
       pfile (" in\n");
+      let tabstrapp = mult_string "\t" ((List.length up.up_arg)+1) in
       List.iter (fun arg -> pfile "\tfor %s = 0 to ((get_nb_proc ()) - 1) do \n " (Hstring.view arg)) up.up_arg;
-      pfile "\t\t%s%s <- " (get_updated_name up.up_arr) (deplier_var_list up.up_arg);
+      pfile "%s%s%s <- " tabstrapp (get_updated_name up.up_arr) (deplier_var_list up.up_arg);
       print_switch up.up_swts;
       List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
     in 
@@ -423,32 +424,25 @@ let write_transitions trans_list ty_defs g_vars =
 
     Hashtbl.iter (fun k v -> pfile "\t%s := %s;\n" k  v) updated;
     let app_upd k v =
-      pfile "\tfor tmp_%d = 0 to ((get_nb_proc ()) - 1) do \n" (k-1);
+      let tabstr = mult_string "\t" k in 
+      let tabstrapp = tabstr^"\t" in
+      pfile "%sfor tmp_%d = 0 to ((get_nb_proc ()) - 1) do \n" tabstr (k-1);
       List.iter 
       (
-        let deplier () = for i = 0 to (k-1) do pfile ".(tmp_%d)" i done in
-        fun (var_name, new_value) -> pfile "\t\t%s" var_name;
-        deplier ();
-        pfile " <- %s" new_value;
-        deplier ();
-        pfile ";\n";
+        fun (var_name, new_value) -> pfile "%s%s%s <- %s%s;\n" tabstrapp var_name (deplier_var k) new_value (deplier_var k); 
       ) 
       v
     in
     IntMap.iter app_upd (!updated_array);
-    for i = 0 to ((IntMap.cardinal (!updated_array) - 1)) do pfile "\tdone;\n" done;
+    let max_card = IntMap.cardinal (!updated_array) in
+    for i = 1 to max_card do pfile "%sdone;\n" (mult_string "\t" (max_card - i + 1)) done;
     
     pfile "\t()\n";
 
     (* On écrit la transition pour la table *)
     pfile "\nlet %s = (\"%s\", req_%s, ac_%s) \n\n" trans_name trans_name trans_name trans_name
-    
-
-
     in
   List.iter write_transition trans_list;
-  
-
 
   (* écriture de la table de transition *) 
 
@@ -457,7 +451,7 @@ let write_transitions trans_list ty_defs g_vars =
   let write_table trans = 
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-    pfile  "\tadd_req_acc %s %s;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
+    pfile "\tadd_req_acc %s %s;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
   in
   List.iter write_table trans_list;
   pfile "\n"
