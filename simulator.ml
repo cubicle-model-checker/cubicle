@@ -23,8 +23,8 @@ let updated_prefix = "n"                  (* Voir dans transition *)
 let pfile = fun d -> fprintf out_file d
 
 (* BEGIN : Fonction d'aide ; Peut être a déplacer dans un fichier 'clib.ml' *)
-let get_var_name v = Format.sprintf "%s%s" var_prefix (Hstring.view v)
-let get_updated_name v = Format.sprintf "%s%s" updated_prefix (Hstring.view v)
+let get_var_name v = sprintf "%s%s" var_prefix (Hstring.view v)
+let get_updated_name v = sprintf "%s%s" updated_prefix (Hstring.view v)
 let get_constr_name s = 
   let s = Hstring.view s in match s with
     | "@MTrue" -> "true"
@@ -74,9 +74,9 @@ let hstring_list_to_string hsl =
   let rec sub_hsllts hsl_rem prev =
     match hsl_rem with
       | [] -> ""
-      | hd::tl -> Format.sprintf "%s%s%s" prev (Hstring.view hd) (sub_hsllts tl "; ")
+      | hd::tl -> sprintf "%s%s%s" prev (Hstring.view hd) (sub_hsllts tl "; ")
   in 
-  Format.sprintf "[%s]" (sub_hsllts hsl "")
+  sprintf "[%s]" (sub_hsllts hsl "")
 
 let const_to_string = function 
   | ConstInt n -> sprintf "%s" (Num.string_of_num n)
@@ -235,24 +235,7 @@ let write_init (vars, dnf) g_vars ty_defs =
       set_without_head
     in
     List.iter sub_build (!union_list);
-    (* Print union_map *)
 
-    IntMap.iter 
-    (
-      fun d m -> 
-        printf "%d : " d; 
-        Hstring.HMap.iter (
-          fun h s -> 
-            printf " (%s :" (Hstring.view h);
-            Hstring.HSet.iter (
-              fun v -> 
-                printf " %s " (Hstring.view v))
-        s;
-            printf ")") m;
-        printf "\n"
-    )
-    (!union_map);
-    printf "\n";
     (* On a maintenant l'union_map, plus qu'a l'écrire. *)
     let print_dim dim hm = 
       (* Les variables a dimension négatives sont les constantes *)
@@ -285,9 +268,8 @@ let write_init (vars, dnf) g_vars ty_defs =
     in 
     
     IntMap.iter print_dim (!union_map);
-    (* Utiliser to_rev_set pour faire les done *)
-
-    List.iter (fun _ -> pfile "\tdone;\n") vars;
+    let revdim = IntMap.to_rev_seq (!union_map) in 
+    Seq.iter (fun (i,_) -> if i > 0 then pfile "%sdone;\n" (mult_string "\t" i)) revdim;
     in
   List.iter manage_satom dnf;
   
@@ -331,19 +313,33 @@ let write_transitions trans_list ty_defs g_vars =
     | Lt -> pfile " < "
     | Neq -> pfile " <> "
     in
-    let print_atom = function
+    let rec print_atom = function
     | Comp(t1, op, t2) -> 
       print_term g_vars t1;
       print_op op;
       print_term g_vars t2;
     | True -> pfile "true"
     | False -> pfile "false"
-    | _ -> () (* TODO : If then else *)
-    in
-    let print_atom_and atom = print_atom atom; pfile " && " in
+    | Ite(satom, t1, t2) -> 
+        pfile "if (";
+        SAtom.iter print_atom_and satom;
+        pfile ")then (";
+        print_atom t1;
+        pfile") else (";
+        print_atom t2;
+        pfile ")"
+    and print_atom_and atom = print_atom atom; pfile " && " in
     pfile "\t";
     SAtom.iter print_atom_and trans_info.tr_reqs;
     pfile "true\n\n";
+    (* Type tr_ureq : Variable.t * Ast.dnf *)
+    (* écriture UREQ *)
+    let print_ureq (v, dnf) = 
+      pfile "(* v : %s\n" (Hstring.view v); 
+      List.iter (SAtom.iter print_atom_and) dnf;
+      pfile "*)\n";
+    in
+    List.iter print_ureq trans_info.tr_ureq;
 
     (* écriture de la tête de ac_ *)
     pfile "let ac_%s args = \n" trans_name;
@@ -413,10 +409,11 @@ let write_transitions trans_list ty_defs g_vars =
       List.iter (fun _ -> pfile ")") up.up_arg;
       pfile (" in\n");
       let tabstrapp = mult_string "\t" ((List.length up.up_arg)+1) in
-      List.iter (fun arg -> pfile "\tfor %s = 0 to ((get_nb_proc ()) - 1) do \n " (Hstring.view arg)) up.up_arg;
+      let depth = ref 0 in
+      List.iter (fun arg -> depth := (!depth) + 1; pfile "%sfor %s = 0 to ((get_nb_proc ()) - 1) do \n " (mult_string "\t" (!depth)) (Hstring.view arg)) up.up_arg;
       pfile "%s%s%s <- " tabstrapp (get_updated_name up.up_arr) (deplier_var_list up.up_arg);
       print_switch up.up_swts;
-      List.iter (fun arg -> pfile "\tdone; \n") up.up_arg; 
+      List.iter (fun arg -> pfile "%sdone; \n" (mult_string "\t" (!depth)); depth := (!depth) - 1) up.up_arg; 
     in 
     List.iter write_upd trans_info.tr_upds;
 
