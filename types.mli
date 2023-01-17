@@ -24,6 +24,9 @@ type sort =
   | Glob (** global variable *)
   | Constr (** constructor *)
   | Var (** variable of the paramterized domain *)
+  | SystemProcs
+
+type proc_act = PlusOne | MinusOne | CompProcs
 
 (** constant: it can be an integer, a real or a constant name *)
 type const =
@@ -63,7 +66,8 @@ type term =
   | Access of Hstring.t * Variable.t list
   (** an access to an array *)
   | Arith of term * int MConst.t
-  (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
+(** arithmetic term: [Arith (t, c)] is the term [t + c] *)
+  | ProcManip of term list * proc_act
 (*  | NArith of cst VMap.t * cst*)
 			   
 (** Module interface for terms *)
@@ -92,6 +96,8 @@ module Term : sig
 
   val print : Format.formatter -> t -> unit
   (** prints a term *)
+      val print_cs : bool -> Format.formatter -> int MConst.t -> unit
+
 
   module Set : Set.S with type elt = t
   (** set of terms *)
@@ -247,6 +253,7 @@ module ArrayAtom : sig
   val alpha : t -> Variable.t list -> Variable.t list * t
   (** alpha renaming of process variables *)
 
+    
   val print : Format.formatter -> t -> unit
   (** prints the conjunction corresponding to the array of atoms *)
 end

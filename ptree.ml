@@ -158,10 +158,16 @@ type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
+  ptr_process : Variable.t option;
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
+  ptr_locks : Ast.lock list;
+  ptr_unlocks : Ast.lock list;
+  ptr_wait : Ast.lock list;
+  ptr_notify: Ast.lock list;
+  ptr_notifyall: Ast.lock list;
   ptr_loc : loc;
 }
 
@@ -454,11 +460,11 @@ let conv_atom aa = match aa with
     let t1 = conv_term t1 in
     let t2 = conv_term t2 in
     let op  = match aa with
-       | AEq _ -> Eq
-       | ANeq _ -> Neq
-       | ALe _ -> Le
-       | ALt _ -> Lt
-       | _ -> assert false
+      | AEq _ -> Eq
+      | ANeq _ -> Neq
+      | ALe _ -> Le
+      | ALt _ -> Lt
+      | _ -> assert false
     in
     Atom.Comp (t1, op, t2)
   | AAtom a -> a
@@ -572,9 +578,10 @@ let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
      up_swts = encode_pswts pup_swts;
   }
 
+
 let encode_ptransition
-    {ptr_lets; ptr_name; ptr_args; ptr_reqs; ptr_assigns;
-     ptr_upds; ptr_nondets; ptr_loc;} =
+    {ptr_lets; ptr_name; ptr_args; ptr_process; ptr_reqs; ptr_assigns;
+     ptr_upds; ptr_nondets; ptr_locks; ptr_unlocks; ptr_wait; ptr_notify; ptr_notifyall; ptr_loc;} =
   let dguards = guard_of_formula ptr_args ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
       (i, encode_pglob_update pgu)) ptr_assigns in
@@ -583,11 +590,17 @@ let encode_ptransition
   List.rev_map (fun (req, ureq) ->
       {  tr_name = ptr_name;
          tr_args = ptr_args;
+	 tr_process = ptr_process; 
          tr_reqs = req;
          tr_ureq = ureq;
 	 tr_lets = tr_lets;
          tr_assigns;
          tr_upds;
+	 tr_locks = ptr_locks;
+	 tr_unlocks = ptr_unlocks;
+	 tr_wait = ptr_wait;
+	 tr_notify = ptr_notify;
+	 tr_notifyall = ptr_notifyall;
          tr_nondets = ptr_nondets;
          tr_loc = ptr_loc }
     ) dguards

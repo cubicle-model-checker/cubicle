@@ -24,6 +24,8 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
+let parse_only = ref false
+
 let max_proc = ref 10
 let type_only = ref false
 let maxrounds = ref 100
@@ -37,6 +39,11 @@ let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
 let enumsolver = ref false
+
+let unDepth = ref 1
+let interpretProcs = ref 3
+let debug_interpreter = ref false
+let interpreter = ref false 
 
 let incr_verbose () = incr verbose
 
@@ -123,6 +130,7 @@ let specs =
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
+    "-parse-only", Arg.Set parse_only, " stop after parsing";
     "-max-procs", Arg.Set_int max_proc, 
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds, 
@@ -198,11 +206,15 @@ let specs =
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
     "-enumsolver", Arg.Set enumsolver,
     " use Enumerated data types solver for finite types";
-    "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
+    "-trace", Arg.String set_trace, " <alt-ergo | why> search strategies";
     "-out", Arg.String set_out,
     "<dir> set output directory for certificate traces to <dir>";
     (* Hidden options *)
-    "-notyping", Arg.Set notyping, ""; (* Disable typing *)
+    "-notyping", Arg.Set notyping, " disable typing"; (* Disable typing *)
+    "-undepth", Arg.Set_int unDepth, " depth of unsafe";
+    "-interpret-proc", Arg.Set_int interpretProcs, " how many procs for interpreter";
+    "-interpreter", Arg.Set interpreter, " start interpreter";
+    "-debug-interpret", Arg.Set debug_interpreter, " debug interpreter";
   ]
 
 let alspecs = Arg.align specs
@@ -218,6 +230,8 @@ let cin =
   | Some f -> file := f ; open_in f 
   | None -> stdin
 
+
+let parse_only = !parse_only 
 let type_only = !type_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
@@ -265,6 +279,13 @@ let noqe = !noqe
 
 let cores = !cores
 
+
+  
+
+let unDepth = !unDepth
+let interpreter = !interpreter
+let debug_interpreter = !debug_interpreter
+
 let mode = !mode
 let smt_solver = !smt_solver
 
@@ -304,9 +325,14 @@ let trace = !trace
 let out_trace = !out
 
 
+
 (* Setters *)
 let set_js_mode b = js_mode := b
 
 
 (* Getters *)
 let js_mode () = !js_mode
+
+
+let set_interpret_procs n = interpretProcs := n
+let get_interpret_procs () = !interpretProcs

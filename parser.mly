@@ -34,6 +34,11 @@
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
+    | Lock of lock
+    | Unlock of lock
+    | Wait of lock
+    | Notify of lock
+    | NotifyAll of lock
 
   module S = Set.Make(Hstring)
 
@@ -88,19 +93,23 @@
 %token SIZEPROC
 %token REQUIRE UNSAFE PREDICATE
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
-%token <string> CONSTPROC
+%token <string*string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
+%token <string> SPROCS
+%token ADDPROC SUBPROC COMPPROC
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE GT GE
 %token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR
 %token IN
 %token LET
+%token RELEASE ACQUIRE WAIT NOTIFY NOTIFYALL KILLPROC GENPROC EXEC
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
+%token STATUS HELP CLEAR RESTART TEST
 %token EOF
 
 %nonassoc IN       
@@ -114,6 +123,9 @@
 %nonassoc NOT
 /* %left BAR */
 
+%start toplevel     
+%type <Ast.toplevel> toplevel
+  
 %type <Ast.system> system
 %start system
 %%
@@ -130,8 +142,8 @@ EOF
   List.iter Constructors.add b;
   let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
-  psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
-   |> encode_psystem 
+  psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4 
+    |> encode_psystem 
 }
 ;
 
@@ -234,52 +246,102 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents_proc RIGHTPAR 
       require
-      LEFTBR let_assigns_nondets_updates RIGHTBR
-      { let lets, (assigns, nondets, upds) = $8 in
+      LEFTBR let_assigns_nondets_updates_locks RIGHTBR
+      { let lets, (assigns, nondets, upds,locks,unlocks,wait, notify, notifyall) = $8 in
 	{   ptr_lets = lets;
 	    ptr_name = $2;
-            ptr_args = $4; 
+            ptr_args = fst $4;
+	    ptr_process = snd $4;
 	    ptr_reqs = $6;
 	    ptr_assigns = assigns; 
 	    ptr_nondets = nondets; 
 	    ptr_upds = upds;
+	    ptr_locks = locks;
+	    ptr_unlocks = unlocks;
+	    ptr_wait = wait;
+	    ptr_notify = notify;
+	    ptr_notifyall = notifyall;
             ptr_loc = loc ();
           }
       }
 ;
 
-let_assigns_nondets_updates:
-  | assigns_nondets_updates { [], $1 }
-  | LET lident EQ term IN let_assigns_nondets_updates {
+let_assigns_nondets_updates_locks:
+  | assigns_nondets_updates_locks { [], $1 }
+  | LET lident EQ term IN let_assigns_nondets_updates_locks {
 	  let lets, l = $6 in
 	  ($2, $4) :: lets, l}
 ;
   
-assigns_nondets_updates:
-  |  { [], [], [] }
-  | assign_nondet_update 
+assigns_nondets_updates_locks:
+  |  { [], [], [], [],[], [], [] ,[] }
+  | assign_nondet_update_lock
       {  
 	match $1 with
-	  | Assign (x, y) -> [x, y], [], []
-	  | Nondet x -> [], [x], []
-	  | Upd x -> [], [], [x]
+	  | Assign (x, y) -> [x, y], [], [], [], [],[],[],[]
+	  | Nondet x -> [], [x], [], [], [],[],[],[]
+	  | Upd x -> [], [], [x], [], [], [], [], []
+	  | Lock vp -> [], [], [], [vp], [], [], [],[]
+	  | Unlock vp -> [], [], [], [], [vp], [], [], []
+	  | Wait vp -> [], [], [], [], [], [vp], [], []
+	  | Notify vp -> [], [], [], [], [], [], [vp], []
+	  | NotifyAll vp -> [], [], [], [], [], [], [], [vp]
+	    
       }
-  | assign_nondet_update PV assigns_nondets_updates 
+  | assign_nondet_update_lock PV assigns_nondets_updates_locks 
       { 
-	let assigns, nondets, upds = $3 in
+	let assigns, nondets, upds, locks,unlocks, wait, notify, notifall = $3 in
 	match $1 with
-	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds
-	  | Nondet x -> assigns, x :: nondets, upds
-	  | Upd x -> assigns, nondets, x :: upds
+	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds, locks, unlocks, wait, notify, notifall
+	  | Nondet x -> assigns, x :: nondets, upds, locks, unlocks, wait, notify, notifall
+	  | Upd x -> assigns, nondets, x :: upds, locks, unlocks, wait, notify, notifall
+	  | Lock vp -> assigns, nondets, upds, vp::locks, unlocks, wait, notify, notifall
+	  | Unlock vp -> assigns, nondets, upds, locks, vp::unlocks, wait, notify, notifall
+	  | Wait vp -> assigns, nondets, upds, locks, unlocks, vp::wait, notify, notifall
+	  | Notify vp -> assigns, nondets, upds, locks, unlocks, wait, vp::notify, notifall
+	  | NotifyAll vp -> assigns, nondets, upds, locks, unlocks, wait, notify, vp::notifall
       }
 ;
 
-assign_nondet_update:
+assign_nondet_update_lock:
   | assignment { $1 }
   | nondet { $1 }
   | update { $1 }
+  | lock { $1 }
+  | unlock { $1 }
+  | wait { $1 }
+  | notify { $1 }
+  | notifall { $1}
+;
+
+/*lock_types:
+  | lock { $1 }
+  | unlock { $1 }
+  | wait { $1 }
+  | notify { $1 }
+  | notifall { $1}
+;*/
+
+
+wait:
+  | WAIT LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Wait(VarLock($3,$5))}
+;
+
+notify:
+  | NOTIFY LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Notify(VarLock($3,$5))}
+;
+notifall:
+  | NOTIFYALL LEFTPAR var_or_array_term COMMA lident RIGHTPAR { NotifyAll(VarLock($3,$5))}
+;
+
+lock:
+  | ACQUIRE LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Lock(VarLock($3,$5)) }
+;
+
+unlock:
+  | RELEASE LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Unlock(VarLock($3,$5)) }
 ;
 
 assignment:
@@ -340,6 +402,9 @@ switch:
 ;
 
 
+
+
+
 constnum:
   | REAL { ConstReal $1 }
   | INT { ConstInt $1 }
@@ -368,6 +433,7 @@ array_term:
 var_or_array_term:
   | var_term { $1 }
   | array_term { $1 }
+  | SPROCS { let s = Hstring.make $1 in Elem(s,SystemProcs)}
 ;
 
 arith_term:
@@ -397,10 +463,24 @@ arith_term:
   | constnum { Const (MConst.add $1 1 MConst.empty) }
 ;
 
+proc_manip:
+  | ADDPROC LEFTPAR var_or_array_term RIGHTPAR
+      { (*let pr = Elem($3, Var) in*) TTerm (ProcManip([$3], PlusOne)) }
+  | SUBPROC LEFTPAR var_or_array_term RIGHTPAR
+      { (*let pr = Elem($3, Var) in*) TTerm (ProcManip([$3], MinusOne)) }
+  | COMPPROC LEFTPAR var_or_array_term COMMA var_or_array_term RIGHTPAR
+      { (*let pr = Elem($3, Var) in
+	let pr2 = Elem($5, Var) in*)
+	TTerm (ProcManip([$3;$5], CompProcs)) }
+;
+
 term:
+  | SPROCS { let s = Hstring.make $1 in TTerm (Elem(s,SystemProcs))}
+  | proc_manip { $1 }
   | top_id_term { $1 } 
   | array_term { TTerm $1 }
   | arith_term { Smt.set_arith true; TTerm $1 }
+
   ;
 
 lident:
@@ -408,7 +488,8 @@ lident:
 ;
 
 const_proc:
-  | CONSTPROC { Hstring.make $1 }
+  | CONSTPROC {let h,s = $1 in if int_of_string s > !Options.size_proc then raise Parsing.Parse_error;
+	       Hstring.make (h^s) }
 ;
 
 proc_name:
@@ -423,6 +504,18 @@ proc_name_list_plus:
 
 mident:
   | MIDENT { Hstring.make $1 }
+;
+ 
+
+lidents_proc_plus:
+  | lident { [$1], None }
+  | lident lidents_proc_plus { $1::(fst $2), (snd $2) }
+  | LEFTSQ lident RIGHTSQ { [$2], Some $2 }
+  | LEFTSQ lident RIGHTSQ lidents_plus { $2::$4, Some $2 }
+; 
+lidents_proc:
+  | { [], None }
+  | lidents_proc_plus {$1 }
 ;
 
 lidents_plus:
@@ -471,7 +564,11 @@ literal:
   | term LE term { Smt.set_arith true; ALe ($1, $3) }
   | term GT term { Smt.set_arith true; ALt ($3, $1) }
   | term GE term { Smt.set_arith true; ALe ($3, $1) }
+
+
 ;
+
+
 
 expr:
   | simple_expr { $1 }
@@ -480,17 +577,39 @@ expr:
   | expr OR expr  { POr [$1; $3] }
   | expr IMP expr { PImp ($1, $3) }
   | expr EQUIV expr { PEquiv ($1, $3) }
-  | IF expr THEN expr ELSE expr %prec prec_ite { PIte ($2, $4, $6) }
+  | IF expr THEN expr ELSE expr %prec prec_ite { let pt = PIte ($2, $4, $6) in
+						 Format.eprintf "ITE: %a@." Ptree.print pt; pt
+						  }
   | FORALL lidents_plus_distinct DOT expr %prec prec_forall { PForall ($2, $4) }
   | EXISTS lidents_plus_distinct DOT expr %prec prec_exists { PExists ($2, $4) }
   | FORALL_OTHER lident DOT expr %prec prec_forall { PForall_other ([$2], $4) }
-  | EXISTS_OTHER lident DOT expr %prec prec_exists { PExists_other ([$2], $4) }
+  | EXISTS_OTHER lident DOT expr %prec prec_exists { PExists_other ([$2], $4) }  
 ;
 
 simple_expr:
   | literal { PAtom $1 }
   | LEFTPAR expr RIGHTPAR { $2 }
   | lident LEFTPAR expr_or_term_comma_list RIGHTPAR { app_fun $1 $3 }
+  | term EQ CASE switchs { (*List.iter (fun (x,y) ->
+    let t = match y with
+      | TVar v -> Elem(v, Var)
+      | TTerm tt -> tt
+    in 
+    Format.eprintf "--- %a : %a@." Ptree.print x Types.Term.print t) $4;*)
+    let rec aux l  =
+      match l with
+	| [] -> PAtom(AAtom(Atom.True))
+	| hd::tl ->
+	  let form, tt = hd in
+	  PIte(form, PAtom(AEq($1,tt)), aux tl)
+    in
+    let thing = aux $4 in
+    Format.eprintf "Final Ite: %a@." Ptree.print thing;
+    thing
+			   
+
+
+			 }
 ;
 
 
@@ -501,4 +620,58 @@ expr_or_term_comma_list:
   | expr  { [PF $1] }
   | term COMMA expr_or_term_comma_list { PT $1 :: $3 }
   | expr COMMA expr_or_term_comma_list { PF $1 :: $3 }
+;
+
+
+top_proc_name:
+  | CONSTPROC { let h,s = $1 in
+		 Hstring.make (h^s)
+	        }
+  
+;
+
+top_proc_name_list_plus:
+  | top_proc_name { [$1] }
+  | top_proc_name COMMA top_proc_name_list_plus { $1::$3 }
+;
+
+top_level_trans:
+  | lident LEFTPAR RIGHTPAR { ($1, [])}
+  | lident LEFTPAR top_proc_name_list_plus RIGHTPAR { ($1, $3)}    
+;
+
+toplevel_trans_list:
+  | top_level_trans { [$1] }
+  | top_level_trans PV toplevel_trans_list { $1::$3 }
+;
+
+
+toplevel_assign:
+  | mident AFFECT term  {
+    match $3 with
+      | TTerm t -> TopAssign($1,Elem($1,Glob), t)
+      | TVar v -> TopAssign($1, Elem($1,Glob), Elem(v, Var))}
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
+      {
+	match $6 with
+	  | TTerm t -> TopAssign($1, Access($1,$3), t)
+	  | TVar v ->  TopAssign($1, Access($1,$3), Elem(v, Var))
+      }
+
+;
+      
+toplevel:
+  | TRANSITION toplevel_trans_list { TopTransition $2}
+  | STATUS { TopShowEnv }
+  | CONSTPROC {TopShowEnv}
+  | TEST { TopTest (Hstring.make "1")}
+  | HELP { TopHelp }
+  | CLEAR { TopClear }
+  | RESTART {TopRestart}
+  | toplevel_assign { $1 }
+  | UNSAFE { TopUnsafe }
+  | GENPROC { TopGenProc }
+  | KILLPROC { TopKillProc(None)}
+  /*| KILLPROC top_proc_name { TopKillProc (Some $2)}*/
+  | EXEC { TopExec }      
 ;

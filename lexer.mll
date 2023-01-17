@@ -45,6 +45,22 @@
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
+	"status", STATUS;
+	"help", HELP;
+	"clear", CLEAR;
+	"reset", RESTART;
+	"test", TEST;
+	"release", RELEASE;
+	"acquire", ACQUIRE;
+	"wait", WAIT;
+	"notify", NOTIFY;
+        "notify_all", NOTIFYALL;
+	"kill", KILLPROC;
+	"generate", GENPROC;
+	"execute", EXEC;
+	"add_proc", ADDPROC;
+	"sub_proc", SUBPROC;
+	"compare_procs", COMPPROC
       ]
 	       
   let newline lexbuf =
@@ -91,19 +107,21 @@ rule token = parse
       { newline lexbuf; token lexbuf }
   | space+  
       { token lexbuf }
+  | "SYS_PROCS" as id { SPROCS id }
   | lident as id
       { try Hashtbl.find keywords id
 	with Not_found ->
 	 if id = "bool" then LIDENT "mbool" else LIDENT id }
-  | '#'(['1'-'9']['0'-'9']* as n) as id
-      { if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;
-        CONSTPROC id }
+  | '#'(['1'-'9']['0'-'9']* as n) 
+      { (*if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;*)
+        CONSTPROC("#",n) }
   | mident as id {
 		  if id = "True" then MIDENT "@MTrue"
 		  else if id = "False" then MIDENT "@MFalse"
 		  else MIDENT id }
   | real as r { REAL (num_of_stringfloat r) }
   | integer as i { INT (Num.num_of_string i) }
+      
   | "("
       { LEFTPAR }
   | ")"

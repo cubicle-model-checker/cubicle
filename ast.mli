@@ -31,6 +31,7 @@ type type_constructors = Hstring.t * (Hstring.t list)
     declaration of type [t] with two constructors [A] and [B]. If the
     list of constructors is empty, the type [t] is defined abstract. *)
 
+    
 type swts = (SAtom.t * Term.t) list
 (** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
 
@@ -46,15 +47,33 @@ type update = {
 }
 (** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
 
+type lock =
+  | VarLock of Term.t * Hstring.t
+(*
+type lock_uses =
+  | Lock of lock list
+  | Unlock of lock list
+  | Wait of lock list
+  | Notify of lock list
+  | NotifyAll of lock list
+  | Semaphore of lock list *)
+       
+
 type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
+  tr_process : Variable.t option;
   (** existentially quantified parameters of the transision *)
   tr_reqs : SAtom.t; (** guard *)
   tr_ureq : (Variable.t * dnf) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
+  tr_locks : lock list; (***)
+  tr_unlocks : lock list; (***)
+  tr_wait : lock list; (***)
+  tr_notify : lock list; (***)
+  tr_notifyall : lock list;
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
@@ -82,6 +101,25 @@ type system = {
   unsafe : (loc * Variable.t list * SAtom.t) list;  
   trans : transition_info list;
 }
+
+type top_proc =
+  | NormalProc of Hstring.t
+  | ExecutingProc of Hstring.t
+
+
+type toplevel =
+  | TopTransition of (Hstring.t * Hstring.t list) list
+  | TopShowEnv
+  | TopAssign of Hstring.t * Term.t * Term.t
+  | TopHelp
+  | TopClear
+  | TopTest of Hstring.t
+  | TopRestart
+  | TopUnsafe
+  | TopGenProc
+  | TopKillProc of Hstring.t option
+  | TopExec
+
 (** type of untyped transition systems constructed by parsing *)
 
 
@@ -141,3 +179,7 @@ type t_system = {
   (** transition relation in the form of a list of transitions *)
 }
 (** type of typed transition systems *)
+
+
+
+		  

@@ -82,10 +82,16 @@ type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
+  ptr_process : Variable.t option;
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
+  ptr_locks : Ast.lock list;
+  ptr_unlocks : Ast.lock list;
+  ptr_wait : Ast.lock list;
+  ptr_notify: Ast.lock list;
+  ptr_notifyall: Ast.lock list;
   ptr_loc : loc;
 }
 
@@ -108,6 +114,7 @@ type pdecl =
   | PTrans of ptransition
   | PFun
 
+val print : Format.formatter -> formula -> unit
 
 val add_fun_def : Hstring.t -> Variable.t list -> formula -> unit
 

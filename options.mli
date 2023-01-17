@@ -26,6 +26,8 @@ val cin : in_channel
 
 val max_proc : int
 val type_only : bool
+val parse_only: bool
+
 val maxrounds : int
 val maxnodes : int
 
@@ -90,8 +92,14 @@ val notyping : bool
 val trace : trace
 val out_trace : string
 
+val unDepth : int
+val interpreter : bool
+val debug_interpreter : bool 
 
 val js_mode : unit -> bool
 
 
 val set_js_mode : bool -> unit
+
+val set_interpret_procs : int -> unit
+val get_interpret_procs : unit -> int

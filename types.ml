@@ -22,7 +22,9 @@ module HSet = Hstring.HSet
 
 type op_comp = Eq | Lt | Le | Neq
 
-type sort = Glob | Constr | Var
+type sort = Glob | Constr | Var | SystemProcs
+
+type proc_act = PlusOne | MinusOne | CompProcs 
 
 
 type const =
@@ -87,6 +89,7 @@ type term =
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
+  | ProcManip of term list * proc_act
 (*  | NArith of cst VMap.t * cst*)
 
 
@@ -168,6 +171,20 @@ module Term = struct
 
   type t = term
 
+ (* let compare_proc_manip process manip =
+ (*   match t1, t2 with
+      | Elem(n, Var), ProcManip((Elem(n1,Var)), PlusOne) ->
+	let pinit = Variable.number n in
+	let p2init = (Variable.number n1) + 1 in compare pont p2int*)
+    let pint = Variable.number process in
+    match manip with
+      |  ProcManip((Elem(n1,Var)), PlusOne) -> let p2int = (Variable.number n1) + 1 in
+					       compare pint p2int
+					     
+      | ProcManip((Elem(n1,Var)), MinusOne) -> let p2int = (Variable.number n1) - 1 in
+					      compare pint p2int
+      | _ -> assert false*)
+
   let rec compare t1 t2 = 
     match t1, t2 with
     | Const c1, Const c2 -> compare_constants c1 c2
@@ -183,6 +200,9 @@ module Term = struct
     | Arith (t1, cs1), Arith (t2, cs2) ->
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
+    | _ -> assert false
+
+    
 
   let hash = Hashtbl.hash_param 50 50
 
@@ -231,6 +251,8 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
+    | ProcManip(_, PlusOne) | ProcManip(_, MinusOne) -> Smt.Type.type_proc
+    | ProcManip(_, CompProcs) -> Smt.Type.type_int
 
 
   let rec print_strings fmt = function
@@ -264,7 +286,24 @@ module Term = struct
     | Access (a, li) ->
        fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+      fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+    | ProcManip([t],PlusOne) ->
+      fprintf fmt "add_proc(%a)" print t
+    | ProcManip([t],MinusOne) ->
+      
+      fprintf fmt "sub_proc(%a)" print t
+	  
+    | ProcManip([t1;t2], CompProcs) ->
+      fprintf fmt "compare_procs(%a,%a)" print t1 print t2
+      (*begin
+	match t1,t2 with
+	  | Elem(n, Var), Elem(n1,Var) ->
+	    fprintf fmt "compare_procs(%a,%a)" Hstring.print n Hstring.print n1
+	  | _ -> assert false
+      end*)
+      
+    | ProcManip _ -> assert false
+      
 
 end
 
