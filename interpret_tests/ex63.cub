@@ -1,0 +1,16 @@
+type t = A | B | C
+
+var X : t
+array Y[proc] : t
+
+init(i) { X = A && Y[i] = A }
+
+unsafe() { X = C}
+
+transition t1(i)
+requires { Y[i] = A} 
+{ X := B }
+
+transition t2(i)
+requires { Y[i] = B }
+{ X := C } 

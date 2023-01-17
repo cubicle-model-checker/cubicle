@@ -1,0 +1,13 @@
+type t = A | B | C | D
+
+array X[proc] : t
+var Y : bool
+
+init(i) { X[i] = A && Y = True}
+
+transition t1(i j)
+requires { X[i] = A }
+{ X[k] := case | X[i] = A && Y = False : B
+       	       | X[i] = A && Y = True : C
+	       | i > j : D 
+}

@@ -1,0 +1,15 @@
+type t = A | B
+
+array X[proc] : t
+
+init(i) { X[i] = B }
+
+unsafe(i) { X[i] = A }
+
+
+transition t1(i)
+{ X[i] := B }
+
+
+transition t2(i)
+{ X[i] := A } 

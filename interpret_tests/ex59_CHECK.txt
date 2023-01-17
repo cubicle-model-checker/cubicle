@@ -1,0 +1,119 @@
+var C : condition
+var C1: condition
+var L : lock
+var RL : rlock
+
+
+#1 : process active
+#2 : process active
+#3 : process active
+#4 : process active
+#5 : process active
+X : A
+C : unlocked
+C1 : unlocked
+L : unlocked
+RL : unlocked
+---------------------------------
+
+> transition t1(#1)
+L : locked by process #1
+
+> transition t1(#2)
+L : locked by process #1
+#2 : process suspended
+L : { #2 }
+
+> transition t4(#2)
+Error: Process #2 is suspended
+
+> transition t4(#3)
+Process #3 cannot unlock #1's lock
+
+> transition t3(#1)
+L : locked by process #1
+RL : locked by process #1 1 time(s)
+
+> transition t3(#1)
+RL : locked by process #1 2 time(s)
+
+> transition t3(#3)
+#3 : process suspended
+RL : { #3  }
+
+> transition t3(#3)
+Error: Process #3 is suspended
+
+> transition t3(#2)
+Error: Process #2 is suspended
+
+> transition t12(#2)
+Error: Process #2 is suspended
+
+> transition t12(#4)
+Process #4 cannot wait since it has never previously acquired C
+
+> transition t5(#1)
+C : locked by process #1
+
+> transition t13(#1)
+Process #1 cannot wait since it has never previously acquired C1
+
+> transition t12(#1)
+C : unlocked
+#1 : process asleep
+C : { #1  }
+
+> transition t7(#4)
+Cannot notify with unlocked lock
+
+> transition t6(#4)
+C1 : locked by process #4
+
+> transition t8(#4)
+Cannot notify with unlocked lock
+
+> transition t5(#4)
+C : locked by process #4
+
+> transition t8(#5)
+Process #5 can't notify: lock C does not belong to #5
+
+> transition t12(#4)
+C : unlocked
+#4 : process asleep
+Wait pools:
+C : { #4 #1  }
+
+> transition t5(#5)
+C : locked by process #5
+
+> transition t7(#5)
+Process #5 can't notify: lock C1 does not belong to #5
+
+> transition t8(#5)
+#4 : process suspended
+#1 : process suspended
+Lock Queues:
+C : { #4 #1  }
+C : locked by process #5
+
+> transition t9(#5)
+C : locked by process #4
+#4 : process active
+Lock Queues:
+C : { #1  }
+
+> transition t9(#4)
+Lock Queues:
+C : {  }
+C : locked by process #1
+
+> transition t11(#4)
+Process #4 cannot unlock #1's lock
+
+> transition t11(#1)
+RL : locked by process #1 1 time(s)
+
+> transition t11(#1)
+RL : locked by process #3

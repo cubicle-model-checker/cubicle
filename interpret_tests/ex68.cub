@@ -1,0 +1,17 @@
+type t = A | B | C
+
+var X : int
+
+var Y : t
+
+
+init() { X = 5 && Y = A }
+
+
+transition t1()
+{ X := SYS_PROCS }
+
+
+transition t2()
+requires { SYS_PROCS > 2 }
+{ Y := B } 

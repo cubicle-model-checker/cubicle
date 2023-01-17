@@ -1,0 +1,32 @@
+type t = A | B | C | D
+
+type t1 = Something | Other
+
+
+var X : t
+var Y : t1
+var Z : bool
+
+array Arr[proc] : t 
+
+init(i) { X = A && Y = Something && Z = True && Arr[i] = B }
+
+
+transition t1(i)
+requires { Arr[i] = B }
+{ Z := False }
+
+transition t2()
+{ Arr[k] := case | _ : D;
+Z := True 
+
+}
+
+transition t3(i j)
+requires { Z = True && Y = Other }
+{ Y := Something }
+
+
+transition t4()
+{ Y := case | Y = Something : Other
+       	    | Y = Other : Something }

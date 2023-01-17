@@ -1,0 +1,85 @@
+type t = None
+       	| Put_Wait | Put_Enter | Put_Exit
+	| Get_Wait | Get_Enter | Get_Exit
+
+var Empty : bool
+var C : condition
+
+array PC[proc] : t
+
+init(i) { Empty = True && PC[i] = None }
+
+(*
+WARNING: Deadlock reached
+Applied transitions:
+transition run_get(#2)
+transition run_put(#1)
+transition wait_get(#2)
+transition wait_get_loop(#2)
+transition run_put(#3)
+transition wait_put(#3)
+transition enter_put(#3)
+transition wait_put(#1)
+transition exit_put(#3)
+transition run_put(#3)
+transition wait_put(#3)
+*)
+
+
+(*---- Run ----*)
+
+transition run_put(i)
+requires { PC[i] = None }
+{ PC[i] := Put_Wait }
+
+transition run_get(i)
+requires { PC[i] = None }
+{ PC[i] := Get_Wait }
+
+
+(*---- Put ----*)
+
+
+transition wait_put(i)
+requires { PC[i] = Put_Wait }
+{ acquire(C,i);
+  PC[i] := Put_Enter }
+
+transition wait_put_loop(i)
+requires { PC[i] = Put_Enter && Empty = False }
+{ wait(C,i) } 
+
+transition enter_put(i)
+requires { PC[i] = Put_Enter && Empty = True}
+{ PC[i] := Put_Exit;
+  Empty := False;
+  notify(C,i); }
+
+transition exit_put(i)
+requires { PC[i] = Put_Exit }
+{ release(C,i);
+  PC[i] := None }
+
+
+(*---- Get ----*)
+
+
+transition wait_get(i)
+requires { PC[i] = Get_Wait }
+{ acquire(C,i);
+  PC[i] := Get_Enter }
+
+transition wait_get_loop(i)
+requires { PC[i] = Get_Enter && Empty = True }
+{ wait(C,i) } 
+
+transition enter_get(i)
+requires { PC[i] = Put_Enter && Empty = False}
+{ PC[i] := Get_Exit;
+  Empty := True;
+  notify(C,i); }
+
+transition exit_get(i)
+requires { PC[i] = Get_Exit }
+{ release(C,i);
+  PC[i] := None }

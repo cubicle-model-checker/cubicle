@@ -1,0 +1,69 @@
+type ph = Thinking | Hungry | Eating | Rel1
+
+array Philosopher[proc] : ph
+
+array LeftNeighbor[proc] : proc
+array RightNeighbor[proc] : proc
+
+array LF[proc] : bool
+array RF[proc] : bool
+
+var Block : bool 
+
+(*one semaphore per philosopher*)
+var S : semaphore
+array B[proc] : semaphore
+
+
+init(i) { LF[i] = False && RF[i] = False && Philosopher[i] = Thinking && S = 4 && B[i] = 1 && Block = False}
+
+(*
+set_neighbor(#1, #5, #2)
+set_neighbor(#2, #1, #3)
+set_neighbor(#3, #2, #4)
+set_neighbor(#4, #3, #5)
+set_neighbor(#5, #4, #1) 
+*)
+transition set_neighbor(i j k)
+requires { Block = False }
+{ LeftNeighbor[i] := j;
+  RightNeighbor[i] := k }
+
+transition block()
+requires {Block = False}
+{ Block := True }
+
+transition hungry(i)
+requires { Philosopher[i] = Thinking } 
+{ Philosopher[i] := Hungry; acquire(S, i) }
+
+transition fork1(i j k)
+requires { LF[i] = False && Philosopher[i] = Hungry && LeftNeighbor[i] = j && RightNeighbor[i] = k}
+{ acquire(B[j],i); LF[i] := True }
+
+transition fork2(i j k)
+requires { RF[i] = False && Philosopher[i] = Hungry && LeftNeighbor[i] = j && RightNeighbor[i] = k}
+{ acquire(B[k],i); RF[i] := True }
+
+transition eat(i)
+requires { Philosopher[i] = Hungry && RF[i] = True && LF[i] = True }
+{ Philosopher[i] := Eating;
+  release(S, i) }
+
+transition release_fork1(i j k)
+requires { LF[i] = True && Philosopher[i] = Eating && LeftNeighbor[i] = j && RightNeighbor[i] = k}
+{ Philosopher[i] := Rel1;
+  LF[i] := False;
+  release(B[j],i) }
+
+
+transition release_fork2(i j k)
+requires { RF[i] = True && Philosopher[i] = Rel1 && LeftNeighbor[i] = j && RightNeighbor[i] = k}
+{ Philosopher[i] := Thinking;
+  RF[i] := False;
+  release(B[k],i)
+}
+
+(*
+transition set_neighbor(#1, #5, #2); set_neighbor(#2, #1, #3); set_neighbor(#3, #2, #4) ;set_neighbor(#4, #3, #5);set_neighbor(#5, #4, #1); block()
+ *)

@@ -1,0 +1,10 @@
+type t = A | B
+
+var X : t
+var Y : t 
+
+init() { X = A && Y = B }
+
+transition t1()
+requires { X = A && Y = A}
+{ Y := A } 

@@ -1,0 +1,56 @@
+type t = None | WaitEnter | WaitIf | WaitFor | WaitExit
+
+var Sense : bool 
+array LocalSense[proc] : bool
+var Count : int 
+array PC[proc] : t
+
+var C : condition 
+
+(*assuming #N is a built-in constant w/ the total number of processes*)
+
+init(i) { Sense = False && LocalSense[i] = False  && Count = #N && PC[i] = None}
+
+transition wait_enter(i)
+requires { PC[i] = None }
+{ PC[i] := WaitEnter;
+  acquire(C,i);
+}
+
+transition wait_lock(i)
+requires { PC[i] = WaitEnter }
+{
+  LocalSense[k] := case | i = k && LocalSense[k] = True : False
+  		   	| i = k && LocalSense[k] = False : True;
+  Count := Count - 1;
+  PC[i] := WaitIf;
+} 
+transition wait_and_exit(i)
+requires { PC[i] = WaitIf && Count = 0 }
+{ Count := #N;
+  Sense := LocalSense[i];
+  notify_all(C,i);
+  PC[i] := WaitExit;
+}
+
+transition wait_since_not_last(i)
+requires { PC[i] = WaitIf && Count > 0}
+{
+  PC[i] := WaitFor;
+}
+
+transition wait_forloop_enter(i)
+requires { PC[i] = WaitFor && LocalSense[i] <> Sense }
+{ wait(C,i); }
+
+transition wait_forloop_exit(i)
+requires { PC[i] = WaitFor && LocalSense[i] = Sense }
+{
+  PC[i] := WaitExit } 
+
+transition wait_exit(i)
+requires { PC[i] = WaitExit }
+{
+  release(C, i);
+  PC[i] := None 
+}

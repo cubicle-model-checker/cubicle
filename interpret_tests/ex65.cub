@@ -1,0 +1,12 @@
+type t = A | B | C | Default
+
+array S[proc] : t
+var P : proc
+
+init(i) { S[i] = C }
+
+
+transition t1(i)
+{ S[l] := case | l = i : A
+  	       | l = P : B
+	       | _ : S[l] } 

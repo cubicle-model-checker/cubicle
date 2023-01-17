@@ -1,0 +1,17 @@
+type t = A | B | C | D
+
+var X : t
+var Y : t
+
+init() { X = A && Y = A }
+
+transition t1()
+{ X := B; Y := B }
+
+transition t2()
+requires { X = B }
+{ Y := A }
+
+transition t3()
+requires { X <> Y }
+{ Y := D }

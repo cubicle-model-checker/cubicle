@@ -1,0 +1,32 @@
+type t = L1 | L2 | L3 | SC | YO
+
+
+var L : lock
+array PC[proc] : t
+array H[proc] : lock
+
+
+init(i) { PC[i] = L1 }
+
+unsafe(i j) { PC[i] = SC && PC[j] = SC }
+
+transition t1(i)
+requires { PC[i] = L1 }
+{ PC[i] := L2; acquire(L,i) }
+
+transition t2(i)
+requires { PC[i] = L2 }
+{ PC[i] := SC }
+
+transition t3(i)
+requires { PC[i] = SC }
+{ release(L,i);
+  PC[i] := L1
+}
+(*
+transition t5(i)
+{ PC[i] := L3 }
+
+transition t4(i)
+requires {forall_other j. PC[j] = L3 }
+{ X[k,l] := case | _ : PP}*)

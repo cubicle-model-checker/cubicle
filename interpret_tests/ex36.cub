@@ -1,0 +1,9 @@
+type t = A | B | C | D | E
+
+array X[proc,proc] : t
+var Y : bool
+
+init(i j) {Y = True}
+
+transition t1(i j)
+{ X[a,b] := case | a > b : D | _ : E}

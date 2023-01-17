@@ -1,0 +1,10 @@
+type t = A | B
+
+var X : t
+var Z : t
+var K : int
+var L : bool
+var P : proc
+array Y[proc] : t
+
+init() { X = A && K = 10 && Z = X && True = L }

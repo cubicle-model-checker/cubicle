@@ -1,0 +1,12 @@
+type t = A | B | C | D
+
+array X[proc] : proc
+var Y : t
+
+init(i) { X[i] = i && Y = A}
+
+transition t1(i j)
+{ Y := case | X[i] >= j : B
+       	    | Y = A : C
+	    | _ : D 
+}

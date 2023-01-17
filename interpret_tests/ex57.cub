@@ -1,0 +1,28 @@
+type t = A | B 
+
+array L[proc] : t
+array L1[proc] : lock
+
+var T : rlock
+
+init(i) {L[i] = A }
+
+
+
+unsafe(i j) { L[i] = B && L[j] = B }
+
+
+transition t1(i)
+{ acquire(T, i) }
+
+transition t2(i)
+{ L[j] := case | _ : B }
+
+transition t3(i)
+{ release(T,i) }
+
+transition t5(i j)
+{ acquire(L1[i], j) }
+
+transition t6(i j)
+{ release(L1[i], j) }

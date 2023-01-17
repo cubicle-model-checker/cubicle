@@ -1,0 +1,15 @@
+type t = A | B | C
+
+
+var X : t
+array Arr[proc] : t 
+var Y : proc
+var Z : proc
+
+init() { X = A }
+
+unsafe(i) { X = B && Arr[i] = B }
+
+transition t1()
+requires{ X = A }
+{ Y := .; Z := ? }

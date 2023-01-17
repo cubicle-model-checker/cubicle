@@ -1,0 +1,13 @@
+var X : int
+array Y[proc] : int
+
+init(i) { X = 9 && Y[i] = 0 }
+
+transition t1()
+{ X := X + 2 }
+
+transition t2(i)
+{ Y[i] := X }
+
+transition t3(i)
+{ X := Y[i] }

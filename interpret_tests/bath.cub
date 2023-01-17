@@ -1,0 +1,48 @@
+type t = Undress | Bathe | Dressed
+       	 | GotPanier | GotCabineU | GotCabineD
+       	 | Nothing
+
+array B[proc] : t
+
+var SNP : semaphore (*paniers*)
+var SNC : semaphore (*cabines*)
+
+init(i) { SNP = 5 && SNC = 2 && B[i] = Nothing }
+
+
+transition get_panier(i)
+requires { B[i] = Nothing }
+{
+ acquire(SNP,i);
+ B[i] := GotPanier
+}
+
+transition go_cabine(i)
+requires { B[i] = GotPanier }
+{ acquire(SNC, i);
+  B[i] := GotCabineU }
+
+
+transition undress(i)
+requires { B[i] = GotCabineU }
+{ B[i] := Undress }
+
+transition got_undressed(i)
+requires { B[i] = Undress }
+{ release(SNC, i);
+  B[i] := Bathe; }
+
+transition bathe(i)
+requires { B[i] = Bathe }
+{ acquire(SNC,i);
+  B[i] := GotCabineD }
+
+transition get_dressed(i)
+requires { B[i] = GotCabineD }
+{ release(SNC, i);
+  B[i] := Dressed }
+
+transition done(i)
+requires { B[i] = Dressed }
+{ release(SNP, i);
+  B[i] := Nothing } 

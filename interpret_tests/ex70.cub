@@ -1,0 +1,16 @@
+array X[proc] : proc
+
+var Y : bool
+
+init(i) { Y = True }
+
+
+transition t1(i j)
+requires { j = add_proc(i)}
+{ X[k] := case | i = k : add_proc(X[i])
+       	       | _ : i
+
+}
+
+transition t2(i)
+{ X[i] := i }

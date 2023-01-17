@@ -1,0 +1,23 @@
+type t = A | B | C
+
+var S : semaphore
+var C1 : condition
+var L : lock
+var R : rlock
+
+
+array X[proc] : t
+
+unsafe(i) { X[i] = B }
+
+init(i) { X[i] = A  }
+
+transition t0(i)
+{ X[i] := B } 
+
+transition t1(i)
+{ acquire(S,i) }
+
+transition t2(i)
+{ release(S,i) }
+

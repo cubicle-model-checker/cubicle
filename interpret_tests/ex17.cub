@@ -1,0 +1,10 @@
+type t = A | B | C
+
+array X[proc] : t
+
+init(i) { X[i] = A }
+
+transition t1(i j)
+requires { X[i] = A }
+{ X[k] := case | i < j : B | _ : C
+}

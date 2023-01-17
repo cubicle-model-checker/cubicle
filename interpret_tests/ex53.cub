@@ -1,0 +1,5 @@
+type t = A | B
+
+var X : t
+var Z : t
+init() { X = A && Z = X }

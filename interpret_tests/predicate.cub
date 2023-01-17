@@ -1,0 +1,23 @@
+type t = A | B | C
+
+
+var X : t
+var Y : t
+var Z : bool 
+
+init() { X = A && Y = B && Z = False }
+
+unsafe() { X = C && Z = True}
+
+
+
+predicate something() { X = B }
+
+
+transition t1()
+requires { not something() }
+{ X := C }
+
+transition t2()
+{ X:= B }
+

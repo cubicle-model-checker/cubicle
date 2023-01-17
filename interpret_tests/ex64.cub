@@ -1,0 +1,13 @@
+type t = A | B | C
+
+var X : t
+
+array Z[proc] : t
+
+
+init() { X = A }
+
+
+transition t1(i j)
+requires { Z[i] = A}
+{ Z[i] := B }

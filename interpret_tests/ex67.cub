@@ -1,0 +1,17 @@
+type t = A | B | C
+
+
+array X[proc] : t
+
+var L : lock
+
+init(i) { X[i] = A }
+
+
+transition t1(i [j] k)
+{X[i] := B}
+
+
+transition lock(i)
+{ acquire(L, i) } 
+

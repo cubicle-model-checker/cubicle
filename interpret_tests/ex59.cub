@@ -1,0 +1,59 @@
+type t = A | B | CC | D 
+
+var X : t
+
+
+
+var C : condition
+var C1: condition
+
+var L : lock
+
+var RL : rlock
+
+init(i) { X = A }
+
+unsafe() { X = D }
+
+
+transition t1(i)
+{ acquire(L, i) }
+
+(*
+transition t2()
+requires { X = A && forall j. Arr[j] = D }
+{ X := B }
+*)
+
+transition t3(i)
+{ acquire(RL, i) }
+
+transition t4(i)
+{ release(L,i) }
+
+transition t5(i)
+{ acquire(C, i) }
+
+transition t6(i)
+{ acquire(C1, i) }
+
+transition t7(i)
+{ notify(C1, i) }
+
+transition t8(i)
+{ notify_all(C, i) }
+
+transition t9(i)
+{ release(C,i) }
+
+transition t10(i)
+{ release(C1, i) }
+
+transition t11(i)
+{ release(RL, i) }
+
+transition t12(i)
+{ wait(C, i) }
+
+transition t13(i)
+{ wait(C1, i) } 

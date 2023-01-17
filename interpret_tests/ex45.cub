@@ -1,0 +1,23 @@
+type t = A | B | C | E
+
+var X : t
+var Y : t
+var Z : t 
+
+init() { Z = Y && Y = X && A = X }
+
+
+transition t1()
+{ X := E }
+
+transition t2()
+requires { X = B }
+{ Y := E }
+
+transition t3()
+requires {Y = A }
+{ X := C }
+
+transition t4()
+requires { Y = B }
+{ X := B }

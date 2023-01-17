@@ -1,0 +1,50 @@
+var Mutex : lock
+
+var Full : semaphore
+
+var Empty : semaphore
+
+init() { Mutex = 1 && Full = 0 && Empty = 5 }
+
+
+(*--Produce--*)
+
+transition produce_one(i)
+requires{ PC[i] = PutWant } 
+{ acquire(Empty,i);
+  PC[i] := Put}
+
+(*
+Applied transitions:
+transition customer_enter_shop(#1)
+transition seats_sit(#1)
+transition release_room_customer(#1)
+transition barber_wait(#3)
+transition barber_got_customer(#3)
+transition announce_presence_customer(#1)
+transition barber_go_cut(#3)
+transition customer_enter_shop(#4)
+transition seats_sit(#4)
+transition release_room_customer(#4)
+transition announce_presence_customer(#4)
+transition customer_enter_shop(#2)
+transition seats_sit(#2)
+transition release_room_customer(#2)
+transition barber_cutting(#3)
+transition barber_done(#3)
+transition barber_wait(#3)
+transition barber_got_customer(#3)
+transition barber_go_cut(#3)
+transition announce_presence_customer(#2)
+transition barber_cutting(#3)
+transition customer_enter_shop(#4)
+transition seats_sit(#4)
+transition release_room_customer(#4)
+transition barber_done(#3)
+transition barber_wait(#3)
+transition announce_presence_customer(#4)
+transition barber_got_customer(#3)
+transition customer_enter_shop(#5)
+
+
+*)

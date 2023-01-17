@@ -1,0 +1,18 @@
+type t = A | B | C | D | E
+
+array X[proc] : t
+var Y : bool
+
+init(i j) {Y = True && X[i] = A}
+
+unsafe(i) { X[i] = E  }
+
+transition t1(i)
+requires { X[i] = A && forall_other k. X[k] = B}
+{ X[i] := E }
+
+transition t2()
+{ Y := False}
+
+transition t3(i)
+{ X[i] := B }

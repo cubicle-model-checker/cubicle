@@ -1,0 +1,74 @@
+type s = Sleeping | GotCustomer | AcceptCustomer | Cutting | Done
+
+type c = Entering | Announce | Sitting | None
+
+var Barber : proc
+var BarberState : s
+
+var Room : lock
+
+var WaitingCustomers : semaphore
+var BarberReady : semaphore
+
+var RelRoom : bool
+var LastCustomer : c
+var LC : proc
+var LTrying : proc
+
+var FreeSeats : int
+
+init(i) { RelRoom = False && LastCustomer = None &&
+	  BarberReady = 0 && BarberState = Sleeping &&
+	  WaitingCustomers = 0 && FreeSeats = 3 }
+
+
+transition barber_wait([i])
+requires { Barber = i && BarberState = Sleeping && RelRoom = False }
+{ acquire(WaitingCustomers, i);
+  BarberState := GotCustomer; }
+
+transition barber_got_customer([i])
+requires { Barber = i && BarberState = GotCustomer && FreeSeats < 3 && RelRoom = False }
+{ acquire(Room,i);
+  FreeSeats := FreeSeats + 1;
+  BarberState := AcceptCustomer }
+
+transition barber_go_cut([i])
+requires { Barber = i && BarberState = AcceptCustomer && RelRoom = False }
+{ release(Room,i);
+  BarberState := Cutting;}
+
+transition barber_cutting([i])
+requires { Barber = i && BarberState = Cutting && RelRoom = False }
+{ release(BarberReady, i);
+  BarberState := Done }
+
+transition barber_done([i])
+requires { Barber = i && BarberState = Done && RelRoom = False }
+{ BarberState := Sleeping }
+
+
+transition customer_enter_shop([i])
+requires { Barber <> i && LastCustomer = None }
+{ acquire(Room,i); LastCustomer := Entering; RelRoom := True; LTrying := i }
+
+transition no_seats_leave([i])
+requires { Barber <> i && FreeSeats = 0 && RelRoom = True && LastCustomer = Entering && LTrying = i }
+{ release(Room,i); RelRoom := False; LastCustomer := None }
+
+transition seats_sit([i])
+requires { Barber <> i && FreeSeats <> 0 && RelRoom = True && LastCustomer = Entering && LTrying = i }
+{ FreeSeats := FreeSeats - 1;
+  release(WaitingCustomers,i);
+  LastCustomer := Sitting;
+  LC := i}
+
+transition release_room_customer([i])
+requires { Barber <> i && RelRoom = True && LastCustomer = Sitting && LC = i}
+{ release(Room, i);
+  RelRoom := False;
+  LastCustomer := Announce }
+
+transition announce_presence_customer([i])
+requires { Barber <> i && LastCustomer = Announce && LC = i }
+{ acquire(BarberReady,i); LastCustomer := None } 

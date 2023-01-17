@@ -1,0 +1,23 @@
+type t = A | B | C | D | E
+
+array X[proc] : t
+
+
+init (i) { X[i] = A }
+
+
+transition t0(i)
+requires { forall_other j. X[j] = A }
+{ X[i] := B }
+
+transition t1(i j)
+requires { i > j }
+{ X[j] := X[i] }
+
+
+transition t2(i)
+{ X[j] := case | _ : E }
+
+transition t3(i)
+{ X[j] := case | i < j : X[i]
+       	       | _ : D }

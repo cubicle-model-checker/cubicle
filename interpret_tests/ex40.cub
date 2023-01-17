@@ -1,0 +1,21 @@
+type t = G | H | J | L
+
+array X[proc] : t
+var A : bool
+var B : t 
+
+init(i) { X[i] = J && A = True && B = J}
+
+
+unsafe(i) { A = False && X[i] = L}
+
+transition t1(i)
+requires { X[i] = J }
+{ X[k] := case | A = False : G | _ : L
+
+(*B := case | True = False : G | A = True : H | _ : L*)
+
+}
+
+transition t2(i)
+{ A:= False }

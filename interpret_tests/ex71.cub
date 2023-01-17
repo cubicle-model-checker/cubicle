@@ -1,0 +1,17 @@
+var X : proc
+var Y : bool
+
+
+init(i) {if Y = True then Y = True else Y = False(*Y = case | Y = True : True
+	      	   | _ : False*)}
+
+
+(*
+
+ITE: (if (= Y @MTrue) then (= Y @MTrue) else (= Y @MFalse))
+
+
+Final Ite: (if (= Y @MTrue) then (= Y @MTrue) else (if true then (= Y @MFalse) else true))
+*)
+
+

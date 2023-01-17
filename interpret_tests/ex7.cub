@@ -1,0 +1,10 @@
+type t = A | B | C | D 
+
+var X : t
+var Y : t 
+
+init() { X = A && Y = B}
+
+transition t1()
+requires { X = A}
+{ X := case | Y = X : B | Y <> B : C | _ : D  } 

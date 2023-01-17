@@ -1,0 +1,194 @@
+ex0.cub [OK]
+- declare type t and var X
+- initialize X
+- apply transition to change its value (no requirements)
+-> should modify X
+
+ex1.cub [OK]
+- declare type t and var X
+- initialize X
+- one transition with one requirement (= init)
+-> should modify X
+
+ex2.cub [OK] 
+- declare type t and var X
+- initialize X
+- one transition with one requirement (<> init)
+-> should not modify X
+
+ex3.cub [OK]
+- type t and vars X and Y
+- both initialized
+- one transition w/ two requirements
+-> should modify Y
+
+ex4.cub [OK]
+- type t and vars X and Y
+- both initialized
+- one transition w/ two requirements
+-> should not modify Y
+
+ex5.cub [OK]
+- type t and var X
+- initialized
+- one transition w/o requirements
+- case construct for X
+-> should modify X to first case
+
+ex5.1.cub [OK]
+- slightly different case than previous (uses _)
+-> should modify X to first case
+
+ex5.2.cub [OK]
+-> should modify X to second case
+
+ex5.3.cub [OK]
+- last _ case
+-> should modify X
+
+ex6.cub [OK]
+- case for X when conditions depend on Y
+
+ex7.cub [OK]
+- case when condition compares global vars (not var and value)
+
+ex7.1.cub [OK]
+- similar to previous, slightly different cases 
+
+ex7.2.cub [OK]
+- similar to previous, slightly different cases 
+
+-------INTRODUCE PROCS----------
+
+ex8.cub [OK]
+- start interpret w/o option to specify procs
+- should init 3 procs 
+[same file, but with option @ 5] [OK]
+
+ex9.cub [OK]
+- one transition w/ one proc parameter, modify proc passed as argument
+
+ex10.cub [OK]
+- one transition with requirements for 1 proc
+
+ex11.cub [OK]
+- one transition with requirements for 1 proc, not satisfied
+
+==CASES==
+
+ex12.cub [OK]
+- case: | _ (change value for all procs)
+
+ex13.cub [OK]
+- case: first case =, and _ (on procs)
+
+ex14.cub [OK]
+- X[k] := case | i < k | _
+ 
+ex14.1.cub [OK]
+- X[k] := case | i > k | _
+
+
+ex15.cub [OK]
+- X[k] := case | i <= k | _
+
+ex15.1.cub [OK]
+- X[k] := case | i >= k | _
+
+ex16.cub [OK]
+- X[k] := case | i = j | _ (2 procs in parameter)
+-> should not work since procs in args have to be =/=
+(if transition called with 2 same procs - error, else nothing changes)
+
+ex17.cub [OK]
+- X[k] := case | i < j | _ (2 procs in parameter)
+
+ex18.cub [OK]
+- X[k] := case | i > j | _ (2 procs in parameter)
+
+ex19.cub [OK]
+- X[k] := case | i <= j | _ (2 procs in parameter)
+
+ex20.cub [OK]
+- X[k] := case | i >= j | _ (2 procs in parameter)
+
+ex21.cub [OK]
+- X[k] := case | i < k | i > j | _
+(where 2 cases are true, to make sure it takes only first and doesn't overwrite)
+(transitiont t1(#2,#1))
+(transition t1(#1,#2))
+
+ex22.cub [OK]
+- X[k] := case | i < k | True = True | _
+(same as above just with Constrs)
+
+
+ex23.cub [OK]
+- X[k] := case | i < k : B | X[i] = A : C | _ : D
+(same as above just with array in condition)
+
+ex24.cub [OK]
+- case with && in condition
+
+ex25.cub [OK]
+- case with && in condition, mix of procs and terms
+
+ex26.cub [OK]
+- case with && in condition, pure procs and terms
+
+ex27.cub [OK]
+- more complex case
+
+ex28.cub [OK]
+- more complex case
+
+ex29.cub [OK]
+- more complex case
+
+ex30.cub [OK]
+- more complex case
+
+ex31.cub [OK]
+- simple matrix allocation
+
+ex32.cub [OK]
+- multiple transitions
+
+ex33.cub [OK]
+- TODO (literally same as 32)
+
+ex34.cub [OK]
+- modify matrix with case (_)
+
+ex35.cub [OK]
+- matrix cases
+
+ex36.cub [OK]
+- matrix cases
+
+ex37.cub []
+- forall_other
+
+ex38.cub []
+- forall_other
+
+ex39.cub
+- update non dets
+
+ex40.cub
+ex41.cub
+ex42.cub
+ex43.cub
+
+ex44.cub
+- test sequences of transitions
+-> all possible combinations should fail
+
+ex45.cub
+ex46.cub
+ex47.cub
+ex48.cub
+ex49.cub
+ex50.cub
+ex51.cub
+ex52.cub

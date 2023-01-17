@@ -1,0 +1,9 @@
+type t = A | B
+
+var X : t
+
+init() { X = A }
+
+
+transition t1()
+{ X := B } 

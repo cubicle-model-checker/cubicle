@@ -1,0 +1,6 @@
+var X : int
+
+init { X = 9 }
+
+transition t1()
+{ X := X + 2 }

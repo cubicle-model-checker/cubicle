@@ -1,0 +1,11 @@
+var S : semaphore
+
+init() { S = SYS_PROCS + 1 }
+
+
+transition t1(i)
+{ acquire(S, i)}
+
+transition t2(i)
+{ release(S,i)} 
+

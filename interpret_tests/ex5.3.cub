@@ -1,0 +1,9 @@
+type t = A | B | C | D 
+
+var X : t
+
+init() { X = A }
+
+transition t1()
+requires { X = A}
+{ X := case | X = B : C | X = C : B | _ : D } 

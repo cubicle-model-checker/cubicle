@@ -1,0 +1,236 @@
+type s = | Smoking | Waiting 
+       	 | NotChoosing | Chosen1 | ChosenBoth | WaitRelease
+	 | Got1 | GotBoth | PutBack1 | PutBackBoth
+
+type i = P | M | T | N
+
+array SmokerSupply[proc] : i 
+
+array Smoker[proc] : s
+
+array SmokerSem[proc] : semaphore
+
+var NonSmoker : proc
+var Choice1 : proc
+var Choice2 : proc 
+
+var Choice1Table : bool
+var Choice2Table : bool
+
+
+var Paper : semaphore
+var Matches : semaphore
+var Tobacco : semaphore
+
+var Block : bool
+
+
+init(i) { Smoker[i] = Waiting && Paper = 0 && Matches = 0 && Tobacco = 0 &&
+	  SmokerSupply[i] = N && Block = False && SmokerSem[i] = 1  &&
+	  Choice1Table = False && Choice2Table = False }
+
+(*---Cheat Initialization---*)
+transition set_non_smoker(i)
+requires { Block = False }
+{ NonSmoker := i;
+  SmokerSupply[i] := N;
+  Smoker[i] := NotChoosing }
+
+transition set_T(i)
+requires { Block = False }
+{ SmokerSupply[i] := T }
+
+transition set_P(i)
+requires { Block = False }
+{ SmokerSupply[i] := P }
+
+transition set_M(i)
+requires { Block = False }
+{ SmokerSupply[i] := M }
+
+transition block()
+requires { Block = False }
+{ Block := True }
+
+(*
+transition set_non_smoker(#4); set_T(#1); set_P(#2); set_M(#3); block()
+*)
+(*--------------------------*)
+
+transition choose_1([i] j)
+requires { NonSmoker = i && Smoker[i] = NotChoosing }
+{ Choice1 := j;
+  Smoker[i] := Chosen1;
+}
+
+transition choose_2([i] j)
+requires { NonSmoker = i && Smoker[i] = Chosen1 && Choice1 <> j }
+{ Choice2 := j;
+  Smoker[i] := ChosenBoth; }
+
+transition put_choice1_table_paper([i] j)
+requires { Choice1Table = False && NonSmoker = i && Smoker[i] = ChosenBoth && Smoker[j] = Waiting && Choice1 = j && SmokerSupply[j] = P && forall_other k. Smoker[k] = Waiting}
+{ release(Paper,i); Choice1Table := True
+}
+
+transition put_choice1_table_tobacco([i] j)
+requires { Choice1Table = False &&  NonSmoker = i && Smoker[i] = ChosenBoth && Smoker[j] = Waiting && Choice1 = j && SmokerSupply[j] = T && forall_other k. Smoker[k] = Waiting}
+{ release(Tobacco,i); Choice1Table := True }
+
+transition put_choice1_table_matches([i] j)
+requires { Choice1Table = False && NonSmoker = i && Smoker[i] = ChosenBoth && Smoker[j] = Waiting && Choice1 = j && SmokerSupply[j] = M && forall_other k. Smoker[k] = Waiting}
+{ release(Matches,i); Choice1Table := True }
+
+
+transition put_choice2_table_paper([i] j)
+requires { Choice2Table = False && NonSmoker = i && Smoker[i] = ChosenBoth && Smoker[j] = Waiting && Choice2 = j && SmokerSupply[j] = P && forall_other k. Smoker[k] = Waiting}
+{ release(Paper,i); Choice2Table := True;
+}
+
+transition put_choice2_table_tobacco([i] j)
+requires { Choice2Table = False && NonSmoker = i && Smoker[i] = ChosenBoth && Smoker[j] = Waiting && Choice2 = j && SmokerSupply[j] = T && forall_other k. Smoker[k] = Waiting}
+{ release(Tobacco,i); Choice2Table := True }
+
+transition put_choice2_table_matches([i] j)
+requires { Choice2Table = False && NonSmoker = i && Smoker[i] = ChosenBoth && Smoker[j] = Waiting && Choice2 = j && SmokerSupply[j] = M && forall_other k. Smoker[k] = Waiting}
+{ release(Matches,i); Choice2Table := True }
+
+(*-------------------Get Matches-------------------------*)
+
+transition get_matches1_first([i] j k)
+requires { i <> Choice2 && Choice1Table = True && Choice2Table = True &&
+           NonSmoker = j && Smoker[i] = Waiting &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice1 = k && SmokerSupply[k] = M }
+{ acquire(Matches,i);
+  Smoker[i] := Got1;
+  Choice1Table := False}
+
+transition get_matches2_first([i] j k)
+requires { i <> Choice1 && Choice2Table = True && Choice1Table = True &&
+	   NonSmoker = j && Smoker[i] = Waiting &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice2 = k && SmokerSupply[k] = M }
+{ acquire(Matches,i);
+  Smoker[i] := Got1;
+  Choice2Table := False}
+
+
+transition get_matches1_second([i] j k)
+requires { i <> Choice2 && Choice1Table = True && Choice2Table = False &&
+	   NonSmoker = j && Smoker[i] = Got1 &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice1 = k && SmokerSupply[k] = M }
+{ acquire(Matches,i);
+  Smoker[i] := GotBoth;
+  Choice1Table := False}
+
+transition get_matches2_second([i] j k)
+requires { i <> Choice1 && Choice2Table = True && Choice1Table = False &&
+	   NonSmoker = j && Smoker[i] = Got1 &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice2 = k && SmokerSupply[k] = M }
+{ acquire(Matches,i);
+  Smoker[i] := GotBoth;
+  Choice2Table := False}
+
+(*-------------------------------------------------------*)
+
+
+(*-------------------Get Paper---------------------------*)
+
+transition get_paper1_first([i] j k)
+requires { i <> Choice2 && Choice1Table = True && Choice2Table = True &&
+	   NonSmoker = j && Smoker[i] = Waiting &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice1 = k && SmokerSupply[k] = P }
+{ acquire(Paper,i);
+  Smoker[i] := Got1;
+  Choice1Table := False}
+
+transition get_paper2_first([i] j k)
+requires { i <> Choice1 && Choice2Table = True && Choice1Table = True &&
+	   NonSmoker = j && Smoker[i] = Waiting &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice2 = k && SmokerSupply[k] = P }
+{ acquire(Paper,i);
+  Smoker[i] := Got1;
+  Choice2Table := False}
+
+
+transition get_paper1_second([i] j k)
+requires { i <> Choice2 && Choice1Table = True && Choice2Table = False &&
+	   NonSmoker = j && Smoker[i] = Got1 &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice1 = k && SmokerSupply[k] = P }
+{ acquire(Paper,i);
+  Smoker[i] := GotBoth;
+  Choice1Table := False}
+
+transition get_paper2_second([i] j k)
+requires { i <> Choice1 && Choice2Table = True && Choice1Table = False &&
+	   NonSmoker = j && Smoker[i] = Got1 &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice2 = k && SmokerSupply[k] = P }
+{ acquire(Paper,i);
+  Smoker[i] := GotBoth;
+  Choice2Table := False}
+
+(*-------------------------------------------------------*)
+
+
+(*-------------------Get Tobacco-------------------------*)
+
+transition get_tobacco1_first([i] j k)
+requires { i <> Choice2 && Choice1Table = True && Choice2Table = True &&
+	   NonSmoker = j && Smoker[i] = Waiting &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice1 = k && SmokerSupply[k] = T }
+{ acquire(Tobacco,i);
+  Smoker[i] := Got1;
+  Choice1Table := False}
+
+transition get_tobacco2_first([i] j k)
+requires { i <> Choice1 && Choice2Table = True && Choice1Table = True &&
+	   NonSmoker = j && Smoker[i] = Waiting &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice2 = k && SmokerSupply[k] = T }
+{ acquire(Tobacco,i);
+  Smoker[i] := Got1;
+  Choice2Table := False}
+
+
+transition get_tobacco1_second([i] j k)
+requires { i <> Choice2 && Choice1Table = True && Choice2Table = False &&
+	   NonSmoker = j && Smoker[i] = Got1 &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice1 = k && SmokerSupply[k] = T }
+{ acquire(Tobacco,i);
+  Smoker[i] := GotBoth;
+  Choice1Table := False}
+
+transition get_tobacco2_second([i] j k)
+requires { i <> Choice1 && Choice2Table = True && Choice1Table = False &&
+	   NonSmoker = j && Smoker[i] = Got1 &&
+	   Smoker[j] = ChosenBoth &&
+	   Choice2 = k && SmokerSupply[k] = T }
+{ acquire(Tobacco,i);
+  Smoker[i] := GotBoth;
+  Choice2Table := False}
+
+(*-------------------------------------------------------*)
+
+transition smoke([i])
+requires { Smoker[i] = GotBoth}
+{ acquire(SmokerSem[i], i);
+  Smoker[l] := case | l = i : Smoking
+  	       	    | l = NonSmoker : WaitRelease
+		    | _ : Smoker[l] }
+
+transition smoke_done([i])
+requires { Smoker[i] = Smoking }
+{ Smoker[i] := Waiting; release(SmokerSem[i], i) }
+
+transition agent_reset([i])
+requires { NonSmoker = i && Smoker[i] = WaitRelease && forall_other j. SmokerSem[j] = 1 }
+{ Smoker[i] := NotChoosing; }

@@ -1,0 +1,17 @@
+var C : condition
+
+var X : bool
+
+init() { X = True }
+
+transition t1(i)
+{ acquire(C,i)}
+
+transition t2(i)
+{ wait(C,i)}
+
+transition t3(i)
+{ release(C,i)}
+
+transition t4(i)
+{ notify(C,i) }

@@ -1,0 +1,32 @@
+type t = A | B | C | Def
+
+var C1 : condition
+
+var L : lock
+
+array X[proc] : t
+
+init(i) { X[i] = Def }
+
+transition t0(i)
+{ acquire(L,i) }
+
+transition t1(i)
+{ acquire(C1, i)}
+
+transition t2(i)
+{ wait(C1,i) }
+
+transition t3(i)
+{ X[i] := C }
+
+transition t4()
+{ X[k] := case | _ : A }
+
+transition t5(i)
+{ X[k] := case | i = k : B
+       	       | _ : C }
+
+transition t6(i j)
+{ X[k] := case | i = j : C
+       	       | _ : B }

@@ -1,0 +1,84 @@
+
+type ph = Thinking | Eating | Hungry | GetRightFork | GotBothForks | PutForkDown
+
+array Philosopher[proc] : ph
+
+
+array Stick[proc] : lock
+
+var Counting : semaphore
+
+(*---------Cheat Neighbors----------*)
+var Block : bool
+array RightN[proc] : proc
+(*----------------------------------*)
+
+
+init(i) { Philosopher[i] = Thinking && Block = False && Counting = 4 } 
+
+
+(*---------Cheat Neighbors----------*)
+
+(*
+transition set_neighbor(#1, #2); set_neighbor(#2, #3); set_neighbor(#3, #4) ;set_neighbor(#4, #5);set_neighbor(#5, #1); block()
+ *)
+
+transition set_neighbor(i k)
+requires { Block = False }
+{ RightN[i] := k }
+
+transition block()
+requires {Block = False}
+{ Block := True }
+(*----------------------------------*)
+
+
+transition hungry(i)
+requires { Philosopher[i] = Thinking }
+{ Philosopher[i] := Hungry;
+  acquire(Counting,i)
+  }
+
+transition get_my_fork(i)
+requires { Philosopher[i] = Hungry  }
+{ acquire(Stick[i], i);
+  Philosopher[i] := GetRightFork }
+
+transition get_right_fork(i j)
+requires { Philosopher[i] = GetRightFork && RightN[i] = j }
+{ acquire(Stick[j], i);
+  Philosopher[i] := GotBothForks; 
+}
+
+transition eat(i)
+requires { Philosopher[i] = GotBothForks }
+{ release(Counting,i);
+  Philosopher[i] := Eating }
+
+transition put_right_fork_down(i j)
+requires { Philosopher[i] = Eating && RightN[i] = j }
+{ release(Stick[j], i);
+  Philosopher[i] := PutForkDown }
+
+transition put_my_fork_down(i)
+requires { Philosopher[i] = PutForkDown }
+{ release(Stick[i], i);
+  Philosopher[i] := Thinking } 
+
+
+(*
+transition hungry(#4)
+transition hungry(#2)
+transition get_left_fork(#4, #3)
+transition hungry(#5)
+transition get_right_fork(#4, #5)
+transition get_left_fork(#2, #1)
+transition hungry(#3)
+transition get_left_fork(#5, #4)
+transition get_right_fork(#2, #3)
+transition get_right_fork(#5, #1)
+transition hungry(#1)
+transition eat(#4)
+
+
+*)

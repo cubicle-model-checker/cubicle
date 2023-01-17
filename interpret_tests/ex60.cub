@@ -1,0 +1,12 @@
+type t = A | B | C
+
+array X[proc] : t
+array P[proc] : t
+
+init(i) { X[i] = A && P[i] = A}
+
+transition t1(i)
+requires { X[i] = A }
+{
+P[i] := C; 	
+X[k] := case | i = k && P[i] = A : B }
