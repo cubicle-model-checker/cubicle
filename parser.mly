@@ -86,6 +86,11 @@
     let cpt = ref 0 in
     fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
 
+  let get_term t =
+    match t with
+      | TTerm t -> t
+      | TVar v -> Elem(v,Var)
+
 %}
 
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
@@ -488,7 +493,9 @@ lident:
 ;
 
 const_proc:
-  | CONSTPROC {let h,s = $1 in if int_of_string s > !Options.size_proc then raise Parsing.Parse_error;
+  | CONSTPROC {let h,s = $1 in
+	       if (not Options.interpreter) && (int_of_string s > !Options.size_proc)
+	       then raise Parsing.Parse_error;
 	       Hstring.make (h^s) }
 ;
 
@@ -655,7 +662,7 @@ toplevel_assign:
       {
 	match $6 with
 	  | TTerm t -> TopAssign($1, Access($1,$3), t)
-	  | TVar v ->  TopAssign($1, Access($1,$3), Elem(v, Var))
+	 | TVar v ->  TopAssign($1, Access($1,$3), Elem(v, Var))
       }
 
 ;

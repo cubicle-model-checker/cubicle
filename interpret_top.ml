@@ -1350,6 +1350,12 @@ let setup_env tsys sys =
     end;
     
   let env = init_vals orig_env tsys.t_init in
+
+  if Options.debug_interpreter then
+    begin
+    Format.eprintf "First initialized environment: @.";
+    print_env fmt env
+    end;
   
     let env_final =
       Env.mapi (fun k x ->
@@ -1423,8 +1429,7 @@ let setup_env tsys sys =
 	| TopHelp -> print_help fmt
 	| TopClear -> ignore (Sys.command "clear")
 	| TopTest h ->
-	  
-	  
+	  	  
 	  let l = all_possible_transitions !global_env transitions procs false in
 		       if l = [] then raise (TopError Deadlock)
 		       else
@@ -1440,7 +1445,10 @@ let setup_env tsys sys =
 	  try
 	    let e, lq, cond,sem = !global_env in
 	    let v = Env.find n e in
-	    let v1 = to_interpret tt in
+	    let v1 =
+	      try Env.find tt e
+	      with Not_found -> to_interpret tt
+	    in 
 	    if Hstring.compare v.typ v1.typ <> 0 then raise (TopError (BadType (v.typ, v1.typ)))
 	    else
 	      let v,l,c,s = !global_env in 
@@ -1457,183 +1465,3 @@ let setup_env tsys sys =
       
   done 
   
-
-  
-(*    
-let setup_env tsys sys =
-  let fmt = Format.std_formatter  in
-
-  (*generate X distinc procs*)
-  let num_procs = Options.get_interpret_procs () in
-  let procs = Variable.give_procs num_procs in
-
-  (*all terms for the procs, i.e generate instantiated array terms*)
-  (* var X[proc]: bool --> X[#1], X[#2] ...  *)
-  let var_terms = Forward.all_var_terms procs tsys in
-  let const_list = List.map (fun x -> Elem(x, Glob)) tsys.t_consts in
-  let var_terms = Term.Set.union var_terms (Term.Set.of_list const_list) in 
-  sys_procs := Options.get_interpret_procs ();
- 
-  let orig_env,lock_queue, cond_sets, semaphores =
-    Term.Set.fold ( fun x (acc,acc_lock, cond_acc, sem_acc) ->
-      match x with
-	| Elem (n1, Glob) ->
-	  let _,ty = Smt.Symbol.type_of n1 in
-	  if is_lock ty || is_rlock ty then
-	    (*let () = Format.eprintf "looks it's slokc: %a@." Term.print x in*)
-	    (Env.add x throwaway acc ,
-	     LockQueues.add x (Queue.create ()) acc_lock,
-	    cond_acc, sem_acc)
-	  else
-	    if is_condition ty then
-	      Env.add x throwaway acc ,
-	      LockQueues.add x (Queue.create ()) acc_lock,
-	      Conditions.add x [] cond_acc,
-	      sem_acc
-	    else
-	      if is_semaphore ty then
-		Env.add x throwaway acc,
-		acc_lock,
-		cond_acc,
-		Semaphores.add x [] sem_acc
-	      else 
-		(Env.add x throwaway acc , acc_lock, cond_acc, sem_acc)
-	| Access(arr,arps) ->
-	  let _,ty = Smt.Symbol.type_of arr in
-	  if is_lock ty then
-	    (Env.add x throwaway acc , LockQueues.add x (Queue.create ()) acc_lock, cond_acc, sem_acc)
-	  else
-	    if is_condition ty then
-	      Env.add x throwaway acc ,
-	      LockQueues.add x (Queue.create ()) acc_lock,
-	      Conditions.add x [] cond_acc,
-	      sem_acc
-	    else
-	      if is_semaphore ty then
-		Env.add x throwaway acc, acc_lock, cond_acc, Semaphores.add x [] sem_acc
-	      else 
-		(Env.add x throwaway acc , acc_lock, cond_acc, sem_acc)
-	       
-	| _ -> Env.add x throwaway acc , acc_lock, cond_acc, sem_acc
-    ) var_terms (Env.empty, LockQueues.empty, Conditions.empty, Semaphores.empty)
-  in
-  (*if Options.debug_interpreter then
-    let () = Format.eprintf "Very first environment: @." in 
-    print_env fmt orig_env;*)
-
-  let env = init_vals orig_env tsys.t_init in
-
-  if Options.debug_interpreter then
-    let () = Format.eprintf "First initialized environment: @." in 
-    print_env fmt env;
-
-  (*initialize_sys orig_env tsys.t_init var_terms;*)
-  let env_final =
-    Env.mapi (fun k x ->
-      if Term.compare x throwaway = 0 then
-	begin
-	  match k with 
-	    | Elem(n,_) | Access(n,_) -> 
-	      let _, ty = Smt.Symbol.type_of n in
-	    {value = random_value ty; typ = ty }
-	  |  _ -> assert false	
-	end
-      else
-	begin
-	  match k with
-	    | Elem(n, _) | Access(n, _) ->
-	      let _, ty = Smt.Symbol.type_of n in
-	      if is_semaphore ty then
-		  {value = semaphore_init x; typ = ty}
-	      else
-		{value = cub_to_val x ; typ = ty }
-	    | _ -> assert false
-
-	end
-    ) env in
-  let env_final =
-    Env.mapi (fun k x ->
-      match x.value with
-	| VArith ta -> let v = eval_arith ta env_final x.typ in
-		       {value =  v; typ = x.typ}
-	| _ -> x ) env_final in
- 
-  let env_final =
-    List.fold_left (fun acc x ->
-      Env.add (Elem(x, Var)) {value = VAlive; typ = ty_proc} acc
-  ) env_final procs
-  in
-  if Options.debug then
-     let () = Format.eprintf "Final Environment: @." in 
-     print_interpret_env fmt (env_final,lock_queue, cond_sets, semaphores) ;
-
-  let transitions =
-    List.fold_left ( fun acc t ->    
-      Trans.add t.tr_name t acc ) Trans.empty sys.trans in
-
-  let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in 
-  ignore (Sys.command "clear");
-  
-  while !interpret_bool do
-    try
-      flush stdout; Format.printf "> %!";
-      let inp = read_line () in
-      let tts = Parser.toplevel Lexer.token (Lexing.from_string inp) in
-      (match tts with
-	| TopExec -> let ap, g =  execute_random fmt !global_env transitions procs sys.unsafe
-		     in
-		     global_env := g;
-		     print_applied_trans fmt ap
-	| TopTransition tl ->
-	  let temp =
-	    try
-	      List.fold_left (fun acc t ->
-		match t with
-		  | (n, []) -> apply_transition [] n transitions acc
-		  | (n,l) ->
-		    
-		    check_duplicates l;
-		    apply_transition l n transitions acc ) !global_env tl
-	    with
-	      | TopError (FalseReq fr) ->
-		Format.printf "%a@." top_report (FalseReq fr); !global_env in
-	  global_env := temp
-	| TopShowEnv -> print_interpret_env fmt !global_env 
-	| TopHelp -> print_help fmt
-	| TopClear -> ignore (Sys.command "clear")
-	| TopTest h ->
-	  
-	  
-	  let l = all_possible_transitions !global_env transitions procs false in
-		       if l = [] then raise (TopError Deadlock)
-		       else
-			 print_poss_trans fmt l
-	| TopUnsafe -> check_unsafe !global_env sys.unsafe 
-	| TopRestart ->
-	  print_interpret_env fmt (env_final, lock_queue, cond_sets, semaphores);
-	  global_env := env_final,lock_queue, cond_sets, semaphores;
-	  print_interpret_env fmt !global_env
-	| TopGenProc -> global_env := generate_process !global_env num_procs tsys
-	| TopKillProc op -> assert false
-	| TopAssign(name,n, tt) ->
-	  try
-	    let e, lq, cond,sem = !global_env in
-	    let v = Env.find n e in
-	    let v1 = to_interpret tt in
-	    if Hstring.compare v.typ v1.typ <> 0 then raise (TopError (BadType (v.typ, v1.typ)))
-	    else
-	      let v,l,c,s = !global_env in 
-	      global_env := Env.add n v1 v, l, c,s
-	  with
-	      Not_found ->
-		  raise (TopError (NoVar name))	  
-      );
-    with
-      | TopError e -> Sys.catch_break false;Format.printf "%a@." top_report e
-      | End_of_file  -> Sys.catch_break false;interpret_bool := false
-      | s ->  Sys.catch_break false; let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError)
-      
-  done 
-  
-
-*)

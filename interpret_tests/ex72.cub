@@ -1,0 +1,10 @@
+type t = A | B | C
+
+var X : t
+array Y[proc] : t 
+
+init() { X = A}
+
+
+transition t1()
+{ X := B }

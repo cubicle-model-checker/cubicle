@@ -110,7 +110,7 @@ type top_proc =
 type toplevel =
   | TopTransition of (Hstring.t * Hstring.t list) list
   | TopShowEnv
-  | TopAssign of Hstring.t * Term.t * Term.t
+  | TopAssign of Hstring.t * term * term
   | TopHelp
   | TopClear
   | TopTest of Hstring.t
