@@ -73,6 +73,48 @@ if test "$OCAMLYACC" = no ; then
 fi
 
 
+
+
+#looking for react library
+
+if test "$USEOCAMLFIND" = yes; then
+  REACTLIB=$(ocamlfind query -i-format react)
+fi
+
+if test -n "$REACTLIB";then
+  echo "ocamlfind found react in $REACTLIB"
+  REACTLD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/react/react.cma,REACTLD=yes,REACTLD=no)
+  if test "$REACTLD" = no ; then
+      AC_MSG_RESULT(Cannot find react library.)
+      REACTLIB=""
+  else
+     REACTLIB="-I +react"
+  fi
+fi
+
+
+#looking for ocaml-canvas library
+
+if test "$USEOCAMLFIND" = yes; then
+  OCAMLCANVASLIB=$(ocamlfind query -i-format ocaml-canvas)
+fi
+
+if test -n "$OCAMLCANVASLIB";then
+  echo "ocamlfind found ocaml-canvas in $OCAMLCANVASLIB"
+  OCAMLCANVASLD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/ocaml-canvas/ocaml_canvas.cma,OCAMLCANVASLD=yes,OCAMLCANVASLD=no)
+  if test "$OCAMLCANVASLD" = no ; then
+      AC_MSG_RESULT(Cannot find ocaml-canvas library.)
+      OCAMLCANVASLIB=""
+  else
+     OCAMLCANVASLIB="-I +ocaml-canvas"
+  fi
+fi
+
+
 #looking for functory library
 
 if test "$USEOCAMLFIND" = yes; then
@@ -146,6 +188,8 @@ AC_SUBST(OCAMLVERSION)
 AC_SUBST(OCAMLLIB)
 AC_SUBST(ALTERGOLIB)
 AC_SUBST(FUNCTORYLIB)
+AC_SUBST(OCAMLCANVASLIB)
+AC_SUBST(REACTLIB)
 AC_SUBST(Z3LIB)
 AC_SUBST(Z3CCFLAGS)
 AC_SUBST(OCAMLWIN32)

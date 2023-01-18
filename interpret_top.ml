@@ -2,6 +2,8 @@ open Ast
 open Types
 open Interpret_errors
 open Interpret_types
+open OcamlCanvas.V1
+
 
 
 let interpret_bool = ref true
@@ -1404,7 +1406,7 @@ let setup_env tsys sys =
   while !interpret_bool do
     try
       flush stdout; Format.printf "> %!";
-      let inp = read_line () in
+      let inp = read_line () in	  
       let tts = Parser.toplevel Lexer.token (Lexing.from_string inp) in
       (match tts with
 	| TopExec -> let ap, g =  execute_random fmt !global_env transitions procs sys.unsafe
@@ -1417,8 +1419,7 @@ let setup_env tsys sys =
 	      List.fold_left (fun acc t ->
 		match t with
 		  | (n, []) -> apply_transition [] n transitions acc
-		  | (n,l) ->
-		    
+		  | (n,l) ->		    
 		    check_duplicates l;
 		    apply_transition l n transitions acc ) !global_env tl
 	    with
@@ -1428,8 +1429,7 @@ let setup_env tsys sys =
 	| TopShowEnv -> print_interpret_env fmt !global_env 
 	| TopHelp -> print_help fmt
 	| TopClear -> ignore (Sys.command "clear")
-	| TopTest h ->
-	  	  
+	| TopTest h ->	  	  
 	  let l = all_possible_transitions !global_env transitions procs false in
 		       if l = [] then raise (TopError Deadlock)
 		       else
@@ -1442,6 +1442,7 @@ let setup_env tsys sys =
 	| TopGenProc -> global_env := generate_process !global_env num_procs tsys
 	| TopKillProc op -> assert false
 	| TopAssign(name,n, tt) ->
+	  (*TO DO FOR CONSTRUCTORS: check that it belongs to type*)
 	  try
 	    let e, lq, cond,sem = !global_env in
 	    let v = Env.find n e in
@@ -1458,6 +1459,7 @@ let setup_env tsys sys =
 		  raise (TopError (NoVar name))
 	  
       );
+      
     with
       | TopError e -> Sys.catch_break false;Format.printf "%a@." top_report e
       | End_of_file  -> Sys.catch_break false;interpret_bool := false

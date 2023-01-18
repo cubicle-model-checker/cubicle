@@ -86,10 +86,6 @@
     let cpt = ref 0 in
     fun () -> incr cpt; Hstring.make ("_j"^(string_of_int !cpt))
 
-  let get_term t =
-    match t with
-      | TTerm t -> t
-      | TVar v -> Elem(v,Var)
 
 %}
 
@@ -658,11 +654,12 @@ toplevel_assign:
     match $3 with
       | TTerm t -> TopAssign($1,Elem($1,Glob), t)
       | TVar v -> TopAssign($1, Elem($1,Glob), Elem(v, Var))}
+      
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
       {
 	match $6 with
 	  | TTerm t -> TopAssign($1, Access($1,$3), t)
-	 | TVar v ->  TopAssign($1, Access($1,$3), Elem(v, Var))
+	  | TVar v ->  TopAssign($1, Access($1,$3), Elem(v, Var))
       }
 
 ;

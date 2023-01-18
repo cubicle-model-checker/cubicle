@@ -277,10 +277,12 @@ let all_constr_terms () =
   List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
        
 let to_interpret term =
+  
   match term with
     | Elem( el, Glob) -> let _, ty = Smt.Symbol.type_of el in {value = VGlob el; typ = ty }
-    | Elem( el, Constr) -> let _, ty = Smt.Symbol.type_of el in {value = VConstr el; typ = ty }
-    | Elem( el, Var) ->  {value = VProc el; typ = Hstring.make "proc" }
+    | Elem( el, Constr) ->
+      let _, ty = Smt.Symbol.type_of el in {value = VConstr el; typ = ty }
+    | Elem( el, Var) -> {value = VProc el; typ = ty_proc }
     | Access(el,vl) -> let _, ty = Smt.Symbol.type_of el in {value = VAccess (el,vl); typ = ty }
     | Const cs -> let x = int_of_consts cs in {value = VInt x; typ = ty_int}
     | Arith(t,cs) -> assert false
