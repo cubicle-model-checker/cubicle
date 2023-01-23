@@ -23,6 +23,7 @@ type top_error =
   | UnlockedNotify
   | CantNotifyNotMine of Term.t * Term.t
   | Deadlock
+  | StopExecution 
 
 exception TopError of top_error
 
@@ -56,6 +57,7 @@ let top_report fmt e =
     | UnlockedNotify -> Format.fprintf fmt "Cannot notify with unlocked lock"
     | CantNotifyNotMine(proc,l) -> Format.fprintf fmt "Process %a can't notify: lock %a does not belong to %a@." Term.print proc Term.print l Term.print proc
     | Deadlock -> Format.fprintf fmt "@{<b>@{<fg_red>WARNING: Deadlock reached@}@}"
+    | StopExecution -> Format.fprintf fmt "Execution interrupted"
 
       
 let top_error e = raise (TopError e)

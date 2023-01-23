@@ -23,6 +23,7 @@ type top_error =
   | UnlockedNotify
   | CantNotifyNotMine of Term.t * Term.t
   | Deadlock
+  | StopExecution
 
 exception TopError of top_error
 
