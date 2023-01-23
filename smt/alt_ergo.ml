@@ -71,6 +71,26 @@ module Type = struct
     H.add decl_types tproc Ty.Tint;
     tproc
 
+  let type_lock = 
+    let tlock = Hstring.make "lock" in
+    H.add decl_types tlock Ty.Tbool;
+    tlock
+
+  let type_rlock = 
+    let rlock = Hstring.make "rlock" in
+    H.add decl_types rlock Ty.Tbool;
+    rlock
+
+  let type_condition =
+    let tcond = Hstring.make "condition" in
+    H.add decl_types tcond Ty.Tbool;
+    tcond
+
+  let type_semaphore =
+    let tsem = Hstring.make "semaphore" in
+    H.add decl_types tsem Ty.Tint;
+    tsem
+
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
     H.add decl_symbs c 
