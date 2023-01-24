@@ -1,0 +1,25 @@
+type t = Idle | Want | Crit
+
+array P[proc] : t
+
+
+var L : lock
+
+
+init (i) { P[i] = Idle }
+
+unsafe(i j) { P[i] = Crit && P[j] = Crit } 
+
+transition want([i])
+requires { P[i] = Idle }
+{ acquire(L,i);
+  P[i] := Want }
+
+transition enter([i])
+requires { P[i] = Want }
+{ P[i] := Crit }
+
+transition exit([i])
+requires { P[i] = Crit }
+{ release(L, i);
+  P[i] := Idle }
