@@ -1192,7 +1192,13 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  (el,[])::acc
 	with
 	  | TopError _ -> acc
-	  | _ -> assert false
+	  | Stdlib.Sys.Break ->
+	    if flag
+	    then
+	      raise (TopError StopExecution)
+	    else raise Exit
+	  | s -> let e = Printexc.to_string s in Format.printf "%s @." e;
+		 assert false
       end
     else
       begin
@@ -1207,19 +1213,31 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	    (el, procs)::acc_t
 	  with
 	    | TopError _ -> acc_t
-	    | Sys.Break ->
+	    | Sys.Break -> 
 	      if flag
 	      then
-		raise Sys.Break
-	      else raise Exit
+		raise (TopError StopExecution)
+	      else  raise Exit
 	    | s -> let e = Printexc.to_string s in Format.printf "%s@." e; assert false      
 	) acc tr_procs
       end 
   ) trans []
     
 
-let execute_random fmt glob_env trans all_procs unsafe =
+let print_header f name=
+  let f = Format.formatter_of_out_channel f in 
+  Format.fprintf f "***Tested states***\n\
+                    Filename: %s\n\
+                    Number of procs: %d\n\
+                    *******************\n@." name (Options.get_interpret_procs())
+                    
+
+let execute_random2 fmt glob_env trans all_procs unsafe =
   Sys.catch_break true;
+  let dfile = Filename.basename Options.file in
+  let open_file = open_out (dfile^".txt") in
+  print_header open_file dfile;
+  close_out open_file; 
   let q = Queue.create () in
   Random.self_init ();
   let running_env = ref glob_env in
@@ -1272,6 +1290,7 @@ let execute_random fmt glob_env trans all_procs unsafe =
       | TopError CantWaitNeverLock _ -> assert false
       | TopError UnlockedNotify -> assert false
       | TopError CantNotifyNotMine _ -> assert false
+      | TopError StopExecution -> Format.eprintf "am here@.";Sys.catch_break false; running := false
       | s -> Sys.catch_break false;
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
@@ -1279,6 +1298,73 @@ let execute_random fmt glob_env trans all_procs unsafe =
     q, !running_env
 
 
+
+    
+let execute_random fmt glob_env trans all_procs unsafe =
+  Sys.catch_break true;
+  let q = Queue.create () in
+  Random.self_init ();
+  let running_env = ref glob_env in
+  let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
+  let running = ref true in
+  while !running do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (apply,apply_procs) = !transitions.(rand) in
+      Queue.push (apply,apply_procs) q;
+      running_env := apply_transition apply_procs apply.tr_name trans !running_env;
+      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
+      check_unsafe !running_env unsafe
+    with
+      | TopError Deadlock -> Sys.catch_break false;
+	Format.fprintf fmt
+	"@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false
+      | TopError Unsafe ->
+	Sys.catch_break false;
+	Format.fprintf fmt
+	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Do you wish to continue? (y/n)@.";
+	begin
+	  let rec decide () =
+	    let inp = read_line () in
+	    match inp with
+	      | "y" -> Sys.catch_break true
+	      | "n" -> running := false
+	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
+	  in decide ()
+	end 
+      | Stdlib.Sys.Break -> Sys.catch_break false; running := false
+      | TopError InputError -> assert false
+      | TopError NoTransition _ -> assert false
+      | TopError WrongArgs _ -> assert false
+      | TopError NoVar _ -> assert false
+      | TopError TooManyProcs -> assert false
+      | TopError FalseReq _ -> assert false
+      | TopError ConflictInit _ -> assert false
+      | TopError UnEqConstr _ -> assert false
+      | TopError CannotProc -> assert false
+      | TopError DupProcs -> assert false
+      | TopError Reached -> assert false
+      | TopError BadType _ -> assert false
+      | TopError BadInit -> assert false
+      | TopError SuspendedProc _ -> assert false
+      | TopError SleepingProc _ -> assert false
+      | TopError CantUnlockOther _ -> assert false
+      | TopError CantWaitNeverLock _ -> assert false
+      | TopError UnlockedNotify -> assert false
+      | TopError CantNotifyNotMine _ -> assert false
+      | TopError StopExecution -> Sys.catch_break false; running := false
+      | s -> Sys.catch_break false;
+	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
+	assert false
+  done;
+    q, !running_env
+
+
+
+let dump_in_file env file = assert false
+  
   
     
 let generate_process (env, locks, conds, semaphores) number tsys=
@@ -1298,8 +1384,7 @@ let generate_process (env, locks, conds, semaphores) number tsys=
 
     
 let setup_env tsys sys =
-  let fmt = Format.std_formatter  in
-
+  let fmt = Format.std_formatter in
   (*generate X distinc procs*)
   let num_procs = Options.get_interpret_procs () in
   let procs = Variable.give_procs num_procs in
