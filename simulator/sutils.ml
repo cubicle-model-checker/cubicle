@@ -15,11 +15,12 @@ let get_random_in_list l =
 let get_random_proc () =
   Random.int (get_nb_proc ())
 
-(* Fonction de debug, a supprimer *)
+(* Fonction de debug divers *)
 
-let print_list_int l = 
+let print_list_int l =
+  Format.printf "[ ";
   List.iter (fun i -> Format.printf "%i " i) l;
-  Format.print_newline ()
+  Format.printf "]\n\n"
 
 (* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément *)
 let computed_args = Hashtbl.create 124 
@@ -27,7 +28,7 @@ let computed_args = Hashtbl.create 124
 let rec get_args n =
   try Hashtbl.find computed_args n with Not_found ->
     (
-      if n < 0 || n > (get_nb_proc ()) then assert false else
+      if n < 0 || n > (get_nb_proc ()) then assert false else (* TODO : Remplacer le assert false ici par une erreur indiquant que le nombre de nbproc doit être supérieur a ... *)
         let rec sub_get_args cur prec returned = 
         let tmp_returned' = (List.map (fun l_part -> if cur > List.hd l_part then l_part@[cur] else []) prec) in
         let tmp_tmp_returned' = List.filter (fun l -> List.length l > 0) tmp_returned' in
@@ -60,40 +61,10 @@ let forall_other f i =
 
 let forall f = forall_other f []
 
-(* Gestion d'évènements *)
+(* Dumper *)
 
-type event = 
-  | Click of int
-  | Button_down of char
-  | Button_up of char
-  | None
-
-(* TODO : Utiliser un set ici. *)
-let event_list = ref [None]
-
-let event_to_string e=
-match e with
-| Click(i) -> Format.sprintf "Click (%d)" i
-| Button_down(c) -> Format.sprintf "Button_Down (%c)" c
-| Button_up(c) -> Format.sprintf "Button_Up (%c)" c
-| _ -> ""
-
-let exist_event e = List.exists (fun e' -> e = e') (!event_list)
-
-let add_event e =
-  if not (exist_event e) then
-    (
-      Printf.printf "Added event %s\n%!" (event_to_string e);
-      event_list := (!event_list)@[e] 
-    )
-
-let remove_event e = 
-  let rec sub_removed prec reste = 
-    match reste with
-    | (hd::tl) -> if hd = e then sub_removed prec tl else sub_removed (prec@[hd]) tl
-    | _ -> prec
-  in
-  event_list := sub_removed [] (!event_list)
+let dumper = ref (fun () -> ()) 
+let register_dumper dump = dumper := dump 
 
 (* Simulation *)
 
@@ -101,7 +72,8 @@ let get_possible_action_for_arg arg trans_list =
   let rec sub_gpafa returned (name, req, ac) = if req arg then ((arg,ac,name)::returned) else returned in
   List.fold_left sub_gpafa [] trans_list
 
-let step () = 
+let step () =
+  Format.printf "step \n%!";
   let possible_actions = 
     let returned_list = ref [] in 
     (* Attention : Si on a des fonctions avec plus d'argument que le nombre de proc, il y a de très fort risque d'avoir un comportement inatendu. Il faudrait peut être mettre un warning et crash. *)
@@ -115,10 +87,10 @@ let step () =
   if List.length possible_actions > 0 then
     (
     let (arg, ac, name) = get_random_in_list possible_actions in
-    ac arg;                     (* Effectue l'action *)
-    Format.printf "%s " name;   (* Affiche une trace de l'action dans la sortie standard*)
+    ac arg;                                     (* Effectue l'action *)
+    Format.printf "Took %s with args " name;    (* Affiche une trace de l'action dans la sortie standard*)
     print_list_int arg;
-    Format.print_newline ()
+    Format.printf "\n";
+    (!dumper) ()
     )
-  else Printf.printf "Pas d'action possible\n%!"
-
+  else Format.printf "Pas d'action possible\n%!"

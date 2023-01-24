@@ -119,7 +119,7 @@ CMO = version.cmo options.cmo \
       pre.cmo forward.cmo enumerative.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \
-      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo simulator.cmo main.cmo
+      stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo cutils.cmo ccompiler.cmo main.cmo
 
 CMX = $(CMO:.cmo=.cmx)
 

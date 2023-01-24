@@ -1,18 +1,11 @@
 ## TODO
 
-# Compilateur
-
-- [.] écrire un fichier sutils.mli avec une bonne déclaration des fonctions
-
 # Simulateur
 
-- [.] Initialiser les arrays dans le init, pour qu'ils soient uniquement de la taille nécéssaire (économie de mémoire)
+- [.] Initialiser les arrays dans le init, pour qu'ils soient uniquement de la taille nécéssaire (Grande économie de mémoire)
 - [.] Remplacer le "args" par un array plutôt qu'une liste pour gagner un peu de performance. permet de supprimer la fonction find_ieme et la remplacer par juste ".(n)";
 - [.] Utiliser le module 'Args' et implémenter Arguments : 
-	--graphics : Utiliser l'affichage graphique. 
 	--save-trace : Sauvegarde la trace de la simulation 
 	--check-unsafe : Vérifie si unsafe. Si c'est unsafe, crash et enregistre la trace
-
-# Simulateur:Interaction
-
-- [.] Utiliser un 'set' pour les events
+- [.] Compilation de unsafe. Ajouter une table contenant toutes les fonctions "unsafe".
+- [.] Amélioration du dumper : Meilleur affichage des tableaux; Meilleur liaison entre took transition et dumper 

@@ -40,15 +40,15 @@ let write_types t_def =
 let write_vars s ty_defs=
   let returned = ref Hstring.HMap.empty in
   let add_to_map n t dim = returned := (Hstring.HMap.add n (t,dim) (!returned)) in
-  let write_global (loc, name, var_type) =
+  let write_global (_, name, var_type) =
     add_to_map name var_type 0;
     pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
   in
-  let write_const (loc, name, var_type) = 
+  let write_const (_, name, var_type) = 
     add_to_map name var_type 0;
     pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs) (* Note : les const n'ont pas réellement besoin d'être des ref *)
   in
-  let write_array (loc, name, (dim, var_type)) =
+  let write_array (_, name, (dim, var_type)) =
     add_to_map name var_type (List.length dim);
     pfile "let %s = " (get_var_name name);
     List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") dim;
@@ -61,6 +61,40 @@ let write_vars s ty_defs=
   List.iter write_array s.arrays;
   pfile "\n";
   !returned
+
+(* TODO / WIP : Dumper *)
+
+let write_dumper g_vars ty_defs =
+  let perc = "%" in
+  let print_var_view name (ty, dim) =
+    (* TODO : Faire fonctionner pour types énumérés. *)
+    for i = 1 to dim do 
+      pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" i) (i-1);
+    done;
+    let pexcl = if dim = 0 then "!" else "" in
+    let realname = sprintf "(%s%s%s)" pexcl (get_var_name name) (deplier_var dim) in
+    begin match (Hstring.view ty) with
+    | "int" | "proc" -> 
+        pfile "printf \"%sd\\n\" %s;\n" perc realname
+    | "real" -> 
+        pfile "printf \"%sf\\n\" %s;\n" perc realname
+    | "bool" | "mbool" -> 
+        pfile "printf \"%sb\\n\" %s;\n" perc realname
+    | _ -> 
+        pfile "()\n" (* Actuellement ne dump pas les variables énumérées *)
+    end;
+    for i = dim downto 1 do 
+      pfile "%sdone;\n" (mult_string "\t" i);
+    done
+  in
+  let write_dumper_var var_name var_info =
+    pfile "\tprintf \"%s = \"; " (Hstring.view var_name);
+    print_var_view var_name var_info
+  in
+  pfile "let dump_vars () =\n";
+  pfile "\tprintf \"-- BEGIN : DUMP --\\n\";\n";
+  Hstring.HMap.iter write_dumper_var g_vars;
+  pfile "\tprintf \"-- END   : DUMP --\\n%s!\"\n\n" perc
 
 (* Init declaration *)
 
@@ -338,16 +372,17 @@ let write_transitions trans_list ty_defs g_vars =
     pfile "\tadd_req_acc %s %s;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
   in
   List.iter write_table trans_list;
-  pfile "\n"
+  pfile "\tregister_dumper dump_vars\n"
 
 let write_unsafe unsafe =
   let sub_write_unsafe (_, vars, satom) = ()
   in List.iter sub_write_unsafe unsafe
 
 let run ts s =
-  pfile "%s\n" "open Sutils";
+  pfile "%s\n%s\n" "open Sutils" "open Format";
   let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
+  write_dumper g_vars g_types;
   write_init ts.t_init g_vars g_types;
   write_transitions ts.t_trans g_types g_vars;
   write_unsafe s.unsafe;
