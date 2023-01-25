@@ -784,13 +784,13 @@ let wait_unlock lockq lock_elem env =
     
 let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
   let locks = tr.tr_locks in
-  let unlocks = tr.tr_unlocks in
+  (*let unlocks = tr.tr_unlocks in
   let wait = tr.tr_wait in
   let notify = tr.tr_notify in
-  let notifyall = tr.tr_notifyall in 
-  match locks,unlocks, wait,notify, notifyall with
-    | [], [], [], [], [] -> new_env, lock_queue, cond_sets, semaphores
-    | [(lockp)], [], [], [], [] ->     
+  let notifyall = tr.tr_notifyall in*) 
+  match locks with
+    | [] -> new_env, lock_queue, cond_sets, semaphores
+    | [Lock lockp] ->
       begin
 	match lockp with
 	  | VarLock(lock_elem,p) ->
@@ -868,7 +868,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
        
       end
       
-    | [], [unlock], [], [], []  ->
+    | [Unlock unlock]  ->
       begin
 	match unlock with
 	  | VarLock(lock_elem,p) ->
@@ -966,7 +966,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 	    end 
 	    
       end
-    | [], [], [wait], [], [] -> (*deal_wait false wait sigma env new_env tr lock_queue cond_sets*)    
+    | [Wait wait] -> (*deal_wait false wait sigma env new_env tr lock_queue cond_sets*)    
      begin
 	match wait with
 	  | VarLock(lock_elem, p) ->
@@ -1031,7 +1031,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 	    end 
 	
       end 
-    | [], [], [], [notify], [] ->
+    | [Notify notify] ->
       begin
 	match notify with
 	  | VarLock(lock_elem,p) ->
@@ -1077,7 +1077,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 	    end
       end
 	
-    | [], [], [], [], [notifyall] ->
+    | [NotifyAll notifyall] ->
       begin
 	match notifyall with
 	  | VarLock(lock_elem,p) ->
@@ -1484,6 +1484,7 @@ let setup_env tsys sys =
   let transitions =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty sys.trans in
+  let original_env = env_final, lock_queue, cond_sets, semaphores in 
 
   let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in 
   
@@ -1521,7 +1522,7 @@ let setup_env tsys sys =
 			 print_poss_trans fmt l
 	| TopUnsafe -> check_unsafe !global_env sys.unsafe 
 	| TopRestart ->
-	  print_interpret_env fmt (env_final, lock_queue, cond_sets, semaphores);
+	  
 	  global_env := env_final,lock_queue, cond_sets, semaphores;
 	  print_interpret_env fmt !global_env
 	| TopGenProc -> global_env := generate_process !global_env num_procs tsys

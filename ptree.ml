@@ -163,11 +163,12 @@ type ptransition = {
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
-  ptr_locks : Ast.lock list;
+  ptr_locks : Ast.lock_uses list; 
+  (*ptr_locks : Ast.lock list;
   ptr_unlocks : Ast.lock list;
   ptr_wait : Ast.lock list;
   ptr_notify: Ast.lock list;
-  ptr_notifyall: Ast.lock list;
+  ptr_notifyall: Ast.lock list;*)
   ptr_loc : loc;
 }
 
@@ -581,7 +582,7 @@ let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
 
 let encode_ptransition
     {ptr_lets; ptr_name; ptr_args; ptr_process; ptr_reqs; ptr_assigns;
-     ptr_upds; ptr_nondets; ptr_locks; ptr_unlocks; ptr_wait; ptr_notify; ptr_notifyall; ptr_loc;} =
+     ptr_upds; ptr_nondets; ptr_locks;  ptr_loc;} =
   let dguards = guard_of_formula ptr_args ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
       (i, encode_pglob_update pgu)) ptr_assigns in
@@ -597,10 +598,10 @@ let encode_ptransition
          tr_assigns;
          tr_upds;
 	 tr_locks = ptr_locks;
-	 tr_unlocks = ptr_unlocks;
+	 (*tr_unlocks = ptr_unlocks;
 	 tr_wait = ptr_wait;
 	 tr_notify = ptr_notify;
-	 tr_notifyall = ptr_notifyall;
+	 tr_notifyall = ptr_notifyall;*)
          tr_nondets = ptr_nondets;
          tr_loc = ptr_loc }
     ) dguards

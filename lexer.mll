@@ -51,7 +51,15 @@
 	"reset", RESTART;
 	"test", TEST;
 	"release", RELEASE;
-	"acquire", ACQUIRE;
+	"release_lock", RELEASELOCK;
+	"relase_rlock", RELEASERLOCK;
+	"release_semaphore", RELEASESEM;
+	"release_condition", RELEASECOND; 
+	"acquire_lock", ACQUIRELOCK;
+	"acquire_rlock", ACQUIRERLOCK;
+	"acquire_semaphore", ACQUIRESEM;
+	"acquire_condition", ACQUIRECOND;
+	"acquire", ACQUIRE; 
 	"wait", WAIT;
 	"notify", NOTIFY;
         "notify_all", NOTIFYALL;

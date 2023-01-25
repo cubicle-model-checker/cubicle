@@ -87,11 +87,12 @@ type ptransition = {
   ptr_assigns : (Hstring.t * pglob_update) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
-  ptr_locks : Ast.lock list;
+  ptr_locks : Ast.lock_uses list; 
+  (*ptr_locks : Ast.lock list;
   ptr_unlocks : Ast.lock list;
   ptr_wait : Ast.lock list;
   ptr_notify: Ast.lock list;
-  ptr_notifyall: Ast.lock list;
+  ptr_notifyall: Ast.lock list;*)
   ptr_loc : loc;
 }
 

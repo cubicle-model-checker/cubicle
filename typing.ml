@@ -40,6 +40,7 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
+  | SingleLockMechanism 
 
 exception Error of error * loc
 
@@ -93,7 +94,9 @@ let report fmt = function
   | Smt (Smt.UnknownType s) ->
       fprintf fmt "unknown type %a" Hstring.print s
   | Smt (Smt.UnknownSymb s) ->
-      fprintf fmt "unknown symbol %a" Hstring.print s
+    fprintf fmt "unknown symbol %a" Hstring.print s
+  | SingleLockMechanism ->
+    fprintf fmt "only one lock-related (acquire, release, wait, notify, notify_all) allowed per transition"
 
 let error e l = raise (Error (e,l))
 
@@ -270,7 +273,14 @@ let check_lets loc args l =
     (fun (x, t) ->
      let _ = term loc args t in ()
     ) l
-	       
+
+(*
+let locks loc tlocks =
+  if List.length tlocks <> 1 then error SingleLockMechanism loc;
+  let el = List.hd tlocks in
+  match el with
+    | Lock l | Unlock l | Wait l | Notify l | *)
+    
 let transitions = 
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) -> 
@@ -282,7 +292,8 @@ let transitions =
        check_lets loc args t.tr_lets;
        updates args t.tr_upds;
        assigns loc args t.tr_assigns;
-       nondets loc t.tr_nondets)
+       nondets loc t.tr_nondets
+       (*locks loc t.tr_locks*))
 
 let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y

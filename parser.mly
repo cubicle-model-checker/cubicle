@@ -34,11 +34,11 @@
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
-    | Lock of lock
-    | Unlock of lock
-    | Wait of lock
-    | Notify of lock
-    | NotifyAll of lock
+    | PLock of lock_uses
+    | PUnlock of lock_uses
+    | PWait of lock_uses
+    | PNotify of lock_uses
+    | PNotifyAll of lock_uses
 
   module S = Set.Make(Hstring)
 
@@ -103,7 +103,8 @@
 %token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR
 %token IN
 %token LET
-%token RELEASE ACQUIRE WAIT NOTIFY NOTIFYALL KILLPROC GENPROC EXEC
+%token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
+%token WAIT NOTIFY NOTIFYALL KILLPROC GENPROC EXEC
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
@@ -250,7 +251,7 @@ transition:
   | TRANSITION transition_name LEFTPAR lidents_proc RIGHTPAR 
       require
       LEFTBR let_assigns_nondets_updates_locks RIGHTBR
-      { let lets, (assigns, nondets, upds,locks,unlocks,wait, notify, notifyall) = $8 in
+      { let lets, (assigns, nondets, upds,locks) = $8 in
 	{   ptr_lets = lets;
 	    ptr_name = $2;
             ptr_args = fst $4;
@@ -260,10 +261,6 @@ transition:
 	    ptr_nondets = nondets; 
 	    ptr_upds = upds;
 	    ptr_locks = locks;
-	    ptr_unlocks = unlocks;
-	    ptr_wait = wait;
-	    ptr_notify = notify;
-	    ptr_notifyall = notifyall;
             ptr_loc = loc ();
           }
       }
@@ -277,32 +274,32 @@ let_assigns_nondets_updates_locks:
 ;
   
 assigns_nondets_updates_locks:
-  |  { [], [], [], [],[], [], [] ,[] }
+  |  { [], [], [], [] }
   | assign_nondet_update_lock
       {  
 	match $1 with
-	  | Assign (x, y) -> [x, y], [], [], [], [],[],[],[]
-	  | Nondet x -> [], [x], [], [], [],[],[],[]
-	  | Upd x -> [], [], [x], [], [], [], [], []
-	  | Lock vp -> [], [], [], [vp], [], [], [],[]
-	  | Unlock vp -> [], [], [], [], [vp], [], [], []
-	  | Wait vp -> [], [], [], [], [], [vp], [], []
-	  | Notify vp -> [], [], [], [], [], [], [vp], []
-	  | NotifyAll vp -> [], [], [], [], [], [], [], [vp]
+	  | Assign (x, y) -> [x, y], [], [], []
+	  | Nondet x -> [], [x], [], []
+	  | Upd x -> [], [], [x], []
+	  | PLock vp 
+	  | PUnlock vp 
+	  | PWait vp 
+	  | PNotify vp 
+	  | PNotifyAll vp -> [], [], [], [vp]
 	    
       }
   | assign_nondet_update_lock PV assigns_nondets_updates_locks 
       { 
-	let assigns, nondets, upds, locks,unlocks, wait, notify, notifall = $3 in
+	let assigns, nondets, upds, locks = $3 in
 	match $1 with
-	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds, locks, unlocks, wait, notify, notifall
-	  | Nondet x -> assigns, x :: nondets, upds, locks, unlocks, wait, notify, notifall
-	  | Upd x -> assigns, nondets, x :: upds, locks, unlocks, wait, notify, notifall
-	  | Lock vp -> assigns, nondets, upds, vp::locks, unlocks, wait, notify, notifall
-	  | Unlock vp -> assigns, nondets, upds, locks, vp::unlocks, wait, notify, notifall
-	  | Wait vp -> assigns, nondets, upds, locks, unlocks, vp::wait, notify, notifall
-	  | Notify vp -> assigns, nondets, upds, locks, unlocks, wait, vp::notify, notifall
-	  | NotifyAll vp -> assigns, nondets, upds, locks, unlocks, wait, notify, vp::notifall
+	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds, locks
+	  | Nondet x -> assigns, x :: nondets, upds, locks
+	  | Upd x -> assigns, nondets, x :: upds, locks
+	  | PLock vp 
+	  | PUnlock vp 
+	  | PWait vp 
+	  | PNotify vp 
+	  | PNotifyAll vp -> assigns, nondets, upds, vp::locks
       }
 ;
 
@@ -310,39 +307,44 @@ assign_nondet_update_lock:
   | assignment { $1 }
   | nondet { $1 }
   | update { $1 }
+  | lock_types { $1 }
+
+;
+
+lock_types:
   | lock { $1 }
   | unlock { $1 }
   | wait { $1 }
   | notify { $1 }
   | notifall { $1}
 ;
-
-/*lock_types:
-  | lock { $1 }
-  | unlock { $1 }
-  | wait { $1 }
-  | notify { $1 }
-  | notifall { $1}
-;*/
 
 
 wait:
-  | WAIT LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Wait(VarLock($3,$5))}
+  | WAIT LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PWait(Wait(VarLock($3,$5)))}
 ;
 
 notify:
-  | NOTIFY LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Notify(VarLock($3,$5))}
+  | NOTIFY LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PNotify(Notify(VarLock($3,$5)))}
 ;
 notifall:
-  | NOTIFYALL LEFTPAR var_or_array_term COMMA lident RIGHTPAR { NotifyAll(VarLock($3,$5))}
+  | NOTIFYALL LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PNotifyAll(NotifyAll(VarLock($3,$5)))}
 ;
 
 lock:
-  | ACQUIRE LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Lock(VarLock($3,$5)) }
+  | ACQUIRE LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRELOCK LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRERLOCK LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRESEM LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRECOND LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
 ;
 
 unlock:
-  | RELEASE LEFTPAR var_or_array_term COMMA lident RIGHTPAR { Unlock(VarLock($3,$5)) }
+  | RELEASE LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASELOCK LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASERLOCK LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASESEM LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASECOND LEFTPAR var_or_array_term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
 ;
 
 assignment:

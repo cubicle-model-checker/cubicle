@@ -49,14 +49,13 @@ type update = {
 
 type lock =
   | VarLock of Term.t * Hstring.t
-(*
+
 type lock_uses =
-  | Lock of lock list
-  | Unlock of lock list
-  | Wait of lock list
-  | Notify of lock list
-  | NotifyAll of lock list
-  | Semaphore of lock list *)
+  | Lock of lock 
+  | Unlock of lock 
+  | Wait of lock 
+  | Notify of lock 
+  | NotifyAll of lock 
        
 
 type transition_info = {
@@ -69,11 +68,12 @@ type transition_info = {
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
   tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
-  tr_locks : lock list; (***)
+  tr_locks : lock_uses list; 
+  (*tr_locks : lock list; (***)
   tr_unlocks : lock list; (***)
   tr_wait : lock list; (***)
   tr_notify : lock list; (***)
-  tr_notifyall : lock list;
+  tr_notifyall : lock list;*)
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
