@@ -53,16 +53,15 @@ module Conditions : Map.S with type key = Types.Term.t
 module Semaphores : Map.S with type key = Types.Term.t
 
 module HT : Hashtbl.S with type key = Types.Term.t
+
+module  PersistentQueue : sig 
+  type 'a t
+  val empty : 'a t
+  val is_empty : 'a t -> bool
+  val push : 'a -> 'a t -> 'a t
+  val pop : 'a t -> 'a * 'a t
+end
   
-(*  
-module Trans = Map.Make(struct type t = Hstring.t let compare = Hstring.compare end)
-module LockQueues = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
-module Conditions = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
-module Semaphores = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
-
-
-module HT = Hashtbl.Make (Term)*)
-
 val int_of_const : Types.const -> int
 
 val int_of_consts : int Types.MConst.t -> int

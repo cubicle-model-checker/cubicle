@@ -64,6 +64,32 @@ module Semaphores = Map.Make(struct type t = Types.Term.t let compare=  Types.Te
 module HT = Hashtbl.Make (Term)
 
 
+module PersistentQueue = struct
+  type 'a t = 'a list * 'a list
+
+  let empty =
+    ([], [])
+
+  let is_empty = function
+    | [], [] -> true
+    | _ -> false
+
+  let push x (o, i) =
+    (o, x :: i)
+
+  let pop = function
+    | [], [] ->
+        invalid_arg "pop"
+    | x :: o, i ->
+        x, (o, i)
+    | [], i ->
+      match List.rev i with
+        | x :: o -> x, (o, [])
+        | [] -> assert false
+
+end 
+
+
 
 let print_val fmt v =
   match v with
