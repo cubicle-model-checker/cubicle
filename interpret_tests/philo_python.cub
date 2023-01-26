@@ -1,0 +1,67 @@
+type s = Idle | Done 
+       	 | Get1 | Get1_lock | ReleaseGet1
+       	 | Get2 | Get2_lock | ReleaseGet2
+
+array P[proc] : s
+
+var X : int
+var C : condition
+var S : semaphore
+
+
+init(i) { P[i] = Idle && X = SYS_PROCS && S = SYS_PROCS - 1 }
+
+
+transition start([i])
+requires { P[i] = Idle }
+{ P[i] := Get1_lock }
+
+transition get1_lock([i])
+requires {P[i] = Get1_lock }
+{ acquire(C,i);
+  P[i] := Get1 }
+
+transition get1_continue([i])
+requires { P[i] = Get1 && X > 0 } 
+{ P[i] := ReleaseGet1;
+  X := X - 1 }
+
+transition get1_wait([i])
+requires { P[i] = Get1 && X = 0 } 
+{ wait(C, i) }
+
+transition get1_release([i])
+requires { P[i] = ReleaseGet1 }
+{ release(C,i);
+  P[i] := Get2_lock }
+
+
+transition get2_lock([i])
+requires {P[i] = Get2_lock }
+{ acquire(C,i);
+  P[i] := Get2 }
+
+transition get2_continue([i])
+requires { P[i] = Get2 && X > 0 } 
+{ P[i] := ReleaseGet2;
+  X := X - 1 }
+
+transition get2_wait([i])
+requires { P[i] = Get2 && X = 0 } 
+{ wait(C, i) }
+
+transition get2_release([i])
+requires { P[i] = ReleaseGet2 }
+{ notify_all(C,i);
+  X := X + 2;
+  P[i] := Done
+}
+
+transition done([i])
+requires { P[i] = Done }
+{ release(C,i);
+  P[i] := Idle
+}
+
+
+
