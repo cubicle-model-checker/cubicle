@@ -92,17 +92,17 @@ val print_interpret_val : Format.formatter -> interpret_value -> unit
 
 val print_poss_trans : Format.formatter -> (Ast.transition_info * Variable.t list) list -> unit
 
-val print_applied_trans : Format.formatter -> (Ast.transition_info * Variable.t list) Queue.t -> unit
+val print_applied_trans : Format.formatter -> (Ast.transition_info * Variable.t list) PersistentQueue.t -> unit
 
 val print_title : Format.formatter -> string -> unit
 
 val print_env : Format.formatter -> Types.Term.t Env.t -> unit
 
-val print_queue : Format.formatter -> Types.Term.t Queue.t -> unit
+val print_queue : Format.formatter -> Types.Term.t PersistentQueue.t -> unit
 
 val print_wait : Format.formatter -> Types.Term.t list -> unit
 
-val print_interpret_env : Format.formatter -> interpret_value Env.t * Types.Term.t Queue.t LockQueues.t *
+val print_interpret_env : Format.formatter -> interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
   Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit
 
 val print_help : Format.formatter -> unit

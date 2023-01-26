@@ -90,7 +90,6 @@ module PersistentQueue = struct
 end 
 
 
-
 let print_val fmt v =
   match v with
     | VInt i -> Format.printf "%d" i
@@ -151,7 +150,16 @@ let print_poss_trans fmt l =
 
 let print_applied_trans fmt l =
   Format.printf "Applied transitions:@.";
-  Queue.iter (fun (t,p) -> Format.printf "transition %a(%a)@." Hstring.print t.tr_name Variable.print_vars p) l 
+  let rec print_trans q =
+    if PersistentQueue.is_empty q then ()
+    else
+      begin
+	let (t,p),r = PersistentQueue.pop q in 
+	Format.printf "transition %a(%a)@." Hstring.print t.tr_name Variable.print_vars p;
+	print_trans r
+      end 
+  in print_trans l
+  
 
 let print_title fmt s =
   Format.printf "@{<b>%s@}\n" s;
@@ -165,7 +173,17 @@ let print_env fmt env =
   Format.printf  "%a@." Pretty.print_line ()
 
 let print_queue fmt el =
-  Queue.iter (fun x -> Format.printf "%a " Term.print x) el
+  let rec print_trans q =
+    if PersistentQueue.is_empty q then ()
+    else
+      begin
+	let x,r = PersistentQueue.pop q in 
+	Format.printf "%a" Term.print x;
+	print_trans r
+      end 
+  in print_trans el
+  
+  
 
 let print_wait fmt el =
   List.iter (fun x -> Format.printf "%a " Term.print x) el
