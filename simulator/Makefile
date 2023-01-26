@@ -1,7 +1,7 @@
-libs := graphics.cma unix.cma
+libs := unix.cma
 
-main: sutils.ml stmp.ml smain.ml
-	ocamlc -I `ocamlfind query graphics` $(libs) $^ -o $@
+main: model.ml scene.ml utils.ml stmp.ml simulator.ml main.ml
+	ocamlc -I +unix $(libs) $^ -o $@
 
 clean:
 		rm -f *.cmx *.cmi *.o *.cmo *.out

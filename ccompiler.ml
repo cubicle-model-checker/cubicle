@@ -40,13 +40,9 @@ let write_types t_def =
 let write_vars s ty_defs=
   let returned = ref Hstring.HMap.empty in
   let add_to_map n t dim = returned := (Hstring.HMap.add n (t,dim) (!returned)) in
-  let write_global (_, name, var_type) =
+  let write_onedim (_, name, var_type) =
     add_to_map name var_type 0;
-    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs)
-  in
-  let write_const (_, name, var_type) = 
-    add_to_map name var_type 0;
-    pfile "let %s = ref %s\n" (get_var_name name) (get_value_for_type var_type ty_defs) (* Note : les const n'ont pas réellement besoin d'être des ref *)
+    pfile "let %s = ref %s in\n" (get_var_name name) (get_value_for_type var_type ty_defs)
   in
   let write_array (_, name, (dim, var_type)) =
     add_to_map name var_type (List.length dim);
@@ -54,15 +50,15 @@ let write_vars s ty_defs=
     List.iter (fun _ -> pfile "Array.make (get_nb_proc ()) (") dim;
     pfile "%s" (get_value_for_type var_type ty_defs);
     List.iter (fun _ -> pfile ")") dim;
-    pfile "\n"
+    pfile " in\n"
   in
-  List.iter write_global s.globals;
-  List.iter write_const s.consts;
+  List.iter write_onedim s.globals;
+  List.iter write_onedim s.consts;
   List.iter write_array s.arrays;
   pfile "\n";
   !returned
 
-(* TODO / WIP : Dumper *)
+(* Dumper *)
 
 let write_dumper g_vars ty_defs =
   let perc = "%" in
@@ -81,7 +77,7 @@ let write_dumper g_vars ty_defs =
     | "bool" | "mbool" -> 
         pfile "printf \"%sb\\n\" %s;\n" perc realname
     | _ -> 
-        pfile "()\n" (* Actuellement ne dump pas les variables énumérées *)
+        pfile "printf \"\\n\"\n" (* Actuellement ne dump pas les variables énumérées *)
     end;
     for i = dim downto 1 do 
       pfile "%sdone;\n" (mult_string "\t" i);
@@ -92,9 +88,9 @@ let write_dumper g_vars ty_defs =
     print_var_view var_name var_info
   in
   pfile "let dump_vars () =\n";
-  pfile "\tprintf \"-- BEGIN : DUMP --\\n\";\n";
+  pfile "\tprintf \"----------Current State----------\\n\";\n";
   Hstring.HMap.iter write_dumper_var g_vars;
-  pfile "\tprintf \"-- END   : DUMP --\\n%s!\"\n\n" perc
+  pfile "\tprintf \"---------------------------------\\n%s!\"\nin\n\n" perc
 
 (* Init declaration *)
 
@@ -200,7 +196,7 @@ let write_init (vars, dnf) g_vars ty_defs =
     in
   List.iter manage_satom dnf;
   
-  pfile "\t()\n\n"
+  pfile "\t()\nin\n\n"
 
 (* Transition declratation *)
 let write_transitions trans_list ty_defs g_vars =
@@ -214,7 +210,7 @@ let write_transitions trans_list ty_defs g_vars =
       let count = ref 0 in
       let write_args arg = 
         begin 
-          pfile "\tlet %s = find_ieme args %d in\n" (Hstring.view arg) (!count);
+          pfile "\tlet %s = List.nth args %d in\n" (Hstring.view arg) (!count);
           count := (!count) + 1; 
         end in
       List.iter write_args trans_args;
@@ -267,7 +263,7 @@ let write_transitions trans_list ty_defs g_vars =
       pfile "args) && \n"; 
     in
     List.iter print_ureq trans_info.tr_ureq;
-    pfile "\ttrue\n\n";
+    pfile "\ttrue\nin\n\n";
     
 
     pfile "let ac_%s args = \n" trans_name;
@@ -355,32 +351,35 @@ let write_transitions trans_list ty_defs g_vars =
     let max_card = IntMap.cardinal (!updated_array) in
     for i = 1 to max_card do pfile "%sdone;\n" (mult_string "\t" (max_card - i + 1)) done;
     
-    pfile "\t()\n";
+    pfile "\t()\nin\n";
 
     (* Create the transition to be able to add it to the transition table *)
-    pfile "\nlet %s = (\"%s\", req_%s, ac_%s) \n\n" trans_name trans_name trans_name trans_name
+    pfile "\nlet %s = (\"%s\", req_%s, ac_%s) \nin\n\n" trans_name trans_name trans_name trans_name
     in
   List.iter write_transition trans_list;
 
   (* Now that all transition have been created, we create a table storing all information about them to actually use them in the simulation *) 
 
-  pfile "\nlet build_table = \n";
+  pfile "\nlet mymodel = ref Model.empty in\n\n";
 
   let write_table trans = 
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-    pfile "\tadd_req_acc %s %s;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
+    pfile "mymodel := Model.add_trans %s %s (!mymodel);\n" (string_of_int (List.length trans_info.tr_args)) trans_name
   in
   List.iter write_table trans_list;
-  pfile "\tregister_dumper dump_vars\n"
+  pfile "register_dumper dump_vars;\n";
+  pfile "mymodel := Model.set_init init (!mymodel);\n";
+  pfile "set_model (!mymodel)\n"
 
 let write_unsafe unsafe =
   let sub_write_unsafe (_, vars, satom) = ()
   in List.iter sub_write_unsafe unsafe
 
 let run ts s =
-  pfile "%s\n%s\n" "open Sutils" "open Format";
+  pfile "open Utils\nopen Format\n\n";
   let g_types = write_types s.type_defs in
+  pfile "let build_model () =\n";
   let g_vars = write_vars s g_types in
   write_dumper g_vars g_types;
   write_init ts.t_init g_vars g_types;

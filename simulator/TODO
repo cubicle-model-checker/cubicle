@@ -9,3 +9,74 @@
 	--check-unsafe : Vérifie si unsafe. Si c'est unsafe, crash et enregistre la trace
 - [.] Compilation de unsafe. Ajouter une table contenant toutes les fonctions "unsafe".
 - [.] Amélioration du dumper : Meilleur affichage des tableaux; Meilleur liaison entre took transition et dumper 
+
+Il y a beaucoup de chose a changer.
+On devrait changer l'argument -sim en -compile.
+Tout le répertoire simulator est entièrement portable car il ne dépend absolument de rien.
+Est-ce que écrire le dumper est forcément nécéssaire?
+-> Probablement pas avec les trucs graphique
+On veut un paramètre -o qui spécifie le path de ccutils
+
+
+Pour afficher une scene, on va juste itérer sur tous les objets qui la compose et les afficher dans le contexte (La fenêtre)
+
+La librairie doit donc contenir des façon de créer ces objets.
+
+
+Pseudo code
+
+Object ... =
+
+
+	CubicleGraphics.Shape ( Circle | Square ...)
+	CubicleGraphics.Text	( ... )
+	CubicleGraphics.
+
+QUESTIONS : Est-ce que un objet dit : "Voila comment on devrait m'afficher" Ou est ce qu'il s'affiche lui même?
+Le plus simple serait que chacun s'affiche comme il veut la ou il veut.
+
+L'utilisateur définit une scene : 
+Un set d'objet ainsi qu'une fonction qui va gérer les différents évenements.
+
+Dans la librairie on a besoin :
+
+CubicleGraphics : Doit s'inspirer de la librairie Graphics pour ne pas dépayser les utilisateurs
+init (Modele) -> Initialise les graphisme pour le modèle. Créer une fenêtre portant le nom du modèle
+SetColor( RGB (r,v,b) | Green | Red | Blue | Yellow | Orange ... )
+SetPosition int * int -> ()
+SetAlpha ( int )
+Shape ( Circle | Square ...)
+Text ( string )
+GetVarValue string * int list option -> string : Prend un nom de variable en argument et renvoie sa valeur en string
+
+
+Le modèle de la simulation doit apparaître une seule fois.
+types.mli -> Déclaration des types scene et modele *)
+
+sutils.ml
+- get_scene
+- set_scene
+- get_model
+- set_model
+- model_step
+
+
+smodel.ml -> définition du modèle
+
+sgraphics.ml
+(depends sutils.ml)
+- init : Création d'une fenêtre
+- set_color 		:
+- get_color 		:
+- set_position 	:
+- get_position 	:
+- set_alpha			:
+- get_alpha			:
+
+sscene.ml -> définition de la scene
+depends (sutils.ml)
+init					: modele -> () Va créer les SceneObjects
+get_modele		: () -> modele
+set_modele		: modele -> ()
+update				: () -> () Va update chacun des SceneObjects
+handle_events : events -> ()
