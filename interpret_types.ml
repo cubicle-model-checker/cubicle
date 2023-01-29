@@ -60,6 +60,12 @@ module LockQueues = Map.Make(struct type t = Types.Term.t let compare=  Types.Te
 module Conditions = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 module Semaphores = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 
+module Backtrack = Map.Make(struct
+  type t = int
+  let compare = compare
+end)
+
+
 
 module HT = Hashtbl.Make (Term)
 
@@ -148,17 +154,41 @@ let print_poss_trans fmt l =
   Format.printf "Possible transitions:@."; 
   List.iter (fun (t,p) -> Format.printf "transition %a(%a)@." Hstring.print t.tr_name Variable.print_vars p) l
 
+let print_transition fmt tr args =
+  Format.printf "transition %a(%a)" Hstring.print tr Variable.print_vars args
+
 let print_applied_trans fmt l =
   Format.printf "Applied transitions:@.";
   let rec print_trans q =
     if PersistentQueue.is_empty q then ()
     else
       begin
-	let (t,p),r = PersistentQueue.pop q in 
-	Format.printf "transition %a(%a)@." Hstring.print t.tr_name Variable.print_vars p;
+	let (_,t,p,_,_),r = PersistentQueue.pop q in 
+	Format.printf "transition %a(%a)@." Hstring.print t Variable.print_vars p;
 	print_trans r
       end 
   in print_trans l
+
+
+let print_debug_trans_path fmt l i =
+  Format.printf "Applied transitions:\n---\n  pre: possible transitions before\n  post: possible transitions after\n  MANUAL: transition applied manually,pre/post not calculated\n---@.";
+  if PersistentQueue.is_empty l then Format.printf "no applied transitions@.";
+  let rec print_trans q =
+    if PersistentQueue.is_empty q then ()
+    else
+      begin
+	let (tn,t,p,ptpre, ptpost),r = PersistentQueue.pop q in
+	let s1 = if ptpre = -1 then "MANUAL" else string_of_int ptpre in
+	let s2 = if ptpost = -1 then "MANUAL" else string_of_int ptpost in
+	if i <> 1 && tn mod i = 0 then 
+	  Format.printf "@{<b>@{<fg_green>Step %d[pre: %s, post: %s]: transition %a(%a)@}@}@."
+	    tn s1 s2 Hstring.print t Variable.print_vars p
+	else
+	  Format.printf "Step %d[pre: %s, post: %s]: transition %a(%a)@."
+	    tn s1 s2 Hstring.print t Variable.print_vars p;
+	print_trans r
+      end 
+  in print_trans l  
   
 
 let print_title fmt s =
@@ -188,6 +218,21 @@ let print_queue fmt el =
 let print_wait fmt el =
   List.iter (fun x -> Format.printf "%a " Term.print x) el
 
+let print_debug_env fmt (env,locks, cond, sem)=
+  Env.iter(fun k {value = v} ->
+    Format.printf "  %a : %a@." Term.print k print_val v
+  ) env;
+  Format.printf "  Lock Queues:@.";
+  LockQueues.iter (fun k el ->
+    Format.printf "   %a : { %a }@." Term.print k print_queue el) locks;
+    Format.printf "  Condition wait pools:@.";
+  Conditions.iter (fun k el ->
+    Format.printf "   %a : { %a }@." Term.print k print_wait el) cond;
+  Format.printf "  Semaphore wait lists:@.";
+  Semaphores.iter (fun k el ->
+    Format.printf "   %a : { %a }@." Term.print k print_wait el) sem;
+  Format.printf  "%a" Pretty.print_line ()    
+
     
 let print_interpret_env fmt (env,locks, cond, sem)=
   print_title fmt "Final Environment";
@@ -209,10 +254,41 @@ let print_interpret_env fmt (env,locks, cond, sem)=
   Format.printf  "%a" Pretty.print_line ()
   
 let print_help fmt =
-  Format.printf "@{<b>@{<fg_blue>Commands@}@}@.";
-  Format.printf "help : display list of commands@.";
-  Format.printf "status : show environment@.";
-  Format.printf "transition <name> <(args)> : apply a transition to procs in args@."
+  Format.printf
+    "Usage:\n\
+     Executing transitions:\n\
+     transition <name>(<args>) : apply a transition\n\
+     transition <name>(<args>); <name>(<args>)... : apply a sequence of transitions\n\n\
+     Other commands:\n\
+     -help : display this list\n\
+     -status : show current environment\n\
+     -execute : run random execution\n\
+     -test : show possible transitions\n\n\
+     Debug commands:\n\
+     --flag <int> : set how often debugger remembers states for easier backtracking\n\
+     --trace  : show trace\n\
+     --replay : replay entire trace, waits for user OK after each step\n\
+     --goto <int> : go to step X from trace\n\
+     --rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
+     --current : prints current debug state/step (NOT global environment)\n\
+     --why <transition call>\n\
+     explain which values interfere with transition application, only works if system encountered deadlock\n\
+     --dhelp : show debug help@."
+
+
+  
+let print_debug_help fmt =
+  Format.printf
+    "Debug help\n\
+     --flag <int> : set how often debugger remembers states for easier backtracking\n\
+     --trace  : show trace\n\
+     --replay : replay entire trace, waits for user OK after each step\n\
+     --goto <int> : go to step X from trace\n\
+     --rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
+     --current : prints current debug state (NOT global environment)/step\n\
+     --why <transition call> : explain which values interfere with transition application\n\
+                               only works if system encountered deadlock\n\
+     --dhelp : show debug usage@."    
 
 
 let str_op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"

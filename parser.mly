@@ -104,6 +104,7 @@
 %token IN
 %token LET
 %token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
+%token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR
 %token WAIT NOTIFY NOTIFYALL KILLPROC GENPROC EXEC
 %token <Num.num> REAL
 %token <Num.num> INT
@@ -111,7 +112,7 @@
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
-%token STATUS HELP CLEAR RESTART TEST
+%token STATUS HELP CLEAR RESTART TEST BACKTRACK
 %token EOF
 
 %nonassoc IN       
@@ -665,6 +666,8 @@ toplevel_assign:
       }
 
 ;
+
+
       
 toplevel:
   | TRANSITION toplevel_trans_list { TopTransition $2}
@@ -679,5 +682,17 @@ toplevel:
   | GENPROC { TopGenProc }
   | KILLPROC { TopKillProc(None)}
   /*| KILLPROC top_proc_name { TopKillProc (Some $2)}*/
-  | EXEC { TopExec }      
+  | EXEC { TopExec }
+  | BACKTRACK INT { let i  = Num.int_of_num $2 in TopBacktrack i}
+  | FLAGTR INT { let i  = Num.int_of_num $2 in TopFlag i }
+  | OFFTR { TopDebugOff }
+  | HELPTR { TopDebugHelp }
+  | WHYTR top_level_trans { let tn, ta = $2 in TopWhy(tn,ta) }
+  | CURRTR { TopCurrentTrace }
+  | RERUNTR INT INT { let i  = Num.int_of_num $2 in
+		      let i2  = Num.int_of_num $3 in
+		      TopRerun(i,i2) }
+  | GOTOTR INT { let i  = Num.int_of_num $2 in TopGoto i }
+  | REPTRACE { TopReplayTrace }
+  | SHOWTRACE { TopShowTrace }
 ;

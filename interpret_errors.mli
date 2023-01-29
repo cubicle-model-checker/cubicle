@@ -24,6 +24,12 @@ type top_error =
   | CantNotifyNotMine of Term.t * Term.t
   | Deadlock
   | StopExecution
+  | StepNotMod of int
+  | AbsentStep of int
+  | StepTooBig of int * int
+  | CannotBacktrack of int
+
+
 
 exception TopError of top_error
 

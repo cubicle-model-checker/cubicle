@@ -23,7 +23,11 @@ type top_error =
   | UnlockedNotify
   | CantNotifyNotMine of Term.t * Term.t
   | Deadlock
-  | StopExecution 
+  | StopExecution
+  | StepNotMod of int
+  | AbsentStep of int
+  | StepTooBig of int * int
+  | CannotBacktrack of int
 
 exception TopError of top_error
 
@@ -58,6 +62,14 @@ let top_report fmt e =
     | CantNotifyNotMine(proc,l) -> Format.fprintf fmt "Process %a can't notify: lock %a does not belong to %a@." Term.print proc Term.print l Term.print proc
     | Deadlock -> Format.fprintf fmt "@{<b>@{<fg_red>WARNING: Deadlock reached@}@}"
     | StopExecution -> Format.fprintf fmt "Execution interrupted"
+    | StepNotMod i ->
+      Format.fprintf fmt "Cannot rerun trace from Step %d [Step %d is not registered]" i i
+    | AbsentStep i ->
+      Format.fprintf fmt "Step %d is absent from backtracking env [Step %d is not registered]" i i
+    | StepTooBig (i,s)->
+      Format.fprintf fmt "Step %d is not part of the trace [max %d steps taken]" i s
+    | CannotBacktrack i ->
+      Format.fprintf fmt "Cannot backtrack: state at Step %d is not saved" i
 
       
 let top_error e = raise (TopError e)

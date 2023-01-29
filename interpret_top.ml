@@ -7,6 +7,9 @@ open OcamlCanvas.V1
 
 
 let interpret_bool = ref true
+let step_flag = ref 1
+let btracks = ref []
+let deadlock = ref false
 
   
 let eval_arith ta env ty =
@@ -95,6 +98,10 @@ let gen_array_combs name procs =
     [] [name]
     
 let fresh = 
+  let cpt = ref 0 in
+  fun () -> incr cpt; !cpt
+
+let fresh_back = 
   let cpt = ref 0 in
   fun () -> incr cpt; !cpt
 
@@ -771,16 +778,16 @@ let upd_non_dets env nondets =
 
 let wait_unlock lockq lock_elem env =
   let q = LockQueues.find lock_elem lockq in
-  if Queue.is_empty q then
+  if PersistentQueue.is_empty q then
     Env.add lock_elem {value = VLock(false,None); typ = ty_lock} env,
     lockq
   else
-    let new_proc = Queue.pop q in
+    let new_proc, rem_queue = PersistentQueue.pop q in
     let nv =
       Env.add lock_elem {value = VLock(true, Some new_proc); typ = ty_proc} env
     in
     let nv = Env.add new_proc {value = VAlive; typ = ty_proc} nv in
-    let lq = LockQueues.add lock_elem q lockq in nv,lq   
+    let lq = LockQueues.add lock_elem rem_queue lockq in nv,lq   
     
 let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
   let locks = tr.tr_locks in
@@ -813,8 +820,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 		      (*if is_condition v.typ then
 			deal_wait true lockp sigma env new_env tr lock_queue cond_sets else*)
 		      let q = LockQueues.find lock_elem lock_queue in
-		      Queue.push term q;
-		      let lock_queue = LockQueues.add lock_elem q lock_queue in
+		      let new_queue =  PersistentQueue.push term q in
+		      let lock_queue = LockQueues.add lock_elem new_queue lock_queue in
 		      (Env.add term {value = VSuspended; typ = ty_proc} new_env),
 		      lock_queue,
 		      cond_sets, semaphores
@@ -839,8 +846,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 
 			  else
 			    begin
-			      Queue.push term q;
-			      let lock_queue = LockQueues.add lock_elem q lock_queue in
+			      let new_queue = PersistentQueue.push term q in
+			      let lock_queue = LockQueues.add lock_elem new_queue lock_queue in
 			      (Env.add term {value = VSuspended; typ = ty_proc} new_env), lock_queue, cond_sets, semaphores
 			    end
 			    
@@ -895,18 +902,18 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			    begin
 			      let q = LockQueues.find lock_elem lock_queue
 			      in
-			      if Queue.is_empty q then
+			      if PersistentQueue.is_empty q then
 				Env.add lock_elem {value = VLock(false,None); typ = v.typ} new_env,
 				lock_queue, cond_sets, semaphores
 			      else
-				let new_proc = Queue.pop q in
+				let new_proc, rem_procs = PersistentQueue.pop q in
 				let nv =
 				  Env.add
 				    lock_elem {value = VLock(true, Some new_proc); typ = v.typ}
 				    new_env
 				in
 				let nv = Env.add new_proc {value = VAlive; typ = ty_proc} nv in
-				let lq = LockQueues.add lock_elem q lock_queue in
+				let lq = LockQueues.add lock_elem rem_procs lock_queue in
 				nv,lq, cond_sets, semaphores
 			    end 
 			  
@@ -933,17 +940,17 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			  let q = LockQueues.find lock_elem lock_queue
 			  in
 			  if i = 1 then
-			    if Queue.is_empty q then
+			    if PersistentQueue.is_empty q then
 			      Env.add lock_elem {value = VRLock(false,None,0); typ = v.typ} new_env,lock_queue, cond_sets, semaphores
 			    else
-			      let new_proc = Queue.pop q in
+			      let new_proc, rem_procs = PersistentQueue.pop q in
 			      let nv =
 				Env.add
 				  lock_elem {value = VRLock(true, Some new_proc,1); typ = v.typ}
 				  new_env
 			      in
 			      let nv = Env.add new_proc {value = VAlive; typ = ty_proc} nv in
-			      let lq = LockQueues.add lock_elem q lock_queue in
+			      let lq = LockQueues.add lock_elem rem_procs lock_queue in
 			      nv,lq, cond_sets, semaphores
 			  else
 			    Env.add lock_elem {value = VRLock(true, Some proc, i-1); typ = v.typ} new_env,
@@ -1062,9 +1069,9 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 				Conditions.add lock_elem (List.tl waiting) cond_sets in
 			      let q = LockQueues.find lock_elem lock_queue in
 			      
-			      let () = Queue.push (List.hd waiting) q in
+			      let new_queue = PersistentQueue.push (List.hd waiting) q in
 			      let nv = Env.add (List.hd waiting) { value = VSuspended; typ = ty_proc} new_env in
-			      let lq = LockQueues.add lock_elem q lock_queue
+			      let lq = LockQueues.add lock_elem new_queue lock_queue
 			      in nv,lq,cond_sets, semaphores
 			  end 
 			    
@@ -1111,8 +1118,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 				List.fold_left (fun acc el ->
 				  Env.add el {value = VSuspended; typ = ty_proc } acc) new_env waiting
 			      in  
-			      let () = List.iter (fun el -> Queue.push el q) waiting in
-			      let lq = LockQueues.add lock_elem q lock_queue
+			      let new_queue = List.fold_left (fun acc el -> PersistentQueue.push el acc) q waiting in
+			      let lq = LockQueues.add lock_elem new_queue lock_queue
 			      in nv,lq,cond_sets, semaphores
 			  end
 		  end 
@@ -1230,33 +1237,152 @@ let print_header f name=
                     Filename: %s\n\
                     Number of procs: %d\n\
                     *******************\n@." name (Options.get_interpret_procs())
-                    
 
-let execute_random2 fmt glob_env trans all_procs unsafe =
+
+
+
+let print_backtrace env =
+  Backtrack.iter (fun num (name, procs, env) ->
+    Format.printf
+      "Step in execution: %d\n Applied transition: %a(%a)\n Resulting Environment\n%a"
+      num Hstring.print name Variable.print_vars procs print_debug_env env) env
+    
+let rec exp n =
+  if n = 0 then Format.printf "@." else
+    begin 
+      Format.printf "\r%d" n; exp (n-1)
+    end 
+    
+(*
+let backtrack_replay env ?(trace=[]) applied_trans orig_env btenv steps=
+  let instructions = "Usage\n [1] Show trace [2] Clear trace [3] Replay & Backtrack" in
+  let s1 = String.make Pretty.vt_width '*' in
+  let s2 = String.make ((Pretty.vt_width-12)/2) ' ' in
+  let deb = ref true in 
+  (*Format.printf "@{<b>@{<fg_cyan>%s*@}@}DEBUG MODE@{<b>@{<fg_cyan>*%s@}@}\n%a@." s s*)
+  ignore (Sys.command "clear");
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+  Format.printf "%s DEBUG MODE %s@." s2 s2;
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+  (*print_debug_trans_path applied_trans*) (*print_backtrace btenv; *)
+  Format.printf
+    "Debug usage\n\
+     --show : show trace\n\
+     --replay : replay entire trace, waits for user OK after each step\n\
+     --goto <int> : go to step X from trace\n\
+     --rerun <int> <int> : rerun trace in interval of steps, waits for user OK after each step\n\
+     --current : prints current state/step\n\
+     --why <transition call> : explain which values interfere with transition application\n\
+     --help : show debug usage@."
+  *)
+    
+let print_val fmt v =
+  match v with
+    | VInt i -> Format.fprintf fmt "%d" i
+    | VReal r -> Format.fprintf fmt "%f" r
+    | VBool b -> Format.fprintf fmt "%b" b
+    | VConstr el | VGlob el  -> Format.fprintf fmt "%a" Hstring.print el
+    | VProc i -> Format.fprintf fmt "%a" Hstring.print i
+    | VLock(b, vo) ->
+      if b then
+	match vo with
+	  | None -> assert false
+	  | Some p -> Format.fprintf fmt "locked by process %a" Term.print p
+      else
+	Format.fprintf fmt "unlocked"
+    | VAlive -> Format.fprintf fmt "process active"
+    | VSuspended -> Format.fprintf fmt "process suspended"
+    | VSleep _ -> Format.fprintf fmt "process asleep"
+    | VRLock (b,po,i) ->
+      if b then
+	 match po with
+	   | None -> assert false
+	   | Some p -> Format.fprintf fmt "locked by process %a %d time(s)" Term.print p i
+      else
+	Format.fprintf fmt "unlocked"
+    | VSemaphore i -> Format.fprintf fmt "%d" i
+    | UNDEF -> Format.fprintf fmt "%s" "UNDEF"
+    | VAccess(l,t) -> Format.fprintf fmt "%a[%a]" Hstring.print l (Hstring.print_list ", ") t
+    | VArith _ -> ()
+
+let print_wait fmt el =
+  List.iter (fun x -> Format.fprintf fmt "%a " Term.print x) el
+
+let print_queue fmt el =
+  let rec print_trans q =
+    if PersistentQueue.is_empty q then ()
+    else
+      begin
+	let x,r = PersistentQueue.pop q in 
+	Format.fprintf fmt "%a " Term.print x;
+	print_trans r
+      end 
+  in print_trans el
+
+let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
+  let f = Format.formatter_of_out_channel f in
+  Format.fprintf f "\nSTEP\nAfter transition %a(" Hstring.print name;
+  Hstring.print_list "," f app_procs;
+  Format.fprintf f ")\n";
+  Env.iter(fun k {value = v} ->
+    Format.fprintf f "%a : " Term.print k; print_val f v; Format.fprintf f "\n"
+  ) env;
+  Format.fprintf f  "%a" Pretty.print_line ();
+  Format.fprintf f "Lock Queues:\n";
+  LockQueues.iter (fun k el ->
+    Format.fprintf f  "%a : { " Term.print k; print_queue f el; Format.fprintf f "}\n") locks;
+  Format.fprintf  f "%a" Pretty.print_line ();
+    Format.fprintf f "Condition wait pools:\n";
+  Conditions.iter (fun k el ->
+    Format.fprintf f "%a : { " Term.print k;  print_wait f el; Format.fprintf f " }\n") cond;
+  Format.fprintf  f "%a" Pretty.print_line ();
+  Format.fprintf f "Semaphore wait lists:\n";
+  Semaphores.iter (fun k el ->
+    Format.fprintf f "%a : { " Term.print k; print_wait f el; Format.fprintf f " }\n") sem;
+  Format.fprintf  f "%a" Pretty.print_line ();
+  Format.fprintf  f "\n"
+
+
+    
+let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
   Sys.catch_break true;
+  let backtrack_env = ref main_bt_env in
+  let trace = ref [] in
+  let steps = ref steps in
   let dfile = Filename.basename Options.file in
   let open_file = open_out (dfile^".txt") in
   print_header open_file dfile;
-  close_out open_file; 
-  let q = Queue.create () in
   Random.self_init ();
   let running_env = ref glob_env in
   let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
   let running = ref true in
+  let queue = ref applied_trans in 
   while !running do
     try
       let l = Array.length !transitions in
       if l = 0 then raise (TopError Deadlock);
       let rand = Random.int l in
       let (apply,apply_procs) = !transitions.(rand) in
-      Queue.push (apply,apply_procs) q;
+      let tr_num = fresh_back () in
       running_env := apply_transition apply_procs apply.tr_name trans !running_env;
+      incr steps;
       transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
-      check_unsafe !running_env unsafe
+      let lp = Array.length !transitions in
+      Hashtbl.add tr_table tr_num (apply.tr_name, apply_procs);
+      queue := PersistentQueue.push (tr_num, apply.tr_name,apply_procs, l, lp) !queue;
+      check_unsafe !running_env unsafe;
+      print_interpret_env_file open_file !running_env apply.tr_name apply_procs;
+      if tr_num mod !step_flag = 0 then
+	backtrack_env := Backtrack.add tr_num (apply.tr_name, apply_procs, !running_env) !backtrack_env;
+      trace := running_env :: !trace
     with
-      | TopError Deadlock -> Sys.catch_break false;
+      | TopError Deadlock ->
+	deadlock := true;
+	Sys.catch_break false;
+	close_out open_file;
 	Format.fprintf fmt
-	"@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false
+	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false;
+	(*backtrack_replay !running_env ~trace:!trace !queue orig_env !backtrack_env !steps*)	 
       | TopError Unsafe ->
 	Sys.catch_break false;
 	Format.fprintf fmt
@@ -1266,54 +1392,95 @@ let execute_random2 fmt glob_env trans all_procs unsafe =
 	    let inp = read_line () in
 	    match inp with
 	      | "y" -> Sys.catch_break true
-	      | "n" -> running := false
+	      | "n" -> running := false; close_out open_file
 	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
 	  in decide ()
 	end 
-      | Stdlib.Sys.Break -> Sys.catch_break false; running := false
-      | TopError InputError -> assert false
-      | TopError NoTransition _ -> assert false
-      | TopError WrongArgs _ -> assert false
-      | TopError NoVar _ -> assert false
-      | TopError TooManyProcs -> assert false
-      | TopError FalseReq _ -> assert false
-      | TopError ConflictInit _ -> assert false
-      | TopError UnEqConstr _ -> assert false
-      | TopError CannotProc -> assert false
-      | TopError DupProcs -> assert false
-      | TopError Reached -> assert false
-      | TopError BadType _ -> assert false
-      | TopError BadInit -> assert false
-      | TopError SuspendedProc _ -> assert false
-      | TopError SleepingProc _ -> assert false
-      | TopError CantUnlockOther _ -> Format.eprintf "hh@.";running := false
-      | TopError CantWaitNeverLock _ -> assert false
-      | TopError UnlockedNotify -> assert false
-      | TopError CantNotifyNotMine _ -> assert false
-      | TopError StopExecution -> Format.eprintf "am here@.";Sys.catch_break false; running := false
-      | s -> Sys.catch_break false;
+      | Stdlib.Sys.Break -> Sys.catch_break false;close_out open_file; running := false
+      | TopError StopExecution -> Sys.catch_break false; close_out open_file; running := false
+      | s -> Sys.catch_break false; close_out open_file;
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
   done;
-    q, !running_env
+  close_out open_file;
+  !queue, !running_env, !backtrack_env, !steps
 
 
 
-    
-let execute_random fmt glob_env trans all_procs unsafe =
+    (*
+  
+
+let execute_random2 fmt glob_env trans all_procs unsafe (*applied_trans orig_env main_bt_env*)=
   Sys.catch_break true;
-  let q = Queue.create () in
+  let backtrack_env = Backtrack.empty in
+  let trace = ref [] in 
+  let dfile = Filename.basename Options.file in
+  let open_file = open_out (dfile^".txt") in
+  print_header open_file dfile;
+  let q = PersistentQueue.empty  in
   Random.self_init ();
   let running_env = ref glob_env in
   let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
   let running = ref true in
+  let queue = ref q in 
   while !running do
     try
       let l = Array.length !transitions in
       if l = 0 then raise (TopError Deadlock);
       let rand = Random.int l in
       let (apply,apply_procs) = !transitions.(rand) in
-      Queue.push (apply,apply_procs) q;
+      queue := PersistentQueue.push (apply,apply_procs) !queue;
+      running_env := apply_transition apply_procs apply.tr_name trans !running_env;
+      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
+      check_unsafe !running_env unsafe;
+      print_interpret_env_file open_file !running_env apply.tr_name apply_procs;
+      trace := running_env :: !trace
+    with
+      | TopError Deadlock -> Sys.catch_break false;
+	Format.fprintf fmt
+	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false
+	(*backtrack_replay !running_env ~trace:!trace applied_trans orig_env main_bt_env*)
+	    
+      | TopError Unsafe ->
+	Sys.catch_break false;
+	Format.fprintf fmt
+	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Do you wish to continue? (y/n)@.";
+	begin
+	  let rec decide () =
+	    let inp = read_line () in
+	    match inp with
+	      | "y" -> Sys.catch_break true
+	      | "n" -> running := false; close_out open_file
+	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
+	  in decide ()
+	end 
+      | Stdlib.Sys.Break -> Sys.catch_break false;close_out open_file; running := false
+      | TopError StopExecution -> Sys.catch_break false; close_out open_file; running := false
+      | s -> Sys.catch_break false; close_out open_file;
+	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
+	assert false
+  done;
+  close_out open_file;
+  !queue, !running_env
+
+
+
+    
+let execute_random fmt glob_env trans all_procs unsafe =
+  Sys.catch_break true;
+  let q = PersistentQueue.empty in
+  Random.self_init ();
+  let running_env = ref glob_env in
+  let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
+  let running = ref true in
+  let queue = ref q in
+  while !running do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (apply,apply_procs) = !transitions.(rand) in
+      queue := PersistentQueue.push (apply,apply_procs) !queue;
       running_env := apply_transition apply_procs apply.tr_name trans !running_env;
       transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
       check_unsafe !running_env unsafe
@@ -1359,14 +1526,44 @@ let execute_random fmt glob_env trans all_procs unsafe =
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
   done;
-    q, !running_env
-
+    !queue, !running_env
+    *)
 
 
 let dump_in_file env file = assert false
-  
-  
+
+
+
+let replay_all_steps_pre s1 s2 benv =
+  let count = ref s1 in
+  Format.printf "Press enter to continue each time@.";
+  while !count <> s2 do
+    ignore(read_line ());
+    incr count;
+    let tr, tr_args, be = Backtrack.find !count benv in 
+    Format.printf "After Step %d, transition %a(%a)@." !count Hstring.print tr Variable.print_vars tr_args;
+    Format.printf "%a" print_debug_env be;
+  done;
+  Format.printf "Rerun Terminated@."
+
+
+let replay_all_steps_not_pre s1 s2 benv htbl transitions=
+  let count = ref s1 in
+  let _,_, en = Backtrack.find s1 benv in 
+  let en = ref en in
+  Format.printf "Press enter to continue each time@.";
+  while !count <> s2 do
+    ignore(read_line ());
+    incr count;
+    let tr, tr_args = Hashtbl.find htbl !count in 
+    en := apply_transition tr_args tr transitions !en;
+    Format.printf "After Step %d, transition %a(%a)@." !count Hstring.print tr Variable.print_vars tr_args;
+    Format.printf "%a" print_debug_env !en;
+  done;
+  Format.printf "Rerun Terminated@."    
     
+  
+      
 let generate_process (env, locks, conds, semaphores) number tsys=
   let arrays = tsys.t_arrays in 
   let new_num = Options.get_interpret_procs () + 1 in 
@@ -1382,13 +1579,70 @@ let generate_process (env, locks, conds, semaphores) number tsys=
   in 
   env,locks,conds, semaphores
 
+
+let replay s1 s2 backtrack htbl transitions= 
+  let tr,tr_args, be = Backtrack.find s1 backtrack in
+  ignore (Sys.command "clear");
+  Format.printf "Rerunning transitions from Step %d to Step %d " s1 s2; 
+  let f = 
+    if !step_flag <> 1 then
+      begin
+	Format.printf "[flag <> 1 : intermediate envs will be recomputed]@.";
+	false
+      end 
+    else
+      begin
+	Format.printf "[flag = 1 : intermediate envs will not be recomputed]@.";
+	true
+      end
+  in
+  Format.printf "Starting from Step %d, post transition %a(%a)@." s1 Hstring.print tr Variable.print_vars tr_args;
+  Format.printf "%a@." print_debug_env be;
+  if f then replay_all_steps_pre s1 s2 backtrack
+  else replay_all_steps_not_pre s1 s2 backtrack htbl transitions
+
+  
+let clear_htbl tbl step all =
+  let step = step + 1 in
+  let all = all + 1 in
+  let rec aux count =
+    if count = all then ()
+    else
+      begin
+	Hashtbl.remove tbl count;
+	aux (count + 1)
+      end
+  in aux step
+
+let clear_back benv step all =
+  let rec aux count env =
+    if count= all then env
+    else
+      begin
+	let e =
+	  Backtrack.remove count env in 
+	aux (count + 1) e
+      end
+  in aux step benv
+
+let clear_queue queue step  =
+  let rec aux count qn qold =
+    if count = step then qn
+    else
+      begin
+	let el,rem = PersistentQueue.pop qold in
+	let q = PersistentQueue.push el qn in
+	aux (count+1) q rem 
+      end
+  in aux 0 PersistentQueue.empty queue
+      
     
-let setup_env tsys sys =
+    
+let setup_env tsys sys = 
   let fmt = Format.std_formatter in
   (*generate X distinc procs*)
   let num_procs = Options.get_interpret_procs () in
   let procs = Variable.give_procs num_procs in
-
   (*all terms for the procs, i.e generate instantiated array terms*)
   (* var X[proc]: bool --> X[#1], X[#2] ...  *)
   let var_terms = Forward.all_var_terms procs tsys in
@@ -1403,11 +1657,11 @@ let setup_env tsys sys =
 	  let _,ty = Smt.Symbol.type_of n1 in
 	  if is_lock ty || is_rlock ty then
 	    (Env.add x throwaway acc ,
-	     LockQueues.add x (Queue.create ()) acc_lock,
+	     LockQueues.add x (PersistentQueue.empty) acc_lock,
 	    cond_acc, sem_acc)
 	  else
 	    if is_condition ty then
-	      Env.add x throwaway acc , LockQueues.add x (Queue.create ()) acc_lock, Conditions.add x [] cond_acc, sem_acc
+	      Env.add x throwaway acc , LockQueues.add x (PersistentQueue.empty) acc_lock, Conditions.add x [] cond_acc, sem_acc
 	    else
 	      if is_semaphore ty then
 		Env.add x throwaway acc, acc_lock, cond_acc, Semaphores.add x [] sem_acc
@@ -1416,10 +1670,10 @@ let setup_env tsys sys =
 	| Access(arr,arps) ->
 	  let _,ty = Smt.Symbol.type_of arr in
 	  if is_lock ty then
-	    (Env.add x throwaway acc , LockQueues.add x (Queue.create ()) acc_lock, cond_acc, sem_acc)
+	    (Env.add x throwaway acc , LockQueues.add x (PersistentQueue.empty) acc_lock, cond_acc, sem_acc)
 	  else
 	    if is_condition ty then
-	      Env.add x throwaway acc , LockQueues.add x (Queue.create ()) acc_lock, Conditions.add x [] cond_acc, sem_acc
+	      Env.add x throwaway acc , LockQueues.add x (PersistentQueue.empty) acc_lock, Conditions.add x [] cond_acc, sem_acc
 	    else
 	      if is_semaphore ty then
 		Env.add x throwaway acc, acc_lock, cond_acc, Semaphores.add x [] sem_acc
@@ -1485,45 +1739,128 @@ let setup_env tsys sys =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty sys.trans in
   let original_env = env_final, lock_queue, cond_sets, semaphores in 
+  let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in
+  let applied_trans = ref PersistentQueue.empty in
+  let backtrack_env = ref Backtrack.empty in
+  let steps = ref 0 in
 
-  let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in 
-  
+  let tr_table = Hashtbl.create 10 in
+
+  let s1 = String.make Pretty.vt_width '*' in
+  let s2 = String.make ((Pretty.vt_width-7)/2) ' ' in
+  let s3 = String.make ((Pretty.vt_width-22)/2) ' ' in
+
   ignore (Sys.command "clear");
+
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
+  Format.printf "%sCubicle%s@." s2 s2;
+  Format.printf "%sInterpreter & Debugger%s@." s3 s3;
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+
+  Format.printf "TODO--some kind of intro message and something about setting flag @.";
+  
   while !interpret_bool do
     try
       flush stdout; Format.printf "> %!";
-      let inp = read_line () in	  
+      let inp = read_line () in
+      (match inp with | "^[[A" -> assert false | _ -> ());
       let tts = Parser.toplevel Lexer.token (Lexing.from_string inp) in
       (match tts with
-	| TopExec -> let ap, g =  execute_random fmt !global_env transitions procs sys.unsafe
+	| TopExec -> let ap, g, be, ste =
+		       execute_random3 fmt !global_env
+			 transitions procs sys.unsafe !applied_trans [] !backtrack_env !steps tr_table
 		     in
 		     global_env := g;
-		     print_applied_trans fmt ap
+		     applied_trans := ap;
+		     backtrack_env := be;
+		     steps := ste
+		     (*print_applied_trans fmt ap*)
 	| TopTransition tl ->
 	  let temp =
 	    try
 	      List.fold_left (fun acc t ->
 		match t with
-		  | (n, []) -> apply_transition [] n transitions acc
+		  | (n, []) ->
+		    let ord = fresh_back () in
+		    applied_trans := PersistentQueue.push (ord,n,[],-1,-1) !applied_trans;
+		    let pe = apply_transition [] n transitions acc in
+		    if ord mod !step_flag = 0 then
+		      backtrack_env := Backtrack.add ord (n,[], pe) !backtrack_env;
+		    incr steps;
+		    Hashtbl.add tr_table ord (n,[]);
+		    pe 
+		    
 		  | (n,l) ->		    
 		    check_duplicates l;
-		    apply_transition l n transitions acc ) !global_env tl
+		    let ord = fresh_back () in	    
+		    applied_trans := PersistentQueue.push (ord,n,l,-1,-1) !applied_trans;
+		    let pe = apply_transition l n transitions acc in
+		    if ord mod !step_flag = 0 then
+		      backtrack_env := Backtrack.add ord (n,l,pe) !backtrack_env;
+		    Hashtbl.add tr_table ord (n,l);	       
+		    incr steps;
+		    
+		    pe 
+	      ) !global_env tl
 	    with
 	      | TopError (FalseReq fr) ->
 		Format.printf "%a@." top_report (FalseReq fr); !global_env in
-	  global_env := temp
+	  global_env := temp;	  	  
 	| TopShowEnv -> print_interpret_env fmt !global_env 
 	| TopHelp -> print_help fmt
 	| TopClear -> ignore (Sys.command "clear")
+
+	| TopBacktrack i->
+	  if i mod !step_flag <> 0 then raise (TopError (CannotBacktrack i));
+	  Format.printf
+	    "@{<b>@{<fg_magenta>WARNING@}@}\n\
+             Backtracking will clean debug environment:\n\
+             all execution traces and saved environments after Step %d will be erasedt@." i;
+	  let _,_, e = Backtrack.find i !backtrack_env in
+	  global_env := e;
+	  clear_htbl tr_table i !steps;
+	  backtrack_env := clear_back !backtrack_env i !steps;
+	  btracks := (1, i, !steps)::!btracks;
+	  applied_trans := clear_queue !applied_trans i;
+	  
+	    
+	| TopFlag f -> step_flag := f; Format.printf  "States will be saved every %d steps@." f 
+	| TopShowTrace -> print_debug_trans_path fmt !applied_trans !step_flag
+	| TopReplayTrace -> replay 1 !steps !backtrack_env tr_table transitions
+	| TopGoto s -> assert false
+	  
+	| TopRerun(b,e) ->
+	  if b mod !step_flag <> 0 then raise (TopError (StepNotMod b));
+	  if e > !steps then raise (TopError (StepTooBig (e,e)));
+	  replay b e !backtrack_env tr_table transitions
+	  
+					      
+	| TopCurrentTrace -> Hashtbl.iter (fun k (n,pr) ->
+	  Format.printf "Step %d: transition %a(%a)@." k Hstring.print n Variable.print_vars pr)
+	  tr_table
+	  
+	| TopWhy(tn,tpl) ->
+	  assert false
+	| TopDebugHelp -> print_debug_help fmt
+	| TopDebugOff -> assert false
+	    
+
+	  
 	| TopTest h ->	  	  
 	  let l = all_possible_transitions !global_env transitions procs false in
-		       if l = [] then raise (TopError Deadlock)
-		       else
-			 print_poss_trans fmt l
+	  if l = [] then
+	    begin
+	      deadlock := true;
+	      raise (TopError Deadlock)
+	    end
+	  else
+	    print_poss_trans fmt l
 	| TopUnsafe -> check_unsafe !global_env sys.unsafe 
 	| TopRestart ->
-	  
-	  global_env := env_final,lock_queue, cond_sets, semaphores;
+	  global_env := original_env;
+	  applied_trans := PersistentQueue.empty;
+	  backtrack_env := Backtrack.empty;
+	  Hashtbl.reset tr_table;
 	  print_interpret_env fmt !global_env
 	| TopGenProc -> global_env := generate_process !global_env num_procs tsys
 	| TopKillProc op -> assert false
@@ -1542,8 +1879,7 @@ let setup_env tsys sys =
 	      global_env := Env.add n v1 v, l, c,s
 	  with
 	      Not_found ->
-		  raise (TopError (NoVar name))
-	  
+		  raise (TopError (NoVar name))	  
       );
       
     with

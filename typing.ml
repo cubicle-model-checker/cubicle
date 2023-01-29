@@ -105,8 +105,19 @@ let rec unique error = function
   | x :: l -> if Hstring.list_mem x l then error x; unique error l
 
 let unify loc (args_1, ty_1) (args_2, ty_2) =
-  if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
-  then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
+  let ts1, ts2 =
+    Hstring.equal ty_1 Smt.Type.type_semaphore,
+    Hstring.equal ty_2 Smt.Type.type_semaphore
+  in
+  let ti1, ti2 =
+    Hstring.equal ty_1 Smt.Type.type_int,
+    Hstring.equal ty_2 Smt.Type.type_int
+  in
+  match ts1,ts2, ti1, ti2 with
+    | true, false, false, true -> ()
+    | false, true, true, false -> ()
+    | _ -> if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
+      then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc
 
 let refinements = Hstring.H.create 17
 
@@ -141,10 +152,11 @@ let rec term loc args = function
 	  try Smt.Symbol.type_of e with Not_found ->
 	    error (UnknownName e) loc
       end
+  | Elem(_, SystemProcs) -> [], Smt.Type.type_int
   | Elem (e, _) -> Smt.Symbol.type_of e
   | Arith (x, _) ->
-      begin
-	let args, tx = term loc args x in
+    begin
+      	let args, tx = term loc args x in
 	if not (Hstring.equal tx Smt.Type.type_int) 
 	  && not (Hstring.equal tx Smt.Type.type_real) then 
 	  error (MustBeNum x) loc;

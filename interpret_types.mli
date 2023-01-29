@@ -51,6 +51,7 @@ module Trans : Map.S with type key = Hstring.t
 module LockQueues : Map.S with type key = Types.Term.t
 module Conditions : Map.S with type key = Types.Term.t
 module Semaphores : Map.S with type key = Types.Term.t
+module Backtrack : Map.S with type key = int 
 
 module HT : Hashtbl.S with type key = Types.Term.t
 
@@ -92,7 +93,9 @@ val print_interpret_val : Format.formatter -> interpret_value -> unit
 
 val print_poss_trans : Format.formatter -> (Ast.transition_info * Variable.t list) list -> unit
 
-val print_applied_trans : Format.formatter -> (Ast.transition_info * Variable.t list) PersistentQueue.t -> unit
+val print_applied_trans : Format.formatter -> (int * Hstring.t * Variable.t list * int * int) PersistentQueue.t -> unit
+
+val print_debug_trans_path : Format.formatter -> (int * Hstring.t * Variable.t list * int * int) PersistentQueue.t -> int -> unit  
 
 val print_title : Format.formatter -> string -> unit
 
@@ -105,4 +108,9 @@ val print_wait : Format.formatter -> Types.Term.t list -> unit
 val print_interpret_env : Format.formatter -> interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
   Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit
 
+val print_debug_env : Format.formatter -> interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
+  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit  
+
 val print_help : Format.formatter -> unit
+val print_debug_help : Format.formatter -> unit
+val print_transition : Format.formatter -> Hstring.t -> Variable.t list -> unit

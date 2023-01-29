@@ -119,6 +119,17 @@ type toplevel =
   | TopGenProc
   | TopKillProc of Hstring.t option
   | TopExec
+      
+  | TopBacktrack of int
+  | TopFlag of int
+  | TopShowTrace
+  | TopReplayTrace
+  | TopGoto of int
+  | TopRerun of int*int
+  | TopCurrentTrace
+  | TopWhy of Hstring.t * Hstring.t list
+  | TopDebugHelp
+  | TopDebugOff
 
 (** type of untyped transition systems constructed by parsing *)
 

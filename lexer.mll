@@ -45,11 +45,11 @@
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
-	"status", STATUS;
-	"help", HELP;
-	"clear", CLEAR;
-	"reset", RESTART;
-	"test", TEST;
+	"-status", STATUS;
+	"-help", HELP;
+	"-clear", CLEAR;
+	"-reset", RESTART;
+	"-test", TEST;
 	"release", RELEASE;
 	"release_lock", RELEASELOCK;
 	"relase_rlock", RELEASERLOCK;
@@ -63,12 +63,22 @@
 	"wait", WAIT;
 	"notify", NOTIFY;
         "notify_all", NOTIFYALL;
-	"kill", KILLPROC;
-	"generate", GENPROC;
-	"execute", EXEC;
+	"-kill", KILLPROC;
+	"-generate", GENPROC;
+	"-execute", EXEC;
+	"--trace", SHOWTRACE;
+	"--replay", REPTRACE;
+	"--goto", GOTOTR;
+	"--rerun", RERUNTR;
+	"--current", CURRTR;
+	"--why", WHYTR;
+	"--dhelp", HELPTR;
+	"--flag", FLAGTR;
+	"--off", OFFTR;
 	"add_proc", ADDPROC;
 	"sub_proc", SUBPROC;
-	"compare_procs", COMPPROC
+	"compare_procs", COMPPROC;
+	"--backtrack", BACKTRACK
       ]
 	       
   let newline lexbuf =
@@ -109,7 +119,8 @@ let integer = ('-')? ['0' - '9'] ['0' - '9']*
 let real = ('-')? ['0' - '9'] ['0' - '9']* '.' ['0' - '9']* 
 let mident = ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let lident = ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
-
+let interpret = ('-')('-')?['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
+  
 rule token = parse
   | newline 
       { newline lexbuf; token lexbuf }
@@ -119,7 +130,8 @@ rule token = parse
   | lident as id
       { try Hashtbl.find keywords id
 	with Not_found ->
-	 if id = "bool" then LIDENT "mbool" else LIDENT id }
+	  if id = "bool" then LIDENT "mbool" else LIDENT id }
+  | interpret as id { try Hashtbl.find keywords id with Not_found -> LIDENT id }
   | '#'(['1'-'9']['0'-'9']* as n) 
       { (*if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;*)
         CONSTPROC("#",n) }
