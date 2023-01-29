@@ -7,13 +7,14 @@ array Stick[proc] : lock
 
 var Counting : semaphore
 
+
 (*---------Cheat Neighbors----------*)
 var Block : bool
 array RightN[proc] : proc
 (*----------------------------------*)
 
 
-init(i) { Philosopher[i] = Thinking && Block = False && Counting = SYS_PROCS - 1} 
+init(i) { Philosopher[i] = Thinking && Block = False && Counting = SYS_PROCS - 1 } 
 
 
 (*---------Cheat Neighbors----------*)

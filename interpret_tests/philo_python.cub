@@ -62,6 +62,3 @@ requires { P[i] = Done }
 { release(C,i);
   P[i] := Idle
 }
-
-
-

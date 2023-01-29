@@ -1,0 +1,91 @@
+type s = Idle | Done | ReleaseSem
+       	 | Get1 | Get1_lock | ReleaseGet1
+       	 | Get2 | Get2_lock | ReleaseGet2
+
+array P[proc] : s
+
+array R[proc] : bool 
+
+var C : condition
+var S : semaphore
+
+
+init(i) { R[i] = True && P[i] = Idle  && S = SYS_PROCS - 1 }
+
+transition start([i])
+requires { P[i] = Idle }
+{ P[i] := Get1_lock;
+  acquire(S,i);}
+
+transition get1_lock([i])
+requires {P[i] = Get1_lock }
+{ acquire(C,i);
+  P[i] := Get1 }
+
+transition get1_continue_other([i] j)
+requires { P[i] = Get1 && R[j] = True } 
+{ P[i] := ReleaseGet1;
+  R[j] := False }
+
+transition get1_continue_mine([i] j)
+requires { P[i] = Get1 && R[i] = True } 
+{ P[i] := ReleaseGet1;
+  R[i] := False }
+
+transition get1_wait([i])
+requires { P[i] = Get1 && R[i] = False && forall_other j. R[j] = False } 
+{ wait(C, i) }
+
+transition get1_release([i])
+requires { P[i] = ReleaseGet1 }
+{ release(C,i);
+  P[i] := Get2_lock }
+
+
+transition get2_lock([i])
+requires {P[i] = Get2_lock }
+{ acquire(C,i);
+  P[i] := Get2 }
+
+transition get2_continue_other([i] j)
+requires { P[i] = Get2 && R[j] = True} 
+{ P[i] := ReleaseGet2;
+  R[j] := False }
+
+
+transition get2_continue_mine([i] j)
+requires { P[i] = Get2 && R[i] = True} 
+{ P[i] := ReleaseGet2;
+  R[i] := False }
+
+transition get2_wait([i])
+requires { P[i] = Get2 && forall_other j. R[j] = False } 
+{ wait(C, i) }
+
+transition get2_release_others([i] j k)
+requires { P[i] = ReleaseGet2 && R[j] = False && R[k] = False  }
+{ notify_all(C,i);
+  R[p] := case | p = j : True | p = k : True | _ : R[p];
+  P[i] := Done
+}
+
+transition get2_release_mine_other([i] j)
+requires { P[i] = ReleaseGet2 && R[i] = False && R[j] = False  }
+{ notify_all(C,i);
+  R[p] := case | p = i : True | p = j : True | _ : R[p];
+  P[i] := Done
+}
+
+transition done([i])
+requires { P[i] = Done }
+{ release(C,i);
+  P[i] := ReleaseSem
+}
+
+transition release_sem([i])
+requires {P[i] = ReleaseSem }
+{ release(S,i);
+  P[i] := Idle } 
+
+
+
