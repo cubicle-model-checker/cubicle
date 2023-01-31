@@ -1,7 +1,9 @@
-(* TODO : Draw_object_fun prend en paramètre le contexte (Fenêtre) *)
-type obj  = int * int * (int -> int -> unit)  (* pos_x, pos_y, draw_object_fun *)
-type t    = obj list
+(* 
+  pre_init          : Appelé avant que le modèle soit initialisé
+  post_init         : Appelé après que le modèle soit initialisé
+  on_model_change   : Appelé lorsque le modèle est modifié
+  update            : Appelé chaque tick
+*)
+type t    = (unit -> unit) * (unit -> unit) * (unit -> unit) * (float -> unit)  
 
-let empty : t = []
-
-let update (s : t) = List.iter (fun (x,y,up) -> up x y) s
+let empty : t = ((fun () -> ()), (fun () -> ()), (fun () -> ()), (fun _ -> ()))

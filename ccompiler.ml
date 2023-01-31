@@ -405,7 +405,7 @@ let write_transitions trans_list ty_defs g_vars =
   in
   List.iter write_table trans_list;
   pfile "mymodel := Model.set_init init (!mymodel);\n";
-  pfile "mymodel := Model.set_vars ([], var_as_string) (!mymodel);\n";
+  pfile "mymodel := Model.set_vars ([], var_as_string) (!mymodel);\n"
   pfile "register_dumper dump_vars;\n";
   pfile "set_model (!mymodel)\n"
 

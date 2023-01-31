@@ -8,7 +8,7 @@ let model        = ref Model.empty
 let set_model m  = model := m
 let get_model () = !model
 
-let nb_proc         = ref 1000 (* NOTE : La valeur initiale est la valeur maximale autorisée actuellement *)
+let nb_proc         = ref 0 
 let get_nb_proc ()  = !nb_proc
 let set_nb_proc nbp = nb_proc := nbp 
 
