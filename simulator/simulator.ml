@@ -1,7 +1,7 @@
 open Utils
 
 let init () =
-  let (_,_,minit,_) = get_model () in
+  let (_,minit,_) = get_model () in
   minit ();
   (!dumper) ()
 
@@ -17,7 +17,7 @@ let step () =
       let arg_list = get_args arg_number in 
       List.iter (fun arg -> returned_list := (get_possible_action_for_arg arg trans_list)@(!returned_list)) arg_list
     in
-    let (_,_, _, req_ac_table) = get_model () in
+    let (_, _, req_ac_table) = get_model () in
     Model.IntMap.iter test_transition req_ac_table;
     !returned_list
   in

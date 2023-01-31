@@ -16,20 +16,29 @@ open Printf
 
 (* Variables globales utilisées *)
 
+type g_varst = (Hstring.t * int) Hstring.HMap.t
+
 let tmp_file_name = "simulator/stmp.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
 let out_file = open_out tmp_file_name  
 let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule, impossible en caml *)
 let updated_prefix = "n"                  (* Voir dans transition *)
 let pfile = fun d -> fprintf out_file d
 
+let get_var_type var_name g_vars    = let (t,_) = Hstring.HMap.find var_name g_vars in t
+let get_var_dim  var_name  g_vars   = try let (_, d) = Hstring.HMap.find var_name g_vars in d with Not_found -> -1
+
 (* BEGIN : Fonction d'aide ; Peut être a déplacer dans un fichier 'clib.ml' *)
 let get_var_name v = sprintf "%s%s" var_prefix (Hstring.view v)
 let get_updated_name v = sprintf "%s%s" updated_prefix (Hstring.view v)
-let get_constr_name s = 
-  let s = Hstring.view s in match s with
+let get_constr_name s g_vars =
+  let sstring = Hstring.view s in match sstring with
     | "@MTrue" -> "true"
     | "@MFalse" -> "false"
-    | _ -> s 
+    | _ -> 
+        try ignore(int_of_string sstring); sstring    with Failure (_) ->
+        try ignore(float_of_string sstring); sstring  with Failure (_) -> 
+        try ignore(bool_of_string sstring); sstring   with Invalid_argument (_) ->
+          "\""^sstring^"\""
 
 (* Utilisé pour renvoyer une valeur d'initialisation quelconque avec le bon type pour une variable *)
 let get_value_for_type ty ty_defs = 
@@ -37,7 +46,7 @@ let get_value_for_type ty ty_defs =
   | "int" | "proc" -> "0"
   | "real" -> "0."
   | "bool" | "mbool" -> "true"
-  | _ -> Hstring.view (List.hd (Hashtbl.find ty_defs ty)) (* Note : Hashtbl.find ne devrait pas throw Not_Found car ast valide. *) 
+  | _ -> "\""^Hstring.view (List.hd (Hashtbl.find ty_defs ty))^"\"" (* Note : Hashtbl.find ne devrait pas throw Not_Found car ast valide. *) 
 
 let mconst_is_float mconst g_vars  = 
   MConst.exists 
@@ -112,7 +121,8 @@ let print_mconst_ref = fun cs -> pfile "%s" (mconst_ref_to_string cs)
 
 let rec print_term g_vars = function
   | Elem(g_var, Glob) -> pfile "!(%s)" (get_var_name g_var)
-  | Elem(var, _) -> pfile "%s" (get_constr_name var)
+  | Elem(var, Constr) -> pfile "%s" (get_constr_name var g_vars)
+  | Elem(var, Var)    -> pfile "%s" (Hstring.view var)
   | Const(c) -> print_mconst_ref c
   | Access(g_var, var_list) -> 
       pfile "%s" (get_var_name g_var); 
@@ -129,12 +139,8 @@ let get_random_for_type ty ty_defs =
   | "proc" -> "get_random_proc ()"
   | "real" -> "Random.float max_float"
   | "bool" | "mbool" -> "Random.bool ()"
-  | _-> 
-      let possible = Hashtbl.find ty_defs ty in 
-      Format.sprintf "get_random_in_list %s" (hstring_list_to_string possible)
+  | t -> Format.sprintf "get_random_in_list %s" t
 
-let get_var_type var_name g_vars = let (t,_) = Hstring.HMap.find var_name g_vars in t
-let get_var_dim var_name g_vars = try let (_, d) = Hstring.HMap.find var_name g_vars in d with Not_found -> -1
 
 module IntMap = Map.Make(struct type t = int let compare : int -> int -> int = Int.compare end) 
 

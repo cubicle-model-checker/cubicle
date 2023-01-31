@@ -18,12 +18,12 @@ open Cutils
 
 let write_types t_def =
   let returned = Hashtbl.create (List.length t_def) in 
-  let print_type hs = pfile " | %s" (Hstring.view hs) in
+  let print_type hs = pfile " ; \"%s\"" (Hstring.view hs) in
   let write_possible_type hstring_list = List.iter print_type hstring_list in
   let write_type (loc, (t_name, t_values)) = 
-    pfile "type %s = %s" (Hstring.view t_name) (Hstring.view (List.hd t_values));
+    pfile "let %s = [\"%s\"" (Hstring.view t_name) (Hstring.view (List.hd t_values));
     write_possible_type (List.tl t_values);
-    pfile "\n";
+    pfile "] in\n";
     Hashtbl.add returned t_name t_values
   in
   List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @Mbool qu'on ne va pas utiliser*)
@@ -58,34 +58,69 @@ let write_vars s ty_defs=
   pfile "\n";
   !returned
 
-(* Dumper *)
+(* var_as_string *)
+
+let write_var_as_string g_vars ty_defs = 
+  pfile "let var_as_string name want = match name with\n";
+
+  let print_var_view name (ty, dim) =
+    let perc = "%" in
+    pfile "\t| \"%s\" -> \n" (Hstring.view name);
+    if dim = 0 then 
+      (
+      let realname = sprintf "(!%s)" (get_var_name name) in
+      begin match (Hstring.view ty) with
+      | "int" | "proc" -> 
+          pfile "\t\tsprintf \"%sd\" %s" perc realname
+      | "real" -> 
+          pfile "\t\tsprintf \"%sf\" %s" perc realname
+      | "bool" | "mbool" -> 
+          pfile "\t\tsprintf \"%sb\" %s" perc realname
+      | _ -> 
+          pfile "\t\tsprintf \"%ss\" %s" perc realname 
+      end;
+      pfile "\n"
+      )
+    else
+      (
+        pfile "\t\tlet result = ref \"\" in \n";
+        for i = 1 to dim do 
+          pfile "%sresult := (!result)^\"[ \";\n" (mult_string "\t" (i+1));
+          pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" (i+1)) (i-1);
+        done;
+
+        let pexcl = if dim = 0 then "!" else "" in
+        let realname = sprintf "(%s%s%s)" pexcl (get_var_name name) (deplier_var dim) in
+        pfile "%sresult := (!result)^sprintf\"%s" (mult_string "\t" (dim+2)) perc;
+        begin match (Hstring.view ty) with
+        | "int" | "proc" -> 
+          pfile "d"
+        | "real" -> 
+          pfile "f"
+        | "bool" | "mbool" -> 
+            pfile "b"
+        | _ -> 
+            pfile "s"
+      end;
+      pfile " \"%s\n" realname;
+
+      for i = dim downto 1 do 
+        pfile "%sdone;\n" (mult_string "\t" (i+1));
+        pfile "%sresult := (!result)^\"]\";\n" (mult_string "\t" (i+1));
+      done;
+      pfile "\t\t!result\n"
+      )
+  in
+
+  Hstring.HMap.iter print_var_view g_vars;
+  pfile "\t| _ -> raise Not_found\n";
+  pfile "in\n"
+
 
 let write_dumper g_vars ty_defs =
   let perc = "%" in
-  let print_var_view name (ty, dim) =
-    (* TODO : Faire fonctionner pour types énumérés. *)
-    for i = 1 to dim do 
-      pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" i) (i-1);
-    done;
-    let pexcl = if dim = 0 then "!" else "" in
-    let realname = sprintf "(%s%s%s)" pexcl (get_var_name name) (deplier_var dim) in
-    begin match (Hstring.view ty) with
-    | "int" | "proc" -> 
-        pfile "printf \"%sd\\n\" %s;\n" perc realname
-    | "real" -> 
-        pfile "printf \"%sf\\n\" %s;\n" perc realname
-    | "bool" | "mbool" -> 
-        pfile "printf \"%sb\\n\" %s;\n" perc realname
-    | _ -> 
-        pfile "printf \"\\n\"\n" (* Actuellement ne dump pas les variables énumérées *)
-    end;
-    for i = dim downto 1 do 
-      pfile "%sdone;\n" (mult_string "\t" i);
-    done
-  in
   let write_dumper_var var_name var_info =
-    pfile "\tprintf \"%s = \"; " (Hstring.view var_name);
-    print_var_view var_name var_info
+    pfile "\tprintf \"%s = %ss\\n\" (var_as_string \"%s\" []);\n" (Hstring.view var_name) perc (Hstring.view var_name);
   in
   pfile "let dump_vars () =\n";
   pfile "\tprintf \"----------Current State----------\\n\";\n";
@@ -165,17 +200,18 @@ let write_init (vars, dnf) g_vars ty_defs =
         if dim > 0 then 
           pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" dim) (dim-1);
         let print_set head set =
-          (* We will only init the head if dim head is equal to the current working dim. 
-           The dim of the head can't be superior to the current working dim (Because the head is the lowest dim possible in the class) 
-          If it's lower, it means that it has already been initialised.
+          (* 
+            We will only init the head if dim head is equal to the current working dim. 
+            The dim of the head can't be superior to the current working dim (Because the head is the lowest dim possible in the class) 
+            If it's lower, it means that it has already been initialised.
           *)
-          let init_sign = if dim = 0 then ":=" else "<-" in
-          let dim_head = get_var_dim head g_vars in 
-          let init_head = (dim_head = dim) in 
+          let init_sign   = if dim = 0 then ":=" else "<-" in
+          let dim_head    = get_var_dim head g_vars in 
+          let init_head   = (dim_head = dim) in 
         
-          let tabstr = mult_string "\t" (dim+1) in
-          let headstr = if dim_head >= 0 then sprintf "%s%s" (get_var_name head) (deplier_var dim_head) else get_constr_name head in 
-          let headgetstr = if dim_head = 0 then "(!"^headstr^")" else headstr in
+          let tabstr      = mult_string "\t" (dim+1) in
+          let headstr     = if dim_head >= 0 then sprintf "%s%s" (get_var_name head) (deplier_var dim_head) else get_constr_name head g_vars in 
+          let headgetstr  = if dim_head = 0 then "(!"^headstr^")" else headstr in
           if init_head then 
             (
               pfile "%s%s %s %s;\n" tabstr headstr init_sign (get_random_for_type (get_var_type head g_vars) ty_defs)
@@ -368,8 +404,9 @@ let write_transitions trans_list ty_defs g_vars =
     pfile "mymodel := Model.add_trans %s %s (!mymodel);\n" (string_of_int (List.length trans_info.tr_args)) trans_name
   in
   List.iter write_table trans_list;
-  pfile "register_dumper dump_vars;\n";
   pfile "mymodel := Model.set_init init (!mymodel);\n";
+  pfile "mymodel := Model.set_vars ([], var_as_string) (!mymodel);\n";
+  pfile "register_dumper dump_vars;\n";
   pfile "set_model (!mymodel)\n"
 
 let write_unsafe unsafe =
@@ -377,10 +414,12 @@ let write_unsafe unsafe =
   in List.iter sub_write_unsafe unsafe
 
 let run ts s =
-  pfile "open Utils\nopen Format\n\n";
-  let g_types = write_types s.type_defs in
+  pfile "open Utils\n";
+  pfile "open Format\n\n";
   pfile "let build_model () =\n";
+  let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
+  write_var_as_string g_vars g_types;
   write_dumper g_vars g_types;
   write_init ts.t_init g_vars g_types;
   write_transitions ts.t_trans g_types g_vars;
