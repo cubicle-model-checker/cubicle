@@ -19,7 +19,7 @@ type conc_value =
   | VAlive | VSuspended | VSleep of int
   | UNDEF
 
-type interpret_value = { value: conc_value; typ: Hstring.t }
+type interpret_value = { value: conc_value; typ: Hstring.t}
 
 let ty_int = Hstring.make "int"
 let ty_real = Hstring.make "real"
@@ -218,20 +218,6 @@ let print_queue fmt el =
 let print_wait fmt el =
   List.iter (fun x -> Format.printf "%a " Term.print x) el
 
-let print_debug_env fmt (env,locks, cond, sem)=
-  Env.iter(fun k {value = v} ->
-    Format.printf "  %a : %a@." Term.print k print_val v
-  ) env;
-  Format.printf "  Lock Queues:@.";
-  LockQueues.iter (fun k el ->
-    Format.printf "   %a : { %a }@." Term.print k print_queue el) locks;
-    Format.printf "  Condition wait pools:@.";
-  Conditions.iter (fun k el ->
-    Format.printf "   %a : { %a }@." Term.print k print_wait el) cond;
-  Format.printf "  Semaphore wait lists:@.";
-  Semaphores.iter (fun k el ->
-    Format.printf "   %a : { %a }@." Term.print k print_wait el) sem;
-  Format.printf  "%a" Pretty.print_line ()    
 
     
 let print_interpret_env fmt (env,locks, cond, sem)=
@@ -252,43 +238,57 @@ let print_interpret_env fmt (env,locks, cond, sem)=
   Semaphores.iter (fun k el ->
     Format.printf "%a : { %a }@." Term.print k print_wait el) sem;
   Format.printf  "%a" Pretty.print_line ()
-  
+
+let print_debug_env fmt (env,locks, cond, sem)=
+  Env.iter(fun k {value = v} ->
+    Format.printf "  %a : %a@." Term.print k print_val v
+  ) env;
+  Format.printf "  Lock Queues:@.";
+  LockQueues.iter (fun k el ->
+    Format.printf "   %a : { %a }@." Term.print k print_queue el) locks;
+    Format.printf "  Condition wait pools:@.";
+  Conditions.iter (fun k el ->
+    Format.printf "   %a : { %a }@." Term.print k print_wait el) cond;
+  Format.printf "  Semaphore wait lists:@.";
+  Semaphores.iter (fun k el ->
+    Format.printf "   %a : { %a }@." Term.print k print_wait el) sem;
+  Format.printf  "%a" Pretty.print_line ()  
+
+    
 let print_help fmt =
   Format.printf
-    "Usage:\n\
+    "@{<b>@{<u>@{<fg_magenta_b>Usage:@}@}@}\n\
      Executing transitions:\n\
-     transition <name>(<args>) : apply a transition\n\
-     transition <name>(<args>); <name>(<args>)... : apply a sequence of transitions\n\n\
-     Other commands:\n\
-     -help : display this list\n\
-     -status : show current environment\n\
-     -execute : run random execution\n\
-     -test : show possible transitions\n\n\
-     Debug commands:\n\
-     --flag <int> : set how often debugger remembers states for easier backtracking\n\
-     --trace  : show trace\n\
-     --replay : replay entire trace, waits for user OK after each step\n\
-     --goto <int> : go to step X from trace\n\
-     --rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
-     --current : prints current debug state/step (NOT global environment)\n\
-     --why <transition call>\n\
-     explain which values interfere with transition application, only works if system encountered deadlock\n\
-     --dhelp : show debug help@."
+     \ttransition <name>(<args>) : apply a transition\n\
+     \ttransition <name>(<args>); <name>(<args>)... : apply a sequence of transitions\n\n\
+     @{<b>@{<u>@{<fg_magenta_b>Other Commands:@}@}@}\n\
+     \t-help : display this list\n\
+     \t-status : show current environment\n\
+     \t-execute : run random execution\n\
+     \t-test : show possible transitions\n\n\
+     @{<b>@{<u>@{<fg_magenta_b>Debug Commands:@}@}@}\n\
+     \t--flag <int> : set how often debugger remembers states for easier backtracking\n\
+     \t--trace  : show trace\n\
+     \t--replay : replay entire trace, waits for user OK after each step\n\
+     \t--goto <int> : go to step X from trace\n\
+     \t--rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
+     \t--current : prints current debug state/step (NOT global environment)\n\
+     \t--why <transition call> : explain which values interfere with transition application\n\
+     \t--dhelp : show debug help@."
 
 
   
 let print_debug_help fmt =
   Format.printf
-    "Debug help\n\
-     --flag <int> : set how often debugger remembers states for easier backtracking\n\
-     --trace  : show trace\n\
-     --replay : replay entire trace, waits for user OK after each step\n\
-     --goto <int> : go to step X from trace\n\
-     --rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
-     --current : prints current debug state (NOT global environment)/step\n\
-     --why <transition call> : explain which values interfere with transition application\n\
-                               only works if system encountered deadlock\n\
-     --dhelp : show debug usage@."    
+    "@{<b>@{<u>@{<fg_magenta_b>Debug Commands:@}@}@}\n\
+     \t--flag <int> : set how often debugger remembers states for easier backtracking\n\
+     \t--trace  : show trace\n\
+     \t--replay : replay entire trace, waits for user OK after each step\n\
+     \t--goto <int> : go to step X from trace\n\
+     \t--rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
+     \t--current : prints current debug state/step (NOT global environment)\n\
+     \t--why <transition call> : explain which values interfere with transition application\n\
+     \t--dhelp : show debug help@."   
 
 
 let str_op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
@@ -387,7 +387,25 @@ let compare_conc v1 v2 =
     | VGlob _, VInt _ -> assert false
     | VSemaphore s1, VSemaphore v2 -> compare s1 v2
     | VSemaphore s1, VInt i1 -> compare s1 i1
-    | VInt i1, VSemaphore s1 -> compare i1 s1    
+    | VInt i1, VSemaphore s1 -> compare i1 s1
+    | VLock (b1, to1), VLock(b2, to2) ->
+      let b3 = b1 && b2 in
+      begin
+	match to1, to2 with 
+	  | None, None -> if b3 then 0 else -1 
+	  | None, Some _ | Some _, None -> -1
+	  | Some p1, Some p2 ->
+	    let comp = Term.compare p1 p2 in
+	    if b3 then comp
+	    else -1 	    
+      end
+    | VAlive, VAlive -> 0
+    | VAlive, (VSuspended| VSleep _) -> 1
+    | (VSuspended| VSleep _), VAlive -> -1
+    | VSuspended, VSuspended -> 0
+    | VSuspended, VSleep _ -> -1
+    | VSleep _, VSuspended -> 1
+    | VSleep i1, VSleep i2 -> compare i1 i2
     | _ -> assert false		     
       
 let compare_interp_val v1 v2 =
@@ -396,8 +414,7 @@ let compare_interp_val v1 v2 =
 let all_constr_terms () =
   List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
        
-let to_interpret term =
-  
+let to_interpret term = 
   match term with
     | Elem( el, Glob) -> let _, ty = Smt.Symbol.type_of el in {value = VGlob el; typ = ty }
     | Elem( el, Constr) ->
@@ -437,3 +454,76 @@ let interpret_comp b op =
     | Lt -> b = -1
     | Le -> b = 0 || b = -1
     | Neq -> b <> 0 
+
+
+
+let compare_queues q1 q2 =
+  let rec aux q1 q2 =
+    let b1 = PersistentQueue.is_empty q1 in
+    let b2 = PersistentQueue.is_empty q2 in  
+    match b1, b2 with
+      | true, true -> 0
+      | true, false -> -1
+      | false, true -> 1
+      | false, false ->
+	let el1,rem1 = PersistentQueue.pop q1 in
+	let el2, rem2 = PersistentQueue.pop q2 in
+	let comp = Types.Term.compare el1 el2 in 
+	if comp = 0 then
+	  aux rem1 rem2
+	else
+	  comp
+  in aux q1 q2
+
+let compare_term_lists l1 l2 =
+  let rec aux l1 l2 =
+    match l1,l2 with
+      | [],[] -> 0
+      | [], _ -> -1
+      | _, [] -> 1
+      | hd1::tl1,hd2::tl2 ->
+	let comp = Types.Term.compare hd1 hd2 in
+	if comp = 0 then aux tl1 tl2
+	else comp
+  in aux l1 l2
+
+      
+let print_debug_color_env fmt (env,locks, cond, sem) (env_old, locks_old, cond_old,sem_old)=
+    Env.iter(fun k {value = v} ->
+      let {value = el} = Env.find k env_old in
+      if compare_conc v el = 0 then
+	Format.printf "  %a : %a@." Term.print k print_val v
+      else
+	Format.printf "  @{<b>@{<fg_green>%a : %a@}@}@." Term.print k print_val v
+    ) env;
+  Format.printf "  Lock Queues:@.";
+  LockQueues.iter (fun k el ->
+    let elm = LockQueues.find k locks_old in
+    if compare_queues el elm = 0  then
+      Format.printf "   %a : { %a }@." Term.print k print_queue el
+    else
+      Format.printf "   @{<b>@{<fg_green>%a : { %a }@}@}@." Term.print k print_queue el
+    ) locks;
+    Format.printf "  Condition wait pools:@.";
+    Conditions.iter (fun k el ->
+      let elm = Conditions.find k cond_old in
+      if compare_term_lists el elm = 0 then
+	Format.printf "   %a : { %a }@." Term.print k print_wait el
+      else
+	Format.printf "   @{<b>@{<fg_green>%a : { %a }@}@}@." Term.print k print_wait el
+    ) cond;
+    Format.printf "  Semaphore wait lists:@.";
+    Semaphores.iter (fun k el ->
+      let elm = Semaphores.find k sem_old in
+      if compare_term_lists el elm = 0 then
+	Format.printf "   %a : { %a }@." Term.print k print_wait el
+      else
+	Format.printf "   @{<b>@{<fg_green>%a : { %a }@}@}@." Term.print k print_wait el
+    ) sem;
+    Format.printf  "%a" Pretty.print_line ()    
+
+
+let print_backtrace_env fmt benv =
+  Backtrack.iter (fun key (name, args, env) ->
+    Format.printf "Step %d: transition %a with args: %a@."
+      key Hstring.print name Variable.print_vars args) benv

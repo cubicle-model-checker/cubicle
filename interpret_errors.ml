@@ -28,6 +28,7 @@ type top_error =
   | AbsentStep of int
   | StepTooBig of int * int
   | CannotBacktrack of int
+  | ExplainReq of Hstring.t * Hstring.t list * Atom.t 
 
 exception TopError of top_error
 
@@ -71,5 +72,7 @@ let top_report fmt e =
     | CannotBacktrack i ->
       Format.fprintf fmt "Cannot backtrack: state at Step %d is not saved" i
 
+    | ExplainReq(tn, args, atom) ->
+      Format.fprintf fmt "Transition %a(%a) blocked due to %a" Hstring.print tn Variable.print_vars args Atom.print atom
       
 let top_error e = raise (TopError e)

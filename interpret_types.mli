@@ -55,7 +55,7 @@ module Backtrack : Map.S with type key = int
 
 module HT : Hashtbl.S with type key = Types.Term.t
 
-module  PersistentQueue : sig 
+module PersistentQueue : sig 
   type 'a t
   val empty : 'a t
   val is_empty : 'a t -> bool
@@ -108,9 +108,20 @@ val print_wait : Format.formatter -> Types.Term.t list -> unit
 val print_interpret_env : Format.formatter -> interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
   Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit
 
-val print_debug_env : Format.formatter -> interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
-  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit  
+val print_debug_env : Format.formatter ->
+  interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
+  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit
+
+
+val print_debug_color_env : Format.formatter ->
+  interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
+  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t ->
+  interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
+  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit 
+  
 
 val print_help : Format.formatter -> unit
 val print_debug_help : Format.formatter -> unit
 val print_transition : Format.formatter -> Hstring.t -> Variable.t list -> unit
+
+val print_backtrace_env : Format.formatter -> (Hstring.t * Variable.t list * 'a) Backtrack.t -> unit

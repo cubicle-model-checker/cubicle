@@ -217,8 +217,7 @@ let check_comp t1 t2 env sigma op =
     | Elem(_, Glob), Elem(_, Glob) ->
       let ev1 = Env.find t1 env in
       let ev2 = Env.find t2 env in
-      interpret_comp (compare_interp_val ev1 ev2) op
-	
+      interpret_comp (compare_interp_val ev1 ev2) op	
     | Elem(_, Glob), Elem(_, (Constr|Var)) ->
       let ev1 = Env.find t1 env in
       let t2 = Term.subst sigma t2 in 
@@ -227,20 +226,17 @@ let check_comp t1 t2 env sigma op =
     | Elem (_, (Constr|Var)), Elem(_, Glob) ->
       let ev1 = Env.find t2 env in
       let t1 = Term.subst sigma t1 in 
-      interpret_comp (compare_interp_val (to_interpret t1 ) ev1) op
-	
+      interpret_comp (compare_interp_val (to_interpret t1 ) ev1) op	
     | Elem(_, Glob), Access _ ->
       let t = Term.subst sigma t2 in
       let ev1 = Env.find t1 env in
       let ev2 = Env.find t env in
-      interpret_comp (compare_interp_val ev1 ev2) op
-	
+      interpret_comp (compare_interp_val ev1 ev2) op	
     | Access _, Elem(_, Glob) ->
       let t = Term.subst sigma t1 in
       let ev1 = Env.find t env in
       let ev2 = Env.find t2 env in
-      interpret_comp (compare_interp_val ev1 ev2) op
-	
+      interpret_comp (compare_interp_val ev1 ev2) op	
     | Elem (_, (Constr|Var)), Access _ ->
 	
       let t = Term.subst sigma t2 in
@@ -1166,11 +1162,57 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
   let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
   let ureqs = uguard env sigma procs trargs tr.tr_ureq in
   let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in
-
   let nv = update_vals env tr.tr_assigns sigma in
   let nv = update_arrs sigma env nv tr.tr_upds in
   let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma env nv tr lock_queue cond_sets semaphores in 
   upd_non_dets nv tr.tr_nondets,lockq,cond_sets, semaphores
+
+
+
+let explain_reqs reqs env sigma tname args=
+  SAtom.fold (fun atom acc ->
+    match atom with
+      | Comp (t1,op,t2) ->
+	if Options.debug_interpreter then 
+	  Format.eprintf "Checking explain requirements, comparing t1 and t2: %a -- %a@." Term.print t1 Term.print t2;
+	let b = check_comp t1 t2 env sigma op in
+	if b then acc
+	else SAtom.add (Comp(Term.subst sigma t1, op, Term.subst sigma t2)) acc	
+      | True -> acc
+      | False ->  SAtom.add atom acc 
+      | Ite _ -> assert false
+  ) reqs SAtom.empty
+
+    
+let explain args trname trans (env,lock_queue,cond_sets, semaphores) =
+  let tr = Trans.find trname trans in
+  let arg_length = List.length tr.tr_args in
+  if List.length args <> arg_length then
+    raise (TopError (WrongArgs (trname,arg_length)));
+  let sigma = Variable.build_subst tr.tr_args args in
+  try
+    check_actor_suspension sigma env tr.tr_process;
+    let satom = explain_reqs tr.tr_reqs env sigma trname args in
+    let procs = Variable.give_procs (Options.get_interpret_procs ()) in
+    let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
+    let ureqs = uguard env sigma procs trargs tr.tr_ureq in
+    let final =
+      List.fold_left (fun acc u ->
+	let r = explain_reqs u env sigma trname args in
+      SAtom.union r acc ) satom ureqs
+    in
+    if SAtom.is_empty final then
+      Format.printf "Transition %a(%a) NOT blocked@." Hstring.print trname Variable.print_vars args
+    else
+      begin
+	Format.printf "Transition %a(%a) blocked because following reqs are false:@." Hstring.print trname Variable.print_vars args; 
+	SAtom.iter (fun atom ->
+      Format.printf "\t%a@." Atom.print atom) final
+      end
+  with
+    | TopError SuspendedProc pp -> Format.printf "Transition %a(%a) blocked due to suspended %a@." Hstring.print trname Variable.print_vars args Term.print pp
+    | TopError SleepingProc pp -> Format.printf "Transition %a(%a) blocked due to sleeping %a@." Hstring.print trname Variable.print_vars args Term.print pp
+       
       
 let check_duplicates l =
   let h = Hashtbl.create( List.length l) in
@@ -1364,7 +1406,8 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
       let rand = Random.int l in
       let (apply,apply_procs) = !transitions.(rand) in
       let tr_num = fresh_back () in
-      running_env := apply_transition apply_procs apply.tr_name trans !running_env;
+      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      running_env := new_env;
       incr steps;
       transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
       let lp = Array.length !transitions in
@@ -1373,7 +1416,7 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
       check_unsafe !running_env unsafe;
       print_interpret_env_file open_file !running_env apply.tr_name apply_procs;
       if tr_num mod !step_flag = 0 then
-	backtrack_env := Backtrack.add tr_num (apply.tr_name, apply_procs, !running_env) !backtrack_env;
+	backtrack_env := Backtrack.add tr_num (apply.tr_name, apply_procs, new_env) !backtrack_env;
       trace := running_env :: !trace
     with
       | TopError Deadlock ->
@@ -1534,31 +1577,36 @@ let dump_in_file env file = assert false
 
 
 
-let replay_all_steps_pre s1 s2 benv =
+let replay_all_steps_pre fmt s1 s2 benv first =
   let count = ref s1 in
+  let old = ref first in
   Format.printf "Press enter to continue each time@.";
   while !count <> s2 do
     ignore(read_line ());
     incr count;
     let tr, tr_args, be = Backtrack.find !count benv in 
     Format.printf "After Step %d, transition %a(%a)@." !count Hstring.print tr Variable.print_vars tr_args;
-    Format.printf "%a" print_debug_env be;
+    print_debug_color_env fmt be !old;
+    old := be
   done;
   Format.printf "Rerun Terminated@."
 
 
-let replay_all_steps_not_pre s1 s2 benv htbl transitions=
+let replay_all_steps_not_pre fmt s1 s2 benv htbl transitions first=
   let count = ref s1 in
+  let old = ref first in 
   let _,_, en = Backtrack.find s1 benv in 
   let en = ref en in
   Format.printf "Press enter to continue each time@.";
   while !count <> s2 do
     ignore(read_line ());
     incr count;
-    let tr, tr_args = Hashtbl.find htbl !count in 
-    en := apply_transition tr_args tr transitions !en;
+    let tr, tr_args = Hashtbl.find htbl !count in
+    let new_env = apply_transition tr_args tr transitions !en in
+    en := new_env;
     Format.printf "After Step %d, transition %a(%a)@." !count Hstring.print tr Variable.print_vars tr_args;
-    Format.printf "%a" print_debug_env !en;
+    print_debug_color_env fmt new_env !old;
+    old := new_env
   done;
   Format.printf "Rerun Terminated@."    
     
@@ -1580,7 +1628,9 @@ let generate_process (env, locks, conds, semaphores) number tsys=
   env,locks,conds, semaphores
 
 
-let replay s1 s2 backtrack htbl transitions= 
+let replay fmt s1 s2 backtrack htbl transitions=
+  Format.eprintf "s1 is: %d@." s1;
+  Format.eprintf "backtrack: %a@." print_backtrace_env backtrack;
   let tr,tr_args, be = Backtrack.find s1 backtrack in
   ignore (Sys.command "clear");
   Format.printf "Rerunning transitions from Step %d to Step %d " s1 s2; 
@@ -1598,8 +1648,8 @@ let replay s1 s2 backtrack htbl transitions=
   in
   Format.printf "Starting from Step %d, post transition %a(%a)@." s1 Hstring.print tr Variable.print_vars tr_args;
   Format.printf "%a@." print_debug_env be;
-  if f then replay_all_steps_pre s1 s2 backtrack
-  else replay_all_steps_not_pre s1 s2 backtrack htbl transitions
+  if f then replay_all_steps_pre fmt s1 s2 backtrack be
+  else replay_all_steps_not_pre fmt s1 s2 backtrack htbl transitions be 
 
   
 let clear_htbl tbl step all =
@@ -1752,10 +1802,10 @@ let setup_env tsys sys =
 
   ignore (Sys.command "clear");
 
-  Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
+  (*Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
   Format.printf "%sCubicle%s@." s2 s2;
   Format.printf "%sInterpreter & Debugger%s@." s3 s3;
-  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;*)
 
   Format.printf "TODO--some kind of intro message and something about setting flag @.";
   
@@ -1826,13 +1876,13 @@ let setup_env tsys sys =
 	    
 	| TopFlag f -> step_flag := f; Format.printf  "States will be saved every %d steps@." f 
 	| TopShowTrace -> print_debug_trans_path fmt !applied_trans !step_flag
-	| TopReplayTrace -> replay 1 !steps !backtrack_env tr_table transitions
+	| TopReplayTrace -> replay fmt 1 !steps !backtrack_env tr_table transitions
 	| TopGoto s -> assert false
 	  
 	| TopRerun(b,e) ->
 	  if b mod !step_flag <> 0 then raise (TopError (StepNotMod b));
 	  if e > !steps then raise (TopError (StepTooBig (e,e)));
-	  replay b e !backtrack_env tr_table transitions
+	  replay fmt b e !backtrack_env tr_table transitions
 	  
 					      
 	| TopCurrentTrace -> Hashtbl.iter (fun k (n,pr) ->
@@ -1840,7 +1890,7 @@ let setup_env tsys sys =
 	  tr_table
 	  
 	| TopWhy(tn,tpl) ->
-	  assert false
+	  explain tpl tn transitions !global_env
 	| TopDebugHelp -> print_debug_help fmt
 	| TopDebugOff -> assert false
 	    

@@ -28,6 +28,8 @@ type top_error =
   | AbsentStep of int
   | StepTooBig of int * int
   | CannotBacktrack of int
+  | ExplainReq of Hstring.t * Hstring.t list * Atom.t 
+	    
 
 
 
