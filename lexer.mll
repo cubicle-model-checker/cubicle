@@ -49,7 +49,7 @@
 	"-help", HELP;
 	"-clear", CLEAR;
 	"-reset", RESTART;
-	"-test", TEST;
+	"-all", ALLT;
 	"release", RELEASE;
 	"release_lock", RELEASELOCK;
 	"relase_rlock", RELEASERLOCK;
@@ -63,7 +63,7 @@
 	"wait", WAIT;
 	"notify", NOTIFY;
         "notify_all", NOTIFYALL;
-	"-kill", KILLPROC;
+	"-random", RANDOMT;
 	"-generate", GENPROC;
 	"-execute", EXEC;
 	"--trace", SHOWTRACE;
@@ -75,10 +75,13 @@
 	"--dhelp", HELPTR;
 	"--flag", FLAGTR;
 	"--off", OFFTR;
+	"-unsafe", UNSAFEINTR;
 	"add_proc", ADDPROC;
 	"sub_proc", SUBPROC;
 	"compare_procs", COMPPROC;
-	"--backtrack", BACKTRACK
+	"--backtrack", BACKTRACK;
+	"-system", INTSYS;
+	"-pre", PREINT;
       ]
 	       
   let newline lexbuf =

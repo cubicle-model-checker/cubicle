@@ -171,7 +171,7 @@ let print_applied_trans fmt l =
 
 
 let print_debug_trans_path fmt l i =
-  Format.printf "Applied transitions:\n---\n  pre: possible transitions before\n  post: possible transitions after\n  MANUAL: transition applied manually,pre/post not calculated\n---@.";
+  Format.printf "Applied transitions:\n---\n  pre: possible transitions before\n  post: possible transitions after\n  MANUAL: transition applied manually, pre/post not calculated\n  @{<b>@{<fg_green>**Step <int>@}@}: resulting env stored and accessible\n---@.";
   if PersistentQueue.is_empty l then Format.printf "no applied transitions@.";
   let rec print_trans q =
     if PersistentQueue.is_empty q then ()
@@ -180,8 +180,8 @@ let print_debug_trans_path fmt l i =
 	let (tn,t,p,ptpre, ptpost),r = PersistentQueue.pop q in
 	let s1 = if ptpre = -1 then "MANUAL" else string_of_int ptpre in
 	let s2 = if ptpost = -1 then "MANUAL" else string_of_int ptpost in
-	if i <> 1 && tn mod i = 0 then 
-	  Format.printf "@{<b>@{<fg_green>Step %d[pre: %s, post: %s]: transition %a(%a)@}@}@."
+	if tn mod i = 0 then 
+	  Format.printf "@{<b>@{<fg_green>**Step %d[pre: %s, post: %s]: transition %a(%a)@}@}@."
 	    tn s1 s2 Hstring.print t Variable.print_vars p
 	else
 	  Format.printf "Step %d[pre: %s, post: %s]: transition %a(%a)@."
@@ -265,14 +265,16 @@ let print_help fmt =
      \t-help : display this list\n\
      \t-status : show current environment\n\
      \t-execute : run random execution\n\
-     \t-test : show possible transitions\n\n\
+     \t-all : show possible transitions\n\
+     \t-random : pick a random transition and apply it\n\
+     \t-unsafe : check if current state is unsafe\n\
+     \t-reset : reset the environment [global system state, trace logs, backtracking info]\n\
      @{<b>@{<u>@{<fg_magenta_b>Debug Commands:@}@}@}\n\
      \t--flag <int> : set how often debugger remembers states for easier backtracking\n\
      \t--trace  : show trace\n\
      \t--replay : replay entire trace, waits for user OK after each step\n\
-     \t--goto <int> : go to step X from trace\n\
+     \t--backtrack <int> : backtrack environment to Step <int>\n\
      \t--rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
-     \t--current : prints current debug state/step (NOT global environment)\n\
      \t--why <transition call> : explain which values interfere with transition application\n\
      \t--dhelp : show debug help@."
 
@@ -284,9 +286,8 @@ let print_debug_help fmt =
      \t--flag <int> : set how often debugger remembers states for easier backtracking\n\
      \t--trace  : show trace\n\
      \t--replay : replay entire trace, waits for user OK after each step\n\
-     \t--goto <int> : go to step X from trace\n\
+     \t--backtrack <int> : backtrack environment to Step <int>\n\
      \t--rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
-     \t--current : prints current debug state/step (NOT global environment)\n\
      \t--why <transition call> : explain which values interfere with transition application\n\
      \t--dhelp : show debug help@."   
 

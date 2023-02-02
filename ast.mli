@@ -102,34 +102,7 @@ type system = {
   trans : transition_info list;
 }
 
-type top_proc =
-  | NormalProc of Hstring.t
-  | ExecutingProc of Hstring.t
 
-
-type toplevel =
-  | TopTransition of (Hstring.t * Hstring.t list) list
-  | TopShowEnv
-  | TopAssign of Hstring.t * term * term
-  | TopHelp
-  | TopClear
-  | TopTest of Hstring.t
-  | TopRestart
-  | TopUnsafe
-  | TopGenProc
-  | TopKillProc of Hstring.t option
-  | TopExec
-      
-  | TopBacktrack of int
-  | TopFlag of int
-  | TopShowTrace
-  | TopReplayTrace
-  | TopGoto of int
-  | TopRerun of int*int
-  | TopCurrentTrace
-  | TopWhy of Hstring.t * Hstring.t list
-  | TopDebugHelp
-  | TopDebugOff
 
 (** type of untyped transition systems constructed by parsing *)
 

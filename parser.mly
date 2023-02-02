@@ -19,6 +19,7 @@
   open Types
   open Parsing
   open Ptree
+  open Toplevel_ast
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -104,15 +105,15 @@
 %token IN
 %token LET
 %token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
-%token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR
-%token WAIT NOTIFY NOTIFYALL KILLPROC GENPROC EXEC
+%token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR UNSAFEINTR INTSYS PREINT
+%token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
-%token STATUS HELP CLEAR RESTART TEST BACKTRACK
+%token STATUS HELP CLEAR RESTART ALLT BACKTRACK
 %token EOF
 
 %nonassoc IN       
@@ -127,7 +128,7 @@
 /* %left BAR */
 
 %start toplevel     
-%type <Ast.toplevel> toplevel
+%type <Toplevel_ast.toplevel> toplevel
   
 %type <Ast.system> system
 %start system
@@ -671,17 +672,18 @@ toplevel_assign:
       
 toplevel:
   | TRANSITION toplevel_trans_list { TopTransition $2}
+  | UNSAFEINTR { TopUnsafe }
   | STATUS { TopShowEnv }
+  | INTSYS { TopPrintSys }
+  | PREINT top_level_trans { let tn, ta = $2 in TopPre(tn,ta) }
   | CONSTPROC {TopShowEnv}
-  | TEST { TopTest (Hstring.make "1")}
+  | ALLT { TopAll }
   | HELP { TopHelp }
   | CLEAR { TopClear }
   | RESTART {TopRestart}
   | toplevel_assign { $1 }
-  | UNSAFE { TopUnsafe }
   | GENPROC { TopGenProc }
-  | KILLPROC { TopKillProc(None)}
-  /*| KILLPROC top_proc_name { TopKillProc (Some $2)}*/
+  | RANDOMT { TopRandom}
   | EXEC { TopExec }
   | BACKTRACK INT { let i  = Num.int_of_num $2 in TopBacktrack i}
   | FLAGTR INT { let i  = Num.int_of_num $2 in TopFlag i }
