@@ -1382,7 +1382,6 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
 
     
 let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
-  Sys.catch_break true;
   let backtrack_env = ref main_bt_env in
   (*let trace = ref [] in*)
   let steps = ref steps in
@@ -1416,27 +1415,25 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
     with
       | TopError Deadlock ->
 	deadlock := true;
-	Sys.catch_break false;
 	close_out open_file;
 	Format.fprintf fmt
 	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false;
 	(*backtrack_replay !running_env ~trace:!trace !queue orig_env !backtrack_env !steps*)	 
       | TopError Unsafe ->
-	Sys.catch_break false;
 	Format.fprintf fmt
 	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Do you wish to continue? (y/n)@.";
 	begin
 	  let rec decide () =
 	    let inp = read_line () in
 	    match inp with
-	      | "y" -> Sys.catch_break true
+	      | "y" -> ()
 	      | "n" -> running := false; close_out open_file
 	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
 	  in decide ()
 	end 
-      | Stdlib.Sys.Break -> Sys.catch_break false;close_out open_file; running := false
-      | TopError StopExecution -> Sys.catch_break false; close_out open_file; running := false
-      | s -> Sys.catch_break false; close_out open_file;
+      | Stdlib.Sys.Break -> close_out open_file; running := false; Format.printf "@."
+      | TopError StopExecution ->  close_out open_file; running := false
+      | s ->  close_out open_file;
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
   done;
@@ -1614,7 +1611,8 @@ let clear_queue queue step  =
   
     
     
-let setup_env tsys sys = 
+let setup_env tsys sys =
+  Sys.catch_break true;
   let fmt = Format.std_formatter in
   (*generate X distinc procs*)
   let num_procs = Options.get_interpret_procs () in
@@ -1875,9 +1873,10 @@ let setup_env tsys sys =
       );
       
     with
-      | TopError e -> Sys.catch_break false;Format.printf "%a@." top_report e
-      | End_of_file  -> Sys.catch_break false;interpret_bool := false
-      | s ->  Sys.catch_break false; let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError)
+      | TopError e -> Format.printf "%a@." top_report e
+      | End_of_file  -> interpret_bool := false
+      | Stdlib.Sys.Break -> Format.printf "@."
+      | s ->  (*let e = Printexc.to_string s in *)Format.printf "%a@."top_report (InputError)
       
   done 
   
