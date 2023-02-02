@@ -1,0 +1,28 @@
+type t = A | B | C
+type status = H
+
+var X : t
+
+array R[proc] : t
+
+var L : lock
+
+init(i) { X = A && R[i] = A }
+
+unsafe() { X = A}
+
+
+transition t1()
+requires { X = A }
+{ X := B }
+
+
+transition t2(i)
+requires { X = B && R[i] = B }
+{ R[i] := B;
+  acquire(L,i)}
+
+
+transition t3(i)
+requires { R[i] = A && forall_other j. R[j] = B}
+{ R[i] := C } 
