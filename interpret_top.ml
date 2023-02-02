@@ -522,10 +522,10 @@ let switchy_satoms op g1 g2 sacc =
 let upd_array_case sigma orig upd tname env =
   let all_procs = Variable.give_procs (Options.get_interpret_procs ()) in 
   (*List.iter (fun x -> Format.eprintf "pre filter: %a@." Hstring.print x) all_procs;*)
-  let all_procs = List.filter (fun x ->
+  (*let all_procs = List.filter (fun x ->
     let elem = Elem(x, Var) in
     let v = Env.find elem env in
-    v.value = VAlive) all_procs in
+    v.value = VAlive) all_procs in*)
   (*List.iter (fun x -> Format.eprintf "Post filter: %a@." Hstring.print x) all_procs;*)
   let swts = upd.up_swts in
   List.fold_left (fun acc proc ->
@@ -572,8 +572,7 @@ let upd_array_case sigma orig upd tname env =
 					
 		      | None, Some gn1 -> switchy_satoms op proc gn1 sacc  && sacc
  
-		      | Some gn1, Some gn2 -> switchy_satoms op gn1 gn2 sacc  && sacc		
-			
+		      | Some gn1, Some gn2 -> switchy_satoms op gn1 gn2 sacc  && sacc	  			
 		  end 
 
 		  | Elem(n1,Var), _  ->
@@ -669,10 +668,10 @@ let upd_matrix sigma orig upd =
     | false ->
       let procs = Variable.give_procs (Options.get_interpret_procs ()) in
       List.iter (fun x -> Format.eprintf "pre filter: %a@." Hstring.print x) procs;
-      let procs = List.filter (fun x ->
+      (*let procs = List.filter (fun x ->
 	let elem = Elem(x, Var) in
 	let v = Env.find elem orig in
-	(v.value = VAlive) ) procs in
+	(v.value = VAlive) ) procs in*)
       List.iter (fun x -> Format.eprintf "Post filter: %a@." Hstring.print x) procs;
       let all = gen_array_combs upd.up_arr procs in
       (*List.iter (fun x ->
@@ -1454,7 +1453,7 @@ let pick_random fmt glob_env trans all_procs unsafe applied_trans orig_env main_
   if l = 0 then raise (TopError Deadlock);
   let rand = Random.int l in
   let (apply,apply_procs) = transitions.(rand) in
-  Format.printf "Picked and applied random transition from %d possible\n\
+  Format.printf "Picked and applied a random transition from %d possible\n\
                  Transition: %a(%a)@."
     l Hstring.print apply.tr_name Variable.print_vars apply_procs;
   let tr_num = fresh_back () in
@@ -1826,7 +1825,7 @@ let setup_env tsys sys =
 	| TopPre(tn,tp) -> (*let _t = Trans.find tn transitions in*)
 			   give_pre !global_env tsys.t_trans
 	  
-	| TopAll->	  	  
+	| TopAll ->	  	  
 	  let l = all_possible_transitions !global_env transitions procs false in
 	  if l = [] then
 	    begin

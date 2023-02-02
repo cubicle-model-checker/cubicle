@@ -51,6 +51,7 @@ type lock =
   | VarLock of Term.t * Hstring.t
 
 type lock_uses =
+  | Condition of lock
   | Lock of lock 
   | Unlock of lock 
   | Wait of lock 
