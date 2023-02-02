@@ -756,7 +756,7 @@ let uguard env sigma args tr_args = function
   | [] -> [SAtom.empty]
   | [j, dnf] ->
     let uargs = List.filter (fun a -> not (Hstring.list_mem a tr_args)) args in
-    let uargs =
+    (*let uargs =
       List.fold_left (fun acc proc ->
 	let elem = Elem(proc, Var) in
 	let v = Env.find elem env in
@@ -764,7 +764,7 @@ let uguard env sigma args tr_args = function
 	  | VAlive -> proc::acc
 	  | VSuspended -> acc
 	  | _ -> acc ) [] uargs 
-    in 
+    in *)
       List.fold_left 
 	(fun lureq z ->
 	   let m = List.map (SAtom.subst ((j, z)::sigma)) dnf in
