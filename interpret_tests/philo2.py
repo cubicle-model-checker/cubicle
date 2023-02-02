@@ -6,7 +6,7 @@ import random
 n = 5 #int(sys.argv[1])
 x = n
 c = threading.Condition()
-#s = threading.Semaphore(n-1)
+s = threading.Semaphore(n-1)
 
 def yielde():
     time.sleep(random.uniform(0.1,0.5))
@@ -16,7 +16,7 @@ def run(i):
     global c
     global x
     for k in range(3):
-        #s.acquire()
+        s.acquire()
 
         # Get1_lock
         with c:
@@ -33,8 +33,7 @@ def run(i):
             x -= 1
             # Release_Get2
             print(i,':get2')
-        yielde()
-        with c:
+            yielde()
             x += 2
             c.notify_all()
             print(i,':release')
