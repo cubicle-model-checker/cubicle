@@ -1,0 +1,11 @@
+type t = A | B
+
+array W[proc] : t
+array W1[proc] : t
+
+
+init(i) { W[i] = A && W1[i] = B }
+
+
+transition t1(i)
+{ W[i] := W1[i] } 

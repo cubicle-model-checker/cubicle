@@ -410,7 +410,11 @@ let upd_arr_direct sigma orig upd tname =
       let t = Term.subst sigma elem in
       begin
 	match upt with
-	  | Elem(_, Glob) | Access _ -> let t2 = Env.find upt orig in
+	  | Elem(_, Glob) -> let t2 = Env.find upt orig in
+					t, t2
+	  | Access _ -> let upt = Term.subst sigma upt in
+			let t2 = Env.find upt orig in
+			
 					t, t2
 	  | ProcManip ([tpm], addsub) -> let tt = Term.subst sigma tpm in
 			   t, (to_interpret (ProcManip([tt],addsub))) 
@@ -1315,31 +1319,31 @@ let rec exp n =
     
 let print_val fmt v =
   match v with
-    | VInt i -> Format.fprintf fmt "%d" i
-    | VReal r -> Format.fprintf fmt "%f" r
-    | VBool b -> Format.fprintf fmt "%b" b
-    | VConstr el | VGlob el  -> Format.fprintf fmt "%a" Hstring.print el
-    | VProc i -> Format.fprintf fmt "%a" Hstring.print i
+    | VInt i -> Format.fprintf fmt "\'%d\'" i
+    | VReal r -> Format.fprintf fmt "\'%f\'" r
+    | VBool b -> Format.fprintf fmt "\'%b\'" b
+    | VConstr el | VGlob el  -> Format.fprintf fmt "\'%a\'" Hstring.print el
+    | VProc i -> Format.fprintf fmt "\'%a\'" Hstring.print i
     | VLock(b, vo) ->
       if b then
 	match vo with
 	  | None -> assert false
-	  | Some p -> Format.fprintf fmt "locked by process %a" Term.print p
+	  | Some p -> Format.fprintf fmt "\'locked by process %a\'" Term.print p
       else
-	Format.fprintf fmt "unlocked"
-    | VAlive -> Format.fprintf fmt "process active"
-    | VSuspended -> Format.fprintf fmt "process suspended"
-    | VSleep _ -> Format.fprintf fmt "process asleep"
+	Format.fprintf fmt "\'unlocked\'"
+    | VAlive -> Format.fprintf fmt "\'process active\'"
+    | VSuspended -> Format.fprintf fmt "\'process suspended\'"
+    | VSleep _ -> Format.fprintf fmt "\'process asleep\'"
     | VRLock (b,po,i) ->
       if b then
 	 match po with
 	   | None -> assert false
-	   | Some p -> Format.fprintf fmt "locked by process %a %d time(s)" Term.print p i
+	   | Some p -> Format.fprintf fmt "\'locked by process %a %d time(s)\'" Term.print p i
       else
-	Format.fprintf fmt "unlocked"
-    | VSemaphore i -> Format.fprintf fmt "%d" i
-    | UNDEF -> Format.fprintf fmt "%s" "UNDEF"
-    | VAccess(l,t) -> Format.fprintf fmt "%a[%a]" Hstring.print l (Hstring.print_list ", ") t
+	Format.fprintf fmt "\'unlocked\'"
+    | VSemaphore i -> Format.fprintf fmt "\'%d\'" i
+    | UNDEF -> Format.fprintf fmt "%s" "\'UNDEF\'"
+    | VAccess(l,t) -> Format.fprintf fmt "\'%a[%a]\'" Hstring.print l (Hstring.print_list ", ") t
     | VArith _ -> ()
 
 let print_wait fmt el =
@@ -1380,14 +1384,17 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
   Format.fprintf  f "\n"
 
 
+
+
+
     
 let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
   let backtrack_env = ref main_bt_env in
   (*let trace = ref [] in*)
   let steps = ref steps in
-  let dfile = Filename.basename Options.file in
+  (*let dfile = Filename.basename Options.file in
   let open_file = open_out (dfile^".txt") in
-  print_header open_file dfile;
+  print_header open_file dfile;*)
   Random.self_init ();
   let running_env = ref glob_env in
   let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
@@ -1408,14 +1415,14 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
       Hashtbl.add tr_table tr_num (apply.tr_name, apply_procs);
       queue := PersistentQueue.push (tr_num, apply.tr_name,apply_procs, l, lp) !queue;
       check_unsafe !running_env unsafe;
-      print_interpret_env_file open_file !running_env apply.tr_name apply_procs;
+      (*print_interpret_env_file open_file !running_env apply.tr_name apply_procs;*)
       if tr_num mod !step_flag = 0 then
 	backtrack_env := Backtrack.add tr_num (apply.tr_name, apply_procs, new_env) !backtrack_env(*;
       trace := running_env :: !trace*)
     with
       | TopError Deadlock ->
 	deadlock := true;
-	close_out open_file;
+	(*close_out open_file;*)
 	Format.fprintf fmt
 	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false;
 	(*backtrack_replay !running_env ~trace:!trace !queue orig_env !backtrack_env !steps*)	 
@@ -1427,17 +1434,17 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
 	    let inp = read_line () in
 	    match inp with
 	      | "y" -> ()
-	      | "n" -> running := false; close_out open_file
+	      | "n" -> running := false(*; close_out open_file*)
 	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
 	  in decide ()
 	end 
-      | Stdlib.Sys.Break -> close_out open_file; running := false; Format.printf "@."
-      | TopError StopExecution ->  close_out open_file; running := false
-      | s ->  close_out open_file;
+      | Stdlib.Sys.Break -> (*close_out open_file;*) running := false; Format.printf "@."
+      | TopError StopExecution ->  (*close_out open_file; *)running := false
+      | s ->  (*close_out open_file;*)
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
   done;
-  close_out open_file;
+  (*close_out open_file;*)
   !queue, !running_env, !backtrack_env, !steps
 
 
@@ -1494,7 +1501,14 @@ let pick_random fmt glob_env trans all_procs unsafe applied_trans orig_env main_
   
 
     
-let dump_in_file env file = assert false
+let dump_in_file  (env,locks, cond, sem) file =
+  let f = Format.formatter_of_out_channel file in
+  Format.fprintf f "[\n"; 
+  Env.iter( fun k {value = v } ->
+    Format.fprintf f "[\'%a\'," Term.print k; print_val f v; Format.fprintf f "],\n"
+  ) env;
+  Format.fprintf f "];"
+  
 
 
 
@@ -1852,7 +1866,12 @@ let setup_env tsys sys =
 	  backtrack_env := be;
 	  steps := ste
 		       
-		       
+
+	| TopDump ->
+	  let dfile = Filename.basename Options.file in
+	  let open_file = open_out (dfile^".txt") in
+	  dump_in_file !global_env open_file;
+	  close_out open_file
 	  
 	| TopAssign(name,n, tt) ->
 	  (*TO DO FOR CONSTRUCTORS: check that it belongs to type ++ deal with SUBTYPING*)
@@ -1876,7 +1895,7 @@ let setup_env tsys sys =
       | TopError e -> Format.printf "%a@." top_report e
       | End_of_file  -> interpret_bool := false
       | Stdlib.Sys.Break -> Format.printf "@."
-      | s ->  (*let e = Printexc.to_string s in *)Format.printf "%a@."top_report (InputError)
+      | s ->  (*let e = Printexc.to_string s in*) Format.printf "%a@." top_report (InputError)
       
   done 
   

@@ -1,0 +1,111 @@
+(*
+ Process i:
+
+ while (true) {
+ L1:
+   buffer(Want[i]) := true;
+ L2:
+   Turn := Other[i];
+ L3:
+   while ( Want[Other[i]] && Turn <> i) { ; }
+ L4_crit:
+   // section critique
+ L5:
+   Want[i] := false;
+ L6:
+   // section restante
+ }
+
+*)
+
+number_procs 2
+
+type loc =  L1 | L2 | L3 | L4_crit | L5 | L6 | Stop
+
+array PC[proc] : loc
+var Turn : proc
+array Want[proc] : bool
+array Want_buffer[proc] : bool
+array Want_buffer_to_sync[proc] : bool
+
+
+(* ----------------------*)
+(* Initialization        *)
+(* ----------------------*)
+
+init (i)
+{ PC[i] = L1 &&  Want[i] = False &&
+  Want_buffer[i] = False &&
+  Want_buffer_to_sync[i] = False }
+
+
+(* ----------------------*)
+(* Properties            *)
+(* ----------------------*)
+
+(* Safety *)
+unsafe (i j) { PC[i] = L4_crit && PC[j] = L4_crit }
+
+(* Starving *)
+(* unsafe (i j) { PC[i] = L3 && PC[j] = Stop && Want_buffer_to_sync[j] = False && *)
+(*                Turn <> i && Want[j] = True } *)
+
+(* Deadlock *)
+(* unsafe (i j) { PC[i] = L3 && PC[j] = L3 && *)
+(*                Turn <> i && Want[j] <> True && *)
+(*                Turn <> j && Want[i] <> True } *)
+
+
+(* ----------------------*)
+(* Transitions           *)
+(* ----------------------*)
+
+(* Buffer synchronization *)
+
+transition sync ( i )
+requires { Want_buffer_to_sync[i] = True }
+{ Want[i] :=  Want_buffer[i];
+  Want_buffer_to_sync[i] := False; }
+
+(* Processes behavior *)
+
+transition t_L1_L2 ( i )
+requires { PC[i] = L1 }
+{ Want_buffer[i] := True;
+  Want_buffer_to_sync[i] := True;
+  PC[i] := L2; }
+
+transition t_L2_L3 ( i j )
+requires { PC[i] = L2 }
+{ Turn := j;
+  PC[i] := L3; }
+
+transition t_L3_L4_1 ( i j )
+requires { PC[i] = L3 && Want[j] = False }
+{ PC[i] := L4_crit; }
+
+transition t_L3_L4_2 ( i )
+requires { PC[i] = L3 && Turn = i }
+{ PC[i] := L4_crit; }
+
+transition t_L4_L5 ( i )
+requires { PC[i] =  L4_crit }
+{ PC[i] := L5; }
+
+transition t_L5_L6 ( i )
+requires { PC[i] = L5 }
+{ Want_buffer[i] := False;
+  Want_buffer_to_sync[i] := True;
+  PC[i] := L6; }
+
+transition t_L6_L1 ( i )
+requires { PC[i] = L6 }
+{ PC[i] := L1; }
+
+transition t_Stop1 ( i )
+requires { PC[i] = L1 }
+{ PC[i] := Stop; }
+
+transition t_Stop2 ( i )
+requires { PC[i] = L6 }
+{ PC[i] := Stop; }
