@@ -1,0 +1,17 @@
+type t = A | B | C | D | E
+
+
+var L : lock
+var F : t
+
+
+init (i) { F = A }
+
+
+transition t1([i])
+{  acquire(L,i) }
+
+
+transition t2()
+{ F := B }
+

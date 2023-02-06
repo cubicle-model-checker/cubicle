@@ -13,9 +13,11 @@ type toplevel =
   | TopHelp
   | TopClear
   | TopAll
+  | TopFuzz of int
   | TopRestart
   | TopUnsafe
   | TopGenProc
+  | TopDump
   | TopRandom
   | TopExec 
   | TopBacktrack of int

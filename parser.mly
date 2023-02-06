@@ -106,14 +106,14 @@
 %token LET
 %token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
 %token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR UNSAFEINTR INTSYS PREINT
-%token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC
+%token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC FUZZ
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
-%token STATUS HELP CLEAR RESTART ALLT BACKTRACK
+%token STATUS HELP CLEAR RESTART ALLT BACKTRACK DUMP
 %token EOF
 
 %nonassoc IN       
@@ -673,6 +673,7 @@ toplevel_assign:
 toplevel:
   | TRANSITION toplevel_trans_list { TopTransition $2}
   | UNSAFEINTR { TopUnsafe }
+  | FUZZ INT {let i  = Num.int_of_num $2 in TopFuzz i} 
   | STATUS { TopShowEnv }
   | INTSYS { TopPrintSys }
   | PREINT top_level_trans { let tn, ta = $2 in TopPre(tn,ta) }
@@ -682,6 +683,7 @@ toplevel:
   | CLEAR { TopClear }
   | RESTART {TopRestart}
   | toplevel_assign { $1 }
+  | DUMP { TopDump } 
   | GENPROC { TopGenProc }
   | RANDOMT { TopRandom}
   | EXEC { TopExec }

@@ -1,0 +1,20 @@
+type t = A | B | C | D | E
+
+
+array X[proc] : t
+var F : t
+
+
+init (i) { X[i] = A }
+
+
+transition t1()
+{  F := C }
+
+(*
+transition t2([i] j k)
+{ X[j] := B }
+
+
+transition t3(some other [himbo])
+{ X[other] := E }*)

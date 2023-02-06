@@ -75,6 +75,8 @@
 	"--dhelp", HELPTR;
 	"--flag", FLAGTR;
 	"--off", OFFTR;
+	"-dump", DUMP;
+	"-fuzz", FUZZ;
 	"-unsafe", UNSAFEINTR;
 	"add_proc", ADDPROC;
 	"sub_proc", SUBPROC;

@@ -119,7 +119,7 @@ CMO = version.cmo options.cmo \
       cube.cmo node.cmo pretty.cmo ptree.cmo parser.cmo lexer.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo \
-      interpret_errors.cmo interpret_types.cmo interpret_scenario.cmo interpret_top.cmo \
+      interpret_errors.cmo interpret_types.cmo interpret_scenario.cmo interpret_calc.cmo interpret_top.cmo \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \
       stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
