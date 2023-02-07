@@ -18,7 +18,7 @@ open Printf
 
 type g_varst = (Hstring.t * int) Hstring.HMap.t
 
-let tmp_file_name = "simulator/stmp.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
+let tmp_file_name = "simulator/mymodel.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
 let out_file = open_out tmp_file_name  
 let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule, impossible en caml *)
 let updated_prefix = "n"                  (* Voir dans transition *)
@@ -27,7 +27,9 @@ let pfile = fun d -> fprintf out_file d
 let get_var_type var_name g_vars    = let (t,_) = Hstring.HMap.find var_name g_vars in t
 let get_var_dim  var_name  g_vars   = try let (_, d) = Hstring.HMap.find var_name g_vars in d with Not_found -> -1
 
-(* BEGIN : Fonction d'aide ; Peut être a déplacer dans un fichier 'clib.ml' *)
+let sim_max_int   = "1000000"
+let sim_max_float = "1000000."
+
 let get_var_name v = sprintf "%s%s" var_prefix (Hstring.view v)
 let get_updated_name v = sprintf "%s%s" updated_prefix (Hstring.view v)
 let get_constr_name s g_vars =
@@ -46,7 +48,7 @@ let get_value_for_type ty ty_defs =
   | "int" | "proc" -> "0"
   | "real" -> "0."
   | "bool" | "mbool" -> "true"
-  | _ -> "\""^Hstring.view (List.hd (Hashtbl.find ty_defs ty))^"\"" (* Note : Hashtbl.find ne devrait pas throw Not_Found car ast valide. *) 
+  | _ -> "\""^Hstring.view (List.hd (Hashtbl.find ty_defs ty))^"\"" 
 
 let mconst_is_float mconst g_vars  = 
   MConst.exists 
@@ -100,7 +102,7 @@ let mconst_to_string cs =
       let nv = 
       match v with 
       | 1 -> sprintf "%s" (const_to_string k)
-      | _ -> sprintf "(%s * %d)" (const_to_string k) v (* Note : Ici les parentèse dans le string ne sont pas réllement obligatoire mais je trouve que ça rend le code final plus lisible *) 
+      | _ -> sprintf "(%s * %d)" (const_to_string k) v 
     in
     match prev with 
     | "" -> sprintf "%s" nv
@@ -135,14 +137,11 @@ let rec print_term g_vars = function
 
 let get_random_for_type ty ty_defs =
   match (Hstring.view ty) with
-  | "int" -> "Random.int max_int" 
+  | "int" -> "Random.int "^sim_max_int
   | "proc" -> "get_random_proc ()"
-  | "real" -> "Random.float max_float"
+  | "real" -> "Random.float "^sim_max_float
   | "bool" | "mbool" -> "Random.bool ()"
   | t -> Format.sprintf "get_random_in_list %s" t
 
 
 module IntMap = Map.Make(struct type t = int let compare : int -> int -> int = Int.compare end) 
-
-(* END : Fonction d'aide *)
-

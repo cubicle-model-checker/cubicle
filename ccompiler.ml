@@ -58,74 +58,31 @@ let write_vars s ty_defs=
   pfile "\n";
   !returned
 
-(* var_as_string *)
+(* State getter *)
 
-let write_var_as_string g_vars ty_defs = 
-  pfile "let var_as_string name want = match name with\n";
+let write_state_getter g_vars ty_defs = 
+  pfile "let state_getter () = \n";
 
-  let print_var_view name (ty, dim) =
-    let perc = "%" in
-    pfile "\t| \"%s\" -> \n" (Hstring.view name);
-    if dim = 0 then 
-      (
-      let realname = sprintf "(!%s)" (get_var_name name) in
-      begin match (Hstring.view ty) with
-      | "int" | "proc" -> 
-          pfile "\t\tsprintf \"%sd\" %s" perc realname
-      | "real" -> 
-          pfile "\t\tsprintf \"%sf\" %s" perc realname
-      | "bool" | "mbool" -> 
-          pfile "\t\tsprintf \"%sb\" %s" perc realname
-      | _ -> 
-          pfile "\t\tsprintf \"%ss\" %s" perc realname 
-      end;
-      pfile "\n"
-      )
-    else
-      (
-        pfile "\t\tlet result = ref \"\" in \n";
-        for i = 1 to dim do 
-          pfile "%sresult := (!result)^\"[ \";\n" (mult_string "\t" (i+1));
-          pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" (i+1)) (i-1);
-        done;
-
-        let pexcl = if dim = 0 then "!" else "" in
-        let realname = sprintf "(%s%s%s)" pexcl (get_var_name name) (deplier_var dim) in
-        pfile "%sresult := (!result)^sprintf\"%s" (mult_string "\t" (dim+2)) perc;
-        begin match (Hstring.view ty) with
-        | "int" | "proc" -> 
-          pfile "d"
-        | "real" -> 
-          pfile "f"
-        | "bool" | "mbool" -> 
-            pfile "b"
-        | _ -> 
-            pfile "s"
-      end;
-      pfile " \"%s\n" realname;
-
-      for i = dim downto 1 do 
-        pfile "%sdone;\n" (mult_string "\t" (i+1));
-        pfile "%sresult := (!result)^\"]\";\n" (mult_string "\t" (i+1));
-      done;
-      pfile "\t\t!result\n"
-      )
+  let add_var_to_state name (ty, dim) =
+    pfile "\t(\"%s\", " (Hstring.view name);
+    let nt =
+      match (Hstring.view ty) with
+      | "int" | "proc"  -> "VInt"
+      | "bool"| "mbool" -> "VBool"
+      | "real"  -> "VFloat"
+      | _       -> "VConstr"
+    in
+    begin match dim with
+    | 0 -> pfile "Val(%s(!%s)))" nt (get_var_name name)
+    | 1 -> pfile "Arr(List.map (fun x -> %s(x)) (Array.to_list %s)))" nt (get_var_name name)
+    | _ -> pfile "Mat(List.map (fun y -> List.map (fun x -> %s(x)) (Array.to_list y)) (Array.to_list %s)))" nt (get_var_name name)
+    end;
+    pfile ";\n"
   in
-
-  Hstring.HMap.iter print_var_view g_vars;
-  pfile "\t| _ -> raise Not_found\n";
-  pfile "in\n"
-
-
-let write_dumper g_vars ty_defs =
-  let perc = "%" in
-  let write_dumper_var var_name var_info =
-    pfile "\tprintf \"%s = %ss\\n\" (var_as_string \"%s\" []);\n" (Hstring.view var_name) perc (Hstring.view var_name);
-  in
-  pfile "let dump_vars () =\n";
-  pfile "\tprintf \"----------Current State----------\\n\";\n";
-  Hstring.HMap.iter write_dumper_var g_vars;
-  pfile "\tprintf \"---------------------------------\\n%s!\"\nin\n\n" perc
+  pfile "[ \n";
+  Hstring.HMap.iter add_var_to_state g_vars;
+  pfile "\t(\"NONE\", Val(VInt(0)))\n";
+  pfile "]\nin\n\n"
 
 (* Init declaration *)
 
@@ -153,8 +110,8 @@ let write_init (vars, dnf) g_vars ty_defs =
     (* Union find *)
     let unionfind = function 
       | Comp(Elem(e1, _) , Eq, Elem(e2, _)) | Comp(Elem(e1,_), Eq, Access(e2,_)) | Comp(Access(e1,_), Eq, Elem(e2,_)) | Comp(Access(e1,_), Eq, Access(e2, _)) -> union e1 e2 
-      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) -> union e1 (Hstring.make (mconst_to_string e2)) 
-      | _ -> () (* Currently, the compiler can only manage equality in init *)
+      | Comp(Elem(e1, _), Eq, Const(e2)) | Comp(Const(e2), Eq, Elem(e1,_)) | Comp(Access(e1,_), Eq, Const(e2)) | Comp(Const(e2), Eq, Access(e1,_))-> union e1 (Hstring.make (mconst_to_string e2)) 
+      | _ -> printf "CCompiler Warning : Unsupported atom type\n" (* Currently, the compiler can only manage equality in init *)
     in 
     SAtom.iter unionfind satom;
     (* 
@@ -252,13 +209,7 @@ let write_transitions trans_list ty_defs g_vars =
       List.iter write_args trans_args;
     end in
 
-    (* Note : 
-      As i arbitrarily decided to use ref for vars, we need to work in two phases :
-        - In the first phase, we are going to set each value that the new vars will take 
-        - In the second phase, we need to actually update the vars value 
-      For that, we are going to use an Hashtbl with as a key, the var that need to be updated and as a value the name of the var containing it's new value. 
-      Note : Since we know how to get the new_val_name from a var_name, we could just use a Set instead of a Hashtbl but oh well
-    *)
+    (*  NOTE : Since we know how to get the new_val_name from a var_name, we could just use a Set instead of a Hashtbl *)
 
     let updated = Hashtbl.create (Hstring.HMap.cardinal g_vars) in
 
@@ -279,7 +230,7 @@ let write_transitions trans_list ty_defs g_vars =
       print_term g_vars t2;
     | True -> pfile "true"
     | False -> pfile "false"
-    | Ite(satom, t1, t2) -> (* Note : As of writing, Ite aren't actually implemented in the transition, so this will effectively never happen *) 
+    | Ite(satom, t1, t2) -> (* NOTE : As of writing, Ite aren't actually implemented in the transition, so this will effectively never happen *) 
         pfile "if (";
         SAtom.iter print_atom_and satom;
         pfile ")then (";
@@ -305,7 +256,6 @@ let write_transitions trans_list ty_defs g_vars =
     pfile "let ac_%s args = \n" trans_name;
     write_args ();
 
-    (* To easily write switch, we just write them as a sequence of if else statement. *)
     let print_switch swts = 
       let print_switch_sub last (satom, term) = 
         if not last then   
@@ -405,8 +355,7 @@ let write_transitions trans_list ty_defs g_vars =
   in
   List.iter write_table trans_list;
   pfile "mymodel := Model.set_init init (!mymodel);\n";
-  pfile "mymodel := Model.set_vars ([], var_as_string) (!mymodel);\n"
-  pfile "register_dumper dump_vars;\n";
+  pfile "mymodel := Model.set_vars ([], state_getter) (!mymodel);\n";
   pfile "set_model (!mymodel)\n"
 
 let write_unsafe unsafe =
@@ -415,12 +364,12 @@ let write_unsafe unsafe =
 
 let run ts s =
   pfile "open Utils\n";
+  pfile "open Model\n";
   pfile "open Format\n\n";
   pfile "let build_model () =\n";
   let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
-  write_var_as_string g_vars g_types;
-  write_dumper g_vars g_types;
+  write_state_getter g_vars g_types;
   write_init ts.t_init g_vars g_types;
   write_transitions ts.t_trans g_types g_vars;
   write_unsafe s.unsafe;

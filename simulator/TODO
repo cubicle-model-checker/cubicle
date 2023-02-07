@@ -3,23 +3,13 @@
 ## Simulateur
 
 - [.] Le modèle devrait contenir les unsafe
-- [.] S'occuper de la partie "renderer"
-- [.] On peut réfléchir a déplacer le dumper du fichier compilé vers le modèle. (Ça serait beaucoup plus cohérent)
-- [.] On peut aussi réfléchir a changer le makefile pour qu'il prenne un argument : Cet argument est le fichier stmp.ml, afin que ce soit peut être plus portable
 - [.] On veut pouvoir valider / changer un init -> Par exemple pour ricart_abdulla, c'est bien d'avoir un random_float mais généralement on en veut pas non plus un immense donc pouvoir set quelques variables a la main peut être utile
--> On doit donc possiblement avoir un variable setter ? Il pourrait être utile dans tout les cas pendant la simulation
-- [.] On voudrait qu'au lieu d'avoir 'stmp', on ait 'mymodel.ml' et 'myscene.ml'. Idéalement, on voudrait qu'il y ait un paramètre pour utiliser ou non la scène
-
-On veut probablement avoir:
-Dans le simulator.ml, avoir une "exclude_list" qui soit modifiable au runtime afin de bloquer ou non des transition pour qu'elle ne se prenne pas automatiquement
-On peut généralement penser a des paramètre de simulation comme:
-- exlude_all : bool						(* Si vrai, aucune transition ne sera prise automatiquement *)
-- exclude_list : string list 	(* Transition qui ne peuvent pas être prise automatiquement *)
-
-Plus généralement, on veut influencer A LA FOIS le simulateur et le modèle
+- [.] Step devrait renvoyer un Model.trace. Le simulateur devrait avoir un Model.full_trace
+- [.] Il serait intéréssant d'avoir une graphics library qui ne serait PAS OBLIGATOIRE, mais tout de même présent pour avoir un truc ultra rapide
 
 ## Compilateur
 
 - [.] On veut (peut-être) un paramètre -o pour spécifier le path
-- [.] Le compilateur ne met pour le moment pas les variables dans le modèle
 - [.] Il faudrait compiler un setter
+- [.] Il faudrait supprimer le "NONE" du state
+- [.] Faire un random jusqu'a max_float rend tout illisible, faudrait il le changer ?

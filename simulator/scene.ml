@@ -1,8 +1,8 @@
 (* 
-  pre_init          : Appelé avant que le modèle soit initialisé
-  post_init         : Appelé après que le modèle soit initialisé
-  on_model_change   : Appelé lorsque le modèle est modifié
-  update            : Appelé chaque tick
+  pre_init          : Called before model init
+  post_init         : Called after model init
+  on_model_change   : Called when model changed
+  update            : Called each tick. Parameter is time ellapsed since last call
 *)
 type t    = (unit -> unit) * (unit -> unit) * (unit -> unit) * (float -> unit)  
 

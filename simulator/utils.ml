@@ -1,3 +1,5 @@
+open Format
+open Model
 
 (* Getters and setters *)
 let scene         = ref Scene.empty
@@ -12,8 +14,32 @@ let nb_proc         = ref 0
 let get_nb_proc ()  = !nb_proc
 let set_nb_proc nbp = nb_proc := nbp 
 
-let dumper = ref (fun () -> ()) 
-let register_dumper dump = dumper := dump 
+let dumper () = 
+  let mstate = Model.get_state (!model) in
+  printf "-------- BEGIN DUMP --------\n";
+  let print_val (val_name, val_value) =
+    printf "%s : " val_name;
+    let pval v = printf "%s " (Model.vuv_to_string v)
+    in
+    let parr a = 
+      printf "[ ";
+      List.iter pval a; 
+      printf "]"
+    in
+    let pmat m = 
+      printf "[ ";
+      List.iter parr m;
+      printf "]"
+    in
+    begin match val_value with
+      | Val(v) -> pval v
+      | Arr(a) -> parr a
+      | Mat(m) -> pmat m
+    end;
+    printf "\n"
+  in
+  List.iter print_val mstate;
+  printf "-------- END DUMP --------\n%!"
 
 let get_random_in_list l =
   List.nth l (Random.int (List.length l))
