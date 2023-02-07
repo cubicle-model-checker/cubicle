@@ -1,0 +1,65 @@
+(*
+if X = A then action1
+else 
+     if Y[i] = B then action2 
+     else 
+     	  if X = B && Y[i] = A then action3
+	  else action4
+*)
+
+type t = A | B | Start
+type action = Action1 | Action2 | Action3 | Action4 | None
+
+array Action[proc] : action
+array X[proc] : t
+array Y[proc] : t 
+
+init(i) { X[i] = Start && Y[i] = Start && Action[i] = None}
+
+unsafe(i j k) { Action[i] = Action2 && Action[j] = Action3 && Action[k] = Action4} 
+
+transition go1(i)
+requires { X[i] = Start } 
+{ X[i] := A }
+
+transition go2(i)
+requires { X[i] = Start } 
+{ X[i] := B }
+
+transition go3(i)
+requires { Y[i] = Start } 
+{ Y[i] := A }
+
+transition go4(i)
+requires { Y[i] = Start } 
+{ Y[i] := B }
+
+
+transition if1(i)
+requires {X[i] = A && Action[i] = None}
+{ Action[i] := Action1;
+  (*X[i] := Start;
+  Y[i] := Start *)}
+
+transition else1(i)
+requires { Y[i] = B && X[i] = B && Action[i] = None}
+{ Action[i] := Action2;
+  (*X[i] := Start;
+  Y[i] := Start*)
+}
+
+transition if2(i)
+requires { X[i] = B && Y[i] = A && Action[i] = None}
+{ Action[i] := Action3;
+  (*X[i] := Start; 
+  Y[i] := Start*)}
+
+transition else2(i)
+requires { X[i] <> A && Y[i] <> B && X[i] <> B && Y[i] <> B && Action[i] = None}
+{ Action[i] := Action4;
+  X[i] := Start;
+  Y[i] := Start}
+
+transition reset(i)
+requires{ Action[i] <> None }
+{ Action[i] := None }

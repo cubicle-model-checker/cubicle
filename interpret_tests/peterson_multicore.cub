@@ -62,11 +62,10 @@ unsafe (i j) { PC[i] = L4_crit && PC[j] = L4_crit }
 (* ----------------------*)
 
 (* Buffer synchronization *)
-(*Init -> t_L1_L2(#2) -> t_L2_L3(#2, #1) -> t_L1_L2(#1) -> t_L2_L3(#1, #2) -> t_L3_L4_1(#1, #2) -> t_L3_L4_2(#2)
 transition sync ( i )
 requires { Want_buffer_to_sync[i] = True }
 { Want[i] :=  Want_buffer[i];
-  Want_buffer_to_sync[i] := False; }*)
+  Want_buffer_to_sync[i] := False; }
 
 (* Processes behavior *)
 

@@ -106,7 +106,7 @@
 %token LET
 %token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
 %token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR UNSAFEINTR INTSYS PREINT
-%token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC FUZZ
+%token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC FUZZ FREQ
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
@@ -679,6 +679,8 @@ toplevel:
   | PREINT top_level_trans { let tn, ta = $2 in TopPre(tn,ta) }
   | CONSTPROC {TopShowEnv}
   | ALLT { TopAll }
+  | FREQ INT INT {let i  = Num.int_of_num $2 in
+		  let i2  = Num.int_of_num $3 in TopCount(i,i2)}
   | HELP { TopHelp }
   | CLEAR { TopClear }
   | RESTART {TopRestart}

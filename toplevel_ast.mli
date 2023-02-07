@@ -21,6 +21,7 @@ type toplevel =
   | TopRandom
   | TopExec
   | TopExecRetry of int * int
+  | TopCount of int * int 
   | TopBacktrack of int
   | TopFlag of int
   | TopShowTrace

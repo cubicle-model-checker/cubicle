@@ -84,6 +84,7 @@
 	"backtrack", BACKTRACK;
 	"system", INTSYS;
 	"pre", PREINT;
+	"freq", FREQ
 	
       ]
 	       
