@@ -11,10 +11,7 @@ let interpret_bool = ref true
 let step_flag = ref 1
 let btracks = ref []
 let deadlock = ref false
-
-  
-
-
+let steps = ref 0 
 
 let semaphore_init s =
   match s with
@@ -219,10 +216,10 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
 
 
     
-let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
+let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env tr_table =
   let backtrack_env = ref main_bt_env in
   (*let trace = ref [] in*)
-  let steps = ref steps in
+  (*let steps = ref steps in*)
   (*let dfile = Filename.basename Options.file in
   let open_file = open_out (dfile^".txt") in
   print_header open_file dfile;*)
@@ -276,7 +273,7 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
 	assert false
   done;
   (*close_out open_file;*)
-  !queue, !running_env, !backtrack_env, !steps
+  !queue, !running_env, !backtrack_env
 
 
 let pick_random fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
@@ -471,7 +468,12 @@ let gen_list depth =
 
 (*└───*)
 
-let run_from_list env trans all_procs follow =
+let hash_of_env env transitions =
+  Trans.iter (fun k el ->
+    Format.eprintf "k = %a and hash = %d@." Hstring.print k (Hashtbl.hash k)) transitions
+
+  
+let run_from_list env trans all_procs follow unsafe=
   List.fold_left (fun (acc,env) proc ->
     Format.printf "\n--Trying for process %a--@." Hstring.print proc;
     Random.self_init ();
@@ -490,17 +492,21 @@ let run_from_list env trans all_procs follow =
 	let app,app_p = la.(rand) in
 	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
 	let new_env = apply_transition app_p app.tr_name trans env
-	in 
+	in
+	check_unsafe new_env unsafe;
 	Some(app,app_p)::acc, new_env                    
       | [], l ->
 	Format.eprintf "└─> Only parameterized transitions for %a possible\n\
-                        └─> Choosing random transitions @." Hstring.print proc;
+                        └─> Choosing random transition @." Hstring.print proc;
 	let la = Array.of_list l in
 	let rand = Random.int (List.length l) in
 	let app,app_p = la.(rand) in
 	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
 	let new_env = apply_transition app_p app.tr_name trans env
-	in 
+	  
+	in
+	check_unsafe new_env unsafe;
+
 	Some(app,app_p)::acc, new_env 
       | l1, l ->
 	Format.eprintf "└─> Parameterized and non-parameterized transitions for %a possible\n\
@@ -510,11 +516,14 @@ let run_from_list env trans all_procs follow =
 	let app,app_p = la.(rand) in
 	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
 	let new_env = apply_transition app_p app.tr_name trans env
-	in 
+	in
+	check_unsafe new_env unsafe;
+	
 	Some(app,app_p)::acc, new_env 
   )  ([],env) follow
   
-      
+
+    
 let setup_env tsys sys =
   Sys.catch_break true;
   let fmt = Format.std_formatter in
@@ -526,7 +535,10 @@ let setup_env tsys sys =
   let var_terms = Forward.all_var_terms procs tsys in
   let const_list = List.map (fun x -> Elem(x, Glob)) tsys.t_consts in
   let var_terms = Term.Set.union var_terms (Term.Set.of_list const_list) in 
-  sys_procs := Options.get_interpret_procs (); 
+  sys_procs := Options.get_interpret_procs ();
+
+  let all_unsafes = init_unsafe procs sys.unsafe in
+ 
  
   let orig_env,lock_queue, cond_sets, semaphores =
     Term.Set.fold ( fun x (acc,acc_lock, cond_acc, sem_acc) ->
@@ -620,7 +632,6 @@ let setup_env tsys sys =
   let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in
   let applied_trans = ref PersistentQueue.empty in
   let backtrack_env = ref Backtrack.empty in
-  let steps = ref 0 in
 
   let tr_table = Hashtbl.create 10 in
 
@@ -643,17 +654,16 @@ let setup_env tsys sys =
     try
       flush stdout; Format.printf "> %!";
       let inp = read_line () in      
-      let tts = Parser.toplevel Lexer.token (Lexing.from_string inp) in
+      let tts = Parser.toplevel Interpret_lexer.token (Lexing.from_string inp) in
       
       (match tts with
-	| TopExec -> let ap, g, be, ste =
+	| TopExec -> let ap, g, be =
 		       execute_random3 fmt !global_env
-			 transitions procs sys.unsafe !applied_trans [] !backtrack_env !steps tr_table
+			 transitions procs all_unsafes !applied_trans [] !backtrack_env tr_table
 		     in
 		     global_env := g;
 		     applied_trans := ap;
 		     backtrack_env := be;
-		     steps := ste
 		     (*print_applied_trans fmt ap*)
 	| TopTransition tl ->
 	  let temp =
@@ -736,20 +746,22 @@ let setup_env tsys sys =
 	    end
 	  else
 	    print_poss_trans fmt l
-	| TopUnsafe -> check_unsafe !global_env sys.unsafe 
+	| TopUnsafe -> check_unsafe !global_env all_unsafes
 	| TopRestart ->
 	  global_env := original_env;
 	  applied_trans := PersistentQueue.empty;
 	  backtrack_env := Backtrack.empty;
 	  Hashtbl.reset tr_table;
+	  steps := 0;
 	  print_interpret_env fmt !global_env
+	   
 	| TopGenProc -> global_env := generate_process !global_env num_procs tsys
 	| TopPrintSys -> Ptree.print_system fmt sys
 
 	| TopRandom ->
 	  let ap, g, be, ste =
 	    pick_random fmt !global_env
-	      transitions procs sys.unsafe !applied_trans [] !backtrack_env !steps tr_table
+	      transitions procs all_unsafes !applied_trans [] !backtrack_env !steps tr_table
 	  in
 	  global_env := g;
 	  applied_trans := ap;
@@ -759,10 +771,10 @@ let setup_env tsys sys =
 
 	| TopFuzz n ->
 	  let l = gen_list n in
-	  let _ = run_from_list !global_env transitions procs l in
+	  let _ = run_from_list !global_env transitions procs l all_unsafes in
 	  ()
 	   
-	    
+	| TopDump -> hash_of_env !global_env transitions
 	  
 	  (*let dfile = Filename.basename Options.file in
 	  let open_file = open_out (dfile^".txt") in

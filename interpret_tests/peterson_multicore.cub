@@ -46,6 +46,7 @@ init (i)
 (* Safety *)
 unsafe (i j) { PC[i] = L4_crit && PC[j] = L4_crit }
 
+
 (* Starving *)
 (* unsafe (i j) { PC[i] = L3 && PC[j] = Stop && Want_buffer_to_sync[j] = False && *)
 (*                Turn <> i && Want[j] = True } *)
@@ -61,11 +62,11 @@ unsafe (i j) { PC[i] = L4_crit && PC[j] = L4_crit }
 (* ----------------------*)
 
 (* Buffer synchronization *)
-
+(*Init -> t_L1_L2(#2) -> t_L2_L3(#2, #1) -> t_L1_L2(#1) -> t_L2_L3(#1, #2) -> t_L3_L4_1(#1, #2) -> t_L3_L4_2(#2)
 transition sync ( i )
 requires { Want_buffer_to_sync[i] = True }
 { Want[i] :=  Want_buffer[i];
-  Want_buffer_to_sync[i] := False; }
+  Want_buffer_to_sync[i] := False; }*)
 
 (* Processes behavior *)
 
@@ -102,10 +103,10 @@ transition t_L6_L1 ( i )
 requires { PC[i] = L6 }
 { PC[i] := L1; }
 
-transition t_Stop1 ( i )
-requires { PC[i] = L1 }
+transition t_Stop1 ( i j)
+requires { PC[i] = L1  && PC[j] <> Stop}
 { PC[i] := Stop; }
 
-transition t_Stop2 ( i )
-requires { PC[i] = L6 }
+transition t_Stop2 ( i j )
+requires { PC[i] = L6  && PC[j] <> Stop}
 { PC[i] := Stop; }

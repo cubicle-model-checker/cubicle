@@ -66,7 +66,7 @@ let gen_array_combs name procs =
     [] [name]      
 
       
-let check_unsafe (env,_,_,_) unsafe =
+let check_unsafe_prover (env,_,_,_) unsafe =
   (*unsafe = (loc * variable * satom) list *)
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in 
   let v = Env.fold (fun key {value = el} acc ->
@@ -89,6 +89,22 @@ let check_unsafe (env,_,_,_) unsafe =
 	| TopError Reached -> raise (TopError Unsafe)
     ) all_procs      
   ) unsafe
+
+
+let check_unsafe (env,_,_,_) unsafes =
+  (*unsafe = (loc * variable * satom) list *)
+  let v = Env.fold (fun key {value = el} acc ->
+    match el with
+      | VGlob el -> SAtom.add (Comp(key, Eq, Elem(el, Glob))) acc 
+      | VProc el -> SAtom.add (Comp(key, Eq, Elem(el, Var))) acc
+      | VConstr el -> SAtom.add (Comp(key, Eq, Elem(el, Constr))) acc
+      | VAccess(el,vl) -> SAtom.add (Comp(key, Eq, Access(el, vl))) acc
+      | _-> acc   
+  ) env SAtom.empty
+  in
+  List.iter (fun satom  ->
+    if SAtom.subset satom v then raise (TopError Unsafe)
+  ) unsafes    
 
 
 
@@ -1203,6 +1219,23 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
       end 
   ) trans ([],[])
 
+let init_unsafe all_procs unsafes = 
+  List.fold_left(fun acc (_,args, satom) ->
+    let num_args = List.length args in
+    let u_procs = all_arrange num_args all_procs in
+    if u_procs = [] then satom::acc
+    else 
+      begin
+	List.fold_left (fun acc2 procs ->
+	  let sigma = Variable.build_subst args procs in
+	  let n_s = SAtom.subst sigma satom in
+	  (*Format.eprintf "n_s is: %a@." SAtom.print n_s;*)
+	  n_s::acc2
+	) acc u_procs
+      end
+    ) [] unsafes
+
+    
 let all_possible_transitions (env,_,_,_) trans all_procs flag=
   Trans.fold (fun x el acc ->
     let name = el.tr_name in 

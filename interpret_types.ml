@@ -262,34 +262,34 @@ let print_help fmt =
      \ttransition <name>(<args>) : apply a transition\n\
      \ttransition <name>(<args>); <name>(<args>)... : apply a sequence of transitions\n\n\
      @{<b>@{<u>@{<fg_magenta_b>Other Commands:@}@}@}\n\
-     \t-help : display this list\n\
-     \t-status : show current environment\n\
-     \t-execute : run random execution\n\
-     \t-all : show possible transitions\n\
-     \t-random : pick a random transition and apply it\n\
-     \t-unsafe : check if current state is unsafe\n\
-     \t-reset : reset the environment [global system state, trace logs, backtracking info]\n\
+     \thelp : display this list\n\
+     \tstatus : show current environment\n\
+     \texecute : run random execution\n\
+     \tall : show possible transitions\n\
+     \trandom : pick a random transition and apply it\n\
+     \tunsafe : check if current state is unsafe\n\
+     \treset : reset the environment [global system state, trace logs, backtracking info]\n\
      @{<b>@{<u>@{<fg_magenta_b>Debug Commands:@}@}@}\n\
-     \t--flag <int> : set how often debugger remembers states for easier backtracking\n\
-     \t--trace  : show trace\n\
-     \t--replay : replay entire trace, waits for user OK after each step\n\
-     \t--backtrack <int> : backtrack environment to Step <int>\n\
-     \t--rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
-     \t--why <transition call> : explain which values interfere with transition application\n\
-     \t--dhelp : show debug help@."
+     \tflag <int> : set how often debugger remembers states for easier backtracking\n\
+     \ttrace  : show trace\n\
+     \treplay : replay entire trace, waits for user OK after each step\n\
+     \tbacktrack <int> : backtrack environment to Step <int>\n\
+     \trerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
+     \twhy <transition call> : explain which values interfere with transition application\n\
+     \tdhelp : show debug help@."
 
 
   
 let print_debug_help fmt =
   Format.printf
     "@{<b>@{<u>@{<fg_magenta_b>Debug Commands:@}@}@}\n\
-     \t--flag <int> : set how often debugger remembers states for easier backtracking\n\
-     \t--trace  : show trace\n\
-     \t--replay : replay entire trace, waits for user OK after each step\n\
-     \t--backtrack <int> : backtrack environment to Step <int>\n\
-     \t--rerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
-     \t--why <transition call> : explain which values interfere with transition application\n\
-     \t--dhelp : show debug help@."   
+     \tflag <int> : set how often debugger remembers states for easier backtracking\n\
+     \ttrace  : show trace\n\
+     \treplay : replay entire trace, waits for user OK after each step\n\
+     \tbacktrack <int> : backtrack environment to Step <int>\n\
+     \trerun <int> <int> : rerun trace between two steps, waits for user OK after each step\n\
+     \twhy <transition call> : explain which values interfere with transition application\n\
+     \tdhelp : show debug help@."   
 
 
 let str_op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"

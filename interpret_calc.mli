@@ -2,12 +2,12 @@ val eval_arith : Types.term ->
 Interpret_types.interpret_value Interpret_types.Env.t ->
 Hstring.t -> Interpret_types.conc_value
 
-val check_unsafe : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c ->
-('d * Hstring.t list * Types.SAtom.t) list -> unit
+val check_unsafe_prover : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c -> ('d * Hstring.t list * Types.SAtom.t) list -> unit
+
+val check_unsafe : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c -> Types.SAtom.t list -> unit
 
 
-val check_comp : Interpret_types.Env.key -> Interpret_types.Env.key -> Interpret_types.interpret_value Interpret_types.Env.t ->
-Variable.subst -> Types.op_comp -> bool
+val check_comp : Interpret_types.Env.key -> Interpret_types.Env.key -> Interpret_types.interpret_value Interpret_types.Env.t -> Variable.subst -> Types.op_comp -> bool
 
 val gen_array : Hstring.t -> Variable.t list -> Types.term list
 
@@ -53,3 +53,9 @@ val explain : Variable.t list ->
 Interpret_types.Trans.key ->
 Ast.transition_info Interpret_types.Trans.t ->
 Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c -> unit
+
+
+val init_unsafe : Variable.t list ->
+('a * Variable.t list * Types.SAtom.t) list -> Types.SAtom.t list
+
+  

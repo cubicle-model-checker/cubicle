@@ -99,7 +99,7 @@ type system = {
   type_defs : (loc * type_constructors) list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
-  unsafe : (loc * Variable.t list * SAtom.t) list;  
+  unsafe : (loc * Variable.t list * SAtom.t) list;
   trans : transition_info list;
 }
 

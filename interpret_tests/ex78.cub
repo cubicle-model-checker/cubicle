@@ -1,0 +1,19 @@
+type t = A | B | C | D | E
+
+
+var X : t
+
+array Y[proc] : t
+
+
+init(i) { Y[i] = A && X = A }
+
+
+unsafe(i) { Y[i] = B }
+unsafe() { X = B }
+unsafe(i) { X = C }
+unsafe(i) { Y[i] = B && X = D }
+unsafe(i j) { Y[i] = D && Y[j] = E}
+
+transition t(i j)
+{ Y[k] := case | k = i : B | j = k : D | _ : E }
