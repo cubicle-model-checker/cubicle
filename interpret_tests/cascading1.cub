@@ -1,0 +1,19 @@
+type t = A1 | A2 | A3
+
+array PC[proc] : t
+var X : int
+var Y : int
+
+init(i) { PC[i] = A1 && X = 0 && Y = 0}
+
+transition t1(i)
+requires {PC[i] = A1} {PC[i] := A2}
+
+transition t2(i)
+requires {PC[i] = A2} {PC[i] := A3}
+
+transition t(i)
+requires {PC[i] = A3 && forall_other j. PC[j] = A3} { X := X+1; PC[k] := case | _ : A1}
+
+transition t4(i j)
+requires {PC[i] = A3 && PC[j] <> A3} { Y := Y + 1; PC[i] := A1 }
