@@ -164,12 +164,11 @@ let print_applied_trans fmt l =
     else
       begin
 	let (_,t,p,_,_),r = PersistentQueue.pop q in 
-	Format.printf "transition %a(%a)@." Hstring.print t Variable.print_vars p;
+	Format.printf "\ttransition %a(%a)@." Hstring.print t Variable.print_vars p;
 	print_trans r
       end 
   in print_trans l
-
-
+  
 let print_debug_trans_path fmt l i =
   Format.printf "Applied transitions:\n---\n  pre: possible transitions before\n  post: possible transitions after\n  MANUAL: transition applied manually, pre/post not calculated\n  @{<b>@{<fg_green>**Step <int>@}@}: resulting env stored and accessible\n---@.";
   if PersistentQueue.is_empty l then Format.printf "no applied transitions@.";
@@ -265,6 +264,7 @@ let print_help fmt =
      \thelp : display this list\n\
      \tstatus : show current environment\n\
      \texecute : run random execution\n\
+     \texecute <N> <depth> : execute <depth> transitions <N> times. Looks for unsafe state\n\
      \tall : show possible transitions\n\
      \trandom : pick a random transition and apply it\n\
      \tunsafe : check if current state is unsafe\n\

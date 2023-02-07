@@ -687,6 +687,9 @@ toplevel:
   | GENPROC { TopGenProc }
   | RANDOMT { TopRandom}
   | EXEC { TopExec }
+  | EXEC INT INT {let i  = Num.int_of_num $2 in
+		  let i2  = Num.int_of_num $3 in TopExecRetry(i,i2)}
+      
   | BACKTRACK INT { let i  = Num.int_of_num $2 in TopBacktrack i}
   | FLAGTR INT { let i  = Num.int_of_num $2 in TopFlag i }
   | OFFTR { TopDebugOff }

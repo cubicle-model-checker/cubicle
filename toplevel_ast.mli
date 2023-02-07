@@ -19,7 +19,8 @@ type toplevel =
   | TopGenProc
   | TopDump
   | TopRandom
-  | TopExec 
+  | TopExec
+  | TopExecRetry of int * int
   | TopBacktrack of int
   | TopFlag of int
   | TopShowTrace

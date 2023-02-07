@@ -11,7 +11,6 @@ let interpret_bool = ref true
 let step_flag = ref 1
 let btracks = ref []
 let deadlock = ref false
-let steps = ref 0 
 
 let semaphore_init s =
   match s with
@@ -211,15 +210,10 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
   Format.fprintf  f "%a" Pretty.print_line ();
   Format.fprintf  f "\n"
 
-
-
-
-
-    
-let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env tr_table =
+let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_env tr_table steps  =
   let backtrack_env = ref main_bt_env in
   (*let trace = ref [] in*)
-  (*let steps = ref steps in*)
+  let steps = ref steps in
   (*let dfile = Filename.basename Options.file in
   let open_file = open_out (dfile^".txt") in
   print_header open_file dfile;*)
@@ -253,9 +247,10 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
 	(*close_out open_file;*)
 	Format.fprintf fmt
 	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false;
+	
 	(*backtrack_replay !running_env ~trace:!trace !queue orig_env !backtrack_env !steps*)	 
       | TopError Unsafe ->
-	Format.fprintf fmt
+      	Format.fprintf fmt
 	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Do you wish to continue? (y/n)@.";
 	begin
 	  let rec decide () =
@@ -265,15 +260,312 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans orig_env m
 	      | "n" -> running := false(*; close_out open_file*)
 	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
 	  in decide ()
-	end 
+	end
       | Stdlib.Sys.Break -> (*close_out open_file;*) running := false; Format.printf "@."
-      | TopError StopExecution ->  (*close_out open_file; *)running := false
+      | TopError StopExecution ->
+
+	(*close_out open_file; *)
+	running := false
       | s ->  (*close_out open_file;*)
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
   done;
   (*close_out open_file;*)
   !queue, !running_env, !backtrack_env
+
+
+let execute_depth fmt glob_env trans all_procs unsafe applied_trans take count =
+  let taken = ref 0 in 
+  Random.self_init ();
+  let running_env = ref glob_env in
+  let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
+  let running = ref true in
+  let queue = ref applied_trans in 
+  while !running do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (apply,apply_procs) = !transitions.(rand) in
+      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      running_env := new_env;
+      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
+      let lp = Array.length !transitions in
+      queue := PersistentQueue.push (!taken,apply.tr_name,apply_procs, l, lp) !queue;
+      incr taken;
+      if take = !taken then raise (TopError StopExecution);
+      check_unsafe !running_env unsafe;
+    with
+      | TopError Deadlock ->
+	running := false;
+	raise (TopError Deadlock) 
+      | TopError Unsafe ->
+	Format.fprintf fmt
+	  "Unsafe state reached after %d runs@." count;
+	print_applied_trans fmt !queue;
+	raise (TopError Unsafe)
+	
+      | Stdlib.Sys.Break -> (*close_out open_file;*) running := false; Format.printf "@."
+      | TopError StopExecution ->
+	running := false;
+	raise (TopError StopExecution)
+      | s ->  (*close_out open_file;*)
+	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
+	assert false
+  done
+  (*close_out open_file;*)
+  
+
+    
+
+let pick_random fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
+  let transitions =
+    Array.of_list (all_possible_transitions glob_env trans all_procs false)
+  in
+  try 
+  let l = Array.length transitions in
+  if l = 0 then raise (TopError Deadlock);
+  let rand = Random.int l in
+  let (apply,apply_procs) = transitions.(rand) in
+  Format.printf "Picked and applied a random transition from %d possible\n\
+                 Transition: %a(%a)@."
+    l Hstring.print apply.tr_name Variable.print_vars apply_procs;
+  let tr_num = fresh_back () in
+  let new_env = apply_transition apply_procs apply.tr_name trans glob_env in
+  let steps = steps + 1 in
+  let l2 = all_possible_transitions new_env trans all_procs true in
+  let lp =
+    if l2 = [] then
+      begin
+	deadlock := true;
+	Format.fprintf fmt "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@.";
+	0
+      end
+    else
+      List.length l2
+  in 
+  Hashtbl.add tr_table tr_num (apply.tr_name, apply_procs);
+  let queue = PersistentQueue.push (tr_num, apply.tr_name,apply_procs, l, lp) applied_trans in
+  check_unsafe new_env unsafe;
+  let new_backtrack = 
+    if tr_num mod !step_flag = 0 then
+      Backtrack.add tr_num (apply.tr_name, apply_procs, new_env) main_bt_env
+    else main_bt_env
+  in
+  queue, new_env, new_backtrack, steps
+  with
+    | TopError Deadlock ->
+      deadlock := true;
+      Format.fprintf fmt "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@.";
+      applied_trans, glob_env, main_bt_env, steps
+    | TopError Unsafe ->
+	Format.fprintf fmt
+	  "@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached@.";
+      applied_trans, glob_env, main_bt_env, steps
+    | s -> 
+      let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
+      applied_trans, glob_env, main_bt_env, steps
+  
+
+  
+  
+
+    
+let dump_in_file  (env,locks, cond, sem) file =
+  let f = Format.formatter_of_out_channel file in
+  Format.fprintf f "[\n"; 
+  Env.iter( fun k {value = v } ->
+    Format.fprintf f "[\'%a\'," Term.print k; print_val f v; Format.fprintf f "],\n"
+  ) env;
+  Format.fprintf f "];"
+  
+
+
+
+let replay_all_steps_pre fmt s1 s2 benv first =
+  let count = ref s1 in
+  let old = ref first in
+  Format.printf "Press enter to continue each time@.";
+  while !count <> s2 do
+    ignore(read_line ());
+    incr count;
+    let tr, tr_args, be = Backtrack.find !count benv in 
+    Format.printf "After Step %d, transition %a(%a)@." !count Hstring.print tr Variable.print_vars tr_args;
+    print_debug_color_env fmt be !old;
+    old := be
+  done;
+  Format.printf "Rerun Terminated@."
+
+
+let replay_all_steps_not_pre fmt s1 s2 benv htbl transitions first=
+  let count = ref s1 in
+  let old = ref first in 
+  let _,_, en = Backtrack.find s1 benv in 
+  let en = ref en in
+  Format.printf "Press enter to continue each time@.";
+  while !count <> s2 do
+    ignore(read_line ());
+    incr count;
+    let tr, tr_args = Hashtbl.find htbl !count in
+    let new_env = apply_transition tr_args tr transitions !en in
+    en := new_env;
+    Format.printf "After Step %d, transition %a(%a)@." !count Hstring.print tr Variable.print_vars tr_args;
+    print_debug_color_env fmt new_env !old;
+    old := new_env
+  done;
+  Format.printf "Rerun Terminated@."    
+    
+  
+      
+let generate_process (env, locks, conds, semaphores) number tsys=
+  let arrays = tsys.t_arrays in 
+  let new_num = Options.get_interpret_procs () + 1 in 
+  let () = Options.set_interpret_procs new_num in
+  let new_proc = Hstring.make ("#"^(string_of_int new_num)) in
+  let env =
+    Env.add (Elem(new_proc, Var)) {value = VAlive; typ = ty_proc} env
+  in
+  let env = 
+  List.fold_left (fun acc el ->
+    let _, ty = Smt.Symbol.type_of el in 
+    Env.add (Access(el, [new_proc])) {value = random_value ty; typ = ty } acc) env arrays
+  in 
+  env,locks,conds, semaphores
+
+
+let replay fmt s1 s2 backtrack htbl transitions =
+  Format.eprintf "s1 is: %d@." s1;
+  Format.eprintf "backtrack: %a@." print_backtrace_env backtrack;
+  let tr,tr_args, be = Backtrack.find s1 backtrack in
+  ignore (Sys.command "clear");
+  Format.printf "Rerunning transitions from Step %d to Step %d " s1 s2; 
+  let f = 
+    if !step_flag <> 1 then
+      begin
+	Format.printf "[flag <> 1 : intermediate envs will be recomputed]@.";
+	false
+      end 
+    else
+      begin
+	Format.printf "[flag = 1 : intermediate envs will not be recomputed]@.";
+	true
+      end
+  in
+  Format.printf "Starting from Step %d, post transition %a(%a)@." s1 Hstring.print tr Variable.print_vars tr_args;
+  Format.printf "%a@." print_debug_env be;
+  if f then replay_all_steps_pre fmt s1 s2 backtrack be
+  else replay_all_steps_not_pre fmt s1 s2 backtrack htbl transitions be 
+
+  
+let clear_htbl tbl step all =
+  let step = step + 1 in
+  let all = all + 1 in
+  let rec aux count =
+    if count = all then ()
+    else
+      begin
+	Hashtbl.remove tbl count;
+	aux (count + 1)
+      end
+  in aux step
+
+let clear_back benv step all =
+  let rec aux count env =
+    if count= all then env
+    else
+      begin
+	let e =
+	  Backtrack.remove count env in 
+	aux (count + 1) e
+      end
+  in aux step benv
+
+let clear_queue queue step  =
+  let rec aux count qn qold =
+    if count = step then qn
+    else
+      begin
+	let el,rem = PersistentQueue.pop qold in
+	let q = PersistentQueue.push el qn in
+	aux (count+1) q rem 
+      end
+  in aux 0 PersistentQueue.empty queue
+
+
+let proc_of_int proc =
+  let s = string_of_int proc in
+  Hstring.make ("#"^s)
+
+  
+let gen_list depth =
+  assert (depth >= 0);
+  Random.self_init ();
+  let all = Options.get_interpret_procs () in
+  let rec aux depth acc =
+    match depth with
+      | 0 -> acc
+      | _ -> let elem = (Random.int all) + 1 in
+	     aux (depth - 1) (proc_of_int elem::acc)
+  in aux depth []
+
+(*└───*)
+
+let hash_of_env env transitions =
+  Trans.iter (fun k el ->
+    Format.eprintf "k = %a and hash = %d@." Hstring.print k (Hashtbl.hash k)) transitions
+
+  
+let run_from_list env trans all_procs follow unsafe=
+  List.fold_left (fun (acc,env) proc ->
+    Format.printf "\n--Trying for process %a--@." Hstring.print proc;
+    Random.self_init ();
+    let npl, pl = possible_for_proc env trans all_procs proc in
+    match npl,pl with
+      | [],[] ->
+	Format.printf "└─> No parameterized transitions for %a possible\n\
+                       └─> No non-parameterized transitions for %a possible\n\
+                       └─> Moving on to next process@." Hstring.print proc Hstring.print proc;
+	None::acc,env
+      | l, [] ->
+	Format.eprintf "└─> No paramaterized transitions for %a possible\n\
+                        └─> Picking non-parameterized transition@." Hstring.print proc;
+	let la = Array.of_list l in
+	let rand = Random.int (List.length l) in
+	let app,app_p = la.(rand) in
+	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
+	let new_env = apply_transition app_p app.tr_name trans env
+	in
+	check_unsafe new_env unsafe;
+	Some(app,app_p)::acc, new_env                    
+      | [], l ->
+	Format.eprintf "└─> Only parameterized transitions for %a possible\n\
+                        └─> Choosing random transition @." Hstring.print proc;
+	let la = Array.of_list l in
+	let rand = Random.int (List.length l) in
+	let app,app_p = la.(rand) in
+	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
+	let new_env = apply_transition app_p app.tr_name trans env
+	  
+	in
+	check_unsafe new_env unsafe;
+
+	Some(app,app_p)::acc, new_env 
+      | l1, l ->
+	Format.eprintf "└─> Parameterized and non-parameterized transitions for %a possible\n\
+                        └─> Choosing random parametrized transition @." Hstring.print proc;
+	let la = Array.of_list l in
+	let rand = Random.int (List.length l) in
+	let app,app_p = la.(rand) in
+	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
+	let new_env = apply_transition app_p app.tr_name trans env
+	in
+	check_unsafe new_env unsafe;
+	
+	Some(app,app_p)::acc, new_env 
+  )  ([],env) follow
+  
+
+    
 
 
 let pick_random fmt glob_env trans all_procs unsafe applied_trans orig_env main_bt_env steps tr_table =
@@ -632,6 +924,8 @@ let setup_env tsys sys =
   let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in
   let applied_trans = ref PersistentQueue.empty in
   let backtrack_env = ref Backtrack.empty in
+  let steps = ref 0 in
+
 
   let tr_table = Hashtbl.create 10 in
 
@@ -657,14 +951,35 @@ let setup_env tsys sys =
       let tts = Parser.toplevel Interpret_lexer.token (Lexing.from_string inp) in
       
       (match tts with
-	| TopExec -> let ap, g, be =
-		       execute_random3 fmt !global_env
-			 transitions procs all_unsafes !applied_trans [] !backtrack_env tr_table
-		     in
-		     global_env := g;
-		     applied_trans := ap;
-		     backtrack_env := be;
-		     (*print_applied_trans fmt ap*)
+	| TopExec ->
+	  let ap, g, be =
+	    execute_random3 fmt !global_env
+	      transitions procs all_unsafes !applied_trans !backtrack_env tr_table !steps 
+	  in
+	  global_env := g;
+	  applied_trans := ap;
+	  backtrack_env := be;
+	(*print_applied_trans fmt ap*)
+	| TopExecRetry (i,d) ->
+	  let rec aux count=
+	    match count with
+	      | 0 -> Format.printf "Could not detect unsafe in %d runs. Stopping.@." i
+	      | _ ->
+		begin 
+		    try 
+		      execute_depth fmt !global_env transitions procs all_unsafes !applied_trans d (i-count)
+		    with
+		      | TopError Deadlock ->
+			Format.printf "Deadlock reached. Restarting...@.";
+			aux (count - 1 )
+		      | TopError StopExecution ->
+			Format.printf "Depth reached. Restarting...@.";
+			aux (count - 1 )
+		      | TopError Unsafe ->
+			Format.printf "Search terminated@.";
+		      | _ -> assert false
+		end
+	  in aux i
 	| TopTransition tl ->
 	  let temp =
 	    try
