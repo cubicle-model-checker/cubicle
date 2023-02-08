@@ -88,8 +88,7 @@ let init_vals env init =
 		Env.add t1 t2 sacc
 		
 		
-	      | _ -> assert false
-		  	     		    
+	      | _ -> assert false		  	     		    
 	  end 	    	   	  
 	| Comp (t1, Neq, t2) -> assert false
 	| Comp (t1, Lt, t2) -> assert false
@@ -637,7 +636,9 @@ let setup_env tsys sys =
 	begin
 	  match k with
 	    | Elem(n, _) | Access(n, _) ->
+	      
 	      let _, ty = Smt.Symbol.type_of n in
+	      Format.eprintf "ty: %a@." Hstring.print ty;
 	      if is_semaphore ty then
 		  {value = semaphore_init x; typ = ty}
 	      else
@@ -855,7 +856,15 @@ let setup_env tsys sys =
 	  let _ = run_from_list !global_env transitions procs l all_unsafes in
 	  ()
 	   
-	| TopDump -> hash_of_env !global_env transitions
+	| TopDump ->
+	  let eee,ll,cc,semm = !global_env in
+	  Format.printf "Env: %d@." (hash_env eee);
+	  Format.printf "Locks: %d@." (hash_locks ll);
+	  Format.printf "Cond: %d@." (hash_cond cc);
+	  Format.printf "Sem: %d@." (hash_sem semm);
+	  Format.printf "Full: %d@." (hash_full_env !global_env)
+	    
+	  (*hash_of_env !global_env transitions*)
 	  
 	  (*let dfile = Filename.basename Options.file in
 	  let open_file = open_out (dfile^".txt") in

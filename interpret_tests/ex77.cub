@@ -3,6 +3,8 @@ type t = A | B | C
 
 var X : t
 
+var L : lock
+
 init() { X = A }
 
 
@@ -11,4 +13,10 @@ transition t1()
 
 
 transition t2()
-{ X := A } 
+{ X := A }
+
+transition t3(i)
+{ acquire(L,i) }
+
+transition t4(i)
+{ release(L,i) }

@@ -59,3 +59,16 @@ val init_unsafe : Variable.t list ->
 ('a * Variable.t list * Types.SAtom.t) list -> Types.SAtom.t list
 
   
+val hash_env : Interpret_types.interpret_value Interpret_types.Env.t -> int
+
+
+val hash_locks : Types.Term.t Interpret_types.PersistentQueue.t Interpret_types.LockQueues.t -> int
+
+val hash_cond : Types.Term.t list Interpret_types.Conditions.t -> int
+
+val hash_sem : Types.Term.t list Interpret_types.Semaphores.t -> int
+
+val hash_full_env : Interpret_types.interpret_value Interpret_types.Env.t *
+Types.Term.t Interpret_types.PersistentQueue.t Interpret_types.LockQueues.t *
+Types.Term.t list Interpret_types.Conditions.t *
+Types.Term.t list Interpret_types.Semaphores.t -> int

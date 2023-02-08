@@ -108,6 +108,95 @@ let check_unsafe (env,_,_,_) unsafes =
 
 
 
+
+let hash_queue q =
+  let rec aux q h =
+    if PersistentQueue.is_empty q then h
+    else
+      begin
+	let x,r = PersistentQueue.pop q in
+	let h1 = 13 * Types.Term.hash x in
+	aux r (h + h1)
+      end
+  in aux q 0
+
+    
+let hash_locks locks =
+  let v =
+    LockQueues.fold (fun key el acc ->
+      let v = hash_queue el in
+      abs (19 * acc + (Term.hash key + v))
+    ) locks 0
+  in
+  abs v
+
+let hash_cond cond =
+  let v =
+    Conditions.fold(fun key el acc ->
+      let h1 = List.fold_left (fun acc1 ll ->
+	13 * acc1 + Term.hash ll) (Term.hash key) el
+      in
+      abs (19 * acc + h1)
+    ) cond 0
+  in abs v
+
+
+let hash_sem sem =
+  let v =
+    Semaphores.fold(fun key el acc ->
+      let h1 = List.fold_left (fun acc1 ll ->
+	13 * acc1 + Term.hash ll) (Term.hash key) el
+      in
+      abs (19 * acc + h1)
+    ) sem 0
+  in abs v
+  
+    
+let hash_env env=
+  let v =
+    Env.fold (fun key {value = el; typ = typ } acc ->
+      (*Format.eprintf "key: %a; typ: %a@." Term.print key Hstring.print typ;*)
+      let h = 
+	match el with
+	  | VInt i -> Hashtbl.hash i  
+	  | VReal f -> Hashtbl.hash f 
+	  | VBool b -> Hashtbl.hash b
+	  | VConstr hs | VProc hs | VGlob hs -> Hstring.hash hs
+	  | VAccess (hs,hsl) ->
+	    List.fold_left (fun acc x -> 13 * acc + Hstring.hash x) (Hstring.hash hs) hsl
+	  | VLock (b,topt) -> 
+	    let h1 = Hashtbl.hash b in
+	    begin
+	      match topt with
+		| None -> Hashtbl.hash None + h1
+		| Some t -> Types.Term.hash t + h1
+	    end
+	  | VRLock (b,topt,i) ->
+	    let h1 = Hashtbl.hash b + Hashtbl.hash i in 
+	    begin
+	      match topt with
+		| None -> Hashtbl.hash None + h1
+		| Some t -> Types.Term.hash t + h1
+	    end
+	  | VSemaphore i -> Hashtbl.hash i
+	  | VArith t -> Types.Term.hash t
+	  | VSleep i -> Hashtbl.hash i
+	  | _ -> Hashtbl.hash el (*VAlive,VSuspended,UNDEF*)	  
+      in
+      abs (19 * acc + (Types.Term.hash key + Hstring.hash typ + h))
+    ) env 0   
+  in
+  abs v
+
+let hash_full_env (env,locks,cond,sem)=
+  let v1 = hash_env env in
+  let v2 = hash_locks locks in
+  let v3 = hash_cond cond in
+  let v4 = hash_sem sem in
+  v1+v2+v3+v4
+    
+
+
 let add_sub_manip manip sigma =
   match manip with 
     | ProcManip([t], PlusOne) ->
