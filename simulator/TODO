@@ -5,11 +5,14 @@
 - [.] Le modèle devrait contenir les unsafe
 - [.] On veut pouvoir valider / changer un init -> Par exemple pour ricart_abdulla, c'est bien d'avoir un random_float mais généralement on en veut pas non plus un immense donc pouvoir set quelques variables a la main peut être utile
 - [.] Step devrait renvoyer un Model.trace. Le simulateur devrait avoir un Model.full_trace
-- [.] Il serait intéréssant d'avoir une graphics library qui ne serait PAS OBLIGATOIRE, mais tout de même présent pour avoir un truc ultra rapide
+- [.] Il serait intéréssant d'avoir une graphics library qui ne serait PAS OBLIGATOIRE, mais tout de même présent pour avoir un truc ultra rapidement
+- [.] Déplacer la plupart de la lib dans Scene
+- [.] Scale le text pour le fit dans les carrés
+- [.] Afficher constantes & Mat
 
 ## Compilateur
 
 - [.] On veut (peut-être) un paramètre -o pour spécifier le path
 - [.] Il faudrait compiler un setter
 - [.] Il faudrait supprimer le "NONE" du state
-- [.] Faire un random jusqu'a max_float rend tout illisible, faudrait il le changer ?
+- [.] On peut peut être mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils

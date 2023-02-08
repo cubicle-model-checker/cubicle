@@ -9,6 +9,7 @@ let get_scene ()  = !scene
 let model        = ref Model.empty
 let set_model m  = model := m
 let get_model () = !model
+let get_model_state () = Model.get_state (!model)
 
 let nb_proc         = ref 0 
 let get_nb_proc ()  = !nb_proc

@@ -13,9 +13,15 @@ let unlock_trans trans_name =
 
 (* -- Simulation -- *)
 
+let full_trace : Model.full_trace ref = ref ([], [])
+let get_full_trace () = !full_trace
+
 let init () =
+  Random.init (int_of_float (Unix.time ()));
   let (_,minit,_) = get_model () in
+  full_trace := (get_model_state (), []);
   minit ();
+  
   dumper ()
 
 let get_possible_action_for_arg arg trans_list trans_map = 
@@ -45,6 +51,8 @@ let step () =
       (
       let (arg, ac, name) = get_random_in_list possible_actions in
       ac arg;                                     (* Effectue l'action *)
+      let (init, last_trace) = !full_trace in
+      full_trace := (init, ((name, arg),get_model_state ())::last_trace);
       Format.printf "Took %s with args " name;    (* Affiche une trace de l'action dans la sortie standard*)
       print_list_int arg;
       )
