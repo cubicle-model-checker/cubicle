@@ -293,20 +293,24 @@ let locks loc tlocks =
   match el with
     | Lock l | Unlock l | Wait l | Notify l | *)
     
-let transitions = 
+let transitions =
+  let h = ref [] in
   List.iter 
-    (fun ({tr_args = args; tr_loc = loc} as t) -> 
-       unique (fun x-> error (DuplicateName x) loc) args; 
-       atoms loc args t.tr_reqs;
-       List.iter 
-	 (fun (x, cnf) -> 
+    (fun ({tr_args = args; tr_loc = loc} as t) ->
+      if List.mem t.tr_name !h then 
+	error (DuplicateName t.tr_name) loc;
+      h := t.tr_name::!h;
+      unique (fun x-> error (DuplicateName x) loc) args; 
+      atoms loc args t.tr_reqs;
+      List.iter 
+	(fun (x, cnf) -> 
 	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
-       check_lets loc args t.tr_lets;
-       updates args t.tr_upds;
-       assigns loc args t.tr_assigns;
-       nondets loc t.tr_nondets
+	    check_lets loc args t.tr_lets;
+	    updates args t.tr_upds;
+	    assigns loc args t.tr_assigns;
+	    nondets loc t.tr_nondets
        (*locks loc t.tr_locks*))
-
+    
 let declare_type (loc, (x, y)) =
   try Smt.Type.declare x y
   with Smt.Error e -> error (Smt e) loc
