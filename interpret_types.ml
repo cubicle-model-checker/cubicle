@@ -350,7 +350,7 @@ let random_value h =
   match is_int h, is_real h, is_bool h,
     is_proc h, is_lock h, is_rlock h, is_condition h, is_semaphore h
   with
-    | true, false, false, false,false, false, false, false -> VInt (Random.int 10)
+    | true, false, false, false, false, false, false, false -> VInt (Random.int 10)
     | false, true, false, false, false, false, false, false -> VReal (Random.float 10.)
     | false, false, true, false, false, false, false, false -> let r = Random.int 12 in
 				   if r mod 2 = 0 then VBool true
