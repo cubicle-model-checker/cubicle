@@ -15,10 +15,12 @@ let nb_proc         = ref 0
 let get_nb_proc ()  = !nb_proc
 let set_nb_proc nbp = nb_proc := nbp 
 
+(* Debug functions *)
+
 let dumper () = 
   let mstate = Model.get_state (!model) in
   printf "-------- BEGIN DUMP --------\n";
-  let print_val (val_name, val_value) =
+  let print_val val_name val_value =
     printf "%s : " val_name;
     let pval v = printf "%s " (Model.vuv_to_string v)
     in
@@ -39,21 +41,58 @@ let dumper () =
     end;
     printf "\n"
   in
-  List.iter print_val mstate;
+  StringMap.iter print_val mstate;
   printf "-------- END DUMP --------\n%!"
+
+let print_list_int l =
+  Format.printf "[ ";
+  List.iter (fun i -> Format.printf "%i " i) l;
+  Format.printf "]\n\n"
+
+(* Scene functions *)
+
+let get_vuv_for_const =
+  let mstate = Model.get_state (get_model ()) in
+  let ret = ref [] in
+  let add_vars vname = function
+  | Model.Val(v) -> 
+    ret := (vname, v)::(!ret)
+  | _ -> ()
+  in
+  StringMap.iter add_vars mstate;
+  !ret
+
+let get_vuv_for_proc i =
+  let mstate = Model.get_state (get_model ()) in
+  let ret = ref [] in
+  let add_vars vname = function 
+    | Model.Arr(a) -> ret := (vname, List.nth a i)::(!ret)
+    | _ -> ()
+  in
+  StringMap.iter add_vars mstate;
+  !ret
+
+let get_vuv_for_proc_pair i j = 
+  let mstate = Model.get_state (get_model ()) in
+  let ret = ref [] in
+  let add_vars vname = function
+    | Model.Mat(m) -> 
+        let a = List.nth m i in
+        ret := (vname, List.nth a j)::(!ret)
+    | _ -> ()
+  in
+  StringMap.iter add_vars mstate;
+  !ret
+
+let get_vuv vuv_name = StringMap.find vuv_name (get_model_state ())
+
+(* Simulation functions *)
 
 let get_random_in_list l =
   List.nth l (Random.int (List.length l))
 
 let get_random_proc () =
   Random.int (get_nb_proc ())
-
-(* Fonction de debug divers *)
-
-let print_list_int l =
-  Format.printf "[ ";
-  List.iter (fun i -> Format.printf "%i " i) l;
-  Format.printf "]\n\n"
 
 (* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément *)
 let computed_args = Hashtbl.create 124 

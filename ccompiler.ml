@@ -62,9 +62,10 @@ let write_vars s ty_defs=
 
 let write_state_getter g_vars ty_defs = 
   pfile "let state_getter () = \n";
-
+  pfile "let ret = ref StringMap.empty in \n";
+  pfile "let add_to_ret n v = ret := StringMap.add n v (!ret) in \n";
   let add_var_to_state name (ty, dim) =
-    pfile "\t(\"%s\", " (Hstring.view name);
+    pfile "add_to_ret \"%s\" " (Hstring.view name);
     let nt =
       match (Hstring.view ty) with
       | "int" | "proc"  -> "VInt"
@@ -73,16 +74,14 @@ let write_state_getter g_vars ty_defs =
       | _       -> "VConstr"
     in
     begin match dim with
-    | 0 -> pfile "Val(%s(!%s)))" nt (get_var_name name)
-    | 1 -> pfile "Arr(List.map (fun x -> %s(x)) (Array.to_list %s)))" nt (get_var_name name)
-    | _ -> pfile "Mat(List.map (fun y -> List.map (fun x -> %s(x)) (Array.to_list y)) (Array.to_list %s)))" nt (get_var_name name)
+    | 0 -> pfile "(Val(%s(!%s)))" nt (get_var_name name)
+    | 1 -> pfile "(Arr(List.map (fun x -> %s(x)) (Array.to_list %s)))" nt (get_var_name name)
+    | _ -> pfile "(Mat(List.map (fun y -> List.map (fun x -> %s(x)) (Array.to_list y)) (Array.to_list %s)))" nt (get_var_name name)
     end;
     pfile ";\n"
   in
-  pfile "[ \n";
   Hstring.HMap.iter add_var_to_state g_vars;
-  pfile "\t(\"NONE\", Val(VInt(0)))\n";
-  pfile "]\nin\n\n"
+  pfile "!ret\nin\n\n"
 
 (* Init declaration *)
 

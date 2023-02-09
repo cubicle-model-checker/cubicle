@@ -9,12 +9,12 @@ let vWant = Array.make (get_nb_proc ()) (true) in
 let vCrit = Array.make (get_nb_proc ()) (true) in
 
 let state_getter () = 
-[ 
-	("Turn", Val(VInt(!vTurn)));
-	("Want", Arr(List.map (fun x -> VBool(x)) (Array.to_list vWant)));
-	("Crit", Arr(List.map (fun x -> VBool(x)) (Array.to_list vCrit)));
-	("NONE", Val(VInt(0)))
-]
+let ret = ref StringMap.empty in 
+let add_to_ret n v = ret := StringMap.add n v (!ret) in 
+add_to_ret "Turn" (Val(VInt(!vTurn)));
+add_to_ret "Want" (Arr(List.map (fun x -> VBool(x)) (Array.to_list vWant)));
+add_to_ret "Crit" (Arr(List.map (fun x -> VBool(x)) (Array.to_list vCrit)));
+!ret
 in
 
 let init () = 

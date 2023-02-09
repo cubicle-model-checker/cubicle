@@ -13,16 +13,18 @@ let unlock_trans trans_name =
 
 (* -- Simulation -- *)
 
-let full_trace : Model.full_trace ref = ref ([], [])
+let sleep_time = ref 1.
+let get_sleep_time () = !sleep_time
+let set_sleep_time st = sleep_time := st
+
+let full_trace : Model.full_trace ref = ref (Model.StringMap.empty, [])
 let get_full_trace () = !full_trace
 
 let init () =
   Random.init (int_of_float (Unix.time ()));
   let (_,minit,_) = get_model () in
   full_trace := (get_model_state (), []);
-  minit ();
-  
-  dumper ()
+  minit () 
 
 let get_possible_action_for_arg arg trans_list trans_map = 
   let sub_gpafa returned name = 
@@ -40,8 +42,10 @@ let step () =
        Il faudrait peut être mettre un warning et crash. 
     *)
     let (_, _, (trans_map, trans_table)) = get_model () in
-    let test_transition arg_number trans_list = 
-      let arg_list = get_args arg_number in 
+    let test_transition arg_number trans_list =
+      if arg_number > get_nb_proc () then failwith (Format.sprintf "At least %d proc is required for this simulation." (get_nb_proc ()))
+      else
+      let arg_list = get_args arg_number in
       List.iter (fun arg -> returned_list := (get_possible_action_for_arg arg trans_list trans_map)@(!returned_list)) arg_list
     in
     Model.IntMap.iter test_transition trans_table;
@@ -57,7 +61,4 @@ let step () =
       print_list_int arg;
       )
     else Format.printf "No possible transition from current state\n"
-  end;
-  Format.printf "New state : \n";
-  dumper ();
-  Format.printf "\n%!";
+  end

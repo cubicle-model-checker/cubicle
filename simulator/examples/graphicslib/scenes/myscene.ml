@@ -3,8 +3,9 @@ open Model
 open Scenelib
 open Graphics
 
-(*
-Simple sample scene adapted to work with dekker
+(* 
+  An simple sample scene:
+  Display the current state in a graphical window with:
 *)
 
 let border_size = 10
@@ -21,33 +22,16 @@ let get_proc_text i =
   List.iter write_vars pvals;
   List.rev (!ret)
 
-let get_proc_color i =
-  let m1 = 
-  match (get_vuv "Want") with
-  | Arr(a) -> a
-  | _ -> failwith "Wrong model"
-  in
-  let m2 = 
-  match (get_vuv "Crit") with
-  | Arr(a) -> a
-  | _ -> failwith "Wrong model"
-  in
-  let v1 = match (List.nth m1 i) with
-  | VBool(b) -> b
-  | _ -> failwith "Wrong model"
-  in
-  let v2 = match (List.nth m2 i) with
-  | VBool(b) -> b
-  | _ -> failwith "Wrong model"
-  in
-  if v2 then red else
-  if v1 then blue else
-  black
+let get_proc_color i = black
 
+let proc_size_rayon () =
+  let proc_size = ((Graphics.size_x ()) - (border_size*2)) / (get_nb_proc ()) in
+  let rayon = (proc_size*space_perc) / 200 in
+  (proc_size, rayon)
 
 let draw_procs () = 
-  let (proc_size, rayon) = Scenelib.proc_size_rayon border_size space_perc        in
-  let compfun     = Scenelib.row_composition border_size proc_size                in
+  let (proc_size, rayon) = proc_size_rayon () in
+  let compfun     = Scenelib.line_composition border_size proc_size               in
   let drawprocfun = Scenelib.draw_square_proc get_proc_text get_proc_color rayon  in 
   Scenelib.draw_procs drawprocfun compfun
 
@@ -58,14 +42,14 @@ let build_scene () =
     open_graph (" "^ws^"x"^ws);
     auto_synchronize false
   in
-
   let post_init () = 
     clear_graph();
     draw_procs ();
     synchronize()
   in
 
-  let update dt = () in
+  let update dt = ()
+  in
 
   let on_model_update () =
     clear_graph ();
@@ -75,4 +59,5 @@ let build_scene () =
 
 
   let s = (pre_init, post_init, on_model_update, update) in 
+
   set_scene(s)

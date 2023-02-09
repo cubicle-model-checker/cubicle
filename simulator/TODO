@@ -3,12 +3,15 @@
 ## Simulateur
 
 - [.] Le modèle devrait contenir les unsafe
-- [.] On veut pouvoir valider / changer un init -> Par exemple pour ricart_abdulla, c'est bien d'avoir un random_float mais généralement on en veut pas non plus un immense donc pouvoir set quelques variables a la main peut être utile
-- [.] Step devrait renvoyer un Model.trace. Le simulateur devrait avoir un Model.full_trace
-- [.] Il serait intéréssant d'avoir une graphics library qui ne serait PAS OBLIGATOIRE, mais tout de même présent pour avoir un truc ultra rapidement
-- [.] Déplacer la plupart de la lib dans Scene
 - [.] Scale le text pour le fit dans les carrés
+- [.] Centrer le text
 - [.] Afficher constantes & Mat
+- [.] Pouvoir revenir en arrière dans la simulation
+- [.] Pouvoir changer la vitesse d'execution de la simulation
+- [.] Optimisation : Accéder au model state uniquement a travers le simulateur. Set le model state uniquement a travers le simulateur. Permet de le calculer qu'une seule fois
+			-> Nécéssiterais de déplacer les "get_vuv_for_proc" de Utils vers le simulateur.
+- [.] print_scene : Afficher les transitions prises avec les arguments. Déplacer le dumper dans la print_scene ?
+- [.] Simulation : Option du simulateur pour uniquement lire une trace sans modèle
 
 ## Compilateur
 

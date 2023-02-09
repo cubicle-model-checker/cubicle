@@ -3,8 +3,9 @@ open Model
 open Scenelib
 open Graphics
 
-(*
-Simple sample scene adapted to work with dekker
+(* 
+  An simple sample scene:
+  Display the current state in a graphical window with:
 *)
 
 let border_size = 10
@@ -21,29 +22,7 @@ let get_proc_text i =
   List.iter write_vars pvals;
   List.rev (!ret)
 
-let get_proc_color i =
-  let m1 = 
-  match (get_vuv "Want") with
-  | Arr(a) -> a
-  | _ -> failwith "Wrong model"
-  in
-  let m2 = 
-  match (get_vuv "Crit") with
-  | Arr(a) -> a
-  | _ -> failwith "Wrong model"
-  in
-  let v1 = match (List.nth m1 i) with
-  | VBool(b) -> b
-  | _ -> failwith "Wrong model"
-  in
-  let v2 = match (List.nth m2 i) with
-  | VBool(b) -> b
-  | _ -> failwith "Wrong model"
-  in
-  if v2 then red else
-  if v1 then blue else
-  black
-
+let get_proc_color i = black
 
 let draw_procs () = 
   let (proc_size, rayon) = Scenelib.proc_size_rayon border_size space_perc        in

@@ -17,7 +17,7 @@ type var_value =
   | Arr  of var_unit_value list
   | Mat  of var_unit_value list list
 
-type model_state = ((string * var_value) list)      (* name of var * value list *)
+type model_state = var_value StringMap.t      (* name of var * value list *)
 
 type trace = (string * int list) * model_state      (* name of transition taken to get here, args, state adter transition was taken *)
 type full_trace = model_state * trace list          (* initial_state, list of transition taken *)
@@ -37,7 +37,7 @@ type transitions      = transition_map * transition_table
 
 type t = variable_table * init * transitions
 
-let empty : t = (([], fun () -> []), (fun () -> ()), (StringMap.empty, IntMap.empty))
+let empty : t = (([], fun () -> StringMap.empty), (fun () -> ()), (StringMap.empty, IntMap.empty))
 
 let add_trans nb_arg (trans_name, trans_req, trans_ac)  ((mvars, minit, (mtransmap, mtranstable)) : t) : t = 
   let cur = try IntMap.find nb_arg mtranstable with Not_found -> [] in

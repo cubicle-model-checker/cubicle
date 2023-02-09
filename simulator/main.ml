@@ -1,9 +1,14 @@
 open Unix
+open Format
 
 let _ =
-  if Array.length Sys.argv <= 2 then Format.printf "Usage : ./%s [nb_proc] [sleep_time]\n" Sys.argv.(0);
-  Utils.set_nb_proc (int_of_string Sys.argv.(1));
-  let sleep_time  = float_of_string Sys.argv.(2)    in
+  
+  if Array.length Sys.argv <= 2 then (printf "Usage : %s [nb_proc] [sleep_time]\n" Sys.argv.(0); exit 1);
+  
+  let nbproc = (int_of_string Sys.argv.(1)) in
+  if nbproc <= 0 then (printf "Number of proc must be strictly positive."; exit 1);
+  Utils.set_nb_proc nbproc;
+  Simulator.set_sleep_time (float_of_string Sys.argv.(2));
   let last_time   = ref (time ()) in
   
   Mymodel.build_model ();
@@ -18,8 +23,8 @@ let _ =
   while true do
     let t = time () in
     let delt = t -. (!last_time) in
-    (*scene_update delt; *)
-    if delt > sleep_time then
+    scene_update delt;
+    if delt > (Simulator.get_sleep_time ()) then
       (
         Simulator.step ();
         scene_onmodelchange ();
