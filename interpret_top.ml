@@ -717,16 +717,16 @@ let setup_env tsys sys =
 	  in
 	  global_env := g;
 	  applied_trans := ap;
-	  backtrack_env := be;
+	  backtrack_env := be
 
-	  let smost,smtime,overall =
+	  (*let smost,smtime,overall =
 	    Hashtbl.fold (fun k el (ak, ael,overall) ->
 	    Format.printf "State: %d seen %d time(s)@." k el;
 	      if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
 	  
 	  Format.printf "Total entries: %d\n\
                          Total visited: %d\n\
-                         State seen most often: %d [%d time(s)] @." (Hashtbl.stats hh).num_bindings overall smost smtime
+                         State seen most often: %d [%d time(s)] @." (Hashtbl.stats hh).num_bindings overall smost smtime*)
 	(*print_applied_trans fmt ap*)
 	| TopExecRetry (i,d) ->
 	  let rec aux count=
