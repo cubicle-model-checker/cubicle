@@ -17,7 +17,7 @@ type var_value =
   | Arr  of var_unit_value list
   | Mat  of var_unit_value list list
 
-type model_state = var_value StringMap.t      (* name of var * value list *)
+type model_state = var_value StringMap.t            (* name of var * value list *)
 
 type trace = (string * int list) * model_state      (* name of transition taken to get here, args, state adter transition was taken *)
 type full_trace = model_state * trace list          (* initial_state, list of transition taken *)

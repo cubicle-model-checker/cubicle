@@ -63,7 +63,7 @@ let computed_args = Hashtbl.create 124
 let rec get_args n =
   try Hashtbl.find computed_args n with Not_found ->
     (
-      if n < 0 || n > (get_nb_proc ()) then assert false else (* TODO : Remplacer le assert false ici par une erreur indiquant que le nombre de nbproc doit être supérieur a ... *)
+      if n < 0 then assert false else 
         let rec sub_get_args cur prec returned = 
         let tmp_returned' = (List.map (fun l_part -> if cur > List.hd l_part then l_part@[cur] else []) prec) in
         let tmp_tmp_returned' = List.filter (fun l -> List.length l > 0) tmp_returned' in
@@ -81,7 +81,6 @@ let rec get_args n =
           result
     )
 
-(* Fonction d'aide pour transitions *)
 let forall_other f i = 
   let rec forall_sub n =
     if not (List.exists (fun v -> v = n) i) && not (f n) then false else if n == ((get_nb_proc ()) - 1) then true else forall_sub (n+1) in
