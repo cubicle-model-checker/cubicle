@@ -99,13 +99,20 @@ let check_unsafe (env,_,_,_) unsafes =
       | VProc el -> SAtom.add (Comp(key, Eq, Elem(el, Var))) acc
       | VConstr el -> SAtom.add (Comp(key, Eq, Elem(el, Constr))) acc
       | VAccess(el,vl) -> SAtom.add (Comp(key, Eq, Access(el, vl))) acc
+      | VInt i -> let i = ConstInt (Num.num_of_int i) in
+		  let m = MConst.add i 1 MConst.empty in
+		   SAtom.add (Comp(key, Eq, Const(m))) acc
+      | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
+		   let m = MConst.add r 1 MConst.empty in
+		   SAtom.add (Comp(key, Eq, Const(m))) acc
+      | VBool _ -> assert false
+      | VArith _ -> assert false
       | _-> acc   
   ) env SAtom.empty
   in
   List.iter (fun satom  ->
     if SAtom.subset satom v then raise (TopError Unsafe)
   ) unsafes    
-
 
 
 

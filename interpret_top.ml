@@ -284,7 +284,6 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_e
   close_out open_file;
   !queue, !running_env, !backtrack_env, hcount
 
-
 let execute_depth fmt glob_env trans all_procs unsafe applied_trans take count =
   let taken = ref 0 in 
   Random.self_init ();
@@ -309,20 +308,86 @@ let execute_depth fmt glob_env trans all_procs unsafe applied_trans take count =
     with
       | TopError Deadlock ->
 	running := false;
-	raise (TopError Deadlock) 
+	raise (RunError (Deadlocked(!queue,!running_env)))
       | TopError Unsafe ->
 	Format.fprintf fmt
 	  "Unsafe state reached after %d runs@." count;
 	print_applied_trans fmt !queue;
-	raise (TopError Unsafe)	
-      | Stdlib.Sys.Break -> (*close_out open_file;*) running := false; Format.printf "@."
+	raise (RunError (ReachedUnsafe(!queue,!running_env)))	
+      | Stdlib.Sys.Break ->running := false
       | TopError StopExecution ->
 	running := false;
-	raise (TopError StopExecution)
+	raise (RunError (ReachedSteps(!queue,!running_env)))	
+      | s ->  
+	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
+	assert false
+  done;
+  raise (RunError (FinishedRun(!queue,!running_env)))
+(*
+depth_t : the total depth that needs to be explored
+step_f : which step it crossed the transition
+*)
+let found_transition env transitions all_procs unsafe trace depth_t step_f =
+  let remaining_random = (depth_t - step_f)/2 in
+  let remaining_fixed = remaining_random - step_f in 
+  
+  let rec aux count times =
+    match count with
+      | 0 -> assert false
+      | _ ->
+	assert false
+  in assert false
+    
+
+
+    
+let execute_depth_find_trace fmt glob_env trans all_procs unsafe applied_trans take tr =
+  let steps_taken = ref 0 in
+  let running_env = ref glob_env in
+  let transitions =
+    ref (Array.of_list (all_possible_transitions glob_env trans all_procs false))
+  in
+  let running = ref true in
+  let queue = ref applied_trans in 
+  while !running do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (apply,apply_procs) = !transitions.(rand) in
+      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      if Hstring.compare apply.tr_name tr = 0 then
+	begin
+	  assert false
+      (*do if found transition*)
+	end
+      else
+	begin
+	  running_env := new_env;
+	  transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
+	  let lp = Array.length !transitions in
+	  queue := PersistentQueue.push (!steps_taken,apply.tr_name,apply_procs, l, lp) !queue;
+	  incr steps_taken;
+	  check_unsafe !running_env unsafe;
+	end 
+
+    with
+      | TopError Deadlock -> assert false
+	 
+      | TopError Unsafe -> assert false
+	
+      | Stdlib.Sys.Break ->  assert false
+      | TopError StopExecution -> assert false
+
       | s ->  (*close_out open_file;*)
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
   done
+ 
+
+
+    
+
     
 let dump_in_file  (env,locks, cond, sem) file =
   let f = Format.formatter_of_out_channel file in
@@ -511,8 +576,6 @@ let gen_list depth =
 
 
 (*--------------*)
-
-  
 let hash_of_env env transitions =
   Trans.iter (fun k el ->
     Format.eprintf "k = %a and hash = %d@." Hstring.print k (Hashtbl.hash k)) transitions
@@ -737,13 +800,13 @@ let setup_env tsys sys =
 		    try 
 		      execute_depth fmt !global_env transitions procs all_unsafes !applied_trans d (i-count)
 		    with
-		      | TopError Deadlock ->
+		      | RunError Deadlocked _ ->
 			Format.printf "Deadlock reached. Restarting...@.";
 			aux (count - 1 )
-		      | TopError StopExecution ->
+		      | RunError ReachedSteps _ ->
 			Format.printf "Depth reached. Restarting...@.";
 			aux (count - 1 )
-		      | TopError Unsafe ->
+		      | RunError ReachedUnsafe _->
 			Format.printf "Search terminated@.";
 		      | _ -> assert false
 		end
@@ -758,13 +821,13 @@ let setup_env tsys sys =
 		    try 
 		      execute_depth fmt !global_env transitions procs all_unsafes !applied_trans d (i-count)
 		    with
-		      | TopError Deadlock ->
+		      | RunError Deadlocked _ ->
 			Format.printf "Deadlock reached. Restarting...@.";
 			aux (count - 1 ) times
-		      | TopError StopExecution ->
+		      | RunError ReachedSteps  _ ->
 			Format.printf "Depth reached. Restarting...@.";
 			aux (count - 1 ) times 
-		      | TopError Unsafe ->
+		      | RunError ReachedUnsafe _  ->
 			Format.printf "Unsafe reached. Restarting...@.";
 			aux (count -1) (times+1)
 		      | _ -> assert false
@@ -881,13 +944,16 @@ let setup_env tsys sys =
 	  ()
 	   
 	| TopDump ->
+	  List.iter (fun x -> Format.eprintf "unsafe: %a@." SAtom.print x) all_unsafes
+	  (*let _ = 
+	  execute_depth_find_trace fmt !global_env transitions procs all_unsafes !applied_trans 10 (Hstring.make "t2") in ()*)
 	  (*let eee,ll,cc,semm = !global_env in
 	  Format.printf "Env: %d@." (hash_env eee);
 	  Format.printf "Locks: %d@." (hash_locks ll);
 	  Format.printf "Cond: %d@." (hash_cond cc);
 	  Format.printf "Sem: %d@." (hash_sem semm);
 	    Format.printf "Full: %d@." (hash_full_env !global_env)*)
-	  begin
+	  (*begin
 
 	  let com = match Util.syscall "uname" with
 	    | "Darwin\n" -> "open"
@@ -898,7 +964,7 @@ let setup_env tsys sys =
 	  with
 	    | 0 -> Format.eprintf "it worked??@."
 	    | _ -> Format.eprintf "lol@."
-	  end 
+	  end *)
 	    
 	  (*hash_of_env !global_env transitions*)
 	  

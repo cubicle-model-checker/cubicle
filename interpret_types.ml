@@ -60,11 +60,11 @@ module LockQueues = Map.Make(struct type t = Types.Term.t let compare=  Types.Te
 module Conditions = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 module Semaphores = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 
+ 
 module Backtrack = Map.Make(struct
   type t = int
   let compare = compare
 end)
-
 
 
 module HT = Hashtbl.Make (Term)

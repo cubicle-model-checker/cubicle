@@ -4,7 +4,10 @@ array PC[proc] : t
 var X : int
 var Y : int
 
-init(i) { PC[i] = A1 && X = 0 && Y = 0}
+
+init(i) { PC[i] = A1 && X = 0 && Y = 0 }
+
+unsafe() { Y = 10}
 
 transition t1(i)
 requires {PC[i] = A1} {PC[i] := A2}
