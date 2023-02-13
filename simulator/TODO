@@ -11,11 +11,50 @@
 - [.] Optimisation : Accéder au model state uniquement a travers le simulateur. Set le model state uniquement a travers le simulateur. Permet de le calculer qu'une seule fois
 			-> Nécéssiterais de déplacer les "get_vuv_for_proc" de Utils vers le simulateur.
 - [.] print_scene : Afficher les transitions prises avec les arguments. Déplacer le dumper dans la print_scene ?
-- [.] Simulation : Option du simulateur pour uniquement lire une trace sans modèle
+- [.] Compiler variable table correctement
+- [.] Utiliser tableau redimensionnable pour la trace
+
+## Simulator
+
+- Pour avoir un mode qui ne fait que lire une trace, il suffierait de set la trace puis de set un modèle vide:
+Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il faudrait que la trace prenne en compte un certain nb proc peut être 
+- C'est le simulator qui devrait appeler le scene_on_model_change après avoir  fait un step : Il faut lui mettre un callback et le faire manuellement (également le scene_pre_init et scene_post_init)
+
+## SceneLib
+
+- Grid Compositor
+- Get hovered proc
+- On veut peut être afficher a l'écran les variables 
+
+## Sample scene 
+- On veut afficher si la simulation est en pause
+- On veut afficher le current step
 
 ## Compilateur
 
 - [.] On veut (peut-être) un paramètre -o pour spécifier le path
-- [.] Il faudrait compiler un setter
-- [.] Il faudrait supprimer le "NONE" du state
-- [.] On peut peut être mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
+- Mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
+
+## Bugs
+
+- Il semblerait que si on remointe dans le simulateur avant la première transition il y ait un problème
+
+## TRACES
+
+Tableau redimensionnable
+{
+	Array : 
+	i : (Ou je suis dans l'array)
+}
+
+module T ( X : sig type t)
+	type X.t t
+		val length 	: X.t -> int			
+		val start 	: X.t -> int -> unit (recalibrer position)
+		val get : 	: X.t -> X.t				(Récup current elem)
+		val next : X.t -> unity
+		val position : X.t -> int (récup current position)
+
+## Notes : Réseau de pétri
+
+Ajouter librairie pour faire raiseau de pétri

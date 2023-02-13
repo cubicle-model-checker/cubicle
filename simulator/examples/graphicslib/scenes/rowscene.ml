@@ -30,6 +30,18 @@ let draw_procs () =
   let drawprocfun = Scenelib.draw_square_proc get_proc_text get_proc_color rayon  in 
   Scenelib.draw_procs drawprocfun compfun
 
+let handle_input () =
+  match get_pressed_key () with
+  | Some(c) -> 
+      begin match c with
+      | ' ' -> Simulator.toggle_pause ()
+      | 'a' -> Simulator.take_step_back ()
+      | 'z' -> Simulator.take_step_forward ()
+      | 'r' -> Simulator.reset ()
+      | c -> Format.printf "Pressed unbound key : '%c'\n%!" c 
+      end
+  | _ -> ()
+
 let build_scene () = 
   
   let pre_init  () =
@@ -44,7 +56,7 @@ let build_scene () =
     synchronize()
   in
 
-  let update dt = () in
+  let update dt = handle_input () in
 
   let on_model_update () =
     clear_graph ();

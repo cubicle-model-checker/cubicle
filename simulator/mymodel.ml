@@ -9,12 +9,23 @@ let vWant = Array.make (get_nb_proc ()) (true) in
 let vCrit = Array.make (get_nb_proc ()) (true) in
 
 let state_getter () = 
-let ret = ref StringMap.empty in 
-let add_to_ret n v = ret := StringMap.add n v (!ret) in 
-add_to_ret "Turn" (Val(VInt(!vTurn)));
-add_to_ret "Want" (Arr(List.map (fun x -> VBool(x)) (Array.to_list vWant)));
-add_to_ret "Crit" (Arr(List.map (fun x -> VBool(x)) (Array.to_list vCrit)));
-!ret
+	let ret = ref StringMap.empty in 
+	let add_to_ret n v = ret := StringMap.add n v (!ret) in 
+	add_to_ret "Turn" (Val(VInt(!vTurn)));
+	add_to_ret "Want" (Arr(List.map (fun x -> VBool(x)) (Array.to_list vWant)));
+	add_to_ret "Crit" (Arr(List.map (fun x -> VBool(x)) (Array.to_list vCrit)));
+	!ret
+in
+
+let state_setter state = 
+	let set_vuv vname vval = 
+		match vname, vval with 
+			| "Turn", Val(VInt(v)) -> vTurn := v
+			| "Want", Arr(a) -> List.iteri (fun i x -> match x with | VBool(v) -> vWant.(i) <- v | _ -> failwith "Unknown") a
+			| "Crit", Arr(a) -> List.iteri (fun i x -> match x with | VBool(v) -> vCrit.(i) <- v | _ -> failwith "Unknown") a
+			| _, _ -> failwith "Unknown"
+		in
+	StringMap.iter set_vuv state
 in
 
 let init () = 
@@ -103,5 +114,5 @@ mymodel := Model.add_trans 1 req (!mymodel);
 mymodel := Model.add_trans 1 enter (!mymodel);
 mymodel := Model.add_trans 1 exit (!mymodel);
 mymodel := Model.set_init init (!mymodel);
-mymodel := Model.set_vars ([], state_getter) (!mymodel);
+mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);
 set_model (!mymodel)

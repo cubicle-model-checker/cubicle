@@ -16,18 +16,16 @@ let _ =
 
   let (scene_preinit, scene_postinit, scene_onmodelchange, scene_update) = Utils.get_scene () in
 
-  scene_preinit ();
+  Simulator.set_callbacks (scene_preinit, scene_postinit, scene_onmodelchange);
   Simulator.init ();
-  scene_postinit ();
 
   while true do
     let t = time () in
     let delt = t -. (!last_time) in
     scene_update delt;
-    if delt > (Simulator.get_sleep_time ()) then
+    if delt >= (Simulator.get_sleep_time ()) then
       (
         Simulator.step ();
-        scene_onmodelchange ();
         last_time := t
       )
   done

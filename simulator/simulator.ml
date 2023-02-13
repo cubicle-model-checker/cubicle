@@ -1,30 +1,42 @@
 open Utils
-
-(* -- Interaction -- *)
-
-(* Lock is similar to req but it is created at runtime *)
-let runtime_lock : (string, (int list -> bool)) Hashtbl.t = Hashtbl.create 10
-
-let lock_trans trans_name =
-  Hashtbl.add runtime_lock trans_name (fun _ -> false)
-
-let unlock_trans trans_name =
-  Hashtbl.remove runtime_lock trans_name
-
-(* -- Simulation -- *)
-
-let sleep_time = ref 1.
-let get_sleep_time () = !sleep_time
-let set_sleep_time st = sleep_time := st
+open Model
 
 let full_trace : Model.full_trace ref = ref (Model.StringMap.empty, [])
 let get_full_trace () = !full_trace
 
+let callbacks = ref ((fun () -> ()), (fun () -> ()), (fun () -> ()))
+let set_callbacks nc = callbacks := nc
+let pre_init_callback () = 
+  let (pic, _,_) = (!callbacks) in
+  pic ()
+
+let post_init_callback () = 
+  let (_, poc, _) = !callbacks in
+  poc ()
+
+let on_model_change_callback () =
+  let (_,_,omc) = !callbacks in
+  omc ()
+
+(* -- Interaction variables -- *)
+
+(* Lock is similar to req but it is created at runtime *)
+let runtime_lock : (string, (int list -> bool)) Hashtbl.t = Hashtbl.create 10
+let is_paused = ref false
+let sleep_time = ref 1.
+let get_sleep_time () = !sleep_time
+let set_sleep_time st = sleep_time := st
+
+(* -- Simulation -- *)
+
+
 let init () =
+  pre_init_callback ();
   Random.init (int_of_float (Unix.time ()));
   let (_,minit,_) = get_model () in
+  minit ();
   full_trace := (get_model_state (), []);
-  minit () 
+  post_init_callback ()
 
 let get_possible_action_for_arg arg trans_list trans_map = 
   let sub_gpafa returned name = 
@@ -34,6 +46,8 @@ let get_possible_action_for_arg arg trans_list trans_map =
   List.fold_left sub_gpafa [] trans_list
 
 let step () =
+  if not !is_paused then
+  (
   let possible_actions = 
     let returned_list = ref [] in 
     (* NOTE:
@@ -51,14 +65,94 @@ let step () =
     Model.IntMap.iter test_transition trans_table;
     !returned_list
   in
-  begin if List.length possible_actions > 0 then
+  if List.length possible_actions > 0 then
       (
       let (arg, ac, name) = get_random_in_list possible_actions in
-      ac arg;                                     (* Effectue l'action *)
+      ac arg;                                     
       let (init, last_trace) = !full_trace in
-      full_trace := (init, ((name, arg),get_model_state ())::last_trace);
-      Format.printf "Took %s with args " name;    (* Affiche une trace de l'action dans la sortie standard*)
-      print_list_int arg;
+      full_trace := (init, ((name, arg), Utils.get_model_state ())::last_trace);
       )
-    else Format.printf "No possible transition from current state\n"
-  end
+  );
+  on_model_change_callback ()
+
+(* Interaction functions *)
+
+let lock_trans trans_name =
+  Hashtbl.add runtime_lock trans_name (fun _ -> false)
+
+let unlock_trans trans_name =
+  Hashtbl.remove runtime_lock trans_name
+
+let toggle_pause () = is_paused := not (!is_paused)
+
+let take_step_back () = 
+  let m = get_model () in
+  match get_full_trace () with
+  | (init, hd::tl) -> 
+      let ns = match tl with
+      | (_,hd2)::tl2 -> hd2
+      | [] -> init
+      in
+      Model.set_state m ns;
+      full_trace := (init, tl)
+  | (init, [])  -> Model.set_state m init
+
+let take_step_forward () = 
+  let pre_paused = !is_paused in
+  is_paused := false;
+  step ();
+  is_paused := pre_paused
+
+let reset () = init ()
+
+let get_model_state () = 
+  match get_full_trace () with
+  | (init, hd::tl) -> 
+      let ns = match tl with
+      | (_,hd2)::tl2 -> hd2
+      | [] -> init
+      in
+      ns
+  | (init, [])  -> init
+
+(* Scene functions *)
+
+let get_vuv_for_const =
+  let mstate = get_model_state () in
+  let ret = ref [] in
+  let add_vars vname = function
+  | Model.Val(v) -> 
+    ret := (vname, v)::(!ret)
+  | _ -> ()
+  in
+  StringMap.iter add_vars mstate;
+  !ret
+
+let get_vuv_for_proc i =
+  let mstate = get_model_state () in
+  let ret = ref [] in
+  let add_vars vname = function 
+    | Model.Arr(a) -> ret := (vname, List.nth a i)::(!ret)
+    | _ -> ()
+  in
+  StringMap.iter add_vars mstate;
+  !ret
+
+let get_vuv_for_proc_pair i j = 
+  let mstate = get_model_state () in
+  let ret = ref [] in
+  let add_vars vname = function
+    | Model.Mat(m) -> 
+        let a = List.nth m i in
+        ret := (vname, List.nth a j)::(!ret)
+    | _ -> ()
+  in
+  StringMap.iter add_vars mstate;
+  !ret
+
+let get_vuv vuv_name = StringMap.find vuv_name (get_model_state ())
+
+let take_transition tname args = 
+  let (_, _, (trans_map, _)) = get_model () in
+  let (req, ac) = StringMap.find tname trans_map in
+  if req args then (ac args; on_model_change_callback ())

@@ -23,7 +23,7 @@ type trace = (string * int list) * model_state      (* name of transition taken 
 type full_trace = model_state * trace list          (* initial_state, list of transition taken *)
 
 type variable       = string * string * int   (* name, type, dim *) 
-type variable_table = variable list * (unit -> model_state) (* var_list, state getter*)
+type variable_table = variable list * (unit -> model_state) * (model_state -> unit) (* var_list, state getter, state setter*)
 
 type init = unit -> unit
 
@@ -37,7 +37,10 @@ type transitions      = transition_map * transition_table
 
 type t = variable_table * init * transitions
 
-let empty : t = (([], fun () -> StringMap.empty), (fun () -> ()), (StringMap.empty, IntMap.empty))
+let empty : t = 
+  let vt = ([], (fun () -> StringMap.empty), (fun _-> ())) in
+  let tr = (StringMap.empty, IntMap.empty) in
+  (vt, (fun () -> ()), tr)
 
 let add_trans nb_arg (trans_name, trans_req, trans_ac)  ((mvars, minit, (mtransmap, mtranstable)) : t) : t = 
   let cur = try IntMap.find nb_arg mtranstable with Not_found -> [] in
@@ -49,10 +52,13 @@ let set_init minit ((mvars, _, mtrans) : t) : t =
 let set_vars mvars ((_, minit, mtrans) : t) : t =
   (mvars, minit, mtrans)
 
-(* Getters *)
+(* Getters & Dynamic Setters *)
 
-let get_state (((_, state_getter), _, _) : t) : model_state =
+let get_state (((_, state_getter, _), _, _) : t) : model_state =
   state_getter ()
+
+let set_state (((_, _, state_setter), _,_) : t) (new_state : model_state) =
+  state_setter new_state
 
 (* Other *)
 

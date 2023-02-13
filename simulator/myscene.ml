@@ -1,10 +1,13 @@
 open Utils
 open Model
 open Scenelib
+open Simulator
 open Graphics
 
-(*
-Simple sample scene adapted to work with dekker
+
+(* 
+  An simple sample scene:
+  Display the current state in a graphical window with:
 *)
 
 let border_size = 10
@@ -44,12 +47,23 @@ let get_proc_color i =
   if v1 then blue else
   black
 
-
 let draw_procs () = 
   let (proc_size, rayon) = Scenelib.proc_size_rayon border_size space_perc        in
   let compfun     = Scenelib.row_composition border_size proc_size                in
   let drawprocfun = Scenelib.draw_square_proc get_proc_text get_proc_color rayon  in 
   Scenelib.draw_procs drawprocfun compfun
+
+let handle_input () =
+  match get_pressed_key () with
+  | Some(c) -> 
+      begin match c with
+      | ' ' -> Simulator.toggle_pause ()
+      | 'a' -> Simulator.take_step_back ()
+      | 'z' -> Simulator.take_step_forward ()
+      | 'r' -> Simulator.reset ()
+      | c -> Format.printf "Pressed unbound key : '%c'\n%!" c 
+      end
+  | _ -> ()
 
 let build_scene () = 
   
@@ -65,7 +79,7 @@ let build_scene () =
     synchronize()
   in
 
-  let update dt = () in
+  let update dt = handle_input () in
 
   let on_model_update () =
     clear_graph ();

@@ -62,10 +62,10 @@ let write_vars s ty_defs=
 
 let write_state_getter g_vars ty_defs = 
   pfile "let state_getter () = \n";
-  pfile "let ret = ref StringMap.empty in \n";
-  pfile "let add_to_ret n v = ret := StringMap.add n v (!ret) in \n";
+  pfile "\tlet ret = ref StringMap.empty in \n";
+  pfile "\tlet add_to_ret n v = ret := StringMap.add n v (!ret) in \n";
   let add_var_to_state name (ty, dim) =
-    pfile "add_to_ret \"%s\" " (Hstring.view name);
+    pfile "\tadd_to_ret \"%s\" " (Hstring.view name);
     let nt =
       match (Hstring.view ty) with
       | "int" | "proc"  -> "VInt"
@@ -81,7 +81,32 @@ let write_state_getter g_vars ty_defs =
     pfile ";\n"
   in
   Hstring.HMap.iter add_var_to_state g_vars;
-  pfile "!ret\nin\n\n"
+  pfile "\t!ret\nin\n\n"
+
+let write_state_setter g_vars ty_defs = 
+  pfile "let state_setter state = \n";
+  pfile "\tlet set_vuv vname vval = \n";
+  pfile "\t\tmatch vname, vval with \n";
+  let add_var_to_matching name (ty, dim) =
+    pfile "\t\t\t| \"%s\", " (Hstring.view name);
+    let nt =
+      match (Hstring.view ty) with
+      | "int" | "proc"  -> "VInt"
+      | "bool"| "mbool" -> "VBool"
+      | "real"  -> "VFloat"
+      | _       -> "VConstr"
+    in
+    begin match dim with
+    | 0 -> pfile "Val(%s(v)) -> %s := v\n" nt (get_var_name name)
+    | 1 -> pfile "Arr(a) -> List.iteri (fun i x -> match x with | %s(v) -> %s.(i) <- v | _ -> failwith \"Unknown\") a\n" nt (get_var_name name)
+    | _ -> pfile "Mat(m) -> List.iteri (fun i x -> List.iteri (fun j y -> match y with | %s(v) -> %s.(i).(j) <- v | _ -> failwith \"Unknown\") x) m\n" nt (get_var_name name)
+    end
+  in
+  Hstring.HMap.iter add_var_to_matching g_vars;
+
+  pfile "\t\t\t| _, _ -> failwith \"Unknown\"\n";
+  pfile "\t\tin\n";
+  pfile "\tStringMap.iter set_vuv state\nin\n\n"
 
 (* Init declaration *)
 
@@ -354,7 +379,7 @@ let write_transitions trans_list ty_defs g_vars =
   in
   List.iter write_table trans_list;
   pfile "mymodel := Model.set_init init (!mymodel);\n";
-  pfile "mymodel := Model.set_vars ([], state_getter) (!mymodel);\n";
+  pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
   pfile "set_model (!mymodel)\n"
 
 let write_unsafe unsafe =
@@ -369,6 +394,7 @@ let run ts s =
   let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
   write_state_getter g_vars g_types;
+  write_state_setter g_vars g_types;
   write_init ts.t_init g_vars g_types;
   write_transitions ts.t_trans g_types g_vars;
   write_unsafe s.unsafe;
