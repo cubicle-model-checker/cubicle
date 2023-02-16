@@ -1,5 +1,7 @@
 open Utils
+open Maps
 open Model
+open Traces
 open Format
 
 let build_model () =

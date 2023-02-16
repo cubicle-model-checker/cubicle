@@ -1,8 +1,8 @@
 open Utils
 open Model
+open Maps
 
-let full_trace : Model.full_trace ref = ref (Model.StringMap.empty, [])
-let get_full_trace () = !full_trace
+let full_trace = Traces.empty ()
 
 let callbacks = ref ((fun () -> ()), (fun () -> ()), (fun () -> ()))
 let set_callbacks nc = callbacks := nc
@@ -29,18 +29,17 @@ let set_sleep_time st = sleep_time := st
 
 (* -- Simulation -- *)
 
-
 let init () =
   pre_init_callback ();
   Random.init (int_of_float (Unix.time ()));
-  let (_,minit,_) = get_model () in
+  let minit = Model.get_init (get_model ()) in
   minit ();
-  full_trace := (get_model_state (), []);
+  Traces.add full_trace (("init", []),Utils.get_model_state ());
   post_init_callback ()
 
 let get_possible_action_for_arg arg trans_list trans_map = 
   let sub_gpafa returned name = 
-    let (req, ac) = Model.StringMap.find name trans_map in
+    let (req, ac) = StringMap.find name trans_map in
     let lock      = try Hashtbl.find runtime_lock name with Not_found -> (fun _ -> true) in
     if (req arg && lock arg) then ((arg,ac,name)::returned) else returned in
   List.fold_left sub_gpafa [] trans_list
@@ -55,22 +54,22 @@ let step () =
        il y a de très fort risque d'avoir un comportement inatendu. 
        Il faudrait peut être mettre un warning et crash. 
     *)
-    let (_, _, (trans_map, trans_table)) = get_model () in
+    let (trans_map, trans_table) = Model.get_trans (get_model ()) in
     let test_transition arg_number trans_list =
       if arg_number > get_nb_proc () then failwith (Format.sprintf "At least %d proc is required for this simulation." (get_nb_proc ()))
       else
       let arg_list = get_args arg_number in
       List.iter (fun arg -> returned_list := (get_possible_action_for_arg arg trans_list trans_map)@(!returned_list)) arg_list
     in
-    Model.IntMap.iter test_transition trans_table;
+    IntMap.iter test_transition trans_table;
     !returned_list
   in
   if List.length possible_actions > 0 then
       (
       let (arg, ac, name) = get_random_in_list possible_actions in
-      ac arg;                                     
-      let (init, last_trace) = !full_trace in
-      full_trace := (init, ((name, arg), Utils.get_model_state ())::last_trace);
+      ac arg;         
+      let ntr = ((name, arg), Utils.get_model_state ()) in 
+      Traces.add full_trace ntr;
       )
   );
   on_model_change_callback ()
@@ -85,17 +84,10 @@ let unlock_trans trans_name =
 
 let toggle_pause () = is_paused := not (!is_paused)
 
-let take_step_back () = 
-  let m = get_model () in
-  match get_full_trace () with
-  | (init, hd::tl) -> 
-      let ns = match tl with
-      | (_,hd2)::tl2 -> hd2
-      | [] -> init
-      in
-      Model.set_state m ns;
-      full_trace := (init, tl)
-  | (init, [])  -> Model.set_state m init
+let take_step_back () =
+  Traces.prev full_trace;
+  let (_, ms) = Traces.get full_trace in
+  Model.set_state (get_model ()) ms
 
 let take_step_forward () = 
   let pre_paused = !is_paused in
@@ -105,23 +97,16 @@ let take_step_forward () =
 
 let reset () = init ()
 
-let get_model_state () = 
-  match get_full_trace () with
-  | (init, hd::tl) -> 
-      let ns = match tl with
-      | (_,hd2)::tl2 -> hd2
-      | [] -> init
-      in
-      ns
-  | (init, [])  -> init
+let get_model_state () =
+  let (_, ret) = Traces.get full_trace in ret
 
 (* Scene functions *)
 
-let get_vuv_for_const =
+let get_vuv_for_const () =
   let mstate = get_model_state () in
   let ret = ref [] in
   let add_vars vname = function
-  | Model.Val(v) -> 
+  | Traces.Val(v) -> 
     ret := (vname, v)::(!ret)
   | _ -> ()
   in
@@ -132,7 +117,7 @@ let get_vuv_for_proc i =
   let mstate = get_model_state () in
   let ret = ref [] in
   let add_vars vname = function 
-    | Model.Arr(a) -> ret := (vname, List.nth a i)::(!ret)
+    | Traces.Arr(a) -> ret := (vname, List.nth a i)::(!ret)
     | _ -> ()
   in
   StringMap.iter add_vars mstate;
@@ -142,7 +127,7 @@ let get_vuv_for_proc_pair i j =
   let mstate = get_model_state () in
   let ret = ref [] in
   let add_vars vname = function
-    | Model.Mat(m) -> 
+    | Traces.Mat(m) -> 
         let a = List.nth m i in
         ret := (vname, List.nth a j)::(!ret)
     | _ -> ()
@@ -153,6 +138,6 @@ let get_vuv_for_proc_pair i j =
 let get_vuv vuv_name = StringMap.find vuv_name (get_model_state ())
 
 let take_transition tname args = 
-  let (_, _, (trans_map, _)) = get_model () in
+  let (trans_map, _) = Model.get_trans (get_model ()) in
   let (req, ac) = StringMap.find tname trans_map in
   if req args then (ac args; on_model_change_callback ())

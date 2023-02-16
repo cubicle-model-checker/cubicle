@@ -1,5 +1,5 @@
 open Format
-open Model
+open Maps
 
 (* Getters and setters *)
 let scene         = ref Scene.empty
@@ -35,9 +35,9 @@ let dumper () =
       printf "]"
     in
     begin match val_value with
-      | Val(v) -> pval v
-      | Arr(a) -> parr a
-      | Mat(m) -> pmat m
+      | Traces.Val(v) -> pval v
+      | Traces.Arr(a) -> parr a
+      | Traces.Mat(m) -> pmat m
     end;
     printf "\n"
   in

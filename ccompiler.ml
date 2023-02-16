@@ -388,7 +388,9 @@ let write_unsafe unsafe =
 
 let run ts s =
   pfile "open Utils\n";
+  pfile "open Maps\n";
   pfile "open Model\n";
+  pfile "open Traces\n";
   pfile "open Format\n\n";
   pfile "let build_model () =\n";
   let g_types = write_types s.type_defs in

@@ -10,7 +10,7 @@ let _ =
   Utils.set_nb_proc nbproc;
   Simulator.set_sleep_time (float_of_string Sys.argv.(2));
   let last_time   = ref (time ()) in
-  
+ 
   Mymodel.build_model ();
   Myscene.build_scene ();
 

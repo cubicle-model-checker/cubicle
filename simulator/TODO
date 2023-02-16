@@ -2,23 +2,24 @@
 
 ## Simulateur
 
-- [.] Le modèle devrait contenir les unsafe
 - [.] Scale le text pour le fit dans les carrés
 - [.] Centrer le text
 - [.] Afficher constantes & Mat
-- [.] Pouvoir revenir en arrière dans la simulation
 - [.] Pouvoir changer la vitesse d'execution de la simulation
 - [.] Optimisation : Accéder au model state uniquement a travers le simulateur. Set le model state uniquement a travers le simulateur. Permet de le calculer qu'une seule fois
 			-> Nécéssiterais de déplacer les "get_vuv_for_proc" de Utils vers le simulateur.
 - [.] print_scene : Afficher les transitions prises avec les arguments. Déplacer le dumper dans la print_scene ?
 - [.] Compiler variable table correctement
-- [.] Utiliser tableau redimensionnable pour la trace
 
-## Simulator
+## Model
+
+- Le model devrait contenir les unsafe
+
+## Simulateur
 
 - Pour avoir un mode qui ne fait que lire une trace, il suffierait de set la trace puis de set un modèle vide:
 Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il faudrait que la trace prenne en compte un certain nb proc peut être 
-- C'est le simulator qui devrait appeler le scene_on_model_change après avoir  fait un step : Il faut lui mettre un callback et le faire manuellement (également le scene_pre_init et scene_post_init)
+- Simuelr les unsafe si spécifié par l'utilisateur (Ajouter option) 
 
 ## SceneLib
 
@@ -35,11 +36,7 @@ Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il
 - [.] On veut (peut-être) un paramètre -o pour spécifier le path
 - Mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
 
-## Bugs
-
-- Il semblerait que si on remointe dans le simulateur avant la première transition il y ait un problème
-
-## TRACES
+## Traces
 
 Tableau redimensionnable
 {
@@ -55,6 +52,19 @@ module T ( X : sig type t)
 		val next : X.t -> unity
 		val position : X.t -> int (récup current position)
 
-## Notes : Réseau de pétri
+Implémenter la signature de la trace statique
+Construire & Impélementer la signature de la trace dynamique
+Utiliser les traces dans le model et dans le simulateur
 
-Ajouter librairie pour faire raiseau de pétri
+Le simumateur devrait rendre une trace non dynamique lorsque demandée mais avoir une trace dynamique
+
+# GraphicsLib
+
+- Ajouter une librarie avec OCamlCanvas
+- Ajouter librairie pour faire raiseau de pétri
+
+## Bugs
+
+- Il semblerait que si on remonte dans le simulateur avant la première transition il y ait un problème
+
+

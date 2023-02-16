@@ -1,26 +1,7 @@
-module IntMap = Map.Make(struct type t = int let compare : int -> int -> int = Int.compare end) 
-module StringMap = Map.Make(struct type t = string let compare : string -> string -> int = String.compare end)
+open Maps
+open Traces
 
 (* Types *)
-
-type var_unit_value = 
-  | VInt        of int
-  | VFloat      of float
-  | VBool       of bool
-  | VConstr     of string
-  | VLock       of int option
-  | VRlock      of int option * int
-  | VSemaphore  of int
-
-type var_value = 
-  | Val  of var_unit_value
-  | Arr  of var_unit_value list
-  | Mat  of var_unit_value list list
-
-type model_state = var_value StringMap.t      (* name of var * value list *)
-
-type trace = (string * int list) * model_state      (* name of transition taken to get here, args, state adter transition was taken *)
-type full_trace = model_state * trace list          (* initial_state, list of transition taken *)
 
 type variable       = string * string * int   (* name, type, dim *) 
 type variable_table = variable list * (unit -> model_state) * (model_state -> unit) (* var_list, state getter, state setter*)
@@ -59,6 +40,11 @@ let get_state (((_, state_getter, _), _, _) : t) : model_state =
 
 let set_state (((_, _, state_setter), _,_) : t) (new_state : model_state) =
   state_setter new_state
+
+let get_vars (vars, _, _) = vars
+let get_init (_, init, _) =  init
+let get_trans (_,_,trans) = trans
+
 
 (* Other *)
 
