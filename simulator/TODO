@@ -1,32 +1,12 @@
 # TODO
 
-## Simulateur
-
-- [.] Scale le text pour le fit dans les carrés
-- [.] Centrer le text
-- [.] Afficher constantes & Mat
-- [.] Pouvoir changer la vitesse d'execution de la simulation
-- [.] Optimisation : Accéder au model state uniquement a travers le simulateur. Set le model state uniquement a travers le simulateur. Permet de le calculer qu'une seule fois
-			-> Nécéssiterais de déplacer les "get_vuv_for_proc" de Utils vers le simulateur.
-- [.] print_scene : Afficher les transitions prises avec les arguments. Déplacer le dumper dans la print_scene ?
-- [.] Compiler variable table correctement
-
 ## Model
 
 - Le model devrait contenir les unsafe
 
 ## Simulateur
 
-- Pour avoir un mode qui ne fait que lire une trace, il suffierait de set la trace puis de set un modèle vide:
-Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il faudrait que la trace prenne en compte un certain nb proc peut être 
-- Simuelr les unsafe si spécifié par l'utilisateur (Ajouter option) 
-=======
-- Scale le text pour le fit dans les carrés
-- Centrer le text
-- Afficher constantes & Mat
-- print_scene : Afficher les transitions prises avec les arguments 
 - Compiler variable table correctement
-- Utiliser tableau redimensionnable pour la trace
 - Mettre les unsafe dans le modèle : Donner l'option ou non de les tester
 - La trace devrait garder le nb_proc
 - Pour avoir un simulateur qui lit une trace : 
@@ -50,6 +30,10 @@ Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il
 ## Sample scene 
 - On veut afficher si la simulation est en pause
 - On veut afficher le current step
+- Scale le text pour le fit dans les carrés
+- Centrer le text
+- Afficher constantes & Mat
+- print_scene : Afficher les transitions prises avec les arguments
 
 ## Compilateur
 
@@ -79,13 +63,20 @@ Utiliser les traces dans le model et dans le simulateur
 
 Le simumateur devrait rendre une trace non dynamique lorsque demandée mais avoir une trace dynamique
 
-# GraphicsLib
+# Petri:
 
-- Ajouter une librarie avec OCamlCanvas
-- Ajouter librairie pour faire raiseau de pétri
+- Utiliser des IntMap et des StringMap pour les trucs qui menent vers leurs position
+
+
+
+
+## Divers
+
+- Au lieu d'utiliser des triplets partout il serait beaucoup plus cohérent d'utiliser des structures non ?
+
+
 
 ## Bugs
 
 - Il semblerait que si on remonte dans le simulateur avant la première transition il y ait un problème
-
 

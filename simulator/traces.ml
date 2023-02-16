@@ -3,6 +3,7 @@
   - Add number of proc to trace
   - Add init state to trace
   - Verify out of bound in get and next
+  - Add a "max" parameter ? You can then have where you are and where you should stop. Adding to a trace increase max. You can 'forget' everything after a certain ...
 *)
 open Maps
 

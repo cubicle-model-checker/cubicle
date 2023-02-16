@@ -117,7 +117,6 @@ in
 let exit = ("exit", req_exit, ac_exit) 
 in
 
-
 let mymodel = ref Model.empty in
 
 mymodel := Model.add_trans 1 req (!mymodel);
