@@ -39,6 +39,14 @@ let init () =
 	()
 in
 
+let unsafe_0 args = 
+	let z1 = List.nth args 0 in
+	let z2 = List.nth args 1 in
+	vCrit.(z1) = true &&
+	vCrit.(z2) = true &&
+	true
+in
+
 let req_req args = 
 	let i = List.nth args 0 in
 	vWant.(i) = false && 

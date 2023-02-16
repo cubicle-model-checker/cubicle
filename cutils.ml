@@ -4,24 +4,18 @@ open Util
 open Atom
 open Printf
 
-(* Quelques notes qui valent pour toutes les fonctions du fichier: 
-  En général, les fonctions sont des séquences d'instruction.
-  On écrit une instruction en considérant que il y a une autre instruction qui va suivre. 
-  On l'écrit également en considérant qu'on est sur une nouvelle ligne. On va donc généralement finir les ligne par ';\n'.
-  On va en genéral finir toutes les fonctions de type unit par "()". Si il n'y a aucune instruction avant, ça marchera quand même, et si il y en a ça permet d'avoir une instruction finale.
-  C'est une solution beaucoup plus simple que de séparer les premières instruction de la dernière, créant un code pour le compilateur plus complexe.
-
-  Les fonctions print_"..." écrivent dans le fichier destination. 
+(*
+  print_"..." functions write in the destination file.
 *)
 
 (* Variables globales utilisées *)
 
-type g_varst = (Hstring.t * int) Hstring.HMap.t
+type g_varst = (Hstring.t * int) Hstring.HMap.t (* Hashtbl to store dimensions *)
 
-let tmp_file_name = "simulator/mymodel.ml"   (* Fichier sortie vers lequel le fichier cubicle va être compilé. Doit avoir un suffixe en ".ml" *)
+let tmp_file_name = "simulator/mymodel.ml"   (* Output file. Need to end with ".ml" *)
 let out_file = open_out tmp_file_name  
-let var_prefix = "v"                      (* Préfixe pour les noms de variable. Nécéssaire car les variables cubicle commencent par une majuscule, impossible en caml *)
-let updated_prefix = "n"                  (* Voir dans transition *)
+let var_prefix = "v"                      
+let updated_prefix = "n"                  
 let pfile = fun d -> fprintf out_file d
 
 let get_var_type var_name g_vars    = let (t,_) = Hstring.HMap.find var_name g_vars in t
@@ -42,7 +36,7 @@ let get_constr_name s g_vars =
         try ignore(bool_of_string sstring); sstring   with Invalid_argument (_) ->
           "\""^sstring^"\""
 
-(* Utilisé pour renvoyer une valeur d'initialisation quelconque avec le bon type pour une variable *)
+(* Used for getting a simple value to initialise variables with the correct type. *)
 let get_value_for_type ty ty_defs = 
   match (Hstring.view ty) with 
   | "int" | "proc" -> "0"
@@ -64,7 +58,7 @@ let mconst_is_float mconst g_vars  =
 let deplier_var_list var_list = 
   List.fold_left (fun prev v -> sprintf "%s.(%s)" prev (Hstring.view v)) "" var_list
 
-(* Permet de multiplier le string s par le string n. Utile pour permettre la tabulation correcte. *)
+(* Mainly used for writting correct tabulation *)
 let mult_string s n = 
   let reste = ref "" in 
   for i = 1 to n do 
@@ -72,7 +66,8 @@ let mult_string s n =
   done;
   !reste
 
-(* Permet d'accéder a un tableau de dimension n. Renvoie le string ".(tmp_0).(tmp_1)..." *)
+(* Return string ".(tmp_0).(tmp_1)..." *)
+
 let deplier_var n = 
   let reste = ref "" in 
   for i = 1 to n do 
@@ -142,6 +137,5 @@ let get_random_for_type ty ty_defs =
   | "real" -> "Random.float "^sim_max_float
   | "bool" | "mbool" -> "Random.bool ()"
   | t -> Format.sprintf "get_random_in_list %s" t
-
 
 module IntMap = Map.Make(struct type t = int let compare : int -> int -> int = Int.compare end) 

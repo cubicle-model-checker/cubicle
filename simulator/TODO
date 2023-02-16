@@ -20,6 +20,26 @@
 - Pour avoir un mode qui ne fait que lire une trace, il suffierait de set la trace puis de set un modèle vide:
 Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il faudrait que la trace prenne en compte un certain nb proc peut être 
 - Simuelr les unsafe si spécifié par l'utilisateur (Ajouter option) 
+=======
+- Scale le text pour le fit dans les carrés
+- Centrer le text
+- Afficher constantes & Mat
+- print_scene : Afficher les transitions prises avec les arguments 
+- Compiler variable table correctement
+- Utiliser tableau redimensionnable pour la trace
+- Mettre les unsafe dans le modèle : Donner l'option ou non de les tester
+- La trace devrait garder le nb_proc
+- Pour avoir un simulateur qui lit une trace : 
+		Set la trace
+		Set modèle vide
+		Se balader dans la trace
+- Un appel a step si il existe des états après la ou on est devrait retourner vers ces états. Une fonction tierce "forget future" devrait exister pour supprimer les traces futures.
+
+# MyModel
+
+- Créer un module pour le modèle.
+- Cacher le type du modèle dans celui ci pour seulement afficher un type "t".
+- Avoir une fonction "create_model"
 
 ## SceneLib
 
@@ -33,8 +53,9 @@ Ainsi, aucune transition ne sera effectuée, mais on pourra voir quand même. Il
 
 ## Compilateur
 
-- [.] On veut (peut-être) un paramètre -o pour spécifier le path
+- Il faudrait un paramètre -o pour spécifier le path
 - Mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
+- La plupart du code entre l'écriture des garde et des états unsafe semble aisément factorisable
 
 ## Traces
 

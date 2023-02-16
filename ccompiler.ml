@@ -6,12 +6,13 @@ open Printf
 open Cutils
 
 (*
-  Quelques notes qui valent pour toutes les fonctions du fichier: 
-  En général, les fonctions sont des séquences d'instruction.
-  On écrit une instruction en considérant que il y a une autre instruction qui va suivre. 
-  On l'écrit également en considérant qu'on est sur une nouvelle ligne. On va donc généralement finir les ligne par ';\n'.
-  On va en genéral finir toutes les fonctions de type unit par "()". Si il n'y a aucune instruction avant, ça marchera quand même, et si il y en a ça permet d'avoir une instruction finale.
-  C'est une solution beaucoup plus simple que de séparer les premières instruction de la dernière, créant un code pour le compilateur plus complexe.
+
+Some notes about functions in this files.
+In general, most functions write a sequence of instructions.
+They are written considering that some other instruction will follow right behind them.
+They consider that they are on a new line : Most instruction will end by begining a new line
+Most functions end with "()" for simplicity. This could easily be avoided but would have made a longer compiler
+
 *)
 
 (* Type declaration *)
@@ -26,7 +27,8 @@ let write_types t_def =
     pfile "] in\n";
     Hashtbl.add returned t_name t_values
   in
-  List.iter write_type (List.tl t_def); (* On prend ici la tl de t_def car le premier élément est la définition d'un type @Mbool qu'on ne va pas utiliser*)
+  (* First element of t_def is a definition of "@Mbool" type that will be translated into OCaml boolean values. *)
+  List.iter write_type (List.tl t_def); 
   pfile "\n";
   returned
 
@@ -222,16 +224,13 @@ let write_transitions trans_list ty_defs g_vars =
     let trans_name = Hstring.view trans_info.tr_name in
     
     let trans_args = trans_info.tr_args in 
-    let write_args () = (* Since we're going to declare the transition args twice (Once in the req and once in the ac), we make it a function *)
-    begin 
-      let count = ref 0 in
-      let write_args arg = 
-        begin 
-          pfile "\tlet %s = List.nth args %d in\n" (Hstring.view arg) (!count);
-          count := (!count) + 1; 
-        end in
-      List.iter write_args trans_args;
-    end in
+    (* Args are declare twice, so it's better to make it a function. *)
+    let write_args () = 
+      let write_args i arg = 
+          pfile "\tlet %s = List.nth args %d in\n" (Hstring.view arg) i;
+      in
+      List.iteri write_args trans_args;
+    in
 
     (*  NOTE : Since we know how to get the new_val_name from a var_name, we could just use a Set instead of a Hashtbl *)
 
@@ -254,7 +253,7 @@ let write_transitions trans_list ty_defs g_vars =
       print_term g_vars t2;
     | True -> pfile "true"
     | False -> pfile "false"
-    | Ite(satom, t1, t2) -> (* NOTE : As of writing, Ite aren't actually implemented in the transition, so this will effectively never happen *) 
+    | Ite(satom, t1, t2) -> 
         pfile "if (";
         SAtom.iter print_atom_and satom;
         pfile ")then (";
@@ -382,9 +381,39 @@ let write_transitions trans_list ty_defs g_vars =
   pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
   pfile "set_model (!mymodel)\n"
 
-let write_unsafe unsafe =
-  let sub_write_unsafe (_, vars, satom) = ()
-  in List.iter sub_write_unsafe unsafe
+let write_unsafe unsafe g_vars =
+  let sub_write_unsafe i (_, vars, satom) =
+    pfile "let unsafe_%d args = \n" i;
+    let write_args i arg = 
+        pfile "\tlet %s = List.nth args %d in\n" (Hstring.view arg) i;
+    in
+    List.iteri write_args vars;
+    let print_op = function 
+    | Eq -> pfile " = "
+    | Le -> pfile " <= "
+    | Lt -> pfile " < "
+    | Neq -> pfile " <> "
+    in
+    let rec print_atom = function
+    | Comp(t1, op, t2) -> 
+      print_term g_vars t1;
+      print_op op;
+      print_term g_vars t2;
+    | True -> pfile "true"
+    | False -> pfile "false"
+    | Ite(satom, t1, t2) -> 
+        pfile "if (";
+        SAtom.iter print_atom_and satom;
+        pfile ")then (";
+        print_atom t1;
+        pfile") else (";
+        print_atom t2;
+        pfile ")"
+      and print_atom_and atom = pfile "\t";print_atom atom; pfile " &&\n" in
+    SAtom.iter print_atom_and satom;
+    pfile "\ttrue\nin\n\n";
+  in 
+  List.iteri sub_write_unsafe unsafe
 
 let run ts s =
   pfile "open Utils\n";
@@ -398,7 +427,7 @@ let run ts s =
   write_state_getter g_vars g_types;
   write_state_setter g_vars g_types;
   write_init ts.t_init g_vars g_types;
+  write_unsafe s.unsafe g_vars;
   write_transitions ts.t_trans g_types g_vars;
-  write_unsafe s.unsafe;
   close_out out_file;
   exit 0
