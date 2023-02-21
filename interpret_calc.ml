@@ -190,7 +190,7 @@ let hash_env env=
 	  | VSleep i -> Hashtbl.hash i
 	  | _ -> Hashtbl.hash el (*VAlive,VSuspended,UNDEF*)	  
       in
-      abs (19 * acc + (Types.Term.hash key + Hstring.hash typ + h))
+      abs (19 * acc + (Types.Term.hash key (*+ Hstring.hash typ *)+ h))
     ) env 0   
   in
   abs v
@@ -346,6 +346,7 @@ let check_switches swts env name sigma  =
 	  | Comp(t1, op, t2) ->
 	    begin
 	      match t1,t2 with
+		  (*TODO : check that this works if multiple procs in transitiions*)
 		| Elem(n1,Var), Elem(n2,Var) -> assert false
 		| Elem(n1,Var), _ ->
 		  let g =
@@ -431,7 +432,7 @@ let upd_arr_direct sigma orig upd tname =
 
 
 (*X[k] := case | i = k -> case where you compare generale with proc in args *)
-let create_case_proc op accatom g side h all_procs term upd =
+(*let create_case_proc op accatom g side h all_procs term upd =
   match op with
     | Eq ->			  
       begin   
@@ -508,9 +509,9 @@ let check_proc_comparison n1 n2 sigma op accatom upd term h all_procs =
 		let temp = Access(upd.up_arr, [el]) in
 		Env.add temp (to_interpret term ) tacc) accatom all_procs, true
 	    else accatom,false
-	  | _ -> assert false
+	  | _ -> assert false (*TODO*)
 	     
-      end 
+      end *)
  
 let switchy_satoms op g1 g2 sacc =
   match op with
@@ -595,7 +596,7 @@ let upd_array_case sigma orig upd tname env =
 		      try List.assoc n1 sigma with
 			  Not_found ->  proc
 		    in
-		    check_comp (Elem(g, Var)) t1 env sigma op  && sacc
+		    check_comp t1 (Elem(g, Var))env sigma op  && sacc
 		      	    
 		  | Access(n1, [pn1]), _ ->
 		    let g =
@@ -609,6 +610,34 @@ let upd_array_case sigma orig upd tname env =
 		      try List.assoc pn1 sigma with
 			Not_found -> proc
 		    in check_comp t1 (Access(n1,[g])) env sigma op && sacc(*DO THIS FOR MATRIX*)
+
+		  | Access(n1, [pn1;pn2]), _ ->
+		    let g =
+		      try List.assoc pn1 sigma with
+			Not_found -> proc
+		    in
+		    let g1 =
+		      try List.assoc pn2 sigma with
+			Not_found -> proc
+		    in
+		    check_comp (Access(n1,[g;g1])) t2 env sigma op  && sacc
+		    
+		  | _, Access(n1, [pn1;pn2]) ->
+		    let g =
+		      try List.assoc pn1 sigma with
+			  Not_found -> proc
+		    in
+		    let g1 =
+		      try List.assoc pn2 sigma with
+			  Not_found -> proc
+		    in check_comp t1 (Access(n1,[g;g1])) env sigma op && sacc
+
+		    
+
+
+
+
+		    
 		  | _ ->
 		    (*let t1 = Term.subst sigma t1 in
 		    let t2 = Term.subst sigma t2 in*) 
@@ -697,21 +726,23 @@ let upd_matrix sigma orig upd =
 	      match atom with
 		| Comp (t1,op,t2)->
 		  begin
+		    Format.eprintf "comparing %a and %a@." Term.print t1 Term.print t2;
 		    match t1, t2 with
 		      | Elem(n1, Var), Elem(n2,Var) ->
 			let proc1, proc2 = 
 			  if Hstring.compare n1 (List.hd upd.up_arg) = 0
 			  then proc1, proc2
 			  else proc2, proc1 in 
-			let g1, gf1 =
-			  try Some (List.assoc n1 sigma), true
-			  with Not_found -> None, false
+			let g1 =
+			  try Some (List.assoc n1 sigma)
+			  with Not_found -> None
 			in
-			let g2, gf2 =
-			  try Some (List.assoc n2 sigma), true
-			  with Not_found -> None, false
+			let g2 =
+			  try Some (List.assoc n2 sigma)
+			  with Not_found -> None
 			in
 			begin
+			  
 			  match g1, g2 with
 			    | None, None ->
 	        	      switchy_satoms op proc1 proc2 sacc			  
@@ -722,8 +753,74 @@ let upd_matrix sigma orig upd =
 			    | Some gn1, Some gn2 ->
 			      switchy_satoms op gn1 gn2 sacc
 
-			end 
-		      | _ -> assert false (*other to elem*) (*TODO ADD OTHER COMPS*)			
+			end
+		      | Elem(n1, Var), _ ->
+			let g =
+			  try List.assoc n1 sigma with
+			      Not_found ->
+				if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in
+			check_comp (Elem(g, Var)) t2 orig sigma op  && sacc
+		      | _, Elem(n1,Var) ->
+			let g =
+			  try List.assoc n1 sigma with
+			      Not_found ->
+				if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in
+			check_comp t1 (Elem(g, Var)) orig sigma op  && sacc
+		      | Access(n1, [pn1]), _ ->
+			let g =
+			  try List.assoc pn1 sigma with
+			      Not_found ->
+				if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in
+			check_comp (Access(n1,[g])) t2 orig sigma op  && sacc
+
+
+
+		      |Access(n1, [pn1;pn2]), _ ->
+			let g =
+			  try List.assoc pn1 sigma with
+			      Not_found ->
+				if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in
+			let g1 =
+			  try List.assoc pn2 sigma with
+			      Not_found ->
+				if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in 
+			check_comp (Access(n1,[g;g1])) t2 orig sigma op  && sacc
+
+
+		      | _, Access(n1, [pn1;pn2]) ->
+			let g =
+			  try List.assoc pn1 sigma with
+			      Not_found -> if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in
+			let g1 =
+			  try List.assoc pn1 sigma with
+			      Not_found -> if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			
+			in check_comp t1 (Access(n1,[g;g1])) orig sigma op && sacc
+			
+
+		      | _, Access(n1, [pn1]) ->
+			let g =
+			  try List.assoc pn1 sigma with
+			      Not_found -> if Hstring.compare n1 (List.hd upd.up_arg) = 0
+				then proc1 else proc2
+			in check_comp t1 (Access(n1,[g])) orig sigma op && sacc
+			
+			  
+		      | _ -> check_comp t1 t2 orig sigma op && sacc
+		  (*other to elem*) (*TODO ADD OTHER COMPS*)			
 			
 		  end 		  
 		| True -> true && sacc
@@ -784,12 +881,12 @@ let uguard env sigma args tr_args = function
 	[SAtom.empty]
 	uargs
   | _ -> assert false
-
+(*
 let map_atoms a sigma =
   match a with
     | Atom.Comp(t1,op, t2) -> Atom.Comp(Term.subst sigma t1, op, Term.subst sigma t2)
     | Ite _ -> assert false
-    | a -> a
+    | a -> a*)
     
 
 let upd_non_dets env nondets =
@@ -1380,7 +1477,119 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	) acc tr_procs
       end 
   ) trans []
-    
 
+
+
+let env_to_satom env =
+  Env.fold (fun key {value = el} acc ->
+    match el with
+      | VGlob el -> SAtom.add (Comp(key, Eq, Elem(el, Glob))) acc 
+      | VProc el -> SAtom.add (Comp(key, Eq, Elem(el, Var))) acc
+      | VConstr el -> SAtom.add (Comp(key, Eq, Elem(el, Constr))) acc
+      | VAccess(el,vl) -> SAtom.add (Comp(key, Eq, Access(el, vl))) acc
+      | VInt i -> let i = ConstInt (Num.num_of_int i) in
+		  let m = MConst.add i 1 MConst.empty in
+		   SAtom.add (Comp(key, Eq, Const(m))) acc
+      | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
+		   let m = MConst.add r 1 MConst.empty in
+		   SAtom.add (Comp(key, Eq, Const(m))) acc
+      | VBool _ -> assert false
+      | VArith _ -> assert false
+      | _-> acc   
+  ) env SAtom.empty
+
+
+  
+let weight_env (env,_,_,_) req env_old weight= 
+  let potential = env_to_satom env in
+  let old = env_to_satom env_old in 
+  SAtom.fold (fun atom acc ->
+    (*Format.eprintf "Trying: %a@." Atom.print atom;*)
+    let f = 
+    try
+      let _ = SAtom.find atom potential
+      in true
+    with
+      | Not_found -> false
+    in
+    let f_old =
+      try
+	let _ = SAtom.find atom old
+	in true
+      with
+	| Not_found -> false
+    in
+    match f, f_old with
+      | true, true -> acc + 1
+      | true, false -> acc + 1
+      | false, true -> acc - 1
+      | false, false -> acc 	
+  ) req weight
     
     
+let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr flag =
+  let env, _,_,_ = global in
+  Trans.fold (fun x el acc ->
+    let name = el.tr_name in 
+    let args = el.tr_args in
+    let num_args = List.length args in
+    let tr_procs = all_arrange num_args all_procs in
+    if tr_procs = [] then
+      begin
+	try 
+	  let sigma = Variable.build_subst args [] in
+	  check_actor_suspension sigma env el.tr_process;
+	  check_reqs el.tr_reqs env sigma name;
+	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
+	  let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	  let new_env = apply_transition [] name trans global in
+	  let reqs = SAtom.subst sigma tr.tr_reqs in
+	  if flag then
+	    begin
+	      let d = weight_env new_env reqs env2 0 in
+	      let d1 =
+		List.fold_left(fun acc satom ->
+		  weight_env new_env satom env2 acc) 0 ureqs in
+	      (d+d1,el,[])::acc
+	    end 
+	  else
+	    (0,el,[])::acc
+
+	with
+	  | TopError _ -> acc
+	  | Stdlib.Sys.Break ->
+	     raise Exit
+	  | s -> let e = Printexc.to_string s in Format.printf "%s @." e;
+		 assert false
+      end
+    else
+      begin
+	List.fold_left (fun acc_t procs ->
+	  let sigma = Variable.build_subst args procs in
+	  try
+	    check_actor_suspension sigma env el.tr_process;
+	    check_reqs el.tr_reqs env sigma name;
+	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
+	    let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	    List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	    let new_env = apply_transition procs name trans global in
+	    let reqs = SAtom.subst sigma tr.tr_reqs in
+	    let nureqs = uguard env sigma all_procs trargs tr.tr_ureq in (*ureqs for desired*)
+	    if flag then
+	      begin
+		let d = weight_env new_env reqs env2 0 in
+		let d1 =
+		  List.fold_left(fun acc satom ->
+		    weight_env new_env satom env2 acc) 0 nureqs in
+		(d+d1,el, procs)::acc_t
+	      end
+	    else (0,el, procs)::acc_t
+	  with
+	    | TopError _ -> acc_t
+	    | Sys.Break -> 
+	      raise Exit
+	    | s -> let e = Printexc.to_string s in Format.printf "%s@." e; assert false      
+	) acc tr_procs
+      end 
+  ) trans []
