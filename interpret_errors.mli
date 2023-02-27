@@ -1,5 +1,6 @@
 open Ast
 open Types
+open Interpret_types
 
 type top_error =
   | InputError
@@ -30,13 +31,7 @@ type top_error =
   | CannotBacktrack of int
   | ExplainReq of Hstring.t * Hstring.t list * Atom.t 
 
-      
-
-type q = (int * Hstring.t * Variable.t list * int * int) Interpret_types.PersistentQueue.t
-type e = (Interpret_types.interpret_value Interpret_types.Env.t *
- Types.Term.t Interpret_types.PersistentQueue.t Interpret_types.LockQueues.t *
- Types.Term.t list Interpret_types.Conditions.t *
- Interpret_types.Env.key list Interpret_types.Semaphores.t)
+     
 
       
 type run_error =

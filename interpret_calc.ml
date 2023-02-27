@@ -165,10 +165,11 @@ let hash_env env=
       (*Format.eprintf "key: %a; typ: %a@." Term.print key Hstring.print typ;*)
       let h = 
 	match el with
-	  | VInt i -> Hashtbl.hash i  
+	  | VInt i -> (*let g = *)Hashtbl.hash i (*in Format.eprintf "hashed int %d: %d@." i g; g*) 
 	  | VReal f -> Hashtbl.hash f 
 	  | VBool b -> Hashtbl.hash b
-	  | VConstr hs | VProc hs | VGlob hs -> Hstring.hash hs
+	  | VConstr hs | VProc hs | VGlob hs -> (*let g = Hstring.hash hs in
+						Format.eprintf "hashed constr %a: %d@." Hstring.print hs g;g*) Hstring.hash hs
 	  | VAccess (hs,hsl) ->
 	    List.fold_left (fun acc x -> 13 * acc + Hstring.hash x) (Hstring.hash hs) hsl
 	  | VLock (b,topt) -> 
@@ -188,7 +189,7 @@ let hash_env env=
 	  | VSemaphore i -> Hashtbl.hash i
 	  | VArith t -> Types.Term.hash t
 	  | VSleep i -> Hashtbl.hash i
-	  | _ -> Hashtbl.hash el (*VAlive,VSuspended,UNDEF*)	  
+	  | _ -> Hashtbl.hash el  (*VAlive,VSuspended,UNDEF*)	  
       in
       abs (19 * acc + (Types.Term.hash key (*+ Hstring.hash typ *)+ h))
     ) env 0   

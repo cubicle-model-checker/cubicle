@@ -72,3 +72,17 @@ val hash_full_env : Interpret_types.interpret_value Interpret_types.Env.t *
 Types.Term.t Interpret_types.PersistentQueue.t Interpret_types.LockQueues.t *
 Types.Term.t list Interpret_types.Conditions.t *
 Types.Term.t list Interpret_types.Semaphores.t -> int
+
+
+val all_possible_weighted_transitions :
+           Interpret_types.interpret_value Interpret_types.Env.t *
+           Types.Term.t Interpret_types.PersistentQueue.t
+           Interpret_types.LockQueues.t *
+           Types.Term.t list Interpret_types.Conditions.t *
+           Interpret_types.Env.key list Interpret_types.Semaphores.t ->
+           Ast.transition_info Interpret_types.Trans.t ->
+           Hstring.t list ->
+           Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b *
+           'c ->
+           Ast.transition_info -> bool -> 
+           (int * Ast.transition_info * Variable.t list) list
