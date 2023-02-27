@@ -33,3 +33,5 @@ type toplevel =
   | TopDebugHelp
   | TopDebugOff
   | TopPre of Hstring.t * Hstring.t list
+
+  | TopExperiment of Hstring.t * int * float
