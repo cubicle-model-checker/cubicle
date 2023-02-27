@@ -66,9 +66,20 @@ module Backtrack = Map.Make(struct
   let compare = compare
 end)
 
+(*
+module HT = Hashtbl.Make (Term)*)
+(*
+module Trace = struct
+  type 'a t = 'a array
 
-module HT = Hashtbl.Make (Term)
+  let index = ref 0
 
+  let length a = Array.length a
+
+  let start i = index := i
+  
+end *)
+  
 
 module PersistentQueue = struct
   type 'a t = 'a list * 'a list
@@ -92,6 +103,16 @@ module PersistentQueue = struct
       match List.rev i with
         | x :: o -> x, (o, [])
         | [] -> assert false
+
+  let rec iter f = function
+    | [], [] -> ()
+    | x::o, i -> f x; iter f (o,i)
+    | [], x::o -> f x; iter f ([],o)
+
+  let rec fold f acc  = function
+    | [], [] -> acc
+    | x::o, i -> fold f (f acc x) (o,i)
+    | [], x::o -> fold f (f acc x) ([],o)
 
 end 
 
@@ -177,8 +198,15 @@ let print_debug_trans_path fmt l i =
     else
       begin
 	let (tn,t,p,ptpre, ptpost),r = PersistentQueue.pop q in
-	let s1 = if ptpre = -1 then "MANUAL" else string_of_int ptpre in
-	let s2 = if ptpost = -1 then "MANUAL" else string_of_int ptpost in
+	let s1 =
+	  if ptpre = -1 then "MANUAL"
+	  else if ptpre = -2 then "-"
+	  else string_of_int ptpre in
+	let s2 =
+	  if ptpost = -1 then "MANUAL"
+	  else if ptpost = -2 then "-"
+	  else string_of_int ptpost in
+	
 	if tn mod i = 0 then 
 	  Format.printf "@{<b>@{<fg_green>**Step %d[pre: %s, post: %s]: transition %a(%a)@}@}@."
 	    tn s1 s2 Hstring.print t Variable.print_vars p
@@ -530,3 +558,16 @@ let print_backtrace_env fmt benv =
       key Hstring.print name Variable.print_vars args) benv
 
 
+type q = (int * Hstring.t * Variable.t list * int * int) PersistentQueue.t
+
+type e = (interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t * Types.Term.t list Conditions.t * Env.key list Semaphores.t)
+
+let procs_to_int_list pl =
+  List.fold_left (fun acc x -> let s = Hstring.view x in
+			       let s1 = String.split_on_char '#' s in
+			       match s1 with
+				 | [a;b] -> int_of_string b::acc
+				 | _ -> assert false ) [] pl
+				 
+			       
+			   

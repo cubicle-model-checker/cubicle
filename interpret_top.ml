@@ -186,6 +186,11 @@ let print_queue fmt el =
       end 
   in print_trans el
 
+
+let dump_transitions f tr start_s go_s=
+  let f = Format.formatter_of_out_channel f in
+  Format.fprintf f "%d %a %d@."start_s Hstring.print tr go_s
+  
 let dump_hashes f hash =
   let f = Format.formatter_of_out_channel f in
   Format.fprintf f "%d@." hash
@@ -214,12 +219,13 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
   Format.fprintf  f "%a" Pretty.print_line ();
   Format.fprintf  f "\n"
 
-let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_env tr_table steps  =  
+let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_env tr_table steps  =  
   let hcount = Hashtbl.create 2 in 
   let backtrack_env = ref main_bt_env in
   let steps = ref steps in
   let dfile = Filename.basename Options.file in
   let open_file = open_out (dfile^".txt") in
+  (*let old_hash = ref (hash_full_env glob_env) in*)
   (*print_header open_file dfile;*)
   Random.self_init ();
   let running_env = ref glob_env in
@@ -241,12 +247,19 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_e
       Hashtbl.add tr_table tr_num (apply.tr_name, apply_procs);
       queue := PersistentQueue.push (tr_num, apply.tr_name,apply_procs, l, lp) !queue;
       check_unsafe !running_env unsafe;
+      (*dump_transitions open_file apply.tr_name;*)
       let hash = hash_full_env new_env in
-      dump_hashes open_file hash;
+      (*dump_transitions open_file apply.tr_name !old_hash hash;
+      old_hash := hash;*)
+      (*dump_hashes open_file hash;*)
       try
-	let he = Hashtbl.find hcount hash in
-	Hashtbl.replace hcount hash (he+1)
-      with Not_found -> Hashtbl.add hcount hash 1;
+	let he,ee = Hashtbl.find hcount hash in
+	(*Format.eprintf "Hash: %d@." hash;
+	Format.eprintf "%a@." print_interpret_env new_env;
+	Format.eprintf "%a@." print_interpret_env ee;
+	assert false;*)
+	Hashtbl.replace hcount hash ((he+1),ee)
+      with Not_found -> Hashtbl.add hcount hash (1,new_env);
       
       (*print_interpret_env_file open_file !running_env apply.tr_name apply_procs;*)
       if tr_num mod !step_flag = 0 then
@@ -258,7 +271,6 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_e
 	close_out open_file;
 	Format.fprintf fmt
 	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached@."; running := false;
-	
 	(*backtrack_replay !running_env ~trace:!trace !queue orig_env !backtrack_env !steps*)	 
       | TopError Unsafe ->
       	Format.fprintf fmt
@@ -272,9 +284,8 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_e
 	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
 	  in decide ()
 	end
-      | Stdlib.Sys.Break -> (*close_out open_file;*) running := false; Format.printf "@."
+      | Stdlib.Sys.Break -> close_out open_file; running := false; Format.printf "@."
       | TopError StopExecution ->
-
 	close_out open_file; 
 	running := false
       | s ->  close_out open_file;
@@ -284,6 +295,148 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans  main_bt_e
   close_out open_file;
   !queue, !running_env, !backtrack_env, hcount
 
+
+let find_max l =
+  List.fold_left (fun (acc, mw, c) (w,tr,args) ->
+    if w > mw then ([(w,tr,args)], w, 1)
+    else if w = mw then ((w,tr,args)::acc, w, c+1)
+    else (acc, mw, c) ) ([],-100,-100) l
+
+let choose_random_of_equal (l, w, c) =
+  if c = 0 then raise (TopError Deadlock); 
+  if c = 1 then List.hd l
+  else
+    begin
+      let l = Array.of_list l in
+      Random.self_init ();
+      let i = Random.int c in
+      l.(i)
+    end
+
+let all_combs_as_pairs l =
+  let rec combs l acc = 
+    match l with 
+      | [] -> acc 
+      | [hd] -> (hd,hd)::acc
+      | hd::tl -> let a = 
+		    List.fold_left
+		      (fun acc1 el -> (hd,el)::(el,hd)::acc1) ((hd,hd)::acc) tl
+		  in combs tl a
+  in combs l []
+
+      
+let create_transition_hash t =
+  let stemp = (float (List.length t))** 2. in
+  let size = int_of_float stemp in
+
+  let ht = Hashtbl.create size in
+  let names = List.map (fun x -> x.tr_name) t in
+  let names = (Hstring.make "Init") :: names in
+  let all_combs = all_combs_as_pairs names in
+  List.iter (fun x -> Hashtbl.add ht x 0) all_combs;
+  
+  ht
+    
+let temp_exec glob_env trans all_procs unsafe tr depth proba systrans =
+  let matrix = create_transition_hash systrans in
+  let hcount = Hashtbl.create 10 in
+  let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
+  let t_count = Hashtbl.create 10 in 
+  let p = if depth = 1 then true else false in
+  let flag = ref false in 
+  let taken = ref 0 in
+
+  let before = Hstring.make "Init" in
+  let before = ref before in 
+  
+  let tr = Trans.find tr trans in
+  let queue = ref PersistentQueue.empty in 
+  let running_env = ref glob_env in
+  let transitions = ref (all_possible_weighted_transitions glob_env trans all_procs glob_env tr false)
+  in
+  let running = ref true in
+  while !running do
+    try
+      let w, apply, apply_procs = choose_random_of_equal (find_max !transitions) in
+      if p then
+	begin
+	  List.iter
+	    (fun (w,t,p) -> Format.eprintf "Transition %a(%a): %d@."
+	      Hstring.print t.tr_name Variable.print_vars p w) !transitions;
+	  Format.eprintf "Chose: %a(%a)@." 
+	    Hstring.print apply.tr_name Variable.print_vars apply_procs;
+	  let _ = read_line () in ();
+	end; 
+      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      let tr_num = fresh () in
+      transitions := all_possible_weighted_transitions new_env trans all_procs !running_env tr !flag;
+      running_env := new_env;
+
+      let pair = (!before, apply.tr_name) in
+      begin
+      try
+	let cpair = Hashtbl.find matrix pair in
+	Hashtbl.replace matrix pair (cpair+1)
+      with Not_found ->
+	Hashtbl.add matrix pair 1
+      end;
+
+      before := apply.tr_name;
+      
+      
+      queue := PersistentQueue.push (tr_num,apply.tr_name,apply_procs,-2,-2) !queue;
+      incr taken;
+      check_unsafe new_env unsafe;
+
+
+      let hash = hash_full_env new_env in
+      begin
+      try
+	let he,ee = Hashtbl.find hcount hash in
+	Hashtbl.replace hcount hash ((he+1),ee)
+      with Not_found ->
+	Hashtbl.add hcount hash (1,new_env)
+      end;
+      let appl = procs_to_int_list apply_procs in
+      List.iter (fun x ->
+	proc_count.(x-1) <- proc_count.(x-1) + 1) appl;
+      begin
+      try
+	let htc= Hashtbl.find t_count apply.tr_name in
+	Hashtbl.replace t_count apply.tr_name (htc+1)
+      with Not_found -> Hashtbl.add t_count apply.tr_name 1
+      end ;
+
+
+
+      
+
+      let prob = Random.float 1.0 in
+      if prob <= proba then flag := true
+      else flag := false;
+      (*if !taken = depth then raise (TopError StopExecution); *)
+    with
+      | TopError Deadlock -> running := false
+      | TopError Unsafe ->
+	Format.printf 
+	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Do you wish to continue? (y/n)@.";
+	begin
+	  let rec decide () =
+	    let inp = read_line () in
+	    match inp with
+	      | "y" -> ()
+	      | "n" -> running := false
+	      | _ -> Format.printf  "Invalid input@."; decide ()
+	  in decide ()
+	end
+      | Stdlib.Sys.Break -> running := false
+      | Stdlib.Exit -> running := false
+      | TopError StopExecution -> running := false; Format.printf "Reached max depth@."
+      | s -> let s= Printexc.to_string s in Format.eprintf "%s@." s
+  done;
+  !queue, !running_env, (hcount,proc_count, t_count, matrix)
+
+    
 let execute_depth fmt glob_env trans all_procs unsafe applied_trans take count =
   let taken = ref 0 in 
   Random.self_init ();
@@ -310,14 +463,15 @@ let execute_depth fmt glob_env trans all_procs unsafe applied_trans take count =
 	running := false;
 	raise (RunError (Deadlocked(!queue,!running_env)))
       | TopError Unsafe ->
-	Format.fprintf fmt
+	Format.printf 
 	  "Unsafe state reached after %d runs@." count;
 	print_applied_trans fmt !queue;
 	raise (RunError (ReachedUnsafe(!queue,!running_env)))	
       | Stdlib.Sys.Break ->running := false
       | TopError StopExecution ->
 	running := false;
-	raise (RunError (ReachedSteps(!queue,!running_env)))	
+	raise (RunError (ReachedSteps(!queue,!running_env)))
+      | Stdlib.Exit -> running := false
       | s ->  
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	assert false
@@ -327,20 +481,38 @@ let execute_depth fmt glob_env trans all_procs unsafe applied_trans take count =
 depth_t : the total depth that needs to be explored
 step_f : which step it crossed the transition
 *)
-let found_transition env transitions all_procs unsafe trace depth_t step_f =
+
+let count_in_queue q tr =
+  (*PersistentQueue.iter (fun (_,x,_,_,_) -> Format.eprintf "this is x: %a@." Hstring.print x) q;
+  let d = PersistentQueue.fold (fun acc (_,x,_,_,_) ->
+    if Hstring.compare tr x = 0 then (acc+1) else acc) 0 q
+    in Format.eprintf "overall t3: %d@." d*)
+  PersistentQueue.fold (fun acc (_,x,_,_,_) -> if Hstring.compare tr x = 0 then (acc+1) else acc) 0 q
+  
+let found_transition fmt original env transitions applied all_procs unsafe trace depth_t step_f tr =
   let remaining_random = (depth_t - step_f)/2 in
   let remaining_fixed = remaining_random - step_f in 
-  
-  let rec aux count times =
+  let rec aux count q e  =
     match count with
-      | 0 -> assert false
+      | 0 -> count_in_queue q tr 
       | _ ->
-	assert false
-  in assert false
+	begin
+	  let q, e =
+	try 
+	   execute_depth fmt e transitions all_procs unsafe q count 0
+	with
+	  | RunError (ReachedUnsafe(q,e)) -> q, e
+	  | RunError (Deadlocked(q,e)) -> q, e
+	  | RunError (ReachedSteps(q,e)) -> q, e	    
+	in
+	  aux (count - 1) q e
+	end 
+  in
+  let d1 = aux remaining_random applied original in
+  let d2 = aux remaining_fixed trace env in 
+  Format.eprintf "d1 is %d and d2 is %d @." d1 d2
     
 
-
-    
 let execute_depth_find_trace fmt glob_env trans all_procs unsafe applied_trans take tr =
   let steps_taken = ref 0 in
   let running_env = ref glob_env in
@@ -358,8 +530,8 @@ let execute_depth_find_trace fmt glob_env trans all_procs unsafe applied_trans t
       let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
       if Hstring.compare apply.tr_name tr = 0 then
 	begin
-	  assert false
-      (*do if found transition*)
+	  incr steps_taken;
+	  found_transition fmt glob_env !running_env trans applied_trans all_procs unsafe !queue take !steps_taken tr
 	end
       else
 	begin
@@ -368,8 +540,8 @@ let execute_depth_find_trace fmt glob_env trans all_procs unsafe applied_trans t
 	  let lp = Array.length !transitions in
 	  queue := PersistentQueue.push (!steps_taken,apply.tr_name,apply_procs, l, lp) !queue;
 	  incr steps_taken;
-	  check_unsafe !running_env unsafe;
-	end 
+	  check_unsafe !running_env unsafe 
+	end
 
     with
       | TopError Deadlock -> assert false
@@ -742,6 +914,7 @@ let setup_env tsys sys =
   let transitions =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty sys.trans in
+
   let original_env = env_final, lock_queue, cond_sets, semaphores in 
   let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in
   let applied_trans = ref PersistentQueue.empty in
@@ -780,17 +953,19 @@ let setup_env tsys sys =
 	  in
 	  global_env := g;
 	  applied_trans := ap;
-	  backtrack_env := be
-
-	  (*let smost,smtime,overall =
-	    Hashtbl.fold (fun k el (ak, ael,overall) ->
-	    Format.printf "State: %d seen %d time(s)@." k el;
+	  backtrack_env := be;
+	  let smost,smtime,overall =
+	    Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
+	      (*Format.printf "State: %d seen %d time(s)@." k el;*)
+	      if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;
 	      if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
+
+	  (*Hashtbl.iter (fun k (el,envoo) ->
+	    Format.eprintf "State: %d, env: %a@." k print_interpret_env envoo) hh;*)
 	  
 	  Format.printf "Total entries: %d\n\
                          Total visited: %d\n\
-                         State seen most often: %d [%d time(s)] @." (Hashtbl.stats hh).num_bindings overall smost smtime*)
-	(*print_applied_trans fmt ap*)
+                         State seen most often: %d [%d time(s)] @." (Hashtbl.stats hh).num_bindings overall smost smtime
 	| TopExecRetry (i,d) ->
 	  let rec aux count=
 	    match count with
@@ -942,9 +1117,54 @@ let setup_env tsys sys =
 	  let l = gen_list n in
 	  let _ = run_from_list !global_env transitions procs l all_unsafes in
 	  ()
+
+	| TopExperiment (t,dep,prob) ->
+	  (*dep will be dep later, it is currently flag to print steps or nah*)
+	  let q, e, (hh,pc,tc,matrix) = temp_exec !global_env transitions procs all_unsafes t dep prob sys.trans 
+	  in
+	  global_env := e;
+	  applied_trans := q;
+
+
+	  let smost,smtime,overall =
+	    Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
+	      if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
+ 
+	  Format.printf "Total entries: %d\n\
+                 Total visited: %d\n\
+                 State seen most often: %d [%d time(s)] @."
+	    (Hashtbl.stats hh).num_bindings overall smost smtime;
+	  
+	  Array.iteri (fun i a -> Format.eprintf "Proc %d : %d times@." (i+1) a) pc;
+	  
+	  Hashtbl.iter (fun k el -> Format.eprintf "Transition %a : %d times@." Hstring.print k el) tc;
+	  
+	  Hashtbl.iter (fun (k,k1) el -> Format.eprintf "(%a->%a) : %d @." Hstring.print k Hstring.print k1 el) matrix
+
+
+
+
+	    
 	   
 	| TopDump ->
-	  List.iter (fun x -> Format.eprintf "unsafe: %a@." SAtom.print x) all_unsafes
+	  let _ = Trans.fold (fun x el acc -> Format.eprintf "T: %a@." Hstring.print x) transitions () in
+	  let _ = Trans.fold (fun x el acc -> Format.eprintf "T1: %a@." Hstring.print x) transitions () in
+	  ()
+	  
+	  
+	  (*execute_depth_find_trace fmt !global_env transitions procs all_unsafes !applied_trans
+	    10 (Hstring.make "t3")*)
+
+
+
+
+	  (*Interpret_run.run !global_env transitions procs all_unsafes !applied_trans sys.trans*)
+
+
+
+	  
+	  
+	  (*List.iter (fun x -> Format.eprintf "unsafe: %a@." SAtom.print x) all_unsafes*)
 	  (*let _ = 
 	  execute_depth_find_trace fmt !global_env transitions procs all_unsafes !applied_trans 10 (Hstring.make "t2") in ()*)
 	  (*let eee,ll,cc,semm = !global_env in
@@ -953,17 +1173,18 @@ let setup_env tsys sys =
 	  Format.printf "Cond: %d@." (hash_cond cc);
 	  Format.printf "Sem: %d@." (hash_sem semm);
 	    Format.printf "Full: %d@." (hash_full_env !global_env)*)
-	  (*begin
+	  
+	(*begin
 
-	  let com = match Util.syscall "uname" with
+	  let _com = match Util.syscall "uname" with
 	    | "Darwin\n" -> "open"
 	    | "Linux\n" -> "xdg-open"
 	    | _ -> (* Windows *) "cmd /c start"
 	  in
-	  match Sys.command ("python3 tewmp.py")
+	  match Sys.command("python3 temp.py") 
 	  with
-	    | 0 -> Format.eprintf "it worked??@."
-	    | _ -> Format.eprintf "lol@."
+	    | 0 ->  Format.eprintf "--python done@."
+	    | _ -> Format.eprintf "Error with python@."
 	  end *)
 	    
 	  (*hash_of_env !global_env transitions*)

@@ -53,7 +53,7 @@ module Conditions : Map.S with type key = Types.Term.t
 module Semaphores : Map.S with type key = Types.Term.t
 module Backtrack : Map.S with type key = int 
 
-module HT : Hashtbl.S with type key = Types.Term.t
+(*module HT : Hashtbl.S with type key = Types.Term.t*)
 
 module PersistentQueue : sig 
   type 'a t
@@ -61,7 +61,29 @@ module PersistentQueue : sig
   val is_empty : 'a t -> bool
   val push : 'a -> 'a t -> 'a t
   val pop : 'a t -> 'a * 'a t
+  val iter : ('a -> unit) -> 'a t -> unit
+  val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b  
 end
+(*
+module Step : sig
+  type t
+  val name : Hstring.t
+  val number : int
+  val procs : Hstring.t list
+  val actor : Hstring.t option
+  val result : unit 
+end 
+  
+module Trace : sig
+  type 'a t
+  val length : 'a t -> int
+  val start : 'a t -> int -> unit
+  val get : 'a t -> 'a
+  val next : 'a t -> unit
+  val position : 'a t -> int 
+end*)
+
+  
   
 val int_of_const : Types.const -> int
 
@@ -126,3 +148,8 @@ val print_transition : Format.formatter -> Hstring.t -> Variable.t list -> unit
 
 val print_backtrace_env : Format.formatter -> (Hstring.t * Variable.t list * 'a) Backtrack.t -> unit
 
+type q = (int * Hstring.t * Variable.t list * int * int) PersistentQueue.t
+
+type e = (interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t * Types.Term.t list Conditions.t * Env.key list Semaphores.t)
+
+val procs_to_int_list : Hstring.t list -> int list
