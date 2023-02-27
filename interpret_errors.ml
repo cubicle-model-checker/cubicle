@@ -33,10 +33,10 @@ type top_error =
 
       
 type run_error =
-  | ReachedUnsafe of q * e 
-  | Deadlocked of q * e 
-  | ReachedSteps of q * e
-  | FinishedRun of q * e
+  | ReachedUnsafe of q * global
+  | Deadlocked of q * global 
+  | ReachedSteps of q * global
+  | FinishedRun of q * global
 
 exception TopError of top_error
 exception RunError of run_error

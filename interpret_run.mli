@@ -1,7 +1,4 @@
-val run : Interpret_types.interpret_value Interpret_types.Env.t *
-Types.Term.t Interpret_types.PersistentQueue.t Interpret_types.LockQueues.t *
-Types.Term.t list Interpret_types.Conditions.t *
-Interpret_types.Env.key list Interpret_types.Semaphores.t ->
+val run : Interpret_types.global ->
 Ast.transition_info Interpret_types.Trans.t ->
 Hstring.t list ->
 Types.SAtom.t list ->

@@ -1427,7 +1427,11 @@ let init_unsafe all_procs unsafes =
 	  n_s::acc2
 	) acc u_procs
       end
-    ) [] unsafes
+  ) [] unsafes
+
+
+let random_possible_trans (env,_,_,_) trans all_procs flag =
+  assert false
 
     
 let all_possible_transitions (env,_,_,_) trans all_procs flag=

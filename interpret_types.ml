@@ -53,6 +53,21 @@ let is_condition h =
     
 let is_semaphore h =
   Hstring.equal h ty_semaphore
+
+
+(*
+module Environment = struct
+  module E = Map.Make(struct type t = Types.Term.t let compare = Types.Term.compare end)
+  module L = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
+  module C = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
+  module S = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
+
+  let pp e = E.iter (fun k elem ->
+    Format.printf "%a : %a@." Term.print k Term.print elem
+  ) e
+  let ppp () = ()
+end*)
+
     
 module Env = Map.Make(struct type t = Types.Term.t let compare = Types.Term.compare end)
 module Trans = Map.Make(struct type t = Hstring.t let compare = Hstring.compare end)
@@ -60,7 +75,9 @@ module LockQueues = Map.Make(struct type t = Types.Term.t let compare=  Types.Te
 module Conditions = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 module Semaphores = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 
- 
+
+
+  
 module Backtrack = Map.Make(struct
   type t = int
   let compare = compare
@@ -114,7 +131,15 @@ module PersistentQueue = struct
     | x::o, i -> fold f (f acc x) (o,i)
     | [], x::o -> fold f (f acc x) ([],o)
 
-end 
+end
+
+
+type term_map = interpret_value Env.t
+type lockq = Types.Term.t PersistentQueue.t LockQueues.t
+type conds = Types.Term.t list Conditions.t
+type semaphs = Types.Term.t list Semaphores.t
+
+type global = term_map * lockq * conds * semaphs 
 
 
 let print_val fmt v =

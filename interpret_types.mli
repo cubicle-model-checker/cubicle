@@ -64,6 +64,16 @@ module PersistentQueue : sig
   val iter : ('a -> unit) -> 'a t -> unit
   val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b  
 end
+
+
+type term_map = interpret_value Env.t
+type lockq = Types.Term.t PersistentQueue.t LockQueues.t
+type conds = Types.Term.t list Conditions.t
+type semaphs = Types.Term.t list Semaphores.t
+
+type global = term_map * lockq * conds * semaphs 
+
+  
 (*
 module Step : sig
   type t
@@ -127,19 +137,11 @@ val print_queue : Format.formatter -> Types.Term.t PersistentQueue.t -> unit
 
 val print_wait : Format.formatter -> Types.Term.t list -> unit
 
-val print_interpret_env : Format.formatter -> interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
-  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit
+val print_interpret_env : Format.formatter -> global -> unit
 
-val print_debug_env : Format.formatter ->
-  interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
-  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit
+val print_debug_env : Format.formatter -> global -> unit
 
-
-val print_debug_color_env : Format.formatter ->
-  interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
-  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t ->
-  interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t *
-  Types.Term.t list Conditions.t * Types.Term.t list Semaphores.t -> unit 
+val print_debug_color_env : Format.formatter -> global  -> global  -> unit 
   
 
 val print_help : Format.formatter -> unit
@@ -150,6 +152,7 @@ val print_backtrace_env : Format.formatter -> (Hstring.t * Variable.t list * 'a)
 
 type q = (int * Hstring.t * Variable.t list * int * int) PersistentQueue.t
 
-type e = (interpret_value Env.t * Types.Term.t PersistentQueue.t LockQueues.t * Types.Term.t list Conditions.t * Env.key list Semaphores.t)
 
 val procs_to_int_list : Hstring.t list -> int list
+
+
