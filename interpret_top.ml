@@ -312,30 +312,7 @@ let choose_random_of_equal (l, w, c) =
       let i = Random.int c in
       l.(i)
     end
-
-let all_combs_as_pairs l =
-  let rec combs l acc = 
-    match l with 
-      | [] -> acc 
-      | [hd] -> (hd,hd)::acc
-      | hd::tl -> let a = 
-		    List.fold_left
-		      (fun acc1 el -> (hd,el)::(el,hd)::acc1) ((hd,hd)::acc) tl
-		  in combs tl a
-  in combs l []
-
-      
-let create_transition_hash t =
-  let stemp = (float (List.length t))** 2. in
-  let size = int_of_float stemp in
-
-  let ht = Hashtbl.create size in
-  let names = List.map (fun x -> x.tr_name) t in
-  let names = (Hstring.make "Init") :: names in
-  let all_combs = all_combs_as_pairs names in
-  List.iter (fun x -> Hashtbl.add ht x 0) all_combs;
-  
-  ht
+    
     
 let temp_exec glob_env trans all_procs unsafe tr depth proba systrans =
   let matrix = create_transition_hash systrans in
@@ -921,7 +898,6 @@ let setup_env tsys sys =
   let backtrack_env = ref Backtrack.empty in
   let steps = ref 0 in
 
-
   let tr_table = Hashtbl.create 10 in
 
   let s1 = String.make Pretty.vt_width '*' in
@@ -934,10 +910,7 @@ let setup_env tsys sys =
   Format.printf "%sCubicle%s@." s2 s2;
   Format.printf "%sInterpreter & Debugger%s@." s3 s3;
   Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
-
   print_help fmt;
-
-  (*Format.printf "TODO--some kind of intro message and something about setting flag @.";*)
   
   while !interpret_bool do
     try
@@ -1142,14 +1115,20 @@ let setup_env tsys sys =
 	  Hashtbl.iter (fun (k,k1) el -> Format.eprintf "(%a->%a) : %d @." Hstring.print k Hstring.print k1 el) matrix
 
 
+	| TopMarkov t ->
+	  let tr = Trans.find t transitions in 
+	  
+	    Interpret_exp.run !global_env sys.trans procs tr transitions
+
+
+
+	  
 
 
 	    
 	   
 	| TopDump ->
-	  let _ = Trans.fold (fun x el acc -> Format.eprintf "T: %a@." Hstring.print x) transitions () in
-	  let _ = Trans.fold (fun x el acc -> Format.eprintf "T1: %a@." Hstring.print x) transitions () in
-	  ()
+	   
 	  
 	  
 	  (*execute_depth_find_trace fmt !global_env transitions procs all_unsafes !applied_trans
@@ -1158,7 +1137,7 @@ let setup_env tsys sys =
 
 
 
-	  (*Interpret_run.run !global_env transitions procs all_unsafes !applied_trans sys.trans*)
+	  Interpret_run.run !global_env transitions procs all_unsafes !applied_trans sys.trans
 
 
 

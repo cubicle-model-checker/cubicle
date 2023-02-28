@@ -85,7 +85,8 @@
 	"system", INTSYS;
 	"pre", PREINT;
 	"freq", FREQ;
-	"try", TOPTRY
+	"try", TOPTRY;
+	"markov", TOPMARKOV
 	
       ]
 	       

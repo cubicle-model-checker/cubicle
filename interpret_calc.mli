@@ -29,7 +29,7 @@ Interpret_types.global ->
 Interpret_types.global
 
 
-val all_possible_transitions : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c ->
+val all_possible_transitions : Interpret_types.global ->
 Ast.transition_info Interpret_types.Trans.t ->
   Hstring.t list -> bool -> (Ast.transition_info * Variable.t list) list
 
@@ -64,7 +64,9 @@ val hash_sem : Types.Term.t list Interpret_types.Semaphores.t -> int
 
 val hash_full_env : Interpret_types.global -> int
 
+val weight_env : Interpret_types.global -> Types.SAtom.t -> Interpret_types.term_map -> int -> int 
 
+  
 val all_possible_weighted_transitions :
            Interpret_types.global ->
            Ast.transition_info Interpret_types.Trans.t ->
@@ -72,3 +74,12 @@ val all_possible_weighted_transitions :
            Interpret_types.global ->
            Ast.transition_info -> bool -> 
            (int * Ast.transition_info * Variable.t list) list
+val uguard : (Variable.t * Variable.t) list -> Hstring.t list -> Hstring.t list ->
+(Variable.t * Types.SAtom.t list) list -> Types.SAtom.t list
+
+val all_arrange : int -> 'a list -> 'a list list
+val all_combs_as_pairs : 'a list -> ('a * 'a) list
+val create_transition_hash : Ast.transition_info list -> (Hstring.t * Hstring.t, int) Hashtbl.t
+
+
+val entropy_env : Interpret_types.global -> Ast.transition_info Interpret_types.Trans.t -> Hstring.t list -> float

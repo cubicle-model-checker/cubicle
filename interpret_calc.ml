@@ -39,7 +39,34 @@ let rec all_arrange n l =
 	    if List.exists (fun el -> el = x) l' then acc else 
 	    (x :: l') :: acc) acc l
         ) [] (all_arrange (n - 1) l))
-  
+
+
+
+let all_combs_as_pairs l =
+  let rec combs l acc = 
+    match l with 
+      | [] -> acc 
+      | [hd] -> (hd,hd)::acc
+      | hd::tl -> let a = 
+		    List.fold_left
+		      (fun acc1 el -> (hd,el)::(el,hd)::acc1) ((hd,hd)::acc) tl
+		  in combs tl a
+  in combs l []
+
+    
+
+let create_transition_hash t =
+  let stemp = (float (List.length t))** 2. in
+  let size = int_of_float stemp in
+
+  let ht = Hashtbl.create size in
+  let names = List.map (fun x -> x.tr_name) t in
+  let names = (Hstring.make "Init") :: names in
+  let all_combs = all_combs_as_pairs names in
+  List.iter (fun x -> Hashtbl.add ht x 0) all_combs;
+  ht
+
+    
 
 let gen_array name procs = 
   List.fold_left (fun acc a ->
@@ -859,7 +886,7 @@ let update_arrs sigma orig acc upds =
   ) acc upds
 
       
-let uguard env sigma args tr_args = function
+let uguard sigma args tr_args = function
   | [] -> [SAtom.empty]
   | [j, dnf] ->
     let uargs = List.filter (fun a -> not (Hstring.list_mem a tr_args)) args in
@@ -1301,7 +1328,7 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
   let () = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
   let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
-  let ureqs = uguard env sigma procs trargs tr.tr_ureq in
+  let ureqs = uguard sigma procs trargs tr.tr_ureq in
   let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in
   let nv = update_vals env tr.tr_assigns sigma in
   let nv = update_arrs sigma env nv tr.tr_upds in
@@ -1335,7 +1362,7 @@ let explain args trname trans (env,lock_queue,cond_sets, semaphores) =
     let satom = explain_reqs tr.tr_reqs env sigma trname args in
     let procs = Variable.give_procs (Options.get_interpret_procs ()) in
     let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
-    let ureqs = uguard env sigma procs trargs tr.tr_ureq in
+    let ureqs = uguard sigma procs trargs tr.tr_ureq in
     let final =
       List.fold_left (fun acc u ->
 	let r = explain_reqs u env sigma trname args in
@@ -1377,7 +1404,7 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	  check_actor_suspension sigma env (Some aproc);
 	  check_reqs el.tr_reqs env sigma name;
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	  let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
 	  ((el,[])::acc_np, acc_p)
 	with
@@ -1399,7 +1426,7 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	      begin		
 	      check_reqs el.tr_reqs env sigma name;  
 	      let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	      let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	      let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	      List.iter (fun u -> check_reqs u env sigma name) ureqs;
 	      acc_np1,((el, procs)::acc_p1)
 	    end
@@ -1447,7 +1474,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  check_actor_suspension sigma env el.tr_process;
 	  check_reqs el.tr_reqs env sigma name;
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	  let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
 	  (el,[])::acc
 	with
@@ -1468,7 +1495,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	    check_actor_suspension sigma env el.tr_process;
 	    check_reqs el.tr_reqs env sigma name;
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	    let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	    List.iter (fun u -> check_reqs u env sigma name) ureqs;	  
 	    (el, procs)::acc_t
 	  with
@@ -1530,10 +1557,15 @@ let weight_env (env,_,_,_) req env_old weight=
       | false, true -> acc - 1
       | false, false -> acc 	
   ) req weight
+
+
+
     
     
 let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr flag =
   let env, _,_,_ = global in
+  (*let des_procs =  all_arrange (List.length tr.tr_args) all_procs in*)
+
   Trans.fold (fun x el acc ->
     let name = el.tr_name in 
     let args = el.tr_args in
@@ -1541,18 +1573,27 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
     let tr_procs = all_arrange num_args all_procs in
     if tr_procs = [] then
       begin
-	try 
+	try
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env el.tr_process;
 	  check_reqs el.tr_reqs env sigma name;
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	  let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
 	  let new_env = apply_transition [] name trans global in
 	  let reqs = SAtom.subst sigma tr.tr_reqs in
 	  if flag then
 	    begin
 	      let d = weight_env new_env reqs env2 0 in
+
+
+	      (*let d =
+		List.fold_left (fun acc1 el ->
+		  let sigma' = Variable.build_subst tr.tr_args el in
+		  let p = SAtom.subst sigma' tr.tr_reqs in 
+		  (weight_env new_env p env 0) + acc1) 0 des_procs in *)
+
+	      
 	      let d1 =
 		List.fold_left(fun acc satom ->
 		  weight_env new_env satom env2 acc) 0 ureqs in
@@ -1576,14 +1617,19 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	    check_actor_suspension sigma env el.tr_process;
 	    check_reqs el.tr_reqs env sigma name;
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	    let ureqs = uguard env sigma all_procs trargs el.tr_ureq in
+	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	    List.iter (fun u -> check_reqs u env sigma name) ureqs;
 	    let new_env = apply_transition procs name trans global in
 	    let reqs = SAtom.subst sigma tr.tr_reqs in
-	    let nureqs = uguard env sigma all_procs trargs tr.tr_ureq in (*ureqs for desired*)
+	    let nureqs = uguard  sigma all_procs trargs tr.tr_ureq in (*ureqs for desired*)
 	    if flag then
 	      begin
 		let d = weight_env new_env reqs env2 0 in
+		(*let d =
+		List.fold_left (fun acc1 el ->
+		  let sigma' = Variable.build_subst tr.tr_args el in
+		  let p = SAtom.subst sigma' tr.tr_reqs in 
+		  (weight_env new_env p env 0) + acc1) 0 des_procs in *)
 		let d1 =
 		  List.fold_left(fun acc satom ->
 		    weight_env new_env satom env2 acc) 0 nureqs in
@@ -1598,3 +1644,17 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	) acc tr_procs
       end 
   ) trans []
+
+
+let entropy_env env trans allprocs =
+  let poss = all_possible_transitions env trans allprocs false in
+  let poss_num = float (List.length poss) in
+  Float.log2 poss_num
+(*let prob = 1. /. poss_num in *)
+(*
+  entropy = SUM Pi*(log2 1/Pi) 
+  since all of our Pi's are equal, this becomes:
+  prob*(log2 1/prob) * poss
+  => log2 poss_num
+*)
+  
