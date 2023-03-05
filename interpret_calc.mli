@@ -83,3 +83,8 @@ val create_transition_hash : Ast.transition_info list -> (Hstring.t * Hstring.t,
 
 
 val entropy_env : Interpret_types.global -> Ast.transition_info Interpret_types.Trans.t -> Hstring.t list -> float
+
+
+val biased_entropy_env : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c ->
+Ast.transition_info Interpret_types.Trans.t ->
+Hstring.t list -> (Hstring.t * float) list -> float

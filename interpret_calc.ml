@@ -56,6 +56,7 @@ let all_combs_as_pairs l =
     
 
 let create_transition_hash t =
+  (* **2 because it'll be building a hash of all the pairs*)
   let stemp = (float (List.length t))** 2. in
   let size = int_of_float stemp in
 
@@ -1654,9 +1655,22 @@ let entropy_env env trans allprocs =
   Float.log2 poss_num
 (*let prob = 1. /. poss_num in *)
 (*
-  entropy = SUM Pi*(log2 1/Pi) 
+  entropy = - SUM Pi*(log2 1/Pi) 
   since all of our Pi's are equal, this becomes:
   prob*(log2 1/prob) * poss
   => log2 poss_num
 *)
+
+    
+let biased_entropy_env env trans allprocs probability =
+  let poss = all_possible_transitions env trans allprocs false in
+
+  let sum =
+    List.fold_left (fun acc (el,_) -> let p = List.assoc el.tr_name probability in
+				acc +. (p *. Float.log2 p)) 0.0 poss 
+      
+  in -. sum 
+
+  
+
   
