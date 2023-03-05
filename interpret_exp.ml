@@ -4,6 +4,15 @@ open Interpret_errors
 open Ast
 open Types
 
+
+
+let cumulative_prob probs =
+  let _, l = List.fold_right (fun el (s,acc) -> let s1 = el+.s in s1,s1::acc) probs (0.,[])
+  in List.rev l
+
+
+let propose array elements = assert false
+
 let markov glob tsys all_procs tr trans=
   Random.self_init ();
   let hcount = Hashtbl.create 10 in
@@ -26,8 +35,6 @@ let markov glob tsys all_procs tr trans=
 	end 
     ) [] tsys
   in 
-  (*List.iter (fun (x,y) -> Format.eprintf
-    "transition %a(%a)@." Hstring.print x.tr_name Variable.print_vars y) trt;*)
   let els = List.length trt in 
   let tr_array = Array.of_list trt in
 
@@ -142,7 +149,6 @@ let markov glob tsys all_procs tr trans=
 	  
 	end
 	  
-
     with
       | TopError Deadlock -> running := false
       | TopError (FalseReq _) -> ()
@@ -155,6 +161,7 @@ let markov glob tsys all_procs tr trans=
 
 let markov_entropy glob tsys all_procs tr trans steps=
   Random.self_init ();
+  let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
@@ -182,19 +189,18 @@ let markov_entropy glob tsys all_procs tr trans steps=
 
   let taken = ref 0 in
   
-  
-
   let before = Hstring.make "Init" in
   let before = ref before in
   
   let running = ref true in
   let running_env = ref glob in
 
-  let des_ureqs = tr.tr_ureq in
+  let accept = ref 0  in
+  let reject = ref 0 in
   
   let w1 = ref (entropy_env glob trans all_procs) in 
 
-  while  !taken < steps do
+  while  (!taken < steps) && !running do
     try
       let env, _,_,_ = !running_env in 
       let rand = Random.int els in
@@ -212,26 +218,36 @@ let markov_entropy glob tsys all_procs tr trans steps=
       List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
 
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
+      tried := 0;
 
       
       let w2 = entropy_env temp_env trans all_procs in 
 
       
       let flag =
-	if w2 > !w1 then true else
+	if w2 > !w1 then
 	  begin
+	    Format.eprintf "---@.";
+	    true
+	  end
+	else
+	  begin
+	    Format.eprintf "+++@.";
+	    
 	    (*Format.eprintf "w1: %d, w2: %d, delta:%d@." !w1 w2 (w2 - !w1);*)
-	    let prob = w2/. !w1(*2.718281828**((w2-. !w1) /. 1.5)*) in
+	    let prob = 2.718281828**(w2 -. !w1) in
 	      (*fw2/.fw1 in*)
-	  let rand_prob = Random.float 1.0 in
+	    let rand_prob = Random.float 1.0 in
+	    (*Format.eprintf "old: %f , new: %f\nrand : %f, prob: %f@." !w1 w2 rand_prob prob;*)
 	  if prob > rand_prob then true else false 
 	end
       in
       if flag then
 	begin
+
+	  incr accept;
 	  w1 := w2;
 	  running_env := temp_env;
-
 	  let pair = (!before, proposal.tr_name) in
 	  begin
 	    try
@@ -240,7 +256,6 @@ let markov_entropy glob tsys all_procs tr trans steps=
 	    with Not_found ->
 	      Hashtbl.add matrix pair 1
 	  end;
-	  
 	  before := proposal.tr_name;
 	  
 	  let hash = hash_full_env temp_env in
@@ -260,10 +275,13 @@ let markov_entropy glob tsys all_procs tr trans steps=
 	      Hashtbl.replace t_count proposal.tr_name (htc+1)
 	    with Not_found -> Hashtbl.add t_count proposal.tr_name 1
 	  end ;
-	  
 	end
       else
 	begin
+	  incr reject
+	end;
+      (*else*)
+	(*begin
 	  let pair = (!before, !before) in
 	  begin
 	    try
@@ -282,15 +300,15 @@ let markov_entropy glob tsys all_procs tr trans steps=
 	      Hashtbl.add hcount hash (1,!running_env)
 	  end;
 	  
-	end;
-	  
+	end;*)
       incr taken
     with
-      | TopError Deadlock -> running := false
-      | TopError (FalseReq _) -> ()
-      | Stdlib.Sys.Break -> running := false
+      | TopError Deadlock -> raise (TopError Deadlock)
+      | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
+      | Stdlib.Sys.Break -> taken := steps
       | Stdlib.Exit -> running := false
   done;
+  Format.eprintf "Accept: %d, Reject: %d@." !accept !reject;
   !running_env, (hcount,proc_count, t_count, matrix)
 
     
@@ -299,9 +317,6 @@ let run glob tsys all_procs tr trans =
   let e, (hh,pc,tc,matrix)  =
     markov_entropy glob tsys all_procs tr trans 1000000
   in
-  
-  
-
   let smost,smtime,overall =
     Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
       if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
@@ -317,4 +332,18 @@ let run glob tsys all_procs tr trans =
   let num = Hashtbl.fold (fun k el acc -> el+acc) tc 0 in
   Format.eprintf "Total transitions taken: %d@." num;
   let num = float (num-1)  in 
-  Hashtbl.iter (fun (k,k1) el -> Format.eprintf "(%a->%a) : %d (%f) @." Hstring.print k Hstring.print k1 el ((float el)/.num)) matrix
+  Hashtbl.iter (fun (k,k1) el -> Format.eprintf "%a->%a : %d @." Hstring.print k Hstring.print k1 el ) matrix;
+  Format.eprintf "%a@." print_interpret_env e;
+  let init_h = Hstring.make "Init" in 
+  let dfile = Filename.basename Options.file in
+  let current_time = string_of_float (Unix.time()) in
+  let data_log = dfile^current_time^"data" in
+  let open_file = open_out data_log in
+  let ff = Format.formatter_of_out_channel open_file in
+  Hashtbl.iter (fun (k,k1) el ->
+    if Hstring.equal init_h k || Hstring.equal init_h k1 then ()
+    else 
+    Format.fprintf ff "%a->%a : %d@." Hstring.print k Hstring.print k1 el ) matrix;
+  close_out open_file;
+  Format.printf "File %s created@." data_log 
+

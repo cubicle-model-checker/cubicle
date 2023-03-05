@@ -1648,7 +1648,9 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 
 let entropy_env env trans allprocs =
   let poss = all_possible_transitions env trans allprocs false in
+  
   let poss_num = float (List.length poss) in
+  if poss_num = 0. then 0. else
   Float.log2 poss_num
 (*let prob = 1. /. poss_num in *)
 (*
