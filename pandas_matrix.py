@@ -28,10 +28,10 @@ matrix = pd.pivot_table(df, values='counts', index='source', columns='target', f
 #print(sum_t1)
 
 sum_by_source = df.groupby('source')['counts'].sum()
-#print(sum_by_source)
+print(sum_by_source)
 
 
-df['prob'] = df.apply(lambda x: x['counts'] / sum_by_source[x['source']], axis=1)
+df['prob'] = df.apply(lambda x: 0.0 if sum_by_source[x['source']] == 0.0 else x['counts'] / sum_by_source[x['source']], axis=1)
 
 #print(df)
 
@@ -42,7 +42,9 @@ final_matrix = pd.pivot_table(df, values='prob', index='source', columns='target
 arr = final_matrix.values
 index = final_matrix.index.tolist()
 
-print(final_matrix)
+print(final_matrix.values)
+
+print(final_matrix.to_markdown(tablefmt="grid"))
 
 #G = nx.DiGraph(final_matrix.values)
 #G = nx.relabel_nodes(G, lambda x: final_matrix.columns[x])

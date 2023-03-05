@@ -1,0 +1,39 @@
+type t = A | B | C | D | E
+
+
+array P[proc] : t
+var X : bool
+
+
+init(i) { X = True && P[i] = A }
+
+
+transition start1()
+requires { X = True }
+{ X := False;
+  P[j] := case |  _ : B }
+
+transition start2()
+requires { X = True }
+{ X := False;
+  P[j] := case | _ : D }
+
+
+transition next1(i)
+requires { X = False && P[i] = B }
+{ P[i] := C }
+
+
+transition loop1(i)
+requires { X = False && P[i] = C }
+{ P[i] := B }
+
+
+transition next2(i)
+requires { X = False && P[i] = D }
+{ P[i] := E }
+
+
+transition loop2(i)
+requires { X = False && P[i] = E }
+{ P[i] := D } 
