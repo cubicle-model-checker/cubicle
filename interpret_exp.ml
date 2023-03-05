@@ -732,7 +732,7 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
   let accept = ref 0  in
   let reject = ref 0 in
 
-  let proposal_probs = [Hstring.make "t", 0.3; Hstring.make "t1", 0.3; Hstring.make "t2", 0.3; Hstring.make "t4", 0.1] in
+  let proposal_probs = [Hstring.make "t", 0.15; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.15] in
 
   let cumulative_proposal = cumulative_prob proposal_probs in 
   
@@ -780,8 +780,17 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
 	    Format.eprintf "+++@.";
 	    
 	    (*Format.eprintf "w1: %d, w2: %d, delta:%d@." !w1 w2 (w2 - !w1);*)
-	    let prob = 2.718281828**(w2 -. !w1) in
-	      (*fw2/.fw1 in*)
+
+	    let bef =
+	      begin
+		try List.assoc !before proposal_probs
+		with Not_found -> 0.000001
+	      end
+	    in
+	    let hastings = (List.assoc proposal.tr_name proposal_probs ) /. bef in 
+	    let prob = (2.718281828**(w2 -. !w1)) *. hastings in
+
+	  	      (*fw2/.fw1 in*)
 	    let rand_prob = Random.float 1.0 in
 	    (*Format.eprintf "old: %f , new: %f\nrand : %f, prob: %f@." !w1 w2 rand_prob prob;*)
 	  if prob > rand_prob then true else false 
@@ -1066,8 +1075,8 @@ let run glob tsys all_procs tr trans =
   (*markov_entropy glob tsys all_procs tr trans 1000000*)
   (*markov_biased_proposal glob tsys all_procs tr trans 1000000*)
   (*markov_biased_entropy glob tsys all_procs tr trans 1000000*)
-  (*markov_biased_entropy_biased_proposal glob tsys all_procs tr trans 1000000*)
-    markov_hastings glob tsys all_procs tr trans 1000000
+  markov_biased_entropy_biased_proposal glob tsys all_procs tr trans 1000000
+    (*markov_hastings glob tsys all_procs tr trans 1000000*)
     
   in
   let smost,smtime,overall =
