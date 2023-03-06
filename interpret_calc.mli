@@ -81,10 +81,14 @@ val all_arrange : int -> 'a list -> 'a list list
 val all_combs_as_pairs : 'a list -> ('a * 'a) list
 val create_transition_hash : Ast.transition_info list -> (Hstring.t * Hstring.t, int) Hashtbl.t
 
+val create_detailed_hash: Ast.transition_info list -> Hstring.t list -> (Hstring.t * Hstring.t, int) Hashtbl.t
 
+  
 val entropy_env : Interpret_types.global -> Ast.transition_info Interpret_types.Trans.t -> Hstring.t list -> float
 
 
 val biased_entropy_env : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c ->
 Ast.transition_info Interpret_types.Trans.t ->
-Hstring.t list -> (Hstring.t * float) list -> float
+  Hstring.t list -> (Hstring.t * float) list -> float
+
+val trans_proc_to_hstring : Hstring.t -> Hstring.t list -> Hstring.t

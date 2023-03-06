@@ -53,7 +53,16 @@ let all_combs_as_pairs l =
 		  in combs tl a
   in combs l []
 
-    
+
+let var_list_to_hstring l =
+  let rec aux l acc =
+    match l with
+      | [] -> acc^")"
+      | [el] -> let s = Hstring.view el in acc^s^")"
+      | hd::tl -> let s = Hstring.view hd in 
+		  let a = acc^s^"," in aux tl a
+  in aux l "(";;
+
 
 let create_transition_hash t =
   (* **2 because it'll be building a hash of all the pairs*)
@@ -64,6 +73,38 @@ let create_transition_hash t =
   let names = List.map (fun x -> x.tr_name) t in
   let names = (Hstring.make "Init") :: names in
   let all_combs = all_combs_as_pairs names in
+  List.iter (fun x -> Hashtbl.add ht x 0) all_combs;
+  ht
+
+
+let trans_proc_to_hstring t p =
+  let t_name = Hstring.view t in
+  let procs = var_list_to_hstring p in
+  Hstring.make (t_name^procs)
+    
+let create_detailed_hash t procs =
+  let trt =
+    List.fold_left (fun acc el->
+      let args = el.tr_args in
+      let num_args = List.length args in
+      let tr_procs = all_arrange num_args procs in
+      if tr_procs = [] then
+	  (el,[])::acc
+      else
+	begin
+	  List.fold_left (fun acc_t procs ->
+	    (el, procs)::acc_t      
+	  ) acc tr_procs
+	
+	end 
+    ) [] t
+  in
+  let l = List.map (fun (tr, p) -> trans_proc_to_hstring tr.tr_name p) trt
+  in
+  let l = (Hstring.make "Init") :: l in
+  let size = int_of_float ((float (List.length l))** 2.) in
+  let ht = Hashtbl.create size in
+  let all_combs = all_combs_as_pairs l in
   List.iter (fun x -> Hashtbl.add ht x 0) all_combs;
   ht
 
