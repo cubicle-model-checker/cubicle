@@ -1115,14 +1115,15 @@ let setup_env tsys sys =
 	  Hashtbl.iter (fun (k,k1) el -> Format.eprintf "(%a->%a) : %d @." Hstring.print k Hstring.print k1 el) matrix
 
 
-	| TopMarkov t ->
-	  let tr = Trans.find t transitions in 
+	| TopMarkov t -> ()
+	  (*let tr = Trans.find t transitions in 
 	  
-	    Interpret_exp.run !global_env sys.trans procs tr transitions
+	    Interpret_exp.run !global_env sys.trans procs tr transitions*)
 
 
 
-	  
+	| TopMCMC(mthd, flg, mc_steps) ->
+	  Interpret_exp.run !global_env sys.trans procs transitions mthd flg mc_steps
 
 
 	    

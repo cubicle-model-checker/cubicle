@@ -36,3 +36,5 @@ type toplevel =
   | TopMarkov of Hstring.t
 
   | TopExperiment of Hstring.t * int * float
+
+  | TopMCMC of int * bool * int

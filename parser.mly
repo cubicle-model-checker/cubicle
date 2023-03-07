@@ -107,6 +107,7 @@
 %token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
 %token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR UNSAFEINTR INTSYS PREINT
 %token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC FUZZ FREQ TOPTRY TOPMARKOV
+%token MARKOV HASTINGS ENTROPY HASTENT
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
@@ -707,5 +708,35 @@ toplevel:
   | TOPTRY lident INT REAL { let i  = Num.int_of_num $3 in
 			    let f  = Num.float_of_num $4 in
 			    TopExperiment ($2,i, f)}
-  | TOPMARKOV lident { TopMarkov $2 } 
+  | TOPMARKOV lident { TopMarkov $2 }
+
+  | MARKOV INT INT
+      {(*mc_run*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in	
+	let steps = Num.int_of_num $3 in
+	TopMCMC (1,flag,steps)
+      }
+  | HASTINGS INT INT
+      {(*mc_hastings*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in	
+	let steps = Num.int_of_num $3 in
+	TopMCMC (2,flag,steps)
+      }
+      
+  | ENTROPY INT INT
+      { (*mc_entropy*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in
+	let steps = Num.int_of_num $3 in
+	TopMCMC (3,flag,steps)
+      }
+  | HASTENT INT INT
+      { (*mc_he*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in
+	let steps = Num.int_of_num $3 in
+	TopMCMC (4,flag,steps)
+      }
 ;

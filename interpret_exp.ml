@@ -17,7 +17,35 @@ match l with
   | (v,p)::tl -> if f <= p then v else pick f tl;;
 
   
-let propose array elements = assert false
+let propose tr flg =
+  let typ = if flg then "proposal" else "entropy" in 
+  Format.printf "Please enter %s probabilities for the system:@." typ;
+  let rec enter l acc =
+    match l with
+      | [] ->
+	let s = List.fold_left (fun sum (_, p) -> p+.sum) 0. acc
+	in if s <> 1.0 then
+	    begin
+	      Format.printf "Given probabilities must sum up to 1.0\n\
+                             Please enter new probabilities.@.";
+	      enter tr []
+	    end
+	  else acc 
+      | hd::tl ->
+	let n = hd.tr_name in
+	Format.printf "probability for %a? @." Hstring.print n;
+	begin
+	try
+	  let f = read_float () in
+	  let a = (n,f)::acc
+	  in enter tl a
+	with
+	  | Failure _  ->
+	    Printf.printf "Please enter a correct float@.";
+	    enter l acc  
+	end
+  in
+  enter tr []
   
 
 let markov glob tsys all_procs tr trans=
@@ -166,7 +194,8 @@ let markov glob tsys all_procs tr trans=
 
 
 (*----------------------*)
-let markov_entropy glob tsys all_procs tr trans steps=
+(*Original Markov function that only counts t-> t without detail and no bias*)
+let markov_entropy glob tsys all_procs trans steps=
   Random.self_init ();
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
@@ -320,13 +349,18 @@ let markov_entropy glob tsys all_procs tr trans steps=
 
 
 (*-----------------------*)
-let markov_entropy_detailed glob tsys all_procs tr trans steps=
+let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
   Random.self_init ();
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
-  let matrix = create_detailed_hash tsys all_procs in
+  let matrix =
+    if det_flag then
+      create_detailed_hash tsys all_procs
+    else
+      create_transition_hash tsys
+  in
   let trt =
     List.fold_left (fun acc el->
       let args = el.tr_args in
@@ -403,7 +437,13 @@ let markov_entropy_detailed glob tsys all_procs tr trans steps=
 	  if prob > rand_prob then true else false 
 	end
       in
-      let prop_hs = trans_proc_to_hstring proposal.tr_name prop_procs in 
+      let prop_hs =
+	if det_flag then
+	  trans_proc_to_hstring proposal.tr_name prop_procs
+	else
+	  proposal.tr_name 
+
+      in 
       if flag then
 	begin
 	  incr accept;
@@ -476,6 +516,7 @@ let markov_entropy_detailed glob tsys all_procs tr trans steps=
 
 
 (*====*)
+(*THIS DOES NOT WORK - NEEDS HASTINGS*)
 let markov_biased_proposal glob tsys all_procs tr trans steps=
   Random.self_init ();
   let tried = ref 0 in
@@ -666,13 +707,18 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
     
 
 (*==Biased entropy==*)
-    let markov_biased_entropy glob tsys all_procs tr trans steps=
+let markov_biased_entropy glob tsys all_procs  trans steps det_flag=
   Random.self_init ();
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
-  let matrix = create_transition_hash tsys in
+  let matrix =
+    if det_flag then
+      create_detailed_hash tsys all_procs
+    else
+      create_transition_hash tsys
+  in
   let trt =
     List.fold_left (fun acc el->
       let args = el.tr_args in
@@ -707,7 +753,9 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
   
   let w1 = ref (entropy_env glob trans all_procs) in
 
-  let proposal_probs = [Hstring.make "t", 0.1; Hstring.make "t1", 0.7; Hstring.make "t2", 0.1; Hstring.make "t4", 0.1] in
+  let proposal_probs = propose tsys false 
+    (*[Hstring.make "t", 0.1; Hstring.make "t1", 0.7; Hstring.make "t2", 0.1; Hstring.make "t4", 0.1] *)
+in
 
   while  (!taken < steps) && !running do
     try
@@ -751,13 +799,20 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
 	  if prob > rand_prob then true else false 
 	end
       in
+      let prop_hs =
+	if det_flag then
+	  trans_proc_to_hstring proposal.tr_name prop_procs
+	else
+	  proposal.tr_name 
+
+      in 
       if flag then
 	begin
 
 	  incr accept;
 	  w1 := w2;
 	  running_env := temp_env;
-	  let pair = (!before, proposal.tr_name) in
+	  let pair = (!before, prop_hs) in
 	  begin
 	    try
 	      let cpair = Hashtbl.find matrix pair in
@@ -765,7 +820,7 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
 	    with Not_found ->
 	      Hashtbl.add matrix pair 1
 	  end;
-	  before := proposal.tr_name;
+	  before := prop_hs;
 	  
 	  let hash = hash_full_env temp_env in
 	  begin
@@ -780,36 +835,15 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
 	    proc_count.(x-1) <- proc_count.(x-1) + 1) appl;
 	  begin
 	    try
-	      let htc= Hashtbl.find t_count proposal.tr_name in
-	      Hashtbl.replace t_count proposal.tr_name (htc+1)
-	    with Not_found -> Hashtbl.add t_count proposal.tr_name 1
+	      let htc= Hashtbl.find t_count prop_hs in
+	      Hashtbl.replace t_count prop_hs (htc+1)
+	    with Not_found -> Hashtbl.add t_count prop_hs 1
 	  end ;
 	end
       else
 	begin
 	  incr reject
 	end;
-      (*else*)
-	(*begin
-	  let pair = (!before, !before) in
-	  begin
-	    try
-	      let cpair = Hashtbl.find matrix pair in
-	      Hashtbl.replace matrix pair (cpair+1)
-	    with Not_found ->
-	      Hashtbl.add matrix pair 1
-	  end;
-
-	  let hash = hash_full_env !running_env in
-	  begin
-	    try
-	      let he,ee = Hashtbl.find hcount hash in
-	      Hashtbl.replace hcount hash ((he+1),ee)
-	    with Not_found ->
-	      Hashtbl.add hcount hash (1,!running_env)
-	  end;
-	  
-	end;*)
       incr taken
     with
       | TopError Deadlock -> raise (TopError Deadlock)
@@ -824,13 +858,18 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
     
 (*=== Biased entropy and proposal ===*)
 
-let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
+let markov_biased_entropy_biased_proposal glob tsys all_procs trans steps det_flag =
   Random.self_init ();
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
-  let matrix = create_transition_hash tsys in
+  let matrix =
+    if det_flag then
+      create_detailed_hash tsys all_procs
+    else
+      create_transition_hash tsys
+  in
   let hprop = Hashtbl.create (List.length tsys) in(*proposition hash*)
   List.iter (fun x -> Hashtbl.add hprop x.tr_name []) tsys;
   let trt =
@@ -886,7 +925,10 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
   let accept = ref 0  in
   let reject = ref 0 in
 
-  let proposal_probs = [Hstring.make "t", 0.1; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.1] in
+  let proposal_probs = propose tsys true in
+  let entropy_probs = propose tsys false in 
+
+(*[Hstring.make "t", 0.1; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.1]*) 
 
   let cumulative_proposal = cumulative_prob proposal_probs in 
   
@@ -920,7 +962,7 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
       tried := 0;
 
       
-      let w2 = biased_entropy_env temp_env trans all_procs proposal_probs in 
+      let w2 = biased_entropy_env temp_env trans all_procs entropy_probs in 
 
       
       let flag =
@@ -950,13 +992,20 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
 	  if prob > rand_prob then true else false 
 	end
       in
+      let prop_hs =
+	if det_flag then
+	  trans_proc_to_hstring proposal.tr_name prop_procs
+	else
+	  proposal.tr_name 
+
+      in 
       if flag then
 	begin
 
 	  incr accept;
 	  w1 := w2;
 	  running_env := temp_env;
-	  let pair = (!before, proposal.tr_name) in
+	  let pair = (!before, prop_hs) in
 	  begin
 	    try
 	      let cpair = Hashtbl.find matrix pair in
@@ -964,7 +1013,7 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
 	    with Not_found ->
 	      Hashtbl.add matrix pair 1
 	  end;
-	  before := proposal.tr_name;
+	  before := prop_hs;
 	  
 	  let hash = hash_full_env temp_env in
 	  begin
@@ -979,36 +1028,15 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
 	    proc_count.(x-1) <- proc_count.(x-1) + 1) appl;
 	  begin
 	    try
-	      let htc= Hashtbl.find t_count proposal.tr_name in
-	      Hashtbl.replace t_count proposal.tr_name (htc+1)
-	    with Not_found -> Hashtbl.add t_count proposal.tr_name 1
+	      let htc= Hashtbl.find t_count prop_hs in
+	      Hashtbl.replace t_count prop_hs (htc+1)
+	    with Not_found -> Hashtbl.add t_count prop_hs 1
 	  end ;
 	end
       else
 	begin
 	  incr reject
 	end;
-      (*else*)
-	(*begin
-	  let pair = (!before, !before) in
-	  begin
-	    try
-	      let cpair = Hashtbl.find matrix pair in
-	      Hashtbl.replace matrix pair (cpair+1)
-	    with Not_found ->
-	      Hashtbl.add matrix pair 1
-	  end;
-
-	  let hash = hash_full_env !running_env in
-	  begin
-	    try
-	      let he,ee = Hashtbl.find hcount hash in
-	      Hashtbl.replace hcount hash ((he+1),ee)
-	    with Not_found ->
-	      Hashtbl.add hcount hash (1,!running_env)
-	  end;
-	  
-	end;*)
       incr taken
     with
       | TopError Deadlock -> raise (TopError Deadlock)
@@ -1023,13 +1051,18 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs tr trans steps=
 (*==Hastings==*)
 
 
-let markov_hastings glob tsys all_procs tr trans steps=
+let markov_hastings glob tsys all_procs trans steps det_flag=
   Random.self_init ();
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
-  let matrix = create_transition_hash tsys in
+  let matrix =
+    if det_flag then
+      create_detailed_hash tsys all_procs
+    else
+      create_transition_hash tsys
+  in
   let hprop = Hashtbl.create (List.length tsys) in(*proposition hash*)
   List.iter (fun x -> Hashtbl.add hprop x.tr_name []) tsys;
 
@@ -1066,12 +1099,12 @@ let markov_hastings glob tsys all_procs tr trans steps=
   let propositions = Hashtbl.create (List.length tsys) in 
   Hashtbl.iter (fun k el -> Hashtbl.add propositions k (List.length el, Array.of_list el)) hprop;
 
-
+  (*
   Hashtbl.iter (fun k (len, el) ->
     Format.eprintf "--@.";
     Format.eprintf "transition %a, #%d@." Hstring.print k len;
     Array.iter (fun x -> Format.eprintf "%a@." Variable.print_vars x) el  
-  ) propositions;
+  ) propositions;*)
  
   let taken = ref 0 in
   
@@ -1088,7 +1121,10 @@ let markov_hastings glob tsys all_procs tr trans steps=
 
   (* let proposal_probs = [Hstring.make "t", 0.026; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.274] in*)
 
-   let proposal_probs = [Hstring.make "t", 0.135; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.165] in
+  let proposal_probs =(* [Hstring.make "t", 0.135; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.165] in*) propose tsys true in 
+
+
+  (*let proposal_probs = [Hstring.make "t", 0.1; Hstring.make "t1", 0.4; Hstring.make "t2", 0.4; Hstring.make "t4", 0.1] in*)
 
   let cumulative_proposal = cumulative_prob proposal_probs in 
   
@@ -1129,12 +1165,12 @@ let markov_hastings glob tsys all_procs tr trans steps=
       let flag =
 	if w2 > !w1 then
 	  begin
-	    Format.eprintf "---@.";
+	    (*Format.eprintf "---@.";*)
 	    true
 	  end
 	else
 	  begin
-	    Format.eprintf "+++@.";
+	    (*Format.eprintf "+++@.";*)
 	    
 	    (*Format.eprintf "w1: %d, w2: %d, delta:%d@." !w1 w2 (w2 - !w1);*)
 	    let bef =
@@ -1151,13 +1187,20 @@ let markov_hastings glob tsys all_procs tr trans steps=
 	  if prob > rand_prob then true else false 
 	end
       in
+      let prop_hs =
+	if det_flag then
+	  trans_proc_to_hstring proposal.tr_name prop_procs
+	else
+	  proposal.tr_name 
+
+      in
       if flag then
 	begin
 
 	  incr accept;
 	  w1 := w2;
 	  running_env := temp_env;
-	  let pair = (!before, proposal.tr_name) in
+	  let pair = (!before, prop_hs) in
 	  begin
 	    try
 	      let cpair = Hashtbl.find matrix pair in
@@ -1180,36 +1223,15 @@ let markov_hastings glob tsys all_procs tr trans steps=
 	    proc_count.(x-1) <- proc_count.(x-1) + 1) appl;
 	  begin
 	    try
-	      let htc= Hashtbl.find t_count proposal.tr_name in
-	      Hashtbl.replace t_count proposal.tr_name (htc+1)
-	    with Not_found -> Hashtbl.add t_count proposal.tr_name 1
+	      let htc= Hashtbl.find t_count prop_hs in
+	      Hashtbl.replace t_count prop_hs (htc+1)
+	    with Not_found -> Hashtbl.add t_count prop_hs 1
 	  end ;
 	end
       else
 	begin
 	  incr reject
 	end;
-      (*else*)
-	(*begin
-	  let pair = (!before, !before) in
-	  begin
-	    try
-	      let cpair = Hashtbl.find matrix pair in
-	      Hashtbl.replace matrix pair (cpair+1)
-	    with Not_found ->
-	      Hashtbl.add matrix pair 1
-	  end;
-
-	  let hash = hash_full_env !running_env in
-	  begin
-	    try
-	      let he,ee = Hashtbl.find hcount hash in
-	      Hashtbl.replace hcount hash ((he+1),ee)
-	    with Not_found ->
-	      Hashtbl.add hcount hash (1,!running_env)
-	  end;
-	  
-	end;*)
       incr taken
     with
       | TopError Deadlock -> raise (TopError Deadlock)
@@ -1224,15 +1246,20 @@ let markov_hastings glob tsys all_procs tr trans steps=
     
     
     
-let run glob tsys all_procs tr trans =
+let run glob tsys all_procs trans mthd flg steps=
   let e, (hh,pc,tc,matrix)  =
-    (*markov_entropy glob tsys all_procs tr trans 1000000*)
+    match mthd with
+      | 1 -> markov_entropy_detailed glob tsys all_procs trans steps flg
+      | 2 -> markov_hastings glob tsys all_procs trans steps flg
+      | 3 -> markov_biased_entropy glob tsys all_procs trans steps flg
+      | 4 -> markov_biased_entropy_biased_proposal glob tsys all_procs trans steps flg
+      | _ -> assert false
+  (*markov_entropy glob tsys all_procs tr trans 1000000*)
   (*markov_biased_proposal glob tsys all_procs tr trans 1000000*)
   (*markov_biased_entropy glob tsys all_procs tr trans 1000000*)
   (*markov_biased_entropy_biased_proposal glob tsys all_procs tr trans 1000000*)
   (*markov_hastings glob tsys all_procs tr trans 1000000*)
-    markov_entropy_detailed glob tsys all_procs tr trans 1000000
-    
+  (* markov_entropy_detailed glob tsys all_procs tr trans 1000000*)
   in
   let smost,smtime,overall =
     Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
@@ -1248,7 +1275,7 @@ let run glob tsys all_procs tr trans =
   Hashtbl.iter (fun k el -> Format.eprintf "Transition %a : %d times@." Hstring.print k el) tc;
   let num = Hashtbl.fold (fun k el acc -> el+acc) tc 0 in
   Format.eprintf "Total transitions taken: %d@." num;
-  let num = float (num-1)  in 
+  (*let num = float (num-1)  in *)
   Hashtbl.iter (fun (k,k1) el -> Format.eprintf "%a->%a : %d @." Hstring.print k Hstring.print k1 el ) matrix;
   Format.eprintf "%a@." print_interpret_env e;
   let init_h = Hstring.make "Init" in 

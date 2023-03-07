@@ -86,7 +86,11 @@
 	"pre", PREINT;
 	"freq", FREQ;
 	"try", TOPTRY;
-	"markov", TOPMARKOV
+	"markov", TOPMARKOV;
+	"mc_run", MARKOV;
+	"mc_hastings", HASTINGS;
+	"mc_entropy", ENTROPY;
+	"mc_he", HASTENT;
 	
       ]
 	       
