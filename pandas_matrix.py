@@ -45,6 +45,7 @@ index = final_matrix.index.tolist()
 print(final_matrix.values)
 
 print(final_matrix.to_markdown(tablefmt="grid"))
+#print(final_matrix.to_markdown())
 
 #G = nx.DiGraph(final_matrix.values)
 #G = nx.relabel_nodes(G, lambda x: final_matrix.columns[x])
