@@ -1,9 +1,9 @@
 import pandas as pd
 import pydtmc as mc
 import matplotlib.pyplot as plt
-import networkx as nx
+#import networkx as nx
 import sys
-import lxml
+#import lxml
 
 
 args = sys.argv
