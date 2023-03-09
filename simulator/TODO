@@ -2,7 +2,7 @@
 
 ## Model
 
-- Le model devrait contenir les unsafe
+- Utiliser des structures plutôt que des n-uplets
 
 ## Simulateur
 
@@ -28,6 +28,7 @@
 - On veut peut être afficher a l'écran les variables 
 
 ## Sample scene 
+
 - On veut afficher si la simulation est en pause
 - On veut afficher le current step
 - Scale le text pour le fit dans les carrés
@@ -40,43 +41,27 @@
 - Il faudrait un paramètre -o pour spécifier le path
 - Mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
 - La plupart du code entre l'écriture des garde et des états unsafe semble aisément factorisable
+- Ajouter les unsafe au modèle : 
+	Créer une fonction pour créer le modèle correctement plutôt que de le créer dans les transitions
 
-## Traces
+## Petri:
 
-Tableau redimensionnable
-{
-	Array : 
-	i : (Ou je suis dans l'array)
-}
-
-module T ( X : sig type t)
-	type X.t t
-		val length 	: X.t -> int			
-		val start 	: X.t -> int -> unit (recalibrer position)
-		val get : 	: X.t -> X.t				(Récup current elem)
-		val next : X.t -> unity
-		val position : X.t -> int (récup current position)
-
-Implémenter la signature de la trace statique
-Construire & Impélementer la signature de la trace dynamique
-Utiliser les traces dans le model et dans le simulateur
-
-Le simumateur devrait rendre une trace non dynamique lorsque demandée mais avoir une trace dynamique
-
-# Petri:
-
-- Utiliser des IntMap et des StringMap pour les trucs qui menent vers leurs position
-
-
+- Une IntMap est elle finalement bien nécéssaire ? On peut simplement utiliser une Hashmap et demander a l'utilisateur un id...
+- Implémenter des flèches pour bien montrer que les transitions sont orientée
+- Mieux centrer l'affichage des procs
+- Ordonner proprement les procs pour qu'on comprenne bien qu'il y a un nouveau proc et qui il est
+- Centrer automatiquement l'affichage de tout le graphe sur l'image ? Le scale ?
+- Ajouter la possibilité de faire pause, step back & step forward
 
 
 ## Divers
 
 - Au lieu d'utiliser des triplets partout il serait beaucoup plus cohérent d'utiliser des structures non ?
 
-
-
 ## Bugs
 
 - Il semblerait que si on remonte dans le simulateur avant la première transition il y ait un problème
 
+## Traces
+
+- Raise une erreur custom en cas de out of bounds

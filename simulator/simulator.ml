@@ -44,6 +44,17 @@ let get_possible_action_for_arg arg trans_list trans_map =
     if (req arg && lock arg) then ((arg,ac,name)::returned) else returned in
   List.fold_left sub_gpafa [] trans_list
 
+let take_transition tname args = 
+  let (trans_map, _) = Model.get_trans (get_model ()) in
+  let (req, ac) = StringMap.find tname trans_map in
+  if req args then
+  (
+    ac args;
+    let ntr = ((tname, args), Utils.get_model_state ()) in
+    Traces.add full_trace ntr;
+    on_model_change_callback ()
+  )
+
 let step () =
   if not !is_paused then
   (
@@ -64,15 +75,11 @@ let step () =
     IntMap.iter test_transition trans_table;
     !returned_list
   in
-  if List.length possible_actions > 0 then
-      (
-      let (arg, ac, name) = get_random_in_list possible_actions in
-      ac arg;         
-      let ntr = ((name, arg), Utils.get_model_state ()) in 
-      Traces.add full_trace ntr;
-      )
-  );
-  on_model_change_callback ()
+  if List.length possible_actions > 0 then  
+    let (arg, ac, name) = get_random_in_list possible_actions in
+    take_transition name arg
+      
+  )
 
 (* Interaction functions *)
 
@@ -137,7 +144,3 @@ let get_vuv_for_proc_pair i j =
 
 let get_vuv vuv_name = StringMap.find vuv_name (get_model_state ())
 
-let take_transition tname args = 
-  let (trans_map, _) = Model.get_trans (get_model ()) in
-  let (req, ac) = StringMap.find tname trans_map in
-  if req args then (ac args; on_model_change_callback ())

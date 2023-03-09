@@ -28,8 +28,8 @@ type t = (int ref) * (tstep Array.t ref)
 
 let start (i, st) j = i := j 
 
-let get (i, st) = 
-  if !i >= Array.length !st then failwith "Trying to get out of bounds.";
+let get (i, st) =
+  if !i >= Array.length !st then failwith "Out of bounds.";
   (!st).(!i)
 
 let next (i, st) = 
@@ -44,10 +44,16 @@ let add (i, st) tr =
   let j = (!i)+1 in
   let t = Array.length (!st) in
   if j < t then
-    (!st).(j) <- tr
-  else
-    let nst = Array.init (t*2) (fun x -> if x < j then (!st).(x) else tr) in
-    st := nst
+    (
+      (!st).(j) <- tr
+    )
+  else 
+    (
+      let nst = Array.init ((t+1)*2) (fun x -> if x < (!i) then (!st).(x) else tr) in
+      st := nst
+    );
+  i := j
+
 
 let empty () = (ref 0, ref [||])
 
