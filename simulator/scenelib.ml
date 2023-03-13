@@ -97,6 +97,21 @@ let draw_for_state () =
   let sttable = Petri.get_states (get_petri ()) in
   let trtable = Petri.get_trans  (get_petri ()) in
 
+  let draw_arc a = 
+    let fst, scnd = match a with
+    | Petri.In(st,tr) -> IntMap.find st sttable, Hashtbl.find trtable tr
+    | Petri.Out(tr,st) -> Hashtbl.find trtable tr, IntMap.find st sttable
+    in
+    moveto fst.x fst.y;
+    lineto scnd.x scnd.y;
+    (* TODO
+       Should be drawing arrow here instead of line
+       Should be taking into account the size of the object that you want to draw an arrow  to : You don't want the arrow to go to it's center but to it's border
+    *)
+  in
+  List.iter draw_arc (Petri.get_arcs (get_petri ())); 
+
+
   let draw_state state_id ({x; y} : Petri.pos) = 
     set_color black;
     draw_circle x y state_size;
@@ -151,19 +166,6 @@ let draw_for_state () =
   Hashtbl.iter draw_trans trtable;
   set_color black;
 
-  let draw_arc a = 
-    let fst, scnd = match a with
-    | Petri.In(st,tr) -> IntMap.find st sttable, Hashtbl.find trtable tr
-    | Petri.Out(tr,st) -> Hashtbl.find trtable tr, IntMap.find st sttable
-    in
-    moveto fst.x fst.y;
-    lineto scnd.x scnd.y;
-    (* TODO
-       Should be drawing arrow here instead of line
-       Should be taking into account the size of the object that you want to draw an arrow  to : You don't want the arrow to go to it's center but to it's border
-    *)
-  in
 
-  List.iter draw_arc (Petri.get_arcs (get_petri ())); 
 
   synchronize ()

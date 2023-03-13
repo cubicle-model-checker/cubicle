@@ -48,6 +48,7 @@
 
 - Une IntMap est elle finalement bien nécéssaire ? On peut simplement utiliser une Hashmap et demander a l'utilisateur un id...
 - Implémenter des flèches pour bien montrer que les transitions sont orientée
+Ces flèches devraient également s'arrêter au bord des ronds et carrés
 - Mieux centrer l'affichage des procs
 - Ordonner proprement les procs pour qu'on comprenne bien qu'il y a un nouveau proc et qui il est
 - Centrer automatiquement l'affichage de tout le graphe sur l'image ? Le scale ?
