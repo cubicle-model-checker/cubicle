@@ -142,5 +142,5 @@ let get_vuv_for_proc_pair i j =
   StringMap.iter add_vars mstate;
   !ret
 
-let get_vuv vuv_name = StringMap.find vuv_name (get_model_state ())
-
+let get_vuv vuv_name = try StringMap.find vuv_name (get_model_state ()) 
+                      with Not_found -> failwith (Format.sprintf "(Simulator) Could'nt get vuv '%s' : Not_found)" vuv_name)

@@ -7,27 +7,15 @@ open Scenelib
 *)
 
 let state_from_proc i = 
-  let m1 = 
-  match (get_vuv "Want") with
-  | Arr(a) -> a
-  | _ -> failwith "Wrong model : No Want"
-  in
-  let m2 = 
-  match (get_vuv "Crit") with
-  | Arr(a) -> a
-  | _ -> failwith "Wrong model : No Crit"
-  in
-  let v1 = match (List.nth m1 i) with
-  | VBool(b) -> b
-  | _ -> failwith "Wrong model : Want is not vbool"
-  in
-  let v2 = match (List.nth m2 i) with
-  | VBool(b) -> b
-  | _ -> failwith "Wrong model : Crit is not vbool"
-  in
-  if v2 then 2 else
-  if v1 then 1 else
-  0
+  match (get_vuv "Cache") with
+  | Arr(a) -> 
+      begin match List.nth a i with
+      | VConstr("Invalid")    -> 0
+      | VConstr("Shared")     -> 1
+      | VConstr("Exclusive")  -> 2
+      | _                     -> failwith "Wrong model"
+      end 
+  | _ -> failwith "Wrong Model : No cache"
 
 let build_scene () =
   

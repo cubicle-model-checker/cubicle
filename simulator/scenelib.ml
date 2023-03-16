@@ -35,24 +35,51 @@ let proc_perc   = 80 (* size taken by proc in perc of state_size *)
 let proc_space_perc = 50
 let trans_size  = 50
 
+
+(* Minor settings *)
+let arrow_size    = 20
+let arrow_pointy  = 30
+
+module Vector =
+struct
+  type t = { x : int; y : int }
+
+  let add a b = { x = a.x + b.x; y = a.y + b.y }
+  let sub a b = { x = a.x - b.x; y = a.y - b.y }
+
+  let mult k a = { x = k* a.x; y = k* a.y }
+  let div  k a = { x = a.x /k; y = a.y /k}
+
+  let dot a b = a.x * b.x + a.y * b.y
+  let norm a = int_of_float (sqrt (float_of_int (dot a a)))
+  let normalize a = div (norm a) a
+  let setsize   k a = div (norm a) (mult k a)
+  let pp a = Format.printf "(%d, %d)" a.x a.y
+
+  let orth v = [| { x = v.y; y = -v.x }  ; {x = -v.y; y=v.x}|]
+
+  let distance a b = Int.abs (a.x - b.x) + Int.abs (a.y - b.y)
+
+  let zero = { x = 0; y = 0 }
+end
+
 (* Petri Settings *)
 module Petri : sig
   type arc = 
     | Out of string * int     (* From transition to state *)
     | In  of int    * string  (* From state to transition *)
   
-  type pos = { x : int; y : int }
   type t
 
   val empty               : unit -> t
-  val add_state           : t -> (int * pos) -> unit
-  val add_trans           : t -> (string*pos) -> unit
+  val add_state           : t -> (int * Vector.t) -> unit
+  val add_trans           : t -> (string * Vector.t) -> unit
   val add_arc             : t -> arc -> unit
   val set_state_fun       : t -> (int -> int) -> unit
-  val set_state           : t -> (int * pos) list -> unit
+  val set_state           : t -> (int * Vector.t) list -> unit
 
-  val get_states          : t -> pos IntMap.t
-  val get_trans           : t -> (string,pos) Hashtbl.t
+  val get_states          : t -> Vector.t IntMap.t
+  val get_trans           : t -> (string,Vector.t) Hashtbl.t
   val get_state_for_proc  : t -> int -> int
   val get_arcs            : t -> arc list
 end
@@ -62,9 +89,8 @@ struct
   type arc = 
   | Out of string * int     
   | In  of int    * string
-  type pos = { x : int; y : int }
   (* Place, Place_pos; Transition, Transition_pos; Arcs ; place_id -> proc on this place*)
-  type t = pos IntMap.t ref * (string, pos) Hashtbl.t * arc list ref * (int -> int) ref
+  type t = Vector.t IntMap.t ref * (string, Vector.t) Hashtbl.t * arc list ref * (int -> int) ref
   
   let empty () = (ref IntMap.empty, Hashtbl.create 10, ref [], ref (fun (x : int) -> 0))
  
@@ -97,22 +123,38 @@ let draw_for_state () =
   let sttable = Petri.get_states (get_petri ()) in
   let trtable = Petri.get_trans  (get_petri ()) in
 
-  let draw_arc a = 
+  let draw_arc a =
+    let draw_arrow (from : Vector.t) (toward : Vector.t) = 
+      let a = Vector.setsize arrow_pointy (Vector.sub from toward) in
+      let draw_pointy pointy = 
+          let o = Vector.add toward (Vector.setsize arrow_size pointy) in
+          let o = Vector.add a o in
+          moveto toward.x toward.y;
+          lineto o.x o.y;
+        in
+        moveto from.x from.y;
+        lineto toward.x toward.y;
+        let ort = Vector.orth (Vector.sub toward from) in
+        draw_pointy (ort.(0));
+        draw_pointy (ort.(1));
+      in
+
     let fst, scnd = match a with
-    | Petri.In(st,tr) -> IntMap.find st sttable, Hashtbl.find trtable tr
-    | Petri.Out(tr,st) -> Hashtbl.find trtable tr, IntMap.find st sttable
+    | Petri.In(st,tr) -> 
+        let (f,s) = (IntMap.find st sttable, Hashtbl.find trtable tr)         in
+        let diff = Vector.setsize state_size (Vector.sub s f)                 in
+        (Vector.add diff f),s
+    | Petri.Out(tr,st) -> 
+        let (f,s) = (Hashtbl.find trtable tr, IntMap.find st sttable)         in
+        let diff = Vector.setsize state_size (Vector.sub f s)                 in
+        f,(Vector.add diff s)
     in
-    moveto fst.x fst.y;
-    lineto scnd.x scnd.y;
-    (* TODO
-       Should be drawing arrow here instead of line
-       Should be taking into account the size of the object that you want to draw an arrow  to : You don't want the arrow to go to it's center but to it's border
-    *)
+    draw_arrow fst scnd;
   in
   List.iter draw_arc (Petri.get_arcs (get_petri ())); 
 
 
-  let draw_state state_id ({x; y} : Petri.pos) = 
+  let draw_state state_id ({x; y} : Vector.t) = 
     set_color black;
     draw_circle x y state_size;
     let proc_in_state = ref [] in
@@ -152,7 +194,7 @@ let draw_for_state () =
   IntMap.iter draw_state sttable;
 
   let ts = trans_size / 2 in
-  let draw_trans trans_name ({x;y} : Petri.pos) =
+  let draw_trans trans_name ({x;y} : Vector.t) =
     let col =
       try
         let ((t_name, _), _) = Traces.get (Simulator.full_trace) in
@@ -165,7 +207,5 @@ let draw_for_state () =
   
   Hashtbl.iter draw_trans trtable;
   set_color black;
-
-
 
   synchronize ()

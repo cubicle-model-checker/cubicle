@@ -19,6 +19,7 @@
 
 - Créer un module pour le modèle.
 - Cacher le type du modèle dans celui ci pour seulement afficher un type "t".
+- Avoir un type de modèle qui n'est pas persistant
 - Avoir une fonction "create_model"
 
 ## SceneLib
@@ -47,13 +48,12 @@
 ## Petri:
 
 - Une IntMap est elle finalement bien nécéssaire ? On peut simplement utiliser une Hashmap et demander a l'utilisateur un id...
-- Implémenter des flèches pour bien montrer que les transitions sont orientée
-Ces flèches devraient également s'arrêter au bord des ronds et carrés
+- Les flèches doivent être restreinte par la taille des square (transition) : On peut approximer avec un rond...
 - Mieux centrer l'affichage des procs
 - Ordonner proprement les procs pour qu'on comprenne bien qu'il y a un nouveau proc et qui il est
 - Centrer automatiquement l'affichage de tout le graphe sur l'image ? Le scale ?
-- Ajouter la possibilité de faire pause, step back & step forward
-
+- Ajouter la possibilité de faire pause, step back & step forward dans la librairie, implémenté de base sans aucune intervention
+- Avoir une transition de pétri qui représente plusieurs transition du modèle cubicle
 
 ## Divers
 
@@ -66,3 +66,18 @@ Ces flèches devraient également s'arrêter au bord des ronds et carrés
 ## Traces
 
 - Raise une erreur custom en cas de out of bounds
+
+## TESTER PETRI
+
+Trucs qui pourrait être intéréssant a ajouter:
+	Texte pour décrire transition
+	Transition qui décrit plusieurs transitions cubicle
+
+On voudrait un truc qui vérifie une propriété : Couleur en fonction de si une propriété est vraie ou non
+
+
+- germanish : On voudait req_share & req_exclusive controllé par des boutons
+	
+- dekker_n
+
+- Hierarchical snoop
