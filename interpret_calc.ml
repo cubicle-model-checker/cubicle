@@ -238,7 +238,8 @@ let hash_env env=
 	  | VReal f -> Hashtbl.hash f 
 	  | VBool b -> Hashtbl.hash b
 	  | VConstr hs | VProc hs | VGlob hs -> (*let g = Hstring.hash hs in
-						Format.eprintf "hashed constr %a: %d@." Hstring.print hs g;g*) Hstring.hash hs
+						  Format.eprintf "hashed constr %a: %d@." Hstring.print hs g;g*)
+	    Hstring.hash hs
 	  | VAccess (hs,hsl) ->
 	    List.fold_left (fun acc x -> 13 * acc + Hstring.hash x) (Hstring.hash hs) hsl
 	  | VLock (b,topt) -> 
@@ -257,8 +258,9 @@ let hash_env env=
 	    end
 	  | VSemaphore i -> Hashtbl.hash i
 	  | VArith t -> Types.Term.hash t
-	  | VSleep i -> Hashtbl.hash i
-	  | _ -> Hashtbl.hash el  (*VAlive,VSuspended,UNDEF*)	  
+	  | _ -> 0 
+	  (*| VSleep i -> Hashtbl.hash i
+	  | _ -> Hashtbl.hash el  (*VAlive,VSuspended,UNDEF*)	*)  
       in
       abs (19 * acc + (Types.Term.hash key (*+ Hstring.hash typ *)+ h))
     ) env 0   
@@ -396,8 +398,12 @@ let check_reqs reqs env sigma tname=
   SAtom.iter (fun atom ->
     match atom with
       | Comp (t1,op,t2) ->
-	if Options.debug_interpreter then 
-	  Format.eprintf "Checking requirements, comparing t1 and t2: %a -- %a@." Term.print t1 Term.print t2;
+	if Options.debug_interpreter then
+	  begin
+	    let t11 = Term.subst sigma t1 in
+	    let t21 = Term.subst sigma t2 in 
+	    Format.eprintf "Checking requirements, comparing t1 and t2: %a -- %a@." Term.print t11 Term.print t21;
+	  end;
 	let b = check_comp t1 t2 env sigma op in
 	if b  then ()
 	else raise (TopError (FalseReq tname))		
@@ -1359,6 +1365,20 @@ let check_suspension sigma env =
       | VSuspended -> raise (TopError (SuspendedProc elem))
       | VSleep _ -> raise (TopError (SleepingProc elem))
       | _ -> assert false) sigma
+
+let check_ureqs ureqs env sigma trname =
+  let rec aux ur =
+    match ur with
+      | [] -> raise (TopError (FalseReq trname))
+      | hd::tl ->
+	begin
+	  try
+	    check_reqs hd env sigma trname
+	  with
+	    | TopError (FalseReq _) -> aux tl 
+	end
+  in aux ureqs
+
     
 let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
   let tr = Trans.find trname trans in
@@ -1371,7 +1391,12 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
   let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
   let ureqs = uguard sigma procs trargs tr.tr_ureq in
-  let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in
+  (*List.iter (fun u -> Format.eprintf "checkingg : %a@." SAtom.print u) ureqs;*)
+  (*Ureqs that have ORs are lists with multiple elements : no or means 1 el in list
+    so instead of iter, it has to be a function because one of the elements has to satisfy 
+  *)
+  (*let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in*)
+  check_ureqs ureqs env sigma trname; 
   let nv = update_vals env tr.tr_assigns sigma in
   let nv = update_arrs sigma env nv tr.tr_upds in
   let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma env nv tr lock_queue cond_sets semaphores in 
@@ -1392,7 +1417,7 @@ let explain_reqs reqs env sigma tname args=
       | Ite _ -> assert false
   ) reqs SAtom.empty
 
-    
+(*TODO: fix ureq explanation*) 
 let explain args trname trans (env,lock_queue,cond_sets, semaphores) =
   let tr = Trans.find trname trans in
   let arg_length = List.length tr.tr_args in
@@ -1447,7 +1472,8 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	  check_reqs el.tr_reqs env sigma name;
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
-	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
+	  check_ureqs ureqs env sigma name; 
 	  ((el,[])::acc_np, acc_p)
 	with
 	  | TopError _ -> (acc_np, acc_p)
@@ -1469,7 +1495,8 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	      check_reqs el.tr_reqs env sigma name;  
 	      let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	      let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
-	      List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	      (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
+	      check_ureqs ureqs env sigma name; 
 	      acc_np1,((el, procs)::acc_p1)
 	    end
 	    else (acc_np1,acc_p1)
@@ -1517,7 +1544,8 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  check_reqs el.tr_reqs env sigma name;
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
-	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
+	  check_ureqs ureqs env sigma name; 
 	  (el,[])::acc
 	with
 	  | TopError _ -> acc
@@ -1538,7 +1566,8 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	    check_reqs el.tr_reqs env sigma name;
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
-	    List.iter (fun u -> check_reqs u env sigma name) ureqs;	  
+	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
+	    check_ureqs ureqs env sigma name; 
 	    (el, procs)::acc_t
 	  with
 	    | TopError _ -> acc_t
@@ -1621,7 +1650,8 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	  check_reqs el.tr_reqs env sigma name;
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
-	  List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
+	  check_ureqs ureqs env sigma name; 
 	  let new_env = apply_transition [] name trans global in
 	  let reqs = SAtom.subst sigma tr.tr_reqs in
 	  if flag then
@@ -1660,10 +1690,11 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	    check_reqs el.tr_reqs env sigma name;
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
-	    List.iter (fun u -> check_reqs u env sigma name) ureqs;
+	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
+	    check_ureqs ureqs env sigma name;  (*TODO: DOUBLE CHECK*)
 	    let new_env = apply_transition procs name trans global in
 	    let reqs = SAtom.subst sigma tr.tr_reqs in
-	    let nureqs = uguard  sigma all_procs trargs tr.tr_ureq in (*ureqs for desired*)
+	    let nureqs = uguard sigma all_procs trargs tr.tr_ureq in (*ureqs for desired*)
 	    if flag then
 	      begin
 		let d = weight_env new_env reqs env2 0 in
