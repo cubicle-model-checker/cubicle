@@ -315,14 +315,25 @@ end
 module Make ( O : Oracle.S ) : S = struct
 
   let subsuming_candidate s =
+    (*Format.eprintf "subsssssss@.";*)
     let approx = approximations s in
+   (* Format.eprintf "-----regfoirgjo---------APPROX %d --@." (List.length approx);
+    List.iter (fun x -> Format.eprintf "%a\n------@." Node.print x) approx;*)
+(*
+    let head_node = List.hd approx in
+    let hnl = Node.litterals head_node in
+    Format.eprintf "Hello friend: %a@." SAtom.print hnl;
+    
+    Format.eprintf "----------------@.";*)
     let approx = if max_cands = -1 then approx else keep max_cands approx in
     if verbose > 0 && not quiet then 
       eprintf "Checking %d approximations:@." (List.length approx);
     O.first_good_candidate approx
 
 
-  let good n = match n.kind with
+  let good n =
+    (*Format.eprintf "NODE: %a\nDONE@." Node.print n;*)
+    match n.kind with
     | Approx ->
        (* It's useless to look for approximations of an approximation *)
        None
@@ -348,11 +359,14 @@ end
 
 
 let select_oracle =
-  if do_brab then
-    if murphi then
-      (module Murphi : Oracle.S)
-    else (module Enumerative : Oracle.S)
+  if int_brab > -1 then
+    (module Interpret_forward : Oracle.S)
   else
+    if do_brab then
+      if murphi then
+	(module Murphi : Oracle.S)
+      else (module Enumerative : Oracle.S)
+    else
     (module GrumpyOracle : Oracle.S)
 
 module SelectedOracle : Oracle.S = (val select_oracle)
@@ -360,7 +374,8 @@ module SelectedOracle : Oracle.S = (val select_oracle)
 
 
 let select_approx =
-  if do_brab then (module Make(SelectedOracle) : S)
+  if int_brab > -1 || do_brab then (module Make(SelectedOracle) : S)
+  (*if do_brab then (module Make(SelectedOracle) : S)*)
   else (module GrumpyApprox)
 
 module Selected : S = (val select_approx)

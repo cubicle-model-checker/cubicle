@@ -44,7 +44,11 @@ let unDepth = ref 1
 let interpretProcs = ref 3
 let debug_interpreter = ref false
 let interpreter = ref false 
+let int_brab = ref (-1)
+let depth_ib = ref (-1)
+let rounds = ref (-1)
 
+  
 let incr_verbose () = incr verbose
 
 let debug_smt = ref false
@@ -159,6 +163,9 @@ let specs =
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
+    "-int-brab", Arg.Tuple [ Arg.Set_int int_brab;
+			     Arg.Set_int rounds;
+			     Arg.Set_int depth_ib], "<nb> procs <nb> rounds <nb> depth";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
@@ -231,6 +238,11 @@ let cin =
   | None -> stdin
 
 
+let int_brab = !int_brab
+let depth_ib = !depth_ib
+let rounds = !rounds
+    
+
 let parse_only = !parse_only 
 let type_only = !type_only
 let maxrounds = !maxrounds
@@ -250,7 +262,10 @@ let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
 let brab = !brab
-let enumerative = if brab <> -1 then brab else !enumerative
+let enumerative =
+  if brab <> -1 then brab
+  else if int_brab <> -1 then int_brab
+  else !enumerative
 let do_brab = brab <> -1
 let brab_up_to =
   if !brab_up_to && not do_brab then
@@ -285,6 +300,8 @@ let cores = !cores
 let unDepth = !unDepth
 let interpreter = !interpreter
 let debug_interpreter = !debug_interpreter
+
+
 
 let mode = !mode
 let smt_solver = !smt_solver

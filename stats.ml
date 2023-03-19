@@ -251,7 +251,7 @@ let print_report ~safe visited candidates =
   printf "Max Number of processes          : %d@." !cpt_process;
   if Options.delete then 
     printf "Number of deleted nodes          : %d@." !cpt_delete;
-  if do_brab then
+  if do_brab || (Options.int_brab > 0) then
     printf "Number of %s             : %d@."
            (if safe then "invariants" else "candidates") (List.length candidates);
   printf "Restarts                         : @[%d%a@]@." !cpt_restart
