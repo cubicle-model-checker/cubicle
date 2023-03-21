@@ -16,7 +16,6 @@ val gen_array_eq_proc : Hstring.t -> Variable.t list -> (Types.term * Variable.t
 val gen_array_combs : Hstring.t -> Variable.t list -> Variable.t list list
 
   
-
 val check_reqs : Types.SAtom.t ->
 Interpret_types.interpret_value Interpret_types.Env.t ->
 Variable.subst -> Hstring.t -> unit
@@ -73,7 +72,9 @@ val all_possible_weighted_transitions :
            Hstring.t list ->
            Interpret_types.global ->
            Ast.transition_info -> bool -> 
-           (int * Ast.transition_info * Variable.t list) list
+  (int * Ast.transition_info * Variable.t list) list
+
+    
 val uguard : (Variable.t * Variable.t) list -> Hstring.t list -> Hstring.t list ->
 (Variable.t * Types.SAtom.t list) list -> Types.SAtom.t list
 
@@ -87,7 +88,7 @@ val create_detailed_hash: Ast.transition_info list -> Hstring.t list -> (Hstring
 val entropy_env : Interpret_types.global -> Ast.transition_info Interpret_types.Trans.t -> Hstring.t list -> float
 
 
-val biased_entropy_env : Interpret_types.interpret_value Interpret_types.Env.t * 'a * 'b * 'c ->
+val biased_entropy_env : Interpret_types.global ->
 Ast.transition_info Interpret_types.Trans.t ->
   Hstring.t list -> (Hstring.t * float) list -> float
 
