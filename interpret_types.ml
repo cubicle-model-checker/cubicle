@@ -15,7 +15,8 @@ type conc_value =
   | VLock of bool * Term.t option
   | VRLock of bool * Term.t option * int
   | VSemaphore of int
-  | VArith of Term.t 
+  | VArith of Term.t
+  | VAbstract of Hstring.t	    
   | VAlive | VSuspended | VSleep of int
   | UNDEF
 
@@ -169,7 +170,8 @@ let print_val fmt v =
     | VSemaphore i -> Format.printf "%d" i
     | UNDEF -> Format.printf "%s" "UNDEF"
     | VAccess(l,t) -> Format.printf "%a[%a]" Hstring.print l (Hstring.print_list ", ") t
-    | VArith _ -> ()
+    | VArith _ -> Format.printf "FORMAT"
+    | VAbstract _ -> ()
 
 
 let print_interpret_val fmt {value=v; typ = t} =
@@ -195,6 +197,8 @@ rocess active"
     | VSemaphore i -> Format.printf "%d" i
     | UNDEF -> Format.printf "%s" "UNDEF"
     | VArith _ -> ()
+    | VAbstract _ -> ()
+
 
 let print_poss_trans fmt l =
   Format.printf "Possible transitions:@."; 
@@ -430,6 +434,7 @@ let random_different_constr typ v =
 
 
 let compare_conc v1 v2 =
+  (*Format.eprintf "comparing v1: %a and v2 %a@." print_val v1 print_val v2;*)
   match v1,v2 with
     | VInt i1, VInt i2 -> compare i1 i2
     | VReal r1, VReal r2 -> compare r1 r2
@@ -460,7 +465,16 @@ let compare_conc v1 v2 =
     | VSuspended, VSleep _ -> -1
     | VSleep _, VSuspended -> 1
     | VSleep i1, VSleep i2 -> compare i1 i2
-    | _ -> assert false		     
+    | UNDEF, _ -> assert false
+    | VInt _, _ -> assert false
+    | VReal _, _ -> assert false
+    | VConstr v1, _ -> assert false
+    | VProc p1, _ -> assert false
+    | VGlob _ , _ -> assert false
+    | _ -> assert false
+
+
+
       
 let compare_interp_val v1 v2 =
   compare_conc v1.value v2.value

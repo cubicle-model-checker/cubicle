@@ -12,7 +12,8 @@ type conc_value =
   | VLock of bool * Term.t option
   | VRLock of bool * Term.t option * int
   | VSemaphore of int
-  | VArith of Term.t 
+  | VArith of Term.t
+  | VAbstract of Hstring.t
   | VAlive | VSuspended | VSleep of int
   | UNDEF
 

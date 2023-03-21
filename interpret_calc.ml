@@ -625,8 +625,23 @@ let upd_array_case sigma orig upd tname env =
 		try
 		  List.assoc pl sigma
 		with Not_found -> proc
-	      in Env.find (Access(n,[pl'])) env		
+	      in Env.find (Access(n,[pl'])) orig		
 	    end
+	  | Access (n,[pl1;pl2]) ->
+	    begin
+	      let pl1' =
+		try
+		  List.assoc pl1 sigma
+		with Not_found -> proc
+	      in
+	      let pl2' =
+		try
+		  List.assoc pl2 sigma
+		with Not_found -> proc
+	      in
+	      Env.find (Access(n,[pl1';pl2'])) orig
+		
+	    end 
 	  | Elem(_, Glob) -> Env.find t env
 	  | Elem(np, Var) -> let tt = Variable.subst sigma np in {value = VProc tt; typ = Smt.Type.type_proc} 
 	  | ProcManip([pmt], addsub) ->
@@ -666,26 +681,26 @@ let upd_array_case sigma orig upd tname env =
 		      try List.assoc n1 sigma with
 			  Not_found ->  proc
 		    in
-		    check_comp (Elem(g, Var)) t2 env sigma op  && sacc
+		    check_comp (Elem(g, Var)) t2 orig sigma op  && sacc
 		  | _, Elem(n1,Var) ->
 		    let g =
 		      try List.assoc n1 sigma with
 			  Not_found ->  proc
 		    in
-		    check_comp t1 (Elem(g, Var))env sigma op  && sacc
+		    check_comp t1 (Elem(g, Var))orig sigma op  && sacc
 		      	    
 		  | Access(n1, [pn1]), _ ->
 		    let g =
 		      try List.assoc pn1 sigma with
 			Not_found -> proc
 		    in
-		    check_comp (Access(n1,[g])) t2 env sigma op  && sacc
+		    check_comp (Access(n1,[g])) t2 orig sigma op  && sacc
 		    
 		  | _, Access(n1, [pn1]) ->
 		    let g =
 		      try List.assoc pn1 sigma with
 			Not_found -> proc
-		    in check_comp t1 (Access(n1,[g])) env sigma op && sacc(*DO THIS FOR MATRIX*)
+		    in check_comp t1 (Access(n1,[g])) orig sigma op && sacc(*DO THIS FOR MATRIX*)
 
 		  | Access(n1, [pn1;pn2]), _ ->
 		    let g =
@@ -696,7 +711,7 @@ let upd_array_case sigma orig upd tname env =
 		      try List.assoc pn2 sigma with
 			Not_found -> proc
 		    in
-		    check_comp (Access(n1,[g;g1])) t2 env sigma op  && sacc
+		    check_comp (Access(n1,[g;g1])) t2 orig sigma op  && sacc
 		    
 		  | _, Access(n1, [pn1;pn2]) ->
 		    let g =
@@ -706,7 +721,7 @@ let upd_array_case sigma orig upd tname env =
 		    let g1 =
 		      try List.assoc pn2 sigma with
 			  Not_found -> proc
-		    in check_comp t1 (Access(n1,[g;g1])) env sigma op && sacc
+		    in check_comp t1 (Access(n1,[g;g1])) orig sigma op && sacc
 
 		    
 
@@ -717,7 +732,7 @@ let upd_array_case sigma orig upd tname env =
 		  | _ ->
 		    (*let t1 = Term.subst sigma t1 in
 		    let t2 = Term.subst sigma t2 in*) 
-		    check_comp t1 t2 env sigma op && sacc
+		    check_comp t1 t2 orig sigma op && sacc
 	    end
 	  | True -> true && sacc
 	  | False -> false && sacc
@@ -734,7 +749,7 @@ let upd_array_case sigma orig upd tname env =
     in e  
   ) env all_procs
 
-let upd_matrix sigma orig upd =
+let upd_matrix sigma orig upd env =
   (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) upd.up_arg;*)
   let s = Hstring.view (List.hd upd.up_arg) in
   let s1 = String.sub s 0 1 in
@@ -747,7 +762,7 @@ let upd_matrix sigma orig upd =
 	  begin
 	    let p1,p2 =
 	      SAtom.fold (fun sa acc ->
-		Format.eprintf "new fold@.";
+		(*Format.eprintf "new fold@.";*)
 		match sa with
 		  | Comp (t1,op,t2) ->
 		    begin
@@ -781,12 +796,12 @@ let upd_matrix sigma orig upd =
       
     | false ->
       let procs = Variable.give_procs (Options.get_interpret_procs ()) in
-      List.iter (fun x -> Format.eprintf "pre filter: %a@." Hstring.print x) procs;
+      (*List.iter (fun x -> Format.eprintf "pre filter: %a@." Hstring.print x) procs;*)
       (*let procs = List.filter (fun x ->
 	let elem = Elem(x, Var) in
 	let v = Env.find elem orig in
 	(v.value = VAlive) ) procs in*)
-      List.iter (fun x -> Format.eprintf "Post filter: %a@." Hstring.print x) procs;
+      (*List.iter (fun x -> Format.eprintf "Post filter: %a@." Hstring.print x) procs;*thisone*)
       let all = gen_array_combs upd.up_arr procs in
       (*List.iter (fun x ->
 	List.iter (fun y -> Format.eprintf "%a" Hstring.print y) x; Format.eprintf "@.")all;
@@ -796,13 +811,58 @@ let upd_matrix sigma orig upd =
 	  match procs with | [p1;p2] -> p1,p2 | _ -> assert false
 	in
 	let  e, _ = 
-	List.fold_left (fun (acc2, f) (sa,t) ->
+	  List.fold_left (fun (acc2, f) (sa,t) ->
+
+	    let t = 
+	      match t with
+		| Access(n,[pl]) ->
+		  begin
+		    let pl' =
+		      try
+			List.assoc pl sigma
+		      with Not_found ->
+		        if Hstring.compare pl (List.hd upd.up_arg) = 0
+			then proc1 else proc2
+		    in Env.find (Access(n,[pl'])) orig		
+		  end
+		| Access(n,[pl1;pl2]) ->
+		  (*Format.eprintf "pl1: %a, pl2: %a@." Hstring.print pl1 Hstring.print pl2;
+		  Format.eprintf "proc1: %a, proc2: %a@." Hstring.print proc1 Hstring.print proc2;
+		  List.iter (fun (aa,bb) -> Format.eprintf "%a --> %a@." Hstring.print aa Hstring.print bb) sigma;*)
+		  begin
+		    let pl1' =
+		      try
+			List.assoc pl1 sigma
+		      with Not_found ->
+			if Hstring.compare pl1 (List.hd upd.up_arg) = 0
+			then proc1 else proc2
+		    in
+		    let pl2' =
+		      try
+			List.assoc pl2 sigma
+		      with Not_found ->
+			if Hstring.compare pl2 (List.hd upd.up_arg) = 0
+			then proc1 else proc2
+
+		    in Env.find (Access(n,[pl1';pl2'])) orig
+		    
+		  end 
+		| Elem(_, Glob) -> Env.find t orig
+		| Elem(np, Var) ->
+		  let tt = Variable.subst sigma np
+		  in {value = VProc tt; typ = Smt.Type.type_proc} 
+		| ProcManip([pmt], addsub) ->
+		  let pmt = Term.subst sigma pmt in
+		  to_interpret (ProcManip([pmt],addsub))
+		| _ -> to_interpret t
+	    in
+   
 	  let flag =
 	    SAtom.fold (fun atom sacc ->
 	      match atom with
 		| Comp (t1,op,t2)->
 		  begin
-		    Format.eprintf "comparing %a and %a@." Term.print t1 Term.print t2;
+		    (*Format.eprintf "comparing %a and %a@." Term.print t1 Term.print t2;*)
 		    match t1, t2 with
 		      | Elem(n1, Var), Elem(n2,Var) ->
 			let proc1, proc2 = 
@@ -855,8 +915,6 @@ let upd_matrix sigma orig upd =
 			in
 			check_comp (Access(n1,[g])) t2 orig sigma op  && sacc
 
-
-
 		      |Access(n1, [pn1;pn2]), _ ->
 			let g =
 			  try List.assoc pn1 sigma with
@@ -904,13 +962,15 @@ let upd_matrix sigma orig upd =
 		| Ite _ -> assert false
 	    ) sa true
 
-	  in if flag && not f then
+	  in
+	  (*Format.eprintf "YOY: %a@." Term.print t;*)
+	  if flag && not f then
 	      let temp = Access(upd.up_arr, procs)
-	      in Env.add temp (to_interpret t ) acc2, true
+	      in Env.add temp (*to_interpret*) t acc2, true
 	    else acc2, f
 	) (acc,false) upd.up_swts
 	in e  
-      )orig all
+      )env all
 
       
       
@@ -929,7 +989,7 @@ let update_arrs sigma orig acc upds =
       else
 	let e = (*upd_arr_case*) upd_array_case sigma orig upd name acc1 in
 	(*Env.add t v acc1 *) e
-    else upd_matrix sigma orig upd 
+    else upd_matrix sigma orig upd acc1
     
   ) acc upds
 
@@ -1720,11 +1780,12 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 
 
 let entropy_env env trans allprocs =
-  let poss = all_possible_transitions env trans allprocs false in
   
+  let poss = all_possible_transitions env trans allprocs false in
   let poss_num = float (List.length poss) in
   if poss_num = 0. then 0. else
-  Float.log2 poss_num
+    Float.log2 poss_num
+  
 (*let prob = 1. /. poss_num in *)
 (*
   entropy = - SUM Pi*(log2 1/Pi) 

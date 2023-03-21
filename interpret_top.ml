@@ -12,6 +12,54 @@ let step_flag = ref 1
 let btracks = ref []
 let deadlock = ref false
 
+
+
+
+
+let rec extract_proc_from_term term acc =
+  match term with
+    | Access(_, l) -> List.fold_left (fun acc2 el -> el::acc2) acc l
+    | Elem(p, Var) -> p::acc
+    | Arith (t,_) -> extract_proc_from_term t acc 
+    | _ -> acc
+    
+      
+
+let gen_mapping pl =
+  let ml, _ =
+    List.fold_left (fun (acc,count) x ->
+      let v = Hstring.make("mapped_"^(string_of_int count))
+      in
+      (v::acc, count+1)
+    ) ([],0) pl in
+  let ml = List.rev ml in
+  Variable.build_subst pl ml
+
+let extract_procs sa =
+  let procs =
+    SAtom.fold (fun atom acc ->
+    match atom with
+      | Comp(t1, _, t2) ->
+	let p1 = extract_proc_from_term t1 acc in
+	extract_proc_from_term t2 p1
+      | Ite _ -> assert false
+      | True | False -> acc	
+    ) sa []
+  in
+  let sorted = List.sort_uniq Hstring.compare procs in
+  (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) sorted;*)
+  sorted
+    
+
+
+
+
+
+
+
+
+  
+
 let semaphore_init s =
   match s with
     | Const i -> let x = int_of_consts i in VSemaphore x
@@ -220,7 +268,9 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
   Format.fprintf  f "\n"
 
 let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_env tr_table steps  =  
-  let hcount = Hashtbl.create 2 in 
+  let hcount = Hashtbl.create 2 in
+
+  let taken = ref 0 in 
   let backtrack_env = ref main_bt_env in
   let steps = ref steps in
   let dfile = Filename.basename Options.file in
@@ -229,10 +279,12 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
   (*print_header open_file dfile;*)
   Random.self_init ();
   let running_env = ref glob_env in
+  let hash = hash_full_env glob_env in
+  Hashtbl.replace hcount hash (1, glob_env);
   let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
   let running = ref true in
   let queue = ref applied_trans in 
-  while !running do
+  while !running (*!taken < 1500  *)do
     try
       let l = Array.length !transitions in
       if l = 0 then raise (TopError Deadlock);
@@ -252,6 +304,7 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
       (*dump_transitions open_file apply.tr_name !old_hash hash;
       old_hash := hash;*)
       (*dump_hashes open_file hash;*)
+      begin
       try
 	let he,ee = Hashtbl.find hcount hash in
 	(*Format.eprintf "Hash: %d@." hash;
@@ -259,12 +312,15 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
 	Format.eprintf "%a@." print_interpret_env ee;
 	assert false;*)
 	Hashtbl.replace hcount hash ((he+1),ee)
-      with Not_found -> Hashtbl.add hcount hash (1,new_env);
-      
+      with Not_found -> Hashtbl.add hcount hash (1,new_env)
+      end;
       (*print_interpret_env_file open_file !running_env apply.tr_name apply_procs;*)
       if tr_num mod !step_flag = 0 then
-	backtrack_env := Backtrack.add tr_num (apply.tr_name, apply_procs, new_env) !backtrack_env(*;
+	backtrack_env := Backtrack.add tr_num (apply.tr_name, apply_procs, new_env) !backtrack_env;
+    (*;
       trace := running_env :: !trace*)
+      incr taken
+      
     with
       | TopError Deadlock ->
 	deadlock := true;
@@ -284,7 +340,7 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
 	      | _ -> Format.fprintf fmt "Invalid input@."; decide ()
 	  in decide ()
 	end
-      | Stdlib.Sys.Break -> close_out open_file; running := false; Format.printf "@."
+      | Stdlib.Sys.Break -> close_out open_file; running := false; taken := 100; Format.printf "@."
       | TopError StopExecution ->
 	close_out open_file; 
 	running := false
@@ -794,10 +850,7 @@ let setup_env tsys sys =
   let const_list = List.map (fun x -> Elem(x, Glob)) tsys.t_consts in
   let var_terms = Term.Set.union var_terms (Term.Set.of_list const_list) in 
   sys_procs := Options.get_interpret_procs ();
-
   let all_unsafes = init_unsafe procs sys.unsafe in
- 
- 
   let orig_env,lock_queue, cond_sets, semaphores =
     Term.Set.fold ( fun x (acc,acc_lock, cond_acc, sem_acc) ->
       match x with
@@ -930,7 +983,8 @@ let setup_env tsys sys =
 	  let smost,smtime,overall =
 	    Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
 	      (*Format.printf "State: %d seen %d time(s)@." k el;*)
-	      if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;
+	      (*print the state it saw multiple times*)
+	      (*if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;*)
 	      if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
 
 	  (*Hashtbl.iter (fun k (el,envoo) ->
@@ -939,6 +993,8 @@ let setup_env tsys sys =
 	  Format.printf "Total entries: %d\n\
                          Total visited: %d\n\
                          State seen most often: %d [%d time(s)] @." (Hashtbl.stats hh).num_bindings overall smost smtime
+	 (* Hashtbl.iter (fun k (_,el) ->
+	    Format.printf "%a@." print_interpret_env el) hh*)
 	| TopExecRetry (i,d) ->
 	  let rec aux count=
 	    match count with
@@ -1129,6 +1185,106 @@ let setup_env tsys sys =
 	    
 	   
 	| TopDump ->
+
+	  
+
+	  let pp = Variable.give_procs (Options.get_interpret_procs ()) in
+
+	  (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) pp;*)
+
+	  let p_m,_ = List.fold_left (fun (acc, count) x ->
+	    let pl = Hstring.make("mapped_"^(string_of_int count))
+	    in Format.eprintf "pm: %a --> %a@." Hstring.print x Hstring.print pl;
+	     ((pl,x)::acc, count+1)
+	  ) ([], 0) pp in
+
+	  (*let susig = Variable.build_subst pp p_m in*)
+
+	  let back_to_proc = p_m in (*Variable.build_subst p_m pp in*)
+
+	  Format.eprintf "System Map:@.";
+	  List.iter (fun (z, y) ->
+	    Format.eprintf "%a -> %a @." Hstring.print z Hstring.print y) back_to_proc;
+
+
+	  let el1 = Access(Hstring.make "P", [Hstring.make "#1"]) in
+	  let el2 = Access(Hstring.make "P", [Hstring.make "#2"]) in
+
+	  let eN1 = Access(Hstring.make "P", [Hstring.make "#4"]) in
+	  let eN2 = Access(Hstring.make "P", [Hstring.make "#5"]) in
+
+
+	  
+
+	  
+	  let el3 = Elem(Hstring.make "A", Constr) in
+	  let el4 = Elem(Hstring.make "B", Constr) in
+	  let el5 = Elem(Hstring.make "G", Glob) in
+	  let el6 = Elem(Hstring.make "#1", Var) in
+
+	  let s1 = Atom.Comp(el1, Eq, el3) in
+	  let s2 = Atom.Comp(el2, Eq, el4) in
+
+	  let sN1 = Atom.Comp(eN1, Eq, el3) in
+	  let sN2 = Atom.Comp(eN2, Eq, el4) in
+	  
+	  let s3 = Atom.Comp(el5, Eq, el6) in
+
+	  let sa = SAtom.add s1 SAtom.empty in
+	  let sa = SAtom.add s2 sa in
+	  let sa = SAtom.add s3 sa in
+
+	  let sa2 = SAtom.add sN1 SAtom.empty in
+	  let sa2 = SAtom.add sN2 sa2 in
+
+	  let pl = extract_procs sa in
+	  let map1 = gen_mapping pl in
+	  
+	  Format.eprintf "Map1:@.";
+	  List.iter (fun (z, y) ->
+	    Format.eprintf "%a -> %a @." Hstring.print z Hstring.print y) map1;
+
+	  let sa_s = SAtom.subst map1 sa in
+
+	  let pl2 = extract_procs sa2 in
+	  let map2 = gen_mapping pl2 in
+
+	  Format.eprintf "Map2:@.";
+	  List.iter (fun (z, y) ->
+	    Format.eprintf "%a -> %a @." Hstring.print z Hstring.print y) map2;
+	  
+
+	  let sa2_s = SAtom.subst map2 sa2 in 
+
+	  let normalized_1 = SAtom.subst back_to_proc sa_s in
+	  let normalized_2 = SAtom.subst back_to_proc sa2_s in
+
+	  
+	  Format.eprintf "Subbed: %a@." SAtom.print normalized_1;
+
+	  Format.eprintf "Subbed2: %a@." SAtom.print normalized_2;
+
+	  (*let subbSA = SAtom.subst susig sa in
+
+	  Format.eprintf "Subbed: %a@." SAtom.print subbSA;
+
+	  let u_procs = all_arrange (Options.get_interpret_procs ()) procs in
+
+	  List.iter (fun x ->
+	    let si = Variable.build_subst p_m x in 
+	    Format.eprintf "Test: %a@."
+	    SAtom.print (SAtom.subst si subbSA)) u_procs;*)
+
+
+      
+
+	  assert false
+	  
+	  (*let en_env = Enumerative.mk_env 3 tsys in
+	  let tt = Elem(Hstring.make "A", Constr) in
+	  let ttt = Elem(Hstring.make "X", Glob) in 
+	  Format.eprintf "%d@." (Enumerative.int_of_term en_env ttt);
+	  assert false*)
 	   
 	  
 	  
@@ -1138,7 +1294,7 @@ let setup_env tsys sys =
 
 
 
-	  Interpret_run.run !global_env transitions procs all_unsafes !applied_trans sys.trans
+	(*Interpret_run.run !global_env transitions procs all_unsafes !applied_trans sys.trans*)
 
 
 
