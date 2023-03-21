@@ -15,7 +15,13 @@
 		Se balader dans la trace
 - Un appel a step si il existe des états après la ou on est devrait retourner vers ces états. Une fonction tierce "forget future" devrait exister pour supprimer les traces futures.
 
-# MyModel
+## Traces
+
+Implémenter la fonction "save trace", qui est une fonction avec la même signature que le modèle 
+(de façon a pouvoir être lu par les mêmes programme)
+Mais qui n'itère que sur un modèle.
+
+## MyModel
 
 - Créer un module pour le modèle.
 - Cacher le type du modèle dans celui ci pour seulement afficher un type "t".
@@ -43,25 +49,21 @@
 - Mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
 - La plupart du code entre l'écriture des garde et des états unsafe semble aisément factorisable
 - Ajouter les unsafe au modèle : 
-	Créer une fonction pour créer le modèle correctement plutôt que de le créer dans les transitions
+	Nécéssite de créer une fonction pour créer le modèle correctement plutôt que de le créer dans les transitions
 
 ## Petri:
 
-- Une IntMap est elle finalement bien nécéssaire ? On peut simplement utiliser une Hashmap et demander a l'utilisateur un id...
-- Ordonner proprement les procs pour qu'on comprenne bien qu'il y a un nouveau proc et qui il est
-- Centrer automatiquement l'affichage de tout le graphe sur l'image ? Le scale ?
+- Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
+- Centrer automatiquement l'affichage de tout le graphe sur l'image et le scale
 - Ajouter un élément qui représente une propriété : Couleur en fonction de si quelquechose
-- Afficher le nom d'un state dans un cercle -> Nécéssiterait un nom pour un state, est-ce souhaitable ? 
 - Afficher sur l'écran si la simulation est en pause, le numéro du step ou on est.
 - Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
 
 ## Divers
 
 - Au lieu d'utiliser des triplets partout il serait beaucoup plus cohérent d'utiliser des structures non ?
-
-## Bugs
-
-- Il semblerait que si on remonte dans le simulateur avant la première transition il y ait un problème
+Notament:
+	Pour Model.t
 
 ## Traces
 

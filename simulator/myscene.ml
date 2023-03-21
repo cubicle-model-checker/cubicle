@@ -10,9 +10,13 @@ let state_from_proc i =
   match (get_vuv "Cache") with
   | Arr(a) -> 
       begin match List.nth a i with
-      | VConstr("Invalid")    -> 0
-      | VConstr("Shared")     -> 1
-      | VConstr("Exclusive")  -> 2
+      (* Could be done with
+      | VConstr(s)  -> s
+      But we would lose the error of a wrong model, changing it for an error of a scene.
+      *)
+      | VConstr("Invalid")    -> "Invalid"
+      | VConstr("Shared")     -> "Shared"
+      | VConstr("Exclusive")  -> "Exclusive"
       | _                     -> failwith "Wrong model"
       end 
   | _ -> failwith "Wrong Model : No cache"
@@ -20,19 +24,30 @@ let state_from_proc i =
 let build_scene () =
 
   let pmodel = Petri.empty () in
-  Petri.set_state pmodel [(0,{x=100; y=100}); (1,{x=300;y=500}); (2,{x=500;y=100})];
+  Petri.add_state pmodel "Invalid" {x=100; y=100};
+  Petri.add_state pmodel "Shared" {x=300;y=500};
+  Petri.add_state pmodel "Exclusive" {x=500;y=100};
+
+  (* 
+    TODO
+    Enter Shared
+    Enter Exclusive
+    Quit Shared
+    Quit Exclusive
+  *)
+
 
   Petri.add_trans pmodel "req" (["req"], {x=200; y=300});
-  Petri.add_trans pmodel "enter" (["enter"], {x=400; y=300});
+  Petri.add_trans pmodel "get shared" (["enter"], {x=400; y=300});
   Petri.add_trans pmodel "exit" (["exit"], {x=300;y=100});
 
-  Petri.add_arc pmodel (Petri.In(0, "req"));
-  Petri.add_arc pmodel (Petri.Out("req", 1));
+  Petri.add_arc pmodel (Petri.StateToTrans("Invalid", "req"));
+  Petri.add_arc pmodel (Petri.TransToState("req", "Shared"));
 
-  Petri.add_arc pmodel (Petri.In(1, "enter"));
-  Petri.add_arc pmodel (Petri.Out("enter", 2));
-  Petri.add_arc pmodel (Petri.In(2, "exit"));
-  Petri.add_arc pmodel (Petri.Out("exit", 0));
+  Petri.add_arc pmodel (Petri.StateToTrans("Shared", "enter"));
+  Petri.add_arc pmodel (Petri.TransToState("enter", "Exclusive"));
+  Petri.add_arc pmodel (Petri.StateToTrans("Exclusive", "exit"));
+  Petri.add_arc pmodel (Petri.TransToState("exit", "Invalid"));
 
   Petri.set_state_fun pmodel state_from_proc;
 

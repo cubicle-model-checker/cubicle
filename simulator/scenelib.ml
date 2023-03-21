@@ -3,43 +3,23 @@ open Maps
 
 (* Library for making petri net *)
 
-(*
-  On demande a l'utilisateur de créer un réseau de pétri.
-  Pour cela, l'utilisateur entre :
-    Places
-    Transition
-    Arc
-
-  On peut dire qu'il définit :
-    Une place (Quel type ?)
-    Une fonction qui a un proc associe une place
-  OU ALORS
-    Une fonction qui pour une  place renvoie les procs qui y appartiennet : Permet plus aisément de décrire les procs
-    Et de les afficher correctement et les scales a usein d'un prikc 
-
-  Réglages possible:
-    Couleur a donner a un proc (Tous noir, Une certaine couleur si c'était un pion qui a pris une transition au dernier tour, ...)
-
-L'utilisateur veut créer un réseau de pétri.
-Il a besoin de définir :
-  Un nombre d'état possible
-  Une fonction qui a tout proc donne un état
-  Des transitions (Simplement des string, doivent correspondre a des transitions cubicle)
-  Des arcs, a savoir des flèches qui relient des états a des transition
-*)
-
 (* Graphical Settings *)
 let window_size = 600
+
 let state_size  = 50
-let proc_perc   = 80 (* size taken by proc in perc of state_size *)
+let state_text_size   = 50
+let state_text_space  = 2
+
+let proc_perc   = 80 (* How much percentage of the available space should proc take *)
 let proc_space_perc = 50
-let trans_size  = 50
+
+let trans_size  = 50  
 let trans_text_size = 50
 let trans_text_space = 2
 
-(* Minor settings : Probably don't touch those *)
-let arrow_size    = 20
-let arrow_pointy  = 30
+(* Point of the arrow settings *)
+let arrow_size    = 20  (* Length of the pointy bit *)
+let arrow_pointy  = 30  (* How pointy is it ?       *)
 
 module Vector =
 struct
@@ -51,8 +31,8 @@ struct
   let mult k a = { x = k* a.x; y = k* a.y }
   let div  k a = { x = a.x /k; y = a.y /k}
 
-  let dot a b = a.x * b.x + a.y * b.y
-  let norm a = int_of_float (sqrt (float_of_int (dot a a)))
+  let dot a b     = a.x * b.x + a.y * b.y
+  let norm a      = int_of_float (sqrt (float_of_int (dot a a)))
   let normalize a = div (norm a) a
   let setsize   k a = div (norm a) (mult k a)
   let pp a = Format.printf "(%d, %d)" a.x a.y
@@ -64,71 +44,70 @@ struct
   let zero = { x = 0; y = 0 }
 end
 
-(* 
-   On a besoin de pouvoir ajouter une transition de Petri représentant plusieurs transitions du modèle.
-  Problème : 
-    Si on stocke les transition comme une liste de string correspondant a toutes les transitions Cubicle que ça représente, comment gérer les Arc efficacemennt
-    -> Une transition doit avoir un nom de transition Petri représentant une liste de transition donc on peut juste prendre plus d'argument
-*)
-
-
-(* Petri Settings *)
 module Petri : sig
   type arc = 
-    | Out of string * int     (* From transition to state *)
-    | In  of int    * string  (* From state to transition *)
+    | TransToState of string * string  (* From transition to state *)
+    | StateToTrans of string * string  (* From state to transition *)
  
   exception Unknown_trans of string
-  exception Unknown_state of int
+  exception Unknown_state of string
 
   type t
 
   val empty               : unit -> t
-  val add_state           : t -> (int * Vector.t) -> unit
+  val add_state           : t -> string -> Vector.t -> unit
   val add_trans           : t -> string -> (string list * Vector.t) -> unit
   val add_arc             : t -> arc -> unit
-  val set_state_fun       : t -> (int -> int) -> unit
-  val set_state           : t -> (int * Vector.t) list -> unit
+  val set_state_fun       : t -> (int -> string) -> unit
 
-  val get_state           : t -> int -> Vector.t
-  val get_state_map       : t -> Vector.t IntMap.t
+  val get_state_pos       : t -> string -> Vector.t
+  val get_state_map       : t -> (string, Vector.t) Hashtbl.t
 
   val get_trans_table     : t -> (string, string list * Vector.t) Hashtbl.t
   val get_trans_pos       : t -> string -> Vector.t
   val get_trans_repr      : t -> string -> string list
-  val get_state_for_proc  : t -> int -> int
+  val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
 end
 =
 struct
   
   type arc = 
-  | Out of string * int     
-  | In  of int    * string
-  (* Place, Place_pos; Transition, Transition_pos; Arcs ; place_id -> proc on this place*)
-  type t = Vector.t IntMap.t ref * (string, string list * Vector.t) Hashtbl.t * arc list ref * (int -> int) ref
+  | TransToState of string * string  
+  | StateToTrans  of string * string
+  type t = 
+    { states  : (string, Vector.t) Hashtbl.t;
+      trans   : (string, string list * Vector.t) Hashtbl.t;
+      arcs    : arc list ref;
+      sfp_fun : (int -> string) ref
+    }
+
   exception Unknown_trans of string
-  exception Unknown_state of int
+  exception Unknown_state of string
 
-  let empty () = (ref IntMap.empty, Hashtbl.create 10, ref [], ref (fun (x : int) -> 0))
+  let empty () : t = 
+    {
+      states  = Hashtbl.create 10;
+      trans   = Hashtbl.create 10; 
+      arcs    = ref [];
+      sfp_fun = ref (fun (x : int) -> "");
+    }
  
-  let add_state (ss,_,_,_) (s_id, sp) = ss := IntMap.add s_id sp (!ss)
-  let add_trans (_,ts,_,_) tname tval = Hashtbl.add ts tname tval
-  let add_arc        (_,_,arcs,_) arc = arcs := arc::!arcs
+  let add_state pet sname sp    = Hashtbl.add pet.states sname sp
+  let add_trans pet tname tval  = Hashtbl.add pet.trans tname tval
+  let add_arc   pet arc         = pet.arcs := arc::!(pet.arcs)
 
-  let set_state_fun (_,_,_,f) g = f := g
-  (* Peut être ededvrait on réinitialiser l'intmap avant de l'ajouter pour correspondre aux attentes d'une fonction 'set' *)
-  let set_state     pet ss'     = List.iter (add_state pet) ss' 
+  let set_state_fun pet g = pet.sfp_fun := g
   
-  let get_state (sl,_,_,_)  i = try IntMap.find i !sl with Not_found -> raise (Unknown_state i)
-  let get_state_map (sl,_,_,_) = !sl
+  let get_state_pos pet  i = try Hashtbl.find pet.states i with Not_found -> raise (Unknown_state i)
+  let get_state_map pet = pet.states
 
-  let get_trans_table (_, ts,_,_) = ts
-  let get_trans_pos  (_,ts,_,_) tname = try (let (_,p) = Hashtbl.find ts tname in p) with Not_found -> raise (Unknown_trans tname)
-  let get_trans_repr (_,ts,_,_) tname = try (let (r,_) = Hashtbl.find ts tname in r) with Not_found -> raise (Unknown_trans tname)
+  let get_trans_table pet = pet.trans
+  let get_trans_pos   pet tname = try (let (_,p) = Hashtbl.find pet.trans tname in p) with Not_found -> raise (Unknown_trans tname)
+  let get_trans_repr  pet tname = try (let (r,_) = Hashtbl.find pet.trans tname in r) with Not_found -> raise (Unknown_trans tname)
 
-  let get_state_for_proc (_,_,_,f) p = !f p
-  let get_arcs (_,_,a,_) = !a
+  let get_state_for_proc pet p = !(pet.sfp_fun) p
+  let get_arcs pet = !(pet.arcs)
 
 end
 
@@ -182,8 +161,8 @@ let draw_for_state () =
       in
 
     let fst, scnd = match a with
-    | Petri.In(st,tr) -> 
-        let (f,s) = (Petri.get_state pet st, Petri.get_trans_pos pet tr)      in
+    | Petri.StateToTrans(st,tr) -> 
+        let (f,s) = (Petri.get_state_pos pet st, Petri.get_trans_pos pet tr)  in
         (* Get on the border of the circle not inside *)
         let diff = Vector.setsize state_size (Vector.sub s f)                 in
         let f = Vector.add diff f in
@@ -192,8 +171,8 @@ let draw_for_state () =
         let s = Vector.add diff s in 
 
         f,s
-    | Petri.Out(tr,st) -> 
-        let (f,s) = (Petri.get_trans_pos pet tr, Petri.get_state pet st)      in
+    | Petri.TransToState(tr,st) -> 
+        let (f,s) = (Petri.get_trans_pos pet tr, Petri.get_state_pos pet st)  in
         let diff = Vector.setsize state_size (Vector.sub f s)                 in
         f,(Vector.add diff s)
     in
@@ -201,7 +180,7 @@ let draw_for_state () =
   in
   List.iter draw_arc (Petri.get_arcs (get_petri ())); 
 
-
+  set_text_size state_text_size; 
   let draw_state state_id ({x; y} : Vector.t) = 
     set_color black;
     draw_circle x y state_size;
@@ -210,6 +189,12 @@ let draw_for_state () =
       let ps = Petri.get_state_for_proc (get_petri ()) i in
       if ps = state_id then proc_in_state := i::(!proc_in_state)
     done;
+
+    let (tsx, tsy) = text_size state_id in
+    let nx = x - (tsx / 2) in
+    let ny = y - tsy - state_size - state_text_space in
+    moveto nx ny;
+    draw_string state_id;
 
     let nb_proc = List.length (!proc_in_state) in
     if nb_proc > 0 then
@@ -240,7 +225,7 @@ let draw_for_state () =
         List.iteri draw_proc (!proc_in_state);
       )
   in
-  IntMap.iter draw_state sttable;
+  Hashtbl.iter draw_state sttable;
 
   let ts = trans_size / 2 in
   set_text_size trans_text_size; 
@@ -255,7 +240,7 @@ let draw_for_state () =
     fill_rect (x-ts) (y-ts) trans_size trans_size;
     let (tsx, tsy) = text_size trans_name in
     let nx = x - (tsx / 2) in
-    let ny = y + tsy - trans_size - trans_text_space (*- tsy - trans_text_space*) in
+    let ny = y + tsy - trans_size - trans_text_space in
     moveto nx ny;
     draw_string trans_name
   in

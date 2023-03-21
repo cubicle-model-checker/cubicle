@@ -4,7 +4,8 @@ open Traces
 (* Types *)
 
 (* TODO
-  - Utiliser une struct ici c'est completement con d'utiliser des tuples
+  - Utiliser une structure ici au lieu d'utiliser des tuples;
+  Ne pas avoir un type t persistant
 *)
 
 type variable       = string * string * int   (* name, type, dim *) 
