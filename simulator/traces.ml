@@ -57,5 +57,5 @@ let add (i, st) tr =
 
 let empty () = (ref 0, ref [||])
 
-
+let save (tr : t) = failwith "todo"
 

@@ -94,7 +94,8 @@ let toggle_pause () = is_paused := not (!is_paused)
 let take_step_back () =
   Traces.prev full_trace;
   let (_, ms) = Traces.get full_trace in
-  Model.set_state (get_model ()) ms
+  Model.set_state (get_model ()) ms;
+  on_model_change_callback ()
 
 let take_step_forward () = 
   let pre_paused = !is_paused in

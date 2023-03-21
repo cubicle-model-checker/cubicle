@@ -48,12 +48,12 @@
 ## Petri:
 
 - Une IntMap est elle finalement bien nécéssaire ? On peut simplement utiliser une Hashmap et demander a l'utilisateur un id...
-- Les flèches doivent être restreinte par la taille des square (transition) : On peut approximer avec un rond...
-- Mieux centrer l'affichage des procs
 - Ordonner proprement les procs pour qu'on comprenne bien qu'il y a un nouveau proc et qui il est
 - Centrer automatiquement l'affichage de tout le graphe sur l'image ? Le scale ?
-- Ajouter la possibilité de faire pause, step back & step forward dans la librairie, implémenté de base sans aucune intervention
-- Avoir une transition de pétri qui représente plusieurs transition du modèle cubicle
+- Ajouter un élément qui représente une propriété : Couleur en fonction de si quelquechose
+- Afficher le nom d'un state dans un cercle -> Nécéssiterait un nom pour un state, est-ce souhaitable ? 
+- Afficher sur l'écran si la simulation est en pause, le numéro du step ou on est.
+- Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
 
 ## Divers
 
@@ -68,13 +68,6 @@
 - Raise une erreur custom en cas de out of bounds
 
 ## TESTER PETRI
-
-Trucs qui pourrait être intéréssant a ajouter:
-	Texte pour décrire transition
-	Transition qui décrit plusieurs transitions cubicle
-
-On voudrait un truc qui vérifie une propriété : Couleur en fonction de si une propriété est vraie ou non
-
 
 - germanish : On voudait req_share & req_exclusive controllé par des boutons
 	

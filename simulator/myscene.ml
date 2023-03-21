@@ -18,15 +18,13 @@ let state_from_proc i =
   | _ -> failwith "Wrong Model : No cache"
 
 let build_scene () =
-  
-  let update dt = () in 
 
   let pmodel = Petri.empty () in
   Petri.set_state pmodel [(0,{x=100; y=100}); (1,{x=300;y=500}); (2,{x=500;y=100})];
 
-  Petri.add_trans pmodel ("req", {x=200; y=300});
-  Petri.add_trans pmodel ("enter", {x=400; y=300});
-  Petri.add_trans pmodel ("exit", {x=300;y=100});
+  Petri.add_trans pmodel "req" (["req"], {x=200; y=300});
+  Petri.add_trans pmodel "enter" (["enter"], {x=400; y=300});
+  Petri.add_trans pmodel "exit" (["exit"], {x=300;y=100});
 
   Petri.add_arc pmodel (Petri.In(0, "req"));
   Petri.add_arc pmodel (Petri.Out("req", 1));

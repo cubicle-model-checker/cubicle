@@ -24,3 +24,4 @@ val prev      : t -> unit
 val add       : t -> tstep -> unit    (* add step at i *)
 val empty     : unit -> t
 val position  : t -> int              (* récup current position *)
+val save      : t -> unit             (* Save the current trace in a model that will play the trace *)
