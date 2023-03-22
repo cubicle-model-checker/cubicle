@@ -321,7 +321,14 @@ let execute_random_forward glob_env trans all_procs unsafe depth =
     with
       | TopError Deadlock ->
 	Format.printf 
-	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached in %d steps@." !steps; steps := depth
+	  "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached in %d steps@." !steps;
+	Format.eprintf "%a@." print_forward_trace !queue;
+	Format.eprintf "----@.";
+	
+
+
+
+	steps := depth
       | TopError Unsafe -> steps := depth;
       	Format.printf 
 	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Stopping exploration.";
@@ -599,10 +606,12 @@ let init tsys =
   let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
   let unsafe = init_unsafe procs unsafe in
 
-
+  (*if Options.mrkv_brab then
+    run_markov original_env t_transitions transitions procs unsafe Options.rounds Options.depth_ib
+  else *)
   run original_env transitions procs unsafe Options.rounds Options.depth_ib
-  (*run_markov original_env t_transitions transitions procs unsafe Options.rounds Options.depth_ib
-  *)
+  
+  
 
 (*let test_cand2s cands =
   let rec aux env rem = 
