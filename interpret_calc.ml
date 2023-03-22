@@ -389,8 +389,12 @@ let check_comp t1 t2 env sigma op =
       let t1 = Term.subst sigma t1 in
       let pt = add_sub_manip t2 sigma in
       interpret_comp (compare_interp_val (to_interpret t1) pt) op
+    | Access _, Access _ ->
+      let ev1 = Env.find t1 env in
+      let ev2 = Env.find t2 env in
+      interpret_comp (compare_interp_val ev1 ev2) op
 	
-    | _ -> assert false
+    | _ -> Format.eprintf "sup: %a, %a@." Term.print t1 Term.print t2;assert false
 
 
     

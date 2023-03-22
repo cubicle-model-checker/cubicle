@@ -47,6 +47,8 @@ let interpreter = ref false
 let int_brab = ref (-1)
 let depth_ib = ref (-1)
 let rounds = ref (-1)
+let mrkv_brab = ref 0
+let int_brab_quiet = ref false
 
   
 let incr_verbose () = incr verbose
@@ -165,7 +167,9 @@ let specs =
      with a finite model of size <nb>";
     "-int-brab", Arg.Tuple [ Arg.Set_int int_brab;
 			     Arg.Set_int rounds;
-			     Arg.Set_int depth_ib], "<nb> procs <nb> rounds <nb> depth";
+			     Arg.Set_int depth_ib;
+			     Arg.Set_int mrkv_brab], "<nb> procs <nb> rounds <nb> depth <bool> smart";
+    "-int-brab-quiet", Arg.Set int_brab_quiet, "Silence interpreter brab";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
@@ -241,6 +245,9 @@ let cin =
 let int_brab = !int_brab
 let depth_ib = !depth_ib
 let rounds = !rounds
+let mrkv_brab = !mrkv_brab
+let int_brab_quiet = !int_brab_quiet
+
     
 
 let parse_only = !parse_only 
