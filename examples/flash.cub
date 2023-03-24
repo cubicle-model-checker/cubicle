@@ -155,7 +155,6 @@ init (p) {
 
 
 
-
 (*-------------------------- Control property ---------------------------*)
 
 unsafe (p) { CacheState_home = CACHE_E && CacheState[p] = CACHE_E }
@@ -458,7 +457,7 @@ requires { Sort[src] = Proc && Home <> src &&
   UniMsg_Proc[src] := Home;
 }
 
-transition ni_Local_Get_Nak (src)
+transition ni_Local_Get_Nak_second (src)
 requires { Sort[src] = Proc && Home <> src &&
 	   UniMsg_Cmd[src] = UNI_Get &&
   	   UniMsg_Proc[src] = Home &&
@@ -618,7 +617,7 @@ requires { Sort[src] = Proc && Home <> src &&
   	UniMsg_Proc[src] := Home;
 }
 
-transition ni_Local_GetX_Nak (src)
+transition ni_Local_GetX_Nak_second (src)
 requires { Sort[src] = Proc && Home <> src &&
   	   UniMsg_Cmd[src] = UNI_GetX &&
   	   UniMsg_Proc[src] = Home &&
