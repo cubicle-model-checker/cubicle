@@ -49,7 +49,7 @@ let depth_ib = ref (-1)
 let rounds = ref (-1)
 let mrkv_brab = ref 0
 let int_brab_quiet = ref false
-
+let int_deadlock = ref false
   
 let incr_verbose () = incr verbose
 
@@ -168,8 +168,9 @@ let specs =
     "-int-brab", Arg.Tuple [ Arg.Set_int int_brab;
 			     Arg.Set_int rounds;
 			     Arg.Set_int depth_ib;
-			     Arg.Set_int mrkv_brab], "<nb> procs <nb> rounds <nb> depth <bool> smart";
-    "-int-brab-quiet", Arg.Set int_brab_quiet, "Silence interpreter brab";
+			     Arg.Set_int mrkv_brab], " <nb> procs <nb> rounds <nb> depth <bool> smart";
+    "-int-brab-debug", Arg.Set int_brab_quiet, " Activate interpreter brab";
+    "-int-deadlock", Arg.Set int_deadlock, " Deadlock details for interpreter forward";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
@@ -307,6 +308,8 @@ let cores = !cores
 let unDepth = !unDepth
 let interpreter = !interpreter
 let debug_interpreter = !debug_interpreter
+let int_deadlock = !int_deadlock
+
 
 
 

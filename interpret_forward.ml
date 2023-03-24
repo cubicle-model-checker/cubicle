@@ -26,7 +26,7 @@ let hCount = Hashtbl.create 100
 let system_sigma_en = ref []
 let system_sigma_de = ref []
 let tr_count = Hashtbl.create 100
-let deadlocks = ref 0
+let deadlocks = ref (0, [])
 module STMap = Map.Make (Types.Term)
 
 
@@ -154,7 +154,11 @@ let markov_entropy_detailed glob tsys all_procs trans steps curr_round=
 	end(*;
       incr taken*)
     with
-      | TopError Deadlock -> incr deadlocks; taken := steps
+      | TopError Deadlock ->
+        let d,dl =  !deadlocks
+	in deadlocks := (d+1, (!taken,steps)::dl);
+	
+	taken := steps
       | Stdlib.Sys.Break -> taken := steps
       | Stdlib.Exit -> taken := steps
   done;
@@ -411,7 +415,8 @@ let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
       
     with
       | TopError Deadlock ->
-	incr deadlocks;
+	let d,dl =  !deadlocks
+	in deadlocks := (d+1, (!steps,depth)::dl);
 	if Options.int_brab_quiet then
 	  begin
 	    Format.printf 
@@ -536,8 +541,10 @@ let run env trans procs unsafe count depth =
 	  !overall
 	  !visit_count
 	  (stats.Hashtbl.num_bindings);
-	Format.printf "Deadlocked %d/%d times@." !deadlocks orig_count;
-
+	let max_dl, dl = !deadlocks in
+	Format.printf "Deadlocked %d/%d times@." max_dl orig_count;
+	if Options.int_deadlock then
+	  List.iter (fun (x,y) -> Format.printf "Step %d / %d@." x y) dl; 
 	Format.printf "%a" Pretty.print_line ();
 	Format.printf "Transition statistics:@.";
 	Hashtbl.iter (fun key (el,seen) ->
@@ -580,7 +587,10 @@ let run_markov env tsys trans procs unsafe count depth =
 	  !overall
 	  !visit_count
 	  (stats.Hashtbl.num_bindings);
-	Format.printf "Deadlocked %d/%d times@." !deadlocks orig_count;
+	let max_dl, dl = !deadlocks in
+	Format.printf "Deadlocked %d/%d times@." max_dl orig_count;
+	if Options.int_deadlock then
+	  List.iter (fun (x,y) -> Format.printf "Step %d / %d@." x y) dl;
 	Format.printf "%a" Pretty.print_line ();
 	Format.printf "Transition statistics:@.";
 	Hashtbl.iter (fun key (el,seen) ->
@@ -589,10 +599,6 @@ let run_markov env tsys trans procs unsafe count depth =
 	  else Format.printf " [first seen: round %d]@." seen	    
 	) tr_count;
 	Format.printf "\n%a" Pretty.print_double_line ();
-
-	
-	
-	
 	if Options.int_brab_quiet then
 	  begin
 	    Format.printf "Various depths:@.";

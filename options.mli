@@ -100,6 +100,7 @@ val depth_ib : int
 val rounds : int
 val mrkv_brab : int
 val int_brab_quiet : bool
+val int_deadlock : bool 
 
 
 
