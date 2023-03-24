@@ -26,6 +26,7 @@ let hCount = Hashtbl.create 100
 let system_sigma_en = ref []
 let system_sigma_de = ref []
 let tr_count = Hashtbl.create 100
+let deadlocks = ref 0
 module STMap = Map.Make (Types.Term)
 
 
@@ -88,7 +89,7 @@ let env_to_map env =
 exception OKCands of Node.t list
 
 
-let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
+let markov_entropy_detailed glob tsys all_procs trans steps curr_round=
   Random.self_init ();
   let taken = ref 0 in
   let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false))
@@ -136,9 +137,10 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 
 	  begin
 	    try 
-	      let ht_count = Hashtbl.find tr_count proposal.tr_name in
-	      Hashtbl.replace tr_count proposal.tr_name (ht_count+1)
-	    with Not_found ->  Hashtbl.add tr_count proposal.tr_name 1
+	      let (ht_count, seen) = Hashtbl.find tr_count proposal.tr_name in
+	      let seen = if seen = -1 then curr_round else seen in  
+	      Hashtbl.replace tr_count proposal.tr_name (ht_count+1, seen)
+	    with Not_found ->  Hashtbl.add tr_count proposal.tr_name (1, curr_round)
 	  end;
 	  
 	  transitions := Array.of_list (all_possible_transitions temp_env trans all_procs true);
@@ -152,7 +154,7 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 	end(*;
       incr taken*)
     with
-      | TopError Deadlock -> taken := steps
+      | TopError Deadlock -> incr deadlocks; taken := steps
       | Stdlib.Sys.Break -> taken := steps
       | Stdlib.Exit -> taken := steps
   done;
@@ -363,7 +365,7 @@ let print_forward_trace fmt el =
 
 
 
-let execute_random_forward glob_env trans all_procs unsafe depth =
+let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
   let steps = ref 0 in
   Random.self_init ();
   let running_env = ref glob_env in
@@ -395,9 +397,10 @@ let execute_random_forward glob_env trans all_procs unsafe depth =
       let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
       begin
 	try 
-	  let ht_count = Hashtbl.find tr_count apply.tr_name in
-	  Hashtbl.replace tr_count apply.tr_name (ht_count+1)
-	with Not_found ->  Hashtbl.add tr_count apply.tr_name 1
+	  let ht_count, seen = Hashtbl.find tr_count apply.tr_name in
+	  let seen = if seen = -1 then curr_round else seen in  
+	  Hashtbl.replace tr_count apply.tr_name (ht_count+1,seen )
+	with Not_found ->  Hashtbl.add tr_count apply.tr_name (1, curr_round)
       end;
       queue := PersistentQueue.push (apply.tr_name, apply_procs) !queue;
       check_unsafe new_env unsafe;
@@ -408,6 +411,7 @@ let execute_random_forward glob_env trans all_procs unsafe depth =
       
     with
       | TopError Deadlock ->
+	incr deadlocks;
 	if Options.int_brab_quiet then
 	  begin
 	    Format.printf 
@@ -516,6 +520,7 @@ let init_vals env init =
 
 let run env trans procs unsafe count depth =
   Random.self_init ();
+  let orig_count = count in 
   let depths = ref [] in 
   let rec aux count  =
     match count with
@@ -531,6 +536,16 @@ let run env trans procs unsafe count depth =
 	  !overall
 	  !visit_count
 	  (stats.Hashtbl.num_bindings);
+	Format.printf "Deadlocked %d/%d times@." !deadlocks orig_count;
+
+	Format.printf "%a" Pretty.print_line ();
+	Format.printf "Transition statistics:@.";
+	Hashtbl.iter (fun key (el,seen) ->
+	  Format.printf "%a : %d times" Hstring.print key el;
+	  if seen = -1 then Format.printf "[]@."
+	  else Format.printf " [first seen: round %d]@." seen	    
+	) tr_count;
+	Format.printf "\n%a" Pretty.print_double_line ();
 	if Options.int_brab_quiet then
 	  begin
 	    Format.printf "Various depths:@.";
@@ -540,7 +555,7 @@ let run env trans procs unsafe count depth =
       | _ ->
 	let rand = (Random.int depth) + 1 in
 	depths := rand :: !depths;
-	execute_random_forward env trans procs unsafe rand;
+	execute_random_forward env trans procs unsafe rand (orig_count - count);
 	aux (count-1)
   in
   aux count
@@ -548,6 +563,7 @@ let run env trans procs unsafe count depth =
 
 let run_markov env tsys trans procs unsafe count depth =
   Random.self_init ();
+  let orig_count = count in 
   let depths = ref [] in 
   let rec aux count  =
     match count with
@@ -564,9 +580,14 @@ let run_markov env tsys trans procs unsafe count depth =
 	  !overall
 	  !visit_count
 	  (stats.Hashtbl.num_bindings);
+	Format.printf "Deadlocked %d/%d times@." !deadlocks orig_count;
 	Format.printf "%a" Pretty.print_line ();
 	Format.printf "Transition statistics:@.";
-	Hashtbl.iter (fun key el -> Format.printf "%a : %d times@." Hstring.print key el) tr_count;
+	Hashtbl.iter (fun key (el,seen) ->
+	  Format.printf "%a : %d times" Hstring.print key el;
+	  if seen = -1 then Format.printf "[]@."
+	  else Format.printf " [first seen: round %d]@." seen	    
+	) tr_count;
 	Format.printf "\n%a" Pretty.print_double_line ();
 
 	
@@ -581,7 +602,7 @@ let run_markov env tsys trans procs unsafe count depth =
       | _ ->
 	let rand = (Random.int depth) + 1 in
 	depths := rand :: !depths;
-	markov_entropy_detailed env tsys procs trans rand false;
+	markov_entropy_detailed env tsys procs trans rand (orig_count - count);
 	aux (count-1)
   in
   aux count    
@@ -734,7 +755,7 @@ let init tsys =
   let transitions =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty t_transitions in
-  List.iter (fun x -> Hashtbl.add tr_count x.tr_name 0)t_transitions;
+  List.iter (fun x -> Hashtbl.add tr_count x.tr_name (0, -1) )t_transitions;
   let original_env = env_final, lock_queue, cond_sets, semaphores in 
   let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
   let unsafe = init_unsafe procs unsafe in
