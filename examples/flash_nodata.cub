@@ -237,6 +237,8 @@ unsafe (i j) { CacheState[i] = CACHE_E && CacheState[j] = CACHE_E }
 
 
 
+
+
 (*----------------------- Muphi rule PI_Remote_Get ----------------------*)
 
 transition pi_Remote_Get (src)
@@ -474,7 +476,7 @@ requires { Home <> src &&
   UniMsg_Proc[src] := Home;
 }
 
-transition ni_Local_Get_Nak (src)
+transition ni_Local_Get_Nak2 (src)
 requires { Home <> src &&
 	   UniMsg_Cmd[src] = UNI_Get &&
   	   UniMsg_Proc[src] = Home &&
@@ -628,7 +630,7 @@ requires { Home <> src &&
   	UniMsg_Proc[src] := Home;
 }
 
-transition ni_Local_GetX_Nak (src)
+transition ni_Local_GetX_Nak2 (src)
 requires { Home <> src &&
   	   UniMsg_Cmd[src] = UNI_GetX &&
   	   UniMsg_Proc[src] = Home &&
