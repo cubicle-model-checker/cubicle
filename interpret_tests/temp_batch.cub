@@ -1,0 +1,47 @@
+type status = Continue | Done | Rollback
+
+array Other[proc] : int
+array Temp[proc] : int
+
+array Treated[proc] : bool
+var MyBalance : int
+var TempBalance : int
+var Amount : int
+var Status : status
+var Batch : bool
+
+init(i) { Treated[i] = False && Status = Continue && Temp[i] = 0 }
+
+
+transition init_balance()
+{ MyBalance := 1000;
+  TempBalance := 1000; }
+
+transition t1()
+requires { forall j. Treated[j] = True }
+{ Status := Done }
+
+transition treat_command(i)
+requires { Status = Continue && Treated[i] = False }
+{ Treated[i] := True;
+  Temp[i] := Amount;
+  TempBalance := TempBalance - Amount;
+  Amount := ?}
+
+transition rollback()
+requires { TempBalance < 0 }
+{ Status := Rollback }
+
+transition reset()
+requires { Status = Rollback }
+{ TempBalance := MyBalance;
+  Temp[i] := case | _ : 0 } 
+
+transition commit()
+requires { Status = Done }
+{ Other[i] := case | _ : Temp[i];
+  Batch := True;
+  MyBalance := TempBalance;
+}
+
+
