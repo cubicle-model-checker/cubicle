@@ -20,6 +20,8 @@ end
 *)
 
 let visited_states = ref []
+let visit_count = ref 0
+let overall = ref 0
 let hCount = Hashtbl.create 100
 let system_sigma_en = ref []
 let system_sigma_de = ref []
@@ -28,6 +30,7 @@ module STMap = Map.Make (Types.Term)
 
 let env_to_satom_map (env,_,_,_) =
   Env.fold (fun key {value = el} acc ->
+    (*Format.eprintf "my key: %a@." Term.print key;*)
     match el with
       | VGlob el -> assert false
       | VProc el -> STMap.add key (Elem(el, Var)) acc 
@@ -84,11 +87,80 @@ let env_to_map env =
 exception OKCands of Node.t list
 
 
-
 let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
   Random.self_init ();
-  let tried = ref 0 in
-  let hcount = Hashtbl.create 10 in
+  let taken = ref 0 in
+  let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false))
+  in 
+  let running_env = ref glob in
+  let accept = ref 0  in
+  let reject = ref 0 in
+  let w1 = ref (entropy_env glob trans all_procs) in 
+  while  !taken < steps do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (proposal,prop_procs) = !transitions.(rand) in
+      
+      let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
+      let w2 = entropy_env temp_env trans all_procs in
+      let flag =
+	if w2 > !w1 then
+	  begin
+	    true
+	  end
+	else
+	  begin
+	    let prob = 2.718281828**(w2 -. !w1) in
+	    let rand_prob = Random.float 1.0 in
+	    if prob > rand_prob then true else false 
+	end
+      in
+      if flag then
+	begin
+	  incr overall;
+	  incr taken;
+	  let hash = hash_full_env temp_env in
+	  begin
+	    try
+	      let he,ee = Hashtbl.find hCount hash in
+	      Hashtbl.replace hCount hash ((he+1),ee)
+	    with Not_found ->
+	      Hashtbl.add hCount hash (1,temp_env);
+	      let ee = env_to_satom_map temp_env in
+	      visited_states := ee::!visited_states;
+	      incr visit_count;
+	  end;
+	  
+	  transitions := Array.of_list (all_possible_transitions temp_env trans all_procs true);
+	  incr accept;
+	  w1 := w2;
+	  running_env := temp_env;	  
+	end
+      else
+	begin
+	  incr reject
+	end(*;
+      incr taken*)
+    with
+      | TopError Deadlock -> taken := steps
+      | Stdlib.Sys.Break -> taken := steps
+      | Stdlib.Exit -> taken := steps
+  done;
+  if Options.int_brab_quiet then 
+  Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject
+  
+
+
+
+
+
+    
+
+
+let markov_entropy_detailed2 glob tsys all_procs trans steps det_flag=
+  Random.self_init ();
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
   let matrix =
@@ -289,25 +361,21 @@ let execute_random_forward glob_env trans all_procs unsafe depth =
   let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
   let queue = ref PersistentQueue.empty in 
   while !steps < depth do
-
-
-    (*let v_s = env_to_satom !running_env in
-    let proc_list = extract_procs v_s in
-    let proc_sigma = gen_mapping proc_list in
+    incr overall;
+    let hash = hash_full_env !running_env in
+    begin
+      try
+	let he,ee = Hashtbl.find hCount hash in
+	Hashtbl.replace hCount hash ((he+1),ee)
+      with Not_found ->
+	begin
+	  Hashtbl.add hCount hash (1,!running_env);
+	  let ee = env_to_satom_map !running_env in
+	  visited_states := ee::!visited_states;
+	  incr visit_count;
+	end
+    end;
     
-    let en_v_s = SAtom.subst proc_sigma v_s in
-    
-    let de_v_s = SAtom.subst !system_sigma_en en_v_s in *)
-    
-    (*
-    let en_v_s = SAtom.subst !system_sigma_en v_s in*)
-    (*let de_v_s = SAtom.subst !system_sigma_de en_v_s in*)
-
-    (*Format.eprintf "Comparing norm and de: %a and %a@." SAtom.print v_s SAtom.print de_v_s;*)
-    (*let ee = env_to_satom !running_env in
-      let ee = env_to_map ee in *)
-    let ee = env_to_satom_map !running_env in 
-    visited_states := ee::!visited_states;
     (*visited_states := (de_v_s)::!visited_states;*)
     
     try
@@ -331,14 +399,6 @@ let execute_random_forward glob_env trans all_procs unsafe depth =
       incr steps;
       transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
       (*count seen states*)
-      let hash = hash_full_env new_env in
-      begin
-      try
-	let he,ee = Hashtbl.find hCount hash in
-	Hashtbl.replace hCount hash ((he+1),ee)
-      with Not_found ->
-	Hashtbl.add hCount hash (1,new_env)
-      end
       
     with
       | TopError Deadlock ->
@@ -454,9 +514,16 @@ let run env trans procs unsafe count depth =
     match count with
       | 0 ->
 	let stats = Hashtbl.stats hCount in 
-	Format.printf "Forward run complete [%d runs of %d depth for %d procs]\n\
-            Visited states: %d\n\
-            Unique states:%d@." Options.rounds Options.depth_ib Options.int_brab (Options.depth_ib * Options.rounds) (stats.Hashtbl.num_bindings);
+	Format.printf "Forward run complete [%d runs of max %d depth for %d procs]\n\
+            Visited nodes total: %d\n\
+            Visited nodes retained: %d\n\
+            Unique states:%d@."
+	  Options.rounds
+	  Options.depth_ib
+	  Options.int_brab
+	  !overall
+	  !visit_count
+	  (stats.Hashtbl.num_bindings);
 	if Options.int_brab_quiet then
 	  begin
 	    Format.printf "Various depths:@.";
@@ -473,15 +540,32 @@ let run env trans procs unsafe count depth =
 
 
 let run_markov env tsys trans procs unsafe count depth =
+  Random.self_init ();
+  let depths = ref [] in 
   let rec aux count  =
     match count with
       | 0 ->
 	let stats = Hashtbl.stats hCount in 
-	Format.printf "Forward run complete [%d runs of %d depth for %d procs]\n\
-            Visited states: %d\n\
-            Unique states:%d@." Options.rounds Options.depth_ib Options.int_brab (Options.depth_ib * Options.rounds) (stats.Hashtbl.num_bindings)
+	Format.printf "Forward run complete [%d runs of max %d depth for %d procs]\n\
+            Visited nodes total: %d\n\
+            Visited nodes retained: %d\n\
+            Unique states:%d@."
+	  Options.rounds
+	  Options.depth_ib
+	  Options.int_brab
+	  !overall
+	  !visit_count
+	  (stats.Hashtbl.num_bindings);
+	if Options.int_brab_quiet then
+	  begin
+	    Format.printf "Various depths:@.";
+	    List.iter (fun x -> Format.printf " %d" x) !depths;
+	    Format.printf "@."
+	  end 
       | _ ->
-	markov_entropy_detailed env tsys procs trans depth false;
+	let rand = (Random.int depth) + 1 in
+	depths := rand :: !depths;
+	markov_entropy_detailed env tsys procs trans rand false;
 	aux (count-1)
   in
   aux count    
@@ -681,7 +765,9 @@ let init tsys =
   in aux !visited_states cands*)
 
 
-
+let temp =
+  let hs = Hstring.make "ShWbMsg_Cmd" in
+  Elem(hs, Glob)
 
 
 let test_vals op v1 v2 =
@@ -698,26 +784,10 @@ let test_cands cands =
       | [], f -> if f then raise (OKCands cands) else None
       | env_map::tl,_ ->
 	begin
-	  (*let env_map =
-	    SAtom.fold (fun atom acc ->
-	      match atom with
-		| Comp(Elem(_, Glob), op, Elem(_, Glob)) 
-		| Comp(Elem(_, Glob), op, Access _)
-		| Comp(Access _, op, Elem(_, Glob))
-		| Comp (Access _, op, Access _)
-		  -> assert false
-		| Comp(((Elem(_, Glob)) as t1), Eq, t2) 
-		| Comp(((Access _ ) as t1), Eq, t2)
-		| Comp(t2, Eq, ((Elem(_, Glob)) as t1))
-		| Comp (t2, Eq, ((Access _) as t1))
-		  -> STMap.add t1 t2 acc
-		| _ -> assert false
-	    ) hd STMap.empty
-	  in*)
-	  
 	  let flag =
 	    List.fold_left (fun acc node ->
-	      let nlitts = node.cube.litterals in	      
+	      let nlitts = node.cube.litterals in
+	      
 	      let f =
 		SAtom.fold (fun atom flagL ->
 		  let f = 
@@ -730,8 +800,10 @@ let test_cands cands =
 			    | Access _, Elem (_, Glob)
 			    | Access _, Access _ 
 			      ->
+			      
 			      let v1 = STMap.find t1 env_map in
 			      let v2 = STMap.find t2 env_map in
+			      (*Format.eprintf "t1 %a v1 is %a\nt2 %av2 is %a@." Term.print t1 Term.print t2 Term.print v1 Term.print v2;*)
 			      test_vals op v1 v2
 			    | Elem (_, Glob), _ ->
 

@@ -62,6 +62,8 @@ val hash_cond : Types.Term.t list Interpret_types.Conditions.t -> int
 val hash_sem : Types.Term.t list Interpret_types.Semaphores.t -> int
 
 val hash_full_env : Interpret_types.global -> int
+val hash_full_env_loud : Interpret_types.global -> int
+
 
 val weight_env : Interpret_types.global -> Types.SAtom.t -> Interpret_types.term_map -> int -> int 
 

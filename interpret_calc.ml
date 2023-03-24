@@ -228,7 +228,7 @@ let hash_sem sem =
   in abs v
   
     
-let hash_env env=
+let hash_e2nv env=
   let v =
     Env.fold (fun key {value = el; typ = typ } acc ->
       (*Format.eprintf "key: %a; typ: %a@." Term.print key Hstring.print typ;*)
@@ -266,6 +266,96 @@ let hash_env env=
     ) env 0   
   in
   abs v
+
+
+let hash_env env=
+  let v =
+    Env.fold (fun key {value = el; typ = typ } acc ->
+      let h = 
+	match el with
+	  | VInt i -> Hashtbl.hash i 
+	  | VReal f -> Hashtbl.hash f 
+	  | VBool b -> Hashtbl.hash b
+	  | VConstr hs | VProc hs | VGlob hs -> 
+	    Hstring.hash hs
+	  | VAccess (hs,hsl) ->
+	    List.fold_left (fun acc x -> 13 * acc + Hstring.hash x) (Hstring.hash hs) hsl
+	  | VLock (b,topt) -> 
+	    let h1 = Hashtbl.hash b in
+	    begin
+	      match topt with
+		| None -> Hashtbl.hash None + h1
+		| Some t -> Types.Term.hash t + h1
+	    end
+	  | VRLock (b,topt,i) ->
+	    let h1 = Hashtbl.hash b + Hashtbl.hash i in 
+	    begin
+	      match topt with
+		| None -> Hashtbl.hash None + h1
+		| Some t -> Types.Term.hash t + h1
+	    end
+	  | VSemaphore i -> Hashtbl.hash i
+	  | VArith t -> Types.Term.hash t
+	  | _ -> acc 
+      in
+      (19 * acc + 23 *Types.Term.hash key + 7*h)
+    ) env 0   
+  in
+  abs v
+    
+
+let hash_loud_env env=
+  let v =
+    Env.fold (fun key {value = el; typ = typ } acc ->
+      Format.eprintf "Hashing %a@." Term.print key;
+      let h = 
+	match el with
+	  | VInt i -> Hashtbl.hash i 
+	  | VReal f -> Hashtbl.hash f 
+	  | VBool b -> Hashtbl.hash b
+	  | VConstr hs | VProc hs | VGlob hs -> 
+	    Hstring.hash hs
+	  | VAccess (hs,hsl) ->
+	    List.fold_left (fun acc x -> 13 * acc + Hstring.hash x) (Hstring.hash hs) hsl
+	  | VLock (b,topt) -> 
+	    let h1 = Hashtbl.hash b in
+	    begin
+	      match topt with
+		| None -> Hashtbl.hash None + h1
+		| Some t -> Types.Term.hash t + h1
+	    end
+	  | VRLock (b,topt,i) ->
+	    let h1 = Hashtbl.hash b + Hashtbl.hash i in 
+	    begin
+	      match topt with
+		| None -> Hashtbl.hash None + h1
+		| Some t -> Types.Term.hash t + h1
+	    end
+	  | VSemaphore i -> Hashtbl.hash i
+	  | VArith t -> Types.Term.hash t
+	  | _ -> acc 
+      in
+      Format.eprintf "hashed %a == %d@." print_val el h;
+      Format.eprintf "19*acc = %d\n23*Types.Term.hash = %d\n7*h = %d"
+	(19 * acc) (23 * Types.Term.hash key) (7*h);
+      let full = 
+	(19 * acc + 23 *Types.Term.hash key + 7*h) in
+      Format.eprintf "Full hash: %d@." full;
+      full
+    ) env 0   
+  in
+  abs v
+    
+
+
+let hash_full_env_loud (env,locks,cond,sem)=
+  let v1 = hash_loud_env env in
+  let v2 = hash_locks locks in
+  let v3 = hash_cond cond in
+  let v4 = hash_sem sem in
+  Format.eprintf "v1: %d, v2: %d, v3: %d, v4: %d@." v1 v2 v3 v4;
+  v1+v2+v3+v4
+    
 
 let hash_full_env (env,locks,cond,sem)=
   let v1 = hash_env env in
