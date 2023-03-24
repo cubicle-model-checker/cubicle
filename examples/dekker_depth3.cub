@@ -1,0 +1,58 @@
+type t = L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8 | L9
+
+var Turn : proc
+array PC[proc] : t
+
+init (z) { PC[z] = L1 }
+
+
+invariant (i j) { PC[i] = L9 && PC[j] = L3 }
+invariant (i j) { PC[i] = L9 && PC[j] = L6 }
+
+unsafe (i j) { PC[i] = L9 && PC[j] = L9 }
+
+
+transition req1 (i)
+requires { PC[i] = L1 }
+{ PC[i] := L2 }
+
+transition enter1 (i)
+requires { PC[i]=L2 && Turn = i}
+{ PC[i] := L3 }
+
+transition exit2 (i)
+requires { PC[i] = L3 }
+{ 
+  Turn := . ;
+  PC[i] := L4;
+}
+
+transition req2 (i)
+requires { PC[i] = L4 }
+{ PC[i] := L5 }
+
+transition enter2 (i j k)
+requires { PC[i]=L5 && PC[j] = L4 && PC[k] = L4 && Turn = i}
+{ PC[i] := L6 }
+
+transition exit5 (i)
+requires { PC[i] = L6 }
+{ 
+  Turn := . ;
+  PC[i] := L7;
+}
+
+transition req3 (i)
+requires { PC[i] = L7 }
+{ PC[i] := L8 }
+
+transition enter3 (i j k)
+requires { PC[i]=L8 && PC[j] = L4 && PC[k] = L7 && Turn = i}
+{ PC[i] := L9 }
+
+transition exit7 (i)
+requires { PC[i] = L9 }
+{ 
+  Turn := . ;
+  PC[i] := L1;
+}
