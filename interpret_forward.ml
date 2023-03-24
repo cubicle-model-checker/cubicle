@@ -161,7 +161,8 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 
 let markov_entropy_detailed2 glob tsys all_procs trans steps det_flag=
   Random.self_init ();
-  let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
+  (*let proc_count = Array.make (Options.get_interpret_procs ()) 0 in*)
+  let proc_count = Array.make Options.int_brab 0 in  
   let t_count = Hashtbl.create 10 in 
   let matrix =
     if det_flag then
@@ -440,7 +441,8 @@ let semaphore_init s =
       
 let init_vals env init =
   if Options.debug_interpreter then Format.eprintf "Init_vals:@.";
-  let procs = Variable.give_procs (Options.get_interpret_procs ()) in
+  (*let procs = Variable.give_procs (Options.get_interpret_procs ()) in*)
+  let procs = Variable.give_procs Options.int_brab in
   let _, dnf = init in
   List.fold_left (fun acc el ->
     SAtom.fold (fun atom sacc -> 
@@ -486,12 +488,12 @@ let init_vals env init =
 	    match t1, t2 with
 	      | Elem(_, Glob), Elem(_, Var) ->
 		let temp =
-		  Hstring.make ("#" ^ string_of_int(Options.get_interpret_procs () + 1))
+		  Hstring.make ("#" ^ string_of_int(Options.int_brab + 1))
 		in
 		Env.add t1 (Elem(temp, Var)) sacc
 	      | Elem (_, Var), Elem(_,Glob) ->
 		let temp =
-		  Hstring.make ("#" ^ string_of_int(Options.get_interpret_procs () + 1))
+		  Hstring.make ("#" ^ string_of_int(Options.int_brab + 1))
 		in
 		Env.add t2 (Elem(temp, Var)) sacc
 	      | _ -> assert false
@@ -581,7 +583,7 @@ let init tsys =
   Sys.catch_break true;
   let fmt = Format.std_formatter in
   (*generate X distinc procs*)
-  let num_procs = Options.get_interpret_procs () in
+  let num_procs = Options.int_brab in
   let procs = Variable.give_procs num_procs in
 
   (*set one sigma for the whole system*)
@@ -599,7 +601,7 @@ let init tsys =
   let var_terms = Forward.all_var_terms procs tsys in
   let const_list = List.map (fun x -> Elem(x, Glob)) tsys.t_consts in
   let var_terms = Term.Set.union var_terms (Term.Set.of_list const_list) in 
-  sys_procs := Options.get_interpret_procs ();
+  sys_procs := Options.int_brab;
   (*let all_unsafes = init_unsafe procs sys.unsafe in*)
   let orig_env,lock_queue, cond_sets, semaphores =
     Term.Set.fold ( fun x (acc,acc_lock, cond_acc, sem_acc) ->
@@ -777,6 +779,8 @@ let test_vals op v1 v2 =
     | Lt -> Term.compare v1 v2 = -1 
     | Le -> Term.compare v1 v2 = -1 || Term.compare v1 v2 = 0
 
+
+
 let test_cands cands =
   (*List.iter (fun x -> Format.eprintf "ENV:%a \\ @." SAtom.print x) !visited_states;*)
   let rec aux env r =
@@ -814,9 +818,10 @@ let test_cands cands =
 			      let v1 = STMap.find t2 env_map in 
 			      test_vals op t1 v1
 			    | Access _, _ ->
-
+			      (*Format.eprintf "t1: %a, t2: %a@." Term.print t1 Term.print t2;
+			      Format.eprintf "Env:@.";
+			      STMap.iter (fun key el -> Format.eprintf "key %a === %a@." Term.print key Term.print el) env_map;*)
 			      let v1 = STMap.find t1 env_map in
-			     
 			      test_vals op v1 t2
 			    | _,  Access _ ->
 			      let v1 = STMap.find t2 env_map in 
