@@ -18,13 +18,14 @@ end
 
 
 *)
-
+ 
 let visited_states = ref []
 let visit_count = ref 0
 let overall = ref 0
 let hCount = Hashtbl.create 100
 let system_sigma_en = ref []
 let system_sigma_de = ref []
+let tr_count = Hashtbl.create 100
 module STMap = Map.Make (Types.Term)
 
 
@@ -131,6 +132,13 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 	      let ee = env_to_satom_map temp_env in
 	      visited_states := ee::!visited_states;
 	      incr visit_count;
+	  end;
+
+	  begin
+	    try 
+	      let ht_count = Hashtbl.find tr_count proposal.tr_name in
+	      Hashtbl.replace tr_count proposal.tr_name (ht_count+1)
+	    with Not_found ->  Hashtbl.add tr_count proposal.tr_name 1
 	  end;
 	  
 	  transitions := Array.of_list (all_possible_transitions temp_env trans all_procs true);
@@ -380,20 +388,17 @@ let execute_random_forward glob_env trans all_procs unsafe depth =
     (*visited_states := (de_v_s)::!visited_states;*)
     
     try
-
-      (*let ggg = Hstring.make "t4_incr_for1" in
-      Format.eprintf "Choices:@.";
-      Array.iter (fun (x,y) ->
-	if Hstring.equal x.tr_name ggg then Format.eprintf "YOYOYOY@." else ();
-	Format.eprintf "%a(%a) | " Hstring.print x.tr_name Variable.print_vars y) !transitions;
-      Format.eprintf "@.Chosen:@.";*)
-
       let l = Array.length !transitions in
       if l = 0 then raise (TopError Deadlock);
       let rand = Random.int l in
       let (apply,apply_procs) = !transitions.(rand) in
-      (*Format.eprintf "%a(%a) : %d\n--------------@." Hstring.print apply.tr_name Variable.print_vars apply_procs rand; *)
       let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      begin
+	try 
+	  let ht_count = Hashtbl.find tr_count apply.tr_name in
+	  Hashtbl.replace tr_count apply.tr_name (ht_count+1)
+	with Not_found ->  Hashtbl.add tr_count apply.tr_name 1
+      end;
       queue := PersistentQueue.push (apply.tr_name, apply_procs) !queue;
       check_unsafe new_env unsafe;
       running_env := new_env;
@@ -547,7 +552,8 @@ let run_markov env tsys trans procs unsafe count depth =
   let rec aux count  =
     match count with
       | 0 ->
-	let stats = Hashtbl.stats hCount in 
+	let stats = Hashtbl.stats hCount in
+	Format.printf "\n%a" Pretty.print_double_line ();
 	Format.printf "Forward run complete [%d runs of max %d depth for %d procs]\n\
             Visited nodes total: %d\n\
             Visited nodes retained: %d\n\
@@ -558,6 +564,14 @@ let run_markov env tsys trans procs unsafe count depth =
 	  !overall
 	  !visit_count
 	  (stats.Hashtbl.num_bindings);
+	Format.printf "%a" Pretty.print_line ();
+	Format.printf "Transition statistics:@.";
+	Hashtbl.iter (fun key el -> Format.printf "%a : %d times@." Hstring.print key el) tr_count;
+	Format.printf "\n%a" Pretty.print_double_line ();
+
+	
+	
+	
 	if Options.int_brab_quiet then
 	  begin
 	    Format.printf "Various depths:@.";
@@ -582,9 +596,11 @@ let throwaway = Elem(Hstring.make "UNDEF", Glob)
 let init tsys = 
   Sys.catch_break true;
   let fmt = Format.std_formatter in
-  (*generate X distinc procs*)
   let num_procs = Options.int_brab in
   let procs = Variable.give_procs num_procs in
+
+  
+  
 
   (*set one sigma for the whole system*)
   let p_m,_ = List.fold_left (fun (acc, count) x ->
@@ -595,7 +611,6 @@ let init tsys =
   system_sigma_en := p_m ;
   
   (*system_sigma_de := Variable.build_subst p_m procs;*)
-  
   (*all terms for the procs, i.e generate instantiated array terms*)
   (* var X[proc]: bool --> X[#1], X[#2] ...  *)
   let var_terms = Forward.all_var_terms procs tsys in
@@ -719,11 +734,8 @@ let init tsys =
   let transitions =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty t_transitions in
+  List.iter (fun x -> Hashtbl.add tr_count x.tr_name 0)t_transitions;
   let original_env = env_final, lock_queue, cond_sets, semaphores in 
-  (*let global_env = ref (env_final,lock_queue, cond_sets, semaphores) in
-  let applied_trans = ref PersistentQueue.empty in
-  let backtrack_env = ref Backtrack.empty in
-  let steps = ref 0 in*)
   let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
   let unsafe = init_unsafe procs unsafe in
 
@@ -782,7 +794,8 @@ let test_vals op v1 v2 =
 
 
 let test_cands cands =
-  (*List.iter (fun x -> Format.eprintf "ENV:%a \\ @." SAtom.print x) !visited_states;*)
+  (*Format.eprintf "how many??@.";*)
+  (*List.iter (fun x -> Format.eprintf "CANDS:%a @." Node.print x) cands;*)
   let rec aux env r =
     match env, r with
       | [], f -> if f then raise (OKCands cands) else None
@@ -807,7 +820,12 @@ let test_cands cands =
 			      
 			      let v1 = STMap.find t1 env_map in
 			      let v2 = STMap.find t2 env_map in
-			      (*Format.eprintf "t1 %a v1 is %a\nt2 %av2 is %a@." Term.print t1 Term.print t2 Term.print v1 Term.print v2;*)
+			      (*Format.eprintf "t1 %a v1 is %a\nt2 %av2 is %a@."
+				Term.print t1 Term.print v1 Term.print t2 Term.print v2;
+
+
+			      Format.eprintf "My candidate: %a@." Node.print node;*)
+			      
 			      test_vals op v1 v2
 			    | Elem (_, Glob), _ ->
 
@@ -844,8 +862,7 @@ let test_cands cands =
 	    match l with
 		| [] -> ff
 		| hd::tl ->
-			   if hd then temp tl (false&&ff) else temp tl ff
-			   
+			   if hd then temp tl (false&&ff) else temp tl ff			   
 	  in
 	  let flag = temp flag true in 
 	  if flag then
