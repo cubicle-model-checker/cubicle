@@ -23,6 +23,8 @@ let visited_states = ref []
 let visit_count = ref 0
 let overall = ref 0
 let hCount = Hashtbl.create 100
+let hSCount = Hashtbl.create 100
+
 let system_sigma_en = ref []
 let system_sigma_de = ref []
 let tr_count = Hashtbl.create 100
@@ -377,6 +379,47 @@ let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
   let queue = ref PersistentQueue.empty in 
   while !steps < depth do
     incr overall;
+
+    (*let saa = env_to_satom !running_env in
+    let saa_map = extract_procs saa in
+    let map1 = gen_mapping saa_map in
+    let mm = SAtom.subst map1 saa in
+
+    Format.eprintf "Original env: %a@." SAtom.print saa;
+
+    let env_mapped = SAtom.subst !system_sigma_en mm in
+
+    Format.eprintf "Mapped env: %a@." SAtom.print env_mapped;
+
+
+    
+    begin
+      try
+	let he  = Hashtbl.find hSCount env_mapped in
+	Hashtbl.replace hSCount env_mapped (he+1)
+      with Not_found ->
+	begin
+	  Hashtbl.add hSCount env_mapped 1;
+	  let ee = env_to_map env_mapped in
+	  visited_states := ee::!visited_states;
+	  incr visit_count;
+	end
+    end;
+
+    let hash = hash_full_env !running_env in
+    begin
+      try
+	let he,ee = Hashtbl.find hCount hash in
+	Hashtbl.replace hCount hash ((he+1),ee)
+      with Not_found ->
+	begin
+	  Hashtbl.add hCount hash (1,!running_env);
+	  (*let ee = env_to_satom_map !running_env in
+	  visited_states := ee::!visited_states;
+	  incr visit_count;*)
+	end
+    end;*)
+    
     let hash = hash_full_env !running_env in
     begin
       try
@@ -691,15 +734,21 @@ let init tsys =
     Format.eprintf "First initialized environment: @.";
     print_env fmt env
     end;
-  
-    let env_final =
-      Env.mapi (fun k x ->
+  (*let original_init = Env.fold (fun k x acc ->
+    if Term.compare x throwaway = 0 then
+      acc
+    else Env.add k x acc) env Env.empty  in
+  let original_init = env_to_satom_map (original_init, 0,0,0) in
+  visited_states := original_init :: !visited_states;*)
+
+  let env_final, original_init =
+      Env.fold (fun k x (env_acc,v_acc) ->
 	if Term.compare x throwaway = 0 then
 	  begin
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
-	    {value = random_value ty; typ = ty }
+		(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)
 	  |  _ -> assert false	
 	end
       else
@@ -708,13 +757,20 @@ let init tsys =
 	    | Elem(n, _) | Access(n, _) ->  
 	      let _, ty = Smt.Symbol.type_of n in
 	      if is_semaphore ty then
-		  {value = semaphore_init x; typ = ty}
-	      else
-		{value = cub_to_val x ; typ = ty }
+		begin
+		  let temp = {value = semaphore_init x; typ = ty}
+		  in
+		  Env.add k temp env_acc, Env.add k temp v_acc
+		end 
+	      else 
+		  begin
+		    let temp = {value = cub_to_val x ; typ = ty }
+		    in Env.add k temp env_acc, Env.add k temp v_acc
+		  end
 	    | _ -> assert false
 
 	end
-      ) env in
+      ) env (Env.empty, Env.empty) in
     let env_final =
       Env.fold (fun k x acc ->
 	match x.value with
@@ -750,13 +806,25 @@ let init tsys =
 
 
     ) env_final in
+  let orig_init =
+    Env.mapi (fun k x ->
+      match x.value with
+	| VArith ta -> let v = eval_arith ta env_final x.typ in
+		       {value =  v; typ = x.typ}
+	| _ ->
+	  x
+
+
+    ) original_init in
+
+  visited_states := (env_to_satom_map (orig_init,0,0,0)) :: !visited_states;
   
   let env_final =
     List.fold_left (fun acc x ->
       Env.add (Elem(x, Var)) {value = VAlive; typ = ty_proc} acc
   ) env_final procs
   in
-
+  
   let t_transitions = List.map (fun x -> x.tr_info) tsys.t_trans in 
   let transitions =
     List.fold_left ( fun acc t ->    
@@ -769,7 +837,12 @@ let init tsys =
   if Options.mrkv_brab = 1 then
     run_markov original_env t_transitions transitions procs unsafe Options.rounds Options.depth_ib
   else 
-  run original_env transitions procs unsafe Options.rounds Options.depth_ib
+    run original_env transitions procs unsafe Options.rounds Options.depth_ib
+  (*List.iter (fun x -> Format.eprintf "======\nNEW ENV@.";
+
+    STMap.iter (fun key el -> Format.eprintf "%a = %a@." Term.print key Term.print el) x) !visited_states
+  *)
+
   
   
 
@@ -806,10 +879,6 @@ let init tsys =
   in aux !visited_states cands*)
 
 
-let temp =
-  let hs = Hstring.make "ShWbMsg_Cmd" in
-  Elem(hs, Glob)
-
 
 let test_vals op v1 v2 =
   match op with
@@ -821,7 +890,6 @@ let test_vals op v1 v2 =
 
 
 let test_cands cands =
-  (*Format.eprintf "how many??@.";*)
   (*List.iter (fun x -> Format.eprintf "CANDS:%a @." Node.print x) cands;*)
   let rec aux env r =
     match env, r with
@@ -834,9 +902,11 @@ let test_cands cands =
 	      
 	      let f =
 		SAtom.fold (fun atom flagL ->
+		  try
 		  let f = 
 		    match atom with
 		      | Comp(t1, op, t2) ->
+			 
 			begin
 			  match t1, t2 with
 			    | Elem(_, Glob), Elem(_, Glob)
@@ -878,18 +948,21 @@ let test_cands cands =
 		      | False -> false (*??*)
 		  in
 		  f::flagL
+		  with
+		    | Not_found -> Format.eprintf "What did you not find %a@." Node.print node;
+		      true::flagL
+		      
 		) nlitts []
 	      in
 	      (List.for_all (fun x -> x) f)::acc
 	    ) [] cands
 	  in
-
 	  
 	  let rec temp l ff=
 	    match l with
 		| [] -> ff
-		| hd::tl ->
-			   if hd then temp tl (false&&ff) else temp tl ff			   
+		| hd::tl -> if hd then false else temp tl ff
+			   (*if hd then temp tl (false&&ff) else temp tl ff*)			  
 	  in
 	  let flag = temp flag true in 
 	  if flag then
@@ -965,7 +1038,12 @@ let first_good_candidate3 n =
       Some (l)
 
 
+	
+
+
 let first_good_candidate n =
+  (*Format.eprintf "candidates: @.";
+  List.iter (fun x -> Format.eprintf  "%a@." Node.print x ) n;*)
   
   let num_procs = Options.int_brab in
   let procs = Variable.give_procs num_procs in
@@ -984,4 +1062,32 @@ let first_good_candidate n =
     | OKCands rem ->  
       let l = List.hd ((*List.rev*) rem) in
       (*Format.eprintf "APPROX: %a -- %d@." Node.print l (List.length rem);*)
+      (*Format.eprintf "LOOK what I picked mom! %a@." Node.print l;*)
       Some (l)
+
+
+let first_good_candid2ate n =
+  let num_procs = Options.int_brab in
+  let procs = Variable.give_procs num_procs in
+  let cands =
+    List.fold_left (fun acc s ->
+      let d = List.rev (Variable.all_permutations (Node.variables s) procs)
+      in
+      let cands = 
+	List.fold_left (fun acc sigma ->
+	  (Node.create ~kind:Approx (Cube.subst sigma s.cube))::acc)[] d
+      in
+      (*List.iter (fun x -> Format.eprintf "Candidate: %a@." Node.print x) cands;*)
+      try
+	let res = test_cands cands in
+	if res = None then acc else assert false
+      with
+	| OKCands rem ->  rem::acc
+    ) [] n   
+  in
+  if cands = [] then None
+  else
+  let cand = List.rev cands in
+  let cand = List.hd (List.hd cand) in
+  Some cand
+
