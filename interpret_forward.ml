@@ -748,7 +748,8 @@ let init tsys =
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
-		(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)
+	  (*(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)*)
+		(env_acc, v_acc)
 	  |  _ -> assert false	
 	end
       else
@@ -806,7 +807,7 @@ let init tsys =
 
 
     ) env_final in
-  let orig_init =
+  (*let orig_init =
     Env.mapi (fun k x ->
       match x.value with
 	| VArith ta -> let v = eval_arith ta env_final x.typ in
@@ -817,7 +818,7 @@ let init tsys =
 
     ) original_init in
 
-  visited_states := (env_to_satom_map (orig_init,0,0,0)) :: !visited_states;
+  visited_states := (env_to_satom_map (orig_init,0,0,0)) :: !visited_states;*)
   
   let env_final =
     List.fold_left (fun acc x ->
