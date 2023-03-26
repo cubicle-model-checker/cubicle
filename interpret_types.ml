@@ -403,7 +403,7 @@ let val_to_cub cv =
   
 
 let random_value h =
-  Random.self_init ();
+  (*Random.self_init ();*)
   match is_int h, is_real h, is_bool h,
     is_proc h, is_lock h, is_rlock h, is_condition h, is_semaphore h
   with

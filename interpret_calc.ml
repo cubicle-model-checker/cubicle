@@ -273,28 +273,29 @@ let hash_env env=
     Env.fold (fun key {value = el; typ = typ } acc ->
       let h = 
 	match el with
-	  | VInt i -> Hashtbl.hash i 
-	  | VReal f -> Hashtbl.hash f 
+	  | VInt i -> i 
+	  | VReal f -> let f = string_of_float f in Hashtbl.hash f
 	  | VBool b -> Hashtbl.hash b
 	  | VConstr hs | VProc hs | VGlob hs -> 
 	    Hstring.hash hs
 	  | VAccess (hs,hsl) ->
 	    List.fold_left (fun acc x -> 13 * acc + Hstring.hash x) (Hstring.hash hs) hsl
 	  | VLock (b,topt) -> 
-	    let h1 = Hashtbl.hash b in
+	    let h1 = if b then 17 else 31 in
 	    begin
 	      match topt with
-		| None -> Hashtbl.hash None + h1
+		| None -> h1
 		| Some t -> Types.Term.hash t + h1
 	    end
 	  | VRLock (b,topt,i) ->
-	    let h1 = Hashtbl.hash b + Hashtbl.hash i in 
+	    let h1 = if b then 17 else 31 in 
+	    let h1 = h1 + i in 
 	    begin
 	      match topt with
-		| None -> Hashtbl.hash None + h1
+		| None -> h1
 		| Some t -> Types.Term.hash t + h1
 	    end
-	  | VSemaphore i -> Hashtbl.hash i
+	  | VSemaphore i -> i
 	  | VArith t -> Types.Term.hash t
 	  | _ -> acc 
       in
@@ -391,9 +392,106 @@ let add_sub_manip manip sigma =
       end
     | _ -> assert false
 
-    
+
+
+let check_req_comp t1 t2 env sigma op new_env =
+  match t1, t2 with      
+    | Elem(_, Glob), Elem(_, Glob) ->
+	let ev1 = Env.find t1 env in
+	let ev2 = Env.find t2 env in
+      interpret_comp (compare_interp_val ev1 ev2) op	
+    | Elem(_, Glob), Elem(_, (Constr|Var)) ->
+      let ev1 = Env.find t1 env in
+      let t2 = Term.subst sigma t2 in 
+      interpret_comp (compare_interp_val ev1 (to_interpret t2 )) op
+	  
+    | Elem (_, (Constr|Var)), Elem(_, Glob) ->
+      let ev1 = Env.find t2 env in
+      let t1 = Term.subst sigma t1 in 
+      interpret_comp (compare_interp_val (to_interpret t1 ) ev1) op	
+    | Elem(_, Glob), Access _ ->
+      let t = Term.subst sigma t2 in
+      let ev1 = Env.find t1 env in
+      let ev2 = Env.find t env in
+      interpret_comp (compare_interp_val ev1 ev2) op	
+    | Access _, Elem(_, Glob) ->
+      let t = Term.subst sigma t1 in
+      let ev1 = Env.find t env in
+      let ev2 = Env.find t2 env in
+      interpret_comp (compare_interp_val ev1 ev2) op	
+    | Elem (_, (Constr|Var)), Access _ ->
+	
+      let t = Term.subst sigma t2 in
+      let ev1 = Env.find t env in
+      let t1 = Term.subst sigma t1 in 
+      interpret_comp (compare_interp_val (to_interpret t1 ) ev1) op	
+	
+    | Access _, Elem (_, (Constr|Var))->
+      let t = Term.subst sigma t1 in
+      let ev1 = Env.find t env in
+      let t2 = Term.subst sigma t2 in 
+      interpret_comp (compare_interp_val ev1 (to_interpret t2 )) op
+	
+    | Elem(n1,Constr), Elem(n2,Constr) -> interpret_comp (Hstring.compare n1 n2) op
+
+    | Access _, Const msc->
+      let t = Term.subst sigma t1 in
+      let ev1 = Env.find t env in
+      let t2 = Term.subst sigma t2 in 
+      interpret_comp (compare_interp_val ev1 (to_interpret t2 )) op
+	  
+    | Elem(n1, Glob), Const msc ->
+      let t1 = Term.subst sigma t1 in
+      let ev1 = Env.find t1 env in
+      interpret_comp (compare_interp_val ev1 (to_interpret t2)) op
+
+    | Const msc , Elem(n1,Glob)->
+      let t2 = Term.subst sigma t2 in
+      let ev1 = Env.find t2 env in
+      interpret_comp (compare_interp_val (to_interpret t1) ev1) op
+	
+	
+    | Elem(n1, Glob), Arith(aterm, msc) ->
+      let t1 = Term.subst sigma t1 in
+      let ev1 = Env.find aterm env in
+      interpret_comp (compare_interp_val ev1 (to_interpret t1)) op
+
+    | Arith(aterm, msc), Elem(n1, Glob) ->
+      let t2 = Term.subst sigma t2 in
+      let ev1 = Env.find aterm env in
+      interpret_comp (compare_interp_val ev1 (to_interpret t2)) op
+    | Elem(p1, Var), Elem(p2, Var) ->
+      let t1 = Term.subst sigma t1 in
+      let t2 = Term.subst sigma t2 in
+      interpret_comp (compare_interp_val (to_interpret t1) (to_interpret t2)) op
+    | tt1, Elem(_, SystemProcs) ->
+      let t1 = Term.subst sigma tt1 in
+      interpret_comp (compare_interp_val (to_interpret t1) (to_interpret t2)) op
+    | Elem(_,SystemProcs), tt1 ->
+      let t2 = Term.subst sigma tt1 in
+      interpret_comp (compare_interp_val (to_interpret t2) (to_interpret t1)) op
+
+    | ProcManip _ , _ ->
+      let t2 = Term.subst sigma t2 in
+      let pt = add_sub_manip t1 sigma in
+      interpret_comp (compare_interp_val pt (to_interpret t2)) op 
+      
+    | _, ProcManip  _ ->
+      let t1 = Term.subst sigma t1 in
+      let pt = add_sub_manip t2 sigma in
+      interpret_comp (compare_interp_val (to_interpret t1) pt) op
+    | Access _, Access _ ->
+      let ev1 = Env.find t1 env in
+      let ev2 = Env.find t2 env in
+      interpret_comp (compare_interp_val ev1 ev2) op
+	
+    | _ -> Format.eprintf "sup: %a, %a@." Term.print t1 Term.print t2;assert false
+
+
+      
 
 let check_comp t1 t2 env sigma op =
+  try
   match t1, t2 with      
     | Elem(_, Glob), Elem(_, Glob) ->
       let ev1 = Env.find t1 env in
@@ -485,7 +583,7 @@ let check_comp t1 t2 env sigma op =
       interpret_comp (compare_interp_val ev1 ev2) op
 	
     | _ -> Format.eprintf "sup: %a, %a@." Term.print t1 Term.print t2;assert false
-
+  with Not_found -> true
 
     
 let check_reqs reqs env sigma tname=
@@ -708,7 +806,7 @@ let upd_array_case sigma orig upd tname env =
     v.value = VAlive) all_procs in*)
   (*List.iter (fun x -> Format.eprintf "Post filter: %a@." Hstring.print x) all_procs;*)
   let swts = upd.up_swts in
-  List.fold_left (fun acc proc ->
+ List.fold_left (fun acc proc ->
     let e, _ = 
       List.fold_left (fun (acc2,f) (sa,t) ->
 	let t = 
@@ -719,7 +817,8 @@ let upd_array_case sigma orig upd tname env =
 		try
 		  List.assoc pl sigma
 		with Not_found -> proc
-	      in Env.find (Access(n,[pl'])) orig		
+	      in
+	      Env.find (Access(n,[pl'])) orig		
 	    end
 	  | Access (n,[pl1;pl2]) ->
 	    begin
@@ -842,6 +941,7 @@ let upd_array_case sigma orig upd tname env =
     ) (acc,false) swts
     in e  
   ) env all_procs
+  
 
 let upd_matrix sigma orig upd env =
   (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) upd.up_arg;*)

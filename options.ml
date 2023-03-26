@@ -362,4 +362,4 @@ let js_mode () = !js_mode
 
 
 let set_interpret_procs n = interpretProcs := n
-let get_interpret_procs () = !interpretProcs
+let get_interpret_procs () = if int_brab > -1 then int_brab else !interpretProcs
