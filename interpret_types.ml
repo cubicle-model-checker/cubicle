@@ -417,10 +417,14 @@ let random_value h =
 				   VProc (Hstring.make s)
     | false, false, false, false,false, false, false, false -> 
       let constrs = Smt.Type.constructors h in
+      if (List.length constrs) = 0 then VConstr(Hstring.make "ABSTRACT")
+      else
+	begin
       let arr = Array.of_list constrs in
       let r = Random.int (List.length constrs -1) in
       let el = arr.(r) in
       VConstr(el)
+	end 
     | false,false,false,false,true, false, false, false -> VLock (false, None)
     | false, false, false, false, false, true, false,false -> VRLock(false, None, 0)
     | false, false, false, false, false, false, true, false -> VLock (false, None)
