@@ -112,12 +112,22 @@ let rec choose_first_current_proc proc transitions =
 	Some (tr,hd)
       else choose_first_current_proc proc tl
 
+let choose_current_proc_list proc transitions =
+  List.fold_left (fun acc (x,pr)->
+    if List.exists (fun x -> Hstring.equal x proc) pr then
+      (x,pr)::acc else acc) [] transitions
+
 let rec choose_first_other_proc proc transitions =
   match transitions with
     | [] -> None
     | (tr,hd)::tl -> if List.exists (fun x -> Hstring.compare x proc <> 0) hd then
 	Some (tr,hd)
-      else choose_first_other_proc proc tl 
+      else choose_first_other_proc proc tl
+
+let choose_other_proc_list proc transitions =
+  List.fold_left (fun acc (x,pr)->
+    if List.exists (fun x -> Hstring.compare x proc <> 0) pr then
+      (x,pr)::acc else acc) [] transitions	
 
 
 let compare_exits (tr1,p1) (tr2,p2) =
@@ -127,6 +137,110 @@ let choose_random_of_equals l len=
   (*Random.self_init();*)
   let i = Random.int len in
   (Array.of_list l).(i)
+
+
+
+let force_procs_forward glob_env trans all_procs  depth p_proc  =
+  let steps = ref 0 in
+  let running_env = ref glob_env in
+  let transitions = ref  (all_possible_transitions glob_env trans all_procs false) in 
+  let queue = ref PersistentQueue.empty in
+  let old_hash = ref (hash_full_env glob_env) in 
+  while !steps < depth do
+    incr overall;
+    try
+      let tr_with_proc = choose_current_proc_list p_proc !transitions in
+      let choose_from =
+	if tr_with_proc = []
+	then 
+	  Array.of_list (!transitions)
+	else Array.of_list (tr_with_proc) in     
+      let l = Array.length choose_from in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (apply,apply_procs) = choose_from.(rand) in
+      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+
+      if !steps > 0 then
+	begin
+	  try
+	    let data = Hashtbl.find initial_data !old_hash in
+	    Hashtbl.replace initial_data !old_hash
+	      { state = data.state;
+		seen = data.seen + 1;
+		exit_number = data.exit_number;
+		exit_transitions = List.filter (fun x ->
+		  not (compare_exits x (apply.tr_name, apply_procs))
+		) data.exit_transitions;
+		taken_transitions = (apply.tr_name, apply_procs)::data.taken_transitions;
+	      }
+	  with Not_found -> assert false
+	end ;
+      let hash = hash_full_env new_env in    
+      let exits = all_possible_transitions new_env trans all_procs true in
+
+      begin
+	try
+	  let he, ee = Hashtbl.find initial_count hash in
+	  Hashtbl.replace initial_count hash ((he+1),ee)
+	with Not_found ->
+	  Hashtbl.add initial_count hash (1,new_env);
+	  let ee = env_to_satom_map new_env in
+	  initial_runs := ee::!initial_runs;
+	  incr initial_visited;
+	  Hashtbl.add initial_data hash
+	    { state = new_env;
+	      seen = 0 ;
+	      exit_number = List.length exits;
+	      exit_transitions = List.map (fun (x,y) -> (x.tr_name, y)) exits;
+	      taken_transitions = [];
+	    } 
+      end;
+      begin
+	try 
+	  let ht_count = Hashtbl.find initial_tr_count apply.tr_name in
+	  Hashtbl.replace initial_tr_count apply.tr_name (ht_count+1)
+	    with Not_found ->  Hashtbl.add initial_tr_count apply.tr_name 1
+      end;
+      queue := PersistentQueue.push (apply.tr_name, apply_procs) !queue;
+      (*check_unsafe new_env unsafe;*)
+      old_hash := hash;
+      running_env := new_env;
+      incr steps;
+      transitions := all_possible_transitions !running_env trans all_procs true;
+      (*count seen states*)
+      
+    with
+      | TopError Deadlock ->
+	let d,dl =  !deadlocks
+	in deadlocks := (d+1, (!steps,depth)::dl);
+	if Options.int_brab_quiet then
+	  begin
+	    Format.printf 
+	      "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached in %d steps@." !steps;
+	    Format.eprintf "----@.";
+	  end ;
+	
+
+
+
+	steps := depth
+      | TopError Unsafe -> steps := depth;
+      	Format.printf 
+	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Stopping exploration."
+      | Stdlib.Sys.Break ->  steps := depth
+      | TopError StopExecution ->
+	steps := depth
+      | s -> 
+	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
+	steps := depth
+  done
+  (*Format.eprintf "%a@." print_forward_trace !queue*)
+
+
+
+
+    
 
 let markov_init_run glob tsys all_procs trans steps=
   (*Random.self_init ();*)
@@ -177,62 +291,61 @@ let markov_init_run glob tsys all_procs trans steps=
       if flag then
 	begin
       
-      if !taken > 0 then 
-	begin
-	  try 
-	    let data = Hashtbl.find initial_data !old_hash  in
-	    
-	    Hashtbl.replace initial_data !old_hash
-	      { state = data.state; 
-		seen = data.seen + 1;
-		exit_number = data.exit_number;
-		exit_transitions =
-		  List.filter (fun x ->
-		    not (compare_exits x (proposal.tr_name, prop_procs))
-		  ) data.exit_transitions;
-		taken_transitions = (proposal.tr_name, prop_procs)::data.taken_transitions
-	      }
-	  with Not_found -> assert false
-      (*shouldn't be raised since you're looking for a state you just assed*)
-	end;
-      incr overall;
-      incr taken;
-      let hash = hash_full_env temp_env in
-      let exits = all_possible_transitions temp_env trans all_procs true in
-      begin
-	try
-	  let he,ee = Hashtbl.find initial_count hash in
-	  Hashtbl.replace initial_count hash ((he+1),ee)
-	with Not_found ->
-	  Hashtbl.add initial_count hash (1,temp_env);
-	  let ee = env_to_satom_map temp_env in
-	  initial_runs := ee::!initial_runs;
-	  incr initial_visited;
-	  Hashtbl.add initial_data hash
+	  if !taken > 0 then 
+	    begin
+	      try 
+		let data = Hashtbl.find initial_data !old_hash  in
+		
+		Hashtbl.replace initial_data !old_hash
+		  { state = data.state; 
+		    seen = data.seen + 1;
+		    exit_number = data.exit_number;
+		    exit_transitions =
+		      List.filter (fun x ->
+			not (compare_exits x (proposal.tr_name, prop_procs))
+		      ) data.exit_transitions;
+		    taken_transitions = (proposal.tr_name, prop_procs)::data.taken_transitions
+		  }
+	      with Not_found -> assert false
+	(*shouldn't be raised since you're looking for a state you just assed*)
+	    end;
+	  incr overall;
+	  incr taken;
+	  let hash = hash_full_env temp_env in
+	  let exits = all_possible_transitions temp_env trans all_procs true in
+	  begin
+	    try
+	      let he,ee = Hashtbl.find initial_count hash in
+	      Hashtbl.replace initial_count hash ((he+1),ee)
+	    with Not_found ->
+	      Hashtbl.add initial_count hash (1,temp_env);
+	      let ee = env_to_satom_map temp_env in
+	      initial_runs := ee::!initial_runs;
+	      incr initial_visited;
+	      Hashtbl.add initial_data hash
 		{ state = temp_env;
 		  seen = 0 ;
 		  exit_number = List.length exits;
 		  exit_transitions = List.map (fun (x,y) -> (x.tr_name, y)) exits;
 		  taken_transitions = [];
 		} 
-      end;
-      begin
-	try 
-	  let ht_count = Hashtbl.find initial_tr_count proposal.tr_name in
-	  Hashtbl.replace initial_tr_count proposal.tr_name (ht_count+1)
-	with Not_found ->  Hashtbl.add initial_tr_count proposal.tr_name 1
-      end;
-      transitions := Array.of_list exits;
-      incr accept;
-      w1 := w2;
-      old_hash := hash;
-      old_env := !running_env;
-      running_env := temp_env;
+	  end;
+	  begin
+	    try 
+	      let ht_count = Hashtbl.find initial_tr_count proposal.tr_name in
+	      Hashtbl.replace initial_tr_count proposal.tr_name (ht_count+1)
+	    with Not_found ->  Hashtbl.add initial_tr_count proposal.tr_name 1
+	  end;
+	  transitions := Array.of_list exits;
+	  incr accept;
+	  w1 := w2;
+	  old_hash := hash;
+	  old_env := !running_env;
+	  running_env := temp_env;
 	end
       else
-	incr reject
-	   
-
+	incr reject	   
+	  
     with
       | TopError Deadlock ->
         let d,dl =  !deadlocks
@@ -242,7 +355,7 @@ let markov_init_run glob tsys all_procs trans steps=
       | Stdlib.Exit -> taken := steps
   done;
   if Options.int_brab_quiet then 
-  Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject
+    Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject
     
 
 
@@ -361,9 +474,14 @@ let smart_run glob tsys trans procs depth=
     Run a X times from Init, each time taking a different first step. 
     First basic statistics exploration. 
   *)
+  (*
   List.iter (fun (tran, pro) ->
     let env = apply_transition pro tran.tr_name trans glob in
     markov_init_run env tsys procs trans max_depth ) transition_list ;
+  *)
+
+  List.iter (fun p ->
+    force_procs_forward glob trans procs max_depth p ) procs ;
   
 
   Hashtbl.iter (fun key el ->
