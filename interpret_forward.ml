@@ -39,11 +39,53 @@ type data = {
   taken_transitions : (Hstring.t * Variable.t list) list;
 }
 
-let initial_data = Hashtbl.create 200
+type deadlock_state = {
+  dead_state : Interpret_types.global;
+  dead_predecessor : Interpret_types.global;
+  dead_path : (Hstring.t * Variable.t list) PersistentQueue.t;
+  dead_steps : int
+}
+
+  
+    
+
+
+    
+    
+let initial_data = Hashtbl.create 200 (*hash -> data*)
+(*env map of initial states to give to Cubicle without having to remap everything*)
 let initial_runs = ref []
+(*Count how many times each hash seen -- could be mixed with initial data*)  
 let initial_count =  Hashtbl.create 100
+(*counter for initially visited states so no need to count again*)
 let initial_visited = ref 0
+(*how many times each transition was seen*)  
 let initial_tr_count = Hashtbl.create 100
+(*states that deadlocked and how it got there*)
+let deadlock_states = Hashtbl.create 10
+(*states that led to a deadlock*)
+let dead_preds = Hashtbl.create 10
+
+  
+let print_forward_trace fmt el =
+  let rec print_trans q =
+    if PersistentQueue.is_empty q then ()
+    else
+      begin
+	let (x,p),r = PersistentQueue.pop q in
+	if PersistentQueue.is_empty r then
+	  begin
+	    Format.printf "%a(%a) @." Hstring.print x Variable.print_vars p;
+	    print_trans r
+	  end
+	else
+	  begin
+	    Format.printf "%a(%a) -> " Hstring.print x Variable.print_vars p;
+	print_trans r
+	  end 
+      end 
+  in print_trans el
+  
 
 
 
@@ -138,13 +180,13 @@ let choose_random_of_equals l len=
   let i = Random.int len in
   (Array.of_list l).(i)
 
-
-
+    
 let force_procs_forward glob_env trans all_procs  depth p_proc  =
   let steps = ref 0 in
   let running_env = ref glob_env in
   let transitions = ref  (all_possible_transitions glob_env trans all_procs false) in 
   let queue = ref PersistentQueue.empty in
+  let old_env = ref glob_env in
   let old_hash = ref (hash_full_env glob_env) in 
   while !steps < depth do
     incr overall;
@@ -205,6 +247,7 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
       queue := PersistentQueue.push (apply.tr_name, apply_procs) !queue;
       (*check_unsafe new_env unsafe;*)
       old_hash := hash;
+      old_env := !running_env;
       running_env := new_env;
       incr steps;
       transitions := all_possible_transitions !running_env trans all_procs true;
@@ -212,18 +255,12 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
       
     with
       | TopError Deadlock ->
-	let d,dl =  !deadlocks
-	in deadlocks := (d+1, (!steps,depth)::dl);
-	if Options.int_brab_quiet then
-	  begin
-	    Format.printf 
-	      "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached in %d steps@." !steps;
-	    Format.eprintf "----@.";
-	  end ;
-	
-
-
-
+	let dead_hash = hash_full_env !running_env in
+	Hashtbl.add deadlock_states dead_hash { dead_state = !running_env;
+						dead_path = !queue;
+						dead_steps = !steps;
+						dead_predecessor = !old_env} ;
+	Hashtbl.add dead_preds !old_hash dead_hash ;
 	steps := depth
       | TopError Unsafe -> steps := depth;
       	Format.printf 
@@ -235,19 +272,27 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	steps := depth
   done
-  (*Format.eprintf "%a@." print_forward_trace !queue*)
+  (*Format.eprintf "For proc: %a@." Hstring.print p_proc;
+  Format.eprintf "%a@." print_forward_trace !queue;
+  Format.eprintf "-------------------------@."*)
 
 
 
 
     
 
-let markov_init_run glob tsys all_procs trans steps=
+let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
   (*Random.self_init ();*)
+  (*Create the transition matrix to filter out transitions that lead to holes *)
+  let before = Hstring.make "Init" in
+  let before = ref before in
+  
   let taken = ref 0 in
   let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false))
   in 
   let running_env = ref glob in
+  let queue = ref PersistentQueue.empty in
+
   let old_env = ref glob in
   let accept = ref 0  in
   let reject = ref 0 in
@@ -307,7 +352,7 @@ let markov_init_run glob tsys all_procs trans steps=
 		    taken_transitions = (proposal.tr_name, prop_procs)::data.taken_transitions
 		  }
 	      with Not_found -> assert false
-	(*shouldn't be raised since you're looking for a state you just assed*)
+	    (*shouldn't be raised since you're looking for a state you just added*)
 	    end;
 	  incr overall;
 	  incr taken;
@@ -336,27 +381,53 @@ let markov_init_run glob tsys all_procs trans steps=
 	      Hashtbl.replace initial_tr_count proposal.tr_name (ht_count+1)
 	    with Not_found ->  Hashtbl.add initial_tr_count proposal.tr_name 1
 	  end;
+
+	  let pair = (!before, proposal.tr_name) in
+	  begin
+	    try
+	      let cpair = Hashtbl.find matrix pair in
+	      Hashtbl.replace matrix pair (cpair+1)
+	    with Not_found -> Hashtbl.add matrix pair 1
+	  end ;
+	  before := proposal.tr_name;
+
+	  begin
+	    Array.iter (fun (tr,_) ->
+	      let paired = (!before, tr.tr_name) in
+	      try
+		let v = Hashtbl.find  possibility_matrix paired in
+		Hashtbl.replace possibility_matrix paired (v+1)
+	      with Not_found -> Hashtbl.add possibility_matrix paired 1)
+	   !transitions
+	  end ;
+
+
+	  
 	  transitions := Array.of_list exits;
 	  incr accept;
 	  w1 := w2;
 	  old_hash := hash;
 	  old_env := !running_env;
 	  running_env := temp_env;
+	  queue := PersistentQueue.push (proposal.tr_name, prop_procs) !queue;
 	end
       else
 	incr reject	   
 	  
     with
       | TopError Deadlock ->
-        let d,dl =  !deadlocks
-	in deadlocks := (d+1, (!taken,steps)::dl);
+        let dead_hash = hash_full_env !running_env in
+	Hashtbl.add deadlock_states dead_hash { dead_state = !running_env;
+						dead_path = !queue;
+						dead_steps = !taken;
+						dead_predecessor = !old_env} ;
+		Hashtbl.add dead_preds !old_hash dead_hash ;
 	taken := steps
       | Stdlib.Sys.Break -> taken := steps
       | Stdlib.Exit -> taken := steps
   done;
   if Options.int_brab_quiet then 
-    Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject
-    
+    Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject    
 
 
 let markov_entropy_detailed glob tsys all_procs trans steps curr_round=
@@ -435,14 +506,19 @@ let markov_entropy_detailed glob tsys all_procs trans steps curr_round=
   Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject
   
 
-
+let analyse_runs matrix =
+    Hashtbl.fold (fun key el acc ->
+      let taken_count = List.length el.taken_transitions in
+      if taken_count = el.exit_number then acc
+      else
+	(key, el)::acc) initial_data []
 
 
 let smart_run glob tsys trans procs depth=
   (*tsys is Ast.transition_info*)
   (*Random.self_init ();*)
   let transition_list = all_possible_transitions glob trans procs false in
-  let transitions = ref (Array.of_list (all_possible_transitions glob trans procs false))
+  let transitions = ref (Array.of_list (transition_list))
   in
 
   let initial_runs = Array.length !transitions in 
@@ -451,22 +527,7 @@ let smart_run glob tsys trans procs depth=
   let max_depth = transition_depth * system_procs *system_procs  in (* reflect on that*)
   
   Format.eprintf "Transitions: overall:%d -- initially:%d@." transition_depth initial_runs;
-  Array.iter (fun (x,p) -> Format.eprintf "exits: %a(%a)@." Hstring.print x.tr_name Variable.print_vars p) !transitions;(*
-  let c1 =
-    match choose_first_current_proc (Hstring.make "#1") transition_list
-    with
-	Some (t,p) -> (t,p)
-      |None -> assert false in
-  let c2 =
-    match choose_first_other_proc (Hstring.make "#1") transition_list
-    with
-	Some (t,p) -> (t,p)
-      |None -> assert false in  
-
-  Format.eprintf "Current: %a(%a)@." Hstring.print (fst c1).tr_name Variable.print_vars (snd c1);
-  Format.eprintf "Other: %a(%a)@." Hstring.print (fst c2).tr_name Variable.print_vars (snd c2);
-
-  List.iter (fun x -> Format.eprintf "PRoc: %a@." Hstring.print x) procs;*)
+  Array.iter (fun (x,p) -> Format.eprintf "exits: %a(%a)@." Hstring.print x.tr_name Variable.print_vars p) !transitions;
 
 
   (*
@@ -474,16 +535,19 @@ let smart_run glob tsys trans procs depth=
     Run a X times from Init, each time taking a different first step. 
     First basic statistics exploration. 
   *)
-  (*
+
+  let matrix = create_transition_hash tsys in
+  let possibility_matrix = create_transition_hash tsys in 
+
+  
   List.iter (fun (tran, pro) ->
     let env = apply_transition pro tran.tr_name trans glob in
-    markov_init_run env tsys procs trans max_depth ) transition_list ;
-  *)
+    markov_init_run env tsys procs trans max_depth matrix possibility_matrix) transition_list ;
 
   List.iter (fun p ->
     force_procs_forward glob trans procs max_depth p ) procs ;
   
-
+(*
   Hashtbl.iter (fun key el ->
     Format.eprintf "---------------------------:@.";
     (*Format.eprintf "Env: %a@." print_interpret_env el.state;*)
@@ -497,14 +561,17 @@ let smart_run glob tsys trans procs depth=
   ) initial_data;
 
 
-  Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) initial_tr_count;
+  Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) initial_tr_count;*)
+
+
+
+
   
   let initD = Hashtbl.fold (fun k el acc -> (env_to_satom_map el.state)::acc ) initial_data [] in
   Format.eprintf "Seen%d@." (List.length initD);
 
   
-  visited_states := initD;
-  assert false
+  visited_states := initD @ !visited_states
     
   
   
@@ -702,17 +769,6 @@ let extract_procs sa =
   sorted
     
 
-let print_forward_trace fmt el =
-  let rec print_trans q =
-    if PersistentQueue.is_empty q then ()
-    else
-      begin
-	let (x,p),r = PersistentQueue.pop q in 
-	Format.printf "%a(%a)@." Hstring.print x Variable.print_vars p;
-	print_trans r
-      end 
-  in print_trans el
-  
 
 
 
