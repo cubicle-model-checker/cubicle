@@ -5,19 +5,13 @@ open Ast
 open Types
 
 
-(*
-  val init : Ast.t_system -> unit
+(*  val init : Ast.t_system -> unit
     (** Initialize the oracle on a given system *)
-
 
     val first_good_candidate : Node.t list -> Node.t option 
     (** Given a list of candidate invariants, returns the first one that seems
         to be indeed an invariant. *)
-
-end
-
-
-*)
+end*)
  
 let visited_states = ref []
 let visit_count = ref 0
@@ -27,7 +21,7 @@ let hSCount = Hashtbl.create 100
 
 let system_sigma_en = ref []
 let system_sigma_de = ref []
-let tr_count = Hashtbl.create 100
+let tr_count = Hashtbl.create 10
 let deadlocks = ref (0, [])
 module STMap = Map.Make (Types.Term)
 
@@ -46,10 +40,35 @@ type deadlock_state = {
   dead_steps : int
 }
 
-  
+
+let print_transitions fmt t =
+  List.iter (fun (x, y) -> Format.printf "%a(%a); " Hstring.print x Variable.print_vars y) t
     
+let print_stateless_data fmt data =
+  Format.printf "{\n\
+                   seen: %d;\n\
+                   exit_number: %d;\n\
+                   exit_transitions: %a\n\
+                   taken_transitions: %a\n\
+                 }@."
+    data.seen
+    data.exit_number
+    print_transitions data.exit_transitions
+    print_transitions data.taken_transitions
 
-
+    
+let print_data fmt data =
+  Format.printf "{ state: %a;\n\
+                   seen: %d;\n\
+                   exit_number: %d;\n\
+                   exit_transitions: %a\n\
+                   taken_transitions: %a }@."
+    print_interpret_env data.state
+    data.seen
+    data.exit_number
+    print_transitions data.exit_transitions
+    print_transitions data.taken_transitions
+    
     
     
 let initial_data = Hashtbl.create 200 (*hash -> data*)
@@ -521,6 +540,8 @@ let smart_run glob tsys trans procs depth=
   let transitions = ref (Array.of_list (transition_list))
   in
 
+  List.iter (fun x -> Hashtbl.add initial_tr_count x.tr_name 0) tsys;
+
   let initial_runs = Array.length !transitions in 
   let transition_depth = List.length tsys in (*if possible max times to let proc follow itself*)
   let system_procs = (Options.get_interpret_procs ())  in
@@ -528,13 +549,6 @@ let smart_run glob tsys trans procs depth=
   
   Format.eprintf "Transitions: overall:%d -- initially:%d@." transition_depth initial_runs;
   Array.iter (fun (x,p) -> Format.eprintf "exits: %a(%a)@." Hstring.print x.tr_name Variable.print_vars p) !transitions;
-
-
-  (*
-    Initial Run
-    Run a X times from Init, each time taking a different first step. 
-    First basic statistics exploration. 
-  *)
 
   let matrix = create_transition_hash tsys in
   let possibility_matrix = create_transition_hash tsys in 
@@ -546,31 +560,29 @@ let smart_run glob tsys trans procs depth=
 
   List.iter (fun p ->
     force_procs_forward glob trans procs max_depth p ) procs ;
-  
-(*
-  Hashtbl.iter (fun key el ->
-    Format.eprintf "---------------------------:@.";
-    (*Format.eprintf "Env: %a@." print_interpret_env el.state;*)
-    Format.eprintf "Seen: %d\n\
-                    Exits: %d\n\
-                    Remaining:%d@." el.seen el.exit_number (List.length el.exit_transitions);
-    List.iter (fun (x,l) -> Format.eprintf "%a(%a)@." Hstring.print x Variable.print_vars l) el.exit_transitions;
-    Format.eprintf "Taken:@.";
-    List.iter (fun (x,l) -> Format.eprintf "%a(%a)@." Hstring.print x Variable.print_vars l) el.taken_transitions 
-
-  ) initial_data;
-
-
-  Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) initial_tr_count;*)
-
-
-
 
   
-  let initD = Hashtbl.fold (fun k el acc -> (env_to_satom_map el.state)::acc ) initial_data [] in
-  Format.eprintf "Seen%d@." (List.length initD);
+  Format.eprintf "----------------Transitions----------------@.";
+
+  Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) initial_tr_count;
+  Format.eprintf "-------------------------------------------@.";
+
+  let init_stats = Hashtbl.stats initial_data in 
+
+  let x = analyse_runs initial_data in
+
+  List.iter (fun (x,d) ->
+    Format.eprintf "%a" print_stateless_data d;
+    Format.eprintf "----------------------------@." ) x;
+
+
+  Format.eprintf "Total states: %d\n\
+                  States totally visited: %d\n\
+                  States with unvisited: %d@." init_stats.num_bindings (init_stats.num_bindings - List.length x) (List.length x);
 
   
+  let initD = Hashtbl.fold (fun k el acc -> (env_to_satom_map el.state)::acc ) initial_data []
+  in
   visited_states := initD @ !visited_states;
   assert false
     
