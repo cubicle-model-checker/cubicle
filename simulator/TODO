@@ -3,6 +3,7 @@
 ## Model
 
 - Utiliser des structures plutôt que des n-uplets
+- Utiliser une structure de donnée non persistante
 
 ## Simulateur
 
@@ -55,9 +56,9 @@ Mais qui n'itère que sur un modèle.
 
 - Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
 - Centrer automatiquement l'affichage de tout le graphe sur l'image et le scale
-- Ajouter un élément qui représente une propriété : Couleur en fonction de si quelquechose
 - Afficher sur l'écran si la simulation est en pause, le numéro du step ou on est.
 - Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
+
 
 ## Divers
 
@@ -73,6 +74,8 @@ Notament:
 
 - germanish : On voudait req_share & req_exclusive controllé par des boutons
 	
+PB : QuitExclusive n'est pas quit exclusive
+
 - dekker_n
 
 - Hierarchical snoop

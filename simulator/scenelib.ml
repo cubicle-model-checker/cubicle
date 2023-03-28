@@ -1,7 +1,12 @@
+(*        Library for making petri net         *)
+(* see https://en.wikipedia.org/wiki/Petri_net *)
+(*                                             *)
+
 open Graphics
 open Maps
 
 (* Library for making petri net *)
+
 
 (* Graphical Settings *)
 let window_size = 600
@@ -16,6 +21,9 @@ let proc_space_perc = 50
 let trans_size  = 50  
 let trans_text_size = 50
 let trans_text_space = 2
+
+let indic_size = 50
+let indic_text_size = 50
 
 (* Point of the arrow settings *)
 let arrow_size    = 20  (* Length of the pointy bit *)
@@ -45,10 +53,11 @@ struct
 end
 
 module Petri : sig
+
   type arc = 
     | TransToState of string * string  (* From transition to state *)
     | StateToTrans of string * string  (* From state to transition *)
- 
+
   exception Unknown_trans of string
   exception Unknown_state of string
 
@@ -58,6 +67,7 @@ module Petri : sig
   val add_state           : t -> string -> Vector.t -> unit
   val add_trans           : t -> string -> (string list * Vector.t) -> unit
   val add_arc             : t -> arc -> unit
+  val add_indic           : t -> string -> (unit -> bool) -> Vector.t -> unit
   val set_state_fun       : t -> (int -> string) -> unit
 
   val get_state_pos       : t -> string -> Vector.t
@@ -68,6 +78,7 @@ module Petri : sig
   val get_trans_repr      : t -> string -> string list
   val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
+  val get_indics          : t -> (string * (unit -> bool) * Vector.t) list
 end
 =
 struct
@@ -79,7 +90,8 @@ struct
     { states  : (string, Vector.t) Hashtbl.t;
       trans   : (string, string list * Vector.t) Hashtbl.t;
       arcs    : arc list ref;
-      sfp_fun : (int -> string) ref
+      sfp_fun : (int -> string) ref;
+      indics  : (string * (unit -> bool) * Vector.t ) list ref;
     }
 
   exception Unknown_trans of string
@@ -91,11 +103,13 @@ struct
       trans   = Hashtbl.create 10; 
       arcs    = ref [];
       sfp_fun = ref (fun (x : int) -> "");
+      indics  = ref [];  
     }
  
   let add_state pet sname sp    = Hashtbl.add pet.states sname sp
   let add_trans pet tname tval  = Hashtbl.add pet.trans tname tval
   let add_arc   pet arc         = pet.arcs := arc::!(pet.arcs)
+  let add_indic pet iname ifun ival   = pet.indics := (iname, ifun, ival)::!(pet.indics)
 
   let set_state_fun pet g = pet.sfp_fun := g
   
@@ -108,6 +122,7 @@ struct
 
   let get_state_for_proc pet p = !(pet.sfp_fun) p
   let get_arcs pet = !(pet.arcs)
+  let get_indics pet = !(pet.indics) 
 
 end
 
@@ -130,7 +145,7 @@ let handle_input    () =
       | 'a' -> Format.printf "Taking step back...\n%!"; Simulator.take_step_back ()
       | 'z' -> Format.printf "Taking step forward...\n%!"; Simulator.take_step_forward ()
       | 'r' -> Format.printf "Resetting simulation...\n%!"; Simulator.reset ()
-      | c -> Format.printf "Pressed unbound key : '%c'\n%!" c 
+      | c   -> Format.printf "Pressed unbound key : '%c'\n%!" c 
       end
   | _ -> ()
 
@@ -144,6 +159,8 @@ let draw_for_state () =
   let sttable = Petri.get_state_map pet   in
   let trtable = Petri.get_trans_table pet in
 
+  (* Draw arcs *)
+  set_color black;
   let draw_arc a =
     let draw_arrow (from : Vector.t) (toward : Vector.t) = 
       let a = Vector.setsize arrow_pointy (Vector.sub from toward) in
@@ -178,8 +195,10 @@ let draw_for_state () =
     in
     draw_arrow fst scnd;
   in
-  List.iter draw_arc (Petri.get_arcs (get_petri ())); 
+  List.iter draw_arc (Petri.get_arcs pet); 
 
+
+  (* Draw states *)
   set_text_size state_text_size; 
   let draw_state state_id ({x; y} : Vector.t) = 
     set_color black;
@@ -227,6 +246,7 @@ let draw_for_state () =
   in
   Hashtbl.iter draw_state sttable;
 
+  (* Draw transitions *)
   let ts = trans_size / 2 in
   set_text_size trans_text_size; 
   let draw_trans trans_name (slist, ({x;y} : Vector.t)) =
@@ -247,5 +267,21 @@ let draw_for_state () =
   
   Hashtbl.iter draw_trans trtable;
   set_color black;
+
+  (* Draw indicators *)
+  let hs = indic_size / 2 in
+  let draw_indicator ((name : string), (f : unit -> bool), (pos : Vector.t)) =
+    let status = f () in
+    let color  = if status then red else black in
+    set_color color;
+    fill_rect (pos.x - hs) (pos.y - hs) indic_size indic_size;
+    let (tsx, tsy) = text_size name in
+    let nx = pos.x - (tsx / 2) in
+    let ny = pos.y - tsy - state_size - state_text_space in
+    moveto nx ny;
+    draw_string name;
+  in
+
+  List.iter draw_indicator (Petri.get_indics pet);
 
   synchronize ()
