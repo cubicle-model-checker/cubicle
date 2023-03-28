@@ -571,7 +571,8 @@ let smart_run glob tsys trans procs depth=
   Format.eprintf "Seen%d@." (List.length initD);
 
   
-  visited_states := initD @ !visited_states
+  visited_states := initD @ !visited_states;
+  assert false
     
   
   
