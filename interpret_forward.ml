@@ -25,13 +25,24 @@ let tr_count = Hashtbl.create 10
 let deadlocks = ref (0, [])
 module STMap = Map.Make (Types.Term)
 
+module ExitMap = Map.Make (struct type t =  Hstring.t * Variable.t list
+				  let compare (h,vl) (h2, vl2) =
+				    let c = Hstring.compare h h2 in
+				    if c = 0 then 
+				      Variable.compare_list vl vl2 
+				    else c
+end)
+  
 type data = {
   state : Interpret_types.global;
   seen : int;
   exit_number : int;
-  exit_transitions : (Hstring.t * Variable.t list) list;
-  taken_transitions : (Hstring.t * Variable.t list) list;
+  exit_transitions : (Hstring.t * Variable.t list) list ;
+  exit_remaining : (Hstring.t * Variable.t list) list ;
+  taken_transitions : int ExitMap.t;
+  taken_list : (Hstring.t * Variable.t list) list 
 }
+
 
 type deadlock_state = {
   dead_state : Interpret_types.global;
@@ -41,20 +52,28 @@ type deadlock_state = {
 }
 
 
+
 let print_transitions fmt t =
   List.iter (fun (x, y) -> Format.printf "%a(%a); " Hstring.print x Variable.print_vars y) t
+
+
+let print_exit_map fmt t =
+  ExitMap.iter (fun (x,y) d -> Format.printf "%a(%a) : %d times; %!" Hstring.print x Variable.print_vars y d) t
     
 let print_stateless_data fmt data =
-  Format.printf "{\n\
-                   seen: %d;\n\
+  Format.printf "{ seen: %d;\n\
                    exit_number: %d;\n\
                    exit_transitions: %a\n\
+                   exit_remaining: %a\n\
                    taken_transitions: %a\n\
-                 }@."
+                   taken_list: %a
+                 }"
     data.seen
     data.exit_number
     print_transitions data.exit_transitions
-    print_transitions data.taken_transitions
+    print_transitions data.exit_remaining
+    print_exit_map data.taken_transitions
+    print_transitions data.taken_list
 
     
 let print_data fmt data =
@@ -62,12 +81,18 @@ let print_data fmt data =
                    seen: %d;\n\
                    exit_number: %d;\n\
                    exit_transitions: %a\n\
-                   taken_transitions: %a }@."
+                   exit_remaining: %a\n\
+                   taken_transitions: %a\n\
+                   taken_list: %a
+
+}@."
     print_interpret_env data.state
     data.seen
     data.exit_number
     print_transitions data.exit_transitions
-    print_transitions data.taken_transitions
+    print_transitions data.exit_remaining
+    print_exit_map data.taken_transitions
+    print_transitions data.taken_list
     
     
     
@@ -105,6 +130,12 @@ let print_forward_trace fmt el =
       end 
   in print_trans el
   
+
+
+let count_taken_exits s =
+  let exits = s.taken_transitions in assert false
+  
+
 
 
 
@@ -192,7 +223,7 @@ let choose_other_proc_list proc transitions =
 
 
 let compare_exits (tr1,p1) (tr2,p2) =
-  (Hstring.equal tr1 tr2) && (Variable.compare_list p1 p2 = 0)
+ (Hstring.equal tr1 tr2) && (Variable.compare_list p1 p2 = 0)
 
 let choose_random_of_equals l len=
   (*Random.self_init();*)
@@ -222,18 +253,29 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
       let (apply,apply_procs) = choose_from.(rand) in
       let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
 
+      
       if !steps > 0 then
 	begin
 	  try
 	    let data = Hashtbl.find initial_data !old_hash in
+	    let new_map =
+	      try
+		ExitMap.find (apply.tr_name, apply_procs) data.taken_transitions
+	      with
+		  Not_found -> 0 
+	    in
 	    Hashtbl.replace initial_data !old_hash
 	      { state = data.state;
 		seen = data.seen + 1;
 		exit_number = data.exit_number;
-		exit_transitions = List.filter (fun x ->
+		exit_transitions = data.exit_transitions;
+		exit_remaining = List.filter (fun x ->
+		  
 		  not (compare_exits x (apply.tr_name, apply_procs))
-		) data.exit_transitions;
-		taken_transitions = (apply.tr_name, apply_procs)::data.taken_transitions;
+		) data.exit_remaining;
+		taken_transitions =
+		  ExitMap.add (apply.tr_name, apply_procs) (new_map+1) data.taken_transitions;
+		taken_list = (apply.tr_name, apply_procs):: data.taken_list
 	      }
 	  with Not_found -> assert false
 	end ;
@@ -249,12 +291,15 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
 	  let ee = env_to_satom_map new_env in
 	  initial_runs := ee::!initial_runs;
 	  incr initial_visited;
+	  let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
 	  Hashtbl.add initial_data hash
 	    { state = new_env;
 	      seen = 0 ;
 	      exit_number = List.length exits;
-	      exit_transitions = List.map (fun (x,y) -> (x.tr_name, y)) exits;
-	      taken_transitions = [];
+	      exit_transitions = mapped_exits;
+	      exit_remaining = mapped_exits;
+	      taken_transitions = ExitMap.empty;
+	      taken_list = []
 	    } 
       end;
       begin
@@ -269,7 +314,7 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
       old_env := !running_env;
       running_env := new_env;
       incr steps;
-      transitions := all_possible_transitions !running_env trans all_procs true;
+      transitions := exits;
       (*count seen states*)
       
     with
@@ -353,22 +398,29 @@ let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
 	end
       in
       if flag then
-	begin
-      
+	begin   
 	  if !taken > 0 then 
 	    begin
 	      try 
 		let data = Hashtbl.find initial_data !old_hash  in
-		
+		let new_map =
+		  try 
+		    ExitMap.find (proposal.tr_name, prop_procs) data.taken_transitions
+		  with Not_found -> 0
+		in
 		Hashtbl.replace initial_data !old_hash
 		  { state = data.state; 
 		    seen = data.seen + 1;
 		    exit_number = data.exit_number;
-		    exit_transitions =
+		    exit_transitions = data.exit_transitions;
+		    exit_remaining =
 		      List.filter (fun x ->
+			let bb = compare_exits x (proposal.tr_name, prop_procs) in
 			not (compare_exits x (proposal.tr_name, prop_procs))
-		      ) data.exit_transitions;
-		    taken_transitions = (proposal.tr_name, prop_procs)::data.taken_transitions
+		      ) data.exit_remaining;
+		    taken_transitions =
+		      ExitMap.add (proposal.tr_name, prop_procs) (new_map+1) data.taken_transitions;
+		    taken_list = (proposal.tr_name, prop_procs)::data.taken_list
 		  }
 	      with Not_found -> assert false
 	    (*shouldn't be raised since you're looking for a state you just added*)
@@ -386,12 +438,15 @@ let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
 	      let ee = env_to_satom_map temp_env in
 	      initial_runs := ee::!initial_runs;
 	      incr initial_visited;
+	      let mapped_exit = List.map (fun (x,y) -> (x.tr_name, y)) exits in
 	      Hashtbl.add initial_data hash
 		{ state = temp_env;
 		  seen = 0 ;
 		  exit_number = List.length exits;
-		  exit_transitions = List.map (fun (x,y) -> (x.tr_name, y)) exits;
-		  taken_transitions = [];
+		  exit_transitions = mapped_exit;
+		  exit_remaining = mapped_exit;
+		  taken_transitions = ExitMap.empty;
+		  taken_list = []
 		} 
 	  end;
 	  begin
@@ -418,10 +473,7 @@ let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
 		Hashtbl.replace possibility_matrix paired (v+1)
 	      with Not_found -> Hashtbl.add possibility_matrix paired 1)
 	   !transitions
-	  end ;
-
-
-	  
+	  end ;	  
 	  transitions := Array.of_list exits;
 	  incr accept;
 	  w1 := w2;
@@ -431,8 +483,7 @@ let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
 	  queue := PersistentQueue.push (proposal.tr_name, prop_procs) !queue;
 	end
       else
-	incr reject	   
-	  
+	incr reject	   	  
     with
       | TopError Deadlock ->
         let dead_hash = hash_full_env !running_env in
@@ -526,11 +577,14 @@ let markov_entropy_detailed glob tsys all_procs trans steps curr_round=
   
 
 let analyse_runs matrix =
-    Hashtbl.fold (fun key el acc ->
-      let taken_count = List.length el.taken_transitions in
-      if taken_count = el.exit_number then acc
-      else
-	(key, el)::acc) initial_data []
+  Hashtbl.fold (fun key el acc ->
+    let card = ExitMap.cardinal el.taken_transitions in
+      if card = el.exit_number
+      then acc
+      else if card < el.exit_number then
+      	  (key, el)::acc
+       else assert false	
+    ) initial_data []
 
 
 let smart_run glob tsys trans procs depth=
@@ -571,9 +625,9 @@ let smart_run glob tsys trans procs depth=
 
   let x = analyse_runs initial_data in
 
-  List.iter (fun (x,d) ->
-    Format.eprintf "%a" print_stateless_data d;
-    Format.eprintf "----------------------------@." ) x;
+  List.iter (fun (_,d) ->
+    Format.eprintf "%a@." print_data d;
+    ) x;
 
 
   Format.eprintf "Total states: %d\n\
