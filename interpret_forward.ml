@@ -343,10 +343,6 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
   Format.eprintf "-------------------------@."*)
 
 
-
-
-    
-
 let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
   (*Random.self_init ();*)
   (*Create the transition matrix to filter out transitions that lead to holes *)
@@ -506,6 +502,76 @@ let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
   done;
   if Options.int_brab_quiet then 
     Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject    
+
+
+    
+
+let markov_fuzz_run glob tsys all_procs trans steps  =
+  (*Random.self_init ();*)
+  let seed = Array.make steps (Hstring.make "", []) in
+  
+  let taken = ref 0 in
+  let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false))
+  in 
+  let running_env = ref glob in
+  let running = ref true in
+  let accept = ref 0  in
+  let reject = ref 0 in
+  let w1 = ref (entropy_env glob trans all_procs) in 
+
+  while  !taken < steps && !running do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+
+      let rand = Random.int l in
+      let (proposal,prop_procs) = !transitions.(rand) in
+      
+      let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
+      let w2 = entropy_env temp_env trans all_procs in
+
+      let flag =
+	if w2 > !w1 then
+	  begin
+	    true
+	  end
+	else
+	  begin
+	    let prob = 2.718281828**(w2 -. !w1) in
+	    let rand_prob = Random.float 1.0 in
+	    if prob > rand_prob then true else false 
+	end
+      in
+      if flag then
+	let hash = hash_full_env temp_env in
+	begin
+	  try
+	    let he,ee = Hashtbl.find fuzzy_visited hash in
+	    Hashtbl.replace fuzzy_visited hash ((he+1),ee)
+	  with Not_found ->
+	    begin
+	      Hashtbl.add fuzzy_visited hash (1,temp_env);
+	      let ee = env_to_satom_map !running_env in
+	      visited_states := ee::!visited_states;
+	      incr visit_count;
+	    end
+      end;
+	  seed.(!taken) <- (proposal.tr_name,prop_procs);
+	  incr taken;
+	  incr accept;
+	  w1 := w2;
+	  running_env := temp_env;	 	  
+	  transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);	
+      else
+	incr reject	   	  
+    with
+      | TopError Deadlock ->Format.eprintf "DEADLOCK : %d@." (!taken-1);running := false
+      | Stdlib.Sys.Break ->  running := false
+      | Stdlib.Exit -> running := false
+  done;
+  if Options.int_brab_quiet then 
+    Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject;
+  if !running then seed else (Array.sub seed 0 (!taken-1)) 
 
 
 let markov_entropy_detailed glob tsys all_procs trans steps curr_round=
@@ -712,6 +778,63 @@ let smart_run glob tsys trans procs depth=
   visited_states := initD @ !visited_states;
   assert false
 
+(*
+1. choisit un candidat au hasard (mais biaisé vers ceux pas encore fuzzés)
+2. t' <- t
+3. n fois (n étant calculé avec une fonction en fonction de je sais plus quoi)
+    a. i fois (i = rand(2, 4, 8, 16, 32, 64, 128))
+        + choisir une position de t'
+        + choisir une mutation
+        + appliquer la mutation a la position sur t'
+    b. executer t'
+    c. si nouvelle coverage
+         + break
+    d. t' <- t 
+
+
+
+
+*)
+
+    
+let create_original_seed glob_env trans all_procs depth =
+  let seed = Array.make depth (Hstring.make "", []) in
+  let steps = ref 0 in
+  let running = ref true in
+  let running_env = ref glob_env in
+  let transitions =
+    ref (Array.of_list (all_possible_transitions glob_env trans all_procs false))
+  in
+  while (!steps < depth) && !running do
+    try 
+    let l = Array.length !transitions in
+    if l = 0 then raise (TopError Deadlock);
+    let rand = Random.int l in
+    let (apply,apply_procs) = !transitions.(rand) in
+    let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+
+    let hash = hash_full_env new_env in
+    begin
+      try
+	let he,ee = Hashtbl.find fuzzy_visited hash in
+	Hashtbl.replace fuzzy_visited hash ((he+1),ee)
+      with Not_found ->
+	begin
+	  Hashtbl.add fuzzy_visited hash (1,new_env);
+	  let ee = env_to_satom_map !running_env in
+	  visited_states := ee::!visited_states;
+	  incr visit_count;
+	end
+    end;
+    running_env := new_env; 
+    seed.(!steps) <- (apply.tr_name,apply_procs);
+    incr steps;
+    transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true)
+    with
+      | TopError Deadlock -> running := false
+	
+  done;
+  if !running then seed else (Array.sub seed 0 (!steps-1))    
 
 let change_proc proc =
   let proc = Variable.number proc in
@@ -726,29 +849,112 @@ let pick_transition_different transitions current num_t =
     else chosen
   in choose ()
 
-let pick_transition transitions current num_t =
+(*let pick_transition transitions current num_t =
   let rand = Random.int num_t in
-  transitions.(rand) 
+  transitions.(rand)*) 
     
-let mutate_proc candidate steps procs =
+let mutate_proc_no_transition candidate steps  =
   let change = Random.int steps in
   let chosen_tr, chosen_procs = candidate.(change) in
   let new_procs = List.map (fun p -> change_proc p) chosen_procs in
   candidate.(change) <- chosen_tr,new_procs
 
-let mutate_transitions candidate steps transitions num_t =
+let mutate_proc (trans,procs)=
+  let new_procs = List.map (fun p -> change_proc p) procs in
+  trans,new_procs
+
+let mutate_transitions_no_transition candidate steps transitions num_t =
   let change = Random.int steps in
   let chosen_tr, chosen_procs = candidate.(change) in
-  let new_transition = pick_transition transitions chosen_tr num_t in
-  candidate.(change) <- new_transition, chosen_procs
+  let len_procs = List.length chosen_procs in
+  let choose_from = Array.fold_left (fun acc (x,el) ->
+    if List.length el = len_procs then (x,el)::acc else acc )[]  transitions in
+  let choose_from = Array.of_list choose_from in
+  let choose_length = Array.length choose_from in 
+  let new_transition = choose_from.(Random.int choose_length)  in
+  candidate.(change) <- new_transition
 
-let mutate_step candidate steps transitions num_t =
-  let change = Random.int steps in
-  let replace = Random.int num_t in
-  candidate.(change) <- transitions.(replace) 
+
+let mutate_transition transitions num_t (current,current_procs) = (*try to keep procs*)
+  let len_current = List.length current_procs in
+  let l_suggestions, sug_count =
+    Array.fold_left (fun (acc,count) (x,y) ->
+      if List.length y = len_current &&
+	(Hstring.compare x current <> 0)
+      then (x,y)::acc,count+1
+      else acc,count)
+      ([],0) transitions in
+  if sug_count = 0 then current, current_procs
+  else
+    begin
+      let suggestions = Array.of_list l_suggestions in
+      let sug = Random.int sug_count in
+      let _, procs = suggestions.(sug) in
+      current, procs
+    end 
   
 
-let apply_seed env trans all_procs depth seed =
+let mutate_step_no_transition candidate steps transitions num_t = 
+  let change = Random.int steps in
+  let replace = Random.int num_t in
+  candidate.(change) <- transitions.(replace)
+    
+let mutate_step transitions num_t = 
+  let change = Random.int num_t in
+  transitions.(change)
+
+let mutate_random_replace candidate steps transitions num_t=
+  let rand = Random.int steps in
+  let rec aux count =
+    match count with
+      | 0 -> ()
+      | _ -> mutate_step candidate steps transitions num_t; aux (count -1)
+  in
+  aux rand
+  
+let mutate_shorten candidate steps =
+  let pos = Random.int steps in
+  let len = Random.int (steps - pos) in
+  Array.sub candidate pos len
+
+let dead_mutation candidate step transitions num_t =
+  let rand = Random.int num_t in
+  candidate.(step) <- transitions.(rand)
+
+let mutate_candidate candidate steps (dead,ds) all_tr length_tr = assert false
+  (*if dead then
+    begin
+      dead_mutation candidate ds all_tr length_tr;
+      None
+    end 
+  else 
+    begin
+      let r = Random.int 4 in
+      match r with
+	| 0 -> mutate_proc candidate steps; None
+	| 1 -> mutate_transitions candidate steps all_tr length_tr; None
+	| 2 -> mutate_step candidate steps all_tr length_tr; None 
+	| 3 -> mutate_random_replace candidate steps all_tr length_tr; None
+	(*| 4 -> Some (mutate_shorten candidate steps)*)
+	| _ -> assert false
+    end *)
+
+
+let lengthen_candidate all_tr length_tr =
+  let rand = Array.make (Random.int 100) (Hstring.make "", []) in
+  Array.map (fun el -> all_tr.(Random.int length_tr) )rand
+  
+
+let mutate_me step all_tr length_tr =
+  let i = (Random.int 100) mod 3 in 
+  match i with
+    | 0 -> mutate_proc step
+    | 1 -> mutate_transition all_tr length_tr step
+    | 2 -> mutate_step all_tr length_tr
+    | _ -> assert false
+  
+let apply_seed env trans all_procs seed =
+  let depth = Array.length seed in 
   let new_seen = ref 0 in 
   let run = ref true in
   let steps = ref 0 in
@@ -756,41 +962,107 @@ let apply_seed env trans all_procs depth seed =
   let running_env = ref env in
   while !run && (!steps < depth) do
     try
-      incr steps; (*before application because need to know which step killed it*)
       let apply, apply_procs = seed.(!steps) in
-      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in 
+      let new_env = apply_transition apply_procs apply trans !running_env in 
       let hash = hash_full_env new_env in
       begin
-      try
-	let _ = Hashtbl.find fuzzy_visited hash in ()
-      with Not_found ->
+	try
+	  let he,ee = Hashtbl.find fuzzy_visited hash in
+	  Hashtbl.replace fuzzy_visited hash ((he+1),ee)
+	with Not_found ->
 	begin
-	  Hashtbl.add fuzzy_visited hash 1;
-	  incr new_seen
-	end 
-      end ;
-
-      running_env := new_env	
+	  Hashtbl.add fuzzy_visited hash (1,new_env);
+	  let ee = env_to_satom_map !running_env in
+	  visited_states := ee::!visited_states;
+	  incr visit_count;
+	  incr new_seen;
+	end
+      end;
+      running_env := new_env;
+      incr steps;
     with
       | TopError (FalseReq tr) -> run := false; dead := true
   done ;
   !steps, !dead,  !new_seen
-    
 
+
+let i_mutations i candidate depth (dead,ds) all_tr length_tr  =
+  let depth = if dead then ds else depth in
+  let rec mutate count cand dep =
+    match count with
+      | 0 -> cand
+      | _ ->
+	let s_cand =
+	  mutate_candidate cand dep (dead,ds) all_tr length_tr  in
+        begin
+	  match s_cand with
+	    | None -> let d = if dead then ds else dep in mutate (count -1) cand d
+	    | Some s -> let d = if dead then ds else dep in mutate (count -1) s d
+	end 
+  in mutate i candidate depth
+
+let n_mutate_tests
+    n candidate glob_env all_procs trans depth all_tr length_tr =
+  let times = [|2; 4; 8; 16; 32; 64; 128|] in
+  let rec mut_test count cand (dead,ds)  =
+    match count with
+      | 0 -> false, cand
+      | _ ->
+	let rand_iterations = times.(Random.int 7) in 
+	let candi = i_mutations rand_iterations cand depth (dead,ds) all_tr length_tr in
+	let steps, died, coverage = apply_seed glob_env trans all_procs  candi in
+	if coverage > 0 then (true,candi)
+	else mut_test (count-1) candidate (died,steps)
+  in
+  mut_test n (Array.copy candidate) (false,0)
+
+
+let n_mutate_tests2 n candidate glob_env all_procs trans depth all_tr length_tr =
+  let rec aux count =
+    let c = Array.copy candidate in 
+    let cand =
+      Array.map (fun el -> if (Random.bool ()) then all_tr.(Random.int length_tr) else el) c in 
+    let steps, died, coverage = apply_seed glob_env trans all_procs  cand in
+    if coverage > 0 then true, cand
+    else if count > 10000 then false, candidate
+    else aux  (count +1)
+  in aux 0
+
+let n_mutate_tests3 n candidate glob_env all_procs trans depth all_tr length_tr =
+  let rec aux count =
+    let c = Array.copy candidate in
+    let cand =
+    if Random.bool () then
+	  Array.map (fun el ->
+	    if (Random.bool ()) then
+	      mutate_me el all_tr length_tr
+	    else el) c
+    else
+      Array.append c (lengthen_candidate all_tr length_tr) 
+    in 
+    let steps, died, coverage = apply_seed glob_env trans all_procs  cand in
+    if coverage > 0 then true, cand
+    else if count > 10000 then false, candidate
+    else aux  (count +1)
+  in aux 0
+  
 
 let fuzzy_cubicle glob_env trans all_procs tsys =
+  Sys.catch_break true;
+  try 
   Random.self_init ();
-  let all_transition_procs =
+  (*all possible transition/proc combinations*)
+  let all_transition_procs = 
     List.fold_left (fun acc el->
       let args = el.tr_args in
       let num_args = List.length args in
       let tr_procs = all_arrange num_args all_procs in
       if tr_procs = [] then
-	  (el,[])::acc
+	  (el.tr_name,[])::acc
       else
 	begin
 	  List.fold_left (fun acc_t procs ->
-	    (el, procs)::acc_t      
+	    (el.tr_name, procs)::acc_t      
 	  ) acc tr_procs
 	
 	end 
@@ -799,27 +1071,49 @@ let fuzzy_cubicle glob_env trans all_procs tsys =
   let length_tr = List.length all_transition_procs in 
   let all_transitions_procs_array = Array.of_list all_transition_procs in
   let depth = 100 in
-  let seed =
+  let cands = Queue.create () in
+  let transition_list = all_possible_transitions glob_env trans all_procs false in
+  let rand_seed =
     Array.init depth (fun i ->
     let el = Random.int length_tr in
     all_transitions_procs_array.(el))
   in
-  (*
-  Array.iter (fun (x,y) -> Format.eprintf "%a(%a)@." Hstring.print x.tr_name Variable.print_vars y) seed;*)
-  Sys.catch_break true;
+  Queue.push rand_seed cands;
+  let done_cand = Queue.create () in
+  List.iter (fun (tran, pro) ->
+    let env = apply_transition pro tran.tr_name trans glob_env in
+    let seed = markov_fuzz_run env tsys all_procs trans depth in
+    (*Format.eprintf "Seed length: %d@." (Array.length seed);*)
+    Queue.push seed cands) transition_list;
   let running = ref true in
-  let visited = Hashtbl.create 100 in
-  let cands = ref PersistentQueue.empty in
-  cands := PersistentQueue.push seed !cands; 
   while !running do
-    let candidate = PersistentQueue.pop !cands in
-    let steps, died, cand_visited = apply_seed glob_env trans all_procs depth seed in
-    assert false
-  done;
-
-  
-  assert false
-
+    let candidate = if Queue.is_empty cands then Queue.pop done_cand else Queue.pop cands in
+    let n = Random.int depth in
+    (*Format.eprintf "Candidate length: %d@." (Array.length candidate);*)
+    let flag, new_cand =
+      n_mutate_tests3
+	n candidate glob_env all_procs trans depth all_transitions_procs_array length_tr in
+    Format.eprintf "Visited states: %d%!\r" !visit_count;
+    if flag then
+      begin
+	(*Format.eprintf "------------------------------@.";
+	Format.eprintf "Old candidate@.";
+	  Array.iter (fun (xx,yy) -> Format.eprintf "%a(%a); @." Hstring.print xx Variable.print_vars yy) candidate;
+	  Format.eprintf "@.";
+	Format.eprintf "New mutant@.";
+	  Array.iter (fun (xx,yy) -> Format.eprintf "%a(%a); @." Hstring.print xx Variable.print_vars yy) new_cand;
+	  Format.eprintf "@.";*)
+	Queue.push new_cand cands;
+	Queue.push candidate done_cand
+	(*Format.eprintf "new covered@."*)
+      end
+    else Queue.push candidate done_cand   
+  done
+  with 
+    | Sys.Break -> ()
+      
+      
+  (*visited_states := !fuzzy_visited @ !visited_states*)
 let rec extract_proc_from_term term acc =
   match term with
     | Access(_, l) -> List.fold_left (fun acc2 el -> el::acc2) acc l
@@ -854,6 +1148,10 @@ let extract_procs sa =
   let sorted = List.sort_uniq Hstring.compare procs in
   (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) sorted;*)
   sorted
+
+
+
+    
     
 
 let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
@@ -1338,7 +1636,9 @@ let init tsys =
     run original_env transitions procs unsafe Options.rounds Options.depth_ib
   else if Options.mrkv_brab = 3 then 
     smart_run original_env t_transitions transitions procs Options.depth_ib
-  else fuzzy_cubicle original_env transitions procs t_transitions 
+  else fuzzy_cubicle original_env transitions procs t_transitions
+  ;
+  Format.eprintf "VISITED STATES : %d@." (List.length !visited_states)
   (*List.iter (fun x -> Format.eprintf "======\nNEW ENV@.";
 
     STMap.iter (fun key el -> Format.eprintf "%a = %a@." Term.print key Term.print el) x) !visited_states
