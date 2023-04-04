@@ -7,11 +7,11 @@ open Cutils
 
 (*
 
-Some notes about functions in this files.
-In general, most functions write a sequence of instructions.
-They are written considering that some other instruction will follow right behind them.
-They consider that they are on a new line : Most instruction will end by begining a new line
-Most functions end with "()" for simplicity. This could easily be avoided but would have made a longer compiler
+Some notes about functions in this files:
+  In general, most functions write a sequence of instructions.
+  They are written considering that some other instruction will follow right behind them.
+  They consider that they are on a new line : Most instruction will end by begining a new line
+  Most functions end with "()" for simplicity. This could easily be avoided but would have made a longer compiler
 
 *)
 
@@ -365,21 +365,7 @@ let write_transitions trans_list ty_defs g_vars =
     (* Create the transition to be able to add it to the transition table *)
     pfile "\nlet %s = (\"%s\", req_%s, ac_%s) \nin\n\n" trans_name trans_name trans_name trans_name
     in
-  List.iter write_transition trans_list;
-
-  (* Now that all transition have been created, we create a table storing all information about them to actually use them in the simulation *) 
-
-  pfile "\nlet mymodel = ref Model.empty in\n\n";
-
-  let write_table trans = 
-    let trans_info = trans.tr_info in
-    let trans_name = Hstring.view trans_info.tr_name in
-    pfile "mymodel := Model.add_trans %s %s (!mymodel);\n" (string_of_int (List.length trans_info.tr_args)) trans_name
-  in
-  List.iter write_table trans_list;
-  pfile "mymodel := Model.set_init init (!mymodel);\n";
-  pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
-  pfile "set_model (!mymodel)\n"
+  List.iter write_transition trans_list
 
 let write_unsafe unsafe g_vars =
   let sub_write_unsafe i (_, vars, satom) =
@@ -415,6 +401,26 @@ let write_unsafe unsafe g_vars =
   in 
   List.iteri sub_write_unsafe unsafe
 
+let write_model_create trans_list unsafe_list =  
+  pfile "\nlet mymodel = ref Model.empty in\n\n";
+
+  let write_trans trans = 
+    let trans_info = trans.tr_info in
+    let trans_name = Hstring.view trans_info.tr_name in
+    pfile "mymodel := Model.add_trans %s %s (!mymodel);\n" (string_of_int (List.length trans_info.tr_args)) trans_name
+  in
+  List.iter write_trans trans_list;
+
+  let write_unsafe i (_, args, _) = 
+    let unsafe_fun_name = sprintf "unsafe_%d" i in
+    pfile "mymodel := Model.add_unsafe %d %s (!mymodel);\n" (List.length args) unsafe_fun_name
+  in 
+  List.iteri write_unsafe unsafe_list;
+
+  pfile "mymodel := Model.set_init init (!mymodel);\n";
+  pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
+  pfile "set_model (!mymodel)\n"
+
 let run ts s =
   pfile "open Utils\n";
   pfile "open Maps\n";
@@ -429,5 +435,6 @@ let run ts s =
   write_init ts.t_init g_vars g_types;
   write_unsafe s.unsafe g_vars;
   write_transitions ts.t_trans g_types g_vars;
+  write_model_create ts.t_trans s.unsafe;
   close_out out_file;
   exit 0

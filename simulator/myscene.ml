@@ -80,5 +80,5 @@ let build_scene () =
 
   Scenelib.set_petri pmodel;
   
-  let s = (pre_init, draw_for_state, draw_for_state, update) in 
+  let s : Scene.t = {pre_init; post_init=draw_for_state; on_model_change=draw_for_state; update; } in 
   set_scene(s)

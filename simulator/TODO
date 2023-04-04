@@ -52,28 +52,27 @@ Mais qui n'itère que sur un modèle.
 - Ajouter les unsafe au modèle : 
 	Nécéssite de créer une fonction pour créer le modèle correctement plutôt que de le créer dans les transitions
 
-## Petri:
+## Model 
 
-Problème : La librairie Petri peut devenir très complexe. Il peut devenir nécéssaire d'avoir une librairie sur plein de fichiers différents
+- Avoir une implémentation impérative plutôt que fonctionnelle
 
-- Améliorer les boutons: Avoir des boutons permettant d'indiquer si un bouton est cliquable, si la souris est sur un bouton changer sa couleur, ...
+## Petri
+
+Réfléchire a la nécéssité d'avoir une librarie en plusieurs fichiers.
+-> On peut avoir une grosse librairie globale au lieu d'avoir plein de scenelib divers et varié, ça serait sûrement plus cohérent
+
+- Améliorer les boutons: Avoir des boutons permettant d'indiquer si un bouton est cliquable, 
+si la souris est sur un bouton changer sa couleur, ...
 -> Les boutons peuvent devenir complexe et on peut penser a l'ajout d'un module Button
 
 Dans un monde idéal : 
 - Avoir des flèches qui sont des courbes et plus des droites pour permettre plus de flexibilité
-- Centrer automatiquement l'affichage pour permettre de scale facilement OU ALORS permettre un zoom + de se déplacer dans l'espace 
--> Faisable en ajoutant une caméra mais ça complique beaucoup 
 - Afficher si la simulation est en pause ainsi que le numéro du step courant
 - Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
 - Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
 
+- Pouvoir zoomer et dézoomer avec la caméra
 - Menu d'aide en appuyant sur h
-
-## Divers
-
-- Au lieu d'utiliser des triplets partout il serait beaucoup plus cohérent d'utiliser des structures non ?
-Notament:
-	Pour Model.t
 
 ## Traces
 

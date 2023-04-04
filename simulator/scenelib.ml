@@ -307,6 +307,11 @@ let draw_for_state () =
   in 
   List.iter draw_button (Petri.get_buttons pet);
 
+  if !Simulator.is_paused then
+    (
+      moveto 5 5;
+      draw_string "Paused."
+    );
   synchronize ()
 
 let last_registered_pos = ref Vector.zero
@@ -316,6 +321,7 @@ let mouse_speed = 1
 let handle_mouse (dt : float) = 
   if button_down () then begin
   let (mx, my) = mouse_pos () in 
+
   (* Button interaction *)
     let bs = button_size / 2 in 
     let handle_button ((_ : string), (bfun : (unit -> unit)), (bpos : Vector.t)) =
@@ -324,8 +330,8 @@ let handle_mouse (dt : float) =
         bfun();
     in 
     List.iter handle_button (Petri.get_buttons (get_petri ()));
-    (* Camera *)
 
+    (* Camera *)
     let mvec = Vector.{x = mx; y = my} in
     if !mouse_down then begin
       let vecdiff = Vector.mult mouse_speed (Vector.sub mvec !last_registered_pos) in
@@ -337,6 +343,6 @@ let handle_mouse (dt : float) =
   end 
     else mouse_down := false
 
-let update dt  = (* Automatically manage pausing and navigating through the trace. *)
+let update dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
   handle_input ();
   handle_mouse dt

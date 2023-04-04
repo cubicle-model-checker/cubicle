@@ -217,6 +217,7 @@ mymodel := Model.add_trans 1 inv_1 (!mymodel);
 mymodel := Model.add_trans 1 inv_2 (!mymodel);
 mymodel := Model.add_trans 1 gnt_shared (!mymodel);
 mymodel := Model.add_trans 1 gnt_exclusive (!mymodel);
+mymodel := Model.add_unsafe 2 unsafe_0 (!mymodel);
 mymodel := Model.set_init init (!mymodel);
 mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);
 set_model (!mymodel)

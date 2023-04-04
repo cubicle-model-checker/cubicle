@@ -1,11 +1,8 @@
 open Maps
 open Traces
 
-(* Types *)
-
 (* TODO
-  - Utiliser une structure ici au lieu d'utiliser des tuples;
-  Ne pas avoir un type t persistant
+  - Ne pas avoir un type t persistant : utiliser des Hashtbl plutôt que des maps
 *)
 
 type variable       = string * string * int   (* name, type, dim *) 
@@ -21,42 +18,74 @@ type transition_map   = transition StringMap.t
 type transition_table = string list IntMap.t                (* Key is number of argument of transitions, value is name of transition*)
 type transitions      = transition_map * transition_table
 
-type unsafe          = (int list -> bool)
-type unsafes         = (unsafe list) IntMap.t
+type unsafe           = (int list -> bool)
+type unsafes          = (unsafe list) IntMap.t
 
-type t = variable_table * init * transitions * unsafes
+type t = 
+  { 
+    vars    : variable_table;
+    init    : unit -> unit;
+    trans   : transitions;
+    unsafe  : unsafes;
+  }
 
 let empty : t = 
-  let vt = ([], (fun () -> StringMap.empty), (fun _-> ())) in
-  let tr = (StringMap.empty, IntMap.empty) in
-  (vt, (fun () -> ()), tr, IntMap.empty)
+  {
+    vars    = ([], (fun () -> StringMap.empty), (fun _-> ()));
+    init    = (fun () -> ());
+    trans   = (StringMap.empty, IntMap.empty);
+    unsafe  = IntMap.empty;
+  }
 
-let add_trans nb_arg (trans_name, trans_req, trans_ac)  ((mvars, minit, (mtransmap, mtranstable), munsafe) : t) : t = 
+let add_trans nb_arg (trans_name, trans_req, trans_ac)  (model : t) : t = 
+  let (mtransmap, mtranstable) = model.trans in
   let cur = try IntMap.find nb_arg mtranstable with Not_found -> [] in
-  (mvars, minit, (StringMap.add trans_name (trans_req, trans_ac) mtransmap, IntMap.add nb_arg (trans_name::cur) mtranstable), munsafe)
+  let new_trans = (StringMap.add trans_name (trans_req, trans_ac) mtransmap, IntMap.add nb_arg (trans_name::cur) mtranstable) in 
+  {
+    vars    = model.vars;
+    init    = model.init;
+    trans   = new_trans;
+    unsafe  = model.unsafe;
+  }
 
-let add_unsafe nb_arg unsafe_fun ((mvars, minit, mtrans, munsafe) : t) : t =
-  let cur = try IntMap.find nb_arg munsafe with Not_found -> [] in
-  (mvars, minit, mtrans, IntMap.add nb_arg (unsafe_fun :: cur) munsafe)
+let add_unsafe nb_arg unsafe_fun (model : t) : t =
+  let cur = try IntMap.find nb_arg model.unsafe with Not_found -> []  in
+  let new_unsafe = IntMap.add nb_arg (unsafe_fun :: cur) model.unsafe in
+  {
+    vars    = model.vars;
+    init    = model.init;
+    trans   = model.trans;
+    unsafe  = new_unsafe;
+  }
 
-let set_init minit ((mvars, _, mtrans, munsafe) : t) : t = 
-  (mvars, minit, mtrans, munsafe)
-
-let set_vars mvars ((_, minit, mtrans, munsafe) : t) : t =
-  (mvars, minit, mtrans, munsafe)
+let set_init minit (model : t) : t = 
+  { 
+    vars    = model.vars;
+    trans   = model.trans;
+    init    = minit;
+    unsafe  = model.unsafe;
+  }
+let set_vars mvars (model : t) : t =
+  {
+    vars    = mvars;
+    trans   = model.trans;
+    init    = model.init;
+    unsafe  = model.unsafe;
+  }
 
 (* Getters & Dynamic Setters *)
-
-let get_state (((_, state_getter, _), _, _, _) : t) : model_state =
+let get_state (model : t) : model_state =
+  let (_, state_getter,_) = model.vars in
   state_getter ()
 
-let set_state (((_, _, state_setter), _,_, _) : t) (new_state : model_state) =
+let set_state (model : t) (new_state : model_state) =
+  let (_,_,state_setter) = model.vars in
   state_setter new_state
 
-let get_vars ((vars, _, _, _) : t) = vars
-let get_init ((_, init, _, _) : t) = init
-let get_trans ((_,_,trans, _) : t) = trans
-let get_unsafe ((_,_,_,unsaf) : t) = unsaf
+let get_vars    (model : t) = model.vars
+let get_init    (model : t) = model.init
+let get_trans   (model : t) = model.trans
+let get_unsafe  (model : t) = model.unsafe
 
 (* Other *)
 
