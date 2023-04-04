@@ -1514,11 +1514,10 @@ let run env trans procs unsafe count depth =
   let rec aux count  =
     match count with
       | 0 ->
-
-	List.iter (fun x ->
+	(*List.iter (fun x ->
 	  Format.eprintf "---------------------------@.";
 	  STMap.iter (fun key el ->
-	    Format.eprintf "%a = %a@." Term.print key Term.print el)x) !visited_states;	
+	    Format.eprintf "%a = %a@." Term.print key Term.print el)x) !visited_states;	*)
 	let stats = Hashtbl.stats hCount in 
 	Format.printf "Forward run complete [%d runs of max %d depth for %d procs]\n\
             Visited nodes total: %d\n\
