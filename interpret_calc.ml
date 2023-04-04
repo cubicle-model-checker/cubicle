@@ -487,11 +487,235 @@ let check_req_comp t1 t2 env sigma op new_env =
 	
     | _ -> Format.eprintf "sup: %a, %a@." Term.print t1 Term.print t2;assert false
 
+let throwaway = Elem(Hstring.make "UNDEF", Glob)
 
+
+let check_comp_req t1 t2 env sigma op =
+  match t1, t2 with      
+    | Elem(_, Glob), Elem(_, Glob) ->
+      let ev1 =
+	try
+	  Some (Env.find t1 env)
+	with Not_found -> None
+      in
+      let ev2 = 
+	try
+	  Some (Env.find t2 env)
+	with Not_found -> None
+      in
+      begin
+	match ev1, ev2 with
+	  | None, None -> assert false
+	  | Some ev1, Some ev2 -> interpret_comp (compare_interp_val ev1 ev2) op, env
+	  | Some ev1, None -> true, (Env.add t2 ev1 env)
+	  | None, Some ev2 -> true, (Env.add t1 ev2 env)
+      end 
+    | Elem(_, Glob), Elem(_, (Constr|Var)) ->
+      let ev1 =
+	try Some (Env.find t1 env)
+	with Not_found -> None 
+      in
+      let t2 = Term.subst sigma t2 in
+
+      begin
+	match ev1 with
+	  | None -> true, Env.add t1 (to_interpret t2) env
+	  | Some ev1 -> interpret_comp (compare_interp_val ev1 (to_interpret t2 )) op, env
+      end 	  
+    | Elem (_, (Constr|Var)), Elem(_, Glob) ->
+      let ev1 =
+	try Some (Env.find t2 env)
+	with Not_found -> None
+	      
+      in
+      let t1 = Term.subst sigma t1 in
+      begin
+	match ev1 with
+	  | None -> true , Env.add t2 (to_interpret t1) env
+	  | Some ev1 -> interpret_comp (compare_interp_val (to_interpret t1 ) ev1) op, env
+      end 
+      	
+    | Elem(_, Glob), Access _ ->
+      let t = Term.subst sigma t2 in     
+      let ev1 =
+	try Some (Env.find t1 env)
+	with Not_found -> None
+      in
+      let ev2 =
+	try
+	  Some (Env.find t env)
+	with Not_found -> None
+      in
+      begin
+	match ev1, ev2 with
+	  | None, None -> assert false
+	  | Some ev1, Some ev2 -> interpret_comp (compare_interp_val ev1 ev2) op, env
+	  | None, Some ev2 -> true, Env.add t1 (to_interpret t2) env
+	  | Some ev1, None -> true, Env.add t (to_interpret t1) env 
+      end 
+    | Access _, Elem(_, Glob) ->
+      let t = Term.subst sigma t1 in
+      let ev1 =
+	try
+	  Some (Env.find t env)
+	with Not_found -> None
+      in
+      let ev2 =
+	try
+	  Some(Env.find t2 env)
+	with Not_found -> None
+      in
+      begin
+	match ev1, ev2 with
+	  | None, None -> assert false
+	  | Some ev1, Some ev2 -> interpret_comp (compare_interp_val ev1 ev2) op, env
+	  | None, Some ev2 -> true, Env.add t (to_interpret t2) env
+	  | Some ev1, None -> true, Env.add t2 (to_interpret t) env 
+      end
+      
+    | Elem (_, (Constr|Var)), Access _ ->
+	
+      let t = Term.subst sigma t2 in
+      let ev1 =
+	try
+	  Some (Env.find t env)
+	with Not_found -> None
+      in
+      let t1 = Term.subst sigma t1 in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t (to_interpret t1) env
+	  | Some ev1 -> interpret_comp (compare_interp_val (to_interpret t1 ) ev1) op, env	
+
+      end 
+	
+    | Access _, Elem (_, (Constr|Var))->
+      let t = Term.subst sigma t1 in
+      let ev1 =
+	try
+	  Some(Env.find t env)
+	with Not_found -> None
+      in
+      let t2 = Term.subst sigma t2 in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t (to_interpret t2) env
+	  | Some ev1 -> interpret_comp (compare_interp_val ev1 (to_interpret t2 )) op, env
+      end 
+	
+    | Elem(n1,Constr), Elem(n2,Constr) -> interpret_comp (Hstring.compare n1 n2) op, env
+
+    | Access _, Const msc->
+      let t = Term.subst sigma t1 in
+      let ev1 =
+	try
+	  Some (Env.find t env)
+	with Not_found -> None
+      in
+      let t2 = Term.subst sigma t2 in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t (to_interpret t2) env
+	  | Some ev1 -> interpret_comp (compare_interp_val ev1 (to_interpret t2 )) op, env
+      end 	  
+    | Elem(n1, Glob), Const msc ->
+      let t1 = Term.subst sigma t1 in
+      let ev1 =
+	try Some (Env.find t1 env)
+	with Not_found -> None
+      in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t1 (to_interpret t2) env
+	  | Some ev1 -> interpret_comp (compare_interp_val ev1 (to_interpret t2)) op, env
+      end 
+    | Const msc , Elem(n1,Glob)->
+      let t2 = Term.subst sigma t2 in
+      let ev1 =
+	try
+	  Some (Env.find t2 env)
+	with Not_found -> None
+      in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t2 (to_interpret t1) env
+	  | Some ev1 -> interpret_comp (compare_interp_val (to_interpret t1) ev1) op, env
+      end 	
+	
+    | Elem(n1, Glob), Arith(aterm, msc) ->
+      let t1 = Term.subst sigma t1 in
+      let ev1 =
+	try
+	  Some (Env.find aterm env)
+	with Not_found -> None 
+      in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t1 (to_interpret t2) env
+	  | Some ev1 -> interpret_comp (compare_interp_val ev1 (to_interpret t1)) op, env
+      end 
+    | Arith(aterm, msc), Elem(n1, Glob) ->
+      let t2 = Term.subst sigma t2 in
+      let ev1 =
+	try
+	  Some (Env.find aterm env)
+	with Not_found -> None
+      in
+      begin
+	match ev1 with
+	  | None -> true, Env.add t2 (to_interpret t1) env
+	  | Some ev1 -> interpret_comp (compare_interp_val ev1 (to_interpret t2)) op, env
+      end 
+      
+    | Elem(p1, Var), Elem(p2, Var) ->
+      let t1 = Term.subst sigma t1 in
+      let t2 = Term.subst sigma t2 in
+      interpret_comp (compare_interp_val (to_interpret t1) (to_interpret t2)) op, env
+	
+    | tt1, Elem(_, SystemProcs) ->
+      let t1 = Term.subst sigma tt1 in
+      interpret_comp (compare_interp_val (to_interpret t1) (to_interpret t2)) op, env
+    | Elem(_,SystemProcs), tt1 ->
+      let t2 = Term.subst sigma tt1 in
+      interpret_comp (compare_interp_val (to_interpret t2) (to_interpret t1)) op, env
+
+    | ProcManip _ , _ ->
+      let t2 = Term.subst sigma t2 in
+      let pt = add_sub_manip t1 sigma in
+      interpret_comp (compare_interp_val pt (to_interpret t2)) op , env
+      
+    | _, ProcManip  _ ->
+      let t1 = Term.subst sigma t1 in
+      let pt = add_sub_manip t2 sigma in
+      interpret_comp (compare_interp_val (to_interpret t1) pt) op, env
+	
+    | Access _, Access _ ->
+      (*let ev1 = Env.find t1 env in
+      let ev2 = Env.find t2 env in
+	interpret_comp (compare_interp_val ev1 ev2) op*)
+      let ev1 =
+	try
+	  Some (Env.find t1 env)
+	with Not_found -> None
+      in
+      let ev2 = 
+	try
+	  Some (Env.find t2 env)
+	with Not_found -> None
+      in
+      begin
+	match ev1, ev2 with
+	  | None, None -> assert false
+	  | Some ev1, Some ev2 -> interpret_comp (compare_interp_val ev1 ev2) op, env
+	  | Some ev1, None -> true, (Env.add t2 ev1 env)
+	  | None, Some ev2 -> true, (Env.add t1 ev2 env)
+      end 
+    | _ -> Format.eprintf "sup: %a, %a@." Term.print t1 Term.print t2;assert false
+
+      
       
 
 let check_comp t1 t2 env sigma op =
-  try
   match t1, t2 with      
     | Elem(_, Glob), Elem(_, Glob) ->
       let ev1 = Env.find t1 env in
@@ -580,13 +804,12 @@ let check_comp t1 t2 env sigma op =
     | Access _, Access _ ->
       let ev1 = Env.find t1 env in
       let ev2 = Env.find t2 env in
-      interpret_comp (compare_interp_val ev1 ev2) op
-	
+      interpret_comp (compare_interp_val ev1 ev2) op	
     | _ -> Format.eprintf "sup: %a, %a@." Term.print t1 Term.print t2;assert false
-  with Not_found -> true
 
     
 let check_reqs reqs env sigma tname=
+  let glob = ref env in 
   SAtom.iter (fun atom ->
     match atom with
       | Comp (t1,op,t2) ->
@@ -596,13 +819,15 @@ let check_reqs reqs env sigma tname=
 	    let t21 = Term.subst sigma t2 in 
 	    Format.eprintf "Checking requirements, comparing t1 and t2: %a -- %a@." Term.print t11 Term.print t21;
 	  end;
-	let b = check_comp t1 t2 env sigma op in
+	let b, nv = check_comp_req t1 t2 env sigma op in
+	glob := nv; 
 	if b  then ()
 	else raise (TopError (FalseReq tname))		
       | True -> ()
       | False ->  raise (TopError (FalseReq tname))
       | Ite _ -> assert false
-  ) reqs
+  ) reqs;
+  !glob
 
 
 
@@ -1621,17 +1846,19 @@ let check_suspension sigma env =
       | _ -> assert false) sigma
 
 let check_ureqs ureqs env sigma trname =
+  let glob = ref env in 
   let rec aux ur =
     match ur with
       | [] -> raise (TopError (FalseReq trname))
       | hd::tl ->
 	begin
 	  try
-	    check_reqs hd env sigma trname
+	    glob := check_reqs hd env sigma trname
 	  with
 	    | TopError (FalseReq _) -> aux tl 
 	end
-  in aux ureqs
+  in aux ureqs;
+  !glob
 
     
 let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
@@ -1641,7 +1868,7 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
     raise (TopError (WrongArgs (trname,arg_length)));
   let sigma = Variable.build_subst tr.tr_args args in 
   check_actor_suspension sigma env tr.tr_process;
-  let () = check_reqs tr.tr_reqs env sigma trname in
+  let new_env = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
   let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
   let ureqs = uguard sigma procs trargs tr.tr_ureq in
@@ -1650,10 +1877,10 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
     so instead of iter, it has to be a function because one of the elements has to satisfy 
   *)
   (*let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in*)
-  check_ureqs ureqs env sigma trname; 
-  let nv = update_vals env tr.tr_assigns sigma in
-  let nv = update_arrs sigma env nv tr.tr_upds in
-  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma env nv tr lock_queue cond_sets semaphores in 
+  let new_env = check_ureqs ureqs new_env sigma trname in 
+  let nv = update_vals new_env tr.tr_assigns sigma in
+  let nv = update_arrs sigma new_env nv tr.tr_upds in
+  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma new_env nv tr lock_queue cond_sets semaphores in 
   upd_non_dets nv tr.tr_nondets,lockq,cond_sets, semaphores
 
 
@@ -1713,6 +1940,7 @@ let check_duplicates l =
 
 
 let possible_for_proc (env,_,_,_) trans all_procs aproc =
+  let glob = ref env in 
   Trans.fold (fun x el (acc_np, acc_p) ->
     let name = el.tr_name in 
     let args = el.tr_args in
@@ -1723,11 +1951,11 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	try 
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env (Some aproc);
-	  check_reqs el.tr_reqs env sigma name;
+	  let new_env = check_reqs el.tr_reqs env sigma name in 
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	  check_ureqs ureqs env sigma name; 
+	  glob := check_ureqs ureqs new_env sigma name; 
 	  ((el,[])::acc_np, acc_p)
 	with
 	  | TopError _ -> (acc_np, acc_p)
@@ -1746,11 +1974,11 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	    in
 	    if f then 
 	      begin		
-	      check_reqs el.tr_reqs env sigma name;  
+		let new_env = check_reqs el.tr_reqs env sigma name in   
 	      let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	      let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	      (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	      check_ureqs ureqs env sigma name; 
+	      glob := check_ureqs ureqs new_env sigma name; 
 	      acc_np1,((el, procs)::acc_p1)
 	    end
 	    else (acc_np1,acc_p1)
@@ -1761,7 +1989,7 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	    | s -> let e = Printexc.to_string s in Format.printf "%s@." e; assert false      
 	) (acc_np, acc_p) tr_procs
       end 
-  ) trans ([],[])
+  ) trans ([],[]), !glob
 
 let init_unsafe all_procs unsafes = 
   List.fold_left(fun acc (_,args, satom) ->
@@ -1785,6 +2013,7 @@ let random_possible_trans (env,_,_,_) trans all_procs flag =
 
     
 let all_possible_transitions (env,_,_,_) trans all_procs flag=
+  let glob = ref env in 
   Trans.fold (fun x el acc ->
     let name = el.tr_name in 
     let args = el.tr_args in
@@ -1795,11 +2024,11 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	try 
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env el.tr_process;
-	  check_reqs el.tr_reqs env sigma name;
+	  let new_env = check_reqs el.tr_reqs env sigma name in
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
+	  let ureqs = uguard sigma all_procs trargs el.tr_ureq in
 	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	  check_ureqs ureqs env sigma name; 
+	  glob := check_ureqs ureqs new_env sigma name; 
 	  (el,[])::acc
 	with
 	  | TopError _ -> acc
@@ -1817,11 +2046,11 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  let sigma = Variable.build_subst args procs in
 	  try
 	    check_actor_suspension sigma env el.tr_process;
-	    check_reqs el.tr_reqs env sigma name;
+	    let new_env = check_reqs el.tr_reqs env sigma name in
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	    check_ureqs ureqs env sigma name; 
+	    glob := check_ureqs ureqs new_env sigma name; 
 	    (el, procs)::acc_t
 	  with
 	    | TopError _ -> acc_t
@@ -1834,8 +2063,6 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	) acc tr_procs
       end 
   ) trans []
-
-
 
 let env_to_satom env =
   Env.fold (fun key {value = el} acc ->
@@ -1890,7 +2117,7 @@ let weight_env (env,_,_,_) req env_old weight=
 let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr flag =
   let env, _,_,_ = global in
   (*let des_procs =  all_arrange (List.length tr.tr_args) all_procs in*)
-
+  let glob = ref env in
   Trans.fold (fun x el acc ->
     let name = el.tr_name in 
     let args = el.tr_args in
@@ -1901,11 +2128,11 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	try
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env el.tr_process;
-	  check_reqs el.tr_reqs env sigma name;
+	  let new_env = check_reqs el.tr_reqs env sigma name in 
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	  check_ureqs ureqs env sigma name; 
+	  glob := check_ureqs ureqs new_env sigma name; 
 	  let new_env = apply_transition [] name trans global in
 	  let reqs = SAtom.subst sigma tr.tr_reqs in
 	  if flag then
@@ -1941,11 +2168,11 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	  let sigma = Variable.build_subst args procs in
 	  try
 	    check_actor_suspension sigma env el.tr_process;
-	    check_reqs el.tr_reqs env sigma name;
+	    let new_env = check_reqs el.tr_reqs env sigma name in 
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
 	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	    check_ureqs ureqs env sigma name;  (*TODO: DOUBLE CHECK*)
+	    glob := check_ureqs ureqs new_env sigma name;  (*TODO: DOUBLE CHECK*)
 	    let new_env = apply_transition procs name trans global in
 	    let reqs = SAtom.subst sigma tr.tr_reqs in
 	    let nureqs = uguard sigma all_procs trargs tr.tr_ureq in (*ureqs for desired*)

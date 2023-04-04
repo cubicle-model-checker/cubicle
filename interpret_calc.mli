@@ -18,7 +18,7 @@ val gen_array_combs : Hstring.t -> Variable.t list -> Variable.t list list
   
 val check_reqs : Types.SAtom.t ->
 Interpret_types.interpret_value Interpret_types.Env.t ->
-Variable.subst -> Hstring.t -> unit
+Variable.subst -> Hstring.t ->  Interpret_types.interpret_value Interpret_types.Env.t
 
 
 val apply_transition : Variable.t list ->
@@ -30,14 +30,17 @@ Interpret_types.global
 
 val all_possible_transitions : Interpret_types.global ->
 Ast.transition_info Interpret_types.Trans.t ->
-  Hstring.t list -> bool -> (Ast.transition_info * Variable.t list) list
+  Hstring.t list -> bool -> (Ast.transition_info * Variable.t list) list 
 
-val possible_for_proc : Interpret_types.global->
-Ast.transition_info Interpret_types.Trans.t ->
-Hstring.t list ->
-Hstring.t ->
-(Ast.transition_info * Variable.t list) list *
-(Ast.transition_info * Variable.t list) list
+val possible_for_proc : Interpret_types.global ->
+           Ast.transition_info Interpret_types.Trans.t ->
+           Hstring.t list ->
+           Hstring.t ->
+           ((Ast.transition_info * Variable.t list) list *
+           (Ast.transition_info * Variable.t list) list) *
+           Interpret_types.interpret_value Interpret_types.Env.t
+
+  
 
 
 val check_duplicates : 'a list -> unit

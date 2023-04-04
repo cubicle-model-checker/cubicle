@@ -39,7 +39,6 @@ let create_transition_hash t =
 
 let execute_random3 glob_env trans all_procs unsafe applied_trans systrans=
   let matrix = create_transition_hash systrans in
-
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
   let t_count = Hashtbl.create 10 in 
@@ -67,8 +66,6 @@ let execute_random3 glob_env trans all_procs unsafe applied_trans systrans=
       let lp = Array.length !transitions in
       queue := PersistentQueue.push (tr_num, apply.tr_name,apply_procs, l, lp) !queue;
       check_unsafe !running_env unsafe;
-
-
       let pair = (!before, apply.tr_name) in
       begin
       try
@@ -177,8 +174,6 @@ let rec find_tr array name procs c =
     
 let wl glob_env trans all_procs tsys steps =
   Random.self_init ();
-
-  
   let matrix = create_transition_hash tsys in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
@@ -253,13 +248,15 @@ let wl glob_env trans all_procs tsys steps =
     let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
-      let ureqs = uguard !running_env sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
-
-      let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
+    let curr_env = ref env in
+    curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+    let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+    let ureqs = uguard !running_env sigma all_procs trargs proposal.tr_ureq in
+    List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+    let _,l1,l2,l3 = !running_env in
+    running_env := !curr_env, l1, l2, l3;
+    
+    let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
 
       let p = 2.718281828** (lng.(!old_index) -. lng.(index)) in
       let rand = Random.float 1. in
@@ -334,9 +331,6 @@ let wl glob_env trans all_procs tsys steps =
 	      Hashtbl.replace t_count !before (htc+1)
 	    with Not_found -> Hashtbl.add t_count proposal.tr_name 1
 	  end ;*)
-
-
-
 	  
 	end;
 
@@ -361,12 +355,6 @@ let wl glob_env trans all_procs tsys steps =
   done ;
   !running_env, (hcount,proc_count, t_count,matrix), hist, lng, tr_array 
   
-
-  
-
-
-    
-
 
 let run glob_env trans all_procs unsafe applied_trans systrans=
   

@@ -5,18 +5,54 @@ open Ast
 open Types
 
 
+let zero = Num.num_of_int 0
+let one = Num.num_of_int 1
+
 
 let cumulative_prob probs =
   let _, l = List.fold_right (fun (n,el) (s,acc) -> let s1 = el+.s in s1,(n,s1)::acc) probs (0.,[])
   in List.rev l
 
 
-let rec pick f l = 
+let rec pick f l =
+  Format.eprintf "%f@." f;
 match l with 
   | [] -> assert false 
-  | (v,p)::tl -> if f <= p then v else pick f tl;;
+  | (v,p)::tl -> Format.eprintf "p: %f@." p;if f <= p then v else pick f tl;;
 
   
+let propose1 tr flg =
+  let typ = if flg then "proposal" else "entropy" in 
+  Format.printf "Please enter %s probabilities for the system:@." typ;
+  let rec enter l acc =
+    match l with
+      | [] ->
+	let s = List.fold_left (fun sum (_, p) -> Num.(+/) p sum) zero acc
+	in if Num.(<>/) s one then
+	    begin
+	      Format.printf "Given probabilities must sum up to 1.0.\n\
+                             Please enter new probabilities.@.";
+	      enter tr []
+	    end
+	  else acc 
+      | hd::tl ->
+	let n = hd.tr_name in
+	Format.printf "probability for %a? @." Hstring.print n;
+	begin
+	try
+	  let f = read_line () in
+	  let f = Num.num_of_string f in 
+	  let a = (n,f)::acc
+	  in enter tl a
+	with
+	  | Failure _  ->
+	    Printf.printf "Please enter a correct float@.";
+	    enter l acc  
+	end
+  in
+  enter tr []
+  
+
 let propose tr flg =
   let typ = if flg then "proposal" else "entropy" in 
   Format.printf "Please enter %s probabilities for the system:@." typ;
@@ -48,6 +84,7 @@ let propose tr flg =
   enter tr []
   
 
+    
 let markov glob tsys all_procs tr trans=
   Random.self_init ();
   let hcount = Hashtbl.create 10 in
@@ -94,11 +131,13 @@ let markov glob tsys all_procs tr trans=
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let curr_env = ref env in 
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+      let _, l1, l2, l3 = !running_env in
+      running_env := !curr_env, l1, l2, l3;
 
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
 
@@ -112,9 +151,7 @@ let markov glob tsys all_procs tr trans=
       let d2 = 
 	List.fold_left(fun acc satom ->
 	  weight_env temp_env satom env acc) 0 nureqs in
-      let w2 = d1+d2 in
-
-      
+      let w2 = d1+d2 in  
       let flag =
 	if w2 > !w1 then true else
 	  begin
@@ -218,7 +255,6 @@ let markov_entropy glob tsys all_procs trans steps=
 	end 
     ) [] tsys
   in
-
   
   let els = List.length trt in 
   let tr_array = Array.of_list trt in
@@ -241,17 +277,19 @@ let markov_entropy glob tsys all_procs trans steps=
       let env, _,_,_ = !running_env in 
       let rand = Random.int els in
       let (proposal,prop_procs) = tr_array.(rand) in
-      
-      
+         
       
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let curr_env = ref env in 
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+
+      let _, l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1,l2,l3;
 
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
@@ -406,12 +444,14 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let curr_env = ref env in 
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 
+      let _,l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1,l2,l3;
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
 
@@ -603,12 +643,15 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
+      let curr_env = ref env in
       
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 
+      let _,l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1, l2, l3;
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
 
@@ -768,12 +811,15 @@ in
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let curr_env = ref env in 
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 
+      let _,l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1,l2,l3;
+      
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
 
@@ -925,8 +971,20 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs trans steps det_fl
   let accept = ref 0  in
   let reject = ref 0 in
 
-  let proposal_probs = propose tsys true in
-  let entropy_probs = propose tsys false in 
+ (* let proposal_probs = propose tsys true in
+    let entropy_probs = propose tsys false in *)
+
+  let proposal_probs =   [
+    Hstring.make "t", 0.05; Hstring.make "t1", 0.05; Hstring.make "t2", 0.05; Hstring.make "t4", 0.05;
+    Hstring.make "t5", 0.05; Hstring.make "t6", 0.05; Hstring.make "t7", 0.05; Hstring.make "t8", 0.10;
+    Hstring.make "t9", 0.05; Hstring.make "t10", 0.50
+  ]
+  in
+  let entropy_probs =   [
+    Hstring.make "t", 0.25; Hstring.make "t1", 0.05; Hstring.make "t2", 0.05; Hstring.make "t4", 0.05;
+    Hstring.make "t5", 0.05; Hstring.make "t6", 0.05; Hstring.make "t7", 0.05; Hstring.make "t8", 0.10;
+    Hstring.make "t9", 0.05; Hstring.make "t10", 0.50
+  ] in 
 
 (*[Hstring.make "t", 0.1; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.1]*) 
 
@@ -952,11 +1010,13 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs trans steps det_fl
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let curr_env = ref env in 
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+      let _,l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1,l2,l3;
 
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
@@ -1120,11 +1180,18 @@ let markov_hastings glob tsys all_procs trans steps det_flag=
   (*let proposal_probs = [Hstring.make "t", 0.1; Hstring.make "t1", 0.4; Hstring.make "t2", 0.4; Hstring.make "t4", 0.1] in*)
 
   (* let proposal_probs = [Hstring.make "t", 0.026; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.274] in*)
+  (* [Hstring.make "t", 0.135; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.165] in*) 
 
-  let proposal_probs =(* [Hstring.make "t", 0.135; Hstring.make "t1", 0.35; Hstring.make "t2", 0.35; Hstring.make "t4", 0.165] in*) propose tsys true in 
+  let proposal_probs = (*propose tsys true *)
 
-
+  [
+    Hstring.make "t", 0.01; Hstring.make "t1", 0.01; Hstring.make "t2", 0.01; Hstring.make "t4", 0.01;
+    Hstring.make "t5", 0.01; Hstring.make "t6", 0.01; Hstring.make "t7", 0.01; Hstring.make "t8", 0.01;
+    Hstring.make "t9", 0.01; Hstring.make "t10", 0.90
+  ]
+  in
   (*let proposal_probs = [Hstring.make "t", 0.1; Hstring.make "t1", 0.4; Hstring.make "t2", 0.4; Hstring.make "t4", 0.1] in*)
+
 
   let cumulative_proposal = cumulative_prob proposal_probs in 
   
@@ -1149,11 +1216,14 @@ let markov_hastings glob tsys all_procs trans steps det_flag=
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      
-      check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let curr_env = ref env in 
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> check_reqs u env sigma proposal.tr_name) ureqs;
+      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+
+      let _, l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1,l2,l3;
 
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
@@ -1235,13 +1305,21 @@ let markov_hastings glob tsys all_procs trans steps det_flag=
       incr taken
     with
       | TopError Deadlock -> raise (TopError Deadlock)
-      | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
+      | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 10000 then running := false 
       | Stdlib.Sys.Break -> taken := steps
       | Stdlib.Exit -> running := false
   done;
   Format.eprintf "Accept: %d, Reject: %d@." !accept !reject;
   !running_env, (hcount,proc_count, t_count, matrix)
 
+
+
+
+
+
+    
+
+(*--------Matrix Hastings-------------*)
 
     
     

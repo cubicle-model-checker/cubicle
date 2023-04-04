@@ -138,7 +138,22 @@ let init_vals env init =
 		
 	      | _ -> assert false		  	     		    
 	  end 	    	   	  
-	| Comp (t1, Neq, t2) -> assert false
+	| Comp (t1, Neq, t2) ->
+	  begin
+	    match t1, t2 with
+	      | Elem(_, Glob), Elem(_, Var) ->
+		let temp =
+		  Hstring.make ("#" ^ string_of_int(Options.get_interpret_procs () + 1))
+		in
+		Env.add t1 (Elem(temp, Var)) sacc
+	      | Elem (_, Var), Elem(_,Glob) ->
+		let temp =
+		  Hstring.make ("#" ^ string_of_int(Options.get_interpret_procs () + 1))
+		in
+		Env.add t2 (Elem(temp, Var)) sacc
+	      | _ -> assert false
+		
+	  end
 	| Comp (t1, Lt, t2) -> assert false
 	| Comp (t1, Le, t2) -> assert false
 	| True -> assert false
@@ -310,6 +325,13 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
 	(*Format.eprintf "Hash: %d@." hash;
 	Format.eprintf "%a@." print_interpret_env new_env;
 	Format.eprintf "%a@." print_interpret_env ee;
+
+	let hhh = hash_full_env_loud new_env in
+	Format.eprintf "----------------------------@.";
+	let hhhh = hash_full_env_loud ee in
+	Format.eprintf "%d\n%d@." hhh hhhh;
+	
+	
 	assert false;*)
 	Hashtbl.replace hcount hash ((he+1),ee)
       with Not_found -> Hashtbl.add hcount hash (1,new_env)
@@ -793,43 +815,46 @@ let run_from_list env trans all_procs follow unsafe=
     Random.self_init ();
     let npl, pl = possible_for_proc env trans all_procs proc in
     match npl,pl with
-      | [],[] ->
+      | ([],[]),_ ->
 	Format.printf "└─> No parameterized transitions for %a possible\n\
                        └─> No non-parameterized transitions for %a possible\n\
                        └─> Moving on to next process@." Hstring.print proc Hstring.print proc;
 	None::acc,env
-      | l, [] ->
+      | (l, []), nv ->
 	Format.eprintf "└─> No paramaterized transitions for %a possible\n\
                         └─> Picking non-parameterized transition@." Hstring.print proc;
 	let la = Array.of_list l in
 	let rand = Random.int (List.length l) in
 	let app,app_p = la.(rand) in
 	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
-	let new_env = apply_transition app_p app.tr_name trans env
+	let _, l1,l2,l3 = env in	
+	let new_env = apply_transition app_p app.tr_name trans (nv,l1,l2,l3)
 	in
 	check_unsafe new_env unsafe;
 	Some(app,app_p)::acc, new_env                    
-      | [], l ->
+      | ([], l), nv ->
 	Format.eprintf "└─> Only parameterized transitions for %a possible\n\
                         └─> Choosing random transition @." Hstring.print proc;
 	let la = Array.of_list l in
 	let rand = Random.int (List.length l) in
 	let app,app_p = la.(rand) in
 	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
-	let new_env = apply_transition app_p app.tr_name trans env
+	let _, l1,l2,l3 = env in	
+	let new_env = apply_transition app_p app.tr_name trans (nv,l1,l2,l3)
 	  
 	in
 	check_unsafe new_env unsafe;
 
 	Some(app,app_p)::acc, new_env 
-      | l1, l ->
+      | (l1, l), nv ->
 	Format.eprintf "└─> Parameterized and non-parameterized transitions for %a possible\n\
                         └─> Choosing random parametrized transition @." Hstring.print proc;
 	let la = Array.of_list l in
 	let rand = Random.int (List.length l) in
 	let app,app_p = la.(rand) in
 	Format.eprintf " └──> Chose transition %a@." Hstring.print app.tr_name;
-	let new_env = apply_transition app_p app.tr_name trans env
+	let _, l1,l2,l3 = env in	
+	let new_env = apply_transition app_p app.tr_name trans (nv,l1,l2,l3)
 	in
 	check_unsafe new_env unsafe;
 	
@@ -906,7 +931,7 @@ let setup_env tsys sys =
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
-	    {value = random_value ty; typ = ty }
+		{value = random_value ty; typ = ty }
 	  |  _ -> assert false	
 	end
       else
@@ -920,15 +945,47 @@ let setup_env tsys sys =
 	      else
 		{value = cub_to_val x ; typ = ty }
 	    | _ -> assert false
-
 	end
-    ) env in
+      ) env in
+   let env_final =
+      Env.fold (fun k x acc ->
+	match x.value with
+	  | VGlob n ->
+	    Format.eprintf "Trying n %a@." Hstring.print n;
+	    let vg = Env.find (Elem(n,Glob)) acc in
+	    begin
+	      match vg.value with
+		| VGlob n1 ->
+		  Format.eprintf "Trying n1 %a@." Hstring.print n1;
+		  begin
+		    let vg2 = Env.find (Elem (n1,Glob)) acc in
+		    let tt = 
+		      match vg2.value with
+			| VGlob n2 ->
+			  Format.eprintf "Trying n2 %a@." Hstring.print n2;
+			  {value = random_value vg2.typ; typ = vg2.typ }
+			| tt -> vg2
+		    in
+		    let e1 =  Env.add (Elem(n,Glob)) tt acc in
+		    let e2 = Env.add (Elem(n1,Glob)) tt e1 in 
+		    Env.add k tt e2 
+		  end
+		| tt -> Env.add k vg acc 
+	    end
+	  | _ -> Env.add k x acc
+      ) env_final env_final in 
   let env_final =
     Env.mapi (fun k x ->
       (*let ty = Smt.Symbol.type_of k in *)
       match x.value with
 	| VArith ta -> let v = eval_arith ta env_final x.typ in
 		       {value =  v; typ = x.typ}
+	(*| VGlob vg ->
+	  let v = Env.find (Elem(vg, Glob)) env in
+	  begin
+	    match v.value with
+	      | VGlob vg' -> 
+	  end *)
 	| _ ->
 	  Format.eprintf "k is %a and typ is %a@." Term.print k Hstring.print x.typ;x
 
@@ -984,7 +1041,8 @@ let setup_env tsys sys =
 	    Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
 	      (*Format.printf "State: %d seen %d time(s)@." k el;*)
 	      (*print the state it saw multiple times*)
-	      (*if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;*)
+	      if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;
+
 	      if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
 
 	  (*Hashtbl.iter (fun k (el,envoo) ->
@@ -995,6 +1053,14 @@ let setup_env tsys sys =
                          State seen most often: %d [%d time(s)] @." (Hashtbl.stats hh).num_bindings overall smost smtime
 	 (* Hashtbl.iter (fun k (_,el) ->
 	    Format.printf "%a@." print_interpret_env el) hh*)
+
+
+
+
+
+
+
+	    
 	| TopExecRetry (i,d) ->
 	  let rec aux count=
 	    match count with
@@ -1225,17 +1291,21 @@ let setup_env tsys sys =
 	  let s1 = Atom.Comp(el1, Eq, el3) in
 	  let s2 = Atom.Comp(el2, Eq, el4) in
 
-	  let sN1 = Atom.Comp(eN1, Eq, el3) in
-	  let sN2 = Atom.Comp(eN2, Eq, el4) in
+	  let sN1 = Atom.Comp(el1, Neq, el4) in
+	  let sN2 = Atom.Comp(el2, Eq, el4) in
 	  
 	  let s3 = Atom.Comp(el5, Eq, el6) in
 
 	  let sa = SAtom.add s1 SAtom.empty in
-	  let sa = SAtom.add s2 sa in
-	  let sa = SAtom.add s3 sa in
+	  (*let sa = SAtom.add s2 sa in
+	  let sa = SAtom.add s3 sa in*)
 
 	  let sa2 = SAtom.add sN1 SAtom.empty in
-	  let sa2 = SAtom.add sN2 sa2 in
+
+
+	  Format.eprintf "??%b@." (SAtom.subset sa2 sa);
+	  assert false;
+	  (*let sa2 = SAtom.add sN2 sa2 in*)
 
 	  let pl = extract_procs sa in
 	  let map1 = gen_mapping pl in
