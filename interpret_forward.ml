@@ -1423,10 +1423,10 @@ let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
       | s -> 
 	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
 	steps := depth
-  done;
+  done(*;
   Format.eprintf "Trace@.";
   Format.eprintf "%a" print_forward_trace !queue;
-  Format.eprintf "@." 
+  Format.eprintf "@." *)
 
 
 
